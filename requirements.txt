@@ -1,0 +1,9 @@
+google-adk==1.21.0
+python-dotenv
+rich
+pydantic
+typing-extensions
+aiosqlite
+fastapi
+uvicorn[standard]
+websockets

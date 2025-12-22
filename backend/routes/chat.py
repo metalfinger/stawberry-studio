@@ -1,0 +1,422 @@
+"""
+Chat WebSocket route - Routes to correct agent based on project phase and sub-mode
+"""
+import json
+import re
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from google.adk import Runner
+from google.adk.sessions import InMemorySessionService
+from google.genai import types as genai_types
+
+from backend import db
+from backend.agents.berry import create_berry_agent
+from backend.agents.planner import create_planner_agent
+from backend.agents.detailer import create_detailer_agent
+from backend.agents.analyst import create_analyst
+from backend.agents.prompter import create_prompter_agent
+from backend.agents.pre_production import create_pre_production_agent
+from backend.agents.renderer import create_renderer_agent
+from backend.agents.qa import create_qa_agent
+
+router = APIRouter()
+
+# Single session service for the app
+session_service = InMemorySessionService()
+
+# Phase to agent mapping
+# Each mode: (name, factory, greeting, auto_trigger or None)
+PHASE_AGENTS = {
+    "BRIEF": {
+        "default": ("Berry", create_berry_agent, "Hey! I'm Berry, your Director. Tell me about your video vision!", None),
+    },
+    "STORY": {
+        "planner": ("Berry", create_planner_agent, "I'm now your Writer. Let me analyze the brief and structure your story...", "Analyze the brief and propose a scene breakdown."),
+        "detailer": ("Berry", create_detailer_agent, "I'm focusing on details. Let's break this scene into shots and cuts!", None),
+        "default": "planner",
+    },
+    "ASSETS": {
+        "default": ("Berry", create_analyst, "I'm now your Designer. Let me examine your story and extract all visual elements...", "Analyze the blueprint and extract all characters, locations, and props."),
+    },
+    "GENERATE": {
+        "prompter": ("Berry", create_prompter_agent, "I'm now your Artist. Let's prepare each cut for rendering. Which cut should we start with?", None),
+        "pre_production": ("Berry", create_pre_production_agent, "I'm your Pre-Production Lead. I'll prepare reference images through i2i chaining.", None),
+        "renderer": ("Berry", create_renderer_agent, "I'm your VFX Artist. Ready to render your visuals.", None),
+        "qa": ("Berry", create_qa_agent, "I'm your QA Lead. I'll review each image for consistency.", None),
+        "default": "prompter",
+    },
+}
+
+
+def detect_agent_switch(message: str, current_mode: str) -> tuple:
+    """
+    Detect if user wants to switch between Planner and Detailer.
+    Returns (new_mode, scene_id or None)
+    """
+    message_lower = message.lower()
+    
+    # Switch to Detailer
+    detail_match = re.search(r"(detail|focus|work on|break down)\s*(scene\s*(\d+)|scene)", message_lower)
+    if detail_match:
+        scene_num = detail_match.group(3)
+        return ("detailer", scene_num)
+    
+    # Switch to Planner
+    if any(phrase in message_lower for phrase in ["back to overview", "back to planner", "overview", "scene structure"]):
+        return ("planner", None)
+    
+    return (current_mode, None)
+
+
+@router.websocket("/api/projects/{project_id}/chat")
+async def chat_websocket(websocket: WebSocket, project_id: str, phase: str = None):
+    """WebSocket endpoint for chatting with phase-appropriate agent."""
+    await websocket.accept()
+    
+    # Verify project exists and get phase
+    project = db.get_project(project_id)
+    if not project:
+        await websocket.send_json({"error": "Project not found"})
+        await websocket.close()
+        return
+    
+    # Use requested phase or current project phase
+    current_phase = phase if phase else project.get("current_phase", "BRIEF")
+    project_phase = project.get("current_phase", "BRIEF")
+    
+    # Check if viewing history (requested phase != current project phase)
+    is_history_mode = current_phase != project_phase
+    
+    # Get phase config
+    phase_config = PHASE_AGENTS.get(current_phase, PHASE_AGENTS["BRIEF"])
+    
+    # Determine initial agent mode
+    if isinstance(phase_config.get("default"), str):
+        current_mode = phase_config["default"]
+        agent_name, create_agent_fn, greeting, auto_trigger = phase_config[current_mode]
+    else:
+        current_mode = "default"
+        agent_name, create_agent_fn, greeting, auto_trigger = phase_config["default"]
+    
+    current_scene_id = None
+    
+    # Send current phase/mode info
+    await websocket.send_json({
+        "type": "phase", 
+        "phase": current_phase, 
+        "agent": agent_name,
+        "mode": current_mode,
+        "is_history": is_history_mode
+    })
+    
+    # Create agent and runner
+    agent = create_agent_fn()
+    runner = Runner(
+        agent=agent,
+        app_name="strawberry_studio",
+        session_service=session_service
+    )
+    
+    user_id = "web_user"
+    session_id = f"session_{project_id}_{current_phase}_{current_mode}"
+    
+    # Get or create session with project_id in state
+    session = await session_service.get_session(
+        app_name="strawberry_studio",
+        user_id=user_id,
+        session_id=session_id
+    )
+    
+    if not session:
+        session = await session_service.create_session(
+            app_name="strawberry_studio",
+            user_id=user_id,
+            session_id=session_id,
+            state={"project_id": project_id, "current_scene_id": current_scene_id}
+        )
+    
+    # Send phase-specific chat history
+    history = db.get_chat_history(project_id, phase=current_phase)
+    await websocket.send_json({"type": "history", "messages": history})
+    
+    # Send initial greeting if no history for this phase (and not in history mode)
+    if not history and not is_history_mode:
+        db.add_chat_message(project_id, "assistant", greeting, phase=current_phase, agent_name=agent_name)
+        await websocket.send_json({"type": "message", "role": "assistant", "content": greeting, "agent_name": agent_name})
+    
+    # If there's an auto-trigger and we just started this phase (no history/fresh start)
+    if auto_trigger and (not history and not is_history_mode):
+        # 1. Send invisible user message to initiate
+        # We don't save this to DB or send to frontend as a user message to keep chat clean,
+        # but we treat it as the initial prompt to the agent.
+        
+        # Initial turn
+        turn = session.turn(auto_trigger)
+        
+        async for step in turn:
+            if isinstance(step, genai_types.ToolCall):
+                # Send tool call notification
+                await websocket.send_json({
+                    "type": "tool",
+                    "name": step.tool_calls[0].name,
+                    "args": step.tool_calls[0].args
+                })
+            elif isinstance(step, genai_types.ToolReturn):
+                # Send tool result notification (optional, maybe just spinner)
+                pass
+            elif isinstance(step, genai_types.Part):
+                # Streaming response
+                if step.text:
+                    await websocket.send_json({
+                        "type": "stream", 
+                        "content": step.text,
+                        "agent_name": agent_name
+                    })
+
+        # Save final response
+        final_response = turn.output.text
+        if final_response:
+            db.add_chat_message(project_id, "assistant", final_response, phase=current_phase, agent_name=agent_name)
+            await websocket.send_json({
+                "type": "message", 
+                "role": "assistant", 
+                "content": final_response, 
+                "agent_name": agent_name
+            })
+
+    try:
+        while True:
+            # Receive user message
+            data = await websocket.receive_text()
+            message_data = json.loads(data)
+            user_message = message_data.get("message", "")
+            
+            if not user_message:
+                continue
+            
+            # Check for agent switch commands (Blueprint phase)
+            if current_phase == "STORY":
+                new_mode, scene_num = detect_agent_switch(user_message, current_mode)
+                
+                if new_mode != current_mode:
+                    current_mode = new_mode
+                    
+                    # Resolve scene number to ID
+                    if scene_num and new_mode == "detailer":
+                        scenes = db.get_scenes(project_id)
+                        scene = next((s for s in scenes if s['scene_number'] == int(scene_num)), None)
+                        if scene:
+                            current_scene_id = scene['id']
+                    
+                    # Switch agent
+                    agent_name, create_agent_fn, mode_greeting, _ = phase_config[current_mode]
+                    agent = create_agent_fn()
+                    runner = Runner(
+                        agent=agent,
+                        app_name="strawberry_studio",
+                        session_service=session_service
+                    )
+                    
+                    # New session for new mode
+                    session_id = f"session_{project_id}_{current_phase}_{current_mode}"
+                    session = await session_service.create_session(
+                        app_name="strawberry_studio",
+                        user_id=user_id,
+                        session_id=session_id,
+                        state={"project_id": project_id, "current_scene_id": current_scene_id}
+                    )
+                    
+                    # Notify client of mode switch
+                    focus_info = None
+                    if current_scene_id and scene:
+                        focus_info = f"Scene {scene['scene_number']}: {scene['title']}"
+                    
+                    await websocket.send_json({
+                        "type": "mode_switch",
+                        "mode": current_mode,
+                        "agent": agent_name,
+                        "scene_id": current_scene_id,
+                        "focus": focus_info
+                    })
+            
+            # Check if phase changed (e.g., complete_briefing was called)
+            project = db.get_project(project_id)
+            new_phase = project.get("current_phase", current_phase)
+            if new_phase != current_phase:
+                old_phase = current_phase
+                current_phase = new_phase
+                
+                # Get new phase config and switch agent
+                phase_config = PHASE_AGENTS.get(current_phase, PHASE_AGENTS["BRIEF"])
+                if isinstance(phase_config.get("default"), str):
+                    current_mode = phase_config["default"]
+                    agent_name, create_agent_fn, new_greeting, _ = phase_config[current_mode]
+                else:
+                    current_mode = "default"
+                    agent_name, create_agent_fn, new_greeting, _ = phase_config["default"]
+                
+                # Create new agent and runner
+                agent = create_agent_fn()
+                runner = Runner(
+                    agent=agent,
+                    app_name="strawberry_studio",
+                    session_service=session_service
+                )
+                session_id = f"session_{project_id}_{current_phase}_{current_mode}"
+                session = await session_service.create_session(
+                    app_name="strawberry_studio",
+                    user_id=user_id,
+                    session_id=session_id,
+                    state={"project_id": project_id, "current_scene_id": current_scene_id}
+                )
+                
+                # Notify client and send new agent greeting
+                await websocket.send_json({"type": "phase_change", "old_phase": old_phase, "new_phase": new_phase, "agent": agent_name})
+                db.add_chat_message(project_id, "assistant", new_greeting, phase=current_phase, agent_name=agent_name)
+                await websocket.send_json({"type": "message", "role": "assistant", "content": new_greeting, "agent_name": agent_name})
+                continue  # Skip processing the triggering user message after phase change
+            
+            # Save and echo user message
+            db.add_chat_message(project_id, "user", user_message, phase=current_phase)
+            await websocket.send_json({"type": "message", "role": "user", "content": user_message})
+            
+            # Run agent
+            full_response = ""
+            handoff_request = None
+            
+            new_message = genai_types.Content(
+                role="user",
+                parts=[genai_types.Part(text=user_message)]
+            )
+            
+            async for event in runner.run_async(
+                user_id=user_id,
+                session_id=session_id,
+                new_message=new_message
+            ):
+                if event.content and event.content.parts:
+                    for part in event.content.parts:
+                        if part.text:
+                            full_response += part.text
+                        if part.function_call:
+                            # Notify frontend of tool use
+                            await websocket.send_json({
+                                "type": "tool",
+                                "name": part.function_call.name
+                            })
+                            
+                            # Detect Handoff
+                            if part.function_call.name == "request_handoff":
+                                args = part.function_call.args
+                                handoff_request = {
+                                    "target": args.get("target_agent"),
+                                    "context": args.get("context")
+                                }
+            
+            if full_response:
+                db.add_chat_message(project_id, "assistant", full_response, phase=current_phase, agent_name=agent_name)
+                await websocket.send_json({
+                    "type": "message",
+                    "role": "assistant",
+                    "content": full_response,
+                    "agent_name": agent_name
+                })
+                
+            # Execute Handoff if requested
+            if handoff_request:
+                target_mode = handoff_request["target"]
+                context_msg = handoff_request["context"]
+                
+                # Verify target exists in current phase
+                if target_mode in phase_config:
+                    # Switch Agent
+                    current_mode = target_mode
+                    agent_name, create_agent_fn, mode_greeting, _ = phase_config[current_mode]
+                    agent = create_agent_fn()
+                    runner = Runner(
+                        agent=agent,
+                        app_name="strawberry_studio",
+                        session_service=session_service
+                    )
+                    
+                    # New session
+                    session_id = f"session_{project_id}_{current_phase}_{current_mode}"
+                    
+                    # Ensure session exists for the new mode
+                    session = await session_service.get_session(
+                        app_name="strawberry_studio",
+                        user_id=user_id,
+                        session_id=session_id
+                    )
+                    
+                    if not session:
+                        # Extract cut_id from context if present (for prompter → pre_production handoffs)
+                        cut_id_from_context = None
+                        if "cut" in context_msg.lower() or "scene" in context_msg.lower():
+                            # Try to parse cut_id from context message
+                            import re
+                            match = re.search(r'cut_[a-f0-9]+', context_msg.lower())
+                            if match:
+                                cut_id_from_context = match.group(0)
+
+                        session = await session_service.create_session(
+                            app_name="strawberry_studio",
+                            user_id=user_id,
+                            session_id=session_id,
+                            state={
+                                "project_id": project_id,
+                                "current_cut_id": cut_id_from_context or ""
+                            }
+                        )
+                    
+                    # Notify Frontend (Mode Switch)
+                    await websocket.send_json({
+                        "type": "mode_switch",
+                        "mode": current_mode,
+                        "agent": agent_name,
+                        "focus": f"Handoff: {context_msg[:30]}..."
+                    })
+                    
+                    # Auto-run the new agent with the context
+                    # Treat context as system prompt or user message? User message "Context from prev agent: ..."
+                    handoff_prompt = f"[SYSTEM: Incoming Handoff]\nReason: {context_msg}\nExplain what you are doing and proceed."
+                    
+                    # Recursively run loop logic for new agent? 
+                    # Simpler: Just run one turn here. 
+                    # NOTE: Ideally this would be a loop, but for now 1 level of handoff is fine.
+                    # Or we can set a flag to continue the outer loop?
+                    # Let's just run the turn here to keep it simple.
+                    
+                    new_agent_response = ""
+                    handoff_message = genai_types.Content(
+                        role="user",
+                        parts=[genai_types.Part(text=handoff_prompt)]
+                    )
+                    
+                    async for event in runner.run_async(
+                        user_id=user_id,
+                        session_id=session_id,
+                        new_message=handoff_message
+                    ):
+                        if event.content and event.content.parts:
+                            for part in event.content.parts:
+                                if part.text:
+                                    new_agent_response += part.text
+                                if part.function_call:
+                                    await websocket.send_json({ "type": "tool", "name": part.function_call.name })
+                    
+                    if new_agent_response:
+                        db.add_chat_message(project_id, "assistant", new_agent_response, phase=current_phase, agent_name=agent_name)
+                        await websocket.send_json({
+                            "type": "message",
+                            "role": "assistant",
+                            "content": new_agent_response,
+                            "agent_name": agent_name
+                        })
+                else:
+                    err_msg = f"Cannot handoff: Target agent '{target_mode}' not found in {current_phase} phase."
+                    await websocket.send_json({"type": "error", "message": err_msg})
+            
+    except WebSocketDisconnect:
+        pass
+    except Exception as e:
+        await websocket.send_json({"type": "error", "message": str(e)})

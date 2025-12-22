@@ -1,0 +1,320 @@
+.node-properties {
+  position: fixed;
+  top: 60px;
+  right: 0;
+  width: 320px;
+  max-height: calc(100vh - 80px);
+  background: rgba(15, 23, 42, 0.98);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  animation: slideInRight 0.2s ease;
+  overflow-y: auto;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(-20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.np-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.np-type {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.np-close {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.np-close:hover {
+  color: white;
+}
+
+.np-body {
+  flex: 1;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.np-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.np-field label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.np-field span {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.4;
+}
+
+.np-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.np-section {
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.np-section.np-parent {
+  background: rgba(0, 0, 0, 0.2);
+  opacity: 0.8;
+}
+
+.np-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.np-type {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.np-parent-label {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.np-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.np-id {
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 10px;
+  font-family: monospace;
+  color: rgba(255, 255, 255, 0.4);
+  word-break: break-all;
+}
+
+/* Compiled Prompt Display */
+.np-prompt-section {
+  margin-top: 12px;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.np-prompt-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: rgba(59, 130, 246, 0.1);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: #93c5fd;
+}
+
+.np-prompt-header:hover {
+  background: rgba(59, 130, 246, 0.15);
+}
+
+.np-expand {
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.np-prompt-slots {
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.np-slots-title {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 8px;
+}
+
+.np-slot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 11px;
+}
+
+.np-slot-key {
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+  min-width: 50px;
+}
+
+.np-slot-name {
+  flex: 1;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.np-slot-type {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-right: 4px;
+}
+
+.np-slot-status {
+  font-size: 12px;
+}
+
+.np-slot-status.ready {
+  color: #86efac;
+}
+
+.np-slot-status.pending {
+  color: #fcd34d;
+}
+
+.np-prompt-text {
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.np-prompt-text pre {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.8);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: 'Monaco', 'Menlo', monospace;
+}
+
+.np-loading {
+  padding: 12px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
+}
+
+/* Wider panel for prompt display */
+.node-properties:has(.np-prompt-section) {
+  width: 380px;
+}
+
+/* History Display */
+.np-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.np-history-item {
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.np-history-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+}
+
+.np-history-stage {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.np-history-stage.pre_production {
+  background: rgba(168, 85, 247, 0.2);
+  color: #d8b4fe;
+}
+
+.np-history-stage.final {
+  background: rgba(34, 197, 94, 0.2);
+  color: #86efac;
+}
+
+.np-history-num {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.np-history-time {
+  margin-left: auto;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.np-history-prompt {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.4;
+  display: -webkit-box;
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.np-history-image {
+  margin-top: 4px;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.np-history-image img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
