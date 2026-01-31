@@ -1,6 +1,7 @@
-import { memo, useState, useEffect } from 'react'
-import { Handle, Position } from '@xyflow/react'
-import { getCutPrompt, getCutHistory, type CompiledPrompt, type GenerationStep } from '../../api/client'
+import { memo, useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
+import { Handle, Position, type NodeProps, useNodes, useEdges } from '@xyflow/react'
+import { NodeProperties } from './NodeProperties'
 import './nodes.css'
 
 interface AssetInfo {
@@ -14,46 +15,73 @@ interface AssetInfo {
 export interface CutNodeData {
     cut_number: number
     action: string
-    story_description?: string  // Narrative intent from STORY phase
-    beat_type?: string
+    story_description?: string
+    // Character Action
     dialogue?: string
     expression?: string
-    gesture?: string
     body_language?: string
+    gesture?: string
+    gaze_direction?: string
+    // Beat & Timing
+    beat_type?: string
+    duration_hint?: string
+    transition?: string
+    // Continuity
+    continuity_notes?: string
+    character_state?: string
+    object_tracking?: string
+    lighting_continuity?: string
+    // Overrides
+    override_camera_distance?: string
+    override_focus_point?: string
+    override_lighting?: string
+    override_mood?: string
+    // Production Notes
+    costume_notes?: string
+    prop_interaction?: string
+    emotional_arc?: string
+    sfx_notes?: string
+    music_cue?: string
+    // Generation
     generation_status?: string
     generated_image_url?: string
+    image_slots?: string // JSON string
+    // Meta
     assets?: AssetInfo[]
-    project_id?: string  // Need for API calls
-    cut_id?: string       // Need for API calls
+    project_id?: string
+    cut_id?: string
 }
 
-export const CutNode = memo(({ data, id }: { data: CutNodeData, id: string }) => {
+export const CutNode = memo(({ data, selected, id }: NodeProps & { data: CutNodeData }) => {
     const [expanded, setExpanded] = useState(true)
-    const [promptExpanded, setPromptExpanded] = useState(false)
-    const [historyExpanded, setHistoryExpanded] = useState(false)
-    const [cutPrompt, setCutPrompt] = useState<CompiledPrompt | null>(null)
-    const [history, setHistory] = useState<GenerationStep[]>([])
-    const [loading, setLoading] = useState(false)
+    const [activeImage, setActiveImage] = useState(data.generated_image_url)
+    const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null)
+
+    // For Inspector Context
+    const nodes = useNodes()
+    const edges = useEdges()
+    const myNode = nodes.find(n => n.id === id) || null
+
+    useEffect(() => {
+        setPortalTarget(document.getElementById('properties-panel-portal'))
+    }, [])
+
+    // Sync external data changes
+    useEffect(() => {
+        setActiveImage(data.generated_image_url)
+    }, [data.generated_image_url])
 
     const assets = data.assets || []
-    const hasDetails = data.expression || data.gesture || data.body_language
 
-    // Load prompt and history when expanded
-    useEffect(() => {
-        if (promptExpanded && data.project_id && id) {
-            setLoading(true)
-            Promise.all([
-                getCutPrompt(data.project_id, id).catch(() => null),
-                getCutHistory(data.project_id, id).catch(() => [])
-            ]).then(([prompt, hist]) => {
-                setCutPrompt(prompt)
-                setHistory(hist || [])
-            }).finally(() => setLoading(false))
+    // Callback when actions happen in the Side Panel (Generation, Set Active)
+    const handleInspectorUpdate = useCallback((newImageUrl?: string) => {
+        if (newImageUrl) {
+            setActiveImage(newImageUrl)
         }
-    }, [promptExpanded, data.project_id, id])
+    }, [])
 
     return (
-        <div className={`canvas-node cut-node ${expanded ? 'expanded' : 'collapsed'}`}>
+        <div className={`canvas-node cut-node ${expanded ? 'expanded' : 'collapsed'} ${selected ? 'selected' : ''}`}>
             <Handle type="target" position={Position.Top} />
 
             {/* Header - Always Visible */}
@@ -70,20 +98,47 @@ export const CutNode = memo(({ data, id }: { data: CutNodeData, id: string }) =>
 
             <div className="node-description">{data.action || 'No action'}</div>
 
+            {/* IMAGE PREVIEW AREA */}
+            {expanded && (
+                <div className="cut-visual-area">
+                    {activeImage ? (
+                        <div className="cut-image-preview">
+                            <img src={activeImage} alt={`Cut ${data.cut_number}`} />
+                        </div>
+                    ) : (
+                        <div className="cut-image-placeholder">
+                            Select to Generate
+                        </div>
+                    )}
+                </div>
+            )}
+
             {/* Quick Summary - Always Visible */}
             {data.beat_type && <div className="node-meta">⚡ {data.beat_type}</div>}
 
             {/* Expandable Details */}
             {expanded && (
                 <div className="node-expanded-content">
-                    {/* Character Details */}
-                    {hasDetails && (
+                    {/* Character Action (Core Performance) */}
+                    {(data.expression || data.body_language || data.gaze_direction) && (
                         <div className="properties-section">
-                            <div className="section-title">Character Details</div>
+                            <div className="section-title">🎭 Character Action</div>
                             {data.expression && (
                                 <div className="property-row">
                                     <label>Expression:</label>
                                     <span className="property-value">{data.expression}</span>
+                                </div>
+                            )}
+                            {data.body_language && (
+                                <div className="property-row">
+                                    <label>Body Language:</label>
+                                    <span className="property-value">{data.body_language}</span>
+                                </div>
+                            )}
+                            {data.gaze_direction && (
+                                <div className="property-row">
+                                    <label>👁️ Gaze:</label>
+                                    <span className="property-value">{data.gaze_direction}</span>
                                 </div>
                             )}
                             {data.gesture && (
@@ -92,10 +147,79 @@ export const CutNode = memo(({ data, id }: { data: CutNodeData, id: string }) =>
                                     <span className="property-value">{data.gesture}</span>
                                 </div>
                             )}
-                            {data.body_language && (
+                            {data.character_state && (
                                 <div className="property-row">
-                                    <label>Body Language:</label>
-                                    <span className="property-value">{data.body_language}</span>
+                                    <label>State:</label>
+                                    <span className="property-value">{data.character_state}</span>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Timing & Beat */}
+                    {(data.duration_hint || data.transition || data.emotional_arc) && (
+                        <div className="properties-section">
+                            <div className="section-title">⏱️ Timing</div>
+                            {data.duration_hint && (
+                                <div className="property-row">
+                                    <label>Duration:</label>
+                                    <span className="property-value">{data.duration_hint}</span>
+                                </div>
+                            )}
+                            {data.transition && (
+                                <div className="property-row">
+                                    <label>Transition:</label>
+                                    <span className="property-value">{data.transition}</span>
+                                </div>
+                            )}
+                            {data.emotional_arc && (
+                                <div className="property-row">
+                                    <label>Emotion Arc:</label>
+                                    <span className="property-value">{data.emotional_arc}</span>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Continuity */}
+                    {(data.continuity_notes || data.costume_notes || data.prop_interaction) && (
+                        <div className="properties-section">
+                            <div className="section-title">🔗 Continuity</div>
+                            {data.costume_notes && (
+                                <div className="property-row">
+                                    <label>👕 Costume:</label>
+                                    <span className="property-value">{data.costume_notes}</span>
+                                </div>
+                            )}
+                            {data.prop_interaction && (
+                                <div className="property-row">
+                                    <label>📦 Props:</label>
+                                    <span className="property-value">{data.prop_interaction}</span>
+                                </div>
+                            )}
+                            {data.continuity_notes && (
+                                <div className="property-row">
+                                    <label>Notes:</label>
+                                    <span className="property-value">{data.continuity_notes}</span>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Production Notes */}
+                    {(data.sfx_notes || data.music_cue) && (
+                        <div className="properties-section">
+                            <div className="section-title">🔊 Sound</div>
+                            {data.sfx_notes && (
+                                <div className="property-row">
+                                    <label>SFX:</label>
+                                    <span className="property-value">{data.sfx_notes}</span>
+                                </div>
+                            )}
+                            {data.music_cue && (
+                                <div className="property-row">
+                                    <label>🎵 Music:</label>
+                                    <span className="property-value">{data.music_cue}</span>
                                 </div>
                             )}
                         </div>
@@ -128,91 +252,23 @@ export const CutNode = memo(({ data, id }: { data: CutNodeData, id: string }) =>
                             </div>
                         </div>
                     )}
-
-                    {/* Story Intent Section (from STORY phase) */}
-                    {data.story_description && (
-                        <div className="properties-section story-intent-section">
-                            <div className="section-title">📖 Story Intent</div>
-                            <div className="story-description">
-                                {data.story_description}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Generation Prompt Section (compiled dynamically) */}
-                    <div className="properties-section prompt-section">
-                        <div
-                            className="section-title clickable"
-                            onClick={() => setPromptExpanded(!promptExpanded)}
-                        >
-                            📝 Generation Prompt {promptExpanded ? '▼' : '▶'}
-                        </div>
-                        {promptExpanded && (
-                            <div className="prompt-content">
-                                {loading ? (
-                                    <div className="loading-text">Loading...</div>
-                                ) : cutPrompt ? (
-                                    <>
-                                        {cutPrompt.reference_images && cutPrompt.reference_images.length > 0 && (
-                                            <div className="prompt-refs">
-                                                <strong>References:</strong>
-                                                {cutPrompt.reference_images.map((ref) => (
-                                                    <div key={ref.ref} className={`ref-slot ${ref.status}`}>
-                                                        <span className="ref-key">{ref.ref}:</span>
-                                                        <span className="ref-name">{ref.name}</span>
-                                                        <span className={`ref-status ${ref.status}`}>
-                                                            {ref.status === 'ready' ? '✓' : '○'}
-                                                        </span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                        <div className="prompt-text">
-                                            <pre>{cutPrompt.prompt}</pre>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <div className="no-data">No prompt generated yet</div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Generation History Section */}
-                    {history && history.length > 0 && (
-                        <div className="properties-section history-section">
-                            <div
-                                className="section-title clickable"
-                                onClick={() => setHistoryExpanded(!historyExpanded)}
-                            >
-                                🕒 History ({history.length}) {historyExpanded ? '▼' : '▶'}
-                            </div>
-                            {historyExpanded && (
-                                <div className="history-content">
-                                    {history.map((step) => (
-                                        <div key={step.id} className="history-item">
-                                            <div className="history-meta">
-                                                <span className={`history-stage ${step.stage}`}>
-                                                    {step.stage === 'pre_production' ? 'Pre-Prod' : 'Final'}
-                                                </span>
-                                                <span className="history-num">#{step.step_number}</span>
-                                            </div>
-                                            <div className="history-prompt">{step.prompt.substring(0, 100)}...</div>
-                                            {step.output_image_url && (
-                                                <div className="history-image">
-                                                    <img src={step.output_image_url} alt="Generated" />
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )}
                 </div>
             )}
 
             <Handle type="source" position={Position.Bottom} />
+
+            {/* INSPECTOR PORTAL */}
+            {selected && portalTarget && data.project_id && myNode && createPortal(
+                <NodeProperties
+                    selectedNode={myNode}
+                    nodes={nodes}
+                    edges={edges}
+                    projectId={data.project_id}
+                    onClose={() => { /* Cannot deselect easily from here without store access */ }}
+                    onNodeUpdate={handleInspectorUpdate}
+                />,
+                portalTarget
+            )}
         </div>
     )
 })

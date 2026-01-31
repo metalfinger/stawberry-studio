@@ -49,26 +49,54 @@
   letter-spacing: 0.5px;
 }
 
-.layout-btn {
+.layout-btn,
+.add-generator-btn {
   background: linear-gradient(135deg, #3b82f6, #8b5cf6);
   border: none;
   color: white;
-  padding: 6px 14px;
-  border-radius: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 12px;
   font-weight: 500;
   transition: all 0.2s;
 }
 
-.layout-btn:hover {
+.layout-btn:hover,
+.add-generator-btn:hover {
   transform: scale(1.05);
   box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
 }
 
+.add-generator-btn {
+  background: linear-gradient(135deg, #6366f1, #a855f7);
+}
+
+/* Properties Panel */
+.properties-panel-container {
+  position: absolute; /* Overlay mode */
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 0;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #0f172a;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  z-index: 20; /* Above the canvas (ReactFlow is usually z-index 0) */
+}
+
+.properties-panel-container:has(> *) {
+  width: 450px; /* Wider for full management system */
+  box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+}
+
 .canvas-container {
   flex: 1;
-  width: calc(100% - 400px);
+  min-width: 0; 
+  position: relative; /* Context for absolute panel */
 }
 
 /* ReactFlow Overrides */

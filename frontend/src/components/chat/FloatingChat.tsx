@@ -19,13 +19,13 @@ interface FloatingChatProps {
     onNodeUpdate?: () => void
 }
 
-// Berry adapts to each phase with a different focus
+// Unique agent identities per phase - collaborative specialists
 const PHASE_CONFIG: Record<string, PhaseConfig> = {
-    BRIEF: { role: 'Director', icon: MessageSquare, description: 'Defining your vision' },
-    STORY: { role: 'Writer', icon: BookOpen, description: 'Structuring the narrative' },
-    ASSETS: { role: 'Designer', icon: Users, description: 'Creating visual elements' },
-    GENERATE: { role: 'Artist', icon: Target, description: 'Rendering visuals' },
-    FINAL: { role: 'Editor', icon: Video, description: 'Final assembly' },
+    BRIEF: { role: 'Berry (Creative Director)', icon: MessageSquare, description: 'Defining your vision' },
+    STORY: { role: 'Sage (Story Architect)', icon: BookOpen, description: 'Structuring the narrative' },
+    ASSETS: { role: 'Atlas (Visual Designer)', icon: Users, description: 'Creating visual elements' },
+    GENERATE: { role: 'Pixel (Prompt Artist)', icon: Target, description: 'Rendering visuals' },
+    FINAL: { role: 'Director', icon: Video, description: 'Final assembly' },
 }
 
 // Phase metadata for transitions
@@ -48,8 +48,8 @@ export function FloatingChat({ projectId, phase, onPhaseChange, onNodeUpdate }: 
     const [viewingPhase, setViewingPhase] = useState(phase)
     const [minimized, setMinimized] = useState(false)
     const [focusTag, setFocusTag] = useState<string | null>(null)
-    const [dynamicRole, setDynamicRole] = useState<string | null>(null)
-    const [phaseTransition, setPhaseTransition] = useState<{from: string, to: string} | null>(null)
+    const [dynamicAgentName, setDynamicAgentName] = useState<string | null>(null)
+    const [phaseTransition, setPhaseTransition] = useState<{ from: string, to: string } | null>(null)
     const wsRef = useRef<WebSocket | null>(null)
     const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -59,11 +59,11 @@ export function FloatingChat({ projectId, phase, onPhaseChange, onNodeUpdate }: 
     // Update viewing phase when project phase changes
     useEffect(() => {
         setViewingPhase(phase)
-        setDynamicRole(null)
+        setDynamicAgentName(null)
     }, [phase])
 
     useEffect(() => {
-        setDynamicRole(null)
+        setDynamicAgentName(null)
         connectWebSocket(viewingPhase)
         return () => wsRef.current?.close()
     }, [projectId, viewingPhase])
@@ -111,14 +111,14 @@ export function FloatingChat({ projectId, phase, onPhaseChange, onNodeUpdate }: 
                 } else {
                     setFocusTag(null)
                 }
-
-                // Update dynamic role based on mode
-                if (data.mode === 'pre_production') setDynamicRole('Pre-Production Lead')
-                else if (data.mode === 'prompter') setDynamicRole('Artist')
-                else if (data.mode === 'renderer') setDynamicRole('VFX Lead')
-                else if (data.mode === 'qa') setDynamicRole('QA Lead')
-                else if (data.mode === 'planner') setDynamicRole('Writer')
-                else if (data.mode === 'detailer') setDynamicRole('Detailer')
+                // Update dynamic agent name based on mode switch
+                if (data.agent) setDynamicAgentName(data.agent)
+                else if (data.mode === 'pre_production') setDynamicAgentName('Iris')
+                else if (data.mode === 'prompter') setDynamicAgentName('Pixel')
+                else if (data.mode === 'renderer') setDynamicAgentName('Spark')
+                else if (data.mode === 'qa') setDynamicAgentName('Scout')
+                else if (data.mode === 'planner') setDynamicAgentName('Sage')
+                else if (data.mode === 'detailer') setDynamicAgentName('Nova')
                 break
             case 'history':
                 setMessages(data.messages.map((m: any) => ({
@@ -205,8 +205,8 @@ export function FloatingChat({ projectId, phase, onPhaseChange, onNodeUpdate }: 
                         <PhaseIcon size={18} />
                     </div>
                     <div className="agent-info">
-                        <span className="agent-name">Berry</span>
-                        <span className="agent-role">{dynamicRole || config.role}</span>
+                        <span className="agent-name">{dynamicAgentName || config.role.split(' (')[0]}</span>
+                        <span className="agent-role">{config.role}</span>
                     </div>
                     <span className={`status-dot ${connected ? 'online' : ''}`} />
                 </div>

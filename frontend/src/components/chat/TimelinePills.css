@@ -105,3 +105,101 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
+
+/* V2 Styles - Stale indicators and All button */
+.timeline-pills.v2 {
+  gap: 8px;
+}
+
+.timeline-all-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.6);
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-right: 8px;
+}
+
+.timeline-all-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.timeline-all-btn.active {
+  background: rgba(34, 211, 238, 0.2);
+  border-color: #22d3ee;
+  color: #22d3ee;
+}
+
+/* Stale phase styling */
+.timeline-pill.stale {
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.timeline-pill.stale .pill-status {
+  color: #f59e0b;
+}
+
+.timeline-connector.stale {
+  background: linear-gradient(90deg, #f59e0b, rgba(245, 158, 11, 0.3));
+}
+
+.pill-label.stale {
+  color: #f59e0b;
+}
+
+.stale-icon {
+  animation: pulse-warning 1.5s infinite;
+}
+
+@keyframes pulse-warning {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Stale warning in header */
+.stale-warning {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.15);
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+
+/* Filter badge */
+.viewing-filter-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: #ff4d6d;
+  background: rgba(255, 77, 109, 0.15);
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+
+.viewing-filter-badge .clear-filter {
+  background: none;
+  border: none;
+  color: #ff4d6d;
+  cursor: pointer;
+  padding: 0 2px;
+  font-size: 10px;
+}
+
+/* Phase tag in messages */
+.msg-phase-tag {
+  font-size: 9px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-left: 8px;
+}

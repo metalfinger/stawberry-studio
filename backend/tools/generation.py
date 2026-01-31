@@ -4,6 +4,7 @@ Context gathering, prompt compilation, and image generation.
 """
 
 import uuid
+import json
 from typing import Dict, Any, List, Optional
 from backend.database import core as db
 from backend.database import shots as shots_db
@@ -142,6 +143,169 @@ def get_cut_assets(project_id: str, cut_id: str) -> Dict[str, List[Dict]]:
     return result
 
 
+def get_smart_generation_context(project_id: str, cut_id: str) -> Dict[str, Any]:
+    """
+    Get FULL context for a cut to enable smart agent decisions.
+    
+    Returns:
+    - current_cut: Details about this cut (action, description, etc.)
+    - current_position: Scene/Shot/Cut numbers
+    - available_assets: ALL project assets with ready images
+    - previous_cuts: ALL previous cuts with generated images (for continuity)
+    - art_style: The project's visual style
+    - action_context: What's happening in this cut
+    
+    The agent uses this to INTELLIGENTLY decide:
+    - Which assets are relevant to this specific cut
+    - Whether continuity from a previous cut is needed
+    - What should go in each image slot
+    """
+    ctx = get_cut_context(project_id, cut_id)
+    if "error" in ctx:
+        return ctx
+    
+    cut = ctx["cut"]
+    shot = ctx["shot"]
+    scene = ctx["scene"]
+    brief = ctx["brief"]
+    
+    # Current position
+    current_scene_num = scene.get("scene_number", 1)
+    current_shot_num = shot.get("shot_number", 1)
+    current_cut_num = cut.get("cut_number", 1)
+    
+    # Get ALL project assets with ready images
+    conn = db.get_connection()
+    cursor = conn.cursor()
+    
+    # Fetch all assets with their master images
+    cursor.execute("""
+        SELECT a.*, em.master_image_url 
+        FROM assets a
+        LEFT JOIN element_masters em ON a.id = em.asset_id AND em.is_active = 1
+        WHERE a.project_id = ?
+    """, (project_id,))
+    
+    all_assets = []
+    for row in cursor.fetchall():
+        asset = dict(row)
+        asset_type = asset.get("type", "prop")
+        # Skip "frame" type assets - these are cut composition references, not real assets
+        if asset_type in ("frame", "cut", "shot", "scene"):
+            continue
+        # Check if image exists
+        img_url = asset.get("master_image_url") or asset.get("image_url")
+        if img_url:
+            all_assets.append({
+                "id": asset["id"],
+                "name": asset.get("name"),
+                "type": asset_type,
+                "appearance": asset.get("appearance", ""),
+                "image_url": img_url,
+                "status": "ready"
+            })
+    
+    # Get ALL previous cuts that have generated images
+    cursor.execute("""
+        SELECT c.*, sh.shot_number, sc.scene_number, 
+               sh.camera_angle, sh.camera_distance, sh.camera_movement AS movement
+        FROM cuts c
+        JOIN shots sh ON c.shot_id = sh.id
+        JOIN scenes sc ON sh.scene_id = sc.id
+        WHERE sc.project_id = ? AND c.generated_image_url IS NOT NULL AND c.generated_image_url != ''
+        ORDER BY sc.scene_number, sh.shot_number, c.cut_number
+    """, (project_id,))
+    
+    previous_cuts = []
+    for row in cursor.fetchall():
+        prev = dict(row)
+        # Only include cuts that come BEFORE the current one
+        if (prev["scene_number"] < current_scene_num or
+            (prev["scene_number"] == current_scene_num and prev["shot_number"] < current_shot_num) or
+            (prev["scene_number"] == current_scene_num and prev["shot_number"] == current_shot_num and prev["cut_number"] < current_cut_num)):
+            previous_cuts.append({
+                "id": prev["id"],
+                "position": f"S{prev['scene_number']}-SH{prev['shot_number']}-C{prev['cut_number']}",
+                "action": prev.get("action", ""),
+                "image_url": prev["generated_image_url"],
+                "camera_angle": prev.get("camera_angle", ""),
+                "camera_distance": prev.get("camera_distance", ""),
+                "movement": prev.get("movement", ""),
+                "status": "ready"
+            })
+    
+    conn.close()
+    
+    # Current cut's linked assets (what the storyteller linked to this cut)
+    linked_assets = get_cut_assets(project_id, cut_id)
+    
+    # Get NEXT cut action for narrative context (not for referencing!)
+    next_cut_action = None
+    conn = db.get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT c.action FROM cuts c
+        JOIN shots sh ON c.shot_id = sh.id
+        JOIN scenes sc ON sh.scene_id = sc.id
+        WHERE sc.project_id = ?
+        AND (
+            (sc.scene_number = ? AND sh.shot_number = ? AND c.cut_number = ?) OR
+            (sc.scene_number = ? AND sh.shot_number = ? AND c.cut_number = 1) OR
+            (sc.scene_number = ? AND sh.shot_number = 1 AND c.cut_number = 1)
+        )
+        ORDER BY sc.scene_number, sh.shot_number, c.cut_number
+        LIMIT 1
+    """, (project_id, 
+          current_scene_num, current_shot_num, current_cut_num + 1,  # Next cut in same shot
+          current_scene_num, current_shot_num + 1,  # First cut of next shot
+          current_scene_num + 1  # First cut of next scene
+    ))
+    next_row = cursor.fetchone()
+    if next_row:
+        next_cut_action = next_row["action"]
+    conn.close()
+    
+    art_style = resolve_inheritance(cut, shot, scene, brief, "art_style") or brief.get("art_style", "cinematic")
+    
+    return {
+        "current_cut": {
+            "id": cut_id,
+            "position": f"S{current_scene_num}-SH{current_shot_num}-C{current_cut_num}",
+            "scene_number": current_scene_num,
+            "shot_number": current_shot_num,
+            "cut_number": current_cut_num,
+            "action": cut.get("action", ""),
+            "story_description": cut.get("story_description", ""),
+            "expression": cut.get("expression", ""),
+            "dialogue": cut.get("dialogue", ""),
+            "beat_type": cut.get("beat_type", ""),
+        },
+        "shot_context": {
+            "description": shot.get("description", ""),
+            "camera_angle": shot.get("camera_angle", ""),
+            "camera_distance": shot.get("camera_distance", ""),
+            "movement": shot.get("movement", ""),
+        },
+        "scene_context": {
+            "name": scene.get("name", ""),
+            "description": scene.get("description", ""),
+            "atmosphere": scene.get("atmosphere", ""),
+        },
+        "art_style": art_style,
+        "genre": brief.get("genre", ""),
+        "available_assets": all_assets,
+        "previous_cuts": previous_cuts,
+        "next_cut_action": next_cut_action,  # For narrative flow awareness
+        "linked_assets": linked_assets,
+        "is_first_cut": (current_scene_num == 1 and current_shot_num == 1 and current_cut_num == 1),
+        "rules": {
+            "can_reference": "All assets with status='ready' AND all previous_cuts with images",
+            "cannot_reference": "Current cut (itself), future cuts, assets without images",
+            "slot_order": "Fill slots in ascending order: @Image1, @Image2, @Image3... No gaps allowed."
+        }
+    }
+
+
 def find_cut_by_number(project_id: str, scene_number: int, shot_number: int, cut_number: int = 1) -> Dict[str, Any]:
     """
     Find a cut UUID by its scene/shot/cut numbers.
@@ -207,6 +371,12 @@ def compile_shot_prompt(project_id: str, cut_id: str) -> Dict[str, Any]:
     """
     Compile a Nano Banana Pro (Gemini 3 Pro Image) format prompt.
     Uses @Image1, @Image2 notation with detailed natural language.
+    
+    SMART FILTERING:
+    - Only includes REAL assets (character, location, prop) with ready images
+    - Excludes "frame" type assets (cut/composition references)
+    - @Image4 = previous cut ONLY if it has a generated image
+    - Never references current cut or future cuts
     """
     ctx = get_cut_context(project_id, cut_id)
     if "error" in ctx:
@@ -217,19 +387,54 @@ def compile_shot_prompt(project_id: str, cut_id: str) -> Dict[str, Any]:
     scene = ctx["scene"]
     brief = ctx["brief"]
     
+    # Get current cut position for filtering
+    current_scene_num = scene.get("scene_number", 1)
+    current_shot_num = shot.get("shot_number", 1)
+    current_cut_num = cut.get("cut_number", 1)
+    is_first_cut = (current_scene_num == 1 and current_shot_num == 1 and current_cut_num == 1)
+    
     assets = get_cut_assets(project_id, cut_id)
     
-    # Build reference image mapping
-    # @Image1 = Primary Character
-    # @Image2 = Location
-    # @Image3 = Secondary Character (if any)
-    # @Image4 = Prop (if any)
     reference_images = []
     image_refs = {}
     slot_num = 1
     
-    # Characters
+    # Helper to ensure we get an image if one exists (auto-heal)
+    def _resolve_asset_image(asset):
+        if asset.get("image_url"):
+            return asset["image_url"]
+            
+        # Fallback: Check if there is an active master
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT master_image_url FROM element_masters WHERE asset_id = ? AND is_active = 1", (asset.get("id"),))
+        row = cursor.fetchone()
+        conn.close()
+        return row["master_image_url"] if row else None
+    
+    def _is_frame_or_cut_reference(asset):
+        """Check if this is a frame/cut reference, not a real asset."""
+        asset_type = asset.get("type", "").lower()
+        asset_name = asset.get("name", "").lower()
+        
+        # Skip if type is "frame" or "cut"
+        if asset_type in ("frame", "cut", "shot", "scene"):
+            return True
+        
+        # Skip if name looks like a cut reference (e.g., "S1 SH1 C1 - Boot Descent")
+        if any(pattern in asset_name for pattern in ["s1 sh", "s2 sh", "s3 sh", "shot 1 cut", "shot 2 cut"]):
+            return True
+            
+        return False
+
+    # Characters (only real characters with ready images)
     for i, char in enumerate(assets["characters"][:2]):
+        if _is_frame_or_cut_reference(char):
+            continue
+        img_url = _resolve_asset_image(char)
+        if not img_url:  # Skip pending assets
+            continue
+            
         ref_key = f"@Image{slot_num}"
         reference_images.append({
             "slot": slot_num,
@@ -237,51 +442,97 @@ def compile_shot_prompt(project_id: str, cut_id: str) -> Dict[str, Any]:
             "type": "character",
             "name": char.get("name"),
             "asset_id": char.get("id"),
-            "image_url": char.get("image_url"),
-            "status": "ready" if char.get("image_url") else "pending"
+            "image_url": img_url,
+            "status": "ready"
         })
         image_refs[f"char_{i}"] = ref_key
         slot_num += 1
     
-    # Location
+    # Location (only if ready)
     if assets["locations"]:
         loc = assets["locations"][0]
-        ref_key = f"@Image{slot_num}"
-        reference_images.append({
-            "slot": slot_num,
-            "ref": ref_key,
-            "type": "location",
-            "name": loc.get("name"),
-            "asset_id": loc.get("id"),
-            "image_url": loc.get("image_url") or scene.get("location_master_url"),
-            "status": "ready" if (loc.get("image_url") or scene.get("location_master_url")) else "pending"
-        })
-        image_refs["location"] = ref_key
-        slot_num += 1
+        if not _is_frame_or_cut_reference(loc):
+            img_url = _resolve_asset_image(loc) or scene.get("location_master_url")
+            if img_url:
+                ref_key = f"@Image{slot_num}"
+                reference_images.append({
+                    "slot": slot_num,
+                    "ref": ref_key,
+                    "type": "location",
+                    "name": loc.get("name"),
+                    "asset_id": loc.get("id"),
+                    "image_url": img_url,
+                    "status": "ready"
+                })
+                image_refs["location"] = ref_key
+                slot_num += 1
     
-    # Props
+    # Props (only real props with ready images, skip frame references)
     if assets["props"]:
-        prop = assets["props"][0]
-        ref_key = f"@Image{slot_num}"
-        reference_images.append({
-            "slot": slot_num,
-            "ref": ref_key,
-            "type": "prop",
-            "name": prop.get("name"),
-            "asset_id": prop.get("id"),
-            "image_url": prop.get("image_url"),
-            "status": "ready" if prop.get("image_url") else "pending"
-        })
-        image_refs["prop"] = ref_key
-        slot_num += 1
+        for prop in assets["props"][:1]:  # Only first prop
+            if _is_frame_or_cut_reference(prop):
+                continue
+            img_url = _resolve_asset_image(prop)
+            if not img_url:
+                continue
+                
+            ref_key = f"@Image{slot_num}"
+            reference_images.append({
+                "slot": slot_num,
+                "ref": ref_key,
+                "type": "prop",
+                "name": prop.get("name"),
+                "asset_id": prop.get("id"),
+                "image_url": img_url,
+                "status": "ready"
+            })
+            image_refs["prop"] = ref_key
+            slot_num += 1
     
+    # @Image4 = Previous cut for continuity (ONLY if not first cut AND has generated image)
+    if not is_first_cut:
+        prev_cut = get_previous_cut(project_id, cut_id)
+        if prev_cut and prev_cut.get("generated_image_url"):
+            ref_key = "@Image4"
+            reference_images.append({
+                "slot": 4,
+                "ref": ref_key,
+                "type": "continuity",
+                "name": f"Previous Cut (S{current_scene_num}-SH{current_shot_num}-C{current_cut_num - 1})",
+                "asset_id": prev_cut.get("id"),
+                "image_url": prev_cut.get("generated_image_url"),
+                "status": "ready"
+            })
+            image_refs["continuity"] = ref_key
+            
+    # NOTE: Persistent Slot Overrides are intentionally NOT processed here
+    # The agent should only use what's returned by this function
+            
+            
     # Build detailed natural language prompt
     prompt_parts = []
     
-    # Opening - Genre and Style
+    # Opening - World and Style Context (Using Brief's full visual style)
     genre = brief.get("genre", "cinematic")
-    art_style = resolve_inheritance(cut, shot, scene, brief, "art_style") or "photorealistic"
-    prompt_parts.append(f"Create a {art_style} still from a {genre} film.")
+    art_style = resolve_inheritance(cut, shot, scene, brief, "art_style")
+    color_palette = brief.get("color_palette", "")
+    lighting_style = resolve_inheritance(cut, shot, scene, brief, "lighting_style") or brief.get("lighting_style", "")
+    world_logic = brief.get("world_logic", "")
+    
+    # Build the opening with style context
+    if art_style:
+        prompt_parts.append(f"WORLD: {genre} | {world_logic or 'Standard universe'}")
+        prompt_parts.append(f"AESTHETIC: {art_style} style rendering.")
+        if color_palette:
+            prompt_parts.append(f"COLOR PALETTE: {color_palette}")
+        if lighting_style:
+            prompt_parts.append(f"LIGHTING: {lighting_style}")
+        prompt_parts.append("")
+        prompt_parts.append(f"Create a {art_style} still from a {genre} film.")
+    else:
+        # Fallback with warning
+        prompt_parts.append(f"STYLE: ⚠️ No art_style defined in Brief - defaulting to cinematic.")
+        prompt_parts.append(f"Create a cinematic still from a {genre} film.")
     prompt_parts.append("")
     
     # SUBJECT section - Characters with @Image references
@@ -434,6 +685,16 @@ def compile_shot_prompt(project_id: str, cut_id: str) -> Dict[str, Any]:
         prompt_parts.append(f"Emotional beat: {cut['beat_type']}.")
     prompt_parts.append("")
     
+    prompt_parts.append("")
+    
+    # CONTINUITY section
+    if "@Image4" in image_refs:
+        prompt_parts.append("CONTINUITY:")
+        prompt_parts.append(f"Use @Image4 as the absolute base for visual continuity (lighting, framing, and environment).")
+        if cut.get("continuity_notes"):
+            prompt_parts.append(f"Notes: {cut['continuity_notes']}.")
+        prompt_parts.append("")
+    
     # REFERENCE IMAGES legend
     if reference_images:
         prompt_parts.append("REFERENCE IMAGES PROVIDED:")
@@ -475,58 +736,201 @@ def compile_edit_prompt(project_id: str, cut_id: str) -> Dict[str, Any]:
     prompt_parts = []
     
     # System instruction for edit mode
-    prompt_parts.append("[System] Edit mode. Preserve spatial relationships.")
-    prompt_parts.append("")
+    # prompt_parts.append("[System] Edit mode. Preserve spatial relationships.")
+    # prompt_parts.append("")
     
     # Edit directive
-    prompt_parts.append("[Edit]")
-    prompt_parts.append("Input Image A is the previous frame to edit.")
-    if assets["characters"]:
-        prompt_parts.append("Image B is the character reference for face consistency.")
-    prompt_parts.append("")
+    # prompt_parts.append("[Edit]")
+    # prompt_parts.append("Input Image A is the previous frame to edit.")
     
-    # What to change
-    if cut.get("edit_target"):
-        prompt_parts.append(f"Target: {cut['edit_target']}")
-    else:
-        prompt_parts.append(f"Action: {cut.get('action', '')}")
-        if cut.get("expression"):
-            prompt_parts.append(f"New Expression: {cut['expression']}")
-        if cut.get("gesture"):
-            prompt_parts.append(f"New Gesture: {cut['gesture']}")
+    # Use consolidated @ImageX format
+    prompt_parts.append(f"AESTHETIC: Lore-consistent continuity edit.")
+    prompt_parts.append(f"ACTION: {cut.get('action', '')}")
+    
+    if assets["characters"]:
+        # prompt_parts.append("Image B is the character reference for face consistency.")
+        prompt_parts.append(f"SUBJECT: Maintain @Image1 identity strictly.")
+    
+    prompt_parts.append("CONTINUITY: Use @Image4 as the base frame for pose and background consistency. Update the frame with the new action.")
+    
+    if cut.get("expression"):
+        prompt_parts.append(f"EXPRESSION: {cut['expression']}")
+    if cut.get("gesture"):
+        prompt_parts.append(f"GESTURE: {cut['gesture']}")
     
     # What to lock
-    spatial_lock = cut.get("spatial_lock", "Keep background, pose, and lighting unchanged.")
-    prompt_parts.append(f"Constraint: {spatial_lock}")
+    spatial_lock = cut.get("spatial_lock", "Keep background, pose, and lighting same as @Image4.")
+    prompt_parts.append(f"CONSTRAINT: {spatial_lock}")
     
     # Continuity notes
     if cut.get("continuity_notes"):
-        prompt_parts.append(f"Continuity: {cut['continuity_notes']}")
+        prompt_parts.append(f"NOTES: {cut['continuity_notes']}")
     
     compiled_prompt = "\n".join(prompt_parts)
     
-    # Slots: Previous cut + Character master
-    slots = {}
-    if prev_cut and prev_cut.get("generated_image_url"):
-        slots["A"] = prev_cut["generated_image_url"]
+    # Unified reference_images format
+    reference_images = []
+    
+    # Character @Image1
     if assets["characters"]:
-        slots["B"] = assets["characters"][0].get("image_url", "")
+        char_img = assets["characters"][0].get("image_url", "")
+        if char_img:
+            reference_images.append({
+                "slot": 1,
+                "ref": "@Image1",
+                "type": "character",
+                "name": assets["characters"][0].get("name"),
+                "image_url": char_img,
+                "status": "ready"
+            })
+            
+    # Previous Cut @Image4
+    if prev_cut:
+        prev_img = prev_cut.get("generated_image_url") or prev_cut.get("master_image_url")
+        if prev_img:
+            reference_images.append({
+                "slot": 4,
+                "ref": "@Image4",
+                "type": "continuity",
+                "name": f"Previous Cut {prev_cut.get('cut_number')}",
+                "image_url": prev_img,
+                "status": "ready"
+            })
     
     return {
         "prompt": compiled_prompt,
-        "slots": slots,
+        "reference_images": reference_images,
         "mode": "edit",
         "cut_id": cut_id,
         "prev_cut_id": prev_cut["id"] if prev_cut else None,
     }
 
 
-# ============== GENERATION (MOCK) ==============
+# ============== REAL GENERATION ==============
+
+def generate_cut_image(
+    project_id: str, 
+    cut_id: str, 
+    prompt: str, 
+    model: str = "gemini-3-pro-image",
+    reference_images: Optional[List[Dict[str, Any]]] = None,
+    mode: str = "text",
+    aspect_ratio: str = "16:9"
+) -> Dict[str, Any]:
+    """
+    Generate a real image for a cut and save to history.
+    Routes between text-to-image and image-to-image based on mode.
+    """
+    from backend.services.gemini_image import generate_image_text_to_image, generate_image_image_to_image
+    from datetime import datetime
+    import json
+    
+    # If no reference images provided, try to compile them from cut context
+    if reference_images is None:
+        compiled = compile_shot_prompt(project_id, cut_id)
+        if "reference_images" in compiled:
+            reference_images = compiled["reference_images"]
+            mode = compiled.get("mode", mode)
+
+    # 1. Create Generation Request ID
+    req_id = f"gen_cut_{uuid.uuid4().hex[:8]}"
+    conn = db.get_connection()
+    cursor = conn.cursor()
+    
+    # Insert 'pending' record
+    cursor.execute("""
+        INSERT INTO generation_requests (
+            id, project_id, target_type, target_cut_id, prompt, model, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (req_id, project_id, 'cut', cut_id, prompt, model, 'generating'))
+    conn.commit()
+    conn.close()
+    
+    try:
+        # 2. Call Generation Service
+        # NEW PHILOSOPHY: Cuts are 99% I2I. 
+        # Default to I2I/Edit model if ANY reference images exist (or if mode is explicitly set)
+        is_i2i = (mode in ["edit", "i2i"]) or (reference_images and len(reference_images) > 0)
+        
+        if is_i2i:
+            # Image to Image via Nano Banana Pro Edit
+            # Base reference is often slot 4 (continuity) or slot 1 (character)
+            base_ref_url = None
+            if reference_images:
+                # Prioritize @Image4 for continuity evolution
+                base_ref_url = next((r["image_url"] for r in reference_images if r["slot"] == 4), None)
+                if not base_ref_url:
+                     # Fallback to any available reference (e.g. @Image1)
+                     base_ref_url = next((r["image_url"] for r in reference_images if r["image_url"]), None)
+
+            result = generate_image_image_to_image(
+                prompt=prompt,
+                reference_image_url=base_ref_url,
+                model="nano-banana-pro-edit",
+                strength=0.7, 
+                num_images=1,
+                reference_images=reference_images,
+                aspect_ratio=aspect_ratio
+            )
+        else:
+            # Pure Text to Image via Nano Banana Pro (only if zero references)
+            result = generate_image_text_to_image(
+                prompt=prompt,
+                model=model,
+                num_images=1,
+                reference_images=reference_images,
+                aspect_ratio=aspect_ratio
+            )
+        
+        # 3. Update Request with Result
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        
+        status = 'complete' if result['success'] else 'failed'
+        output_url = result.get('image_url')
+        error_msg = result.get('error')
+        
+        cursor.execute("""
+            UPDATE generation_requests 
+            SET status = ?, output_image_url = ?, error_message = ?, 
+                completed_at = CURRENT_TIMESTAMP, cost_usd = ?
+            WHERE id = ?
+        """, (status, output_url, error_msg, result.get('cost_usd', 0), req_id))
+        
+        # 4. Auto-update Cut if successful (optional, but good UX for first gen)
+        if result['success']:
+            cursor.execute("""
+                UPDATE cuts 
+                SET generated_image_url = ?, generation_status = 'complete'
+                WHERE id = ? AND (generated_image_url IS NULL OR generated_image_url = '')
+            """, (output_url, cut_id))
+            
+        conn.commit()
+        conn.close()
+        
+        return {
+            "success": result['success'],
+            "image_url": output_url,
+            "request_id": req_id
+        }
+        
+    except Exception as e:
+        # Fail the request
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE generation_requests SET status = 'failed', error_message = ? WHERE id = ?", (str(e), req_id))
+        conn.commit()
+        conn.close()
+        raise e
+
+
+
+# ============== LEGACY / HELPERS ==============
 
 def generate_image_mock(prompt: str, slots: Dict[str, str]) -> Dict[str, Any]:
     """
     Mock image generation - returns placeholder URL.
-    Replace with real Gemini/Imagen API call later.
+    Kept for backward compatibility / dev mode.
     """
     mock_id = uuid.uuid4().hex[:12]
     mock_url = f"https://placeholder.generated/{mock_id}.png"
@@ -541,7 +945,7 @@ def generate_image_mock(prompt: str, slots: Dict[str, str]) -> Dict[str, Any]:
 
 
 def save_cut_image(project_id: str, cut_id: str, image_url: str) -> Dict[str, Any]:
-    """Save generated image URL to cut."""
+    """Save generated image URL to cut (Helper)."""
     conn = db.get_connection()
     cursor = conn.cursor()
     cursor.execute("""
@@ -554,7 +958,7 @@ def save_cut_image(project_id: str, cut_id: str, image_url: str) -> Dict[str, An
 
 
 def mark_cut_status(project_id: str, cut_id: str, status: str, notes: str = "") -> Dict[str, Any]:
-    """Update cut's generation status."""
+    """Update cut's generation status (Helper)."""
     conn = db.get_connection()
     cursor = conn.cursor()
     cursor.execute("""

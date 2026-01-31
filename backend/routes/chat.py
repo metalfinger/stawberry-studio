@@ -17,31 +17,32 @@ from backend.agents.prompter import create_prompter_agent
 from backend.agents.pre_production import create_pre_production_agent
 from backend.agents.renderer import create_renderer_agent
 from backend.agents.qa import create_qa_agent
+# V1 collaborative agents - each phase has specialists
 
 router = APIRouter()
 
 # Single session service for the app
 session_service = InMemorySessionService()
 
-# Phase to agent mapping
-# Each mode: (name, factory, greeting, auto_trigger or None)
+# Phase to agent mapping - Collaborative Specialists
+# Each mode: (agent_name, factory, greeting, auto_trigger or None)
 PHASE_AGENTS = {
     "BRIEF": {
-        "default": ("Berry", create_berry_agent, "Hey! I'm Berry, your Director. Tell me about your video vision!", None),
+        "default": ("Berry", create_berry_agent, "Hey! I'm Berry, your Creative Director. Tell me about your video vision!", None),
     },
     "STORY": {
-        "planner": ("Berry", create_planner_agent, "I'm now your Writer. Let me analyze the brief and structure your story...", "Analyze the brief and propose a scene breakdown."),
-        "detailer": ("Berry", create_detailer_agent, "I'm focusing on details. Let's break this scene into shots and cuts!", None),
+        "planner": ("Sage", create_planner_agent, "Hi! I'm Sage, your Story Architect. I've read the brief - let me propose a scene structure.", "Analyze the brief and propose a scene breakdown."),
+        "detailer": ("Nova", create_detailer_agent, "I'm Nova, your Shot Designer. Let's break this scene into shots and cuts!", None),
         "default": "planner",
     },
     "ASSETS": {
-        "default": ("Berry", create_analyst, "I'm now your Designer. Let me examine your story and extract all visual elements...", "Analyze the blueprint and extract all characters, locations, and props."),
+        "default": ("Atlas", create_analyst, "I'm Atlas, your Visual Designer. Let me examine your story and extract all visual elements...", "Analyze the blueprint and extract all characters, locations, and props."),
     },
     "GENERATE": {
-        "prompter": ("Berry", create_prompter_agent, "I'm now your Artist. Let's prepare each cut for rendering. Which cut should we start with?", None),
-        "pre_production": ("Berry", create_pre_production_agent, "I'm your Pre-Production Lead. I'll prepare reference images through i2i chaining.", None),
-        "renderer": ("Berry", create_renderer_agent, "I'm your VFX Artist. Ready to render your visuals.", None),
-        "qa": ("Berry", create_qa_agent, "I'm your QA Lead. I'll review each image for consistency.", None),
+        "prompter": ("Pixel", create_prompter_agent, "Hey! I'm Pixel, your Prompt Artist. Which cut shall we start with?", None),
+        "pre_production": ("Iris", create_pre_production_agent, "I'm Iris, your Pre-Production Lead. I'll prepare reference images through i2i chaining.", None),
+        "renderer": ("Spark", create_renderer_agent, "I'm Spark, your VFX Artist. Ready to render your visuals.", None),
+        "qa": ("Scout", create_qa_agent, "I'm Scout, your QA Lead. I'll review each image for consistency.", None),
         "default": "prompter",
     },
 }
@@ -216,14 +217,20 @@ async def chat_websocket(websocket: WebSocket, project_id: str, phase: str = Non
                         session_service=session_service
                     )
                     
-                    # New session for new mode
+                    # Get or create session for new mode
                     session_id = f"session_{project_id}_{current_phase}_{current_mode}"
-                    session = await session_service.create_session(
+                    session = await session_service.get_session(
                         app_name="strawberry_studio",
                         user_id=user_id,
-                        session_id=session_id,
-                        state={"project_id": project_id, "current_scene_id": current_scene_id}
+                        session_id=session_id
                     )
+                    if not session:
+                        session = await session_service.create_session(
+                            app_name="strawberry_studio",
+                            user_id=user_id,
+                            session_id=session_id,
+                            state={"project_id": project_id, "current_scene_id": current_scene_id}
+                        )
                     
                     # Notify client of mode switch
                     focus_info = None
@@ -262,12 +269,18 @@ async def chat_websocket(websocket: WebSocket, project_id: str, phase: str = Non
                     session_service=session_service
                 )
                 session_id = f"session_{project_id}_{current_phase}_{current_mode}"
-                session = await session_service.create_session(
+                session = await session_service.get_session(
                     app_name="strawberry_studio",
                     user_id=user_id,
-                    session_id=session_id,
-                    state={"project_id": project_id, "current_scene_id": current_scene_id}
+                    session_id=session_id
                 )
+                if not session:
+                    session = await session_service.create_session(
+                        app_name="strawberry_studio",
+                        user_id=user_id,
+                        session_id=session_id,
+                        state={"project_id": project_id, "current_scene_id": current_scene_id}
+                    )
                 
                 # Notify client and send new agent greeting
                 await websocket.send_json({"type": "phase_change", "old_phase": old_phase, "new_phase": new_phase, "agent": agent_name})

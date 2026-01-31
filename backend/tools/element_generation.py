@@ -23,30 +23,15 @@ from backend.services.gemini_image import (
 def generate_element_master(
     asset_id: str,
     prompt: Optional[str] = None,
-    auto_generate: bool = False,
+    auto_generate: bool = True,
     model: str = "gemini-3-pro-image",
     resolution: str = "2048x2048",
-    params: Optional[Dict[str, Any]] = None
+    view_type: Optional[str] = None,
+    params: Optional[Dict[str, Any]] = None,
+    reference_images: Optional[List[Dict[str, Any]]] = None
 ) -> str:
     """
     Generate master reference image for an asset element.
-
-    Args:
-        asset_id: Asset to generate master for
-        prompt: Custom prompt (if None, will compile from asset)
-        auto_generate: If True, auto-compile prompt from asset data
-        model: 'gemini-3-pro-image' (default) | 'gemini-2.5-flash-image'
-        resolution: Image resolution
-        params: Additional generation parameters
-
-    Returns:
-        master_id: ID of created element master
-
-    Example:
-        master_id = generate_element_master(
-            asset_id="char_abc",
-            auto_generate=True
-        )
     """
     # Get asset
     asset = db.get_asset(asset_id)
@@ -54,6 +39,10 @@ def generate_element_master(
         raise ValueError(f"Asset {asset_id} not found")
 
     element_type = asset.get('type', 'character')
+    
+    # Default view type if not provided
+    if not view_type:
+        view_type = 'front_full' if element_type == 'character' else 'hero_shot'
 
     # Compile prompt if needed
     if auto_generate or not prompt:
@@ -78,20 +67,32 @@ def generate_element_master(
         element_type,
         prompt,
         'white',
-        'front_full' if element_type == 'character' else 'hero_shot',
+        view_type,
         resolution,
         'generating'
     ))
     conn.commit()
 
     # Generate image
-    result = generate_image_text_to_image(
-        prompt=prompt,
-        model=model,
-        resolution=resolution,
-        num_images=1,
-        params=params
-    )
+    if params and params.get('reference_image_url'):
+        result = generate_image_image_to_image(
+            prompt=prompt,
+            reference_image_url=params.get('reference_image_url'),
+            model=model,
+            resolution=resolution,
+            num_images=1,
+            params=params,
+            reference_images=reference_images
+        )
+    else:
+        result = generate_image_text_to_image(
+            prompt=prompt,
+            model=model,
+            resolution=resolution,
+            num_images=1,
+            params=params,
+            reference_images=reference_images
+        )
 
     # Update master with result
     if result.get('success'):
@@ -130,13 +131,15 @@ def generate_element_master(
     # Save to generation history
     project_id = asset.get('project_id')
     if project_id:
+        gen_method = 'image_to_image' if (params and params.get('reference_image_url')) else 'text_to_image'
         _save_to_history(
             project_id=project_id,
             target_type='element_master',
             target_id=master_id,
             prompt=prompt,
             model=model,
-            method='text_to_image',
+            method=gen_method,
+            reference_images=reference_images,
             result=result
         )
 
@@ -169,9 +172,9 @@ def compile_element_master_prompt(
     if not asset:
         raise ValueError(f"Asset {asset_id} not found")
 
-    element_type = asset.get('type', 'character')
-    name = asset.get('name', 'Unnamed')
-    appearance = asset.get('appearance', '')
+    element_type = asset.get('type') or 'character'
+    name = asset.get('name') or 'Unnamed'
+    appearance = asset.get('appearance') or ''
 
     # Get preset template if available
     if use_preset:
@@ -194,75 +197,118 @@ def compile_element_master_prompt(
             }
 
     # Fallback: manual prompt compilation
+    # Get project style from brief - PRIORITIZE art_style over legacy style
+    project_id = asset.get('project_id')
+    brief = db.get_brief(project_id) if project_id else {}
+    art_style = brief.get('art_style') or brief.get('style') or 'high-quality cinematic'
+    color_palette = brief.get('color_palette', '')
+    world_logic = brief.get('world_logic', '')
+    
+    # Build style context header
+    style_header = f"UNIVERSE: {world_logic}\n" if world_logic else ""
+    style_header += f"ART STYLE: {art_style}\n"
+    if color_palette:
+        style_header += f"COLOR PALETTE: {color_palette}\n"
+
+    # Detect if this is an animal character (for appropriate template)
+    animal_keywords = ['ram', 'deer', 'wolf', 'fox', 'bear', 'lion', 'tiger', 'dog', 'cat',
+                       'horse', 'eagle', 'bird', 'fish', 'dragon', 'creature', 'animal',
+                       'rabbit', 'mouse', 'elephant', 'monkey', 'ape', 'gorilla', 'snake',
+                       'frog', 'owl', 'crow', 'raven', 'stag', 'doe', 'buck']
+    is_animal = any(word in appearance.lower() or word in name.lower() for word in animal_keywords)
+
     if element_type == 'character':
-        prompt = f"""
-Create a high-quality character reference sheet in photorealistic style.
+        # Build stylization keywords based on art style
+        style_keywords = ""
+        if "spider" in art_style.lower() or "comic" in art_style.lower():
+            style_keywords = "with bold ink outlines, halftone dot shading, and subtle chromatic aberration"
+        elif "ghibli" in art_style.lower() or "anime" in art_style.lower():
+            style_keywords = "with soft hand-painted textures and warm, expressive colors"
+        elif "pixar" in art_style.lower() or "3d" in art_style.lower():
+            style_keywords = "with smooth stylized 3D rendering and soft rim lighting"
+        else:
+            style_keywords = "with consistent stylized rendering"
+            
+        if is_animal:
+            # Animal character template - no hands, clothing references
+            prompt = f"""A full-body character reference of {name}, rendered in {art_style} style {style_keywords}.
 
-CHARACTER: {name}
-DESCRIPTION: {appearance}
+{appearance}
 
-REQUIREMENTS:
-- Full body shot, front view facing camera
-- Neutral standing pose with arms slightly away from body
-- Clear facial features with detailed eyes, nose, mouth
-- Pure white background (#FFFFFF)
-- Studio lighting, no shadows on background
-- Photorealistic 3D render quality
-- High detail on face, hands, clothing, accessories
-- Character should be centered in frame
-- 2048x2048 resolution, square composition
+The character is shown in a neutral standing pose (on all fours or natural stance), front view facing the camera. Clear anatomical features with detailed eyes and face. High detail on fur, hide texture, and any horns, antlers, or distinctive features. Pure white background with soft studio lighting.
 
-This is a master reference image for character consistency in future generations.
+2048x2048 resolution, square composition, character centered in frame.
+
+No text, no speech bubbles, no labels, no watermarks, no UI elements, no signatures.
+"""
+        else:
+            # Humanoid character template
+            prompt = f"""A full-body character reference of {name}, rendered in {art_style} style {style_keywords}.
+
+{appearance}
+
+The character is shown in a neutral standing pose with arms slightly away from body, front view facing the camera. Clear facial features with detailed eyes, nose, and mouth. High detail on face, hands, clothing, and accessories. Pure white background with soft studio lighting.
+
+2048x2048 resolution, square composition, character centered in frame.
+
+No text, no speech bubbles, no labels, no watermarks, no UI elements, no signatures.
 """
         resolution = "2048x2048"
 
     elif element_type == 'location':
-        prompt = f"""
-Create a high-quality location establishing shot in photorealistic style.
+        # Build stylization keywords based on art style
+        style_keywords = ""
+        if "spider" in art_style.lower() or "comic" in art_style.lower():
+            style_keywords = "with heavy ink outlines, halftone dot shadows, and subtle chromatic aberration on edges"
+        elif "ghibli" in art_style.lower() or "anime" in art_style.lower():
+            style_keywords = "with soft hand-painted textures, warm color gradients, and atmospheric depth"
+        elif "pixar" in art_style.lower() or "3d" in art_style.lower():
+            style_keywords = "with smooth 3D surfaces, subsurface scattering, and cinematic lighting"
+        else:
+            style_keywords = "with consistent stylized rendering matching the project aesthetic"
+            
+        prompt = f"""A wide establishing shot of {name}, rendered entirely in {art_style} style {style_keywords}.
 
-LOCATION: {name}
-DESCRIPTION: {appearance}
+{appearance}
 
-REQUIREMENTS:
-- Hero angle showing the most important view
-- Clear spatial understanding and depth
-- Cinematic composition with proper framing
-- {asset.get('time_of_day', 'day')} lighting
-- Photorealistic architectural/environmental detail
-- Show key features that define this location
-- 2048x1365 resolution (3:2 landscape aspect ratio)
-- Professional photography quality
+The environment features {asset.get('time_of_day', 'day')} lighting with clear spatial depth and atmospheric perspective. Key architectural and environmental features are prominently visible. The composition uses a hero angle that showcases the most important view of this location. All elements are stylized consistently - no photorealistic textures, maintaining the illustrated aesthetic throughout.
 
-This is a master reference for location consistency.
+2048x1365 resolution, 3:2 landscape aspect ratio, professional quality.
+
+No text, no speech bubbles, no labels, no watermarks, no UI elements, no signatures, no captions.
 """
         resolution = "2048x1365"
 
     elif element_type == 'prop':
-        prompt = f"""
-Create a high-quality prop reference image in photorealistic style.
+        # Build stylization keywords based on art style
+        style_keywords = ""
+        if "spider" in art_style.lower() or "comic" in art_style.lower():
+            style_keywords = "with bold ink outlines, halftone shading, and slight chromatic aberration on metallic or reflective surfaces"
+        elif "ghibli" in art_style.lower() or "anime" in art_style.lower():
+            style_keywords = "with soft hand-painted textures and warm, organic color tones"
+        elif "pixar" in art_style.lower() or "3d" in art_style.lower():
+            style_keywords = "with smooth stylized 3D materials and soft studio lighting"
+        else:
+            style_keywords = "with consistent stylized rendering matching the project aesthetic"
+            
+        prompt = f"""A product reference shot of {name}, rendered in {art_style} style {style_keywords}.
 
-PROP: {name}
-DESCRIPTION: {appearance}
+{appearance}
 
-REQUIREMENTS:
-- Front view, clearly visible and centered
-- Pure white background (#FFFFFF)
-- Studio product photography lighting
-- Clear details, textures, and materials
-- Proper scale and proportions
-- Professional product shot quality
-- 2048x2048 resolution, square composition
+The prop is centered on a pure white background with soft studio lighting. All details, textures, and materials are clearly visible. The object maintains proper scale and proportions with the stylized rendering applied consistently to all surfaces.
 
-This is a master reference for prop consistency.
+2048x2048 resolution, square composition, professional quality.
+
+No text, no speech bubbles, no labels, no watermarks, no UI elements, no signatures, no brand names.
 """
         resolution = "2048x2048"
 
     else:
-        prompt = f"Create a high-quality reference image of {name}. {appearance}"
+        prompt = f"Create a high-quality reference image of {name} in {art_style} style. {appearance}"
         resolution = "2048x2048"
 
-    # Enhance prompt for consistency
-    prompt = enhance_prompt_for_consistency(prompt, element_type)
+    # Enhance prompt for consistency (pass art_style)
+    prompt = enhance_prompt_for_consistency(prompt, element_type, art_style)
 
     return {
         'prompt': prompt,
@@ -282,8 +328,8 @@ def generate_element_variant(
     variant_type: str,
     method: str = 'image_to_image',
     custom_prompt: Optional[str] = None,
-    model: str = 'gemini-2.5-flash-image',
-    strength: float = 0.6
+    model: str = 'nano-banana-pro-edit',
+    strength: float = 0.7
 ) -> str:
     """
     Generate a variant of an element master.
@@ -537,7 +583,7 @@ def get_element_variants(master_id: str, active_only: bool = True) -> List[Dict[
     params = [master_id]
 
     if active_only:
-        query += " AND is_active = TRUE"
+        query += " AND is_active = 1"
 
     query += " ORDER BY created_at ASC"
 
@@ -639,7 +685,7 @@ def deactivate_element_variant(variant_id: str) -> bool:
 
     cursor.execute("""
         UPDATE element_variants
-        SET is_active = FALSE
+        SET is_active = 0
         WHERE id = ?
     """, (variant_id,))
 

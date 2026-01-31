@@ -5,16 +5,15 @@ Maintains backward compatibility with 'import backend.db'
 from .database.core import (
     init_db, get_connection,
     create_project, get_project, list_projects, update_phase,
-    get_brief, update_brief, complete_briefing
+    get_brief, update_brief, complete_briefing,
+    get_stale_phases, mark_phases_stale, clear_stale_phase, update_project_phase
 )
-# Alias for backwards compatibility
-update_project_phase = update_phase
 from .database.scenes import (
     get_scenes, add_scene, update_scene, delete_scene, delete_all_scenes,
     add_scene_raw
 )
 from .database.shots import (
-    get_shots, add_shot, update_shot, delete_shot, delete_all_shots,
+    get_shots, get_shots as get_shots_for_scene, add_shot, update_shot, delete_shot, delete_all_shots,
     get_cuts, add_cut, update_cut, delete_cut, delete_all_cuts,
     add_shot_raw
 )

@@ -6,7 +6,7 @@ import uuid
 import json
 import asyncio
 from datetime import datetime
-from typing import Optional, Dict, Any, Callable
+from typing import Optional, Dict, Any, Callable, List
 from pathlib import Path
 
 from backend.database.core import get_connection
@@ -84,6 +84,7 @@ def create_generation_request(
     target_cut_id: Optional[str] = None,
     candidate_group_id: Optional[str] = None,
     reference_image_url: Optional[str] = None,
+    reference_images: Optional[List[Dict[str, Any]]] = None,
     method: str = 'text_to_image'
 ) -> str:
     """Create a new generation request and return request_id"""
@@ -104,12 +105,12 @@ def create_generation_request(
     cursor.execute("""
         INSERT INTO generation_requests (
             id, project_id, target_type, target_asset_id, target_cut_id,
-            prompt, model, method, reference_image_url, params,
+            prompt, model, method, reference_image_url, reference_images, params,
             status, candidate_group_id, started_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', ?, ?)
     """, (request_id, project_id, target_type, target_asset_id, target_cut_id,
-          prompt, model, method, reference_image_url, json.dumps(params),
-          candidate_group_id, datetime.now().isoformat()))
+          prompt, model, method, reference_image_url, json.dumps(reference_images) if reference_images else None, 
+          json.dumps(params), candidate_group_id, datetime.now().isoformat()))
     conn.commit()
     conn.close()
 
@@ -135,37 +136,54 @@ async def execute_generation(request_id: str):
 
         # Step 1: Prepare (5%)
         request.update_progress(5, "Preparing prompt...", "preparing")
-        await asyncio.sleep(0.5)
-
-        # Step 2: Call AI API (10%)
-        request.update_progress(10, "Calling AI API...", "generating")
+        await asyncio.sleep(0.3)
 
         # Import generation service
         from backend.services.gemini_image import generate_image_text_to_image
 
         params = json.loads(req_data['params'])
 
-        # Update progress during generation (10% -> 70%)
-        request.update_progress(30, "Generating image...", "generating")
+        # Parse reference_images if present
+        reference_images = None
+        num_refs = 0
+        if req_data.get('reference_images'):
+            try:
+                reference_images = json.loads(req_data['reference_images'])
+                num_refs = len([r for r in reference_images if r.get('image_url')])
+            except:
+                pass
+
+        # Step 2: Upload references (10-25%) - if there are reference images
+        if num_refs > 0:
+            request.update_progress(10, f"Uploading {num_refs} reference image(s)...", "uploading")
+            await asyncio.sleep(0.3)
+            request.update_progress(20, "Uploading references to Fal.ai...", "uploading")
+        else:
+            request.update_progress(15, "No references to upload...", "preparing")
+
+        # Step 3: Call AI API (25-70%)
+        request.update_progress(25, "Starting image generation...", "generating")
+        await asyncio.sleep(0.3)
+        request.update_progress(40, "Generating image with AI...", "generating")
         await asyncio.sleep(0.5)
-        request.update_progress(50, "Generating image...", "generating")
-        await asyncio.sleep(0.5)
-        request.update_progress(70, "Generating image...", "generating")
+        request.update_progress(55, "Rendering image...", "generating")
 
         # Generate image using actual Gemini service
         result = generate_image_text_to_image(
             prompt=req_data['prompt'],
             model=req_data['model'],
             resolution=params.get('resolution', '2048x2048'),
+            aspect_ratio=params.get('aspect_ratio', '1:1'),
             seed=params.get('seed'),
-            num_images=1
+            num_images=1,
+            reference_images=reference_images
         )
 
         if not result.get('success'):
             raise Exception(result.get('error', 'Image generation failed'))
 
-        # Step 3: Save file (70% -> 95%)
-        request.update_progress(75, "Downloading image...", "downloading")
+        # Step 4: Download and save (70-95%)
+        request.update_progress(70, "Downloading generated image...", "downloading")
 
         # Download the generated image from the mock service
         image_url = result['image_url']

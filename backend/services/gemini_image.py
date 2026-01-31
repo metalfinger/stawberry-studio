@@ -9,6 +9,10 @@ import base64
 import requests
 from typing import Dict, Any, Optional, List
 from datetime import datetime
+from dotenv import load_dotenv
+
+# Load .env file
+load_dotenv()
 
 # API Keys
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -30,32 +34,12 @@ def generate_image_text_to_image(
     aspect_ratio: str = "1:1",
     num_images: int = 1,
     seed: Optional[int] = None,
-    params: Optional[Dict[str, Any]] = None
+    params: Optional[Dict[str, Any]] = None,
+    reference_images: Optional[List[Dict[str, Any]]] = None
 ) -> Dict[str, Any]:
     """
     Generate image from text prompt using Gemini 3 Pro Image.
-
-    Args:
-        prompt: Text description of what to generate
-        model: 'gemini-3-pro-image' (Nano Banana Pro) or 'gemini-2.5-flash-image' (Nano Banana)
-        resolution: '1024x1024' | '2048x2048' | '4096x4096'
-        aspect_ratio: '1:1' | '16:9' | '9:16' | '3:2' | '2:3' | etc.
-        num_images: Number of images to generate (1-4)
-        seed: Optional seed for reproducibility
-        params: Additional generation parameters
-
-    Returns:
-        {
-            'success': bool,
-            'image_url': str,           # First generated image
-            'image_urls': List[str],    # All generated images
-            'image_id': str,
-            'model_used': str,
-            'cost_usd': float,
-            'tokens_used': int,
-            'generation_params': dict,
-            'error': str (if failed)
-        }
+    Supports multi-image reference slots (@Image1, @Image2, etc.)
     """
     try:
         # Map model names
@@ -76,7 +60,8 @@ def generate_image_text_to_image(
                 resolution=resolution,
                 aspect_ratio=aspect_ratio,
                 num_images=num_images,
-                seed=seed
+                seed=seed,
+                reference_images=reference_images
             )
         elif GEMINI_API_KEY:
             return _generate_with_gemini(
@@ -85,7 +70,8 @@ def generate_image_text_to_image(
                 resolution=resolution,
                 aspect_ratio=aspect_ratio,
                 num_images=num_images,
-                seed=seed
+                seed=seed,
+                reference_images=reference_images
             )
         else:
             return _generate_image_mock(
@@ -113,54 +99,81 @@ def _generate_with_fal(
     resolution: str,
     aspect_ratio: str,
     num_images: int,
-    seed: Optional[int]
+    seed: Optional[int],
+    reference_images: Optional[List[Dict[str, Any]]] = None
 ) -> Dict[str, Any]:
-    """Generate image using Fal.ai Nano Banana Pro (text-to-image)"""
+    """Generate image using Fal.ai Nano Banana Pro (Official T2I Schema)"""
     import fal_client
+    import requests
+
+    # If grounded (has reference images), delegate to Edit model
+    if reference_images:
+        return _generate_with_fal_edit(
+            prompt=prompt,
+            reference_images=reference_images,
+            num_images=num_images,
+            seed=seed,
+            # We use aspect_ratio and resolution from here too
+        )
 
     # Set API key
     os.environ["FAL_KEY"] = FAL_API_KEY
 
-    # Parse resolution to get image size
-    width, height = resolution.split('x')
-    width, height = int(width), int(height)
-
-    # Use Nano Banana Pro for all generations
     fal_model = "fal-ai/nano-banana-pro"
-    cost_per_image = 0.039  # Similar to Gemini pricing
-
+    cost_per_image = 0.039 
     image_id = str(uuid.uuid4())[:8]
 
-    # Call Fal.ai Nano Banana Pro API
+    # Parse resolution - Official values: 1K, 2K, 4K
+    fal_resolution = "1K"
+    if resolution:
+        if "2048" in resolution:
+            fal_resolution = "2K"
+        elif "4096" in resolution:
+            fal_resolution = "4K"
+
+    # Call Fal.ai T2I API conforming to documentation
+    arguments = {
+        "prompt": prompt,
+        "resolution": fal_resolution,
+        "aspect_ratio": aspect_ratio,
+        "num_images": num_images,
+        "sync_mode": True,
+        "output_format": "png",
+        "enable_web_search": False
+    }
+
+    if seed is not None:
+        arguments["seed"] = seed
+
     result = fal_client.subscribe(
         fal_model,
-        arguments={
-            "prompt": prompt,
-            "negative_prompt": "blurry, low quality, distorted, deformed",
-            "image_size": {
-                "width": width,
-                "height": height
-            },
-            "num_images": num_images,
-            "seed": seed,
-            "guidance_scale": 7.5,
-            "num_inference_steps": 30,
-            "enable_safety_checker": False,
-            "output_format": "png"
-        },
+        arguments=arguments,
     )
 
     # Extract and save images
     image_urls = []
     for idx, image_data in enumerate(result.get("images", [])):
         image_url_remote = image_data.get("url")
-
-        # Download and save locally
-        response = requests.get(image_url_remote, timeout=30)
-        response.raise_for_status()
+        
+        # Handle base64 data URIs (commonly returned by Fal.ai)
+        if image_url_remote and image_url_remote.startswith("data:"):
+            # Extract base64 content from data URI
+            # Format: data:image/png;base64,<base64_data>
+            try:
+                header, base64_data = image_url_remote.split(",", 1)
+                image_content = base64.b64decode(base64_data)
+            except Exception as e:
+                raise Exception(f"Failed to decode base64 image: {e}")
+        elif image_url_remote and image_url_remote.startswith("http"):
+            # Handle regular HTTP URLs
+            response = requests.get(image_url_remote, timeout=30)
+            response.raise_for_status()
+            image_content = response.content
+        else:
+            raise Exception(f"Invalid image URL format: {image_url_remote}")
 
         filename = f"nanobananapro_{image_id}_{idx}.png"
-        local_url = save_generated_image(response.content, filename)
+        local_url = save_generated_image(image_content, filename)
         image_urls.append(local_url)
 
     if not image_urls:
@@ -176,7 +189,7 @@ def _generate_with_fal(
         'tokens_used': 0,
         'generation_params': {
             'prompt': prompt,
-            'resolution': resolution,
+            'resolution': fal_resolution,
             'aspect_ratio': aspect_ratio,
             'seed': seed,
             'model': fal_model
@@ -190,9 +203,10 @@ def _generate_with_gemini(
     resolution: str,
     aspect_ratio: str,
     num_images: int,
-    seed: Optional[int]
+    seed: Optional[int],
+    reference_images: Optional[List[Dict[str, Any]]] = None
 ) -> Dict[str, Any]:
-    """Generate image using Gemini Imagen 3 API"""
+    """Generate image using Gemini Imagen 3 API (Note: multi-image ref limited in direct API)"""
     imagen_model = "imagen-3.0-generate-001"
     if "pro" in model.lower():
         imagen_model = "imagen-3.0-fast-generate-001"
@@ -251,28 +265,18 @@ def _generate_with_gemini(
 
 def generate_image_image_to_image(
     prompt: str,
-    reference_image_url: str,
+    reference_image_url: Optional[str] = None,
     model: str = "nano-banana-pro-edit",
     strength: float = 0.7,
     aspect_ratio: str = "1:1",
     num_images: int = 1,
     seed: Optional[int] = None,
-    params: Optional[Dict[str, Any]] = None
+    params: Optional[Dict[str, Any]] = None,
+    reference_images: Optional[List[Dict[str, Any]]] = None
 ) -> Dict[str, Any]:
     """
-    Generate variant from reference image using Nano Banana Pro Edit.
-
-    Args:
-        prompt: What to change/generate
-        reference_image_url: Base image URL
-        model: Model to use
-        strength: 0.0-1.0, how much to deviate from reference
-        aspect_ratio: Aspect ratio
-        num_images: Number of variants
-        seed: Optional seed
-        params: Additional parameters
-
-    Returns: Same structure as generate_image_text_to_image
+    Generate variant from reference images using Nano Banana Pro Edit.
+    Supports multi-image reference slots.
     """
     try:
         # Use Fal.ai Nano Banana Pro Edit if API key available
@@ -282,7 +286,9 @@ def generate_image_image_to_image(
                 reference_image_url=reference_image_url,
                 strength=strength,
                 num_images=num_images,
-                seed=seed
+                seed=seed,
+                reference_images=reference_images,
+                aspect_ratio=aspect_ratio
             )
         else:
             # Fall back to mock
@@ -297,6 +303,9 @@ def generate_image_image_to_image(
             )
 
     except Exception as e:
+        print(f"ERROR in generate_image_image_to_image: {e}")
+        import traceback
+        traceback.print_exc()
         return {
             'success': False,
             'error': str(e),
@@ -308,12 +317,17 @@ def generate_image_image_to_image(
 
 def _generate_with_fal_edit(
     prompt: str,
-    reference_image_url: str,
+    reference_image_url: Optional[str] = None,
     strength: float = 0.7,
     num_images: int = 1,
-    seed: Optional[int] = None
+    seed: Optional[int] = None,
+    reference_images: Optional[List[Dict[str, Any]]] = None,
+    aspect_ratio: str = "16:9"
 ) -> Dict[str, Any]:
-    """Generate image using Fal.ai Nano Banana Pro Edit (image-to-image)"""
+    """
+    Generate image using Fal.ai Nano Banana Pro Edit (image-to-image).
+    Docs: https://fal.ai/models/fal-ai/nano-banana-pro/edit
+    """
     import fal_client
 
     # Set API key
@@ -324,45 +338,105 @@ def _generate_with_fal_edit(
 
     image_id = str(uuid.uuid4())[:8]
 
-    # If reference_image_url is a local path, we need to read it and convert to base64
-    if reference_image_url.startswith('/storage/'):
-        # Read local file
+    # Handle Reference Image URL
+    # API requires 'image_urls' list with actual URLs (not base64)
+    # Use fal_client.upload_file() to upload local files and get URLs
+    
+    def upload_local_to_fal(local_path_str: str) -> str:
+        """Upload a local file to Fal.ai and return the URL."""
         from pathlib import Path
-        local_path = Path(__file__).parent.parent / reference_image_url.lstrip('/')
-        with open(local_path, 'rb') as f:
-            image_data = f.read()
-        # Convert to data URL
-        image_base64 = base64.b64encode(image_data).decode('utf-8')
-        reference_image_url = f"data:image/png;base64,{image_base64}"
+        # Convert relative storage path to absolute
+        if local_path_str.startswith('/storage/'):
+            local_path = Path(__file__).parent.parent / local_path_str.lstrip('/')
+        else:
+            local_path = Path(local_path_str)
+        
+        if local_path.exists():
+            # Upload to Fal.ai storage and get URL
+            uploaded_url = fal_client.upload_file(str(local_path))
+            print(f"Uploaded {local_path.name} to Fal: {uploaded_url[:60]}...")
+            return uploaded_url
+        else:
+            print(f"Warning: Local file not found: {local_path}")
+            return local_path_str
+    
+    final_ref_url = reference_image_url
+    if reference_image_url.startswith('/storage/'):
+        # Upload local file to Fal.ai and get URL
+        final_ref_url = upload_local_to_fal(reference_image_url)
+
+    # Handle Multiple Reference Images with Slot Alignment
+    fal_image_urls = []
+    if reference_images:
+        max_slot = 0
+        slot_map = {}
+        for ref in reference_images:
+            slot = int(ref.get("slot", 1))
+            url = ref.get("image_url")
+            if url:
+                if url.startswith('/storage/'):
+                    # Upload local file to Fal.ai
+                    url = upload_local_to_fal(url)
+                
+                slot_map[slot] = url
+                max_slot = max(max_slot, slot)
+        
+        if max_slot > 0:
+            # Padding to ensure slot index mapping (slots 1 to max_slot)
+            first_v = next((u for s, u in sorted(slot_map.items()) if u), final_ref_url)
+            for i in range(1, max_slot + 1):
+                fal_image_urls.append(slot_map.get(i, first_v))
+    elif final_ref_url:
+        fal_image_urls = [final_ref_url]
 
     # Call Fal.ai Nano Banana Pro Edit API
+    arguments = {
+        "prompt": prompt,
+        "image_urls": fal_image_urls,
+        "num_images": num_images,
+        "aspect_ratio": aspect_ratio,
+        "resolution": "1K",
+        "output_format": "png",
+        "sync_mode": True,
+        "enable_web_search": False
+    }
+    
+    if seed is not None:
+        arguments["seed"] = seed
+
+    print(f"DEBUG: Fal Image URLs: {fal_image_urls}")
+    print(f"DEBUG: Fal Arguments: {arguments}")
+
     result = fal_client.subscribe(
         fal_model,
-        arguments={
-            "prompt": prompt,
-            "image_url": reference_image_url,
-            "strength": strength,
-            "negative_prompt": "blurry, low quality, distorted, deformed",
-            "num_images": num_images,
-            "seed": seed,
-            "guidance_scale": 7.5,
-            "num_inference_steps": 30,
-            "enable_safety_checker": False,
-            "output_format": "png"
-        },
+        arguments=arguments,
     )
 
     # Extract and save images
     image_urls = []
+    # Result schema: { "images": [ { "url": "...", ... } ] }
     for idx, image_data in enumerate(result.get("images", [])):
         image_url_remote = image_data.get("url")
 
-        # Download and save locally
-        response = requests.get(image_url_remote, timeout=30)
-        response.raise_for_status()
+        # Handle base64 data URIs (commonly returned by Fal.ai)
+        if image_url_remote and image_url_remote.startswith("data:"):
+            # Extract base64 content from data URI
+            # Format: data:image/png;base64,<base64_data>
+            try:
+                header, base64_data = image_url_remote.split(",", 1)
+                image_content = base64.b64decode(base64_data)
+            except Exception as e:
+                raise Exception(f"Failed to decode base64 image: {e}")
+        elif image_url_remote and image_url_remote.startswith("http"):
+            # Handle regular HTTP URLs
+            response = requests.get(image_url_remote, timeout=30)
+            response.raise_for_status()
+            image_content = response.content
+        else:
+            raise Exception(f"Invalid image URL format: {image_url_remote}")
 
         filename = f"nanobananapro_edit_{image_id}_{idx}.png"
-        local_url = save_generated_image(response.content, filename)
+        local_url = save_generated_image(image_content, filename)
         image_urls.append(local_url)
 
     if not image_urls:
@@ -561,7 +635,8 @@ def download_image_to_local(image_url: str, filename: Optional[str] = None) -> s
 
 def enhance_prompt_for_consistency(
     base_prompt: str,
-    element_type: str = "character"
+    element_type: str = "character",
+    art_style: str = "photorealistic"
 ) -> str:
     """
     Add consistency-enhancing instructions to prompt.
@@ -569,42 +644,22 @@ def enhance_prompt_for_consistency(
     Args:
         base_prompt: Original prompt
         element_type: 'character' | 'location' | 'prop'
+        art_style: The art style from brief (e.g., 'anime', 'photorealistic', 'Ghibli')
 
     Returns:
-        Enhanced prompt with consistency instructions
+        Enhanced prompt with consistency instructions (as natural language, no headers)
     """
+    # Use natural language instead of structured headers to avoid text rendering
     consistency_instructions = {
-        "character": """
-CONSISTENCY REQUIREMENTS:
-- Photorealistic 3D render quality
-- Exact same facial features, bone structure, and proportions
-- Consistent hair color, style, and texture
-- Same body type and build
-- Identical clothing and accessories
-- Pure white background for easy extraction
-- Studio lighting with no background shadows
-""",
-        "location": """
-CONSISTENCY REQUIREMENTS:
-- Photorealistic architectural detail
-- Consistent lighting and time of day
-- Same spatial layout and proportions
-- Matching materials and textures
-- Clear depth and perspective
-""",
-        "prop": """
-CONSISTENCY REQUIREMENTS:
-- Photorealistic product photography quality
-- Exact same shape, size, and proportions
-- Consistent materials and textures
-- Same color and finish
-- Pure white background
-- Studio product lighting
-"""
+        "character": f"""Maintain exact facial features, bone structure, and proportions throughout. Keep consistent hair color, style, texture, body type, and all clothing and accessories. Render in {art_style} style with pure white background and soft studio lighting.""",
+        "location": f"""Maintain consistent architectural details and spatial layout. Keep the same lighting, time of day, materials, textures, and perspective throughout. Render in {art_style} style with clear depth.""",
+        "prop": f"""Maintain exact shape, size, and proportions. Keep consistent materials, textures, color, and finish throughout. Render in {art_style} style with pure white background and product lighting."""
     }
 
     enhancement = consistency_instructions.get(element_type, "")
-    return f"{base_prompt}\n\n{enhancement}".strip()
+    if enhancement:
+        return f"{base_prompt}\n\n{enhancement}".strip()
+    return base_prompt
 
 
 def get_variant_prompt_suffix(variant_type: str) -> str:

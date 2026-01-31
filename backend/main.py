@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 
-from backend.routes import projects, chat, elements
+from backend.routes import projects, chat, elements, cuts, assets
 from backend.database.core import init_db
 
 # Initialize database on startup
@@ -32,6 +32,8 @@ app.add_middleware(
 app.include_router(projects.router)
 app.include_router(chat.router)
 app.include_router(elements.router)
+app.include_router(cuts.router)
+app.include_router(assets.router)
 
 # Serve generated images from local storage
 storage_path = Path(__file__).parent / "storage" / "generated"

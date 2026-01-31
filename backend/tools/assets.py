@@ -5,6 +5,7 @@ Used by the Analyst agent in STORYBOARD phase
 
 from backend.database import assets as asset_db
 from backend import db
+from backend.database.core import mark_phases_stale
 
 
 def get_full_blueprint_for_analysis(project_id: str) -> dict:
@@ -210,6 +211,10 @@ def create_asset(
         appearance=appearance,
         style=style
     )
+
+    # Mark downstream phases as stale when assets change
+    mark_phases_stale(project_id, "ASSETS")
+
     return {"success": True, "asset": asset}
 
 
@@ -382,12 +387,40 @@ def update_asset(
     
     if not updates:
         return {"error": "No updates provided"}
-    
+
     asset = asset_db.update_asset(asset_id, **updates)
     if not asset:
         return {"error": f"Asset not found: {asset_id}"}
-    
+
+    # Mark downstream phases as stale when assets change
+    if asset.get("project_id"):
+        mark_phases_stale(asset["project_id"], "ASSETS")
+
     return {"success": True, "asset": asset}
+
+
+def save_suggested_asset_prompt(asset_id: str, prompt: str) -> dict:
+    """
+    Save a suggested prompt for an asset's master image.
+    This prompt can be used by the user to generate the first master image.
+    
+    Args:
+        asset_id: ID of the asset to update
+        prompt: The suggested generation prompt
+        
+    Returns:
+        Success status and updated asset
+    """
+    conn = db.get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE assets SET suggested_prompt = ? WHERE id = ?",
+        (prompt, asset_id)
+    )
+    conn.commit()
+    conn.close()
+    
+    return {"success": True, "asset_id": asset_id, "suggested_prompt": prompt}
 
 
 def delete_asset(asset_id: str) -> dict:
@@ -474,16 +507,67 @@ def get_node_assets(node_type: str, node_id: str) -> dict:
 
 def complete_asset_extraction(project_id: str) -> dict:
     """
-    Mark asset extraction as complete and transition to generation phase.
-    Call this after all assets have been identified and linked.
+    Request to complete asset extraction - REQUIRES USER CONFIRMATION.
+    This tool summarizes extracted assets, then asks the user to confirm the phase transition.
+    
+    DO NOT proceed to the next phase without explicit user confirmation (e.g., "yes", "proceed", "confirm").
     
     Args:
         project_id: The current project ID
     
     Returns:
-        Summary of extracted assets
+        Summary of extracted assets with confirmation request
     """
     # Get summary (masters only for clean count)
+    characters = asset_db.get_masters(project_id, "character")
+    locations = asset_db.get_masters(project_id, "location")
+    props = asset_db.get_masters(project_id, "prop")
+    frames = asset_db.get_assets(project_id, "frame")
+    
+    # Count variants
+    all_variants = sum(len(asset_db.get_variants(c["id"])) for c in characters)
+    all_variants += sum(len(asset_db.get_variants(l["id"])) for l in locations)
+    all_variants += sum(len(asset_db.get_variants(p["id"])) for p in props)
+    
+    total_slots = len(characters) + len(locations) + len(props) + len(frames) + all_variants
+    
+    return {
+        "status": "CONFIRMATION_REQUIRED",
+        "summary": {
+            "characters": {"masters": len(characters), "variants": all_variants},
+            "locations": len(locations),
+            "props": len(props),
+            "frames": len(frames),
+            "total_slots": total_slots
+        },
+        "message": f"""✅ **Asset extraction is ready to complete!**
+
+📦 **Assets Summary:**
+- **Characters:** {len(characters)} masters + {all_variants} variants
+- **Locations:** {len(locations)}
+- **Props:** {len(props)}
+- **Frames:** {len(frames)}
+- **Total Slots:** {total_slots}
+
+🚨 **CONFIRMATION REQUIRED:**
+Are you ready to move to the **GENERATE** phase where we'll create visual references for each asset?
+
+👉 **Please say "yes" or "proceed" to confirm**, or tell me what changes you'd like to make first."""
+    }
+
+
+def confirm_asset_extraction_complete(project_id: str) -> dict:
+    """
+    Actually complete asset extraction and transition to GENERATE phase.
+    ONLY call this AFTER the user has explicitly confirmed (said "yes", "proceed", "confirm", etc.)
+    
+    Args:
+        project_id: The current project ID
+    
+    Returns:
+        Success message with summary
+    """
+    # Get summary for the success message
     characters = asset_db.get_masters(project_id, "character")
     locations = asset_db.get_masters(project_id, "location")
     props = asset_db.get_masters(project_id, "prop")
@@ -507,5 +591,6 @@ def complete_asset_extraction(project_id: str) -> dict:
             "total_slots": len(characters) + len(locations) + len(props) + len(frames) + all_variants
         },
         "next_phase": "GENERATE",
-        "message": "Asset extraction complete! Ready to generate visual references."
+        "message": "🎉 Asset extraction complete! Project advancing to GENERATE phase. Ready to create visual references."
     }
+

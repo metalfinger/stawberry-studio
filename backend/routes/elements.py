@@ -21,7 +21,9 @@ class GenerateMasterRequest(BaseModel):
     auto_generate: bool = True
     model: str = "gemini-3-pro-image"
     resolution: str = "2048x2048"
+    view_type: Optional[str] = None
     params: Optional[Dict[str, Any]] = None
+    reference_images: Optional[List[Dict[str, Any]]] = None
 
 
 class GenerateVariantRequest(BaseModel):
@@ -53,7 +55,8 @@ def create_element_master(project_id: str, request: GenerateMasterRequest):
         prompt?: str,
         auto_generate?: bool,
         model?: str,
-        resolution?: str
+        resolution?: str,
+        view_type?: str
     }
 
     Returns: { master_id, status, image_url, prompt }
@@ -78,7 +81,9 @@ def create_element_master(project_id: str, request: GenerateMasterRequest):
             auto_generate=request.auto_generate,
             model=request.model,
             resolution=request.resolution,
-            params=request.params
+            view_type=request.view_type,
+            params=request.params,
+            reference_images=request.reference_images
         )
 
         # Get created master
@@ -367,7 +372,7 @@ def get_active_master_for_asset(project_id: str, asset_id: str):
         SELECT em.*, gr.id as generation_request_id
         FROM element_masters em
         LEFT JOIN generation_requests gr ON gr.id = em.generation_request_id
-        WHERE em.asset_id = ? AND em.is_active = TRUE
+        WHERE em.asset_id = ? AND em.is_active = 1
         ORDER BY em.created_at DESC
         LIMIT 1
     """, (asset_id,))
@@ -529,7 +534,8 @@ def queue_master_generation(project_id: str, request: GenerateMasterRequest, bac
         params={
             'resolution': request.resolution,
             'seed': request.params.get('seed') if request.params else None
-        }
+        },
+        reference_images=request.reference_images
     )
 
     # Start generation in background
@@ -663,16 +669,23 @@ def save_generation_to_slot(
                 # First deactivate ALL masters for this asset
                 cursor.execute("""
                     UPDATE element_masters
-                    SET is_active = FALSE
+                    SET is_active = 0
                     WHERE asset_id = ?
                 """, (req['target_asset_id'],))
 
                 # Then activate this one
                 cursor.execute("""
                     UPDATE element_masters
-                    SET is_active = TRUE, updated_at = ?
+                    SET is_active = 1, updated_at = ?
                     WHERE id = ?
                 """, (datetime.now().isoformat(), master_id))
+                
+                # CRITICAL FIX: Update the main asset record
+                cursor.execute("""
+                    UPDATE assets
+                    SET image_url = ?, slot_filled = 1
+                    WHERE id = ?
+                """, (req['output_image_url'], req['target_asset_id']))
 
             conn.commit()
             conn.close()
@@ -688,21 +701,42 @@ def save_generation_to_slot(
 
         # If make_active, first deactivate ALL masters for this asset
         if make_active:
+            # First deactivate ALL masters for this asset
             cursor.execute("""
                 UPDATE element_masters
-                SET is_active = FALSE
+                SET is_active = 0
                 WHERE asset_id = ?
             """, (req['target_asset_id'],))
 
-        cursor.execute("""
-            INSERT INTO element_masters (
-                id, asset_id, element_type, master_image_url,
-                master_prompt, candidate_group_id, is_active,
-                generation_request_id, status, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'complete', ?, ?)
-        """, (master_id, req['target_asset_id'], element_type,
-              req['output_image_url'], req['prompt'], req['candidate_group_id'],
-              make_active, request_id, datetime.now().isoformat(), datetime.now().isoformat()))
+            # Activate this one
+            cursor.execute("""
+                INSERT INTO element_masters (
+                    id, asset_id, element_type, master_image_url,
+                    master_prompt, candidate_group_id, is_active,
+                    generation_request_id, status, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'complete', ?, ?)
+            """, (master_id, req['target_asset_id'], element_type,
+                  req['output_image_url'], req['prompt'], req['candidate_group_id'],
+                  make_active, request_id, datetime.now().isoformat(), datetime.now().isoformat()))
+            
+            # CRITICAL FIX: Update the main asset record with this image_url
+            cursor.execute("""
+                UPDATE assets
+                SET image_url = ?, slot_filled = 1
+                WHERE id = ?
+            """, (req['output_image_url'], req['target_asset_id']))
+
+        else:
+            # Just insert without activating
+            cursor.execute("""
+                INSERT INTO element_masters (
+                    id, asset_id, element_type, master_image_url,
+                    master_prompt, candidate_group_id, is_active,
+                    generation_request_id, status, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'complete', ?, ?)
+            """, (master_id, req['target_asset_id'], element_type,
+                  req['output_image_url'], req['prompt'], req['candidate_group_id'],
+                  make_active, request_id, datetime.now().isoformat(), datetime.now().isoformat()))
 
         # Update generation_request
         cursor.execute("""

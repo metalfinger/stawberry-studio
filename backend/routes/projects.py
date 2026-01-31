@@ -182,11 +182,13 @@ def get_node_assets(project_id: str, node_type: str, node_id: str):
 def get_cut_prompt(project_id: str, cut_id: str):
     """
     Get compiled prompt for a specific cut.
-    Returns the full generation prompt with slot assignments.
+    Returns saved prompt if available, else generates dynamically.
     """
+    import json
     from backend.tools.generation import compile_shot_prompt, compile_edit_prompt, get_cut_context
+    from backend.database.assets import get_asset
     
-    # Get cut context to determine mode
+    # Get cut context
     ctx = get_cut_context(project_id, cut_id)
     if "error" in ctx:
         raise HTTPException(status_code=404, detail=ctx["error"])
@@ -194,7 +196,50 @@ def get_cut_prompt(project_id: str, cut_id: str):
     cut = ctx["cut"]
     cut_number = cut.get("cut_number", 1)
     
-    # Determine which prompt to compile
+    # PRIORITY 1: Return saved prompt if it exists
+    if cut.get("compiled_prompt") and cut.get("image_slots"):
+        try:
+            slots = json.loads(cut.get("image_slots", "{}"))
+            reference_images = []
+            
+            for slot_key, asset_id in slots.items():
+                if asset_id:
+                    asset = get_asset(asset_id)
+                    if asset:
+                        # Check for master image
+                        from backend import db
+                        conn = db.get_connection()
+                        cursor = conn.cursor()
+                        cursor.execute("SELECT master_image_url FROM element_masters WHERE asset_id = ? AND is_active = 1", (asset_id,))
+                        row = cursor.fetchone()
+                        conn.close()
+                        
+                        img_url = row["master_image_url"] if row else asset.get("image_url")
+                        slot_num = int(slot_key.replace("@Image", ""))
+                        
+                        reference_images.append({
+                            "slot": slot_num,
+                            "ref": slot_key,
+                            "type": asset.get("type", "asset"),
+                            "name": asset.get("name"),
+                            "asset_id": asset_id,
+                            "image_url": img_url,
+                            "status": "ready" if img_url else "pending"
+                        })
+            
+            # Sort by slot number
+            reference_images.sort(key=lambda x: x["slot"])
+            
+            return {
+                "prompt": cut["compiled_prompt"],
+                "reference_images": reference_images,
+                "source": "saved"
+            }
+        except Exception as e:
+            print(f"Error parsing saved prompt/slots: {e}")
+            # Fall through to dynamic generation
+    
+    # PRIORITY 2: Generate dynamically
     if cut_number == 1:
         result = compile_shot_prompt(project_id, cut_id)
     else:
@@ -203,19 +248,10 @@ def get_cut_prompt(project_id: str, cut_id: str):
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
     
+    result["source"] = "generated"
     return result
 
+# NOTE: Cut history is now handled by routes/cuts.py
 
-@router.get("/{project_id}/cuts/{cut_id}/history")
-def get_cut_history(project_id: str, cut_id: str):
-    """Get generation history for a cut."""
-    from backend.tools.pre_production import get_generation_history
-    
-    # Verify project exists
-    project = db.get_project(project_id)
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-        
-    return get_generation_history(project_id, cut_id)
 
 

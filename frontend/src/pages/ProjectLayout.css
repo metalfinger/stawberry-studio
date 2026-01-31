@@ -1,4 +1,4 @@
-/* Project Layout Styles */
+/* Project Layout Styles - Unified Canvas */
 
 .project-layout {
   display: flex;
@@ -7,109 +7,19 @@
   background: #0f0f23;
 }
 
+/* Unified Canvas Mode - Full screen canvas */
+.project-layout.unified-canvas {
+  overflow: hidden;
+}
+
+.project-layout.unified-canvas .canvas-page {
+  height: 100%;
+}
+
 .project-layout.loading {
   align-items: center;
   justify-content: center;
   color: rgba(255, 255, 255, 0.6);
-}
-
-.project-header {
-  background: rgba(0, 0, 0, 0.4);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 16px 24px;
-}
-
-.project-title {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.back-btn {
-  padding: 8px 12px;
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 6px;
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.back-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-}
-
-.project-title h1 {
-  font-size: 20px;
-  font-weight: 600;
-  color: #fff;
-  margin: 0;
-}
-
-.phase-badge {
-  padding: 4px 10px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  color: #fff;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.project-tabs {
-  display: flex;
-  gap: 8px;
-}
-
-.tab-btn {
-  padding: 10px 20px;
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.tab-btn:hover {
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.tab-btn.active {
-  color: #fff;
-  border-bottom-color: #667eea;
-}
-
-.project-content {
-  flex: 1;
-  overflow: auto;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-}
-
-.assets-tab-content {
-  height: 100%;
-  overflow: auto;
-  padding: 24px;
-}
-
-/* Override AssetPanel's fixed positioning when inside Assets tab */
-.assets-tab-content .asset-panel {
-  position: relative;
-  left: auto;
-  top: auto;
-  max-height: none;
-  height: auto;
 }
 
 /* Loading Spinner */

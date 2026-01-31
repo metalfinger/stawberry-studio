@@ -30,23 +30,29 @@ def init_db():
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             current_phase TEXT DEFAULT 'BRIEF',
+            stale_phases TEXT DEFAULT '[]',
             created_at TEXT,
             updated_at TEXT
         )
     """)
+
+    # Migration: Add stale_phases column if it doesn't exist
+    cursor.execute("PRAGMA table_info(projects)")
+    columns = [col[1] for col in cursor.fetchall()]
+    if 'stale_phases' not in columns:
+        cursor.execute("ALTER TABLE projects ADD COLUMN stale_phases TEXT DEFAULT '[]'")
     
-    # Briefs Table (Extended for GENERATION)
+    # Briefs Table (Extended for GENERATION - Maximum Data Collection)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS briefs (
             project_id TEXT PRIMARY KEY,
             title TEXT,
             logline TEXT,
             genre TEXT,
-            style TEXT,
             tone TEXT,
             target_audience TEXT,
             key_themes TEXT,
-            -- Visual Style (Global)
+            -- Visual Style (Global) - CRITICAL FOR GENERATION
             art_style TEXT DEFAULT '',
             color_palette TEXT DEFAULT '',
             aspect_ratio TEXT DEFAULT '16:9',
@@ -55,11 +61,18 @@ def init_db():
             -- World Rules
             world_logic TEXT DEFAULT '',
             era_setting TEXT DEFAULT '',
+            -- References & Inspiration (NEW)
+            reference_films TEXT DEFAULT '',
+            reference_artists TEXT DEFAULT '',
+            negative_prompts TEXT DEFAULT '',
+            -- Design Notes (NEW)
+            character_design_notes TEXT DEFAULT '',
+            environment_design_notes TEXT DEFAULT '',
             FOREIGN KEY (project_id) REFERENCES projects(id)
         )
     """)
     
-    # Scenes Table (Extended)
+    # Scenes Table (Extended - Maximum Data Collection)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS scenes (
             id TEXT PRIMARY KEY,
@@ -85,11 +98,16 @@ def init_db():
             anchor_cut_id TEXT DEFAULT '',
             scene_continuity_log TEXT DEFAULT '',
             location_master_url TEXT DEFAULT '',
+            -- Production Notes (NEW)
+            set_decoration TEXT DEFAULT '',
+            camera_restrictions TEXT DEFAULT '',
+            key_props_list TEXT DEFAULT '',
+            blocking_notes TEXT DEFAULT '',
             FOREIGN KEY (project_id) REFERENCES projects(id)
         )
     """)
     
-    # Shots Table (Extended)
+    # Shots Table (Extended - Maximum Data Collection)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS shots (
             id TEXT PRIMARY KEY,
@@ -103,6 +121,7 @@ def init_db():
             camera_distance TEXT DEFAULT '',
             -- Lens
             lens_type TEXT DEFAULT '',
+            focal_length_mm TEXT DEFAULT '',
             depth_of_field TEXT DEFAULT '',
             focus_point TEXT DEFAULT '',
             -- Composition
@@ -115,18 +134,22 @@ def init_db():
             override_mood TEXT,
             override_lighting TEXT DEFAULT '',
             override_art_style TEXT DEFAULT '',
+            -- Effects (NEW)
+            aspect_ratio_override TEXT DEFAULT '',
+            filter_effects TEXT DEFAULT '',
+            speed_ramp TEXT DEFAULT '',
             FOREIGN KEY (scene_id) REFERENCES scenes(id)
         )
     """)
     
-    # Cuts Table (Extended for GENERATION)
+    # Cuts Table (Extended for GENERATION - Maximum Data Collection)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS cuts (
             id TEXT PRIMARY KEY,
             shot_id TEXT,
             cut_number INTEGER,
             action TEXT,
-            story_description TEXT DEFAULT '',  -- Narrative intent written in STORY phase
+            story_description TEXT DEFAULT '',
             -- Character Action
             dialogue TEXT,
             expression TEXT DEFAULT '',
@@ -155,6 +178,14 @@ def init_db():
             override_focus_point TEXT DEFAULT '',
             override_lighting TEXT DEFAULT '',
             override_mood TEXT DEFAULT '',
+            -- Production Notes (NEW)
+            costume_notes TEXT DEFAULT '',
+            prop_interaction TEXT DEFAULT '',
+            emotional_arc TEXT DEFAULT '',
+            sfx_notes TEXT DEFAULT '',
+            music_cue TEXT DEFAULT '',
+            compiled_prompt TEXT DEFAULT '',
+            image_slots TEXT DEFAULT '{}',
             FOREIGN KEY (shot_id) REFERENCES shots(id)
         )
     """)
@@ -169,10 +200,10 @@ def init_db():
             agent_name TEXT,
             content TEXT,
             timestamp TEXT,
+            is_noise INTEGER DEFAULT 0,
             FOREIGN KEY (project_id) REFERENCES projects(id)
         )
     """)
-    
     # Assets (Extended with consistency tokens + source tracking)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS assets (
@@ -192,6 +223,8 @@ def init_db():
             consistency_tokens TEXT DEFAULT '',
             distinctive_features TEXT DEFAULT '',
             wardrobe_lock TEXT DEFAULT '',
+            -- Suggested prompt for master image
+            suggested_prompt TEXT DEFAULT '',
             -- Source tracking (for pre-production)
             source_type TEXT DEFAULT 'global',
             source_cut_id TEXT,
@@ -216,11 +249,7 @@ def init_db():
         )
     """)
     
-    # Generation History (for pre-production and final outputs) - REMOVED
-    # This table is now created with the element generation tables below
-
-    # Element Generation Tables
-    # Element Masters - Core reference images for assets
+    # Element Master Generation Tables
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS element_masters (
             id TEXT PRIMARY KEY,
@@ -237,11 +266,14 @@ def init_db():
             error_message TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            is_active BOOLEAN DEFAULT 0,
+            generation_request_id TEXT,
+            candidate_group_id TEXT,
             FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE
         )
     """)
-
-    # Element Variants - Different views/variations
+ 
+    # Element Variant Generation Tables
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS element_variants (
             id TEXT PRIMARY KEY,
@@ -260,8 +292,8 @@ def init_db():
             FOREIGN KEY (master_id) REFERENCES element_masters(id) ON DELETE CASCADE
         )
     """)
-
-    # Generation Requests - Track all generation requests with progress
+ 
+    # Generation Requests Table (Progress tracking for all generation types)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS generation_requests (
             id TEXT PRIMARY KEY,
@@ -273,6 +305,7 @@ def init_db():
             model TEXT DEFAULT 'gemini-3-pro-image',
             method TEXT DEFAULT 'text_to_image',
             reference_image_url TEXT,
+            reference_images TEXT, -- JSON list for multi-reference
             params TEXT,
             status TEXT DEFAULT 'queued',
             progress_percentage INTEGER DEFAULT 0,
@@ -293,8 +326,8 @@ def init_db():
             FOREIGN KEY (target_cut_id) REFERENCES cuts(id) ON DELETE CASCADE
         )
     """)
-
-    # Generation History - Full traceability (kept for backwards compatibility)
+ 
+    # Generation History Table (For traceability and library view)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS generation_history (
             id TEXT PRIMARY KEY,
@@ -302,16 +335,16 @@ def init_db():
             target_type TEXT NOT NULL,
             target_id TEXT,
             prompt TEXT NOT NULL,
-            model TEXT DEFAULT 'gemini_3_pro_image',
+            model TEXT DEFAULT 'gemini-3-pro-image',
             generation_method TEXT DEFAULT 'text_to_image',
-            reference_images TEXT,
+            reference_images TEXT, -- JSON representation
             params TEXT,
             output_image_url TEXT,
             output_image_id TEXT,
             status TEXT DEFAULT 'pending',
             error_message TEXT,
-            cost_usd REAL DEFAULT 0.039,
-            tokens_used INTEGER DEFAULT 1290,
+            cost_usd REAL DEFAULT 0.0,
+            tokens_used INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             completed_at TIMESTAMP,
             FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
@@ -441,6 +474,123 @@ def complete_briefing(project_id: str) -> bool:
     cursor.execute(
         "UPDATE projects SET current_phase = 'STORY', updated_at = ? WHERE id = ?",
         (datetime.now().isoformat(), project_id)
+    )
+    conn.commit()
+    conn.close()
+    return True
+
+
+# ============================================================================
+# Stale Phase Tracking
+# ============================================================================
+
+# Phase order for cascade detection
+PHASE_ORDER = ["BRIEF", "STORY", "ASSETS", "GENERATE"]
+
+
+def get_stale_phases(project_id: str) -> list:
+    """Get list of stale phases for a project."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT stale_phases FROM projects WHERE id = ?", (project_id,))
+    row = cursor.fetchone()
+    conn.close()
+
+    if row and row['stale_phases']:
+        try:
+            return json.loads(row['stale_phases'])
+        except json.JSONDecodeError:
+            return []
+    return []
+
+
+def mark_phases_stale(project_id: str, from_phase: str) -> list:
+    """
+    Mark a phase and all downstream phases as stale.
+
+    Args:
+        project_id: The project ID
+        from_phase: The phase that changed (downstream phases will be marked stale)
+
+    Returns:
+        List of phases marked stale
+    """
+    if from_phase not in PHASE_ORDER:
+        return []
+
+    # Get current stale phases
+    current_stale = set(get_stale_phases(project_id))
+
+    # Find index of changed phase
+    phase_idx = PHASE_ORDER.index(from_phase)
+
+    # Mark all downstream phases as stale (not including the changed phase itself)
+    downstream_phases = PHASE_ORDER[phase_idx + 1:]
+    new_stale = current_stale.union(set(downstream_phases))
+
+    # Save to database
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE projects SET stale_phases = ?, updated_at = ? WHERE id = ?",
+        (json.dumps(list(new_stale)), datetime.now().isoformat(), project_id)
+    )
+    conn.commit()
+    conn.close()
+
+    return list(new_stale)
+
+
+def clear_stale_phase(project_id: str, phase: str) -> list:
+    """
+    Clear stale flag for a specific phase.
+    Called when work is done in that phase to "refresh" it.
+
+    Args:
+        project_id: The project ID
+        phase: The phase to clear from stale list
+
+    Returns:
+        Remaining stale phases
+    """
+    current_stale = set(get_stale_phases(project_id))
+    current_stale.discard(phase)
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE projects SET stale_phases = ?, updated_at = ? WHERE id = ?",
+        (json.dumps(list(current_stale)), datetime.now().isoformat(), project_id)
+    )
+    conn.commit()
+    conn.close()
+
+    return list(current_stale)
+
+
+def clear_all_stale_phases(project_id: str) -> bool:
+    """Clear all stale flags for a project."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE projects SET stale_phases = '[]', updated_at = ? WHERE id = ?",
+        (datetime.now().isoformat(), project_id)
+    )
+    conn.commit()
+    conn.close()
+    return True
+
+
+def update_project_phase(project_id: str, new_phase: str) -> bool:
+    """
+    Update project phase (used for navigation).
+    Does NOT clear stale flags - that's separate.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE projects SET current_phase = ?, updated_at = ? WHERE id = ?",
+        (new_phase, datetime.now().isoformat(), project_id)
     )
     conn.commit()
     conn.close()

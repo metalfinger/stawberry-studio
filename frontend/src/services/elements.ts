@@ -51,6 +51,7 @@ export interface GenerateMasterRequest {
   auto_generate?: boolean;
   model?: string;
   resolution?: string;
+  view_type?: string;
   params?: Record<string, any>;
 }
 
@@ -250,6 +251,7 @@ export async function queueMasterGeneration(
     prompt?: string;
     model?: string;
     resolution?: string;
+    view_type?: string;
     params?: any;
   }
 ): Promise<{ success: boolean; request_id: string; status: string }> {

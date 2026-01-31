@@ -204,17 +204,52 @@ def execute_pre_production_step(
     reference_images: List[Dict[str, Any]]
 ) -> Dict[str, Any]:
     """
-    Execute a pre-production step (currently mock).
-    In production, this would call the actual image generation API.
+    Execute a pre-production step using real image generation (Fal AI).
+    Falls back to mock if generation fails.
     """
-    # Generate mock result
-    mock_id = uuid.uuid4().hex[:12]
-    mock_url = f"https://placeholder.preprod/{mock_id}.png"
+    from backend.services.gemini_image import generate_image, generate_image_with_reference
     
-    # Record in generation history
     history_id = f"gen_{uuid.uuid4().hex[:8]}"
     now = datetime.now().isoformat()
     
+    # Check if we have reference images for i2i generation
+    ref_urls = [r.get('image_url') for r in reference_images if r.get('image_url')]
+    
+    try:
+        if ref_urls:
+            # Image-to-image generation with reference
+            result = generate_image_with_reference(
+                prompt=prompt,
+                image_url=ref_urls[0],  # Primary reference
+                model="gemini-3-pro-image",
+                strength=0.7  # Moderate influence from reference
+            )
+        else:
+            # Text-to-image generation
+            result = generate_image(
+                prompt=prompt,
+                model="gemini-3-pro-image",
+                resolution="1024",
+                aspect_ratio="16:9"
+            )
+        
+        if result.get('success') and result.get('image_url'):
+            output_url = result['image_url']
+            is_mock = False
+        else:
+            # Fallback to mock if generation fails
+            mock_id = uuid.uuid4().hex[:12]
+            output_url = f"https://placeholder.preprod/{mock_id}.png"
+            is_mock = True
+            print(f"Pre-production generation failed, using mock: {result.get('error', 'Unknown error')}")
+            
+    except Exception as e:
+        print(f"Pre-production generation error: {e}")
+        mock_id = uuid.uuid4().hex[:12]
+        output_url = f"https://placeholder.preprod/{mock_id}.png"
+        is_mock = True
+    
+    # Record in generation history
     conn = db.get_connection()
     cursor = conn.cursor()
     
@@ -231,8 +266,8 @@ def execute_pre_production_step(
         "pre_production",
         prompt,
         json.dumps(reference_images),
-        mock_url,
-        json.dumps({"mock": True}),
+        output_url,
+        json.dumps({"mock": is_mock, "ref_count": len(ref_urls)}),
         now
     ))
     
@@ -242,9 +277,9 @@ def execute_pre_production_step(
     return {
         "success": True,
         "history_id": history_id,
-        "output_image_url": mock_url,
+        "output_image_url": output_url,
         "step_number": step_number,
-        "mock": True
+        "mock": is_mock
     }
 
 
@@ -343,8 +378,8 @@ def get_generation_history(project_id: str, cut_id: str) -> Dict[str, Any]:
     
     cursor.execute("""
         SELECT * FROM generation_history 
-        WHERE cut_id = ?
-        ORDER BY stage, step_number
+        WHERE target_id = ? AND target_type = 'cut'
+        ORDER BY created_at DESC
     """, (cut_id,))
     
     history = [dict(row) for row in cursor.fetchall()]

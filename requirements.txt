@@ -7,3 +7,6 @@ aiosqlite
 fastapi
 uvicorn[standard]
 websockets
+requests
+fal-client
+google-generativeai
