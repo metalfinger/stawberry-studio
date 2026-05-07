@@ -17,6 +17,7 @@ import dagre from 'dagre'
 import { getProject, getBlueprint, getAssets, type Blueprint, type AssetsResponse } from '../api/client'
 import { nodeTypes } from '../components/canvas'
 import { FloatingChat } from '../components/chat'
+import { Console } from '../components/console/Console'
 import './Canvas.css'
 
 
@@ -581,12 +582,20 @@ export function Canvas() {
                 </ReactFlow>
             </div>
 
-            <FloatingChat
-                projectId={projectId}
-                phase={project?.current_phase || 'BRIEF'}
-                onPhaseChange={handlePhaseChange}
-                onNodeUpdate={handleNodeUpdate}
-            />
+            {import.meta.env.VITE_USE_CONSOLE === '1' ? (
+                <Console
+                    projectId={projectId}
+                    initialPhase={project?.current_phase || 'BRIEF'}
+                    onNodeUpdate={handleNodeUpdate}
+                />
+            ) : (
+                <FloatingChat
+                    projectId={projectId}
+                    phase={project?.current_phase || 'BRIEF'}
+                    onPhaseChange={handlePhaseChange}
+                    onNodeUpdate={handleNodeUpdate}
+                />
+            )}
         </div>
     )
 }

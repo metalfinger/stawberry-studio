@@ -186,8 +186,22 @@ async def chat_websocket(websocket: WebSocket, project_id: str, phase: str = Non
             # Receive user message
             data = await websocket.receive_text()
             message_data = json.loads(data)
-            user_message = message_data.get("message", "")
-            
+            # Console sends {type: 'user_message', content, attachments} or
+            # {type: 'user_intent', intent, payload}. Legacy clients send {message}.
+            msg_type = message_data.get("type")
+            if msg_type == "user_intent":
+                # Wrap intent as a structured user message so downstream agents
+                # see it as natural language. attachments + payload are passed
+                # through; Phase D will add proper intent dispatch.
+                intent = message_data.get("intent", "")
+                payload = message_data.get("payload") or {}
+                user_message = f"[intent:{intent}] {json.dumps(payload)}" if intent else ""
+            else:
+                user_message = (
+                    message_data.get("content")
+                    or message_data.get("message", "")
+                )
+
             if not user_message:
                 continue
             
