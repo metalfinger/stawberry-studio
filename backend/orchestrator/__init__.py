@@ -109,6 +109,15 @@ from backend.orchestrator.references import (
 from backend.orchestrator.vision_critic import ContinuityScore, review_cut
 from backend.orchestrator.context_bundler import CutContext, bundle_cut_context, render_context_summary
 from backend.orchestrator.asset_bundler import AssetContext, bundle_asset_context
+from backend.orchestrator.references_v2 import (
+    generate_identity_card,
+    generate_pose,
+    get_or_generate as get_or_generate_reference,
+    list_references,
+    get_identity_card,
+    standard_turnaround_set,
+    precache_standard_turnaround,
+)
 from backend.orchestrator.cut_composer import (
     ComposeResult,
     ComposeStep,
