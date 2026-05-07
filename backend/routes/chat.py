@@ -148,43 +148,38 @@ async def chat_websocket(websocket: WebSocket, project_id: str, phase: str = Non
     
     # If there's an auto-trigger and we just started this phase (no history/fresh start)
     if auto_trigger and (not history and not is_history_mode):
-        # 1. Send invisible user message to initiate
-        # We don't save this to DB or send to frontend as a user message to keep chat clean,
-        # but we treat it as the initial prompt to the agent.
-        
-        # Initial turn
-        turn = session.turn(auto_trigger)
-        
-        async for step in turn:
-            if isinstance(step, genai_types.ToolCall):
-                # Send tool call notification
+        # The legacy `session.turn(auto_trigger)` API was an ADK-era helper
+        # that no longer exists. Route through chat_bridge for Pydantic AI
+        # agents; skip silently for any agent that hasn't been ported yet.
+        spec_id = (agent_name or "").lower()
+        if chat_bridge.is_enabled(spec_id):
+            full_response = ""
+            try:
+                async for chunk in chat_bridge.stream_turn(
+                    spec_id, auto_trigger, project_id=project_id, phase=current_phase
+                ):
+                    if chunk:
+                        full_response += chunk
+                        await websocket.send_json({
+                            "type": "stream",
+                            "content": chunk,
+                            "agent_name": agent_name,
+                        })
+            except Exception as e:
+                await websocket.send_json({"type": "error", "message": f"auto_trigger: {e}"})
+            if full_response:
+                await db_async.add_chat_message(project_id, "assistant", full_response, phase=current_phase, agent_name=agent_name)
                 await websocket.send_json({
-                    "type": "tool",
-                    "name": step.tool_calls[0].name,
-                    "args": step.tool_calls[0].args
+                    "type": "message",
+                    "role": "assistant",
+                    "content": full_response,
+                    "agent_name": agent_name,
                 })
-            elif isinstance(step, genai_types.ToolReturn):
-                # Send tool result notification (optional, maybe just spinner)
-                pass
-            elif isinstance(step, genai_types.Part):
-                # Streaming response
-                if step.text:
-                    await websocket.send_json({
-                        "type": "stream", 
-                        "content": step.text,
-                        "agent_name": agent_name
-                    })
-
-        # Save final response
-        final_response = turn.output.text
-        if final_response:
-            await db_async.add_chat_message(project_id, "assistant", final_response, phase=current_phase, agent_name=agent_name)
-            await websocket.send_json({
-                "type": "message", 
-                "role": "assistant", 
-                "content": final_response, 
-                "agent_name": agent_name
-            })
+                await websocket.send_json({
+                    "type": "tree_updated",
+                    "agent": agent_name,
+                    "phase": current_phase,
+                })
 
     try:
         while True:
