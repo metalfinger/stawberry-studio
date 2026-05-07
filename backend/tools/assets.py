@@ -426,7 +426,7 @@ async def get_asset_tree_context(asset_id: str) -> dict:
     def _scene_brief(s):
         return {k: s.get(k) for k in ("id", "scene_number", "title", "location", "lighting", "lighting_color", "time_of_day", "mood")}
     def _shot_brief(s):
-        return {k: s.get(k) for k in ("id", "shot_number", "shot_size", "camera_angle", "camera_movement", "description")}
+        return {k: s.get(k) for k in ("id", "shot_number", "camera_distance", "camera_angle", "camera_movement", "description")}
     return {
         "asset": ctx.asset,
         "brief": {k: ctx.brief.get(k) for k in ("title", "art_style", "color_palette", "lighting_style", "world_logic", "era_setting", "tone", "negative_prompts", "aspect_ratio")} if ctx.brief else {},

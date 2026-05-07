@@ -794,7 +794,7 @@ def compile_edit_prompt(project_id: str, cut_id: str) -> Dict[str, Any]:
             
     # Previous Cut @Image4
     if prev_cut:
-        prev_img = prev_cut.get("generated_image_url") or prev_cut.get("master_image_url")
+        prev_img = prev_cut.get("generated_image_url")
         if prev_img:
             reference_images.append({
                 "slot": 4,

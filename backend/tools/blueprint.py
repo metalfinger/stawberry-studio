@@ -686,9 +686,9 @@ def complete_blueprint(project_id: str) -> str:
                 structural_problems.append(
                     f"Shot {shot.get('shot_number', shot['id'])} in '{scene['title']}' has no cuts."
                 )
-            if not (shot.get('shot_size') or '').strip():
+            if not (shot.get('camera_distance') or '').strip():
                 structural_problems.append(
-                    f"Shot {shot.get('shot_number', shot['id'])} in '{scene['title']}' has no shot_size (wide / medium / close / etc.)."
+                    f"Shot {shot.get('shot_number', shot['id'])} in '{scene['title']}' has no camera_distance (wide / medium / close / etc.)."
                 )
         total_cuts += scene_cut_count
 
@@ -748,8 +748,8 @@ def confirm_blueprint_complete(project_id: str) -> str:
             conn.close()
             if cut_count == 0:
                 problems.append(f"Shot {shot.get('shot_number')} in '{scene['title']}' has no cuts.")
-            if not (shot.get('shot_size') or '').strip():
-                problems.append(f"Shot {shot.get('shot_number')} in '{scene['title']}' has no shot_size.")
+            if not (shot.get('camera_distance') or '').strip():
+                problems.append(f"Shot {shot.get('shot_number')} in '{scene['title']}' has no camera_distance.")
     if problems:
         return "❌ Refusing to advance:\n" + "\n".join(f"- {p}" for p in problems)
 

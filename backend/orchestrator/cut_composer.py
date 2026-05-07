@@ -115,7 +115,7 @@ def _build_template(ctx: CutContext) -> str:
         v = (cut.get(k) or "").strip()
         if v:
             cam_bits.append(v)
-    for k in ("shot_size", "camera_angle", "camera_movement", "lens_mm", "focal_length_mm"):
+    for k in ("camera_distance", "camera_angle", "camera_movement", "lens_type", "focal_length_mm"):
         v = (shot or {}).get(k)
         if v:
             cam_bits.append(str(v))

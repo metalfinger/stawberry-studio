@@ -258,8 +258,8 @@ def get_phase_progress(project_id: str) -> dict:
             },
             {
                 "name": "Style",
-                "done": bool(brief and brief.get('style')),
-                "value": brief.get('style') if brief else None
+                "done": bool(brief and brief.get('art_style')),
+                "value": brief.get('art_style') if brief else None
             }
         ]
         # Required: title, logline, genre
