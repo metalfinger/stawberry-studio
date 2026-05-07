@@ -13,6 +13,7 @@ from backend import db_async
 from backend.orchestrator import chat_bridge
 from backend.orchestrator import intents as intent_dispatch
 from backend.orchestrator.bus import bus
+from backend.orchestrator.llm_cost import cost_for as _llm_cost_for
 from backend.orchestrator.narrator import Narrator, Action
 from backend.agents.berry import create_berry_agent
 from backend.agents.planner import create_planner_agent
@@ -344,14 +345,17 @@ async def chat_websocket(websocket: WebSocket, project_id: str, phase: str = Non
             use_pai = chat_bridge.is_enabled(spec_id)
 
             if use_pai:
-                # New path: Pydantic AI orchestrator. Track latency + char
-                # count → coarse cost estimate so the Console cost meter
-                # also reflects LLM usage, not just image gens.
+                # New path: Pydantic AI orchestrator. Track real token
+                # usage (pydantic_ai's RunUsage) and price it against the
+                # per-model cost table so the Console cost meter is exact.
                 import time as _time
                 _t0 = _time.monotonic()
+                usage_info: dict = {}
                 try:
                     async for chunk in chat_bridge.stream_turn(
-                        spec_id, user_message, project_id=project_id, phase=current_phase
+                        spec_id, user_message,
+                        project_id=project_id, phase=current_phase,
+                        usage_out=usage_info,
                     ):
                         if chunk:
                             full_response += chunk
@@ -360,18 +364,22 @@ async def chat_websocket(websocket: WebSocket, project_id: str, phase: str = Non
                                 "content": chunk,
                                 "agent_name": agent_name,
                             })
-                    # Cost: ~$2.50 per 1M output tokens (Gemini 2.5 Pro tier),
-                    # ~4 chars per token. This is a best-effort estimate until
-                    # pydantic-ai surfaces structured usage.
-                    out_tokens = max(1, len(full_response) // 4)
-                    est_cost = out_tokens * 2.5 / 1_000_000
+                    in_tok = int(usage_info.get("input_tokens", 0) or 0)
+                    out_tok = int(usage_info.get("output_tokens", 0) or 0)
+                    model_used = usage_info.get("model") or ""
+                    cost = _llm_cost_for(model_used, in_tok, out_tok)
                     latency_ms = int((_time.monotonic() - _t0) * 1000)
                     try:
                         await narrator.tool_call(
                             name=f"{spec_id}.complete",
-                            args={"chars": len(full_response)},
+                            args={
+                                "model": model_used,
+                                "input_tokens": in_tok,
+                                "output_tokens": out_tok,
+                                "requests": int(usage_info.get("requests", 0) or 0),
+                            },
                             status="done",
-                            cost_usd=est_cost,
+                            cost_usd=cost,
                             latency_ms=latency_ms,
                         )
                     except Exception:

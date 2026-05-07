@@ -147,6 +147,7 @@ async def stream_agent(
     phase: str = "",
     prompt_vars: dict[str, str] | None = None,
     history: list[Any] | None = None,
+    usage_out: dict[str, Any] | None = None,
 ) -> AsyncIterator[str]:
     """Stream chunks from the agent. Yields strings.
 
@@ -157,6 +158,13 @@ async def stream_agent(
     spec = load_agent_spec(agent_id)
     ctx = RunContext(project_id=project_id, phase=phase, agent_id=agent_id)
     pai_agent = build_pai_agent(spec, system_prompt_overrides=prompt_vars)
+
+    # Resolve the actual model name once so usage_out can carry it back.
+    if usage_out is not None:
+        try:
+            usage_out["model"] = get_settings().llm.role(spec.model_role)
+        except Exception:
+            pass
 
     history_len = len(history) if history else 0
     await log_event(
@@ -193,6 +201,18 @@ async def stream_agent(
         if final_text:
             yield final_text
     finally:
+        # Capture real token usage on the way out so the chat route can
+        # compute exact cost per model rather than guessing from chars.
+        if usage_out is not None and last_resp is not None:
+            try:
+                u = last_resp.usage() if hasattr(last_resp, "usage") else None
+                if u is not None:
+                    usage_out["input_tokens"] = int(getattr(u, "input_tokens", 0) or 0)
+                    usage_out["output_tokens"] = int(getattr(u, "output_tokens", 0) or 0)
+                    usage_out["total_tokens"] = int(getattr(u, "total_tokens", 0) or 0)
+                    usage_out["requests"] = int(getattr(u, "requests", 0) or 0)
+            except Exception as e:  # noqa: BLE001
+                log.warning("usage_extract_failed", error=str(e))
         # After the stream ends, walk the full message list and log tool calls
         # + the final assistant text. This is what makes the event log useful
         # for debugging runs.

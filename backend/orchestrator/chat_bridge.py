@@ -174,10 +174,15 @@ async def stream_turn(
     *,
     project_id: str,
     phase: str,
+    usage_out: dict | None = None,
 ) -> AsyncIterator[str]:
     """Stream chunks from the new Pydantic AI runner. Caller pushes each chunk
     onto the WebSocket as it arrives. Threads recent chat history so the agent
     remembers the conversation.
+
+    Pass `usage_out` (a dict) to receive real token counts after the stream
+    completes — populated keys: input_tokens, output_tokens, total_tokens,
+    requests, model. The dict is mutated in place by the runner.
     """
     prompt_vars = build_prompt_vars(agent_id, project_id)
     history = await _load_history_for_pai(project_id, phase, limit=20)
@@ -188,5 +193,6 @@ async def stream_turn(
         phase=phase,
         prompt_vars=prompt_vars,
         history=history,
+        usage_out=usage_out,
     ):
         yield chunk
