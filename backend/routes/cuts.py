@@ -39,6 +39,10 @@ async def compose_cut_stream(websocket: WebSocket, project_id: str, cut_id: str)
             pass
 
 
+class SetActiveRequest(BaseModel):
+    generation_id: str
+
+
 @router.get("/{cut_id}/history")
 async def get_cut_history(project_id: str, cut_id: str):
     """Get generation history for a cut."""
