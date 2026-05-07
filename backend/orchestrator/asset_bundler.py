@@ -123,14 +123,15 @@ async def bundle_asset_context(asset_id: str) -> AssetContext:
             (project_id, asset_id),
         )
 
-        sheet = await _fetch_one(
+        # Active "sheet" is now the asset's identity reference from
+        # reference_pool. The downstream code uses sheet.image_url so this
+        # adapter shape stays compatible.
+        identity = await _fetch_one(
             conn,
-            "SELECT * FROM element_sheets WHERE asset_id = ? AND is_active = 1 ORDER BY created_at DESC LIMIT 1",
+            "SELECT * FROM reference_pool WHERE asset_id = ? AND label = 'identity' ORDER BY created_at DESC LIMIT 1",
             (asset_id,),
         )
-        if sheet:
-            sheet["panels"] = json.loads(sheet.get("panels_json") or "[]")
-            sheet["layout"] = json.loads(sheet.get("layout_json") or "{}")
+        sheet = identity  # alias for backwards-compat downstream
 
         # Walk the parent chain (max depth 4) for derived/variant assets.
         parent_chain: list[dict[str, Any]] = []
@@ -144,15 +145,12 @@ async def bundle_asset_context(asset_id: str) -> AssetContext:
             parent = await _fetch_one(conn, "SELECT * FROM assets WHERE id = ?", (pid,))
             if not parent:
                 break
-            parent_sheet = await _fetch_one(
+            parent_identity = await _fetch_one(
                 conn,
-                "SELECT * FROM element_sheets WHERE asset_id = ? AND is_active = 1 ORDER BY created_at DESC LIMIT 1",
+                "SELECT * FROM reference_pool WHERE asset_id = ? AND label = 'identity' ORDER BY created_at DESC LIMIT 1",
                 (pid,),
             )
-            if parent_sheet:
-                parent_sheet["panels"] = json.loads(parent_sheet.get("panels_json") or "[]")
-                parent_sheet["layout"] = json.loads(parent_sheet.get("layout_json") or "{}")
-            parent["sheet"] = parent_sheet
+            parent["sheet"] = parent_identity
             parent_chain.append(parent)
             cursor_asset = parent
 

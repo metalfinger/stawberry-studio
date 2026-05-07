@@ -906,4 +906,67 @@ asset. Three gates now hard-block bad transitions:
 - CLIP/SigLIP embeddings on reference_pool — not built.
 - Legacy `compile_shot_prompt` flow still exists; not deleted.
 
+### 2026-05-07 (later) — References-first asset architecture
+
+Replaced sheets-as-grid-images with references-as-atomic-units. Every
+visual representation of an asset is now one row in `reference_pool`
+with a label and (optionally) a parent_reference_id linking back to the
+identity card it was conditioned on. Sheets become a client-side
+rendering of these references in a grid; no backend "sheet" file.
+
+**Why**: Pre-built 3×3 sheets generated 5/9 panels nobody used per
+character, cropped panels lost resolution, and templates couldn't adapt
+to story-specific needs. References-first generates exactly what cuts
+ask for, at full resolution, accumulated organically.
+
+**Migration shape (7 commits, all on main)**:
+1. `0a012d1` — migration 007: extend reference_pool with asset_id,
+   label, parent_reference_id, status, scope, scope_id columns.
+2. `5185332` — `backend/orchestrator/references_v2.py` core module:
+   generate_identity_card, generate_pose, get_or_generate,
+   list_references, precache_standard_turnaround. Pose vocabulary
+   (~30 labels) replaces template registry. Identity-first prompt
+   structure (Nov-2026 Nano Banana Pro best practice).
+3. `4da9688` — `backend/orchestrator/picker_v2.py`: label-aware picker
+   with deterministic keyword scoring. resolve_references lazy-fills
+   missing labels per asset.
+4. `0e9098c` — cut composer routes through picker_v2. Per-asset
+   identity + ranked extras (running, sad, glowing, etc.) based on
+   cut text. Lazy-fill on miss in parallel.
+5. `84acd22` — frontend AssetMasterNode renders references grid
+   client-side. Identity card on top, accumulated thumbnails below
+   (3-col grid). Two buttons: "✨ Generate identity" + "⚡ Pre-cache
+   turnaround". REST endpoints: GET /assets/{id}/references, POST
+   /assets/{id}/references/identity, POST /assets/{id}/references/precache.
+6. `8b3b1ab` — `generate_all_missing_sheets` rewired to use
+   references_v2.precache_standard_turnaround. Topological order
+   preserved (parents before derived).
+7. `<this commit>` — deletes sheet_generator.py / sheet_planner.py /
+   sheet_cells.py and the test_sheet_planner test. Migration 008
+   drops element_sheets + sheet_cell_crops tables. element_masters
+   and element_variants stay alive (legacy routes still write to
+   them — defer their removal). Iris updated to call
+   precache_standard_turnaround. Bundlers (asset/cut) read identity
+   from reference_pool instead of element_sheets.
+
+**Key invariants**:
+- Identity card = first reference per asset, label='identity', no
+  parent. Eternal anchor. All other poses condition on it.
+- Pose generation auto-bootstraps identity if missing.
+- Derived assets (parent_asset_id set) thread their parent's identity
+  as @Image1, so identity propagates structurally.
+- generate_all_missing_sheets does topological waves: parents/variant-
+  bases before derived/variants.
+- Cut composer's _pick_references hands off entirely to
+  picker_v2.resolve_references.
+
+**Verified state after this session**:
+- 35/35 tests passing.
+- Frontend tsc clean.
+- Atlas → suggested_prompt → "Generate identity" → identity reference
+  generated → "Pre-cache turnaround" → standard set generated in
+  parallel → cut compose → identity + ranked references resolved per
+  cut, lazy-filled when missing.
+- Sheets, sheet templates, grid math, panel cropping all gone.
+
 **End of session 2026-05-07.**

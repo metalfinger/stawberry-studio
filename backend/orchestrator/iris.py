@@ -31,7 +31,7 @@ from typing import Any
 import structlog
 
 from backend.orchestrator.events import RunContext, log_event
-from backend.orchestrator.sheet_generator import generate_sheet_for_asset
+from backend.orchestrator.references_v2 import precache_standard_turnaround
 
 log = structlog.get_logger(__name__)
 
@@ -50,20 +50,21 @@ async def compose_missing_reference(cut_id: str, gap: dict[str, Any]) -> dict[st
     await log_event(rc, "iris_gap_start", {"cut_id": cut_id, "asset_id": asset_id, "type": asset_type})
 
     try:
-        result = await generate_sheet_for_asset(asset_id)
+        refs = await precache_standard_turnaround(asset_id)
     except Exception as e:
-        log.exception("iris_sheet_failed", asset_id=asset_id, cut_id=cut_id)
+        log.exception("iris_reference_failed", asset_id=asset_id, cut_id=cut_id)
         await log_event(rc, "iris_gap_error", {"asset_id": asset_id, "error": str(e)})
         raise
 
+    identity = refs[0]
     out = {
         "asset_id": asset_id,
         "type": asset_type,
-        "sheet_id": result.sheet_id,
-        "image_url": result.image_url,
-        "cost_usd": result.cost_usd,
-        "rationale": result.rationale,
+        "identity_reference_id": identity["id"],
+        "image_url": identity["image_url"],
+        "extra_views": [r["label"] for r in refs[1:]],
+        "cost_usd": sum(r.get("cost_usd", 0.0) for r in refs),
     }
     await log_event(rc, "iris_gap_filled", out)
-    log.info("iris_gap_filled", cut_id=cut_id, asset_id=asset_id, sheet_id=result.sheet_id)
+    log.info("iris_gap_filled", cut_id=cut_id, asset_id=asset_id, identity_id=identity["id"])
     return out

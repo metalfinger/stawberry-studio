@@ -183,27 +183,15 @@ async def bundle_cut_context(cut_id: str, *, sibling_window: int = 6) -> CutCont
             (cut_id,),
         )
 
-        # Pull active sheet (and falling back to element_master) for each linked asset.
-        # Also walk the parent chain so derived assets contribute their parent's
-        # sheet as a continuity anchor (Mara's gun → Mara; alley alcove → alley).
+        # Pull the asset's identity reference from reference_pool. The "sheet"
+        # alias keeps downstream consumers working without renaming.
         async def _attach_sheet_and_master(a):
             a["sheet"] = await _fetch_one(
                 conn,
-                "SELECT * FROM element_sheets WHERE asset_id = ? AND is_active = 1 ORDER BY created_at DESC LIMIT 1",
+                "SELECT * FROM reference_pool WHERE asset_id = ? AND label = 'identity' ORDER BY created_at DESC LIMIT 1",
                 (a["id"],),
             )
-            if a["sheet"] is not None:
-                a["sheet"]["panels"] = json.loads(a["sheet"].get("panels_json") or "[]")
-                a["sheet"]["layout"] = json.loads(a["sheet"].get("layout_json") or "{}")
-            a["master"] = await _fetch_one(
-                conn,
-                """
-                SELECT id, master_image_url FROM element_masters
-                WHERE asset_id = ? AND is_active = 1 AND master_image_url IS NOT NULL
-                ORDER BY created_at DESC LIMIT 1
-                """,
-                (a["id"],),
-            )
+            a["master"] = None  # legacy element_masters table is gone
 
         for a in linked_assets:
             await _attach_sheet_and_master(a)
