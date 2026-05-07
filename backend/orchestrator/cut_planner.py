@@ -1,0 +1,219 @@
+"""
+Cut Planner — proposes the Plan for composing a cut without executing.
+
+Returns a Plan structure listing every reference required (cached or new),
+the render step, and the register step. The agent (Pixel) presents this to
+the user as a PlanCard message; the user approves or modifies; the cut
+executor then runs the approved plan.
+
+Public API:
+    plan_compose_cut(cut_id, feedback=None, parent_plan=None) -> Plan
+"""
+from __future__ import annotations
+
+import re
+from typing import Any
+
+import structlog
+
+from backend.orchestrator import references_v2, picker_v2
+from backend.orchestrator.context_bundler import bundle_cut_context
+from backend.orchestrator.plans import (
+    ITEM_KIND_PREPROD_FILL,
+    ITEM_KIND_REFERENCE_GENERATE,
+    ITEM_KIND_REFERENCE_REUSE,
+    ITEM_KIND_REGISTER,
+    ITEM_KIND_RENDER,
+    Plan,
+    PlanItem,
+    fork_plan_for_refinement,
+    make_item,
+    make_plan,
+)
+
+log = structlog.get_logger(__name__)
+
+
+# Cost / time estimates per kind. Tuned for Nano Banana Pro Nov-2026 pricing.
+_COST_REFERENCE_GEN = 0.04
+_COST_RENDER_CUT = 0.04
+_ETA_REFERENCE_GEN = 30
+_ETA_RENDER_CUT = 30
+_ETA_REGISTER = 1
+_ETA_REUSE = 0
+
+
+def _close_enough_alternatives(
+    asset_id: str, label: str, all_refs: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Find cached references for the same asset that are close-enough
+    substitutes for the requested label. Used by the planner to surface
+    'use this instead' alternatives.
+
+    Heuristic: same asset, share a label keyword (e.g. 'expression_focused'
+    matches 'expression_angry' on the 'expression' prefix).
+    """
+    candidates = [r for r in all_refs if r.get("asset_id") == asset_id and r.get("label") and r["label"] != label]
+    if not candidates:
+        return []
+    # Score by token overlap between requested label and candidate label.
+    target_tokens = set(re.split(r"[_/\s]+", label.lower()))
+    scored = []
+    for r in candidates:
+        cand_tokens = set(re.split(r"[_/\s]+", (r.get("label") or "").lower()))
+        overlap = len(target_tokens & cand_tokens)
+        if overlap > 0:
+            scored.append((overlap, r))
+    scored.sort(reverse=True)
+    out = []
+    for _, r in scored[:3]:
+        cand_tokens = set(re.split(r"[_/\s]+", (r.get("label") or "").lower()))
+        shared = ", ".join(sorted(target_tokens & cand_tokens))
+        out.append({
+            "ref_id": r["id"],
+            "label": r["label"],
+            "image_url": r["image_url"],
+            "reason": f"shares '{shared}'",
+        })
+    return out
+
+
+async def plan_compose_cut(
+    cut_id: str,
+    *,
+    feedback: str | None = None,
+    parent_plan: Plan | None = None,
+) -> Plan:
+    """Build a Plan describing what this cut needs.
+
+    Strategy:
+    1. Bundle context.
+    2. For each linked asset: rank labels via picker_v2.
+    3. For each top label per asset: check if reference exists.
+       - If exists: reuse item (cached, free, instant).
+       - If missing: generate item with cost + ETA + close-enough alternatives.
+    4. Add render item + register item.
+    5. If feedback present: fork parent plan to carry cumulative feedback.
+    """
+    ctx = await bundle_cut_context(cut_id)
+
+    if parent_plan and feedback:
+        plan = await fork_plan_for_refinement(parent_plan, feedback)
+        plan.cut_id = cut_id
+    else:
+        plan = make_plan(
+            project_id=ctx.project_id,
+            cut_id=cut_id,
+            feedback=[feedback] if feedback else [],
+            feedback_round=1 if feedback else 0,
+        )
+
+    # Pull every existing reference once for alternative-finding.
+    from backend.database.core import get_async_connection
+    async with get_async_connection() as conn:
+        async with conn.execute(
+            "SELECT * FROM reference_pool WHERE project_id = ? AND is_active = 1",
+            (ctx.project_id,),
+        ) as cur:
+            all_active_refs = [dict(r) for r in await cur.fetchall()]
+
+    # Per-asset reference resolution
+    linked = ctx.linked_characters + ctx.linked_locations + ctx.linked_props
+    for asset in linked:
+        labels = picker_v2.rank_labels_for_cut(ctx.cut, asset, top_n=2)
+        for label in labels:
+            existing = await references_v2.find_reference_by_label(asset["id"], label)
+            if existing:
+                plan.items.append(make_item(
+                    ITEM_KIND_REFERENCE_REUSE,
+                    f"Reuse {asset['name']} / {label} (cached)",
+                    cost_usd=0.0,
+                    eta_s=_ETA_REUSE,
+                    cached=True,
+                    payload={
+                        "asset_id": asset["id"],
+                        "asset_name": asset["name"],
+                        "label": label,
+                        "reference_id": existing["id"],
+                        "image_url": existing["image_url"],
+                    },
+                ))
+            else:
+                alternatives = _close_enough_alternatives(asset["id"], label, all_active_refs)
+                plan.items.append(make_item(
+                    ITEM_KIND_REFERENCE_GENERATE,
+                    f"Generate {asset['name']} / {label}",
+                    cost_usd=_COST_REFERENCE_GEN,
+                    eta_s=_ETA_REFERENCE_GEN,
+                    cached=False,
+                    payload={
+                        "asset_id": asset["id"],
+                        "asset_name": asset["name"],
+                        "label": label,
+                        "story_context": (ctx.cut.get("action") or "")[:200],
+                    },
+                    alternatives=alternatives,
+                ))
+
+    # Continuity: previous cut as a reference if it exists
+    if ctx.previous_cut and ctx.previous_cut.get("generated_image_url"):
+        plan.items.append(make_item(
+            ITEM_KIND_REFERENCE_REUSE,
+            f"Reuse previous cut {ctx.previous_cut.get('cut_number')} (continuity)",
+            cost_usd=0.0,
+            cached=True,
+            payload={
+                "label": f"prev_cut_{ctx.previous_cut.get('cut_number', '')}",
+                "image_url": ctx.previous_cut["generated_image_url"],
+                "reason": "previous cut for continuity",
+            },
+        ))
+
+    # Style anchor if present
+    if ctx.style_anchor and ctx.style_anchor.get("image_url"):
+        plan.items.append(make_item(
+            ITEM_KIND_REFERENCE_REUSE,
+            "Use project style anchor",
+            cost_usd=0.0,
+            cached=True,
+            payload={
+                "label": "style_anchor",
+                "image_url": ctx.style_anchor["image_url"],
+                "reason": "project-pinned style reference",
+            },
+        ))
+
+    # Render the cut
+    plan.items.append(make_item(
+        ITEM_KIND_RENDER,
+        f"Render cut {ctx.cut.get('cut_number', '')} on Nano Banana Pro",
+        cost_usd=_COST_RENDER_CUT,
+        eta_s=_ETA_RENDER_CUT,
+        cached=False,
+        payload={
+            "cut_id": cut_id,
+            "feedback": list(plan.feedback),  # cumulative feedback
+        },
+    ))
+
+    # Register the result
+    plan.items.append(make_item(
+        ITEM_KIND_REGISTER,
+        "Save to library + cut card",
+        cost_usd=0.0,
+        eta_s=_ETA_REGISTER,
+        cached=False,
+        payload={"cut_id": cut_id},
+    ))
+
+    plan.recompute_totals()
+    log.info(
+        "plan_composed",
+        plan_id=plan.id,
+        cut_id=cut_id,
+        n_items=len(plan.items),
+        total_cost=plan.total_cost_usd,
+        total_eta=plan.total_eta_s,
+        feedback_round=plan.feedback_round,
+    )
+    return plan

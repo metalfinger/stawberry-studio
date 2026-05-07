@@ -516,11 +516,59 @@ def cleanup_misclassified_assets(project_id: str) -> dict:
     }
 
 
-@tool("compose_cut", description="One-button compose: bundle full tree → smart picker → fill missing references → DSL prompt → Nano Banana Pro render → vision critic with auto-retry → register reference. Use this for ANY 'generate this cut' request instead of compile_shot_prompt.", tags=["cut", "write", "phase"])
-async def compose_cut_tool(cut_id: str) -> dict:
-    """Run the production-grade Cut Composer pipeline for one cut."""
+@tool("compose_cut", description="One-button compose: bundle full tree → resolve references → render → register. NO automatic critic. For richer flow with user approval, use propose_cut_plan + execute_cut_plan instead.", tags=["cut", "write", "phase"])
+async def compose_cut_tool(cut_id: str, feedback: str = "") -> dict:
+    """Run the auto-approve compose pipeline for one cut."""
     from backend.orchestrator.cut_composer import compose_cut
-    result = await compose_cut(cut_id)
+    result = await compose_cut(cut_id, feedback=feedback or None)
+    return result.to_dict()
+
+
+@tool("propose_cut_plan", description="Propose a Plan for composing a cut WITHOUT executing. Returns the full plan so the agent can present it to the user for approval. Pass feedback to fork from a prior plan with cumulative refinement notes.", tags=["cut", "plan"])
+async def propose_cut_plan_tool(cut_id: str, feedback: str = "", parent_plan_id: str = "") -> dict:
+    """Build a Plan describing what the cut needs."""
+    from backend.orchestrator.cut_planner import plan_compose_cut
+    from backend.orchestrator.plans import load_plan, save_plan
+
+    parent = None
+    if parent_plan_id:
+        parent = await load_plan(parent_plan_id)
+
+    plan = await plan_compose_cut(
+        cut_id,
+        feedback=feedback or None,
+        parent_plan=parent,
+    )
+    await save_plan(plan)
+    return plan.to_dict()
+
+
+@tool("execute_cut_plan", description="Execute an approved Plan. Pass plan_id from a previous propose_cut_plan call. Optionally pass approved_item_ids to override default approval (cached items always auto-approved; new gens need explicit approval unless cost is below auto_approve_under_usd).", tags=["cut", "plan"])
+async def execute_cut_plan_tool(plan_id: str, approved_item_ids: list[str] | None = None, deny_item_ids: list[str] | None = None) -> dict:
+    """Approve items per-id and execute."""
+    from backend.orchestrator.cut_executor import execute_plan
+    from backend.orchestrator.plans import load_plan, save_plan, update_plan_status
+
+    plan = await load_plan(plan_id)
+    if plan is None:
+        return {"error": f"plan {plan_id} not found"}
+
+    approved_set = set(approved_item_ids or [])
+    deny_set = set(deny_item_ids or [])
+
+    # Default approval: cached items auto-approved, new gens require approved_item_ids.
+    for item in plan.items:
+        if item.id in deny_set:
+            item.approved = False
+        elif item.cached or item.id in approved_set:
+            item.approved = True
+        elif not approved_item_ids:
+            # No explicit approval list provided — auto-approve everything (legacy fast path).
+            item.approved = True
+
+    await save_plan(plan)
+    await update_plan_status(plan_id, "approved")
+    result = await execute_plan(plan_id)
     return result.to_dict()
 
 

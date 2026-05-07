@@ -97,6 +97,20 @@ from backend.orchestrator.references import (
 from backend.orchestrator.vision_critic import ContinuityScore, review_cut
 from backend.orchestrator.context_bundler import CutContext, bundle_cut_context, render_context_summary
 from backend.orchestrator.asset_bundler import AssetContext, bundle_asset_context
+from backend.orchestrator.plans import (
+    Plan,
+    PlanItem,
+    make_plan,
+    make_item,
+    save_plan,
+    load_plan,
+    update_plan_status,
+    update_item_status,
+    fork_plan_for_refinement,
+    list_plans_for_cut,
+)
+from backend.orchestrator.cut_planner import plan_compose_cut
+from backend.orchestrator.cut_executor import execute_plan, ExecuteResult
 from backend.orchestrator.references_v2 import (
     generate_identity_card,
     generate_pose,
