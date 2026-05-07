@@ -780,3 +780,40 @@ Key Hiren statements that shaped the design:
 **END OF DOCUMENT.**
 
 Update §3 (current state), §11 (commit log), §12 (verifications) after every commit. Treat the rest as immutable unless Hiren explicitly amends.
+
+---
+
+## §13 — Honest audit (post Phase H)
+
+After shipping Phases A–G, the actual reachable surface is much narrower than the commits implied. Recording the gap so future-me doesn't lie about what's done.
+
+### What renders end-to-end today
+- **TextMessage** — agent + user, with markdown via react-markdown.
+- **ElapsedMessage** — synthesized client-side as the "agent is thinking…" pseudo-message.
+- **HandoffCard** — wired in routes/chat.py (Phase H).
+- **FailureCard** — wired in routes/chat.py exception handler (Phase H).
+- **PlanCard / plan_update** — backend dataclasses + tools exist (Pixel `propose_cut_plan`, `execute_cut_plan`); not yet emitted over the chat WebSocket. Wires up the moment cut composer streams via Narrator.
+
+### Built but dormant (no backend caller)
+- ImageMessage, ReferenceCardMessage, ToolCallTag (currently hidden in MessageStream too), ComparisonView, RecommendationCard, BatchProgressCard, IdleSuggestion, ActivityCard, ActionsBar.
+
+### Cost meter coverage
+- ✅ Image generations (via `reference_card.cost_usd`).
+- ✅ LLM calls (Phase H — emitted via `tool_call.cost_usd` from chat_bridge stream end; coarse char→token estimate at $2.50/M output, replace with real usage when pydantic-ai exposes it).
+
+### Layout
+- Console: floating dock bottom-right, collapsible to 220×48 header.
+- Library: docked left flex sibling that pushes the canvas (Arc-style); collapses to a 28px vertical rail.
+- ContextPanel: floating top-left, only when a node is selected.
+
+### Color
+- All indigo/purple "AI" gradients replaced with neutral slate + coral accent (#f43f5e, the existing strawberry brand color).
+
+### Open work to make remaining components live
+1. Cut composer (`stream_compose_cut`) → emit Plan, plan_update, ImageMessage, ReferenceCardMessage via Narrator on the same WS that routes/chat.py owns. Currently it streams over `/cuts/{id}/compose/stream` — unify under chat WS or fan-out.
+2. picker_v2 → emit RecommendationCard when cached candidates score above threshold.
+3. Refine flow → emit ComparisonView (before/after).
+4. Batch compose route → emit BatchProgressCard.
+5. user_idle intent → wire an agent (Berry?) to optionally respond with IdleSuggestion.
+6. Reconnect path → emit ActivityCard summarizing offline events.
+7. Agent prompts ("approve / cancel / modify") → emit ActionsBar instead of inline text.

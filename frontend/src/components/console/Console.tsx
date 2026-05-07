@@ -17,7 +17,20 @@ interface ConsoleProps {
   onClose?: () => void
 }
 
+const COLLAPSE_KEY = 'strawberry.console.collapsed'
+
 export function Console({ projectId, initialPhase, onNodeUpdate, onClose }: ConsoleProps) {
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    return localStorage.getItem(COLLAPSE_KEY) === '1'
+  })
+  const toggleCollapse = () => {
+    setCollapsed(c => {
+      const n = !c
+      try { localStorage.setItem(COLLAPSE_KEY, n ? '1' : '0') } catch {}
+      return n
+    })
+  }
   const [messages, setMessages] = useState<ConsoleMessage[]>([])
   const [phase, setPhase] = useState<string>(initialPhase ?? 'BRIEF')
   const [agentName, setAgentName] = useState<string>('Berry')
@@ -114,8 +127,11 @@ export function Console({ projectId, initialPhase, onNodeUpdate, onClose }: Cons
           }))
           return
         }
-        // New typed message
-        setMessages(prev => [...prev, data as ConsoleMessage])
+        // New typed message — also clears any "thinking" pseudo-message.
+        setMessages(prev => [
+          ...prev.filter(m => !(m.kind === 'elapsed' && m.message_id.startsWith('pending_'))),
+          data as ConsoleMessage,
+        ])
         // Bump cost meter
         if (data.kind === 'reference_card' && typeof data.cost_usd === 'number') {
           setCostToday(c => c + data.cost_usd)
@@ -126,26 +142,47 @@ export function Console({ projectId, initialPhase, onNodeUpdate, onClose }: Cons
         return
       }
 
-      // Legacy plain message (backwards compat — text only)
-      if (data.type === 'message' && data.role !== 'user') {
-        setMessages(prev => [...prev, {
-          kind: 'text',
-          message_id: `m_${Date.now()}`,
-          timestamp: new Date().toISOString(),
-          markdown: data.content || '',
-          agent_name: data.agent_name,
-        }])
-      }
-      if (data.type === 'stream') {
-        // Append to last text message if it's recent, else start a new one.
+      // Legacy text path. Backend sends incremental {type:'stream'} chunks
+      // followed by a final {type:'message'} containing the same full text.
+      // We must NOT render both — fold the final into the in-progress
+      // stream message (or push a fresh text message if no stream existed).
+      if (data.type === 'stream' || (data.type === 'message' && data.role !== 'user')) {
+        // First chunk/message → drop any pending "thinking" elapsed pseudo-msg.
+        setMessages(prev => prev.filter(m => !(m.kind === 'elapsed' && m.message_id.startsWith('pending_'))))
         setMessages(prev => {
-          const last = prev[prev.length - 1]
+          const lastIdx = [...prev].reverse().findIndex(
+            m => m.kind === 'text' && (m.message_id.startsWith('stream_') || m.message_id.startsWith('final_'))
+          )
+          const realIdx = lastIdx >= 0 ? prev.length - 1 - lastIdx : -1
+          const last = realIdx >= 0 ? prev[realIdx] : null
+
+          if (data.type === 'stream') {
+            if (last && last.kind === 'text' && last.message_id.startsWith('stream_')) {
+              const updated = { ...last, markdown: last.markdown + (data.content || '') } as ConsoleMessage
+              return [...prev.slice(0, realIdx), updated, ...prev.slice(realIdx + 1)]
+            }
+            return [...prev, {
+              kind: 'text',
+              message_id: `stream_${Date.now()}`,
+              timestamp: new Date().toISOString(),
+              markdown: data.content || '',
+              agent_name: data.agent_name,
+            }]
+          }
+
+          // type === 'message' — finalize the most recent stream if it exists.
           if (last && last.kind === 'text' && last.message_id.startsWith('stream_')) {
-            return [...prev.slice(0, -1), { ...last, markdown: last.markdown + (data.content || '') }]
+            const finalized = {
+              ...last,
+              message_id: `final_${last.message_id.slice(7)}`,
+              markdown: data.content || last.markdown,
+              agent_name: data.agent_name || last.agent_name,
+            } as ConsoleMessage
+            return [...prev.slice(0, realIdx), finalized, ...prev.slice(realIdx + 1)]
           }
           return [...prev, {
             kind: 'text',
-            message_id: `stream_${Date.now()}`,
+            message_id: `final_${Date.now()}`,
             timestamp: new Date().toISOString(),
             markdown: data.content || '',
             agent_name: data.agent_name,
@@ -170,14 +207,25 @@ export function Console({ projectId, initialPhase, onNodeUpdate, onClose }: Cons
       content,
       attachments: all,
     }))
-    // Echo locally
-    setMessages(prev => [...prev, {
-      kind: 'text',
-      message_id: `local_${Date.now()}`,
-      timestamp: new Date().toISOString(),
-      markdown: content,
-      agent_name: 'You',
-    }])
+    const ts = new Date().toISOString()
+    // Echo locally + show "thinking" pseudo-message until first response.
+    setMessages(prev => [
+      ...prev.filter(m => !(m.kind === 'elapsed' && m.message_id.startsWith('pending_'))),
+      {
+        kind: 'text',
+        message_id: `local_${Date.now()}`,
+        timestamp: ts,
+        markdown: content,
+        agent_name: 'You',
+      },
+      {
+        kind: 'elapsed',
+        message_id: `pending_${Date.now()}`,
+        timestamp: ts,
+        label: `${agentName || 'Agent'} is thinking…`,
+        started_at: ts,
+      },
+    ])
   }
 
   const sendIntent = (intent: string, payload?: Record<string, unknown>, ref_message_id?: string) => {
@@ -191,13 +239,15 @@ export function Console({ projectId, initialPhase, onNodeUpdate, onClose }: Cons
   }
 
   return (
-    <div className="console">
+    <div className={`console ${collapsed ? 'console--collapsed' : ''}`}>
       <ConsoleHeader
         projectId={projectId}
         phase={phase}
         agentName={agentName}
         costToday={costToday}
         connecting={connecting}
+        collapsed={collapsed}
+        onToggleCollapse={toggleCollapse}
         onClose={onClose}
       />
       <MessageStream

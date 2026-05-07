@@ -24,6 +24,7 @@ interface Props {
   projectId: string
   open: boolean
   onClose: () => void
+  onOpen?: () => void
 }
 
 const SOURCE_TYPES = [
@@ -34,7 +35,7 @@ const SOURCE_TYPES = [
   { id: 'upload', label: 'Uploads' },
 ]
 
-export function LibraryDrawer({ projectId, open, onClose }: Props) {
+export function LibraryDrawer({ projectId, open, onClose, onOpen }: Props) {
   const [items, setItems] = useState<LibraryItem[]>([])
   const [stats, setStats] = useState<LibraryStats | null>(null)
   const [search, setSearch] = useState('')
@@ -93,14 +94,26 @@ export function LibraryDrawer({ projectId, open, onClose }: Props) {
     toast.success('Reference restored')
   }
 
-  if (!open) return null
+  if (!open) {
+    // Collapsed rail — slim left edge with vertical label, click to expand.
+    return (
+      <button
+        className="library-rail"
+        onClick={() => onOpen?.()}
+        aria-label="Open library"
+        title="Library (⌘L)"
+      >
+        <span>📚</span>
+        <span className="library-rail__label">LIBRARY</span>
+      </button>
+    )
+  }
 
   const favorites = items.filter(i => i.is_favorite)
   const rest = items.filter(i => !i.is_favorite)
 
   return (
     <>
-      <div className="library-overlay" onClick={onClose} />
       <aside className="library-drawer" role="region" aria-label="Reference library">
         <header className="library-drawer__head">
           <div>

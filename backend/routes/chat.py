@@ -11,6 +11,7 @@ from google.genai import types as genai_types
 from backend import db
 from backend import db_async
 from backend.orchestrator import chat_bridge
+from backend.orchestrator.narrator import Narrator, Action
 from backend.agents.berry import create_berry_agent
 from backend.agents.planner import create_planner_agent
 from backend.agents.detailer import create_detailer_agent
@@ -102,10 +103,14 @@ async def chat_websocket(websocket: WebSocket, project_id: str, phase: str = Non
     
     current_scene_id = None
     
+    # Narrator emits typed Console messages (handoff, failure, tool_call,
+    # etc.) over the same WebSocket. Bound here once per connection.
+    narrator = Narrator(websocket.send_json)
+
     # Send current phase/mode info
     await websocket.send_json({
-        "type": "phase", 
-        "phase": current_phase, 
+        "type": "phase",
+        "phase": current_phase,
         "agent": agent_name,
         "mode": current_mode,
         "is_history": is_history_mode
@@ -293,7 +298,18 @@ async def chat_websocket(websocket: WebSocket, project_id: str, phase: str = Non
                         state={"project_id": project_id, "current_scene_id": current_scene_id}
                     )
                 
-                # Notify client and send new agent greeting
+                # Notify client and send new agent greeting.
+                # Emit typed handoff card alongside legacy phase_change so the
+                # Console renders it as a HandoffCard.
+                try:
+                    prev_agent = phase_config.get(current_mode, ("",))[0] if current_mode else ""
+                    await narrator.handoff(
+                        from_agent=prev_agent or "—",
+                        to_agent=agent_name,
+                        reason=f"Phase {old_phase} → {new_phase}",
+                    )
+                except Exception:
+                    pass
                 await websocket.send_json({"type": "phase_change", "old_phase": old_phase, "new_phase": new_phase, "agent": agent_name})
                 await db_async.add_chat_message(project_id, "assistant", new_greeting, phase=current_phase, agent_name=agent_name)
                 await websocket.send_json({"type": "message", "role": "assistant", "content": new_greeting, "agent_name": agent_name})
@@ -311,7 +327,11 @@ async def chat_websocket(websocket: WebSocket, project_id: str, phase: str = Non
             use_pai = chat_bridge.is_enabled(spec_id)
 
             if use_pai:
-                # New path: Pydantic AI orchestrator
+                # New path: Pydantic AI orchestrator. Track latency + char
+                # count → coarse cost estimate so the Console cost meter
+                # also reflects LLM usage, not just image gens.
+                import time as _time
+                _t0 = _time.monotonic()
                 try:
                     async for chunk in chat_bridge.stream_turn(
                         spec_id, user_message, project_id=project_id, phase=current_phase
@@ -323,7 +343,31 @@ async def chat_websocket(websocket: WebSocket, project_id: str, phase: str = Non
                                 "content": chunk,
                                 "agent_name": agent_name,
                             })
+                    # Cost: ~$2.50 per 1M output tokens (Gemini 2.5 Pro tier),
+                    # ~4 chars per token. This is a best-effort estimate until
+                    # pydantic-ai surfaces structured usage.
+                    out_tokens = max(1, len(full_response) // 4)
+                    est_cost = out_tokens * 2.5 / 1_000_000
+                    latency_ms = int((_time.monotonic() - _t0) * 1000)
+                    try:
+                        await narrator.tool_call(
+                            name=f"{spec_id}.complete",
+                            args={"chars": len(full_response)},
+                            status="done",
+                            cost_usd=est_cost,
+                            latency_ms=latency_ms,
+                        )
+                    except Exception:
+                        pass
                 except Exception as e:
+                    try:
+                        await narrator.failure(
+                            error=str(e),
+                            suggestion="Retry the message — if it keeps failing, check the agent logs.",
+                            recovery_actions=[],
+                        )
+                    except Exception:
+                        pass
                     await websocket.send_json({"type": "error", "message": f"orchestrator: {e}"})
             else:
                 # Legacy path: Google ADK runner

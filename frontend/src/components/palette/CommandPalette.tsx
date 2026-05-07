@@ -39,12 +39,12 @@ export function CommandPalette({ open, onClose, onOpenLibrary }: Props) {
     ta?.focus()
   }
 
+  // Only ship commands that actually do something. Prepend-text shortcuts
+  // were misleading (looked like commands, just nudged the textarea), so
+  // they're cut. Add more as the underlying actions land.
   const commands: Command[] = [
     { id: 'library', label: 'Open Library', hint: '⌘L', icon: '📚', run: () => { onClose(); onOpenLibrary() } },
-    { id: 'focus_chat', label: 'Focus Chat Input', hint: '/', icon: '💬', run: () => { onClose(); focusChat() } },
-    { id: 'compose', label: 'Compose Cut (in chat)', hint: '/compose', icon: '🎬', run: () => { onClose(); focusChat(); typeIntoInput('compose ') } },
-    { id: 'refine', label: 'Refine Last Cut', hint: '/refine', icon: '✏️', run: () => { onClose(); focusChat(); typeIntoInput('refine ') } },
-    { id: 'list', label: 'List Scenes', hint: '/list scenes', icon: '📋', run: () => { onClose(); focusChat(); typeIntoInput('list scenes ') } },
+    { id: 'focus_chat', label: 'Focus Chat Input', hint: '↩', icon: '💬', run: () => { onClose(); focusChat() } },
   ]
 
   const filtered = query.trim()

@@ -69,7 +69,9 @@ function MessageRenderer({ msg, onIntent }: { msg: ConsoleMessage; onIntent: Mes
     case 'elapsed':
       return <ElapsedMessage msg={msg} />
     case 'tool_call':
-      return <ToolCallTag msg={msg} />
+      // Hidden by default — tool traces are noise in the user-facing stream.
+      // Power users can re-enable via a future setting; for now we suppress.
+      return null
     case 'comparison':
       return <ComparisonView msg={msg} onIntent={onIntent} />
     case 'recommendation':

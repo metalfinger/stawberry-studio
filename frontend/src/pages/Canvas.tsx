@@ -534,22 +534,7 @@ export function Canvas() {
         })
     }, [edges, setNodes])
 
-    // Add a new ImageGenerator node to the canvas
-    const handleAddGeneratorNode = useCallback(() => {
-        if (!projectId) return
-
-        const newNode: Node = {
-            id: `generator-${Date.now()}`,
-            type: 'imageGenerator',
-            position: { x: 800, y: 100 },
-            data: { projectId },
-            draggable: true,
-        }
-
-        setNodes((nds) => [...nds, newNode])
-    }, [projectId, setNodes])
-
-    // Get MiniMap color for node type
+// Get MiniMap color for node type
     const getNodeColor = (node: Node) => {
         switch (node.type) {
             case 'brief': return '#f43f5e'
@@ -570,15 +555,22 @@ export function Canvas() {
             <div className="canvas-header">
                 <button className="back-btn" onClick={() => navigate('/')}>← Projects</button>
                 <h1>{project?.name || 'Loading...'}</h1>
-                <span className="phase-badge">{project?.current_phase || 'BRIEFING'}</span>
-                <button className="layout-btn" onClick={handleAutoLayoutBlueprint} title="Re-layout blueprint nodes only">
+                {/* Phase status lives in the PhaseRail above; canvas header
+                    only shows project-scoped controls. The legacy
+                    "Add Generator" button is removed — generation now flows
+                    through the Console agentic plan path. */}
+                <button className="layout-btn" onClick={handleAutoLayoutBlueprint} title="Re-layout nodes">
                     ⚡ Auto Layout
-                </button>
-                <button className="add-generator-btn" onClick={handleAddGeneratorNode} title="Add Image Generator node">
-                    🎨 Add Generator
                 </button>
             </div>
 
+            <div className="canvas-body">
+            <LibraryDrawer
+                projectId={projectId}
+                open={libraryOpen}
+                onClose={() => setLibraryOpen(false)}
+                onOpen={() => setLibraryOpen(true)}
+            />
             <div className="canvas-container">
                 {/* Properties Panel Portal Container - Inside relative container to respect header */}
                 <aside id="properties-panel-portal" className="properties-panel-container"></aside>
@@ -610,6 +602,7 @@ export function Canvas() {
                     />
                 </ReactFlow>
             </div>
+            </div>
 
             <Console
                 projectId={projectId}
@@ -621,22 +614,14 @@ export function Canvas() {
                 selectedNodeId={selectedNodeId}
                 selectedNodeType={selectedNodeType}
             />
-            <LibraryDrawer
-                projectId={projectId}
-                open={libraryOpen}
-                onClose={() => setLibraryOpen(false)}
-            />
             <CommandPalette
                 projectId={projectId}
                 open={paletteOpen}
                 onClose={() => setPaletteOpen(false)}
                 onOpenLibrary={() => { setPaletteOpen(false); setLibraryOpen(true) }}
             />
-            <button
-                className="canvas-fab canvas-fab--library"
-                onClick={() => setLibraryOpen(o => !o)}
-                title="Library (⌘L)"
-            >📚 Library</button>
+            {/* Library FAB removed — the docked left rail now serves as
+                both the affordance and the toggle. */}
         </div>
     )
 }

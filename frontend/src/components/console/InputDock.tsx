@@ -1,9 +1,6 @@
-// InputDock — the rich chat input.
-// - Reference chip rail (drop zone, paste support — Phase D fully wires it)
-// - Textarea with @ # / autocomplete (Phase D)
-// - Quick command bar (always-visible)
-// - Agent selector
-// - Send (Cmd+Enter)
+// InputDock — chat input with reference chips, drag-drop, and Cmd+Enter send.
+// Half-baked quick-command shortcuts removed; the same actions live in
+// ⌘K (CommandPalette) which is the canonical entry point.
 import { useEffect, useRef, useState } from 'react'
 import type { UserAttachment } from './types'
 import { readRefDrag } from '../dnd/refDragData'
@@ -15,13 +12,6 @@ interface InputDockProps {
   disabled?: boolean
 }
 
-const QUICK_COMMANDS = [
-  { label: '/compose', insert: 'compose ' },
-  { label: '/refine', insert: 'refine ' },
-  { label: '/batch', insert: 'compose all cuts in ' },
-  { label: '/list', insert: 'list ' },
-]
-
 export function InputDock({ onSend, agentName, disabled }: InputDockProps) {
   const [text, setText] = useState('')
   const [attachments, setAttachments] = useState<UserAttachment[]>([])
@@ -29,7 +19,6 @@ export function InputDock({ onSend, agentName, disabled }: InputDockProps) {
   const [dragOver, setDragOver] = useState(false)
   const ref = useRef<HTMLTextAreaElement>(null)
 
-  // Auto-resize textarea
   useEffect(() => {
     const el = ref.current
     if (!el) return
@@ -50,11 +39,6 @@ export function InputDock({ onSend, agentName, disabled }: InputDockProps) {
       e.preventDefault()
       submit()
     }
-  }
-
-  const insertCommand = (insert: string) => {
-    setText(prev => insert + prev)
-    ref.current?.focus()
   }
 
   const onDrop = (e: React.DragEvent) => {
@@ -100,7 +84,7 @@ export function InputDock({ onSend, agentName, disabled }: InputDockProps) {
       <textarea
         ref={ref}
         className="input-dock__textarea"
-        placeholder={`Message ${agentName}... (Cmd+Enter to send)`}
+        placeholder={`Message ${agentName}…  (⌘+Enter to send · drop a reference here)`}
         value={text}
         onChange={e => setText(e.target.value)}
         onKeyDown={onKey}
@@ -109,19 +93,8 @@ export function InputDock({ onSend, agentName, disabled }: InputDockProps) {
       />
 
       <div className="input-dock__bar">
-        <div className="input-dock__commands">
-          {QUICK_COMMANDS.map(c => (
-            <button
-              key={c.label}
-              className="input-dock__cmd"
-              onClick={() => insertCommand(c.insert)}
-              title={`Insert ${c.label}`}
-            >{c.label}</button>
-          ))}
-        </div>
-        <select className="input-dock__agent-select" value={agentName} disabled aria-label="Agent">
-          <option>{agentName}</option>
-        </select>
+        <span className="input-dock__hint">⌘K · commands</span>
+        <div style={{ flex: 1 }} />
         <button
           className="console-btn console-btn--primary"
           onClick={submit}

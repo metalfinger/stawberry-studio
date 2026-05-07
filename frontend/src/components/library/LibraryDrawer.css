@@ -1,24 +1,21 @@
-/* Library drawer — slides in from the right edge of the canvas. */
-.library-overlay {
-  position: fixed; inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  z-index: 9000;
-  animation: libFade 120ms ease;
-}
+/* Library — docked left side panel. Lives alongside the canvas, never on
+ * top of it; can be collapsed to a slim 32px rail so the canvas regains
+ * full width without losing the affordance. */
+.library-overlay { display: none; }
 .library-drawer {
-  position: fixed; top: 0; right: 0; bottom: 0;
-  width: 480px; max-width: 90vw;
+  position: relative;
+  width: 360px;
+  flex-shrink: 0;
+  height: 100%;
   background: #0f0f10;
-  border-left: 1px solid #2a2a2c;
+  border-right: 1px solid #2a2a2c;
   display: flex; flex-direction: column;
-  z-index: 9001;
   color: #e8e8e8;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  animation: libSlide 180ms ease-out;
-  box-shadow: -10px 0 40px rgba(0, 0, 0, 0.6);
+  animation: libSlide 160ms ease-out;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.25);
 }
-@keyframes libFade { from { opacity: 0 } to { opacity: 1 } }
-@keyframes libSlide { from { transform: translateX(40px); opacity: 0 } to { transform: translateX(0); opacity: 1 } }
+@keyframes libSlide { from { width: 28px; opacity: 0.3; } to { width: 360px; opacity: 1; } }
 
 .library-drawer__head {
   display: flex; align-items: center; justify-content: space-between;
@@ -42,7 +39,7 @@
   padding: 4px 10px; border-radius: 12px; border: 1px solid #2a2a2c;
   background: #18181a; color: #aaa; font-size: 11px; cursor: pointer;
 }
-.library-pill--active { background: #4f46e5; color: #fff; border-color: #4f46e5; }
+.library-pill--active { background: #f43f5e; color: #fff; border-color: #f43f5e; }
 .library-drawer__toggles { display: flex; gap: 14px; font-size: 11px; color: #999; }
 .library-drawer__toggles label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
 
@@ -61,7 +58,7 @@
 }
 .library-thumb:active { cursor: grabbing; }
 .library-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.library-thumb--selected { border-color: #4f46e5; }
+.library-thumb--selected { border-color: #f43f5e; }
 .library-thumb--inactive img { opacity: 0.4; filter: grayscale(0.6); }
 .library-thumb__badge {
   position: absolute; top: 4px; right: 4px;
@@ -97,13 +94,34 @@
 }
 .library-detail__actions button:hover { background: #2a2a2e; }
 
-/* FAB toggling the drawer from canvas. */
+/* FAB toggling the drawer from canvas. Pinned bottom-LEFT so the floating
+ * Console (bottom-right) never overlaps it. */
 .canvas-fab {
-  position: fixed; bottom: 16px; right: 16px;
-  background: #4f46e5; color: #fff; border: 0;
+  position: fixed; bottom: 16px; left: 16px;
+  background: #f43f5e; color: #fff; border: 0;
   padding: 9px 14px; border-radius: 22px; font-size: 12px; font-weight: 600;
   cursor: pointer; z-index: 8500;
-  box-shadow: 0 6px 18px rgba(79,70,229,0.45);
+  box-shadow: 0 6px 18px rgba(244, 63, 94,0.45);
 }
-.canvas-fab:hover { background: #5b52f0; }
-.canvas-fab--library { right: 16px; bottom: 64px; }
+.canvas-fab:hover { background: #fb7185; }
+.canvas-fab--library { left: 16px; bottom: 16px; }
+
+/* Collapsed rail — flex sibling, 28px wide, click to expand. */
+.library-rail {
+  position: relative;
+  flex-shrink: 0;
+  width: 28px;
+  height: 100%;
+  background: #14161b;
+  border-right: 1px solid #2a2a2c;
+  border-top: 0; border-bottom: 0; border-left: 0;
+  color: #aaa; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  padding-top: 14px;
+  transition: background 120ms;
+}
+.library-rail:hover { background: #1d2027; color: #fff; }
+.library-rail__label {
+  writing-mode: vertical-rl; transform: rotate(180deg);
+  font-size: 10px; letter-spacing: 2px; font-weight: 600;
+}

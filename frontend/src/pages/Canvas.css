@@ -129,3 +129,14 @@
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
+
+/* Phase H — Arc-style push layout. canvas-body is a row containing the
+ * library (rail or expanded) plus the canvas-container. When the library
+ * expands, the canvas reflows automatically — no overlap. */
+.canvas-body {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  min-height: 0;
+}
+.canvas-body > .canvas-container { flex: 1; min-width: 0; }
