@@ -79,20 +79,22 @@ Don't just extract nouns. Extract **roles**.
 
 ### 3. **MANDATORY — Save a Master Prompt for Every Asset**
 
-For each asset you create, **immediately** call `save_suggested_asset_prompt(asset_id, prompt)` with a complete master-image prompt. This is non-negotiable. An asset with no `suggested_prompt` is dead weight — the sheet/master generator has nothing to render and the phase gate will reject the handoff.
+For each asset you create, **immediately** call `save_suggested_asset_prompt(asset_id, prompt)` with a complete IDENTITY FOUNDATION prompt for the asset's model sheet. This is non-negotiable. An asset with no `suggested_prompt` is dead weight — the sheet generator has nothing to render and the phase gate will reject the handoff.
 
-**A complete master prompt has all of:**
+**Important — what `suggested_prompt` is for**: it's the *identity foundation* the sheet generator wraps. The sheet generator handles the multi-panel layout (front / 3-quarter / side / back / expressions etc.) automatically — you don't write angle instructions. You write what makes the subject look like *this specific subject* across every angle.
+
+**A complete suggested_prompt has all of:**
 1. Brief's `art_style` (e.g. "Cinematic Anime") + `color_palette` from `get_brief`.
-2. Subject framing — characters: "full-body, neutral 3/4 pose"; locations: "wide establishing shot"; props: "three-quarter studio view, isolated".
-3. Identity ammunition — `appearance` + `consistency_tokens` + `wardrobe_lock`.
-4. Lighting — soft neutral studio lighting unless brief.lighting_style demands otherwise.
-5. Background — characters/props: "plain neutral grey background"; locations: their own environment.
+2. Identity ammunition — every detail that must stay consistent: appearance, distinctive features, wardrobe (for characters), materials/geometry (for props), architecture (for locations).
+3. Verbatim signature tokens (use exact words: "emerald eyes" not "green eyes" — the model re-uses verbatim tokens better).
+4. Lighting baseline — soft neutral studio lighting unless brief.lighting_style demands otherwise.
+5. Background — characters/props: neutral; locations: their own environment.
 6. Negatives — "No text, no labels, no UI, no captions."
 
-**Templates:**
-- *Character:* `[art_style], full-body portrait of [name], [appearance], [consistency_tokens], wearing [wardrobe_lock], neutral 3/4 pose, soft even lighting, plain neutral grey background, [color_palette]. No text, no labels.`
-- *Location:* `[art_style], wide establishing shot of [name], [appearance], [atmosphere], [color_palette]. No text, no labels.`
-- *Prop:* `[art_style], three-quarter studio shot of [name], [appearance], plain neutral grey background, soft studio lighting. No text, no labels.`
+**Templates (no angle instructions — sheet generator adds those):**
+- *Character:* `[art_style], [name] — [appearance], [distinctive_features verbatim], wearing [wardrobe], soft even lighting, plain neutral grey background, [color_palette]. No text, no labels.`
+- *Location:* `[art_style], [name] — [appearance description], [atmosphere/time-of-day], [color_palette]. No text, no labels.`
+- *Prop:* `[art_style], [name] — [appearance], [materials], plain neutral grey background, soft studio lighting. No text, no labels.`
 
 ### 4. Auto-Link & Verify
 - Call `auto_link_assets_to_blueprint`.

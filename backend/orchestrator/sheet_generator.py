@@ -125,32 +125,68 @@ def _cells_layout_json(plan: SheetPlan) -> dict[str, Any]:
 
 
 def _build_prompt(plan: SheetPlan, asset: dict[str, Any], brief: dict[str, Any]) -> str:
-    """Compose the multi-panel prompt fed to Nano Banana Pro."""
+    """Compose the multi-panel prompt fed to Nano Banana Pro.
+
+    Structure follows the research-backed winning template for character/model
+    sheets on Gemini 3 Pro Image (Nov 2026 prompting guide):
+
+      1. Identity-first (so the model locks the subject before layout).
+      2. Verbatim consistency tokens (re-state exact words, e.g. "emerald
+         eyes" not "green").
+      3. Explicit "do-not-vary" clause naming face / proportions / hair /
+         eye-color / wardrobe.
+      4. Layout block with row/col callouts.
+      5. Sheet-level constraints (background, proportions, no text).
+      6. Negatives at the end.
+    """
     rows, cols = plan.template.grid
     cells = plan.template.cells
     layout_text = _grid_layout_text(rows, cols, cells)
 
-    # Identity / consistency block — the absolute non-negotiable bit
+    # ---- Identity block (FIRST — model needs subject locked before layout) ----
     name = asset.get("name") or "the subject"
     description = (asset.get("description") or "").strip()
     appearance = (asset.get("appearance") or "").strip()
     tokens = (asset.get("consistency_tokens") or "").strip()
     distinctive = (asset.get("distinctive_features") or "").strip()
     wardrobe = (asset.get("wardrobe_lock") or "").strip()
+    suggested = (asset.get("suggested_prompt") or "").strip()
 
-    identity_lines: list[str] = [f"Subject: **{name}**."]
+    identity_lines: list[str] = [f"**Subject:** {name}."]
     if description:
         identity_lines.append(f"Description: {description}")
     if appearance:
         identity_lines.append(f"Appearance: {appearance}")
     if distinctive:
-        identity_lines.append(f"Distinctive features (must match exactly across every panel): {distinctive}")
+        identity_lines.append(f"Distinctive features (verbatim, MUST appear identically in every panel): {distinctive}")
     if tokens:
-        identity_lines.append(f"Consistency tokens (must appear in every panel): {tokens}")
+        identity_lines.append(f"Consistency tokens (verbatim, MUST appear in every panel): {tokens}")
     if wardrobe:
-        identity_lines.append(f"Wardrobe lock (do not vary across panels): {wardrobe}")
+        identity_lines.append(f"Wardrobe lock (DO NOT vary across panels): {wardrobe}")
+    if suggested and not appearance:
+        # Fall back to Atlas's suggested_prompt if no structured appearance was set.
+        identity_lines.append(f"Foundation prompt: {suggested}")
 
-    # Globals from the brief
+    # Explicit do-not-vary clause — Nov-2026 best practice.
+    asset_type = (asset.get("type") or "").lower()
+    if asset_type == "character":
+        do_not_vary = (
+            "DO NOT change across panels: face geometry, eye color, eye shape, hair "
+            "color, hair length, skin tone, body proportions, age, or wardrobe. "
+            "ONLY the listed angle / expression / state changes between panels."
+        )
+    elif asset_type == "location":
+        do_not_vary = (
+            "DO NOT change across panels: architecture, set decoration, geometry, "
+            "color story, or time-of-day. ONLY the camera framing / vantage changes."
+        )
+    else:  # prop / vehicle / costume
+        do_not_vary = (
+            "DO NOT change across panels: object geometry, materials, color, scale, "
+            "or detailing. ONLY the camera angle changes between panels."
+        )
+
+    # ---- Style block ----
     art_style = (brief.get("art_style") or "").strip()
     color_palette = (brief.get("color_palette") or "").strip()
     lighting = (brief.get("lighting_style") or "").strip()
@@ -164,26 +200,31 @@ def _build_prompt(plan: SheetPlan, asset: dict[str, Any], brief: dict[str, Any])
     if lighting:
         style_lines.append(f"Lighting: {lighting}, applied uniformly across every panel")
 
-    # Sheet-level constraints — these matter a lot for layout fidelity
+    # ---- Sheet-level constraints ----
     constraints = [
-        "Plain white seamless background.",
-        "Identical character/object proportions, identical lighting, identical render quality across every panel — only the angle/expression/state changes per panel.",
-        "Clean borders between panels (thin neutral grey gridlines).",
+        "Plain white seamless background (unless this is a location sheet, in which case the location's own environment fills each panel).",
+        "Identical render quality, identical proportions, identical lighting across every panel.",
+        "Clean borders between panels (thin neutral grey gridlines, no overlap).",
+        "Each panel fully visible — no cropping at panel edges.",
         "No on-image text labels, no captions, no numbering, no watermarks.",
     ]
 
-    negatives_full = "no text, no labels, no captions, no numbering, no watermarks, no signatures, no UI"
+    negatives_full = "no text, no labels, no captions, no numbering, no watermarks, no signatures, no UI elements"
     if negatives:
         negatives_full += f"; {negatives}"
 
     parts: list[str] = []
-    parts.append(f"Generate a single **model sheet** image — a multi-panel reference grid of {name}.")
-    parts.append(layout_text)
-    parts.append("\n## Identity\n" + "\n".join(identity_lines))
+    parts.append(
+        f"Generate a single **model sheet** — a multi-panel reference grid of {name}. "
+        "This is THE canonical reference image for this subject; downstream cuts will use individual panels as identity slots."
+    )
+    parts.append("\n## Identity (this defines the subject — lock it before composing the layout)\n" + "\n".join(identity_lines))
+    parts.append(f"\n## Identity lock\n{do_not_vary}")
     if style_lines:
         parts.append("\n## Style\n" + "\n".join(style_lines))
+    parts.append("\n## Layout\n" + layout_text)
     parts.append("\n## Sheet constraints\n" + "\n".join(f"- {c}" for c in constraints))
-    parts.append(f"\nNegative: {negatives_full}.")
+    parts.append(f"\n## Negatives\n{negatives_full}.")
     return "\n".join(parts)
 
 
