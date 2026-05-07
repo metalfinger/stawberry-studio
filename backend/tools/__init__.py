@@ -26,6 +26,10 @@ from backend.tools.element_generation import (
     get_asset_elements_summary, get_generation_history as get_element_history,
 )
 from backend.tools.handoff import request_handoff
+# Trigger registration side-effects for tool modules used only by specific agents.
+from backend.tools import navigation as _navigation  # noqa: F401
+from backend.tools import phase_confirmation as _phase_confirmation  # noqa: F401
+from backend.tools import pre_production as _pre_production  # noqa: F401
 
 __all__ = [
     # Briefing tools

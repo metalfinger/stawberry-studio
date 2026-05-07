@@ -9,6 +9,8 @@ from google.adk.sessions import InMemorySessionService
 from google.genai import types as genai_types
 
 from backend import db
+from backend import db_async
+from backend.orchestrator import chat_bridge
 from backend.agents.berry import create_berry_agent
 from backend.agents.planner import create_planner_agent
 from backend.agents.detailer import create_detailer_agent
@@ -74,7 +76,7 @@ async def chat_websocket(websocket: WebSocket, project_id: str, phase: str = Non
     await websocket.accept()
     
     # Verify project exists and get phase
-    project = db.get_project(project_id)
+    project = await db_async.get_project(project_id)
     if not project:
         await websocket.send_json({"error": "Project not found"})
         await websocket.close()
@@ -136,12 +138,12 @@ async def chat_websocket(websocket: WebSocket, project_id: str, phase: str = Non
         )
     
     # Send phase-specific chat history
-    history = db.get_chat_history(project_id, phase=current_phase)
+    history = await db_async.get_chat_history(project_id, phase=current_phase)
     await websocket.send_json({"type": "history", "messages": history})
     
     # Send initial greeting if no history for this phase (and not in history mode)
     if not history and not is_history_mode:
-        db.add_chat_message(project_id, "assistant", greeting, phase=current_phase, agent_name=agent_name)
+        await db_async.add_chat_message(project_id, "assistant", greeting, phase=current_phase, agent_name=agent_name)
         await websocket.send_json({"type": "message", "role": "assistant", "content": greeting, "agent_name": agent_name})
     
     # If there's an auto-trigger and we just started this phase (no history/fresh start)
@@ -176,7 +178,7 @@ async def chat_websocket(websocket: WebSocket, project_id: str, phase: str = Non
         # Save final response
         final_response = turn.output.text
         if final_response:
-            db.add_chat_message(project_id, "assistant", final_response, phase=current_phase, agent_name=agent_name)
+            await db_async.add_chat_message(project_id, "assistant", final_response, phase=current_phase, agent_name=agent_name)
             await websocket.send_json({
                 "type": "message", 
                 "role": "assistant", 
@@ -203,7 +205,7 @@ async def chat_websocket(websocket: WebSocket, project_id: str, phase: str = Non
                     
                     # Resolve scene number to ID
                     if scene_num and new_mode == "detailer":
-                        scenes = db.get_scenes(project_id)
+                        scenes = await db_async.get_scenes(project_id)
                         scene = next((s for s in scenes if s['scene_number'] == int(scene_num)), None)
                         if scene:
                             current_scene_id = scene['id']
@@ -246,7 +248,7 @@ async def chat_websocket(websocket: WebSocket, project_id: str, phase: str = Non
                     })
             
             # Check if phase changed (e.g., complete_briefing was called)
-            project = db.get_project(project_id)
+            project = await db_async.get_project(project_id)
             new_phase = project.get("current_phase", current_phase)
             if new_phase != current_phase:
                 old_phase = current_phase
@@ -284,49 +286,65 @@ async def chat_websocket(websocket: WebSocket, project_id: str, phase: str = Non
                 
                 # Notify client and send new agent greeting
                 await websocket.send_json({"type": "phase_change", "old_phase": old_phase, "new_phase": new_phase, "agent": agent_name})
-                db.add_chat_message(project_id, "assistant", new_greeting, phase=current_phase, agent_name=agent_name)
+                await db_async.add_chat_message(project_id, "assistant", new_greeting, phase=current_phase, agent_name=agent_name)
                 await websocket.send_json({"type": "message", "role": "assistant", "content": new_greeting, "agent_name": agent_name})
                 continue  # Skip processing the triggering user message after phase change
             
             # Save and echo user message
-            db.add_chat_message(project_id, "user", user_message, phase=current_phase)
+            await db_async.add_chat_message(project_id, "user", user_message, phase=current_phase)
             await websocket.send_json({"type": "message", "role": "user", "content": user_message})
             
             # Run agent
             full_response = ""
             handoff_request = None
-            
-            new_message = genai_types.Content(
-                role="user",
-                parts=[genai_types.Part(text=user_message)]
-            )
-            
-            async for event in runner.run_async(
-                user_id=user_id,
-                session_id=session_id,
-                new_message=new_message
-            ):
-                if event.content and event.content.parts:
-                    for part in event.content.parts:
-                        if part.text:
-                            full_response += part.text
-                        if part.function_call:
-                            # Notify frontend of tool use
+
+            spec_id = (agent_name or "").lower()
+            use_pai = chat_bridge.is_enabled(spec_id)
+
+            if use_pai:
+                # New path: Pydantic AI orchestrator
+                try:
+                    async for chunk in chat_bridge.stream_turn(
+                        spec_id, user_message, project_id=project_id, phase=current_phase
+                    ):
+                        if chunk:
+                            full_response += chunk
                             await websocket.send_json({
-                                "type": "tool",
-                                "name": part.function_call.name
+                                "type": "stream",
+                                "content": chunk,
+                                "agent_name": agent_name,
                             })
-                            
-                            # Detect Handoff
-                            if part.function_call.name == "request_handoff":
-                                args = part.function_call.args
-                                handoff_request = {
-                                    "target": args.get("target_agent"),
-                                    "context": args.get("context")
-                                }
+                except Exception as e:
+                    await websocket.send_json({"type": "error", "message": f"orchestrator: {e}"})
+            else:
+                # Legacy path: Google ADK runner
+                new_message = genai_types.Content(
+                    role="user",
+                    parts=[genai_types.Part(text=user_message)],
+                )
+                async for event in runner.run_async(
+                    user_id=user_id,
+                    session_id=session_id,
+                    new_message=new_message,
+                ):
+                    if event.content and event.content.parts:
+                        for part in event.content.parts:
+                            if part.text:
+                                full_response += part.text
+                            if part.function_call:
+                                await websocket.send_json({
+                                    "type": "tool",
+                                    "name": part.function_call.name,
+                                })
+                                if part.function_call.name == "request_handoff":
+                                    args = part.function_call.args
+                                    handoff_request = {
+                                        "target": args.get("target_agent"),
+                                        "context": args.get("context"),
+                                    }
             
             if full_response:
-                db.add_chat_message(project_id, "assistant", full_response, phase=current_phase, agent_name=agent_name)
+                await db_async.add_chat_message(project_id, "assistant", full_response, phase=current_phase, agent_name=agent_name)
                 await websocket.send_json({
                     "type": "message",
                     "role": "assistant",
@@ -418,7 +436,7 @@ async def chat_websocket(websocket: WebSocket, project_id: str, phase: str = Non
                                     await websocket.send_json({ "type": "tool", "name": part.function_call.name })
                     
                     if new_agent_response:
-                        db.add_chat_message(project_id, "assistant", new_agent_response, phase=current_phase, agent_name=agent_name)
+                        await db_async.add_chat_message(project_id, "assistant", new_agent_response, phase=current_phase, agent_name=agent_name)
                         await websocket.send_json({
                             "type": "message",
                             "role": "assistant",

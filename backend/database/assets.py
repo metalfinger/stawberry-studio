@@ -140,7 +140,13 @@ def get_masters(project_id: str, asset_type: str = None) -> List[Dict[str, Any]]
 
 def update_asset(asset_id: str, **updates) -> Optional[Dict[str, Any]]:
     """Update an asset's fields."""
-    allowed = ["name", "description", "appearance", "style", "metadata", "slot_filled", "image_url", "variant_diff"]
+    allowed = [
+        "name", "description", "appearance", "style", "metadata",
+        "slot_filled", "image_url", "variant_diff",
+        # Continuity fields used by the Sheet Planner + Continuity Bible.
+        "consistency_tokens", "distinctive_features", "wardrobe_lock",
+        "suggested_prompt", "face_embedding_url",
+    ]
     updates = {k: v for k, v in updates.items() if k in allowed}
     
     if not updates:

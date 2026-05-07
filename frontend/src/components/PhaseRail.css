@@ -1,0 +1,92 @@
+.phase-rail {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.5rem 0.75rem;
+    background: linear-gradient(to bottom, #15161a, #1c1d22);
+    border-bottom: 1px solid #2a2c33;
+    overflow-x: auto;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size: 0.85rem;
+    color: #c8cad0;
+}
+
+.phase-rail-loading,
+.phase-rail-error {
+    padding: 0.25rem 0.75rem;
+    color: #888;
+    font-style: italic;
+}
+.phase-rail-error {
+    color: #e07a7a;
+}
+
+.phase-rail-step {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: 6px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: inherit;
+    cursor: pointer;
+    transition: background 120ms, border-color 120ms;
+    white-space: nowrap;
+}
+.phase-rail-step:hover {
+    background: #20222a;
+    border-color: #3a3d47;
+}
+
+.phase-rail-glyph {
+    display: inline-block;
+    width: 1.25em;
+    text-align: center;
+}
+
+.phase-rail-version {
+    font-size: 0.7rem;
+    padding: 0 0.35rem;
+    border-radius: 3px;
+    background: #2a2c33;
+    color: #9ea1aa;
+}
+
+.phase-rail-arrow {
+    margin-left: 0.5rem;
+    color: #4a4c54;
+    font-size: 0.9em;
+}
+
+/* Status colors */
+.phase-rail-step.status-pending .phase-rail-glyph {
+    color: #6a6d75;
+}
+.phase-rail-step.status-in_progress {
+    background: rgba(99, 178, 247, 0.08);
+    border-color: rgba(99, 178, 247, 0.35);
+}
+.phase-rail-step.status-in_progress .phase-rail-glyph {
+    color: #63b2f7;
+}
+.phase-rail-step.status-frozen .phase-rail-glyph {
+    color: #4ade80;
+}
+.phase-rail-step.status-frozen .phase-rail-version {
+    background: #1d3a25;
+    color: #4ade80;
+}
+.phase-rail-step.status-stale {
+    background: rgba(250, 204, 21, 0.08);
+    border-color: rgba(250, 204, 21, 0.4);
+    animation: phase-rail-stale-pulse 2.5s ease-in-out infinite;
+}
+.phase-rail-step.status-stale .phase-rail-glyph {
+    color: #facc15;
+}
+
+@keyframes phase-rail-stale-pulse {
+    0%, 100% { background: rgba(250, 204, 21, 0.08); }
+    50%      { background: rgba(250, 204, 21, 0.16); }
+}

@@ -1,4 +1,8 @@
-// API client for Strawberry Studio backend
+// API client for Strawberry Studio backend.
+//
+// NOTE: Canonical Pydantic-generated types live in ./generated.ts (regenerate
+// with `make types`). The legacy inline interfaces below are kept until the
+// frontend migrates to the generated types in Phase 6.
 
 const API_BASE = import.meta.env.DEV ? '' : 'http://localhost:8000';
 
@@ -228,6 +232,55 @@ export async function generateCutImage(projectId: string, cutId: string, promptO
   return res.json();
 }
 
+export interface ComposeStepEvent {
+  type: 'compose_step' | 'compose_done' | 'compose_error';
+  step?: 'bundle' | 'pick' | 'preprod' | 'prompt' | 'render' | 'critic' | 'register';
+  status?: 'start' | 'ok' | 'skip' | 'error';
+  detail?: Record<string, unknown>;
+  ts?: string;
+  cut_id?: string;
+  error?: string;
+}
+
+export async function composeCut(projectId: string, cutId: string): Promise<{
+  cut_id: string;
+  image_url: string | null;
+  score: { face: number; wardrobe: number; lighting: number; props: number; overall: number; issues: string[]; suggestions: string[] } | null;
+  attempts: number;
+  steps: Array<{ step: string; status: string; detail: Record<string, unknown>; ts: string }>;
+  error: string | null;
+}> {
+  const res = await fetch(`${API_BASE}/api/projects/${projectId}/cuts/${cutId}/compose`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Compose failed');
+  }
+  return res.json();
+}
+
+export function streamComposeCut(
+  projectId: string,
+  cutId: string,
+  onEvent: (event: ComposeStepEvent) => void,
+): WebSocket {
+  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const host = API_BASE || `${proto}//${window.location.host}`;
+  const url = (host.startsWith('http') ? host.replace(/^http/, 'ws') : host) +
+    `/api/projects/${projectId}/cuts/${cutId}/compose/stream`;
+  const ws = new WebSocket(url);
+  ws.onmessage = (msg) => {
+    try {
+      onEvent(JSON.parse(msg.data));
+    } catch {
+      /* ignore malformed */
+    }
+  };
+  return ws;
+}
+
 export async function setActiveCutImage(projectId: string, cutId: string, generationId: string): Promise<{ success: boolean; active_url: string }> {
   const res = await fetch(`${API_BASE}/api/projects/${projectId}/cuts/${cutId}/active`, {
     method: 'POST',
@@ -245,6 +298,55 @@ export async function swapCutAssetLink(projectId: string, cutId: string, oldAsse
     body: JSON.stringify({ cut_id: cutId, old_asset_id: oldAssetId, new_asset_id: newAssetId })
   });
   if (!res.ok) throw new Error('Failed to swap asset link');
+  return res.json();
+}
+
+// Element Sheets
+
+export interface ElementSheet {
+  id: string;
+  asset_id: string;
+  sheet_type: string;
+  template_id: string;
+  image_url: string;
+  aspect_ratio: string;
+  panels: string[];
+  layout: { grid: [number, number]; cells: Array<{ label: string; row: number; col: number; bbox: [number, number, number, number] }>; aspect_ratio: string };
+  status: string;
+  cost_usd: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export async function getAssetSheet(projectId: string, assetId: string): Promise<{ sheet: ElementSheet | null }> {
+  const res = await fetch(`${API_BASE}/api/projects/${projectId}/assets/${assetId}/sheet`);
+  if (!res.ok) throw new Error('Failed to fetch sheet');
+  return res.json();
+}
+
+export async function generateAssetSheet(
+  projectId: string,
+  assetId: string,
+  options: { override_sheet_type?: string; seed?: number } = {},
+): Promise<{
+  sheet_id: string;
+  image_url: string;
+  template_id: string;
+  sheet_type: string;
+  panels: string[];
+  layout: ElementSheet['layout'];
+  cost_usd: number;
+  rationale: string;
+}> {
+  const res = await fetch(`${API_BASE}/api/projects/${projectId}/assets/${assetId}/sheet/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(options),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Sheet generation failed');
+  }
   return res.json();
 }
 

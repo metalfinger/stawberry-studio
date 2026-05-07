@@ -3,8 +3,10 @@ Navigation Tools for Berry Orchestrator
 Handles phase switching and project status tracking
 """
 from backend import db
+from backend.tools.registry import tool
 
 
+@tool("get_project_status", description="Project state: phase, completion %, asset/scene counts.", tags=["navigation", "read"])
 def get_project_status(project_id: str) -> dict:
     """
     Get comprehensive project status including phase progress and stale indicators.
@@ -92,6 +94,7 @@ def get_project_status(project_id: str) -> dict:
     }
 
 
+@tool("switch_phase", description="Switch the active phase (does not delete data — just navigation).", tags=["navigation"])
 def switch_phase(project_id: str, target_phase: str) -> dict:
     """
     Switch to a different phase for viewing/editing.
@@ -136,6 +139,7 @@ def switch_phase(project_id: str, target_phase: str) -> dict:
     }
 
 
+@tool("get_stale_status", description="Which phases are flagged stale due to upstream changes.", tags=["navigation", "read"])
 def get_stale_status(project_id: str) -> dict:
     """
     Get detailed stale status for all phases.
@@ -180,6 +184,7 @@ def get_stale_status(project_id: str) -> dict:
     }
 
 
+@tool("refresh_phase", description="Clear stale flag on a phase after re-validating its content.", tags=["navigation"])
 def refresh_phase(project_id: str, phase: str) -> dict:
     """
     Mark a phase as refreshed (no longer stale).
@@ -213,6 +218,7 @@ def refresh_phase(project_id: str, phase: str) -> dict:
     }
 
 
+@tool("get_phase_progress", description="Progress per phase (artifacts present / required).", tags=["navigation", "read"])
 def get_phase_progress(project_id: str) -> dict:
     """
     Get checklist-style progress for the current phase.

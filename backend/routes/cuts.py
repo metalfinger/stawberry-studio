@@ -1,11 +1,42 @@
 from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 import backend.database.core as db
 import backend.tools.generation as generation
 import json
 
+from backend.orchestrator.cut_composer import compose_cut, stream_compose_cut
+
 router = APIRouter(prefix="/api/projects/{project_id}/cuts", tags=["cuts"])
+
+
+@router.post("/{cut_id}/compose")
+async def compose_cut_endpoint(project_id: str, cut_id: str):
+    """Run the full Cut Composer pipeline (bundle → pick → preprod → prompt → render → critic → register)."""
+    result = await compose_cut(cut_id)
+    return result.to_dict()
+
+
+@router.websocket("/{cut_id}/compose/stream")
+async def compose_cut_stream(websocket: WebSocket, project_id: str, cut_id: str):
+    """Stream `compose_step` events to the client as the pipeline runs."""
+    await websocket.accept()
+    try:
+        async for step in stream_compose_cut(cut_id):
+            await websocket.send_json({"type": "compose_step", **step.to_dict()})
+        await websocket.send_json({"type": "compose_done", "cut_id": cut_id})
+    except WebSocketDisconnect:
+        return
+    except Exception as e:
+        try:
+            await websocket.send_json({"type": "compose_error", "error": str(e)})
+        finally:
+            return
+    finally:
+        try:
+            await websocket.close()
+        except Exception:
+            pass
 
 class GenerateCutRequest(BaseModel):
     prompt_override: Optional[str] = None

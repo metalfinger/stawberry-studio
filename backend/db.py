@@ -18,7 +18,7 @@ from .database.shots import (
     add_shot_raw
 )
 from .database.history import (
-    get_chat_history, add_chat_message
+    get_chat_history, add_chat_message, get_chat_history_for_context
 )
 from .database.blueprint import (
     get_full_struct as get_blueprint,

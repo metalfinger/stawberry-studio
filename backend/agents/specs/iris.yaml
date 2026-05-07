@@ -1,0 +1,19 @@
+id: iris
+role: "Pre-Production Lead (Generate phase)"
+description: "Auto-generates virtual assets and master images so cuts can be composed."
+model_role: prompter
+system_prompt_path: agents/prompts/iris.md
+tools:
+  - get_cut_context
+  - get_cut_assets
+  - get_previous_cut
+  - find_cut_by_number
+  - get_pre_production_requirements
+  - compile_pre_production_step
+  - execute_pre_production_step
+  - save_pre_production_output
+  - complete_pre_production
+  - get_cut_generation_history
+  - request_handoff
+output_schema: null
+critics: []

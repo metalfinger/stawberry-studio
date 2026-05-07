@@ -1,0 +1,25 @@
+id: atlas
+role: "Visual Designer / Asset Analyst (Assets phase)"
+description: "Deep analyst — extracts characters, locations, props from the blueprint, auto-links to scenes/shots/cuts, captures consistency tokens."
+model_role: detailer
+system_prompt_path: agents/prompts/atlas.md
+tools:
+  - get_brief
+  - get_full_blueprint_for_analysis
+  - create_asset
+  - create_variant
+  - create_frame_slot
+  - get_assets
+  - get_masters_with_variants
+  - get_asset_usage
+  - update_asset
+  - delete_asset
+  - delete_all_assets
+  - link_asset_to_node
+  - get_node_assets
+  - auto_link_assets_to_blueprint
+  - save_suggested_asset_prompt
+  - complete_asset_extraction
+  - confirm_asset_extraction_complete
+output_schema: null
+critics: []

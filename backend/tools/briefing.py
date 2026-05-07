@@ -4,8 +4,10 @@ Tools for managing project briefs in Phase 1
 """
 from backend import db
 from backend.database.core import mark_phases_stale
+from backend.tools.registry import tool
 
 
+@tool("get_brief", description="Read the current brief for a project, including all visual style and world fields.", tags=["brief", "read"])
 def get_brief(project_id: str) -> str:
     """
     Get the current brief status for a project with ALL fields.
@@ -45,6 +47,7 @@ def get_brief(project_id: str) -> str:
 """
 
 
+@tool("update_brief", description="Patch fields on a project's brief. Pass only the fields you want to change.", tags=["brief", "write"])
 def update_brief(
     project_id: str,
     title: str = None,
@@ -133,6 +136,7 @@ def update_brief(
     return f"✅ Brief updated! {', '.join(set_fields)}{stale_msg}"
 
 
+@tool("complete_briefing", description="Validate the brief is ready and ASK the user for confirmation to advance to STORY phase. Does not actually transition.", tags=["brief", "phase"])
 def complete_briefing(project_id: str) -> str:
     """
     Request to complete the briefing phase - REQUIRES USER CONFIRMATION.
@@ -176,6 +180,7 @@ Are you ready to move to the **STORY** phase where we'll plan scenes and shots?
 👉 **Please say "yes" or "proceed" to confirm**, or tell me what changes you'd like to make first."""
 
 
+@tool("confirm_briefing_complete", description="Actually advance the project to STORY phase. Call ONLY after the user has explicitly confirmed.", tags=["brief", "phase"])
 def confirm_briefing_complete(project_id: str) -> str:
     """
     Actually complete the briefing and transition to STORY phase.

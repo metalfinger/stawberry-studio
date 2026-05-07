@@ -48,6 +48,10 @@ frontend/dist/
 
 # Database files (local development)
 *.db
+*.db-journal
+*.sqlite
+storage/generated/
+storage/projects/
 storage/
 
 # Logs

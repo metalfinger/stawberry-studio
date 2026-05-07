@@ -1,0 +1,26 @@
+id: nova
+role: "Shot Designer (Story phase, granular)"
+description: "Master visual director — breaks scenes into shots and cuts with full character performance and cinematic detail."
+model_role: detailer
+system_prompt_path: agents/prompts/nova.md
+tools:
+  - get_brief
+  - get_scenes
+  - get_shots_for_scene
+  - get_cuts
+  - add_shot
+  - update_shot
+  - delete_shot
+  - delete_all_shots
+  - add_cut
+  - update_cut
+  - delete_cut
+  - delete_all_cuts
+  - add_scene
+  - update_scene
+  - delete_scene
+  - get_full_blueprint
+  - complete_blueprint
+  - confirm_blueprint_complete
+output_schema: null
+critics: []

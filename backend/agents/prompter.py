@@ -31,13 +31,81 @@ from backend.tools.pre_production import (
 )
 
 
+def _check_master_readiness(project_id: str) -> dict:
+    """Inspect DB for assets without master images. Returns gap summary for the agent."""
+    if project_id == "unknown":
+        return {"ok": True, "missing": [], "by_type": {}}
+    try:
+        from backend.database.core import get_connection
+
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT a.id, a.type, a.name,
+                   COALESCE(em.master_image_url, '') AS master_url,
+                   COALESCE(a.image_url, '') AS direct_url
+            FROM assets a
+            LEFT JOIN element_masters em
+              ON em.asset_id = a.id AND em.is_active = 1 AND em.master_image_url IS NOT NULL
+            WHERE a.project_id = ? AND a.type IN ('character','location','prop')
+              AND (a.master_id IS NULL OR a.master_id = '')
+            """,
+            (project_id,),
+        )
+        rows = [dict(r) for r in cursor.fetchall()]
+        conn.close()
+        missing = [r for r in rows if not r["master_url"] and not r["direct_url"]]
+        by_type: dict = {}
+        for m in missing:
+            by_type.setdefault(m["type"], []).append(m["name"])
+        return {"ok": len(missing) == 0, "missing": missing, "by_type": by_type, "total_assets": len(rows)}
+    except Exception as e:
+        return {"ok": True, "missing": [], "by_type": {}, "error": str(e)}
+
+
 def get_prompter_instruction(ctx: ReadonlyContext) -> str:
     """Dynamic instruction with project_id context."""
     project_id = ctx.state.get("project_id", "unknown")
 
+    # Check master readiness — Pixel cannot compose cut prompts without master images.
+    readiness = _check_master_readiness(project_id)
+    readiness_block = ""
+    if not readiness["ok"]:
+        bt = readiness["by_type"]
+        type_lines = "\n".join(
+            f"- **{t.capitalize()}s**: {', '.join(names)}" for t, names in bt.items()
+        )
+        readiness_block = f"""
+---
+
+## 🚨 STOP — MASTERS NOT READY
+
+This project has **{len(readiness['missing'])} of {readiness['total_assets']}** core assets without master images:
+
+{type_lines}
+
+You **CANNOT compose useful cut prompts yet**. Cuts use master images as `@Image1`, `@Image2`, etc.
+references for character/location/prop consistency. Without masters there is nothing to reference.
+
+**Your job RIGHT NOW is to tell the user this clearly and direct them:**
+
+> "Hold on — I see you have **{len(readiness['missing'])} characters/locations/props without master images**.
+> Cuts reference those for visual consistency, so we need them first. **Click on each asset node in the canvas
+> (the panels on the right side) and generate its master image.** Once all masters are ready, come back
+> to me and we'll compose cut prompts using them as references."
+
+Be friendly, list the missing assets by type, and be specific. Do NOT ask which cut to start with.
+Do NOT call `get_smart_generation_context` until the user confirms masters are generated.
+
+---
+
+"""
+
     return f"""You are **Pixel**, an intelligent Prompt Architect for Nano Banana Pro image generation.
 
 **Project ID:** `{project_id}`
+{readiness_block}
 
 ---
 

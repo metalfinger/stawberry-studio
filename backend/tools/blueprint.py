@@ -6,10 +6,12 @@ import json
 import uuid
 from backend import db
 from backend.database.core import mark_phases_stale
+from backend.tools.registry import tool
 
 
 # ============== SCENE TOOLS ==============
 
+@tool("get_scenes", description="List all scenes for a project — returns formatted text with scene UUIDs.", tags=["blueprint"])
 def get_scenes(project_id: str) -> str:
     """
     Get all scenes for a project with their metadata.
@@ -35,6 +37,7 @@ def get_scenes(project_id: str) -> str:
     return result
 
 
+@tool("add_scene", description="Create a new scene with rich metadata (location, lighting, mood, etc.).", tags=["blueprint"])
 def add_scene(
     project_id: str,
     title: str,
@@ -114,6 +117,7 @@ def add_scene(
 
 # ============== SHOT TOOLS ==============
 
+@tool("get_shots_for_scene", description="List shots within a scene — returns shot UUIDs and descriptions.", tags=["blueprint"])
 def get_shots_for_scene(scene_id: str) -> str:
     """
     Get all shots for a specific scene.
@@ -139,6 +143,7 @@ def get_shots_for_scene(scene_id: str) -> str:
     return result
 
 
+@tool("add_shot", description="Create a shot inside a scene with camera + composition metadata.", tags=["blueprint"])
 def add_shot(
     scene_id: str,
     description: str,
@@ -221,6 +226,7 @@ def add_shot(
 
 # ============== CUT TOOLS ==============
 
+@tool("get_cuts", description="List cuts within a shot.", tags=["blueprint"])
 def get_cuts(shot_id: str) -> str:
     """
     Get all cuts for a specific shot.
@@ -251,6 +257,7 @@ def get_cuts(shot_id: str) -> str:
     return result
 
 
+@tool("add_cut", description="Create an action cut inside a shot.", tags=["blueprint"])
 def add_cut(
     shot_id: str,
     action: str,
@@ -340,6 +347,7 @@ def add_cut(
 
 # ============== UPDATE/DELETE TOOLS ==============
 
+@tool("update_scene", description="Update fields on an existing scene by UUID.", tags=["blueprint"])
 def update_scene(
     scene_id: str,
     title: str = None,
@@ -396,18 +404,21 @@ def update_scene(
         return f"✅ Scene updated with {len(updates)} fields."
     return "❌ Failed to update scene."
 
+@tool("delete_scene", description="Delete a scene (cascades to its shots and cuts).", tags=["blueprint"])
 def delete_scene(scene_id: str) -> str:
     """Delete a scene and all its contents."""
     if db.delete_scene(scene_id):
         return "✅ Scene deleted."
     return "❌ Failed to delete scene."
 
+@tool("delete_all_scenes", description="Delete all scenes in a project.", tags=["blueprint"])
 def delete_all_scenes(project_id: str) -> str:
     """Delete ALL scenes in the project. Use with caution!"""
     if db.delete_all_scenes(project_id):
         return "✅ All scenes deleted."
     return "❌ Failed to delete scenes."
 
+@tool("update_shot", description="Update fields on an existing shot by UUID.", tags=["blueprint"])
 def update_shot(
     shot_id: str,
     description: str = None,
@@ -475,18 +486,21 @@ def update_shot(
         return f"✅ Shot updated with {len(updates)} fields."
     return "❌ Failed to update shot."
 
+@tool("delete_shot", description="Delete a shot (cascades to its cuts).", tags=["blueprint"])
 def delete_shot(shot_id: str) -> str:
     """Delete a shot."""
     if db.delete_shot(shot_id):
         return "✅ Shot deleted."
     return "❌ Failed to delete shot."
 
+@tool("delete_all_shots", description="Delete all shots in a scene.", tags=["blueprint"])
 def delete_all_shots(scene_id: str) -> str:
     """Delete ALL shots in a scene."""
     if db.delete_all_shots(scene_id):
         return "✅ All shots in scene deleted."
     return "❌ Failed to delete shots."
 
+@tool("update_cut", description="Update fields on an existing cut by UUID.", tags=["blueprint"])
 def update_cut(
     cut_id: str,
     action: str = None,
@@ -566,12 +580,14 @@ def update_cut(
         return f"✅ Cut updated with {len(updates)} fields."
     return "❌ Failed to update cut."
 
+@tool("delete_cut", description="Delete a cut.", tags=["blueprint"])
 def delete_cut(cut_id: str) -> str:
     """Delete a cut."""
     if db.delete_cut(cut_id):
         return "✅ Cut deleted."
     return "❌ Failed to delete cut."
 
+@tool("delete_all_cuts", description="Delete all cuts in a shot.", tags=["blueprint"])
 def delete_all_cuts(shot_id: str) -> str:
     """Delete ALL cuts in a shot."""
     if db.delete_all_cuts(shot_id):
@@ -582,6 +598,7 @@ def delete_all_cuts(shot_id: str) -> str:
 
 # ============== STRUCTURE TOOLS ==============
 
+@tool("get_full_blueprint", description="Return the entire blueprint (scenes -> shots -> cuts).", tags=["blueprint"])
 def get_full_blueprint(project_id: str) -> str:
     """
     Get the complete blueprint hierarchy: Scenes → Shots → Cuts
@@ -624,6 +641,7 @@ def get_full_blueprint(project_id: str) -> str:
     return result
 
 
+@tool("complete_blueprint", description="Validate the blueprint is ready and ASK the user to confirm advancing to ASSETS phase.", tags=["blueprint"])
 def complete_blueprint(project_id: str) -> str:
     """
     Request to complete the blueprint phase - REQUIRES USER CONFIRMATION.
@@ -682,6 +700,7 @@ Are you ready to move to the **ASSETS** phase where we'll extract characters, lo
 👉 **Please say "yes" or "proceed" to confirm**, or tell me what changes you'd like to make first."""
 
 
+@tool("confirm_blueprint_complete", description="Actually advance to ASSETS phase. Call only after explicit user confirmation.", tags=["blueprint"])
 def confirm_blueprint_complete(project_id: str) -> str:
     """
     Actually complete the blueprint and transition to ASSETS phase.

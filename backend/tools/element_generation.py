@@ -12,14 +12,16 @@ from backend.services.gemini_image import (
     generate_image_text_to_image,
     generate_image_image_to_image,
     enhance_prompt_for_consistency,
-    get_variant_prompt_suffix
+    get_variant_prompt_suffix,
 )
+from backend.tools.registry import tool
 
 
 # ============================================================================
 # MASTER GENERATION
 # ============================================================================
 
+@tool("generate_element_master", description="Trigger master image generation for an asset.", tags=["elements", "write"])
 def generate_element_master(
     asset_id: str,
     prompt: Optional[str] = None,
@@ -148,6 +150,7 @@ def generate_element_master(
     return master_id
 
 
+@tool("compile_element_master_prompt", description="Build the master image prompt for an asset (style + appearance + view).", tags=["elements", "read"])
 def compile_element_master_prompt(
     asset_id: str,
     use_preset: bool = True
@@ -323,6 +326,7 @@ No text, no speech bubbles, no labels, no watermarks, no UI elements, no signatu
 # VARIANT GENERATION
 # ============================================================================
 
+@tool("generate_element_variant", description="DEPRECATED — use generate_sheet_for_asset (one sheet covers all angles).", tags=["elements", "write", "deprecated"])
 def generate_element_variant(
     master_id: str,
     variant_type: str,
@@ -451,6 +455,7 @@ def generate_element_variant(
     return variant_id
 
 
+@tool("compile_element_variant_prompt", description="Compile a variant prompt referencing the master image.", tags=["elements", "read"])
 def compile_element_variant_prompt(
     master_id: str,
     variant_type: str
@@ -503,10 +508,17 @@ CONSISTENCY REQUIREMENTS:
     }
 
 
+@tool("generate_all_standard_variants", description="DEPRECATED — use generate_sheet_for_asset instead. Kept for legacy routes.", tags=["elements", "write", "deprecated"])
 def generate_all_standard_variants(
     master_id: str,
     variant_types: Optional[List[str]] = None
 ) -> List[str]:
+    import warnings
+    warnings.warn(
+        "generate_all_standard_variants is deprecated; use orchestrator.sheet_generator.generate_sheet_for_asset",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     """
     Generate a full set of standard variants for a master.
 
@@ -556,6 +568,7 @@ def generate_all_standard_variants(
 # QUERY & MANAGEMENT
 # ============================================================================
 
+@tool("get_element_master", description="Read element_master row by id.", tags=["elements", "read"])
 def get_element_master(asset_id: str) -> Optional[Dict[str, Any]]:
     """Get element master for an asset (if exists)."""
     conn = db.get_connection()
@@ -574,6 +587,7 @@ def get_element_master(asset_id: str) -> Optional[Dict[str, Any]]:
     return dict(row) if row else None
 
 
+@tool("get_element_variants", description="List variants of a master.", tags=["elements", "read"])
 def get_element_variants(master_id: str, active_only: bool = True) -> List[Dict[str, Any]]:
     """Get all variants for a master."""
     conn = db.get_connection()
@@ -594,6 +608,7 @@ def get_element_variants(master_id: str, active_only: bool = True) -> List[Dict[
     return [dict(row) for row in rows]
 
 
+@tool("get_asset_elements_summary", description="Summary of master+variant state for an asset.", tags=["elements", "read"])
 def get_asset_elements_summary(asset_id: str) -> Dict[str, Any]:
     """
     Get complete element summary for an asset.
@@ -629,6 +644,7 @@ def get_asset_elements_summary(asset_id: str) -> Dict[str, Any]:
     }
 
 
+@tool("get_generation_history", description="List recent generation_history rows for a project/cut.", tags=["elements", "read"])
 def get_generation_history(
     project_id: str,
     target_type: Optional[str] = None,
@@ -665,6 +681,7 @@ def get_generation_history(
     return [dict(row) for row in rows]
 
 
+@tool("delete_element_variant", description="Delete a variant.", tags=["elements", "write"])
 def delete_element_variant(variant_id: str) -> bool:
     """Delete a variant (hard delete)."""
     conn = db.get_connection()
@@ -678,6 +695,7 @@ def delete_element_variant(variant_id: str) -> bool:
     return success
 
 
+@tool("deactivate_element_variant", description="Deactivate (soft-disable) a variant.", tags=["elements", "write"])
 def deactivate_element_variant(variant_id: str) -> bool:
     """Deactivate a variant (soft delete)."""
     conn = db.get_connection()

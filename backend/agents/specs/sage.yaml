@@ -1,0 +1,27 @@
+id: sage
+role: "Story Architect (Story phase)"
+description: "Master storyteller — proposes scene structure, breaks scenes into shots and cuts, captures rich environmental detail."
+model_role: planner
+system_prompt_path: agents/prompts/sage.md
+tools:
+  - get_brief
+  - get_scenes
+  - add_scene
+  - update_scene
+  - delete_scene
+  - delete_all_scenes
+  - get_shots_for_scene
+  - add_shot
+  - update_shot
+  - delete_shot
+  - delete_all_shots
+  - get_cuts
+  - add_cut
+  - update_cut
+  - delete_cut
+  - delete_all_cuts
+  - get_full_blueprint
+  - complete_blueprint
+  - confirm_blueprint_complete
+output_schema: null
+critics: []

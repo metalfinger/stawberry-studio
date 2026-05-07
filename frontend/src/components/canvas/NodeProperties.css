@@ -598,3 +598,35 @@
   background: rgba(16, 185, 129, 0.1);
   border-radius: 4px;
 }
+
+.compose-progress {
+  margin-top: 12px;
+  padding: 10px;
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 6px;
+  font-size: 12px;
+}
+.compose-progress__header {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.compose-progress__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.compose-progress__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  opacity: 0.55;
+}
+.compose-progress__row--start { opacity: 1; }
+.compose-progress__row--ok { opacity: 1; }
+.compose-progress__row--error { opacity: 1; color: #ef4444; }
+.compose-progress__row--skip { opacity: 0.7; font-style: italic; }
+.compose-progress__icon { width: 14px; text-align: center; }
+.compose-progress__label { flex: 1; }
+.compose-progress__summary { color: #6b7280; font-size: 11px; }

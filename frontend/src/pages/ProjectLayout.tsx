@@ -1,20 +1,20 @@
 import React from 'react';
+import { useParams } from 'react-router-dom';
 import { Canvas } from './Canvas';
+import { PhaseRail } from '../components/PhaseRail';
 import './ProjectLayout.css';
 
 /**
- * ProjectLayout - Unified Canvas View
+ * ProjectLayout — phase rail on top, canvas below.
  *
- * All tabs have been removed. The entire project is now displayed
- * on a single React Flow canvas with:
- * - Blueprint nodes (Brief → Scenes → Shots → Cuts) on the left
- * - Asset nodes (Characters, Locations, Props) on the right
- * - Floating chat for AI assistance
+ * The 6-phase pipeline (Develop → Animatic) is visible at all times via the
+ * top rail. Canvas renders the blueprint + assets unified graph.
  */
 export const ProjectLayout: React.FC = () => {
-  // Canvas handles all loading and rendering now
+  const { projectId } = useParams<{ projectId: string }>();
   return (
     <div className="project-layout unified-canvas">
+      {projectId && <PhaseRail projectId={projectId} />}
       <Canvas />
     </div>
   );

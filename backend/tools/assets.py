@@ -6,8 +6,10 @@ Used by the Analyst agent in STORYBOARD phase
 from backend.database import assets as asset_db
 from backend import db
 from backend.database.core import mark_phases_stale
+from backend.tools.registry import tool
 
 
+@tool("get_full_blueprint_for_analysis", description="Flatten the blueprint (scenes->shots->cuts) into one structure for asset extraction.", tags=["assets", "read"])
 def get_full_blueprint_for_analysis(project_id: str) -> dict:
     """
     Get the complete blueprint structure for asset analysis.
@@ -61,6 +63,7 @@ def _match_asset_in_text(asset_name: str, text: str) -> bool:
     return bool(re.search(pattern, text.lower(), re.IGNORECASE))
 
 
+@tool("auto_link_assets_to_blueprint", description="Auto-link assets to scene/shot/cut nodes by matching names in descriptions.", tags=["assets"])
 def auto_link_assets_to_blueprint(project_id: str) -> dict:
     """
     Auto-link all project assets to appropriate blueprint nodes.
@@ -177,6 +180,7 @@ def auto_link_assets_to_blueprint(project_id: str) -> dict:
     }
 
 
+@tool("create_asset", description="Create a new asset (character/location/prop/frame).", tags=["assets", "write"])
 def create_asset(
     project_id: str,
     asset_type: str,
@@ -218,6 +222,7 @@ def create_asset(
     return {"success": True, "asset": asset}
 
 
+@tool("create_variant", description="Create a variant of an existing master asset.", tags=["assets", "write"])
 def create_variant(
     master_id: str,
     variant_name: str,
@@ -249,6 +254,7 @@ def create_variant(
     return {"success": True, "variant": variant}
 
 
+@tool("create_frame_slot", description="Create a frame placeholder asset for a specific cut.", tags=["assets", "write"])
 def create_frame_slot(
     project_id: str,
     cut_id: str,
@@ -287,6 +293,7 @@ def create_frame_slot(
     return {"success": True, "frame": frame, "linked_to": cut_id}
 
 
+@tool("get_asset_usage", description="Show all nodes (scenes/shots/cuts) that link to an asset.", tags=["assets", "read"])
 def get_asset_usage(asset_id: str) -> dict:
     """
     Get all nodes that use a specific asset (bidirectional query).
@@ -319,6 +326,7 @@ def get_asset_usage(asset_id: str) -> dict:
     }
 
 
+@tool("get_masters_with_variants", description="List master assets grouped with their variants.", tags=["assets", "read"])
 def get_masters_with_variants(project_id: str, asset_type: str = None) -> dict:
     """
     Get all master assets with their variants (hierarchical view).
@@ -341,6 +349,7 @@ def get_masters_with_variants(project_id: str, asset_type: str = None) -> dict:
     return {"masters": result, "count": len(result)}
 
 
+@tool("get_assets", description="List all assets for a project, optionally filtered by type.", tags=["assets", "read"])
 def get_assets(project_id: str, asset_type: str = None) -> dict:
     """
     Get all assets for the current project (masters and variants).
@@ -356,6 +365,7 @@ def get_assets(project_id: str, asset_type: str = None) -> dict:
     return {"assets": assets, "count": len(assets)}
 
 
+@tool("update_asset", description="Patch fields on an existing asset.", tags=["assets", "write"])
 def update_asset(
     asset_id: str,
     name: str = None,
@@ -399,6 +409,58 @@ def update_asset(
     return {"success": True, "asset": asset}
 
 
+@tool("generate_all_missing_sheets", description="Trigger sheet/master generation for every project asset that has a suggested_prompt but no active sheet. Runs in parallel; returns per-asset status.", tags=["assets", "write", "phase"])
+async def generate_all_missing_sheets(project_id: str) -> dict:
+    """One-button unblock for the CAST_SCOUT → STORYBOARD handoff.
+
+    Iterates every asset in the project. For each that has a non-empty
+    `suggested_prompt` and no active element_sheet, generates a sheet via the
+    Sheet Planner + Nano Banana Pro. Skips assets that are already covered.
+
+    Returns a per-asset report: which were generated, which were skipped (and
+    why), which failed.
+    """
+    import asyncio
+    from backend.orchestrator.sheet_generator import (
+        generate_sheet_for_asset,
+        get_active_sheet,
+    )
+
+    assets = asset_db.get_assets(project_id)
+    if not assets:
+        return {"success": True, "generated": [], "skipped": [], "errors": [],
+                "message": "No assets in this project."}
+
+    async def _process(a: dict):
+        if not (a.get("suggested_prompt") or "").strip():
+            return ("skipped", a, "no suggested_prompt — Atlas must save one first")
+        existing = await get_active_sheet(a["id"])
+        if existing:
+            return ("skipped", a, f"already has sheet {existing['id']}")
+        try:
+            res = await generate_sheet_for_asset(a["id"])
+            return ("generated", a, {"sheet_id": res.sheet_id, "image_url": res.image_url, "cost_usd": res.cost_usd})
+        except Exception as e:
+            return ("error", a, str(e))
+
+    outcomes = await asyncio.gather(*[_process(a) for a in assets], return_exceptions=False)
+    generated, skipped, errors = [], [], []
+    for status, a, info in outcomes:
+        item = {"id": a["id"], "type": a["type"], "name": a["name"], "info": info}
+        if status == "generated": generated.append(item)
+        elif status == "skipped": skipped.append(item)
+        else: errors.append(item)
+
+    return {
+        "success": len(errors) == 0,
+        "generated": generated,
+        "skipped": skipped,
+        "errors": errors,
+        "summary": f"Generated {len(generated)} sheet(s); skipped {len(skipped)}; {len(errors)} error(s).",
+    }
+
+
+@tool("save_suggested_asset_prompt", description="Persist a suggested generation prompt on an asset.", tags=["assets", "write"])
 def save_suggested_asset_prompt(asset_id: str, prompt: str) -> dict:
     """
     Save a suggested prompt for an asset's master image.
@@ -423,6 +485,7 @@ def save_suggested_asset_prompt(asset_id: str, prompt: str) -> dict:
     return {"success": True, "asset_id": asset_id, "suggested_prompt": prompt}
 
 
+@tool("delete_asset", description="Delete an asset and its links/variants.", tags=["assets", "write"])
 def delete_asset(asset_id: str) -> dict:
     """
     Delete an asset, all its variants, and all node links.
@@ -437,6 +500,7 @@ def delete_asset(asset_id: str) -> dict:
     return {"success": True, "deleted": asset_id}
 
 
+@tool("delete_all_assets", description="Delete every asset in a project.", tags=["assets", "write"])
 def delete_all_assets(project_id: str) -> dict:
     """
     Delete ALL assets and their links for a project.
@@ -457,6 +521,7 @@ def delete_all_assets(project_id: str) -> dict:
     return {"success": True, "deleted_count": count, "message": f"Deleted {count} assets and all their links"}
 
 
+@tool("link_asset_to_node", description="Link an asset to a scene/shot/cut node.", tags=["assets", "write"])
 def link_asset_to_node(
     asset_id: str,
     node_type: str,
@@ -490,6 +555,7 @@ def link_asset_to_node(
     return {"success": True, "link": link}
 
 
+@tool("get_node_assets", description="List assets linked to a specific node.", tags=["assets", "read"])
 def get_node_assets(node_type: str, node_id: str) -> dict:
     """
     Get all assets linked to a specific node.
@@ -505,19 +571,43 @@ def get_node_assets(node_type: str, node_id: str) -> dict:
     return {"assets": assets, "count": len(assets)}
 
 
+@tool("complete_asset_extraction", description="Validate assets are extracted and ASK user to confirm advancing to GENERATE phase.", tags=["assets", "phase"])
 def complete_asset_extraction(project_id: str) -> dict:
     """
-    Request to complete asset extraction - REQUIRES USER CONFIRMATION.
-    This tool summarizes extracted assets, then asks the user to confirm the phase transition.
-    
-    DO NOT proceed to the next phase without explicit user confirmation (e.g., "yes", "proceed", "confirm").
-    
+    Request to complete asset extraction - REQUIRES USER CONFIRMATION
+    AND every asset must have a non-empty `suggested_prompt`.
+
+    DO NOT proceed to the next phase without explicit user confirmation.
+
     Args:
         project_id: The current project ID
-    
+
     Returns:
-        Summary of extracted assets with confirmation request
+        Either a "missing prompts" failure (so Atlas can fix in-loop) or
+        a CONFIRMATION_REQUIRED summary asking the user to advance.
     """
+    # Hard pre-check: every asset must have a suggested_prompt before we can
+    # even *ask* the user to advance. This is the gate that previously failed.
+    all_assets = asset_db.get_assets(project_id)
+    missing_prompts = [a for a in all_assets if not (a.get("suggested_prompt") or "").strip()]
+    if missing_prompts:
+        return {
+            "status": "MISSING_PROMPTS",
+            "blocking": True,
+            "missing": [
+                {"id": a["id"], "type": a["type"], "name": a["name"]}
+                for a in missing_prompts
+            ],
+            "message": (
+                "❌ Cannot advance — these assets have no `suggested_prompt`. "
+                "Call `save_suggested_asset_prompt(asset_id, prompt)` on each one "
+                "with a full master-image prompt (full-body or establishing shot, "
+                "applying brief.art_style + color_palette, neutral background) before "
+                "trying to complete the phase again.\n\n" +
+                "\n".join(f"- {a['type']}/{a['name']} ({a['id']})" for a in missing_prompts)
+            ),
+        }
+
     # Get summary (masters only for clean count)
     characters = asset_db.get_masters(project_id, "character")
     locations = asset_db.get_masters(project_id, "location")
@@ -556,6 +646,7 @@ Are you ready to move to the **GENERATE** phase where we'll create visual refere
     }
 
 
+@tool("confirm_asset_extraction_complete", description="Actually advance to GENERATE phase. Call only after explicit user confirmation.", tags=["assets", "phase"])
 def confirm_asset_extraction_complete(project_id: str) -> dict:
     """
     Actually complete asset extraction and transition to GENERATE phase.
@@ -565,19 +656,35 @@ def confirm_asset_extraction_complete(project_id: str) -> dict:
         project_id: The current project ID
     
     Returns:
-        Success message with summary
+        Success message with summary, OR a hard-block payload if any asset
+        is still prompt-less (the same gate as `complete_asset_extraction`).
     """
+    # Hard gate: refuse to transition if anything is still prompt-less.
+    all_assets = asset_db.get_assets(project_id)
+    missing = [a for a in all_assets if not (a.get("suggested_prompt") or "").strip()]
+    if missing:
+        return {
+            "success": False,
+            "blocked": True,
+            "missing": [{"id": a["id"], "type": a["type"], "name": a["name"]} for a in missing],
+            "message": (
+                "Refusing to advance — assets without `suggested_prompt` exist:\n" +
+                "\n".join(f"- {a['type']}/{a['name']}" for a in missing) +
+                "\nFix them with `save_suggested_asset_prompt` first."
+            ),
+        }
+
     # Get summary for the success message
     characters = asset_db.get_masters(project_id, "character")
     locations = asset_db.get_masters(project_id, "location")
     props = asset_db.get_masters(project_id, "prop")
     frames = asset_db.get_assets(project_id, "frame")
-    
+
     # Count variants
     all_variants = sum(len(asset_db.get_variants(c["id"])) for c in characters)
     all_variants += sum(len(asset_db.get_variants(l["id"])) for l in locations)
     all_variants += sum(len(asset_db.get_variants(p["id"])) for p in props)
-    
+
     # Update project phase
     db.update_project_phase(project_id, "GENERATE")
     

@@ -1,140 +1,95 @@
 # Strawberry Studio
 
-A visual workflow builder for creating AI agent pipelines using Google ADK (Agent Development Kit).
+Visual AI storyboarding tool. Agentic, canvas-driven, multi-provider (Gemini / Fal / Anthropic / OpenAI / Kimi). Pipeline mimics real film production: Develop → Design → Cast/Scout → Blueprint → Storyboard → Animatic.
 
-## Features
+## Stack
 
-- Visual node-based workflow editor using React Flow
-- Create and manage AI agent projects
-- Design element trees with parent-child relationships
-- AI-powered content generation for workflow elements
-- Real-time WebSocket communication
-- SQLite database for persistent storage
-
-## Tech Stack
-
-### Frontend
-- React 19 with TypeScript
-- Vite for build tooling
-- React Flow (@xyflow/react) for node-based UI
-- React Router for navigation
-- Lucide React for icons
-
-### Backend
-- Python with FastAPI
-- Google ADK (Agent Development Kit)
-- SQLite with aiosqlite for async database operations
-- WebSockets for real-time communication
+- **Backend:** FastAPI · Pydantic AI · aiosqlite · WebSockets
+- **Frontend:** React 19 · Vite · React Flow · Zustand
+- **Image gen:** Gemini 3 Pro Image · Fal Nano Banana Pro · OpenAI gpt-image-2 · Replicate (FLUX/SDXL)
 
 ## Prerequisites
 
-- Python 3.10+
-- Node.js 18+
-- npm or yarn
+- Python 3.10+ (3.11+ recommended)
+- Node 18+
+- pnpm or npm
 
-## Installation
-
-### 1. Clone the repository
+## Setup
 
 ```bash
-git clone https://github.com/yourusername/strawberry-studio.git
-cd strawberry-studio
-```
-
-### 2. Set up the backend
-
-```bash
-# Create virtual environment
+# Backend (one-time)
 python -m venv venv
+source venv/bin/activate          # Windows: .\venv\Scripts\activate
+pip install -e .                   # editable install — works from any cwd
 
-# Activate virtual environment
-# On macOS/Linux:
-source venv/bin/activate
-# On Windows:
-.\venv\Scripts\activate
+# Frontend
+cd frontend && npm install && cd ..
 
-# Install dependencies
-pip install -r requirements.txt
+# Environment
+cp .env.example .env               # then fill in keys
 ```
 
-### 3. Set up the frontend
+`.env` keys:
+
+```
+GEMINI_API_KEY=
+FAL_KEY=
+ANTHROPIC_API_KEY=
+OPENAI_API_KEY=
+MOONSHOT_API_KEY=
+CORS_ORIGINS=http://localhost:5173
+```
+
+## Run
 
 ```bash
-cd frontend
-npm install
-```
-
-### 4. Configure environment variables
-
-Create a `.env` file in the root directory:
-
-```env
-GOOGLE_API_KEY=your_google_api_key_here
-```
-
-## Running the Application
-
-### Option 1: Use the start script
-
-```bash
-chmod +x start.sh
 ./start.sh
 ```
 
-### Option 2: Run manually
+Or run each side in its own terminal:
 
-**Terminal 1 - Backend:**
 ```bash
+# Terminal 1 — backend (works from any cwd thanks to editable install)
 source venv/bin/activate
-cd backend
-python -m uvicorn main:app --reload --port 8000
+python -m uvicorn backend.main:app --reload --port 8000
+
+# Terminal 2 — frontend
+cd frontend && npm run dev
 ```
 
-**Terminal 2 - Frontend:**
-```bash
-cd frontend
-npm run dev
-```
-
-The application will be available at:
 - Frontend: http://localhost:5173
-- Backend API: http://localhost:8000
+- API: http://localhost:8000
+- API docs: http://localhost:8000/docs
 
-## Project Structure
+## Project layout
 
 ```
 strawberry-studio/
 ├── backend/
-│   ├── agents/          # AI agent definitions
-│   ├── database/        # Database models and operations
-│   ├── intelligence/    # AI intelligence services
-│   ├── routes/          # API route handlers
-│   ├── services/        # Business logic services
-│   ├── storage/         # File storage
-│   ├── tools/           # ADK tool definitions
-│   └── main.py          # FastAPI application entry
+│   ├── agents/        # ADK agents (migrating to Pydantic AI)
+│   ├── database/      # SQLite + migrations
+│   ├── routes/        # FastAPI routers
+│   ├── services/      # Image gen + queue (migrating to providers/)
+│   ├── tools/         # Agent tools (per-phase)
+│   └── main.py        # FastAPI entrypoint
 ├── frontend/
-│   ├── src/
-│   │   ├── components/  # React components
-│   │   ├── pages/       # Page components
-│   │   └── ...
-│   └── package.json
-├── requirements.txt     # Python dependencies
-├── start.sh            # Startup script
-└── README.md
+│   └── src/           # React 19 + React Flow canvas
+├── storage/           # Generated images + project files (gitignored)
+├── pyproject.toml
+└── requirements.txt
 ```
 
-## API Endpoints
+## Pipeline
 
-- `GET /api/projects` - List all projects
-- `POST /api/projects` - Create a new project
-- `GET /api/projects/{id}` - Get project details
-- `DELETE /api/projects/{id}` - Delete a project
-- `GET /api/projects/{id}/elements` - Get project elements
-- `POST /api/projects/{id}/elements` - Create an element
-- `PUT /api/elements/{id}` - Update an element
-- `DELETE /api/elements/{id}` - Delete an element
+| Phase | Lead agent | Output |
+|---|---|---|
+| BRIEF | Berry | Brief |
+| STORY | Sage / Nova | Scenes → Shots → Cuts |
+| ASSETS | Atlas | Characters, locations, props |
+| GENERATE | Pixel / Iris / Spark / Scout | Storyboard panels |
+
+The pipeline is being expanded to a 6-phase film-production flow (Develop / Design / Cast & Scout / Blueprint / Storyboard / Animatic) — see `~/.claude/plans/lets-plan-rewamp-of-cryptic-lovelace.md` for the revamp plan.
 
 ## License
 
-MIT License
+MIT

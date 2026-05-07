@@ -1,77 +1,97 @@
 """
-Generation Queue Service
-Handles async generation with progress tracking and file management
-"""
-import uuid
-import json
-import asyncio
-from datetime import datetime
-from typing import Optional, Dict, Any, Callable, List
-from pathlib import Path
+Generation Queue Service — async-native progress tracking + file management.
 
-from backend.database.core import get_connection
+All DB operations use aiosqlite (no event-loop blocking). The synchronous image
+generation call (`generate_image_text_to_image`) is wrapped in `asyncio.to_thread`
+so the underlying `fal_client.subscribe` runs off-loop. File downloads use
+`httpx.AsyncClient`.
+"""
+from __future__ import annotations
+
+import asyncio
+import json
+import shutil
+import uuid
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional
+
+import httpx
+import structlog
+
+from backend.database.core import get_async_connection, get_connection
+
+log = structlog.get_logger(__name__)
 
 
 class GenerationRequest:
-    """Tracks progress of a single generation request"""
+    """Tracks progress of a single generation request — async DB writes."""
 
     def __init__(self, request_id: str):
         self.request_id = request_id
         self.cancelled = False
 
-    def update_progress(self,
-                       percentage: int,
-                       step: str,
-                       status: str = 'generating'):
-        """Update generation progress"""
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            UPDATE generation_requests
-            SET progress_percentage = ?,
-                current_step = ?,
-                status = ?
-            WHERE id = ?
-        """, (percentage, step, status, self.request_id))
-        conn.commit()
-        conn.close()
+    async def update_progress(
+        self,
+        percentage: int,
+        step: str,
+        status: str = "generating",
+    ) -> None:
+        async with get_async_connection() as conn:
+            await conn.execute(
+                """
+                UPDATE generation_requests
+                SET progress_percentage = ?, current_step = ?, status = ?
+                WHERE id = ?
+                """,
+                (percentage, step, status, self.request_id),
+            )
+            await conn.commit()
 
-    def mark_complete(self,
-                     output_url: str,
-                     file_path: str,
-                     cost: float,
-                     metadata: Dict[str, Any]):
-        """Mark generation as complete"""
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            UPDATE generation_requests
-            SET status = 'complete',
-                progress_percentage = 100,
-                output_image_url = ?,
-                output_file_path = ?,
-                output_metadata = ?,
-                cost_usd = ?,
-                completed_at = ?
-            WHERE id = ?
-        """, (output_url, file_path, json.dumps(metadata), cost,
-              datetime.now().isoformat(), self.request_id))
-        conn.commit()
-        conn.close()
+    async def mark_complete(
+        self,
+        output_url: str,
+        file_path: str,
+        cost: float,
+        metadata: Dict[str, Any],
+    ) -> None:
+        async with get_async_connection() as conn:
+            await conn.execute(
+                """
+                UPDATE generation_requests
+                SET status = 'complete',
+                    progress_percentage = 100,
+                    output_image_url = ?,
+                    output_file_path = ?,
+                    output_metadata = ?,
+                    cost_usd = ?,
+                    completed_at = ?
+                WHERE id = ?
+                """,
+                (
+                    output_url,
+                    file_path,
+                    json.dumps(metadata),
+                    cost,
+                    datetime.now().isoformat(),
+                    self.request_id,
+                ),
+            )
+            await conn.commit()
 
-    def mark_failed(self, error: str):
-        """Mark generation as failed"""
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            UPDATE generation_requests
-            SET status = 'failed',
-                error_message = ?,
-                completed_at = ?
-            WHERE id = ?
-        """, (error, datetime.now().isoformat(), self.request_id))
-        conn.commit()
-        conn.close()
+    async def mark_failed(self, error: str) -> None:
+        async with get_async_connection() as conn:
+            await conn.execute(
+                """
+                UPDATE generation_requests
+                SET status = 'failed',
+                    error_message = ?,
+                    completed_at = ?
+                WHERE id = ?
+                """,
+                (error, datetime.now().isoformat(), self.request_id),
+            )
+            await conn.commit()
 
 
 def create_generation_request(
@@ -85,135 +105,140 @@ def create_generation_request(
     candidate_group_id: Optional[str] = None,
     reference_image_url: Optional[str] = None,
     reference_images: Optional[List[Dict[str, Any]]] = None,
-    method: str = 'text_to_image'
+    method: str = "text_to_image",
 ) -> str:
-    """Create a new generation request and return request_id"""
+    """Create a new generation request and return request_id. Sync — called from sync route handlers."""
     request_id = f"gen_{uuid.uuid4().hex[:8]}"
 
-    # Generate candidate_group_id if not provided
     if not candidate_group_id:
-        if target_type == 'master' and target_asset_id:
+        if target_type == "master" and target_asset_id:
             candidate_group_id = f"master_group_{target_asset_id}"
-        elif target_type == 'variant' and target_asset_id:
-            variant_type = params.get('variant_type', 'unknown')
+        elif target_type == "variant" and target_asset_id:
+            variant_type = params.get("variant_type", "unknown")
             candidate_group_id = f"variant_group_{target_asset_id}_{variant_type}"
-        elif target_type == 'cut' and target_cut_id:
+        elif target_type == "cut" and target_cut_id:
             candidate_group_id = f"cut_group_{target_cut_id}"
 
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT INTO generation_requests (
             id, project_id, target_type, target_asset_id, target_cut_id,
             prompt, model, method, reference_image_url, reference_images, params,
             status, candidate_group_id, started_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', ?, ?)
-    """, (request_id, project_id, target_type, target_asset_id, target_cut_id,
-          prompt, model, method, reference_image_url, json.dumps(reference_images) if reference_images else None, 
-          json.dumps(params), candidate_group_id, datetime.now().isoformat()))
+        """,
+        (
+            request_id,
+            project_id,
+            target_type,
+            target_asset_id,
+            target_cut_id,
+            prompt,
+            model,
+            method,
+            reference_image_url,
+            json.dumps(reference_images) if reference_images else None,
+            json.dumps(params),
+            candidate_group_id,
+            datetime.now().isoformat(),
+        ),
+    )
     conn.commit()
     conn.close()
-
     return request_id
 
 
-def start_generation_task(request_id: str):
-    """Start generation task in background - call this from endpoint with BackgroundTasks"""
+def start_generation_task(request_id: str) -> None:
+    """Entry point from FastAPI BackgroundTasks (sync). Schedules the async runner."""
     asyncio.run(execute_generation(request_id))
 
 
-async def execute_generation(request_id: str):
-    """Execute generation with progress tracking"""
+async def execute_generation(request_id: str) -> None:
+    """Execute generation with progress tracking — fully async."""
     request = GenerationRequest(request_id)
 
     try:
-        # Load request details
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM generation_requests WHERE id = ?", (request_id,))
-        req_data = dict(cursor.fetchone())
-        conn.close()
+        async with get_async_connection() as conn:
+            async with conn.execute(
+                "SELECT * FROM generation_requests WHERE id = ?", (request_id,)
+            ) as cursor:
+                row = await cursor.fetchone()
+        if row is None:
+            raise RuntimeError(f"generation_request not found: {request_id}")
+        req_data = dict(row)
 
-        # Step 1: Prepare (5%)
-        request.update_progress(5, "Preparing prompt...", "preparing")
-        await asyncio.sleep(0.3)
+        await request.update_progress(5, "Preparing prompt...", "preparing")
+        await asyncio.sleep(0.2)
 
-        # Import generation service
         from backend.services.gemini_image import generate_image_text_to_image
 
-        params = json.loads(req_data['params'])
+        params = json.loads(req_data["params"])
 
-        # Parse reference_images if present
         reference_images = None
         num_refs = 0
-        if req_data.get('reference_images'):
+        if req_data.get("reference_images"):
             try:
-                reference_images = json.loads(req_data['reference_images'])
-                num_refs = len([r for r in reference_images if r.get('image_url')])
-            except:
+                reference_images = json.loads(req_data["reference_images"])
+                num_refs = len([r for r in reference_images if r.get("image_url")])
+            except Exception:
                 pass
 
-        # Step 2: Upload references (10-25%) - if there are reference images
         if num_refs > 0:
-            request.update_progress(10, f"Uploading {num_refs} reference image(s)...", "uploading")
-            await asyncio.sleep(0.3)
-            request.update_progress(20, "Uploading references to Fal.ai...", "uploading")
+            await request.update_progress(20, f"Uploading {num_refs} reference image(s)...", "uploading")
         else:
-            request.update_progress(15, "No references to upload...", "preparing")
+            await request.update_progress(15, "No references to upload...", "preparing")
 
-        # Step 3: Call AI API (25-70%)
-        request.update_progress(25, "Starting image generation...", "generating")
-        await asyncio.sleep(0.3)
-        request.update_progress(40, "Generating image with AI...", "generating")
-        await asyncio.sleep(0.5)
-        request.update_progress(55, "Rendering image...", "generating")
+        await request.update_progress(40, "Generating image with AI...", "generating")
 
-        # Generate image using actual Gemini service
-        result = generate_image_text_to_image(
-            prompt=req_data['prompt'],
-            model=req_data['model'],
-            resolution=params.get('resolution', '2048x2048'),
-            aspect_ratio=params.get('aspect_ratio', '1:1'),
-            seed=params.get('seed'),
+        # Image gen is sync (fal_client / google.generativeai are sync libs).
+        # Run in a thread so we don't block the event loop.
+        result = await asyncio.to_thread(
+            generate_image_text_to_image,
+            prompt=req_data["prompt"],
+            model=req_data["model"],
+            resolution=params.get("resolution", "2048x2048"),
+            aspect_ratio=params.get("aspect_ratio", "1:1"),
+            seed=params.get("seed"),
             num_images=1,
-            reference_images=reference_images
+            reference_images=reference_images,
         )
 
-        if not result.get('success'):
-            raise Exception(result.get('error', 'Image generation failed'))
+        if not result.get("success"):
+            raise RuntimeError(result.get("error", "Image generation failed"))
 
-        # Step 4: Download and save (70-95%)
-        request.update_progress(70, "Downloading generated image...", "downloading")
+        await request.update_progress(70, "Downloading generated image...", "downloading")
 
-        # Download the generated image from the mock service
-        image_url = result['image_url']
+        async def _on_progress(pct: int) -> None:
+            await request.update_progress(75 + int(pct * 0.20), f"Saving... {pct}%")
+
         file_info = await save_generated_file_from_url(
-            image_url=image_url,
-            project_id=req_data['project_id'],
-            target_type=req_data['target_type'],
-            asset_id=req_data['target_asset_id'],
+            image_url=result["image_url"],
+            project_id=req_data["project_id"],
+            target_type=req_data["target_type"],
+            asset_id=req_data["target_asset_id"],
             request_id=request_id,
-            progress_callback=lambda pct: request.update_progress(75 + int(pct * 0.20), f"Saving... {pct}%")
+            progress_callback=_on_progress,
         )
 
-        # Step 4: Complete (100%)
-        request.update_progress(95, "Finalizing...", "complete")
-        request.mark_complete(
-            output_url=file_info['url'],
-            file_path=file_info['path'],
-            cost=result.get('cost_usd', 0.039),
+        await request.update_progress(95, "Finalizing...", "complete")
+        await request.mark_complete(
+            output_url=file_info["url"],
+            file_path=file_info["path"],
+            cost=result.get("cost_usd", 0.039),
             metadata={
-                'resolution': params.get('resolution'),
-                'seed': params.get('seed'),
-                'model': req_data['model'],
-                'image_id': result.get('image_id'),
-                'tokens_used': result.get('tokens_used', 0)
-            }
+                "resolution": params.get("resolution"),
+                "seed": params.get("seed"),
+                "model": req_data["model"],
+                "image_id": result.get("image_id"),
+                "tokens_used": result.get("tokens_used", 0),
+            },
         )
-
+        log.info("generation_complete", request_id=request_id)
     except Exception as e:
-        request.mark_failed(str(e))
-        print(f"Generation failed for {request_id}: {e}")
+        await request.mark_failed(str(e))
+        log.error("generation_failed", request_id=request_id, error=str(e))
 
 
 async def save_generated_file_from_url(
@@ -222,76 +247,60 @@ async def save_generated_file_from_url(
     target_type: str,
     asset_id: Optional[str],
     request_id: str,
-    progress_callback: Optional[Callable] = None
+    progress_callback: Optional[Callable[[int], Any]] = None,
 ) -> Dict[str, str]:
     """
-    Copy generated file from temp location to structured project storage:
-    /storage/projects/{project_id}/elements/{asset_id}/{target_type}_{request_id}.jpg
+    Move generated file into project storage:
+        backend/storage/projects/{project_id}/elements/{asset_id}/{target_type}_{request_id}.jpg
     """
-    import shutil
-    import requests
-
-    # Create directory structure under backend/storage
-    backend_dir = Path(__file__).parent.parent  # backend/
+    backend_dir = Path(__file__).parent.parent
     base_dir = backend_dir / "storage" / "projects" / project_id / "elements"
     if asset_id:
         base_dir = base_dir / asset_id
     base_dir.mkdir(parents=True, exist_ok=True)
 
-    # Generate filename
     filename = f"{target_type}_{request_id}.jpg"
     dest_path = base_dir / filename
 
-    # If image_url is a local path (starts with /storage/generated/)
-    if image_url.startswith('/storage/generated/'):
-        # Copy from temp storage to project storage
-        source_path = Path(__file__).parent.parent / image_url.lstrip('/')
+    async def _emit(pct: int) -> None:
+        if progress_callback is None:
+            return
+        result = progress_callback(pct)
+        if asyncio.iscoroutine(result):
+            await result
 
-        if progress_callback:
-            progress_callback(50)
-
-        shutil.copy2(source_path, dest_path)
-
-        if progress_callback:
-            progress_callback(100)
+    if image_url.startswith("/storage/generated/"):
+        source_path = backend_dir / image_url.lstrip("/")
+        await _emit(50)
+        await asyncio.to_thread(shutil.copy2, source_path, dest_path)
+        await _emit(100)
     else:
-        # Download from remote URL
-        response = requests.get(image_url, stream=True, timeout=30)
-        response.raise_for_status()
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            async with client.stream("GET", image_url) as response:
+                response.raise_for_status()
+                total_size = int(response.headers.get("content-length", 0) or 0)
+                downloaded = 0
+                with open(dest_path, "wb") as f:
+                    async for chunk in response.aiter_bytes(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+                            downloaded += len(chunk)
+                            if total_size > 0:
+                                await _emit(int((downloaded / total_size) * 100))
 
-        total_size = int(response.headers.get('content-length', 0))
-        chunk_size = 8192
-        downloaded = 0
-
-        with open(dest_path, 'wb') as f:
-            for chunk in response.iter_content(chunk_size=chunk_size):
-                if chunk:
-                    f.write(chunk)
-                    downloaded += len(chunk)
-                    if progress_callback and total_size > 0:
-                        progress_pct = int((downloaded / total_size) * 100)
-                        progress_callback(progress_pct)
-
-    # Return URL and path
     url_path = f"/storage/projects/{project_id}/elements"
     if asset_id:
         url_path += f"/{asset_id}"
-    url = f"{url_path}/{filename}"
-
-    return {
-        'url': url,
-        'path': str(dest_path)
-    }
+    return {"url": f"{url_path}/{filename}", "path": str(dest_path)}
 
 
 def get_generation_status(request_id: str) -> Optional[Dict[str, Any]]:
-    """Get current status of a generation request"""
+    """Sync — used by sync route handlers polling status."""
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM generation_requests WHERE id = ?", (request_id,))
     row = cursor.fetchone()
     conn.close()
-
     return dict(row) if row else None
 
 
@@ -299,19 +308,18 @@ def list_generation_requests(
     project_id: str,
     status: Optional[str] = None,
     target_asset_id: Optional[str] = None,
-    limit: int = 50
+    limit: int = 50,
 ) -> list[Dict[str, Any]]:
-    """List generation requests with filters"""
+    """Sync — list endpoints."""
     conn = get_connection()
     cursor = conn.cursor()
 
     query = "SELECT * FROM generation_requests WHERE project_id = ?"
-    params = [project_id]
+    params: list[Any] = [project_id]
 
     if status:
         query += " AND status = ?"
         params.append(status)
-
     if target_asset_id:
         query += " AND target_asset_id = ?"
         params.append(target_asset_id)
@@ -322,22 +330,22 @@ def list_generation_requests(
     cursor.execute(query, params)
     rows = cursor.fetchall()
     conn.close()
-
     return [dict(row) for row in rows]
 
 
 def cancel_generation(request_id: str) -> bool:
-    """Cancel a pending/generating request"""
+    """Cancel a pending/generating request."""
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("""
+    cursor.execute(
+        """
         UPDATE generation_requests
-        SET status = 'cancelled',
-            completed_at = ?
+        SET status = 'cancelled', completed_at = ?
         WHERE id = ? AND status IN ('queued', 'preparing', 'generating', 'downloading')
-    """, (datetime.now().isoformat(), request_id))
+        """,
+        (datetime.now().isoformat(), request_id),
+    )
     affected = cursor.rowcount
     conn.commit()
     conn.close()
-
     return affected > 0

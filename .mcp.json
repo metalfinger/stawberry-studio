@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "helix-memory": {
+      "command": "python",
+      "args": [
+        "-m",
+        "helix_memory.mcp"
+      ],
+      "env": {
+        "HELIX_QDRANT__URL": "https://6289e223-2759-4785-8432-2924fe2b906b.us-west-1-0.aws.cloud.qdrant.io:6333",
+        "HELIX_QDRANT__API_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.pUJRsG1zKClpH2PHrKFUYmE_HOrzK9dKw09u19vc8oI",
+        "PYTHONUTF8": "1"
+      }
+    }
+  }
+}

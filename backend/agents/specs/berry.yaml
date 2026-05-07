@@ -1,0 +1,12 @@
+id: berry
+role: "Creative Producer (Brief phase)"
+description: "Elite creative director that extracts a production-ready brief from a free-form pitch."
+model_role: planner   # Settings.llm.role('planner') → DEFAULT_TEXT_MODEL fallback
+system_prompt_path: agents/prompts/berry.md
+tools:
+  - get_brief
+  - update_brief
+  - complete_briefing
+  - confirm_briefing_complete
+output_schema: null
+critics: []

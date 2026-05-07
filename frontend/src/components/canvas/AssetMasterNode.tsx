@@ -10,6 +10,7 @@ import {
   queueMasterGeneration,
   generateElementVariant
 } from '../../services/elements'
+import { getAssetSheet, generateAssetSheet, type ElementSheet } from '../../api/client'
 
 export interface Asset {
   id: string
@@ -65,10 +66,52 @@ export const AssetMasterNode = memo(({ data, selected }: NodeProps & { data: Ass
   const [generationModel, setGenerationModel] = useState('gemini-3-pro-image')
   const [generationResolution, setGenerationResolution] = useState(asset.type === 'location' ? '2048x1365' : '2048x2048')
 
-  // Variant Modal State
+  // Variant Modal State (legacy — kept until backend tools are removed)
   const [showVariantModal, setShowVariantModal] = useState(false)
   const [pendingVariantType, setPendingVariantType] = useState<string | null>(null)
   const [variantPrompt, setVariantPrompt] = useState('')
+
+  // Element Sheet state (Phase 4.6 — replaces variants)
+  const [sheet, setSheet] = useState<ElementSheet | null>(null)
+  const [sheetLoading, setSheetLoading] = useState(false)
+  const [sheetError, setSheetError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    getAssetSheet(projectId, asset.id)
+      .then(({ sheet }) => { if (!cancelled) setSheet(sheet) })
+      .catch(() => { /* ignore — no sheet is fine */ })
+    return () => { cancelled = true }
+  }, [projectId, asset.id])
+
+  const handleGenerateSheet = async () => {
+    setSheetLoading(true)
+    setSheetError(null)
+    try {
+      const result = await generateAssetSheet(projectId, asset.id)
+      // Refetch full sheet to populate is_active/created_at fields
+      const { sheet: fresh } = await getAssetSheet(projectId, asset.id)
+      setSheet(fresh ?? {
+        id: result.sheet_id,
+        asset_id: asset.id,
+        sheet_type: result.sheet_type,
+        template_id: result.template_id,
+        image_url: result.image_url,
+        aspect_ratio: result.layout.aspect_ratio,
+        panels: result.panels,
+        layout: result.layout,
+        status: 'complete',
+        cost_usd: result.cost_usd,
+        is_active: true,
+        created_at: new Date().toISOString(),
+      })
+      data.onRefresh?.()
+    } catch (e: any) {
+      setSheetError(e.message || 'Sheet generation failed')
+    } finally {
+      setSheetLoading(false)
+    }
+  }
 
   const pollInterval = useRef<number | undefined>(undefined)
 
@@ -351,22 +394,46 @@ const renderPropertiesPanel = () => (
         </div>
       </div>
 
-      {/* 4. VARIANTS */}
+      {/* 4. ELEMENT SHEET (Phase 4.6 — single multi-panel image) */}
       <div className="panel-section variants-section">
-        <h3>Variants</h3>
-        <div className="variants-list">
-          {['SIDE_LEFT', 'SIDE_RIGHT', 'FRONT_3_4', 'BACK'].map(v => (
-            <div key={v} className="variant-row">
-              <span>{v.replace('_', ' ')}</span>
-              <button
-                className="add-btn"
-                onClick={() => handleVariantClick(v)}
-                title={`Generate ${v}`}
-                disabled={isGenerating}
-              >+</button>
+        <h3>Element Sheet</h3>
+        {sheet ? (
+          <div className="sheet-display">
+            <img src={sheet.image_url} className="sheet-image" alt={`${asset.name} sheet`} />
+            <div className="sheet-meta">
+              <span className="sheet-type-tag">{sheet.sheet_type}</span>
+              <span className="sheet-cost">${sheet.cost_usd?.toFixed(3)}</span>
             </div>
-          ))}
-        </div>
+            <div className="sheet-cells">
+              {sheet.panels.map((label) => (
+                <span key={label} className="sheet-cell-label">{label.replace(/_/g, ' ')}</span>
+              ))}
+            </div>
+            <button
+              className="add-btn"
+              onClick={handleGenerateSheet}
+              disabled={sheetLoading || isGenerating}
+              style={{ width: '100%', marginTop: 8 }}
+            >
+              {sheetLoading ? 'Regenerating…' : '↻ Regenerate sheet'}
+            </button>
+          </div>
+        ) : (
+          <div className="sheet-empty">
+            <p style={{ fontSize: 12, color: '#9ca3af', margin: '4px 0 8px' }}>
+              No sheet yet. One image, every angle/expression, locked consistency.
+            </p>
+            <button
+              className="add-btn"
+              onClick={handleGenerateSheet}
+              disabled={sheetLoading || isGenerating}
+              style={{ width: '100%' }}
+            >
+              {sheetLoading ? 'Generating…' : '✨ Generate sheet'}
+            </button>
+          </div>
+        )}
+        {sheetError && <div className="np-error" style={{ marginTop: 6 }}>{sheetError}</div>}
       </div>
 
     </div>

@@ -9,11 +9,13 @@ from typing import Dict, Any, List, Optional
 from backend.database import core as db
 from backend.database import shots as shots_db
 from backend.database import assets as assets_db
+from backend.tools.registry import tool
 
 
 
 # ============== CONTEXT TOOLS ==============
 
+@tool("get_cut_context", description="Return cut + parent shot + scene + brief for prompt assembly.", tags=["generation", "read"])
 def get_cut_context(project_id: str, cut_id: str) -> Dict[str, Any]:
     """
     Get full hierarchical context for a cut.
@@ -57,6 +59,7 @@ def get_cut_context(project_id: str, cut_id: str) -> Dict[str, Any]:
     }
 
 
+@tool("get_previous_cut", description="Return the cut immediately before this one (for continuity chaining).", tags=["generation", "read"])
 def get_previous_cut(project_id: str, cut_id: str) -> Optional[Dict[str, Any]]:
     """
     Get the cut before this one (for continuity chaining).
@@ -90,6 +93,7 @@ def get_previous_cut(project_id: str, cut_id: str) -> Optional[Dict[str, Any]]:
     return dict(prev) if prev else None
 
 
+@tool("get_cut_assets", description="Return assets linked to a specific cut, grouped by type.", tags=["generation", "read"])
 def get_cut_assets(project_id: str, cut_id: str) -> Dict[str, List[Dict]]:
     """
     Get all assets linked to this cut.
@@ -143,6 +147,7 @@ def get_cut_assets(project_id: str, cut_id: str) -> Dict[str, List[Dict]]:
     return result
 
 
+@tool("get_smart_generation_context", description="Full context bundle: cut, available_assets, previous_cuts, next_cut, art_style, slot rules.", tags=["generation", "read"])
 def get_smart_generation_context(project_id: str, cut_id: str) -> Dict[str, Any]:
     """
     Get FULL context for a cut to enable smart agent decisions.
@@ -306,6 +311,7 @@ def get_smart_generation_context(project_id: str, cut_id: str) -> Dict[str, Any]
     }
 
 
+@tool("find_cut_by_number", description="Look up a cut by S{n}-Sh{n}-C{n} numbering.", tags=["generation", "read"])
 def find_cut_by_number(project_id: str, scene_number: int, shot_number: int, cut_number: int = 1) -> Dict[str, Any]:
     """
     Find a cut UUID by its scene/shot/cut numbers.
@@ -367,6 +373,7 @@ def resolve_inheritance(cut: dict, shot: dict, scene: dict, brief: dict, field: 
     return brief.get(field, "")
 
 
+@tool("compile_shot_prompt", description="Compile a text-to-image prompt for the first cut of a shot.", tags=["generation", "write"])
 def compile_shot_prompt(project_id: str, cut_id: str) -> Dict[str, Any]:
     """
     Compile a Nano Banana Pro (Gemini 3 Pro Image) format prompt.
@@ -720,6 +727,7 @@ def compile_shot_prompt(project_id: str, cut_id: str) -> Dict[str, Any]:
     }
 
 
+@tool("compile_edit_prompt", description="Compile an image-to-image edit prompt for cuts >1.", tags=["generation", "write"])
 def compile_edit_prompt(project_id: str, cut_id: str) -> Dict[str, Any]:
     """
     Compile an edit prompt for cut refinement.
@@ -808,6 +816,7 @@ def compile_edit_prompt(project_id: str, cut_id: str) -> Dict[str, Any]:
 
 # ============== REAL GENERATION ==============
 
+@tool("generate_cut_image", description="Run the image generator for a cut and save the result.", tags=["generation", "write"])
 def generate_cut_image(
     project_id: str, 
     cut_id: str, 
@@ -927,6 +936,7 @@ def generate_cut_image(
 
 # ============== LEGACY / HELPERS ==============
 
+@tool("generate_image_mock", description="Mock image generator for offline testing.", tags=["generation", "mock"])
 def generate_image_mock(prompt: str, slots: Dict[str, str]) -> Dict[str, Any]:
     """
     Mock image generation - returns placeholder URL.
@@ -944,6 +954,7 @@ def generate_image_mock(prompt: str, slots: Dict[str, str]) -> Dict[str, Any]:
     }
 
 
+@tool("save_cut_image", description="Persist a generated image URL onto a cut row.", tags=["generation", "write"])
 def save_cut_image(project_id: str, cut_id: str, image_url: str) -> Dict[str, Any]:
     """Save generated image URL to cut (Helper)."""
     conn = db.get_connection()
@@ -957,6 +968,7 @@ def save_cut_image(project_id: str, cut_id: str, image_url: str) -> Dict[str, An
     return {"success": True, "cut_id": cut_id, "image_url": image_url}
 
 
+@tool("mark_cut_status", description="Update generation_status on a cut (pending|generating|complete|failed).", tags=["generation", "write"])
 def mark_cut_status(project_id: str, cut_id: str, status: str, notes: str = "") -> Dict[str, Any]:
     """Update cut's generation status (Helper)."""
     conn = db.get_connection()
@@ -970,6 +982,7 @@ def mark_cut_status(project_id: str, cut_id: str, status: str, notes: str = "") 
     return {"success": True, "cut_id": cut_id, "status": status}
 
 
+@tool("get_asset_image", description="Return the active image URL for an asset (master or fallback).", tags=["generation", "read"])
 def get_asset_image(project_id: str, asset_id: str) -> Optional[str]:
     """Get the image URL for an asset."""
     asset = assets_db.get_asset(asset_id)
@@ -978,6 +991,7 @@ def get_asset_image(project_id: str, asset_id: str) -> Optional[str]:
 
 # ============== QA TOOLS ==============
 
+@tool("compare_with_master", description="QA: compare a generated cut against character master refs (stub for vision check).", tags=["generation", "qa"])
 def compare_with_master(project_id: str, cut_id: str) -> Dict[str, Any]:
     """
     Compare generated cut with master assets.
@@ -1001,6 +1015,7 @@ def compare_with_master(project_id: str, cut_id: str) -> Dict[str, Any]:
     }
 
 
+@tool("flag_issue", description="QA: flag a continuity issue on a cut.", tags=["generation", "qa"])
 def flag_issue(project_id: str, cut_id: str, issue: str, severity: str = "minor") -> Dict[str, Any]:
     """Flag a continuity issue on a cut."""
     conn = db.get_connection()
@@ -1014,6 +1029,7 @@ def flag_issue(project_id: str, cut_id: str, issue: str, severity: str = "minor"
     return {"success": True, "cut_id": cut_id, "issue": issue, "severity": severity}
 
 
+@tool("request_edit", description="QA: ask the renderer to redo a cut with edit_target/spatial_lock.", tags=["generation", "qa"])
 def request_edit(project_id: str, cut_id: str, edit_target: str, spatial_lock: str = "") -> Dict[str, Any]:
     """Request an edit pass on a cut."""
     conn = db.get_connection()
@@ -1027,6 +1043,7 @@ def request_edit(project_id: str, cut_id: str, edit_target: str, spatial_lock: s
     return {"success": True, "cut_id": cut_id, "edit_requested": edit_target}
 
 
+@tool("approve_cut", description="QA: mark a cut as approved.", tags=["generation", "qa"])
 def approve_cut(project_id: str, cut_id: str) -> Dict[str, Any]:
     """Approve a cut after QA review."""
     conn = db.get_connection()

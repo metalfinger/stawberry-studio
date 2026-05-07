@@ -1,0 +1,78 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "strawberry-studio"
+version = "3.0.0"
+description = "Visual AI storyboarding tool with agentic pipelines"
+requires-python = ">=3.10"
+readme = "README.md"
+dynamic = ["dependencies"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[tool.setuptools.packages.find]
+include = ["backend*"]
+exclude = ["frontend*", "venv*", "storage*", "tests*"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+extend-exclude = [
+    "venv",
+    "frontend",
+    "storage",
+    "backend/database/migrations",
+    # Legacy modules — ruff-clean during Phase 5 split (deferred).
+    "backend/agents",
+    "backend/tools/generation.py",
+    "backend/tools/element_generation.py",
+    "backend/tools/blueprint.py",
+    "backend/tools/assets.py",
+    "backend/tools/pre_production.py",
+    "backend/tools/navigation.py",
+    "backend/tools/handoff.py",
+    "backend/tools/phase_confirmation.py",
+    "backend/tools/briefing.py",
+    "backend/tools/__init__.py",
+    "backend/services/gemini_image.py",
+    "backend/services/generation_queue.py",
+    "backend/database/scenes.py",
+    "backend/database/shots.py",
+    "backend/database/blueprint.py",
+    "backend/database/assets.py",
+    "backend/database/history.py",
+    "backend/database/db.sqlite",
+    "backend/db.py",
+    "backend/db_async.py",
+    "backend/routes/cuts.py",
+    "backend/routes/elements.py",
+    "backend/routes/assets.py",
+    "backend/routes/projects.py",
+    "backend/routes/chat.py",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = ["E501", "B008"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+    "ignore::FutureWarning",
+]
+markers = [
+    "live: tests that hit real LLM/image providers (expensive)",
+]
+
+[tool.mypy]
+python_version = "3.10"
+strict = false
+ignore_missing_imports = true
+exclude = ["venv/", "frontend/", "storage/", "backend/database/migrations/"]
+files = ["backend/models.py", "backend/providers", "backend/orchestrator", "backend/errors.py"]

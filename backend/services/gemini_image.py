@@ -1,31 +1,153 @@
 """
-Image Generation API Integration
-Supports Fal.ai (Flux), Gemini Imagen, and mock modes
-For generating high-quality element images (characters, locations, props)
+Image generation — backwards-compatible shim over backend/providers/.
+
+This module preserves the legacy public API (`generate_image_text_to_image`,
+`generate_image_image_to_image`, helpers) so existing callers in
+`tools/element_generation.py`, `tools/generation.py`, `services/generation_queue.py`
+and `tools/pre_production.py` keep working unchanged. Internally it delegates
+to the new provider abstraction in `backend.providers`.
+
+Provider routing:
+- model starts with "fal-ai/" or FAL_KEY set with no Gemini key → Fal adapter
+- model starts with "gemini-" or default → Gemini adapter (via google-genai)
 """
-import os
+from __future__ import annotations
+
+import asyncio
 import uuid
-import base64
-import requests
-from typing import Dict, Any, Optional, List
-from datetime import datetime
+from typing import Any, Dict, List, Optional
+
 from dotenv import load_dotenv
 
-# Load .env file
+from backend.config import get_settings
+from backend.providers import (
+    ImageGenRequest,
+    ProviderError,
+    ReferenceImage,
+    get_registry,
+)
+from backend.providers.image._storage import save_image_bytes
+
 load_dotenv()
+_settings = get_settings()
 
-# API Keys
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-FAL_API_KEY = os.getenv("FAL_KEY")
+# Re-exported for legacy callers that import these constants
+GEMINI_API_KEY: Optional[str] = _settings.llm.gemini_api_key
+FAL_API_KEY: Optional[str] = _settings.image.fal_api_key
 
-# Try to configure Gemini if available
-try:
-    import google.generativeai as genai
-    if GEMINI_API_KEY:
-        genai.configure(api_key=GEMINI_API_KEY)
-except ImportError:
-    genai = None
 
+# ============================================================================
+# Internal helpers
+# ============================================================================
+
+def _provider_for(model: str) -> str:
+    """Pick a provider given a logical or model name."""
+    m = (model or "").lower()
+    if m.startswith("fal-ai/"):
+        return "fal"
+    if m.startswith("gemini") or "nano_banana" in m or "nano-banana" in m:
+        # Prefer Gemini if key set, else fall through to Fal
+        return "gemini" if _settings.llm.gemini_api_key else "fal"
+    # Default: prefer Fal (richer multi-ref edit), else Gemini
+    if _settings.image.fal_api_key:
+        return "fal"
+    return "gemini"
+
+
+def _normalize_model(model: str, provider_name: str) -> str:
+    """Map legacy model aliases to provider-native model strings."""
+    aliases = {
+        "nano_banana_pro": "gemini-3-pro-image-preview",
+        "nano_banana": "gemini-3.1-flash-image-preview",
+        "nano-banana-pro-edit": "fal-ai/nano-banana-pro/edit",
+        "nano-banana-pro": "gemini-3-pro-image-preview",
+        "gemini-3-pro-image": "gemini-3-pro-image-preview",
+        "gemini-2.5-flash-image": "gemini-3.1-flash-image-preview",
+    }
+    m = aliases.get(model, model)
+    # If routing through Fal but model is a Gemini name, use Fal's equivalent
+    if provider_name == "fal" and m.startswith("gemini-"):
+        m = _settings.image.fal_text_to_image_model
+    return m
+
+
+def _refs_to_pydantic(reference_images: Optional[List[Dict[str, Any]]]) -> List[ReferenceImage]:
+    if not reference_images:
+        return []
+    out: List[ReferenceImage] = []
+    for r in reference_images:
+        url = r.get("image_url") or r.get("url")
+        if not url:
+            continue
+        out.append(
+            ReferenceImage(
+                image_url=url,
+                slot=int(r.get("slot", len(out) + 1)),
+                name=r.get("name"),
+                asset_id=r.get("asset_id"),
+            )
+        )
+    return out
+
+
+def _run(coro):
+    """Run a coroutine from sync code, transparently handling 'event loop
+    already running' by trampolining into a worker thread.
+
+    This shim is called from sync gen helpers that may be invoked from:
+      - sync route handlers (FastAPI thread-pools them) → no running loop, asyncio.run is fine
+      - async route handlers / tools called from running event loops → must trampoline
+      - tools called from an ADK / Pydantic AI run inside a WebSocket handler → must trampoline
+    """
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        # No running loop — safe to use asyncio.run directly.
+        return asyncio.run(coro)
+
+    # Already inside an event loop (e.g. async route handler).
+    # Run the coroutine in a worker thread so its own asyncio.run is independent.
+    import concurrent.futures
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        future = pool.submit(asyncio.run, coro)
+        return future.result()
+
+
+def _ok(result, *, prompt: str, resolution: str, aspect_ratio: str, seed) -> Dict[str, Any]:
+    """Convert ImageGenResult to legacy dict shape."""
+    return {
+        "success": True,
+        "image_url": result.image_urls[0],
+        "image_urls": result.image_urls,
+        "image_id": result.image_id,
+        "model_used": result.model_used,
+        "cost_usd": result.cost_usd,
+        "tokens_used": 0,
+        "generation_params": {
+            "prompt": prompt,
+            "resolution": resolution,
+            "aspect_ratio": aspect_ratio,
+            "seed": seed,
+            "model": result.model_used,
+            **result.metadata,
+        },
+    }
+
+
+def _err(e: Exception) -> Dict[str, Any]:
+    return {
+        "success": False,
+        "error": str(e),
+        "image_url": None,
+        "image_urls": [],
+        "cost_usd": 0.0,
+    }
+
+
+# ============================================================================
+# Public API
+# ============================================================================
 
 def generate_image_text_to_image(
     prompt: str,
@@ -35,232 +157,37 @@ def generate_image_text_to_image(
     num_images: int = 1,
     seed: Optional[int] = None,
     params: Optional[Dict[str, Any]] = None,
-    reference_images: Optional[List[Dict[str, Any]]] = None
+    reference_images: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
-    """
-    Generate image from text prompt using Gemini 3 Pro Image.
-    Supports multi-image reference slots (@Image1, @Image2, etc.)
-    """
+    """Text-to-image (with optional multi-image references). Routes via the new provider abstraction."""
     try:
-        # Map model names
-        model_map = {
-            "gemini-3-pro-image": "gemini-3-pro-image",  # Nano Banana Pro
-            "gemini-2.5-flash-image": "gemini-2.5-flash-image",  # Nano Banana
-            "nano_banana_pro": "gemini-3-pro-image",
-            "nano_banana": "gemini-2.5-flash-image"
-        }
+        provider_name = _provider_for(model)
+        actual_model = _normalize_model(model, provider_name)
+        registry = get_registry()
+        provider = registry.get_image(provider_name)
 
-        actual_model = model_map.get(model, "gemini-3-pro-image")
-
-        # Priority: Fal.ai > Gemini > Mock
-        if FAL_API_KEY:
-            return _generate_with_fal(
-                prompt=prompt,
-                model=actual_model,
-                resolution=resolution,
-                aspect_ratio=aspect_ratio,
-                num_images=num_images,
-                seed=seed,
-                reference_images=reference_images
-            )
-        elif GEMINI_API_KEY:
-            return _generate_with_gemini(
-                prompt=prompt,
-                model=actual_model,
-                resolution=resolution,
-                aspect_ratio=aspect_ratio,
-                num_images=num_images,
-                seed=seed,
-                reference_images=reference_images
-            )
-        else:
-            return _generate_image_mock(
-                prompt=prompt,
-                model=actual_model,
-                resolution=resolution,
-                aspect_ratio=aspect_ratio,
-                num_images=num_images,
-                seed=seed
-            )
-
-    except Exception as e:
-        return {
-            'success': False,
-            'error': str(e),
-            'image_url': None,
-            'image_urls': [],
-            'cost_usd': 0.0
-        }
-
-
-def _generate_with_fal(
-    prompt: str,
-    model: str,
-    resolution: str,
-    aspect_ratio: str,
-    num_images: int,
-    seed: Optional[int],
-    reference_images: Optional[List[Dict[str, Any]]] = None
-) -> Dict[str, Any]:
-    """Generate image using Fal.ai Nano Banana Pro (Official T2I Schema)"""
-    import fal_client
-    import requests
-
-    # If grounded (has reference images), delegate to Edit model
-    if reference_images:
-        return _generate_with_fal_edit(
+        req = ImageGenRequest(
             prompt=prompt,
-            reference_images=reference_images,
+            model=actual_model,
+            resolution=resolution,
+            aspect_ratio=aspect_ratio,
             num_images=num_images,
             seed=seed,
-            # We use aspect_ratio and resolution from here too
+            reference_images=_refs_to_pydantic(reference_images),
+            extra=params or {},
         )
 
-    # Set API key
-    os.environ["FAL_KEY"] = FAL_API_KEY
-
-    fal_model = "fal-ai/nano-banana-pro"
-    cost_per_image = 0.039 
-    image_id = str(uuid.uuid4())[:8]
-
-    # Parse resolution - Official values: 1K, 2K, 4K
-    fal_resolution = "1K"
-    if resolution:
-        if "2048" in resolution:
-            fal_resolution = "2K"
-        elif "4096" in resolution:
-            fal_resolution = "4K"
-
-    # Call Fal.ai T2I API conforming to documentation
-    arguments = {
-        "prompt": prompt,
-        "resolution": fal_resolution,
-        "aspect_ratio": aspect_ratio,
-        "num_images": num_images,
-        "sync_mode": True,
-        "output_format": "png",
-        "enable_web_search": False
-    }
-
-    if seed is not None:
-        arguments["seed"] = seed
-
-    result = fal_client.subscribe(
-        fal_model,
-        arguments=arguments,
-    )
-
-    # Extract and save images
-    image_urls = []
-    for idx, image_data in enumerate(result.get("images", [])):
-        image_url_remote = image_data.get("url")
-        
-        # Handle base64 data URIs (commonly returned by Fal.ai)
-        if image_url_remote and image_url_remote.startswith("data:"):
-            # Extract base64 content from data URI
-            # Format: data:image/png;base64,<base64_data>
-            try:
-                header, base64_data = image_url_remote.split(",", 1)
-                image_content = base64.b64decode(base64_data)
-            except Exception as e:
-                raise Exception(f"Failed to decode base64 image: {e}")
-        elif image_url_remote and image_url_remote.startswith("http"):
-            # Handle regular HTTP URLs
-            response = requests.get(image_url_remote, timeout=30)
-            response.raise_for_status()
-            image_content = response.content
+        # If references present and the provider supports edit, route via edit
+        if req.reference_images:
+            result = _run(provider.edit(req))
         else:
-            raise Exception(f"Invalid image URL format: {image_url_remote}")
+            result = _run(provider.generate(req))
 
-        filename = f"nanobananapro_{image_id}_{idx}.png"
-        local_url = save_generated_image(image_content, filename)
-        image_urls.append(local_url)
-
-    if not image_urls:
-        raise Exception("No images were generated by Fal.ai Nano Banana Pro")
-
-    return {
-        'success': True,
-        'image_url': image_urls[0],
-        'image_urls': image_urls,
-        'image_id': image_id,
-        'model_used': fal_model,
-        'cost_usd': cost_per_image * len(image_urls),
-        'tokens_used': 0,
-        'generation_params': {
-            'prompt': prompt,
-            'resolution': fal_resolution,
-            'aspect_ratio': aspect_ratio,
-            'seed': seed,
-            'model': fal_model
-        }
-    }
-
-
-def _generate_with_gemini(
-    prompt: str,
-    model: str,
-    resolution: str,
-    aspect_ratio: str,
-    num_images: int,
-    seed: Optional[int],
-    reference_images: Optional[List[Dict[str, Any]]] = None
-) -> Dict[str, Any]:
-    """Generate image using Gemini Imagen 3 API (Note: multi-image ref limited in direct API)"""
-    imagen_model = "imagen-3.0-generate-001"
-    if "pro" in model.lower():
-        imagen_model = "imagen-3.0-fast-generate-001"
-
-    api_url = f"https://generativelanguage.googleapis.com/v1beta/models/{imagen_model}:generateImages"
-
-    payload = {
-        "prompt": prompt,
-        "number_of_images": num_images,
-        "aspect_ratio": aspect_ratio,
-    }
-
-    if seed is not None:
-        payload["seed"] = seed
-
-    response = requests.post(
-        f"{api_url}?key={GEMINI_API_KEY}",
-        headers={"Content-Type": "application/json"},
-        json=payload,
-        timeout=60
-    )
-
-    if response.status_code != 200:
-        raise Exception(f"Gemini API error: {response.status_code} - {response.text}")
-
-    result = response.json()
-    image_urls = []
-    image_id = str(uuid.uuid4())[:8]
-
-    for idx, image_data in enumerate(result.get("generatedImages", [])):
-        image_bytes = base64.b64decode(image_data.get("bytesBase64Encoded", ""))
-        filename = f"gemini_{image_id}_{idx}.png"
-        image_url = save_generated_image(image_bytes, filename)
-        image_urls.append(image_url)
-
-    if not image_urls:
-        raise Exception("No images were generated by Gemini API")
-
-    return {
-        'success': True,
-        'image_url': image_urls[0],
-        'image_urls': image_urls,
-        'image_id': image_id,
-        'model_used': imagen_model,
-        'cost_usd': 0.039 * len(image_urls),
-        'tokens_used': 1290 * len(image_urls),
-        'generation_params': {
-            'prompt': prompt,
-            'resolution': resolution,
-            'aspect_ratio': aspect_ratio,
-            'seed': seed,
-            'model': imagen_model
-        }
-    }
+        return _ok(result, prompt=prompt, resolution=resolution, aspect_ratio=aspect_ratio, seed=seed)
+    except ProviderError as e:
+        return _err(e)
+    except Exception as e:
+        return _err(e)
 
 
 def generate_image_image_to_image(
@@ -272,406 +199,141 @@ def generate_image_image_to_image(
     num_images: int = 1,
     seed: Optional[int] = None,
     params: Optional[Dict[str, Any]] = None,
-    reference_images: Optional[List[Dict[str, Any]]] = None
+    reference_images: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
-    """
-    Generate variant from reference images using Nano Banana Pro Edit.
-    Supports multi-image reference slots.
-    """
+    """Image-to-image edit. Reference is required."""
     try:
-        # Use Fal.ai Nano Banana Pro Edit if API key available
-        if FAL_API_KEY:
-            return _generate_with_fal_edit(
-                prompt=prompt,
-                reference_image_url=reference_image_url,
-                strength=strength,
-                num_images=num_images,
-                seed=seed,
-                reference_images=reference_images,
-                aspect_ratio=aspect_ratio
-            )
-        else:
-            # Fall back to mock
-            return _generate_image_i2i_mock(
-                prompt=prompt,
-                reference_image_url=reference_image_url,
-                model=model,
-                strength=strength,
-                aspect_ratio=aspect_ratio,
-                num_images=num_images,
-                seed=seed
-            )
+        # Build the unified reference list
+        refs: List[Dict[str, Any]] = list(reference_images or [])
+        if reference_image_url and not any(r.get("image_url") == reference_image_url for r in refs):
+            refs.insert(0, {"image_url": reference_image_url, "slot": 1, "name": "primary"})
 
+        if not refs:
+            return _err(ValueError("image_to_image: reference_image_url or reference_images required"))
+
+        # Route to Fal if any of the legacy edit models requested, or fall to Gemini
+        provider_name = "fal" if (FAL_API_KEY and "edit" in (model or "").lower()) else _provider_for(model)
+        actual_model = _normalize_model(model, provider_name)
+        # If model is Gemini's pro-image, edit is the same model
+        registry = get_registry()
+        provider = registry.get_image(provider_name)
+
+        extra: Dict[str, Any] = dict(params or {})
+        extra["strength"] = strength
+
+        req = ImageGenRequest(
+            prompt=prompt,
+            model=actual_model,
+            resolution="2048x2048",
+            aspect_ratio=aspect_ratio,
+            num_images=num_images,
+            seed=seed,
+            reference_images=_refs_to_pydantic(refs),
+            extra=extra,
+        )
+        result = _run(provider.edit(req))
+        return _ok(result, prompt=prompt, resolution="2048x2048", aspect_ratio=aspect_ratio, seed=seed)
+    except ProviderError as e:
+        return _err(e)
     except Exception as e:
-        print(f"ERROR in generate_image_image_to_image: {e}")
-        import traceback
-        traceback.print_exc()
-        return {
-            'success': False,
-            'error': str(e),
-            'image_url': None,
-            'image_urls': [],
-            'cost_usd': 0.0
-        }
+        return _err(e)
 
 
-def _generate_with_fal_edit(
+# ----------------------------------------------------------------------------
+# Legacy aliases used by tools/pre_production.py
+# ----------------------------------------------------------------------------
+
+def generate_image(
     prompt: str,
-    reference_image_url: Optional[str] = None,
-    strength: float = 0.7,
+    model: str = "gemini-3-pro-image",
+    resolution: str = "1024x1024",
+    aspect_ratio: str = "16:9",
     num_images: int = 1,
     seed: Optional[int] = None,
-    reference_images: Optional[List[Dict[str, Any]]] = None,
-    aspect_ratio: str = "16:9"
 ) -> Dict[str, Any]:
-    """
-    Generate image using Fal.ai Nano Banana Pro Edit (image-to-image).
-    Docs: https://fal.ai/models/fal-ai/nano-banana-pro/edit
-    """
-    import fal_client
-
-    # Set API key
-    os.environ["FAL_KEY"] = FAL_API_KEY
-
-    fal_model = "fal-ai/nano-banana-pro/edit"
-    cost_per_image = 0.039
-
-    image_id = str(uuid.uuid4())[:8]
-
-    # Handle Reference Image URL
-    # API requires 'image_urls' list with actual URLs (not base64)
-    # Use fal_client.upload_file() to upload local files and get URLs
-    
-    def upload_local_to_fal(local_path_str: str) -> str:
-        """Upload a local file to Fal.ai and return the URL."""
-        from pathlib import Path
-        # Convert relative storage path to absolute
-        if local_path_str.startswith('/storage/'):
-            local_path = Path(__file__).parent.parent / local_path_str.lstrip('/')
-        else:
-            local_path = Path(local_path_str)
-        
-        if local_path.exists():
-            # Upload to Fal.ai storage and get URL
-            uploaded_url = fal_client.upload_file(str(local_path))
-            print(f"Uploaded {local_path.name} to Fal: {uploaded_url[:60]}...")
-            return uploaded_url
-        else:
-            print(f"Warning: Local file not found: {local_path}")
-            return local_path_str
-    
-    final_ref_url = reference_image_url
-    if reference_image_url.startswith('/storage/'):
-        # Upload local file to Fal.ai and get URL
-        final_ref_url = upload_local_to_fal(reference_image_url)
-
-    # Handle Multiple Reference Images with Slot Alignment
-    fal_image_urls = []
-    if reference_images:
-        max_slot = 0
-        slot_map = {}
-        for ref in reference_images:
-            slot = int(ref.get("slot", 1))
-            url = ref.get("image_url")
-            if url:
-                if url.startswith('/storage/'):
-                    # Upload local file to Fal.ai
-                    url = upload_local_to_fal(url)
-                
-                slot_map[slot] = url
-                max_slot = max(max_slot, slot)
-        
-        if max_slot > 0:
-            # Padding to ensure slot index mapping (slots 1 to max_slot)
-            first_v = next((u for s, u in sorted(slot_map.items()) if u), final_ref_url)
-            for i in range(1, max_slot + 1):
-                fal_image_urls.append(slot_map.get(i, first_v))
-    elif final_ref_url:
-        fal_image_urls = [final_ref_url]
-
-    # Call Fal.ai Nano Banana Pro Edit API
-    arguments = {
-        "prompt": prompt,
-        "image_urls": fal_image_urls,
-        "num_images": num_images,
-        "aspect_ratio": aspect_ratio,
-        "resolution": "1K",
-        "output_format": "png",
-        "sync_mode": True,
-        "enable_web_search": False
-    }
-    
-    if seed is not None:
-        arguments["seed"] = seed
-
-    print(f"DEBUG: Fal Image URLs: {fal_image_urls}")
-    print(f"DEBUG: Fal Arguments: {arguments}")
-
-    result = fal_client.subscribe(
-        fal_model,
-        arguments=arguments,
+    """Legacy alias: text-to-image with simpler signature."""
+    return generate_image_text_to_image(
+        prompt=prompt,
+        model=model,
+        resolution=resolution,
+        aspect_ratio=aspect_ratio,
+        num_images=num_images,
+        seed=seed,
     )
 
-    # Extract and save images
-    image_urls = []
-    # Result schema: { "images": [ { "url": "...", ... } ] }
-    for idx, image_data in enumerate(result.get("images", [])):
-        image_url_remote = image_data.get("url")
 
-        # Handle base64 data URIs (commonly returned by Fal.ai)
-        if image_url_remote and image_url_remote.startswith("data:"):
-            # Extract base64 content from data URI
-            # Format: data:image/png;base64,<base64_data>
-            try:
-                header, base64_data = image_url_remote.split(",", 1)
-                image_content = base64.b64decode(base64_data)
-            except Exception as e:
-                raise Exception(f"Failed to decode base64 image: {e}")
-        elif image_url_remote and image_url_remote.startswith("http"):
-            # Handle regular HTTP URLs
-            response = requests.get(image_url_remote, timeout=30)
-            response.raise_for_status()
-            image_content = response.content
-        else:
-            raise Exception(f"Invalid image URL format: {image_url_remote}")
-
-        filename = f"nanobananapro_edit_{image_id}_{idx}.png"
-        local_url = save_generated_image(image_content, filename)
-        image_urls.append(local_url)
-
-    if not image_urls:
-        raise Exception("No images were generated by Fal.ai Nano Banana Pro Edit")
-
-    return {
-        'success': True,
-        'image_url': image_urls[0],
-        'image_urls': image_urls,
-        'image_id': image_id,
-        'model_used': fal_model,
-        'cost_usd': cost_per_image * len(image_urls),
-        'tokens_used': 0,
-        'generation_params': {
-            'prompt': prompt,
-            'reference_image_url': reference_image_url[:50] + '...' if len(reference_image_url) > 50 else reference_image_url,
-            'strength': strength,
-            'seed': seed,
-            'model': fal_model
-        },
-        'method': 'image_to_image'
-    }
-
-
-def _generate_image_mock(
+def generate_image_with_reference(
     prompt: str,
-    model: str,
-    resolution: str,
-    aspect_ratio: str,
-    num_images: int,
-    seed: Optional[int]
+    image_url: str,
+    model: str = "gemini-3-pro-image",
+    strength: float = 0.7,
+    aspect_ratio: str = "16:9",
+    num_images: int = 1,
+    seed: Optional[int] = None,
 ) -> Dict[str, Any]:
-    """
-    Mock image generation for development/testing.
-    Downloads placeholder images from picsum.photos and saves locally.
-    """
-    # Parse resolution
-    width, height = resolution.split('x')
-
-    # Generate mock URLs
-    image_id = str(uuid.uuid4())[:8]
-    base_seed = seed if seed else hash(prompt) % 10000
-
-    image_urls = []
-    for i in range(num_images):
-        img_seed = base_seed + i
-        # Download from picsum and save locally
-        picsum_url = f"https://picsum.photos/seed/{img_seed}/{width}/{height}"
-
-        try:
-            # Download and save locally
-            local_url = download_image_to_local(picsum_url, filename=f"mock_{image_id}_{i}.jpg")
-            image_urls.append(local_url)
-        except Exception as e:
-            # Fallback to remote URL if download fails
-            print(f"Failed to download mock image: {e}")
-            image_urls.append(picsum_url)
-
-    return {
-        'success': True,
-        'image_url': image_urls[0],
-        'image_urls': image_urls,
-        'image_id': image_id,
-        'model_used': model,
-        'cost_usd': 0.039 * num_images,
-        'tokens_used': 1290 * num_images,
-        'generation_params': {
-            'prompt': prompt,
-            'resolution': resolution,
-            'aspect_ratio': aspect_ratio,
-            'seed': base_seed,
-            'mock': True
-        },
-        'mock': True
-    }
+    """Legacy alias: single-reference image-to-image."""
+    return generate_image_image_to_image(
+        prompt=prompt,
+        reference_image_url=image_url,
+        model=model,
+        strength=strength,
+        aspect_ratio=aspect_ratio,
+        num_images=num_images,
+        seed=seed,
+    )
 
 
-def _generate_image_i2i_mock(
-    prompt: str,
-    reference_image_url: str,
-    model: str,
-    strength: float,
-    aspect_ratio: str,
-    num_images: int,
-    seed: Optional[int]
-) -> Dict[str, Any]:
-    """
-    Mock image-to-image generation.
-    Downloads placeholder images locally that vary based on strength.
-    """
-    # For mock, just generate new images with different seeds
-    base_seed = seed if seed else hash(prompt + reference_image_url) % 10000
-
-    # Higher strength = more variation from reference
-    seed_offset = int(strength * 1000)
-
-    image_id = str(uuid.uuid4())[:8]
-    image_urls = []
-
-    for i in range(num_images):
-        img_seed = base_seed + seed_offset + i
-        picsum_url = f"https://picsum.photos/seed/{img_seed}/2048/2048"
-
-        try:
-            # Download and save locally
-            local_url = download_image_to_local(picsum_url, filename=f"mock_i2i_{image_id}_{i}.jpg")
-            image_urls.append(local_url)
-        except Exception as e:
-            # Fallback to remote URL if download fails
-            print(f"Failed to download mock i2i image: {e}")
-            image_urls.append(picsum_url)
-
-    return {
-        'success': True,
-        'image_url': image_urls[0],
-        'image_urls': image_urls,
-        'image_id': image_id,
-        'model_used': model,
-        'cost_usd': 0.039 * num_images,
-        'tokens_used': 1290 * num_images,
-        'generation_params': {
-            'prompt': prompt,
-            'reference_image_url': reference_image_url,
-            'strength': strength,
-            'aspect_ratio': aspect_ratio,
-            'seed': base_seed,
-            'mock': True
-        },
-        'mock': True,
-        'method': 'image_to_image'
-    }
-
+# ----------------------------------------------------------------------------
+# Storage utilities (delegates to providers/image/_storage.py)
+# ----------------------------------------------------------------------------
 
 def save_generated_image(image_data: bytes, filename: Optional[str] = None) -> str:
-    """
-    Save generated image to storage and return URL.
-
-    Args:
-        image_data: Binary image data
-        filename: Optional filename (will generate UUID if not provided)
-
-    Returns:
-        URL to saved image (local file:// URL or public URL)
-    """
-    if not filename:
-        filename = f"{uuid.uuid4()}.png"
-
-    # Save to local storage
-    from pathlib import Path
-    storage_dir = Path(__file__).parent.parent / "storage" / "generated"
-    storage_dir.mkdir(parents=True, exist_ok=True)
-
-    file_path = storage_dir / filename
-
-    with open(file_path, 'wb') as f:
-        f.write(image_data)
-
-    # Return local file URL for now
-    # In production, upload to S3/GCS and return public URL
-    return f"/storage/generated/{filename}"
+    """Save raw bytes to /storage/generated/ and return a /storage/... URL."""
+    return save_image_bytes(image_data, filename)
 
 
 def download_image_to_local(image_url: str, filename: Optional[str] = None) -> str:
-    """
-    Download image from URL and save locally.
+    """Download an image URL and save locally. Returns the local /storage/... URL."""
+    from backend.providers.image._storage import fetch_url_sync
 
-    Args:
-        image_url: URL of image to download
-        filename: Optional filename (will generate UUID if not provided)
-
-    Returns:
-        Local storage URL
-    """
     if not filename:
-        filename = f"{uuid.uuid4()}.png"
-
-    from pathlib import Path
-    storage_dir = Path(__file__).parent.parent / "storage" / "generated"
-    storage_dir.mkdir(parents=True, exist_ok=True)
-
-    file_path = storage_dir / filename
-
-    # Download image
-    response = requests.get(image_url, timeout=30)
-    response.raise_for_status()
-
-    # Save locally
-    with open(file_path, 'wb') as f:
-        f.write(response.content)
-
-    # Return local URL
-    return f"/storage/generated/{filename}"
+        filename = f"{uuid.uuid4().hex}.png"
+    data = fetch_url_sync(image_url)
+    return save_image_bytes(data, filename)
 
 
-# Helper functions for prompt enhancement
+# ----------------------------------------------------------------------------
+# Prompt-engineering helpers — pure-functional, kept inline.
+# ----------------------------------------------------------------------------
 
 def enhance_prompt_for_consistency(
     base_prompt: str,
     element_type: str = "character",
-    art_style: str = "photorealistic"
+    art_style: str = "photorealistic",
 ) -> str:
-    """
-    Add consistency-enhancing instructions to prompt.
-
-    Args:
-        base_prompt: Original prompt
-        element_type: 'character' | 'location' | 'prop'
-        art_style: The art style from brief (e.g., 'anime', 'photorealistic', 'Ghibli')
-
-    Returns:
-        Enhanced prompt with consistency instructions (as natural language, no headers)
-    """
-    # Use natural language instead of structured headers to avoid text rendering
+    """Append consistency instructions to a base prompt as natural language."""
     consistency_instructions = {
-        "character": f"""Maintain exact facial features, bone structure, and proportions throughout. Keep consistent hair color, style, texture, body type, and all clothing and accessories. Render in {art_style} style with pure white background and soft studio lighting.""",
-        "location": f"""Maintain consistent architectural details and spatial layout. Keep the same lighting, time of day, materials, textures, and perspective throughout. Render in {art_style} style with clear depth.""",
-        "prop": f"""Maintain exact shape, size, and proportions. Keep consistent materials, textures, color, and finish throughout. Render in {art_style} style with pure white background and product lighting."""
+        "character": (
+            f"Maintain exact facial features, bone structure, and proportions throughout. "
+            f"Keep consistent hair color, style, texture, body type, and all clothing and accessories. "
+            f"Render in {art_style} style with pure white background and soft studio lighting."
+        ),
+        "location": (
+            f"Maintain consistent architectural details and spatial layout. Keep the same lighting, "
+            f"time of day, materials, textures, and perspective throughout. Render in {art_style} style "
+            f"with clear depth."
+        ),
+        "prop": (
+            f"Maintain exact shape, size, and proportions. Keep consistent materials, textures, color, "
+            f"and finish throughout. Render in {art_style} style with pure white background and product lighting."
+        ),
     }
-
     enhancement = consistency_instructions.get(element_type, "")
-    if enhancement:
-        return f"{base_prompt}\n\n{enhancement}".strip()
-    return base_prompt
+    return f"{base_prompt}\n\n{enhancement}".strip() if enhancement else base_prompt
 
 
 def get_variant_prompt_suffix(variant_type: str) -> str:
-    """
-    Get the prompt instructions for a specific variant type.
-
-    Args:
-        variant_type: e.g., 'side_left', 'face_detail', etc.
-
-    Returns:
-        Prompt suffix with specific instructions
-    """
+    """Variant-specific prompt instructions."""
     variant_instructions = {
         "side_left": "Perfect left profile view (90° from camera). Same character, same pose, white background.",
         "side_right": "Perfect right profile view (90° from camera). Same character, same pose, white background.",
@@ -691,5 +353,4 @@ def get_variant_prompt_suffix(variant_type: str) -> str:
         "aerial": "Aerial top-down view of the location.",
         "detail": "Close-up detail shot of key features.",
     }
-
     return variant_instructions.get(variant_type, f"Alternative view: {variant_type}")

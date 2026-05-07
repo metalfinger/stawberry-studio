@@ -4,8 +4,68 @@ from pydantic import BaseModel
 from backend import db
 from backend.database import assets as assets_db
 from backend.tools.generation import get_cut_context
+from backend.orchestrator.sheet_generator import (
+    generate_sheet_for_asset,
+    get_active_sheet,
+    list_sheets_for_asset,
+)
+from backend.orchestrator.sheet_cells import crop_cell_url
 
 router = APIRouter(prefix="/api/projects/{project_id}", tags=["assets"])
+
+
+@router.get("/assets/{asset_id}/sheet")
+async def get_asset_sheet(project_id: str, asset_id: str):
+    """Return the asset's active element sheet (or null if none)."""
+    sheet = await get_active_sheet(asset_id)
+    return {"sheet": sheet}
+
+
+@router.get("/assets/{asset_id}/sheets")
+async def list_asset_sheets(project_id: str, asset_id: str):
+    sheets = await list_sheets_for_asset(asset_id)
+    return {"sheets": sheets}
+
+
+class GenerateSheetRequest(BaseModel):
+    override_sheet_type: str | None = None
+    seed: int | None = None
+
+
+@router.post("/assets/{asset_id}/sheet/generate")
+async def generate_asset_sheet(project_id: str, asset_id: str, req: GenerateSheetRequest):
+    """Plan + generate a new element sheet for the asset (Nano Banana Pro)."""
+    try:
+        result = await generate_sheet_for_asset(
+            asset_id,
+            override_sheet_type=req.override_sheet_type,
+            seed=req.seed,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return {
+        "sheet_id": result.sheet_id,
+        "image_url": result.image_url,
+        "template_id": result.template_id,
+        "sheet_type": result.sheet_type,
+        "panels": result.panels,
+        "layout": result.layout,
+        "cost_usd": result.cost_usd,
+        "rationale": result.rationale,
+    }
+
+
+@router.get("/assets/{asset_id}/sheet/cells/{cell_label}")
+async def get_sheet_cell(project_id: str, asset_id: str, cell_label: str):
+    """Return a cropped cell image URL for a single panel of the active sheet."""
+    sheet = await get_active_sheet(asset_id)
+    if not sheet:
+        raise HTTPException(status_code=404, detail="no active sheet")
+    url = await crop_cell_url(sheet["id"], cell_label)
+    if not url:
+        raise HTTPException(status_code=404, detail=f"cell {cell_label} not found")
+    return {"image_url": url, "cell_label": cell_label}
+
 
 # Models
 class AssetSwapRequest(BaseModel):

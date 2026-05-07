@@ -9,8 +9,10 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 
 from backend.database import core as db
+from backend.tools.registry import tool
 
 
+@tool("get_pre_production_requirements", description="List required masters/variants/refs needed before generating a cut.", tags=["preprod", "read"])
 def get_pre_production_requirements(project_id: str, cut_id: str) -> Dict[str, Any]:
     """
     Analyze what pre-production is needed for a cut.
@@ -114,6 +116,7 @@ def get_pre_production_requirements(project_id: str, cut_id: str) -> Dict[str, A
     }
 
 
+@tool("compile_pre_production_step", description="Compile a single i2i pre-production step for a cut.", tags=["preprod", "write"])
 def compile_pre_production_step(
     project_id: str,
     cut_id: str,
@@ -196,6 +199,7 @@ def compile_pre_production_step(
     }
 
 
+@tool("execute_pre_production_step", description="Run a pre-production gen step.", tags=["preprod", "write"])
 def execute_pre_production_step(
     project_id: str,
     cut_id: str,
@@ -283,6 +287,7 @@ def execute_pre_production_step(
     }
 
 
+@tool("save_pre_production_output", description="Persist a pre-prod step output URL.", tags=["preprod", "write"])
 def save_pre_production_output(
     project_id: str,
     cut_id: str,
@@ -329,6 +334,7 @@ def save_pre_production_output(
     }
 
 
+@tool("complete_pre_production", description="Mark pre-production complete for a cut.", tags=["preprod", "phase"])
 def complete_pre_production(project_id: str, cut_id: str) -> Dict[str, Any]:
     """
     Signal that pre-production is complete for a cut.
@@ -368,6 +374,7 @@ def complete_pre_production(project_id: str, cut_id: str) -> Dict[str, Any]:
     }
 
 
+@tool("get_cut_generation_history", description="Generation history for a specific cut (preprod-side).", tags=["preprod", "read"])
 def get_generation_history(project_id: str, cut_id: str) -> Dict[str, Any]:
     """
     Get full generation history for a cut.

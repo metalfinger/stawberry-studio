@@ -13,6 +13,7 @@ import {
     type AssetsResponse,
     type PreProductionStatus,
 } from '../../api/client'
+import { ComposeProgress } from './ComposeProgress'
 import './NodeProperties.css'
 
 interface NodePropertiesProps {
@@ -207,6 +208,7 @@ function PromptAndGenerate({
     const [expanded, setExpanded] = useState(true)
     const [editablePrompt, setEditablePrompt] = useState(prompt.prompt)
     const [isGenerating, setIsGenerating] = useState(false)
+    const [isComposing, setIsComposing] = useState(false)
     const [error, setError] = useState<string | null>(null)
     // Unified slots state: @Image1 to @Image5
     // We initialize from both prompt.reference_images (standard) and initialSlots (persisted overrides)
@@ -365,11 +367,28 @@ function PromptAndGenerate({
                         <button
                             className="np-btn-primary"
                             onClick={handleGenerate}
-                            disabled={isGenerating}
+                            disabled={isGenerating || isComposing}
                         >
                             {isGenerating ? 'Generating...' : '🚀 Generate Visual'}
                         </button>
+                        <button
+                            className="np-btn-primary"
+                            onClick={() => { setIsComposing(true); setError(null); }}
+                            disabled={isGenerating || isComposing}
+                            title="Bundle full tree → pick refs → fix gaps → render → critic"
+                        >
+                            {isComposing ? 'Composing…' : '🎬 Compose Cut'}
+                        </button>
                     </div>
+                    <ComposeProgress
+                        projectId={projectId}
+                        cutId={cutId}
+                        running={isComposing}
+                        onDone={(imageUrl) => {
+                            setIsComposing(false);
+                            if (imageUrl) onGenerateComplete();
+                        }}
+                    />
                     {error && <div className="np-error">{error}</div>}
                 </>
             )}

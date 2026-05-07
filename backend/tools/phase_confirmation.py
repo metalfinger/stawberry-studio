@@ -4,8 +4,10 @@ Centralized logic for requesting and confirming phase transitions.
 All phase changes MUST go through user confirmation.
 """
 from backend import db
+from backend.tools.registry import tool
 
 
+@tool("request_phase_change", description="Ask the user to confirm a phase transition with a summary.", tags=["phase"])
 def request_phase_change(project_id: str, from_phase: str, to_phase: str, summary: str) -> dict:
     """
     Request a phase change - this does NOT perform the transition.
@@ -30,6 +32,7 @@ def request_phase_change(project_id: str, from_phase: str, to_phase: str, summar
     }
 
 
+@tool("confirm_phase_change", description="Actually move to the target phase. Call only after explicit user confirmation.", tags=["phase"])
 def confirm_phase_change(project_id: str, target_phase: str) -> dict:
     """
     Confirm and execute a phase change - ONLY call this after user says YES.
