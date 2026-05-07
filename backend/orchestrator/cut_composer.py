@@ -150,12 +150,16 @@ async def _detect_gaps(ctx: CutContext) -> list[dict[str, Any]]:
 
 
 async def _pick_references(ctx: CutContext) -> list[dict[str, Any]]:
-    """Build a slot list for the cut. Order of priority (slot 1 first):
-       1. Project style anchor (if pinned).
-       2. Each linked asset's parent-chain sheets (parents before child).
-       3. Each linked asset's own active sheet.
-       4. Smart Picker scoring for any remaining capacity.
+    """Build a slot list for the cut using the references-first picker.
+
+    Order of priority (slot 1 first):
+      1. Project style anchor (if pinned).
+      2. Per linked asset, references resolved by picker_v2: identity first,
+         then ranked extras (sad / running / glowing / etc.) based on the
+         cut's text. picker_v2 lazy-fills any missing labels.
     """
+    from backend.orchestrator import picker_v2
+
     seen_urls: set[str] = set()
     pinned: list[dict[str, Any]] = []
 
@@ -172,34 +176,18 @@ async def _pick_references(ctx: CutContext) -> list[dict[str, Any]]:
     if ctx.style_anchor:
         _push(ctx.style_anchor.get("image_url"), "style_anchor", "pinned style anchor")
 
-    # Walk every linked asset; pre-pin parent chain sheets first, then the
-    # asset's own sheet. Ordering: characters → locations → props.
-    for asset in (ctx.linked_characters + ctx.linked_locations + ctx.linked_props):
-        for parent in reversed(asset.get("parent_chain") or []):
-            sheet = parent.get("sheet")
-            url = (sheet or {}).get("image_url") or parent.get("image_url")
-            _push(url, parent.get("name", "parent"), f"parent of {asset.get('name')}")
-        sheet = asset.get("sheet")
-        url = (sheet or {}).get("image_url") or asset.get("image_url")
-        _push(url, asset.get("name", "asset"), "linked asset")
+    # Resolve references for every linked asset (lazy-fill on miss). Order:
+    # characters first (identity drives most cuts), then locations, then props.
+    linked = ctx.linked_characters + ctx.linked_locations + ctx.linked_props
+    if linked:
+        refs = await picker_v2.resolve_references(linked, ctx.cut, max_per_asset=2)
+        for r in refs:
+            _push(r.get("image_url"), r.get("label", "ref"), f"asset:{r.get('label')}")
 
-    # Trim to max 5 (Nano Banana Pro slot limit) before invoking picker so
-    # we don't blow past it.
+    # Trim to Nano Banana Pro's slot limit (5).
     pinned = pinned[:5]
 
-    # Picker fills remaining slots from the broader reference pool.
-    remaining = max(0, 5 - len(pinned))
-    if remaining > 0:
-        picker_picks = await pick_for_cut(ctx.project_id, ctx.cut_id, max_slots=remaining)
-        for p in picker_picks:
-            url = (p.get("reference") or {}).get("image_url")
-            if url and url not in seen_urls:
-                seen_urls.add(url)
-                pinned.append(p)
-                if len(pinned) >= 5:
-                    break
-
-    # Number the slots
+    # Number the slots.
     for i, p in enumerate(pinned, start=1):
         p["slot"] = i
         p["ref"] = f"@Image{i}"
