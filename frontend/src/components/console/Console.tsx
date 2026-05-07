@@ -67,52 +67,15 @@ export function Console({ projectId, initialPhase, onNodeUpdate, onClose }: Cons
     const ws = new WebSocket(url)
     wsRef.current = ws
 
-    const LAST_SEEN_KEY = `strawberry.lastSeen.${projectId}`
-    ws.onopen = () => {
-      setConnecting(false)
-      // Send a reconnect intent with our last-seen ts so the backend can
-      // emit an ActivityCard summarizing what happened while offline.
-      const last = localStorage.getItem(LAST_SEEN_KEY)
-      if (last) {
-        try {
-          ws.send(JSON.stringify({ type: 'user_intent', intent: 'reconnect', payload: { last_seen_ts: last } }))
-        } catch {}
-      }
-    }
-    // Persist last-seen on every message so the next reconnect knows the cutoff.
-    const stamp = () => { try { localStorage.setItem(LAST_SEEN_KEY, new Date().toISOString()) } catch {} }
+    ws.onopen = () => setConnecting(false)
     ws.onclose = () => setConnecting(true)
     ws.onerror = () => setConnecting(true)
-
-    // Idle detection: if the user is inactive for IDLE_MS, ping the agent
-    // with `user_idle` so it can decide whether to surface a suggestion.
-    // Activity = mousemove, keydown, click, focus on input.
-    const IDLE_MS = 90_000
-    let idleTimer: ReturnType<typeof setTimeout> | null = null
-    let lastSent = 0
-    const fireIdle = () => {
-      if (Date.now() - lastSent < IDLE_MS) return
-      lastSent = Date.now()
-      try {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: 'user_intent', intent: 'user_idle' }))
-        }
-      } catch {}
-    }
-    const reset = () => {
-      if (idleTimer) clearTimeout(idleTimer)
-      idleTimer = setTimeout(fireIdle, IDLE_MS)
-    }
-    reset()
-    const events = ['mousemove', 'keydown', 'click', 'focus'] as const
-    events.forEach(ev => window.addEventListener(ev, reset, { passive: true }))
-    const cleanup = () => events.forEach(ev => window.removeEventListener(ev, reset))
+    const cleanup = () => {}
 
     ws.onmessage = (event) => {
       let data: any
       try { data = JSON.parse(event.data) } catch { return }
       if (typeof data !== 'object' || !data) return
-      stamp()
 
       if (data.type === 'phase') {
         setPhase(data.phase)
@@ -242,7 +205,6 @@ export function Console({ projectId, initialPhase, onNodeUpdate, onClose }: Cons
 
     return () => {
       cleanup()
-      if (idleTimer) clearTimeout(idleTimer)
       ws.close()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

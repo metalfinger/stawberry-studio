@@ -38,6 +38,10 @@ _running_plans: dict[str, asyncio.Task] = {}
 _running_batches: dict[str, asyncio.Task] = {}
 _paused_batches: set[str] = set()
 _cancelled_batches: set[str] = set()
+# IdleSuggestion debounce: skip if user just got one and didn't act on it.
+# Cleared whenever the user sends a real chat message (see chat.py).
+_idle_active: set[str] = set()
+_idle_dismissed: set[str] = set()
 
 
 async def handle_intent(
@@ -79,6 +83,13 @@ async def handle_intent(
             return await _confirm_briefing(project_id, narrator)
         if intent == "decline_briefing":
             await narrator.text("OK — tell me what you'd like to change about the brief.")
+            return True
+        if intent == "draft_identities":
+            return await _draft_identities(project_id, narrator)
+        if intent == "plan_unrendered":
+            return await _plan_unrendered(project_id, narrator)
+        if intent == "dismiss":
+            _idle_dismissed.add(project_id)
             return True
         # Unknown intents fall back to chat agent.
         return False
@@ -327,49 +338,21 @@ async def _cancel_batch(payload: dict, narrator: Narrator) -> bool:
 # ============================================================================
 
 async def _idle_suggestion(project_id: str, narrator: Narrator) -> bool:
-    """When the user has been idle, look for a useful next step. Stay silent
-    if there's nothing obvious to suggest — empty noise is worse than none."""
-    from backend.database.core import get_async_connection
+    """No-op. Idle suggestions were dropped — turned out to be noise rather
+    than signal. The frontend stopped sending the user_idle ping, but we
+    still handle the intent here for backwards compat with old tabs."""
+    return True
 
-    async with get_async_connection() as conn:
-        async with conn.execute(
-            "SELECT COUNT(*) AS n FROM cuts WHERE shot_id IN ("
-            "  SELECT id FROM shots WHERE scene_id IN ("
-            "    SELECT id FROM scenes WHERE project_id = ?"
-            "  )"
-            ") AND COALESCE(generated_image_url,'') = ''",
-            (project_id,),
-        ) as cur:
-            row = await cur.fetchone()
-        unrendered = (row and row[0]) or 0
 
-        async with conn.execute(
-            "SELECT COUNT(*) AS n FROM assets WHERE project_id = ? "
-            "AND id NOT IN (SELECT DISTINCT asset_id FROM reference_pool WHERE label = 'identity' AND project_id = ?)",
-            (project_id, project_id),
-        ) as cur:
-            row = await cur.fetchone()
-        missing_identity = (row and row[0]) or 0
+async def _draft_identities(project_id: str, narrator: Narrator) -> bool:
+    """Stub — not exposed in current UX. Leaving the handler so a future
+    'draft missing identities' button can wire to it cleanly."""
+    return True
 
-    if missing_identity > 0:
-        await narrator.idle_suggestion(
-            reasoning=f"{missing_identity} asset(s) don't have an identity reference yet. Want me to draft them?",
-            actions=[
-                Action(label="Draft identities", intent="draft_identities", primary=True),
-                Action(label="Not now", intent="dismiss"),
-            ],
-        )
-        return True
-    if unrendered > 0:
-        await narrator.idle_suggestion(
-            reasoning=f"You have {unrendered} cut(s) without renders. Want to compose them?",
-            actions=[
-                Action(label="Plan all", intent="plan_unrendered", primary=True),
-                Action(label="Not now", intent="dismiss"),
-            ],
-        )
-        return True
-    return True  # silent
+
+async def _plan_unrendered(project_id: str, narrator: Narrator) -> bool:
+    """Stub — same rationale as _draft_identities."""
+    return True
 
 
 async def _activity_summary(project_id: str, payload: dict, narrator: Narrator) -> bool:
