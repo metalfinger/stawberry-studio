@@ -99,6 +99,49 @@ def list_library(
         conn.close()
 
 
+@router.get("/cost-summary")
+def cost_summary(project_id: str):
+    """Aggregate spend for the project. Combines image generation cost
+    (sum of reference_pool.cost_usd) with LLM tool-call cost (sum of
+    cost_usd embedded in agent_events tool_call payloads). Used to seed
+    the Console cost meter on refresh so the user never loses the
+    running total."""
+    conn = db_core.get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT COALESCE(SUM(cost_usd), 0) AS image_cost FROM reference_pool "
+            "WHERE project_id = ?",
+            (project_id,),
+        )
+        image_cost = float(cur.fetchone()["image_cost"] or 0)
+
+        # LLM cost lives inside agent_events.payload_json for tool_call rows.
+        try:
+            cur.execute(
+                "SELECT payload_json FROM agent_events "
+                "WHERE project_id = ? AND event_type = 'tool_call'",
+                (project_id,),
+            )
+            llm_cost = 0.0
+            for r in cur.fetchall():
+                try:
+                    p = json.loads(r["payload_json"] or "{}")
+                    llm_cost += float(p.get("cost_usd") or 0)
+                except Exception:
+                    pass
+        except Exception:
+            llm_cost = 0.0
+
+        return {
+            "image_cost_usd": image_cost,
+            "llm_cost_usd": llm_cost,
+            "total_cost_usd": image_cost + llm_cost,
+        }
+    finally:
+        conn.close()
+
+
 @router.get("/stats")
 def library_stats(project_id: str):
     """Counts by source_type + total cost so the drawer header shows budget context."""

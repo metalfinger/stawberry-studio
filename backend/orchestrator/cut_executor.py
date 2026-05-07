@@ -255,6 +255,9 @@ async def execute_plan(
     # comparisons without holding the WS handle.
     narrator = Narrator(plan.project_id)
     consumed_ref_ids: list[str] = []  # for used_in_cuts_json bookkeeping
+    # Render bookkeeping passed from RENDER → REGISTER so the library row
+    # has full provenance (prompt, cost, model, which slots fed in).
+    render_meta: dict[str, Any] = {}
 
     # Tracks references that will be passed to the render step
     ref_slots: list[ReferenceImage] = []
@@ -387,6 +390,22 @@ async def execute_plan(
                         "prompt_chars": len(compiled.final_prompt),
                         "slots": len(refs_for_call),
                     }
+                    # Stash for REGISTER so the library row carries the full
+                    # generation context (re-use decisioning needs this).
+                    render_meta = {
+                        "prompt": compiled.final_prompt,
+                        "cost_usd": img_result.cost_usd,
+                        "model_used": img_result.model_used,
+                        "request_id": img_result.image_id,
+                        "aspect_ratio": req.aspect_ratio,
+                        "slots_used": [
+                            {"slot": s.slot, "name": s.name, "image_url": s.image_url}
+                            for s in refs_for_call
+                        ],
+                        "consumed_ref_ids": list(consumed_ref_ids),
+                        "feedback_round": plan.feedback_round,
+                        "feedback_chain": list(plan.feedback or []),
+                    }
                     result.image_url = image_url
                     result.cost_usd += img_result.cost_usd
                     # Emit a typed image so the Console renders it inline,
@@ -433,17 +452,33 @@ async def execute_plan(
                             image_url=result.image_url,
                             source_type="cut",
                             source_cut_id=cut_id,
+                            source_request_id=render_meta.get("request_id"),
+                            aspect_ratio=render_meta.get("aspect_ratio") or "",
                             tags={
                                 "label": f"render_v{version}",
                                 "feedback_round": plan.feedback_round,
                                 "plan_id": plan.id,
+                                "slots_used": render_meta.get("slots_used") or [],
+                                "consumed_ref_ids": render_meta.get("consumed_ref_ids") or [],
+                                "feedback_chain": render_meta.get("feedback_chain") or [],
                             },
                         )
-                        # Set the new render's label + supersede prior versions.
+                        # Backfill the metadata register_image doesn't take —
+                        # this is what makes the Library detail pane truly
+                        # useful for "is this reusable, or do I need a variant?".
                         async with get_async_connection() as conn:
                             await conn.execute(
-                                "UPDATE reference_pool SET label = ?, is_active = 1 WHERE id = ?",
-                                (f"render_v{version}", ref_id),
+                                """UPDATE reference_pool
+                                   SET label = ?, is_active = 1,
+                                       prompt = ?, cost_usd = ?, model_used = ?
+                                   WHERE id = ?""",
+                                (
+                                    f"render_v{version}",
+                                    render_meta.get("prompt", "") or "",
+                                    float(render_meta.get("cost_usd", 0) or 0),
+                                    render_meta.get("model_used", "") or "",
+                                    ref_id,
+                                ),
                             )
                             await conn.commit()
                         await _supersede_prior_renders(cut_id, ref_id)

@@ -203,49 +203,168 @@ export function LibraryDrawer({ projectId, open, onClose, onOpen }: Props) {
         </div>
 
         {selected && (
-          <div className="library-detail">
-            <img src={selected.image_url} alt={selected.label} className="library-detail__img" />
-            <div className="library-detail__meta">
-              <div className="library-detail__title">{selected.label}</div>
-              <div className="library-detail__sub">
-                {selected.source_type}
-                {selected.cost_usd > 0 && ` · $${selected.cost_usd.toFixed(3)}`}
-                {selected.model_used && ` · ${selected.model_used}`}
-              </div>
-              {selected.prompt && (
-                <details className="library-detail__prompt">
-                  <summary>Prompt</summary>
-                  <pre>{selected.prompt}</pre>
-                </details>
-              )}
-              {selected.used_in_cuts.length > 0 && (
-                <div className="library-detail__used">
-                  Used in {selected.used_in_cuts.length} cut(s)
-                </div>
-              )}
-            </div>
-            <div className="library-detail__actions">
-              <button
-                onClick={() => {
-                  const nowPinned = pinning.togglePin(projectId, selected.ref_id)
-                  toast.success(nowPinned ? 'Pinned to chat' : 'Unpinned')
-                }}
-              >📌 {pinning.isPinned(projectId, selected.ref_id) ? 'Unpin' : 'Pin to chat'}</button>
-              <button onClick={() => onFavorite(selected)}>
-                {selected.is_favorite ? '★ Unfavorite' : '☆ Favorite'}
-              </button>
-              <button onClick={() => onSetAnchor(selected)}>
-                {selected.is_style_anchor ? '⚓ Unset anchor' : '⚓ Set as style anchor'}
-              </button>
-              {!selected.is_active && (
-                <button onClick={() => onRestore(selected)}>↺ Restore</button>
-              )}
-            </div>
-          </div>
+          <LibraryDetail
+            projectId={projectId}
+            item={selected}
+            onFavorite={onFavorite}
+            onSetAnchor={onSetAnchor}
+            onRestore={onRestore}
+          />
         )}
       </aside>
     </>
   )
+}
+
+// LibraryDetail — full info pane for a selected reference. Designed so the
+// user can decide "reuse this / refine it / regenerate / make a variant"
+// without leaving the drawer:
+//  - prompt always visible (truncates with expand)
+//  - slot thumbnails: which references fed THIS render (provenance graph)
+//  - feedback chain (if this is a refinement)
+//  - actions: pin, favorite, anchor, restore, plus "Refine with feedback"
+//    which writes to the chat as an intent — the agent picks it up, forks
+//    a plan with cumulative feedback, and re-renders.
+function LibraryDetail({ projectId, item, onFavorite, onSetAnchor, onRestore }: {
+  projectId: string
+  item: LibraryItem
+  onFavorite: (item: LibraryItem) => Promise<void> | void
+  onSetAnchor: (item: LibraryItem) => Promise<void> | void
+  onRestore: (item: LibraryItem) => Promise<void> | void
+}) {
+  const [feedback, setFeedback] = useState('')
+  const [refining, setRefining] = useState(false)
+  const tags = (item.tags as any) || {}
+  const slots: Array<{ slot: number; name: string; image_url: string }> = Array.isArray(tags.slots_used) ? tags.slots_used : []
+  const feedbackChain: string[] = Array.isArray(tags.feedback_chain) ? tags.feedback_chain : []
+  const isCutRender = item.source_type === 'cut'
+
+  const submitRefine = () => {
+    const text = feedback.trim()
+    if (!text) return
+    setRefining(true)
+    // Compose path: re-plan via Pixel using the cut id this render is from.
+    if (isCutRender && item.source_cut_id) {
+      sendChatIntent('propose_cut_plan', {
+        cut_id: item.source_cut_id,
+        feedback: text,
+      })
+      toast.success('Asked Pixel to refine')
+    } else if (item.asset_id) {
+      sendChatIntent('refine_reference', {
+        ref_id: item.ref_id,
+        asset_id: item.asset_id,
+        feedback: text,
+      })
+      toast.success('Asked Atlas to refine')
+    } else {
+      toast.error('Nothing to refine — no source cut or asset on this reference.')
+    }
+    setFeedback('')
+    setRefining(false)
+  }
+
+  return (
+    <div className="library-detail">
+      <img src={item.image_url} alt={item.label} className="library-detail__img" />
+      <div className="library-detail__meta">
+        <div className="library-detail__title">{item.label}</div>
+        <div className="library-detail__sub">
+          {item.source_type}
+          {item.cost_usd > 0 && ` · $${item.cost_usd.toFixed(3)}`}
+          {item.model_used && ` · ${item.model_used}`}
+          {item.created_at && ` · ${new Date(item.created_at).toLocaleString()}`}
+        </div>
+        {item.used_in_cuts.length > 0 && (
+          <div className="library-detail__used">
+            Used in {item.used_in_cuts.length} cut(s)
+          </div>
+        )}
+      </div>
+
+      {item.prompt && (
+        <div className="library-detail__prompt-block">
+          <div className="library-detail__section-title">Prompt</div>
+          <pre className="library-detail__prompt-pre">{item.prompt}</pre>
+        </div>
+      )}
+
+      {feedbackChain.length > 0 && (
+        <div className="library-detail__prompt-block">
+          <div className="library-detail__section-title">Feedback chain</div>
+          <ol className="library-detail__feedback">
+            {feedbackChain.map((f, i) => <li key={i}>{f}</li>)}
+          </ol>
+        </div>
+      )}
+
+      {slots.length > 0 && (
+        <div className="library-detail__prompt-block">
+          <div className="library-detail__section-title">References used</div>
+          <div className="library-detail__slots">
+            {slots.map((s, i) => (
+              <div key={i} className="library-detail__slot" title={s.name}>
+                <img src={s.image_url} alt={s.name} />
+                <span>{s.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="library-detail__refine">
+        <textarea
+          className="library-detail__refine-input"
+          placeholder={isCutRender ? 'Describe what to change for the next render…' : 'Describe how to redo this asset reference…'}
+          value={feedback}
+          onChange={e => setFeedback(e.target.value)}
+          rows={2}
+        />
+        <button
+          className="library-detail__refine-btn"
+          onClick={submitRefine}
+          disabled={refining || !feedback.trim()}
+          title="Send refine request to the agent"
+        >🔁 Refine</button>
+      </div>
+
+      <div className="library-detail__actions">
+        <button
+          onClick={() => {
+            const nowPinned = pinning.togglePin(projectId, item.ref_id)
+            toast.success(nowPinned ? 'Pinned to chat' : 'Unpinned')
+          }}
+        >📌 {pinning.isPinned(projectId, item.ref_id) ? 'Unpin' : 'Pin to chat'}</button>
+        <button onClick={() => onFavorite(item)}>
+          {item.is_favorite ? '★ Unfavorite' : '☆ Favorite'}
+        </button>
+        <button onClick={() => onSetAnchor(item)}>
+          {item.is_style_anchor ? '⚓ Unset anchor' : '⚓ Set as style anchor'}
+        </button>
+        {!item.is_active && (
+          <button onClick={() => onRestore(item)}>↺ Restore</button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// Send an intent through the active chat WebSocket. Lives outside the
+// Console so any panel (Library, Context, etc.) can drive the agent
+// without prop-drilling. We grab the live socket via a global window
+// hook the Console publishes on connect.
+function sendChatIntent(intent: string, payload: Record<string, unknown>) {
+  const w: any = window
+  const ws: WebSocket | undefined = w.__strawberry_chat_ws
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    toast.error('Console not connected.')
+    return
+  }
+  try {
+    ws.send(JSON.stringify({ type: 'user_intent', intent, payload }))
+  } catch (e) {
+    toast.error('Failed to send.')
+  }
 }
 
 function LibraryThumb({ item, selected, onClick }: { item: LibraryItem; selected: boolean; onClick: () => void }) {

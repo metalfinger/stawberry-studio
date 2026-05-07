@@ -152,6 +152,25 @@ async def chat_websocket(websocket: WebSocket, project_id: str, phase: str = Non
     # Send phase-specific chat history
     history = await db_async.get_chat_history(project_id, phase=current_phase)
     await websocket.send_json({"type": "history", "messages": history})
+
+    # Replay typed Console events so PlanCards, images, references,
+    # comparisons, handoffs, etc. all re-render after a hard refresh.
+    # Each replayed event carries a `_replayed: true` flag so the
+    # frontend knows not to re-bump the cost meter (it's already seeded
+    # from /library/stats + /cost-summary on mount).
+    try:
+        from backend.orchestrator.bus import fetch_recent_events
+        replay = await fetch_recent_events(project_id, limit=300)
+        if replay:
+            await websocket.send_json({"type": "replay_start", "count": len(replay)})
+            for ev in replay:
+                ev2 = {**ev, "_replayed": True}
+                await websocket.send_json(ev2)
+            await websocket.send_json({"type": "replay_end"})
+    except Exception as e:
+        # Non-fatal: log and continue with the live session.
+        import structlog as _sl
+        _sl.get_logger(__name__).warning("replay_failed", error=str(e))
     
     # Send initial greeting if no history for this phase (and not in history mode)
     if not history and not is_history_mode:

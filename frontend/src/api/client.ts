@@ -530,3 +530,15 @@ export async function assignSlot(projectId: string, cutId: string, slotIndex: nu
   if (!res.ok) throw new Error('Failed to assign slot');
   return res.json();
 }
+
+export interface CostSummary {
+  image_cost_usd: number;
+  llm_cost_usd: number;
+  total_cost_usd: number;
+}
+
+export async function getCostSummary(projectId: string): Promise<CostSummary> {
+  const res = await fetch(`${API_BASE}/api/projects/${projectId}/library/cost-summary`);
+  if (!res.ok) throw new Error('Failed to load cost summary');
+  return res.json();
+}

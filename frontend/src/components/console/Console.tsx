@@ -9,6 +9,7 @@ import { PinnedTray } from './PinnedTray'
 import { InputDock } from './InputDock'
 import { ConsoleHeader } from './ConsoleHeader'
 import { pinning } from '../dnd/pinning'
+import { getCostSummary } from '../../api/client'
 import './Console.css'
 
 interface ConsoleProps {
@@ -56,7 +57,19 @@ export function Console({ projectId, initialPhase, onNodeUpdate, onClose }: Cons
   }, [projectId])
   const [connecting, setConnecting] = useState(true)
   const [costToday, setCostToday] = useState<number>(0)
+  const [replaying, setReplaying] = useState<boolean>(false)
   const wsRef = useRef<WebSocket | null>(null)
+
+  // Seed the cost meter on mount from the project's persisted spend
+  // (image + LLM) so a hard refresh doesn't reset the running total.
+  useEffect(() => {
+    if (!projectId) return
+    let cancelled = false
+    getCostSummary(projectId)
+      .then(s => { if (!cancelled) setCostToday(s.total_cost_usd || 0) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [projectId])
 
   // Connect WS
   useEffect(() => {
@@ -67,7 +80,12 @@ export function Console({ projectId, initialPhase, onNodeUpdate, onClose }: Cons
     const ws = new WebSocket(url)
     wsRef.current = ws
 
-    ws.onopen = () => setConnecting(false)
+    ws.onopen = () => {
+      setConnecting(false)
+      // Publish the live socket on window so other panels (Library,
+      // ContextPanel) can post user_intent without prop-drilling.
+      ;(window as any).__strawberry_chat_ws = ws
+    }
     ws.onclose = () => setConnecting(true)
     ws.onerror = () => setConnecting(true)
     const cleanup = () => {}
@@ -80,6 +98,17 @@ export function Console({ projectId, initialPhase, onNodeUpdate, onClose }: Cons
       if (data.type === 'phase') {
         setPhase(data.phase)
         setAgentName(data.agent || agentName)
+        return
+      }
+      if (data.type === 'replay_start') {
+        setReplaying(true)
+        // Wipe transient messages — the replay will rehydrate from the
+        // persisted typed-event log so we don't double-render.
+        setMessages(prev => prev.filter(m => m.kind === 'text' && m.message_id.startsWith('legacy_')))
+        return
+      }
+      if (data.type === 'replay_end') {
+        setReplaying(false)
         return
       }
       if (data.type === 'history') {
@@ -144,12 +173,17 @@ export function Console({ projectId, initialPhase, onNodeUpdate, onClose }: Cons
           ...prev.filter(m => !(m.kind === 'elapsed' && m.message_id.startsWith('pending_'))),
           data as ConsoleMessage,
         ])
-        // Bump cost meter
-        if (data.kind === 'reference_card' && typeof data.cost_usd === 'number') {
-          setCostToday(c => c + data.cost_usd)
-        }
-        if (data.kind === 'tool_call' && typeof data.cost_usd === 'number') {
-          setCostToday(c => c + data.cost_usd)
+        // Bump cost meter, but only for live events. Replayed events are
+        // already in the cost-summary that seeded the meter on mount, so
+        // counting them again would double the total.
+        const isReplay = !!(data as any)._replayed
+        if (!isReplay) {
+          if (data.kind === 'reference_card' && typeof data.cost_usd === 'number') {
+            setCostToday(c => c + data.cost_usd)
+          }
+          if (data.kind === 'tool_call' && typeof data.cost_usd === 'number') {
+            setCostToday(c => c + data.cost_usd)
+          }
         }
         return
       }
@@ -205,6 +239,7 @@ export function Console({ projectId, initialPhase, onNodeUpdate, onClose }: Cons
 
     return () => {
       cleanup()
+      try { if ((window as any).__strawberry_chat_ws === ws) (window as any).__strawberry_chat_ws = null } catch {}
       ws.close()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

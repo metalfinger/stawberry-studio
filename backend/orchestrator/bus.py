@@ -19,6 +19,7 @@ Dead sinks self-prune on first publish failure.
 from __future__ import annotations
 
 import asyncio
+import json
 from collections import defaultdict
 from collections.abc import Awaitable, Callable
 
@@ -53,8 +54,17 @@ class ProjectBus:
         return len(self._subs.get(project_id, {}))
 
     async def publish(self, project_id: str, event: dict) -> None:
-        """Broadcast an event to every subscriber for the project. Failed
-        sinks are auto-pruned so a dropped WebSocket doesn't block others."""
+        """Broadcast an event to every subscriber for the project AND persist
+        it so a future refresh can replay the same stream. Failed sinks are
+        auto-pruned. Persistence is fire-and-forget; if the DB write fails
+        we still deliver to live subscribers."""
+        # 1. Persist (so refresh resumes). Skip purely-internal events.
+        try:
+            await _persist_event(project_id, event)
+        except Exception as e:  # noqa: BLE001
+            log.warning("bus.persist_failed", project_id=project_id, error=str(e))
+
+        # 2. Broadcast to live subscribers.
         sinks = list(self._subs.get(project_id, {}).items())
         if not sinks:
             return
@@ -67,6 +77,57 @@ class ProjectBus:
                 dead.append(sid)
         for sid in dead:
             await self.unsubscribe(project_id, sid)
+
+
+# ---------------------------------------------------------------------------
+# Persistence — every typed event lands in console_events so a hard refresh
+# can replay the same stream. Events without a `kind` field are skipped
+# (they're plain transport messages like type=phase / type=stream).
+# ---------------------------------------------------------------------------
+
+async def _persist_event(project_id: str, event: dict) -> None:
+    if not isinstance(event, dict):
+        return
+    kind = event.get("kind")
+    if not kind:
+        return
+    # Avoid recursion / circular imports — get_async_connection is the same
+    # connection helper the rest of the app uses.
+    from backend.database.core import get_async_connection
+    payload = json.dumps(event, default=str)
+    async with get_async_connection() as conn:
+        await conn.execute(
+            "INSERT INTO console_events (project_id, ts, kind, message_id, payload_json) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (
+                project_id,
+                event.get("timestamp"),
+                kind,
+                event.get("message_id"),
+                payload,
+            ),
+        )
+        await conn.commit()
+
+
+async def fetch_recent_events(project_id: str, limit: int = 300) -> list[dict]:
+    """Return the most recent typed events for a project, oldest-first so
+    they replay in chronological order."""
+    from backend.database.core import get_async_connection
+    async with get_async_connection() as conn:
+        async with conn.execute(
+            "SELECT payload_json FROM console_events "
+            "WHERE project_id = ? ORDER BY id DESC LIMIT ?",
+            (project_id, limit),
+        ) as cur:
+            rows = await cur.fetchall()
+    out: list[dict] = []
+    for r in reversed(rows):
+        try:
+            out.append(json.loads(r["payload_json"]))
+        except Exception:
+            continue
+    return out
 
 
 # Module-level singleton — import this everywhere instead of constructing.

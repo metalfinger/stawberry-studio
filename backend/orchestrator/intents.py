@@ -91,6 +91,12 @@ async def handle_intent(
         if intent == "dismiss":
             _idle_dismissed.add(project_id)
             return True
+        if intent == "refine_reference":
+            return await _refine_reference(project_id, payload, narrator)
+        if intent == "regenerate_asset_identity":
+            return await _regenerate_asset_identity(project_id, payload, narrator)
+        if intent == "update_asset_prompt":
+            return await _update_asset_prompt(project_id, payload, narrator)
         # Unknown intents fall back to chat agent.
         return False
     except Exception as e:
@@ -352,6 +358,143 @@ async def _draft_identities(project_id: str, narrator: Narrator) -> bool:
 
 async def _plan_unrendered(project_id: str, narrator: Narrator) -> bool:
     """Stub — same rationale as _draft_identities."""
+    return True
+
+
+# ============================================================================
+# Asset prompt edit + regenerate flow
+# ============================================================================
+
+async def _update_asset_prompt(project_id: str, payload: dict, narrator: Narrator) -> bool:
+    """Patch assets.suggested_prompt. The user can then regenerate identity."""
+    asset_id = payload.get("asset_id")
+    new_prompt = (payload.get("prompt") or "").strip()
+    if not asset_id or not new_prompt:
+        return False
+    from backend.database.core import get_async_connection
+    async with get_async_connection() as conn:
+        await conn.execute(
+            "UPDATE assets SET suggested_prompt = ? WHERE id = ? AND project_id = ?",
+            (new_prompt, asset_id, project_id),
+        )
+        await conn.commit()
+    await narrator.text(f"Updated prompt for asset `{asset_id[:8]}`.")
+    return True
+
+
+async def _regenerate_asset_identity(project_id: str, payload: dict, narrator: Narrator) -> bool:
+    """Update prompt (if provided) and regenerate the asset's identity
+    reference. Supersedes the prior identity — the new one becomes the
+    active anchor for downstream cuts."""
+    asset_id = payload.get("asset_id")
+    new_prompt = (payload.get("prompt") or "").strip()
+    if not asset_id:
+        return False
+
+    from backend.database.core import get_async_connection
+    from backend.orchestrator import references_v2
+
+    if new_prompt:
+        async with get_async_connection() as conn:
+            await conn.execute(
+                "UPDATE assets SET suggested_prompt = ? WHERE id = ? AND project_id = ?",
+                (new_prompt, asset_id, project_id),
+            )
+            await conn.commit()
+
+    # Supersede prior identity so the regen mints a fresh one.
+    async with get_async_connection() as conn:
+        async with conn.execute(
+            "SELECT id, image_url FROM reference_pool WHERE asset_id = ? AND label = 'identity' AND is_active = 1",
+            (asset_id,),
+        ) as cur:
+            old = await cur.fetchone()
+        if old:
+            await conn.execute(
+                "UPDATE reference_pool SET is_active = 0 WHERE id = ?", (old["id"],),
+            )
+            await conn.commit()
+
+    await narrator.text(f"Regenerating identity for asset `{asset_id[:8]}`…")
+    try:
+        new_ref = await references_v2.generate_identity_card(asset_id)
+    except Exception as e:  # noqa: BLE001
+        await narrator.failure(error=str(e), suggestion="Check the prompt and try again.", recovery_actions=[])
+        return True
+
+    # Point the prior identity at the new one for clear lineage.
+    if old and new_ref.get("id"):
+        async with get_async_connection() as conn:
+            await conn.execute(
+                "UPDATE reference_pool SET superseded_by_id = ? WHERE id = ?",
+                (new_ref["id"], old["id"]),
+            )
+            await conn.commit()
+
+    await narrator.reference_card(
+        ref={
+            "id": new_ref["id"],
+            "image_url": new_ref["image_url"],
+            "label": "identity",
+            "asset_name": "",
+        },
+        status="newly_generated",
+        cost_usd=new_ref.get("cost_usd", 0.0),
+    )
+    return True
+
+
+# ============================================================================
+# Refine an existing reference (asset variant) with feedback
+# ============================================================================
+
+async def _refine_reference(project_id: str, payload: dict, narrator: Narrator) -> bool:
+    """Generate a sibling reference using the parent's identity + the user's
+    feedback as story_context. Useful for 'this expression is wrong, here's
+    what I want' on asset references. Supersedes nothing — the original
+    stays around so the user can compare."""
+    ref_id = payload.get("ref_id")
+    asset_id = payload.get("asset_id")
+    feedback = (payload.get("feedback") or "").strip()
+    if not (ref_id and feedback):
+        return False
+    if not asset_id:
+        from backend.database.core import get_async_connection
+        async with get_async_connection() as conn:
+            async with conn.execute(
+                "SELECT asset_id, label FROM reference_pool WHERE id = ?", (ref_id,),
+            ) as cur:
+                row = await cur.fetchone()
+        if not row:
+            await narrator.failure(error=f"Reference {ref_id[:8]} not found", suggestion="", recovery_actions=[])
+            return True
+        asset_id = row["asset_id"]
+
+    await narrator.text(f"Refining reference `{ref_id[:8]}` with your feedback…")
+    try:
+        from backend.orchestrator import references_v2
+        # Use a label that captures the refinement intent.
+        label = f"refine_{ref_id[-6:]}"
+        new_ref = await references_v2.generate_pose(
+            asset_id=asset_id,
+            label=label,
+            story_context=feedback,
+            parent_reference_id=ref_id,
+        )
+    except Exception as e:  # noqa: BLE001
+        await narrator.failure(error=str(e), suggestion="Try a different prompt.", recovery_actions=[])
+        return True
+
+    await narrator.reference_card(
+        ref={
+            "id": new_ref["id"],
+            "image_url": new_ref["image_url"],
+            "label": label,
+            "asset_name": "",
+        },
+        status="newly_generated",
+        cost_usd=new_ref.get("cost_usd", 0.0),
+    )
     return True
 
 
