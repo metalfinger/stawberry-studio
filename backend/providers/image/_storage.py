@@ -28,7 +28,9 @@ async def fetch_url_or_data_uri(url: str) -> bytes:
         _, b64 = url.split(",", 1)
         return base64.b64decode(b64)
     if url.startswith("/storage/generated/"):
-        return (_STORAGE_ROOT.parent / url.lstrip("/")).read_bytes()
+        # URL: /storage/generated/<file>; _STORAGE_ROOT already points there.
+        filename = url.rsplit("/", 1)[-1]
+        return (_STORAGE_ROOT / filename).read_bytes()
     async with httpx.AsyncClient(timeout=30.0) as client:
         resp = await client.get(url)
         resp.raise_for_status()
@@ -41,7 +43,9 @@ def fetch_url_sync(url: str) -> bytes:
         _, b64 = url.split(",", 1)
         return base64.b64decode(b64)
     if url.startswith("/storage/generated/"):
-        return (_STORAGE_ROOT.parent / url.lstrip("/")).read_bytes()
+        # URL: /storage/generated/<file>; _STORAGE_ROOT already points there.
+        filename = url.rsplit("/", 1)[-1]
+        return (_STORAGE_ROOT / filename).read_bytes()
     import requests
 
     resp = requests.get(url, timeout=30)
