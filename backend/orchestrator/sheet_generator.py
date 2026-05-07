@@ -287,6 +287,31 @@ async def generate_sheet_for_asset(
     prompt = _build_prompt(plan, asset, brief)
     layout = _cells_layout_json(plan)
 
+    # Asset DAG: if this asset has a parent or a variant base, pin that
+    # asset's sheet/master into slot @Image1 so identity locks across the
+    # generation. Mara's gun → Mara's sheet; alley alcove → alley's sheet.
+    from backend.providers.base import ReferenceImage
+    refs: list[ReferenceImage] = []
+    parent_id = asset.get("parent_asset_id") or asset.get("master_id")
+    if parent_id:
+        async with get_async_connection() as conn:
+            async with conn.execute("SELECT * FROM assets WHERE id = ?", (parent_id,)) as cur:
+                parent_row = await cur.fetchone()
+            parent_sheet_url = None
+            if parent_row:
+                async with conn.execute(
+                    "SELECT image_url FROM element_sheets WHERE asset_id = ? AND is_active = 1 ORDER BY created_at DESC LIMIT 1",
+                    (parent_id,),
+                ) as cur:
+                    sheet_row = await cur.fetchone()
+                if sheet_row and sheet_row["image_url"]:
+                    parent_sheet_url = sheet_row["image_url"]
+        parent_master_url = (parent_row and parent_row["image_url"]) or None
+        parent_url = parent_sheet_url or parent_master_url
+        if parent_url:
+            refs.append(ReferenceImage(image_url=parent_url, slot=1, name="parent"))
+            log.info("sheet_using_parent_reference", asset_id=asset_id, parent=parent_id, has_sheet=bool(parent_sheet_url))
+
     # Provider call — best-of-best per user mandate
     settings = get_settings()
     reg = get_registry()
@@ -298,7 +323,7 @@ async def generate_sheet_for_asset(
         resolution="2048x2048",
         num_images=1,
         seed=seed,
-        reference_images=[],
+        reference_images=refs,
     )
 
     try:

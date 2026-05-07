@@ -183,8 +183,10 @@ async def bundle_cut_context(cut_id: str, *, sibling_window: int = 6) -> CutCont
             (cut_id,),
         )
 
-        # Pull active sheet (and falling back to element_master) for each linked asset
-        for a in linked_assets:
+        # Pull active sheet (and falling back to element_master) for each linked asset.
+        # Also walk the parent chain so derived assets contribute their parent's
+        # sheet as a continuity anchor (Mara's gun → Mara; alley alcove → alley).
+        async def _attach_sheet_and_master(a):
             a["sheet"] = await _fetch_one(
                 conn,
                 "SELECT * FROM element_sheets WHERE asset_id = ? AND is_active = 1 ORDER BY created_at DESC LIMIT 1",
@@ -202,6 +204,25 @@ async def bundle_cut_context(cut_id: str, *, sibling_window: int = 6) -> CutCont
                 """,
                 (a["id"],),
             )
+
+        for a in linked_assets:
+            await _attach_sheet_and_master(a)
+            # Walk parent chain (max depth 4 to avoid pathological cycles).
+            chain: list[dict[str, Any]] = []
+            seen = {a["id"]}
+            cur = a
+            for _ in range(4):
+                pid = cur.get("parent_asset_id") or cur.get("master_id")
+                if not pid or pid in seen:
+                    break
+                seen.add(pid)
+                parent = await _fetch_one(conn, "SELECT * FROM assets WHERE id = ?", (pid,))
+                if not parent:
+                    break
+                await _attach_sheet_and_master(parent)
+                chain.append(parent)
+                cur = parent
+            a["parent_chain"] = chain
 
         # Style anchor + scene anchor cut
         style_anchor = await _fetch_one(

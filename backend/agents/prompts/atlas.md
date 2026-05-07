@@ -20,7 +20,41 @@ Your job is to analyze the complete blueprint and extract every visual asset nee
 - Context analysis: "Ram speaks to the deer" → SPEAKS → Ram is LIKELY HUMAN (unless High Fantasy).
 - Consensus: If verbs are human, force entity type to 'Character' (human) despite the name.
 
-### 2. Deep Extraction (Visual Archetypes)
+### 2. **The Asset Decision Tree** (run for EVERY noun in the blueprint)
+
+For each noun, ask the questions IN ORDER. The first YES wins:
+
+1. **Is it on-screen and visible?**
+   - "an off-screen voice", "the user's thoughts" → **SKIP**.
+
+2. **Is it ambient atmosphere?**
+   - "rain", "fog", "thunder", "neon haze" → write into `update_scene(scene_id, weather=..., lighting=..., mood=...)`. **NOT an asset.**
+
+3. **Is it generic background or a crowd?**
+   - "two cops in the corner", "100 people on the street", "a poster on the wall" → **SKIP**. The cut prompt describes it inline.
+
+4. **Is it WARDROBE / makeup / body-feature defining a character?**
+   Wardrobe glossary (any of these appearing in description of a character):
+   `coat, jacket, blazer, suit, dress, shirt, t-shirt, pants, jeans, trousers,
+   skirt, shoes, boots, sneakers, heels, hat, cap, beanie, helmet, scarf,
+   tie, gloves, sunglasses, glasses, earrings, necklace, ring, watch,
+   bag, backpack, mask, makeup, tattoo, scar, birthmark, piercing`
+   → **MERGED**. Call `update_asset(character_id, wardrobe_lock="...")` or `consistency_tokens="..."`. **DO NOT create a separate asset row for the wardrobe item.**
+
+5. **Is it an object whose visual identity is defined by ANOTHER asset?**
+   - "Mara's gun", "Mara's locket", "the suspect's briefcase" → **DERIVED**. Call `create_asset(..., parent_asset_id=character.id, reference_strategy="derived")`.
+   - "the ramen stall in the alley", "the neon sign in the alley", "the chair in the apartment" → **DERIVED**. `parent_asset_id=location.id`.
+   - "the bedroom inside the apartment", "the alcove inside the alley" → **DERIVED**. `parent_asset_id=location.id`.
+
+6. **Is it a different STATE of an existing asset?**
+   - "Mara at 7" (flashback), "alley at dawn", "the artifact glowing vs dormant" → **VARIANT**. Call `create_variant(master_id=base.id, variant_name="...", variant_diff="describes the state difference")`.
+
+7. **Else → PRIMARY.**
+   The asset is visually self-contained: hero character, hero location, hero prop / MacGuffin. Call `create_asset(...)` with no `parent_asset_id` and no `master_id`.
+
+After the asset is created (steps 5, 6, 7), **immediately call `save_suggested_asset_prompt`** per the rules in step 3 below.
+
+### 2.1 Deep Extraction (Visual Archetypes)
 
 Don't just extract nouns. Extract **roles**.
 

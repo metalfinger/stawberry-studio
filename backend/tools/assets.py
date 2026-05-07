@@ -180,40 +180,56 @@ def auto_link_assets_to_blueprint(project_id: str) -> dict:
     }
 
 
-@tool("create_asset", description="Create a new asset (character/location/prop/frame).", tags=["assets", "write"])
+@tool("create_asset", description="Create a new asset (character/location/prop/frame). Pass parent_asset_id when this asset's identity is defined by another (Mara's gun → parent_asset_id=mara.id, ramen stall in alley → parent_asset_id=alley.id). Pass reference_strategy='derived' alongside.", tags=["assets", "write"])
 def create_asset(
     project_id: str,
     asset_type: str,
     name: str,
     description: str = None,
     appearance: str = None,
-    style: str = None
+    style: str = None,
+    parent_asset_id: str = None,
+    reference_strategy: str = "standalone",
 ) -> dict:
     """
     Create a new MASTER asset (character, location, prop, or frame).
     For variants, use create_variant instead.
-    
+
     Args:
         project_id: The current project ID
-        asset_type: Type of asset - 'character', 'location', 'prop', or 'frame'
+        asset_type: 'character' | 'location' | 'prop' | 'frame'
         name: Name of the asset (e.g., "Dr. Sarah Chen", "Mars Colony")
         description: Detailed description of the asset
         appearance: Visual appearance details (for characters)
         style: Style notes (for locations/props)
-    
+        parent_asset_id: Optional. The asset whose visual identity defines this
+            one. Sheet generation will pin the parent's sheet/master into slot
+            @Image1 so identity locks. Use for character-bound props ("Mara's
+            gun" → Mara), set-dressing ("ramen stall in the alley" → alley),
+            or sub-locations ("the alcove inside the alley" → alley).
+        reference_strategy: 'standalone' (default) | 'derived' (uses parent
+            as reference) | 'variant' (use create_variant instead).
+
     Returns:
         The created asset with its ID
     """
     if asset_type not in ["character", "location", "prop", "frame"]:
         return {"error": f"Invalid asset_type: {asset_type}. Must be 'character', 'location', 'prop', or 'frame'"}
-    
+
+    if parent_asset_id and reference_strategy == "standalone":
+        # If the agent passed a parent, default the strategy to 'derived'
+        # so the sheet generator picks it up.
+        reference_strategy = "derived"
+
     asset = asset_db.create_asset(
         project_id=project_id,
         asset_type=asset_type,
         name=name,
         description=description,
         appearance=appearance,
-        style=style
+        style=style,
+        parent_asset_id=parent_asset_id,
+        reference_strategy=reference_strategy,
     )
 
     # Mark downstream phases as stale when assets change
@@ -409,6 +425,61 @@ def update_asset(
     return {"success": True, "asset": asset}
 
 
+_WARDROBE_GLOSSARY = {
+    "coat", "jacket", "blazer", "suit", "dress", "shirt", "t-shirt", "tshirt",
+    "pants", "jeans", "trousers", "skirt", "shoes", "boots", "sneakers",
+    "heels", "hat", "cap", "beanie", "helmet", "scarf", "tie", "gloves",
+    "sunglasses", "glasses", "earrings", "necklace", "ring", "watch",
+    "bag", "backpack", "mask", "makeup", "tattoo", "scar", "birthmark",
+    "piercing", "robe", "cloak", "armor", "armour", "uniform",
+}
+
+
+@tool("cleanup_misclassified_assets", description="Apply the asset decision tree retroactively to a project. Wardrobe-named assets get merged into the most-likely character's wardrobe_lock; the rogue asset rows are deleted. Use on legacy projects extracted before the DAG refactor.", tags=["assets", "write", "cleanup"])
+def cleanup_misclassified_assets(project_id: str) -> dict:
+    """Find prop/character assets whose name is a wardrobe noun and merge them
+    into the most-likely-wearing character's wardrobe_lock, then delete them."""
+    assets = asset_db.get_assets(project_id)
+    chars = [a for a in assets if a.get("type") == "character"]
+    moved: list[dict] = []
+    deleted: list[dict] = []
+    for a in assets:
+        name_low = (a.get("name") or "").lower()
+        if a.get("type") == "character":
+            continue
+        # Match wardrobe glossary
+        if not any(g in name_low.split() or g == name_low for g in _WARDROBE_GLOSSARY):
+            continue
+        # Pick the character that is linked to the most overlapping nodes.
+        target = None
+        if chars:
+            target = chars[0]  # default — most projects have a single hero
+            # Heuristic: if the asset's name contains a character's name token,
+            # prefer that character.
+            for c in chars:
+                if (c.get("name") or "").split()[0].lower() in name_low:
+                    target = c
+                    break
+        if target is None:
+            continue
+        # Append to wardrobe_lock
+        existing_wardrobe = (target.get("wardrobe_lock") or "").strip()
+        descriptor = (a.get("name") or "") + (
+            f" ({a.get('appearance')})" if a.get("appearance") else ""
+        )
+        new_wardrobe = (existing_wardrobe + "; " + descriptor).strip("; ")
+        asset_db.update_asset(target["id"], wardrobe_lock=new_wardrobe)
+        moved.append({"from": a["id"], "to": target["id"], "descriptor": descriptor})
+        asset_db.delete_asset(a["id"])
+        deleted.append({"id": a["id"], "name": a["name"]})
+    return {
+        "success": True,
+        "moved_to_wardrobe": moved,
+        "deleted": deleted,
+        "summary": f"Merged {len(moved)} wardrobe assets; deleted {len(deleted)} rows.",
+    }
+
+
 @tool("compose_cut", description="One-button compose: bundle full tree → smart picker → fill missing references → DSL prompt → Nano Banana Pro render → vision critic with auto-retry → register reference. Use this for ANY 'generate this cut' request instead of compile_shot_prompt.", tags=["cut", "write", "phase"])
 async def compose_cut_tool(cut_id: str) -> dict:
     """Run the production-grade Cut Composer pipeline for one cut."""
@@ -461,6 +532,26 @@ async def generate_all_missing_sheets(project_id: str) -> dict:
         return {"success": True, "generated": [], "skipped": [], "errors": [],
                 "message": "No assets in this project."}
 
+    # Topo-sort: parents/variant-bases must be generated before children so
+    # the child's sheet can use the parent's sheet as a reference.
+    by_id = {a["id"]: a for a in assets}
+    waves: list[list[dict]] = []
+    remaining = list(assets)
+    placed: set[str] = set()
+    while remaining:
+        wave = [
+            a for a in remaining
+            if (not a.get("parent_asset_id") or a["parent_asset_id"] in placed or a["parent_asset_id"] not in by_id)
+            and (not a.get("master_id") or a["master_id"] in placed or a["master_id"] not in by_id)
+        ]
+        if not wave:
+            # Cycle or unreachable parents — flush the rest as one wave.
+            wave = remaining[:]
+        for a in wave:
+            placed.add(a["id"])
+        waves.append(wave)
+        remaining = [a for a in remaining if a["id"] not in placed]
+
     async def _process(a: dict):
         if not (a.get("suggested_prompt") or "").strip():
             return ("skipped", a, "no suggested_prompt — Atlas must save one first")
@@ -473,13 +564,14 @@ async def generate_all_missing_sheets(project_id: str) -> dict:
         except Exception as e:
             return ("error", a, str(e))
 
-    outcomes = await asyncio.gather(*[_process(a) for a in assets], return_exceptions=False)
     generated, skipped, errors = [], [], []
-    for status, a, info in outcomes:
-        item = {"id": a["id"], "type": a["type"], "name": a["name"], "info": info}
-        if status == "generated": generated.append(item)
-        elif status == "skipped": skipped.append(item)
-        else: errors.append(item)
+    for wave in waves:
+        outcomes = await asyncio.gather(*[_process(a) for a in wave], return_exceptions=False)
+        for status, a, info in outcomes:
+            item = {"id": a["id"], "type": a["type"], "name": a["name"], "info": info}
+            if status == "generated": generated.append(item)
+            elif status == "skipped": skipped.append(item)
+            else: errors.append(item)
 
     return {
         "success": len(errors) == 0,

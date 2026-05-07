@@ -47,24 +47,26 @@ def create_asset(
     style: str = None,
     metadata: dict = None,
     master_id: str = None,
-    variant_diff: str = None
+    variant_diff: str = None,
+    parent_asset_id: str = None,
+    reference_strategy: str = "standalone",
 ) -> Dict[str, Any]:
     """Create a new asset (master or variant)."""
     asset_id = f"asset_{uuid.uuid4().hex[:12]}"
-    
+
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO assets (id, project_id, type, name, description, appearance, style, metadata, master_id, variant_diff)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO assets (id, project_id, type, name, description, appearance, style, metadata, master_id, variant_diff, parent_asset_id, reference_strategy)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         asset_id, project_id, asset_type, name, description,
         appearance, style, json.dumps(metadata) if metadata else None,
-        master_id, variant_diff
+        master_id, variant_diff, parent_asset_id, reference_strategy,
     ))
     conn.commit()
     conn.close()
-    
+
     return {
         "id": asset_id,
         "project_id": project_id,
@@ -76,8 +78,10 @@ def create_asset(
         "metadata": metadata,
         "master_id": master_id,
         "variant_diff": variant_diff,
+        "parent_asset_id": parent_asset_id,
+        "reference_strategy": reference_strategy,
         "slot_filled": False,
-        "image_url": None
+        "image_url": None,
     }
 
 
@@ -146,6 +150,8 @@ def update_asset(asset_id: str, **updates) -> Optional[Dict[str, Any]]:
         # Continuity fields used by the Sheet Planner + Continuity Bible.
         "consistency_tokens", "distinctive_features", "wardrobe_lock",
         "suggested_prompt", "face_embedding_url",
+        # Asset DAG (migration 006).
+        "parent_asset_id", "reference_strategy",
     ]
     updates = {k: v for k, v in updates.items() if k in allowed}
     
