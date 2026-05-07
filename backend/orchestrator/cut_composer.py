@@ -150,23 +150,60 @@ async def _detect_gaps(ctx: CutContext) -> list[dict[str, Any]]:
 
 
 async def _pick_references(ctx: CutContext) -> list[dict[str, Any]]:
-    picks = await pick_for_cut(ctx.project_id, ctx.cut_id, max_slots=5)
+    """Build a slot list for the cut. Order of priority (slot 1 first):
+       1. Project style anchor (if pinned).
+       2. Each linked asset's parent-chain sheets (parents before child).
+       3. Each linked asset's own active sheet.
+       4. Smart Picker scoring for any remaining capacity.
+    """
+    seen_urls: set[str] = set()
+    pinned: list[dict[str, Any]] = []
 
-    # Always front-load the style anchor as slot 1 if available and no pick
-    # already occupies it.
-    if ctx.style_anchor and not any(p.get("slot") == 1 for p in picks):
-        picks.insert(0, {
-            "reference": ctx.style_anchor,
+    def _push(image_url: str | None, name: str, reason: str):
+        if not image_url or image_url in seen_urls:
+            return
+        seen_urls.add(image_url)
+        pinned.append({
+            "reference": {"image_url": image_url, "name": name},
             "score": 1.0,
-            "reasons": ["pinned style anchor"],
-            "slot": 1,
-            "ref": "@Image1",
+            "reasons": [reason],
         })
-    # Re-number slots in case insertion shifted them
-    for i, p in enumerate(picks, start=1):
+
+    if ctx.style_anchor:
+        _push(ctx.style_anchor.get("image_url"), "style_anchor", "pinned style anchor")
+
+    # Walk every linked asset; pre-pin parent chain sheets first, then the
+    # asset's own sheet. Ordering: characters → locations → props.
+    for asset in (ctx.linked_characters + ctx.linked_locations + ctx.linked_props):
+        for parent in reversed(asset.get("parent_chain") or []):
+            sheet = parent.get("sheet")
+            url = (sheet or {}).get("image_url") or parent.get("image_url")
+            _push(url, parent.get("name", "parent"), f"parent of {asset.get('name')}")
+        sheet = asset.get("sheet")
+        url = (sheet or {}).get("image_url") or asset.get("image_url")
+        _push(url, asset.get("name", "asset"), "linked asset")
+
+    # Trim to max 5 (Nano Banana Pro slot limit) before invoking picker so
+    # we don't blow past it.
+    pinned = pinned[:5]
+
+    # Picker fills remaining slots from the broader reference pool.
+    remaining = max(0, 5 - len(pinned))
+    if remaining > 0:
+        picker_picks = await pick_for_cut(ctx.project_id, ctx.cut_id, max_slots=remaining)
+        for p in picker_picks:
+            url = (p.get("reference") or {}).get("image_url")
+            if url and url not in seen_urls:
+                seen_urls.add(url)
+                pinned.append(p)
+                if len(pinned) >= 5:
+                    break
+
+    # Number the slots
+    for i, p in enumerate(pinned, start=1):
         p["slot"] = i
         p["ref"] = f"@Image{i}"
-    return picks
+    return pinned
 
 
 def _slot_dict_from_picks(picks: list[dict[str, Any]]) -> dict[str, str]:

@@ -256,6 +256,25 @@ async def _save_sheet_row(
             "UPDATE assets SET image_url = ? WHERE id = ?",
             (image_url, plan.asset_id),
         )
+        # Stale-cascade: any asset that derives from this one (parent_asset_id
+        # or master_id pointing here) loses identity continuity until it's
+        # regenerated. Mark their active sheets as stale so the picker stops
+        # reusing them and `generate_all_missing_sheets` queues them again.
+        descendants = await conn.execute_fetchall(
+            "SELECT id FROM assets WHERE parent_asset_id = ? OR master_id = ?",
+            (plan.asset_id, plan.asset_id),
+        ) if hasattr(conn, "execute_fetchall") else None
+        if descendants is None:
+            async with conn.execute(
+                "SELECT id FROM assets WHERE parent_asset_id = ? OR master_id = ?",
+                (plan.asset_id, plan.asset_id),
+            ) as cur:
+                descendants = await cur.fetchall()
+        for row in descendants:
+            await conn.execute(
+                "UPDATE element_sheets SET is_active = 0, status = 'stale' WHERE asset_id = ? AND is_active = 1",
+                (row["id"],),
+            )
         await conn.commit()
     return sheet_id
 

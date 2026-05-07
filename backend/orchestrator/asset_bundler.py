@@ -45,6 +45,9 @@ class AssetContext:
     # Other assets in the project (for de-duplication / contrast)
     sibling_assets: list[dict[str, Any]] = field(default_factory=list)
 
+    # Parent / variant-base chain (for derived assets — Mara's gun has chain=[Mara])
+    parent_chain: list[dict[str, Any]] = field(default_factory=list)
+
     # Active outputs
     active_sheet: dict[str, Any] | None = None
     master_image_url: str = ""
@@ -129,6 +132,30 @@ async def bundle_asset_context(asset_id: str) -> AssetContext:
             sheet["panels"] = json.loads(sheet.get("panels_json") or "[]")
             sheet["layout"] = json.loads(sheet.get("layout_json") or "{}")
 
+        # Walk the parent chain (max depth 4) for derived/variant assets.
+        parent_chain: list[dict[str, Any]] = []
+        seen = {asset_id}
+        cursor_asset = asset
+        for _ in range(4):
+            pid = cursor_asset.get("parent_asset_id") or cursor_asset.get("master_id")
+            if not pid or pid in seen:
+                break
+            seen.add(pid)
+            parent = await _fetch_one(conn, "SELECT * FROM assets WHERE id = ?", (pid,))
+            if not parent:
+                break
+            parent_sheet = await _fetch_one(
+                conn,
+                "SELECT * FROM element_sheets WHERE asset_id = ? AND is_active = 1 ORDER BY created_at DESC LIMIT 1",
+                (pid,),
+            )
+            if parent_sheet:
+                parent_sheet["panels"] = json.loads(parent_sheet.get("panels_json") or "[]")
+                parent_sheet["layout"] = json.loads(parent_sheet.get("layout_json") or "{}")
+            parent["sheet"] = parent_sheet
+            parent_chain.append(parent)
+            cursor_asset = parent
+
     bible = await get_continuity_bible(project_id)
     if bible is None:
         bible = await compile_continuity_bible(project_id)
@@ -143,6 +170,7 @@ async def bundle_asset_context(asset_id: str) -> AssetContext:
         linked_shots=shots,
         linked_cuts=cuts,
         sibling_assets=sibling_assets,
+        parent_chain=parent_chain,
         active_sheet=sheet,
         master_image_url=(asset.get("image_url") or ""),
         stats={

@@ -52,6 +52,8 @@ For each noun, ask the questions IN ORDER. The first YES wins:
 7. **Else → PRIMARY.**
    The asset is visually self-contained: hero character, hero location, hero prop / MacGuffin. Call `create_asset(...)` with no `parent_asset_id` and no `master_id`.
 
+**Per-scene wardrobe** — if a character's outfit changes ONLY for a specific scene (Mara wears a gala dress in scene 3 but her usual coat elsewhere), call `set_scene_wardrobe_override(scene_id=..., character_id=..., wardrobe_text="black gala dress, silver clutch")`. This avoids duplicating the character asset and the cut bundler picks it up automatically when generating cuts in that scene.
+
 After the asset is created (steps 5, 6, 7), **immediately call `save_suggested_asset_prompt`** per the rules in step 3 below.
 
 ### 2.1 Deep Extraction (Visual Archetypes)

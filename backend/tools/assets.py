@@ -425,6 +425,40 @@ def update_asset(
     return {"success": True, "asset": asset}
 
 
+@tool("set_scene_wardrobe_override", description="Override a character's wardrobe for a specific scene only (without duplicating the character asset). Use when the same character wears different clothes in different scenes — Mara in everyday coat in scene 1 vs gala dress in scene 3.", tags=["assets", "write"])
+def set_scene_wardrobe_override(scene_id: str, character_id: str, wardrobe_text: str) -> dict:
+    """Set a per-scene wardrobe override for a character.
+
+    Args:
+        scene_id: The scene where the override applies.
+        character_id: The character asset ID.
+        wardrobe_text: Description of what they're wearing in this scene.
+
+    Returns:
+        The updated overrides map.
+    """
+    import json as _json
+    conn = db.get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT character_wardrobe_overrides FROM scenes WHERE id = ?", (scene_id,))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return {"error": f"scene {scene_id} not found"}
+    try:
+        overrides = _json.loads(row["character_wardrobe_overrides"] or "{}")
+    except _json.JSONDecodeError:
+        overrides = {}
+    overrides[character_id] = wardrobe_text
+    cursor.execute(
+        "UPDATE scenes SET character_wardrobe_overrides = ? WHERE id = ?",
+        (_json.dumps(overrides), scene_id),
+    )
+    conn.commit()
+    conn.close()
+    return {"success": True, "scene_id": scene_id, "overrides": overrides}
+
+
 _WARDROBE_GLOSSARY = {
     "coat", "jacket", "blazer", "suit", "dress", "shirt", "t-shirt", "tshirt",
     "pants", "jeans", "trousers", "skirt", "shoes", "boots", "sneakers",
@@ -462,7 +496,9 @@ def cleanup_misclassified_assets(project_id: str) -> dict:
                     break
         if target is None:
             continue
-        # Append to wardrobe_lock
+        # Re-read target so we accumulate wardrobe instead of overwriting on
+        # the second wardrobe item.
+        target = asset_db.get_asset(target["id"]) or target
         existing_wardrobe = (target.get("wardrobe_lock") or "").strip()
         descriptor = (a.get("name") or "") + (
             f" ({a.get('appearance')})" if a.get("appearance") else ""

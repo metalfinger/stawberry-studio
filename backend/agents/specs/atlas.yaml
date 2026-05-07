@@ -22,6 +22,7 @@ tools:
   - get_asset_tree_context
   - generate_all_missing_sheets
   - cleanup_misclassified_assets
+  - set_scene_wardrobe_override
   - complete_asset_extraction
   - confirm_asset_extraction_complete
 output_schema: null

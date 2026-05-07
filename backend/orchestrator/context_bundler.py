@@ -252,6 +252,24 @@ async def bundle_cut_context(cut_id: str, *, sibling_window: int = 6) -> CutCont
     locs = [a for a in linked_assets if (a.get("type") or "").lower() == "location"]
     props = [a for a in linked_assets if (a.get("type") or "").lower() == "prop"]
 
+    # Apply scene-level wardrobe override on top of character.wardrobe_lock
+    # so prompt-builders see the right outfit for THIS scene without us having
+    # to mint a per-scene character variant.
+    overrides_raw = (scene or {}).get("character_wardrobe_overrides") or ""
+    if overrides_raw:
+        try:
+            overrides = json.loads(overrides_raw)
+        except json.JSONDecodeError:
+            overrides = {}
+        for c in chars:
+            ov = overrides.get(c["id"])
+            if ov:
+                c["wardrobe_lock_scene"] = ov
+                # Layer the override on top of the base wardrobe_lock for any
+                # downstream prompt builder that just reads wardrobe_lock.
+                base = (c.get("wardrobe_lock") or "").strip()
+                c["wardrobe_lock"] = (base + " · scene-specific: " + ov).strip(" · ") if base else ov
+
     ctx = CutContext(
         project_id=project_id,
         cut_id=cut_id,
