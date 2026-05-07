@@ -351,6 +351,16 @@ async def chat_websocket(websocket: WebSocket, project_id: str, phase: str = Non
                     "content": full_response,
                     "agent_name": agent_name
                 })
+                # Notify the frontend that mutating agents may have changed the
+                # tree state. Cheap and idempotent — the canvas re-fetches
+                # assets/scenes/shots/cuts and reconciles. Fixes the stale
+                # asset-id bug where the canvas held an old UUID after Atlas
+                # rebuilt extraction.
+                await websocket.send_json({
+                    "type": "tree_updated",
+                    "agent": agent_name,
+                    "phase": current_phase,
+                })
                 
             # Execute Handoff if requested
             if handoff_request:

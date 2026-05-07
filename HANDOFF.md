@@ -815,7 +815,95 @@ where this section says.
   most of these by replacing the scattered chat-driven generation with the
   one-button Cut Composer.
 
-**Branch:** main (untracked changes — user has not committed; do NOT commit
-without asking).
+**Branch:** main.
 
-**End of handoff. Phase 4.6 work begins after this file is saved.**
+---
+
+## 14. Session 2026-05-07 — bug fix wave + phase gates
+
+This session uncovered and fixed several **systemic** issues that had been
+silently breaking every multi-turn agent run.
+
+### Critical fixes (verified end-to-end)
+
+1. **Pydantic AI dropped the system prompt when message_history was non-empty.**
+   PA only re-injects `system_prompt` if the history's first ModelRequest
+   already contains a `SystemPromptPart`. Our rebuilder produced text-only
+   requests, so every turn after turn 1 ran with no project_id, no tool
+   instructions, no schema. Symptoms: "I need a project ID", hallucinated
+   values like "12345", brief never saved.
+   Fix: `runner.run_agent` and `runner.stream_agent` now prepend a
+   `SystemPromptPart(content=rendered_system)` to `message_history` whenever
+   it's non-empty. Covers ALL Pydantic AI agents.
+
+2. **`run_stream` halts before the tool loop completes.** PA's run_stream
+   only streams the first model response — when the model calls a tool, the
+   tool never executes. Switched `stream_agent` to `agent.run()` and yield
+   the final output as one chunk.
+
+3. **Wrong model IDs hung indefinitely.** `gemini-3-pro-preview` /
+   `gemini-3-pro-image-preview` are not real public Gemini IDs. Routed all
+   roles to `gemini-2.5-pro`. Kimi was tried as creative-role default but is
+   weak at tool-calling — narrates "logging the brief" without actually
+   invoking the tool.
+
+4. **`backend.db` facade missed `get_chat_history_for_context`.** Re-exported.
+
+### Phase gates added (the structural fix)
+
+CAST_SCOUT was advancing to STORYBOARD with empty `suggested_prompt` on every
+asset. Three gates now hard-block bad transitions:
+
+- **`confirm_briefing_complete`** — blocks unless `title`, `logline`, `genre`,
+  `art_style` are all non-empty (`art_style` was previously unchecked).
+- **`complete_blueprint` + `confirm_blueprint_complete`** — blocks if any
+  scene has no shots, any shot has no cuts, or any shot has no `shot_size`.
+- **`complete_asset_extraction` + `confirm_asset_extraction_complete`** —
+  blocks if any asset has empty `suggested_prompt`. Returns the missing list
+  so Atlas can fix in-loop.
+
+### New tools
+
+- **`generate_all_missing_sheets(project_id)`** — bulk fan-out of sheet
+  generation across every prompt-ready asset that lacks an active sheet.
+  Pixel calls it as a one-click unblock.
+- **`get_asset_tree_context(asset_id)`** — sibling of `bundle_cut_context`
+  for upstream phases. Returns brief globals + linked scenes/shots/cuts +
+  sibling assets + active sheet. Atlas uses it before writing prompts.
+- **`compose_cut(cut_id)`** — Cut Composer pipeline exposed as a tool.
+  Pixel's prompt now prefers this single call over manual orchestration.
+
+### New module
+
+- **`backend/orchestrator/asset_bundler.py`** — `bundle_asset_context()`
+  walks the tree from one asset outward (asset + brief + linked
+  scenes/shots/cuts + sibling assets + active sheet + Continuity Bible).
+
+### Frontend tightening
+
+- **`tree_updated` WebSocket event** — broadcast after every chat turn so
+  the canvas re-fetches scenes/shots/cuts/assets. Fixes the stale-asset-id
+  bug ("Asset 492c... not found" after Atlas rebuilt extraction).
+- **AssetMasterNode sheet UI** replaces the variant grid.
+- **ComposeProgress component** — live 7-step timeline next to the cut
+  node's Generate panel.
+
+### Verified state
+
+- Backend boots from any cwd: ✅
+- 19/19 tests passing: ✅
+- Frontend `tsc --noEmit`: ✅
+- All chat agents tool-call reliably with Gemini 2.5 Pro: ✅
+- Phase gates enforce required state before transitions: ✅
+
+### Still open (not blockers for testing)
+
+- Per-phase critic loops (BRIEF_RUBRIC etc. defined but not invoked).
+- Sage doesn't yet call `set_style_anchor` automatically.
+- Nova doesn't populate `focal_length_mm` on shots.
+- Coverage agent (wide/medium/close trios) — not built.
+- 180° / eyeline grammar critic — not built.
+- CLIP/SigLIP embeddings on reference_pool — not built.
+- Legacy `compile_shot_prompt` flow still exists; not deleted.
+
+**End of session 2026-05-07.**

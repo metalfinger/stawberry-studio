@@ -19,6 +19,8 @@ tools:
   - get_node_assets
   - auto_link_assets_to_blueprint
   - save_suggested_asset_prompt
+  - get_asset_tree_context
+  - generate_all_missing_sheets
   - complete_asset_extraction
   - confirm_asset_extraction_complete
 output_schema: null

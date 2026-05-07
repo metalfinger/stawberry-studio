@@ -409,6 +409,36 @@ def update_asset(
     return {"success": True, "asset": asset}
 
 
+@tool("compose_cut", description="One-button compose: bundle full tree → smart picker → fill missing references → DSL prompt → Nano Banana Pro render → vision critic with auto-retry → register reference. Use this for ANY 'generate this cut' request instead of compile_shot_prompt.", tags=["cut", "write", "phase"])
+async def compose_cut_tool(cut_id: str) -> dict:
+    """Run the production-grade Cut Composer pipeline for one cut."""
+    from backend.orchestrator.cut_composer import compose_cut
+    result = await compose_cut(cut_id)
+    return result.to_dict()
+
+
+@tool("get_asset_tree_context", description="Walk the project tree from one asset outward — brief globals, linked scenes/shots/cuts, sibling assets, active sheet. Use this BEFORE writing a suggested_prompt so the prompt incorporates lighting/world context.", tags=["assets", "read"])
+async def get_asset_tree_context(asset_id: str) -> dict:
+    """Return the full tree context around an asset — for Atlas/Pixel."""
+    from backend.orchestrator.asset_bundler import bundle_asset_context
+    ctx = await bundle_asset_context(asset_id)
+    # Compact the response — strip large blobs, keep the bits useful for prompt-writing.
+    def _scene_brief(s):
+        return {k: s.get(k) for k in ("id", "scene_number", "title", "location", "lighting", "lighting_color", "time_of_day", "mood")}
+    def _shot_brief(s):
+        return {k: s.get(k) for k in ("id", "shot_number", "shot_size", "camera_angle", "camera_movement", "description")}
+    return {
+        "asset": ctx.asset,
+        "brief": {k: ctx.brief.get(k) for k in ("title", "art_style", "color_palette", "lighting_style", "world_logic", "era_setting", "tone", "negative_prompts", "aspect_ratio")} if ctx.brief else {},
+        "linked_scenes": [_scene_brief(s) for s in ctx.linked_scenes],
+        "linked_shots": [_shot_brief(s) for s in ctx.linked_shots],
+        "linked_cuts": [{"id": c["id"], "action": c.get("action"), "expression": c.get("expression")} for c in ctx.linked_cuts],
+        "sibling_assets": [{"id": a["id"], "type": a["type"], "name": a["name"], "has_prompt": bool(a.get("suggested_prompt"))} for a in ctx.sibling_assets],
+        "has_active_sheet": ctx.active_sheet is not None,
+        "stats": ctx.stats,
+    }
+
+
 @tool("generate_all_missing_sheets", description="Trigger sheet/master generation for every project asset that has a suggested_prompt but no active sheet. Runs in parallel; returns per-asset status.", tags=["assets", "write", "phase"])
 async def generate_all_missing_sheets(project_id: str) -> dict:
     """One-button unblock for the CAST_SCOUT → STORYBOARD handoff.

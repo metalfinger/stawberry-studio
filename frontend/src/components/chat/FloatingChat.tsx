@@ -156,6 +156,11 @@ export function FloatingChat({ projectId, phase, onPhaseChange, onNodeUpdate }: 
                     content: `Error: ${data.message}`
                 }])
                 break
+            case 'tree_updated':
+                // Server signal that an agent likely mutated assets/scenes/shots.
+                // Trigger a canvas refresh so we don't hold stale node IDs.
+                onNodeUpdate?.()
+                break
         }
     }
 

@@ -195,15 +195,19 @@ def confirm_briefing_complete(project_id: str) -> str:
     brief = db.get_brief(project_id)
     if not brief:
         return "❌ Error: Project not found."
-    
+
     missing = []
-    if not brief['title']: missing.append("Title")
-    if not brief['logline']: missing.append("Logline")
-    if not brief['genre']: missing.append("Genre")
-    
+    if not (brief.get('title') or '').strip(): missing.append("Title")
+    if not (brief.get('logline') or '').strip(): missing.append("Logline")
+    if not (brief.get('genre') or '').strip(): missing.append("Genre")
+    if not (brief.get('art_style') or '').strip(): missing.append("Art Style")
+
     if missing:
-        return f"❌ Cannot complete briefing. Missing: {', '.join(missing)}"
-    
+        return (
+            f"❌ Cannot complete briefing. Missing required fields: {', '.join(missing)}.\n"
+            "Call `update_brief` with the missing fields, then try again."
+        )
+
     success = db.complete_briefing(project_id)
     if success:
         return "🎉 Briefing complete! Project advancing to STORY phase. The Story Architect will take over."

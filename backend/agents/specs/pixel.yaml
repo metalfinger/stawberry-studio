@@ -20,5 +20,6 @@ tools:
   - compile_element_master_prompt
   - get_asset_elements_summary
   - generate_all_missing_sheets
+  - compose_cut
 output_schema: null
 critics: []

@@ -658,20 +658,22 @@ def complete_blueprint(project_id: str) -> str:
     scenes = db.get_scenes(project_id)
     if not scenes:
         return "❌ Cannot complete: No scenes defined yet."
-    
+
     scene_stats = []
     total_shots = 0
     total_cuts = 0
-    
+    structural_problems: list[str] = []
+
     for scene in scenes:
         shots = db.get_shots(scene['id'])
         if not shots:
-            return f"❌ Cannot complete: Scene '{scene['title']}' has no shots."
-        
+            structural_problems.append(f"Scene '{scene['title']}' has no shots.")
+            continue
+
         scene_shot_count = len(shots)
         total_shots += scene_shot_count
-        
-        # Count cuts per scene
+
+        # Count cuts per scene + flag shotless cuts and missing shot_size.
         scene_cut_count = 0
         for shot in shots:
             conn = db.get_connection()
@@ -680,9 +682,24 @@ def complete_blueprint(project_id: str) -> str:
             cut_count = cursor.fetchone()[0]
             conn.close()
             scene_cut_count += cut_count
+            if cut_count == 0:
+                structural_problems.append(
+                    f"Shot {shot.get('shot_number', shot['id'])} in '{scene['title']}' has no cuts."
+                )
+            if not (shot.get('shot_size') or '').strip():
+                structural_problems.append(
+                    f"Shot {shot.get('shot_number', shot['id'])} in '{scene['title']}' has no shot_size (wide / medium / close / etc.)."
+                )
         total_cuts += scene_cut_count
-        
+
         scene_stats.append(f"  - Scene {scene['scene_number']}: {scene['title']} ({scene_shot_count} shots, {scene_cut_count} cuts)")
+
+    if structural_problems:
+        return (
+            "❌ Cannot complete blueprint — fix these structural gaps first:\n" +
+            "\n".join(f"- {p}" for p in structural_problems) +
+            "\n\nUse `update_shot` / `add_cut` to fix, then call `complete_blueprint` again."
+        )
     
     # Build summary
     summary = f"""📖 **Blueprint Summary:**
@@ -715,12 +732,27 @@ def confirm_blueprint_complete(project_id: str) -> str:
     scenes = db.get_scenes(project_id)
     if not scenes:
         return "❌ Cannot complete: No scenes defined yet."
-    
+
+    # Mirror complete_blueprint's structural checks to keep the gates aligned.
+    problems: list[str] = []
     for scene in scenes:
         shots = db.get_shots(scene['id'])
         if not shots:
-            return f"❌ Cannot complete: Scene '{scene['title']}' has no shots."
-    
+            problems.append(f"Scene '{scene['title']}' has no shots.")
+            continue
+        for shot in shots:
+            conn = db.get_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM cuts WHERE shot_id = ?", (shot['id'],))
+            cut_count = cursor.fetchone()[0]
+            conn.close()
+            if cut_count == 0:
+                problems.append(f"Shot {shot.get('shot_number')} in '{scene['title']}' has no cuts.")
+            if not (shot.get('shot_size') or '').strip():
+                problems.append(f"Shot {shot.get('shot_number')} in '{scene['title']}' has no shot_size.")
+    if problems:
+        return "❌ Refusing to advance:\n" + "\n".join(f"- {p}" for p in problems)
+
     success = db.complete_blueprint(project_id)
     if success:
         return "🎉 Blueprint complete! Project advancing to ASSETS phase. The Asset Analyst will take over."
