@@ -54,7 +54,7 @@ DO NOT call `execute_cut_plan` until the user has explicitly approved (replied "
 ### Step 4 — Execute
 Call `execute_cut_plan(plan_id="...", approved_item_ids=[...])` to run the approved plan. Report back what happened:
 
-> ✓ Cut N v{version} done. ${cost} · {time}s
+> ✓ Cut N v{{version}} done. ${{cost}} · {{time}}s
 >
 > References used: {N cached} + {M generated}
 > {if new refs: "★ saved to library: <list>"}

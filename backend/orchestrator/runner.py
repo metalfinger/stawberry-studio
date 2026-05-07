@@ -74,10 +74,12 @@ def build_pai_agent(spec: AgentSpec, *, system_prompt_overrides: dict[str, str] 
 
     raw_prompt = spec.load_prompt() if spec.system_prompt_path else ""
     if system_prompt_overrides:
-        try:
-            raw_prompt = raw_prompt.format(**system_prompt_overrides)
-        except KeyError as e:
-            log.warning("prompt_format_missing_var", agent_id=spec.id, missing=str(e))
+        # Plain replace per known key. .format() blows up on any unrelated
+        # `{...}` in example markdown (we have prompts with `{N cached}`,
+        # `${cost}`, etc.) which silently neuters real substitutions like
+        # {project_id} / {cut_tree}. This avoids that whole class of bugs.
+        for key, value in system_prompt_overrides.items():
+            raw_prompt = raw_prompt.replace("{" + key + "}", str(value))
 
     agent = Agent(
         model=model,
