@@ -240,15 +240,18 @@ async def _persist_cut_image(cut_id: str, image_url: str, status: str) -> None:
 async def compose_cut(
     cut_id: str,
     *,
-    max_critic_retries: int = 2,
-    critic_threshold: float = 0.8,
+    feedback: str | None = None,
     on_step: "callable[[ComposeStep], None] | None" = None,
 ) -> ComposeResult:
-    """Run the full compose pipeline for one cut. Synchronous-ish: returns
-    when the pipeline either succeeds or abandons.
+    """Run the compose pipeline for one cut. Single render attempt — no
+    automated critic loop. The user is the critic; refine via `feedback`.
 
-    `on_step` is invoked synchronously after each step is recorded — the
-    WebSocket route uses it to stream `compose_step` events to the client.
+    Args:
+        cut_id: cut to compose.
+        feedback: optional user feedback from a prior render. Threaded into
+            the prompt as 'USER FEEDBACK' so the model adjusts.
+        on_step: callback fired after each pipeline step (used by the
+            streaming WS route).
     """
     steps: list[ComposeStep] = []
 
@@ -432,11 +435,15 @@ async def compose_cut(
 
     # ---- Step 7: persist + register ----
     if final_url:
-        await _persist_cut_image(cut_id, final_url, "complete")
+        passed = bool(final_score and final_score.passed(critic_threshold))
+        # Persist as 'complete' even if critic failed — the image exists, the
+        # cut is done. Critic verdict is a separate dimension surfaced via
+        # the compose_done event (passed=false, overall=score).
+        await _persist_cut_image(cut_id, final_url, "complete" if passed else "complete_low_score")
         _emit(ComposeStep("register", "start"))
         try:
             ref_id = await auto_register_cut(cut_id, final_url)
-            _emit(ComposeStep("register", "ok", {"reference_id": ref_id}))
+            _emit(ComposeStep("register", "ok", {"reference_id": ref_id, "low_score": not passed}))
         except Exception as e:
             log.exception("compose_register_failed", cut_id=cut_id)
             _emit(ComposeStep("register", "error", {"error": str(e)}))
