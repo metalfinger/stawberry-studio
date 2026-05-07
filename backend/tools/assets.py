@@ -546,30 +546,24 @@ async def get_asset_tree_context(asset_id: str) -> dict:
     }
 
 
-@tool("generate_all_missing_sheets", description="Trigger sheet/master generation for every project asset that has a suggested_prompt but no active sheet. Runs in parallel; returns per-asset status.", tags=["assets", "write", "phase"])
+@tool("generate_all_missing_sheets", description="Generate identity cards + standard turnaround for every project asset that has a suggested_prompt but no identity reference yet. Runs parents-before-derived, identity-then-turnaround. Returns per-asset status.", tags=["assets", "write", "phase"])
 async def generate_all_missing_sheets(project_id: str) -> dict:
     """One-button unblock for the CAST_SCOUT → STORYBOARD handoff.
 
-    Iterates every asset in the project. For each that has a non-empty
-    `suggested_prompt` and no active element_sheet, generates a sheet via the
-    Sheet Planner + Nano Banana Pro. Skips assets that are already covered.
-
-    Returns a per-asset report: which were generated, which were skipped (and
-    why), which failed.
+    For each asset: ensure identity exists (generate if missing), then fire
+    the standard turnaround set in parallel. Parents (parent_asset_id /
+    master_id) generated before their children so derived assets can
+    condition on the parent's identity.
     """
     import asyncio
-    from backend.orchestrator.sheet_generator import (
-        generate_sheet_for_asset,
-        get_active_sheet,
-    )
+    from backend.orchestrator import references_v2
 
     assets = asset_db.get_assets(project_id)
     if not assets:
         return {"success": True, "generated": [], "skipped": [], "errors": [],
                 "message": "No assets in this project."}
 
-    # Topo-sort: parents/variant-bases must be generated before children so
-    # the child's sheet can use the parent's sheet as a reference.
+    # Topo-sort: parents/variant-bases must be generated before children.
     by_id = {a["id"]: a for a in assets}
     waves: list[list[dict]] = []
     remaining = list(assets)
@@ -581,7 +575,6 @@ async def generate_all_missing_sheets(project_id: str) -> dict:
             and (not a.get("master_id") or a["master_id"] in placed or a["master_id"] not in by_id)
         ]
         if not wave:
-            # Cycle or unreachable parents — flush the rest as one wave.
             wave = remaining[:]
         for a in wave:
             placed.add(a["id"])
@@ -591,12 +584,16 @@ async def generate_all_missing_sheets(project_id: str) -> dict:
     async def _process(a: dict):
         if not (a.get("suggested_prompt") or "").strip():
             return ("skipped", a, "no suggested_prompt — Atlas must save one first")
-        existing = await get_active_sheet(a["id"])
+        existing = await references_v2.get_identity_card(a["id"])
         if existing:
-            return ("skipped", a, f"already has sheet {existing['id']}")
+            return ("skipped", a, f"already has identity {existing['id']}")
         try:
-            res = await generate_sheet_for_asset(a["id"])
-            return ("generated", a, {"sheet_id": res.sheet_id, "image_url": res.image_url, "cost_usd": res.cost_usd})
+            refs = await references_v2.precache_standard_turnaround(a["id"])
+            return ("generated", a, {
+                "identity_id": refs[0]["id"],
+                "image_url": refs[0]["image_url"],
+                "extra_views": [r["label"] for r in refs[1:]],
+            })
         except Exception as e:
             return ("error", a, str(e))
 
@@ -614,7 +611,7 @@ async def generate_all_missing_sheets(project_id: str) -> dict:
         "generated": generated,
         "skipped": skipped,
         "errors": errors,
-        "summary": f"Generated {len(generated)} sheet(s); skipped {len(skipped)}; {len(errors)} error(s).",
+        "summary": f"Generated identity+turnaround for {len(generated)} asset(s); skipped {len(skipped)}; {len(errors)} error(s).",
     }
 
 
