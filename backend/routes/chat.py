@@ -284,8 +284,11 @@ async def chat_websocket(websocket: WebSocket, project_id: str, phase: str = Non
             new_phase = project.get("current_phase", current_phase)
             if new_phase != current_phase:
                 old_phase = current_phase
+                # Capture the OUTGOING agent before reassignment so the
+                # HandoffCard reads "Berry → Atlas" instead of "Atlas → Atlas".
+                prev_agent_name = agent_name
                 current_phase = new_phase
-                
+
                 # Get new phase config and switch agent
                 phase_config = PHASE_AGENTS.get(current_phase, PHASE_AGENTS["BRIEF"])
                 if isinstance(phase_config.get("default"), str):
@@ -320,11 +323,10 @@ async def chat_websocket(websocket: WebSocket, project_id: str, phase: str = Non
                 # Emit typed handoff card alongside legacy phase_change so the
                 # Console renders it as a HandoffCard.
                 try:
-                    prev_agent = phase_config.get(current_mode, ("",))[0] if current_mode else ""
                     await narrator.handoff(
-                        from_agent=prev_agent or "—",
+                        from_agent=prev_agent_name or "—",
                         to_agent=agent_name,
-                        reason=f"Phase {old_phase} → {new_phase}",
+                        reason=f"{old_phase} → {new_phase}",
                     )
                 except Exception:
                     pass
