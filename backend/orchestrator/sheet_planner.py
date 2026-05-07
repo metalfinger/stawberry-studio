@@ -64,7 +64,7 @@ TEMPLATES: dict[str, SheetTemplate] = {
         sheet_type="character_3view",
         grid=(1, 3),
         cells=["front", "three_quarter_right", "side_right"],
-        aspect_ratio="3:1",
+        aspect_ratio="4:1",
         rationale="Named support character with limited appearances",
     ),
     "character_solo": SheetTemplate(
@@ -98,7 +98,7 @@ TEMPLATES: dict[str, SheetTemplate] = {
         sheet_type="prop_3view",
         grid=(1, 3),
         cells=["front", "three_quarter", "side"],
-        aspect_ratio="3:1",
+        aspect_ratio="4:1",
         rationale="Hero prop linked to multiple cuts",
     ),
     "prop_solo": SheetTemplate(
@@ -124,7 +124,7 @@ TEMPLATES: dict[str, SheetTemplate] = {
         sheet_type="costume_flat",
         grid=(1, 2),
         cells=["flat_front", "flat_back"],
-        aspect_ratio="2:1",
+        aspect_ratio="21:9",
         rationale="Standalone wardrobe asset",
     ),
 }
