@@ -176,6 +176,16 @@ async def _pick_references(ctx: CutContext) -> list[dict[str, Any]]:
     if ctx.style_anchor:
         _push(ctx.style_anchor.get("image_url"), "style_anchor", "pinned style anchor")
 
+    # Continuity: thread the previous cut's rendered frame so this cut's
+    # lighting / composition / wardrobe state chains from the last beat.
+    # Real continuity supervisor pattern — cut N inherits cut N-1's state.
+    if ctx.previous_cut and ctx.previous_cut.get("generated_image_url"):
+        _push(
+            ctx.previous_cut["generated_image_url"],
+            f"prev_cut_{ctx.previous_cut.get('cut_number', '')}",
+            "previous cut continuity",
+        )
+
     # Resolve references for every linked asset (lazy-fill on miss). Order:
     # characters first (identity drives most cuts), then locations, then props.
     linked = ctx.linked_characters + ctx.linked_locations + ctx.linked_props

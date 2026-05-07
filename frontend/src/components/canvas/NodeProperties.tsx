@@ -3,11 +3,9 @@ import { type Node, type Edge } from '@xyflow/react'
 import {
     getCutPrompt,
     getCutHistory,
-    generateCutImage,
     setActiveCutImage,
     getAssets,
     getPreProductionRequirements,
-    updateCutSlots,
     type CompiledPrompt,
     type CutGenerationRequest,
     type AssetsResponse,
@@ -191,105 +189,17 @@ function PreProductionPanel({
 }
 
 function PromptAndGenerate({
-    prompt,
     projectId,
     cutId,
-    assets,
     onGenerateComplete,
-    initialSlots
 }: {
-    prompt: CompiledPrompt;
     projectId: string;
     cutId: string;
-    assets: AssetsResponse | null;
     onGenerateComplete: () => void;
-    initialSlots?: string;
 }) {
     const [expanded, setExpanded] = useState(true)
-    const [editablePrompt, setEditablePrompt] = useState(prompt.prompt)
-    const [isGenerating, setIsGenerating] = useState(false)
     const [isComposing, setIsComposing] = useState(false)
     const [error, setError] = useState<string | null>(null)
-    // Unified slots state: @Image1 to @Image5
-    // We initialize from both prompt.reference_images (standard) and initialSlots (persisted overrides)
-    const [unifiedSlots, setUnifiedSlots] = useState<Record<string, string>>(() => {
-        const slots: Record<string, string> = {}
-        // 1. Load from prompt (server-calculated defaults)
-        prompt.reference_images?.forEach(ref => {
-            if (ref.asset_id) slots[ref.ref] = ref.asset_id
-        })
-        // 2. Override with persisted selections if any
-        if (initialSlots) {
-            try {
-                const parsed = JSON.parse(initialSlots)
-                Object.assign(slots, parsed)
-            } catch (e) {
-                console.error("Error parsing initialSlots", e)
-            }
-        }
-        return slots
-    })
-
-    // Auto-detect continuity for @Image4 if empty
-    useEffect(() => {
-        if (!unifiedSlots['@Image4'] && assets?.frames) {
-            const sortedFrames = [...assets.frames].sort((a, b) =>
-                new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
-            )
-            const lastFrame = sortedFrames[0]
-            if (lastFrame) {
-                setUnifiedSlots(prev => ({ ...prev, '@Image4': lastFrame.id }))
-            }
-        }
-    }, [assets?.frames])
-
-    // Reset local prompt when upstream prompt changes
-    useEffect(() => {
-        setEditablePrompt(prompt.prompt)
-    }, [prompt.prompt])
-
-    const handleGenerate = async () => {
-        setIsGenerating(true)
-        setError(null)
-        try {
-            // Save unified slots to DB
-            await updateCutSlots(projectId, cutId, unifiedSlots)
-
-            // Generate
-            const hasChanges = editablePrompt !== prompt.prompt
-            await generateCutImage(projectId, cutId, hasChanges ? editablePrompt : undefined)
-            onGenerateComplete()
-        } catch (e: any) {
-            setError(e.message || 'Generation failed')
-        } finally {
-            setIsGenerating(false)
-        }
-    }
-
-    const handleSlotChange = (slot: string, assetId: string) => {
-        setUnifiedSlots(prev => ({ ...prev, [slot]: assetId }))
-    }
-
-    const getCandidateAssets = (type: string) => {
-        if (!assets) return []
-        // Include frames for all types as potential references
-        const frames = assets.frames || []
-        let candidates: any[] = []
-        if (type === 'character') candidates = [...assets.characters, ...frames]
-        else if (type === 'location') candidates = [...assets.locations, ...frames]
-        else if (type === 'prop') candidates = [...assets.props, ...frames]
-        else if (type === 'frame') candidates = frames
-        // For "any" type, return all assets
-        else candidates = [...assets.characters, ...assets.locations, ...assets.props, ...frames]
-
-        // Deduplicate by ID to avoid React key warnings
-        const seen = new Map()
-        return candidates.filter(a => {
-            if (seen.has(a.id)) return false
-            seen.set(a.id, true)
-            return true
-        })
-    }
 
     return (
         <div className="np-prompt-section">
@@ -300,82 +210,21 @@ function PromptAndGenerate({
 
             {expanded && (
                 <>
-                    {/* UNIFIED INPUT SLOTS */}
-                    <div className="np-prompt-slots">
-                        <div className="np-slots-title">Inputs (@Image1-5):</div>
-                        {['@Image1', '@Image2', '@Image3', '@Image4', '@Image5'].map((slotKey) => {
-                            const selectedId = unifiedSlots[slotKey] || ''
-                            const allAssets = getCandidateAssets('any')
-                            const selectedAsset = allAssets.find(a => a.id === selectedId)
-
-                            return (
-                                <div key={slotKey} className="np-slot-unified">
-                                    <div className="np-slot-row-main">
-                                        <span className="np-slot-key">{slotKey}:</span>
-                                        <select
-                                            className="np-swap-select"
-                                            value={selectedId}
-                                            onChange={(e) => handleSlotChange(slotKey, e.target.value)}
-                                        >
-                                            <option value="">-- No reference --</option>
-                                            <optgroup label="🖼️ Generated Frames (Continuity)">
-                                                {(assets?.frames || []).map(a => (
-                                                    <option key={`${slotKey}-${a.id}`} value={a.id}>{a.name}</option>
-                                                ))}
-                                            </optgroup>
-                                            <optgroup label="👤 Characters">
-                                                {(assets?.characters || []).map(a => (
-                                                    <option key={`${slotKey}-${a.id}`} value={a.id}>{a.name}</option>
-                                                ))}
-                                            </optgroup>
-                                            <optgroup label="🏠 Locations">
-                                                {(assets?.locations || []).map(a => (
-                                                    <option key={`${slotKey}-${a.id}`} value={a.id}>{a.name}</option>
-                                                ))}
-                                            </optgroup>
-                                            <optgroup label="📦 Props">
-                                                {(assets?.props || []).map(a => (
-                                                    <option key={`${slotKey}-${a.id}`} value={a.id}>{a.name}</option>
-                                                ))}
-                                            </optgroup>
-                                        </select>
-                                    </div>
-                                    {selectedAsset?.image_url && (
-                                        <div className="np-slot-preview">
-                                            <img src={selectedAsset.image_url} alt={selectedAsset.name} />
-                                            <span className="np-slot-preview-name">{selectedAsset.name}</span>
-                                        </div>
-                                    )}
-                                </div>
-                            )
-                        })}
+                    {/* COMPOSE CUT — references-first single-button pipeline */}
+                    <div className="np-prompt-stack" style={{ fontSize: 12, color: '#94a3b8', padding: '8px 0' }}>
+                        Compose Cut runs the full pipeline: bundles the project tree,
+                        resolves identity + ranked references per linked asset (lazy-fills
+                        on miss), threads the previous cut for continuity, renders via
+                        Nano Banana Pro, and runs the vision critic with auto-retry.
                     </div>
 
-                    {/* PROMPT EDITOR */}
-                    <div className="np-prompt-stack">
-                        <label>Prompt (Agent Compiled):</label>
-                        <textarea
-                            className="np-prompt-input"
-                            value={editablePrompt}
-                            onChange={(e) => setEditablePrompt(e.target.value)}
-                            rows={10}
-                        />
-                    </div>
-
-                    {/* ACTION BUTTONS */}
                     <div className="np-actions">
                         <button
                             className="np-btn-primary"
-                            onClick={handleGenerate}
-                            disabled={isGenerating || isComposing}
-                        >
-                            {isGenerating ? 'Generating...' : '🚀 Generate Visual'}
-                        </button>
-                        <button
-                            className="np-btn-primary"
                             onClick={() => { setIsComposing(true); setError(null); }}
-                            disabled={isGenerating || isComposing}
-                            title="Bundle full tree → pick refs → fix gaps → render → critic"
+                            disabled={isComposing}
+                            title="Bundle full tree → resolve refs → render → critic"
+                            style={{ width: '100%' }}
                         >
                             {isComposing ? 'Composing…' : '🎬 Compose Cut'}
                         </button>
@@ -516,16 +365,14 @@ export function NodeProperties({ selectedNode, nodes, edges, projectId, onClose,
                         <div className="np-loading">Loading details...</div>
                     ) : (
                         <>
-                            {cutPrompt && (
-                                <PromptAndGenerate
-                                    prompt={cutPrompt}
-                                    projectId={projectId}
-                                    cutId={selectedNode.id}
-                                    assets={assets}
-                                    onGenerateComplete={() => setRefreshTrigger(t => t + 1)}
-                                    initialSlots={(selectedNode.data as any).image_slots}
-                                />
-                            )}
+                            <PromptAndGenerate
+                                projectId={projectId}
+                                cutId={selectedNode.id}
+                                onGenerateComplete={() => {
+                                    setRefreshTrigger(t => t + 1)
+                                    onNodeUpdate?.()
+                                }}
+                            />
                             <PreProductionPanel
                                 projectId={projectId}
                                 cutId={selectedNode.id}
