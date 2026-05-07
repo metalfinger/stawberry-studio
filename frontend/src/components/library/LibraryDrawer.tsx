@@ -17,6 +17,7 @@ import {
 } from '../../api/client'
 import { setRefDrag } from '../dnd/refDragData'
 import { useHoverPreview } from '../dnd/HoverPreview'
+import { toast } from '../toast/Toast'
 import './LibraryDrawer.css'
 
 interface Props {
@@ -61,6 +62,7 @@ export function LibraryDrawer({ projectId, open, onClose }: Props) {
       setStats(st)
     } catch (e) {
       console.error('library load failed', e)
+      toast.error('Failed to load library')
     } finally {
       setLoading(false)
     }
@@ -82,11 +84,13 @@ export function LibraryDrawer({ projectId, open, onClose }: Props) {
       is_style_anchor: i.ref_id === item.ref_id ? !item.is_style_anchor : false,
     })))
     if (selected?.ref_id === item.ref_id) setSelected({ ...item, is_style_anchor: !item.is_style_anchor })
+    toast.success(item.is_style_anchor ? 'Style anchor cleared' : 'Style anchor set')
   }
 
   const onRestore = async (item: LibraryItem) => {
     await restoreReference(projectId, item.ref_id)
     await load()
+    toast.success('Reference restored')
   }
 
   if (!open) return null

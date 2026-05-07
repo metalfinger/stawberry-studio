@@ -4,6 +4,7 @@ import { Handle, Position, type NodeProps, useNodes, useEdges } from '@xyflow/re
 import { NodeProperties } from './NodeProperties'
 import { readRefDrag } from '../dnd/refDragData'
 import { assignSlot } from '../../api/client'
+import { toast } from '../toast/Toast'
 import './nodes.css'
 
 interface AssetInfo {
@@ -75,8 +76,10 @@ export const CutNode = memo(({ data, selected, id }: NodeProps & { data: CutNode
         } catch { nextSlot = 0 }
         try {
             await assignSlot(data.project_id, data.cut_id, nextSlot, payload.ref_id)
+            toast.success(`Reference attached to slot ${nextSlot}`)
         } catch (err) {
             console.error('slot assign failed', err)
+            toast.error('Failed to attach reference')
         }
     }, [data.cut_id, data.project_id, data.image_slots])
 
