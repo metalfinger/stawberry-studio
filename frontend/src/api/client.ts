@@ -442,3 +442,91 @@ export async function updateCutSlots(projectId: string, cutId: string, slots: Re
     if (!res.ok) throw new Error('Failed to update cut slots');
     return res.json();
 }
+
+// ─── Library (reference_pool) ─────────────────────────────────────────────
+export interface LibraryItem {
+  ref_id: string;
+  image_url: string;
+  thumb_url: string;
+  label: string;
+  asset_id: string | null;
+  scope: string;
+  source_type: string;
+  source_cut_id: string | null;
+  is_active: boolean;
+  is_anchor: boolean;
+  is_style_anchor: boolean;
+  is_favorite: boolean;
+  superseded_by_id: string | null;
+  prompt: string;
+  cost_usd: number;
+  model_used: string;
+  used_in_cuts: string[];
+  created_at: string;
+  tags: Record<string, unknown>;
+  aspect_ratio: string;
+}
+
+export interface LibraryStats {
+  by_type: Record<string, { count: number; cost: number }>;
+  total_count: number;
+  total_cost_usd: number;
+}
+
+export interface LibraryFilters {
+  asset_id?: string;
+  source_type?: string;
+  only_active?: boolean;
+  favorites_only?: boolean;
+  search?: string;
+  limit?: number;
+}
+
+export async function getLibrary(projectId: string, filters: LibraryFilters = {}): Promise<{ items: LibraryItem[]; count: number }> {
+  const qs = new URLSearchParams();
+  if (filters.asset_id) qs.set('asset_id', filters.asset_id);
+  if (filters.source_type) qs.set('source_type', filters.source_type);
+  if (filters.only_active !== undefined) qs.set('only_active', String(filters.only_active));
+  if (filters.favorites_only !== undefined) qs.set('favorites_only', String(filters.favorites_only));
+  if (filters.search) qs.set('search', filters.search);
+  if (filters.limit) qs.set('limit', String(filters.limit));
+  const res = await fetch(`${API_BASE}/api/projects/${projectId}/library?${qs.toString()}`);
+  if (!res.ok) throw new Error('Failed to load library');
+  return res.json();
+}
+
+export async function getLibraryStats(projectId: string): Promise<LibraryStats> {
+  const res = await fetch(`${API_BASE}/api/projects/${projectId}/library/stats`);
+  if (!res.ok) throw new Error('Failed to load library stats');
+  return res.json();
+}
+
+export async function favoriteReference(projectId: string, refId: string, favorite: boolean): Promise<void> {
+  await fetch(`${API_BASE}/api/projects/${projectId}/library/${refId}/favorite`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ favorite }),
+  });
+}
+
+export async function setStyleAnchor(projectId: string, refId: string, anchor: boolean): Promise<void> {
+  await fetch(`${API_BASE}/api/projects/${projectId}/library/${refId}/style-anchor`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ anchor }),
+  });
+}
+
+export async function restoreReference(projectId: string, refId: string): Promise<void> {
+  await fetch(`${API_BASE}/api/projects/${projectId}/library/${refId}/restore`, { method: 'POST' });
+}
+
+export async function assignSlot(projectId: string, cutId: string, slotIndex: number, refId: string | null): Promise<any> {
+  const res = await fetch(`${API_BASE}/api/projects/${projectId}/library/slot`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cut_id: cutId, slot_index: slotIndex, ref_id: refId }),
+  });
+  if (!res.ok) throw new Error('Failed to assign slot');
+  return res.json();
+}

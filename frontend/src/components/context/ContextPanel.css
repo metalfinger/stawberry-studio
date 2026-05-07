@@ -1,0 +1,39 @@
+.context-panel {
+  position: fixed; top: 64px; left: 16px;
+  width: 280px; max-height: calc(100vh - 96px);
+  background: rgba(15, 15, 16, 0.95);
+  border: 1px solid #2a2a2c;
+  border-radius: 8px;
+  color: #e8e8e8;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  z-index: 7000;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+.context-panel__head {
+  padding: 10px 14px; border-bottom: 1px solid #222;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.context-panel__kind { font-size: 11px; color: #aaa; text-transform: capitalize; font-weight: 600; }
+.context-panel__id { font-family: ui-monospace, monospace; font-size: 10px; color: #666; }
+.context-panel__hint { padding: 8px 14px; font-size: 10px; color: #777; line-height: 1.4; border-bottom: 1px solid #1a1a1c; }
+.context-panel__loading,
+.context-panel__empty { padding: 16px 14px; font-size: 11px; color: #777; text-align: center; }
+.context-panel__section { padding: 10px 14px; overflow-y: auto; }
+.context-panel__section-title { font-size: 10px; text-transform: uppercase; color: #888; letter-spacing: 0.5px; margin-bottom: 6px; }
+.context-panel__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.context-panel__thumb {
+  position: relative; aspect-ratio: 1; border-radius: 4px;
+  overflow: hidden; background: #18181a; cursor: grab;
+  border: 1px solid #2a2a2c;
+}
+.context-panel__thumb:active { cursor: grabbing; }
+.context-panel__thumb img { width: 100%; height: 100%; object-fit: cover; }
+.context-panel__thumb-label {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  padding: 2px 4px; font-size: 9px;
+  background: linear-gradient(transparent, rgba(0,0,0,0.85));
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}

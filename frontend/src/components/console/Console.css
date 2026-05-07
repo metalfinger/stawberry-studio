@@ -362,3 +362,14 @@
 .dot--warn { background: var(--console-warn); }
 .dot--error { background: var(--console-error); }
 .dot--info { background: var(--console-accent); }
+
+/* Phase D — drop affordances and highlight when dragging a reference. */
+.input-dock--drop {
+  outline: 2px dashed #4f46e5;
+  outline-offset: -4px;
+  background: rgba(79, 70, 229, 0.06);
+}
+.cut-slot--drop {
+  outline: 2px dashed #4f46e5 !important;
+  outline-offset: -2px;
+}

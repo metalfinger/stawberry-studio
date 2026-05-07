@@ -2,6 +2,8 @@ import { memo, useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Handle, Position, type NodeProps, useNodes, useEdges } from '@xyflow/react'
 import { NodeProperties } from './NodeProperties'
+import { readRefDrag } from '../dnd/refDragData'
+import { assignSlot } from '../../api/client'
 import './nodes.css'
 
 interface AssetInfo {
@@ -56,6 +58,36 @@ export const CutNode = memo(({ data, selected, id }: NodeProps & { data: CutNode
     const [expanded, setExpanded] = useState(true)
     const [activeImage, setActiveImage] = useState(data.generated_image_url)
     const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null)
+    const [dropping, setDropping] = useState(false)
+
+    // Drop a reference onto the cut → assign to the next free slot.
+    const onDropRef = useCallback(async (e: React.DragEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setDropping(false)
+        const payload = readRefDrag(e)
+        if (!payload || !data.project_id || !data.cut_id) return
+        let nextSlot = 0
+        try {
+            const slots = data.image_slots ? JSON.parse(data.image_slots) : {}
+            const taken = Object.keys(slots).map(Number).filter(n => !isNaN(n))
+            nextSlot = taken.length ? Math.max(...taken) + 1 : 0
+        } catch { nextSlot = 0 }
+        try {
+            await assignSlot(data.project_id, data.cut_id, nextSlot, payload.ref_id)
+        } catch (err) {
+            console.error('slot assign failed', err)
+        }
+    }, [data.cut_id, data.project_id, data.image_slots])
+
+    const onDragOverRef = (e: React.DragEvent) => {
+        if (e.dataTransfer.types.includes('application/x-strawberry-ref')) {
+            e.preventDefault()
+            e.stopPropagation()
+            setDropping(true)
+        }
+    }
+    const onDragLeaveRef = () => setDropping(false)
 
     // For Inspector Context
     const nodes = useNodes()
@@ -81,7 +113,12 @@ export const CutNode = memo(({ data, selected, id }: NodeProps & { data: CutNode
     }, [])
 
     return (
-        <div className={`canvas-node cut-node ${expanded ? 'expanded' : 'collapsed'} ${selected ? 'selected' : ''}`}>
+        <div
+            className={`canvas-node cut-node ${expanded ? 'expanded' : 'collapsed'} ${selected ? 'selected' : ''} ${dropping ? 'cut-slot--drop' : ''}`}
+            onDrop={onDropRef}
+            onDragOver={onDragOverRef}
+            onDragLeave={onDragLeaveRef}
+        >
             <Handle type="target" position={Position.Top} />
 
             {/* Header - Always Visible */}

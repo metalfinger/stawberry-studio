@@ -16,8 +16,10 @@ import dagre from 'dagre'
 
 import { getProject, getBlueprint, getAssets, type Blueprint, type AssetsResponse } from '../api/client'
 import { nodeTypes } from '../components/canvas'
-import { FloatingChat } from '../components/chat'
 import { Console } from '../components/console/Console'
+import { LibraryDrawer } from '../components/library/LibraryDrawer'
+import { ContextPanel } from '../components/context/ContextPanel'
+import { CommandPalette } from '../components/palette/CommandPalette'
 import './Canvas.css'
 
 
@@ -138,6 +140,29 @@ export function Canvas() {
     const [project, setProject] = useState<{ name: string; current_phase: string } | null>(null)
     const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
+    const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
+    const [selectedNodeType, setSelectedNodeType] = useState<string | null>(null)
+    const [libraryOpen, setLibraryOpen] = useState(false)
+    const [paletteOpen, setPaletteOpen] = useState(false)
+
+    // Global keyboard shortcuts: ⌘L library, ⌘K palette, Esc close drawers.
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => {
+            const meta = e.metaKey || e.ctrlKey
+            if (meta && e.key.toLowerCase() === 'l') {
+                e.preventDefault()
+                setLibraryOpen(o => !o)
+            } else if (meta && e.key.toLowerCase() === 'k') {
+                e.preventDefault()
+                setPaletteOpen(o => !o)
+            } else if (e.key === 'Escape') {
+                setLibraryOpen(false)
+                setPaletteOpen(false)
+            }
+        }
+        window.addEventListener('keydown', onKey)
+        return () => window.removeEventListener('keydown', onKey)
+    }, [])
 
     const updateTimeoutRef = useRef<any>(null)
 
@@ -438,10 +463,6 @@ export function Canvas() {
         return { nodes, edges }
     }
 
-    const handlePhaseChange = useCallback((newPhase: string) => {
-        setProject((p) => p ? { ...p, current_phase: newPhase } : null)
-    }, [])
-
     const handleNodeUpdate = useCallback(() => {
         console.log('[Canvas] handleNodeUpdate triggered')
 
@@ -567,6 +588,14 @@ export function Canvas() {
                     edges={edges}
                     onNodesChange={onNodesChange}
                     onEdgesChange={onEdgesChange}
+                    onNodeClick={(_, node) => {
+                        setSelectedNodeId(node.id)
+                        setSelectedNodeType(node.type ?? null)
+                    }}
+                    onPaneClick={() => {
+                        setSelectedNodeId(null)
+                        setSelectedNodeType(null)
+                    }}
                     nodeTypes={nodeTypes}
                     fitView
                     fitViewOptions={{ padding: 0.1 }}
@@ -582,20 +611,32 @@ export function Canvas() {
                 </ReactFlow>
             </div>
 
-            {import.meta.env.VITE_USE_CONSOLE === '1' ? (
-                <Console
-                    projectId={projectId}
-                    initialPhase={project?.current_phase || 'BRIEF'}
-                    onNodeUpdate={handleNodeUpdate}
-                />
-            ) : (
-                <FloatingChat
-                    projectId={projectId}
-                    phase={project?.current_phase || 'BRIEF'}
-                    onPhaseChange={handlePhaseChange}
-                    onNodeUpdate={handleNodeUpdate}
-                />
-            )}
+            <Console
+                projectId={projectId}
+                initialPhase={project?.current_phase || 'BRIEF'}
+                onNodeUpdate={handleNodeUpdate}
+            />
+            <ContextPanel
+                projectId={projectId}
+                selectedNodeId={selectedNodeId}
+                selectedNodeType={selectedNodeType}
+            />
+            <LibraryDrawer
+                projectId={projectId}
+                open={libraryOpen}
+                onClose={() => setLibraryOpen(false)}
+            />
+            <CommandPalette
+                projectId={projectId}
+                open={paletteOpen}
+                onClose={() => setPaletteOpen(false)}
+                onOpenLibrary={() => { setPaletteOpen(false); setLibraryOpen(true) }}
+            />
+            <button
+                className="canvas-fab canvas-fab--library"
+                onClick={() => setLibraryOpen(o => !o)}
+                title="Library (⌘L)"
+            >📚 Library</button>
         </div>
     )
 }
