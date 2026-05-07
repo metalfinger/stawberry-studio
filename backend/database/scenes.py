@@ -24,17 +24,17 @@ def add_scene(
 ) -> Dict[str, Any]:
     conn = get_connection()
     cursor = conn.cursor()
-    
-    # Get next scene number
-    cursor.execute("SELECT MAX(scene_number) FROM scenes WHERE project_id = ?", (project_id,))
-    max_num = cursor.fetchone()[0]
-    scene_number = (max_num or 0) + 1
-    
+
     scene_id = f"scene_{uuid.uuid4().hex[:8]}"
+    # Atomic auto-numbering — read MAX inside the INSERT so parallel calls
+    # from a single agent turn don't all get the same number.
     cursor.execute("""
         INSERT INTO scenes (id, project_id, scene_number, title, description, location, time_of_day, lighting, mood)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (scene_id, project_id, scene_number, title, description, location, time_of_day, lighting, mood))
+        SELECT ?, ?, COALESCE(MAX(scene_number), 0) + 1, ?, ?, ?, ?, ?, ?
+        FROM scenes WHERE project_id = ?
+    """, (scene_id, project_id, title, description, location, time_of_day, lighting, mood, project_id))
+    cursor.execute("SELECT scene_number FROM scenes WHERE id = ?", (scene_id,))
+    scene_number = cursor.fetchone()[0]
     
     cursor.execute("UPDATE projects SET updated_at = ? WHERE id = ?",
                    (datetime.now().isoformat(), project_id))

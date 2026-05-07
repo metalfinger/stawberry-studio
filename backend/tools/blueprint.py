@@ -81,23 +81,27 @@ def add_scene(
     """
     conn = db.get_connection()
     cursor = conn.cursor()
-    
-    # Get next scene number
-    cursor.execute("SELECT MAX(scene_number) FROM scenes WHERE project_id = ?", (project_id,))
-    max_num = cursor.fetchone()[0]
-    scene_number = (max_num or 0) + 1
-    
+
     scene_id = f"scene_{uuid.uuid4().hex[:8]}"
+    # Atomic auto-number: read MAX inside the INSERT so concurrent calls
+    # from a parallel-tool-call turn don't all read 0 and emit duplicates.
     cursor.execute("""
-        INSERT INTO scenes (id, project_id, scene_number, title, description, 
-                           location, location_detail, time_of_day, 
+        INSERT INTO scenes (id, project_id, scene_number, title, description,
+                           location, location_detail, time_of_day,
                            lighting, lighting_color, weather, atmosphere, mood, ambient_sound,
                            override_art_style, override_color_palette)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (scene_id, project_id, scene_number, title, description, 
-          location, location_detail, time_of_day, 
+        SELECT ?, ?, COALESCE(MAX(scene_number), 0) + 1, ?, ?,
+               ?, ?, ?,
+               ?, ?, ?, ?, ?, ?,
+               ?, ?
+        FROM scenes WHERE project_id = ?
+    """, (scene_id, project_id, title, description,
+          location, location_detail, time_of_day,
           lighting, lighting_color, weather, atmosphere, mood, ambient_sound,
-          override_art_style, override_color_palette))
+          override_art_style, override_color_palette,
+          project_id))
+    cursor.execute("SELECT scene_number FROM scenes WHERE id = ?", (scene_id,))
+    scene_number = cursor.fetchone()[0]
     
     from datetime import datetime
     cursor.execute("UPDATE projects SET updated_at = ? WHERE id = ?",
@@ -194,25 +198,28 @@ def add_shot(
     """
     conn = db.get_connection()
     cursor = conn.cursor()
-    
-    # Get next shot number
-    cursor.execute("SELECT MAX(shot_number) FROM shots WHERE scene_id = ?", (scene_id,))
-    max_num = cursor.fetchone()[0]
-    shot_number = (max_num or 0) + 1
-    
+
     shot_id = f"shot_{uuid.uuid4().hex[:8]}"
     cursor.execute("""
-        INSERT INTO shots (id, scene_id, shot_number, description, 
+        INSERT INTO shots (id, scene_id, shot_number, description,
                           camera_angle, camera_height, camera_movement, camera_distance,
                           lens_type, depth_of_field, focus_point,
                           subject, subject_position, composition, foreground, background,
                           override_mood, override_lighting, override_art_style)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (shot_id, scene_id, shot_number, description, 
+        SELECT ?, ?, COALESCE(MAX(shot_number), 0) + 1, ?,
+               ?, ?, ?, ?,
+               ?, ?, ?,
+               ?, ?, ?, ?, ?,
+               ?, ?, ?
+        FROM shots WHERE scene_id = ?
+    """, (shot_id, scene_id, description,
           camera_angle, camera_height, camera_movement, camera_distance,
           lens_type, depth_of_field, focus_point,
           subject, subject_position, composition, foreground, background,
-          override_mood, override_lighting, override_art_style))
+          override_mood, override_lighting, override_art_style,
+          scene_id))
+    cursor.execute("SELECT shot_number FROM shots WHERE id = ?", (shot_id,))
+    shot_number = cursor.fetchone()[0]
     
     conn.commit()
     conn.close()
@@ -316,24 +323,27 @@ def add_cut(
     conn = db.get_connection()
     cursor = conn.cursor()
 
-    # Get next cut number
-    cursor.execute("SELECT MAX(cut_number) FROM cuts WHERE shot_id = ?", (shot_id,))
-    max_num = cursor.fetchone()[0]
-    cut_number = (max_num or 0) + 1
-
     cut_id = f"cut_{uuid.uuid4().hex[:8]}"
     cursor.execute("""
         INSERT INTO cuts (id, shot_id, cut_number, action, story_description,
                          dialogue, expression, body_language, gesture, gaze_direction,
                          beat_type, duration_hint, transition,
                          continuity_notes, character_state, object_tracking, lighting_continuity,
-                                                   override_camera_distance, override_focus_point, override_lighting, override_mood, image_slots)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (cut_id, shot_id, cut_number, action, story_description,
+                         override_camera_distance, override_focus_point, override_lighting, override_mood, image_slots)
+        SELECT ?, ?, COALESCE(MAX(cut_number), 0) + 1, ?, ?,
+               ?, ?, ?, ?, ?,
+               ?, ?, ?,
+               ?, ?, ?, ?,
+               ?, ?, ?, ?, ?
+        FROM cuts WHERE shot_id = ?
+    """, (cut_id, shot_id, action, story_description,
           dialogue, expression, body_language, gesture, gaze_direction,
           beat_type, duration_hint, transition,
           continuity_notes, character_state, object_tracking, lighting_continuity,
-          override_camera_distance, override_focus_point, override_lighting, override_mood, image_slots))
+          override_camera_distance, override_focus_point, override_lighting, override_mood, image_slots,
+          shot_id))
+    cursor.execute("SELECT cut_number FROM cuts WHERE id = ?", (cut_id,))
+    cut_number = cursor.fetchone()[0]
 
     conn.commit()
     conn.close()

@@ -26,16 +26,14 @@ def add_shot(
     conn = get_connection()
     cursor = conn.cursor()
 
-    # Get next shot number
-    cursor.execute("SELECT MAX(shot_number) FROM shots WHERE scene_id = ?", (scene_id,))
-    max_num = cursor.fetchone()[0]
-    shot_number = (max_num or 0) + 1
-
     shot_id = f"shot_{uuid.uuid4().hex[:8]}"
     cursor.execute("""
         INSERT INTO shots (id, scene_id, shot_number, description, camera_angle, camera_movement, subject, composition, override_mood)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (shot_id, scene_id, shot_number, description, camera_angle, camera_movement, subject, composition, override_mood))
+        SELECT ?, ?, COALESCE(MAX(shot_number), 0) + 1, ?, ?, ?, ?, ?, ?
+        FROM shots WHERE scene_id = ?
+    """, (shot_id, scene_id, description, camera_angle, camera_movement, subject, composition, override_mood, scene_id))
+    cursor.execute("SELECT shot_number FROM shots WHERE id = ?", (shot_id,))
+    shot_number = cursor.fetchone()[0]
 
     conn.commit()
     conn.close()
@@ -127,17 +125,15 @@ def add_cut(
 ) -> Dict[str, Any]:
     conn = get_connection()
     cursor = conn.cursor()
-    
-    # Get next cut number
-    cursor.execute("SELECT MAX(cut_number) FROM cuts WHERE shot_id = ?", (shot_id,))
-    max_num = cursor.fetchone()[0]
-    cut_number = (max_num or 0) + 1
-    
+
     cut_id = f"cut_{uuid.uuid4().hex[:8]}"
     cursor.execute("""
         INSERT INTO cuts (id, shot_id, cut_number, action, dialogue, beat_type, transition)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (cut_id, shot_id, cut_number, action, dialogue, beat_type, transition))
+        SELECT ?, ?, COALESCE(MAX(cut_number), 0) + 1, ?, ?, ?, ?
+        FROM cuts WHERE shot_id = ?
+    """, (cut_id, shot_id, action, dialogue, beat_type, transition, shot_id))
+    cursor.execute("SELECT cut_number FROM cuts WHERE id = ?", (cut_id,))
+    cut_number = cursor.fetchone()[0]
     
     conn.commit()
     conn.close()
