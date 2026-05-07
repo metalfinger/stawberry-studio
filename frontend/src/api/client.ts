@@ -301,7 +301,49 @@ export async function swapCutAssetLink(projectId: string, cutId: string, oldAsse
   return res.json();
 }
 
-// Element Sheets
+// References — references-first asset model
+
+export interface AssetReference {
+  id: string;
+  asset_id: string;
+  label: string;                 // "identity" | "side_right" | "expression_sad" | ...
+  image_url: string;
+  parent_reference_id: string | null;
+  status: 'pending' | 'complete' | 'failed';
+  scope: 'project' | 'scene' | 'cut';
+  scope_id: string | null;
+  created_at: string;
+}
+
+export async function listAssetReferences(projectId: string, assetId: string): Promise<{ references: AssetReference[] }> {
+  const res = await fetch(`${API_BASE}/api/projects/${projectId}/assets/${assetId}/references`);
+  if (!res.ok) throw new Error('Failed to fetch references');
+  return res.json();
+}
+
+export async function generateAssetIdentity(projectId: string, assetId: string): Promise<AssetReference> {
+  const res = await fetch(`${API_BASE}/api/projects/${projectId}/assets/${assetId}/references/identity`, {
+    method: 'POST',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Identity generation failed');
+  }
+  return res.json();
+}
+
+export async function precacheAssetTurnaround(projectId: string, assetId: string): Promise<{ references: AssetReference[] }> {
+  const res = await fetch(`${API_BASE}/api/projects/${projectId}/assets/${assetId}/references/precache`, {
+    method: 'POST',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Precache failed');
+  }
+  return res.json();
+}
+
+// Element Sheets — legacy (still used by old projects until commit 6 migration)
 
 export interface ElementSheet {
   id: string;

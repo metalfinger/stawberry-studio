@@ -14,6 +14,37 @@ from backend.orchestrator.sheet_cells import crop_cell_url
 router = APIRouter(prefix="/api/projects/{project_id}", tags=["assets"])
 
 
+@router.get("/assets/{asset_id}/references")
+async def list_asset_references(project_id: str, asset_id: str):
+    """Every reference for this asset, identity first."""
+    from backend.orchestrator import references_v2
+    refs = await references_v2.list_references(asset_id)
+    return {"references": refs}
+
+
+@router.post("/assets/{asset_id}/references/identity")
+async def generate_asset_identity_route(project_id: str, asset_id: str):
+    """Generate (or return existing) identity card for the asset."""
+    from backend.orchestrator import references_v2
+    try:
+        ref = await references_v2.generate_identity_card(asset_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return ref
+
+
+@router.post("/assets/{asset_id}/references/precache")
+async def precache_asset_turnaround(project_id: str, asset_id: str):
+    """Generate the standard turnaround set for the asset (identity + a few
+    canonical poses, in parallel)."""
+    from backend.orchestrator import references_v2
+    try:
+        refs = await references_v2.precache_standard_turnaround(asset_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return {"references": refs}
+
+
 @router.get("/assets/{asset_id}/sheet")
 async def get_asset_sheet(project_id: str, asset_id: str):
     """Return the asset's active element sheet (or null if none)."""
