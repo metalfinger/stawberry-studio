@@ -524,10 +524,15 @@ async def compose_cut_tool(cut_id: str, feedback: str = "") -> dict:
     return result.to_dict()
 
 
-@tool("propose_cut_plan", description="Propose a Plan for composing a cut WITHOUT executing. Returns the full plan so the agent can present it to the user for approval. Pass feedback to fork from a prior plan with cumulative refinement notes.", tags=["cut", "plan"])
+@tool("propose_cut_plan", description="Propose a Plan for composing a cut WITHOUT executing. Emits a typed PlanCard to the user's chat — the agent should NOT also print the plan as text. Returns plan summary (id, totals, items) for the agent's bookkeeping. Pass feedback + parent_plan_id to fork from a prior plan with cumulative refinement notes.", tags=["cut", "plan"])
 async def propose_cut_plan_tool(cut_id: str, feedback: str = "", parent_plan_id: str = "") -> dict:
-    """Build a Plan describing what the cut needs."""
+    """Build a Plan and surface it as a PlanCard. The card is the canonical
+    UI for plan approval — the agent's text reply should be a single
+    sentence (e.g. "Plan ready — approve below.") and never duplicate the
+    plan contents."""
     from backend.orchestrator.cut_planner import plan_compose_cut
+    from backend.orchestrator.intents import _set_plan_message_id
+    from backend.orchestrator.narrator import Narrator
     from backend.orchestrator.plans import load_plan, save_plan
 
     parent = None
@@ -540,14 +545,36 @@ async def propose_cut_plan_tool(cut_id: str, feedback: str = "", parent_plan_id:
         parent_plan=parent,
     )
     await save_plan(plan)
-    return plan.to_dict()
+
+    # Emit the typed PlanCard via the project bus so the user sees it
+    # regardless of how the plan was triggered (chat tool vs UI button).
+    try:
+        narrator = Narrator(plan.project_id)
+        msg_id = await narrator.plan(plan)
+        await _set_plan_message_id(plan.id, msg_id)
+    except Exception:
+        pass
+
+    return {
+        "plan_id": plan.id,
+        "cut_id": plan.cut_id,
+        "items_total": len(plan.items),
+        "items_cached": sum(1 for i in plan.items if i.cached),
+        "items_new_gen": sum(1 for i in plan.items if not i.cached and i.kind == "reference_generate"),
+        "total_cost_usd": plan.total_cost_usd,
+        "total_eta_s": plan.total_eta_s,
+        "ui_emitted": True,
+    }
 
 
-@tool("execute_cut_plan", description="Execute an approved Plan. Pass plan_id from a previous propose_cut_plan call. Optionally pass approved_item_ids to override default approval (cached items always auto-approved; new gens need explicit approval unless cost is below auto_approve_under_usd).", tags=["cut", "plan"])
+@tool("execute_cut_plan", description="Execute an approved Plan. Pass plan_id from a previous propose_cut_plan call. Optionally pass approved_item_ids to override default approval (cached items always auto-approved; new gens need explicit approval unless cost is below auto_approve_under_usd). Per-item progress is streamed to the chat as PlanCard updates — the agent should not narrate each step.", tags=["cut", "plan"])
 async def execute_cut_plan_tool(plan_id: str, approved_item_ids: list[str] | None = None, deny_item_ids: list[str] | None = None) -> dict:
-    """Approve items per-id and execute."""
+    """Approve items per-id and execute. Streams plan_update events to the
+    Console PlanCard so the user sees per-item progress in real time."""
     from backend.orchestrator.cut_executor import execute_plan
-    from backend.orchestrator.plans import load_plan, save_plan, update_plan_status
+    from backend.orchestrator.intents import _get_plan_message_id
+    from backend.orchestrator.narrator import Narrator
+    from backend.orchestrator.plans import PlanItem, load_plan, save_plan, update_plan_status
 
     plan = await load_plan(plan_id)
     if plan is None:
@@ -568,7 +595,31 @@ async def execute_cut_plan_tool(plan_id: str, approved_item_ids: list[str] | Non
 
     await save_plan(plan)
     await update_plan_status(plan_id, "approved")
-    result = await execute_plan(plan_id)
+
+    # Wire on_step → narrator.update_plan_item so the existing PlanCard
+    # patches in place. Also emit the final image as an ImageMessage
+    # via cut_executor (already handled there).
+    plan_msg_id = await _get_plan_message_id(plan_id)
+    narrator = Narrator(plan.project_id)
+    import asyncio as _asyncio
+
+    def _on_step(item: PlanItem) -> None:
+        if not plan_msg_id:
+            return
+        try:
+            _asyncio.create_task(
+                narrator.update_plan_item(
+                    plan_msg_id,
+                    item.id,
+                    status=item.status,
+                    result=item.result,
+                    error=item.error,
+                )
+            )
+        except Exception:
+            pass
+
+    result = await execute_plan(plan_id, on_step=_on_step)
     return result.to_dict()
 
 
