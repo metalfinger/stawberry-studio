@@ -39,6 +39,28 @@ def _build_existing_structure(project_id: str) -> str:
     return "## ⚠️ EXISTING STRUCTURE (DO NOT RECREATE)\n" + "\n".join(lines)
 
 
+def _build_full_tree(project_id: str) -> str:
+    """Full scene → shot → cut tree with UUIDs. Pixel needs this so when the
+    user says 'scene 1 shot 1 cut 1' the agent can resolve to a real
+    cut_id from its prompt context instead of hallucinating a UUID."""
+    scenes = db.get_scenes(project_id) or []
+    if not scenes:
+        return "- No scenes yet."
+    lines = ["## CUTS YOU CAN COMPOSE (use these exact IDs — never invent)"]
+    for s in scenes:
+        lines.append(f"- Scene {s['scene_number']}: {s['title']}")
+        shots = db.get_shots(s["id"]) or []
+        for sh in shots:
+            cuts = db.get_cuts(sh["id"]) or []
+            for cut in cuts:
+                action = (cut.get("action") or cut.get("description") or "").strip()[:80]
+                lines.append(
+                    f"  - S{s['scene_number']}/Sh{sh['shot_number']}/C{cut['cut_number']} "
+                    f"(cut_id: `{cut['id']}`) — {action}"
+                )
+    return "\n".join(lines)
+
+
 def build_prompt_vars(agent_id: str, project_id: str) -> dict[str, str]:
     """Compose the placeholder values each agent's prompt expects."""
     if agent_id == "berry":
@@ -130,7 +152,8 @@ def build_prompt_vars(agent_id: str, project_id: str) -> dict[str, str]:
                 "from nothing. Suggest going back to the CAST_SCOUT phase.\n\n"
                 "---\n"
             )
-        return {"project_id": project_id, "readiness_block": block}
+        tree = _build_full_tree(project_id)
+        return {"project_id": project_id, "readiness_block": block, "cut_tree": tree}
 
     if agent_id in {"spark", "scout"}:
         return {"project_id": project_id}
