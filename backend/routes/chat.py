@@ -11,6 +11,8 @@ from google.genai import types as genai_types
 from backend import db
 from backend import db_async
 from backend.orchestrator import chat_bridge
+from backend.orchestrator import intents as intent_dispatch
+from backend.orchestrator.bus import bus
 from backend.orchestrator.narrator import Narrator, Action
 from backend.agents.berry import create_berry_agent
 from backend.agents.planner import create_planner_agent
@@ -104,8 +106,12 @@ async def chat_websocket(websocket: WebSocket, project_id: str, phase: str = Non
     current_scene_id = None
     
     # Narrator emits typed Console messages (handoff, failure, tool_call,
-    # etc.) over the same WebSocket. Bound here once per connection.
-    narrator = Narrator(websocket.send_json)
+    # plan, image, etc.) by publishing to the project's ProjectBus. The
+    # WebSocket is registered as a bus subscriber so any backend code
+    # (orchestrator, tools, batch runners) can emit without holding the
+    # socket itself. The subscription is torn down on WS close (see finally).
+    narrator = Narrator(project_id)
+    sub_id = await bus.subscribe(project_id, websocket.send_json)
 
     # Send current phase/mode info
     await websocket.send_json({
@@ -195,11 +201,22 @@ async def chat_websocket(websocket: WebSocket, project_id: str, phase: str = Non
             # {type: 'user_intent', intent, payload}. Legacy clients send {message}.
             msg_type = message_data.get("type")
             if msg_type == "user_intent":
-                # Wrap intent as a structured user message so downstream agents
-                # see it as natural language. attachments + payload are passed
-                # through; Phase D will add proper intent dispatch.
+                # Route the intent through the typed dispatcher. If it
+                # handles the intent fully (returns True), skip the chat
+                # agent for this turn. Unknown intents fall through to
+                # the legacy path so existing flows aren't broken.
                 intent = message_data.get("intent", "")
                 payload = message_data.get("payload") or {}
+                ref_msg_id = message_data.get("ref_message_id")
+                handled = await intent_dispatch.handle_intent(
+                    project_id=project_id,
+                    intent=intent,
+                    payload=payload,
+                    ref_message_id=ref_msg_id,
+                    narrator=narrator,
+                )
+                if handled:
+                    continue
                 user_message = f"[intent:{intent}] {json.dumps(payload)}" if intent else ""
             else:
                 user_message = (
@@ -359,6 +376,26 @@ async def chat_websocket(websocket: WebSocket, project_id: str, phase: str = Non
                         )
                     except Exception:
                         pass
+                    # Pattern-detect known agent prompts and surface a typed
+                    # ActionsBar so the user can decide with a click instead
+                    # of typing "yes"/"no". Cheap heuristic; agents that
+                    # call structured tools (future) will skip this branch.
+                    try:
+                        lowered = full_response.lower()
+                        if (
+                            spec_id == "berry"
+                            and "story" in lowered
+                            and ("confirmation required" in lowered or "say \"yes\"" in lowered or "please say" in lowered)
+                        ):
+                            await narrator.actions(
+                                prompt="Ready to move to STORY phase?",
+                                buttons=[
+                                    Action(label="✅ Yes, proceed", intent="confirm_briefing", primary=True),
+                                    Action(label="✏️ Make changes", intent="decline_briefing"),
+                                ],
+                            )
+                    except Exception:
+                        pass
                 except Exception as e:
                     try:
                         await narrator.failure(
@@ -513,4 +550,13 @@ async def chat_websocket(websocket: WebSocket, project_id: str, phase: str = Non
     except WebSocketDisconnect:
         pass
     except Exception as e:
-        await websocket.send_json({"type": "error", "message": str(e)})
+        try:
+            await websocket.send_json({"type": "error", "message": str(e)})
+        except Exception:
+            pass
+    finally:
+        # Always release the bus subscription so a dropped WS doesn't leak.
+        try:
+            await bus.unsubscribe(project_id, sub_id)
+        except Exception:
+            pass

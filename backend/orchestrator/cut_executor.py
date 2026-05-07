@@ -24,6 +24,7 @@ from backend.database.core import get_async_connection
 from backend.orchestrator import references_v2
 from backend.orchestrator.context_bundler import bundle_cut_context
 from backend.orchestrator.events import RunContext, log_event
+from backend.orchestrator.narrator import Narrator
 from backend.orchestrator.plans import (
     ITEM_KIND_REFERENCE_GENERATE,
     ITEM_KIND_REFERENCE_REUSE,
@@ -152,6 +153,48 @@ async def _supersede_prior_renders(cut_id: str, new_ref_id: str) -> None:
         await conn.commit()
 
 
+async def _previous_render_url(cut_id: str, *, exclude_url: str | None = None) -> str | None:
+    """Most recent prior render image_url for this cut (active or superseded)."""
+    async with get_async_connection() as conn:
+        async with conn.execute(
+            "SELECT image_url FROM reference_pool WHERE source_cut_id = ? AND label LIKE 'render_v%' "
+            "ORDER BY created_at DESC LIMIT 5",
+            (cut_id,),
+        ) as cur:
+            rows = await cur.fetchall()
+    for r in rows:
+        url = r["image_url"]
+        if url and url != exclude_url:
+            return url
+    return None
+
+
+async def _append_used_in_cuts(ref_ids: list[str], cut_id: str) -> None:
+    """Append cut_id to each consumed reference's `used_in_cuts_json`. Lets
+    the Library show 'used in N cuts' counts truthfully."""
+    if not ref_ids or not cut_id:
+        return
+    async with get_async_connection() as conn:
+        for rid in ref_ids:
+            async with conn.execute(
+                "SELECT used_in_cuts_json FROM reference_pool WHERE id = ?", (rid,),
+            ) as cur:
+                row = await cur.fetchone()
+            if not row:
+                continue
+            try:
+                arr = json.loads(row["used_in_cuts_json"] or "[]")
+            except Exception:
+                arr = []
+            if cut_id not in arr:
+                arr.append(cut_id)
+                await conn.execute(
+                    "UPDATE reference_pool SET used_in_cuts_json = ? WHERE id = ?",
+                    (json.dumps(arr), rid),
+                )
+        await conn.commit()
+
+
 async def _persist_cut_image(cut_id: str, image_url: str, status: str) -> None:
     async with get_async_connection() as conn:
         await conn.execute(
@@ -207,6 +250,12 @@ async def execute_plan(
 
     ctx = await bundle_cut_context(plan.cut_id) if plan.cut_id else None
 
+    # Narrator publishes typed events to the project's Console subscribers
+    # (chat WS). Lets the executor emit reference cards, images, and
+    # comparisons without holding the WS handle.
+    narrator = Narrator(plan.project_id)
+    consumed_ref_ids: list[str] = []  # for used_in_cuts_json bookkeeping
+
     # Tracks references that will be passed to the render step
     ref_slots: list[ReferenceImage] = []
 
@@ -239,14 +288,30 @@ async def execute_plan(
             try:
                 if item.kind == ITEM_KIND_REFERENCE_REUSE:
                     image_url = item.payload.get("image_url")
+                    ref_id = item.payload.get("reference_id")
                     if image_url:
                         ref_slots.append(ReferenceImage(
                             image_url=image_url,
                             slot=len(ref_slots) + 1,
                             name=item.payload.get("label") or "ref",
                         ))
+                    if ref_id:
+                        consumed_ref_ids.append(ref_id)
                     item.status = "done"
                     item.result = {"image_url": image_url}
+                    try:
+                        await narrator.reference_card(
+                            ref={
+                                "id": ref_id or "",
+                                "image_url": image_url,
+                                "label": item.payload.get("label") or "ref",
+                                "asset_name": item.payload.get("asset_name") or "",
+                            },
+                            status="cached",
+                            cost_usd=0.0,
+                        )
+                    except Exception:
+                        log.exception("emit_ref_card_failed")
 
                 elif item.kind == ITEM_KIND_REFERENCE_GENERATE:
                     asset_id = item.payload.get("asset_id")
@@ -268,11 +333,35 @@ async def execute_plan(
                         slot=len(ref_slots) + 1,
                         name=label or "ref",
                     ))
+                    consumed_ref_ids.append(ref["id"])
+                    try:
+                        await narrator.reference_card(
+                            ref={
+                                "id": ref["id"],
+                                "image_url": ref["image_url"],
+                                "label": label or "ref",
+                                "asset_name": item.payload.get("asset_name") or "",
+                            },
+                            status="newly_generated",
+                            cost_usd=ref.get("cost_usd", 0.0),
+                        )
+                    except Exception:
+                        log.exception("emit_ref_card_failed")
 
                 elif item.kind == ITEM_KIND_RENDER:
                     if not ctx:
                         raise RuntimeError("render item without cut context")
                     cumulative_feedback = item.payload.get("feedback") or []
+                    # Auto-prepend project style anchor as slot 0 when one
+                    # exists and isn't already present.
+                    if ctx.style_anchor and ctx.style_anchor.get("image_url"):
+                        anchor_url = ctx.style_anchor["image_url"]
+                        if not any(s.image_url == anchor_url for s in ref_slots):
+                            ref_slots.insert(0, ReferenceImage(
+                                image_url=anchor_url, slot=1, name="style_anchor",
+                            ))
+                            for i, s in enumerate(ref_slots):
+                                s.slot = i + 1
                     template = _build_template_from_ctx(ctx, cumulative_feedback)
                     compiled = compile_prompt(template, plan.project_id)
                     # Trim slots to provider limit (5).
@@ -300,6 +389,36 @@ async def execute_plan(
                     }
                     result.image_url = image_url
                     result.cost_usd += img_result.cost_usd
+                    # Emit a typed image so the Console renders it inline,
+                    # not just behind the plan card.
+                    try:
+                        await narrator.image(
+                            image_url,
+                            caption=f"Cut render · ${img_result.cost_usd:.2f}",
+                            metadata={"plan_id": plan.id, "cut_id": plan.cut_id},
+                        )
+                    except Exception:
+                        log.exception("emit_image_failed")
+                    # If this is a refinement (feedback present), surface a
+                    # before/after Comparison so the user can accept/refine
+                    # without leaving the chat.
+                    if plan.feedback_round > 0 and plan.cut_id:
+                        try:
+                            prev = await _previous_render_url(plan.cut_id, exclude_url=image_url)
+                            if prev:
+                                from backend.orchestrator.narrator import Action as _Action
+                                await narrator.comparison(
+                                    left_url=prev,
+                                    right_url=image_url,
+                                    left_label="Previous",
+                                    right_label=f"Round {plan.feedback_round}",
+                                    actions=[
+                                        _Action(label="Accept", intent="approve_cut_render", payload={"cut_id": plan.cut_id, "image_url": image_url}, primary=True),
+                                        _Action(label="Refine again", intent="propose_cut_plan", payload={"cut_id": plan.cut_id, "parent_plan_id": plan.id}),
+                                    ],
+                                )
+                        except Exception:
+                            log.exception("emit_comparison_failed")
 
                 elif item.kind == ITEM_KIND_REGISTER:
                     cut_id = item.payload.get("cut_id")
@@ -332,6 +451,10 @@ async def execute_plan(
                         # Append cumulative feedback (only new round) to cut.
                         if plan.feedback:
                             await _append_refinement_feedback(cut_id, plan.feedback[-1:])
+                        # Truthfully record which library refs this render
+                        # consumed, so the Library "used in N cuts" badge
+                        # actually means something.
+                        await _append_used_in_cuts(consumed_ref_ids, cut_id)
                         item.status = "done"
                         item.result = {"reference_id": ref_id, "version": version}
                         result.reference_id = ref_id

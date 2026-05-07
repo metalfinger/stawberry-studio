@@ -27,6 +27,7 @@ from typing import Any, Awaitable, Callable
 
 import structlog
 
+from backend.orchestrator.bus import bus
 from backend.orchestrator.plans import Plan, PlanItem
 
 log = structlog.get_logger(__name__)
@@ -57,17 +58,36 @@ class Action:
 # ============================================================================
 
 class Narrator:
-    """Per-WS-turn helper that emits typed Console messages.
+    """Per-project helper that emits typed Console messages.
 
-    Caller passes `send` — an async callable that takes a JSON-serializable
-    dict and pushes it onto the chat WS. Narrator wraps each emit with
-    message_id, timestamp, and message kind metadata.
+    Constructed with the project_id; it publishes to the ProjectBus so any
+    backend code (route handler, orchestrator, tool, batch runner) can emit
+    without holding the WebSocket directly. The chat route subscribes the
+    socket to the bus on connect — broadcast and decoupled.
+
+    Backwards-compat: if a `send` callable is passed it's still respected
+    so older call sites keep working until migrated.
     """
 
-    def __init__(self, send: Callable[[dict[str, Any]], Awaitable[None]], parent_message_id: str | None = None):
-        self.send = send
+    def __init__(
+        self,
+        project_id_or_send: "str | Callable[[dict[str, Any]], Awaitable[None]]",
+        parent_message_id: str | None = None,
+    ):
+        if callable(project_id_or_send):
+            # Legacy: direct sink. Bus path inactive.
+            self._project_id: str | None = None
+            self._send: Callable[[dict[str, Any]], Awaitable[None]] | None = project_id_or_send
+        else:
+            self._project_id = project_id_or_send
+            self._send = None
         self.parent_message_id = parent_message_id
         self.last_message_id: str | None = None
+
+    # legacy shim; some sites read `narrator.send` directly
+    @property
+    def send(self):  # noqa: D401
+        return self._send
 
     @staticmethod
     def _new_id() -> str:
@@ -82,7 +102,10 @@ class Narrator:
         payload.setdefault("timestamp", self._ts())
         if self.parent_message_id:
             payload.setdefault("parent_message_id", self.parent_message_id)
-        await self.send(payload)
+        if self._send is not None:
+            await self._send(payload)
+        elif self._project_id is not None:
+            await bus.publish(self._project_id, payload)
         self.last_message_id = payload["message_id"]
         return payload["message_id"]
 
@@ -134,7 +157,7 @@ class Narrator:
         result: dict[str, Any] | None = None,
         error: str | None = None,
     ) -> None:
-        await self.send({
+        event = {
             "kind": "plan_update",
             "message_id": plan_message_id,
             "item_id": item_id,
@@ -142,7 +165,11 @@ class Narrator:
             "result": result,
             "error": error,
             "timestamp": self._ts(),
-        })
+        }
+        if self._send is not None:
+            await self._send(event)
+        elif self._project_id is not None:
+            await bus.publish(self._project_id, event)
 
     async def image(self, url: str, *, caption: str = "", metadata: dict[str, Any] | None = None) -> str:
         return await self._emit({
@@ -252,6 +279,28 @@ class Narrator:
             "items": items,
             "can_pause": can_pause,
         })
+
+    async def update_batch_item(
+        self,
+        batch_message_id: str,
+        item_id: str,
+        *,
+        status: str,
+        thumb_url: str | None = None,
+    ) -> None:
+        """Patch a single item inside an existing batch_progress card."""
+        event = {
+            "kind": "batch_item_update",
+            "message_id": batch_message_id,
+            "item_id": item_id,
+            "status": status,
+            "thumb_url": thumb_url,
+            "timestamp": self._ts(),
+        }
+        if self._send is not None:
+            await self._send(event)
+        elif self._project_id is not None:
+            await bus.publish(self._project_id, event)
 
     async def idle_suggestion(self, reasoning: str, actions: list[Action]) -> str:
         return await self._emit({

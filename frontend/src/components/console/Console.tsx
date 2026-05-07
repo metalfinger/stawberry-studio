@@ -8,6 +8,7 @@ import { MessageStream } from './MessageStream'
 import { PinnedTray } from './PinnedTray'
 import { InputDock } from './InputDock'
 import { ConsoleHeader } from './ConsoleHeader'
+import { pinning } from '../dnd/pinning'
 import './Console.css'
 
 interface ConsoleProps {
@@ -31,10 +32,28 @@ export function Console({ projectId, initialPhase, onNodeUpdate, onClose }: Cons
       return n
     })
   }
+  const TRACES_KEY = 'strawberry.console.traces'
+  const [showTraces, setShowTraces] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    return localStorage.getItem(TRACES_KEY) === '1'
+  })
+  const toggleTraces = () => {
+    setShowTraces(t => {
+      const n = !t
+      try { localStorage.setItem(TRACES_KEY, n ? '1' : '0') } catch {}
+      return n
+    })
+  }
   const [messages, setMessages] = useState<ConsoleMessage[]>([])
   const [phase, setPhase] = useState<string>(initialPhase ?? 'BRIEF')
   const [agentName, setAgentName] = useState<string>('Berry')
-  const [pinned, setPinned] = useState<UserAttachment[]>([])
+  const [pinned, setPinned] = useState<UserAttachment[]>(() => pinning.list(projectId))
+  // Sync to the cross-component pin store so Library/Console/messages all
+  // see the same list. Updates flow through pinning.* setters below.
+  useEffect(() => {
+    if (!projectId) return
+    return pinning.subscribe(projectId, setPinned)
+  }, [projectId])
   const [connecting, setConnecting] = useState(true)
   const [costToday, setCostToday] = useState<number>(0)
   const wsRef = useRef<WebSocket | null>(null)
@@ -48,7 +67,20 @@ export function Console({ projectId, initialPhase, onNodeUpdate, onClose }: Cons
     const ws = new WebSocket(url)
     wsRef.current = ws
 
-    ws.onopen = () => setConnecting(false)
+    const LAST_SEEN_KEY = `strawberry.lastSeen.${projectId}`
+    ws.onopen = () => {
+      setConnecting(false)
+      // Send a reconnect intent with our last-seen ts so the backend can
+      // emit an ActivityCard summarizing what happened while offline.
+      const last = localStorage.getItem(LAST_SEEN_KEY)
+      if (last) {
+        try {
+          ws.send(JSON.stringify({ type: 'user_intent', intent: 'reconnect', payload: { last_seen_ts: last } }))
+        } catch {}
+      }
+    }
+    // Persist last-seen on every message so the next reconnect knows the cutoff.
+    const stamp = () => { try { localStorage.setItem(LAST_SEEN_KEY, new Date().toISOString()) } catch {} }
     ws.onclose = () => setConnecting(true)
     ws.onerror = () => setConnecting(true)
 
@@ -80,6 +112,7 @@ export function Console({ projectId, initialPhase, onNodeUpdate, onClose }: Cons
       let data: any
       try { data = JSON.parse(event.data) } catch { return }
       if (typeof data !== 'object' || !data) return
+      stamp()
 
       if (data.type === 'phase') {
         setPhase(data.phase)
@@ -110,6 +143,22 @@ export function Console({ projectId, initialPhase, onNodeUpdate, onClose }: Cons
 
       // Typed Console messages
       if (typeof data.kind === 'string') {
+        if (data.kind === 'batch_item_update') {
+          setMessages(prev => prev.map(m => {
+            if (m.kind === 'batch_progress' && m.message_id === data.message_id) {
+              return {
+                ...m,
+                items: m.items.map(i =>
+                  i.id === data.item_id
+                    ? { ...i, status: data.status, thumb_url: data.thumb_url ?? i.thumb_url }
+                    : i
+                ),
+              } as ConsoleMessage
+            }
+            return m
+          }))
+          return
+        }
         if (data.kind === 'plan_update') {
           // Patch plan items in-place
           setMessages(prev => prev.map(m => {
@@ -247,16 +296,19 @@ export function Console({ projectId, initialPhase, onNodeUpdate, onClose }: Cons
         costToday={costToday}
         connecting={connecting}
         collapsed={collapsed}
+        showTraces={showTraces}
+        onToggleTraces={toggleTraces}
         onToggleCollapse={toggleCollapse}
         onClose={onClose}
       />
       <MessageStream
         messages={messages}
         onIntent={sendIntent}
+        showTraces={showTraces}
       />
       <PinnedTray
         pinned={pinned}
-        onUnpin={(refId) => setPinned(p => p.filter(a => a.ref_id !== refId))}
+        onUnpin={(refId) => pinning.unpin(projectId, refId)}
       />
       <InputDock
         onSend={sendMessage}

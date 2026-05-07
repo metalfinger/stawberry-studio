@@ -17,7 +17,7 @@ load_dotenv()
 from backend.config import get_settings  # noqa: E402
 from backend.database.core import init_db_async  # noqa: E402
 from backend.errors import configure_logging, install_exception_handlers  # noqa: E402
-from backend.routes import assets, chat, cuts, elements, library, pipeline, projects  # noqa: E402
+from backend.routes import assets, batch, chat, cuts, elements, library, pipeline, projects  # noqa: E402
 
 configure_logging()
 
@@ -47,6 +47,7 @@ app.include_router(cuts.router)
 app.include_router(assets.router)
 app.include_router(pipeline.router)
 app.include_router(library.router)
+app.include_router(batch.router)
 
 # Static file mounts
 storage_path = Path(__file__).parent / "storage" / "generated"

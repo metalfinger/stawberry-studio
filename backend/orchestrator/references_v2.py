@@ -266,7 +266,11 @@ async def _save_reference_row(
     scope: str = "project",
     scope_id: str | None = None,
 ) -> str:
-    """Insert a reference into reference_pool and return its id."""
+    """Insert a reference into reference_pool and return its id.
+
+    Persists `cost_usd`, `model_used`, and `prompt` on the row so the
+    Library can show real spend per asset and the cost meter has data
+    beyond render-time. Earlier code dropped these on the floor."""
     rid = f"ref_{uuid.uuid4().hex[:12]}"
     async with get_async_connection() as conn:
         await conn.execute(
@@ -276,8 +280,9 @@ async def _save_reference_row(
                  location_id, aspect_ratio, lighting_signature, source_type,
                  source_master_id, source_request_id,
                  is_anchor, is_style_anchor,
-                 asset_id, label, parent_reference_id, status, scope, scope_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 asset_id, label, parent_reference_id, status, scope, scope_id,
+                 cost_usd, model_used, prompt)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 rid,
@@ -299,6 +304,9 @@ async def _save_reference_row(
                 "complete",
                 scope,
                 scope_id,
+                float(cost_usd or 0),
+                model or "",
+                "",
             ),
         )
         await conn.commit()
@@ -419,6 +427,16 @@ async def _generate_one(
         tags=tags,
         is_anchor=(label == "identity"),
     )
+    # Backfill the prompt — _save_reference_row writes "" because it doesn't
+    # see it; we have it here so persist directly.
+    try:
+        async with get_async_connection() as conn:
+            await conn.execute(
+                "UPDATE reference_pool SET prompt = ? WHERE id = ?", (prompt, rid),
+            )
+            await conn.commit()
+    except Exception:
+        log.exception("prompt_persist_failed", reference_id=rid)
     log.info(
         "reference_generated",
         asset_id=asset["id"],

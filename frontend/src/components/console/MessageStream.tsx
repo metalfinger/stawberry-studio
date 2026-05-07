@@ -20,9 +20,10 @@ import { HandoffCard } from './messages/HandoffCard'
 interface MessageStreamProps {
   messages: ConsoleMessage[]
   onIntent: (intent: string, payload?: Record<string, unknown>, refMessageId?: string) => void
+  showTraces?: boolean
 }
 
-export function MessageStream({ messages, onIntent }: MessageStreamProps) {
+export function MessageStream({ messages, onIntent, showTraces }: MessageStreamProps) {
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -48,13 +49,13 @@ export function MessageStream({ messages, onIntent }: MessageStreamProps) {
   return (
     <div className="console-stream" ref={ref}>
       {messages.map(msg => (
-        <MessageRenderer key={msg.message_id} msg={msg} onIntent={onIntent} />
+        <MessageRenderer key={msg.message_id} msg={msg} onIntent={onIntent} showTraces={showTraces} />
       ))}
     </div>
   )
 }
 
-function MessageRenderer({ msg, onIntent }: { msg: ConsoleMessage; onIntent: MessageStreamProps['onIntent'] }) {
+function MessageRenderer({ msg, onIntent, showTraces }: { msg: ConsoleMessage; onIntent: MessageStreamProps['onIntent']; showTraces?: boolean }) {
   switch (msg.kind) {
     case 'text':
       return <TextMessage msg={msg} />
@@ -69,9 +70,7 @@ function MessageRenderer({ msg, onIntent }: { msg: ConsoleMessage; onIntent: Mes
     case 'elapsed':
       return <ElapsedMessage msg={msg} />
     case 'tool_call':
-      // Hidden by default — tool traces are noise in the user-facing stream.
-      // Power users can re-enable via a future setting; for now we suppress.
-      return null
+      return showTraces ? <ToolCallTag msg={msg} /> : null
     case 'comparison':
       return <ComparisonView msg={msg} onIntent={onIntent} />
     case 'recommendation':

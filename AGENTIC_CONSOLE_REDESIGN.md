@@ -817,3 +817,74 @@ After shipping Phases A–G, the actual reachable surface is much narrower than 
 5. user_idle intent → wire an agent (Berry?) to optionally respond with IdleSuggestion.
 6. Reconnect path → emit ActivityCard summarizing offline events.
 7. Agent prompts ("approve / cancel / modify") → emit ActionsBar instead of inline text.
+
+---
+
+## §14 — Phase I: making everything live (post-audit)
+
+The §13 audit said 12/14 typed-message components were dormant because
+the `Narrator` was constructed with a per-WS callback — only the chat
+route handler could emit. Phase I removes that bottleneck.
+
+### Foundation: ProjectBus
+
+`backend/orchestrator/bus.py` — a small async pub/sub keyed by
+`project_id`. The chat route subscribes its `websocket.send_json` on
+connect and unsubscribes in the `finally` block. `Narrator(project_id)`
+publishes through the bus, so any code (orchestrator, tools, batch
+runners, intent dispatchers) can emit typed messages without holding
+the socket. Multiple WS subscribers per project (multi-tab) all receive
+the same broadcast.
+
+Contract locked by `tests/orchestrator/test_bus.py` (4 tests).
+
+### Intent dispatcher
+
+`backend/orchestrator/intents.py` routes structured `user_intent` events
+the Console emits when a button is clicked. Handles:
+`compose_cut`, `propose_cut_plan`, `approve_plan`, `modify_plan`,
+`cancel_plan`, `skip_new_gens`, `retry_plan`, `accept_recommendation`,
+`generate_new_instead`, `pause_batch`, `cancel_batch`, `user_idle`,
+`reconnect`, `confirm_briefing`, `decline_briefing`. Unknown intents
+fall through to the legacy chat path.
+
+### What's now reachable
+
+| Component | Wired path |
+|-----------|-----------|
+| TextMessage | legacy stream/message + Narrator.text |
+| PlanCard / plan_update | intents.propose_plan → narrator.plan; cut_executor on_step → narrator.update_plan_item |
+| ImageMessage | cut_executor RENDER → narrator.image |
+| ReferenceCardMessage | cut_executor REFERENCE_REUSE / REFERENCE_GENERATE → narrator.reference_card |
+| RecommendationCard | cut_planner → narrator.recommendation when token-overlap match exists |
+| ComparisonView | cut_executor on refine (feedback_round > 0) → narrator.comparison |
+| ActionsBar | chat.py pattern-detects Berry's confirm prompt → narrator.actions |
+| BatchProgressCard | routes/batch.py → narrator.batch_progress + update_batch_item |
+| FailureCard | chat.py exception + intents.py error path |
+| HandoffCard | chat.py phase change |
+| IdleSuggestion | intents.user_idle → heuristic → narrator.idle_suggestion |
+| ActivityCard | intents.reconnect → query agent_events since last_seen → narrator.activity |
+| ToolCallTag | hidden by default; 🔧 toggle in Console header |
+
+### Data + UX gaps closed
+
+- `reference_pool.cost_usd` / `model_used` / `prompt` now actually
+  populated by `references_v2._save_reference_row` + post-update.
+- `reference_pool.used_in_cuts_json` populated by
+  `cut_executor._append_used_in_cuts` after every REGISTER.
+- Style anchor enforcement: `cut_executor` auto-prepends the project
+  style anchor as slot 0 of every render when present.
+- Pinned tray: `frontend/src/components/dnd/pinning.ts` is a localStorage-
+  backed singleton; Console subscribes; LibraryDrawer's detail pane has
+  a `📌 Pin to chat` button.
+- Onboarding copy updated to match shipped UX.
+- Cost meter accumulates LLM cost via `tool_call.cost_usd` (still a
+  coarse estimate; replace with `pydantic_ai` real usage when available).
+
+### Still TODO (real work, model-pick required)
+
+- CLIP/SigLIP embeddings for `reference_pool.embedding` + cosine in the
+  Library search backend.
+- Vision auto-tagging at gen time → populated `tags_json` for filterable
+  semantic search.
+- `pydantic_ai` real usage extraction so cost meter is exact, not coarse.

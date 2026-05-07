@@ -18,6 +18,7 @@ import structlog
 
 from backend.orchestrator import references_v2, picker_v2
 from backend.orchestrator.context_bundler import bundle_cut_context
+from backend.orchestrator.narrator import Narrator
 from backend.orchestrator.plans import (
     ITEM_KIND_PREPROD_FILL,
     ITEM_KIND_REFERENCE_GENERATE,
@@ -117,6 +118,12 @@ async def plan_compose_cut(
         ) as cur:
             all_active_refs = [dict(r) for r in await cur.fetchall()]
 
+    # Strong-match candidates we'll surface as a single Recommendation
+    # message so the user can pick "use this existing" with one click
+    # before approving the plan. Best-overlap candidates only — picker
+    # heuristic, not embeddings.
+    strong_recs: list[dict[str, Any]] = []
+
     # Per-asset reference resolution
     linked = ctx.linked_characters + ctx.linked_locations + ctx.linked_props
     for asset in linked:
@@ -154,6 +161,16 @@ async def plan_compose_cut(
                     },
                     alternatives=alternatives,
                 ))
+                # If a cached candidate has 2+ token overlap (i.e. close
+                # enough to skip the gen) record it for a single
+                # Recommendation message after planning.
+                if alternatives:
+                    strong_recs.append({
+                        "asset_name": asset["name"],
+                        "label": label,
+                        "primary": alternatives[0],
+                        "alternatives": alternatives[1:],
+                    })
 
     # Continuity: previous cut as a reference if it exists
     if ctx.previous_cut and ctx.previous_cut.get("generated_image_url"):
@@ -216,4 +233,39 @@ async def plan_compose_cut(
         total_eta=plan.total_eta_s,
         feedback_round=plan.feedback_round,
     )
+
+    # Surface a single Recommendation for the strongest cached match so
+    # the user can swap it in pre-approval. Silent when nothing close.
+    if strong_recs:
+        try:
+            top = strong_recs[0]
+            primary = top["primary"]
+            alts = top["alternatives"]
+            narrator = Narrator(plan.project_id)
+            await narrator.recommendation(
+                primary={
+                    "ref_id": primary["ref_id"],
+                    "thumb_url": primary["image_url"],
+                    "label": primary["label"],
+                    "asset_name": top["asset_name"],
+                    "status": "cached",
+                },
+                alternatives=[
+                    {
+                        "ref_id": a["ref_id"],
+                        "thumb_url": a["image_url"],
+                        "label": a["label"],
+                        "asset_name": top["asset_name"],
+                        "status": "cached",
+                    }
+                    for a in alts
+                ],
+                reasoning=(
+                    f"Found a close match for {top['asset_name']}/{top['label']} "
+                    f"in the library — using it would skip a $0.04 generation."
+                ),
+            )
+        except Exception:
+            log.exception("recommendation_emit_failed")
+
     return plan

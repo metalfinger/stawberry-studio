@@ -16,26 +16,26 @@ interface Step {
 const STEPS: Step[] = [
   {
     title: 'Welcome to Strawberry Studio',
-    body: 'A storyboard tool that gets better the more you use it. Talk to agents, approve plans, and build a reusable visual library.',
+    body: 'A storyboard tool that gets better the more you use it. Talk to agents, approve plans, build a reusable visual library.',
   },
   {
     title: 'The Console drives everything',
-    body: 'Type a message in the Console to talk to an agent. Agents propose plans — you approve, modify, or cancel. Every change is recorded.',
+    body: 'Type a message in the floating Console to talk to an agent. Agents propose plans — you approve, modify, or cancel. Double-click the header to collapse it.',
     hint: '⌘+Enter to send',
   },
   {
     title: 'Drag references anywhere',
-    body: 'Drag any image from the Library, Console, or Context Panel into the chat input or onto a cut node. References thread through generations to keep things consistent.',
+    body: 'Drag any image from the Library or Console into the chat input or onto a cut node. References thread through generations to keep characters and locations consistent.',
   },
   {
     title: 'Library is your visual memory',
-    body: 'Every generated image lives there forever. Search, filter, favorite, supersede. The agent reuses cached references when it can to save you money.',
+    body: 'Every generated image lives in the left rail forever. Search, filter, favorite, set a project-wide style anchor. The agent reuses cached references when it can to save money.',
     hint: '⌘L to open',
   },
   {
-    title: 'Cmd+K is your shortcut',
-    body: 'Open the command palette to jump anywhere — quick commands, focus chat, list scenes. Esc closes drawers.',
-    hint: '⌘K to try it',
+    title: 'Click 🔧 to see the agent’s work',
+    body: 'The wrench icon in the Console header toggles tool-call traces — useful when you want to see exactly what the agent did under the hood.',
+    hint: '⌘K opens the command palette',
   },
 ]
 

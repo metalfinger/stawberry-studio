@@ -17,6 +17,7 @@ import {
 } from '../../api/client'
 import { setRefDrag } from '../dnd/refDragData'
 import { useHoverPreview } from '../dnd/HoverPreview'
+import { pinning } from '../dnd/pinning'
 import { toast } from '../toast/Toast'
 import './LibraryDrawer.css'
 
@@ -224,6 +225,12 @@ export function LibraryDrawer({ projectId, open, onClose, onOpen }: Props) {
               )}
             </div>
             <div className="library-detail__actions">
+              <button
+                onClick={() => {
+                  const nowPinned = pinning.togglePin(projectId, selected.ref_id)
+                  toast.success(nowPinned ? 'Pinned to chat' : 'Unpinned')
+                }}
+              >📌 {pinning.isPinned(projectId, selected.ref_id) ? 'Unpin' : 'Pin to chat'}</button>
               <button onClick={() => onFavorite(selected)}>
                 {selected.is_favorite ? '★ Unfavorite' : '☆ Favorite'}
               </button>

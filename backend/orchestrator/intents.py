@@ -1,0 +1,414 @@
+"""Intent dispatch — handles `user_intent` events the Console sends.
+
+The Console emits structured intents (approve_plan, accept_recommendation,
+pause_batch, etc.) when the user clicks a button on a typed message. This
+module routes each intent to the right handler and emits typed responses
+back via the Narrator/bus.
+
+Returning True means the intent was fully handled and the route loop
+should NOT also feed the message through the chat agent. Returning False
+means we couldn't handle it — fall back to the legacy text path.
+"""
+from __future__ import annotations
+
+import asyncio
+import json
+from typing import Any
+
+import structlog
+
+from backend.orchestrator import cut_executor, cut_planner, picker_v2
+from backend.orchestrator.bus import bus
+from backend.orchestrator.narrator import Action, Narrator
+from backend.orchestrator.plans import (
+    Plan,
+    PlanItem,
+    fork_plan_for_refinement,
+    load_plan,
+    save_plan,
+    update_item_status,
+    update_plan_status,
+)
+
+log = structlog.get_logger(__name__)
+
+
+# Track in-flight executions so cancel_plan / pause_batch can act on them.
+_running_plans: dict[str, asyncio.Task] = {}
+_running_batches: dict[str, asyncio.Task] = {}
+_paused_batches: set[str] = set()
+_cancelled_batches: set[str] = set()
+
+
+async def handle_intent(
+    *,
+    project_id: str,
+    intent: str,
+    payload: dict[str, Any],
+    ref_message_id: str | None,
+    narrator: Narrator,
+) -> bool:
+    """Dispatch a user_intent. Returns True if fully handled."""
+    log.info("intent_received", intent=intent, project_id=project_id, payload_keys=list(payload.keys()))
+    try:
+        if intent == "compose_cut" or intent == "propose_cut_plan":
+            return await _propose_plan(project_id, payload, narrator)
+        if intent == "approve_plan":
+            return await _approve_plan(project_id, payload, ref_message_id, narrator)
+        if intent == "modify_plan":
+            return await _modify_plan(project_id, payload, narrator)
+        if intent == "cancel_plan":
+            return await _cancel_plan(project_id, payload, narrator)
+        if intent == "skip_new_gens":
+            return await _skip_new_gens(project_id, payload, ref_message_id, narrator)
+        if intent == "retry_plan":
+            return await _retry_plan(project_id, payload, ref_message_id, narrator)
+        if intent == "accept_recommendation":
+            return await _accept_recommendation(project_id, payload, narrator)
+        if intent == "generate_new_instead":
+            return await _generate_new_instead(project_id, payload, narrator)
+        if intent == "pause_batch":
+            return await _pause_batch(payload, narrator)
+        if intent == "cancel_batch":
+            return await _cancel_batch(payload, narrator)
+        if intent == "user_idle":
+            return await _idle_suggestion(project_id, narrator)
+        if intent == "reconnect":
+            return await _activity_summary(project_id, payload, narrator)
+        if intent == "confirm_briefing":
+            return await _confirm_briefing(project_id, narrator)
+        if intent == "decline_briefing":
+            await narrator.text("OK — tell me what you'd like to change about the brief.")
+            return True
+        # Unknown intents fall back to chat agent.
+        return False
+    except Exception as e:
+        log.exception("intent_handler_failed", intent=intent)
+        try:
+            await narrator.failure(
+                error=str(e),
+                suggestion="The intent failed. You can try the action again or use chat.",
+                recovery_actions=[],
+            )
+        except Exception:
+            pass
+        return True
+
+
+# ============================================================================
+# Plan flow
+# ============================================================================
+
+async def _propose_plan(project_id: str, payload: dict, narrator: Narrator) -> bool:
+    cut_id = payload.get("cut_id")
+    feedback = payload.get("feedback")
+    parent_plan_id = payload.get("parent_plan_id")
+    if not cut_id:
+        await narrator.text("I need a cut id to plan a compose. Try clicking compose on a specific cut.")
+        return True
+    parent_plan = await load_plan(parent_plan_id) if parent_plan_id else None
+    plan = await cut_planner.plan_compose_cut(cut_id, feedback=feedback, parent_plan=parent_plan)
+    await save_plan(plan)
+    auto = float(payload.get("auto_approve_under_usd") or 0.0)
+    msg_id = await narrator.plan(plan, auto_approve_under=auto)
+    # Persist the message_id on the plan record so executor / approve_plan
+    # can patch the right card from anywhere.
+    await _set_plan_message_id(plan.id, msg_id)
+    return True
+
+
+async def _set_plan_message_id(plan_id: str, message_id: str) -> None:
+    """Persist the chat message_id of the plan card so update_plan_item can
+    patch the right card from anywhere."""
+    from backend.database.core import get_async_connection
+
+    async with get_async_connection() as conn:
+        await conn.execute(
+            "UPDATE plans SET payload_json = json_set(COALESCE(payload_json,'{}'), '$.message_id', ?) WHERE id = ?",
+            (message_id, plan_id),
+        )
+        await conn.commit()
+
+
+async def _get_plan_message_id(plan_id: str) -> str | None:
+    from backend.database.core import get_async_connection
+
+    async with get_async_connection() as conn:
+        async with conn.execute(
+            "SELECT json_extract(payload_json, '$.message_id') FROM plans WHERE id = ?",
+            (plan_id,),
+        ) as cur:
+            row = await cur.fetchone()
+    return row[0] if row and row[0] else None
+
+
+async def _approve_plan(
+    project_id: str, payload: dict, ref_message_id: str | None, narrator: Narrator
+) -> bool:
+    plan_id = payload.get("plan_id")
+    if not plan_id:
+        return False
+    plan = await load_plan(plan_id)
+    if not plan:
+        await narrator.failure(error=f"Plan {plan_id} not found", suggestion="Re-propose the plan.", recovery_actions=[])
+        return True
+
+    # Mark all items approved.
+    for item in plan.items:
+        item.approved = True
+    await save_plan(plan)
+    await update_plan_status(plan_id, "approved")
+
+    plan_msg_id = ref_message_id or await _get_plan_message_id(plan_id)
+
+    async def on_step(item: PlanItem) -> None:
+        if not plan_msg_id:
+            return
+        try:
+            await narrator.update_plan_item(
+                plan_msg_id,
+                item.id,
+                status=item.status,
+                result=item.result,
+                error=item.error,
+            )
+        except Exception:
+            log.exception("plan_update_emit_failed", item_id=item.id)
+
+    # Run executor in the background so the WS loop stays responsive.
+    task = asyncio.create_task(_run_executor(project_id, plan_id, on_step, narrator))
+    _running_plans[plan_id] = task
+    task.add_done_callback(lambda _t: _running_plans.pop(plan_id, None))
+    return True
+
+
+async def _run_executor(project_id: str, plan_id: str, on_step, narrator: Narrator) -> None:
+    try:
+        from backend.orchestrator.cut_executor import execute_plan as _exec
+        result = await _exec(plan_id, on_step=on_step)
+        if result.error:
+            await narrator.failure(
+                error=result.error,
+                suggestion="You can retry the failed steps or modify the plan.",
+                recovery_actions=[
+                    Action(label="🔁 Retry", intent="retry_plan", payload={"plan_id": plan_id}, primary=True),
+                    Action(label="Cancel", intent="cancel_plan", payload={"plan_id": plan_id}),
+                ],
+            )
+        elif result.image_url:
+            # Show the final render as an Image message in addition to the
+            # per-item updates that already moved through plan_update.
+            await narrator.image(
+                result.image_url,
+                caption=f"Cut rendered · ${result.cost_usd:.2f}",
+                metadata={"plan_id": plan_id, "cut_id": result.cut_id},
+            )
+    except asyncio.CancelledError:
+        await narrator.text(f"_Plan {plan_id[:8]} cancelled._")
+        raise
+    except Exception as e:  # noqa: BLE001
+        await narrator.failure(error=str(e), suggestion="Try again, or modify the plan.", recovery_actions=[])
+
+
+async def _modify_plan(project_id: str, payload: dict, narrator: Narrator) -> bool:
+    plan_id = payload.get("plan_id")
+    await narrator.text(
+        f"OK — tell me what to change about the plan (e.g. _'use cached identity for Mara'_, _'skip the location reference'_). "
+        f"Plan id: `{plan_id[:8]}`"
+    )
+    return True
+
+
+async def _cancel_plan(project_id: str, payload: dict, narrator: Narrator) -> bool:
+    plan_id = payload.get("plan_id")
+    if not plan_id:
+        return False
+    task = _running_plans.pop(plan_id, None)
+    if task and not task.done():
+        task.cancel()
+    await update_plan_status(plan_id, "cancelled")
+    await narrator.text(f"_Plan `{plan_id[:8]}` cancelled._")
+    return True
+
+
+async def _skip_new_gens(
+    project_id: str, payload: dict, ref_message_id: str | None, narrator: Narrator
+) -> bool:
+    plan_id = payload.get("plan_id")
+    if not plan_id:
+        return False
+    plan = await load_plan(plan_id)
+    if not plan:
+        return False
+    for item in plan.items:
+        if item.kind == "reference_generate":
+            item.approved = False
+        else:
+            item.approved = True
+    await save_plan(plan)
+    await narrator.text("Skipping new gens — running with cached references only.")
+    return await _approve_plan(project_id, {"plan_id": plan_id}, ref_message_id, narrator)
+
+
+async def _retry_plan(
+    project_id: str, payload: dict, ref_message_id: str | None, narrator: Narrator
+) -> bool:
+    plan_id = payload.get("plan_id")
+    if not plan_id:
+        return False
+    plan = await load_plan(plan_id)
+    if not plan:
+        return False
+    # Reset error/done items so they re-execute.
+    for item in plan.items:
+        if item.status in ("error", "skipped"):
+            item.status = "pending"
+            item.error = None
+            item.approved = True
+    await save_plan(plan)
+    return await _approve_plan(project_id, {"plan_id": plan_id}, ref_message_id, narrator)
+
+
+# ============================================================================
+# Recommendation flow
+# ============================================================================
+
+async def _accept_recommendation(project_id: str, payload: dict, narrator: Narrator) -> bool:
+    ref_id = payload.get("ref_id")
+    cut_id = payload.get("cut_id")
+    slot_index = payload.get("slot_index")
+    if not (ref_id and cut_id and slot_index is not None):
+        return False
+    from backend.routes.library import assign_slot, SlotAssignRequest
+
+    try:
+        assign_slot(project_id, SlotAssignRequest(cut_id=cut_id, slot_index=int(slot_index), ref_id=ref_id))
+        await narrator.text(f"Reference attached to cut slot {slot_index}.")
+    except Exception as e:  # noqa: BLE001
+        await narrator.failure(error=str(e), suggestion="Try drag-drop instead.", recovery_actions=[])
+    return True
+
+
+async def _generate_new_instead(project_id: str, payload: dict, narrator: Narrator) -> bool:
+    # Re-propose the plan so the cached candidate isn't suggested this time.
+    cut_id = payload.get("cut_id")
+    if not cut_id:
+        return False
+    return await _propose_plan(project_id, {"cut_id": cut_id, "force_new_gens": True}, narrator)
+
+
+# ============================================================================
+# Batch flow
+# ============================================================================
+
+async def _pause_batch(payload: dict, narrator: Narrator) -> bool:
+    batch_id = payload.get("batch_id")
+    if not batch_id:
+        return False
+    _paused_batches.add(batch_id)
+    await narrator.text(f"Batch `{batch_id[:8]}` paused.")
+    return True
+
+
+async def _cancel_batch(payload: dict, narrator: Narrator) -> bool:
+    batch_id = payload.get("batch_id")
+    if not batch_id:
+        return False
+    _cancelled_batches.add(batch_id)
+    task = _running_batches.pop(batch_id, None)
+    if task and not task.done():
+        task.cancel()
+    await narrator.text(f"Batch `{batch_id[:8]}` cancelled.")
+    return True
+
+
+# ============================================================================
+# Idle + Activity
+# ============================================================================
+
+async def _idle_suggestion(project_id: str, narrator: Narrator) -> bool:
+    """When the user has been idle, look for a useful next step. Stay silent
+    if there's nothing obvious to suggest — empty noise is worse than none."""
+    from backend.database.core import get_async_connection
+
+    async with get_async_connection() as conn:
+        async with conn.execute(
+            "SELECT COUNT(*) AS n FROM cuts WHERE shot_id IN ("
+            "  SELECT id FROM shots WHERE scene_id IN ("
+            "    SELECT id FROM scenes WHERE project_id = ?"
+            "  )"
+            ") AND COALESCE(generated_image_url,'') = ''",
+            (project_id,),
+        ) as cur:
+            row = await cur.fetchone()
+        unrendered = (row and row[0]) or 0
+
+        async with conn.execute(
+            "SELECT COUNT(*) AS n FROM assets WHERE project_id = ? "
+            "AND id NOT IN (SELECT DISTINCT asset_id FROM reference_pool WHERE label = 'identity' AND project_id = ?)",
+            (project_id, project_id),
+        ) as cur:
+            row = await cur.fetchone()
+        missing_identity = (row and row[0]) or 0
+
+    if missing_identity > 0:
+        await narrator.idle_suggestion(
+            reasoning=f"{missing_identity} asset(s) don't have an identity reference yet. Want me to draft them?",
+            actions=[
+                Action(label="Draft identities", intent="draft_identities", primary=True),
+                Action(label="Not now", intent="dismiss"),
+            ],
+        )
+        return True
+    if unrendered > 0:
+        await narrator.idle_suggestion(
+            reasoning=f"You have {unrendered} cut(s) without renders. Want to compose them?",
+            actions=[
+                Action(label="Plan all", intent="plan_unrendered", primary=True),
+                Action(label="Not now", intent="dismiss"),
+            ],
+        )
+        return True
+    return True  # silent
+
+
+async def _activity_summary(project_id: str, payload: dict, narrator: Narrator) -> bool:
+    last_seen = payload.get("last_seen_ts")
+    if not last_seen:
+        return True
+    from backend.database.core import get_async_connection
+
+    async with get_async_connection() as conn:
+        async with conn.execute(
+            "SELECT ts, agent_id, event_type, payload_json FROM agent_events "
+            "WHERE project_id = ? AND ts > ? "
+            "ORDER BY ts ASC LIMIT 50",
+            (project_id, last_seen),
+        ) as cur:
+            rows = [dict(r) for r in await cur.fetchall()]
+    if not rows:
+        return True
+    events = []
+    for r in rows:
+        when = (r.get("ts") or "")[11:19]  # HH:MM:SS
+        what = f"{r.get('agent_id', '?')} · {r.get('event_type', '?')}"
+        cost = 0.0
+        try:
+            p = json.loads(r.get("payload_json") or "{}")
+            cost = float(p.get("cost_usd") or 0)
+        except Exception:
+            pass
+        events.append({"when": when, "what": what, "cost_usd": cost})
+    await narrator.activity(events=events)
+    return True
+
+
+# ============================================================================
+# Briefing confirm
+# ============================================================================
+
+async def _confirm_briefing(project_id: str, narrator: Narrator) -> bool:
+    from backend.tools.briefing import confirm_briefing_complete as _confirm
+    msg = _confirm(project_id)
+    await narrator.text(msg)
+    return True

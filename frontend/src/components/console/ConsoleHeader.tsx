@@ -5,13 +5,15 @@ interface ConsoleHeaderProps {
   costToday: number
   connecting: boolean
   collapsed?: boolean
+  showTraces?: boolean
+  onToggleTraces?: () => void
   onToggleCollapse?: () => void
   onClose?: () => void
 }
 
 export function ConsoleHeader({
   phase, agentName, costToday, connecting,
-  collapsed, onToggleCollapse, onClose,
+  collapsed, showTraces, onToggleTraces, onToggleCollapse, onClose,
 }: ConsoleHeaderProps) {
   return (
     <header className="console-header" onDoubleClick={onToggleCollapse}>
@@ -21,9 +23,17 @@ export function ConsoleHeader({
         {!collapsed && <span className="console-header__phase" style={{ marginLeft: 8 }}>{phase}</span>}
       </div>
       {!collapsed && (
-        <span className="console-header__cost" title="Estimated cost this session">
+        <span className="console-header__cost" title="Estimated cost this session (LLM + image)">
           ${costToday.toFixed(2)}
         </span>
+      )}
+      {!collapsed && onToggleTraces && (
+        <button
+          className={`console-header__close ${showTraces ? 'console-header__toggle--on' : ''}`}
+          onClick={onToggleTraces}
+          aria-label={showTraces ? 'Hide tool traces' : 'Show tool traces'}
+          title={showTraces ? 'Hide tool traces' : 'Show tool traces'}
+        >🔧</button>
       )}
       {onToggleCollapse && (
         <button
