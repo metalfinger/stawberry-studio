@@ -14,6 +14,5 @@ tools:
   - save_pre_production_output
   - complete_pre_production
   - get_cut_generation_history
-  - request_handoff
 output_schema: null
 critics: []

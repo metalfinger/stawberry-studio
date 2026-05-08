@@ -10,8 +10,6 @@ tools:
   - get_cut_context
   - get_previous_cut
   - get_cut_assets
-  - compile_shot_prompt
-  - compile_edit_prompt
   - update_cut
   - update_shot
   - get_full_blueprint

@@ -179,44 +179,51 @@ def get_node_assets(project_id: str, node_type: str, node_id: str):
 
 
 @router.get("/{project_id}/cuts/{cut_id}/prompt")
-def get_cut_prompt(project_id: str, cut_id: str):
+async def get_cut_prompt(project_id: str, cut_id: str):
     """
     Get compiled prompt for a specific cut.
-    Returns saved prompt if available, else generates dynamically.
+
+    Priority 1: return the prompt + slot map persisted on the cut row
+    (set by `propose_cut_plan` when Pixel built the plan).
+
+    Priority 2 fallback: build a plan now via cut_planner.plan_compose_cut.
+    The plan's compiled_preview / slots_preview is the modern source of
+    truth — same path the PlanCard uses. We do NOT execute the plan here.
     """
     import json
-    from backend.tools.generation import compile_shot_prompt, compile_edit_prompt, get_cut_context
+    from backend.tools.generation import get_cut_context
     from backend.database.assets import get_asset
-    
-    # Get cut context
+
     ctx = get_cut_context(project_id, cut_id)
     if "error" in ctx:
         raise HTTPException(status_code=404, detail=ctx["error"])
-    
+
     cut = ctx["cut"]
-    cut_number = cut.get("cut_number", 1)
-    
-    # PRIORITY 1: Return saved prompt if it exists
+
+    # PRIORITY 1: return saved prompt + slots if both are present.
     if cut.get("compiled_prompt") and cut.get("image_slots"):
         try:
             slots = json.loads(cut.get("image_slots", "{}"))
             reference_images = []
-            
+
             for slot_key, asset_id in slots.items():
                 if asset_id:
                     asset = get_asset(asset_id)
                     if asset:
-                        # Check for master image
+                        # Check for master image.
                         from backend import db
                         conn = db.get_connection()
                         cursor = conn.cursor()
-                        cursor.execute("SELECT master_image_url FROM element_masters WHERE asset_id = ? AND is_active = 1", (asset_id,))
+                        cursor.execute(
+                            "SELECT master_image_url FROM element_masters WHERE asset_id = ? AND is_active = 1",
+                            (asset_id,),
+                        )
                         row = cursor.fetchone()
                         conn.close()
-                        
+
                         img_url = row["master_image_url"] if row else asset.get("image_url")
                         slot_num = int(slot_key.replace("@Image", ""))
-                        
+
                         reference_images.append({
                             "slot": slot_num,
                             "ref": slot_key,
@@ -224,32 +231,34 @@ def get_cut_prompt(project_id: str, cut_id: str):
                             "name": asset.get("name"),
                             "asset_id": asset_id,
                             "image_url": img_url,
-                            "status": "ready" if img_url else "pending"
+                            "status": "ready" if img_url else "pending",
                         })
-            
-            # Sort by slot number
+
             reference_images.sort(key=lambda x: x["slot"])
-            
             return {
                 "prompt": cut["compiled_prompt"],
                 "reference_images": reference_images,
-                "source": "saved"
+                "source": "saved",
             }
         except Exception as e:
             print(f"Error parsing saved prompt/slots: {e}")
-            # Fall through to dynamic generation
-    
-    # PRIORITY 2: Generate dynamically
-    if cut_number == 1:
-        result = compile_shot_prompt(project_id, cut_id)
-    else:
-        result = compile_edit_prompt(project_id, cut_id)
-    
-    if "error" in result:
-        raise HTTPException(status_code=400, detail=result["error"])
-    
-    result["source"] = "generated"
-    return result
+            # Fall through to dynamic compile.
+
+    # PRIORITY 2: build a plan via cut_planner. Same compile path the
+    # PlanCard uses — no second source of truth.
+    from backend.orchestrator.cut_planner import plan_compose_cut
+
+    plan = await plan_compose_cut(cut_id)
+    # The render item carries the compiled prompt + slots preview.
+    render_item = next((i for i in plan.items if i.kind == "render"), None)
+    if not render_item:
+        raise HTTPException(status_code=400, detail="Plan produced no render item.")
+    payload = render_item.payload or {}
+    return {
+        "prompt": payload.get("compiled_prompt", ""),
+        "reference_images": payload.get("slots_preview", []),
+        "source": "generated",
+    }
 
 # NOTE: Cut history is now handled by routes/cuts.py
 

@@ -12,7 +12,6 @@ from backend.tools.blueprint import (
 
 from backend.tools.generation import (
     get_cut_context, get_previous_cut, get_cut_assets,
-    compile_shot_prompt, compile_edit_prompt,
     generate_image_mock, save_cut_image, mark_cut_status, get_asset_image,
     compare_with_master, flag_issue, request_edit, approve_cut, find_cut_by_number,
 )
@@ -26,7 +25,6 @@ from backend.tools.element_generation import (
     compile_element_master_prompt, generate_element_master,
     get_asset_elements_summary, get_generation_history as get_element_history,
 )
-from backend.tools.handoff import request_handoff
 # Trigger registration side-effects for tool modules used only by specific agents.
 from backend.tools import navigation as _navigation  # noqa: F401
 from backend.tools import phase_confirmation as _phase_confirmation  # noqa: F401
@@ -68,8 +66,6 @@ __all__ = [
     'get_cut_context',
     'get_previous_cut',
     'get_cut_assets',
-    'compile_shot_prompt',
-    'compile_edit_prompt',
     'generate_image_mock',
     'save_cut_image',
     'mark_cut_status',
@@ -97,6 +93,4 @@ __all__ = [
     'complete_pre_production',
     'get_generation_history',
     'get_generation_history',
-    # Handoff tool
-    'request_handoff',
 ]

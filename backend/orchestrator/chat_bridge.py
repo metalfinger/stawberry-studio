@@ -1,27 +1,71 @@
 """
-Chat bridge — minimal opt-in surface for routes/chat.py.
+Chat bridge — the chat WebSocket's single entry into the agent runtime.
 
-When `USE_PYDANTIC_AI=1` is in env, the WebSocket handler can route a turn
-through this module instead of the legacy ADK runner. Phase 1 of the agent
-migration: only Berry is wired (the BRIEF phase). Other agents keep the
-ADK path until ported.
+Every chat turn flows: routes/chat.py → chat_bridge.stream_turn → orchestrator/
+runner.stream_agent (pydantic-AI). The legacy google.adk path is gone; this
+module is now the canonical surface.
 """
 from __future__ import annotations
 
 import json
-import os
 from collections.abc import AsyncIterator
 
 from backend import db
 from backend.orchestrator.runner import stream_agent
 
+# Every agent the chat WebSocket can route to. Iris is internal (gap-filler)
+# and not user-chat-addressable; everything else has both a YAML spec and an
+# MD prompt under backend/agents/{specs,prompts}/.
 PYDANTIC_AI_AGENTS = {"berry", "sage", "nova", "atlas", "pixel", "spark", "scout"}
 
 
 def is_enabled(agent_id: str) -> bool:
-    if os.getenv("USE_PYDANTIC_AI", "").lower() not in ("1", "true", "yes"):
-        return False
+    """True iff the agent has a pydantic-AI spec we can stream. Always
+    on — there's no legacy fallback anymore."""
     return agent_id in PYDANTIC_AI_AGENTS
+
+
+def _check_master_readiness(project_id: str) -> dict:
+    """Inspect DB for assets without master images. Returns gap summary
+    so Pixel's prompt can hard-stop when masters aren't ready.
+
+    Moved from the deleted backend/agents/prompter.py — chat_bridge is the
+    only caller. Self-contained: only touches get_connection.
+    """
+    if not project_id or project_id == "unknown":
+        return {"ok": True, "missing": [], "by_type": {}}
+    try:
+        from backend.database.core import get_connection
+
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT a.id, a.type, a.name,
+                   COALESCE(em.master_image_url, '') AS master_url,
+                   COALESCE(a.image_url, '') AS direct_url
+            FROM assets a
+            LEFT JOIN element_masters em
+              ON em.asset_id = a.id AND em.is_active = 1 AND em.master_image_url IS NOT NULL
+            WHERE a.project_id = ? AND a.type IN ('character','location','prop')
+              AND (a.master_id IS NULL OR a.master_id = '')
+            """,
+            (project_id,),
+        )
+        rows = [dict(r) for r in cursor.fetchall()]
+        conn.close()
+        missing = [r for r in rows if not r["master_url"] and not r["direct_url"]]
+        by_type: dict = {}
+        for m in missing:
+            by_type.setdefault(m["type"], []).append(m["name"])
+        return {
+            "ok": len(missing) == 0,
+            "missing": missing,
+            "by_type": by_type,
+            "total_assets": len(rows),
+        }
+    except Exception as e:  # noqa: BLE001
+        return {"ok": True, "missing": [], "by_type": {}, "error": str(e)}
 
 
 def _build_existing_structure(project_id: str) -> str:
@@ -118,8 +162,6 @@ def build_prompt_vars(agent_id: str, project_id: str) -> dict[str, str]:
         return {"project_id": project_id, "existing_assets": block}
 
     if agent_id == "pixel":
-        from backend.agents.prompter import _check_master_readiness  # reuse logic
-
         readiness = _check_master_readiness(project_id)
         if readiness["ok"]:
             block = ""
@@ -134,8 +176,10 @@ def build_prompt_vars(agent_id: str, project_id: str) -> dict[str, str]:
                 f"{type_lines}\n\n"
                 "## YOUR ONLY JOB IN THIS TURN\n\n"
                 "1. Refuse to compose any cut prompt.\n"
-                "2. Do **NOT** call `get_smart_generation_context`, `compile_shot_prompt`, "
-                "`compile_edit_prompt`, or `update_cut`. Calling these now is a bug.\n"
+                "2. Do **NOT** call `get_smart_generation_context`, "
+                "`propose_cut_plan`, `execute_cut_plan`, `compose_cut`, "
+                "or `update_cut`. Composing any cut prompt before masters "
+                "exist is a bug.\n"
                 "3. **Offer the one-click unblock.** Reply with EXACTLY this structure:\n\n"
                 "   > Hold on — these assets still need master images:\n"
                 "   > - [list every missing asset, grouped by type]\n"
