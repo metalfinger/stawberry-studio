@@ -527,10 +527,30 @@ def cleanup_misclassified_assets(project_id: str) -> dict:
 
 @tool("compose_cut", description="One-button compose: bundle full tree → resolve references → render → register. NO automatic critic. For richer flow with user approval, use propose_cut_plan + execute_cut_plan instead.", tags=["cut", "write", "phase"])
 async def compose_cut_tool(cut_id: str, feedback: str = "") -> dict:
-    """Run the auto-approve compose pipeline for one cut."""
-    from backend.orchestrator.cut_composer import compose_cut
-    result = await compose_cut(cut_id, feedback=feedback or None)
-    return result.to_dict()
+    """Run the auto-approve compose pipeline for one cut.
+
+    Inlined from the deleted cut_composer.py wrapper: plan → mark every
+    item approved → execute. This is the legacy fast path for callers
+    that don't want the user to see the PlanCard before render. Modern
+    flows use propose_cut_plan + execute_cut_plan.
+    """
+    from backend.orchestrator.cut_planner import plan_compose_cut
+    from backend.orchestrator.cut_executor import execute_plan
+    from backend.orchestrator.plans import save_plan, update_plan_status
+
+    plan = await plan_compose_cut(cut_id, feedback=feedback or None)
+    for item in plan.items:
+        item.approved = True
+    await save_plan(plan)
+    await update_plan_status(plan.id, "approved")
+    result = await execute_plan(plan.id)
+    return {
+        "cut_id": cut_id,
+        "image_url": result.image_url,
+        "score": None,
+        "attempts": 1,
+        "error": result.error,
+    }
 
 
 @tool("propose_cut_plan", description="Propose a Plan for composing a cut WITHOUT executing. Emits a typed PlanCard to the user's chat — the agent should NOT also print the plan as text. Returns plan summary (id, totals, items) for the agent's bookkeeping. Pass feedback + parent_plan_id to fork from a prior plan with cumulative refinement notes.", tags=["cut", "plan"])

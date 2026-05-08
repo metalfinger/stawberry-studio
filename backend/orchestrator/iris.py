@@ -9,7 +9,7 @@ appropriate sheet, returns a structured result, and the composer continues.
 Public API:
     compose_missing_reference(cut_id, gap) → dict
 
-`gap` shape (from cut_composer._detect_gaps):
+`gap` shape (detected during cut planning):
     {"asset_id": str, "type": "character|location|prop", "name": str | None}
 
 Return shape:

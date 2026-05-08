@@ -1,3 +1,5 @@
+import asyncio
+from datetime import datetime
 from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
@@ -5,25 +7,114 @@ import backend.database.core as db
 import backend.tools.generation as generation
 import json
 
-from backend.orchestrator.cut_composer import compose_cut, stream_compose_cut
+from backend.orchestrator.cut_planner import plan_compose_cut
+from backend.orchestrator.cut_executor import execute_plan
+from backend.orchestrator.plans import save_plan, update_plan_status
 
 router = APIRouter(prefix="/api/projects/{project_id}/cuts", tags=["cuts"])
 
 
+# --- Auto-approve compose path -----------------------------------------------
+#
+# Inlined from the deleted cut_composer.py wrapper. Plan → mark every item
+# approved → execute. New code that wants user approval should call
+# plan_compose_cut + present the Plan via PlanCard, then execute_plan; this
+# endpoint stays as the explicit "fire and forget" route for callers who
+# really want a single-shot render with no user gate.
+
+_STEP_NAME_MAP = {
+    "reference_check": "pick",
+    "reference_reuse": "pick",
+    "reference_generate": "preprod",
+    "render": "render",
+    "register": "register",
+}
+
+
+def _item_to_step(item) -> dict:
+    return {
+        "step": _STEP_NAME_MAP.get(item.kind, item.kind),
+        "status": "ok" if item.status == "done" else item.status,
+        "detail": {
+            "description": item.description,
+            "cost_usd": item.cost_usd,
+            **(item.result or {}),
+        },
+        "ts": datetime.now().isoformat(),
+    }
+
+
+async def _compose_auto(cut_id: str, on_step=None) -> dict:
+    """Plan → auto-approve → execute. Returns a dict shaped like the old
+    ComposeResult.to_dict() so frontend / streaming clients keep working."""
+    steps: list[dict] = []
+
+    def _emit(step: dict) -> None:
+        steps.append(step)
+        if on_step:
+            try:
+                on_step(step)
+            except Exception:
+                pass
+
+    _emit({"step": "bundle", "status": "start", "detail": {"cut_id": cut_id}, "ts": datetime.now().isoformat()})
+    try:
+        plan = await plan_compose_cut(cut_id)
+    except Exception as e:
+        _emit({"step": "bundle", "status": "error", "detail": {"error": str(e)}, "ts": datetime.now().isoformat()})
+        return {"cut_id": cut_id, "image_url": None, "score": None, "attempts": 1, "steps": steps, "error": str(e)}
+
+    _emit({"step": "bundle", "status": "ok",
+           "detail": {"items": len(plan.items), "total_cost_usd": plan.total_cost_usd},
+           "ts": datetime.now().isoformat()})
+
+    for item in plan.items:
+        item.approved = True
+    await save_plan(plan)
+    await update_plan_status(plan.id, "approved")
+
+    def _exec_step(item):
+        _emit(_item_to_step(item))
+
+    result = await execute_plan(plan.id, on_step=_exec_step)
+    return {
+        "cut_id": cut_id,
+        "image_url": result.image_url,
+        "score": None,
+        "attempts": 1,
+        "steps": steps,
+        "error": result.error,
+    }
+
+
 @router.post("/{cut_id}/compose")
 async def compose_cut_endpoint(project_id: str, cut_id: str):
-    """Run the full Cut Composer pipeline (bundle → pick → preprod → prompt → render → critic → register)."""
-    result = await compose_cut(cut_id)
-    return result.to_dict()
+    """Auto-approve compose: plan → approve all → execute. Use plan_compose_cut + execute_plan directly when user approval is desired."""
+    return await _compose_auto(cut_id)
 
 
 @router.websocket("/{cut_id}/compose/stream")
 async def compose_cut_stream(websocket: WebSocket, project_id: str, cut_id: str):
     """Stream `compose_step` events to the client as the pipeline runs."""
     await websocket.accept()
+    queue: asyncio.Queue = asyncio.Queue()
+
+    def _push(step: dict) -> None:
+        queue.put_nowait(step)
+
+    async def _runner() -> None:
+        try:
+            await _compose_auto(cut_id, on_step=_push)
+        finally:
+            queue.put_nowait(None)
+
+    task = asyncio.create_task(_runner())
     try:
-        async for step in stream_compose_cut(cut_id):
-            await websocket.send_json({"type": "compose_step", **step.to_dict()})
+        while True:
+            step = await queue.get()
+            if step is None:
+                break
+            await websocket.send_json({"type": "compose_step", **step})
         await websocket.send_json({"type": "compose_done", "cut_id": cut_id})
     except WebSocketDisconnect:
         return
@@ -33,6 +124,8 @@ async def compose_cut_stream(websocket: WebSocket, project_id: str, cut_id: str)
         finally:
             return
     finally:
+        if not task.done():
+            await task
         try:
             await websocket.close()
         except Exception:
