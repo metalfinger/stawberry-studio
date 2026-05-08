@@ -226,6 +226,42 @@ class RestoreRequest(BaseModel):
     pass
 
 
+@router.get("/{ref_id}/versions")
+def reference_versions(project_id: str, ref_id: str):
+    """Return the full supersession chain for a reference, oldest-first.
+
+    Used by the Library detail "Versions" panel: pick any version of the
+    same logical reference (same asset_id + label, OR same source_cut_id +
+    label-pattern for cut renders) and Compare against the active one.
+    """
+    conn = db_core.get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM reference_pool WHERE id = ?", (ref_id,))
+        seed = cur.fetchone()
+        if not seed:
+            raise HTTPException(404, "reference not found")
+        seed = dict(seed)
+        # Cut renders: chain by source_cut_id + label LIKE 'render_v%'.
+        if seed.get("source_type") == "cut" and seed.get("source_cut_id"):
+            cur.execute(
+                "SELECT * FROM reference_pool WHERE source_cut_id = ? "
+                "AND label LIKE 'render_v%' ORDER BY created_at ASC",
+                (seed["source_cut_id"],),
+            )
+        else:
+            # Asset references: chain by asset_id + same label.
+            cur.execute(
+                "SELECT * FROM reference_pool WHERE asset_id = ? AND label = ? "
+                "ORDER BY created_at ASC",
+                (seed.get("asset_id"), seed.get("label") or ""),
+            )
+        rows = [dict(r) for r in cur.fetchall()]
+        return {"versions": [_row_to_card(r) for r in rows]}
+    finally:
+        conn.close()
+
+
 @router.post("/{ref_id}/restore")
 def restore_reference(project_id: str, ref_id: str):
     """Re-activate a superseded reference. Drops its superseded_by_id pointer

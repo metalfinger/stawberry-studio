@@ -169,3 +169,39 @@
 }
 .library-detail__refine-btn:disabled { background: #4d2530; cursor: not-allowed; }
 .library-detail__refine-btn:hover:not(:disabled) { background: #fb7185; }
+
+/* Versions / compare panel (Phase K #5). */
+.library-detail__versions {
+  display: flex; gap: 6px; flex-wrap: wrap;
+}
+.library-detail__version {
+  background: #18181a; border: 2px solid transparent; border-radius: 4px;
+  padding: 3px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  color: #aaa; font-size: 9px;
+}
+.library-detail__version img { width: 48px; height: 48px; object-fit: cover; border-radius: 3px; display: block; }
+.library-detail__version--current { border-color: #f43f5e; cursor: default; }
+.library-detail__version--inactive img { opacity: 0.5; filter: grayscale(0.4); }
+.library-detail__version:hover:not(.library-detail__version--current) { border-color: #444; }
+
+.library-detail__compare {
+  border-top: 1px solid #1c1c1e; padding-top: 8px; margin-top: 4px;
+}
+.library-detail__close-compare {
+  float: right; background: none; border: 0; color: #888; cursor: pointer;
+  font-size: 16px; line-height: 1; padding: 0 4px;
+}
+.library-detail__close-compare:hover { color: #fff; }
+.library-detail__compare-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px;
+}
+.library-detail__compare-grid figure { margin: 0; }
+.library-detail__compare-grid img {
+  width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 4px;
+  background: #000;
+}
+.library-detail__compare-grid figcaption {
+  font-size: 9px; color: #888; text-align: center; margin-top: 2px;
+  text-transform: uppercase; letter-spacing: 0.4px;
+}

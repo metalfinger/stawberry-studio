@@ -13,6 +13,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import {
   getLibrary, getLibraryStats, favoriteReference, setStyleAnchor, restoreReference,
+  getReferenceVersions,
   type LibraryItem, type LibraryStats,
 } from '../../api/client'
 import { setRefDrag } from '../dnd/refDragData'
@@ -234,10 +235,25 @@ function LibraryDetail({ projectId, item, onFavorite, onSetAnchor, onRestore }: 
 }) {
   const [feedback, setFeedback] = useState('')
   const [refining, setRefining] = useState(false)
+  const [versions, setVersions] = useState<LibraryItem[]>([])
+  const [comparing, setComparing] = useState<LibraryItem | null>(null)
   const tags = (item.tags as any) || {}
   const slots: Array<{ slot: number; name: string; image_url: string }> = Array.isArray(tags.slots_used) ? tags.slots_used : []
   const feedbackChain: string[] = Array.isArray(tags.feedback_chain) ? tags.feedback_chain : []
   const isCutRender = item.source_type === 'cut'
+
+  // Load the supersession chain so the user can see (and compare) every
+  // earlier version of this same reference. This is the "history" view
+  // for any single ref — the Library grid is project-wide history.
+  useEffect(() => {
+    let cancelled = false
+    setVersions([])
+    setComparing(null)
+    getReferenceVersions(projectId, item.ref_id)
+      .then(r => { if (!cancelled) setVersions(r.versions || []) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [projectId, item.ref_id])
 
   const submitRefine = () => {
     const text = feedback.trim()
@@ -308,6 +324,49 @@ function LibraryDetail({ projectId, item, onFavorite, onSetAnchor, onRestore }: 
                 <span>{s.name}</span>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {versions.length > 1 && (
+        <div className="library-detail__prompt-block">
+          <div className="library-detail__section-title">Versions ({versions.length})</div>
+          <div className="library-detail__versions">
+            {versions.map(v => (
+              <button
+                key={v.ref_id}
+                type="button"
+                className={
+                  'library-detail__version' +
+                  (v.ref_id === item.ref_id ? ' library-detail__version--current' : '') +
+                  (!v.is_active ? ' library-detail__version--inactive' : '')
+                }
+                onClick={() => v.ref_id !== item.ref_id && setComparing(v)}
+                title={`${v.label} · ${new Date(v.created_at).toLocaleString()}`}
+              >
+                <img src={v.image_url} alt={v.label} />
+                <span>{v.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {comparing && (
+        <div className="library-detail__compare">
+          <div className="library-detail__section-title">
+            Compare {comparing.label}
+            <button className="library-detail__close-compare" onClick={() => setComparing(null)}>×</button>
+          </div>
+          <div className="library-detail__compare-grid">
+            <figure>
+              <img src={comparing.image_url} alt={comparing.label} />
+              <figcaption>previous · {comparing.label}</figcaption>
+            </figure>
+            <figure>
+              <img src={item.image_url} alt={item.label} />
+              <figcaption>current · {item.label}</figcaption>
+            </figure>
           </div>
         </div>
       )}

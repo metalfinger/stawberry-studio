@@ -561,3 +561,9 @@ export async function getAsset(projectId: string, assetId: string): Promise<Asse
   if (!res.ok) throw new Error('Failed to load asset');
   return res.json();
 }
+
+export async function getReferenceVersions(projectId: string, refId: string): Promise<{ versions: LibraryItem[] }> {
+  const res = await fetch(`${API_BASE}/api/projects/${projectId}/library/${refId}/versions`);
+  if (!res.ok) throw new Error('Failed to load versions');
+  return res.json();
+}
