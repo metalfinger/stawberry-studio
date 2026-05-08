@@ -218,12 +218,13 @@ async def stream_agent(
         # After the stream ends, walk the full message list and log tool calls
         # + the final assistant text. This is what makes the event log useful
         # for debugging runs.
+        post_msgs: list[Any] = []
         try:
             if last_resp is not None:
                 from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
 
-                msgs = last_resp.all_messages() if hasattr(last_resp, "all_messages") else []
-                for msg in msgs:
+                post_msgs = last_resp.all_messages() if hasattr(last_resp, "all_messages") else []
+                for msg in post_msgs:
                     if isinstance(msg, ModelResponse):
                         for part in msg.parts:
                             if isinstance(part, ToolCallPart):
@@ -234,6 +235,18 @@ async def stream_agent(
                                 )
         except Exception as e:  # noqa: BLE001
             log.warning("stream_post_log_failed", error=str(e))
+
+        # Base-level chronological order guarantee: even if the agent
+        # forgot to pass scene_number / shot_number / cut_number on
+        # add_*, reorder rows to match their position in the model
+        # response (= the author's intended order). Idempotent and
+        # safe-on-failure — never blocks a chat turn.
+        try:
+            if project_id and post_msgs:
+                from backend.orchestrator.turn_ordering import reorder_from_turn
+                reorder_from_turn(project_id, post_msgs)
+        except Exception as e:  # noqa: BLE001
+            log.warning("turn_ordering_failed", error=str(e))
 
         if final_text:
             await log_event(ctx, "agent_message", {"content": final_text[:2000]})
