@@ -2,6 +2,7 @@ import React from 'react';
 import { useParams } from 'react-router-dom';
 import { Canvas } from './Canvas';
 import { PhaseRail } from '../components/PhaseRail';
+import { RepairMenu } from '../components/RepairMenu';
 import './ProjectLayout.css';
 
 /**
@@ -14,7 +15,12 @@ export const ProjectLayout: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   return (
     <div className="project-layout unified-canvas">
-      {projectId && <PhaseRail projectId={projectId} />}
+      {projectId && (
+        <div className="project-layout__topbar">
+          <PhaseRail projectId={projectId} />
+          <RepairMenu projectId={projectId} />
+        </div>
+      )}
       <Canvas />
     </div>
   );

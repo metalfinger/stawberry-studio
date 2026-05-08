@@ -12,6 +12,15 @@
   overflow: hidden;
 }
 
+.project-layout__topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 12px 0 0;
+}
+.project-layout__topbar > :first-child { flex: 1; }
+
 .project-layout.unified-canvas .canvas-page {
   height: 100%;
 }

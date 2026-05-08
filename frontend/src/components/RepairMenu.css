@@ -1,0 +1,81 @@
+.repair-menu {
+  position: relative;
+  display: inline-block;
+}
+
+.repair-menu__trigger {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms;
+}
+.repair-menu__trigger:hover {
+  background: rgba(245, 158, 11, 0.2);
+}
+
+.repair-menu__panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 320px;
+  background: rgba(15, 15, 16, 0.98);
+  border: 1px solid #2a2a2c;
+  border-radius: 8px;
+  padding: 8px;
+  z-index: 7100;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+}
+
+.repair-menu__title {
+  padding: 6px 10px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #888;
+  font-weight: 700;
+}
+.repair-menu__hint {
+  padding: 4px 10px 8px;
+  font-size: 11px;
+  color: #888;
+  line-height: 1.4;
+  border-bottom: 1px solid #1a1a1c;
+  margin-bottom: 4px;
+}
+
+.repair-menu__item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  padding: 8px 10px;
+  border-radius: 4px;
+  color: #ddd;
+  cursor: pointer;
+  font-family: inherit;
+}
+.repair-menu__item:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06);
+}
+.repair-menu__item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.repair-menu__item-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #f1f5f9;
+  margin-bottom: 2px;
+}
+.repair-menu__item-hint {
+  font-size: 10px;
+  color: #888;
+  line-height: 1.3;
+}
