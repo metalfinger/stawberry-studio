@@ -1,181 +1,171 @@
 """
-Smart Reference Picker.
+Label-aware reference picker.
 
-Given a cut to generate, score every candidate in the reference_pool against
-the cut's needs and return a ranked top-K with rationale. The Pixel agent
-calls `pick_for_cut` to populate slot assignments instead of using rule
-heuristics.
+Given a cut and its linked assets, decide which reference labels each asset
+needs and return the actual reference rows (lazy-filling any that don't
+exist yet). Replaces the tag-scoring picker for new code paths.
 
-Scoring (v1, deterministic — vision-LLM scoring lands in v2 once embeddings exist):
-  + 1.5  exact character match (linked_asset id ∈ candidate.character_ids)
-  + 1.0  location match
-  + 0.6  lighting signature match
-  + 0.4  same aspect ratio
-  + 0.3  is_anchor
-  + 0.4  is_style_anchor (for slot 1)
-  + 0.2  recency (newest wins ties)
-  - 0.5  is_favorite from a different project (cross-project ref — slight penalty)
+Public API:
+    rank_labels_for_cut(cut, asset) -> list[str]
+        Reads cut text fields (action, expression, body_language, gaze,
+        prop_interaction, character_state) and returns the top-N labels
+        from the controlled vocabulary that best match this cut.
 
-Returns list of {reference, score, reason}.
+    resolve_references(asset_ids, cut, *, max_per_asset=2, allow_lazy=True)
+        -> list[Reference]
+        For each asset, ensure its identity card exists, then look up
+        the top labels (cache-first). Lazy-fills missing ones in
+        parallel if allow_lazy=True.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+import asyncio
+import re
 from typing import Any
 
 import structlog
 
-from backend.database.core import get_async_connection
-from backend.orchestrator.references import search
+from backend.orchestrator import references
 
 log = structlog.get_logger(__name__)
 
 
-@dataclass
-class PickRequest:
-    project_id: str
-    cut_id: str
-    character_ids: list[str]
-    location_id: str | None
-    lighting_signature: str
-    aspect_ratio: str
-    needs_anchor: bool = False
-    use_style_anchor: bool = True
-    include_favorites: bool = True
+# ============================================================================
+# Label scoring — keyword → label map
+# ============================================================================
+#
+# Each label has a list of keywords. A cut's text fields are scanned; the
+# label with the most keyword hits wins for that cut. Deterministic, no
+# LLM call.
 
-
-def _score_candidate(
-    cand: dict[str, Any],
-    req: PickRequest,
-    is_slot_one: bool = False,
-) -> tuple[float, list[str]]:
-    score = 0.0
-    reasons: list[str] = []
-
-    # Character identity
-    cand_chars = cand.get("character_ids") or []
-    if any(cid in cand_chars for cid in req.character_ids):
-        score += 1.5
-        reasons.append("character match")
-
+_LABEL_KEYWORDS: dict[str, list[str]] = {
+    # Angles
+    "side_right": ["profile", "side view", "from the side", "side-right"],
+    "side_left": ["side-left"],
+    "three_quarter_right": ["three-quarter", "3/4 angle", "from the right"],
+    "three_quarter_left": ["from the left"],
+    "back": ["from behind", "back to camera", "walking away", "back view"],
+    # Expressions
+    "expression_focused": ["focused", "concentrating", "narrowed eyes", "intense gaze"],
+    "expression_angry": ["angry", "rage", "furious", "snarling", "scowl"],
+    "expression_sad": ["sad", "tears", "crying", "sorrow", "weeping"],
+    "expression_happy": ["happy", "smiling", "laughing", "joy", "grin"],
+    "expression_terrified": ["terrified", "afraid", "horror", "panic", "fear"],
+    "expression_smug": ["smug", "smirk", "smirking", "self-satisfied"],
+    # Actions / states
+    "running": ["running", "sprinting", "racing", "chase", "fleeing", "pursuing"],
+    "fighting_stance": ["fighting", "ready stance", "combat", "guard up"],
+    "wounded": ["wounded", "bleeding", "injured", "hurt", "limping"],
+    "kneeling": ["kneeling", "knelt", "on her knees", "on his knees"],
+    "gun_drawn": ["gun drawn", "weapon raised", "aiming", "pistol up"],
+    "hero_pose": ["heroic", "stands tall", "confident pose"],
+    # Prop states
+    "state_glowing": ["glowing", "lit up", "activated", "shining"],
+    "state_dormant": ["dormant", "powered down", "dark", "inactive"],
     # Location
-    if cand.get("location_id") and cand["location_id"] == req.location_id:
-        score += 1.0
-        reasons.append("location match")
-
-    # Lighting
-    if req.lighting_signature and cand.get("lighting_signature"):
-        # Cheap fuzzy: any token in common
-        a = set((req.lighting_signature or "").split(":"))
-        b = set((cand["lighting_signature"] or "").split(":"))
-        overlap = len(a & b - {""})
-        if overlap >= 2:
-            score += 0.6
-            reasons.append("lighting match")
-        elif overlap == 1:
-            score += 0.3
-            reasons.append("lighting partial")
-
-    # Aspect ratio
-    if cand.get("aspect_ratio") and cand["aspect_ratio"] == req.aspect_ratio:
-        score += 0.4
-        reasons.append("aspect match")
-
-    # Anchors
-    if cand.get("is_anchor"):
-        score += 0.3
-        reasons.append("scene anchor")
-    if cand.get("is_style_anchor") and is_slot_one and req.use_style_anchor:
-        score += 0.4
-        reasons.append("style anchor")
-
-    # Cross-project favorite penalty
-    if cand.get("is_favorite") and cand.get("project_id") != req.project_id:
-        score -= 0.5
-        reasons.append("cross-project favorite")
-
-    return score, reasons
+    "key_detail": ["close-up", "detail", "focus on", "zoomed in"],
+    "alt_lighting": ["dawn", "dusk", "night-time", "alternate lighting"],
+}
 
 
-async def pick_for_cut(
-    project_id: str,
-    cut_id: str,
+def _score_label(label: str, text_blob: str) -> int:
+    """Count how many of `label`'s keywords appear in the text."""
+    score = 0
+    for kw in _LABEL_KEYWORDS.get(label, []):
+        if re.search(r"\b" + re.escape(kw) + r"\b", text_blob, re.IGNORECASE):
+            score += 1
+    return score
+
+
+def _cut_text_blob(cut: dict, asset: dict | None = None) -> str:
+    """Concatenate the cut's user-provided text fields into one blob."""
+    parts: list[str] = []
+    for k in (
+        "action", "story_description", "expression", "body_language",
+        "gesture", "gaze_direction", "character_state", "prop_interaction",
+        "costume_notes", "emotional_arc",
+    ):
+        v = (cut.get(k) or "").strip()
+        if v:
+            parts.append(v)
+    return " · ".join(parts)
+
+
+def rank_labels_for_cut(cut: dict, asset: dict, *, top_n: int = 2) -> list[str]:
+    """Return the top-N reference labels that best fit this cut for this asset.
+
+    Always includes "identity" as a baseline at index 0 unless something
+    scores higher.
+    """
+    asset_type = (asset.get("type") or "").lower()
+    blob = _cut_text_blob(cut)
+    if not blob:
+        return ["identity"]
+
+    # Restrict candidate labels to ones plausible for this asset type.
+    candidates = list(_LABEL_KEYWORDS.keys())
+    if asset_type == "character":
+        candidates = [l for l in candidates if not l.startswith("state_") and not l.startswith("prop_") and l not in ("alt_lighting", "key_detail")]
+    elif asset_type in ("location", "sublocation", "location_angle"):
+        # L4: sublocations and angles use the same location label vocabulary.
+        # An angle's identity already encodes the camera vantage; we still let
+        # picker pick alt_lighting / key_detail when the cut hints at them.
+        candidates = [l for l in candidates if l in ("key_detail", "alt_lighting", "establishing")]
+    elif asset_type == "prop":
+        candidates = [l for l in candidates if l.startswith("prop_") or l.startswith("state_")]
+
+    scored = [(l, _score_label(l, blob)) for l in candidates]
+    scored = [(l, s) for l, s in scored if s > 0]
+    scored.sort(key=lambda x: x[1], reverse=True)
+
+    labels = [l for l, _ in scored[:top_n]]
+    if "identity" not in labels:
+        labels.insert(0, "identity")
+    return labels[:top_n]
+
+
+# ============================================================================
+# Public: resolve references for a cut's linked assets
+# ============================================================================
+
+async def resolve_references(
+    assets: list[dict],
+    cut: dict,
     *,
-    max_slots: int = 5,
-) -> list[dict[str, Any]]:
-    """Build a slot-assignment list for a cut. Slot 1 = highest-scoring etc."""
-    # Pull cut context — character/location ids linked + scene lighting
-    async with get_async_connection() as conn:
-        async with conn.execute(
-            """
-            SELECT c.id, sh.id AS shot_id, s.id AS scene_id, s.project_id,
-                   s.lighting_color, s.time_of_day, s.mood
-            FROM cuts c
-            JOIN shots sh ON sh.id = c.shot_id
-            JOIN scenes s ON s.id = sh.scene_id
-            WHERE c.id = ?
-            """,
-            (cut_id,),
-        ) as cur:
-            ctx = await cur.fetchone()
-        if ctx is None:
-            return []
-        ctx = dict(ctx)
+    max_per_asset: int = 2,
+    allow_lazy: bool = True,
+) -> list[dict]:
+    """For each asset linked to a cut, pick the labels it needs and return
+    the actual reference rows (cache-first, lazy-fill on miss when allowed).
 
-        async with conn.execute(
-            """
-            SELECT a.id, a.type
-            FROM asset_links al JOIN assets a ON a.id = al.asset_id
-            WHERE al.node_type = 'cut' AND al.node_id = ?
-            """,
-            (cut_id,),
-        ) as cur:
-            links = [dict(r) for r in await cur.fetchall()]
-        char_ids = [r["id"] for r in links if r["type"] == "character"]
-        loc_ids = [r["id"] for r in links if r["type"] == "location"]
-
-        # Brief aspect ratio
-        async with conn.execute(
-            "SELECT aspect_ratio FROM briefs WHERE project_id = ?", (project_id,)
-        ) as cur:
-            brief = await cur.fetchone()
-        aspect_ratio = (brief and brief["aspect_ratio"]) or "16:9"
-
-    lighting_sig = ":".join(
-        x for x in [ctx.get("time_of_day") or "", ctx.get("lighting_color") or "", ctx.get("mood") or ""] if x
-    )
-
-    req = PickRequest(
-        project_id=project_id,
-        cut_id=cut_id,
-        character_ids=char_ids,
-        location_id=loc_ids[0] if loc_ids else None,
-        lighting_signature=lighting_sig,
-        aspect_ratio=aspect_ratio,
-    )
-
-    # Pull candidate pool
-    candidates = await search(project_id, include_favorites=req.include_favorites, limit=200)
-
-    scored = []
-    for cand in candidates:
-        s, reasons = _score_candidate(cand, req)
-        if s <= 0:
-            continue
-        scored.append({"reference": cand, "score": round(s, 2), "reasons": reasons})
-
-    scored.sort(key=lambda x: x["score"], reverse=True)
-    top = scored[:max_slots]
-
-    log.info(
-        "picker_ranked",
-        cut_id=cut_id,
-        candidates=len(candidates),
-        picked=len(top),
-        top_scores=[t["score"] for t in top],
-    )
-    # Assign slot numbers
-    for i, item in enumerate(top, start=1):
-        item["slot"] = i
-        item["ref"] = f"@Image{i}"
-    return top
+    Returned references are ordered: per-asset identity first, then ranked
+    extras. Caller can slice down to the model's slot limit.
+    """
+    out: list[dict] = []
+    for asset in assets:
+        labels = rank_labels_for_cut(cut, asset, top_n=max_per_asset)
+        for label in labels:
+            existing = await references.find_reference_by_label(asset["id"], label)
+            if existing:
+                out.append(existing)
+                continue
+            if not allow_lazy:
+                # Fall back to identity if we can't generate.
+                identity = await references.get_identity_card(asset["id"])
+                if identity and identity not in out:
+                    out.append(identity)
+                continue
+            try:
+                generated = await references.get_or_generate(
+                    asset["id"], label, story_context=cut.get("action") or None,
+                )
+                out.append(generated)
+            except Exception as e:
+                log.warning(
+                    "lazy_fill_failed",
+                    asset_id=asset["id"], label=label, error=str(e),
+                )
+                identity = await references.get_identity_card(asset["id"])
+                if identity and identity not in out:
+                    out.append(identity)
+    return out

@@ -21,7 +21,7 @@ from typing import Any, Callable
 import structlog
 
 from backend.database.core import get_async_connection
-from backend.orchestrator import references_v2
+from backend.orchestrator import references
 from backend.orchestrator.context_bundler import bundle_cut_context
 from backend.orchestrator.events import RunContext, log_event
 from backend.orchestrator.narrator import Narrator
@@ -320,7 +320,7 @@ async def execute_plan(
                     asset_id = item.payload.get("asset_id")
                     label = item.payload.get("label")
                     story = item.payload.get("story_context")
-                    ref = await references_v2.get_or_generate(
+                    ref = await references.get_or_generate(
                         asset_id, label, story_context=story,
                     )
                     item.status = "done"

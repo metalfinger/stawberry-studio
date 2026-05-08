@@ -17,7 +17,7 @@ from typing import Any
 
 import structlog
 
-from backend.orchestrator import cut_executor, cut_planner, picker_v2
+from backend.orchestrator import cut_executor, cut_planner, picker
 from backend.orchestrator.bus import bus
 from backend.orchestrator.narrator import Action, Narrator
 from backend.orchestrator.plans import (
@@ -456,7 +456,7 @@ async def _regenerate_asset_identity(project_id: str, payload: dict, narrator: N
         return False
 
     from backend.database.core import get_async_connection
-    from backend.orchestrator import references_v2
+    from backend.orchestrator import references
 
     if new_prompt:
         async with get_async_connection() as conn:
@@ -481,7 +481,7 @@ async def _regenerate_asset_identity(project_id: str, payload: dict, narrator: N
 
     await narrator.text(f"Regenerating identity for asset `{asset_id[:8]}`…")
     try:
-        new_ref = await references_v2.generate_identity_card(asset_id)
+        new_ref = await references.generate_identity_card(asset_id)
     except Exception as e:  # noqa: BLE001
         await narrator.failure(error=str(e), suggestion="Check the prompt and try again.", recovery_actions=[])
         return True
@@ -536,10 +536,10 @@ async def _refine_reference(project_id: str, payload: dict, narrator: Narrator) 
 
     await narrator.text(f"Refining reference `{ref_id[:8]}` with your feedback…")
     try:
-        from backend.orchestrator import references_v2
+        from backend.orchestrator import references
         # Use a label that captures the refinement intent.
         label = f"refine_{ref_id[-6:]}"
-        new_ref = await references_v2.generate_pose(
+        new_ref = await references.generate_pose(
             asset_id=asset_id,
             label=label,
             story_context=feedback,

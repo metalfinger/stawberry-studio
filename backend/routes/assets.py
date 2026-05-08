@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from backend import db
 from backend.database import assets as assets_db
 from backend.tools.generation import get_cut_context
-# Legacy sheet routes are removed; references_v2 endpoints below replace them.
+# Legacy sheet routes are removed; references endpoints below replace them.
 
 router = APIRouter(prefix="/api/projects/{project_id}", tags=["assets"])
 
@@ -44,8 +44,8 @@ async def get_asset(project_id: str, asset_id: str):
 @router.get("/assets/{asset_id}/references")
 async def list_asset_references(project_id: str, asset_id: str):
     """Every reference for this asset, identity first."""
-    from backend.orchestrator import references_v2
-    refs = await references_v2.list_references(asset_id)
+    from backend.orchestrator import references
+    refs = await references.list_references(asset_id)
     return {"references": refs}
 
 
@@ -104,9 +104,9 @@ async def update_asset_prompt_route(project_id: str, asset_id: str, body: Prompt
 @router.post("/assets/{asset_id}/references/identity")
 async def generate_asset_identity_route(project_id: str, asset_id: str):
     """Generate (or return existing) identity card for the asset."""
-    from backend.orchestrator import references_v2
+    from backend.orchestrator import references
     try:
-        ref = await references_v2.generate_identity_card(asset_id)
+        ref = await references.generate_identity_card(asset_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return ref
@@ -120,7 +120,7 @@ async def regenerate_asset_identity_route(project_id: str, asset_id: str):
     of the per-asset busy state — the frontend can show a card-level spinner
     and a toast, no confusing chat dialogue."""
     from backend.database.core import get_async_connection
-    from backend.orchestrator import references_v2
+    from backend.orchestrator import references
 
     async with get_async_connection() as conn:
         async with conn.execute(
@@ -137,7 +137,7 @@ async def regenerate_asset_identity_route(project_id: str, asset_id: str):
             await conn.commit()
 
     try:
-        new_ref = await references_v2.generate_identity_card(asset_id)
+        new_ref = await references.generate_identity_card(asset_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
@@ -155,9 +155,9 @@ async def regenerate_asset_identity_route(project_id: str, asset_id: str):
 async def precache_asset_turnaround(project_id: str, asset_id: str):
     """Generate the standard turnaround set for the asset (identity + a few
     canonical poses, in parallel)."""
-    from backend.orchestrator import references_v2
+    from backend.orchestrator import references
     try:
-        refs = await references_v2.precache_standard_turnaround(asset_id)
+        refs = await references.precache_standard_turnaround(asset_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return {"references": refs}

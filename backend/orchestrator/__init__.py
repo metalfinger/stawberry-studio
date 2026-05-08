@@ -71,7 +71,7 @@ __all__ = [
     "get_anchors",
     "get_style_anchor",
     "set_style_anchor",
-    "pick_for_cut",
+    "rank_labels_for_cut",
     "compile_prompt",
     "review_cut",
     "ContinuityScore",
@@ -83,7 +83,7 @@ from backend.orchestrator.continuity import (
     get_continuity_bible,
     render_bible_prefix,
 )
-from backend.orchestrator.picker import pick_for_cut
+from backend.orchestrator.picker import rank_labels_for_cut
 from backend.orchestrator.prompt_dsl import compile_prompt
 from backend.orchestrator.references import (
     get_anchors,
@@ -111,7 +111,7 @@ from backend.orchestrator.plans import (
 )
 from backend.orchestrator.cut_planner import plan_compose_cut
 from backend.orchestrator.cut_executor import execute_plan, ExecuteResult
-from backend.orchestrator.references_v2 import (
+from backend.orchestrator.references import (
     generate_identity_card,
     generate_pose,
     get_or_generate as get_or_generate_reference,

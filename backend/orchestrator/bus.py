@@ -5,7 +5,7 @@ Why this exists
 Phase B added a `Narrator` that emits typed messages over a WebSocket. It
 took a `send_fn` callback at construction time, which meant only code with
 direct access to the socket could emit. That excluded virtually every
-business-logic site (cut_executor, references_v2, picker, batch runners,
+business-logic site (cut_executor, references, picker, batch runners,
 agent tools), so 9 of the 14 message components shipped dormant.
 
 The bus fixes that: any backend code can `publish(project_id, event)` and

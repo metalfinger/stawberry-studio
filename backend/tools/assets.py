@@ -664,7 +664,7 @@ async def generate_all_missing_sheets(project_id: str) -> dict:
     condition on the parent's identity.
     """
     import asyncio
-    from backend.orchestrator import references_v2
+    from backend.orchestrator import references
 
     assets = asset_db.get_assets(project_id)
     if not assets:
@@ -692,11 +692,11 @@ async def generate_all_missing_sheets(project_id: str) -> dict:
     async def _process(a: dict):
         if not (a.get("suggested_prompt") or "").strip():
             return ("skipped", a, "no suggested_prompt — Atlas must save one first")
-        existing = await references_v2.get_identity_card(a["id"])
+        existing = await references.get_identity_card(a["id"])
         if existing:
             return ("skipped", a, f"already has identity {existing['id']}")
         try:
-            refs = await references_v2.precache_standard_turnaround(a["id"])
+            refs = await references.precache_standard_turnaround(a["id"])
             return ("generated", a, {
                 "identity_id": refs[0]["id"],
                 "image_url": refs[0]["image_url"],

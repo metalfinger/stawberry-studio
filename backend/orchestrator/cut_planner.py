@@ -16,7 +16,7 @@ from typing import Any
 
 import structlog
 
-from backend.orchestrator import references_v2, picker_v2
+from backend.orchestrator import references, picker
 from backend.orchestrator.context_bundler import bundle_cut_context
 from backend.orchestrator.narrator import Narrator
 from backend.orchestrator.plans import (
@@ -142,7 +142,7 @@ async def plan_compose_cut(
 
     Strategy:
     1. Bundle context.
-    2. For each linked asset: rank labels via picker_v2.
+    2. For each linked asset: rank labels via picker.
     3. For each top label per asset: check if reference exists.
        - If exists: reuse item (cached, free, instant).
        - If missing: generate item with cost + ETA + close-enough alternatives.
@@ -191,13 +191,13 @@ async def plan_compose_cut(
         is_character = (asset.get("type") or "").lower() == "character"
         # Characters: identity-only. Locations/props: top-2 still allowed.
         top_n = 1 if is_character else 2
-        labels = picker_v2.rank_labels_for_cut(ctx.cut, asset, top_n=top_n)
+        labels = picker.rank_labels_for_cut(ctx.cut, asset, top_n=top_n)
         # Force identity for characters — picker can rank others first when
         # the cut hints at them, but identity is non-negotiable in slot 1.
         if is_character and "identity" not in labels:
             labels = ["identity"] + labels[:0]
         for label in labels:
-            existing = await references_v2.find_reference_by_label(asset["id"], label)
+            existing = await references.find_reference_by_label(asset["id"], label)
             if existing:
                 plan.items.append(make_item(
                     ITEM_KIND_REFERENCE_REUSE,

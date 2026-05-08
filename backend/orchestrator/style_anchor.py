@@ -5,7 +5,7 @@ embodies it: palette, line, grain, finish, lighting. The URL is saved into
 `continuity_bible.style_anchor_url` (column already exists) and then
 attached as a reference image to EVERY downstream generation:
 
-  - asset identity cards / pose references (`references_v2._generate_one`)
+  - asset identity cards / pose references (`references._generate_one`)
   - cut renders (`tools/generation.py`, the cut composer's reference list)
 
 A single image moves visual cohesion farther than any text prompt can.
@@ -95,7 +95,7 @@ async def _persist_anchor_url(project_id: str, url: str) -> None:
     time. set_style_anchor() handles deactivating any prior is_style_anchor
     row so we don't accumulate stale anchors."""
     from backend.database.core import get_async_connection
-    from backend.orchestrator import references as refs_legacy
+    from backend.orchestrator import references as refs
 
     async with get_async_connection() as conn:
         async with conn.execute(
@@ -120,7 +120,7 @@ async def _persist_anchor_url(project_id: str, url: str) -> None:
     # Mirror to reference_pool so cut_planner/cut_executor see it too.
     if url:
         try:
-            await refs_legacy.set_style_anchor(project_id, url)
+            await refs.set_style_anchor(project_id, url)
         except Exception as e:  # noqa: BLE001
             log.warning("set_style_anchor_mirror_failed", project_id=project_id, error=str(e))
 

@@ -106,7 +106,7 @@ async def repair_regenerate_identities(project_id: str):
     is regenerated for characters / props / locations alike — locations
     re-render as flat-lit plates."""
     from backend.database.core import get_async_connection
-    from backend.orchestrator import references_v2
+    from backend.orchestrator import references
 
     async with get_async_connection() as conn:
         async with conn.execute(
@@ -130,7 +130,7 @@ async def repair_regenerate_identities(project_id: str):
     failed: list[dict] = []
     for a in assets:
         try:
-            ref = await references_v2.generate_identity_card(a["id"])
+            ref = await references.generate_identity_card(a["id"])
             minted.append({
                 "asset_id": a["id"], "type": a["type"],
                 "image_url": ref.get("image_url"),
