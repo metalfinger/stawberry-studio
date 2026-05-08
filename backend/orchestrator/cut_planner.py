@@ -44,6 +44,42 @@ _ETA_REGISTER = 1
 _ETA_REUSE = 0
 
 
+_CONTINUITY_TOKENS = (
+    "still ", "same ", "continues", "continuing", "continue",
+    "keeps ", "keep ", "remains", "remain ", "as before",
+    "from the previous", "moments later", "a moment later",
+    "the next instant", "without cut", "no cut", "match cut",
+    "carries on", "follows through", "right after",
+)
+
+
+def _should_chain_prev_cut(ctx) -> bool:
+    """Return True iff the new cut should condition on the previous cut.
+
+    Default (safe): only when same shot OR explicit continuity language is
+    present in the cut's action / continuity_notes. The previous beat's
+    composition can otherwise pull the model away from the new framing.
+    `cuts.chain_from_prev` overrides the heuristic when set explicitly.
+    """
+    cut = ctx.cut or {}
+    prev = ctx.previous_cut or {}
+    # Explicit override (truthy=force chain, falsy="0"/"no"=force off).
+    explicit = cut.get("chain_from_prev")
+    if explicit is not None and explicit != "":
+        return str(explicit).lower() not in ("0", "false", "no", "off")
+
+    # Same shot ⇒ continuity is the default expectation.
+    if cut.get("shot_id") and prev.get("shot_id") and cut["shot_id"] == prev["shot_id"]:
+        return True
+
+    blob = " ".join([
+        (cut.get("action") or ""),
+        (cut.get("continuity_notes") or ""),
+        (cut.get("transition") or ""),
+    ]).lower()
+    return any(tok in blob for tok in _CONTINUITY_TOKENS)
+
+
 def _close_enough_alternatives(
     asset_id: str, label: str, all_refs: list[dict[str, Any]]
 ) -> list[dict[str, Any]]:
@@ -187,19 +223,25 @@ async def plan_compose_cut(
                         "alternatives": alternatives[1:],
                     })
 
-    # Continuity: previous cut as a reference if it exists
+    # Continuity: previous cut as a reference — but ONLY when the cut
+    # actually continues the prior beat. Stacking prev_cut as a slot on
+    # an unrelated new beat (e.g. a close-up reaction following a wide)
+    # drags the model toward the previous composition and weakens
+    # identity locks. Heuristic: keep prev_cut when (a) same shot or
+    # (b) action language signals continuation.
     if ctx.previous_cut and ctx.previous_cut.get("generated_image_url"):
-        plan.items.append(make_item(
-            ITEM_KIND_REFERENCE_REUSE,
-            f"Reuse previous cut {ctx.previous_cut.get('cut_number')} (continuity)",
-            cost_usd=0.0,
-            cached=True,
-            payload={
-                "label": f"prev_cut_{ctx.previous_cut.get('cut_number', '')}",
-                "image_url": ctx.previous_cut["generated_image_url"],
-                "reason": "previous cut for continuity",
-            },
-        ))
+        if _should_chain_prev_cut(ctx):
+            plan.items.append(make_item(
+                ITEM_KIND_REFERENCE_REUSE,
+                f"Reuse previous cut {ctx.previous_cut.get('cut_number')} (continuity)",
+                cost_usd=0.0,
+                cached=True,
+                payload={
+                    "label": f"prev_cut_{ctx.previous_cut.get('cut_number', '')}",
+                    "image_url": ctx.previous_cut["generated_image_url"],
+                    "reason": "previous cut for continuity",
+                },
+            ))
 
     # Style anchor if present
     if ctx.style_anchor and ctx.style_anchor.get("image_url"):
