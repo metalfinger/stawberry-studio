@@ -597,6 +597,24 @@ async def _activity_summary(project_id: str, payload: dict, narrator: Narrator) 
 
 async def _confirm_briefing(project_id: str, narrator: Narrator) -> bool:
     from backend.tools.briefing import confirm_briefing_complete as _confirm
+    from backend.orchestrator.style_bible import compile_style_bible_for_project
+
     msg = _confirm(project_id)
     await narrator.text(msg)
+    # Phase L1: distill the brief's prose into a quotable style bible
+    # (palette_hex + style_tokens + lighting_rules) so every Atlas / Pixel
+    # prompt downstream can append the same shared vocabulary.
+    # Best-effort — never block the BRIEF→STORY handoff.
+    try:
+        bible = await compile_style_bible_for_project(project_id)
+        if bible.get("palette_hex") or bible.get("style_tokens"):
+            tokens = ", ".join(bible.get("style_tokens") or [])
+            palette = ", ".join(bible.get("palette_hex") or [])
+            await narrator.text(
+                "🎨 Style bible compiled.\n"
+                + (f"  • Palette: {palette}\n" if palette else "")
+                + (f"  • Tokens: {tokens}" if tokens else "")
+            )
+    except Exception:  # noqa: BLE001
+        pass
     return True

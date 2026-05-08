@@ -58,3 +58,17 @@
 .ctx-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .ctx-btn--primary { background: #f43f5e; color: #fff; border-color: #f43f5e; }
 .ctx-btn--primary:hover:not(:disabled) { background: #fb7185; }
+
+.context-panel__regen-status {
+  font-size: 11px; color: #fb7185;
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 0 0;
+}
+.context-panel__spinner {
+  width: 10px; height: 10px; border-radius: 50%;
+  border: 2px solid rgba(244, 63, 94, 0.25);
+  border-top-color: #f43f5e;
+  animation: ctx-spin 0.8s linear infinite;
+  display: inline-block;
+}
+@keyframes ctx-spin { to { transform: rotate(360deg); } }

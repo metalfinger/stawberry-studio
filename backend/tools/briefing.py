@@ -22,6 +22,18 @@ def get_brief(project_id: str) -> str:
     if not brief:
         return "No brief found for this project."
     
+    import json as _json
+    try:
+        palette_hex = _json.loads(brief.get('palette_hex') or '[]')
+    except Exception:
+        palette_hex = []
+    try:
+        style_tokens = _json.loads(brief.get('style_tokens') or '[]')
+    except Exception:
+        style_tokens = []
+    palette_str = ", ".join(palette_hex) if palette_hex else '(not compiled — locked at BRIEF→STORY handoff)'
+    tokens_str = "\n  - " + "\n  - ".join(style_tokens) if style_tokens else '(not compiled)'
+
     return f"""📋 CURRENT BRIEF (Full Context)
 
 ## Core Identity
@@ -36,6 +48,11 @@ def get_brief(project_id: str) -> str:
 - **Lighting Style:** {brief.get('lighting_style') or '(not set)'}
 - **Aspect Ratio:** {brief.get('aspect_ratio') or '16:9'}
 - **Render Quality:** {brief.get('render_quality') or '(not set)'}
+
+## Style Bible (compiled — quote these verbatim in every asset prompt)
+- **Palette (hex):** {palette_str}
+- **Style tokens:**{tokens_str}
+- **Lighting rules:** {brief.get('lighting_rules') or '(not compiled)'}
 
 ## World Rules
 - **World Logic:** {brief.get('world_logic') or '(not set)'}
@@ -210,5 +227,16 @@ def confirm_briefing_complete(project_id: str) -> str:
 
     success = db.complete_briefing(project_id)
     if success:
+        # Phase L1 — compile style bible (best-effort, never blocks).
+        try:
+            import asyncio
+            from backend.orchestrator.style_bible import compile_style_bible_for_project
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(compile_style_bible_for_project(project_id))
+            except RuntimeError:
+                asyncio.run(compile_style_bible_for_project(project_id))
+        except Exception:
+            pass
         return "🎉 Briefing complete! Project advancing to STORY phase. The Story Architect will take over."
     return "❌ Error advancing project."

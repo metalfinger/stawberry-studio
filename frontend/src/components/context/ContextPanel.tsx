@@ -1,14 +1,29 @@
 // ContextPanel — sidebar for the selected canvas node.
 //
 // For asset nodes it shows the asset's identity image + editable
-// suggested_prompt + a "Save & Regenerate" action that fires through
-// the agent intent dispatcher (so every change is recorded in the
-// run log + console_events). For other node types it stays read-only.
+// suggested_prompt + Save / Regenerate actions. The actions go through
+// REST (not the chat WebSocket) so the busy state stays scoped to the
+// asset card on the canvas instead of pushing a confusing status message
+// into the console.
+//
+// Both this panel and the canvas AssetMasterNode subscribe to the
+// per-asset busy bus (lib/assetBusy.ts), so clicking Regenerate in either
+// place shows the spinner in both — and references refresh automatically
+// when the new identity lands.
 import { useEffect, useState } from 'react'
-import { getLibrary, getAsset, type LibraryItem, type AssetDetail } from '../../api/client'
+import {
+  getLibrary,
+  getAsset,
+  updateAssetPrompt,
+  regenerateAssetIdentity,
+  generateAssetIdentity,
+  type LibraryItem,
+  type AssetDetail,
+} from '../../api/client'
 import { useHoverPreview } from '../dnd/HoverPreview'
 import { setRefDrag } from '../dnd/refDragData'
 import { toast } from '../toast/Toast'
+import { markBusy, markIdle, isBusy, subscribeBusy, emitAssetUpdated, subscribeAssetUpdated } from '../../services/assetBusy'
 import './ContextPanel.css'
 
 interface Props {
@@ -23,6 +38,12 @@ export function ContextPanel({ projectId, selectedNodeId, selectedNodeType }: Pr
   const [loading, setLoading] = useState(false)
   const isAsset = selectedNodeType === 'assetMaster' || selectedNodeType === 'assetGroup'
 
+  const reloadRefs = (assetId: string) => {
+    getLibrary(projectId, { asset_id: assetId, only_active: true })
+      .then(r => setRefs(r.items))
+      .catch(() => setRefs([]))
+  }
+
   useEffect(() => {
     if (!selectedNodeId || !isAsset) {
       setRefs([])
@@ -34,6 +55,15 @@ export function ContextPanel({ projectId, selectedNodeId, selectedNodeType }: Pr
       getLibrary(projectId, { asset_id: selectedNodeId, only_active: true }).then(r => setRefs(r.items)).catch(() => setRefs([])),
       getAsset(projectId, selectedNodeId).then(setAsset).catch(() => setAsset(null)),
     ]).finally(() => setLoading(false))
+  }, [projectId, selectedNodeId, isAsset])
+
+  // When something else (canvas card, library) regenerates the same
+  // asset, refresh our reference grid so the new identity shows up here too.
+  useEffect(() => {
+    if (!selectedNodeId || !isAsset) return
+    return subscribeAssetUpdated(id => {
+      if (id === selectedNodeId) reloadRefs(id)
+    })
   }, [projectId, selectedNodeId, isAsset])
 
   if (!selectedNodeId) return null
@@ -74,39 +104,54 @@ function AssetPromptEditor({ projectId, asset, hasIdentity }: {
   hasIdentity: boolean
 }) {
   const [draft, setDraft] = useState(asset.suggested_prompt || '')
-  const [busy, setBusy] = useState(false)
-  // If the asset prop changes (different selection), reset the draft.
+  const [saving, setSaving] = useState(false)
+  const [busy, setBusyState] = useState<boolean>(isBusy(asset.id))
+
+  // Reset draft when selection changes.
   useEffect(() => { setDraft(asset.suggested_prompt || '') }, [asset.id, asset.suggested_prompt])
+
+  // Subscribe to bus so canvas-side regen updates this view too.
+  useEffect(() => {
+    return subscribeBusy((id, b) => { if (id === asset.id) setBusyState(b) })
+  }, [asset.id])
+
   const dirty = draft.trim() !== (asset.suggested_prompt || '').trim()
 
-  const send = (intent: string, payload: Record<string, unknown>) => {
-    const w: any = window
-    const ws: WebSocket | undefined = w.__strawberry_chat_ws
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
-      toast.error('Console not connected.')
-      return false
-    }
+  const save = async () => {
+    if (!draft.trim()) return
+    setSaving(true)
     try {
-      ws.send(JSON.stringify({ type: 'user_intent', intent, payload }))
-      return true
-    } catch {
-      toast.error('Failed to send.')
-      return false
+      await updateAssetPrompt(projectId, asset.id, draft)
+      toast.success('Prompt saved.')
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Save failed.')
+    } finally {
+      setSaving(false)
     }
   }
 
-  const save = () => {
-    setBusy(true)
-    const ok = send('update_asset_prompt', { asset_id: asset.id, prompt: draft })
-    if (ok) toast.success('Prompt saved.')
-    setTimeout(() => setBusy(false), 200)
-  }
-
-  const regenerate = () => {
-    setBusy(true)
-    const ok = send('regenerate_asset_identity', { asset_id: asset.id, prompt: draft })
-    if (ok) toast.info(hasIdentity ? 'Regenerating identity…' : 'Generating identity…')
-    setTimeout(() => setBusy(false), 200)
+  const regenerate = async () => {
+    if (!draft.trim()) return
+    // Save edits first if dirty so the regen uses the latest prompt.
+    if (dirty) {
+      try {
+        await updateAssetPrompt(projectId, asset.id, draft)
+      } catch (e: unknown) {
+        toast.error(e instanceof Error ? e.message : 'Save failed.')
+        return
+      }
+    }
+    markBusy(asset.id)
+    try {
+      const fn = hasIdentity ? regenerateAssetIdentity : generateAssetIdentity
+      await fn(projectId, asset.id)
+      emitAssetUpdated(asset.id)
+      toast.success(hasIdentity ? 'Identity regenerated.' : 'Identity generated.')
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Generation failed.')
+    } finally {
+      markIdle(asset.id)
+    }
   }
 
   return (
@@ -117,22 +162,32 @@ function AssetPromptEditor({ projectId, asset, hasIdentity }: {
         rows={6}
         value={draft}
         onChange={e => setDraft(e.target.value)}
+        disabled={busy}
         placeholder="Describe how this asset should look. Identity locks (e.g. round glasses, black turtleneck) belong here."
       />
       <div className="context-panel__editor-actions">
         <button
           className="ctx-btn"
           onClick={save}
-          disabled={busy || !dirty}
+          disabled={busy || saving || !dirty}
           title={dirty ? 'Save prompt without regenerating' : 'No changes to save'}
-        >💾 Save</button>
+        >{saving ? '…' : '💾 Save'}</button>
         <button
           className="ctx-btn ctx-btn--primary"
           onClick={regenerate}
           disabled={busy || !draft.trim()}
           title={hasIdentity ? 'Regenerate identity (supersedes the prior one)' : 'Generate identity'}
-        >{hasIdentity ? '🔁 Regenerate' : '✨ Generate identity'}</button>
+        >
+          {busy
+            ? (hasIdentity ? '🔁 Regenerating…' : '✨ Generating…')
+            : (hasIdentity ? '🔁 Regenerate' : '✨ Generate identity')}
+        </button>
       </div>
+      {busy && (
+        <div className="context-panel__regen-status">
+          <span className="context-panel__spinner" aria-hidden /> Talking to the model… this usually takes 5–15s.
+        </div>
+      )}
     </div>
   )
 }

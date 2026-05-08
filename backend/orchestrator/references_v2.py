@@ -215,20 +215,51 @@ async def _build_prompt(
     lighting = (brief.get("lighting_style") or "").strip()
     negatives = (brief.get("negative_prompts") or "").strip()
 
+    # Phase L1: pull the compiled style bible if present so every reference
+    # carries the same locked palette + style tokens. This is what binds the
+    # cross-asset look — text alone, before the style anchor image lands.
+    import json as _json
+    try:
+        palette_hex = _json.loads(brief.get("palette_hex") or "[]")
+    except Exception:
+        palette_hex = []
+    try:
+        style_tokens = _json.loads(brief.get("style_tokens") or "[]")
+    except Exception:
+        style_tokens = []
+    lighting_rules = (brief.get("lighting_rules") or "").strip()
+
     style_lines: list[str] = []
     if art_style:
         style_lines.append(f"Art style: {art_style}")
     if color_palette:
         style_lines.append(f"Color palette: {color_palette}")
+    if palette_hex:
+        style_lines.append("Locked palette (hex): " + ", ".join(palette_hex))
     if lighting:
         style_lines.append(f"Lighting: {lighting}")
+    if lighting_rules:
+        style_lines.append(f"Lighting rules: {lighting_rules}")
+    if style_tokens:
+        # Verbatim shared tokens — these MUST appear in every prompt, the
+        # model re-uses verbatim phrasing more reliably than paraphrase.
+        style_lines.append("Shared style tokens (apply verbatim): " + " | ".join(style_tokens))
 
     directive = pose_directive(label)
 
-    constraints = (
-        "Single subject in frame. Plain neutral background unless this is a "
-        "location reference. No on-image text, no labels, no captions, no UI."
-    )
+    if asset_type == "location":
+        constraints = (
+            "Full set / environment in frame. Keep the location's own "
+            "atmosphere and lighting. No on-image text, no labels, no "
+            "captions, no UI."
+        )
+    else:
+        constraints = (
+            "Single subject in frame. PURE WHITE BACKGROUND (#FFFFFF), "
+            "flat even key + soft fill, no cast shadow on backdrop, "
+            "subject only — sheet/turnaround style. "
+            "No on-image text, no labels, no captions, no UI."
+        )
 
     negatives_full = "no text, no labels, no captions, no watermarks, no signatures"
     if negatives:

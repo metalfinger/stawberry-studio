@@ -10,9 +10,18 @@ import { type NodeProps } from '@xyflow/react'
 import {
   listAssetReferences,
   generateAssetIdentity,
+  regenerateAssetIdentity,
   precacheAssetTurnaround,
   type AssetReference,
 } from '../../api/client'
+import {
+  markBusy,
+  markIdle,
+  isBusy,
+  subscribeBusy,
+  emitAssetUpdated,
+  subscribeAssetUpdated,
+} from '../../services/assetBusy'
 
 export interface Asset {
   id: string
@@ -40,9 +49,15 @@ export const AssetMasterNode = memo(({ data, selected }: NodeProps & { data: Ass
   const colors = typeColors[asset.type] || typeColors.character
 
   const [refs, setRefs] = useState<AssetReference[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState<boolean>(isBusy(asset.id))
   const [precaching, setPrecaching] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const reload = () => {
+    listAssetReferences(projectId, asset.id)
+      .then(({ references }) => setRefs(references))
+      .catch(() => { /* none yet */ })
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -52,21 +67,31 @@ export const AssetMasterNode = memo(({ data, selected }: NodeProps & { data: Ass
     return () => { cancelled = true }
   }, [projectId, asset.id])
 
+  // Stay in sync with the busy bus + cross-component refresh.
+  useEffect(() => {
+    const offBusy = subscribeBusy((id, b) => { if (id === asset.id) setLoading(b) })
+    const offUpd = subscribeAssetUpdated((id) => { if (id === asset.id) reload() })
+    return () => { offBusy(); offUpd() }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [asset.id, projectId])
+
   const identity = refs.find((r) => r.label === 'identity') ?? null
   const others = refs.filter((r) => r.label !== 'identity')
 
   const handleGenerateIdentity = async () => {
-    setLoading(true)
+    markBusy(asset.id)
     setError(null)
     try {
-      await generateAssetIdentity(projectId, asset.id)
+      const fn = identity ? regenerateAssetIdentity : generateAssetIdentity
+      await fn(projectId, asset.id)
       const { references } = await listAssetReferences(projectId, asset.id)
       setRefs(references)
+      emitAssetUpdated(asset.id)
       data.onRefresh?.()
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
-      setLoading(false)
+      markIdle(asset.id)
     }
   }
 
@@ -121,12 +146,16 @@ export const AssetMasterNode = memo(({ data, selected }: NodeProps & { data: Ass
 
       {/* IDENTITY CARD */}
       {identity ? (
-        <div style={{ marginBottom: 8 }}>
+        <div style={{ marginBottom: 8, position: 'relative' }}>
           <img
             src={identity.image_url}
             alt={`${asset.name} identity`}
-            style={{ width: '100%', borderRadius: 8, background: '#000', display: 'block' }}
+            style={{
+              width: '100%', borderRadius: 8, background: '#000', display: 'block',
+              opacity: loading ? 0.45 : 1, transition: 'opacity 200ms',
+            }}
           />
+          {loading && <BusyOverlay label="Regenerating identity…" />}
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
             <span style={{
               background: 'rgba(16,185,129,0.15)', color: '#10b981',
@@ -145,8 +174,11 @@ export const AssetMasterNode = memo(({ data, selected }: NodeProps & { data: Ass
           fontSize: 12,
           color: '#94a3b8',
           marginBottom: 8,
+          position: 'relative',
         }}>
-          No identity card yet. Click below to generate the asset's anchor reference.
+          {loading
+            ? <BusyOverlay label="Generating identity…" inline />
+            : "No identity card yet. Click below to generate the asset's anchor reference."}
         </div>
       )}
 
@@ -226,3 +258,25 @@ export const AssetMasterNode = memo(({ data, selected }: NodeProps & { data: Ass
 })
 
 AssetMasterNode.displayName = 'AssetMasterNode'
+
+function BusyOverlay({ label, inline = false }: { label: string; inline?: boolean }) {
+  return (
+    <div style={{
+      position: inline ? 'static' : 'absolute', inset: 0,
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center', gap: 8,
+      background: inline ? 'transparent' : 'rgba(15, 23, 42, 0.55)',
+      borderRadius: 8, color: '#fbbf24', fontSize: 12, fontWeight: 600,
+      pointerEvents: 'none',
+    }}>
+      <span style={{
+        width: 18, height: 18, borderRadius: '50%',
+        border: '2px solid rgba(251, 191, 36, 0.25)',
+        borderTopColor: '#fbbf24',
+        animation: 'amn-spin 0.8s linear infinite',
+      }} />
+      <div>{label}</div>
+      <style>{`@keyframes amn-spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  )
+}

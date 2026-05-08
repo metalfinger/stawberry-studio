@@ -34,6 +34,22 @@ async def compile_continuity_bible(project_id: str) -> dict[str, Any]:
         ) as cur:
             brief_row = await cur.fetchone()
         brief = dict(brief_row) if brief_row else {}
+        # Phase L1: parse the compiled style bible (palette_hex + style_tokens
+        # + lighting_rules) so the DSL's [STYLE] block expands to a verbatim,
+        # cross-asset-locked phrase set on every prompt.
+        try:
+            palette_hex = json.loads(brief.get("palette_hex") or "[]")
+            if not isinstance(palette_hex, list):
+                palette_hex = []
+        except Exception:
+            palette_hex = []
+        try:
+            style_tokens = json.loads(brief.get("style_tokens") or "[]")
+            if not isinstance(style_tokens, list):
+                style_tokens = []
+        except Exception:
+            style_tokens = []
+
         brief_globals = {
             "art_style": brief.get("art_style", ""),
             "color_palette": brief.get("color_palette", ""),
@@ -46,6 +62,9 @@ async def compile_continuity_bible(project_id: str) -> dict[str, Any]:
             "render_quality": brief.get("render_quality", ""),
             "character_design_notes": brief.get("character_design_notes", ""),
             "environment_design_notes": brief.get("environment_design_notes", ""),
+            "palette_hex": palette_hex,
+            "style_tokens": style_tokens,
+            "lighting_rules": brief.get("lighting_rules", ""),
         }
 
         # Characters with master image lookup. We also pull suggested_prompt

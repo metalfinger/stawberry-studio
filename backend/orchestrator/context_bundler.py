@@ -84,6 +84,12 @@ class CutContext:
     aspect_ratio: str = "16:9"
     negatives: str = ""
 
+    # Phase L1: compiled style bible — palette_hex (list[str]), style_tokens
+    # (list[str], appended verbatim to every prompt), lighting_rules (str).
+    palette_hex: list[str] = field(default_factory=list)
+    style_tokens: list[str] = field(default_factory=list)
+    lighting_rules: str = ""
+
     # Stats for logging / UI ("loaded 4 sibling cuts, 3 sheets, 12K tokens")
     stats: dict[str, Any] = field(default_factory=dict)
 
@@ -101,6 +107,21 @@ async def _fetch_one(conn, sql: str, params: tuple) -> dict[str, Any] | None:
 async def _fetch_all(conn, sql: str, params: tuple) -> list[dict[str, Any]]:
     async with conn.execute(sql, params) as cur:
         return [dict(r) for r in await cur.fetchall()]
+
+
+def _parse_json_list(value: Any) -> list[str]:
+    """Tolerant JSON-array parse. briefs.palette_hex / style_tokens are
+    stored as TEXT JSON; tolerate '[]', missing values, or already-parsed
+    lists."""
+    if value is None or value == "":
+        return []
+    if isinstance(value, list):
+        return [str(v) for v in value if str(v).strip()]
+    try:
+        out = json.loads(value)
+        return [str(v) for v in out if str(v).strip()] if isinstance(out, list) else []
+    except Exception:
+        return []
 
 
 def _lighting_signature(scene: dict[str, Any]) -> str:
@@ -282,6 +303,9 @@ async def bundle_cut_context(cut_id: str, *, sibling_window: int = 6) -> CutCont
         lighting_signature=_lighting_signature(scene),
         aspect_ratio=(brief or {}).get("aspect_ratio") or "16:9",
         negatives=(brief or {}).get("negative_prompts") or "",
+        palette_hex=_parse_json_list((brief or {}).get("palette_hex")),
+        style_tokens=_parse_json_list((brief or {}).get("style_tokens")),
+        lighting_rules=(brief or {}).get("lighting_rules") or "",
         stats={
             "siblings_in_shot": len(siblings_shot),
             "siblings_in_scene": len(siblings_scene),

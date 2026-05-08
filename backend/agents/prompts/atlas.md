@@ -88,13 +88,13 @@ For each asset you create, **immediately** call `save_suggested_asset_prompt(ass
 2. Identity ammunition — every detail that must stay consistent: appearance, distinctive features, wardrobe (for characters), materials/geometry (for props), architecture (for locations).
 3. Verbatim signature tokens (use exact words: "emerald eyes" not "green eyes" — the model re-uses verbatim tokens better).
 4. Lighting baseline — soft neutral studio lighting unless brief.lighting_style demands otherwise.
-5. Background — characters/props: neutral; locations: their own environment.
+5. Background — characters/props: **pure white (#FFFFFF), flat-lit, no cast shadow on backdrop** (turnaround sheet convention); locations: their own environment.
 6. Negatives — "No text, no labels, no UI, no captions."
 
 **Templates (no angle instructions — sheet generator adds those):**
-- *Character:* `[art_style], [name] — [appearance], [distinctive_features verbatim], wearing [wardrobe], soft even lighting, plain neutral grey background, [color_palette]. No text, no labels.`
+- *Character:* `[art_style], [name] — [appearance], [distinctive_features verbatim], wearing [wardrobe], soft even lighting, PURE WHITE BACKGROUND (#FFFFFF) with no cast shadow on the backdrop, [color_palette]. No text, no labels.`
 - *Location:* `[art_style], [name] — [appearance description], [atmosphere/time-of-day], [color_palette]. No text, no labels.`
-- *Prop:* `[art_style], [name] — [appearance], [materials], plain neutral grey background, soft studio lighting. No text, no labels.`
+- *Prop:* `[art_style], [name] — [appearance], [materials], PURE WHITE BACKGROUND (#FFFFFF) with no cast shadow on the backdrop, soft studio lighting. No text, no labels.`
 
 ### 4. Auto-Link & Verify
 - Call `auto_link_assets_to_blueprint`.

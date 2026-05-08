@@ -96,6 +96,17 @@ def compile_prompt(template: str, project_id: str) -> CompiledPrompt:
                 parts.append(bg["art_style"])
             if bg.get("color_palette"):
                 parts.append(f"palette: {bg['color_palette']}")
+            # Phase L1: append compiled style bible — these tokens are the
+            # cross-asset glue and MUST appear in every cut prompt verbatim.
+            palette_hex = bg.get("palette_hex") or []
+            if palette_hex:
+                parts.append("locked palette (hex): " + ", ".join(palette_hex))
+            style_tokens = bg.get("style_tokens") or []
+            if style_tokens:
+                parts.append("style tokens: " + " | ".join(style_tokens))
+            lighting_rules = (bg.get("lighting_rules") or "").strip()
+            if lighting_rules:
+                parts.append(f"lighting rules: {lighting_rules}")
             if bg.get("render_quality"):
                 parts.append(bg["render_quality"])
             return ", ".join(parts) if parts else "(style not set)"

@@ -332,6 +332,30 @@ export async function generateAssetIdentity(projectId: string, assetId: string):
   return res.json();
 }
 
+export async function regenerateAssetIdentity(projectId: string, assetId: string): Promise<AssetReference> {
+  const res = await fetch(`${API_BASE}/api/projects/${projectId}/assets/${assetId}/references/identity/regenerate`, {
+    method: 'POST',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Identity regeneration failed');
+  }
+  return res.json();
+}
+
+export async function updateAssetPrompt(projectId: string, assetId: string, prompt: string): Promise<{ ok: boolean }> {
+  const res = await fetch(`${API_BASE}/api/projects/${projectId}/assets/${assetId}/prompt`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Save failed');
+  }
+  return res.json();
+}
+
 export async function precacheAssetTurnaround(projectId: string, assetId: string): Promise<{ references: AssetReference[] }> {
   const res = await fetch(`${API_BASE}/api/projects/${projectId}/assets/${assetId}/references/precache`, {
     method: 'POST',
