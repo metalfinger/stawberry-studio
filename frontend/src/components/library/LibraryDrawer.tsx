@@ -371,20 +371,39 @@ function LibraryDetail({ projectId, item, onFavorite, onSetAnchor, onRestore }: 
         </div>
       )}
 
-      <div className="library-detail__refine">
-        <textarea
-          className="library-detail__refine-input"
-          placeholder={isCutRender ? 'Describe what to change for the next render…' : 'Describe how to redo this asset reference…'}
-          value={feedback}
-          onChange={e => setFeedback(e.target.value)}
-          rows={2}
-        />
-        <button
-          className="library-detail__refine-btn"
-          onClick={submitRefine}
-          disabled={refining || !feedback.trim()}
-          title="Send refine request to the agent"
-        >🔁 Refine</button>
+      <div className="library-detail__refine-block">
+        <div className="library-detail__chip-row">
+          <span className="library-detail__chip-label">quick locks:</span>
+          {[
+            'Preserve identity exactly — same face, hair, eyes.',
+            'Keep all distinctive props (glasses, etc.) visible.',
+            'Match wardrobe from the identity card.',
+            'Same lighting and color palette as previous beat.',
+          ].map((preset) => (
+            <button
+              key={preset}
+              type="button"
+              className="library-detail__chip"
+              onClick={() => setFeedback(prev => (prev ? prev.trim() + ' ' : '') + preset)}
+              title="Append this lock to your feedback"
+            >+ {preset.split('—')[0].split('.')[0].trim()}</button>
+          ))}
+        </div>
+        <div className="library-detail__refine">
+          <textarea
+            className="library-detail__refine-input"
+            placeholder={isCutRender ? 'Describe what to change for the next render…' : 'Describe how to redo this asset reference…'}
+            value={feedback}
+            onChange={e => setFeedback(e.target.value)}
+            rows={2}
+          />
+          <button
+            className="library-detail__refine-btn"
+            onClick={submitRefine}
+            disabled={refining || !feedback.trim()}
+            title="Send refine request to the agent"
+          >🔁 Refine</button>
+        </div>
       </div>
 
       <div className="library-detail__actions">

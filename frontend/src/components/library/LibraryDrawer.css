@@ -154,7 +154,6 @@
 
 .library-detail__refine {
   display: flex; gap: 6px; align-items: stretch;
-  padding-top: 6px; border-top: 1px solid #1c1c1e;
 }
 .library-detail__refine-input {
   flex: 1; min-height: 38px; max-height: 100px; resize: vertical;
@@ -205,3 +204,21 @@
   font-size: 9px; color: #888; text-align: center; margin-top: 2px;
   text-transform: uppercase; letter-spacing: 0.4px;
 }
+
+/* Identity-lock preset chips for the Refine box (Phase K #6, user-as-critic). */
+.library-detail__refine-block {
+  display: flex; flex-direction: column; gap: 6px;
+  padding-top: 6px; border-top: 1px solid #1c1c1e;
+}
+.library-detail__chip-row {
+  display: flex; gap: 4px; flex-wrap: wrap; align-items: center;
+}
+.library-detail__chip-label {
+  font-size: 9px; color: #888; text-transform: uppercase;
+  letter-spacing: 0.5px; margin-right: 2px;
+}
+.library-detail__chip {
+  background: #1f1f24; color: #ccc; border: 1px solid #303034;
+  padding: 3px 8px; border-radius: 12px; font-size: 10px; cursor: pointer;
+}
+.library-detail__chip:hover { background: #2a2a30; color: #fff; border-color: #444; }
