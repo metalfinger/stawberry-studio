@@ -53,6 +53,14 @@ _CONTINUITY_TOKENS = (
 )
 
 
+_RE_ANCHOR_EVERY_N_CUTS = 4
+"""Every Nth cut in a chain we drop prev_cut from refs and let the
+original identity dominate. Without this, identity drifts by cut 5+
+because prev_cut piles its own face/wardrobe on top of identity each
+time. 4 is the sweet spot — enough room for natural cut-to-cut flow,
+short enough to claw the face back before it's gone."""
+
+
 def _should_chain_prev_cut(ctx) -> bool:
     """Return True iff the new cut should condition on the previous cut.
 
@@ -60,6 +68,9 @@ def _should_chain_prev_cut(ctx) -> bool:
     present in the cut's action / continuity_notes. The previous beat's
     composition can otherwise pull the model away from the new framing.
     `cuts.chain_from_prev` overrides the heuristic when set explicitly.
+
+    L-fix: every Nth cut we force the chain off so identity re-anchors
+    against the original. Otherwise long chains drift faces.
     """
     cut = ctx.cut or {}
     prev = ctx.previous_cut or {}
@@ -67,6 +78,12 @@ def _should_chain_prev_cut(ctx) -> bool:
     explicit = cut.get("chain_from_prev")
     if explicit is not None and explicit != "":
         return str(explicit).lower() not in ("0", "false", "no", "off")
+
+    # Identity re-anchor: every Nth cut drop prev_cut so the character's
+    # original identity reference can dominate without competition.
+    cut_num = cut.get("cut_number")
+    if isinstance(cut_num, int) and cut_num > 0 and cut_num % _RE_ANCHOR_EVERY_N_CUTS == 0:
+        return False
 
     # Same shot ⇒ continuity is the default expectation.
     if cut.get("shot_id") and prev.get("shot_id") and cut["shot_id"] == prev["shot_id"]:

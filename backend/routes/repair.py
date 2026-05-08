@@ -31,6 +31,46 @@ from fastapi import APIRouter, HTTPException
 
 router = APIRouter(prefix="/api/projects/{project_id}/repair", tags=["repair"])
 
+# Approximate per-action costs in USD. The image cost is a rough
+# average for Nano Banana Pro at 2048x2048; the bible LLM call is
+# basically free. These match the order of magnitude shown to the
+# user before they confirm.
+_COST_BIBLE_USD = 0.001
+_COST_ANCHOR_USD = 0.20
+_COST_IDENTITY_PER_ASSET_USD = 0.20
+
+
+@router.get("/preview")
+async def repair_preview(project_id: str):
+    """Cost preview before the user clicks Run all. Counts the assets
+    that would be re-minted and returns a USD breakdown so the UI can
+    show "this will cost ~$X" before the confirm."""
+    from backend.database.core import get_async_connection
+
+    async with get_async_connection() as conn:
+        async with conn.execute(
+            "SELECT COUNT(*) AS n FROM assets WHERE project_id = ? "
+            "AND COALESCE(type,'') IN "
+            "('character','location','prop','sublocation','location_angle')",
+            (project_id,),
+        ) as cur:
+            row = await cur.fetchone()
+        asset_count = (row["n"] if row else 0) or 0
+
+    bible = _COST_BIBLE_USD
+    anchor = _COST_ANCHOR_USD
+    identities = asset_count * _COST_IDENTITY_PER_ASSET_USD
+    return {
+        "asset_count": asset_count,
+        "estimates_usd": {
+            "style_bible": round(bible, 3),
+            "style_anchor": round(anchor, 3),
+            "regenerate_identities": round(identities, 3),
+            "all": round(bible + anchor + identities, 3),
+        },
+        "per_asset_usd": _COST_IDENTITY_PER_ASSET_USD,
+    }
+
 
 @router.post("/style-bible")
 async def repair_style_bible(project_id: str):

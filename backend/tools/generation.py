@@ -421,9 +421,15 @@ def resolve_inheritance(cut: dict, shot: dict, scene: dict, brief: dict, field: 
     return brief.get(field, "")
 
 
-@tool("compile_shot_prompt", description="Compile a text-to-image prompt for the first cut of a shot.", tags=["generation", "write"])
+@tool("compile_shot_prompt", description="DEPRECATED — legacy chat path only. New code MUST use cut_planner.plan_compose_cut + cut_executor.execute_plan (via the propose_cut_plan / execute_cut_plan tools). This tool stays for the google.adk Pixel agent until it migrates.", tags=["generation", "write", "deprecated"])
 def compile_shot_prompt(project_id: str, cut_id: str) -> Dict[str, Any]:
     """
+    DEPRECATED — kept for the legacy google.adk-based Pixel agent in
+    backend/agents/prompter.py. The modern pydantic-AI Pixel goes
+    through cut_planner / cut_executor which use the DSL + bundler
+    path with proper [STYLE] expansion (palette_hex + style_tokens +
+    style_anchor). This compile path is missing a few of those bindings.
+
     Compile a Nano Banana Pro (Gemini 3 Pro Image) format prompt.
     Uses @Image1, @Image2 notation with detailed natural language.
     
