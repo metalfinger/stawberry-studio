@@ -2,6 +2,11 @@
 // Shows every plan item with status icon, description, cost, ETA, and
 // "use existing alternative" rows. Action bar at the bottom routes user
 // intent back to the agent (Approve / Modify / Skip / Cancel).
+//
+// Render items expand to show the compiled prompt + slot images that will
+// feed the model, with an inline editor so the user can override before
+// approving.
+import { useState } from 'react'
 import type { ConsoleMessage, PlanItemData } from '../types'
 
 interface Props {
@@ -39,7 +44,13 @@ export function PlanCard({ msg, onIntent }: Props) {
 
         <div className="plan-card__items">
           {msg.items.map(item => (
-            <PlanItemRow key={item.id} item={item} />
+            <PlanItemRow
+              key={item.id}
+              item={item}
+              planId={msg.plan_id}
+              planMessageId={msg.message_id}
+              onIntent={onIntent}
+            />
           ))}
         </div>
 
@@ -94,7 +105,12 @@ export function PlanCard({ msg, onIntent }: Props) {
   )
 }
 
-function PlanItemRow({ item }: { item: PlanItemData }) {
+function PlanItemRow({ item, planId, planMessageId, onIntent }: {
+  item: PlanItemData
+  planId: string
+  planMessageId: string
+  onIntent: (intent: string, payload?: Record<string, unknown>, refMessageId?: string) => void
+}) {
   const icon = (() => {
     if (item.status === 'running') return '⏳'
     if (item.status === 'done') return '✓'
@@ -111,11 +127,71 @@ function PlanItemRow({ item }: { item: PlanItemData }) {
     return item.cached ? 'plan-item plan-item--cached' : 'plan-item plan-item--new'
   })()
 
+  const isRender = item.kind === 'render'
+  const compiledPrompt: string = (item.payload as any)?.compiled_prompt || ''
+  const slotsPreview: Array<{ slot: number; image_url: string }> = (item.payload as any)?.slots_preview || []
+  const [expanded, setExpanded] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState<string>(compiledPrompt)
+
+  const savePrompt = () => {
+    onIntent('update_render_prompt', { plan_id: planId, item_id: item.id, prompt: draft }, planMessageId)
+    setEditing(false)
+  }
+
   return (
     <div className={cls}>
       <span className="plan-item__icon" aria-hidden>{icon}</span>
       <div className="plan-item__body">
-        <div className="plan-item__desc">{item.description}</div>
+        <div
+          className="plan-item__desc"
+          style={isRender ? { cursor: 'pointer' } : undefined}
+          onClick={isRender ? () => setExpanded(e => !e) : undefined}
+        >
+          {item.description}
+          {isRender && (
+            <span className="plan-item__expand">{expanded ? '▾' : '▸'} prompt</span>
+          )}
+        </div>
+
+        {isRender && expanded && (
+          <div className="plan-item__prompt">
+            {!editing ? (
+              <>
+                <pre className="plan-item__prompt-pre">{compiledPrompt || '(prompt not compiled yet)'}</pre>
+                <div className="plan-item__prompt-actions">
+                  <button className="console-btn console-btn--ghost" onClick={() => { setDraft(compiledPrompt); setEditing(true) }}>
+                    ✏️ Edit prompt
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <textarea
+                  className="plan-item__prompt-textarea"
+                  value={draft}
+                  onChange={e => setDraft(e.target.value)}
+                  rows={Math.min(14, Math.max(4, draft.split('\n').length + 1))}
+                />
+                <div className="plan-item__prompt-actions">
+                  <button className="console-btn console-btn--primary" onClick={savePrompt} disabled={!draft.trim()}>Save</button>
+                  <button className="console-btn console-btn--ghost" onClick={() => setEditing(false)}>Cancel</button>
+                </div>
+              </>
+            )}
+            {slotsPreview.length > 0 && (
+              <div className="plan-item__slots">
+                {slotsPreview.map(s => (
+                  <div key={s.slot} className="plan-item__slot" title={`Slot ${s.slot}`}>
+                    <img src={s.image_url} alt={`slot ${s.slot}`} />
+                    <span>@Image{s.slot}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {item.alternatives && item.alternatives.length > 0 && item.status === 'pending' && (
           <div className="plan-item__alt">
             <span style={{ color: 'var(--console-text-muted)' }}>↳ Or use existing:</span>

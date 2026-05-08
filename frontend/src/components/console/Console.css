@@ -607,3 +607,46 @@
   display: flex; justify-content: space-between;
   padding: 4px 6px; font-size: 11px; color: var(--console-text-dim);
 }
+
+/* Plan item — prompt preview / editor panel (Phase K). */
+.plan-item__expand {
+  margin-left: 8px; font-size: 10px; color: var(--console-text-muted);
+  text-transform: uppercase; letter-spacing: 0.4px;
+}
+.plan-item__prompt {
+  margin-top: 6px; padding: 8px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--console-border);
+  border-radius: 6px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.plan-item__prompt-pre {
+  margin: 0; padding: 8px; background: #0a0e1a;
+  border: 1px solid var(--console-border); border-radius: 4px;
+  font-family: ui-monospace, "SF Mono", monospace; font-size: 11px;
+  color: #d8e0ff; max-height: 220px; overflow-y: auto;
+  white-space: pre-wrap; word-break: break-word; line-height: 1.5;
+}
+.plan-item__prompt-textarea {
+  width: 100%; box-sizing: border-box;
+  padding: 8px; border-radius: 4px;
+  background: #0a0e1a; border: 1px solid var(--console-border);
+  color: #e8e9ec; font-family: ui-monospace, monospace; font-size: 11px;
+  line-height: 1.5; resize: vertical;
+}
+.plan-item__prompt-actions {
+  display: flex; gap: 6px;
+}
+.plan-item__slots {
+  display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px;
+}
+.plan-item__slot {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  background: var(--console-surface-2); border: 1px solid var(--console-border);
+  border-radius: 4px; padding: 4px;
+}
+.plan-item__slot img { width: 44px; height: 44px; object-fit: cover; border-radius: 3px; }
+.plan-item__slot span {
+  font-size: 9px; color: var(--console-text-muted);
+  font-family: ui-monospace, monospace;
+}

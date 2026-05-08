@@ -97,6 +97,8 @@ async def handle_intent(
             return await _regenerate_asset_identity(project_id, payload, narrator)
         if intent == "update_asset_prompt":
             return await _update_asset_prompt(project_id, payload, narrator)
+        if intent == "update_render_prompt":
+            return await _update_render_prompt(project_id, payload, narrator, ref_message_id)
         # Unknown intents fall back to chat agent.
         return False
     except Exception as e:
@@ -364,6 +366,41 @@ async def _plan_unrendered(project_id: str, narrator: Narrator) -> bool:
 # ============================================================================
 # Asset prompt edit + regenerate flow
 # ============================================================================
+
+async def _update_render_prompt(
+    project_id: str, payload: dict, narrator: Narrator, ref_message_id: str | None
+) -> bool:
+    """Persist a user-edited prompt onto the render plan item so that when
+    the user approves the plan, the executor uses the override instead of
+    re-compiling from the DSL. Echoes the change back as a plan_update so
+    the PlanCard reflects the new prompt immediately."""
+    plan_id = payload.get("plan_id")
+    item_id = payload.get("item_id")
+    new_prompt = (payload.get("prompt") or "").strip()
+    if not (plan_id and item_id and new_prompt):
+        return False
+    plan = await load_plan(plan_id)
+    if not plan:
+        return False
+    target = next((i for i in plan.items if i.id == item_id), None)
+    if target is None:
+        return False
+    target.payload = {**(target.payload or {}), "prompt_override": new_prompt, "compiled_prompt": new_prompt}
+    await save_plan(plan)
+    plan_msg_id = ref_message_id or await _get_plan_message_id(plan_id)
+    if plan_msg_id:
+        try:
+            await narrator.update_plan_item(
+                plan_msg_id, item_id,
+                status=target.status,
+                result={"prompt_edited": True},
+                error=None,
+            )
+        except Exception:
+            pass
+    await narrator.text("Prompt saved. Approve the plan to render with your edits.")
+    return True
+
 
 async def _update_asset_prompt(project_id: str, payload: dict, narrator: Narrator) -> bool:
     """Patch assets.suggested_prompt. The user can then regenerate identity."""

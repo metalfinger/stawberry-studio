@@ -365,8 +365,17 @@ async def execute_plan(
                             ))
                             for i, s in enumerate(ref_slots):
                                 s.slot = i + 1
+                    # Honor a user-supplied prompt override if present —
+                    # set by the PlanCard "Edit prompt" panel before
+                    # approval. Otherwise compile from the DSL template.
+                    override = (item.payload.get("prompt_override") or "").strip()
                     template = _build_template_from_ctx(ctx, cumulative_feedback)
                     compiled = compile_prompt(template, plan.project_id)
+                    if override:
+                        # Preserve the slot bindings from the DSL compile so
+                        # @ImageN references stay correct, but swap the
+                        # final prompt text for the user's override.
+                        compiled.final_prompt = override
                     # Trim slots to provider limit (5).
                     refs_for_call = ref_slots[:5]
                     reg = get_registry()

@@ -215,6 +215,26 @@ async def plan_compose_cut(
             },
         ))
 
+    # Compile the render prompt at plan time so the user can preview AND
+    # override it before approval. Prior implementation only built the
+    # prompt at execute time, so the user never saw what was being sent.
+    try:
+        from backend.orchestrator.cut_executor import _build_template_from_ctx
+        from backend.orchestrator.prompt_dsl import compile_prompt as _compile
+
+        cumulative_feedback = list(plan.feedback or [])
+        template_preview = _build_template_from_ctx(ctx, cumulative_feedback)
+        compiled_preview = _compile(template_preview, ctx.project_id)
+        compiled_prompt_text = compiled_preview.final_prompt
+        slots_preview = [
+            {"slot": int(k.replace("@Image", "")), "image_url": v}
+            for k, v in compiled_preview.slots.items()
+        ]
+    except Exception as e:  # noqa: BLE001
+        log.warning("compile_prompt_preview_failed", error=str(e))
+        compiled_prompt_text = ""
+        slots_preview = []
+
     # Render the cut
     plan.items.append(make_item(
         ITEM_KIND_RENDER,
@@ -225,6 +245,10 @@ async def plan_compose_cut(
         payload={
             "cut_id": cut_id,
             "feedback": list(plan.feedback),  # cumulative feedback
+            # Pre-compiled preview so PlanCard can show the actual prompt
+            # the model will see. `prompt_override`, if set, replaces it.
+            "compiled_prompt": compiled_prompt_text,
+            "slots_preview": slots_preview,
         },
     ))
 
