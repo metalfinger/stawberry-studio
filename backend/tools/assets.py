@@ -213,8 +213,17 @@ def create_asset(
     Returns:
         The created asset with its ID
     """
-    if asset_type not in ["character", "location", "prop", "frame"]:
-        return {"error": f"Invalid asset_type: {asset_type}. Must be 'character', 'location', 'prop', or 'frame'"}
+    if asset_type not in ["character", "location", "prop", "frame", "sublocation", "location_angle"]:
+        return {"error": f"Invalid asset_type: {asset_type}. Must be one of: 'character', 'location', 'prop', 'frame', 'sublocation', 'location_angle'."}
+
+    # L4 — sublocations and angles MUST point at a parent location.
+    if asset_type in ("sublocation", "location_angle") and not parent_asset_id:
+        return {
+            "error": (
+                f"asset_type='{asset_type}' requires parent_asset_id pointing at "
+                "a Location asset. Sub-locations and angles cannot exist standalone."
+            )
+        }
 
     if parent_asset_id and reference_strategy == "standalone":
         # If the agent passed a parent, default the strategy to 'derived'

@@ -45,11 +45,19 @@ For each noun, ask the questions IN ORDER. The first YES wins:
    - "Mara's gun", "Mara's locket", "the suspect's briefcase" → **DERIVED**. Call `create_asset(..., parent_asset_id=character.id, reference_strategy="derived")`.
    - "the ramen stall in the alley", "the neon sign in the alley", "the chair in the apartment" → **DERIVED**. `parent_asset_id=location.id`.
    - "the bedroom inside the apartment", "the alcove inside the alley" → **DERIVED**. `parent_asset_id=location.id`.
+   - **NESTED LOCATIONS** (a location physically inside another location) — e.g. "the fake moon set" lives inside "the film studio", "Mara's apartment" lives inside "the brutalist tower" — create BOTH as `type='location'` and set `parent_asset_id=outer_location.id`. The downstream renderer auto-injects "Located inside: <parent>" into the child's prompt so they share set context, lighting, and adjoining geometry. **DO NOT** create them as siblings — the visual link will be lost.
 
 6. **Is it a different STATE of an existing asset?**
    - "Mara at 7" (flashback), "alley at dawn", "the artifact glowing vs dormant" → **VARIANT**. Call `create_variant(master_id=base.id, variant_name="...", variant_diff="describes the state difference")`.
 
-7. **Else → PRIMARY.**
+7. **Is it a SUB-LOCATION (a named region inside a parent location)?**
+   - "the director's chair area" inside "Film Studio", "the lander touchdown spot" inside "Fake Moon Set", "the kitchen in the apartment" → **SUB-LOCATION**. Call `create_asset(asset_type='sublocation', parent_asset_id=parent_location.id, ...)`. These are zones, not new sets — they share lighting and palette with the parent.
+
+8. **Is it a NAMED CAMERA ANGLE on a location or sub-location?**
+   - "wide from camera A on the moon set", "over-the-shoulder of the director", "POV from the catering table" — when scenes/shots reference recurring vantages → **LOCATION ANGLE**. Call `create_asset(asset_type='location_angle', parent_asset_id=location_or_sublocation.id, ...)` and write the camera direction, focal length intent, and what's in/out of frame into the suggested_prompt.
+   - Skip for one-off cinematic flourishes; only create when the same vantage will recur across cuts.
+
+9. **Else → PRIMARY.**
    The asset is visually self-contained: hero character, hero location, hero prop / MacGuffin. Call `create_asset(...)` with no `parent_asset_id` and no `master_id`.
 
 **Per-scene wardrobe** — if a character's outfit changes ONLY for a specific scene (Mara wears a gala dress in scene 3 but her usual coat elsewhere), call `set_scene_wardrobe_override(scene_id=..., character_id=..., wardrobe_text="black gala dress, silver clutch")`. This avoids duplicating the character asset and the cut bundler picks it up automatically when generating cuts in that scene.

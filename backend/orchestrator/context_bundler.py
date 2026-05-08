@@ -90,6 +90,11 @@ class CutContext:
     style_tokens: list[str] = field(default_factory=list)
     lighting_rules: str = ""
 
+    # L5 — explicit CutPlan: structured, prompt-ready resolution of
+    # location chain, characters, props, lighting, style, refs. The prompt
+    # builder reads this directly so nothing important slips through.
+    cut_plan: dict[str, Any] = field(default_factory=dict)
+
     # Stats for logging / UI ("loaded 4 sibling cuts, 3 sheets, 12K tokens")
     stats: dict[str, Any] = field(default_factory=dict)
 
@@ -257,10 +262,78 @@ async def bundle_cut_context(cut_id: str, *, sibling_window: int = 6) -> CutCont
     # Compilation is cheap (a couple of indexed reads) and worth it.
     bible = await compile_continuity_bible(project_id)
 
-    # Bucket linked assets by type
+    # Bucket linked assets by type. L4: sublocation + location_angle are
+    # treated as locations for prompt purposes — the prompt builder reads
+    # parent_chain to inherit set context.
     chars = [a for a in linked_assets if (a.get("type") or "").lower() == "character"]
-    locs = [a for a in linked_assets if (a.get("type") or "").lower() == "location"]
+    locs = [
+        a for a in linked_assets
+        if (a.get("type") or "").lower() in ("location", "sublocation", "location_angle")
+    ]
     props = [a for a in linked_assets if (a.get("type") or "").lower() == "prop"]
+
+    # L5 — CutPlan: build an explicit, structured resolution of "what this
+    # cut needs". The prompt builder consumes this directly so nothing
+    # important slips through (e.g. "Pixel forgot the prop" was the
+    # symptom Hiren reported).
+    def _ident_url(a):
+        s = a.get("sheet") or {}
+        return s.get("image_url") or a.get("image_url") or ""
+
+    location_chain: list[dict] = []
+    if locs:
+        primary = locs[0]
+        location_chain.append({
+            "id": primary["id"], "name": primary.get("name"),
+            "type": (primary.get("type") or "location"),
+            "image_url": _ident_url(primary),
+        })
+        # Walk parent chain so a sublocation/angle inherits its parent location.
+        for p in primary.get("parent_chain", []) or []:
+            location_chain.append({
+                "id": p["id"], "name": p.get("name"),
+                "type": (p.get("type") or "location"),
+                "image_url": _ident_url(p),
+            })
+
+    cut_plan = {
+        "cut_id": cut_id,
+        "scene_id": scene["id"] if scene else None,
+        "shot_id": shot["id"] if shot else None,
+        "location_chain": location_chain,                    # outermost-last
+        "characters": [{
+            "id": c["id"], "name": c.get("name"),
+            "image_url": _ident_url(c),
+            "appearance": c.get("appearance"),
+            "distinctive_features": c.get("distinctive_features"),
+            "wardrobe_lock": c.get("wardrobe_lock"),
+        } for c in chars],
+        "props": [{
+            "id": p["id"], "name": p.get("name"),
+            "image_url": _ident_url(p),
+            "appearance": p.get("appearance"),
+        } for p in props],
+        "lighting_state": {
+            "scene_id": scene["id"] if scene else None,
+            "time_of_day": (scene or {}).get("time_of_day") or "",
+            "lighting": (scene or {}).get("lighting") or "",
+            "lighting_color": (scene or {}).get("lighting_color") or "",
+            "mood": (scene or {}).get("mood") or "",
+        },
+        "style": {
+            "art_style": (brief or {}).get("art_style") or "",
+            "color_palette": (brief or {}).get("color_palette") or "",
+            "palette_hex": _parse_json_list((brief or {}).get("palette_hex")),
+            "style_tokens": _parse_json_list((brief or {}).get("style_tokens")),
+            "lighting_rules": (brief or {}).get("lighting_rules") or "",
+        },
+        "previous_cut_image_url": (previous_cut or {}).get("generated_image_url") or "",
+        "style_anchor_url": (
+            (style_anchor or {}).get("image_url")
+            or (bible or {}).get("style_anchor_url")
+            or ""
+        ),
+    }
 
     # Apply scene-level wardrobe override on top of character.wardrobe_lock
     # so prompt-builders see the right outfit for THIS scene without us having
@@ -306,6 +379,7 @@ async def bundle_cut_context(cut_id: str, *, sibling_window: int = 6) -> CutCont
         palette_hex=_parse_json_list((brief or {}).get("palette_hex")),
         style_tokens=_parse_json_list((brief or {}).get("style_tokens")),
         lighting_rules=(brief or {}).get("lighting_rules") or "",
+        cut_plan=cut_plan,
         stats={
             "siblings_in_shot": len(siblings_shot),
             "siblings_in_scene": len(siblings_scene),

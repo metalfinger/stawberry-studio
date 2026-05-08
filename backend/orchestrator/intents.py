@@ -617,4 +617,13 @@ async def _confirm_briefing(project_id: str, narrator: Narrator) -> bool:
             )
     except Exception:  # noqa: BLE001
         pass
+    # L2 — mint the project's pinned style anchor image so every
+    # downstream generation can attach it as a visual reference.
+    try:
+        from backend.orchestrator.style_anchor import ensure_style_anchor
+        url = await ensure_style_anchor(project_id)
+        if url:
+            await narrator.text(f"🖼️ Style anchor pinned. Every generation will reference it.")
+    except Exception:  # noqa: BLE001
+        pass
     return True

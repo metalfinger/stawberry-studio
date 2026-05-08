@@ -5,11 +5,59 @@ Context gathering, prompt compilation, and image generation.
 
 import uuid
 import json
+import sqlite3
 from typing import Dict, Any, List, Optional
 from backend.database import core as db
 from backend.database import shots as shots_db
 from backend.database import assets as assets_db
 from backend.tools.registry import tool
+
+
+# L2 — style anchor injector. Sync helper since the cut compile tools are
+# sync. Reads continuity_bible.style_anchor_url directly.
+def _style_anchor_url_sync(project_id: str) -> str:
+    try:
+        conn = db.get_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT style_anchor_url FROM continuity_bible WHERE project_id = ?",
+                (project_id,),
+            )
+            row = cur.fetchone()
+            if not row:
+                return ""
+            try:
+                return (row["style_anchor_url"] or "").strip()
+            except Exception:
+                return (row[0] or "").strip()
+        finally:
+            conn.close()
+    except sqlite3.Error:
+        return ""
+
+
+def _prepend_style_anchor_ref(reference_images: list[dict], project_id: str) -> list[dict]:
+    """If a style anchor exists, prepend it as a high-slot reference. The
+    model treats it as a visual lock — palette, line, grain. We don't add
+    a @ImageN tag in the prompt for it; it's a passive style binder."""
+    url = _style_anchor_url_sync(project_id)
+    if not url:
+        return reference_images
+    # Use slot 9 to avoid clashing with cut composer's 1-4 mapping.
+    if any(r.get("image_url") == url for r in reference_images):
+        return reference_images
+    return [
+        {
+            "slot": 9,
+            "ref": "@StyleAnchor",
+            "type": "style_anchor",
+            "name": "Project style anchor",
+            "image_url": url,
+            "status": "ready",
+        },
+        *reference_images,
+    ]
 
 
 
@@ -711,6 +759,7 @@ def compile_shot_prompt(project_id: str, cut_id: str) -> Dict[str, Any]:
     
     compiled_prompt = "\n".join(prompt_parts)
     
+    reference_images = _prepend_style_anchor_ref(reference_images, project_id)
     return {
         "prompt": compiled_prompt,
         "reference_images": reference_images,
@@ -805,6 +854,7 @@ def compile_edit_prompt(project_id: str, cut_id: str) -> Dict[str, Any]:
                 "status": "ready"
             })
     
+    reference_images = _prepend_style_anchor_ref(reference_images, project_id)
     return {
         "prompt": compiled_prompt,
         "reference_images": reference_images,

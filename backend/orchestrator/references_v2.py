@@ -95,6 +95,20 @@ _POSE_DIRECTIVES: dict[str, str] = {
     "medium": "medium-distance view emphasising key features, no characters",
     "key_detail": "close-up of a key landmark or focal point within the location",
     "alt_lighting": "the location at an alternative lighting state (different time of day or weather)",
+    # Location — reference plate (L3): flat-lit clean reference, the
+    # identity-style anchor for a place. NOT a story shot.
+    "plate": (
+        "FLAT-LIT REFERENCE PLATE: full set / environment in frame, "
+        "even ambient lighting (no dramatic key, no harsh shadow), "
+        "neutral white-cyc edges, all key set pieces visible. "
+        "This is a reference card, not a final shot — used by downstream cuts "
+        "to inherit geometry and palette. No text, no characters."
+    ),
+    "establishing": (
+        "FINAL ESTABLISHING SHOT: same location as the plate but with "
+        "this world's dramatic lighting fully applied (per the brief's "
+        "lighting rules). Cinematic framing, story-ready."
+    ),
     # Prop — angles
     "prop_front": "front view of the prop, isolated on neutral background",
     "prop_three_quarter": "three-quarter view of the prop (45° angle), isolated",
@@ -111,7 +125,10 @@ _STANDARD_TURNAROUND: dict[str, list[str]] = {
     # `identity` always comes first (auto-bootstrap); these are the additional
     # views to pre-cache so the picker has them on-tap without lazy-fill.
     "character": ["three_quarter_right", "side_right", "back"],
-    "location": ["key_detail"],  # identity already covers wide-establishing
+    # L3 — for locations the identity card now serves as the PLATE (flat,
+    # neutral, set-as-reference). The dramatic establishing shot is its
+    # own pose label — generated lazily when an estab cut needs it.
+    "location": ["establishing", "key_detail"],
     "prop": ["prop_three_quarter", "prop_side"],
 }
 
@@ -192,6 +209,31 @@ async def _build_prompt(
     if suggested and not appearance:
         identity_lines.append(f"Foundation: {suggested}")
 
+    # L3 — if the asset is a location nested inside a parent location (e.g.
+    # "Fake Moon Set" inside "Film Studio"), inject the parent's identity
+    # context so the child looks correct in-world.
+    parent_aid = asset.get("parent_asset_id")
+    if parent_aid:
+        try:
+            from backend.database.core import get_async_connection as _gac
+            async with _gac() as _conn:
+                _row = await _fetch_one(
+                    _conn,
+                    "SELECT name, type, appearance, suggested_prompt FROM assets WHERE id = ?",
+                    (parent_aid,),
+                )
+            if _row and (_row.get("type") or "").lower() == "location" and asset_type == "location":
+                pname = _row.get("name") or ""
+                p_app = (_row.get("appearance") or "").strip()
+                p_sp = (_row.get("suggested_prompt") or "").strip()
+                inherit = p_app or p_sp[:300]
+                if pname:
+                    identity_lines.append(
+                        f"Located inside: {pname}. Inherit set context: {inherit}"
+                    )
+        except Exception:
+            pass
+
     asset_type = (asset.get("type") or "").lower()
     if asset_type == "character":
         do_not_vary = (
@@ -248,11 +290,22 @@ async def _build_prompt(
     directive = pose_directive(label)
 
     if asset_type == "location":
-        constraints = (
-            "Full set / environment in frame. Keep the location's own "
-            "atmosphere and lighting. No on-image text, no labels, no "
-            "captions, no UI."
-        )
+        # L3 — the location IDENTITY is the flat-lit reference plate.
+        # Dramatic lighting belongs on the `establishing` and per-cut renders.
+        if label == "identity":
+            constraints = (
+                "FLAT-LIT REFERENCE PLATE. Full set / environment in frame, "
+                "even ambient lighting (no dramatic key, no harsh shadow, "
+                "no colored gels), neutral white-cyc edges, every set "
+                "piece readable. This image is a downstream geometry + "
+                "palette anchor, not a final shot. "
+                "No text, no labels, no captions, no characters in frame."
+            )
+        else:
+            constraints = (
+                "Full set / environment in frame. Apply the brief's "
+                "lighting rules. No text, no labels, no captions, no UI."
+            )
     else:
         constraints = (
             "Single subject in frame. PURE WHITE BACKGROUND (#FFFFFF), "
@@ -407,6 +460,21 @@ async def _generate_one(
     prompt = await _build_prompt(asset, brief, label, story_context)
 
     refs: list[ReferenceImage] = []
+
+    # L2 — attach the project's style anchor as the FIRST reference so it
+    # carries palette, line, grain across every subsequent generation. We
+    # skip self-reference (the anchor itself shouldn't reference itself if
+    # somebody marks the asset that way later).
+    try:
+        from backend.orchestrator.style_anchor import get_style_anchor_url
+        anchor_url = await get_style_anchor_url(asset["project_id"])
+        if anchor_url and anchor_url != asset.get("image_url"):
+            refs.append(
+                ReferenceImage(image_url=anchor_url, slot=len(refs) + 1, name="style_anchor")
+            )
+    except Exception:  # noqa: BLE001
+        pass
+
     if parent_reference_id:
         async with get_async_connection() as conn:
             parent = await _fetch_one(
@@ -414,16 +482,16 @@ async def _generate_one(
                 (parent_reference_id,),
             )
         if parent and parent["image_url"]:
-            refs.append(ReferenceImage(image_url=parent["image_url"], slot=1, name="identity"))
+            refs.append(ReferenceImage(image_url=parent["image_url"], slot=len(refs) + 1, name="identity"))
 
     # If the asset has a parent_asset_id (Mara's gun → Mara), thread the
     # parent's identity card into the request too.
-    if not refs and asset.get("parent_asset_id"):
+    if asset.get("parent_asset_id") and not any(r.name == "identity" for r in refs):
         parent_identity = await get_identity_card(asset["parent_asset_id"])
         if parent_identity and parent_identity.get("image_url"):
             refs.append(
                 ReferenceImage(
-                    image_url=parent_identity["image_url"], slot=1, name="parent_identity"
+                    image_url=parent_identity["image_url"], slot=len(refs) + 1, name="parent_identity"
                 )
             )
 
