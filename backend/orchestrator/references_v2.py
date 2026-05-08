@@ -96,13 +96,14 @@ _POSE_DIRECTIVES: dict[str, str] = {
     "key_detail": "close-up of a key landmark or focal point within the location",
     "alt_lighting": "the location at an alternative lighting state (different time of day or weather)",
     # Location — reference plate (L3): flat-lit clean reference, the
-    # identity-style anchor for a place. NOT a story shot.
+    # identity-style anchor for a place. NOT a story shot. Stays in the
+    # project's art_style; just removes dramatic lighting so geometry +
+    # palette read clearly.
     "plate": (
-        "FLAT-LIT REFERENCE PLATE: full set / environment in frame, "
-        "even ambient lighting (no dramatic key, no harsh shadow), "
-        "neutral white-cyc edges, all key set pieces visible. "
-        "This is a reference card, not a final shot — used by downstream cuts "
-        "to inherit geometry and palette. No text, no characters."
+        "Reference plate of the location: full set / environment in "
+        "frame, even ambient lighting (no harsh single-source key, no "
+        "colored gels), all key set pieces visible. Stay in the "
+        "project's art_style. No characters."
     ),
     "establishing": (
         "FINAL ESTABLISHING SHOT: same location as the plate but with "
@@ -290,15 +291,19 @@ async def _build_prompt(
     directive = pose_directive(label)
 
     if asset_type == "location":
-        # L3 — the location IDENTITY is the flat-lit reference plate.
-        # Dramatic lighting belongs on the `establishing` and per-cut renders.
+        # L3 — the location IDENTITY is the flat-lit reference plate, but
+        # KEEP the art_style intact (Spider-Verse stays Spider-Verse).
+        # Earlier wording ("neutral white-cyc edges") was overpowering the
+        # art_style and pushing the model toward photoreal soundstage refs.
         if label == "identity":
             constraints = (
-                "FLAT-LIT REFERENCE PLATE. Full set / environment in frame, "
-                "even ambient lighting (no dramatic key, no harsh shadow, "
-                "no colored gels), neutral white-cyc edges, every set "
-                "piece readable. This image is a downstream geometry + "
-                "palette anchor, not a final shot. "
+                "Full set / environment in frame, every key set piece "
+                "readable. Use even, ambient lighting that exposes "
+                "geometry and palette (no harsh single-source key, no "
+                "colored gels — save dramatic lighting for the "
+                "`establishing` view). "
+                "STAY in the project's art_style — this is a styled "
+                "reference plate, NOT a photoreal soundstage shot. "
                 "No text, no labels, no captions, no characters in frame."
             )
         else:

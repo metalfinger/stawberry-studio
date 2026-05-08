@@ -227,15 +227,36 @@ def confirm_briefing_complete(project_id: str) -> str:
 
     success = db.complete_briefing(project_id)
     if success:
-        # Phase L1 — compile style bible (best-effort, never blocks).
+        # Phase L1/L2 — compile style bible + mint style anchor BLOCKING in
+        # a background thread so they actually finish before the agent
+        # moves on. Earlier fire-and-forget create_task() silently dropped
+        # the work whenever Berry called this tool directly (vs the
+        # _confirm_briefing intent path), which is why Test 5's bible was
+        # never populated.
         try:
             import asyncio
+            import threading
             from backend.orchestrator.style_bible import compile_style_bible_for_project
-            try:
-                loop = asyncio.get_running_loop()
-                loop.create_task(compile_style_bible_for_project(project_id))
-            except RuntimeError:
-                asyncio.run(compile_style_bible_for_project(project_id))
+            from backend.orchestrator.style_anchor import ensure_style_anchor
+
+            def _runner(pid: str) -> None:
+                loop = asyncio.new_event_loop()
+                try:
+                    asyncio.set_event_loop(loop)
+                    loop.run_until_complete(compile_style_bible_for_project(pid))
+                    loop.run_until_complete(ensure_style_anchor(pid))
+                except Exception:  # noqa: BLE001
+                    pass
+                finally:
+                    loop.close()
+
+            t = threading.Thread(target=_runner, args=(project_id,), daemon=True)
+            t.start()
+            # Block up to 90s so the bible (cheap LLM) and anchor (one image)
+            # finish before Atlas starts. If they overrun we let them
+            # background — the next save_suggested_asset_prompt + reference
+            # generation calls will still pick up whatever exists by then.
+            t.join(timeout=90)
         except Exception:
             pass
         return "🎉 Briefing complete! Project advancing to STORY phase. The Story Architect will take over."
