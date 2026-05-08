@@ -389,19 +389,13 @@ async def execute_plan(
                         negative_prompt=ctx.negatives,
                         reference_images=refs_for_call,
                     )
-                    # Live "Rendering…" indication. The elapsed pseudo-msg
-                    # shows a spinner + ETA so the user knows the gen is in
-                    # flight (Nano Banana Pro can take 20–40s).
-                    started_at = datetime.now().isoformat()
-                    rendering_msg_id = None
-                    try:
-                        rendering_msg_id = await narrator.elapsed(
-                            label=f"Rendering cut {(plan.cut_id or '')[-6:]} on {model}…",
-                            started_at=started_at,
-                            estimated_total_s=30,
-                        )
-                    except Exception:
-                        pass
+                    # Per-item "running" state on the PlanCard already shows
+                    # a ⏳ spinner via on_step → plan_update. We previously
+                    # also emitted a separate elapsed message here, but it
+                    # never got cleared (the message_id was never echoed
+                    # back to remove it) — so the loader spun forever even
+                    # after the render landed. Removing in favor of the
+                    # PlanCard signal.
                     img_result = await img_provider.generate(req)
                     image_url = img_result.image_urls[0]
                     item.status = "done"

@@ -152,20 +152,24 @@ export function Console({ projectId, initialPhase, onNodeUpdate, onClose }: Cons
           return
         }
         if (data.kind === 'plan_update') {
-          // Patch plan items in-place
-          setMessages(prev => prev.map(m => {
-            if (m.kind === 'plan' && m.message_id === data.message_id) {
-              return {
-                ...m,
-                items: m.items.map(i =>
-                  i.id === data.item_id
-                    ? { ...i, status: data.status, result: data.result ?? i.result, error: data.error ?? i.error }
-                    : i
-                ),
-              } as ConsoleMessage
-            }
-            return m
-          }))
+          // Patch plan items in-place AND clear any "thinking…" pending
+          // pseudo-message — the PlanCard's running spinner is the
+          // canonical in-flight indicator from this point on.
+          setMessages(prev => prev
+            .filter(m => !(m.kind === 'elapsed' && m.message_id.startsWith('pending_')))
+            .map(m => {
+              if (m.kind === 'plan' && m.message_id === data.message_id) {
+                return {
+                  ...m,
+                  items: m.items.map(i =>
+                    i.id === data.item_id
+                      ? { ...i, status: data.status, result: data.result ?? i.result, error: data.error ?? i.error }
+                      : i
+                  ),
+                } as ConsoleMessage
+              }
+              return m
+            }))
           return
         }
         // New typed message — also clears any "thinking" pseudo-message.

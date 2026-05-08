@@ -214,14 +214,11 @@ async def _run_executor(project_id: str, plan_id: str, on_step, narrator: Narrat
                     Action(label="Cancel", intent="cancel_plan", payload={"plan_id": plan_id}),
                 ],
             )
-        elif result.image_url:
-            # Show the final render as an Image message in addition to the
-            # per-item updates that already moved through plan_update.
-            await narrator.image(
-                result.image_url,
-                caption=f"Cut rendered · ${result.cost_usd:.2f}",
-                metadata={"plan_id": plan_id, "cut_id": result.cut_id},
-            )
+        # NOTE: cut_executor already emits narrator.image() inside the
+        # RENDER step. Emitting again here was producing two image cards
+        # in the chat for the same render — confusing and made it look
+        # like the model was re-running. The PlanCard final state plus
+        # the executor's image emission cover the success UX.
     except asyncio.CancelledError:
         await narrator.text(f"_Plan {plan_id[:8]} cancelled._")
         raise
