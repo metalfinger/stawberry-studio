@@ -403,19 +403,47 @@ async def _update_render_prompt(
 
 
 async def _update_asset_prompt(project_id: str, payload: dict, narrator: Narrator) -> bool:
-    """Patch assets.suggested_prompt. The user can then regenerate identity."""
+    """Patch assets.suggested_prompt and re-extract structured identity
+    locks (appearance / distinctive_features / wardrobe_lock) so the cut
+    DSL has rich grounding next time. The user can then regenerate the
+    identity image."""
     asset_id = payload.get("asset_id")
     new_prompt = (payload.get("prompt") or "").strip()
     if not asset_id or not new_prompt:
         return False
     from backend.database.core import get_async_connection
+    from backend.orchestrator.identity_traits import extract_identity_traits
+
     async with get_async_connection() as conn:
+        async with conn.execute(
+            "SELECT type FROM assets WHERE id = ? AND project_id = ?",
+            (asset_id, project_id),
+        ) as cur:
+            row = await cur.fetchone()
+        asset_type = (row["type"] if row else "character") or "character"
         await conn.execute(
             "UPDATE assets SET suggested_prompt = ? WHERE id = ? AND project_id = ?",
             (new_prompt, asset_id, project_id),
         )
         await conn.commit()
-    await narrator.text(f"Updated prompt for asset `{asset_id[:8]}`.")
+
+    traits = await extract_identity_traits(new_prompt, asset_type=asset_type)
+    if any(traits.values()):
+        async with get_async_connection() as conn:
+            await conn.execute(
+                "UPDATE assets SET appearance = ?, distinctive_features = ?, wardrobe_lock = ? "
+                "WHERE id = ? AND project_id = ?",
+                (
+                    traits.get("appearance") or "",
+                    traits.get("distinctive_features") or "",
+                    traits.get("wardrobe_lock") or "",
+                    asset_id,
+                    project_id,
+                ),
+            )
+            await conn.commit()
+
+    await narrator.text(f"Prompt saved for asset `{asset_id[:8]}` — identity locks refreshed.")
     return True
 
 

@@ -714,29 +714,52 @@ async def generate_all_missing_sheets(project_id: str) -> dict:
     }
 
 
-@tool("save_suggested_asset_prompt", description="Persist a suggested generation prompt on an asset.", tags=["assets", "write"])
-def save_suggested_asset_prompt(asset_id: str, prompt: str) -> dict:
-    """
-    Save a suggested prompt for an asset's master image.
-    This prompt can be used by the user to generate the first master image.
-    
-    Args:
-        asset_id: ID of the asset to update
-        prompt: The suggested generation prompt
-        
-    Returns:
-        Success status and updated asset
-    """
+@tool("save_suggested_asset_prompt", description="Persist a suggested generation prompt on an asset. Also auto-extracts structured identity locks (appearance, distinctive_features, wardrobe_lock) so the cut DSL has rich text grounding for continuity.", tags=["assets", "write"])
+async def save_suggested_asset_prompt(asset_id: str, prompt: str) -> dict:
+    """Save a suggested prompt and run a cheap identity-trait extraction
+    so that downstream cut renders can lean on structured columns rather
+    than a single big blob. Without this, characters appear in cut
+    prompts as bare "@Image1 The Director" with no text grounding —
+    which is exactly how we lost glasses on Test 2 / cut C2."""
+    import asyncio
+    from backend.orchestrator.identity_traits import extract_identity_traits
+
+    # Pull the asset type for type-aware extraction.
     conn = db.get_connection()
     cursor = conn.cursor()
+    cursor.execute("SELECT type FROM assets WHERE id = ?", (asset_id,))
+    row = cursor.fetchone()
+    asset_type = (dict(row).get("type") if row else "character") or "character"
     cursor.execute(
         "UPDATE assets SET suggested_prompt = ? WHERE id = ?",
-        (prompt, asset_id)
+        (prompt, asset_id),
     )
     conn.commit()
     conn.close()
-    
-    return {"success": True, "asset_id": asset_id, "suggested_prompt": prompt}
+
+    # Extract identity traits in the same coroutine so callers get a
+    # consistent post-state. Best-effort — empty traits if the LLM
+    # call fails; the DSL still uses suggested_prompt as fallback.
+    traits = await extract_identity_traits(prompt, asset_type=asset_type)
+    appearance = traits.get("appearance") or ""
+    distinctive = traits.get("distinctive_features") or ""
+    wardrobe = traits.get("wardrobe_lock") or ""
+    if appearance or distinctive or wardrobe:
+        conn = db.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE assets SET appearance = ?, distinctive_features = ?, wardrobe_lock = ? WHERE id = ?",
+            (appearance, distinctive, wardrobe, asset_id),
+        )
+        conn.commit()
+        conn.close()
+
+    return {
+        "success": True,
+        "asset_id": asset_id,
+        "suggested_prompt": prompt,
+        "identity_traits": traits,
+    }
 
 
 @tool("delete_asset", description="Delete an asset and its links/variants.", tags=["assets", "write"])
