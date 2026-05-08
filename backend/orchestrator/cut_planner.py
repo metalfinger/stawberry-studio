@@ -124,10 +124,25 @@ async def plan_compose_cut(
     # heuristic, not embeddings.
     strong_recs: list[dict[str, Any]] = []
 
-    # Per-asset reference resolution
+    # Per-asset reference resolution.
+    #
+    # Continuity learning from Test 2 / cut C2 (the glasses incident):
+    # picking BOTH identity AND a variant (e.g. expression_angry) for the
+    # same character ended up sending Nano Banana Pro three slots for one
+    # face — and the variant pulled the model away from the identity, so
+    # fine details (round glasses) were dropped on the second beat. The
+    # identity carries the most signal; expression should be expressed via
+    # text in [ACTION], not by stacking another image.
     linked = ctx.linked_characters + ctx.linked_locations + ctx.linked_props
     for asset in linked:
-        labels = picker_v2.rank_labels_for_cut(ctx.cut, asset, top_n=2)
+        is_character = (asset.get("type") or "").lower() == "character"
+        # Characters: identity-only. Locations/props: top-2 still allowed.
+        top_n = 1 if is_character else 2
+        labels = picker_v2.rank_labels_for_cut(ctx.cut, asset, top_n=top_n)
+        # Force identity for characters — picker can rank others first when
+        # the cut hints at them, but identity is non-negotiable in slot 1.
+        if is_character and "identity" not in labels:
+            labels = ["identity"] + labels[:0]
         for label in labels:
             existing = await references_v2.find_reference_by_label(asset["id"], label)
             if existing:

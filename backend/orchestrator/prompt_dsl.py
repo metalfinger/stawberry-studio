@@ -112,13 +112,20 @@ def compile_prompt(template: str, project_id: str) -> CompiledPrompt:
             used_assets.append(c["id"])
             mu = c.get("master_image_url") or c.get("image_url") or ""
             ref = _take_slot(mu) if mu else "(no master)"
+            # Build text grounding: prefer structured columns, fall back to
+            # the suggested_prompt Atlas wrote at extraction time. Without
+            # this, characters appear as bare "@Image1 The Director" with no
+            # textual identity — and Nano Banana Pro drifts (e.g. drops
+            # glasses) when reference images are weak or composition heavy.
             tokens = []
-            if c.get("appearance"):
-                tokens.append(c["appearance"])
-            if c.get("distinctive_features"):
-                tokens.append(c["distinctive_features"])
-            if c.get("wardrobe_lock"):
-                tokens.append(c["wardrobe_lock"])
+            for k in ("appearance", "distinctive_features", "wardrobe_lock"):
+                v = (c.get(k) or "").strip()
+                if v:
+                    tokens.append(v)
+            if not tokens:
+                sp = (c.get("suggested_prompt") or "").strip()
+                if sp:
+                    tokens.append(sp)
             traits = "; ".join(t for t in tokens if t)
             return f"{ref} {c['name']} ({traits})" if traits else f"{ref} {c['name']}"
 
@@ -130,7 +137,9 @@ def compile_prompt(template: str, project_id: str) -> CompiledPrompt:
             used_assets.append(loc["id"])
             mu = loc.get("master_image_url") or loc.get("image_url") or ""
             ref = _take_slot(mu) if mu else "(no master)"
-            traits = loc.get("appearance") or ""
+            traits = (loc.get("appearance") or "").strip()
+            if not traits:
+                traits = (loc.get("suggested_prompt") or "").strip()
             return f"{ref} {loc['name']} ({traits})" if traits else f"{ref} {loc['name']}"
 
         if block == "LIGHTING":

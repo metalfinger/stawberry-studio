@@ -48,11 +48,16 @@ async def compile_continuity_bible(project_id: str) -> dict[str, Any]:
             "environment_design_notes": brief.get("environment_design_notes", ""),
         }
 
-        # Characters with master image lookup
+        # Characters with master image lookup. We also pull suggested_prompt
+        # so the DSL has TEXT grounding even when the structured columns
+        # (appearance/distinctive_features/wardrobe_lock) are empty — which
+        # is the common case after Atlas extraction (it only writes
+        # suggested_prompt today).
         async with conn.execute(
             """
             SELECT a.id, a.name, a.description, a.appearance, a.consistency_tokens,
                    a.distinctive_features, a.wardrobe_lock, a.image_url,
+                   a.suggested_prompt,
                    COALESCE(em.master_image_url, '') AS master_image_url
             FROM assets a
             LEFT JOIN element_masters em
@@ -63,10 +68,26 @@ async def compile_continuity_bible(project_id: str) -> dict[str, Any]:
         ) as cur:
             char_rows = [dict(r) for r in await cur.fetchall()]
 
-        # Locations
+        # If a character has no master_image_url (element_masters not used)
+        # but DOES have an active identity in reference_pool, mirror that
+        # in. Without this, the DSL emits "(no master)" and the cut render
+        # has no character image slot — drift guaranteed.
+        for ch in char_rows:
+            if not ch.get("master_image_url"):
+                async with conn.execute(
+                    "SELECT image_url FROM reference_pool WHERE asset_id = ? AND label = 'identity' "
+                    "AND COALESCE(is_active, 1) = 1 ORDER BY created_at DESC LIMIT 1",
+                    (ch["id"],),
+                ) as cur:
+                    row = await cur.fetchone()
+                if row and row["image_url"]:
+                    ch["master_image_url"] = row["image_url"]
+
+        # Locations — same identity-from-reference-pool fallback.
         async with conn.execute(
             """
             SELECT a.id, a.name, a.description, a.appearance, a.image_url,
+                   a.suggested_prompt,
                    COALESCE(em.master_image_url, '') AS master_image_url
             FROM assets a
             LEFT JOIN element_masters em
@@ -76,6 +97,16 @@ async def compile_continuity_bible(project_id: str) -> dict[str, Any]:
             (project_id,),
         ) as cur:
             loc_rows = [dict(r) for r in await cur.fetchall()]
+        for lo in loc_rows:
+            if not lo.get("master_image_url"):
+                async with conn.execute(
+                    "SELECT image_url FROM reference_pool WHERE asset_id = ? AND label = 'identity' "
+                    "AND COALESCE(is_active, 1) = 1 ORDER BY created_at DESC LIMIT 1",
+                    (lo["id"],),
+                ) as cur:
+                    row = await cur.fetchone()
+                if row and row["image_url"]:
+                    lo["master_image_url"] = row["image_url"]
 
         # Lighting state per scene
         async with conn.execute(

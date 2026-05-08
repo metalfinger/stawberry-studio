@@ -229,11 +229,12 @@ async def bundle_cut_context(cut_id: str, *, sibling_window: int = 6) -> CutCont
                 (scene["anchor_cut_id"],),
             )
 
-    # Continuity Bible — compile fresh if it doesn't exist yet, otherwise
-    # use the persisted one (the freeze step recompiles).
-    bible = await get_continuity_bible(project_id)
-    if bible is None:
-        bible = await compile_continuity_bible(project_id)
+    # Continuity Bible — recompile every time we bundle a cut. Stale
+    # bibles were the root cause of glasses being dropped on cut #2 of
+    # Test 2: the bible was compiled at asset extraction (when columns
+    # were empty) and never refreshed when identities were generated.
+    # Compilation is cheap (a couple of indexed reads) and worth it.
+    bible = await compile_continuity_bible(project_id)
 
     # Bucket linked assets by type
     chars = [a for a in linked_assets if (a.get("type") or "").lower() == "character"]
