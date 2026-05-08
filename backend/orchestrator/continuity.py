@@ -102,16 +102,21 @@ async def compile_continuity_bible(project_id: str) -> dict[str, Any]:
                 if row and row["image_url"]:
                     ch["master_image_url"] = row["image_url"]
 
-        # Locations — same identity-from-reference-pool fallback.
+        # Locations — same identity-from-reference-pool fallback. L4: include
+        # sublocation + location_angle so the prompt DSL can resolve them
+        # via [SETTING:id] just like a regular location, and so the parent
+        # walker has every node it needs.
         async with conn.execute(
             """
-            SELECT a.id, a.name, a.description, a.appearance, a.image_url,
-                   a.suggested_prompt,
+            SELECT a.id, a.name, a.type, a.description, a.appearance, a.image_url,
+                   a.suggested_prompt, a.parent_asset_id,
                    COALESCE(em.master_image_url, '') AS master_image_url
             FROM assets a
             LEFT JOIN element_masters em
               ON em.asset_id = a.id AND em.is_active = 1 AND em.master_image_url IS NOT NULL
-            WHERE a.project_id = ? AND a.type = 'location' AND (a.master_id IS NULL OR a.master_id = '')
+            WHERE a.project_id = ?
+              AND a.type IN ('location','sublocation','location_angle')
+              AND (a.master_id IS NULL OR a.master_id = '')
             """,
             (project_id,),
         ) as cur:
@@ -186,6 +191,19 @@ async def compile_continuity_bible(project_id: str) -> dict[str, Any]:
         locations=len(loc_rows),
         scenes=len(scenes),
     )
+    # Expose the pinned style_anchor_url so agents/runtime callers reading
+    # the bible see what's locked. The compile path doesn't WRITE this
+    # column (style_anchor.py is the writer); we just surface it on read.
+    style_anchor_url = ""
+    async with get_async_connection() as conn:
+        async with conn.execute(
+            "SELECT style_anchor_url FROM continuity_bible WHERE project_id = ?",
+            (project_id,),
+        ) as cur:
+            r = await cur.fetchone()
+        if r:
+            style_anchor_url = (r["style_anchor_url"] or "").strip()
+
     return {
         "project_id": project_id,
         "version": version,
@@ -193,6 +211,7 @@ async def compile_continuity_bible(project_id: str) -> dict[str, Any]:
         "characters": char_rows,
         "locations": loc_rows,
         "lighting_state": lighting_state,
+        "style_anchor_url": style_anchor_url,
     }
 
 

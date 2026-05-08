@@ -151,6 +151,22 @@ def compile_prompt(template: str, project_id: str) -> CompiledPrompt:
             traits = (loc.get("appearance") or "").strip()
             if not traits:
                 traits = (loc.get("suggested_prompt") or "").strip()
+            # L3/L5 — walk the parent chain for nested locations so
+            # "Fake Moon Set" inherits "Film Studio Soundstage" context.
+            # The bible carries `parent_asset_id`; locations referenced via
+            # bible already have the chain walked by the bundler. We
+            # surface it here as inherited prose so the model sees both.
+            parent_id = loc.get("parent_asset_id")
+            chain_seen = {loc["id"]}
+            while parent_id and parent_id not in chain_seen:
+                chain_seen.add(parent_id)
+                parent = loc_map.get(parent_id)
+                if not parent:
+                    break
+                p_traits = (parent.get("appearance") or "").strip() or (parent.get("suggested_prompt") or "")[:240]
+                if p_traits:
+                    traits = f"{traits}; located inside {parent.get('name','?')}: {p_traits}"
+                parent_id = parent.get("parent_asset_id")
             return f"{ref} {loc['name']} ({traits})" if traits else f"{ref} {loc['name']}"
 
         if block == "LIGHTING":

@@ -83,8 +83,19 @@ def _build_anchor_prompt(brief: dict[str, Any]) -> str:
 
 
 async def _persist_anchor_url(project_id: str, url: str) -> None:
-    """Upsert continuity_bible.style_anchor_url. Creates a row if missing."""
+    """Pin the anchor in both storage locations so every render path sees it.
+
+    Two storage locations exist for historical reasons:
+      - continuity_bible.style_anchor_url   — read by L2-aware paths
+      - reference_pool row with is_style_anchor=1, scope='project'
+        — read by cut_planner / cut_executor (the modern Pixel path)
+
+    The L2 commit only wrote to the first one, which meant the modern
+    cut-render path never saw the anchor. This unifies: write both, every
+    time. set_style_anchor() handles deactivating any prior is_style_anchor
+    row so we don't accumulate stale anchors."""
     from backend.database.core import get_async_connection
+    from backend.orchestrator import references as refs_legacy
 
     async with get_async_connection() as conn:
         async with conn.execute(
@@ -105,6 +116,13 @@ async def _persist_anchor_url(project_id: str, url: str) -> None:
                 (project_id, url),
             )
         await conn.commit()
+
+    # Mirror to reference_pool so cut_planner/cut_executor see it too.
+    if url:
+        try:
+            await refs_legacy.set_style_anchor(project_id, url)
+        except Exception as e:  # noqa: BLE001
+            log.warning("set_style_anchor_mirror_failed", project_id=project_id, error=str(e))
 
 
 async def get_style_anchor_url(project_id: str) -> str:
