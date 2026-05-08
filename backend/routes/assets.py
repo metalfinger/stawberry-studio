@@ -9,6 +9,38 @@ from backend.tools.generation import get_cut_context
 router = APIRouter(prefix="/api/projects/{project_id}", tags=["assets"])
 
 
+@router.get("/assets/{asset_id}")
+async def get_asset(project_id: str, asset_id: str):
+    """Return the asset row + its identity reference summary so the
+    ContextPanel can show name / type / suggested_prompt for editing."""
+    from backend.database import assets as assets_db
+    asset = assets_db.get_asset(asset_id) if hasattr(assets_db, "get_asset") else None
+    if not asset:
+        # Fall back to direct query
+        from backend.database.core import get_async_connection
+        async with get_async_connection() as conn:
+            async with conn.execute(
+                "SELECT * FROM assets WHERE id = ? AND project_id = ?",
+                (asset_id, project_id),
+            ) as cur:
+                row = await cur.fetchone()
+        if row is None:
+            raise HTTPException(status_code=404, detail="Asset not found")
+        asset = dict(row)
+    return {
+        "id": asset["id"],
+        "name": asset.get("name"),
+        "type": asset.get("type"),
+        "description": asset.get("description"),
+        "suggested_prompt": asset.get("suggested_prompt"),
+        "appearance": asset.get("appearance"),
+        "distinctive_features": asset.get("distinctive_features"),
+        "wardrobe_lock": asset.get("wardrobe_lock"),
+        "image_url": asset.get("image_url"),
+        "parent_asset_id": asset.get("parent_asset_id"),
+    }
+
+
 @router.get("/assets/{asset_id}/references")
 async def list_asset_references(project_id: str, asset_id: str):
     """Every reference for this asset, identity first."""

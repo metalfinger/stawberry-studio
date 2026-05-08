@@ -542,3 +542,22 @@ export async function getCostSummary(projectId: string): Promise<CostSummary> {
   if (!res.ok) throw new Error('Failed to load cost summary');
   return res.json();
 }
+
+export interface AssetDetail {
+  id: string;
+  name: string;
+  type: string;
+  description?: string;
+  suggested_prompt?: string;
+  appearance?: string;
+  distinctive_features?: string;
+  wardrobe_lock?: string;
+  image_url?: string;
+  parent_asset_id?: string | null;
+}
+
+export async function getAsset(projectId: string, assetId: string): Promise<AssetDetail> {
+  const res = await fetch(`${API_BASE}/api/projects/${projectId}/assets/${assetId}`);
+  if (!res.ok) throw new Error('Failed to load asset');
+  return res.json();
+}

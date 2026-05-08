@@ -37,3 +37,24 @@
   background: linear-gradient(transparent, rgba(0,0,0,0.85));
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+
+/* Asset prompt editor in context panel (Phase K #2). */
+.context-panel__editor { padding: 10px 14px; border-bottom: 1px solid #1a1a1c; display: flex; flex-direction: column; gap: 6px; }
+.context-panel__textarea {
+  width: 100%; box-sizing: border-box;
+  background: #0a0a0b; color: #ddd;
+  border: 1px solid #2a2a2c; border-radius: 5px;
+  padding: 7px 9px; font-size: 11px; line-height: 1.5;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  resize: vertical; max-height: 240px;
+}
+.context-panel__editor-actions { display: flex; gap: 6px; }
+.ctx-btn {
+  background: #1f1f24; color: #ddd; border: 1px solid #303034;
+  padding: 6px 10px; border-radius: 5px; font-size: 11px;
+  font-weight: 500; cursor: pointer;
+}
+.ctx-btn:hover:not(:disabled) { background: #2a2a2e; }
+.ctx-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.ctx-btn--primary { background: #f43f5e; color: #fff; border-color: #f43f5e; }
+.ctx-btn--primary:hover:not(:disabled) { background: #fb7185; }
