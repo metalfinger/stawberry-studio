@@ -37,7 +37,7 @@ def get_scenes(project_id: str) -> str:
     return result
 
 
-@tool("add_scene", description="Create a new scene with rich metadata (location, lighting, mood, etc.).", tags=["blueprint"])
+@tool("add_scene", description="Create a new scene with rich metadata. Pass scene_number explicitly when creating multiple scenes in the same turn — without it, parallel tool calls land in DB-arrival order which is essentially random and scrambles narrative chronology.", tags=["blueprint"])
 def add_scene(
     project_id: str,
     title: str,
@@ -56,6 +56,9 @@ def add_scene(
     # Overrides (scene-specific style changes)
     override_art_style: str = "",
     override_color_palette: str = "",
+    # Explicit ordering. None = auto (MAX+1, atomic but order-of-arrival).
+    # Any positive int = land at that number; later scenes shift up to make room.
+    scene_number: int | None = None,
 ) -> str:
     """
     Add a new scene to the project. Scene metadata cascades to its shots and cuts.
@@ -81,27 +84,53 @@ def add_scene(
     """
     conn = db.get_connection()
     cursor = conn.cursor()
-
     scene_id = f"scene_{uuid.uuid4().hex[:8]}"
-    # Atomic auto-number: read MAX inside the INSERT so concurrent calls
-    # from a parallel-tool-call turn don't all read 0 and emit duplicates.
-    cursor.execute("""
-        INSERT INTO scenes (id, project_id, scene_number, title, description,
-                           location, location_detail, time_of_day,
-                           lighting, lighting_color, weather, atmosphere, mood, ambient_sound,
-                           override_art_style, override_color_palette)
-        SELECT ?, ?, COALESCE(MAX(scene_number), 0) + 1, ?, ?,
-               ?, ?, ?,
-               ?, ?, ?, ?, ?, ?,
-               ?, ?
-        FROM scenes WHERE project_id = ?
-    """, (scene_id, project_id, title, description,
-          location, location_detail, time_of_day,
-          lighting, lighting_color, weather, atmosphere, mood, ambient_sound,
-          override_art_style, override_color_palette,
-          project_id))
-    cursor.execute("SELECT scene_number FROM scenes WHERE id = ?", (scene_id,))
-    scene_number = cursor.fetchone()[0]
+
+    if scene_number is not None and scene_number > 0:
+        # Caller specified the slot. Shift any existing scenes at or after
+        # this number up by one to make room. Atomic inside a single
+        # transaction so a concurrent batch produces deterministic order.
+        cursor.execute("BEGIN IMMEDIATE")
+        try:
+            cursor.execute(
+                "UPDATE scenes SET scene_number = scene_number + 1 "
+                "WHERE project_id = ? AND scene_number >= ?",
+                (project_id, scene_number),
+            )
+            cursor.execute("""
+                INSERT INTO scenes (id, project_id, scene_number, title, description,
+                                   location, location_detail, time_of_day,
+                                   lighting, lighting_color, weather, atmosphere, mood, ambient_sound,
+                                   override_art_style, override_color_palette)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (scene_id, project_id, scene_number, title, description,
+                  location, location_detail, time_of_day,
+                  lighting, lighting_color, weather, atmosphere, mood, ambient_sound,
+                  override_art_style, override_color_palette))
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+    else:
+        # Legacy auto-number — atomic at MAX-read time, but order is the
+        # order of-write-arrival. Use only for single-scene turns.
+        cursor.execute("""
+            INSERT INTO scenes (id, project_id, scene_number, title, description,
+                               location, location_detail, time_of_day,
+                               lighting, lighting_color, weather, atmosphere, mood, ambient_sound,
+                               override_art_style, override_color_palette)
+            SELECT ?, ?, COALESCE(MAX(scene_number), 0) + 1, ?, ?,
+                   ?, ?, ?,
+                   ?, ?, ?, ?, ?, ?,
+                   ?, ?
+            FROM scenes WHERE project_id = ?
+        """, (scene_id, project_id, title, description,
+              location, location_detail, time_of_day,
+              lighting, lighting_color, weather, atmosphere, mood, ambient_sound,
+              override_art_style, override_color_palette,
+              project_id))
+        cursor.execute("SELECT scene_number FROM scenes WHERE id = ?", (scene_id,))
+        scene_number = cursor.fetchone()[0]
     
     from datetime import datetime
     cursor.execute("UPDATE projects SET updated_at = ? WHERE id = ?",
@@ -147,7 +176,7 @@ def get_shots_for_scene(scene_id: str) -> str:
     return result
 
 
-@tool("add_shot", description="Create a shot inside a scene with camera + composition metadata.", tags=["blueprint"])
+@tool("add_shot", description="Create a shot inside a scene. Pass shot_number when creating multiple shots in the same turn — without it, parallel calls land in DB-arrival order, not narrative order.", tags=["blueprint"])
 def add_shot(
     scene_id: str,
     description: str,
@@ -170,6 +199,9 @@ def add_shot(
     override_mood: str = "",
     override_lighting: str = "",
     override_art_style: str = "",
+    # Explicit ordering (None = auto MAX+1; positive int = land at slot,
+    # later shots shift up).
+    shot_number: int | None = None,
 ) -> str:
     """
     Add a shot to a scene. Shots inherit scene metadata unless overridden.
@@ -198,28 +230,53 @@ def add_shot(
     """
     conn = db.get_connection()
     cursor = conn.cursor()
-
     shot_id = f"shot_{uuid.uuid4().hex[:8]}"
-    cursor.execute("""
-        INSERT INTO shots (id, scene_id, shot_number, description,
-                          camera_angle, camera_height, camera_movement, camera_distance,
-                          lens_type, depth_of_field, focus_point,
-                          subject, subject_position, composition, foreground, background,
-                          override_mood, override_lighting, override_art_style)
-        SELECT ?, ?, COALESCE(MAX(shot_number), 0) + 1, ?,
-               ?, ?, ?, ?,
-               ?, ?, ?,
-               ?, ?, ?, ?, ?,
-               ?, ?, ?
-        FROM shots WHERE scene_id = ?
-    """, (shot_id, scene_id, description,
-          camera_angle, camera_height, camera_movement, camera_distance,
-          lens_type, depth_of_field, focus_point,
-          subject, subject_position, composition, foreground, background,
-          override_mood, override_lighting, override_art_style,
-          scene_id))
-    cursor.execute("SELECT shot_number FROM shots WHERE id = ?", (shot_id,))
-    shot_number = cursor.fetchone()[0]
+
+    if shot_number is not None and shot_number > 0:
+        cursor.execute("BEGIN IMMEDIATE")
+        try:
+            cursor.execute(
+                "UPDATE shots SET shot_number = shot_number + 1 "
+                "WHERE scene_id = ? AND shot_number >= ?",
+                (scene_id, shot_number),
+            )
+            cursor.execute("""
+                INSERT INTO shots (id, scene_id, shot_number, description,
+                                  camera_angle, camera_height, camera_movement, camera_distance,
+                                  lens_type, depth_of_field, focus_point,
+                                  subject, subject_position, composition, foreground, background,
+                                  override_mood, override_lighting, override_art_style)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (shot_id, scene_id, shot_number, description,
+                  camera_angle, camera_height, camera_movement, camera_distance,
+                  lens_type, depth_of_field, focus_point,
+                  subject, subject_position, composition, foreground, background,
+                  override_mood, override_lighting, override_art_style))
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+    else:
+        cursor.execute("""
+            INSERT INTO shots (id, scene_id, shot_number, description,
+                              camera_angle, camera_height, camera_movement, camera_distance,
+                              lens_type, depth_of_field, focus_point,
+                              subject, subject_position, composition, foreground, background,
+                              override_mood, override_lighting, override_art_style)
+            SELECT ?, ?, COALESCE(MAX(shot_number), 0) + 1, ?,
+                   ?, ?, ?, ?,
+                   ?, ?, ?,
+                   ?, ?, ?, ?, ?,
+                   ?, ?, ?
+            FROM shots WHERE scene_id = ?
+        """, (shot_id, scene_id, description,
+              camera_angle, camera_height, camera_movement, camera_distance,
+              lens_type, depth_of_field, focus_point,
+              subject, subject_position, composition, foreground, background,
+              override_mood, override_lighting, override_art_style,
+              scene_id))
+        cursor.execute("SELECT shot_number FROM shots WHERE id = ?", (shot_id,))
+        shot_number = cursor.fetchone()[0]
     
     conn.commit()
     conn.close()
@@ -264,7 +321,7 @@ def get_cuts(shot_id: str) -> str:
     return result
 
 
-@tool("add_cut", description="Create an action cut inside a shot.", tags=["blueprint"])
+@tool("add_cut", description="Create an action cut inside a shot. Pass cut_number when creating multiple cuts in the same turn — without it, parallel calls land in DB-arrival order, not narrative order.", tags=["blueprint"])
 def add_cut(
     shot_id: str,
     action: str,
@@ -290,6 +347,9 @@ def add_cut(
     override_lighting: str = "",
     override_mood: str = "",
     image_slots: str = "{}",
+    # Explicit ordering (None = auto MAX+1; positive int = land at slot,
+    # later cuts shift up).
+    cut_number: int | None = None,
 ) -> str:
     """
     Add a cut (edit point) to a shot. Cuts are the atomic visual storytelling units.
@@ -322,28 +382,53 @@ def add_cut(
     """
     conn = db.get_connection()
     cursor = conn.cursor()
-
     cut_id = f"cut_{uuid.uuid4().hex[:8]}"
-    cursor.execute("""
-        INSERT INTO cuts (id, shot_id, cut_number, action, story_description,
-                         dialogue, expression, body_language, gesture, gaze_direction,
-                         beat_type, duration_hint, transition,
-                         continuity_notes, character_state, object_tracking, lighting_continuity,
-                         override_camera_distance, override_focus_point, override_lighting, override_mood, image_slots)
-        SELECT ?, ?, COALESCE(MAX(cut_number), 0) + 1, ?, ?,
-               ?, ?, ?, ?, ?,
-               ?, ?, ?,
-               ?, ?, ?, ?,
-               ?, ?, ?, ?, ?
-        FROM cuts WHERE shot_id = ?
-    """, (cut_id, shot_id, action, story_description,
-          dialogue, expression, body_language, gesture, gaze_direction,
-          beat_type, duration_hint, transition,
-          continuity_notes, character_state, object_tracking, lighting_continuity,
-          override_camera_distance, override_focus_point, override_lighting, override_mood, image_slots,
-          shot_id))
-    cursor.execute("SELECT cut_number FROM cuts WHERE id = ?", (cut_id,))
-    cut_number = cursor.fetchone()[0]
+
+    if cut_number is not None and cut_number > 0:
+        cursor.execute("BEGIN IMMEDIATE")
+        try:
+            cursor.execute(
+                "UPDATE cuts SET cut_number = cut_number + 1 "
+                "WHERE shot_id = ? AND cut_number >= ?",
+                (shot_id, cut_number),
+            )
+            cursor.execute("""
+                INSERT INTO cuts (id, shot_id, cut_number, action, story_description,
+                                 dialogue, expression, body_language, gesture, gaze_direction,
+                                 beat_type, duration_hint, transition,
+                                 continuity_notes, character_state, object_tracking, lighting_continuity,
+                                 override_camera_distance, override_focus_point, override_lighting, override_mood, image_slots)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (cut_id, shot_id, cut_number, action, story_description,
+                  dialogue, expression, body_language, gesture, gaze_direction,
+                  beat_type, duration_hint, transition,
+                  continuity_notes, character_state, object_tracking, lighting_continuity,
+                  override_camera_distance, override_focus_point, override_lighting, override_mood, image_slots))
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+    else:
+        cursor.execute("""
+            INSERT INTO cuts (id, shot_id, cut_number, action, story_description,
+                             dialogue, expression, body_language, gesture, gaze_direction,
+                             beat_type, duration_hint, transition,
+                             continuity_notes, character_state, object_tracking, lighting_continuity,
+                             override_camera_distance, override_focus_point, override_lighting, override_mood, image_slots)
+            SELECT ?, ?, COALESCE(MAX(cut_number), 0) + 1, ?, ?,
+                   ?, ?, ?, ?, ?,
+                   ?, ?, ?,
+                   ?, ?, ?, ?,
+                   ?, ?, ?, ?, ?
+            FROM cuts WHERE shot_id = ?
+        """, (cut_id, shot_id, action, story_description,
+              dialogue, expression, body_language, gesture, gaze_direction,
+              beat_type, duration_hint, transition,
+              continuity_notes, character_state, object_tracking, lighting_continuity,
+              override_camera_distance, override_focus_point, override_lighting, override_mood, image_slots,
+              shot_id))
+        cursor.execute("SELECT cut_number FROM cuts WHERE id = ?", (cut_id,))
+        cut_number = cursor.fetchone()[0]
 
     conn.commit()
     conn.close()
@@ -768,3 +853,159 @@ def confirm_blueprint_complete(project_id: str) -> str:
         return "🎉 Blueprint complete! Project advancing to ASSETS phase. The Asset Analyst will take over."
     return "❌ Error advancing project."
 
+
+
+# ============== REORDER TOOLS (fix scrambled chronology) ==============
+#
+# Even with explicit numbering on add_*, an existing project can end up
+# with scenes/shots/cuts in the wrong order — typically because the agent
+# fired parallel add_scene calls before we shipped the explicit-number
+# parameter. These tools renumber a single level (scenes within a project,
+# shots within a scene, cuts within a shot) atomically inside a
+# transaction, so nothing is lost and the new order is the one given.
+
+def _renumber(conn, *, table: str, parent_col: str, parent_id: str,
+              num_col: str, ordered_ids: list[str]) -> tuple[int, int]:
+    """Rewrite the {num_col} column of `table` rows belonging to `parent_id`
+    to match the order in `ordered_ids` (1-indexed). Two-phase to avoid
+    UNIQUE constraint trips:
+      1. shift every row to a temporary high range (10_000+) so no
+         intermediate UPDATE collides with another row's current number.
+      2. overwrite each row with its final 1..N number.
+    Returns (matched, total) for sanity checking by the caller."""
+    cur = conn.cursor()
+    cur.execute(f"SELECT id FROM {table} WHERE {parent_col} = ?", (parent_id,))
+    existing = {r[0] for r in cur.fetchall()}
+    matched = sum(1 for i in ordered_ids if i in existing)
+    if matched != len(existing) or len(ordered_ids) != len(set(ordered_ids)):
+        return (matched, len(existing))
+
+    # Phase 1: park everything well above any real number.
+    OFFSET = 10_000
+    for i, _id in enumerate(ordered_ids, start=1):
+        cur.execute(
+            f"UPDATE {table} SET {num_col} = ? WHERE id = ?",
+            (OFFSET + i, _id),
+        )
+    # Phase 2: settle to the canonical 1..N.
+    for i, _id in enumerate(ordered_ids, start=1):
+        cur.execute(
+            f"UPDATE {table} SET {num_col} = ? WHERE id = ?",
+            (i, _id),
+        )
+    return (matched, len(existing))
+
+
+@tool(
+    "reorder_scenes",
+    description=(
+        "Renumber the project's scenes to match the given ordered list of "
+        "scene_ids. 1-based, contiguous; must include every scene exactly "
+        "once. Use this when a project's chronology is wrong (e.g. parallel "
+        "add_scene calls landed in DB-arrival order). Atomic: either the "
+        "whole reorder commits or nothing does."
+    ),
+    tags=["blueprint", "write"],
+)
+def reorder_scenes(project_id: str, ordered_scene_ids: list[str]) -> str:
+    conn = db.get_connection()
+    cur = conn.cursor()
+    cur.execute("BEGIN IMMEDIATE")
+    try:
+        matched, total = _renumber(
+            conn,
+            table="scenes",
+            parent_col="project_id",
+            parent_id=project_id,
+            num_col="scene_number",
+            ordered_ids=ordered_scene_ids,
+        )
+        if matched != total or matched != len(ordered_scene_ids):
+            conn.rollback()
+            conn.close()
+            return (
+                f"❌ Refusing to reorder: list contained {len(ordered_scene_ids)} ids "
+                f"({matched} matched out of {total} scenes). The list must include "
+                f"every scene id exactly once."
+            )
+        conn.commit()
+    except Exception as e:  # noqa: BLE001
+        conn.rollback()
+        conn.close()
+        return f"❌ Reorder failed: {e}"
+    conn.close()
+    return f"✅ Renumbered {total} scenes to match the supplied order."
+
+
+@tool(
+    "reorder_shots",
+    description=(
+        "Renumber a scene's shots to match the given ordered list of "
+        "shot_ids. Same atomic semantics as reorder_scenes."
+    ),
+    tags=["blueprint", "write"],
+)
+def reorder_shots(scene_id: str, ordered_shot_ids: list[str]) -> str:
+    conn = db.get_connection()
+    cur = conn.cursor()
+    cur.execute("BEGIN IMMEDIATE")
+    try:
+        matched, total = _renumber(
+            conn,
+            table="shots",
+            parent_col="scene_id",
+            parent_id=scene_id,
+            num_col="shot_number",
+            ordered_ids=ordered_shot_ids,
+        )
+        if matched != total or matched != len(ordered_shot_ids):
+            conn.rollback()
+            conn.close()
+            return (
+                f"❌ Refusing to reorder: list contained {len(ordered_shot_ids)} ids "
+                f"({matched} matched out of {total} shots)."
+            )
+        conn.commit()
+    except Exception as e:  # noqa: BLE001
+        conn.rollback()
+        conn.close()
+        return f"❌ Reorder failed: {e}"
+    conn.close()
+    return f"✅ Renumbered {total} shots in scene {scene_id[-6:]}."
+
+
+@tool(
+    "reorder_cuts",
+    description=(
+        "Renumber a shot's cuts to match the given ordered list of cut_ids. "
+        "Same atomic semantics as reorder_scenes."
+    ),
+    tags=["blueprint", "write"],
+)
+def reorder_cuts(shot_id: str, ordered_cut_ids: list[str]) -> str:
+    conn = db.get_connection()
+    cur = conn.cursor()
+    cur.execute("BEGIN IMMEDIATE")
+    try:
+        matched, total = _renumber(
+            conn,
+            table="cuts",
+            parent_col="shot_id",
+            parent_id=shot_id,
+            num_col="cut_number",
+            ordered_ids=ordered_cut_ids,
+        )
+        if matched != total or matched != len(ordered_cut_ids):
+            conn.rollback()
+            conn.close()
+            return (
+                f"❌ Refusing to reorder: list contained {len(ordered_cut_ids)} ids "
+                f"({matched} matched out of {total} cuts)."
+            )
+        conn.commit()
+    except Exception as e:  # noqa: BLE001
+        conn.rollback()
+        conn.close()
+        return f"❌ Reorder failed: {e}"
+    conn.close()
+    return f"✅ Renumbered {total} cuts in shot {shot_id[-6:]}."

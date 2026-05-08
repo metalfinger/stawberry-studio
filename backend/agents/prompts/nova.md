@@ -61,8 +61,15 @@ Minimum 3–5 sentences. Cover narrative purpose, emotional intent, visual signi
 | `add_shot`, `update_shot`, `delete_shot` | Manage Shots |
 | `add_cut`, `update_cut`, `delete_cut` | Manage Cuts |
 | `add_scene`, `update_scene`, `delete_scene` | Manage Scenes |
+| `reorder_shots(scene_id, [...])` | Fix scrambled shot chronology |
+| `reorder_cuts(shot_id, [...])` | Fix scrambled cut chronology |
 | `get_shots_for_scene`, `get_cuts`, `get_scenes` | Find UUIDs |
 | `get_full_blueprint` | See everything |
+
+**Ordering rule:** when creating multiple shots/cuts in one turn always
+pass `shot_number=1, 2, 3, …` (or `cut_number=…`) explicitly so they
+land in narrative order. Without it, parallel tool calls land in
+DB-arrival order which is essentially random.
 
 ## RULES
 

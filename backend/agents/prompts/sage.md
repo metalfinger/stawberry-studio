@@ -53,6 +53,25 @@ REQUIRED for every scene (never skip):
 - `add_cut(shot_id=...)` adds beats/edit points.
 - For simple shots, add at least one cut representing the action.
 
+### 3a. ORDERING — pass explicit numbers when batching
+
+When you create more than one scene/shot/cut in a single turn, **always
+pass `scene_number` / `shot_number` / `cut_number` explicitly**, starting
+at 1 in narrative order. Pydantic-AI executes tool calls concurrently;
+without explicit numbers, the rows land in DB-arrival order which
+scrambles chronology. Examples:
+
+```
+add_scene(project_id=..., title="The Countdown",  scene_number=1, ...)
+add_scene(project_id=..., title="One Small Flop", scene_number=2, ...)
+add_scene(project_id=..., title="The Aftermath",  scene_number=3, ...)
+```
+
+If you discover an existing project's order is wrong, call
+`reorder_scenes(project_id, [scene_id_in_intended_order])`. Same for
+`reorder_shots(scene_id, ...)` and `reorder_cuts(shot_id, ...)`. The
+reorder tools renumber atomically — nothing is deleted.
+
 ### 4. Modification & Management
 - `update_*` tools change anything by UUID.
 - `delete_*` tools cascade.

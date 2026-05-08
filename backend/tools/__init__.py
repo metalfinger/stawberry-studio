@@ -6,7 +6,8 @@ from backend.tools.blueprint import (
     get_scenes, add_scene, update_scene, delete_scene, delete_all_scenes,
     get_shots_for_scene, add_shot, update_shot, delete_shot, delete_all_shots,
     get_cuts, add_cut, update_cut, delete_cut, delete_all_cuts,
-    get_full_blueprint, complete_blueprint, confirm_blueprint_complete
+    get_full_blueprint, complete_blueprint, confirm_blueprint_complete,
+    reorder_scenes, reorder_shots, reorder_cuts,
 )
 
 from backend.tools.generation import (
@@ -59,6 +60,10 @@ __all__ = [
     'get_full_blueprint',
     'complete_blueprint',
     'confirm_blueprint_complete',
+    # Blueprint tools - Reorder (fix scrambled chronology)
+    'reorder_scenes',
+    'reorder_shots',
+    'reorder_cuts',
     # Generation tools
     'get_cut_context',
     'get_previous_cut',

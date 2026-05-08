@@ -22,5 +22,8 @@ tools:
   - get_full_blueprint
   - complete_blueprint
   - confirm_blueprint_complete
+  - reorder_scenes
+  - reorder_shots
+  - reorder_cuts
 output_schema: null
 critics: []
