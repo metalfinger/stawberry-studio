@@ -86,11 +86,13 @@ async def update_asset_prompt_route(project_id: str, asset_id: str, body: Prompt
         async with get_async_connection() as conn:
             await conn.execute(
                 "UPDATE assets SET appearance = ?, distinctive_features = ?, "
-                "wardrobe_lock = ? WHERE id = ? AND project_id = ?",
+                "wardrobe_lock = ?, consistency_tokens = ? "
+                "WHERE id = ? AND project_id = ?",
                 (
                     traits.get("appearance") or "",
                     traits.get("distinctive_features") or "",
                     traits.get("wardrobe_lock") or "",
+                    traits.get("consistency_tokens") or "",
                     asset_id,
                     project_id,
                 ),

@@ -148,6 +148,37 @@ def update_brief(
     stale = mark_phases_stale(project_id, "BRIEF")
     stale_msg = f" (Downstream phases marked stale: {', '.join(stale)})" if stale else ""
 
+    # Invalidate the style bible + anchor when STYLE-RELEVANT fields change.
+    # Without this, an edit to art_style / color_palette / lighting_style /
+    # world_logic leaves the OLD bible + OLD anchor pinned, which silently
+    # diverges from what the user just typed.
+    style_keys = {"art_style", "color_palette", "lighting_style",
+                  "world_logic", "era_setting", "negative_prompts"}
+    if any(k in updates for k in style_keys):
+        try:
+            conn = db.get_connection()
+            cur = conn.cursor()
+            cur.execute(
+                "UPDATE briefs SET palette_hex = '[]', style_tokens = '[]', "
+                "lighting_rules = '' WHERE project_id = ?",
+                (project_id,),
+            )
+            cur.execute(
+                "UPDATE continuity_bible SET style_anchor_url = '' "
+                "WHERE project_id = ?",
+                (project_id,),
+            )
+            cur.execute(
+                "UPDATE reference_pool SET is_active = 0 "
+                "WHERE project_id = ? AND is_style_anchor = 1 AND is_active = 1",
+                (project_id,),
+            )
+            conn.commit()
+            conn.close()
+            stale_msg += " · style bible + anchor invalidated (run 🛠️ Consistency to recompile)"
+        except Exception:
+            pass
+
     # Build summary of what was set
     set_fields = [f"{k}='{v[:30]}...'" if len(str(v)) > 30 else f"{k}='{v}'" for k, v in updates.items()]
     return f"✅ Brief updated! {', '.join(set_fields)}{stale_msg}"

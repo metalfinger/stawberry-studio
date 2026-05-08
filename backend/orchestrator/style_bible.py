@@ -52,6 +52,11 @@ Rules:
 """
 
 
+import re
+
+_HEX_RE = re.compile(r"^#[0-9A-Fa-f]{6}$")
+
+
 def _safe_list(value: Any, max_items: int = 6) -> list[str]:
     if not isinstance(value, list):
         return []
@@ -60,6 +65,22 @@ def _safe_list(value: Any, max_items: int = 6) -> list[str]:
         s = str(v).strip()
         if s:
             out.append(s[:120])
+    return out
+
+
+def _safe_palette(value: Any, max_items: int = 8) -> list[str]:
+    """Like _safe_list but enforces #RRGGBB. Drops anything that doesn't
+    parse — corrupted hex codes from a flaky Gemini response should not
+    propagate into prompt builders that quote them verbatim."""
+    if not isinstance(value, list):
+        return []
+    out = []
+    for v in value:
+        s = str(v).strip()
+        if s.startswith("#") and _HEX_RE.match(s):
+            out.append(s.upper())
+        if len(out) >= max_items:
+            break
     return out
 
 
@@ -106,7 +127,7 @@ async def extract_style_bible(brief: dict[str, Any]) -> dict[str, Any]:
             text = text.rsplit("```", 1)[0].strip()
         data = json.loads(text)
         return {
-            "palette_hex": _safe_list(data.get("palette_hex"), max_items=8),
+            "palette_hex": _safe_palette(data.get("palette_hex"), max_items=8),
             "style_tokens": _safe_list(data.get("style_tokens"), max_items=8),
             "lighting_rules": _safe_text(data.get("lighting_rules")),
         }

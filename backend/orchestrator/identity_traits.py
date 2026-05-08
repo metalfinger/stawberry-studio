@@ -23,10 +23,11 @@ Return STRICT JSON, no prose. Schema:
 {
   "appearance": "<one short sentence describing the body / face / age / style>",
   "distinctive_features": "<comma-separated identity locks that MUST persist across every generation: glasses, scars, hair color/length, eye color, build>",
-  "wardrobe_lock": "<comma-separated wardrobe items the character wears by default>"
+  "wardrobe_lock": "<comma-separated wardrobe items the character wears by default>",
+  "consistency_tokens": "<comma-separated 3-6 SHORT verbatim phrases the renderer should echo word-for-word every time, e.g. 'amber eyes', 'bone clasp', 'scar on chin'. Pick the MOST distinctive and re-quotable details. Use exact words from the prompt. Each token <= 6 words.>"
 }
 Each value is plain text, no JSON, no quotes inside, no markdown.
-If the prompt is for a location or prop, return appearance only and leave the others as "".
+If the prompt is for a location or prop, return appearance + consistency_tokens (geometry / material lock phrases) and leave wardrobe_lock as "" and distinctive_features as "".
 Keep each field under 240 chars. Be specific and concrete. Never invent details not in the prompt.
 """
 
@@ -37,13 +38,21 @@ def _safe_strip(value: Any) -> str:
     return str(value).strip()[:240]
 
 
+_EMPTY_TRAITS = {
+    "appearance": "",
+    "distinctive_features": "",
+    "wardrobe_lock": "",
+    "consistency_tokens": "",
+}
+
+
 async def extract_identity_traits(prompt: str, *, asset_type: str = "character") -> dict[str, str]:
     """Best-effort extraction. On any error returns empty fields so the
     caller can still persist the raw prompt and fall back to the DSL's
     suggested_prompt path."""
     prompt = (prompt or "").strip()
     if not prompt:
-        return {"appearance": "", "distinctive_features": "", "wardrobe_lock": ""}
+        return dict(_EMPTY_TRAITS)
 
     try:
         from backend.config import get_settings
@@ -68,7 +77,8 @@ async def extract_identity_traits(prompt: str, *, asset_type: str = "character")
             "appearance": _safe_strip(data.get("appearance")),
             "distinctive_features": _safe_strip(data.get("distinctive_features")),
             "wardrobe_lock": _safe_strip(data.get("wardrobe_lock")),
+            "consistency_tokens": _safe_strip(data.get("consistency_tokens")),
         }
     except Exception as e:  # noqa: BLE001
         log.warning("identity_traits_extract_failed", error=str(e))
-        return {"appearance": "", "distinctive_features": "", "wardrobe_lock": ""}
+        return dict(_EMPTY_TRAITS)

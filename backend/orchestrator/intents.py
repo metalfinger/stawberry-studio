@@ -428,12 +428,14 @@ async def _update_asset_prompt(project_id: str, payload: dict, narrator: Narrato
     if any(traits.values()):
         async with get_async_connection() as conn:
             await conn.execute(
-                "UPDATE assets SET appearance = ?, distinctive_features = ?, wardrobe_lock = ? "
+                "UPDATE assets SET appearance = ?, distinctive_features = ?, "
+                "wardrobe_lock = ?, consistency_tokens = ? "
                 "WHERE id = ? AND project_id = ?",
                 (
                     traits.get("appearance") or "",
                     traits.get("distinctive_features") or "",
                     traits.get("wardrobe_lock") or "",
+                    traits.get("consistency_tokens") or "",
                     asset_id,
                     project_id,
                 ),

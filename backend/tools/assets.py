@@ -753,12 +753,14 @@ async def save_suggested_asset_prompt(asset_id: str, prompt: str) -> dict:
     appearance = traits.get("appearance") or ""
     distinctive = traits.get("distinctive_features") or ""
     wardrobe = traits.get("wardrobe_lock") or ""
-    if appearance or distinctive or wardrobe:
+    tokens = traits.get("consistency_tokens") or ""
+    if appearance or distinctive or wardrobe or tokens:
         conn = db.get_connection()
         cursor = conn.cursor()
         cursor.execute(
-            "UPDATE assets SET appearance = ?, distinctive_features = ?, wardrobe_lock = ? WHERE id = ?",
-            (appearance, distinctive, wardrobe, asset_id),
+            "UPDATE assets SET appearance = ?, distinctive_features = ?, "
+            "wardrobe_lock = ?, consistency_tokens = ? WHERE id = ?",
+            (appearance, distinctive, wardrobe, tokens, asset_id),
         )
         conn.commit()
         conn.close()

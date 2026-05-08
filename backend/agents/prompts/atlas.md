@@ -93,11 +93,15 @@ For each asset you create, **immediately** call `save_suggested_asset_prompt(ass
 
 **A complete suggested_prompt has all of:**
 1. Brief's `art_style` (e.g. "Cinematic Anime") + `color_palette` from `get_brief`.
-2. Identity ammunition — every detail that must stay consistent: appearance, distinctive features, wardrobe (for characters), materials/geometry (for props), architecture (for locations).
-3. Verbatim signature tokens (use exact words: "emerald eyes" not "green eyes" — the model re-uses verbatim tokens better).
-4. Lighting baseline — soft neutral studio lighting unless brief.lighting_style demands otherwise.
-5. Background — characters/props: **pure white (#FFFFFF), flat-lit, no cast shadow on backdrop** (turnaround sheet convention); locations: their own environment.
-6. Negatives — "No text, no labels, no UI, no captions."
+2. **Locked palette (verbatim hex codes from `get_brief`'s `palette_hex` field)** — quote the codes the user sees, e.g. `palette: #0A0E27, #FF3366, #FACC15`. The model re-uses verbatim hex strings to color-match across assets.
+3. **Style tokens (verbatim from `get_brief`'s `style_tokens` field)** — short shared phrases that must appear in every prompt: halftone density, line weight, chroma offset, grain. Quote them exactly.
+4. Identity ammunition — every detail that must stay consistent: appearance, distinctive features, wardrobe (for characters), materials/geometry (for props), architecture (for locations).
+5. Verbatim signature tokens (use exact words: "emerald eyes" not "green eyes" — the model re-uses verbatim tokens better).
+6. Lighting baseline — soft neutral studio lighting unless brief.lighting_style demands otherwise.
+7. Background — characters/props: **pure white (#FFFFFF), flat-lit, no cast shadow on backdrop** (turnaround sheet convention); locations: their own environment.
+8. Negatives — "No text, no labels, no UI, no captions."
+
+If the bible is empty (palette_hex `[]` or style_tokens `[]`) the project's style bible never compiled — flag this to the user and ask them to run 🛠️ Consistency before extracting assets.
 
 **Templates (no angle instructions — sheet generator adds those):**
 - *Character:* `[art_style], [name] — [appearance], [distinctive_features verbatim], wearing [wardrobe], soft even lighting, PURE WHITE BACKGROUND (#FFFFFF) with no cast shadow on the backdrop, [color_palette]. No text, no labels.`
