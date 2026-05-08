@@ -878,6 +878,45 @@ def complete_asset_extraction(project_id: str) -> dict:
     # even *ask* the user to advance. This is the gate that previously failed.
     all_assets = asset_db.get_assets(project_id)
     missing_prompts = [a for a in all_assets if not (a.get("suggested_prompt") or "").strip()]
+
+    # Variant-fold detector — flag assets that share a long prefix and same
+    # type. They're almost certainly variants the agent should have folded
+    # via create_variant (e.g. "Astronaut Actor" + "Astronaut Actor —
+    # Cracked Helmet"). Two siblings with overlapping identities lose their
+    # face/wardrobe lock; one master + variant doesn't.
+    variant_warnings: list[dict] = []
+    by_type: dict[str, list[dict]] = {}
+    for a in all_assets:
+        if (a.get("master_id") or "").strip():
+            continue  # already a variant
+        by_type.setdefault((a.get("type") or "").lower(), []).append(a)
+    for t, group in by_type.items():
+        if t in ("frame", "sublocation", "location_angle"):
+            continue
+        names = [(g["id"], (g.get("name") or "").strip()) for g in group]
+        for i, (id_a, n_a) in enumerate(names):
+            for id_b, n_b in names[i + 1:]:
+                if not n_a or not n_b:
+                    continue
+                # Same first 2+ words OR shared prefix > 60% of shorter.
+                a_words = n_a.split()
+                b_words = n_b.split()
+                shared_words = 0
+                for x, y in zip(a_words, b_words):
+                    if x.lower() == y.lower():
+                        shared_words += 1
+                    else:
+                        break
+                short = min(len(n_a), len(n_b))
+                long = max(len(n_a), len(n_b))
+                if shared_words >= 2 and short / long >= 0.4:
+                    variant_warnings.append({
+                        "type": t,
+                        "candidate_master": id_a if len(n_a) <= len(n_b) else id_b,
+                        "candidate_variant": id_b if len(n_a) <= len(n_b) else id_a,
+                        "names": [n_a, n_b],
+                    })
+
     if missing_prompts:
         return {
             "status": "MISSING_PROMPTS",
@@ -909,6 +948,20 @@ def complete_asset_extraction(project_id: str) -> dict:
     
     total_slots = len(characters) + len(locations) + len(props) + len(frames) + all_variants
     
+    variant_block = ""
+    if variant_warnings:
+        lines = []
+        for vw in variant_warnings:
+            a, b = vw["names"]
+            lines.append(f"  - `{a}` + `{b}` ({vw['type']})")
+        variant_block = (
+            "\n\n⚠️ **Possible variants flagged** — these look like sibling "
+            "states of the same identity. Consider folding the second into "
+            "the first via `create_variant(master_id=..., variant_name=..., "
+            "variant_diff=...)` instead of two top-level assets:\n"
+            + "\n".join(lines)
+        )
+
     return {
         "status": "CONFIRMATION_REQUIRED",
         "summary": {
@@ -916,7 +969,8 @@ def complete_asset_extraction(project_id: str) -> dict:
             "locations": len(locations),
             "props": len(props),
             "frames": len(frames),
-            "total_slots": total_slots
+            "total_slots": total_slots,
+            "variant_warnings": variant_warnings,
         },
         "message": f"""✅ **Asset extraction is ready to complete!**
 
@@ -925,7 +979,7 @@ def complete_asset_extraction(project_id: str) -> dict:
 - **Locations:** {len(locations)}
 - **Props:** {len(props)}
 - **Frames:** {len(frames)}
-- **Total Slots:** {total_slots}
+- **Total Slots:** {total_slots}{variant_block}
 
 🚨 **CONFIRMATION REQUIRED:**
 Are you ready to move to the **GENERATE** phase where we'll create visual references for each asset?

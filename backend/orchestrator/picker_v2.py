@@ -106,8 +106,11 @@ def rank_labels_for_cut(cut: dict, asset: dict, *, top_n: int = 2) -> list[str]:
     candidates = list(_LABEL_KEYWORDS.keys())
     if asset_type == "character":
         candidates = [l for l in candidates if not l.startswith("state_") and not l.startswith("prop_") and l not in ("alt_lighting", "key_detail")]
-    elif asset_type == "location":
-        candidates = [l for l in candidates if l in ("key_detail", "alt_lighting")]
+    elif asset_type in ("location", "sublocation", "location_angle"):
+        # L4: sublocations and angles use the same location label vocabulary.
+        # An angle's identity already encodes the camera vantage; we still let
+        # picker pick alt_lighting / key_detail when the cut hints at them.
+        candidates = [l for l in candidates if l in ("key_detail", "alt_lighting", "establishing")]
     elif asset_type == "prop":
         candidates = [l for l in candidates if l.startswith("prop_") or l.startswith("state_")]
 
