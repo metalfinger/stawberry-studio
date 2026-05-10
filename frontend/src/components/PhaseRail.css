@@ -61,6 +61,18 @@
     border-color: #2a2c33;
     cursor: not-allowed;
 }
+/* Not-ready style — clickable but visually subdued. Click surfaces a
+   toast so user knows why it's blocked. */
+.phase-rail-advance.phase-rail-advance--blocked {
+    background: rgba(255, 255, 255, 0.03);
+    color: #888;
+    border-color: rgba(250, 204, 21, 0.25);
+    cursor: help;
+}
+.phase-rail-advance.phase-rail-advance--blocked:hover:not(:disabled) {
+    background: rgba(250, 204, 21, 0.08);
+    color: #facc15;
+}
 
 .phase-rail-glyph {
     display: inline-block;

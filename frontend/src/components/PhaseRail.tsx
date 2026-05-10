@@ -7,6 +7,7 @@
 // that only ever advances 4 of those, leaving 2 perpetually pending. One
 // label, one source of truth: projects.current_phase.
 import { useEffect, useState } from 'react'
+import { toast } from './toast/Toast'
 import './PhaseRail.css'
 
 const API_BASE = (import.meta as any).env?.VITE_API_BASE || ''
@@ -65,11 +66,22 @@ export function PhaseRail({ projectId, refreshKey = 0 }: Props) {
   }, [projectId, refreshKey])
 
   const advance = () => {
+    // ALWAYS surface a toast so the user sees the click registered.
+    // Earlier versions silently no-op'd when the WS was closed or the
+    // gate said not-ready — that's why the button "didn't work".
+    if (!ready) {
+      toast.error(reason || 'Phase not ready yet.')
+      return
+    }
     const ws: WebSocket | undefined = (window as any).__strawberry_chat_ws
-    if (!ws || ws.readyState !== WebSocket.OPEN) return
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      toast.error('Chat connection lost. Refresh the page.')
+      return
+    }
     setAdvancing(true)
     try {
       ws.send(JSON.stringify({ type: 'user_intent', intent: 'advance_phase', payload: {} }))
+      toast.info(`Advancing to ${next ? PHASE_LABELS[next] : 'next phase'}…`)
     } finally {
       // Re-enable shortly — readiness poll will reflect the new phase.
       setTimeout(() => setAdvancing(false), 1500)
@@ -105,9 +117,12 @@ export function PhaseRail({ projectId, refreshKey = 0 }: Props) {
       {next && (
         <button
           type="button"
-          className="phase-rail-advance"
+          className={`phase-rail-advance${ready ? '' : ' phase-rail-advance--blocked'}`}
           onClick={advance}
-          disabled={!ready || advancing}
+          // Don't disable — we always want clicks to surface a toast so
+          // users see "Phase not ready: <reason>" instead of nothing.
+          // The visual state still indicates not-ready via a class.
+          disabled={advancing}
           title={ready ? `Advance to ${PHASE_LABELS[next]}` : reason || 'Phase not ready'}
         >
           {advancing
