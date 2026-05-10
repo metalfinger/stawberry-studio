@@ -161,11 +161,8 @@ export async function getAssets(projectId: string): Promise<AssetsResponse> {
   return res.json();
 }
 
-export async function getNodeAssets(projectId: string, nodeType: string, nodeId: string): Promise<{ assets: Asset[], count: number }> {
-  const res = await fetch(`${API_BASE}/api/projects/${projectId}/node/${nodeType}/${nodeId}/assets`);
-  if (!res.ok) throw new Error('Failed to fetch node assets');
-  return res.json();
-}
+// (getNodeAssets removed — zero callers. Frontend reads node-asset
+//  links via getBlueprint(includeAssets=true) instead.)
 
 // Compiled Prompt types (Nano Banana Pro format)
 // (Legacy CompiledPrompt / CutGenerationRequest / ComposeStepEvent /

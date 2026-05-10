@@ -169,15 +169,6 @@ def get_assets(project_id: str, asset_type: str = None):
     return result
 
 
-@router.get("/{project_id}/node/{node_type}/{node_id}/assets")
-def get_node_assets(project_id: str, node_type: str, node_id: str):
-    """Get assets linked to a specific node."""
-    from backend.database import assets as asset_db
-    
-    assets = asset_db.get_node_assets(node_type, node_id)
-    return {"assets": assets, "count": len(assets)}
-
-
 @router.get("/{project_id}/cuts/{cut_id}/prompt")
 async def get_cut_prompt(project_id: str, cut_id: str):
     """
