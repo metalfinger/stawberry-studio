@@ -241,7 +241,7 @@ async def execute_plan(
     result.cut_id = plan.cut_id
     result.items_total = len(plan.items)
 
-    rc = RunContext(project_id=plan.project_id, phase="STORYBOARD", agent_id="cut_executor")
+    rc = RunContext(project_id=plan.project_id, phase="GENERATE", agent_id="cut_executor")
     await update_plan_status(plan_id, "executing")
     await log_event(rc, "plan_execute_start", {"plan_id": plan_id, "items": len(plan.items)})
 

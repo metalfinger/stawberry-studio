@@ -103,7 +103,7 @@ async def review_cut(
         "\nReturn a strict ContinuityScore JSON. `overall` is the MIN of the 4 axes."
     )
 
-    ctx = RunContext(project_id=project_id, phase="STORYBOARD", agent_id="vision_critic")
+    ctx = RunContext(project_id=project_id, phase="GENERATE", agent_id="vision_critic")
     await log_event(
         ctx,
         "critic_start",

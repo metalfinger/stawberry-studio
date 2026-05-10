@@ -198,7 +198,7 @@ def build_prompt_vars(agent_id: str, project_id: str) -> dict[str, str]:
                 "and report the per-asset result.\n"
                 "5. If `generate_all_missing_sheets` returns assets without `suggested_prompt`, "
                 "tell the user Atlas needs to fill those — Pixel cannot create master prompts "
-                "from nothing. Suggest going back to the CAST_SCOUT phase.\n\n"
+                "from nothing. Suggest going back to the ASSETS phase.\n\n"
                 "---\n"
             )
         tree = _build_full_tree(project_id)

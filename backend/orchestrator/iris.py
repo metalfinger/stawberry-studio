@@ -46,7 +46,7 @@ async def compose_missing_reference(cut_id: str, gap: dict[str, Any]) -> dict[st
     """
     asset_id = gap["asset_id"]
     asset_type = gap.get("type") or ""
-    rc = RunContext(project_id="", phase="CAST_SCOUT", agent_id="iris")
+    rc = RunContext(project_id="", phase="ASSETS", agent_id="iris")
     await log_event(rc, "iris_gap_start", {"cut_id": cut_id, "asset_id": asset_id, "type": asset_type})
 
     try:

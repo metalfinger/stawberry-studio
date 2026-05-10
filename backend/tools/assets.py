@@ -1,6 +1,6 @@
 """
-Agent tools for Asset Extraction and Management
-Used by the Analyst agent in STORYBOARD phase
+Agent tools for Asset Extraction and Management — used by Atlas in the
+ASSETS phase.
 """
 
 from backend.database import assets as asset_db
@@ -676,7 +676,7 @@ async def get_asset_tree_context(asset_id: str) -> dict:
 
 @tool("generate_all_missing_sheets", description="Generate identity cards + standard turnaround for every project asset that has a suggested_prompt but no identity reference yet. Runs parents-before-derived, identity-then-turnaround. Returns per-asset status.", tags=["assets", "write", "phase"])
 async def generate_all_missing_sheets(project_id: str) -> dict:
-    """One-button unblock for the CAST_SCOUT → STORYBOARD handoff.
+    """One-button unblock for the ASSETS → GENERATE handoff.
 
     For each asset: ensure identity exists (generate if missing), then fire
     the standard turnaround set in parallel. Parents (parent_asset_id /

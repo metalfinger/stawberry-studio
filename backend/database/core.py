@@ -126,7 +126,7 @@ def update_brief(project_id: str, **kwargs) -> dict[str, Any]:
 
 
 def complete_briefing(project_id: str) -> bool:
-    """Advance project to BLUEPRINT phase."""
+    """Advance project from BRIEF to STORY phase."""
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
@@ -142,30 +142,17 @@ def complete_briefing(project_id: str) -> bool:
 # Stale Phase Tracking
 # ============================================================================
 
-# 6-phase production flow (Phase 4) + legacy 4-phase aliases (BRIEF/STORY/ASSETS/GENERATE).
-# Both names coexist so old projects don't break. New projects use the 6-phase model.
-PIPELINE_PHASES = ["DEVELOP", "DESIGN", "CAST_SCOUT", "BLUEPRINT", "STORYBOARD", "ANIMATIC"]
-LEGACY_PHASES = ["BRIEF", "STORY", "ASSETS", "GENERATE"]
-
-# Maps legacy → canonical 6-phase name. Routes/agents that still emit legacy
-# phase strings get translated transparently.
-LEGACY_TO_PIPELINE = {
-    "BRIEF": "DEVELOP",
-    "STORY": "BLUEPRINT",
-    "ASSETS": "CAST_SCOUT",
-    "GENERATE": "STORYBOARD",
-}
-
-# Order used for cascade staleness. Concatenates both naming systems so that
-# any phase a row contains has a deterministic position. Legacy and modern
-# names are kept side by side; downstream of any phase = everything to its right
-# in this combined ordering.
-PHASE_ORDER = LEGACY_PHASES + PIPELINE_PHASES
+# Single phase model. The dual 4-phase / 6-phase split that used to live
+# here is dead — every consumer now uses these four names.
+PIPELINE_PHASES = ["BRIEF", "STORY", "ASSETS", "GENERATE"]
+PHASE_ORDER = PIPELINE_PHASES
 
 
 def canonical_phase(name: str) -> str:
-    """Translate a legacy phase name to its 6-phase equivalent. Idempotent."""
-    return LEGACY_TO_PIPELINE.get(name, name)
+    """Identity helper kept for callers that wrap phase strings. The
+    legacy translation table (DEVELOP/DESIGN/etc → BRIEF/STORY/...) is
+    gone; every phase string in the system is one of PIPELINE_PHASES."""
+    return name
 
 
 def get_stale_phases(project_id: str) -> list:
@@ -185,24 +172,16 @@ def get_stale_phases(project_id: str) -> list:
 
 
 def mark_phases_stale(project_id: str, from_phase: str) -> list:
-    """
-    Mark every downstream phase as stale.
-
-    Walks the canonical 6-phase pipeline (DEVELOP → ANIMATIC), translating
-    a legacy phase name (BRIEF/STORY/ASSETS/GENERATE) into its pipeline
-    equivalent first. This avoids the bug where extending PHASE_ORDER to
-    include both naming systems caused every phase to flag stale on any change.
-    """
-    canonical = canonical_phase(from_phase)
-    if canonical not in PIPELINE_PHASES:
+    """Mark every phase strictly downstream of `from_phase` as stale.
+    Single 4-phase pipeline (BRIEF → STORY → ASSETS → GENERATE)."""
+    if from_phase not in PIPELINE_PHASES:
         return []
 
     current_stale = set(get_stale_phases(project_id))
-    phase_idx = PIPELINE_PHASES.index(canonical)
-    # Downstream of the changed phase, in canonical names only.
+    phase_idx = PIPELINE_PHASES.index(from_phase)
     downstream_phases = PIPELINE_PHASES[phase_idx + 1:]
-    # Drop any legacy names from the existing stale set so we don't carry
-    # the previous mistake forward.
+    # Drop anything not in the current pipeline (cleans up old DBs that
+    # had legacy 6-phase names lingering in stale_phases JSON).
     cleaned_existing = {p for p in current_stale if p in PIPELINE_PHASES}
     new_stale = cleaned_existing.union(set(downstream_phases))
 

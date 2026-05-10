@@ -17,7 +17,7 @@ def get_full_struct(project_id: str) -> Dict[str, Any]:
     return {"project_id": project_id, "scenes": scene_list}
 
 def complete_blueprint(project_id: str) -> bool:
-    """Advance project to STORYBOARD phase if blueprint is complete."""
+    """Advance project from STORY to ASSETS phase if blueprint is complete."""
     scenes = get_scenes(project_id)
     if not scenes:
         return False
