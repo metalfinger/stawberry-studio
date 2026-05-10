@@ -230,14 +230,21 @@ Are you ready to move to the **STORY** phase where we'll plan scenes and shots?
 
 
 @tool("confirm_briefing_complete", description="Actually advance the project to STORY phase. Call ONLY after the user has explicitly confirmed.", tags=["brief", "phase"])
-def confirm_briefing_complete(project_id: str) -> str:
+async def confirm_briefing_complete(project_id: str) -> str:
     """
     Actually complete the briefing and transition to STORY phase.
     ONLY call this AFTER the user has explicitly confirmed (said "yes", "proceed", "confirm", etc.)
-    
+
+    Async because we await the style-bible + style-anchor compilation
+    on the SAME event loop as the chat WS. The earlier threaded approach
+    was creating a new loop in a daemon thread, but pydantic_ai / aiosqlite
+    cache async clients globally — those clients got bound to the thread's
+    loop, then when the main loop tried to reuse them on the next chat
+    turn we hit "Event loop is closed".
+
     Args:
         project_id: The current project ID
-    
+
     Returns:
         Success or error message
     """
@@ -258,38 +265,31 @@ def confirm_briefing_complete(project_id: str) -> str:
         )
 
     success = db.complete_briefing(project_id)
-    if success:
-        # Phase L1/L2 — compile style bible + mint style anchor BLOCKING in
-        # a background thread so they actually finish before the agent
-        # moves on. Earlier fire-and-forget create_task() silently dropped
-        # the work whenever Berry called this tool directly (vs the
-        # _confirm_briefing intent path), which is why Test 5's bible was
-        # never populated.
+    if not success:
+        return "❌ Error advancing project."
+
+    # Compile bible + mint anchor on the running loop. Awaiting them
+    # ensures they finish before Atlas starts AND keeps every async
+    # client bound to the chat WS's loop (no cross-loop pollution).
+    try:
+        import asyncio
+        from backend.orchestrator.style_bible import compile_style_bible_for_project
+        from backend.orchestrator.style_anchor import ensure_style_anchor
+
+        # Cap at 90s combined so a flaky LLM doesn't block the chat turn
+        # forever. If they overrun we let them keep going as a background
+        # task — next reference generation picks up whatever exists.
+        async def _compile_both():
+            await compile_style_bible_for_project(project_id)
+            await ensure_style_anchor(project_id)
+
         try:
-            import asyncio
-            import threading
-            from backend.orchestrator.style_bible import compile_style_bible_for_project
-            from backend.orchestrator.style_anchor import ensure_style_anchor
+            await asyncio.wait_for(_compile_both(), timeout=90)
+        except asyncio.TimeoutError:
+            # Fire-and-forget the rest — same loop, no cross-loop issue.
+            asyncio.create_task(_compile_both())
+    except Exception:
+        # Best-effort. Don't block the BRIEF→STORY handoff on bible failure.
+        pass
 
-            def _runner(pid: str) -> None:
-                loop = asyncio.new_event_loop()
-                try:
-                    asyncio.set_event_loop(loop)
-                    loop.run_until_complete(compile_style_bible_for_project(pid))
-                    loop.run_until_complete(ensure_style_anchor(pid))
-                except Exception:  # noqa: BLE001
-                    pass
-                finally:
-                    loop.close()
-
-            t = threading.Thread(target=_runner, args=(project_id,), daemon=True)
-            t.start()
-            # Block up to 90s so the bible (cheap LLM) and anchor (one image)
-            # finish before Atlas starts. If they overrun we let them
-            # background — the next save_suggested_asset_prompt + reference
-            # generation calls will still pick up whatever exists by then.
-            t.join(timeout=90)
-        except Exception:
-            pass
-        return "🎉 Briefing complete! Project advancing to STORY phase. The Story Architect will take over."
-    return "❌ Error advancing project."
+    return "🎉 Briefing complete! Project advancing to STORY phase. The Story Architect will take over."
