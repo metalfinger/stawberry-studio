@@ -1,7 +1,5 @@
 import { memo, useState, useEffect, useCallback } from 'react'
-import { createPortal } from 'react-dom'
-import { Handle, Position, type NodeProps, useNodes, useEdges } from '@xyflow/react'
-import { NodeProperties } from './NodeProperties'
+import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { readRefDrag } from '../dnd/refDragData'
 import { assignSlot } from '../../api/client'
 import { toast } from '../toast/Toast'
@@ -55,10 +53,9 @@ export interface CutNodeData {
     cut_id?: string
 }
 
-export const CutNode = memo(({ data, selected, id }: NodeProps & { data: CutNodeData }) => {
+export const CutNode = memo(({ data, selected }: NodeProps & { data: CutNodeData }) => {
     const [expanded, setExpanded] = useState(true)
     const [activeImage, setActiveImage] = useState(data.generated_image_url)
-    const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null)
     const [dropping, setDropping] = useState(false)
 
     // Drop a reference onto the cut → assign to the next free slot.
@@ -92,28 +89,12 @@ export const CutNode = memo(({ data, selected, id }: NodeProps & { data: CutNode
     }
     const onDragLeaveRef = () => setDropping(false)
 
-    // For Inspector Context
-    const nodes = useNodes()
-    const edges = useEdges()
-    const myNode = nodes.find(n => n.id === id) || null
-
-    useEffect(() => {
-        setPortalTarget(document.getElementById('properties-panel-portal'))
-    }, [])
-
     // Sync external data changes
     useEffect(() => {
         setActiveImage(data.generated_image_url)
     }, [data.generated_image_url])
 
     const assets = data.assets || []
-
-    // Callback when actions happen in the Side Panel (Generation, Set Active)
-    const handleInspectorUpdate = useCallback((newImageUrl?: string) => {
-        if (newImageUrl) {
-            setActiveImage(newImageUrl)
-        }
-    }, [])
 
     return (
         <div
@@ -296,19 +277,6 @@ export const CutNode = memo(({ data, selected, id }: NodeProps & { data: CutNode
             )}
 
             <Handle type="source" position={Position.Bottom} />
-
-            {/* INSPECTOR PORTAL */}
-            {selected && portalTarget && data.project_id && myNode && createPortal(
-                <NodeProperties
-                    selectedNode={myNode}
-                    nodes={nodes}
-                    edges={edges}
-                    projectId={data.project_id}
-                    onClose={() => { /* Cannot deselect easily from here without store access */ }}
-                    onNodeUpdate={handleInspectorUpdate}
-                />,
-                portalTarget
-            )}
         </div>
     )
 })

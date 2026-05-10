@@ -571,8 +571,8 @@ export function Canvas() {
                 onOpen={() => setLibraryOpen(true)}
             />
             <div className="canvas-container">
-                {/* Properties Panel Portal Container - Inside relative container to respect header */}
-                <aside id="properties-panel-portal" className="properties-panel-container"></aside>
+                {/* Legacy `properties-panel-portal` removed — NodeProperties
+                    inspector deleted in favor of the chat PlanCard flow. */}
 
                 <ReactFlow
                     nodes={nodes}

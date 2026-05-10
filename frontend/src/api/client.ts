@@ -171,135 +171,11 @@ export async function getNodeAssets(projectId: string, nodeType: string, nodeId:
 }
 
 // Compiled Prompt types (Nano Banana Pro format)
-export interface ReferenceImage {
-  slot: number;
-  ref: string;  // e.g., "@Image1"
-  type: 'character' | 'location' | 'prop';
-  name: string;
-  asset_id: string;
-  image_url: string | null;
-  status: 'ready' | 'pending';
-}
-
-export interface CompiledPrompt {
-  prompt: string;
-  reference_images: ReferenceImage[];
-  mode: string;
-  cut_id: string;
-  scene_number?: number;
-  shot_number?: number;
-  cut_number?: number;
-  assets_used: {
-    characters: string[];
-    locations: string[];
-    props: string[];
-  };
-}
-
-export async function getCutPrompt(projectId: string, cutId: string): Promise<CompiledPrompt> {
-  const res = await fetch(`${API_BASE}/api/projects/${projectId}/cuts/${cutId}/prompt`);
-  if (!res.ok) throw new Error('Failed to fetch cut prompt');
-  return res.json();
-}
-
-// Generation History types (matching generation_requests table)
-export interface CutGenerationRequest {
-  id: string;
-  status: 'generating' | 'complete' | 'failed';
-  prompt: string;
-  output_image_url?: string;
-  error_message?: string;
-  created_at: string;
-  model?: string;
-}
-
-export async function getCutHistory(projectId: string, cutId: string): Promise<CutGenerationRequest[]> {
-  const res = await fetch(`${API_BASE}/api/projects/${projectId}/cuts/${cutId}/history`);
-  if (!res.ok) throw new Error('Failed to fetch cut history');
-  return res.json();
-}
-
-export async function generateCutImage(projectId: string, cutId: string, promptOverride?: string): Promise<{ success: boolean; image_url: string; request_id: string }> {
-  const res = await fetch(`${API_BASE}/api/projects/${projectId}/cuts/${cutId}/generate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt_override: promptOverride })
-  });
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.detail || 'Failed to generate image');
-  }
-  return res.json();
-}
-
-export interface ComposeStepEvent {
-  type: 'compose_step' | 'compose_done' | 'compose_error';
-  step?: 'bundle' | 'pick' | 'preprod' | 'prompt' | 'render' | 'critic' | 'register';
-  status?: 'start' | 'ok' | 'skip' | 'error';
-  detail?: Record<string, unknown>;
-  ts?: string;
-  cut_id?: string;
-  error?: string;
-}
-
-export async function composeCut(projectId: string, cutId: string): Promise<{
-  cut_id: string;
-  image_url: string | null;
-  score: { face: number; wardrobe: number; lighting: number; props: number; overall: number; issues: string[]; suggestions: string[] } | null;
-  attempts: number;
-  steps: Array<{ step: string; status: string; detail: Record<string, unknown>; ts: string }>;
-  error: string | null;
-}> {
-  const res = await fetch(`${API_BASE}/api/projects/${projectId}/cuts/${cutId}/compose`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || 'Compose failed');
-  }
-  return res.json();
-}
-
-export function streamComposeCut(
-  projectId: string,
-  cutId: string,
-  onEvent: (event: ComposeStepEvent) => void,
-): WebSocket {
-  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const host = API_BASE || `${proto}//${window.location.host}`;
-  const url = (host.startsWith('http') ? host.replace(/^http/, 'ws') : host) +
-    `/api/projects/${projectId}/cuts/${cutId}/compose/stream`;
-  const ws = new WebSocket(url);
-  ws.onmessage = (msg) => {
-    try {
-      onEvent(JSON.parse(msg.data));
-    } catch {
-      /* ignore malformed */
-    }
-  };
-  return ws;
-}
-
-export async function setActiveCutImage(projectId: string, cutId: string, generationId: string): Promise<{ success: boolean; active_url: string }> {
-  const res = await fetch(`${API_BASE}/api/projects/${projectId}/cuts/${cutId}/active`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ generation_id: generationId })
-  });
-  if (!res.ok) throw new Error('Failed to set active image');
-  return res.json();
-}
-
-export async function swapCutAssetLink(projectId: string, cutId: string, oldAssetId: string, newAssetId: string): Promise<{ success: boolean; level: string; message: string }> {
-  const res = await fetch(`${API_BASE}/api/projects/${projectId}/assets/swap-input`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ cut_id: cutId, old_asset_id: oldAssetId, new_asset_id: newAssetId })
-  });
-  if (!res.ok) throw new Error('Failed to swap asset link');
-  return res.json();
-}
+// (Legacy CompiledPrompt / CutGenerationRequest / ComposeStepEvent /
+//  composeCut / streamComposeCut / getCutPrompt / getCutHistory /
+//  setActiveCutImage / generateCutImage / swapCutAssetLink were removed
+//  with the NodeProperties inspector — modern flow goes through chat
+//  PlanCard via propose_cut_plan / execute_cut_plan intents.)
 
 // References — references-first asset model
 
@@ -416,56 +292,9 @@ export async function generateAssetSheet(
   return res.json();
 }
 
-// Pre-Production Requirements
-export interface PreProductionRequirement {
-  type: 'character_master' | 'location_master' | 'expression_variant';
-  name: string;
-  asset_id: string;
-  action: 'generate' | 'i2i_edit';
-  base_reference?: string;
-  details: Record<string, any>;
-}
-
-export interface ReadyReference {
-  type: 'character' | 'location';
-  name: string;
-  asset_id: string;
-  image_url: string;
-  purpose: string;
-}
-
-export interface ContinuityOption {
-  type: 'previous_cut';
-  cut_id: string;
-  image_url: string;
-  action: string;
-  use_for: string;
-}
-
-export interface PreProductionStatus {
-  cut_id: string;
-  cut_action: string;
-  requirements: PreProductionRequirement[];
-  ready_references: ReadyReference[];
-  continuity_option: ContinuityOption | null;
-  pre_production_needed: boolean;
-}
-
-export async function getPreProductionRequirements(projectId: string, cutId: string): Promise<PreProductionStatus> {
-  const res = await fetch(`${API_BASE}/api/projects/${projectId}/cuts/${cutId}/pre-production`);
-  if (!res.ok) throw new Error('Failed to get pre-production requirements');
-  return res.json();
-}
-
-export async function updateCutSlots(projectId: string, cutId: string, slots: Record<string, string>): Promise<any> {
-    const res = await fetch(`${API_BASE}/api/projects/${projectId}/cuts/${cutId}/slots`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image_slots: JSON.stringify(slots) })
-    });
-    if (!res.ok) throw new Error('Failed to update cut slots');
-    return res.json();
-}
+// (Legacy PreProductionStatus / getPreProductionRequirements /
+//  updateCutSlots removed with NodeProperties — Iris is now invoked
+//  internally via PREPROD_FILL plan items, not a frontend status panel.)
 
 // ─── Library (reference_pool) ─────────────────────────────────────────────
 export interface LibraryItem {
