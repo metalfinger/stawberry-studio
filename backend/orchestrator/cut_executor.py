@@ -67,6 +67,70 @@ class ExecuteResult:
 # Helpers
 # ============================================================================
 
+# Priority weights for reference selection. Lower = higher priority.
+# When the cut has more refs than Nano Banana Pro can attend to (~4),
+# we keep the highest-priority ones. Reasoning per slot:
+#   anchor    — palette/line/grain lock, single image, tiny composition
+#               footprint (the new swatch sheet doesn't bias scene layout)
+#   identity  — character face/wardrobe lock, can't drop without drift
+#   prev_cut  — same-shot continuity reference
+#   location  — plate/establishing for set geometry
+#   variant   — per-cut character pose (hero_pose etc.)
+#   prop      — usually inferred from text well; lowest priority
+_PRIORITY_BY_NAME_PREFIX = (
+    ("style_anchor",      0),
+    ("identity_",         1),  # PREPROD_FILL emits "identity_<name>"
+    ("identity",          1),  # generic identity slot from REFERENCE_REUSE
+    ("front",             1),
+    ("three_quarter",     2),
+    ("side_",             2),
+    ("face_close_up",     2),
+    ("hero_pose",         3),
+    ("expression_",       3),
+    ("running",           3),
+    ("kneeling",          3),
+    ("fighting_stance",   3),
+    ("wounded",           3),
+    ("gun_drawn",         3),
+    ("plate",             4),
+    ("establishing",      4),
+    ("alt_lighting",      4),
+    ("key_detail",        4),
+    ("wide_establishing", 4),
+    ("medium",            4),
+    ("prop_",             5),
+    ("state_",            5),
+    ("prev_cut_",         3),  # only present when planner added it
+)
+
+
+def _ref_priority(ref) -> int:
+    """Return a priority weight for a ReferenceImage (lower = keep first)."""
+    name = (getattr(ref, "name", "") or "").lower()
+    for prefix, weight in _PRIORITY_BY_NAME_PREFIX:
+        if name.startswith(prefix):
+            return weight
+    return 6  # unknown labels go last
+
+
+def _prioritize_refs(ref_slots, ctx, *, max_refs: int = 4):
+    """Sort ref_slots by priority and trim to max_refs.
+
+    Stable-sort preserves insertion order for ties, so anchor stays first
+    even when other refs share priority 0. Returns the trimmed list with
+    slot numbers re-assigned 1..N for the model.
+    """
+    if len(ref_slots) <= max_refs:
+        # Nothing to drop, but still re-assign slot numbers in priority
+        # order so the model sees the most important first.
+        sorted_refs = sorted(ref_slots, key=_ref_priority)
+    else:
+        sorted_refs = sorted(ref_slots, key=_ref_priority)[:max_refs]
+    for i, r in enumerate(sorted_refs):
+        r.slot = i + 1
+    return sorted_refs
+
+
 def _build_template_from_ctx(ctx, cumulative_feedback: list[str]) -> str:
     """Build the DSL template for the cut. Threads cumulative feedback as
     a USER FEEDBACK block at the end so it influences the render."""
@@ -432,8 +496,14 @@ async def execute_plan(
                         # @ImageN references stay correct, but swap the
                         # final prompt text for the user's override.
                         compiled.final_prompt = override
-                    # Trim slots to provider limit (5).
-                    refs_for_call = ref_slots[:5]
+
+                    # Priority-based reference cap. Nano Banana Pro's optimal
+                    # is 3-4 reference images; quality drops above that
+                    # because the model has to attend to too many guides.
+                    # Old code did `ref_slots[:5]` — naive truncation that
+                    # could drop the location plate while keeping a prop
+                    # turnaround. Now we sort by importance and cap at 4.
+                    refs_for_call = _prioritize_refs(ref_slots, ctx, max_refs=4)
                     reg = get_registry()
                     img_provider, model = reg.image_for_role("pro")
                     req = ImageGenRequest(
