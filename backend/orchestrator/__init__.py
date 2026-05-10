@@ -1,88 +1,31 @@
 """
 Strawberry Studio orchestrator — agent runtime, tool registry, event log.
 
-Public API:
-    from backend.orchestrator import load_agent, run_agent, RunContext, log_event
+Modules in this package:
+  agent_spec      load YAML agent declarations
+  runner          stream pydantic-AI agent turns
+  chat_bridge     chat-WS surface used by routes/chat.py
+  intents         user_intent dispatch (PlanCard buttons, etc.)
+  events          structured event log (agent_events table)
+  bus             per-project ProjectBus pub/sub for typed Console messages
+  narrator        typed-message emitter (text, plan, reference_card, …)
+  llm_cost        per-model cost lookups
+  gen_stats       in-memory in-flight image-gen tracker
 
-The orchestrator wraps `pydantic_ai.Agent` with:
-- declarative agent specs loaded from backend/agents/specs/*.yaml
-- a project-aware tool registry
-- structured event logging to the agent_events table
-- hookable critic loops
+  references      reference_pool service + asset-aware generators
+  picker          label-aware reference picker (rank_labels_for_cut)
+  prompt_dsl      [STYLE]/[CHARACTER]/[SETTING]/… block resolver
+  identity_traits LLM trait extraction (appearance, distinctive_features, …)
+  style_bible     palette_hex + style_tokens + lighting_rules compiler
+  style_anchor    project-pinned anchor image (writes both storage paths)
+  continuity      continuity-bible compile/read
 
-This package is the Phase 3 successor to backend/agents/{berry,planner,...}.py
-which used Google ADK. New code lives here; old factories stay alive in parallel
-during the migration.
+  context_bundler bundles cut → CutContext for the planner
+  asset_bundler   bundles asset → AssetContext (DAG walk, history)
+  plans           Plan dataclass + persistence
+  cut_planner     plan_compose_cut: build a Plan for one cut
+  cut_executor    execute_plan: run an approved Plan
+  iris            internal gap-filler (called from cut_executor PREPROD_FILL)
+  vision_critic   image-rubric review for cut_executor's auto-retry
+  turn_ordering   author-order enforcement after a runner turn
 """
-from backend.orchestrator.agent_spec import AgentSpec, list_agent_ids, load_agent_spec
-from backend.orchestrator.events import RunContext, log_event, replay_run
-from backend.orchestrator.runner import build_pai_agent, run_agent, stream_agent
-
-__all__ = [
-    "AgentSpec",
-    "load_agent_spec",
-    "list_agent_ids",
-    "RunContext",
-    "log_event",
-    "replay_run",
-    "build_pai_agent",
-    "run_agent",
-    "stream_agent",
-    # Phase 4.5
-    "compile_continuity_bible",
-    "get_continuity_bible",
-    "render_bible_prefix",
-    "register_image",
-    "search_references",
-    "get_anchors",
-    "get_style_anchor",
-    "set_style_anchor",
-    "rank_labels_for_cut",
-    "compile_prompt",
-    "review_cut",
-    "ContinuityScore",
-]
-
-
-from backend.orchestrator.continuity import (
-    compile_continuity_bible,
-    get_continuity_bible,
-    render_bible_prefix,
-)
-from backend.orchestrator.picker import rank_labels_for_cut
-from backend.orchestrator.prompt_dsl import compile_prompt
-from backend.orchestrator.references import (
-    get_anchors,
-    get_style_anchor,
-    register_image,
-    set_style_anchor,
-)
-from backend.orchestrator.references import (
-    search as search_references,
-)
-from backend.orchestrator.vision_critic import ContinuityScore, review_cut
-from backend.orchestrator.context_bundler import CutContext, bundle_cut_context, render_context_summary
-from backend.orchestrator.asset_bundler import AssetContext, bundle_asset_context
-from backend.orchestrator.plans import (
-    Plan,
-    PlanItem,
-    make_plan,
-    make_item,
-    save_plan,
-    load_plan,
-    update_plan_status,
-    update_item_status,
-    fork_plan_for_refinement,
-    list_plans_for_cut,
-)
-from backend.orchestrator.cut_planner import plan_compose_cut
-from backend.orchestrator.cut_executor import execute_plan, ExecuteResult
-from backend.orchestrator.references import (
-    generate_identity_card,
-    generate_pose,
-    get_or_generate as get_or_generate_reference,
-    list_references,
-    get_identity_card,
-    standard_turnaround_set,
-    precache_standard_turnaround,
-)
