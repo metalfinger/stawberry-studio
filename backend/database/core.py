@@ -148,13 +148,6 @@ PIPELINE_PHASES = ["BRIEF", "STORY", "ASSETS", "GENERATE"]
 PHASE_ORDER = PIPELINE_PHASES
 
 
-def canonical_phase(name: str) -> str:
-    """Identity helper kept for callers that wrap phase strings. The
-    legacy translation table (DEVELOP/DESIGN/etc → BRIEF/STORY/...) is
-    gone; every phase string in the system is one of PIPELINE_PHASES."""
-    return name
-
-
 def get_stale_phases(project_id: str) -> list:
     """Get list of stale phases for a project."""
     conn = get_connection()
@@ -180,10 +173,7 @@ def mark_phases_stale(project_id: str, from_phase: str) -> list:
     current_stale = set(get_stale_phases(project_id))
     phase_idx = PIPELINE_PHASES.index(from_phase)
     downstream_phases = PIPELINE_PHASES[phase_idx + 1:]
-    # Drop anything not in the current pipeline (cleans up old DBs that
-    # had legacy 6-phase names lingering in stale_phases JSON).
-    cleaned_existing = {p for p in current_stale if p in PIPELINE_PHASES}
-    new_stale = cleaned_existing.union(set(downstream_phases))
+    new_stale = current_stale.union(set(downstream_phases))
 
     # Save to database
     conn = get_connection()

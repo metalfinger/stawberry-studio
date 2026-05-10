@@ -21,7 +21,6 @@ import structlog
 from backend import db
 
 PIPELINE_PHASES = db.PIPELINE_PHASES
-canonical_phase = db.canonical_phase
 get_async_connection = db.get_async_connection
 mark_phases_stale = db.mark_phases_stale
 
@@ -62,7 +61,7 @@ async def get_artifact(
     version: int | None = None,
 ) -> dict[str, Any] | None:
     """Return a specific artifact version, or the current_version if `version` is None."""
-    phase_c = canonical_phase(phase)
+    phase_c = phase
     async with get_async_connection() as conn:
         if version is None:
             async with conn.execute(
@@ -94,7 +93,7 @@ async def get_artifact(
 
 async def list_versions(project_id: str, phase: str) -> list[dict[str, Any]]:
     """All versions of an artifact for one phase, newest first."""
-    phase_c = canonical_phase(phase)
+    phase_c = phase
     async with get_async_connection() as conn:
         async with conn.execute(
             """
@@ -140,7 +139,7 @@ async def save_artifact_version(
     set_as_current: bool = True,
 ) -> dict[str, Any]:
     """Mint a new artifact version. Auto-increments. Optionally sets as current."""
-    phase_c = canonical_phase(phase)
+    phase_c = phase
     async with get_async_connection() as conn:
         await _ensure_phase_row(conn, project_id, phase_c)
         async with conn.execute(
@@ -212,7 +211,7 @@ async def fork_artifact(
     keeps the lineage. Does NOT auto-set as current — caller decides via
     `set_as_current` if they want this fork to win.
     """
-    phase_c = canonical_phase(phase)
+    phase_c = phase
     base = await get_artifact(project_id, phase_c, base_version)
     if base is None:
         raise ValueError(f"base version {base_version} not found for {phase_c}")
@@ -233,7 +232,7 @@ async def freeze_and_advance(project_id: str, phase: str) -> dict[str, Any]:
     in PIPELINE_PHASES, and cascade staleness onto downstream phases per the
     existing mark_phases_stale mechanic.
     """
-    phase_c = canonical_phase(phase)
+    phase_c = phase
     if phase_c not in PIPELINE_PHASES:
         raise ValueError(f"unknown phase: {phase_c}")
 
@@ -273,7 +272,7 @@ async def freeze_and_advance(project_id: str, phase: str) -> dict[str, Any]:
 
 async def mark_phase_in_progress(project_id: str, phase: str) -> None:
     """Idempotent: surface a phase as the active editing target."""
-    phase_c = canonical_phase(phase)
+    phase_c = phase
     async with get_async_connection() as conn:
         await _ensure_phase_row(conn, project_id, phase_c)
         await conn.execute(

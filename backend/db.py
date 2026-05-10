@@ -25,7 +25,6 @@ from .database.core import (
     get_brief, update_brief, complete_briefing,
     # Phase staleness
     get_stale_phases, mark_phases_stale, clear_stale_phase, clear_all_stale_phases,
-    canonical_phase,
     # Constants
     PIPELINE_PHASES, PHASE_ORDER,
 )
@@ -59,7 +58,6 @@ __all__ = [
     "create_project", "get_project", "list_projects", "update_phase", "update_project_phase",
     "get_brief", "update_brief", "complete_briefing",
     "get_stale_phases", "mark_phases_stale", "clear_stale_phase", "clear_all_stale_phases",
-    "canonical_phase",
     "PIPELINE_PHASES", "PHASE_ORDER",
     "get_scenes", "add_scene", "update_scene", "delete_scene", "delete_all_scenes", "add_scene_raw",
     "get_shots", "get_shots_for_scene", "add_shot", "update_shot", "delete_shot", "delete_all_shots",

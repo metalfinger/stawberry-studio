@@ -175,43 +175,10 @@ CREATE TABLE asset_links (
     FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE
 );
 
-CREATE TABLE element_masters (
-    id TEXT PRIMARY KEY,
-    asset_id TEXT NOT NULL,
-    element_type TEXT NOT NULL,
-    master_image_url TEXT,
-    master_prompt TEXT,
-    master_generation_params TEXT,
-    background_type TEXT DEFAULT 'white',
-    view_type TEXT,
-    resolution TEXT DEFAULT '2048x2048',
-    aspect_ratio TEXT DEFAULT '1:1',
-    status TEXT DEFAULT 'pending',
-    error_message TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    is_active BOOLEAN DEFAULT 0,
-    generation_request_id TEXT,
-    candidate_group_id TEXT,
-    FOREIGN KEY (asset_id) REFERENCES assets(id) ON DELETE CASCADE
-);
-
-CREATE TABLE element_variants (
-    id TEXT PRIMARY KEY,
-    master_id TEXT NOT NULL,
-    variant_type TEXT NOT NULL,
-    variant_description TEXT,
-    image_url TEXT,
-    prompt TEXT,
-    generation_method TEXT DEFAULT 'image_to_image',
-    reference_image_id TEXT,
-    generation_params TEXT,
-    status TEXT DEFAULT 'pending',
-    error_message TEXT,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (master_id) REFERENCES element_masters(id) ON DELETE CASCADE
-);
+-- element_masters / element_variants tables removed: reference_pool
+-- (see migration 007) is the single source of truth for asset master
+-- images, and the routes/tools that wrote to these tables are gone
+-- (see C1 cleanup commit). Dev-mode rebuild — old DBs need to be wiped.
 
 CREATE TABLE generation_requests (
     id TEXT PRIMARY KEY,
@@ -265,26 +232,10 @@ CREATE TABLE generation_history (
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 );
 
-CREATE TABLE element_presets (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    element_type TEXT NOT NULL,
-    preset_type TEXT NOT NULL,
-    variant_type TEXT,
-    prompt_template TEXT NOT NULL,
-    required_fields TEXT,
-    default_model TEXT DEFAULT 'gemini_3_pro_image',
-    default_resolution TEXT DEFAULT '2048x2048',
-    default_aspect_ratio TEXT DEFAULT '1:1',
-    default_background TEXT DEFAULT 'white',
-    default_params TEXT,
-    is_system BOOLEAN DEFAULT TRUE,
-    created_by TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+-- element_presets table removed: it served the deleted element_generation
+-- tools (preset prompt templates for the legacy sheet generator). No
+-- code reads or writes it any more.
 
-CREATE INDEX idx_element_masters_asset_id ON element_masters(asset_id);
-CREATE INDEX idx_element_variants_master_id ON element_variants(master_id);
 CREATE INDEX idx_generation_history_project_id ON generation_history(project_id);
 CREATE INDEX idx_generation_requests_project ON generation_requests(project_id);
 CREATE INDEX idx_generation_requests_status ON generation_requests(status);
