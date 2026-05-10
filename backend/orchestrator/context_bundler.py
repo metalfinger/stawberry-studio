@@ -199,16 +199,49 @@ async def bundle_cut_context(cut_id: str, *, sibling_window: int = 6) -> CutCont
             previous_cut = scene_cuts[idx - 1] if idx > 0 else None
             next_cut = scene_cuts[idx + 1] if idx + 1 < len(scene_cuts) else None
 
-        # Linked assets via asset_links + scene/shot bubble-up
-        linked_assets = await _fetch_all(
+        # Linked assets — cut-level direct + bubble-up from shot + scene.
+        # The bubble-up cascade is critical: with the auto-linker's
+        # imperfect matching, cuts often have zero direct asset_links.
+        # If we don't bubble shot/scene-level links down to the cut, the
+        # cut renders blind (no character/location/prop refs). Test1's
+        # Scene 2 was a ghost-town because of exactly this.
+        # Dedupe by asset id, prefer the lowest-level (most specific) link.
+        cut_links = await _fetch_all(
             conn,
             """
-            SELECT a.*, al.usage, al.variant_notes
+            SELECT a.*, al.usage, al.variant_notes, 'cut' AS link_level
             FROM asset_links al JOIN assets a ON a.id = al.asset_id
             WHERE al.node_type = 'cut' AND al.node_id = ?
             """,
             (cut_id,),
         )
+        shot_links = await _fetch_all(
+            conn,
+            """
+            SELECT a.*, al.usage, al.variant_notes, 'shot' AS link_level
+            FROM asset_links al JOIN assets a ON a.id = al.asset_id
+            WHERE al.node_type = 'shot' AND al.node_id = ?
+            """,
+            (shot["id"] if shot else "",),
+        ) if shot else []
+        scene_links = await _fetch_all(
+            conn,
+            """
+            SELECT a.*, al.usage, al.variant_notes, 'scene' AS link_level
+            FROM asset_links al JOIN assets a ON a.id = al.asset_id
+            WHERE al.node_type = 'scene' AND al.node_id = ?
+            """,
+            (scene["id"] if scene else "",),
+        ) if scene else []
+
+        seen_ids: set[str] = set()
+        linked_assets: list[dict[str, Any]] = []
+        for source in (cut_links, shot_links, scene_links):
+            for a in source:
+                if a["id"] in seen_ids:
+                    continue
+                seen_ids.add(a["id"])
+                linked_assets.append(a)
 
         # Pull the asset's identity reference from reference_pool. The "sheet"
         # alias keeps downstream consumers working without renaming.

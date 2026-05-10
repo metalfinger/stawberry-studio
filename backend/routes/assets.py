@@ -68,20 +68,21 @@ async def update_asset_prompt_route(project_id: str, asset_id: str, body: Prompt
 
     async with get_async_connection() as conn:
         async with conn.execute(
-            "SELECT type FROM assets WHERE id = ? AND project_id = ?",
+            "SELECT type, name FROM assets WHERE id = ? AND project_id = ?",
             (asset_id, project_id),
         ) as cur:
             row = await cur.fetchone()
         if row is None:
             raise HTTPException(status_code=404, detail="Asset not found")
         asset_type = row["type"] or "character"
+        asset_name = row["name"] or ""
         await conn.execute(
             "UPDATE assets SET suggested_prompt = ? WHERE id = ? AND project_id = ?",
             (new_prompt, asset_id, project_id),
         )
         await conn.commit()
 
-    traits = await extract_identity_traits(new_prompt, asset_type=asset_type)
+    traits = await extract_identity_traits(new_prompt, asset_type=asset_type, asset_name=asset_name)
     if any(traits.values()):
         async with get_async_connection() as conn:
             await conn.execute(

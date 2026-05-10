@@ -124,14 +124,16 @@ _POSE_DIRECTIVES: dict[str, str] = {
 
 
 _STANDARD_TURNAROUND: dict[str, list[str]] = {
-    # `identity` always comes first (auto-bootstrap); these are the additional
-    # views to pre-cache so the picker has them on-tap without lazy-fill.
-    "character": ["three_quarter_right", "side_right", "back"],
-    # L3 — for locations the identity card now serves as the PLATE (flat,
-    # neutral, set-as-reference). The dramatic establishing shot is its
-    # own pose label — generated lazily when an estab cut needs it.
-    "location": ["establishing", "key_detail"],
-    "prop": ["prop_three_quarter", "prop_side"],
+    # `identity` always comes first (auto-bootstrap); these are the
+    # additional views to pre-cache. Conservative defaults — only the
+    # variants we actually expect most projects to need. Per-cut variants
+    # get lazy-filled by the planner when a specific cut requests them
+    # (see picker.rank_labels_for_cut + cut_planner REFERENCE_GENERATE
+    # plan items). Test1 generated 16 prop turnaround views that zero
+    # cuts ever picked up — pure waste.
+    "character": ["three_quarter_right"],
+    "location": [],
+    "prop": [],
 }
 
 

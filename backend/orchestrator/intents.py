@@ -426,18 +426,19 @@ async def _update_asset_prompt(project_id: str, payload: dict, narrator: Narrato
 
     async with get_async_connection() as conn:
         async with conn.execute(
-            "SELECT type FROM assets WHERE id = ? AND project_id = ?",
+            "SELECT type, name FROM assets WHERE id = ? AND project_id = ?",
             (asset_id, project_id),
         ) as cur:
             row = await cur.fetchone()
         asset_type = (row["type"] if row else "character") or "character"
+        asset_name = (row["name"] if row else "") or ""
         await conn.execute(
             "UPDATE assets SET suggested_prompt = ? WHERE id = ? AND project_id = ?",
             (new_prompt, asset_id, project_id),
         )
         await conn.commit()
 
-    traits = await extract_identity_traits(new_prompt, asset_type=asset_type)
+    traits = await extract_identity_traits(new_prompt, asset_type=asset_type, asset_name=asset_name)
     if any(traits.values()):
         async with get_async_connection() as conn:
             await conn.execute(

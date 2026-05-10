@@ -190,13 +190,17 @@ async def plan_compose_cut(
     linked = ctx.linked_characters + ctx.linked_locations + ctx.linked_props
     for asset in linked:
         is_character = (asset.get("type") or "").lower() == "character"
-        # Characters: identity-only. Locations/props: top-2 still allowed.
-        top_n = 1 if is_character else 2
-        labels = picker.rank_labels_for_cut(ctx.cut, asset, top_n=top_n)
-        # Force identity for characters — picker can rank others first when
-        # the cut hints at them, but identity is non-negotiable in slot 1.
+        # Characters get top-2: identity (always slot 1) + best variant
+        # (hero_pose / kneeling / expression_X / etc.) the cut keywords
+        # score for. The previous top_n=1+force-identity rule killed all
+        # character variant generation — astronaut suit drifted because
+        # only the static identity card was attached, no per-cut pose.
+        # P2 trade-off: one extra ref slot per character per cut, but
+        # identity stays AND pose locks. Net consistency win.
+        labels = picker.rank_labels_for_cut(ctx.cut, asset, top_n=2)
         if is_character and "identity" not in labels:
-            labels = ["identity"] + labels[:0]
+            # Identity must be slot 1 — push the picker's top pick to slot 2.
+            labels = ["identity"] + [l for l in labels if l != "identity"][:1]
         for label in labels:
             existing = await references.find_reference_by_label(asset["id"], label)
             if existing:

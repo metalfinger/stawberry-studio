@@ -41,27 +41,67 @@ def get_full_blueprint_for_analysis(project_id: str) -> dict:
     return result
 
 
+# Words that aren't useful for asset-name matching — articles, generic
+# nouns that show up in scene/shot text constantly.
+_ASSET_MATCH_STOPWORDS = {
+    "the", "a", "an", "of", "and", "or", "in", "on", "at", "to",
+    "set", "shot", "scene", "cut", "frame", "image", "view",
+    "actor", "actress",  # title role qualifiers — match the proper noun
+}
+
+
 def _match_asset_in_text(asset_name: str, text: str) -> bool:
     """
-    Match asset name in text using word boundary detection.
-    Handles partial matches, plurals, and possessives.
-    
+    Match asset name in text. Tries patterns in order:
+      1. Full name (case-insensitive, word-boundary, optional 's/s')
+      2. Last word of the name ("Astronaut" from "The Astronaut Actor")
+      3. Each non-stopword word of the name individually
+
+    This rescues the common case where the cut/scene text says "the
+    astronaut" or just "astronaut" but the asset is named "The Astronaut
+    Actor" — old code did literal full-name match and silently missed.
+
     Examples:
+    - "The Astronaut Actor" matches "the astronaut steps" ✓ (last-word fallback)
     - "Veer" matches "Veer kicks" ✓
     - "Veer" matches "Veer's boots" ✓
-    - "Boot" matches "Boots" ✓
-    - "Veer" does NOT match "Veeru" ✗
+    - "Director's Megaphone" matches "screams into a megaphone" ✓ (last-word)
+    - "Veer" does NOT match "Veeru" ✗ (word boundary)
+    - "The" does NOT match anything (stopword)
     """
     import re
-    
-    # Escape special regex characters in asset name
-    escaped_name = re.escape(asset_name.lower())
-    
-    # Build pattern with word boundaries
-    # Allow optional 's (possessive) or 's' at end (plurals)
-    pattern = r'\b' + escaped_name + r"(?:'s|s)?\b"
-    
-    return bool(re.search(pattern, text.lower(), re.IGNORECASE))
+
+    text_lower = text.lower()
+    candidates: list[str] = []
+
+    # 1. Full asset name first (preserves existing behavior).
+    full = asset_name.strip().lower()
+    if full and full not in _ASSET_MATCH_STOPWORDS:
+        candidates.append(full)
+
+    # 2. Build content words (drop stopwords + qualifiers).
+    raw_words = [w.strip("'\".,;:!?()[]") for w in asset_name.split()]
+    content_words = [
+        w.lower() for w in raw_words
+        if w and w.lower() not in _ASSET_MATCH_STOPWORDS and len(w) > 2
+    ]
+
+    # Last content word gets priority — "Astronaut" from "The Astronaut Actor".
+    if content_words:
+        last = content_words[-1]
+        if last not in candidates:
+            candidates.append(last)
+        # Then any other content words.
+        for w in content_words:
+            if w not in candidates:
+                candidates.append(w)
+
+    for cand in candidates:
+        escaped = re.escape(cand)
+        pattern = r"\b" + escaped + r"(?:'s|s)?\b"
+        if re.search(pattern, text_lower, re.IGNORECASE):
+            return True
+    return False
 
 
 @tool("auto_link_assets_to_blueprint", description="Auto-link assets to scene/shot/cut nodes by matching names in descriptions.", tags=["assets"])
@@ -754,12 +794,14 @@ async def save_suggested_asset_prompt(asset_id: str, prompt: str) -> dict:
     import asyncio
     from backend.orchestrator.identity_traits import extract_identity_traits
 
-    # Pull the asset type for type-aware extraction.
+    # Pull the asset type + name for type-aware extraction (the sanitizer
+    # uses the name to drop tokens that just echo the asset's own name).
     conn = db.get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT type FROM assets WHERE id = ?", (asset_id,))
+    cursor.execute("SELECT type, name FROM assets WHERE id = ?", (asset_id,))
     row = cursor.fetchone()
     asset_type = (dict(row).get("type") if row else "character") or "character"
+    asset_name = (dict(row).get("name") if row else "") or ""
     cursor.execute(
         "UPDATE assets SET suggested_prompt = ? WHERE id = ?",
         (prompt, asset_id),
@@ -770,7 +812,7 @@ async def save_suggested_asset_prompt(asset_id: str, prompt: str) -> dict:
     # Extract identity traits in the same coroutine so callers get a
     # consistent post-state. Best-effort — empty traits if the LLM
     # call fails; the DSL still uses suggested_prompt as fallback.
-    traits = await extract_identity_traits(prompt, asset_type=asset_type)
+    traits = await extract_identity_traits(prompt, asset_type=asset_type, asset_name=asset_name)
     appearance = traits.get("appearance") or ""
     distinctive = traits.get("distinctive_features") or ""
     wardrobe = traits.get("wardrobe_lock") or ""
