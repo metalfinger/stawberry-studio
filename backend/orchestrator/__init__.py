@@ -16,15 +16,6 @@ during the migration.
 """
 from backend.orchestrator.agent_spec import AgentSpec, list_agent_ids, load_agent_spec
 from backend.orchestrator.events import RunContext, log_event, replay_run
-from backend.orchestrator.pipeline import (
-    fork_artifact,
-    freeze_and_advance,
-    get_artifact,
-    get_pipeline_state,
-    list_versions,
-    mark_phase_in_progress,
-    save_artifact_version,
-)
 from backend.orchestrator.runner import build_pai_agent, run_agent, stream_agent
 
 __all__ = [
@@ -37,13 +28,6 @@ __all__ = [
     "build_pai_agent",
     "run_agent",
     "stream_agent",
-    "get_pipeline_state",
-    "get_artifact",
-    "list_versions",
-    "save_artifact_version",
-    "fork_artifact",
-    "freeze_and_advance",
-    "mark_phase_in_progress",
     # Phase 4.5
     "compile_continuity_bible",
     "get_continuity_bible",

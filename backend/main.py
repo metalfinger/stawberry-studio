@@ -18,7 +18,7 @@ from backend.config import get_settings  # noqa: E402
 from backend import db  # noqa: E402
 init_db_async = db.init_db_async
 from backend.errors import configure_logging, install_exception_handlers  # noqa: E402
-from backend.routes import assets, batch, chat, cuts, library, pipeline, projects, repair  # noqa: E402
+from backend.routes import assets, batch, chat, cuts, library, projects, repair  # noqa: E402
 
 configure_logging()
 
@@ -45,7 +45,6 @@ app.include_router(projects.router)
 app.include_router(chat.router)
 app.include_router(cuts.router)
 app.include_router(assets.router)
-app.include_router(pipeline.router)
 app.include_router(library.router)
 app.include_router(batch.router)
 app.include_router(repair.router)
