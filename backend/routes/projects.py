@@ -353,3 +353,13 @@ async def get_phase_readiness(project_id: str):
         "ready": ready,
         "reason": reason,
     }
+
+
+@router.get("/{project_id}/generation-stats")
+async def get_generation_stats(project_id: str):
+    """Live in-flight image-gen counters for a project. UI polls this so
+    the user sees "{N} generating" instead of staring at silence while
+    Pixel/Iris are running. In-process counters reset on backend restart
+    — this is purely a UI indicator, not persistent state."""
+    from backend.orchestrator import gen_stats
+    return gen_stats.snapshot(project_id)

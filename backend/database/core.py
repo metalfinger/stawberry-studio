@@ -16,18 +16,40 @@ import aiosqlite
 DB_PATH = str(Path(__file__).parent.parent.parent / "strawberry.db")
 
 
+# Concurrency settings applied to EVERY connection. Without these the
+# default rollback-journal mode serializes all writes through a single
+# global lock — and the moment two coroutines try to write at once
+# ("Iris generating an identity card" + "executor saving a render row"
+# is the common case), one of them gets `database is locked`.
+#
+# WAL mode: readers and writers don't block each other. One writer at a
+# time still, but writes don't block readers (and vice versa).
+# busy_timeout: when a write IS contended, retry for up to this many ms
+# before raising. 5 seconds is plenty for our hot paths.
+_PRAGMAS_SYNC = (
+    "PRAGMA journal_mode=WAL",
+    "PRAGMA busy_timeout=5000",
+    "PRAGMA synchronous=NORMAL",  # safe with WAL; ~3-5x faster commits
+    "PRAGMA foreign_keys=ON",
+)
+
+
 def get_connection():
     """Synchronous connection. Used by legacy tools/agents during transition."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=5.0)
     conn.row_factory = sqlite3.Row
+    for p in _PRAGMAS_SYNC:
+        conn.execute(p)
     return conn
 
 
 @asynccontextmanager
 async def get_async_connection() -> AsyncIterator[aiosqlite.Connection]:
     """Async connection for hot paths (chat WebSocket, background tasks)."""
-    async with aiosqlite.connect(DB_PATH) as conn:
+    async with aiosqlite.connect(DB_PATH, timeout=5.0) as conn:
         conn.row_factory = aiosqlite.Row
+        for p in _PRAGMAS_SYNC:
+            await conn.execute(p)
         yield conn
 
 

@@ -35,6 +35,13 @@ interface Readiness {
   reason: string
 }
 
+interface GenStats {
+  in_flight_count: number
+  in_flight: { label: string; elapsed_s: number }[]
+  completed_total: number
+  failed_total: number
+}
+
 interface Props {
   projectId: string
   /** Bump to force re-fetch (e.g. after a tool advances the phase). */
@@ -44,6 +51,7 @@ interface Props {
 export function PhaseRail({ projectId, refreshKey = 0 }: Props) {
   const [readiness, setReadiness] = useState<Readiness | null>(null)
   const [advancing, setAdvancing] = useState(false)
+  const [genStats, setGenStats] = useState<GenStats | null>(null)
 
   // Fetch readiness on mount, on refreshKey bump, and every 4s while mounted
   // so the button enables itself as soon as the gate passes.
@@ -64,6 +72,26 @@ export function PhaseRail({ projectId, refreshKey = 0 }: Props) {
     const id = setInterval(load, 4000)
     return () => { cancelled = true; clearInterval(id) }
   }, [projectId, refreshKey])
+
+  // Poll generation-stats more aggressively (1.5s) — when the user has
+  // many cuts queueing, they want fast feedback that work is happening.
+  useEffect(() => {
+    if (!projectId) return
+    let cancelled = false
+    const load = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/projects/${projectId}/generation-stats`)
+        if (!res.ok) return
+        const data = (await res.json()) as GenStats
+        if (!cancelled) setGenStats(data)
+      } catch {
+        /* ignore */
+      }
+    }
+    void load()
+    const id = setInterval(load, 1500)
+    return () => { cancelled = true; clearInterval(id) }
+  }, [projectId])
 
   const advance = () => {
     // ALWAYS surface a toast so the user sees the click registered.
@@ -113,6 +141,31 @@ export function PhaseRail({ projectId, refreshKey = 0 }: Props) {
           </div>
         )
       })}
+
+      {genStats && (genStats.in_flight_count > 0 || genStats.completed_total > 0 || genStats.failed_total > 0) && (
+        <div
+          className={`phase-rail-genstats ${genStats.in_flight_count > 0 ? 'phase-rail-genstats--active' : ''}`}
+          title={
+            genStats.in_flight_count > 0
+              ? genStats.in_flight.map(g => `${g.label} (${g.elapsed_s}s)`).join('\n')
+              : `Completed: ${genStats.completed_total}${genStats.failed_total ? ` · Failed: ${genStats.failed_total}` : ''}`
+          }
+        >
+          {genStats.in_flight_count > 0 && (
+            <span className="phase-rail-genstats__spinner" aria-hidden />
+          )}
+          <span className="phase-rail-genstats__label">
+            {genStats.in_flight_count > 0
+              ? `🎨 ${genStats.in_flight_count} generating`
+              : `✓ ${genStats.completed_total} done`}
+            {genStats.failed_total > 0 && (
+              <span className="phase-rail-genstats__failed">
+                {' '}· {genStats.failed_total} failed
+              </span>
+            )}
+          </span>
+        </div>
+      )}
 
       {next && (
         <button

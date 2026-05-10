@@ -61,6 +61,47 @@
     border-color: #2a2c33;
     cursor: not-allowed;
 }
+
+/* Live image-gen counter — sits between the phase chips and the advance
+   button. Pulses cyan while gens are in flight. */
+.phase-rail-genstats {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-left: auto;
+    padding: 0.3rem 0.7rem;
+    border-radius: 6px;
+    border: 1px solid #2a2c33;
+    background: rgba(255, 255, 255, 0.02);
+    font-size: 0.78rem;
+    color: #9ea1aa;
+    white-space: nowrap;
+    cursor: help;
+}
+.phase-rail-genstats--active {
+    border-color: rgba(99, 178, 247, 0.4);
+    background: rgba(99, 178, 247, 0.08);
+    color: #63b2f7;
+    animation: gs-pulse 2s ease-in-out infinite;
+}
+.phase-rail-genstats__spinner {
+    width: 10px; height: 10px; border-radius: 50%;
+    border: 2px solid rgba(99, 178, 247, 0.25);
+    border-top-color: #63b2f7;
+    animation: gs-spin 0.8s linear infinite;
+    display: inline-block;
+}
+.phase-rail-genstats__failed { color: #fb7185; }
+@keyframes gs-pulse {
+    0%, 100% { background: rgba(99, 178, 247, 0.08); }
+    50%      { background: rgba(99, 178, 247, 0.18); }
+}
+@keyframes gs-spin { to { transform: rotate(360deg); } }
+/* When the genstats badge is present, advance button no longer has
+   margin-left:auto; it just sits next to the badge. */
+.phase-rail-genstats + .phase-rail-advance {
+    margin-left: 0.5rem;
+}
 /* Not-ready style — clickable but visually subdued. Click surfaces a
    toast so user knows why it's blocked. */
 .phase-rail-advance.phase-rail-advance--blocked {

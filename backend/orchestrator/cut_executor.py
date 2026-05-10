@@ -522,7 +522,9 @@ async def execute_plan(
                     # back to remove it) — so the loader spun forever even
                     # after the render landed. Removing in favor of the
                     # PlanCard signal.
-                    img_result = await img_provider.generate(req)
+                    from backend.orchestrator import gen_stats
+                    with gen_stats.track(plan.project_id, label="cut_render"):
+                        img_result = await img_provider.generate(req)
                     image_url = img_result.image_urls[0]
                     item.status = "done"
                     item.result = {

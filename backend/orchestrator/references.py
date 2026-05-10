@@ -524,7 +524,9 @@ async def _generate_one(
         num_images=1,
         reference_images=refs,
     )
-    result = await img_provider.generate(req)
+    from backend.orchestrator import gen_stats
+    with gen_stats.track(asset["project_id"], label=f"asset/{label}"):
+        result = await img_provider.generate(req)
     image_url = result.image_urls[0]
 
     tags = {
