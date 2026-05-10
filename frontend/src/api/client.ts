@@ -54,11 +54,8 @@ export async function getProject(projectId: string): Promise<Project> {
   return res.json();
 }
 
-export async function getBrief(projectId: string): Promise<Brief> {
-  const res = await fetch(`${API_BASE}/api/projects/${projectId}/brief`);
-  if (!res.ok) throw new Error('Failed to fetch brief');
-  return res.json();
-}
+// (getBrief removed — no callers. Brief data flows through chat history
+//  + the bible compile path now, not a separate REST fetch.)
 
 // Blueprint types
 export interface Scene {
@@ -243,54 +240,9 @@ export async function precacheAssetTurnaround(projectId: string, assetId: string
   return res.json();
 }
 
-// Element Sheets — legacy (still used by old projects until commit 6 migration)
-
-export interface ElementSheet {
-  id: string;
-  asset_id: string;
-  sheet_type: string;
-  template_id: string;
-  image_url: string;
-  aspect_ratio: string;
-  panels: string[];
-  layout: { grid: [number, number]; cells: Array<{ label: string; row: number; col: number; bbox: [number, number, number, number] }>; aspect_ratio: string };
-  status: string;
-  cost_usd: number;
-  is_active: boolean;
-  created_at: string;
-}
-
-export async function getAssetSheet(projectId: string, assetId: string): Promise<{ sheet: ElementSheet | null }> {
-  const res = await fetch(`${API_BASE}/api/projects/${projectId}/assets/${assetId}/sheet`);
-  if (!res.ok) throw new Error('Failed to fetch sheet');
-  return res.json();
-}
-
-export async function generateAssetSheet(
-  projectId: string,
-  assetId: string,
-  options: { override_sheet_type?: string; seed?: number } = {},
-): Promise<{
-  sheet_id: string;
-  image_url: string;
-  template_id: string;
-  sheet_type: string;
-  panels: string[];
-  layout: ElementSheet['layout'];
-  cost_usd: number;
-  rationale: string;
-}> {
-  const res = await fetch(`${API_BASE}/api/projects/${projectId}/assets/${assetId}/sheet/generate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(options),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || 'Sheet generation failed');
-  }
-  return res.json();
-}
+// (Legacy ElementSheet / getAssetSheet / generateAssetSheet removed —
+//  the references-first model uses /assets/{id}/references endpoints
+//  exclusively. Old element_sheets table was dropped in migration 008.)
 
 // (Legacy PreProductionStatus / getPreProductionRequirements /
 //  updateCutSlots removed with NodeProperties — Iris is now invoked

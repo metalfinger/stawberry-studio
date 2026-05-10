@@ -16,7 +16,6 @@ tools:
   - get_assets
   - save_suggested_asset_prompt
   - generate_all_missing_sheets
-  - compose_cut
   - propose_cut_plan
   - execute_cut_plan
 output_schema: null

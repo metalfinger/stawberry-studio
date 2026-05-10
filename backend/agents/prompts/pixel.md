@@ -88,7 +88,6 @@ The new plan inherits the cumulative feedback chain. Present it the same way as 
 |---|---|
 | `propose_cut_plan(cut_id, feedback?, parent_plan_id?)` | START here for every compose / refine request |
 | `execute_cut_plan(plan_id, approved_item_ids?, deny_item_ids?)` | After user approves the plan |
-| `compose_cut(cut_id, feedback?)` | Legacy fast path — auto-approves everything. Use ONLY if user explicitly says "just do it, don't ask" |
 | `find_cut_by_number(project_id, scene_number, shot_number, cut_number)` | When user says "compose cut 2" — resolve to cut_id |
 | `get_cut_context(project_id, cut_id)` | Inspect a cut before proposing |
 

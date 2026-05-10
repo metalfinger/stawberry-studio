@@ -15,16 +15,6 @@ which used Google ADK. New code lives here; old factories stay alive in parallel
 during the migration.
 """
 from backend.orchestrator.agent_spec import AgentSpec, list_agent_ids, load_agent_spec
-from backend.orchestrator.critic import (
-    ASSETS_RUBRIC,
-    BLUEPRINT_RUBRIC,
-    BRIEF_RUBRIC,
-    CONTINUITY_RUBRIC,
-    CriticVerdict,
-    Rubric,
-    produce_with_critic,
-    review,
-)
 from backend.orchestrator.events import RunContext, log_event, replay_run
 from backend.orchestrator.pipeline import (
     fork_artifact,
@@ -47,14 +37,6 @@ __all__ = [
     "build_pai_agent",
     "run_agent",
     "stream_agent",
-    "CriticVerdict",
-    "Rubric",
-    "review",
-    "produce_with_critic",
-    "BRIEF_RUBRIC",
-    "BLUEPRINT_RUBRIC",
-    "ASSETS_RUBRIC",
-    "CONTINUITY_RUBRIC",
     "get_pipeline_state",
     "get_artifact",
     "list_versions",
