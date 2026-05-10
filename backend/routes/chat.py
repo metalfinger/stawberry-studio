@@ -368,6 +368,80 @@ async def chat_websocket(websocket: WebSocket, project_id: str, phase: str = Non
         except Exception as e:
             await websocket.send_json({"type": "error", "message": f"auto_trigger: {e}"})
 
+    async def _maybe_handle_phase_change():
+        """Detect a phase change since the last loop iteration. If found,
+        emit handoff card + phase_change event + run the new phase's
+        auto_trigger (Atlas extracts assets, Sage analyzes brief, etc).
+
+        Returns the new (current_phase, current_mode, phase_config,
+        agent_name, agent_id) tuple so the caller can update its locals.
+        Or None if no change.
+        """
+        nonlocal_proj = await db_async.get_project(project_id)
+        new_phase_local = nonlocal_proj.get("current_phase", current_phase)
+        if new_phase_local == current_phase:
+            return None
+
+        new_phase_config = PHASE_AGENTS.get(new_phase_local, PHASE_AGENTS["BRIEF"])
+        new_mode_key, entry_local = _resolve_mode(new_phase_config)
+        new_agent_name, new_agent_id, new_greeting, new_auto_trigger = entry_local
+
+        try:
+            await narrator.handoff(
+                from_agent=agent_name or "—",
+                to_agent=new_agent_name,
+                reason=f"{current_phase} → {new_phase_local}",
+            )
+        except Exception:
+            pass
+        await websocket.send_json({
+            "type": "phase_change",
+            "old_phase": current_phase,
+            "new_phase": new_phase_local,
+            "agent": new_agent_name,
+        })
+
+        if new_auto_trigger:
+            try:
+                full_response = await _stream_one_turn(
+                    websocket,
+                    agent_id=new_agent_id,
+                    agent_name=new_agent_name,
+                    user_message=new_auto_trigger,
+                    project_id=project_id,
+                    phase=new_phase_local,
+                    narrator=narrator,
+                )
+                if full_response:
+                    await db_async.add_chat_message(
+                        project_id, "assistant", full_response,
+                        phase=new_phase_local, agent_name=new_agent_name,
+                    )
+                    await websocket.send_json({
+                        "type": "message",
+                        "role": "assistant",
+                        "content": full_response,
+                        "agent_name": new_agent_name,
+                    })
+                    await websocket.send_json({
+                        "type": "tree_updated",
+                        "agent": new_agent_name,
+                        "phase": new_phase_local,
+                    })
+            except Exception as e:
+                await websocket.send_json({"type": "error", "message": f"phase_auto_trigger: {e}"})
+        else:
+            await db_async.add_chat_message(
+                project_id, "assistant", new_greeting,
+                phase=new_phase_local, agent_name=new_agent_name,
+            )
+            await websocket.send_json({
+                "type": "message", "role": "assistant",
+                "content": new_greeting, "agent_name": new_agent_name,
+            })
+
+        return new_phase_local, new_mode_key, new_phase_config, new_agent_name, new_agent_id
+
     try:
         while True:
             data = await websocket.receive_text()
@@ -387,6 +461,13 @@ async def chat_websocket(websocket: WebSocket, project_id: str, phase: str = Non
                     narrator=narrator,
                 )
                 if handled:
+                    # An intent like advance_phase or confirm_briefing may have
+                    # advanced the project's current_phase. Detect + run the
+                    # next agent's auto_trigger immediately so Atlas (etc.)
+                    # actually runs without waiting for a user message.
+                    changed = await _maybe_handle_phase_change()
+                    if changed:
+                        current_phase, current_mode, phase_config, agent_name, agent_id = changed
                     continue
                 user_message = f"[intent:{intent}] {json.dumps(payload)}" if intent else ""
             else:
@@ -425,72 +506,9 @@ async def chat_websocket(websocket: WebSocket, project_id: str, phase: str = Non
 
             # Cross-phase transition (e.g. complete_briefing fired and the
             # project's current_phase advanced behind our back).
-            project = await db_async.get_project(project_id)
-            new_phase = project.get("current_phase", current_phase)
-            if new_phase != current_phase:
-                old_phase = current_phase
-                prev_agent_name = agent_name
-
-                current_phase = new_phase
-                phase_config = PHASE_AGENTS.get(current_phase, PHASE_AGENTS["BRIEF"])
-                current_mode, entry = _resolve_mode(phase_config)
-                agent_name, agent_id, new_greeting, new_auto_trigger = entry
-
-                # ONE typed handoff card carries the prev→next narrative.
-                # We deliberately do NOT echo the new agent's greeting — the
-                # auto_trigger below produces the substantive first message,
-                # which is far more useful than a static "Hi I'm Atlas" line.
-                try:
-                    await narrator.handoff(
-                        from_agent=prev_agent_name or "—",
-                        to_agent=agent_name,
-                        reason=f"{old_phase} → {new_phase}",
-                    )
-                except Exception:
-                    pass
-                await websocket.send_json({
-                    "type": "phase_change",
-                    "old_phase": old_phase,
-                    "new_phase": new_phase,
-                    "agent": agent_name,
-                })
-
-                # If the new phase has an auto_trigger, run it immediately so
-                # the user doesn't have to type anything to get the agent
-                # working. This is the "no nudge" fix — old flow showed only
-                # a greeting and waited for the user to say "go".
-                if new_auto_trigger:
-                    try:
-                        full_response = await _stream_one_turn(
-                            websocket,
-                            agent_id=agent_id,
-                            agent_name=agent_name,
-                            user_message=new_auto_trigger,
-                            project_id=project_id,
-                            phase=current_phase,
-                            narrator=narrator,
-                        )
-                        if full_response:
-                            await db_async.add_chat_message(project_id, "assistant", full_response, phase=current_phase, agent_name=agent_name)
-                            await websocket.send_json({
-                                "type": "message",
-                                "role": "assistant",
-                                "content": full_response,
-                                "agent_name": agent_name,
-                            })
-                            await websocket.send_json({
-                                "type": "tree_updated",
-                                "agent": agent_name,
-                                "phase": current_phase,
-                            })
-                    except Exception as e:
-                        await websocket.send_json({"type": "error", "message": f"phase_auto_trigger: {e}"})
-                else:
-                    # No auto_trigger — show greeting once so the user knows
-                    # the new agent is here.
-                    await db_async.add_chat_message(project_id, "assistant", new_greeting, phase=current_phase, agent_name=agent_name)
-                    await websocket.send_json({"type": "message", "role": "assistant", "content": new_greeting, "agent_name": agent_name})
-
+            changed = await _maybe_handle_phase_change()
+            if changed:
+                current_phase, current_mode, phase_config, agent_name, agent_id = changed
                 continue  # Skip processing the triggering user message after phase change.
 
             # Persist + echo user message.

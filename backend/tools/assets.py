@@ -1064,9 +1064,31 @@ def confirm_asset_extraction_complete(project_id: str) -> dict:
         Success message with summary, OR a hard-block payload if any asset
         is still prompt-less (the same gate as `complete_asset_extraction`).
     """
-    # Hard gate: refuse to transition if anything is still prompt-less.
+    # Hard gate 1: refuse to transition if there are NO assets at all.
+    # The earlier version of this gate only checked "assets missing
+    # suggested_prompt" — empty asset list silently passed (Test2 hit
+    # exactly this: user clicked → Generate before Atlas had run, the
+    # gate said "ok" because there was nothing to be missing prompts for,
+    # phase advanced, GENERATE started with zero assets).
     all_assets = asset_db.get_assets(project_id)
-    missing = [a for a in all_assets if not (a.get("suggested_prompt") or "").strip()]
+    real_assets = [a for a in all_assets if (a.get("type") or "") in (
+        "character", "location", "prop", "sublocation", "location_angle",
+    )]
+    if not real_assets:
+        return {
+            "success": False,
+            "blocked": True,
+            "missing": [],
+            "message": (
+                "Refusing to advance — no assets have been extracted yet. "
+                "Atlas needs to run before GENERATE can start. Ask Atlas "
+                "to analyze the blueprint and extract characters, "
+                "locations, and props."
+            ),
+        }
+
+    # Hard gate 2: refuse if any asset still has no suggested_prompt.
+    missing = [a for a in real_assets if not (a.get("suggested_prompt") or "").strip()]
     if missing:
         return {
             "success": False,
