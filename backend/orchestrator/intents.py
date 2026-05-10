@@ -86,6 +86,14 @@ async def handle_intent(
             return True
         if intent == "advance_phase":
             return await _advance_phase(project_id, narrator)
+        if intent == "recompile_style_bible":
+            return await _recompile_bible(project_id, narrator)
+        if intent == "recompile_style_anchor":
+            return await _recompile_anchor(project_id, narrator)
+        if intent == "regenerate_identities":
+            return await _regenerate_identities(project_id, narrator)
+        if intent == "repair_all":
+            return await _repair_all(project_id, narrator)
         if intent == "draft_identities":
             return await _draft_identities(project_id, narrator)
         if intent == "plan_unrendered":
@@ -676,4 +684,93 @@ async def _advance_phase(project_id: str, narrator: Narrator) -> bool:
         return True
 
     await narrator.text(f"Don't know how to advance from phase `{current}`.")
+    return True
+
+
+# ============================================================================
+# Repair intents — surfaced inline in chat as ActionsBar buttons. No
+# standalone Consistency menu needed.
+# ============================================================================
+
+async def _recompile_bible(project_id: str, narrator: Narrator) -> bool:
+    from backend.orchestrator.style_bible import compile_style_bible_for_project
+
+    await narrator.text("🎨 Recompiling style bible…")
+    try:
+        bible = await compile_style_bible_for_project(project_id)
+    except Exception as e:  # noqa: BLE001
+        await narrator.failure(error=str(e), suggestion="Check the brief has art_style set.", recovery_actions=[])
+        return True
+    pal = ", ".join(bible.get("palette_hex") or []) or "(none)"
+    tok = ", ".join(bible.get("style_tokens") or []) or "(none)"
+    await narrator.text(f"✓ Bible compiled.\n  • Palette: {pal}\n  • Tokens: {tok}")
+    return True
+
+
+async def _recompile_anchor(project_id: str, narrator: Narrator) -> bool:
+    from backend.orchestrator.style_anchor import recompile_style_anchor
+
+    await narrator.text("🖼️ Minting a fresh style anchor image…")
+    try:
+        url = await recompile_style_anchor(project_id)
+    except Exception as e:  # noqa: BLE001
+        await narrator.failure(error=str(e), suggestion="Check brief.art_style.", recovery_actions=[])
+        return True
+    if not url:
+        await narrator.text("Couldn't mint anchor — brief needs art_style or color_palette.")
+        return True
+    await narrator.text("✓ Style anchor pinned. Every generation now references it.")
+    return True
+
+
+async def _regenerate_identities(project_id: str, narrator: Narrator) -> bool:
+    """Mark every active identity superseded and re-mint each. Costs one
+    image gen per asset. We surface a tool_call card so the user sees cost
+    + latency live."""
+    from backend.database.core import get_async_connection
+    from backend.orchestrator import references
+    import time as _time
+
+    async with get_async_connection() as conn:
+        async with conn.execute(
+            "SELECT id, name, type FROM assets WHERE project_id = ? "
+            "AND COALESCE(type,'') IN "
+            "('character','location','prop','sublocation','location_angle')",
+            (project_id,),
+        ) as cur:
+            assets = [dict(r) for r in await cur.fetchall()]
+        await conn.execute(
+            "UPDATE reference_pool SET is_active = 0 "
+            "WHERE asset_id IN (SELECT id FROM assets WHERE project_id = ?) "
+            "AND label = 'identity' AND is_active = 1",
+            (project_id,),
+        )
+        await conn.commit()
+
+    if not assets:
+        await narrator.text("No assets to regenerate.")
+        return True
+
+    await narrator.text(f"♻️ Re-minting {len(assets)} asset identities (≈${len(assets) * 0.20:.2f})…")
+    minted = 0
+    failed = 0
+    t0 = _time.monotonic()
+    for a in assets:
+        try:
+            await references.generate_identity_card(a["id"])
+            minted += 1
+        except Exception:  # noqa: BLE001
+            failed += 1
+    elapsed = int(_time.monotonic() - t0)
+    await narrator.text(f"✓ Re-minted {minted} identities ({failed} failed) in {elapsed}s.")
+    return True
+
+
+async def _repair_all(project_id: str, narrator: Narrator) -> bool:
+    """Bible → anchor → identities, in order. The full lift-onto-new-stack
+    pass for projects created before the consistency work landed."""
+    await _recompile_bible(project_id, narrator)
+    await _recompile_anchor(project_id, narrator)
+    await _regenerate_identities(project_id, narrator)
+    await narrator.text("✓ Consistency repair complete.")
     return True

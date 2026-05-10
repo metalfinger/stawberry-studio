@@ -55,6 +55,110 @@ PHASE_AGENTS: dict[str, dict] = {
 }
 
 
+# Per-WS-session debounce — only emit one repair-offer ActionsBar per
+# connected session so refreshes don't pile up the same card. Cleared on
+# disconnect implicitly because it's tied to the project_id+phase pair we
+# already bookkeep via narrator events.
+_repair_offered: set[str] = set()
+
+
+async def _maybe_offer_repair(project_id: str, current_phase: str, narrator: Narrator) -> None:
+    """If the project is past BRIEF but the consistency stack isn't ready
+    yet, emit one ActionsBar offering to repair it inline. Replaces the
+    old standalone 🛠️ Consistency menu — repair is a chat decision now.
+    """
+    if current_phase == "BRIEF":
+        # Bible auto-compiles at BRIEF→STORY confirm; nothing to offer here.
+        return
+
+    key = f"{project_id}:{current_phase}"
+    if key in _repair_offered:
+        return
+
+    from backend.database.core import get_async_connection
+    from backend import db
+
+    brief = db.get_brief(project_id) or {}
+    try:
+        palette_hex = json.loads(brief.get("palette_hex") or "[]")
+    except Exception:
+        palette_hex = []
+    try:
+        style_tokens = json.loads(brief.get("style_tokens") or "[]")
+    except Exception:
+        style_tokens = []
+    bible_empty = not (palette_hex or style_tokens)
+
+    anchor_url = ""
+    async with get_async_connection() as conn:
+        async with conn.execute(
+            "SELECT style_anchor_url FROM continuity_bible WHERE project_id = ?",
+            (project_id,),
+        ) as cur:
+            row = await cur.fetchone()
+        if row:
+            anchor_url = (row["style_anchor_url"] or "").strip()
+    anchor_missing = not anchor_url
+
+    # Identity coverage — if the project has assets but few have an active
+    # identity reference, the user almost certainly wants the regen pass.
+    asset_count = 0
+    identity_count = 0
+    async with get_async_connection() as conn:
+        async with conn.execute(
+            "SELECT COUNT(*) AS n FROM assets WHERE project_id = ? "
+            "AND COALESCE(type,'') IN "
+            "('character','location','prop','sublocation','location_angle')",
+            (project_id,),
+        ) as cur:
+            r = await cur.fetchone()
+            asset_count = (r["n"] if r else 0) or 0
+        if asset_count:
+            async with conn.execute(
+                "SELECT COUNT(DISTINCT asset_id) AS n FROM reference_pool "
+                "WHERE project_id = ? AND label = 'identity' AND is_active = 1",
+                (project_id,),
+            ) as cur:
+                r = await cur.fetchone()
+                identity_count = (r["n"] if r else 0) or 0
+    identities_thin = asset_count > 0 and identity_count < asset_count
+
+    if not (bible_empty or anchor_missing or identities_thin):
+        return
+
+    # Pick the highest-leverage single button. If everything's broken,
+    # offer "Repair all" — one click runs bible → anchor → identities.
+    needs = []
+    if bible_empty:
+        needs.append("style bible")
+    if anchor_missing:
+        needs.append("anchor image")
+    if identities_thin:
+        needs.append(f"{asset_count - identity_count} asset identities")
+    needs_str = ", ".join(needs)
+
+    buttons = [Action(label="✅ Repair now", intent="repair_all", primary=True)]
+    if not bible_empty and anchor_missing:
+        buttons = [
+            Action(label="🖼️ Mint anchor", intent="recompile_style_anchor", primary=True),
+            Action(label="Skip", intent="dismiss"),
+        ]
+    elif bible_empty and not anchor_missing and not identities_thin:
+        buttons = [
+            Action(label="🎨 Compile bible", intent="recompile_style_bible", primary=True),
+            Action(label="Skip", intent="dismiss"),
+        ]
+    else:
+        # Default: one-click full repair, plus dismiss.
+        buttons.append(Action(label="Skip", intent="dismiss"))
+
+    await narrator.actions(
+        prompt=f"This project is missing: {needs_str}. Want me to fix it?",
+        buttons=buttons,
+    )
+    _repair_offered.add(key)
+
+
 def _resolve_mode(phase_config: dict) -> tuple:
     """Pick the entry corresponding to the phase's `default` mode key."""
     default_key = phase_config.get("default")
@@ -225,6 +329,16 @@ async def chat_websocket(websocket: WebSocket, project_id: str, phase: str = Non
     if not history and not is_history_mode:
         await db_async.add_chat_message(project_id, "assistant", greeting, phase=current_phase, agent_name=agent_name)
         await websocket.send_json({"type": "message", "role": "assistant", "content": greeting, "agent_name": agent_name})
+
+    # Inline consistency-repair offer — replaces the standalone 🛠️ menu.
+    # Detects projects that are past BRIEF but missing a compiled bible /
+    # anchor / asset identities, and surfaces a typed ActionsBar so the user
+    # can fix it from chat with one click.
+    try:
+        await _maybe_offer_repair(project_id, current_phase, narrator)
+    except Exception as e:
+        import structlog as _sl
+        _sl.get_logger(__name__).warning("repair_offer_failed", error=str(e))
 
     # Auto-trigger on fresh phase entry (Sage analyzes brief, Atlas extracts assets, etc.).
     if auto_trigger and (not history and not is_history_mode):
