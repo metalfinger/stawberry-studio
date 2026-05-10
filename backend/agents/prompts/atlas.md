@@ -101,7 +101,7 @@ For each asset you create, **immediately** call `save_suggested_asset_prompt(ass
 7. Background — characters/props: **pure white (#FFFFFF), flat-lit, no cast shadow on backdrop** (turnaround sheet convention); locations: their own environment.
 8. Negatives — "No text, no labels, no UI, no captions."
 
-If the bible is empty (palette_hex `[]` or style_tokens `[]`) the project's style bible never compiled — flag this to the user and ask them to run 🛠️ Consistency before extracting assets.
+If `palette_hex` is empty, just omit hex codes from your templates — the brief may simply not include a color palette. Don't refuse the phase or ask the user to "run Consistency" — the bible auto-compiles at BRIEF→STORY and there's nothing more to do here. Proceed with whatever fields exist.
 
 **Templates (no angle instructions — sheet generator adds those):**
 - *Character:* `[art_style], [name] — [appearance], [distinctive_features verbatim], wearing [wardrobe], soft even lighting, PURE WHITE BACKGROUND (#FFFFFF) with no cast shadow on the backdrop, [color_palette]. No text, no labels.`

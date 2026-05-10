@@ -84,6 +84,8 @@ async def handle_intent(
         if intent == "decline_briefing":
             await narrator.text("OK — tell me what you'd like to change about the brief.")
             return True
+        if intent == "advance_phase":
+            return await _advance_phase(project_id, narrator)
         if intent == "draft_identities":
             return await _draft_identities(project_id, narrator)
         if intent == "plan_unrendered":
@@ -598,6 +600,9 @@ async def _activity_summary(project_id: str, payload: dict, narrator: Narrator) 
 # ============================================================================
 
 async def _confirm_briefing(project_id: str, narrator: Narrator) -> bool:
+    """Direct phase advancement — no LLM call. Backs the chat ActionsBar
+    "Yes, proceed" button AND the PhaseRail "Move to next phase" button
+    when the project is in BRIEF."""
     from backend.tools.briefing import confirm_briefing_complete as _confirm
     from backend.orchestrator.style_bible import compile_style_bible_for_project
 
@@ -628,4 +633,47 @@ async def _confirm_briefing(project_id: str, narrator: Narrator) -> bool:
             await narrator.text(f"🖼️ Style anchor pinned. Every generation will reference it.")
     except Exception:  # noqa: BLE001
         pass
+    return True
+
+
+# ============================================================================
+# Generic phase-advance — backs the PhaseRail "Move to next phase" button.
+# Picks the right confirm_*_complete tool based on current_phase and runs it
+# DIRECTLY (no LLM call). The user sees the result via the phase_change event
+# the chat WS already emits when current_phase advances.
+# ============================================================================
+
+async def _advance_phase(project_id: str, narrator: Narrator) -> bool:
+    from backend import db_async
+
+    project = await db_async.get_project(project_id)
+    if not project:
+        await narrator.text("Project not found.")
+        return True
+    current = (project.get("current_phase") or "BRIEF").upper()
+
+    if current == "BRIEF":
+        return await _confirm_briefing(project_id, narrator)
+
+    if current == "STORY":
+        from backend.tools.blueprint import confirm_blueprint_complete
+        msg = confirm_blueprint_complete(project_id)
+        await narrator.text(msg)
+        return True
+
+    if current == "ASSETS":
+        from backend.tools.assets import confirm_asset_extraction_complete
+        result = confirm_asset_extraction_complete(project_id)
+        if isinstance(result, dict):
+            msg = result.get("message") or "Phase advanced."
+        else:
+            msg = str(result)
+        await narrator.text(msg)
+        return True
+
+    if current == "GENERATE":
+        await narrator.text("GENERATE is the final phase — nothing further to advance to.")
+        return True
+
+    await narrator.text(f"Don't know how to advance from phase `{current}`.")
     return True

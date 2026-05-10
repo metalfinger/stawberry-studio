@@ -320,8 +320,12 @@ async def chat_websocket(websocket: WebSocket, project_id: str, phase: str = Non
                 current_phase = new_phase
                 phase_config = PHASE_AGENTS.get(current_phase, PHASE_AGENTS["BRIEF"])
                 current_mode, entry = _resolve_mode(phase_config)
-                agent_name, agent_id, new_greeting, _auto = entry
+                agent_name, agent_id, new_greeting, new_auto_trigger = entry
 
+                # ONE typed handoff card carries the prev→next narrative.
+                # We deliberately do NOT echo the new agent's greeting — the
+                # auto_trigger below produces the substantive first message,
+                # which is far more useful than a static "Hi I'm Atlas" line.
                 try:
                     await narrator.handoff(
                         from_agent=prev_agent_name or "—",
@@ -336,8 +340,43 @@ async def chat_websocket(websocket: WebSocket, project_id: str, phase: str = Non
                     "new_phase": new_phase,
                     "agent": agent_name,
                 })
-                await db_async.add_chat_message(project_id, "assistant", new_greeting, phase=current_phase, agent_name=agent_name)
-                await websocket.send_json({"type": "message", "role": "assistant", "content": new_greeting, "agent_name": agent_name})
+
+                # If the new phase has an auto_trigger, run it immediately so
+                # the user doesn't have to type anything to get the agent
+                # working. This is the "no nudge" fix — old flow showed only
+                # a greeting and waited for the user to say "go".
+                if new_auto_trigger:
+                    try:
+                        full_response = await _stream_one_turn(
+                            websocket,
+                            agent_id=agent_id,
+                            agent_name=agent_name,
+                            user_message=new_auto_trigger,
+                            project_id=project_id,
+                            phase=current_phase,
+                            narrator=narrator,
+                        )
+                        if full_response:
+                            await db_async.add_chat_message(project_id, "assistant", full_response, phase=current_phase, agent_name=agent_name)
+                            await websocket.send_json({
+                                "type": "message",
+                                "role": "assistant",
+                                "content": full_response,
+                                "agent_name": agent_name,
+                            })
+                            await websocket.send_json({
+                                "type": "tree_updated",
+                                "agent": agent_name,
+                                "phase": current_phase,
+                            })
+                    except Exception as e:
+                        await websocket.send_json({"type": "error", "message": f"phase_auto_trigger: {e}"})
+                else:
+                    # No auto_trigger — show greeting once so the user knows
+                    # the new agent is here.
+                    await db_async.add_chat_message(project_id, "assistant", new_greeting, phase=current_phase, agent_name=agent_name)
+                    await websocket.send_json({"type": "message", "role": "assistant", "content": new_greeting, "agent_name": agent_name})
+
                 continue  # Skip processing the triggering user message after phase change.
 
             # Persist + echo user message.

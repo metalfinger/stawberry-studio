@@ -30,13 +30,36 @@
     background: transparent;
     border: 1px solid transparent;
     color: inherit;
-    cursor: pointer;
     transition: background 120ms, border-color 120ms;
     white-space: nowrap;
 }
-.phase-rail-step:hover {
-    background: #20222a;
-    border-color: #3a3d47;
+.phase-rail-agent {
+    margin-left: 0.4rem;
+    color: #888;
+    font-size: 0.78em;
+    font-weight: 400;
+}
+.phase-rail-advance {
+    margin-left: auto;
+    background: rgba(99, 178, 247, 0.12);
+    color: #63b2f7;
+    border: 1px solid rgba(99, 178, 247, 0.35);
+    border-radius: 6px;
+    padding: 0.35rem 0.8rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 120ms;
+    white-space: nowrap;
+}
+.phase-rail-advance:hover:not(:disabled) {
+    background: rgba(99, 178, 247, 0.22);
+}
+.phase-rail-advance:disabled {
+    background: rgba(255, 255, 255, 0.03);
+    color: #666;
+    border-color: #2a2c33;
+    cursor: not-allowed;
 }
 
 .phase-rail-glyph {

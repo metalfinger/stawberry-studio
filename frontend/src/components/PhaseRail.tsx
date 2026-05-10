@@ -1,113 +1,122 @@
+// PhaseRail — the 4 real phases the project actually transitions through,
+// plus a "Move to next phase" button that fires the `advance_phase` intent
+// directly (no LLM call) when the gate is ready.
+//
+// Replaces the older 6-phase rail (DEVELOP / DESIGN / CAST_SCOUT / BLUEPRINT
+// / STORYBOARD / ANIMATIC) which mixed display labels with a backend pipeline
+// that only ever advances 4 of those, leaving 2 perpetually pending. One
+// label, one source of truth: projects.current_phase.
 import { useEffect, useState } from 'react'
 import './PhaseRail.css'
 
-export type PhaseStatus = 'pending' | 'in_progress' | 'frozen' | 'stale'
+const API_BASE = (import.meta as any).env?.VITE_API_BASE || ''
 
-export interface PhaseRow {
-    phase: string
-    status: PhaseStatus
-    current_version: number
-    updated_at: string | null
+type PhaseId = 'BRIEF' | 'STORY' | 'ASSETS' | 'GENERATE'
+
+const PHASE_LABELS: Record<PhaseId, string> = {
+  BRIEF: 'Brief',
+  STORY: 'Story',
+  ASSETS: 'Cast & Scout',
+  GENERATE: 'Generate',
 }
+const PHASE_AGENTS: Record<PhaseId, string> = {
+  BRIEF: 'Berry',
+  STORY: 'Sage',
+  ASSETS: 'Atlas',
+  GENERATE: 'Pixel',
+}
+const PHASE_ORDER: PhaseId[] = ['BRIEF', 'STORY', 'ASSETS', 'GENERATE']
 
-interface PhasesResponse {
-    project_id: string
-    phases: PhaseRow[]
+interface Readiness {
+  current_phase: PhaseId
+  next_phase: PhaseId | null
+  ready: boolean
+  reason: string
 }
 
 interface Props {
-    projectId: string
-    /** Callback when user clicks a phase to focus on it. */
-    onSelect?: (phase: string) => void
-    /** External refresh trigger (bump number to force re-fetch). */
-    refreshKey?: number
+  projectId: string
+  /** Bump to force re-fetch (e.g. after a tool advances the phase). */
+  refreshKey?: number
 }
 
-const PHASE_LABELS: Record<string, string> = {
-    DEVELOP: 'Develop',
-    DESIGN: 'Design',
-    CAST_SCOUT: 'Cast & Scout',
-    BLUEPRINT: 'Blueprint',
-    STORYBOARD: 'Storyboard',
-    ANIMATIC: 'Animatic',
-}
+export function PhaseRail({ projectId, refreshKey = 0 }: Props) {
+  const [readiness, setReadiness] = useState<Readiness | null>(null)
+  const [advancing, setAdvancing] = useState(false)
 
-const STATUS_GLYPH: Record<PhaseStatus, string> = {
-    pending: '○',
-    in_progress: '●',
-    frozen: '✓',
-    stale: '⚠',
-}
+  // Fetch readiness on mount, on refreshKey bump, and every 4s while mounted
+  // so the button enables itself as soon as the gate passes.
+  useEffect(() => {
+    if (!projectId) return
+    let cancelled = false
+    const load = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/projects/${projectId}/phase-readiness`)
+        if (!res.ok) return
+        const data = (await res.json()) as Readiness
+        if (!cancelled) setReadiness(data)
+      } catch {
+        /* ignore */
+      }
+    }
+    void load()
+    const id = setInterval(load, 4000)
+    return () => { cancelled = true; clearInterval(id) }
+  }, [projectId, refreshKey])
 
-const STATUS_LABEL: Record<PhaseStatus, string> = {
-    pending: 'Pending',
-    in_progress: 'In progress',
-    frozen: 'Frozen',
-    stale: 'Stale (upstream changed)',
-}
+  const advance = () => {
+    const ws: WebSocket | undefined = (window as any).__strawberry_chat_ws
+    if (!ws || ws.readyState !== WebSocket.OPEN) return
+    setAdvancing(true)
+    try {
+      ws.send(JSON.stringify({ type: 'user_intent', intent: 'advance_phase', payload: {} }))
+    } finally {
+      // Re-enable shortly — readiness poll will reflect the new phase.
+      setTimeout(() => setAdvancing(false), 1500)
+    }
+  }
 
-/**
- * Visual rail for the 6-phase production pipeline. First UI for the new
- * Phase 4 backend (`/api/projects/{id}/phases`).
- *
- * Renders horizontally — each phase shows its status glyph, current version,
- * and is clickable. Stale phases pulse yellow.
- */
-export function PhaseRail({ projectId, onSelect, refreshKey = 0 }: Props) {
-    const [phases, setPhases] = useState<PhaseRow[]>([])
-    const [loading, setLoading] = useState(false)
-    const [err, setErr] = useState<string | null>(null)
+  if (!projectId) return null
+  const current = readiness?.current_phase ?? 'BRIEF'
+  const currentIdx = PHASE_ORDER.indexOf(current)
+  const next = readiness?.next_phase ?? null
+  const ready = !!readiness?.ready
+  const reason = readiness?.reason ?? ''
 
-    useEffect(() => {
-        let cancelled = false
-        async function load() {
-            setLoading(true)
-            setErr(null)
-            try {
-                const res = await fetch(`/api/projects/${projectId}/phases`)
-                if (!res.ok) throw new Error(`HTTP ${res.status}`)
-                const data = (await res.json()) as PhasesResponse
-                if (!cancelled) setPhases(data.phases)
-            } catch (e: any) {
-                if (!cancelled) setErr(String(e))
-            } finally {
-                if (!cancelled) setLoading(false)
-            }
-        }
-        if (projectId) void load()
-        return () => {
-            cancelled = true
-        }
-    }, [projectId, refreshKey])
+  return (
+    <div className="phase-rail" role="navigation" aria-label="Production phases">
+      {PHASE_ORDER.map((phase, idx) => {
+        const isDone = idx < currentIdx
+        const isCurrent = idx === currentIdx
+        const status = isDone ? 'frozen' : isCurrent ? 'in_progress' : 'pending'
+        const glyph = isDone ? '✓' : isCurrent ? '●' : '○'
+        return (
+          <div key={phase} className={`phase-rail-step status-${status}`} aria-current={isCurrent}>
+            <span className="phase-rail-glyph" aria-hidden>{glyph}</span>
+            <span className="phase-rail-label">
+              {PHASE_LABELS[phase]}
+              <span className="phase-rail-agent">· {PHASE_AGENTS[phase]}</span>
+            </span>
+            {idx < PHASE_ORDER.length - 1 && <span className="phase-rail-arrow" aria-hidden>→</span>}
+          </div>
+        )
+      })}
 
-    if (!projectId) return null
-
-    return (
-        <div className="phase-rail" role="navigation" aria-label="Production phases">
-            {loading && phases.length === 0 ? (
-                <div className="phase-rail-loading">loading pipeline…</div>
-            ) : err ? (
-                <div className="phase-rail-error">⚠ {err}</div>
-            ) : (
-                phases.map((p, idx) => (
-                    <button
-                        key={p.phase}
-                        type="button"
-                        className={`phase-rail-step status-${p.status}`}
-                        onClick={() => onSelect?.(p.phase)}
-                        title={`${STATUS_LABEL[p.status]} · v${p.current_version}`}
-                    >
-                        <span className="phase-rail-glyph" aria-hidden>
-                            {STATUS_GLYPH[p.status]}
-                        </span>
-                        <span className="phase-rail-label">{PHASE_LABELS[p.phase] ?? p.phase}</span>
-                        {p.current_version > 0 && (
-                            <span className="phase-rail-version">v{p.current_version}</span>
-                        )}
-                        {idx < phases.length - 1 && <span className="phase-rail-arrow" aria-hidden>→</span>}
-                    </button>
-                ))
-            )}
-        </div>
-    )
+      {next && (
+        <button
+          type="button"
+          className="phase-rail-advance"
+          onClick={advance}
+          disabled={!ready || advancing}
+          title={ready ? `Advance to ${PHASE_LABELS[next]}` : reason || 'Phase not ready'}
+        >
+          {advancing
+            ? '⏳ Advancing…'
+            : ready
+              ? `→ ${PHASE_LABELS[next]}`
+              : `→ ${PHASE_LABELS[next]} (not ready)`}
+        </button>
+      )}
+    </div>
+  )
 }

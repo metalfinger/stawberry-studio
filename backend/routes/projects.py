@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException
 from typing import List
 import uuid
 
-from backend import db
+from backend import db, db_async
 from backend.models import Project, ProjectCreate, Brief, BriefUpdate
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
@@ -264,3 +264,89 @@ async def get_cut_prompt(project_id: str, cut_id: str):
 
 
 
+
+
+@router.get("/{project_id}/phase-readiness")
+async def get_phase_readiness(project_id: str):
+    """Lightweight check the PhaseRail uses to enable/disable the
+    "Move to next phase" button. Returns the current phase, what the
+    next phase would be, whether the gate would pass right now, and a
+    short reason when blocked.
+
+    Cheap — only reads counts. Safe to poll every few seconds.
+    """
+    from backend.database.core import get_async_connection
+
+    proj = await db_async.get_project(project_id)
+    if not proj:
+        raise HTTPException(status_code=404, detail="Project not found")
+    current = (proj.get("current_phase") or "BRIEF").upper()
+
+    next_map = {"BRIEF": "STORY", "STORY": "ASSETS", "ASSETS": "GENERATE", "GENERATE": None}
+    next_phase = next_map.get(current)
+
+    ready = False
+    reason = ""
+
+    if current == "BRIEF":
+        from backend import db
+        brief = db.get_brief(project_id) or {}
+        missing = [
+            field for field in ("title", "logline", "genre", "art_style")
+            if not (brief.get(field) or "").strip()
+        ]
+        ready = not missing
+        reason = "" if ready else f"Brief missing: {', '.join(missing)}"
+
+    elif current == "STORY":
+        async with get_async_connection() as conn:
+            async with conn.execute(
+                "SELECT COUNT(*) AS n FROM scenes WHERE project_id = ?",
+                (project_id,),
+            ) as cur:
+                row = await cur.fetchone()
+            scene_count = (row["n"] if row else 0) or 0
+            async with conn.execute(
+                """
+                SELECT COUNT(*) AS n FROM cuts c
+                JOIN shots sh ON sh.id = c.shot_id
+                JOIN scenes s ON s.id = sh.scene_id
+                WHERE s.project_id = ?
+                """,
+                (project_id,),
+            ) as cur:
+                row = await cur.fetchone()
+            cut_count = (row["n"] if row else 0) or 0
+        ready = scene_count > 0 and cut_count > 0
+        reason = "" if ready else "No scenes or cuts yet"
+
+    elif current == "ASSETS":
+        async with get_async_connection() as conn:
+            async with conn.execute(
+                "SELECT id, name, type, COALESCE(suggested_prompt,'') AS sp "
+                "FROM assets WHERE project_id = ? AND COALESCE(type,'') IN "
+                "('character','location','prop','sublocation','location_angle')",
+                (project_id,),
+            ) as cur:
+                rows = [dict(r) for r in await cur.fetchall()]
+        if not rows:
+            reason = "No assets yet"
+        else:
+            no_prompt = [r for r in rows if not r["sp"].strip()]
+            if no_prompt:
+                names = ", ".join(r["name"] for r in no_prompt[:3])
+                more = f" (+{len(no_prompt) - 3})" if len(no_prompt) > 3 else ""
+                reason = f"{len(no_prompt)} assets missing suggested_prompt: {names}{more}"
+            else:
+                ready = True
+
+    elif current == "GENERATE":
+        ready = False
+        reason = "Final phase"
+
+    return {
+        "current_phase": current,
+        "next_phase": next_phase,
+        "ready": ready,
+        "reason": reason,
+    }
