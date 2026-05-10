@@ -5,7 +5,8 @@ ASSETS phase.
 
 from backend.database import assets as asset_db
 from backend import db
-from backend.database.core import mark_phases_stale
+from backend import db
+mark_phases_stale = db.mark_phases_stale
 from backend.tools.registry import tool
 
 

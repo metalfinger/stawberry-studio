@@ -20,7 +20,8 @@ from typing import Any, Callable
 
 import structlog
 
-from backend.database.core import get_async_connection
+from backend import db
+get_async_connection = db.get_async_connection
 from backend.orchestrator import references
 from backend.orchestrator.context_bundler import bundle_cut_context
 from backend.orchestrator.events import RunContext, log_event

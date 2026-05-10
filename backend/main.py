@@ -15,7 +15,8 @@ load_dotenv()
 # E402 imports below are intentional: load_dotenv() must run first so settings
 # pick up .env values before any module reads from os.environ.
 from backend.config import get_settings  # noqa: E402
-from backend.database.core import init_db_async  # noqa: E402
+from backend import db  # noqa: E402
+init_db_async = db.init_db_async
 from backend.errors import configure_logging, install_exception_handlers  # noqa: E402
 from backend.routes import assets, batch, chat, cuts, library, pipeline, projects, repair  # noqa: E402
 

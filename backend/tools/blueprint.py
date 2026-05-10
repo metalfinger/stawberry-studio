@@ -5,7 +5,8 @@ Tools for managing scenes, shots, and cuts with cascading metadata
 import json
 import uuid
 from backend import db
-from backend.database.core import mark_phases_stale
+from backend import db
+mark_phases_stale = db.mark_phases_stale
 from backend.tools.registry import tool
 
 

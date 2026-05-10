@@ -17,7 +17,7 @@ async def get_asset(project_id: str, asset_id: str):
     asset = assets_db.get_asset(asset_id) if hasattr(assets_db, "get_asset") else None
     if not asset:
         # Fall back to direct query
-        from backend.database.core import get_async_connection
+        get_async_connection = db.get_async_connection
         async with get_async_connection() as conn:
             async with conn.execute(
                 "SELECT * FROM assets WHERE id = ? AND project_id = ?",
@@ -59,7 +59,7 @@ async def update_asset_prompt_route(project_id: str, asset_id: str, body: Prompt
     chat WS so the UI doesn't have to wait on a narrator round-trip just to
     persist a prompt edit. Re-runs trait extraction so appearance /
     distinctive_features / wardrobe_lock stay in sync."""
-    from backend.database.core import get_async_connection
+    get_async_connection = db.get_async_connection
     from backend.orchestrator.identity_traits import extract_identity_traits
 
     new_prompt = (body.prompt or "").strip()
@@ -119,7 +119,7 @@ async def regenerate_asset_identity_route(project_id: str, asset_id: str):
     AssetMasterNode regen buttons. Direct REST so the chat console stays out
     of the per-asset busy state — the frontend can show a card-level spinner
     and a toast, no confusing chat dialogue."""
-    from backend.database.core import get_async_connection
+    get_async_connection = db.get_async_connection
     from backend.orchestrator import references
 
     async with get_async_connection() as conn:

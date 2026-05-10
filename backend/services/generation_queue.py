@@ -19,7 +19,9 @@ from typing import Any, Callable, Dict, List, Optional
 import httpx
 import structlog
 
-from backend.database.core import get_async_connection, get_connection
+from backend import db
+get_async_connection = db.get_async_connection
+get_connection = db.get_connection
 
 log = structlog.get_logger(__name__)
 

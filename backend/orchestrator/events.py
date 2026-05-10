@@ -21,7 +21,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
-from backend.database.core import get_async_connection
+from backend import db
+get_async_connection = db.get_async_connection
 
 
 @dataclass

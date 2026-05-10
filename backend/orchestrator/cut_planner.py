@@ -163,7 +163,8 @@ async def plan_compose_cut(
         )
 
     # Pull every existing reference once for alternative-finding.
-    from backend.database.core import get_async_connection
+    from backend import db
+    get_async_connection = db.get_async_connection
     async with get_async_connection() as conn:
         async with conn.execute(
             "SELECT * FROM reference_pool WHERE project_id = ? AND is_active = 1",

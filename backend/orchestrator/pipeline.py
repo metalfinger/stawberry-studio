@@ -18,12 +18,12 @@ from typing import Any
 
 import structlog
 
-from backend.database.core import (
-    PIPELINE_PHASES,
-    canonical_phase,
-    get_async_connection,
-    mark_phases_stale,
-)
+from backend import db
+
+PIPELINE_PHASES = db.PIPELINE_PHASES
+canonical_phase = db.canonical_phase
+get_async_connection = db.get_async_connection
+mark_phases_stale = db.mark_phases_stale
 
 log = structlog.get_logger(__name__)
 

@@ -93,7 +93,8 @@ async def _persist_event(project_id: str, event: dict) -> None:
         return
     # Avoid recursion / circular imports — get_async_connection is the same
     # connection helper the rest of the app uses.
-    from backend.database.core import get_async_connection
+    from backend import db
+    get_async_connection = db.get_async_connection
     payload = json.dumps(event, default=str)
     async with get_async_connection() as conn:
         await conn.execute(
@@ -113,7 +114,8 @@ async def _persist_event(project_id: str, event: dict) -> None:
 async def fetch_recent_events(project_id: str, limit: int = 300) -> list[dict]:
     """Return the most recent typed events for a project, oldest-first so
     they replay in chronological order."""
-    from backend.database.core import get_async_connection
+    from backend import db
+    get_async_connection = db.get_async_connection
     async with get_async_connection() as conn:
         async with conn.execute(
             "SELECT payload_json FROM console_events "

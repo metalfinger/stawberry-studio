@@ -94,7 +94,8 @@ async def _persist_anchor_url(project_id: str, url: str) -> None:
     cut-render path never saw the anchor. This unifies: write both, every
     time. set_style_anchor() handles deactivating any prior is_style_anchor
     row so we don't accumulate stale anchors."""
-    from backend.database.core import get_async_connection
+    from backend import db
+    get_async_connection = db.get_async_connection
     from backend.orchestrator import references as refs
 
     async with get_async_connection() as conn:
@@ -127,7 +128,8 @@ async def _persist_anchor_url(project_id: str, url: str) -> None:
 
 async def get_style_anchor_url(project_id: str) -> str:
     """Read the pinned anchor URL. Empty string when not yet generated."""
-    from backend.database.core import get_async_connection
+    from backend import db
+    get_async_connection = db.get_async_connection
 
     async with get_async_connection() as conn:
         async with conn.execute(
@@ -147,7 +149,8 @@ async def ensure_style_anchor(project_id: str) -> str:
     if existing:
         return existing
 
-    from backend.database.core import get_async_connection
+    from backend import db
+    get_async_connection = db.get_async_connection
     from backend.providers import ImageGenRequest, get_registry
 
     async with get_async_connection() as conn:

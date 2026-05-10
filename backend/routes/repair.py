@@ -45,7 +45,8 @@ async def repair_preview(project_id: str):
     """Cost preview before the user clicks Run all. Counts the assets
     that would be re-minted and returns a USD breakdown so the UI can
     show "this will cost ~$X" before the confirm."""
-    from backend.database.core import get_async_connection
+    from backend import db
+    get_async_connection = db.get_async_connection
 
     async with get_async_connection() as conn:
         async with conn.execute(
@@ -105,7 +106,8 @@ async def repair_regenerate_identities(project_id: str):
     fresh one using the current (white-background) sheet rules. Identity
     is regenerated for characters / props / locations alike — locations
     re-render as flat-lit plates."""
-    from backend.database.core import get_async_connection
+    from backend import db
+    get_async_connection = db.get_async_connection
     from backend.orchestrator import references
 
     async with get_async_connection() as conn:

@@ -192,7 +192,8 @@ async def get_cut_prompt(project_id: str, cut_id: str):
     """
     import json
     from backend.tools.generation import get_cut_context
-    from backend.database.assets import get_asset
+    from backend import db
+    get_asset = db.get_asset
 
     ctx = get_cut_context(project_id, cut_id)
     if "error" in ctx:
@@ -276,7 +277,8 @@ async def get_phase_readiness(project_id: str):
 
     Cheap — only reads counts. Safe to poll every few seconds.
     """
-    from backend.database.core import get_async_connection
+    from backend import db
+    get_async_connection = db.get_async_connection
 
     proj = await db_async.get_project(project_id)
     if not proj:

@@ -149,7 +149,8 @@ async def _propose_plan(project_id: str, payload: dict, narrator: Narrator) -> b
 async def _set_plan_message_id(plan_id: str, message_id: str) -> None:
     """Persist the chat message_id of the plan card so update_plan_item can
     patch the right card from anywhere."""
-    from backend.database.core import get_async_connection
+    from backend import db
+    get_async_connection = db.get_async_connection
 
     async with get_async_connection() as conn:
         await conn.execute(
@@ -160,7 +161,8 @@ async def _set_plan_message_id(plan_id: str, message_id: str) -> None:
 
 
 async def _get_plan_message_id(plan_id: str) -> str | None:
-    from backend.database.core import get_async_connection
+    from backend import db
+    get_async_connection = db.get_async_connection
 
     async with get_async_connection() as conn:
         async with conn.execute(
@@ -418,7 +420,8 @@ async def _update_asset_prompt(project_id: str, payload: dict, narrator: Narrato
     new_prompt = (payload.get("prompt") or "").strip()
     if not asset_id or not new_prompt:
         return False
-    from backend.database.core import get_async_connection
+    from backend import db
+    get_async_connection = db.get_async_connection
     from backend.orchestrator.identity_traits import extract_identity_traits
 
     async with get_async_connection() as conn:
@@ -465,7 +468,8 @@ async def _regenerate_asset_identity(project_id: str, payload: dict, narrator: N
     if not asset_id:
         return False
 
-    from backend.database.core import get_async_connection
+    from backend import db
+    get_async_connection = db.get_async_connection
     from backend.orchestrator import references
 
     if new_prompt:
@@ -533,7 +537,8 @@ async def _refine_reference(project_id: str, payload: dict, narrator: Narrator) 
     if not (ref_id and feedback):
         return False
     if not asset_id:
-        from backend.database.core import get_async_connection
+        from backend import db
+        get_async_connection = db.get_async_connection
         async with get_async_connection() as conn:
             async with conn.execute(
                 "SELECT asset_id, label FROM reference_pool WHERE id = ?", (ref_id,),
@@ -576,7 +581,8 @@ async def _activity_summary(project_id: str, payload: dict, narrator: Narrator) 
     last_seen = payload.get("last_seen_ts")
     if not last_seen:
         return True
-    from backend.database.core import get_async_connection
+    from backend import db
+    get_async_connection = db.get_async_connection
 
     async with get_async_connection() as conn:
         async with conn.execute(
@@ -727,7 +733,8 @@ async def _regenerate_identities(project_id: str, narrator: Narrator) -> bool:
     """Mark every active identity superseded and re-mint each. Costs one
     image gen per asset. We surface a tool_call card so the user sees cost
     + latency live."""
-    from backend.database.core import get_async_connection
+    from backend import db
+    get_async_connection = db.get_async_connection
     from backend.orchestrator import references
     import time as _time
 

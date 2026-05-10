@@ -31,7 +31,8 @@ from typing import Any
 
 import structlog
 
-from backend.database.core import get_async_connection
+from backend import db
+get_async_connection = db.get_async_connection
 from backend.orchestrator.continuity import (
     compile_continuity_bible,
     get_continuity_bible,

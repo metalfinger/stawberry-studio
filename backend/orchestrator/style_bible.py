@@ -139,7 +139,8 @@ async def extract_style_bible(brief: dict[str, Any]) -> dict[str, Any]:
 async def persist_style_bible(project_id: str, bible: dict[str, Any]) -> None:
     """Write palette_hex / style_tokens / lighting_rules onto the brief row.
     Idempotent — safe to re-run."""
-    from backend.database.core import get_async_connection
+    from backend import db
+    get_async_connection = db.get_async_connection
 
     palette = json.dumps(bible.get("palette_hex") or [])
     tokens = json.dumps(bible.get("style_tokens") or [])
@@ -161,7 +162,8 @@ async def persist_style_bible(project_id: str, bible: dict[str, Any]) -> None:
 
 async def compile_style_bible_for_project(project_id: str) -> dict[str, Any]:
     """Read the brief, extract, persist. Returns the bible dict."""
-    from backend.database.core import get_async_connection
+    from backend import db
+    get_async_connection = db.get_async_connection
 
     async with get_async_connection() as conn:
         async with conn.execute(

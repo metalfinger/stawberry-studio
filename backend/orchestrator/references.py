@@ -52,7 +52,8 @@ from typing import Any
 
 import structlog
 
-from backend.database.core import get_async_connection
+from backend import db
+get_async_connection = db.get_async_connection
 from backend.providers import ImageGenRequest, ProviderError, ReferenceImage, get_registry
 
 log = structlog.get_logger(__name__)
@@ -216,7 +217,7 @@ async def _build_prompt(
     parent_aid = asset.get("parent_asset_id")
     if parent_aid:
         try:
-            from backend.database.core import get_async_connection as _gac
+            _gac = db.get_async_connection
             async with _gac() as _conn:
                 _row = await _fetch_one(
                     _conn,

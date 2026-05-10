@@ -35,7 +35,7 @@ def _check_master_readiness(project_id: str) -> dict:
     if not project_id or project_id == "unknown":
         return {"ok": True, "missing": [], "by_type": {}}
     try:
-        from backend.database.core import get_connection
+        get_connection = db.get_connection
 
         conn = get_connection()
         cursor = conn.cursor()
