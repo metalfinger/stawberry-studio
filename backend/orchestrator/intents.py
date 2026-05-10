@@ -637,6 +637,17 @@ async def _confirm_briefing(project_id: str, narrator: Narrator) -> bool:
                 + (f"  • Palette: {palette}\n" if palette else "")
                 + (f"  • Tokens: {tokens}" if tokens else "")
             )
+        elif bible.get("_failed"):
+            # Loud failure (I5) — without this, Test1's bible came back
+            # empty and nobody noticed until cuts rendered with drifting
+            # palettes. Surface to chat so the user can repair.
+            await narrator.failure(
+                error="Style bible compile returned empty after retry.",
+                suggestion="Render quality will degrade without locked palette + tokens. Click 🔧 Repair to retry, or edit the brief and try again.",
+                recovery_actions=[
+                    Action(label="🎨 Retry bible compile", intent="recompile_style_bible", primary=True),
+                ],
+            )
     except Exception:  # noqa: BLE001
         pass
     # L2 — mint the project's pinned style anchor image so every

@@ -468,20 +468,31 @@ async def _generate_one(
     prompt = await _build_prompt(asset, brief, label, story_context)
 
     refs: list[ReferenceImage] = []
+    asset_type_lower = (asset.get("type") or "").lower()
 
     # L2 — attach the project's style anchor as the FIRST reference so it
-    # carries palette, line, grain across every subsequent generation. We
-    # skip self-reference (the anchor itself shouldn't reference itself if
-    # somebody marks the asset that way later).
-    try:
-        from backend.orchestrator.style_anchor import get_style_anchor_url
-        anchor_url = await get_style_anchor_url(asset["project_id"])
-        if anchor_url and anchor_url != asset.get("image_url"):
-            refs.append(
-                ReferenceImage(image_url=anchor_url, slot=len(refs) + 1, name="style_anchor")
-            )
-    except Exception:  # noqa: BLE001
-        pass
+    # carries palette, line, grain across every subsequent generation.
+    #
+    # I4 (Test1 audit): SKIP anchor injection for location identity gens.
+    # The anchor (currently a hero key-art image) was making locations
+    # render as story shots instead of plates — Fake Lunar Set's identity
+    # had an astronaut + flag in it because it was copying the anchor's
+    # composition. Locations should render their own set against an empty
+    # ref slot 1 (or their parent location's plate).
+    skip_anchor = (
+        asset_type_lower in ("location", "sublocation", "location_angle")
+        and label == "identity"
+    )
+    if not skip_anchor:
+        try:
+            from backend.orchestrator.style_anchor import get_style_anchor_url
+            anchor_url = await get_style_anchor_url(asset["project_id"])
+            if anchor_url and anchor_url != asset.get("image_url"):
+                refs.append(
+                    ReferenceImage(image_url=anchor_url, slot=len(refs) + 1, name="style_anchor")
+                )
+        except Exception:  # noqa: BLE001
+            pass
 
     if parent_reference_id:
         async with get_async_connection() as conn:

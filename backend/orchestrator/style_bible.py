@@ -90,50 +90,92 @@ def _safe_text(value: Any, max_len: int = 600) -> str:
     return str(value).strip()[:max_len]
 
 
+_RETRY_HINT = (
+    "\n\nIMPORTANT: respond with VALID JSON only. The previous attempt "
+    "returned empty palette_hex AND empty style_tokens — that's a bug. "
+    "The brief above contains real visual cues; produce 4-6 hex codes "
+    "that match the described palette and 4-6 short concrete style "
+    "tokens. Do not return empty arrays."
+)
+
+
+async def _extract_once(brief_msg: str) -> dict[str, Any]:
+    """One attempt at the LLM extraction. Returns parsed dict or raises."""
+    from backend.config import get_settings
+    from backend.orchestrator.runner import _make_pai_model
+    from pydantic_ai import Agent
+
+    s = get_settings()
+    model_name = s.llm.role("qa") or s.llm.role("planner") or "gemini-2.5-flash"
+    model = _make_pai_model(model_name)
+    agent = Agent(model=model, system_prompt=_SYSTEM)
+    result = await agent.run(brief_msg)
+    text = (getattr(result, "output", None) or "").strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[1] if "\n" in text else ""
+        text = text.rsplit("```", 1)[0].strip()
+    data = json.loads(text)
+    return {
+        "palette_hex": _safe_palette(data.get("palette_hex"), max_items=8),
+        "style_tokens": _safe_list(data.get("style_tokens"), max_items=8),
+        "lighting_rules": _safe_text(data.get("lighting_rules")),
+    }
+
+
 async def extract_style_bible(brief: dict[str, Any]) -> dict[str, Any]:
-    """Best-effort extraction. Returns dict with palette_hex / style_tokens
-    / lighting_rules. On any error the dict has sensible empty defaults so
-    callers can persist without branching."""
+    """Extract the style bible from a brief.
+
+    Returns dict with palette_hex / style_tokens / lighting_rules. The
+    returned dict ALWAYS includes a `_failed` boolean so callers can
+    surface a chat warning when the extraction failed silently — Test1
+    showed this happens regularly (Gemini Flash returns malformed JSON
+    or hits a transient error and we get empty arrays). Without surfacing
+    it, the user has no idea their bible is empty until they look at
+    rendered cuts and notice palette drift.
+
+    I5 — single retry on empty result with a stricter prompt before
+    giving up. Caller can read `_failed` to decide whether to narrate.
+    """
     art_style = (brief.get("art_style") or "").strip()
     color_palette = (brief.get("color_palette") or "").strip()
     lighting_style = (brief.get("lighting_style") or "").strip()
     world_logic = (brief.get("world_logic") or "").strip()
 
     if not (art_style or color_palette or lighting_style):
-        # Nothing to anchor against — don't waste a call.
-        return {"palette_hex": [], "style_tokens": [], "lighting_rules": ""}
+        # Nothing to anchor against — don't waste a call. Not a "failure".
+        return {"palette_hex": [], "style_tokens": [], "lighting_rules": "", "_failed": False}
 
+    user_msg = (
+        f"art_style: {art_style or '(unspecified)'}\n"
+        f"color_palette: {color_palette or '(unspecified)'}\n"
+        f"lighting_style: {lighting_style or '(unspecified)'}\n"
+        f"world_logic: {world_logic or '(unspecified)'}\n\n"
+        "Return the JSON now."
+    )
+
+    # Attempt 1.
     try:
-        from backend.config import get_settings
-        from backend.orchestrator.runner import _make_pai_model
-        from pydantic_ai import Agent
-
-        s = get_settings()
-        model_name = s.llm.role("qa") or s.llm.role("planner") or "gemini-2.5-flash"
-        model = _make_pai_model(model_name)
-        agent = Agent(model=model, system_prompt=_SYSTEM)
-
-        user_msg = (
-            f"art_style: {art_style or '(unspecified)'}\n"
-            f"color_palette: {color_palette or '(unspecified)'}\n"
-            f"lighting_style: {lighting_style or '(unspecified)'}\n"
-            f"world_logic: {world_logic or '(unspecified)'}\n\n"
-            "Return the JSON now."
-        )
-        result = await agent.run(user_msg)
-        text = (getattr(result, "output", None) or "").strip()
-        if text.startswith("```"):
-            text = text.split("\n", 1)[1] if "\n" in text else ""
-            text = text.rsplit("```", 1)[0].strip()
-        data = json.loads(text)
-        return {
-            "palette_hex": _safe_palette(data.get("palette_hex"), max_items=8),
-            "style_tokens": _safe_list(data.get("style_tokens"), max_items=8),
-            "lighting_rules": _safe_text(data.get("lighting_rules")),
-        }
+        result = await _extract_once(user_msg)
     except Exception as e:  # noqa: BLE001
-        log.warning("style_bible_extract_failed", error=str(e))
-        return {"palette_hex": [], "style_tokens": [], "lighting_rules": ""}
+        log.warning("style_bible_extract_attempt1_failed", error=str(e))
+        result = {"palette_hex": [], "style_tokens": [], "lighting_rules": ""}
+
+    # If both palette AND tokens are empty, the result is useless —
+    # retry once with a stricter prompt.
+    if not result["palette_hex"] and not result["style_tokens"]:
+        log.warning("style_bible_attempt1_empty_retrying")
+        try:
+            result = await _extract_once(user_msg + _RETRY_HINT)
+        except Exception as e:  # noqa: BLE001
+            log.warning("style_bible_extract_attempt2_failed", error=str(e))
+
+    # Mark failure when we still have no useful output. The caller
+    # (intents._confirm_briefing) reads this flag to narrate to chat.
+    failed = not (result.get("palette_hex") or result.get("style_tokens"))
+    if failed:
+        log.warning("style_bible_compile_FAILED_after_retry", brief_keys=list(brief.keys()))
+    result["_failed"] = failed
+    return result
 
 
 async def persist_style_bible(project_id: str, bible: dict[str, Any]) -> None:

@@ -24,17 +24,23 @@ log = structlog.get_logger(__name__)
 
 
 def _build_anchor_prompt(brief: dict[str, Any]) -> str:
-    """Compose the prompt that distills the brief + bible into one image.
+    """Compose the prompt for the project's style anchor.
 
-    The anchor is intentionally not a story shot — it's a key-art beat
-    that expresses the look. No characters by name, no narrative. Just
-    palette + style tokens + lighting + atmosphere.
+    I3 (Test1 audit): the old prompt asked for "single key-art frame" /
+    "wide cinematic frame, one striking subject" — and the model
+    interpreted that as a story shot (in Test1: a moon set with an
+    astronaut planting a flag). The anchor was then attached as ref slot 1
+    on every downstream gen, dragging the moon-set composition into
+    locations and cuts.
+
+    The fix: ask for an ABSTRACT STYLE SWATCH — a designer's reference
+    sheet, not a story shot. Color palette stripe + halftone gradient +
+    ink-line texture sample + paper grain. No subjects, no setting, no
+    narrative. The model sees the swatch and re-uses its line/grain/
+    palette without copying any composition.
     """
     art_style = (brief.get("art_style") or "").strip()
     color_palette = (brief.get("color_palette") or "").strip()
-    lighting = (brief.get("lighting_style") or "").strip()
-    world = (brief.get("world_logic") or "").strip()
-    era = (brief.get("era_setting") or "").strip()
     lighting_rules = (brief.get("lighting_rules") or "").strip()
 
     try:
@@ -46,38 +52,38 @@ def _build_anchor_prompt(brief: dict[str, Any]) -> str:
     except Exception:
         style_tokens = []
 
-    parts: list[str] = [
-        f"Single key-art frame, no text, no characters by name. "
-        f"Pure visual style sample for: {brief.get('title') or 'untitled project'}.",
-        f"## World\n{world or '(unspecified)'}",
-    ]
-    if era:
-        parts.append(f"## Era\n{era}")
-    style_lines = []
-    if art_style:
-        style_lines.append(f"Art style: {art_style}")
-    if color_palette:
-        style_lines.append(f"Color palette: {color_palette}")
-    if palette_hex:
-        style_lines.append("Locked palette (hex): " + ", ".join(palette_hex))
-    if lighting:
-        style_lines.append(f"Lighting: {lighting}")
-    if lighting_rules:
-        style_lines.append(f"Lighting rules: {lighting_rules}")
-    if style_tokens:
-        style_lines.append("Shared style tokens (apply verbatim): " + " | ".join(style_tokens))
-    if style_lines:
-        parts.append("## Style\n" + "\n".join(style_lines))
+    palette_str = ", ".join(palette_hex) if palette_hex else color_palette
+    tokens_str = " | ".join(style_tokens) if style_tokens else ""
 
+    parts: list[str] = [
+        "ABSTRACT STYLE SWATCH SHEET — not a scene, not a story. A "
+        "designer's reference card showing the visual language of this "
+        "project. Layout: a horizontal palette strip across the bottom "
+        "(swatches of the locked colors), a halftone gradient panel in "
+        "the middle (density and dot pattern), an ink-line texture "
+        "sample on top showing line weight + chromatic edge offset.",
+    ]
     parts.append(
-        "## Composition\n"
-        "Wide cinematic frame. One striking subject (silhouette or environment), "
-        "no faces, no UI, no captions. Show the world's mood and palette. "
-        "This image will be used as a visual anchor for all downstream generations."
+        f"## Style language\n"
+        f"Art style: {art_style or '(unspecified)'}\n"
+        + (f"Locked palette (hex, render swatches of EACH): {palette_str}\n" if palette_str else "")
+        + (f"Style tokens (render examples of each technique): {tokens_str}\n" if tokens_str else "")
+        + (f"Lighting rules (sample shadow + edge): {lighting_rules}\n" if lighting_rules else "")
+    )
+    parts.append(
+        "## Hard constraints\n"
+        "- ZERO subjects (no characters, no faces, no objects from a story).\n"
+        "- ZERO settings (no rooms, no landscapes, no skies, no environments).\n"
+        "- ZERO narrative composition (no foreground/background, no perspective).\n"
+        "- This is a flat designer's swatch sheet on a paper-textured background.\n"
+        "- The swatch sheet should look like something a colorist would tape "
+        "  to the wall as a reference, NOT like a movie still."
     )
     parts.append(
         "## Negatives\nno text, no labels, no UI, no captions, no watermarks, "
-        "no signatures, no recognizable celebrity faces."
+        "no signatures, no recognizable celebrity faces, no characters, no "
+        "story moments, no narrative scenes, no people, no buildings, no "
+        "vehicles, no creatures."
     )
     return "\n\n".join(parts)
 
