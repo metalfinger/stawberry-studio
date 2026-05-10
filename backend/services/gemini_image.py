@@ -239,48 +239,8 @@ def generate_image_image_to_image(
         return _err(e)
 
 
-# ----------------------------------------------------------------------------
-# Legacy aliases used by tools/pre_production.py
-# ----------------------------------------------------------------------------
-
-def generate_image(
-    prompt: str,
-    model: str = "gemini-3-pro-image",
-    resolution: str = "1024x1024",
-    aspect_ratio: str = "16:9",
-    num_images: int = 1,
-    seed: Optional[int] = None,
-) -> Dict[str, Any]:
-    """Legacy alias: text-to-image with simpler signature."""
-    return generate_image_text_to_image(
-        prompt=prompt,
-        model=model,
-        resolution=resolution,
-        aspect_ratio=aspect_ratio,
-        num_images=num_images,
-        seed=seed,
-    )
-
-
-def generate_image_with_reference(
-    prompt: str,
-    image_url: str,
-    model: str = "gemini-3-pro-image",
-    strength: float = 0.7,
-    aspect_ratio: str = "16:9",
-    num_images: int = 1,
-    seed: Optional[int] = None,
-) -> Dict[str, Any]:
-    """Legacy alias: single-reference image-to-image."""
-    return generate_image_image_to_image(
-        prompt=prompt,
-        reference_image_url=image_url,
-        model=model,
-        strength=strength,
-        aspect_ratio=aspect_ratio,
-        num_images=num_images,
-        seed=seed,
-    )
+# Legacy aliases (generate_image, generate_image_with_reference) removed
+# with tools/pre_production.py — they were the only callers.
 
 
 # ----------------------------------------------------------------------------

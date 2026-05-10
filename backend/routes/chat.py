@@ -47,10 +47,7 @@ PHASE_AGENTS: dict[str, dict] = {
         "default": ("Atlas", "atlas", "I'm Atlas, your Visual Designer. Let me examine your story and extract all visual elements...", "Analyze the blueprint and extract all characters, locations, and props."),
     },
     "GENERATE": {
-        "prompter": ("Pixel", "pixel", "Hey! I'm Pixel, your Prompt Artist. Which cut shall we start with?", None),
-        "renderer": ("Spark", "spark", "I'm Spark, your VFX Artist. Ready to render your visuals.", None),
-        "qa": ("Scout", "scout", "I'm Scout, your QA Lead. I'll review each image for consistency.", None),
-        "default": "prompter",
+        "default": ("Pixel", "pixel", "Hey! I'm Pixel, your Prompt Artist. Which cut shall we start with?", None),
     },
 }
 

@@ -13,10 +13,11 @@ from collections.abc import AsyncIterator
 from backend import db
 from backend.orchestrator.runner import stream_agent
 
-# Every agent the chat WebSocket can route to. Iris is internal (gap-filler)
-# and not user-chat-addressable; everything else has both a YAML spec and an
-# MD prompt under backend/agents/{specs,prompts}/.
-PYDANTIC_AI_AGENTS = {"berry", "sage", "nova", "atlas", "pixel", "spark", "scout"}
+# Every agent the chat WebSocket can route to. Iris is internal (gap-filler,
+# invoked from cut_executor PREPROD_FILL items) and not user-chat-addressable.
+# Spark/Scout were never reachable from chat (PHASE_AGENTS only auto-switched
+# Sage↔Nova in STORY mode) so they were deleted as dead-end legacy.
+PYDANTIC_AI_AGENTS = {"berry", "sage", "nova", "atlas", "pixel"}
 
 
 def is_enabled(agent_id: str) -> bool:
@@ -203,9 +204,6 @@ def build_prompt_vars(agent_id: str, project_id: str) -> dict[str, str]:
             )
         tree = _build_full_tree(project_id)
         return {"project_id": project_id, "readiness_block": block, "cut_tree": tree}
-
-    if agent_id in {"spark", "scout"}:
-        return {"project_id": project_id}
 
     return {"project_id": project_id}
 

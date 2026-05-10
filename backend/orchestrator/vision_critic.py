@@ -7,7 +7,8 @@ After a cut renders, score the panel against:
   - the scene's expected mood/lighting
 
 Returns ContinuityScore{face, wardrobe, lighting, props, overall}. Below the
-threshold, the system can call `request_edit` with stronger reference weighting.
+threshold, cut_executor's auto-retry loop re-renders with stronger reference
+weighting via the planner's feedback chain.
 
 Uses Gemini's multimodal capability via the GeminiLLM provider — Gemini sees
 the actual images and reasons about visual continuity, not just text.

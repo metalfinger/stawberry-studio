@@ -348,124 +348,16 @@ def find_cut_by_number(project_id: str, scene_number: int, shot_number: int, cut
         
     return dict(cut)
 
-# ============== LEGACY / HELPERS ==============
-
-@tool("generate_image_mock", description="Mock image generator for offline testing.", tags=["generation", "mock"])
-def generate_image_mock(prompt: str, slots: Dict[str, str]) -> Dict[str, Any]:
-    """
-    Mock image generation - returns placeholder URL.
-    Kept for backward compatibility / dev mode.
-    """
-    mock_id = uuid.uuid4().hex[:12]
-    mock_url = f"https://placeholder.generated/{mock_id}.png"
-    
-    return {
-        "success": True,
-        "image_url": mock_url,
-        "mock": True,
-        "prompt_length": len(prompt),
-        "slots_used": list(slots.keys()),
-    }
-
-
-@tool("save_cut_image", description="Persist a generated image URL onto a cut row.", tags=["generation", "write"])
-def save_cut_image(project_id: str, cut_id: str, image_url: str) -> Dict[str, Any]:
-    """Save generated image URL to cut (Helper)."""
-    conn = db.get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        UPDATE cuts SET generated_image_url = ? WHERE id = ?
-    """, (image_url, cut_id))
-    conn.commit()
-    conn.close()
-    
-    return {"success": True, "cut_id": cut_id, "image_url": image_url}
-
-
-@tool("mark_cut_status", description="Update generation_status on a cut (pending|generating|complete|failed).", tags=["generation", "write"])
-def mark_cut_status(project_id: str, cut_id: str, status: str, notes: str = "") -> Dict[str, Any]:
-    """Update cut's generation status (Helper)."""
-    conn = db.get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        UPDATE cuts SET generation_status = ?, generation_notes = ? WHERE id = ?
-    """, (status, notes, cut_id))
-    conn.commit()
-    conn.close()
-    
-    return {"success": True, "cut_id": cut_id, "status": status}
-
-
-@tool("get_asset_image", description="Return the active image URL for an asset (master or fallback).", tags=["generation", "read"])
-def get_asset_image(project_id: str, asset_id: str) -> Optional[str]:
-    """Get the image URL for an asset."""
-    asset = assets_db.get_asset(asset_id)
-    return asset.get("image_url") if asset else None
-
-
-# ============== QA TOOLS ==============
-
-@tool("compare_with_master", description="QA: compare a generated cut against character master refs (stub for vision check).", tags=["generation", "qa"])
-def compare_with_master(project_id: str, cut_id: str) -> Dict[str, Any]:
-    """
-    Compare generated cut with master assets.
-    Returns consistency check results.
-    """
-    ctx = get_cut_context(project_id, cut_id)
-    assets = get_cut_assets(project_id, cut_id)
-    
-    # For now, return mock results
-    # Real implementation would use vision model to compare
-    return {
-        "cut_id": cut_id,
-        "has_image": bool(ctx["cut"].get("generated_image_url")),
-        "character_count": len(assets["characters"]),
-        "checks": {
-            "face_match": "pending_vision_check",
-            "wardrobe_match": "pending_vision_check",
-            "lighting_match": "pending_vision_check",
-        },
-        "note": "Vision-based comparison not yet implemented"
-    }
-
-
-@tool("flag_issue", description="QA: flag a continuity issue on a cut.", tags=["generation", "qa"])
-def flag_issue(project_id: str, cut_id: str, issue: str, severity: str = "minor") -> Dict[str, Any]:
-    """Flag a continuity issue on a cut."""
-    conn = db.get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        UPDATE cuts SET generation_notes = ?, generation_status = 'failed' WHERE id = ?
-    """, (f"[{severity.upper()}] {issue}", cut_id))
-    conn.commit()
-    conn.close()
-    
-    return {"success": True, "cut_id": cut_id, "issue": issue, "severity": severity}
-
-
-@tool("request_edit", description="QA: ask the renderer to redo a cut with edit_target/spatial_lock.", tags=["generation", "qa"])
-def request_edit(project_id: str, cut_id: str, edit_target: str, spatial_lock: str = "") -> Dict[str, Any]:
-    """Request an edit pass on a cut."""
-    conn = db.get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        UPDATE cuts SET edit_target = ?, spatial_lock = ?, generation_status = 'pending' WHERE id = ?
-    """, (edit_target, spatial_lock, cut_id))
-    conn.commit()
-    conn.close()
-    
-    return {"success": True, "cut_id": cut_id, "edit_requested": edit_target}
-
-
-@tool("approve_cut", description="QA: mark a cut as approved.", tags=["generation", "qa"])
-def approve_cut(project_id: str, cut_id: str) -> Dict[str, Any]:
-    """Approve a cut after QA review."""
-    conn = db.get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        UPDATE cuts SET generation_status = 'approved', generation_notes = 'QA approved' WHERE id = ?
-    """, (cut_id,))
-    conn.commit()
-    conn.close()
-    
-    return {"success": True, "cut_id": cut_id, "status": "approved"}
+# Legacy QA tools (compare_with_master / flag_issue / request_edit /
+# approve_cut) and generate_image_mock removed — they were granted only
+# to Spark and Scout, both of which were never reachable from chat
+# (PHASE_AGENTS only auto-switched between Sage and Nova). Modern
+# render-quality flow goes through orchestrator/vision_critic.py and
+# the cut_executor's auto-retry loop. The legacy "approve_cut" tool is
+# different from the "approve_cut_render" frontend intent — the
+# frontend intent still works via intents.py.
+#
+# Helper tools (save_cut_image, mark_cut_status, get_asset_image) also
+# removed — modern paths write generated_image_url directly via the
+# planner/executor + reference_pool, and asset image lookup is a
+# subquery (see continuity.py / chat_bridge.py).
