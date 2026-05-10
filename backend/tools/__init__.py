@@ -21,10 +21,6 @@ from backend.tools.assets import (
     complete_asset_extraction, confirm_asset_extraction_complete, save_suggested_asset_prompt,
 )
 
-from backend.tools.element_generation import (
-    compile_element_master_prompt, generate_element_master,
-    get_asset_elements_summary, get_generation_history as get_element_history,
-)
 # Trigger registration side-effects for tool modules used only by specific agents.
 from backend.tools import navigation as _navigation  # noqa: F401
 from backend.tools import phase_confirmation as _phase_confirmation  # noqa: F401

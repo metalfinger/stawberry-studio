@@ -72,48 +72,40 @@ async def compile_continuity_bible(project_id: str) -> dict[str, Any]:
         # (appearance/distinctive_features/wardrobe_lock) are empty — which
         # is the common case after Atlas extraction (it only writes
         # suggested_prompt today).
+        # Pull characters then resolve master_image_url from reference_pool's
+        # identity row. element_masters is gone — reference_pool is the
+        # single source of truth for asset master images.
         async with conn.execute(
             """
             SELECT a.id, a.name, a.description, a.appearance, a.consistency_tokens,
                    a.distinctive_features, a.wardrobe_lock, a.image_url,
-                   a.suggested_prompt,
-                   COALESCE(em.master_image_url, '') AS master_image_url
+                   a.suggested_prompt
             FROM assets a
-            LEFT JOIN element_masters em
-              ON em.asset_id = a.id AND em.is_active = 1 AND em.master_image_url IS NOT NULL
             WHERE a.project_id = ? AND a.type = 'character' AND (a.master_id IS NULL OR a.master_id = '')
             """,
             (project_id,),
         ) as cur:
             char_rows = [dict(r) for r in await cur.fetchall()]
 
-        # If a character has no master_image_url (element_masters not used)
-        # but DOES have an active identity in reference_pool, mirror that
-        # in. Without this, the DSL emits "(no master)" and the cut render
-        # has no character image slot — drift guaranteed.
         for ch in char_rows:
-            if not ch.get("master_image_url"):
-                async with conn.execute(
-                    "SELECT image_url FROM reference_pool WHERE asset_id = ? AND label = 'identity' "
-                    "AND COALESCE(is_active, 1) = 1 ORDER BY created_at DESC LIMIT 1",
-                    (ch["id"],),
-                ) as cur:
-                    row = await cur.fetchone()
-                if row and row["image_url"]:
-                    ch["master_image_url"] = row["image_url"]
+            ch["master_image_url"] = ""
+            async with conn.execute(
+                "SELECT image_url FROM reference_pool WHERE asset_id = ? AND label = 'identity' "
+                "AND COALESCE(is_active, 1) = 1 ORDER BY created_at DESC LIMIT 1",
+                (ch["id"],),
+            ) as cur:
+                row = await cur.fetchone()
+            if row and row["image_url"]:
+                ch["master_image_url"] = row["image_url"]
 
-        # Locations — same identity-from-reference-pool fallback. L4: include
-        # sublocation + location_angle so the prompt DSL can resolve them
-        # via [SETTING:id] just like a regular location, and so the parent
-        # walker has every node it needs.
+        # Locations — same lookup. L4 includes sublocation + location_angle
+        # so the prompt DSL can resolve them via [SETTING:id] just like a
+        # regular location, and so the parent walker has every node it needs.
         async with conn.execute(
             """
             SELECT a.id, a.name, a.type, a.description, a.appearance, a.image_url,
-                   a.suggested_prompt, a.parent_asset_id,
-                   COALESCE(em.master_image_url, '') AS master_image_url
+                   a.suggested_prompt, a.parent_asset_id
             FROM assets a
-            LEFT JOIN element_masters em
-              ON em.asset_id = a.id AND em.is_active = 1 AND em.master_image_url IS NOT NULL
             WHERE a.project_id = ?
               AND a.type IN ('location','sublocation','location_angle')
               AND (a.master_id IS NULL OR a.master_id = '')
@@ -122,15 +114,15 @@ async def compile_continuity_bible(project_id: str) -> dict[str, Any]:
         ) as cur:
             loc_rows = [dict(r) for r in await cur.fetchall()]
         for lo in loc_rows:
-            if not lo.get("master_image_url"):
-                async with conn.execute(
-                    "SELECT image_url FROM reference_pool WHERE asset_id = ? AND label = 'identity' "
-                    "AND COALESCE(is_active, 1) = 1 ORDER BY created_at DESC LIMIT 1",
-                    (lo["id"],),
-                ) as cur:
-                    row = await cur.fetchone()
-                if row and row["image_url"]:
-                    lo["master_image_url"] = row["image_url"]
+            lo["master_image_url"] = ""
+            async with conn.execute(
+                "SELECT image_url FROM reference_pool WHERE asset_id = ? AND label = 'identity' "
+                "AND COALESCE(is_active, 1) = 1 ORDER BY created_at DESC LIMIT 1",
+                (lo["id"],),
+            ) as cur:
+                row = await cur.fetchone()
+            if row and row["image_url"]:
+                lo["master_image_url"] = row["image_url"]
 
         # Lighting state per scene
         async with conn.execute(

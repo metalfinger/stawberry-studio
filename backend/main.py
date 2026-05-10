@@ -17,7 +17,7 @@ load_dotenv()
 from backend.config import get_settings  # noqa: E402
 from backend.database.core import init_db_async  # noqa: E402
 from backend.errors import configure_logging, install_exception_handlers  # noqa: E402
-from backend.routes import assets, batch, chat, cuts, elements, library, pipeline, projects, repair  # noqa: E402
+from backend.routes import assets, batch, chat, cuts, library, pipeline, projects, repair  # noqa: E402
 
 configure_logging()
 
@@ -42,7 +42,6 @@ app.add_middleware(
 
 app.include_router(projects.router)
 app.include_router(chat.router)
-app.include_router(elements.router)
 app.include_router(cuts.router)
 app.include_router(assets.router)
 app.include_router(pipeline.router)

@@ -15,8 +15,6 @@ tools:
   - get_full_blueprint
   - get_assets
   - save_suggested_asset_prompt
-  - compile_element_master_prompt
-  - get_asset_elements_summary
   - generate_all_missing_sheets
   - compose_cut
   - propose_cut_plan

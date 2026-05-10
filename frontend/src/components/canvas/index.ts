@@ -4,10 +4,9 @@ import { CutNode, type CutNodeData } from './CutNode'
 import { BriefNode, type BriefNodeData } from './BriefNode'
 import { AssetGroupNode, type AssetGroupNodeData } from './AssetGroupNode'
 import { AssetMasterNode, type AssetMasterNodeData } from './AssetMasterNode'
-import { ImageGeneratorNode, type ImageGeneratorNodeData } from './ImageGeneratorNode'
 
-export { SceneNode, ShotNode, CutNode, BriefNode, AssetGroupNode, AssetMasterNode, ImageGeneratorNode }
-export type { SceneNodeData, ShotNodeData, CutNodeData, BriefNodeData, AssetGroupNodeData, AssetMasterNodeData, ImageGeneratorNodeData }
+export { SceneNode, ShotNode, CutNode, BriefNode, AssetGroupNode, AssetMasterNode }
+export type { SceneNodeData, ShotNodeData, CutNodeData, BriefNodeData, AssetGroupNodeData, AssetMasterNodeData }
 
 export const nodeTypes = {
   brief: BriefNode,
@@ -16,5 +15,4 @@ export const nodeTypes = {
   cut: CutNode,
   assetGroup: AssetGroupNode,
   assetMaster: AssetMasterNode,
-  imageGenerator: ImageGeneratorNode,
 }

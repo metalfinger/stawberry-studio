@@ -182,11 +182,15 @@ def get_smart_generation_context(project_id: str, cut_id: str) -> Dict[str, Any]
     conn = db.get_connection()
     cursor = conn.cursor()
     
-    # Fetch all assets with their master images
+    # Fetch all assets with their master images. Source: reference_pool's
+    # active 'identity' row (single source of truth, replaces element_masters).
     cursor.execute("""
-        SELECT a.*, em.master_image_url 
+        SELECT a.*,
+               (SELECT rp.image_url FROM reference_pool rp
+                WHERE rp.asset_id = a.id AND rp.label = 'identity'
+                  AND COALESCE(rp.is_active,1) = 1
+                ORDER BY rp.created_at DESC LIMIT 1) AS master_image_url
         FROM assets a
-        LEFT JOIN element_masters em ON a.id = em.asset_id AND em.is_active = 1
         WHERE a.project_id = ?
     """, (project_id,))
     

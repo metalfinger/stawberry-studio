@@ -39,14 +39,19 @@ def _check_master_readiness(project_id: str) -> dict:
 
         conn = get_connection()
         cursor = conn.cursor()
+        # Master image lives in reference_pool (label='identity'). element_masters
+        # is gone — single source of truth.
         cursor.execute(
             """
             SELECT a.id, a.type, a.name,
-                   COALESCE(em.master_image_url, '') AS master_url,
-                   COALESCE(a.image_url, '') AS direct_url
+                   COALESCE(a.image_url, '') AS direct_url,
+                   COALESCE((
+                     SELECT rp.image_url FROM reference_pool rp
+                     WHERE rp.asset_id = a.id AND rp.label = 'identity'
+                       AND COALESCE(rp.is_active,1) = 1
+                     ORDER BY rp.created_at DESC LIMIT 1
+                   ), '') AS master_url
             FROM assets a
-            LEFT JOIN element_masters em
-              ON em.asset_id = a.id AND em.is_active = 1 AND em.master_image_url IS NOT NULL
             WHERE a.project_id = ? AND a.type IN ('character','location','prop')
               AND (a.master_id IS NULL OR a.master_id = '')
             """,

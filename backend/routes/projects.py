@@ -210,18 +210,19 @@ async def get_cut_prompt(project_id: str, cut_id: str):
                 if asset_id:
                     asset = get_asset(asset_id)
                     if asset:
-                        # Check for master image.
-                        from backend import db
+                        # Master image lives in reference_pool's active identity row.
                         conn = db.get_connection()
                         cursor = conn.cursor()
                         cursor.execute(
-                            "SELECT master_image_url FROM element_masters WHERE asset_id = ? AND is_active = 1",
+                            "SELECT image_url FROM reference_pool WHERE asset_id = ? "
+                            "AND label = 'identity' AND COALESCE(is_active,1) = 1 "
+                            "ORDER BY created_at DESC LIMIT 1",
                             (asset_id,),
                         )
                         row = cursor.fetchone()
                         conn.close()
 
-                        img_url = row["master_image_url"] if row else asset.get("image_url")
+                        img_url = row["image_url"] if row else asset.get("image_url")
                         slot_num = int(slot_key.replace("@Image", ""))
 
                         reference_images.append({

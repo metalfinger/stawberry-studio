@@ -192,22 +192,14 @@ async def set_active_generation(project_id: str, cut_id: str, request: SetActive
         asset_name = f"Frame: Cut {cut_num}"
         frame_asset_id = f"asset_frame_{cut_id}"
         
-        # Upsert Asset
+        # Upsert frame Asset. assets.image_url is the canonical home; the
+        # legacy element_masters row that used to be written here is gone.
         cursor.execute("""
             INSERT INTO assets (id, project_id, name, type, image_url, description)
             VALUES (?, ?, ?, 'frame', ?, 'Auto-generated frame from Cut')
             ON CONFLICT(id) DO UPDATE SET
                 image_url = excluded.image_url
         """, (frame_asset_id, project_id, asset_name, image_url))
-        
-        # Upsert Element Master
-        master_id = f"master_{frame_asset_id}"
-        cursor.execute("""
-            INSERT INTO element_masters (id, asset_id, element_type, master_image_url, status, is_active)
-            VALUES (?, ?, 'frame', ?, 'complete', 1)
-            ON CONFLICT(id) DO UPDATE SET
-                master_image_url = excluded.master_image_url
-        """, (master_id, frame_asset_id, image_url))
         
         conn.commit()
         conn.close()

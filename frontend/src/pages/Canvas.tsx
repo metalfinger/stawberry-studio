@@ -482,8 +482,8 @@ export function Canvas() {
     const handleAutoLayoutBlueprint = useCallback(() => {
         setNodes((currentNodes) => {
             // Separate blueprint nodes from asset nodes
-            const blueprintNodes = currentNodes.filter(n => !['assetGroup', 'assetMaster', 'imageGenerator'].includes(n.type || ''))
-            const assetNodes = currentNodes.filter(n => ['assetGroup', 'assetMaster', 'imageGenerator'].includes(n.type || ''))
+            const blueprintNodes = currentNodes.filter(n => !['assetGroup', 'assetMaster'].includes(n.type || ''))
+            const assetNodes = currentNodes.filter(n => ['assetGroup', 'assetMaster'].includes(n.type || ''))
 
             // Create a fresh graph for layout
             const dagreGraph = new dagre.graphlib.Graph()
@@ -543,7 +543,6 @@ export function Canvas() {
             case 'cut': return '#ec4899'
             case 'assetGroup': return '#10b981'
             case 'assetMaster': return '#059669'
-            case 'imageGenerator': return '#6366f1'
             default: return '#6b7280'
         }
     }
