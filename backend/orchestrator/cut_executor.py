@@ -27,6 +27,7 @@ from backend.orchestrator.context_bundler import bundle_cut_context
 from backend.orchestrator.events import RunContext, log_event
 from backend.orchestrator.narrator import Narrator
 from backend.orchestrator.plans import (
+    ITEM_KIND_PREPROD_FILL,
     ITEM_KIND_REFERENCE_GENERATE,
     ITEM_KIND_REFERENCE_REUSE,
     ITEM_KIND_REGISTER,
@@ -351,6 +352,60 @@ async def execute_plan(
                         )
                     except Exception:
                         log.exception("emit_ref_card_failed")
+
+                elif item.kind == ITEM_KIND_PREPROD_FILL:
+                    # P3 — Iris invocation. The planner emits PREPROD_FILL
+                    # for assets that are linked to the cut but have NO
+                    # active identity reference yet (Atlas wrote
+                    # suggested_prompt but the asset never got
+                    # generate_identity_card called). Iris fills the gap by
+                    # running the standard turnaround. Without this, the
+                    # cut would render with a missing @ImageN slot for the
+                    # asset and the model would hallucinate it from text.
+                    from backend.orchestrator import iris as _iris
+                    asset_id = item.payload.get("asset_id")
+                    asset_type = item.payload.get("asset_type") or ""
+                    asset_name = item.payload.get("asset_name") or ""
+                    try:
+                        out = await _iris.compose_missing_reference(
+                            cut_id=plan.cut_id or "",
+                            gap={"asset_id": asset_id, "type": asset_type, "name": asset_name},
+                        )
+                    except Exception as e:  # noqa: BLE001
+                        item.status = "failed"
+                        item.error = f"Iris pre-prod failed: {e}"
+                        continue
+                    item.status = "done"
+                    item.result = {
+                        "asset_id": asset_id,
+                        "identity_reference_id": out.get("identity_reference_id"),
+                        "image_url": out.get("image_url"),
+                        "extra_views": out.get("extra_views", []),
+                        "cost_usd": out.get("cost_usd", 0.0),
+                    }
+                    result.cost_usd += out.get("cost_usd", 0.0)
+                    img_url = out.get("image_url")
+                    if img_url:
+                        ref_slots.append(ReferenceImage(
+                            image_url=img_url,
+                            slot=len(ref_slots) + 1,
+                            name=f"identity_{asset_name or asset_id[:8]}",
+                        ))
+                        if out.get("identity_reference_id"):
+                            consumed_ref_ids.append(out["identity_reference_id"])
+                    try:
+                        await narrator.reference_card(
+                            ref={
+                                "id": out.get("identity_reference_id") or "",
+                                "image_url": img_url or "",
+                                "label": "identity (preprod)",
+                                "asset_name": asset_name,
+                            },
+                            status="preprod_filled",
+                            cost_usd=out.get("cost_usd", 0.0),
+                        )
+                    except Exception:
+                        log.exception("emit_preprod_card_failed")
 
                 elif item.kind == ITEM_KIND_RENDER:
                     if not ctx:

@@ -37,8 +37,10 @@ log = structlog.get_logger(__name__)
 
 # Cost / time estimates per kind. Tuned for Nano Banana Pro Nov-2026 pricing.
 _COST_REFERENCE_GEN = 0.04
+_COST_PREPROD_FILL = 0.04   # Iris invocation = 1 image gen
 _COST_RENDER_CUT = 0.04
 _ETA_REFERENCE_GEN = 30
+_ETA_PREPROD_FILL = 35
 _ETA_RENDER_CUT = 30
 _ETA_REGISTER = 1
 _ETA_REUSE = 0
@@ -190,6 +192,31 @@ async def plan_compose_cut(
     linked = ctx.linked_characters + ctx.linked_locations + ctx.linked_props
     for asset in linked:
         is_character = (asset.get("type") or "").lower() == "character"
+
+        # P3 — gap detection: if this linked asset has NO active identity
+        # reference yet, emit a PREPROD_FILL item so Iris generates one
+        # before the render runs. Without this, the cut would attach a
+        # missing-image slot for the asset and the model would invent it
+        # from text alone (which is exactly how Test1's astronaut suit
+        # drifted across cuts).
+        identity_ref = await references.find_reference_by_label(asset["id"], "identity")
+        if not identity_ref:
+            plan.items.append(make_item(
+                ITEM_KIND_PREPROD_FILL,
+                f"Pre-prod: generate {asset['name']} identity (Iris)",
+                cost_usd=_COST_PREPROD_FILL,
+                eta_s=_ETA_PREPROD_FILL,
+                cached=False,
+                payload={
+                    "asset_id": asset["id"],
+                    "asset_name": asset["name"],
+                    "asset_type": asset.get("type") or "",
+                },
+            ))
+            # Don't also add REFERENCE_REUSE/REFERENCE_GENERATE for the
+            # identity label — Iris will produce it. Continue to variant
+            # picking (extras still get added below if cut keywords match).
+
         # Characters get top-2: identity (always slot 1) + best variant
         # (hero_pose / kneeling / expression_X / etc.) the cut keywords
         # score for. The previous top_n=1+force-identity rule killed all
@@ -201,6 +228,10 @@ async def plan_compose_cut(
         if is_character and "identity" not in labels:
             # Identity must be slot 1 — push the picker's top pick to slot 2.
             labels = ["identity"] + [l for l in labels if l != "identity"][:1]
+        # If we just emitted a PREPROD_FILL for identity, skip the
+        # 'identity' label in the per-label loop below — it's covered.
+        if not identity_ref:
+            labels = [l for l in labels if l != "identity"]
         for label in labels:
             existing = await references.find_reference_by_label(asset["id"], label)
             if existing:
