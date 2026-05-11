@@ -32,16 +32,35 @@ interface Props {
   selectedNodeType: string | null
 }
 
+interface PriorIdentity {
+  id: string
+  image_url: string
+  created_at: string
+}
+
 export function ContextPanel({ projectId, selectedNodeId, selectedNodeType }: Props) {
   const [refs, setRefs] = useState<LibraryItem[]>([])
   const [asset, setAsset] = useState<AssetDetail | null>(null)
   const [loading, setLoading] = useState(false)
+  const [priorIdentities, setPriorIdentities] = useState<PriorIdentity[]>([])
   const isAsset = selectedNodeType === 'assetMaster' || selectedNodeType === 'assetGroup'
 
   const reloadRefs = (assetId: string) => {
     getLibrary(projectId, { asset_id: assetId, only_active: true })
       .then(r => setRefs(r.items))
       .catch(() => setRefs([]))
+    // Also pull superseded identity history so the user can see prior
+    // takes of the same asset (and verify regen actually produced something
+    // new). Filters server-side via include_history flag.
+    fetch(`/api/projects/${projectId}/assets/${assetId}/references?include_history=true`)
+      .then(r => r.ok ? r.json() : { references: [] })
+      .then((j: { references: Array<{ id: string; label: string; image_url: string; is_active: boolean; created_at: string }> }) => {
+        const prior = (j.references || [])
+          .filter(r => r.label === 'identity' && !r.is_active)
+          .map(r => ({ id: r.id, image_url: r.image_url, created_at: r.created_at }))
+        setPriorIdentities(prior)
+      })
+      .catch(() => setPriorIdentities([]))
   }
 
   useEffect(() => {
@@ -51,10 +70,23 @@ export function ContextPanel({ projectId, selectedNodeId, selectedNodeType }: Pr
       return
     }
     setLoading(true)
-    Promise.all([
-      getLibrary(projectId, { asset_id: selectedNodeId, only_active: true }).then(r => setRefs(r.items)).catch(() => setRefs([])),
-      getAsset(projectId, selectedNodeId).then(setAsset).catch(() => setAsset(null)),
-    ]).finally(() => setLoading(false))
+    reloadRefs(selectedNodeId)
+    getAsset(projectId, selectedNodeId).then(setAsset).catch(() => setAsset(null))
+      .finally(() => setLoading(false))
+  }, [projectId, selectedNodeId, isAsset])
+
+  // Listen for cross-tab / WS-driven asset updates from anywhere.
+  useEffect(() => {
+    if (!selectedNodeId || !isAsset) return
+    const onAssetUpdated = (e: Event) => {
+      const ev = e as CustomEvent<{ asset_id: string }>
+      if (ev.detail?.asset_id === selectedNodeId) {
+        reloadRefs(selectedNodeId)
+        getAsset(projectId, selectedNodeId).then(setAsset).catch(() => {})
+      }
+    }
+    window.addEventListener('asset_updated', onAssetUpdated as EventListener)
+    return () => window.removeEventListener('asset_updated', onAssetUpdated as EventListener)
   }, [projectId, selectedNodeId, isAsset])
 
   // When something else (canvas card, library) regenerates the same
@@ -92,6 +124,22 @@ export function ContextPanel({ projectId, selectedNodeId, selectedNodeType }: Pr
       {!loading && refs.length === 0 && isAsset && (
         <div className="context-panel__empty">
           No references yet. Edit the prompt then click Generate identity.
+        </div>
+      )}
+
+      {!loading && priorIdentities.length > 0 && (
+        <div className="context-panel__section">
+          <div className="context-panel__section-title">
+            Previous identities ({priorIdentities.length})
+          </div>
+          <div className="context-panel__grid">
+            {priorIdentities.map(p => (
+              <div key={p.id} className="context-panel__thumb context-panel__thumb--prior" title={new Date(p.created_at).toLocaleString()}>
+                <img src={p.image_url} alt="prior identity" loading="lazy" />
+                <div className="context-panel__thumb-label">superseded</div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </aside>

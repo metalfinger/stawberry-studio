@@ -53,10 +53,69 @@ export interface CutNodeData {
     cut_id?: string
 }
 
+interface RenderRow {
+    id: string
+    label: string
+    image_url: string
+    is_active: number
+    created_at: string
+}
+
 export const CutNode = memo(({ data, selected }: NodeProps & { data: CutNodeData }) => {
     const [expanded, setExpanded] = useState(true)
     const [activeImage, setActiveImage] = useState(data.generated_image_url)
     const [dropping, setDropping] = useState(false)
+    const [renders, setRenders] = useState<RenderRow[]>([])
+
+    const fetchRenders = useCallback(async () => {
+        if (!data.project_id || !data.cut_id) return
+        try {
+            const r = await fetch(`/api/projects/${data.project_id}/cuts/${data.cut_id}/renders`)
+            if (!r.ok) return
+            const j = await r.json()
+            setRenders(j.renders || [])
+        } catch { /* ignore */ }
+    }, [data.project_id, data.cut_id])
+
+    // Refetch render history when the cut image changes OR when a
+    // cut_updated WS event fires for this cut.
+    useEffect(() => {
+        if (!expanded) return
+        fetchRenders()
+    }, [expanded, fetchRenders, activeImage])
+
+    useEffect(() => {
+        const onCutUpdated = (e: Event) => {
+            const ev = e as CustomEvent<{ cut_id: string; image_url: string }>
+            if (ev.detail?.cut_id === data.cut_id) {
+                if (ev.detail.image_url) setActiveImage(ev.detail.image_url)
+                fetchRenders()
+            }
+        }
+        window.addEventListener('cut_updated', onCutUpdated as EventListener)
+        return () => window.removeEventListener('cut_updated', onCutUpdated as EventListener)
+    }, [data.cut_id, fetchRenders])
+
+    const onSetActive = useCallback(async (referenceId: string, imageUrl: string) => {
+        if (!data.project_id || !data.cut_id) return
+        // Optimistic preview swap.
+        setActiveImage(imageUrl)
+        try {
+            const r = await fetch(
+                `/api/projects/${data.project_id}/cuts/${data.cut_id}/active-render`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reference_id: referenceId }),
+                },
+            )
+            if (!r.ok) throw new Error(await r.text())
+            await fetchRenders()
+        } catch (err) {
+            console.error('set active render failed', err)
+            toast.error('Failed to switch version')
+        }
+    }, [data.project_id, data.cut_id, fetchRenders])
 
     // Drop a reference onto the cut → assign to the next free slot.
     const onDropRef = useCallback(async (e: React.DragEvent) => {
@@ -129,6 +188,31 @@ export const CutNode = memo(({ data, selected }: NodeProps & { data: CutNodeData
                     ) : (
                         <div className="cut-image-placeholder">
                             Select to Generate
+                        </div>
+                    )}
+                    {/* Render-history strip: every prior render of this cut.
+                        Click a thumbnail to make it the active image.
+                        Shows ALL versions including superseded so the user
+                        can revert a regen. */}
+                    {renders.length > 1 && (
+                        <div className="cut-history-strip" onClick={e => e.stopPropagation()}>
+                            <div className="cut-history-label">
+                                History · {renders.length} version{renders.length === 1 ? '' : 's'}
+                            </div>
+                            <div className="cut-history-thumbs">
+                                {renders.map(r => (
+                                    <button
+                                        key={r.id}
+                                        type="button"
+                                        className={`cut-history-thumb${r.image_url === activeImage ? ' active' : ''}`}
+                                        title={`${r.label} · ${new Date(r.created_at).toLocaleString()}`}
+                                        onClick={() => onSetActive(r.id, r.image_url)}
+                                    >
+                                        <img src={r.image_url} alt={r.label} />
+                                        <span className="cut-history-label-sm">{r.label.replace('render_v', 'v')}</span>
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     )}
                 </div>

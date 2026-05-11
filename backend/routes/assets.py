@@ -1,6 +1,8 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from backend import db
+
 router = APIRouter(prefix="/api/projects/{project_id}", tags=["assets"])
 
 
@@ -37,10 +39,18 @@ async def get_asset(project_id: str, asset_id: str):
 
 
 @router.get("/assets/{asset_id}/references")
-async def list_asset_references(project_id: str, asset_id: str):
-    """Every reference for this asset, identity first."""
+async def list_asset_references(
+    project_id: str, asset_id: str, include_history: bool = False
+):
+    """Every reference for this asset, identity first.
+
+    When `include_history=True`, superseded identities (is_active=0,
+    label='identity') are returned too — the ContextPanel uses this to
+    render a small "previous versions" gallery."""
     from backend.orchestrator import references
     refs = await references.list_references(asset_id)
+    if not include_history:
+        refs = [r for r in refs if r.get("is_active", True) or r.get("label") != "identity"]
     return {"references": refs}
 
 
@@ -118,32 +128,46 @@ async def regenerate_asset_identity_route(project_id: str, asset_id: str):
     get_async_connection = db.get_async_connection
     from backend.orchestrator import references
 
+    # Find existing identity, if any. DO NOT supersede yet — only after the
+    # new card lands successfully. Earlier code marked old inactive first,
+    # so a failed regen left the asset with NO identity card at all.
     async with get_async_connection() as conn:
         async with conn.execute(
             "SELECT id FROM reference_pool WHERE asset_id = ? "
-            "AND label = 'identity' AND is_active = 1",
+            "AND label = 'identity' AND COALESCE(is_active, 1) = 1",
             (asset_id,),
         ) as cur:
             old = await cur.fetchone()
-        if old:
-            await conn.execute(
-                "UPDATE reference_pool SET is_active = 0 WHERE id = ?",
-                (old["id"],),
-            )
-            await conn.commit()
 
+    # `generate_identity_card` short-circuits if any active identity exists,
+    # so go through `_generate_one` directly to force a fresh render.
     try:
-        new_ref = await references.generate_identity_card(asset_id)
+        asset, brief = await references._load_asset_and_brief(asset_id)
+        new_ref = await references._generate_one(
+            asset=asset, brief=brief, label="identity",
+            parent_reference_id=None, story_context=None,
+        )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        # Don't touch the old card — it's still the only identity the asset has.
+        raise HTTPException(status_code=502, detail=f"Identity regen failed: {e}") from e
 
     if old and new_ref.get("id"):
         async with get_async_connection() as conn:
             await conn.execute(
-                "UPDATE reference_pool SET superseded_by_id = ? WHERE id = ?",
+                "UPDATE reference_pool SET is_active = 0, superseded_by_id = ? "
+                "WHERE id = ?",
                 (new_ref["id"], old["id"]),
             )
             await conn.commit()
+
+    # Notify any WS listeners so the canvas / context panel refresh.
+    try:
+        from backend.orchestrator.bus import bus
+        await bus.publish(project_id, {"type": "asset_updated", "asset_id": asset_id})
+    except Exception:
+        pass
     return new_ref
 
 

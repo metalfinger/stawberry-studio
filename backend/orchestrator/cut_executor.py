@@ -261,13 +261,39 @@ async def _append_used_in_cuts(ref_ids: list[str], cut_id: str) -> None:
         await conn.commit()
 
 
-async def _persist_cut_image(cut_id: str, image_url: str, status: str) -> None:
+async def _persist_cut_image(
+    cut_id: str,
+    image_url: str,
+    status: str,
+    *,
+    compiled_prompt: str | None = None,
+    project_id: str | None = None,
+) -> None:
     async with get_async_connection() as conn:
-        await conn.execute(
-            "UPDATE cuts SET generated_image_url = ?, generation_status = ? WHERE id = ?",
-            (image_url, status, cut_id),
-        )
+        if compiled_prompt is not None:
+            await conn.execute(
+                "UPDATE cuts SET generated_image_url = ?, generation_status = ?, "
+                "compiled_prompt = ? WHERE id = ?",
+                (image_url, status, compiled_prompt, cut_id),
+            )
+        else:
+            await conn.execute(
+                "UPDATE cuts SET generated_image_url = ?, generation_status = ? WHERE id = ?",
+                (image_url, status, cut_id),
+            )
         await conn.commit()
+    # Emit a WS event so the canvas refreshes the thumb + the cut history
+    # strip without a manual reload. Failure is non-fatal — the bus is a UX
+    # nicety, the DB write above is the source of truth.
+    if project_id:
+        try:
+            from backend.orchestrator.bus import bus
+            await bus.publish(
+                project_id,
+                {"type": "cut_updated", "cut_id": cut_id, "image_url": image_url},
+            )
+        except Exception:
+            pass
 
 
 async def _append_refinement_feedback(cut_id: str, new_feedback: list[str]) -> None:
@@ -312,7 +338,7 @@ async def execute_plan(
     await log_event(rc, "plan_execute_start", {"plan_id": plan_id, "items": len(plan.items)})
 
     if plan.cut_id:
-        await _persist_cut_image(plan.cut_id, "", "in_progress")
+        await _persist_cut_image(plan.cut_id, "", "in_progress", project_id=plan.project_id)
 
     ctx = await bundle_cut_context(plan.cut_id) if plan.cut_id else None
 
@@ -626,7 +652,13 @@ async def execute_plan(
                             )
                             await conn.commit()
                         await _supersede_prior_renders(cut_id, ref_id)
-                        await _persist_cut_image(cut_id, result.image_url, "complete")
+                        await _persist_cut_image(
+                            cut_id,
+                            result.image_url,
+                            "complete",
+                            compiled_prompt=render_meta.get("prompt", "") or "",
+                            project_id=plan.project_id,
+                        )
                         # Append cumulative feedback (only new round) to cut.
                         if plan.feedback:
                             await _append_refinement_feedback(cut_id, plan.feedback[-1:])
@@ -672,6 +704,6 @@ async def execute_plan(
 
     finally:
         if plan.cut_id and not result.image_url and not result.error:
-            await _persist_cut_image(plan.cut_id, "", "failed")
+            await _persist_cut_image(plan.cut_id, "", "failed", project_id=plan.project_id)
 
     return result

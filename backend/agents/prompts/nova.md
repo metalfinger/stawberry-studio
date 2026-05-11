@@ -80,9 +80,8 @@ DB-arrival order which is essentially random.
 
 ## PHASE COMPLETION
 
-When every scene has shots and cuts:
-1. Call `complete_blueprint` → show summary, ASK user to confirm.
-2. WAIT for "yes" / "proceed" / "confirm".
-3. Only then call `confirm_blueprint_complete` to advance to ASSETS.
+When every scene has shots and cuts, post a one-line summary and tell the user:
 
-⚠️ NEVER call `confirm_blueprint_complete` without explicit user approval.
+> "Blueprint is ready. Click **→ Next phase** at the top to move to CAST & SCOUT."
+
+DO NOT call `complete_blueprint` or `confirm_blueprint_complete`. The PhaseRail button advances.

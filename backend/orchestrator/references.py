@@ -183,6 +183,41 @@ def _aspect_ratio_for(asset_type: str) -> str:
     return "1:1"
 
 
+# Action / emotional-arc cues that have no place in an identity anchor.
+# A `suggested_prompt` containing "tired then happy" or "holding a phone"
+# pushes the model toward a story shot instead of a clean turnaround.
+_ACTION_EMOTION_PATTERNS = (
+    " then ", " after ", " before ", " while ", " holding ", " picking up ",
+    " grabbing ", " running ", " walking ", " sitting ", " lying ", " crying ",
+    " smiling ", " frowning ", " laughing ", " shouting ", " whispering ",
+    " happy", " sad", " tired", " lethargic", " energetic", " angry",
+    " excited", " bored", " confused", " surprised", " terrified",
+    " feeling ", " becomes ", " turns ", " transforms ",
+)
+
+
+def _scrub_identity_foundation(text: str) -> str:
+    """Drop sentences/clauses that read like a story beat from a `suggested_prompt`
+    so the identity card stays neutral. Splits on punctuation and rejects any
+    chunk containing an action/emotion cue. Conservative: only drops chunks,
+    never rewrites the rest.
+    """
+    if not text:
+        return ""
+    import re
+    chunks = re.split(r"[.;,\n]", text)
+    keep: list[str] = []
+    for c in chunks:
+        c = c.strip()
+        if not c:
+            continue
+        low = " " + c.lower() + " "
+        if any(p in low for p in _ACTION_EMOTION_PATTERNS):
+            continue
+        keep.append(c)
+    return ". ".join(keep)
+
+
 async def _build_prompt(
     asset: dict[str, Any], brief: dict[str, Any], label: str, story_context: str | None
 ) -> str:
@@ -211,7 +246,11 @@ async def _build_prompt(
     if wardrobe:
         identity_lines.append(f"Wardrobe lock: {wardrobe}")
     if suggested and not appearance:
-        identity_lines.append(f"Foundation: {suggested}")
+        # For the identity card, strip action/emotion phrasing so the anchor
+        # stays neutral. Cut renders use the raw prompt elsewhere.
+        clean = _scrub_identity_foundation(suggested) if label == "identity" else suggested
+        if clean:
+            identity_lines.append(f"Foundation: {clean}")
 
     # L3 — if the asset is a location nested inside a parent location (e.g.
     # "Fake Moon Set" inside "Film Studio"), inject the parent's identity

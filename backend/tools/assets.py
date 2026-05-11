@@ -3,8 +3,9 @@ Agent tools for Asset Extraction and Management — used by Atlas in the
 ASSETS phase.
 """
 
+import re
+
 from backend.database import assets as asset_db
-from backend import db
 from backend import db
 mark_phases_stale = db.mark_phases_stale
 from backend.tools.registry import tool
@@ -132,7 +133,21 @@ def auto_link_assets_to_blueprint(project_id: str) -> dict:
     all_assets = asset_db.get_assets(project_id)
     if not all_assets:
         return {"error": "No assets found. Create assets first."}
-    
+
+    # Pronoun-fallback: when a project has exactly ONE character and a cut
+    # mentions a pronoun/role-noun ("he", "she", "they", "the person",
+    # "protagonist"), auto-link that lone character. Saves projects where
+    # Atlas named the hero something the cut prose never quotes (the
+    # "The User" disaster — cuts said "the person").
+    characters_only = [a for a in all_assets if (a.get("type") or "").lower() == "character"]
+    lone_character = characters_only[0] if len(characters_only) == 1 else None
+    _PRONOUN_TOKENS = re.compile(
+        r"\b(he|she|they|him|her|them|his|hers|their|"
+        r"the\s+(?:person|man|woman|boy|girl|kid|child|protagonist|hero|"
+        r"figure|user|character|guy|stranger))\b",
+        re.IGNORECASE,
+    )
+
     # Get full blueprint
     scenes = db.get_scenes(project_id)
     
@@ -171,6 +186,7 @@ def auto_link_assets_to_blueprint(project_id: str) -> dict:
                     str(cut.get("gesture", "")),
                 ])
                 
+                cut_character_linked = False
                 # Match each asset using word boundary matching
                 for asset in all_assets:
                     asset_name = asset.get("name", "")
@@ -195,6 +211,8 @@ def auto_link_assets_to_blueprint(project_id: str) -> dict:
                             if result.get("id"):
                                 links_created["cut_links"] += 1
                                 links_created["details"].append(f"{asset['name']} → Cut {cut.get('cut_number')}")
+                            if asset_type == "character":
+                                cut_character_linked = True
                         elif _match_asset_in_text(asset_name, shot_text):
                             result = asset_db.link_asset_to_node(asset_id, "shot", shot["id"], "primary")
                             if result.get("id"):
@@ -205,7 +223,22 @@ def auto_link_assets_to_blueprint(project_id: str) -> dict:
                             if result.get("id"):
                                 links_created["scene_links"] += 1
                                 links_created["details"].append(f"{asset['name']} → Scene {scene.get('scene_number')}")
-    
+
+                # Pronoun fallback — lone character + pronoun-y cut text.
+                if (
+                    not cut_character_linked
+                    and lone_character is not None
+                    and _PRONOUN_TOKENS.search(cut_text)
+                ):
+                    result = asset_db.link_asset_to_node(
+                        lone_character["id"], "cut", cut["id"], "primary"
+                    )
+                    if result.get("id"):
+                        links_created["cut_links"] += 1
+                        links_created["details"].append(
+                            f"{lone_character['name']} → Cut {cut.get('cut_number')} (pronoun fallback)"
+                        )
+
     total = links_created["scene_links"] + links_created["shot_links"] + links_created["cut_links"]
     
     return {

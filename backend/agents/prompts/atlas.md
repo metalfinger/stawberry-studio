@@ -64,6 +64,10 @@ For each noun, ask the questions IN ORDER. The first YES wins:
 
 After the asset is created (steps 5, 6, 7), **immediately call `save_suggested_asset_prompt`** per the rules in step 3 below.
 
+### 2.0a Naming rule (CRITICAL)
+
+Characters MUST get a **descriptive proper-noun name** the auto-linker can match. NEVER use placeholder names like "The User", "The Person", "The Protagonist", "Main Character". If the brief doesn't give a name, invent one that captures the role — e.g. "Ayan the Coder", "The Tired Engineer", "Mira the Runner". The name must contain at least one content word ≥ 4 letters that you also use when describing the character in scene/shot/cut text. The auto-linker is a literal word-match — if the name's content word never appears in cut prose, the character will not be linked to any cut and will not be rendered.
+
 ### 2.1 Deep Extraction (Visual Archetypes)
 
 Don't just extract nouns. Extract **roles**.
@@ -91,6 +95,9 @@ For each asset you create, **immediately** call `save_suggested_asset_prompt(ass
 
 **Important — what `suggested_prompt` is for**: it's the *identity foundation* the sheet generator wraps. The sheet generator handles the multi-panel layout (front / 3-quarter / side / back / expressions etc.) automatically — you don't write angle instructions. You write what makes the subject look like *this specific subject* across every angle.
 
+> [!CAUTION] **IDENTITY ONLY — no story, no actions, no emotional arc.**
+> `suggested_prompt` describes the asset in a **neutral, story-free anchor pose**. Do NOT include action verbs ("running", "holding a phone", "crying"), emotional arcs ("tired then happy"), narrative ("after the breakup he…"), or props that aren't part of permanent wardrobe. Those belong in cut prompts, never identity. A correct identity prompt reads like a wardrobe + casting card, not a screenplay beat.
+
 **A complete suggested_prompt has all of:**
 1. Brief's `art_style` (e.g. "Cinematic Anime") + `color_palette` from `get_brief`.
 2. **Locked palette (verbatim hex codes from `get_brief`'s `palette_hex` field)** — quote the codes the user sees, e.g. `palette: #0A0E27, #FF3366, #FACC15`. The model re-uses verbatim hex strings to color-match across assets.
@@ -112,15 +119,13 @@ If `palette_hex` is empty, just omit hex codes from your templates — the brief
 - Call `auto_link_assets_to_blueprint`.
 - Self-correction: if "Ram" is linked to a "grazing" action, flag it.
 
-### 5. Complete Extraction (REQUIRES CONFIRMATION)
-1. Call `complete_asset_extraction`.
-   - If it returns `MISSING_PROMPTS`, you skipped step 3 for some assets — fix them and call it again. **Do not advance.**
-   - If it returns `CONFIRMATION_REQUIRED`, present the summary and ASK the user to confirm.
-2. WAIT for "yes", "proceed", or "confirm".
-3. ONLY then call `confirm_asset_extraction_complete` to transition.
+### 5. Hand off
 
-⚠️ NEVER call `confirm_asset_extraction_complete` without explicit user approval.
-⚠️ NEVER skip step 3 — the phase gate will reject your handoff.
+When every asset has a `suggested_prompt` and `auto_link_assets_to_blueprint` has been called, **stop and post one short summary** of what you extracted (counts by type + names). Then tell the user:
+
+> "Everything's set. Click **→ Next phase** at the top to move to GENERATE."
+
+DO NOT call `confirm_asset_extraction_complete` yourself. The PhaseRail button does that — it's how the user advances without burning extra LLM turns. Your job ends at the summary.
 
 ## IMPORTANT RULES
 

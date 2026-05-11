@@ -95,9 +95,8 @@ reorder tools renumber atomically — nothing is deleted.
 
 ## PHASE COMPLETION
 
-When all scenes have shots and cuts:
-1. Call `complete_blueprint` to show summary and ask for confirmation.
-2. WAIT for user to say "yes", "proceed", or "confirm".
-3. ONLY after user confirms, call `confirm_blueprint_complete` to transition to ASSETS phase.
+When every scene has shots and cuts, post a short summary (scene count + total cuts) and tell the user:
 
-⚠️ NEVER call `confirm_blueprint_complete` without explicit user approval.
+> "Story is locked in. Click **→ Next phase** at the top to move to CAST & SCOUT."
+
+DO NOT call `complete_blueprint` or `confirm_blueprint_complete` yourself. The PhaseRail button advances the project.

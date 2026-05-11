@@ -30,6 +30,8 @@
   border: 1px solid #2a2a2c;
 }
 .context-panel__thumb:active { cursor: grabbing; }
+.context-panel__thumb--prior { opacity: 0.55; cursor: default; }
+.context-panel__thumb--prior:hover { opacity: 1; }
 .context-panel__thumb img { width: 100%; height: 100%; object-fit: cover; }
 .context-panel__thumb-label {
   position: absolute; left: 0; right: 0; bottom: 0;

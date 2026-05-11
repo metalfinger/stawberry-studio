@@ -127,6 +127,14 @@ export function Console({ projectId, initialPhase, onNodeUpdate, onClose }: Cons
         onNodeUpdate?.()
         return
       }
+      // Targeted node refresh events — emit a window CustomEvent so any
+      // CutNode / AssetMasterNode / ContextPanel can refetch its slice
+      // without forcing a full canvas reload.
+      if (data.type === 'cut_updated' || data.type === 'asset_updated') {
+        window.dispatchEvent(new CustomEvent(data.type, { detail: data }))
+        onNodeUpdate?.()
+        return
+      }
       if (data.type === 'phase_change') {
         setPhase(data.new_phase)
         setAgentName(data.agent || agentName)
