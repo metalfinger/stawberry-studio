@@ -84,7 +84,33 @@ class GeminiImage(ImageProvider):
                     image_urls.append(save_image_bytes(inline.data, fname))
 
         if not image_urls:
-            raise ProviderError(self.name, "no image returned")
+            # Surface why. Gemini emits no IMAGE part when prompt_feedback
+            # blocks the request (real-person likeness, copyrighted IP,
+            # safety filter) or when finish_reason is non-STOP. Without
+            # this, the user sees a generic "no image returned" and has
+            # no path to fix the prompt.
+            reasons: list[str] = []
+            try:
+                pf = getattr(resp, "prompt_feedback", None)
+                if pf:
+                    br = getattr(pf, "block_reason", None)
+                    if br:
+                        reasons.append(f"prompt_blocked={br}")
+                    br_msg = getattr(pf, "block_reason_message", None)
+                    if br_msg:
+                        reasons.append(str(br_msg))
+                cands = resp.candidates or []
+                if cands:
+                    fr = getattr(cands[0], "finish_reason", None)
+                    if fr:
+                        reasons.append(f"finish_reason={fr}")
+                    fr_msg = getattr(cands[0], "finish_message", None)
+                    if fr_msg:
+                        reasons.append(str(fr_msg))
+            except Exception:
+                pass
+            detail = "; ".join(reasons) if reasons else "no image returned"
+            raise ProviderError(self.name, detail)
 
         cost = _COST_PER_IMAGE.get(req.model, 0.039) * len(image_urls)
         return ImageGenResult(

@@ -7,7 +7,6 @@
 // that only ever advances 4 of those, leaving 2 perpetually pending. One
 // label, one source of truth: projects.current_phase.
 import { useEffect, useState } from 'react'
-import { toast } from './toast/Toast'
 import './PhaseRail.css'
 
 const API_BASE = (import.meta as any).env?.VITE_API_BASE || ''
@@ -50,11 +49,12 @@ interface Props {
 
 export function PhaseRail({ projectId, refreshKey = 0 }: Props) {
   const [readiness, setReadiness] = useState<Readiness | null>(null)
-  const [advancing, setAdvancing] = useState(false)
   const [genStats, setGenStats] = useState<GenStats | null>(null)
 
-  // Fetch readiness on mount, on refreshKey bump, and every 4s while mounted
-  // so the button enables itself as soon as the gate passes.
+  // Fetch readiness on mount, on refreshKey bump, and every 4s while
+  // mounted. The top rail is read-only now — phase advancement happens
+  // via the in-chat PhaseAdvanceBar — but we still poll so the active
+  // phase chip updates after the user clicks Advance in chat.
   useEffect(() => {
     if (!projectId) return
     let cancelled = false
@@ -93,35 +93,9 @@ export function PhaseRail({ projectId, refreshKey = 0 }: Props) {
     return () => { cancelled = true; clearInterval(id) }
   }, [projectId])
 
-  const advance = () => {
-    // ALWAYS surface a toast so the user sees the click registered.
-    // Earlier versions silently no-op'd when the WS was closed or the
-    // gate said not-ready — that's why the button "didn't work".
-    if (!ready) {
-      toast.error(reason || 'Phase not ready yet.')
-      return
-    }
-    const ws: WebSocket | undefined = (window as any).__strawberry_chat_ws
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
-      toast.error('Chat connection lost. Refresh the page.')
-      return
-    }
-    setAdvancing(true)
-    try {
-      ws.send(JSON.stringify({ type: 'user_intent', intent: 'advance_phase', payload: {} }))
-      toast.info(`Advancing to ${next ? PHASE_LABELS[next] : 'next phase'}…`)
-    } finally {
-      // Re-enable shortly — readiness poll will reflect the new phase.
-      setTimeout(() => setAdvancing(false), 1500)
-    }
-  }
-
   if (!projectId) return null
   const current = readiness?.current_phase ?? 'BRIEF'
   const currentIdx = PHASE_ORDER.indexOf(current)
-  const next = readiness?.next_phase ?? null
-  const ready = !!readiness?.ready
-  const reason = readiness?.reason ?? ''
 
   return (
     <div className="phase-rail" role="navigation" aria-label="Production phases">
@@ -167,24 +141,6 @@ export function PhaseRail({ projectId, refreshKey = 0 }: Props) {
         </div>
       )}
 
-      {next && (
-        <button
-          type="button"
-          className={`phase-rail-advance${ready ? '' : ' phase-rail-advance--blocked'}`}
-          onClick={advance}
-          // Don't disable — we always want clicks to surface a toast so
-          // users see "Phase not ready: <reason>" instead of nothing.
-          // The visual state still indicates not-ready via a class.
-          disabled={advancing}
-          title={ready ? `Advance to ${PHASE_LABELS[next]}` : reason || 'Phase not ready'}
-        >
-          {advancing
-            ? '⏳ Advancing…'
-            : ready
-              ? `→ ${PHASE_LABELS[next]}`
-              : `→ ${PHASE_LABELS[next]} (not ready)`}
-        </button>
-      )}
     </div>
   )
 }

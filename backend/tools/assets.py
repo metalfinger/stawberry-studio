@@ -304,6 +304,21 @@ def create_asset(
         # so the sheet generator picks it up.
         reference_strategy = "derived"
 
+    # Dedupe — if an asset of the same type with a matching canonical name
+    # already exists in this project, return it instead of creating a second
+    # row. Prevents Atlas (or a re-extract) from minting two "The Hero"
+    # entries when the user asks to "change the prompt" mid-conversation.
+    canonical = (name or "").strip().lower()
+    if canonical:
+        for existing in asset_db.get_assets(project_id, asset_type):
+            if (existing.get("name") or "").strip().lower() == canonical:
+                return {
+                    "success": True,
+                    "asset": existing,
+                    "deduped": True,
+                    "note": f"An asset named '{name}' already exists — returning the existing one. Use update_asset to change it.",
+                }
+
     asset = asset_db.create_asset(
         project_id=project_id,
         asset_type=asset_type,
@@ -497,15 +512,119 @@ def update_asset(
     if not updates:
         return {"error": "No updates provided"}
 
+    # If we're renaming, fetch the OLD name first so we can cascade it across
+    # any scene / shot / cut prose that still references the literal old
+    # name. Without this, Atlas could rename "Sunny Deol" → "The Hero" on
+    # the asset row but every cut.action still said "Sunny Deol" verbatim →
+    # Gemini safety-filtered the prompt → "no image returned".
+    old_name: str | None = None
+    if "name" in updates:
+        before = asset_db.get_asset(asset_id)
+        if before and (before.get("name") or "").strip() != updates["name"].strip():
+            old_name = before.get("name")
+
     asset = asset_db.update_asset(asset_id, **updates)
     if not asset:
         return {"error": f"Asset not found: {asset_id}"}
+
+    cascaded = 0
+    if old_name and asset.get("project_id"):
+        cascaded = _cascade_name_rename(
+            asset["project_id"], old_name, updates["name"]
+        )
 
     # Mark downstream phases as stale when assets change
     if asset.get("project_id"):
         mark_phases_stale(asset["project_id"], "ASSETS")
 
-    return {"success": True, "asset": asset}
+    out = {"success": True, "asset": asset}
+    if cascaded:
+        out["cascaded_rename_rows"] = cascaded
+    return out
+
+
+def _cascade_name_rename(project_id: str, old_name: str, new_name: str) -> int:
+    """Replace every occurrence of `old_name` with `new_name` in scene /
+    shot / cut prose for the project. Word-boundary match — case-insensitive
+    — so "Sunny Deol" gets caught but "sunny side" doesn't. Returns the
+    number of rows updated (rough; SQLite REPLACE doesn't easily give us
+    per-row diffs, so we count rows that contained the substring).
+    """
+    import re
+
+    if not old_name or not new_name or old_name.strip() == new_name.strip():
+        return 0
+    pattern = re.compile(r"\b" + re.escape(old_name) + r"\b", re.IGNORECASE)
+    fields_by_table = {
+        "scenes": ["title", "description", "location", "location_detail", "mood"],
+        "shots": ["subject", "description", "foreground", "background"],
+        "cuts": [
+            "action", "story_description", "dialogue", "expression",
+            "gesture", "body_language", "continuity_notes",
+            "character_state", "object_tracking", "prop_interaction",
+            "costume_notes", "emotional_arc",
+        ],
+    }
+    conn = db.get_connection()
+    cur = conn.cursor()
+    updated = 0
+    try:
+        # Walk each table; for each row that has at least one match, rewrite.
+        # Scope by project — scenes by project_id directly; shots/cuts by
+        # joining up to their scene.
+        cur.execute(
+            "SELECT id FROM scenes WHERE project_id = ?", (project_id,)
+        )
+        scene_ids = [r["id"] for r in cur.fetchall()]
+        cur.execute(
+            "SELECT id FROM shots WHERE scene_id IN ({seq})".format(
+                seq=",".join("?" * len(scene_ids)) or "''"
+            ),
+            scene_ids,
+        )
+        shot_ids = [r["id"] for r in cur.fetchall()] if scene_ids else []
+        cur.execute(
+            "SELECT id FROM cuts WHERE shot_id IN ({seq})".format(
+                seq=",".join("?" * len(shot_ids)) or "''"
+            ),
+            shot_ids,
+        )
+        cut_ids = [r["id"] for r in cur.fetchall()] if shot_ids else []
+
+        scope = {
+            "scenes": scene_ids,
+            "shots": shot_ids,
+            "cuts": cut_ids,
+        }
+
+        for table, fields in fields_by_table.items():
+            ids = scope.get(table) or []
+            if not ids:
+                continue
+            qmarks = ",".join("?" * len(ids))
+            field_list = ", ".join(fields)
+            cur.execute(
+                f"SELECT id, {field_list} FROM {table} WHERE id IN ({qmarks})",
+                ids,
+            )
+            rows = cur.fetchall()
+            for row in rows:
+                patched: dict[str, str] = {}
+                for f in fields:
+                    v = row[f]
+                    if isinstance(v, str) and v and pattern.search(v):
+                        patched[f] = pattern.sub(new_name, v)
+                if patched:
+                    sets = ", ".join(f"{k} = ?" for k in patched)
+                    cur.execute(
+                        f"UPDATE {table} SET {sets} WHERE id = ?",
+                        list(patched.values()) + [row["id"]],
+                    )
+                    updated += 1
+        conn.commit()
+    finally:
+        conn.close()
+    return updated
 
 
 @tool("set_scene_wardrobe_override", description="Override a character's wardrobe for a specific scene only (without duplicating the character asset). Use when the same character wears different clothes in different scenes — Mara in everyday coat in scene 1 vs gala dress in scene 3.", tags=["assets", "write"])

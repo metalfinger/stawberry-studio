@@ -98,7 +98,11 @@ export function ContextPanel({ projectId, selectedNodeId, selectedNodeType }: Pr
     })
   }, [projectId, selectedNodeId, isAsset])
 
-  if (!selectedNodeId) return null
+  // Don't render when nothing's selected OR when the selected node is
+  // not an asset — the panel only knows how to show asset prompt +
+  // references, and an empty chrome at the top of the canvas was just
+  // noise.
+  if (!selectedNodeId || !isAsset) return null
 
   return (
     <aside className="context-panel" role="complementary" aria-label="Context">
