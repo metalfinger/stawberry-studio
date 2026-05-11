@@ -829,8 +829,11 @@ def confirm_blueprint_complete(project_id: str) -> str:
     if not scenes:
         return "❌ Cannot complete: No scenes defined yet."
 
-    # Mirror complete_blueprint's structural checks to keep the gates aligned.
+    # Soft gate: missing camera_distance is auto-inferred from shot.subject
+    # / shot.description so the user never gets stuck on Sage's omissions.
+    # Cuts-missing is still a hard block (no good auto-fix).
     problems: list[str] = []
+    auto_filled: list[str] = []
     for scene in scenes:
         shots = db.get_shots(scene['id'])
         if not shots:
@@ -845,9 +848,18 @@ def confirm_blueprint_complete(project_id: str) -> str:
             if cut_count == 0:
                 problems.append(f"Shot {shot.get('shot_number')} in '{scene['title']}' has no cuts.")
             if not (shot.get('camera_distance') or '').strip():
-                problems.append(f"Shot {shot.get('shot_number')} in '{scene['title']}' has no camera_distance.")
+                inferred = _infer_camera_distance(shot)
+                db.update_shot(shot['id'], {"camera_distance": inferred})
+                auto_filled.append(
+                    f"Shot {shot.get('shot_number')} in '{scene['title']}' → {inferred}"
+                )
     if problems:
-        return "❌ Refusing to advance:\n" + "\n".join(f"- {p}" for p in problems)
+        msg = "❌ Refusing to advance:\n" + "\n".join(f"- {p}" for p in problems)
+        if auto_filled:
+            msg += "\n\nAuto-filled camera distance for:\n" + "\n".join(
+                f"- {a}" for a in auto_filled
+            )
+        return msg
 
     success = db.complete_blueprint(project_id)
     if success:
@@ -1010,3 +1022,35 @@ def reorder_cuts(shot_id: str, ordered_cut_ids: list[str]) -> str:
         return f"❌ Reorder failed: {e}"
     conn.close()
     return f"✅ Renumbered {total} cuts in shot {shot_id[-6:]}."
+
+
+def _infer_camera_distance(shot: dict) -> str:
+    """Pick a reasonable camera_distance from shot.subject/description so the
+    blueprint gate can pass without nagging the user. Keyword sniff first;
+    fall back to "Medium Shot" which is the safe default for most cuts."""
+    text = " ".join([
+        str(shot.get("subject") or ""),
+        str(shot.get("description") or ""),
+        str(shot.get("composition") or ""),
+    ]).lower()
+    # Order matters — longest / most-specific first.
+    keymap = [
+        ("extreme close", "Extreme Close-up"),
+        ("close-up", "Close-up"),
+        ("close up", "Close-up"),
+        ("medium close", "Medium Close-up"),
+        ("medium wide", "Medium Wide"),
+        ("medium", "Medium Shot"),
+        ("over the shoulder", "Over the Shoulder"),
+        ("over-the-shoulder", "Over the Shoulder"),
+        ("two shot", "Two Shot"),
+        ("wide", "Wide"),
+        ("establishing", "Wide"),
+        ("aerial", "Wide"),
+        ("pov", "POV"),
+        ("insert", "Insert"),
+    ]
+    for needle, label in keymap:
+        if needle in text:
+            return label
+    return "Medium Shot"

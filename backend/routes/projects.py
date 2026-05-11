@@ -311,8 +311,28 @@ async def get_phase_readiness(project_id: str):
             ) as cur:
                 row = await cur.fetchone()
             cut_count = (row["n"] if row else 0) or 0
-        ready = scene_count > 0 and cut_count > 0
-        reason = "" if ready else "No scenes or cuts yet"
+            # Camera distance is the only non-trivial shot-level gate. We
+            # auto-fill it server-side on advance, so readiness can stay
+            # green here — but we still surface the count for visibility.
+            async with conn.execute(
+                """
+                SELECT COUNT(*) AS n FROM shots sh
+                JOIN scenes s ON s.id = sh.scene_id
+                WHERE s.project_id = ? AND (sh.camera_distance IS NULL OR TRIM(sh.camera_distance) = '')
+                """,
+                (project_id,),
+            ) as cur:
+                row = await cur.fetchone()
+            shots_missing_cd = (row["n"] if row else 0) or 0
+        if scene_count == 0 or cut_count == 0:
+            ready = False
+            reason = "No scenes or cuts yet"
+        else:
+            ready = True
+            reason = (
+                f"{shots_missing_cd} shots missing camera_distance — will be auto-filled on advance"
+                if shots_missing_cd else ""
+            )
 
     elif current == "ASSETS":
         async with get_async_connection() as conn:

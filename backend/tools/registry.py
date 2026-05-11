@@ -161,8 +161,18 @@ def export_mcp_manifest() -> list[dict[str, Any]]:
 # ============================================================================
 
 def bind_tools_to_pai(pai_agent: Any, tool_ids: list[str]) -> None:
-    """Attach registered tools to a Pydantic AI Agent by id."""
+    """Attach registered tools to a Pydantic AI Agent by id.
+
+    Bumps `retries` to 3 (default is 1). When the model invents a wrong
+    kwarg name pydantic-AI re-validates and asks the model to try again;
+    one retry isn't enough for real-world drift (e.g. `update_cut`
+    receiving `camera_distance` which belongs on `update_shot`). Three
+    gives the model space to self-correct without nuking the chat turn.
+    """
     for tid in tool_ids:
         entry = get_tool(tid)
-        # Pydantic AI's `tool_plain` takes the raw fn; signature-derived schema is fine for most cases.
-        pai_agent.tool_plain(entry.fn)
+        try:
+            pai_agent.tool_plain(entry.fn, retries=3)
+        except TypeError:
+            # Older pydantic-AI signatures may not support `retries` kwarg.
+            pai_agent.tool_plain(entry.fn)
