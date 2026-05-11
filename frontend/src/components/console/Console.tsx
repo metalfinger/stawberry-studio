@@ -7,6 +7,7 @@ import type { ConsoleMessage, UserAttachment } from './types'
 import { MessageStream } from './MessageStream'
 import { PinnedTray } from './PinnedTray'
 import { InputDock } from './InputDock'
+import { PhaseAdvanceBar } from './PhaseAdvanceBar'
 import { ConsoleHeader } from './ConsoleHeader'
 import { pinning } from '../dnd/pinning'
 import { getCostSummary } from '../../api/client'
@@ -318,6 +319,10 @@ export function Console({ projectId, initialPhase, onNodeUpdate, onClose }: Cons
       <PinnedTray
         pinned={pinned}
         onUnpin={(refId) => pinning.unpin(projectId, refId)}
+      />
+      <PhaseAdvanceBar
+        projectId={projectId}
+        onAdvance={() => sendIntent('advance_phase', {})}
       />
       <InputDock
         onSend={sendMessage}

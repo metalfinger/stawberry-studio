@@ -1,0 +1,81 @@
+// PhaseAdvanceBar — in-chat sticky CTA shown above the InputDock. Polls
+// /phase-readiness and surfaces a fat "→ Next phase" button right inside
+// the conversation, so the user doesn't have to look up at the top rail.
+//
+// The top PhaseRail still exists (overview + agent labels), but this
+// component is the one the user actually clicks during a working session
+// because it's an inch away from the cursor.
+import { useEffect, useState } from 'react'
+
+type PhaseId = 'BRIEF' | 'STORY' | 'ASSETS' | 'GENERATE'
+
+const PHASE_LABELS: Record<PhaseId, string> = {
+  BRIEF: 'Brief',
+  STORY: 'Story',
+  ASSETS: 'Cast & Scout',
+  GENERATE: 'Generate',
+}
+
+interface Readiness {
+  current_phase: PhaseId
+  next_phase: PhaseId | null
+  ready: boolean
+  reason: string
+}
+
+interface Props {
+  projectId: string
+  onAdvance: () => void
+  refreshKey?: number
+}
+
+export function PhaseAdvanceBar({ projectId, onAdvance, refreshKey = 0 }: Props) {
+  const [r, setR] = useState<Readiness | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    if (!projectId) return
+    let cancelled = false
+    const load = async () => {
+      try {
+        const res = await fetch(`/api/projects/${projectId}/phase-readiness`)
+        if (!res.ok) return
+        const data = (await res.json()) as Readiness
+        if (!cancelled) setR(data)
+      } catch { /* ignore */ }
+    }
+    void load()
+    const id = setInterval(load, 3000)
+    return () => { cancelled = true; clearInterval(id) }
+  }, [projectId, refreshKey])
+
+  if (!r || !r.next_phase) return null
+
+  const onClick = () => {
+    setBusy(true)
+    onAdvance()
+    setTimeout(() => setBusy(false), 1500)
+  }
+
+  const ready = r.ready
+  const nextLabel = r.next_phase ? PHASE_LABELS[r.next_phase] : ''
+
+  return (
+    <div className={`phase-cta${ready ? ' phase-cta--ready' : ' phase-cta--blocked'}`}>
+      <span className="phase-cta__label">
+        {ready
+          ? `${PHASE_LABELS[r.current_phase]} looks ready.`
+          : `${PHASE_LABELS[r.current_phase]} — ${r.reason || 'not ready yet'}`}
+      </span>
+      <button
+        type="button"
+        className="phase-cta__btn"
+        onClick={onClick}
+        disabled={busy}
+        title={ready ? `Advance to ${nextLabel}` : r.reason || 'Phase not ready'}
+      >
+        {busy ? '⏳ Advancing…' : `→ Move to ${nextLabel}`}
+      </button>
+    </div>
+  )
+}

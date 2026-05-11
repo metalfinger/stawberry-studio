@@ -621,8 +621,11 @@ async def _confirm_briefing(project_id: str, narrator: Narrator) -> bool:
     from backend.tools.briefing import confirm_briefing_complete as _confirm
     from backend.orchestrator.style_bible import compile_style_bible_for_project
 
-    msg = _confirm(project_id)
-    await narrator.text(msg)
+    # `confirm_briefing_complete` is async — earlier code dropped the
+    # coroutine on the floor and the phase never actually advanced. That's
+    # why the PhaseRail button "did nothing".
+    msg = await _confirm(project_id)
+    await narrator.text(str(msg))
     # Phase L1: distill the brief's prose into a quotable style bible
     # (palette_hex + style_tokens + lighting_rules) so every Atlas / Pixel
     # prompt downstream can append the same shared vocabulary.
