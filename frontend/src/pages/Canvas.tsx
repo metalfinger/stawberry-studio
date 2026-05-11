@@ -30,7 +30,7 @@ const NODE_SIZES: Record<string, { width: number; height: number }> = {
     shot: { width: 380, height: 300 },      // Expanded for camera details + assets
     cut: { width: 380, height: 400 },       // Expanded for details + prompt + history
     assetGroup: { width: 380, height: 100 }, // Asset group container (wider for padding)
-    assetMaster: { width: 340, height: 450 }, // Individual asset with generation (taller)
+    assetMaster: { width: 280, height: 320 }, // Individual asset: identity card + count badge + actions (post-grid-removal)
 }
 
 // Asset group configuration
@@ -320,6 +320,7 @@ export function Canvas() {
                             distinctive_features: (asset as any).distinctive_features,
                             wardrobe_lock: (asset as any).wardrobe_lock,
                             inspired_by: (asset as any).inspired_by,
+                            updated_at: (asset as any).updated_at,
                             linked_cut_count: Array.isArray((asset as any).linked_nodes)
                                 ? (asset as any).linked_nodes.filter((n: any) => n.node_type === 'cut').length
                                 : undefined,

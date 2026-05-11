@@ -399,6 +399,20 @@ async def chat_websocket(websocket: WebSocket, project_id: str, phase: str = Non
         })
 
         if new_auto_trigger:
+            # Surface a one-line "agent is working" cue so the user knows
+            # the phase advanced and something is happening — auto_trigger
+            # turns can take 30-60s and the chat used to go dead silent.
+            _PHASE_WORK = {
+                "STORY": "🧠 **Sage** is reading the brief and drafting scenes / shots / cuts…",
+                "ASSETS": "🔍 **Atlas** is scanning the blueprint to extract characters, locations and props…",
+                "GENERATE": "🎨 **Pixel** is ready. Pick a cut and click compose to start rendering.",
+            }
+            note = _PHASE_WORK.get(new_phase_local, "")
+            if note:
+                try:
+                    await narrator.text(note)
+                except Exception:
+                    pass
             try:
                 full_response = await _stream_one_turn(
                     websocket,

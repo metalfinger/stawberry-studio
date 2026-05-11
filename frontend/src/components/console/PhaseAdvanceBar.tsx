@@ -16,6 +16,16 @@ const PHASE_LABELS: Record<PhaseId, string> = {
   GENERATE: 'Generate',
 }
 
+// What the next phase actually does, in the user's voice. The original
+// "Story looks ready → Move to Cast & Scout" left users wondering what
+// would happen.
+const NEXT_PHASE_PROMISE: Record<PhaseId, string> = {
+  BRIEF: 'Sage will draft scenes, shots, and cuts',
+  STORY: 'Atlas will extract characters / locations / props',
+  ASSETS: 'Pixel will compose cuts on demand',
+  GENERATE: '',
+}
+
 interface Readiness {
   current_phase: PhaseId
   next_phase: PhaseId | null
@@ -72,11 +82,12 @@ export function PhaseAdvanceBar({ projectId, onAdvance, refreshKey = 0 }: Props)
   const ready = r.ready
   const nextLabel = r.next_phase ? PHASE_LABELS[r.next_phase] : ''
 
+  const promise = r.next_phase ? NEXT_PHASE_PROMISE[r.next_phase] : ''
   return (
     <div className={`phase-cta${ready ? ' phase-cta--ready' : ' phase-cta--blocked'}`}>
       <span className="phase-cta__label">
         {ready
-          ? `${PHASE_LABELS[r.current_phase]} looks ready.`
+          ? `${PHASE_LABELS[r.current_phase]} looks ready.${promise ? ` Next: ${promise}.` : ''}`
           : `${PHASE_LABELS[r.current_phase]} — ${r.reason || 'not ready yet'}`}
       </span>
       <button

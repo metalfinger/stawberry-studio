@@ -240,6 +240,32 @@ def auto_link_assets_to_blueprint(project_id: str) -> dict:
                         )
 
     total = links_created["scene_links"] + links_created["shot_links"] + links_created["cut_links"]
+
+    # If pronoun-fallback fired, tell the user. The auto-linker can match
+    # a lone character to cuts via pronouns (he/she/the person/etc.), but
+    # silent linking is mysterious. Surface counts in chat.
+    fallback_count = sum(1 for d in links_created["details"] if "pronoun fallback" in d)
+    if fallback_count:
+        try:
+            import asyncio as _asyncio
+            from backend.orchestrator.bus import bus as _bus
+            note = (
+                f"🔗 Auto-linked {fallback_count} cut{'s' if fallback_count != 1 else ''} "
+                f"to **{lone_character['name'] if lone_character else 'the lone character'}** "
+                f"via pronoun fallback (cut prose used 'he/she/the person' rather than the name)."
+            )
+
+            async def _emit():
+                await _bus.publish(project_id, {
+                    "kind": "text", "markdown": note, "agent_name": "Atlas",
+                })
+            try:
+                loop = _asyncio.get_running_loop()
+                loop.create_task(_emit())
+            except RuntimeError:
+                pass
+        except Exception:
+            pass
     
     return {
         "success": True,
@@ -337,6 +363,30 @@ def create_asset(
         try:
             asset_db.update_asset(asset["id"], inspired_by=inspired_by.strip())
             asset["inspired_by"] = inspired_by.strip()
+        except Exception:
+            pass
+        # Emit a visible chat note so the user can SEE the substitution
+        # happen. Without this, recast was silent and read as "Atlas
+        # missed the character." The bus is async; we schedule the
+        # coroutine on a running loop if there is one, otherwise drop it
+        # (no chat connection = no audience anyway).
+        try:
+            import asyncio as _asyncio
+            from backend.orchestrator.bus import bus as _bus
+            note = (
+                f"🎭 Recast **{inspired_by}** → **{name}** "
+                f"(legal-safety guardrail — celebrity names trigger Gemini's safety filter)."
+            )
+
+            async def _emit():
+                await _bus.publish(project_id, {
+                    "kind": "text", "markdown": note, "agent_name": "Atlas",
+                })
+            try:
+                loop = _asyncio.get_running_loop()
+                loop.create_task(_emit())
+            except RuntimeError:
+                pass
         except Exception:
             pass
 

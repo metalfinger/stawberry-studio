@@ -34,6 +34,8 @@ export interface Asset {
   /** Number of cuts that have this asset linked — surfaced as a badge so the
       user knows whether this character/location is actually getting used. */
   linked_cut_count?: number
+  /** Used to detect stale identity (prompt changed since last gen). */
+  updated_at?: string
 }
 
 export interface AssetMasterNodeData {
@@ -126,8 +128,8 @@ export const AssetMasterNode = memo(({ data, selected }: NodeProps & { data: Ass
         border: `2px solid ${selected ? '#fff' : colors.border}`,
         borderRadius: 12,
         padding: 12,
-        minWidth: 280,
-        maxWidth: 320,
+        minWidth: 260,
+        maxWidth: 280,
         background: '#0f172a',
         color: '#e2e8f0',
       }}
