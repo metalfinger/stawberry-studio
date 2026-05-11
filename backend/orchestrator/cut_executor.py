@@ -705,5 +705,27 @@ async def execute_plan(
     finally:
         if plan.cut_id and not result.image_url and not result.error:
             await _persist_cut_image(plan.cut_id, "", "failed", project_id=plan.project_id)
+        # Reconcile stale `in_progress` cuts in this project — a prior aborted
+        # run could leave a cut locked forever otherwise. We only touch cuts
+        # OLDER than this run start; the active cut is excluded.
+        try:
+            async with get_async_connection() as conn:
+                await conn.execute(
+                    """
+                    UPDATE cuts
+                    SET generation_status = 'pending'
+                    WHERE generation_status = 'in_progress'
+                      AND id != ?
+                      AND shot_id IN (
+                          SELECT sh.id FROM shots sh
+                          JOIN scenes s ON s.id = sh.scene_id
+                          WHERE s.project_id = ?
+                      )
+                    """,
+                    (plan.cut_id or "", plan.project_id),
+                )
+                await conn.commit()
+        except Exception:
+            log.exception("stale_inprogress_sweep_failed")
 
     return result

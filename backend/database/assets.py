@@ -152,6 +152,8 @@ def update_asset(asset_id: str, **updates) -> Optional[Dict[str, Any]]:
         "suggested_prompt", "face_embedding_url",
         # Asset DAG (migration 006).
         "parent_asset_id", "reference_strategy",
+        # Atlas recast traceability (migration 014).
+        "inspired_by",
     ]
     updates = {k: v for k, v in updates.items() if k in allowed}
     

@@ -30,6 +30,10 @@ export interface Asset {
   description?: string
   suggested_prompt?: string
   parent_asset_id?: string | null
+  inspired_by?: string | null
+  /** Number of cuts that have this asset linked — surfaced as a badge so the
+      user knows whether this character/location is actually getting used. */
+  linked_cut_count?: number
 }
 
 export interface AssetMasterNodeData {
@@ -128,20 +132,34 @@ export const AssetMasterNode = memo(({ data, selected }: NodeProps & { data: Ass
         color: '#e2e8f0',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
         <span style={{ fontSize: 18 }}>{colors.icon}</span>
-        <strong style={{ fontSize: 14 }}>{asset.name}</strong>
-        <span style={{ marginLeft: 'auto', fontSize: 10, color: '#94a3b8', textTransform: 'uppercase' }}>{asset.type}</span>
+        <strong style={{ fontSize: 14, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{asset.name}</strong>
+        {typeof asset.linked_cut_count === 'number' && (
+          <span
+            title={asset.linked_cut_count === 0
+              ? 'Not linked to any cut yet — auto-linker missed it. Edit the prompt or rename so cut prose matches.'
+              : `Linked to ${asset.linked_cut_count} cut${asset.linked_cut_count === 1 ? '' : 's'}`}
+            style={{
+              fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 10,
+              background: asset.linked_cut_count === 0 ? 'rgba(239,68,68,0.18)' : 'rgba(34,211,238,0.18)',
+              color: asset.linked_cut_count === 0 ? '#fca5a5' : '#67e8f9',
+            }}
+          >{asset.linked_cut_count}↗</span>
+        )}
+        <span style={{ fontSize: 10, color: '#94a3b8', textTransform: 'uppercase' }}>{asset.type}</span>
       </div>
+
+      {asset.inspired_by && (
+        <div style={{ fontSize: 11, color: '#fbbf24', marginBottom: 6 }}>
+          ✨ recast from <em>{asset.inspired_by}</em>
+        </div>
+      )}
 
       {asset.parent_asset_id && (
         <div style={{ fontSize: 11, color: '#a78bfa', marginBottom: 6 }}>
           ⊂ derived (parent identity pinned automatically)
         </div>
-      )}
-
-      {asset.description && (
-        <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 8 }}>{asset.description}</div>
       )}
 
       {/* IDENTITY CARD */}
@@ -182,32 +200,13 @@ export const AssetMasterNode = memo(({ data, selected }: NodeProps & { data: Ass
         </div>
       )}
 
-      {/* ACCUMULATED REFERENCES THUMBNAIL GRID */}
+      {/* The thumbnail grid lived here once. ContextPanel (sidebar) now
+          owns the full reference/history gallery — the canvas card was
+          duplicating it and making AssetMasterNode feel "useless." We
+          surface a count instead and link to the sidebar via selection. */}
       {others.length > 0 && (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: 4,
-          marginBottom: 8,
-        }}>
-          {others.map((r) => (
-            <div key={r.id} title={r.label} style={{
-              position: 'relative',
-              borderRadius: 4,
-              overflow: 'hidden',
-              border: '1px solid rgba(255,255,255,0.08)',
-            }}>
-              <img src={r.image_url} alt={r.label} style={{
-                width: '100%', display: 'block', aspectRatio: '1', objectFit: 'cover',
-              }} />
-              <span style={{
-                position: 'absolute', bottom: 0, left: 0, right: 0,
-                background: 'rgba(15,23,42,0.85)', color: '#d1d5db',
-                fontSize: 9, padding: '1px 4px', textAlign: 'center',
-                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-              }}>{r.label.replace(/_/g, ' ')}</span>
-            </div>
-          ))}
+        <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 8 }}>
+          + {others.length} reference{others.length === 1 ? '' : 's'} — see sidebar for gallery
         </div>
       )}
 

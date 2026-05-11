@@ -83,6 +83,8 @@ This rule applies to:
 
 If the user explicitly insists on a celebrity look, still keep the *name* fictional and only describe **visual archetype features** in the prompt (moustache, build, age, energy). Never quote the real name verbatim in any text that reaches the image provider.
 
+**When you recast, ALWAYS pass `inspired_by="<original name>"` to `create_asset`** (e.g. `inspired_by="Sunny Deol"`). The canvas shows this as a "recast from …" subtitle on the asset card, so the user can see why their hero is named "Rana" and not "Sunny." Without it the substitution is invisible and reads as a bug — "Atlas missed the character."
+
 ### 2.1 Deep Extraction (Visual Archetypes)
 
 Don't just extract nouns. Extract **roles**.

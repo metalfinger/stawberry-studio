@@ -26,6 +26,20 @@ configure_logging()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db_async()
+    # Reset any cuts left in 'in_progress' from a previous run — they'll
+    # otherwise sit locked forever and the canvas shows a spinner that
+    # never resolves. Safe: a real in-flight cut would not survive a
+    # process restart anyway.
+    try:
+        gac = db.get_async_connection
+        async with gac() as conn:
+            await conn.execute(
+                "UPDATE cuts SET generation_status = 'pending' "
+                "WHERE generation_status = 'in_progress'"
+            )
+            await conn.commit()
+    except Exception:
+        pass
     yield
 
 

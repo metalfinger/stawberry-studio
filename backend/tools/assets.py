@@ -264,6 +264,7 @@ def create_asset(
     style: str = None,
     parent_asset_id: str = None,
     reference_strategy: str = "standalone",
+    inspired_by: str = None,
 ) -> dict:
     """
     Create a new MASTER asset (character, location, prop, or frame).
@@ -329,6 +330,15 @@ def create_asset(
         parent_asset_id=parent_asset_id,
         reference_strategy=reference_strategy,
     )
+    # Stamp inspired_by trace (Atlas recast traceability — e.g.
+    # Sunny Deol → Rana). Best-effort: works only after migration 014
+    # has been applied.
+    if asset and inspired_by:
+        try:
+            asset_db.update_asset(asset["id"], inspired_by=inspired_by.strip())
+            asset["inspired_by"] = inspired_by.strip()
+        except Exception:
+            pass
 
     # Mark downstream phases as stale when assets change
     mark_phases_stale(project_id, "ASSETS")

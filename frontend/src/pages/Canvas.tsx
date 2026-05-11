@@ -319,6 +319,10 @@ export function Canvas() {
                             consistency_tokens: (asset as any).consistency_tokens,
                             distinctive_features: (asset as any).distinctive_features,
                             wardrobe_lock: (asset as any).wardrobe_lock,
+                            inspired_by: (asset as any).inspired_by,
+                            linked_cut_count: Array.isArray((asset as any).linked_nodes)
+                                ? (asset as any).linked_nodes.filter((n: any) => n.node_type === 'cut').length
+                                : undefined,
                         },
                         projectId: projectId,
                     },
