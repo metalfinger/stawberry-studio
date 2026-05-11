@@ -1211,19 +1211,36 @@ def confirm_asset_extraction_complete(project_id: str) -> dict:
             ),
         }
 
-    # Hard gate 2: refuse if any asset still has no suggested_prompt.
+    # Soft gate 2: if any asset still has no suggested_prompt, AUTO-FILL it
+    # from a server-side template using the brief. Earlier code refused and
+    # the user had to ask Atlas to re-run for every gap — bad UX. The
+    # template-fill is good-enough as a fallback; the user can always edit
+    # the prompt later via the ContextPanel.
     missing = [a for a in real_assets if not (a.get("suggested_prompt") or "").strip()]
     if missing:
-        return {
-            "success": False,
-            "blocked": True,
-            "missing": [{"id": a["id"], "type": a["type"], "name": a["name"]} for a in missing],
-            "message": (
-                "Refusing to advance — assets without `suggested_prompt` exist:\n" +
-                "\n".join(f"- {a['type']}/{a['name']}" for a in missing) +
-                "\nFix them with `save_suggested_asset_prompt` first."
-            ),
-        }
+        brief = db.get_brief(project_id) or {}
+        filled: list[str] = []
+        for a in missing:
+            text = _template_suggested_prompt(a, brief)
+            if text:
+                asset_db.update_asset(a["id"], suggested_prompt=text)
+                filled.append(f"{a['type']}/{a['name']}")
+        # Re-read so the summary below reflects fills.
+        all_assets = asset_db.get_assets(project_id)
+        real_assets = [a for a in all_assets if (a.get("type") or "") in (
+            "character", "location", "prop", "sublocation", "location_angle",
+        )]
+        still_missing = [a for a in real_assets if not (a.get("suggested_prompt") or "").strip()]
+        if still_missing:
+            return {
+                "success": False,
+                "blocked": True,
+                "missing": [{"id": a["id"], "type": a["type"], "name": a["name"]} for a in still_missing],
+                "message": (
+                    "Refusing to advance — couldn't auto-fill prompts for:\n" +
+                    "\n".join(f"- {a['type']}/{a['name']}" for a in still_missing)
+                ),
+            }
 
     # Get summary for the success message
     characters = asset_db.get_masters(project_id, "character")
@@ -1252,3 +1269,43 @@ def confirm_asset_extraction_complete(project_id: str) -> dict:
         "message": "🎉 Asset extraction complete! Project advancing to GENERATE phase. Ready to create visual references."
     }
 
+
+
+# ============================================================================
+# Template fallback for missing suggested_prompts.
+# Atlas is supposed to write these but occasionally skips an asset. Instead
+# of blocking the phase on the gap, we synthesize a usable prompt from the
+# asset's name + type + the brief's art_style / palette / style_tokens.
+# Good-enough is better than "fix it and try again."
+# ============================================================================
+
+def _template_suggested_prompt(asset: dict, brief: dict) -> str:
+    name = (asset.get("name") or "").strip()
+    if not name:
+        return ""
+    asset_type = (asset.get("type") or "").lower()
+    art_style = (brief.get("art_style") or "").strip()
+    palette = (brief.get("color_palette") or "").strip()
+    appearance = (asset.get("appearance") or asset.get("description") or "").strip()
+
+    import json as _json
+    try:
+        style_tokens = _json.loads(brief.get("style_tokens") or "[]")
+    except Exception:
+        style_tokens = []
+    tokens_line = " ".join(style_tokens[:6]) if style_tokens else ""
+
+    parts: list[str] = []
+    if art_style:
+        parts.append(art_style)
+    parts.append(name)
+    if appearance:
+        parts.append(f"— {appearance}")
+    if tokens_line:
+        parts.append(tokens_line)
+    if palette:
+        parts.append(f"Palette: {palette}.")
+    if asset_type == "character" or asset_type in ("prop",):
+        parts.append("PURE WHITE BACKGROUND (#FFFFFF) with no cast shadow on the backdrop, soft even lighting.")
+    parts.append("No text, no labels, no UI, no captions.")
+    return " ".join(parts)

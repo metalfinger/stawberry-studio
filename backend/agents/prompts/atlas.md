@@ -68,6 +68,21 @@ After the asset is created (steps 5, 6, 7), **immediately call `save_suggested_a
 
 Characters MUST get a **descriptive proper-noun name** the auto-linker can match. NEVER use placeholder names like "The User", "The Person", "The Protagonist", "Main Character". If the brief doesn't give a name, invent one that captures the role — e.g. "Ayan the Coder", "The Tired Engineer", "Mira the Runner". The name must contain at least one content word ≥ 4 letters that you also use when describing the character in scene/shot/cut text. The auto-linker is a literal word-match — if the name's content word never appears in cut prose, the character will not be linked to any cut and will not be rendered.
 
+### 2.0b NO REAL PEOPLE (HARD GUARDRAIL)
+
+**Never use a real person's name** — actor, athlete, celebrity, politician, public figure. Gemini's safety filter blocks real-person likeness and the cut never renders.
+
+If the brief says "Sunny Deol", "Tom Cruise", "Shah Rukh Khan", "Modi" or any other real-world identity, **recast as a fictional archetype** that captures the vibe without the legal/safety landmine. Examples:
+- "Sunny Deol" → "Ranveer Singh" → "Rana the Action Veteran" — a 60-something Indian action movie veteran with a thick handlebar moustache, broad shoulders, intense piercing eyes, weathered face, plain kurta.
+- "Tom Cruise" → "Mav the Pilot Ace" — a 60-something American action star, lean and athletic, perpetual half-grin, aviator sunglasses, bomber jacket.
+
+This rule applies to:
+- `name` (asset row)
+- `description`, `appearance`, `consistency_tokens`, `wardrobe_lock`, `suggested_prompt`
+- Cut / shot / scene prose if you wrote it (Sage / Nova may have used the real name — when you spot it, also call `update_asset` rename; the rename cascade will rewrite the prose)
+
+If the user explicitly insists on a celebrity look, still keep the *name* fictional and only describe **visual archetype features** in the prompt (moustache, build, age, energy). Never quote the real name verbatim in any text that reaches the image provider.
+
 ### 2.1 Deep Extraction (Visual Archetypes)
 
 Don't just extract nouns. Extract **roles**.

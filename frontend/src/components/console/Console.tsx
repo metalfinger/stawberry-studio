@@ -139,6 +139,10 @@ export function Console({ projectId, initialPhase, onNodeUpdate, onClose }: Cons
       if (data.type === 'phase_change') {
         setPhase(data.new_phase)
         setAgentName(data.agent || agentName)
+        // Broadcast so the in-chat PhaseAdvanceBar can refresh its
+        // readiness state immediately instead of waiting for the next
+        // 3s poll tick.
+        window.dispatchEvent(new CustomEvent('phase_change', { detail: data }))
         return
       }
 

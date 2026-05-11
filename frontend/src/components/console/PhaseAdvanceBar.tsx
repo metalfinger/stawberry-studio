@@ -41,12 +41,24 @@ export function PhaseAdvanceBar({ projectId, onAdvance, refreshKey = 0 }: Props)
         const res = await fetch(`/api/projects/${projectId}/phase-readiness`)
         if (!res.ok) return
         const data = (await res.json()) as Readiness
-        if (!cancelled) setR(data)
+        if (!cancelled) {
+          setR(data)
+          setBusy(false)  // Clear advancing-state once the new phase lands.
+        }
       } catch { /* ignore */ }
     }
     void load()
     const id = setInterval(load, 3000)
-    return () => { cancelled = true; clearInterval(id) }
+    // Console dispatches a window CustomEvent on phase_change WS messages
+    // (added via the same event-bus shim CutNode uses). Reload immediately
+    // instead of waiting up to 3s for the next poll tick.
+    const onPhaseChange = () => { void load() }
+    window.addEventListener('phase_change', onPhaseChange)
+    return () => {
+      cancelled = true
+      clearInterval(id)
+      window.removeEventListener('phase_change', onPhaseChange)
+    }
   }, [projectId, refreshKey])
 
   if (!r || !r.next_phase) return null
