@@ -15,6 +15,7 @@ from backend.studio.models import (
     NodeCreate,
     NodePatch,
     RecipeCreate,
+    Reconciliation,
     Reorder,
     Selection,
     SourceCreate,
@@ -48,7 +49,11 @@ def create_app(home=None):
 
     @app.get("/api/studio/health")
     def health():
-        return {"status": "ok", "mode": "local", "schema": 2}
+        return {"status": "ok", "mode": "local", "schema": 3}
+
+    @app.get("/api/studio/runtime")
+    def runtime():
+        return studio.execution.status()
 
     @app.get("/api/studio/projects")
     def projects():
@@ -130,6 +135,18 @@ def create_app(home=None):
     @app.post("/api/studio/jobs/{job_id}/retry-collection")
     def retry_collection(job_id: str):
         return studio.retry_collection(job_id)
+
+    @app.post("/api/studio/jobs/{job_id}/cancel")
+    def cancel(job_id: str):
+        return studio.execution.cancel(job_id)
+
+    @app.get("/api/studio/jobs/{job_id}/reconciliation")
+    def reconciliation_preview(job_id: str, provider_id: str):
+        return studio.execution.preview_reconciliation(job_id, provider_id)
+
+    @app.post("/api/studio/jobs/{job_id}/reconciliation")
+    def reconcile(job_id: str, body: Reconciliation):
+        return studio.execution.reconcile(job_id, body)
 
     dist = Path(__file__).resolve().parents[2] / "frontend" / "dist"
     if (dist / "assets").is_dir():

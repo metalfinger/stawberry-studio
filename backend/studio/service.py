@@ -7,6 +7,7 @@ import shutil
 import time
 from pathlib import Path
 
+from backend.studio.execution import Execution, validate_cost
 from backend.studio.models import Approval, MediaReview, NodeCreate, NodePatch, RecipeCreate, Reorder, SourceCreate
 from backend.studio.production import ASSET_KINDS, ProductionRules
 from backend.studio.store import Store, StudioError, digest, encoded, identifier
@@ -25,6 +26,7 @@ class Studio:
     def __init__(self, store: Store):
         self.store = store
         self.rules = ProductionRules(self)
+        self.execution = Execution(self)
 
     def create_node(self, request: NodeCreate):
         with self.store.connection(write=True) as conn:
@@ -464,6 +466,12 @@ class Studio:
             if row["fingerprint"] != approval.fingerprint:
                 raise StudioError("approval_mismatch", "Approval does not match the prepared request", 409)
             self._fresh(conn, row)
+            estimate = json.loads(row["spec"]).get("estimate", {"credits": None})
+            policy = approval.model_dump(exclude={"fingerprint", "user_decision"})
+            if policy["max_credits"] is None and estimate.get("credits") is not None:
+                policy["max_credits"] = estimate["credits"]
+            validate_cost(estimate, policy)
+            conn.execute("INSERT OR REPLACE INTO recipe_approvals VALUES (?,?)", (recipe_id, encoded(policy)))
             conn.execute(
                 "UPDATE recipes SET approved_at=?,user_decision=? WHERE id=?",
                 (time.time(), approval.user_decision, recipe_id),

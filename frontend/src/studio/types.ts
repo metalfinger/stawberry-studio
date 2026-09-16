@@ -36,12 +36,25 @@ export interface Context {
 export interface Recipe {
   id: string; node_id: string; fingerprint: string; approved_at: number | null;
   spec: { provider: string; model: string; prompt: string; intent: string; settings: Record<string, unknown>;
-    references: { media_id: string; role: string; instruction: string; subjects?: string[] }[] };
+    references: { media_id: string; role: string; instruction: string; subjects?: string[] }[];
+    estimate?: { credits: number | null; unit: string; settings_only_credits?: number; reason?: string } };
   context: Context;
 }
 export interface Job {
   id: string; recipe_id: string; state: string; error: string | null;
   provider_id: string | null; created_at: number; updated_at: number;
+}
+export interface Runtime {
+  checked_at: number;
+  responsive: boolean; higgsfield_enabled: boolean; remote_cancellation: boolean;
+  workers: { id: string; responsive: boolean; heartbeat_at: number; stopped_at: number | null; current_job: string | null; enabled_providers: string[] }[];
+}
+export interface JobDetail extends Job {
+  events: { sequence: number; state: string; details: Record<string, unknown>; created_at: number }[];
+}
+export interface RecoveryPreview {
+  provider_id: string; fingerprint: string; can_link: boolean; requires_reference_confirmation: boolean;
+  checks: Record<string, boolean>; remote: { id: string; job_set_type: string; params: Record<string, unknown>; status: string };
 }
 export interface ProjectData {
   project: ProductionNode; nodes: ProductionNode[]; media: Media[]; recipes: Recipe[]; jobs: Job[];

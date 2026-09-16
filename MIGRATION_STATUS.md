@@ -177,15 +177,25 @@ proof that generation is free or covered by unlimited website usage.
 
 ## Next work, in order
 
-1. **Stronger execution recovery.** Add provider-enabled/worker-health visibility,
-   guarded reconciliation of uncertain submissions using verified remote IDs,
-   cost estimates/limits, and tested model-capability bounds. Harden output URL
-   collection against DNS rebinding; current HTTPS/private-address checks do not
-   pin DNS through the request. Test long-running leases and partial outputs.
+1. **Execution recovery verification.** Implemented durable worker visibility,
+   queued cancellation, guarded two-step reconciliation, explicit known/unknown
+   cost approvals, atomic estimate-policy rechecks, DNS-pinned HTTPS collection,
+   long-call lease renewal and partial-output preservation. Full offline suite:
+   **154 passed**; build and scoped Ruff/ESLint pass. Browser confirms worker
+   status and persisted job events. Isolated browser fixture verified uncertain
+   submission preview/link, collection to ready without resubmission, and queued
+   cancellation. Narrow 390px activity layout has no horizontal overflow. Real
+   prepared recipe displays exact prompt/settings, 2-credit estimate and ceiling;
+   its approval button was not clicked. Unknown-cost acknowledgement still needs
+   browser coverage. See `EXECUTION_CONTRACTS.md`.
 2. **Bounded visual proof with the user.** Present exact character/location/prop
    sheet recipes, reference order and known/unknown credit costs. Obtain approval,
    generate and inspect pixels. Then three cuts, non-adjacent reuse, one revision
    and one supported video job. Do not infer this approval from this migration task.
+   Three proposed Nano Banana Pro 2K sheet recipes are now saved under
+   `/studio/a14b173e-13be-45ab-9efe-e1a399216ed6`, each quoted at 2 credits.
+   No approval/enqueue/upload/create occurred. An explicit approval question was
+   sent for these three sheets only (6 estimated credits, no retries/cuts/video).
 3. **Viewer parity.** Add comparison, reference-network navigation, planned missing
    views/states, approved batches, fuller field editing and selective project
    export/import. Persisted feedback is available but no automatic refinement

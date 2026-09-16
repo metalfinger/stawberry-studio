@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import math
+import re
 import subprocess
 from pathlib import Path
 
@@ -30,6 +32,11 @@ class Higgsfield:
 
     def contract(self, model):
         version = self.command(["version"], raw=True)
+        if not re.search(r"\b0\.1\.28\b", version):
+            raise StudioError(
+                "cli_unsupported",
+                "This adapter is verified against Higgsfield CLI 0.1.28; verify compatibility before using another version",
+            )
         schema = self.command(["model", "get", model, "--json"])
         if not isinstance(schema, dict) or schema.get("job_set_type") != model:
             raise StudioError("provider_schema", "Unexpected model schema")
@@ -91,12 +98,45 @@ class Higgsfield:
             raise StudioError(
                 "capability_unverified", "This model's media mapping has not been verified in Strawberry yet"
             )
-        return {"settings": settings, "provider_contract": contract}
+        spec = {
+            "model": request.model,
+            "prompt": request.prompt,
+            "settings": settings,
+            "references": [r.model_dump() for r in request.references],
+        }
+        return {"settings": settings, "provider_contract": contract, "estimate": self.estimate(spec)}
+
+    def estimate(self, spec):
+        args = ["generate", "cost", spec["model"], "--prompt", spec["prompt"]]
+        for key, value in spec["settings"].items():
+            args.extend(["--" + key, value if isinstance(value, str) else json.dumps(value)])
+        try:
+            result = self.command([*args, "--json"])
+            amount = result.get("credits") if isinstance(result, dict) else None
+            if type(amount) not in {int, float} or not math.isfinite(amount) or amount < 0:
+                raise StudioError("cost_response", "Unrecognized credit estimate")
+            return {
+                "credits": None if spec["references"] else amount,
+                "unit": "provider_credits",
+                "settings_only_credits": amount,
+                "source": "higgsfield.generate.cost",
+                "reason": "Exact reference-input pricing is unverified; no files uploaded"
+                if spec["references"]
+                else "Estimate, not a provider-enforced billing cap",
+            }
+        except StudioError:
+            return {
+                "credits": None,
+                "unit": "provider_credits",
+                "reason": "Provider estimate unavailable; no files uploaded",
+            }
+
+    def preflight(self, spec):
+        if self.contract(spec["model"]) != spec["provider_contract"]:
+            raise StudioError("provider_changed", "CLI/model schema changed; prepare and approve a new recipe")
+        return self.estimate(spec)
 
     def submit(self, job_id, spec, files):
-        current = self.contract(spec["model"])
-        if current != spec["provider_contract"]:
-            raise StudioError("provider_changed", "CLI/model schema changed; prepare and approve a new recipe")
         args = ["generate", "create", spec["model"], "--prompt", spec["prompt"]]
         for key, value in spec["settings"].items():
             args.extend(["--" + key, value if isinstance(value, str) else json.dumps(value)])
@@ -113,10 +153,14 @@ class Higgsfield:
             raise SubmissionUnknown("CLI returned no recognized job ID; inspect provider jobs before any retry")
         return provider_id, result
 
-    def poll(self, provider_id):
+    def inspect(self, provider_id):
         result = self.command(["generate", "get", provider_id, "--json"])
         if not isinstance(result, dict) or result.get("id") != provider_id:
             raise StudioError("provider_response", "Unexpected job response", 502)
+        return result
+
+    def poll(self, provider_id):
+        result = self.inspect(provider_id)
         status = str(result.get("status", "")).lower()
         if status in {"failed", "error", "canceled", "cancelled"}:
             return "failed", [], result
@@ -140,7 +184,14 @@ class FakeProvider:
         self.directory.mkdir(exist_ok=True)
 
     def prepare(self, request):
-        return {"settings": request.settings, "provider_contract": {"fixture_version": 1}}
+        return {
+            "settings": request.settings,
+            "provider_contract": {"fixture_version": 1},
+            "estimate": self.preflight(None),
+        }
+
+    def preflight(self, spec):
+        return {"credits": 0, "unit": "provider_credits", "source": "offline_fixture"}
 
     def submit(self, job_id, spec, files):
         from PIL import Image, ImageDraw
@@ -153,7 +204,23 @@ class FakeProvider:
         draw.text((105, 200), spec["intent"][:90].encode("ascii", "replace").decode(), fill="#173a2e")
         draw.text((105, 260), f"References: {len(files)} | Job: {job_id}", fill="#173a2e")
         image.save(path)
+        (self.directory / f"{job_id}.json").write_text(
+            json.dumps(
+                {
+                    "id": job_id,
+                    "job_set_type": spec["model"],
+                    "status": "completed",
+                    "params": {**spec["settings"], "prompt": spec["prompt"], "input_images": [str(f) for f in files]},
+                }
+            )
+        )
         return job_id, {"fake": True, "path": str(path)}
+
+    def inspect(self, provider_id):
+        path = self.directory / f"{provider_id}.json"
+        if not path.is_file():
+            raise StudioError("fixture_missing", "Offline job receipt missing")
+        return json.loads(path.read_text())
 
     def poll(self, provider_id):
         path = self.directory / f"{provider_id}.png"

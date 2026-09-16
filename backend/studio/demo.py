@@ -163,4 +163,5 @@ def seed_demo(studio):
         "Waiting under the clock / revised framing",
         [Reference(media_id=cut_media[0]["id"], role="base", instruction="Preserve scene; tighten framing")],
     )
+    worker.pulse(stopped=True)
     return {"project_id": project["id"], "offline": True, "url": f"/studio/{project['id']}"}

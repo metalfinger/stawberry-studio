@@ -80,6 +80,13 @@ CREATE TABLE IF NOT EXISTS media_reviews (
  definition_hash TEXT NOT NULL, subject_hashes TEXT NOT NULL, created_at REAL NOT NULL,
  PRIMARY KEY(media_id,revision)
 );
+CREATE TABLE IF NOT EXISTS workers (
+ id TEXT PRIMARY KEY, pid INTEGER NOT NULL, enabled_providers TEXT NOT NULL,
+ current_job TEXT, heartbeat_at REAL NOT NULL, stopped_at REAL
+);
+CREATE TABLE IF NOT EXISTS recipe_approvals (
+ recipe_id TEXT PRIMARY KEY REFERENCES recipes(id), policy TEXT NOT NULL
+);
 """
 
 
@@ -96,11 +103,11 @@ class Store:
         self.media_dir.mkdir(exist_ok=True)
         self.path = self.home / "production.sqlite"
         with self.connection() as conn:
-            if conn.execute("PRAGMA user_version").fetchone()[0] not in {0, 1, 2}:
+            if conn.execute("PRAGMA user_version").fetchone()[0] not in {0, 1, 2, 3}:
                 raise StudioError("schema_unsupported", "This workspace requires a different engine version")
             conn.execute("PRAGMA journal_mode=WAL")
             conn.executescript(SCHEMA)
-            conn.execute("PRAGMA user_version=2")
+            conn.execute("PRAGMA user_version=3")
 
     @contextmanager
     def connection(self, *, write=False):

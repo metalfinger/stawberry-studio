@@ -18,6 +18,18 @@
 .studio-brand strong { font-size: 18px; font-weight: 650; }
 .studio-local { display: flex; align-items: center; gap: 7px; color: #737b76; font-size: 12px; }
 .studio-local > span { width: 6px; height: 6px; border-radius: 50%; background: #287451; }
+.studio-local.offline > span { background: #9e6930; }
+.studio-provider-status { color: #68756e; font-size: 11px; }
+.studio-job-counts { display: flex; gap: 12px 20px; flex-wrap: wrap; padding: 18px 0; border-bottom: 1px solid #dce1dd; font-size: 12px; }
+.studio-job-detail { overflow-wrap: anywhere; padding: 6px 0; }
+.studio-job-detail pre { max-height: 280px; overflow: auto; white-space: pre-wrap; font-size: 11px; padding: 8px; background: #f5f7f5; }
+.studio-event-list { padding-left: 18px; font-size: 12px; }
+.studio-event-list li { padding: 8px 0; }
+.studio-event-list strong { margin-left: 10px; font-weight: 500; }
+.studio-recovery { border-top: 1px solid #dce1dd; padding: 12px 0; display: grid; gap: 10px; }
+.studio-approval { display: grid; gap: 8px; margin-top: 12px; }
+.studio-workspace .studio-checkbox { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; }
+.studio-workspace .studio-checkbox input { width: 16px; height: 16px; flex: 0 0 16px; margin-top: 2px; accent-color: #245b43; }
 .studio-header-right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
 .studio-running { display: inline-flex; align-items: center; gap: 7px; color: #326e88; }
 .studio-running svg, .studio-spin { animation: studio-rotate 1.5s linear infinite; }

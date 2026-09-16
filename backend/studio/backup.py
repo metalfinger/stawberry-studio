@@ -117,7 +117,7 @@ def _restore(archive_path: str | Path, destination: str | Path):
                 raise StudioError("archive_invalid", "Database integrity check failed")
             if conn.execute("SELECT name FROM sqlite_master WHERE type IN ('trigger','view')").fetchone():
                 raise StudioError("archive_invalid", "Unexpected executable database objects")
-            if conn.execute("PRAGMA user_version").fetchone()[0] not in {1, 2}:
+            if conn.execute("PRAGMA user_version").fetchone()[0] not in {1, 2, 3}:
                 raise StudioError("archive_invalid", "Unsupported database schema")
             for name, expected in conn.execute("SELECT path,sha256 FROM media"):
                 item = files.get("media/" + name)
@@ -144,6 +144,8 @@ def _restore(archive_path: str | Path, destination: str | Path):
                     time.time(),
                 )
             conn.execute("UPDATE jobs SET owner=NULL,lease_until=NULL")
+            if conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='workers'").fetchone():
+                conn.execute("DELETE FROM workers")
         # Reserve the destination exclusively. An interrupted final move is never
         # accepted as a usable workspace, and cannot overwrite an existing folder.
         try:

@@ -101,6 +101,15 @@ class RecipeCreate(Contract):
 class Approval(Contract):
     fingerprint: str
     user_decision: str = Field(min_length=1)
+    max_credits: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    allow_unknown_cost: bool = False
+
+
+class Reconciliation(Contract):
+    provider_id: str = Field(min_length=1, pattern=r"^[a-zA-Z0-9][a-zA-Z0-9_-]*$")
+    fingerprint: str = Field(min_length=64, max_length=64)
+    user_decision: str = Field(min_length=1)
+    confirm_reference_match: bool = False
 
 
 class Selection(Contract):

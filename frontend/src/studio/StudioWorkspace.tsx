@@ -2,9 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Activity, ArrowLeft, Check, ChevronRight, Clapperboard, FileText, Images, LoaderCircle, Menu, Plus, RefreshCw, Save, X } from 'lucide-react';
 import { api } from './types';
-import type { Job, Media, MediaDetail, NodeDetail, ProductionNode, ProjectData, Recipe } from './types';
+import type { Media, MediaDetail, NodeDetail, ProductionNode, ProjectData, Recipe, Runtime } from './types';
 import ProductionInspector, { ReviewStatus } from './ProductionInspector';
 import TakeReview from './TakeReview';
+import JobActivity from './JobActivity';
+import RecipeApproval from './RecipeApproval';
 import './studio.css';
 
 function Visual({ media, interactive = false }: { media?: Media; interactive?: boolean }) {
@@ -23,6 +25,7 @@ function Workspace({ projectId }: { projectId?: string }) {
   const navigate = useNavigate();
   const [projects, setProjects] = useState<ProductionNode[]>([]);
   const [data, setData] = useState<ProjectData | null>(null);
+  const [runtime, setRuntime] = useState<Runtime | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [detail, setDetail] = useState<NodeDetail | null>(null);
   const [tab, setTab] = useState<'storyboard' | 'assets' | 'activity'>('storyboard');
@@ -68,6 +71,8 @@ function Workspace({ projectId }: { projectId?: string }) {
 
   const refresh = useCallback(async (isActive: () => boolean = () => true) => {
     const sequence = ++readSequence.current;
+    const workerStatus = await api<Runtime>('/runtime');
+    if (sequence === readSequence.current && isActive()) setRuntime(workerStatus);
     if (!projectId) {
       const result = await api<ProductionNode[]>('/projects');
       if (sequence === readSequence.current && isActive()) setProjects(result);
@@ -120,7 +125,7 @@ function Workspace({ projectId }: { projectId?: string }) {
   });
   const assets = data?.nodes.filter(n => ['character', 'location', 'prop'].includes(n.kind)) ?? [];
   const nodeRecipes = data?.recipes.filter(r => r.node_id === selected) ?? [];
-  const activeJobs = data?.jobs.filter(j => ['queued', 'submitting', 'running', 'collecting'].includes(j.state)).length ?? 0;
+  const activeJobs = data?.jobs.filter(j => ['submitting', 'running', 'collecting'].includes(j.state)).length ?? 0;
 
   const recipeView = (recipe: Recipe) => {
     const job = data?.jobs.find(j => j.recipe_id === recipe.id);
@@ -135,11 +140,8 @@ function Workspace({ projectId }: { projectId?: string }) {
         </li>)}</ol>
         <pre>{recipe.spec.prompt}</pre>
         <dl className="studio-facts">{Object.entries(recipe.spec.settings).map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{JSON.stringify(value)}</dd></div>)}</dl>
-        {job ? <JobStatus job={job} retry={() => action(() => api(`/jobs/${job.id}/retry-collection`, {}))} />
-          : <button className="studio-primary" disabled={busy} onClick={() => action(async () => {
-            await api(`/recipes/${recipe.id}/approval`, { fingerprint: recipe.fingerprint, user_decision: 'Approved exact recipe in the local review viewer' });
-            await api(`/recipes/${recipe.id}/jobs`, {});
-          })}><Check size={16} />Approve and queue{recipe.spec.provider === 'higgsfield' ? ' (uses credits)' : ''}</button>}
+        {job ? <JobActivity job={job} provider={recipe.spec.provider} runtime={runtime} busy={busy} action={action} />
+          : <RecipeApproval recipe={recipe} busy={busy} action={action} />}
       </div>
     </details>;
   };
@@ -147,7 +149,8 @@ function Workspace({ projectId }: { projectId?: string }) {
   return <div className="studio-workspace">
     <header className="studio-header">
       <Link to="/studio" className="studio-brand"><Clapperboard size={22} /><strong>Strawberry Studio</strong></Link>
-      <span className="studio-local"><span />Local workspace</span>
+      <span className={`studio-local ${runtime?.responsive ? '' : 'offline'}`}><span />{runtime?.responsive ? 'Worker responding' : 'Worker not responding'}</span>
+      <span className="studio-provider-status">{runtime?.higgsfield_enabled ? 'Paid generation enabled' : 'Paid generation disabled'}</span>
       <div className="studio-header-right">{activeJobs > 0 && <span className="studio-running"><LoaderCircle size={15} />{activeJobs} in progress</span>}
         <button className="studio-icon" title="Refresh workspace" onClick={() => action(refresh)} disabled={busy}><RefreshCw size={17} /></button>
       </div>
@@ -184,7 +187,12 @@ function Workspace({ projectId }: { projectId?: string }) {
           <nav className="studio-tabs" aria-label="Production views">{([
             ['storyboard', 'Storyboard', Clapperboard], ['assets', 'Assets', Images], ['activity', 'Activity', Activity],
           ] as const).map(([id, title, Icon]) => <button key={id} aria-current={tab === id ? 'page' : undefined} onClick={() => setTab(id)}><Icon size={16} />{title}</button>)}</nav>
-          {tab === 'activity' ? <div className="studio-job-list">{data.jobs.map(job => <section key={job.id}><h3>{data.recipes.find(r => r.id === job.recipe_id)?.spec.intent}</h3><JobStatus job={job} retry={() => action(() => api(`/jobs/${job.id}/retry-collection`, {}))} /></section>)}{!data.jobs.length && <p>No generation jobs.</p>}</div>
+          {tab === 'activity' ? <div className="studio-job-list">
+            <div className="studio-job-counts">{['queued', 'submitting', 'running', 'collecting', 'ready', 'failed', 'submission_unknown', 'collection_failed', 'cancelled'].map(state => {
+              const count = data.jobs.filter(j => j.state === state).length;
+              return count ? <span key={state}><strong>{count}</strong> {state.replaceAll('_', ' ')}</span> : null;
+            })}</div>
+            {data.jobs.map(job => <section key={job.id}><h3>{data.recipes.find(r => r.id === job.recipe_id)?.spec.intent}</h3><JobActivity job={job} provider={data.recipes.find(r => r.id === job.recipe_id)?.spec.provider} runtime={runtime} busy={busy} action={action} /></section>)}{!data.jobs.length && <p>No generation jobs.</p>}</div>
             : <div className="studio-grid">{(tab === 'storyboard' ? sequence : assets).map((node, index) => {
               const media = findMedia(node.active_media_id) ?? data.media.find(m => m.node_id === node.id);
               const takes = data.media.filter(m => m.node_id === node.id);
@@ -242,14 +250,5 @@ function Workspace({ projectId }: { projectId?: string }) {
         <button className="studio-primary" disabled={busy || !feedback.trim()}><Save size={15} />Save feedback</button>
       </form>
     </div></div>}
-  </div>;
-}
-
-function JobStatus({ job, retry }: { job: Job; retry: () => void }) {
-  const running = ['queued', 'submitting', 'running', 'collecting'].includes(job.state);
-  return <div className="studio-job"><span className={`studio-job-state ${job.state}`}>
-    {running ? <LoaderCircle className="studio-spin" size={14} /> : job.state === 'ready' ? <Check size={14} /> : <Activity size={14} />}{job.state.replaceAll('_', ' ')}
-    </span><small>{new Date(job.created_at * 1000).toLocaleTimeString()}</small>{job.error && <p className="studio-job-error">{job.error}</p>}
-    {job.state === 'collection_failed' && <button onClick={retry}><RefreshCw size={14} />Retry download</button>}
   </div>;
 }
