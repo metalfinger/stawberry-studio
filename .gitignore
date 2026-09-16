@@ -64,6 +64,7 @@ server.log
 .claude/
 .adk/
 backend/.adk/
+.strawberry/
 
 # Local diagnostic scripts (tests are versioned)
 debug_*.py

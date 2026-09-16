@@ -1,0 +1,125 @@
+from __future__ import annotations
+
+from pathlib import Path
+from urllib.parse import urlparse
+
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from starlette.middleware.trustedhost import TrustedHostMiddleware
+
+from backend.studio.models import Approval, Feedback, NodeCreate, NodePatch, RecipeCreate, Selection, SourceCreate
+from backend.studio.service import Studio
+from backend.studio.store import Store, StudioError
+
+
+def create_app(home=None):
+    studio = Studio(Store(home))
+    app = FastAPI(title="Strawberry Production Engine", version="0.1")
+    app.state.studio = studio
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "[::1]", "testserver"])
+
+    @app.middleware("http")
+    async def local_mutations(request: Request, call_next):
+        if request.method in {"POST", "PUT", "PATCH", "DELETE"}:
+            origin = request.headers.get("origin")
+            if origin and urlparse(origin).netloc != request.headers.get("host"):
+                return JSONResponse({"error": "origin_forbidden"}, status_code=403)
+            if request.headers.get("x-strawberry-action") != "1":
+                return JSONResponse({"error": "action_header_required"}, status_code=403)
+        return await call_next(request)
+
+    @app.exception_handler(StudioError)
+    async def studio_error(_request, error):
+        return JSONResponse({"error": error.code, "message": str(error)}, status_code=error.status)
+
+    @app.get("/api/studio/health")
+    def health():
+        return {"status": "ok", "mode": "local", "schema": 1}
+
+    @app.get("/api/studio/projects")
+    def projects():
+        return studio.projects()
+
+    @app.get("/api/studio/projects/{project_id}")
+    def project(project_id: str):
+        return studio.project(project_id)
+
+    @app.post("/api/studio/nodes")
+    def create_node(body: NodeCreate):
+        return studio.create_node(body)
+
+    @app.get("/api/studio/nodes/{node_id}")
+    def node(node_id: str):
+        return studio.inspect(node_id)
+
+    @app.patch("/api/studio/nodes/{node_id}")
+    def patch(node_id: str, body: NodePatch):
+        return studio.patch_node(node_id, body)
+
+    @app.get("/api/studio/nodes/{node_id}/revisions/{revision}")
+    def revision(node_id: str, revision: int):
+        return studio.revision(node_id, revision)
+
+    @app.post("/api/studio/nodes/{node_id}/sources")
+    def capture(node_id: str, body: SourceCreate):
+        return studio.capture(node_id, body)
+
+    @app.post("/api/studio/nodes/{node_id}/selection")
+    def select(node_id: str, body: Selection):
+        return studio.select(node_id, body.media_id, body.expected_revision)
+
+    @app.get("/api/studio/media/{media_id}/file")
+    def media_file(media_id: str):
+        path, mime = studio.media_path(media_id)
+        return FileResponse(path, media_type=mime, headers={"X-Content-Type-Options": "nosniff"})
+
+    @app.get("/api/studio/media/{media_id}")
+    def media_detail(media_id: str):
+        return studio.media(media_id)
+
+    @app.post("/api/studio/media/{media_id}/feedback")
+    def feedback(media_id: str, body: Feedback):
+        return studio.feedback(media_id, body.text)
+
+    @app.post("/api/studio/recipes")
+    def prepare(body: RecipeCreate):
+        return studio.prepare(body)
+
+    @app.get("/api/studio/recipes/{recipe_id}")
+    def recipe(recipe_id: str):
+        return studio.recipe(recipe_id)
+
+    @app.post("/api/studio/recipes/{recipe_id}/approval")
+    def approve(recipe_id: str, body: Approval):
+        return studio.approve(recipe_id, body)
+
+    @app.post("/api/studio/recipes/{recipe_id}/jobs")
+    def execute(recipe_id: str):
+        return studio.enqueue(recipe_id)
+
+    @app.get("/api/studio/jobs/{job_id}")
+    def job(job_id: str):
+        return studio.job(job_id)
+
+    @app.post("/api/studio/jobs/{job_id}/retry-collection")
+    def retry_collection(job_id: str):
+        return studio.retry_collection(job_id)
+
+    dist = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+    if (dist / "assets").is_dir():
+        app.mount("/assets", StaticFiles(directory=dist / "assets"), name="assets")
+
+    @app.get("/")
+    def root():
+        return RedirectResponse("/studio")
+
+    @app.get("/studio")
+    @app.get("/studio/{project_id}")
+    def viewer(project_id: str = ""):
+        index = dist / "index.html"
+        if not index.is_file():
+            raise HTTPException(503, "Build the frontend before opening the viewer")
+        return FileResponse(index)
+
+    return app
