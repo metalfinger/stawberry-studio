@@ -1,9 +1,10 @@
 # Strawberry Studio — Revamp Handoff
 
-> Last updated: 2026-05-07. This file is the single source of truth for an LLM
-> session continuing the revamp work. If you're a fresh Claude session reading
-> this: stop. Read this whole document. Then read the plan file referenced in
-> §1. Then start.
+> Historical handoff for the May 2026 in-app agent implementation. The user
+> approved a local Codex-operated migration on 2026-09-16. Start with
+> [MIGRATION_STATUS.md](MIGRATION_STATUS.md), [MIGRATION_PLAN.md](MIGRATION_PLAN.md)
+> and [AGENTS.md](AGENTS.md). This document preserves earlier reasoning; it is
+> not the current implementation plan and must not reintroduce replaced paths.
 
 ---
 

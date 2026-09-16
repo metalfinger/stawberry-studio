@@ -1,8 +1,9 @@
 # Strawberry assistant-operated filmmaking migration
 
 Date: 2026-09-16
-Status: Proposed implementation plan. Product direction agreed; implementation
-has not begun. See [research and product thesis](MIGRATION_RESEARCH.md) and
+Status: Approved, implementation in progress. The first isolated engine/viewer
+proof is running; full parity is not complete. See [current checkpoint](MIGRATION_STATUS.md),
+[research and product thesis](MIGRATION_RESEARCH.md) and
 [proposed context/reference rules](WORKFLOW_RULES.md).
 
 Planning additions: local viewer, detailed node memory, and role/skill boundaries
@@ -48,9 +49,9 @@ history and progress. It must not require a second conversational agent.
 
 ## Local workspace and viewer
 
-The web UI is a required deliverable, not an optional future feature. It runs
-from a local server and can be opened in the Codex in-app browser. Planning does
-not imply the new server/viewer is already implemented or running.
+The web UI is a required deliverable, not an optional future feature. The initial
+local viewer now runs in Codex's in-app browser; the complete required surface
+below remains a release checklist, not a claim of current parity.
 
 One documented startup command should start/check the engine, worker and viewer,
 report health and the actual local URL, detect occupied ports, and shut down
@@ -192,7 +193,7 @@ model realistic for a local full-access Codex host; no tamper-proof claim.
   cancellation and error semantics. Read-only checks first; no generation.
 - [ ] Verify how Codex local invokes Strawberry and sees image/video results.
   Do not spend this milestone on cloud or second-host transport research.
-- [ ] Identify every hidden direct LLM call on the intended path, including
+- [x] Identify every hidden direct LLM call on the intended path, including
   style_bible and identity_traits, not only the conversational agent runner.
 
 Verified read-only on 2026-09-16: installed Higgsfield CLI is 0.1.28, build
@@ -211,30 +212,30 @@ on the installed CLI, not assumptions. Unsupported capabilities are explicit.
 
 - [ ] Implement the contracts above using existing database/domain conventions
   where sound. Keep the first schema limited to the three-cut proof.
-- [ ] Separate domain operations from chat events, narrator messages and HTTP.
+- [x] Separate domain operations from chat events, narrator messages and HTTP.
 - [ ] Implement validated project/story/asset changes, context retrieval and
   reference selection with actionable structured errors.
-- [ ] Implement source-input capture, scoped notes, provenance, proposal/approval
+- [x] Implement source-input capture, scoped notes, provenance, proposal/approval
   distinctions and revision-checked edits. Test faithful retention of long notes.
-- [ ] Freeze approved generation specs; ensure prompt labels match actual media.
+- [x] Freeze approved generation specs; ensure prompt labels match actual media.
 - [ ] Centralize phase readiness so UI and tools cannot disagree or skip required
   pre-production silently. Returning to earlier work is an explicit revision.
-- [ ] Preserve old active takes until replacement outputs are locally ready.
+- [x] Preserve old active takes until replacement outputs are locally ready.
 
 Exit: domain tests cover ordering, inheritance, reference roles, missing inputs,
 approval invalidation and immutable version history without any provider calls.
 
 ## Milestone 2: durable execution and Higgsfield adapter
 
-- [ ] Add a local worker that runs independently of the requesting assistant.
+- [x] Add a local worker that runs independently of the requesting assistant.
 - [ ] Persist jobs before submission, record attempts and remote IDs, use
   ownership/leases, and remove broad project-wide running-state resets.
 - [ ] Add fake and Higgsfield adapters with capability-aware validation.
 - [ ] Model unsupported cancellation and uncertain submission honestly; reconcile
   by known remote ID and never blindly repeat ambiguous billable submissions.
-- [ ] Separate provider success from output collection and local registration.
+- [x] Separate provider success from output collection and local registration.
   Retrying a download must not regenerate the image/video.
-- [ ] Expose durable status/events, with queryable state after reconnect.
+- [x] Expose durable status/events, with queryable state after reconnect.
 - [ ] Treat unknown prices as unknown; record provider credits separately from
   currency estimates. No implicit unlimited-generation assumption.
 
@@ -247,10 +248,10 @@ partial-output and collection-failure tests pass. No cross-job status corruption
   inspect/context, validated changes, prepare, approve/execute, status, review,
   select and export. Add MCP only if Codex integration needs it, as a thin
   transport over the same operations rather than a parallel implementation.
-- [ ] Write concise host skills for story development, production breakdown,
+- [x] Write concise host skills for story development, production breakdown,
   casting/locations/props, cut preparation, and script supervision. No second
   internal LLM agent stack. Host reasoning supplies structured style/trait data.
-- [ ] Provide a minimal browser sequence/reference/take view using reusable
+- [x] Provide a minimal browser sequence/reference/take view using reusable
   frontend pieces, not a new chat interface.
 - [ ] Open the local viewer in Codex and verify visible data updates after a
   tool mutation, approved generation, active-version change and browser refresh.
@@ -343,5 +344,13 @@ the user to debug routine engineering failures or repeatedly approve bookkeeping
 - [x] Proposed implementation sequence and acceptance gates documented.
 - [x] Local viewer, node-memory and skill/sub-agent design documented.
 - [x] Installed Higgsfield CLI and authenticated account checked read-only.
-- [ ] Milestone 0 complete (access checks only; baseline fixes still pending).
+- [x] Baseline restored: 67 original tests and frontend build pass.
+- [x] First isolated CLI/engine/worker/viewer proof with 33 additional tests.
+- [x] Fake three-cut loop, one revision, non-adjacent reuse and backup/restore.
+- [ ] Milestone 0 complete (clean-install and full provider-contract checks remain).
 - [ ] Milestones 1-5 implemented and verified.
+
+See [MIGRATION_STATUS.md](MIGRATION_STATUS.md) for actual commands, file ownership,
+test results, provider limitations and the prioritized next implementation work.
+Unchecked compound tasks may be partially implemented; no unchecked item is
+implicitly waived by the proof. Real Higgsfield generation still needs approval.

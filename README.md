@@ -1,5 +1,23 @@
 # Strawberry Studio
 
+## Local Codex Migration
+
+The first assistant-operated production workspace is implemented as an isolated
+proof. Codex supplies the creative reasoning; a local engine preserves context,
+references, approvals, jobs and all takes. Higgsfield CLI is the first real
+generation adapter. Full replacement parity is still in progress.
+
+**Start the new viewer:** `./studio.sh --port 8788`, then open
+[the local workspace](http://127.0.0.1:8788/studio). Paid execution is disabled by
+default during the proof. `venv/bin/python -m backend.studio demo` creates an
+offline test production without calling any image provider.
+
+Read [migration status and next steps](MIGRATION_STATUS.md),
+[the migration plan](MIGRATION_PLAN.md), and [workflow rules](WORKFLOW_RULES.md).
+The existing app and data remain untouched until the cutover gates pass.
+
+## Existing App (Before Cutover)
+
 Visual AI storyboarding tool. Agentic, canvas-driven, single-chat interface. Pipeline: **Brief → Story → Cast & Scout → Generate**.
 
 ## Stack

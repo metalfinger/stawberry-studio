@@ -1,9 +1,13 @@
 # Agentic Console Redesign — Source of Truth
 
-**Status**: design locked, ready to implement.
+**Status**: historical specification for the old in-app chat architecture.
 **Created**: 2026-05-07.
 **Authors**: Hiren (product) + Claude (synthesis).
-**Read this first.** This document is the canonical specification of the next-generation UX. If a future session conflicts with anything here, this wins until Hiren explicitly amends.
+**Superseded direction:** the user approved a local Codex-operated workflow on
+2026-09-16. Read [MIGRATION_STATUS.md](MIGRATION_STATUS.md) and
+[MIGRATION_PLAN.md](MIGRATION_PLAN.md) for current implementation work. Preserve
+the useful review/history/reference requirements here, but do not rebuild a
+second conversational runtime from this historical specification.
 
 ---
 

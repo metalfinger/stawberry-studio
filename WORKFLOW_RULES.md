@@ -1,7 +1,10 @@
 # Strawberry context and reference preparation
 
 Date: 2026-09-16
-Status: Design proposal informed by the user's decisions; not implemented.
+Status: Agreed target contract. The isolated proof implements field inheritance,
+source retention, exact recipes and take history. Story-state relationships,
+complete semantic readiness and real-provider visual validation remain pending.
+See [implementation status](MIGRATION_STATUS.md); do not assume full completion.
 Related: [migration plan](MIGRATION_PLAN.md), [product thesis](MIGRATION_RESEARCH.md).
 
 ## Confirmed scope
@@ -16,7 +19,7 @@ choice and prompt writing are creative reasoning tasks for Codex. The engine
 validates and faithfully executes the prepared request; it does not silently
 substitute references or impose a universal prompt template.
 
-## Proposed context rules
+## Context rules
 
 1. An absent local field inherits its closest applicable ancestor value.
 2. An explicit local value overrides that field, not every other field in the
