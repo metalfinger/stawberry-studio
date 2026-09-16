@@ -148,3 +148,14 @@
 @media (max-width: 620px) { .studio-header { height: auto; min-height: 60px; flex-wrap: wrap; padding: 12px; } .studio-brand strong { font-size: 16px; } .studio-project-bar { padding: 12px; } .studio-project-bar h1 { font-size: 18px; } .studio-layout { flex-direction: column; } .studio-inspector { width: 100%; flex-basis: auto; border-left: 0; border-top: 1px solid #dce1dd; } .studio-tabs { padding: 0 16px; gap: 20px; } .studio-create { grid-template-columns: 1fr; } .studio-create label { grid-column: 1; } .studio-create button { justify-self: start; } .studio-projects { padding: 24px 16px; } }
 @media (prefers-reduced-motion: reduce) { .studio-running svg, .studio-spin { animation: none; } }
 @media (max-width: 620px) { .studio-inspector { position: fixed; bottom: 0; left: 0; right: 0; max-height: 75vh; overflow: auto; z-index: 30; box-shadow: 0 -8px 28px #172d2226; } }
+.studio-comparison-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+.studio-comparison-side { min-width: 0; }
+.studio-comparison-side label { display: grid; gap: 6px; }
+.studio-comparison-side select { width: 100%; min-width: 0; padding: 6px; }
+.studio-comparison-image { aspect-ratio: 4 / 3; background: #edf0ef; margin: 10px 0; }
+.studio-comparison-image img, .studio-comparison-image video { width: 100%; height: 100%; object-fit: contain; }
+.studio-comparison-side pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 11px; }
+.studio-comparison-side small { display: block; overflow-wrap: anywhere; }
+@media (max-width: 480px) { .studio-comparison-grid { grid-template-columns: minmax(0, 1fr); } }
+.studio-reference-usage > div { padding: 10px 0; border-bottom: 1px solid #dce2df; }
+.studio-reference-usage small { display: block; margin: 6px 0; }

@@ -196,10 +196,15 @@ proof that generation is free or covered by unlimited website usage.
    `/studio/a14b173e-13be-45ab-9efe-e1a399216ed6`, each quoted at 2 credits.
    No approval/enqueue/upload/create occurred. An explicit approval question was
    sent for these three sheets only (6 estimated credits, no retries/cuts/video).
-3. **Viewer parity.** Add comparison, reference-network navigation, planned missing
+3. **Viewer parity.** Side-by-side take comparison now shows exact recipes and
+   feedback without changing selected takes. Take inspection includes reverse
+   reference usage and navigation to consuming nodes. Continue planned missing
    views/states, approved batches, fuller field editing and selective project
    export/import. Persisted feedback is available but no automatic refinement
    prompt synthesis runs in the server; the host must read it and compose a recipe.
+   Comparison verified with two loaded images at desktop and 390px widths;
+   selection remained unchanged. Browser verified Mara's identity-reference
+   uses and navigation to the third cut, including its non-adjacent dependency.
 4. **Cutover and cleanup.** Verify the old feature inventory, then remove old
    conversational agents/chat surfaces/direct LLM calls and redundant storage
    paths. Switch to one normal launch path, trim dependencies, add CI and a

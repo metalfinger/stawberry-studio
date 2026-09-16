@@ -7,6 +7,7 @@ import ProductionInspector, { ReviewStatus } from './ProductionInspector';
 import TakeReview from './TakeReview';
 import JobActivity from './JobActivity';
 import RecipeApproval from './RecipeApproval';
+import TakeComparison from './TakeComparison';
 import './studio.css';
 
 function Visual({ media, interactive = false }: { media?: Media; interactive?: boolean }) {
@@ -230,6 +231,7 @@ function Workspace({ projectId }: { projectId?: string }) {
                 {media.id === detail.node.active_media_id ? <><Check size={13} />Selected</> : 'Use take'}</button>
               <button onClick={() => setFocusedMedia(media)}>Review take</button>
             </div>)}</div>{!detail.media.length && <p className="studio-muted">No takes.</p>}</section>
+            <TakeComparison key={detail.node.id} takes={detail.media} selectedId={detail.node.active_media_id} review={setFocusedMedia} />
             <section><h3>Generation recipes</h3>{nodeRecipes.map(recipeView)}{!nodeRecipes.length && <p className="studio-muted">No prepared recipes.</p>}</section>
             <details><summary>Source instructions ({detail.sources.length})</summary>{detail.sources.map(source => <section key={source.id}><small>{source.node_name} / {source.author} / {source.status}</small><p className="studio-notes">{source.text}</p></section>)}</details>
             <details><summary>Revision history</summary>{detail.revisions.map(r => <p key={r.revision}>r{r.revision} / {r.reason}</p>)}</details>
@@ -244,6 +246,18 @@ function Workspace({ projectId }: { projectId?: string }) {
       <p className="studio-muted">{focusedMedia.metadata.fake ? 'Offline fixture / not AI generated' : focusedMedia.metadata.model ?? 'Imported reference'}</p>
       {mediaDetail && data && <TakeReview key={`${mediaDetail.media.id}-${mediaDetail.media.review.revision}`} detail={mediaDetail} nodes={data.nodes} busy={busy} action={action} reviewed={setMediaDetail} />}
       {mediaDetail?.recipe && recipeView(mediaDetail.recipe)}
+      <section className="studio-reference-usage"><h3>Used as a reference</h3>
+        {data?.recipes.filter(r => r.spec.references.some(ref => ref.media_id === focusedMedia.id)).map(recipe => {
+          const target = findNode(recipe.node_id);
+          const job = data.jobs.find(j => j.recipe_id === recipe.id);
+          return <div key={recipe.id}>
+            <button disabled={!target} onClick={() => { if (target) { setFocusedMedia(null); selectNode(target); } }}>{target?.name ?? recipe.node_id}<ChevronRight size={14} /></button>
+            <small>{recipe.spec.intent} / {job?.state ?? 'not submitted'}</small>
+            {recipe.spec.references.filter(ref => ref.media_id === focusedMedia.id).map((ref, i) => <p key={i}><strong>{ref.role}</strong>: {ref.instruction}</p>)}
+          </div>;
+        })}
+        {!data?.recipes.some(r => r.spec.references.some(ref => ref.media_id === focusedMedia.id)) && <p className="studio-muted">No saved recipes reference this take.</p>}
+      </section>
       {!!mediaDetail?.feedback.length && <section className="studio-feedback-history"><h3>Feedback history</h3>{mediaDetail.feedback.map(item => <div key={item.id}><small>{new Date(item.created_at * 1000).toLocaleString()}</small><p className="studio-notes">{item.text}</p></div>)}</section>}
       <form onSubmit={e => { e.preventDefault(); void action(async () => { await api(`/media/${focusedMedia.id}/feedback`, { text: feedback }); setMediaDetail(await api<MediaDetail>(`/media/${focusedMedia.id}`)); setFeedback(''); setNotice('Feedback saved to this take.'); }); }}>
         <label htmlFor="take-feedback">Feedback on this take</label><textarea id="take-feedback" value={feedback} onChange={e => setFeedback(e.target.value)} rows={2} required />
