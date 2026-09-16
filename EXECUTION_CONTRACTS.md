@@ -1,6 +1,6 @@
 # Execution and recovery contracts
 
-Implementation in progress. This complements `PRODUCTION_CONTRACTS.md` and is
+Implemented and offline-verified. This complements `PRODUCTION_CONTRACTS.md` and is
 not evidence that a paid generation has been tested.
 
 - Workers publish a durable heartbeat, current job and enabled providers. A
@@ -46,9 +46,11 @@ No create/upload was executed for this inspection.
 - [x] Explicit known/unknown cost approval and pre-submit estimate checks.
 - [x] DNS-pinned collection, redirect/size/incomplete-output tests.
 - [x] Viewer activity, job events and recovery controls implemented.
-- [ ] Full test/build/browser verification and documented commit.
+- [x] Full test/build/browser verification and documented commit.
 
-Verified: 154 offline tests, frontend build, scoped Ruff/ESLint. Browser tests
+Verified: 155 offline tests, frontend build, scoped Ruff/ESLint. Browser tests
 covered worker status, persisted events, uncertain preview/link, collection to
 ready, queued cancellation, and a 390px layout with no overflow. Known-cost
-approval preview inspected without submitting. Unknown-cost UI test remains.
+approval preview inspected without submitting. An isolated fake-provider UI test
+verified unknown-cost approval stays disabled until acknowledged, then queues.
+Real create/upload receipts still require the separately approved visual proof.

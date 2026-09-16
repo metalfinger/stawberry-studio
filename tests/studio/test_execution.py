@@ -7,7 +7,7 @@ from PIL import Image
 
 from backend.studio.execution import Execution, validate_cost
 from backend.studio.models import Approval, MediaReview, NodeCreate, RecipeCreate, Reconciliation, Reference
-from backend.studio.providers import Higgsfield, SubmissionUnknown
+from backend.studio.providers import FakeProvider, Higgsfield, SubmissionUnknown
 from backend.studio.service import Studio
 from backend.studio.store import Store, StudioError, encoded
 from backend.studio.worker import Worker
@@ -241,6 +241,23 @@ def test_cost_policy(estimate, policy, allowed):
     else:
         with pytest.raises(StudioError):
             validate_cost(estimate, policy)
+
+
+def test_unknown_cost_requires_explicit_recipe_approval(studio, monkeypatch):
+    original = FakeProvider.prepare
+    monkeypatch.setattr(
+        FakeProvider, "prepare", lambda self, spec: original(self, spec) | {"estimate": {"credits": None}}
+    )
+    node = studio.create_node(NodeCreate(kind="project", name="Unknown price fixture"))
+    recipe = studio.prepare(
+        RecipeCreate(node_id=node["id"], provider="fake", model="fixture", prompt="Offline", intent="Offline")
+    )
+    approval = Approval(fingerprint=recipe["fingerprint"], user_decision="Offline test")
+    with pytest.raises(StudioError, match="acknowledge unknown cost"):
+        studio.approve(recipe["id"], approval)
+    assert studio.recipe(recipe["id"])["approved_at"] is None
+    studio.approve(recipe["id"], approval.model_copy(update={"allow_unknown_cost": True}))
+    assert studio.enqueue(recipe["id"])["state"] == "queued"
 
 
 def test_recovery_requires_reference_identity_confirmation(studio, monkeypatch):

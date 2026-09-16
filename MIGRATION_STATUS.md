@@ -116,13 +116,14 @@ All seven images are **test fixtures, not AI generations**.
 This is not evidence that visual identity or geography is solved.
 The current fixture is at `/studio/9a0a939b-8fa3-4933-9b3c-7fc3f497ec09` in this
 checkout. Earlier Offline Proof data remains untouched. Isolated workspace
-schema 2 adds review records; existing images are not implicitly approved.
+schema 3 adds execution heartbeat and cost policies alongside review records;
+existing images are not implicitly approved.
 
 Verified in this checkout:
 
 - Original baseline: 67 tests pass; missing-prompt phase gate and TypeScript build
   failures fixed. Previously ignored test files are tracked in git.
-- New engine suite: 55 tests. Total `pytest -q -m 'not live'`: **122 passed**.
+- New engine suite: 88 tests. Total `pytest -q -m 'not live'`: **155 passed**.
 - Fake-provider proof, worker restart, active lease, uncertain submit, collection
   retry, duplicate enqueue, parent override, missing reference, raw-note retention,
   source-context staleness, revision conflicts, history and backup/restore tested.
@@ -181,13 +182,15 @@ proof that generation is free or covered by unlimited website usage.
    queued cancellation, guarded two-step reconciliation, explicit known/unknown
    cost approvals, atomic estimate-policy rechecks, DNS-pinned HTTPS collection,
    long-call lease renewal and partial-output preservation. Full offline suite:
-   **154 passed**; build and scoped Ruff/ESLint pass. Browser confirms worker
+   **155 passed**; build and scoped Ruff/ESLint pass. Browser confirms worker
    status and persisted job events. Isolated browser fixture verified uncertain
    submission preview/link, collection to ready without resubmission, and queued
    cancellation. Narrow 390px activity layout has no horizontal overflow. Real
    prepared recipe displays exact prompt/settings, 2-credit estimate and ceiling;
-   its approval button was not clicked. Unknown-cost acknowledgement still needs
-   browser coverage. See `EXECUTION_CONTRACTS.md`.
+   its approval button was not clicked. Isolated fake-provider browser test
+   confirms unknown-cost approval is disabled until acknowledged, then queues
+   successfully and shows that no enabled worker is available. See
+   `EXECUTION_CONTRACTS.md`.
 2. **Bounded visual proof with the user.** Present exact character/location/prop
    sheet recipes, reference order and known/unknown credit costs. Obtain approval,
    generate and inspect pixels. Then three cuts, non-adjacent reuse, one revision
