@@ -64,7 +64,7 @@ function Workspace({ projectId }: { projectId?: string }) {
     return () => { document.removeEventListener('keydown', keydown); previous?.focus(); };
   }, [focusedMedia]);
 
-  const refresh = useCallback(async (isActive = () => true) => {
+  const refresh = useCallback(async (isActive: () => boolean = () => true) => {
     const sequence = ++readSequence.current;
     if (!projectId) {
       const result = await api<ProductionNode[]>('/projects');
