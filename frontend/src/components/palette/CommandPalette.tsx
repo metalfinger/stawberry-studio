@@ -97,12 +97,3 @@ export function CommandPalette({ open, onClose, onOpenLibrary }: Props) {
     </div>
   )
 }
-
-function typeIntoInput(text: string) {
-  const ta = document.querySelector<HTMLTextAreaElement>('.input-dock__textarea')
-  if (!ta) return
-  // React sets value via prop tracking; we have to use the native setter.
-  const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')!.set!
-  setter.call(ta, text)
-  ta.dispatchEvent(new Event('input', { bubbles: true }))
-}

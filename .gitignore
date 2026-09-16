@@ -49,6 +49,8 @@ frontend/dist/
 # Database files (local development)
 *.db
 *.db-journal
+*.db-wal
+*.db-shm
 *.sqlite
 storage/generated/
 storage/projects/
@@ -63,8 +65,7 @@ server.log
 .adk/
 backend/.adk/
 
-# Test files (optional - remove if you want to track these)
-test_*.py
+# Local diagnostic scripts (tests are versioned)
 debug_*.py
 fix_*.py
 

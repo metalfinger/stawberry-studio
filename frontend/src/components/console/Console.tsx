@@ -331,7 +331,7 @@ export function Console({ projectId, initialPhase, onNodeUpdate, onClose }: Cons
       <InputDock
         onSend={sendMessage}
         agentName={agentName}
-        disabled={connecting}
+        disabled={connecting || replaying}
       />
     </div>
   )

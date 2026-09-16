@@ -7,20 +7,32 @@ import { useEffect, useState } from 'react'
 type HoverState = { url: string; x: number; y: number } | null
 let listeners: Array<(s: HoverState) => void> = []
 let timer: ReturnType<typeof setTimeout> | null = null
+let current: HoverState = null
+let pending: HoverState = null
 
-function emit(s: HoverState) { listeners.forEach(fn => fn(s)) }
+function emit(s: HoverState) {
+  current = s
+  listeners.forEach(fn => fn(s))
+}
 
 export const hoverPreview = {
   show(url: string, x: number, y: number, delay = 250) {
     if (timer) clearTimeout(timer)
-    timer = setTimeout(() => emit({ url, x, y }), delay)
+    pending = { url, x, y }
+    timer = setTimeout(() => {
+      timer = null
+      emit(pending)
+      pending = null
+    }, delay)
   },
   move(x: number, y: number) {
-    listeners.forEach(fn => fn(prev => prev ? ({ ...prev, x, y }) : prev as any) as any)
+    if (pending) pending = { ...pending, x, y }
+    if (current) emit({ ...current, x, y })
   },
   hide() {
     if (timer) clearTimeout(timer)
     timer = null
+    pending = null
     emit(null)
   },
 }
@@ -28,17 +40,16 @@ export const hoverPreview = {
 export function HoverPreviewLayer() {
   const [state, setState] = useState<HoverState>(null)
   useEffect(() => {
-    const fn = (s: HoverState) => setState(typeof s === 'function' ? (s as any)(state) : s)
+    const fn = (s: HoverState) => setState(s)
     listeners.push(fn)
     return () => { listeners = listeners.filter(l => l !== fn) }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   if (!state) return null
-  const W = 380
-  const H = 380
-  const left = Math.min(window.innerWidth - W - 16, state.x + 24)
-  const top = Math.min(window.innerHeight - H - 16, state.y + 24)
+  const W = Math.min(380, window.innerWidth - 32)
+  const H = Math.min(380, window.innerHeight - 32)
+  const left = Math.max(16, Math.min(window.innerWidth - W - 16, state.x + 24))
+  const top = Math.max(16, Math.min(window.innerHeight - H - 16, state.y + 24))
   return (
     <div
       style={{
@@ -57,7 +68,7 @@ export function HoverPreviewLayer() {
 export function useHoverPreview(url: string | undefined) {
   return {
     onMouseEnter: (e: React.MouseEvent) => { if (url) hoverPreview.show(url, e.clientX, e.clientY) },
-    onMouseMove: (e: React.MouseEvent) => { if (url) hoverPreview.show(url, e.clientX, e.clientY, 0) },
+    onMouseMove: (e: React.MouseEvent) => { if (url) hoverPreview.move(e.clientX, e.clientY) },
     onMouseLeave: () => hoverPreview.hide(),
   }
 }

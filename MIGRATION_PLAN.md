@@ -183,8 +183,8 @@ model realistic for a local full-access Codex host; no tamper-proof claim.
 
 ## Milestone 0: trustworthy baseline and bounded integration checks
 
-- [ ] Track the existing real tests; remove the blanket test ignore rule.
-- [ ] Fix frontend build errors and resolve the asset-gate test disagreement
+- [x] Track the existing real tests; remove the blanket test ignore rule.
+- [x] Fix frontend build errors and resolve the asset-gate test disagreement
   against intended behavior, rather than merely changing the assertion.
 - [ ] Record tested dependency/runtime versions and reproducible install steps.
 - [ ] Verify installed Higgsfield CLI version, schema discovery, accepted media
