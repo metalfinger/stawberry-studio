@@ -7,7 +7,8 @@ import shutil
 import time
 from pathlib import Path
 
-from backend.studio.models import Approval, NodeCreate, NodePatch, RecipeCreate, SourceCreate
+from backend.studio.models import Approval, MediaReview, NodeCreate, NodePatch, RecipeCreate, Reorder, SourceCreate
+from backend.studio.production import ASSET_KINDS, ProductionRules
 from backend.studio.store import Store, StudioError, digest, encoded, identifier
 
 PARENTS = {
@@ -23,6 +24,7 @@ PARENTS = {
 class Studio:
     def __init__(self, store: Store):
         self.store = store
+        self.rules = ProductionRules(self)
 
     def create_node(self, request: NodeCreate):
         with self.store.connection(write=True) as conn:
@@ -92,6 +94,7 @@ class Studio:
             ).fetchall()
             for child in descendants:
                 self._context(conn, child["id"])
+            self.rules.validate_project(conn, node["project_id"])
             node = self.store.one(conn, "nodes", node_id)
             self.store.revision(conn, node, patch.reason, patch.source_id)
             return self._node(node)
@@ -176,12 +179,44 @@ class Studio:
 
     def context(self, node_id: str):
         with self.store.connection() as conn:
-            return self._context(conn, node_id)
+            return self._generation_context(conn, node_id)
+
+    def _generation_context(self, conn, node_id):
+        return {**self._context(conn, node_id), "production": self.rules.resolve(conn, node_id)}
+
+    def readiness(self, node_id):
+        with self.store.connection() as conn:
+            node = self.store.one(conn, "nodes", node_id)
+            if node["kind"] != "project":
+                return self.rules.resolve(conn, node_id)["readiness"]
+            cuts = [
+                dict(r)
+                for r in conn.execute(
+                    "SELECT * FROM nodes WHERE project_id=? AND kind='cut' ORDER BY position,created_at", (node_id,)
+                )
+            ]
+            results = [
+                {"node_id": cut["id"], "name": cut["name"], **self.rules.resolve(conn, cut["id"])["readiness"]}
+                for cut in cuts
+            ]
+            return {
+                "ready": bool(results) and all(cut["ready"] for cut in results),
+                "cuts": results,
+                "issues": []
+                if cuts
+                else [
+                    {
+                        "code": "story_empty",
+                        "message": "Create the scene, shot and cut breakdown first",
+                        "node_id": node_id,
+                    }
+                ],
+            }
 
     def inspect(self, node_id: str):
         with self.store.connection() as conn:
             node = self.store.one(conn, "nodes", node_id)
-            context = self._context(conn, node_id)
+            context = self._generation_context(conn, node_id)
             return {
                 "node": self._node(node),
                 "context": context,
@@ -194,7 +229,7 @@ class Studio:
                     )
                 ],
                 "media": [
-                    self._media(dict(r))
+                    self._media(conn, dict(r))
                     for r in conn.execute("SELECT * FROM media WHERE node_id=? ORDER BY created_at DESC", (node_id,))
                 ],
             }
@@ -209,15 +244,26 @@ class Studio:
 
     def media(self, media_id):
         with self.store.connection() as conn:
-            media = self._media(self.store.one(conn, "media", media_id))
+            media = self._media(conn, self.store.one(conn, "media", media_id))
             recipe_id = media["metadata"].get("recipe_id")
             return {
                 "media": media,
+                "review_context": self.rules.review_context(conn, media),
                 "feedback": [
                     dict(r)
                     for r in conn.execute("SELECT * FROM feedback WHERE media_id=? ORDER BY created_at,id", (media_id,))
                 ],
                 "recipe": self._recipe(self.store.one(conn, "recipes", recipe_id)) if recipe_id else None,
+                "review_history": [
+                    {
+                        **dict(r),
+                        "depicted_assets": json.loads(r["depicted_assets"]),
+                        "subject_hashes": json.loads(r["subject_hashes"]),
+                    }
+                    for r in conn.execute(
+                        "SELECT * FROM media_reviews WHERE media_id=? ORDER BY revision DESC", (media_id,)
+                    )
+                ],
             }
 
     def projects(self):
@@ -241,7 +287,7 @@ class Studio:
                     )
                 ],
                 "media": [
-                    self._media(dict(r))
+                    self._media(conn, dict(r))
                     for r in conn.execute(
                         "SELECT m.* FROM media m JOIN nodes n ON n.id=m.node_id WHERE n.project_id=? ORDER BY m.created_at DESC",
                         (project_id,),
@@ -263,9 +309,13 @@ class Studio:
                 ],
             }
 
-    @staticmethod
-    def _media(row):
-        return {**row, "metadata": json.loads(row["metadata"]), "url": f"/api/studio/media/{row['id']}/file"}
+    def _media(self, conn, row):
+        return {
+            **row,
+            "metadata": json.loads(row["metadata"]),
+            "url": f"/api/studio/media/{row['id']}/file",
+            "review": self.rules.review(conn, row),
+        }
 
     def import_media(self, node_id: str, path: str | Path, label: str, *, job_id=None, metadata=None):
         from PIL import Image
@@ -295,7 +345,7 @@ class Studio:
                     raise StudioError("job_target", "Job and media target differ")
                 existing = conn.execute("SELECT * FROM media WHERE job_id=? AND sha256=?", (job_id, sha)).fetchone()
                 if existing:
-                    return self._media(dict(existing))
+                    return self._media(conn, dict(existing))
             if not destination.exists():
                 temp = self.store.media_dir / (identifier() + ".partial")
                 try:
@@ -322,7 +372,7 @@ class Studio:
                     time.time(),
                 ),
             )
-            return self._media(self.store.one(conn, "media", media_id))
+            return self._media(conn, self.store.one(conn, "media", media_id))
 
     @staticmethod
     def _file_hash(path):
@@ -347,7 +397,7 @@ class Studio:
         prepared = provider.prepare(request)
         with self.store.connection(write=True) as conn:
             node = self.store.one(conn, "nodes", request.node_id)
-            context = self._context(conn, node["id"])
+            context = self._generation_context(conn, node["id"])
             references = []
             for ref in request.references:
                 media = self.store.one(conn, "media", ref.media_id)
@@ -361,11 +411,13 @@ class Studio:
                         "source_node_id": owner["id"],
                         "source_revision": owner["revision"],
                         "source_context": self._context(conn, owner["id"]),
+                        "review_revision": self.rules.review(conn, media)["revision"],
                     }
                 )
             slots = [int(n) for n in re.findall(r"@Image(\d+)", request.prompt)]
             if any(n < 1 or n > len(references) for n in slots):
                 raise StudioError("reference_binding", "Prompt names an image that is not attached")
+            self.rules.validate_recipe(conn, node["id"], references)
             spec = {**request.model_dump(), **prepared, "references": references}
             fingerprint = digest({"spec": spec, "context": context})
             recipe_id = identifier()
@@ -393,14 +445,18 @@ class Studio:
             return self._recipe(self.store.one(conn, "recipes", recipe_id))
 
     def _fresh(self, conn, recipe):
-        if self._context(conn, recipe["node_id"]) != json.loads(recipe["context"]):
+        if self._generation_context(conn, recipe["node_id"]) != json.loads(recipe["context"]):
             raise StudioError("context_changed", "Context changed; prepare and approve a new recipe", 409)
         for ref in json.loads(recipe["spec"])["references"]:
             owner = self.store.one(conn, "nodes", ref["source_node_id"])
-            if owner["revision"] != ref["source_revision"] or (
-                "source_context" in ref and self._context(conn, owner["id"]) != ref["source_context"]
+            media = self.store.one(conn, "media", ref["media_id"])
+            if (
+                owner["revision"] != ref["source_revision"]
+                or ("source_context" in ref and self._context(conn, owner["id"]) != ref["source_context"])
+                or self.rules.review(conn, media)["revision"] != ref.get("review_revision")
             ):
                 raise StudioError("reference_changed", "A reference source changed; review a new recipe", 409)
+        self.rules.validate_recipe(conn, recipe["node_id"], json.loads(recipe["spec"])["references"])
 
     def approve(self, recipe_id: str, approval: Approval):
         with self.store.connection(write=True) as conn:
@@ -452,6 +508,28 @@ class Studio:
                 raise StudioError("media_target", "This take belongs to a different node")
             if node["revision"] != expected_revision:
                 raise StudioError("revision_conflict", "Node changed; refresh before selecting", 409)
+            review = self.rules.review(conn, media)
+            if review["status"] != "approved" or review["stale"]:
+                raise StudioError(
+                    "review_required", "Approve this take against its current definition before selecting it", 409
+                )
+            if node["kind"] == "cut":
+                production = self.rules.resolve(conn, node_id)
+                if not production["readiness"]["ready"]:
+                    raise StudioError(
+                        "production_not_ready",
+                        "Resolve this cut's readiness issues before selecting its final take",
+                        409,
+                    )
+                missing = set(self.rules.asset_ids(production["scope"])) - set(review["depicted_assets"])
+                if missing:
+                    names = [self.store.one(conn, "nodes", item)["name"] for item in sorted(missing)]
+                    raise StudioError(
+                        "depiction_missing",
+                        "Confirm these required assets are visible before selecting the final take: "
+                        + ", ".join(names),
+                        409,
+                    )
             conn.execute(
                 "UPDATE nodes SET active_media_id=?,revision=revision+1,updated_at=? WHERE id=?",
                 (media_id, time.time(), node_id),
@@ -459,6 +537,69 @@ class Studio:
             node = self.store.one(conn, "nodes", node_id)
             self.store.revision(conn, node, "Selected take " + media_id)
             return self._node(node)
+
+    def review_media(self, media_id: str, request: MediaReview):
+        with self.store.connection(write=True) as conn:
+            media = self.store.one(conn, "media", media_id)
+            node = self.store.one(conn, "nodes", media["node_id"])
+            previous = self.rules.review(conn, media)
+            if previous["revision"] != request.expected_revision:
+                raise StudioError(
+                    "review_conflict", "This take was reviewed elsewhere; inspect the current decision", 409
+                )
+            if self.rules.review_context(conn, media) != request.expected_context:
+                raise StudioError(
+                    "review_context_changed",
+                    "Production details changed during review; reopen this take before deciding",
+                    409,
+                )
+            if media["job_id"] and self.store.one(conn, "jobs", media["job_id"])["state"] != "ready":
+                raise StudioError("output_not_ready", "Wait for this job's outputs to finish collecting", 409)
+            subjects = list(
+                dict.fromkeys([*([node["id"]] if node["kind"] in ASSET_KINDS else []), *request.depicted_assets])
+            )
+            for subject in subjects:
+                self.rules.target(conn, node, subject, ASSET_KINDS)
+            conn.execute(
+                "INSERT INTO media_reviews VALUES (?,?,?,?,?,?,?,?)",
+                (
+                    media_id,
+                    previous["revision"] + 1,
+                    request.status,
+                    request.user_decision,
+                    encoded(subjects),
+                    self.rules.definition(conn, node["id"]),
+                    encoded({subject: self.rules.definition(conn, subject) for subject in subjects}),
+                    time.time(),
+                ),
+            )
+            return self._media(conn, media)
+
+    def reorder(self, parent_id: str, request: Reorder):
+        with self.store.connection(write=True) as conn:
+            self.store.one(conn, "nodes", parent_id)
+            siblings = {
+                r["id"]: dict(r)
+                for r in conn.execute("SELECT * FROM nodes WHERE parent_id=? AND kind=?", (parent_id, request.kind))
+            }
+            if (
+                len(request.ordered_ids) != len(set(request.ordered_ids))
+                or set(request.ordered_ids) != set(siblings)
+                or set(request.expected_revisions) != set(siblings)
+            ):
+                raise StudioError("order_conflict", "Reorder must include every current sibling exactly once", 409)
+            if any(node["revision"] != request.expected_revisions[node_id] for node_id, node in siblings.items()):
+                raise StudioError("revision_conflict", "A sibling changed; inspect before reordering", 409)
+            conn.execute("UPDATE nodes SET position=-position WHERE parent_id=? AND kind=?", (parent_id, request.kind))
+            for position, node_id in enumerate(request.ordered_ids, 1):
+                changed = position != siblings[node_id]["position"]
+                conn.execute(
+                    "UPDATE nodes SET position=?,revision=revision+?,updated_at=? WHERE id=?",
+                    (position, int(changed), time.time(), node_id),
+                )
+                if changed:
+                    self.store.revision(conn, self.store.one(conn, "nodes", node_id), request.reason)
+            return [self._node(self.store.one(conn, "nodes", node_id)) for node_id in request.ordered_ids]
 
     def feedback(self, media_id, text):
         with self.store.connection(write=True) as conn:

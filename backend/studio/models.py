@@ -63,6 +63,7 @@ class Reference(Contract):
         "end_frame",
     ]
     instruction: str = Field(min_length=1)
+    subjects: list[str] = Field(default_factory=list)
 
 
 class RecipeCreate(Contract):
@@ -109,3 +110,18 @@ class Selection(Contract):
 
 class Feedback(Contract):
     text: str = Field(min_length=1)
+
+
+class MediaReview(Contract):
+    expected_revision: int = Field(ge=0)
+    expected_context: str = Field(min_length=64, max_length=64)
+    status: Literal["approved", "rejected"]
+    user_decision: str = Field(min_length=1)
+    depicted_assets: list[str] = Field(default_factory=list)
+
+
+class Reorder(Contract):
+    kind: NodeKind
+    ordered_ids: list[str] = Field(min_length=1)
+    expected_revisions: dict[str, int]
+    reason: str = Field(min_length=1)

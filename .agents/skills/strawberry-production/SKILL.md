@@ -89,23 +89,62 @@ is retained during this proof. Scene/shot/cut positions are assigned atomically.
 ```
 
 Absent local values inherit. `set` overrides, `clear` suppresses inheritance,
-`inherit` removes a local override. `add`/`remove` apply to collections. Do not
-confuse scene-available cast with visible cast. Story-state propagation is not
-an automatic simulation: explicitly inspect and record the intended continuity
-at each affected scope until a validated state-transition operation exists.
+`inherit` removes a local override. `add`/`remove` apply to collections. Read
+`PRODUCTION_CONTRACTS.md` for validated relationship and continuity fields.
+
+- `available_cast` lists possible characters; `visible_cast` declares the actual
+  intended frame. Both use stored character IDs, never names. An empty visible
+  list means nobody. Missing visible cast means unknown, not "everyone available".
+- `location_id` identifies the exact location/sublocation. Explicit `clear` means
+  no location requirement. A parent location does not silently cover a sublocation.
+- `required_props` uses prop IDs; explicitly set `[]` when no props appear.
+- Cuts require `style` (normally inherited), and an `action` or local action notes.
+- Cut-local `story_order` is chronology. `reorder PARENT_ID input.json` changes
+  editorial positions using `kind`, `ordered_ids`, `expected_revisions` for every
+  sibling of that kind, and `reason`. It never changes story chronology.
+- Cut-local `continuity_from` lists earlier story-state sources, not necessarily
+  adjacent editorial cuts. `continuity.before` / `continuity.after` map asset IDs
+  to attribute/value objects. Conflicting incoming states require explicit before
+  values. `owner_id` must refer to a character/location or null. Cycles fail.
+
+Read `readiness NODE_ID` and `context NODE_ID` before preparing. Context includes
+linked asset definitions and selected references, continuity state/provenance and
+actionable blockers. These are authored facts, not simulated physics or verified
+pixels. Approved selected upstream cuts are required for continuity dependencies.
 
 ## Sheets and reference library
 
 Plan character, location and prop sheets before storyboard generation. A sheet
 may be one multi-view image or several base-conditioned views. Do not enforce
 a universal grid, identity-first extra generation, or speculative turnarounds.
-Every generated take remains reference-eligible; approved sources are the default.
-Rejected takes require deliberate, scoped reuse, not promotion to identity truth.
+Every generated take is retained. The current strict execution path accepts only
+approved, fresh references. Scoped reuse of rejected images is not implemented;
+do not bypass that check or pretend rejection means approved identity truth.
 
 Import approved local inputs with `import-media NODE_ID PATH --label LABEL`.
-This copies bytes into managed media storage and records a checksum. Select a
-take with `select NODE_ID MEDIA_ID --revision N`. Importing is not approval of
-the image's visual accuracy. Never overwrite a previous take to implement a redo.
+This copies bytes into managed media storage and records a checksum. Importing
+is not visual approval. Inspect `media MEDIA_ID` and show the exact image to the
+human. Record their decision with `review MEDIA_ID input.json`:
+
+```json
+{
+  "expected_revision": 0,
+  "expected_context": "COPY_THE_REVIEW_CONTEXT_HASH_FROM_MEDIA_RESPONSE",
+  "status": "approved",
+  "user_decision": "The user's actual review decision",
+  "depicted_assets": ["CONFIRMED_ASSET_ID"]
+}
+```
+
+Use `media.review.revision`, not the node revision. The returned `review_context`
+binds current definitions; stale review windows fail instead of approving unseen
+changes. For asset sheets, the owning asset is implicit. On cut images, only
+record entities the human confirms are present, not everything the prompt asked
+for. An image may be approved as a partial reference without being a final cut.
+Select with `select NODE_ID MEDIA_ID --revision N` using the current node revision.
+Final cut selection also checks readiness and confirmed visible subject coverage.
+Review history is append-only. Changed definitions require explicit re-review;
+old media remain stored. Never overwrite a previous take to implement a redo.
 
 ## Prepare, approve, execute
 
@@ -113,9 +152,14 @@ the image's visual accuracy. Never overwrite a previous take to implement a redo
    including non-adjacent cuts. Inspect pixels, not only old prompts.
 2. Prepare a JSON recipe with `node_id`, `provider`, `model`, `intent`, final
    `prompt`, `settings`, and ordered `references`. Each reference has `media_id`,
-   `role` and `instruction` describing what to borrow/preserve/exclude. Roles:
+   `role` and `instruction` describing what to borrow/preserve/exclude. Add
+   `subjects` with confirmed asset IDs when borrowing entities from a multi-asset
+   cut image. Roles:
    base, identity, wardrobe, location, prop, pose, composition, lighting, style,
    start_frame, end_frame. An edit base is optional, with at most one per recipe.
+   Identity, location and prop roles must cover the required assets; composition
+   or style cannot stand in for identity. Base/start/end frames can cover their
+   confirmed subjects. No automatic choice of the most recent cut.
 3. Call `prepare input.json`. Higgsfield preparation discovers schema/defaults
    read-only and freezes the effective settings. Do not assume a model's API
    capability or website subscription benefit is exposed through this CLI.

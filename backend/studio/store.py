@@ -74,6 +74,12 @@ CREATE TABLE IF NOT EXISTS job_events (
  state TEXT NOT NULL, details TEXT NOT NULL, created_at REAL NOT NULL
 );
 CREATE INDEX IF NOT EXISTS job_events_job ON job_events(job_id,sequence);
+CREATE TABLE IF NOT EXISTS media_reviews (
+ media_id TEXT NOT NULL REFERENCES media(id), revision INTEGER NOT NULL,
+ status TEXT NOT NULL, user_decision TEXT NOT NULL, depicted_assets TEXT NOT NULL,
+ definition_hash TEXT NOT NULL, subject_hashes TEXT NOT NULL, created_at REAL NOT NULL,
+ PRIMARY KEY(media_id,revision)
+);
 """
 
 
@@ -90,11 +96,11 @@ class Store:
         self.media_dir.mkdir(exist_ok=True)
         self.path = self.home / "production.sqlite"
         with self.connection() as conn:
-            if conn.execute("PRAGMA user_version").fetchone()[0] not in {0, 1}:
+            if conn.execute("PRAGMA user_version").fetchone()[0] not in {0, 1, 2}:
                 raise StudioError("schema_unsupported", "This workspace requires a different engine version")
             conn.execute("PRAGMA journal_mode=WAL")
             conn.executescript(SCHEMA)
-            conn.execute("PRAGMA user_version=1")
+            conn.execute("PRAGMA user_version=2")
 
     @contextmanager
     def connection(self, *, write=False):

@@ -14,6 +14,11 @@ offline test production without calling any image provider.
 
 Read [migration status and next steps](MIGRATION_STATUS.md),
 [the migration plan](MIGRATION_PLAN.md), and [workflow rules](WORKFLOW_RULES.md).
+The current engine also enforces [production contracts](PRODUCTION_CONTRACTS.md):
+explicit visible cast/location/props, reviewed reference coverage, non-adjacent
+continuity dependencies, version-specific visual review and editorial reordering
+independent of story chronology. These are deterministic checks, not a claim that
+AI-generated imagery has been visually validated.
 The existing app and data remain untouched until the cutover gates pass.
 
 ## Existing App (Before Cutover)

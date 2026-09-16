@@ -27,7 +27,7 @@ def test_complete_offline_proof_backup_restore_and_no_repeated_spend(tmp_path):
         "ready",
     ]
     recipe = studio.prepare(
-        RecipeCreate(node_id=cuts[0]["id"], provider="fake", model="test", prompt="frame", intent="pending")
+        RecipeCreate(node_id=project_id, provider="fake", model="test", prompt="Style swatch", intent="pending")
     )
     studio.approve(recipe["id"], Approval(fingerprint=recipe["fingerprint"], user_decision="Offline test"))
     job = studio.enqueue(recipe["id"])

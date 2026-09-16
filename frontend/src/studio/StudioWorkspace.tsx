@@ -3,6 +3,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Activity, ArrowLeft, Check, ChevronRight, Clapperboard, FileText, Images, LoaderCircle, Menu, Plus, RefreshCw, Save, X } from 'lucide-react';
 import { api } from './types';
 import type { Job, Media, MediaDetail, NodeDetail, ProductionNode, ProjectData, Recipe } from './types';
+import ProductionInspector, { ReviewStatus } from './ProductionInspector';
+import TakeReview from './TakeReview';
 import './studio.css';
 
 function Visual({ media, interactive = false }: { media?: Media; interactive?: boolean }) {
@@ -55,7 +57,7 @@ function Workspace({ projectId }: { projectId?: string }) {
     const keydown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setFocusedMedia(null);
       if (event.key !== 'Tab' || !modal) return;
-      const controls = [...modal.querySelectorAll<HTMLElement>('button:not(:disabled), textarea, input, video[controls]')];
+      const controls = [...modal.querySelectorAll<HTMLElement>('button:not(:disabled), textarea:not(:disabled), input:not(:disabled), video[controls], summary')].filter(el => el.getClientRects().length > 0);
       const first = controls[0], last = controls[controls.length - 1];
       if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
@@ -129,7 +131,7 @@ function Workspace({ projectId }: { projectId?: string }) {
         {recipe.spec.provider === 'fake' && <p className="studio-test-label">Offline test. No generation credits.</p>}
         <ol className="studio-reference-list">{recipe.spec.references.map((ref, i) => <li key={`${ref.media_id}-${i}`}>
           <button title="Inspect reference" onClick={() => setFocusedMedia(findMedia(ref.media_id) ?? null)}><Visual media={findMedia(ref.media_id)} /></button>
-          <div><strong>{i + 1}. {ref.role}</strong><p>{ref.instruction}</p></div>
+          <div><strong>{i + 1}. {ref.role}</strong><p>{ref.instruction}</p>{!!ref.subjects?.length && <small>{ref.subjects.map(id => findNode(id)?.name ?? id).join(', ')}</small>}</div>
         </li>)}</ol>
         <pre>{recipe.spec.prompt}</pre>
         <dl className="studio-facts">{Object.entries(recipe.spec.settings).map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{JSON.stringify(value)}</dd></div>)}</dl>
@@ -150,7 +152,7 @@ function Workspace({ projectId }: { projectId?: string }) {
         <button className="studio-icon" title="Refresh workspace" onClick={() => action(refresh)} disabled={busy}><RefreshCw size={17} /></button>
       </div>
     </header>
-    {error && <div role="alert" className="studio-error">{error}<button className="studio-icon" title="Dismiss error" onClick={() => setError('')}><X size={16} /></button></div>}
+    {error && !focusedMedia && <div role="alert" className="studio-error">{error}<button className="studio-icon" title="Dismiss error" onClick={() => setError('')}><X size={16} /></button></div>}
     {notice && <div role="status" className="studio-notice">{notice}<button className="studio-icon" title="Dismiss notification" onClick={() => setNotice('')}><X size={16} /></button></div>}
     {!projectId ? <main className="studio-projects">
       <h1>Productions</h1>
@@ -190,6 +192,7 @@ function Workspace({ projectId }: { projectId?: string }) {
                 <button className="studio-tile-image" onClick={() => selectNode(node)} aria-label={`Inspect ${node.name}`}><Visual media={media} /></button>
                 <div className="studio-tile-text"><small>{tab === 'storyboard' ? `CUT ${index + 1}` : node.kind.toUpperCase()}{media?.metadata.fake ? ' / OFFLINE TEST' : ''}</small>
                   <button onClick={() => selectNode(node)}><h3>{node.name}</h3></button><p>{takes.length} {takes.length === 1 ? 'take' : 'takes'}{node.active_media_id ? ' / selected' : ' / not selected'}</p>
+                  {media && <ReviewStatus review={media.review} />}
                   {node.active_media_id && takes[0] && takes[0].id !== node.active_media_id && <small className="studio-review-label">Newest take is not selected</small>}</div>
               </article>;
             })}{!(tab === 'storyboard' ? sequence : assets).length && <p className="studio-muted">{tab === 'storyboard' ? 'No cuts yet.' : 'No assets yet.'}</p>}</div>}
@@ -198,6 +201,7 @@ function Workspace({ projectId }: { projectId?: string }) {
           <div className="studio-inspector-head"><span>{detail?.node.kind ?? 'Context'}</span><button className="studio-icon" title="Close inspector" onClick={() => { setSelected(null); setDetail(null); }}><X size={16} /></button></div>
           {!detail ? <LoaderCircle className="studio-running" /> : <>
             <h2>{detail.node.name}</h2><p className="studio-muted">Revision {detail.node.revision}</p>
+            <ProductionInspector detail={detail} nodes={data.nodes} busy={busy} inspect={selectNode} action={action} />
             <section><h3>Context</h3><dl className="studio-facts">{Object.entries(detail.context.values).map(([field, value]) => {
               const origin = detail.context.provenance[field];
               return <div key={field}><dt>{field}</dt><dd>{fieldValue(value)}<small>{origin.node_id === detail.node.id ? 'Local' : `From ${findNode(origin.node_id)?.name ?? 'parent'}`}</small></dd></div>;
@@ -213,8 +217,10 @@ function Workspace({ projectId }: { projectId?: string }) {
             <section><h3>Takes</h3><div className="studio-takes">{detail.media.map(media => <div key={media.id}>
               <button title={`Inspect ${media.label}`} onClick={() => setFocusedMedia(media)}><Visual media={media} /></button>
               <small className="studio-take-label">{media.label}</small>
-              <button disabled={busy || media.id === detail.node.active_media_id} onClick={() => action(() => api(`/nodes/${detail.node.id}/selection`, { media_id: media.id, expected_revision: detail.node.revision }))}>
+              <ReviewStatus review={media.review} />
+              <button disabled={busy || media.id === detail.node.active_media_id || media.review.status !== 'approved' || media.review.stale || !media.review.complete} onClick={() => action(() => api(`/nodes/${detail.node.id}/selection`, { media_id: media.id, expected_revision: detail.node.revision }))}>
                 {media.id === detail.node.active_media_id ? <><Check size={13} />Selected</> : 'Use take'}</button>
+              <button onClick={() => setFocusedMedia(media)}>Review take</button>
             </div>)}</div>{!detail.media.length && <p className="studio-muted">No takes.</p>}</section>
             <section><h3>Generation recipes</h3>{nodeRecipes.map(recipeView)}{!nodeRecipes.length && <p className="studio-muted">No prepared recipes.</p>}</section>
             <details><summary>Source instructions ({detail.sources.length})</summary>{detail.sources.map(source => <section key={source.id}><small>{source.node_name} / {source.author} / {source.status}</small><p className="studio-notes">{source.text}</p></section>)}</details>
@@ -224,9 +230,11 @@ function Workspace({ projectId }: { projectId?: string }) {
       </div>
     </>}
     {focusedMedia && <div className="studio-modal-backdrop" onClick={() => setFocusedMedia(null)}><div role="dialog" aria-modal="true" aria-label="Take inspection" className="studio-modal" onClick={e => e.stopPropagation()}>
+      {error && <div role="alert" className="studio-error">{error}<button className="studio-icon" title="Dismiss error" onClick={() => setError('')}><X size={16} /></button></div>}
       <div className="studio-inspector-head"><h2>{focusedMedia.label}</h2><button className="studio-icon" title="Close image" onClick={() => setFocusedMedia(null)}><X size={20} /></button></div>
       <div className="studio-large-visual"><Visual media={focusedMedia} interactive /></div>
       <p className="studio-muted">{focusedMedia.metadata.fake ? 'Offline fixture / not AI generated' : focusedMedia.metadata.model ?? 'Imported reference'}</p>
+      {mediaDetail && data && <TakeReview key={`${mediaDetail.media.id}-${mediaDetail.media.review.revision}`} detail={mediaDetail} nodes={data.nodes} busy={busy} action={action} reviewed={setMediaDetail} />}
       {mediaDetail?.recipe && recipeView(mediaDetail.recipe)}
       {!!mediaDetail?.feedback.length && <section className="studio-feedback-history"><h3>Feedback history</h3>{mediaDetail.feedback.map(item => <div key={item.id}><small>{new Date(item.created_at * 1000).toLocaleString()}</small><p className="studio-notes">{item.text}</p></div>)}</section>}
       <form onSubmit={e => { e.preventDefault(); void action(async () => { await api(`/media/${focusedMedia.id}/feedback`, { text: feedback }); setMediaDetail(await api<MediaDetail>(`/media/${focusedMedia.id}`)); setFeedback(''); setNotice('Feedback saved to this take.'); }); }}>

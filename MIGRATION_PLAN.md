@@ -213,13 +213,14 @@ on the installed CLI, not assumptions. Unsupported capabilities are explicit.
 - [ ] Implement the contracts above using existing database/domain conventions
   where sound. Keep the first schema limited to the three-cut proof.
 - [x] Separate domain operations from chat events, narrator messages and HTTP.
-- [ ] Implement validated project/story/asset changes, context retrieval and
+- [x] Implement validated project/story/asset changes, context retrieval and
   reference selection with actionable structured errors.
 - [x] Implement source-input capture, scoped notes, provenance, proposal/approval
   distinctions and revision-checked edits. Test faithful retention of long notes.
 - [x] Freeze approved generation specs; ensure prompt labels match actual media.
-- [ ] Centralize phase readiness so UI and tools cannot disagree or skip required
-  pre-production silently. Returning to earlier work is an explicit revision.
+- [x] Centralize cut readiness so UI, tools and worker cannot disagree or skip
+  declared pre-production requirements silently. Returning to earlier work is
+  an explicit revision, not an irreversible phase staircase.
 - [x] Preserve old active takes until replacement outputs are locally ready.
 
 Exit: domain tests cover ordering, inheritance, reference roles, missing inputs,
@@ -347,6 +348,9 @@ the user to debug routine engineering failures or repeatedly approve bookkeeping
 - [x] Baseline restored: 67 original tests and frontend build pass.
 - [x] First isolated CLI/engine/worker/viewer proof with 33 additional tests.
 - [x] Fake three-cut loop, one revision, non-adjacent reuse and backup/restore.
+- [x] Shared production contracts: typed required assets, reference-role coverage,
+  exact-media visual review, explicit continuity and editorial reorder. Viewer
+  interactions checked on desktop/mobile. 122 total offline tests now pass.
 - [ ] Milestone 0 complete (clean-install and full provider-contract checks remain).
 - [ ] Milestones 1-5 implemented and verified.
 

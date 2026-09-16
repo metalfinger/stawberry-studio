@@ -73,6 +73,9 @@ class Worker:
         fields["updated_at"] = self.clock()
         with self.studio.store.connection(write=True) as conn:
             previous = self.studio.store.one(conn, "jobs", job_id)
+            if fields.get("state") == "submitting":
+                # Bind the final readiness check to the submission state transition.
+                self.studio._fresh(conn, self.studio.store.one(conn, "recipes", previous["recipe_id"]))
             assignments = ",".join(f"{key}=?" for key in fields)
             values = [encoded(value) if key in {"outputs", "receipt"} else value for key, value in fields.items()]
             cursor = conn.execute(

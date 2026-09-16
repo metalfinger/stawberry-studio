@@ -8,7 +8,17 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from backend.studio.models import Approval, Feedback, NodeCreate, NodePatch, RecipeCreate, Selection, SourceCreate
+from backend.studio.models import (
+    Approval,
+    Feedback,
+    MediaReview,
+    NodeCreate,
+    NodePatch,
+    RecipeCreate,
+    Reorder,
+    Selection,
+    SourceCreate,
+)
 from backend.studio.service import Studio
 from backend.studio.store import Store, StudioError
 
@@ -31,11 +41,14 @@ def create_app(home=None):
 
     @app.exception_handler(StudioError)
     async def studio_error(_request, error):
-        return JSONResponse({"error": error.code, "message": str(error)}, status_code=error.status)
+        return JSONResponse(
+            {"error": error.code, "message": str(error), "issues": getattr(error, "issues", [])},
+            status_code=error.status,
+        )
 
     @app.get("/api/studio/health")
     def health():
-        return {"status": "ok", "mode": "local", "schema": 1}
+        return {"status": "ok", "mode": "local", "schema": 2}
 
     @app.get("/api/studio/projects")
     def projects():
@@ -52,6 +65,14 @@ def create_app(home=None):
     @app.get("/api/studio/nodes/{node_id}")
     def node(node_id: str):
         return studio.inspect(node_id)
+
+    @app.get("/api/studio/nodes/{node_id}/readiness")
+    def readiness(node_id: str):
+        return studio.readiness(node_id)
+
+    @app.post("/api/studio/nodes/{node_id}/reorder")
+    def reorder(node_id: str, body: Reorder):
+        return studio.reorder(node_id, body)
 
     @app.patch("/api/studio/nodes/{node_id}")
     def patch(node_id: str, body: NodePatch):
@@ -77,6 +98,10 @@ def create_app(home=None):
     @app.get("/api/studio/media/{media_id}")
     def media_detail(media_id: str):
         return studio.media(media_id)
+
+    @app.post("/api/studio/media/{media_id}/review")
+    def review(media_id: str, body: MediaReview):
+        return studio.review_media(media_id, body)
 
     @app.post("/api/studio/media/{media_id}/feedback")
     def feedback(media_id: str, body: Feedback):

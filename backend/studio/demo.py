@@ -4,12 +4,21 @@ from __future__ import annotations
 
 import time
 
-from backend.studio.models import Approval, FieldEdit, NodeCreate, NodePatch, RecipeCreate, Reference, SourceCreate
+from backend.studio.models import (
+    Approval,
+    FieldEdit,
+    MediaReview,
+    NodeCreate,
+    NodePatch,
+    RecipeCreate,
+    Reference,
+    SourceCreate,
+)
 from backend.studio.worker import Worker
 
 
 def seed_demo(studio):
-    name = "The Last Train / Offline Proof"
+    name = "The Last Train / Continuity Proof"
     for project in studio.projects():
         if project["name"] == name:
             return {"project_id": project["id"], "existing": True, "url": f"/studio/{project['id']}"}
@@ -73,6 +82,17 @@ def seed_demo(studio):
             if studio.job(job["id"])["state"] == "ready":
                 break
         media = studio.inspect(node["id"])["media"][0]
+        scope = studio.context(node["id"])["production"]["scope"]
+        studio.review_media(
+            media["id"],
+            MediaReview(
+                expected_revision=0,
+                expected_context=studio.media(media["id"])["review_context"],
+                status="approved",
+                user_decision="Offline mechanical fixture approval, not a claim about generated pixels",
+                depicted_assets=studio.rules.asset_ids(scope) if node["kind"] == "cut" else [],
+            ),
+        )
         current = studio.inspect(node["id"])["node"]
         studio.select(node["id"], media["id"], current["revision"])
         return media
@@ -95,6 +115,9 @@ def seed_demo(studio):
                 "lighting.color": FieldEdit(value="Cool dawn"),
                 "weather": FieldEdit(value="Rain"),
                 "available_cast": FieldEdit(value=[assets[0]["id"]]),
+                "visible_cast": FieldEdit(value=[assets[0]["id"]]),
+                "location_id": FieldEdit(value=assets[1]["id"]),
+                "required_props": FieldEdit(value=[assets[2]["id"]]),
             },
         ),
     )
@@ -111,6 +134,16 @@ def seed_demo(studio):
             )
         )
         cuts.append(cut)
+        changes = {"story_order": FieldEdit(value=index + 1)}
+        if index == 0:
+            changes["continuity.after"] = FieldEdit(
+                value={assets[2]["id"]: {"owner_id": assets[0]["id"], "clip_position": "upper_left"}}
+            )
+        if index == 2:
+            changes["continuity_from"] = FieldEdit(value=[cuts[0]["id"]])
+        studio.patch_node(
+            cut["id"], NodePatch(expected_revision=1, reason="Offline story-state coverage", changes=changes)
+        )
         refs = [
             Reference(media_id=sheets[0]["id"], role="identity", instruction="Preserve identity and navy coat"),
             Reference(media_id=sheets[1]["id"], role="location", instruction="Preserve platform geography"),

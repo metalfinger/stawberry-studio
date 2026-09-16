@@ -3,7 +3,16 @@ from concurrent.futures import ThreadPoolExecutor
 import pytest
 from PIL import Image
 
-from backend.studio.models import Approval, FieldEdit, NodeCreate, NodePatch, RecipeCreate, Reference, SourceCreate
+from backend.studio.models import (
+    Approval,
+    FieldEdit,
+    MediaReview,
+    NodeCreate,
+    NodePatch,
+    RecipeCreate,
+    Reference,
+    SourceCreate,
+)
 from backend.studio.service import Studio
 from backend.studio.store import Store, StudioError
 
@@ -13,10 +22,25 @@ def studio(tmp_path):
     return Studio(Store(tmp_path / "workspace"))
 
 
-def tree(studio):
+def tree(studio, *, ready=False):
     nodes = []
     for kind in ("project", "scene", "shot", "cut"):
         nodes.append(studio.create_node(NodeCreate(kind=kind, name=kind, parent_id=nodes[-1]["id"] if nodes else None)))
+    if ready:
+        nodes[-1] = studio.patch_node(
+            nodes[-1]["id"],
+            NodePatch(
+                expected_revision=1,
+                reason="Explicit empty frame for domain tests",
+                notes="Empty establishing frame",
+                changes={
+                    "visible_cast": FieldEdit(value=[]),
+                    "required_props": FieldEdit(value=[]),
+                    "location_id": FieldEdit(op="clear"),
+                    "style": FieldEdit(value="Test style"),
+                },
+            ),
+        )
     return nodes
 
 
@@ -30,17 +54,27 @@ def asset(studio, project, tmp_path):
     char = studio.create_node(NodeCreate(kind="character", name="Mara", parent_id=project["id"]))
     image = tmp_path / "ref.png"
     Image.new("RGB", (32, 32), "red").save(image)
-    return studio.import_media(char["id"], image, "Identity")
+    media = studio.import_media(char["id"], image, "Identity")
+    return studio.review_media(
+        media["id"],
+        MediaReview(
+            expected_revision=0,
+            expected_context=studio.media(media["id"])["review_context"],
+            status="approved",
+            user_decision="Offline test",
+        ),
+    )
 
 
 def test_inheritance_clear_and_restore(studio):
     project, scene, shot, cut = tree(studio)
+    character = studio.create_node(NodeCreate(kind="character", name="Mara", parent_id=project["id"]))
     patch(
         studio,
         project,
         **{
             "lighting.color": FieldEdit(value="warm"),
-            "visible_cast": FieldEdit(value=["Mara"]),
+            "visible_cast": FieldEdit(value=[character["id"]]),
             "music": FieldEdit(value="piano"),
         },
     )
@@ -133,7 +167,7 @@ def test_parent_types_and_cross_project_references(studio, tmp_path):
 
 
 def test_recipe_exact_order_and_duplicate_submit(studio, tmp_path):
-    project, scene, shot, cut = tree(studio)
+    project, scene, shot, cut = tree(studio, ready=True)
     first = asset(studio, project, tmp_path)
     second = asset(studio, project, tmp_path)
     request = RecipeCreate(
@@ -157,7 +191,7 @@ def test_recipe_exact_order_and_duplicate_submit(studio, tmp_path):
 
 
 def test_parent_change_invalidates_approval_without_rewriting_recipe(studio):
-    project, _, _, cut = tree(studio)
+    project, _, _, cut = tree(studio, ready=True)
     recipe = studio.prepare(
         RecipeCreate(node_id=cut["id"], provider="fake", model="test", prompt="frame", intent="test")
     )
@@ -178,6 +212,15 @@ def test_selection_retains_older_versions(studio, tmp_path):
     project = tree(studio)[0]
     first = asset(studio, project, tmp_path)
     second = studio.import_media(first["node_id"], tmp_path / "ref.png", "New attempt")
+    studio.review_media(
+        second["id"],
+        MediaReview(
+            expected_revision=0,
+            expected_context=studio.media(second["id"])["review_context"],
+            status="approved",
+            user_decision="Offline test",
+        ),
+    )
     studio.select(first["node_id"], first["id"], 1)
     studio.select(first["node_id"], second["id"], 2)
     detail = studio.inspect(first["node_id"])
@@ -186,7 +229,7 @@ def test_selection_retains_older_versions(studio, tmp_path):
 
 
 def test_new_raw_instruction_invalidates_approved_recipe(studio):
-    project, _, _, cut = tree(studio)
+    project, _, _, cut = tree(studio, ready=True)
     recipe = studio.prepare(
         RecipeCreate(node_id=cut["id"], provider="fake", model="test", prompt="frame", intent="test")
     )
@@ -206,12 +249,21 @@ def test_parent_cannot_invalidate_child_collection_contract(studio):
 
 
 def test_source_parent_change_invalidates_reference_recipe(studio, tmp_path):
-    project, _, _, cut = tree(studio)
+    project, _, _, cut = tree(studio, ready=True)
     location = studio.create_node(NodeCreate(kind="location", name="Station", parent_id=project["id"]))
     prop = studio.create_node(NodeCreate(kind="prop", name="Clock", parent_id=location["id"]))
     path = tmp_path / "clock.png"
     Image.new("RGB", (32, 32), "blue").save(path)
     image = studio.import_media(prop["id"], path, "Clock")
+    studio.review_media(
+        image["id"],
+        MediaReview(
+            expected_revision=0,
+            expected_context=studio.media(image["id"])["review_context"],
+            status="approved",
+            user_decision="Offline test",
+        ),
+    )
     recipe = studio.prepare(
         RecipeCreate(
             node_id=cut["id"],

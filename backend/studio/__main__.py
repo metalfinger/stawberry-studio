@@ -9,7 +9,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from backend.studio.models import Approval, NodeCreate, NodePatch, RecipeCreate, SourceCreate
+from backend.studio.models import Approval, MediaReview, NodeCreate, NodePatch, RecipeCreate, Reorder, SourceCreate
 from backend.studio.service import Studio
 from backend.studio.store import Store, StudioError
 
@@ -33,7 +33,7 @@ def main():
     p = sub.add_parser("start", help="Build and run the local viewer, API and worker")
     p.add_argument("--port", type=int, default=8787)
     p.add_argument("--allow-higgsfield", action="store_true")
-    for name in ("project", "inspect", "context", "recipe", "job", "media", "enqueue", "retry-collection"):
+    for name in ("project", "inspect", "context", "readiness", "recipe", "job", "media", "enqueue", "retry-collection"):
         p = sub.add_parser(name)
         p.add_argument("id")
     p = sub.add_parser("revision")
@@ -42,7 +42,7 @@ def main():
     for name in ("create", "prepare"):
         p = sub.add_parser(name)
         p.add_argument("file", help="JSON file, or - for stdin")
-    for name in ("patch", "capture", "approve"):
+    for name in ("patch", "capture", "approve", "review", "reorder"):
         p = sub.add_parser(name)
         p.add_argument("id")
         p.add_argument("file", help="JSON file, or - for stdin")
@@ -107,6 +107,12 @@ def main():
             result = studio.inspect(args.id)
         elif args.command == "context":
             result = studio.context(args.id)
+        elif args.command == "readiness":
+            result = studio.readiness(args.id)
+        elif args.command == "review":
+            result = studio.review_media(args.id, MediaReview.model_validate(read_json(args.file)))
+        elif args.command == "reorder":
+            result = studio.reorder(args.id, Reorder.model_validate(read_json(args.file)))
         elif args.command == "revision":
             result = studio.revision(args.id, args.number)
         elif args.command == "media":
@@ -141,7 +147,16 @@ def main():
             result = seed_demo(studio)
         print(json.dumps(result, ensure_ascii=False, indent=2))
     except (StudioError, ValidationError, ValueError, OSError) as exc:
-        print(json.dumps({"error": getattr(exc, "code", "invalid_request"), "message": str(exc)}), file=sys.stderr)
+        print(
+            json.dumps(
+                {
+                    "error": getattr(exc, "code", "invalid_request"),
+                    "message": str(exc),
+                    "issues": getattr(exc, "issues", []),
+                }
+            ),
+            file=sys.stderr,
+        )
         raise SystemExit(1) from exc
     except KeyboardInterrupt:
         return
