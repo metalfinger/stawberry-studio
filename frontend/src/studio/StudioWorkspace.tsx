@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Activity, ArrowLeft, Check, ChevronRight, Clapperboard, FileText, Images, LoaderCircle, Menu, Plus, RefreshCw, Save, X } from 'lucide-react';
+import { Activity, ArrowLeft, Check, ChevronRight, Clapperboard, Download, FileText, Images, LoaderCircle, Menu, Plus, RefreshCw, Save, Upload, X } from 'lucide-react';
 import { api } from './types';
 import type { Media, MediaDetail, NodeDetail, ProductionNode, ProjectData, Recipe, Runtime } from './types';
 import ProductionInspector, { ReviewStatus } from './ProductionInspector';
@@ -44,6 +44,7 @@ function Workspace({ projectId }: { projectId?: string }) {
   const [treeOpen, setTreeOpen] = useState(false);
   const projectName = data?.project.name;
   const readSequence = useRef(0);
+  const importInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => { document.title = projectName ? `${projectName} | Strawberry Studio` : 'Strawberry Studio'; }, [projectName]);
 
@@ -111,6 +112,24 @@ function Workspace({ projectId }: { projectId?: string }) {
   const selectNode = (node: ProductionNode) => {
     setSelected(node.id); setDetail(null); setNoteDraft(null); setFeedback(''); setTreeOpen(false);
   };
+  const importArchive = async (file?: File) => {
+    if (!file) return;
+    setBusy(true); setError('');
+    try {
+      const response = await fetch('/api/studio/projects/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/zip', 'X-Strawberry-Action': '1' },
+        body: file,
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message ?? result.error ?? 'Project import failed');
+      navigate(`/studio/${result.project_id}`);
+    } catch (e) { setError(String(e)); }
+    finally {
+      setBusy(false);
+      if (importInput.current) importInput.current.value = '';
+    }
+  };
   const findNode = (id: string) => data?.nodes.find(n => n.id === id);
   const findMedia = (id: string | null) => data?.media.find(m => m.id === id);
   const fieldValue = (value: unknown): string => {
@@ -163,7 +182,8 @@ function Workspace({ projectId }: { projectId?: string }) {
     {error && !focusedMedia && <div role="alert" className="studio-error">{error}<button className="studio-icon" title="Dismiss error" onClick={() => setError('')}><X size={16} /></button></div>}
     {notice && <div role="status" className="studio-notice">{notice}<button className="studio-icon" title="Dismiss notification" onClick={() => setNotice('')}><X size={16} /></button></div>}
     {!projectId ? <main className="studio-projects">
-      <h1>Productions</h1>
+      <div className="studio-projects-head"><h1>Productions</h1><button disabled={busy} onClick={() => importInput.current?.click()}><Upload size={15} />Import production</button></div>
+      <input ref={importInput} className="studio-visually-hidden" type="file" accept=".zip,application/zip" onChange={event => void importArchive(event.target.files?.[0])} />
       <form className="studio-create" onSubmit={e => { e.preventDefault(); void action(async () => {
         const node = await api<ProductionNode>('/nodes', { kind: 'project', name }); navigate(`/studio/${node.id}`);
       }); }}>
@@ -173,7 +193,7 @@ function Workspace({ projectId }: { projectId?: string }) {
       <div className="studio-project-list">{projects.map(p => <Link key={p.id} to={`/studio/${p.id}`}><Clapperboard size={22} /><span><strong>{p.name}</strong><small>Revision {p.revision}</small></span><ChevronRight size={18} /></Link>)}</div>
       {!projects.length && <p className="studio-muted">No productions yet.</p>}
     </main> : !data ? <main className="studio-loading"><LoaderCircle />Loading production</main> : <>
-      <div className="studio-project-bar"><Link to="/studio" className="studio-icon" title="All productions"><ArrowLeft size={18} /></Link><button className="studio-icon studio-mobile-hierarchy" title="Show production hierarchy" aria-expanded={treeOpen} onClick={() => setTreeOpen(!treeOpen)}><Menu size={18} /></button><h1>{data.project.name}</h1></div>
+      <div className="studio-project-bar"><Link to="/studio" className="studio-icon" title="All productions"><ArrowLeft size={18} /></Link><button className="studio-icon studio-mobile-hierarchy" title="Show production hierarchy" aria-expanded={treeOpen} onClick={() => setTreeOpen(!treeOpen)}><Menu size={18} /></button><h1>{data.project.name}</h1><a className="studio-button studio-export" href={`/api/studio/projects/${data.project.id}/export`} download><Download size={15} />Export</a></div>
       <div className="studio-layout">
         <aside className={`studio-tree ${treeOpen ? 'is-open' : ''}`} aria-label="Production hierarchy">
           <button className="studio-mobile-hierarchy" onClick={() => setTreeOpen(false)}><X size={16} />Close hierarchy</button>

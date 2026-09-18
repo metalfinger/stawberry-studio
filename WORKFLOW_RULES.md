@@ -130,6 +130,12 @@ then review the results. Saving, downloading, showing progress and registering
 outputs do not require repeated confirmation. Regeneration is a new approved
 request; restoration/selection of an existing take does not generate anything.
 
+Portable project archives preserve creative records, visual reviews, prompts,
+recipes, job history and managed media. They are data, not a transfer of tool
+permission: importing an archive clears executable generation approval and moves
+in-flight work to explicit reconciliation. The user must inspect and approve any
+new provider request in the destination workspace.
+
 ## First contract-test cases
 
 - Missing value inherits; local value overrides one field; clear stays cleared.

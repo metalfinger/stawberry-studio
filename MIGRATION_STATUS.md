@@ -74,6 +74,10 @@ Typed relationships, continuity and review semantics are specified in
 - Workspace backup/restore includes database, media and checksummed manifest.
   Restore refuses existing destinations, checks archive/database/media integrity,
   and blocks old pending submissions so a restored snapshot cannot re-spend.
+- Selective project export/import moves one production, its managed media and
+  complete history without exposing other productions. Imports are atomic,
+  reject identity collisions/tampering, reset generation authorization and move
+  in-flight jobs to reconciliation instead of resubmission.
 
 ## Run it
 
@@ -110,12 +114,16 @@ venv/bin/python -m backend.studio reorder PARENT_ID order.json
 venv/bin/python -m backend.studio revision NODE_ID NUMBER
 venv/bin/python -m backend.studio backup /absolute/path/workspace.zip
 venv/bin/python -m backend.studio restore /absolute/path/workspace.zip --to /absolute/path/new-workspace
+venv/bin/python -m backend.studio export-project PROJECT_ID /absolute/path/production.zip
+venv/bin/python -m backend.studio import-project /absolute/path/production.zip
 ```
 
-`backup` is a whole-workspace snapshot, not yet a selective project export. It
-includes private production notes, prompts and provider receipts; treat the ZIP
+`backup` is a whole-workspace snapshot. `export-project` is the selective,
+shareable production archive used by the viewer's Export/Import controls. Both
+include private production notes, prompts and provider receipts; treat the ZIP
 as private. It does not copy `.env` or Higgsfield credential files. Current
-portable backup/restore size limit is 4 GiB. Incomplete restores are blocked.
+portable archive size limit is 4 GiB. Incomplete restores are blocked. Imported
+project records retain historical decisions but require fresh generation approval.
 
 ## Offline proof and verification
 
@@ -135,7 +143,7 @@ Verified in this checkout:
 
 - Original baseline: 67 tests pass; missing-prompt phase gate and TypeScript build
   failures fixed. Previously ignored test files are tracked in git.
-- New engine suite: 93 tests. Total `pytest -q -m 'not live'`: **160 passed**.
+- New engine suite: 96 tests. Total `pytest -q -m 'not live'`: **163 passed**.
 - Fake-provider proof, worker restart, active lease, uncertain submit, collection
   retry, duplicate enqueue, parent override, missing reference, raw-note retention,
   source-context staleness, revision conflicts, history and backup/restore tested.
@@ -215,8 +223,9 @@ proof that generation is free or covered by unlimited website usage.
    feedback without changing selected takes. Take inspection includes reverse
    reference usage and navigation to consuming nodes. Planned views/states and
    atomic approved batches are now live. Production-detail editing now supports
-   inherited, overridden and explicitly cleared scalar fields. Continue selective
-   project export/import. Persisted feedback is available but no automatic refinement
+   inherited, overridden and explicitly cleared scalar fields. Selective project
+   export/import is live in the CLI, API and viewer with checksummed media and
+   reset execution permissions. Persisted feedback is available but no automatic refinement
    prompt synthesis runs in the server; the host must read it and compose a recipe.
    Comparison verified with two loaded images at desktop and 390px widths;
    selection remained unchanged. Browser verified Mara's identity-reference

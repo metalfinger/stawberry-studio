@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import os
+import tempfile
 from pathlib import Path
 from urllib.parse import urlparse
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.background import BackgroundTask
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from backend.studio.models import (
@@ -52,7 +55,7 @@ def create_app(home=None):
 
     @app.get("/api/studio/health")
     def health():
-        return {"status": "ok", "mode": "local", "schema": 3}
+        return {"status": "ok", "mode": "local", "schema": 5}
 
     @app.get("/api/studio/runtime")
     def runtime():
@@ -69,6 +72,47 @@ def create_app(home=None):
     @app.get("/api/studio/projects/{project_id}")
     def project(project_id: str):
         return studio.project(project_id)
+
+    @app.get("/api/studio/projects/{project_id}/export")
+    def export(project_id: str):
+        from backend.studio.project_archive import export_project
+
+        handle, path = tempfile.mkstemp(prefix="strawberry-project-", suffix=".zip")
+        os.close(handle)
+        Path(path).unlink()
+        try:
+            result = export_project(studio.store, project_id, path)
+            filename = f"{result['project_name']}.strawberry.zip"
+            return FileResponse(path, media_type="application/zip", filename=filename, background=BackgroundTask(os.unlink, path))
+        except BaseException:
+            Path(path).unlink(missing_ok=True)
+            raise
+
+    @app.post("/api/studio/projects/import")
+    async def import_archive(request: Request):
+        from backend.studio.backup import MAX_ARCHIVE_BYTES
+        from backend.studio.project_archive import import_project
+
+        declared = request.headers.get("content-length")
+        if declared:
+            try:
+                too_large = int(declared) > MAX_ARCHIVE_BYTES
+            except ValueError as exc:
+                raise StudioError("archive_size", "Invalid project archive size", 400) from exc
+            if too_large:
+                raise StudioError("archive_size", "Project archive exceeds the current 4 GiB import limit", 413)
+        handle, path = tempfile.mkstemp(prefix="strawberry-project-upload-", suffix=".zip")
+        size = 0
+        try:
+            with os.fdopen(handle, "wb") as output:
+                async for chunk in request.stream():
+                    size += len(chunk)
+                    if size > MAX_ARCHIVE_BYTES:
+                        raise StudioError("archive_size", "Project archive exceeds the current 4 GiB import limit", 413)
+                    output.write(chunk)
+            return import_project(studio.store, path)
+        finally:
+            Path(path).unlink(missing_ok=True)
 
     @app.post("/api/studio/nodes")
     def create_node(body: NodeCreate):

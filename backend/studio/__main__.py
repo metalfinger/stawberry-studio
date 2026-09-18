@@ -37,6 +37,11 @@ def main():
     sub.add_parser("runtime")
     p = sub.add_parser("backup", help="Snapshot database and managed media to a new ZIP archive")
     p.add_argument("path")
+    p = sub.add_parser("export-project", help="Export one production and its managed media")
+    p.add_argument("id")
+    p.add_argument("path")
+    p = sub.add_parser("import-project", help="Import one production without carrying spending authorization")
+    p.add_argument("path")
     p = sub.add_parser("restore", help="Verify and restore a workspace into a new directory")
     p.add_argument("path")
     p.add_argument("--to", required=True)
@@ -134,6 +139,14 @@ def main():
             from backend.studio.backup import backup
 
             result = backup(studio.store, args.path)
+        elif args.command == "export-project":
+            from backend.studio.project_archive import export_project
+
+            result = export_project(studio.store, args.id, args.path)
+        elif args.command == "import-project":
+            from backend.studio.project_archive import import_project
+
+            result = import_project(studio.store, args.path)
         elif args.command == "project":
             result = studio.project(args.id)
         elif args.command == "inspect":

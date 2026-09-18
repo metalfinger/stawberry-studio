@@ -1,8 +1,8 @@
 .studio-workspace { min-height: 100vh; background: #f5f6f5; color: #232b28; font: 14px/1.5 Inter, -apple-system, BlinkMacSystemFont, sans-serif; letter-spacing: 0; }
 .studio-workspace * { box-sizing: border-box; letter-spacing: 0; }
 .studio-workspace button, .studio-workspace input, .studio-workspace textarea { font: inherit; }
-.studio-workspace button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid #d7ddd9; background: #fff; color: #26352e; padding: 7px 10px; border-radius: 4px; cursor: pointer; white-space: normal; }
-.studio-workspace button:hover { background: #edf2ee; }
+.studio-workspace button, .studio-workspace .studio-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid #d7ddd9; background: #fff; color: #26352e; padding: 7px 10px; border-radius: 4px; cursor: pointer; white-space: normal; }
+.studio-workspace button:hover, .studio-workspace .studio-button:hover { background: #edf2ee; }
 .studio-workspace button:disabled { cursor: default; opacity: .55; }
 .studio-workspace :focus-visible { outline: 2px solid #20654b; outline-offset: 2px; }
 .studio-workspace input, .studio-workspace textarea { width: 100%; border: 1px solid #bdc8c0; border-radius: 4px; padding: 8px 10px; background: white; color: #232b28; resize: vertical; }
@@ -37,6 +37,8 @@
 .studio-error { padding: 12px 24px; background: #f8e6e2; color: #852f24; display: flex; align-items: center; justify-content: space-between; overflow-wrap: anywhere; }
 .studio-notice { padding: 8px 24px; background: #e2eee5; color: #254d34; display: flex; align-items: center; justify-content: space-between; }
 .studio-projects { max-width: 960px; padding: 40px 24px; margin: 0 auto; }
+.studio-projects-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.studio-visually-hidden { position: absolute !important; width: 1px !important; height: 1px; padding: 0 !important; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0 !important; }
 .studio-create { display: grid; grid-template-columns: 1fr auto; gap: 8px 14px; margin: 24px 0; max-width: 680px; }
 .studio-create label { grid-column: 1 / -1; }
 .studio-project-list { border-top: 1px solid #dce1dd; }
@@ -45,6 +47,7 @@
 .studio-project-list a:hover { color: #246b4a; }
 .studio-project-bar { display: flex; align-items: center; gap: 10px; padding: 18px 24px; border-bottom: 1px solid #dce1dd; background: #fff; }
 .studio-project-bar h1 { font-size: 20px; }
+.studio-export { margin-left: auto; flex-shrink: 0; }
 .studio-workspace .studio-mobile-hierarchy { display: none; }
 .studio-layout { display: flex; min-height: calc(100vh - 131px); align-items: stretch; }
 .studio-tree { width: 224px; flex: 0 0 224px; padding: 18px 10px; background: #f9faf9; border-right: 1px solid #dce1dd; }

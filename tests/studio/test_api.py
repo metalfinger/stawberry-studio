@@ -5,7 +5,8 @@ from backend.studio.api import create_app
 
 def test_local_mutations_and_revisions(tmp_path):
     client = TestClient(create_app(tmp_path))
-    assert client.get("/api/studio/health").status_code == 200
+    health = client.get("/api/studio/health")
+    assert health.status_code == 200 and health.json()["schema"] == 5
     body = {"kind": "project", "name": "Test"}
     assert client.post("/api/studio/nodes", json=body).status_code == 403
     headers = {"X-Strawberry-Action": "1"}

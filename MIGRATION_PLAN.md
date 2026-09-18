@@ -280,7 +280,9 @@ and history. The user reviews this proof before broadening the workflow.
 - [x] Show queued/running/collecting/failed/ready states, known costs and recovery
   actions. No indefinite spinner or undocumented false progress percentage.
 - [ ] Support video artifacts and their actual reference/input roles; do not
-  build a full NLE. Export/import the project with media and manifests.
+  build a full NLE.
+- [x] Export/import one production with checksummed media and manifests. Preserve
+  history while resetting provider-spend authorization and in-flight execution.
 - [x] Verify desktop/narrow layouts, image/video loading and interaction through
   browser tests. Deterministic selection/navigation must not spend LLM tokens.
 
