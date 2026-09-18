@@ -7,6 +7,10 @@ proof. Codex supplies the creative reasoning; a local engine preserves context,
 references, approvals, jobs and all takes. Higgsfield CLI is the first real
 generation adapter. Full replacement parity is still in progress.
 
+**Install the new workspace once:** `./install-studio.sh`. This uses the pinned,
+minimal [Studio requirements](requirements-studio.txt) and does not install the
+old hosted-agent provider stack.
+
 **Start the new viewer:** `./studio.sh --port 8788`, then open
 [the local workspace](http://127.0.0.1:8788/studio). Paid execution is disabled by
 default during the proof. `venv/bin/python -m backend.studio demo` creates an
@@ -32,13 +36,13 @@ Visual AI storyboarding tool. Agentic, canvas-driven, single-chat interface. Pip
 - **Image gen:** Gemini 3 Pro Image (Nano Banana Pro) · Fal · Higgsfield (planned)
 - **LLM:** Gemini Pro for agent tool-calling, Kimi (Moonshot) for cheap roles, optional Anthropic / OpenAI
 
-## Prerequisites
+## Existing App Prerequisites
 
 - Python 3.10+ (3.11+ recommended)
 - Node 18+
 - pnpm or npm
 
-## Setup
+## Existing App Setup
 
 ```bash
 # Backend (one-time)

@@ -299,6 +299,8 @@ without guessing which take is active or which references were used.
   dependency checks. No permanently exposed legacy/new switch.
 - [ ] Reconcile docs, startup scripts, dependency manifests and CI. Pin a tested
   CLI compatibility range and provide an explicit unsupported-version message.
+- [x] Add a separate pinned minimal Studio install, one launcher, and enforced
+  Python 3.10/3.12 plus viewer CI while retaining the old regression suite.
 - [ ] Exercise backup/restore, no-network startup, concurrent requests, duplicate
   approval clicks, refresh/reconnect and process interruption.
 - [ ] Verify fresh-session resume in local Codex. Explicitly document cloud and

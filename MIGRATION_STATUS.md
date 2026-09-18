@@ -81,8 +81,13 @@ Typed relationships, continuity and review semantics are specified in
 
 ## Run it
 
-Existing dependencies are used for this checkpoint; dependency pruning and a
-clean-install recipe are part of cutover. No packages install during startup.
+The new workspace has a pinned minimal runtime separate from the old provider
+stack. Installation and startup are deliberately separate; startup never installs
+or updates packages.
+
+```bash
+./install-studio.sh
+```
 
 ```bash
 ./studio.sh --port 8788
@@ -156,6 +161,13 @@ Verified in this checkout:
 - Frontend production build passes. The retained old bundle still has Vite's
   large-chunk warning; this is not a new-viewer runtime failure.
 - New Python modules/tests pass scoped Ruff. New viewer/App pass scoped ESLint.
+- CI enforces the minimal Studio runtime on Python 3.10 and 3.12, Studio-only
+  Ruff/ESLint, the production frontend build and the full retained regression
+  suite. Existing-app frontend lint debt remains visible as an advisory step.
+- A fresh temporary virtual environment installed only
+  `requirements-studio-dev.txt`; all 96 Studio tests passed. The normal launcher
+  then built, started on an unused port with paid execution disabled, reported
+  healthy, and shut down both owned processes cleanly.
 - Browser checks: storyboard renders, active take changes immediately, earlier
   take remains available, feedback saves and is visible on the same take, source
   instructions and inherited values render. Refresh preserves stored selection.
@@ -238,8 +250,9 @@ proof that generation is free or covered by unlimited website usage.
    generation was triggered.
 4. **Cutover and cleanup.** Verify the old feature inventory, then remove old
    conversational agents/chat surfaces/direct LLM calls and redundant storage
-   paths. Switch to one normal launch path, trim dependencies, add CI and a
-   clean-checkout test. No permanent old/new selector.
+   paths after the visual proof. The new path now has a minimal pinned install,
+   one launcher and enforced clean-checkout CI; retained legacy code remains
+   available until its parity gate passes. No permanent old/new selector.
 
 Execution recovery and viewer work can proceed without spending credits. The full migration is
 not complete merely because the isolated proof works. In particular, do not mark
