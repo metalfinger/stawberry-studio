@@ -58,6 +58,14 @@ Typed relationships, continuity and review semantics are specified in
   Inspector now shows frame requirements, linked assets, continuity state and
   specific blockers; review dialogs include confirmed-visible-asset checklists,
   rejection/reapproval history, and reference-only versus final-take actions.
+- Asset reference requirements are stable records for views, states, details and
+  scale coverage. Coverage is confirmed only during human review of an exact
+  take and is bound to the requirement definition; editing a requirement removes
+  obsolete coverage without deleting review history.
+- Frozen asset recipes can be approved as an explicit bounded batch. Batch
+  validation is atomic, records one batch provenance ID, preserves every recipe's
+  fingerprint and estimate ceiling, and queues nothing if any item is stale.
+  Stale recipe snapshots remain inspectable but cannot be approved or batched.
 - CLI and HTTP use the same domain service. No internal LLM runtime is invoked
   by the new path. Codex performs creative roles using one coordinating skill.
 - Workspace backup/restore includes database, media and checksummed manifest.
@@ -116,14 +124,15 @@ All seven images are **test fixtures, not AI generations**.
 This is not evidence that visual identity or geography is solved.
 The current fixture is at `/studio/9a0a939b-8fa3-4933-9b3c-7fc3f497ec09` in this
 checkout. Earlier Offline Proof data remains untouched. Isolated workspace
-schema 3 adds execution heartbeat and cost policies alongside review records;
+schema 5 adds execution heartbeat, cost policies, planned reference requirements
+and batch provenance alongside review records;
 existing images are not implicitly approved.
 
 Verified in this checkout:
 
 - Original baseline: 67 tests pass; missing-prompt phase gate and TypeScript build
   failures fixed. Previously ignored test files are tracked in git.
-- New engine suite: 88 tests. Total `pytest -q -m 'not live'`: **155 passed**.
+- New engine suite: 93 tests. Total `pytest -q -m 'not live'`: **160 passed**.
 - Fake-provider proof, worker restart, active lease, uncertain submit, collection
   retry, duplicate enqueue, parent override, missing reference, raw-note retention,
   source-context staleness, revision conflicts, history and backup/restore tested.
@@ -201,13 +210,17 @@ proof that generation is free or covered by unlimited website usage.
    sent for these three sheets only (6 estimated credits, no retries/cuts/video).
 3. **Viewer parity.** Side-by-side take comparison now shows exact recipes and
    feedback without changing selected takes. Take inspection includes reverse
-   reference usage and navigation to consuming nodes. Continue planned missing
-   views/states, approved batches, fuller field editing and selective project
-   export/import. Persisted feedback is available but no automatic refinement
+   reference usage and navigation to consuming nodes. Planned views/states and
+   atomic approved batches are now live. Continue fuller field editing and
+   selective project export/import. Persisted feedback is available but no automatic refinement
    prompt synthesis runs in the server; the host must read it and compose a recipe.
    Comparison verified with two loaded images at desktop and 390px widths;
    selection remained unchanged. Browser verified Mara's identity-reference
    uses and navigation to the third cut, including its non-adjacent dependency.
+   Browser also verified that the proposed sheet batch contains exactly three
+   current recipes, totals 6 estimated credits, stays disabled without a written
+   decision, and excludes retained stale recipes. Mara's four planned requirements
+   render as uncovered. No approval, queue, upload or generation was triggered.
 4. **Cutover and cleanup.** Verify the old feature inventory, then remove old
    conversational agents/chat surfaces/direct LLM calls and redundant storage
    paths. Switch to one normal launch path, trim dependencies, add CI and a

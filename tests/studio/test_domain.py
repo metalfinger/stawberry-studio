@@ -5,6 +5,8 @@ from PIL import Image
 
 from backend.studio.models import (
     Approval,
+    AssetRequirementCreate,
+    AssetRequirementUpdate,
     FieldEdit,
     MediaReview,
     NodeCreate,
@@ -94,6 +96,62 @@ def test_inheritance_clear_and_restore(studio):
     assert context["provenance"]["lighting.direction"]["node_id"] == scene["id"]
     patch(studio, cut, **{"lighting.color": FieldEdit(op="inherit")})
     assert studio.context(cut["id"])["values"]["lighting.color"] == "warm"
+
+
+def test_asset_requirement_coverage_is_reviewed_and_definition_bound(studio, tmp_path):
+    project = studio.create_node(NodeCreate(kind="project", name="Coverage"))
+    character = studio.create_node(NodeCreate(kind="character", name="Mara", parent_id=project["id"]))
+    requirement = studio.create_requirement(
+        character["id"],
+        AssetRequirementCreate(
+            kind="view", label="Full-body left profile", instruction="Show the whole body in true profile", priority=1
+        ),
+    )
+    image = tmp_path / "profile.png"
+    Image.new("RGB", (32, 32), "navy").save(image)
+    media = studio.import_media(character["id"], image, "Profile")
+    reviewed = studio.review_media(
+        media["id"],
+        MediaReview(
+            expected_revision=0,
+            expected_context=studio.media(media["id"])["review_context"],
+            status="approved",
+            user_decision="The full body is visibly in left profile",
+            requirement_ids=[requirement["id"]],
+        ),
+    )
+    assert reviewed["review"]["requirement_ids"] == [requirement["id"]]
+    assert studio.inspect(character["id"])["requirements"][0]["covered_by"] == [media["id"]]
+    studio.update_requirement(
+        requirement["id"],
+        AssetRequirementUpdate(
+            label="Full-body right profile", instruction="Show the whole body in true right profile", priority=1
+        ),
+    )
+    assert studio.inspect(character["id"])["requirements"][0]["covered_by"] == []
+
+
+def test_requirement_review_must_belong_to_asset(studio, tmp_path):
+    project = studio.create_node(NodeCreate(kind="project", name="Coverage"))
+    first = studio.create_node(NodeCreate(kind="character", name="First", parent_id=project["id"]))
+    second = studio.create_node(NodeCreate(kind="prop", name="Second", parent_id=project["id"]))
+    requirement = studio.create_requirement(
+        second["id"], AssetRequirementCreate(kind="detail", label="Latch", instruction="Show latch", priority=1)
+    )
+    image = tmp_path / "first.png"
+    Image.new("RGB", (32, 32), "red").save(image)
+    media = studio.import_media(first["id"], image, "First")
+    with pytest.raises(StudioError, match="does not belong"):
+        studio.review_media(
+            media["id"],
+            MediaReview(
+                expected_revision=0,
+                expected_context=studio.media(media["id"])["review_context"],
+                status="approved",
+                user_decision="Wrong requirement",
+                requirement_ids=[requirement["id"]],
+            ),
+        )
 
 
 def test_collection_edits_do_not_affect_siblings(studio):

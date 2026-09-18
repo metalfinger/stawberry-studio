@@ -5,7 +5,14 @@ Run from the repository: venv/bin/python -m scripts.prepare_visual_proof
 
 import json
 
-from backend.studio.models import FieldEdit, NodeCreate, NodePatch, RecipeCreate, SourceCreate
+from backend.studio.models import (
+    AssetRequirementCreate,
+    FieldEdit,
+    NodeCreate,
+    NodePatch,
+    RecipeCreate,
+    SourceCreate,
+)
 from backend.studio.service import Studio
 from backend.studio.store import Store
 
@@ -64,16 +71,65 @@ decorative cinematic environment or invented alternate designs.""",
     ),
 ]
 
+REQUIREMENTS = {
+    "Mara": [
+        (
+            "view",
+            "Full-body front",
+            "Show crown-to-boots proportions and the complete six-button navy coat from the front.",
+            1,
+        ),
+        (
+            "view",
+            "Full-body left profile",
+            "Rotate shoulders, torso, hips and feet into a true left profile; do not rotate only the head.",
+            1,
+        ),
+        ("view", "Full-body back", "Establish the complete rear silhouette, haircut and coat construction.", 1),
+        (
+            "detail",
+            "Three-quarter face",
+            "Establish Mara's face, round dark-metal glasses and short tucked bob at useful identity detail.",
+            1,
+        ),
+    ],
+    "Platform 4": [
+        (
+            "view",
+            "Looking east",
+            "Establish the east entrance, clock, tracks, wall and bench in one coherent geography.",
+            1,
+        ),
+        ("view", "Looking west", "Show the exact reverse direction without redesigning the station.", 1),
+        ("view", "Looking north", "Establish the wall, bench and clock relationship from the track side.", 1),
+        (
+            "scale",
+            "High geography overview",
+            "Show the spatial relationship of tracks, wall, entrance, bench and canopy columns.",
+            1,
+        ),
+    ],
+    "Train ticket": [
+        (
+            "view",
+            "Printed front",
+            "Show the exact border, PLATFORM 4 heading, serial 0184 and upper-left brass clip.",
+            1,
+        ),
+        (
+            "view",
+            "Physical back",
+            "Show the same object from behind with the clip in its physically corresponding position.",
+            2,
+        ),
+        ("detail", "Clip construction", "Resolve the spring clip, attachment and paper-edge wear at close range.", 1),
+    ],
+}
+
 
 def prepare(studio):
     name = "The Last Train / Proposed Visual Proof"
     existing = next((p for p in studio.projects() if p["name"] == name), None)
-    if existing and studio.project(existing["id"])["recipes"]:
-        return {
-            "project_id": existing["id"],
-            "existing": True,
-            "note": "Inspect existing recipes; never duplicate or auto-approve.",
-        }
     project = existing or studio.create_node(
         NodeCreate(
             kind="project",
@@ -81,38 +137,65 @@ def prepare(studio):
             notes="Assistant-proposed real-image benchmark. Awaiting user recipe approval; not an approved production.",
         )
     )
-    source = studio.capture(
-        project["id"],
-        SourceCreate(
-            author="assistant",
-            status="proposal",
-            text="Proposed bounded visual test: three independent character/location/prop sheets for Mara waiting at Platform 4 with a brass-clipped ticket. Human reviews sheets before any cut recipes are prepared. No paid approval implied.",
-        ),
-    )
-    studio.patch_node(
-        project["id"],
-        NodePatch(
-            expected_revision=studio.inspect(project["id"])["node"]["revision"],
-            reason="Record proposed benchmark context",
-            source_id=source["id"],
-            changes={
-                "style": FieldEdit(value="Cinematic photographic realism, neutral consistent materials"),
-                "era": FieldEdit(value="1980s"),
-            },
-        ),
-    )
+    if not existing:
+        source = studio.capture(
+            project["id"],
+            SourceCreate(
+                author="assistant",
+                status="proposal",
+                text="Proposed bounded visual test: three independent character/location/prop sheets for Mara waiting at Platform 4 with a brass-clipped ticket. Human reviews sheets before any cut recipes are prepared. No paid approval implied.",
+            ),
+        )
+        studio.patch_node(
+            project["id"],
+            NodePatch(
+                expected_revision=studio.inspect(project["id"])["node"]["revision"],
+                reason="Record proposed benchmark context",
+                source_id=source["id"],
+                changes={
+                    "style": FieldEdit(value="Cinematic photographic realism, neutral consistent materials"),
+                    "era": FieldEdit(value="1980s"),
+                },
+            ),
+        )
     recipes = []
     for kind, name, aspect, prompt in SHEETS:
-        node = studio.create_node(NodeCreate(kind=kind, name=name, parent_id=project["id"], notes=prompt))
-        recipe = studio.prepare(
-            RecipeCreate(
-                node_id=node["id"],
-                model="nano_banana_2",
-                prompt=prompt,
-                intent=f"Proposed {name} reference sheet",
-                settings={"aspect_ratio": aspect, "resolution": "2k"},
-            )
+        data = studio.project(project["id"])
+        node = next(
+            (item for item in data["nodes"] if item["kind"] == kind and item["name"] == name),
+            None,
+        ) or studio.create_node(NodeCreate(kind=kind, name=name, parent_id=project["id"], notes=prompt))
+        known_labels = {item["label"] for item in studio.inspect(node["id"])["requirements"]}
+        for requirement_kind, label, instruction, priority in REQUIREMENTS[name]:
+            if label not in known_labels:
+                studio.create_requirement(
+                    node["id"],
+                    AssetRequirementCreate(
+                        kind=requirement_kind, label=label, instruction=instruction, priority=priority
+                    ),
+                )
+        data = studio.project(project["id"])
+        recipe = next(
+            (
+                item
+                for item in data["recipes"]
+                if item["node_id"] == node["id"]
+                and item["fresh"]
+                and item["spec"]["prompt"] == prompt
+                and item["spec"]["settings"] == {"aspect_ratio": aspect, "resolution": "2k"}
+            ),
+            None,
         )
+        if not recipe:
+            recipe = studio.prepare(
+                RecipeCreate(
+                    node_id=node["id"],
+                    model="nano_banana_2",
+                    prompt=prompt,
+                    intent=f"Proposed {name} reference sheet",
+                    settings={"aspect_ratio": aspect, "resolution": "2k"},
+                )
+            )
         recipes.append(
             {
                 "name": name,

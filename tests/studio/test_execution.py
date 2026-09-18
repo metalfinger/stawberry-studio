@@ -6,7 +6,16 @@ import pytest
 from PIL import Image
 
 from backend.studio.execution import Execution, validate_cost
-from backend.studio.models import Approval, MediaReview, NodeCreate, RecipeCreate, Reconciliation, Reference
+from backend.studio.models import (
+    Approval,
+    BatchApproval,
+    BatchApprovalItem,
+    MediaReview,
+    NodeCreate,
+    RecipeCreate,
+    Reconciliation,
+    Reference,
+)
 from backend.studio.providers import FakeProvider, Higgsfield, SubmissionUnknown
 from backend.studio.service import Studio
 from backend.studio.store import Store, StudioError, encoded
@@ -98,6 +107,55 @@ def test_disabled_paid_queue_is_not_consumed(studio):
     assert studio.job(job["id"])["state"] == "queued"
     studio.execution.cancel(job["id"])
     assert studio.job(job["id"])["state"] == "cancelled"
+
+
+def test_batch_approval_is_atomic_and_traceable(studio):
+    project = studio.create_node(NodeCreate(kind="project", name="Batch"))
+    recipes = []
+    for name in ("Character", "Location"):
+        asset = studio.create_node(NodeCreate(kind="character", name=name, parent_id=project["id"]))
+        recipes.append(
+            studio.prepare(
+                RecipeCreate(node_id=asset["id"], provider="fake", model="fixture", prompt=name, intent=name)
+            )
+        )
+    request = BatchApproval(
+        user_decision="Approved both displayed offline recipes",
+        items=[
+            BatchApprovalItem(recipe_id=recipe["id"], fingerprint=recipe["fingerprint"], max_credits=0)
+            for recipe in recipes
+        ],
+    )
+    result = studio.approve_batch(request)
+    assert len(result["jobs"]) == 2 and all(job["state"] == "queued" for job in result["jobs"])
+    with studio.store.connection() as conn:
+        rows = conn.execute(
+            "SELECT batch_id FROM recipe_approvals WHERE recipe_id IN (?,?)", tuple(recipe["id"] for recipe in recipes)
+        ).fetchall()
+    assert {row["batch_id"] for row in rows} == {result["batch_id"]}
+
+
+def test_batch_mismatch_rolls_back_every_recipe(studio):
+    project = studio.create_node(NodeCreate(kind="project", name="Batch"))
+    recipes = [
+        studio.prepare(RecipeCreate(node_id=project["id"], provider="fake", model="fixture", prompt=name, intent=name))
+        for name in ("First", "Second")
+    ]
+    with pytest.raises(StudioError, match="does not match"):
+        studio.approve_batch(
+            BatchApproval(
+                user_decision="Invalid test batch",
+                items=[
+                    BatchApprovalItem(
+                        recipe_id=recipe["id"],
+                        fingerprint=recipe["fingerprint"] if index == 0 else "0" * 64,
+                        max_credits=0,
+                    )
+                    for index, recipe in enumerate(recipes)
+                ],
+            )
+        )
+    assert all(studio.recipe(recipe["id"])["approved_at"] is None for recipe in recipes)
 
 
 def test_runtime_distinguishes_responsive_stale_stopped(studio):

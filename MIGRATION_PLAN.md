@@ -210,7 +210,7 @@ on the installed CLI, not assumptions. Unsupported capabilities are explicit.
 
 ## Milestone 1: extract the domain engine
 
-- [ ] Implement the contracts above using existing database/domain conventions
+- [x] Implement the contracts above using existing database/domain conventions
   where sound. Keep the first schema limited to the three-cut proof.
 - [x] Separate domain operations from chat events, narrator messages and HTTP.
 - [x] Implement validated project/story/asset changes, context retrieval and
@@ -229,15 +229,15 @@ approval invalidation and immutable version history without any provider calls.
 ## Milestone 2: durable execution and Higgsfield adapter
 
 - [x] Add a local worker that runs independently of the requesting assistant.
-- [ ] Persist jobs before submission, record attempts and remote IDs, use
+- [x] Persist jobs before submission, record attempts and remote IDs, use
   ownership/leases, and remove broad project-wide running-state resets.
-- [ ] Add fake and Higgsfield adapters with capability-aware validation.
-- [ ] Model unsupported cancellation and uncertain submission honestly; reconcile
+- [x] Add fake and Higgsfield adapters with capability-aware validation.
+- [x] Model unsupported cancellation and uncertain submission honestly; reconcile
   by known remote ID and never blindly repeat ambiguous billable submissions.
 - [x] Separate provider success from output collection and local registration.
   Retrying a download must not regenerate the image/video.
 - [x] Expose durable status/events, with queryable state after reconnect.
-- [ ] Treat unknown prices as unknown; record provider credits separately from
+- [x] Treat unknown prices as unknown; record provider credits separately from
   currency estimates. No implicit unlimited-generation assumption.
 
 Exit: fake-provider restart, duplicate-request, concurrent-job, provider-error,
@@ -245,7 +245,7 @@ partial-output and collection-failure tests pass. No cross-job status corruption
 
 ## Milestone 3: assistant tools and the first vertical proof
 
-- [ ] Expose a small CLI surface with structured output backed by the engine:
+- [x] Expose a small CLI surface with structured output backed by the engine:
   inspect/context, validated changes, prepare, approve/execute, status, review,
   select and export. Add MCP only if Codex integration needs it, as a thin
   transport over the same operations rather than a parallel implementation.
@@ -254,9 +254,9 @@ partial-output and collection-failure tests pass. No cross-job status corruption
   internal LLM agent stack. Host reasoning supplies structured style/trait data.
 - [x] Provide a minimal browser sequence/reference/take view using reusable
   frontend pieces, not a new chat interface.
-- [ ] Open the local viewer in Codex and verify visible data updates after a
+- [x] Open the local viewer in Codex and verify visible data updates after a
   tool mutation, approved generation, active-version change and browser refresh.
-- [ ] Complete one story, one character, recurring prop, location/sublocation,
+- [x] Complete one story, one character, recurring prop, location/sublocation,
   three connected cuts and one revision with fake media/jobs first.
 - [ ] Run a bounded user-approved Higgsfield proof. Inspect actual images and
   usage, not just successful responses. Test one video job from an approved
@@ -269,17 +269,17 @@ and history. The user reviews this proof before broadening the workflow.
 
 ## Milestone 4: production viewer and full workflow
 
-- [ ] Sequence-first overview, asset/sheet library, context hierarchy inspector,
+- [x] Sequence-first overview, asset/sheet library, context hierarchy inspector,
   source previews and traceable reference relationships.
-- [ ] Take comparison, active selection, version-specific feedback, prompt/spec
+- [x] Take comparison, active selection, version-specific feedback, prompt/spec
   inspection and actionable missing-reference/continuity notes.
-- [ ] Support planned missing views/states and user-approved batches without
+- [x] Support planned missing views/states and user-approved batches without
   speculative automatic generation. Preserve all versions and derived crops.
-- [ ] Show queued/running/collecting/failed/ready states, known costs and recovery
+- [x] Show queued/running/collecting/failed/ready states, known costs and recovery
   actions. No indefinite spinner or undocumented false progress percentage.
 - [ ] Support video artifacts and their actual reference/input roles; do not
   build a full NLE. Export/import the project with media and manifests.
-- [ ] Verify desktop/narrow layouts, image/video loading and interaction through
+- [x] Verify desktop/narrow layouts, image/video loading and interaction through
   browser tests. Deterministic selection/navigation must not spend LLM tokens.
 
 Exit: a fresh user can inspect, approve, revise and recover the complete project

@@ -11,6 +11,11 @@ export interface Media {
 export interface Review {
   revision: number; status: 'pending' | 'approved' | 'rejected'; stale?: boolean; complete?: boolean;
   depicted_assets: string[]; user_decision: string; created_at?: number;
+  requirement_ids: string[];
+}
+export interface AssetRequirement {
+  id: string; asset_id: string; kind: 'view' | 'state' | 'detail' | 'scale';
+  label: string; instruction: string; priority: number; covered_by: string[];
 }
 export interface Readiness {
   ready: boolean; issues: { code: string; message: string; node_id?: string; field?: string }[];
@@ -35,6 +40,7 @@ export interface Context {
 }
 export interface Recipe {
   id: string; node_id: string; fingerprint: string; approved_at: number | null;
+  fresh: boolean; stale_reason: string | null;
   spec: { provider: string; model: string; prompt: string; intent: string; settings: Record<string, unknown>;
     references: { media_id: string; role: string; instruction: string; subjects?: string[] }[];
     estimate?: { credits: number | null; unit: string; settings_only_credits?: number; reason?: string } };
@@ -63,10 +69,12 @@ export interface NodeDetail {
   node: ProductionNode; context: Context; media: Media[];
   sources: { id: string; node_id: string; node_name: string; author: string; status: string; text: string }[];
   revisions: { revision: number; reason: string; created_at: number }[];
+  requirements: AssetRequirement[];
 }
 export interface MediaDetail {
   media: Media; recipe: Recipe | null;
   review_context: string;
+  requirements: AssetRequirement[];
   feedback: { id: string; text: string; created_at: number }[];
   review_history: Review[];
 }

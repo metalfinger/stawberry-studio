@@ -117,7 +117,7 @@ def _restore(archive_path: str | Path, destination: str | Path):
                 raise StudioError("archive_invalid", "Database integrity check failed")
             if conn.execute("SELECT name FROM sqlite_master WHERE type IN ('trigger','view')").fetchone():
                 raise StudioError("archive_invalid", "Unexpected executable database objects")
-            if conn.execute("PRAGMA user_version").fetchone()[0] not in {1, 2, 3}:
+            if conn.execute("PRAGMA user_version").fetchone()[0] not in {1, 2, 3, 4, 5}:
                 raise StudioError("archive_invalid", "Unsupported database schema")
             for name, expected in conn.execute("SELECT path,sha256 FROM media"):
                 item = files.get("media/" + name)

@@ -115,6 +115,13 @@ approval scope retained. A crop or a generated reverse angle is not automaticall
 a new independent identity, a true 360 capture, or proof of geometric consistency.
 Generate extra views only when a cut needs them and the user approves the work.
 
+Planned view/state/detail/scale requirements are persistent asset records, not
+free-form prompt fragments. Human review of an exact take confirms which current
+requirements it visibly covers. Changing a requirement invalidates that coverage;
+it does not rewrite or delete the old image or review. A generation batch contains
+only frozen, current recipes with explicit estimate ceilings and one recorded
+user decision. One stale or mismatched recipe rejects the whole batch.
+
 ## Approval loop during testing
 
 Review story/breakdown decisions and sheet plans as coherent groups. For each

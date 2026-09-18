@@ -13,11 +13,13 @@ export default function TakeReview({ detail, nodes, busy, action, reviewed }: {
   const ownsAsset = !!owner && assets.some(a => a.id === owner.id);
   // Requested subjects are not evidence of what actually appears in the image.
   const [subjects, setSubjects] = useState<string[]>(detail.media.review.depicted_assets);
+  const [requirements, setRequirements] = useState<string[]>(detail.media.review.requirement_ids ?? []);
   const [decision, setDecision] = useState('');
   const save = (status: 'approved' | 'rejected', select: boolean) => action(async () => {
     await api(`/media/${detail.media.id}/review`, {
       expected_revision: detail.media.review.revision, expected_context: detail.review_context,
       status, user_decision: decision.trim(), depicted_assets: subjects,
+      requirement_ids: requirements,
     });
     reviewed(await api<MediaDetail>(`/media/${detail.media.id}`));
     if (select && owner) await api(`/nodes/${owner.id}/selection`, { media_id: detail.media.id, expected_revision: owner.revision });
@@ -32,6 +34,13 @@ export default function TakeReview({ detail, nodes, busy, action, reviewed }: {
         <span>{asset.name}<small>{asset.kind}</small></span>
       </label>)}</div>
     </fieldset>}
+    {ownsAsset && detail.requirements.length > 0 && <fieldset><legend>Confirmed reference coverage</legend>
+      <div className="studio-requirement-checks">{detail.requirements.map(requirement => <label key={requirement.id}>
+        <input type="checkbox" disabled={busy} checked={requirements.includes(requirement.id)}
+          onChange={event => setRequirements(previous => event.target.checked ? [...previous, requirement.id] : previous.filter(id => id !== requirement.id))} />
+        <span><strong>{requirement.label}</strong><small>{requirement.kind} / P{requirement.priority}</small><small>{requirement.instruction}</small></span>
+      </label>)}</div>
+    </fieldset>}
     <label htmlFor="review-decision">Review decision</label>
     <textarea id="review-decision" rows={2} value={decision} onChange={e => setDecision(e.target.value)} disabled={busy} />
     <div className="studio-actions">
@@ -44,6 +53,7 @@ export default function TakeReview({ detail, nodes, busy, action, reviewed }: {
         <small>Review {review.revision} / {review.created_at && new Date(review.created_at * 1000).toLocaleString()}</small>
         <ReviewStatus review={review} /><p className="studio-notes">{review.user_decision}</p>
         {review.depicted_assets.length > 0 && <p className="studio-muted">{review.depicted_assets.map(id => assets.find(a => a.id === id)?.name ?? id).join(', ')}</p>}
+        {review.requirement_ids?.length > 0 && <p className="studio-muted">Coverage: {review.requirement_ids.map(id => detail.requirements.find(item => item.id === id)?.label ?? 'Changed requirement').join(', ')}</p>}
       </div>)}
     </details>}
   </section>;

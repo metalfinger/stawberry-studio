@@ -105,6 +105,23 @@ class Approval(Contract):
     allow_unknown_cost: bool = False
 
 
+class BatchApprovalItem(Contract):
+    recipe_id: str
+    fingerprint: str = Field(min_length=64, max_length=64)
+    max_credits: float = Field(ge=0, allow_inf_nan=False)
+
+
+class BatchApproval(Contract):
+    items: list[BatchApprovalItem] = Field(min_length=1, max_length=32)
+    user_decision: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def distinct_recipes(self):
+        if len({item.recipe_id for item in self.items}) != len(self.items):
+            raise ValueError("Batch recipes must be distinct")
+        return self
+
+
 class Reconciliation(Contract):
     provider_id: str = Field(min_length=1, pattern=r"^[a-zA-Z0-9][a-zA-Z0-9_-]*$")
     fingerprint: str = Field(min_length=64, max_length=64)
@@ -127,6 +144,20 @@ class MediaReview(Contract):
     status: Literal["approved", "rejected"]
     user_decision: str = Field(min_length=1)
     depicted_assets: list[str] = Field(default_factory=list)
+    requirement_ids: list[str] = Field(default_factory=list)
+
+
+class AssetRequirementCreate(Contract):
+    kind: Literal["view", "state", "detail", "scale"]
+    label: str = Field(min_length=1, max_length=120)
+    instruction: str = Field(min_length=1, max_length=1000)
+    priority: int = Field(default=1, ge=1, le=3)
+
+
+class AssetRequirementUpdate(Contract):
+    label: str = Field(min_length=1, max_length=120)
+    instruction: str = Field(min_length=1, max_length=1000)
+    priority: int = Field(ge=1, le=3)
 
 
 class Reorder(Contract):

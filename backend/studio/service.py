@@ -8,7 +8,18 @@ import time
 from pathlib import Path
 
 from backend.studio.execution import Execution, validate_cost
-from backend.studio.models import Approval, MediaReview, NodeCreate, NodePatch, RecipeCreate, Reorder, SourceCreate
+from backend.studio.models import (
+    Approval,
+    AssetRequirementCreate,
+    AssetRequirementUpdate,
+    BatchApproval,
+    MediaReview,
+    NodeCreate,
+    NodePatch,
+    RecipeCreate,
+    Reorder,
+    SourceCreate,
+)
 from backend.studio.production import ASSET_KINDS, ProductionRules
 from backend.studio.store import Store, StudioError, digest, encoded, identifier
 
@@ -184,7 +195,12 @@ class Studio:
             return self._generation_context(conn, node_id)
 
     def _generation_context(self, conn, node_id):
-        return {**self._context(conn, node_id), "production": self.rules.resolve(conn, node_id)}
+        node = self.store.one(conn, "nodes", node_id)
+        return {
+            **self._context(conn, node_id),
+            "production": self.rules.resolve(conn, node_id),
+            "requirements": self._requirements(conn, node_id) if node["kind"] in ASSET_KINDS else [],
+        }
 
     def readiness(self, node_id):
         with self.store.connection() as conn:
@@ -234,7 +250,76 @@ class Studio:
                     self._media(conn, dict(r))
                     for r in conn.execute("SELECT * FROM media WHERE node_id=? ORDER BY created_at DESC", (node_id,))
                 ],
+                "requirements": self._requirements(conn, node_id) if node["kind"] in ASSET_KINDS else [],
             }
+
+    def _requirements(self, conn, asset_id):
+        requirements = [
+            dict(row)
+            for row in conn.execute(
+                "SELECT * FROM asset_requirements WHERE asset_id=? ORDER BY priority,created_at,id", (asset_id,)
+            )
+        ]
+        reviews = [
+            dict(row)
+            for row in conn.execute(
+                """SELECT mr.* FROM media_reviews mr JOIN media m ON m.id=mr.media_id
+                WHERE m.node_id=? AND mr.revision=(
+                    SELECT MAX(latest.revision) FROM media_reviews latest WHERE latest.media_id=mr.media_id
+                ) ORDER BY mr.created_at DESC""",
+                (asset_id,),
+            )
+        ]
+        for requirement in requirements:
+            current_hash = digest(
+                {key: requirement[key] for key in ("id", "asset_id", "kind", "label", "instruction", "priority")}
+            )
+            requirement["covered_by"] = [
+                review["media_id"]
+                for review in reviews
+                if review["status"] == "approved"
+                and json.loads(review["requirement_hashes"]).get(requirement["id"]) == current_hash
+            ]
+        return requirements
+
+    def create_requirement(self, asset_id: str, request: AssetRequirementCreate):
+        with self.store.connection(write=True) as conn:
+            asset = self.store.one(conn, "nodes", asset_id)
+            if asset["kind"] not in ASSET_KINDS:
+                raise StudioError("requirement_target", "Planned views and states belong to production assets")
+            requirement_id, now = identifier(), time.time()
+            conn.execute(
+                "INSERT INTO asset_requirements VALUES (?,?,?,?,?,?,?,?)",
+                (
+                    requirement_id,
+                    asset_id,
+                    request.kind,
+                    request.label,
+                    request.instruction,
+                    request.priority,
+                    now,
+                    now,
+                ),
+            )
+            conn.execute("UPDATE nodes SET revision=revision+1,updated_at=? WHERE id=?", (now, asset_id))
+            self.store.revision(conn, self.store.one(conn, "nodes", asset_id), "Added planned reference requirement")
+            return next(item for item in self._requirements(conn, asset_id) if item["id"] == requirement_id)
+
+    def update_requirement(self, requirement_id: str, request: AssetRequirementUpdate):
+        with self.store.connection(write=True) as conn:
+            row = conn.execute("SELECT * FROM asset_requirements WHERE id=?", (requirement_id,)).fetchone()
+            if not row:
+                raise StudioError("not_found", f"asset requirement not found: {requirement_id}", 404)
+            now = time.time()
+            conn.execute(
+                "UPDATE asset_requirements SET label=?,instruction=?,priority=?,updated_at=? WHERE id=?",
+                (request.label, request.instruction, request.priority, now, requirement_id),
+            )
+            conn.execute("UPDATE nodes SET revision=revision+1,updated_at=? WHERE id=?", (now, row["asset_id"]))
+            self.store.revision(
+                conn, self.store.one(conn, "nodes", row["asset_id"]), "Updated planned reference requirement"
+            )
+            return next(item for item in self._requirements(conn, row["asset_id"]) if item["id"] == requirement_id)
 
     def revision(self, node_id, revision):
         with self.store.connection() as conn:
@@ -251,16 +336,21 @@ class Studio:
             return {
                 "media": media,
                 "review_context": self.rules.review_context(conn, media),
+                "requirements": self._requirements(conn, media["node_id"])
+                if self.store.one(conn, "nodes", media["node_id"])["kind"] in ASSET_KINDS
+                else [],
                 "feedback": [
                     dict(r)
                     for r in conn.execute("SELECT * FROM feedback WHERE media_id=? ORDER BY created_at,id", (media_id,))
                 ],
-                "recipe": self._recipe(self.store.one(conn, "recipes", recipe_id)) if recipe_id else None,
+                "recipe": self._recipe_status(conn, self.store.one(conn, "recipes", recipe_id)) if recipe_id else None,
                 "review_history": [
                     {
                         **dict(r),
                         "depicted_assets": json.loads(r["depicted_assets"]),
                         "subject_hashes": json.loads(r["subject_hashes"]),
+                        "requirement_ids": json.loads(r["requirement_ids"]),
+                        "requirement_hashes": json.loads(r["requirement_hashes"]),
                     }
                     for r in conn.execute(
                         "SELECT * FROM media_reviews WHERE media_id=? ORDER BY revision DESC", (media_id,)
@@ -296,7 +386,7 @@ class Studio:
                     )
                 ],
                 "recipes": [
-                    self._recipe(dict(r))
+                    self._recipe_status(conn, dict(r))
                     for r in conn.execute(
                         "SELECT r.* FROM recipes r JOIN nodes n ON n.id=r.node_id WHERE n.project_id=? ORDER BY r.created_at DESC",
                         (project_id,),
@@ -442,9 +532,17 @@ class Studio:
     def _recipe(row):
         return {**row, "spec": json.loads(row["spec"]), "context": json.loads(row["context"])}
 
+    def _recipe_status(self, conn, row):
+        recipe = self._recipe(row)
+        try:
+            self._fresh(conn, row)
+            return {**recipe, "fresh": True, "stale_reason": None}
+        except StudioError as error:
+            return {**recipe, "fresh": False, "stale_reason": str(error)}
+
     def recipe(self, recipe_id):
         with self.store.connection() as conn:
-            return self._recipe(self.store.one(conn, "recipes", recipe_id))
+            return self._recipe_status(conn, self.store.one(conn, "recipes", recipe_id))
 
     def _fresh(self, conn, recipe):
         if self._generation_context(conn, recipe["node_id"]) != json.loads(recipe["context"]):
@@ -471,12 +569,60 @@ class Studio:
             if policy["max_credits"] is None and estimate.get("credits") is not None:
                 policy["max_credits"] = estimate["credits"]
             validate_cost(estimate, policy)
-            conn.execute("INSERT OR REPLACE INTO recipe_approvals VALUES (?,?)", (recipe_id, encoded(policy)))
+            conn.execute(
+                "INSERT OR REPLACE INTO recipe_approvals(recipe_id,policy,batch_id) VALUES (?,?,NULL)",
+                (recipe_id, encoded(policy)),
+            )
             conn.execute(
                 "UPDATE recipes SET approved_at=?,user_decision=? WHERE id=?",
                 (time.time(), approval.user_decision, recipe_id),
             )
             return self._recipe(self.store.one(conn, "recipes", recipe_id))
+
+    def approve_batch(self, request: BatchApproval):
+        with self.store.connection(write=True) as conn:
+            prepared = []
+            project_id = None
+            for item in request.items:
+                row = self.store.one(conn, "recipes", item.recipe_id)
+                node = self.store.one(conn, "nodes", row["node_id"])
+                if project_id is None:
+                    project_id = node["project_id"]
+                elif project_id != node["project_id"]:
+                    raise StudioError("batch_project", "A generation batch cannot span productions", 409)
+                if row["fingerprint"] != item.fingerprint:
+                    raise StudioError("approval_mismatch", "Batch approval does not match a prepared request", 409)
+                self._fresh(conn, row)
+                estimate = json.loads(row["spec"]).get("estimate", {"credits": None})
+                policy = {"max_credits": item.max_credits, "allow_unknown_cost": False}
+                validate_cost(estimate, policy)
+                prepared.append((row, policy))
+            batch_id, now = identifier(), time.time()
+            conn.execute(
+                "INSERT INTO approval_batches VALUES (?,?,?,?)", (batch_id, project_id, request.user_decision, now)
+            )
+            jobs = []
+            for row, policy in prepared:
+                conn.execute(
+                    "INSERT OR REPLACE INTO recipe_approvals(recipe_id,policy,batch_id) VALUES (?,?,?)",
+                    (row["id"], encoded(policy), batch_id),
+                )
+                conn.execute(
+                    "UPDATE recipes SET approved_at=?,user_decision=? WHERE id=?",
+                    (now, request.user_decision, row["id"]),
+                )
+                existing = conn.execute("SELECT * FROM jobs WHERE recipe_id=?", (row["id"],)).fetchone()
+                if existing:
+                    jobs.append(self._job(dict(existing)))
+                    continue
+                job_id = identifier()
+                conn.execute(
+                    "INSERT INTO jobs(id,recipe_id,state,created_at,updated_at) VALUES (?,?,'queued',?,?)",
+                    (job_id, row["id"], now, now),
+                )
+                self.store.event(conn, job_id, "queued", {"recipe_id": row["id"], "batch_id": batch_id}, now)
+                jobs.append(self._job(self.store.one(conn, "jobs", job_id)))
+            return {"batch_id": batch_id, "project_id": project_id, "jobs": jobs}
 
     def enqueue(self, recipe_id: str):
         with self.store.connection(write=True) as conn:
@@ -568,8 +714,29 @@ class Studio:
             )
             for subject in subjects:
                 self.rules.target(conn, node, subject, ASSET_KINDS)
+            requirements = list(dict.fromkeys(request.requirement_ids))
+            if requirements and node["kind"] not in ASSET_KINDS:
+                raise StudioError("requirement_target", "Only asset takes can confirm planned view or state coverage")
+            known_requirements = {
+                row["id"] for row in conn.execute("SELECT id FROM asset_requirements WHERE asset_id=?", (node["id"],))
+            }
+            if not set(requirements) <= known_requirements:
+                raise StudioError("requirement_invalid", "A confirmed requirement does not belong to this asset")
+            requirement_hashes = {}
+            for requirement in conn.execute(
+                "SELECT * FROM asset_requirements WHERE asset_id=? AND id IN ({})".format(
+                    ",".join("?" for _ in requirements) or "NULL"
+                ),
+                (node["id"], *requirements),
+            ):
+                requirement_hashes[requirement["id"]] = digest(
+                    {key: requirement[key] for key in ("id", "asset_id", "kind", "label", "instruction", "priority")}
+                )
             conn.execute(
-                "INSERT INTO media_reviews VALUES (?,?,?,?,?,?,?,?)",
+                """INSERT INTO media_reviews(
+                    media_id,revision,status,user_decision,depicted_assets,
+                    definition_hash,subject_hashes,created_at,requirement_ids,requirement_hashes
+                ) VALUES (?,?,?,?,?,?,?,?,?,?)""",
                 (
                     media_id,
                     previous["revision"] + 1,
@@ -579,6 +746,8 @@ class Studio:
                     self.rules.definition(conn, node["id"]),
                     encoded({subject: self.rules.definition(conn, subject) for subject in subjects}),
                     time.time(),
+                    encoded(requirements),
+                    encoded(requirement_hashes),
                 ),
             )
             return self._media(conn, media)

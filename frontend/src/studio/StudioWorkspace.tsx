@@ -8,6 +8,8 @@ import TakeReview from './TakeReview';
 import JobActivity from './JobActivity';
 import RecipeApproval from './RecipeApproval';
 import TakeComparison from './TakeComparison';
+import AssetRequirements from './AssetRequirements';
+import GenerationBatch from './GenerationBatch';
 import './studio.css';
 
 function Visual({ media, interactive = false }: { media?: Media; interactive?: boolean }) {
@@ -131,9 +133,10 @@ function Workspace({ projectId }: { projectId?: string }) {
   const recipeView = (recipe: Recipe) => {
     const job = data?.jobs.find(j => j.recipe_id === recipe.id);
     return <details className="studio-recipe" key={recipe.id}>
-      <summary><FileText size={15} />{recipe.spec.intent}<span className="studio-tag">{job?.state ?? (recipe.approved_at ? 'approved' : 'review')}</span></summary>
+      <summary><FileText size={15} />{recipe.spec.intent}<span className="studio-tag">{!recipe.fresh ? 'stale' : job?.state ?? (recipe.approved_at ? 'approved' : 'review')}</span></summary>
       <div className="studio-recipe-body">
         <p className="studio-muted">{recipe.spec.provider} / {recipe.spec.model}</p>
+        {!recipe.fresh && <p className="studio-job-error">This recipe is no longer current: {recipe.stale_reason}. Prepare a new recipe; the old record is retained.</p>}
         {recipe.spec.provider === 'fake' && <p className="studio-test-label">Offline test. No generation credits.</p>}
         <ol className="studio-reference-list">{recipe.spec.references.map((ref, i) => <li key={`${ref.media_id}-${i}`}>
           <button title="Inspect reference" onClick={() => setFocusedMedia(findMedia(ref.media_id) ?? null)}><Visual media={findMedia(ref.media_id)} /></button>
@@ -142,7 +145,7 @@ function Workspace({ projectId }: { projectId?: string }) {
         <pre>{recipe.spec.prompt}</pre>
         <dl className="studio-facts">{Object.entries(recipe.spec.settings).map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{JSON.stringify(value)}</dd></div>)}</dl>
         {job ? <JobActivity job={job} provider={recipe.spec.provider} runtime={runtime} busy={busy} action={action} />
-          : <RecipeApproval recipe={recipe} busy={busy} action={action} />}
+          : recipe.fresh ? <RecipeApproval recipe={recipe} busy={busy} action={action} /> : null}
       </div>
     </details>;
   };
@@ -194,7 +197,8 @@ function Workspace({ projectId }: { projectId?: string }) {
               return count ? <span key={state}><strong>{count}</strong> {state.replaceAll('_', ' ')}</span> : null;
             })}</div>
             {data.jobs.map(job => <section key={job.id}><h3>{data.recipes.find(r => r.id === job.recipe_id)?.spec.intent}</h3><JobActivity job={job} provider={data.recipes.find(r => r.id === job.recipe_id)?.spec.provider} runtime={runtime} busy={busy} action={action} /></section>)}{!data.jobs.length && <p>No generation jobs.</p>}</div>
-            : <div className="studio-grid">{(tab === 'storyboard' ? sequence : assets).map((node, index) => {
+            : <>{tab === 'assets' && <GenerationBatch recipes={data.recipes} jobs={data.jobs} nodes={data.nodes} busy={busy} action={action} />}
+            <div className="studio-grid">{(tab === 'storyboard' ? sequence : assets).map((node, index) => {
               const media = findMedia(node.active_media_id) ?? data.media.find(m => m.node_id === node.id);
               const takes = data.media.filter(m => m.node_id === node.id);
               return <article key={node.id} className={`studio-tile ${selected === node.id ? 'selected' : ''}`}>
@@ -204,7 +208,7 @@ function Workspace({ projectId }: { projectId?: string }) {
                   {media && <ReviewStatus review={media.review} />}
                   {node.active_media_id && takes[0] && takes[0].id !== node.active_media_id && <small className="studio-review-label">Newest take is not selected</small>}</div>
               </article>;
-            })}{!(tab === 'storyboard' ? sequence : assets).length && <p className="studio-muted">{tab === 'storyboard' ? 'No cuts yet.' : 'No assets yet.'}</p>}</div>}
+            })}{!(tab === 'storyboard' ? sequence : assets).length && <p className="studio-muted">{tab === 'storyboard' ? 'No cuts yet.' : 'No assets yet.'}</p>}</div></>}
         </main>
         {selected && <aside className="studio-inspector" aria-label="Node inspector">
           <div className="studio-inspector-head"><span>{detail?.node.kind ?? 'Context'}</span><button className="studio-icon" title="Close inspector" onClick={() => { setSelected(null); setDetail(null); }}><X size={16} /></button></div>
@@ -231,6 +235,7 @@ function Workspace({ projectId }: { projectId?: string }) {
                 {media.id === detail.node.active_media_id ? <><Check size={13} />Selected</> : 'Use take'}</button>
               <button onClick={() => setFocusedMedia(media)}>Review take</button>
             </div>)}</div>{!detail.media.length && <p className="studio-muted">No takes.</p>}</section>
+            {['character', 'location', 'prop'].includes(detail.node.kind) && <AssetRequirements asset={detail.node} requirements={detail.requirements} busy={busy} action={action} />}
             <TakeComparison key={detail.node.id} takes={detail.media} selectedId={detail.node.active_media_id} review={setFocusedMedia} />
             <section><h3>Generation recipes</h3>{nodeRecipes.map(recipeView)}{!nodeRecipes.length && <p className="studio-muted">No prepared recipes.</p>}</section>
             <details><summary>Source instructions ({detail.sources.length})</summary>{detail.sources.map(source => <section key={source.id}><small>{source.node_name} / {source.author} / {source.status}</small><p className="studio-notes">{source.text}</p></section>)}</details>

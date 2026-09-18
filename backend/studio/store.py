@@ -87,6 +87,16 @@ CREATE TABLE IF NOT EXISTS workers (
 CREATE TABLE IF NOT EXISTS recipe_approvals (
  recipe_id TEXT PRIMARY KEY REFERENCES recipes(id), policy TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS approval_batches (
+ id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES nodes(id),
+ user_decision TEXT NOT NULL, created_at REAL NOT NULL
+);
+CREATE TABLE IF NOT EXISTS asset_requirements (
+ id TEXT PRIMARY KEY, asset_id TEXT NOT NULL REFERENCES nodes(id),
+ kind TEXT NOT NULL, label TEXT NOT NULL, instruction TEXT NOT NULL,
+ priority INTEGER NOT NULL, created_at REAL NOT NULL, updated_at REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS asset_requirements_asset ON asset_requirements(asset_id,priority,created_at);
 """
 
 
@@ -103,11 +113,20 @@ class Store:
         self.media_dir.mkdir(exist_ok=True)
         self.path = self.home / "production.sqlite"
         with self.connection() as conn:
-            if conn.execute("PRAGMA user_version").fetchone()[0] not in {0, 1, 2, 3}:
+            version = conn.execute("PRAGMA user_version").fetchone()[0]
+            if version not in {0, 1, 2, 3, 4, 5}:
                 raise StudioError("schema_unsupported", "This workspace requires a different engine version")
             conn.execute("PRAGMA journal_mode=WAL")
             conn.executescript(SCHEMA)
-            conn.execute("PRAGMA user_version=3")
+            columns = {row[1] for row in conn.execute("PRAGMA table_info(media_reviews)")}
+            if "requirement_ids" not in columns:
+                conn.execute("ALTER TABLE media_reviews ADD COLUMN requirement_ids TEXT NOT NULL DEFAULT '[]'")
+            if "requirement_hashes" not in columns:
+                conn.execute("ALTER TABLE media_reviews ADD COLUMN requirement_hashes TEXT NOT NULL DEFAULT '{}'")
+            approval_columns = {row[1] for row in conn.execute("PRAGMA table_info(recipe_approvals)")}
+            if "batch_id" not in approval_columns:
+                conn.execute("ALTER TABLE recipe_approvals ADD COLUMN batch_id TEXT REFERENCES approval_batches(id)")
+            conn.execute("PRAGMA user_version=5")
 
     @contextmanager
     def connection(self, *, write=False):

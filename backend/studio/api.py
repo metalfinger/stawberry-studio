@@ -10,6 +10,9 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from backend.studio.models import (
     Approval,
+    AssetRequirementCreate,
+    AssetRequirementUpdate,
+    BatchApproval,
     Feedback,
     MediaReview,
     NodeCreate,
@@ -55,6 +58,10 @@ def create_app(home=None):
     def runtime():
         return studio.execution.status()
 
+    @app.post("/api/studio/generation-batches")
+    def approve_batch(body: BatchApproval):
+        return studio.approve_batch(body)
+
     @app.get("/api/studio/projects")
     def projects():
         return studio.projects()
@@ -70,6 +77,14 @@ def create_app(home=None):
     @app.get("/api/studio/nodes/{node_id}")
     def node(node_id: str):
         return studio.inspect(node_id)
+
+    @app.post("/api/studio/assets/{asset_id}/requirements")
+    def create_requirement(asset_id: str, body: AssetRequirementCreate):
+        return studio.create_requirement(asset_id, body)
+
+    @app.put("/api/studio/requirements/{requirement_id}")
+    def update_requirement(requirement_id: str, body: AssetRequirementUpdate):
+        return studio.update_requirement(requirement_id, body)
 
     @app.get("/api/studio/nodes/{node_id}/readiness")
     def readiness(node_id: str):

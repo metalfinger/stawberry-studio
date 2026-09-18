@@ -139,6 +139,15 @@ class ProductionRules:
                         (node["project_id"],),
                     )
                 },
+                "requirements": [
+                    {key: row[key] for key in ("id", "kind", "label", "instruction", "priority")}
+                    for row in conn.execute(
+                        "SELECT * FROM asset_requirements WHERE asset_id=? ORDER BY priority,created_at,id",
+                        (node["id"],),
+                    )
+                ]
+                if node["kind"] in ASSET_KINDS
+                else [],
             }
         )
 
@@ -153,11 +162,14 @@ class ProductionRules:
                 "stale": False,
                 "complete": False,
                 "depicted_assets": [],
+                "requirement_ids": [],
                 "user_decision": "",
             }
         result = dict(row)
         result["depicted_assets"] = json.loads(result["depicted_assets"])
         result["subject_hashes"] = json.loads(result["subject_hashes"])
+        result["requirement_ids"] = json.loads(result["requirement_ids"])
+        result["requirement_hashes"] = json.loads(result["requirement_hashes"])
         cache = {}
         result["stale"] = result["definition_hash"] != self.definition(conn, media["node_id"], cache) or any(
             self.definition(conn, subject, cache) != expected for subject, expected in result["subject_hashes"].items()
