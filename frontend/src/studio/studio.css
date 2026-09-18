@@ -178,3 +178,9 @@
 .studio-batch-items label { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 9px; align-items: center; padding: 8px; border: 1px solid #dce2df; }
 .studio-batch-items small { display: block; }
 .studio-generation-batch > label { display: grid; gap: 5px; margin: 10px 0; }
+.studio-context-editor form { display: grid; gap: 10px; margin-top: 10px; }
+.studio-context-editor fieldset { border: 1px solid #dce2df; padding: 9px; display: grid; gap: 7px; }
+.studio-context-editor legend { font-weight: 650; }
+.studio-context-editor input[type="text"], .studio-context-editor input[type="number"], .studio-context-editor select { width: 100%; min-width: 0; }
+.studio-field-mode { display: flex; flex-wrap: wrap; gap: 10px; }
+.studio-field-mode label { display: inline-flex; align-items: center; gap: 4px; }

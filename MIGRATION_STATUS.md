@@ -58,6 +58,9 @@ Typed relationships, continuity and review semantics are specified in
   Inspector now shows frame requirements, linked assets, continuity state and
   specific blockers; review dialogs include confirmed-visible-asset checklists,
   rejection/reapproval history, and reference-only versus final-take actions.
+- The inspector now edits common filmmaking details through explicit Inherit,
+  Override and Clear controls. Saves use optimistic node revisions, preserve
+  original source notes, and make parent provenance visible before editing.
 - Asset reference requirements are stable records for views, states, details and
   scale coverage. Coverage is confirmed only during human review of an exact
   take and is bound to the requirement definition; editing a requirement removes
@@ -211,8 +214,9 @@ proof that generation is free or covered by unlimited website usage.
 3. **Viewer parity.** Side-by-side take comparison now shows exact recipes and
    feedback without changing selected takes. Take inspection includes reverse
    reference usage and navigation to consuming nodes. Planned views/states and
-   atomic approved batches are now live. Continue fuller field editing and
-   selective project export/import. Persisted feedback is available but no automatic refinement
+   atomic approved batches are now live. Production-detail editing now supports
+   inherited, overridden and explicitly cleared scalar fields. Continue selective
+   project export/import. Persisted feedback is available but no automatic refinement
    prompt synthesis runs in the server; the host must read it and compose a recipe.
    Comparison verified with two loaded images at desktop and 390px widths;
    selection remained unchanged. Browser verified Mara's identity-reference
@@ -220,7 +224,9 @@ proof that generation is free or covered by unlimited website usage.
    Browser also verified that the proposed sheet batch contains exactly three
    current recipes, totals 6 estimated credits, stays disabled without a written
    decision, and excludes retained stale recipes. Mara's four planned requirements
-   render as uncovered. No approval, queue, upload or generation was triggered.
+   render as uncovered. Browser verified the production-detail editor and its
+   parent provenance without saving a mutation. No approval, queue, upload or
+   generation was triggered.
 4. **Cutover and cleanup.** Verify the old feature inventory, then remove old
    conversational agents/chat surfaces/direct LLM calls and redundant storage
    paths. Switch to one normal launch path, trim dependencies, add CI and a

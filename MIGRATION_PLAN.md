@@ -275,6 +275,8 @@ and history. The user reviews this proof before broadening the workflow.
   inspection and actionable missing-reference/continuity notes.
 - [x] Support planned missing views/states and user-approved batches without
   speculative automatic generation. Preserve all versions and derived crops.
+- [x] Edit common production details with explicit inheritance, override and
+  clear semantics while preserving source notes and revision history.
 - [x] Show queued/running/collecting/failed/ready states, known costs and recovery
   actions. No indefinite spinner or undocumented false progress percentage.
 - [ ] Support video artifacts and their actual reference/input roles; do not

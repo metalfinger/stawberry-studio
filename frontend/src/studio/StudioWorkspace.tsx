@@ -10,6 +10,7 @@ import RecipeApproval from './RecipeApproval';
 import TakeComparison from './TakeComparison';
 import AssetRequirements from './AssetRequirements';
 import GenerationBatch from './GenerationBatch';
+import ContextEditor from './ContextEditor';
 import './studio.css';
 
 function Visual({ media, interactive = false }: { media?: Media; interactive?: boolean }) {
@@ -215,6 +216,7 @@ function Workspace({ projectId }: { projectId?: string }) {
           {!detail ? <LoaderCircle className="studio-running" /> : <>
             <h2>{detail.node.name}</h2><p className="studio-muted">Revision {detail.node.revision}</p>
             <ProductionInspector detail={detail} nodes={data.nodes} busy={busy} inspect={selectNode} action={action} />
+            <ContextEditor key={`${detail.node.id}-${detail.node.revision}`} detail={detail} busy={busy} action={action} />
             <section><h3>Context</h3><dl className="studio-facts">{Object.entries(detail.context.values).map(([field, value]) => {
               const origin = detail.context.provenance[field];
               return <div key={field}><dt>{field}</dt><dd>{fieldValue(value)}<small>{origin.node_id === detail.node.id ? 'Local' : `From ${findNode(origin.node_id)?.name ?? 'parent'}`}</small></dd></div>;
