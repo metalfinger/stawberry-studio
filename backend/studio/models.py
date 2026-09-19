@@ -69,7 +69,7 @@ class Reference(Contract):
 class RecipeCreate(Contract):
     node_id: str
     provider: Literal["fake", "higgsfield"] = "higgsfield"
-    model: str = Field(min_length=1, pattern=r"^[a-zA-Z0-9_-]+$")
+    model: str = Field(default="gpt_image_2_5", min_length=1, pattern=r"^[a-zA-Z0-9_-]+$")
     prompt: str = Field(min_length=1)
     references: list[Reference] = Field(default_factory=list, max_length=32)
     settings: dict[str, JsonValue] = Field(default_factory=dict)

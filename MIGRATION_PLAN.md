@@ -10,6 +10,10 @@ Planning additions: local viewer, detailed node memory, and role/skill boundarie
 specified below. Read-only Higgsfield access verified; generation integration
 and visual quality are not yet verified.
 
+**Current product scope is image storyboarding only.** Video generation, video
+provider migration and NLE behavior are explicitly deferred. Existing generic
+media preview/storage support may remain, but video is not a release gate.
+
 ## Decision
 
 Keep Strawberry's filmmaking workflow and persistent production relationships.
@@ -61,8 +65,8 @@ worker explicitly is handled by persisted recovery state.
 
 Required workspace views:
 
-1. Storyboard: scenes/shots/cuts in editorial order, active take, durations,
-   image/video preview, generation and approval state.
+1. Storyboard: scenes/shots/cuts in editorial order, active image take,
+   durations, generation and approval state.
 2. Production library: characters, locations and props; approved sheets, named
    views/crops, states/variants, all take versions and their provenance.
 3. Context inspector: local node facts, inherited values with source breadcrumbs,
@@ -191,7 +195,7 @@ model realistic for a local full-access Codex host; no tamper-proof claim.
 - [ ] Verify installed Higgsfield CLI version, schema discovery, accepted media
   inputs/order, account access, cost units, output formats, get/list/status,
   cancellation and error semantics. Read-only checks first; no generation.
-- [ ] Verify how Codex local invokes Strawberry and sees image/video results.
+- [ ] Verify how Codex local invokes Strawberry and sees image results.
   Do not spend this milestone on cloud or second-host transport research.
 - [x] Identify every hidden direct LLM call on the intended path, including
   style_bible and identity_traits, not only the conversational agent runner.
@@ -235,7 +239,7 @@ approval invalidation and immutable version history without any provider calls.
 - [x] Model unsupported cancellation and uncertain submission honestly; reconcile
   by known remote ID and never blindly repeat ambiguous billable submissions.
 - [x] Separate provider success from output collection and local registration.
-  Retrying a download must not regenerate the image/video.
+  Retrying a download must not regenerate the image.
 - [x] Expose durable status/events, with queryable state after reconnect.
 - [x] Treat unknown prices as unknown; record provider credits separately from
   currency estimates. No implicit unlimited-generation assumption.
@@ -259,8 +263,7 @@ partial-output and collection-failure tests pass. No cross-job status corruption
 - [x] Complete one story, one character, recurring prop, location/sublocation,
   three connected cuts and one revision with fake media/jobs first.
 - [ ] Run a bounded user-approved Higgsfield proof. Inspect actual images and
-  usage, not just successful responses. Test one video job from an approved
-  still when the chosen model supports it.
+  usage, not just successful responses. Video generation is outside this scope.
 - [ ] Resume from a new assistant session; reconcile an interrupted known job;
   reuse a non-adjacent take for an explicitly different visual purpose.
 
@@ -279,11 +282,11 @@ and history. The user reviews this proof before broadening the workflow.
   clear semantics while preserving source notes and revision history.
 - [x] Show queued/running/collecting/failed/ready states, known costs and recovery
   actions. No indefinite spinner or undocumented false progress percentage.
-- [ ] Support video artifacts and their actual reference/input roles; do not
-  build a full NLE.
+- [x] Keep video generation and NLE behavior outside the image-storyboarding
+  release scope; do not spend implementation or provider-validation time on it.
 - [x] Export/import one production with checksummed media and manifests. Preserve
   history while resetting provider-spend authorization and in-flight execution.
-- [x] Verify desktop/narrow layouts, image/video loading and interaction through
+- [x] Verify desktop/narrow layouts, image loading and interaction through
   browser tests. Deterministic selection/navigation must not spend LLM tokens.
 
 Exit: a fresh user can inspect, approve, revise and recover the complete project

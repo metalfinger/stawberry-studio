@@ -45,3 +45,56 @@ def test_asset_requirement_api(tmp_path):
         headers=headers,
     )
     assert changed.status_code == 200 and changed.json()["priority"] == 2
+
+
+def test_provider_catalog_api_is_read_only(tmp_path, monkeypatch):
+    from backend.studio.providers import Higgsfield
+
+    monkeypatch.setattr(
+        Higgsfield,
+        "catalog",
+        lambda _self: {
+            "provider": "higgsfield",
+            "cli_version": "0.1.28",
+            "media_type": "image",
+            "models": [{"model": "gpt_image_2_5", "display_name": "GPT Image 2.5", "media_type": "image"}],
+        },
+    )
+    monkeypatch.setattr(
+        Higgsfield,
+        "describe",
+        lambda _self, model: {"provider": "higgsfield", "model": model, "media_type": "image"},
+    )
+    client = TestClient(create_app(tmp_path))
+    assert client.get("/api/studio/providers/higgsfield/models").json()["models"][0]["model"] == "gpt_image_2_5"
+    assert client.get("/api/studio/providers/higgsfield/models/gpt_image_2_5").json()["model"] == "gpt_image_2_5"
+
+
+def test_workflow_api_guides_without_advancing_phases(tmp_path):
+    client = TestClient(create_app(tmp_path))
+    headers = {"X-Strawberry-Action": "1"}
+    project = client.post("/api/studio/nodes", json={"kind": "project", "name": "Film"}, headers=headers).json()
+    initial = client.get(f"/api/studio/projects/{project['id']}/workflow").json()
+    assert initial["next_actions"][0]["kind"] == "capture_intent"
+    kinds = {item["kind"] for item in initial["next_actions"]}
+    assert {"capture_intent", "break_down_story"} <= kinds
+    assert initial["stages"][0]["status"] == "needs_attention"
+
+
+def test_offline_proof_reaches_reviewable_workflow_without_paid_provider(tmp_path):
+    from backend.studio.demo import seed_demo
+    from backend.studio.service import Studio
+    from backend.studio.store import Store
+
+    studio = Studio(Store(tmp_path))
+    project_id = seed_demo(studio)["project_id"]
+    workflow = studio.workflow(project_id)
+    assert [stage["status"] for stage in workflow["stages"]] == ["ready", "ready", "ready", "ready"]
+    assert workflow["next_actions"] == [
+        {
+            "kind": "review_production",
+            "message": "Review the complete storyboard and record any refinement notes",
+            "node_id": project_id,
+            "priority": 4,
+        }
+    ]

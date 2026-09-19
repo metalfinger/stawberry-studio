@@ -40,6 +40,9 @@ the offline fixture proves visual quality or that a skill is an enforcement laye
 
 ## Creative roles
 
+Read `PLAYBOOKS.md` for the operating sequence, structured outputs and efficient
+confirmation cadence. Do not recreate the old phase-by-phase greeting loop.
+
 Use these as responsibilities, not greetings or required model calls:
 
 - **Director (Berry):** clarify intent and develop the story/visual direction.
@@ -107,12 +110,21 @@ Absent local values inherit. `set` overrides, `clear` suppresses inheritance,
   to attribute/value objects. Conflicting incoming states require explicit before
   values. `owner_id` must refer to a character/location or null. Cycles fail.
 
-Read `readiness NODE_ID` and `context NODE_ID` before preparing. Context includes
+Read `workflow PROJECT_ID`, then `readiness NODE_ID` and `context NODE_ID` before
+preparing. Workflow reports deterministic production gaps without a phase-change
+model call. Context includes
 linked asset definitions and selected references, continuity state/provenance and
 actionable blockers. These are authored facts, not simulated physics or verified
 pixels. Approved selected upstream cuts are required for continuity dependencies.
 
 ## Sheets and reference library
+
+User review preference (2026-09-18): do not automatically inspect generated
+image pixels or run a visual critique. The user reviews outputs visually to save
+tokens. Check technical completion, retain receipts and present generated takes.
+Use stored reference metadata and user feedback for subsequent preparation;
+request visual inspection only when needed and explicitly authorized. Do not
+mistake permission to generate more cuts for acceptance of an unreviewed take.
 
 Plan character, location and prop sheets before storyboard generation. A sheet
 may be one multi-view image or several base-conditioned views. Do not enforce
@@ -160,9 +172,13 @@ old media remain stored. Never overwrite a previous take to implement a redo.
    Identity, location and prop roles must cover the required assets; composition
    or style cannot stand in for identity. Base/start/end frames can cover their
    confirmed subjects. No automatic choice of the most recent cut.
-3. Call `prepare input.json`. Higgsfield preparation discovers schema/defaults
-   read-only and freezes the effective settings. Do not assume a model's API
-   capability or website subscription benefit is exposed through this CLI.
+3. Use `models` and `model MODEL_ID` to inspect the live Higgsfield image catalog
+   and exact schema. New recipes default to GPT Image 2.5 (`gpt_image_2_5`),
+   as selected by the user. Explicit alternatives remain possible; never silently
+   switch a frozen recipe. Set quality/resolution explicitly for paid proofs.
+   Call `prepare input.json`; preparation freezes the model,
+   schema/defaults and effective settings. Do not assume availability proves
+   visual quality or that a website subscription benefit exists in the CLI.
 4. Present the exact prompt, ordered image previews, roles, requested changes,
    provider/model and known cost. Unknown cost is not zero. Obtain the user's
    approval for that recipe or a bounded set of displayed recipes.
@@ -180,9 +196,25 @@ old media remain stored. Never overwrite a previous take to implement a redo.
    `media MEDIA_ID` retrieves the original recipe and all feedback for that take;
    read it when refining. `revision NODE_ID NUMBER` retrieves a historical node.
 
-The engine currently verifies selected image models using schema discovery and
-Kling v3.0 start/end-frame video mapping. Other video media mappings remain
-explicitly unsupported until tested. No internal automatic quality-scoring loop.
+Current production scope is image storyboarding only. Do not prepare, approve or
+execute video-generation recipes. Generic video storage/preview code is not a
+production workflow and video is not a release gate. No internal automatic
+quality-scoring loop; the user remains the visual critic.
+
+Read `MODEL_ROUTING.md` before choosing a paid model. GPT Image 2.5, FLUX.2,
+Seedream and Nano Banana can be candidates when their live contracts fit. Do not
+claim a quality winner until a bounded Strawberry benchmark has been reviewed.
+Never change a recipe's model as fallback after approval.
+
+When generation is submitted through the connected Higgsfield app rather than
+the CLI adapter, keep Strawberry as the system of record. Preview the exact
+provider receipt with `attach-external-preview JOB_ID PROVIDER_ID`; verify the
+model, prompt, settings and ordered uploaded inputs; then persist the supplied
+receipt payload with `attach-external JOB_ID request.json`. The equivalent local
+API is `GET`/`POST /api/studio/jobs/{job_id}/external-submission`. Never attach a
+job from prompt similarity alone, and never treat an app result as an untracked
+download. A clean rate-limit rejection with no provider job ID may be retried
+after capacity returns; an ambiguous submission must be reconciled, not repeated.
 
 ## Viewer and execution
 

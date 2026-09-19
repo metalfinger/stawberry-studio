@@ -15,6 +15,8 @@ class SubmissionUnknown(Exception):
 
 class Higgsfield:
     name = "higgsfield"
+    verified_cli_version = "0.1.28"
+    reference_params = ("input_images", "medias")
 
     def __init__(self, binary="higgsfield", run=subprocess.run):
         self.binary, self.run = binary, run
@@ -32,7 +34,7 @@ class Higgsfield:
 
     def contract(self, model):
         version = self.command(["version"], raw=True)
-        if not re.search(r"\b0\.1\.28\b", version):
+        if not re.search(rf"\b{re.escape(self.verified_cli_version)}\b", version):
             raise StudioError(
                 "cli_unsupported",
                 "This adapter is verified against Higgsfield CLI 0.1.28; verify compatibility before using another version",
@@ -42,10 +44,79 @@ class Higgsfield:
             raise StudioError("provider_schema", "Unexpected model schema")
         return {"cli_version": version, "schema": schema, "schema_hash": digest(schema)}
 
+    @staticmethod
+    def _params(schema):
+        rows = schema.get("params", [])
+        if not isinstance(rows, list) or any(not isinstance(row, dict) or not row.get("name") for row in rows):
+            raise StudioError("provider_schema", "Unexpected model parameter schema")
+        return {row["name"]: row for row in rows}
+
+    @classmethod
+    def _reference_param(cls, params):
+        declared = [name for name in cls.reference_params if name in params]
+        if len(declared) > 1:
+            raise StudioError("provider_schema", "Model declares ambiguous image-reference parameters")
+        return params[declared[0]] if declared else None
+
+    def catalog(self, media_type="image"):
+        version = self.command(["version"], raw=True)
+        if not re.search(rf"\b{re.escape(self.verified_cli_version)}\b", version):
+            raise StudioError(
+                "cli_unsupported",
+                "This adapter is verified against Higgsfield CLI 0.1.28; verify compatibility before using another version",
+            )
+        rows = self.command(["model", "list", "--json"])
+        if not isinstance(rows, list):
+            raise StudioError("provider_schema", "Unexpected model catalog")
+        models = []
+        for row in rows:
+            if not isinstance(row, dict) or row.get("type") != media_type:
+                continue
+            model = row.get("job_set_type")
+            name = row.get("display_name")
+            if not isinstance(model, str) or not model or not isinstance(name, str) or not name:
+                raise StudioError("provider_schema", "Model catalog entry is incomplete")
+            models.append({"model": model, "display_name": name, "media_type": media_type})
+        models.sort(key=lambda item: (item["display_name"].casefold(), item["model"]))
+        return {
+            "provider": self.name,
+            "cli_version": version,
+            "media_type": media_type,
+            "models": models,
+        }
+
+    def describe(self, model):
+        contract = self.contract(model)
+        schema = contract["schema"]
+        if schema.get("type") != "image":
+            raise StudioError("model_scope", "Strawberry currently supports image-storyboarding models only")
+        params = self._params(schema)
+        reference_param = self._reference_param(params)
+        return {
+            "provider": self.name,
+            "model": model,
+            "display_name": schema.get("display_name", model),
+            "media_type": schema["type"],
+            "cli_version": contract["cli_version"],
+            "schema_hash": contract["schema_hash"],
+            "capabilities": {
+                "prompt": "prompt" in params,
+                "image_references": reference_param is not None,
+                "reference_parameter": reference_param.get("name") if reference_param else None,
+                "minimum_references": reference_param.get(
+                    "minItems", 1 if reference_param and reference_param.get("required") else 0
+                )
+                if reference_param
+                else 0,
+                "maximum_references": reference_param.get("maxItems") if reference_param else 0,
+            },
+            "parameters": list(params.values()),
+        }
+
     def prepare(self, request):
         contract = self.contract(request.model)
         schema = contract["schema"]
-        params = {p["name"]: p for p in schema.get("params", [])}
+        params = self._params(schema)
         settings = {
             p["name"]: p["default"]
             for p in params.values()
@@ -77,15 +148,21 @@ class Higgsfield:
             if param.get("required") and name not in {"prompt", "input_images", "medias"} and name not in settings:
                 raise StudioError("setting_missing", f"Model requires setting: {name}")
         if schema.get("type") == "image":
-            if request.references and "input_images" not in params:
+            if "prompt" not in params:
+                raise StudioError("capability_unverified", "This image utility does not accept a Strawberry prompt")
+            media_param = self._reference_param(params)
+            if request.references and media_param is None:
                 raise StudioError("reference_unsupported", "Model does not declare image inputs")
             if any(r.role in {"start_frame", "end_frame"} for r in request.references):
                 raise StudioError("reference_role", "Video frame roles cannot be used for this image model")
-            media_param = params.get("input_images", {})
-            if len(request.references) < media_param.get("minItems", 0) or len(request.references) > media_param.get(
-                "maxItems", 32
-            ):
+            minimum = (
+                media_param.get("minItems", 1 if media_param.get("required") else 0) if media_param else 0
+            )
+            maximum = media_param.get("maxItems", 32) if media_param else 0
+            if len(request.references) < minimum or len(request.references) > maximum:
                 raise StudioError("reference_count", "Reference count exceeds the model's declared input bounds")
+            if settings.get("batch_size", 1) != 1:
+                raise StudioError("setting_unsupported", "Strawberry currently requires one provider job per recipe")
         elif schema.get("type") == "video" and request.model == "kling3_0":
             roles = [r.role for r in request.references]
             if any(role not in {"start_frame", "end_frame"} for role in roles) or len(roles) != len(set(roles)):

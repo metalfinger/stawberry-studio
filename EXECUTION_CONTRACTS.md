@@ -25,7 +25,7 @@ not evidence that a paid generation has been tested.
 - An approved estimate ceiling is rechecked before submission, not a provider-
   enforced billing cap. No automatic retry when cost/schema/context changed.
 - Keep original receipts/events and all partially collected media. Retry failed
-  collection without regenerating any image/video.
+  collection without regenerating any image.
 - Download only public HTTPS destinations, pin the validated IP through the TLS
   connection, preserve certificate/hostname verification, check every redirect,
   bound bytes/time and clean partial temporary files.

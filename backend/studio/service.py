@@ -231,6 +231,152 @@ class Studio:
                 ],
             }
 
+    def workflow(self, project_id):
+        with self.store.connection() as conn:
+            project = self.store.one(conn, "nodes", project_id)
+            if project["kind"] != "project":
+                raise StudioError("not_project", "Expected a project ID")
+            nodes = [
+                dict(row)
+                for row in conn.execute(
+                    "SELECT * FROM nodes WHERE project_id=? ORDER BY created_at,id", (project_id,)
+                )
+            ]
+            by_kind = {
+                kind: [node for node in nodes if node["kind"] == kind]
+                for kind in ("scene", "shot", "cut", "character", "location", "prop")
+            }
+            child_counts = {
+                node["id"]: conn.execute("SELECT COUNT(*) FROM nodes WHERE parent_id=?", (node["id"],)).fetchone()[0]
+                for node in by_kind["scene"] + by_kind["shot"]
+            }
+            source_count = conn.execute(
+                "SELECT COUNT(*) FROM sources s JOIN nodes n ON n.id=s.node_id WHERE n.project_id=?",
+                (project_id,),
+            ).fetchone()[0]
+            assets = by_kind["character"] + by_kind["location"] + by_kind["prop"]
+            asset_rows = []
+            for asset in assets:
+                requirements = self._requirements(conn, asset["id"])
+                selection = self.rules.selected(conn, asset)
+                asset_rows.append(
+                    {
+                        "node_id": asset["id"],
+                        "name": asset["name"],
+                        "kind": asset["kind"],
+                        "requirements": len(requirements),
+                        "requirements_covered": sum(bool(item["covered_by"]) for item in requirements),
+                        "reference_ready": bool(
+                            selection
+                            and selection["status"] == "approved"
+                            and not selection["stale"]
+                            and selection["complete"]
+                        ),
+                    }
+                )
+            cut_rows = []
+            for cut in by_kind["cut"]:
+                readiness = self.rules.resolve(conn, cut["id"])["readiness"]
+                selection = self.rules.selected(conn, cut)
+                cut_rows.append(
+                    {
+                        "node_id": cut["id"],
+                        "name": cut["name"],
+                        "ready_to_prepare": readiness["ready"],
+                        "issues": readiness["issues"],
+                        "take_ready": bool(
+                            selection
+                            and selection["status"] == "approved"
+                            and not selection["stale"]
+                            and selection["complete"]
+                        ),
+                    }
+                )
+            counts = {
+                "sources": source_count,
+                **{kind: len(rows) for kind, rows in by_kind.items()},
+                "assets": len(assets),
+            }
+            stages = [
+                {
+                    "id": "development",
+                    "label": "Development",
+                    "status": "ready" if source_count else "needs_attention",
+                    "summary": f"{source_count} captured source instruction{'s' if source_count != 1 else ''}",
+                },
+                {
+                    "id": "story",
+                    "label": "Story breakdown",
+                    "status": "ready"
+                    if by_kind["cut"] and all(child_counts.get(node["id"], 0) for node in by_kind["scene"] + by_kind["shot"])
+                    else "needs_attention",
+                    "summary": f"{len(by_kind['scene'])} scenes · {len(by_kind['shot'])} shots · {len(by_kind['cut'])} cuts",
+                },
+                {
+                    "id": "production_design",
+                    "label": "Cast & scout",
+                    "status": "ready" if assets and all(row["reference_ready"] for row in asset_rows) else "needs_attention",
+                    "summary": f"{sum(row['reference_ready'] for row in asset_rows)} of {len(asset_rows)} assets reference-ready",
+                },
+                {
+                    "id": "storyboard",
+                    "label": "Storyboard",
+                    "status": "ready" if cut_rows and all(row["take_ready"] for row in cut_rows) else "in_progress",
+                    "summary": f"{sum(row['take_ready'] for row in cut_rows)} of {len(cut_rows)} cuts have approved selected takes",
+                },
+            ]
+            actions = self._workflow_actions(conn, project, by_kind, child_counts, asset_rows, cut_rows, source_count)
+            return {
+                "project_id": project_id,
+                "counts": counts,
+                "stages": stages,
+                "assets": asset_rows,
+                "cuts": cut_rows,
+                "next_actions": actions,
+            }
+
+    def _workflow_actions(self, conn, project, by_kind, child_counts, assets, cuts, source_count):
+        actions = []
+
+        def add(kind, message, node_id, priority=1):
+            actions.append({"kind": kind, "message": message, "node_id": node_id, "priority": priority})
+
+        if not source_count:
+            add("capture_intent", "Capture the user's original brief and constraints", project["id"], 1)
+        if not by_kind["scene"]:
+            add("break_down_story", "Develop the story and create its scenes", project["id"], 1)
+        for scene in by_kind["scene"]:
+            if not child_counts.get(scene["id"]):
+                add("add_shots", f"Break {scene['name']} into shots", scene["id"], 1)
+        for shot in by_kind["shot"]:
+            if not child_counts.get(shot["id"]):
+                add("add_cuts", f"Define visual cuts for {shot['name']}", shot["id"], 1)
+        if by_kind["cut"] and not any((by_kind["character"], by_kind["location"], by_kind["prop"])):
+            add("derive_assets", "Derive recurring characters, locations and props from the complete story", project["id"], 1)
+        for asset in assets:
+            if not asset["requirements"]:
+                add("plan_asset_views", f"Plan story-driven reference views for {asset['name']}", asset["node_id"], 2)
+            if not asset["reference_ready"]:
+                add("create_asset_reference", f"Prepare or review an identity reference for {asset['name']}", asset["node_id"], 2)
+            elif asset["requirements_covered"] < asset["requirements"]:
+                add("cover_asset_views", f"Cover remaining planned views for {asset['name']}", asset["node_id"], 2)
+        for cut in cuts:
+            if not cut["ready_to_prepare"]:
+                add("resolve_cut_readiness", f"Resolve blockers for {cut['name']}", cut["node_id"], 2)
+            elif not cut["take_ready"]:
+                recipe = conn.execute(
+                    "SELECT id FROM recipes WHERE node_id=? ORDER BY created_at DESC LIMIT 1", (cut["node_id"],)
+                ).fetchone()
+                add(
+                    "review_or_prepare_cut" if recipe else "prepare_cut",
+                    f"{'Review the latest work for' if recipe else 'Prepare references and prompt for'} {cut['name']}",
+                    cut["node_id"],
+                    3,
+                )
+        if not actions and cuts:
+            add("review_production", "Review the complete storyboard and record any refinement notes", project["id"], 4)
+        return sorted(actions, key=lambda item: (item["priority"], item["message"]))
+
     def inspect(self, node_id: str):
         with self.store.connection() as conn:
             node = self.store.one(conn, "nodes", node_id)

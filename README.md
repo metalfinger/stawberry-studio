@@ -5,7 +5,8 @@
 The first assistant-operated production workspace is implemented as an isolated
 proof. Codex supplies the creative reasoning; a local engine preserves context,
 references, approvals, jobs and all takes. Higgsfield CLI is the first real
-generation adapter. Full replacement parity is still in progress.
+image-generation adapter. Full replacement parity is still in progress. Video
+generation and NLE behavior are explicitly outside the current product scope.
 
 **Install the new workspace once:** `./install-studio.sh`. This uses the pinned,
 minimal [Studio requirements](requirements-studio.txt) and does not install the

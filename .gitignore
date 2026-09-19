@@ -63,6 +63,7 @@ server.log
 # Claude/ADK
 .claude/
 .adk/
+.codex/
 backend/.adk/
 .strawberry/
 

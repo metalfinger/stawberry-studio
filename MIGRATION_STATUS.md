@@ -1,12 +1,13 @@
-# Migration checkpoint - 2026-09-16
+# Migration checkpoint - 2026-09-18
 
 ## Read this first
 
 The user approved planning and starting a local, Codex-operated migration. This
 includes the executable proof plus shared production contracts, **not full replacement parity or a production
 release**. Preserve the existing app and `strawberry.db` until the release gates
-in [MIGRATION_PLAN.md](MIGRATION_PLAN.md) pass. No paid generation was submitted
-in this implementation session.
+in [MIGRATION_PLAN.md](MIGRATION_PLAN.md) pass. On 2026-09-18 the user approved
+the four-image visual proof: all four Higgsfield jobs completed, with no retries.
+See `VISUAL_PROOF_BATCH.md` for exact records and initial observations.
 
 The creative contract is [WORKFLOW_RULES.md](WORKFLOW_RULES.md). The migration
 research is [MIGRATION_RESEARCH.md](MIGRATION_RESEARCH.md). Repository instructions
@@ -16,6 +17,62 @@ Typed relationships, continuity and review semantics are specified in
 [PRODUCTION_CONTRACTS.md](PRODUCTION_CONTRACTS.md).
 
 ## Working now
+
+- 2026-09-18 storyboard auto-run checkpoint: dream production
+  `045f766b-efdb-445f-a888-19852e251bad` now has a selected, locally managed
+  take for **all 22 chronological cuts**. The user explicitly authorized this
+  bounded auto-approval run after approving the assets. Every new cut was
+  prepared as an immutable Strawberry recipe, submitted through the connected
+  Higgsfield plugin using ordered provider references, receipt-reconciled,
+  collected locally and selected before the next cut was prepared. No image
+  pixels were visually judged by the assistant. The local viewer reports all
+  storyboard stages ready. The remaining `cover_asset_views` suggestions are
+  optional coverage expansion, not blockers for the completed storyboard.
+  `scripts/auto_storyboard_run.sh` now emits one connector-ready payload only;
+  it deliberately has no direct Higgsfield CLI submission path because the CLI
+  local-reference upload path remains unreliable. Use
+  `scripts/finalize_connector_cut.sh` only after the connected plugin returns a
+  completed provider job ID.
+
+- 2026-09-18 dream-production checkpoint: project
+  `045f766b-efdb-445f-a888-19852e251bad` has 5 scenes, 11 shots, 22 cuts,
+  9 assets and 19 reference requirements. The user rejected the initial
+  silver-memory realistic candidate and adopted a handmade monochrome
+  charcoal-and-cut-paper dream-collage treatment. Ten new character, prop and
+  location candidates were generated with GPT Image 2.5, collected into managed
+  local media and are pending human review. Nothing is selected and no cuts have
+  been generated. See `DREAM_PRODUCTION_2026-09-18.md`.
+
+- The connected Higgsfield app can now be used as a submission transport without
+  bypassing Strawberry's records. External jobs are linked only after an exact
+  receipt preview verifies model, prompt, settings and ordered inputs; the worker
+  then polls and collects them through the normal provider adapter. CLI reference
+  upload currently fails with an upstream signed-S3 `SignatureDoesNotMatch` error,
+  while plugin upload and generation succeed. No matching provider generation was
+  created by the failed CLI upload attempts.
+
+- Latest execution: user accepted cut 1 and authorized cuts 2 and 3. Cut 3
+  completed using non-adjacent cut 1 as base; pending human-only visual review.
+  Cut 2 failed at Higgsfield with no detailed reason or output. No retries were
+  submitted and no subsequent images were visually inspected by the assistant.
+  Exact recipes and receipts remain stored; see `STORYBOARD_PROOF.md`.
+
+- 2026-09-18 checkpoint: new recipe requests default to `gpt_image_2_5`, per
+  user choice; explicit alternatives and historical recipes remain unchanged.
+  GPT Mara, NORTH-panel location baseline and side-clipped ticket are selected.
+  First three-reference GPT cut completed after explicit approval. Reference
+  upload, submission, receipt and local collection are now verified end to end.
+  Output awaits human review; architecture shifts and tiny prop details remain
+  continuity concerns. See `STORYBOARD_PROOF.md`. Final billed cost is unknown.
+  Latest local checks: **174 passed**, scoped Ruff clean, frontend build passes
+  with retained legacy chunk-size warning. No commit, push or CI run performed.
+
+- The authenticated Higgsfield CLI is the first execution adapter. Read-only
+  discovery exposes its live image-model catalog and normalized model details in
+  both the Strawberry CLI and viewer. Recipes support Higgsfield schemas using
+  either `input_images` or `medias`, so model choice is no longer tied to Nano
+  Banana Pro. GPT Image 2.5, FLUX.2 and Seedream 5 Pro are visible candidates;
+  their visual continuity quality is not yet proven. See `MODEL_ROUTING.md`.
 
 - Local SQLite engine with project/scene/shot/cut and character/location/prop
   nodes, nested locations, atomic sibling numbering, structured errors and
@@ -192,24 +249,36 @@ These record the working checkout, not a claim of a verified minimal install.
 
 ## Higgsfield boundary
 
+The current product scope is image storyboarding. Video generation and video
+provider migration are deferred and are not part of the visual-proof or cutover
+gate. Generic stored-video preview support is not evidence of a video workflow.
+
 Read-only verification found an authenticated Pro account and installed CLI
 0.1.28 (build e7a475eb57e8824321309a9f5add6a88181b3079). Credentials were not
 copied into the app, browser or repo. The adapter uses the user's installed CLI.
 
 Model schema is discovered with `model get`; schema and CLI version are frozen
 with each recipe and rechecked before submission. Image references use repeated
-`--image` arguments in exact recipe order. Video currently supports the verified
-`kling3_0` start/end-frame mapping only. Other video mappings fail explicitly.
+`--image` arguments in exact recipe order.
 
-`generate get` was inspected on an existing completed job. **The create/upload
-receipt shape and real multi-reference quality have not been verified through a
-new paid request.** Unexpected receipts are classified as uncertain rather than
-silently retried. Installed help does not expose cancellation. Costs remain
-unknown unless supplied by an actual estimate/receipt; account access is not
-proof that generation is free or covered by unlimited website usage.
+Four earlier approved text-to-image requests completed successfully: three Nano
+Banana Pro sheets and one GPT Image 2.5 sheet. Create receipts, polling, local
+collection and original-media registration worked end to end. The connected app
+has since verified reference upload and generated the ten-image dream asset batch.
+Those external submissions were attached to their frozen Strawberry jobs with
+exact provider receipts, then collected locally through the normal worker path.
+This verifies transport and provenance, not human-reviewed multi-reference visual
+quality. Unexpected receipts are classified as uncertain rather than silently
+retried. Installed help does not expose cancellation. Costs remain unknown unless
+supplied by an actual estimate/receipt; account access is not proof that generation
+is free or covered by unlimited website usage.
 
 ## Next work, in order
 
+0. **Dream asset review gate.** Present the ten generated candidates for project
+   `045f766b-efdb-445f-a888-19852e251bad`. Record the user's decision and feedback
+   on each exact media item, select only approved references, and do not prepare
+   or generate cuts until that review is complete.
 1. **Execution recovery verification.** Implemented durable worker visibility,
    queued cancellation, guarded two-step reconciliation, explicit known/unknown
    cost approvals, atomic estimate-policy rechecks, DNS-pinned HTTPS collection,
@@ -226,11 +295,15 @@ proof that generation is free or covered by unlimited website usage.
 2. **Bounded visual proof with the user.** Present exact character/location/prop
    sheet recipes, reference order and known/unknown credit costs. Obtain approval,
    generate and inspect pixels. Then three cuts, non-adjacent reuse, one revision
-   and one supported video job. Do not infer this approval from this migration task.
-   Three proposed Nano Banana Pro 2K sheet recipes are now saved under
-   `/studio/a14b173e-13be-45ab-9efe-e1a399216ed6`, each quoted at 2 credits.
-   No approval/enqueue/upload/create occurred. An explicit approval question was
-   sent for these three sheets only (6 estimated credits, no retries/cuts/video).
+   and one feedback-driven replacement take. Do not infer this approval from this
+   migration task.
+   Three proposed Nano Banana Pro 2K sheet recipes are saved under
+   `/studio/a14b173e-13be-45ab-9efe-e1a399216ed6`, each quoted at 2 credits. A
+   same-prompt Mara sheet on GPT Image 2.5 at 2K/xhigh is quoted at 5 credits.
+   The exact 11-credit bounded proposal is recorded in `VISUAL_PROOF_BATCH.md`.
+   User approval was received on 2026-09-18 and all four jobs completed. No retries
+   or cuts were generated. Assistant observations are recorded on each exact take;
+   human visual review and active-reference selection remain pending.
 3. **Viewer parity.** Side-by-side take comparison now shows exact recipes and
    feedback without changing selected takes. Take inspection includes reverse
    reference usage and navigation to consuming nodes. Planned views/states and
@@ -253,6 +326,7 @@ proof that generation is free or covered by unlimited website usage.
    paths after the visual proof. The new path now has a minimal pinned install,
    one launcher and enforced clean-checkout CI; retained legacy code remains
    available until its parity gate passes. No permanent old/new selector.
+   The inventory and deletion gates are now explicit in `CUTOVER_AUDIT.md`.
 
 Execution recovery and viewer work can proceed without spending credits. The full migration is
 not complete merely because the isolated proof works. In particular, do not mark

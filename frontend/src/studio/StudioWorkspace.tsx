@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Activity, ArrowLeft, Check, ChevronRight, Clapperboard, Download, FileText, Images, LoaderCircle, Menu, Plus, RefreshCw, Save, Upload, X } from 'lucide-react';
+import { Activity, ArrowLeft, Check, ChevronRight, Circle, Clapperboard, Download, FileText, Images, ListChecks, LoaderCircle, Menu, Plus, RefreshCw, Save, Sparkles, Upload, X } from 'lucide-react';
 import { api } from './types';
-import type { Media, MediaDetail, NodeDetail, ProductionNode, ProjectData, Recipe, Runtime } from './types';
+import type { Media, MediaDetail, NodeDetail, ProductionNode, ProjectData, Recipe, Runtime, WorkflowStatus } from './types';
 import ProductionInspector, { ReviewStatus } from './ProductionInspector';
 import TakeReview from './TakeReview';
 import JobActivity from './JobActivity';
@@ -11,6 +11,7 @@ import TakeComparison from './TakeComparison';
 import AssetRequirements from './AssetRequirements';
 import GenerationBatch from './GenerationBatch';
 import ContextEditor from './ContextEditor';
+import ProviderModels from './ProviderModels';
 import './studio.css';
 
 function Visual({ media, interactive = false }: { media?: Media; interactive?: boolean }) {
@@ -30,9 +31,10 @@ function Workspace({ projectId }: { projectId?: string }) {
   const [projects, setProjects] = useState<ProductionNode[]>([]);
   const [data, setData] = useState<ProjectData | null>(null);
   const [runtime, setRuntime] = useState<Runtime | null>(null);
+  const [workflow, setWorkflow] = useState<WorkflowStatus | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [detail, setDetail] = useState<NodeDetail | null>(null);
-  const [tab, setTab] = useState<'storyboard' | 'assets' | 'activity'>('storyboard');
+  const [tab, setTab] = useState<'plan' | 'storyboard' | 'assets' | 'activity'>('plan');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [name, setName] = useState('');
@@ -42,6 +44,7 @@ function Workspace({ projectId }: { projectId?: string }) {
   const [mediaDetail, setMediaDetail] = useState<MediaDetail | null>(null);
   const [notice, setNotice] = useState('');
   const [treeOpen, setTreeOpen] = useState(false);
+  const [modelsOpen, setModelsOpen] = useState(false);
   const projectName = data?.project.name;
   const readSequence = useRef(0);
   const importInput = useRef<HTMLInputElement>(null);
@@ -82,9 +85,12 @@ function Workspace({ projectId }: { projectId?: string }) {
       const result = await api<ProductionNode[]>('/projects');
       if (sequence === readSequence.current && isActive()) setProjects(result);
     } else {
-      const result = await api<ProjectData>(`/projects/${projectId}`);
+      const [result, workflowResult] = await Promise.all([
+        api<ProjectData>(`/projects/${projectId}`),
+        api<WorkflowStatus>(`/projects/${projectId}/workflow`),
+      ]);
       const node = selected ? await api<NodeDetail>(`/nodes/${selected}`) : null;
-      if (sequence === readSequence.current && isActive()) { setData(result); setDetail(node); }
+      if (sequence === readSequence.current && isActive()) { setData(result); setWorkflow(workflowResult); setDetail(node); }
     }
   }, [projectId, selected]);
 
@@ -176,9 +182,11 @@ function Workspace({ projectId }: { projectId?: string }) {
       <span className={`studio-local ${runtime?.responsive ? '' : 'offline'}`}><span />{runtime?.responsive ? 'Worker responding' : 'Worker not responding'}</span>
       <span className="studio-provider-status">{runtime?.higgsfield_enabled ? 'Paid generation enabled' : 'Paid generation disabled'}</span>
       <div className="studio-header-right">{activeJobs > 0 && <span className="studio-running"><LoaderCircle size={15} />{activeJobs} in progress</span>}
+        <button title="Browse live image models" onClick={() => setModelsOpen(true)}><Sparkles size={15} />Models</button>
         <button className="studio-icon" title="Refresh workspace" onClick={() => action(refresh)} disabled={busy}><RefreshCw size={17} /></button>
       </div>
     </header>
+    {modelsOpen && <ProviderModels close={() => setModelsOpen(false)} />}
     {error && !focusedMedia && <div role="alert" className="studio-error">{error}<button className="studio-icon" title="Dismiss error" onClick={() => setError('')}><X size={16} /></button></div>}
     {notice && <div role="status" className="studio-notice">{notice}<button className="studio-icon" title="Dismiss notification" onClick={() => setNotice('')}><X size={16} /></button></div>}
     {!projectId ? <main className="studio-projects">
@@ -210,9 +218,18 @@ function Workspace({ projectId }: { projectId?: string }) {
         </aside>
         <main className="studio-content">
           <nav className="studio-tabs" aria-label="Production views">{([
-            ['storyboard', 'Storyboard', Clapperboard], ['assets', 'Assets', Images], ['activity', 'Activity', Activity],
+            ['plan', 'Plan', ListChecks], ['storyboard', 'Storyboard', Clapperboard], ['assets', 'Assets', Images], ['activity', 'Activity', Activity],
           ] as const).map(([id, title, Icon]) => <button key={id} aria-current={tab === id ? 'page' : undefined} onClick={() => setTab(id)}><Icon size={16} />{title}</button>)}</nav>
-          {tab === 'activity' ? <div className="studio-job-list">
+          {tab === 'plan' ? <div className="studio-plan-view">
+            <header><div><small>PRODUCTION STATUS</small><h2>What needs attention</h2></div><p>Derived from stored records. Creative choices still happen with Codex and you.</p></header>
+            <div className="studio-stage-grid">{workflow?.stages.map(stage => <article key={stage.id} data-status={stage.status}>
+              {stage.status === 'ready' ? <Check size={17} /> : <Circle size={17} />}<div><strong>{stage.label}</strong><p>{stage.summary}</p></div>
+            </article>)}</div>
+            <section className="studio-next-actions"><h3>Next actions</h3>{workflow?.next_actions.map((item, index) => <button key={`${item.kind}-${item.node_id}-${index}`} onClick={() => {
+              const node = findNode(item.node_id); if (node) selectNode(node);
+            }}><span>{index + 1}</span><div><strong>{item.message}</strong><small>{item.kind.replaceAll('_', ' ')}</small></div><ChevronRight size={16} /></button>)}
+              {!workflow?.next_actions.length && <p className="studio-muted">No unresolved production actions.</p>}</section>
+          </div> : tab === 'activity' ? <div className="studio-job-list">
             <div className="studio-job-counts">{['queued', 'submitting', 'running', 'collecting', 'ready', 'failed', 'submission_unknown', 'collection_failed', 'cancelled'].map(state => {
               const count = data.jobs.filter(j => j.state === state).length;
               return count ? <span key={state}><strong>{count}</strong> {state.replaceAll('_', ' ')}</span> : null;
@@ -220,14 +237,27 @@ function Workspace({ projectId }: { projectId?: string }) {
             {data.jobs.map(job => <section key={job.id}><h3>{data.recipes.find(r => r.id === job.recipe_id)?.spec.intent}</h3><JobActivity job={job} provider={data.recipes.find(r => r.id === job.recipe_id)?.spec.provider} runtime={runtime} busy={busy} action={action} /></section>)}{!data.jobs.length && <p>No generation jobs.</p>}</div>
             : <>{tab === 'assets' && <GenerationBatch recipes={data.recipes} jobs={data.jobs} nodes={data.nodes} busy={busy} action={action} />}
             <div className="studio-grid">{(tab === 'storyboard' ? sequence : assets).map((node, index) => {
-              const media = findMedia(node.active_media_id) ?? data.media.find(m => m.node_id === node.id);
               const takes = data.media.filter(m => m.node_id === node.id);
+              const selectedTake = findMedia(node.active_media_id);
+              const newestTake = takes[0];
+              // Asset cards are review surfaces: always expose the newest candidate.
+              // The selected reference remains clearly marked in the take rail below.
+              const media = tab === 'assets' ? newestTake ?? selectedTake : selectedTake ?? newestTake;
               return <article key={node.id} className={`studio-tile ${selected === node.id ? 'selected' : ''}`}>
-                <button className="studio-tile-image" onClick={() => selectNode(node)} aria-label={`Inspect ${node.name}`}><Visual media={media} /></button>
+                <button className="studio-tile-image" onClick={() => selectNode(node)} aria-label={`Inspect ${node.name}`}>
+                  <Visual media={media} />
+                  {tab === 'assets' && media && <span className="studio-preview-badge">{media.id === node.active_media_id ? 'Selected reference' : 'Newest take'}</span>}
+                </button>
+                {tab === 'assets' && takes.length > 1 && <div className="studio-take-rail" aria-label={`${node.name} take history`}>
+                  {takes.slice(0, 5).map((take, takeIndex) => <button key={take.id} title={`${take.label} · ${take.review.status}${take.id === node.active_media_id ? ' · selected reference' : ''}`} onClick={() => setFocusedMedia(take)}>
+                    <Visual media={take} />
+                    <span>{take.id === node.active_media_id ? 'Selected' : takeIndex === 0 ? 'Newest' : `Take ${takes.length - takeIndex}`}</span>
+                  </button>)}
+                </div>}
                 <div className="studio-tile-text"><small>{tab === 'storyboard' ? `CUT ${index + 1}` : node.kind.toUpperCase()}{media?.metadata.fake ? ' / OFFLINE TEST' : ''}</small>
                   <button onClick={() => selectNode(node)}><h3>{node.name}</h3></button><p>{takes.length} {takes.length === 1 ? 'take' : 'takes'}{node.active_media_id ? ' / selected' : ' / not selected'}</p>
                   {media && <ReviewStatus review={media.review} />}
-                  {node.active_media_id && takes[0] && takes[0].id !== node.active_media_id && <small className="studio-review-label">Newest take is not selected</small>}</div>
+                  {node.active_media_id && newestTake && newestTake.id !== node.active_media_id && <small className="studio-review-label">Showing newest take · selected reference preserved in history</small>}</div>
               </article>;
             })}{!(tab === 'storyboard' ? sequence : assets).length && <p className="studio-muted">{tab === 'storyboard' ? 'No cuts yet.' : 'No assets yet.'}</p>}</div></>}
         </main>

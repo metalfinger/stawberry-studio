@@ -61,6 +61,18 @@ def create_app(home=None):
     def runtime():
         return studio.execution.status()
 
+    @app.get("/api/studio/providers/higgsfield/models")
+    def higgsfield_models():
+        from backend.studio.providers import Higgsfield
+
+        return Higgsfield().catalog()
+
+    @app.get("/api/studio/providers/higgsfield/models/{model_id}")
+    def higgsfield_model(model_id: str):
+        from backend.studio.providers import Higgsfield
+
+        return Higgsfield().describe(model_id)
+
     @app.post("/api/studio/generation-batches")
     def approve_batch(body: BatchApproval):
         return studio.approve_batch(body)
@@ -72,6 +84,10 @@ def create_app(home=None):
     @app.get("/api/studio/projects/{project_id}")
     def project(project_id: str):
         return studio.project(project_id)
+
+    @app.get("/api/studio/projects/{project_id}/workflow")
+    def workflow(project_id: str):
+        return studio.workflow(project_id)
 
     @app.get("/api/studio/projects/{project_id}/export")
     def export(project_id: str):
@@ -206,6 +222,14 @@ def create_app(home=None):
     @app.post("/api/studio/jobs/{job_id}/reconciliation")
     def reconcile(job_id: str, body: Reconciliation):
         return studio.execution.reconcile(job_id, body)
+
+    @app.get("/api/studio/jobs/{job_id}/external-submission")
+    def external_submission_preview(job_id: str, provider_id: str):
+        return studio.execution.preview_external_submission(job_id, provider_id)
+
+    @app.post("/api/studio/jobs/{job_id}/external-submission")
+    def attach_external_submission(job_id: str, body: Reconciliation):
+        return studio.execution.attach_external_submission(job_id, body)
 
     dist = Path(__file__).resolve().parents[2] / "frontend" / "dist"
     if (dist / "assets").is_dir():

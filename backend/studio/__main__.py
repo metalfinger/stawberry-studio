@@ -35,6 +35,9 @@ def main():
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("projects")
     sub.add_parser("runtime")
+    sub.add_parser("models", help="List live Higgsfield image models without generating")
+    p = sub.add_parser("model", help="Show a live Higgsfield image-model contract")
+    p.add_argument("id")
     p = sub.add_parser("backup", help="Snapshot database and managed media to a new ZIP archive")
     p.add_argument("path")
     p = sub.add_parser("export-project", help="Export one production and its managed media")
@@ -53,6 +56,7 @@ def main():
         "inspect",
         "context",
         "readiness",
+        "workflow",
         "recipe",
         "job",
         "media",
@@ -68,11 +72,14 @@ def main():
     for name in ("create", "prepare"):
         p = sub.add_parser(name)
         p.add_argument("file", help="JSON file, or - for stdin")
-    for name in ("patch", "capture", "approve", "review", "reorder", "reconcile"):
+    for name in ("patch", "capture", "approve", "review", "reorder", "reconcile", "attach-external"):
         p = sub.add_parser(name)
         p.add_argument("id")
         p.add_argument("file", help="JSON file, or - for stdin")
     p = sub.add_parser("reconcile-preview")
+    p.add_argument("id")
+    p.add_argument("provider_id")
+    p = sub.add_parser("attach-external-preview")
     p.add_argument("id")
     p.add_argument("provider_id")
     p = sub.add_parser("import-media")
@@ -129,12 +136,26 @@ def main():
             result = studio.projects()
         elif args.command == "runtime":
             result = studio.execution.status()
+        elif args.command == "models":
+            from backend.studio.providers import Higgsfield
+
+            result = Higgsfield().catalog()
+        elif args.command == "model":
+            from backend.studio.providers import Higgsfield
+
+            result = Higgsfield().describe(args.id)
         elif args.command == "cancel":
             result = studio.execution.cancel(args.id)
         elif args.command == "reconcile-preview":
             result = studio.execution.preview_reconciliation(args.id, args.provider_id)
         elif args.command == "reconcile":
             result = studio.execution.reconcile(args.id, Reconciliation.model_validate(read_json(args.file)))
+        elif args.command == "attach-external-preview":
+            result = studio.execution.preview_external_submission(args.id, args.provider_id)
+        elif args.command == "attach-external":
+            result = studio.execution.attach_external_submission(
+                args.id, Reconciliation.model_validate(read_json(args.file))
+            )
         elif args.command == "backup":
             from backend.studio.backup import backup
 
@@ -155,6 +176,8 @@ def main():
             result = studio.context(args.id)
         elif args.command == "readiness":
             result = studio.readiness(args.id)
+        elif args.command == "workflow":
+            result = studio.workflow(args.id)
         elif args.command == "review":
             result = studio.review_media(args.id, MediaReview.model_validate(read_json(args.file)))
         elif args.command == "reorder":

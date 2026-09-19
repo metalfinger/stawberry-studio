@@ -173,7 +173,13 @@ def test_provider_declared_reference_limit_is_not_silently_trimmed():
 
     provider = Higgsfield()
     provider.contract = lambda model: {
-        "schema": {"type": "image", "params": [{"name": "input_images", "type": "array", "maxItems": 1}]}
+        "schema": {
+            "type": "image",
+            "params": [
+                {"name": "prompt", "type": "string", "required": True},
+                {"name": "input_images", "type": "array", "maxItems": 1},
+            ],
+        }
     }
     request = RecipeCreate(
         node_id="test",
@@ -184,3 +190,87 @@ def test_provider_declared_reference_limit_is_not_silently_trimmed():
     )
     with pytest.raises(StudioError, match="input bounds"):
         provider.prepare(request)
+
+
+def test_higgsfield_catalog_normalizes_image_models(monkeypatch):
+    provider = Higgsfield()
+
+    def command(args, raw=False):
+        if args == ["version"]:
+            return "higgsfield 0.1.28"
+        assert args == ["model", "list", "--json"]
+        return [
+            {"display_name": "Kling", "job_set_type": "kling", "type": "video"},
+            {"display_name": "GPT Image 2.5", "job_set_type": "gpt_image_2_5", "type": "image"},
+            {"display_name": "Nano Banana Pro", "job_set_type": "nano_banana_2", "type": "image"},
+        ]
+
+    monkeypatch.setattr(provider, "command", command)
+    result = provider.catalog()
+    assert [row["model"] for row in result["models"]] == ["gpt_image_2_5", "nano_banana_2"]
+    assert result["media_type"] == "image"
+
+
+def test_higgsfield_describe_reports_verified_reference_contract(monkeypatch):
+    provider = Higgsfield()
+    provider.contract = lambda _model: {
+        "cli_version": "higgsfield 0.1.28",
+        "schema_hash": "hash",
+        "schema": {
+            "display_name": "GPT Image 2.5",
+            "job_set_type": "gpt_image_2_5",
+            "type": "image",
+            "params": [
+                {"name": "prompt", "type": "string", "required": True},
+                {"name": "medias", "type": "array", "required": False, "maxItems": 8},
+            ],
+        },
+    }
+    result = provider.describe("gpt_image_2_5")
+    assert result["capabilities"] == {
+        "prompt": True,
+        "image_references": True,
+        "reference_parameter": "medias",
+        "minimum_references": 0,
+        "maximum_references": 8,
+    }
+
+
+def test_higgsfield_prepare_accepts_medias_reference_schema():
+    from backend.studio.models import Reference
+
+    provider = Higgsfield()
+    provider.contract = lambda _model: {
+        "schema": {
+            "type": "image",
+            "params": [
+                {"name": "prompt", "type": "string", "required": True},
+                {"name": "medias", "type": "array", "required": False, "maxItems": 8},
+                {"name": "quality", "type": "string", "required": False, "default": "low"},
+            ],
+        }
+    }
+    provider.estimate = lambda _spec: {"credits": None}
+    request = RecipeCreate(
+        node_id="test",
+        model="gpt_image_2_5",
+        prompt="Preserve @Image1 identity",
+        intent="Storyboard cut",
+        references=[Reference(media_id="identity", role="identity", instruction="Preserve identity")],
+    )
+    assert provider.prepare(request)["settings"] == {"quality": "low"}
+
+
+def test_higgsfield_prepare_requires_media_for_reference_only_utility():
+    provider = Higgsfield()
+    provider.contract = lambda _model: {
+        "schema": {
+            "type": "image",
+            "params": [
+                {"name": "prompt", "type": "string", "required": True},
+                {"name": "medias", "type": "array", "required": True},
+            ],
+        }
+    }
+    with pytest.raises(StudioError, match="input bounds"):
+        provider.prepare(RecipeCreate(node_id="test", model="utility", prompt="Rotate", intent="Angle"))

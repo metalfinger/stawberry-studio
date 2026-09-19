@@ -55,6 +55,25 @@ export interface Runtime {
   responsive: boolean; higgsfield_enabled: boolean; remote_cancellation: boolean;
   workers: { id: string; responsive: boolean; heartbeat_at: number; stopped_at: number | null; current_job: string | null; enabled_providers: string[] }[];
 }
+export interface ProviderModel {
+  model: string; display_name: string; media_type: 'image';
+}
+export interface ProviderCatalog {
+  provider: 'higgsfield'; cli_version: string; media_type: 'image'; models: ProviderModel[];
+}
+export interface ProviderParameter {
+  name: string; type: string; required?: boolean; default?: unknown; enum?: unknown[];
+  minItems?: number; maxItems?: number;
+}
+export interface ProviderModelDetail {
+  provider: 'higgsfield'; model: string; display_name: string; media_type: 'image';
+  cli_version: string; schema_hash: string;
+  capabilities: {
+    prompt: boolean; image_references: boolean; reference_parameter: string | null;
+    minimum_references: number; maximum_references: number | null;
+  };
+  parameters: ProviderParameter[];
+}
 export interface JobDetail extends Job {
   events: { sequence: number; state: string; details: Record<string, unknown>; created_at: number }[];
 }
@@ -64,6 +83,14 @@ export interface RecoveryPreview {
 }
 export interface ProjectData {
   project: ProductionNode; nodes: ProductionNode[]; media: Media[]; recipes: Recipe[]; jobs: Job[];
+}
+export interface WorkflowStage { id: string; label: string; status: string; summary: string }
+export interface WorkflowAction { kind: string; message: string; node_id: string; priority: number }
+export interface WorkflowStatus {
+  project_id: string; counts: Record<string, number>; stages: WorkflowStage[];
+  assets: { node_id: string; name: string; kind: string; requirements: number; requirements_covered: number; reference_ready: boolean }[];
+  cuts: { node_id: string; name: string; ready_to_prepare: boolean; take_ready: boolean; issues: { code: string; message: string }[] }[];
+  next_actions: WorkflowAction[];
 }
 export interface NodeDetail {
   node: ProductionNode; context: Context; media: Media[];

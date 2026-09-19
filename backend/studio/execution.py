@@ -68,7 +68,17 @@ class Execution:
             self.store.event(conn, job_id, "cancelled", {"reason": "User cancelled before submission"}, self.clock())
             return self.studio._job(self.store.one(conn, "jobs", job_id))
 
-    def preview_reconciliation(self, job_id, provider_id):
+    @staticmethod
+    def _settings_match(expected, remote):
+        """Compare provider receipts after normalizing equivalent app defaults."""
+        implicit = {"batch_size": 1}
+        return all(
+            encoded(remote.get(key, implicit.get(key))) == encoded(value)
+            for key, value in expected.items()
+            if key in remote or key in implicit
+        ) and all(key in remote or key in implicit for key in expected)
+
+    def _preview_submission(self, job_id, provider_id, *, states):
         import re
 
         if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_-]*", provider_id):
@@ -76,8 +86,8 @@ class Execution:
         with self.store.connection() as conn:
             job = self.store.one(conn, "jobs", job_id)
             recipe = self.studio._recipe(self.store.one(conn, "recipes", job["recipe_id"]))
-        if job["state"] != "submission_unknown":
-            raise StudioError("reconciliation_state", "Only uncertain submissions require reconciliation", 409)
+        if job["state"] not in states:
+            raise StudioError("reconciliation_state", "This job cannot accept a provider submission in its current state", 409)
         spec = recipe["spec"]
         remote = self._provider(spec["provider"]).inspect(provider_id)
         if remote.get("id") != provider_id:
@@ -88,7 +98,7 @@ class Execution:
         checks = {
             "model": remote.get("job_set_type") == spec["model"],
             "prompt": params.get("prompt") == spec["prompt"],
-            "settings": all(k in params and encoded(params[k]) == encoded(v) for k, v in spec["settings"].items()),
+            "settings": self._settings_match(spec["settings"], params),
         }
         remote_refs = params.get("input_images", params.get("medias", [])) or []
         checks["reference_count"] = isinstance(remote_refs, list) and len(remote_refs) == len(spec["references"])
@@ -109,8 +119,27 @@ class Execution:
             "local_references": spec["references"],
         }
 
+    def preview_reconciliation(self, job_id, provider_id):
+        return self._preview_submission(job_id, provider_id, states={"submission_unknown"})
+
+    def preview_external_submission(self, job_id, provider_id):
+        return self._preview_submission(job_id, provider_id, states={"queued"})
+
     def reconcile(self, job_id, request):
         preview = self.preview_reconciliation(job_id, request.provider_id)
+        return self._link_submission(job_id, request, preview, expected_state="submission_unknown", external=False)
+
+    def attach_external_submission(self, job_id, request):
+        preview = self.preview_external_submission(job_id, request.provider_id)
+        with self.store.connection() as conn:
+            job = self.store.one(conn, "jobs", job_id)
+            recipe = self.store.one(conn, "recipes", job["recipe_id"])
+            if not recipe["approved_at"]:
+                raise StudioError("approval_required", "Approve the exact recipe before external submission", 409)
+            self.studio._fresh(conn, recipe)
+        return self._link_submission(job_id, request, preview, expected_state="queued", external=True)
+
+    def _link_submission(self, job_id, request, preview, *, expected_state, external):
         if preview["fingerprint"] != request.fingerprint:
             raise StudioError("reconciliation_changed", "Recovery evidence changed; inspect a fresh preview", 409)
         if not preview["can_link"]:
@@ -135,7 +164,7 @@ class Execution:
                     "evidence": evidence,
                 }
             )
-            if job["state"] != "submission_unknown" or current != request.fingerprint:
+            if job["state"] != expected_state or current != request.fingerprint:
                 raise StudioError("reconciliation_changed", "Job changed during recovery", 409)
             duplicate = conn.execute(
                 """SELECT j.id FROM jobs j JOIN recipes r ON r.id=j.recipe_id
@@ -153,7 +182,8 @@ class Execution:
                 job_id,
                 "running",
                 {
-                    "reconciled": True,
+                    "reconciled": not external,
+                    "external_submission": external,
                     "provider_id": request.provider_id,
                     "user_decision": request.user_decision,
                     "evidence": request.fingerprint,

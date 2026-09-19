@@ -6,6 +6,7 @@ import time
 
 from backend.studio.models import (
     Approval,
+    AssetRequirementCreate,
     FieldEdit,
     MediaReview,
     NodeCreate,
@@ -55,6 +56,15 @@ def seed_demo(studio):
         ("prop", "Train ticket", "Cream card with a brass clip. The clip remains on its upper-left edge."),
     ]:
         assets.append(studio.create_node(NodeCreate(kind=kind, name=title, notes=note, parent_id=project["id"])))
+    requirement_specs = [
+        ("view", "Identity turnaround", "Confirm full-body front, profile and back with stable coat and glasses"),
+        ("view", "Connected geography", "Confirm east entrance, clock, tracks and reverse platform direction"),
+        ("detail", "Ticket construction", "Confirm ticket face, back and brass clip on the upper-left edge"),
+    ]
+    for asset, (kind, label, instruction) in zip(assets, requirement_specs, strict=True):
+        studio.create_requirement(
+            asset["id"], AssetRequirementCreate(kind=kind, label=label, instruction=instruction, priority=1)
+        )
     clock = [time.time() + 10]
     worker = Worker(studio, clock=lambda: clock[0])
 
@@ -91,6 +101,7 @@ def seed_demo(studio):
                 status="approved",
                 user_decision="Offline mechanical fixture approval, not a claim about generated pixels",
                 depicted_assets=studio.rules.asset_ids(scope) if node["kind"] == "cut" else [],
+                requirement_ids=[item["id"] for item in studio.inspect(node["id"])["requirements"]],
             ),
         )
         current = studio.inspect(node["id"])["node"]

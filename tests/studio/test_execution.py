@@ -248,6 +248,37 @@ def test_recovery_collects_without_second_submission(studio, monkeypatch):
     assert any(e["details"].get("reconciled") for e in studio.job(job["id"])["events"])
 
 
+def test_external_submission_attaches_approved_queued_job(studio):
+    _, recipe, job = queued(studio)
+    provider = FakeProvider(studio.store.home / "fixtures")
+    provider.submit(job["id"], recipe["spec"], [])
+
+    preview = studio.execution.preview_external_submission(job["id"], job["id"])
+    assert preview["can_link"]
+    linked = studio.execution.attach_external_submission(
+        job["id"],
+        Reconciliation(
+            provider_id=job["id"],
+            fingerprint=preview["fingerprint"],
+            user_decision="Submitted through approved external connector",
+        ),
+    )
+
+    assert linked["state"] == "running"
+    assert any(event["details"].get("external_submission") for event in studio.job(job["id"])["events"])
+
+
+def test_provider_receipt_allows_implicit_single_batch_size():
+    assert Execution._settings_match(
+        {"batch_size": 1, "quality": "xhigh"},
+        {"quality": "xhigh"},
+    )
+    assert not Execution._settings_match(
+        {"batch_size": 2, "quality": "xhigh"},
+        {"quality": "xhigh"},
+    )
+
+
 def test_recovery_rejects_changed_or_mismatched_evidence(studio, monkeypatch):
     _, _, job = uncertain(studio, monkeypatch)
     preview = studio.execution.preview_reconciliation(job["id"], job["id"])
