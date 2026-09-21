@@ -338,3 +338,38 @@ def test_a_second_opinion_counts_even_when_it_is_not_required(world):
     assert not status["accepted"] and status["second_opinion"] is not None
     assert any("second evaluator disagrees" in r for r in status["reasons"])
     assert "identity" in " ".join(status["reasons"])
+
+
+def test_the_style_contract_is_asked_token_by_token(world):
+    change(world.studio, world.project, **{
+        "bible.tokens": ["torn fibrous paper edges", "graphite linework"],
+        "bible.palette_hex": ["#F1ECE2", "#12100E"],
+        "bible.lighting_rules": "Flat grey daylight; no cast shadows.",
+        "negative_prompts": "colour accents, glossy painting, invented props",
+    })
+    refresh(world.studio, world.media)
+    ids = {q["id"]: q for q in world.studio.facts(world.cuts[0]["id"])["questions"]}
+    assert ids["style_token:0"]["question"] == "Does the image actually show this: torn fibrous paper edges?"
+    assert ids["style_token:1"]["group"] == "style" and ids["palette"]["group"] == "style"
+    assert ids["lighting_rules"]["group"] == "style"
+    assert ids["excluded"]["cap_on_miss"] and "invented props" in ids["excluded"]["question"]
+    # an asset sheet is held to the same visual contract
+    assert "style_token:0" in {q["id"] for q in world.studio.facts(world.mara["id"])["questions"]}
+    # a frame that does not look like the production is capped, however well it scores elsewhere
+    media_id = world.media[0]["id"]
+    record = world.studio.evaluate(media_id, evaluation(
+        world.studio, media_id, evidence=answers(world.studio, media_id, style_token=0.2, palette=0.3, style=0.3)))
+    assert record["scores"]["groups"]["style"] < 0.5
+    assert record["scores"]["capped"] == 1.0 and record["scores"]["min_group"] <= 0.4
+
+
+def test_hands_are_their_own_question(world):
+    ids = {q["id"]: q for q in world.studio.facts(world.cuts[0]["id"])["questions"]}
+    hands = ids[f"hands:{world.mara['id']}"]
+    assert hands["cap_on_miss"] and hands["weight"] == 2 and hands["group"] == "identity"
+    assert "five separate readable fingers" in hands["question"]
+    assert "highest magnification" in hands["look_at"]
+    media_id = world.media[0]["id"]
+    record = world.studio.evaluate(media_id, evaluation(
+        world.studio, media_id, evidence=answers(world.studio, media_id, hands=0.1)))
+    assert record["scores"]["capped"] == 1.0

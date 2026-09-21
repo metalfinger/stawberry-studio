@@ -62,6 +62,11 @@ against sibling cuts and the image's own references; Pillow only, no model). Sco
 that need torch — subject-cropped identity similarity, cross-panel scene diversity —
 are planned as an optional extra and are not installed by the base runtime.
 
+## The harness
+
+Read `HARNESS.md` first for a new production: the declarations, the checks, the failure
+classes and the starting sequence. `PLAYBOOKS.md` is the per-role procedure.
+
 ## Autonomous mode
 
 Set `policy.autonomous` (and a cost ceiling) on the project, then run

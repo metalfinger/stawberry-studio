@@ -128,6 +128,12 @@ strawberry-studio/
 └── requirements.txt
 ```
 
+## The harness
+
+`HARNESS.md` is the operating document: what a story declares, what is checked and when,
+the failure classes found so far and what holds each one, and how to start a new
+production. Read it before a new film; update it when a new failure class appears.
+
 ## Consistency stack
 
 Every cut render flows through:

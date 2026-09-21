@@ -905,7 +905,8 @@ class Studio:
             raise StudioError("evidence_empty", "No evidence answers a current question", 409)
         gm = lambda pairs: math.exp(sum(w * math.log(max(p, 1e-3)) for p, w in pairs) / sum(w for _, w in pairs))  # noqa: E731
         group_scores = {name: round(gm(pairs), 3) for name, pairs in groups.items()}
-        if group_scores.get("action", 1.0) < 0.5:
+        # a frame that does not do its job, or does not look like the production, is not "mostly fine"
+        if group_scores.get("action", 1.0) < 0.5 or group_scores.get("style", 1.0) < 0.5:
             capped = True
         everything = [pair for pairs in groups.values() for pair in pairs]
         headline = round(gm(everything), 3)
@@ -950,9 +951,12 @@ class Studio:
 
             questions = []
 
-            GROUPS = {"cast": "identity", "pose": "identity", "detail": "identity", "wardrobe": "identity", "subject": "identity",
-                      "features": "identity", "location": "scope", "prop": "scope", "state": "state", "action": "action",
-                      "beat": "action", "style": "style"}
+            GROUPS = {"cast": "identity", "pose": "identity", "hands": "identity", "detail": "identity",
+                      "wardrobe": "identity", "subject": "identity", "features": "identity",
+                      "location": "scope", "prop": "scope", "state": "state",
+                      "action": "action", "beat": "action",
+                      "style": "style", "style_token": "style", "palette": "style", "lighting_rules": "style",
+                      "excluded": "style"}
 
             def ask(qid, question, *, expected="yes", asset_id=None, weight=1, cap=False, look_at=None):
                 prefix = qid.split(":")[0]
@@ -975,6 +979,14 @@ class Studio:
                         "reversed, duplicated or missing)?",
                         asset_id=asset["id"], weight=2, cap=True,
                     )
+                    # the commonest generative defect, and the easiest to skim past at any size
+                    ask(
+                        f"hands:{asset['id']}",
+                        f"Are {asset['name']}'s hands and arms correct — both arms emerging and visible where they should be, "
+                        "five separate readable fingers on each visible hand, no fused, extra or missing digits?",
+                        asset_id=asset["id"], weight=2, cap=True,
+                        look_at=f"Crop {asset['name']}'s hands at the highest magnification the image allows and look at each one",
+                    )
                 for i, token in enumerate(ctx.get("consistency_tokens") or []):
                     ask(f"detail:{asset['id']}:{i}", f"Does {asset['name']} show '{token}'?", asset_id=asset["id"], cap=True)
                 features = ctx.get("distinctive_features")
@@ -988,6 +1000,11 @@ class Studio:
                 asset = {"id": node["id"], "name": node["name"], "kind": node["kind"], "context": self._context(conn, node_id)}
                 ask(f"subject:{node['id']}", f"Does the image show {node['name']} and nothing else as the subject?", asset_id=node["id"], weight=3, cap=True)
                 identity(asset)
+                for position, token in enumerate(values.get("bible.tokens") or []):
+                    ask(f"style_token:{position}", f"Does the image actually show this: {token}?", weight=2)
+                if values.get("bible.palette_hex"):
+                    ask("palette", "Are the image's values confined to this palette, with no colour outside it: "
+                        + ", ".join(values["bible.palette_hex"]) + "?", weight=2)
             elif node["kind"] == "cut":
                 scope = production["scope"]
                 for asset in production["assets"]:
@@ -1020,6 +1037,23 @@ class Studio:
                 style = values.get("style")
                 if isinstance(style, str) and style.strip():
                     ask("style", f"Is the image rendered in this style: {style.strip()}?", weight=1)
+                # A harness exists to hold someone's visual language. One vague question about
+                # "the style" is answered generously; each declared token has to be looked for.
+                for position, token in enumerate(values.get("bible.tokens") or []):
+                    ask(f"style_token:{position}", f"Does the image actually show this: {token}?", weight=2,
+                        look_at="Look at the whole frame and at one detail crop; a technique either appears or it does not")
+                palette = values.get("bible.palette_hex") or []
+                if palette:
+                    ask("palette", "Are the image's values confined to this palette, with no colour outside it: "
+                        + ", ".join(palette) + "?", weight=2,
+                        look_at="Look at the whole frame; sample a light area, a mid tone and a shadow")
+                rules = values.get("bible.lighting_rules")
+                if isinstance(rules, str) and rules.strip():
+                    ask("lighting_rules", f"Does the light in this frame follow: {rules.strip()}?", weight=2)
+                excluded = values.get("negative_prompts")
+                if isinstance(excluded, str) and excluded.strip():
+                    ask("excluded", f"Is the image free of all of these: {excluded.strip()}?", weight=2, cap=True,
+                        look_at="Scan the whole frame for anything on the list, including small invented props")
             else:
                 raise StudioError("facts_scope", "Facts are derived for cuts and assets")
             return {"node_id": node_id, "kind": node["kind"], "questions": questions,
