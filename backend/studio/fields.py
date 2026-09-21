@@ -99,6 +99,8 @@ FIELD_SPECS: dict[str, dict] = {
     # assets: identity locks, and which continuity attributes are locked (capped when checked)
     "consistency_tokens": {"type": "token_list", "kinds": ASSETS, "max_items": 6},
     "locks": {"type": "attr_list", "kinds": ASSETS, "max_items": 8},
+    # "text": the asset's identity travels as quoted locks, not an image — for when a provider refuses the image
+    "reference_mode": {"type": "enum", "kinds": ASSETS, "options": ("image", "text")},
     "inspired_by": {"type": "text", "kinds": ASSETS, "max_len": 240},
 }
 

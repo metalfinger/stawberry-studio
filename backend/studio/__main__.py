@@ -99,6 +99,8 @@ def main():
     p.add_argument("text")
     p = sub.add_parser("evaluate-local", help="Record deterministic local scores for one image; no model calls")
     p.add_argument("media_id")
+    p = sub.add_parser("abandon", help="Close a submission_unknown job whose error is a definitive provider rejection")
+    p.add_argument("id")
     p = sub.add_parser("worker")
     p.add_argument("--once", action="store_true")
     p.add_argument(
@@ -160,6 +162,8 @@ def main():
             result = Higgsfield().describe(args.id)
         elif args.command == "cancel":
             result = studio.execution.cancel(args.id)
+        elif args.command == "abandon":
+            result = studio.execution.abandon(args.id)
         elif args.command == "reconcile-preview":
             result = studio.execution.preview_reconciliation(args.id, args.provider_id)
         elif args.command == "reconcile":

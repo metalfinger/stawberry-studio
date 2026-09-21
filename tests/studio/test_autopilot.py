@@ -4,6 +4,7 @@ import pytest
 from PIL import Image
 
 from backend.studio.models import (
+    Approval,
     EvaluationCreate,
     Evidence,
     FieldEdit,
@@ -122,3 +123,38 @@ def test_autopilot_requires_the_policy(tmp_path):
     project = studio.create_node(NodeCreate(kind="project", name="Manual"))
     with pytest.raises(StudioError, match="policy.autonomous"):
         step(studio, project["id"], fake=True)
+
+
+def test_provider_rejection_is_definitive_and_repairable(world, monkeypatch):
+    from backend.studio.providers import Higgsfield, ProviderRejected
+    from backend.studio.worker import Worker
+
+    w = world
+    w.studio.patch_node(w.mara["id"], NodePatch(expected_revision=w.studio.inspect(w.mara["id"])["node"]["revision"], reason="t",
+                                                 changes={"reference_mode": FieldEdit(value="text")}))
+    for m in w.sheets.values():  # the field write staled the sheet reviews; carry them forward
+        detail = w.studio.media(m["id"])
+        if detail["media"]["review"]["stale"]:
+            w.studio.review_media(m["id"], MediaReview(expected_revision=detail["media"]["review"]["revision"], expected_context=detail["review_context"],
+                                                        status="approved", user_decision="carried forward"))
+    # a text-only asset satisfies coverage through its quoted locks, without an image
+    recipe = w.studio.prepare(RecipeCreate(node_id=w.cut["id"], provider="fake", model="fixture", intent="take", prompt="Mara waits. amber eyes. torn paper",
+                                           references=[Reference(media_id=w.sheets["Station"]["id"], role="location", instruction="keep")]))
+    assert recipe["warnings"] == []
+    # a CLI rejection at submit is a failure with a repair, not an unknown submission
+    from types import SimpleNamespace as NS
+
+    def refuse(argv, **kw):
+        return NS(returncode=1, stdout="", stderr="Error: NSFW content detected\n")
+    provider = Higgsfield(run=refuse)
+    with pytest.raises(ProviderRejected):
+        provider.submit("j", {"model": "m", "prompt": "p", "references": [], "settings": {}}, [])
+    w.studio.approve(recipe["id"], Approval(fingerprint=recipe["fingerprint"], user_decision="t", max_credits=1))
+    job = w.studio.enqueue(recipe["id"])
+    worker = Worker(w.studio, {"fake": provider}, allow_higgsfield=False, clock=lambda: 10**12)
+    monkeypatch.setattr(worker.providers["fake"], "preflight", lambda spec: {"credits": 0, "unit": "provider_credits"})
+    worker.tick(job_id=job["id"])
+    assert w.studio.job(job["id"])["state"] == "failed" and w.studio.job(job["id"])["error"].startswith("provider_rejected")
+    out = step(w.studio, w.project["id"], fake=True, clock=lambda: 10**12, sleep=lambda s: None)
+    assert out["cuts"][0]["stage"] == "provider_rejected"
+    assert out["tasks"][0]["repair"]["suggestions"][0]["code"] == "provider_rejected"

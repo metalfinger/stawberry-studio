@@ -117,6 +117,12 @@ def step(studio, project_id, only=None, max_ticks=120, fake=False, clock=time.ti
             state = drive_job(studio, job["id"], max_ticks, clock=clock, sleep=sleep, fake=fake)
             job = {**job, "state": state}
             media = take_media(studio, cut["id"])
+        if job and job["state"] == "failed" and (job.get("error") or "").startswith("provider_rejected"):
+            entry["stage"] = "provider_rejected"
+            tasks.append({"task": "prepare", "cut_id": cut["id"], "repair": studio.repair(cut["id"]),
+                          "instruction": "The provider refused the submission; apply the repair suggestion and prepare again"})
+            report.append(entry)
+            continue
         if job and job["state"] in {"failed", "collection_failed", "submission_unknown"}:
             entry["stage"] = f"job_{job['state']}"
             tasks.append({"task": "recover_job", "cut_id": cut["id"], "job_id": job["id"], "state": job["state"]})

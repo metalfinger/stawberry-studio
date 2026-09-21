@@ -791,7 +791,14 @@ class Studio:
             used = self.rules.takes_used(conn, cut_id)
             base = {"cut_id": cut_id, "takes_used": used, "max_takes": pol["max_takes_per_cut"], "can_retry": used < pol["max_takes_per_cut"]}
             if not row:
-                return {**base, "take": None, "suggestions": [{"code": "first_take", "message": "No take yet; prepare from the sheets"}]}
+                rejected = conn.execute(
+                    "SELECT j.error FROM jobs j JOIN recipes r ON r.id=j.recipe_id WHERE r.node_id=? AND j.state='failed' "
+                    "AND j.error LIKE 'provider_rejected%' ORDER BY j.updated_at DESC LIMIT 1", (cut_id,)).fetchone()
+                suggestions = [{"code": "first_take", "message": "No take yet; prepare from the sheets"}]
+                if rejected:
+                    suggestions.insert(0, {"code": "provider_rejected", "message": rejected["error"][:200] +
+                                           ". Set reference_mode=text on the asset whose image the provider refuses and quote its consistency_tokens"})
+                return {**base, "take": None, "suggestions": suggestions}
             media = dict(row)
             status = self.rules.take_status(conn, media, pol)
             facts = self.rules.current_evaluation(conn, media, "facts")
@@ -839,6 +846,14 @@ class Studio:
                     suggest("judge_" + d["tag"], d["note"], asset_id=d.get("asset_id"), region=d.get("region"))
             if duplicate and any(d["tag"] == "copy_paste" for d in duplicate["discrepancies"]):
                 suggest("change_camera", "Near-identical to a sibling beat: change camera.framing or camera.angle and do not use the previous take as base")
+            failed_job = conn.execute(
+                "SELECT j.error FROM jobs j JOIN recipes r ON r.id=j.recipe_id WHERE r.node_id=? AND j.state='failed' "
+                "ORDER BY j.updated_at DESC LIMIT 1", (cut_id,)).fetchone()
+            if failed_job and (failed_job["error"] or "").startswith("provider_rejected"):
+                image_refs = [a for a in production["assets"] if a["context"]["values"].get("reference_mode") != "text"]
+                suggest("provider_rejected", failed_job["error"][:200] + ". Set reference_mode=text on the asset whose image the provider refuses "
+                        "(usually a child's likeness) and quote all its consistency_tokens instead",
+                        assets=[a["id"] for a in image_refs])
             if status["accepted"] and not suggestions:
                 suggest("accepted", "The latest take passes the gate; nothing to repair")
             return {**base, "take": status, "suggestions": suggestions,

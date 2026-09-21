@@ -52,6 +52,22 @@ class Execution:
             "checked_at": now,
         }
 
+    def abandon(self, job_id):
+        """Close a submission_unknown job whose recorded error is a definitive provider rejection."""
+        from backend.studio.providers import REJECTION_SIGNATURES
+
+        with self.studio.store.connection(write=True) as conn:
+            job = self.studio.store.one(conn, "jobs", job_id)
+            if job["state"] != "submission_unknown":
+                raise StudioError("job_state", "Only a submission_unknown job can be abandoned", 409)
+            if not any(sig in (job["error"] or "").lower() for sig in REJECTION_SIGNATURES):
+                raise StudioError("job_state", "This job's error is not a definitive rejection; reconcile it instead", 409)
+            now = time.time()
+            conn.execute("UPDATE jobs SET state='failed',error=?,updated_at=? WHERE id=?",
+                         (f"provider_rejected: {job['error']}"[:2000], now, job_id))
+            self.studio.store.event(conn, job_id, "failed", {"reason": "abandoned: provider rejected the submission"}, now)
+            return self.studio._job(self.studio.store.one(conn, "jobs", job_id))
+
     def cancel(self, job_id):
         with self.store.connection(write=True) as conn:
             job = self.store.one(conn, "jobs", job_id)

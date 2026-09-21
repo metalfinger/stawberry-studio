@@ -534,6 +534,12 @@ class ProductionRules:
         node = self.store.one(conn, "nodes", node_id)
         ctx = self.studio._context(conn, node_id)
         pol = resolve_policy(ctx["values"])
+        low = (prompt or "").lower()
+        for asset in production["assets"]:
+            actx = asset["context"]["values"]
+            tokens = actx.get("consistency_tokens") or []
+            if actx.get("reference_mode") == "text" and tokens and all(t.lower() in low for t in tokens):
+                covered[asset["kind"]].add(asset["id"])  # identity carried by its quoted locks
         if pol["autonomous"]:
             for gap in self.recipe_gaps(conn, node_id, references, prompt):
                 if gap["code"] in {"reference_unfit", "take_budget"} or (gap["code"] == "prompt_unbound" and gap["node_id"] != node["project_id"]):
@@ -556,11 +562,16 @@ class ProductionRules:
         if node["kind"] == "cut":
             for asset in production["assets"]:
                 if asset["id"] not in covered[asset["kind"]]:
+                    text_only = asset["context"]["values"].get("reference_mode") == "text"
                     issues.append(
                         {
                             "code": "reference_coverage",
                             "node_id": asset["id"],
-                            "message": f"Attach a reviewed {asset['kind']} reference for {asset['name']} with the matching role",
+                            "message": (
+                                f"{asset['name']} is text-only: quote every one of its consistency_tokens in the prompt"
+                                if text_only else
+                                f"Attach a reviewed {asset['kind']} reference for {asset['name']} with the matching role"
+                            ),
                         }
                     )
         if issues:

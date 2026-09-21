@@ -8,6 +8,12 @@ from pathlib import Path
 
 from backend.studio.store import StudioError, digest
 
+REJECTION_SIGNATURES = ("nsfw content detected", "content policy", "moderation", "safety system", "rejected by the provider")
+
+
+class ProviderRejected(Exception):
+    """The provider refused the request before creating a job. Definitive; nothing to reconcile."""
+
 
 class SubmissionUnknown(Exception):
     """A billable operation may have succeeded; never retry automatically."""
@@ -29,6 +35,8 @@ class Higgsfield:
             return result.stdout.strip() if raw else json.loads(result.stdout)
         except (OSError, subprocess.TimeoutExpired, ValueError) as exc:
             if submission:
+                if isinstance(exc, ValueError) and any(sig in str(exc).lower() for sig in REJECTION_SIGNATURES):
+                    raise ProviderRejected(str(exc).strip()) from exc
                 raise SubmissionUnknown(f"Submission needs reconciliation: {exc}") from exc
             raise StudioError("provider_error", str(exc), 502) from exc
 

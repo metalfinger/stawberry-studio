@@ -9,7 +9,7 @@ from pathlib import Path
 
 from backend.studio.collection import download
 from backend.studio.execution import validate_cost
-from backend.studio.providers import FakeProvider, Higgsfield, SubmissionUnknown
+from backend.studio.providers import FakeProvider, Higgsfield, ProviderRejected, SubmissionUnknown
 from backend.studio.service import Studio
 from backend.studio.store import StudioError, encoded, identifier
 
@@ -189,6 +189,8 @@ class Worker:
                         if spec["provider"] != "fake":
                             local.unlink(missing_ok=True)
                 self._save(job["id"], state="ready", error=None, owner=None, lease_until=None)
+        except ProviderRejected as exc:
+            self._save(job["id"], state="failed", error=f"provider_rejected: {exc}"[:2000], owner=None, lease_until=None)
         except SubmissionUnknown as exc:
             self._save(job["id"], state="submission_unknown", error=str(exc), owner=None, lease_until=None)
         except Exception as exc:
