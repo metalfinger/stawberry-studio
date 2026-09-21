@@ -1,5 +1,9 @@
 # Strawberry assistant-operated filmmaking migration
 
+2026-09-21: the user authorized a portable workflow for Claude Code, Codex and
+other local tool-capable hosts. `PORTABILITY_STATUS.md` tracks this extension;
+older deferrals of second-host integration below no longer define its scope.
+
 Date: 2026-09-16
 Status: Approved, implementation in progress. The first isolated engine/viewer
 proof is running; full parity is not complete. See [current checkpoint](MIGRATION_STATUS.md),

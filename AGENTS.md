@@ -1,5 +1,9 @@
 # Strawberry Studio development and operation
 
+For the portable assistant workflow, start with `START_HERE.md` and
+`PORTABILITY_STATUS.md`. Codex and Claude Code share the same JSON CLI/MCP
+operations; earlier Codex-only restrictions are historical migration scope.
+
 Read `MIGRATION_PLAN.md` for the migration status and `WORKFLOW_RULES.md` for the
 filmmaking/context contract. Do not infer completion from earlier chat summaries.
 Read `MIGRATION_STATUS.md` for the latest executable checkpoint, verified tests,

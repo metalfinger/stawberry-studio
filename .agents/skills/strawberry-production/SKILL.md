@@ -5,6 +5,11 @@ description: Operate Strawberry Studio from Codex using its local production eng
 
 # Human-directed filmmaking in Strawberry
 
+For portable operation in Codex, Claude Code or another local assistant, read
+`START_HERE.md` and `workflow/PORTABLE_WORKFLOW.md` at the repository root.
+Host-specific preferences below are historical session context, not universal
+defaults. The historical dream auto-run scripts are not generic production tools.
+
 ## Operating boundary
 
 One Codex conversation coordinates the user. You perform the creative reasoning;

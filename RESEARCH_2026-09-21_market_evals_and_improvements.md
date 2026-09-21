@@ -194,12 +194,61 @@ by feel, each a one-afternoon experiment once 3.1–3.3 exist:
 Deliverable is one page: which layer earns its cost, which is decoration, which magic
 number moves. Then decide whether evaluator records become a real production contract.
 
+## 4a. ViStoryBench, specifically — what to run, what to steal, what not to
+
+**Runnable on our own storyboards: yes, with an adapter.** `bench_run.py --outputs_path`
+accepts custom paths; `vistorybench/dataset_loader/adapt_base.py` is the template. Layout
+it wants is `method/mode/lang/timestamp/shots/story_id/shot_XX.png` plus a `story.json`
+(plot correspondence, setting, on-stage characters per shot) and
+`image/[Character]/` reference dirs. Strawberry already holds every field:
+
+| ViStoryBench | Strawberry |
+|---|---|
+| shot description | cut `action` + camera |
+| on-stage characters | `visible_cast` |
+| setting | `location_id` |
+| character reference images | approved media on the character node |
+| generated shot | selected take on the cut |
+
+One export op from `.strawberry/` to that layout is a day's work and it becomes the offline
+audit for every production, Nine O'Clock first.
+
+**The limit that matters: CIDS is face-based.** GroundingDINO + ArcFace / AdaFace /
+FaceNet. It measures the identity of *realistic human faces*. It has nothing to say about
+props, locations, or a charcoal-and-cut-paper Abhishek who is "non-realistic but
+identity-readable". Copy-paste detection is inside CIDS and inherits the limit — and when a
+character has only one reference it uses a *mirrored* copy, which is a shortcut, not a
+measurement. So on stylized work the headline metric is likely noise. Running it once on
+Nine O'Clock and finding that out is itself the result: it tells us the in-engine evaluator
+cannot be ViStoryBench's.
+
+**Weight, not a library.** ~15 GB of weights, 24 GB VRAM recommended (CPU fallback exists),
+conda env, its own config. A benchmark harness, not something a `studio/worker.py` job
+imports per cut.
+
+**Therefore:** ViStoryBench is the **offline audit**, run occasionally on an exported
+production to check whether our numbers and Hiren's eye agree. The **in-engine evaluator
+record** (3.2–3.3) should be the VLM judge with the capped rubric plus MaSC / DINOv2 on the
+*cropped subject* — that works for props, locations and stylized characters, which ArcFace
+cannot, and it runs on a CPU worker.
+
+**What to steal outright:**
+- the `story.json` schema as validation that Strawberry's fields are the right ones;
+- **OOCM** (on-screen character detection) — it is the machine form of `depicted_assets`,
+  the one thing the human currently has to confirm by hand. Even a weak automatic version
+  can pre-fill the review and let the human correct rather than author;
+- **Prompt Align** — GPT/Gemini as judge with `--base_url` override, i.e. exactly the
+  evaluator-record shape;
+- their v4 leaderboard row for NanoBanana-Pro, which is Strawberry's own model — a free
+  published baseline for where it drifts.
+
 ## 5. Build order
 
 1. Depth query + surface in `inspect` / `context` (3.1). Days, no schema.
 2. Evaluator records table + promotion rule as a readiness warning (3.2).
 3. Critic worker with data-driven rubric, cropped similarity, sibling variance (3.3).
-4. Nine O'Clock as fixture; run the ref-count and ref-order experiments (4).
+4. Nine O'Clock as fixture; run the ref-count and ref-order experiments (4). Export it to
+   ViStoryBench layout once and run the offline audit (4a).
 5. Beat fields (3.4) and named views + state-aware resolver (3.5).
 6. `candidates` read op and the retrieval playbook (3.6). Stranger evaluator (3.7).
 

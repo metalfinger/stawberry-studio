@@ -1,5 +1,9 @@
 # Strawberry context and reference preparation
 
+2026-09-21 extension: local assistant hosts now include Claude Code and Codex.
+See `START_HERE.md` and `workflow/PORTABLE_WORKFLOW.md`. Earlier single-host
+scope below is historical; context inheritance and reference contracts remain.
+
 Date: 2026-09-16
 Status: Agreed target contract. The isolated proof implements field inheritance,
 source retention, exact recipes and take history. Story-state relationships,

@@ -1,0 +1,14 @@
+{
+  "status": "planning template; not yet enforced by the engine",
+  "mode": "manual_review",
+  "allowed_modes_planned": ["manual_review", "autonomous_unverified", "evaluation_assisted"],
+  "provider": "higgsfield",
+  "submission_transport": "host_connector",
+  "model": "gpt_image_2_5",
+  "max_credits": null,
+  "max_retries_per_cut": 0,
+  "visual_inspection_authorized": false,
+  "authorization_source_id": null,
+  "on_unknown_submission": "reconcile_existing_job",
+  "on_budget_exhaustion": "stop"
+}

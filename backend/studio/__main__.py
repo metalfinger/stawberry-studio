@@ -35,6 +35,10 @@ def main():
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("projects")
     sub.add_parser("runtime")
+    sub.add_parser("tools", help="Discover host-neutral operation schemas")
+    p = sub.add_parser("call", help="Invoke a host-neutral operation with JSON")
+    p.add_argument("operation")
+    p.add_argument("file", help="JSON file, or - for stdin")
     sub.add_parser("models", help="List live Higgsfield image models without generating")
     p = sub.add_parser("model", help="Show a live Higgsfield image-model contract")
     p.add_argument("id")
@@ -132,6 +136,14 @@ def main():
                 return
             with worker.keepalive():
                 result = {"processed": worker.tick()}
+        elif args.command == "tools":
+            from backend.studio.tools import catalog
+
+            result = catalog()
+        elif args.command == "call":
+            from backend.studio.tools import invoke
+
+            result = invoke(studio, args.operation, read_json(args.file))
         elif args.command == "projects":
             result = studio.projects()
         elif args.command == "runtime":

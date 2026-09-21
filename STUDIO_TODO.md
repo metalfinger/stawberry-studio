@@ -1,5 +1,9 @@
 # Strawberry Studio local work queue
 
+Superseded for current planning by `PORTABILITY_STATUS.md` (2026-09-21).
+The pending dream-asset statements below are historical: the dream production
+completed all 22 cuts. Retained here as the earlier migration work log.
+
 Updated: 2026-09-18
 
 This is the local source of truth for the Codex-operated migration. Keep it in

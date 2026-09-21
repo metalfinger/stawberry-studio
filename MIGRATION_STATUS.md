@@ -1,5 +1,9 @@
 # Migration checkpoint - 2026-09-18
 
+Current extension (2026-09-21): read `PORTABILITY_STATUS.md` and `START_HERE.md`
+for the host-neutral CLI/MCP kit. Dated entries below are historical checkpoints;
+the dream production has 22 generated selected cuts, not pending asset creation.
+
 ## Read this first
 
 The user approved planning and starting a local, Codex-operated migration. This
