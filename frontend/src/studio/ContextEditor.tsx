@@ -6,7 +6,7 @@ import type { NodeDetail } from './types';
 type Definition = {
   field: string;
   label: string;
-  type?: 'text' | 'number' | 'select';
+  type?: 'text' | 'number' | 'select' | 'list' | 'boolean';
   options?: string[];
 };
 
@@ -20,6 +20,22 @@ const COMMON: Definition[] = [
   { field: 'era', label: 'Era / period' },
 ];
 
+const CAMERA: Definition[] = [
+  { field: 'camera.framing', label: 'Framing' },
+  { field: 'camera.angle', label: 'Camera angle' },
+  { field: 'camera.movement', label: 'Camera movement' },
+  { field: 'camera.height', label: 'Camera height' },
+  { field: 'camera.lens', label: 'Lens' },
+  { field: 'camera.depth_of_field', label: 'Depth of field' },
+  { field: 'camera.foreground', label: 'Foreground' },
+  { field: 'camera.background', label: 'Background' },
+];
+
+const IDENTITY: Definition[] = [
+  { field: 'consistency_tokens', label: 'Consistency tokens (comma-separated, each a short phrase)', type: 'list' },
+  { field: 'inspired_by', label: 'Inspired by (original reference, if recast)' },
+];
+
 const BY_KIND: Record<string, Definition[]> = {
   project: [
     { field: 'genre', label: 'Genre' },
@@ -31,28 +47,50 @@ const BY_KIND: Record<string, Definition[]> = {
       options: ['16:9', '9:16', '1:1', '4:3', '3:2', '2.39:1'],
     },
     { field: 'duration_seconds', label: 'Target duration (seconds)', type: 'number' },
+    { field: 'world_logic', label: 'World logic' },
+    { field: 'bible.palette_hex', label: 'Locked palette (#RRGGBB, comma-separated)', type: 'list' },
+    { field: 'bible.tokens', label: 'Style tokens (comma-separated, concrete techniques)', type: 'list' },
+    { field: 'bible.lighting_rules', label: 'Lighting rules' },
+    { field: 'negative_prompts', label: 'Never show' },
+    { field: 'policy.reference_depth_cap', label: 'Reference depth cap', type: 'number' },
+    { field: 'policy.require_evaluation_for_reference', label: 'Require evaluation before reuse as reference', type: 'boolean' },
   ],
   scene: [
     { field: 'action', label: 'Scene action' },
     { field: 'story_time', label: 'Story time' },
-    { field: 'weather', label: 'Weather / atmosphere' },
+    { field: 'weather', label: 'Weather' },
+    { field: 'atmosphere', label: 'Atmosphere / effects' },
+    { field: 'mood', label: 'Mood' },
+    { field: 'lighting.source', label: 'Light source' },
     { field: 'lighting.color', label: 'Light color' },
     { field: 'lighting.direction', label: 'Light direction' },
+    { field: 'set_decoration', label: 'Set decoration' },
+    { field: 'sound.ambient', label: 'Ambient sound' },
   ],
   shot: [
     { field: 'action', label: 'Shot action' },
     { field: 'dialogue', label: 'Dialogue' },
-    { field: 'camera.framing', label: 'Framing' },
-    { field: 'camera.angle', label: 'Camera angle' },
-    { field: 'camera.movement', label: 'Camera movement' },
+    ...CAMERA,
     { field: 'duration_seconds', label: 'Duration (seconds)', type: 'number' },
   ],
   cut: [
     { field: 'action', label: 'Cut action' },
     { field: 'dialogue', label: 'Dialogue' },
-    { field: 'camera.framing', label: 'Framing' },
-    { field: 'camera.angle', label: 'Camera angle' },
-    { field: 'camera.movement', label: 'Camera movement' },
+    { field: 'beat.purpose', label: 'Beat: what this moment accomplishes' },
+    { field: 'beat.emotional_intent', label: 'Beat: what the audience should feel' },
+    { field: 'beat.visual_point', label: 'Beat: why it matters visually' },
+    { field: 'beat.theme', label: 'Beat: what it advances' },
+    { field: 'beat.type', label: 'Beat type' },
+    { field: 'performance.expression', label: 'Expression' },
+    { field: 'performance.body_language', label: 'Body language' },
+    { field: 'performance.gaze', label: 'Gaze direction' },
+    { field: 'performance.gesture', label: 'Gesture' },
+    { field: 'performance.state', label: 'Character state' },
+    ...CAMERA,
+    { field: 'sound.sfx', label: 'Sound effects' },
+    { field: 'sound.music', label: 'Music cue' },
+    { field: 'transition', label: 'Transition out' },
+    { field: 'chain_from_prev', label: 'Chain from previous cut', type: 'select', options: ['yes', 'no'] },
     { field: 'duration_seconds', label: 'Duration (seconds)', type: 'number' },
   ],
   character: [
@@ -60,18 +98,21 @@ const BY_KIND: Record<string, Definition[]> = {
     { field: 'appearance', label: 'Appearance' },
     { field: 'wardrobe', label: 'Wardrobe' },
     { field: 'distinctive_features', label: 'Distinctive features' },
+    ...IDENTITY,
   ],
   location: [
     { field: 'geography', label: 'Geography / layout' },
     { field: 'materials', label: 'Materials' },
     { field: 'landmarks', label: 'Landmarks' },
     { field: 'story_time', label: 'Default story time' },
+    ...IDENTITY,
   ],
   prop: [
     { field: 'identity', label: 'Prop identity' },
     { field: 'materials', label: 'Materials' },
     { field: 'dimensions', label: 'Dimensions / scale' },
     { field: 'distinctive_features', label: 'Distinctive features' },
+    ...IDENTITY,
   ],
 };
 
@@ -86,7 +127,8 @@ function initialDrafts(detail: NodeDetail, definitions: Definition[]): Record<st
     const local = detail.node.fields[definition.field];
     const mode = local?.op === 'clear' ? 'clear' : local ? 'set' : 'inherit';
     const value = local?.value ?? detail.context.values[definition.field] ?? '';
-    return [definition.field, { mode, value: String(value) } satisfies Draft];
+    const text = Array.isArray(value) ? value.join(', ') : String(value);
+    return [definition.field, { mode, value: text } satisfies Draft];
   }));
 }
 
@@ -110,7 +152,10 @@ export default function ContextEditor({ detail, busy, action }: {
     const changes = Object.fromEntries(dirty.map(field => {
       const draft = drafts[field];
       const definition = definitions.find(item => item.field === field);
-      const value = definition?.type === 'number' ? Number(draft.value) : draft.value.trim();
+      const value = definition?.type === 'number' ? Number(draft.value)
+        : definition?.type === 'boolean' ? draft.value === 'true'
+        : definition?.type === 'list' ? draft.value.split(',').map(item => item.trim()).filter(Boolean)
+        : draft.value.trim();
       return [field, draft.mode === 'set' ? { op: 'set', value } : { op: draft.mode }];
     }));
     await api(`/nodes/${detail.node.id}`, {
@@ -155,10 +200,10 @@ export default function ContextEditor({ detail, busy, action }: {
               Clear
             </label>
           </div>
-          {draft.mode === 'set' && (definition.type === 'select'
+          {draft.mode === 'set' && (definition.type === 'select' || definition.type === 'boolean'
             ? <select aria-label={definition.label} value={draft.value} onChange={event => update(definition.field, { ...draft, value: event.target.value })}>
               <option value="">Choose</option>
-              {definition.options?.map(option => <option key={option}>{option}</option>)}
+              {(definition.type === 'boolean' ? ['true', 'false'] : definition.options ?? []).map(option => <option key={option}>{option}</option>)}
             </select>
             : <input
               aria-label={definition.label}

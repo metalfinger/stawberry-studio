@@ -33,6 +33,7 @@ export default function ProductionInspector({ detail, nodes, busy, inspect, acti
           <p>{issue.message}</p>{issue.node_id && issue.node_id !== detail.node.id && nodeLink(issue.node_id)}
         </div>)}
         {values.story_order !== undefined && <p className="studio-muted">Story beat {String(values.story_order)}</p>}
+        {detail.warnings?.map((warning, i) => <p className="studio-muted" key={`${warning.code}-${i}`}>Advisory: {warning.message}</p>)}
       </section>
       <section><h3>In This Frame</h3>{production.assets.map(asset => <div className="studio-scope-row" key={asset.id}>
         <div><small>{asset.kind}</small>{nodeLink(asset.id, asset.name)}</div>
@@ -53,6 +54,10 @@ export default function ProductionInspector({ detail, nodes, busy, inspect, acti
         </details>)}
       </section>}
     </>}
+    {detail.node.kind === 'project' && detail.warnings && detail.warnings.length > 0 && <section className="studio-readiness">
+      <h3><AlertCircle size={16} />Advisory</h3>
+      {detail.warnings.map((warning, i) => <p className="studio-muted" key={`${warning.code}-${i}`}>{warning.message}</p>)}
+    </section>}
     {children.length > 0 && <section><h3>Editorial Order</h3><ol className="studio-order-list">{children.map((child, i) => <li key={child.id}>
       <span>{i + 1}</span>{nodeLink(child.id)}
       <button className="studio-icon" title={`Move ${child.name} earlier`} disabled={busy || i === 0} onClick={() => void move(i, -1)}><ArrowUp size={15} /></button>

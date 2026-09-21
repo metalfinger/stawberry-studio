@@ -17,8 +17,9 @@ export interface AssetRequirement {
   id: string; asset_id: string; kind: 'view' | 'state' | 'detail' | 'scale';
   label: string; instruction: string; priority: number; covered_by: string[];
 }
+export interface Issue { code: string; message: string; node_id?: string; field?: string }
 export interface Readiness {
-  ready: boolean; issues: { code: string; message: string; node_id?: string; field?: string }[];
+  ready: boolean; issues: Issue[]; warnings?: Issue[];
 }
 interface Selection { media_id: string; review_revision: number; status: string; stale: boolean }
 interface StateFact { asset_id: string; attribute: string; value: unknown; source_cut: string }
@@ -89,11 +90,11 @@ export interface WorkflowAction { kind: string; message: string; node_id: string
 export interface WorkflowStatus {
   project_id: string; counts: Record<string, number>; stages: WorkflowStage[];
   assets: { node_id: string; name: string; kind: string; requirements: number; requirements_covered: number; reference_ready: boolean }[];
-  cuts: { node_id: string; name: string; ready_to_prepare: boolean; take_ready: boolean; issues: { code: string; message: string }[] }[];
+  cuts: { node_id: string; name: string; ready_to_prepare: boolean; take_ready: boolean; issues: Issue[]; warnings?: Issue[] }[];
   next_actions: WorkflowAction[];
 }
 export interface NodeDetail {
-  node: ProductionNode; context: Context; media: Media[];
+  node: ProductionNode; context: Context; media: Media[]; warnings?: Issue[];
   sources: { id: string; node_id: string; node_name: string; author: string; status: string; text: string }[];
   revisions: { revision: number; reason: string; created_at: number }[];
   requirements: AssetRequirement[];

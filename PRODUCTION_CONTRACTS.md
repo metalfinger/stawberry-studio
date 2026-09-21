@@ -69,8 +69,15 @@ Required assets need approved selected references, and the exact generation
 recipe must cover them with compatible roles. Generation approval does not
 bypass readiness. Recheck before approval, enqueue and submission.
 
+Readiness also returns `warnings` — advisory gaps in the canonical vocabulary
+(`WORKFLOW_RULES.md`: beat, performance, sound, bible). Warnings never change `ready`,
+are computed outside the frozen generation context, and appear on `readiness`,
+`workflow` cut rows and `inspect`, never inside `context`.
+
 There is no irreversible phase staircase. Earlier work can be revised, with
 dependent reviews/recipes becoming stale and with existing takes preserved.
+Writing canonical fields is such a revision: project-level `bible.*` and asset
+identity fields change every dependent definition and stale their reviews.
 Editorial reorder is one transaction, validates the entire sibling set and its
 revisions, and never changes story order or continuity links.
 

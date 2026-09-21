@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 
+from backend.studio.fields import validate_field, warnings_for
 from backend.studio.store import StudioError, digest, encoded
 
 ASSET_KINDS = {"character", "location", "prop"}
@@ -54,6 +55,8 @@ class ProductionRules:
                     self.target(conn, node, target_id, {kind})
             if "location_id" in values:
                 self.target(conn, node, values["location_id"], {"location"})
+            for field, value in values.items():
+                validate_field(field, value, node)
             if "story_order" in values and (type(values["story_order"]) is not int or values["story_order"] < 1):
                 raise StudioError("story_order", "Story order must be a positive integer")
             for field in ("continuity.before", "continuity.after"):
@@ -326,6 +329,12 @@ class ProductionRules:
             "continuity": continuity,
             "readiness": {"ready": not issues, "issues": issues},
         }
+
+    def warnings(self, conn, node_id):
+        """Advisory gaps. Kept out of resolve() so they never enter a frozen generation context."""
+        node = self.store.one(conn, "nodes", node_id)
+        ctx = self.studio._context(conn, node_id)
+        return warnings_for(node, ctx["values"], ctx["cleared"])
 
     def validate_recipe(self, conn, node_id, references):
         production = self.resolve(conn, node_id)

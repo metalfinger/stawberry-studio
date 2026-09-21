@@ -47,6 +47,31 @@ substitute references or impose a universal prompt template.
    Missing facts are unknown, not invented defaults presented as user decisions.
    The assistant can propose reasonable choices together for efficient approval.
 
+### Canonical field vocabulary
+
+The field namespace is open: any dotted `lower_case` leaf is accepted. The names below
+are additionally type-checked at write time (`backend/studio/fields.py`) and, when
+absent, produce readiness *warnings* that never block generation and never enter a
+frozen generation context. Names must be leaves — a host that writes `beat` and
+`beat.purpose` on the same lineage hits `field_overlap`. The viewer edits exactly the
+leaf names listed; the engine permits deeper nesting under other names.
+
+| Level | Fields |
+| --- | --- |
+| project | `bible.palette_hex` (≤8 `#RRGGBB`), `bible.tokens` (≤8 × 120 chars), `bible.lighting_rules`, `world_logic`, `negative_prompts`, `policy.reference_depth_cap` (int), `policy.require_evaluation_for_reference` (bool) |
+| scene | `lighting.source`, `lighting.color`, `lighting.direction`, `weather`, `atmosphere`, `mood`, `set_decoration`, `sound.ambient` |
+| shot / cut | `camera.framing`, `camera.angle`, `camera.movement`, `camera.height`, `camera.lens`, `camera.depth_of_field`, `camera.foreground`, `camera.background` |
+| cut | `beat.purpose`, `beat.emotional_intent`, `beat.visual_point`, `beat.theme`, `beat.type`, `performance.expression`, `performance.body_language`, `performance.gaze`, `performance.gesture`, `performance.state`, `sound.sfx`, `sound.music`, `transition`, `chain_from_prev` (`yes`/`no`) |
+| character / location / prop | `consistency_tokens` (≤6 phrases, ≤6 words each, no sheet directives, not the asset name), `inspired_by` |
+
+Warnings: `bible_missing` (project), `beat_missing`, `performance_missing` (visible cast
+but no expression), `sound_missing` (cut) — an explicitly cleared sound field counts as a
+declaration of silence, not an omission. Writing any of these fields is a revision:
+prepared-but-unapproved recipes under the node become `context_changed`, and because
+definitions hash every resolved value, writing `bible.*` on the project or identity
+fields on an asset makes every approved review that depends on them stale. Write the
+bible and identity locks before the first review pass, or budget a re-review pass.
+
 ### Context is not the same as story state
 
 Hierarchy controls defaults. Continuity links control state across story beats.

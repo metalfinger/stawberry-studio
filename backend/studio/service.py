@@ -206,7 +206,7 @@ class Studio:
         with self.store.connection() as conn:
             node = self.store.one(conn, "nodes", node_id)
             if node["kind"] != "project":
-                return self.rules.resolve(conn, node_id)["readiness"]
+                return {**self.rules.resolve(conn, node_id)["readiness"], "warnings": self.rules.warnings(conn, node_id)}
             cuts = [
                 dict(r)
                 for r in conn.execute(
@@ -214,12 +214,18 @@ class Studio:
                 )
             ]
             results = [
-                {"node_id": cut["id"], "name": cut["name"], **self.rules.resolve(conn, cut["id"])["readiness"]}
+                {
+                    "node_id": cut["id"],
+                    "name": cut["name"],
+                    **self.rules.resolve(conn, cut["id"])["readiness"],
+                    "warnings": self.rules.warnings(conn, cut["id"]),
+                }
                 for cut in cuts
             ]
             return {
                 "ready": bool(results) and all(cut["ready"] for cut in results),
                 "cuts": results,
+                "warnings": self.rules.warnings(conn, node_id),
                 "issues": []
                 if cuts
                 else [
@@ -284,6 +290,7 @@ class Studio:
                         "name": cut["name"],
                         "ready_to_prepare": readiness["ready"],
                         "issues": readiness["issues"],
+                        "warnings": self.rules.warnings(conn, cut["id"]),
                         "take_ready": bool(
                             selection
                             and selection["status"] == "approved"
@@ -384,6 +391,7 @@ class Studio:
             return {
                 "node": self._node(node),
                 "context": context,
+                "warnings": self.rules.warnings(conn, node_id),
                 "sources": context["sources"],
                 "revisions": [
                     dict(r)

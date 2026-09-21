@@ -32,8 +32,17 @@ Inputs: raw user brief, attachments and existing production records.
    constraints arise later, report the real provider response; do not silently
    recast the subject.
 5. Present one compact creative brief and only the material open decisions.
+6. When the user names a film, show, artist or era as a reference, ask what the *art
+   style* is before anything else — a reference is not a style.
+7. Compile the **style bible** yourself and write it as typed project fields, before the
+   first review pass (later edits stale every review in the project):
+   - `bible.palette_hex` — 4–6 `#RRGGBB` codes, quoted verbatim in every prompt;
+   - `bible.tokens` — 4–6 concrete, re-quotable technique phrases. "Halftone Ben-Day
+     dots, cyan/magenta offset 2px" is a token. "Spider-Verse art style" is not;
+   - `bible.lighting_rules` — 2–3 sentences on default light, shadow and edge;
+   - `world_logic` (animals talk? magic exists? fake moon set?) and `negative_prompts`.
 
-Output: captured source plus typed project fields and rich project notes.
+Output: captured source plus typed project fields (including the bible) and rich notes.
 
 ## Story / Story Architect
 
@@ -47,10 +56,31 @@ Inputs: resolved project context and captured brief.
 4. Break every shot into visual cuts. Each cut must define its action, timing,
    actual visible cast, exact location/sublocation and required props, including
    explicit empty lists where appropriate.
-5. Keep editorial position and `story_order` distinct. Link `continuity_from`
-   to any relevant earlier cut, not automatically just the previous cut.
-6. Run project workflow/readiness. Fill mechanical omissions directly when they
-   follow from the approved breakdown; ask only if the fix changes intent.
+5. Write the **beat** as fields, not prose: `beat.purpose` (what this moment
+   accomplishes), `beat.emotional_intent` (what the audience should feel),
+   `beat.visual_point` (why it matters visually — the one thing the frame must carry),
+   `beat.theme` (what it advances). One decisive still moment per cut; a beat with two
+   actions is two cuts.
+6. Write the **performance** for the visible cast: `performance.expression`,
+   `performance.body_language`, `performance.gaze`, and where useful
+   `performance.gesture`, `performance.state`. Expression comes from these fields and
+   the action text, never from a second reference image.
+7. Write **sound** at the level it belongs: `sound.ambient` on the scene,
+   `sound.sfx` and `sound.music` on the cut, and `transition` out of the cut. Declare
+   silence explicitly by clearing the field; an absent field is an omission and the
+   engine warns about it.
+8. Shots carry the lens: `camera.framing`, `camera.angle`, `camera.movement`,
+   `camera.height`, `camera.lens`, `camera.depth_of_field`, `camera.foreground`,
+   `camera.background`. Scenes carry `lighting.source/color/direction`, `atmosphere`,
+   `mood`, `set_decoration`.
+9. Script mode: when the user pastes a script or scene text, parse it as written into
+   scenes, shots and cuts. Do not propose an alternative structure first.
+10. Keep editorial position and `story_order` distinct. Link `continuity_from`
+    to any relevant earlier cut, not automatically just the previous cut.
+11. Run project workflow/readiness. Fill mechanical omissions directly when they
+    follow from the approved breakdown; ask only if the fix changes intent.
+    Readiness *warnings* (`beat_missing`, `performance_missing`, `sound_missing`,
+    `bible_missing`) are advisory: fill them or state why not.
 
 Output: complete scene -> shot -> cut hierarchy, not a teaser followed by repeated
 nudges to finish the remaining scenes.
@@ -59,20 +89,46 @@ nudges to finish the remaining scenes.
 
 Inputs: the whole approved breakdown, not just the first scene.
 
-1. Extract canonical recurring characters, locations/sublocations and props.
-   Reconcile aliases before creating records. Separate asset identity from
-   wardrobe, damage, possession, time-of-day and other story states.
-2. Model sublocations under their parent location when geography matters.
-3. Link each cut through typed visible cast, location and required props.
-4. Derive reference requirements from actual planned coverage:
+1. Check world logic first (`world_logic`): in a realistic or sci-fi story animals do
+   not talk or wear clothes unless stated; an ambiguous name ("Ram", "Rose", "Hunter")
+   is human until the verbs say otherwise ("grips his staff" → human).
+2. Run the **asset decision tree** for every noun in the breakdown; the first yes wins:
+   1. off-screen or a thought → not an asset;
+   2. ambient atmosphere (rain, fog, neon haze) → scene `weather` / `atmosphere` /
+      `lighting.*`, not an asset;
+   3. generic crowd or background ("two cops in the corner", "a poster") → not an
+      asset; the cut prompt describes it inline;
+   4. wardrobe, makeup or a body feature of a character → merge into that character's
+      `wardrobe` / `distinctive_features` / `consistency_tokens`; never a separate node;
+   5. an object whose look is defined by another asset ("Mara's locket", "the stall in
+      the alley") → a prop or sublocation under that parent;
+   6. a different *state* of an existing asset (wet, at dawn, glowing, aged) → a
+      continuity state or an `asset_requirements` entry of kind `state`, not a new asset;
+   7. a named region inside a location → a sublocation under it;
+   8. a recurring named vantage on a location → an `asset_requirements` entry of kind
+      `view` on that location, with the camera intent in its instruction;
+   9. otherwise → a primary asset.
+   Reconcile aliases before creating records ("Dr. Chen" and "the scientist" are one
+   node). Separate asset identity from wardrobe, damage, possession, time-of-day and
+   other story states.
+3. Write identity locks as fields. `consistency_tokens`: 3–6 short verbatim phrases the
+   renderer must echo every time ("amber eyes", "bone clasp", "scar on chin") — each at
+   most six words, never the asset's own name, never a sheet directive ("pure white
+   background", "soft even lighting"). `distinctive_features` and `wardrobe` hold the
+   rest. If a real person is preserved as requested and the provider later refuses,
+   report the provider's response; if the user chooses a recast, record the original
+   in `inspired_by` so the substitution is visible.
+4. Model sublocations under their parent location when geography matters.
+5. Link each cut through typed visible cast, location and required props.
+6. Derive reference requirements from actual planned coverage:
    - character: identity, full-body proportions, required body angles, wardrobe,
      expressions or story states visible in planned cuts;
    - location: connected geography, entrances/exits, landmarks, reverse angles
      and planned viewpoints, not a generic white-background object sheet;
    - prop: shape, scale, construction, readable details and planned states.
-5. Choose one multi-view sheet or base-conditioned views per asset based on the
+7. Choose one multi-view sheet or base-conditioned views per asset based on the
    requirements. Do not force one hardcoded grid or speculative precaching.
-6. Prepare all useful sheet recipes as a bounded reviewable batch. Initial sheets
+8. Prepare all useful sheet recipes as a bounded reviewable batch. Initial sheets
    need no prior identity generation unless an existing approved source is used.
 
 Output: canonical assets, cut scope, requirements and proposed sheet recipes.
@@ -111,6 +167,12 @@ facts and user feedback on prior takes.
 5. Write a model-appropriate prompt with explicit outcome, continuity locks,
    required changes, composition/camera, environment/geography, lighting/style
    and exclusions. Reference labels/order must match the frozen recipe.
+   Quote the bible **verbatim** in every prompt, in this order: art style →
+   `bible.palette_hex` → `bible.tokens` → `bible.lighting_rules`. For each visible
+   character quote `appearance; distinctive_features; wardrobe` and every
+   `consistency_tokens` entry word-for-word. Put the `beat.visual_point` and the
+   `performance.*` fields into the action sentence; put `sound.*` nowhere — it is not
+   for the image model. Close with `negative_prompts`.
 6. Present the complete recipe and estimate. After approval, enqueue exactly it.
 
 Output: immutable GenerationSpec plus approval request, never an opaque “compose.”
