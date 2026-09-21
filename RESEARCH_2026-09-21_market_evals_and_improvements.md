@@ -359,10 +359,72 @@ graph exists.
    discrepancies as tags.
 4. Nine O'Clock as fixture; run the ref-count and ref-order experiments (4). Export it to
    ViStoryBench layout once and run the offline audit (4a).
-5. Beat fields (3.4) and named views + state-aware resolver (3.5).
+5. Restore the typed schema from the five agents (§6) — beat, performance, sound,
+   identity, style bible — as dotted fields; named views + state-aware resolver (3.5).
 6. `candidates` read op and the retrieval playbook (3.6). Stranger evaluator (3.7).
 
 Not now: video, training a reward model, reproducing a leaderboard, a second orchestrator.
+
+## 6. The five-agent workflow — what the migration kept, what it dropped
+
+Read `backend/agents/prompts/{berry,sage,nova,atlas,pixel}.md` against
+`.agents/skills/strawberry-production/PLAYBOOKS.md` + `SKILL.md` and `backend/studio/models.py`.
+
+**Headline: the migration kept the procedures and dropped the schema.** Every role
+survived as a playbook the host reads — correct, and what OpenMontage independently
+converged on. But of the typed fields the old agents were *required* to fill, **zero**
+survive in the new engine (`wardrobe_lock`, `consistency_tokens`, `distinctive_features`,
+`expression`, `body_language`, `gaze_direction`, `story_description`, `music_cue`,
+`sfx_notes`, `duration_hint`, `palette_hex`, `style_tokens`, `lighting_rules`,
+`style_anchor`, `location_angle`, `inspired_by` — 0 files each under `backend/studio/`,
+`workflow/`, `.agents/`). A new node is `name`, `parent_id`, `notes`, and a `changes` dict
+of dotted leaf fields. The graph fields (`visible_cast`, `location_id`, `required_props`,
+`continuity_*`, `style`, `action`) are validated. Everything else the five agents used to
+force into structure is now prose in `notes`.
+
+| Agent | What it forced | Survived as | Lost | Verdict |
+|---|---|---|---|---|
+| **Berry** (producer) | Tiered brief — art_style *mandatory*; "you mentioned a film → what's the art style?"; at BRIEF→STORY compiles the **style bible** (`palette_hex`, `style_tokens`, `lighting_rules`) and mints the **style anchor** image | Director playbook: capture raw, extract typed fields without embellishing | The bible compile and the anchor — the only two *enforced-not-described* style mechanisms the system had. Also the reference-elicitation move | Persona gone: fine. Bible gone: **real loss** |
+| **Sage** (story architect) | 13 required scene fields incl. `lighting`, `lighting_color`, `atmosphere`, `mood`, `set_decoration`, **`ambient_sound`**; Script Mode (paste → parse as written, don't propose); explicit ordering when batching | Story Architect playbook: purpose / location-time / turning point / cast availability / state | 12 of 13 fields, including the only sound field at scene level; Script Mode | Prose can hold it, nothing can check it |
+| **Nova** (shot designer) | Shot: `camera_height`, `lens_type`, `depth_of_field`, `foreground`, `background`. Cut: **5 mandatory** — `action`, `story_description` (narrative purpose · emotional intent · visual storytelling · theme, 3–5 sentences), `expression`, `body_language`, `gaze_direction`; optional `gesture`, `costume_notes`, `character_state`, `duration_hint`, **`sfx_notes`, `music_cue`** | Shot: camera intent / framing / angle / movement / staging / duration / coverage. Cut: action, timing, visible cast, location, props | **The entire performance block and the beat.** `story_description`'s four parts *is* a beat definition. Sound at cut level | **Biggest loss.** This is exactly what §3.4 asks to add back — the old system already had the schema |
+| **Atlas** (production designer) | World-logic check; humanity heuristic; the **9-step asset decision tree** (off-screen → skip · ambient → scene weather · crowd → skip · wardrobe → merge into character · owned/nested → derived with `parent_asset_id` · state → variant · zone → sublocation · recurring vantage → `location_angle` · else primary); per-scene wardrobe override; identity-only prompt template with verbatim hex; no-real-people with `inspired_by` provenance; dedup | Production Designer playbook: reconcile aliases, separate identity from state, sublocations, **derive views from planned coverage** (better than the old fixed grid) | The decision tree as procedure; `location_angle` as a kind; identity-trait fields; the identity-prompt template | The tree is the best single artefact in the old system — real designer judgment about what is and isn't an asset — and a host will re-derive it badly every time. Real-people rule reversed deliberately (playbook: "do not silently recast") — fine, keep `inspired_by` for when a recast does happen |
+| **Pixel** (cut director) | `propose_cut_plan` → PlanCard → approve → `execute_cut_plan`; ID resolution; narrates like a cinematographer | Prompt/Reference Director: base vs fresh, rank refs by what must be preserved, per-image role instruction, live model contract, **prepare → approve → enqueue** | PlanCard as UI only | **Kept and improved.** Reference reasoning replaced the hardcoded cap |
+| **Iris** (silent gap-filler) | PREPROD_FILL: generate a missing identity on demand | `readiness` reports the gap deterministically; nothing spends credits unasked | Auto-spend | **Right to drop.** Detection kept, action removed |
+
+The six-layer consistency stack, line by line: style anchor — gone; style bible verbatim
+— gone; identity-trait extraction — fields gone, only the old code has them; per-cut
+variants / PREPROD_FILL — replaced by `asset_requirements` (better); reference-priority
+cap — replaced by reasoning (better); re-anchor every 4th — never existed in code.
+Net: the two *enforced* layers were dropped, the two *heuristic* layers were improved,
+and the vision critic went from auto-gate to "never run" — which §3.2 turns into a record.
+
+### What to bring back, and how it fits without a new table
+
+The `changes` model already takes dotted leaf fields with inherit/override semantics.
+Restore the schema as validated dotted fields, not free notes:
+
+- **Project:** `style.palette_hex`, `style.tokens`, `style.lighting_rules` — the bible,
+  inherited by every cut; the host quotes them verbatim in prompts.
+- **Scene:** `atmosphere.{lighting, lighting_color, weather, fx, mood}`,
+  `set_decoration`, **`sound.ambient`**.
+- **Cut:** `beat.{purpose, emotional_intent, visual_point, theme}` (Nova's four parts,
+  as fields), `performance.{expression, body_language, gaze, gesture, state}`,
+  `duration_hint`, **`sound.{sfx, music_cue}`**.
+- **Character:** `identity.{appearance, distinctive_features, wardrobe_lock,
+  consistency_tokens}` — the capped-rubric input for §3.3, and the atoms for §4b's
+  Soft-TIFA questions.
+- **Location:** named recurring vantages (`location_angle`) as an `asset_requirements`
+  kind `view` with a camera label — no new node kind needed.
+- **Playbook:** Atlas's decision tree, verbatim, as a section of the Production Designer
+  playbook. World-logic check and humanity heuristic with it.
+
+Keep dropped: personas and phase greetings, the PhaseRail loop, Iris's auto-spend, the
+literal-word auto-linker (explicit IDs are better), the vision critic *as a gate*.
+
+This closes the loop on "beats + sound + consistency": the old system had beats,
+performance and sound **as typed fields**; the migration reduced them to prose; the market
+and eval study says structure is the moat. Bringing the fields back is not a new idea — it
+is un-losing one.
 
 ## Sources
 
