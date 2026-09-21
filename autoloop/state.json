@@ -4,8 +4,8 @@
     "start_credits": 317,
     "ceiling_spend": 120,
     "hard_stop_balance": 200,
-    "last_balance": 291.1,
-    "checked_at": "2026-09-22T05:10:00+05:30"
+    "last_balance": 287.1,
+    "checked_at": "2026-09-22T06:05:00+05:30"
   },
   "stories": [
     {
@@ -19,7 +19,7 @@
         "transformation across frames"
       ],
       "project_id": "5b0eccc3-70a6-491b-b91d-13b54474d022",
-      "stage": "cuts 4/11 current; bible corrected; 5 ice frames to regenerate"
+      "stage": "cuts 8/11 current against the corrected bible"
     },
     {
       "slug": "effigy",
@@ -241,12 +241,18 @@
       "code": "reanswer_carries_judge",
       "class": "bug",
       "change": "a judge record goes stale with the definition too; carrying only facts left takes unevaluated"
+    },
+    {
+      "iteration": 7,
+      "code": "controls_must_match_density",
+      "class": "the generous evaluator",
+      "change": "counting needs two or three controls of comparable ink density; a blank region makes anything look graded"
     }
   ],
-  "iterations": 6,
+  "iterations": 7,
   "open": [
-    "'She returns' and 'Standing naturally' are near-identical pictures; the walk does not read as a walk",
-    "four ice frames still to regenerate against the corrected bible",
+    "three cuts left: the angles, the horse's head, the closing wide with its match_frame",
+    "the standing full-figure block counts above its frame's range; watch rather than reject",
     "the autoclave is re-drawn at new proportions in several cuts; matches_sheet catches it, the prompt does not prevent it"
   ]
 }

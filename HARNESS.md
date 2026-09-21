@@ -173,6 +173,12 @@ On a blind grid it vanishes, because a fixed patch dilutes a localised object an
 glassware is legitimately busy. Knowing *where* to crop is the whole problem, and knowing where to
 crop is segmentation, which is a model.
 
+What both attempts do yield is an instruction, and the instruction has a trap of its own: the
+control has to be comparable. The same ice block measured against a blank apron reads 1.85x and
+against the figure's own skirt 0.62x, because a blank area has few tones whatever the style does.
+Sample two or three controls across the frame's range of ink density, at equal crop size, and read
+the spread rather than a single number.
+
 What both attempts do yield is an instruction. A style token phrased as a prohibition — "no
 gradients anywhere", "never smooth shading" — is answered generously by anyone looking at a frame
 that mostly obeys it. It should be answered by counting: crop the one object most likely to break

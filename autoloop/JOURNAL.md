@@ -372,3 +372,51 @@ read as a walk. Four ice frames still need regenerating against the corrected bi
 **Harness deltas.** The transparency token, the corrected paper hex, the `viewpoint` question and
 its failure class, camera fields reaching the prompt, `reanswer.py` carrying judge records. 161
 tests, Ruff clean.
+
+## Iteration 7 — 22 Sep, 06:05 IST — four frames reprinted, and a control that lied
+
+**Credits** 291.1 → 287.1 (4 spent). Hard stop 200.
+
+**Where the story stands.** Eight of eleven cuts current and accepted against the corrected bible.
+Three left: the angles, the horse's head, and the closing wide.
+
+**The walk that was not a walk.** "She returns" and "Standing naturally" had collapsed into the same
+picture — the duplicate check flagged the pair and my own action score of 0.75 said the same thing
+in different words. The cut declared *mid-stride* and the generator produced a stance, because
+"mid-stride" names a thing instead of describing it. Replaced with what mid-stride looks like: the
+rear boot lifted clear with its sole showing, the forward boot planted and already weighted, the
+skirt swinging out behind the rear leg, the arms slightly out of phase. The frame came back
+unmistakably in motion, and the pair no longer collapses.
+
+**A control that lied, and the instruction that now guards against it.** The counting method from
+last iteration gave the same ice block a ratio of 1.85 against her apron and 0.62 against her skirt.
+The apron is nearly blank, and a blank area has few tones whatever the style does, so measured
+against it anything looks graded. Sampling three controls across the frame's range settled it: the
+block at 196 tones sits below the skirt at 318, the barrel at 305 and the bench at 222 — flatter
+than most of the frame. The instruction now says to use two or three controls of comparable ink
+density at equal crop size and read the spread, not a single number, and HARNESS.md carries the
+numbers that made the point.
+
+**Four frames reprinted against the corrected bible**, each measured rather than eyeballed:
+
+| Frame | block tones | frame's correctly-printed range |
+|---|---|---|
+| She returns | 196 | 222 – 318 |
+| Standing naturally | 382 | 244 – 341 |
+| The block (close) | 203 | 222 – 350 |
+| The first channels | 236 | 239 – 334 |
+
+Three of the four are at or below the flattest correctly printed area in their own frame. The one
+that sits above the range is the full-figure standing shot, where the block is small and its facet
+edges make up a larger share of its area — worth watching rather than rejecting.
+
+The meltwater is the clearest single result: two takes ago the drips were smooth gradients, and
+they are now flat rivulets of the cold ink with gouged white edges, from the same token that fixed
+the block.
+
+**Harness deltas.** The counting instruction now requires several controls of comparable ink
+density; HARNESS.md §4b records the apron-versus-skirt discrepancy that motivated it. 161 tests,
+Ruff clean.
+
+**Next.** The angles, the horse's head — the frame the whole dream is for — and the closing wide,
+which carries a `match_frame` back to the opening.
