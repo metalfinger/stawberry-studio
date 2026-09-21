@@ -373,3 +373,22 @@ def test_hands_are_their_own_question(world):
     record = world.studio.evaluate(media_id, evaluation(
         world.studio, media_id, evidence=answers(world.studio, media_id, hands=0.1)))
     assert record["scores"]["capped"] == 1.0
+
+
+def test_a_sheet_that_failed_its_own_evaluation_cannot_be_built_on(world):
+    change(world.studio, world.project, **{"policy.autonomous": True, "policy.min_take_score": 0.6})
+    refresh(world.studio, world.media)
+    sheet = world.media[0]["id"]
+    refs = [Reference(media_id=m["id"], role=role, instruction="keep")
+            for m, role in zip(world.media, ("identity", "location", "prop"), strict=True)]
+    prompt = "Mara holds the ticket. amber eyes. bone clasp"
+    # an unevaluated sheet is fine — sheets are not gated on having been looked at
+    world.studio.prepare(RecipeCreate(node_id=world.cuts[0]["id"], provider="fake", model="t", intent="i",
+                                      prompt=prompt, references=refs))
+    # but one that was looked at and failed is refused, and the message names the weakest group
+    world.studio.evaluate(sheet, evaluation(world.studio, sheet, evidence=answers(world.studio, sheet, subject=0.1, detail=0.2)))
+    with pytest.raises(StudioError) as caught:
+        world.studio.prepare(RecipeCreate(node_id=world.cuts[0]["id"], provider="fake", model="t", intent="i",
+                                          prompt=prompt, references=refs))
+    unfit = [i for i in caught.value.issues if i["code"] == "reference_unfit"]
+    assert unfit and "failed its own evaluation" in unfit[0]["message"] and "identity" in unfit[0]["message"]

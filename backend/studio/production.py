@@ -299,9 +299,16 @@ class ProductionRules:
         for ref in references:
             media = self.store.one(conn, "media", ref["media_id"])
             owner = self.store.one(conn, "nodes", media["node_id"])
-            if owner["kind"] != "cut":
-                continue
             facts = self.current_evaluation(conn, media, "facts")
+            if owner["kind"] != "cut":
+                # a sheet need not be evaluated, but an evaluated sheet that failed must not be
+                # used: whatever it got wrong is inherited by every cut built on it
+                if facts and (facts["scores"].get("capped") or facts["scores"].get("min_group", 1.0) < pol["min_take_score"]):
+                    weakest = min(facts["scores"].get("groups", {}).items(), key=lambda kv: kv[1], default=("", 1.0))
+                    gaps.append({"code": "reference_unfit", "media_id": media["id"],
+                                 "message": f"Reference sheet {media['label']} failed its own evaluation"
+                                            f" ({weakest[0]} {weakest[1]:.2f}); fix the sheet before building cuts on it"})
+                continue
             if not facts:
                 gaps.append({"code": "reference_unevaluated", "media_id": media["id"],
                              "message": f"Reference {media['label']} is a take with no current facts record"})
