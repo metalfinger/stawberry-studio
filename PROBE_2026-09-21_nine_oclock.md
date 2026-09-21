@@ -78,3 +78,63 @@ and approve the set with a cost ceiling.
 4. The offline ViStoryBench export (22 shots, 2 characters, `story.json`) is at
    `scratchpad/vistory-export`; its CIDS will not read a charcoal-collage Abhishek, and
    that result is worth having in writing.
+
+## Second pass — bible, beats and the host evaluate run (same day)
+
+On the probe copy: `scripts/apply_fields.py` wrote the style bible, world logic and
+negatives on the project; ambient sound, mood and light source on each scene; identity
+locks on every asset; and `beat.*`, `performance.*`, `sound.*` and `transition` on all 22
+cuts (`scripts/nine_oclock_fields.json`, authored from `DREAM_SHOT_LIST.md` and the
+treatment). That staled all 34 approved reviews, which were carried forward by the same
+script with a decision text saying so — a metadata-only re-review, not a fresh look.
+Afterwards: project ready, no field warnings; only `reference_unevaluated` remained.
+
+Worth knowing: the original host *had* structured the story — `emotion.beat`,
+`camera.distance`, `lighting.intent`, `composition`, `soundscape`, `identity.preserve`,
+`wardrobe.initial` — under its own names. The vocabulary was not missing; it was
+unshared. (`identity.*` and `wardrobe.*` as nested leaves also collide with the viewer's
+`identity` / `wardrobe` fields; the engine allows it, the editor cannot show it.)
+
+Then the host (Claude, this session) looked at eight frames and the identity sheet and
+answered the engine's `facts` questions, and wrote a VIEScore-style judge record for each.
+
+| Cut | facts GM | judge SC / PQ / overall | what the eye found |
+| --- | --- | --- | --- |
+| The road before Abhishek | 0.90 | 0.90 / 0.90 / 0.90 | clean opener |
+| Running against traffic | 0.69 | **0.45** / 0.80 / 0.60 | he runs **left**, the auto also faces left: the counterflow — the poster idea — is absent; trousers patterned |
+| An auto crosses the frame | 0.85 | 0.75 / 0.75 / 0.75 | occlusion works; auto rendered in a coarser paper pass |
+| Exactly nine | 0.93 | 0.95 / 0.90 / 0.93 | 9:00, second hand at 12; best style match |
+| Before the doorway | 0.66 | **0.40** / 0.85 / 0.58 | rear view; **child carried on his back**, not the locked chest position; nothing here can be match-cut from the front |
+| Crossing the line | 0.82 | 0.65 / 0.85 / 0.74 | profile; matches cut 18, not cut 15 |
+| After the doorway | **0.19** | 0.70 / 0.85 / 0.77 | the turn lands — same geometry, uniform, empty chest — but a **backpack** was invented and persists to the end |
+| Collapse | 0.81 | 0.75 / 0.85 / 0.80 | the intended ending; corridor rather than the declared entrance |
+| Abhishek identity sheet | 0.88 | 0.90 / 0.85 / 0.88 | consistent across seven views; the face is near-photographic inside a charcoal body |
+
+Three things the numbers say that neither the slideshow nor the README could:
+
+- **"After the doorway" scores 0.19 on facts and 0.77 on judge, and both are right.**
+  The image does what the story needs. The *graph* says the toddler is still present in a
+  chest carrier and Abhishek is in ordinary clothes, because the `continuity.after`
+  transition was declared on "Collapse", four cuts late. The facts score measured the
+  declaration, not the picture. That is the attribution ImagenWorld says judges cannot do,
+  and it found a continuity-authoring bug, not a rendering one.
+- **The two lowest judge scores are the two most important frames.** The poster image
+  lost its direction; the threshold frame lost its carrier position and its front view.
+  Facts alone under-report both (0.69, 0.66) because identity atoms outnumber the one
+  action atom that mattered; the judge caught them. Both records are needed.
+- **The 0.98 "duplicate" between cuts 17 and 18 is the match cut working.** The spec
+  demanded exact geometry there. The scorer cannot tell a designed match from a collapse;
+  it should read `beat.type == "turn"` or the declared `transition` and stand down. Cut
+  3's 0.95 against its base, by contrast, is a real "barely moved".
+
+Engine changes from this pass: `facts` no longer asks about a state whose asset is not in
+frame (the clock insert was being asked about the toddler).
+
+## Prepared for approval
+
+Twelve recipes on "An auto crosses the frame" against the live `gpt_image_2_5` contract
+(CLI 0.1.28): reference count 2/3/4/5, six role orders, tokens verbatim vs paraphrased.
+Every one carries a `reference_depth` warning — the base is depth 8 — which is itself the
+argument for the shallow-vs-deep run once a shallow base exists. Reference-input pricing
+is unverified by the provider (`credits: None`, settings-only 1 credit each), so approval
+needs `allow_unknown_cost` and a ceiling. Nothing has been approved or submitted.

@@ -148,6 +148,10 @@ def test_facts_are_derived_from_declared_scope_states_and_identity(world):
     change(world.studio, cut, continuity_from=[world.cuts[0]["id"], other["id"]])
     ids = {q["id"] for q in world.studio.facts(cut["id"])["questions"]}
     assert f"state:{world.mara['id']}/cloak" not in ids
+    # a state about an asset that is not in this frame is not asked
+    empty = world.studio.create_node(NodeCreate(kind="cut", name="Insert", parent_id=cut["parent_id"], notes="clock"))
+    change(world.studio, empty, visible_cast=[], required_props=[], continuity_from=[world.cuts[0]["id"]])
+    assert not [q for q in world.studio.facts(empty["id"])["questions"] if q["id"].startswith("state:")]
     # assets get identity questions; other kinds are refused
     asset_facts = world.studio.facts(world.mara["id"])
     assert asset_facts["questions"][0]["id"] == f"subject:{world.mara['id']}"

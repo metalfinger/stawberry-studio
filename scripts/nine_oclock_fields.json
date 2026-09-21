@@ -1,0 +1,329 @@
+{
+  "project": {
+    "bible.palette_hex": ["#F1ECE2", "#D9D2C4", "#8E877C", "#3A3632", "#12100E"],
+    "bible.tokens": [
+      "graphite and charcoal linework",
+      "torn fibrous paper edges",
+      "visible paper grain",
+      "imperfect registration, layers slightly offset",
+      "rubbed-out marks and erasures",
+      "warm paper grey, no colour accents"
+    ],
+    "bible.lighting_rules": "Scenes 1-2: soft grey evening; the pale road is the brightest value. Scenes 3-5: flat, clean 9 AM morning that arrives without transition. No dramatic cast shadows, no horror lighting, no glow or particle effects at the threshold.",
+    "world_logic": "Third-person dream: the dreamer watches himself from outside. Evening becomes morning at the school without explanation. At the doorway the child and carrier vanish and the adult is in school uniform; nothing announces it. The world collapses like damaged film; the waking world is never shown.",
+    "negative_prompts": "colour accents, glossy digital painting, photorealism, generic fantasy fog, horror lighting, floating symbols, expository text, labels, real school crest, modern black outerwear, phone, mirror",
+    "policy.reference_depth_cap": 2
+  },
+  "scenes": {
+    "The White Road": {
+      "sound.ambient": "wind in enormous roadside trees; distant period two-strokes; a few birds",
+      "mood": "anxious pursuit under an ordinary sky",
+      "atmosphere": "light wind moving branches; dry road dust",
+      "lighting.source": "overcast evening sky"
+    },
+    "No Ride Stops": {
+      "sound.ambient": "auto-rickshaw engines receding; a horn far off; the same wind",
+      "mood": "opportunity always moving the other way",
+      "atmosphere": "still air at the intersection",
+      "lighting.source": "evening sky, deeper street shadow"
+    },
+    "Nine O’Clock": {
+      "sound.ambient": "morning birds; no traffic; a faint clock mechanism",
+      "mood": "the deadline made visible",
+      "atmosphere": "clear dry morning that arrives without transition",
+      "lighting.source": "flat 9 AM daylight"
+    },
+    "The Door Is for You": {
+      "sound.ambient": "near silence; a single held room tone inside the stone entrance",
+      "mood": "confusion, not fear",
+      "atmosphere": "still",
+      "lighting.source": "even flat threshold light"
+    },
+    "The Scene Collapses": {
+      "sound.ambient": "room tone thinning to projector hum and emulsion crackle",
+      "mood": "abrupt absurdity",
+      "atmosphere": "paper grain and registration coming apart",
+      "lighting.source": "grey emulsion wash, uneven density"
+    }
+  },
+  "assets": {
+    "Abhishek — The Dreamer": {"consistency_tokens": ["silver swept hair", "full salt-and-pepper beard", "lean adult proportions"]},
+    "Eight-month-old toddler": {"consistency_tokens": ["plain light one-piece", "quiet neutral face", "eight-month proportions"]},
+    "Chest baby carrier": {"consistency_tokens": ["charcoal canvas carrier", "broad shoulder straps", "chest position"]},
+    "1980s Bangalore auto-rickshaw": {"consistency_tokens": ["three-wheel auto", "canvas hood", "period bodywork"]},
+    "The wide white road": {"consistency_tokens": ["broad pale road", "enormous roadside trees"]},
+    "School exterior and clock tower": {"consistency_tokens": ["large stone arches", "legible clock tower"]},
+    "The Old Stone School — dream analogue": {"consistency_tokens": ["weathered grey stone", "institutional arches", "clock tower"]},
+    "Stone-arched school entrance": {"consistency_tokens": ["single stone-arched doorway", "worn threshold step"]}
+  },
+  "cuts": {
+    "The road before Abhishek": {
+      "beat.purpose": "Establish the remembered road as a place before anyone is in it.",
+      "beat.visual_point": "The road is the brightest thing; the trees move and nothing else does.",
+      "beat.emotional_intent": "anticipatory stillness",
+      "beat.theme": "old Bangalore remembered as space and wind, not exposition",
+      "beat.type": "establish",
+      "sound.sfx": "wind rising through leaves",
+      "transition": "hold, then Abhishek enters on the next cut"
+    },
+    "Abhishek enters the frame": {
+      "beat.purpose": "Introduce the adult, the child and the carrier in one entrance, already running.",
+      "beat.visual_point": "A small figure enters the huge frame from the left, mid-stride, chest first.",
+      "beat.emotional_intent": "anxiety begins",
+      "beat.theme": "responsibility carried on the chest",
+      "beat.type": "action",
+      "performance.expression": "set jaw, eyes ahead",
+      "performance.body_language": "forward lean, arms braced around the carrier",
+      "performance.gaze": "down the road, right of frame",
+      "sound.sfx": "running footfalls arriving from off-frame",
+      "transition": "cut on stride"
+    },
+    "Running against traffic": {
+      "beat.purpose": "The poster image: he runs one way, everything else moves the other.",
+      "beat.visual_point": "Counterflow — autos left, Abhishek right, trees bending over both.",
+      "beat.emotional_intent": "urgent but controlled",
+      "beat.theme": "no one is going where he is going",
+      "beat.type": "hero",
+      "performance.expression": "controlled strain",
+      "performance.body_language": "steady running stride, torso protective of the child",
+      "performance.gaze": "fixed ahead",
+      "sound.sfx": "two auto engines passing left; his breathing under them",
+      "sound.music": "none yet — hold for scene three",
+      "transition": "lateral track carries into the profile"
+    },
+    "The quiet passenger": {
+      "beat.purpose": "Show the carrier and the child's quietness as one silhouette.",
+      "beat.visual_point": "Profile: the child's outline against his pale shirt does not move.",
+      "beat.emotional_intent": "physical urgency, infant calm",
+      "beat.theme": "the calm he is running for is right against him",
+      "beat.type": "action",
+      "performance.expression": "breath visible, mouth slightly open",
+      "performance.body_language": "one hand on the carrier strap",
+      "performance.gaze": "ahead",
+      "sound.sfx": "footfalls; fabric of the carrier; no sound from the child",
+      "transition": "push closer"
+    },
+    "No sound from the child": {
+      "beat.purpose": "Put the anxious adult face and the quiet child in one frame.",
+      "beat.visual_point": "Two faces, one tense and one neutral, sharing the frame.",
+      "beat.emotional_intent": "anxiety against silence",
+      "beat.theme": "the child's silence is the strangest thing in the dream",
+      "beat.type": "reaction",
+      "performance.expression": "worry; scanning the road",
+      "performance.body_language": "shoulders high, running",
+      "performance.gaze": "flicking ahead and to the side",
+      "sound.sfx": "his breath close; the road far",
+      "transition": "cut wide to the intersection"
+    },
+    "Transport moving away": {
+      "beat.purpose": "Make transport visible and unavailable without a hail or a word.",
+      "beat.visual_point": "Vehicles form one clean vector out of frame, away from his route.",
+      "beat.emotional_intent": "opportunity moving away",
+      "beat.theme": "the city keeps its own direction",
+      "beat.type": "establish",
+      "sound.sfx": "engines receding; one horn",
+      "transition": "pan left ends on empty road"
+    },
+    "Searching for transport": {
+      "beat.purpose": "He looks for a ride while never stopping.",
+      "beat.visual_point": "His head turns while his legs do not.",
+      "beat.emotional_intent": "deadline anxiety",
+      "beat.theme": "the deadline exists before its task",
+      "beat.type": "action",
+      "performance.expression": "hope draining",
+      "performance.body_language": "running, half-turned toward traffic",
+      "performance.gaze": "over his shoulder at the receding autos",
+      "sound.sfx": "footfalls; a two-stroke fading",
+      "transition": "a foreground wipe"
+    },
+    "An auto crosses the frame": {
+      "beat.purpose": "An auto hides him for a moment; when it clears he is still running.",
+      "beat.visual_point": "Occlusion, then the same figure in the same stride.",
+      "beat.emotional_intent": "frustration",
+      "beat.theme": "the city passes through him without stopping",
+      "beat.type": "action",
+      "performance.expression": "unchanged strain",
+      "performance.body_language": "unchanged stride",
+      "performance.gaze": "ahead",
+      "sound.sfx": "auto engine loud in foreground, then gone",
+      "transition": "cut to the long road"
+    },
+    "Keep running": {
+      "beat.purpose": "Make progress feel small.",
+      "beat.visual_point": "Compressed road layers; the figure barely moves against them.",
+      "beat.emotional_intent": "sustained anxiety",
+      "beat.theme": "distance that does not close",
+      "beat.type": "hold",
+      "performance.expression": "unreadable at this distance",
+      "performance.body_language": "small running figure",
+      "performance.gaze": "toward the vanishing point",
+      "sound.sfx": "wind; footfalls thin and far",
+      "sound.music": "a single low held tone begins under the wind",
+      "transition": "push through the trees"
+    },
+    "Arches through the trees": {
+      "beat.purpose": "First sight of the destination, partial, through movement.",
+      "beat.visual_point": "Stone arches and a clock tower glimpsed between moving branches.",
+      "beat.emotional_intent": "recognition without relief",
+      "beat.theme": "the school is a role waiting, not a place arrived at",
+      "beat.type": "reveal",
+      "performance.expression": "recognition",
+      "performance.body_language": "running, head lifting",
+      "performance.gaze": "up through the branches",
+      "sound.sfx": "leaves; the held tone continues",
+      "sound.music": "held tone",
+      "transition": "cut to morning"
+    },
+    "Arrival at the old school": {
+      "beat.purpose": "The school in full, and evening has become morning without transition.",
+      "beat.visual_point": "Flat morning light on grey stone where the last cut was evening.",
+      "beat.emotional_intent": "anxiety sharpened",
+      "beat.theme": "dream logic enters through light, not effect",
+      "beat.type": "establish",
+      "performance.expression": "arrival without relief",
+      "performance.body_language": "slowing, still carrying",
+      "performance.gaze": "up at the tower",
+      "sound.sfx": "morning birds; the traffic is gone",
+      "sound.music": "held tone",
+      "transition": "cut to the clock"
+    },
+    "Exactly nine": {
+      "beat.purpose": "Externalise the deadline.",
+      "beat.visual_point": "A clock face, exactly 9:00, second hand motionless.",
+      "beat.emotional_intent": "deadline made visible",
+      "beat.theme": "a deadline with no task",
+      "beat.type": "insert",
+      "sound.sfx": "a faint clock mechanism; no tick",
+      "sound.music": "held tone",
+      "transition": "cut to his face"
+    },
+    "Checking the deadline": {
+      "beat.purpose": "Put him and the clock in one composition and one eyeline.",
+      "beat.visual_point": "Profile foreground-left, clock upper-right, both sharp.",
+      "beat.emotional_intent": "anxiety peaks",
+      "beat.theme": "he already knows he is late for something",
+      "beat.type": "reaction",
+      "performance.expression": "alarm",
+      "performance.body_language": "stopped, chest rising",
+      "performance.gaze": "up-right at the clock",
+      "sound.sfx": "birds; his breath",
+      "sound.music": "held tone rises a step",
+      "transition": "cut to the arches"
+    },
+    "Running under the arches": {
+      "beat.purpose": "The building pulls him in.",
+      "beat.visual_point": "Repeating arches receding; a rear three-quarter figure moving into them.",
+      "beat.emotional_intent": "compelled forward",
+      "beat.theme": "drawn, not deciding",
+      "beat.type": "action",
+      "performance.expression": "not visible; back to camera",
+      "performance.body_language": "running into shadow",
+      "performance.gaze": "toward the doorway",
+      "sound.sfx": "footfalls echoing under stone",
+      "sound.music": "held tone",
+      "transition": "cut to the locked doorway frame"
+    },
+    "Before the doorway": {
+      "beat.purpose": "The locked frame that everything after must match.",
+      "beat.visual_point": "Centered doorway; adult clothes, toddler, carrier, all present and clear.",
+      "beat.emotional_intent": "last anxious state",
+      "beat.theme": "everything he carries, shown once, plainly",
+      "beat.type": "hold",
+      "performance.expression": "held breath",
+      "performance.body_language": "stopped square to the door",
+      "performance.gaze": "at the doorway",
+      "sound.sfx": "silence but for room tone",
+      "sound.music": "tone thins",
+      "transition": "cut in to the child"
+    },
+    "Last view of the child": {
+      "beat.purpose": "Confirm the child, the carrier and both straps one last time.",
+      "beat.visual_point": "Infant scale against the pale shirt; two straps.",
+      "beat.emotional_intent": "calm child, held tension",
+      "beat.theme": "what is about to be gone",
+      "beat.type": "insert",
+      "performance.expression": "the child's neutral quiet",
+      "performance.body_language": "still",
+      "performance.gaze": "the child looks at nothing in particular",
+      "sound.sfx": "fabric; a small breath",
+      "transition": "cut back to the exact locked frame"
+    },
+    "Crossing the line": {
+      "beat.purpose": "He crosses the threshold with everything still there.",
+      "beat.visual_point": "Same frame as before the doorway; one step forward; child and carrier present.",
+      "beat.emotional_intent": "anxiety at transition",
+      "beat.theme": "the ordinary side of a line",
+      "beat.type": "turn",
+      "performance.expression": "held breath",
+      "performance.body_language": "mid-step across the threshold",
+      "performance.gaze": "ahead into the dark",
+      "sound.sfx": "one footfall on stone",
+      "transition": "straight cut; nothing announces the change"
+    },
+    "After the doorway": {
+      "beat.purpose": "The turn: same frame, same man, uniform, no child, no carrier.",
+      "beat.visual_point": "Exact geometry of the previous frame with only wardrobe changed and the chest empty.",
+      "beat.emotional_intent": "instant confusion",
+      "beat.theme": "the adult is returned to being the student",
+      "beat.type": "turn",
+      "performance.expression": "blank, a half-second before understanding",
+      "performance.body_language": "same mid-step, arms now holding nothing",
+      "performance.gaze": "ahead, then beginning to drop",
+      "sound.sfx": "the second footfall, alone",
+      "sound.music": "silence",
+      "transition": "push in"
+    },
+    "The school was for Abhishek": {
+      "beat.purpose": "He notices; no explanation arrives.",
+      "beat.visual_point": "Hands at an empty chest; a uniform on an adult body.",
+      "beat.emotional_intent": "confusion, not fear",
+      "beat.theme": "the school was for him all along",
+      "beat.type": "reaction",
+      "performance.expression": "confusion, a little amusement underneath",
+      "performance.body_language": "hands checking the chest, turning at the waist",
+      "performance.gaze": "down at himself, then around the entrance",
+      "sound.sfx": "room tone; his breath",
+      "sound.music": "silence",
+      "transition": "slow pull back"
+    },
+    "The school grows too large": {
+      "beat.purpose": "The building begins to be wrong around him.",
+      "beat.visual_point": "Realistic stone, subtly oversized; the figure smaller than it should be.",
+      "beat.emotional_intent": "disorientation",
+      "beat.theme": "the role is bigger than the person",
+      "beat.type": "hold",
+      "performance.expression": "looking up",
+      "performance.body_language": "small, still",
+      "performance.gaze": "up at the ceiling",
+      "sound.sfx": "room tone deepening",
+      "sound.music": "projector hum enters",
+      "transition": "layers begin to drift"
+    },
+    "The frame loses alignment": {
+      "beat.purpose": "The world comes apart before he does.",
+      "beat.visual_point": "Arches, clock geometry and grain out of register; Abhishek still coherent.",
+      "beat.emotional_intent": "world losing coherence",
+      "beat.theme": "the picture, not the man, is failing",
+      "beat.type": "hold",
+      "performance.expression": "unchanged",
+      "performance.body_language": "unchanged",
+      "performance.gaze": "unchanged",
+      "sound.sfx": "emulsion crackle; the hum",
+      "sound.music": "projector hum",
+      "transition": "dissolve into collapse"
+    },
+    "Collapse": {
+      "beat.purpose": "End where the dream ends: the image runs out.",
+      "beat.visual_point": "Stone folds inward; the man is the last recognisable thing, then grey.",
+      "beat.emotional_intent": "abrupt absurdity",
+      "beat.theme": "amused, not afraid",
+      "beat.type": "end",
+      "performance.expression": "still recognisable, then gone",
+      "performance.body_language": "held pose dissolving",
+      "performance.gaze": "toward camera for the first time, briefly",
+      "sound.sfx": "film running out; the hum stops",
+      "sound.music": "silence",
+      "transition": "to grey; no waking world"
+    }
+  }
+}

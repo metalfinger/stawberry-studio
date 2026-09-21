@@ -815,10 +815,13 @@ class Studio:
                         ask(f"prop:{asset['id']}", f"Is {asset['name']} visible?", asset_id=asset["id"], weight=2, cap=True)
                 continuity = production["continuity"] or {}
                 conflicted = {conflict["field"] for conflict in continuity.get("conflicts", [])}
+                in_frame = set(self.rules.asset_ids(scope))
                 for key, candidates in continuity.get("incoming", {}).items():
                     if key in conflicted or not candidates:
                         continue
                     fact = candidates[0]
+                    if fact["asset_id"] not in in_frame:
+                        continue  # a state is only answerable about something the frame shows
                     attribute = fact["attribute"].replace("_", " ")
                     ask(f"state:{key}", f"Is {label(fact['asset_id'])}'s {attribute} {label(fact['value'])}?", asset_id=fact["asset_id"], weight=2)
                 action = str(values.get("action") or "").strip() or node["notes"].strip()
