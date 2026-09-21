@@ -1,0 +1,12 @@
+{
+  "started": "2026-09-21T18:00:00+05:30",
+  "budget": {"start_credits": 317, "ceiling_spend": 120, "hard_stop_balance": 200},
+  "stories": [
+    {"slug": "lantern", "title": "The Lantern-Keeper's Last Night", "style": "woodblock", "project_id": null, "stage": "not_started"},
+    {"slug": "smallhours", "title": "Small Hours", "style": "gouache-cut-paper-colour", "project_id": null, "stage": "not_started"},
+    {"slug": "surveyors", "title": "The Surveyors", "style": "graphite-blueprint", "project_id": null, "stage": "not_started"}
+  ],
+  "current": "lantern",
+  "harness_changes": [],
+  "iterations": 0
+}

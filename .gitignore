@@ -85,3 +85,4 @@ V2_SUMMARY.md
 venv
 .strawberry-probe/
 probe/
+autoloop/scratch/
