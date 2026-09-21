@@ -207,7 +207,8 @@ so recording one never stales a recipe. Each record binds to the image's current
 `review_context`; if definitions change, evaluate again. Run them after collection,
 before asking the human to review.
 
-1. **Facts.** `facts CUT_ID` returns the cut's declared facts as questions — each visible
+1. **Facts.** Answer **every** question — a partial answer sheet is not an evaluation and
+   the engine will not count it. `facts CUT_ID` returns the cut's declared facts as questions — each visible
    cast member, each identity lock, the location, each prop, each entering continuity
    state, the action, the beat's visual point, the style. Look at the take and answer
    every question with a probability that the answer is yes. Record
@@ -224,6 +225,12 @@ before asking the human to review.
      tilted the wrong way, a child carried on the back when the carrier is on the
      chest, a missing strap, are invisible at contact-sheet size and are the defects
      that matter most. Score every frame that declares the cast, not a sample.
+     Check **hands and arms** on every figure specifically — fused digits, mitts with no
+     fingers, an arm that never emerges from a garment. They are the commonest defect and
+     the easiest to skim past: three independent evaluators each found one in frames that
+     had already been cropped and passed by a careful reader.
+     Score style against the project's `bible.*` **as written**, not against how this
+     frame compares to the last one. "Better than before" is not "meets the contract".
    Be strict: if the face drifted, score identity low; if wardrobe changed without a
    declared state, score it low. `overall = sqrt(sc * pq)`. Record `kind: judge` with
    scores `sc`, `pq`, `overall` and every problem as a tagged `discrepancy`
@@ -233,10 +240,15 @@ before asking the human to review.
 3. **Pairwise.** When two takes compete for one cut, ask "which is better on each axis",
    not "how good is each"; record `kind: pairwise` on the preferred take with the loser's
    media id in the evidence.
-4. **Stranger.** When authorized to use a sub-agent, give it only the image and the
-   `facts` questions — never the notes, the sources, the prompt or this conversation —
-   and record its answers as `kind: stranger`. Its value is that it cannot be talked into
-   approving.
+4. **Stranger.** Give a sub-agent only the image file and the `facts` questions — never
+   the notes, the sources, the prompt, your scores or this conversation. Tell it to crop
+   every named subject before answering, to answer every question, and to add a free note
+   on anything wrong that no question asked about. Record as `kind: stranger`. Run one on
+   at least every third take and on every take about to be reused as a reference. Its
+   value is that it cannot be talked into approving, and that free note is where error
+   classes nobody has named yet appear — here it found malformed hands and a style drift
+   the named questions could not have caught. A gap over 0.25, or a second opinion below
+   the threshold, stops the take by itself.
 5. Read `evaluations MEDIA_ID` before reusing any take as a reference. The readiness
    warning `reference_unevaluated` names selected references with no `judge`/`facts`
    record; with `policy.require_evaluation_for_reference` set on the project, `prepare`
@@ -263,6 +275,19 @@ If a provider refuses a submission on content grounds the job fails as
 as an image becomes `reference_mode: text` on the asset, and its identity travels as its
 quoted `consistency_tokens`. Coverage then requires those tokens in the prompt; the facts
 gate still requires the asset to appear in the take.
+
+## Edit review
+
+Frames pass one at a time; an edit fails between them. Run `sequence PROJECT_ID` after any
+batch of cuts lands and before calling a production finished. It reports, deterministically
+and without a model: a subject reversing screen direction inside a scene with no declared
+crossing; neighbouring cuts that would render the same picture; a declared `match_frame`
+pair whose framing does not actually match; runtime drift against `target_duration_seconds`;
+one scene taking more than 40% of the film; four or more consecutive cuts at one framing;
+two cuts carrying the same `beat.visual_point`; and evaluation coverage per scene, so a gap
+cannot hide in a project-wide average. Declare `screen_direction` on cuts that travel and
+`match_frame` on any frame that must cut together with an earlier one — a declared match is
+expected to look alike and is not reported as a duplicate.
 
 ## Review and refinement
 
