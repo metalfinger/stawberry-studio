@@ -44,11 +44,16 @@ TABLE_COLUMNS = {
     "asset_requirements": [
         "id", "asset_id", "kind", "label", "instruction", "priority", "created_at", "updated_at",
     ],
+    "evaluations": [
+        "media_id", "evaluator", "version", "kind", "scores", "evidence", "confidence", "discrepancies",
+        "context_hash", "review_revision", "created_at",
+    ],
 }
+OPTIONAL_TABLES = {"evaluations"}
 
 INSERT_ORDER = (
     "nodes", "sources", "revisions", "media", "recipes", "approval_batches", "jobs", "feedback",
-    "job_events", "media_reviews", "asset_requirements",
+    "job_events", "media_reviews", "asset_requirements", "evaluations",
 )
 PENDING_STATES = {"queued", "submitting", "running", "collecting"}
 
@@ -96,6 +101,12 @@ def _project_records(conn, project_id: str):
             f"SELECT job_id,state,details,created_at FROM job_events WHERE job_id IN ({','.join('?' for _ in job_ids)}) ORDER BY sequence",
             job_ids,
         ) if job_ids else [],
+        "evaluations": _rows(
+            conn,
+            "SELECT media_id,evaluator,version,kind,scores,evidence,confidence,discrepancies,context_hash,"
+            f"review_revision,created_at FROM evaluations WHERE media_id IN ({','.join('?' for _ in media_ids)}) ORDER BY sequence",
+            media_ids,
+        ) if media_ids else [],
         "media_reviews": _rows(
             conn,
             f"SELECT * FROM media_reviews WHERE media_id IN ({','.join('?' for _ in media_ids)}) ORDER BY media_id,revision",
@@ -222,8 +233,10 @@ def _validate_records(payload, manifest):
     if payload.get("schema_version") != 5 or payload.get("project_id") != manifest.get("project", {}).get("id"):
         raise StudioError("archive_invalid", "Project metadata version or identity is incompatible")
     tables = payload.get("tables")
-    if not isinstance(tables, dict) or set(tables) != set(TABLE_COLUMNS):
+    if not isinstance(tables, dict) or not (set(TABLE_COLUMNS) - OPTIONAL_TABLES <= set(tables) <= set(TABLE_COLUMNS)):
         raise StudioError("archive_invalid", "Project archive has an unexpected table set")
+    for table in OPTIONAL_TABLES:
+        tables.setdefault(table, [])
     for table, columns in TABLE_COLUMNS.items():
         rows = tables[table]
         if not isinstance(rows, list) or any(not isinstance(row, dict) or set(row) != set(columns) for row in rows):

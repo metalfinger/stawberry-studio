@@ -147,6 +147,48 @@ class MediaReview(Contract):
     requirement_ids: list[str] = Field(default_factory=list)
 
 
+DiscrepancyTag = Literal[
+    "identity_drift", "wardrobe_mismatch", "prop_missing", "prop_extra", "location_mismatch",
+    "state_mismatch", "instruction_not_followed", "count_wrong", "unreadable_text", "artifact",
+    "copy_paste", "new_image_not_edit", "other",
+]
+EvaluationKind = Literal["judge", "facts", "similarity", "diversity", "duplicate", "stranger", "pairwise"]
+
+
+class Evidence(Contract):
+    question: str = Field(min_length=1, max_length=1000)
+    answer: str = Field(max_length=1000)
+    probability: float | None = Field(default=None, ge=0, le=1, allow_inf_nan=False)
+    asset_id: str | None = None
+
+
+class Discrepancy(Contract):
+    tag: DiscrepancyTag
+    asset_id: str | None = None
+    region: str | None = Field(default=None, max_length=240)
+    note: str = Field(min_length=1, max_length=1000)
+
+
+class EvaluationCreate(Contract):
+    """An observation about one exact image. It never sets review status; humans do that."""
+
+    expected_context: str = Field(min_length=64, max_length=64)
+    evaluator: str = Field(min_length=1, max_length=120)
+    version: str = Field(min_length=1, max_length=120)
+    kind: EvaluationKind
+    scores: dict[str, float] = Field(default_factory=dict)
+    evidence: list[Evidence] = Field(default_factory=list, max_length=200)
+    confidence: float | None = Field(default=None, ge=0, le=1, allow_inf_nan=False)
+    discrepancies: list[Discrepancy] = Field(default_factory=list, max_length=200)
+
+    @model_validator(mode="after")
+    def unit_scores(self):
+        for name, value in self.scores.items():
+            if not (0.0 <= value <= 1.0):
+                raise ValueError(f"Score {name} must be between 0 and 1")
+        return self
+
+
 class AssetRequirementCreate(Contract):
     kind: Literal["view", "state", "detail", "scale"]
     label: str = Field(min_length=1, max_length=120)

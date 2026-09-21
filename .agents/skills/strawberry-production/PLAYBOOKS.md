@@ -191,6 +191,45 @@ facts and user feedback on prior takes.
 
 Output: immutable GenerationSpec plus approval request, never an opaque “compose.”
 
+## Evaluate / Script Supervisor's instruments
+
+Evaluations are observations you record about one exact image. They never set review
+status — the human does that — and they are kept outside the frozen generation context,
+so recording one never stales a recipe. Each record binds to the image's current
+`review_context`; if definitions change, evaluate again. Run them after collection,
+before asking the human to review.
+
+1. **Facts.** `facts CUT_ID` returns the cut's declared facts as questions — each visible
+   cast member, each identity lock, the location, each prop, each entering continuity
+   state, the action, the beat's visual point, the style. Look at the take and answer
+   every question with a probability that the answer is yes. Record
+   `evaluate` with `kind: facts`, one `evidence` entry per question, and two scores:
+   `arithmetic_mean` (how many atoms landed) and `geometric_mean` (whether the *whole*
+   declaration landed — one failed atom sinks it). If a question marked `cap_on_miss`
+   scores below 0.5, cap `geometric_mean` at 0.4: a named detail that does not match is
+   not close enough.
+2. **Judge.** Two prompts to yourself, each the minimum of its sub-scores, on 0–1:
+   - semantic consistency — every declared fact present *and* nothing changed that was
+     not asked to change (compare against the `base` reference when there is one);
+   - perceptual quality — anatomy, naturalness, artifacts, readable text.
+   Be strict: if the face drifted, score identity low; if wardrobe changed without a
+   declared state, score it low. `overall = sqrt(sc * pq)`. Record `kind: judge` with
+   scores `sc`, `pq`, `overall` and every problem as a tagged `discrepancy`
+   (`identity_drift`, `wardrobe_mismatch`, `prop_missing`, `location_mismatch`,
+   `state_mismatch`, `instruction_not_followed`, `artifact`, `copy_paste`, …) with the
+   asset and region it concerns. Tags, not adjectives.
+3. **Pairwise.** When two takes compete for one cut, ask "which is better on each axis",
+   not "how good is each"; record `kind: pairwise` on the preferred take with the loser's
+   media id in the evidence.
+4. **Stranger.** When authorized to use a sub-agent, give it only the image and the
+   `facts` questions — never the notes, the sources, the prompt or this conversation —
+   and record its answers as `kind: stranger`. Its value is that it cannot be talked into
+   approving.
+5. Read `evaluations MEDIA_ID` before reusing any take as a reference. The readiness
+   warning `reference_unevaluated` names selected references with no `judge`/`facts`
+   record; with `policy.require_evaluation_for_reference` set on the project, `prepare`
+   refuses such references instead.
+
 ## Review and refinement
 
 1. Show the actual image at useful size with prompt, model, references and take
@@ -201,7 +240,8 @@ Output: immutable GenerationSpec plus approval request, never an opaque “compo
    previous selected image stays selected until its replacement is approved.
 4. Read cumulative feedback from the exact take. Prepare a precise edit or fresh
    recipe, explaining which references are reused and why.
-5. Never run an automatic vision critic or auto-retry paid work.
+5. Never auto-retry paid work. Evaluations inform the human's review; they do not
+   replace it, and they never approve, reject, select or regenerate anything.
 
 ## Going backward
 

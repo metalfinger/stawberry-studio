@@ -14,6 +14,7 @@ from backend.studio.models import (
     AssetRequirementCreate,
     AssetRequirementUpdate,
     BatchApproval,
+    EvaluationCreate,
     MediaReview,
     NodeCreate,
     NodePatch,
@@ -499,6 +500,10 @@ class Studio:
                     for r in conn.execute("SELECT * FROM feedback WHERE media_id=? ORDER BY created_at,id", (media_id,))
                 ],
                 "recipe": self._recipe_status(conn, self.store.one(conn, "recipes", recipe_id)) if recipe_id else None,
+                "evaluations": [
+                    self._evaluation(r)
+                    for r in conn.execute("SELECT * FROM evaluations WHERE media_id=? ORDER BY sequence DESC", (media_id,))
+                ],
                 "review_history": [
                     {
                         **dict(r),
@@ -563,7 +568,133 @@ class Studio:
             "url": f"/api/studio/media/{row['id']}/file",
             "review": self.rules.review(conn, row),
             "depth": lineage.depth(conn, row["id"]),
+            "evaluations": self._latest_evaluations(conn, row["id"]),
         }
+
+    @staticmethod
+    def _evaluation(row):
+        return {
+            **dict(row),
+            "scores": json.loads(row["scores"]),
+            "evidence": json.loads(row["evidence"]),
+            "discrepancies": json.loads(row["discrepancies"]),
+        }
+
+    def _latest_evaluations(self, conn, media_id):
+        latest = {}
+        for row in conn.execute("SELECT * FROM evaluations WHERE media_id=? ORDER BY sequence DESC", (media_id,)):
+            latest.setdefault(row["kind"], self._evaluation(row))
+        return latest
+
+    def evaluations(self, media_id):
+        with self.store.connection() as conn:
+            self.store.one(conn, "media", media_id)
+            return [
+                self._evaluation(row)
+                for row in conn.execute("SELECT * FROM evaluations WHERE media_id=? ORDER BY sequence DESC", (media_id,))
+            ]
+
+    def evaluate(self, media_id, request: EvaluationCreate):
+        """Record an observation about one exact image. Append-only; never touches review status."""
+        with self.store.connection(write=True) as conn:
+            media = self.store.one(conn, "media", media_id)
+            context = self.rules.review_context(conn, media)
+            if request.expected_context != context:
+                raise StudioError("evaluation_context_changed", "Inspect the image again before evaluating it", 409)
+            review = self.rules.review(conn, media)
+            conn.execute(
+                "INSERT INTO evaluations(media_id,evaluator,version,kind,scores,evidence,confidence,discrepancies,"
+                "context_hash,review_revision,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                (
+                    media_id,
+                    request.evaluator,
+                    request.version,
+                    request.kind,
+                    encoded(request.scores),
+                    encoded([item.model_dump() for item in request.evidence]),
+                    request.confidence,
+                    encoded([item.model_dump() for item in request.discrepancies]),
+                    context,
+                    review["revision"],
+                    time.time(),
+                ),
+            )
+            row = conn.execute("SELECT * FROM evaluations WHERE media_id=? ORDER BY sequence DESC LIMIT 1", (media_id,)).fetchone()
+            return self._evaluation(row)
+
+    def facts(self, node_id):
+        """The declared facts of a cut or asset as answerable questions. Deterministic; no model call.
+
+        A host answers each with its own vision and records a kind="facts" evaluation. The
+        geometric mean of the answer probabilities is the prompt-level score; a capped question
+        that misses caps the whole record (a named detail that does not match is not "close enough").
+        """
+        with self.store.connection() as conn:
+            node = self.store.one(conn, "nodes", node_id)
+            production = self.rules.resolve(conn, node_id)
+            values = self._context(conn, node_id)["values"]
+            names = {asset["id"]: asset["name"] for asset in production["assets"]}
+
+            def label(value):
+                if isinstance(value, str):
+                    if value in names:
+                        return names[value]
+                    row = conn.execute("SELECT name FROM nodes WHERE id=?", (value,)).fetchone()
+                    return row["name"] if row else value
+                return encoded(value)
+
+            questions = []
+
+            def ask(qid, question, *, expected="yes", asset_id=None, weight=1, cap=False):
+                questions.append(
+                    {"id": qid, "question": question, "expected": expected, "asset_id": asset_id, "weight": weight, "cap_on_miss": cap}
+                )
+
+            def identity(asset):
+                ctx = asset["context"]["values"]
+                for i, token in enumerate(ctx.get("consistency_tokens") or []):
+                    ask(f"detail:{asset['id']}:{i}", f"Does {asset['name']} show '{token}'?", asset_id=asset["id"], cap=True)
+                features = ctx.get("distinctive_features")
+                if isinstance(features, str) and features.strip():
+                    ask(f"features:{asset['id']}", f"Does {asset['name']} match: {features.strip()}?", asset_id=asset["id"], cap=True)
+                wardrobe = ctx.get("wardrobe")
+                if asset["kind"] == "character" and isinstance(wardrobe, str) and wardrobe.strip():
+                    ask(f"wardrobe:{asset['id']}", f"Is {asset['name']} wearing: {wardrobe.strip()}?", asset_id=asset["id"], cap=True)
+
+            if node["kind"] in ASSET_KINDS:
+                asset = {"id": node["id"], "name": node["name"], "kind": node["kind"], "context": self._context(conn, node_id)}
+                ask(f"subject:{node['id']}", f"Does the image show {node['name']} and nothing else as the subject?", asset_id=node["id"], weight=3, cap=True)
+                identity(asset)
+            elif node["kind"] == "cut":
+                scope = production["scope"]
+                for asset in production["assets"]:
+                    if asset["id"] in scope["characters"]:
+                        ask(f"cast:{asset['id']}", f"Is {asset['name']} in frame?", asset_id=asset["id"], weight=3, cap=True)
+                        identity(asset)
+                    elif asset["id"] == scope["location"]:
+                        ask(f"location:{asset['id']}", f"Is this {asset['name']}?", asset_id=asset["id"], weight=3, cap=True)
+                    elif asset["id"] in scope["props"]:
+                        ask(f"prop:{asset['id']}", f"Is {asset['name']} visible?", asset_id=asset["id"], weight=2, cap=True)
+                continuity = production["continuity"] or {}
+                conflicted = {conflict["field"] for conflict in continuity.get("conflicts", [])}
+                for key, candidates in continuity.get("incoming", {}).items():
+                    if key in conflicted or not candidates:
+                        continue
+                    fact = candidates[0]
+                    attribute = fact["attribute"].replace("_", " ")
+                    ask(f"state:{key}", f"Is {label(fact['asset_id'])}'s {attribute} {label(fact['value'])}?", asset_id=fact["asset_id"], weight=2)
+                action = str(values.get("action") or "").strip() or node["notes"].strip()
+                if action:
+                    ask("action", f"Does the frame show this happening: {action}?", weight=3)
+                point = values.get("beat.visual_point")
+                if isinstance(point, str) and point.strip():
+                    ask("beat", f"Does the frame carry this: {point.strip()}?", weight=2)
+                style = values.get("style")
+                if isinstance(style, str) and style.strip():
+                    ask("style", f"Is the image rendered in this style: {style.strip()}?", weight=1)
+            else:
+                raise StudioError("facts_scope", "Facts are derived for cuts and assets")
+            return {"node_id": node_id, "kind": node["kind"], "questions": questions}
 
     def lineage(self, media_id):
         with self.store.connection() as conn:

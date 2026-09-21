@@ -97,6 +97,14 @@ CREATE TABLE IF NOT EXISTS asset_requirements (
  priority INTEGER NOT NULL, created_at REAL NOT NULL, updated_at REAL NOT NULL
 );
 CREATE INDEX IF NOT EXISTS asset_requirements_asset ON asset_requirements(asset_id,priority,created_at);
+CREATE TABLE IF NOT EXISTS evaluations (
+ sequence INTEGER PRIMARY KEY AUTOINCREMENT, media_id TEXT NOT NULL REFERENCES media(id),
+ evaluator TEXT NOT NULL, version TEXT NOT NULL, kind TEXT NOT NULL,
+ scores TEXT NOT NULL, evidence TEXT NOT NULL, confidence REAL,
+ discrepancies TEXT NOT NULL, context_hash TEXT NOT NULL, review_revision INTEGER NOT NULL,
+ created_at REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS evaluations_media ON evaluations(media_id,sequence);
 """
 
 
@@ -114,7 +122,7 @@ class Store:
         self.path = self.home / "production.sqlite"
         with self.connection() as conn:
             version = conn.execute("PRAGMA user_version").fetchone()[0]
-            if version not in {0, 1, 2, 3, 4, 5}:
+            if version not in {0, 1, 2, 3, 4, 5, 6}:
                 raise StudioError("schema_unsupported", "This workspace requires a different engine version")
             conn.execute("PRAGMA journal_mode=WAL")
             conn.executescript(SCHEMA)

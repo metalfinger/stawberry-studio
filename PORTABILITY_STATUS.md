@@ -13,7 +13,9 @@ in earlier migration documents for the portable-workflow extension.
 - [ ] Replace historical story-specific shell runners with generic resumable
       operations and durable provider-submission handoffs.
 - [ ] Structured prompt-binding validator and generation-packet API.
-- [ ] Optional evaluator records and bounded repair execution.
+- [x] Optional evaluator records (`evaluate` / `evaluations` / `facts`; append-only,
+      bound to review context, never review status). Bounded repair execution remains
+      open.
 - [ ] Fresh production and interrupted-run handoff in actual Claude Code and Codex.
 
 The dream project completed 22 generated cuts. That demonstrates a production

@@ -43,6 +43,7 @@ READS = {
     "projects": "projects", "project": "project", "inspect": "inspect",
     "context": "context", "workflow": "workflow", "readiness": "readiness",
     "recipe": "recipe", "job": "job", "media": "media", "lineage": "lineage",
+    "evaluations": "evaluations", "facts": "facts",
 }
 WRITES = {
     "create": ("create_node", models.NodeCreate, False),
@@ -55,6 +56,7 @@ WRITES = {
     "create_requirement": ("create_requirement", models.AssetRequirementCreate, True),
     "update_requirement": ("update_requirement", models.AssetRequirementUpdate, True),
     "approve_batch": ("approve_batch", models.BatchApproval, False),
+    "evaluate": ("evaluate", models.EvaluationCreate, True),
 }
 
 

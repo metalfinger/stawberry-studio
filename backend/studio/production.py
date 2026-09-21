@@ -330,11 +330,37 @@ class ProductionRules:
             "readiness": {"ready": not issues, "issues": issues},
         }
 
+    def evaluated(self, conn, media, kinds=("judge", "facts")):
+        """True when an evaluation of one of `kinds` is bound to this image's current definitions."""
+        context = self.review_context(conn, media)
+        placeholders = ",".join("?" for _ in kinds)
+        return bool(
+            conn.execute(
+                f"SELECT 1 FROM evaluations WHERE media_id=? AND context_hash=? AND kind IN ({placeholders}) LIMIT 1",
+                (media["id"], context, *kinds),
+            ).fetchone()
+        )
+
     def warnings(self, conn, node_id):
         """Advisory gaps. Kept out of resolve() so they never enter a frozen generation context."""
         node = self.store.one(conn, "nodes", node_id)
         ctx = self.studio._context(conn, node_id)
-        return warnings_for(node, ctx["values"], ctx["cleared"])
+        out = warnings_for(node, ctx["values"], ctx["cleared"])
+        if node["kind"] == "cut":
+            for asset_id in self.asset_ids(self.scope(ctx)):
+                asset = self.store.one(conn, "nodes", asset_id)
+                if asset["active_media_id"]:
+                    media = self.store.one(conn, "media", asset["active_media_id"])
+                    if not self.evaluated(conn, media):
+                        out.append(
+                            {
+                                "code": "reference_unevaluated",
+                                "node_id": asset_id,
+                                "media_id": media["id"],
+                                "message": f"No evaluation is recorded for {asset['name']}'s selected reference",
+                            }
+                        )
+        return out
 
     def validate_recipe(self, conn, node_id, references):
         production = self.resolve(conn, node_id)
@@ -377,6 +403,18 @@ class ProductionRules:
                 ):
                     covered[kind].add(subject)
         node = self.store.one(conn, "nodes", node_id)
+        ctx = self.studio._context(conn, node_id)
+        if ctx["values"].get("policy.require_evaluation_for_reference") is True:
+            for ref in references:
+                media = self.store.one(conn, "media", ref["media_id"])
+                if not self.evaluated(conn, media):
+                    issues.append(
+                        {
+                            "code": "reference_unevaluated",
+                            "media_id": media["id"],
+                            "message": f"Project policy requires an evaluation of {media['label']} before it is reused",
+                        }
+                    )
         if node["kind"] == "cut":
             for asset in production["assets"]:
                 if asset["id"] not in covered[asset["kind"]]:

@@ -105,7 +105,7 @@ def test_unknown_fields_remain_open(world):
 def test_warnings_are_advisory_and_clear_when_declared(world):
     readiness = world.studio.readiness(world.cut["id"])
     assert readiness["ready"]
-    assert codes(readiness["warnings"]) == {"beat_missing", "performance_missing", "sound_missing"}
+    assert codes(readiness["warnings"]) == {"beat_missing", "performance_missing", "sound_missing", "reference_unevaluated"}
     assert codes(world.studio.readiness(world.project["id"])["warnings"]) == {"bible_missing"}
     change(world.studio, world.scene, **{"sound.ambient": "platform hum, distant announcement"})
     change(
@@ -114,9 +114,9 @@ def test_warnings_are_advisory_and_clear_when_declared(world):
         **{"beat.purpose": "Mara realises the train will not stop", "performance.expression": "held breath"},
     )
     change(world.studio, world.project, **{"bible.tokens": ["torn matte paper", "graphite linework"]})
-    assert world.studio.readiness(world.cut["id"])["warnings"] == []
+    assert codes(world.studio.readiness(world.cut["id"])["warnings"]) == {"reference_unevaluated"}
     assert world.studio.readiness(world.project["id"])["warnings"] == []
-    assert world.studio.inspect(world.cut["id"])["warnings"] == []
+    assert codes(world.studio.inspect(world.cut["id"])["warnings"]) == {"reference_unevaluated"}
     assert "warnings" not in world.studio.context(world.cut["id"])
 
 

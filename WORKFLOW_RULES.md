@@ -175,3 +175,7 @@ new provider request in the destination workspace.
 - Changing a reference after approval invalidates that request's approval.
 - Parent revision flags relevant work but leaves completed takes unchanged.
 - Prompt preview and provider submission share identical image order/bindings.
+- Writing a canonical field is type-checked; an absent one warns and never blocks.
+- A media row's depth follows its recipe references; imports and sheets are depth 0.
+- An evaluation never changes review status and never stales a prepared recipe.
+- An evaluation recorded before a definition change no longer counts as current.

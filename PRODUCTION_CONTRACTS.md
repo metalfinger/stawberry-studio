@@ -61,6 +61,20 @@ regenerated or deleted. Rejected media cannot be used by the initial strict
 execution path. Deliberate scoped reuse of rejected material is deferred until
 it has its own explicit approval contract.
 
+## Evaluations
+
+Evaluations are observations with their own append-only record (`evaluations`),
+separate from human review. Each binds to the image's `review_context` at the time it
+was made; a changed definition means it no longer counts. They carry an evaluator,
+version, kind (`facts`, `judge`, `pairwise`, `stranger`, `similarity`, `diversity`,
+`duplicate`), unit-interval scores, question-level evidence and tagged, localised
+discrepancies. They never set review status, selection, approval or readiness, and
+they live outside the frozen generation context so recording one stales nothing.
+`facts NODE_ID` derives a cut's or asset's declared facts as questions deterministically;
+the host answers them. Readiness warns (`reference_unevaluated`) when a selected
+reference has no current `judge`/`facts` record; the project field
+`policy.require_evaluation_for_reference` turns that into a `prepare` refusal.
+
 ## Readiness
 
 The same service returns readiness to Codex and the viewer and enforces it before
