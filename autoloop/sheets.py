@@ -4,8 +4,11 @@
 plan.json: [{"node": "<id>", "label": "...", "prompt": "...", "refs": [[media_id, role, instruction], ...]}]
 Nothing is approved outside `policy.credit_ceiling_per_take`. Nothing is retried.
 """
-import json, sys, time
+import json
+import sys
+import time
 from pathlib import Path
+
 from backend.studio.models import RecipeCreate, Reference
 from backend.studio.service import Studio
 from backend.studio.store import Store, StudioError
@@ -30,12 +33,14 @@ for item in plan:
         print(f"  warn {item['label']}: {[w['code'] for w in recipe['warnings']]}")
     job = approve_within_policy(studio, recipe, pol, log)
     if not job:
-        print(f"SKIPPED {item['label']}: outside policy"); continue
+        print(f"SKIPPED {item['label']}: outside policy")
+        continue
     state = drive_job(studio, job["id"], 80, sleep=lambda s: time.sleep(5))
     if state != "ready":
         err = (studio.job(job["id"]).get("error") or "")[:160]
         print(f"FAILED {item['label']}: {state} {err}")
-        log.append({"label": item["label"], "job_state": state, "error": err}); continue
+        log.append({"label": item["label"], "job_state": state, "error": err})
+        continue
     with studio.store.connection() as conn:
         row = conn.execute("SELECT id FROM media WHERE job_id=? ORDER BY created_at DESC LIMIT 1", (job["id"],)).fetchone()
     out[item["label"]] = row["id"]

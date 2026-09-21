@@ -215,4 +215,73 @@ def warnings_for(node: dict, values: dict, cleared) -> list[dict]:
             )
         if not any(_present(values, cleared, f) for f in ("sound.sfx", "sound.music", "sound.ambient")):
             warn("sound_missing", "Declare what is heard: sound.sfx, sound.music, or an inherited sound.ambient", "sound.sfx")
+    for clash in palette_conflicts(values):
+        warn(
+            "palette_conflict",
+            f"{clash['field']} says '{clash['word']}', and no colour in bible.palette_hex is near it. "
+            f"Either say in the prompt that the {clash['word']} is depicted in the declared inks rather than "
+            f"printed in its own colour, or widen the palette",
+            clash["field"],
+        )
+    return out
+
+
+# A restricted palette and the story's own material vocabulary can contradict each other
+# silently. "brass and riveted steel" is a true description of an 1898 autoclave, and in a
+# four-ink woodblock it is also an instruction to print a colour the bible forbids — which is
+# exactly what happened the first time a location sheet was drawn from that field. The word
+# is usually right and the palette is usually right; what is missing is the sentence saying
+# the material is *depicted*, not *coloured*. So: warn, name both sides, and let the host
+# decide which one to rewrite. Approximate RGB is enough — the check only has to notice that
+# nothing in the declared palette is anywhere near the named colour.
+COLOUR_WORDS = {
+    "black": (0, 0, 0), "white": (255, 255, 255), "grey": (128, 128, 128), "gray": (128, 128, 128),
+    "silver": (192, 192, 192), "red": (200, 30, 30), "crimson": (170, 20, 40), "scarlet": (220, 40, 20),
+    "maroon": (110, 20, 30), "pink": (240, 150, 170), "orange": (240, 130, 30), "amber": (230, 160, 40),
+    "ochre": (200, 150, 60), "yellow": (240, 210, 50), "gold": (200, 170, 60), "golden": (200, 170, 60),
+    "brass": (181, 166, 66), "bronze": (150, 110, 60), "copper": (184, 110, 70), "rust": (160, 80, 40),
+    "green": (50, 140, 70), "emerald": (30, 150, 90), "olive": (120, 120, 50), "teal": (40, 130, 130),
+    "cyan": (60, 200, 220), "blue": (50, 90, 190), "navy": (25, 35, 90), "indigo": (70, 60, 150),
+    "violet": (140, 90, 200), "purple": (120, 60, 160), "magenta": (220, 60, 170), "lavender": (200, 180, 230),
+    "brown": (120, 80, 50), "tan": (190, 160, 120), "beige": (225, 210, 180), "cream": (245, 235, 210),
+    "ivory": (250, 245, 230), "sepia": (110, 80, 50), "charcoal": (45, 45, 45), "slate": (110, 120, 130),
+}
+# validated against this project: an in-palette word lands under 40, "brass" lands at 118
+PALETTE_DISTANCE = 90
+# fields that describe a thing rather than the printing language; the bible's own fields are
+# excluded because a palette is allowed to name its own colours
+COLOUR_BEARING = (
+    "materials", "identity", "appearance", "wardrobe", "distinctive_features", "set_decoration",
+    "atmosphere", "mood", "action", "props", "subject",
+)
+
+
+def _rgb(text):
+    text = text.lstrip("#")
+    return tuple(int(text[i : i + 2], 16) for i in (0, 2, 4))
+
+
+def palette_conflicts(values: dict) -> list[dict]:
+    palette = values.get("bible.palette_hex") or []
+    if not palette:
+        return []
+    swatches = []
+    for entry in palette:
+        try:
+            swatches.append(_rgb(str(entry)))
+        except (ValueError, IndexError):
+            continue
+    if not swatches:
+        return []
+    out = []
+    for field, value in sorted(values.items()):
+        if not isinstance(value, str) or field.startswith("bible.") or field == "negative_prompts":
+            continue
+        if not (field in COLOUR_BEARING or field.endswith(".color") or field.endswith(".colour")):
+            continue
+        for word in sorted(set(re.findall(r"[a-z]+", value.lower())) & set(COLOUR_WORDS)):
+            rgb = COLOUR_WORDS[word]
+            near = min(sum((a - b) ** 2 for a, b in zip(rgb, s, strict=True)) ** 0.5 for s in swatches)
+            if near > PALETTE_DISTANCE:
+                out.append({"field": field, "word": word, "distance": round(near)})
     return out

@@ -3,7 +3,9 @@
   "budget": {
     "start_credits": 317,
     "ceiling_spend": 120,
-    "hard_stop_balance": 200
+    "hard_stop_balance": 200,
+    "last_balance": 311.1,
+    "checked_at": "2026-09-22T00:20:00+05:30"
   },
   "stories": [
     {
@@ -16,8 +18,8 @@
         "two-colour palette",
         "transformation across frames"
       ],
-      "project_id": null,
-      "stage": "not_started"
+      "project_id": "5b0eccc3-70a6-491b-b91d-13b54474d022",
+      "stage": "sheets_done"
     },
     {
       "slug": "effigy",
@@ -47,6 +49,43 @@
     }
   ],
   "current": "icehead",
-  "harness_changes": [],
-  "iterations": 0
+  "harness_changes": [
+    {
+      "iteration": 1,
+      "code": "performance_missing",
+      "class": "declaration lag",
+      "change": "any performance.* field satisfies the warning; a figure with no readable face still has posture"
+    },
+    {
+      "iteration": 1,
+      "code": "facts_scope",
+      "class": "style drift",
+      "change": "a project's style anchor is evaluatable \u2014 the one image every other image inherits"
+    },
+    {
+      "iteration": 2,
+      "code": "palette_conflict",
+      "class": "palette conflict",
+      "change": "a colour word in a content field far from every declared swatch is warned about"
+    },
+    {
+      "iteration": 2,
+      "code": "sheet_unreferenced",
+      "class": "the second version",
+      "change": "a prompt naming an asset that holds a selected sheet must reference it"
+    },
+    {
+      "iteration": 2,
+      "code": "matches_sheet",
+      "class": "the second version",
+      "change": "capped question: is this the same object as its sheet, not a second version"
+    },
+    {
+      "iteration": 2,
+      "code": "sheet_style_questions",
+      "class": "style drift",
+      "change": "asset sheets are asked lighting_rules and excluded, as cuts already were"
+    }
+  ],
+  "iterations": 2
 }

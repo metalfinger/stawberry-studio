@@ -923,11 +923,11 @@ class Studio:
             "asked": float(len(questions)),
         }
 
-    def facts(self, node_id):
+    def facts(self, node_id, media_id=None):
         with self.store.connection() as conn:
-            return self._facts(conn, node_id)
+            return self._facts(conn, node_id, media_id)
 
-    def _facts(self, conn, node_id):
+    def _facts(self, conn, node_id, media_id=None):
         """The declared facts of a cut or asset as answerable questions. Deterministic; no model call.
 
         A host answers each with its own vision and records a kind="facts" evaluation. The
@@ -952,7 +952,7 @@ class Studio:
             questions = []
 
             GROUPS = {"cast": "identity", "pose": "identity", "hands": "identity", "detail": "identity",
-                      "wardrobe": "identity", "subject": "identity", "features": "identity",
+                      "wardrobe": "identity", "subject": "identity", "features": "identity", "matches_sheet": "identity",
                       "location": "scope", "prop": "scope", "state": "state",
                       "action": "action", "beat": "action",
                       "style": "style", "style_token": "style", "palette": "style", "lighting_rules": "style", "anchor": "style",
@@ -1004,7 +1004,18 @@ class Studio:
                     ask(f"style_token:{position}", f"Does the image actually show this: {token}?", weight=2)
                 if values.get("bible.palette_hex"):
                     ask("palette", "Are the image's values confined to this palette, with no colour outside it: "
-                        + ", ".join(values["bible.palette_hex"]) + "?", weight=2)
+                        + ", ".join(values["bible.palette_hex"]) + "?", weight=2,
+                        look_at="Sample a light area, a mid tone and a shadow, and every metal, fabric and liquid in the image")
+                rules = values.get("bible.lighting_rules")
+                if isinstance(rules, str) and rules.strip():
+                    ask("lighting_rules", f"Does the light in this sheet follow: {rules.strip()}?", weight=2)
+                # A sheet is inherited by every frame that references it, so it has at least as
+                # much to answer for as a cut. It was asked less only because nobody had written
+                # the questions down.
+                excluded = values.get("negative_prompts")
+                if isinstance(excluded, str) and excluded.strip():
+                    ask("excluded", f"Is the sheet free of all of these: {excluded.strip()}?", weight=2, cap=True,
+                        look_at="Scan the whole sheet, including every small invented detail")
             elif node["kind"] == "cut":
                 scope = production["scope"]
                 for asset in production["assets"]:
@@ -1076,9 +1087,39 @@ class Studio:
                     ask("excluded", f"Is the image free of all of these: {excluded.strip()}?", weight=3, cap=True)
             else:
                 raise StudioError("facts_scope", "Facts are derived for cuts, assets and a project's style anchor")
+            # An image that was built on another asset's sheet has one more thing to answer for:
+            # whether it drew the same object. A location sheet can satisfy every one of its own
+            # details and still contain a second, different machine where the prop should be, and
+            # nothing else in this rubric would notice.
+            for owner_id, owner_name in self._referenced_assets(conn, media_id, node_id):
+                ask(f"matches_sheet:{owner_id}",
+                    f"Does {owner_name} as it appears here match its own reference sheet — the same "
+                    f"object with the same construction, not a second version of it?",
+                    asset_id=owner_id, weight=2, cap=True,
+                    look_at=f"Crop {owner_name} out of this image and set it beside its sheet")
             return {"node_id": node_id, "kind": node["kind"], "questions": questions,
                     "scoring": "engine computes per-group weighted geometric means from your probabilities; "
                                "min_group is the headline; any capped question below 0.5, or the action group below 0.5, caps the record at 0.4"}
+
+    def _referenced_assets(self, conn, media_id, node_id):
+        """Assets whose own sheet was a reference for this media, newest recipe wins."""
+        if not media_id:
+            return []
+        media = self.store.one(conn, "media", media_id)
+        if not media["job_id"]:
+            return []
+        job = self.store.one(conn, "jobs", media["job_id"])
+        recipe = self.store.one(conn, "recipes", job["recipe_id"])
+        out, seen = [], set()
+        for ref in json.loads(recipe["spec"]).get("references") or []:
+            row = conn.execute(
+                "SELECT n.id,n.name,n.kind FROM media m JOIN nodes n ON n.id=m.node_id WHERE m.id=?",
+                (ref.get("media_id"),),
+            ).fetchone()
+            if row and row["kind"] in ASSET_KINDS and row["id"] != node_id and row["id"] not in seen:
+                seen.add(row["id"])
+                out.append((row["id"], row["name"]))
+        return out
 
     def lineage(self, media_id):
         with self.store.connection() as conn:

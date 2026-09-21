@@ -319,6 +319,28 @@ class ProductionRules:
                 gaps.append({"code": "reference_unfit", "media_id": media["id"],
                              "failed": [e["question"] for e in failed][:5],
                              "message": f"Reference {media['label']} failed its own facts: " + "; ".join(e["question"] for e in failed[:3])})
+        # If the prompt is going to draw a thing that has already been drawn, it must look at
+        # the drawing. A location sheet that renders a declared prop from its description alone
+        # produces a second, different machine — and nothing downstream can tell which one is
+        # the prop. The name is the signal: cheap, and wrong only in the harmless direction.
+        held = {ref["media_id"] for ref in references}
+        for row in conn.execute(
+            "SELECT id,name,active_media_id FROM nodes WHERE project_id=? AND kind IN "
+            "('character','location','prop') AND active_media_id IS NOT NULL AND id<>? ORDER BY id",
+            (node["project_id"], node_id),
+        ).fetchall():
+            if row["active_media_id"] in held:
+                continue
+            # an asset carried as text on purpose — a provider refuses its image, so it is
+            # described and never shown — is not an unreferenced sheet, it is a declared choice
+            if self.studio._context(conn, row["id"])["values"].get("reference_mode") == "text":
+                continue
+            bare = re.sub(r"^(the|a|an)\s+", "", row["name"].strip().lower())
+            if bare and re.search(r"\b" + re.escape(bare) + r"\b", low):
+                gaps.append({"code": "sheet_unreferenced", "node_id": row["id"],
+                             "media_id": row["active_media_id"],
+                             "message": f"The prompt draws {row['name']}, which already has a selected sheet. "
+                                        f"Reference that sheet or the two will not be the same object"})
         return gaps
 
 

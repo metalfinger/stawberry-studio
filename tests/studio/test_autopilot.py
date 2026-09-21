@@ -158,3 +158,53 @@ def test_provider_rejection_is_definitive_and_repairable(world, monkeypatch):
     out = step(w.studio, w.project["id"], fake=True, clock=lambda: 10**12, sleep=lambda s: None)
     assert out["cuts"][0]["stage"] == "provider_rejected"
     assert out["tasks"][0]["repair"]["suggestions"][0]["code"] == "provider_rejected"
+
+
+
+def test_a_prompt_that_draws_another_asset_must_reference_its_sheet(world):
+    # A location sheet that renders a declared character or prop from its description alone
+    # produces a second, different object, and cuts inherit whichever one they referenced.
+    w = world
+    args = dict(node_id=w.station["id"], provider="fake", model="fixture", intent="location sheet",
+                prompt="The platform at Station, with Mara standing at the far end. torn paper")
+    loose = w.studio.prepare(RecipeCreate(**args, references=[]))
+    gap = [g for g in loose["warnings"] if g["code"] == "sheet_unreferenced"]
+    assert [g["node_id"] for g in gap] == [w.mara["id"]]
+    assert gap[0]["media_id"] == w.sheets["Mara"]["id"]
+
+    held = w.studio.prepare(RecipeCreate(**args, references=[
+        Reference(media_id=w.sheets["Mara"]["id"], role="identity", instruction="the same Mara")]))
+    assert not [g for g in held["warnings"] if g["code"] == "sheet_unreferenced"]
+
+
+def test_an_asset_drawn_from_another_sheet_is_asked_whether_it_is_the_same_object(world):
+    from backend.studio.worker import Worker
+
+    w = world
+    recipe = w.studio.prepare(RecipeCreate(
+        node_id=w.station["id"], provider="fake", model="fixture", intent="location sheet",
+        prompt="The platform at Station, with Mara at the far end. torn paper",
+        references=[Reference(media_id=w.sheets["Mara"]["id"], role="identity", instruction="the same Mara")]))
+    w.studio.approve(recipe["id"], Approval(fingerprint=recipe["fingerprint"], user_decision="fixture"))
+    job = w.studio.enqueue(recipe["id"])
+    clock = [10**12]
+    worker = Worker(w.studio, clock=lambda: clock[0])
+    while w.studio.job(job["id"])["state"] != "ready":
+        assert worker.tick()
+        clock[0] += 10
+    media = [m["id"] for m in w.studio.inspect(w.station["id"])["media"] if m["job_id"] == job["id"]][0]
+    ids = [q["id"] for q in w.studio.facts(w.station["id"], media)["questions"]]
+    assert f"matches_sheet:{w.mara['id']}" in ids
+    # node-scoped facts, with no media to trace references from, cannot ask it
+    assert not [q for q in w.studio.facts(w.station["id"])["questions"] if q["id"].startswith("matches_sheet")]
+
+
+def test_a_colour_word_the_palette_cannot_print_is_warned_about(world):
+    w = world
+    change(w.studio, w.project, **{"bible.palette_hex": ["#12100E", "#F2EFE6", "#A8C6D6"]})
+    change(w.studio, w.station, materials="brass fittings on riveted steel")
+    clash = [x for x in w.studio.inspect(w.station["id"])["warnings"] if x["code"] == "palette_conflict"]
+    assert len(clash) == 1 and clash[0]["field"] == "materials" and "brass" in clash[0]["message"]
+    # a word the palette can actually print is not a conflict, and the bible's own fields never are
+    change(w.studio, w.station, materials="black ink on cream paper")
+    assert not [x for x in w.studio.inspect(w.station["id"])["warnings"] if x["code"] == "palette_conflict"]
