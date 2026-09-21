@@ -160,6 +160,20 @@ facts and user feedback on prior takes.
    edit base (if any), visible character identity/wardrobe, exact location,
    hero props, then pose/composition/lighting/style evidence. This is reasoning,
    not a hardcoded global cap.
+   Read each candidate's `depth` (on every media row, and `lineage MEDIA_ID` for the
+   full tree). Depth 0 is a sheet or an import; depth n was generated from depth n-1
+   images. Error compounds with depth — prefer the shallowest image that carries what
+   you need, and when only deep candidates exist for an asset, reach back to its
+   approved sheet. `prepare` returns `warnings` when a reference exceeds
+   `policy.reference_depth_cap`; treat them as a reason to reconsider, not a block.
+   Whether to chain from the previous cut is a decision, in this order: the cut's
+   explicit `chain_from_prev` (`yes`/`no`) wins; otherwise do not chain when the
+   previous take's depth already meets the cap; otherwise chain when this cut is in
+   the same shot (same `parent_id`) or its `action` / `transition` / notes use
+   continuity language ("moments later", "still ", "match cut", "continues",
+   "a moment later", "without cut", "carries on", "right after"); otherwise do not.
+   A chosen previous cut is declared through `continuity_from` and attached as a
+   `base` or `composition` reference — never silently.
 3. Inspect pixels and conflicts. Assign exact roles and one instruction per image
    saying what to preserve or borrow and what must not transfer.
 4. Read the live model contract. Select a prompt-capable image model that accepts

@@ -42,7 +42,7 @@ class Feedback(Empty):
 READS = {
     "projects": "projects", "project": "project", "inspect": "inspect",
     "context": "context", "workflow": "workflow", "readiness": "readiness",
-    "recipe": "recipe", "job": "job", "media": "media",
+    "recipe": "recipe", "job": "job", "media": "media", "lineage": "lineage",
 }
 WRITES = {
     "create": ("create_node", models.NodeCreate, False),

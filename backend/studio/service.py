@@ -7,6 +7,7 @@ import shutil
 import time
 from pathlib import Path
 
+from backend.studio import lineage
 from backend.studio.execution import Execution, validate_cost
 from backend.studio.models import (
     Approval,
@@ -561,7 +562,13 @@ class Studio:
             "metadata": json.loads(row["metadata"]),
             "url": f"/api/studio/media/{row['id']}/file",
             "review": self.rules.review(conn, row),
+            "depth": lineage.depth(conn, row["id"]),
         }
+
+    def lineage(self, media_id):
+        with self.store.connection() as conn:
+            self.store.one(conn, "media", media_id)
+            return lineage.lineage(conn, media_id)
 
     def import_media(self, node_id: str, path: str | Path, label: str, *, job_id=None, metadata=None):
         from PIL import Image
@@ -680,7 +687,11 @@ class Studio:
                     time.time(),
                 ),
             )
-            return self._recipe(self.store.one(conn, "recipes", recipe_id))
+            cap = context["values"].get("policy.reference_depth_cap", lineage.DEFAULT_DEPTH_CAP)
+            return {
+                **self._recipe(self.store.one(conn, "recipes", recipe_id)),
+                "warnings": lineage.depth_warnings(conn, references, cap),
+            }
 
     @staticmethod
     def _recipe(row):

@@ -136,8 +136,8 @@ Every cut render flows through:
 2. **Style bible** — compiled at BRIEF confirm: `palette_hex` (verbatim hex codes), `style_tokens` (4-6 short shared phrases), `lighting_rules`. Every prompt quotes these verbatim via `prompt_dsl`'s [STYLE] block.
 3. **Identity-traits extraction** — when Atlas saves a suggested_prompt, a Flash call extracts `appearance / distinctive_features / wardrobe_lock / consistency_tokens` so the DSL has structured grounding (not just free text).
 4. **Per-cut variants** — picker reads cut text, requests `hero_pose / kneeling / expression_X / etc` for each linked character; planner emits PREPROD_FILL when identity is missing.
-5. **Reference-priority cap** — Nano Banana Pro takes ~4 refs optimally; `_prioritize_refs` sorts by importance (anchor → identity → prev_cut → location plate → props) and caps at 4.
-6. **Identity re-anchor every 4th cut** — drops prev_cut from refs to let original identity dominate, fights long-chain drift.
+5. **Reference selection by reasoning** — the host ranks references by what this exact cut must preserve (edit base, visible identity, location, hero props, then pose/composition/style evidence); the recipe freezes the ordered list. The historical `_prioritize_refs` 4-slot priority table is retained in the old runtime only.
+6. **Generation depth, not a counter** — every image's ancestry is recoverable (media → job → recipe → references), so each take carries a `depth`: 0 for sheets and imports, n for an image generated from depth n-1 references. `prepare` warns when a reference exceeds the project's `policy.reference_depth_cap` (default 2); the host reaches back to a sheet instead of chaining a chain. This replaces the old "re-anchor every 4th cut" modulo (`cut_planner.py`), whose other three rules — explicit override, same shot, continuity language — survive as playbook guidance.
 
 ## Chat-native UX
 

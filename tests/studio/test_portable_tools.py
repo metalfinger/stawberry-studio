@@ -24,7 +24,7 @@ def test_discovery_and_invalid_operations(tmp_path):
     studio = Studio(Store(tmp_path))
     names = [tool["name"] for tool in catalog()]
     assert len(names) == len(set(names))
-    assert {"prepare", "external_preview", "attach_external", "context"} <= set(names)
+    assert {"prepare", "external_preview", "attach_external", "context", "lineage"} <= set(names)
     with pytest.raises(StudioError, match="Unknown Studio tool"):
         invoke(studio, "shell", {"command": "echo bad"})
     with pytest.raises(ValidationError):
