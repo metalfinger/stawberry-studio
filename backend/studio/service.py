@@ -780,6 +780,11 @@ class Studio:
             return {**result, "chain": True, "reason": f"continuity language: '{hit.strip()}'"}
         return {**result, "chain": False, "reason": "new shot, no continuity language"}
 
+    def sequence(self, project_id):
+        from backend.studio import sequence
+
+        return sequence.review(self, project_id)
+
     def repair(self, cut_id):
         """What to change for the next take, derived from the latest take's records. Deterministic; no model."""
         with self.store.connection() as conn:
@@ -803,6 +808,7 @@ class Studio:
             status = self.rules.take_status(conn, media, pol)
             facts = self.rules.current_evaluation(conn, media, "facts")
             judge = self.rules.current_evaluation(conn, media, "judge")
+            stranger = self.rules.current_evaluation(conn, media, "stranger")
             duplicate = self.rules.current_evaluation(conn, media, "duplicate")
             production = self.rules.resolve(conn, cut_id)
             sheets = {a["id"]: (a["selection"] or {}).get("media_id") for a in production["assets"]}
@@ -816,9 +822,18 @@ class Studio:
             suggestions = []
 
             def suggest(code, message, **extra):
+                if any(s["code"] == code and s["message"] == message for s in suggestions):
+                    return
                 suggestions.append({"code": code, "message": message, **extra})
 
-            failed = [e for e in (facts["evidence"] if facts else []) if e.get("probability") is not None and e["probability"] < 0.5]
+            # every current evaluation counts: a blind second opinion is evidence like any other
+            seen, failed = set(), []
+            for record in (facts, stranger):
+                for e in (record["evidence"] if record else []):
+                    qid = e.get("question_id")
+                    if e.get("probability") is not None and e["probability"] < 0.5 and qid not in seen:
+                        seen.add(qid)
+                        failed.append(e)
             for item in failed:
                 qid = item.get("question_id") or ""
                 kind = qid.split(":")[0]
@@ -841,14 +856,19 @@ class Studio:
                     suggest("lead_with_action", "Lead the prompt with the action sentence and beat.visual_point, verbatim; everything else after")
                 elif kind == "style":
                     suggest("bible_in_prompt", "Quote bible.tokens and bible.palette_hex verbatim; add negative_prompts")
-            if judge:
-                for d in judge["discrepancies"]:
+            for record in (judge, stranger):
+                for d in (record["discrepancies"] if record else []):
                     suggest("judge_" + d["tag"], d["note"], asset_id=d.get("asset_id"), region=d.get("region"))
+            if stranger:
+                note = next((e["answer"] for e in stranger["evidence"] if not e.get("question_id") and e["answer"]), "")
+                if note:
+                    suggest("second_opinion", "A blind evaluator saw: " + note[:400])
             if duplicate and any(d["tag"] == "copy_paste" for d in duplicate["discrepancies"]):
                 suggest("change_camera", "Near-identical to a sibling beat: change camera.framing or camera.angle and do not use the previous take as base")
+            # only if nothing has succeeded since: a rejection older than the newest take is history
             failed_job = conn.execute(
                 "SELECT j.error FROM jobs j JOIN recipes r ON r.id=j.recipe_id WHERE r.node_id=? AND j.state='failed' "
-                "ORDER BY j.updated_at DESC LIMIT 1", (cut_id,)).fetchone()
+                "AND j.updated_at > ? ORDER BY j.updated_at DESC LIMIT 1", (cut_id, media["created_at"])).fetchone()
             if failed_job and (failed_job["error"] or "").startswith("provider_rejected"):
                 image_refs = [a for a in production["assets"] if a["context"]["values"].get("reference_mode") != "text"]
                 suggest("provider_rejected", failed_job["error"][:200] + ". Set reference_mode=text on the asset whose image the provider refuses "

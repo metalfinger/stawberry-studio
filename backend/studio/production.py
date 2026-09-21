@@ -16,7 +16,7 @@ LINK_FIELDS = {
     "required_props": "prop",
     "continuity_from": "cut",
 }
-CUT_ONLY = {"continuity_from", "continuity.before", "continuity.after", "story_order"}
+CUT_ONLY = {"continuity_from", "continuity.before", "continuity.after", "story_order", "match_frame"}
 
 
 class ProductionRules:
@@ -56,6 +56,10 @@ class ProductionRules:
                     self.target(conn, node, target_id, {kind})
             if "location_id" in values:
                 self.target(conn, node, values["location_id"], {"location"})
+            if values.get("match_frame"):
+                if values["match_frame"] == node["id"]:
+                    raise StudioError("match_frame", "A cut cannot match itself")
+                self.target(conn, node, values["match_frame"], {"cut"})
             for field, value in values.items():
                 validate_field(field, value, node)
             if "story_order" in values and (type(values["story_order"]) is not int or values["story_order"] < 1):
@@ -224,6 +228,11 @@ class ProductionRules:
         if not judge:
             reasons.append("no current judge record")
         score = None
+        if facts:
+            asked, answered = facts["scores"].get("asked", 0), facts["scores"].get("answered", 0)
+            if asked and answered < asked:
+                # a partial answer sheet is the question-level form of a partial pass
+                reasons.append(f"facts record answers {int(answered)} of {int(asked)} questions")
         if facts and judge:
             score = min(facts["scores"].get("min_group", facts["scores"].get("geometric_mean", 0.0)), judge["scores"].get("overall", 0.0))
             if facts["scores"].get("capped"):
@@ -232,14 +241,27 @@ class ProductionRules:
                 reasons.append(f"score {score:.2f} below policy.min_take_score {pol['min_take_score']}")
         if duplicate and any(d["tag"] == "copy_paste" for d in duplicate["discrepancies"]):
             reasons.append("near-identical to a sibling beat")
-        if pol["require_stranger"]:
-            if not stranger:
-                reasons.append("no stranger record")
-            elif facts and abs(stranger["scores"].get("min_group", 0) - facts["scores"].get("min_group", 0)) > 0.25:
-                reasons.append("stranger disagrees with the host by more than 0.25")
+        # an existing second opinion always counts; the policy only decides whether one is required
+        if stranger and facts:
+            gap = abs(stranger["scores"].get("min_group", 0) - facts["scores"].get("min_group", 0))
+            if gap > 0.25:
+                disputed = sorted(
+                    (name for name, value in stranger["scores"].get("groups", {}).items()
+                     if abs(value - facts["scores"].get("groups", {}).get(name, value)) > 0.25),
+                )
+                reasons.append(
+                    f"a second evaluator disagrees by {gap:.2f}"
+                    + (" on " + ", ".join(disputed) if disputed else "")
+                    + "; look again before using this take"
+                )
+            if stranger["scores"].get("min_group", 1.0) < pol["min_take_score"]:
+                reasons.append(f"the second evaluator scores it {stranger['scores']['min_group']:.2f}, below policy.min_take_score")
+        elif pol["require_stranger"] and not stranger:
+            reasons.append("no stranger record")
         return {
             "media_id": media["id"],
-            "evaluated": bool(facts and judge),
+            "evaluated": bool(facts and judge and facts["scores"].get("answered", 0) >= facts["scores"].get("asked", 0)),
+            "second_opinion": stranger["scores"].get("min_group") if stranger else None,
             "score": score,
             "accepted": not reasons,
             "reasons": reasons,

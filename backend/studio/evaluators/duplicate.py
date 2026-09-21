@@ -55,12 +55,21 @@ def compare(studio, media_id: str):
         owner = studio.store.one(conn, "nodes", media["node_id"])
         context = studio.rules.review_context(conn, media)
         candidates = []
+        matched = set()
         if owner["kind"] == "cut":
+            values = studio._context(conn, owner["id"])["values"]
+            if values.get("match_frame"):
+                matched.add(values["match_frame"])
+            for row in conn.execute("SELECT id FROM nodes WHERE project_id=? AND kind='cut'", (owner["project_id"],)):
+                other = studio._context(conn, row["id"])["values"]
+                if other.get("match_frame") == owner["id"]:
+                    matched.add(row["id"])
             for row in conn.execute(
                 "SELECT id,name,active_media_id FROM nodes WHERE parent_id=? AND kind='cut' AND id<>? AND active_media_id IS NOT NULL",
                 (owner["parent_id"], owner["id"]),
             ):
-                candidates.append(("sibling", row["name"], row["active_media_id"]))
+                relation = "match_frame" if row["id"] in matched else "sibling"
+                candidates.append((relation, row["name"], row["active_media_id"]))
         _, references = lineage._recipe_references(conn, media_id)
         for ref in references:
             ref_media = studio.store.one(conn, "media", ref["media_id"])

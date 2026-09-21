@@ -95,6 +95,11 @@ FIELD_SPECS: dict[str, dict] = {
     "sound.sfx": {"type": "text", "kinds": {"cut"}},
     "sound.music": {"type": "text", "kinds": {"cut"}},
     "transition": {"type": "text", "kinds": {"cut"}, "max_len": 120},
+    # the 180-degree rule, declared: which way the subject travels across the frame
+    "screen_direction": {"type": "enum", "kinds": {"scene", "shot", "cut"},
+                         "options": ("left", "right", "toward", "away", "neutral")},
+    # this cut's framing must match another cut's exactly (a match cut); a designed duplicate
+    "match_frame": {"type": "text", "kinds": {"cut"}, "max_len": 64},
     "chain_from_prev": {"type": "enum", "kinds": {"cut"}, "options": ("yes", "no")},
     # assets: identity locks, and which continuity attributes are locked (capped when checked)
     "consistency_tokens": {"type": "token_list", "kinds": ASSETS, "max_items": 6},

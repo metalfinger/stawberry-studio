@@ -307,3 +307,34 @@ def test_autonomous_selection_needs_an_accepted_take_and_evidence_backed_review(
     assert workflow["evaluation_coverage"] == {"evaluated": 1, "selected": 1, "total": 2}
     assert workflow["cuts"][0]["take"]["accepted"] and workflow["cuts"][0]["take_ready"]
     assert "review_contradicted" not in {w["code"] for w in world.studio.readiness(cut["id"])["warnings"]}
+
+
+def test_a_partial_answer_sheet_is_not_an_evaluation(world):
+    change(world.studio, world.project, **{"policy.autonomous": True})
+    media_id = world.media[0]["id"]
+    full = answers(world.studio, media_id)
+    world.studio.evaluate(media_id, evaluation(world.studio, media_id, evidence=full[:2]))
+    world.studio.evaluate(media_id, evaluation(world.studio, media_id, kind="judge"))
+    with world.studio.store.connection() as conn:
+        status = world.studio.rules.take_status(conn, world.studio.store.one(conn, "media", media_id))
+    assert not status["evaluated"] and "answers 2 of" in " ".join(status["reasons"])
+    world.studio.evaluate(media_id, evaluation(world.studio, media_id, evidence=full))
+    with world.studio.store.connection() as conn:
+        assert world.studio.rules.take_status(conn, world.studio.store.one(conn, "media", media_id))["evaluated"]
+
+
+def test_a_second_opinion_counts_even_when_it_is_not_required(world):
+    change(world.studio, world.project, **{"policy.autonomous": True, "policy.min_take_score": 0.5})
+    media_id = world.media[0]["id"]
+    world.studio.evaluate(media_id, evaluation(world.studio, media_id))
+    world.studio.evaluate(media_id, evaluation(world.studio, media_id, kind="judge"))
+    with world.studio.store.connection() as conn:
+        assert world.studio.rules.take_status(conn, world.studio.store.one(conn, "media", media_id))["accepted"]
+    # a blind evaluator that scores the same take far lower stops it, with the policy flag still off
+    world.studio.evaluate(media_id, evaluation(world.studio, media_id, kind="stranger",
+                                               evidence=answers(world.studio, media_id, subject=0.2)))
+    with world.studio.store.connection() as conn:
+        status = world.studio.rules.take_status(conn, world.studio.store.one(conn, "media", media_id))
+    assert not status["accepted"] and status["second_opinion"] is not None
+    assert any("second evaluator disagrees" in r for r in status["reasons"])
+    assert "identity" in " ".join(status["reasons"])
