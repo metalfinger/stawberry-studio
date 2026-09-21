@@ -18,6 +18,16 @@ from backend.studio.store import Store, StudioError
 from scripts.autopilot import approve_within_policy, drive_job
 
 ROLE = {"character": "identity", "location": "location", "prop": "prop"}
+# longest keys first: "medium close" must win over "close"
+FRAMING = {
+    "long wide": "The subject is small in a wide view; the space is most of the frame.",
+    "medium wide": "The subject occupies about a third of the frame height, with the space around them clearly visible.",
+    "medium close": "The subject fills roughly half the frame height; only a narrow band of background remains at the edges.",
+    "full body": "The whole figure is in frame from head to feet, with a margin above and below.",
+    "close": "The subject fills nearly the whole frame edge to edge; the background is a thin strip and little more.",
+    "wide": "The whole space is in frame and the subject, if any, is small within it.",
+    "medium": "The subject occupies about half the frame height.",
+}
 PERFORMANCE = ("expression", "body_language", "gaze", "gesture", "state")
 
 
@@ -41,10 +51,36 @@ def build(studio, cut_id):
     if anchor:
         refs.append(Reference(media_id=anchor, role="style",
                               instruction="the printing language only — copy no content or layout from it"))
+    # A cut that declares where it continues from gets that cut's selected take as its base. This is
+    # the one place a generated image is fed back in, and it is admission-controlled: the reference
+    # deepens the lineage by one, so the depth cap decides whether a scene may chain at all. A scene
+    # whose whole content is a single object transforming is the case that earns a deeper cap; a
+    # scene that merely happens in order is not.
+    # Which frame the visual continues is not always which frame the story continues. In a
+    # transformation, every frame after the first should continue *that* one: chaining each onto
+    # its predecessor deepens the lineage by one per cut and the form drifts a step at a time,
+    # while chaining all of them onto the frame that established the form keeps them one step from
+    # it. `base_from` says so; without it the story chain is used.
+    for previous in values.get("base_from") or values.get("continuity_from") or []:
+        with studio.store.connection() as conn:
+            earlier = studio.store.one(conn, "nodes", previous)
+        if earlier["active_media_id"]:
+            refs.append(Reference(media_id=earlier["active_media_id"], role="base",
+                                  instruction=f"the frame immediately before this one ('{earlier['name']}'): the same "
+                                              "objects in the same places, seen a moment later. Continue it; do not "
+                                              "restage it"))
 
-    framing = " ".join(str(values.get(k) or "") for k in ("camera.framing", "camera.angle")).strip()
+    # A shot size is a word to a director and nothing at all to a generator: "close" came back
+    # three times as a medium, and two beats declared one size apart came back as the same
+    # picture. Say how much of the frame the subject is to occupy.
+    framing = str(values.get("camera.framing") or "").strip()
+    angle = str(values.get("camera.angle") or "").strip()
+    fills = next((how for key, how in FRAMING.items() if key in framing.lower()), "")
     action = str(values.get("action") or "").strip() or node["notes"].strip()
-    out.append(f"A single storyboard frame, {framing}. {action}")
+    opening = f"A single storyboard frame, {framing}{', ' + angle if angle else ''}."
+    if fills:
+        opening += f" {fills}"
+    out.append(f"{opening} {action}")
 
     out += _lines("PERFORMANCE", [str(values.get(f"performance.{p}") or "") for p in PERFORMANCE], join="; ")
 

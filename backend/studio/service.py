@@ -794,7 +794,20 @@ class Studio:
             pol = self.rules.policy(conn, cut_id)
             row = conn.execute("SELECT * FROM media WHERE node_id=? ORDER BY created_at DESC LIMIT 1", (cut_id,)).fetchone()
             used = self.rules.takes_used(conn, cut_id)
-            base = {"cut_id": cut_id, "takes_used": used, "max_takes": pol["max_takes_per_cut"], "can_retry": used < pol["max_takes_per_cut"]}
+            # The budget counts takes that asked for the same thing, so what decides whether a
+            # retry is possible is how many share the *latest* prompt — not how many exist. A cut
+            # whose story has been rewritten has spent nothing against the frame it now describes.
+            latest = conn.execute(
+                "SELECT r.spec AS spec FROM media m JOIN jobs j ON j.id=m.job_id JOIN recipes r ON r.id=j.recipe_id "
+                "WHERE m.node_id=? ORDER BY m.created_at DESC LIMIT 1", (cut_id,)).fetchone()
+            spent = used
+            if latest:
+                try:
+                    spent = self.rules.takes_used(conn, cut_id, json.loads(latest["spec"]).get("prompt") or "")
+                except (TypeError, ValueError):
+                    spent = used
+            base = {"cut_id": cut_id, "takes_used": used, "takes_on_this_prompt": spent,
+                    "max_takes": pol["max_takes_per_cut"], "can_retry": spent < pol["max_takes_per_cut"]}
             if not row:
                 rejected = conn.execute(
                     "SELECT j.error FROM jobs j JOIN recipes r ON r.id=j.recipe_id WHERE r.node_id=? AND j.state='failed' "
@@ -978,8 +991,8 @@ class Studio:
 
             GROUPS = {"cast": "identity", "pose": "identity", "hands": "identity", "detail": "identity",
                       "wardrobe": "identity", "subject": "identity", "features": "identity", "matches_sheet": "identity",
-                      "feet": "identity",
-                      "location": "scope", "prop": "scope", "state": "state",
+                      "feet": "identity", "continues": "state",
+                      "location": "scope", "prop": "scope", "undeclared": "scope", "state": "state",
                       "action": "action", "beat": "action",
                       "style": "style", "style_token": "style", "palette": "style", "lighting_rules": "style", "anchor": "style",
                       "excluded": "style"}
@@ -1084,6 +1097,19 @@ class Studio:
                     locked = fact["attribute"] in (self._context(conn, fact["asset_id"])["values"].get("locks") or [])
                     ask(f"state:{key}", f"Is {label(fact['asset_id'])}'s {attribute} {label(fact['value'])}?",
                         asset_id=fact["asset_id"], weight=3 if locked else 2, cap=locked)
+                # Every other question asks whether what was declared is there. This asks the
+                # opposite, and it is the only one that can catch what the frame invented: a
+                # second figure, a pair of hands, a tool, an animal, a doorway that is not in the
+                # story. A verb can summon an agent the production never cast — "the sculpturing
+                # goes on" produced a sculptor with a chisel — and nothing else in this rubric
+                # would have noticed, because everything declared was also present.
+                named = ", ".join(sorted(a["name"] for a in production["assets"])) or "nothing"
+                ask("undeclared",
+                    f"Is everything in this frame declared? The cut names {named}. Is there no other person, "
+                    "face, hand, limb, creature, tool or significant object that the story has not cast?",
+                    weight=3, cap=True,
+                    look_at="Name every object and every body part in the frame, then strike off the declared ones; "
+                            "whatever is left over is the answer")
                 action = str(values.get("action") or "").strip() or node["notes"].strip()
                 if action:
                     ask("action", f"Does the frame show this happening: {action}?", weight=3)
@@ -1137,6 +1163,15 @@ class Studio:
             # whether it drew the same object. A location sheet can satisfy every one of its own
             # details and still contain a second, different machine where the prop should be, and
             # nothing else in this rubric would notice.
+            # The one place a generated image is fed back in is a chained frame, and until now
+            # nothing asked whether it had continued the frame it was built from or quietly
+            # restaged it. A sheet match cannot cover this: the reference is a cut, not an asset.
+            for owner_id, owner_name in self._referenced_cuts(conn, media_id, node_id):
+                ask(f"continues:{owner_id}",
+                    f"Does this frame continue '{owner_name}', the frame it was built from — the same objects "
+                    f"at the same size in the same places, a moment later, rather than restaged or redrawn?",
+                    asset_id=None, weight=3, cap=True,
+                    look_at="Put the two frames side by side and check the subject's size and position first")
             for owner_id, owner_name in self._referenced_assets(conn, media_id, node_id):
                 ask(f"matches_sheet:{owner_id}",
                     f"Does {owner_name} as it appears here match its own reference sheet — the same "
@@ -1147,8 +1182,16 @@ class Studio:
                     "scoring": "engine computes per-group weighted geometric means from your probabilities; "
                                "min_group is the headline; any capped question below 0.5, or the action group below 0.5, caps the record at 0.4"}
 
+    def _referenced_cuts(self, conn, media_id, node_id):
+        """Cuts whose selected take this media was generated from."""
+        return self._referenced(conn, media_id, node_id, {"cut"})
+
     def _referenced_assets(self, conn, media_id, node_id):
-        """Assets whose own sheet was a reference for this media, newest recipe wins."""
+        """Assets whose own sheet was a reference for this media."""
+        return self._referenced(conn, media_id, node_id, ASSET_KINDS)
+
+    def _referenced(self, conn, media_id, node_id, kinds):
+        """Nodes of the given kinds whose media this one was generated from."""
         if not media_id:
             return []
         media = self.store.one(conn, "media", media_id)
@@ -1162,7 +1205,7 @@ class Studio:
                 "SELECT n.id,n.name,n.kind FROM media m JOIN nodes n ON n.id=m.node_id WHERE m.id=?",
                 (ref.get("media_id"),),
             ).fetchone()
-            if row and row["kind"] in ASSET_KINDS and row["id"] != node_id and row["id"] not in seen:
+            if row and row["kind"] in kinds and row["id"] != node_id and row["id"] not in seen:
                 seen.add(row["id"])
                 out.append((row["id"], row["name"]))
         return out

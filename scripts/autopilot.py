@@ -139,14 +139,18 @@ def step(studio, project_id, only=None, max_ticks=120, fake=False, clock=time.ti
             report.append(entry)
             continue
         # 2. the latest take: duplicate check, then the gate
+        # The duplicate check can itself produce a reason to refuse a take, so it has to finish
+        # before the status this loop acts on is read. Reading first meant deciding a take was
+        # accepted and then having `select` refuse it — a crash, not a judgement.
         with studio.store.connection() as conn:
-            status = studio.rules.take_status(conn, media, pol)
             has_duplicate = studio.rules.current_evaluation(conn, media, "duplicate") is not None
         if not has_duplicate:
             try:
                 evaluate_duplicate(studio, media["id"])
             except StudioError as error:
                 log.append({"media": media["id"], "duplicate_check": error.code})
+        with studio.store.connection() as conn:
+            status = studio.rules.take_status(conn, media, pol)
         if not status["evaluated"]:
             entry["stage"] = "awaiting_evaluation"
             facts = studio.facts(cut["id"], media["id"])  # media-scoped: the sheet-match questions exist only here

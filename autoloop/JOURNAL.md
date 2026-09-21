@@ -207,3 +207,63 @@ tasks. One new failure class. 161 tests, Ruff clean.
 
 **Next.** The sculpturing chain — the block, the first channels, the angles, the horse's head — and
 a blind evaluator on one of the six accepted frames, since a pass is where a generous evaluator hides.
+
+## Iteration 5 — 22 Sep, 03:50 IST — the frame invented a sculptor
+
+**Credits** 298.1 → 293.1 (5 spent: the block, the channels, three takes of the angles). Hard stop 200.
+
+**Where the story stands.** Nine of eleven cuts accepted and selected. The sculpturing chain is
+three frames in: the block in close, the first meltwater channels, and the planes falling away with
+a long form legible inside the ice. Two cuts left — the horse's head and the closing wide.
+
+**A verb cast an actor nobody hired.** "Angles round away" came back with a pair of arms and hands
+holding a chisel, carving a second mass of ice in her lap. Every declared fact in that frame was
+present and correct: she was there, the block was there, the room was right, the style held. The
+cause was one word in the cut's own `action` — "the sculpturing goes on rapidly" reads as something
+a person does, and the world logic saying the melting carves itself was three paragraphs further
+down the prompt and lost to the verb.
+
+Nothing in the rubric could have caught it. Every question asks whether a declared thing is
+present; not one asks whether anything *undeclared* is. So there is now a capped question that runs
+the other way: name every object and every body part in the frame, strike off the ones the cut
+casts, and answer on what is left. It scored 0.05 on that frame — two forearms, two hands, a chisel
+and a second block of ice — and the take was rejected at 0.22. Rewriting the action without an
+agent removed the sculptor entirely; the retake scores 0.82. Eight earlier frames were carried onto
+the new question with `reanswer.py` and all eight answered it cleanly, which is the right result:
+the check earns its keep on the one frame that needed it, not by finding faults everywhere.
+
+**Chaining, and where it is allowed.** The sculpturing is one object transforming across five
+frames, so each cut must continue the last — the only place in this harness where a generated image
+is fed back in. Two things had to be true for that to be safe. First, the scene declares a deeper
+`policy.reference_depth_cap`, because the default of two forbids chaining at all and here chaining
+*is* the content; a scene that merely happens in order does not get that. Second, `base_from`:
+which frame the visual continues need not be which frame the story continues. Chaining each cut
+onto its predecessor deepens the lineage by one per cut and lets the form drift a step at a time,
+so every frame after the first now continues *the frame that established the block* instead. Depth
+is flat at four across the whole scene rather than climbing to six.
+
+And a chained frame is now asked whether it actually continued: `continues:<cut>`, capped, weight
+three. A sheet match cannot cover it, because the reference is a cut and not an asset.
+
+**Measuring corrected me.** I was about to reject the channels frame for a block that had visibly
+grown. Measured, it is 402 by 388 pixels against 404 by 372, in the same place within twenty
+pixels. The drift was in my eye. The answer records the numbers so the next reader can check it
+rather than trust it.
+
+**Two bugs, both mine.** The autopilot read a take's status *before* running the duplicate check
+that can add a reason to refuse it, so it decided a take was accepted and then crashed when `select`
+disagreed. And `repair`'s `can_retry` still counted every take rather than the ones sharing the
+latest prompt, so a cut whose story had been rewritten reported its budget as spent on a frame it
+no longer describes.
+
+**A shot size is a word to a director and nothing to a generator.** "Close" came back as a medium
+three times, and two beats declared one size apart came back as near-identical pictures — the
+duplicate check flagged the pair. The prompt builder now expands the declared framing into how much
+of the frame the subject is to occupy, and the retake pushed in.
+
+**Harness deltas.** The `undeclared` question, `continues`, `base_from`, scene-level depth caps,
+framing expansion, the autopilot ordering fix, prompt-scoped `can_retry`. One new failure class —
+the summoned agent. 161 tests, Ruff clean.
+
+**Next.** The horse's head and the closing wide, which carries a `match_frame` back to the opening;
+then the blind evaluator's report on an accepted frame.

@@ -4,8 +4,8 @@
     "start_credits": 317,
     "ceiling_spend": 120,
     "hard_stop_balance": 200,
-    "last_balance": 298.1,
-    "checked_at": "2026-09-22T02:40:00+05:30"
+    "last_balance": 293.1,
+    "checked_at": "2026-09-22T03:50:00+05:30"
   },
   "stories": [
     {
@@ -19,7 +19,7 @@
         "transformation across frames"
       ],
       "project_id": "5b0eccc3-70a6-491b-b91d-13b54474d022",
-      "stage": "cuts_6_of_11_accepted"
+      "stage": "cuts_9_of_11_accepted"
     },
     {
       "slug": "effigy",
@@ -163,7 +163,43 @@
       "code": "evaluated_counts_unseen",
       "class": "bug",
       "change": "not_visible counted toward coverage in the evaluated flag; it looped forever without it"
+    },
+    {
+      "iteration": 5,
+      "code": "undeclared",
+      "class": "the summoned agent",
+      "change": "one capped question asked the other way round: what is in the frame that the cut never cast"
+    },
+    {
+      "iteration": 5,
+      "code": "continues",
+      "class": "compounding drift",
+      "change": "a chained frame is asked whether it continued the frame it was built from"
+    },
+    {
+      "iteration": 5,
+      "code": "base_from",
+      "class": "compounding drift",
+      "change": "chain every frame of a transformation onto the one that established the form, not onto its predecessor"
+    },
+    {
+      "iteration": 5,
+      "code": "framing_expansion",
+      "class": "the degenerate solution",
+      "change": "a declared shot size is expanded into how much of the frame the subject fills"
+    },
+    {
+      "iteration": 5,
+      "code": "autopilot_status_order",
+      "class": "bug",
+      "change": "the duplicate check runs before the status the loop acts on is read"
+    },
+    {
+      "iteration": 5,
+      "code": "can_retry_by_prompt",
+      "class": "bug",
+      "change": "can_retry counts takes sharing the latest prompt, matching the budget rule"
     }
   ],
-  "iterations": 4
+  "iterations": 5
 }
