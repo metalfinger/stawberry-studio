@@ -622,6 +622,144 @@ class Studio:
             row = conn.execute("SELECT * FROM evaluations WHERE media_id=? ORDER BY sequence DESC LIMIT 1", (media_id,)).fetchone()
             return self._evaluation(row)
 
+    CONTINUITY_LANGUAGE = (
+        "still ", "same ", "continues", "continuing", "continue", "keeps ", "keep ", "remains", "remain ",
+        "as before", "from the previous", "moments later", "a moment later", "the next instant", "without cut",
+        "no cut", "match cut", "carries on", "follows through", "right after",
+    )
+
+    def _previous_cut(self, conn, cut):
+        """Editorial predecessor: the prior sibling, else the last cut of the prior shot in the scene."""
+        prior = conn.execute(
+            "SELECT * FROM nodes WHERE parent_id=? AND kind='cut' AND position<? ORDER BY position DESC LIMIT 1",
+            (cut["parent_id"], cut["position"]),
+        ).fetchone()
+        if prior:
+            return dict(prior)
+        shot = self.store.one(conn, "nodes", cut["parent_id"])
+        prior_shot = conn.execute(
+            "SELECT id FROM nodes WHERE parent_id=? AND kind='shot' AND position<? ORDER BY position DESC LIMIT 1",
+            (shot["parent_id"], shot["position"]),
+        ).fetchone()
+        if not prior_shot:
+            return None
+        last = conn.execute(
+            "SELECT * FROM nodes WHERE parent_id=? AND kind='cut' ORDER BY position DESC LIMIT 1", (prior_shot["id"],)
+        ).fetchone()
+        return dict(last) if last else None
+
+    def candidates(self, cut_id):
+        """Every reusable image in the project, scored against this cut. Deterministic; the host chooses."""
+        with self.store.connection() as conn:
+            cut = self.store.one(conn, "nodes", cut_id)
+            if cut["kind"] != "cut":
+                raise StudioError("candidates_scope", "Candidates are computed for cuts")
+            ctx = self._context(conn, cut_id)
+            values = ctx["values"]
+            production = self.rules.resolve(conn, cut_id)
+            scope = production["scope"]
+            scoped = set(self.rules.asset_ids(scope))
+            continuity = production["continuity"] or {"incoming": {}, "conflicts": [], "sources": []}
+            conflicted = {c["field"] for c in continuity["conflicts"]}
+            expected_states = {
+                key: candidates[0]["value"]
+                for key, candidates in continuity["incoming"].items()
+                if key not in conflicted and candidates
+            }
+            linked = set(values.get("continuity_from", [])) | {s["node_id"] for s in continuity["sources"]}
+            cap = values.get("policy.reference_depth_cap", lineage.DEFAULT_DEPTH_CAP)
+            depth_cache = {}
+            out = []
+            rows = conn.execute(
+                "SELECT m.*, n.kind AS owner_kind, n.name AS owner_name, n.parent_id AS owner_parent, "
+                "n.active_media_id AS owner_active FROM media m JOIN nodes n ON n.id=m.node_id "
+                "WHERE n.project_id=? AND m.node_id<>? ORDER BY m.created_at DESC",
+                (cut["project_id"], cut_id),
+            ).fetchall()
+            for row in rows:
+                media = dict(row)
+                review = self.rules.review(conn, media)
+                if review["status"] != "approved" or review["stale"]:
+                    continue
+                owner_id, owner_kind = media["node_id"], media["owner_kind"]
+                depth = lineage.depth(conn, media["id"], depth_cache)
+                depicted = set(review["depicted_assets"])
+                item = {
+                    "media_id": media["id"],
+                    "label": media["label"],
+                    "owner": {"id": owner_id, "kind": owner_kind, "name": media["owner_name"]},
+                    "selected": media["owner_active"] == media["id"],
+                    "partial": not review["complete"],
+                    "depth": depth,
+                    "trust": round(1 / (1 + depth), 3),
+                    "over_cap": depth + 1 > cap,
+                    "depicted_assets": sorted(depicted),
+                    "roles_possible": [],
+                    "relevance": {
+                        "in_scope_asset": owner_id in scoped,
+                        "shared_cast": len(depicted & set(scope["characters"])),
+                        "same_location": False,
+                        "same_shot": False,
+                        "continuity_linked": owner_id in linked,
+                    },
+                    "state_flags": [],
+                    "covers_requirements": [],
+                    "evaluations": self._latest_evaluations(conn, media["id"]),
+                }
+                if owner_kind in ASSET_KINDS:
+                    item["roles_possible"] = [{"character": "identity", "location": "location", "prop": "prop"}[owner_kind]]
+                    item["relevance"]["same_location"] = owner_id == scope["location"]
+                    item["covers_requirements"] = [
+                        r["id"] for r in self._requirements(conn, owner_id) if media["id"] in r["covered_by"]
+                    ]
+                elif owner_kind == "cut":
+                    item["roles_possible"] = ["base", "composition", "pose", "lighting", "style"]
+                    owner_values = self._context(conn, owner_id)["values"]
+                    item["relevance"]["same_location"] = bool(scope["location"]) and owner_values.get("location_id") == scope["location"]
+                    item["relevance"]["same_shot"] = media["owner_parent"] == cut["parent_id"]
+                    outgoing = self.rules.continuity(conn, owner_id)["outgoing"]
+                    for key, expected in expected_states.items():
+                        found = outgoing.get(key)
+                        if found and encoded(found[0]["value"]) != encoded(expected):
+                            item["state_flags"].append(
+                                {"tag": "state_mismatch", "field": key, "candidate_value": found[0]["value"], "expected_value": expected}
+                            )
+                else:
+                    continue
+                item["relevance_score"] = (
+                    3 * item["relevance"]["in_scope_asset"]
+                    + item["relevance"]["shared_cast"]
+                    + 2 * item["relevance"]["same_location"]
+                    + item["relevance"]["same_shot"]
+                    + 2 * item["relevance"]["continuity_linked"]
+                    - 2 * len(item["state_flags"])
+                )
+                out.append(item)
+            out.sort(key=lambda i: (-i["relevance_score"], -i["trust"], i["label"]))
+            return {"cut_id": cut_id, "depth_cap": cap, "chain": self._chain_recommendation(conn, cut, values, cap), "candidates": out}
+
+    def _chain_recommendation(self, conn, cut, values, cap):
+        previous = self._previous_cut(conn, cut)
+        if not previous:
+            return {"previous_cut": None, "chain": False, "reason": "no previous cut"}
+        result = {"previous_cut": {"id": previous["id"], "name": previous["name"]}, "media_id": previous["active_media_id"]}
+        explicit = values.get("chain_from_prev")
+        if explicit in ("yes", "no"):
+            return {**result, "chain": explicit == "yes", "reason": "explicit chain_from_prev"}
+        if previous["active_media_id"]:
+            depth = lineage.depth(conn, previous["active_media_id"])
+            if depth + 1 > cap:
+                return {**result, "chain": False, "reason": f"previous take is depth {depth}; chaining would pass the cap of {cap}"}
+        else:
+            return {**result, "chain": False, "reason": "previous cut has no selected take"}
+        if previous["parent_id"] == cut["parent_id"]:
+            return {**result, "chain": True, "reason": "same shot"}
+        text = " ".join(str(values.get(k, "")) for k in ("action", "transition")).lower() + " " + cut["notes"].lower()
+        hit = next((token for token in self.CONTINUITY_LANGUAGE if token in text), None)
+        if hit:
+            return {**result, "chain": True, "reason": f"continuity language: '{hit.strip()}'"}
+        return {**result, "chain": False, "reason": "new shot, no continuity language"}
+
     def facts(self, node_id):
         """The declared facts of a cut or asset as answerable questions. Deterministic; no model call.
 

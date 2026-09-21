@@ -160,6 +160,14 @@ facts and user feedback on prior takes.
    edit base (if any), visible character identity/wardrobe, exact location,
    hero props, then pose/composition/lighting/style evidence. This is reasoning,
    not a hardcoded global cap.
+   Start from `candidates CUT_ID`: every approved image in the project scored against
+   this cut — in-scope asset sheets, shared cast, same location, same shot, continuity
+   links, depth and trust, requirement coverage, latest evaluations, and
+   `state_flags` where a take's leaving state contradicts this cut's entering state.
+   The list is ranked but the choice is yours; fill the slots by relevance × trust ×
+   *diversity* against what you have already chosen, so four near-identical
+   front-facing frames never fill the stack. Its `chain` field applies the chaining
+   rules below to the editorial predecessor.
    Read each candidate's `depth` (on every media row, and `lineage MEDIA_ID` for the
    full tree). Depth 0 is a sheet or an import; depth n was generated from depth n-1
    images. Error compounds with depth — prefer the shallowest image that carries what

@@ -43,7 +43,7 @@ READS = {
     "projects": "projects", "project": "project", "inspect": "inspect",
     "context": "context", "workflow": "workflow", "readiness": "readiness",
     "recipe": "recipe", "job": "job", "media": "media", "lineage": "lineage",
-    "evaluations": "evaluations", "facts": "facts",
+    "evaluations": "evaluations", "facts": "facts", "candidates": "candidates",
 }
 WRITES = {
     "create": ("create_node", models.NodeCreate, False),
