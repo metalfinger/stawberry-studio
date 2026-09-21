@@ -97,6 +97,8 @@ def main():
     p = sub.add_parser("feedback")
     p.add_argument("media_id")
     p.add_argument("text")
+    p = sub.add_parser("evaluate-local", help="Record deterministic local scores for one image; no model calls")
+    p.add_argument("media_id")
     p = sub.add_parser("worker")
     p.add_argument("--once", action="store_true")
     p.add_argument(
@@ -222,6 +224,10 @@ def main():
             result = studio.select(args.node_id, args.media_id, args.revision)
         elif args.command == "feedback":
             result = studio.feedback(args.media_id, args.text)
+        elif args.command == "evaluate-local":
+            from backend.studio.evaluators.duplicate import evaluate_duplicate
+
+            result = evaluate_duplicate(studio, args.media_id)
         elif args.command == "demo":
             from backend.studio.demo import seed_demo
 

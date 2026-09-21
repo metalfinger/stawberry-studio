@@ -52,11 +52,21 @@ Higgsfield must be authenticated separately in the host. Its connector submits
 images; Strawberry stores the frozen recipe and reconciles the receipt. The
 MCP server does not install, authenticate, or impersonate that connector.
 
+## Evaluations
+
+The engine records evaluations as observations beside human review — never as review
+status. `call facts` turns a cut's declared facts into questions the host answers with
+its own vision; `call evaluate` records the answers, a judge score or a pairwise choice;
+`evaluate-local MEDIA_ID` records the deterministic copy-paste check (perceptual hashes
+against sibling cuts and the image's own references; Pillow only, no model). Scorers
+that need torch — subject-cropped identity similarity, cross-panel scene diversity —
+are planned as an optional extra and are not installed by the base runtime.
+
 ## Current limits
 
 The portable transport and operating instructions are implemented. A real
-Claude Code session handoff has not yet been exercised. Autonomous visual
-evaluation, budget-enforced run policies and automated repair remain pending.
+Claude Code session handoff has not yet been exercised. Budget-enforced run policies and automated repair remain pending; evaluation is
+recorded, not enforced.
 Do not use `scripts/auto_storyboard_run.sh` or `finalize_connector_cut.sh` for
 new projects: they are historical dream-run helpers with story-specific logic
 and unverified depiction assumptions.
