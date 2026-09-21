@@ -242,11 +242,121 @@ cannot, and it runs on a CPU worker.
 - their v4 leaderboard row for NanoBanana-Pro, which is Strawberry's own model — a free
   published baseline for where it drifts.
 
+## 4b. Four more benchmarks, same treatment
+
+### Story2Board — Rich Storyboard Benchmark (FLUX.1-dev, training-free)
+
+**How it works.** 100 original stories, each with a 7-panel breakdown. Three metrics:
+character consistency via **DreamSim** (panel-level), prompt alignment via **VQAScore**, and
+the one that matters — **Scene Diversity**: Grounding DINO finds the subject per panel,
+normalised bbox variance captures framing / position / scale; for humans, **ViTPose** adds 17
+keypoints and per-keypoint variance across panels; score = ½(bbox + pose). Their own
+sentence on why: *"The Flux baseline attains strong consistency scores by rendering nearly
+identical characters across panels, but lacks sensitivity to prompt-specific content."*
+Consistency methods are **Latent Panel Anchoring** (a shared reference latent across
+panels — the training-free cousin of Strawberry's identity anchor) and RAVM (attention
+value mixing, model-internal, unreachable through an API).
+
+**Runnable on ours:** the metric is, the method isn't. Grounding DINO + ViTPose run on CPU
+in seconds per panel. The benchmark stories themselves are for comparing *generators*,
+not productions.
+
+**Steal:** Scene Diversity, verbatim. It is the copy-paste guard the pipeline needs, it
+works on props and stylized characters (bbox does not need a face), and pairing it with
+identity similarity is the single chart that says "consistent because it copy-pasted".
+Sibling cuts of one shot are exactly where it bites.
+
+### GEdit-Bench (Step1X-Edit) and VIEScore
+
+**How it works.** 11 categories — `background_change, color_alter, material_alter,
+motion_change, ps_human, style_change, subject-add, subject-remove, subject-replace,
+text_change, tone_transfer` — real user instructions. Scoring is **VIEScore**: judge
+(GPT-4o or Qwen2.5-VL-72B) sees source + edited image at 512², answers two prompts on 0–10 —
+**Semantic Consistency** (edit followed *and* untouched content preserved) and **Perceptual
+Quality** (naturalness, artifacts) — each as the *minimum* of its sub-scores, and
+**Overall = √(SC × PQ)**. Weakest link wins, then geometric mean. The v2 paper adds a
+pairwise judge (PVC-Judge) because pointwise 0–10 aligns worse with humans than "which of
+these two is better".
+
+**Runnable on ours:** yes — `run_gedit_score.py --edited_images_dir …` over a
+`results/{method}/fullset/{task}/{en}/key.png` layout; needs a judge API key, no GPU.
+
+**Steal:** the two-prompt split and the geometric-mean Overall. `vision_critic.py` already
+does weakest-axis; VIEScore is the published, human-validated version of the same
+instinct. And the categories are a ready taxonomy for *what kind of edit* a cut recipe is —
+a cut generated from a previous cut with a costume change is `subject-replace` +
+`motion_change`, and the judge prompt should know that. Pairwise beats pointwise: when the
+host has two takes for a cut, ask "which" not "how good".
+
+### GenEval 2 (Meta) and Soft-TIFA
+
+**How it works.** 800 prompts built from **atoms** — objects, attributes, relations, counts
+— at 3–10 atoms each, with a pre-written VQA pair per atom in `geneval2_data.jsonl`.
+**Soft-TIFA** asks a VQA model each question and takes the probability of the right
+answer: arithmetic mean = atom-level, **geometric mean = prompt-level** (one failed atom
+sinks the prompt). The finding: models score high per atom and low per prompt — the
+individual elements land and the *conjunction* fails. Old GenEval had drifted up to 17.7%
+from human judgment; Soft-TIFA drifts less because it scores probabilities, not verdicts.
+
+**Runnable on ours:** `evaluation.py --benchmark_data … --image_filepath_data … --method
+soft_tifa_gm`, a JSON of prompt → image path, `pip install torch transformers`. Trivially.
+
+**Steal — the most direct of the four.** A Strawberry cut *is* an atom list already:
+`visible_cast` (each a presence atom), `required_props` (each an atom), `location_id`
+(a setting atom), `continuity.after` states (each an attribute atom: "is the jacket wet"),
+and the beat's action. Generate one VQA question per declared fact, score with Soft-TIFA,
+take the geometric mean. That is a **prompt-level "did every declared fact land"** number
+that comes straight from the typed graph, needs no rubric writing, and by construction
+answers ImagenWorld's complaint that VLM judges cannot attribute errors — because each
+question *is* an attribution. This becomes the `evidence` field of the evaluator record.
+
+### ImagenWorld (ICLR 2026)
+
+**How it works.** Six tasks (T2I, single-ref gen, multi-ref gen, T2I edit, single-ref
+edit, multi-ref edit) × six domains (artworks, photoreal, information graphics, textual
+graphics, computer graphics, screenshots). ~20K human annotations that are **tags, not
+scalars**: object-level and segment-level failures — instruction-following problems,
+numerical inconsistencies, segment/labeling issues, "generated a new image instead of
+editing", plot/chart errors, unreadable text. VLM judges reach Kendall 0.79 against human
+*ranking* but cannot do the fine-grained attribution the tags do.
+
+**Runnable on ours:** the taxonomy is described, the annotation tool is not released in the
+README. It is a finding, not a harness.
+
+**Steal:** the shape of the record. `discrepancies (JSON)` in the evaluator record should be
+a list of *tagged, localised* failures — `{tag, asset_id, region}` — never a number alone.
+And the findings set expectations: editing is harder than generation, local edits hardest,
+multi-reference hardest of all — which is precisely Strawberry's mode every time it
+generates a cut from a base + refs. Expect the cut gate to fail more than the sheet gate;
+that is the model, not the pipeline.
+
+### One playground
+
+All four plus ViStoryBench, side by side:
+
+| | Measures | Needs | Runs on stylized / props | Take for Strawberry |
+|---|---|---|---|---|
+| ViStoryBench | face identity, style, copy-paste, prompt align | 15 GB weights, big GPU | no (ArcFace) | offline audit; OOCM; story.json |
+| Story2Board | **scene diversity**, DreamSim, VQAScore | Grounding DINO + ViTPose, CPU | yes | the collapse guard, verbatim |
+| GEdit / VIEScore | edit fidelity + quality, √(SC·PQ) | judge API | yes | two-prompt judge; pairwise for take choice |
+| GenEval 2 / Soft-TIFA | per-atom VQA, geometric mean | small VQA model | yes | **declared facts → questions**; the evidence field |
+| ImagenWorld | tagged, localised failures | humans | — | discrepancies as tags, not scores |
+
+So the in-house evaluator is not one metric; it is a **composition** the engine already has
+the inputs for: Soft-TIFA over the cut's declared facts (did it land), VIEScore-style
+weakest-axis judge (is it good), MaSC on the cropped subject (is it the same one), Scene
+Diversity across siblings (or did it just copy), all written as tagged discrepancies. Each
+part is public, human-validated and cheap. What is new is only that the questions come
+from the production graph instead of a benchmark file — which is the whole reason the
+graph exists.
+
 ## 5. Build order
 
 1. Depth query + surface in `inspect` / `context` (3.1). Days, no schema.
 2. Evaluator records table + promotion rule as a readiness warning (3.2).
-3. Critic worker with data-driven rubric, cropped similarity, sibling variance (3.3).
+3. Critic worker (3.3), composed per 4b: Soft-TIFA over declared facts, VIEScore-style
+   judge, MaSC on the cropped subject, Story2Board Scene Diversity across siblings,
+   discrepancies as tags.
 4. Nine O'Clock as fixture; run the ref-count and ref-order experiments (4). Export it to
    ViStoryBench layout once and run the offline audit (4a).
 5. Beat fields (3.4) and named views + state-aware resolver (3.5).
@@ -260,4 +370,4 @@ Market and tools: [Higgsfield — consistent characters](https://higgsfield.ai/b
 
 Agentic systems: [OpenMontage](https://github.com/nguyenquanvan/OpenMontage) · [ViMax](https://github.com/hkuds/vimax) · [Movie-Agent](https://github.com/YidanPan/Movie-Agent) · [MUSE](https://arxiv.org/pdf/2602.03028) · [LogiStory](https://arxiv.org/pdf/2603.28082)
 
-Evals and papers: [ViStoryBench (CVPR 2026)](https://github.com/vistorybench/vistorybench) · [ViStoryBench leaderboard](https://vistorybench.github.io/) · [ViStoryBench arXiv](https://arxiv.org/abs/2505.24862) · [SCHEMA / Iterative Generative Drift](https://arxiv.org/pdf/2602.18903) · [UniCustom multi-reference](https://arxiv.org/pdf/2605.12088) · [LCG long-context consistency](https://arxiv.org/pdf/2606.26171) · [ReMix consistent characters](https://arxiv.org/pdf/2510.10156) · [Visual-Aware CoT](https://arxiv.org/pdf/2512.19686)
+Evals and papers: [Story2Board](https://github.com/daviddinkevich/Story2Board) · [Story2Board arXiv](https://arxiv.org/abs/2508.09983) · [GEdit-Bench / Step1X-Edit](https://github.com/stepfun-ai/Step1X-Edit) · [GenEval 2](https://github.com/facebookresearch/GenEval2) · [ImagenWorld](https://tiger-ai-lab.github.io/ImagenWorld/) · [ImagenWorld repo](https://github.com/TIGER-AI-Lab/ImagenWorld) · [ViStoryBench (CVPR 2026)](https://github.com/vistorybench/vistorybench) · [ViStoryBench leaderboard](https://vistorybench.github.io/) · [ViStoryBench arXiv](https://arxiv.org/abs/2505.24862) · [SCHEMA / Iterative Generative Drift](https://arxiv.org/pdf/2602.18903) · [UniCustom multi-reference](https://arxiv.org/pdf/2605.12088) · [LCG long-context consistency](https://arxiv.org/pdf/2606.26171) · [ReMix consistent characters](https://arxiv.org/pdf/2510.10156) · [Visual-Aware CoT](https://arxiv.org/pdf/2512.19686)
