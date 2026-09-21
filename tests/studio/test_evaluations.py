@@ -36,7 +36,7 @@ def change(studio, node, **fields):
     )
 
 
-def take(studio, node, path, subjects=None):
+def take(studio, node, path, subjects=None, select=True):
     media = studio.import_media(node["id"], path, node["name"], metadata={"fake": True})
     studio.review_media(
         media["id"],
@@ -48,8 +48,31 @@ def take(studio, node, path, subjects=None):
             depicted_assets=subjects or [],
         ),
     )
-    studio.select(node["id"], media["id"], studio.inspect(node["id"])["node"]["revision"])
+    if select:
+        studio.select(node["id"], media["id"], studio.inspect(node["id"])["node"]["revision"])
     return media
+
+
+def answers(studio, media_id, probability=0.95, **per_question):
+    """Evidence for every current question of the media's owner, at one probability unless overridden."""
+    owner = studio.media(media_id)["media"]["node_id"]
+    out = []
+    for q in studio.facts(owner)["questions"]:
+        p = per_question.get(q["id"], per_question.get(q["id"].split(":")[0], probability))
+        out.append(Evidence(question=q["question"], answer="yes" if p >= 0.5 else "no", probability=p,
+                            asset_id=q["asset_id"], question_id=q["id"], region="crop of the subject" if q["asset_id"] else "whole frame"))
+    return out
+
+
+def refresh(studio, media):
+    """Carry approved reviews forward after a definition change (the documented staleness consequence)."""
+    for item in media:
+        detail = studio.media(item["id"])
+        review = detail["media"]["review"]
+        if review["status"] == "approved" and review["stale"]:
+            studio.review_media(item["id"], MediaReview(
+                expected_revision=review["revision"], expected_context=detail["review_context"], status="approved",
+                user_decision="carried forward", depicted_assets=review["depicted_assets"], requirement_ids=review["requirement_ids"]))
 
 
 def evaluation(studio, media_id, kind="facts", **overrides):
@@ -58,8 +81,8 @@ def evaluation(studio, media_id, kind="facts", **overrides):
         "evaluator": "host:test",
         "version": "1",
         "kind": kind,
-        "scores": {"geometric_mean": 0.9, "arithmetic_mean": 0.95},
-        "evidence": [Evidence(question="Is Mara in frame?", answer="yes", probability=0.95)],
+        "scores": {"sc": 0.9, "pq": 0.9} if kind == "judge" else {},
+        "evidence": answers(studio, media_id) if kind in {"facts", "stranger"} else [Evidence(question="note", answer="fine")],
         "discrepancies": [],
     }
     return EvaluationCreate(**{**base, **overrides})
@@ -92,13 +115,13 @@ def world(tmp_path):
 def test_evaluate_is_append_only_and_never_touches_review(world):
     media_id = world.media[0]["id"]
     first = world.studio.evaluate(media_id, evaluation(world.studio, media_id))
-    second = world.studio.evaluate(
-        media_id, evaluation(world.studio, media_id, kind="judge", scores={"sc": 0.7, "pq": 0.9, "overall": 0.79})
-    )
+    second = world.studio.evaluate(media_id, evaluation(world.studio, media_id, kind="judge", scores={"sc": 0.7, "pq": 0.9}))
     assert first["sequence"] < second["sequence"]
     records = world.studio.evaluations(media_id)
     assert [r["kind"] for r in records] == ["judge", "facts"]
     assert records[1]["evidence"][0]["probability"] == 0.95
+    assert records[1]["scores"]["min_group"] == 0.95 and records[1]["scores"]["capped"] == 0.0
+    assert records[0]["scores"]["overall"] == 0.794
     detail = world.studio.media(media_id)
     assert detail["media"]["review"]["status"] == "approved" and detail["media"]["review"]["revision"] == 1
     assert len(detail["evaluations"]) == 2
@@ -219,3 +242,68 @@ def test_archives_carry_evaluations_and_older_archives_still_import(world, tmp_p
     legacy = Studio(Store(tmp_path / "legacy"))
     import_project(legacy.store, older)
     assert legacy.evaluations(media_id) == []
+
+
+def test_engine_computes_scores_and_refuses_unplaced_evidence(world):
+    media_id = world.media[0]["id"]
+    with pytest.raises(StudioError, match="Say where you looked"):
+        world.studio.evaluate(media_id, evaluation(world.studio, media_id, evidence=[
+            Evidence(question="Is Mara in frame?", answer="yes", probability=0.9, asset_id=world.mara["id"], question_id=f"subject:{world.mara['id']}")]))
+    with pytest.raises(StudioError, match="question_id"):
+        world.studio.evaluate(media_id, evaluation(world.studio, media_id, evidence=[
+            Evidence(question="Is Mara in frame?", answer="yes", probability=0.9, region="crop")]))
+    # a host-supplied headline is replaced by the engine's computation
+    record = world.studio.evaluate(media_id, evaluation(world.studio, media_id, scores={"geometric_mean": 1.0},
+                                                         evidence=answers(world.studio, media_id, detail=0.2)))
+    assert record["scores"]["capped"] == 1.0 and record["scores"]["min_group"] <= 0.4
+    assert record["scores"]["groups"]["identity"] < 0.7
+
+
+def test_locks_make_state_questions_capped_and_gate_the_take(world):
+    change(world.studio, world.ticket, locks=["owner_id"])
+    refresh(world.studio, world.media)
+    change(world.studio, world.cuts[0], **{"continuity.after": {world.ticket["id"]: {"owner_id": world.mara["id"]}}})
+    cut = world.cuts[1]
+    change(world.studio, cut, continuity_from=[world.cuts[0]["id"]])
+    q = {x["id"]: x for x in world.studio.facts(cut["id"])["questions"]}[f"state:{world.ticket['id']}/owner_id"]
+    assert q["cap_on_miss"] and q["weight"] == 3 and q["group"] == "state" and "Crop" in q["look_at"]
+    # take on cut[0] (the source) must be accepted before it is fit as a reference in autonomous mode
+    change(world.studio, world.project, **{"policy.autonomous": True})
+    refresh(world.studio, world.media)
+    take_media = take(world.studio, world.cuts[0], world.path, [world.mara["id"], world.station["id"], world.ticket["id"]], select=False)
+    world.studio.evaluate(take_media["id"], evaluation(world.studio, take_media["id"], evidence=answers(world.studio, take_media["id"], pose=0.1)))
+    world.studio.evaluate(take_media["id"], evaluation(world.studio, take_media["id"], kind="judge"))
+    with world.studio.store.connection() as conn:
+        status = world.studio.rules.take_status(conn, world.studio.store.one(conn, "media", take_media["id"]))
+    assert not status["accepted"] and "capped" in " ".join(status["reasons"])
+    with pytest.raises(StudioError, match="evaluation gate"):
+        world.studio.select(world.cuts[0]["id"], take_media["id"], world.studio.inspect(world.cuts[0]["id"])["node"]["revision"])
+    with pytest.raises(StudioError) as caught:
+        world.studio.prepare(RecipeCreate(node_id=cut["id"], provider="fake", model="t", intent="i", prompt="p",
+                                          references=[Reference(media_id=take_media["id"], role="base", instruction="continue"),
+                                                      Reference(media_id=world.media[1]["id"], role="location", instruction="keep"),
+                                                      Reference(media_id=world.media[2]["id"], role="prop", instruction="keep")]))
+    codes = {i["code"] for i in caught.value.issues}
+    assert "reference_unfit" in codes and "prompt_unbound" in codes
+
+
+def test_autonomous_selection_needs_an_accepted_take_and_evidence_backed_review(world):
+    change(world.studio, world.project, **{"policy.autonomous": True, "policy.min_take_score": 0.5})
+    refresh(world.studio, world.media)
+    cut = world.cuts[0]
+    media = world.studio.import_media(cut["id"], world.path, "Take", metadata={"fake": True})
+    subjects = [world.mara["id"], world.station["id"], world.ticket["id"]]
+    world.studio.review_media(media["id"], MediaReview(author="script", expected_revision=0,
+        expected_context=world.studio.media(media["id"])["review_context"], status="approved", user_decision="auto", depicted_assets=subjects))
+    # a script's confirmation is not complete until a facts record shows the assets
+    assert world.studio.media(media["id"])["media"]["review"]["complete"] is False
+    with pytest.raises(StudioError, match="evaluation gate"):
+        world.studio.select(cut["id"], media["id"], world.studio.inspect(cut["id"])["node"]["revision"])
+    world.studio.evaluate(media["id"], evaluation(world.studio, media["id"]))
+    world.studio.evaluate(media["id"], evaluation(world.studio, media["id"], kind="judge"))
+    assert world.studio.media(media["id"])["media"]["review"]["complete"] is True
+    world.studio.select(cut["id"], media["id"], world.studio.inspect(cut["id"])["node"]["revision"])
+    workflow = world.studio.workflow(world.project["id"])
+    assert workflow["evaluation_coverage"] == {"evaluated": 1, "selected": 1, "total": 2}
+    assert workflow["cuts"][0]["take"]["accepted"] and workflow["cuts"][0]["take_ready"]
+    assert "review_contradicted" not in {w["code"] for w in world.studio.readiness(cut["id"])["warnings"]}

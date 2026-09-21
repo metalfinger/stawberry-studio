@@ -131,6 +131,8 @@ class Store:
                 conn.execute("ALTER TABLE media_reviews ADD COLUMN requirement_ids TEXT NOT NULL DEFAULT '[]'")
             if "requirement_hashes" not in columns:
                 conn.execute("ALTER TABLE media_reviews ADD COLUMN requirement_hashes TEXT NOT NULL DEFAULT '{}'")
+            if "author" not in columns:
+                conn.execute("ALTER TABLE media_reviews ADD COLUMN author TEXT NOT NULL DEFAULT 'human'")
             approval_columns = {row[1] for row in conn.execute("PRAGMA table_info(recipe_approvals)")}
             if "batch_id" not in approval_columns:
                 conn.execute("ALTER TABLE recipe_approvals ADD COLUMN batch_id TEXT REFERENCES approval_batches(id)")

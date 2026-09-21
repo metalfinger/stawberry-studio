@@ -139,6 +139,7 @@ class Feedback(Contract):
 
 
 class MediaReview(Contract):
+    author: Literal["human", "assistant", "script"] = "human"
     expected_revision: int = Field(ge=0)
     expected_context: str = Field(min_length=64, max_length=64)
     status: Literal["approved", "rejected"]
@@ -160,6 +161,8 @@ class Evidence(Contract):
     answer: str = Field(max_length=1000)
     probability: float | None = Field(default=None, ge=0, le=1, allow_inf_nan=False)
     asset_id: str | None = None
+    question_id: str | None = Field(default=None, max_length=200)
+    region: str | None = Field(default=None, max_length=240)
 
 
 class Discrepancy(Contract):

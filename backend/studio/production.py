@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 
+from backend.studio.fields import policy as resolve_policy
 from backend.studio.fields import validate_field, warnings_for
 from backend.studio.store import StudioError, digest, encoded
 
@@ -178,10 +179,118 @@ class ProductionRules:
             self.definition(conn, subject, cache) != expected for subject, expected in result["subject_hashes"].items()
         )
         node = self.store.one(conn, "nodes", media["node_id"])
-        result["complete"] = node["kind"] != "cut" or set(
-            self.asset_ids(self.scope(self.studio._context(conn, node["id"])))
-        ) <= set(result["depicted_assets"])
+        result.setdefault("author", "human")
+        scoped = set(self.asset_ids(self.scope(self.studio._context(conn, node["id"])))) if node["kind"] == "cut" else set()
+        covered = scoped <= set(result["depicted_assets"])
+        if covered and node["kind"] == "cut" and result["author"] != "human":
+            # a non-human confirmation only counts where a current facts record shows the asset
+            facts = self.current_evaluation(conn, media, "facts")
+            seen = self.assets_seen(facts) if facts else set()
+            covered = scoped <= seen
+        result["complete"] = node["kind"] != "cut" or covered
         return result
+
+    def current_evaluation(self, conn, media, kind):
+        row = conn.execute(
+            "SELECT * FROM evaluations WHERE media_id=? AND context_hash=? AND kind=? ORDER BY sequence DESC LIMIT 1",
+            (media["id"], self.review_context(conn, media), kind),
+        ).fetchone()
+        return self.studio._evaluation(row) if row else None
+
+    @staticmethod
+    def assets_seen(facts):
+        """Assets whose presence question scored >= 0.5 in a facts record."""
+        seen = set()
+        for item in facts["evidence"]:
+            qid = item.get("question_id") or ""
+            if qid.split(":")[0] in {"cast", "location", "prop", "subject"} and (item.get("probability") or 0) >= 0.5:
+                seen.add(item["asset_id"])
+        return seen
+
+    def policy(self, conn, node_id):
+        return resolve_policy(self.studio._context(conn, node_id)["values"])
+
+    def take_status(self, conn, media, pol=None):
+        """Where a take stands against the project's evaluation gate. Never touches review status."""
+        pol = pol or self.policy(conn, media["node_id"])
+        facts = self.current_evaluation(conn, media, "facts")
+        judge = self.current_evaluation(conn, media, "judge")
+        stranger = self.current_evaluation(conn, media, "stranger")
+        duplicate = self.current_evaluation(conn, media, "duplicate")
+        reasons = []
+        if not facts:
+            reasons.append("no current facts record")
+        if not judge:
+            reasons.append("no current judge record")
+        score = None
+        if facts and judge:
+            score = min(facts["scores"].get("min_group", facts["scores"].get("geometric_mean", 0.0)), judge["scores"].get("overall", 0.0))
+            if facts["scores"].get("capped"):
+                reasons.append("a capped fact missed")
+            if score < pol["min_take_score"]:
+                reasons.append(f"score {score:.2f} below policy.min_take_score {pol['min_take_score']}")
+        if duplicate and any(d["tag"] == "copy_paste" for d in duplicate["discrepancies"]):
+            reasons.append("near-identical to a sibling beat")
+        if pol["require_stranger"]:
+            if not stranger:
+                reasons.append("no stranger record")
+            elif facts and abs(stranger["scores"].get("min_group", 0) - facts["scores"].get("min_group", 0)) > 0.25:
+                reasons.append("stranger disagrees with the host by more than 0.25")
+        return {
+            "media_id": media["id"],
+            "evaluated": bool(facts and judge),
+            "score": score,
+            "accepted": not reasons,
+            "reasons": reasons,
+            "records": {k: (v["sequence"] if v else None) for k, v in (("facts", facts), ("judge", judge), ("stranger", stranger), ("duplicate", duplicate))},
+        }
+
+    def takes_used(self, conn, cut_id):
+        return conn.execute(
+            "SELECT COUNT(*) FROM media WHERE node_id=? AND job_id IS NOT NULL", (cut_id,)
+        ).fetchone()[0]
+
+    def recipe_gaps(self, conn, node_id, references, prompt):
+        """Pre-generation checks. Advisory by default; issues in autonomous mode."""
+        pol = self.policy(conn, node_id)
+        node = self.store.one(conn, "nodes", node_id)
+        ctx = self.studio._context(conn, node_id)
+        gaps = []
+        low = prompt.lower()
+        if node["kind"] == "cut":
+            for asset_id in self.asset_ids(self.scope(ctx)):
+                asset = self.store.one(conn, "nodes", asset_id)
+                actx = self.studio._context(conn, asset_id)["values"]
+                for token in actx.get("consistency_tokens") or []:
+                    if token.lower() not in low:
+                        gaps.append({"code": "prompt_unbound", "node_id": asset_id, "token": token,
+                                     "message": f"Prompt does not quote {asset['name']}'s lock '{token}'"})
+            for token in ctx["values"].get("bible.tokens") or []:
+                if token.lower() not in low:
+                    gaps.append({"code": "prompt_unbound", "node_id": node["project_id"], "token": token,
+                                 "message": f"Prompt does not quote the bible token '{token}'"})
+            used = self.takes_used(conn, node_id)
+            if used >= pol["max_takes_per_cut"]:
+                gaps.append({"code": "take_budget", "node_id": node_id,
+                             "message": f"{used} takes already generated for this cut; policy.max_takes_per_cut is {pol['max_takes_per_cut']}"})
+        for ref in references:
+            media = self.store.one(conn, "media", ref["media_id"])
+            owner = self.store.one(conn, "nodes", media["node_id"])
+            if owner["kind"] != "cut":
+                continue
+            facts = self.current_evaluation(conn, media, "facts")
+            if not facts:
+                gaps.append({"code": "reference_unevaluated", "media_id": media["id"],
+                             "message": f"Reference {media['label']} is a take with no current facts record"})
+                continue
+            failed = [e for e in facts["evidence"] if e.get("probability") is not None and e["probability"] < 0.5
+                      and (e.get("question_id") or "").split(":")[0] in {"cast", "state", "pose", "prop", "location"}]
+            if failed or facts["scores"].get("capped"):
+                gaps.append({"code": "reference_unfit", "media_id": media["id"],
+                             "failed": [e["question"] for e in failed][:5],
+                             "message": f"Reference {media['label']} failed its own facts: " + "; ".join(e["question"] for e in failed[:3])})
+        return gaps
+
 
     def selected(self, conn, node):
         if not node["active_media_id"]:
@@ -346,6 +455,25 @@ class ProductionRules:
         node = self.store.one(conn, "nodes", node_id)
         ctx = self.studio._context(conn, node_id)
         out = warnings_for(node, ctx["values"], ctx["cleared"])
+        if node["kind"] == "cut" and node["active_media_id"]:
+            media = self.store.one(conn, "media", node["active_media_id"])
+            status = self.take_status(conn, media)
+            if not status["evaluated"]:
+                out.append({"code": "take_unevaluated", "node_id": node_id, "media_id": media["id"],
+                            "message": "The selected take has no current facts and judge records"})
+            elif not status["accepted"]:
+                out.append({"code": "take_below_threshold", "node_id": node_id, "media_id": media["id"],
+                            "message": "The selected take does not pass the evaluation gate: " + "; ".join(status["reasons"])})
+            review = self.review(conn, media)
+            facts = self.current_evaluation(conn, media, "facts")
+            if facts:
+                for item in facts["evidence"]:
+                    qid = item.get("question_id") or ""
+                    if qid.split(":")[0] in {"cast", "prop", "location"} and item.get("probability") is not None \
+                            and item["probability"] < 0.2 and item["asset_id"] in review["depicted_assets"]:
+                        out.append({"code": "review_contradicted", "node_id": node_id, "media_id": media["id"],
+                                    "field": item["asset_id"],
+                                    "message": f"Review confirms an asset the facts record does not see: {item['question']}"})
         if node["kind"] == "cut":
             for asset_id in self.asset_ids(self.scope(ctx)):
                 asset = self.store.one(conn, "nodes", asset_id)
@@ -404,7 +532,13 @@ class ProductionRules:
                     covered[kind].add(subject)
         node = self.store.one(conn, "nodes", node_id)
         ctx = self.studio._context(conn, node_id)
-        if ctx["values"].get("policy.require_evaluation_for_reference") is True:
+        pol = resolve_policy(ctx["values"])
+        if pol["autonomous"]:
+            prompt = getattr(self, "_prompt_under_validation", "") or ""
+            for gap in self.recipe_gaps(conn, node_id, references, prompt):
+                if gap["code"] in {"reference_unfit", "take_budget"} or (gap["code"] == "prompt_unbound" and gap["node_id"] != node["project_id"]):
+                    issues.append(gap)
+        if ctx["values"].get("policy.require_evaluation_for_reference") is True or pol["autonomous"]:
             for ref in references:
                 media = self.store.one(conn, "media", ref["media_id"])
                 if not self.evaluated(conn, media):

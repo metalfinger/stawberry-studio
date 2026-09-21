@@ -283,9 +283,13 @@ class Studio:
                     }
                 )
             cut_rows = []
+            pol = self.rules.policy(conn, project_id)
+            evaluated = 0
             for cut in by_kind["cut"]:
                 readiness = self.rules.resolve(conn, cut["id"])["readiness"]
                 selection = self.rules.selected(conn, cut)
+                status = self.rules.take_status(conn, self.store.one(conn, "media", cut["active_media_id"]), pol) if cut["active_media_id"] else None
+                evaluated += 1 if status and status["evaluated"] else 0
                 cut_rows.append(
                     {
                         "node_id": cut["id"],
@@ -293,11 +297,13 @@ class Studio:
                         "ready_to_prepare": readiness["ready"],
                         "issues": readiness["issues"],
                         "warnings": self.rules.warnings(conn, cut["id"]),
+                        "take": status,
                         "take_ready": bool(
                             selection
                             and selection["status"] == "approved"
                             and not selection["stale"]
                             and selection["complete"]
+                            and (not pol["autonomous"] or (status and status["accepted"]))
                         ),
                     }
                 )
@@ -306,6 +312,7 @@ class Studio:
                 **{kind: len(rows) for kind, rows in by_kind.items()},
                 "assets": len(assets),
             }
+            coverage = {"evaluated": evaluated, "selected": sum(1 for c in by_kind["cut"] if c["active_media_id"]), "total": len(by_kind["cut"])}
             stages = [
                 {
                     "id": "development",
@@ -338,6 +345,8 @@ class Studio:
             return {
                 "project_id": project_id,
                 "counts": counts,
+                "evaluation_coverage": coverage,
+                "policy": pol,
                 "stages": stages,
                 "assets": asset_rows,
                 "cuts": cut_rows,
@@ -602,6 +611,17 @@ class Studio:
             if request.expected_context != context:
                 raise StudioError("evaluation_context_changed", "Inspect the image again before evaluating it", 409)
             review = self.rules.review(conn, media)
+            scores = dict(request.scores)
+            if request.kind in {"facts", "judge", "stranger"}:
+                for item in request.evidence:
+                    if item.asset_id and not item.region:
+                        raise StudioError("evidence_region_missing", f"Say where you looked for: {item.question}", 409)
+            if request.kind in {"facts", "stranger"}:
+                scores.update(self._score_facts(conn, media, request.evidence))
+            if request.kind == "judge":
+                if "sc" not in scores or "pq" not in scores:
+                    raise StudioError("judge_scores", "A judge record needs sc and pq", 409)
+                scores["overall"] = round((scores["sc"] * scores["pq"]) ** 0.5, 3)
             conn.execute(
                 "INSERT INTO evaluations(media_id,evaluator,version,kind,scores,evidence,confidence,discrepancies,"
                 "context_hash,review_revision,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
@@ -610,7 +630,7 @@ class Studio:
                     request.evaluator,
                     request.version,
                     request.kind,
-                    encoded(request.scores),
+                    encoded(scores),
                     encoded([item.model_dump() for item in request.evidence]),
                     request.confidence,
                     encoded([item.model_dump() for item in request.discrepancies]),
@@ -760,18 +780,66 @@ class Studio:
             return {**result, "chain": True, "reason": f"continuity language: '{hit.strip()}'"}
         return {**result, "chain": False, "reason": "new shot, no continuity language"}
 
+    def _score_facts(self, conn, media, evidence):
+        """The engine, not the evaluator, turns probabilities into the record's scores."""
+        import math
+
+        owner = self.store.one(conn, "nodes", media["node_id"])
+        try:
+            questions = {q["id"]: q for q in self._facts(conn, owner["id"])["questions"]}
+        except StudioError:
+            questions = {}
+        groups, capped, answered = {}, False, 0
+        for item in evidence:
+            if item.probability is None:
+                continue
+            q = questions.get(item.question_id or "")
+            if not q:
+                if item.question_id is None:
+                    raise StudioError("evidence_unbound", f"Evidence must carry the question_id it answers: {item.question}", 409)
+                continue  # a question the current definition no longer asks
+            answered += 1
+            groups.setdefault(q["group"], []).append((item.probability, q["weight"]))
+            if q["cap_on_miss"] and item.probability < 0.5:
+                capped = True
+        if not answered:
+            raise StudioError("evidence_empty", "No evidence answers a current question", 409)
+        gm = lambda pairs: math.exp(sum(w * math.log(max(p, 1e-3)) for p, w in pairs) / sum(w for _, w in pairs))  # noqa: E731
+        group_scores = {name: round(gm(pairs), 3) for name, pairs in groups.items()}
+        if group_scores.get("action", 1.0) < 0.5:
+            capped = True
+        everything = [pair for pairs in groups.values() for pair in pairs]
+        headline = round(gm(everything), 3)
+        min_group = round(min(group_scores.values()), 3)
+        if capped:
+            headline, min_group = min(headline, 0.4), min(min_group, 0.4)
+        return {
+            "groups": group_scores,
+            "min_group": min_group,
+            "geometric_mean": headline,
+            "arithmetic_mean": round(sum(p * w for p, w in everything) / sum(w for _, w in everything), 3),
+            "capped": 1.0 if capped else 0.0,
+            "answered": float(answered),
+            "asked": float(len(questions)),
+        }
+
     def facts(self, node_id):
+        with self.store.connection() as conn:
+            return self._facts(conn, node_id)
+
+    def _facts(self, conn, node_id):
         """The declared facts of a cut or asset as answerable questions. Deterministic; no model call.
 
         A host answers each with its own vision and records a kind="facts" evaluation. The
         geometric mean of the answer probabilities is the prompt-level score; a capped question
         that misses caps the whole record (a named detail that does not match is not "close enough").
         """
-        with self.store.connection() as conn:
+        if True:
             node = self.store.one(conn, "nodes", node_id)
             production = self.rules.resolve(conn, node_id)
             values = self._context(conn, node_id)["values"]
             names = {asset["id"]: asset["name"] for asset in production["assets"]}
+            names[node["id"]] = node["name"]
 
             def label(value):
                 if isinstance(value, str):
@@ -783,9 +851,20 @@ class Studio:
 
             questions = []
 
-            def ask(qid, question, *, expected="yes", asset_id=None, weight=1, cap=False):
+            GROUPS = {"cast": "identity", "pose": "identity", "detail": "identity", "wardrobe": "identity", "subject": "identity",
+                      "features": "identity", "location": "scope", "prop": "scope", "state": "state", "action": "action",
+                      "beat": "action", "style": "style"}
+
+            def ask(qid, question, *, expected="yes", asset_id=None, weight=1, cap=False, look_at=None):
+                prefix = qid.split(":")[0]
+                if look_at is None:
+                    look_at = (
+                        f"Crop the region containing {names.get(asset_id, 'the subject')} at full resolution and inspect the crop, not the frame"
+                        if asset_id else "Look at the whole frame"
+                    )
                 questions.append(
-                    {"id": qid, "question": question, "expected": expected, "asset_id": asset_id, "weight": weight, "cap_on_miss": cap}
+                    {"id": qid, "question": question, "expected": expected, "asset_id": asset_id, "weight": weight,
+                     "cap_on_miss": cap, "group": GROUPS.get(prefix, "action"), "look_at": look_at}
                 )
 
             def identity(asset):
@@ -830,7 +909,9 @@ class Studio:
                     if fact["asset_id"] not in in_frame:
                         continue  # a state is only answerable about something the frame shows
                     attribute = fact["attribute"].replace("_", " ")
-                    ask(f"state:{key}", f"Is {label(fact['asset_id'])}'s {attribute} {label(fact['value'])}?", asset_id=fact["asset_id"], weight=2)
+                    locked = fact["attribute"] in (self._context(conn, fact["asset_id"])["values"].get("locks") or [])
+                    ask(f"state:{key}", f"Is {label(fact['asset_id'])}'s {attribute} {label(fact['value'])}?",
+                        asset_id=fact["asset_id"], weight=3 if locked else 2, cap=locked)
                 action = str(values.get("action") or "").strip() or node["notes"].strip()
                 if action:
                     ask("action", f"Does the frame show this happening: {action}?", weight=3)
@@ -842,7 +923,9 @@ class Studio:
                     ask("style", f"Is the image rendered in this style: {style.strip()}?", weight=1)
             else:
                 raise StudioError("facts_scope", "Facts are derived for cuts and assets")
-            return {"node_id": node_id, "kind": node["kind"], "questions": questions}
+            return {"node_id": node_id, "kind": node["kind"], "questions": questions,
+                    "scoring": "engine computes per-group weighted geometric means from your probabilities; "
+                               "min_group is the headline; any capped question below 0.5, or the action group below 0.5, caps the record at 0.4"}
 
     def lineage(self, media_id):
         with self.store.connection() as conn:
@@ -949,7 +1032,12 @@ class Studio:
             slots = [int(n) for n in re.findall(r"@Image(\d+)", request.prompt)]
             if any(n < 1 or n > len(references) for n in slots):
                 raise StudioError("reference_binding", "Prompt names an image that is not attached")
-            self.rules.validate_recipe(conn, node["id"], references)
+            self.rules._prompt_under_validation = request.prompt
+            try:
+                self.rules.validate_recipe(conn, node["id"], references)
+            finally:
+                self.rules._prompt_under_validation = ""
+            gaps = self.rules.recipe_gaps(conn, node["id"], references, request.prompt)
             spec = {**request.model_dump(), **prepared, "references": references}
             fingerprint = digest({"spec": spec, "context": context})
             recipe_id = identifier()
@@ -969,7 +1057,7 @@ class Studio:
             cap = context["values"].get("policy.reference_depth_cap", lineage.DEFAULT_DEPTH_CAP)
             return {
                 **self._recipe(self.store.one(conn, "recipes", recipe_id)),
-                "warnings": lineage.depth_warnings(conn, references, cap),
+                "warnings": lineage.depth_warnings(conn, references, cap) + gaps,
             }
 
     @staticmethod
@@ -1112,6 +1200,10 @@ class Studio:
                     "review_required", "Approve this take against its current definition before selecting it", 409
                 )
             if node["kind"] == "cut":
+                if self.rules.policy(conn, node_id)["autonomous"]:
+                    status = self.rules.take_status(conn, media)
+                    if not status["accepted"]:
+                        raise StudioError("take_not_accepted", "This take has not passed the evaluation gate: " + "; ".join(status["reasons"]), 409)
                 production = self.rules.resolve(conn, node_id)
                 if not production["readiness"]["ready"]:
                     raise StudioError(
@@ -1179,8 +1271,8 @@ class Studio:
             conn.execute(
                 """INSERT INTO media_reviews(
                     media_id,revision,status,user_decision,depicted_assets,
-                    definition_hash,subject_hashes,created_at,requirement_ids,requirement_hashes
-                ) VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                    definition_hash,subject_hashes,created_at,requirement_ids,requirement_hashes,author
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
                 (
                     media_id,
                     previous["revision"] + 1,
@@ -1192,6 +1284,7 @@ class Studio:
                     time.time(),
                     encoded(requirements),
                     encoded(requirement_hashes),
+                    request.author,
                 ),
             )
             return self._media(conn, media)

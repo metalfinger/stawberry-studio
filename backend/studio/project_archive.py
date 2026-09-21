@@ -37,7 +37,7 @@ TABLE_COLUMNS = {
     "job_events": ["job_id", "state", "details", "created_at"],
     "media_reviews": [
         "media_id", "revision", "status", "user_decision", "depicted_assets", "definition_hash",
-        "subject_hashes", "created_at", "requirement_ids", "requirement_hashes",
+        "subject_hashes", "created_at", "requirement_ids", "requirement_hashes", "author",
     ],
     "recipe_approvals": ["recipe_id", "policy", "batch_id"],
     "approval_batches": ["id", "project_id", "user_decision", "created_at"],
@@ -237,9 +237,14 @@ def _validate_records(payload, manifest):
         raise StudioError("archive_invalid", "Project archive has an unexpected table set")
     for table in OPTIONAL_TABLES:
         tables.setdefault(table, [])
+    for row in tables.get("media_reviews", []):
+        row.setdefault("author", "human")
     for table, columns in TABLE_COLUMNS.items():
         rows = tables[table]
-        if not isinstance(rows, list) or any(not isinstance(row, dict) or set(row) != set(columns) for row in rows):
+        optional_columns = {"media_reviews": {"author"}}.get(table, set())
+        if not isinstance(rows, list) or any(
+            not isinstance(row, dict) or not (set(columns) - optional_columns <= set(row) <= set(columns)) for row in rows
+        ):
             raise StudioError("archive_invalid", f"Project archive has invalid {table} records")
     project_id = payload["project_id"]
     nodes = tables["nodes"]

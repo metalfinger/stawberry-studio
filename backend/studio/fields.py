@@ -35,6 +35,22 @@ TOKEN_MAX_WORDS = 6
 
 ASSETS = {"character", "location", "prop"}
 
+POLICY_DEFAULTS = {
+    "policy.reference_depth_cap": 2,
+    "policy.require_evaluation_for_reference": False,
+    "policy.autonomous": False,
+    "policy.min_take_score": 0.6,
+    "policy.max_takes_per_cut": 4,
+    "policy.credit_ceiling_per_take": 0.0,
+    "policy.allow_unknown_cost": False,
+    "policy.require_stranger": False,
+}
+
+
+def policy(values: dict) -> dict:
+    """Resolved project policy with defaults; keys are the short names."""
+    return {key.split(".", 1)[1]: values.get(key, default) for key, default in POLICY_DEFAULTS.items()}
+
 # field -> {"type", "kinds", limits...}
 # kinds lists where the field natively belongs; validation applies wherever the name resolves.
 FIELD_SPECS: dict[str, dict] = {
@@ -46,6 +62,13 @@ FIELD_SPECS: dict[str, dict] = {
     "negative_prompts": {"type": "text", "kinds": {"project"}},
     "policy.reference_depth_cap": {"type": "int", "kinds": {"project"}, "min": 0},
     "policy.require_evaluation_for_reference": {"type": "bool", "kinds": {"project"}},
+    # autonomous mode: every evaluation gate becomes an issue, approvals happen within the ceiling
+    "policy.autonomous": {"type": "bool", "kinds": {"project"}},
+    "policy.min_take_score": {"type": "float", "kinds": {"project"}, "min": 0.0, "max": 1.0},
+    "policy.max_takes_per_cut": {"type": "int", "kinds": {"project"}, "min": 1},
+    "policy.credit_ceiling_per_take": {"type": "float", "kinds": {"project"}, "min": 0.0},
+    "policy.allow_unknown_cost": {"type": "bool", "kinds": {"project"}},
+    "policy.require_stranger": {"type": "bool", "kinds": {"project"}},
     # scene: atmosphere and ambient sound
     "lighting.source": {"type": "text", "kinds": {"scene"}},
     "atmosphere": {"type": "text", "kinds": {"scene"}},
@@ -73,8 +96,9 @@ FIELD_SPECS: dict[str, dict] = {
     "sound.music": {"type": "text", "kinds": {"cut"}},
     "transition": {"type": "text", "kinds": {"cut"}, "max_len": 120},
     "chain_from_prev": {"type": "enum", "kinds": {"cut"}, "options": ("yes", "no")},
-    # assets: identity locks
+    # assets: identity locks, and which continuity attributes are locked (capped when checked)
     "consistency_tokens": {"type": "token_list", "kinds": ASSETS, "max_items": 6},
+    "locks": {"type": "attr_list", "kinds": ASSETS, "max_items": 8},
     "inspired_by": {"type": "text", "kinds": ASSETS, "max_len": 240},
 }
 
@@ -97,9 +121,19 @@ def validate_field(field: str, value, node: dict | None = None) -> None:
     elif kind == "int":
         if type(value) is not int or value < spec.get("min", 0):
             _fail(field, f"expected an integer >= {spec.get('min', 0)}")
+    elif kind == "float":
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            _fail(field, "expected a number")
+        if value < spec.get("min", float("-inf")) or value > spec.get("max", float("inf")):
+            _fail(field, f"expected a number between {spec.get('min', '-inf')} and {spec.get('max', 'inf')}")
     elif kind == "bool":
         if type(value) is not bool:
             _fail(field, "expected true or false")
+    elif kind == "attr_list":
+        if not isinstance(value, list) or any(not isinstance(v, str) or not re.fullmatch(r"[a-z][a-z0-9_]*", v) for v in value):
+            _fail(field, "expected a list of lower_case attribute names")
+        if len(value) > spec["max_items"] or len(set(value)) != len(value):
+            _fail(field, f"at most {spec['max_items']} distinct attribute names")
     elif kind == "enum":
         if value not in spec["options"]:
             _fail(field, f"expected one of {', '.join(spec['options'])}")
