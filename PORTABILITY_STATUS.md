@@ -12,6 +12,13 @@ in earlier migration documents for the portable-workflow extension.
       take continuation, separate from human-confirmed visual facts.
 - [ ] Replace historical story-specific shell runners with generic resumable
       operations and durable provider-submission handoffs.
+- [x] Canonical creative vocabulary (beat, performance, sound, bible, identity locks)
+      with typed validation and advisory readiness warnings.
+- [x] Generation depth on every image, full lineage, depth-cap warning at prepare.
+- [x] `candidates` — reference retrieval scored against a cut, with state flags and the
+      chaining decision.
+- [x] `evaluate-local` copy-paste check; `export_benchmark` (ViStoryBench layout).
+- [ ] Optional eval extra (subject-cropped identity similarity, cross-panel diversity).
 - [ ] Structured prompt-binding validator and generation-packet API.
 - [x] Optional evaluator records (`evaluate` / `evaluations` / `facts`; append-only,
       bound to review context, never review status). Bounded repair execution remains
@@ -23,7 +30,9 @@ example, not general unattended execution. The old helper inferred depicted
 assets from intended requirements and must not be reused for new productions.
 No claim of automated visual correctness or tested cross-host UI integration.
 
-Verification: 177 offline tests pass, including a real stdio MCP client/server
+Probe of the real Nine O'Clock production: `PROBE_2026-09-21_nine_oclock.md`.
+
+Verification: 135 studio tests (183 offline overall) pass, including a real stdio MCP client/server
 roundtrip and shared-store revision-conflict handling. Scoped Ruff and frontend
 production build pass (existing legacy bundle-size warning retained). No paid
 generation was submitted. The MCP SDK is an optional pinned dependency; its

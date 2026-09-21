@@ -74,7 +74,7 @@ def catalog():
         result.append({"name": name, "inputSchema": schema, "readOnly": False})
     for name, schema in (("enqueue", Identifier), ("select", Selection),
                          ("import_media", ImportMedia), ("external_preview", ExternalPreview),
-                         ("export_project", Export), ("feedback", Feedback),
+                         ("export_project", Export), ("export_benchmark", Export), ("feedback", Feedback),
                          ("retry_collection", Identifier)):
         result.append({"name": name, "inputSchema": schema.model_json_schema(),
                        "readOnly": name == "external_preview"})
@@ -108,6 +108,11 @@ def invoke(studio, name, arguments):
 
         request = Export.model_validate(arguments)
         return export_project(studio.store, request.id, request.path)
+    if name == "export_benchmark":
+        from backend.studio.benchmark_export import export_benchmark
+
+        request = Export.model_validate(arguments)
+        return export_benchmark(studio, request.id, request.path)
     if name == "select":
         request = Selection.model_validate(arguments)
         return studio.select(request.node_id, request.media_id, request.revision)

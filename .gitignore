@@ -83,3 +83,5 @@ PROMPT_FIELDS_EXPLAINED.md
 UPGRADE_GUIDE.md
 V2_SUMMARY.md
 venv
+.strawberry-probe/
+probe/

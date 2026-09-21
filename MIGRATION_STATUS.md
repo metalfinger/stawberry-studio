@@ -277,6 +277,16 @@ retried. Installed help does not expose cancellation. Costs remain unknown unles
 supplied by an actual estimate/receipt; account access is not proof that generation
 is free or covered by unlimited website usage.
 
+## Evaluation and vocabulary extension (2026-09-21)
+
+Superseding notes for the items below: the canonical field vocabulary, generation
+depth, evaluation records, `facts`, `candidates`, the local duplicate check and the
+benchmark export are implemented in `backend/studio/{fields,lineage,evaluators,
+benchmark_export}.py` and `service.py`; contracts in `PRODUCTION_CONTRACTS.md` and
+`WORKFLOW_RULES.md`; status in `PORTABILITY_STATUS.md`; findings from the real
+production in `PROBE_2026-09-21_nine_oclock.md`. Schema stays at user_version 5 with
+an additive `evaluations` table; archives without it still import.
+
 ## Next work, in order
 
 0. **Dream asset review gate.** Present the ten generated candidates for project

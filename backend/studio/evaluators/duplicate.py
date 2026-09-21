@@ -89,13 +89,15 @@ def compare(studio, media_id: str):
             for item in matches
         ],
         confidence=1.0,
+        # a base-conditioned take is expected to share most of its pixels with its base; the
+        # collapse worth tagging is a different beat that came out as the same picture
         discrepancies=[
             Discrepancy(
                 tag="copy_paste",
                 note=f"Near-identical to {item['relation']} {item['name']} (similarity {item['similarity']:.2f})",
             )
             for item in matches
-            if item["similarity"] >= COPY_PASTE_THRESHOLD
+            if item["similarity"] >= COPY_PASTE_THRESHOLD and item["relation"] == "sibling"
         ],
     )
     return request, matches
