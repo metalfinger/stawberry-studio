@@ -1,12 +1,52 @@
 {
   "started": "2026-09-21T18:00:00+05:30",
-  "budget": {"start_credits": 317, "ceiling_spend": 120, "hard_stop_balance": 200},
+  "budget": {
+    "start_credits": 317,
+    "ceiling_spend": 120,
+    "hard_stop_balance": 200
+  },
   "stories": [
-    {"slug": "lantern", "title": "The Lantern-Keeper's Last Night", "style": "woodblock", "project_id": null, "stage": "not_started"},
-    {"slug": "smallhours", "title": "Small Hours", "style": "gouache-cut-paper-colour", "project_id": null, "stage": "not_started"},
-    {"slug": "surveyors", "title": "The Surveyors", "style": "graphite-blueprint", "project_id": null, "stage": "not_started"}
+    {
+      "slug": "icehead",
+      "title": "The ice head",
+      "source": "Stiles #047, 18 Mar 1898 (DreamBank)",
+      "style": "woodblock/linocut, flat ink, one cold spot colour",
+      "stresses": [
+        "hard flat edges",
+        "two-colour palette",
+        "transformation across frames"
+      ],
+      "project_id": null,
+      "stage": "not_started"
+    },
+    {
+      "slug": "effigy",
+      "title": "The half-built effigy",
+      "source": "Lawrence #193, 20 Nov 2009 (DreamBank)",
+      "style": "risograph screen print, 2-3 spot inks, halftone, misregistration",
+      "stresses": [
+        "spot colour",
+        "monumental scale",
+        "misregistration token"
+      ],
+      "project_id": null,
+      "stage": "not_started"
+    },
+    {
+      "slug": "zikery",
+      "title": "The departure board",
+      "source": "Stiles #068, 1905 (DreamBank)",
+      "style": "sumi ink and wash, negative space",
+      "stresses": [
+        "legible text in frame",
+        "countable objects",
+        "minimal composition"
+      ],
+      "project_id": null,
+      "stage": "not_started"
+    }
   ],
-  "current": "lantern",
+  "current": "icehead",
   "harness_changes": [],
   "iterations": 0
 }
