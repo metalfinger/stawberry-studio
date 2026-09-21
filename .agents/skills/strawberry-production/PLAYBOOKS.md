@@ -242,6 +242,28 @@ before asking the human to review.
    record; with `policy.require_evaluation_for_reference` set on the project, `prepare`
    refuses such references instead.
 
+## Autonomous mode
+
+With `policy.autonomous` on the project, the evaluation gate is enforced rather than
+advised, and `scripts/autopilot.py step PROJECT_ID` drives everything that needs no eyes:
+it approves fresh recipes within `policy.credit_ceiling_per_take` (acknowledging unknown
+cost only if `policy.allow_unknown_cost`), enqueues, drives the worker, runs the duplicate
+check, and — once a take has current `facts` and `judge` records that clear
+`policy.min_take_score` — writes an evidence-backed review (author `assistant`, depicted
+assets = what the facts record saw) and selects it. It hands back exactly two kinds of
+task: `evaluate` (look at the take, answer every question with a probability and a
+region, write facts and judge) and `prepare` (write the next recipe from `candidates`
+and `repair`). In this mode `prepare` refuses a prompt that does not quote every lock of
+every asset in scope, a reference that failed its own facts, and a cut past
+`policy.max_takes_per_cut`; `select` refuses a take that has not passed the gate.
+Loop: `step` → do the tasks → `step`, until the summary shows only `accepted`.
+
+If a provider refuses a submission on content grounds the job fails as
+`provider_rejected` and `repair` says what to do; a likeness the provider will not accept
+as an image becomes `reference_mode: text` on the asset, and its identity travels as its
+quoted `consistency_tokens`. Coverage then requires those tokens in the prompt; the facts
+gate still requires the asset to appear in the take.
+
 ## Review and refinement
 
 1. Show the actual image at useful size with prompt, model, references and take

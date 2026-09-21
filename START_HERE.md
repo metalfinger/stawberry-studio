@@ -62,6 +62,13 @@ against sibling cuts and the image's own references; Pillow only, no model). Sco
 that need torch — subject-cropped identity similarity, cross-panel scene diversity —
 are planned as an optional extra and are not installed by the base runtime.
 
+## Autonomous mode
+
+Set `policy.autonomous` (and a cost ceiling) on the project, then run
+`venv/bin/python -m scripts.autopilot step PROJECT_ID --home STORE`. The engine approves,
+generates, collects, checks and selects within policy; the host answers the two tasks it
+hands back — evaluate a take, or write the next recipe. See `PLAYBOOKS.md`.
+
 ## Current limits
 
 The portable transport and operating instructions are implemented. A real
