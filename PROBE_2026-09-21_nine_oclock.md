@@ -138,3 +138,51 @@ Every one carries a `reference_depth` warning — the base is depth 8 — which 
 argument for the shallow-vs-deep run once a shallow base exists. Reference-input pricing
 is unverified by the provider (`credits: None`, settings-only 1 credit each), so approval
 needs `allow_unknown_cost` and a ceiling. Nothing has been approved or submitted.
+
+## Third pass — every frame that declares the child, cropped
+
+Hiren's eye caught two things the first pass did not: a child whose head is the wrong
+way up, and frames with no child at all. Both were misses of mine — I sampled eight
+frames and scored perceptual quality at contact-sheet size. This pass looked at all 14
+frames that declare the toddler, with the child cropped at full resolution.
+
+| # | Cut | child | carrier | what is wrong |
+| --- | --- | --- | --- | --- |
+| 2 | Abhishek enters the frame | ✓ | chest ✓ | runs left, declared right |
+| 3 | Running against traffic | ✓ | chest ✓ | counterflow absent |
+| 4 | The quiet passenger | ✓ | chest ✓ | — |
+| 5 | No sound from the child | ✓ | chest ✓ | — |
+| 7 | Searching for transport | ✓ | chest ✓ | **child reclined, head tipped back** |
+| 8 | An auto crosses the frame | ✓ | chest ✓ | **head fully inverted — face to the sky, body horizontal.** First pass gave this PQ 0.75; corrected to 0.45 |
+| 9 | Keep running | **✗** | **✗** | plain shirt, no straps, no child |
+| 10 | Arches through the trees | **✗** | **✗** | over-the-shoulder view; no straps on either shoulder |
+| 11 | Arrival at the old school | ✓ | **✗** | child carried in arms, no carrier; sun *and* moon in the sky |
+| 13 | Checking the deadline | ✓ | chest ✓ | dark shirt for one cut |
+| 14 | Running under the arches | ✓ | chest ✓ | — |
+| 15 | Before the doorway | ✓ | **back** | wrong side, rear view |
+| 16 | Last view of the child | ✓ | **back** | the last confirmation before the threshold confirms the wrong thing |
+| 17 | Crossing the line | ✓ | chest ✓ | — |
+
+Seven of fourteen frames fail the film's one continuity lock. Three have no carrier;
+two have it on his back; two have the child's head the wrong way. The child's *look*
+(dark hair, round face, light one-piece) is consistent wherever he appears — identity
+held, presence and posture did not.
+
+**How this was signed off.** Every one of these reviews reads *"User enabled
+auto-approval for the sequential storyboard run"* with the toddler and carrier listed as
+depicted — including cut 9, which shows neither. The historical run helper inferred
+depicted assets from the cut's requirements and wrote them as confirmations. That is the
+exact failure `PRODUCTION_CONTRACTS.md` names ("a prompt requesting an object does not
+prove the image contains it"), and it is why `START_HERE.md` says not to reuse that
+helper. The engine could not have caught it: nothing asked.
+
+**What changed in the engine.** `facts` now asks, for every visible character, whether
+the body, head and limbs are in a physically plausible position — a capped question, so
+an inverted head caps the record at 0.4. The playbook's judge step now says to crop every
+declared cast member at full resolution and to score every frame, not a sample. Cut 8's
+first-pass record stands in the table alongside the corrected one; both are evidence.
+
+**Facts vs judge, again.** On the missing-child frames facts scored 0.02–0.04 and judge
+0.36–0.51: the declared-fact questions are the sharper instrument for *absence*; the
+judge is sharper for *wrongness of what is present*. Neither found the inverted head
+until a person said "look at the head".

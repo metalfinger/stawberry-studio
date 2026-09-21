@@ -133,6 +133,7 @@ def test_facts_are_derived_from_declared_scope_states_and_identity(world):
     by_id = {q["id"]: q for q in facts["questions"]}
     assert by_id[f"cast:{world.mara['id']}"]["cap_on_miss"] and by_id[f"cast:{world.mara['id']}"]["weight"] == 3
     assert by_id[f"detail:{world.mara['id']}:0"]["question"] == "Does Mara show 'amber eyes'?"
+    assert by_id[f"pose:{world.mara['id']}"]["cap_on_miss"] and "plausible" in by_id[f"pose:{world.mara['id']}"]["question"]
     assert by_id[f"wardrobe:{world.mara['id']}"]["question"] == "Is Mara wearing: wool cloak?"
     assert by_id[f"location:{world.station['id']}"]["question"] == "Is this Station?"
     assert by_id[f"prop:{world.ticket['id']}"]["question"] == "Is Ticket visible?"

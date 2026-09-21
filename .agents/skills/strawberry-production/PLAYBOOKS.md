@@ -219,7 +219,11 @@ before asking the human to review.
 2. **Judge.** Two prompts to yourself, each the minimum of its sub-scores, on 0–1:
    - semantic consistency — every declared fact present *and* nothing changed that was
      not asked to change (compare against the `base` reference when there is one);
-   - perceptual quality — anatomy, naturalness, artifacts, readable text.
+   - perceptual quality — anatomy, naturalness, artifacts, readable text. **Crop and
+     look at every visible cast member at full resolution before scoring**: a head
+     tilted the wrong way, a child carried on the back when the carrier is on the
+     chest, a missing strap, are invisible at contact-sheet size and are the defects
+     that matter most. Score every frame that declares the cast, not a sample.
    Be strict: if the face drifted, score identity low; if wardrobe changed without a
    declared state, score it low. `overall = sqrt(sc * pq)`. Record `kind: judge` with
    scores `sc`, `pq`, `overall` and every problem as a tagged `discrepancy`

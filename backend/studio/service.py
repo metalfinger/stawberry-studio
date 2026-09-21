@@ -790,6 +790,13 @@ class Studio:
 
             def identity(asset):
                 ctx = asset["context"]["values"]
+                if asset["kind"] == "character":
+                    ask(
+                        f"pose:{asset['id']}",
+                        f"Is {asset['name']}'s body, head and limbs in a physically plausible position (nothing inverted, "
+                        "reversed, duplicated or missing)?",
+                        asset_id=asset["id"], weight=2, cap=True,
+                    )
                 for i, token in enumerate(ctx.get("consistency_tokens") or []):
                     ask(f"detail:{asset['id']}:{i}", f"Does {asset['name']} show '{token}'?", asset_id=asset["id"], cap=True)
                 features = ctx.get("distinctive_features")
