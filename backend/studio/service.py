@@ -955,7 +955,7 @@ class Studio:
                       "wardrobe": "identity", "subject": "identity", "features": "identity",
                       "location": "scope", "prop": "scope", "state": "state",
                       "action": "action", "beat": "action",
-                      "style": "style", "style_token": "style", "palette": "style", "lighting_rules": "style",
+                      "style": "style", "style_token": "style", "palette": "style", "lighting_rules": "style", "anchor": "style",
                       "excluded": "style"}
 
             def ask(qid, question, *, expected="yes", asset_id=None, weight=1, cap=False, look_at=None):
@@ -1054,8 +1054,28 @@ class Studio:
                 if isinstance(excluded, str) and excluded.strip():
                     ask("excluded", f"Is the image free of all of these: {excluded.strip()}?", weight=2, cap=True,
                         look_at="Scan the whole frame for anything on the list, including small invented props")
+            elif node["kind"] == "project":
+                # A project-level image is the style reference every other image inherits. It is the
+                # one picture whose only job is the visual contract, so that is all it is asked.
+                if not any(values.get(k) for k in ("bible.tokens", "bible.palette_hex", "bible.lighting_rules", "negative_prompts")):
+                    raise StudioError("facts_scope", "This project has no style bible to check an anchor against")
+                ask(f"anchor:{node['id']}",
+                    "Is this a style reference only — no characters, no story location, no narrative "
+                    "composition, nothing that could be mistaken for a frame of the film?",
+                    asset_id=None, weight=3, cap=True, look_at="Look at the whole image")
+                for position, token in enumerate(values.get("bible.tokens") or []):
+                    ask(f"style_token:{position}", f"Does the image actually show this: {token}?", weight=3)
+                if values.get("bible.palette_hex"):
+                    ask("palette", "Are the image's values confined to this palette, with no colour outside it: "
+                        + ", ".join(values["bible.palette_hex"]) + "?", weight=3)
+                rules = values.get("bible.lighting_rules")
+                if isinstance(rules, str) and rules.strip():
+                    ask("lighting_rules", f"Does the image demonstrate: {rules.strip()}?", weight=2)
+                excluded = values.get("negative_prompts")
+                if isinstance(excluded, str) and excluded.strip():
+                    ask("excluded", f"Is the image free of all of these: {excluded.strip()}?", weight=3, cap=True)
             else:
-                raise StudioError("facts_scope", "Facts are derived for cuts and assets")
+                raise StudioError("facts_scope", "Facts are derived for cuts, assets and a project's style anchor")
             return {"node_id": node_id, "kind": node["kind"], "questions": questions,
                     "scoring": "engine computes per-group weighted geometric means from your probabilities; "
                                "min_group is the headline; any capped question below 0.5, or the action group below 0.5, caps the record at 0.4"}

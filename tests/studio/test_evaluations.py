@@ -179,7 +179,7 @@ def test_facts_are_derived_from_declared_scope_states_and_identity(world):
     # assets get identity questions; other kinds are refused
     asset_facts = world.studio.facts(world.mara["id"])
     assert asset_facts["questions"][0]["id"] == f"subject:{world.mara['id']}"
-    with pytest.raises(StudioError, match="cuts and assets"):
+    with pytest.raises(StudioError, match="cuts, assets and a project"):
         world.studio.facts(world.scene["id"])
 
 
@@ -392,3 +392,22 @@ def test_a_sheet_that_failed_its_own_evaluation_cannot_be_built_on(world):
                                           prompt=prompt, references=refs))
     unfit = [i for i in caught.value.issues if i["code"] == "reference_unfit"]
     assert unfit and "failed its own evaluation" in unfit[0]["message"] and "identity" in unfit[0]["message"]
+
+
+def test_a_project_style_anchor_is_checkable(world):
+    """The anchor is the one image every other image inherits; it was unevaluatable."""
+    with pytest.raises(StudioError, match="no style bible"):
+        world.studio.facts(world.project["id"])
+    change(world.studio, world.project, **{
+        "bible.tokens": ["flat black ink, no gradients"], "bible.palette_hex": ["#12100E", "#F2EFE6"],
+        "negative_prompts": "photorealism, gradients"})
+    ids = {q["id"]: q for q in world.studio.facts(world.project["id"])["questions"]}
+    anchor = ids[f"anchor:{world.project['id']}"]
+    assert anchor["cap_on_miss"] and "mistaken for a frame" in anchor["question"]
+    assert ids["style_token:0"]["weight"] == 3 and ids["palette"]["group"] == "style"
+    assert ids["excluded"]["cap_on_miss"]
+    # nothing about cast, scope or action is asked of a swatch card
+    # a swatch card is asked nothing about cast, scope, state or action
+    assert {q["group"] for q in world.studio.facts(world.project["id"])["questions"]} == {"style"}
+    with pytest.raises(StudioError, match="cuts, assets and a project"):
+        world.studio.facts(world.scene["id"])

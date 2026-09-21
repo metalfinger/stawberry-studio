@@ -152,3 +152,15 @@ def test_field_write_stales_prepared_recipe_and_reviews(world):
     assert world.studio.media(world.media[0]["id"])["media"]["review"]["stale"] is False
     change(world.studio, world.project, **{"bible.tokens": ["torn matte paper"]})
     assert world.studio.media(world.media[0]["id"])["media"]["review"]["stale"] is True
+
+
+def test_performance_is_satisfied_by_any_of_its_fields(world):
+    """A figure with no readable face still acts. Found on a dream whose character has a block of
+    ice where her head is, for seven of eleven cuts."""
+    assert "performance_missing" in codes(world.studio.readiness(world.cut["id"])["warnings"])
+    change(world.studio, world.cut, **{"performance.body_language": "at rest, weight even, hands at her sides"})
+    assert "performance_missing" not in codes(world.studio.readiness(world.cut["id"])["warnings"])
+    change(world.studio, world.cut, **{"performance.body_language": FieldEdit(op="inherit")})
+    assert "performance_missing" in codes(world.studio.readiness(world.cut["id"])["warnings"])
+    change(world.studio, world.cut, **{"performance.gaze": "away down the room"})
+    assert "performance_missing" not in codes(world.studio.readiness(world.cut["id"])["warnings"])

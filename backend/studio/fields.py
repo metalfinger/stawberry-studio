@@ -200,11 +200,18 @@ def warnings_for(node: dict, values: dict, cleared) -> list[dict]:
     if node["kind"] == "cut":
         if not _present(values, cleared, "beat.purpose"):
             warn("beat_missing", "State what this beat accomplishes in beat.purpose", "beat.purpose")
-        if values.get("visible_cast") and not _present(values, cleared, "performance.expression"):
+        # A face is not the only performance. A figure seen from behind, at distance, in
+        # silhouette, masked — or, in one real dream, with a block of ice where its head is —
+        # still acts, through posture and gaze. Any performance field satisfies this.
+        if values.get("visible_cast") and not any(
+            _present(values, cleared, f"performance.{name}")
+            for name in ("expression", "body_language", "gaze", "gesture", "state")
+        ):
             warn(
                 "performance_missing",
-                "Describe the visible cast's performance: performance.expression at minimum",
-                "performance.expression",
+                "Say how the visible cast acts — expression, body language, gaze, gesture or state; "
+                "a figure with no readable face still has posture",
+                "performance.body_language",
             )
         if not any(_present(values, cleared, f) for f in ("sound.sfx", "sound.music", "sound.ambient")):
             warn("sound_missing", "Declare what is heard: sound.sfx, sound.music, or an inherited sound.ambient", "sound.sfx")
