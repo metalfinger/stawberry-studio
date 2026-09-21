@@ -780,6 +780,70 @@ class Studio:
             return {**result, "chain": True, "reason": f"continuity language: '{hit.strip()}'"}
         return {**result, "chain": False, "reason": "new shot, no continuity language"}
 
+    def repair(self, cut_id):
+        """What to change for the next take, derived from the latest take's records. Deterministic; no model."""
+        with self.store.connection() as conn:
+            cut = self.store.one(conn, "nodes", cut_id)
+            if cut["kind"] != "cut":
+                raise StudioError("repair_scope", "Repair proposals are for cuts")
+            pol = self.rules.policy(conn, cut_id)
+            row = conn.execute("SELECT * FROM media WHERE node_id=? ORDER BY created_at DESC LIMIT 1", (cut_id,)).fetchone()
+            used = self.rules.takes_used(conn, cut_id)
+            base = {"cut_id": cut_id, "takes_used": used, "max_takes": pol["max_takes_per_cut"], "can_retry": used < pol["max_takes_per_cut"]}
+            if not row:
+                return {**base, "take": None, "suggestions": [{"code": "first_take", "message": "No take yet; prepare from the sheets"}]}
+            media = dict(row)
+            status = self.rules.take_status(conn, media, pol)
+            facts = self.rules.current_evaluation(conn, media, "facts")
+            judge = self.rules.current_evaluation(conn, media, "judge")
+            duplicate = self.rules.current_evaluation(conn, media, "duplicate")
+            production = self.rules.resolve(conn, cut_id)
+            sheets = {a["id"]: (a["selection"] or {}).get("media_id") for a in production["assets"]}
+            names = {a["id"]: a["name"] for a in production["assets"]}
+            _, references = lineage._recipe_references(conn, media["id"])
+            ref_facts = {}
+            for ref in references:
+                ref_media = self.store.one(conn, "media", ref["media_id"])
+                if self.store.one(conn, "nodes", ref_media["node_id"])["kind"] == "cut":
+                    ref_facts[ref["media_id"]] = (ref["role"], self.rules.current_evaluation(conn, ref_media, "facts"))
+            suggestions = []
+
+            def suggest(code, message, **extra):
+                suggestions.append({"code": code, "message": message, **extra})
+
+            failed = [e for e in (facts["evidence"] if facts else []) if e.get("probability") is not None and e["probability"] < 0.5]
+            for item in failed:
+                qid = item.get("question_id") or ""
+                kind = qid.split(":")[0]
+                asset = item.get("asset_id")
+                if kind == "state":
+                    blamed = [mid for mid, (role, f) in ref_facts.items() if f and any(
+                        (x.get("question_id") == qid) and (x.get("probability") or 1) < 0.5 for x in f["evidence"])]
+                    if blamed:
+                        suggest("drop_reference", f"Reference {blamed[0][:8]} fails the same fact ({item['question']}); do not chain from it — use the sheet for {names.get(asset, asset)}",
+                                media_id=blamed[0], sheet=sheets.get(asset))
+                    else:
+                        suggest("state_in_prompt", f"State the lock in the prompt, verbatim: {item['question'].rstrip('?')}", asset_id=asset)
+                elif kind in {"cast", "prop", "location"}:
+                    suggest("attach_reference", f"Attach the {kind} reference for {names.get(asset, asset)} and name it in the prompt", asset_id=asset, sheet=sheets.get(asset))
+                elif kind == "pose":
+                    suggest("pose_in_prompt", f"Describe {names.get(asset, asset)}'s posture explicitly (upright, facing, limbs); do not use the previous take as base", asset_id=asset)
+                elif kind in {"detail", "wardrobe", "features"}:
+                    suggest("token_in_prompt", f"Quote verbatim: {item['question'].rstrip('?')}", asset_id=asset)
+                elif kind in {"action", "beat"}:
+                    suggest("lead_with_action", "Lead the prompt with the action sentence and beat.visual_point, verbatim; everything else after")
+                elif kind == "style":
+                    suggest("bible_in_prompt", "Quote bible.tokens and bible.palette_hex verbatim; add negative_prompts")
+            if judge:
+                for d in judge["discrepancies"]:
+                    suggest("judge_" + d["tag"], d["note"], asset_id=d.get("asset_id"), region=d.get("region"))
+            if duplicate and any(d["tag"] == "copy_paste" for d in duplicate["discrepancies"]):
+                suggest("change_camera", "Near-identical to a sibling beat: change camera.framing or camera.angle and do not use the previous take as base")
+            if status["accepted"] and not suggestions:
+                suggest("accepted", "The latest take passes the gate; nothing to repair")
+            return {**base, "take": status, "suggestions": suggestions,
+                    "sheets": {names[a]: m for a, m in sheets.items()}}
+
     def _score_facts(self, conn, media, evidence):
         """The engine, not the evaluator, turns probabilities into the record's scores."""
         import math
@@ -1032,11 +1096,7 @@ class Studio:
             slots = [int(n) for n in re.findall(r"@Image(\d+)", request.prompt)]
             if any(n < 1 or n > len(references) for n in slots):
                 raise StudioError("reference_binding", "Prompt names an image that is not attached")
-            self.rules._prompt_under_validation = request.prompt
-            try:
-                self.rules.validate_recipe(conn, node["id"], references)
-            finally:
-                self.rules._prompt_under_validation = ""
+            self.rules.validate_recipe(conn, node["id"], references, request.prompt)
             gaps = self.rules.recipe_gaps(conn, node["id"], references, request.prompt)
             spec = {**request.model_dump(), **prepared, "references": references}
             fingerprint = digest({"spec": spec, "context": context})
@@ -1088,7 +1148,8 @@ class Studio:
                 or self.rules.review(conn, media)["revision"] != ref.get("review_revision")
             ):
                 raise StudioError("reference_changed", "A reference source changed; review a new recipe", 409)
-        self.rules.validate_recipe(conn, recipe["node_id"], json.loads(recipe["spec"])["references"])
+        spec = json.loads(recipe["spec"])
+        self.rules.validate_recipe(conn, recipe["node_id"], spec["references"], spec.get("prompt", ""))
 
     def approve(self, recipe_id: str, approval: Approval):
         with self.store.connection(write=True) as conn:

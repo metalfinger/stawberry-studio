@@ -118,7 +118,8 @@ class ProductionRules:
             dependencies = self.asset_ids(self.scope(ctx)) + ctx["values"].get("continuity_from", [])
         signature = digest(
             {
-                "values": ctx["values"],
+                # policy is about process, not the picture: changing it must not stale a visual review
+                "values": {k: v for k, v in ctx["values"].items() if not k.startswith("policy.")},
                 "cleared": ctx["cleared"],
                 "sources": ctx["sources"],
                 "ancestors": [{key: item[key] for key in ("id", "kind", "name", "notes")} for item in ctx["ancestors"]],
@@ -490,7 +491,7 @@ class ProductionRules:
                         )
         return out
 
-    def validate_recipe(self, conn, node_id, references):
+    def validate_recipe(self, conn, node_id, references, prompt=""):
         production = self.resolve(conn, node_id)
         issues = list(production["readiness"]["issues"])
         covered = {"character": set(), "location": set(), "prop": set()}
@@ -534,13 +535,16 @@ class ProductionRules:
         ctx = self.studio._context(conn, node_id)
         pol = resolve_policy(ctx["values"])
         if pol["autonomous"]:
-            prompt = getattr(self, "_prompt_under_validation", "") or ""
             for gap in self.recipe_gaps(conn, node_id, references, prompt):
                 if gap["code"] in {"reference_unfit", "take_budget"} or (gap["code"] == "prompt_unbound" and gap["node_id"] != node["project_id"]):
                     issues.append(gap)
-        if ctx["values"].get("policy.require_evaluation_for_reference") is True or pol["autonomous"]:
+        explicit = ctx["values"].get("policy.require_evaluation_for_reference") is True
+        if explicit or pol["autonomous"]:
             for ref in references:
                 media = self.store.one(conn, "media", ref["media_id"])
+                owner_kind = self.store.one(conn, "nodes", media["node_id"])["kind"]
+                if not explicit and owner_kind != "cut":
+                    continue  # autonomous mode gates reused takes; sheets stay a warning unless asked for explicitly
                 if not self.evaluated(conn, media):
                     issues.append(
                         {

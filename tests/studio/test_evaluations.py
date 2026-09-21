@@ -289,7 +289,7 @@ def test_locks_make_state_questions_capped_and_gate_the_take(world):
 
 def test_autonomous_selection_needs_an_accepted_take_and_evidence_backed_review(world):
     change(world.studio, world.project, **{"policy.autonomous": True, "policy.min_take_score": 0.5})
-    refresh(world.studio, world.media)
+    assert world.studio.media(world.media[0]["id"])["media"]["review"]["stale"] is False  # policy never stales a review
     cut = world.cuts[0]
     media = world.studio.import_media(cut["id"], world.path, "Take", metadata={"fake": True})
     subjects = [world.mara["id"], world.station["id"], world.ticket["id"]]
