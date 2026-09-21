@@ -240,3 +240,58 @@ ran without a hand on it.
 engine has no delete, so they stay as history. Cuts 17 and 18 (the match-cut pair) were
 not re-cut and still descend from the depth-16/17 chain; cut 3's old take and the seven
 replaced takes remain as unselected history.
+
+## Fifth pass — the stranger, and what it cost me
+
+Three takes were handed to blind evaluators: a fresh context each, given only the image
+file and the cut's question list. No story, no prompt, no notes, no knowledge of my
+scores, no access to this conversation. Each was told to crop every named subject before
+answering and to say which crop it used.
+
+All three disagreed with me past the threshold, in the same two directions.
+
+| Take | my min-group | blind | gap | what the blind evaluator saw that I did not |
+| --- | --- | --- | --- | --- |
+| Before the doorway | 0.90 | **0.45** | 0.45 | "the baby's hands are featureless white mitts with no fingers"; the man is out of scale with the arch; style is "a photoreal portrait with a sketch filter over it… warm sepia rather than true monochrome" |
+| Arrival at the old school | 0.82 | **0.40** | 0.42 | "the man's left hand is malformed — the digits fuse into a single curled hook"; no figure casts a shadow on a sunlit plaza; the child reads 12–18 months, not eight |
+| An auto crosses the frame | 0.62 | **0.29** | 0.33 | "the auto never actually hides the man"; "the baby's arms are nowhere visible — the carrier panel has no armholes and no hands appear anywhere"; the street is cobblestone, which reads European |
+
+Two systematic errors of mine, found by three independent readers who could not have
+coordinated:
+
+1. **Hands.** Every one of the three found an anatomy defect in a hand — mitts without
+   fingers, fused digits, arms absent entirely. I had cropped the child on all three and
+   scored pose 0.85–0.95. I checked that the head was the right way up, because that was
+   the failure I had been told about, and stopped looking.
+2. **Style.** I scored style 0.85–0.90 across every frame; the blind readers gave
+   0.45, 0.55, 0.68, and each independently described the same thing: near-photoreal
+   figures under a filter, warm sepia rather than monochrome, no real spatial
+   discontinuity. The project's own bible says *monochrome, no colour accents,
+   non-realistic, imperfect registration*. The pictures do not meet it and I had been
+   marking them as though they did. That is the single largest unnoticed drift in the
+   production, and it is in every frame including the twenty-two originals.
+
+Both are the same mistake in different clothes: I was scoring against my memory of what
+the frame was supposed to fix rather than against the declaration in front of me.
+
+**What changed in the engine as a result.**
+
+- A facts record that answers fewer questions than were asked is **not an evaluation**.
+  Mine answered 14 of 22 on two takes and 15 of 23 on the third — I had silently skipped
+  the identity-token questions. Coverage now reads 0 of 22, which is the truth.
+- **An existing second opinion always counts**, whether or not `policy.require_stranger`
+  is set. The policy decides whether a missing stranger blocks; it never decides whether
+  a present disagreement is heard. A gap over 0.25 names the group it is about
+  ("disagrees by 0.45 on style"), and a second opinion below the project threshold stops
+  the take on its own.
+- **Repair reads the stranger too** — its failing atoms, its tagged discrepancies, and
+  its free note, which is where "the auto never actually hides him" and "no armholes"
+  live. Those are the instructions for the next take.
+
+All three takes are now rejected by the gate and carry repair proposals. Nothing was
+un-selected by hand; the engine did it once the evidence existed.
+
+**The lesson for the harness, stated once.** A single evaluator scoring its own work will
+converge on the defects it already knows about. The second opinion is not a nicety at the
+end; it is the only mechanism here that can find an error class nobody has named yet. It
+cost three subagent runs and found two.
