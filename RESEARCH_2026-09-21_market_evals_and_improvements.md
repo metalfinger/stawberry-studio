@@ -18,8 +18,15 @@ Two engines live in one repo, and the thesis has already moved between them.
 
 Three things the earlier chat got wrong or couldn't know:
 
-- **"Re-anchor every 4th cut"** — no code matches `re_anchor` / `reanchor`. Either it lives
-  under another name or it was a doc-level intention. Unverified; do not build on it.
+- **"Re-anchor every 4th cut" exists, and is richer than the README says.** It is
+  `backend/orchestrator/cut_planner.py:58-99`: `_RE_ANCHOR_EVERY_N_CUTS = 4` and
+  `_should_chain_prev_cut()`, a four-rule *chaining decision* in precedence order — an
+  explicit `cuts.chain_from_prev` override; then never chain when `cut_number % 4 == 0`;
+  then chain if the cut is in the same shot as the previous one; then chain if the action
+  text contains continuity language (`"moments later"`, `"still "`, `"match cut"`, …
+  `cut_planner.py:49-55`). "Drop prev_cut" is implemented by never adding it to the plan.
+  The modulo is the guess; the other three rules are worth keeping. (An earlier version of
+  this note said the mechanism did not exist — a case-sensitive grep missed the constant.)
 - **Lineage is already recoverable in the new engine.** `media.job_id → jobs.recipe_id →
   recipes.spec.references[]` (ordered, each with `role` and `subjects`). Generation depth
   is a recursive query, not a schema change.
@@ -394,7 +401,9 @@ force into structure is now prose in `notes`.
 The six-layer consistency stack, line by line: style anchor — gone; style bible verbatim
 — gone; identity-trait extraction — fields gone, only the old code has them; per-cut
 variants / PREPROD_FILL — replaced by `asset_requirements` (better); reference-priority
-cap — replaced by reasoning (better); re-anchor every 4th — never existed in code.
+cap — replaced by reasoning (better); re-anchor every 4th — exists in `cut_planner.py:58-99` as a
+four-rule chaining decision; the modulo should give way to measured depth, the other three
+rules (explicit override, same shot, continuity language) should be ported.
 Net: the two *enforced* layers were dropped, the two *heuristic* layers were improved,
 and the vision critic went from auto-gate to "never run" — which §3.2 turns into a record.
 
