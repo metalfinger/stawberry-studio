@@ -153,3 +153,57 @@ plus the recorded negative result. 161 tests, Ruff clean.
 **Next.** Generate the laboratory's cross-room reference view, retry "Talking by the autoclave",
 then re-cut "She excuses herself" with the hands and apron named — and check whether the apron
 straps are the sheet's fault or the frame's.
+
+## Iteration 4 — 22 Sep, 02:40 IST — six of eleven, and the budget learns the difference
+
+**Credits** 303.1 → 298.1 (5 spent: a location view, three repairs, one recut). Hard stop 200.
+
+**Where the story stands.** Six cuts accepted and selected: the empty laboratory, the two-shot by
+the autoclave, her walking away, the far door, her return with the block, and her standing before
+him. The sequence review now reports one finding — the sculpturing scene is 40% of the runtime,
+which is a real editorial note and not a defect — and the `coverage_repeats` complaint from the
+first iteration is gone.
+
+**The flipped room was a missing reference, not a stubborn generator.** The two-shot came back with
+the laboratory rearranged, twice. The sheet shows the room along one axis; the cut is staged across
+it, so nothing held the walls. The workflow had been saying so since the sheets landed
+(`plan_asset_views`) and I had skipped it. Declared the requirement, generated the across-the-room
+view — window wall filling the frame, bench behind camera, end door where the two walls meet — and
+added `location_view` to the prompt builder: a cut names the view it is staged on and gets that
+media as its location reference instead of the primary sheet. The retry holds the geography.
+
+**A take budget should count blind retries, not repairs.** `Talking` had used both its takes and the
+gate refused a third — but the cause had been found and fixed, and a generation with a reference
+that did not exist before is different work. First attempt compared the whole generation context,
+which refunded the budget every time any asset in the project moved: too loose. The right signal is
+the prompt. `takes_used` now counts takes made from the *same* prompt, so re-running an identical
+ask is refused and a repair that changed what the frame asks for starts its own count. The existing
+test had encoded the old rule and now documents the distinction.
+
+**The rubric moves, and records do not.** This harness adds questions as it learns what nobody
+asked, which quietly leaves earlier frames graded against a weaker rubric while still reading as
+complete. `take_status` now says so — "answered against an older rubric: 32 questions then, 34 now"
+— and `autoloop/reanswer.py` carries a record forward, keeping the answers that still apply verbatim
+and asking only for the ones that did not exist yet. Four records were carried onto the feet
+question that way, one of them a take that had already been accepted without it.
+
+**The detail that is not there to have.** Three frames in a row failed the hands question, and
+cropping at 8x and 9x showed why: at thirty-five pixels a woodcut hand *is* a paddle with a thumb.
+The question was written for a frame where the subject fills it and was being asked of the same
+subject at a tenth the size. The instruction now says to measure first — under about sixty pixels a
+hand cannot carry five fingers in any drawn idiom, so the answer is `not_visible` with the size
+stated, and the same for a shoe under forty. That is not a softening: in the one frame where the
+hands are ninety pixels across, they were counted and scored.
+
+**A bug I had just introduced.** `evaluated` still required `answered >= asked` and ignored
+`not_visible`, so every frame with an unseeable fact was asked to evaluate something it had already
+evaluated, forever. Four cuts sat in that loop before it showed. Fixed, and the autopilot now asks
+its evaluation questions media-scoped, so the sheet-match questions — which only exist for a
+specific image — are in the task it hands over.
+
+**Harness deltas.** `location_view` in the prompt builder, prompt-scoped take budget, rubric-drift
+reporting, `reanswer.py`, scale-aware anatomy questions, the `evaluated` fix, media-scoped autopilot
+tasks. One new failure class. 161 tests, Ruff clean.
+
+**Next.** The sculpturing chain — the block, the first channels, the angles, the horse's head — and
+a blind evaluator on one of the six accepted frames, since a pass is where a generous evaluator hides.

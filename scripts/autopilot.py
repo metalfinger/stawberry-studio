@@ -149,7 +149,7 @@ def step(studio, project_id, only=None, max_ticks=120, fake=False, clock=time.ti
                 log.append({"media": media["id"], "duplicate_check": error.code})
         if not status["evaluated"]:
             entry["stage"] = "awaiting_evaluation"
-            facts = studio.facts(cut["id"])
+            facts = studio.facts(cut["id"], media["id"])  # media-scoped: the sheet-match questions exist only here
             tasks.append({"task": "evaluate", "cut_id": cut["id"], "media_id": media["id"],
                           "path": str(studio.store.media_dir / media["path"]),
                           "questions": facts["questions"], "scoring": facts["scoring"],

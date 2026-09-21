@@ -1014,8 +1014,11 @@ class Studio:
                         f"Are {asset['name']}'s hands and arms correct — both arms emerging and visible where they should be, "
                         "five separate readable fingers AND a thumb on each visible hand, no fused, extra or missing digits?",
                         asset_id=asset["id"], weight=2, cap=True,
-                        look_at=f"Crop each of {asset['name']}'s hands on its own and enlarge it at least 8x with nearest-neighbour "
-                                "resampling. If you cannot count the fingers and find the thumb, the answer is no, not 'probably'",
+                        look_at=f"Crop each of {asset['name']}'s hands on its own and enlarge it at least 8x with "
+                                "nearest-neighbour resampling. First measure it: a hand under about 60 pixels on its "
+                                "longest side cannot carry five fingers in any drawn idiom, and the honest answer is "
+                                "not visible with the size stated, not a guess either way. Above that, if you cannot "
+                                "count the fingers and find the thumb, the answer is no, not 'probably'",
                     )
                     # Feet are as malformed as hands and nobody looks at them: "body, head and limbs"
                     # is answered from the torso up. A boot that is two merged blobs passed a pose
@@ -1025,7 +1028,9 @@ class Studio:
                         f"Are {asset['name']}'s feet correct — each shoe or foot a single coherent shape with a readable "
                         "toe and heel, both standing on the same floor, neither merged into the other or into the ground?",
                         asset_id=asset["id"], weight=1, cap=True,
-                        look_at=f"Crop {asset['name']}'s feet and enlarge at least 8x; check each shoe separately",
+                        look_at=f"Crop {asset['name']}'s feet and enlarge at least 8x; check each shoe separately, and "
+                                "say the pixel size — below about 40 pixels a shoe is a silhouette and nothing more "
+                                "can be asked of it",
                     )
                 for i, token in enumerate(ctx.get("consistency_tokens") or []):
                     ask(f"detail:{asset['id']}:{i}", f"Does {asset['name']} show '{token}'?", asset_id=asset["id"], cap=True)

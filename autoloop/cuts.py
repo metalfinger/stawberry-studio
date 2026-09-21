@@ -71,8 +71,20 @@ def build(studio, cut_id):
             bits.append("Unchanging: " + ", ".join(f'"{t}"' for t in locks) + ".")
         out.append(f"{asset['name']} ({asset['kind']}): " + "; ".join(b.strip().rstrip(".") for b in bits if b) + ".")
         media = asset.get("selection") or {}
+        # A sheet shows a place along one axis. A cut staged across that axis has nothing holding
+        # its walls in place, and the room comes back rearranged. When the cut names a view, use
+        # the media that covers it instead of the primary sheet.
+        wanted = values.get("location_view") if asset["kind"] == "location" else None
+        if wanted:
+            covering = [r for r in studio.inspect(asset["id"])["requirements"]
+                        if r["kind"] == "view" and r["label"] == wanted and r.get("covered_by")]
+            if not covering:
+                raise ValueError(f"{node['name']}: no approved view labelled {wanted!r} for {asset['name']}")
+            media = {"media_id": covering[0]["covered_by"][-1]}
         if ctx.get("reference_mode") != "text" and media.get("media_id"):
             instruction = f"{asset['name']}: this exact {asset['kind']}, unchanged"
+            if wanted:
+                instruction = f"{asset['name']} seen '{wanted}': this exact room from this angle"
             if asset["kind"] == "location":
                 # the commonest location failure is not a wrong room but a mirrored one
                 instruction += (". The camera stands inside this room: keep its walls, windows, benches and "

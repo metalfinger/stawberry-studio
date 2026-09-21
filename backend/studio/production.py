@@ -234,6 +234,17 @@ class ProductionRules:
             if asked and answered + unseen < asked:
                 # a partial answer sheet is the question-level form of a partial pass
                 reasons.append(f"facts record answers {int(answered)} of {int(asked)} questions")
+            # The rubric is not fixed: this harness adds questions as it learns what nobody asked.
+            # A record stores how many questions it was answering, so a frame graded before the
+            # hands instruction named a magnification — or before feet were asked at all — still
+            # reads as complete. It is not; it is complete against a weaker rubric, and saying so
+            # is the only thing that keeps an improving loop from grandfathering its own mistakes.
+            try:
+                current = len(self.studio._facts(conn, media["node_id"], media["id"])["questions"])
+            except StudioError:
+                current = 0
+            if current and asked and current > asked:
+                reasons.append(f"answered against an older rubric: {int(asked)} questions then, {current} now")
             # "not visible" is an honest answer once and a hiding place if it is most of them.
             # When half a frame's declared facts are out of shot, the declarations belong on a
             # different cut — the picture is not what is wrong.
@@ -267,7 +278,10 @@ class ProductionRules:
             reasons.append("no stranger record")
         return {
             "media_id": media["id"],
-            "evaluated": bool(facts and judge and facts["scores"].get("answered", 0) >= facts["scores"].get("asked", 0)),
+            # an unseeable fact is answered, not skipped: leaving it out here made every frame with
+            # one loop forever, asked to evaluate something it had already evaluated
+            "evaluated": bool(facts and judge and facts["scores"].get("answered", 0)
+                              + facts["scores"].get("not_visible", 0) >= facts["scores"].get("asked", 0)),
             "second_opinion": stranger["scores"].get("min_group") if stranger else None,
             "score": score,
             "accepted": not reasons,
@@ -275,10 +289,31 @@ class ProductionRules:
             "records": {k: (v["sequence"] if v else None) for k, v in (("facts", facts), ("judge", judge), ("stranger", stranger), ("duplicate", duplicate))},
         }
 
-    def takes_used(self, conn, cut_id):
-        return conn.execute(
-            "SELECT COUNT(*) FROM media WHERE node_id=? AND job_id IS NOT NULL", (cut_id,)
-        ).fetchone()[0]
+    def takes_used(self, conn, cut_id, prompt=None):
+        """Takes generated for this cut; with a prompt, only the ones that asked for the same thing.
+
+        The budget exists so an autonomous loop cannot burn credits retrying the same broken thing.
+        It is not meant to stop a repair. Re-running an identical prompt is the blind retry it was
+        built to catch; a prompt that changed because the story changed — a state described
+        properly, an action rewritten, a reference view that did not exist before — is different
+        work and starts its own count. Comparing the whole generation context instead would refund
+        the budget every time any asset in the project moved, which is not the same thing at all.
+        """
+        rows = conn.execute(
+            "SELECT r.spec AS spec FROM media m JOIN jobs j ON j.id=m.job_id "
+            "JOIN recipes r ON r.id=j.recipe_id WHERE m.node_id=?", (cut_id,)
+        ).fetchall()
+        if prompt is None:
+            return len(rows)
+        wanted = " ".join(prompt.split())
+        used = 0
+        for row in rows:
+            try:
+                if " ".join((json.loads(row["spec"]).get("prompt") or "").split()) == wanted:
+                    used += 1
+            except (TypeError, ValueError):
+                continue
+        return used
 
     def recipe_gaps(self, conn, node_id, references, prompt):
         """Pre-generation checks. Advisory by default; issues in autonomous mode."""
@@ -299,10 +334,12 @@ class ProductionRules:
                 if token.lower() not in low:
                     gaps.append({"code": "prompt_unbound", "node_id": node["project_id"], "token": token,
                                  "message": f"Prompt does not quote the bible token '{token}'"})
-            used = self.takes_used(conn, node_id)
+            used = self.takes_used(conn, node_id, prompt)
             if used >= pol["max_takes_per_cut"]:
                 gaps.append({"code": "take_budget", "node_id": node_id,
-                             "message": f"{used} takes already generated for this cut; policy.max_takes_per_cut is {pol['max_takes_per_cut']}"})
+                             "message": f"{used} takes already generated from this exact prompt; "
+                                        f"policy.max_takes_per_cut is {pol['max_takes_per_cut']}. "
+                                        "Change what the frame asks for, or accept the best take"})
         for ref in references:
             media = self.store.one(conn, "media", ref["media_id"])
             owner = self.store.one(conn, "nodes", media["node_id"])

@@ -17,6 +17,7 @@ from backend.studio.models import (
 from backend.studio.service import Studio
 from backend.studio.store import Store, StudioError
 from backend.studio.tools import invoke
+from backend.studio.worker import Worker
 from scripts.autopilot import step
 
 
@@ -106,9 +107,22 @@ def test_autopilot_runs_the_loop_and_stops_only_for_eyes(world):
     review = w.studio.media(media2)["media"]["review"]
     assert review["author"] == "assistant" and review["complete"] and set(review["depicted_assets"]) == {w.mara["id"], w.station["id"]}
     assert fifth["evaluation_coverage"] == {"evaluated": 1, "selected": 1, "total": 1}
-    # budget: two takes used, a third prepare is refused in autonomous mode
+    # Budget: two takes exist, but they asked for different things — the second was a repair that
+    # rewrote the prompt. That is new work, not a blind retry, so it does not spend the budget.
+    assert invoke(w.studio, "repair", {"id": w.cut["id"]})["takes_used"] == 2
+    assert prepare(w)["id"]
+
+    # Asking for the identical thing twice is what the budget is for.
+    repeated = "Mara waits upright. amber eyes. torn paper"  # one take from this prompt already exists
+    for _ in range(1):
+        again = prepare(w, prompt=repeated)
+        w.studio.approve(again["id"], Approval(fingerprint=again["fingerprint"], user_decision="fixture"))
+        job = w.studio.enqueue(again["id"])
+        while w.studio.job(job["id"])["state"] != "ready":
+            assert Worker(w.studio, clock=lambda: clock[0]).tick()
+            clock[0] += 10
     with pytest.raises(StudioError) as caught:
-        prepare(w)
+        prepare(w, prompt=repeated)
     assert any(i["code"] == "take_budget" for i in caught.value.issues)
 
 

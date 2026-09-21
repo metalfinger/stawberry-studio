@@ -4,8 +4,8 @@
     "start_credits": 317,
     "ceiling_spend": 120,
     "hard_stop_balance": 200,
-    "last_balance": 303.1,
-    "checked_at": "2026-09-22T01:30:00+05:30"
+    "last_balance": 298.1,
+    "checked_at": "2026-09-22T02:40:00+05:30"
   },
   "stories": [
     {
@@ -19,7 +19,7 @@
         "transformation across frames"
       ],
       "project_id": "5b0eccc3-70a6-491b-b91d-13b54474d022",
-      "stage": "cuts_in_progress"
+      "stage": "cuts_6_of_11_accepted"
     },
     {
       "slug": "effigy",
@@ -133,7 +133,37 @@
       "code": "palette_scorer_abandoned",
       "class": "recorded negative result",
       "change": "no aggregate pixel measure separates a fifth ink from ink-to-paper blend; HARNESS.md 4b"
+    },
+    {
+      "iteration": 4,
+      "code": "location_view",
+      "class": "the second version",
+      "change": "a cut names the view it is staged on; a sheet shows a place along one axis only"
+    },
+    {
+      "iteration": 4,
+      "code": "take_budget_by_prompt",
+      "class": "budget",
+      "change": "the budget counts identical prompts; a repair that changed the ask is new work"
+    },
+    {
+      "iteration": 4,
+      "code": "rubric_drift",
+      "class": "the generous evaluator",
+      "change": "a record answered against an older rubric says so; reanswer.py carries it forward"
+    },
+    {
+      "iteration": 4,
+      "code": "scale_aware_anatomy",
+      "class": "the detail that is not there to have",
+      "change": "measure first: under ~60px a hand cannot carry fingers, so not_visible with the size"
+    },
+    {
+      "iteration": 4,
+      "code": "evaluated_counts_unseen",
+      "class": "bug",
+      "change": "not_visible counted toward coverage in the evaluated flag; it looped forever without it"
     }
   ],
-  "iterations": 3
+  "iterations": 4
 }
