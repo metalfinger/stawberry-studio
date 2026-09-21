@@ -53,6 +53,18 @@ for media_id, new in json.loads(Path(sys.argv[1]).read_text()).items():
         version=previous["version"] + "+carried", kind="facts", evidence=evidence,
         confidence=previous.get("confidence"), discrepancies=previous["discrepancies"]))
     status = studio.rules_take_status if False else None
+    # A judge record goes stale with the definition exactly as the facts record does, and a judge
+    # note about an unchanged image is still true when only the rubric moved. Carry it too, or the
+    # take reads as unevaluated however carefully its facts were re-answered.
+    judge = detail["media"]["evaluations"].get("judge")
+    if judge:
+        studio.evaluate(media_id, EvaluationCreate(
+            expected_context=detail["review_context"], evaluator=judge["evaluator"],
+            version=judge["version"] + "+carried", kind="judge",
+            scores={k: v for k, v in judge["scores"].items() if k in {"sc", "pq"}},
+            evidence=[Evidence(question=e["question"], answer=e["answer"], probability=e.get("probability"),
+                               asset_id=e.get("asset_id"), region=e.get("region")) for e in judge["evidence"]],
+            confidence=judge.get("confidence"), discrepancies=judge["discrepancies"]))
     print(f"{media_id[:8]} {record['scores']['min_group']:.2f} capped {int(record['scores']['capped'])} "
           f"answered {int(record['scores']['answered'])}+{int(record['scores']['not_visible'])} "
           f"of {int(record['scores']['asked'])} (was {int(previous['scores']['asked'])})")

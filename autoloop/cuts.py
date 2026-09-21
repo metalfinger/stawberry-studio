@@ -80,6 +80,13 @@ def build(studio, cut_id):
     opening = f"A single storyboard frame, {framing}{', ' + angle if angle else ''}."
     if fills:
         opening += f" {fills}"
+    # Where the camera is decides which faces of everything are visible, and a frame that gets it
+    # wrong reads as composited rather than drawn. These fields were in the vocabulary and the
+    # prompt was throwing them away.
+    for field, label in (("camera.height", "Camera height"), ("camera.lens", "Lens"),
+                         ("camera.movement", "Camera movement"), ("camera.depth_of_field", "Depth")):
+        if str(values.get(field) or "").strip():
+            opening += f" {label}: {str(values[field]).strip().rstrip('.')}."
     out.append(f"{opening} {action}")
 
     out += _lines("PERFORMANCE", [str(values.get(f"performance.{p}") or "") for p in PERFORMANCE], join="; ")

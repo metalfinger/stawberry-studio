@@ -316,3 +316,59 @@ held inside black contour" in the lighting rules, which is a sentence the genera
 times. It needs a token of its own, the paper hex needs correcting to what this style actually
 prints, and the five ice frames need regenerating. That stales every review in the project, so it
 wants a whole iteration.
+
+## Iteration 6 — 22 Sep, 05:10 IST — one sentence in the bible, measured
+
+**Credits** 293.1 → 291.1 (2 spent, both on "She returns"). Hard stop 200.
+
+**The fix was a sentence, and the effect is measurable.** The bible had six tokens about ink, edges,
+gouges, grain and tone, and nothing at all about how this style prints something transparent. The
+lighting rules mentioned ice in passing and the generator ignored it five times. Added as a token:
+*ice and window glass are flat plates of the cold ink with white gouged in, never graded.*
+
+Counted inside the block against a matched crop of her own skirt in the same frame:
+
+| | block | cloth | ratio |
+|---|---|---|---|
+| Before the token | 592 | 253 | 2.34 |
+| After the token | 156 | 238 | **0.66** |
+| After the token, two facets | 264 | 189 | 1.40 |
+
+The third row matters as much as the second. The frame with two flat facets in two tones counts
+higher than the one with a single plate, and that is correct — two plates cost twice the tones and
+are still flat. The measurement is a pointer to where to look, not a verdict, and the evidence now
+says so in as many words.
+
+**The paper hex was a number nothing ever met.** `#F2EFE6` is missed by every image in the
+production including the style anchor, measured `#F2E5CE` and `#EFE3CF`. Corrected to `#F0E4CE`. A
+palette question the production cannot pass is not a check, it is noise.
+
+**The viewpoint question, first use.** The blind evaluator had found the ice block drawn from its
+own eye level — a top surface visible on an object well above the horizon, so it read as composited.
+Added as a capped question: find the horizon from two objects you trust, then check everything else
+against it, especially whatever the frame had to invent. On its first real frame it scored 0.40 and
+rejected the take. The remedy was not a prompt trick: `camera.height` was already in the vocabulary
+and the prompt builder was throwing it away along with lens, movement and depth of field. Declaring
+*chest height, below the block — its underside is the face we see and its top is never visible*
+produced a block showing a front and a left side face and no top plane, and the question scored 0.90.
+
+**A token that swept in too much.** As first written it said "transparent things — ice, glass,
+water", which made every retort and test tube take the cold ink, contradicting the lighting rule and
+every frame approved so far. Narrowed to the cold things, with the glassware exception put where the
+rest of the ink placement lives. The lesson is small and general: a style token is a rule about
+technique, and a rule that names a category rather than the things in it will collect things you did
+not mean.
+
+**What a bible change costs, paid in full.** Amending it staled every review and every evaluation in
+the project — nine cuts and five sheets. The sheets carry forward unchanged; the cuts were
+re-answered onto the new rubric with `reanswer.py`, which turned out to carry only the facts record
+and leave the judge record stale, so four takes read as unevaluated however carefully their facts
+had been re-answered. It carries both now.
+
+**Still open.** "She returns" and "Standing naturally" collapsed into near-identical pictures — the
+duplicate check flagged them and my own action score of 0.75 said the same thing: the walk does not
+read as a walk. Four ice frames still need regenerating against the corrected bible.
+
+**Harness deltas.** The transparency token, the corrected paper hex, the `viewpoint` question and
+its failure class, camera fields reaching the prompt, `reanswer.py` carrying judge records. 161
+tests, Ruff clean.

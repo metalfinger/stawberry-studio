@@ -4,8 +4,8 @@
     "start_credits": 317,
     "ceiling_spend": 120,
     "hard_stop_balance": 200,
-    "last_balance": 293.1,
-    "checked_at": "2026-09-22T03:50:00+05:30"
+    "last_balance": 291.1,
+    "checked_at": "2026-09-22T05:10:00+05:30"
   },
   "stories": [
     {
@@ -19,7 +19,7 @@
         "transformation across frames"
       ],
       "project_id": "5b0eccc3-70a6-491b-b91d-13b54474d022",
-      "stage": "cuts_8_of_11_accepted; ice rendering needs a bible fix"
+      "stage": "cuts 4/11 current; bible corrected; 5 ice frames to regenerate"
     },
     {
       "slug": "effigy",
@@ -211,13 +211,42 @@
       "code": "tonality_scorer_abandoned",
       "class": "recorded negative result",
       "change": "within-frame tonal patches fail too: a fixed grid dilutes a localised fault; HARNESS.md 4b"
+    },
+    {
+      "iteration": 6,
+      "code": "viewpoint",
+      "class": "the pasted element",
+      "change": "one capped question: is every object drawn from the same horizon"
+    },
+    {
+      "iteration": 6,
+      "code": "camera_fields_in_prompt",
+      "class": "the pasted element",
+      "change": "camera.height, lens, movement and depth of field reach the prompt; they were being discarded"
+    },
+    {
+      "iteration": 6,
+      "code": "transparency_token",
+      "class": "style drift",
+      "change": "the bible says how a transparent thing is printed; measured, it moved the ice from 2.34x the cloth to 0.66x"
+    },
+    {
+      "iteration": 6,
+      "code": "paper_hex_corrected",
+      "class": "style drift",
+      "change": "a palette entry nothing in the production ever met, including the anchor, is not a check"
+    },
+    {
+      "iteration": 6,
+      "code": "reanswer_carries_judge",
+      "class": "bug",
+      "change": "a judge record goes stale with the definition too; carrying only facts left takes unevaluated"
     }
   ],
-  "iterations": 5,
+  "iterations": 6,
   "open": [
-    "bible: ice has no token of its own and is airbrushed in all five frames that contain it",
-    "bible: paper hex #F2EFE6 is met by nothing in the production, including the anchor (measured #F2E5CE / #EFE3CF)",
-    "no question asks whether every element is drawn from the same viewpoint \u2014 the stranger found the block is not",
+    "'She returns' and 'Standing naturally' are near-identical pictures; the walk does not read as a walk",
+    "four ice frames still to regenerate against the corrected bible",
     "the autoclave is re-drawn at new proportions in several cuts; matches_sheet catches it, the prompt does not prevent it"
   ]
 }

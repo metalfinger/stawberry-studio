@@ -995,6 +995,7 @@ class Studio:
                       "location": "scope", "prop": "scope", "undeclared": "scope", "state": "state",
                       "action": "action", "beat": "action",
                       "style": "style", "style_token": "style", "palette": "style", "lighting_rules": "style", "anchor": "style",
+                      "viewpoint": "scope",
                       "excluded": "style"}
 
             def ask(qid, question, *, expected="yes", asset_id=None, weight=1, cap=False, look_at=None):
@@ -1110,6 +1111,16 @@ class Studio:
                     weight=3, cap=True,
                     look_at="Name every object and every body part in the frame, then strike off the declared ones; "
                             "whatever is left over is the answer")
+                # A composited frame gives itself away at the horizon before it does anywhere else:
+                # an element drawn from its own eye level shows a face no other object shows. A
+                # blind evaluator found an object sitting well above the horizon with its top
+                # surface visible, and nothing in this rubric had a place to put that.
+                ask("viewpoint",
+                    "Is every object in this frame drawn from the same viewpoint — one horizon and one eye "
+                    "level, so that nothing above it shows a top surface and nothing below it shows an underside?",
+                    weight=2, cap=True,
+                    look_at="Find the horizon from two objects you trust — a table top, a floor, a shelf — then "
+                            "check every other object against it, especially anything the frame had to invent")
                 action = str(values.get("action") or "").strip() or node["notes"].strip()
                 if action:
                     ask("action", f"Does the frame show this happening: {action}?", weight=3)
