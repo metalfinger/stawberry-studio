@@ -163,6 +163,10 @@ class Evidence(Contract):
     asset_id: str | None = None
     question_id: str | None = Field(default=None, max_length=200)
     region: str | None = Field(default=None, max_length=240)
+    # A declared fact can be true and unseeable: a state written on a cut that shows the
+    # subject from behind, a lock on a part the framing excludes. Guessing it either way is
+    # worse than saying so, and an unanswered question is not the same as a lazy evaluator.
+    not_visible: bool = False
 
 
 class Discrepancy(Contract):

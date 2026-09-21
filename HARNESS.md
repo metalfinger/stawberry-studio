@@ -126,8 +126,38 @@ Every one of these was found in a real production. None of them is about that st
 | **The generous evaluator** | Scores drift upward across a session; the evaluator checks the defect it was told about and stops looking | Whoever writes the story cannot un-know it | The stranger (§5) |
 | **Partial coverage** | Eight frames evaluated out of twenty-two, reported as "done" | Choosing your own sample is the easiest thing in the world | Coverage counted per take *and per question*; a partial answer sheet is not an evaluation |
 | **Provider refusal** | A submission refused on content grounds, looking like a transport failure | Every provider has rules, and a likeness is the usual trigger | Definitive `provider_rejected` failure; `reference_mode: text` carries the identity as quoted locks instead |
+| **The inherited defect** | A frame faithfully reproduces a fault that was in the sheet it was built from, and the per-frame rubric charges it to the frame | Every question is asked of one image, so a defect that was copied looks exactly like a defect that was invented; retrying the frame reproduces it | `matches_sheet` high *and* an identity detail failing routes the repair upstream as `inherited_defect`. Only what a sheet fixes — detail, wardrobe, features — routes; anatomy is regenerated per frame |
+| **The under-magnified answer** | A capped anatomy question answered "yes, fingers separate" about a hand that is a thumbless mitten | "The highest magnification the image allows" is satisfied by any crop, and at four times a mitten still reads as a hand | The instruction names a number — crop each hand alone, enlarge at least 8× nearest-neighbour — and says outright that an uncountable hand is a no, not a probably. Feet are their own capped question, because "body, head and limbs" is answered from the torso up |
 | **Palette conflict** | The story's own material vocabulary names a colour the style cannot print — "brass and riveted steel" in a four-ink woodblock — and the generator obeys the material field over the bible | Material words are true and are written by whoever knows the object; the palette is true and is written by whoever knows the print. Neither is wrong and nobody compares them | `palette_conflict` warns when a colour word in a content field is far from every declared swatch. The fix is usually a sentence, not a rewrite: *the material is depicted in the declared inks, never printed in its own colour* |
 | **The second version** | A sheet draws a thing that already has its own sheet, from the description alone, and produces a different object — same words, different machine | A location contains props and a prompt describing one is easy to write; nothing connects the two sheets, and the cuts inherit whichever one they happened to reference | `sheet_unreferenced` refuses a prompt that names an asset holding a selected sheet without referencing it. After generation, `matches_sheet` asks, capped, whether it is the same object |
+
+## 4b. One thing that cannot be automated, and the evidence
+
+The palette question — *are the image's values confined to this palette* — looks like the one
+part of a style contract a machine could settle exactly, and it is worth writing down that it
+is not, because it will look tempting again.
+
+Three measures were built and tested against a known pair: one frame whose brass fittings were
+printed in a fifth ink and had been rejected by eye, and the corrected frame that replaced it.
+
+| Measure | Rejected frame | Corrected frame | Separates? |
+|---|---|---|---|
+| Share of pixels far from every swatch, downsampled | 1.15% | 2.04% | No — inverted |
+| Share of *saturated* pixels far in hue, full resolution | 3 px | 0 px | No |
+| Largest colour cluster far from every swatch (16-way quantisation) | #4C4539 at distance 90 | #4C4539 at distance 90 | No — identical |
+
+The reason is structural, and it holds for any print-styled image. The boundary between flat
+ink and warm paper generates a wide continuum of intermediate tones which is *large in area* and
+genuinely far from every declared swatch. A real fifth ink arrives on thin linework — clamps,
+pipes, a collar — and is *tiny in area*. Every aggregate over the frame is dominated by the
+first and blind to the second. Telling them apart means separating the drawn objects from the
+paper they are printed on, which is a model, not arithmetic, and a model is the thing the engine
+does not contain.
+
+So the palette stays a capped question answered by an evaluator with eyes, and the instruction
+attached to it — sample a light area, a mid tone, and every metal, fabric and liquid — is the
+whole defence. The evidence for a palette answer should name the specific objects sampled, so a
+later reader can check the answer rather than trust it.
 
 ## 5. The stranger, and why it is not optional
 

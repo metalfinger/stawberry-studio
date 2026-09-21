@@ -4,6 +4,13 @@ ordered references → media — so generation depth is a query, not a schema.
 Depth 0: imported media, or media generated with no references (a sheet). Depth n: generated
 from a recipe whose deepest reference is depth n-1. Cycles are impossible because a reference
 must exist before the recipe that cites it.
+
+Depth measures generations of *content*, because that is what the published drift result is
+about: feed an image's own subject back in as its own reference and the error compounds. A
+style anchor carries no subject — no character, no location, no composition; that is the whole
+definition of an anchor and it is asked, capped, at evaluation. So a `style` reference does not
+deepen the count. Without this, composing a sheet from an anchor and another sheet looks
+exactly like chaining cut onto cut, and the cap fires on the safe case while the real one hides.
 """
 
 from __future__ import annotations
@@ -11,6 +18,7 @@ from __future__ import annotations
 import json
 
 DEFAULT_DEPTH_CAP = 2
+CONTENTLESS_ROLES = {"style"}
 
 
 def _recipe_references(conn, media_id):
@@ -31,7 +39,8 @@ def depth(conn, media_id, cache=None) -> int:
     if media_id in cache:
         return cache[media_id]
     _, references = _recipe_references(conn, media_id)
-    value = 1 + max(depth(conn, ref["media_id"], cache) for ref in references) if references else 0
+    carrying = [ref for ref in references if ref.get("role") not in CONTENTLESS_ROLES]
+    value = 1 + max(depth(conn, ref["media_id"], cache) for ref in carrying) if carrying else 0
     cache[media_id] = value
     return value
 

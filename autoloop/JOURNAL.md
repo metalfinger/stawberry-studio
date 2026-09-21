@@ -75,3 +75,81 @@ unblocking in story order, exactly as designed.
 *The second version*. 158 tests, Ruff clean.
 
 **Next.** Prepare and evaluate the first ready cuts of "The ice head".
+
+## Iteration 3 — 22 Sep, 01:30 IST — eleven frames, and a stranger that was right
+
+**Credits** 311.1 → ~303 (8 spent: 5 cuts, 3 retries). Hard stop 200.
+
+**What ran.** Built `autoloop/cuts.py`: a cut's prompt and its ordered references derived entirely
+from the graph — framing, action, performance, resolved incoming states, each asset's identity and
+verbatim locks, the bible tokens, palette, lighting rules, world logic and exclusions. Nothing is
+hand-written, so a prompt cannot drift from the story it belongs to and `recipe_gaps` has nothing
+to find. Generated the five ready cuts, evaluated every one at full resolution, rejected three,
+fixed the causes in the graph, regenerated, and re-evaluated.
+
+**Gate results.** First pass: 2 of 5 passed. After repair: 4 of 5 pass on the corrected scoring
+below. The three rejections were each a different kind of wrong, and each fix was a data change
+rather than a prompt tweak:
+- *The laboratory* — the cold ink lay across the tiled floor as cast daylight. The cut's own
+  `action` had asked for "daylight from the tall windows falls across the bench", which the bible
+  forbids in as many words. Rewrote the action to describe the room. Retry 0.93.
+- *She returns* — the block of ice came out as a soft head-shaped mass with rounded contours: it
+  took the outline of a head instead of replacing it. Rewrote `head_state` to say what a block is
+  ("wider than it is tall, flat facets, hard straight edges, sitting square on her collar, no
+  features"). Retry 0.86, and the new wording is inherited by every later cut in the chain.
+- *Talking by the autoclave* — the room was rearranged, twice. The sheet shows the space along one
+  axis only and this cut shoots it across, so there is no reference for that angle. The workflow
+  had already said so (`plan_asset_views`) and I skipped it. Next iteration generates the view.
+
+**Four harness changes.**
+- *The unseeable declaration.* At the far door she is a few marks wide: her hands, her collar and
+  her locked "quiet hands" are genuinely not in the image rather than wrong. Guessing either way is
+  worse than saying so, so `Evidence.not_visible` is a real answer — excluded from the score,
+  counted in coverage, and flagged when more than half a frame's declared facts are out of shot,
+  because that means the declarations are on a cut that cannot show them.
+- *A placeholder is not a declaration.* Two cuts carried `performance.expression: "none available"`,
+  which reached both the prompt and the rubric as if it were content. The engine already has a word
+  for an absent thing and it is `clear`. Placeholders are now refused outright, with the fix named.
+- *Style references do not deepen lineage.* Fixing the laboratory sheet by building it on the prop
+  sheet pushed every cut to depth 3 against a cap of 2. But the drift result is about feeding a
+  subject back as its own reference, and an anchor carries no subject — that is what it is asked,
+  capped, at evaluation. `style` references now contribute no depth, which puts the cuts at exactly
+  2 and keeps the cap pointed at the thing it was built for.
+- *Scope outranks prose.* `sheet_unreferenced` fired on a cut whose action says "she turns away from
+  the dreamer" while `visible_cast` says he is not in frame. For a cut the scope is the declaration;
+  the check now applies only to sheets, which have no scope and are where it earns its keep.
+
+**The blind evaluator, which was right and I was not.** Ran a sub-agent on "She excuses herself" —
+image only, fresh context. I had passed it at 0.92. It could not read the question file (I gave the
+wrong path) so it inspected the frame unprompted at 8× to 16×, and found:
+- both hands are **thumbless mittens** — one crease standing in for all fingers. I had recorded
+  "five readable fingers on each, no fusion". I cropped and checked at 8×: it is right and I was wrong.
+- the apron back has grown **two wide knee-length straps** the character sheet does not have.
+- the **right boot** is two merged blobs with no toe, heel or welt. Nothing had looked at feet.
+- two wing bolts on the autoclave flange are knots and one has detached from the ring.
+- and, separately, that the non-convergent floor grid and the disconnected condenser glassware are
+  **inherited verbatim from the laboratory sheet** — it measured the seam positions and found them
+  identical to within a pixel — so they should be fixed upstream, not charged to this frame.
+
+Re-scored the take honestly: 0.40, capped, rejected. Two changes followed. `hands` now names a
+number — crop each hand alone, enlarge at least 8× nearest-neighbour, and an uncountable hand is a
+no rather than a probably — and `feet` is its own capped question. And `inherited_defect`: when a
+frame matches its sheet closely and still fails a detail the sheet fixes, the repair is routed to
+the sheet, because retrying the frame would only copy it again.
+
+**One negative result, recorded rather than shipped.** Built a deterministic palette scorer to make
+the style contract machine-checkable, and tested it against the known pair — the frame with a fifth
+ink in its brass fittings, and its corrected replacement. Three measures, none separated them; the
+rejected frame scored *better* than the approved one. The reason is structural and is now in
+HARNESS.md §4b: the ink-to-paper boundary produces a wide band of intermediate tones that is large
+in area and far from every swatch, while a real fifth ink arrives on thin linework and is tiny in
+area. Every aggregate over the frame is dominated by the first and blind to the second. Deleted the
+scorer; shipping it would have given a false all-clear on exactly the case that motivated it.
+
+**Harness deltas.** `not_visible`, placeholder refusal, style-role depth, scope-over-prose,
+capped `lighting_rules`, `feet`, 8× hands instruction, `inherited_defect`. Two new failure classes
+plus the recorded negative result. 161 tests, Ruff clean.
+
+**Next.** Generate the laboratory's cross-room reference view, retry "Talking by the autoclave",
+then re-cut "She excuses herself" with the hands and apron named — and check whether the apron
+straps are the sheet's fault or the frame's.

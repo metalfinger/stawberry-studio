@@ -4,8 +4,8 @@
     "start_credits": 317,
     "ceiling_spend": 120,
     "hard_stop_balance": 200,
-    "last_balance": 311.1,
-    "checked_at": "2026-09-22T00:20:00+05:30"
+    "last_balance": 303.1,
+    "checked_at": "2026-09-22T01:30:00+05:30"
   },
   "stories": [
     {
@@ -19,7 +19,7 @@
         "transformation across frames"
       ],
       "project_id": "5b0eccc3-70a6-491b-b91d-13b54474d022",
-      "stage": "sheets_done"
+      "stage": "cuts_in_progress"
     },
     {
       "slug": "effigy",
@@ -85,7 +85,55 @@
       "code": "sheet_style_questions",
       "class": "style drift",
       "change": "asset sheets are asked lighting_rules and excluded, as cuts already were"
+    },
+    {
+      "iteration": 3,
+      "code": "not_visible",
+      "class": "the unseeable declaration",
+      "change": "a fact that cannot be seen is answered as such, excluded from the score, counted in coverage"
+    },
+    {
+      "iteration": 3,
+      "code": "placeholder_refused",
+      "class": "declaration lag",
+      "change": "'none available' and friends are refused in any field; clearing says it properly"
+    },
+    {
+      "iteration": 3,
+      "code": "style_role_depth",
+      "class": "compounding drift",
+      "change": "a style reference carries no subject, so it does not deepen content lineage"
+    },
+    {
+      "iteration": 3,
+      "code": "scope_over_prose",
+      "class": "the second version",
+      "change": "sheet_unreferenced applies to sheets only; for a cut the scope is the declaration"
+    },
+    {
+      "iteration": 3,
+      "code": "lighting_rules_capped",
+      "class": "style drift",
+      "change": "the lighting rule is a contract, not a preference"
+    },
+    {
+      "iteration": 3,
+      "code": "feet",
+      "class": "the under-magnified answer",
+      "change": "feet are their own capped question; hands name 8x nearest-neighbour"
+    },
+    {
+      "iteration": 3,
+      "code": "inherited_defect",
+      "class": "the inherited defect",
+      "change": "a fault copied from a sheet is routed to the sheet, not charged to the frame"
+    },
+    {
+      "iteration": 3,
+      "code": "palette_scorer_abandoned",
+      "class": "recorded negative result",
+      "change": "no aggregate pixel measure separates a fifth ink from ink-to-paper blend; HARNESS.md 4b"
     }
   ],
-  "iterations": 2
+  "iterations": 3
 }

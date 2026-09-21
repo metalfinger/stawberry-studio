@@ -164,3 +164,18 @@ def test_performance_is_satisfied_by_any_of_its_fields(world):
     assert "performance_missing" in codes(world.studio.readiness(world.cut["id"])["warnings"])
     change(world.studio, world.cut, **{"performance.gaze": "away down the room"})
     assert "performance_missing" not in codes(world.studio.readiness(world.cut["id"])["warnings"])
+
+
+def test_a_placeholder_string_is_refused_in_favour_of_clearing_the_field(world):
+    from backend.studio.models import FieldEdit, NodePatch
+    from backend.studio.store import StudioError
+
+    studio, cut = world.studio, world.cut
+    rev = studio.inspect(cut["id"])["node"]["revision"]
+    with pytest.raises(StudioError, match="placeholder"):
+        studio.patch_node(cut["id"], NodePatch(expected_revision=rev, reason="t",
+            changes={"performance.expression": FieldEdit(value="none available")}))
+    # clearing says the same thing, and readiness and the prompt both understand it
+    studio.patch_node(cut["id"], NodePatch(expected_revision=rev, reason="t",
+        changes={"performance.expression": FieldEdit(op="clear")}))
+    assert "performance.expression" in studio.inspect(cut["id"])["context"]["cleared"]

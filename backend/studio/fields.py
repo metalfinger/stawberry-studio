@@ -114,8 +114,19 @@ def _fail(field, message):
     raise StudioError("field_type", f"{field}: {message}")
 
 
+# Written into a field to mean "there isn't one", these reach the prompt and the rubric as if
+# they were content: a frame asked to show "none available", a question asking whether the
+# subject's expression is "none available". The engine already has a word for an absent thing,
+# and it is `clear`, which every reader — inheritance, readiness, facts — understands.
+PLACEHOLDERS = {"none", "none available", "n/a", "na", "nil", "null", "tbd", "tba", "unknown",
+                "not applicable", "not specified", "-", "--", "???"}
+
+
 def validate_field(field: str, value, node: dict | None = None) -> None:
     """Type-check a resolved value for a canonical field. Unknown fields are not checked."""
+    if isinstance(value, str) and value.strip().lower() in PLACEHOLDERS:
+        _fail(field, f"'{value.strip()}' is a placeholder, not a declaration — clear the field instead, "
+                     "which says the same thing in a way the prompt and the rubric both understand")
     spec = FIELD_SPECS.get(field)
     if spec is None:
         return

@@ -834,10 +834,30 @@ class Studio:
                     if e.get("probability") is not None and e["probability"] < 0.5 and qid not in seen:
                         seen.add(qid)
                         failed.append(e)
+            # A defect can be faithfully copied. When a frame reproduces its sheet closely and still
+            # fails a detail about that asset, the detail is wrong on the sheet, and retrying the
+            # frame will reproduce it again — the repair belongs upstream. A blind evaluator found
+            # four such faults in one frame of this production and correctly refused to charge them
+            # to the generation that inherited them.
+            matched = {}
+            for record in (facts, stranger):
+                for e in (record["evidence"] if record else []):
+                    if (e.get("question_id") or "").startswith("matches_sheet:") and e.get("probability") is not None:
+                        aid = e["question_id"].split(":", 1)[1]
+                        matched[aid] = max(matched.get(aid, 0.0), e["probability"])
             for item in failed:
                 qid = item.get("question_id") or ""
                 kind = qid.split(":")[0]
                 asset = item.get("asset_id")
+                # only what a sheet actually fixes: identity and costume, which a frame copies.
+                # Anatomy is re-generated per frame, so matching the sheet says nothing about it.
+                if kind in {"detail", "wardrobe", "features"} and matched.get(asset, 0.0) >= 0.85:
+                    suggest("inherited_defect",
+                            f"This frame matches {names.get(asset, asset)}'s sheet closely and still fails "
+                            f"\"{item['question'].rstrip('?')}\" — the fault is on the sheet, not in this take. "
+                            "Fix the sheet and regenerate what was built on it",
+                            asset_id=asset, sheet=sheets.get(asset))
+                    continue
                 if kind == "state":
                     blamed = [mid for mid, (role, f) in ref_facts.items() if f and any(
                         (x.get("question_id") == qid) and (x.get("probability") or 1) < 0.5 for x in f["evidence"])]
@@ -885,14 +905,18 @@ class Studio:
 
         owner = self.store.one(conn, "nodes", media["node_id"])
         try:
-            questions = {q["id"]: q for q in self._facts(conn, owner["id"])["questions"]}
+            questions = {q["id"]: q for q in self._facts(conn, owner["id"], media["id"])["questions"]}
         except StudioError:
             questions = {}
-        groups, capped, answered = {}, False, 0
+        groups, capped, answered, unseen = {}, False, 0, 0
         for item in evidence:
+            q = questions.get(item.question_id or "")
+            if item.not_visible:
+                if q:
+                    unseen += 1
+                continue
             if item.probability is None:
                 continue
-            q = questions.get(item.question_id or "")
             if not q:
                 if item.question_id is None:
                     raise StudioError("evidence_unbound", f"Evidence must carry the question_id it answers: {item.question}", 409)
@@ -920,6 +944,7 @@ class Studio:
             "arithmetic_mean": round(sum(p * w for p, w in everything) / sum(w for _, w in everything), 3),
             "capped": 1.0 if capped else 0.0,
             "answered": float(answered),
+            "not_visible": float(unseen),
             "asked": float(len(questions)),
         }
 
@@ -953,6 +978,7 @@ class Studio:
 
             GROUPS = {"cast": "identity", "pose": "identity", "hands": "identity", "detail": "identity",
                       "wardrobe": "identity", "subject": "identity", "features": "identity", "matches_sheet": "identity",
+                      "feet": "identity",
                       "location": "scope", "prop": "scope", "state": "state",
                       "action": "action", "beat": "action",
                       "style": "style", "style_token": "style", "palette": "style", "lighting_rules": "style", "anchor": "style",
@@ -979,13 +1005,27 @@ class Studio:
                         "reversed, duplicated or missing)?",
                         asset_id=asset["id"], weight=2, cap=True,
                     )
-                    # the commonest generative defect, and the easiest to skim past at any size
+                    # The commonest generative defect, and the easiest to skim past. "The highest
+                    # magnification the image allows" was the instruction here once, and it was
+                    # obeyed at four times and answered wrongly; a blind evaluator looking at eight
+                    # times found thumbless mittens in the same frame. So name the number.
                     ask(
                         f"hands:{asset['id']}",
                         f"Are {asset['name']}'s hands and arms correct — both arms emerging and visible where they should be, "
-                        "five separate readable fingers on each visible hand, no fused, extra or missing digits?",
+                        "five separate readable fingers AND a thumb on each visible hand, no fused, extra or missing digits?",
                         asset_id=asset["id"], weight=2, cap=True,
-                        look_at=f"Crop {asset['name']}'s hands at the highest magnification the image allows and look at each one",
+                        look_at=f"Crop each of {asset['name']}'s hands on its own and enlarge it at least 8x with nearest-neighbour "
+                                "resampling. If you cannot count the fingers and find the thumb, the answer is no, not 'probably'",
+                    )
+                    # Feet are as malformed as hands and nobody looks at them: "body, head and limbs"
+                    # is answered from the torso up. A boot that is two merged blobs passed a pose
+                    # question scored 0.95 in this production.
+                    ask(
+                        f"feet:{asset['id']}",
+                        f"Are {asset['name']}'s feet correct — each shoe or foot a single coherent shape with a readable "
+                        "toe and heel, both standing on the same floor, neither merged into the other or into the ground?",
+                        asset_id=asset["id"], weight=1, cap=True,
+                        look_at=f"Crop {asset['name']}'s feet and enlarge at least 8x; check each shoe separately",
                     )
                 for i, token in enumerate(ctx.get("consistency_tokens") or []):
                     ask(f"detail:{asset['id']}:{i}", f"Does {asset['name']} show '{token}'?", asset_id=asset["id"], cap=True)
@@ -1008,7 +1048,7 @@ class Studio:
                         look_at="Sample a light area, a mid tone and a shadow, and every metal, fabric and liquid in the image")
                 rules = values.get("bible.lighting_rules")
                 if isinstance(rules, str) and rules.strip():
-                    ask("lighting_rules", f"Does the light in this sheet follow: {rules.strip()}?", weight=2)
+                    ask("lighting_rules", f"Does the light in this sheet follow: {rules.strip()}?", weight=2, cap=True)
                 # A sheet is inherited by every frame that references it, so it has at least as
                 # much to answer for as a cut. It was asked less only because nobody had written
                 # the questions down.
@@ -1060,7 +1100,8 @@ class Studio:
                         look_at="Look at the whole frame; sample a light area, a mid tone and a shadow")
                 rules = values.get("bible.lighting_rules")
                 if isinstance(rules, str) and rules.strip():
-                    ask("lighting_rules", f"Does the light in this frame follow: {rules.strip()}?", weight=2)
+                    ask("lighting_rules", f"Does the light in this frame follow: {rules.strip()}?", weight=2, cap=True,
+                        look_at="Look at every surface light could fall on — floor, walls, faces — not only at the source")
                 excluded = values.get("negative_prompts")
                 if isinstance(excluded, str) and excluded.strip():
                     ask("excluded", f"Is the image free of all of these: {excluded.strip()}?", weight=2, cap=True,
@@ -1081,7 +1122,7 @@ class Studio:
                         + ", ".join(values["bible.palette_hex"]) + "?", weight=3)
                 rules = values.get("bible.lighting_rules")
                 if isinstance(rules, str) and rules.strip():
-                    ask("lighting_rules", f"Does the image demonstrate: {rules.strip()}?", weight=2)
+                    ask("lighting_rules", f"Does the image demonstrate: {rules.strip()}?", weight=2, cap=True)
                 excluded = values.get("negative_prompts")
                 if isinstance(excluded, str) and excluded.strip():
                     ask("excluded", f"Is the image free of all of these: {excluded.strip()}?", weight=3, cap=True)

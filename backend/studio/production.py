@@ -230,9 +230,16 @@ class ProductionRules:
         score = None
         if facts:
             asked, answered = facts["scores"].get("asked", 0), facts["scores"].get("answered", 0)
-            if asked and answered < asked:
+            unseen = facts["scores"].get("not_visible", 0)
+            if asked and answered + unseen < asked:
                 # a partial answer sheet is the question-level form of a partial pass
                 reasons.append(f"facts record answers {int(answered)} of {int(asked)} questions")
+            # "not visible" is an honest answer once and a hiding place if it is most of them.
+            # When half a frame's declared facts are out of shot, the declarations belong on a
+            # different cut — the picture is not what is wrong.
+            if asked and unseen * 2 > asked:
+                reasons.append(f"{int(unseen)} of {int(asked)} declared facts are out of shot; "
+                               "they are written on a cut that cannot show them")
         if facts and judge:
             score = min(facts["scores"].get("min_group", facts["scores"].get("geometric_mean", 0.0)), judge["scores"].get("overall", 0.0))
             if facts["scores"].get("capped"):
@@ -323,8 +330,11 @@ class ProductionRules:
         # the drawing. A location sheet that renders a declared prop from its description alone
         # produces a second, different machine — and nothing downstream can tell which one is
         # the prop. The name is the signal: cheap, and wrong only in the harmless direction.
+        # For a cut the scope is the declaration of what is in the frame, and it outranks prose:
+        # an asset named in the action but absent from visible_cast is being referred to, not
+        # drawn. A sheet has no scope, which is exactly where this check earns its keep.
         held = {ref["media_id"] for ref in references}
-        for row in conn.execute(
+        for row in [] if node["kind"] == "cut" else conn.execute(
             "SELECT id,name,active_media_id FROM nodes WHERE project_id=? AND kind IN "
             "('character','location','prop') AND active_media_id IS NOT NULL AND id<>? ORDER BY id",
             (node["project_id"], node_id),

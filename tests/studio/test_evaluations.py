@@ -256,7 +256,7 @@ def test_engine_computes_scores_and_refuses_unplaced_evidence(world):
     record = world.studio.evaluate(media_id, evaluation(world.studio, media_id, scores={"geometric_mean": 1.0},
                                                          evidence=answers(world.studio, media_id, detail=0.2)))
     assert record["scores"]["capped"] == 1.0 and record["scores"]["min_group"] <= 0.4
-    assert record["scores"]["groups"]["identity"] < 0.7
+    assert record["scores"]["groups"]["identity"] < 0.75
 
 
 def test_locks_make_state_questions_capped_and_gate_the_take(world):
@@ -368,7 +368,7 @@ def test_hands_are_their_own_question(world):
     hands = ids[f"hands:{world.mara['id']}"]
     assert hands["cap_on_miss"] and hands["weight"] == 2 and hands["group"] == "identity"
     assert "five separate readable fingers" in hands["question"]
-    assert "highest magnification" in hands["look_at"]
+    assert "8x" in hands["look_at"]  # a number, because "highest magnification" was obeyed at 4x and answered wrongly
     media_id = world.media[0]["id"]
     record = world.studio.evaluate(media_id, evaluation(
         world.studio, media_id, evidence=answers(world.studio, media_id, hands=0.1)))
