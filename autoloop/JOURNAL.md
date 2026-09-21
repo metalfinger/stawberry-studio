@@ -267,3 +267,52 @@ the summoned agent. 161 tests, Ruff clean.
 
 **Next.** The horse's head and the closing wide, which carries a `match_frame` back to the opening;
 then the blind evaluator's report on an accepted frame.
+
+## Iteration 5b — 22 Sep, 04:20 IST — the stranger, again, and on the same axis
+
+A blind evaluator was run on "Standing naturally", which I had passed at 0.885. It had the image,
+the question list and nothing else. It scored the frame **0.40**. The gap is 0.48, and it is almost
+entirely one axis: I gave style 0.89, it gave 0.44.
+
+**Its claims, checked before acting on them.** It reported 73,209 unique colours in the frame and
+660 distinct 8-step tonal bins inside the ice block. Measured independently: 73,209 exactly, and 740
+bins in my own crop of the block — against **287** in a same-sized crop of her skirt *in the same
+frame*, and 193 to 244 in equivalent crops of approved frames and the anchor. The block carries
+three times the tonal complexity of anything else in this production. It is airbrushed. The token
+says "flat black ink, no gradients anywhere" and I had scored it 0.93.
+
+Where it was too harsh I said so rather than deferring. It scored palette 0.28 on 25% of pixels
+sitting beyond 40 RGB units from the nearest declared colour. Baselined: an approved frame is 27.0%
+and the style anchor itself is 18.0%, against this frame's 33.9%. The paper tone is warmer than the
+declared `#F2EFE6` in **every image in the production including the anchor** — measured `#F2E5CE`
+and `#EFE3CF` — so that part is a bible number that was never achievable, not a fault in this frame.
+Scored 0.65 with the baseline in the evidence.
+
+**Two things it found that no question asks.** The ice block is drawn from a viewpoint about 150
+pixels above the horizon the room establishes — its top facet is visible although it sits well above
+eye level — so it reads as a separately rendered object pasted onto the figure. And a detached grey
+tab hangs under the collar, connecting to nothing, which reads as an unerased remnant of the neck
+the head substitution removed.
+
+**My corrected record now agrees with it exactly: 0.40 against 0.40**, and the take is rejected. The
+same thing happened in the earlier production, on the same axis, and that is the finding: I read a
+frame as being in the style when it is *mostly* in the style, and I do not test the tokens that are
+phrased as prohibitions. The transferable fix is in the rubric — a token containing "no", "never" or
+"without" now carries an instruction to answer it by counting: crop the object most likely to break
+it, crop a region that is printed correctly, and compare.
+
+**A second scorer built, tested and deleted.** Tonal complexity per patch, compared *within* the
+frame so that paper, ink and grain cancel — the flaw the palette attempt had. Hand-cropped onto the
+block it is decisive at 740 against 200. On a blind grid it vanishes: the airbrushed frame scores
+2.50 against an approved frame's 2.13, and the frame with *more* ice scores 1.99. A fixed patch
+dilutes a localised object and finely hatched glassware is legitimately busy. Knowing where to crop
+is the whole problem, and that is segmentation, which is a model. Recorded in HARNESS.md §4b beside
+the first attempt; two independent failures for the same structural reason is a stronger result than
+one.
+
+**Next, and it is a production fix rather than a harness one.** The ice is airbrushed in all five
+frames that contain it. The bible never says how ice is printed — only that it "reads as white paper
+held inside black contour" in the lighting rules, which is a sentence the generator has ignored five
+times. It needs a token of its own, the paper hex needs correcting to what this style actually
+prints, and the five ice frames need regenerating. That stales every review in the project, so it
+wants a whole iteration.

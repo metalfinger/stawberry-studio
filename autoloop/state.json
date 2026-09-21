@@ -19,7 +19,7 @@
         "transformation across frames"
       ],
       "project_id": "5b0eccc3-70a6-491b-b91d-13b54474d022",
-      "stage": "cuts_9_of_11_accepted"
+      "stage": "cuts_8_of_11_accepted; ice rendering needs a bible fix"
     },
     {
       "slug": "effigy",
@@ -199,7 +199,25 @@
       "code": "can_retry_by_prompt",
       "class": "bug",
       "change": "can_retry counts takes sharing the latest prompt, matching the budget rule"
+    },
+    {
+      "iteration": "5b",
+      "code": "prohibition_tokens_counted",
+      "class": "the generous evaluator",
+      "change": "a style token phrased as a prohibition carries an instruction to answer it by counting, not looking"
+    },
+    {
+      "iteration": "5b",
+      "code": "tonality_scorer_abandoned",
+      "class": "recorded negative result",
+      "change": "within-frame tonal patches fail too: a fixed grid dilutes a localised fault; HARNESS.md 4b"
     }
   ],
-  "iterations": 5
+  "iterations": 5,
+  "open": [
+    "bible: ice has no token of its own and is airbrushed in all five frames that contain it",
+    "bible: paper hex #F2EFE6 is met by nothing in the production, including the anchor (measured #F2E5CE / #EFE3CF)",
+    "no question asks whether every element is drawn from the same viewpoint \u2014 the stranger found the block is not",
+    "the autoclave is re-drawn at new proportions in several cuts; matches_sheet catches it, the prompt does not prevent it"
+  ]
 }

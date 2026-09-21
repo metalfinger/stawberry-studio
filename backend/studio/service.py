@@ -1122,8 +1122,15 @@ class Studio:
                 # A harness exists to hold someone's visual language. One vague question about
                 # "the style" is answered generously; each declared token has to be looked for.
                 for position, token in enumerate(values.get("bible.tokens") or []):
+                    # A token phrased as a prohibition is answered generously by anyone looking at a
+                    # frame that mostly obeys it. It is answered honestly by counting.
+                    forbidding = any(word in token.lower() for word in (" no ", "no ", "never", "without", "not "))
                     ask(f"style_token:{position}", f"Does the image actually show this: {token}?", weight=2,
-                        look_at="Look at the whole frame and at one detail crop; a technique either appears or it does not")
+                        look_at=("Crop the one object most likely to break this, crop a region you can see is printed "
+                                 "correctly, and compare them — count distinct tones in each if the token forbids "
+                                 "gradients or shading. A frame that obeys it everywhere but in one object does not obey it")
+                        if forbidding else
+                        "Look at the whole frame and at one detail crop; a technique either appears or it does not")
                 palette = values.get("bible.palette_hex") or []
                 if palette:
                     ask("palette", "Are the image's values confined to this palette, with no colour outside it: "

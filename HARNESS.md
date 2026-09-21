@@ -156,6 +156,29 @@ first and blind to the second. Telling them apart means separating the drawn obj
 paper they are printed on, which is a model, not arithmetic, and a model is the thing the engine
 does not contain.
 
+A second attempt was made later on a different axis — tonal complexity, counting distinct 8-step
+colour bins per patch, on the reasoning that a relief print is uniformly flat and an airbrushed
+object is a spike. The comparison was *within* the frame, so paper, ink and grain all cancel, which
+is the flaw the palette attempt had. It still failed:
+
+| Frame | median bins/patch | worst patch | ratio |
+|---|---|---|---|
+| Frame with an airbrushed ice block | 274 | 685 | **2.50** |
+| Approved frame, no such object | 245 | 523 | 2.13 |
+| Approved frame with *more* ice | 300 | 596 | 1.99 |
+
+Hand-cropped onto the block alone the same measure gives 740 bins against 200 elsewhere — decisive.
+On a blind grid it vanishes, because a fixed patch dilutes a localised object and finely hatched
+glassware is legitimately busy. Knowing *where* to crop is the whole problem, and knowing where to
+crop is segmentation, which is a model.
+
+What both attempts do yield is an instruction. A style token phrased as a prohibition — "no
+gradients anywhere", "never smooth shading" — is answered generously by anyone looking at a frame
+that mostly obeys it. It should be answered by counting: crop the one object most likely to break
+it, crop a region known to be printed correctly, and compare distinct tones. That is a within-frame
+control performed by someone who can see where to look, which is the division of labour this harness
+is built on — the engine records, the evaluator looks.
+
 So the palette stays a capped question answered by an evaluator with eyes, and the instruction
 attached to it — sample a light area, a mid tone, and every metal, fabric and liquid — is the
 whole defence. The evidence for a palette answer should name the specific objects sampled, so a
