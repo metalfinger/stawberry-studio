@@ -537,12 +537,17 @@ Every layer builds on the one before, like an agency's pipeline:
 4. **Ghost edits between.**
    - Every lasting change to a person or thing gets its own ghost before any moment shows it. Each ghost is one edit of that subject's previous look (sheet → ice block → melting → horse), and every moment from the change on draws them from it.
    - A dream's jump is a boundary: moments after it take nothing of the place from before it.
-5. **Beats.** Each cut carries its purpose, feeling, visual point and whether it is the key moment. Each scene carries what it does in the story.
+5. **Beats and staging.**
+   - Each cut carries its purpose, feeling, visual point and whether it is the key moment. Each scene carries what it does in the story.
+   - A scene places its people once, left to right, and every picture of it keeps that order: the line between them is never crossed.
+   - A moment's own change replaces the look it had; only what still holds from earlier is "still so".
 6. **The prompt.**
    - It is a manifest of every attached image: what it shows, in words, and the one thing to take from it.
    - The edit base comes first, then the sheets, ghosts and earlier cuts.
    - At most 12 images, under the model's 14.
    - A style's description line never enters an image prompt: it is for the person. Style tokens naming the story's own things are dropped.
+   - Every prompt states the medium (a photograph when the style names none), and each cut is checked for being made the same way as the picture it follows.
+   - What the judge found invented in a picture is named for removal in every picture drawn from it.
 
 ## Defaults (change any)
 

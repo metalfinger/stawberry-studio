@@ -78,9 +78,22 @@ Other rules:
 - **Order.** Moments are drawn as what they need lands.
 - **Approval.** The chat approves a moment for what follows only when the judge saw everything
   in it; otherwise what follows waits for the person's verdict, and Berry says so.
+- **What a moment changes.** A moment's own change (the ice becomes a horse's head) replaces
+  the look it had: the picture is told and checked for the new look, and the old one is never
+  "still so".
+- **Staging.** A scene places its people once, left to right, from the first picture that shows
+  two or more of them; newcomers stand to their right. Every later picture of the scene is told
+  the order and checked for it, so the line between them is never crossed. A jump starts it again.
+- **Medium.** Every style says what the pictures are made as (a photograph when it names none),
+  every prompt states it, and each moment is checked for being made the same way as the picture
+  it follows.
+- **What was invented.** What the judge finds invented in a picture (a viewer's hands) counts
+  toward its one repair, and every picture drawn from it is told to leave it out.
 - **Corrections.** A correction redraws only the later pictures it touches.
 - **What Strawberry records.** Everything goes into Strawberry as `continuity_from`,
   `continuity.before`/`after`, `transition` and `match_frame`, and the engine checks the chain.
+  `continuity.before` is what the still shows: its own change done, and what still holds. A
+  cut's record is set to its plan before each draw.
 
 The loop, the judge's evidence rules and the reply contract are copied from vibechk's
 two-call form lab (`experiments/two-call-form`, commit adcbaccdd), with each file's
@@ -123,7 +136,8 @@ calls.
 | `DREAMCHAT_HOST_THINKING_DEEP` | `low` | for the turns that change phase: retelling, corrections, closing |
 | `DREAMCHAT_PRODUCER_THINKING` | `disabled` | the producer's thinking; `low` took 2–4× longer for the same breakdowns |
 | `DREAMCHAT_STRAWBERRY_HOME` | `dreamchat/strawberry-home` | where productions are written |
-| `DREAMCHAT_PROVIDER` | `fal` when `FAL_KEY` is set, else `fake` | `fake` draws labelled offline placeholders, at no cost |
+| `DREAMCHAT_PROVIDER` | `fal` when `FAL_KEY` is set, else `fake` | `higgsfield` draws with Nano Banana Pro there (2 credits); `fake` draws labelled offline placeholders, at no cost |
+| `DREAMCHAT_JUDGE` | `assistant` | `assistant`: each take waits in `judge-queue/` for the assistant's answers; `pc`: the judge on the PC; `off` |
 | `DREAMCHAT_IMAGE_CAP` | 30 | pictures per dream, at most ($4.50 at fal's list price) |
 | `DREAMCHAT_JUDGE_ENV` | `~/.config/strawberry/judge.env` | `JUDGE_URL` and `JUDGE_API_KEY` for the image judge on the PC |
 | `JEV_MODEL` | `jev-latest` | |
@@ -156,6 +170,29 @@ Known limits:
 - A style option can still carry some of the dream's content (a little ice at a woman's feet).
 - A download from fal's CDN sometimes times out; it is collected again twice at no cost before
   the picture counts as failed, and Berry says honestly if one never arrives.
+
+### Resuming a dream
+
+```sh
+DREAMCHAT_PROVIDER=higgsfield bun run resume.ts <session id> [--redraw m6]
+```
+
+It picks a saved dream up where it stopped:
+- plans its unapproved moments again with the current planner and corrects their records;
+- draws again what failed before it was ever submitted;
+- judges takes that landed while nothing ran, and waits for the judge.
+
+Nothing already paid for is redrawn. A picture whose submission is in doubt (a 503 before the
+provider answered) is drawn again only when named with `--redraw`, after the provider's account
+shows it never ran.
+
+### The assistant as judge
+
+Each take is written to `judge-queue/<media>.json` with Strawberry's own questions for it and
+the continuity checks against the pictures it was drawn from. The answers go beside it as
+`<media>.answer.json`: `{answers: {<question id>: {answer, where}}, continuity: {<index>:
+"yes" | "no" | {answer, where}}}`. They are recorded in Strawberry as the take's facts, and
+what the judge saw travels with a repair.
 
 ## Test
 
@@ -196,3 +233,5 @@ It writes the full transcripts to `runs/`.
 | `boot.ts` | Loads the keys before any module reads them |
 | `simulate.ts` | Simulated dreamers |
 | `produce.ts` | Runs the producer and the check on a saved simulated conversation |
+| `resume.ts` | Picks a saved dream's drawing up where it stopped |
+| `judge.ts` | The assistant as judge: the queue folder, and the answers recorded as facts |

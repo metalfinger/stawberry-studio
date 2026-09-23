@@ -43,6 +43,12 @@ export type CutPlan = {
    * One this moment changes again is not among them: the melting ice gives way to the horse.
    */
   states: State[];
+  /**
+   * The people in view from left to right, as their scene first placed them: every picture of the
+   * scene keeps it, so the line between them is never crossed (the dreamer and the young woman
+   * swapped sides at the scene's last picture, 23 Sep). Empty with fewer than two in view.
+   */
+  staging: string[];
   /** The location sheet sets the layout only when the cut faces the side it shows. */
   sheetLayout: boolean;
   /** What differs from its references. Three or more is too much for one edit. */
@@ -248,6 +254,7 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
       refs,
       own,
       states: (m.states ?? []).filter((st) => !own.some((o) => o.who === st.who && o.what === st.what)),
+      staging: [],
       sheetLayout,
       changes: [],
       needs: [],
@@ -404,6 +411,24 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
       });
   }
 
+  // Staging: a scene places its people once, left to right, from the first picture that shows two
+  // or more of them; anyone who joins later stands to their right. Every picture of the scene keeps
+  // that order, and a dream's jump starts it again.
+  const lineups = new Map<string, string[]>();
+  let jumps = 0;
+  for (const c of cuts) {
+    const m = byId.get(c.id)!;
+    if (m.shift) jumps += 1;
+    const key = `${c.scene}/${jumps}`;
+    const line = lineups.get(key) ?? [];
+    if (m.visible.length >= 2 || line.length) {
+      for (const p of m.visible) if (!line.includes(p)) line.push(p);
+      lineups.set(key, line);
+    }
+    const inView = line.filter((p) => m.visible.includes(p));
+    c.staging = inView.length >= 2 ? inView : [];
+  }
+
   // Needs, depth, checks, transitions and a line of why, now the references are final.
   const depth = new Map<string, number>();
   for (const g of ghosts) if (!g.from) depth.set(g.id, 1);
@@ -471,6 +496,14 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
           text: `Is ${name(p)} the same person in both pictures: the same face, hair and clothes?`,
           fix: `${name(p)} must be the same person as in picture ${k}: the same face, hair and clothes`,
         });
+    }
+    if (c.staging.length) {
+      const order = c.staging.map(name).join(', then ');
+      out.push({
+        with: null,
+        text: `From left to right in the frame, is it ${order}?`,
+        fix: `from left to right: ${order}, never swapped`,
+      });
     }
     // Every picture is made the same way as the one it follows: a photographic storyboard came
     // back as an ink drawing at its fifth picture (23 Sep).

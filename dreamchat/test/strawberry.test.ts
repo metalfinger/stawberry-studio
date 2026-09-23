@@ -66,6 +66,7 @@ describe("a cut's record", () => {
         { id: 'g3', kind: 'ghost' as const, role: 'identity' as const, carries: '' },
       ],
       own: [{ who: 'p1', what: 'head', now: "a horse's head of ice", since: 'm5' }],
+      staging: [],
       states: [{ who: 'p1', what: 'coat', now: 'soaked through', since: 'm2' }],
       sheetLayout: true,
       changes: [],

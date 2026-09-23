@@ -229,6 +229,39 @@ describe('ghosts', () => {
     expect(checks).toEqual(["In this picture, is ana's head a horse's head of ice?"]);
   });
 
+  test('a scene places its people once, left to right, and every picture of it keeps the order', () => {
+    const person = (id: string, name: string, is_dreamer = false) => ({
+      id,
+      name,
+      is_dreamer,
+      protagonist: false,
+      fields: { identity: detail(), appearance: detail(), wardrobe: detail(), distinctive_features: detail() },
+    });
+    const b = breakdown(
+      [
+        moment({ id: 'm1', visible: ['p2', 'p1'] }),
+        moment({ id: 'm2', visible: ['p1'] }),
+        moment({ id: 'm3', visible: ['p1', 'p2'] }),
+        moment({ id: 'm4', visible: ['p1', 'p3', 'p2'] }),
+        moment({ id: 'm5', visible: ['p1', 'p2'], shift: 'the room turns to glass' }),
+      ],
+      { people: [person('p1', 'ana'), person('p2', 'you', true), person('p3', 'the juggler')] },
+    );
+    const plan = planContinuity(b);
+    expect(plan.cuts.map((c) => c.staging)).toEqual([
+      ['p2', 'p1'],
+      [],
+      // Listed the other way round, still placed as the scene first placed them.
+      ['p2', 'p1'],
+      // Whoever joins stands to their right.
+      ['p2', 'p1', 'p3'],
+      // A jump starts the staging again.
+      ['p1', 'p2'],
+    ]);
+    expect(plan.cuts[2].criteria.map((k) => k.text)).toContain('From left to right in the frame, is it the dreamer, then ana?');
+    expect(plan.cuts[1].criteria.some((k) => k.text.startsWith('From left to right'))).toBe(false);
+  });
+
   test('a change still in force is carried into a moment that changes something else', () => {
     const b = breakdown([
       moment({ id: 'm1', visible: ['p1'], leaves: [{ who: 'p1', what: 'head', now: 'a block of ice' }] }),

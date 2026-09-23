@@ -1495,7 +1495,7 @@ export class SessionStore {
     const fixes = (it.frame?.plan?.criteria ?? []).filter(
       (k) =>
         (it.continuity?.failed ?? []).includes(k.text) &&
-        /same person|same side|same view|reference sheet|framing|made the same way/.test(k.text),
+        /same person|same side|same view|reference sheet|framing|made the same way|left to right/.test(k.text),
     );
     const serious = [...facts, ...fixes.map((k) => k.text)];
     if (!serious.length) return false;

@@ -105,6 +105,7 @@ describe('a moment drawn from earlier moments', () => {
         shot: 's1.sh1',
         refs,
         own: [],
+        staging: [],
         states: [],
         sheetLayout: true,
         changes: [],
@@ -143,6 +144,16 @@ describe('a moment drawn from earlier moments', () => {
     );
     // The manifest comes before the scene, and each image says what to take from it.
     expect(prompt.indexOf('The attached images, in order')).toBeLessThan(prompt.indexOf('What happens in this frame'));
+  });
+
+  test('the people in view are told where they stand, left to right', () => {
+    const bo = { ...sheet('p2', 'character', 'you'), isDreamer: true };
+    const two = moment('m1', 1);
+    two.frame = { ...two.frame!, visible: ['p1', 'p2'], plan: { ...two.frame!.plan!, staging: ['p2', 'p1'] } };
+    expect(framePrompt(two, [ana, bo, kitchen], style).prompt).toContain(
+      'Where they stand, from left to right: the dreamer, then ana. The same in every picture of this scene: they never swap sides.',
+    );
+    expect(framePrompt(moment('m1', 1), [ana, kitchen], style).prompt).not.toContain('Where they stand');
   });
 
   test('what the judge found invented in the picture being edited is left out of the edit', () => {
@@ -297,6 +308,7 @@ describe('a change that replaces part of someone', () => {
           shot: 's1.sh4',
           refs: [],
           own: [],
+          staging: [],
           states: [{ who: 'p1', what: 'head', now: 'a block of ice', since: 'm3' }],
           sheetLayout: true,
           changes: [],
@@ -327,6 +339,7 @@ describe('a change that replaces part of someone', () => {
           id: 'm5',
           order: 5,
           own: [{ who: 'p1', what: 'head', now: "a horse's head of ice", since: 'm5' }],
+          staging: [],
           states: [],
         },
       },

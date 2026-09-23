@@ -373,6 +373,7 @@ function drawnFrom(it, pieces) {
     if ((it.dropped || []).includes(r.id)) row.append(el('span', { class: 'bad' }, ' (it failed, so drawn without it)'));
     box.append(row);
   }
+  if ((plan.staging || []).length) box.append(el('div', { class: 'muted' }, `Left to right: ${plan.staging.map((id) => { const s = find(id); return s ? label(s) : id; }).join(', ')}`));
   if ((plan.own || []).length) box.append(el('div', { class: 'muted' }, `Changes here: ${plan.own.map((st) => `${st.what} now ${st.now}`).join('; ')}`));
   if (plan.states.length) box.append(el('div', { class: 'muted' }, `Still so: ${plan.states.map((st) => `${st.what} ${st.now}`).join('; ')}`));
   box.append(el('div', { class: 'muted' }, `${plan.transition}${plan.changes.length ? ` · changes: ${plan.changes.join('; ')}` : ''}`));

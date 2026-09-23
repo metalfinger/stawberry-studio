@@ -113,9 +113,10 @@ export type FrameReference = {
 /** An earlier picture the plan draws this one from, with the plan's reason for it. */
 export type PlannedInput = { use: PlanRef; item: Item };
 
+// "You" in an instruction to a picture is anyone, a viewer's hands included: the dreamer is "the dreamer".
 const nameOf = (sheets: Item[], id: string) => {
   const s = sheets.find((x) => x.id === id);
-  return s ? (s.isDreamer ? 'you, the dreamer' : s.name) : id;
+  return s ? (s.isDreamer ? 'the dreamer' : s.name) : id;
 };
 
 const approved = (s: Item) => s.status === 'ready' && !!s.mediaId && (!!s.review || !!s.continuityApproved);
@@ -293,6 +294,9 @@ export function framePrompt(
       ? `The attached images, in order, and the one thing to take from each:\n${manifest.join('\n')}`
       : '',
     `What happens in this frame: ${action}`,
+    (plan?.staging?.length ?? 0) >= 2
+      ? `Where they stand, from left to right: ${plan!.staging.map((id) => nameOf(sheets, id)).join(', then ')}. The same in every picture of this scene: they never swap sides.`
+      : '',
     // The moments are told to the dreamer ("she stands before you"), and to a picture "you" is the
     // viewer: a moment seen from outside came back with a viewer's hands reaching in (23 Sep).
     f.eyes === 'outside' && /\byou(r|rself)?\b/i.test(`${action} ${point ?? ''}`)
