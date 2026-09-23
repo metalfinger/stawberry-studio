@@ -275,10 +275,10 @@ export async function cleanStyles(b: Breakdown, jev: JevFn): Promise<{ breakdown
   const ask = (key: string, text: string) => {
     questions[key] = {
       type: 'noul',
-      instructions: `A way of drawing a dream is described by this phrase: "${text}". Does it name something that would then have to appear in every picture: a place, building, street, room, object, person, animal, anything from the dream's story, or a particular light source such as lamps, stoves, candles or a fire? Or does it only describe how the picture is drawn (the medium, the line, the texture, the colour treatment, the general quality and direction of light)?`,
+      instructions: `A way of drawing a dream is described by this phrase: "${text}". If a picture followed it, would something appear in the picture that is not there anyway: a place, room, building, street, object, person or animal; a substance or particles such as water drops, rain, snow, dust, smoke or sparks; a particular light source such as lamps, stoves, candles or a fire; or anything from the dream's story? A comparison counts ("like an equipment room" brings the room). Or does it only change how the picture is drawn (the medium, the line, the texture, the colour treatment, the general quality and direction of light)?`,
       criteria: {
-        true: 'it names things to show: places, objects, people, story content, or particular lamps, stoves, candles or fires',
-        false: 'it only describes how the picture is drawn, or the general quality and direction of light',
+        true: 'following it adds things to the picture: places, objects, people, water drops or other particles, particular light sources, or story content, even by comparison',
+        false: 'it only changes how the picture is drawn, or the general quality and direction of light',
       },
     };
   };

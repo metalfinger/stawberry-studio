@@ -1215,7 +1215,9 @@ export class SessionStore {
       const d = item.fields[k];
       return !d?.value || (!d.said && VAGUE.test(d.value));
     };
-    const unknown = item.kind === 'character' && vague('appearance') && vague('wardrobe') && this.deps.proposeLook;
+    // Either half of a look left open is filled: "a young woman" with no clothes named was drawn in
+    // whatever came to hand, and every moment had to guess again (23 Sep).
+    const unknown = item.kind === 'character' && (vague('appearance') || vague('wardrobe')) && this.deps.proposeLook;
     const looked = unknown
       ? this.deps.proposeLook!(item.name, item.fields, renderTranscript(s.transcript))
           .catch(() => item.fields)
