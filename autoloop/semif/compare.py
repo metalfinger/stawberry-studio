@@ -71,9 +71,13 @@ for line in results_path.read_text().splitlines():
 rows, agree_blind, agree_host, contested, side_blind, side_host = [], 0, 0, 0, 0, 0
 for key, semif in theirs.items():
     cut, qid = key
-    evals = studio.media(plan[cut]["media"])["media"]["evaluations"]
-    host = {e["question_id"]: (None if e.get("not_visible") else e.get("probability")) for e in evals["facts"]["evidence"]}
-    blind = {e["question_id"]: (None if e.get("not_visible") else e.get("probability")) for e in evals["stranger"]["evidence"]}
+    # pick the records by who wrote them, not by recency: a remote judge recorded later is also a
+    # "stranger", and must not quietly replace the blind reviewer this comparison is anchored on
+    history = studio.evaluations(plan[cut]["media"])
+    host_rec = next(e for e in history if e["kind"] == "facts")
+    blind_rec = next(e for e in history if e["kind"] == "stranger" and e["evaluator"] == "stranger:general-purpose")
+    host = {e["question_id"]: (None if e.get("not_visible") else e.get("probability")) for e in host_rec["evidence"]}
+    blind = {e["question_id"]: (None if e.get("not_visible") else e.get("probability")) for e in blind_rec["evidence"]}
     if qid not in host or qid not in blind:
         continue
     s, h, b = verdict(semif), verdict(host[qid]), verdict(blind[qid])

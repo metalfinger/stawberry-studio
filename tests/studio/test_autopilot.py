@@ -1,3 +1,4 @@
+import json
 from types import SimpleNamespace
 
 import pytest
@@ -293,3 +294,61 @@ def test_a_defect_the_frame_copied_from_its_sheet_is_sent_upstream(world):
     record(w.studio, media_id, detail=0.1, matches_sheet=0.2)
     codes = {s["code"] for s in w.studio.repair(w.cut["id"])["suggestions"]}
     assert "token_in_prompt" in codes and "inherited_defect" not in codes
+
+
+def _generated_take(w):
+    recipe = prepare(w)
+    w.studio.approve(recipe["id"], Approval(fingerprint=recipe["fingerprint"], user_decision="fixture"))
+    job = w.studio.enqueue(recipe["id"])
+    clock = [10**12]
+    worker = Worker(w.studio, clock=lambda: clock[0])
+    while w.studio.job(job["id"])["state"] != "ready":
+        assert worker.tick()
+        clock[0] += 10
+    return [m["id"] for m in w.studio.inspect(w.cut["id"])["media"] if m["job_id"] == job["id"]][0]
+
+
+def test_remote_judge_reads_probabilities_and_records_an_independent_evaluation(world):
+    import httpx
+
+    from backend.studio.evaluators.remote_judge import JudgeClient, evaluate_remote
+
+    w = world
+    media_id = _generated_take(w)
+    seen = {}
+
+    def handler(request):
+        seen["auth"] = request.headers.get("authorization")
+        body = json.loads(request.content)
+        seen["questions"] = [q["id"] for q in body["questions"]]
+        assert body["image"]  # the frame travels once, base64
+        answers = [{"id": q["id"], "p_yes": 0.1 if q["id"].startswith("hands") else 0.95,
+                    "p_no": 0.9 if q["id"].startswith("hands") else 0.05, "ms": 40} for q in body["questions"]]
+        return httpx.Response(200, json={"model": "qwen3-vl-8b", "answers": answers, "image_ms": 300, "total_ms": 900})
+
+    client = JudgeClient("https://judge.example", "k", transport=httpx.MockTransport(handler))
+    result = evaluate_remote(w.studio, media_id, client)
+    assert seen["auth"] == "Bearer k"
+    # a question needing a second image is never sent to a one-image endpoint
+    assert not [q for q in seen["questions"] if q.startswith(("matches_sheet", "continues"))]
+    assert result["kind"] == "stranger" and result["evaluator"] == "remote:judge-host"
+    # the capped hands question answered "no" caps the independent record — the gate sees it as a failure
+    assert result["scores"]["capped"] == 1.0
+    assert result["timing"]["server_ms"] == 900 and result["timing"]["questions"] == len(seen["questions"])
+
+
+def test_remote_judge_refuses_to_run_unconfigured_or_unauthorised(world, monkeypatch):
+    import httpx
+
+    from backend.studio.evaluators.remote_judge import JudgeClient, evaluate_remote
+
+    monkeypatch.delenv("JUDGE_URL", raising=False)
+    monkeypatch.delenv("JUDGE_API_KEY", raising=False)
+    with pytest.raises(StudioError, match="JUDGE_URL"):
+        JudgeClient()
+    media_id = _generated_take(world)
+    rejecting = JudgeClient("https://judge.example", "wrong",
+                            transport=httpx.MockTransport(lambda r: httpx.Response(401, json={"detail": "no"})))
+    with pytest.raises(StudioError) as caught:
+        evaluate_remote(world.studio, media_id, rejecting)
+    assert caught.value.code == "judge_unauthorized"
