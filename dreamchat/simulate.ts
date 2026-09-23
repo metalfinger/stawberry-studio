@@ -118,7 +118,15 @@ async function run(file: string, max: number) {
     // looks at them before saying whether they're right.
     if (!closed && (r.phase === 'review' || r.phase === 'frames')) {
       await store.settle(id);
-      listener += '\n(the pictures have appeared on the right)';
+      // What is really on the right: told "the pictures have appeared" every turn, the simulated
+      // dreamer said the whole dream was there with six moments still to come (24 Sep).
+      const v = store.view(id);
+      const shown =
+        v?.phase === 'review'
+          ? (v.build?.items ?? [])
+          : (v?.build?.frames ?? []).filter((f) => f.kind === 'cut');
+      const up = shown.filter((f) => f.status === 'ready').length;
+      listener += `\n(on the right now: ${up} of the ${shown.length} pictures${up < shown.length ? '; the rest are not there yet' : ''})`;
       const seen = await lookAt(store, id);
       if (seen) listener += `\n\n(What you see in the pictures on the right, which only you know: ${seen})`;
     }
