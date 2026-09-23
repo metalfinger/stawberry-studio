@@ -216,7 +216,7 @@ export function planWrites(b: Breakdown, style: StyleOption, transcript: string)
       // What the still shows: its own change done, and what still holds from earlier.
       const shows = [...(cp?.own ?? []), ...(cp?.states ?? [])];
       if (shows.length) cut['continuity.before'] = stateMap(shows);
-      if (m.leaves?.length) cut['continuity.after'] = stateMap(m.leaves);
+      if (cp?.own.length) cut['continuity.after'] = stateMap(cp.own);
       if (cp?.transition) cut.transition = cp.transition;
       if (cp?.matchFrame) cut.match_frame = `$${cp.matchFrame}`;
       // Strawberry's own chaining says the same: an edit of the cut just before, or not.
