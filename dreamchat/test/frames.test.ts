@@ -305,6 +305,35 @@ describe('the dreamer in the words of a moment', () => {
     expect(prompt).toContain('"You" in these words is the dreamer');
   });
 
+  test("through the dreamer's own eyes, their face sheet stays out and only their hands may show", () => {
+    const dreamer: Item = {
+      id: 'p2',
+      kind: 'character',
+      name: 'you',
+      isDreamer: true,
+      fields: { wardrobe: { value: 'a grey t-shirt and jeans', said: true } },
+      status: 'ready',
+      version: 1,
+      mediaId: 'media-p2',
+      review: 'approved',
+    };
+    const pov: Item = {
+      id: 'm3',
+      kind: 'cut',
+      name: 'm3',
+      fields: { action: { value: 'You step through the window.', said: true } },
+      status: 'waiting',
+      version: 0,
+      frame: { visible: ['p2'], things: [], place: 'l1', distance: 'wide', eyes: 'dreamer', key: true, order: 3 },
+    };
+    const { prompt, references } = framePrompt(pov, [dreamer], style);
+    expect(references.map((r) => r.media_id)).not.toContain('media-p2');
+    expect(prompt).not.toContain('who the dreamer is');
+    expect(prompt).toContain(
+      "The camera is the dreamer's own eyes: the dreamer is not in the picture, except perhaps their own hands, arms or feet, in a grey t-shirt and jeans.",
+    );
+  });
+
   test('seen from outside, the dreamer is named as in the picture only when they are in it', () => {
     const dreamer: Item = {
       id: 'p2',

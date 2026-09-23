@@ -145,7 +145,8 @@ export function framePrompt(
   const plan = f.plan;
   const byId = new Map(sheets.map((s) => [s.id, s]));
   const inView = [
-    ...f.visible.map((id) => byId.get(id)),
+    // Through the dreamer's own eyes the dreamer is the camera, never a face in the picture.
+    ...f.visible.filter((id) => !(f.eyes === 'dreamer' && byId.get(id)?.isDreamer)).map((id) => byId.get(id)),
     ...f.things.map((id) => byId.get(id)),
     byId.get(f.place),
   ].filter((s): s is Item => !!s);
@@ -267,7 +268,9 @@ export function framePrompt(
       role,
       x.use.carries,
       (r === 'shift'
-        ? `${pictureNo(x)}${shows}, just before the dream jumps. Keep its framing and where everyone is exactly; the dream changes this: ${frame.fields.shift?.value ?? ''}.`
+        ? f.eyes === 'dreamer' && x.item.frame?.eyes !== 'dreamer'
+          ? `${pictureNo(x)}${shows}, just before the dream jumps. Keep its framing and the shapes in it where they are; the dreamer in it is now the camera, so they are not in this picture. The dream changes this: ${frame.fields.shift?.value ?? ''}.`
+          : `${pictureNo(x)}${shows}, just before the dream jumps. Keep its framing and where everyone is exactly; the dream changes this: ${frame.fields.shift?.value ?? ''}.`
         : x.use.role === 'composition'
           ? `${pictureNo(x)}${shows}: the same place from the same side. Take where its walls, windows, furniture and people are, and its light; this frame is framed ${f.distance}.`
           : x.use.role === 'lighting'
@@ -287,6 +290,13 @@ export function framePrompt(
       : inView.some((s) => s.isDreamer)
         ? 'at eye level, the dreamer seen from outside'
         : 'at eye level';
+  // Their own hands or feet may show, in their own clothes.
+  const dreamer = sheets.find((x) => x.isDreamer);
+  const wear = dreamer ? lookOf(dreamer, ['wardrobe']) : '';
+  const pov =
+    f.eyes === 'dreamer'
+      ? `The camera is the dreamer's own eyes: the dreamer is not in the picture, except perhaps their own hands, arms or feet${wear ? `, in ${wear}` : ''}.`
+      : '';
   const feeling = frame.fields.feeling?.value;
   const point = frame.fields.visual_point?.value;
   const purpose = frame.fields.purpose?.value;
@@ -296,6 +306,7 @@ export function framePrompt(
       ? `The attached images, in order, and the one thing to take from each:\n${manifest.join('\n')}`
       : '',
     `What happens in this frame: ${action}`,
+    pov,
     (plan?.staging?.length ?? 0) >= 2
       ? `Where they stand, from left to right: ${plan!.staging.map((id) => nameOf(sheets, id)).join(', then ')}. The same in every picture of this scene: they never swap sides.`
       : '',

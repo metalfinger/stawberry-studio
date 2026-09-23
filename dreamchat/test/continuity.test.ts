@@ -262,6 +262,40 @@ describe('ghosts', () => {
     expect(plan.cuts[1].criteria.some((k) => k.text.startsWith('From left to right'))).toBe(false);
   });
 
+  test("through the dreamer's own eyes the dreamer is the camera: never staged, never checked for a face", () => {
+    const b = breakdown(
+      [
+        moment({ id: 'm1', visible: ['p2', 'p1'], eyes: 'outside' }),
+        moment({ id: 'm2', visible: ['p2', 'p1'], eyes: 'dreamer', from: 'm1' }),
+      ],
+      {
+        people: [
+          {
+            id: 'p1',
+            name: 'ana',
+            is_dreamer: false,
+            protagonist: true,
+            fields: { identity: detail(), appearance: detail(), wardrobe: detail(), distinctive_features: detail() },
+          },
+          {
+            id: 'p2',
+            name: 'you',
+            is_dreamer: true,
+            protagonist: false,
+            fields: { identity: detail(), appearance: detail(), wardrobe: detail(), distinctive_features: detail() },
+          },
+        ],
+      },
+    );
+    const [outside, pov] = planContinuity(b).cuts;
+    expect(outside.staging).toEqual(['p2', 'p1']);
+    expect(pov.staging).toEqual([]);
+    const texts = pov.criteria.map((k) => `${k.with}: ${k.text}`);
+    expect(texts.some((t) => t.includes('the dreamer the same person'))).toBe(false);
+    expect(texts.some((t) => t.startsWith('sheet:p2'))).toBe(false);
+    expect(texts.some((t) => t.startsWith('sheet:p1'))).toBe(true);
+  });
+
   test('a change still in force is carried into a moment that changes something else', () => {
     const b = breakdown([
       moment({ id: 'm1', visible: ['p1'], leaves: [{ who: 'p1', what: 'head', now: 'a block of ice' }] }),

@@ -112,6 +112,14 @@ export function sameWords(a: string, b: string): boolean {
 export const pictureName = (name: string) =>
   name.replace(/\byour\b/gi, "the dreamer's").replace(/\byou\b/gi, 'the dreamer');
 
+/**
+ * Who a picture shows as people. Through the dreamer's own eyes the dreamer is the camera: at most
+ * their own hands or feet show, never their face (the glass world's point-of-view moments were
+ * given the dreamer's face sheet, and checked for "the same face").
+ */
+export const seenIn = (m: Pick<Moment, 'visible' | 'eyes'>, dreamerId?: string) =>
+  m.eyes === 'dreamer' && dreamerId ? m.visible.filter((p) => p !== dreamerId) : m.visible;
+
 /** Everything a picture shows that a lasting change can be seen on, its place included. */
 export const inViewAt = (m: Moment) => new Set([...m.visible, ...m.things, ...(m.place ? [m.place] : [])]);
 
@@ -145,6 +153,7 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
   // The dreamer is "you" in the conversation, but "you" in an instruction to a picture is anyone.
   const dreamerId = b.people.find((p) => p.is_dreamer)?.id;
   const name = (id: string) => (id === dreamerId ? 'the dreamer' : pictureName(names.get(id) ?? id));
+  const seen = (m: Moment) => seenIn(m, dreamerId);
   const no = (id: string) => (index.get(id) ?? 0) + 1;
   const kindOf = (id: string): 'person' | 'place' | 'thing' =>
     b.places.some((p) => p.id === id) ? 'place' : b.things.some((t) => t.id === id) ? 'thing' : 'person';
@@ -360,12 +369,12 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
   const MAX_CUTS = MAX_EARLIER + 2;
   for (const c of cuts) {
     const m = byId.get(c.id)!;
-    for (const p of m.visible) {
+    for (const p of seen(m)) {
       const cutRefs = c.refs.filter((r) => r.kind === 'cut');
       if (cutRefs.length >= MAX_CUTS || cutRefs.some((r) => inViewAt(byId.get(r.id)!).has(p))) continue;
       const lastSeen = ms
         .slice(0, c.order - 1)
-        .filter((e) => e.visible.includes(p))
+        .filter((e) => seen(e).includes(p))
         .at(-1);
       if (lastSeen)
         c.refs.push({
@@ -429,11 +438,12 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
     if (m.shift) jumps += 1;
     const key = `${c.scene}/${jumps}`;
     const line = lineups.get(key) ?? [];
-    if (m.visible.length >= 2 || line.length) {
-      for (const p of m.visible) if (!line.includes(p)) line.push(p);
+    const people = seen(m);
+    if (people.length >= 2 || line.length) {
+      for (const p of people) if (!line.includes(p)) line.push(p);
       lineups.set(key, line);
     }
-    const inView = line.filter((p) => m.visible.includes(p));
+    const inView = line.filter((p) => people.includes(p));
     c.staging = inView.length >= 2 ? inView : [];
   }
 
@@ -473,7 +483,7 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
       if (r.kind !== 'cut') continue;
       const e = byId.get(r.id)!;
       const k = no(r.id);
-      const people = e.visible.filter((p) => m.visible.includes(p));
+      const people = seen(e).filter((p) => seen(m).includes(p));
       if (r.relation === 'same_setup')
         out.push({
           with: r.id,
@@ -524,7 +534,7 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
       });
     // Everyone in it is also held to their own sheet: drift caught at the first moment is not
     // carried into the next (a dreamer drawn from a line sketch came back as someone else, 23 Sep).
-    for (const p of m.visible)
+    for (const p of seen(m))
       out.push({
         with: `sheet:${p}`,
         text: `Is ${name(p)} the same person as in their reference sheet: the same face, hair and clothes?`,

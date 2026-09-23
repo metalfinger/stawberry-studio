@@ -7,7 +7,7 @@
 // not invented defaults presented as user decisions").
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { type CutPlan, planContinuity } from './continuity';
+import { type CutPlan, planContinuity, seenIn } from './continuity';
 import { type Breakdown, type Detail, moments, type State, type StyleOption } from './producer';
 
 export const REPO = resolve(import.meta.dir, '..');
@@ -96,6 +96,7 @@ function patches(node: string, fields: Record<string, Detail>, what: string): Op
 
 /** The whole production as an ordered list of engine calls. Pure, so it can be tested. */
 export function planWrites(b: Breakdown, style: StyleOption, transcript: string): Op[] {
+  const dreamerId = b.people.find((p) => p.is_dreamer)?.id;
   const ops: Op[] = [
     { op: 'create', ref: '$project', kind: 'project', name: b.title.slice(0, 240), notes: b.logline },
     { op: 'capture', ref: '$said', node: '$project', text: transcript, author: 'user', status: 'instruction' },
@@ -197,7 +198,7 @@ export function planWrites(b: Breakdown, style: StyleOption, transcript: string)
       ops.push({ op: 'create', ref: `$${m.id}`, kind: 'cut', name, parent: shot, notes: m.action });
       const cut: Record<string, Value> = {
         action: m.action,
-        visible_cast: m.visible.map((id) => `$${id}`),
+        visible_cast: seenIn(m, dreamerId).map((id) => `$${id}`),
         required_props: m.things.map((id) => `$${id}`),
         story_order: order,
       };

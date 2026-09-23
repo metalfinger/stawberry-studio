@@ -37,6 +37,37 @@ describe('the plan', () => {
   });
 });
 
+describe('through the dreamer\'s own eyes', () => {
+  test('the dreamer is the camera, not in the cut\'s cast', () => {
+    const withDreamer: Breakdown = {
+      ...breakdown,
+      people: [
+        {
+          id: 'p1',
+          name: 'you',
+          is_dreamer: true,
+          protagonist: true,
+          fields: {
+            identity: { value: null, said: false },
+            appearance: { value: 'brown hair', said: true },
+            wardrobe: { value: 'a grey t-shirt', said: true },
+            distinctive_features: { value: null, said: false },
+          },
+        },
+      ],
+      scenes: breakdown.scenes.map((sc) => ({
+        ...sc,
+        moments: sc.moments.map((m) => ({ ...m, visible: ['p1'] })),
+      })),
+    };
+    const cuts = planWrites(withDreamer, style, 'Person: I looked at the board').filter(
+      (o) => o.op === 'patch' && o.node.startsWith('$m') && 'visible_cast' in o.changes,
+    );
+    expect(cuts.length).toBeGreaterThan(0);
+    for (const c of cuts) if (c.op === 'patch') expect(c.changes.visible_cast).toEqual([]);
+  });
+});
+
 describe.skipIf(!strawberryAvailable())('written into an isolated Strawberry store', () => {
   test('the engine accepts it, and its open issues are the sheets and the continuity source, which come next', async () => {
     const r = await writeProduction(breakdown, style, 'Person: there was a board in my kitchen');
