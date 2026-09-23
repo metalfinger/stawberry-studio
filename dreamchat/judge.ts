@@ -27,7 +27,12 @@ const call = (operation: string, body: unknown) => cli(['call', operation, '-'],
 type Media = { media: { node_id: string; path: string }; review_context: string };
 type Question = { id: string; question: string; asset_id: string | null; look_at: string };
 type Answer = { answer: 'yes' | 'no' | 'not_visible'; where?: string };
-export type JudgeOptions = { facts?: boolean; continuity?: { with: string | null; text: string }[] };
+export type JudgeOptions = {
+  facts?: boolean;
+  continuity?: { with: string | null; text: string }[];
+  /** What the judge must know to answer fairly, such as whose eyes the camera is. */
+  note?: string;
+};
 export type JudgedCheck = Check & { continuity?: Check };
 
 async function waitFor(path: string): Promise<unknown | null> {
@@ -65,6 +70,7 @@ export async function assistantJudge(mediaId: string, opts: JudgeOptions = {}): 
     moment: node.node.name,
     // What the picture is: a person's, place's or thing's sheet, or a moment.
     subject: node.node.kind,
+    ...(opts.note ? { note: opts.note } : {}),
     image: join(STRAWBERRY_HOME, 'media', media.media.path),
     questions: questions.map(({ id, question, look_at }) => ({ id, question, look_at })),
     continuity: await Promise.all(

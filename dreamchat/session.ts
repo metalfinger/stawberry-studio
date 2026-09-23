@@ -1421,7 +1421,15 @@ export class SessionStore {
     try {
       // A moment's check is its facts record: what the chat approves it for continuity on.
       // Sheets are judged too: every picture drawn later takes its people, places and things from them.
-      check = await judge(mediaId, { facts: it.kind !== 'ghost', continuity: it.kind === 'cut' ? checks : [] });
+      check = await judge(mediaId, {
+        facts: it.kind !== 'ghost',
+        continuity: it.kind === 'cut' ? checks : [],
+        // The dreamer's own hands in a moment seen through their eyes are theirs, not invented.
+        note:
+          it.frame?.eyes === 'dreamer'
+            ? "Seen through the dreamer's own eyes: the camera is the dreamer, and their own hands, arms or feet may show; they are declared, not an extra person."
+            : undefined,
+      });
     } catch (e) {
       check = { questions: 0, passed: 0, failed: [], error: String(e).slice(0, 200) };
     }
