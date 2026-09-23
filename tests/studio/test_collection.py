@@ -129,9 +129,14 @@ def test_tls_connect_preserves_hostname_and_does_not_resolve_again(monkeypatch):
     monkeypatch.setattr(
         context, "wrap_socket", lambda sock, server_hostname: calls.append((sock, server_hostname)) or sock
     )
-    monkeypatch.setattr(collection.ssl, "create_default_context", lambda: context)
+    made = []
+    monkeypatch.setattr(collection.ssl, "create_default_context", lambda **kw: made.append(kw) or context)
     monkeypatch.setattr(collection.socket, "socket", lambda *a: raw)
     client = collection.PinnedHTTPS("cdn.example", address()[0], 30)
     client.connect()
     assert raw.destination == ("8.8.8.8", 443)
     assert calls == [(raw, "cdn.example")]
+    # Verified against certifi's bundle, the same one the provider API calls use.
+    import certifi
+
+    assert made == [{"cafile": certifi.where()}]
