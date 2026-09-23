@@ -1122,6 +1122,8 @@ export class SessionStore {
   ): Promise<void> {
     item.status = 'drawing';
     item.version += 1;
+    // A new version starts clean: an error belonged to the one before.
+    item.error = undefined;
     // The last job is finished: the watch must not read it back as this version's result before
     // the new job's id arrives (a repaired moment was marked ready with its old take, 23 Sep).
     item.jobId = undefined;
@@ -1257,6 +1259,8 @@ export class SessionStore {
     item.nodeId = ids[item.id];
     item.status = 'drawing';
     item.version += 1;
+    // A new version starts clean: an error belonged to the one before.
+    item.error = undefined;
     // As for a moment: the watch waits for this version's own job.
     item.jobId = undefined;
     item.recipeId = undefined;
@@ -1336,8 +1340,10 @@ export class SessionStore {
       .catch((e) =>
         this.serial(s.id, () =>
           this.update(s.id, (x) => {
+            // A verdict on a take that has since been redrawn fails harmlessly: the redraw moved
+            // the production on. Only a failure on the take still shown is theirs to know.
             const it = [...(x.build?.items ?? []), ...(x.build?.frames ?? [])].find((i) => i.id === item.id);
-            if (it) it.error = `recording their verdict failed: ${String(e).slice(0, 200)}`;
+            if (it && it.mediaId === item.mediaId) it.error = `recording their verdict failed: ${String(e).slice(0, 200)}`;
           }),
         ),
       );
