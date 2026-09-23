@@ -104,6 +104,7 @@ describe('a moment drawn from earlier moments', () => {
         scene: 's1',
         shot: 's1.sh1',
         refs,
+        own: [],
         states: [],
         sheetLayout: true,
         changes: [],
@@ -144,6 +145,26 @@ describe('a moment drawn from earlier moments', () => {
     expect(prompt.indexOf('The attached images, in order')).toBeLessThan(prompt.indexOf('What happens in this frame'));
   });
 
+  test('what the judge found invented in the picture being edited is left out of the edit', () => {
+    const use = { id: 'm1', kind: 'cut' as const, role: 'base' as const, relation: 'same_setup' as const, carries: 'x' };
+    const flawed: Item = {
+      ...drawn('m1', 1),
+      check: {
+        questions: 15,
+        passed: 14,
+        failed: ['Is everything in this frame declared?'],
+        failedIds: ['undeclared'],
+        notes: ["a pair of hands reaches in from the bottom corners, as if from a viewer"],
+      },
+    };
+    const { prompt } = framePrompt(moment('m2', 2, [use]), [ana, kitchen], style, [{ use, item: flawed }]);
+    expect(prompt).toContain(
+      'Leave out what it shows that is not in the dream: a pair of hands reaches in from the bottom corners, as if from a viewer.',
+    );
+    const { prompt: clean } = framePrompt(moment('m2', 2, [use]), [ana, kitchen], style, [{ use, item: drawn('m1', 1) }]);
+    expect(clean).not.toContain('Leave out what it shows');
+  });
+
   test("the room from an earlier moment keeps the place's sheet, for its materials only", () => {
     const use = {
       id: 'm1',
@@ -176,6 +197,9 @@ describe('what a redraw is told', () => {
     expect(asInstruction("Is the young woman's head an irregular block of ice?")).toBe(
       "the young woman's head is an irregular block of ice",
     );
+    expect(
+      asInstruction('Is everything in this frame declared? The cut names the room. Is there no other person?'),
+    ).toBe('nothing is in the picture that the dream does not have: no other person, face, hand, limb, creature or tool');
   });
 });
 
@@ -213,6 +237,30 @@ describe('the dreamer in the words of a moment', () => {
     const seen = { ...outside, frame: { ...outside.frame!, eyes: 'dreamer' as const } };
     expect(framePrompt(seen, [], style).prompt).not.toContain('"You" in these words is the dreamer');
   });
+
+  test('seen from outside, the dreamer is named as in the picture only when they are in it', () => {
+    const dreamer: Item = {
+      id: 'p2',
+      kind: 'character',
+      name: 'you',
+      isDreamer: true,
+      fields: {},
+      status: 'ready',
+      version: 1,
+    };
+    const without: Item = {
+      id: 'm5',
+      kind: 'cut',
+      name: 'm5',
+      fields: { action: { value: 'The ice becomes a horse.', said: true } },
+      status: 'waiting',
+      version: 0,
+      frame: { visible: [], things: [], place: 'l1', distance: 'close', eyes: 'outside', key: true, order: 5 },
+    };
+    expect(framePrompt(without, [dreamer], style).prompt).not.toContain('the dreamer seen from outside');
+    const withThem = { ...without, frame: { ...without.frame!, visible: ['p2'] } };
+    expect(framePrompt(withThem, [dreamer], style).prompt).toContain('the dreamer seen from outside');
+  });
 });
 
 describe('a change that replaces part of someone', () => {
@@ -248,6 +296,7 @@ describe('a change that replaces part of someone', () => {
           scene: 's1',
           shot: 's1.sh4',
           refs: [],
+          own: [],
           states: [{ who: 'p1', what: 'head', now: 'a block of ice', since: 'm3' }],
           sheetLayout: true,
           changes: [],
@@ -262,5 +311,43 @@ describe('a change that replaces part of someone', () => {
     const { prompt } = framePrompt(moment, [woman], style);
     expect(prompt).toContain('who the young woman is: their build and clothes, exactly.');
     expect(prompt).toContain('Except their head, which is no longer theirs: it is now a block of ice');
+
+    // The moment that changes it again: the sheet gives way to the new look, and the look it
+    // replaces is not "still so".
+    const plan = moment.frame!.plan!;
+    const horse: Item = {
+      ...moment,
+      id: 'm5',
+      fields: { action: { value: "The ice becomes a horse's head.", said: true } },
+      frame: {
+        ...moment.frame!,
+        order: 5,
+        plan: {
+          ...plan,
+          id: 'm5',
+          order: 5,
+          own: [{ who: 'p1', what: 'head', now: "a horse's head of ice", since: 'm5' }],
+          states: [],
+        },
+      },
+    };
+    const next = framePrompt(horse, [woman], style).prompt;
+    expect(next).toContain("Except their head, which is no longer theirs: it is now a horse's head of ice");
+    expect(next).not.toContain('Still so from earlier');
+    expect(next).not.toContain('a block of ice');
+  });
+});
+
+describe('what the pictures are made as', () => {
+  test('every picture names its medium; a style that names none is a photograph', () => {
+    const asSeen = { ...style, name: 'the dream exactly as it looked to you', tokens: ['water drops catching the light'] };
+    expect(styleBlock(asSeen)).toContain('Made as: a photograph.');
+    expect(styleBlock({ ...asSeen, medium: 'soft pencil on paper' })).toContain('Made as: soft pencil on paper.');
+    expect(styleBlock({ ...asSeen, name: 'soft watercolour' })).toContain('Made as: soft watercolour.');
+    expect(styleBlock({ ...asSeen, tokens: ['flat black ink with hard edges'] })).toContain(
+      'Made as: flat black ink with hard edges.',
+    );
+    // "Storyboard" says drawn: a photographic dream turned into an ink drawing at its fifth picture.
+    expect(framePrompt(frame('A board.'), [], asSeen).prompt).not.toMatch(/storyboard/i);
   });
 });

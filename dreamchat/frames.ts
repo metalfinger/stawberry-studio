@@ -10,6 +10,9 @@ import type { Breakdown, Moment, StyleOption } from './producer';
 import { VAGUE } from './producer';
 import { type Item, styleBlock, toldColours } from './sheets';
 
+/** A phrase ended as one sentence, however the model ended it. */
+const sentence = (text: string) => `${text.trim().replace(/[.!?;,:\s]+$/, '')}.`;
+
 const FRAMING: Record<Moment['distance'], string> = {
   close: 'The subject fills nearly the whole frame edge to edge; the background is a thin strip and little more.',
   medium: 'The subject occupies about half the frame height, with the space around them clearly visible.',
@@ -158,13 +161,22 @@ export function framePrompt(
     manifest.push(`Image ${references.length}: ${line}`);
   };
   const pictureNo = (x: PlannedInput) => (x.item.frame ? `picture ${x.item.frame.order}` : 'an in-between reference');
+  // What the judge found invented in an earlier picture stays out of this one: a viewer's hands in
+  // picture 3 were kept by the edit made from it (23 Sep).
+  const strays = (x: PlannedInput) => {
+    const c = x.item.check;
+    const found = (c?.failedIds ?? [])
+      .map((id, i) => (id === 'undeclared' ? c?.notes?.[i] : undefined))
+      .filter((n): n is string => !!n);
+    return found.length ? ` Leave out what it shows that is not in the dream: ${found.join('; ')}.` : '';
+  };
 
   if (base?.item.mediaId)
     attach(
       base.item.mediaId,
       'base',
       'the same view a moment earlier: edit it into this moment',
-      `EDIT THIS PICTURE. It is ${pictureNo(base)}, the same view a moment earlier. Keep its camera, framing, room, light and everyone in it exactly as they are, faces and clothes included; change only what this moment changes.`,
+      `EDIT THIS PICTURE. It is ${pictureNo(base)}, the same view a moment earlier. Keep its camera, framing, room, light and everyone in it exactly as they are, faces and clothes included; change only what this moment changes.${strays(base)}`,
     );
 
   // What each sheet says in words, so the manifest ties each image to who or what it is.
@@ -188,7 +200,7 @@ export function framePrompt(
       const look = lookOf(s, ['appearance', 'wardrobe', 'distinctive_features']);
       // A change that replaces part of them overrides their sheet for that part: told to keep
       // her face, a moment drew her own face inside the block of ice that replaces her head (23 Sep).
-      const changed = (plan?.states ?? []).filter((st) => st.who === s.id);
+      const changed = [...(plan?.own ?? []), ...(plan?.states ?? [])].filter((st) => st.who === s.id);
       const except = changed.length
         ? ` Except ${changed.map((st) => `their ${st.what}, which is no longer theirs: it is now ${st.now}, with nothing of the old ${st.what} inside or behind it`).join('; ')}.`
         : '';
@@ -251,25 +263,32 @@ export function framePrompt(
       x.item.mediaId,
       role,
       x.use.carries,
-      r === 'shift'
+      (r === 'shift'
         ? `${pictureNo(x)}${shows}, just before the dream jumps. Keep its framing and where everyone is exactly; the dream changes this: ${frame.fields.shift?.value ?? ''}.`
         : x.use.role === 'composition'
           ? `${pictureNo(x)}${shows}: the same place from the same side. Take where its walls, windows, furniture and people are, and its light; this frame is framed ${f.distance}.`
           : x.use.role === 'lighting'
             ? `${pictureNo(x)}${shows}: the same place from the other side, a moment earlier. Take only its light and how everyone looks; the walls behind are the ones opposite to that picture's.`
-            : `${pictureNo(x)}${shows}: take only ${x.use.carries.replace(/;.*$/, '')}. Nothing of its place, framing or background.`,
+            : `${pictureNo(x)}${shows}: take only ${x.use.carries.replace(/;.*$/, '')}. Nothing of its place, framing or background.`) +
+        strays(x),
     );
   }
 
   const states = (plan?.states ?? []).map((st) => `${nameOf(sheets, st.who)}'s ${st.what}: ${st.now}`);
   const action = frame.fields.action?.value ?? '';
+  // Seen from outside, the dreamer is a person in the picture only when the moment has them in it:
+  // "the dreamer seen from outside" of a moment without them invites a second figure.
   const angle =
-    f.eyes === 'dreamer' ? "seen through the dreamer's own eyes" : 'at eye level, the dreamer seen from outside';
+    f.eyes === 'dreamer'
+      ? "seen through the dreamer's own eyes"
+      : inView.some((s) => s.isDreamer)
+        ? 'at eye level, the dreamer seen from outside'
+        : 'at eye level';
   const feeling = frame.fields.feeling?.value;
   const point = frame.fields.visual_point?.value;
   const purpose = frame.fields.purpose?.value;
   const prompt = [
-    `A single storyboard frame, ${f.distance}, ${angle}${f.looksAt ? `, facing ${f.looksAt}` : ''}. ${FRAMING[f.distance]}`,
+    `One picture from the dream, ${f.distance}, ${angle}${f.looksAt ? `, facing ${f.looksAt}` : ''}. ${FRAMING[f.distance]}`,
     manifest.length
       ? `The attached images, in order, and the one thing to take from each:\n${manifest.join('\n')}`
       : '',
@@ -281,9 +300,9 @@ export function framePrompt(
       : '',
     facts.length ? `In it:\n${facts.join('\n')}` : '',
     states.length ? `Still so from earlier in the dream: ${states.join('; ')}.` : '',
-    purpose ? `Its part in the story: ${purpose}.` : '',
-    feeling ? `It should feel: ${feeling}.` : '',
-    point ? `The one thing this frame must show: ${point}.` : '',
+    purpose ? `Its part in the story: ${sentence(purpose)}` : '',
+    feeling ? `It should feel: ${sentence(feeling)}` : '',
+    point ? `The one thing this frame must show: ${sentence(point)}` : '',
     // The judge's findings on the last attempt, when it was drawn again for them.
     frame.repairFor?.length
       ? `The last attempt at this frame got these wrong. Put each right:\n${frame.repairFor.map((q) => `- ${q}`).join('\n')}`

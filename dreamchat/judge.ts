@@ -10,7 +10,7 @@
 //      continuity: [{earlier, text}], answerFile}
 //   answer:   judge-queue/<media>.answer.json
 //     {answers: {<question id>: {answer: "yes" | "no" | "not_visible", where}},
-//      continuity: {<index>: "yes" | "no"}}
+//      continuity: {<index>: "yes" | "no" | {answer: "yes" | "no", where}}}
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Check } from './sheets';
@@ -75,7 +75,7 @@ export async function assistantJudge(mediaId: string, opts: JudgeOptions = {}): 
   writeFileSync(join(JUDGE_QUEUE, `${mediaId}.json`), JSON.stringify(request, null, 2));
   const answer = (await waitFor(request.answerFile)) as {
     answers?: Record<string, Answer>;
-    continuity?: Record<string, 'yes' | 'no'>;
+    continuity?: Record<string, 'yes' | 'no' | { answer: 'yes' | 'no'; where?: string }>;
   } | null;
   if (!answer?.answers) return { questions: 0, passed: 0, failed: [], error: 'no judge answered' };
 
@@ -113,8 +113,13 @@ export async function assistantJudge(mediaId: string, opts: JudgeOptions = {}): 
     error = `recording the answers failed: ${String(e).slice(0, 160)}`;
   }
   const failed = evidence.filter((e) => e.answer === 'no');
-  const asked = continuity.map((c, i) => ({ text: c.text, a: answer.continuity?.[String(i)] })).filter((x) => x.a);
-  const missed = asked.filter((x) => x.a === 'no').map((x) => x.text);
+  const asked = continuity
+    .map((c, i) => {
+      const a = answer.continuity?.[String(i)];
+      return { text: c.text, a: typeof a === 'object' ? a?.answer : a, where: typeof a === 'object' ? a?.where : undefined };
+    })
+    .filter((x) => x.a);
+  const missed = asked.filter((x) => x.a === 'no');
   return {
     questions: evidence.filter((e) => !e.not_visible).length,
     passed: evidence.filter((e) => e.answer === 'yes').length,
@@ -125,7 +130,15 @@ export async function assistantJudge(mediaId: string, opts: JudgeOptions = {}): 
     unseen: failed.filter((e) => PRESENCE.includes(e.question_id.split(':')[0])).map((e) => e.question),
     ...(error ? { error } : {}),
     ...(asked.length
-      ? { continuity: { questions: asked.length, passed: asked.length - missed.length, failed: missed } }
+      ? {
+          continuity: {
+            questions: asked.length,
+            passed: asked.length - missed.length,
+            failed: missed.map((x) => x.text),
+            // What the judge saw, for each failure, as with the facts.
+            notes: missed.map((x) => (x.where ?? '').slice(0, 240)),
+          },
+        }
       : {}),
   };
 }

@@ -217,6 +217,32 @@ describe('ghosts', () => {
       ['g3'],
     ]);
     expect(drawOrder(plan)).toEqual(['g1', 'm1', 'g2', 'g3', 'm2', 'm3', 'm4']);
+    // A moment's own change replaces what that part was: the horse's head is told and checked as
+    // the horse's head, never as the melting ice it was a moment ago.
+    expect(plan.cuts.map((c) => [c.own.map((st) => st.now), c.states.map((st) => st.now)])).toEqual([
+      [[], []],
+      [['a block of ice'], []],
+      [['melting ice'], []],
+      [["a horse's head of ice"], []],
+    ]);
+    const checks = plan.cuts[3].criteria.map((k) => k.text).filter((t) => t.includes('head'));
+    expect(checks).toEqual(["In this picture, is ana's head a horse's head of ice?"]);
+  });
+
+  test('a change still in force is carried into a moment that changes something else', () => {
+    const b = breakdown([
+      moment({ id: 'm1', visible: ['p1'], leaves: [{ who: 'p1', what: 'head', now: 'a block of ice' }] }),
+      moment({
+        id: 'm2',
+        visible: ['p1'],
+        from: 'm1',
+        states: [{ who: 'p1', what: 'head', now: 'a block of ice', since: 'm1' }],
+        leaves: [{ who: 'p1', what: 'coat', now: 'soaked through' }],
+      }),
+    ]);
+    const m2 = planContinuity(b).cuts[1];
+    expect(m2.own.map((st) => `${st.what}: ${st.now}`)).toEqual(['coat: soaked through']);
+    expect(m2.states.map((st) => `${st.what}: ${st.now}`)).toEqual(['head: a block of ice']);
   });
 
   test("a dream's jump is a boundary: what follows takes nothing of the place from before it", () => {

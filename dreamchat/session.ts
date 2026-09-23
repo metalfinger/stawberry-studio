@@ -54,9 +54,9 @@ import {
 } from './producer';
 import { type ContinuityPlan, drawOrder, planContinuity } from './continuity';
 import { buildFrames, buildGhosts, type FrameReference, framePrompt, ghostPrompt, type PlannedInput } from './frames';
-import { type Check, type Item, MAX_PER_IMAGE, profileOf, type SheetEngine } from './sheets';
+import { type Check, type CutRecord, type Item, MAX_PER_IMAGE, profileOf, type SheetEngine } from './sheets';
 import type { JudgedCheck, JudgeOptions } from './judge';
-import type { WriteResult } from './strawberry';
+import { cutRecord, type WriteResult } from './strawberry';
 
 export type Entry = { role: 'user' | 'assistant'; content: string; messages?: string[] };
 
@@ -311,6 +311,10 @@ export function asInstruction(question: string): string {
     ],
     // A carried state: "Is the young woman's head an irregular block of ice?"
     [/^Is (.+?)'s (\w+) (.+)\?$/, (_, a, b, c) => `${a}'s ${b} is ${c}`],
+    [
+      /^Is everything in this frame declared\?/,
+      () => 'nothing is in the picture that the dream does not have: no other person, face, hand, limb, creature or tool',
+    ],
   ];
   for (const [re, f] of rules) {
     const m = q.match(re);
@@ -1014,26 +1018,31 @@ export class SessionStore {
           changes[k === 'feeling' ? 'beat.emotional_intent' : k === 'visual_point' ? 'beat.visual_point' : k] = d.value;
     frame.depicted = depicted;
     frame.continuity = undefined;
-    // A source that failed is left out of the cut's record as well as its references.
-    const ids = s.production?.result?.ids ?? {};
-    const failedCuts = (frame.dropped ?? []).filter((d) => s.build?.frames?.find((x) => x.id === d)?.kind === 'cut');
-    const relink =
-      failedCuts.length && ids.proposal
-        ? {
-            continuityFrom: (frame.frame?.plan?.refs ?? [])
-              .filter((r) => r.kind === 'cut' && !failedCuts.includes(r.id) && ids[r.id])
-              .map((r) => ids[r.id]),
-            source: ids.proposal,
-            reason: `Drawn without ${failedCuts.map((d) => s.build?.frames?.find((x) => x.id === d)?.name ?? d).join(', ')}, which could not be drawn`,
-          }
-        : undefined;
     await this.launch(s, frame, {
       prompt,
       references,
       changes,
-      relink,
+      record: this.recordOf(s, frame),
       reason: `The person asked to see their dream drawn and settled everything in it; approved within the ${IMAGE_CAP}-picture limit.`,
     });
+  }
+
+  /**
+   * The cut's record as its plan says; a source that failed is left out of it as well as its
+   * references.
+   */
+  private recordOf(s: Session, frame: Item): CutRecord | undefined {
+    const ids = s.production?.result?.ids ?? {};
+    const plan = frame.frame?.plan;
+    if (!plan || !ids.proposal) return undefined;
+    const failedCuts = (frame.dropped ?? []).filter((d) => s.build?.frames?.find((x) => x.id === d)?.kind === 'cut');
+    return {
+      fields: cutRecord(plan, ids, failedCuts),
+      source: ids.proposal,
+      reason: failedCuts.length
+        ? `Drawn without ${failedCuts.map((d) => s.build?.frames?.find((x) => x.id === d)?.name ?? d).join(', ')}, which could not be drawn`
+        : 'The continuity this moment is drawn with',
+    };
   }
 
   /** Start one ghost: an edit of its asset's approved sheet, never shown as part of the dream. */
@@ -1070,7 +1079,7 @@ export class SessionStore {
       changes?: Record<string, string>;
       reason: string;
       intent?: string;
-      relink?: { continuityFrom: string[]; source: string; reason: string };
+      record?: CutRecord;
     },
   ): Promise<void> {
     item.status = 'drawing';
@@ -1093,7 +1102,7 @@ export class SessionStore {
         reason: job.reason,
         maxUsd: MAX_PER_IMAGE,
         intent: job.intent,
-        relink: job.relink,
+        record: job.record,
       })
       .then(
         (r) =>
@@ -1478,13 +1487,15 @@ export class SessionStore {
     if (!c || c.error) return false;
     // Who or what is missing, a changed look not carried, the wrong clothes or features, a broken
     // body; and a person or room that does not match what the moment follows.
-    const SERIOUS = ['cast', 'location', 'prop', 'state', 'wardrobe', 'features', 'pose'];
+    // Something invented counts too: a viewer's hands kept in one picture are kept by every edit
+    // of it (23 Sep).
+    const SERIOUS = ['cast', 'location', 'prop', 'state', 'wardrobe', 'features', 'pose', 'undeclared'];
     const factAt = c.failed.map((_, i) => i).filter((i) => SERIOUS.includes((c.failedIds?.[i] ?? '').split(':')[0]));
     const facts = factAt.map((i) => c.failed[i]);
     const fixes = (it.frame?.plan?.criteria ?? []).filter(
       (k) =>
         (it.continuity?.failed ?? []).includes(k.text) &&
-        /same person|same side|same view|reference sheet|framing/.test(k.text),
+        /same person|same side|same view|reference sheet|framing|made the same way/.test(k.text),
     );
     const serious = [...facts, ...fixes.map((k) => k.text)];
     if (!serious.length) return false;
@@ -1495,7 +1506,10 @@ export class SessionStore {
         const saw = c.notes?.[i];
         return saw ? `${asInstruction(c.failed[i])} (last time: ${saw})` : asInstruction(c.failed[i]);
       }),
-      ...fixes.map((k) => k.fix),
+      ...fixes.map((k) => {
+        const saw = it.continuity?.notes?.[(it.continuity?.failed ?? []).indexOf(k.text)];
+        return saw ? `${k.fix} (last time: ${saw})` : k.fix;
+      }),
     ].slice(0, 6);
     this.reviewSketch(
       s,
@@ -1519,14 +1533,34 @@ export class SessionStore {
   /**
    * Draw again what failed before it was ever submitted: an approval refused, a provider out of
    * balance, an upload refused. Nothing was spent on those, so nothing paid is retried; a picture
-   * that failed after its job was submitted stays failed for the person to decide.
+   * that failed after its job was submitted stays failed for the person to decide, unless they
+   * name it in `redraw`, having confirmed with the provider that it never ran (a submission cut
+   * off by a 503 before Higgsfield answered, with no charge on the account, 23 Sep).
    */
-  async resume(id: string): Promise<string[]> {
-    return this.serial(id, async () => {
+  async resume(id: string, opts: { redraw?: string[] } = {}): Promise<string[]> {
+    const again = await this.serial(id, async () => {
       const s = structuredClone(this.require(id));
+      // Every moment not yet approved is planned again, so a fix to the planner reaches a dream
+      // already under way; an approved one keeps the plan it was drawn from. A plan that needs a
+      // picture this dream never planned is left as it was.
+      // Its record follows, so the judge asks about what the moment should now show.
+      if (s.build?.frames && s.draft?.breakdown) {
+        const plan = planContinuity(s.draft.breakdown);
+        const known = new Set(s.build.frames.map((f) => f.id));
+        for (const f of s.build.frames) {
+          const next = plan.cuts.find((c) => c.id === f.id);
+          if (f.kind !== 'cut' || !f.frame || !next || f.review || f.continuityApproved) continue;
+          if (![...next.needs, ...next.refs.map((r) => r.id)].every((n) => known.has(n))) continue;
+          f.frame.plan = next;
+          f.needs = next.needs;
+          const record = this.recordOf(s, f);
+          if (f.nodeId && record && f.status !== 'waiting') await this.deps.sheets?.record?.(f.nodeId, record);
+        }
+      }
       const again: string[] = [];
       for (const it of [...(s.build?.items ?? []), ...(s.build?.frames ?? [])])
-        if (it.status === 'failed' && !it.jobId) {
+        if (it.status === 'failed' && (!it.jobId || opts.redraw?.includes(it.id))) {
+          it.jobId = undefined;
           again.push(it.id);
           Object.assign(it, { status: 'waiting', error: undefined, version: Math.max(0, it.version - 1) });
           // A picture's count was taken when it was started; it is taken again when it restarts.
@@ -1539,6 +1573,12 @@ export class SessionStore {
       if ([...(s.build?.items ?? []), ...(s.build?.frames ?? [])].some((i) => i.status === 'drawing')) this.watch(id);
       return again;
     });
+    // A take that landed while nothing was running is looked at now.
+    const s = this.require(id);
+    for (const it of [...(s.build?.items ?? []), ...(s.build?.frames ?? [])])
+      if (it.kind !== 'ghost' && it.status === 'ready' && it.mediaId && !it.check && !it.review)
+        void this.judgeWhenReady(id, it.id);
+    return again;
   }
 
   /** Wait for every background job this conversation has running. For tests and the simulator. */

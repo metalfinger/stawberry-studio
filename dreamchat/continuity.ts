@@ -36,7 +36,12 @@ export type CutPlan = {
   scene: string;
   shot: string;
   refs: PlanRef[];
-  /** Changes still in force for what is in view, spelled out in the prompt. */
+  /** What this moment itself changes: the picture shows it done, and it holds from here on. */
+  own: State[];
+  /**
+   * Changes from earlier moments still in force for what is in view, spelled out in the prompt.
+   * One this moment changes again is not among them: the melting ice gives way to the horse.
+   */
   states: State[];
   /** The location sheet sets the layout only when the cut faces the side it shows. */
   sheetLayout: boolean;
@@ -232,13 +237,17 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
     const first = ms.find((e) => e.place === m.place);
     const sheetLayout = !first || first === m || sides(m, first);
 
+    // A moment that changes a part again replaces what it was: the horse's head was told "still
+    // a melting ice block" and judged against it (23 Sep).
+    const own = m.leaves.map((l) => ({ who: l.who, what: l.what, now: l.now, since: m.id }));
     return {
       id: m.id,
       order: i + 1,
       scene,
       shot: shotOf.get(m.id)!,
       refs,
-      states: m.states ?? [],
+      own,
+      states: (m.states ?? []).filter((st) => !own.some((o) => o.who === st.who && o.what === st.what)),
       sheetLayout,
       changes: [],
       needs: [],
@@ -321,12 +330,8 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
       ghostOf.set(stateKey(state), g);
     }
   for (const c of cuts) {
-    const m = byId.get(c.id)!;
-    // Its own change, and every change still in force on what it shows, except where its own
-    // change replaces one (the melting ice gives way to the horse's head).
-    const own = m.leaves.map((l) => ({ who: l.who, what: l.what, now: l.now, since: m.id }));
-    const shown = [...own, ...c.states.filter((st) => !own.some((o) => o.who === st.who && o.what === st.what))];
-    for (const st of shown) {
+    // Its own change, and every change still in force on what it shows.
+    for (const st of [...c.own, ...c.states]) {
       const g = ghostOf.get(stateKey(st));
       if (!g || c.refs.some((r) => r.id === g.id)) continue;
       g.usedBy.push(c.id);
@@ -467,6 +472,15 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
           fix: `${name(p)} must be the same person as in picture ${k}: the same face, hair and clothes`,
         });
     }
+    // Every picture is made the same way as the one it follows: a photographic storyboard came
+    // back as an ink drawing at its fifth picture (23 Sep).
+    const follows = c.refs.find((r) => r.kind === 'cut');
+    if (follows)
+      out.push({
+        with: follows.id,
+        text: 'Are both pictures made the same way: the same medium (a photograph, pencil, paint, ink…) and the same finish?',
+        fix: `made exactly as picture ${no(follows.id)} is: the same medium and finish`,
+      });
     // Everyone in it is also held to their own sheet: drift caught at the first moment is not
     // carried into the next (a dreamer drawn from a line sketch came back as someone else, 23 Sep).
     for (const p of m.visible)
@@ -481,7 +495,7 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
         text: `Is ${name(t)} the same object as in its reference sheet: the same shape, colours and details?`,
         fix: `${name(t)} must look exactly like its reference sheet: the same shape, colours and details`,
       });
-    for (const st of c.states)
+    for (const st of [...c.own, ...c.states])
       out.push({
         with: null,
         text: `In this picture, is ${name(st.who)}'s ${st.what} ${st.now}?`,
@@ -499,7 +513,7 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
         issues.push(`picture ${c.order} refers to picture ${no(r.id)}, which is not earlier`);
     if (c.changes.length >= TOO_MANY)
       issues.push(`picture ${c.order} still changes ${c.changes.length} things at once: ${c.changes.join('; ')}`);
-    for (const st of c.states)
+    for (const st of [...c.own, ...c.states])
       if (!carriedBy(c, st))
         issues.push(`picture ${c.order}: ${name(st.who)}'s ${st.what} (${st.now}) is carried in words only`);
   }

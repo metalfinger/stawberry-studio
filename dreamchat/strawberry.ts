@@ -7,7 +7,7 @@
 // not invented defaults presented as user decisions").
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { planContinuity } from './continuity';
+import { type CutPlan, planContinuity } from './continuity';
 import { type Breakdown, type Detail, moments, type State, type StyleOption } from './producer';
 
 export const REPO = resolve(import.meta.dir, '..');
@@ -45,6 +45,30 @@ const attribute = (what: string) => {
     .slice(0, 40);
   return /^[a-z]/.test(slug) ? slug : `x_${slug || 'state'}`;
 };
+
+/**
+ * A cut's continuity as the plan it is drawn from says, in the production's ids: the earlier cuts
+ * it follows (less any that could not be drawn), what it shows, and what it leaves. Strawberry
+ * asks the judge about what a cut shows, so a record left from an older plan asks the wrong thing
+ * ("is her head still a melting block?" of the horse's head, 23 Sep).
+ */
+export function cutRecord(cp: CutPlan, ids: Record<string, string>, without: string[] = []): Record<string, Value> {
+  const record: Record<string, Value> = {
+    continuity_from: cp.refs
+      .filter((r) => r.kind === 'cut' && !without.includes(r.id) && ids[r.id])
+      .map((r) => ids[r.id]),
+  };
+  // A plan made before a cut's own change was kept apart says nothing reliable about states.
+  if (!cp.own) return record;
+  const states = (list: Pick<State, 'who' | 'what' | 'now'>[]) => {
+    const out: Record<string, Record<string, Value>> = {};
+    for (const st of list) if (ids[st.who]) (out[ids[st.who]] ??= {})[attribute(st.what)] = st.now;
+    return out;
+  };
+  record['continuity.before'] = states([...cp.own, ...cp.states]);
+  record['continuity.after'] = states(cp.own);
+  return record;
+}
 
 /** States as Strawberry keeps them: `{ asset: { attribute: value } }`. */
 function stateMap(states: Pick<State, 'who' | 'what' | 'now'>[]): Record<string, Record<string, Value>> {
@@ -186,7 +210,9 @@ export function planWrites(b: Breakdown, style: StyleOption, transcript: string)
       const cp = planOf.get(m.id);
       const from = (cp?.refs ?? []).filter((r) => r.kind === 'cut').map((r) => `$${r.id}`);
       if (from.length) cut.continuity_from = from;
-      if (cp?.states.length) cut['continuity.before'] = stateMap(cp.states);
+      // What the still shows: its own change done, and what still holds from earlier.
+      const shows = [...(cp?.own ?? []), ...(cp?.states ?? [])];
+      if (shows.length) cut['continuity.before'] = stateMap(shows);
       if (m.leaves?.length) cut['continuity.after'] = stateMap(m.leaves);
       if (cp?.transition) cut.transition = cp.transition;
       if (cp?.matchFrame) cut.match_frame = `$${cp.matchFrame}`;

@@ -70,6 +70,8 @@ export type StyleOption = {
   id: string;
   /** Plain words a person would use: "like an old woodcut print". */
   name: string;
+  /** What every picture is made as: "a photograph", "soft pencil on paper". */
+  medium?: string;
   line: string;
   tokens: string[];
   palette_hex: string[];
@@ -135,10 +137,11 @@ JSON only, exactly this shape (ids like p1, l1, t1, s1, m1, a/b/c/d):
 where D is {"value": "..." or null, "said": true or false}. Moment "said" is true when the person described that moment happening.`;
 
 const STYLE_SYSTEM = `You help turn a person's dream into pictures. From the conversation below, propose how the pictures could be drawn. Return JSON only:
-{"style_options": [{"id": "a", "name": "", "line": "", "tokens": [""], "palette_hex": ["#000000"], "lighting_rules": ""}]}
+{"style_options": [{"id": "a", "name": "", "medium": "", "line": "", "tokens": [""], "palette_hex": ["#000000"], "lighting_rules": ""}]}
 
 - Exactly 4 options: 3 ways suited to this dream's feeling and look, then "d", as close as possible to how the dream looked to them.
 - "name": plain words anyone would understand, like "an old woodcut print" or "soft watercolour". No art jargon, no artist names.
+- "medium": what every picture is made as, in a few plain words: "a photograph", "soft pencil on paper", "watercolour on rough paper", "flat black ink". For "d", when the dream looked like real life, "a photograph".
 - "line": one plain sentence on how it would feel.
 - "tokens": 4-6 concrete technique phrases a renderer can follow, each under 120 characters ("flat black ink with hard carved edges" is a token; "dreamy style" is not). Tokens say how everything is drawn, never what is in the dream: no ice, glass, horses, glowing objects or other content, or every picture will be made of it.
 - "palette_hex": 4-6 colours as #RRGGBB.
@@ -516,6 +519,7 @@ export function normalizeStyles(raw: unknown): StyleOption[] {
       return {
         id: str(so.id, 4) || 'abcd'[i],
         name: str(so.name, 80) || `option ${i + 1}`,
+        medium: str(so.medium, 80),
         line: str(so.line, 240),
         tokens,
         palette_hex: palette,

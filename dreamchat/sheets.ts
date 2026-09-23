@@ -53,7 +53,7 @@ export type Item = {
   /** For a ghost: the planned requirement on its asset that its take covers. */
   requirementId?: string;
   /** The judge's continuity check: the take beside the pictures it was drawn from. */
-  continuity?: { questions: number; passed: number; failed: string[]; error?: string };
+  continuity?: { questions: number; passed: number; failed: string[]; notes?: string[]; error?: string };
   /** Downloads of the current take retried after failing. */
   collectRetries?: number;
   /** The image judge's check of the current take: how many declared facts it saw. */
@@ -213,6 +213,21 @@ export function toldColours(...items: Item[]): string[] {
   return [...out];
 }
 
+/** Words that say what a picture is made as. */
+const MEDIUM =
+  /\b(photo\w*|camera|film still|pencil|graphite|charcoal|ink|watercolou?r|gouache|oil|acrylic|paint\w*|pastel|crayon|woodcut|linocut|etching|engraving|print|collage|clay|stop.motion|3d|render\w*|cgi|anime|cartoon|comic|manga|sketch\w*|drawing|drawn|illustrat\w*|mosaic|stained glass|embroider\w*|pixel|vector|poster|screen.?print|risograph|animation|animated)\b/i;
+
+/**
+ * What every picture of a style is made as. A style that names no medium ("the dream exactly as
+ * it looked to you") left it to the model, and a photographic storyboard turned into an ink
+ * drawing at its fifth picture (23 Sep): one that names none is a photograph, as the eye saw it.
+ */
+export function mediumOf(style: StyleOption): string {
+  if (style.medium?.trim()) return style.medium.trim();
+  if (MEDIUM.test(style.name)) return style.name;
+  return style.tokens.find((t) => MEDIUM.test(t)) ?? 'a photograph';
+}
+
 export function styleBlock(style: StyleOption, told: string[] = []): string {
   const colours = [...new Set(style.palette_hex.map(colourName))];
   return [
@@ -220,6 +235,7 @@ export function styleBlock(style: StyleOption, told: string[] = []): string {
     // ("…precise details on the horse head" put ice horses in every sketch, 23 Sep): only the
     // style's name and its technique reach a picture.
     `Style: ${style.name}.`,
+    `Made as: ${mediumOf(style)}. Every part of the picture is made this way, the same as every other picture of this dream.`,
     style.tokens.length ? `Technique, followed exactly: ${style.tokens.join('; ')}.` : '',
     colours.length
       ? told.length
@@ -289,6 +305,9 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
     .join('\n\n');
 }
 
+/** A cut's continuity fields as its plan says, sourced and explained for the record. */
+export type CutRecord = { fields: Record<string, unknown>; source: string; reason: string };
+
 export type SheetEngine = {
   /** Write the confirmed fields, then prepare, approve and queue the sketch. */
   start(input: {
@@ -323,6 +342,8 @@ export type SheetEngine = {
   }): Promise<void>;
   /** Collect a finished picture again after its download failed. Costs nothing: no new generation. */
   retryCollection(jobId: string): Promise<void>;
+  /** Set a cut's record to what its plan says, where it differs. */
+  record?(nodeId: string, record: CutRecord): Promise<void>;
   /** Prepare, approve and queue a moment's frame, with the approved sheets as references. */
   startFrame(input: {
     item: Item;
@@ -336,12 +357,30 @@ export type SheetEngine = {
     /** What the recipe is for, as Strawberry records it. */
     intent?: string;
     /**
-     * The earlier cuts it is really drawn from, when some it was planned on failed: the cut's
-     * record is set to these first, or Strawberry refuses it for a source that never was.
+     * The cut's continuity as the plan it is drawn from says: its record is set to it first where
+     * it differs. Strawberry refuses a cut for a source that never was drawn, and asks the judge
+     * about the states its record holds.
      */
-    relink?: { continuityFrom: string[]; source: string; reason: string };
+    record?: CutRecord;
   }): Promise<{ recipeId: string; jobId: string; usd: number | null }>;
 };
+
+/** Two field values the same, whatever their key order; an empty one is the same as none. */
+function sameValue(a: unknown, b: unknown): boolean {
+  const empty = (v: unknown) =>
+    v == null || (Array.isArray(v) ? !v.length : typeof v === 'object' && !Object.keys(v as object).length);
+  const canon = (v: unknown): unknown =>
+    Array.isArray(v)
+      ? v.map(canon)
+      : v && typeof v === 'object'
+        ? Object.fromEntries(
+            Object.entries(v as Record<string, unknown>)
+              .sort(([x], [y]) => x.localeCompare(y))
+              .map(([k, x]) => [k, canon(x)]),
+          )
+        : v;
+  return (empty(a) && empty(b)) || JSON.stringify(canon(a)) === JSON.stringify(canon(b));
+}
 
 export const PROVIDER =
   (process.env.DREAMCHAT_PROVIDER as 'fal' | 'higgsfield' | 'fake' | undefined) ??
@@ -458,20 +497,26 @@ export const liveSheets: SheetEngine = {
     await call('retry_collection', { id: jobId });
   },
 
-  async startFrame({ item, prompt, references, changes, source, reason, maxUsd, intent, relink }) {
-    if (!item.nodeId) throw new Error(`${item.name} is not in the production yet`);
-    if (relink) {
-      const node = (await call('inspect', { id: item.nodeId })) as { node: { revision: number } };
+  async record(nodeId, record) {
+    const node = (await call('inspect', { id: nodeId })) as {
+      node: { revision: number; fields: Record<string, { value?: unknown }> };
+    };
+    const differs = Object.entries(record.fields).filter(([k, v]) => !sameValue(node.node.fields[k]?.value, v));
+    if (differs.length)
       await call('patch', {
-        id: item.nodeId,
+        id: nodeId,
         request: {
           expected_revision: node.node.revision,
-          changes: { continuity_from: { op: 'set', value: relink.continuityFrom } },
-          source_id: relink.source,
-          reason: relink.reason,
+          changes: Object.fromEntries(differs.map(([k, v]) => [k, { op: 'set', value: v }])),
+          source_id: record.source,
+          reason: record.reason,
         },
       });
-    }
+  },
+
+  async startFrame({ item, prompt, references, changes, source, reason, maxUsd, intent, record }) {
+    if (!item.nodeId) throw new Error(`${item.name} is not in the production yet`);
+    if (record) await liveSheets.record!(item.nodeId, record);
     if (changes && Object.keys(changes).length && source) {
       const node = (await call('inspect', { id: item.nodeId })) as { node: { revision: number } };
       await call('patch', {

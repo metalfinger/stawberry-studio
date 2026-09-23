@@ -6,7 +6,7 @@ import type { Breakdown } from '../producer';
 
 // The engine's CLI reads its store from this, so it must be set before the module loads.
 process.env.DREAMCHAT_STRAWBERRY_HOME = mkdtempSync(join(tmpdir(), 'dreamchat-strawberry-'));
-const { planWrites, strawberryAvailable, writeProduction } = await import('../strawberry');
+const { cutRecord, planWrites, strawberryAvailable, writeProduction } = await import('../strawberry');
 
 const breakdown = (await Bun.file(join(import.meta.dir, 'fixtures', 'breakdown.json')).json()) as Breakdown;
 const style = breakdown.style_options[0];
@@ -50,4 +50,37 @@ describe.skipIf(!strawberryAvailable())('written into an isolated Strawberry sto
     ]);
     expect(r.readyCuts).toBe(0);
   }, 30000);
+});
+
+describe("a cut's record", () => {
+  test('holds what the still shows, its own change done, and what it leaves', () => {
+    const ids = { p1: 'P1', m4: 'M4', m3: 'M3' };
+    const plan = {
+      id: 'm5',
+      order: 5,
+      scene: 's1',
+      shot: 's1.sh4',
+      refs: [
+        { id: 'm4', kind: 'cut' as const, role: 'base' as const, carries: '' },
+        { id: 'm3', kind: 'cut' as const, role: 'composition' as const, carries: '' },
+        { id: 'g3', kind: 'ghost' as const, role: 'identity' as const, carries: '' },
+      ],
+      own: [{ who: 'p1', what: 'head', now: "a horse's head of ice", since: 'm5' }],
+      states: [{ who: 'p1', what: 'coat', now: 'soaked through', since: 'm2' }],
+      sheetLayout: true,
+      changes: [],
+      needs: [],
+      criteria: [],
+      depth: 1,
+      transition: '',
+      why: '',
+    };
+    expect(cutRecord(plan, ids)).toEqual({
+      continuity_from: ['M4', 'M3'],
+      'continuity.before': { P1: { head: "a horse's head of ice", coat: 'soaked through' } },
+      'continuity.after': { P1: { head: "a horse's head of ice" } },
+    });
+    // A source that could not be drawn is left out.
+    expect(cutRecord(plan, ids, ['m3']).continuity_from).toEqual(['M4']);
+  });
 });
