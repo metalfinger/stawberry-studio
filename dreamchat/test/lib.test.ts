@@ -204,7 +204,7 @@ describe('how it should look', () => {
   test('a chosen option starts the build', () => {
     const { move } = selectMove(state({ style_choice: 'b' }), cfg, style());
     expect(move).toEqual({ kind: 'start', styleId: 'b' });
-    expect(phaseAfter('style', move)).toBe('ready');
+    expect(phaseAfter('style', move)).toBe('build');
   });
 
   test('their own description is a choice too', () => {
@@ -220,11 +220,40 @@ describe('how it should look', () => {
   });
 });
 
+describe('building, one profile at a time', () => {
+  const build = (over: Partial<NonNullable<MoveContext['build']>> = {}): MoveContext =>
+    listen({ phase: 'build', build: { current: 'p1', next: 'l1', checks: 0, ...over } });
+  const replied = (r: State['signals']['profile_reply']) => {
+    const st = state({});
+    st.signals.profile_reply = r;
+    return st;
+  };
+
+  test('a confirmed profile moves to the next one', () => {
+    expect(selectMove(replied('confirmed'), cfg, build()).move).toEqual({ kind: 'confirm_profile', itemId: 'l1' });
+  });
+
+  test('a change, or "you choose", settles it just the same', () => {
+    expect(selectMove(replied('changes'), cfg, build()).move.kind).toBe('confirm_profile');
+    expect(selectMove(replied('you_choose'), cfg, build()).move.kind).toBe('confirm_profile');
+  });
+
+  test('no clear answer is asked once, then taken as it is', () => {
+    expect(selectMove(replied('unclear'), cfg, build()).move).toEqual({ kind: 'profile_check', itemId: 'p1' });
+    expect(selectMove(replied('unclear'), cfg, build({ checks: 1 })).move.kind).toBe('confirm_profile');
+  });
+
+  test('the last profile settled means everything is being sketched', () => {
+    expect(selectMove(replied('confirmed'), cfg, build({ next: null })).move).toEqual({ kind: 'build_done' });
+  });
+});
+
 describe('phases', () => {
   test('code moves the phase, the model never does', () => {
     expect(phaseAfter('listen', { kind: 'retell' })).toBe('retell');
     expect(phaseAfter('retell', { kind: 'retell_check' })).toBe('retell');
-    expect(phaseAfter('style', { kind: 'start', styleId: 'a' })).toBe('ready');
+    expect(phaseAfter('style', { kind: 'start', styleId: 'a' })).toBe('build');
+    expect(phaseAfter('build', { kind: 'build_done' })).toBe('review');
     expect(phaseAfter('listen', { kind: 'wrap' })).toBe('ended');
     expect(phaseAfter('listen', { kind: 'follow' })).toBe('listen');
   });

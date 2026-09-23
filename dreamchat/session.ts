@@ -41,7 +41,8 @@ import {
   parseTurnResponse,
   type Thinking,
 } from './llm';
-import { type Breakdown, callProducer, normalizeBreakdown, ownStyle, type StyleOption } from './producer';
+import { type Breakdown, callProducer, type Detail, normalizeBreakdown, ownStyle, type StyleOption } from './producer';
+import { type Item, profileOf, type SheetEngine } from './sheets';
 import type { WriteResult } from './strawberry';
 
 export type Entry = { role: 'user' | 'assistant'; content: string; messages?: string[] };
@@ -95,6 +96,14 @@ export type Production = {
   error?: string;
 };
 
+/** Sketches per conversation, at most. At fal's $0.15 a sketch, 30 is $4.50. */
+export const IMAGE_CAP = Number(process.env.DREAMCHAT_IMAGE_CAP ?? 30);
+/** The approval ceiling on a single sketch, in US dollars. */
+const MAX_USD_PER_IMAGE = 0.2;
+
+/** The people, places and things being confirmed and sketched, in Strawberry's order. */
+export type Build = { items: Item[]; current: string | null; checks: number };
+
 export type Session = {
   id: string;
   name: string;
@@ -114,6 +123,11 @@ export type Session = {
   draft: Draft | null;
   style: StyleOption | null;
   production: Production | null;
+  build: Build | null;
+  /** Sketches started, against the cap. */
+  images: number;
+  /** What fal's list price says they cost so far, in US dollars. */
+  spentUsd: number;
 };
 
 export type TurnResult = {
@@ -137,6 +151,12 @@ export type StoreDeps = {
   ownStyle?: (transcript: string) => Promise<StyleOption | null>;
   /** Writes the production into Strawberry. Absent when the engine isn't installed. */
   write?: (b: Breakdown, style: StyleOption, transcript: string) => Promise<WriteResult>;
+  /** Draws reference sheets through the engine. Absent: nothing is sketched. */
+  sheets?: SheetEngine;
+  /** Applies the person's answer to a profile. */
+  reviseItem?: (name: string, fields: Record<string, Detail>, transcript: string) => Promise<Record<string, Detail>>;
+  /** How often a running sketch is checked, in ms. */
+  watchEveryMs?: number;
   dir?: string;
   now?: () => number;
 };
@@ -155,6 +175,36 @@ export { ownStyle };
 
 const userTurns = (s: Session) => s.transcript.filter((e) => e.role === 'user').length;
 
+/**
+ * The sheets to draw, in Strawberry's order: the protagonist, the other people, the places, the
+ * things, and last the dreamer, when they are seen at all.
+ */
+export function buildItems(b: Breakdown): Item[] {
+  const item = (
+    id: string,
+    kind: Item['kind'],
+    name: string,
+    fields: Record<string, Detail>,
+    isDreamer = false,
+  ): Item => ({
+    id,
+    kind,
+    name,
+    fields: structuredClone(fields),
+    status: 'waiting',
+    version: 0,
+    isDreamer,
+  });
+  const others = b.people.filter((p) => !p.is_dreamer);
+  others.sort((x, y) => Number(y.protagonist) - Number(x.protagonist));
+  return [
+    ...others.map((p) => item(p.id, 'character', p.name, p.fields)),
+    ...b.places.map((l) => item(l.id, 'location', l.name, l.fields)),
+    ...b.things.map((t) => item(t.id, 'prop', t.name, t.fields)),
+    ...b.people.filter((p) => p.is_dreamer).map((p) => item(p.id, 'character', p.name, p.fields, true)),
+  ];
+}
+
 /** The first thing that would be drawn, in plain words: the protagonist, else the first place. */
 function firstSubject(b: Breakdown | undefined): string | undefined {
   if (!b) return undefined;
@@ -167,6 +217,9 @@ export class SessionStore {
   private chains = new Map<string, Promise<unknown>>();
   private memoryDetails = new Map<string, TurnDetail>();
   private drafts = new Map<string, { basedOn: number; promise: Promise<DraftResult> }>();
+  private writes = new Map<string, Promise<unknown>>();
+  private watching = new Set<string>();
+  private reviews = new Map<string, Promise<unknown>>();
 
   constructor(
     readonly cfg: GoalsFile,
@@ -185,6 +238,9 @@ export class SessionStore {
         draft: saved.draft ?? null,
         style: saved.style ?? null,
         production: saved.production ?? null,
+        build: saved.build ?? null,
+        images: saved.images ?? 0,
+        spentUsd: saved.spentUsd ?? 0,
       } as Session);
     }
   }
@@ -217,6 +273,9 @@ export class SessionStore {
       draft: null,
       style: null,
       production: null,
+      build: null,
+      images: 0,
+      spentUsd: 0,
     };
     this.sessions.set(id, s);
     return s;
@@ -357,7 +416,18 @@ export class SessionStore {
     s.transcript.push({ role: 'user', content: text });
 
     const styles = s.draft?.breakdown?.style_options ?? [];
-    const questions = bookkeeperQuestions(this.cfg, s.transcript, prev, s.phase, styles);
+    const onShow = s.build?.items.find((i) => i.id === s.build?.current);
+    // Sketches they have been shown and not yet answered about.
+    const pending = s.build?.items.filter((i) => i.status === 'ready' && i.announced && !i.review) ?? [];
+    const questions = bookkeeperQuestions(
+      this.cfg,
+      s.transcript,
+      prev,
+      s.phase,
+      styles,
+      onShow?.name,
+      s.phase === 'review' ? pending.map(({ id, name }) => ({ id, name })) : [],
+    );
     const call = await this.deps.jev(renderTranscript(s.transcript), questions);
     const { next, notes } = readState(prev, this.cfg, s.transcript, call, turnNow, s.phase);
 
@@ -368,6 +438,39 @@ export class SessionStore {
       last_move: lastTurn ? moveKey(lastTurn.move) : next.last_move,
       threads: next.threads.map((th) => (s.exploredThreads.includes(th.id) ? { ...th, explored: true } : th)),
     };
+    // Their answer to the sketches is applied before the next move is chosen: it can settle the
+    // last one, or start a new version.
+    const reviewed = { approved: [] as string[], redrawing: [] as string[] };
+    let whichUnclear = false;
+    if (s.phase === 'review' && pending.length) {
+      const reaction = overlaid.signals.sketch_reaction ?? 'no_reaction';
+      const which = overlaid.signals.sketch_which ?? 'unclear';
+      const named = which === 'all' ? pending : pending.filter((i) => i.id === which);
+      if (reaction === 'no_reaction') {
+        for (const it of pending)
+          this.reviewSketch(s, it, 'left', 'Shown to them in the chat; they raised nothing against it.');
+      } else if (reaction === 'looks_right') {
+        // "It looks great" with two sketches up and no name means both.
+        for (const it of named.length ? named : pending) {
+          this.reviewSketch(s, it, 'approved', `They said it looks right: "${text.slice(0, 400)}"`);
+          reviewed.approved.push(it.name);
+        }
+      } else if (named.length || pending.length === 1) {
+        for (const it of named.length ? named : pending) {
+          this.reviewSketch(s, it, 'rejected', `They said it isn't right: "${text.slice(0, 400)}"`);
+          if (this.deps.reviseItem)
+            it.fields = await this.deps.reviseItem(it.name, it.fields, renderTranscript(s.transcript));
+          it.announced = false;
+          it.review = undefined;
+          await this.startSketch(s, it, turnNow);
+          reviewed.redrawing.push(it.name);
+        }
+      } else whichUnclear = true;
+    }
+    const settled =
+      !!s.build &&
+      s.build.items.every((i) => i.status === 'failed' || (i.status === 'ready' && i.review !== undefined));
+
     let followStreak = 0;
     for (let i = s.turns.length - 1; i >= 0 && isFollowing(s.turns[i].move); i--) followStreak++;
     const { move, rule } = selectMove(overlaid, this.cfg, {
@@ -379,6 +482,10 @@ export class SessionStore {
       offers: s.offers,
       styleAsks: s.styleAsks,
       styleIds: styles.map((o) => o.id),
+      build: s.build
+        ? { current: s.build.current, next: this.nextItem(s.build)?.id ?? null, checks: s.build.checks }
+        : undefined,
+      review: { settled, whichUnclear },
     });
     let phase = phaseAfter(s.phase, move);
 
@@ -405,6 +512,48 @@ export class SessionStore {
     };
     if (s.style?.id === 'own')
       extras.styles = [...(extras.styles ?? []), { id: 'own', name: s.style.name, line: s.style.line }];
+
+    // Building: the answer settles the profile on show, its sketch starts, and the next one is shown.
+    if (move.kind === 'start') {
+      const items = s.draft?.breakdown ? buildItems(s.draft.breakdown) : [];
+      if (!items.length || !this.deps.sheets || !this.deps.write) phase = 'ready';
+      else {
+        items[0].status = 'confirming';
+        s.build = { items, current: items[0].id, checks: 0 };
+        extras.profile = profileOf(items[0]);
+      }
+    }
+    if (s.build && (move.kind === 'confirm_profile' || move.kind === 'build_done')) {
+      const settling = s.build.items.find((i) => i.id === s.build?.current);
+      if (settling) {
+        if (overlaid.signals.profile_reply === 'changes' && this.deps.reviseItem)
+          settling.fields = await this.deps.reviseItem(settling.name, settling.fields, renderTranscript(s.transcript));
+        await this.startSketch(s, settling, turnNow);
+        extras.sketching = settling.name;
+      }
+      const next = move.kind === 'confirm_profile' ? s.build.items.find((i) => i.id === move.itemId) : undefined;
+      if (next) {
+        next.status = 'confirming';
+        extras.profile = profileOf(next);
+      }
+      s.build.current = next?.id ?? null;
+      s.build.checks = 0;
+    }
+    if (s.build && move.kind === 'profile_check') {
+      s.build.checks += 1;
+      const item = s.build.items.find((i) => i.id === move.itemId);
+      if (item) extras.profile = profileOf(item);
+    }
+    if (s.build && (move.kind === 'while_drawing' || move.kind === 'sheets_done' || move.kind === 'ask_which')) {
+      extras.approved = reviewed.approved;
+      extras.redrawing = reviewed.redrawing;
+      extras.shown = pending.map((i) => i.name);
+      if (move.kind === 'while_drawing') {
+        const fresh = s.build.items.filter((i) => i.status === 'ready' && !i.announced);
+        extras.finished = fresh.map((i) => i.name);
+        for (const i of fresh) i.announced = true;
+      }
+    }
     const brief = renderBrief(overlaid, move, this.cfg, { phase, extras });
     if (move.kind === 'probe_goal') s.askCounts[move.goalId] = (s.askCounts[move.goalId] ?? 0) + 1;
     s.briefs[turnNow] = brief;
@@ -439,6 +588,7 @@ export class SessionStore {
     s.closed = CLOSED.includes(phase);
     s.state = { ...overlaid, last_move: moveKey(move) };
     if (move.kind === 'start') this.startWrite(s);
+    if (s.build?.items.some((i) => i.status === 'drawing')) this.watch(s.id);
 
     await this.commit(
       s,
@@ -519,7 +669,9 @@ export class SessionStore {
       return;
     }
     s.production = { status: 'writing' };
-    this.deps.write(b, s.style, renderTranscript(s.transcript)).then(
+    const writing = this.deps.write(b, s.style, renderTranscript(s.transcript));
+    this.writes.set(s.id, writing);
+    writing.then(
       (result) =>
         this.serial(s.id, () =>
           this.update(s.id, (x) => {
@@ -535,6 +687,139 @@ export class SessionStore {
     );
   }
 
+  private nextItem(b: Build): Item | undefined {
+    const at = b.items.findIndex((i) => i.id === b.current);
+    return b.items.slice(at + 1).find((i) => i.status === 'waiting');
+  }
+
+  /**
+   * Start one sketch. The engine calls run in the background; their result, and every later
+   * change of the sketch's state, comes back through the turn queue.
+   */
+  private async startSketch(s: Session, item: Item, turn: number): Promise<void> {
+    item.startedAtTurn = turn;
+    if (!this.deps.sheets || !s.style) {
+      item.status = 'failed';
+      item.error = 'nothing can be drawn here: the Strawberry engine is not set up';
+      return;
+    }
+    if (s.images >= IMAGE_CAP) {
+      item.status = 'failed';
+      item.error = `the ${IMAGE_CAP}-picture limit for one dream is reached`;
+      return;
+    }
+    // The production must be written before a sketch can be attached to it.
+    if (s.production?.status === 'writing') {
+      try {
+        const result = (await this.writes.get(s.id)) as WriteResult | undefined;
+        if (result) s.production = { status: 'written', result };
+      } catch (e) {
+        s.production = { status: 'failed', error: String(e) };
+      }
+    }
+    const ids = s.production?.result?.ids;
+    if (!ids?.[item.id] || !ids.said || !ids.proposal) {
+      item.status = 'failed';
+      item.error = 'the production was not written, so there is nothing to attach the sketch to';
+      return;
+    }
+    item.nodeId = ids[item.id];
+    item.status = 'drawing';
+    item.version += 1;
+    s.images += 1;
+    const snapshot = structuredClone(item);
+    const style = s.style;
+    this.deps.sheets
+      .start({
+        item: snapshot,
+        style,
+        sources: { said: ids.said, proposal: ids.proposal },
+        reason: `The person asked to see their dream drawn and settled this profile in conversation; approved within the ${IMAGE_CAP}-picture limit.`,
+        maxUsd: MAX_USD_PER_IMAGE,
+      })
+      .then(
+        (r) =>
+          this.serial(s.id, () =>
+            this.update(s.id, (x) => {
+              const it = x.build?.items.find((i) => i.id === item.id);
+              if (!it) return;
+              it.jobId = r.jobId;
+              it.recipeId = r.recipeId;
+              x.spentUsd = Math.round((x.spentUsd + (r.usd ?? 0)) * 100) / 100;
+            }),
+          ).then(() => this.watch(s.id)),
+        (e) =>
+          this.serial(s.id, () =>
+            this.update(s.id, (x) => {
+              const it = x.build?.items.find((i) => i.id === item.id);
+              if (it) Object.assign(it, { status: 'failed', error: String(e).slice(0, 300) });
+            }),
+          ),
+      );
+  }
+
+  /**
+   * Record their verdict on a sketch's current take in Strawberry. Approved and left takes become
+   * the item's reference; a rejected one stays on record as rejected. Runs in the background;
+   * a failure is noted on the item.
+   */
+  private reviewSketch(s: Session, item: Item, verdict: 'approved' | 'left' | 'rejected', decision: string): void {
+    if (verdict !== 'rejected') item.review = verdict;
+    if (!this.deps.sheets || !item.mediaId || !item.nodeId) return;
+    const done = this.deps.sheets
+      .review({ mediaId: item.mediaId, nodeId: item.nodeId, approved: verdict !== 'rejected', decision })
+      .catch((e) =>
+        this.serial(s.id, () =>
+          this.update(s.id, (x) => {
+            const it = x.build?.items.find((i) => i.id === item.id);
+            if (it) it.error = `recording their verdict failed: ${String(e).slice(0, 200)}`;
+          }),
+        ),
+      );
+    this.reviews.set(`${s.id}:${item.id}`, done);
+  }
+
+  /** Check running sketches until none is left, recording each change through the queue. */
+  private watch(id: string): void {
+    if (this.watching.has(id) || !this.deps.sheets) return;
+    this.watching.add(id);
+    const sheets = this.deps.sheets;
+    const every = this.deps.watchEveryMs ?? 3000;
+    const loop = async () => {
+      try {
+        for (;;) {
+          const s = this.sessions.get(id);
+          const running = s?.build?.items.filter((i) => i.status === 'drawing') ?? [];
+          if (!running.length) return;
+          for (const it of running) {
+            if (!it.jobId || !it.nodeId) continue;
+            let st: Awaited<ReturnType<SheetEngine['status']>>;
+            try {
+              st = await sheets.status(it.jobId, it.nodeId);
+            } catch {
+              continue; // a failed check is retried on the next pass
+            }
+            const failed = ['failed', 'submission_unknown', 'collection_failed', 'cancelled'].includes(st.state);
+            if (st.state !== 'ready' && !failed) continue;
+            await this.serial(id, () =>
+              this.update(id, (x) => {
+                const cur = x.build?.items.find((i) => i.id === it.id);
+                if (!cur || cur.jobId !== it.jobId) return;
+                if (st.state === 'ready')
+                  Object.assign(cur, { status: 'ready', mediaId: st.mediaId, mediaPath: st.mediaPath });
+                else Object.assign(cur, { status: 'failed', error: st.error ?? st.state });
+              }),
+            );
+          }
+          await Bun.sleep(every);
+        }
+      } finally {
+        this.watching.delete(id);
+      }
+    };
+    void loop();
+  }
+
   private async update(id: string, fn: (s: Session) => void): Promise<void> {
     const s = structuredClone(this.require(id));
     fn(s);
@@ -547,7 +832,8 @@ export class SessionStore {
     while (Date.now() < until) {
       await this.serial(id, async () => undefined);
       const s = this.sessions.get(id);
-      if (s?.draft?.status !== 'drafting' && s?.production?.status !== 'writing') return;
+      const drawing = s?.build?.items.some((i) => i.status === 'drawing');
+      if (s?.draft?.status !== 'drafting' && s?.production?.status !== 'writing' && !drawing) return;
       await Bun.sleep(100);
     }
   }

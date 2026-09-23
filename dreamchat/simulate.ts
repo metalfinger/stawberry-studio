@@ -4,17 +4,18 @@
 //
 //   bun run simulate.ts dreams/icehead.md
 //   bun run simulate.ts dreams/*.md --max 30
+import { loadedKeys } from './boot';
 import { mkdirSync, readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { dreamConfig } from './dream';
-import { loadEnvFile } from './env';
 import { callJev } from './jev';
 import { callDeepseek, callHost, type ChatMessage } from './llm';
-import { details, moments } from './producer';
+import { details, moments, reviseItem } from './producer';
 import { liveProducer, ownStyle, SessionStore } from './session';
-import { strawberryAvailable, writeProduction } from './strawberry';
+import { liveSheets, PROVIDER, spawnWorker } from './sheets';
+import { REPO, STRAWBERRY_HOME, STRAWBERRY_PYTHON, strawberryAvailable, writeProduction } from './strawberry';
 
-loadEnvFile();
+void loadedKeys;
 
 const DREAMER = (
   dream: string,
@@ -32,6 +33,8 @@ How to behave:
 - If they tell the dream back to you, check it against the dream above and say honestly whether it's right, correcting anything that's wrong or missing.
 - If they ask whether you'd like to see it drawn, say yes.
 - If they offer ways it could be drawn, pick the one closest to how the dream looked to you, in a few words.
+- If they describe how they picture someone or something from your dream, say whether that fits. If a detail is wrong against the dream above, correct it; if the dream doesn't say, tell them to go with their guess.
+- Once they say the pictures are being made, just say thanks.
 
 Reply with only your next message, nothing else.`;
 
@@ -55,6 +58,8 @@ async function run(file: string, max: number) {
     producer: liveProducer(callJev),
     ownStyle,
     write: strawberryAvailable() ? writeProduction : undefined,
+    sheets: strawberryAvailable() ? liveSheets : undefined,
+    reviseItem,
   });
   const { id } = store.create(`simulated: ${slug}`);
 
@@ -68,7 +73,8 @@ async function run(file: string, max: number) {
     dreamer.push({ role: 'assistant', content: reply });
     const r = await store.message(id, reply);
     listener = r.messages.join('\n');
-    closed = r.closed;
+    // Everything is being sketched: the conversation's work is done.
+    closed = r.closed || r.phase === 'review';
   }
 
   await store.settle(id);
@@ -127,6 +133,17 @@ async function run(file: string, max: number) {
     style: s.style?.name ?? null,
     styleWaitMs: s.turns.reduce((n, t) => n + (t.waitMs ?? 0), 0),
     production: s.production,
+    sketches: (s.build?.items ?? []).map((i) => ({
+      name: i.name,
+      status: i.status,
+      error: i.error,
+      file: i.mediaPath ? join(STRAWBERRY_HOME, 'media', i.mediaPath) : null,
+      prompt_fields: Object.fromEntries(
+        Object.entries(i.fields).map(([k, d]) => [k, `${d.value}${d.said ? '' : ' (guess)'}`]),
+      ),
+    })),
+    images: s.images,
+    spentUsd: s.spentUsd,
     avgJudgeMs: Math.round(turns.reduce((n, t) => n + t.jevMs, 0) / Math.max(turns.length, 1)),
     avgReplyMs: Math.round(turns.reduce((n, t) => n + t.hostMs, 0) / Math.max(turns.length, 1)),
     transcript: s.transcript.map((e) => `${e.role === 'user' ? 'dreamer' : 'Berry'}: ${e.content}`),
@@ -185,6 +202,9 @@ function print(r: Report) {
     console.log(`details ${bd.said} said, ${bd.guessed} guessed (${bd.downgraded} downgraded by the check)`);
   }
   console.log(`style: ${r.style ?? '—'} (waited ${r.styleWaitMs} ms for the breakdown)`);
+  for (const k of r.sketches)
+    console.log(`  sketch ${k.name}: ${k.status}${k.error ? ` (${k.error})` : ''}${k.file ? ` ${k.file}` : ''}`);
+  console.log(`images ${r.images} · $${r.spentUsd.toFixed(2)} at list price`);
   const p = r.production;
   console.log(
     `strawberry: ${p?.status ?? '—'}${p?.result ? ` · ${p.result.cuts} cuts, ${JSON.stringify(p.result.created)}, issues: ${p.result.issues.length}` : ''}${p?.error ? ` · ${p.error.slice(0, 200)}` : ''}`,
@@ -203,7 +223,10 @@ if (!files.length) {
 const out = join(import.meta.dir, 'runs');
 mkdirSync(out, { recursive: true });
 const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+const worker = strawberryAvailable() ? spawnWorker(STRAWBERRY_PYTHON, REPO) : null;
+console.log(`sketches drawn with ${PROVIDER} into ${STRAWBERRY_HOME}`);
 const reports = await Promise.all(files.map((f) => run(f, max)));
+worker?.stop();
 for (const r of reports) print(r);
 const path = join(out, `sim-${stamp}-${process.env.DREAMCHAT_HOST_THINKING ?? 'low'}.json`);
 await Bun.write(path, JSON.stringify(reports, null, 2));

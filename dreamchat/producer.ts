@@ -88,6 +88,7 @@ Mark every detail "said": true ONLY when the person's own words give it. Anythin
 - One "protagonist": true — the person the dream is most about.
 - A thing gets an entry only if it matters or is seen closely.
 - People fields: identity (who they are to the dreamer), appearance (age, build, face, hair), wardrobe, distinctive_features. Places: geography (what kind of place, inside or out, layout), landmarks (what's in it), light. Things: appearance, materials.
+- A profile is how someone or something ordinarily looks, before anything happens to it in the dream. What happens to them (a head turning to ice, a room going dark, a person starting to glow) is a moment's action, never part of the profile: it would be drawn on every picture of them.
 
 ## Look (Director)
 - "look" is what the dream looked like to them: colours, light, texture.
@@ -109,7 +110,7 @@ const STYLE_SYSTEM = `You help turn a person's dream into pictures. From the con
 - Exactly 4 options: 3 ways suited to this dream's feeling and look, then "d", as close as possible to how the dream looked to them.
 - "name": plain words anyone would understand, like "an old woodcut print" or "soft watercolour". No art jargon, no artist names.
 - "line": one plain sentence on how it would feel.
-- "tokens": 4-6 concrete technique phrases a renderer can follow, each under 120 characters ("flat black ink with hard carved edges" is a token; "dreamy style" is not).
+- "tokens": 4-6 concrete technique phrases a renderer can follow, each under 120 characters ("flat black ink with hard carved edges" is a token; "dreamy style" is not). Tokens say how everything is drawn, never what is in the dream: no ice, glass, horses, glowing objects or other content, or every picture will be made of it.
 - "palette_hex": 4-6 colours as #RRGGBB.
 - "lighting_rules": 2-3 sentences on light, shadow and edges.`;
 
@@ -151,6 +152,43 @@ export const callProducer: ProducerFn = async (transcript, previous) => {
     : previous?.style_options;
   return { raw: JSON.stringify(parsed), ms: Date.now() - t0 };
 };
+
+const REVISE_ITEM = `The person was shown a profile of something from their dream and answered it (their latest message). Apply what they changed or added, and nothing else. Return JSON only: {"fields": {...}} with exactly the same keys as the profile, each value a short plain phrase, or null when nothing is known. Keep every value they didn't change exactly as it was.`;
+
+/**
+ * Apply the person's answer to a profile. Returns the new fields; any value that changed is
+ * now theirs, so it is marked as said.
+ */
+export async function reviseItem(
+  name: string,
+  fields: Record<string, Detail>,
+  transcript: string,
+): Promise<Record<string, Detail>> {
+  const current = Object.fromEntries(Object.entries(fields).map(([k, d]) => [k, d.value]));
+  const res = await callDeepseek(
+    [
+      { role: 'system', content: REVISE_ITEM },
+      {
+        role: 'user',
+        content: `The conversation:\n\n${transcript}\n\nThe profile of ${name}:\n${JSON.stringify(current)}`,
+      },
+    ],
+    { json: true, thinking: PRODUCER_THINKING },
+  );
+  let next: Record<string, unknown> = {};
+  try {
+    next = ((JSON.parse(res.content) as { fields?: Record<string, unknown> }).fields ?? {}) as Record<string, unknown>;
+  } catch {
+    return fields;
+  }
+  const out: Record<string, Detail> = {};
+  for (const [k, d] of Object.entries(fields)) {
+    const v =
+      typeof next[k] === 'string' && (next[k] as string).trim() ? (next[k] as string).trim().slice(0, 600) : null;
+    out[k] = v !== null && v !== d.value ? { value: v, said: true } : d;
+  }
+  return out;
+}
 
 /** Their own description of how it should look, as one style option. */
 export async function ownStyle(transcript: string): Promise<StyleOption | null> {

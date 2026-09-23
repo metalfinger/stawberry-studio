@@ -2,13 +2,13 @@
 // the breakdown without talking to anyone.
 //
 //   bun run produce.ts runs/sim-….json icehead
+import { loadedKeys } from './boot';
 import { readFileSync } from 'node:fs';
-import { loadEnvFile } from './env';
 import { ground } from './ground';
 import { callJev, type Exchange, renderTranscript } from './jev';
 import { callProducer, details, moments, normalizeBreakdown } from './producer';
 
-loadEnvFile();
+void loadedKeys;
 const [file, name] = process.argv.slice(2);
 if (!file) {
   console.error('usage: bun run produce.ts runs/<sim>.json [dream]');

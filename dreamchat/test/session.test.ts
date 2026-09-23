@@ -133,6 +133,7 @@ describe('a whole conversation', () => {
         written.push({ title: b.title, style: style.name });
         return {
           projectId: 'p',
+          ids: {},
           home: '/tmp',
           created: { project: 1, scene: 1, shot: 2, cut: 2, character: 0, location: 1, prop: 1 },
           cuts: 2,
@@ -207,6 +208,123 @@ describe('a whole conversation', () => {
     const r = await store.message(id, "no thanks, I'd rather not");
     expect([r.move?.kind, r.phase, r.closed]).toEqual(['keep', 'kept', true]);
     expect(store.get(id)!.production).toBeNull();
+  });
+
+  test('after the style, each profile is confirmed in turn and its sketch drawn', async () => {
+    const started: { name: string; fields: Record<string, string | null> }[] = [];
+    const verdicts: [string, boolean][] = [];
+    let reaction: Record<string, Answer> = {};
+    const statuses = new Map<string, string>();
+    let replies = ['confirmed', 'changes'];
+    const host = fakeHost();
+    const store = new SessionStore(cfg, {
+      jev: fakeJev((q) => {
+        const out = script(q);
+        if (q.profile_reply) out.profile_reply = pick(replies.shift() ?? 'confirmed');
+        if (q.sketch_reaction) Object.assign(out, reaction);
+        return out;
+      }),
+      host,
+      producer: async () => ({ breakdown, downgraded: [], notes: [], ms: 1 }),
+      write: async () => ({
+        projectId: 'p',
+        ids: { said: 'src-said', proposal: 'src-proposal', l1: 'node-l1', t1: 'node-t1' },
+        home: '/tmp',
+        created: { project: 1, scene: 1, shot: 2, cut: 2, character: 0, location: 1, prop: 1 },
+        cuts: 2,
+        readyCuts: 0,
+        issues: [],
+        ms: 1,
+      }),
+      reviseItem: async (_name, fields) => ({ ...fields, materials: { value: 'enamelled tin', said: true } }),
+      sheets: {
+        start: async ({ item }) => {
+          started.push({
+            name: item.name,
+            fields: Object.fromEntries(Object.entries(item.fields).map(([k, d]) => [k, d.value])),
+          });
+          statuses.set(`job-${item.id}`, 'running');
+          return { recipeId: `r-${item.id}`, jobId: `job-${item.id}`, usd: 0.15 };
+        },
+        status: async (jobId, nodeId) =>
+          statuses.get(jobId) === 'ready'
+            ? { state: 'ready', mediaId: `media-${nodeId}-${jobId}`, mediaPath: `${nodeId}.png` }
+            : { state: 'running' },
+        review: async ({ mediaId, approved }) => {
+          verdicts.push([mediaId, approved]);
+        },
+      },
+      watchEveryMs: 10,
+    });
+    const { id } = store.create();
+    await store.open(id);
+    for (const text of ['a train board in my kitchen', 'it said zikery, then I woke', 'yes', 'yes please'])
+      await store.message(id, text);
+
+    const t5 = await store.message(id, 'the poster one');
+    expect([t5.move?.kind, t5.phase, t5.closed]).toEqual(['start', 'build', false]);
+    const brief5 = host.calls.at(-1)!.find((m) => m.content.startsWith('<brief>'))!.content;
+    expect(brief5).toContain('how you picture the kitchen');
+
+    const t6 = await store.message(id, 'yes that is the kitchen');
+    expect(t6.move).toEqual({ kind: 'confirm_profile', itemId: 't1' });
+    expect(host.calls.at(-1)!.find((m) => m.content.startsWith('<brief>'))!.content).toContain(
+      "you're sketching the kitchen now",
+    );
+    expect(started.map((x) => x.name)).toEqual(['the kitchen']);
+
+    const t7 = await store.message(id, 'the board was enamelled tin, not metal slats');
+    expect([t7.move?.kind, t7.phase]).toEqual(['build_done', 'review']);
+    expect(started[1]).toEqual({
+      name: 'the departure board',
+      fields: { appearance: 'twenty black slats, all blank but one reading zikery', materials: 'enamelled tin' },
+    });
+    const s = store.get(id)!;
+    expect([s.images, s.build?.items.map((i) => i.status)]).toEqual([2, ['drawing', 'drawing']]);
+
+    statuses.set('job-l1', 'ready');
+    statuses.set('job-t1', 'ready');
+    await store.settle(id);
+    expect(store.get(id)!.build?.items.map((i) => [i.status, i.mediaId])).toEqual([
+      ['ready', 'media-node-l1-job-l1'],
+      ['ready', 'media-node-t1-job-t1'],
+    ]);
+    expect(store.get(id)!.spentUsd).toBe(0.3);
+
+    const t8 = await store.message(id, 'ooh');
+    expect(t8.move).toEqual({ kind: 'while_drawing' });
+    expect(host.calls.at(-1)!.find((m) => m.content.startsWith('<brief>'))!.content).toContain(
+      'the kitchen and the departure board are up on the right',
+    );
+
+    // The kitchen looks right; the board is wrong, so it is rejected and drawn again.
+    reaction = { sketch_reaction: pick('looks_right'), sketch_which: pick('l1') };
+    const t9 = await store.message(id, 'the kitchen is perfect');
+    expect(t9.move).toEqual({ kind: 'while_drawing' });
+    reaction = { sketch_reaction: pick('not_right'), sketch_which: pick('t1') };
+    statuses.set('job-t1', 'running');
+    const t10 = await store.message(id, 'the board should be green, not black');
+    expect(t10.move).toEqual({ kind: 'while_drawing' });
+    expect(host.calls.at(-1)!.find((m) => m.content.startsWith('<brief>'))!.content).toContain(
+      "you're redrawing the departure board",
+    );
+    await store.settle(id, 50);
+    expect(verdicts).toEqual([
+      ['media-node-l1-job-l1', true],
+      ['media-node-t1-job-t1', false],
+    ]);
+    const board = store.get(id)!.build!.items[1];
+    expect([board.status, board.version, store.get(id)!.images]).toEqual(['drawing', 2, 3]);
+
+    // Version 2 lands, is shown, and a quiet reply leaves it as drawn: every sketch is settled.
+    statuses.set('job-t1', 'ready');
+    await store.settle(id);
+    reaction = {};
+    await store.message(id, 'ok');
+    reaction = { sketch_reaction: pick('no_reaction'), sketch_which: pick('unclear') };
+    const t12 = await store.message(id, 'what happens next?');
+    expect([t12.move?.kind, t12.phase]).toEqual(['sheets_done', 'frames']);
+    expect(store.get(id)!.build!.items.map((i) => i.review)).toEqual(['approved', 'left']);
   });
 
   test('each probe is counted, and a goal is asked at most twice', async () => {

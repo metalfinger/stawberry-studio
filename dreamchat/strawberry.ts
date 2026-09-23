@@ -9,7 +9,7 @@ import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { Breakdown, Detail, StyleOption } from './producer';
 
-const REPO = resolve(import.meta.dir, '..');
+export const REPO = resolve(import.meta.dir, '..');
 export const STRAWBERRY_PYTHON = process.env.STRAWBERRY_PYTHON ?? join(REPO, 'venv', 'bin', 'python');
 export const STRAWBERRY_HOME = process.env.DREAMCHAT_STRAWBERRY_HOME ?? join(import.meta.dir, 'strawberry-home');
 
@@ -145,6 +145,8 @@ export function planWrites(b: Breakdown, style: StyleOption, transcript: string)
 
 export type WriteResult = {
   projectId: string;
+  /** Every node and source written, by the breakdown's id ("p1", "m3", "said", "proposal"). */
+  ids: Record<string, string>;
   home: string;
   created: Record<Kind, number>;
   cuts: number;
@@ -154,7 +156,7 @@ export type WriteResult = {
   ms: number;
 };
 
-async function cli(args: string[], input?: unknown): Promise<unknown> {
+export async function cli(args: string[], input?: unknown): Promise<unknown> {
   const proc = Bun.spawn([STRAWBERRY_PYTHON, '-m', 'backend.studio', '--home', STRAWBERRY_HOME, ...args], {
     cwd: REPO,
     stdin: input === undefined ? 'ignore' : new Blob([JSON.stringify(input)]),
@@ -234,6 +236,7 @@ export async function writeProduction(b: Breakdown, style: StyleOption, transcri
   const issues = [...new Set(cuts.flatMap((c) => (c.issues ?? []).map((i) => `${i.code}: ${i.message}`)))];
   return {
     projectId,
+    ids: Object.fromEntries([...ids].map(([ref, id]) => [ref.slice(1), id])),
     home: STRAWBERRY_HOME,
     created,
     cuts: cuts.length,

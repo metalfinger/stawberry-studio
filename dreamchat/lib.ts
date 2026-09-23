@@ -59,6 +59,8 @@ export type ClosingNote = 'celebrate' | 'acknowledge_problem' | 'warm' | 'brisk'
 
 export type RetellReply = 'confirmed' | 'corrected' | 'added_more' | 'unclear';
 export type WantsToSee = 'yes' | 'not_yet' | 'no' | 'unclear';
+export type ProfileReply = 'confirmed' | 'changes' | 'you_choose' | 'unclear';
+export type SketchReaction = 'looks_right' | 'not_right' | 'no_reaction';
 
 /** Jev's readings that move the conversation between parts, as opposed to goal coverage. */
 export type Signals = {
@@ -70,6 +72,12 @@ export type Signals = {
   wants_to_see: WantsToSee | null;
   /** Which way of drawing it they chose: an option id, "own" (they described their own), or "unsure". */
   style_choice: string | null;
+  /** How they answered a profile they were shown. Only read while one is open. */
+  profile_reply?: ProfileReply | null;
+  /** How they took the sketches they were shown, and which one they meant. */
+  sketch_reaction?: SketchReaction | null;
+  /** A sketch's item id, "all", or "unclear". */
+  sketch_which?: string | null;
 };
 
 export type State = {
@@ -91,11 +99,15 @@ export type State = {
  * - retell: the dream has been told back, and any correction is being settled.
  * - offer: they confirmed it; we've asked whether they'd like to see it.
  * - style: they said yes; we've offered ways it could be drawn.
- * - ready: they chose a way; the production is written and drawing can start.
+ * - build: they chose a way; each profile is confirmed in turn, and each confirmed one is sketched.
+ * - review: every sketch has started; they see each as it lands and say if it looks right.
+ * - frames: every sketch is settled; the moments are being drawn from them.
+ * - ready: they chose a way, but there is nothing to sketch (no engine, or nothing to draw).
  * - kept: they'd rather not see it drawn; the dream is kept as told.
  * - ended: they left.
  */
-export type Phase = 'listen' | 'retell' | 'offer' | 'style' | 'ready' | 'kept' | 'ended';
+export type Phase =
+  'listen' | 'retell' | 'offer' | 'style' | 'build' | 'review' | 'frames' | 'ready' | 'kept' | 'ended';
 
 /** Phases where the conversation is over for this step. */
 export const CLOSED: readonly Phase[] = ['ready', 'kept', 'ended'];
@@ -115,6 +127,12 @@ export type Move =
   | { kind: 'choose_style' }
   | { kind: 'style_help' }
   | { kind: 'start'; styleId: string }
+  | { kind: 'confirm_profile'; itemId: string }
+  | { kind: 'profile_check'; itemId: string }
+  | { kind: 'build_done' }
+  | { kind: 'while_drawing' }
+  | { kind: 'ask_which' }
+  | { kind: 'sheets_done' }
   | { kind: 'keep' }
   | { kind: 'wrap' };
 
@@ -235,6 +253,10 @@ export type MoveContext = {
   styleAsks?: number;
   /** The style options on offer, once the producer has written them. */
   styleIds?: string[];
+  /** While building: the profile being confirmed, and the one after it. */
+  build?: { current: string | null; next: string | null; checks: number };
+  /** While reviewing: every sketch settled, or a reaction whose sketch isn't clear. */
+  review?: { settled: boolean; whichUnclear: boolean };
   maxAsksPerGoal?: number;
 };
 
@@ -249,6 +271,28 @@ export function askableGoals(state: State, cfg: GoalsFile, askCounts: Record<str
 export function selectMove(state: State, cfg: GoalsFile, ctx: MoveContext): { move: Move; rule: string } {
   // 1. exit signals win over everything
   if (state.rapport.wants_out === 'hard') return { move: { kind: 'wrap' }, rule: '1: they are leaving' };
+
+  // Step 4 draws the moments; until then the frames phase keeps the conversation open.
+  if (ctx.phase === 'frames') return { move: { kind: 'while_drawing' }, rule: 'F0: the moments are on their way' };
+
+  if (ctx.phase === 'review') {
+    const r = ctx.review ?? { settled: false, whichUnclear: false };
+    if (r.whichUnclear)
+      return { move: { kind: 'ask_which' }, rule: "V2: a reaction, but it isn't clear to which sketch" };
+    if (r.settled) return { move: { kind: 'sheets_done' }, rule: 'V3: every sketch settled — on to the moments' };
+    return { move: { kind: 'while_drawing' }, rule: 'V1: the sketches are on their way' };
+  }
+
+  if (ctx.phase === 'build') {
+    const b = ctx.build ?? { current: null, next: null, checks: 0 };
+    const reply = state.signals.profile_reply ?? 'unclear';
+    if (reply === 'unclear' && b.current && b.checks < 1)
+      return { move: { kind: 'profile_check', itemId: b.current }, rule: 'B2: no clear answer about the profile' };
+    // Settled (confirmed, changed, left to us, or still unclear after asking again): code
+    // starts its sketch, and the next profile is shown in the same turn.
+    if (b.next) return { move: { kind: 'confirm_profile', itemId: b.next }, rule: `B1: profile ${reply} — next one` };
+    return { move: { kind: 'build_done' }, rule: `B1: profile ${reply} — all profiles settled` };
+  }
 
   if (ctx.phase === 'style') {
     const choice = state.signals.style_choice;
@@ -358,7 +402,15 @@ export function phaseAfter(phase: Phase, move: Move): Phase {
     case 'style_help':
       return 'style';
     case 'start':
-      return 'ready';
+    case 'confirm_profile':
+    case 'profile_check':
+      return 'build';
+    case 'build_done':
+    case 'while_drawing':
+    case 'ask_which':
+      return 'review';
+    case 'sheets_done':
+      return 'frames';
     case 'keep':
       return 'kept';
     case 'wrap':
@@ -385,6 +437,17 @@ export type BriefExtras = {
   styles?: { id: string; name: string; line: string }[];
   /** The first thing that would be drawn, in plain words ("the young woman"). */
   firstSubject?: string;
+  /** The profile to show with this move: its name, what they said, and what was guessed. */
+  profile?: { name: string; kind: string; said: string[]; guessed: string[] };
+  /** The sketch just started this turn, by name. */
+  sketching?: string;
+  /** Sketches that have finished since they last heard, by name. */
+  finished?: string[];
+  /** Sketches they approved this turn, and ones being redrawn from their correction. */
+  approved?: string[];
+  redrawing?: string[];
+  /** Sketches still waiting for a verdict, by name. */
+  shown?: string[];
 };
 
 export function renderBrief(
@@ -412,6 +475,15 @@ export function renderBrief(
   ].filter(Boolean);
 
   return `<brief>\n${lines.join('\n')}\n</brief>`;
+}
+
+/** How a profile is put to the person: what they said as fact, what was guessed as a guess. */
+function profileLine(p: NonNullable<BriefExtras['profile']>): string {
+  const said = p.said.length ? ` From what they told you: ${p.said.join('; ')}.` : '';
+  const guessed = p.guessed.length
+    ? ` You filled in (say plainly that these are your guesses): ${p.guessed.join('; ')}.`
+    : '';
+  return `describe how you picture ${p.name}, briefly, in plain words.${said}${guessed} Then ask if anything's different, or if they'd leave it to you.`;
 }
 
 function closingInstruction(note: ClosingNote | undefined): string {
@@ -473,7 +545,31 @@ function renderMove(move: Move, state: State, cfg: GoalsFile, extras: BriefExtra
         ? `style_help. They're not sure how it should look. Suggest the one closest to how they described the dream, ${styleName(styles.some((o) => o.id === 'd') ? 'd' : styles[0].id)}, and ask if that feels right.`
         : "style_help. They're not sure how it should look. Suggest keeping it close to how the dream looked to them, and ask if that feels right.";
     case 'start':
-      return `start. They chose ${styleName(move.styleId)}. Tell them warmly that you'll start with ${extras.firstSubject ?? 'the first picture'}, and that the pictures will appear on the right as they're ready. Don't ask anything.`;
+      return extras.profile
+        ? `start. They chose ${styleName(move.styleId)}. Say you'll start with ${extras.profile.name}, then ${profileLine(extras.profile)}`
+        : `start. They chose ${styleName(move.styleId)}. Tell them warmly that you have what you need, and that the pictures will appear on the right as they're ready. Don't ask anything.`;
+    case 'confirm_profile':
+      return `confirm_profile. ${extras.sketching ? `First say, in a few words, that you're sketching ${extras.sketching} now and it'll appear on the right. Then ` : ''}${extras.profile ? profileLine(extras.profile) : 'describe the next thing to draw, and ask if anything should change.'}`;
+    case 'profile_check':
+      return `profile_check. It isn't clear whether ${extras.profile?.name ?? 'that'} is right as you described. Ask simply whether you've got it, or whether anything's different.`;
+    case 'build_done':
+      return `build_done. ${extras.sketching ? `Say you're sketching ${extras.sketching} now. ` : ''}Tell them everything is being sketched and will appear on the right over the next minute or two. They can say if anything looks wrong once it's there. Keep it short; no question needed.`;
+    case 'while_drawing': {
+      const parts = [
+        extras.approved?.length ? `Take in that they're happy with ${extras.approved.join(' and ')}.` : '',
+        extras.redrawing?.length
+          ? `Say you're redrawing ${extras.redrawing.join(' and ')} with their change; the new version will appear on the right.`
+          : '',
+        extras.finished?.length
+          ? `${extras.finished.join(' and ')} ${extras.finished.length > 1 ? 'are' : 'is'} up on the right now: ask if it looks the way they remember.`
+          : "The rest are still on their way; if they ask, say they'll appear on the right soon.",
+      ];
+      return `while_drawing. ${parts.filter(Boolean).join(' ')}`;
+    }
+    case 'ask_which':
+      return `ask_which. They reacted to a sketch but it isn't clear which. Ask which one they mean${extras.shown?.length ? `: ${extras.shown.join(', ')}` : ''}.`;
+    case 'sheets_done':
+      return `sheets_done. ${extras.approved?.length ? `Take in that they're happy with ${extras.approved.join(' and ')}. ` : ''}Everyone and everything is sketched now. Tell them you'll start drawing the moments of the dream, beginning with the one they'd pause on; they'll appear on the right. No question needed.`;
     case 'keep':
       return "keep. They'd rather not see it drawn, and that's fine. Thank them for sharing their dream, warmly and briefly. Don't ask anything.";
     case 'wrap':
@@ -502,6 +598,7 @@ export function needsThought(move: Move): boolean {
     move.kind === 'retell_check' ||
     move.kind === 'choose_style' ||
     move.kind === 'start' ||
+    move.kind === 'build_done' ||
     move.kind === 'keep' ||
     move.kind === 'wrap'
   );
@@ -529,6 +626,14 @@ export function moveKey(move: Move): string {
       return move.kind;
     case 'start':
       return `start:${move.styleId}`;
+    case 'confirm_profile':
+    case 'profile_check':
+      return `${move.kind}:${move.itemId}`;
+    case 'build_done':
+    case 'while_drawing':
+    case 'ask_which':
+    case 'sheets_done':
+      return move.kind;
     default:
       return unreachable(move);
   }

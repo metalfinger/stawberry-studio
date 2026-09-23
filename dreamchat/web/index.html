@@ -121,6 +121,16 @@ summary { cursor: pointer; color: var(--muted); font-size: .82rem; padding: 3px 
 .working { color: var(--open); font-size: .82rem; }
 .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); margin-left: 5px; vertical-align: middle; }
 .muted { color: var(--muted); font-size: .82rem; }
+.sketch { align-self: flex-start; width: min(76%, 420px); border: 1px solid var(--line); border-radius: 12px; background: var(--panel); overflow: hidden; }
+.sketch .cap { display: flex; justify-content: space-between; gap: 8px; padding: 7px 11px; font-size: .8rem; }
+.sketch .cap span:last-child { color: var(--muted); }
+.sketch img { display: block; width: 100%; background: #fff; }
+.sketch .wait { aspect-ratio: 16 / 9; display: grid; place-items: center; color: var(--muted); font-size: .82rem;
+  background: repeating-linear-gradient(135deg, var(--panel) 0 12px, var(--panel2) 12px 24px); }
+@media (prefers-reduced-motion: no-preference) { .sketch .wait { animation: slide 1.6s linear infinite; background-size: 34px 34px; } }
+@keyframes slide { to { background-position: 34px 0; } }
+.sketches { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sketches .sketch { width: 100%; }
 @media (prefers-reduced-motion: no-preference) { #chat { scroll-behavior: smooth; } }
 </style>
 </head>
@@ -132,7 +142,7 @@ summary { cursor: pointer; color: var(--muted); font-size: .82rem; padding: 3px 
     <span data-phase="listen">Listening</span>
     <span data-phase="retell">Telling it back</span>
     <span data-phase="see">Seeing it</span>
-    <span data-phase="ready">Ready to draw</span>
+    <span data-phase="ready">Drawing</span>
   </div>
   <div class="spacer"></div>
   <select id="sessions" aria-label="earlier conversations"></select>
@@ -198,11 +208,12 @@ function renderChat() {
       const n = t.turn;
       chip.onclick = () => selectTurn(n);
       chat.append(chip);
+      for (const it of (session.build ? session.build.items : []).filter((i) => i.startedAtTurn === t.turn)) chat.append(sketchCard(it));
     }
     hostTurn += 1;
   }
   const endings = {
-    ready: 'Ready to draw. The production is in Strawberry; drawing the pictures comes in the next step.',
+    ready: 'The production is in Strawberry, but nothing can be sketched here.',
     kept: 'Kept as told. Nothing will be drawn.',
     ended: 'This conversation has ended.',
   };
@@ -213,7 +224,7 @@ function renderChat() {
 
 function renderSteps() {
   const order = ['listen', 'retell', 'see', 'ready'];
-  const step = { listen: 'listen', retell: 'retell', offer: 'see', style: 'see', ready: 'ready', kept: 'see', ended: 'listen' };
+  const step = { listen: 'listen', retell: 'retell', offer: 'see', style: 'see', build: 'ready', review: 'ready', ready: 'ready', kept: 'see', ended: 'listen' };
   const at = session ? order.indexOf(step[session.phase] || 'listen') : -1;
   for (const s of $('steps').children) {
     const i = order.indexOf(s.dataset.phase);
@@ -254,6 +265,20 @@ function renderDream() {
   }
 }
 
+function sketchCard(it) {
+  const card = el('div', { class: 'sketch' });
+  const cap = el('div', { class: 'cap' });
+  const state = { drawing: 'drawing…', ready: `sketch${it.version > 1 ? ` v${it.version}` : ''}`, failed: 'not drawn', waiting: 'waiting', confirming: 'confirming' };
+  cap.append(el('span', {}, it.name), el('span', {}, state[it.status] || it.status));
+  card.append(cap);
+  if (it.status === 'ready') {
+    const img = el('img', { alt: `Sketch of ${it.name}`, loading: 'lazy', src: `/api/sketch?id=${encodeURIComponent(session.id)}&item=${encodeURIComponent(it.id)}&v=${it.version}` });
+    card.append(img);
+  } else if (it.status === 'drawing') card.append(el('div', { class: 'wait' }, 'sketching…'));
+  else if (it.status === 'failed') card.append(el('div', { class: 'muted', style: 'padding:0 11px 9px' }, it.error || 'something went wrong'));
+  return card;
+}
+
 function tag(said) { return el('span', { class: `tag ${said ? 'said' : 'guess'}` }, said ? 'said' : 'guess'); }
 
 function renderProduction() {
@@ -266,6 +291,14 @@ function renderProduction() {
   if (d.status === 'failed') pane.append(el('p', { class: 'bad' }, `Drafting failed: ${d.error}`));
   const b = d.breakdown;
   if (!b) return;
+  const build = session.build;
+  if (build) {
+    pane.append(el('h4', {}, 'Sketches'));
+    pane.append(el('p', { class: 'muted' }, `${session.images} drawn · $${(session.spentUsd || 0).toFixed(2)} at list price · limit ${cfg ? cfg.imageCap : 30} a dream${cfg ? ` · ${cfg.provider === 'fal' ? 'fal' : 'offline fixture, not real pictures'}` : ''}`));
+    const grid = el('div', { class: 'sketches' });
+    for (const it of build.items) grid.append(sketchCard(it));
+    pane.append(grid);
+  }
   if (d.status === 'ready') pane.append(el('p', { class: 'muted' }, `Drafted in ${Math.round((d.ms || 0) / 1000)} s from their first ${d.basedOn} messages. ${d.downgraded && d.downgraded.length ? `${d.downgraded.length} detail(s) the producer called "said" were not in their words, so they're marked as guesses.` : ''}`));
   pane.append(el('h4', {}, b.title), el('p', { class: 'muted' }, b.logline));
 
@@ -380,7 +413,8 @@ async function refresh() {
   renderChat(); renderSteps(); renderDream(); renderProduction();
   if (busy) typing(true);
   // Background work finishes between turns; watch for it while any is running.
-  const working = (session.draft && session.draft.status === 'drafting') || (session.production && session.production.status === 'writing');
+  const drawing = session.build && session.build.items.some((i) => i.status === 'drawing');
+  const working = drawing || (session.draft && session.draft.status === 'drafting') || (session.production && session.production.status === 'writing');
   clearTimeout(poll);
   if (working) poll = setTimeout(() => refresh().catch(() => {}), 3000);
 }
@@ -448,6 +482,8 @@ $('sessions').onchange = async (ev) => {
   if (last) selectTurn(last.turn);
 };
 
+let cfg = null;
+api('/api/config').then((c) => { cfg = c; }).catch(() => {});
 loadSessions();
 </script>
 </body>

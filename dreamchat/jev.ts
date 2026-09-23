@@ -16,6 +16,8 @@ import type {
   GoalsFile,
   GoalState,
   Phase,
+  ProfileReply,
+  SketchReaction,
   Rapport,
   RetellReply,
   State,
@@ -106,6 +108,9 @@ export function bookkeeperQuestions(
   prev: State | undefined,
   phase: Phase,
   styles: { id: string; name: string }[] = [],
+  profileName?: string,
+  /** Sketches they have been shown and not yet answered about, by id and name. */
+  shown: { id: string; name: string }[] = [],
 ): Record<string, Question> {
   const msgs = respondentMessages(transcript);
 
@@ -251,6 +256,40 @@ export function bookkeeperQuestions(
       type: 'choice',
       instructions: `The listener offered ways the person's dream could be drawn. Which did the person choose in this message: "${latest.slice(0, 240)}"? If they agreed to a way the listener suggested, pick that one.`,
       criteria,
+    };
+  }
+
+  if (phase === 'build' && profileName) {
+    q.profile_reply = {
+      type: 'choice',
+      instructions: `The listener described how they picture ${profileName} and asked whether anything is different. How does the person answer in this message: "${latest.slice(0, 240)}"?`,
+      criteria: {
+        confirmed: "it's right, or near enough, with nothing to change",
+        changes: 'they changed, corrected or added a detail about it',
+        you_choose: "they don't mind, don't remember, or leave it to the listener",
+        unclear: "they didn't answer that",
+      },
+    };
+  }
+
+  if (shown.length) {
+    q.sketch_reaction = {
+      type: 'choice',
+      instructions: `The person was shown sketches from their dream (${shown.map((x) => x.name).join(', ')}) and asked if they look the way they remember. How do they answer in this message: "${latest.slice(0, 240)}"?`,
+      criteria: {
+        looks_right: 'it looks right, or close enough, or they like it',
+        not_right: 'something about it is wrong or different from their dream, and they say what',
+        no_reaction: "they didn't say anything about the sketches",
+      },
+    };
+    const which: Record<string, string> = {};
+    for (const x of shown) which[x.id] = `the sketch of ${x.name}`;
+    which.all = 'all of them, or they speak about the sketches together';
+    which.unclear = "it isn't clear which one they mean";
+    q.sketch_which = {
+      type: 'choice',
+      instructions: `Which sketch is the person talking about in this message: "${latest.slice(0, 240)}"?`,
+      criteria: which,
     };
   }
 
@@ -486,6 +525,22 @@ export function readState(
       'unclear',
       RETELL_CONFIDENCE,
     ).value;
+  const reaction = choice<SketchReaction>(
+    a.sketch_reaction,
+    ['looks_right', 'not_right', 'no_reaction'] as const,
+    'no_reaction',
+    RETELL_CONFIDENCE,
+  ).value;
+  const whichA = a.sketch_which;
+  const which = whichA?.type === 'choice' && whichA.confidence >= RETELL_CONFIDENCE ? whichA.choice : 'unclear';
+  let profileReply: ProfileReply | null = null;
+  if (a.profile_reply)
+    profileReply = choice<ProfileReply>(
+      a.profile_reply,
+      ['confirmed', 'changes', 'you_choose', 'unclear'] as const,
+      'unclear',
+      RETELL_CONFIDENCE,
+    ).value;
   let styleChoice: string | null = null;
   if (phase === 'style') {
     const c = a.style_choice;
@@ -505,6 +560,9 @@ export function readState(
         retell_reply: retellReply,
         wants_to_see: wantsToSee,
         style_choice: styleChoice,
+        profile_reply: profileReply,
+        sketch_reaction: a.sketch_reaction ? reaction : null,
+        sketch_which: a.sketch_which ? which : null,
       },
       last_move: prev.last_move,
     },

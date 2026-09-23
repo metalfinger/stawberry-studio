@@ -3,15 +3,17 @@
 //
 //   bun run server.ts            # http://127.0.0.1:8790
 //   PORT=8791 bun run server.ts
+import { loadedKeys } from './boot';
 import { join } from 'node:path';
 import { dreamConfig } from './dream';
-import { loadEnvFile } from './env';
 import { callJev, jevAvailable } from './jev';
 import { callHost, HOST_MODEL } from './llm';
-import { liveProducer, ownStyle, SessionStore } from './session';
-import { STRAWBERRY_HOME, strawberryAvailable, writeProduction } from './strawberry';
+import { reviseItem } from './producer';
+import { IMAGE_CAP, liveProducer, ownStyle, SessionStore } from './session';
+import { liveSheets, PROVIDER, spawnWorker } from './sheets';
+import { REPO, STRAWBERRY_HOME, STRAWBERRY_PYTHON, strawberryAvailable, writeProduction } from './strawberry';
 
-const loaded = loadEnvFile();
+const loaded = loadedKeys;
 const cfg = dreamConfig();
 const store = new SessionStore(cfg, {
   jev: callJev,
@@ -19,8 +21,17 @@ const store = new SessionStore(cfg, {
   producer: liveProducer(callJev),
   ownStyle,
   write: strawberryAvailable() ? writeProduction : undefined,
+  sheets: strawberryAvailable() ? liveSheets : undefined,
+  reviseItem,
   dir: join(import.meta.dir, 'state'),
 });
+// The engine's own worker draws the sketches the chat queues, for this store only.
+const worker = strawberryAvailable() ? spawnWorker(STRAWBERRY_PYTHON, REPO) : null;
+for (const signal of ['SIGINT', 'SIGTERM'] as const)
+  process.on(signal, () => {
+    worker?.stop();
+    process.exit(0);
+  });
 const page = Bun.file(join(import.meta.dir, 'web', 'index.html'));
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
@@ -53,6 +64,8 @@ const server = Bun.serve({
           model: HOST_MODEL,
           jev: jevAvailable(),
           strawberry: strawberryAvailable() ? STRAWBERRY_HOME : null,
+          provider: PROVIDER,
+          imageCap: IMAGE_CAP,
         });
 
       if (url.pathname === '/api/sessions') return json(store.list());
@@ -60,6 +73,15 @@ const server = Bun.serve({
       if (url.pathname === '/api/session') {
         const view = store.view(id);
         return view ? json(view) : fail(404, 'no such conversation');
+      }
+
+      // A sketch, by conversation and item. Only files the store itself named are served.
+      if (url.pathname === '/api/sketch') {
+        const item = store.get(id)?.build?.items.find((i) => i.id === url.searchParams.get('item'));
+        if (!item?.mediaPath || !/^[0-9a-f]{64}\.(png|jpe?g|webp)$/.test(item.mediaPath)) return fail(404, 'no sketch');
+        return new Response(Bun.file(join(STRAWBERRY_HOME, 'media', item.mediaPath)), {
+          headers: { 'cache-control': 'private, max-age=3600' },
+        });
       }
 
       if (url.pathname === '/api/turn') {
@@ -100,6 +122,6 @@ if (!jevAvailable()) console.warn('JEV_API_KEY is missing: every turn will run w
 if (!process.env.DEEPSEEK_API_KEY) console.warn('DEEPSEEK_API_KEY is missing: the host cannot reply');
 console.log(
   strawberryAvailable()
-    ? `productions are written to the Strawberry store at ${STRAWBERRY_HOME}`
+    ? `productions are written to the Strawberry store at ${STRAWBERRY_HOME}; sketches drawn with ${PROVIDER === 'fal' ? `fal (at most ${IMAGE_CAP} a dream)` : 'the offline fixture (set FAL_KEY for real pictures)'}`
     : 'Strawberry engine not found (run ./install-studio.sh at the repo root): productions will not be written',
 );
