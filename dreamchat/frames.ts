@@ -14,8 +14,27 @@ const FRAMING: Record<Moment['distance'], string> = {
   wide: 'The whole space is in frame and the subject, if any, is small within it.',
 };
 
-const NO_WORDS =
-  'Do not write any words, letters, numbers or labels anywhere in the image, unless the dream itself has writing in it.';
+const NO_WORDS = 'Do not write any words, letters, numbers or labels anywhere in the image.';
+
+/**
+ * Writing the dream itself contains, from quoted words in the moment: 'zikery' on a board.
+ * Told only that writing was allowed, the zikery board came back reading "KITCHEN", the
+ * place's own name (23 Sep); the exact word, spelled out, is the only writing allowed.
+ */
+export function writingIn(...texts: (string | null | undefined)[]): string[] {
+  const found = new Set<string>();
+  for (const t of texts)
+    // A quote mark counts only outside a word, so "the dreamer's kitchen" quotes nothing.
+    for (const m of (t ?? '').matchAll(/(?<![A-Za-z])["'“‘]([^"'“”‘’]{2,40})["'”’](?![A-Za-z])/g))
+      found.add(m[1].trim());
+  return [...found].filter((w) => /[a-z]/i.test(w));
+}
+
+function writingLine(words: string[]): string {
+  if (!words.length) return NO_WORDS;
+  const spelled = words.map((w) => `"${w.toUpperCase()}", spelled ${w.toUpperCase().split('').join('-')}`);
+  return `The only writing anywhere in the picture is ${spelled.join(' and ')}, exactly as spelled, and nothing else: no other words, letters, numbers or labels.`;
+}
 
 /** The moments to draw, the key one first and then in story order. */
 export function buildFrames(b: Breakdown): Item[] {
@@ -118,7 +137,7 @@ export function framePrompt(
     references.length
       ? 'Everyone and everything looks exactly as in their reference image, except for what this moment itself changes.'
       : '',
-    `One single picture, not a sheet or a grid. ${NO_WORDS}`,
+    `One single picture, not a sheet or a grid. ${writingLine(writingIn(action, point))}`,
   ]
     .filter(Boolean)
     .join('\n\n');
