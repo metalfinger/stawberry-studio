@@ -22,8 +22,12 @@ export type PlanRef = {
   carries: string;
 };
 
-/** A continuity check for the judge: `with` is the earlier picture to compare against, if any. */
-export type Criterion = { with: string | null; text: string };
+/**
+ * A continuity check for the judge: `with` is the earlier picture to compare against (a moment's
+ * id, or `sheet:<id>` for a person's own sheet), if any. `fix` says it as an instruction, for a
+ * redraw when the check fails.
+ */
+export type Criterion = { with: string | null; text: string; fix: string };
 
 export type CutPlan = {
   id: string;
@@ -362,14 +366,12 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
     };
     ghosts.push(g);
     for (const id of g.usedBy)
-      cutOf
-        .get(id)!
-        .refs.push({
-          id: g.id,
-          kind: 'ghost',
-          role: 'location',
-          carries: `${name(m.place)} from the side this picture faces`,
-        });
+      cutOf.get(id)!.refs.push({
+        id: g.id,
+        kind: 'ghost',
+        role: 'location',
+        carries: `${name(m.place)} from the side this picture faces`,
+      });
   }
 
   // Needs, depth, checks, transitions and a line of why, now the references are final.
@@ -407,29 +409,53 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
     for (const r of c.refs) {
       if (r.kind !== 'cut') continue;
       const e = byId.get(r.id)!;
-      const people = e.visible.filter((p) => m.visible.includes(p)).map(name);
+      const k = no(r.id);
+      const people = e.visible.filter((p) => m.visible.includes(p));
       if (r.relation === 'same_setup')
         out.push({
           with: r.id,
           text: 'Is the second picture the same view as the first, a moment later: the same place from the same side, in the same light?',
+          fix: `keep the view of picture ${k} exactly: the same place, from the same side, in the same light, a moment later`,
         });
       if (r.relation === 'same_side')
         out.push({
           with: r.id,
           text: `Do both pictures show ${name(m.place)} from the same side, with its walls, windows and furniture in the same places?`,
+          fix: `show ${name(m.place)} from the same side as picture ${k}, with its walls, windows and furniture where they are there`,
         });
       if (r.relation === 'other_side' || r.relation === 'same_side' || r.relation === 'same_setup')
         out.push({
           with: r.id,
           text: 'Is the light the same in both pictures: the same time of day and the same light sources?',
+          fix: `keep the light of picture ${k}: the same time of day and the same light`,
         });
       if (r.relation === 'shift')
-        out.push({ with: r.id, text: `Does the second picture keep the first one's framing, while ${m.shift}?` });
+        out.push({
+          with: r.id,
+          text: `Does the second picture keep the first one's framing, while ${m.shift}?`,
+          fix: `keep the framing of picture ${k}, while ${m.shift}`,
+        });
       for (const p of people)
-        out.push({ with: r.id, text: `Is ${p} the same person in both pictures: the same face, hair and clothes?` });
+        out.push({
+          with: r.id,
+          text: `Is ${name(p)} the same person in both pictures: the same face, hair and clothes?`,
+          fix: `${name(p)} must be the same person as in picture ${k}: the same face, hair and clothes`,
+        });
     }
+    // Everyone in it is also held to their own sheet: drift caught at the first moment is not
+    // carried into the next (a dreamer drawn from a line sketch came back as someone else, 23 Sep).
+    for (const p of m.visible)
+      out.push({
+        with: `sheet:${p}`,
+        text: `Is ${name(p)} the same person as in their reference sheet: the same face, hair and clothes?`,
+        fix: `${name(p)} must look exactly like their reference sheet: the same face, hair and clothes`,
+      });
     for (const st of c.states)
-      out.push({ with: null, text: `In this picture, is ${name(st.who)}'s ${st.what} ${st.now}?` });
+      out.push({
+        with: null,
+        text: `In this picture, is ${name(st.who)}'s ${st.what} ${st.now}?`,
+        fix: `${name(st.who)}'s ${st.what} is ${st.now}`,
+      });
     return out;
   }
 

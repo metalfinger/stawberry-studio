@@ -6,7 +6,7 @@
 // run strictly one at a time.
 import { existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { type GroundingNote, ground, linkContinuity } from './ground';
+import { cleanStyles, type GroundingNote, ground, linkContinuity } from './ground';
 import {
   bookkeeperQuestions,
   type Exchange,
@@ -48,6 +48,7 @@ import {
   type Detail,
   moments,
   normalizeBreakdown,
+  VAGUE,
   ownStyle,
   type StyleOption,
 } from './producer';
@@ -206,8 +207,10 @@ export function liveProducer(jev: JevFn): NonNullable<StoreDeps['producer']> {
     const { breakdown, notes } = normalizeBreakdown(raw);
     const g = await ground(breakdown, transcript, jev);
     const c = await linkContinuity(g.breakdown, jev);
+    const styled = await cleanStyles(c.breakdown, jev);
+    if (styled.dropped.length) notes.push(`style content dropped: ${styled.dropped.join('; ')}`);
     return {
-      breakdown: c.breakdown,
+      breakdown: styled.breakdown,
       downgraded: g.downgraded,
       notes: [...notes, `continuity: ${c.links.length ? c.links.join(', ') : 'no links'}`, ...c.notes],
       ms: ms + g.ms + c.ms,
@@ -285,6 +288,27 @@ function firstSubject(b: Breakdown | undefined): string | undefined {
   if (!b) return undefined;
   const p = b.people.find((x) => x.protagonist && !x.is_dreamer) ?? b.people.find((x) => !x.is_dreamer);
   return p?.name ?? b.places[0]?.name ?? b.things[0]?.name;
+}
+
+/** A failed declared-fact question as the instruction a redraw needs. */
+export function asInstruction(question: string): string {
+  const q = question.trim();
+  const rules: [RegExp, (...m: string[]) => string][] = [
+    [/^Is (.+) in frame\?$/, (_, a) => `${a} must be clearly in the frame`],
+    [/^Is this (.+)\?$/, (_, a) => `it must clearly be ${a}`],
+    [/^Is (.+) visible\?$/, (_, a) => `${a} must be clearly visible`],
+    [/^Is (.+) wearing: (.+)\?$/, (_, a, b) => `${a} wears ${b}`],
+    [/^Does (.+) match: (.+)\?$/, (_, a, b) => `${a}: ${b}`],
+    [
+      /^Is (.+)'s body, head and limbs in a physically plausible position.*$/,
+      (_, a) => `${a}'s body is whole and natural: nothing inverted, duplicated or missing`,
+    ],
+  ];
+  for (const [re, f] of rules) {
+    const m = q.match(re);
+    if (m) return f(...m);
+  }
+  return `make this true: ${q.replace(/\?$/, '')}`;
 }
 
 export class SessionStore {
@@ -1023,6 +1047,10 @@ export class SessionStore {
   ): Promise<void> {
     item.status = 'drawing';
     item.version += 1;
+    // The last job is finished: the watch must not read it back as this version's result before
+    // the new job's id arrives (a repaired moment was marked ready with its old take, 23 Sep).
+    item.jobId = undefined;
+    item.recipeId = undefined;
     s.images += 1;
     const snapshot = structuredClone(item);
     // A deps check above already failed the picture if the engine is missing.
@@ -1153,16 +1181,20 @@ export class SessionStore {
     item.nodeId = ids[item.id];
     item.status = 'drawing';
     item.version += 1;
+    // As for a moment: the watch waits for this version's own job.
+    item.jobId = undefined;
+    item.recipeId = undefined;
     s.images += 1;
     const snapshot = structuredClone(item);
     const style = s.style;
     const sheets = this.deps.sheets;
     // A person nobody described gets words for their look first, as our guesses, so every
     // picture of them carries the same look in words as well as in the image.
-    const unknown =
-      item.kind === 'character' &&
-      !['appearance', 'wardrobe'].some((k) => item.fields[k]?.value) &&
-      this.deps.proposeLook;
+    const vague = (k: string) => {
+      const d = item.fields[k];
+      return !d?.value || (!d.said && VAGUE.test(d.value));
+    };
+    const unknown = item.kind === 'character' && vague('appearance') && vague('wardrobe') && this.deps.proposeLook;
     const looked = unknown
       ? this.deps.proposeLook!(item.name, item.fields, renderTranscript(s.transcript))
           .catch(() => item.fields)
@@ -1321,8 +1353,12 @@ export class SessionStore {
     this.judged.add(mediaId);
     // A moment is also checked against the pictures it was drawn from: the same room, the same
     // people, the change still there.
+    const media = (ref: string) =>
+      ref.startsWith('sheet:')
+        ? b?.items.find((i) => i.id === ref.slice(6) && i.status === 'ready')?.mediaId
+        : b?.frames?.find((f) => f.id === ref)?.mediaId;
     const checks = (it.frame?.plan?.criteria ?? [])
-      .map((c) => ({ ...c, with: c.with ? (b?.frames?.find((f) => f.id === c.with)?.mediaId ?? '') : null }))
+      .map((c) => ({ with: c.with ? (media(c.with) ?? '') : null, text: c.text }))
       .filter((c) => c.with !== '');
     let check: JudgedCheck | null;
     try {
@@ -1376,15 +1412,17 @@ export class SessionStore {
     // Who or what is missing, a changed look not carried, the wrong clothes or features, a broken
     // body; and a person or room that does not match what the moment follows.
     const SERIOUS = ['cast', 'location', 'prop', 'state', 'wardrobe', 'features', 'pose'];
-    const serious = [
-      ...c.failed.filter((_, i) => SERIOUS.includes((c.failedIds?.[i] ?? '').split(':')[0])),
-      ...(it.continuity?.failed ?? []).filter((q) =>
-        /same person|same side|same place|same view|keep the first/.test(q),
-      ),
-    ];
+    const facts = c.failed.filter((_, i) => SERIOUS.includes((c.failedIds?.[i] ?? '').split(':')[0]));
+    const fixes = (it.frame?.plan?.criteria ?? []).filter(
+      (k) =>
+        (it.continuity?.failed ?? []).includes(k.text) &&
+        /same person|same side|same view|reference sheet|framing/.test(k.text),
+    );
+    const serious = [...facts, ...fixes.map((k) => k.text)];
     if (!serious.length) return false;
     it.repairs = (it.repairs ?? 0) + 1;
-    it.repairFor = serious.slice(0, 6);
+    // Said to the image model as instructions: a judge's question means nothing to it.
+    it.repairFor = [...facts.map(asInstruction), ...fixes.map((k) => k.fix)].slice(0, 6);
     this.reviewSketch(
       s,
       it,

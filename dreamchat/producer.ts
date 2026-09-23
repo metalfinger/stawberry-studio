@@ -232,33 +232,69 @@ export async function proposeLook(
   fields: Record<string, Detail>,
   transcript: string,
 ): Promise<Record<string, Detail>> {
-  const current = Object.fromEntries(Object.entries(fields).map(([k, d]) => [k, d.value]));
-  const res = await callDeepseek(
-    [
-      { role: 'system', content: PROPOSE_LOOK },
-      {
-        role: 'user',
-        content: `The conversation:\n\n${transcript}\n\nThe profile of ${name}:\n${JSON.stringify(current)}`,
-      },
-    ],
-    { json: true, thinking: PRODUCER_THINKING },
-  );
-  let next: Record<string, unknown> = {};
-  try {
-    next = ((JSON.parse(res.content) as { fields?: Record<string, unknown> }).fields ?? {}) as Record<string, unknown>;
-  } catch {
-    return fields;
-  }
+  // A guess that says nothing ("young, but no specific features remembered") is filled in too;
+  // what they said is never touched.
+  const open = (d: Detail) => !d.value || (!d.said && VAGUE.test(d.value));
+  const current = Object.fromEntries(Object.entries(fields).map(([k, d]) => [k, open(d) ? null : d.value]));
+  const ask = async (extra: string) => {
+    const res = await callDeepseek(
+      [
+        { role: 'system', content: PROPOSE_LOOK + extra },
+        {
+          role: 'user',
+          content: `The conversation:\n\n${transcript}\n\nThe profile of ${name}:\n${JSON.stringify(current)}`,
+        },
+      ],
+      { json: true, thinking: PRODUCER_THINKING },
+    );
+    try {
+      return ((JSON.parse(res.content) as { fields?: Record<string, unknown> }).fields ?? {}) as Record<
+        string,
+        unknown
+      >;
+    } catch {
+      return {};
+    }
+  };
+  const usable = (v: unknown) => {
+    const raw = typeof v === 'string' ? v.trim() : '';
+    // "none" is not a look, and "hair: undefined" is a template, not a guess.
+    return raw && !/^(none|n\/a|nothing)\.?$/i.test(raw) && !VAGUE.test(raw) ? raw.slice(0, 300) : null;
+  };
+  // Specific enough to hold a person steady from picture to picture: their hair, and colours.
+  const specific = (k: string, v: string | null) =>
+    !!v &&
+    (k === 'appearance'
+      ? /\bhair\b/i.test(v)
+      : k === 'wardrobe'
+        ? /\b(black|white|grey|gray|blue|navy|green|brown|beige|red|yellow|cream|olive|tan|pink|purple|orange|khaki|denim)\b/i.test(
+            v,
+          )
+        : true);
+  let next = await ask('');
+  // Once more if it left placeholders, or too little to draw the same person twice.
+  if (
+    Object.entries(fields).some(
+      ([k, d]) => open(d) && ['appearance', 'wardrobe'].includes(k) && !specific(k, usable(next[k])),
+    )
+  )
+    next = {
+      ...next,
+      ...(await ask(
+        ' Your last answer left placeholders. They will be drawn, so every empty field needs a specific, ordinary guess even if nothing is remembered: pick a plain adult look (age range, hair colour and length, build) and everyday clothes with their colours. Never "undefined", "unknown", "indeterminate" or "not remembered".',
+      )),
+    };
   const out: Record<string, Detail> = {};
   for (const [k, d] of Object.entries(fields)) {
-    const raw = typeof next[k] === 'string' ? (next[k] as string).trim() : '';
-    // "none" is not a look: it would be drawn as a line of the prompt.
-    const v = raw && !/^(none|n\/a|unknown|nothing|not known)\.?$/i.test(raw) ? raw.slice(0, 300) : null;
-    // Only what was empty is filled, and as a guess: nothing they said is touched.
-    out[k] = !d.value && v ? { value: v, said: false } : d;
+    const v = usable(next[k]);
+    out[k] = open(d) && v ? { value: v, said: false } : d;
   }
   return out;
 }
+
+/** A value that says nothing a picture can show. */
+export const VAGUE =
+  /\b(undefined|unknown|unclear|indeterminate|unspecified|ambiguous|not (?:remembered|specified|known|sure|clear|described|given)|no specific|(?:can't|cannot|don't|do not) remember)\b/i;
 
 /** Their own description of how it should look, as one style option. */
 export async function ownStyle(transcript: string): Promise<StyleOption | null> {

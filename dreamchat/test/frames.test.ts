@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { CutPlan } from '../continuity';
 import { framePrompt, writingIn } from '../frames';
+import { asInstruction } from '../session';
 import { type Item, styleBlock, toldColours } from '../sheets';
 
 const style = {
@@ -125,8 +126,10 @@ describe('a moment drawn from earlier moments', () => {
       { use, item: drawn('m1', 1) },
     ]);
     expect(references.map((r) => `${r.role}:${r.media_id}`)).toEqual(['base:media-m1', 'identity:media-p1']);
-    expect(prompt).toContain('Image 1 is picture 1, the same view a moment earlier. Edit it into this moment');
-    expect(prompt).toContain("Image 2 is ana's reference sheet");
+    expect(prompt).toContain('Image 1: EDIT THIS PICTURE. It is picture 1, the same view a moment earlier.');
+    expect(prompt).toContain('Image 2: who ana is: face, hair, build and clothes, to check against Image 1.');
+    // The manifest comes before the scene, and each image says what to take from it.
+    expect(prompt.indexOf('The attached images, in order')).toBeLessThan(prompt.indexOf('What happens in this frame'));
   });
 
   test("the room from an earlier moment keeps the place's sheet, for its materials only", () => {
@@ -141,7 +144,18 @@ describe('a moment drawn from earlier moments', () => {
       { use, item: drawn('m1', 1) },
     ]);
     expect(references.map((r) => r.role)).toEqual(['identity', 'location', 'composition']);
-    expect(prompt).toContain("Image 2 is the kitchen's reference sheet: take only its materials, colours and objects");
-    expect(prompt).toContain('Image 3 is picture 1: the same place from the same side');
+    expect(prompt).toContain(
+      'Image 2: the kitchen: only its materials, colours and objects; where things stand comes from the earlier picture of this place.',
+    );
+    expect(prompt).toContain('Image 3: picture 1: the same place from the same side.');
+  });
+});
+
+describe('what a redraw is told', () => {
+  test('a failed fact becomes an instruction the image model can follow', () => {
+    expect(asInstruction('Is the aunt in frame?')).toBe('the aunt must be clearly in the frame');
+    expect(asInstruction('Is this the tiny room?')).toBe('it must clearly be the tiny room');
+    expect(asInstruction('Is ana wearing: a grey coat?')).toBe('ana wears a grey coat');
+    expect(asInstruction('Are the hands right?')).toBe('make this true: Are the hands right');
   });
 });

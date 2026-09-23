@@ -7,6 +7,7 @@
 // in view is said out loud, and the style tokens are quoted word for word.
 import type { ContinuityPlan, PlanRef } from './continuity';
 import type { Breakdown, Moment, StyleOption } from './producer';
+import { VAGUE } from './producer';
 import { type Item, styleBlock, toldColours } from './sheets';
 
 const FRAMING: Record<Moment['distance'], string> = {
@@ -118,9 +119,13 @@ const approved = (s: Item) => s.status === 'ready' && !!s.mediaId && (!!s.review
 
 /**
  * The frame's prompt and its references, in the order the images are attached. Only approved
- * pictures are references: an unapproved take is never fed back in. The earlier cuts and ghosts
- * come from the continuity plan, each told what to take from it: an edit base first (Image 1 is
- * the picture to change), then the sheets of what is in view, then ghosts, then other cuts.
+ * pictures are references: an unapproved take is never fed back in.
+ *
+ * The prompt opens with a manifest: each attached image, numbered, with exactly what to take
+ * from it and nothing else. An edit base goes first (Image 1 is the picture to change), then the
+ * sheets of who and what is in view, then ghosts, then other earlier moments. Folded into a
+ * description of the scene, "keep this face" and "keep everyone as in the picture before" read
+ * as two sources for one thing, and a repaired moment came back as a third person (23 Sep).
  */
 export function framePrompt(
   frame: Item,
@@ -143,98 +148,103 @@ export function framePrompt(
     (x) => x.use.kind === 'cut' && (x.use.relation === 'same_setup' || x.use.relation === 'same_side'),
   );
   const viewGhost = usable.find((x) => x.item.ghost?.kind === 'view');
+  const who = (s: Item) => (s.isDreamer ? 'the dreamer' : s.name);
 
   const references: FrameReference[] = [];
+  const manifest: string[] = [];
   const depicted: string[] = [];
-  const lines: string[] = [];
-  const drawnFrom: string[] = [];
-  const push = (r: FrameReference) => references.push(r);
+  const attach = (media_id: string, role: FrameReference['role'], instruction: string, line: string) => {
+    references.push({ media_id, role, instruction });
+    manifest.push(`Image ${references.length}: ${line}`);
+  };
   const pictureNo = (x: PlannedInput) => (x.item.frame ? `picture ${x.item.frame.order}` : 'an in-between reference');
 
-  if (base?.item.mediaId) {
-    push({
-      media_id: base.item.mediaId,
-      role: 'base',
-      instruction: 'the same view a moment earlier: edit it into this moment',
-    });
-    drawnFrom.push(
-      `Image ${references.length} is ${pictureNo(base)}, the same view a moment earlier. Edit it into this moment: keep the camera, the place, the light and how everyone looks exactly; change only what this moment changes.`,
+  if (base?.item.mediaId)
+    attach(
+      base.item.mediaId,
+      'base',
+      'the same view a moment earlier: edit it into this moment',
+      `EDIT THIS PICTURE. It is ${pictureNo(base)}, the same view a moment earlier. Keep its camera, framing, room, light and everyone in it exactly as they are, faces and clothes included; change only what this moment changes.`,
     );
-  }
 
+  const facts: string[] = [];
   for (const s of inView) {
     if (s.nodeId) depicted.push(s.nodeId);
-    const facts = Object.values(s.fields)
+    const known = Object.values(s.fields)
       .map((d) => d.value)
-      .filter(Boolean)
+      .filter((v): v is string => !!v && !VAGUE.test(v))
       .join('; ');
     const kind = s.kind === 'character' ? 'person' : s.kind === 'location' ? 'place' : 'thing';
-    let seeImage = '';
+    facts.push(`${who(s)} (${kind})${known ? `: ${known}` : ''}.`);
     // An edit base already holds the place, and a view ghost shows the side this frame faces; the
     // sheet would only pull the layout back to its own view. Otherwise the sheet always goes in:
     // Strawberry draws a moment only when everything in it has its own reference or a base.
-    const skipSheet = s.kind === 'location' && (!!base || !!viewGhost);
-    if (approved(s) && s.mediaId && !skipSheet) {
+    if (!approved(s) || !s.mediaId || (s.kind === 'location' && (!!base || !!viewGhost))) continue;
+    if (s.kind === 'character')
+      attach(
+        s.mediaId,
+        'identity',
+        `${s.name}: this exact person, with the same face, build and clothes`,
+        base
+          ? `who ${who(s)} is: face, hair, build and clothes, to check against Image 1. Nothing else from it: not its pose, background or framing.`
+          : `who ${who(s)} is: their face, hair, build and clothes, exactly. Nothing else from it: not its pose, background or framing.`,
+      );
+    else if (s.kind === 'location') {
       // With an earlier picture of the room from this side, that picture sets the layout.
-      const layout = s.kind !== 'location' || (plan?.sheetLayout !== false && !roomFromCut);
-      push({
-        media_id: s.mediaId,
-        role: s.kind === 'character' ? 'identity' : s.kind === 'location' ? 'location' : 'prop',
-        instruction:
-          s.kind === 'location'
-            ? layout
-              ? `${s.name}: this exact place. Keep its walls, windows and doors on the sides the reference puts them; do not mirror or rearrange them`
-              : `${s.name}: its materials, colours and objects only; ${roomFromCut ? 'the layout comes from the earlier picture' : 'this frame faces another side of it'}`
-            : `${s.name}: this exact ${s.kind === 'character' ? 'person, with the same face, build and clothes' : 'object, with the same shape and materials'}`,
-      });
-      seeImage = ` Image ${references.length} is ${s.name}'s reference sheet: ${
-        s.kind === 'location'
-          ? layout
-            ? 'the camera stands inside this place; keep its walls, windows and doors on the sides that sheet puts them, and do not mirror or rearrange them.'
-            : roomFromCut
-              ? 'take only its materials, colours and objects from it; where things are comes from the earlier picture of this place.'
-              : `it shows the place from another side. Take only its materials, colours and objects; this frame faces ${f.looksAt || 'the other way'}.`
-          : s.kind === 'character'
-            ? 'keep the same face, build and clothes exactly.'
-            : 'keep the same shape and materials exactly.'
-      }${s.kind === 'location' ? '' : ' Use the sheet only for what they look like, never for its layout.'}`;
-    }
-    lines.push(`${s.name} (${kind})${facts ? `: ${facts}` : ''}.${seeImage}`);
+      const layout = plan?.sheetLayout !== false && !roomFromCut;
+      attach(
+        s.mediaId,
+        'location',
+        layout
+          ? `${s.name}: this exact place. Keep its walls, windows and doors on the sides the reference puts them; do not mirror or rearrange them`
+          : `${s.name}: its materials, colours and objects only; ${roomFromCut ? 'the layout comes from the earlier picture' : 'this frame faces another side of it'}`,
+        layout
+          ? `${s.name}: the camera stands inside this place. Keep its walls, windows, doors and furniture where it puts them; do not mirror or rearrange them.`
+          : roomFromCut
+            ? `${s.name}: only its materials, colours and objects; where things stand comes from the earlier picture of this place.`
+            : `${s.name}: only its materials, colours and objects. It shows the place from another side: this frame faces ${f.looksAt || 'the other way'}.`,
+      );
+    } else
+      attach(
+        s.mediaId,
+        'prop',
+        `${s.name}: this exact object, with the same shape and materials`,
+        `${s.name}: its exact shape, materials and colours. Nothing else from it.`,
+      );
   }
 
   for (const x of usable) {
     if (x === base || !x.item.mediaId) continue;
     const g = x.item.ghost;
     if (g) {
-      push({
-        media_id: x.item.mediaId,
-        role: x.use.role === 'location' ? 'location' : x.use.role === 'prop' ? 'prop' : 'identity',
-        instruction: x.use.carries,
-      });
-      drawnFrom.push(
+      attach(
+        x.item.mediaId,
+        x.use.role === 'location' ? 'location' : x.use.role === 'prop' ? 'prop' : 'identity',
+        x.use.carries,
         g.kind === 'view'
-          ? `Image ${references.length} shows ${nameOf(sheets, g.of)} facing ${g.looksAt || 'the other way'}: the side this frame faces. Keep its walls, windows and objects where it puts them.`
-          : `Image ${references.length} shows how ${nameOf(sheets, g.of)} looks now: ${g.state?.what} ${g.state?.now}. Draw them exactly so.`,
+          ? `${nameOf(sheets, g.of)} seen facing ${g.looksAt || 'the other way'}: the side this frame faces. Keep its walls, windows and objects where it puts them.`
+          : `how ${nameOf(sheets, g.of)} looks now: ${g.state?.what} ${g.state?.now}. Draw them exactly so.`,
       );
       continue;
     }
     const r = x.use.relation;
     const role: FrameReference['role'] =
       x.use.role === 'lighting' ? 'lighting' : x.use.role === 'composition' ? 'composition' : 'identity';
-    push({ media_id: x.item.mediaId, role, instruction: x.use.carries });
-    const n = references.length;
-    drawnFrom.push(
+    attach(
+      x.item.mediaId,
+      role,
+      x.use.carries,
       r === 'shift'
-        ? `Image ${n} is ${pictureNo(x)}, just before the dream jumps. Keep its framing and where everyone is exactly; the dream changes this: ${frame.fields.shift?.value ?? ''}.`
+        ? `${pictureNo(x)}, just before the dream jumps. Keep its framing and where everyone is exactly; the dream changes this: ${frame.fields.shift?.value ?? ''}.`
         : x.use.role === 'composition'
-          ? `Image ${n} is ${pictureNo(x)}: the same place from the same side. Keep its walls, windows, furniture and light where that picture shows them, and everyone where they were unless this moment moves them; this frame is framed ${f.distance}.`
+          ? `${pictureNo(x)}: the same place from the same side. Take where its walls, windows, furniture and people are, and its light; this frame is framed ${f.distance}.`
           : x.use.role === 'lighting'
-            ? `Image ${n} is ${pictureNo(x)}, the same place seen from the other side a moment earlier. Keep its light and how everyone looks; the camera now faces ${f.looksAt || 'the other way'}, so the walls behind are the ones opposite to that picture's.`
-            : `Image ${n} is ${pictureNo(x)}: take only how ${x.use.carries.replace(/^how /, '').replace(/;.*$/, '')} from it, never its place, framing or background.`,
+            ? `${pictureNo(x)}: the same place from the other side, a moment earlier. Take only its light and how everyone looks; the walls behind are the ones opposite to that picture's.`
+            : `${pictureNo(x)}: take only how ${x.use.carries.replace(/^how /, '').replace(/;.*$/, '')}. Nothing of its place, framing or background.`,
     );
   }
 
-  const states = (plan?.states ?? []).map((st) => `${nameOf(sheets, st.who)}: ${st.what} ${st.now}`);
+  const states = (plan?.states ?? []).map((st) => `${nameOf(sheets, st.who)}'s ${st.what}: ${st.now}`);
   const action = frame.fields.action?.value ?? '';
   const angle =
     f.eyes === 'dreamer' ? "seen through the dreamer's own eyes" : 'at eye level, the dreamer seen from outside';
@@ -242,22 +252,25 @@ export function framePrompt(
   const point = frame.fields.visual_point?.value;
   const purpose = frame.fields.purpose?.value;
   const prompt = [
-    `A single storyboard frame, ${f.distance}, ${angle}${f.looksAt ? `, facing ${f.looksAt}` : ''}. ${FRAMING[f.distance]} ${action}`,
-    drawnFrom.join('\n'),
-    lines.length ? `In this frame:\n${lines.join('\n')}` : '',
+    `A single storyboard frame, ${f.distance}, ${angle}${f.looksAt ? `, facing ${f.looksAt}` : ''}. ${FRAMING[f.distance]}`,
+    manifest.length
+      ? `The attached images, in order, and the one thing to take from each:\n${manifest.join('\n')}`
+      : '',
+    `What happens in this frame: ${action}`,
+    facts.length ? `In it:\n${facts.join('\n')}` : '',
     states.length ? `Still so from earlier in the dream: ${states.join('; ')}.` : '',
     purpose ? `Its part in the story: ${purpose}.` : '',
-    // The judge's findings on the last attempt, when it was drawn again for them.
-    frame.repairFor?.length
-      ? `The last attempt at this frame got these wrong. This time each must be true:\n${frame.repairFor.map((q) => `- ${q}`).join('\n')}`
-      : '',
     feeling ? `It should feel: ${feeling}.` : '',
     point ? `The one thing this frame must show: ${point}.` : '',
+    // The judge's findings on the last attempt, when it was drawn again for them.
+    frame.repairFor?.length
+      ? `The last attempt at this frame got these wrong. Put each right:\n${frame.repairFor.map((q) => `- ${q}`).join('\n')}`
+      : '',
     styleBlock(style, toldColours(frame, ...inView)),
     // The ice-head frames came back with the whole woman made of ice (23 Sep): what the action
     // changes, and nothing else, differs from the references.
     references.length
-      ? 'Everyone and everything looks exactly as in their reference images, except for what this moment itself changes and what is still so from earlier.'
+      ? 'Everyone and everything looks exactly as in their images above, except for what this moment itself changes and what is still so from earlier.'
       : '',
     // A style's "double exposure" plus an earlier picture put a house's roof through the walls of
     // a tiny room (23 Sep): an earlier picture gives only what it is attached for.

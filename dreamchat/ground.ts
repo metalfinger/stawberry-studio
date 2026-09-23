@@ -212,6 +212,86 @@ export async function linkContinuity(
   return { breakdown: out, links, notes, ms: call?.ms ?? 0 };
 }
 
+const CONTENT_BAR = 0.5;
+
+/** Light sources a style must not bring into every picture: the stove in a stairwell (23 Sep). */
+const NAMED_LIGHTS = /\b(lamps?|stoves?|candles?|lanterns?|fires?|fireplaces?|hearths?|torches?)\b/i;
+
+/** A lighting sentence without its clauses that name light sources. */
+function withoutNamedLights(sentence: string): string {
+  if (!NAMED_LIGHTS.test(sentence)) return sentence;
+  const kept = sentence
+    .replace(/[.!?]+$/, '')
+    .split(/,\s*(?:but|and|while|with)\s+|;\s*|,\s+(?=as if|like)/)
+    .filter((clause) => !NAMED_LIGHTS.test(clause))
+    .join(', ')
+    .trim();
+  return kept ? `${kept}.` : '';
+}
+
+/** The sentences of a lighting rule, each judged on its own. */
+const sentences = (text: string) =>
+  text
+    .split(/(?<=[.!?])\s+/)
+    .map((x) => x.trim())
+    .filter(Boolean);
+
+/**
+ * A way of drawing it is technique only: the medium, the line, the colour treatment, the light's
+ * quality. A style that names the dream's own content ("cobblestone street and old European
+ * village", "pools of warm light from lamps and stoves") puts that content in every picture: a
+ * hallway came back cobbled and a stairwell with a stove (23 Sep). Jev judges each token and each
+ * sentence of the light; content is dropped from the style, since the pictures carry it where it
+ * belongs.
+ */
+export async function cleanStyles(b: Breakdown, jev: JevFn): Promise<{ breakdown: Breakdown; dropped: string[] }> {
+  const out: Breakdown = structuredClone(b);
+  const questions: Record<string, Question> = {};
+  const ask = (key: string, text: string) => {
+    questions[key] = {
+      type: 'noul',
+      instructions: `A way of drawing a dream is described by this phrase: "${text}". Does it name something that would then have to appear in every picture: a place, building, street, room, object, person, animal, anything from the dream's story, or a particular light source such as lamps, stoves, candles or a fire? Or does it only describe how the picture is drawn (the medium, the line, the texture, the colour treatment, the general quality and direction of light)?`,
+      criteria: {
+        true: 'it names things to show: places, objects, people, story content, or particular lamps, stoves, candles or fires',
+        false: 'it only describes how the picture is drawn, or the general quality and direction of light',
+      },
+    };
+  };
+  out.style_options.forEach((o, i) => {
+    o.tokens.forEach((t, j) => ask(`tok_${i}_${j}`, t));
+    sentences(o.lighting_rules).forEach((t, j) => ask(`light_${i}_${j}`, t));
+  });
+  if (!Object.keys(questions).length) return { breakdown: out, dropped: [] };
+  const call = await jev('Ways a dream could be drawn, proposed for a storyboard.', questions);
+  const content = (key: string) => {
+    const a = call.answers?.[key];
+    return a?.type === 'noul' && a.noul >= CONTENT_BAR;
+  };
+  const dropped: string[] = [];
+  out.style_options.forEach((o, i) => {
+    const tokens = o.tokens.filter((t, j) => {
+      if (!content(`tok_${i}_${j}`)) return true;
+      dropped.push(`${o.name}: "${t}"`);
+      return false;
+    });
+    // Never empty a style: if every token named content, the least bad stays.
+    o.tokens = tokens.length ? tokens : o.tokens.slice(0, 1);
+    o.lighting_rules = sentences(o.lighting_rules)
+      .map((t, j) => {
+        if (content(`light_${i}_${j}`)) {
+          dropped.push(`${o.name} light: "${t}"`);
+          return '';
+        }
+        const kept = withoutNamedLights(t);
+        if (kept !== t) dropped.push(`${o.name} light: "${t}" → "${kept}"`);
+        return kept;
+      })
+      .filter(Boolean)
+      .join(' ');
+  });
+  return { breakdown: out, dropped };
+}
+
 /**
  * Apply Jev's answers: a "said" that Jev can't back becomes a guess. Returns the details that
  * were downgraded. When the judge is unavailable, nothing is confirmed as said.

@@ -543,8 +543,9 @@ describe('a whole conversation', () => {
     // Rejected as the assistant, and drawn again with the finding as its correction.
     expect(verdicts).toContainEqual(['media-cut-m1-job-m1', false, 'assistant']);
     expect(framesStarted.map((f) => f.id)).toEqual(['m1', 'm1']);
+    // Said to the image model as an instruction, not as the judge's question.
     expect(framesStarted[1].prompt).toContain(
-      'The last attempt at this frame got these wrong. This time each must be true:\n- Is the departure board visible?',
+      'The last attempt at this frame got these wrong. Put each right:\n- the departure board must be clearly visible',
     );
     // The second take passes: approved for continuity on the judge's word, and the close-up goes on.
     statuses.set('job-m1', 'ready');

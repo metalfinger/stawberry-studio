@@ -301,6 +301,12 @@ const out = join(import.meta.dir, 'runs');
 mkdirSync(out, { recursive: true });
 const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
 const worker = strawberryAvailable() ? spawnWorker(STRAWBERRY_PYTHON, REPO) : null;
+// A run stopped early takes its worker with it, or workers pile up on the store.
+for (const signal of ['SIGINT', 'SIGTERM'] as const)
+  process.on(signal, () => {
+    worker?.stop();
+    process.exit(130);
+  });
 console.log(`sketches drawn with ${PROVIDER} into ${STRAWBERRY_HOME}`);
 const reports = await Promise.all(files.map((f) => run(f, max)));
 worker?.stop();

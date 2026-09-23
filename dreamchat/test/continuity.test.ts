@@ -146,6 +146,13 @@ describe('the continuity plan', () => {
       'm1: Is the second picture the same view as the first, a moment later: the same place from the same side, in the same light?',
     );
     expect(texts).toContain("null: In this picture, is ana's head a block of glittering ice?");
+    // Everyone is also held to their own sheet, and each check can be said as a fix.
+    expect(texts).toContain(
+      'sheet:p1: Is ana the same person as in their reference sheet: the same face, hair and clothes?',
+    );
+    expect(cut('m5').criteria.find((c) => c.with === 'm1')?.fix).toBe(
+      'keep the view of picture 1 exactly: the same place, from the same side, in the same light, a moment later',
+    );
   });
 
   test('pictures are drawn in story order', () => {
