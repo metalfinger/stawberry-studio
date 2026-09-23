@@ -5,10 +5,23 @@ The contract is Engram `projects/strawberry-studio/specs/2026-09-image-judge-hos
 
 ```
 https://judge.metalfinger.xyz  (my-pc tunnel, ingress -> 127.0.0.1:8001)
-  judge-host  FastAPI + SAM 3        WSL judge-env   127.0.0.1:8001   app.py
-  vLLM        Qwen3-VL-8B W8A8 INT8  WSL vllm-env    127.0.0.1:8000   never exposed
-  both on GPU 0 (CUDA_VISIBLE_DEVICES=0 = UUID GPU-c5c9552e, bus 01:00.0); GPU 1 is ComfyUI's
+  judge-host  FastAPI + SAM 3 (GPU 0)   WSL judge-env   127.0.0.1:8001   app.py
+  vLLM        the judge model           WSL vllm-env    127.0.0.1:8000   never exposed
+  GPU 0 = UUID GPU-c5c9552e, bus 01:00.0; GPU 1 = bus 02:00.0 (ComfyUI's card unless Hiren says otherwise)
 ```
+
+## Which judge model: profiles
+
+`profiles/*.env` set the model, GPUs, tensor parallelism and memory share; `~/judge-host/profile` (in WSL)
+names the active one, default `qwen3-vl-8b`.
+
+| profile | model | GPUs | notes |
+|---|---|---|---|
+| `qwen3-vl-8b` | amd/Qwen3-VL-8B-Instruct-w8a8-llmcompressor (W8A8 INT8) | 0 | 23 Sep baseline, commit 539d933, results_qwen.jsonl |
+| `qwen3.5-27b` | Qwen/Qwen3.5-27B-FP8 (block FP8 -> W8A16 Marlin on Ampere) | 0,1 (TP=2) | thinking model; `think` flag on /judge |
+
+Switch: `wsl -d Ubuntu -- bash -c 'echo qwen3-vl-8b > ~/judge-host/profile'`, then run `scripts/stop.sh` and start
+the `judge-host-vllm` task, and once vLLM is up, the `judge-host-api` task. Check that GPU 1 is free before using a two-GPU profile.
 
 ## Start / stop
 
