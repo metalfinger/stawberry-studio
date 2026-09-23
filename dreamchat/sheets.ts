@@ -64,6 +64,8 @@ export type Item = {
     error?: string;
     unseen?: string[];
     failedIds?: string[];
+    /** What the judge saw, per failure. */
+    notes?: string[];
   };
   /** Why a moment can't be drawn from yet without the person's verdict. */
   waitsForPerson?: string;
@@ -242,8 +244,22 @@ const value = (item: Item, field: string) => item.fields[field]?.value ?? '';
  * what Strawberry's playbooks ask of a reference sheet: identity and proportions for a person,
  * geography for a place, shape and scale for a thing.
  */
+/**
+ * The fields a sheet is drawn from: how it looks, never who it is in the story. "Who they are"
+ * carries the story ("a young woman cooking", "the dreamer's aunt"), and a sheet drawn from it
+ * came back cooking at a stove (23 Sep). A sheet is the ordinary look, for every picture.
+ */
+const LOOK: Record<ItemKind, string[]> = {
+  character: ['appearance', 'wardrobe', 'distinctive_features'],
+  location: ['geography', 'landmarks', 'light'],
+  prop: ['appearance', 'materials'],
+  cut: [],
+  ghost: [],
+};
+
 export function sheetPrompt(item: Item, style: StyleOption): string {
   const facts = Object.keys(item.fields)
+    .filter((k) => LOOK[item.kind].includes(k))
     .map((k) => (value(item, k) ? `${FIELD_WORDS[k] ?? k}: ${value(item, k)}` : ''))
     .filter(Boolean)
     .join('\n');
@@ -257,11 +273,18 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
         ? `A single wide picture of ${item.name}, as it ordinarily looks, with no people in it, showing the whole place and how it is laid out.`
         : `A single clear picture of ${item.name} on its own, as it ordinarily looks, seen at a slight angle so its shape and materials read.`;
   const background = item.kind === 'location' ? '' : 'Plain, uncluttered background. ';
+  // A person's sheet is the face every moment draws them from, so nothing may stand between
+  // them and the viewer: a glass-world style drew the dreamer three times behind a frosted
+  // shower door, face blurred (23 Sep).
+  const clear =
+    item.kind === 'character'
+      ? 'Nothing between them and the viewer: no glass, pane, screen, door, veil, mist or reflection over them; the face and clothes clearly seen. Whatever the style, it is how the picture is drawn, not something in front of them.'
+      : '';
   // The judge's findings on the last attempt, when it was drawn again for them.
   const repair = item.repairFor?.length
     ? `The last attempt at this sheet got these wrong. Put each right:\n${item.repairFor.map((q) => `- ${q}`).join('\n')}`
     : '';
-  return [layout, facts, repair, styleBlock(style, toldColours(item)), `${background}${NO_WORDS}`]
+  return [layout, facts, clear, repair, styleBlock(style, toldColours(item)), `${background}${NO_WORDS}`]
     .filter(Boolean)
     .join('\n\n');
 }

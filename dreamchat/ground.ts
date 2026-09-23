@@ -46,10 +46,10 @@ export function groundingQuestions(b: Breakdown, transcript: Exchange[]): Record
       if (d.value)
         q[`state_${p.id}.${k}`] = {
           type: 'noul',
-          instructions: `A profile of ${p.name} from a dream says: "${d.value}". Does it describe something that happens to ${p.name} during the dream (a change, transformation or passing state), rather than how ${p.name} ordinarily looks?`,
+          instructions: `A profile of ${p.name} from a dream says: "${d.value}". Does it describe something from the story rather than how ${p.name} ordinarily looks: a change or passing state (turning into something, melting, glowing), something ${p.name} does in the dream (cooking, juggling, driving, waiting), or who else is there?`,
           criteria: {
-            true: 'it describes a change or state from the story, such as turning into something, melting, glowing or being hurt',
-            false: 'it describes how they ordinarily look, or says nothing is known',
+            true: 'it describes a change, an activity from the story, or other people present, such as "cooking", "juggling", "with you and your aunt" or "turning to ice"',
+            false: 'it describes how they ordinarily look, or what the place is and holds, or says nothing is known',
           },
         };
   // A moment is judged on what is in it, not on how near it is shown: the same told moment,

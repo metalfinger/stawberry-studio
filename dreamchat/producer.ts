@@ -388,6 +388,16 @@ export function normalizeBreakdown(raw: string): { breakdown: Breakdown; notes: 
     };
   });
 
+  // One name, one subject: a car ridden in can be both a place (its inside) and a thing (the car),
+  // but under one name the two sketches are drawn as one, and a sketch of the car came back as
+  // its seats (23 Sep). The place is named for what it is.
+  const lower = (x: string) => x.toLowerCase().replace(/^(the|a|an)\s+/, '');
+  for (const pl of places)
+    if (things.some((t) => lower(t.name) === lower(pl.name))) {
+      notes.push(`place "${pl.name}" shares its name with a thing; renamed to its inside`);
+      pl.name = `inside ${pl.name}`;
+    }
+
   const personIds = new Set(people.map((p) => p.id));
   const placeIds = new Set(places.map((p) => p.id));
   const thingIds = new Set(things.map((t) => t.id));

@@ -56,13 +56,15 @@ export async function assistantJudge(mediaId: string, opts: JudgeOptions = {}): 
   if (!opts.facts) return null;
   mkdirSync(JUDGE_QUEUE, { recursive: true });
   const media = (await call('media', { id: mediaId })) as Media;
-  const node = (await call('inspect', { id: media.media.node_id })) as { node: { name: string } };
+  const node = (await call('inspect', { id: media.media.node_id })) as { node: { name: string; kind: string } };
   const { questions } = (await call('facts', { id: media.media.node_id })) as { questions: Question[] };
   const continuity = opts.continuity ?? [];
   const request = {
     kind: 'facts',
     mediaId,
     moment: node.node.name,
+    // What the picture is: a person's, place's or thing's sheet, or a moment.
+    subject: node.node.kind,
     image: join(STRAWBERRY_HOME, 'media', media.media.path),
     questions: questions.map(({ id, question, look_at }) => ({ id, question, look_at })),
     continuity: await Promise.all(
@@ -118,6 +120,8 @@ export async function assistantJudge(mediaId: string, opts: JudgeOptions = {}): 
     passed: evidence.filter((e) => e.answer === 'yes').length,
     failed: failed.map((e) => e.question),
     failedIds: failed.map((e) => e.question_id),
+    // What the judge saw, for each failure: a redraw is told this, not only the question.
+    notes: failed.map((e) => e.region),
     unseen: failed.filter((e) => PRESENCE.includes(e.question_id.split(':')[0])).map((e) => e.question),
     ...(error ? { error } : {}),
     ...(asked.length

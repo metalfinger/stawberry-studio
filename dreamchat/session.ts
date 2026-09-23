@@ -1422,14 +1422,20 @@ export class SessionStore {
     const c = it.check;
     if (it.review || (it.repairs ?? 0) >= MAX_REPAIRS || !c || c.error) return;
     const SERIOUS = ['subject', 'wardrobe', 'features', 'pose'];
-    const facts = c.failed.filter((_, i) => SERIOUS.includes((c.failedIds?.[i] ?? '').split(':')[0]));
+    const at = c.failed.map((_, i) => i).filter((i) => SERIOUS.includes((c.failedIds?.[i] ?? '').split(':')[0]));
+    const facts = at.map((i) => c.failed[i]);
     if (!facts.length) return;
     it.repairs = (it.repairs ?? 0) + 1;
-    it.repairFor = facts.map((q) =>
-      /nothing else as the subject/.test(q)
-        ? `only ${it.isDreamer ? 'the dreamer' : it.name} is in the picture: no other person, creature or object beside them`
-        : asInstruction(q),
-    );
+    // Each correction says what was wrong last time, as the judge saw it: "only the dreamer" alone
+    // redrew her behind the same frosted door (23 Sep).
+    it.repairFor = at.map((i) => {
+      const q = c.failed[i];
+      const fix = /nothing else as the subject/.test(q)
+        ? `only ${it.isDreamer ? 'the dreamer' : it.name} is in the picture, alone, clearly seen, on a plain ground`
+        : asInstruction(q);
+      const saw = c.notes?.[i];
+      return saw ? `${fix} (last time: ${saw})` : fix;
+    });
     this.reviewSketch(
       s,
       it,
@@ -1448,7 +1454,8 @@ export class SessionStore {
     // Who or what is missing, a changed look not carried, the wrong clothes or features, a broken
     // body; and a person or room that does not match what the moment follows.
     const SERIOUS = ['cast', 'location', 'prop', 'state', 'wardrobe', 'features', 'pose'];
-    const facts = c.failed.filter((_, i) => SERIOUS.includes((c.failedIds?.[i] ?? '').split(':')[0]));
+    const factAt = c.failed.map((_, i) => i).filter((i) => SERIOUS.includes((c.failedIds?.[i] ?? '').split(':')[0]));
+    const facts = factAt.map((i) => c.failed[i]);
     const fixes = (it.frame?.plan?.criteria ?? []).filter(
       (k) =>
         (it.continuity?.failed ?? []).includes(k.text) &&
@@ -1458,7 +1465,13 @@ export class SessionStore {
     if (!serious.length) return false;
     it.repairs = (it.repairs ?? 0) + 1;
     // Said to the image model as instructions: a judge's question means nothing to it.
-    it.repairFor = [...facts.map(asInstruction), ...fixes.map((k) => k.fix)].slice(0, 6);
+    it.repairFor = [
+      ...factAt.map((i) => {
+        const saw = c.notes?.[i];
+        return saw ? `${asInstruction(c.failed[i])} (last time: ${saw})` : asInstruction(c.failed[i]);
+      }),
+      ...fixes.map((k) => k.fix),
+    ].slice(0, 6);
     this.reviewSketch(
       s,
       it,
