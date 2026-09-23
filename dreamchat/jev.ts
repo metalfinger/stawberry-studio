@@ -209,6 +209,16 @@ export function bookkeeperQuestions(
   };
 
   if (phase === 'listen') {
+    // A person whose memory is spent answers "I don't remember" to each thing left: four in a row
+    // about the balloons before the dream was told back (simulated run meads-house, 24 Sep).
+    q.recall_spent = {
+      type: 'noul',
+      instructions: `Read only the person's most recent message: "${latest.slice(0, 240)}". Does it mainly say they don't remember, can't recall, or have nothing more to say about what they were asked?`,
+      criteria: {
+        true: "it is mostly 'I don't remember', 'no idea', or 'that's all there was' about what was asked",
+        false: 'it tells something, even a little, or answers the question',
+      },
+    };
     q.finished_telling = {
       type: 'noul',
       instructions:
@@ -568,6 +578,7 @@ export function readState(
       closing_note: closing.value,
       signals: {
         finished_telling: finished ?? prev.signals.finished_telling,
+        recall_spent: phase === 'listen' ? noul(a.recall_spent) : null,
         retell_reply: retellReply,
         wants_to_see: wantsToSee,
         style_choice: styleChoice,

@@ -83,6 +83,8 @@ export type TurnRecord = {
   waitMs?: number;
   violations: string[];
   notes: JevReadNote[];
+  /** Their message said they don't remember (while listening). */
+  forgot?: boolean;
   at: number;
 };
 
@@ -626,12 +628,16 @@ export class SessionStore {
 
     let followStreak = 0;
     for (let i = s.turns.length - 1; i >= 0 && isFollowing(s.turns[i].move); i--) followStreak++;
+    const forgot = s.phase === 'listen' && (overlaid.signals.recall_spent ?? 0) >= 0.5;
+    let forgotStreak = forgot ? 1 : 0;
+    for (let i = s.turns.length - 1; forgot && i >= 0 && s.turns[i].forgot; i--) forgotStreak++;
     const { move, rule } = selectMove(overlaid, this.cfg, {
       phase: s.phase,
       askCounts: s.askCounts,
       listenTurns: turnNow,
       retells: s.retells,
       followStreak,
+      forgotStreak,
       offers: s.offers,
       styleAsks: s.styleAsks,
       styleIds: styles.map((o) => o.id),
@@ -796,6 +802,7 @@ export class SessionStore {
         waitMs: waitMs || undefined,
         violations: parsed.violations,
         notes,
+        forgot: forgot || undefined,
         at: this.now(),
       },
       {

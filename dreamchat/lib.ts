@@ -66,6 +66,8 @@ export type SketchReaction = 'looks_right' | 'not_right' | 'no_reaction';
 export type Signals = {
   /** P(they have told the dream through to an end), read while listening. */
   finished_telling: number;
+  /** P(their latest message mostly says they don't remember), read while listening. */
+  recall_spent?: number | null;
   /** How they answered the retelling. Only read on the turn after one. */
   retell_reply: RetellReply | null;
   /** How they answered "would you like to see it?". Only read while that is open. */
@@ -231,6 +233,8 @@ export const LISTEN_TURN_LIMIT = 18;
  * window, 23 Sep), which then ran out of listening turns with the key moment never asked.
  */
 export const MAX_FOLLOW_STREAK = 3;
+/** "I don't remember" this many times in a row, once the story is told to its end, is enough. */
+export const FORGOT_STREAK = 2;
 
 /** Times "would you like to see it?" is put before a hesitation is taken as no, for now. */
 export const MAX_OFFERS = 2;
@@ -250,6 +254,8 @@ export type MoveContext = {
   retells: number;
   /** How many turns in a row, up to the last one, followed the telling rather than asking. */
   followStreak: number;
+  /** How many of their messages in a row, this one included, said they don't remember. */
+  forgotStreak?: number;
   /** How many times "would you like to see it?" has been put. */
   offers?: number;
   /** How many times the style has been asked about. */
@@ -356,6 +362,11 @@ export function selectMove(state: State, cfg: GoalsFile, ctx: MoveContext): { mo
     if (state.rapport.wants_out === 'soft' || state.rapport.verbosity === 'clipped')
       return { move: { kind: 'retell' }, rule: '2: story understood and they are winding down' };
   }
+
+  // 2b. Their memory is spent: the story has reached its end and the last answers were "I don't
+  // remember". Asking after every gap left only collects more of them.
+  if (finished && (ctx.forgotStreak ?? 0) >= FORGOT_STREAK)
+    return { move: { kind: 'retell' }, rule: "2: told all they remember" };
 
   // 3. Don't listen forever. Tell back what is known; the person fills the rest.
   if (ctx.listenTurns >= LISTEN_TURN_LIMIT) return { move: { kind: 'retell' }, rule: '3: listening limit reached' };

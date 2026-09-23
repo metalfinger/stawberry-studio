@@ -63,6 +63,15 @@ const thread = (id: string, strength: Thread['strength']): Thread => ({
 });
 
 describe('listening', () => {
+  test("once the story has reached its end, two \"I don't remember\"s in a row mean it is told back", () => {
+    const told = state({ covered: ['telling'], finished: 0.9 });
+    expect(selectMove(told, cfg, listen({ forgotStreak: 2 })).move).toEqual({ kind: 'retell' });
+    // One is only a gap they don't remember: the next one is asked.
+    expect(selectMove(told, cfg, listen({ forgotStreak: 1 })).move.kind).toBe('probe_goal');
+    // Partway through the story, it is theirs to go on with.
+    expect(selectMove(state({ covered: ['telling'] }), cfg, listen({ forgotStreak: 3 })).move.kind).not.toBe('retell');
+  });
+
   test('while they are still telling it, the host follows instead of asking about gaps', () => {
     const { move, rule } = selectMove(state({ covered: ['telling'] }), cfg, listen());
     expect(move).toEqual({ kind: 'follow' });
