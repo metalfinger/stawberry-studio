@@ -16,9 +16,9 @@ The conversation moves through these phases:
 | Listening | They tell the dream; Berry follows, then asks about gaps | none |
 | Telling it back | Berry retells it; corrections are settled here | none |
 | Seeing it | "Would you like to see it?", then four ways it could look | none |
-| Drawing: profiles | Each person, place and thing is shown as Berry pictures it; confirmed or corrected | a sketch starts for each one settled |
+| Drawing: profiles | Up to two people, the key moment's place and the dreamer (if seen) are shown as Berry pictures them; confirmed or corrected. Everything else is sketched unasked | a sketch starts for each one settled |
 | Drawing: sketches | Finished sketches are shown; "looks right" approves one, a correction redraws it | redraws |
-| Drawing: moments | Frames drawn from the approved sketches, key moment first; the key one is asked about by name | one per moment, plus redraws |
+| Drawing: moments | In story order, each moment drawn from the sketches and from the earlier moments it has to match (the continuity plan, below); the key one is asked about by name | one per moment, plus in-between references and redraws |
 | Done | Berry says what was drawn, and honestly what couldn't be | none |
 
 Every turn works like this:
@@ -47,6 +47,40 @@ how it should look, the whole production is written into Strawberry through its 
 (`strawberry.ts`), into an isolated store (`strawberry-home/`, never the shared one). The person's
 words are captured as the source of what they said, and a proposal is the source of what was
 filled in.
+
+### Continuity
+
+A storyboard has to read as one sequence, not as separate pictures of the same world. Before
+any moment is drawn, `continuity.ts` makes a plan from the breakdown and Jev's judgments. Jev
+decides three things:
+- which earlier moment each one must match;
+- whether two moments face the same side of a place;
+- whether a change (a head turned to ice) still holds.
+
+What each moment is drawn from depends on how the camera moves:
+
+| How it follows an earlier moment | Drawn from that moment as | Takes |
+|---|---|---|
+| Same place, side and framing | an edit base | the picture itself, a moment later |
+| Same side, new framing | composition | where the room and everyone in it are |
+| The other side of the room | lighting | the light and how people look, not the walls |
+| Another place, same people | identity | how the people look now |
+| A jump the dream made (only if they told it) | composition, as a match cut | the framing; the dream changes the rest |
+
+Other rules:
+- **Sheets.** They always go in for identity.
+- **Base edits.** At most two run in a row, then a moment is redrawn from the sheets so drift
+  stops.
+- **Ghosts.** An in-between reference is made only when it is needed: a changed look that
+  happened out of view and is then seen twice, an edit that would otherwise change three things
+  at once, or a close-up that is the first to face a side of a room that wider moments need.
+  Ghosts are never shown as the dream.
+- **Order.** Moments are drawn as what they need lands.
+- **Approval.** The chat approves a moment for what follows only when the judge saw everything
+  in it; otherwise what follows waits for the person's verdict, and Berry says so.
+- **Corrections.** A correction redraws only the later pictures it touches.
+- **What Strawberry records.** Everything goes into Strawberry as `continuity_from`,
+  `continuity.before`/`after`, `transition` and `match_frame`, and the engine checks the chain.
 
 The loop, the judge's evidence rules and the reply contract are copied from vibechk's
 two-call form lab (`experiments/two-call-form`, commit adcbaccdd), with each file's
@@ -104,14 +138,19 @@ Open http://127.0.0.1:8790, press **New dream** and tell a dream the way you'd t
 
 Say "that's right", correct anything in your own words, or say you'd leave it to Berry. The
 right-hand panel shows what Berry has understood, the production, and every picture with the
-judge's count of the declared details it saw.
+judge's count of the declared details it saw. Each moment there says what it was drawn from and
+why, with the judge's continuity check against those pictures. The in-between references and the
+plan's findings are listed under the moments.
+
+A simulated run (`simulate.ts`) is saved beside your own conversations; restart the page to open
+it there.
 
 A dream costs roughly $0.15 × (people + places + things + moments + redraws): usually $1–2, and
 never more than the limit.
 
 Known limits:
-- Frames are drawn from the approved sketches, not from the frame before, so continuity between
-  frames rests on the sketches.
+- Without the judge on the PC, each moment drawn from another waits for the person's verdict on
+  it, so the moments come one after another as they answer.
 - The judge's badge informs, and decides nothing; it hasn't been measured against people's
   verdicts yet.
 - A style option can still carry some of the dream's content (a little ice at a woman's feet).
@@ -151,7 +190,8 @@ It writes the full transcripts to `runs/`.
 | `ground.ts` | Jev's check that every detail marked as said is in the person's words |
 | `strawberry.ts` | Writes the production into Strawberry through its JSON CLI |
 | `sheets.ts` | Profiles, sketch prompts, and the engine calls that draw, approve and select them |
-| `frames.ts` | The moments: frame prompts and their references from the approved sketches |
+| `continuity.ts` | The continuity plan: what each moment is drawn from, and the in-between references it needs. Pure |
+| `frames.ts` | The moments and in-between references: their prompts, with the sketches and earlier moments as references |
 | `judge.py` | Bridge to the engine's remote judge, which checks a take against its declared facts |
 | `boot.ts` | Loads the keys before any module reads them |
 | `simulate.ts` | Simulated dreamers |

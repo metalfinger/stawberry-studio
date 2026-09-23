@@ -416,6 +416,96 @@ describe('a whole conversation', () => {
     expect(store.get(id)!.images).toBe(8);
   });
 
+  test('without a judge, a moment drawn from another waits for their verdict on it', async () => {
+    const framesStarted: { id: string; refs: string[] }[] = [];
+    const verdicts: [string, boolean, string][] = [];
+    let reaction: Record<string, Answer> = {};
+    const statuses = new Map<string, string>();
+    const host = fakeHost();
+    const store = new SessionStore(cfg, {
+      jev: fakeJev((q) => {
+        const out = script(q);
+        if (q.profile_reply) out.profile_reply = pick('confirmed');
+        if (q.sketch_reaction) Object.assign(out, reaction);
+        return out;
+      }),
+      host,
+      producer: async () => ({ breakdown, downgraded: [], notes: [], ms: 1 }),
+      write: async () => ({
+        projectId: 'p',
+        ids: { said: 'src-said', proposal: 'src-proposal', l1: 'node-l1', t1: 'node-t1', m1: 'cut-m1', m2: 'cut-m2' },
+        home: '/tmp',
+        created: { project: 1, scene: 1, shot: 2, cut: 2, character: 0, location: 1, prop: 1 },
+        cuts: 2,
+        readyCuts: 0,
+        issues: [],
+        ms: 1,
+      }),
+      sheets: {
+        start: async ({ item }) => {
+          statuses.set(`job-${item.id}`, 'running');
+          return { recipeId: `r-${item.id}`, jobId: `job-${item.id}`, usd: 0.15 };
+        },
+        status: async (jobId, nodeId) =>
+          statuses.get(jobId) === 'ready'
+            ? { state: 'ready', mediaId: `media-${nodeId}-${jobId}`, mediaPath: `${nodeId}.png` }
+            : { state: 'running' },
+        review: async ({ mediaId, approved, author }) => {
+          verdicts.push([mediaId, approved, author ?? 'human']);
+        },
+        retryCollection: async () => {},
+        startFrame: async ({ item, references }) => {
+          framesStarted.push({ id: item.id, refs: references.map((r) => `${r.role}:${r.media_id}`) });
+          statuses.set(`job-${item.id}`, 'running');
+          return { recipeId: `r-${item.id}`, jobId: `job-${item.id}`, usd: 0.15 };
+        },
+      },
+      watchEveryMs: 10,
+    });
+    const { id } = store.create();
+    await store.open(id);
+    for (const text of [
+      'a train board in my kitchen',
+      'it said zikery, then I woke',
+      'yes',
+      'yes please',
+      'the poster one',
+    ])
+      await store.message(id, text);
+    await store.message(id, 'yes, that is the kitchen');
+    statuses.set('job-l1', 'ready');
+    statuses.set('job-t1', 'ready');
+    await store.settle(id);
+    await store.message(id, 'ooh');
+    reaction = { sketch_reaction: pick('looks_right') };
+    const toFrames = await store.message(id, 'both look right');
+    expect([toFrames.move?.kind, toFrames.phase]).toEqual(['sheets_done', 'frames']);
+
+    // The wide is drawn and lands; with no judge to vouch for it, the close-up drawn from it waits.
+    await store.settle(id, 50);
+    statuses.set('job-m1', 'ready');
+    await store.settle(id, 100);
+    expect(framesStarted.map((f) => f.id)).toEqual(['m1']);
+    expect(store.get(id)!.build!.frames!.map((f) => [f.id, f.status])).toEqual([
+      ['m1', 'ready'],
+      ['m2', 'waiting'],
+    ]);
+
+    // Shown, the reply says what carries on from it; their "looks right" lets the close-up go on.
+    reaction = {};
+    await store.message(id, 'can I see them?');
+    expect(host.calls.at(-1)!.find((m) => m.content.startsWith('<brief>'))!.content).toContain(
+      'The next moments carry on from The kitchen, with the board on the wall',
+    );
+    reaction = { sketch_reaction: pick('looks_right'), ok_m1: noul(0.9) };
+    await store.message(id, 'yes, that is my kitchen');
+    expect(verdicts.at(-1)).toEqual(['media-cut-m1-job-m1', true, 'human']);
+    expect(framesStarted.at(-1)).toEqual({
+      id: 'm2',
+      refs: ['prop:media-node-t1-job-t1', 'location:media-node-l1-job-l1', 'composition:media-cut-m1-job-m1'],
+    });
+  });
+
   test('each probe is counted, and a goal is asked at most twice', async () => {
     const store = new SessionStore(cfg, {
       jev: fakeJev(() => ({ ...told('telling', 1), finished_telling: noul(0.9) })),

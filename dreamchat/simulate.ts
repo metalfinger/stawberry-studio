@@ -1,6 +1,7 @@
 // Simulated dreamers. A model plays someone who knows only one dream, and talks to the real
-// harness (real judge, real host) until the conversation closes. Nothing is drawn, so a run
-// costs only text calls.
+// harness (real judge, real host) until the conversation closes. With FAL_KEY set the sketches
+// and moments are really drawn, so a run costs images; without it, the offline fixture draws.
+// Each run is saved beside the page's conversations and can be opened there.
 //
 //   bun run simulate.ts dreams/icehead.md
 //   bun run simulate.ts dreams/*.md --max 30
@@ -62,6 +63,9 @@ async function run(file: string, max: number) {
     reviseItem,
     judge: judgeAvailable() ? judgeTake : undefined,
     judgeContinuity: judgeAvailable() ? judgeContinuity : undefined,
+    // Kept beside the web page's own conversations, so a simulated run can be opened there,
+    // pictures, plan and all, after the page is restarted.
+    dir: join(import.meta.dir, 'state'),
   });
   const { id } = store.create(`simulated: ${slug}`);
 

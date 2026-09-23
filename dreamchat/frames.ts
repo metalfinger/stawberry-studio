@@ -7,7 +7,7 @@
 // in view is said out loud, and the style tokens are quoted word for word.
 import type { ContinuityPlan, PlanRef } from './continuity';
 import type { Breakdown, Moment, StyleOption } from './producer';
-import { type Item, styleBlock } from './sheets';
+import { type Item, styleBlock, toldColours } from './sheets';
 
 const FRAMING: Record<Moment['distance'], string> = {
   close: 'The subject fills nearly the whole frame edge to edge; the background is a thin strip and little more.',
@@ -247,7 +247,7 @@ export function framePrompt(
     purpose ? `Its part in the story: ${purpose}.` : '',
     feeling ? `It should feel: ${feeling}.` : '',
     point ? `The one thing this frame must show: ${point}.` : '',
-    styleBlock(style),
+    styleBlock(style, toldColours(frame, ...inView)),
     // The ice-head frames came back with the whole woman made of ice (23 Sep): what the action
     // changes, and nothing else, differs from the references.
     references.length
@@ -308,7 +308,11 @@ export function ghostPrompt(
             : '',
           `Keep everything else exactly as in image 1: ${keep}.`,
         ];
-  const prompt = [...lines, styleBlock(style), `One single picture, not a sheet or a grid. ${NO_WORDS}`]
+  const prompt = [
+    ...lines,
+    styleBlock(style, toldColours(sheet)),
+    `One single picture, not a sheet or a grid. ${NO_WORDS}`,
+  ]
     .filter(Boolean)
     .join('\n\n');
   return { prompt, references, depicted: sheet.nodeId ? [sheet.nodeId] : [] };

@@ -175,12 +175,42 @@ export function colourName(hex: string): string {
   return best[0];
 }
 
-export function styleBlock(style: StyleOption): string {
+const COLOUR_WORDS =
+  /\b(red|scarlet|crimson|blue|navy|turquoise|green|emerald|yellow|golden|gold|orange|purple|violet|pink|white|black|grey|gray|brown|silver|beige)\b/gi;
+
+/**
+ * The colours a dream itself gives, from what the person said: "a string of blue balloons" is
+ * blue whatever the chosen look. A muted palette drew them silver (23 Sep); the dream's own
+ * detail wins over the treatment.
+ */
+export function toldColours(...items: Item[]): string[] {
+  const out = new Set<string>();
+  for (const it of items)
+    for (const d of Object.values(it.fields))
+      if (d.said && d.value)
+        for (const m of d.value.matchAll(new RegExp(COLOUR_WORDS.source, 'gi'))) {
+          // The phrase around the colour, so it lands on the right thing: "blue balloons".
+          const phrase = d.value
+            .slice(m.index ?? 0)
+            .split(/[,;.]/)[0]
+            .split(/\s+/)
+            .slice(0, 3)
+            .join(' ');
+          out.add(phrase.toLowerCase());
+        }
+  return [...out];
+}
+
+export function styleBlock(style: StyleOption, told: string[] = []): string {
   const colours = [...new Set(style.palette_hex.map(colourName))];
   return [
     `Style: ${style.name}. ${style.line}`,
     style.tokens.length ? `Technique, followed exactly: ${style.tokens.join('; ')}.` : '',
-    colours.length ? `Colours, and no others: ${colours.join(', ')}.` : '',
+    colours.length
+      ? told.length
+        ? `Colours: ${colours.join(', ')}, except what the dream itself gives a colour, which keeps it exactly: ${told.join('; ')}.`
+        : `Colours, and no others: ${colours.join(', ')}.`
+      : '',
     style.lighting_rules ? `Light: ${style.lighting_rules}` : '',
   ]
     .filter(Boolean)
@@ -214,7 +244,7 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
         ? `A single wide picture of ${item.name}, as it ordinarily looks, with no people in it, showing the whole place and how it is laid out.`
         : `A single clear picture of ${item.name} on its own, as it ordinarily looks, seen at a slight angle so its shape and materials read.`;
   const background = item.kind === 'location' ? '' : 'Plain, uncluttered background. ';
-  return [layout, facts, styleBlock(style), `${background}${NO_WORDS}`].filter(Boolean).join('\n\n');
+  return [layout, facts, styleBlock(style, toldColours(item)), `${background}${NO_WORDS}`].filter(Boolean).join('\n\n');
 }
 
 export type SheetEngine = {
