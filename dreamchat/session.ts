@@ -1612,8 +1612,16 @@ export class SessionStore {
     while (Date.now() < until) {
       await this.serial(id, async () => undefined);
       const s = this.sessions.get(id);
-      const drawing = [...(s?.build?.items ?? []), ...(s?.build?.frames ?? [])].some(
-        (i) => i.status === 'drawing' || (i.status === 'waiting' && s?.phase === 'frames'),
+      // A moment waiting on a picture the person hasn't answered for yet is not going to start by
+      // waiting: a simulated turn sat out the whole timeout for each of them.
+      const frames = s?.build?.frames ?? [];
+      const startable = (i: Item) =>
+        (i.needs ?? []).every((n) => {
+          const x = frames.find((y) => y.id === n);
+          return !x || x.status === 'failed' || (x.status === 'ready' && (x.kind === 'ghost' || !!x.review || !!x.continuityApproved));
+        });
+      const drawing = [...(s?.build?.items ?? []), ...frames].some(
+        (i) => i.status === 'drawing' || (i.status === 'waiting' && s?.phase === 'frames' && startable(i)),
       );
       if (s?.draft?.status !== 'drafting' && s?.production?.status !== 'writing' && !drawing) return;
       await Bun.sleep(100);
