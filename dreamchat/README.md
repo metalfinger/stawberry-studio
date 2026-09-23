@@ -171,6 +171,12 @@ Known limits:
 - A style option can still carry some of the dream's content (a little ice at a woman's feet).
 - A download from fal's CDN sometimes times out; it is collected again twice at no cost before
   the picture counts as failed, and Berry says honestly if one never arrives.
+- Who stands where is kept by words and checked by the judge; the model can still swap two
+  people, and a picture gets one repair.
+- Strawberry's palette question is literal: skin and denim fail a cold palette, so its "no" is
+  noise for pictures of people.
+- A submission cut off before the provider answered (Higgsfield's 503) stays in doubt until
+  someone checks the account; `resume.ts --redraw` draws it again once they have.
 
 ### Resuming a dream
 
