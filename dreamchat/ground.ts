@@ -40,7 +40,8 @@ export function groundingQuestions(b: Breakdown, transcript: Exchange[]): Record
     if (detail.said && detail.value) add(path, `${label} "${detail.value}"?`);
   // A moment is judged on what is in it, not on how near it is shown: the same told moment,
   // framed wide and then close, is still what they said.
-  for (const m of moments(b)) if (m.said) add(m.id, `this was in the dream, however near or far it is shown — "${m.action}"?`);
+  for (const m of moments(b))
+    if (m.said) add(m.id, `this was in the dream, however near or far it is shown — "${m.action}"?`);
   return q;
 }
 
