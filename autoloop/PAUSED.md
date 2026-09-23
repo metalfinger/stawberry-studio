@@ -1,5 +1,12 @@
 # Paused overnight run — resume instructions
 
+> **Update, 23 Sep — read this first.** A blind review of the eight "accepted" frames rejected all
+> eight (my scores 0.90–0.93, blind scores 0.19–0.66). Story 1 is at **0 of 11** independently
+> accepted, not 8 of 11. See the reassessment at the end of `autoloop/JOURNAL.md` and the `open`
+> list in `state.json` for what to fix before generating anything else. The store is also backed
+> up outside git at `~/Documents/Strawberry-Backups/icehead-2026-09-23.strawberry.zip` — the
+> SQLite store is gitignored, so on another PC restore from that archive rather than a checkout.
+
 Paused 22 Sep 2026, ~06:15 IST, by Hiren's request to conserve Claude usage. Nothing is at risk:
 all work is committed and pushed to `origin/lab/agent-portability` (latest `60e5d18`). The store,
 the harness code, and the journal all persist exactly as left.

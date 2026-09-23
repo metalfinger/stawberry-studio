@@ -19,7 +19,7 @@
         "transformation across frames"
       ],
       "project_id": "5b0eccc3-70a6-491b-b91d-13b54474d022",
-      "stage": "cuts 8/11 current against the corrected bible"
+      "stage": "0/11 accepted after blind review (8 self-passed frames all rejected by independent evaluation)"
     },
     {
       "slug": "effigy",
@@ -251,8 +251,50 @@
   ],
   "iterations": 7,
   "open": [
-    "three cuts left: the angles, the horse's head, the closing wide with its match_frame",
-    "the standing full-figure block counts above its frame's range; watch rather than reject",
-    "the autoclave is re-drawn at new proportions in several cuts; matches_sheet catches it, the prompt does not prevent it"
-  ]
+    "set policy.require_stranger=true for autonomous runs: the host must not be the only evaluator",
+    "rewrite `continues` and the base-reference instruction: same world (identity, state, geography, props), not same framing",
+    "the head renders as a cut gem in five takes; try a reference image of a rough block rather than more prompt text",
+    "add tests for undeclared, viewpoint, continues, feet, base_from, rubric drift, prompt-scoped can_retry",
+    "move the prompt builder and reanswer into backend/studio",
+    "only then: story 2 in a different style to test transfer"
+  ],
+  "reassessment_2026_09_23": {
+    "blind_vs_mine": {
+      "1": [
+        0.93,
+        0.4
+      ],
+      "2": [
+        0.92,
+        0.4
+      ],
+      "3": [
+        0.92,
+        0.4
+      ],
+      "4": [
+        0.91,
+        0.66
+      ],
+      "5": [
+        0.9,
+        0.35
+      ],
+      "6": [
+        0.9,
+        0.4
+      ],
+      "7": [
+        0.91,
+        0.4
+      ],
+      "8": [
+        0.9,
+        0.19
+      ]
+    },
+    "average_gap": 0.51,
+    "finding": "self-evaluation is generous by ~0.5 consistently; the gate is sound once a stranger record exists",
+    "harness_bug": "continues question and base-reference instruction demand same framing; continuity should mean same world, not same shot"
+  }
 }

@@ -420,3 +420,47 @@ Ruff clean.
 
 **Next.** The angles, the horse's head — the frame the whole dream is for — and the closing wide,
 which carries a `match_frame` back to the opening.
+
+## Reassessment — 23 Sep — the eight accepted frames, checked blind
+
+Eight blind evaluators, one per accepted frame, each given the image, its question list and its
+reference sheets and nothing else. **None of the eight survives.** Every frame I had passed at
+0.90–0.93 was scored far lower by the blind evaluator, and the gate now rejects all eight.
+
+| # | Cut | Mine | Blind | Gap | What failed, per the blind evaluator |
+|---|---|---|---|---|---|
+| 1 | The laboratory | 0.93 | 0.40 | 0.53 | an invented bowl of ice on the bench; the autoclave has two gauges where its own sheet has one |
+| 2 | Talking by the autoclave | 0.92 | 0.40 | 0.52 | clasped hands unreadable; an invented monogram in the corner; a bottle inked with the cold blue |
+| 3 | She excuses herself | 0.92 | 0.40 | 0.52 | right boot malformed; hem shortened and boots swapped against the sheet; standing, not walking |
+| 4 | At the far end | 0.91 | 0.66 | 0.25 | near-copy of the location plate; collar and apron straps drift from the sheet |
+| 5 | She returns | 0.90 | 0.35 | 0.55 | the block is a rounded gem, not a rough block; a cold-ink smear on the floor; a floating sole |
+| 6 | Standing naturally | 0.90 | 0.40 | 0.50 | the block is a symmetric cut gem, and its shape changed from the frame before |
+| 7 | The block | 0.91 | 0.40 | 0.51 | figure enlarged fivefold while the room stayed put; the autoclave vanished; the door moved |
+| 8 | The first channels | 0.90 | 0.19 | 0.71 | no channels and nothing rounding — the beat is missing; the block grew and runs off the top |
+
+Average gap 0.51, all in the same direction. The earlier two blind runs found the same thing (0.45,
+0.48). **The evaluator is the weak link, not the gate:** the moment an independent record exists,
+`take_status` refuses every one of these takes for the reasons it was built to use. What never
+happened overnight was an independent record on most takes — the loop's instruction asked for a
+blind evaluator on every third take and got one in twenty-three.
+
+Where the blind evaluator could be wrong: two frames turn on judgement calls about the head
+("a gem" versus "a rough block") and one on hand legibility at about 80 pixels. None of the eight
+has a single contested answer carrying the verdict; each is capped by at least one concrete,
+checkable fault — an invented object, a missing prop, a malformed boot, a shape that changed between
+cuts.
+
+**One of the failures is the harness's own fault.** "The block" is framed close-up but chains from
+a full-body frame. The prompt builder then tells the generator "same objects in the same places,
+do not restage", and the `continues` question asks "the same objects at the same size in the same
+places" — both contradicting the cut's declared change of shot size. Continuity across a cut is
+*the same world*, not *the same framing*: identity, state, geography and props must hold while
+size and position change with the camera. The question and the base-reference instruction both
+need rewriting to say that.
+
+**The persistent generator failure** is the head: five takes across four cuts produce a symmetric
+cut gem where the declared state is a rough, unworked block, despite the state text saying "not
+rounded, not a lozenge". Prompt wording has stopped moving it; a reference image of a rough block
+is the next thing to try.
+
+**Cost.** Eight blind runs, about 570k Claude tokens between them, no Higgsfield credits.
