@@ -188,6 +188,8 @@ export type StoreDeps = {
   watchEveryMs?: number;
   /** The image judge: checks a finished take against its declared facts. Absent: no check. */
   judge?: (mediaId: string, opts?: { facts?: boolean }) => Promise<Check>;
+  /** Words for a person's look when nobody described it, filled in as guesses before the sketch. */
+  proposeLook?: (name: string, fields: Record<string, Detail>, transcript: string) => Promise<Record<string, Detail>>;
   /** The continuity check: a take beside the pictures it was drawn from. Absent: no check. */
   judgeContinuity?: (mediaId: string, checks: { with: string | null; text: string }[]) => Promise<Check>;
   dir?: string;
@@ -1151,14 +1153,28 @@ export class SessionStore {
     s.images += 1;
     const snapshot = structuredClone(item);
     const style = s.style;
-    this.deps.sheets
-      .start({
-        item: snapshot,
-        style,
-        sources: { said: ids.said, proposal: ids.proposal },
-        reason: `The person asked to see their dream drawn and settled this profile in conversation; approved within the ${IMAGE_CAP}-picture limit.`,
-        maxUsd: MAX_USD_PER_IMAGE,
-      })
+    const sheets = this.deps.sheets;
+    // A person nobody described gets words for their look first, as our guesses, so every
+    // picture of them carries the same look in words as well as in the image.
+    const unknown =
+      item.kind === 'character' &&
+      !['appearance', 'wardrobe'].some((k) => item.fields[k]?.value) &&
+      this.deps.proposeLook;
+    const looked = unknown
+      ? this.deps.proposeLook!(item.name, item.fields, renderTranscript(s.transcript))
+          .catch(() => item.fields)
+          .then((fields) => (snapshot.fields = fields))
+      : Promise.resolve(null);
+    looked
+      .then(() =>
+        sheets.start({
+          item: snapshot,
+          style,
+          sources: { said: ids.said, proposal: ids.proposal },
+          reason: `The person asked to see their dream drawn and settled this profile in conversation; approved within the ${IMAGE_CAP}-picture limit.`,
+          maxUsd: MAX_USD_PER_IMAGE,
+        }),
+      )
       .then(
         (r) =>
           this.serial(s.id, () =>
@@ -1167,6 +1183,7 @@ export class SessionStore {
               if (!it) return;
               it.jobId = r.jobId;
               it.recipeId = r.recipeId;
+              if (unknown) it.fields = snapshot.fields;
               x.spentUsd = Math.round((x.spentUsd + (r.usd ?? 0)) * 100) / 100;
             }),
           ).then(() => this.watch(s.id)),

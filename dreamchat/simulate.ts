@@ -11,7 +11,7 @@ import { basename, join } from 'node:path';
 import { dreamConfig } from './dream';
 import { callJev } from './jev';
 import { callDeepseek, callHost, type ChatMessage } from './llm';
-import { details, moments, reviseItem } from './producer';
+import { details, moments, proposeLook, reviseItem } from './producer';
 import { liveProducer, ownStyle, SessionStore } from './session';
 import { judgeAvailable, judgeContinuity, judgeTake, liveSheets, PROVIDER, spawnWorker } from './sheets';
 import { REPO, STRAWBERRY_HOME, STRAWBERRY_PYTHON, strawberryAvailable, writeProduction } from './strawberry';
@@ -61,6 +61,7 @@ async function run(file: string, max: number) {
     write: strawberryAvailable() ? writeProduction : undefined,
     sheets: strawberryAvailable() ? liveSheets : undefined,
     reviseItem,
+    proposeLook,
     judge: judgeAvailable() ? judgeTake : undefined,
     judgeContinuity: judgeAvailable() ? judgeContinuity : undefined,
     // Kept beside the web page's own conversations, so a simulated run can be opened there,

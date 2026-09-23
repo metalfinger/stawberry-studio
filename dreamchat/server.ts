@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { dreamConfig } from './dream';
 import { callJev, jevAvailable } from './jev';
 import { callHost, HOST_MODEL } from './llm';
-import { reviseItem } from './producer';
+import { proposeLook, reviseItem } from './producer';
 import { IMAGE_CAP, liveProducer, ownStyle, SessionStore } from './session';
 import { judgeAvailable, judgeContinuity, judgeTake, liveSheets, PROVIDER, spawnWorker } from './sheets';
 import { REPO, STRAWBERRY_HOME, STRAWBERRY_PYTHON, strawberryAvailable, writeProduction } from './strawberry';
@@ -23,6 +23,7 @@ const store = new SessionStore(cfg, {
   write: strawberryAvailable() ? writeProduction : undefined,
   sheets: strawberryAvailable() ? liveSheets : undefined,
   reviseItem,
+  proposeLook,
   judge: judgeAvailable() ? judgeTake : undefined,
   judgeContinuity: judgeAvailable() ? judgeContinuity : undefined,
   dir: join(import.meta.dir, 'state'),

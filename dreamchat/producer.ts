@@ -97,7 +97,7 @@ const SYSTEM = `You are the producer for Strawberry Studio, a tool that turns a 
 Mark every detail "said": true ONLY when the person's own words give it. Anything you infer, fill in or choose is "said": false — a guess the person will be asked to confirm. When nobody knows a detail and the pictures don't need it, use {"value": null, "said": false}. Never present a guess as said.
 
 ## Breakdown (Story Architect)
-- Scenes in story order. A new scene when the place or the time changes.
+- Scenes in story order. A new scene when the place or the time changes. Where the story goes somewhere, even briefly and nearby (a drive to a bridge, a walk down the road, another room), that is its own place with its own id: pictures of one place are drawn to match each other, so a place that is really two would put the bridge in front of the house.
 - Each scene holds moments in order. A moment is ONE still picture: one decisive visible action, where it is, who and what is in view. A beat with two actions is two moments.
 - 3 to 10 moments for the whole dream, in the person's order and words. A dream that is a single image still gets at least 3: where it is (wide), the thing itself, and the detail that matters most (close). Framing the same told moment differently is not inventing.
 - "action" says what happens or what is there, in plain words. Never the camera: "wide view of", "close-up of" and the like belong in "distance", not in the action.
@@ -216,6 +216,46 @@ export async function reviseItem(
     const v =
       typeof next[k] === 'string' && (next[k] as string).trim() ? (next[k] as string).trim().slice(0, 600) : null;
     out[k] = v !== null && v !== d.value ? { value: v, said: true } : d;
+  }
+  return out;
+}
+
+const PROPOSE_LOOK = `Someone from a person's dream is about to be drawn, and nothing is known of how they look: the person left it to us. From the conversation, fill in ONLY the empty fields of their profile with a plain, specific, ordinary guess a picture can keep to: age range, hair (colour, length, how it's worn), build, and clothes with their colours. Nothing from the story's events (no transformations, nothing that happens to them), nothing remarkable unless the conversation says so, and nothing that contradicts what the conversation says. Return JSON only: {"fields": {...}} with exactly the same keys as the profile, each value a short plain phrase; keep every value already given exactly as it is.`;
+
+/**
+ * Words for a look nobody described. A person drawn only from an image drifts as soon as they
+ * are seen another way: the dreamer, seen from behind, came back as someone else (23 Sep). The
+ * words ride along in every picture of them; they are our guesses, and marked so.
+ */
+export async function proposeLook(
+  name: string,
+  fields: Record<string, Detail>,
+  transcript: string,
+): Promise<Record<string, Detail>> {
+  const current = Object.fromEntries(Object.entries(fields).map(([k, d]) => [k, d.value]));
+  const res = await callDeepseek(
+    [
+      { role: 'system', content: PROPOSE_LOOK },
+      {
+        role: 'user',
+        content: `The conversation:\n\n${transcript}\n\nThe profile of ${name}:\n${JSON.stringify(current)}`,
+      },
+    ],
+    { json: true, thinking: PRODUCER_THINKING },
+  );
+  let next: Record<string, unknown> = {};
+  try {
+    next = ((JSON.parse(res.content) as { fields?: Record<string, unknown> }).fields ?? {}) as Record<string, unknown>;
+  } catch {
+    return fields;
+  }
+  const out: Record<string, Detail> = {};
+  for (const [k, d] of Object.entries(fields)) {
+    const raw = typeof next[k] === 'string' ? (next[k] as string).trim() : '';
+    // "none" is not a look: it would be drawn as a line of the prompt.
+    const v = raw && !/^(none|n\/a|unknown|nothing|not known)\.?$/i.test(raw) ? raw.slice(0, 300) : null;
+    // Only what was empty is filled, and as a guess: nothing they said is touched.
+    out[k] = !d.value && v ? { value: v, said: false } : d;
   }
   return out;
 }
