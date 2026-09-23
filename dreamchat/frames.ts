@@ -15,7 +15,8 @@ const FRAMING: Record<Moment['distance'], string> = {
   wide: 'The whole space is in frame and the subject, if any, is small within it.',
 };
 
-const NO_WORDS = 'Do not write any words, letters, numbers or labels anywhere in the image.';
+// A "little round convertible" came back with a real maker's badge on its bonnet (23 Sep).
+const NO_WORDS = 'Do not write any words, letters, numbers or labels anywhere in the image, and no logos or brand badges.';
 
 /**
  * Writing the dream itself contains, from quoted words in the moment: 'zikery' on a board.
@@ -38,7 +39,7 @@ function writingLine(words: string[]): string {
     const letters = w.toUpperCase().replace(/[^A-Z0-9]/g, '');
     return `"${w.toUpperCase()}" (${letters.length} letters: ${letters.split('').join(' ')})`;
   });
-  return `The only writing anywhere in the picture is ${spelled.join(' and ')}, exactly as spelled, and nothing else: no other words, letters, numbers or labels.`;
+  return `The only writing anywhere in the picture is ${spelled.join(' and ')}, exactly as spelled, and nothing else: no other words, letters, numbers, labels, logos or brand badges.`;
 }
 
 /** The moments to draw, one per cut, each with its entry in the continuity plan. */

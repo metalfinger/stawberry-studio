@@ -305,6 +305,10 @@ function sketchCard(it, where = 'chat') {
   cap.append(el('span', {}, it.name), el('span', {}, state[it.status] || it.status));
   card.append(cap);
   if (where === 'panel' && (it.kind === 'cut' || it.kind === 'ghost')) card.append(drawnFrom(it, pieces));
+  // A moment later ones are drawn from, that only the person's verdict can release.
+  const followers = pieces.filter((x) => x.status === 'waiting' && (x.needs || []).includes(it.id));
+  if (it.kind === 'cut' && it.status === 'ready' && !it.review && !it.continuityApproved && followers.length)
+    card.append(el('div', { class: 'judge miss' }, `${followers.map(label).join(', ')} wait${followers.length === 1 ? 's' : ''} for their verdict on this${it.waitsForPerson ? `: ${it.waitsForPerson}` : ''}`));
   if (it.status === 'ready') {
     const img = imageFor(`/api/sketch?id=${encodeURIComponent(session.id)}&item=${encodeURIComponent(it.id)}&v=${it.version}`, it.kind === 'cut' ? `The moment: ${it.name}` : `Sketch of ${it.name}`, where);
     card.append(img);

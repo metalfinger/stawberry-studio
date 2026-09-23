@@ -220,7 +220,7 @@ export function styleBlock(style: StyleOption, told: string[] = []): string {
 // Measured on the first real sheets (23 Sep): "No text, labels or captions" still came back
 // with "front view" under each view, a ruler, and the palette drawn as labelled swatches.
 const NO_WORDS =
-  'Do not write any words, letters, numbers, labels or colour codes anywhere in the image. Do not draw colour swatches, rulers or captions.';
+  'Do not write any words, letters, numbers, labels or colour codes anywhere in the image, and no logos or brand badges. Do not draw colour swatches, rulers or captions.';
 
 const value = (item: Item, field: string) => item.fields[field]?.value ?? '';
 
