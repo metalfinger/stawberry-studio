@@ -215,7 +215,7 @@ export function toldColours(...items: Item[]): string[] {
 
 /** Words that say what a picture is made as. */
 const MEDIUM =
-  /\b(photo\w*|camera|film still|pencil|graphite|charcoal|ink|watercolou?r|gouache|oil|acrylic|paint\w*|pastel|crayon|woodcut|linocut|etching|engraving|print|collage|clay|stop.motion|3d|render\w*|cgi|anime|cartoon|comic|manga|sketch\w*|drawing|drawn|illustrat\w*|mosaic|stained glass|embroider\w*|pixel|vector|poster|screen.?print|risograph|animation|animated)\b/i;
+  /\b(photo\w*|camera|film still|pencil|graphite|charcoal|ink|watercolou?r|gouache|oil paint\w*|oils|acrylic|paint\w*|pastel|crayon|woodcut|linocut|etching|engraving|print|collage|clay|stop.motion|3d render\w*|cgi|anime|cartoon|comic|manga|sketch\w*|drawing|drawn|illustrat\w*|mosaic|stained glass|embroider\w*|pixel art|vector|poster|screen.?print|risograph|animation|animated)\b/i;
 
 /**
  * What every picture of a style is made as. A style that names no medium ("the dream exactly as
@@ -275,7 +275,7 @@ const value = (item: Item, field: string) => item.fields[field]?.value ?? '';
  * carries the story ("a young woman cooking", "the dreamer's aunt"), and a sheet drawn from it
  * came back cooking at a stove (23 Sep). A sheet is the ordinary look, for every picture.
  */
-const LOOK: Record<ItemKind, string[]> = {
+export const LOOK: Record<ItemKind, string[]> = {
   character: ['appearance', 'wardrobe', 'distinctive_features'],
   location: ['geography', 'landmarks', 'light'],
   prop: ['appearance', 'materials'],

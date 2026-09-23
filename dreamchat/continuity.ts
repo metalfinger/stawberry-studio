@@ -104,6 +104,14 @@ export function sameWords(a: string, b: string): boolean {
   return norm(a) === norm(b);
 }
 
+/**
+ * A name as a picture is told it. The people of a dream are named as the dreamer said them, and
+ * "your aunt" in an instruction to a picture brings a viewer ("you") into it: she is "the
+ * dreamer's aunt".
+ */
+export const pictureName = (name: string) =>
+  name.replace(/\byour\b/gi, "the dreamer's").replace(/\byou\b/gi, 'the dreamer');
+
 /** Everything a picture shows that a lasting change can be seen on, its place included. */
 export const inViewAt = (m: Moment) => new Set([...m.visible, ...m.things, ...(m.place ? [m.place] : [])]);
 
@@ -136,7 +144,7 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
   const names = new Map<string, string>([...b.people, ...b.places, ...b.things].map((x) => [x.id, x.name]));
   // The dreamer is "you" in the conversation, but "you" in an instruction to a picture is anyone.
   const dreamerId = b.people.find((p) => p.is_dreamer)?.id;
-  const name = (id: string) => (id === dreamerId ? 'the dreamer' : (names.get(id) ?? id));
+  const name = (id: string) => (id === dreamerId ? 'the dreamer' : pictureName(names.get(id) ?? id));
   const no = (id: string) => (index.get(id) ?? 0) + 1;
   const kindOf = (id: string): 'person' | 'place' | 'thing' =>
     b.places.some((p) => p.id === id) ? 'place' : b.things.some((t) => t.id === id) ? 'thing' : 'person';

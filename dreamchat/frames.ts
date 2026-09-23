@@ -5,10 +5,13 @@
 // nothing to a generator, so say how much of the frame the subject fills; a room referenced from
 // a sheet comes back mirrored unless told which side its walls are on; every detail of what is
 // in view is said out loud, and the style tokens are quoted word for word.
-import type { ContinuityPlan, PlanRef } from './continuity';
+import { type ContinuityPlan, type PlanRef, pictureName } from './continuity';
 import type { Breakdown, Moment, StyleOption } from './producer';
 import { VAGUE } from './producer';
-import { type Item, styleBlock, toldColours } from './sheets';
+import { type Item, LOOK, styleBlock, toldColours } from './sheets';
+
+/** Where the line that says who "you" is goes, when anything told to the picture says "you". */
+const YOU = '\u0000you';
 
 /** A phrase ended as one sentence, however the model ended it. */
 const sentence = (text: string) => `${text.trim().replace(/[.!?;,:\s]+$/, '')}.`;
@@ -116,7 +119,7 @@ export type PlannedInput = { use: PlanRef; item: Item };
 // "You" in an instruction to a picture is anyone, a viewer's hands included: the dreamer is "the dreamer".
 const nameOf = (sheets: Item[], id: string) => {
   const s = sheets.find((x) => x.id === id);
-  return s ? (s.isDreamer ? 'the dreamer' : s.name) : id;
+  return s ? (s.isDreamer ? 'the dreamer' : pictureName(s.name)) : id;
 };
 
 const approved = (s: Item) => s.status === 'ready' && !!s.mediaId && (!!s.review || !!s.continuityApproved);
@@ -152,7 +155,7 @@ export function framePrompt(
     (x) => x.use.kind === 'cut' && (x.use.relation === 'same_setup' || x.use.relation === 'same_side'),
   );
   const viewGhost = usable.find((x) => x.item.ghost?.kind === 'view');
-  const who = (s: Item) => (s.isDreamer ? 'the dreamer' : s.name);
+  const who = (s: Item) => (s.isDreamer ? 'the dreamer' : pictureName(s.name));
 
   const references: FrameReference[] = [];
   const manifest: string[] = [];
@@ -189,10 +192,9 @@ export function framePrompt(
   const facts: string[] = [];
   for (const s of inView) {
     if (s.nodeId) depicted.push(s.nodeId);
-    const known = Object.values(s.fields)
-      .map((d) => d.value)
-      .filter((v): v is string => !!v && !VAGUE.test(v))
-      .join('; ');
+    // How it looks, as its sketch was drawn: "who they are" carries the story ("a young woman
+    // cooking") into every moment they are in.
+    const known = lookOf(s, LOOK[s.kind]);
     const kind = s.kind === 'character' ? 'person' : s.kind === 'location' ? 'place' : 'thing';
     facts.push(`${who(s)} (${kind})${known ? `: ${known}` : ''}.`);
     // Every sheet of what is in view always goes in: consistency starts from them.
@@ -208,7 +210,7 @@ export function framePrompt(
       attach(
         s.mediaId,
         'identity',
-        `${s.name}: this exact person, with the same face, build and clothes`,
+        `${who(s)}: this exact person, with the same face, build and clothes`,
         `who ${who(s)} is${look ? ` (${look})` : ''}: their ${changed.some((st) => /head|face/i.test(st.what)) ? 'build and clothes' : 'face, hair, build and clothes'}, exactly${base ? ', as Image 1 already shows them' : ''}. Nothing else from it: not its pose, background or framing.${except}`,
       );
     } else if (s.kind === 'location') {
@@ -220,21 +222,21 @@ export function framePrompt(
         s.mediaId,
         'location',
         layout
-          ? `${s.name}: this exact place. Keep its walls, windows and doors on the sides the reference puts them; do not mirror or rearrange them`
-          : `${s.name}: its materials, colours and objects only; the layout comes from ${base ? 'the picture being edited' : 'the earlier picture'}`,
+          ? `${who(s)}: this exact place. Keep its walls, windows and doors on the sides the reference puts them; do not mirror or rearrange them`
+          : `${who(s)}: its materials, colours and objects only; the layout comes from ${base ? 'the picture being edited' : 'the earlier picture'}`,
         layout
-          ? `${s.name}${look ? ` (${look})` : ''}: the camera stands inside this place. Keep its walls, windows, doors and furniture where it puts them; do not mirror or rearrange them.`
+          ? `${who(s)}${look ? ` (${look})` : ''}: the camera stands inside this place. Keep its walls, windows, doors and furniture where it puts them; do not mirror or rearrange them.`
           : base || roomFromCut
-            ? `${s.name}${look ? ` (${look})` : ''}: only its materials, colours and objects; where things stand comes from ${base ? 'Image 1' : 'the earlier picture of this place'}.`
-            : `${s.name}${look ? ` (${look})` : ''}: only its materials, colours and objects. It shows the place from another side: this frame faces ${f.looksAt || 'the other way'}.`,
+            ? `${who(s)}${look ? ` (${look})` : ''}: only its materials, colours and objects; where things stand comes from ${base ? 'Image 1' : 'the earlier picture of this place'}.`
+            : `${who(s)}${look ? ` (${look})` : ''}: only its materials, colours and objects. It shows the place from another side: this frame faces ${f.looksAt || 'the other way'}.`,
       );
     } else {
       const look = lookOf(s, ['appearance', 'materials']);
       attach(
         s.mediaId,
         'prop',
-        `${s.name}: this exact object, with the same shape and materials`,
-        `${s.name}${look ? ` (${look})` : ''}: its exact shape, materials and colours, the same in every picture. Nothing else from it.`,
+        `${who(s)}: this exact object, with the same shape and materials`,
+        `${who(s)}${look ? ` (${look})` : ''}: its exact shape, materials and colours, the same in every picture. Nothing else from it.`,
       );
     }
   }
@@ -288,7 +290,7 @@ export function framePrompt(
   const feeling = frame.fields.feeling?.value;
   const point = frame.fields.visual_point?.value;
   const purpose = frame.fields.purpose?.value;
-  const prompt = [
+  const lines = [
     `One picture from the dream, ${f.distance}, ${angle}${f.looksAt ? `, facing ${f.looksAt}` : ''}. ${FRAMING[f.distance]}`,
     manifest.length
       ? `The attached images, in order, and the one thing to take from each:\n${manifest.join('\n')}`
@@ -297,11 +299,7 @@ export function framePrompt(
     (plan?.staging?.length ?? 0) >= 2
       ? `Where they stand, from left to right: ${plan!.staging.map((id) => nameOf(sheets, id)).join(', then ')}. The same in every picture of this scene: they never swap sides.`
       : '',
-    // The moments are told to the dreamer ("she stands before you"), and to a picture "you" is the
-    // viewer: a moment seen from outside came back with a viewer's hands reaching in (23 Sep).
-    f.eyes === 'outside' && /\byou(r|rself)?\b/i.test(`${action} ${point ?? ''}`)
-      ? `"You" in these words is the dreamer, a person in the picture like anyone else. There is no viewer in the picture: no hands, arms or body of the camera.`
-      : '',
+    YOU,
     facts.length ? `In it:\n${facts.join('\n')}` : '',
     states.length ? `Still so from earlier in the dream: ${states.join('; ')}.` : '',
     purpose ? `Its part in the story: ${sentence(purpose)}` : '',
@@ -325,7 +323,19 @@ export function framePrompt(
     // The dream's writing can live in what is in view as well as in the action: a frame of the
     // board without the word quoted in its action came back reading "NONSENSICAL" (23 Sep).
     `One single picture, not a sheet or a grid. ${writingLine(writingIn(action, point, ...inView.flatMap((x) => Object.values(x.fields).map((d) => d.value))))}`,
-  ]
+  ];
+  // The moments are told to the dreamer ("she stands before you"), and to a picture "you" is the
+  // viewer: a moment seen from outside came back with a viewer's hands reaching in (23 Sep). "You"
+  // can be anywhere in what is told, a place's words included ("where you wait"), not only the action.
+  const told = lines.filter((l) => l !== YOU).join('\n');
+  const prompt = lines
+    .map((l) =>
+      l !== YOU
+        ? l
+        : f.eyes === 'outside' && /\byou(r|rself)?\b/i.test(told)
+          ? `"You" in these words is the dreamer, a person in the picture like anyone else. There is no viewer in the picture: no hands, arms or body of the camera.`
+          : '',
+    )
     .filter(Boolean)
     .join('\n\n');
   return { prompt, references, depicted: [...new Set(depicted)] };

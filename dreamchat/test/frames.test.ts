@@ -152,6 +152,19 @@ describe('a moment drawn from earlier moments', () => {
     expect(prompt.indexOf('The attached images, in order')).toBeLessThan(prompt.indexOf('What happens in this frame'));
   });
 
+  test('someone in a moment is described by their look, never by the story in who they are', () => {
+    const cook: Item = {
+      ...sheet('p1', 'character', 'the young woman'),
+      fields: {
+        identity: { value: 'a young woman cooking', said: true },
+        appearance: { value: 'shoulder-length blonde hair in a pageboy', said: true },
+      },
+    };
+    const { prompt } = framePrompt(moment('m9', 9), [cook, kitchen], style);
+    expect(prompt).toContain('the young woman (person): shoulder-length blonde hair in a pageboy.');
+    expect(prompt).not.toContain('cooking');
+  });
+
   test('the people in view are told where they stand, left to right', () => {
     const bo = { ...sheet('p2', 'character', 'you'), isDreamer: true };
     const two = moment('m1', 1);
@@ -253,6 +266,43 @@ describe('the dreamer in the words of a moment', () => {
     expect(framePrompt(outside, [], style).prompt).toContain('"You" in these words is the dreamer');
     const seen = { ...outside, frame: { ...outside.frame!, eyes: 'dreamer' as const } };
     expect(framePrompt(seen, [], style).prompt).not.toContain('"You" in these words is the dreamer');
+  });
+
+  test("someone named as the dreamer said them is named for the picture: 'your aunt' is the dreamer's aunt", () => {
+    const aunt: Item = {
+      id: 'p4',
+      kind: 'character',
+      name: 'your aunt',
+      fields: { wardrobe: { value: 'a blue top', said: true } },
+      status: 'ready',
+      version: 1,
+      mediaId: 'media-p4',
+      review: 'approved',
+    };
+    const street: Item = {
+      id: 'l2',
+      kind: 'location',
+      name: 'outside the house',
+      fields: { geography: { value: 'where you wait for your aunt', said: false } },
+      status: 'ready',
+      version: 1,
+      mediaId: 'media-l2',
+      review: 'approved',
+    };
+    const arrives: Item = {
+      id: 'm8',
+      kind: 'cut',
+      name: 'm8',
+      fields: { action: { value: 'The convertible pulls up.', said: true } },
+      status: 'waiting',
+      version: 0,
+      frame: { visible: ['p4'], things: [], place: 'l2', distance: 'medium', eyes: 'outside', key: false, order: 8 },
+    };
+    const { prompt } = framePrompt(arrives, [aunt, street], style);
+    expect(prompt).toContain("who the dreamer's aunt is");
+    expect(prompt).not.toContain('who your aunt is');
+    // "You" left anywhere in what is told, a place's words included, is said to be the dreamer.
+    expect(prompt).toContain('"You" in these words is the dreamer');
   });
 
   test('seen from outside, the dreamer is named as in the picture only when they are in it', () => {

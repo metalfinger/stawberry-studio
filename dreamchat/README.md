@@ -187,6 +187,17 @@ Nothing already paid for is redrawn. A picture whose submission is in doubt (a 5
 provider answered) is drawn again only when named with `--redraw`, after the provider's account
 shows it never ran.
 
+### Seeing every prompt before paying
+
+```sh
+bun run plan.ts <session id> [m5 g2 …]
+```
+
+It prints the dream's continuity plan with its findings: the draw order, each moment's shot,
+what it is drawn from, who stands where and what changes. Then comes each picture's prompt and
+references, as if everything before it had been drawn and approved. It makes no model calls and
+draws nothing.
+
 ### The assistant as judge
 
 Each take is written to `judge-queue/<media>.json` with Strawberry's own questions for it and
@@ -236,3 +247,4 @@ It writes the full transcripts to `runs/`.
 | `produce.ts` | Runs the producer and the check on a saved simulated conversation |
 | `resume.ts` | Picks a saved dream's drawing up where it stopped |
 | `judge.ts` | The assistant as judge: the queue folder, and the answers recorded as facts |
+| `plan.ts` | Prints a saved dream's continuity plan and every picture's prompt, before anything is paid for |
