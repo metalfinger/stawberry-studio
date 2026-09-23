@@ -42,7 +42,15 @@ import {
   parseTurnResponse,
   type Thinking,
 } from './llm';
-import { type Breakdown, callProducer, type Detail, normalizeBreakdown, ownStyle, type StyleOption } from './producer';
+import {
+  type Breakdown,
+  callProducer,
+  type Detail,
+  moments,
+  normalizeBreakdown,
+  ownStyle,
+  type StyleOption,
+} from './producer';
 import { type ContinuityPlan, drawOrder, planContinuity } from './continuity';
 import { buildFrames, buildGhosts, type FrameReference, framePrompt, ghostPrompt, type PlannedInput } from './frames';
 import { type Check, type Item, profileOf, type SheetEngine } from './sheets';
@@ -179,7 +187,7 @@ export type StoreDeps = {
   /** How often a running sketch is checked, in ms. */
   watchEveryMs?: number;
   /** The image judge: checks a finished take against its declared facts. Absent: no check. */
-  judge?: (mediaId: string) => Promise<Check>;
+  judge?: (mediaId: string, opts?: { facts?: boolean }) => Promise<Check>;
   /** The continuity check: a take beside the pictures it was drawn from. Absent: no check. */
   judgeContinuity?: (mediaId: string, checks: { with: string | null; text: string }[]) => Promise<Check>;
   dir?: string;
@@ -210,6 +218,16 @@ const userTurns = (s: Session) => s.transcript.filter((e) => e.role === 'user').
  * The sheets to draw, in Strawberry's order: the protagonist, the other people, the places, the
  * things, and last the dreamer, when they are seen at all.
  */
+/** The most people and places asked about one by one; everything else is sketched unasked. */
+const MAX_PEOPLE_ASKED = 2;
+
+/**
+ * The people, places and things to sketch, in Strawberry's order, each marked whether it gets
+ * its own question. A long run of profile questions lost the person (eight in one dream, 23 Sep),
+ * so only what their answer can change is asked: up to two people whose look is partly guessed,
+ * protagonist first, the key moment's place if it is partly guessed, and the dreamer when they
+ * are seen. Everything else is drawn from what they told, and can still be corrected on sight.
+ */
 export function buildItems(b: Breakdown): Item[] {
   const item = (
     id: string,
@@ -228,12 +246,33 @@ export function buildItems(b: Breakdown): Item[] {
   });
   const others = b.people.filter((p) => !p.is_dreamer);
   others.sort((x, y) => Number(y.protagonist) - Number(x.protagonist));
-  return [
-    ...others.map((p) => item(p.id, 'character', p.name, p.fields)),
-    ...b.places.map((l) => item(l.id, 'location', l.name, l.fields)),
+  const guessed = (fields: Record<string, Detail>, keys: string[]) =>
+    keys.some((k) => fields[k]?.value && !fields[k]?.said);
+  const keyPlace = moments(b).find((m) => m.key)?.place;
+  let people = 0;
+  const items = [
+    ...others.map((p) => {
+      const it = item(p.id, 'character', p.name, p.fields);
+      it.ask = people < MAX_PEOPLE_ASKED && guessed(p.fields, ['appearance', 'wardrobe', 'distinctive_features']);
+      if (it.ask) people += 1;
+      return it;
+    }),
+    ...b.places.map((l) => {
+      const it = item(l.id, 'location', l.name, l.fields);
+      it.ask = l.id === keyPlace && guessed(l.fields, ['geography', 'landmarks', 'light']);
+      return it;
+    }),
     ...b.things.map((t) => item(t.id, 'prop', t.name, t.fields)),
-    ...b.people.filter((p) => p.is_dreamer).map((p) => item(p.id, 'character', p.name, p.fields, true)),
+    ...b.people
+      .filter((p) => p.is_dreamer)
+      .map((p) => Object.assign(item(p.id, 'character', p.name, p.fields, true), { ask: true })),
   ];
+  // At least one profile is shown, so the person sees what the pictures will be drawn from.
+  if (!items.some((i) => i.ask)) {
+    const first = items.find((i) => i.kind !== 'prop');
+    if (first) first.ask = true;
+  }
+  return items;
 }
 
 /** The first thing that would be drawn, in plain words: the protagonist, else the first place. */
@@ -522,6 +561,8 @@ export class SessionStore {
           });
       }
     }
+    // A verdict can be what a later moment was waiting for: it is drawn now.
+    if (s.phase === 'frames' && s.build?.frames?.some((f) => f.status === 'waiting')) await this.fillFrames(s, turnNow);
     const settled = !!s.build && s.build.items.every(isSettled);
     const framesSettled = !!s.build?.frames?.length && s.build.frames.every(isSettled);
 
@@ -571,7 +612,7 @@ export class SessionStore {
     // Building: the answer settles the profile on show, its sketch starts, and the next one is shown.
     if (move.kind === 'start') {
       const items = s.draft?.breakdown ? buildItems(s.draft.breakdown) : [];
-      const first = items.find((i) => i.kind !== 'prop') ?? items[0];
+      const first = items.find((i) => i.ask) ?? items[0];
       if (!items.length || !first || !this.deps.sheets || !this.deps.write) phase = 'ready';
       else {
         first.status = 'confirming';
@@ -585,8 +626,8 @@ export class SessionStore {
         if (overlaid.signals.profile_reply === 'changes' && this.deps.reviseItem)
           settling.fields = await this.deps.reviseItem(settling.name, settling.fields, renderTranscript(s.transcript));
         await this.startSketch(s, settling, turnNow);
-        // Things go with the first profile settled: they are drawn from what was said, unasked.
-        const things = s.build.items.filter((i) => i.kind === 'prop' && i.status === 'waiting');
+        // What isn't asked about goes with the first profile settled: drawn from what was said.
+        const things = s.build.items.filter((i) => !i.ask && i.status === 'waiting');
         for (const t of things) await this.startSketch(s, t, turnNow);
         extras.sketching = [settling.isDreamer ? 'you' : settling.name, ...things.map((t) => t.name)].join(' and ');
       }
@@ -610,6 +651,16 @@ export class SessionStore {
       const moments = (s.build.frames ?? []).filter((i) => i.kind === 'cut');
       extras.frameCount = moments.length;
       extras.failed = moments.filter((i) => i.status === 'failed').map((i) => i.name);
+      // Moments on show that what follows is waiting on: the person's verdict lets it go on.
+      extras.waitsOnThem = moments
+        .filter(
+          (i) =>
+            i.status === 'ready' &&
+            !i.review &&
+            !i.continuityApproved &&
+            (s.build?.frames ?? []).some((d) => d.status === 'waiting' && d.needs?.includes(i.id)),
+        )
+        .map((i) => i.name);
       if (move.kind === 'frames_drawing') {
         const fresh = moments.filter((i) => i.status === 'ready' && !i.announced);
         const key = fresh.find((i) => i.frame?.key);
@@ -761,10 +812,10 @@ export class SessionStore {
     );
   }
 
-  /** The next profile to show. Things are sketched without their own question. */
+  /** The next profile to show. What isn't asked about is sketched without its own question. */
   private nextItem(b: Build): Item | undefined {
     const at = b.items.findIndex((i) => i.id === b.current);
-    return b.items.slice(at + 1).find((i) => i.status === 'waiting' && i.kind !== 'prop');
+    return b.items.slice(at + 1).find((i) => i.status === 'waiting' && i.ask);
   }
 
   /**
@@ -806,7 +857,17 @@ export class SessionStore {
       if (f.status !== 'waiting') continue;
       const needs = (f.needs ?? []).map((id) => frames.find((x) => x.id === id)).filter((x): x is Item => !!x);
       if (needs.some((n) => n.status !== 'ready' && n.status !== 'failed')) continue;
-      for (const n of needs) if (n.status === 'ready') await this.approveForContinuity(s, n, f);
+      let approvedAll = true;
+      for (const n of needs.filter((x) => x.status === 'ready')) {
+        if (n.kind === 'ghost') await this.approveGhost(s, n);
+        else if (n.review) {
+          // Their own verdict approved it; it must be on record before anything is drawn from it.
+          await this.reviews.get(`${s.id}:${n.id}`)?.catch(() => undefined);
+          n.continuityApproved = true;
+        }
+        if (!n.continuityApproved) approvedAll = false;
+      }
+      if (!approvedAll) continue;
       f.dropped = needs.filter((n) => n.status === 'failed').map((n) => n.id);
       if (f.kind === 'ghost') await this.startGhost(s, f, turn);
       else await this.startFrame(s, f, turn);
@@ -814,15 +875,12 @@ export class SessionStore {
   }
 
   /**
-   * Approve a picture so a later one can be drawn from it. The person's own verdict, when there
-   * is one, already approved it. A moment is also selected; a ghost covers its requirement and
-   * is never selected, so the sheet stays its asset's reference.
+   * A ghost is approved by the chat as soon as a moment needs it: it is a reference, never part
+   * of the dream, and its take covers the requirement planned on its asset. It is never
+   * selected, so the sheet stays the asset's reference.
    */
-  private async approveForContinuity(s: Session, n: Item, forItem: Item): Promise<void> {
-    if (n.continuityApproved || n.review) {
-      n.continuityApproved = true;
-      return;
-    }
+  private async approveGhost(s: Session, n: Item): Promise<void> {
+    if (n.continuityApproved) return;
     const users = (s.build?.frames ?? []).filter((x) => x.needs?.includes(n.id)).map((x) => x.name);
     if (this.deps.sheets && n.mediaId && n.nodeId)
       try {
@@ -831,19 +889,52 @@ export class SessionStore {
           nodeId: n.nodeId,
           approved: true,
           author: 'assistant',
-          decision:
-            n.kind === 'ghost'
-              ? `An in-between reference, approved by the chat for continuity: ${n.ghost?.why ?? ''}. Used by: ${users.join('; ')}.`
-              : `Approved by the chat as the continuity source for: ${users.join('; ')}. Not yet seen by the person; their verdict stands above this.`,
-          depicted: n.kind === 'cut' ? (n.depicted ?? []) : [n.nodeId],
-          requirementIds: n.kind === 'ghost' && n.requirementId ? [n.requirementId] : [],
-          select: n.kind !== 'ghost',
+          decision: `An in-between reference, approved by the chat for continuity: ${n.ghost?.why ?? ''}. Used by: ${users.join('; ')}.`,
+          depicted: [n.nodeId],
+          requirementIds: n.requirementId ? [n.requirementId] : [],
+          select: false,
         });
       } catch (e) {
-        forItem.error = `approving ${n.name} for continuity failed: ${String(e).slice(0, 200)}`;
+        n.error = `approving it for continuity failed: ${String(e).slice(0, 200)}`;
       }
     n.continuityApproved = true;
-    if (n.kind === 'ghost') n.review = 'approved';
+    n.review = 'approved';
+  }
+
+  /**
+   * Approve a moment so later moments can be drawn from it, before the person has seen it: only
+   * on the judge's evidence that everyone and everything in it is there (Strawberry counts a
+   * non-human approval of a moment only where its facts record shows each asset). Otherwise, or
+   * without a judge, what follows waits for the person's own verdict.
+   */
+  private async vouch(s: Session, n: Item): Promise<void> {
+    if (n.review || n.continuityApproved || n.kind !== 'cut' || !n.mediaId || !n.nodeId) return;
+    const users = (s.build?.frames ?? []).filter((x) => x.needs?.includes(n.id));
+    if (!users.length) return;
+    const c = n.check;
+    if (!c || c.error || c.unseen?.length) {
+      n.waitsForPerson = c?.unseen?.length
+        ? `the judge could not see ${c.unseen.join('; ')}`
+        : c?.error
+          ? 'the judge is unavailable'
+          : 'no judge here';
+      return;
+    }
+    if (!this.deps.sheets) return;
+    try {
+      await this.deps.sheets.review({
+        mediaId: n.mediaId,
+        nodeId: n.nodeId,
+        approved: true,
+        author: 'assistant',
+        decision: `Approved by the chat as the continuity source for: ${users.map((x) => x.name).join('; ')}. The judge saw everything in it (${c.passed} of ${c.questions} declared facts); the person has not seen it yet, and their verdict stands above this.`,
+        depicted: n.depicted ?? [],
+      });
+      n.continuityApproved = true;
+      n.waitsForPerson = undefined;
+    } catch (e) {
+      n.waitsForPerson = `approving it for continuity failed: ${String(e).slice(0, 160)}`;
+    }
   }
 
   /** The earlier pictures the plan draws this moment from, that are drawn and usable. */
@@ -1203,16 +1294,23 @@ export class SessionStore {
     this.judged.add(mediaId);
     let check: Check;
     try {
-      check = await judge(mediaId);
+      // A moment's check is its facts record: what the chat approves it for continuity on.
+      check = await judge(mediaId, { facts: it.kind === 'cut' });
     } catch (e) {
       check = { questions: 0, passed: 0, failed: [], error: String(e).slice(0, 200) };
     }
-    await this.serial(id, () =>
-      this.update(id, (x) => {
-        const cur = [...(x.build?.items ?? []), ...(x.build?.frames ?? [])].find((i) => i.id === itemId);
-        if (cur && cur.mediaId === mediaId) cur.check = check;
-      }),
-    );
+    await this.serial(id, async () => {
+      const x = structuredClone(this.require(id));
+      const cur = [...(x.build?.items ?? []), ...(x.build?.frames ?? [])].find((i) => i.id === itemId);
+      if (!cur || cur.mediaId !== mediaId) return;
+      cur.check = check;
+      if (cur.kind === 'cut') {
+        await this.vouch(x, cur);
+        await this.fillFrames(x, x.turns.at(-1)?.turn ?? 0);
+      }
+      await this.save(x);
+    });
+    if (this.sessions.get(id)?.build?.frames?.some((f) => f.status === 'drawing')) this.watch(id);
     // A moment is also checked against the pictures it was drawn from: the same room, the same
     // people, the change still there. Informs, like the badge; decides nothing.
     const checks = (it.frame?.plan?.criteria ?? [])

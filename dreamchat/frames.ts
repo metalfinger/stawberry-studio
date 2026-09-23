@@ -168,11 +168,13 @@ export function framePrompt(
       .join('; ');
     const kind = s.kind === 'character' ? 'person' : s.kind === 'location' ? 'place' : 'thing';
     let seeImage = '';
-    // The room comes from an earlier cut when one shows it from this side; the sheet would only
-    // pull the layout back to its own view.
-    const skipSheet = s.kind === 'location' && (!!base || roomFromCut || !!viewGhost);
+    // An edit base already holds the place, and a view ghost shows the side this frame faces; the
+    // sheet would only pull the layout back to its own view. Otherwise the sheet always goes in:
+    // Strawberry draws a moment only when everything in it has its own reference or a base.
+    const skipSheet = s.kind === 'location' && (!!base || !!viewGhost);
     if (approved(s) && s.mediaId && !skipSheet) {
-      const layout = s.kind !== 'location' || plan?.sheetLayout !== false;
+      // With an earlier picture of the room from this side, that picture sets the layout.
+      const layout = s.kind !== 'location' || (plan?.sheetLayout !== false && !roomFromCut);
       push({
         media_id: s.mediaId,
         role: s.kind === 'character' ? 'identity' : s.kind === 'location' ? 'location' : 'prop',
@@ -180,14 +182,16 @@ export function framePrompt(
           s.kind === 'location'
             ? layout
               ? `${s.name}: this exact place. Keep its walls, windows and doors on the sides the reference puts them; do not mirror or rearrange them`
-              : `${s.name}: its materials, colours and objects only; this frame faces another side of it`
+              : `${s.name}: its materials, colours and objects only; ${roomFromCut ? 'the layout comes from the earlier picture' : 'this frame faces another side of it'}`
             : `${s.name}: this exact ${s.kind === 'character' ? 'person, with the same face, build and clothes' : 'object, with the same shape and materials'}`,
       });
       seeImage = ` Image ${references.length} is ${s.name}'s reference sheet: ${
         s.kind === 'location'
           ? layout
             ? 'the camera stands inside this place; keep its walls, windows and doors on the sides that sheet puts them, and do not mirror or rearrange them.'
-            : `it shows the place from another side. Take only its materials, colours and objects; this frame faces ${f.looksAt || 'the other way'}.`
+            : roomFromCut
+              ? 'take only its materials, colours and objects from it; where things are comes from the earlier picture of this place.'
+              : `it shows the place from another side. Take only its materials, colours and objects; this frame faces ${f.looksAt || 'the other way'}.`
           : s.kind === 'character'
             ? 'keep the same face, build and clothes exactly.'
             : 'keep the same shape and materials exactly.'

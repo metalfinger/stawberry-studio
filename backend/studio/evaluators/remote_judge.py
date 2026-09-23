@@ -79,8 +79,12 @@ class JudgeClient:
                                       "threshold": threshold, "masks": masks})
 
 
-def evaluate_remote(studio, media_id: str, client: JudgeClient | None = None, context: str = DEFAULT_CONTEXT):
-    """Ask every single-image question of one take and record the answers as a stranger evaluation."""
+def evaluate_remote(studio, media_id: str, client: JudgeClient | None = None, context: str = DEFAULT_CONTEXT,
+                    kind: str = "stranger"):
+    """Ask every single-image question of one take and record the answers as a stranger evaluation.
+
+    With kind="facts" the same answers are the take's facts record instead: for a harness whose
+    host cannot see images, the judge is the only evaluator of its declared facts."""
     client = client or JudgeClient()
     detail = studio.media(media_id)
     media = detail["media"]
@@ -107,7 +111,7 @@ def evaluate_remote(studio, media_id: str, client: JudgeClient | None = None, co
             region=f"whole frame, P(yes) from {result.get('model', 'judge')} in {answer.get('ms', '?')} ms"))
     missing = sorted(set(by_id) - {e.question_id for e in evidence})
     record = studio.evaluate(media_id, EvaluationCreate(
-        expected_context=detail["review_context"], evaluator=EVALUATOR, version=VERSION, kind="stranger",
+        expected_context=detail["review_context"], evaluator=EVALUATOR, version=VERSION, kind=kind,
         evidence=evidence, confidence=None, discrepancies=[]))
     return {**record, "timing": {"wall_ms": wall_ms, "server_ms": result.get("total_ms"),
                                  "image_ms": result.get("image_ms"), "questions": len(evidence)},

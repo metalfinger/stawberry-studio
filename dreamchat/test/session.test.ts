@@ -218,6 +218,9 @@ describe('a whole conversation', () => {
     const framesStarted: { id: string; refs: string[] }[] = [];
     let reaction: Record<string, Answer> = {};
     const statuses = new Map<string, string>();
+    // Each new version of a moment is a new take, with its own media id.
+    const versions = new Map<string, number>();
+    const judged: string[] = [];
     let replies = ['changes'];
     const host = fakeHost();
     const store = new SessionStore(cfg, {
@@ -249,10 +252,16 @@ describe('a whole conversation', () => {
           statuses.set(`job-${item.id}`, 'running');
           return { recipeId: `r-${item.id}`, jobId: `job-${item.id}`, usd: 0.15 };
         },
-        status: async (jobId, nodeId) =>
-          statuses.get(jobId) === 'ready'
-            ? { state: 'ready', mediaId: `media-${nodeId}-${jobId}`, mediaPath: `${nodeId}.png` }
-            : { state: 'running' },
+        status: async (jobId, nodeId) => {
+          const v = versions.get(jobId) ?? 1;
+          return statuses.get(jobId) === 'ready'
+            ? {
+                state: 'ready',
+                mediaId: `media-${nodeId}-${jobId}${v > 1 ? `-v${v}` : ''}`,
+                mediaPath: `${nodeId}.png`,
+              }
+            : { state: 'running' };
+        },
         review: async ({ mediaId, approved }) => {
           verdicts.push([mediaId, approved]);
         },
@@ -260,8 +269,14 @@ describe('a whole conversation', () => {
         startFrame: async ({ item, references }) => {
           framesStarted.push({ id: item.id, refs: references.map((r) => `${r.role}:${r.media_id}`) });
           statuses.set(`job-${item.id}`, 'running');
+          versions.set(`job-${item.id}`, item.version);
           return { recipeId: `r-${item.id}`, jobId: `job-${item.id}`, usd: 0.15 };
         },
+      },
+      // The judge sees everything in every take, so the chat may approve a moment for what follows.
+      judge: async (mediaId) => {
+        judged.push(mediaId);
+        return { questions: 3, passed: 3, failed: [], unseen: [] };
       },
       watchEveryMs: 10,
     });
@@ -340,12 +355,14 @@ describe('a whole conversation', () => {
     ]);
     statuses.set('job-m1', 'ready');
     await store.settle(id, 100);
-    // The wide is approved for continuity by the chat, and the close-up is drawn from it: the
-    // board's sheet for the board, the wide for the room (so not the kitchen's sheet).
+    // The judge saw everything in the wide, so the chat approves it for continuity, and the
+    // close-up is drawn from it: the board's sheet for the board, the kitchen's sheet for its
+    // materials, and the wide for where everything is.
+    expect(judged).toContain('media-cut-m1-job-m1');
     expect(verdicts.at(-1)).toEqual(['media-cut-m1-job-m1', true]);
     expect(framesStarted[1]).toEqual({
       id: 'm2',
-      refs: ['prop:media-node-t1-job-t1', 'composition:media-cut-m1-job-m1'],
+      refs: ['prop:media-node-t1-job-t1', 'location:media-node-l1-job-l1', 'composition:media-cut-m1-job-m1'],
     });
     statuses.set('job-m2', 'ready');
     await store.settle(id);
@@ -386,7 +403,7 @@ describe('a whole conversation', () => {
     await store.settle(id, 100);
     expect(framesStarted.at(-1)).toEqual({
       id: 'm2',
-      refs: ['prop:media-node-t1-job-t1', 'composition:media-cut-m1-job-m1'],
+      refs: ['prop:media-node-t1-job-t1', 'location:media-node-l1-job-l1', 'composition:media-cut-m1-job-m1-v3'],
     });
     statuses.set('job-m2', 'ready');
     await store.settle(id);

@@ -1,6 +1,6 @@
 """Ask the image judge on the PC about one take, and record its answers in Strawberry.
 
-    venv/bin/python dreamchat/judge.py STORE_HOME MEDIA_ID     (from the repo root)
+    venv/bin/python dreamchat/judge.py STORE_HOME MEDIA_ID [--facts]     (from the repo root)
 
 Uses the engine's own remote judge (backend/studio/evaluators/remote_judge.py): every
 single-image question of the take's declared facts, answered as P(yes) by the judge host, and
@@ -82,18 +82,23 @@ if sys.argv[2] == "--continuity":
     continuity(json.load(sys.stdin))
     sys.exit(0)
 
-record = evaluate_remote(studio, sys.argv[2], JudgeClient(timeout=240))
+# A moment's check is its facts record: the chat approves a moment for continuity only on it.
+kind = "facts" if "--facts" in sys.argv[3:] else "stranger"
+record = evaluate_remote(studio, sys.argv[2], JudgeClient(timeout=240), kind=kind)
 if record is None:
-    print(json.dumps({"questions": 0, "passed": 0, "failed": []}))
+    print(json.dumps({"questions": 0, "passed": 0, "failed": [], "unseen": []}))
     sys.exit(0)
 evidence = record.get("evidence") or []
 failed = [e for e in evidence if e.get("answer") == "no"]
+PRESENCE = ("cast", "location", "prop", "subject")
 print(
     json.dumps(
         {
             "questions": len(evidence),
             "passed": len(evidence) - len(failed),
             "failed": [e.get("question", "") for e in failed][:8],
+            # Who or what in the take the judge could not see at all.
+            "unseen": [e.get("question", "") for e in failed if (e.get("question_id") or "").split(":")[0] in PRESENCE],
             "model": (evidence[0].get("region", "").split(" from ")[-1].split(" in ")[0] if evidence else None),
             "ms": record.get("timing", {}).get("wall_ms"),
         }

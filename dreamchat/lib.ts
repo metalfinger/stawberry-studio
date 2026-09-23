@@ -489,6 +489,8 @@ export type BriefExtras = {
   frameCount?: number;
   /** Pieces that could not be drawn, by name. */
   failed?: string[];
+  /** Pictures on show that later moments are drawn from, waiting for their verdict. */
+  waitsOnThem?: string[];
 };
 
 export function renderBrief(
@@ -530,7 +532,7 @@ function profileLine(p: NonNullable<BriefExtras['profile']>): string {
   const guessed = p.guessed.length
     ? ` You filled in (say plainly that these are your guesses): ${p.guessed.join('; ')}.`
     : '';
-  return `describe how you picture ${p.name}, briefly, in plain words.${said}${guessed} Then ask if anything's different, or if they'd leave it to you.`;
+  return `describe how you picture ${p.name} on their own, briefly, in plain words: not the scene around them, not anyone or anything else, and not the rest of the dream.${said}${guessed} Then ask if anything's different, or if they'd leave it to you.`;
 }
 
 function closingInstruction(note: ClosingNote | undefined): string {
@@ -596,7 +598,7 @@ function renderMove(move: Move, state: State, cfg: GoalsFile, extras: BriefExtra
         ? `start. They chose ${styleName(move.styleId)}. Say you'll start with ${extras.profile.name}, then ${profileLine(extras.profile)}`
         : `start. They chose ${styleName(move.styleId)}. Tell them warmly that you have what you need, and that the pictures will appear on the right as they're ready. Don't ask anything.`;
     case 'confirm_profile':
-      return `confirm_profile. ${extras.sketching ? `First say, in a few words, that you're sketching ${extras.sketching} now and it'll appear on the right. Then ` : ''}${extras.profile ? profileLine(extras.profile) : 'describe the next thing to draw, and ask if anything should change.'}`;
+      return `confirm_profile. ${extras.sketching ? `First say, in a few words, that you're sketching ${extras.sketching} now and it'll appear on the right: only that, nothing else is being drawn yet. Then ` : ''}${extras.profile ? profileLine(extras.profile) : 'describe the next thing to draw, and ask if anything should change.'}`;
     case 'profile_check':
       return `profile_check. It isn't clear whether ${extras.profile?.name ?? 'that'} is right as you described. Ask simply whether you've got it, or whether anything's different.`;
     case 'build_done':
@@ -624,6 +626,9 @@ function renderMove(move: Move, state: State, cfg: GoalsFile, extras: BriefExtra
           : extras.finished?.length
             ? `More of the dream is up on the right (${extras.finished.join('; ')}). Ask if it looks the way they remember.`
             : "The rest of the moments are still being drawn; if they ask, say they'll appear on the right soon.",
+        extras.waitsOnThem?.length
+          ? `The next moments carry on from ${extras.waitsOnThem.join(' and ')}, so they're drawn once they say it looks right, or what to change. Say that simply, in passing.`
+          : '',
       ];
       return `frames_drawing. ${parts.filter(Boolean).join(' ')}`;
     }
@@ -677,6 +682,10 @@ export function needsThought(move: Move): boolean {
     move.kind === 'sheets_done' ||
     move.kind === 'ask_which' ||
     move.kind === 'start' ||
+    // Without thinking, a profile turn once described the whole dream and said it was all being
+    // drawn, and the person took it as the end (live run, 23 Sep).
+    move.kind === 'confirm_profile' ||
+    move.kind === 'profile_check' ||
     move.kind === 'build_done' ||
     move.kind === 'all_done' ||
     move.kind === 'keep' ||

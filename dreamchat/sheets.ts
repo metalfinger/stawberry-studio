@@ -54,7 +54,9 @@ export type Item = {
   /** Downloads of the current take retried after failing. */
   collectRetries?: number;
   /** The image judge's check of the current take: how many declared facts it saw. */
-  check?: { questions: number; passed: number; failed: string[]; error?: string };
+  check?: { questions: number; passed: number; failed: string[]; error?: string; unseen?: string[] };
+  /** Why a moment can't be drawn from yet without the person's verdict. */
+  waitsForPerson?: string;
   /** For a moment: the asset nodes its frame shows, confirmed on the take when approved. */
   depicted?: string[];
   /** For a moment: what is in view, where, and how it is seen. */
@@ -73,6 +75,8 @@ export type Item = {
     plan?: CutPlan;
   };
   isDreamer?: boolean;
+  /** Shown to the person as a profile to confirm; otherwise sketched from what they told, unasked. */
+  ask?: boolean;
 };
 
 const FIELD_WORDS: Record<string, string> = {
@@ -402,13 +406,16 @@ export type Check = NonNullable<Item['check']>;
 export const judgeAvailable = () => !!process.env.JUDGE_URL && !!process.env.JUDGE_API_KEY;
 
 /** The judge on the PC checks one take against its declared facts; the answers go into Strawberry. */
-export async function judgeTake(mediaId: string): Promise<Check> {
-  const proc = Bun.spawn([STRAWBERRY_PYTHON, 'dreamchat/judge.py', STRAWBERRY_HOME, mediaId], {
-    cwd: REPO,
-    stdout: 'pipe',
-    stderr: 'pipe',
-    env: { ...process.env, PYTHONPATH: REPO },
-  });
+export async function judgeTake(mediaId: string, opts: { facts?: boolean } = {}): Promise<Check> {
+  const proc = Bun.spawn(
+    [STRAWBERRY_PYTHON, 'dreamchat/judge.py', STRAWBERRY_HOME, mediaId, ...(opts.facts ? ['--facts'] : [])],
+    {
+      cwd: REPO,
+      stdout: 'pipe',
+      stderr: 'pipe',
+      env: { ...process.env, PYTHONPATH: REPO },
+    },
+  );
   const [out, err, code] = await Promise.all([
     new Response(proc.stdout).text(),
     new Response(proc.stderr).text(),
