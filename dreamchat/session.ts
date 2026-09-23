@@ -42,7 +42,8 @@ import {
   type Thinking,
 } from './llm';
 import { type Breakdown, callProducer, type Detail, normalizeBreakdown, ownStyle, type StyleOption } from './producer';
-import { type Item, profileOf, type SheetEngine } from './sheets';
+import { buildFrames, framePrompt } from './frames';
+import { type Check, type Item, profileOf, type SheetEngine } from './sheets';
 import type { WriteResult } from './strawberry';
 
 export type Entry = { role: 'user' | 'assistant'; content: string; messages?: string[] };
@@ -101,8 +102,14 @@ export const IMAGE_CAP = Number(process.env.DREAMCHAT_IMAGE_CAP ?? 30);
 /** The approval ceiling on a single sketch, in US dollars. */
 const MAX_USD_PER_IMAGE = 0.2;
 
-/** The people, places and things being confirmed and sketched, in Strawberry's order. */
-export type Build = { items: Item[]; current: string | null; checks: number };
+/** Frames drawing at once, at most; the rest wait their turn. */
+const FRAMES_AT_ONCE = 3;
+
+/**
+ * The people, places and things being confirmed and sketched, in Strawberry's order; then the
+ * moments drawn from them, the key one first.
+ */
+export type Build = { items: Item[]; current: string | null; checks: number; frames?: Item[] };
 
 export type Session = {
   id: string;
@@ -157,6 +164,8 @@ export type StoreDeps = {
   reviseItem?: (name: string, fields: Record<string, Detail>, transcript: string) => Promise<Record<string, Detail>>;
   /** How often a running sketch is checked, in ms. */
   watchEveryMs?: number;
+  /** The image judge: checks a finished take against its declared facts. Absent: no check. */
+  judge?: (mediaId: string) => Promise<Check>;
   dir?: string;
   now?: () => number;
 };
@@ -418,7 +427,8 @@ export class SessionStore {
     const styles = s.draft?.breakdown?.style_options ?? [];
     const onShow = s.build?.items.find((i) => i.id === s.build?.current);
     // Sketches they have been shown and not yet answered about.
-    const pending = s.build?.items.filter((i) => i.status === 'ready' && i.announced && !i.review) ?? [];
+    const pieces = s.phase === 'frames' ? (s.build?.frames ?? []) : (s.build?.items ?? []);
+    const pending = pieces.filter((i) => i.status === 'ready' && i.announced && !i.review);
     const questions = bookkeeperQuestions(
       this.cfg,
       s.transcript,
@@ -426,7 +436,7 @@ export class SessionStore {
       s.phase,
       styles,
       onShow?.name,
-      s.phase === 'review' ? pending.map(({ id, name }) => ({ id, name })) : [],
+      s.phase === 'review' || s.phase === 'frames' ? pending.map(({ id, name }) => ({ id, name })) : [],
     );
     const call = await this.deps.jev(renderTranscript(s.transcript), questions);
     const { next, notes } = readState(prev, this.cfg, s.transcript, call, turnNow, s.phase);
@@ -442,7 +452,7 @@ export class SessionStore {
     // last one, or start a new version.
     const reviewed = { approved: [] as string[], redrawing: [] as string[] };
     let whichUnclear = false;
-    if (s.phase === 'review' && pending.length) {
+    if ((s.phase === 'review' || s.phase === 'frames') && pending.length) {
       const reaction = overlaid.signals.sketch_reaction ?? 'no_reaction';
       const which = overlaid.signals.sketch_which ?? 'unclear';
       const named = which === 'all' ? pending : pending.filter((i) => i.id === which);
@@ -458,18 +468,20 @@ export class SessionStore {
       } else if (named.length || pending.length === 1) {
         for (const it of named.length ? named : pending) {
           this.reviewSketch(s, it, 'rejected', `They said it isn't right: "${text.slice(0, 400)}"`);
+          const before = structuredClone(it.fields);
           if (this.deps.reviseItem)
             it.fields = await this.deps.reviseItem(it.name, it.fields, renderTranscript(s.transcript));
           it.announced = false;
           it.review = undefined;
-          await this.startSketch(s, it, turnNow);
+          if (it.kind === 'cut') await this.startFrame(s, it, turnNow, before);
+          else await this.startSketch(s, it, turnNow);
           reviewed.redrawing.push(it.name);
         }
       } else whichUnclear = true;
     }
-    const settled =
-      !!s.build &&
-      s.build.items.every((i) => i.status === 'failed' || (i.status === 'ready' && i.review !== undefined));
+    const isSettled = (i: Item) => i.status === 'failed' || (i.status === 'ready' && i.review !== undefined);
+    const settled = !!s.build && s.build.items.every(isSettled);
+    const framesSettled = !!s.build?.frames?.length && s.build.frames.every(isSettled);
 
     let followStreak = 0;
     for (let i = s.turns.length - 1; i >= 0 && isFollowing(s.turns[i].move); i--) followStreak++;
@@ -486,6 +498,7 @@ export class SessionStore {
         ? { current: s.build.current, next: this.nextItem(s.build)?.id ?? null, checks: s.build.checks }
         : undefined,
       review: { settled, whichUnclear },
+      frames: { settled: framesSettled, whichUnclear },
     });
     let phase = phaseAfter(s.phase, move);
 
@@ -544,6 +557,20 @@ export class SessionStore {
       const item = s.build.items.find((i) => i.id === move.itemId);
       if (item) extras.profile = profileOf(item);
     }
+    if (s.build && move.kind === 'sheets_done') await this.startFrames(s, turnNow);
+    if (s.build && (move.kind === 'frames_drawing' || move.kind === 'all_done')) {
+      extras.approved = reviewed.approved;
+      extras.redrawing = reviewed.redrawing;
+      extras.frameCount = s.build.frames?.length;
+      extras.failed = (s.build.frames ?? []).filter((i) => i.status === 'failed').map((i) => i.name);
+      if (move.kind === 'frames_drawing') {
+        const fresh = (s.build.frames ?? []).filter((i) => i.status === 'ready' && !i.announced);
+        const key = fresh.find((i) => i.frame?.key);
+        if (key) extras.keyReady = key.fields.action?.value ?? key.name;
+        extras.finished = fresh.filter((i) => i !== key).map((i) => i.name);
+        for (const i of fresh) i.announced = true;
+      }
+    }
     if (s.build && (move.kind === 'while_drawing' || move.kind === 'sheets_done' || move.kind === 'ask_which')) {
       extras.approved = reviewed.approved;
       extras.redrawing = reviewed.redrawing;
@@ -588,7 +615,7 @@ export class SessionStore {
     s.closed = CLOSED.includes(phase);
     s.state = { ...overlaid, last_move: moveKey(move) };
     if (move.kind === 'start') this.startWrite(s);
-    if (s.build?.items.some((i) => i.status === 'drawing')) this.watch(s.id);
+    if ([...(s.build?.items ?? []), ...(s.build?.frames ?? [])].some((i) => i.status === 'drawing')) this.watch(s.id);
 
     await this.commit(
       s,
@@ -693,6 +720,92 @@ export class SessionStore {
   }
 
   /**
+   * Begin the moments: one frame per cut, the key one first. Their verdicts on the sheets must
+   * be recorded first, because only approved sheets can be references.
+   */
+  private async startFrames(s: Session, turn: number): Promise<void> {
+    if (!s.build || !s.draft?.breakdown) return;
+    await Promise.all(
+      [...this.reviews.entries()].filter(([k]) => k.startsWith(`${s.id}:`)).map(([, p]) => p.catch(() => undefined)),
+    );
+    const ids = s.production?.result?.ids ?? {};
+    s.build.frames = buildFrames(s.draft.breakdown).map((f) => ({ ...f, nodeId: ids[f.id] }));
+    await this.fillFrames(s, turn);
+  }
+
+  /** Start waiting frames until as many are drawing as may be at once. */
+  private async fillFrames(s: Session, turn: number): Promise<void> {
+    const frames = s.build?.frames ?? [];
+    for (const f of frames) {
+      if (frames.filter((x) => x.status === 'drawing').length >= FRAMES_AT_ONCE) break;
+      if (f.status === 'waiting') await this.startFrame(s, f, turn);
+    }
+  }
+
+  /**
+   * Start (or redraw) one frame. When the person corrected the moment, its revised fields are
+   * patched onto the cut first, sourced to their words.
+   */
+  private async startFrame(s: Session, frame: Item, turn: number, before?: Item['fields']): Promise<void> {
+    frame.startedAtTurn = turn;
+    if (!this.deps.sheets || !s.style || !s.build) {
+      Object.assign(frame, {
+        status: 'failed',
+        error: 'nothing can be drawn here: the Strawberry engine is not set up',
+      });
+      return;
+    }
+    if (s.images >= IMAGE_CAP) {
+      Object.assign(frame, { status: 'failed', error: `the ${IMAGE_CAP}-picture limit for one dream is reached` });
+      return;
+    }
+    if (!frame.nodeId) {
+      Object.assign(frame, { status: 'failed', error: 'this moment is not in the production' });
+      return;
+    }
+    const { prompt, references, depicted } = framePrompt(frame, s.build.items, s.style);
+    const changes: Record<string, string> = {};
+    if (before)
+      for (const [k, d] of Object.entries(frame.fields))
+        if (d.value && d.value !== before[k]?.value)
+          changes[k === 'feeling' ? 'beat.emotional_intent' : k === 'visual_point' ? 'beat.visual_point' : k] = d.value;
+    frame.depicted = depicted;
+    frame.status = 'drawing';
+    frame.version += 1;
+    s.images += 1;
+    const snapshot = structuredClone(frame);
+    this.deps.sheets
+      .startFrame({
+        item: snapshot,
+        prompt,
+        references,
+        changes,
+        source: s.production?.result?.ids.said,
+        reason: `The person asked to see their dream drawn and settled everything in it; approved within the ${IMAGE_CAP}-picture limit.`,
+        maxUsd: MAX_USD_PER_IMAGE,
+      })
+      .then(
+        (r) =>
+          this.serial(s.id, () =>
+            this.update(s.id, (x) => {
+              const it = x.build?.frames?.find((i) => i.id === frame.id);
+              if (!it) return;
+              it.jobId = r.jobId;
+              it.recipeId = r.recipeId;
+              x.spentUsd = Math.round((x.spentUsd + (r.usd ?? 0)) * 100) / 100;
+            }),
+          ).then(() => this.watch(s.id)),
+        (e) =>
+          this.serial(s.id, () =>
+            this.update(s.id, (x) => {
+              const it = x.build?.frames?.find((i) => i.id === frame.id);
+              if (it) Object.assign(it, { status: 'failed', error: String(e).slice(0, 300) });
+            }),
+          ),
+      );
+  }
+
+  /**
    * Start one sketch. The engine calls run in the background; their result, and every later
    * change of the sketch's state, comes back through the turn queue.
    */
@@ -767,11 +880,17 @@ export class SessionStore {
     if (verdict !== 'rejected') item.review = verdict;
     if (!this.deps.sheets || !item.mediaId || !item.nodeId) return;
     const done = this.deps.sheets
-      .review({ mediaId: item.mediaId, nodeId: item.nodeId, approved: verdict !== 'rejected', decision })
+      .review({
+        mediaId: item.mediaId,
+        nodeId: item.nodeId,
+        approved: verdict !== 'rejected',
+        decision,
+        depicted: item.kind === 'cut' ? (item.depicted ?? []) : [item.nodeId],
+      })
       .catch((e) =>
         this.serial(s.id, () =>
           this.update(s.id, (x) => {
-            const it = x.build?.items.find((i) => i.id === item.id);
+            const it = [...(x.build?.items ?? []), ...(x.build?.frames ?? [])].find((i) => i.id === item.id);
             if (it) it.error = `recording their verdict failed: ${String(e).slice(0, 200)}`;
           }),
         ),
@@ -789,7 +908,9 @@ export class SessionStore {
       try {
         for (;;) {
           const s = this.sessions.get(id);
-          const running = s?.build?.items.filter((i) => i.status === 'drawing') ?? [];
+          const running = [...(s?.build?.items ?? []), ...(s?.build?.frames ?? [])].filter(
+            (i) => i.status === 'drawing',
+          );
           if (!running.length) return;
           for (const it of running) {
             if (!it.jobId || !it.nodeId) continue;
@@ -803,14 +924,29 @@ export class SessionStore {
             if (st.state !== 'ready' && !failed) continue;
             await this.serial(id, () =>
               this.update(id, (x) => {
-                const cur = x.build?.items.find((i) => i.id === it.id);
+                const cur = [...(x.build?.items ?? []), ...(x.build?.frames ?? [])].find((i) => i.id === it.id);
                 if (!cur || cur.jobId !== it.jobId) return;
                 if (st.state === 'ready')
-                  Object.assign(cur, { status: 'ready', mediaId: st.mediaId, mediaPath: st.mediaPath });
+                  Object.assign(cur, {
+                    status: 'ready',
+                    mediaId: st.mediaId,
+                    mediaPath: st.mediaPath,
+                    check: undefined,
+                  });
                 else Object.assign(cur, { status: 'failed', error: st.error ?? st.state });
               }),
             );
           }
+          // Each finished take is checked by the judge in the background; the verdict is shown, and
+          // decides nothing on its own.
+          for (const it of running) void this.judgeWhenReady(id, it.id);
+          // A frame that finished makes room for the next one in the queue.
+          if (this.sessions.get(id)?.build?.frames?.some((f) => f.status === 'waiting'))
+            await this.serial(id, async () => {
+              const x = structuredClone(this.require(id));
+              await this.fillFrames(x, x.turns.at(-1)?.turn ?? 0);
+              await this.save(x);
+            });
           await Bun.sleep(every);
         }
       } finally {
@@ -818,6 +954,29 @@ export class SessionStore {
       }
     };
     void loop();
+  }
+
+  private judged = new Set<string>();
+
+  private async judgeWhenReady(id: string, itemId: string): Promise<void> {
+    const judge = this.deps.judge;
+    const b = this.sessions.get(id)?.build;
+    const it = [...(b?.items ?? []), ...(b?.frames ?? [])].find((i) => i.id === itemId);
+    if (!judge || !it || it.status !== 'ready' || !it.mediaId || this.judged.has(it.mediaId)) return;
+    const mediaId = it.mediaId;
+    this.judged.add(mediaId);
+    let check: Check;
+    try {
+      check = await judge(mediaId);
+    } catch (e) {
+      check = { questions: 0, passed: 0, failed: [], error: String(e).slice(0, 200) };
+    }
+    await this.serial(id, () =>
+      this.update(id, (x) => {
+        const cur = [...(x.build?.items ?? []), ...(x.build?.frames ?? [])].find((i) => i.id === itemId);
+        if (cur && cur.mediaId === mediaId) cur.check = check;
+      }),
+    );
   }
 
   private async update(id: string, fn: (s: Session) => void): Promise<void> {
@@ -832,7 +991,9 @@ export class SessionStore {
     while (Date.now() < until) {
       await this.serial(id, async () => undefined);
       const s = this.sessions.get(id);
-      const drawing = s?.build?.items.some((i) => i.status === 'drawing');
+      const drawing = [...(s?.build?.items ?? []), ...(s?.build?.frames ?? [])].some(
+        (i) => i.status === 'drawing' || (i.status === 'waiting' && s?.phase === 'frames'),
+      );
       if (s?.draft?.status !== 'drafting' && s?.production?.status !== 'writing' && !drawing) return;
       await Bun.sleep(100);
     }

@@ -213,6 +213,7 @@ describe('a whole conversation', () => {
   test('after the style, each profile is confirmed in turn and its sketch drawn', async () => {
     const started: { name: string; fields: Record<string, string | null> }[] = [];
     const verdicts: [string, boolean][] = [];
+    const framesStarted: { id: string; refs: string[] }[] = [];
     let reaction: Record<string, Answer> = {};
     const statuses = new Map<string, string>();
     let replies = ['confirmed', 'changes'];
@@ -228,7 +229,7 @@ describe('a whole conversation', () => {
       producer: async () => ({ breakdown, downgraded: [], notes: [], ms: 1 }),
       write: async () => ({
         projectId: 'p',
-        ids: { said: 'src-said', proposal: 'src-proposal', l1: 'node-l1', t1: 'node-t1' },
+        ids: { said: 'src-said', proposal: 'src-proposal', l1: 'node-l1', t1: 'node-t1', m1: 'cut-m1', m2: 'cut-m2' },
         home: '/tmp',
         created: { project: 1, scene: 1, shot: 2, cut: 2, character: 0, location: 1, prop: 1 },
         cuts: 2,
@@ -252,6 +253,11 @@ describe('a whole conversation', () => {
             : { state: 'running' },
         review: async ({ mediaId, approved }) => {
           verdicts.push([mediaId, approved]);
+        },
+        startFrame: async ({ item, references }) => {
+          framesStarted.push({ id: item.id, refs: references.map((r) => `${r.role}:${r.media_id}`) });
+          statuses.set(`job-${item.id}`, 'running');
+          return { recipeId: `r-${item.id}`, jobId: `job-${item.id}`, usd: 0.15 };
         },
       },
       watchEveryMs: 10,
@@ -325,6 +331,26 @@ describe('a whole conversation', () => {
     const t12 = await store.message(id, 'what happens next?');
     expect([t12.move?.kind, t12.phase]).toEqual(['sheets_done', 'frames']);
     expect(store.get(id)!.build!.items.map((i) => i.review)).toEqual(['approved', 'left']);
+
+    // The moments: the key one (m2) first, each with the approved sheets of what is in it.
+    await store.settle(id, 50);
+    expect(framesStarted).toEqual([
+      { id: 'm2', refs: ['prop:media-node-t1-job-t1', 'location:media-node-l1-job-l1'] },
+      { id: 'm1', refs: ['prop:media-node-t1-job-t1', 'location:media-node-l1-job-l1'] },
+    ]);
+    statuses.set('job-m2', 'ready');
+    statuses.set('job-m1', 'ready');
+    await store.settle(id);
+    reaction = {};
+    const t13 = await store.message(id, 'can I see them?');
+    expect(t13.move).toEqual({ kind: 'frames_drawing' });
+    expect(host.calls.at(-1)!.find((m) => m.content.startsWith('<brief>'))!.content).toContain(
+      "The moment they said they'd pause on is up on the right now (The one slat that reads zikery)",
+    );
+    reaction = { sketch_reaction: pick('looks_right'), sketch_which: pick('all') };
+    const t14 = await store.message(id, 'yes, that is exactly it');
+    expect([t14.move?.kind, t14.phase, t14.closed]).toEqual(['all_done', 'done', true]);
+    expect(store.get(id)!.images).toBe(5);
   });
 
   test('each probe is counted, and a goal is asked at most twice', async () => {

@@ -10,7 +10,7 @@ import { callJev, jevAvailable } from './jev';
 import { callHost, HOST_MODEL } from './llm';
 import { reviseItem } from './producer';
 import { IMAGE_CAP, liveProducer, ownStyle, SessionStore } from './session';
-import { liveSheets, PROVIDER, spawnWorker } from './sheets';
+import { judgeAvailable, judgeTake, liveSheets, PROVIDER, spawnWorker } from './sheets';
 import { REPO, STRAWBERRY_HOME, STRAWBERRY_PYTHON, strawberryAvailable, writeProduction } from './strawberry';
 
 const loaded = loadedKeys;
@@ -23,6 +23,7 @@ const store = new SessionStore(cfg, {
   write: strawberryAvailable() ? writeProduction : undefined,
   sheets: strawberryAvailable() ? liveSheets : undefined,
   reviseItem,
+  judge: judgeAvailable() ? judgeTake : undefined,
   dir: join(import.meta.dir, 'state'),
 });
 // The engine's own worker draws the sketches the chat queues, for this store only.
@@ -65,6 +66,7 @@ const server = Bun.serve({
           jev: jevAvailable(),
           strawberry: strawberryAvailable() ? STRAWBERRY_HOME : null,
           provider: PROVIDER,
+          judge: judgeAvailable(),
           imageCap: IMAGE_CAP,
         });
 
@@ -77,7 +79,8 @@ const server = Bun.serve({
 
       // A sketch, by conversation and item. Only files the store itself named are served.
       if (url.pathname === '/api/sketch') {
-        const item = store.get(id)?.build?.items.find((i) => i.id === url.searchParams.get('item'));
+        const b = store.get(id)?.build;
+        const item = [...(b?.items ?? []), ...(b?.frames ?? [])].find((i) => i.id === url.searchParams.get('item'));
         if (!item?.mediaPath || !/^[0-9a-f]{64}\.(png|jpe?g|webp)$/.test(item.mediaPath)) return fail(404, 'no sketch');
         return new Response(Bun.file(join(STRAWBERRY_HOME, 'media', item.mediaPath)), {
           headers: { 'cache-control': 'private, max-age=3600' },

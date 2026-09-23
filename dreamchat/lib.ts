@@ -102,15 +102,16 @@ export type State = {
  * - build: they chose a way; each profile is confirmed in turn, and each confirmed one is sketched.
  * - review: every sketch has started; they see each as it lands and say if it looks right.
  * - frames: every sketch is settled; the moments are being drawn from them.
+ * - done: every moment is drawn and settled.
  * - ready: they chose a way, but there is nothing to sketch (no engine, or nothing to draw).
  * - kept: they'd rather not see it drawn; the dream is kept as told.
  * - ended: they left.
  */
 export type Phase =
-  'listen' | 'retell' | 'offer' | 'style' | 'build' | 'review' | 'frames' | 'ready' | 'kept' | 'ended';
+  'listen' | 'retell' | 'offer' | 'style' | 'build' | 'review' | 'frames' | 'done' | 'ready' | 'kept' | 'ended';
 
 /** Phases where the conversation is over for this step. */
-export const CLOSED: readonly Phase[] = ['ready', 'kept', 'ended'];
+export const CLOSED: readonly Phase[] = ['done', 'ready', 'kept', 'ended'];
 
 export type Move =
   | { kind: 'open_ended' }
@@ -133,6 +134,8 @@ export type Move =
   | { kind: 'while_drawing' }
   | { kind: 'ask_which' }
   | { kind: 'sheets_done' }
+  | { kind: 'frames_drawing' }
+  | { kind: 'all_done' }
   | { kind: 'keep' }
   | { kind: 'wrap' };
 
@@ -257,6 +260,8 @@ export type MoveContext = {
   build?: { current: string | null; next: string | null; checks: number };
   /** While reviewing: every sketch settled, or a reaction whose sketch isn't clear. */
   review?: { settled: boolean; whichUnclear: boolean };
+  /** While drawing the moments: every frame settled, or a reaction whose frame isn't clear. */
+  frames?: { settled: boolean; whichUnclear: boolean };
   maxAsksPerGoal?: number;
 };
 
@@ -272,9 +277,13 @@ export function selectMove(state: State, cfg: GoalsFile, ctx: MoveContext): { mo
   // 1. exit signals win over everything
   if (state.rapport.wants_out === 'hard') return { move: { kind: 'wrap' }, rule: '1: they are leaving' };
 
-  // Step 4 draws the moments; until then the frames phase keeps the conversation open.
-  if (ctx.phase === 'frames') return { move: { kind: 'while_drawing' }, rule: 'F0: the moments are on their way' };
-
+  if (ctx.phase === 'frames') {
+    const f = ctx.frames ?? { settled: false, whichUnclear: false };
+    if (f.whichUnclear)
+      return { move: { kind: 'ask_which' }, rule: "F2: a reaction, but it isn't clear to which picture" };
+    if (f.settled) return { move: { kind: 'all_done' }, rule: 'F3: every moment drawn and settled' };
+    return { move: { kind: 'frames_drawing' }, rule: 'F1: the moments are on their way' };
+  }
   if (ctx.phase === 'review') {
     const r = ctx.review ?? { settled: false, whichUnclear: false };
     if (r.whichUnclear)
@@ -407,10 +416,14 @@ export function phaseAfter(phase: Phase, move: Move): Phase {
       return 'build';
     case 'build_done':
     case 'while_drawing':
-    case 'ask_which':
       return 'review';
+    case 'ask_which':
+      return phase;
     case 'sheets_done':
+    case 'frames_drawing':
       return 'frames';
+    case 'all_done':
+      return 'done';
     case 'keep':
       return 'kept';
     case 'wrap':
@@ -448,6 +461,12 @@ export type BriefExtras = {
   redrawing?: string[];
   /** Sketches still waiting for a verdict, by name. */
   shown?: string[];
+  /** The key moment's frame, when it has just landed: it is asked about by name. */
+  keyReady?: string;
+  /** How many moments there are in all. */
+  frameCount?: number;
+  /** Pieces that could not be drawn, by name. */
+  failed?: string[];
 };
 
 export function renderBrief(
@@ -566,6 +585,30 @@ function renderMove(move: Move, state: State, cfg: GoalsFile, extras: BriefExtra
       ];
       return `while_drawing. ${parts.filter(Boolean).join(' ')}`;
     }
+    case 'frames_drawing': {
+      const parts = [
+        extras.approved?.length ? `Take in that they're happy with ${extras.approved.join(' and ')}.` : '',
+        extras.redrawing?.length
+          ? `Say you're redrawing ${extras.redrawing.join(' and ')} with their change; it will appear on the right.`
+          : '',
+        extras.keyReady
+          ? `The moment they said they'd pause on is up on the right now (${extras.keyReady}). Ask if that's how they saw it.`
+          : extras.finished?.length
+            ? `More of the dream is up on the right (${extras.finished.join('; ')}). Ask if it looks the way they remember.`
+            : "The rest of the moments are still being drawn; if they ask, say they'll appear on the right soon.",
+      ];
+      return `frames_drawing. ${parts.filter(Boolean).join(' ')}`;
+    }
+    case 'all_done': {
+      const failed = extras.failed ?? [];
+      const drawn = (extras.frameCount ?? 0) - failed.length;
+      const outcome = failed.length
+        ? drawn > 0
+          ? `${drawn} of the ${extras.frameCount} moments are drawn, on the right. ${failed.length} couldn't be drawn because of a problem on our side: say so plainly, and that you're sorry.`
+          : "None of the moments could be drawn, because of a problem on our side. Say so plainly and that you're sorry; don't pretend anything was drawn."
+        : `Their dream is drawn: ${extras.frameCount ?? 'all the'} pictures, on the right, in order.`;
+      return `all_done. ${extras.approved?.length ? `Take in that they're happy with ${extras.approved.join(' and ')}. ` : ''}${outcome} Thank them warmly for sharing it${drawn > 0 ? ' and say they can look through it there' : ''}. Don't ask anything.`;
+    }
     case 'ask_which':
       return `ask_which. They reacted to a sketch but it isn't clear which. Ask which one they mean${extras.shown?.length ? `: ${extras.shown.join(', ')}` : ''}.`;
     case 'sheets_done':
@@ -599,6 +642,7 @@ export function needsThought(move: Move): boolean {
     move.kind === 'choose_style' ||
     move.kind === 'start' ||
     move.kind === 'build_done' ||
+    move.kind === 'all_done' ||
     move.kind === 'keep' ||
     move.kind === 'wrap'
   );
@@ -633,6 +677,8 @@ export function moveKey(move: Move): string {
     case 'while_drawing':
     case 'ask_which':
     case 'sheets_done':
+    case 'frames_drawing':
+    case 'all_done':
       return move.kind;
     default:
       return unreachable(move);

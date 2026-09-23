@@ -88,7 +88,7 @@ Mark every detail "said": true ONLY when the person's own words give it. Anythin
 - One "protagonist": true — the person the dream is most about.
 - A thing gets an entry only if it matters or is seen closely.
 - People fields: identity (who they are to the dreamer), appearance (age, build, face, hair), wardrobe, distinctive_features. Places: geography (what kind of place, inside or out, layout), landmarks (what's in it), light. Things: appearance, materials.
-- A profile is how someone or something ordinarily looks, before anything happens to it in the dream. What happens to them (a head turning to ice, a room going dark, a person starting to glow) is a moment's action, never part of the profile: it would be drawn on every picture of them.
+- A profile is how someone or something ordinarily looks, before anything happens to it in the dream. What happens to them (a head turning to ice, a room going dark, a person starting to glow) is a moment's action, never part of the profile: it would be drawn on every picture of them. If a woman's head turns to ice, her profile describes an ordinary woman's head and face (a guess if they didn't say), and the ice belongs to the moments.
 
 ## Look (Director)
 - "look" is what the dream looked like to them: colours, light, texture.

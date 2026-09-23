@@ -3,9 +3,9 @@
 // their source, a recipe is prepared, approved within the conversation's image cap, queued, and
 // the engine's worker draws it.
 import type { Detail, StyleOption } from './producer';
-import { cli, STRAWBERRY_HOME } from './strawberry';
+import { cli, REPO, STRAWBERRY_HOME, STRAWBERRY_PYTHON } from './strawberry';
 
-export type ItemKind = 'character' | 'location' | 'prop';
+export type ItemKind = 'character' | 'location' | 'prop' | 'cut';
 
 /** A person, place or thing being confirmed and sketched. */
 export type Item = {
@@ -34,6 +34,21 @@ export type Item = {
    * objection); undefined while it waits. A correction rejects the version and draws a new one.
    */
   review?: 'approved' | 'left';
+  /** The image judge's check of the current take: how many declared facts it saw. */
+  check?: { questions: number; passed: number; failed: string[]; error?: string };
+  /** For a moment: the asset nodes its frame shows, confirmed on the take when approved. */
+  depicted?: string[];
+  /** For a moment: what is in view, where, and how it is seen. */
+  frame?: {
+    visible: string[];
+    things: string[];
+    place: string;
+    distance: 'close' | 'medium' | 'wide';
+    eyes: 'dreamer' | 'outside';
+    key: boolean;
+    /** Its place in the story, counting from 1. */
+    order: number;
+  };
   isDreamer?: boolean;
 };
 
@@ -147,13 +162,17 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
     .map((k) => (value(item, k) ? `${FIELD_WORDS[k] ?? k}: ${value(item, k)}` : ''))
     .filter(Boolean)
     .join('\n');
+  // One picture per item, not a grid of views: named views came back captioned ("Front",
+  // "Side", "Closer") whatever the prompt said, and a grid used as a reference gets its layout
+  // copied. A single clear picture is the identity the moments are drawn from.
   const layout =
     item.kind === 'character'
-      ? `A character reference sheet of ${item.name}, one person only, as they ordinarily look: the whole figure standing, seen from the front, from three-quarters and from the side, and their face up close. The same person, clothes and features every time.`
+      ? `A single full-length picture of ${item.name}, one person only, as they ordinarily look: standing in a relaxed three-quarter view, the whole figure from head to feet, the face clearly visible.`
       : item.kind === 'location'
-        ? `A location reference sheet of ${item.name}, as it ordinarily looks, with no people in it: one wide picture showing the whole place and its layout, and two smaller pictures of it from other angles.`
-        : `An object reference sheet of ${item.name}, as it ordinarily looks: the same object from the front, from the side, and much closer.`;
-  return [layout, facts, styleBlock(style), `Plain, uncluttered background. ${NO_WORDS}`].filter(Boolean).join('\n\n');
+        ? `A single wide picture of ${item.name}, as it ordinarily looks, with no people in it, showing the whole place and how it is laid out.`
+        : `A single clear picture of ${item.name} on its own, as it ordinarily looks, seen at a slight angle so its shape and materials read.`;
+  const background = item.kind === 'location' ? '' : 'Plain, uncluttered background. ';
+  return [layout, facts, styleBlock(style), `${background}${NO_WORDS}`].filter(Boolean).join('\n\n');
 }
 
 export type SheetEngine = {
@@ -174,7 +193,25 @@ export type SheetEngine = {
    * Record the person's verdict on a take. An approved take is confirmed as depicting the item
    * and selected, which makes it the item's reference for every picture it appears in.
    */
-  review(input: { mediaId: string; nodeId: string; approved: boolean; decision: string }): Promise<void>;
+  review(input: {
+    mediaId: string;
+    nodeId: string;
+    approved: boolean;
+    decision: string;
+    /** The asset nodes the take shows. A sheet shows its own node; a frame, everything in view. */
+    depicted: string[];
+  }): Promise<void>;
+  /** Prepare, approve and queue a moment's frame, with the approved sheets as references. */
+  startFrame(input: {
+    item: Item;
+    prompt: string;
+    references: { media_id: string; role: string; instruction: string }[];
+    /** Revised fields to patch onto the cut first, when the person corrected the moment. */
+    changes?: Record<string, string>;
+    source?: string;
+    reason: string;
+    maxUsd: number;
+  }): Promise<{ recipeId: string; jobId: string; usd: number | null }>;
 };
 
 export const PROVIDER =
@@ -220,7 +257,7 @@ export const liveSheets: SheetEngine = {
     return { recipeId: recipe.id, jobId: job.id, usd };
   },
 
-  async review({ mediaId, nodeId, approved, decision }) {
+  async review({ mediaId, nodeId, approved, decision, depicted }) {
     const media = (await call('media', { id: mediaId })) as {
       media: { review: { revision: number } };
       review_context: string;
@@ -233,12 +270,43 @@ export const liveSheets: SheetEngine = {
         expected_context: media.review_context,
         status: approved ? 'approved' : 'rejected',
         user_decision: decision.slice(0, 1000),
-        depicted_assets: approved ? [nodeId] : [],
+        depicted_assets: approved ? depicted : [],
       },
     });
     if (!approved) return;
     const node = (await call('inspect', { id: nodeId })) as { node: { revision: number } };
     await call('select', { node_id: nodeId, media_id: mediaId, revision: node.node.revision });
+  },
+
+  async startFrame({ item, prompt, references, changes, source, reason, maxUsd }) {
+    if (!item.nodeId) throw new Error(`${item.name} is not in the production yet`);
+    if (changes && Object.keys(changes).length && source) {
+      const node = (await call('inspect', { id: item.nodeId })) as { node: { revision: number } };
+      await call('patch', {
+        id: item.nodeId,
+        request: {
+          expected_revision: node.node.revision,
+          changes: Object.fromEntries(Object.entries(changes).map(([k, v]) => [k, { op: 'set', value: v }])),
+          source_id: source,
+          reason: 'The moment as they corrected it',
+        },
+      });
+    }
+    const recipe = (await call('prepare', {
+      node_id: item.nodeId,
+      provider: PROVIDER,
+      model: MODEL,
+      prompt,
+      references,
+      intent: `Frame: ${item.name}${item.version > 1 ? `, version ${item.version}` : ''}`,
+      settings: PROVIDER === 'fal' ? { aspect_ratio: '16:9' } : {},
+    })) as { id: string; fingerprint: string; spec: { estimate?: { credits?: number | null } } };
+    await call('approve', {
+      id: recipe.id,
+      request: { fingerprint: recipe.fingerprint, user_decision: reason, max_credits: maxUsd },
+    });
+    const job = (await call('enqueue', { id: recipe.id })) as { id: string };
+    return { recipeId: recipe.id, jobId: job.id, usd: recipe.spec.estimate?.credits ?? null };
   },
 
   async status(jobId, nodeId) {
@@ -265,4 +333,25 @@ export function spawnWorker(python: string, repo: string): { stop(): void } | nu
     { cwd: repo, stdout: 'ignore', stderr: 'inherit', env: process.env },
   );
   return { stop: () => proc.kill() };
+}
+
+export type Check = NonNullable<Item['check']>;
+
+export const judgeAvailable = () => !!process.env.JUDGE_URL && !!process.env.JUDGE_API_KEY;
+
+/** The judge on the PC checks one take against its declared facts; the answers go into Strawberry. */
+export async function judgeTake(mediaId: string): Promise<Check> {
+  const proc = Bun.spawn([STRAWBERRY_PYTHON, 'dreamchat/judge.py', STRAWBERRY_HOME, mediaId], {
+    cwd: REPO,
+    stdout: 'pipe',
+    stderr: 'pipe',
+    env: { ...process.env, PYTHONPATH: REPO },
+  });
+  const [out, err, code] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+    proc.exited,
+  ]);
+  if (code !== 0) throw new Error((err || out).trim().split('\n').at(-1)?.slice(0, 300) ?? 'judge failed');
+  return JSON.parse(out) as Check;
 }

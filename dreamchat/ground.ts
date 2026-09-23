@@ -4,9 +4,10 @@
 // guess, and the person is asked to confirm it before anything is drawn from it.
 import type { Exchange, JevFn, Question } from './jev';
 import { renderTranscript } from './jev';
-import { type Breakdown, details, moments } from './producer';
+import { type Breakdown, type Detail, details, moments } from './producer';
 
 const SAID_BAR = 0.6;
+const STATE_BAR = 0.7;
 
 export type GroundingNote = { path: string; label: string; value: string; p: number; evidence: number | null };
 
@@ -38,6 +39,19 @@ export function groundingQuestions(b: Breakdown, transcript: Exchange[]): Record
   };
   for (const { path, label, detail } of details(b))
     if (detail.said && detail.value) add(path, `${label} "${detail.value}"?`);
+  // A profile is drawn on every picture of its subject, so a thing that happens to them in the
+  // dream must not be in it (a woman whose head turns to ice was sketched with the ice, 23 Sep).
+  for (const p of [...b.people, ...b.places])
+    for (const [k, d] of Object.entries(p.fields))
+      if (d.value)
+        q[`state_${p.id}.${k}`] = {
+          type: 'noul',
+          instructions: `A profile of ${p.name} from a dream says: "${d.value}". Does it describe something that happens to ${p.name} during the dream (a change, transformation or passing state), rather than how ${p.name} ordinarily looks?`,
+          criteria: {
+            true: 'it describes a change or state from the story, such as turning into something, melting, glowing or being hurt',
+            false: 'it describes how they ordinarily look, or says nothing is known',
+          },
+        };
   // A moment is judged on what is in it, not on how near it is shown: the same told moment,
   // framed wide and then close, is still what they said.
   for (const m of moments(b))
@@ -78,6 +92,21 @@ export async function ground(
       downgraded.push({ path, label, value: detail.value, p: Number(p.toFixed(2)), evidence });
     }
   }
+  for (const p of [...out.people, ...out.places])
+    for (const [k, d] of Object.entries(p.fields) as [string, Detail][]) {
+      const a = call.answers?.[`state_${p.id}.${k}`];
+      if (!d.value || a?.type !== 'noul' || a.noul < STATE_BAR) continue;
+      downgraded.push({
+        path: `${p.id}.${k}`,
+        label: `${p.name}: a story state, not a profile`,
+        value: d.value,
+        p: Number(a.noul.toFixed(2)),
+        evidence: null,
+      });
+      d.value = null;
+      d.said = false;
+      d.evidence = null;
+    }
   for (const m of moments(out)) {
     if (!m.said) continue;
     const { ok, p, evidence } = judge(m.id);

@@ -12,7 +12,7 @@ import { callJev } from './jev';
 import { callDeepseek, callHost, type ChatMessage } from './llm';
 import { details, moments, reviseItem } from './producer';
 import { liveProducer, ownStyle, SessionStore } from './session';
-import { liveSheets, PROVIDER, spawnWorker } from './sheets';
+import { judgeAvailable, judgeTake, liveSheets, PROVIDER, spawnWorker } from './sheets';
 import { REPO, STRAWBERRY_HOME, STRAWBERRY_PYTHON, strawberryAvailable, writeProduction } from './strawberry';
 
 void loadedKeys;
@@ -34,7 +34,7 @@ How to behave:
 - If they ask whether you'd like to see it drawn, say yes.
 - If they offer ways it could be drawn, pick the one closest to how the dream looked to you, in a few words.
 - If they describe how they picture someone or something from your dream, say whether that fits. If a detail is wrong against the dream above, correct it; if the dream doesn't say, tell them to go with their guess.
-- Once they say the pictures are being made, just say thanks.
+- When they say a picture is up and ask how it looks, you can't see it: say it looks right, briefly, unless what they describe contradicts your dream.
 
 Reply with only your next message, nothing else.`;
 
@@ -60,6 +60,7 @@ async function run(file: string, max: number) {
     write: strawberryAvailable() ? writeProduction : undefined,
     sheets: strawberryAvailable() ? liveSheets : undefined,
     reviseItem,
+    judge: judgeAvailable() ? judgeTake : undefined,
   });
   const { id } = store.create(`simulated: ${slug}`);
 
@@ -73,8 +74,12 @@ async function run(file: string, max: number) {
     dreamer.push({ role: 'assistant', content: reply });
     const r = await store.message(id, reply);
     listener = r.messages.join('\n');
-    // Everything is being sketched: the conversation's work is done.
-    closed = r.closed || r.phase === 'review';
+    closed = r.closed;
+    // Pictures take a minute: a person would wait for them before answering about them.
+    if (!closed && (r.phase === 'review' || r.phase === 'frames')) {
+      await store.settle(id);
+      listener += '\n(the pictures have appeared on the right)';
+    }
   }
 
   await store.settle(id);
@@ -133,6 +138,14 @@ async function run(file: string, max: number) {
     style: s.style?.name ?? null,
     styleWaitMs: s.turns.reduce((n, t) => n + (t.waitMs ?? 0), 0),
     production: s.production,
+    frames: (s.build?.frames ?? []).map((i) => ({
+      name: i.name,
+      key: i.frame?.key,
+      status: i.status,
+      version: i.version,
+      error: i.error,
+      file: i.mediaPath ? join(STRAWBERRY_HOME, 'media', i.mediaPath) : null,
+    })),
     sketches: (s.build?.items ?? []).map((i) => ({
       name: i.name,
       status: i.status,
@@ -202,6 +215,10 @@ function print(r: Report) {
     console.log(`details ${bd.said} said, ${bd.guessed} guessed (${bd.downgraded} downgraded by the check)`);
   }
   console.log(`style: ${r.style ?? '—'} (waited ${r.styleWaitMs} ms for the breakdown)`);
+  for (const k of r.frames)
+    console.log(
+      `  frame ${k.key ? '★ ' : ''}${k.name}: ${k.status}${k.error ? ` (${k.error})` : ''}${k.file ? ` ${k.file}` : ''}`,
+    );
   for (const k of r.sketches)
     console.log(`  sketch ${k.name}: ${k.status}${k.error ? ` (${k.error})` : ''}${k.file ? ` ${k.file}` : ''}`);
   console.log(`images ${r.images} · $${r.spentUsd.toFixed(2)} at list price`);
