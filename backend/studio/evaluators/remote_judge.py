@@ -61,9 +61,18 @@ class JudgeClient:
         response.raise_for_status()
         return response.json()
 
-    def judge(self, image: str | Path, questions: list[dict], context: str = DEFAULT_CONTEXT) -> dict:
-        """questions: [{"id", "text"}] -> {"model", "answers": [{"id", "p_yes", "p_no", "ms"}], ...}"""
-        return self._post("/judge", {"image": self._image(image), "questions": questions, "context": context})
+    def judge(self, image: str | Path, questions: list[dict], context: str = DEFAULT_CONTEXT,
+              think: bool = False) -> dict:
+        """questions: [{"id", "text"}] -> {"model", "answers": [{"id", "p_yes", "p_no", "ms"}], ...}
+
+        With think=True the host lets the model reason before its one-word answer, and each answer also
+        carries `reasoning` and `think_ms`. The flag is only sent when set, so a host without it is
+        unaffected by the default.
+        """
+        payload = {"image": self._image(image), "questions": questions, "context": context}
+        if think:
+            payload["think"] = True
+        return self._post("/judge", payload)
 
     def locate(self, image: str | Path, nouns: list[str], threshold: float = 0.5, masks: bool = False) -> dict:
         return self._post("/locate", {"image": self._image(image), "nouns": nouns,
