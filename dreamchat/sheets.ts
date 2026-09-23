@@ -228,8 +228,16 @@ export function mediumOf(style: StyleOption): string {
   return style.tokens.find((t) => MEDIUM.test(t)) ?? 'a photograph';
 }
 
-export function styleBlock(style: StyleOption, told: string[] = []): string {
+/**
+ * The style, for one picture. `fromImages` is for a moment drawn from sketches and earlier
+ * pictures: they already fix everyone's colours, so the palette rules the light and whatever no
+ * image gives a colour ("colours, and no others" beside the dreamer's blue jeans asked for both).
+ */
+export function styleBlock(style: StyleOption, told: string[] = [], opts: { fromImages?: boolean } = {}): string {
   const colours = [...new Set(style.palette_hex.map(colourName))];
+  // A photograph of a person in a cold palette still has warm skin.
+  const skin = /photo|camera|film still/i.test(mediumOf(style)) ? 'Skin keeps its natural tone.' : '';
+  const keep = told.length ? ` What the dream itself gives a colour keeps it exactly: ${told.join('; ')}.` : '';
   return [
     // The line describing a style is written for the person, and it can carry the dream itself
     // ("…precise details on the horse head" put ice horses in every sketch, 23 Sep): only the
@@ -238,9 +246,11 @@ export function styleBlock(style: StyleOption, told: string[] = []): string {
     `Made as: ${mediumOf(style)}. Every part of the picture is made this way, the same as every other picture of this dream.`,
     style.tokens.length ? `Technique, followed exactly: ${style.tokens.join('; ')}.` : '',
     colours.length
-      ? told.length
-        ? `Colours: ${colours.join(', ')}, except what the dream itself gives a colour, which keeps it exactly: ${told.join('; ')}.`
-        : `Colours, and no others: ${colours.join(', ')}.`
+      ? opts.fromImages
+        ? `Colours: ${colours.join(', ')}, for the light and everything no image above gives a colour to; each person and thing keeps the colours of its image.${keep}${skin ? ` ${skin}` : ''}`
+        : told.length
+          ? `Colours: ${colours.join(', ')}, except what the dream itself gives a colour, which keeps it exactly: ${told.join('; ')}.${skin ? ` ${skin}` : ''}`
+          : `Colours, and no others: ${colours.join(', ')}.${skin ? ` ${skin}` : ''}`
       : '',
     style.lighting_rules ? `Light: ${style.lighting_rules}` : '',
   ]

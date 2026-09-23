@@ -59,6 +59,12 @@ describe('colours the dream gives', () => {
       'except what the dream itself gives a colour, which keeps it exactly: blue balloons',
     );
     expect(styleBlock(muted)).toContain('Colours, and no others: ');
+    // A moment drawn from its sketches: they fix everyone's colours; the palette rules the rest.
+    expect(styleBlock(muted, [], { fromImages: true })).toContain(
+      'for the light and everything no image above gives a colour to; each person and thing keeps the colours of its image.',
+    );
+    expect(styleBlock({ ...muted, medium: 'a photograph' })).toContain('Skin keeps its natural tone.');
+    expect(styleBlock(muted)).not.toContain('Skin');
   });
 });
 

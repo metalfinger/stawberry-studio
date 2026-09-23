@@ -311,7 +311,7 @@ export function framePrompt(
     frame.repairFor?.length
       ? `The last attempt at this frame got these wrong. Put each right:\n${frame.repairFor.map((q) => `- ${q}`).join('\n')}`
       : '',
-    styleBlock(style, toldColours(frame, ...inView)),
+    styleBlock(style, toldColours(frame, ...inView), { fromImages: references.length > 0 }),
     // The ice-head frames came back with the whole woman made of ice (23 Sep): what the action
     // changes, and nothing else, differs from the references.
     references.length
@@ -401,7 +401,7 @@ export function ghostPrompt(
         ];
   const prompt = [
     ...lines,
-    styleBlock(style, toldColours(sheet)),
+    styleBlock(style, toldColours(sheet), { fromImages: true }),
     `One single picture, not a sheet or a grid. ${NO_WORDS}`,
   ]
     .filter(Boolean)
