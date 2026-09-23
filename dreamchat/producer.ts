@@ -78,6 +78,21 @@ export type StyleOption = {
   lighting_rules: string;
 };
 
+/** Words that say what a picture is made as. */
+const MEDIUM =
+  /\b(photo\w*|camera|film still|pencil|graphite|charcoal|ink|watercolou?r|gouache|oil paint\w*|oils|acrylic|paint\w*|pastel|crayon|woodcut|linocut|etching|engraving|print|collage|clay|stop.motion|3d render\w*|cgi|anime|cartoon|comic|manga|sketch\w*|drawing|drawn|illustrat\w*|mosaic|stained glass|embroider\w*|pixel art|vector|poster|screen.?print|risograph|animation|animated)\b/i;
+
+/**
+ * What every picture of a style is made as. A style that names no medium ("the dream exactly as
+ * it looked to you") left it to the model, and a photographic storyboard turned into an ink
+ * drawing at its fifth picture (23 Sep): one that names none is a photograph, as the eye saw it.
+ */
+export function mediumOf(style: StyleOption): string {
+  if (style.medium?.trim()) return style.medium.trim();
+  if (MEDIUM.test(style.name)) return style.name;
+  return style.tokens.find((t) => MEDIUM.test(t)) ?? 'a photograph';
+}
+
 export type Breakdown = {
   title: string;
   logline: string;

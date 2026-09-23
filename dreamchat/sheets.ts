@@ -3,7 +3,7 @@
 // their source, a recipe is prepared, approved within the conversation's image cap, queued, and
 // the engine's worker draws it.
 import type { CutPlan, GhostPlan } from './continuity';
-import type { Detail, StyleOption } from './producer';
+import { type Detail, mediumOf, type StyleOption } from './producer';
 import { cli, REPO, STRAWBERRY_HOME, STRAWBERRY_PYTHON } from './strawberry';
 
 export type ItemKind = 'character' | 'location' | 'prop' | 'cut' | 'ghost';
@@ -211,21 +211,6 @@ export function toldColours(...items: Item[]): string[] {
           out.add(phrase.toLowerCase());
         }
   return [...out];
-}
-
-/** Words that say what a picture is made as. */
-const MEDIUM =
-  /\b(photo\w*|camera|film still|pencil|graphite|charcoal|ink|watercolou?r|gouache|oil paint\w*|oils|acrylic|paint\w*|pastel|crayon|woodcut|linocut|etching|engraving|print|collage|clay|stop.motion|3d render\w*|cgi|anime|cartoon|comic|manga|sketch\w*|drawing|drawn|illustrat\w*|mosaic|stained glass|embroider\w*|pixel art|vector|poster|screen.?print|risograph|animation|animated)\b/i;
-
-/**
- * What every picture of a style is made as. A style that names no medium ("the dream exactly as
- * it looked to you") left it to the model, and a photographic storyboard turned into an ink
- * drawing at its fifth picture (23 Sep): one that names none is a photograph, as the eye saw it.
- */
-export function mediumOf(style: StyleOption): string {
-  if (style.medium?.trim()) return style.medium.trim();
-  if (MEDIUM.test(style.name)) return style.name;
-  return style.tokens.find((t) => MEDIUM.test(t)) ?? 'a photograph';
 }
 
 /**

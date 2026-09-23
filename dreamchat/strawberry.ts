@@ -8,7 +8,7 @@
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { type CutPlan, planContinuity, seenIn } from './continuity';
-import { type Breakdown, type Detail, moments, type State, type StyleOption } from './producer';
+import { type Breakdown, type Detail, mediumOf, moments, type State, type StyleOption } from './producer';
 
 export const REPO = resolve(import.meta.dir, '..');
 export const STRAWBERRY_PYTHON = process.env.STRAWBERRY_PYTHON ?? join(REPO, 'venv', 'bin', 'python');
@@ -114,7 +114,9 @@ export function planWrites(b: Breakdown, style: StyleOption, transcript: string)
       source: '$said',
       reason: 'The way they chose to have it drawn',
       changes: {
-        style: `${style.name}: ${style.line}`.slice(0, 600),
+        // What a picture can be judged for: the style and what it is made as. Its line is how it
+        // would feel, for the person, and asked "does it feel like watching the ice carve itself?".
+        style: `${style.name}, made as ${mediumOf(style)}`.slice(0, 600),
         'bible.tokens': style.tokens,
         'bible.palette_hex': style.palette_hex,
         'bible.lighting_rules': style.lighting_rules,
