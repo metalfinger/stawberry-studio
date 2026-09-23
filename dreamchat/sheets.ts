@@ -3,7 +3,7 @@
 // their source, a recipe is prepared, approved within the conversation's image cap, queued, and
 // the engine's worker draws it.
 import type { CutPlan, GhostPlan } from './continuity';
-import { type Detail, mediumOf, type StyleOption } from './producer';
+import { type Detail, mediumOf, type StyleOption, VAGUE } from './producer';
 import { cli, REPO, STRAWBERRY_HOME, STRAWBERRY_PYTHON } from './strawberry';
 
 export type ItemKind = 'character' | 'location' | 'prop' | 'cut' | 'ghost';
@@ -269,8 +269,10 @@ export const LOOK: Record<ItemKind, string[]> = {
 };
 
 export function sheetPrompt(item: Item, style: StyleOption): string {
+  // A look that says nothing a picture can keep ("indistinct, like a figure in a hazy memory")
+  // would be drawn as a blur.
   const facts = Object.keys(item.fields)
-    .filter((k) => LOOK[item.kind].includes(k))
+    .filter((k) => LOOK[item.kind].includes(k) && !VAGUE.test(value(item, k)))
     .map((k) => (value(item, k) ? `${FIELD_WORDS[k] ?? k}: ${value(item, k)}` : ''))
     .filter(Boolean)
     .join('\n');
