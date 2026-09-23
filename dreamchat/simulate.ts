@@ -10,7 +10,9 @@ import { dreamConfig } from './dream';
 import { loadEnvFile } from './env';
 import { callJev } from './jev';
 import { callDeepseek, callHost, type ChatMessage } from './llm';
-import { SessionStore } from './session';
+import { details, moments } from './producer';
+import { liveProducer, ownStyle, SessionStore } from './session';
+import { strawberryAvailable, writeProduction } from './strawberry';
 
 loadEnvFile();
 
@@ -28,6 +30,8 @@ How to behave:
 - Only use what is in the dream above. If you're asked about something it doesn't say, say you don't remember. Never invent a detail.
 - You know nothing about film, art or drawing.
 - If they tell the dream back to you, check it against the dream above and say honestly whether it's right, correcting anything that's wrong or missing.
+- If they ask whether you'd like to see it drawn, say yes.
+- If they offer ways it could be drawn, pick the one closest to how the dream looked to you, in a few words.
 
 Reply with only your next message, nothing else.`;
 
@@ -45,7 +49,13 @@ async function run(file: string, max: number) {
     .replace(/^Source:.*\n/m, '')
     .trim();
   const cfg = dreamConfig();
-  const store = new SessionStore(cfg, { jev: callJev, host: callHost });
+  const store = new SessionStore(cfg, {
+    jev: callJev,
+    host: callHost,
+    producer: liveProducer(callJev),
+    ownStyle,
+    write: strawberryAvailable() ? writeProduction : undefined,
+  });
   const { id } = store.create(`simulated: ${slug}`);
 
   const opened = await store.open(id);
@@ -61,7 +71,10 @@ async function run(file: string, max: number) {
     closed = r.closed;
   }
 
+  await store.settle(id);
   const s = store.view(id)!;
+  const b = s.draft?.breakdown;
+  const all = b ? details(b).filter((d) => d.detail.value) : [];
   const turns = s.turns.filter((t) => t.turn > 0);
   const hostMessages = s.transcript.filter((e) => e.role === 'assistant').flatMap((e) => e.messages ?? [e.content]);
   // A film word the person used first is theirs to use; only Berry's own count.
@@ -98,6 +111,22 @@ async function run(file: string, max: number) {
     repairs: turns.flatMap((t) => t.violations),
     retelling,
     fidelity,
+    breakdown: b
+      ? {
+          title: b.title,
+          moments: moments(b).map((m) => `${m.key ? '★ ' : ''}${m.action}${m.said ? '' : ' (guess)'}`),
+          people: b.people.map((p) => p.name),
+          places: b.places.map((p) => p.name),
+          things: b.things.map((t) => t.name),
+          said: all.filter((d) => d.detail.said).length,
+          guessed: all.filter((d) => !d.detail.said).length,
+          downgraded: s.draft?.downgraded?.length ?? 0,
+          ms: s.draft?.ms,
+        }
+      : null,
+    style: s.style?.name ?? null,
+    styleWaitMs: s.turns.reduce((n, t) => n + (t.waitMs ?? 0), 0),
+    production: s.production,
     avgJudgeMs: Math.round(turns.reduce((n, t) => n + t.jevMs, 0) / Math.max(turns.length, 1)),
     avgReplyMs: Math.round(turns.reduce((n, t) => n + t.hostMs, 0) / Math.max(turns.length, 1)),
     transcript: s.transcript.map((e) => `${e.role === 'user' ? 'dreamer' : 'Berry'}: ${e.content}`),
@@ -147,6 +176,19 @@ function print(r: Report) {
   console.log(`film words: ${r.filmWords.length ? r.filmWords.join(', ') : 'none'} · repairs: ${r.repairs.length}`);
   console.log(`retelling fidelity: ${JSON.stringify(r.fidelity)}`);
   console.log(`avg judge ${r.avgJudgeMs} ms · avg reply ${r.avgReplyMs} ms`);
+  if (r.breakdown) {
+    const bd = r.breakdown;
+    console.log(
+      `breakdown "${bd.title}" in ${bd.ms} ms: ${bd.moments.length} moments · people ${bd.people.join(', ') || '—'} · places ${bd.places.join(', ')} · things ${bd.things.join(', ') || '—'}`,
+    );
+    for (const m of bd.moments) console.log(`    ${m}`);
+    console.log(`details ${bd.said} said, ${bd.guessed} guessed (${bd.downgraded} downgraded by the check)`);
+  }
+  console.log(`style: ${r.style ?? '—'} (waited ${r.styleWaitMs} ms for the breakdown)`);
+  const p = r.production;
+  console.log(
+    `strawberry: ${p?.status ?? '—'}${p?.result ? ` · ${p.result.cuts} cuts, ${JSON.stringify(p.result.created)}, issues: ${p.result.issues.length}` : ''}${p?.error ? ` · ${p.error.slice(0, 200)}` : ''}`,
+  );
 }
 
 const args = process.argv.slice(2);

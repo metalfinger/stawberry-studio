@@ -290,14 +290,72 @@ The redraw shows as the next version.
 
 Each step ships on its own and is measured with the simulated dreamers before the next one starts.
 
-1. **Listen.** Copy the lab loop. Add the story goals, including `look` and `things`, and the
-   don't-know handling. Add the per-conversation turn queue and the simulated dreamers. Text only.
-2. **Retell and ask.** The producer writes the breakdown into Strawberry, using the fake provider.
-   Then the retelling, the ask and the style choice.
+1. **Listen.** *Built* (`dreamchat/`). Copy the lab loop. Add the story goals, including `look` and
+   `things`, and the don't-know handling. Add the per-conversation turn queue and the simulated
+   dreamers. Text only.
+2. **Retell and ask.** *Built.* The retelling, the ask, the style choice, and the producer's
+   breakdown written into Strawberry. Changes from the plan above, each for a measured reason:
+   - The retelling is written from the conversation, not from the breakdown. The producer takes
+     18–22 s, so it drafts in the background while the person answers the retelling. By the
+     style question it had finished, or needed a wait of up to 13 s.
+   - Jev checks every detail the producer marks as said against the person's own messages.
+     Anything it can't find becomes a guess.
+   - The engine's only open issue on every written production is "approve a reference for …":
+     the sheets, which is step 3.
 3. **Sheets.** Profiles and their confirmation, the fal provider, the job ledger, the panel and the
    judge badges.
 4. **Frames.** The key moment first, then story order. References, reactions and new versions.
 5. **Waiting and polish.** Statuses in the brief, pacing, the cap and error states.
+
+## Step 3 design: every item is a form
+
+The lab's construct is a form: a list of goals, each with a plain probe hint. Jev reads coverage
+with an evidence pointer, code picks the move, and each goal is asked at most twice, with
+not-applicable and don't-remember as answers. Step 1 runs the dream's story as one such form.
+Step 3 runs the Strawberry part as more of them: **one small form per item, generated from
+the breakdown, in Strawberry's order.** The machinery (`selectMove`, `readState`,
+`renderBrief`) runs them unchanged.
+
+| Form | Its goals (Strawberry fields) | Pre-filled from | Asked as |
+|---|---|---|---|
+| The look | the chosen style, palette, light | the style they chose | nothing more to ask |
+| Each person, protagonist first | identity, appearance, wardrobe, distinctive features | the breakdown's details | "Here's how I picture her: … Anything to change?" |
+| Each place | geography, landmarks, light | the breakdown | "Here's the kitchen as I see it: …" |
+| Each thing that matters | appearance, materials | the breakdown | only if it is seen closely |
+| Each moment (cut) | what happens, who's in view, whose eyes, how close | the breakdown | only the key moment is confirmed; the rest ride on the retelling |
+
+How a goal starts:
+- **Said, with evidence:** covered, and never asked.
+- **Guessed:** open. It is shown to the person as part of a profile to confirm, never asked
+  as a bare question.
+- **Empty:** open, and asked with its plain hint.
+
+Answers are read the lab's way:
+- A confirmation covers every guess in the profile it was shown in.
+- "You choose" settles a guess as a proposal the person accepted.
+- "I don't remember" settles it as unknown, drawn from the guess.
+
+Each settled field is patched into Strawberry with its source: their words, or the accepted
+proposal.
+
+The form moves on when its required goals are settled. Code then:
+- starts its sheet (the job ledger, keyed by item and version);
+- opens the next form in Strawberry's order: style, then sheets in the order people, places,
+  things, then the key moment, then the frames in story order.
+
+The conversation never waits on a picture.
+
+The same construct handles pictures coming back. When a sheet lands, the item's form gains
+one goal, "does it look right?". Jev reads it as matches / mostly / wrong / no answer. A
+correction points at its message and becomes version 2, edited from version 1. That is the
+lab's evidence pointer driving an image edit.
+
+What stays the same across every form:
+- **Code picks the move.**
+- **The model phrases it.**
+- **Two asks at most per goal.**
+- **Unknown is an answer.**
+- **One turn at a time**, with background jobs reporting back through the same queue.
 
 ## Defaults (change any)
 

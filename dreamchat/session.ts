@@ -6,8 +6,10 @@
 // run strictly one at a time.
 import { existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { type GroundingNote, ground } from './ground';
 import {
   bookkeeperQuestions,
+  type Exchange,
   type JevFn,
   type JevReadNote,
   readState,
@@ -16,6 +18,8 @@ import {
 } from './jev';
 import {
   askableGoals,
+  type BriefExtras,
+  CLOSED,
   type GoalsFile,
   goalStatus,
   initialState,
@@ -37,6 +41,8 @@ import {
   parseTurnResponse,
   type Thinking,
 } from './llm';
+import { type Breakdown, callProducer, normalizeBreakdown, ownStyle, type StyleOption } from './producer';
+import type { WriteResult } from './strawberry';
 
 export type Entry = { role: 'user' | 'assistant'; content: string; messages?: string[] };
 
@@ -50,6 +56,8 @@ export type TurnRecord = {
   jevMs: number;
   hostMs: number;
   thinking?: Thinking;
+  /** Time this turn spent waiting for the producer's breakdown. */
+  waitMs?: number;
   violations: string[];
   notes: JevReadNote[];
   at: number;
@@ -63,6 +71,28 @@ export type TurnDetail = {
   hostInput: ChatMessage[];
   hostRaw: string;
   stateAfter: State;
+};
+
+/** The producer's breakdown of the dream, drafted in the background. */
+export type Draft = {
+  status: 'drafting' | 'ready' | 'failed';
+  /** How many of their messages it was drafted from. */
+  basedOn: number;
+  breakdown?: Breakdown;
+  /** Details the producer marked as said that Jev could not find in their words. */
+  downgraded?: GroundingNote[];
+  notes?: string[];
+  ms?: number;
+  error?: string;
+};
+
+export type DraftResult = { breakdown: Breakdown; downgraded: GroundingNote[]; notes: string[]; ms: number };
+
+/** The production written into Strawberry once they choose how it should look. */
+export type Production = {
+  status: 'writing' | 'written' | 'failed' | 'unavailable';
+  result?: WriteResult;
+  error?: string;
 };
 
 export type Session = {
@@ -79,6 +109,11 @@ export type Session = {
   askCounts: Record<string, number>;
   exploredThreads: string[];
   retells: number;
+  offers: number;
+  styleAsks: number;
+  draft: Draft | null;
+  style: StyleOption | null;
+  production: Production | null;
 };
 
 export type TurnResult = {
@@ -93,12 +128,45 @@ export type TurnResult = {
   refused?: boolean;
 };
 
-export type StoreDeps = { jev: JevFn; host: HostFn; dir?: string; now?: () => number };
+export type StoreDeps = {
+  jev: JevFn;
+  host: HostFn;
+  /** Drafts the breakdown. Absent in tests that don't need one: the chat then offers no style options. */
+  producer?: (transcript: Exchange[], previous?: Breakdown) => Promise<DraftResult>;
+  /** Their own description of how it should look, as a style option. */
+  ownStyle?: (transcript: string) => Promise<StyleOption | null>;
+  /** Writes the production into Strawberry. Absent when the engine isn't installed. */
+  write?: (b: Breakdown, style: StyleOption, transcript: string) => Promise<WriteResult>;
+  dir?: string;
+  now?: () => number;
+};
+
+/** The real producer: the breakdown, then Jev's check of every detail marked as said. */
+export function liveProducer(jev: JevFn): NonNullable<StoreDeps['producer']> {
+  return async (transcript, previous) => {
+    const { raw, ms } = await callProducer(renderTranscript(transcript), previous);
+    const { breakdown, notes } = normalizeBreakdown(raw);
+    const g = await ground(breakdown, transcript, jev);
+    return { breakdown: g.breakdown, downgraded: g.downgraded, notes, ms: ms + g.ms };
+  };
+}
+
+export { ownStyle };
+
+const userTurns = (s: Session) => s.transcript.filter((e) => e.role === 'user').length;
+
+/** The first thing that would be drawn, in plain words: the protagonist, else the first place. */
+function firstSubject(b: Breakdown | undefined): string | undefined {
+  if (!b) return undefined;
+  const p = b.people.find((x) => x.protagonist && !x.is_dreamer) ?? b.people.find((x) => !x.is_dreamer);
+  return p?.name ?? b.places[0]?.name ?? b.things[0]?.name;
+}
 
 export class SessionStore {
   private sessions = new Map<string, Session>();
   private chains = new Map<string, Promise<unknown>>();
   private memoryDetails = new Map<string, TurnDetail>();
+  private drafts = new Map<string, { basedOn: number; promise: Promise<DraftResult> }>();
 
   constructor(
     readonly cfg: GoalsFile,
@@ -108,8 +176,16 @@ export class SessionStore {
     mkdirSync(deps.dir, { recursive: true });
     for (const f of readdirSync(deps.dir)) {
       if (!f.endsWith('.json')) continue;
-      const s = JSON.parse(readFileSync(join(deps.dir, f), 'utf8')) as Session;
-      this.sessions.set(s.id, s);
+      // Conversations saved before a field existed get its starting value.
+      const saved = JSON.parse(readFileSync(join(deps.dir, f), 'utf8')) as Partial<Session> & { id: string };
+      this.sessions.set(saved.id, {
+        ...saved,
+        offers: saved.offers ?? 0,
+        styleAsks: saved.styleAsks ?? 0,
+        draft: saved.draft ?? null,
+        style: saved.style ?? null,
+        production: saved.production ?? null,
+      } as Session);
     }
   }
 
@@ -136,6 +212,11 @@ export class SessionStore {
       askCounts: {},
       exploredThreads: [],
       retells: 0,
+      offers: 0,
+      styleAsks: 0,
+      draft: null,
+      style: null,
+      production: null,
     };
     this.sessions.set(id, s);
     return s;
@@ -275,7 +356,8 @@ export class SessionStore {
     const lastTurn = s.turns.at(-1);
     s.transcript.push({ role: 'user', content: text });
 
-    const questions = bookkeeperQuestions(this.cfg, s.transcript, prev, s.phase);
+    const styles = s.draft?.breakdown?.style_options ?? [];
+    const questions = bookkeeperQuestions(this.cfg, s.transcript, prev, s.phase, styles);
     const call = await this.deps.jev(renderTranscript(s.transcript), questions);
     const { next, notes } = readState(prev, this.cfg, s.transcript, call, turnNow, s.phase);
 
@@ -294,9 +376,36 @@ export class SessionStore {
       listenTurns: turnNow,
       retells: s.retells,
       followStreak,
+      offers: s.offers,
+      styleAsks: s.styleAsks,
+      styleIds: styles.map((o) => o.id),
     });
     let phase = phaseAfter(s.phase, move);
-    const brief = renderBrief(overlaid, move, this.cfg, { phase });
+
+    // The producer drafts the breakdown while the dream is told back, so it is usually done
+    // by the time the person has answered; a correction redrafts it from the previous one.
+    if (move.kind === 'retell' || move.kind === 'take_correction') this.startDraft(s);
+    // The moves that offer or apply a way of drawing it need the breakdown. Wait if needed.
+    let waitMs = 0;
+    if (move.kind === 'choose_style' || move.kind === 'style_help' || move.kind === 'start') {
+      const t0 = this.now();
+      await this.readyDraft(s);
+      waitMs = this.now() - t0;
+    }
+    if (move.kind === 'start') {
+      const b = s.draft?.breakdown;
+      s.style =
+        move.styleId === 'own' && this.deps.ownStyle
+          ? await this.deps.ownStyle(renderTranscript(s.transcript))
+          : (b?.style_options.find((o) => o.id === move.styleId) ?? b?.style_options[0] ?? null);
+    }
+    const extras: BriefExtras = {
+      styles: (s.draft?.breakdown?.style_options ?? []).map(({ id, name, line }) => ({ id, name, line })),
+      firstSubject: firstSubject(s.draft?.breakdown),
+    };
+    if (s.style?.id === 'own')
+      extras.styles = [...(extras.styles ?? []), { id: 'own', name: s.style.name, line: s.style.line }];
+    const brief = renderBrief(overlaid, move, this.cfg, { phase, extras });
     if (move.kind === 'probe_goal') s.askCounts[move.goalId] = (s.askCounts[move.goalId] ?? 0) + 1;
     s.briefs[turnNow] = brief;
 
@@ -324,9 +433,12 @@ export class SessionStore {
     if ((move.kind === 'explore_thread' || move.kind === 'circle_back') && !s.exploredThreads.includes(move.threadId))
       s.exploredThreads.push(move.threadId);
     if ((move.kind === 'retell' && told) || move.kind === 'take_correction') s.retells += 1;
+    if (move.kind === 'offer_visualize' || move.kind === 'offer_later') s.offers += 1;
+    if (move.kind === 'choose_style' || move.kind === 'style_help') s.styleAsks += 1;
     s.phase = phase;
-    s.closed = phase === 'understood' || phase === 'ended';
+    s.closed = CLOSED.includes(phase);
     s.state = { ...overlaid, last_move: moveKey(move) };
+    if (move.kind === 'start') this.startWrite(s);
 
     await this.commit(
       s,
@@ -339,6 +451,7 @@ export class SessionStore {
         jevMs: call.ms,
         hostMs: res.ms,
         thinking,
+        waitMs: waitMs || undefined,
         violations: parsed.violations,
         notes,
         at: this.now(),
@@ -353,6 +466,90 @@ export class SessionStore {
       },
     );
     return { messages: parsed.messages, phase, closed: s.closed, move, rule };
+  }
+
+  // ── Background work ───────────────────────────────────────────────────────
+  // A job never writes to a conversation directly. It runs outside the turn queue, then
+  // hands its result back THROUGH the queue, so it can't be overwritten by a turn that was
+  // running at the same time, or overwrite one.
+
+  private startDraft(s: Session): void {
+    if (!this.deps.producer) return;
+    const basedOn = userTurns(s);
+    if (this.drafts.get(s.id)?.basedOn === basedOn) return;
+    const promise = this.deps.producer(structuredClone(s.transcript), s.draft?.breakdown);
+    this.drafts.set(s.id, { basedOn, promise });
+    // The previous breakdown stays on show while the new one is drafted.
+    s.draft = { status: 'drafting', basedOn, breakdown: s.draft?.breakdown };
+    promise.then(
+      (r) => this.serial(s.id, () => this.update(s.id, (x) => this.applyDraft(x, basedOn, r))),
+      (e) =>
+        this.serial(s.id, () =>
+          this.update(s.id, (x) => {
+            if (x.draft?.basedOn === basedOn && x.draft.status === 'drafting')
+              x.draft = { ...x.draft, status: 'failed', error: String(e) };
+          }),
+        ),
+    );
+  }
+
+  private applyDraft(s: Session, basedOn: number, r: DraftResult): void {
+    // A newer draft has started, or a turn already applied this one.
+    if (s.draft && (s.draft.basedOn > basedOn || (s.draft.basedOn === basedOn && s.draft.status === 'ready'))) return;
+    s.draft = { status: 'ready', basedOn, ...r };
+  }
+
+  /** The breakdown for this turn, waiting for the running draft (or starting one) if needed. */
+  private async readyDraft(s: Session): Promise<void> {
+    if (s.draft?.status === 'ready' || !this.deps.producer) return;
+    if (!this.drafts.has(s.id)) this.startDraft(s); // e.g. after a restart lost the running one
+    const d = this.drafts.get(s.id);
+    if (!d) return;
+    try {
+      this.applyDraft(s, d.basedOn, await d.promise);
+    } catch (e) {
+      s.draft = { status: 'failed', basedOn: d.basedOn, breakdown: s.draft?.breakdown, error: String(e) };
+    }
+  }
+
+  private startWrite(s: Session): void {
+    const b = s.draft?.breakdown;
+    if (!this.deps.write || !b || !s.style) {
+      s.production = { status: 'unavailable' };
+      return;
+    }
+    s.production = { status: 'writing' };
+    this.deps.write(b, s.style, renderTranscript(s.transcript)).then(
+      (result) =>
+        this.serial(s.id, () =>
+          this.update(s.id, (x) => {
+            x.production = { status: 'written', result };
+          }),
+        ),
+      (e) =>
+        this.serial(s.id, () =>
+          this.update(s.id, (x) => {
+            x.production = { status: 'failed', error: String(e) };
+          }),
+        ),
+    );
+  }
+
+  private async update(id: string, fn: (s: Session) => void): Promise<void> {
+    const s = structuredClone(this.require(id));
+    fn(s);
+    await this.save(s);
+  }
+
+  /** Wait for every background job this conversation has running. For tests and the simulator. */
+  async settle(id: string, timeoutMs = 180_000): Promise<void> {
+    const until = Date.now() + timeoutMs;
+    while (Date.now() < until) {
+      await this.serial(id, async () => undefined);
+      const s = this.sessions.get(id);
+      if (s?.draft?.status !== 'drafting' && s?.production?.status !== 'writing') return;
+      await Bun.sleep(100);
+    }
   }
 
   // Assistant history is replayed in the SAME JSON shape the model must emit: fed back as
@@ -376,14 +573,17 @@ export class SessionStore {
 
   private async commit(s: Session, turn: TurnRecord, detail: TurnDetail): Promise<void> {
     s.turns.push(turn);
+    if (!this.deps.dir) this.memoryDetails.set(`${s.id}:${turn.turn}`, detail);
+    else {
+      mkdirSync(join(this.deps.dir, s.id), { recursive: true });
+      await Bun.write(join(this.deps.dir, s.id, `turn-${turn.turn}.json`), JSON.stringify(detail, null, 2));
+    }
+    await this.save(s);
+  }
+
+  private async save(s: Session): Promise<void> {
     s.updatedAt = this.now();
     this.sessions.set(s.id, s);
-    if (!this.deps.dir) {
-      this.memoryDetails.set(`${s.id}:${turn.turn}`, detail);
-      return;
-    }
-    mkdirSync(join(this.deps.dir, s.id), { recursive: true });
-    await Bun.write(join(this.deps.dir, s.id, `turn-${turn.turn}.json`), JSON.stringify(detail, null, 2));
-    await Bun.write(join(this.deps.dir, `${s.id}.json`), JSON.stringify(s, null, 2));
+    if (this.deps.dir) await Bun.write(join(this.deps.dir, `${s.id}.json`), JSON.stringify(s, null, 2));
   }
 }

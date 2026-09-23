@@ -3,7 +3,9 @@ import { dreamConfig } from '../dream';
 import {
   initialState,
   LISTEN_TURN_LIMIT,
+  MAX_OFFERS,
   MAX_RETELLS,
+  MAX_STYLE_ASKS,
   type MoveContext,
   phaseAfter,
   renderBrief,
@@ -24,11 +26,18 @@ function state(over: {
   threads?: Thread[];
   last_move?: string;
   retell_reply?: State['signals']['retell_reply'];
+  wants_to_see?: State['signals']['wants_to_see'];
+  style_choice?: string;
 }): State {
   const s = initialState('t', cfg);
   for (const id of over.covered ?? []) s.goals[id] = { confidence: 0.9, evidence: `told ${id}` };
   for (const id of over.unknown ?? []) s.goals[id] = { confidence: 0.1, evidence: '', unknown: true };
-  s.signals = { finished_telling: over.finished ?? 0, retell_reply: over.retell_reply ?? null };
+  s.signals = {
+    finished_telling: over.finished ?? 0,
+    retell_reply: over.retell_reply ?? null,
+    wants_to_see: over.wants_to_see ?? null,
+    style_choice: over.style_choice ?? null,
+  };
   s.rapport = { ...s.rapport, verbosity: over.verbosity ?? 'neutral', wants_out: over.wants_out ?? 'no' };
   s.threads = over.threads ?? [];
   s.last_move = over.last_move ?? '';
@@ -140,8 +149,10 @@ describe('listening', () => {
 describe('the retelling', () => {
   const retell = (over: Partial<MoveContext> = {}): MoveContext => listen({ phase: 'retell', retells: 1, ...over });
 
-  test('confirmed means understood', () => {
-    expect(selectMove(state({ retell_reply: 'confirmed' }), cfg, retell()).move).toEqual({ kind: 'understood' });
+  test('confirmed leads to asking whether they would like to see it', () => {
+    const { move } = selectMove(state({ retell_reply: 'confirmed' }), cfg, retell());
+    expect(move).toEqual({ kind: 'offer_visualize' });
+    expect(phaseAfter('retell', move)).toBe('offer');
   });
 
   test('a correction is settled inside the retelling, not by going back to listening', () => {
@@ -152,13 +163,59 @@ describe('the retelling', () => {
 
   test('after the last retelling, a correction is accepted as it stands', () => {
     const { move } = selectMove(state({ retell_reply: 'added_more' }), cfg, retell({ retells: MAX_RETELLS }));
-    expect(move).toEqual({ kind: 'understood' });
+    expect(move).toEqual({ kind: 'offer_visualize' });
   });
 
   test('no clear answer is asked about once, then taken as right', () => {
     expect(selectMove(state({ retell_reply: 'unclear' }), cfg, retell()).move).toEqual({ kind: 'retell_check' });
     expect(selectMove(state({ retell_reply: 'unclear', last_move: 'retell_check' }), cfg, retell()).move).toEqual({
-      kind: 'understood',
+      kind: 'offer_visualize',
+    });
+  });
+});
+
+describe('would you like to see it', () => {
+  const offer = (over: Partial<MoveContext> = {}): MoveContext => listen({ phase: 'offer', offers: 1, ...over });
+
+  test('yes leads to the style', () => {
+    const { move } = selectMove(state({ wants_to_see: 'yes' }), cfg, offer());
+    expect(move).toEqual({ kind: 'choose_style' });
+    expect(phaseAfter('offer', move)).toBe('style');
+  });
+
+  test('no keeps the dream as told, and closes', () => {
+    const { move } = selectMove(state({ wants_to_see: 'no' }), cfg, offer());
+    expect(move).toEqual({ kind: 'keep' });
+    expect(phaseAfter('offer', move)).toBe('kept');
+  });
+
+  test('not yet is asked about lightly once more, then kept', () => {
+    expect(selectMove(state({ wants_to_see: 'not_yet' }), cfg, offer()).move).toEqual({ kind: 'offer_later' });
+    expect(selectMove(state({ wants_to_see: 'not_yet' }), cfg, offer({ offers: MAX_OFFERS })).move).toEqual({
+      kind: 'keep',
+    });
+  });
+});
+
+describe('how it should look', () => {
+  const style = (over: Partial<MoveContext> = {}): MoveContext =>
+    listen({ phase: 'style', styleAsks: 1, styleIds: ['a', 'b', 'c', 'd'], ...over });
+
+  test('a chosen option starts the build', () => {
+    const { move } = selectMove(state({ style_choice: 'b' }), cfg, style());
+    expect(move).toEqual({ kind: 'start', styleId: 'b' });
+    expect(phaseAfter('style', move)).toBe('ready');
+  });
+
+  test('their own description is a choice too', () => {
+    expect(selectMove(state({ style_choice: 'own' }), cfg, style()).move).toEqual({ kind: 'start', styleId: 'own' });
+  });
+
+  test('unsure gets a suggestion, then the one closest to how it looked', () => {
+    expect(selectMove(state({ style_choice: 'unsure' }), cfg, style()).move).toEqual({ kind: 'style_help' });
+    expect(selectMove(state({ style_choice: 'unsure' }), cfg, style({ styleAsks: MAX_STYLE_ASKS })).move).toEqual({
+      kind: 'start',
+      styleId: 'd',
     });
   });
 });
@@ -167,7 +224,7 @@ describe('phases', () => {
   test('code moves the phase, the model never does', () => {
     expect(phaseAfter('listen', { kind: 'retell' })).toBe('retell');
     expect(phaseAfter('retell', { kind: 'retell_check' })).toBe('retell');
-    expect(phaseAfter('retell', { kind: 'understood' })).toBe('understood');
+    expect(phaseAfter('style', { kind: 'start', styleId: 'a' })).toBe('ready');
     expect(phaseAfter('listen', { kind: 'wrap' })).toBe('ended');
     expect(phaseAfter('listen', { kind: 'follow' })).toBe('listen');
   });

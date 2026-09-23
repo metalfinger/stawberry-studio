@@ -1,0 +1,15 @@
+{
+  "title": "The departure board",
+  "logline": "A railway board on a kitchen wall shows one word: zikery.",
+  "look": { "colours": { "value": "black slats, white letters", "said": true }, "light": { "value": null, "said": false }, "texture": { "value": null, "said": false } },
+  "world_logic": "A station's board can hang in a home kitchen.",
+  "people": [],
+  "places": [{ "id": "l1", "name": "the kitchen", "fields": { "geography": { "value": "their own kitchen, indoors", "said": true }, "landmarks": { "value": "a railway board on the wall", "said": true }, "light": { "value": "ordinary morning light", "said": false } } }],
+  "things": [{ "id": "t1", "name": "the departure board", "fields": { "appearance": { "value": "twenty black slats, all blank but one reading zikery", "said": true }, "materials": { "value": "painted metal slats", "said": false } } }],
+  "scenes": [{ "id": "s1", "title": "The kitchen", "place": "l1", "mood": "puzzled, stuck", "moments": [
+    { "id": "m1", "action": "The kitchen, with the board on the wall", "visible": [], "things": ["t1"], "place": "l1", "eyes": "dreamer", "distance": "wide", "feeling": "not quite their kitchen", "visual_point": "the board where it shouldn't be", "key": false, "said": true },
+    { "id": "m2", "action": "The one slat that reads zikery", "visible": [], "things": ["t1"], "place": "l1", "eyes": "dreamer", "distance": "close", "feeling": "it should mean something", "visual_point": "the word zikery", "key": true, "said": true }
+  ] }],
+  "style_options": [{ "id": "d", "name": "sumi ink and wash", "line": "quiet, lots of empty paper", "tokens": ["single loaded brush strokes"], "palette_hex": ["#111111", "#F4EFE6"], "lighting_rules": "Soft, even light." }],
+  "unknowns": []
+}

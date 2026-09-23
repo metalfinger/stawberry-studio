@@ -101,6 +101,25 @@ pre {
 details { margin-bottom: 8px; }
 summary { cursor: pointer; color: var(--muted); font-size: .82rem; padding: 3px 0; }
 .bad { color: #ef8f86; font-size: .8rem; }
+.moment { display: grid; grid-template-columns: 2.2em 1fr; gap: 2px 8px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: .86rem; }
+.moment .n { color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; }
+.moment .n.key { color: var(--accent); }
+.moment .meta { grid-column: 2; color: var(--muted); font-size: .75rem; }
+.entity { padding: 8px 0; border-bottom: 1px solid var(--line); }
+.entity b { font-weight: 600; font-size: .88rem; }
+.field { display: flex; gap: 8px; align-items: baseline; font-size: .8rem; margin-top: 3px; }
+.field .k { color: var(--muted); min-width: 8.5em; }
+.field .v { flex: 1; overflow-wrap: anywhere; }
+.tag { font-size: .66rem; padding: 0 6px; border-radius: 99px; border: 1px solid currentColor; white-space: nowrap; }
+.tag.said { color: var(--told); }
+.tag.guess { color: var(--open); border-style: dashed; }
+.style { padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; margin-bottom: 7px; font-size: .84rem; }
+.style.chosen { border-color: var(--accent); }
+.style .line { color: var(--muted); font-size: .78rem; }
+.swatches { display: flex; gap: 3px; margin-top: 5px; }
+.swatches i { width: 16px; height: 16px; border-radius: 3px; border: 1px solid var(--line); }
+.working { color: var(--open); font-size: .82rem; }
+.dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); margin-left: 5px; vertical-align: middle; }
 .muted { color: var(--muted); font-size: .82rem; }
 @media (prefers-reduced-motion: no-preference) { #chat { scroll-behavior: smooth; } }
 </style>
@@ -112,7 +131,8 @@ summary { cursor: pointer; color: var(--muted); font-size: .82rem; padding: 3px 
   <div class="steps" id="steps" aria-label="where the conversation is">
     <span data-phase="listen">Listening</span>
     <span data-phase="retell">Telling it back</span>
-    <span data-phase="understood">Understood</span>
+    <span data-phase="see">Seeing it</span>
+    <span data-phase="ready">Ready to draw</span>
   </div>
   <div class="spacer"></div>
   <select id="sessions" aria-label="earlier conversations"></select>
@@ -131,10 +151,12 @@ summary { cursor: pointer; color: var(--muted); font-size: .82rem; padding: 3px 
   <aside>
     <nav>
       <button data-pane="dream" class="on">The dream</button>
+      <button data-pane="production" id="productionTab">Production</button>
       <button data-pane="turn">Turn</button>
       <button data-pane="calls">Calls</button>
     </nav>
     <div class="pane on" id="pane-dream"><p class="muted">Start a conversation to see what Berry has understood.</p></div>
+    <div class="pane" id="pane-production"><p class="muted">Once Berry tells the dream back, the producer drafts it here: the moments to draw, the people, places and things, and ways it could look.</p></div>
     <div class="pane" id="pane-turn"><p class="muted">Pick a reply's label in the chat to see why it was said.</p></div>
     <div class="pane" id="pane-calls"><p class="muted">The exact judge questions and model input for the selected turn.</p></div>
   </aside>
@@ -179,16 +201,20 @@ function renderChat() {
     }
     hostTurn += 1;
   }
-  if (session.closed) chat.append(el('div', { class: 'notice' }, session.phase === 'understood'
-    ? 'Berry has the dream. The next version starts building pictures from here.'
-    : 'This conversation has ended.'));
+  const endings = {
+    ready: 'Ready to draw. The production is in Strawberry; drawing the pictures comes in the next step.',
+    kept: 'Kept as told. Nothing will be drawn.',
+    ended: 'This conversation has ended.',
+  };
+  if (session.closed) chat.append(el('div', { class: 'notice' }, endings[session.phase] || 'This conversation has ended.'));
   chat.scrollTop = chat.scrollHeight;
   $('send').hidden = session.closed;
 }
 
 function renderSteps() {
-  const order = ['listen', 'retell', 'understood'];
-  const at = session ? order.indexOf(session.phase) : -1;
+  const order = ['listen', 'retell', 'see', 'ready'];
+  const step = { listen: 'listen', retell: 'retell', offer: 'see', style: 'see', ready: 'ready', kept: 'see', ended: 'listen' };
+  const at = session ? order.indexOf(step[session.phase] || 'listen') : -1;
   for (const s of $('steps').children) {
     const i = order.indexOf(s.dataset.phase);
     s.className = i === at ? 'now' : i < at ? 'done' : '';
@@ -225,6 +251,83 @@ function renderDream() {
   if (st.threads.length) {
     pane.append(el('h4', {}, 'Things they raised'));
     for (const t of st.threads) pane.append(el('div', { class: 'ev' }, `${t.strength}${t.explored ? ', followed' : ''}: ${t.summary}`));
+  }
+}
+
+function tag(said) { return el('span', { class: `tag ${said ? 'said' : 'guess'}` }, said ? 'said' : 'guess'); }
+
+function renderProduction() {
+  const pane = $('pane-production');
+  const d = session && session.draft;
+  $('productionTab').replaceChildren('Production', ...(d && d.status === 'drafting' ? [el('span', { class: 'dot', 'aria-label': 'working' })] : []));
+  if (!d) return;
+  pane.replaceChildren();
+  if (d.status === 'drafting') pane.append(el('p', { class: 'working' }, d.breakdown ? 'Redrafting from their correction…' : 'The producer is drafting the breakdown…'));
+  if (d.status === 'failed') pane.append(el('p', { class: 'bad' }, `Drafting failed: ${d.error}`));
+  const b = d.breakdown;
+  if (!b) return;
+  if (d.status === 'ready') pane.append(el('p', { class: 'muted' }, `Drafted in ${Math.round((d.ms || 0) / 1000)} s from their first ${d.basedOn} messages. ${d.downgraded && d.downgraded.length ? `${d.downgraded.length} detail(s) the producer called "said" were not in their words, so they're marked as guesses.` : ''}`));
+  pane.append(el('h4', {}, b.title), el('p', { class: 'muted' }, b.logline));
+
+  pane.append(el('h4', {}, 'The moments to draw'));
+  let n = 0;
+  for (const sc of b.scenes) for (const m of sc.moments) {
+    n += 1;
+    const row = el('div', { class: 'moment' });
+    row.append(el('span', { class: `n${m.key ? ' key' : ''}` }, m.key ? `★${n}` : String(n)));
+    const txt = el('span', {}, m.action + ' ');
+    if (!m.said) txt.append(tag(false));
+    row.append(txt, el('span', { class: 'meta' }, `${m.distance} · ${m.eyes === 'dreamer' ? 'through their eyes' : 'seen from outside'}${m.feeling ? ` · ${m.feeling}` : ''}`));
+    pane.append(row);
+  }
+
+  const group = (title, items) => {
+    if (!items.length) return;
+    pane.append(el('h4', {}, title));
+    for (const it of items) {
+      const box = el('div', { class: 'entity' });
+      box.append(el('b', {}, it.name + (it.protagonist ? ' · protagonist' : '') + (it.is_dreamer ? ' · the dreamer' : '')));
+      for (const [k, f] of Object.entries(it.fields)) {
+        if (!f.value) continue;
+        const row = el('div', { class: 'field' });
+        row.append(el('span', { class: 'k' }, k.replace('_', ' ')), el('span', { class: 'v' }, f.value), tag(f.said));
+        box.append(row);
+      }
+      pane.append(box);
+    }
+  };
+  group('People', b.people);
+  group('Places', b.places);
+  group('Things', b.things);
+  group('How it looked', [{ name: 'as they described it', fields: b.look }]);
+
+  if (b.style_options.length) {
+    pane.append(el('h4', {}, 'Ways it could be drawn'));
+    const chosen = session.style && session.style.id;
+    const opts = [...b.style_options, ...(session.style && session.style.id === 'own' ? [session.style] : [])];
+    for (const o of opts) {
+      const box = el('div', { class: `style${o.id === chosen ? ' chosen' : ''}` });
+      box.append(el('div', {}, `${o.id}) ${o.name}${o.id === chosen ? ' — chosen' : ''}`), el('div', { class: 'line' }, o.line));
+      const sw = el('div', { class: 'swatches' });
+      for (const hex of o.palette_hex) { const i = el('i', { title: hex }); i.style.background = hex; sw.append(i); }
+      box.append(sw);
+      pane.append(box);
+    }
+  }
+
+  const p = session.production;
+  if (p) {
+    pane.append(el('h4', {}, 'In Strawberry Studio'));
+    if (p.status === 'writing') pane.append(el('p', { class: 'working' }, 'Writing the production…'));
+    if (p.status === 'unavailable') pane.append(el('p', { class: 'muted' }, 'Strawberry engine not installed here; nothing written.'));
+    if (p.status === 'failed') pane.append(el('p', { class: 'bad' }, p.error));
+    if (p.status === 'written') {
+      const r = p.result;
+      const kv = el('div', { class: 'kv' });
+      for (const [k, v] of [['project', r.projectId], ['written', Object.entries(r.created).filter(([, n]) => n).map(([k2, n]) => `${n} ${k2}`).join(', ')], ['next', r.issues.length ? `${r.issues.length} open: ${r.issues[0]}${r.issues.length > 1 ? '…' : ''}` : 'nothing open'], ['took', `${(r.ms / 1000).toFixed(1)} s`]])
+        kv.append(el('span', {}, k), el('span', {}, v));
+      pane.append(kv);
+    }
   }
 }
 
@@ -271,9 +374,15 @@ function showPane(name) {
 for (const b of document.querySelectorAll('aside nav button')) b.onclick = () => showPane(b.dataset.pane);
 
 // ── flow ────────────────────────────────────────────────────────────────────
+let poll = null;
 async function refresh() {
   session = await api(`/api/session?id=${encodeURIComponent(session.id)}`);
-  renderChat(); renderSteps(); renderDream();
+  renderChat(); renderSteps(); renderDream(); renderProduction();
+  if (busy) typing(true);
+  // Background work finishes between turns; watch for it while any is running.
+  const working = (session.draft && session.draft.status === 'drafting') || (session.production && session.production.status === 'writing');
+  clearTimeout(poll);
+  if (working) poll = setTimeout(() => refresh().catch(() => {}), 3000);
 }
 
 async function loadSessions(selectId) {

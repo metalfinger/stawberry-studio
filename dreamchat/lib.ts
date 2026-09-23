@@ -58,6 +58,7 @@ export type Rapport = {
 export type ClosingNote = 'celebrate' | 'acknowledge_problem' | 'warm' | 'brisk';
 
 export type RetellReply = 'confirmed' | 'corrected' | 'added_more' | 'unclear';
+export type WantsToSee = 'yes' | 'not_yet' | 'no' | 'unclear';
 
 /** Jev's readings that move the conversation between parts, as opposed to goal coverage. */
 export type Signals = {
@@ -65,6 +66,10 @@ export type Signals = {
   finished_telling: number;
   /** How they answered the retelling. Only read on the turn after one. */
   retell_reply: RetellReply | null;
+  /** How they answered "would you like to see it?". Only read while that is open. */
+  wants_to_see: WantsToSee | null;
+  /** Which way of drawing it they chose: an option id, "own" (they described their own), or "unsure". */
+  style_choice: string | null;
 };
 
 export type State = {
@@ -84,10 +89,16 @@ export type State = {
  * reading, or moves repeat.
  * - listen: they tell the dream and nothing is drawn.
  * - retell: the dream has been told back, and any correction is being settled.
- * - understood: they confirmed the retelling.
+ * - offer: they confirmed it; we've asked whether they'd like to see it.
+ * - style: they said yes; we've offered ways it could be drawn.
+ * - ready: they chose a way; the production is written and drawing can start.
+ * - kept: they'd rather not see it drawn; the dream is kept as told.
  * - ended: they left.
  */
-export type Phase = 'listen' | 'retell' | 'understood' | 'ended';
+export type Phase = 'listen' | 'retell' | 'offer' | 'style' | 'ready' | 'kept' | 'ended';
+
+/** Phases where the conversation is over for this step. */
+export const CLOSED: readonly Phase[] = ['ready', 'kept', 'ended'];
 
 export type Move =
   | { kind: 'open_ended' }
@@ -99,7 +110,12 @@ export type Move =
   | { kind: 'retell' }
   | { kind: 'retell_check' }
   | { kind: 'take_correction' }
-  | { kind: 'understood' }
+  | { kind: 'offer_visualize' }
+  | { kind: 'offer_later' }
+  | { kind: 'choose_style' }
+  | { kind: 'style_help' }
+  | { kind: 'start'; styleId: string }
+  | { kind: 'keep' }
   | { kind: 'wrap' };
 
 export function initialState(sessionId: string, cfg: GoalsFile): State {
@@ -111,7 +127,7 @@ export function initialState(sessionId: string, cfg: GoalsFile): State {
     goals,
     threads: [],
     rapport: { verbosity: 'neutral', volunteers_detail: false, warmth: 'neutral', wants_out: 'no' },
-    signals: { finished_telling: 0, retell_reply: null },
+    signals: { finished_telling: 0, retell_reply: null, wants_to_see: null, style_choice: null },
     last_move: '',
   };
 }
@@ -195,6 +211,12 @@ export const LISTEN_TURN_LIMIT = 18;
  */
 export const MAX_FOLLOW_STREAK = 3;
 
+/** Times "would you like to see it?" is put before a hesitation is taken as no, for now. */
+export const MAX_OFFERS = 2;
+
+/** Times the style is asked about before the one closest to how the dream looked is chosen. */
+export const MAX_STYLE_ASKS = 2;
+
 /** Rounds of telling back (the retelling plus each correction) before a change is simply taken as it stands. */
 export const MAX_RETELLS = 3;
 
@@ -207,6 +229,12 @@ export type MoveContext = {
   retells: number;
   /** How many turns in a row, up to the last one, followed the telling rather than asking. */
   followStreak: number;
+  /** How many times "would you like to see it?" has been put. */
+  offers?: number;
+  /** How many times the style has been asked about. */
+  styleAsks?: number;
+  /** The style options on offer, once the producer has written them. */
+  styleIds?: string[];
   maxAsksPerGoal?: number;
 };
 
@@ -222,12 +250,35 @@ export function selectMove(state: State, cfg: GoalsFile, ctx: MoveContext): { mo
   // 1. exit signals win over everything
   if (state.rapport.wants_out === 'hard') return { move: { kind: 'wrap' }, rule: '1: they are leaving' };
 
+  if (ctx.phase === 'style') {
+    const choice = state.signals.style_choice;
+    const ids = ctx.styleIds ?? [];
+    if (choice && (ids.includes(choice) || choice === 'own'))
+      return { move: { kind: 'start', styleId: choice }, rule: 'S1: they chose how it looks' };
+    const fallback = ids.includes('d') ? 'd' : (ids[0] ?? 'd');
+    if ((ctx.styleAsks ?? 0) >= MAX_STYLE_ASKS)
+      return {
+        move: { kind: 'start', styleId: fallback },
+        rule: 'S3: still unsure — the one closest to how it looked',
+      };
+    return { move: { kind: 'style_help' }, rule: 'S2: unsure how it should look' };
+  }
+
+  if (ctx.phase === 'offer') {
+    const answer = state.signals.wants_to_see;
+    if (answer === 'yes') return { move: { kind: 'choose_style' }, rule: 'O1: they want to see it' };
+    if (answer === 'no') return { move: { kind: 'keep' }, rule: "O2: they'd rather not" };
+    if ((ctx.offers ?? 0) >= MAX_OFFERS)
+      return { move: { kind: 'keep' }, rule: 'O3: still not ready — keep it as told' };
+    return { move: { kind: 'offer_later' }, rule: answer === 'not_yet' ? 'O3: not yet' : 'O3: no clear answer' };
+  }
+
   if (ctx.phase === 'retell') {
     const reply = state.signals.retell_reply;
-    if (reply === 'confirmed') return { move: { kind: 'understood' }, rule: 'R1: retelling confirmed' };
+    if (reply === 'confirmed') return { move: { kind: 'offer_visualize' }, rule: 'R1: retelling confirmed' };
     if (reply === 'corrected' || reply === 'added_more') {
       if (ctx.retells >= MAX_RETELLS)
-        return { move: { kind: 'understood' }, rule: 'R2: retelling amended, retell limit reached' };
+        return { move: { kind: 'offer_visualize' }, rule: 'R2: retelling amended, retell limit reached' };
       // Settled right here, still in the retelling: tell back just the changed part and
       // check it. Sending a correction back to listening made the host retell the whole
       // dream again, or sign off on its own, once the person said "that's it" (simulated
@@ -236,7 +287,7 @@ export function selectMove(state: State, cfg: GoalsFile, ctx: MoveContext): { mo
     }
     if (state.last_move !== 'retell_check')
       return { move: { kind: 'retell_check' }, rule: 'R3: no clear answer to the retelling' };
-    return { move: { kind: 'understood' }, rule: 'R3: still no clear answer — take it as right' };
+    return { move: { kind: 'offer_visualize' }, rule: 'R3: still no clear answer — take it as right' };
   }
 
   // Listening. Author order, not ascending confidence: working through a form's fields in
@@ -300,8 +351,16 @@ export function phaseAfter(phase: Phase, move: Move): Phase {
     case 'retell_check':
     case 'take_correction':
       return 'retell';
-    case 'understood':
-      return 'understood';
+    case 'offer_visualize':
+    case 'offer_later':
+      return 'offer';
+    case 'choose_style':
+    case 'style_help':
+      return 'style';
+    case 'start':
+      return 'ready';
+    case 'keep':
+      return 'kept';
     case 'wrap':
       return 'ended';
     case 'open_ended':
@@ -321,11 +380,18 @@ export function phaseAfter(phase: Phase, move: Move): Phase {
 const OPENING =
   'This is your FIRST message. They have not said anything yet. Greet them once, briefly, and invite them to tell you their dream, however it comes back to them. Nothing else: no questions about details, nothing about pictures.';
 
+/** What the brief needs from the production, once the producer has written it. */
+export type BriefExtras = {
+  styles?: { id: string; name: string; line: string }[];
+  /** The first thing that would be drawn, in plain words ("the young woman"). */
+  firstSubject?: string;
+};
+
 export function renderBrief(
   state: State,
   move: Move,
   cfg: GoalsFile,
-  opts: { opening?: boolean; phase?: Phase } = {},
+  opts: { opening?: boolean; phase?: Phase; extras?: BriefExtras } = {},
 ): string {
   const t = cfg.confidence_threshold;
   const labels = (status: GoalStatus, required = false) =>
@@ -342,7 +408,7 @@ export function renderBrief(
     !opts.opening && heard.length > 0 && `Already told you: ${heard.join(', ')}.`,
     forgotten.length > 0 && `They don't remember: ${forgotten.join(', ')}. Don't ask about these again.`,
     !opts.opening && listening && (open.length ? `Not heard yet: ${open.join(', ')}.` : 'You have the whole story.'),
-    `Move: ${renderMove(move, state, cfg)}`,
+    `Move: ${renderMove(move, state, cfg, opts.extras ?? {})}`,
   ].filter(Boolean);
 
   return `<brief>\n${lines.join('\n')}\n</brief>`;
@@ -369,7 +435,9 @@ function goalOf(cfg: GoalsFile, id: string): GoalDef | undefined {
   return cfg.goals.find((g) => g.id === id);
 }
 
-function renderMove(move: Move, state: State, cfg: GoalsFile): string {
+function renderMove(move: Move, state: State, cfg: GoalsFile, extras: BriefExtras): string {
+  const styles = extras.styles ?? [];
+  const styleName = (id: string) => styles.find((o) => o.id === id)?.name ?? 'the way they described';
   switch (move.kind) {
     case 'open_ended':
       return 'open_ended. Nothing to chase. Let them lead.';
@@ -392,8 +460,22 @@ function renderMove(move: Move, state: State, cfg: GoalsFile): string {
       return "retell_check. It isn't clear whether you have it right. Ask them simply whether that's how it went, or if there's anything to change.";
     case 'take_correction':
       return "take_correction. They changed or added something. In a sentence or two, tell back just that part the way they put it, then check you have it right now. Don't retell the whole dream, and don't say goodbye.";
-    case 'understood':
-      return "understood. They've confirmed you have it. Thank them simply and tell them you have their dream now. Don't ask anything else.";
+    case 'offer_visualize':
+      return "offer_visualize. They've confirmed you have their dream. Ask them, simply and warmly, whether they'd like to see it drawn. One question. Don't explain how it works.";
+    case 'offer_later':
+      return "offer_later. They haven't said they want to see it yet. No pressure: say it can be drawn whenever they like, and ask lightly whether they'd like to now.";
+    case 'choose_style':
+      return styles.length
+        ? `choose_style. They want to see it. Offer these ways it could be drawn, each in a few plain words, and ask which feels closest, or whether they'd describe their own: ${styles.map((o) => `${o.id}) ${o.name}: ${o.line}`).join('; ')}.`
+        : "choose_style. They want to see it. Ask how they'd like it to look: which feels closest to the dream, in their own words.";
+    case 'style_help':
+      return styles.length
+        ? `style_help. They're not sure how it should look. Suggest the one closest to how they described the dream, ${styleName(styles.some((o) => o.id === 'd') ? 'd' : styles[0].id)}, and ask if that feels right.`
+        : "style_help. They're not sure how it should look. Suggest keeping it close to how the dream looked to them, and ask if that feels right.";
+    case 'start':
+      return `start. They chose ${styleName(move.styleId)}. Tell them warmly that you'll start with ${extras.firstSubject ?? 'the first picture'}, and that the pictures will appear on the right as they're ready. Don't ask anything.`;
+    case 'keep':
+      return "keep. They'd rather not see it drawn, and that's fine. Thank them for sharing their dream, warmly and briefly. Don't ask anything.";
     case 'wrap':
       return `wrap. ${closingInstruction(state.closing_note)} Do not ask another question.`;
     default:
@@ -418,7 +500,9 @@ export function needsThought(move: Move): boolean {
     move.kind === 'retell' ||
     move.kind === 'take_correction' ||
     move.kind === 'retell_check' ||
-    move.kind === 'understood' ||
+    move.kind === 'choose_style' ||
+    move.kind === 'start' ||
+    move.kind === 'keep' ||
     move.kind === 'wrap'
   );
 }
@@ -436,9 +520,15 @@ export function moveKey(move: Move): string {
     case 'retell':
     case 'retell_check':
     case 'take_correction':
-    case 'understood':
+    case 'offer_visualize':
+    case 'offer_later':
+    case 'choose_style':
+    case 'style_help':
+    case 'keep':
     case 'wrap':
       return move.kind;
+    case 'start':
+      return `start:${move.styleId}`;
     default:
       return unreachable(move);
   }

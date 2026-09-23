@@ -10,7 +10,18 @@
 // - "they don't remember" per goal;
 // - "have they told it to the end";
 // - how they answered a retelling.
-import type { ClosingNote, GoalDef, GoalsFile, GoalState, Phase, Rapport, RetellReply, State, Thread } from './lib';
+import type {
+  ClosingNote,
+  GoalDef,
+  GoalsFile,
+  GoalState,
+  Phase,
+  Rapport,
+  RetellReply,
+  State,
+  Thread,
+  WantsToSee,
+} from './lib';
 import { reconcileThreads } from './lib';
 
 const ENDPOINT = 'https://api.typesafe.ai/v1/systemone';
@@ -94,6 +105,7 @@ export function bookkeeperQuestions(
   transcript: Exchange[],
   prev: State | undefined,
   phase: Phase,
+  styles: { id: string; name: string }[] = [],
 ): Record<string, Question> {
   const msgs = respondentMessages(transcript);
 
@@ -215,6 +227,30 @@ export function bookkeeperQuestions(
         added_more: 'they added a detail that was missing from it',
         unclear: "they didn't say whether it was right",
       },
+    };
+  }
+
+  if (phase === 'offer') {
+    q.wants_to_see = {
+      type: 'choice',
+      instructions: `The listener has asked whether the person would like to see their dream drawn. How does the person answer in this message: "${latest.slice(0, 240)}"?`,
+      criteria: {
+        yes: 'yes, they want to see it',
+        not_yet: 'maybe later, not now, or they want to say more first',
+        no: "no, they'd rather not see it drawn",
+        unclear: "they didn't answer that",
+      },
+    };
+  }
+  if (phase === 'style') {
+    const criteria: Record<string, string> = {};
+    for (const o of styles) criteria[o.id] = `they chose: ${o.name}`;
+    criteria.own = 'they described, in their own words, a different way it should look';
+    criteria.unsure = "they aren't sure, or left it to the listener";
+    q.style_choice = {
+      type: 'choice',
+      instructions: `The listener offered ways the person's dream could be drawn. Which did the person choose in this message: "${latest.slice(0, 240)}"? If they agreed to a way the listener suggested, pick that one.`,
+      criteria,
     };
   }
 
@@ -370,7 +406,14 @@ export function readState(
   // A failed judge must never blank the ledger. Degrade to the previous reading.
   if (call.answers === null) {
     notes.push({ goalId: '*', reason: call.error ?? 'no answers', attempted: -1 });
-    return { next: { ...prev, turn: turnNow, signals: { ...prev.signals, retell_reply: null } }, notes };
+    return {
+      next: {
+        ...prev,
+        turn: turnNow,
+        signals: { ...prev.signals, retell_reply: null, wants_to_see: null, style_choice: null },
+      },
+      notes,
+    };
   }
   const a = call.answers;
   const byIdx = new Map(transcript.map((e, idx) => [idx, e.content]));
@@ -435,6 +478,20 @@ export function readState(
     });
   }
 
+  let wantsToSee: WantsToSee | null = null;
+  if (phase === 'offer')
+    wantsToSee = choice<WantsToSee>(
+      a.wants_to_see,
+      ['yes', 'not_yet', 'no', 'unclear'] as const,
+      'unclear',
+      RETELL_CONFIDENCE,
+    ).value;
+  let styleChoice: string | null = null;
+  if (phase === 'style') {
+    const c = a.style_choice;
+    styleChoice = c?.type === 'choice' && c.confidence >= RETELL_CONFIDENCE ? c.choice : 'unsure';
+  }
+
   return {
     next: {
       session_id: prev.session_id,
@@ -443,7 +500,12 @@ export function readState(
       threads: reconcileThreads(prev.threads, found, turnNow),
       rapport,
       closing_note: closing.value,
-      signals: { finished_telling: finished ?? prev.signals.finished_telling, retell_reply: retellReply },
+      signals: {
+        finished_telling: finished ?? prev.signals.finished_telling,
+        retell_reply: retellReply,
+        wants_to_see: wantsToSee,
+        style_choice: styleChoice,
+      },
       last_move: prev.last_move,
     },
     notes,

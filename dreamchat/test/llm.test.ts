@@ -38,3 +38,14 @@ describe('the one-ask repair keeps an example with its question', () => {
     expect(t.messages).toEqual(['did you hear anything? like voices, or music?']);
   });
 });
+
+describe('the producer keeps the camera out of what happens', () => {
+  test('camera words at the start of an action are stripped', async () => {
+    const { stripCamera } = await import('../producer');
+    expect(stripCamera('Close on the single slat with the word zikery')).toBe('The single slat with the word zikery');
+    expect(stripCamera('Wide view of the kitchen with the board')).toBe('The kitchen with the board');
+    expect(stripCamera('A close-up of her hands')).toBe('Her hands');
+    expect(stripCamera('She walks to the far end of the room')).toBe('She walks to the far end of the room');
+    expect(stripCamera('Closer and closer the ice melts')).toBe('Closer and closer the ice melts');
+  });
+});

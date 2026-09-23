@@ -8,11 +8,19 @@ import { dreamConfig } from './dream';
 import { loadEnvFile } from './env';
 import { callJev, jevAvailable } from './jev';
 import { callHost, HOST_MODEL } from './llm';
-import { SessionStore } from './session';
+import { liveProducer, ownStyle, SessionStore } from './session';
+import { STRAWBERRY_HOME, strawberryAvailable, writeProduction } from './strawberry';
 
 const loaded = loadEnvFile();
 const cfg = dreamConfig();
-const store = new SessionStore(cfg, { jev: callJev, host: callHost, dir: join(import.meta.dir, 'state') });
+const store = new SessionStore(cfg, {
+  jev: callJev,
+  host: callHost,
+  producer: liveProducer(callJev),
+  ownStyle,
+  write: strawberryAvailable() ? writeProduction : undefined,
+  dir: join(import.meta.dir, 'state'),
+});
 const page = Bun.file(join(import.meta.dir, 'web', 'index.html'));
 
 const json = (body: unknown, status = 200) => Response.json(body, { status });
@@ -44,6 +52,7 @@ const server = Bun.serve({
           threshold: cfg.confidence_threshold,
           model: HOST_MODEL,
           jev: jevAvailable(),
+          strawberry: strawberryAvailable() ? STRAWBERRY_HOME : null,
         });
 
       if (url.pathname === '/api/sessions') return json(store.list());
@@ -89,3 +98,8 @@ console.log(`dream chat on http://${server.hostname}:${server.port}`);
 console.log(`keys from env file: ${loaded.length ? loaded.join(', ') : 'none (using the shell environment)'}`);
 if (!jevAvailable()) console.warn('JEV_API_KEY is missing: every turn will run without the judge');
 if (!process.env.DEEPSEEK_API_KEY) console.warn('DEEPSEEK_API_KEY is missing: the host cannot reply');
+console.log(
+  strawberryAvailable()
+    ? `productions are written to the Strawberry store at ${STRAWBERRY_HOME}`
+    : 'Strawberry engine not found (run ./install-studio.sh at the repo root): productions will not be written',
+);
