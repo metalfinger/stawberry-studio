@@ -25,6 +25,28 @@ SycoPhantasy found the same inflation on fantasy-character art [V]
 ([arXiv 2604.24346](https://arxiv.org/html/2604.24346)). The fixes are all measured:
 probabilities instead of generated scores, pairwise comparison, calibration, and ensembles.
 
+## Community "multimodal Jev" projects (checked on X and GitHub, 23 Sep)
+
+The chatter on X is real. Official Jev is still text-only; posts across 18–22 Sep ask for "a Jev
+vision model", and one unverified post claims TypeSafe "teased jev image soon". Within a week of
+launch, the community built reproductions, all listed in
+[awesome-jev](https://github.com/cobanov/awesome-jev):
+
+| Project | What it is | Runs on | Maturity |
+|---|---|---|---|
+| **[Visual-JEV / SemIf](https://github.com/jiangxiluning/Visual-Jev)** | Jev-shaped API (state + question + options → probabilities from one forward pass) on **Qwen3.5-4B**, image paths go straight into the model. Balanced accuracy 0.845 vs the real Jev's 0.883 on TypeSafe's own text set; about 1 s per decision, about 20/s with state reuse | **CUDA for images** — its MLX (Apple Silicon) backend "rejects image rows" | MIT, 13 commits, 7 stars, vision added 22 Sep. No image benchmark |
+| **[Jev Visual](https://github.com/hr98w/jev-visual)** | Educational MLX/Qwen experiment sharing one image across several scoring questions | **Apple Silicon (MLX)** | Experiment |
+| **[Laya Vision](https://github.com/r33drichards/laya-vision)** | Replaces the text encoder with SmolVLM-256M to read typed decisions from images | MLX | Research fork |
+| **[PlayJev](https://github.com/OmniJev/PlayJev)** | 0.8B vision-language model returning moves from typed option lists for game frames | — | Game-specific |
+| **[jev-eyes](https://github.com/LeddoEngano/jev-eyes)** | OCR + layout converted to text, then fed to real Jev | Local | Useless for pictures without text |
+
+**What this changes.** SemIf is the same mechanism this report already proposed — read yes/no
+probabilities out of an open Qwen vision model instead of letting it write — packaged behind a Jev-like
+request shape. That makes it the fastest way to run the first experiment: our `facts` questions map
+directly onto its state/question/options format. It does not change the caveats: none of these has
+been benchmarked on image judgments, all are days old, and all still need calibrating on our own
+blind labels. Someone on X is already trying the same stack we proposed ("Yolo + SAM 3.1 + Jev").
+
 ## Why our two pixel scorers failed, and what fixes that
 
 HARNESS.md §4b records two whole-frame scorers that could not separate a real fault from print
