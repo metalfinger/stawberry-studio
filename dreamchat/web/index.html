@@ -46,6 +46,8 @@ header h1 { font-size: 1rem; margin: 0; font-weight: 650; letter-spacing: .01em;
 @media (max-width: 900px) { #layout { grid-template-columns: minmax(0, 1fr); } aside { display: none !important; } }
 
 #chat { flex: 1; overflow-y: auto; padding: 22px 22px 10px; display: flex; flex-direction: column; gap: 8px; }
+/* Nothing in the chat may shrink: picture cards (overflow hidden) collapsed to a line in long chats. */
+#chat > * { flex-shrink: 0; }
 .msg { max-width: min(76%, 620px); padding: 9px 14px; border-radius: 16px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .host { align-self: flex-start; background: var(--panel); border: 1px solid var(--line); border-bottom-left-radius: 5px; }
 .me { align-self: flex-end; background: #2b2533; border-bottom-right-radius: 5px; }
@@ -134,7 +136,6 @@ summary { cursor: pointer; color: var(--muted); font-size: .82rem; padding: 3px 
 .sketch .judge.miss b { color: var(--open); }
 .sketches { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .sketches .sketch { width: 100%; }
-@media (prefers-reduced-motion: no-preference) { #chat { scroll-behavior: smooth; } }
 </style>
 </head>
 <body>
