@@ -630,6 +630,9 @@ export class SessionStore {
         move.styleId === 'own' && this.deps.ownStyle
           ? await this.deps.ownStyle(renderTranscript(s.transcript))
           : (b?.style_options.find((o) => o.id === move.styleId) ?? b?.style_options[0] ?? null);
+      // Their own way of drawing it keeps to technique too, as the proposed ones were made to.
+      if (move.styleId === 'own' && s.style && b)
+        s.style = (await cleanStyles({ ...b, style_options: [s.style] }, this.deps.jev)).breakdown.style_options[0];
     }
     const extras: BriefExtras = {
       styles: (s.draft?.breakdown?.style_options ?? []).map(({ id, name, line }) => ({ id, name, line })),
