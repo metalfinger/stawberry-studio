@@ -296,6 +296,16 @@ describe('ghosts', () => {
     expect(texts.some((t) => t.startsWith('sheet:p1'))).toBe(true);
   });
 
+  test('only a look lasts: a change of where someone is makes no ghost', () => {
+    const b = breakdown([
+      moment({ id: 'm1', visible: ['p1'] }),
+      moment({ id: 'm2', visible: ['p1'], leaves: [{ who: 'p1', what: 'location', now: 'at the far end of the room' }] }),
+    ]);
+    const plan = planContinuity(b);
+    expect(plan.ghosts).toEqual([]);
+    expect(plan.cuts[1].own).toEqual([]);
+  });
+
   test('a change still in force is carried into a moment that changes something else', () => {
     const b = breakdown([
       moment({ id: 'm1', visible: ['p1'], leaves: [{ who: 'p1', what: 'head', now: 'a block of ice' }] }),

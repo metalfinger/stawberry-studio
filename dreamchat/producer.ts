@@ -296,7 +296,7 @@ export async function proposeLook(
 }
 
 /** "What" changed, when it is a position or an activity rather than a look. */
-const POSITION =
+export const POSITION =
   /^(location|position|place|where|whereabouts|posture|pose|activity|action|movement|direction|distance|mood|emotion|feeling|expression)$/i;
 
 /** A value that says nothing a picture can show. */

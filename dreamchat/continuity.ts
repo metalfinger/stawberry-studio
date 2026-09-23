@@ -7,7 +7,7 @@
 // change too much at once, or several cuts need the same changed look, a ghost is made first:
 // an in-between picture that is never a cut. Everything here is pure: the breakdown in, the plan
 // out, and the same breakdown always gives the same plan.
-import { type Breakdown, type Moment, type State, moments } from './producer';
+import { type Breakdown, type Moment, moments, POSITION, type State } from './producer';
 
 export type Relation = 'same_setup' | 'same_side' | 'other_side' | 'other_place' | 'shift';
 export type RefRole = 'base' | 'composition' | 'lighting' | 'identity' | 'prop' | 'location';
@@ -145,7 +145,9 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
     ...m,
     looks_at: m.looks_at ?? '',
     shift: m.shift ?? '',
-    leaves: m.leaves ?? [],
+    // Only a look lasts: "location: at the far end of the room" in an older breakdown became a
+    // ghost of her standing somewhere.
+    leaves: (m.leaves ?? []).filter((l) => !POSITION.test(l.what.trim())),
   }));
   const index = new Map(ms.map((m, i) => [m.id, i]));
   const byId = new Map(ms.map((m) => [m.id, m]));
