@@ -76,8 +76,8 @@ export type Signals = {
   profile_reply?: ProfileReply | null;
   /** How they took the sketches they were shown, and which one they meant. */
   sketch_reaction?: SketchReaction | null;
-  /** A sketch's item id, "all", or "unclear". */
-  sketch_which?: string | null;
+  /** Per picture on show: said to look right, or said to be wrong. Absent: not mentioned. */
+  sketch_verdicts?: Record<string, 'right' | 'wrong'> | null;
 };
 
 export type State = {
@@ -668,6 +668,14 @@ export function needsThought(move: Move): boolean {
     move.kind === 'take_correction' ||
     move.kind === 'retell_check' ||
     move.kind === 'choose_style' ||
+    move.kind === 'style_help' ||
+    move.kind === 'offer_later' ||
+    // Picture turns aren't waited on (the pictures are drawing anyway), and without thinking the
+    // reply once ignored the move and didn't ask about the key moment (live test, 23 Sep).
+    move.kind === 'while_drawing' ||
+    move.kind === 'frames_drawing' ||
+    move.kind === 'sheets_done' ||
+    move.kind === 'ask_which' ||
     move.kind === 'start' ||
     move.kind === 'build_done' ||
     move.kind === 'all_done' ||

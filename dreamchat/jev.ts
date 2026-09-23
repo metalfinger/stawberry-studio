@@ -282,15 +282,19 @@ export function bookkeeperQuestions(
         no_reaction: "they didn't say anything about the sketches",
       },
     };
-    const which: Record<string, string> = {};
-    for (const x of shown) which[x.id] = `the sketch of ${x.name}`;
-    which.all = 'all of them, or they speak about the sketches together';
-    which.unclear = "it isn't clear which one they mean";
-    q.sketch_which = {
-      type: 'choice',
-      instructions: `Which sketch is the person talking about in this message: "${latest.slice(0, 240)}"?`,
-      criteria: which,
-    };
+    // One pair of judgments per picture on show, so an answer about several at once reads
+    // right: "the window one is exactly it, and the others look right too" once approved only
+    // the picture it named first, because a single "which one" could hold only one answer.
+    for (const x of shown) {
+      q[`ok_${x.id}`] = {
+        type: 'noul',
+        instructions: `In this message, does the person say the picture of ${x.name} looks right, either by name or by saying all of them, or the others, look right: "${latest.slice(0, 240)}"?`,
+      };
+      q[`bad_${x.id}`] = {
+        type: 'noul',
+        instructions: `In this message, does the person say something about the picture of ${x.name} is wrong or should change: "${latest.slice(0, 240)}"?`,
+      };
+    }
   }
 
   // Threads: something they raised that was not asked about. A summary cannot
@@ -531,8 +535,15 @@ export function readState(
     'no_reaction',
     RETELL_CONFIDENCE,
   ).value;
-  const whichA = a.sketch_which;
-  const which = whichA?.type === 'choice' && whichA.confidence >= RETELL_CONFIDENCE ? whichA.choice : 'unclear';
+  const verdicts: Record<string, 'right' | 'wrong'> = {};
+  for (const [k, v] of Object.entries(a)) {
+    if (v.type !== 'noul' || !(k.startsWith('ok_') || k.startsWith('bad_'))) continue;
+    const id = k.slice(k.indexOf('_') + 1);
+    const ok = noul(a[`ok_${id}`]) ?? 0;
+    const bad = noul(a[`bad_${id}`]) ?? 0;
+    if (bad >= 0.6) verdicts[id] = 'wrong';
+    else if (ok >= 0.6) verdicts[id] = 'right';
+  }
   let profileReply: ProfileReply | null = null;
   if (a.profile_reply)
     profileReply = choice<ProfileReply>(
@@ -562,7 +573,7 @@ export function readState(
         style_choice: styleChoice,
         profile_reply: profileReply,
         sketch_reaction: a.sketch_reaction ? reaction : null,
-        sketch_which: a.sketch_which ? which : null,
+        sketch_verdicts: a.sketch_reaction ? verdicts : null,
       },
       last_move: prev.last_move,
     },

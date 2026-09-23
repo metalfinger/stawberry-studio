@@ -454,30 +454,37 @@ export class SessionStore {
     let whichUnclear = false;
     if ((s.phase === 'review' || s.phase === 'frames') && pending.length) {
       const reaction = overlaid.signals.sketch_reaction ?? 'no_reaction';
-      const which = overlaid.signals.sketch_which ?? 'unclear';
-      const named = which === 'all' ? pending : pending.filter((i) => i.id === which);
-      if (reaction === 'no_reaction') {
+      const verdicts = overlaid.signals.sketch_verdicts ?? {};
+      const right = pending.filter((i) => verdicts[i.id] === 'right');
+      const wrong = pending.filter((i) => verdicts[i.id] === 'wrong');
+      if (reaction === 'no_reaction' && !right.length && !wrong.length) {
         for (const it of pending)
           this.reviewSketch(s, it, 'left', 'Shown to them in the chat; they raised nothing against it.');
-      } else if (reaction === 'looks_right') {
-        // "It looks great" with two sketches up and no name means both.
-        for (const it of named.length ? named : pending) {
+      } else if (!right.length && !wrong.length) {
+        // A reaction, but to no picture in particular: "it looks great" with one or all on show.
+        if (reaction === 'looks_right')
+          for (const it of pending) {
+            this.reviewSketch(s, it, 'approved', `They said it looks right: "${text.slice(0, 400)}"`);
+            reviewed.approved.push(it.name);
+          }
+        else if (pending.length === 1) wrong.push(pending[0]);
+        else whichUnclear = true;
+      } else
+        for (const it of right) {
           this.reviewSketch(s, it, 'approved', `They said it looks right: "${text.slice(0, 400)}"`);
           reviewed.approved.push(it.name);
         }
-      } else if (named.length || pending.length === 1) {
-        for (const it of named.length ? named : pending) {
-          this.reviewSketch(s, it, 'rejected', `They said it isn't right: "${text.slice(0, 400)}"`);
-          const before = structuredClone(it.fields);
-          if (this.deps.reviseItem)
-            it.fields = await this.deps.reviseItem(it.name, it.fields, renderTranscript(s.transcript));
-          it.announced = false;
-          it.review = undefined;
-          if (it.kind === 'cut') await this.startFrame(s, it, turnNow, before);
-          else await this.startSketch(s, it, turnNow);
-          reviewed.redrawing.push(it.name);
-        }
-      } else whichUnclear = true;
+      for (const it of wrong) {
+        this.reviewSketch(s, it, 'rejected', `They said it isn't right: "${text.slice(0, 400)}"`);
+        const before = structuredClone(it.fields);
+        if (this.deps.reviseItem)
+          it.fields = await this.deps.reviseItem(it.name, it.fields, renderTranscript(s.transcript));
+        it.announced = false;
+        it.review = undefined;
+        if (it.kind === 'cut') await this.startFrame(s, it, turnNow, before);
+        else await this.startSketch(s, it, turnNow);
+        reviewed.redrawing.push(it.name);
+      }
     }
     const isSettled = (i: Item) => i.status === 'failed' || (i.status === 'ready' && i.review !== undefined);
     const settled = !!s.build && s.build.items.every(isSettled);

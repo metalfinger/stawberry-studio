@@ -300,10 +300,10 @@ describe('a whole conversation', () => {
     );
 
     // The kitchen looks right; the board is wrong, so it is rejected and drawn again.
-    reaction = { sketch_reaction: pick('looks_right'), sketch_which: pick('l1') };
+    reaction = { sketch_reaction: pick('looks_right'), ok_l1: noul(0.9) };
     const t9 = await store.message(id, 'the kitchen is perfect');
     expect(t9.move).toEqual({ kind: 'while_drawing' });
-    reaction = { sketch_reaction: pick('not_right'), sketch_which: pick('t1') };
+    reaction = { sketch_reaction: pick('not_right'), bad_t1: noul(0.9) };
     statuses.set('job-t1', 'running');
     const t10 = await store.message(id, 'the board should be green, not black');
     expect(t10.move).toEqual({ kind: 'while_drawing' });
@@ -323,7 +323,7 @@ describe('a whole conversation', () => {
     await store.settle(id);
     reaction = {};
     await store.message(id, 'ok');
-    reaction = { sketch_reaction: pick('no_reaction'), sketch_which: pick('unclear') };
+    reaction = { sketch_reaction: pick('no_reaction') };
     const t12 = await store.message(id, 'what happens next?');
     expect([t12.move?.kind, t12.phase]).toEqual(['sheets_done', 'frames']);
     expect(store.get(id)!.build!.items.map((i) => i.review)).toEqual(['approved', 'left']);
@@ -343,10 +343,24 @@ describe('a whole conversation', () => {
     expect(host.calls.at(-1)!.find((m) => m.content.startsWith('<brief>'))!.content).toContain(
       "The moment they said they'd pause on is up on the right now (The one slat that reads zikery)",
     );
-    reaction = { sketch_reaction: pick('looks_right'), sketch_which: pick('all') };
-    const t14 = await store.message(id, 'yes, that is exactly it');
-    expect([t14.move?.kind, t14.phase, t14.closed]).toEqual(['all_done', 'done', true]);
-    expect(store.get(id)!.images).toBe(5);
+    // Mixed: the key moment is right, the other one is wrong and is redrawn.
+    reaction = { sketch_reaction: pick('not_right'), ok_m2: noul(0.9), bad_m1: noul(0.8) };
+    statuses.set('job-m1', 'running');
+    const t14 = await store.message(id, 'the slat one is exactly it, but the kitchen in the other is too dark');
+    expect([t14.move?.kind, t14.phase]).toEqual(['frames_drawing', 'frames']);
+    expect(store.get(id)!.build!.frames!.map((f) => [f.id, f.review ?? null, f.status, f.version])).toEqual([
+      ['m2', 'approved', 'ready', 1],
+      ['m1', null, 'drawing', 2],
+    ]);
+    statuses.set('job-m1', 'ready');
+    await store.settle(id);
+    reaction = {};
+    await store.message(id, 'ok');
+    // "They all look right", naming none, settles everything on show.
+    reaction = { sketch_reaction: pick('looks_right') };
+    const t16 = await store.message(id, 'yes, lovely');
+    expect([t16.move?.kind, t16.phase, t16.closed]).toEqual(['all_done', 'done', true]);
+    expect(store.get(id)!.images).toBe(6);
   });
 
   test('each probe is counted, and a goal is asked at most twice', async () => {
