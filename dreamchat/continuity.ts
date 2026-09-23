@@ -123,7 +123,9 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
   const index = new Map(ms.map((m, i) => [m.id, i]));
   const byId = new Map(ms.map((m) => [m.id, m]));
   const names = new Map<string, string>([...b.people, ...b.places, ...b.things].map((x) => [x.id, x.name]));
-  const name = (id: string) => names.get(id) ?? id;
+  // The dreamer is "you" in the conversation, but "you" in an instruction to a picture is anyone.
+  const dreamerId = b.people.find((p) => p.is_dreamer)?.id;
+  const name = (id: string) => (id === dreamerId ? 'the dreamer' : (names.get(id) ?? id));
   const no = (id: string) => (index.get(id) ?? 0) + 1;
   const kindOf = (id: string): 'person' | 'place' | 'thing' =>
     b.places.some((p) => p.id === id) ? 'place' : b.things.some((t) => t.id === id) ? 'thing' : 'person';

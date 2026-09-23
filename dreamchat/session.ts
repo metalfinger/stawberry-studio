@@ -292,7 +292,13 @@ function firstSubject(b: Breakdown | undefined): string | undefined {
 
 /** A failed declared-fact question as the instruction a redraw needs. */
 export function asInstruction(question: string): string {
-  const q = question.trim();
+  // The dreamer's asset is called "you"; to a picture, "you" is anyone.
+  const q = question
+    .trim()
+    .replace(/^Is you\b/, 'Is the dreamer')
+    .replace(/^Are you's\b/, "Are the dreamer's")
+    .replace(/^Is you's\b/, "Is the dreamer's")
+    .replace(/^Does you\b/, 'Does the dreamer');
   const rules: [RegExp, (...m: string[]) => string][] = [
     [/^Is (.+) in frame\?$/, (_, a) => `${a} must be clearly in the frame`],
     [/^Is this (.+)\?$/, (_, a) => `it must clearly be ${a}`],

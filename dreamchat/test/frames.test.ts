@@ -170,6 +170,9 @@ describe('what a redraw is told', () => {
     expect(asInstruction('Is this the tiny room?')).toBe('it must clearly be the tiny room');
     expect(asInstruction('Is ana wearing: a grey coat?')).toBe('ana wears a grey coat');
     expect(asInstruction('Are the hands right?')).toBe('make this true: Are the hands right');
+    // The dreamer is "you" to the person, never to a picture.
+    expect(asInstruction('Is you in frame?')).toBe('the dreamer must be clearly in the frame');
+    expect(asInstruction('Is you wearing: jeans?')).toBe('the dreamer wears jeans');
   });
 });
 
