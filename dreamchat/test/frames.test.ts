@@ -194,3 +194,20 @@ describe('a sketch drawn again', () => {
     expect(styleBlock({ ...style, line: 'precise details on the horse head' })).not.toContain('horse');
   });
 });
+
+describe('the dreamer in the words of a moment', () => {
+  test('"you" seen from outside is said to be the dreamer, with no viewer in the picture', () => {
+    const outside: Item = {
+      id: 'm3',
+      kind: 'cut',
+      name: 'm3',
+      fields: { action: { value: 'She stands before you.', said: true } },
+      status: 'waiting',
+      version: 0,
+      frame: { visible: [], things: [], place: 'l1', distance: 'medium', eyes: 'outside', key: false, order: 3 },
+    };
+    expect(framePrompt(outside, [], style).prompt).toContain('"You" in these words is the dreamer');
+    const seen = { ...outside, frame: { ...outside.frame!, eyes: 'dreamer' as const } };
+    expect(framePrompt(seen, [], style).prompt).not.toContain('"You" in these words is the dreamer');
+  });
+});

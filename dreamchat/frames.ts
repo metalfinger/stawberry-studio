@@ -268,6 +268,11 @@ export function framePrompt(
       ? `The attached images, in order, and the one thing to take from each:\n${manifest.join('\n')}`
       : '',
     `What happens in this frame: ${action}`,
+    // The moments are told to the dreamer ("she stands before you"), and to a picture "you" is the
+    // viewer: a moment seen from outside came back with a viewer's hands reaching in (23 Sep).
+    f.eyes === 'outside' && /\byou(r|rself)?\b/i.test(`${action} ${point ?? ''}`)
+      ? `"You" in these words is the dreamer, a person in the picture like anyone else. There is no viewer in the picture: no hands, arms or body of the camera.`
+      : '',
     facts.length ? `In it:\n${facts.join('\n')}` : '',
     states.length ? `Still so from earlier in the dream: ${states.join('; ')}.` : '',
     purpose ? `Its part in the story: ${purpose}.` : '',
