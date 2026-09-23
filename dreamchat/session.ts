@@ -309,6 +309,8 @@ export function asInstruction(question: string): string {
       /^Is (.+)'s body, head and limbs in a physically plausible position.*$/,
       (_, a) => `${a}'s body is whole and natural: nothing inverted, duplicated or missing`,
     ],
+    // A carried state: "Is the young woman's head an irregular block of ice?"
+    [/^Is (.+?)'s (\w+) (.+)\?$/, (_, a, b, c) => `${a}'s ${b} is ${c}`],
   ];
   for (const [re, f] of rules) {
     const m = q.match(re);

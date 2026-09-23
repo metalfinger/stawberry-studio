@@ -173,6 +173,9 @@ describe('what a redraw is told', () => {
     // The dreamer is "you" to the person, never to a picture.
     expect(asInstruction('Is you in frame?')).toBe('the dreamer must be clearly in the frame');
     expect(asInstruction('Is you wearing: jeans?')).toBe('the dreamer wears jeans');
+    expect(asInstruction("Is the young woman's head an irregular block of ice?")).toBe(
+      "the young woman's head is an irregular block of ice",
+    );
   });
 });
 
