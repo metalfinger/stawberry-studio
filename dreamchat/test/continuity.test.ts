@@ -109,12 +109,12 @@ describe('the continuity plan', () => {
   });
 
   test('a new size from the same side takes the room from the wider cut', () => {
-    expect(refs('m2')).toEqual(['m1:composition']);
+    expect(refs('m2')).toEqual(['m1:composition', 'g1:identity']);
     expect(cut('m2').changes).toEqual(['the action', 'reframed close from picture 1']);
   });
 
   test('turning to the other side keeps the light and the changed look, not the walls', () => {
-    expect(refs('m3')).toEqual(['m2:lighting']);
+    expect(refs('m3')).toEqual(['m2:lighting', 'g1:identity']);
     expect(cut('m3').sheetLayout).toBe(false);
     // The ice is carried by picture 2, drawn after the change and showing her.
     expect(cut('m3').changes).toEqual(['the action', 'the kitchen facing the window, never drawn']);
@@ -124,19 +124,29 @@ describe('the continuity plan', () => {
     expect(refs('m4')).toEqual(['m1:composition']);
   });
 
-  test('a return to the opening setup edits the old wide, and takes the ice from the latest cut showing it', () => {
-    expect(refs('m5')).toEqual(['m1:base', 'm3:identity']);
+  test('a return to the opening setup is the same shot: it edits the old wide, and takes the ice from its ghost', () => {
+    expect(refs('m5')).toEqual(['m1:base', 'g1:identity']);
+    expect(cut('m5').shot).toBe(cut('m1').shot);
+    expect(new Set(plan.cuts.map((c) => c.shot)).size).toBe(5);
     expect(cut('m5').transition).toBe('continuous');
     expect(cut('m5').changes).toEqual(['the action']);
   });
 
   test('a reverse angle out of the door carries on from the picture before', () => {
-    expect(refs('m6')).toEqual(['m5:lighting']);
-    expect(cut('m6').needs).toEqual(['m5']);
+    expect(refs('m6')).toEqual(['m5:lighting', 'g1:identity']);
+    expect(cut('m6').needs).toEqual(['m5', 'g1']);
   });
 
-  test('no ghost is made when earlier cuts already carry everything', () => {
-    expect(plan.ghosts).toEqual([]);
+  test('a lasting change is drawn once on its own, from the sheet, and every picture from the change on takes it', () => {
+    expect(plan.ghosts).toHaveLength(1);
+    expect(plan.ghosts[0]).toMatchObject({
+      id: 'g1',
+      kind: 'state',
+      of: 'p1',
+      from: null,
+      needs: [],
+      usedBy: ['m2', 'm3', 'm5', 'm6'],
+    });
     expect(plan.issues).toEqual([]);
   });
 
@@ -156,35 +166,77 @@ describe('the continuity plan', () => {
   });
 
   test('pictures are drawn in story order', () => {
-    expect(drawOrder(plan)).toEqual(['m1', 'm2', 'm3', 'm4', 'm5', 'm6']);
+    expect(drawOrder(plan)).toEqual(['g1', 'm1', 'm2', 'm3', 'm4', 'm5', 'm6']);
   });
 });
 
 describe('ghosts', () => {
-  test("a change seen through the dreamer's eyes, then shown twice, becomes one state ghost", () => {
-    const glass = { who: 'p1', what: 'hands', now: 'clear glass', since: 'm1' };
-    const b = breakdown(
-      [
-        moment({
-          id: 'm1',
-          eyes: 'dreamer',
-          distance: 'close',
-          leaves: [{ who: 'p1', what: 'hands', now: 'clear glass' }],
-        }),
-        moment({ id: 'm2', visible: ['p1'], from: null, sameSide: [], looks_at: 'the mirror', states: [glass] }),
-        moment({ id: 'm3', visible: ['p1'], place: 'l2', distance: 'wide', from: 'm2', states: [glass] }),
-      ],
-      {},
-    );
-    b.people[0].is_dreamer = true;
+  test('a change that goes on changing is a chain of ghosts, one edit each, each from the one before', () => {
+    const iceHead = { who: 'p1', what: 'head', now: 'a block of ice', since: 'm2' };
+    const melting = { who: 'p1', what: 'head', now: 'melting ice', since: 'm3' };
+    const b = breakdown([
+      moment({ id: 'm1', visible: ['p1'], looks_at: 'the counter' }),
+      moment({
+        id: 'm2',
+        visible: ['p1'],
+        looks_at: 'the counter',
+        from: 'm1',
+        sameSide: ['m1'],
+        leaves: [{ who: 'p1', what: 'head', now: 'a block of ice' }],
+      }),
+      moment({
+        id: 'm3',
+        visible: ['p1'],
+        looks_at: 'the counter',
+        from: 'm2',
+        sameSide: ['m1', 'm2'],
+        states: [iceHead],
+        leaves: [{ who: 'p1', what: 'head', now: 'melting ice' }],
+      }),
+      moment({
+        id: 'm4',
+        visible: ['p1'],
+        looks_at: 'the counter',
+        from: 'm3',
+        sameSide: ['m1', 'm2', 'm3'],
+        states: [melting],
+        leaves: [{ who: 'p1', what: 'head', now: "a horse's head of ice" }],
+      }),
+    ]);
     const plan = planContinuity(b);
-    expect(plan.ghosts).toHaveLength(1);
-    const g = plan.ghosts[0];
-    expect(g).toMatchObject({ kind: 'state', of: 'p1', from: 'm1', needs: ['m1'], usedBy: ['m2', 'm3'] });
-    // Picture 2 takes the look from the ghost; picture 3 from picture 2, which shows it.
-    expect(plan.cuts[1].refs.map((r) => r.id)).toContain('g1');
-    expect(plan.cuts[2].refs.map((r) => `${r.id}:${r.role}`)).toEqual(['m2:identity']);
-    expect(drawOrder(plan)).toEqual(['m1', 'g1', 'm2', 'm3']);
+    expect(plan.ghosts.map((g) => [g.id, g.state?.now, g.after ?? null, g.needs])).toEqual([
+      ['g1', 'a block of ice', null, []],
+      ['g2', 'melting ice', 'g1', ['g1']],
+      ['g3', "a horse's head of ice", 'g2', ['g2']],
+    ]);
+    // Each moment takes its own change's ghost, not the look it replaces.
+    expect(plan.cuts.map((c) => c.refs.filter((r) => r.kind === 'ghost').map((r) => r.id))).toEqual([
+      [],
+      ['g1'],
+      ['g2'],
+      ['g3'],
+    ]);
+    expect(drawOrder(plan)).toEqual(['g1', 'm1', 'g2', 'g3', 'm2', 'm3', 'm4']);
+  });
+
+  test("a dream's jump is a boundary: what follows takes nothing of the place from before it", () => {
+    const b = breakdown([
+      moment({ id: 'm1', visible: ['p1'], looks_at: 'the window' }),
+      moment({
+        id: 'm2',
+        visible: ['p1'],
+        looks_at: 'the window',
+        from: 'm1',
+        sameSide: ['m1'],
+        shift: 'the window becomes the whole world',
+      }),
+      moment({ id: 'm3', visible: ['p1'], looks_at: 'the window', from: 'm2', sameSide: ['m1', 'm2'] }),
+    ]);
+    const plan = planContinuity(b);
+    expect(plan.cuts[1].refs.map((r) => `${r.id}:${r.relation}`)).toEqual(['m1:shift']);
+    // After the jump, the picture before it gives only how she looks, never the room.
+    expect(plan.cuts[2].refs.map((r) => `${r.id}:${r.role}:${r.relation}`)).toEqual(['m2:identity:other_place']);
+    expect(plan.cuts[2].shot).not.toBe(plan.cuts[0].shot);
   });
 
   test('a close-up first facing a new side gets a view ghost for the wider pictures of that side', () => {

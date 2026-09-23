@@ -167,6 +167,12 @@ export function framePrompt(
       `EDIT THIS PICTURE. It is ${pictureNo(base)}, the same view a moment earlier. Keep its camera, framing, room, light and everyone in it exactly as they are, faces and clothes included; change only what this moment changes.`,
     );
 
+  // What each sheet says in words, so the manifest ties each image to who or what it is.
+  const lookOf = (s: Item, keys: string[]) =>
+    keys
+      .map((k) => s.fields[k]?.value)
+      .filter((v): v is string => !!v && !VAGUE.test(v))
+      .join('; ');
   const facts: string[] = [];
   for (const s of inView) {
     if (s.nodeId) depicted.push(s.nodeId);
@@ -176,45 +182,49 @@ export function framePrompt(
       .join('; ');
     const kind = s.kind === 'character' ? 'person' : s.kind === 'location' ? 'place' : 'thing';
     facts.push(`${who(s)} (${kind})${known ? `: ${known}` : ''}.`);
-    // An edit base already holds the place, and a view ghost shows the side this frame faces; the
-    // sheet would only pull the layout back to its own view. Otherwise the sheet always goes in:
-    // Strawberry draws a moment only when everything in it has its own reference or a base.
-    if (!approved(s) || !s.mediaId || (s.kind === 'location' && (!!base || !!viewGhost))) continue;
-    if (s.kind === 'character')
+    // Every sheet of what is in view always goes in: consistency starts from them.
+    if (!approved(s) || !s.mediaId) continue;
+    if (s.kind === 'character') {
+      const look = lookOf(s, ['appearance', 'wardrobe', 'distinctive_features']);
       attach(
         s.mediaId,
         'identity',
         `${s.name}: this exact person, with the same face, build and clothes`,
-        base
-          ? `who ${who(s)} is: face, hair, build and clothes, to check against Image 1. Nothing else from it: not its pose, background or framing.`
-          : `who ${who(s)} is: their face, hair, build and clothes, exactly. Nothing else from it: not its pose, background or framing.`,
+        `who ${who(s)} is${look ? ` (${look})` : ''}: their face, hair, build and clothes, exactly${base ? ', as Image 1 already shows them' : ''}. Nothing else from it: not its pose, background or framing.`,
       );
-    else if (s.kind === 'location') {
-      // With an earlier picture of the room from this side, that picture sets the layout.
-      const layout = plan?.sheetLayout !== false && !roomFromCut;
+    } else if (s.kind === 'location') {
+      // An edit base or an earlier picture of this side sets where things stand; a view ghost shows
+      // the side this frame faces. Then the sheet gives the place's materials, colours and objects.
+      const layout = plan?.sheetLayout !== false && !roomFromCut && !base && !viewGhost;
+      const look = lookOf(s, ['geography', 'landmarks', 'light']);
       attach(
         s.mediaId,
         'location',
         layout
           ? `${s.name}: this exact place. Keep its walls, windows and doors on the sides the reference puts them; do not mirror or rearrange them`
-          : `${s.name}: its materials, colours and objects only; ${roomFromCut ? 'the layout comes from the earlier picture' : 'this frame faces another side of it'}`,
+          : `${s.name}: its materials, colours and objects only; the layout comes from ${base ? 'the picture being edited' : 'the earlier picture'}`,
         layout
-          ? `${s.name}: the camera stands inside this place. Keep its walls, windows, doors and furniture where it puts them; do not mirror or rearrange them.`
-          : roomFromCut
-            ? `${s.name}: only its materials, colours and objects; where things stand comes from the earlier picture of this place.`
-            : `${s.name}: only its materials, colours and objects. It shows the place from another side: this frame faces ${f.looksAt || 'the other way'}.`,
+          ? `${s.name}${look ? ` (${look})` : ''}: the camera stands inside this place. Keep its walls, windows, doors and furniture where it puts them; do not mirror or rearrange them.`
+          : base || roomFromCut
+            ? `${s.name}${look ? ` (${look})` : ''}: only its materials, colours and objects; where things stand comes from ${base ? 'Image 1' : 'the earlier picture of this place'}.`
+            : `${s.name}${look ? ` (${look})` : ''}: only its materials, colours and objects. It shows the place from another side: this frame faces ${f.looksAt || 'the other way'}.`,
       );
-    } else
+    } else {
+      const look = lookOf(s, ['appearance', 'materials']);
       attach(
         s.mediaId,
         'prop',
         `${s.name}: this exact object, with the same shape and materials`,
-        `${s.name}: its exact shape, materials and colours. Nothing else from it.`,
+        `${s.name}${look ? ` (${look})` : ''}: its exact shape, materials and colours, the same in every picture. Nothing else from it.`,
       );
+    }
   }
 
+  // Ghosts, then earlier moments, while there is room: the model takes 14 images, and a dozen
+  // leaves each one legible. A person's latest picture, the last kind added, is the first to go.
+  const MAX_IMAGES = 12;
   for (const x of usable) {
-    if (x === base || !x.item.mediaId) continue;
+    if (x === base || !x.item.mediaId || references.length >= MAX_IMAGES) continue;
     const g = x.item.ghost;
     if (g) {
       attach(
@@ -223,11 +233,12 @@ export function framePrompt(
         x.use.carries,
         g.kind === 'view'
           ? `${nameOf(sheets, g.of)} seen facing ${g.looksAt || 'the other way'}: the side this frame faces. Keep its walls, windows and objects where it puts them.`
-          : `how ${nameOf(sheets, g.of)} looks now: ${g.state?.what} ${g.state?.now}. Draw them exactly so.`,
+          : `how ${nameOf(sheets, g.of)} looks now (${g.state?.what}: ${g.state?.now}): draw ${g.of === f.place ? 'it' : 'them'} exactly so. Nothing else from it.`,
       );
       continue;
     }
     const r = x.use.relation;
+    const shows = x.item.fields.action?.value ? ` (${x.item.fields.action.value.replace(/\.$/, '')})` : '';
     const role: FrameReference['role'] =
       x.use.role === 'lighting' ? 'lighting' : x.use.role === 'composition' ? 'composition' : 'identity';
     attach(
@@ -235,12 +246,12 @@ export function framePrompt(
       role,
       x.use.carries,
       r === 'shift'
-        ? `${pictureNo(x)}, just before the dream jumps. Keep its framing and where everyone is exactly; the dream changes this: ${frame.fields.shift?.value ?? ''}.`
+        ? `${pictureNo(x)}${shows}, just before the dream jumps. Keep its framing and where everyone is exactly; the dream changes this: ${frame.fields.shift?.value ?? ''}.`
         : x.use.role === 'composition'
-          ? `${pictureNo(x)}: the same place from the same side. Take where its walls, windows, furniture and people are, and its light; this frame is framed ${f.distance}.`
+          ? `${pictureNo(x)}${shows}: the same place from the same side. Take where its walls, windows, furniture and people are, and its light; this frame is framed ${f.distance}.`
           : x.use.role === 'lighting'
-            ? `${pictureNo(x)}: the same place from the other side, a moment earlier. Take only its light and how everyone looks; the walls behind are the ones opposite to that picture's.`
-            : `${pictureNo(x)}: take only how ${x.use.carries.replace(/^how /, '').replace(/;.*$/, '')}. Nothing of its place, framing or background.`,
+            ? `${pictureNo(x)}${shows}: the same place from the other side, a moment earlier. Take only its light and how everyone looks; the walls behind are the ones opposite to that picture's.`
+            : `${pictureNo(x)}${shows}: take only ${x.use.carries.replace(/;.*$/, '')}. Nothing of its place, framing or background.`,
     );
   }
 
@@ -296,14 +307,34 @@ export function ghostPrompt(
   sheet: Item,
   from: Item | undefined,
   style: StyleOption,
+  /** The ghost of the change before, edited in turn: one change per edit. */
+  previous?: Item,
 ): { prompt: string; references: FrameReference[]; depicted: string[] } {
   const g = ghost.ghost;
   if (!g) throw new Error(`${ghost.name} is not a ghost`);
   if (!sheet.mediaId) throw new Error(`${sheet.name} has no approved sheet`);
   const name = sheet.isDreamer ? 'the dreamer' : sheet.name;
-  const references: FrameReference[] = [
-    { media_id: sheet.mediaId, role: 'base', instruction: `${sheet.name}'s reference sheet: edit it with one change` },
-  ];
+  const before = previous && approved(previous) && previous.mediaId ? previous : undefined;
+  const references: FrameReference[] = before?.mediaId
+    ? [
+        {
+          media_id: before.mediaId,
+          role: 'base',
+          instruction: `${name} as they looked a moment before: edit it with one change`,
+        },
+        {
+          media_id: sheet.mediaId,
+          role: sheet.kind === 'character' ? 'identity' : sheet.kind === 'location' ? 'location' : 'prop',
+          instruction: `${sheet.name}'s reference sheet: who or what it is`,
+        },
+      ]
+    : [
+        {
+          media_id: sheet.mediaId,
+          role: 'base',
+          instruction: `${sheet.name}'s reference sheet: edit it with one change`,
+        },
+      ];
   const useFrom = from && approved(from) && from.mediaId ? from : undefined;
   if (useFrom?.mediaId)
     references.push(
@@ -326,9 +357,11 @@ export function ghostPrompt(
         ]
       : [
           `A reference picture of ${name}, on their own: not a scene from the story.`,
-          `Image 1 is ${name}'s reference sheet: edit it. Make exactly one change: ${g.state?.what} is now ${g.state?.now}.`,
+          before
+            ? `Image 1 is ${name} as they looked a moment before, after the change before this one: edit it. Make exactly one change: ${g.state?.what} is now ${g.state?.now}. Image 2 is their reference sheet: who they are.`
+            : `Image 1 is ${name}'s reference sheet: edit it. Make exactly one change: ${g.state?.what} is now ${g.state?.now}.`,
           useFrom
-            ? `Image 2 is the moment it happened in the dream: make the change look as it does there, and take nothing else from it.`
+            ? `Image ${references.length} is the moment it happened in the dream: make the change look as it does there, and take nothing else from it.`
             : '',
           `Keep everything else exactly as in image 1: ${keep}.`,
         ];

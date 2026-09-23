@@ -32,6 +32,9 @@ export type Criterion = { with: string | null; text: string; fix: string };
 export type CutPlan = {
   id: string;
   order: number;
+  /** Its scene, and its shot there: one camera setup (place, side, framing, eyes). */
+  scene: string;
+  shot: string;
   refs: PlanRef[];
   /** Changes still in force for what is in view, spelled out in the prompt. */
   states: State[];
@@ -59,6 +62,8 @@ export type GhostPlan = {
   change: string;
   /** The cut that shows how the change looks, or the place's light; null for the sheet alone. */
   from: string | null;
+  /** The ghost of this subject's change before, edited in turn: one change per edit. */
+  after?: string;
   needs: string[];
   usedBy: string[];
   why: string;
@@ -128,15 +133,42 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
     m.sameSide
       ? m.sameSide.includes(e.id)
       : e.place === m.place && (!e.looks_at || !m.looks_at || sameWords(e.looks_at, m.looks_at));
+  // A dream's jump is a boundary: what came before it shares no place with what comes after,
+  // even filed under the same name (the room before the glass world was drawn again after the
+  // jump, 23 Sep). Only the jump's own picture is matched to the one just before it.
+  const acrossJump = (e: Moment, m: Moment) =>
+    ms.some((k, at) => {
+      const ei = index.get(e.id)!;
+      const mi = index.get(m.id)!;
+      return !!k.shift && ((ei < at && at <= mi) || (ei === at && at < mi));
+    });
   const relation = (m: Moment, e: Moment): Relation => {
     if (m.shift && index.get(e.id) === (index.get(m.id) ?? 0) - 1) return 'shift';
+    if (acrossJump(e, m)) return 'other_place';
     if (!m.place || e.place !== m.place) return 'other_place';
     if (!sides(m, e)) return 'other_side';
     return e.distance === m.distance && e.eyes === m.eyes ? 'same_setup' : 'same_side';
   };
 
+  const sceneOf = new Map<string, string>();
+  for (const sc of b.scenes) for (const mo of sc.moments) sceneOf.set(mo.id, sc.id);
+  // A shot is one camera setup within a scene: a cut joins the shot of an earlier cut of the same
+  // setup, even after a cutaway, else opens a new one.
+  const shotOf = new Map<string, string>();
+  const shotsIn = new Map<string, number>();
+
   const baseRun = new Map<string, number>();
   const cuts: CutPlan[] = ms.map((m, i) => {
+    const scene = sceneOf.get(m.id) ?? 's1';
+    const setup = ms
+      .slice(0, i)
+      .filter((e) => sceneOf.get(e.id) === scene && relation(m, e) === 'same_setup')
+      .at(-1);
+    if (setup) shotOf.set(m.id, shotOf.get(setup.id)!);
+    else {
+      shotsIn.set(scene, (shotsIn.get(scene) ?? 0) + 1);
+      shotOf.set(m.id, `${scene}.sh${shotsIn.get(scene)}`);
+    }
     const earlier = ms.slice(0, i);
     const rel = new Map(earlier.map((e) => [e.id, relation(m, e)]));
     const refs: PlanRef[] = [];
@@ -201,6 +233,8 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
     return {
       id: m.id,
       order: i + 1,
+      scene,
+      shot: shotOf.get(m.id)!,
       refs,
       states: m.states ?? [],
       sheetLayout,
@@ -249,7 +283,6 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
 
   const roleFor = (id: string): RefRole =>
     kindOf(id) === 'place' ? 'location' : kindOf(id) === 'thing' ? 'prop' : 'identity';
-  const dreamer = b.people.find((p) => p.is_dreamer)?.id;
   const addGhostRef = (c: CutPlan, g: GhostPlan, st: State) =>
     c.refs.push({
       id: g.id,
@@ -257,80 +290,70 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
       role: roleFor(st.who),
       carries: `how ${name(st.who)} looks now: ${st.what} ${st.now}`,
     });
-  const stateGhost = (state: State, users: CutPlan[], why: string): GhostPlan => {
-    const at = byId.get(state.since)!;
-    // The change's own picture shows how it looks, even through the dreamer's eyes (their hands).
-    const seen = inViewAt(at).has(state.who) || (state.who === dreamer && at.eyes === 'dreamer');
-    const g: GhostPlan = {
-      id: `g${ghosts.length + 1}`,
-      kind: 'state',
-      of: state.who,
-      label: `${name(state.who)}, ${state.what} now ${state.now}`,
-      change: `${name(state.who)}'s ${state.what} is now ${state.now}`,
-      from: seen ? at.id : null,
-      needs: seen ? [at.id] : [],
-      usedBy: users.map((c) => c.id),
-      why,
-      state,
-      depth: 0,
-    };
-    ghosts.push(g);
-    return g;
-  };
-
-  // State ghosts, for reuse: a change that happened out of view (no picture of the moment shows
-  // who changed) and is then seen in two or more cuts. Otherwise the first of them would invent
-  // the look inside a whole scene and the rest copy that; a ghost invents it once, on its own,
-  // as one edit of the sheet, and every picture takes the same look from it.
-  const byState = new Map<string, { state: State; cuts: CutPlan[] }>();
-  for (const c of cuts)
-    for (const st of c.states) {
-      const entry = byState.get(stateKey(st)) ?? { state: st, cuts: [] };
-      entry.cuts.push(c);
-      byState.set(stateKey(st), entry);
+  // Transformation ghosts: every lasting change to a person, place or thing is drawn on its own
+  // first, one change per edit, each from the one before (sheet → ice block → melting → horse).
+  // Every moment from the change on, while it holds, takes the look from its ghost, so the
+  // change is invented once and carried, never re-invented inside a whole scene.
+  const latest = new Map<string, GhostPlan>();
+  const ghostOf = new Map<string, GhostPlan>(); // by state key
+  for (const m of ms)
+    for (const l of m.leaves) {
+      const state: State = { who: l.who, what: l.what, now: l.now, since: m.id };
+      const prev = latest.get(l.who);
+      const g: GhostPlan = {
+        id: `g${ghosts.length + 1}`,
+        kind: 'state',
+        of: l.who,
+        label: `${name(l.who)}, ${l.what} now ${l.now}`,
+        change: `${name(l.who)}'s ${l.what} is now ${l.now}`,
+        from: null,
+        after: prev?.id,
+        needs: prev ? [prev.id] : [],
+        usedBy: [],
+        why: `${name(l.who)} changes at picture ${no(m.id)}: drawn on ${kindOf(l.who) === 'person' ? 'them' : 'it'} alone first, one change in one edit${prev ? ', from the change before' : ''}`,
+        state,
+        depth: 0,
+      };
+      ghosts.push(g);
+      latest.set(l.who, g);
+      ghostOf.set(stateKey(state), g);
     }
-  for (const { state, cuts: users } of byState.values()) {
-    if (users.length < 2 || inViewAt(byId.get(state.since)!).has(state.who)) continue;
-    const g = stateGhost(
-      state,
-      users,
-      `${name(state.who)} changes out of view at picture ${no(state.since)}, then pictures ${users.map((c) => c.order).join(', ')} show it`,
-    );
-    for (const c of users) if (!carriedBy(c, state)) addGhostRef(c, g, state);
+  for (const c of cuts) {
+    const m = byId.get(c.id)!;
+    // Its own change, and every change still in force on what it shows, except where its own
+    // change replaces one (the melting ice gives way to the horse's head).
+    const own = m.leaves.map((l) => ({ who: l.who, what: l.what, now: l.now, since: m.id }));
+    const shown = [...own, ...c.states.filter((st) => !own.some((o) => o.who === st.who && o.what === st.what))];
+    for (const st of shown) {
+      const g = ghostOf.get(stateKey(st));
+      if (!g || c.refs.some((r) => r.id === g.id)) continue;
+      g.usedBy.push(c.id);
+      addGhostRef(c, g, st);
+    }
   }
-
-  // Changed looks still not carried are taken from the latest earlier cut that shows them, while
-  // there is room for one more reference. It costs nothing: that cut is drawn already.
-  for (const c of cuts)
-    for (const st of c.states) {
-      if (carriedBy(c, st) || c.refs.length >= MAX_EARLIER) continue;
-      const shows = ms
-        .slice(index.get(st.since)!, c.order - 1)
-        .filter((e) => inViewAt(e).has(st.who))
-        .at(-1);
-      if (shows)
-        c.refs.push({
-          id: shows.id,
-          kind: 'cut',
-          role: roleFor(st.who),
-          relation: relation(byId.get(c.id)!, shows),
-          carries: `how ${name(st.who)} looks now (${st.what} ${st.now}); nothing else from it`,
-        });
-    }
   for (const c of cuts) c.changes = countChanges(c);
 
-  // State ghosts, for one edit at a time: a cut that would still change three or more things
-  // takes its uncarried change out into a ghost first.
+  // Every person in a moment, as last drawn: their sheet says who they are, and their latest
+  // picture says how they look in this storyboard, so they look as they did a moment ago.
+  const MAX_CUTS = MAX_EARLIER + 2;
   for (const c of cuts) {
-    if (c.changes.length < TOO_MANY) continue;
-    const st = c.states.find((x) => !carriedBy(c, x));
-    if (!st) continue;
-    addGhostRef(
-      c,
-      stateGhost(st, [c], `picture ${c.order} would otherwise change ${c.changes.length} things at once`),
-      st,
-    );
-    c.changes = countChanges(c);
+    const m = byId.get(c.id)!;
+    for (const p of m.visible) {
+      const cutRefs = c.refs.filter((r) => r.kind === 'cut');
+      if (cutRefs.length >= MAX_CUTS || cutRefs.some((r) => inViewAt(byId.get(r.id)!).has(p))) continue;
+      const lastSeen = ms
+        .slice(0, c.order - 1)
+        .filter((e) => e.visible.includes(p))
+        .at(-1);
+      if (lastSeen)
+        c.refs.push({
+          id: lastSeen.id,
+          kind: 'cut',
+          role: 'identity',
+          relation: relation(m, lastSeen),
+          carries: `how ${name(p)} looks in the storyboard so far: face, hair and clothes; nothing else from it`,
+        });
+    }
   }
 
   // View ghosts: a side of a place never drawn, where the first picture facing it can't set it
@@ -449,6 +472,12 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
         with: `sheet:${p}`,
         text: `Is ${name(p)} the same person as in their reference sheet: the same face, hair and clothes?`,
         fix: `${name(p)} must look exactly like their reference sheet: the same face, hair and clothes`,
+      });
+    for (const t of m.things)
+      out.push({
+        with: `sheet:${t}`,
+        text: `Is ${name(t)} the same object as in its reference sheet: the same shape, colours and details?`,
+        fix: `${name(t)} must look exactly like its reference sheet: the same shape, colours and details`,
       });
     for (const st of c.states)
       out.push({

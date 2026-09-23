@@ -520,6 +520,30 @@ reply says which. Accepted pictures that the correction doesn't touch are kept.
 - Ghosts get their own section: what each shows, what it was edited from, and which cuts use it.
 - Preflight findings are listed.
 
+### Threaded together: how the storyboard stays consistent
+
+Every layer builds on the one before, like an agency's pipeline:
+
+1. **Sheets first, and judged.**
+   - Every character, place and thing gets its sheet before any moment is drawn.
+   - The judge checks each sheet: its subject alone, nothing extra, and the look as described. A failing sheet gets one repair.
+   - A moment always attaches the sheets of everything in view. The place's sheet gives materials only when an earlier cut already sets where things stand.
+2. **Scene → shot → cut.**
+   - A scene is one place and time.
+   - A shot is one camera setup (place, side, framing, eyes) within a scene. Cuts that share a setup share a shot, even when the story cuts away and returns.
+   - The rules: cuts in one shot are edits of each other; a new shot in the same scene takes the room from the widest cut of that side; a new scene takes only the people.
+   - Strawberry gets one shot node per setup.
+3. **Every cut is a reference.** Later cuts draw on earlier ones by those relations. Each person's most recent appearance also goes in, so they look as they did a moment ago.
+4. **Ghost edits between.**
+   - Every lasting change to a person or thing gets its own ghost before any moment shows it. Each ghost is one edit of that subject's previous look (sheet → ice block → melting → horse), and every moment from the change on draws them from it.
+   - A dream's jump is a boundary: moments after it take nothing of the place from before it.
+5. **Beats.** Each cut carries its purpose, feeling, visual point and whether it is the key moment. Each scene carries what it does in the story.
+6. **The prompt.**
+   - It is a manifest of every attached image: what it shows, in words, and the one thing to take from it.
+   - The edit base comes first, then the sheets, ghosts and earlier cuts.
+   - At most 12 images, under the model's 14.
+   - A style's description line never enters an image prompt: it is for the person. Style tokens naming the story's own things are dropped.
+
 ## Defaults (change any)
 
 - **Producer model:** DeepSeek v4 pro, the same model that writes the replies.

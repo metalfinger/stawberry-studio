@@ -229,6 +229,31 @@ function withoutNamedLights(sentence: string): string {
   return kept ? `${kept}.` : '';
 }
 
+// Words too general to be the story's own: a style may say them freely.
+const GENERAL = new Set(
+  'the and with from that this into over under light soft sharp edge edges shadow shadows colour colors color colours tone tones glow figure figures focus detail details line lines paper texture background surface form forms shape shapes scene dream picture image warm cool pale dark bright white black grey gray blue green clear smooth faint rough thin thick layer layers wash washes stroke strokes style drawn drawing painting sketch room place places people person thing things young small little large big face faces body bodies hand hands head world outside inside other others side sides back front short long empty tiny old new first second far near end top bottom left right own just like some all each every few many much more most very quite slight slightly gentle gently subtle deep high low open close closed half whole full block blocks piece pieces part parts'.split(
+    ' ',
+  ),
+);
+
+/**
+ * The story's own words: what its people, places and things are called, and what changes on
+ * them. A style that names one ("smooth, photorealistic rendering on the ice") draws it into
+ * every picture, where it may not yet exist.
+ */
+function storyWords(b: Breakdown): Set<string> {
+  const out = new Set<string>();
+  const add = (text: string) => {
+    for (const w of text.toLowerCase().match(/[a-z]{3,}/g) ?? []) if (!GENERAL.has(w)) out.add(w.replace(/s$/, ''));
+  };
+  for (const x of [...b.people, ...b.places, ...b.things]) add(x.name);
+  for (const m of moments(b)) for (const l of m.leaves ?? []) add(`${l.what} ${l.now}`);
+  return out;
+}
+
+const namesStory = (text: string, words: Set<string>) =>
+  (text.toLowerCase().match(/[a-z]{3,}/g) ?? []).some((w) => words.has(w.replace(/s$/, '')));
+
 /** The sentences of a lighting rule, each judged on its own. */
 const sentences = (text: string) =>
   text
@@ -268,9 +293,10 @@ export async function cleanStyles(b: Breakdown, jev: JevFn): Promise<{ breakdown
     return a?.type === 'noul' && a.noul >= CONTENT_BAR;
   };
   const dropped: string[] = [];
+  const story = storyWords(out);
   out.style_options.forEach((o, i) => {
     const tokens = o.tokens.filter((t, j) => {
-      if (!content(`tok_${i}_${j}`)) return true;
+      if (!content(`tok_${i}_${j}`) && !namesStory(t, story)) return true;
       dropped.push(`${o.name}: "${t}"`);
       return false;
     });
@@ -278,7 +304,7 @@ export async function cleanStyles(b: Breakdown, jev: JevFn): Promise<{ breakdown
     o.tokens = tokens.length ? tokens : o.tokens.slice(0, 1);
     o.lighting_rules = sentences(o.lighting_rules)
       .map((t, j) => {
-        if (content(`light_${i}_${j}`)) {
+        if (content(`light_${i}_${j}`) || namesStory(t, story)) {
           dropped.push(`${o.name} light: "${t}"`);
           return '';
         }

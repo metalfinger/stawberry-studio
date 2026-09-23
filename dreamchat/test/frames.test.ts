@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import type { CutPlan } from '../continuity';
 import { framePrompt, writingIn } from '../frames';
 import { asInstruction } from '../session';
-import { type Item, styleBlock, toldColours } from '../sheets';
+import { type Item, sheetPrompt, styleBlock, toldColours } from '../sheets';
 
 const style = {
   id: 'd',
@@ -101,6 +101,8 @@ describe('a moment drawn from earlier moments', () => {
       plan: {
         id,
         order,
+        scene: 's1',
+        shot: 's1.sh1',
         refs,
         states: [],
         sheetLayout: true,
@@ -125,9 +127,19 @@ describe('a moment drawn from earlier moments', () => {
     const { prompt, references } = framePrompt(moment('m2', 2, [use]), [ana, kitchen], style, [
       { use, item: drawn('m1', 1) },
     ]);
-    expect(references.map((r) => `${r.role}:${r.media_id}`)).toEqual(['base:media-m1', 'identity:media-p1']);
+    // Every sheet of what is in view goes in, the place's too, after the picture being edited.
+    expect(references.map((r) => `${r.role}:${r.media_id}`)).toEqual([
+      'base:media-m1',
+      'identity:media-p1',
+      'location:media-l1',
+    ]);
     expect(prompt).toContain('Image 1: EDIT THIS PICTURE. It is picture 1, the same view a moment earlier.');
-    expect(prompt).toContain('Image 2: who ana is: face, hair, build and clothes, to check against Image 1.');
+    expect(prompt).toContain(
+      'Image 2: who ana is: their face, hair, build and clothes, exactly, as Image 1 already shows them.',
+    );
+    expect(prompt).toContain(
+      'Image 3: the kitchen: only its materials, colours and objects; where things stand comes from Image 1.',
+    );
     // The manifest comes before the scene, and each image says what to take from it.
     expect(prompt.indexOf('The attached images, in order')).toBeLessThan(prompt.indexOf('What happens in this frame'));
   });
@@ -147,7 +159,8 @@ describe('a moment drawn from earlier moments', () => {
     expect(prompt).toContain(
       'Image 2: the kitchen: only its materials, colours and objects; where things stand comes from the earlier picture of this place.',
     );
-    expect(prompt).toContain('Image 3: picture 1: the same place from the same side.');
+    // An earlier moment says what it shows, so the model knows which picture is which.
+    expect(prompt).toContain('Image 3: picture 1 (Ana stands at the counter): the same place from the same side.');
   });
 });
 
@@ -157,5 +170,24 @@ describe('what a redraw is told', () => {
     expect(asInstruction('Is this the tiny room?')).toBe('it must clearly be the tiny room');
     expect(asInstruction('Is ana wearing: a grey coat?')).toBe('ana wears a grey coat');
     expect(asInstruction('Are the hands right?')).toBe('make this true: Are the hands right');
+  });
+});
+
+describe('a sketch drawn again', () => {
+  test('carries what the judge found as corrections', () => {
+    const woman: Item = {
+      id: 'p1',
+      kind: 'character',
+      name: 'the young woman',
+      fields: { appearance: { value: 'brown hair in a ponytail', said: true } },
+      status: 'drawing',
+      version: 2,
+      repairFor: ['only the young woman is in the picture: no other person, creature or object beside them'],
+    };
+    expect(sheetPrompt(woman, style)).toContain(
+      'The last attempt at this sheet got these wrong. Put each right:\n- only the young woman is in the picture',
+    );
+    // And a style's description line never reaches a picture: only its name and technique.
+    expect(styleBlock({ ...style, line: 'precise details on the horse head' })).not.toContain('horse');
   });
 });

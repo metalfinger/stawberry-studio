@@ -8,7 +8,7 @@
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { planContinuity } from './continuity';
-import type { Breakdown, Detail, State, StyleOption } from './producer';
+import { type Breakdown, type Detail, moments, type State, type StyleOption } from './producer';
 
 export const REPO = resolve(import.meta.dir, '..');
 export const STRAWBERRY_PYTHON = process.env.STRAWBERRY_PYTHON ?? join(REPO, 'venv', 'bin', 'python');
@@ -132,6 +132,7 @@ export function planWrites(b: Breakdown, style: StyleOption, transcript: string)
     });
 
   let order = 0;
+  const madeShots = new Set<string>();
   for (const s of b.scenes) {
     ops.push({ op: 'create', ref: `$${s.id}`, kind: 'scene', name: s.title || s.id, parent: '$project' });
     if (s.mood)
@@ -139,22 +140,37 @@ export function planWrites(b: Breakdown, style: StyleOption, transcript: string)
     for (const m of s.moments) {
       order += 1;
       const name = m.action.slice(0, 80);
-      // One shot per moment for now: each moment is its own picture with its own framing.
-      ops.push({ op: 'create', ref: `$shot_${m.id}`, kind: 'shot', name, parent: `$${s.id}` });
-      ops.push({
-        op: 'patch',
-        node: `$shot_${m.id}`,
-        source: '$proposal',
-        reason: 'Framing',
-        changes: {
-          'camera.framing': FRAMING[m.distance],
-          'camera.angle':
-            m.eyes === 'dreamer'
-              ? "first person, through the dreamer's eyes"
-              : 'eye level, the dreamer seen from outside',
-        },
-      });
-      ops.push({ op: 'create', ref: `$${m.id}`, kind: 'cut', name, parent: `$shot_${m.id}`, notes: m.action });
+      // A shot is one camera setup: the cuts that share a setup share a shot, even after a
+      // cutaway, so Strawberry sees what the storyboard does (the return to the opening wide is
+      // the same shot, resumed).
+      const shot = `$shot_${(planOf.get(m.id)?.shot ?? m.id).replace(/[^a-z0-9]+/gi, '_')}`;
+      if (!madeShots.has(shot)) {
+        madeShots.add(shot);
+        ops.push({
+          op: 'create',
+          ref: shot,
+          kind: 'shot',
+          name: `${m.distance}${m.looks_at ? `, facing ${m.looks_at}` : ''}${m.eyes === 'dreamer' ? ", through the dreamer's eyes" : ''}`.slice(
+            0,
+            120,
+          ),
+          parent: `$${s.id}`,
+        });
+        ops.push({
+          op: 'patch',
+          node: shot,
+          source: '$proposal',
+          reason: 'The camera setup its cuts share',
+          changes: {
+            'camera.framing': FRAMING[m.distance],
+            'camera.angle':
+              m.eyes === 'dreamer'
+                ? "first person, through the dreamer's eyes"
+                : 'eye level, the dreamer seen from outside',
+          },
+        });
+      }
+      ops.push({ op: 'create', ref: `$${m.id}`, kind: 'cut', name, parent: shot, notes: m.action });
       const cut: Record<string, Value> = {
         action: m.action,
         visible_cast: m.visible.map((id) => `$${id}`),
@@ -174,6 +190,9 @@ export function planWrites(b: Breakdown, style: StyleOption, transcript: string)
       if (m.leaves?.length) cut['continuity.after'] = stateMap(m.leaves);
       if (cp?.transition) cut.transition = cp.transition;
       if (cp?.matchFrame) cut.match_frame = `$${cp.matchFrame}`;
+      // Strawberry's own chaining says the same: an edit of the cut just before, or not.
+      const prev = order > 1 ? moments(b)[order - 2]?.id : undefined;
+      cut.chain_from_prev = cp?.refs.some((r) => r.role === 'base' && r.id === prev) ? 'yes' : 'no';
       if (m.key) cut['beat.type'] = 'key moment';
       ops.push({
         op: 'patch',

@@ -353,12 +353,17 @@ function drawnFrom(it, pieces) {
   const find = (id) => pieces.find((x) => x.id === id);
   if (it.kind === 'ghost' && it.ghost) {
     const g = it.ghost;
-    box.append(el('div', {}, `Edit of ${g.of === '' ? 'a sheet' : 'the sheet'}${g.from ? `, looking at ${label(find(g.from) || { kind: 'cut', frame: { order: '?' } })}` : ''}: ${g.change}.`));
+    const before = g.after && find(g.after);
+    box.append(el('div', {}, `One edit of ${before ? label(before) : 'the sheet'}${g.from ? `, looking at ${label(find(g.from) || { kind: 'cut', frame: { order: '?' } })}` : ''}: ${g.change}.`));
     box.append(el('div', { class: 'muted' }, `Why: ${g.why}. Used by ${g.usedBy.map((id) => label(find(id) || { kind: 'cut', frame: { order: '?' } })).join(', ')}.`));
     return box;
   }
   const plan = it.frame && it.frame.plan;
   if (!plan) return box;
+  if (plan.shot) {
+    const [scene, shot] = plan.shot.split('.');
+    box.append(el('div', { class: 'muted' }, `scene ${scene.replace(/^s/, '')} · shot ${shot.replace(/^sh/, '')}`));
+  }
   const roles = { base: 'edited from', composition: 'room from', lighting: 'light from', identity: 'look from', location: 'place from', prop: 'thing from' };
   if (!plan.refs.length) box.append(el('div', {}, 'Drawn from the sheets alone.'));
   for (const r of plan.refs) {

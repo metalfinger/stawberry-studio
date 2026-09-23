@@ -110,7 +110,8 @@ export type Production = {
 };
 
 /** Sketches per conversation, at most. At fal's $0.15 a sketch, 30 is $4.50. */
-export const IMAGE_CAP = Number(process.env.DREAMCHAT_IMAGE_CAP ?? 30);
+// A rich dream is a dozen sketches, a dozen moments, their ghosts and a few redraws.
+export const IMAGE_CAP = Number(process.env.DREAMCHAT_IMAGE_CAP ?? 60);
 /** The approval ceiling on a single sketch, in US dollars. */
 const MAX_USD_PER_IMAGE = 0.2;
 
@@ -1026,7 +1027,9 @@ export class SessionStore {
     if (!sheet || sheet.status !== 'ready' || !sheet.mediaId || !ghost.nodeId)
       return void fail(`${sheet?.name ?? g.of} has no approved sheet to edit`);
     const from = g.from ? s.build.frames?.find((x) => x.id === g.from && x.status === 'ready') : undefined;
-    const { prompt, references, depicted } = ghostPrompt(ghost, sheet, from, s.style);
+    // A change that goes on changing is edited from its last look, one change at a time.
+    const previous = g.after ? s.build.frames?.find((x) => x.id === g.after && x.status === 'ready') : undefined;
+    const { prompt, references, depicted } = ghostPrompt(ghost, sheet, from, s.style, previous);
     ghost.depicted = depicted;
     await this.launch(s, ghost, {
       prompt,
@@ -1366,7 +1369,8 @@ export class SessionStore {
     let check: JudgedCheck | null;
     try {
       // A moment's check is its facts record: what the chat approves it for continuity on.
-      check = await judge(mediaId, { facts: it.kind === 'cut', continuity: it.kind === 'cut' ? checks : [] });
+      // Sheets are judged too: every picture drawn later takes its people, places and things from them.
+      check = await judge(mediaId, { facts: it.kind !== 'ghost', continuity: it.kind === 'cut' ? checks : [] });
     } catch (e) {
       check = { questions: 0, passed: 0, failed: [], error: String(e).slice(0, 200) };
     }
@@ -1382,7 +1386,7 @@ export class SessionStore {
       if (cur.kind === 'cut') {
         if (!(await this.repair(x, cur))) await this.vouch(x, cur);
         await this.fillFrames(x, x.turns.at(-1)?.turn ?? 0);
-      }
+      } else if (cur.kind !== 'ghost') await this.repairSheet(x, cur);
       await this.save(x);
     });
     if (this.sessions.get(id)?.build?.frames?.some((f) => f.status === 'drawing')) this.watch(id);
@@ -1408,6 +1412,35 @@ export class SessionStore {
    * rejected and the moment drawn once more with those failures as its correction, before the
    * person has had to point them out. A second failure is left for the person: never a loop.
    */
+  /**
+   * One repair per sheet, before anything is drawn from it: a sheet that shows more than its
+   * subject (ice horse heads beside a woman, 23 Sep), the wrong clothes or features, or a broken
+   * body would carry that into every moment it is attached to. A sheet the person has already
+   * approved is theirs, and stays.
+   */
+  private async repairSheet(s: Session, it: Item): Promise<void> {
+    const c = it.check;
+    if (it.review || (it.repairs ?? 0) >= MAX_REPAIRS || !c || c.error) return;
+    const SERIOUS = ['subject', 'wardrobe', 'features', 'pose'];
+    const facts = c.failed.filter((_, i) => SERIOUS.includes((c.failedIds?.[i] ?? '').split(':')[0]));
+    if (!facts.length) return;
+    it.repairs = (it.repairs ?? 0) + 1;
+    it.repairFor = facts.map((q) =>
+      /nothing else as the subject/.test(q)
+        ? `only ${it.isDreamer ? 'the dreamer' : it.name} is in the picture: no other person, creature or object beside them`
+        : asInstruction(q),
+    );
+    this.reviewSketch(
+      s,
+      it,
+      'rejected',
+      `The judge found, before it was drawn from: ${facts.join(' | ').slice(0, 800)}`,
+      'assistant',
+    );
+    it.announced = false;
+    await this.startSketch(s, it, it.startedAtTurn ?? 0);
+  }
+
   private async repair(s: Session, it: Item): Promise<boolean> {
     if (it.review || (it.repairs ?? 0) >= MAX_REPAIRS || !it.mediaId || !it.nodeId) return false;
     const c = it.check;

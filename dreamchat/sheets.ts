@@ -214,7 +214,10 @@ export function toldColours(...items: Item[]): string[] {
 export function styleBlock(style: StyleOption, told: string[] = []): string {
   const colours = [...new Set(style.palette_hex.map(colourName))];
   return [
-    `Style: ${style.name}. ${style.line}`,
+    // The line describing a style is written for the person, and it can carry the dream itself
+    // ("…precise details on the horse head" put ice horses in every sketch, 23 Sep): only the
+    // style's name and its technique reach a picture.
+    `Style: ${style.name}.`,
     style.tokens.length ? `Technique, followed exactly: ${style.tokens.join('; ')}.` : '',
     colours.length
       ? told.length
@@ -254,7 +257,13 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
         ? `A single wide picture of ${item.name}, as it ordinarily looks, with no people in it, showing the whole place and how it is laid out.`
         : `A single clear picture of ${item.name} on its own, as it ordinarily looks, seen at a slight angle so its shape and materials read.`;
   const background = item.kind === 'location' ? '' : 'Plain, uncluttered background. ';
-  return [layout, facts, styleBlock(style, toldColours(item)), `${background}${NO_WORDS}`].filter(Boolean).join('\n\n');
+  // The judge's findings on the last attempt, when it was drawn again for them.
+  const repair = item.repairFor?.length
+    ? `The last attempt at this sheet got these wrong. Put each right:\n${item.repairFor.map((q) => `- ${q}`).join('\n')}`
+    : '';
+  return [layout, facts, repair, styleBlock(style, toldColours(item)), `${background}${NO_WORDS}`]
+    .filter(Boolean)
+    .join('\n\n');
 }
 
 export type SheetEngine = {

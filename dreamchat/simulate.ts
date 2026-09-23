@@ -55,16 +55,20 @@ type Report = Awaited<ReturnType<typeof run>>;
 async function lookAt(store: SessionStore, id: string): Promise<string> {
   const until = Date.now() + Number(process.env.DREAMCHAT_SIM_LOOK_MS ?? 20 * 60_000);
   for (;;) {
-    const frames = (store.view(id)?.build?.frames ?? []).filter(
-      (f) => f.kind === 'cut' && f.status === 'ready' && f.announced && !f.review,
-    );
+    // The sketches while they are on show, then the moments: whatever they are asked about.
+    const view = store.view(id);
+    const pieces =
+      view?.phase === 'review'
+        ? (view.build?.items ?? [])
+        : (view?.build?.frames ?? []).filter((f) => f.kind === 'cut');
+    const frames = pieces.filter((f) => f.status === 'ready' && f.announced && !f.review);
     const judged = frames.filter((f) => f.check);
     if (judged.length === frames.length || Date.now() > until) {
       return judged
         .map((f) => {
           const wrong = [...(f.check?.failed ?? []), ...(f.continuity?.failed ?? [])];
           return wrong.length
-            ? `in the picture of "${f.name}", something is off: ${wrong.map((q) => q.replace(/\?$/, '')).join('; ')} — the answer to each is no.`
+            ? `in the picture of "${f.name}", something is off: ${wrong.map((q) => q.replace(/\?$/, '')).join('; ')} (the answer to each is no).`
             : `the picture of "${f.name}" looks the way you remember.`;
         })
         .join(' ');

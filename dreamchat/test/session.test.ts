@@ -524,7 +524,6 @@ describe('a whole conversation', () => {
   test('a moment the judge fails is drawn once more with what was wrong, then released on a pass', async () => {
     const judged: string[] = [];
     const { store, id, framesStarted, verdicts, statuses } = await toTheMoments(async (mediaId, opts) => {
-      // Like the assistant judge: only moments are asked about.
       if (!opts?.facts) return null;
       judged.push(mediaId);
       // The first take of the wide has no board in it; the second has.
@@ -550,7 +549,13 @@ describe('a whole conversation', () => {
     // The second take passes: approved for continuity on the judge's word, and the close-up goes on.
     statuses.set('job-m1', 'ready');
     await store.settle(id, 150);
-    expect(judged).toEqual(['media-cut-m1-job-m1', 'media-cut-m1-job-m1-v2']);
+    // The sketches were judged too, before anything was drawn from them.
+    expect(judged).toEqual([
+      'media-node-l1-job-l1',
+      'media-node-t1-job-t1',
+      'media-cut-m1-job-m1',
+      'media-cut-m1-job-m1-v2',
+    ]);
     expect(verdicts.at(-1)).toEqual(['media-cut-m1-job-m1-v2', true, 'assistant']);
     expect(framesStarted.map((f) => f.id)).toEqual(['m1', 'm1', 'm2']);
     expect(store.get(id)!.build!.frames![0]).toMatchObject({ repairs: 1, version: 2 });
