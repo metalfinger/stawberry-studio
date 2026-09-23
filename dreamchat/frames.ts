@@ -32,7 +32,11 @@ export function writingIn(...texts: (string | null | undefined)[]): string[] {
 
 function writingLine(words: string[]): string {
   if (!words.length) return NO_WORDS;
-  const spelled = words.map((w) => `"${w.toUpperCase()}", spelled ${w.toUpperCase().split('').join('-')}`);
+  // "Spelled Z-I-K-E-R-Y" still came back "ZIIKERY" (23 Sep); the letter count pins it.
+  const spelled = words.map((w) => {
+    const letters = w.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    return `"${w.toUpperCase()}" (${letters.length} letters: ${letters.split('').join(' ')})`;
+  });
   return `The only writing anywhere in the picture is ${spelled.join(' and ')}, exactly as spelled, and nothing else: no other words, letters, numbers or labels.`;
 }
 
@@ -137,7 +141,9 @@ export function framePrompt(
     references.length
       ? 'Everyone and everything looks exactly as in their reference image, except for what this moment itself changes.'
       : '',
-    `One single picture, not a sheet or a grid. ${writingLine(writingIn(action, point))}`,
+    // The dream's writing can live in what is in view as well as in the action: a frame of the
+    // board without the word quoted in its action came back reading "NONSENSICAL" (23 Sep).
+    `One single picture, not a sheet or a grid. ${writingLine(writingIn(action, point, ...inView.flatMap((x) => Object.values(x.fields).map((d) => d.value))))}`,
   ]
     .filter(Boolean)
     .join('\n\n');

@@ -25,7 +25,7 @@ describe('writing in the dream', () => {
   test('quoted words are the only writing, spelled out', () => {
     expect(writingIn("one slat reads 'zikery', the rest blank")).toEqual(['zikery']);
     const { prompt } = framePrompt(frame("One slat of the board reads 'zikery'."), [], style);
-    expect(prompt).toContain('The only writing anywhere in the picture is "ZIKERY", spelled Z-I-K-E-R-Y');
+    expect(prompt).toContain('The only writing anywhere in the picture is "ZIKERY" (6 letters: Z I K E R Y)');
   });
 
   test('a moment without quoted writing forbids all writing', () => {

@@ -94,6 +94,30 @@ calls.
 | `DREAMCHAT_JUDGE_ENV` | `~/.config/strawberry/judge.env` | `JUDGE_URL` and `JUDGE_API_KEY` for the image judge on the PC |
 | `JEV_MODEL` | `jev-latest` | |
 
+## Trying it
+
+Open http://127.0.0.1:8790, press **New dream** and tell a dream the way you'd tell a friend. Berry:
+1. listens, then tells it back;
+2. asks whether you'd like to see it, and offers four ways it could be drawn;
+3. shows each person and place as it pictures them;
+4. shows the sketches, then the moments.
+
+Say "that's right", correct anything in your own words, or say you'd leave it to Berry. The
+right-hand panel shows what Berry has understood, the production, and every picture with the
+judge's count of the declared details it saw.
+
+A dream costs roughly $0.15 × (people + places + things + moments + redraws): usually $1–2, and
+never more than the limit.
+
+Known limits:
+- Frames are drawn from the approved sketches, not from the frame before, so continuity between
+  frames rests on the sketches.
+- The judge's badge informs, and decides nothing; it hasn't been measured against people's
+  verdicts yet.
+- A style option can still carry some of the dream's content (a little ice at a woman's feet).
+- A download from fal's CDN sometimes times out; it is collected again twice at no cost before
+  the picture counts as failed, and Berry says honestly if one never arrives.
+
 ## Test
 
 ```sh
