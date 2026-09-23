@@ -706,6 +706,12 @@ export class SessionStore {
       if (item) extras.profile = profileOf(item);
     }
     if (s.build && move.kind === 'sheets_done') await this.startFrames(s, turnNow);
+    // How far the moments have got, whenever they are being drawn: leaving included.
+    if (s.build?.frames?.length && (move.kind === 'frames_drawing' || move.kind === 'wrap')) {
+      const moments = s.build.frames.filter((i) => i.kind === 'cut');
+      extras.frameCount = moments.length;
+      extras.drawnCount = moments.filter((i) => i.status === 'ready').length;
+    }
     if (s.build && (move.kind === 'frames_drawing' || move.kind === 'all_done')) {
       extras.approved = reviewed.approved;
       extras.redrawing = reviewed.redrawing;

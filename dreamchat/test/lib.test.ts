@@ -257,6 +257,19 @@ describe('briefs for the pictures', () => {
     expect(b).toContain('ask gently how they');
   });
 
+  test('while moments are still to come, the host is told how many, drawing or leaving', () => {
+    const extras = { frameCount: 13, drawnCount: 7 };
+    const drawing = renderBrief(state({}), { kind: 'frames_drawing' }, cfg, { phase: 'frames', extras });
+    expect(drawing).toContain('7 of the 13 moments are on the right so far; the other 6 are still to come.');
+    const leaving = renderBrief(state({}), { kind: 'wrap' }, cfg, { phase: 'frames', extras });
+    expect(leaving).toContain('Never say the whole dream is drawn while any are.');
+    const done = renderBrief(state({}), { kind: 'frames_drawing' }, cfg, {
+      phase: 'frames',
+      extras: { frameCount: 13, drawnCount: 13 },
+    });
+    expect(done).not.toContain('still to come');
+  });
+
   test('a structured move asks nothing of its own', () => {
     expect(renderBrief(state({}), { kind: 'offer_visualize' }, cfg, { phase: 'offer' })).toContain(
       'Ask nothing except what this move says.',

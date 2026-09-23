@@ -487,6 +487,8 @@ export type BriefExtras = {
   keyReady?: string;
   /** How many moments there are in all. */
   frameCount?: number;
+  /** How many are up on the right so far. */
+  drawnCount?: number;
   /** Pieces that could not be drawn, by name. */
   failed?: string[];
   /** Pictures on show that later moments are drawn from, waiting for their verdict. */
@@ -533,6 +535,17 @@ function profileLine(p: NonNullable<BriefExtras['profile']>): string {
     ? ` You filled in (say plainly that these are your guesses): ${p.guessed.join('; ')}.`
     : '';
   return `describe how you picture ${p.name} on their own, briefly, in plain words: not the scene around them, not anyone or anything else, and not the rest of the dream.${said}${guessed} Then ask if anything's different, or if they'd leave it to you.`;
+}
+
+/**
+ * How far the moments have got, when some are still to come. Told "that's the whole thing", Berry
+ * once said the whole dream was drawn with six of its thirteen moments still waiting (24 Sep).
+ */
+function stillToCome(extras: BriefExtras): string {
+  const all = extras.frameCount ?? 0;
+  const drawn = extras.drawnCount ?? all;
+  if (!all || drawn >= all) return '';
+  return `${drawn} of the ${all} moments are on the right so far; the other ${all - drawn} are still to come. Never say the whole dream is drawn while any are.`;
 }
 
 function closingInstruction(note: ClosingNote | undefined): string {
@@ -629,6 +642,7 @@ function renderMove(move: Move, state: State, cfg: GoalsFile, extras: BriefExtra
         extras.waitsOnThem?.length
           ? `The next moments carry on from ${extras.waitsOnThem.join(' and ')}, so they're drawn once they say it looks right, or what to change. If you haven't said so already, say it once, simply, in passing.`
           : '',
+        stillToCome(extras),
       ];
       return `frames_drawing. ${parts.filter(Boolean).join(' ')}`;
     }
@@ -649,7 +663,7 @@ function renderMove(move: Move, state: State, cfg: GoalsFile, extras: BriefExtra
     case 'keep':
       return "keep. They'd rather not see it drawn, and that's fine. Thank them for sharing their dream, warmly and briefly. Don't ask anything.";
     case 'wrap':
-      return `wrap. ${closingInstruction(state.closing_note)} Do not ask another question.`;
+      return `wrap. ${closingInstruction(state.closing_note)}${stillToCome(extras) ? ` ${stillToCome(extras)}` : ''} Do not ask another question.`;
     default:
       return unreachable(move);
   }
