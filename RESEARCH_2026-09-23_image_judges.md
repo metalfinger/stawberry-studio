@@ -115,3 +115,20 @@ Claude's role moves from being the gate to orchestrating it and breaking ties.
 
 Needs: a GPU for Qwen3-VL-8B (about 16–24 GB at bf16, or a 4-bit build on less) or an on-demand
 host (Fireworks lists Qwen3-VL-8B on-demand) [V]; a fal key, which we have.
+
+## Result (23 Sep): open judges dropped
+
+Both self-hosted Qwen judges were tested on the 208 ice-head questions and the 94 Nine O'Clock
+questions. On the 15 questions where the host's scores and the blind reviewer's disagreed:
+
+| | Qwen3-VL-8B | Qwen3.5-27B, think off | 27B, think on |
+|---|---|---|---|
+| Sides with blind / host | 3 / 11 | 7 / 7 | stopped at 6 of 8 frames |
+| Time per 26-question frame | ~2 s | ~17 s | ~3.5–4 min |
+
+The 27B is stricter, not more accurate. Most of its extra "no" answers come from question wording:
+names instead of descriptions, and compound questions. Thinking fixed the clock frame but is far too
+slow for the loop. Neither model goes into the harness. The client (`remote_judge.py`) and the test
+kit (`autoloop/judge_tests/`, with `compare_models.py`) stay, so a future judge can be measured on the
+same questions. Before trying another model, build a labelled set from human marks: the blind reviewer
+is not ground truth.

@@ -1,0 +1,975 @@
+[
+ {
+  "n": 2,
+  "name": "The quiet passenger",
+  "image": ".strawberry-probe/media/63c155fbc7def1bcede2541b01fce73e2e75d7b0eba2f3df4a224bbb7e5fcac4.png",
+  "model": "Qwen/Qwen3.5-27B-FP8",
+  "think": true,
+  "server_ms": 112485,
+  "wall_ms": 116061,
+  "rows": [
+   {
+    "id": "global:single",
+    "text": "Is this a single image, not a grid, contact sheet, filmstrip or multi-panel board?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 17025,
+    "reasoning": "The user is asking a simple yes/no question about the format of the image.\n1.  **Analyze the image:** The image shows a single scene: a man running with a baby in a carrier down a tree-lined street.\n2.  **Check for multiple panels:** There are no grid lines, no separate distinct images arranged in a row or column (like a contact sheet or filmstrip), and no distinct panels separated by borders (like a comic strip).\n3.  **Check for collage/montage:** While the style looks like a textured drawing or perhaps a digital art piece mimicking paper texture, it is a single, cohesive composition. It's not a \"multi-panel board\" in the sense of a vision board or a collage of different photos. It's one continuous artwork.\n4.  **Formulate the answer:** The image is a single, unified artwork. Therefore, the answer is \"yes\".",
+    "think_ms": 17025,
+    "reasoning_capped": false
+   },
+   {
+    "id": "global:no_border",
+    "text": "Is the image free of any decorative border, frame line or panel division?",
+    "scope": "global",
+    "p_yes": 0.0009,
+    "ms": 75306,
+    "reasoning": "The user is asking a yes/no question about the presence of a decorative border, frame line, or panel division in the image.\n\n1.  **Analyze the image:** I see a central illustration of a man running with a baby in a carrier.\n2.  **Look at the edges:** The edges of the image are not straight, clean lines. They look like torn paper or a rough, textured border.\n3.  **Identify the border:** There is a distinct, lighter-colored area surrounding the main illustration. It looks like a piece of paper with rough, torn edges placed on top of another surface, or perhaps the illustration itself is framed by this rough, textured border.\n4.  **Evaluate \"decorative border, frame line or panel division\":** The rough, torn-paper edge acts as a frame or border around the central scene. It separates the main artwork from the \"background\" (which is just the edge of the paper itself). It's definitely a border of some kind. It's not a simple straight line, but it is a border. Wait, let me re-read the question carefully. \"Is the image free of any decorative border, frame line or panel division?\"\n5.  **Re-evaluating the \"border\":** The image has a very distinct, rough, torn-paper edge around the entire perimeter. This acts as a frame. It's not a \"panel division\" in the comic book sense, but it is a border. The question asks if it is *free* of these things. Since there is a border (the torn paper edge), the answer should be \"no\".\n6.  **Double check:** Is that a border? Yes, the image has a distinct, uneven, light-colored margin around the darker central illustration. It looks like a collage or a piece of paper with torn edges. This constitutes a border/frame. Therefore, the image is *not* free of a border.\n\nWait, let me look closer. The entire image *is* the artwork. The \"border\" is part of the artistic style, looking like torn paper. Does that count as a \"decorative border\"? Yes, it frames the central scene. The central scene is the man running. The area around it is a textured, lighter beige color that looks like the edge of a piece of paper. This is a border.\n\nSo, is the image *free* of it? No.\n\nLet's look for \"panel division\". No panels.\nLet's look for \"frame line",
+    "think_ms": 46978,
+    "reasoning_capped": true
+   },
+   {
+    "id": "global:no_words",
+    "text": "Is the image free of readable words, captions, labels or logos?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 26604,
+    "reasoning": "The user wants to know if there are any readable words, captions, labels, or logos in the image.\n\n1.  **Scan the image:** I'll look at the entire image from top to bottom, left to right.\n2.  **Foreground:** There's a man running with a baby in a carrier. No text on his clothes or the carrier.\n3.  **Background:** There are trees lining a road, a wall on the left, and a distant vehicle.\n4.  **Texture/Style:** The image has a textured, almost painted or etched look.\n5.  **Text search:** I am looking for any alphanumeric characters.\n    *   Left side: Trees, wall. No text.\n    *   Center: Man, baby, road. No text.\n    *   Right side: Trees, wall. No text.\n    *   Top/Bottom edges: Just the texture of the \"paper\" or canvas. No text.\n    *   Distant vehicle: Too small to read anything, and likely just a shape.\n6.  **Conclusion:** There are no visible words, captions, labels, or logos.\n\nTherefore, the answer is \"yes\".",
+    "think_ms": 26604,
+    "reasoning_capped": false
+   },
+   {
+    "id": "global:mono",
+    "text": "Is the image entirely monochrome, black, white and grey only, with no colour at all?",
+    "scope": "global",
+    "p_yes": 0.003,
+    "ms": 76525,
+    "reasoning": "The user is asking a yes/no question about the color palette of the image.\n1.  **Analyze the image:** I see a man running with a baby in a carrier. The style looks like a sketch or a drawing on textured paper.\n2.  **Check for colors:**\n    *   The dominant tones are sepia, beige, brown, black, and white.\n    *   The \"paper\" background has a yellowish/beige tint.\n    *   The trees and shadows are dark brown/black.\n    *   The man's shirt is a light beige/white.\n    *   There are no distinct hues like red, blue, green, yellow (except as part of the sepia tone), etc.\n    *   Wait, is it *strictly* monochrome (black, white, grey)? Or is it sepia-toned?\n    *   Looking closely at the \"paper\" texture and the overall cast, it's definitely not pure grayscale. It has a warm, brownish/yellowish tint typical of sepia or aged paper.\n    *   However, the question asks \"Is the image entirely monochrome, black, white and grey only, with no colour at all?\"\n    *   Technically, sepia is a monochromatic scheme (variations of a single color), but it's not \"black, white and grey only\". It has brown tones.\n    *   Let's look really closely. Is there *any* color? The overall cast is definitely brownish/sepia. It's not a pure grayscale image.\n    *   But often, \"monochrome\" is used loosely. Let's look for *any* distinct color.\n    *   The image looks like a digital art piece mimicking a sketch on old paper. The \"paper\" color is a light tan/beige. The ink is black/dark brown.\n    *   Is beige considered a \"color\" in this context? Yes, it's a tint. It's not grey.\n    *   Therefore, the image is not *only* black, white, and grey. It has brownish/beige tones.\n    *   So the answer should be \"no\".\n\n    *   *Self-Correction/Refinement:* Let's re-read the prompt's definition of monochrome: \"black, white and grey only\".\n    *   The image clearly has a sepia or parchment tone. The background isn't white; it's",
+    "think_ms": 47288,
+    "reasoning_capped": true
+   },
+   {
+    "id": "global:handmade",
+    "text": "Does the image look hand-made, like charcoal or graphite drawing combined with cut paper, rather than a photograph?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 27229,
+    "reasoning": "The user is asking for a stylistic assessment of the image.\n1.  **Analyze the visual texture:** The image has a distinct, rough texture. It looks like paper with torn edges.\n2.  **Analyze the rendering style:** The trees, the man, the baby, and the road all have a sketchy, hatched quality. It resembles charcoal or pencil strokes.\n3.  **Analyze the composition:** The edges of the image are jagged and uneven, mimicking torn paper. The background has a \"paper\" texture.\n4.  **Compare to photography:** A standard photograph would have smooth gradients and realistic lighting without this specific \"sketchy\" overlay. This looks like a digital art piece mimicking traditional media (charcoal/graphite) or a collage.\n5.  **Formulate the answer:** The question asks \"Does the image look hand-made, like charcoal or graphite drawing combined with cut paper, rather than a photograph?\" and requests a one-word answer (\"yes\" or \"no\").\n6.  **Conclusion:** The visual evidence strongly supports the \"hand-made/drawing\" description. The texture, the hatching, and the torn edges all point to this. Therefore, the answer is \"yes\".",
+    "think_ms": 27229,
+    "reasoning_capped": false
+   },
+   {
+    "id": "global:not_glossy",
+    "text": "Is the image free of the smooth, glossy look of a digital painting or 3D render?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 34657,
+    "reasoning": "The user is asking a question about the visual style of the image.\n1.  **Analyze the image:** The image shows a man running with a baby in a carrier.\n2.  **Examine the texture:** The entire image has a distinct, rough texture. It looks like it's drawn on crumpled paper or has a heavy, grainy filter applied. The lines are sketchy and hatched, resembling a pencil or charcoal drawing.\n3.  **Evaluate \"smooth, glossy look\":** A digital painting or 3D render often has smooth gradients, clean lines, and a polished, sometimes shiny appearance. This image is the opposite. It is gritty, textured, and looks like a traditional sketch or a heavily stylized photo manipulation that mimics traditional media. It lacks the \"smooth, glossy\" quality.\n4.  **Formulate the answer:** The question asks \"Is the image free of the smooth, glossy look...?\" Since the image is rough and textured, the answer is \"yes\". It *is* free of that look.\n\nWait, let me re-read carefully. \"Is the image free of the smooth, glossy look of a digital painting or 3D render?\"\n- If the image *looks* like a digital painting/3D render (smooth/glossy), the answer is \"no\" (it is not free of it).\n- If the image *does not look* like that (it looks rough/textured), the answer is \"yes\" (it is free of it).\n\nThe image definitely looks like a sketch or a textured drawing. It does not look like a smooth, glossy 3D render. Therefore, it is free of that look.\n\nAnswer: yes.",
+    "think_ms": 34657,
+    "reasoning_capped": false
+   },
+   {
+    "id": "global:torn_edges",
+    "text": "Are torn paper edges visible somewhere in the image?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 24766,
+    "reasoning": "The user is asking a simple yes/no question about the visual content of the image.\n1.  **Analyze the image:** I see an image that looks like a drawing or painting on a piece of paper.\n2.  **Look for \"torn paper edges\":** I need to examine the borders of the image.\n3.  **Inspect the borders:**\n    *   Top edge: It looks ragged and uneven, like torn paper.\n    *   Left edge: Also ragged and uneven.\n    *   Right edge: Ragged and uneven.\n    *   Bottom edge: Ragged and uneven.\n    *   The entire image is framed by what looks like a piece of textured, possibly torn, paper. The texture itself looks like crumpled or aged paper. The edges specifically have that jagged, torn appearance.\n\n4.  **Formulate the answer:** The question asks \"Are torn paper edges visible somewhere in the image?\" and requests a one-word answer \"yes or no\".\n5.  **Conclusion:** Yes, the edges of the image clearly simulate torn paper.\n\nAnswer: yes",
+    "think_ms": 24766,
+    "reasoning_capped": false
+   },
+   {
+    "id": "global:paper_grain",
+    "text": "Is visible paper grain or paper fibre texture present?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 27469,
+    "reasoning": "The user is asking a specific question about the texture of the image.\n1.  **Analyze the image:** I need to look closely at the visual style. It looks like a drawing or a painting, possibly on textured paper.\n2.  **Look for paper grain/fibre:**\n    *   The edges of the image are rough and torn, resembling a piece of paper.\n    *   The entire surface has a stippled, grainy quality. It's not a smooth digital gradient.\n    *   The shading on the trees, the man's clothes, and the ground is done with small, distinct marks that mimic ink or pencil on rough paper.\n    *   The background \"sky\" area also has a textured, fibrous look, like the white of the paper showing through.\n    *   The overall aesthetic is deliberately mimicking an old, textured paper medium.\n\n3.  **Formulate the answer:** The question asks \"Is visible paper grain or paper fibre texture present?\" and requests a one-word answer: \"yes\" or \"no\".\n4.  **Conclusion:** Yes, the texture is very prominent throughout the image, especially in the way the shading is applied and the rough edges.\n\n5.  **Final Answer Selection:** yes.",
+    "think_ms": 27469,
+    "reasoning_capped": false
+   },
+   {
+    "id": "global:linework",
+    "text": "Is visible graphite or charcoal linework present?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 35303,
+    "reasoning": "The user is asking a specific question about the visual style of the image: \"Is visible graphite or charcoal linework present?\"\n\n1.  **Analyze the image:** I need to look closely at the texture and rendering of the image.\n2.  **Identify the medium:** The image looks like a drawing or a digital artwork mimicking a drawing.\n3.  **Look for linework:**\n    *   Look at the trees: The trunks and branches are defined by dark, scratchy lines. The leaves are rendered with stippling or short, repetitive marks that look like pencil or charcoal strokes.\n    *   Look at the man: His clothing has folds and shadows created by hatching and cross-hatching lines. His face has shading that looks like graphite smudging or fine lines.\n    *   Look at the ground: The road surface is textured with horizontal lines and shading that resemble pencil strokes.\n    *   Look at the overall texture: The entire image has a grainy, textured quality consistent with graphite or charcoal on paper. The edges of the \"paper\" are torn, reinforcing the idea of a physical drawing.\n4.  **Evaluate \"visible linework\":** Yes, there are clearly visible lines used to create form, shadow, and texture. It's not a smooth photograph or a flat vector graphic. The strokes are distinct.\n5.  **Formulate the answer:** The question asks for a one-word answer: \"yes\" or \"no\". Based on the observation of hatching, cross-hatching, and sketchy lines throughout the image, the answer is \"yes\".\n\n**Conclusion:** The image is clearly a drawing (or a digital simulation of one) that relies heavily on visible linework, shading, and texture typical of graphite or charcoal.",
+    "think_ms": 35303,
+    "reasoning_capped": false
+   },
+   {
+    "id": "global:registration",
+    "text": "Are some collage layers slightly offset or imperfectly aligned with each other?",
+    "scope": "global",
+    "p_yes": 0.9971,
+    "ms": 77276,
+    "reasoning": "The user is asking a question about the visual style of the image, specifically regarding \"collage layers\" and their alignment.\n\n1.  **Analyze the image:** The image has a distinct texture that looks like torn paper or a collage. The edges are rough and uneven, resembling torn paper.\n2.  **Look for layers:** The entire image seems to be constructed from pieces of paper or a texture that mimics it.\n3.  **Check for offsets/imperfections:**\n    *   Look at the edges of the \"paper\" pieces. They are jagged and irregular.\n    *   Look at the transition between different parts of the image (e.g., the trees, the road, the man). The texture is consistent, but it looks like a single piece of textured paper or a very well-integrated collage.\n    *   Wait, let's look closer at the prompt's premise. \"Are some collage layers slightly offset or imperfectly aligned with each other?\"\n    *   Looking at the overall composition, it looks like a single image with a heavy \"torn paper\" or \"cracked earth\" texture applied to it. However, looking at the very edges of the image, there's a border that looks like a separate piece of paper underneath or around it.\n    *   More importantly, look at the internal details. The texture itself is made of many small, irregular shapes that look like puzzle pieces or torn fragments. These fragments are not perfectly aligned in a grid; they are jumbled.\n    *   But the question asks about \"collage layers\". Let's look for distinct layers.\n    *   The border is definitely a layer. It's a lighter, textured paper surrounding the main image. The main image is \"pasted\" onto it. The edge where they meet is rough and torn. This is a classic collage technique.\n    *   Is there offsetting? The main image is centered but the torn edges are irregular.\n    *   Let's look at the texture *within* the image. It looks like a \"crackle\" effect or a mosaic of small paper pieces. These pieces are definitely not perfectly aligned. They are offset and irregular.\n    *   Let's re-read the question: \"Are some collage layers slightly offset or imperfectly aligned with each other?\"\n    *   The visual style is explicitly a collage or a simulation of one. The \"layers\" could refer to the torn paper effect. The edges of the main image against the background border",
+    "think_ms": 46728,
+    "reasoning_capped": true
+   },
+   {
+    "id": "global:erasures",
+    "text": "Are there visible rubbed-out marks or erasures?",
+    "scope": "global",
+    "p_yes": 0.4494,
+    "ms": 78587,
+    "reasoning": "The user is asking a specific question about the visual texture of the image: \"Are there visible rubbed-out marks or erasures?\"\n\n1.  **Analyze the image style:** The image has a distinct, textured appearance. It looks like a drawing, possibly done with charcoal, pencil, or a digital brush mimicking these media.\n2.  **Look for \"rubbed-out marks\" or \"erasures\":**\n    *   The texture is very grainy and stippled.\n    *   The edges of the image are rough and uneven, looking like torn paper or a rough border.\n    *   Within the drawing itself, especially in the lighter areas (like the sky, the road, the man's shirt), there are areas where the dark lines are sparse or absent, revealing the \"paper\" texture underneath. This could be interpreted as erasures or just negative space.\n    *   However, looking closely at the texture, it resembles a \"cracked\" or \"peeling\" effect, almost like old paint or a specific digital filter that mimics a rough surface.\n    *   Wait, let's look at the prompt again. \"Rubbed-out marks or erasures.\" This usually implies a specific artistic technique where something was drawn and then partially removed.\n    *   Looking at the trees and the road, the texture is consistent. It looks like a stippling or cross-hatching technique.\n    *   Is there evidence of *erasure* specifically? The edges of the image are very ragged, like a piece of paper that was torn or the image was masked out.\n    *   Let's look at the \"rubbed-out\" aspect. The texture looks like a \"crackle\" filter or a \"dry brush\" effect. It doesn't look like someone took an eraser to a pencil drawing in the traditional sense of smudging or lifting graphite.\n    *   However, the question asks \"Are there visible rubbed-out marks or erasures?\"\n    *   Let's re-evaluate the texture. It looks like a \"scratchboard\" or a very rough, textured paper.\n    *   Actually, looking very closely at the edges and the general \"grunge\" aesthetic, it looks like a digital manipulation that adds a texture overlay.\n    *   But let's look for specific *erasures*. In the sky area, the texture is lighter. In the road, it's lighter.\n    *   Let's consider the phrase \"rubbed-out marks\". This",
+    "think_ms": 46741,
+    "reasoning_capped": true
+   },
+   {
+    "id": "global:no_modern_vehicle",
+    "text": "Is the image free of any modern vehicle?",
+    "scope": "global",
+    "p_yes": 0.0,
+    "ms": 44296,
+    "reasoning": "The user is asking a yes/no question about the presence of modern vehicles in the image.\n\n1.  **Scan the image:** I need to look carefully at the background and foreground for any vehicles.\n2.  **Foreground:** A man is running with a baby in a carrier. No vehicles here.\n3.  **Mid-ground:** There's a road stretching into the distance, lined with trees and a wall on the left.\n4.  **Background:** Looking down the road, towards the vanishing point.\n5.  **Identify object:** In the distance, on the road, there is a small, boxy shape. It looks like a car or a van. Let me zoom in mentally. Yes, it's a vehicle. It looks like a car driving away or towards the viewer (hard to tell direction, but it's a vehicle).\n6.  **Evaluate \"modern\":** The vehicle looks like a standard car, possibly a sedan or a small van. It's definitely a motorized vehicle, which fits the definition of a \"modern vehicle\" in the context of general imagery (as opposed to a horse-drawn carriage). Even if it's an older model car, it's a \"modern vehicle\" in the sense of being a car. Wait, let me look closer. It's a small, dark shape. It looks like a car.\n7.  **Re-evaluate the question:** \"Is the image free of any modern vehicle?\"\n8.  **Conclusion:** Since there is a car visible in the distance, the answer is \"no\". The image is *not* free of modern vehicles.\n\nLet me double-check.\n-   Left side: Wall, trees.\n-   Center: Man running.\n-   Right side: Trees.\n-   Far distance: A vehicle is clearly visible on the road. It looks like a car.\n\nTherefore, the image contains a modern vehicle. The answer to \"Is the image free of any modern vehicle?\" is No.\n\nWait, let me look really closely at that distant object. It's a small rectangle. It could be a car. It's definitely a vehicle. Is it \"modern\"? It looks like a car from the 20th or 21st century. It's not a horse carriage. So yes, it's a modern vehicle.\n\nSo the answer is No.",
+    "think_ms": 44296,
+    "reasoning_capped": false
+   },
+   {
+    "id": "global:no_map_news",
+    "text": "Is the image free of maps and newspaper fragments?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 36379,
+    "reasoning": "The user is asking a yes/no question about the presence of maps or newspaper fragments in the image.\n\n1.  **Analyze the image:** I see a man running with a baby in a carrier. The style looks like a sketch or a drawing, possibly with a textured paper effect.\n2.  **Look for maps:** I scan the background, the foreground, and the borders. There are no geographical maps visible. The background shows trees, a wall, and a road.\n3.  **Look for newspaper fragments:** I scan the image for text, columns of print, or torn paper edges that look like newsprint. The image has a textured, almost collage-like border, but it looks like torn paper or a stylistic frame, not specifically newspaper clippings with text. The main image is a drawing. There are no visible newspaper fragments.\n4.  **Formulate the answer:** Since neither maps nor newspaper fragments are visible, the answer is \"yes\". The image is free of them.\n\nWait, let me double-check the \"newspaper fragments\" part. The border looks like torn paper. Is it newspaper? It's beige/white with some texture. It doesn't have the distinct black text of a newspaper. It looks more like a textured paper border or a stylistic effect. The question asks if it is *free* of them. If I don't see any, the answer is yes.\n\nLet's look really closely at the texture. The entire image has a stippled or pointillist texture. The border is a rough, torn edge. It doesn't look like a collage of newspaper clippings. It looks like a single artwork on textured paper. So, \"yes\" is the correct answer.\n\nFinal check:\n- Maps? No.\n- Newspaper fragments? No.\n- Is the image free of them? Yes.",
+    "think_ms": 36379,
+    "reasoning_capped": false
+   },
+   {
+    "id": "global:not_horror",
+    "text": "Is the image free of horror, gore or violence?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 53559,
+    "reasoning": "The user wants to know if the image contains horror, gore, or violence.\n\n1.  **Analyze the image:**\n    *   **Subject:** A man is running down a tree-lined street. He has a baby strapped to his chest in a carrier.\n    *   **Action:** He is running, which implies urgency or fleeing, but the act itself isn't violent.\n    *   **Setting:** A long, straight road lined with trees and a wall on the left. It looks like a suburban or park-like setting.\n    *   **Style:** The image has a textured, almost painted or etched look, with a sepia or monochromatic tone. It looks somewhat artistic or illustrative.\n    *   **Emotional Tone:** The man's expression is serious and focused. The baby looks calm. The running suggests escape or haste, but there are no visible threats, weapons, blood, or monsters.\n    *   **Horror/Gore/Violence Check:**\n        *   **Horror:** No scary elements, monsters, or disturbing imagery.\n        *   **Gore:** No blood, wounds, or bodily fluids.\n        *   **Violence:** No fighting, attacking, or weapons visible. The running could imply fleeing *from* violence, but the image itself doesn't depict violence.\n\n2.  **Conclusion:** The image depicts a man running with a child. While the context might be dramatic (fleeing), the visual content itself is free of explicit horror, gore, or violence.\n\n3.  **Formulate the answer:** The user requested a one-word answer: \"yes\" or \"no\". Since it is free of those elements, the answer is \"yes\".",
+    "think_ms": 53559,
+    "reasoning_capped": false
+   },
+   {
+    "id": "global:anatomy",
+    "text": "Is the image free of any malformed human body, such as extra or missing limbs, a head the wrong way up, or fused fingers?",
+    "scope": "global",
+    "p_yes": 0.9224,
+    "ms": 81038,
+    "reasoning": "The user wants to know if the image contains any malformed human bodies.\n\n1.  **Analyze the main subject:** A man is running.\n    *   **Head:** Looks normal. Facing right.\n    *   **Torso:** Looks normal. Wearing a shirt and a baby carrier.\n    *   **Arms:**\n        *   Left arm: Visible, bent at the elbow, hand near the baby carrier. Looks normal.\n        *   Right arm: Visible, bent at the elbow, hand near the baby carrier. Looks normal.\n    *   **Legs:**\n        *   Left leg: Extended back, foot off the ground. Looks normal.\n        *   Right leg: Extended forward, foot off the ground. Looks normal.\n    *   **Feet:** Both feet are visible and look like normal boots/shoes.\n\n2.  **Analyze the secondary subject:** A baby in a carrier.\n    *   **Head:** Visible, looking right. Looks normal.\n    *   **Body:** Mostly obscured by the carrier, but legs are visible.\n    *   **Legs:** Two legs visible, dangling down. Look normal.\n    *   **Feet:** Two feet visible. Look normal.\n\n3.  **Check for other people:** There are no other clearly visible people. There might be a vehicle in the distance, but no distinct human figures.\n\n4.  **Evaluate for malformations:**\n    *   Extra limbs? No.\n    *   Missing limbs? No.\n    *   Head wrong way up? No.\n    *   Fused fingers? The hands are a bit stylized due to the artistic rendering (looks like a sketch or textured painting), but they don't look grotesquely malformed or fused in a way that suggests an error. The fingers are somewhat indistinct but generally follow a natural hand shape. Wait, let me look closer at the man's hands.\n    *   The man's left hand (holding the carrier strap) looks a bit odd. The fingers seem a bit clumped, but it's consistent with the artistic style.\n    *   The man's right hand (lower down) is also a bit indistinct.\n    *   The baby's hand is visible near the man's chest. It looks like a small hand.\n    *   Let's re-examine the prompt's criteria: \"malformed human body, such as extra or missing limbs,",
+    "think_ms": 68647,
+    "reasoning_capped": true
+   },
+   {
+    "id": "global:no_duplicates",
+    "text": "Is the image free of duplicates, meaning the same person or the same object appearing twice?",
+    "scope": "global",
+    "p_yes": 0.9957,
+    "ms": 79473,
+    "reasoning": "The user wants to know if there are duplicates of the same person or object in the image.\n\n1.  **Analyze the main subject:** There is a man running with a baby in a carrier on his back.\n    *   Man: One man, running towards the right.\n    *   Baby: One baby, in the carrier.\n2.  **Analyze the background:**\n    *   Trees: There are many trees lining the road. They are distinct trees, not duplicates of the *same* tree object in a cloning sense, but rather a row of similar trees. The question asks about \"the same person or the same object appearing twice\". Usually, this implies a copy-paste error or a surreal duplication. A row of trees is a natural scene.\n    *   Wall: There is a wall on the left.\n    *   Road: A long road stretching into the distance.\n    *   Vehicle: There is a small vehicle in the far distance.\n3.  **Check for specific duplications:**\n    *   Is the man duplicated? No.\n    *   Is the baby duplicated? No.\n    *   Are there identical objects placed unnaturally? The trees are similar but distinct parts of a landscape. The fence posts are similar but distinct.\n    *   Wait, let's look closer at the trees. The trees on the left and right form a tunnel. They are distinct trees.\n    *   Let's look for any weird artifacts. The image has a textured, almost painted or etched style.\n    *   Is there a duplicate of the man? No.\n    *   Is there a duplicate of the baby? No.\n\nThe question \"Is the image free of duplicates, meaning the same person or the same object appearing twice?\" usually refers to obvious cloning or repetition errors.\n- I see one man.\n- I see one baby.\n- I see a row of trees (many objects, but distinct instances).\n- I see a wall.\n- I see a car in the distance.\n\nThere are no obvious duplicates of the *same* specific person or unique object (like two identical men running side-by-side). The trees are a series of similar objects, which is normal for a tree-lined avenue.\n\nTherefore, the answer is yes, it is free of duplicates in the sense of the same person/object appearing twice unnaturally.\n\nWait, let me re-read carefully. \"Is the image free of duplicates, meaning the same",
+    "think_ms": 67727,
+    "reasoning_capped": true
+   },
+   {
+    "id": "frame:one_man",
+    "text": "Is there exactly one adult man in the image?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 54402,
+    "reasoning": "The user wants to know if there is exactly one adult man in the image.\n\n1.  **Scan the image for people:** I see a man running in the foreground. He is carrying a baby in a carrier on his chest.\n2.  **Identify the man:** He has a beard, short hair, is wearing a light-colored shirt, dark pants, and boots. He is clearly an adult male.\n3.  **Identify the baby:** There is a small child/baby in the carrier. This is not an adult man.\n4.  **Scan the background:** I see a long road lined with trees. In the distance, there is a vehicle (looks like a car or van). I don't see any other distinct human figures, especially not other adult men. The figures in the distance are too small/indistinct to be identified as people, and even if there were people in the car, they aren't clearly visible as \"adult men\" in the same way the main subject is. Wait, let me look closer at the distant vehicle. It's just a shape. No distinct people.\n5.  **Count the adult men:** There is only the one main figure running.\n6.  **Formulate the answer:** The question asks \"Is there exactly one adult man in the image?\". Based on my observation, the answer is yes.\n\n**Final check:**\n-   Main subject: Adult man running. (Count = 1)\n-   Secondary subject: Baby in carrier. (Not an adult man)\n-   Background: Trees, wall, road, distant vehicle. No other people visible.\n\nConclusion: Yes.",
+    "think_ms": 54402,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:grey_hair",
+    "text": "Does the man have grey hair?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 47912,
+    "reasoning": "The user wants to know if the man in the image has grey hair.\n\n1.  **Identify the man:** I see a man running in the foreground, carrying a baby in a carrier on his chest.\n2.  **Locate his hair:** Look at the top of his head.\n3.  **Analyze the hair color:** The hair appears to be a mix of dark and light strands, giving it a salt-and-pepper or greyish appearance. It's definitely not solid black or solid blonde. It looks like greying hair.\n4.  **Formulate the answer:** The question asks for a one-word answer: \"yes\" or \"no\". Since the hair is visibly grey/greying, the answer is \"yes\".",
+    "think_ms": 47912,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:beard",
+    "text": "Does the man have a beard?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 45981,
+    "reasoning": "The user wants to know if the man in the image has a beard.\n\n1.  **Identify the man:** I see a man running in the foreground, carrying a baby in a carrier on his chest.\n2.  **Focus on his face:** I need to look at his facial features, specifically the chin and jaw area.\n3.  **Check for facial hair:** Looking closely at the man's face (profile view), I can see hair on his chin and jawline. It looks like a short, graying beard.\n4.  **Formulate the answer:** The question asks for a one-word answer: \"yes\" or \"no\". Since I see a beard, the answer is \"yes\".",
+    "think_ms": 45981,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:running",
+    "text": "Is the man running?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 57479,
+    "reasoning": "The user wants to know if the man in the image is running.\n\n1.  **Analyze the man's posture:**\n    *   His legs are spread wide apart in a striding motion.\n    *   His left leg is extended forward, foot about to land or just landing.\n    *   His right leg is extended backward, foot off the ground.\n    *   His arms are bent at the elbows, suggesting a running or fast-walking motion.\n    *   His body is leaning slightly forward.\n    *   He is carrying a baby in a carrier on his chest.\n\n2.  **Evaluate the motion:** The wide stride and the position of the legs (one forward, one back, both seemingly off the ground or in transition) strongly suggest running or a very fast jog. It's definitely an active, forward-moving pose.\n\n3.  **Formulate the answer:** The question asks for a one-word answer: \"yes\" or \"no\". Based on the visual evidence, \"yes\" is the correct answer. The man is clearly in a running pose.\n\n4.  **Final check:** Does the image support \"running\"? Yes. The stride is too long for a normal walk. The dynamic pose indicates speed.\n\nAnswer: yes.",
+    "think_ms": 57479,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:left_to_right",
+    "text": "Is the man moving from the left side of the image towards the right side?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 58464,
+    "reasoning": "The user wants to know the direction of movement of the man in the image.\n\n1.  **Analyze the man's pose:** The man is in a running or striding pose. His left leg is forward and his right leg is back. His body is angled towards the right side of the frame.\n2.  **Analyze the man's gaze:** He is looking towards the right side of the image.\n3.  **Analyze the context:** He is carrying a baby in a front carrier. The baby is also facing somewhat right/forward.\n4.  **Conclusion:** The visual cues (body orientation, leg position, gaze) all indicate movement from left to right.\n\nTherefore, the answer is \"yes\".",
+    "think_ms": 58463,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:looking_ahead",
+    "text": "Is the man looking ahead, in the direction he is running?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 60579,
+    "reasoning": "The user wants to know if the man is looking ahead in the direction he is running.\n\n1.  **Analyze the man's pose:** He is running towards the right side of the image. His body is angled towards the right.\n2.  **Analyze the man's head:** His head is turned slightly to the right, facing the same direction his body is moving.\n3.  **Analyze the man's eyes:** His eyes are open and looking forward, towards the right side of the frame, which is the direction of his movement.\n4.  **Confirm the direction:** He is running down a road lined with trees. The perspective leads the eye towards the vanishing point on the right. He is facing that way.\n5.  **Formulate the answer:** The question asks for a one-word answer: \"yes\" or \"no\". Based on the visual evidence, the answer is \"yes\".",
+    "think_ms": 60579,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:anxious",
+    "text": "Does the man's expression show worry or anxiety rather than calm or happiness?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 82625,
+    "reasoning": "The user wants to know if the man's expression shows worry or anxiety.\n\n1.  **Analyze the man's face:** I need to look closely at the man's facial features.\n    *   **Eyebrows:** They seem slightly furrowed or drawn together, which can indicate concern or focus.\n    *   **Eyes:** His gaze is directed forward, looking ahead down the road. They look intense, perhaps a bit wide.\n    *   **Mouth:** His mouth is set in a firm line, not smiling. It looks serious.\n    *   **Overall demeanor:** He is running or striding quickly. This action itself suggests urgency. Carrying a child while running often implies escaping something or rushing to get somewhere important.\n\n2.  **Evaluate the options:**\n    *   **Calm/Happiness:** He is definitely not smiling. His posture is tense (running). He doesn't look relaxed.\n    *   **Worry/Anxiety:** The furrowed brow, the intense gaze, the serious mouth, and the act of running with a child all point towards a state of urgency, concern, or worry. He looks like he is fleeing or rushing.\n\n3.  **Formulate the answer:** The question asks \"Does the man's expression show worry or anxiety rather than calm or happiness?\" Based on the visual evidence (furrowed brow, serious mouth, running posture), the answer is yes.\n\n4.  **Final check:** The prompt asks for a one-word answer: \"yes\" or \"no\".\n    *   Does he look worried/anxious? Yes.\n    *   Does he look calm/happy? No.\n    *   Therefore, the answer is \"yes\".",
+    "think_ms": 82625,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:one_child",
+    "text": "Is there exactly one toddler in the image?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 58966,
+    "reasoning": "The user wants to know if there is exactly one toddler in the image.\n\n1.  **Scan the image for people:** I see a man running. He is carrying a child in a front-facing carrier.\n2.  **Identify the child:** The child is small, looks like a toddler or baby.\n3.  **Count the toddlers:** I see only one child being carried by the man.\n4.  **Check for other people:** I look down the road. There is a vehicle in the distance, but no other distinct people or toddlers are visible.\n5.  **Formulate the answer:** The question asks \"Is there exactly one toddler in the image?\". Based on my observation, yes, there is one toddler.\n\n**Conclusion:** Yes.",
+    "think_ms": 58966,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:chest_carrier",
+    "text": "Is the toddler carried in a carrier strapped to the man's chest?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 64808,
+    "reasoning": "The user wants to know if the toddler is in a carrier strapped to the man's chest.\n\n1.  **Analyze the image:** I see a man running. He has a child with him.\n2.  **Locate the child:** The child is positioned on the man's front.\n3.  **Identify the carrying method:** The child is held in a dark-colored fabric carrier. The straps of the carrier are visible over the man's shoulders and around his torso. The child's head is visible just above the carrier's rim, facing forward/slightly right. The man's hand is near the child's leg/bottom area, supporting or holding the carrier.\n4.  **Confirm the position:** The carrier is clearly strapped to the front of the man's torso, i.e., his chest/stomach area.\n5.  **Formulate the answer:** The question asks \"Is the toddler carried in a carrier strapped to the man's chest?\" The answer is yes. The constraint is \"Answer with one word: yes or no.\"\n\nSo, the final answer is \"yes\".",
+    "think_ms": 64808,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:child_head_upright",
+    "text": "Is the toddler's head the right way up and naturally attached to its body?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 59361,
+    "reasoning": "The user is asking a specific question about the orientation and attachment of the toddler's head in the image.\n\n1.  **Locate the toddler:** The toddler is being carried in a front-facing carrier on the man's chest.\n2.  **Examine the head:** Look at the toddler's head. It is positioned upright, facing slightly to the right (viewer's right).\n3.  **Check for natural attachment:** The head connects to the neck and body in a standard, anatomical way. It is not upside down, sideways, or detached. It looks like a normal baby sitting in a carrier.\n4.  **Formulate the answer:** The question asks for a one-word answer: \"yes\" or \"no\". Based on the observation, the answer is \"yes\".",
+    "think_ms": 59361,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:child_face",
+    "text": "Is the toddler's face visible?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 69051,
+    "reasoning": "The user wants to know if the toddler's face is visible in the image.\n\n1.  **Identify the toddler:** I see a man running with a child strapped to his chest in a carrier.\n2.  **Locate the toddler's face:** The child is facing somewhat towards the right, looking forward.\n3.  **Check visibility:** I can see the child's forehead, eyes, nose, and mouth. The face is clearly visible.\n4.  **Formulate the answer:** The question asks for a one-word answer: \"yes\" or \"no\". Since the face is visible, the answer is \"yes\".",
+    "think_ms": 69051,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:child_calm",
+    "text": "Does the toddler look calm and quiet, not crying or screaming?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 62946,
+    "reasoning": "The user wants to know if the toddler in the image looks calm and quiet.\n\n1.  **Identify the toddler:** I see a small child strapped into a carrier on the man's back.\n2.  **Examine the toddler's face:** I need to zoom in on the child's face.\n    *   The child is looking to the right.\n    *   The mouth is closed or slightly open but not in a grimace of crying.\n    *   The eyes are open and looking forward/sideways.\n    *   The expression seems neutral or perhaps slightly curious/alert, but definitely not distressed. There are no tears, no open mouth screaming, no furrowed brow indicating anger or pain.\n3.  **Formulate the answer:** Based on the visual evidence, the toddler appears calm. The question asks for a \"yes or no\" answer.\n4.  **Final Answer:** Yes.",
+    "think_ms": 62946,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:straps",
+    "text": "Are the carrier's straps visible over the man's shoulders or torso?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 70899,
+    "reasoning": "The user is asking a specific question about the visibility of straps on the baby carrier.\n1.  **Identify the subject:** The man carrying the baby.\n2.  **Locate the carrier:** It's the dark fabric holding the baby against the man's chest.\n3.  **Look for straps:**\n    *   I see a strap going over his left shoulder [417, 253, 461, 335].\n    *   I see a strap going across his chest/torso [412, 368, 467, 417].\n    *   I see another strap part near his right shoulder area, though less distinct, the main shoulder strap is clearly visible.\n4.  **Confirm visibility:** Yes, the straps are clearly visible over his shoulder and across his torso.\n5.  **Formulate the answer:** The user requested a one-word answer: \"yes\" or \"no\". The answer is \"yes\".",
+    "think_ms": 70899,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:carrier_dark",
+    "text": "Is the carrier dark, charcoal-toned?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 67960,
+    "reasoning": "The user is asking a question about the color of the baby carrier worn by the man.\n1.  **Identify the carrier:** I see a man running with a baby strapped to his chest. The baby is in a carrier.\n2.  **Analyze the color:** The carrier is a dark, solid color. In this sepia/monochrome image, it appears very dark, almost black or dark grey.\n3.  **Compare to \"charcoal-toned\":** Charcoal is a dark grey color. The carrier fits this description perfectly within the context of the image's color palette. It is definitely dark.\n4.  **Formulate the answer:** The question asks for a \"yes or no\" answer. Since the carrier is indeed dark and charcoal-toned, the answer is \"yes\".",
+    "think_ms": 67960,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:child_secure",
+    "text": "Is the toddler held securely, not slipping out of the carrier?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 81658,
+    "reasoning": "The user wants to know if the toddler is held securely based on the image.\n\n1.  **Analyze the image:** I see a man running. He has a baby/toddler in a carrier on his chest.\n2.  **Focus on the carrier:** The carrier is a dark-colored fabric sling or wrap.\n3.  **Focus on the toddler:** The toddler's head is visible, looking to the right. The body is nestled in the carrier.\n4.  **Evaluate security:** The straps are visible across the man's chest and shoulders. The fabric seems to hold the child snugly against the man's chest. The child's legs are visible and seem supported. There is no indication of slipping or falling. The child looks stable.\n5.  **Formulate the answer:** The question asks for a one-word answer: \"yes\" or \"no\". Based on the visual evidence, the child appears secure.\n\nTherefore, the answer is \"yes\".",
+    "think_ms": 81658,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:side_view",
+    "text": "Is this a medium-wide side view, showing the man from the side with most of his body visible?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 86578,
+    "reasoning": "The user is asking a question about the camera angle and framing of the image.\n1.  **Analyze the image:** I see a man running. He is positioned in the foreground, slightly to the left of the center.\n2.  **Determine the view:** The man is shown in profile, facing towards the right side of the frame. I can see his entire body from head to toe, including his legs in mid-stride.\n3.  **Evaluate \"medium-wide side view\":**\n    *   \"Side view\": Yes, he is clearly seen from the side (profile).\n    *   \"Most of his body visible\": Yes, his full body is visible.\n    *   \"Medium-wide\": This term is a bit subjective but generally implies a shot that captures the full subject and some surroundings. The shot captures the man fully and a significant portion of the street and trees, fitting a medium-wide description. It's not a close-up (just face) or an extreme wide shot (tiny figure in landscape). It's a full-body shot within an environment.\n4.  **Formulate the answer:** The description \"medium-wide side view, showing the man from the side with most of his body visible\" accurately describes the image.\n5.  **Final Answer:** Yes.",
+    "think_ms": 86578,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:road",
+    "text": "Is a pale road visible?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 81911,
+    "reasoning": "The user is asking a simple yes/no question about the visibility of a \"pale road\".\n\n1.  **Analyze the image:** I see a man running with a baby in a carrier.\n2.  **Look at the ground:** The ground they are running on is a wide, paved surface. It looks like a road or a very wide path.\n3.  **Determine the color:** The road surface is light-colored, definitely pale, contrasting with the darker trees and the man's pants. It has a textured, almost cobblestone or paved look, but the overall tone is light beige/white/grey.\n4.  **Confirm visibility:** Yes, the road takes up the bottom half of the image and stretches into the distance. It is clearly visible.\n5.  **Formulate the answer:** The user requested a one-word answer: \"yes\" or \"no\". Since the road is visible and pale, the answer is \"yes\".",
+    "think_ms": 81911,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:trees",
+    "text": "Are trees visible along the road, bent as if by wind?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 86411,
+    "reasoning": "The user wants to know if there are trees visible along the road that look bent as if by wind.\n\n1.  **Analyze the image:** I see a man running with a baby in a carrier.\n2.  **Look at the background:** There is a road stretching into the distance.\n3.  **Look at the sides of the road:** There are rows of trees lining both sides of the road.\n4.  **Examine the trees:** The trees on the left side, especially the large ones in the foreground, are leaning significantly to the right. The trees further down the road also seem to have a similar lean or are arranged in a way that suggests a strong directional force, like wind. The branches are swept back. The overall composition strongly suggests a windy environment.\n5.  **Formulate the answer:** The question asks \"Are trees visible along the road, bent as if by wind?\" and requires a \"yes\" or \"no\" answer. Based on my observation, the answer is yes.\n\n**Conclusion:** Yes, the trees are visible and appear bent.",
+    "think_ms": 86411,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:traffic_distant",
+    "text": "Is any traffic only a small, faint mark in the distance rather than a prominent vehicle?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 88723,
+    "reasoning": "The user is asking a question about the presence of traffic in the image.\n1.  **Scan the image for vehicles:** I need to look down the road/path where the man is running.\n2.  **Locate potential vehicles:** Looking far down the center of the road, towards the vanishing point.\n3.  **Identify the object:** There is a small, dark shape in the distance [727, 586, 742, 616]. It looks like a car or van.\n4.  **Evaluate its prominence:** It is very small and somewhat indistinct compared to the main subject (the man and child). It fits the description of a \"small, faint mark in the distance rather than a prominent vehicle.\"\n5.  **Formulate the answer:** The question asks \"Is any traffic only a small, faint mark in the distance rather than a prominent vehicle?\" The answer is yes, because that distant car fits that description perfectly. It's the only traffic visible.\n\nWait, let me re-read the question carefully: \"Is any traffic only a small, faint mark in the distance rather than a prominent vehicle?\"\nThis is a yes/no question.\n- Is there traffic? Yes, there is a vehicle in the distance.\n- Is it a small, faint mark? Yes.\n- Is it rather than a prominent vehicle? Yes, it is not prominent.\n\nSo the answer is \"yes\".",
+    "think_ms": 88723,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:no_school",
+    "text": "Is the image free of a school building, clock tower, school uniform and doorway?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 85474,
+    "reasoning": "The user wants to know if the image is free of specific objects: a school building, a clock tower, a school uniform, and a doorway.\n\n1.  **School building:** I see a wall on the left, but it looks like a stone wall with pillars, not a school building. The background shows trees and a road. No school building is visible.\n2.  **Clock tower:** I scan the background and the sides. There are trees, a wall, and a road. No clock tower is visible.\n3.  **School uniform:** The man is wearing a light-colored shirt and dark pants. The baby is in a carrier. Neither looks like a school uniform.\n4.  **Doorway:** I see a wall with pillars, but no clear doorway or entrance is visible in the immediate foreground or background. The wall seems continuous.\n\nTherefore, the image is free of all these items. The answer should be \"yes\".",
+    "think_ms": 85474,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:no_auto",
+    "text": "Is the image free of an auto-rickshaw in the foreground?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 90626,
+    "reasoning": "The user is asking a yes/no question about the presence of an auto-rickshaw in the foreground.\n\n1.  **Analyze the foreground:** The foreground is dominated by a man running with a baby in a carrier. He is on a paved road.\n2.  **Look for vehicles:** I see a vehicle in the distance, down the road. It looks like a car or maybe a small truck, but it's very far away.\n3.  **Check for an auto-rickshaw:** An auto-rickshaw is a three-wheeled vehicle common in some countries. I do not see one in the foreground. The foreground only contains the man, the baby, the road surface, and the base of the trees/wall.\n4.  **Formulate the answer:** Since there is no auto-rickshaw in the foreground, the answer is \"yes\". The image *is* free of an auto-rickshaw in the foreground.\n\nWait, let me double-check the distant vehicle just in case. It's too small to be certain, but it looks like a car. Regardless, the question is specifically about the *foreground*. The foreground is definitely free of any vehicle, let alone an auto-rickshaw.\n\nSo, the answer is Yes.",
+    "think_ms": 90626,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:no_stroller",
+    "text": "Is the image free of a stroller or pram?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 90379,
+    "reasoning": "The user is asking a yes/no question about the presence of a stroller or pram in the image.\n\n1.  **Analyze the image:** I see a man running. He is carrying a baby in a carrier on his chest.\n2.  **Scan for a stroller/pram:** I look around the man.\n    *   Behind him: There's a wall, trees, and a road stretching into the distance.\n    *   In front of him: Just the road.\n    *   To the sides: Trees and walls.\n    *   In the distance: There is a vehicle (looks like a car or van) far down the road, but no stroller.\n3.  **Confirm the baby carrier:** The baby is in a soft-structured carrier strapped to the man's chest, not in a wheeled stroller.\n4.  **Formulate the answer:** The question asks \"Is the image free of a stroller or pram?\". Since there is no stroller or pram visible, the answer is \"yes\".\n\nWait, let me double-check.\n- Man running with baby in carrier.\n- No stroller visible.\n- Therefore, the image *is* free of a stroller.\n- Answer: yes.",
+    "think_ms": 90378,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:grey_evening",
+    "text": "Is the light a soft grey evening, not bright daylight or night?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 91257,
+    "reasoning": "The user is asking a question about the lighting conditions in the image.\n1.  **Analyze the image:** The image is a monochromatic or sepia-toned illustration. It depicts a man running with a baby in a carrier.\n2.  **Evaluate the lighting:**\n    *   The overall tone is muted, with shades of grey, beige, and black.\n    *   There are no harsh, bright highlights typical of bright daylight (like a sunny noon).\n    *   It's not pitch black like night.\n    *   The atmosphere feels somewhat hazy or misty, especially in the distance where the trees fade out.\n    *   The lighting is diffuse and soft.\n    *   The question asks if it is a \"soft grey evening, not bright daylight or night\".\n    *   The visual evidence supports \"soft grey\". The lack of strong shadows and the overall muted palette suggest an overcast day, dawn, or dusk (evening). It definitely isn't bright, harsh daylight. It isn't night because everything is clearly visible.\n    *   Therefore, the description \"soft grey evening\" fits the visual mood and lighting well enough to answer \"yes\". The prompt asks for a one-word answer.\n\n3.  **Formulate the answer:** The answer should be \"yes\".",
+    "think_ms": 91257,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:contrast",
+    "text": "Does the image show a contrast between the man's urgency and the toddler's stillness?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 90339,
+    "reasoning": "The user wants to know if there is a contrast between the man's urgency and the toddler's stillness based on the image.\n\n1.  **Analyze the man's posture:** The man is in mid-stride, running. His legs are spread wide, one foot off the ground, the other pushing off. His arms are bent, suggesting movement. His facial expression is focused, looking ahead. This conveys urgency, speed, and action.\n2.  **Analyze the toddler's posture:** The toddler is strapped into a carrier on the man's chest. The child is sitting relatively still, looking forward or slightly to the side. The child's limbs are not flailing; they are contained within the carrier. The child appears calm and passive compared to the man's vigorous movement.\n3.  **Compare the two:** The man is dynamic (running), while the toddler is static (being carried). This creates a visual and thematic contrast between the active urgency of the adult and the passive stillness of the child.\n4.  **Formulate the answer:** The question asks for a one-word answer: \"yes\" or \"no\". Based on the analysis, the answer is \"yes\".",
+    "think_ms": 90339,
+    "reasoning_capped": false
+   }
+  ]
+ },
+ {
+  "n": 12,
+  "name": "Collapse",
+  "image": ".strawberry-probe/media/7dd71b0285888c8e8e1df2e9553a348409bb8f02538830793364a3547f640c19.png",
+  "model": "Qwen/Qwen3.5-27B-FP8",
+  "think": true,
+  "server_ms": 105935,
+  "wall_ms": 108712,
+  "rows": [
+   {
+    "id": "global:single",
+    "text": "Is this a single image, not a grid, contact sheet, filmstrip or multi-panel board?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 17571,
+    "reasoning": "The user is asking a simple yes/no question about the format of the image.\n1.  **Analyze the image:** The image shows a single scene. It's a composite or edited image where a photograph of a man in a hallway is overlaid onto a textured, peeling wall background.\n2.  **Evaluate the \"single image\" criteria:**\n    *   Is it a grid? No, there are no multiple distinct images arranged in a grid.\n    *   Is it a contact sheet? No, contact sheets have many small thumbnails.\n    *   Is it a filmstrip? No, there are no sprocket holes or sequential frames.\n    *   Is it a multi-panel board? No, it's one continuous visual field, even though it has a \"peeling\" effect that reveals a texture underneath. It functions as a single composition.\n\n3.  **Formulate the answer:** The image is a single, unified composition. Therefore, the answer is \"yes\".",
+    "think_ms": 17571,
+    "reasoning_capped": false
+   },
+   {
+    "id": "global:no_border",
+    "text": "Is the image free of any decorative border, frame line or panel division?",
+    "scope": "global",
+    "p_yes": 0.0694,
+    "ms": 48421,
+    "reasoning": "The user is asking a yes/no question about the presence of decorative borders, frame lines, or panel divisions in the image.\n\n1.  **Analyze the image:** I see a man standing in a hallway. The image has a very distinct texture. It looks like a collage or a piece of artwork made from torn paper or textured material.\n2.  **Look for borders/frames:**\n    *   The entire image has a \"torn paper\" or \"collage\" aesthetic.\n    *   There are jagged edges where different textures meet.\n    *   Specifically, on the right side, there's a large area of plain, textured paper that looks like it's peeling away or covering part of the scene.\n    *   The left side and the hallway itself are composed of different textured patches (some look like cross-hatching, some like stippling).\n    *   These patches are separated by jagged, torn edges. These edges act as \"panel divisions\" in a sense, dividing the image into different textured regions.\n    *   However, the question asks about a \"decorative border, frame line or panel division\".\n    *   Let's look at the very edges of the image. Is there a frame *around* the image? No, the image fills the frame.\n    *   Is there a decorative border *inside* the image? The \"torn paper\" effect creates internal divisions. The right side is a large panel of texture. The left side is a complex scene made of smaller panels.\n    *   Wait, let's re-read the question carefully: \"Is the image free of any decorative border, frame line or panel division?\"\n    *   The image *is* a collage. The entire visual style relies on \"panel divisions\" created by the torn paper edges. The scene is fragmented.\n    *   But usually, \"panel division\" refers to comic book panels or distinct framed sections. Here, it's more of a texture overlay.\n    *   Let's look for a specific \"frame line\". There isn't a simple black line bordering the whole image.\n    *   Let's look for \"panel division\". The image is clearly divided into sections by the torn paper effect. The right side is a big chunk of \"wall\" texture. The left side is the \"hallway\" scene. The transition is a jagged tear. This is a form of division.\n    *   However, looking at the *entire* image",
+    "think_ms": 44703,
+    "reasoning_capped": true
+   },
+   {
+    "id": "global:no_words",
+    "text": "Is the image free of readable words, captions, labels or logos?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 21080,
+    "reasoning": "The user wants to know if there are any readable words, captions, labels, or logos in the image.\n\n1.  **Scan the image:** I'll look at the entire image from left to right, top to bottom.\n2.  **Left side:** There's a window with light coming through. No text.\n3.  **Center:** A man standing in a hallway. He's wearing a backpack. No text on his clothes or backpack.\n4.  **Background:** Arched hallway, windows further down. No signs or text visible on the walls.\n5.  **Right side:** The image has a \"torn paper\" or \"peeling wall\" effect. The texture is rough and stone-like. No text here.\n6.  **Overall:** The image is an artistic rendering, possibly AI-generated or heavily edited, showing a man in a corridor. There are no visible words, logos, or labels anywhere.\n\n**Conclusion:** The image is free of readable text.",
+    "think_ms": 21080,
+    "reasoning_capped": false
+   },
+   {
+    "id": "global:mono",
+    "text": "Is the image entirely monochrome, black, white and grey only, with no colour at all?",
+    "scope": "global",
+    "p_yes": 0.11,
+    "ms": 49495,
+    "reasoning": "The user is asking a simple yes/no question about the color palette of the image.\n1.  **Analyze the image:** I see a man standing in a hallway. The image has a textured, almost torn-paper or collage effect.\n2.  **Check for color:** I am scanning the entire image for any hues other than black, white, and grey.\n    *   The walls are shades of grey and brownish-grey (sepia tone perhaps, but technically monochromatic in a broad sense, or very desaturated). Wait, let me look closer.\n    *   The overall tone is sepia or brownish-grey. It's not strictly \"black and white\" in the purest sense (grayscale), but it is monochromatic.\n    *   However, the question asks: \"Is the image entirely monochrome, black, white and grey only, with no colour at all?\"\n    *   Looking very closely at the tones, there is a distinct brownish/sepia tint. It's not pure grayscale. It looks like an old photograph or a sepia-toned image.\n    *   Let's re-evaluate \"monochrome\". Monochrome means \"one color\". Sepia is a monochromatic scheme.\n    *   But the question specifies \"black, white and grey only\". This implies a strict grayscale.\n    *   Let's look at the \"torn paper\" edges. They are a lighter, creamy white/beige.\n    *   The shadows are dark brown/black.\n    *   The highlights are off-white/cream.\n    *   Is there *any* color? Like a blue shirt or a red door? No.\n    *   Is it strictly black, white, and grey? Or is it sepia/brown?\n    *   To the naked eye, it looks like a sepia-toned image. Sepia is a brownish tone. Technically, that's a color (brown).\n    *   However, in common parlance, people often call sepia images \"black and white\" or \"monochrome\".\n    *   Let's look really closely at the man's shirt. It's a light color, maybe white or very light grey.\n    *   Let's look at the backpack. It's dark, likely black or dark grey.\n    *   Let's look at the walls. They have a textured, grainy look. The tones range from dark charcoal to light beige.",
+    "think_ms": 45045,
+    "reasoning_capped": true
+   },
+   {
+    "id": "global:handmade",
+    "text": "Does the image look hand-made, like charcoal or graphite drawing combined with cut paper, rather than a photograph?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 29129,
+    "reasoning": "The user is asking for a stylistic assessment of the image.\n1.  **Analyze the visual texture:** The image has a distinct grainy, textured appearance. It's not a smooth, clean digital photograph.\n2.  **Look for specific artistic techniques:**\n    *   **Hatching/Cross-hatching:** The darker areas, especially on the left wall and the man's backpack, show clear lines that look like pencil or charcoal strokes (hatching).\n    *   **Tearing/Collage:** The right side of the image looks like torn paper revealing a rougher, concrete-like texture underneath. The edges are jagged and uneven, characteristic of torn paper.\n    *   **Grain:** There's a stippled or grainy texture over the whole image, mimicking old paper or a specific drawing medium.\n3.  **Evaluate the \"hand-made\" aspect:** The combination of the sketch-like rendering of the man and the architecture (especially the hatching) with the torn paper effect strongly suggests a mixed-media artwork or a digital manipulation designed to look exactly like that. It definitely does *not* look like a standard photograph. It looks like a drawing (charcoal/graphite) combined with collage elements (cut/torn paper).\n4.  **Formulate the answer:** The question asks \"Does the image look hand-made... rather than a photograph?\" and requests a one-word answer \"yes or no\". Based on the visual evidence, the answer is clearly \"yes\".",
+    "think_ms": 29129,
+    "reasoning_capped": false
+   },
+   {
+    "id": "global:not_glossy",
+    "text": "Is the image free of the smooth, glossy look of a digital painting or 3D render?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 27965,
+    "reasoning": "The user is asking a question about the visual style of the image, specifically whether it lacks the \"smooth, glossy look of a digital painting or 3D render.\"\n\n1.  **Analyze the image:**\n    *   The image shows a man standing in a long, arched hallway.\n    *   The texture is very prominent. It looks like torn paper, old parchment, or a collage.\n    *   There are visible cracks, tears, and rough edges throughout the image.\n    *   The shading and lighting have a grainy, textured quality, resembling a sketch, a charcoal drawing, or a heavily filtered photograph.\n    *   It definitely does *not* look like a smooth, glossy digital painting or a clean 3D render. It has a deliberately rough, analog, or distressed aesthetic.\n\n2.  **Formulate the answer:**\n    *   The question asks: \"Is the image free of the smooth, glossy look of a digital painting or 3D render?\"\n    *   Based on my analysis, the image is indeed free of that look. It is textured, rough, and looks like a drawing or collage.\n    *   Therefore, the answer is \"yes\".\n\n3.  **Final check:**\n    *   Does \"yes\" accurately answer the question? Yes. The image *is* free of that specific look.\n    *   Is it one word? Yes.",
+    "think_ms": 27965,
+    "reasoning_capped": false
+   },
+   {
+    "id": "global:torn_edges",
+    "text": "Are torn paper edges visible somewhere in the image?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 30508,
+    "reasoning": "The user is asking a simple yes/no question about the presence of torn paper edges in the image.\n\n1.  **Analyze the image:** I see a man standing in a hallway. The image has a very distinct texture. It looks like a collage or a mixed-media piece.\n2.  **Look for \"torn paper edges\":**\n    *   The entire image seems to be constructed from pieces of paper or textures that look like paper.\n    *   There are jagged, irregular lines separating different sections of the image.\n    *   Specifically, on the right side, there's a large area that looks like a rough, textured surface (maybe concrete or old paper) that is \"peeling\" or \"torn\" away to reveal the hallway scene underneath.\n    *   The transition between the hallway scene and the right-side texture is a jagged, torn edge.\n    *   Even within the hallway scene, there are vertical strips that look like pieces of paper pasted together, with slightly uneven edges.\n    *   The overall aesthetic is definitely \"torn paper\" or \"collage.\"\n\n3.  **Formulate the answer:** The question asks \"Are torn paper edges visible somewhere in the image?\" and requests a one-word answer: \"yes\" or \"no\".\n    *   Since I clearly see torn paper edges (especially the large tear on the right side and the collage-like construction), the answer is \"yes\".\n\n4.  **Final check:** Does the image show torn paper edges? Yes. Is the answer one word? Yes.",
+    "think_ms": 30508,
+    "reasoning_capped": false
+   },
+   {
+    "id": "global:paper_grain",
+    "text": "Is visible paper grain or paper fibre texture present?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 25884,
+    "reasoning": "The user is asking a specific question about the texture of the image.\n1.  **Analyze the image:** I see a man standing in a hallway. The image has a very distinct, textured overlay.\n2.  **Examine the texture:**\n    *   The left side looks like a sketch or drawing with cross-hatching.\n    *   The right side looks like torn paper or a rough wall surface.\n    *   Looking closely at the \"torn paper\" effect on the right and the general overlay, there is a visible graininess. It looks like old paper, parchment, or a textured surface.\n    *   Specifically, the question asks about \"paper grain or paper fibre texture\".\n    *   The right side of the image, which looks like a torn layer revealing something underneath (or just a textured wall), has a very distinct fibrous, grainy appearance consistent with paper or rough plaster.\n    *   The entire image has a stippled or grainy quality that mimics paper texture.\n    *   Therefore, the answer is \"yes\".\n\n3.  **Formulate the answer:** The user requested a one-word answer: \"yes\" or \"no\".\n    *   Based on the visual evidence of the textured, grainy surface that resembles paper fibers, the answer is yes.",
+    "think_ms": 25884,
+    "reasoning_capped": false
+   },
+   {
+    "id": "global:linework",
+    "text": "Is visible graphite or charcoal linework present?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 31278,
+    "reasoning": "The user is asking a specific question about the visual style of the image: \"Is visible graphite or charcoal linework present?\"\n\n1.  **Analyze the image:** I see a man standing in a hallway. The image has a very distinct texture. It looks like a drawing or a sketch.\n2.  **Examine the textures:**\n    *   The walls, floor, and ceiling have a cross-hatching or stippling effect. This is characteristic of pencil, graphite, or charcoal drawings.\n    *   The lines defining the architecture (arches, windows, doorways) are clearly drawn, not just photographic edges. They have the rough, sketchy quality of dry media.\n    *   The shading on the man's clothes and the backpack also shows this hatching/stippling texture.\n    *   The overall aesthetic is sepia-toned, mimicking an old sketch or etching.\n    *   There is a \"peeling paper\" effect overlaying the right side, which adds to the artistic, non-photorealistic feel, but the underlying image is definitely a drawing.\n\n3.  **Evaluate \"graphite or charcoal linework\":**\n    *   The term \"linework\" refers to the lines used to create the image.\n    *   The visible lines are indeed consistent with graphite or charcoal. They are dark, textured, and used for shading and outlining.\n    *   Therefore, the answer is \"yes\".\n\n4.  **Formulate the final answer:** The user requested a one-word answer: \"yes or no\".\n    *   My conclusion is \"yes\".",
+    "think_ms": 31278,
+    "reasoning_capped": false
+   },
+   {
+    "id": "global:registration",
+    "text": "Are some collage layers slightly offset or imperfectly aligned with each other?",
+    "scope": "global",
+    "p_yes": 0.9999,
+    "ms": 50137,
+    "reasoning": "The user is asking a question about the visual style of the image, specifically regarding the alignment of collage layers.\n\n1.  **Analyze the image:** I see an image that looks like a collage or a composite of different textures and drawings.\n2.  **Focus on the \"layers\":** The image is constructed from pieces that look like torn paper or textured overlays.\n3.  **Check for alignment:**\n    *   Look at the edges where different textures meet.\n    *   On the left side, there's a window area. The lines of the window frame and the surrounding wall texture don't perfectly align in a seamless way; there are jagged edges.\n    *   Look at the man. His figure is overlaid on the background. The edges around him are somewhat jagged, suggesting a cutout.\n    *   Look at the right side. There's a large, rough texture that looks like peeling paint or torn paper overlaying the architectural drawing. The edges are very irregular.\n    *   Look at the floor. The perspective lines of the floor tiles seem to shift slightly or are interrupted by the \"tears\" in the paper texture.\n    *   Look at the arches. The lines of the arches are interrupted by the jagged edges of the overlay.\n    *   Specifically, look at the transition between the darker, hatched area on the left and the lighter, textured area on the right. The boundary is a jagged, torn edge.\n    *   Look at the man's backpack. It seems to sit on top of the wall texture, but the texture continues underneath or around it in a way that suggests layering.\n    *   The overall aesthetic is deliberately \"rough\" and \"assembled.\" The edges are not clean cuts; they are torn. This implies that the layers are placed on top of each other.\n    *   Are they *offset* or *imperfectly aligned*? Yes. The jagged edges themselves represent a lack of perfect alignment. Furthermore, looking closely at the architectural lines (like the floor tiles or the arches), they don't always continue perfectly seamlessly across the \"tears.\" For example, the floor lines seem to stop or shift slightly where the texture changes. The window on the far left has a grid that is drawn, but the surrounding wall texture is a different pattern. The transition is abrupt and jagged.\n    *   The question asks if *some* layers are slightly offset or imperfectly aligned.",
+    "think_ms": 44539,
+    "reasoning_capped": true
+   },
+   {
+    "id": "global:erasures",
+    "text": "Are there visible rubbed-out marks or erasures?",
+    "scope": "global",
+    "p_yes": 0.9967,
+    "ms": 51321,
+    "reasoning": "The user is asking a specific question about the visual content of the image: \"Are there visible rubbed-out marks or erasures?\"\n\n1.  **Analyze the image:** The image shows a man standing in a hallway. The entire image has a distinct texture. It looks like a collage or a piece of artwork made from torn paper or textured material.\n2.  **Look for \"rubbed-out marks or erasures\":**\n    *   The right side of the image is dominated by a large, rough, textured area that looks like torn paper or a wall where a layer has been peeled away.\n    *   The transition between the detailed hallway scene (left/center) and the rough texture (right) is jagged and irregular, resembling torn edges.\n    *   Within the hallway scene itself, there are faint, scratchy lines and textures that could be interpreted as pencil strokes or erasures, especially in the darker areas.\n    *   However, the most prominent feature is the \"torn\" or \"peeled\" look. The question asks about \"rubbed-out marks or erasures\".\n    *   Looking closely at the texture, especially on the right side and the edges of the \"torn\" sections, it looks like paper that has been torn or perhaps scraped.\n    *   Wait, let's re-evaluate the \"rubbed-out\" part. The texture on the right looks like a wall where plaster or paint has been scraped off, or perhaps paper torn away.\n    *   Let's look at the \"hallway\" part. It has a stippled or cross-hatched texture, like a pencil drawing.\n    *   Is there evidence of *erasure*? The jagged edges where the \"image\" meets the \"blank\" or \"textured\" area look like torn paper. But looking closer at the texture itself, especially the lighter areas, it looks like pencil marks that have been smudged or erased.\n    *   Actually, looking at the entire composition, it looks like a digital manipulation or a mixed-media piece. The right side looks like a rough, concrete-like texture. The left side looks like a drawing.\n    *   Let's look for specific \"rubbed-out marks\". In the darker areas of the hallway (like the shadows under the arches), there are faint white speckles that could be eraser marks.\n    *   But more importantly, the overall aesthetic is one of decay or roughness. The edges are jagged",
+    "think_ms": 44557,
+    "reasoning_capped": true
+   },
+   {
+    "id": "global:no_modern_vehicle",
+    "text": "Is the image free of any modern vehicle?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 22160,
+    "reasoning": "The user wants to know if there are any modern vehicles in the image.\n\n1.  **Scan the image:** I see a man standing in a hallway.\n2.  **Identify objects:**\n    *   Man: Wearing a backpack, shirt, pants.\n    *   Hallway: Arched ceiling, windows, doors, tiled floor.\n    *   Texture: The image has a torn paper or collage effect.\n3.  **Look for vehicles:** I am scanning the entire visible area.\n    *   Left side: Window, wall. No vehicles.\n    *   Center: Man, hallway extending back. No vehicles.\n    *   Right side: Wall texture, torn paper effect. No vehicles.\n    *   Background: Another window at the end of the hall. No vehicles.\n\n**Conclusion:** There are no vehicles, modern or otherwise, visible in the image.\n\n**Formulate Answer:** The question asks for a one-word answer: \"yes\" or \"no\". Since there are no modern vehicles, the answer is \"yes\" (it is free of them).",
+    "think_ms": 22160,
+    "reasoning_capped": false
+   },
+   {
+    "id": "global:no_map_news",
+    "text": "Is the image free of maps and newspaper fragments?",
+    "scope": "global",
+    "p_yes": 0.0095,
+    "ms": 51246,
+    "reasoning": "The user is asking a yes/no question about the presence of maps and newspaper fragments in the image.\n\n1.  **Analyze the image:** I see a man standing in a hallway. The image has a very specific texture. It looks like a collage or a piece of art made from torn paper.\n2.  **Examine the texture:** The \"walls\" and \"floor\" are composed of many small, irregular pieces of paper or material.\n3.  **Look for specific details:**\n    *   On the left side, there's a window. The texture around it looks like cross-hatching or a grid pattern, possibly from a map or a technical drawing.\n    *   The overall texture is grainy and fragmented.\n    *   Looking closely at the \"torn\" edges, especially on the right side where the image seems to peel away or transition into a rougher texture, it looks like layers of paper.\n    *   The question asks if the image is *free* of maps and newspaper fragments.\n    *   The texture strongly suggests a collage technique often used with maps, old paper, or newspaper clippings. The cross-hatching on the left wall looks very much like a map grid or architectural drawing. The grainy texture on the right looks like old paper or newspaper print.\n    *   Wait, let me look closer at the \"torn\" effect. The right side looks like a wall of peeling paint or plaster, but the left side is clearly a constructed image. The transition suggests the image itself is made of fragments.\n    *   Actually, looking very closely at the texture on the left wall (the dark and light stripes), it has a distinct cross-hatch pattern. This is characteristic of engraving or map-making.\n    *   The question is \"Is the image free of maps and newspaper fragments?\".\n    *   If the image *is* a collage made of these things, then the answer is \"no\" (it is not free of them).\n    *   Let's re-evaluate. Is it a photo of a man in a hallway that has been *edited* to look like torn paper? Or is it a physical collage?\n    *   The texture on the right side looks like rough, torn paper edges. The texture on the left looks like a printed image (maybe a map or architectural drawing) that has been torn.\n    *   The prompt asks \"Is the image free of maps and newspaper fragments?\".\n    *",
+    "think_ms": 44474,
+    "reasoning_capped": true
+   },
+   {
+    "id": "global:not_horror",
+    "text": "Is the image free of horror, gore or violence?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 44102,
+    "reasoning": "The user is asking a yes/no question about the content of the image, specifically regarding horror, gore, or violence.\n\n1.  **Analyze the image:**\n    *   **Subject:** A man with a backpack is standing in a hallway. He is looking up and to the right.\n    *   **Setting:** It looks like an old, possibly abandoned or historic building with arched ceilings and large windows. The lighting suggests daylight coming through the windows.\n    *   **Style:** The image has a textured, almost collage-like or torn paper effect. It's sepia-toned or monochromatic.\n    *   **Content Check:**\n        *   **Horror:** There are no scary monsters, ghosts, or threatening figures. The atmosphere is a bit moody due to the texture and lighting, but not inherently horrific.\n        *   **Gore:** There is no blood, bodily fluids, or mutilation visible.\n        *   **Violence:** There is no fighting, weapons, or acts of aggression. The man is just standing there.\n\n2.  **Conclusion:** The image depicts a peaceful, albeit slightly eerie or artistic, scene of a man in a hallway. It does not contain horror, gore, or violence.\n\n3.  **Formulate the answer:** The user requested a one-word answer: \"yes\" or \"no\". Since the image is free of those elements, the answer is \"yes\".",
+    "think_ms": 44102,
+    "reasoning_capped": false
+   },
+   {
+    "id": "global:anatomy",
+    "text": "Is the image free of any malformed human body, such as extra or missing limbs, a head the wrong way up, or fused fingers?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 73621,
+    "reasoning": "The user wants to know if the human figure in the image has any malformed body parts.\n\n1.  **Analyze the human figure:**\n    *   **Head:** The man has a head with hair and a beard. It is oriented correctly (upright).\n    *   **Torso:** He is wearing a shirt. The torso looks normal.\n    *   **Arms:** He has two arms. The left arm is hanging down by his side. The right arm is obscured by the backpack strap but seems to be in a normal position.\n    *   **Legs:** He has two legs. They are standing straight.\n    *   **Feet:** He is wearing shoes. Both feet are visible and planted on the ground.\n    *   **Hands:** His left hand is visible hanging by his side. The fingers look normal, not fused or extra.\n\n2.  **Evaluate for malformations:**\n    *   Extra limbs? No.\n    *   Missing limbs? No.\n    *   Head wrong way up? No.\n    *   Fused fingers? No visible evidence of this.\n\n3.  **Conclusion:** The human body appears anatomically correct and free of the specified malformations.\n\n4.  **Formulate the answer:** The question asks for a one-word answer: \"yes\" or \"no\". Since the image *is* free of malformed bodies, the answer is \"yes\". Wait, let me re-read the question carefully. \"Is the image free of any malformed human body...?\" Yes, it is free of them. So the answer is \"yes\".",
+    "think_ms": 73621,
+    "reasoning_capped": false
+   },
+   {
+    "id": "global:no_duplicates",
+    "text": "Is the image free of duplicates, meaning the same person or the same object appearing twice?",
+    "scope": "global",
+    "p_yes": 0.9967,
+    "ms": 67688,
+    "reasoning": "The user wants to know if there are duplicates of the person or objects in the image.\n\n1.  **Analyze the image:**\n    *   I see a man standing in a hallway. He is facing right, looking up. He has a backpack.\n    *   The hallway has arches and windows.\n    *   The image has a distinct texture, like torn paper or a collage effect.\n    *   Looking closely at the right side of the image, there's a large area that looks like a textured wall or paper overlay.\n    *   Wait, let's look at the \"torn paper\" effect. It seems to reveal a scene underneath or is part of the scene itself.\n    *   Is there another person? No, just the one man on the left.\n    *   Are there duplicate objects? The windows are distinct (one large on the left, one smaller further down). The arches repeat, but that's architectural repetition, not a \"duplicate object\" in the sense of a copy-paste error or a clone.\n    *   Let's re-examine the right side. It looks like a large, textured surface that obscures part of the hallway. It doesn't look like a duplicate of the man.\n    *   Is the man duplicated? No, he appears only once.\n    *   Is the backpack duplicated? No.\n    *   Is the window duplicated? There are multiple windows, but they are part of the architecture, not identical copies placed unnaturally.\n    *   The question asks \"Is the image free of duplicates, meaning the same person or the same object appearing twice?\"\n    *   The man appears once.\n    *   The backpack appears once.\n    *   The specific windows are distinct instances in a hallway.\n    *   Therefore, the image is free of duplicates in the sense of the same specific entity appearing twice unnaturally.\n\n    *   Wait, let me look really closely at the texture. Is it possible that the \"torn paper\" on the right is actually a duplicate of the left side?\n    *   The texture on the right looks like a rough, grey surface. It doesn't clearly show a duplicate of the man.\n    *   Let's look at the arches. The arches recede into the distance. This is perspective, not duplication.\n    *   So, the answer should be \"yes\".\n\n    *   Let me double check. Is there a faint reflection",
+    "think_ms": 65997,
+    "reasoning_capped": true
+   },
+   {
+    "id": "frame:man_recognisable",
+    "text": "Is a grey-haired, bearded man recognisable in the image?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 41640,
+    "reasoning": "The user wants to know if there is a grey-haired, bearded man in the image.\n\n1.  **Scan the image:** I see a man standing in a hallway.\n2.  **Examine the man's features:**\n    *   **Hair:** It looks short and greyish/brownish. It's definitely not jet black, suggesting grey or salt-and-pepper.\n    *   **Facial hair:** He has a beard. It looks like a full beard, also greyish.\n    *   **Overall appearance:** He is an adult male.\n\n3.  **Confirm the details:**\n    *   Is he grey-haired? Yes, his hair appears grey or greying.\n    *   Is he bearded? Yes, he has a visible beard.\n    *   Is he a man? Yes.\n\n4.  **Formulate the answer:** The question asks for a one-word answer: \"yes\" or \"no\". Since the man fits the description, the answer is \"yes\".",
+    "think_ms": 41640,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:man_clearest",
+    "text": "Is the man the clearest, most recognisable form in the image?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 57947,
+    "reasoning": "The user wants to know if the man is the clearest, most recognizable form in the image.\n\n1.  **Analyze the image:**\n    *   The image shows a man standing in a hallway.\n    *   The style is a mix of realistic photography (the man) and a textured, almost torn-paper or sketch-like overlay.\n    *   The man is relatively sharp and detailed compared to the surrounding environment.\n    *   The environment (walls, floor, ceiling) has a heavy texture applied to it, making it look like a drawing or a collage. The lines are jagged and the shading is stippled or hatched.\n    *   The man's features (face, beard, clothes, backpack) are distinct and clearly identifiable as a human figure.\n    *   The background elements (windows, arches) are recognizable but obscured by the heavy texture and \"torn\" effect.\n    *   Therefore, the man stands out as the most distinct and \"real\" element in the composition.\n\n2.  **Formulate the answer:**\n    *   The question asks for a one-word answer: \"yes\" or \"no\".\n    *   Based on the analysis, the answer is \"yes\". The man is the focal point and is rendered with more clarity than the stylized background.\n\n3.  **Final check:** Does the man look clearer than the rest? Yes. The rest of the image looks like a textured overlay or a sketch, while the man looks like a photograph placed into it. He is the most recognizable form.",
+    "think_ms": 57947,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:school",
+    "text": "Is a school building or school imagery visible?",
+    "scope": "frame",
+    "p_yes": 0.9571,
+    "ms": 73059,
+    "reasoning": "The user is asking a yes/no question about whether a school building or school imagery is visible.\n\n1.  **Analyze the image:**\n    *   I see a man standing in a long hallway.\n    *   The hallway has arched ceilings and large windows.\n    *   The architecture looks somewhat institutional, possibly a university, a museum, or an old public building. It has a grand, somewhat classical feel.\n    *   The man is wearing a backpack, which is often associated with students.\n    *   The overall aesthetic is a bit surreal or artistic, with a \"peeling paper\" or \"cracked wall\" effect overlaying the right side.\n    *   Is it explicitly a *school*? It's hard to say definitively. It could be a university corridor, a museum, a library, or just a generic institutional hallway.\n    *   However, the question asks if \"school building or school imagery\" is visible.\n    *   The man with the backpack is a strong piece of \"school imagery\" (student).\n    *   The long hallway with lockers (wait, are those lockers? No, they look like doors or panels) and windows is very typical of school or university architecture.\n    *   Let's look closer at the walls. They look like stone or brick. There are doors along the side.\n    *   The prompt asks for a simple \"yes\" or \"no\".\n    *   Is it *definitely* a school? Not 100%. But is \"school imagery\" visible? The backpack suggests a student. The hallway suggests an institution.\n    *   Let's reconsider the \"school building\" part. It looks like a corridor in a large building. It could be a school.\n    *   Let's look for specific school markers. No blackboards, no desks, no lockers clearly visible (just doors).\n    *   But the man with the backpack is a very strong cue for \"student/school\".\n    *   The architecture is reminiscent of older universities or schools.\n    *   So, \"yes\" seems like a reasonable answer because the imagery (man with backpack in a hallway) strongly evokes a school setting, even if it's not explicitly labeled \"School\".\n    *   Wait, let's look at the \"peeling\" effect. It looks like a drawing or a sketch overlaid on a photo, or a photo treated to look like old paper.",
+    "think_ms": 71398,
+    "reasoning_capped": true
+   },
+   {
+    "id": "frame:folding_film",
+    "text": "Does the image look like it is folding, tearing or running out like damaged film?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 61286,
+    "reasoning": "The user is asking a question about the visual style of the image.\n1.  **Analyze the image:** I see a man standing in a hallway. The image has a very distinct texture.\n2.  **Identify the texture:** The right side of the image looks like peeling paint or torn paper. The left side has a cross-hatched, sketch-like texture. The transition between the \"sketch\" part and the \"peeling\" part looks like layers of paper or film being torn away.\n3.  **Evaluate the specific options:**\n    *   \"Folding\": There are creases, but it's more about layers separating.\n    *   \"Tearing\": Yes, the edges look jagged and torn, especially on the right side where the \"wall\" texture is peeling off to reveal a rougher surface underneath. The transition from the detailed sketch to the rough texture looks like a tear.\n    *   \"Running out like damaged film\": This is a bit more abstract, but the peeling effect could be interpreted as damaged film or paper.\n4.  **Synthesize:** The overall effect is definitely one of damage, tearing, or peeling layers. The prompt asks \"Does the image look like it is folding, tearing or running out like damaged film?\". The visual evidence strongly supports \"tearing\" and \"damaged film/paper\" aesthetics. The jagged edges and the way one texture overlays another suggest tearing.\n5.  **Formulate the answer:** The question asks for a one-word answer: \"yes\" or \"no\". Since the image clearly exhibits tearing and a damaged, peeling aesthetic, the answer is \"yes\".",
+    "think_ms": 61286,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:to_grey",
+    "text": "Does part of the image dissolve into plain grey?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 72856,
+    "reasoning": "The user wants to know if part of the image dissolves into plain grey.\n\n1.  **Analyze the image:** I see a man standing in a hallway. The hallway has arches and windows.\n2.  **Look for texture changes:** The left side of the image looks like a detailed drawing or sketch, with hatching and shading.\n3.  **Look at the right side:** As I move from left to right, the detailed drawing style transitions. The lines and shading break apart.\n4.  **Identify the transition:** There's a jagged, torn-paper-like edge where the detailed drawing meets a rougher, more solid texture.\n5.  **Examine the far right:** The rightmost part of the image is a large, relatively uniform area of grey texture. It looks like a wall or a piece of paper that has been torn away to reveal a plain surface underneath, or perhaps the drawing just fades into a plain grey texture. It is definitely a large area of plain, textured grey compared to the detailed architectural drawing on the left.\n6.  **Formulate the answer:** The question asks \"Does part of the image dissolve into plain grey?\". Looking at the right side, yes, the detailed image transitions into a large area of plain, textured grey. The transition looks like peeling paint or torn paper revealing a grey surface. So, the answer is \"yes\".\n\nWait, let me look closer. Is it \"plain grey\"? It's a textured grey, like concrete or old paper. But compared to the detailed drawing, it is a \"plain\" area without the specific architectural details. The question asks if it dissolves into \"plain grey\". The right side is a large expanse of greyish texture. It's not a solid flat color, but it is a \"plain\" area in terms of content (no buildings, no man). It looks like the image is peeling away to reveal a grey background. So, \"yes\" is the appropriate answer. The visual effect is definitely a dissolution or transition into a grey, textured area.\n\nLet's re-read the prompt: \"Answer only from what is visible in the attached image.\" and \"Answer with one word: yes or no.\"\n\nThe right side of the image is a large, textured grey area that the detailed drawing seems to be peeling away from or dissolving into. So, yes.",
+    "think_ms": 72856,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:not_filmstrip",
+    "text": "Is this one frame, rather than a strip or grid of several film frames?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 64762,
+    "reasoning": "The user is asking a question about the format of the image.\n1.  **Analyze the image:** The image shows a single, continuous scene. It depicts a man standing in a hallway with arched ceilings. The style is a mix of photography and a textured, almost torn-paper or sketch-like overlay.\n2.  **Evaluate \"frame\" vs \"strip/grid\":**\n    *   A \"strip\" of film frames would show multiple distinct images arranged horizontally or vertically, usually with sprocket holes visible.\n    *   A \"grid\" would show multiple distinct images arranged in rows and columns.\n    *   This image is a single, cohesive composition. It looks like a digital artwork or a heavily edited photograph, but it is presented as a single rectangular image. There are no borders separating multiple distinct scenes. It is one continuous view.\n\n3.  **Formulate the answer:** The question asks \"Is this one frame, rather than a strip or grid of several film frames?\". Based on the visual evidence, it is a single image. Therefore, the answer is \"yes\".",
+    "think_ms": 64762,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:era",
+    "text": "Does the setting look like a 1980s Indian city rather than a modern one?",
+    "scope": "frame",
+    "p_yes": 0.0137,
+    "ms": 85929,
+    "reasoning": "The user is asking a question about the setting of the image, specifically if it looks like a 1980s Indian city versus a modern one.\n\n1.  **Analyze the image:**\n    *   **Visual Style:** The image has a very distinct, textured, almost collage-like or etched appearance. It looks like a digital manipulation or a specific artistic filter applied to a photograph. It's not a straightforward photograph.\n    *   **Architecture:** The architecture features large arches, tall windows with grilles, and what looks like stone or brick construction. It resembles a colonial-era building, perhaps a government building, a university, or a church. It has a grand, somewhat old-fashioned feel.\n    *   **The Person:** There is a man standing in the hallway. He is wearing a light-colored shirt, dark trousers, and carrying a backpack. He has a beard. His clothing is relatively modern but not distinctly \"1980s\" or \"modern\" in a way that screams a specific era (like neon or futuristic tech). He looks like a contemporary traveler or student.\n    *   **The \"Peeling\" Effect:** A significant portion of the right side of the image looks like peeling paint or paper, revealing a rougher texture underneath. This is an artistic effect, not a physical description of the room itself.\n\n2.  **Evaluate the \"1980s Indian city\" vs. \"modern\" premise:**\n    *   The architecture *could* be found in an Indian city (colonial architecture is common in places like Mumbai, Kolkata, Chennai).\n    *   However, the question asks if the *setting* looks like a 1980s city *rather than* a modern one.\n    *   The image is highly stylized. It doesn't look like a candid street photo of a city. It looks like an interior shot.\n    *   The man's clothing (backpack, casual shirt) is timeless but leans towards modern.\n    *   The architecture is old (colonial style), which exists in modern cities.\n    *   Crucially, the image is an artistic rendering. It doesn't clearly depict a \"city\" street scene. It depicts an interior hallway.\n    *   Does it look like the *1980s*? Not specifically. The style is more timeless/colonial.\n    *   Does it look like a *modern* city? The man's attire suggests a modern",
+    "think_ms": 81843,
+    "reasoning_capped": true
+   },
+   {
+    "id": "frame:soft_grey",
+    "text": "Is the light soft and grey?",
+    "scope": "frame",
+    "p_yes": 0.9958,
+    "ms": 85913,
+    "reasoning": "The user is asking a question about the lighting in the image.\n1.  **Analyze the image:** The image is a sepia-toned or monochromatic artwork. It depicts a man standing in a hallway.\n2.  **Evaluate the lighting:**\n    *   The overall tone is muted, brownish-grey (sepia).\n    *   The light coming through the windows (left and far end) is bright but diffused. It's not harsh, direct sunlight creating sharp, high-contrast shadows everywhere, although there are shadows.\n    *   The \"grey\" part of the question is tricky because it's sepia. However, in terms of value and mood, it feels desaturated and somewhat greyish-brown.\n    *   The light itself, especially the ambient light filling the hallway, appears soft. It's not a stark, high-contrast scene. The shadows are present but not pitch black in a way that suggests harsh light. The texture of the \"peeling paint\" effect also adds a softness to the overall visual.\n    *   Wait, let's look closer at the light source. The windows are bright white. The light hitting the floor is bright. But the overall atmosphere is definitely \"soft\" in terms of mood and texture, and the color palette is essentially grey/brown.\n    *   Is the light *grey*? The image is monochromatic/sepia. So \"grey\" is a reasonable description of the color palette, even if it's technically sepia.\n    *   Is the light *soft*? The light from the windows is bright, but the overall illumination of the scene feels somewhat diffuse and atmospheric, not harsh. The shadows are soft-edged in many places due to the artistic style.\n    *   Let's reconsider the \"grey\" part. The image is definitely not full color. It's a monochrome image. So describing the light as \"grey\" fits the monochromatic nature.\n    *   Let's reconsider the \"soft\" part. The light coming through the window on the left is quite bright, creating a strong contrast with the dark wall next to it. However, the light further down the hall is softer. The overall *feel* is soft due to the texture.\n    *   Actually, looking at the shadows cast by the man and the architectural elements, they are distinct. But the question asks \"Is the light soft and grey?\". This is likely referring to the overall aesthetic. The image is a",
+    "think_ms": 81967,
+    "reasoning_capped": true
+   },
+   {
+    "id": "frame:humane",
+    "text": "Is the tone anxious but not frightening?",
+    "scope": "frame",
+    "p_yes": 0.9879,
+    "ms": 85804,
+    "reasoning": "The user is asking for a subjective interpretation of the image's tone, specifically whether it is \"anxious but not frightening.\"\n\n1.  **Analyze the visual elements:**\n    *   **Subject:** A man standing alone in a large, somewhat empty corridor. He is looking up and away, perhaps contemplative or waiting. He has a backpack, suggesting travel or a journey.\n    *   **Setting:** A long, arched hallway with high ceilings. It looks like an old building, possibly a church, museum, or institutional building. The perspective draws the eye deep into the distance.\n    *   **Lighting:** The light is coming from windows on the left and far end, creating strong contrasts (chiaroscuro). It's somewhat dim but not pitch black.\n    *   **Texture/Style:** The image has a heavy texture overlay. It looks like torn paper, peeling paint, or a rough, grainy filter. This adds a sense of decay, age, or unease. The sepia/monochromatic tone adds to a feeling of nostalgia or melancholy.\n    *   **Composition:** The man is small compared to the architecture, emphasizing isolation. The \"torn\" effect on the right side feels disruptive and unsettling.\n\n2.  **Evaluate \"Anxious\":**\n    *   The isolation of the figure.\n    *   The vast, echoing space.\n    *   The \"torn\" texture creates a sense of instability or something breaking apart.\n    *   The man's posture is still, but his gaze is fixed on something unseen or distant, which can imply anticipation or worry.\n    *   The lighting is dramatic, casting shadows that can feel ominous.\n    *   Yes, there are elements of anxiety or unease.\n\n3.  **Evaluate \"Not Frightening\":**\n    *   Is it scary? Not in a horror movie sense. There are no monsters, blood, or immediate threats visible.\n    *   The man doesn't look terrified; he looks pensive or observant.\n    *   The architecture is grand, not claustrophobic (though the texture makes it feel a bit closed in).\n    *   The overall mood is more melancholic, mysterious, or contemplative than outright terrifying. It feels like a scene from a drama or a psychological thriller, not a slasher film.\n\n4.  **Synthesize:**\n    *   The combination of the lonely figure, the decaying",
+    "think_ms": 81743,
+    "reasoning_capped": true
+   }
+  ]
+ },
+ {
+  "n": 18,
+  "name": "Exactly nine",
+  "image": ".strawberry-probe/media/103997853aec245d08e1539fc0d990600119eb452cc84e86fc1e14edf32dce23.png",
+  "model": "Qwen/Qwen3.5-27B-FP8",
+  "think": true,
+  "server_ms": 93207,
+  "wall_ms": 96185,
+  "rows": [
+   {
+    "id": "global:single",
+    "text": "Is this a single image, not a grid, contact sheet, filmstrip or multi-panel board?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 16608,
+    "reasoning": "The user is asking a simple yes/no question about the format of the image.\n1.  **Analyze the image:** The image shows a single, continuous scene of a clock tower. It has a textured, almost paper-like or stone-like overlay, but it is clearly one cohesive composition.\n2.  **Check for grid/contact sheet/filmstrip features:**\n    *   **Grid:** No grid lines dividing the image into multiple distinct photos.\n    *   **Contact sheet:** No series of small thumbnails.\n    *   **Filmstrip:** No sprocket holes or multiple frames in a strip.\n    *   **Multi-panel board:** No distinct separate panels.\n3.  **Conclusion:** It is a single image.\n4.  **Formulate the answer:** The user requested \"Answer with one word: yes or no.\" So the answer is \"yes\".",
+    "think_ms": 16608,
+    "reasoning_capped": false
+   },
+   {
+    "id": "global:no_border",
+    "text": "Is the image free of any decorative border, frame line or panel division?",
+    "scope": "global",
+    "p_yes": 0.0,
+    "ms": 37806,
+    "reasoning": "The user is asking a yes/no question about the presence of a border, frame line, or panel division in the image.\n\n1.  **Analyze the image:** I see a clock tower. The style looks like a sketch or a textured drawing, possibly on paper.\n2.  **Look for borders:**\n    *   Around the very edge of the image, there is a distinct, uneven white border. It looks like the edge of a piece of paper or a mat.\n    *   The texture of the \"paper\" itself has cracks and creases, which could be interpreted as panel divisions or just texture, but the white edge is definitely a border.\n    *   Wait, let's look closer at the prompt: \"Is the image free of any decorative border, frame line or panel division?\"\n    *   Looking at the very edges of the provided image file, there is a white, textured border surrounding the main drawing. It looks like the edge of a piece of paper.\n    *   Also, the drawing style itself has a \"cracked\" or \"torn paper\" aesthetic that creates a sort of frame around the central subject.\n    *   Therefore, the image is *not* free of a border. There is a visible white border around the artwork.\n\n3.  **Formulate the answer:** The question asks \"Is the image free of...?\" Since there *is* a border (the white edge), the answer is \"no\".\n\nLet me double-check.\n- Is there a decorative border? The white edge looks like a paper border.\n- Is there a frame line? The edge of the paper acts as a frame.\n- Is there a panel division? The texture looks like cracked paper, which creates divisions.\n\nThe most prominent feature is the white border surrounding the main image content. So, the image is *not* free of a border.\n\nAnswer: no.",
+    "think_ms": 37806,
+    "reasoning_capped": false
+   },
+   {
+    "id": "global:no_words",
+    "text": "Is the image free of readable words, captions, labels or logos?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 19111,
+    "reasoning": "The user wants to know if there are any readable words, captions, labels, or logos in the image.\n\n1.  **Scan the image:** I see a clock tower.\n2.  **Examine the clock face:** It has hour markers (lines) and hands. No numbers are visible.\n3.  **Examine the tower structure:** It's made of stone blocks. No inscriptions or plaques are visible.\n4.  **Examine the surroundings:** There are trees/bushes on the sides. No signs or text.\n5.  **Examine the borders:** The image has a textured, paper-like border, but no text on it.\n6.  **Conclusion:** There are no readable words, captions, labels, or logos.\n\nTherefore, the answer is \"yes\".",
+    "think_ms": 19111,
+    "reasoning_capped": false
+   },
+   {
+    "id": "global:mono",
+    "text": "Is the image entirely monochrome, black, white and grey only, with no colour at all?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 24307,
+    "reasoning": "The user is asking a simple yes/no question about the color palette of the image.\n1.  **Analyze the image:** I see a clock tower. The entire image is rendered in shades of grey, black, and white. It looks like a pencil sketch or a sepia-toned drawing, but even if it's sepia, it's extremely desaturated, bordering on monochrome. Wait, let me look closer. It's definitely grayscale. There are no hints of blue, red, green, etc. It's a monochromatic image.\n2.  **Formulate the answer:** The question asks \"Is the image entirely monochrome, black, white and grey only, with no colour at all?\". Based on my observation, the answer is yes.\n3.  **Final check:** Does \"monochrome\" strictly mean black/white/grey? Yes, in common parlance, especially when contrasted with \"color\". The image fits this description perfectly. It looks like a textured drawing or a photo with a heavy filter applied that removes all hue.\n\nTherefore, the answer is \"yes\".",
+    "think_ms": 24307,
+    "reasoning_capped": false
+   },
+   {
+    "id": "global:handmade",
+    "text": "Does the image look hand-made, like charcoal or graphite drawing combined with cut paper, rather than a photograph?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 27622,
+    "reasoning": "The user is asking for a stylistic assessment of the image.\n1.  **Analyze the visual texture:** The image has a very distinct, rough texture. It looks like paper with torn edges.\n2.  **Analyze the shading and lines:** The shading isn't smooth like a photograph. It has hatching and cross-hatching marks, typical of pencil, charcoal, or pen and ink.\n3.  **Analyze the composition:** The edges of the \"building\" and the \"sky\" look like pieces of paper cut out and pasted together. The sky area has a crumpled paper texture. The trees look like dark, textured paper cutouts or heavy charcoal smudges.\n4.  **Evaluate the \"hand-made\" aspect:** The combination of the paper texture, the visible \"cut\" edges, and the drawing-like shading strongly suggests a mixed-media artwork (collage/drawing) rather than a straight photograph. It looks like a digital simulation of this style or an actual physical artwork photographed.\n5.  **Formulate the answer:** The question asks \"Does the image look hand-made... rather than a photograph?\" and requests a one-word answer \"yes or no\". Based on the visual evidence (paper texture, drawing marks, collage aesthetic), the answer is definitely \"yes\".",
+    "think_ms": 27622,
+    "reasoning_capped": false
+   },
+   {
+    "id": "global:not_glossy",
+    "text": "Is the image free of the smooth, glossy look of a digital painting or 3D render?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 25665,
+    "reasoning": "The user is asking a question about the visual style of the image.\n1.  **Analyze the image:** The image shows a clock tower.\n2.  **Examine the texture:** The entire image has a distinct texture. It looks like paper, specifically watercolor paper or perhaps a collage of torn paper pieces. There are visible creases, tears, and a grainy, fibrous texture throughout.\n3.  **Evaluate \"smooth, glossy look\":** A digital painting or 3D render often has a very clean, smooth, or artificially glossy finish unless specifically textured to look old. This image is the opposite. It looks like a physical medium, possibly a drawing, a print, or a photograph that has been heavily textured to look like old paper or a sketch. It lacks the \"plastic\" or \"perfect\" sheen of a standard 3D render.\n4.  **Formulate the answer:** The question asks \"Is the image free of the smooth, glossy look...?\" Since the image is textured, grainy, and looks like paper/sketch, it *is* free of that smooth, glossy look.\n5.  **Final Answer:** Yes.",
+    "think_ms": 25665,
+    "reasoning_capped": false
+   },
+   {
+    "id": "global:torn_edges",
+    "text": "Are torn paper edges visible somewhere in the image?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 23508,
+    "reasoning": "The user is asking a simple yes/no question about the visual content of the image.\n1.  **Analyze the image:** I see a clock tower. The entire image has a texture that looks like old, crumpled, or torn paper.\n2.  **Look for \"torn paper edges\":**\n    *   The border of the image itself looks like torn paper. It's uneven and white/cream-colored, resembling the edge of a piece of paper that has been ripped.\n    *   The texture *within* the image also mimics torn or layered paper, with visible creases and ragged edges where different \"layers\" of texture meet.\n    *   Specifically, the very perimeter of the image has a distinct, jagged white border that looks exactly like torn paper.\n\n3.  **Formulate the answer:** The question asks \"Are torn paper edges visible somewhere in the image?\". Based on the border and the texture, the answer is definitely yes. The constraint is \"Answer with one word: yes or no.\"\n\n4.  **Final Answer:** yes.",
+    "think_ms": 23507,
+    "reasoning_capped": false
+   },
+   {
+    "id": "global:paper_grain",
+    "text": "Is visible paper grain or paper fibre texture present?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 28283,
+    "reasoning": "The user is asking a specific question about the texture of the image.\n1.  **Analyze the image:** I need to look closely at the visual characteristics. The image shows a clock tower, but it's not a photograph. It looks like a drawing or a print.\n2.  **Look for texture:**\n    *   The entire image has a distinct, rough, fibrous look.\n    *   The background (sky area) has a mottled, uneven texture that looks like watercolor paper or heavy cardstock.\n    *   The \"stones\" of the tower are rendered with hatching and shading that sits on top of this underlying texture.\n    *   The edges of the image are rough and torn, characteristic of paper.\n    *   The overall aesthetic is very much like a pencil or charcoal drawing on textured paper. The \"grain\" is extremely prominent throughout the entire surface.\n\n3.  **Formulate the answer:** The question asks \"Is visible paper grain or paper fibre texture present?\" and requests a one-word answer \"yes or no\".\n    *   Based on my observation, the answer is definitely \"yes\". The texture is a defining feature of the image.\n\n4.  **Final check:** Does the image show paper grain? Yes. Is it visible? Yes. So the answer is \"yes\".",
+    "think_ms": 28282,
+    "reasoning_capped": false
+   },
+   {
+    "id": "global:linework",
+    "text": "Is visible graphite or charcoal linework present?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 31524,
+    "reasoning": "The user is asking a specific question about the visual style of the image: \"Is visible graphite or charcoal linework present?\"\n\n1.  **Analyze the image:** I need to look closely at the texture and rendering of the image.\n2.  **Identify the medium:** The image looks like a drawing or a digital manipulation that mimics a drawing.\n3.  **Look for linework:**\n    *   The stone blocks have distinct outlines and shading.\n    *   The shading isn't just flat color; it has texture.\n    *   Looking closely at the darker areas (like the shadows under the roof, the trees, the clock hands), there are visible strokes.\n    *   The strokes look like pencil (graphite) or charcoal marks. They are hatched, cross-hatched, or scribbled in a way typical of these dry media.\n    *   The texture of the \"paper\" background also suggests a drawing surface.\n    *   The edges of the stones are defined by dark, sketchy lines.\n    *   The trees in the bottom corners are rendered with loose, sketchy marks that look very much like charcoal or graphite scribbles.\n\n4.  **Formulate the answer:** The visual evidence strongly points to \"yes\". The entire image has the aesthetic of a graphite or charcoal drawing, with visible strokes and linework defining the forms.\n\n5.  **Final check:** Does the image show visible linework? Yes. Is it graphite or charcoal style? Yes. So the answer is \"yes\".",
+    "think_ms": 31524,
+    "reasoning_capped": false
+   },
+   {
+    "id": "global:registration",
+    "text": "Are some collage layers slightly offset or imperfectly aligned with each other?",
+    "scope": "global",
+    "p_yes": 0.9998,
+    "ms": 51807,
+    "reasoning": "The user is asking a question about the visual style of the image, specifically regarding \"collage layers\" and their alignment.\n\n1.  **Analyze the image:** The image shows a clock tower. The texture looks like crumpled paper or a collage of paper pieces.\n2.  **Look for \"collage layers\":** The entire image has a texture that mimics torn or crumpled paper. There are visible seams and edges where different \"pieces\" of texture meet.\n3.  **Check for \"offset\" or \"imperfectly aligned\":**\n    *   Look at the edges of the \"paper\" pieces. They are jagged and irregular.\n    *   Look at the transition between the sky/background and the tower. It's not a clean line; it looks like pieces of paper overlaid.\n    *   Look at the texture within the tower itself. It looks like a grid of stones, but the texture overlay makes it look like separate patches.\n    *   Specifically, look at the borders. The white border around the image looks like the edge of a piece of paper.\n    *   Look at the \"seams\" in the sky area. There are distinct lines where one texture ends and another begins, and they don't perfectly align in a grid; they are organic and offset.\n    *   Look at the clock face. The texture continues over it, but there are subtle shifts.\n    *   The question asks if *some* layers are slightly offset. Yes, the nature of a collage or a crumpled paper effect inherently involves layers that are not perfectly aligned. The visible \"tears\" and \"creases\" create offsets. For example, look at the top left corner. The texture shifts. Look at the right edge. The texture of the tower side seems to be a separate layer from the front face, and they meet at an angle, but the texture itself has offsets.\n    *   More importantly, the prompt asks about \"collage layers\". The image *is* a collage-style image. The visible \"tears\" and overlapping textures (like the dark trees in the bottom corners against the lighter sky) show distinct layers. The edges of these layers are jagged and not perfectly straight or aligned with a grid. The texture of the \"paper\" itself has creases that look like offsets.\n\n4.  **Formulate the answer:** The visual evidence supports \"yes\". The image is constructed to look like a collage of paper pieces, and",
+    "think_ms": 46378,
+    "reasoning_capped": true
+   },
+   {
+    "id": "global:erasures",
+    "text": "Are there visible rubbed-out marks or erasures?",
+    "scope": "global",
+    "p_yes": 0.9819,
+    "ms": 51771,
+    "reasoning": "The user is asking a specific question about the visual texture of the image: \"Are there visible rubbed-out marks or erasures?\"\n\n1.  **Analyze the image:** The image shows a clock tower. The style is very distinctive. It looks like a drawing or a print, possibly a lithograph or a rubbing.\n2.  **Examine the texture:** The entire image has a rough, textured appearance. It looks like paper with a grainy surface.\n3.  **Look for \"rubbed-out marks\" or \"erasures\":**\n    *   The edges of the image are jagged and uneven, like torn paper.\n    *   The texture within the image, especially in the lighter areas (the sky/background and the clock face), has a mottled, uneven look.\n    *   There are white lines and patches that look like cracks or tears in the surface, or perhaps where material has been worn away.\n    *   Specifically, looking at the \"sky\" area (top left and right), there are distinct white, jagged lines that look like cracks or erasures in the paper surface itself.\n    *   The overall aesthetic mimics a rubbing (like a frottage) or a very rough print where ink hasn't covered everything perfectly, or where the paper texture is very prominent.\n    *   Wait, let's look closer at the prompt's specific phrasing: \"rubbed-out marks or erasures\". This usually implies pencil or charcoal that has been smudged or erased.\n    *   Looking at the dark areas (the trees, the shadows on the tower), the texture is scratchy. It looks like charcoal or pencil strokes.\n    *   Looking at the lighter areas, especially the background, there are white, irregular shapes that look like the paper underneath showing through, or perhaps areas where a drawing was erased.\n    *   Actually, the entire image has a \"cracked\" or \"crazed\" look, like old paint or a rubbing on rough paper.\n    *   Let's re-evaluate \"rubbed-out marks\". In the context of art, this could refer to the technique. But looking strictly at the visual evidence: Are there marks that look like erasures?\n    *   Yes. The white, jagged lines running through the grey areas (especially the sky/background) look like cracks or erasures. The texture of the clock face also has a \"worn\" look.\n    *   However, looking really",
+    "think_ms": 46408,
+    "reasoning_capped": true
+   },
+   {
+    "id": "global:no_modern_vehicle",
+    "text": "Is the image free of any modern vehicle?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 19975,
+    "reasoning": "The user wants to know if there are any modern vehicles in the image.\n\n1.  **Analyze the image:** I see a clock tower made of stone blocks. It looks like an old, possibly historical building.\n2.  **Scan for vehicles:** I'm looking at the bottom of the image, the sides, and the background.\n    *   Bottom left: There are some dark shapes that look like trees or bushes. No cars.\n    *   Bottom right: More dark shapes, likely trees/bushes. No cars.\n    *   Center: Just the clock face and the stone structure.\n    *   Top: The top of the tower and the sky (which is textured like paper). No planes or helicopters.\n3.  **Conclusion:** There are absolutely no vehicles visible in this image. It's a close-up architectural shot of a clock tower.\n\nTherefore, the answer is \"yes\".",
+    "think_ms": 19975,
+    "reasoning_capped": false
+   },
+   {
+    "id": "global:no_map_news",
+    "text": "Is the image free of maps and newspaper fragments?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 21342,
+    "reasoning": "The user is asking a yes/no question about the presence of maps and newspaper fragments in the image.\n\n1.  **Analyze the image:** The image shows a clock tower. The style is very textured, resembling a collage or a drawing made with textured paper.\n2.  **Look for maps:** I see no geographical features, lines of latitude/longitude, or map-like structures. The background is a textured, cloudy sky, but not a map.\n3.  **Look for newspaper fragments:** I see no text, columns of print, or headlines typical of newspaper clippings. The texture looks like torn paper or stone, but not printed newsprint.\n4.  **Evaluate the \"free of\" condition:** Since I don't see maps or newspaper fragments, the image is indeed free of them.\n5.  **Formulate the answer:** The question asks for a one-word answer: \"yes\" or \"no\". Since the image is free of those items, the answer is \"yes\".",
+    "think_ms": 21341,
+    "reasoning_capped": false
+   },
+   {
+    "id": "global:not_horror",
+    "text": "Is the image free of horror, gore or violence?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 35748,
+    "reasoning": "The user is asking a safety-related question about the content of the image.\n1.  **Analyze the image:** The image shows a clock tower. It looks like a sketch or a textured drawing. The style is somewhat gritty, with a stone texture overlay.\n2.  **Check for horror/gore/violence:**\n    *   **Horror:** The image is a bit dark and textured, which could be interpreted as slightly eerie or gothic, but it's just a building. There are no monsters, ghosts, or scary figures.\n    *   **Gore:** There is no blood, bodily fluids, or mutilation.\n    *   **Violence:** There are no weapons, fighting, or acts of aggression.\n3.  **Conclusion:** The image is a depiction of a clock tower. It is safe.\n4.  **Formulate the answer:** The user requested a one-word answer: \"yes\" or \"no\". Since it is free of those elements, the answer is \"yes\".",
+    "think_ms": 35748,
+    "reasoning_capped": false
+   },
+   {
+    "id": "global:anatomy",
+    "text": "Is the image free of any malformed human body, such as extra or missing limbs, a head the wrong way up, or fused fingers?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 48765,
+    "reasoning": "The user is asking a question about the presence of malformed human bodies in the image.\n1.  **Analyze the image:** The image shows a clock tower made of stone blocks. It's a black and white, textured image, possibly a drawing or a filtered photo.\n2.  **Scan for human figures:** I need to look for any people or human-like figures.\n    *   I see a clock face.\n    *   I see stone blocks.\n    *   I see some trees/bushes at the bottom left and right.\n    *   I see the top of the tower with some openings.\n    *   There are no people visible in the image at all.\n3.  **Evaluate the condition:** Since there are no human bodies, there cannot be any *malformed* human bodies (extra limbs, missing limbs, etc.). The condition \"free of any malformed human body\" is technically true because there are no human bodies to begin with.\n4.  **Formulate the answer:** The question asks for a \"yes\" or \"no\" answer. Since there are no malformed bodies (because there are no bodies), the answer is \"yes\". Wait, let me re-read carefully. \"Is the image free of any malformed human body...?\" Yes, it is free of them.\n\nLet me double check. Is there a hidden figure?\n- Looking closely at the clock hands. No, just hands.\n- Looking at the stone texture. No faces or bodies hidden in the stones.\n- Looking at the trees. Just foliage.\n\nConclusion: The image contains no human figures. Therefore, it is free of malformed human bodies.\n\nAnswer: yes.",
+    "think_ms": 48765,
+    "reasoning_capped": false
+   },
+   {
+    "id": "global:no_duplicates",
+    "text": "Is the image free of duplicates, meaning the same person or the same object appearing twice?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 52307,
+    "reasoning": "The user is asking a question about whether there are duplicates in the image.\n1.  **Analyze the image:** The image shows a clock tower. It's a single structure.\n2.  **Look for duplicates:**\n    *   Are there two identical clock towers? No.\n    *   Are there two identical people? No people are visible.\n    *   Are there repeating patterns that look like \"duplicates\" in the sense of copy-pasting? The stone texture is repetitive, but that's natural for a building. The clock face is unique. The trees on the sides are different.\n    *   The question asks \"Is the image free of duplicates, meaning the same person or the same object appearing twice?\"\n    *   I see one clock tower. I see one clock face. I see trees on the left and right, but they are distinct parts of the scene, not the *same* object duplicated (like a clone stamp effect). Wait, let me look closer at the trees. The tree on the left [10, 576, 160, 977] and the tree on the right [908, 706, 990, 977] look somewhat similar in texture but are positioned differently. They are likely just trees in the background.\n    *   The core question is usually about obvious duplication errors or multiple instances of a main subject. Here, there is one main subject: the clock tower.\n    *   Therefore, the image is free of duplicates in the sense of the same object appearing twice as a distinct entity.\n\n3.  **Formulate the answer:** The answer should be \"yes\".",
+    "think_ms": 52307,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:one_clock",
+    "text": "Is there exactly one clock in the image?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 38269,
+    "reasoning": "The user wants to know if there is exactly one clock in the image.\n\n1.  **Scan the image:** I see a large stone structure, likely a clock tower.\n2.  **Identify clocks:**\n    *   There is a large, prominent clock face in the center of the tower [335, 246, 638, 755].\n    *   I look around the rest of the image.\n    *   Top section: Just stone blocks and openings, no other clock faces.\n    *   Side section (right): Just stone texture, no clock faces visible.\n    *   Bottom/Background: Trees and sky, no other clocks.\n3.  **Count:** I see only one clock face.\n4.  **Formulate answer:** The question asks \"Is there exactly one clock in the image?\". The answer is \"yes\".",
+    "think_ms": 38268,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:analogue",
+    "text": "Is it an analogue clock face with hands, not a digital display?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 43278,
+    "reasoning": "The user wants to know if the clock in the image is an analogue clock with hands.\n\n1.  **Analyze the image:** I see a large clock face on a stone tower.\n2.  **Identify clock features:**\n    *   There is a circular face.\n    *   There are markings around the perimeter indicating hours (12, 1, 2, etc., though no numbers, just lines).\n    *   There are hands in the center.\n    *   One hand is pointing straight up (towards 12).\n    *   One hand is pointing straight left (towards 9).\n    *   There is a thinner hand pointing straight down (towards 6).\n3.  **Determine clock type:** This configuration of hands and markings is characteristic of an analogue clock. It is definitely not a digital display (which would show numbers like 12:00).\n4.  **Formulate the answer:** The question asks for a one-word answer: \"yes\" or \"no\". Since it is an analogue clock, the answer is \"yes\".",
+    "think_ms": 43278,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:fills_frame",
+    "text": "Does the clock face fill most of the frame?",
+    "scope": "frame",
+    "p_yes": 0.0,
+    "ms": 51097,
+    "reasoning": "The user wants to know if the clock face fills most of the frame.\n\n1.  **Analyze the image:** I see a clock tower. The clock face is a prominent feature in the center.\n2.  **Evaluate \"most of the frame\":**\n    *   The frame includes the entire image.\n    *   The clock face is the circular part with the hands and numbers.\n    *   Surrounding the clock face is a lot of stone masonry (the tower structure).\n    *   There is also sky/background visible on the left and right sides.\n    *   There are trees visible at the bottom left and right.\n    *   The clock face itself takes up maybe 20-30% of the total image area. It is central, but definitely not \"most\" of the frame. The stone tower structure dominates the frame.\n\n3.  **Formulate the answer:** The question asks for a one-word answer: \"yes\" or \"no\". Since the clock face does not fill most of the frame, the answer is \"no\".",
+    "think_ms": 51097,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:hour_at_9",
+    "text": "Is the hour hand pointing at the 9?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 63051,
+    "reasoning": "The user wants to know if the hour hand is pointing at the 9.\n\n1.  **Identify the clock face:** I see a large clock face on a stone tower.\n2.  **Identify the hands:**\n    *   There is a shorter, thicker hand. This is typically the hour hand.\n    *   There is a longer, thinner hand. This is typically the minute hand.\n    *   There is a very thin hand pointing straight down. This is likely the second hand.\n3.  **Determine the position of the hour hand:** The shorter, thicker hand is pointing directly to the left, towards the 9 o'clock position.\n4.  **Determine the position of the minute hand:** The longer hand is pointing straight up, towards the 12 o'clock position.\n5.  **Confirm the time:** The time appears to be 9:00.\n6.  **Answer the specific question:** \"Is the hour hand pointing at the 9?\" Yes, the shorter hand is pointing at the 9 position.\n\nWait, let me look closer.\n- The hand pointing left (towards 9) is shorter and thicker. That's the hour hand.\n- The hand pointing up (towards 12) is longer. That's the minute hand.\n- So the time is 9:00.\n- Therefore, the hour hand is pointing at the 9.\n\nLet me double-check.\n- The hand pointing left is definitely the hour hand. It's pointing at the marker for 9.\n- The hand pointing up is the minute hand. It's pointing at the marker for 12.\n- So yes, the hour hand is pointing at the 9.\n\nFinal Answer formulation: \"yes\".",
+    "think_ms": 63051,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:minute_at_12",
+    "text": "Is the minute hand pointing straight up at the 12?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 38473,
+    "reasoning": "The user wants to know if the minute hand is pointing straight up at the 12.\n\n1.  **Identify the clock face:** I see a large clock face on a stone tower.\n2.  **Identify the hands:** There are two main hands visible.\n    *   One hand is shorter and points to the left, towards the 9 position. This is the hour hand.\n    *   One hand is longer and points straight up, towards the 12 position. This is the minute hand.\n3.  **Confirm the position:** The long hand (minute hand) is pointing directly at the top marker, which corresponds to the 12 o'clock position.\n4.  **Formulate the answer:** The question asks for a one-word answer: \"yes\" or \"no\". Since the minute hand is indeed pointing straight up at the 12, the answer is \"yes\".",
+    "think_ms": 38473,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:reads_9",
+    "text": "Does the clock read exactly nine o'clock?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 52087,
+    "reasoning": "The user wants to know if the clock reads exactly nine o'clock.\n\n1.  **Analyze the clock face:**\n    *   I see a large clock face on a stone tower.\n    *   There are hour markers (rectangular blocks) around the perimeter.\n    *   There are hands.\n    *   The short hand (hour hand) is pointing directly to the left, towards the 9 position.\n    *   The long hand (minute hand) is pointing straight up, towards the 12 position.\n    *   There is a thin second hand pointing straight down, towards the 6 position.\n\n2.  **Determine the time:**\n    *   Hour hand at 9.\n    *   Minute hand at 12.\n    *   This indicates 9:00.\n\n3.  **Formulate the answer:**\n    *   The question asks \"Does the clock read exactly nine o'clock?\"\n    *   The visual evidence supports this. The hour hand is on the 9 and the minute hand is on the 12.\n    *   The required answer format is \"yes or no\".\n\n4.  **Final check:**\n    *   Is it *exactly* nine? The hands are aligned perfectly with the 9 and 12 markers. Yes.\n    *   Answer: yes.",
+    "think_ms": 52087,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:second_hand",
+    "text": "Does the clock have a second hand?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 47971,
+    "reasoning": "The user wants to know if the clock in the image has a second hand.\n\n1.  **Analyze the clock face:** I see a large clock face on a stone tower.\n2.  **Identify the hands:**\n    *   There is a short, thick hand pointing towards the 9 (hour hand).\n    *   There is a long, thick hand pointing towards the 12 (minute hand).\n    *   There is a very thin, long line extending from the center downwards towards the 6. This looks like a second hand. Wait, let me look closer.\n    *   Actually, looking at the center, there are three distinct lines radiating from the center.\n        *   One short, thick hand pointing left (towards 9).\n        *   One long, thick hand pointing up (towards 12).\n        *   One very thin, long line pointing down (towards 6). This is characteristic of a second hand.\n\n3.  **Confirm the presence:** Yes, there is a thin hand pointing downwards, distinct from the hour and minute hands.\n\n4.  **Formulate the answer:** The question asks for a one-word answer: \"yes\" or \"no\". Since I see a second hand, the answer is \"yes\".",
+    "think_ms": 47971,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:second_still",
+    "text": "Does the second hand look still rather than blurred with motion?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 55894,
+    "reasoning": "The user wants to know if the second hand looks still or blurred.\n1.  **Identify the second hand:** It's the thin, long hand pointing straight down towards the 6 o'clock position.\n2.  **Examine its appearance:** Look closely at the edges of the hand.\n3.  **Check for motion blur:** Is it fuzzy or streaked? No, the edges are sharp and distinct, matching the style of the rest of the drawing (which looks like a sketch or etching). It is a static line.\n4.  **Formulate the answer:** The question asks \"Does the second hand look still rather than blurred with motion?\". Since it is sharp and not blurred, the answer is \"yes\".\n\nWait, let me double-check.\n- The hour hand is pointing at 9.\n- The minute hand is pointing at 12.\n- The second hand is pointing at 6.\n- All hands are drawn with clear, solid lines. There is no indication of motion blur. The entire image has a textured, sketch-like quality, but the lines themselves are distinct.\n\nSo, the answer is yes.",
+    "think_ms": 55894,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:numerals_correct",
+    "text": "Are the numbers or hour marks on the clock face correct and in the right order?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 65986,
+    "reasoning": "The user wants to know if the hour marks on the clock face are correct and in the right order.\n\n1.  **Analyze the clock face:** I need to look at the markings around the circle.\n2.  **Identify the markings:** They are simple rectangular bars, not numbers.\n3.  **Check the positions:**\n    *   Top (12 o'clock position): There is a mark.\n    *   Right (3 o'clock position): There is a mark.\n    *   Bottom (6 o'clock position): There is a mark.\n    *   Left (9 o'clock position): There is a mark.\n    *   Between 12 and 3: There are marks at roughly 1, 2 o'clock positions. Let's count them.\n        *   12 o'clock mark.\n        *   1 o'clock mark.\n        *   2 o'clock mark.\n        *   3 o'clock mark.\n    *   Between 3 and 6:\n        *   4 o'clock mark.\n        *   5 o'clock mark.\n        *   6 o'clock mark.\n    *   Between 6 and 9:\n        *   7 o'clock mark.\n        *   8 o'clock mark.\n        *   9 o'clock mark.\n    *   Between 9 and 12:\n        *   10 o'clock mark.\n        *   11 o'clock mark.\n\n4.  **Verify the count:** There are 12 distinct marks evenly spaced around the circle.\n5.  **Verify the order:** They are arranged clockwise in the standard positions for a clock face (12 at top, 3 at right, 6 at bottom, 9 at left).\n6.  **Conclusion:** The hour marks are correct and in the right order.\n\nThe question asks for a one-word answer: \"yes\" or \"no\".\nThe answer is \"yes\".",
+    "think_ms": 65986,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:no_brand",
+    "text": "Is the clock free of readable words such as a brand name?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 54280,
+    "reasoning": "The user wants to know if there are readable words on the clock face.\n1.  **Analyze the clock face:** I see a large clock face on the tower.\n2.  **Look for text:** I'm scanning the area around the center and the perimeter of the clock face.\n3.  **Identify markings:** There are tick marks for the hours (12, 1, 2, etc., though no numbers are visible, just lines).\n4.  **Check for brand names:** I don't see any text like \"Grandfather Clock Co.\" or any other brand name.\n5.  **Conclusion:** The clock face only has hands and hour markers. No words are visible.\n6.  **Formulate answer:** The question asks \"Is the clock free of readable words such as a brand name?\". Since there are no words, the answer is \"yes\".",
+    "think_ms": 54280,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:no_people",
+    "text": "Is the image free of people?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 58615,
+    "reasoning": "The user wants to know if there are people in the image.\n1.  **Scan the image:** I see a clock tower made of stone blocks.\n2.  **Look for people:** I'm scanning the foreground, the background, the windows, and the surrounding areas.\n    *   Foreground: Just stone texture and trees/bushes on the sides. No people.\n    *   Clock face: Just hands and markers. No people.\n    *   Top of the tower: Just architectural details (windows/openings). No people visible.\n    *   Sides/Background: Just sky (textured) and trees. No people.\n3.  **Conclusion:** The image contains only a building (clock tower) and some vegetation. There are no human figures visible.\n4.  **Formulate answer:** The question asks for a one-word answer: \"yes\" or \"no\". Since there are no people, the answer is \"yes\".",
+    "think_ms": 58614,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:no_extra_clocks",
+    "text": "Is the image free of extra clocks or digital displays?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 60767,
+    "reasoning": "The user wants to know if there are any extra clocks or digital displays in the image.\n\n1.  **Analyze the image:** I see a large clock face on a stone tower.\n2.  **Scan for other clocks:** I'm looking around the tower, the sky, the trees.\n    *   Top part of the tower: Just stone blocks and some dark openings (windows/vents). No clocks.\n    *   Side of the tower: Just stone texture. No clocks.\n    *   Bottom part: Stone blocks. No clocks.\n    *   Surroundings: Trees on the left and right. Sky background. No other clocks.\n3.  **Scan for digital displays:** The entire image has a textured, almost paper-like or stone-carved aesthetic. There are no glowing screens, LED numbers, or digital readouts. The clock face is analog with hands and tick marks.\n4.  **Conclusion:** There is only one clock face visible, and it is analog. There are no digital displays.\n\nTherefore, the answer is \"yes\".",
+    "think_ms": 60767,
+    "reasoning_capped": false
+   },
+   {
+    "id": "frame:period_clock",
+    "text": "Does the clock look like a 1980s clock rather than a modern one?",
+    "scope": "frame",
+    "p_yes": 0.1828,
+    "ms": 73606,
+    "reasoning": "The user is asking a subjective question about the style of the clock based on the image.\n1.  **Analyze the image:** The image shows a large clock face set into a stone tower. The style is very traditional, almost like a church clock or a town hall clock. It has simple rectangular hour markers, no numbers. The hands are simple, dark, and pointed. The overall aesthetic is old-fashioned, stone, and monumental.\n2.  **Evaluate \"1980s clock\":** A \"1980s clock\" usually implies digital displays, neon, specific retro-futuristic designs, or perhaps a specific analog style popular in the 80s (like bold geometric shapes). This clock looks much older, like Victorian or early 20th-century architecture. It doesn't scream \"1980s.\"\n3.  **Evaluate \"modern one\":** A \"modern clock\" could mean a sleek digital wall clock, a minimalist design, or a smart clock. This is definitely not a modern, sleek, minimalist clock. It's a traditional, heavy, stone-faced clock.\n4.  **Re-evaluating the question:** \"Does the clock look like a 1980s clock rather than a modern one?\" This is a bit of a trick. It's asking to choose between two options: \"1980s\" or \"modern\".\n    *   Is it a 1980s clock? Unlikely. It looks like an old stone tower clock, possibly from the 19th or early 20th century.\n    *   Is it a modern clock? No, it looks antique.\n    *   Wait, maybe the question implies \"Does it look *old* (like from the 80s or earlier) rather than *new* (modern)?\" Or perhaps the user is asking if the *style* is 80s.\n    *   Let's look at the texture. The image has a heavy texture overlay, making it look like a sketch or an old photograph. This adds to the \"old\" feel.\n    *   Let's reconsider the \"1980s\" part. Maybe the user is referring to the specific design? No, the design is classic.\n    *   Let's look at the phrasing again. \"Does the clock look like a 1980s clock rather than a modern one?\"\n    *   If I have to choose \"yes",
+    "think_ms": 72084,
+    "reasoning_capped": true
+   }
+  ]
+ }
+]
