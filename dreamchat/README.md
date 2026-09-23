@@ -29,6 +29,11 @@ Every turn works like this:
 2. **Code picks the move** from those facts (`lib.ts` → `selectMove`). While the person is
    still telling the dream, Berry follows along. Once they reach the end, Berry asks about
    the gaps, at most twice each. When the story is understood, Berry tells it back.
+   - Three messages in a row that add nothing new to what happened count as reaching the
+     end, because a dream that is a place rather than a plot never ends as a story.
+   - Two "I don't remember"s in a row after the end mean it is told back.
+   - While moments are being drawn, and when the person leaves, Berry is told how many are
+     up and how many are still to come.
 3. **DeepSeek writes the words**, steered by a short private brief. It never picks the move.
    It writes ordinary replies without thinking (about 2 s) and thinks before the turns that
    change the conversation, such as telling the dream back (about 10 s). A retelling is
