@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { CutPlan } from '../continuity';
 import { framePrompt, writingIn } from '../frames';
+import { VAGUE } from '../producer';
 import { asInstruction } from '../session';
 import { isGroup, type Item, sheetPrompt, styleBlock, toldColours } from '../sheets';
 
@@ -164,6 +165,9 @@ describe('a moment drawn from earlier moments', () => {
     const { prompt } = framePrompt(moment('m1', 1), [hazy, kitchen], style);
     expect(prompt).toContain('ana (person): faded blue jeans and a plain grey t-shirt.');
     expect(prompt).not.toMatch(/indistinct|blends into/);
+    for (const nothing of ['none remarkable', 'nothing in particular', 'no distinctive features'])
+      expect(VAGUE.test(nothing)).toBe(true);
+    expect(VAGUE.test('a scar over the left eye')).toBe(false);
   });
 
   test('someone in a moment is described by their look, never by the story in who they are', () => {

@@ -316,7 +316,7 @@ export const POSITION =
 
 /** A value that says nothing a picture can show. */
 export const VAGUE =
-  /\b(undefined|unknown|unclear|indeterminate|unspecified|ambiguous|indistinct|nondescript|hazy memory|blends? into|none notable|nothing notable|not notable|not (?:remembered|specified|known|sure|clear|described|given)|no specific|(?:can't|cannot|don't|do not) remember)\b/i;
+  /\b(undefined|unknown|unclear|indeterminate|unspecified|ambiguous|indistinct|nondescript|hazy memory|blends? into|(?:none|nothing|not) (?:notable|remarkable|special|distinctive|in particular)|no (?:distinctive|distinguishing|notable|remarkable) features?|not (?:remembered|specified|known|sure|clear|described|given)|no specific|(?:can't|cannot|don't|do not) remember)\b/i;
 
 /** Their own description of how it should look, as one style option. */
 export async function ownStyle(transcript: string): Promise<StyleOption | null> {
