@@ -86,7 +86,8 @@ Mark every detail "said": true ONLY when the person's own words give it. Anythin
 - Only real presences get an entry. Ambient things (fog, glow, rain) belong to the look or a scene's mood. A crowd is not a person. Clothes and body features belong to the person, never separate things.
 - The dreamer is a person entry ("is_dreamer": true) only if they are seen in some moment ("eyes": "outside").
 - One "protagonist": true — the person the dream is most about.
-- A thing gets an entry only if it matters or is seen closely.
+- A thing gets an entry only if someone holds or uses it, or it is the main subject of a moment. Parts of a place (a window, shelves, a door), what is seen through them (the moon, the sky) and collections (floating books, leaves) are the place's landmarks, never things. Most dreams have 0-2 things.
+- "name" is how the person would say it, in lowercase with its article: "the old man", "the flooded library", "the boat". The dreamer is "you".
 - People fields: identity (who they are to the dreamer), appearance (age, build, face, hair), wardrobe, distinctive_features. Places: geography (what kind of place, inside or out, layout), landmarks (what's in it), light. Things: appearance, materials.
 - A profile is how someone or something ordinarily looks, before anything happens to it in the dream. What happens to them (a head turning to ice, a room going dark, a person starting to glow) is a moment's action, never part of the profile: it would be drawn on every picture of them. If a woman's head turns to ice, her profile describes an ordinary woman's head and face (a guess if they didn't say), and the ice belongs to the moments.
 

@@ -240,5 +240,13 @@ export function parseTurnResponse(raw: string): ParsedTurn {
   if (messages.length !== list.length) violations.push('dropped blank or non-string messages');
   if (messages.length === 0) return { messages: [RECOVERY], violations: [...violations, 'every message was blank'] };
 
-  return { messages: repairExtraQuestions(messages, violations), violations };
+  const repaired = repairExtraQuestions(messages, violations);
+  // The ask goes last. A single question followed by a softener ("just a feeling, even if it
+  // didn't make sense") left the person answering a statement (live test, 23 Sep).
+  const asks = repaired.filter((m) => m.includes('?'));
+  if (asks.length === 1 && !repaired.at(-1)?.includes('?')) {
+    violations.push('the question was not last — moved to the end');
+    return { messages: [...repaired.filter((m) => m !== asks[0]), asks[0]], violations };
+  }
+  return { messages: repaired, violations };
 }

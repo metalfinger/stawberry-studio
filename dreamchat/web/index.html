@@ -200,6 +200,9 @@ async function api(path, body) {
 // ── chat ────────────────────────────────────────────────────────────────────
 function renderChat() {
   const chat = $('chat');
+  // Stay where they were reading, unless they were already at the bottom.
+  const atBottom = chat.scrollHeight - chat.scrollTop - chat.clientHeight < 80;
+  const was = chat.scrollTop;
   chat.replaceChildren();
   if (!session) return;
   let hostTurn = 0;
@@ -226,7 +229,7 @@ function renderChat() {
     ended: 'This conversation has ended.',
   };
   if (session.closed) chat.append(el('div', { class: 'notice' }, endings[session.phase] || 'This conversation has ended.'));
-  chat.scrollTop = chat.scrollHeight;
+  chat.scrollTop = atBottom ? chat.scrollHeight : was;
   $('send').hidden = session.closed;
 }
 
@@ -273,7 +276,21 @@ function renderDream() {
   }
 }
 
-function sketchCard(it) {
+// The page redraws while pictures are being made; one image element per picture is kept and
+// moved into each new card, so a picture that is loading isn't thrown away and restarted.
+const images = new Map();
+function imageFor(src, alt, where) {
+  const key = `${where}|${src}`;
+  let img = images.get(key);
+  if (!img) { img = el('img', { alt, src }); images.set(key, img); }
+  return img;
+}
+const plainQuestion = (q) => q
+  .replace(/^Does the image actually show this: /, '')
+  .replace(/(#[0-9A-Fa-f]{6}(, )?)+/g, 'the chosen colours')
+  .replace(/\?$/, '');
+
+function sketchCard(it, where = 'chat') {
   const card = el('div', { class: 'sketch' });
   const cap = el('div', { class: 'cap' });
   const noun = it.kind === 'cut' ? (it.frame && it.frame.key ? 'the key moment' : `moment ${it.frame ? it.frame.order : ''}`) : 'sketch';
@@ -282,13 +299,18 @@ function sketchCard(it) {
   cap.append(el('span', {}, it.name), el('span', {}, state[it.status] || it.status));
   card.append(cap);
   if (it.status === 'ready') {
-    const img = el('img', { alt: it.kind === 'cut' ? `The moment: ${it.name}` : `Sketch of ${it.name}`, loading: 'lazy', src: `/api/sketch?id=${encodeURIComponent(session.id)}&item=${encodeURIComponent(it.id)}&v=${it.version}` });
+    const img = imageFor(`/api/sketch?id=${encodeURIComponent(session.id)}&item=${encodeURIComponent(it.id)}&v=${it.version}`, it.kind === 'cut' ? `The moment: ${it.name}` : `Sketch of ${it.name}`, where);
     card.append(img);
     const c = it.check;
     if (c && !c.error && c.questions) {
       const line = el('div', { class: `judge${c.failed.length ? ' miss' : ''}` });
       line.append('Judge: ', el('b', {}, `${c.passed} of ${c.questions}`), ' declared details seen');
-      if (c.failed.length) line.append(el('div', {}, `Not seen: ${c.failed.map((q) => q.replace(/^Does the image actually show this: /, '').replace(/\?$/, '')).join('; ')}`));
+      if (c.failed.length) {
+        const det = el('details');
+        det.append(el('summary', {}, 'what it didn’t see'));
+        for (const q of c.failed) det.append(el('div', {}, plainQuestion(q)));
+        line.append(det);
+      }
       card.append(line);
     } else if (c && c.error) card.append(el('div', { class: 'judge' }, 'Judge unavailable'));
     else if (cfg && cfg.judge) card.append(el('div', { class: 'judge' }, 'Judge checking…'));
@@ -313,14 +335,14 @@ function renderProduction() {
   if (build && build.frames && build.frames.length) {
     pane.append(el('h4', {}, 'The dream, in order'));
     const strip = el('div', { class: 'sketches' });
-    for (const f of [...build.frames].sort((a, b2) => a.frame.order - b2.frame.order)) strip.append(sketchCard(f));
+    for (const f of [...build.frames].sort((a, b2) => a.frame.order - b2.frame.order)) strip.append(sketchCard(f, 'panel'));
     pane.append(strip);
   }
   if (build) {
     pane.append(el('h4', {}, 'Sketches'));
     pane.append(el('p', { class: 'muted' }, `${session.images} drawn · $${(session.spentUsd || 0).toFixed(2)} at list price · limit ${cfg ? cfg.imageCap : 30} a dream${cfg ? ` · ${cfg.provider === 'fal' ? 'fal' : 'offline fixture, not real pictures'}` : ''}`));
     const grid = el('div', { class: 'sketches' });
-    for (const it of build.items) grid.append(sketchCard(it));
+    for (const it of build.items) grid.append(sketchCard(it, 'panel'));
     pane.append(grid);
   }
   if (d.status === 'ready') pane.append(el('p', { class: 'muted' }, `Drafted in ${Math.round((d.ms || 0) / 1000)} s from their first ${d.basedOn} messages. ${d.downgraded && d.downgraded.length ? `${d.downgraded.length} detail(s) the producer called "said" were not in their words, so they're marked as guesses.` : ''}`));
@@ -502,6 +524,7 @@ $('sessions').onchange = async (ev) => {
   if (!ev.target.value) return;
   session = { id: ev.target.value };
   await refresh();
+  $('chat').scrollTop = $('chat').scrollHeight;
   const last = session.turns.at(-1);
   if (last) selectTurn(last.turn);
 };

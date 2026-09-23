@@ -302,9 +302,20 @@ Each step ships on its own and is measured with the simulated dreamers before th
      Anything it can't find becomes a guess.
    - The engine's only open issue on every written production is "approve a reference for …":
      the sheets, which is step 3.
-3. **Sheets.** Profiles and their confirmation, the fal provider, the job ledger, the panel and the
-   judge badges.
-4. **Frames.** The key moment first, then story order. References, reactions and new versions.
+3. **Sheets.** *Built.* Profiles and their confirmation, the fal provider in the engine, the
+   image limit, the panel and the judge badges. Changes from the plan, each for a measured
+   reason:
+   - Each item gets one identity picture, not a sheet of views. Labelled grids came back with
+     "front view" and "side view" drawn in whatever the prompt said.
+   - Colours are named, not given as hex, after hex codes came back drawn as swatches.
+   - Jev removes story states from profiles, after a woman whose head turns to ice was drawn
+     with the ice.
+   - The judge only informs: there is no automatic redraw until it has been measured against
+     people's verdicts.
+4. **Frames.** *Built.* The key moment first, then story order, three at a time, each drawn
+   from the approved sketches of what is in it. Reactions and new versions work as for
+   sketches. Frames reference sketches only, not the previous frame: continuity chaining
+   (Strawberry's `continuity_from`) is the next improvement.
 5. **Waiting and polish.** Statuses in the brief, pacing, the cap and error states.
 
 ## Step 3 design: every item is a form

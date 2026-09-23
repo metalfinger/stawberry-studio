@@ -49,3 +49,16 @@ describe('the producer keeps the camera out of what happens', () => {
     expect(stripCamera('Closer and closer the ice melts')).toBe('Closer and closer the ice melts');
   });
 });
+
+describe('the ask goes last', () => {
+  test('a single question followed by a softener is moved to the end', () => {
+    const t = parseTurnResponse(
+      '{"response": ["an old man rowing in silence.", "was he a stranger?", "just a feeling, even if it made no sense."]}',
+    );
+    expect(t.messages).toEqual([
+      'an old man rowing in silence.',
+      'just a feeling, even if it made no sense.',
+      'was he a stranger?',
+    ]);
+  });
+});

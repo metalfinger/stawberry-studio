@@ -216,7 +216,7 @@ describe('a whole conversation', () => {
     const framesStarted: { id: string; refs: string[] }[] = [];
     let reaction: Record<string, Answer> = {};
     const statuses = new Map<string, string>();
-    let replies = ['confirmed', 'changes'];
+    let replies = ['changes'];
     const host = fakeHost();
     const store = new SessionStore(cfg, {
       jev: fakeJev((q) => {
@@ -254,6 +254,7 @@ describe('a whole conversation', () => {
         review: async ({ mediaId, approved }) => {
           verdicts.push([mediaId, approved]);
         },
+        retryCollection: async () => {},
         startFrame: async ({ item, references }) => {
           framesStarted.push({ id: item.id, refs: references.map((r) => `${r.role}:${r.media_id}`) });
           statuses.set(`job-${item.id}`, 'running');
@@ -272,19 +273,14 @@ describe('a whole conversation', () => {
     const brief5 = host.calls.at(-1)!.find((m) => m.content.startsWith('<brief>'))!.content;
     expect(brief5).toContain('how you picture the kitchen');
 
-    const t6 = await store.message(id, 'yes that is the kitchen');
-    expect(t6.move).toEqual({ kind: 'confirm_profile', itemId: 't1' });
+    // The kitchen is changed; the board, a thing, is sketched with it without its own question.
+    const t6 = await store.message(id, 'yes, but the kitchen had a checked floor');
+    expect([t6.move?.kind, t6.phase]).toEqual(['build_done', 'review']);
     expect(host.calls.at(-1)!.find((m) => m.content.startsWith('<brief>'))!.content).toContain(
-      "you're sketching the kitchen now",
+      "you're sketching the kitchen and the departure board now",
     );
-    expect(started.map((x) => x.name)).toEqual(['the kitchen']);
-
-    const t7 = await store.message(id, 'the board was enamelled tin, not metal slats');
-    expect([t7.move?.kind, t7.phase]).toEqual(['build_done', 'review']);
-    expect(started[1]).toEqual({
-      name: 'the departure board',
-      fields: { appearance: 'twenty black slats, all blank but one reading zikery', materials: 'enamelled tin' },
-    });
+    expect(started.map((x) => x.name)).toEqual(['the kitchen', 'the departure board']);
+    expect(started[0].fields.materials).toBe('enamelled tin');
     const s = store.get(id)!;
     expect([s.images, s.build?.items.map((i) => i.status)]).toEqual([2, ['drawing', 'drawing']]);
 

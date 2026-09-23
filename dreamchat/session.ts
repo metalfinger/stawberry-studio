@@ -529,11 +529,12 @@ export class SessionStore {
     // Building: the answer settles the profile on show, its sketch starts, and the next one is shown.
     if (move.kind === 'start') {
       const items = s.draft?.breakdown ? buildItems(s.draft.breakdown) : [];
-      if (!items.length || !this.deps.sheets || !this.deps.write) phase = 'ready';
+      const first = items.find((i) => i.kind !== 'prop') ?? items[0];
+      if (!items.length || !first || !this.deps.sheets || !this.deps.write) phase = 'ready';
       else {
-        items[0].status = 'confirming';
-        s.build = { items, current: items[0].id, checks: 0 };
-        extras.profile = profileOf(items[0]);
+        first.status = 'confirming';
+        s.build = { items, current: first.id, checks: 0 };
+        extras.profile = profileOf(first);
       }
     }
     if (s.build && (move.kind === 'confirm_profile' || move.kind === 'build_done')) {
@@ -542,7 +543,10 @@ export class SessionStore {
         if (overlaid.signals.profile_reply === 'changes' && this.deps.reviseItem)
           settling.fields = await this.deps.reviseItem(settling.name, settling.fields, renderTranscript(s.transcript));
         await this.startSketch(s, settling, turnNow);
-        extras.sketching = settling.name;
+        // Things go with the first profile settled: they are drawn from what was said, unasked.
+        const things = s.build.items.filter((i) => i.kind === 'prop' && i.status === 'waiting');
+        for (const t of things) await this.startSketch(s, t, turnNow);
+        extras.sketching = [settling.isDreamer ? 'you' : settling.name, ...things.map((t) => t.name)].join(' and ');
       }
       const next = move.kind === 'confirm_profile' ? s.build.items.find((i) => i.id === move.itemId) : undefined;
       if (next) {
@@ -714,9 +718,10 @@ export class SessionStore {
     );
   }
 
+  /** The next profile to show. Things are sketched without their own question. */
   private nextItem(b: Build): Item | undefined {
     const at = b.items.findIndex((i) => i.id === b.current);
-    return b.items.slice(at + 1).find((i) => i.status === 'waiting');
+    return b.items.slice(at + 1).find((i) => i.status === 'waiting' && i.kind !== 'prop');
   }
 
   /**
@@ -919,6 +924,22 @@ export class SessionStore {
               st = await sheets.status(it.jobId, it.nodeId);
             } catch {
               continue; // a failed check is retried on the next pass
+            }
+            // A picture made but not downloaded is collected again, at no cost, a couple of times
+            // before it counts as failed (a download from fal's CDN timed out once, 23 Sep).
+            if (st.state === 'collection_failed' && (it.collectRetries ?? 0) < 2) {
+              try {
+                await sheets.retryCollection(it.jobId);
+                await this.serial(id, () =>
+                  this.update(id, (x) => {
+                    const cur = [...(x.build?.items ?? []), ...(x.build?.frames ?? [])].find((i) => i.id === it.id);
+                    if (cur && cur.jobId === it.jobId) cur.collectRetries = (cur.collectRetries ?? 0) + 1;
+                  }),
+                );
+              } catch {
+                // retried on the next pass
+              }
+              continue;
             }
             const failed = ['failed', 'submission_unknown', 'collection_failed', 'cancelled'].includes(st.state);
             if (st.state !== 'ready' && !failed) continue;

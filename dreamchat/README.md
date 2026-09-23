@@ -1,8 +1,25 @@
 # Dream chat
 
-A chat that listens to someone's dream until it understands it, tells it back, asks whether
-they'd like to see it, lets them choose how it should look, and writes the production into
-Strawberry Studio. Steps 1 and 2 of `../DREAM_CHAT_PLAN.md`; nothing is drawn yet.
+A chat that turns someone's dream into pictures. It:
+- listens until it understands the dream, and tells it back;
+- asks whether they'd like to see it, and lets them choose how it should look;
+- confirms each person, place and thing with them, and sketches it;
+- draws the moments from those sketches, the key one first.
+
+Everything goes through Strawberry Studio's engine: the production, every recipe, approval,
+job, picture and check. Steps 1–4 of `../DREAM_CHAT_PLAN.md`.
+
+The conversation moves through these phases:
+
+| Phase | What happens | Pictures |
+|---|---|---|
+| Listening | They tell the dream; Berry follows, then asks about gaps | none |
+| Telling it back | Berry retells it; corrections are settled here | none |
+| Seeing it | "Would you like to see it?", then four ways it could look | none |
+| Drawing: profiles | Each person, place and thing is shown as Berry pictures it; confirmed or corrected | a sketch starts for each one settled |
+| Drawing: sketches | Finished sketches are shown; "looks right" approves one, a correction redraws it | redraws |
+| Drawing: moments | Frames drawn from the approved sketches, key moment first; the key one is asked about by name | one per moment, plus redraws |
+| Done | Berry says what was drawn, and honestly what couldn't be | none |
 
 Every turn works like this:
 
@@ -43,6 +60,13 @@ pnpm install          # once: type-checker and formatter only; the app has no de
 bun run server.ts     # http://127.0.0.1:8790, this machine only
 ```
 
+Pictures are drawn by the engine's own worker, which the server starts for its store (with
+`--allow-fal` when drawing with fal). Every paid picture is a Strawberry recipe, approved in
+the engine with the reason recorded (the person asked to see their dream and settled what is
+in it) and a ceiling of $0.20. The chat stops at the per-dream limit. A picture the person
+says looks right is approved in Strawberry and selected as the reference for everything it
+appears in. A correction rejects that take and draws the next version.
+
 The Strawberry engine must be installed at the repo root (`./install-studio.sh`, or just
 `python3 -m venv venv && venv/bin/pip install -r requirements-studio.txt`); without it the chat
 still runs and writes nothing. To look at what was written, open the viewer on the same store:
@@ -65,6 +89,9 @@ calls.
 | `DREAMCHAT_HOST_THINKING_DEEP` | `low` | for the turns that change phase: retelling, corrections, closing |
 | `DREAMCHAT_PRODUCER_THINKING` | `disabled` | the producer's thinking; `low` took 2–4× longer for the same breakdowns |
 | `DREAMCHAT_STRAWBERRY_HOME` | `dreamchat/strawberry-home` | where productions are written |
+| `DREAMCHAT_PROVIDER` | `fal` when `FAL_KEY` is set, else `fake` | `fake` draws labelled offline placeholders, at no cost |
+| `DREAMCHAT_IMAGE_CAP` | 30 | pictures per dream, at most ($4.50 at fal's list price) |
+| `DREAMCHAT_JUDGE_ENV` | `~/.config/strawberry/judge.env` | `JUDGE_URL` and `JUDGE_API_KEY` for the image judge on the PC |
 | `JEV_MODEL` | `jev-latest` | |
 
 ## Test
@@ -99,5 +126,9 @@ It writes the full transcripts to `runs/`.
 | `producer.ts` | The breakdown: story, people, places, things, look, ways to draw it; and the code that repairs its shape |
 | `ground.ts` | Jev's check that every detail marked as said is in the person's words |
 | `strawberry.ts` | Writes the production into Strawberry through its JSON CLI |
+| `sheets.ts` | Profiles, sketch prompts, and the engine calls that draw, approve and select them |
+| `frames.ts` | The moments: frame prompts and their references from the approved sketches |
+| `judge.py` | Bridge to the engine's remote judge, which checks a take against its declared facts |
+| `boot.ts` | Loads the keys before any module reads them |
 | `simulate.ts` | Simulated dreamers |
 | `produce.ts` | Runs the producer and the check on a saved simulated conversation |

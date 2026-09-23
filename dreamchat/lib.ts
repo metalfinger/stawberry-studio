@@ -442,6 +442,28 @@ export function phaseAfter(phase: Phase, move: Move): Phase {
 
 // ── Brief renderer — prose, never JSON ──────────────────────────────────────
 
+/** Moves whose question is set by the move itself. */
+const STRUCTURED = new Set<Move['kind']>([
+  'retell',
+  'retell_check',
+  'take_correction',
+  'offer_visualize',
+  'offer_later',
+  'choose_style',
+  'style_help',
+  'start',
+  'confirm_profile',
+  'profile_check',
+  'build_done',
+  'while_drawing',
+  'ask_which',
+  'sheets_done',
+  'frames_drawing',
+  'all_done',
+  'keep',
+  'wrap',
+]);
+
 const OPENING =
   'This is your FIRST message. They have not said anything yet. Greet them once, briefly, and invite them to tell you their dream, however it comes back to them. Nothing else: no questions about details, nothing about pictures.';
 
@@ -451,7 +473,7 @@ export type BriefExtras = {
   /** The first thing that would be drawn, in plain words ("the young woman"). */
   firstSubject?: string;
   /** The profile to show with this move: its name, what they said, and what was guessed. */
-  profile?: { name: string; kind: string; said: string[]; guessed: string[] };
+  profile?: { name: string; kind: string; said: string[]; guessed: string[]; dreamer?: boolean; unknownLook?: boolean };
   /** The sketch just started this turn, by name. */
   sketching?: string;
   /** Sketches that have finished since they last heard, by name. */
@@ -491,6 +513,9 @@ export function renderBrief(
     forgotten.length > 0 && `They don't remember: ${forgotten.join(', ')}. Don't ask about these again.`,
     !opts.opening && listening && (open.length ? `Not heard yet: ${open.join(', ')}.` : 'You have the whole story.'),
     `Move: ${renderMove(move, state, cfg, opts.extras ?? {})}`,
+    // A reply once added its own question to a move that already had one, and the one-ask repair
+    // then kept the wrong question (live test, 23 Sep).
+    STRUCTURED.has(move.kind) && 'Ask nothing except what this move says.',
   ].filter(Boolean);
 
   return `<brief>\n${lines.join('\n')}\n</brief>`;
@@ -498,6 +523,9 @@ export function renderBrief(
 
 /** How a profile is put to the person: what they said as fact, what was guessed as a guess. */
 function profileLine(p: NonNullable<BriefExtras['profile']>): string {
+  // They are seen in their own dream but never said what they look like: ask, gently.
+  if (p.dreamer && p.unknownLook)
+    return "say you'll draw them too, since they're in it, and ask gently how they'd like to be drawn: as they are (they can say a little about themselves), or however you imagine them. One question.";
   const said = p.said.length ? ` From what they told you: ${p.said.join('; ')}.` : '';
   const guessed = p.guessed.length
     ? ` You filled in (say plainly that these are your guesses): ${p.guessed.join('; ')}.`

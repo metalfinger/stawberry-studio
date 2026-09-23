@@ -113,6 +113,11 @@ export function framePrompt(
     feeling ? `It should feel: ${feeling}.` : '',
     point ? `The one thing this frame must show: ${point}.` : '',
     styleBlock(style),
+    // The ice-head frames came back with the whole woman made of ice (23 Sep): what the action
+    // changes, and nothing else, differs from the references.
+    references.length
+      ? 'Everyone and everything looks exactly as in their reference image, except for what this moment itself changes.'
+      : '',
     `One single picture, not a sheet or a grid. ${NO_WORDS}`,
   ]
     .filter(Boolean)

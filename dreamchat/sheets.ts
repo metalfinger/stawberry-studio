@@ -34,6 +34,8 @@ export type Item = {
    * objection); undefined while it waits. A correction rejects the version and draws a new one.
    */
   review?: 'approved' | 'left';
+  /** Downloads of the current take retried after failing. */
+  collectRetries?: number;
   /** The image judge's check of the current take: how many declared facts it saw. */
   check?: { questions: number; passed: number; failed: string[]; error?: string };
   /** For a moment: the asset nodes its frame shows, confirmed on the take when approved. */
@@ -64,14 +66,29 @@ const FIELD_WORDS: Record<string, string> = {
 };
 
 /** The profile as the person is shown it: what they said, and what was guessed. */
-export function profileOf(item: Item): { name: string; kind: string; said: string[]; guessed: string[] } {
+export function profileOf(item: Item): {
+  name: string;
+  kind: string;
+  said: string[];
+  guessed: string[];
+  dreamer?: boolean;
+  unknownLook?: boolean;
+} {
   const said: string[] = [];
   const guessed: string[] = [];
   for (const [k, d] of Object.entries(item.fields)) {
     if (!d.value) continue;
     (d.said ? said : guessed).push(`${FIELD_WORDS[k] ?? k}: ${d.value}`);
   }
-  return { name: item.name, kind: item.kind, said, guessed };
+  const looks = ['appearance', 'wardrobe'].some((k) => item.fields[k]?.said);
+  return {
+    name: item.isDreamer ? 'you' : item.name,
+    kind: item.kind,
+    said,
+    guessed,
+    dreamer: item.isDreamer,
+    unknownLook: item.isDreamer && !looks,
+  };
 }
 
 const NAMED: [string, number, number, number][] = [
@@ -201,6 +218,8 @@ export type SheetEngine = {
     /** The asset nodes the take shows. A sheet shows its own node; a frame, everything in view. */
     depicted: string[];
   }): Promise<void>;
+  /** Collect a finished picture again after its download failed. Costs nothing: no new generation. */
+  retryCollection(jobId: string): Promise<void>;
   /** Prepare, approve and queue a moment's frame, with the approved sheets as references. */
   startFrame(input: {
     item: Item;
@@ -276,6 +295,10 @@ export const liveSheets: SheetEngine = {
     if (!approved) return;
     const node = (await call('inspect', { id: nodeId })) as { node: { revision: number } };
     await call('select', { node_id: nodeId, media_id: mediaId, revision: node.node.revision });
+  },
+
+  async retryCollection(jobId) {
+    await call('retry_collection', { id: jobId });
   },
 
   async startFrame({ item, prompt, references, changes, source, reason, maxUsd }) {

@@ -248,6 +248,23 @@ describe('building, one profile at a time', () => {
   });
 });
 
+describe('briefs for the pictures', () => {
+  test('a dreamer who never said how they look is asked how to be drawn', () => {
+    const b = renderBrief(state({}), { kind: 'confirm_profile', itemId: 'p9' }, cfg, {
+      phase: 'build',
+      extras: { profile: { name: 'you', kind: 'character', said: [], guessed: [], dreamer: true, unknownLook: true } },
+    });
+    expect(b).toContain('ask gently how they');
+  });
+
+  test('a structured move asks nothing of its own', () => {
+    expect(renderBrief(state({}), { kind: 'offer_visualize' }, cfg, { phase: 'offer' })).toContain(
+      'Ask nothing except what this move says.',
+    );
+    expect(renderBrief(state({}), { kind: 'follow' }, cfg, { phase: 'listen' })).not.toContain('Ask nothing except');
+  });
+});
+
 describe('phases', () => {
   test('code moves the phase, the model never does', () => {
     expect(phaseAfter('listen', { kind: 'retell' })).toBe('retell');
