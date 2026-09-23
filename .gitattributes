@@ -1,2 +1,3 @@
 # run inside WSL from this working tree: must stay LF on a Windows checkout
 judge_host/scripts/*.sh text eol=lf
+judge_host/profiles/*.env text eol=lf
