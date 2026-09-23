@@ -186,11 +186,17 @@ export function framePrompt(
     if (!approved(s) || !s.mediaId) continue;
     if (s.kind === 'character') {
       const look = lookOf(s, ['appearance', 'wardrobe', 'distinctive_features']);
+      // A change that replaces part of them overrides their sheet for that part: told to keep
+      // her face, a moment drew her own face inside the block of ice that replaces her head (23 Sep).
+      const changed = (plan?.states ?? []).filter((st) => st.who === s.id);
+      const except = changed.length
+        ? ` Except ${changed.map((st) => `their ${st.what}, which is no longer theirs: it is now ${st.now}, with nothing of the old ${st.what} inside or behind it`).join('; ')}.`
+        : '';
       attach(
         s.mediaId,
         'identity',
         `${s.name}: this exact person, with the same face, build and clothes`,
-        `who ${who(s)} is${look ? ` (${look})` : ''}: their face, hair, build and clothes, exactly${base ? ', as Image 1 already shows them' : ''}. Nothing else from it: not its pose, background or framing.`,
+        `who ${who(s)} is${look ? ` (${look})` : ''}: their ${changed.some((st) => /head|face/i.test(st.what)) ? 'build and clothes' : 'face, hair, build and clothes'}, exactly${base ? ', as Image 1 already shows them' : ''}. Nothing else from it: not its pose, background or framing.${except}`,
       );
     } else if (s.kind === 'location') {
       // An edit base or an earlier picture of this side sets where things stand; a view ghost shows

@@ -211,3 +211,53 @@ describe('the dreamer in the words of a moment', () => {
     expect(framePrompt(seen, [], style).prompt).not.toContain('"You" in these words is the dreamer');
   });
 });
+
+describe('a change that replaces part of someone', () => {
+  test('their sheet gives the rest of them, never the part that changed', () => {
+    const woman: Item = {
+      id: 'p1',
+      kind: 'character',
+      name: 'the young woman',
+      fields: {},
+      status: 'ready',
+      version: 1,
+      mediaId: 'media-p1',
+      review: 'approved',
+    };
+    const moment: Item = {
+      id: 'm4',
+      kind: 'cut',
+      name: 'm4',
+      fields: { action: { value: 'The ice begins to melt.', said: true } },
+      status: 'waiting',
+      version: 0,
+      frame: {
+        visible: ['p1'],
+        things: [],
+        place: 'l1',
+        distance: 'close',
+        eyes: 'outside',
+        key: false,
+        order: 4,
+        plan: {
+          id: 'm4',
+          order: 4,
+          scene: 's1',
+          shot: 's1.sh4',
+          refs: [],
+          states: [{ who: 'p1', what: 'head', now: 'a block of ice', since: 'm3' }],
+          sheetLayout: true,
+          changes: [],
+          needs: [],
+          criteria: [],
+          depth: 1,
+          transition: '',
+          why: '',
+        },
+      },
+    };
+    const { prompt } = framePrompt(moment, [woman], style);
+    expect(prompt).toContain('who the young woman is: their build and clothes, exactly.');
+    expect(prompt).toContain('Except their head, which is no longer theirs: it is now a block of ice');
+  });
+});
