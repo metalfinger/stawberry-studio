@@ -1310,9 +1310,9 @@ class Studio:
             return path, row["mime_type"]
 
     def prepare(self, request: RecipeCreate):
-        from backend.studio.providers import FakeProvider, Higgsfield
+        from backend.studio.providers import provider_for
 
-        provider = FakeProvider(self.store.home / "fixtures") if request.provider == "fake" else Higgsfield()
+        provider = provider_for(request.provider, self.store.home)
         prepared = provider.prepare(request)
         with self.store.connection(write=True) as conn:
             node = self.store.one(conn, "nodes", request.node_id)

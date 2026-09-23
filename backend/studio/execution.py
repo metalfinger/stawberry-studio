@@ -3,7 +3,7 @@
 import json
 import time
 
-from backend.studio.providers import FakeProvider, Higgsfield
+from backend.studio.providers import provider_for
 from backend.studio.store import StudioError, digest, encoded
 
 HEARTBEAT_TTL = 30
@@ -31,7 +31,7 @@ class Execution:
     def _provider(self, name):
         if self.providers is not None:
             return self.providers[name]
-        return Higgsfield() if name == "higgsfield" else FakeProvider(self.store.home / "fixtures")
+        return provider_for(name, self.store.home)
 
     def status(self):
         now = self.clock()
@@ -48,6 +48,7 @@ class Execution:
             "workers": workers,
             "responsive": any(w["responsive"] for w in workers),
             "higgsfield_enabled": any(w["responsive"] and "higgsfield" in w["enabled_providers"] for w in workers),
+            "fal_enabled": any(w["responsive"] and "fal" in w["enabled_providers"] for w in workers),
             "remote_cancellation": False,
             "checked_at": now,
         }

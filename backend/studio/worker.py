@@ -9,18 +9,28 @@ from pathlib import Path
 
 from backend.studio.collection import download
 from backend.studio.execution import validate_cost
-from backend.studio.providers import FakeProvider, Higgsfield, ProviderRejected, SubmissionUnknown
+from backend.studio.providers import FakeProvider, Fal, Higgsfield, ProviderRejected, SubmissionUnknown
 from backend.studio.service import Studio
 from backend.studio.store import StudioError, encoded, identifier
 
 
 class Worker:
-    def __init__(self, studio: Studio, providers=None, *, allow_higgsfield=False, clock=time.time):
+    def __init__(self, studio: Studio, providers=None, *, allow_higgsfield=False, allow_fal=False, clock=time.time):
         self.studio, self.clock = studio, clock
         self.owner = identifier()
-        self.providers = providers or {"fake": FakeProvider(studio.store.home / "fixtures"), "higgsfield": Higgsfield()}
+        self.providers = providers or {
+            "fake": FakeProvider(studio.store.home / "fixtures"),
+            "higgsfield": Higgsfield(),
+            "fal": Fal(),
+        }
         self.allow_higgsfield = allow_higgsfield
+        self.allow_fal = allow_fal
         self.current_job = None
+
+    @property
+    def enabled_providers(self):
+        """Paid providers run only when switched on; the offline fixture always runs."""
+        return ["fake", *(["higgsfield"] if self.allow_higgsfield else []), *(["fal"] if self.allow_fal else [])]
 
     def pulse(self, *, stopped=False):
         now = self.clock()
@@ -30,7 +40,7 @@ class Worker:
                 (
                     self.owner,
                     os.getpid(),
-                    encoded(["fake", *(["higgsfield"] if self.allow_higgsfield else [])]),
+                    encoded(self.enabled_providers),
                     self.current_job,
                     now,
                     now if stopped else None,
@@ -98,13 +108,13 @@ class Worker:
             row = conn.execute(
                 """SELECT * FROM jobs WHERE
                 state IN ('queued','submitting','running','collecting')
-                AND (state<>'queued' OR ? OR recipe_id IN (
-                    SELECT id FROM recipes WHERE json_extract(spec,'$.provider')='fake'))
+                AND (state<>'queued' OR recipe_id IN (
+                    SELECT id FROM recipes WHERE json_extract(spec,'$.provider') IN (SELECT value FROM json_each(?))))
                 AND (owner IS NULL OR lease_until < ?)
                 AND (state='queued' OR updated_at <= ?)
                 AND (? IS NULL OR id=?)
                 ORDER BY updated_at LIMIT 1""",
-                (self.allow_higgsfield, now, now - 5, job_id, job_id),
+                (encoded(self.enabled_providers), now, now - 5, job_id, job_id),
             ).fetchone()
             if not row:
                 return False

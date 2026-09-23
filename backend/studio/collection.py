@@ -14,10 +14,21 @@ from backend.studio.store import StudioError, identifier
 MAX_BYTES = 256 * 1024 * 1024
 
 
+def tls_context():
+    """Verify against certifi's CA bundle when it is installed (it comes with httpx), as the
+    provider API calls already do. The interpreter's own store can be stale: python.org builds
+    on macOS ship without an up-to-date one, and refused fal's CDN chain as self-signed."""
+    try:
+        import certifi
+    except ImportError:
+        return ssl.create_default_context()
+    return ssl.create_default_context(cafile=certifi.where())
+
+
 class PinnedHTTPS(http.client.HTTPSConnection):
     def __init__(self, host, address, timeout):
         self.address = address
-        self.tls = ssl.create_default_context()
+        self.tls = tls_context()
         self.tls.set_alpn_protocols(["http/1.1"])
         super().__init__(host, 443, timeout=timeout, context=self.tls)
 

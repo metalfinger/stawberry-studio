@@ -55,6 +55,7 @@ def main():
     p = sub.add_parser("start", help="Build and run the local viewer, API and worker")
     p.add_argument("--port", type=int, default=8787)
     p.add_argument("--allow-higgsfield", action="store_true")
+    p.add_argument("--allow-fal", action="store_true", help="Enable paid fal execution; every recipe still requires approval")
     for name in (
         "project",
         "inspect",
@@ -108,6 +109,11 @@ def main():
         action="store_true",
         help="Enable paid provider execution; every recipe still requires approval",
     )
+    p.add_argument(
+        "--allow-fal",
+        action="store_true",
+        help="Enable paid fal execution; every recipe still requires approval",
+    )
     p = sub.add_parser("serve")
     p.add_argument("--port", type=int, default=8787)
     sub.add_parser("demo", help="Create an explicitly labeled offline three-cut fixture; no external calls")
@@ -122,7 +128,7 @@ def main():
         if args.command == "start":
             from backend.studio.launch import launch
 
-            launch(studio.store.home, args.port, args.allow_higgsfield)
+            launch(studio.store.home, args.port, args.allow_higgsfield, args.allow_fal)
             return
         if args.command == "serve":
             import uvicorn
@@ -134,7 +140,7 @@ def main():
         if args.command == "worker":
             from backend.studio.worker import Worker
 
-            worker = Worker(studio, allow_higgsfield=args.allow_higgsfield)
+            worker = Worker(studio, allow_higgsfield=args.allow_higgsfield, allow_fal=args.allow_fal)
             if not args.once:
                 worker.run()
                 return

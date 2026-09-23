@@ -11,7 +11,7 @@ import httpx
 from backend.studio.store import StudioError
 
 
-def launch(home: Path, port: int, allow_higgsfield: bool):
+def launch(home: Path, port: int, allow_higgsfield: bool, allow_fal: bool = False):
     with socket.socket() as probe:
         probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
@@ -30,7 +30,8 @@ def launch(home: Path, port: int, allow_higgsfield: bool):
     try:
         server = subprocess.Popen([*base, "serve", "--port", str(port)], cwd=root)
         processes.append(server)
-        worker = subprocess.Popen([*base, "worker", *(["--allow-higgsfield"] if allow_higgsfield else [])], cwd=root)
+        flags = [*(["--allow-higgsfield"] if allow_higgsfield else []), *(["--allow-fal"] if allow_fal else [])]
+        worker = subprocess.Popen([*base, "worker", *flags], cwd=root)
         processes.append(worker)
         for _ in range(40):
             if any(p.poll() is not None for p in processes):
@@ -48,6 +49,10 @@ def launch(home: Path, port: int, allow_higgsfield: bool):
         print(
             "Higgsfield execution: "
             + ("enabled; approved recipes only" if allow_higgsfield else "disabled; offline jobs only"),
+            flush=True,
+        )
+        print(
+            "fal execution: " + ("enabled; approved recipes only" if allow_fal else "disabled"),
             flush=True,
         )
         while all(p.poll() is None for p in processes):
