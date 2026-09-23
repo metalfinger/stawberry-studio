@@ -16,7 +16,8 @@ const FRAMING: Record<Moment['distance'], string> = {
 };
 
 // A "little round convertible" came back with a real maker's badge on its bonnet (23 Sep).
-const NO_WORDS = 'Do not write any words, letters, numbers or labels anywhere in the image, and no logos or brand badges.';
+const NO_WORDS =
+  'Do not write any words, letters, numbers or labels anywhere in the image, and no logos or brand badges.';
 
 /**
  * Writing the dream itself contains, from quoted words in the moment: 'zikery' on a board.
@@ -246,6 +247,10 @@ export function framePrompt(
     lines.length ? `In this frame:\n${lines.join('\n')}` : '',
     states.length ? `Still so from earlier in the dream: ${states.join('; ')}.` : '',
     purpose ? `Its part in the story: ${purpose}.` : '',
+    // The judge's findings on the last attempt, when it was drawn again for them.
+    frame.repairFor?.length
+      ? `The last attempt at this frame got these wrong. This time each must be true:\n${frame.repairFor.map((q) => `- ${q}`).join('\n')}`
+      : '',
     feeling ? `It should feel: ${feeling}.` : '',
     point ? `The one thing this frame must show: ${point}.` : '',
     styleBlock(style, toldColours(frame, ...inView)),
@@ -253,6 +258,11 @@ export function framePrompt(
     // changes, and nothing else, differs from the references.
     references.length
       ? 'Everyone and everything looks exactly as in their reference images, except for what this moment itself changes and what is still so from earlier.'
+      : '',
+    // A style's "double exposure" plus an earlier picture put a house's roof through the walls of
+    // a tiny room (23 Sep): an earlier picture gives only what it is attached for.
+    usable.some((x) => x.use.kind === 'cut')
+      ? 'Nothing from another picture shows through this one: no other place, sky, wall or person is layered or double-exposed into it, whatever the style.'
       : '',
     // The dream's writing can live in what is in view as well as in the action: a frame of the
     // board without the word quoted in its action came back reading "NONSENSICAL" (23 Sep).

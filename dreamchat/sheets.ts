@@ -45,6 +45,9 @@ export type Item = {
   redrawBecause?: string;
   /** Still drawing from a version the person has since corrected: drawn again once it lands. */
   stale?: boolean;
+  /** Redraws the judge asked for, and what the last one was to put right. */
+  repairs?: number;
+  repairFor?: string[];
   /** For a ghost: what it shows, what it is edited from, and which moments use it. */
   ghost?: GhostPlan;
   /** For a ghost: the planned requirement on its asset that its take covers. */
@@ -54,7 +57,14 @@ export type Item = {
   /** Downloads of the current take retried after failing. */
   collectRetries?: number;
   /** The image judge's check of the current take: how many declared facts it saw. */
-  check?: { questions: number; passed: number; failed: string[]; error?: string; unseen?: string[] };
+  check?: {
+    questions: number;
+    passed: number;
+    failed: string[];
+    error?: string;
+    unseen?: string[];
+    failedIds?: string[];
+  };
   /** Why a moment can't be drawn from yet without the person's verdict. */
   waitsForPerson?: string;
   /** For a moment: the asset nodes its frame shows, confirmed on the take when approved. */

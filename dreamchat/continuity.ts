@@ -168,11 +168,17 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
       matchFrame = ms[i - 1].id;
     }
 
-    // 2. The story's own link, in the role the camera move allows.
+    // 2. The story's own link, in the role the camera move allows. From another place it gives
+    // only how people look now, which their sheets already give unless something has changed
+    // on them: then it stays out, since its background bleeds in (a house came through the walls
+    // of a tiny room as a double exposure, 23 Sep).
     const from = m.from ? byId.get(m.from) : undefined;
     if (from && index.get(from.id)! < i) {
       const r = rel.get(from.id) as Relation;
-      add(from, ROLE[r], r);
+      const carriesChange = (m.states ?? []).some(
+        (st) => index.get(from.id)! >= index.get(st.since)! && inViewAt(from).has(st.who),
+      );
+      if (r !== 'other_place' || carriesChange) add(from, ROLE[r], r);
     }
 
     // 3. The room: when nothing yet shows this place from this side, the widest cut that does.

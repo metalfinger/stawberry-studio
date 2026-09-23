@@ -10,6 +10,7 @@ import { callJev, jevAvailable } from './jev';
 import { callHost, HOST_MODEL } from './llm';
 import { proposeLook, reviseItem } from './producer';
 import { IMAGE_CAP, liveProducer, ownStyle, SessionStore } from './session';
+import { assistantJudge, judgeKind } from './judge';
 import { judgeAvailable, judgeContinuity, judgeTake, liveSheets, PROVIDER, spawnWorker } from './sheets';
 import { REPO, STRAWBERRY_HOME, STRAWBERRY_PYTHON, strawberryAvailable, writeProduction } from './strawberry';
 
@@ -24,8 +25,9 @@ const store = new SessionStore(cfg, {
   sheets: strawberryAvailable() ? liveSheets : undefined,
   reviseItem,
   proposeLook,
-  judge: judgeAvailable() ? judgeTake : undefined,
-  judgeContinuity: judgeAvailable() ? judgeContinuity : undefined,
+  // The assistant is the judge unless the PC's judge is asked for (DREAMCHAT_JUDGE=pc).
+  judge: judgeKind === 'assistant' ? assistantJudge : judgeKind === 'pc' && judgeAvailable() ? judgeTake : undefined,
+  judgeContinuity: judgeKind === 'pc' && judgeAvailable() ? judgeContinuity : undefined,
   dir: join(import.meta.dir, 'state'),
 });
 // The engine's own worker draws the sketches the chat queues, for this store only.
@@ -68,7 +70,7 @@ const server = Bun.serve({
           jev: jevAvailable(),
           strawberry: strawberryAvailable() ? STRAWBERRY_HOME : null,
           provider: PROVIDER,
-          judge: judgeAvailable(),
+          judge: judgeKind === 'assistant' ? 'assistant' : judgeKind === 'pc' && judgeAvailable() ? 'pc' : false,
           imageCap: IMAGE_CAP,
         });
 

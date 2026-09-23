@@ -2,3 +2,4 @@ node_modules/
 state/
 runs/
 strawberry-home/
+judge-queue/

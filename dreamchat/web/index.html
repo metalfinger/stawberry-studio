@@ -324,7 +324,7 @@ function sketchCard(it, where = 'chat') {
       }
       card.append(line);
     } else if (c && c.error) card.append(el('div', { class: 'judge' }, 'Judge unavailable'));
-    else if (cfg && cfg.judge) card.append(el('div', { class: 'judge' }, 'Judge checking…'));
+    else if (cfg && cfg.judge && (it.kind === 'cut' || cfg.judge === 'pc')) card.append(el('div', { class: 'judge' }, 'Judge checking…'));
     const k = it.continuity;
     if (k && !k.error && k.questions) {
       const line = el('div', { class: `judge${k.failed.length ? ' miss' : ''}` });

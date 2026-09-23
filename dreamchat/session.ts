@@ -54,6 +54,7 @@ import {
 import { type ContinuityPlan, drawOrder, planContinuity } from './continuity';
 import { buildFrames, buildGhosts, type FrameReference, framePrompt, ghostPrompt, type PlannedInput } from './frames';
 import { type Check, type Item, profileOf, type SheetEngine } from './sheets';
+import type { JudgedCheck, JudgeOptions } from './judge';
 import type { WriteResult } from './strawberry';
 
 export type Entry = { role: 'user' | 'assistant'; content: string; messages?: string[] };
@@ -114,6 +115,8 @@ const MAX_USD_PER_IMAGE = 0.2;
 
 /** Frames drawing at once, at most; the rest wait their turn. */
 const FRAMES_AT_ONCE = 3;
+/** Automatic redraws of a moment the judge failed, before the person sees it. */
+const MAX_REPAIRS = 1;
 
 /**
  * The people, places and things being confirmed and sketched, in Strawberry's order; then the
@@ -187,7 +190,7 @@ export type StoreDeps = {
   /** How often a running sketch is checked, in ms. */
   watchEveryMs?: number;
   /** The image judge: checks a finished take against its declared facts. Absent: no check. */
-  judge?: (mediaId: string, opts?: { facts?: boolean }) => Promise<Check>;
+  judge?: (mediaId: string, opts?: JudgeOptions) => Promise<JudgedCheck | null>;
   /** Words for a person's look when nobody described it, filled in as guesses before the sketch. */
   proposeLook?: (name: string, fields: Record<string, Detail>, transcript: string) => Promise<Record<string, Detail>>;
   /** The continuity check: a take beside the pictures it was drawn from. Absent: no check. */
@@ -1202,7 +1205,13 @@ export class SessionStore {
    * the item's reference; a rejected one stays on record as rejected. Runs in the background;
    * a failure is noted on the item.
    */
-  private reviewSketch(s: Session, item: Item, verdict: 'approved' | 'left' | 'rejected', decision: string): void {
+  private reviewSketch(
+    s: Session,
+    item: Item,
+    verdict: 'approved' | 'left' | 'rejected',
+    decision: string,
+    author: 'human' | 'assistant' = 'human',
+  ): void {
     if (verdict !== 'rejected') item.review = verdict;
     if (!this.deps.sheets || !item.mediaId || !item.nodeId) return;
     const done = this.deps.sheets
@@ -1211,6 +1220,7 @@ export class SessionStore {
         nodeId: item.nodeId,
         approved: verdict !== 'rejected',
         decision,
+        author,
         depicted: item.kind === 'cut' ? (item.depicted ?? []) : [item.nodeId],
       })
       .catch((e) =>
@@ -1309,31 +1319,36 @@ export class SessionStore {
     if (!judge || !it || it.status !== 'ready' || !it.mediaId || this.judged.has(it.mediaId)) return;
     const mediaId = it.mediaId;
     this.judged.add(mediaId);
-    let check: Check;
+    // A moment is also checked against the pictures it was drawn from: the same room, the same
+    // people, the change still there.
+    const checks = (it.frame?.plan?.criteria ?? [])
+      .map((c) => ({ ...c, with: c.with ? (b?.frames?.find((f) => f.id === c.with)?.mediaId ?? '') : null }))
+      .filter((c) => c.with !== '');
+    let check: JudgedCheck | null;
     try {
       // A moment's check is its facts record: what the chat approves it for continuity on.
-      check = await judge(mediaId, { facts: it.kind === 'cut' });
+      check = await judge(mediaId, { facts: it.kind === 'cut', continuity: it.kind === 'cut' ? checks : [] });
     } catch (e) {
       check = { questions: 0, passed: 0, failed: [], error: String(e).slice(0, 200) };
     }
+    if (!check) return;
+    const answered = check;
     await this.serial(id, async () => {
       const x = structuredClone(this.require(id));
       const cur = [...(x.build?.items ?? []), ...(x.build?.frames ?? [])].find((i) => i.id === itemId);
       if (!cur || cur.mediaId !== mediaId) return;
-      cur.check = check;
+      const { continuity, ...facts } = answered;
+      cur.check = facts;
+      if (continuity) cur.continuity = continuity;
       if (cur.kind === 'cut') {
-        await this.vouch(x, cur);
+        if (!(await this.repair(x, cur))) await this.vouch(x, cur);
         await this.fillFrames(x, x.turns.at(-1)?.turn ?? 0);
       }
       await this.save(x);
     });
     if (this.sessions.get(id)?.build?.frames?.some((f) => f.status === 'drawing')) this.watch(id);
-    // A moment is also checked against the pictures it was drawn from: the same room, the same
-    // people, the change still there. Informs, like the badge; decides nothing.
-    const checks = (it.frame?.plan?.criteria ?? [])
-      .map((c) => ({ ...c, with: c.with ? (b?.frames?.find((f) => f.id === c.with)?.mediaId ?? '') : null }))
-      .filter((c) => c.with !== '');
-    if (!this.deps.judgeContinuity || it.kind !== 'cut' || !checks.length) return;
+    // A judge that sees one image at a time is asked about continuity on its own.
+    if (answered.continuity || !this.deps.judgeContinuity || it.kind !== 'cut' || !checks.length) return;
     let continuity: Check;
     try {
       continuity = await this.deps.judgeContinuity(mediaId, checks);
@@ -1346,6 +1361,41 @@ export class SessionStore {
         if (cur && cur.mediaId === mediaId) cur.continuity = continuity;
       }),
     );
+  }
+
+  /**
+   * One repair per moment. When the judge finds someone or something missing, a changed look not
+   * carried, or a person or room not matching what the moment was drawn from, the take is
+   * rejected and the moment drawn once more with those failures as its correction, before the
+   * person has had to point them out. A second failure is left for the person: never a loop.
+   */
+  private async repair(s: Session, it: Item): Promise<boolean> {
+    if (it.review || (it.repairs ?? 0) >= MAX_REPAIRS || !it.mediaId || !it.nodeId) return false;
+    const c = it.check;
+    if (!c || c.error) return false;
+    // Who or what is missing, a changed look not carried, the wrong clothes or features, a broken
+    // body; and a person or room that does not match what the moment follows.
+    const SERIOUS = ['cast', 'location', 'prop', 'state', 'wardrobe', 'features', 'pose'];
+    const serious = [
+      ...c.failed.filter((_, i) => SERIOUS.includes((c.failedIds?.[i] ?? '').split(':')[0])),
+      ...(it.continuity?.failed ?? []).filter((q) =>
+        /same person|same side|same place|same view|keep the first/.test(q),
+      ),
+    ];
+    if (!serious.length) return false;
+    it.repairs = (it.repairs ?? 0) + 1;
+    it.repairFor = serious.slice(0, 6);
+    this.reviewSketch(
+      s,
+      it,
+      'rejected',
+      `The judge found, before the person had to: ${serious.join(' | ').slice(0, 800)}`,
+      'assistant',
+    );
+    it.announced = false;
+    it.continuityApproved = false;
+    await this.startFrame(s, it, it.startedAtTurn ?? 0);
+    return true;
   }
 
   private async update(id: string, fn: (s: Session) => void): Promise<void> {

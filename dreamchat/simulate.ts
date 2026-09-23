@@ -13,6 +13,7 @@ import { callJev } from './jev';
 import { callDeepseek, callHost, type ChatMessage } from './llm';
 import { details, moments, proposeLook, reviseItem } from './producer';
 import { liveProducer, ownStyle, SessionStore } from './session';
+import { assistantJudge, judgeKind } from './judge';
 import { judgeAvailable, judgeContinuity, judgeTake, liveSheets, PROVIDER, spawnWorker } from './sheets';
 import { REPO, STRAWBERRY_HOME, STRAWBERRY_PYTHON, strawberryAvailable, writeProduction } from './strawberry';
 
@@ -35,7 +36,7 @@ How to behave:
 - If they ask whether you'd like to see it drawn, say yes.
 - If they offer ways it could be drawn, pick the one closest to how the dream looked to you, in a few words.
 - If they describe how they picture someone or something from your dream, say whether that fits. If a detail is wrong against the dream above, correct it; if the dream doesn't say, tell them to go with their guess.
-- When they say a picture is up and ask how it looks, you can't see it: say it looks right, briefly, unless what they describe contradicts your dream.
+- When they say a picture is up and ask how it looks: if you're told below what you see in it, react to that as you would to a picture of your own dream: say plainly what's wrong ("the aunt isn't in it", "she's wearing different clothes than in the last one"), or that it looks right. If you're not told, say it looks right, briefly, unless what they describe contradicts your dream.
 
 Reply with only your next message, nothing else.`;
 
@@ -44,6 +45,33 @@ const FILM_WORDS =
   /\b(shots?|scenes?|frames?|angles?|palettes?|cinematic|composition|storyboard|character sheets?|lens)\b/gi;
 
 type Report = Awaited<ReturnType<typeof run>>;
+
+/**
+ * What the simulated dreamer sees in the moments on show: the judge's findings, as a person
+ * would notice them. The dreamer can't see images; the judge (the assistant) can, so its answers
+ * stand in for their eyes, and a real flaw gets the correction a real person would give. Waits
+ * for the judge on every moment on show, so no flaw is waved through unseen.
+ */
+async function lookAt(store: SessionStore, id: string): Promise<string> {
+  const until = Date.now() + Number(process.env.DREAMCHAT_SIM_LOOK_MS ?? 20 * 60_000);
+  for (;;) {
+    const frames = (store.view(id)?.build?.frames ?? []).filter(
+      (f) => f.kind === 'cut' && f.status === 'ready' && f.announced && !f.review,
+    );
+    const judged = frames.filter((f) => f.check);
+    if (judged.length === frames.length || Date.now() > until) {
+      return judged
+        .map((f) => {
+          const wrong = [...(f.check?.failed ?? []), ...(f.continuity?.failed ?? [])];
+          return wrong.length
+            ? `in the picture of "${f.name}", something is off: ${wrong.map((q) => q.replace(/\?$/, '')).join('; ')} — the answer to each is no.`
+            : `the picture of "${f.name}" looks the way you remember.`;
+        })
+        .join(' ');
+    }
+    await Bun.sleep(3000);
+  }
+}
 
 async function run(file: string, max: number) {
   const slug = basename(file, '.md');
@@ -62,8 +90,9 @@ async function run(file: string, max: number) {
     sheets: strawberryAvailable() ? liveSheets : undefined,
     reviseItem,
     proposeLook,
-    judge: judgeAvailable() ? judgeTake : undefined,
-    judgeContinuity: judgeAvailable() ? judgeContinuity : undefined,
+    // The assistant is the judge unless the PC's judge is asked for (DREAMCHAT_JUDGE=pc).
+    judge: judgeKind === 'assistant' ? assistantJudge : judgeKind === 'pc' && judgeAvailable() ? judgeTake : undefined,
+    judgeContinuity: judgeKind === 'pc' && judgeAvailable() ? judgeContinuity : undefined,
     // Kept beside the web page's own conversations, so a simulated run can be opened there,
     // pictures, plan and all, after the page is restarted.
     dir: join(import.meta.dir, 'state'),
@@ -81,10 +110,13 @@ async function run(file: string, max: number) {
     const r = await store.message(id, reply);
     listener = r.messages.join('\n');
     closed = r.closed;
-    // Pictures take a minute: a person would wait for them before answering about them.
+    // Pictures take a minute: a person would wait for them before answering about them, and
+    // looks at them before saying whether they're right.
     if (!closed && (r.phase === 'review' || r.phase === 'frames')) {
       await store.settle(id);
       listener += '\n(the pictures have appeared on the right)';
+      const seen = await lookAt(store, id);
+      if (seen) listener += `\n\n(What you see in the pictures on the right, which only you know: ${seen})`;
     }
   }
 

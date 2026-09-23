@@ -627,7 +627,7 @@ function renderMove(move: Move, state: State, cfg: GoalsFile, extras: BriefExtra
             ? `More of the dream is up on the right (${extras.finished.join('; ')}). Ask if it looks the way they remember.`
             : "The rest of the moments are still being drawn; if they ask, say they'll appear on the right soon.",
         extras.waitsOnThem?.length
-          ? `The next moments carry on from ${extras.waitsOnThem.join(' and ')}, so they're drawn once they say it looks right, or what to change. Say that simply, in passing.`
+          ? `The next moments carry on from ${extras.waitsOnThem.join(' and ')}, so they're drawn once they say it looks right, or what to change. If you haven't said so already, say it once, simply, in passing.`
           : '',
       ];
       return `frames_drawing. ${parts.filter(Boolean).join(' ')}`;
@@ -645,7 +645,7 @@ function renderMove(move: Move, state: State, cfg: GoalsFile, extras: BriefExtra
     case 'ask_which':
       return `ask_which. They reacted to a sketch but it isn't clear which. Ask which one they mean${extras.shown?.length ? `: ${extras.shown.join(', ')}` : ''}.`;
     case 'sheets_done':
-      return `sheets_done. ${extras.approved?.length ? `Take in that they're happy with ${extras.approved.join(' and ')}. ` : ''}Everyone and everything is sketched now. Tell them you'll start drawing the moments of the dream, beginning with the one they'd pause on; they'll appear on the right. No question needed.`;
+      return `sheets_done. ${extras.approved?.length ? `Take in that they're happy with ${extras.approved.join(' and ')}. ` : ''}Everyone and everything is sketched now. Tell them you'll draw the moments of the dream in order, each carrying on from the ones before it, and they'll appear on the right as they're ready. No question needed.`;
     case 'keep':
       return "keep. They'd rather not see it drawn, and that's fine. Thank them for sharing their dream, warmly and briefly. Don't ask anything.";
     case 'wrap':

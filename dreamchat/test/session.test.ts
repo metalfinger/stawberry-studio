@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { dreamConfig } from '../dream';
 import type { Answer, Question } from '../jev';
 import type { Breakdown } from '../producer';
-import { SessionStore } from '../session';
+import { SessionStore, type StoreDeps } from '../session';
 import { fakeHost, fakeJev, noul, pick, told } from './fakes';
 
 const cfg = dreamConfig();
@@ -416,17 +416,19 @@ describe('a whole conversation', () => {
     expect(store.get(id)!.images).toBe(8);
   });
 
-  test('without a judge, a moment drawn from another waits for their verdict on it', async () => {
-    const framesStarted: { id: string; refs: string[] }[] = [];
+  /** A conversation taken to the moments, with the engine and the judge faked as asked. */
+  async function toTheMoments(judge?: StoreDeps['judge']) {
+    const framesStarted: { id: string; refs: string[]; prompt: string }[] = [];
     const verdicts: [string, boolean, string][] = [];
-    let reaction: Record<string, Answer> = {};
+    const reaction: { now: Record<string, Answer> } = { now: {} };
     const statuses = new Map<string, string>();
+    const versions = new Map<string, number>();
     const host = fakeHost();
     const store = new SessionStore(cfg, {
       jev: fakeJev((q) => {
         const out = script(q);
         if (q.profile_reply) out.profile_reply = pick('confirmed');
-        if (q.sketch_reaction) Object.assign(out, reaction);
+        if (q.sketch_reaction) Object.assign(out, reaction.now);
         return out;
       }),
       host,
@@ -446,20 +448,28 @@ describe('a whole conversation', () => {
           statuses.set(`job-${item.id}`, 'running');
           return { recipeId: `r-${item.id}`, jobId: `job-${item.id}`, usd: 0.15 };
         },
-        status: async (jobId, nodeId) =>
-          statuses.get(jobId) === 'ready'
-            ? { state: 'ready', mediaId: `media-${nodeId}-${jobId}`, mediaPath: `${nodeId}.png` }
-            : { state: 'running' },
+        status: async (jobId, nodeId) => {
+          const v = versions.get(jobId) ?? 1;
+          return statuses.get(jobId) === 'ready'
+            ? {
+                state: 'ready',
+                mediaId: `media-${nodeId}-${jobId}${v > 1 ? `-v${v}` : ''}`,
+                mediaPath: `${nodeId}.png`,
+              }
+            : { state: 'running' };
+        },
         review: async ({ mediaId, approved, author }) => {
           verdicts.push([mediaId, approved, author ?? 'human']);
         },
         retryCollection: async () => {},
-        startFrame: async ({ item, references }) => {
-          framesStarted.push({ id: item.id, refs: references.map((r) => `${r.role}:${r.media_id}`) });
+        startFrame: async ({ item, references, prompt }) => {
+          framesStarted.push({ id: item.id, refs: references.map((r) => `${r.role}:${r.media_id}`), prompt });
           statuses.set(`job-${item.id}`, 'running');
+          versions.set(`job-${item.id}`, item.version);
           return { recipeId: `r-${item.id}`, jobId: `job-${item.id}`, usd: 0.15 };
         },
       },
+      judge,
       watchEveryMs: 10,
     });
     const { id } = store.create();
@@ -477,12 +487,17 @@ describe('a whole conversation', () => {
     statuses.set('job-t1', 'ready');
     await store.settle(id);
     await store.message(id, 'ooh');
-    reaction = { sketch_reaction: pick('looks_right') };
+    reaction.now = { sketch_reaction: pick('looks_right') };
     const toFrames = await store.message(id, 'both look right');
     expect([toFrames.move?.kind, toFrames.phase]).toEqual(['sheets_done', 'frames']);
+    await store.settle(id, 50);
+    return { store, id, framesStarted, verdicts, statuses, host, reaction };
+  }
+
+  test('without a judge, a moment drawn from another waits for their verdict on it', async () => {
+    const { store, id, framesStarted, verdicts, statuses, host, reaction } = await toTheMoments();
 
     // The wide is drawn and lands; with no judge to vouch for it, the close-up drawn from it waits.
-    await store.settle(id, 50);
     statuses.set('job-m1', 'ready');
     await store.settle(id, 100);
     expect(framesStarted.map((f) => f.id)).toEqual(['m1']);
@@ -492,18 +507,52 @@ describe('a whole conversation', () => {
     ]);
 
     // Shown, the reply says what carries on from it; their "looks right" lets the close-up go on.
-    reaction = {};
+    reaction.now = {};
     await store.message(id, 'can I see them?');
     expect(host.calls.at(-1)!.find((m) => m.content.startsWith('<brief>'))!.content).toContain(
       'The next moments carry on from The kitchen, with the board on the wall',
     );
-    reaction = { sketch_reaction: pick('looks_right'), ok_m1: noul(0.9) };
+    reaction.now = { sketch_reaction: pick('looks_right'), ok_m1: noul(0.9) };
     await store.message(id, 'yes, that is my kitchen');
     expect(verdicts.at(-1)).toEqual(['media-cut-m1-job-m1', true, 'human']);
-    expect(framesStarted.at(-1)).toEqual({
+    expect(framesStarted.at(-1)).toMatchObject({
       id: 'm2',
       refs: ['prop:media-node-t1-job-t1', 'location:media-node-l1-job-l1', 'composition:media-cut-m1-job-m1'],
     });
+  });
+
+  test('a moment the judge fails is drawn once more with what was wrong, then released on a pass', async () => {
+    const judged: string[] = [];
+    const { store, id, framesStarted, verdicts, statuses } = await toTheMoments(async (mediaId, opts) => {
+      // Like the assistant judge: only moments are asked about.
+      if (!opts?.facts) return null;
+      judged.push(mediaId);
+      // The first take of the wide has no board in it; the second has.
+      return mediaId === 'media-cut-m1-job-m1'
+        ? {
+            questions: 4,
+            passed: 3,
+            failed: ['Is the departure board visible?'],
+            failedIds: ['prop:node-t1'],
+            unseen: ['Is the departure board visible?'],
+          }
+        : { questions: 4, passed: 4, failed: [], failedIds: [], unseen: [] };
+    });
+    statuses.set('job-m1', 'ready');
+    await store.settle(id, 150);
+    // Rejected as the assistant, and drawn again with the finding as its correction.
+    expect(verdicts).toContainEqual(['media-cut-m1-job-m1', false, 'assistant']);
+    expect(framesStarted.map((f) => f.id)).toEqual(['m1', 'm1']);
+    expect(framesStarted[1].prompt).toContain(
+      'The last attempt at this frame got these wrong. This time each must be true:\n- Is the departure board visible?',
+    );
+    // The second take passes: approved for continuity on the judge's word, and the close-up goes on.
+    statuses.set('job-m1', 'ready');
+    await store.settle(id, 150);
+    expect(judged).toEqual(['media-cut-m1-job-m1', 'media-cut-m1-job-m1-v2']);
+    expect(verdicts.at(-1)).toEqual(['media-cut-m1-job-m1-v2', true, 'assistant']);
+    expect(framesStarted.map((f) => f.id)).toEqual(['m1', 'm1', 'm2']);
+    expect(store.get(id)!.build!.frames![0]).toMatchObject({ repairs: 1, version: 2 });
   });
 
   test('each probe is counted, and a goal is asked at most twice', async () => {
