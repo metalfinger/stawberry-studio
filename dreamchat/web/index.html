@@ -415,7 +415,8 @@ function renderProduction() {
   }
   if (build) {
     pane.append(el('h4', {}, 'Sketches'));
-    pane.append(el('p', { class: 'muted' }, `${session.images} drawn · $${(session.spentUsd || 0).toFixed(2)} at list price · limit ${cfg ? cfg.imageCap : 30} a dream${cfg ? ` · ${cfg.provider === 'fal' ? 'fal' : 'offline fixture, not real pictures'}` : ''}`));
+    const spent = [session.spentUsd ? `$${session.spentUsd.toFixed(2)} at fal's list price` : '', session.spentCredits ? `${session.spentCredits} Higgsfield credits` : ''].filter(Boolean).join(' · ') || 'nothing spent';
+    pane.append(el('p', { class: 'muted' }, `${session.images} drawn · ${spent} · limit ${cfg ? cfg.imageCap : 30} a dream${cfg ? ` · ${cfg.provider === 'fal' ? 'fal' : cfg.provider === 'higgsfield' ? 'Higgsfield' : 'offline fixture, not real pictures'}` : ''}`));
     const grid = el('div', { class: 'sketches' });
     for (const it of build.items) grid.append(sketchCard(it, 'panel'));
     pane.append(grid);

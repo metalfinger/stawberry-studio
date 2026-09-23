@@ -68,5 +68,5 @@ for (const f of s?.build?.frames ?? [])
   console.log(
     `${f.kind === 'ghost' ? 'ghost' : `frame ${f.frame?.order}`} ${f.id} ${f.status} v${f.version}${f.mediaPath ? ` ${join(STRAWBERRY_HOME, 'media', f.mediaPath)}` : ''}${f.error ? ` (${f.error.slice(0, 160)})` : ''}${f.check ? ` facts ${f.check.passed}/${f.check.questions}` : ''}${f.continuity ? ` continuity ${f.continuity.passed}/${f.continuity.questions}` : ''}`,
   );
-console.log(`images ${s?.images} · spent ${s?.spentUsd}`);
+console.log(`images ${s?.images} · $${(s?.spentUsd ?? 0).toFixed(2)} at fal's list price · ${s?.spentCredits ?? 0} Higgsfield credits`);
 process.exit(0);

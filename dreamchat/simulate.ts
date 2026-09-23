@@ -217,6 +217,7 @@ async function run(file: string, max: number) {
     })),
     images: s.images,
     spentUsd: s.spentUsd,
+    spentCredits: s.spentCredits ?? 0,
     avgJudgeMs: Math.round(turns.reduce((n, t) => n + t.jevMs, 0) / Math.max(turns.length, 1)),
     avgReplyMs: Math.round(turns.reduce((n, t) => n + t.hostMs, 0) / Math.max(turns.length, 1)),
     transcript: s.transcript.map((e) => `${e.role === 'user' ? 'dreamer' : 'Berry'}: ${e.content}`),
@@ -285,7 +286,7 @@ function print(r: Report) {
   }
   for (const k of r.sketches)
     console.log(`  sketch ${k.name}: ${k.status}${k.error ? ` (${k.error})` : ''}${k.file ? ` ${k.file}` : ''}`);
-  console.log(`images ${r.images} · $${r.spentUsd.toFixed(2)} at list price`);
+  console.log(`images ${r.images} · $${r.spentUsd.toFixed(2)} at fal's list price · ${r.spentCredits ?? 0} Higgsfield credits`);
   const p = r.production;
   console.log(
     `strawberry: ${p?.status ?? '—'}${p?.result ? ` · ${p.result.cuts} cuts, ${JSON.stringify(p.result.created)}, issues: ${p.result.issues.length}` : ''}${p?.error ? ` · ${p.error.slice(0, 200)}` : ''}`,

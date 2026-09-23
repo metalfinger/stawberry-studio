@@ -54,7 +54,16 @@ import {
 } from './producer';
 import { type ContinuityPlan, drawOrder, planContinuity } from './continuity';
 import { buildFrames, buildGhosts, type FrameReference, framePrompt, ghostPrompt, type PlannedInput } from './frames';
-import { type Check, type CutRecord, type Item, MAX_PER_IMAGE, profileOf, type SheetEngine } from './sheets';
+import {
+  type Check,
+  CREDITS_PER_IMAGE,
+  type CutRecord,
+  type Item,
+  MAX_PER_IMAGE,
+  PROVIDER,
+  profileOf,
+  type SheetEngine,
+} from './sheets';
 import type { JudgedCheck, JudgeOptions } from './judge';
 import { cutRecord, type WriteResult } from './strawberry';
 
@@ -161,6 +170,8 @@ export type Session = {
   images: number;
   /** What fal's list price says they cost so far, in US dollars. */
   spentUsd: number;
+  /** Higgsfield credits so far: its estimates, or its charge per picture where it gives none. */
+  spentCredits?: number;
 };
 
 export type TurnResult = {
@@ -321,6 +332,12 @@ export function asInstruction(question: string): string {
     if (m) return f(...m);
   }
   return `make this true: ${q.replace(/\?$/, '')}`;
+}
+
+/** A picture's cost, in its provider's own unit: fal's list price in dollars, Higgsfield's credits. */
+function spend(s: Session, estimate: number | null): void {
+  if (PROVIDER === 'higgsfield') s.spentCredits = (s.spentCredits ?? 0) + (estimate ?? CREDITS_PER_IMAGE);
+  else s.spentUsd = Math.round((s.spentUsd + (estimate ?? 0)) * 100) / 100;
 }
 
 export class SessionStore {
@@ -1112,7 +1129,7 @@ export class SessionStore {
               if (!it) return;
               it.jobId = r.jobId;
               it.recipeId = r.recipeId;
-              x.spentUsd = Math.round((x.spentUsd + (r.usd ?? 0)) * 100) / 100;
+              spend(x, r.usd);
             }),
           ).then(() => this.watch(s.id)),
         (e) =>
@@ -1259,7 +1276,7 @@ export class SessionStore {
               it.jobId = r.jobId;
               it.recipeId = r.recipeId;
               if (unknown) it.fields = snapshot.fields;
-              x.spentUsd = Math.round((x.spentUsd + (r.usd ?? 0)) * 100) / 100;
+              spend(x, r.usd);
             }),
           ).then(() => this.watch(s.id)),
         (e) =>

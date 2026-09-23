@@ -410,6 +410,11 @@ const SETTINGS: Record<string, string> =
       : {};
 /** The most one picture may cost, in the provider's own unit: US dollars on fal, credits on Higgsfield. */
 export const MAX_PER_IMAGE = PROVIDER === 'higgsfield' ? 2.5 : 0.2;
+/**
+ * Higgsfield's charge per picture, as its account shows it (23 Sep): Nano Banana Pro 2 credits,
+ * Nano Banana 2 one. It gives no estimate for an edit, so this is what one counts as.
+ */
+export const CREDITS_PER_IMAGE = MODEL === 'nano_banana_flash' ? 1 : 2;
 
 const call = (operation: string, body: unknown) => cli(['call', operation, '-'], body);
 

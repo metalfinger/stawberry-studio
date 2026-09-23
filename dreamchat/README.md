@@ -159,8 +159,9 @@ plan's findings are listed under the moments.
 A simulated run (`simulate.ts`) is saved beside your own conversations; restart the page to open
 it there.
 
-A dream costs roughly $0.15 × (people + places + things + moments + redraws): usually $1–2, and
-never more than the limit.
+A dream costs roughly $0.15 × (people + places + things + moments + ghosts + redraws) on fal, or 2
+Higgsfield credits a picture: usually $1–3 or 20–40 credits, and never more than the limit. The
+panel counts each provider in its own unit.
 
 Known limits:
 - Without the judge on the PC, each moment drawn from another waits for the person's verdict on
