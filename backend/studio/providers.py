@@ -343,20 +343,45 @@ class Fal:
             raise StudioError("provider_changed", "fal model mapping changed; prepare and approve a new recipe")
         return self.estimate(spec)
 
+    CDN = "https://v3.fal.media"
+
     def _upload(self, path):
+        """Upload a reference image the way fal's own client does: a short-lived CDN token, then
+        the bytes to fal's CDN. The older storage route is the fallback, as in fal's client."""
         import mimetypes
 
         content_type = mimetypes.guess_type(str(path))[0] or "application/octet-stream"
-        init = self.client.post(
-            f"{self.REST}/storage/upload/initiate?storage_type=gcs",
-            json={"file_name": Path(path).name, "content_type": content_type},
-            headers={**self._headers(), "Accept": "application/json"},
-        )
-        init.raise_for_status()
-        target = init.json()
-        put = self.client.put(target["upload_url"], content=Path(path).read_bytes(), headers={"Content-Type": content_type})
-        put.raise_for_status()
-        return target["file_url"]
+        data = Path(path).read_bytes()
+        try:
+            token = self.client.post(
+                f"{self.REST}/storage/auth/token?storage_type=fal-cdn-v3",
+                json={},
+                headers={**self._headers(), "Accept": "application/json"},
+            )
+            token.raise_for_status()
+            t = token.json()
+            uploaded = self.client.post(
+                f"{self.CDN}/files/upload",
+                content=data,
+                headers={
+                    "Authorization": f"{t['token_type']} {t['token']}",
+                    "Content-Type": content_type,
+                    "X-Fal-File-Name": Path(path).name,
+                },
+            )
+            uploaded.raise_for_status()
+            return uploaded.json()["access_url"]
+        except Exception:
+            init = self.client.post(
+                f"{self.REST}/storage/upload/initiate?storage_type=gcs",
+                json={"file_name": Path(path).name, "content_type": content_type},
+                headers={**self._headers(), "Accept": "application/json"},
+            )
+            init.raise_for_status()
+            target = init.json()
+            put = self.client.put(target["upload_url"], content=data, headers={"Content-Type": content_type})
+            put.raise_for_status()
+            return target["file_url"]
 
     def submit(self, job_id, spec, files):
         import httpx

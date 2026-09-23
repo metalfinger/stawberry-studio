@@ -16,19 +16,27 @@ RESULT = QUEUE + "fal-ai/nano-banana-pro/requests/req-1"
 class FakeFal:
     """Records every request and answers like fal's queue and storage APIs."""
 
-    def __init__(self, *, submit_status=200, status="COMPLETED", result_status=200, upload_status=200):
+    def __init__(self, *, submit_status=200, status="COMPLETED", result_status=200, upload_status=200, cdn_status=200):
         self.calls = []
-        self.submit_status, self.status, self.result_status, self.upload_status = (
+        self.submit_status, self.status, self.result_status, self.upload_status, self.cdn_status = (
             submit_status,
             status,
             result_status,
             upload_status,
+            cdn_status,
         )
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
         url = str(request.url)
         body = json.loads(request.content) if request.headers.get("content-type") == "application/json" else None
         self.calls.append((request.method, url, body))
+        if url.startswith("https://rest.fal.ai/storage/auth/token"):
+            if self.cdn_status >= 400:
+                return httpx.Response(self.cdn_status, text="token refused")
+            return httpx.Response(200, json={"token": "t", "token_type": "Bearer", "base_url": "x", "expires_at": "2099-01-01T00:00:00+00:00"})
+        if url == "https://v3.fal.media/files/upload":
+            n = sum(1 for c in self.calls if c[1] == url)
+            return httpx.Response(200, json={"access_url": f"https://v3.fal.media/files/{n}.png"})
         if url.startswith("https://rest.fal.ai/storage/upload/initiate"):
             if self.upload_status >= 400:
                 return httpx.Response(self.upload_status, text="storage down")
@@ -112,7 +120,16 @@ def test_references_are_uploaded_then_sent_to_the_edit_model(tmp_path):
     fal(fake).submit("job", spec_for(fal(fake)), files)
     post = [c for c in fake.calls if c[0] == "POST" and c[1].startswith(QUEUE)][0]
     assert post[1] == QUEUE + "fal-ai/nano-banana-pro/edit"
-    assert post[2]["image_urls"] == ["https://cdn.example/1.png", "https://cdn.example/2.png"]
+    assert post[2]["image_urls"] == ["https://v3.fal.media/files/1.png", "https://v3.fal.media/files/2.png"]
+
+
+def test_uploads_fall_back_to_the_storage_route_when_the_cdn_refuses(tmp_path):
+    path = tmp_path / "ref.png"
+    path.write_bytes(b"x")
+    fake = FakeFal(cdn_status=500)
+    fal(fake).submit("job", spec_for(fal(fake)), [path])
+    post = [c for c in fake.calls if c[0] == "POST" and c[1].startswith(QUEUE)][0]
+    assert post[2]["image_urls"] == ["https://cdn.example/1.png"]
 
 
 def test_a_refusal_is_definitive_and_an_outage_needs_reconciling(tmp_path):
@@ -125,7 +142,7 @@ def test_a_refusal_is_definitive_and_an_outage_needs_reconciling(tmp_path):
 def test_a_failed_upload_costs_nothing_and_says_so(tmp_path):
     path = tmp_path / "ref.png"
     path.write_bytes(b"x")
-    fake = FakeFal(upload_status=500)
+    fake = FakeFal(upload_status=500, cdn_status=500)
     with pytest.raises(ProviderRejected, match="before submission"):
         fal(fake).submit("job", spec_for(fal(fake)), [path])
     assert not [c for c in fake.calls if c[0] == "POST" and c[1].startswith(QUEUE)]
