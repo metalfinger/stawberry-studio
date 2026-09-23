@@ -364,6 +364,31 @@ export const MAX_PER_IMAGE = PROVIDER === 'higgsfield' ? 2.5 : 0.2;
 
 const call = (operation: string, body: unknown) => cli(['call', operation, '-'], body);
 
+/**
+ * The approval for one picture: within the per-picture ceiling when the provider prices it, or
+ * with its cost acknowledged as unknown when it cannot. Higgsfield prices no edit that has
+ * reference images, though the model's price does not change with them; the dream's picture
+ * limit still bounds the spend.
+ */
+function approval(
+  recipe: { fingerprint: string; spec: { estimate?: { credits?: number | null } } },
+  reason: string,
+  max: number,
+) {
+  const known = typeof recipe.spec.estimate?.credits === 'number';
+  return known || PROVIDER !== 'higgsfield'
+    ? { fingerprint: recipe.fingerprint, user_decision: reason, max_credits: max }
+    : {
+        fingerprint: recipe.fingerprint,
+        user_decision:
+          `${reason} Higgsfield gives no estimate for an edit with reference images; ${MODEL} costs 2 credits a picture, and the dream's picture limit bounds the spend.`.slice(
+            0,
+            1000,
+          ),
+        allow_unknown_cost: true,
+      };
+}
+
 export const liveSheets: SheetEngine = {
   async start({ item, style, sources, reason, maxUsd }) {
     if (!item.nodeId) throw new Error(`${item.name} is not in the production yet`);
@@ -393,10 +418,7 @@ export const liveSheets: SheetEngine = {
       settings: SETTINGS,
     })) as { id: string; fingerprint: string; spec: { estimate?: { credits?: number | null } } };
     const usd = recipe.spec.estimate?.credits ?? null;
-    await call('approve', {
-      id: recipe.id,
-      request: { fingerprint: recipe.fingerprint, user_decision: reason, max_credits: maxUsd },
-    });
+    await call('approve', { id: recipe.id, request: approval(recipe, reason, maxUsd) });
     const job = (await call('enqueue', { id: recipe.id })) as { id: string };
     return { recipeId: recipe.id, jobId: job.id, usd };
   },
@@ -471,10 +493,7 @@ export const liveSheets: SheetEngine = {
       intent: `${intent ?? `Frame: ${item.name}`}${item.version > 1 ? `, version ${item.version}` : ''}`,
       settings: SETTINGS,
     })) as { id: string; fingerprint: string; spec: { estimate?: { credits?: number | null } } };
-    await call('approve', {
-      id: recipe.id,
-      request: { fingerprint: recipe.fingerprint, user_decision: reason, max_credits: maxUsd },
-    });
+    await call('approve', { id: recipe.id, request: approval(recipe, reason, maxUsd) });
     const job = (await call('enqueue', { id: recipe.id })) as { id: string };
     return { recipeId: recipe.id, jobId: job.id, usd: recipe.spec.estimate?.credits ?? null };
   },

@@ -1508,6 +1508,31 @@ export class SessionStore {
     await this.save(s);
   }
 
+  /**
+   * Draw again what failed before it was ever submitted: an approval refused, a provider out of
+   * balance, an upload refused. Nothing was spent on those, so nothing paid is retried; a picture
+   * that failed after its job was submitted stays failed for the person to decide.
+   */
+  async resume(id: string): Promise<string[]> {
+    return this.serial(id, async () => {
+      const s = structuredClone(this.require(id));
+      const again: string[] = [];
+      for (const it of [...(s.build?.items ?? []), ...(s.build?.frames ?? [])])
+        if (it.status === 'failed' && !it.jobId) {
+          again.push(it.id);
+          Object.assign(it, { status: 'waiting', error: undefined, version: Math.max(0, it.version - 1) });
+          // A picture's count was taken when it was started; it is taken again when it restarts.
+          s.images = Math.max(0, s.images - 1);
+        }
+      const turn = s.turns.at(-1)?.turn ?? 0;
+      for (const it of s.build?.items ?? []) if (again.includes(it.id)) await this.startSketch(s, it, turn);
+      if (s.phase === 'frames' || s.phase === 'done') await this.fillFrames(s, turn);
+      await this.save(s);
+      if ([...(s.build?.items ?? []), ...(s.build?.frames ?? [])].some((i) => i.status === 'drawing')) this.watch(id);
+      return again;
+    });
+  }
+
   /** Wait for every background job this conversation has running. For tests and the simulator. */
   async settle(id: string, timeoutMs = 180_000): Promise<void> {
     const until = Date.now() + timeoutMs;
