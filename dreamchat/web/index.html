@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dream chat</title>
+<style>
+:root {
+  --bg: #0f1218; --panel: #171b23; --panel2: #1d222c; --line: #2a303c;
+  --text: #ebe6dc; --muted: #8d95a3; --accent: #e56b86;
+  --told: #6cc08b; --forgot: #a99be0; --na: #6b7280; --open: #d9a45b;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 15px/1.55 ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  display: grid; grid-template-rows: auto 1fr; overflow: hidden;
+}
+button, select, input { font: inherit; color: inherit; }
+button {
+  background: var(--accent); color: #1a0d12; border: 0; border-radius: 8px;
+  padding: 7px 14px; font-weight: 600; cursor: pointer;
+}
+button.ghost { background: var(--panel2); color: var(--text); border: 1px solid var(--line); font-weight: 500; }
+button:disabled { opacity: .45; cursor: default; }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+select, input[type=text] {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
+}
+
+header {
+  display: flex; align-items: center; gap: 14px; padding: 10px 16px;
+  border-bottom: 1px solid var(--line); flex-wrap: wrap;
+}
+header h1 { font-size: 1rem; margin: 0; font-weight: 650; letter-spacing: .01em; }
+.steps { display: flex; gap: 6px; align-items: center; font-size: .8rem; color: var(--muted); }
+.steps span { padding: 3px 10px; border-radius: 99px; border: 1px solid var(--line); }
+.steps span.now { color: var(--text); border-color: var(--accent); }
+.steps span.done { color: var(--told); border-color: transparent; }
+.spacer { flex: 1; }
+#sessions { max-width: 260px; }
+
+#layout { display: grid; grid-template-columns: minmax(0, 1fr) 400px; min-height: 0; }
+#layout > * { min-height: 0; min-width: 0; display: flex; flex-direction: column; }
+@media (max-width: 900px) { #layout { grid-template-columns: minmax(0, 1fr); } aside { display: none !important; } }
+
+#chat { flex: 1; overflow-y: auto; padding: 22px 22px 10px; display: flex; flex-direction: column; gap: 8px; }
+.msg { max-width: min(76%, 620px); padding: 9px 14px; border-radius: 16px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.host { align-self: flex-start; background: var(--panel); border: 1px solid var(--line); border-bottom-left-radius: 5px; }
+.me { align-self: flex-end; background: #2b2533; border-bottom-right-radius: 5px; }
+.chip {
+  align-self: flex-start; font-size: .72rem; color: var(--muted); margin: -3px 0 6px 4px;
+  cursor: pointer; border: 0; background: none; padding: 0; font-weight: 400;
+  border-bottom: 1px dotted var(--line); border-radius: 0;
+}
+.chip:hover { color: var(--text); }
+.typing { align-self: flex-start; color: var(--muted); font-style: italic; padding: 2px 6px; }
+.notice { align-self: center; color: var(--muted); font-size: .85rem; padding: 10px; text-align: center; }
+.error { color: #ef8f86; }
+form#send { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--line); }
+form#send input { flex: 1; }
+.empty { margin: auto; text-align: center; color: var(--muted); max-width: 420px; padding: 20px; }
+.empty p { margin: 0 0 16px; }
+
+aside { border-left: 1px solid var(--line); background: #12161d; }
+aside nav { display: flex; border-bottom: 1px solid var(--line); flex-shrink: 0; }
+aside nav button {
+  flex: 1; background: none; color: var(--muted); border: 0; border-bottom: 2px solid transparent;
+  border-radius: 0; padding: 10px 4px; font-size: .82rem; font-weight: 500;
+}
+aside nav button.on { color: var(--text); border-bottom-color: var(--accent); }
+.pane { display: none; overflow-y: auto; padding: 14px 16px 24px; flex: 1; }
+.pane.on { display: block; }
+h4 {
+  margin: 18px 0 8px; font-size: .7rem; text-transform: uppercase; letter-spacing: .09em;
+  color: var(--muted); font-weight: 600;
+}
+h4:first-child { margin-top: 0; }
+.goal { padding: 8px 0; border-bottom: 1px solid var(--line); }
+.goal .top { display: flex; gap: 8px; align-items: baseline; }
+.goal .label { flex: 1; font-size: .88rem; }
+.goal .asks { font-size: .72rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.goal .ev { color: var(--muted); font-size: .78rem; margin-top: 3px; overflow-wrap: anywhere; }
+.status { font-size: .7rem; padding: 1px 8px; border-radius: 99px; border: 1px solid currentColor; white-space: nowrap; }
+.status.covered { color: var(--told); }
+.status.unknown { color: var(--forgot); }
+.status.not_applicable { color: var(--na); }
+.status.open { color: var(--open); border-style: dashed; }
+.meter { height: 5px; border-radius: 3px; background: var(--line); overflow: hidden; margin: 4px 0 10px; }
+.meter i { display: block; height: 100%; background: var(--accent); }
+.pills { display: flex; flex-wrap: wrap; gap: 5px; }
+.pill { font-size: .74rem; color: var(--muted); border: 1px solid var(--line); border-radius: 99px; padding: 1px 9px; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: .82rem; }
+.kv span:nth-child(odd) { color: var(--muted); }
+pre {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px;
+  font: .74rem/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; overflow-wrap: anywhere;
+  margin: 0 0 8px; max-height: 360px; overflow-y: auto;
+}
+details { margin-bottom: 8px; }
+summary { cursor: pointer; color: var(--muted); font-size: .82rem; padding: 3px 0; }
+.bad { color: #ef8f86; font-size: .8rem; }
+.muted { color: var(--muted); font-size: .82rem; }
+@media (prefers-reduced-motion: no-preference) { #chat { scroll-behavior: smooth; } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Dream chat</h1>
+  <div class="steps" id="steps" aria-label="where the conversation is">
+    <span data-phase="listen">Listening</span>
+    <span data-phase="retell">Telling it back</span>
+    <span data-phase="understood">Understood</span>
+  </div>
+  <div class="spacer"></div>
+  <select id="sessions" aria-label="earlier conversations"></select>
+  <button id="new">New dream</button>
+</header>
+
+<div id="layout">
+  <main>
+    <div id="chat"><div class="empty"><p>Tell Berry a dream. Nothing is drawn yet: this version only listens.</p><button id="start">Start</button></div></div>
+    <form id="send" hidden>
+      <input type="text" id="text" placeholder="Type your reply…" autocomplete="off" aria-label="your reply">
+      <button id="sendBtn">Send</button>
+    </form>
+  </main>
+
+  <aside>
+    <nav>
+      <button data-pane="dream" class="on">The dream</button>
+      <button data-pane="turn">Turn</button>
+      <button data-pane="calls">Calls</button>
+    </nav>
+    <div class="pane on" id="pane-dream"><p class="muted">Start a conversation to see what Berry has understood.</p></div>
+    <div class="pane" id="pane-turn"><p class="muted">Pick a reply's label in the chat to see why it was said.</p></div>
+    <div class="pane" id="pane-calls"><p class="muted">The exact judge questions and model input for the selected turn.</p></div>
+  </aside>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const STATUS = { covered: 'told', unknown: "doesn't remember", not_applicable: "doesn't apply", open: 'not yet' };
+let session = null;
+let selectedTurn = null;
+let busy = false;
+
+function el(tag, attrs = {}, text) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+  if (text !== undefined) n.textContent = text;
+  return n;
+}
+
+async function api(path, body) {
+  const res = await fetch(path, body ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : {});
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `request failed (${res.status})`);
+  return data;
+}
+
+// ── chat ────────────────────────────────────────────────────────────────────
+function renderChat() {
+  const chat = $('chat');
+  chat.replaceChildren();
+  if (!session) return;
+  let hostTurn = 0;
+  for (const e of session.transcript) {
+    if (e.role === 'user') { chat.append(el('div', { class: 'msg me' }, e.content)); continue; }
+    for (const m of e.messages || [e.content]) chat.append(el('div', { class: 'msg host' }, m));
+    const t = session.turns[hostTurn];
+    if (t) {
+      const chip = el('button', { class: 'chip', type: 'button' }, `${t.move.kind} · ${t.rule}`);
+      const n = t.turn;
+      chip.onclick = () => selectTurn(n);
+      chat.append(chip);
+    }
+    hostTurn += 1;
+  }
+  if (session.closed) chat.append(el('div', { class: 'notice' }, session.phase === 'understood'
+    ? 'Berry has the dream. The next version starts building pictures from here.'
+    : 'This conversation has ended.'));
+  chat.scrollTop = chat.scrollHeight;
+  $('send').hidden = session.closed;
+}
+
+function renderSteps() {
+  const order = ['listen', 'retell', 'understood'];
+  const at = session ? order.indexOf(session.phase) : -1;
+  for (const s of $('steps').children) {
+    const i = order.indexOf(s.dataset.phase);
+    s.className = i === at ? 'now' : i < at ? 'done' : '';
+  }
+}
+
+// ── panel ───────────────────────────────────────────────────────────────────
+function renderDream() {
+  const pane = $('pane-dream');
+  pane.replaceChildren();
+  if (!session) return;
+  const st = session.state;
+  pane.append(el('h4', {}, 'What Berry has understood'));
+  for (const g of session.goals) {
+    const row = el('div', { class: 'goal' });
+    const top = el('div', { class: 'top' });
+    top.append(el('span', { class: 'label' }, g.label + (g.optional ? ' (only if mentioned)' : '')));
+    if (g.asks) top.append(el('span', { class: 'asks' }, `asked ${g.asks}×`));
+    top.append(el('span', { class: `status ${g.status}` }, STATUS[g.status]));
+    row.append(top);
+    if (g.status === 'covered' && g.evidence) row.append(el('div', { class: 'ev' }, `“${g.evidence.slice(0, 180)}${g.evidence.length > 180 ? '…' : ''}”`));
+    pane.append(row);
+  }
+  pane.append(el('h4', {}, 'Told it to the end'));
+  const meter = el('div', { class: 'meter', role: 'meter', 'aria-valuemin': 0, 'aria-valuemax': 1, 'aria-valuenow': st.signals.finished_telling });
+  const fill = el('i'); fill.style.width = `${Math.round(st.signals.finished_telling * 100)}%`;
+  meter.append(fill);
+  pane.append(meter);
+  pane.append(el('h4', {}, 'How they are talking'));
+  const pills = el('div', { class: 'pills' });
+  for (const [k, v] of Object.entries({ length: st.rapport.verbosity, warmth: st.rapport.warmth, leaving: st.rapport.wants_out }))
+    pills.append(el('span', { class: 'pill' }, `${k}: ${v}`));
+  pane.append(pills);
+  if (st.threads.length) {
+    pane.append(el('h4', {}, 'Things they raised'));
+    for (const t of st.threads) pane.append(el('div', { class: 'ev' }, `${t.strength}${t.explored ? ', followed' : ''}: ${t.summary}`));
+  }
+}
+
+async function selectTurn(n) {
+  selectedTurn = n;
+  const t = session.turns.find((x) => x.turn === n);
+  const turn = $('pane-turn');
+  turn.replaceChildren();
+  if (!t) return;
+  turn.append(el('h4', {}, n === 0 ? 'Opening' : `Turn ${n}`));
+  const kv = el('div', { class: 'kv' });
+  for (const [k, v] of [['move', t.move.kind], ['rule', t.rule], ['phase after', t.phase], ['judge', `${t.jevMs} ms`], ['reply', `${t.hostMs} ms`]])
+    kv.append(el('span', {}, k), el('span', {}, v));
+  turn.append(kv);
+  turn.append(el('h4', {}, 'Brief given to Berry'), el('pre', {}, t.brief));
+  if (t.violations.length) { turn.append(el('h4', {}, 'Reply repaired')); for (const v of t.violations) turn.append(el('div', { class: 'bad' }, v)); }
+  if (t.notes.length) { turn.append(el('h4', {}, 'Judge notes')); for (const x of t.notes) turn.append(el('div', { class: 'muted' }, `${x.goalId}: ${x.reason}`)); }
+  showPane('turn');
+
+  const calls = $('pane-calls');
+  calls.replaceChildren(el('p', { class: 'muted' }, 'Loading…'));
+  try {
+    const d = await api(`/api/turn?id=${encodeURIComponent(session.id)}&n=${n}`);
+    calls.replaceChildren();
+    const block = (title, value, open) => {
+      const det = el('details'); if (open) det.open = true;
+      det.append(el('summary', {}, title), el('pre', {}, typeof value === 'string' ? value : JSON.stringify(value, null, 2)));
+      calls.append(det);
+    };
+    if (d.jevError) calls.append(el('div', { class: 'bad' }, `judge failed: ${d.jevError}`));
+    if (d.jevAnswers) block('Judge answers', d.jevAnswers, true);
+    if (d.jevQuestions) block('Judge questions', d.jevQuestions);
+    block('Reply model input', d.hostInput.map((m) => `[${m.role}]\n${m.content}`).join('\n\n'));
+    block('Reply model raw output', d.hostRaw);
+  } catch (e) {
+    calls.replaceChildren(el('div', { class: 'bad' }, e.message));
+  }
+}
+
+function showPane(name) {
+  for (const b of document.querySelectorAll('aside nav button')) b.classList.toggle('on', b.dataset.pane === name);
+  for (const p of document.querySelectorAll('.pane')) p.classList.toggle('on', p.id === `pane-${name}`);
+}
+for (const b of document.querySelectorAll('aside nav button')) b.onclick = () => showPane(b.dataset.pane);
+
+// ── flow ────────────────────────────────────────────────────────────────────
+async function refresh() {
+  session = await api(`/api/session?id=${encodeURIComponent(session.id)}`);
+  renderChat(); renderSteps(); renderDream();
+}
+
+async function loadSessions(selectId) {
+  const list = await api('/api/sessions');
+  const sel = $('sessions');
+  sel.replaceChildren(el('option', { value: '' }, list.length ? 'Earlier conversations' : 'No earlier conversations'));
+  for (const s of list) {
+    const when = new Date(s.updatedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const o = el('option', { value: s.id }, `${when} · ${s.phase} · ${s.opening || '(not started)'}`);
+    if (s.id === selectId) o.selected = true;
+    sel.append(o);
+  }
+}
+
+function typing(on) {
+  const chat = $('chat');
+  chat.querySelector('.typing')?.remove();
+  if (on) { chat.append(el('div', { class: 'typing' }, 'Berry is writing…')); chat.scrollTop = chat.scrollHeight; }
+}
+
+async function start() {
+  if (busy) return;
+  busy = true;
+  try {
+    const { id } = await api('/api/new', {});
+    session = { id, transcript: [], turns: [], closed: false, phase: 'listen' };
+    renderChat(); renderSteps(); typing(true);
+    await api('/api/open', { id });
+    await refresh();
+    await loadSessions(id);
+    $('send').hidden = false; $('text').focus();
+  } catch (e) {
+    typing(false); $('chat').append(el('div', { class: 'notice error' }, e.message));
+  } finally { busy = false; typing(false); }
+}
+
+$('send').onsubmit = async (ev) => {
+  ev.preventDefault();
+  const text = $('text').value.trim();
+  if (!text || busy || !session) return;
+  busy = true; $('sendBtn').disabled = true; $('text').value = '';
+  $('chat').append(el('div', { class: 'msg me' }, text));
+  typing(true);
+  try {
+    await api('/api/message', { id: session.id, text });
+    await refresh();
+    await loadSessions(session.id);
+  } catch (e) {
+    typing(false);
+    $('chat').lastElementChild?.remove();
+    $('text').value = text;
+    $('chat').append(el('div', { class: 'notice error' }, `Not sent: ${e.message}. Your message is back in the box.`));
+  } finally { busy = false; $('sendBtn').disabled = false; typing(false); $('text').focus(); }
+};
+
+$('new').onclick = start;
+$('start').onclick = start;
+$('sessions').onchange = async (ev) => {
+  if (!ev.target.value) return;
+  session = { id: ev.target.value };
+  await refresh();
+  const last = session.turns.at(-1);
+  if (last) selectTurn(last.turn);
+};
+
+loadSessions();
+</script>
+</body>
+</html>

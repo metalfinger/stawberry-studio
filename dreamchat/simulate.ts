@@ -1,0 +1,168 @@
+// Simulated dreamers. A model plays someone who knows only one dream, and talks to the real
+// harness (real judge, real host) until the conversation closes. Nothing is drawn, so a run
+// costs only text calls.
+//
+//   bun run simulate.ts dreams/icehead.md
+//   bun run simulate.ts dreams/*.md --max 30
+import { mkdirSync, readFileSync } from 'node:fs';
+import { basename, join } from 'node:path';
+import { dreamConfig } from './dream';
+import { loadEnvFile } from './env';
+import { callJev } from './jev';
+import { callDeepseek, callHost, type ChatMessage } from './llm';
+import { SessionStore } from './session';
+
+loadEnvFile();
+
+const DREAMER = (
+  dream: string,
+) => `You had a dream, and you're telling someone about it in a chat. This is the dream as you remember it:
+
+<dream>
+${dream}
+</dream>
+
+How to behave:
+- You're an ordinary person, not a writer. Reply the way people text: plain, not long, sometimes vague.
+- Don't pour the whole dream out in one message. Start with the part that stuck with you and let the rest come as they ask.
+- Only use what is in the dream above. If you're asked about something it doesn't say, say you don't remember. Never invent a detail.
+- You know nothing about film, art or drawing.
+- If they tell the dream back to you, check it against the dream above and say honestly whether it's right, correcting anything that's wrong or missing.
+
+Reply with only your next message, nothing else.`;
+
+// Words the host should never use with a person who knows nothing about film.
+const FILM_WORDS =
+  /\b(shots?|scenes?|frames?|angles?|palettes?|cinematic|composition|storyboard|character sheets?|lens)\b/gi;
+
+type Report = Awaited<ReturnType<typeof run>>;
+
+async function run(file: string, max: number) {
+  const slug = basename(file, '.md');
+  const raw = readFileSync(file, 'utf8');
+  const dream = raw
+    .replace(/^#.*\n/, '')
+    .replace(/^Source:.*\n/m, '')
+    .trim();
+  const cfg = dreamConfig();
+  const store = new SessionStore(cfg, { jev: callJev, host: callHost });
+  const { id } = store.create(`simulated: ${slug}`);
+
+  const opened = await store.open(id);
+  const dreamer: ChatMessage[] = [{ role: 'system', content: DREAMER(dream) }];
+  let listener = opened.messages.join('\n');
+  let closed = false;
+  for (let i = 0; i < max && !closed; i++) {
+    dreamer.push({ role: 'user', content: listener });
+    const reply = (await callDeepseek(dreamer, { thinking: 'disabled' })).content.trim();
+    dreamer.push({ role: 'assistant', content: reply });
+    const r = await store.message(id, reply);
+    listener = r.messages.join('\n');
+    closed = r.closed;
+  }
+
+  const s = store.view(id)!;
+  const turns = s.turns.filter((t) => t.turn > 0);
+  const hostMessages = s.transcript.filter((e) => e.role === 'assistant').flatMap((e) => e.messages ?? [e.content]);
+  // A film word the person used first is theirs to use; only Berry's own count.
+  const theirs = s.transcript
+    .filter((e) => e.role === 'user')
+    .map((e) => e.content)
+    .join(' ')
+    .toLowerCase();
+  const filmWords = hostMessages
+    .flatMap((m) => m.match(FILM_WORDS) ?? [])
+    .filter((w) => !theirs.includes(w.toLowerCase()));
+  const retellIdx = s.turns.findIndex((t) => t.move.kind === 'retell');
+  // The transcript's assistant entries line up one-to-one with turn records, opening first.
+  const retelling =
+    retellIdx === -1 ? '' : (s.transcript.filter((e) => e.role === 'assistant')[retellIdx]?.content ?? '');
+  // Judged against what the person actually said, not the dream text: the simulated
+  // dreamer embellishes, and a retelling that keeps what they said is doing its job.
+  const fidelity = retelling ? await judgeRetelling(theirs, retelling) : null;
+
+  return {
+    dream: slug,
+    id,
+    phase: s.phase,
+    closed: s.closed,
+    messages: turns.length,
+    firstRetellAt: retellIdx === -1 ? null : s.turns[retellIdx].turn,
+    retells: s.retells,
+    moves: turns.map(
+      (t) => `${t.turn} ${t.move.kind}${t.move.kind === 'probe_goal' ? `:${t.move.goalId}` : ''} (${t.rule})`,
+    ),
+    goals: Object.fromEntries(s.goals.map((g) => [g.id, g.status])),
+    asks: s.askCounts,
+    filmWords,
+    repairs: turns.flatMap((t) => t.violations),
+    retelling,
+    fidelity,
+    avgJudgeMs: Math.round(turns.reduce((n, t) => n + t.jevMs, 0) / Math.max(turns.length, 1)),
+    avgReplyMs: Math.round(turns.reduce((n, t) => n + t.hostMs, 0) / Math.max(turns.length, 1)),
+    transcript: s.transcript.map((e) => `${e.role === 'user' ? 'dreamer' : 'Berry'}: ${e.content}`),
+  };
+}
+
+/** Jev scores the retelling against what the person said: coverage, and anything invented. */
+async function judgeRetelling(told: string, retelling: string) {
+  const call = await callJev(`What the person told:\n${told}\n\nRetelling:\n${retelling}`, {
+    complete: {
+      type: 'score',
+      instructions:
+        'How completely and faithfully does the retelling capture the dream the person told: what happened, in order, where, who was there, how it felt and looked?',
+      criteria: ['misses or changes important parts', 'mostly right, with gaps', 'complete and faithful'],
+    },
+    invents: {
+      type: 'noul',
+      instructions: 'Does the retelling add anything the person did not say?',
+      criteria: {
+        true: 'it adds a detail, event or feeling they never mentioned',
+        false: 'everything in it comes from what they said',
+      },
+    },
+  });
+  if (!call.answers) return { error: call.error };
+  const c = call.answers.complete;
+  const inv = call.answers.invents;
+  return {
+    complete: c?.type === 'score' ? (c.legend[String(Math.round(c.score))] ?? c.score) : null,
+    score: c?.type === 'score' ? Number(c.score.toFixed(2)) : null,
+    invents: inv?.type === 'noul' ? Number(inv.noul.toFixed(2)) : null,
+  };
+}
+
+function print(r: Report) {
+  console.log(`\n━━ ${r.dream} ━━ ${r.phase}${r.closed ? '' : ' (not closed)'} after ${r.messages} messages`);
+  console.log(`first retelling at message ${r.firstRetellAt ?? '—'}, retellings ${r.retells}`);
+  for (const m of r.moves) console.log(`  ${m}`);
+  const byStatus: Record<string, string[]> = {};
+  for (const [g, st] of Object.entries(r.goals)) (byStatus[st] ??= []).push(g);
+  console.log(
+    `goals: ${Object.entries(byStatus)
+      .map(([st, gs]) => `${st} ${gs.join(', ')}`)
+      .join(' · ')}`,
+  );
+  console.log(`asked: ${JSON.stringify(r.asks)}`);
+  console.log(`film words: ${r.filmWords.length ? r.filmWords.join(', ') : 'none'} · repairs: ${r.repairs.length}`);
+  console.log(`retelling fidelity: ${JSON.stringify(r.fidelity)}`);
+  console.log(`avg judge ${r.avgJudgeMs} ms · avg reply ${r.avgReplyMs} ms`);
+}
+
+const args = process.argv.slice(2);
+const maxIdx = args.indexOf('--max');
+const max = maxIdx === -1 ? 30 : Number(args[maxIdx + 1]);
+const files = args.filter((a, i) => !a.startsWith('--') && (maxIdx === -1 || i !== maxIdx + 1));
+if (!files.length) {
+  console.error('usage: bun run simulate.ts dreams/<name>.md [more.md …] [--max 30]');
+  process.exit(1);
+}
+
+const out = join(import.meta.dir, 'runs');
+mkdirSync(out, { recursive: true });
+const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+const reports = await Promise.all(files.map((f) => run(f, max)));
+for (const r of reports) print(r);
+const path = join(out, `sim-${stamp}-${process.env.DREAMCHAT_HOST_THINKING ?? 'low'}.json`);
+await Bun.write(path, JSON.stringify(reports, null, 2));
+console.log(`\nfull transcripts: ${path}`);

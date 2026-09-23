@@ -1,0 +1,17 @@
+{
+  "name": "dreamchat",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "bun run server.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "simulate": "bun run simulate.ts",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.2",
+    "prettier": "^3.9.9",
+    "typescript": "^7.0.2"
+  }
+}
