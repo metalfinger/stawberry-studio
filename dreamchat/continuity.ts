@@ -258,6 +258,13 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
       if (anchor) add(anchor, 'composition', rel.get(anchor.id) as Relation, CARRIES.same_side);
     }
 
+    // 4. The light: a place seen so far only from other sides still gives its light and time of
+    // day (the drop-off at the house took nothing from the waiting and arrival shots before it).
+    if (m.place && !refs.some((r) => inPlace(r) || r.relation === 'other_side')) {
+      const lit = earlier.filter((e) => rel.get(e.id) === 'other_side').at(-1);
+      if (lit) add(lit, 'lighting', 'other_side');
+    }
+
     // The location sheet shows the place from one side: the side its first picture faces.
     const first = ms.find((e) => e.place === m.place);
     const sheetLayout = !first || first === m || sides(m, first);

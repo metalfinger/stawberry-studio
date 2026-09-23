@@ -152,6 +152,20 @@ describe('a moment drawn from earlier moments', () => {
     expect(prompt.indexOf('The attached images, in order')).toBeLessThan(prompt.indexOf('What happens in this frame'));
   });
 
+  test('a look that says nothing a sketch can keep is left out', () => {
+    const hazy: Item = {
+      ...sheet('p1', 'character', 'ana'),
+      fields: {
+        appearance: { value: 'indistinct, like a figure in a hazy memory', said: false },
+        wardrobe: { value: 'faded blue jeans and a plain grey t-shirt', said: false },
+        distinctive_features: { value: 'none notable, blends into the dreamscape', said: false },
+      },
+    };
+    const { prompt } = framePrompt(moment('m1', 1), [hazy, kitchen], style);
+    expect(prompt).toContain('ana (person): faded blue jeans and a plain grey t-shirt.');
+    expect(prompt).not.toMatch(/indistinct|blends into/);
+  });
+
   test('someone in a moment is described by their look, never by the story in who they are', () => {
     const cook: Item = {
       ...sheet('p1', 'character', 'the young woman'),

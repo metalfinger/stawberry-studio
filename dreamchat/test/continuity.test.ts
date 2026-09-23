@@ -296,6 +296,16 @@ describe('ghosts', () => {
     expect(texts.some((t) => t.startsWith('sheet:p1'))).toBe(true);
   });
 
+  test('a place seen so far only from another side still gives its light', () => {
+    const b = breakdown([
+      moment({ id: 'm1', visible: ['p1'], place: 'l1', looks_at: 'the door' }),
+      moment({ id: 'm2', visible: ['p1'], place: 'l2', looks_at: 'the road' }),
+      moment({ id: 'm3', visible: ['p1'], place: 'l1', looks_at: 'the window' }),
+    ]);
+    const m3 = planContinuity(b).cuts[2];
+    expect(m3.refs.find((r) => r.id === 'm1')).toMatchObject({ role: 'lighting', relation: 'other_side' });
+  });
+
   test('only a look lasts: a change of where someone is makes no ghost', () => {
     const b = breakdown([
       moment({ id: 'm1', visible: ['p1'] }),
