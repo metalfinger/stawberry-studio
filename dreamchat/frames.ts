@@ -8,7 +8,7 @@
 import { type ContinuityPlan, type PlanRef, pictureName } from './continuity';
 import type { Breakdown, Moment, StyleOption } from './producer';
 import { VAGUE } from './producer';
-import { type Item, LOOK, styleBlock, toldColours } from './sheets';
+import { isGroup, type Item, LOOK, styleBlock, toldColours } from './sheets';
 
 /** Where the line that says who "you" is goes, when anything told to the picture says "you". */
 const YOU = '\u0000you';
@@ -212,7 +212,7 @@ export function framePrompt(
         s.mediaId,
         'identity',
         `${who(s)}: this exact person, with the same face, build and clothes`,
-        `who ${who(s)} is${look ? ` (${look})` : ''}: their ${changed.some((st) => /head|face/i.test(st.what)) ? 'build and clothes' : 'face, hair, build and clothes'}, exactly${base ? ', as Image 1 already shows them' : ''}. Nothing else from it: not its pose, background or framing.${except}`,
+        `who ${who(s)} ${isGroup(s) ? 'are' : 'is'}${look ? ` (${look})` : ''}: their ${changed.some((st) => /head|face/i.test(st.what)) ? 'build and clothes' : 'face, hair, build and clothes'}, exactly${base ? ', as Image 1 already shows them' : ''}. Nothing else from it: not its pose, background or framing.${except}`,
       );
     } else if (s.kind === 'location') {
       // An edit base or an earlier picture of this side sets where things stand; a view ghost shows

@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import type { CutPlan } from '../continuity';
 import { framePrompt, writingIn } from '../frames';
 import { asInstruction } from '../session';
-import { type Item, sheetPrompt, styleBlock, toldColours } from '../sheets';
+import { isGroup, type Item, sheetPrompt, styleBlock, toldColours } from '../sheets';
 
 const style = {
   id: 'd',
@@ -244,6 +244,26 @@ describe('what a redraw is told', () => {
     expect(
       asInstruction('Is everything in this frame declared? The cut names the room. Is there no other person?'),
     ).toBe('nothing is in the picture that the dream does not have: no other person, face, hand, limb, creature or tool');
+  });
+});
+
+describe('a group of people', () => {
+  test('is sketched together, never as one person', () => {
+    const person = (name: string, appearance: string): Item => ({
+      id: 'p5',
+      kind: 'character',
+      name,
+      fields: { appearance: { value: appearance, said: true } },
+      status: 'waiting',
+      version: 0,
+    });
+    const couple = person('a couple of people', 'one man and one woman');
+    expect(isGroup(couple)).toBe(true);
+    expect(sheetPrompt(couple, style)).toContain('all of them together and no one else');
+    expect(sheetPrompt(couple, style)).not.toContain('one person only');
+    expect(isGroup(person('the old men', 'two old men in caps'))).toBe(true);
+    expect(isGroup(person('the girl', 'a girl with two braids'))).toBe(false);
+    expect(sheetPrompt(person('your aunt', 'shoulder-length brown hair'), style)).toContain('one person only');
   });
 });
 

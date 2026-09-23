@@ -268,6 +268,14 @@ export const LOOK: Record<ItemKind, string[]> = {
   ghost: [],
 };
 
+/** A character that is several people: named or described as more than one. */
+export function isGroup(item: Item): boolean {
+  const said = `${item.name} ${item.fields.appearance?.value ?? ''}`;
+  return /\b(people|persons|couple of|group of|crowd|pair of|twins|children|kids|(?:two|three|four|five|both|several) (?:\w+ )?(?:men|women|people|children|girls|boys|kids|friends|sisters|brothers|figures))\b/i.test(
+    said,
+  );
+}
+
 export function sheetPrompt(item: Item, style: StyleOption): string {
   // A look that says nothing a picture can keep ("indistinct, like a figure in a hazy memory")
   // would be drawn as a blur.
@@ -279,9 +287,13 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
   // One picture per item, not a grid of views: named views came back captioned ("Front",
   // "Side", "Closer") whatever the prompt said, and a grid used as a reference gets its layout
   // copied. A single clear picture is the identity the moments are drawn from.
+  // Some of a dream's people are a group ("a couple of people", "the twins"): "one person only"
+  // sketched them as a single man.
   const layout =
     item.kind === 'character'
-      ? `A single full-length picture of ${item.name}, one person only, as they ordinarily look: standing in a relaxed three-quarter view, the whole figure from head to feet, the face clearly visible.`
+      ? isGroup(item)
+        ? `A single full-length picture of ${item.name}, all of them together and no one else, as they ordinarily look: standing side by side in a relaxed three-quarter view, every figure from head to feet, each face clearly visible.`
+        : `A single full-length picture of ${item.name}, one person only, as they ordinarily look: standing in a relaxed three-quarter view, the whole figure from head to feet, the face clearly visible.`
       : item.kind === 'location'
         ? `A single wide picture of ${item.name}, as it ordinarily looks, with no people in it, showing the whole place and how it is laid out.`
         : `A single clear picture of ${item.name} on its own, as it ordinarily looks, seen at a slight angle so its shape and materials read.`;
