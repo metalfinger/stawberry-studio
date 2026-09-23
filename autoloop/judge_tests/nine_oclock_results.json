@@ -1,0 +1,690 @@
+[
+ {
+  "n": 2,
+  "name": "The quiet passenger",
+  "image": ".strawberry-probe/media/63c155fbc7def1bcede2541b01fce73e2e75d7b0eba2f3df4a224bbb7e5fcac4.png",
+  "model": "amd/Qwen3-VL-8B-Instruct-w8a8-llmcompressor",
+  "server_ms": 8171,
+  "wall_ms": 27428,
+  "rows": [
+   {
+    "id": "global:single",
+    "text": "Is this a single image, not a grid, contact sheet, filmstrip or multi-panel board?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 1923
+   },
+   {
+    "id": "global:no_border",
+    "text": "Is the image free of any decorative border, frame line or panel division?",
+    "scope": "global",
+    "p_yes": 0.0003,
+    "ms": 5219
+   },
+   {
+    "id": "global:no_words",
+    "text": "Is the image free of readable words, captions, labels or logos?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 5111
+   },
+   {
+    "id": "global:mono",
+    "text": "Is the image entirely monochrome, black, white and grey only, with no colour at all?",
+    "scope": "global",
+    "p_yes": 0.9999,
+    "ms": 5002
+   },
+   {
+    "id": "global:handmade",
+    "text": "Does the image look hand-made, like charcoal or graphite drawing combined with cut paper, rather than a photograph?",
+    "scope": "global",
+    "p_yes": 0.9999,
+    "ms": 4895
+   },
+   {
+    "id": "global:not_glossy",
+    "text": "Is the image free of the smooth, glossy look of a digital painting or 3D render?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 4878
+   },
+   {
+    "id": "global:torn_edges",
+    "text": "Are torn paper edges visible somewhere in the image?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 4897
+   },
+   {
+    "id": "global:paper_grain",
+    "text": "Is visible paper grain or paper fibre texture present?",
+    "scope": "global",
+    "p_yes": 0.9995,
+    "ms": 4991
+   },
+   {
+    "id": "global:linework",
+    "text": "Is visible graphite or charcoal linework present?",
+    "scope": "global",
+    "p_yes": 0.2689,
+    "ms": 4945
+   },
+   {
+    "id": "global:registration",
+    "text": "Are some collage layers slightly offset or imperfectly aligned with each other?",
+    "scope": "global",
+    "p_yes": 0.9978,
+    "ms": 4841
+   },
+   {
+    "id": "global:erasures",
+    "text": "Are there visible rubbed-out marks or erasures?",
+    "scope": "global",
+    "p_yes": 0.0052,
+    "ms": 4732
+   },
+   {
+    "id": "global:no_modern_vehicle",
+    "text": "Is the image free of any modern vehicle?",
+    "scope": "global",
+    "p_yes": 0.0373,
+    "ms": 4621
+   },
+   {
+    "id": "global:no_map_news",
+    "text": "Is the image free of maps and newspaper fragments?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 4512
+   },
+   {
+    "id": "global:not_horror",
+    "text": "Is the image free of horror, gore or violence?",
+    "scope": "global",
+    "p_yes": 0.9999,
+    "ms": 4432
+   },
+   {
+    "id": "global:anatomy",
+    "text": "Is the image free of any malformed human body, such as extra or missing limbs, a head the wrong way up, or fused fingers?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 4319
+   },
+   {
+    "id": "global:no_duplicates",
+    "text": "Is the image free of duplicates, meaning the same person or the same object appearing twice?",
+    "scope": "global",
+    "p_yes": 0.9999,
+    "ms": 4288
+   },
+   {
+    "id": "frame:one_man",
+    "text": "Is there exactly one adult man in the image?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 4102
+   },
+   {
+    "id": "frame:grey_hair",
+    "text": "Does the man have grey hair?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 4020
+   },
+   {
+    "id": "frame:beard",
+    "text": "Does the man have a beard?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 3947
+   },
+   {
+    "id": "frame:running",
+    "text": "Is the man running?",
+    "scope": "frame",
+    "p_yes": 0.982,
+    "ms": 3836
+   },
+   {
+    "id": "frame:left_to_right",
+    "text": "Is the man moving from the left side of the image towards the right side?",
+    "scope": "frame",
+    "p_yes": 0.9997,
+    "ms": 3740
+   },
+   {
+    "id": "frame:looking_ahead",
+    "text": "Is the man looking ahead, in the direction he is running?",
+    "scope": "frame",
+    "p_yes": 0.9972,
+    "ms": 3611
+   },
+   {
+    "id": "frame:anxious",
+    "text": "Does the man's expression show worry or anxiety rather than calm or happiness?",
+    "scope": "frame",
+    "p_yes": 0.9948,
+    "ms": 3518
+   },
+   {
+    "id": "frame:one_child",
+    "text": "Is there exactly one toddler in the image?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 3442
+   },
+   {
+    "id": "frame:chest_carrier",
+    "text": "Is the toddler carried in a carrier strapped to the man's chest?",
+    "scope": "frame",
+    "p_yes": 0.6514,
+    "ms": 3340
+   },
+   {
+    "id": "frame:child_head_upright",
+    "text": "Is the toddler's head the right way up and naturally attached to its body?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 3326
+   },
+   {
+    "id": "frame:child_face",
+    "text": "Is the toddler's face visible?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 3242
+   },
+   {
+    "id": "frame:child_calm",
+    "text": "Does the toddler look calm and quiet, not crying or screaming?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 3107
+   },
+   {
+    "id": "frame:straps",
+    "text": "Are the carrier's straps visible over the man's shoulders or torso?",
+    "scope": "frame",
+    "p_yes": 0.9988,
+    "ms": 2946
+   },
+   {
+    "id": "frame:carrier_dark",
+    "text": "Is the carrier dark, charcoal-toned?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 2902
+   },
+   {
+    "id": "frame:child_secure",
+    "text": "Is the toddler held securely, not slipping out of the carrier?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 2796
+   },
+   {
+    "id": "frame:side_view",
+    "text": "Is this a medium-wide side view, showing the man from the side with most of his body visible?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 2708
+   },
+   {
+    "id": "frame:road",
+    "text": "Is a pale road visible?",
+    "scope": "frame",
+    "p_yes": 0.9981,
+    "ms": 2636
+   },
+   {
+    "id": "frame:trees",
+    "text": "Are trees visible along the road, bent as if by wind?",
+    "scope": "frame",
+    "p_yes": 0.1192,
+    "ms": 2562
+   },
+   {
+    "id": "frame:traffic_distant",
+    "text": "Is any traffic only a small, faint mark in the distance rather than a prominent vehicle?",
+    "scope": "frame",
+    "p_yes": 0.9992,
+    "ms": 2455
+   },
+   {
+    "id": "frame:no_school",
+    "text": "Is the image free of a school building, clock tower, school uniform and doorway?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 2347
+   },
+   {
+    "id": "frame:no_auto",
+    "text": "Is the image free of an auto-rickshaw in the foreground?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 2232
+   },
+   {
+    "id": "frame:no_stroller",
+    "text": "Is the image free of a stroller or pram?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 2152
+   },
+   {
+    "id": "frame:grey_evening",
+    "text": "Is the light a soft grey evening, not bright daylight or night?",
+    "scope": "frame",
+    "p_yes": 0.9998,
+    "ms": 2042
+   },
+   {
+    "id": "frame:contrast",
+    "text": "Does the image show a contrast between the man's urgency and the toddler's stillness?",
+    "scope": "frame",
+    "p_yes": 0.9994,
+    "ms": 1949
+   }
+  ]
+ },
+ {
+  "n": 12,
+  "name": "Collapse",
+  "image": ".strawberry-probe/media/7dd71b0285888c8e8e1df2e9553a348409bb8f02538830793364a3547f640c19.png",
+  "model": "amd/Qwen3-VL-8B-Instruct-w8a8-llmcompressor",
+  "server_ms": 5558,
+  "wall_ms": 11008,
+  "rows": [
+   {
+    "id": "global:single",
+    "text": "Is this a single image, not a grid, contact sheet, filmstrip or multi-panel board?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 1895
+   },
+   {
+    "id": "global:no_border",
+    "text": "Is the image free of any decorative border, frame line or panel division?",
+    "scope": "global",
+    "p_yes": 0.0159,
+    "ms": 3045
+   },
+   {
+    "id": "global:no_words",
+    "text": "Is the image free of readable words, captions, labels or logos?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 3073
+   },
+   {
+    "id": "global:mono",
+    "text": "Is the image entirely monochrome, black, white and grey only, with no colour at all?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 3187
+   },
+   {
+    "id": "global:handmade",
+    "text": "Does the image look hand-made, like charcoal or graphite drawing combined with cut paper, rather than a photograph?",
+    "scope": "global",
+    "p_yes": 0.9968,
+    "ms": 3075
+   },
+   {
+    "id": "global:not_glossy",
+    "text": "Is the image free of the smooth, glossy look of a digital painting or 3D render?",
+    "scope": "global",
+    "p_yes": 0.9999,
+    "ms": 2967
+   },
+   {
+    "id": "global:torn_edges",
+    "text": "Are torn paper edges visible somewhere in the image?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 2738
+   },
+   {
+    "id": "global:paper_grain",
+    "text": "Is visible paper grain or paper fibre texture present?",
+    "scope": "global",
+    "p_yes": 0.9859,
+    "ms": 2844
+   },
+   {
+    "id": "global:linework",
+    "text": "Is visible graphite or charcoal linework present?",
+    "scope": "global",
+    "p_yes": 0.0851,
+    "ms": 2668
+   },
+   {
+    "id": "global:registration",
+    "text": "Are some collage layers slightly offset or imperfectly aligned with each other?",
+    "scope": "global",
+    "p_yes": 0.9998,
+    "ms": 2625
+   },
+   {
+    "id": "global:erasures",
+    "text": "Are there visible rubbed-out marks or erasures?",
+    "scope": "global",
+    "p_yes": 0.148,
+    "ms": 2517
+   },
+   {
+    "id": "global:no_modern_vehicle",
+    "text": "Is the image free of any modern vehicle?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 2395
+   },
+   {
+    "id": "global:no_map_news",
+    "text": "Is the image free of maps and newspaper fragments?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 2290
+   },
+   {
+    "id": "global:not_horror",
+    "text": "Is the image free of horror, gore or violence?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 2183
+   },
+   {
+    "id": "global:anatomy",
+    "text": "Is the image free of any malformed human body, such as extra or missing limbs, a head the wrong way up, or fused fingers?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 2075
+   },
+   {
+    "id": "global:no_duplicates",
+    "text": "Is the image free of duplicates, meaning the same person or the same object appearing twice?",
+    "scope": "global",
+    "p_yes": 0.9627,
+    "ms": 2028
+   },
+   {
+    "id": "frame:man_recognisable",
+    "text": "Is a grey-haired, bearded man recognisable in the image?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 1916
+   },
+   {
+    "id": "frame:man_clearest",
+    "text": "Is the man the clearest, most recognisable form in the image?",
+    "scope": "frame",
+    "p_yes": 0.9579,
+    "ms": 1805
+   },
+   {
+    "id": "frame:school",
+    "text": "Is a school building or school imagery visible?",
+    "scope": "frame",
+    "p_yes": 0.2689,
+    "ms": 1699
+   },
+   {
+    "id": "frame:folding_film",
+    "text": "Does the image look like it is folding, tearing or running out like damaged film?",
+    "scope": "frame",
+    "p_yes": 0.9985,
+    "ms": 1587
+   },
+   {
+    "id": "frame:to_grey",
+    "text": "Does part of the image dissolve into plain grey?",
+    "scope": "frame",
+    "p_yes": 0.9995,
+    "ms": 1465
+   },
+   {
+    "id": "frame:not_filmstrip",
+    "text": "Is this one frame, rather than a strip or grid of several film frames?",
+    "scope": "frame",
+    "p_yes": 0.9994,
+    "ms": 1362
+   },
+   {
+    "id": "frame:era",
+    "text": "Does the setting look like a 1980s Indian city rather than a modern one?",
+    "scope": "frame",
+    "p_yes": 0.0097,
+    "ms": 1265
+   },
+   {
+    "id": "frame:soft_grey",
+    "text": "Is the light soft and grey?",
+    "scope": "frame",
+    "p_yes": 0.9996,
+    "ms": 1154
+   },
+   {
+    "id": "frame:humane",
+    "text": "Is the tone anxious but not frightening?",
+    "scope": "frame",
+    "p_yes": 0.977,
+    "ms": 1039
+   }
+  ]
+ },
+ {
+  "n": 18,
+  "name": "Exactly nine",
+  "image": ".strawberry-probe/media/103997853aec245d08e1539fc0d990600119eb452cc84e86fc1e14edf32dce23.png",
+  "model": "amd/Qwen3-VL-8B-Instruct-w8a8-llmcompressor",
+  "server_ms": 6345,
+  "wall_ms": 11880,
+  "rows": [
+   {
+    "id": "global:single",
+    "text": "Is this a single image, not a grid, contact sheet, filmstrip or multi-panel board?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 1954
+   },
+   {
+    "id": "global:no_border",
+    "text": "Is the image free of any decorative border, frame line or panel division?",
+    "scope": "global",
+    "p_yes": 0.0009,
+    "ms": 3755
+   },
+   {
+    "id": "global:no_words",
+    "text": "Is the image free of readable words, captions, labels or logos?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 3761
+   },
+   {
+    "id": "global:mono",
+    "text": "Is the image entirely monochrome, black, white and grey only, with no colour at all?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 3668
+   },
+   {
+    "id": "global:handmade",
+    "text": "Does the image look hand-made, like charcoal or graphite drawing combined with cut paper, rather than a photograph?",
+    "scope": "global",
+    "p_yes": 0.9999,
+    "ms": 3729
+   },
+   {
+    "id": "global:not_glossy",
+    "text": "Is the image free of the smooth, glossy look of a digital painting or 3D render?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 3523
+   },
+   {
+    "id": "global:torn_edges",
+    "text": "Are torn paper edges visible somewhere in the image?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 3503
+   },
+   {
+    "id": "global:paper_grain",
+    "text": "Is visible paper grain or paper fibre texture present?",
+    "scope": "global",
+    "p_yes": 0.9999,
+    "ms": 3394
+   },
+   {
+    "id": "global:linework",
+    "text": "Is visible graphite or charcoal linework present?",
+    "scope": "global",
+    "p_yes": 0.9325,
+    "ms": 3282
+   },
+   {
+    "id": "global:registration",
+    "text": "Are some collage layers slightly offset or imperfectly aligned with each other?",
+    "scope": "global",
+    "p_yes": 0.9998,
+    "ms": 3226
+   },
+   {
+    "id": "global:erasures",
+    "text": "Are there visible rubbed-out marks or erasures?",
+    "scope": "global",
+    "p_yes": 0.023,
+    "ms": 3110
+   },
+   {
+    "id": "global:no_modern_vehicle",
+    "text": "Is the image free of any modern vehicle?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 3000
+   },
+   {
+    "id": "global:no_map_news",
+    "text": "Is the image free of maps and newspaper fragments?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 2886
+   },
+   {
+    "id": "global:not_horror",
+    "text": "Is the image free of horror, gore or violence?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 2773
+   },
+   {
+    "id": "global:anatomy",
+    "text": "Is the image free of any malformed human body, such as extra or missing limbs, a head the wrong way up, or fused fingers?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 2644
+   },
+   {
+    "id": "global:no_duplicates",
+    "text": "Is the image free of duplicates, meaning the same person or the same object appearing twice?",
+    "scope": "global",
+    "p_yes": 1.0,
+    "ms": 2544
+   },
+   {
+    "id": "frame:one_clock",
+    "text": "Is there exactly one clock in the image?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 2472
+   },
+   {
+    "id": "frame:analogue",
+    "text": "Is it an analogue clock face with hands, not a digital display?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 2320
+   },
+   {
+    "id": "frame:fills_frame",
+    "text": "Does the clock face fill most of the frame?",
+    "scope": "frame",
+    "p_yes": 0.8808,
+    "ms": 2297
+   },
+   {
+    "id": "frame:hour_at_9",
+    "text": "Is the hour hand pointing at the 9?",
+    "scope": "frame",
+    "p_yes": 0.9325,
+    "ms": 2177
+   },
+   {
+    "id": "frame:minute_at_12",
+    "text": "Is the minute hand pointing straight up at the 12?",
+    "scope": "frame",
+    "p_yes": 0.9999,
+    "ms": 2054
+   },
+   {
+    "id": "frame:reads_9",
+    "text": "Does the clock read exactly nine o'clock?",
+    "scope": "frame",
+    "p_yes": 0.3775,
+    "ms": 1939
+   },
+   {
+    "id": "frame:second_hand",
+    "text": "Does the clock have a second hand?",
+    "scope": "frame",
+    "p_yes": 0.0293,
+    "ms": 1868
+   },
+   {
+    "id": "frame:second_still",
+    "text": "Does the second hand look still rather than blurred with motion?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 1701
+   },
+   {
+    "id": "frame:numerals_correct",
+    "text": "Are the numbers or hour marks on the clock face correct and in the right order?",
+    "scope": "frame",
+    "p_yes": 0.982,
+    "ms": 1597
+   },
+   {
+    "id": "frame:no_brand",
+    "text": "Is the clock free of readable words such as a brand name?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 1492
+   },
+   {
+    "id": "frame:no_people",
+    "text": "Is the image free of people?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 1427
+   },
+   {
+    "id": "frame:no_extra_clocks",
+    "text": "Is the image free of extra clocks or digital displays?",
+    "scope": "frame",
+    "p_yes": 1.0,
+    "ms": 1316
+   },
+   {
+    "id": "frame:period_clock",
+    "text": "Does the clock look like a 1980s clock rather than a modern one?",
+    "scope": "frame",
+    "p_yes": 0.5622,
+    "ms": 1199
+   }
+  ]
+ }
+]
