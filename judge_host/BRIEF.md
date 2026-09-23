@@ -13,6 +13,25 @@ If Engram is not reachable from this machine, everything you need is in this fil
 - The test data: `autoloop/semif/frames.jsonl` (208 questions, 8 frames, image paths relative to
   the repo root), `autoloop/semif/plan.json`, and `autoloop/semif/compare.py` (reads your output).
 
+## The machine (from the slate session's measurements, 23 Sep)
+
+**2× RTX A5000 24 GB (Ampere, sm_86), Windows 11, reached over RDP.** ComfyUI lives on **GPU 1**
+and another session uses it for Qwen-Image / MiniMax work — see
+Engram `projects/slate/references/qwen-image-21-on-rtx-a5000.md`.
+
+- **The judges run on GPU 0 only** — `CUDA_VISIBLE_DEVICES=0` for vLLM and SAM 3 alike. Never touch
+  GPU 1, ComfyUI, or ComfyUI's Python environment (`D:\ComfyUI`, torch 2.14+cu130). Use a separate
+  env (WSL2 venv or a container).
+- **Ampere has native INT8 tensor cores but no native FP8.** Prefer an INT8 (W8A8) or AWQ/GPTQ 4-bit
+  build of Qwen3-VL-8B over FP8. bf16 (~17.5 GB) also fits on a dedicated GPU 0 but leaves little
+  room for SAM 3 beside it.
+- **`nvidia-smi` does not see allocations made under WDDM/RDP on this box.** Don't trust it for VRAM
+  headroom; measure from inside the process (torch.cuda.mem_get_info, vLLM's own logs).
+- **Hugging Face downloads can hang silently** (hf_xet, no progress, process alive). Fix that worked:
+  `curl -sL -C - --retry 20 --retry-all-errors` to a `.part`, then verify byte size and sha256 against
+  the HF API `lfs.oid`.
+- GPU 1 runs hot and throttles; GPU 0 timings are the ones to report.
+
 ## Build
 One FastAPI service `judge_host/` on `127.0.0.1:8001`, the only thing exposed:
 - `GET /health` → GPU name, VRAM used/total, both model names.
@@ -41,7 +60,7 @@ One FastAPI service `judge_host/` on `127.0.0.1:8001`, the only thing exposed:
 
 ## Hard constraints
 - **vLLM does not run on native Windows** — WSL2 (Ubuntu) or Docker with GPU passthrough.
-- **Share the 24 GB**: `--gpu-memory-utilization 0.75`, or an FP8/AWQ Qwen3-VL-8B, so SAM 3 fits.
+- **GPU 0 only.** Both models on GPU 0; an INT8 or AWQ Qwen3-VL-8B (not FP8 — Ampere has no native FP8) with `--gpu-memory-utilization` set so SAM 3 fits beside it.
 - **This may be the main PC that runs the `my-pc` Cloudflare tunnel for Engram
   (engram.metalfinger.xyz) and the Survey MCP (mcp.metalfinger.xyz).** If so: add an ingress
   hostname to that tunnel — no second tunnel, and no restart of the tunnel service without
