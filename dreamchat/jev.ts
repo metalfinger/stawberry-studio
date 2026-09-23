@@ -219,6 +219,16 @@ export function bookkeeperQuestions(
         false: 'it tells something, even a little, or answers the question',
       },
     };
+    // A dream that is a place rather than a plot never "reaches its end": the glass world was
+    // asked about the colour of its glow and whether it pulsed until the listening limit.
+    q.adds_story = {
+      type: 'noul',
+      instructions: `Read only the person's most recent message: "${latest.slice(0, 240)}". Does it add something new to what happened in the dream (something that happens next, a new place, a new person or thing), rather than more about what they had already told?`,
+      criteria: {
+        true: 'a new happening, place, person or thing enters the dream',
+        false: "only more about what was already told, an answer about a detail, or that they don't remember",
+      },
+    };
     q.finished_telling = {
       type: 'noul',
       instructions:
@@ -579,6 +589,7 @@ export function readState(
       signals: {
         finished_telling: finished ?? prev.signals.finished_telling,
         recall_spent: phase === 'listen' ? noul(a.recall_spent) : null,
+        adds_story: phase === 'listen' ? noul(a.adds_story) : null,
         retell_reply: retellReply,
         wants_to_see: wantsToSee,
         style_choice: styleChoice,

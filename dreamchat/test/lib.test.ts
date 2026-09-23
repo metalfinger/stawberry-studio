@@ -72,6 +72,12 @@ describe('listening', () => {
     expect(selectMove(state({ covered: ['telling'] }), cfg, listen({ forgotStreak: 3 })).move.kind).not.toBe('retell');
   });
 
+  test('three messages in a row that add nothing new to what happened count as told to the end', () => {
+    const place = state({ covered: ['telling'] });
+    expect(selectMove(place, cfg, listen({ dryStreak: 2 })).move.kind).toBe('follow');
+    expect(selectMove(place, cfg, listen({ dryStreak: 3 })).move.kind).toBe('probe_goal');
+  });
+
   test('while they are still telling it, the host follows instead of asking about gaps', () => {
     const { move, rule } = selectMove(state({ covered: ['telling'] }), cfg, listen());
     expect(move).toEqual({ kind: 'follow' });

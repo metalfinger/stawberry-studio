@@ -68,6 +68,8 @@ export type Signals = {
   finished_telling: number;
   /** P(their latest message mostly says they don't remember), read while listening. */
   recall_spent?: number | null;
+  /** P(their latest message adds a new happening, place, person or thing), read while listening. */
+  adds_story?: number | null;
   /** How they answered the retelling. Only read on the turn after one. */
   retell_reply: RetellReply | null;
   /** How they answered "would you like to see it?". Only read while that is open. */
@@ -235,6 +237,8 @@ export const LISTEN_TURN_LIMIT = 18;
 export const MAX_FOLLOW_STREAK = 3;
 /** "I don't remember" this many times in a row, once the story is told to its end, is enough. */
 export const FORGOT_STREAK = 2;
+/** This many messages in a row that add nothing new to what happened: the telling has run dry. */
+export const DRY_STREAK = 3;
 
 /** Times "would you like to see it?" is put before a hesitation is taken as no, for now. */
 export const MAX_OFFERS = 2;
@@ -256,6 +260,8 @@ export type MoveContext = {
   followStreak: number;
   /** How many of their messages in a row, this one included, said they don't remember. */
   forgotStreak?: number;
+  /** How many of their messages in a row, this one included, added nothing new to what happened. */
+  dryStreak?: number;
   /** How many times "would you like to see it?" has been put. */
   offers?: number;
   /** How many times the style has been asked about. */
@@ -353,7 +359,8 @@ export function selectMove(state: State, cfg: GoalsFile, ctx: MoveContext): { mo
   // the order they were written is what a person would do (the lab measured confidence
   // order asking the least natural question third).
   const askable = askableGoals(state, cfg, ctx.askCounts, ctx.maxAsksPerGoal);
-  const finished = state.signals.finished_telling >= FINISHED_BAR;
+  // Told to its end, or run dry: a dream that is a place rather than a plot never ends as a story.
+  const finished = state.signals.finished_telling >= FINISHED_BAR || (ctx.dryStreak ?? 0) >= DRY_STREAK;
 
   // 2. The story is understood: every required goal is settled or has had its two asks.
   // Tell it back once they have reached the end, or once they are winding down.

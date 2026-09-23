@@ -85,6 +85,8 @@ export type TurnRecord = {
   notes: JevReadNote[];
   /** Their message said they don't remember (while listening). */
   forgot?: boolean;
+  /** Their message added nothing new to what happened (while listening). */
+  dry?: boolean;
   at: number;
 };
 
@@ -631,6 +633,10 @@ export class SessionStore {
     const forgot = s.phase === 'listen' && (overlaid.signals.recall_spent ?? 0) >= 0.5;
     let forgotStreak = forgot ? 1 : 0;
     for (let i = s.turns.length - 1; forgot && i >= 0 && s.turns[i].forgot; i--) forgotStreak++;
+    const adds = overlaid.signals.adds_story;
+    const dry = s.phase === 'listen' && adds !== null && adds !== undefined && adds < 0.5;
+    let dryStreak = dry ? 1 : 0;
+    for (let i = s.turns.length - 1; dry && i >= 0 && s.turns[i].dry; i--) dryStreak++;
     const { move, rule } = selectMove(overlaid, this.cfg, {
       phase: s.phase,
       askCounts: s.askCounts,
@@ -638,6 +644,7 @@ export class SessionStore {
       retells: s.retells,
       followStreak,
       forgotStreak,
+      dryStreak,
       offers: s.offers,
       styleAsks: s.styleAsks,
       styleIds: styles.map((o) => o.id),
@@ -803,6 +810,7 @@ export class SessionStore {
         violations: parsed.violations,
         notes,
         forgot: forgot || undefined,
+        dry: dry || undefined,
         at: this.now(),
       },
       {
