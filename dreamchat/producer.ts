@@ -106,7 +106,7 @@ Mark every detail "said": true ONLY when the person's own words give it. Anythin
 - "eyes": "dreamer" when we see through the dreamer's eyes, "outside" when the dreamer is seen. Follow what they said about how they were in it.
 - "distance": "close", "medium" or "wide" — how near the viewer is to what matters.
 - "feeling" is what the moment should feel like, in their words where possible. "visual_point" is the one thing the picture must carry. "purpose" is what the moment does in the story, in a few words: "sets the scene", "the turn", "the payoff", "the waking".
-- "leaves": what this moment changes that later pictures must keep showing, as {"who": an id, "what": the part or attribute, "now": its new state}. For example, when her head turns to ice: {"who": "p1", "what": "head", "now": "a block of glittering ice"}. Empty when nothing lasting changes.
+- "leaves": what this moment changes in how someone or something LOOKS, that later pictures must keep showing, as {"who": an id, "what": the part or attribute, "now": its new state}. For example, when her head turns to ice: {"who": "p1", "what": "head", "now": "a block of glittering ice"}. Never where someone is or what they are doing (walking off, sitting down, being at the far end): only how they look. Empty when nothing about a look lasts.
 - "looks_at": what the camera faces in the place, a landmark of it in a few words ("the window", "the door to the hall", "the stove"). Two pictures facing the same side of a place get the same words. Through the dreamer's eyes it is what they face.
 - "shift": only where the person said the dream itself jumped: the place, a person or a thing abruptly became something else. Say what changes, from their words: "the kitchen becomes a station platform around her". Empty otherwise; an ordinary cut to a new place or time is not a shift.
 - "continues": true when the moment carries straight on from the one before it in the same scene (the same people and things, a moment later), false when it jumps: a new place, a new time, or a different part of the story. The first moment of each scene is false.
@@ -292,6 +292,10 @@ export async function proposeLook(
   return out;
 }
 
+/** "What" changed, when it is a position or an activity rather than a look. */
+const POSITION =
+  /^(location|position|place|where|whereabouts|posture|pose|activity|action|movement|direction|distance|mood|emotion|feeling|expression)$/i;
+
 /** A value that says nothing a picture can show. */
 export const VAGUE =
   /\b(undefined|unknown|unclear|indeterminate|unspecified|ambiguous|not (?:remembered|specified|known|sure|clear|described|given)|no specific|(?:can't|cannot|don't|do not) remember)\b/i;
@@ -434,6 +438,8 @@ export function normalizeBreakdown(raw: string): { breakdown: Breakdown; notes: 
         leaves: list(mo.leaves)
           .map((x) => (x ?? {}) as Record<string, unknown>)
           .filter((x) => [...personIds, ...placeIds, ...thingIds].includes(str(x.who)) && str(x.what) && str(x.now))
+          // A change of where someone is, or what they do, is the moment's action, not a look to carry.
+          .filter((x) => !POSITION.test(str(x.what)))
           .map((x) => ({ who: str(x.who), what: str(x.what, 60), now: str(x.now, 200) }))
           .slice(0, 6),
         // The first picture of the dream has nothing to jump from.

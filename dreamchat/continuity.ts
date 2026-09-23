@@ -502,7 +502,9 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
         issues.push(`picture ${c.order}: ${name(st.who)}'s ${st.what} (${st.now}) is carried in words only`);
   }
   for (const g of ghosts)
-    for (const n of g.needs) if (!cutOf.has(n)) issues.push(`ghost ${g.id} needs ${n}, which is not a picture`);
+    for (const n of g.needs)
+      if (!cutOf.has(n) && !ghosts.some((x) => x.id === n))
+        issues.push(`ghost ${g.id} needs ${n}, which is not a picture`);
   return { cuts, ghosts, issues };
 }
 

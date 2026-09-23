@@ -335,12 +335,32 @@ export type SheetEngine = {
     maxUsd: number;
     /** What the recipe is for, as Strawberry records it. */
     intent?: string;
+    /**
+     * The earlier cuts it is really drawn from, when some it was planned on failed: the cut's
+     * record is set to these first, or Strawberry refuses it for a source that never was.
+     */
+    relink?: { continuityFrom: string[]; source: string; reason: string };
   }): Promise<{ recipeId: string; jobId: string; usd: number | null }>;
 };
 
 export const PROVIDER =
-  (process.env.DREAMCHAT_PROVIDER as 'fal' | 'fake' | undefined) ?? (process.env.FAL_KEY ? 'fal' : 'fake');
-const MODEL = PROVIDER === 'fal' ? 'nano_banana_pro' : 'fixture';
+  (process.env.DREAMCHAT_PROVIDER as 'fal' | 'higgsfield' | 'fake' | undefined) ??
+  (process.env.FAL_KEY ? 'fal' : 'fake');
+// The same model on either paid provider: Nano Banana Pro is `nano_banana_2` on Higgsfield.
+const MODEL =
+  PROVIDER === 'fal'
+    ? 'nano_banana_pro'
+    : PROVIDER === 'higgsfield'
+      ? (process.env.DREAMCHAT_MODEL ?? 'nano_banana_2')
+      : 'fixture';
+const SETTINGS: Record<string, string> =
+  PROVIDER === 'fal'
+    ? { aspect_ratio: '16:9' }
+    : PROVIDER === 'higgsfield'
+      ? { aspect_ratio: '16:9', resolution: '2k' }
+      : {};
+/** The most one picture may cost, in the provider's own unit: US dollars on fal, credits on Higgsfield. */
+export const MAX_PER_IMAGE = PROVIDER === 'higgsfield' ? 2.5 : 0.2;
 
 const call = (operation: string, body: unknown) => cli(['call', operation, '-'], body);
 
@@ -370,7 +390,7 @@ export const liveSheets: SheetEngine = {
       model: MODEL,
       prompt: sheetPrompt(item, style),
       intent: `Reference sheet for ${item.name}${item.version > 1 ? `, version ${item.version}` : ''}`,
-      settings: PROVIDER === 'fal' ? { aspect_ratio: '16:9' } : {},
+      settings: SETTINGS,
     })) as { id: string; fingerprint: string; spec: { estimate?: { credits?: number | null } } };
     const usd = recipe.spec.estimate?.credits ?? null;
     await call('approve', {
@@ -416,8 +436,20 @@ export const liveSheets: SheetEngine = {
     await call('retry_collection', { id: jobId });
   },
 
-  async startFrame({ item, prompt, references, changes, source, reason, maxUsd, intent }) {
+  async startFrame({ item, prompt, references, changes, source, reason, maxUsd, intent, relink }) {
     if (!item.nodeId) throw new Error(`${item.name} is not in the production yet`);
+    if (relink) {
+      const node = (await call('inspect', { id: item.nodeId })) as { node: { revision: number } };
+      await call('patch', {
+        id: item.nodeId,
+        request: {
+          expected_revision: node.node.revision,
+          changes: { continuity_from: { op: 'set', value: relink.continuityFrom } },
+          source_id: relink.source,
+          reason: relink.reason,
+        },
+      });
+    }
     if (changes && Object.keys(changes).length && source) {
       const node = (await call('inspect', { id: item.nodeId })) as { node: { revision: number } };
       await call('patch', {
@@ -437,7 +469,7 @@ export const liveSheets: SheetEngine = {
       prompt,
       references,
       intent: `${intent ?? `Frame: ${item.name}`}${item.version > 1 ? `, version ${item.version}` : ''}`,
-      settings: PROVIDER === 'fal' ? { aspect_ratio: '16:9' } : {},
+      settings: SETTINGS,
     })) as { id: string; fingerprint: string; spec: { estimate?: { credits?: number | null } } };
     await call('approve', {
       id: recipe.id,
@@ -466,7 +498,7 @@ export function spawnWorker(python: string, repo: string): { stop(): void } | nu
       '--home',
       STRAWBERRY_HOME,
       'worker',
-      ...(PROVIDER === 'fal' ? ['--allow-fal'] : []),
+      ...(PROVIDER === 'fal' ? ['--allow-fal'] : PROVIDER === 'higgsfield' ? ['--allow-higgsfield'] : []),
     ],
     { cwd: repo, stdout: 'ignore', stderr: 'inherit', env: process.env },
   );

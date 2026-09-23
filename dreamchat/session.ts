@@ -54,7 +54,7 @@ import {
 } from './producer';
 import { type ContinuityPlan, drawOrder, planContinuity } from './continuity';
 import { buildFrames, buildGhosts, type FrameReference, framePrompt, ghostPrompt, type PlannedInput } from './frames';
-import { type Check, type Item, profileOf, type SheetEngine } from './sheets';
+import { type Check, type Item, MAX_PER_IMAGE, profileOf, type SheetEngine } from './sheets';
 import type { JudgedCheck, JudgeOptions } from './judge';
 import type { WriteResult } from './strawberry';
 
@@ -113,7 +113,6 @@ export type Production = {
 // A rich dream is a dozen sketches, a dozen moments, their ghosts and a few redraws.
 export const IMAGE_CAP = Number(process.env.DREAMCHAT_IMAGE_CAP ?? 60);
 /** The approval ceiling on a single sketch, in US dollars. */
-const MAX_USD_PER_IMAGE = 0.2;
 
 /** Frames drawing at once, at most; the rest wait their turn. */
 const FRAMES_AT_ONCE = 3;
@@ -1007,10 +1006,24 @@ export class SessionStore {
           changes[k === 'feeling' ? 'beat.emotional_intent' : k === 'visual_point' ? 'beat.visual_point' : k] = d.value;
     frame.depicted = depicted;
     frame.continuity = undefined;
+    // A source that failed is left out of the cut's record as well as its references.
+    const ids = s.production?.result?.ids ?? {};
+    const failedCuts = (frame.dropped ?? []).filter((d) => s.build?.frames?.find((x) => x.id === d)?.kind === 'cut');
+    const relink =
+      failedCuts.length && ids.proposal
+        ? {
+            continuityFrom: (frame.frame?.plan?.refs ?? [])
+              .filter((r) => r.kind === 'cut' && !failedCuts.includes(r.id) && ids[r.id])
+              .map((r) => ids[r.id]),
+            source: ids.proposal,
+            reason: `Drawn without ${failedCuts.map((d) => s.build?.frames?.find((x) => x.id === d)?.name ?? d).join(', ')}, which could not be drawn`,
+          }
+        : undefined;
     await this.launch(s, frame, {
       prompt,
       references,
       changes,
+      relink,
       reason: `The person asked to see their dream drawn and settled everything in it; approved within the ${IMAGE_CAP}-picture limit.`,
     });
   }
@@ -1049,6 +1062,7 @@ export class SessionStore {
       changes?: Record<string, string>;
       reason: string;
       intent?: string;
+      relink?: { continuityFrom: string[]; source: string; reason: string };
     },
   ): Promise<void> {
     item.status = 'drawing';
@@ -1069,8 +1083,9 @@ export class SessionStore {
         changes: job.changes,
         source: s.production?.result?.ids.said,
         reason: job.reason,
-        maxUsd: MAX_USD_PER_IMAGE,
+        maxUsd: MAX_PER_IMAGE,
         intent: job.intent,
+        relink: job.relink,
       })
       .then(
         (r) =>
@@ -1213,7 +1228,7 @@ export class SessionStore {
           style,
           sources: { said: ids.said, proposal: ids.proposal },
           reason: `The person asked to see their dream drawn and settled this profile in conversation; approved within the ${IMAGE_CAP}-picture limit.`,
-          maxUsd: MAX_USD_PER_IMAGE,
+          maxUsd: MAX_PER_IMAGE,
         }),
       )
       .then(
