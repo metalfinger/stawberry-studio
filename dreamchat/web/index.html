@@ -130,6 +130,8 @@ summary { cursor: pointer; color: var(--muted); font-size: .82rem; padding: 3px 
 .sketch .wait { aspect-ratio: 16 / 9; display: grid; place-items: center; color: var(--muted); font-size: .82rem;
   background: repeating-linear-gradient(135deg, var(--panel) 0 12px, var(--panel2) 12px 24px); }
 @media (prefers-reduced-motion: no-preference) { .sketch .wait { animation: slide 1.6s linear infinite; background-size: 34px 34px; } }
+.sketch .from { padding: 0 11px 9px; font-size: 12px; line-height: 1.45; display: grid; gap: 3px; }
+.sketch .from b { font-weight: 600; }
 @keyframes slide { to { background-position: 34px 0; } }
 .sketch .judge { padding: 0 11px 8px; font-size: .74rem; color: var(--muted); }
 .sketch .judge b { font-weight: 600; color: var(--text); }
@@ -217,7 +219,8 @@ function renderChat() {
       chip.onclick = () => selectTurn(n);
       chat.append(chip);
       const pieces = session.build ? [...session.build.items, ...(session.build.frames || [])] : [];
-      for (const it of pieces.filter((i) => i.startedAtTurn === t.turn)) chat.append(sketchCard(it));
+      // In-between references are production's own; the chat shows only the dream.
+      for (const it of pieces.filter((i) => i.startedAtTurn === t.turn && i.kind !== 'ghost')) chat.append(sketchCard(it));
     }
     hostTurn += 1;
   }
@@ -294,11 +297,14 @@ const plainQuestion = (q) => q
 function sketchCard(it, where = 'chat') {
   const card = el('div', { class: 'sketch' });
   const cap = el('div', { class: 'cap' });
-  const noun = it.kind === 'cut' ? (it.frame && it.frame.key ? 'the key moment' : `moment ${it.frame ? it.frame.order : ''}`) : 'sketch';
+  const noun = it.kind === 'cut' ? (it.frame && it.frame.key ? 'the key moment' : `moment ${it.frame ? it.frame.order : ''}`) : it.kind === 'ghost' ? 'in-between' : 'sketch';
   const verdict = it.review === 'approved' ? ' · looks right' : it.review === 'left' ? ' · kept' : '';
-  const state = { drawing: 'drawing…', ready: `${noun}${it.version > 1 ? ` v${it.version}` : ''}${verdict}`, failed: 'not drawn', waiting: 'waiting', confirming: 'confirming' };
+  const pieces = session.build ? [...session.build.items, ...(session.build.frames || [])] : [];
+  const waitingFor = (it.needs || []).map((id) => pieces.find((x) => x.id === id)).filter((x) => x && x.status !== 'ready' && x.status !== 'failed');
+  const state = { drawing: 'drawing…', ready: `${noun}${it.version > 1 ? ` v${it.version}` : ''}${verdict}`, failed: 'not drawn', waiting: waitingFor.length ? `waits for ${waitingFor.map(label).join(', ')}` : 'waiting', confirming: 'confirming' };
   cap.append(el('span', {}, it.name), el('span', {}, state[it.status] || it.status));
   card.append(cap);
+  if (where === 'panel' && (it.kind === 'cut' || it.kind === 'ghost')) card.append(drawnFrom(it, pieces));
   if (it.status === 'ready') {
     const img = imageFor(`/api/sketch?id=${encodeURIComponent(session.id)}&item=${encodeURIComponent(it.id)}&v=${it.version}`, it.kind === 'cut' ? `The moment: ${it.name}` : `Sketch of ${it.name}`, where);
     card.append(img);
@@ -315,9 +321,53 @@ function sketchCard(it, where = 'chat') {
       card.append(line);
     } else if (c && c.error) card.append(el('div', { class: 'judge' }, 'Judge unavailable'));
     else if (cfg && cfg.judge) card.append(el('div', { class: 'judge' }, 'Judge checking…'));
+    const k = it.continuity;
+    if (k && !k.error && k.questions) {
+      const line = el('div', { class: `judge${k.failed.length ? ' miss' : ''}` });
+      line.append('Continuity: ', el('b', {}, `${k.passed} of ${k.questions}`), ' checks against what it follows');
+      if (k.failed.length) {
+        const det = el('details');
+        det.append(el('summary', {}, 'what didn’t match'));
+        for (const q of k.failed) det.append(el('div', {}, q));
+        line.append(det);
+      }
+      card.append(line);
+    } else if (k && k.error) card.append(el('div', { class: 'judge' }, 'Continuity check unavailable'));
   } else if (it.status === 'drawing') card.append(el('div', { class: 'wait' }, 'sketching…'));
   else if (it.status === 'failed') card.append(el('div', { class: 'muted', style: 'padding:0 11px 9px' }, it.error || 'something went wrong'));
   return card;
+}
+
+/** How the panel names a picture: its place in the story, or the ghost it is. */
+function label(x) {
+  return x.kind === 'cut' ? `picture ${x.frame ? x.frame.order : '?'}` : x.kind === 'ghost' ? `in-between “${x.name}”` : `${x.name}’s sheet`;
+}
+
+/** What a moment or a ghost is drawn from, and why: the continuity plan, in plain words. */
+function drawnFrom(it, pieces) {
+  const box = el('div', { class: 'from' });
+  const find = (id) => pieces.find((x) => x.id === id);
+  if (it.kind === 'ghost' && it.ghost) {
+    const g = it.ghost;
+    box.append(el('div', {}, `Edit of ${g.of === '' ? 'a sheet' : 'the sheet'}${g.from ? `, looking at ${label(find(g.from) || { kind: 'cut', frame: { order: '?' } })}` : ''}: ${g.change}.`));
+    box.append(el('div', { class: 'muted' }, `Why: ${g.why}. Used by ${g.usedBy.map((id) => label(find(id) || { kind: 'cut', frame: { order: '?' } })).join(', ')}.`));
+    return box;
+  }
+  const plan = it.frame && it.frame.plan;
+  if (!plan) return box;
+  const roles = { base: 'edited from', composition: 'room from', lighting: 'light from', identity: 'look from', location: 'place from', prop: 'thing from' };
+  if (!plan.refs.length) box.append(el('div', {}, 'Drawn from the sheets alone.'));
+  for (const r of plan.refs) {
+    const src = find(r.id);
+    const row = el('div', {});
+    row.append(el('b', {}, `${roles[r.role] || r.role} ${src ? label(src) : r.id}`), ` — ${r.carries}`);
+    if ((it.dropped || []).includes(r.id)) row.append(el('span', { class: 'bad' }, ' (it failed, so drawn without it)'));
+    box.append(row);
+  }
+  if (plan.states.length) box.append(el('div', { class: 'muted' }, `Still so: ${plan.states.map((st) => `${st.what} ${st.now}`).join('; ')}`));
+  box.append(el('div', { class: 'muted' }, `${plan.transition}${plan.changes.length ? ` · changes: ${plan.changes.join('; ')}` : ''}`));
+  if (it.redrawBecause) box.append(el('div', { class: 'muted' }, `Redrawn because ${it.redrawBecause} was corrected.`));
+  return box;
 }
 
 function tag(said) { return el('span', { class: `tag ${said ? 'said' : 'guess'}` }, said ? 'said' : 'guess'); }
@@ -336,8 +386,21 @@ function renderProduction() {
   if (build && build.frames && build.frames.length) {
     pane.append(el('h4', {}, 'The dream, in order'));
     const strip = el('div', { class: 'sketches' });
-    for (const f of [...build.frames].sort((a, b2) => a.frame.order - b2.frame.order)) strip.append(sketchCard(f, 'panel'));
+    for (const f of build.frames.filter((x) => x.kind === 'cut').sort((a, b2) => a.frame.order - b2.frame.order)) strip.append(sketchCard(f, 'panel'));
     pane.append(strip);
+    const ghosts = build.frames.filter((x) => x.kind === 'ghost');
+    if (ghosts.length) {
+      pane.append(el('h4', {}, 'In-between references'));
+      pane.append(el('p', { class: 'muted' }, 'Never shown as the dream: each is one edit made so later pictures can carry the same look.'));
+      const grid = el('div', { class: 'sketches' });
+      for (const g of ghosts) grid.append(sketchCard(g, 'panel'));
+      pane.append(grid);
+    }
+    const issues = (build.plan && build.plan.issues) || [];
+    if (issues.length) {
+      pane.append(el('h4', {}, 'Continuity plan: before drawing'));
+      for (const x of issues) pane.append(el('div', { class: 'muted' }, x));
+    }
   }
   if (build) {
     pane.append(el('h4', {}, 'Sketches'));
@@ -357,7 +420,7 @@ function renderProduction() {
     row.append(el('span', { class: `n${m.key ? ' key' : ''}` }, m.key ? `★${n}` : String(n)));
     const txt = el('span', {}, m.action + ' ');
     if (!m.said) txt.append(tag(false));
-    row.append(txt, el('span', { class: 'meta' }, `${m.distance} · ${m.eyes === 'dreamer' ? 'through their eyes' : 'seen from outside'}${m.feeling ? ` · ${m.feeling}` : ''}`));
+    row.append(txt, el('span', { class: 'meta' }, `${m.distance} · ${m.eyes === 'dreamer' ? 'through their eyes' : 'seen from outside'}${m.looks_at ? ` · facing ${m.looks_at}` : ''}${m.feeling ? ` · ${m.feeling}` : ''}${m.shift ? ` · the dream jumps: ${m.shift}` : ''}${m.from ? ` · follows ${m.from}` : ''}`));
     pane.append(row);
   }
 
@@ -460,7 +523,7 @@ async function refresh() {
   renderChat(); renderSteps(); renderDream(); renderProduction();
   if (busy) typing(true);
   // Background work finishes between turns; watch for it while any is running.
-  const drawing = session.build && [...session.build.items, ...(session.build.frames || [])].some((i) => i.status === 'drawing' || (i.kind === 'cut' && i.status === 'waiting'));
+  const drawing = session.build && [...session.build.items, ...(session.build.frames || [])].some((i) => i.status === 'drawing' || ((i.kind === 'cut' || i.kind === 'ghost') && i.status === 'waiting'));
   const working = drawing || (session.draft && session.draft.status === 'drafting') || (session.production && session.production.status === 'writing');
   clearTimeout(poll);
   if (working) poll = setTimeout(() => refresh().catch(() => {}), 3000);

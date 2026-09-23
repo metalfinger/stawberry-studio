@@ -6,12 +6,13 @@
 // run strictly one at a time.
 import { existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { type GroundingNote, ground } from './ground';
+import { type GroundingNote, ground, linkContinuity } from './ground';
 import {
   bookkeeperQuestions,
   type Exchange,
   type JevFn,
   type JevReadNote,
+  type Question,
   readState,
   renderTranscript,
   retellingQuestion,
@@ -42,7 +43,8 @@ import {
   type Thinking,
 } from './llm';
 import { type Breakdown, callProducer, type Detail, normalizeBreakdown, ownStyle, type StyleOption } from './producer';
-import { buildFrames, framePrompt } from './frames';
+import { type ContinuityPlan, drawOrder, planContinuity } from './continuity';
+import { buildFrames, buildGhosts, type FrameReference, framePrompt, ghostPrompt, type PlannedInput } from './frames';
 import { type Check, type Item, profileOf, type SheetEngine } from './sheets';
 import type { WriteResult } from './strawberry';
 
@@ -109,7 +111,19 @@ const FRAMES_AT_ONCE = 3;
  * The people, places and things being confirmed and sketched, in Strawberry's order; then the
  * moments drawn from them, the key one first.
  */
-export type Build = { items: Item[]; current: string | null; checks: number; frames?: Item[] };
+export type Build = {
+  items: Item[];
+  current: string | null;
+  checks: number;
+  /** The moments and the ghosts they need, in the order they are drawn. */
+  frames?: Item[];
+  /** Which earlier pictures each moment is drawn from, and why; made before any is drawn. */
+  plan?: ContinuityPlan;
+};
+
+/** A moment or a ghost that needs nothing more from anyone: drawn and looked at, or failed. */
+const isSettled = (i: Item) =>
+  i.status === 'failed' || (i.status === 'ready' && (i.kind === 'ghost' || i.review !== undefined));
 
 export type Session = {
   id: string;
@@ -166,6 +180,8 @@ export type StoreDeps = {
   watchEveryMs?: number;
   /** The image judge: checks a finished take against its declared facts. Absent: no check. */
   judge?: (mediaId: string) => Promise<Check>;
+  /** The continuity check: a take beside the pictures it was drawn from. Absent: no check. */
+  judgeContinuity?: (mediaId: string, checks: { with: string | null; text: string }[]) => Promise<Check>;
   dir?: string;
   now?: () => number;
 };
@@ -176,7 +192,13 @@ export function liveProducer(jev: JevFn): NonNullable<StoreDeps['producer']> {
     const { raw, ms } = await callProducer(renderTranscript(transcript), previous);
     const { breakdown, notes } = normalizeBreakdown(raw);
     const g = await ground(breakdown, transcript, jev);
-    return { breakdown: g.breakdown, downgraded: g.downgraded, notes, ms: ms + g.ms };
+    const c = await linkContinuity(g.breakdown, jev);
+    return {
+      breakdown: c.breakdown,
+      downgraded: g.downgraded,
+      notes: [...notes, `continuity: ${c.links.length ? c.links.join(', ') : 'no links'}`, ...c.notes],
+      ms: ms + g.ms + c.ms,
+    };
   };
 }
 
@@ -481,12 +503,25 @@ export class SessionStore {
           it.fields = await this.deps.reviseItem(it.name, it.fields, renderTranscript(s.transcript));
         it.announced = false;
         it.review = undefined;
+        it.continuityApproved = false;
         if (it.kind === 'cut') await this.startFrame(s, it, turnNow, before);
         else await this.startSketch(s, it, turnNow);
         reviewed.redrawing.push(it.name);
       }
+      // What was drawn from a corrected moment follows it, where the correction touches what it
+      // took: those wait for the new version and are drawn again; the rest are kept.
+      const cuts = wrong.filter((i) => i.kind === 'cut');
+      if (cuts.length) {
+        const follow = await this.followCorrections(s, cuts, text);
+        for (const it of follow) reviewed.redrawing.push(`${it.name} (it follows from ${it.redrawBecause})`);
+        if (follow.length)
+          notes.push({
+            goalId: 'continuity',
+            reason: `redrawing what follows: ${follow.map((i) => i.id).join(', ')}`,
+            attempted: 0,
+          });
+      }
     }
-    const isSettled = (i: Item) => i.status === 'failed' || (i.status === 'ready' && i.review !== undefined);
     const settled = !!s.build && s.build.items.every(isSettled);
     const framesSettled = !!s.build?.frames?.length && s.build.frames.every(isSettled);
 
@@ -572,10 +607,11 @@ export class SessionStore {
     if (s.build && (move.kind === 'frames_drawing' || move.kind === 'all_done')) {
       extras.approved = reviewed.approved;
       extras.redrawing = reviewed.redrawing;
-      extras.frameCount = s.build.frames?.length;
-      extras.failed = (s.build.frames ?? []).filter((i) => i.status === 'failed').map((i) => i.name);
+      const moments = (s.build.frames ?? []).filter((i) => i.kind === 'cut');
+      extras.frameCount = moments.length;
+      extras.failed = moments.filter((i) => i.status === 'failed').map((i) => i.name);
       if (move.kind === 'frames_drawing') {
-        const fresh = (s.build.frames ?? []).filter((i) => i.status === 'ready' && !i.announced);
+        const fresh = moments.filter((i) => i.status === 'ready' && !i.announced);
         const key = fresh.find((i) => i.frame?.key);
         if (key) extras.keyReady = key.fields.action?.value ?? key.name;
         extras.finished = fresh.filter((i) => i !== key).map((i) => i.name);
@@ -732,8 +768,9 @@ export class SessionStore {
   }
 
   /**
-   * Begin the moments: one frame per cut, the key one first. Their verdicts on the sheets must
-   * be recorded first, because only approved sheets can be references.
+   * Begin the moments. The continuity plan decides what each is drawn from; the moments and the
+   * ghosts they need are then drawn in its order, each as soon as what it needs is in. Their
+   * verdicts on the sheets must be recorded first, because only approved sheets are references.
    */
   private async startFrames(s: Session, turn: number): Promise<void> {
     if (!s.build || !s.draft?.breakdown) return;
@@ -741,17 +778,80 @@ export class SessionStore {
       [...this.reviews.entries()].filter(([k]) => k.startsWith(`${s.id}:`)).map(([, p]) => p.catch(() => undefined)),
     );
     const ids = s.production?.result?.ids ?? {};
-    s.build.frames = buildFrames(s.draft.breakdown).map((f) => ({ ...f, nodeId: ids[f.id] }));
+    const plan = planContinuity(s.draft.breakdown);
+    s.build.plan = plan;
+    const pictures = new Map(
+      [
+        ...buildFrames(s.draft.breakdown, plan).map((f) => ({ ...f, nodeId: ids[f.id] })),
+        // A ghost is drawn on the asset it shows, covering the requirement planned there.
+        ...buildGhosts(plan).map((g) => ({ ...g, nodeId: ids[g.ghost?.of ?? ''], requirementId: ids[g.id] })),
+      ].map((i) => [i.id, i as Item]),
+    );
+    s.build.frames = drawOrder(plan)
+      .map((id) => pictures.get(id))
+      .filter((i): i is Item => !!i);
     await this.fillFrames(s, turn);
   }
 
-  /** Start waiting frames until as many are drawing as may be at once. */
+  /**
+   * Start what can be drawn, in plan order, until as many are drawing as may be at once. A
+   * picture waits until everything it needs is drawn; a need that failed is dropped. Each need
+   * is approved for continuity first: Strawberry draws a moment from another only once that one
+   * is approved and selected.
+   */
   private async fillFrames(s: Session, turn: number): Promise<void> {
     const frames = s.build?.frames ?? [];
     for (const f of frames) {
       if (frames.filter((x) => x.status === 'drawing').length >= FRAMES_AT_ONCE) break;
-      if (f.status === 'waiting') await this.startFrame(s, f, turn);
+      if (f.status !== 'waiting') continue;
+      const needs = (f.needs ?? []).map((id) => frames.find((x) => x.id === id)).filter((x): x is Item => !!x);
+      if (needs.some((n) => n.status !== 'ready' && n.status !== 'failed')) continue;
+      for (const n of needs) if (n.status === 'ready') await this.approveForContinuity(s, n, f);
+      f.dropped = needs.filter((n) => n.status === 'failed').map((n) => n.id);
+      if (f.kind === 'ghost') await this.startGhost(s, f, turn);
+      else await this.startFrame(s, f, turn);
     }
+  }
+
+  /**
+   * Approve a picture so a later one can be drawn from it. The person's own verdict, when there
+   * is one, already approved it. A moment is also selected; a ghost covers its requirement and
+   * is never selected, so the sheet stays its asset's reference.
+   */
+  private async approveForContinuity(s: Session, n: Item, forItem: Item): Promise<void> {
+    if (n.continuityApproved || n.review) {
+      n.continuityApproved = true;
+      return;
+    }
+    const users = (s.build?.frames ?? []).filter((x) => x.needs?.includes(n.id)).map((x) => x.name);
+    if (this.deps.sheets && n.mediaId && n.nodeId)
+      try {
+        await this.deps.sheets.review({
+          mediaId: n.mediaId,
+          nodeId: n.nodeId,
+          approved: true,
+          author: 'assistant',
+          decision:
+            n.kind === 'ghost'
+              ? `An in-between reference, approved by the chat for continuity: ${n.ghost?.why ?? ''}. Used by: ${users.join('; ')}.`
+              : `Approved by the chat as the continuity source for: ${users.join('; ')}. Not yet seen by the person; their verdict stands above this.`,
+          depicted: n.kind === 'cut' ? (n.depicted ?? []) : [n.nodeId],
+          requirementIds: n.kind === 'ghost' && n.requirementId ? [n.requirementId] : [],
+          select: n.kind !== 'ghost',
+        });
+      } catch (e) {
+        forItem.error = `approving ${n.name} for continuity failed: ${String(e).slice(0, 200)}`;
+      }
+    n.continuityApproved = true;
+    if (n.kind === 'ghost') n.review = 'approved';
+  }
+
+  /** The earlier pictures the plan draws this moment from, that are drawn and usable. */
+  private plannedInputs(s: Session, frame: Item): PlannedInput[] {
+    const frames = s.build?.frames ?? [];
+    return (frame.frame?.plan?.refs ?? [])
+      .map((use) => ({ use, item: frames.find((x) => x.id === use.id) }))
+      .filter((x): x is PlannedInput => !!x.item && x.item.status === 'ready' && !!x.item.mediaId);
   }
 
   /**
@@ -775,32 +875,78 @@ export class SessionStore {
       Object.assign(frame, { status: 'failed', error: 'this moment is not in the production' });
       return;
     }
-    const { prompt, references, depicted } = framePrompt(frame, s.build.items, s.style);
+    const { prompt, references, depicted } = framePrompt(frame, s.build.items, s.style, this.plannedInputs(s, frame));
     const changes: Record<string, string> = {};
     if (before)
       for (const [k, d] of Object.entries(frame.fields))
         if (d.value && d.value !== before[k]?.value)
           changes[k === 'feeling' ? 'beat.emotional_intent' : k === 'visual_point' ? 'beat.visual_point' : k] = d.value;
     frame.depicted = depicted;
-    frame.status = 'drawing';
-    frame.version += 1;
+    frame.continuity = undefined;
+    await this.launch(s, frame, {
+      prompt,
+      references,
+      changes,
+      reason: `The person asked to see their dream drawn and settled everything in it; approved within the ${IMAGE_CAP}-picture limit.`,
+    });
+  }
+
+  /** Start one ghost: an edit of its asset's approved sheet, never shown as part of the dream. */
+  private async startGhost(s: Session, ghost: Item, turn: number): Promise<void> {
+    ghost.startedAtTurn = turn;
+    const g = ghost.ghost;
+    const sheet = s.build?.items.find((i) => i.id === g?.of);
+    const fail = (error: string) => Object.assign(ghost, { status: 'failed', error });
+    if (!this.deps.sheets || !s.style || !s.build || !g)
+      return void fail('nothing can be drawn here: the Strawberry engine is not set up');
+    if (s.images >= IMAGE_CAP) return void fail(`the ${IMAGE_CAP}-picture limit for one dream is reached`);
+    if (!sheet || sheet.status !== 'ready' || !sheet.mediaId || !ghost.nodeId)
+      return void fail(`${sheet?.name ?? g.of} has no approved sheet to edit`);
+    const from = g.from ? s.build.frames?.find((x) => x.id === g.from && x.status === 'ready') : undefined;
+    const { prompt, references, depicted } = ghostPrompt(ghost, sheet, from, s.style);
+    ghost.depicted = depicted;
+    await this.launch(s, ghost, {
+      prompt,
+      references,
+      intent: `Ghost reference: ${ghost.name}`,
+      reason: `An in-between reference the storyboard needs for continuity (${g.why}); approved within the ${IMAGE_CAP}-picture limit.`,
+    });
+  }
+
+  /** Prepare, approve and queue a moment or a ghost; the engine's answer comes back through the queue. */
+  private async launch(
+    s: Session,
+    item: Item,
+    job: {
+      prompt: string;
+      references: FrameReference[];
+      changes?: Record<string, string>;
+      reason: string;
+      intent?: string;
+    },
+  ): Promise<void> {
+    item.status = 'drawing';
+    item.version += 1;
     s.images += 1;
-    const snapshot = structuredClone(frame);
-    this.deps.sheets
+    const snapshot = structuredClone(item);
+    // A deps check above already failed the picture if the engine is missing.
+    const sheets = this.deps.sheets as SheetEngine;
+    sheets
       .startFrame({
         item: snapshot,
-        prompt,
-        references,
-        changes,
+        prompt: job.prompt,
+        references: job.references,
+        changes: job.changes,
         source: s.production?.result?.ids.said,
-        reason: `The person asked to see their dream drawn and settled everything in it; approved within the ${IMAGE_CAP}-picture limit.`,
+        reason: job.reason,
         maxUsd: MAX_USD_PER_IMAGE,
+        intent: job.intent,
       })
       .then(
         (r) =>
           this.serial(s.id, () =>
             this.update(s.id, (x) => {
-              const it = x.build?.frames?.find((i) => i.id === frame.id);
+              const it = x.build?.frames?.find((i) => i.id === item.id);
               if (!it) return;
               it.jobId = r.jobId;
               it.recipeId = r.recipeId;
@@ -810,11 +956,71 @@ export class SessionStore {
         (e) =>
           this.serial(s.id, () =>
             this.update(s.id, (x) => {
-              const it = x.build?.frames?.find((i) => i.id === frame.id);
+              const it = x.build?.frames?.find((i) => i.id === item.id);
               if (it) Object.assign(it, { status: 'failed', error: String(e).slice(0, 300) });
             }),
           ),
       );
+  }
+
+  /**
+   * The person corrected some moments. Every picture drawn from them, directly or through
+   * another, is checked: does the correction touch what it took from them (the room, a changed
+   * look, the framing)? Jev decides; those wait for the new version and are drawn again, and the
+   * rest are kept. Returns the ones that will be redrawn.
+   */
+  private async followCorrections(s: Session, corrected: Item[], text: string): Promise<Item[]> {
+    const frames = s.build?.frames ?? [];
+    const reach = new Map<string, Item>();
+    const walk = (id: string, root: Item) => {
+      for (const d of frames)
+        if (d.needs?.includes(id) && !reach.has(d.id) && !corrected.includes(d)) {
+          reach.set(d.id, root);
+          walk(d.id, root);
+        }
+    };
+    for (const c of corrected) walk(c.id, c);
+    const drawn = [...reach.keys()]
+      .map((id) => frames.find((x) => x.id === id))
+      .filter((d): d is Item => !!d && (d.status === 'ready' || d.status === 'drawing'));
+    if (!drawn.length) return [];
+    const describe = (i: Item) =>
+      i.kind === 'ghost'
+        ? `an in-between reference showing ${i.name}`
+        : `picture ${i.frame?.order} (${i.fields.action?.value ?? i.name})`;
+    const questions: Record<string, Question> = {};
+    for (const d of drawn) {
+      const root = reach.get(d.id) as Item;
+      const took = [...(d.frame?.plan?.refs ?? []).map((r) => r.carries), ...(d.ghost ? [d.ghost.change] : [])].join(
+        '; ',
+      );
+      questions[`touches_${d.id}`] = {
+        type: 'noul',
+        instructions: `In a storyboard of their dream, the person corrected ${describe(root)}: "${text.slice(0, 400)}". ${describe(d)} was drawn from it, directly or through other pictures, taking: ${took || 'how things look'}. Would their correction also be wrong in it, so it has to be drawn again to match?`,
+        criteria: {
+          true: 'the correction is about something it took from the corrected picture, so it would now disagree',
+          false: 'the correction is about something it does not show or did not take, so it can stay',
+        },
+      };
+    }
+    const call = await this.deps.jev(renderTranscript(s.transcript), questions);
+    const follow: Item[] = [];
+    for (const d of drawn) {
+      const a = call.answers?.[`touches_${d.id}`];
+      if (!a || a.type !== 'noul' || a.noul < 0.5) continue;
+      const root = reach.get(d.id) as Item;
+      // A picture still drawing is redrawn after it lands; one already drawn waits for its source.
+      Object.assign(d, {
+        status: d.status === 'drawing' ? d.status : 'waiting',
+        stale: d.status === 'drawing',
+        announced: false,
+        review: undefined,
+        continuityApproved: false,
+        redrawBecause: root.name,
+      });
+      follow.push(d);
+    }
+    return follow;
   }
 
   /**
@@ -956,7 +1162,9 @@ export class SessionStore {
                 if (!cur || cur.jobId !== it.jobId) return;
                 if (st.state === 'ready')
                   Object.assign(cur, {
-                    status: 'ready',
+                    // Drawn from a version the person has since corrected: drawn again from the new one.
+                    status: cur.stale ? 'waiting' : 'ready',
+                    stale: undefined,
                     mediaId: st.mediaId,
                     mediaPath: st.mediaPath,
                     check: undefined,
@@ -1003,6 +1211,24 @@ export class SessionStore {
       this.update(id, (x) => {
         const cur = [...(x.build?.items ?? []), ...(x.build?.frames ?? [])].find((i) => i.id === itemId);
         if (cur && cur.mediaId === mediaId) cur.check = check;
+      }),
+    );
+    // A moment is also checked against the pictures it was drawn from: the same room, the same
+    // people, the change still there. Informs, like the badge; decides nothing.
+    const checks = (it.frame?.plan?.criteria ?? [])
+      .map((c) => ({ ...c, with: c.with ? (b?.frames?.find((f) => f.id === c.with)?.mediaId ?? '') : null }))
+      .filter((c) => c.with !== '');
+    if (!this.deps.judgeContinuity || it.kind !== 'cut' || !checks.length) return;
+    let continuity: Check;
+    try {
+      continuity = await this.deps.judgeContinuity(mediaId, checks);
+    } catch (e) {
+      continuity = { questions: 0, passed: 0, failed: [], error: String(e).slice(0, 200) };
+    }
+    await this.serial(id, () =>
+      this.update(id, (x) => {
+        const cur = x.build?.frames?.find((i) => i.id === itemId);
+        if (cur && cur.mediaId === mediaId) cur.continuity = continuity;
       }),
     );
   }

@@ -7,7 +7,8 @@
 // not invented defaults presented as user decisions").
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import type { Breakdown, Detail, StyleOption } from './producer';
+import { planContinuity } from './continuity';
+import type { Breakdown, Detail, State, StyleOption } from './producer';
 
 export const REPO = resolve(import.meta.dir, '..');
 export const STRAWBERRY_PYTHON = process.env.STRAWBERRY_PYTHON ?? join(REPO, 'venv', 'bin', 'python');
@@ -15,7 +16,7 @@ export const STRAWBERRY_HOME = process.env.DREAMCHAT_STRAWBERRY_HOME ?? join(imp
 
 type Kind = 'project' | 'scene' | 'shot' | 'cut' | 'character' | 'location' | 'prop';
 /** A value, or a `$ref` to a node or source created earlier in the same plan. */
-type Value = string | number | boolean | null | Value[];
+type Value = string | number | boolean | null | Value[] | { [key: string]: Value };
 
 export type Op =
   | { op: 'create'; ref: string; kind: Kind; name: string; parent?: string; notes?: string }
@@ -27,10 +28,30 @@ export type Op =
       author: 'user' | 'assistant';
       status: 'instruction' | 'proposal';
     }
-  | { op: 'patch'; node: string; changes: Record<string, Value>; source: string; reason: string };
+  | { op: 'patch'; node: string; changes: Record<string, Value>; source: string; reason: string }
+  | { op: 'requirement'; ref: string; node: string; kind: 'state' | 'view'; label: string; instruction: string };
 
 const FRAMING = { close: 'close', medium: 'medium', wide: 'wide' } as const;
-const LINKS = new Set(['visible_cast', 'required_props', 'location_id']);
+const LINKS = new Set(['visible_cast', 'required_props', 'location_id', 'continuity_from', 'match_frame']);
+/** Fields keyed by asset: the keys are references, the values text. */
+const STATES = new Set(['continuity.before', 'continuity.after']);
+
+/** Strawberry's state attributes are lower_case names: "left hand" is `left_hand`. */
+const attribute = (what: string) => {
+  const slug = what
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 40);
+  return /^[a-z]/.test(slug) ? slug : `x_${slug || 'state'}`;
+};
+
+/** States as Strawberry keeps them: `{ asset: { attribute: value } }`. */
+function stateMap(states: Pick<State, 'who' | 'what' | 'now'>[]): Record<string, Record<string, Value>> {
+  const out: Record<string, Record<string, Value>> = {};
+  for (const st of states) (out[`$${st.who}`] ??= {})[attribute(st.what)] = st.now;
+  return out;
+}
 
 function split(fields: Record<string, Detail>): { said: Record<string, Value>; guessed: Record<string, Value> } {
   const said: Record<string, Value> = {};
@@ -97,6 +118,19 @@ export function planWrites(b: Breakdown, style: StyleOption, transcript: string)
     ops.push(...patches(`$${t.id}`, t.fields, t.name));
   }
 
+  // Ghosts are planned coverage on the asset they show, covered by the ghost's take once drawn.
+  const plan = planContinuity(b);
+  const planOf = new Map(plan.cuts.map((c) => [c.id, c]));
+  for (const g of plan.ghosts)
+    ops.push({
+      op: 'requirement',
+      ref: `$${g.id}`,
+      node: `$${g.of}`,
+      kind: g.kind,
+      label: g.label.slice(0, 120),
+      instruction: `${g.change}. Needed because ${g.why}.`.slice(0, 1000),
+    });
+
   let order = 0;
   for (const s of b.scenes) {
     ops.push({ op: 'create', ref: `$${s.id}`, kind: 'scene', name: s.title || s.id, parent: '$project' });
@@ -130,6 +164,16 @@ export function planWrites(b: Breakdown, style: StyleOption, transcript: string)
       if (m.place) cut.location_id = `$${m.place}`;
       if (m.feeling) cut['beat.emotional_intent'] = m.feeling;
       if (m.visual_point) cut['beat.visual_point'] = m.visual_point;
+      if (m.purpose) cut['beat.purpose'] = m.purpose;
+      // The continuity plan: every earlier cut it is drawn from, the states it carries in and
+      // leaves behind, and how it follows the one before.
+      const cp = planOf.get(m.id);
+      const from = (cp?.refs ?? []).filter((r) => r.kind === 'cut').map((r) => `$${r.id}`);
+      if (from.length) cut.continuity_from = from;
+      if (cp?.states.length) cut['continuity.before'] = stateMap(cp.states);
+      if (m.leaves?.length) cut['continuity.after'] = stateMap(m.leaves);
+      if (cp?.transition) cut.transition = cp.transition;
+      if (cp?.matchFrame) cut.match_frame = `$${cp.matchFrame}`;
       if (m.key) cut['beat.type'] = 'key moment';
       ops.push({
         op: 'patch',
@@ -208,12 +252,28 @@ export async function writeProduction(b: Breakdown, style: StyleOption, transcri
       // Capturing a source is itself a revision of the node it is captured on.
       const node = resolveRef(op.node) as string;
       revisions.set(node, (revisions.get(node) ?? 1) + 1);
+    } else if (op.op === 'requirement') {
+      const node = resolveRef(op.node) as string;
+      const req = (await call('create_requirement', {
+        id: node,
+        request: { kind: op.kind, label: op.label, instruction: op.instruction, priority: 1 },
+      })) as { id: string };
+      ids.set(op.ref, req.id);
+      // A planned requirement is itself a revision of its asset.
+      revisions.set(node, (revisions.get(node) ?? 1) + 1);
     } else {
       const id = resolveRef(op.node) as string;
       const changes: Record<string, { op: 'set'; value: Value }> = {};
-      // Only link fields hold references; any other value is text and passes through as written.
+      // Link fields hold references, and state fields are keyed by them; any other value is text.
       for (const [k, v] of Object.entries(op.changes))
-        changes[k] = { op: 'set', value: LINKS.has(k) ? resolveRef(v) : v };
+        changes[k] = {
+          op: 'set',
+          value: LINKS.has(k)
+            ? resolveRef(v)
+            : STATES.has(k) && v && typeof v === 'object' && !Array.isArray(v)
+              ? Object.fromEntries(Object.entries(v).map(([asset, facts]) => [resolveRef(asset) as string, facts]))
+              : v,
+        };
       const node = (await call('patch', {
         id,
         request: {

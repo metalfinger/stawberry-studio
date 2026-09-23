@@ -30,16 +30,23 @@ describe('the plan', () => {
       expect(c.changes.required_props).toEqual(['$t1']);
       expect(c.changes.location_id).toBe('$l1');
     }
+    // The close-up takes the room from the wide: the continuity plan's link, and how it follows.
+    const close = ops.find((o) => o.op === 'patch' && o.node === '$m2' && 'action' in o.changes);
+    expect(close?.op === 'patch' && close.changes.continuity_from).toEqual(['$m1']);
+    expect(close?.op === 'patch' && close.changes.transition).toBe('cut, carrying on');
   });
 });
 
 describe.skipIf(!strawberryAvailable())('written into an isolated Strawberry store', () => {
-  test('the engine accepts it, and its only open issue is the sheets, which come next', async () => {
+  test('the engine accepts it, and its open issues are the sheets and the continuity source, which come next', async () => {
     const r = await writeProduction(breakdown, style, 'Person: there was a board in my kitchen');
     expect(r.created).toMatchObject({ project: 1, location: 1, prop: 1, scene: 1, shot: 2, cut: 2 });
+    // The close-up of the slat is drawn from the wide of the kitchen, so the wide must be
+    // approved first: the engine checks the continuity chain itself.
     expect(r.issues.sort()).toEqual([
       'asset_reference: Approve and select a current reference for the departure board',
       'asset_reference: Approve and select a current reference for the kitchen',
+      'continuity_take: Approve and select a current take for continuity source The kitchen, with the board on the wall',
     ]);
     expect(r.readyCuts).toBe(0);
   }, 30000);

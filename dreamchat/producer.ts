@@ -32,12 +32,37 @@ export type Moment = {
   /** Whose eyes we see it through. */
   eyes: 'dreamer' | 'outside';
   distance: 'close' | 'medium' | 'wide';
+  /** What the camera faces: a landmark of the place ("the window"). Tells sides of a room apart. */
+  looks_at: string;
   feeling: string;
   /** The one thing the picture must carry. */
   visual_point: string;
+  /** What this moment does in the story (Strawberry's beat.purpose). */
+  purpose: string;
+  /**
+   * The producer's view: whether it carries straight on from the moment before in its scene.
+   * Only a hint: which earlier moment it must match is decided by Jev (`from`).
+   */
+  continues: boolean;
+  /** The earlier moment this one must match to read as continuous, or null. Decided by Jev. */
+  from?: string | null;
+  /** What this moment changes that later pictures must keep showing (Strawberry's continuity.after). */
+  leaves: { who: string; what: string; now: string }[];
+  /**
+   * An intended dream discontinuity from the moment before, only when the person told it: "the
+   * kitchen becomes a station platform around her". Continuity must not smooth it away.
+   */
+  shift: string;
+  /** Earlier moments in the same place that face the same side of it. Decided by Jev. */
+  sameSide?: string[];
+  /** The changes still in force here for what is in view, from earlier moments. Decided by Jev. */
+  states?: State[];
   key: boolean;
   said: boolean;
 };
+
+/** A lasting change in force at a moment: who changed, what, into what, and since which moment. */
+export type State = { who: string; what: string; now: string; since: string };
 
 export type Scene = { id: string; title: string; place: string; mood: string; moments: Moment[] };
 
@@ -80,7 +105,11 @@ Mark every detail "said": true ONLY when the person's own words give it. Anythin
 - Mark exactly one moment "key": true — the moment they said stays with them, or would pause on.
 - "eyes": "dreamer" when we see through the dreamer's eyes, "outside" when the dreamer is seen. Follow what they said about how they were in it.
 - "distance": "close", "medium" or "wide" — how near the viewer is to what matters.
-- "feeling" is what the moment should feel like, in their words where possible. "visual_point" is the one thing the picture must carry.
+- "feeling" is what the moment should feel like, in their words where possible. "visual_point" is the one thing the picture must carry. "purpose" is what the moment does in the story, in a few words: "sets the scene", "the turn", "the payoff", "the waking".
+- "leaves": what this moment changes that later pictures must keep showing, as {"who": an id, "what": the part or attribute, "now": its new state}. For example, when her head turns to ice: {"who": "p1", "what": "head", "now": "a block of glittering ice"}. Empty when nothing lasting changes.
+- "looks_at": what the camera faces in the place, a landmark of it in a few words ("the window", "the door to the hall", "the stove"). Two pictures facing the same side of a place get the same words. Through the dreamer's eyes it is what they face.
+- "shift": only where the person said the dream itself jumped: the place, a person or a thing abruptly became something else. Say what changes, from their words: "the kitchen becomes a station platform around her". Empty otherwise; an ordinary cut to a new place or time is not a shift.
+- "continues": true when the moment carries straight on from the one before it in the same scene (the same people and things, a moment later), false when it jumps: a new place, a new time, or a different part of the story. The first moment of each scene is false.
 
 ## People, places, things (Production Designer)
 - Only real presences get an entry. Ambient things (fog, glow, rain) belong to the look or a scene's mood. A crowd is not a person. Clothes and body features belong to the person, never separate things.
@@ -101,7 +130,7 @@ JSON only, exactly this shape (ids like p1, l1, t1, s1, m1, a/b/c/d):
  "people": [{"id": "p1", "name": "", "is_dreamer": false, "protagonist": true, "fields": {"identity": D, "appearance": D, "wardrobe": D, "distinctive_features": D}}],
  "places": [{"id": "l1", "name": "", "fields": {"geography": D, "landmarks": D, "light": D}}],
  "things": [{"id": "t1", "name": "", "fields": {"appearance": D, "materials": D}}],
- "scenes": [{"id": "s1", "title": "", "place": "l1", "mood": "", "moments": [{"id": "m1", "action": "", "visible": ["p1"], "things": ["t1"], "place": "l1", "eyes": "dreamer", "distance": "medium", "feeling": "", "visual_point": "", "key": false, "said": true}]}],
+ "scenes": [{"id": "s1", "title": "", "place": "l1", "mood": "", "moments": [{"id": "m1", "action": "", "visible": ["p1"], "things": ["t1"], "place": "l1", "eyes": "dreamer", "distance": "medium", "looks_at": "", "feeling": "", "visual_point": "", "purpose": "", "continues": false, "leaves": [], "shift": "", "key": false, "said": true}]}],
  "unknowns": ["what the dream leaves open that a picture will need"]}
 where D is {"value": "..." or null, "said": true or false}. Moment "said" is true when the person described that moment happening.`;
 
@@ -292,7 +321,7 @@ export function normalizeBreakdown(raw: string): { breakdown: Breakdown; notes: 
   const scenes: Scene[] = list(b.scenes).map((s, i) => {
     const o = (s ?? {}) as Record<string, unknown>;
     const scenePlace = placeIds.has(str(o.place)) ? str(o.place) : firstPlace;
-    const moments: Moment[] = list(o.moments).map((m) => {
+    const moments: Moment[] = list(o.moments).map((m, j) => {
       const mo = (m ?? {}) as Record<string, unknown>;
       momentNo += 1;
       const place = placeIds.has(str(mo.place)) ? str(mo.place) : scenePlace;
@@ -310,8 +339,19 @@ export function normalizeBreakdown(raw: string): { breakdown: Breakdown; notes: 
         place,
         eyes: mo.eyes === 'outside' ? 'outside' : 'dreamer',
         distance: mo.distance === 'close' || mo.distance === 'wide' ? mo.distance : 'medium',
+        looks_at: str(mo.looks_at, 80),
         feeling: str(mo.feeling, 240),
         visual_point: str(mo.visual_point, 240),
+        purpose: str(mo.purpose, 120),
+        // Code decides the edge case: a scene's first moment continues from nothing.
+        continues: j > 0 && mo.continues !== false,
+        leaves: list(mo.leaves)
+          .map((x) => (x ?? {}) as Record<string, unknown>)
+          .filter((x) => [...personIds, ...placeIds, ...thingIds].includes(str(x.who)) && str(x.what) && str(x.now))
+          .map((x) => ({ who: str(x.who), what: str(x.what, 60), now: str(x.now, 200) }))
+          .slice(0, 6),
+        // The first picture of the dream has nothing to jump from.
+        shift: momentNo > 1 ? str(mo.shift, 200) : '',
         key: mo.key === true,
         said: mo.said !== false,
       };

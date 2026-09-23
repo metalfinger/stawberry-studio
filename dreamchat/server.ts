@@ -10,7 +10,7 @@ import { callJev, jevAvailable } from './jev';
 import { callHost, HOST_MODEL } from './llm';
 import { reviseItem } from './producer';
 import { IMAGE_CAP, liveProducer, ownStyle, SessionStore } from './session';
-import { judgeAvailable, judgeTake, liveSheets, PROVIDER, spawnWorker } from './sheets';
+import { judgeAvailable, judgeContinuity, judgeTake, liveSheets, PROVIDER, spawnWorker } from './sheets';
 import { REPO, STRAWBERRY_HOME, STRAWBERRY_PYTHON, strawberryAvailable, writeProduction } from './strawberry';
 
 const loaded = loadedKeys;
@@ -24,6 +24,7 @@ const store = new SessionStore(cfg, {
   sheets: strawberryAvailable() ? liveSheets : undefined,
   reviseItem,
   judge: judgeAvailable() ? judgeTake : undefined,
+  judgeContinuity: judgeAvailable() ? judgeContinuity : undefined,
   dir: join(import.meta.dir, 'state'),
 });
 // The engine's own worker draws the sketches the chat queues, for this store only.

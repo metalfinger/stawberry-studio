@@ -2,10 +2,11 @@
 // draw one. Everything goes through Strawberry's own path: the item's fields are patched with
 // their source, a recipe is prepared, approved within the conversation's image cap, queued, and
 // the engine's worker draws it.
+import type { CutPlan, GhostPlan } from './continuity';
 import type { Detail, StyleOption } from './producer';
 import { cli, REPO, STRAWBERRY_HOME, STRAWBERRY_PYTHON } from './strawberry';
 
-export type ItemKind = 'character' | 'location' | 'prop' | 'cut';
+export type ItemKind = 'character' | 'location' | 'prop' | 'cut' | 'ghost';
 
 /** A person, place or thing being confirmed and sketched. */
 export type Item = {
@@ -34,6 +35,22 @@ export type Item = {
    * objection); undefined while it waits. A correction rejects the version and draws a new one.
    */
   review?: 'approved' | 'left';
+  /** Approved by the chat so the next moment could be drawn from it; the person's verdict still stands above it. */
+  continuityApproved?: boolean;
+  /** For a moment or a ghost: the pictures that must be drawn and approved before it. */
+  needs?: string[];
+  /** Pictures its plan wanted but it was drawn without, because they failed. */
+  dropped?: string[];
+  /** Redrawn because the person corrected this earlier picture, which it was drawn from. */
+  redrawBecause?: string;
+  /** Still drawing from a version the person has since corrected: drawn again once it lands. */
+  stale?: boolean;
+  /** For a ghost: what it shows, what it is edited from, and which moments use it. */
+  ghost?: GhostPlan;
+  /** For a ghost: the planned requirement on its asset that its take covers. */
+  requirementId?: string;
+  /** The judge's continuity check: the take beside the pictures it was drawn from. */
+  continuity?: { questions: number; passed: number; failed: string[]; error?: string };
   /** Downloads of the current take retried after failing. */
   collectRetries?: number;
   /** The image judge's check of the current take: how many declared facts it saw. */
@@ -50,6 +67,10 @@ export type Item = {
     key: boolean;
     /** Its place in the story, counting from 1. */
     order: number;
+    /** What the camera faces. */
+    looksAt?: string;
+    /** What it is drawn from and why: the continuity plan's entry for it. */
+    plan?: CutPlan;
   };
   isDreamer?: boolean;
 };
@@ -217,6 +238,12 @@ export type SheetEngine = {
     decision: string;
     /** The asset nodes the take shows. A sheet shows its own node; a frame, everything in view. */
     depicted: string[];
+    /** The person (their verdict, relayed) or the chat itself (approval for continuity). */
+    author?: 'human' | 'assistant';
+    /** Planned requirements on the asset the take covers: a ghost's view or state. */
+    requirementIds?: string[];
+    /** Make an approved take the node's selection. A ghost is never selected: the sheet stays. */
+    select?: boolean;
   }): Promise<void>;
   /** Collect a finished picture again after its download failed. Costs nothing: no new generation. */
   retryCollection(jobId: string): Promise<void>;
@@ -230,6 +257,8 @@ export type SheetEngine = {
     source?: string;
     reason: string;
     maxUsd: number;
+    /** What the recipe is for, as Strawberry records it. */
+    intent?: string;
   }): Promise<{ recipeId: string; jobId: string; usd: number | null }>;
 };
 
@@ -276,23 +305,33 @@ export const liveSheets: SheetEngine = {
     return { recipeId: recipe.id, jobId: job.id, usd };
   },
 
-  async review({ mediaId, nodeId, approved, decision, depicted }) {
-    const media = (await call('media', { id: mediaId })) as {
-      media: { review: { revision: number } };
-      review_context: string;
-    };
-    await call('review', {
-      id: mediaId,
-      request: {
-        author: 'human',
-        expected_revision: media.media.review.revision,
-        expected_context: media.review_context,
-        status: approved ? 'approved' : 'rejected',
-        user_decision: decision.slice(0, 1000),
-        depicted_assets: approved ? depicted : [],
-      },
-    });
-    if (!approved) return;
+  async review({ mediaId, nodeId, approved, decision, depicted, author, requirementIds, select }) {
+    // The person's verdict and the chat's continuity approval can land together: a conflict is
+    // read again and tried once more.
+    for (let attempt = 0; ; attempt++) {
+      const media = (await call('media', { id: mediaId })) as {
+        media: { review: { revision: number } };
+        review_context: string;
+      };
+      try {
+        await call('review', {
+          id: mediaId,
+          request: {
+            author: author ?? 'human',
+            expected_revision: media.media.review.revision,
+            expected_context: media.review_context,
+            status: approved ? 'approved' : 'rejected',
+            user_decision: decision.slice(0, 1000),
+            depicted_assets: approved ? depicted : [],
+            requirement_ids: approved ? (requirementIds ?? []) : [],
+          },
+        });
+        break;
+      } catch (e) {
+        if (attempt || !String(e).includes('review_conflict')) throw e;
+      }
+    }
+    if (!approved || select === false) return;
     const node = (await call('inspect', { id: nodeId })) as { node: { revision: number } };
     await call('select', { node_id: nodeId, media_id: mediaId, revision: node.node.revision });
   },
@@ -301,7 +340,7 @@ export const liveSheets: SheetEngine = {
     await call('retry_collection', { id: jobId });
   },
 
-  async startFrame({ item, prompt, references, changes, source, reason, maxUsd }) {
+  async startFrame({ item, prompt, references, changes, source, reason, maxUsd, intent }) {
     if (!item.nodeId) throw new Error(`${item.name} is not in the production yet`);
     if (changes && Object.keys(changes).length && source) {
       const node = (await call('inspect', { id: item.nodeId })) as { node: { revision: number } };
@@ -321,7 +360,7 @@ export const liveSheets: SheetEngine = {
       model: MODEL,
       prompt,
       references,
-      intent: `Frame: ${item.name}${item.version > 1 ? `, version ${item.version}` : ''}`,
+      intent: `${intent ?? `Frame: ${item.name}`}${item.version > 1 ? `, version ${item.version}` : ''}`,
       settings: PROVIDER === 'fal' ? { aspect_ratio: '16:9' } : {},
     })) as { id: string; fingerprint: string; spec: { estimate?: { credits?: number | null } } };
     await call('approve', {
@@ -376,5 +415,26 @@ export async function judgeTake(mediaId: string): Promise<Check> {
     proc.exited,
   ]);
   if (code !== 0) throw new Error((err || out).trim().split('\n').at(-1)?.slice(0, 300) ?? 'judge failed');
+  return JSON.parse(out) as Check;
+}
+
+/** The judge's continuity check: each question asked of the take beside the picture it compares with. */
+export async function judgeContinuity(
+  mediaId: string,
+  checks: { with: string | null; text: string }[],
+): Promise<Check> {
+  const proc = Bun.spawn([STRAWBERRY_PYTHON, 'dreamchat/judge.py', STRAWBERRY_HOME, '--continuity'], {
+    cwd: REPO,
+    stdin: new Blob([JSON.stringify({ media: mediaId, checks })]),
+    stdout: 'pipe',
+    stderr: 'pipe',
+    env: { ...process.env, PYTHONPATH: REPO },
+  });
+  const [out, err, code] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+    proc.exited,
+  ]);
+  if (code !== 0) throw new Error((err || out).trim().split('\n').at(-1)?.slice(0, 300) ?? 'continuity check failed');
   return JSON.parse(out) as Check;
 }

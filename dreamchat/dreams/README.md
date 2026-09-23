@@ -4,4 +4,4 @@ Real dream reports, retold in the first person as the simulated dreamer remember
 Quoted phrases are the dreamers' own words; everything else stays within what each report says,
 so any detail the listener asks about beyond it is something the dreamer "doesn't remember".
 
-Source for all four: DreamBank, UCSC (Domhoff & Schneider), CC BY-NC-SA 4.0.
+Source for all of them: DreamBank, UCSC (Domhoff & Schneider), CC BY-NC-SA 4.0.

@@ -106,6 +106,8 @@ describe('a whole conversation', () => {
   // the answers to the retelling, the offer and the style.
   const script = (q: Record<string, Question>): Record<string, Answer> => {
     if (q.is_retelling) return { is_retelling: noul(0.95) };
+    // Not a turn's reading: a question about the pictures, answered inertly unless a test says.
+    if (!q.eviD_telling) return {};
     const out: Record<string, Answer> = {};
     const turns = Object.keys(q.eviD_telling.type === 'choice' ? q.eviD_telling.criteria : {}).length - 1;
     if (turns >= 1) Object.assign(out, told('telling', 1));
@@ -222,7 +224,7 @@ describe('a whole conversation', () => {
       jev: fakeJev((q) => {
         const out = script(q);
         if (q.profile_reply) out.profile_reply = pick(replies.shift() ?? 'confirmed');
-        if (q.sketch_reaction) Object.assign(out, reaction);
+        if (q.sketch_reaction || Object.keys(q).some((k) => k.startsWith('touches_'))) Object.assign(out, reaction);
         return out;
       }),
       host,
@@ -328,14 +330,24 @@ describe('a whole conversation', () => {
     expect([t12.move?.kind, t12.phase]).toEqual(['sheets_done', 'frames']);
     expect(store.get(id)!.build!.items.map((i) => i.review)).toEqual(['approved', 'left']);
 
-    // The moments: the key one (m2) first, each with the approved sheets of what is in it.
+    // The moments, in story order by the continuity plan: the wide first, from the sheets. The
+    // close-up of the slat waits for it, because it takes its room from it.
     await store.settle(id, 50);
-    expect(framesStarted).toEqual([
-      { id: 'm2', refs: ['prop:media-node-t1-job-t1', 'location:media-node-l1-job-l1'] },
-      { id: 'm1', refs: ['prop:media-node-t1-job-t1', 'location:media-node-l1-job-l1'] },
+    expect(framesStarted).toEqual([{ id: 'm1', refs: ['prop:media-node-t1-job-t1', 'location:media-node-l1-job-l1'] }]);
+    expect(store.get(id)!.build!.plan!.cuts.map((c) => c.why)).toEqual([
+      'the sheets alone',
+      'picture 1 as composition',
     ]);
-    statuses.set('job-m2', 'ready');
     statuses.set('job-m1', 'ready');
+    await store.settle(id, 100);
+    // The wide is approved for continuity by the chat, and the close-up is drawn from it: the
+    // board's sheet for the board, the wide for the room (so not the kitchen's sheet).
+    expect(verdicts.at(-1)).toEqual(['media-cut-m1-job-m1', true]);
+    expect(framesStarted[1]).toEqual({
+      id: 'm2',
+      refs: ['prop:media-node-t1-job-t1', 'composition:media-cut-m1-job-m1'],
+    });
+    statuses.set('job-m2', 'ready');
     await store.settle(id);
     reaction = {};
     const t13 = await store.message(id, 'can I see them?');
@@ -348,11 +360,35 @@ describe('a whole conversation', () => {
     statuses.set('job-m1', 'running');
     const t14 = await store.message(id, 'the slat one is exactly it, but the kitchen in the other is too dark');
     expect([t14.move?.kind, t14.phase]).toEqual(['frames_drawing', 'frames']);
+    // The correction (the kitchen too dark) is not something the slat close-up took from the
+    // wide, so it is kept.
     expect(store.get(id)!.build!.frames!.map((f) => [f.id, f.review ?? null, f.status, f.version])).toEqual([
-      ['m2', 'approved', 'ready', 1],
       ['m1', null, 'drawing', 2],
+      ['m2', 'approved', 'ready', 1],
     ]);
     statuses.set('job-m1', 'ready');
+    await store.settle(id);
+    reaction = {};
+    await store.message(id, 'ok');
+    // A correction the close-up did take from the wide (the room) redraws it too, once the new
+    // wide is in, and the reply says so.
+    reaction = { sketch_reaction: pick('not_right'), bad_m1: noul(0.9), touches_m2: noul(0.9) };
+    statuses.set('job-m1', 'running');
+    await store.message(id, 'the kitchen walls should be green');
+    expect(host.calls.at(-1)!.find((m) => m.content.startsWith('<brief>'))!.content).toContain(
+      'The one slat that reads zikery (it follows from The kitchen, with the board on the wall)',
+    );
+    expect(store.get(id)!.build!.frames!.map((f) => [f.id, f.status, f.version, f.redrawBecause ?? null])).toEqual([
+      ['m1', 'drawing', 3, null],
+      ['m2', 'waiting', 1, 'The kitchen, with the board on the wall'],
+    ]);
+    statuses.set('job-m1', 'ready');
+    await store.settle(id, 100);
+    expect(framesStarted.at(-1)).toEqual({
+      id: 'm2',
+      refs: ['prop:media-node-t1-job-t1', 'composition:media-cut-m1-job-m1'],
+    });
+    statuses.set('job-m2', 'ready');
     await store.settle(id);
     reaction = {};
     await store.message(id, 'ok');
@@ -360,7 +396,7 @@ describe('a whole conversation', () => {
     reaction = { sketch_reaction: pick('looks_right') };
     const t16 = await store.message(id, 'yes, lovely');
     expect([t16.move?.kind, t16.phase, t16.closed]).toEqual(['all_done', 'done', true]);
-    expect(store.get(id)!.images).toBe(6);
+    expect(store.get(id)!.images).toBe(8);
   });
 
   test('each probe is counted, and a goal is asked at most twice', async () => {

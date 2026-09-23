@@ -12,7 +12,7 @@ import { callJev } from './jev';
 import { callDeepseek, callHost, type ChatMessage } from './llm';
 import { details, moments, reviseItem } from './producer';
 import { liveProducer, ownStyle, SessionStore } from './session';
-import { judgeAvailable, judgeTake, liveSheets, PROVIDER, spawnWorker } from './sheets';
+import { judgeAvailable, judgeContinuity, judgeTake, liveSheets, PROVIDER, spawnWorker } from './sheets';
 import { REPO, STRAWBERRY_HOME, STRAWBERRY_PYTHON, strawberryAvailable, writeProduction } from './strawberry';
 
 void loadedKeys;
@@ -61,6 +61,7 @@ async function run(file: string, max: number) {
     sheets: strawberryAvailable() ? liveSheets : undefined,
     reviseItem,
     judge: judgeAvailable() ? judgeTake : undefined,
+    judgeContinuity: judgeAvailable() ? judgeContinuity : undefined,
   });
   const { id } = store.create(`simulated: ${slug}`);
 
@@ -139,13 +140,31 @@ async function run(file: string, max: number) {
     styleWaitMs: s.turns.reduce((n, t) => n + (t.waitMs ?? 0), 0),
     production: s.production,
     frames: (s.build?.frames ?? []).map((i) => ({
+      id: i.id,
+      kind: i.kind,
       name: i.name,
       key: i.frame?.key,
+      order: i.frame?.order,
       status: i.status,
       version: i.version,
       error: i.error,
       file: i.mediaPath ? join(STRAWBERRY_HOME, 'media', i.mediaPath) : null,
+      from:
+        i.frame?.plan?.why ??
+        (i.ghost ? `ghost of ${i.ghost.of} from ${i.ghost.from ?? 'the sheet'}: ${i.ghost.why}` : null),
+      transition: i.frame?.plan?.transition,
+      changes: i.frame?.plan?.changes,
+      states: i.frame?.plan?.states,
+      dropped: i.dropped,
+      check: i.check,
+      continuity: i.continuity,
     })),
+    plan: s.build?.plan
+      ? {
+          issues: s.build.plan.issues,
+          ghosts: s.build.plan.ghosts.map((g) => `${g.id} ${g.kind} ${g.label}: ${g.why}`),
+        }
+      : null,
     sketches: (s.build?.items ?? []).map((i) => ({
       name: i.name,
       status: i.status,
@@ -217,8 +236,12 @@ function print(r: Report) {
   console.log(`style: ${r.style ?? '—'} (waited ${r.styleWaitMs} ms for the breakdown)`);
   for (const k of r.frames)
     console.log(
-      `  frame ${k.key ? '★ ' : ''}${k.name}: ${k.status}${k.error ? ` (${k.error})` : ''}${k.file ? ` ${k.file}` : ''}`,
+      `  ${k.kind === 'ghost' ? 'ghost' : `frame ${k.order}`} ${k.key ? '★ ' : ''}${k.name}: ${k.status}${k.error ? ` (${k.error})` : ''}${k.file ? ` ${k.file}` : ''}\n      from: ${k.from ?? '—'}${k.transition ? ` · ${k.transition}` : ''}${k.changes?.length ? ` · changes: ${k.changes.join('; ')}` : ''}${k.dropped?.length ? ` · dropped ${k.dropped.join(', ')}` : ''}${k.continuity ? ` · continuity ${k.continuity.passed}/${k.continuity.questions}${k.continuity.failed.length ? ` (missed: ${k.continuity.failed.join(' | ')})` : ''}${k.continuity.error ? ` (${k.continuity.error})` : ''}` : ''}${k.check ? ` · facts ${k.check.passed}/${k.check.questions}` : ''}`,
     );
+  if (r.plan) {
+    for (const g of r.plan.ghosts) console.log(`  plan ghost ${g}`);
+    for (const x of r.plan.issues) console.log(`  plan issue: ${x}`);
+  }
   for (const k of r.sketches)
     console.log(`  sketch ${k.name}: ${k.status}${k.error ? ` (${k.error})` : ''}${k.file ? ` ${k.file}` : ''}`);
   console.log(`images ${r.images} · $${r.spentUsd.toFixed(2)} at list price`);

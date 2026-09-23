@@ -316,7 +316,10 @@ Each step ships on its own and is measured with the simulated dreamers before th
    from the approved sketches of what is in it. Reactions and new versions work as for
    sketches. Frames reference sketches only, not the previous frame: continuity chaining
    (Strawberry's `continuity_from`) is the next improvement.
-5. **Waiting and polish.** Statuses in the brief, pacing, the cap and error states.
+5. **Continuity.** The continuity plan below: each cut drawn from the earlier cuts it has to
+   match, chosen by story and camera, plus ghost references where one edit would otherwise
+   change too much.
+6. **Waiting and polish.** Statuses in the brief, pacing, the cap and error states.
 
 ## Step 3 design: every item is a form
 
@@ -368,10 +371,159 @@ What stays the same across every form:
 - **Unknown is an answer.**
 - **One turn at a time**, with background jobs reporting back through the same queue.
 
+## Step 5 design: continuity
+
+A storyboard has to read as one continuous sequence when it is shown to someone. Frames drawn
+from the sheets alone look like the same world, but not like a sequence. Two mechanisms carry
+continuity:
+
+- **Cut references.** Each cut is drawn from the earlier cuts it has to match. It is not always
+  the previous cut: the choice depends on the story and on how the camera moves.
+- **Ghost references.** A ghost is an in-between picture that is never a cut. It is one edit of
+  an existing picture, made when a cut would otherwise need too many changes in one edit, or
+  when several cuts need the same thing.
+
+Both are decided by a **continuity plan**. The plan is made in code from the breakdown and
+Jev's judgments, and it exists before any cut is drawn.
+
+### What the plan reads
+
+The producer proposes, per moment:
+
+| Field | Meaning |
+|---|---|
+| `place`, `distance`, `eyes` | as now |
+| `looks_at` | what the camera faces: a landmark of the place ("the window", "the door to the hall") |
+| `purpose` | what the moment does in the story (the beat) |
+| `leaves` | lasting changes later pictures must keep showing: `{who, what, now}` |
+| `shift` | an intended dream discontinuity from the moment before: "the kitchen becomes a station platform around her" |
+
+A shift is only kept if the person told it. Grounding checks it like any said detail. An
+invented discontinuity would be a lie about their dream, and a missed one gets smoothed into
+false continuity.
+
+Jev decides, in one continuity pass after grounding (split into parallel calls when long):
+
+- `from_<m>`: which earlier moment this one must match, or none.
+- `side_<a>_<b>`: for two moments in the same place, whether they face the same side of it.
+  This is skipped when the `looks_at` values are the same words.
+- `holds_<k>_<m>`: whether change `k` still holds at moment `m`. Unsure means it holds.
+
+### Camera relation to each earlier cut
+
+| Relation | When | What the earlier cut can give | Role |
+|---|---|---|---|
+| same setup | same place, same side, same distance and eyes | the picture itself, a moment later | `base` (edit it) |
+| same side | same place and side, new distance or eyes | the room's layout, the light, where people are | `composition` |
+| other side | same place, the camera turned | the light and how people look; not the walls | `lighting` |
+| other place | a new place with the same people | how the people look now; not the background | `identity` |
+| dream shift | the moment the person said the dream jumped | the framing and the pose (a match cut); the dream changes the rest | `composition`, with `match_frame` |
+
+### Picking references
+
+In order:
+
+1. **Base.** The latest same-setup cut. Jev's `from_` choice wins when it is also same-setup.
+2. **Story source.** Jev's `from_` choice, when it is not the base, in the role its relation
+   gives.
+3. **Room anchor.** Only if there is no base and no same-side reference yet: the widest earlier
+   cut from the same side.
+4. **Sheets.** Always the sheets of everything in view: identity never comes second-hand. The
+   location sheet only sets the layout when the cut faces the sheet's side. Facing the other
+   way, it gives materials and colours only.
+5. **States.** Every state in force (`leaves` that still hold) is spelled out in the prompt. It
+   is carried by a state ghost when there is one, or by a referenced cut drawn after the change
+   that shows who changed.
+
+Limits: at most three earlier pictures per cut, and at most two base edits in a row. The third
+cut in a chain takes its predecessor as `composition` instead, so the sheets re-anchor identity
+and drift stops.
+
+### When to make a ghost
+
+The rule is one edit, one change. For each cut, count what differs from its references:
+
+- **The action.** Always one.
+- **The camera.** One if the cut is reframed from a same-side cut. One if it faces a side of an
+  established place that no reference shows.
+- **States.** One for each state in force that no reference shows.
+
+Two or fewer changes, and the cut is drawn directly. Three or more, and a ghost takes one
+change out first. A **state ghost** is also made when two or more later cuts need the same
+changed state. Otherwise no ghost is made: most cuts never need one.
+
+| Ghost | Made from | Used as |
+|---|---|---|
+| state: someone or something after a change | edit their sheet (`base`) to apply the one change, with the cut where it happened as the look of the change | their `identity`, `prop` or `location` reference in every later cut where the change holds |
+| view: a place from a side never drawn | edit the location sheet to face `looks_at`, with the widest cut there for its light | the room reference for that cut |
+
+Detail and scale ghosts (a legible sign reused by every insert, a size relation) come later.
+
+Ghosts are production inventions, never dream facts. In Strawberry each ghost is a planned
+requirement on its asset (`view` or `state`). The ghost's take covers that requirement and is
+never selected, so the sheet stays the asset's reference. The recipe records which picture it
+was edited from.
+
+### Draw order and approval
+
+Cuts and ghosts form a graph of needs:
+
+- a cut waits for the cuts and ghosts it references;
+- a ghost waits for the cut it was taken from.
+
+Whatever is ready is drawn, up to three at a time, in story order. A cut must be approved
+before a later cut can be drawn from it (Strawberry's `continuity_take`). The chat approves it
+for continuity itself, recorded as the assistant with the pictures it serves, and selects it.
+The judge only informs, as before, because it has not been measured against people's verdicts
+yet. A need that failed is dropped and the dependent is drawn without it, noted in its plan.
+
+### Preflight
+
+Before any frame is drawn, code checks the plan:
+
+- every moment has a visible action;
+- every reference is earlier and exists;
+- no cut still changes three or more things;
+- every state in force is carried or spelled out.
+
+Findings show in the panel and in the turn notes. Nothing is refused on them.
+
+### Strawberry records
+
+Each cut records:
+- `continuity_from`: every earlier cut it references;
+- `continuity.before`: the states in force at it;
+- `continuity.after`: what it `leaves`;
+- `transition`: continuous, a cut, or the dream's shift;
+- `match_frame`: set on a shift;
+- `beat.purpose`.
+
+The engine then checks the chain on its own: cycles, unapproved sources, conflicting states.
+
+### Checking
+
+The plan gives each cut its continuity criteria: "the same room as picture 1, from the same
+side", "her head is still ice", "the dream's shift happened". The judge answers them on the
+source and the new picture side by side. Like the other badges, the result informs and decides
+nothing.
+
+### Corrections
+
+When the person marks a cut wrong, it is redrawn as before. Each later picture drawn from it is
+then checked. Jev decides whether their correction touches what that picture took from it (the
+room, a state, the framing). Only those are redrawn, after the new version is approved, and the
+reply says which. Accepted pictures that the correction doesn't touch are kept.
+
+### The panel
+
+- Each cut shows what it was drawn from, and why.
+- Ghosts get their own section: what each shows, what it was edited from, and which cuts use it.
+- Preflight findings are listed.
+
 ## Defaults (change any)
 
 - **Producer model:** DeepSeek v4 pro, the same model that writes the replies.
 - **Image cap:** 30 per conversation (about $4.50).
-- **Order:** the key moment is drawn first.
+- **Order:** story order, as the continuity plan allows; independent pictures in parallel.
 - **Failed checks:** one automatic redraw when the judge fails a picture.
 - **Parallel drawing:** up to three pictures at once.

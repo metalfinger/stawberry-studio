@@ -4,7 +4,8 @@
 //   bun run produce.ts runs/sim-….json icehead
 import { loadedKeys } from './boot';
 import { readFileSync } from 'node:fs';
-import { ground } from './ground';
+import { planContinuity } from './continuity';
+import { ground, linkContinuity } from './ground';
 import { callJev, type Exchange, renderTranscript } from './jev';
 import { callProducer, details, moments, normalizeBreakdown } from './producer';
 
@@ -25,7 +26,8 @@ for (const run of runs.filter((r) => !name || r.dream === name)) {
   const { raw, ms } = await callProducer(renderTranscript(transcript));
   const { breakdown, notes } = normalizeBreakdown(raw);
   const g = await ground(breakdown, transcript, callJev);
-  const b = g.breakdown;
+  const c = await linkContinuity(g.breakdown, callJev);
+  const b = c.breakdown;
   const all = details(b).filter((d) => d.detail.value);
   console.log(`\n━━ ${run.dream}: "${b.title}" — producer ${ms} ms, grounding ${g.ms} ms, total ${Date.now() - t0} ms`);
   console.log(`   ${b.logline}`);
@@ -34,11 +36,25 @@ for (const run of runs.filter((r) => !name || r.dream === name)) {
   );
   for (const s of b.scenes)
     for (const m of s.moments)
-      console.log(`   ${m.key ? '★' : ' '} ${m.id} [${m.distance}, ${m.eyes}${m.said ? '' : ', GUESS'}] ${m.action}`);
+      console.log(
+        `   ${m.key ? '★' : ' '} ${m.id} [${m.distance}, ${m.eyes}${m.looks_at ? `, facing ${m.looks_at}` : ''}${m.said ? '' : ', GUESS'}] ${m.action}${m.shift ? ` ⟿ jump: ${m.shift}` : ''}${m.leaves.length ? ` → leaves ${m.leaves.map((l) => `${l.who}.${l.what}=${l.now}`).join(', ')}` : ''}`,
+      );
   console.log(
     `   details: ${all.filter((d) => d.detail.said).length} said, ${all.filter((d) => !d.detail.said).length} guessed`,
   );
   for (const d of g.downgraded) console.log(`   ↓ ${d.label}: "${d.value.slice(0, 90)}" (p ${d.p})`);
   console.log(`   styles: ${b.style_options.map((o) => `${o.id}) ${o.name}`).join(' · ')}`);
   if (notes.length) console.log(`   repaired: ${notes.join('; ')}`);
+  // The continuity plan, as the frames will be drawn.
+  console.log(
+    `   continuity (${c.ms} ms): ${c.links.join(', ') || 'no links'}${c.notes.length ? ` · ${c.notes.join('; ')}` : ''}`,
+  );
+  const plan = planContinuity(b);
+  for (const cut of plan.cuts)
+    console.log(
+      `   ${cut.order}. ${cut.why} · ${cut.transition}${cut.states.length ? ` · still: ${cut.states.map((st) => `${st.who}.${st.what}`).join(', ')}` : ''} · changes: ${cut.changes.join('; ')}`,
+    );
+  for (const gh of plan.ghosts)
+    console.log(`   ghost ${gh.id} (${gh.kind}) ${gh.label} from ${gh.from ?? 'the sheet'}: ${gh.why}`);
+  for (const x of plan.issues) console.log(`   issue: ${x}`);
 }
