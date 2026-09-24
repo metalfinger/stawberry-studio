@@ -275,7 +275,11 @@ export function toldColours(...items: Item[]): string[] {
 export const DREAM_QUALITY =
   'the stillness of a remembered moment, light a little softer than real and edges a little less sure, with no fog, haze or effects added';
 
-export function styleBlock(style: StyleOption, told: string[] = [], opts: { fromImages?: boolean } = {}): string {
+export function styleBlock(
+  style: StyleOption,
+  told: string[] = [],
+  opts: { fromImages?: boolean; ownColours?: boolean } = {},
+): string {
   const colours = [...new Set(style.palette_hex.map(colourName))];
   const mono = oneColour(style);
   // A photograph of a person in a cold palette still has warm skin; one in black and white does not.
@@ -298,6 +302,11 @@ export function styleBlock(style: StyleOption, told: string[] = [], opts: { from
         ? shades
         : opts.fromImages
         ? `Colours: ${colours.join(', ')}, for the light and everything no image above gives a colour to; each person and thing keeps the colours of its image.${keep}${skin ? ` ${skin}` : ''}`
+        : opts.ownColours
+          ? // A sketch is where its colours are first set: "and no others" beside a sofa "in medium
+            // blue", a colour the dreamer said, read as the sketch contradicting itself (0.35;
+            // 0.08 without that line, 24 Sep).
+            `Colours: ${colours.join(', ')}, for the light and everything its look above gives no colour to; what the look gives a colour keeps it.${keep}${skin ? ` ${skin}` : ''}`
         : told.length
           ? `Colours: ${colours.join(', ')}, except what the dream itself gives a colour, which keeps it exactly: ${told.join('; ')}.${skin ? ` ${skin}` : ''}`
           : `Colours, and no others: ${colours.join(', ')}.${skin ? ` ${skin}` : ''}`
@@ -420,7 +429,8 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
   const repair = item.repairFor?.length
     ? `The last attempt at this sheet got these wrong. Put each right:\n${item.repairFor.map((q) => `- ${q}`).join('\n')}`
     : '';
-  return [layout, facts, clear, repair, styleBlock(style, toldColours(item)), `${background}${NO_WORDS}`]
+  const ownColours = new RegExp(COLOUR_WORDS.source, 'i').test(facts);
+  return [layout, facts, clear, repair, styleBlock(style, toldColours(item), { ownColours }), `${background}${NO_WORDS}`]
     .filter(Boolean)
     .join('\n\n');
 }

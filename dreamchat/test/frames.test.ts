@@ -78,6 +78,24 @@ describe('colours the dream gives', () => {
     expect(styleBlock(muted)).not.toContain('Skin');
   });
 
+  test("a sketch keeps the colours its own look gives, and the palette rules the rest", () => {
+    const sofa: Item = {
+      id: 't1',
+      kind: 'prop',
+      name: 'the blue sofa',
+      fields: { appearance: { value: 'a two-seater sofa', said: false }, materials: { value: 'medium blue fabric', said: false } },
+      status: 'waiting',
+      version: 0,
+    };
+    const colourful = { ...style, palette_hex: ['#8a8a8a', '#a08f7a', '#6f7f8f'] };
+    expect(sheetPrompt(sofa, colourful)).toContain('for the light and everything its look above gives no colour to; what the look gives a colour keeps it.');
+    expect(sheetPrompt(sofa, colourful)).not.toContain('Colours, and no others');
+    // A look with no colour of its own keeps to the palette.
+    expect(sheetPrompt({ ...sofa, fields: { appearance: { value: 'a two-seater sofa', said: false } } }, colourful)).toContain(
+      'Colours, and no others',
+    );
+  });
+
   test('in a style made in one colour, a colour a look names is a shade of it', () => {
     const blueInk = {
       ...style,
