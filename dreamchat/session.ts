@@ -606,6 +606,14 @@ export class SessionStore {
       last_move: lastTurn ? moveKey(lastTurn.move) : next.last_move,
       threads: next.threads.map((th) => (s.exploredThreads.includes(th.id) ? { ...th, explored: true } : th)),
     };
+    // A sketch held back for how it looks, asked about last turn: their answer is applied and it is
+    // put through the gate again. Twice asked and still unsure, it is left undrawn.
+    if (s.phase === 'review' && s.build)
+      for (const it of s.build.items.filter((i) => i.held && i.status === 'waiting' && i.heldAsks)) {
+        if (this.deps.reviseItem) it.fields = await this.deps.reviseItem(it.name, it.fields, renderTranscript(s.transcript));
+        it.held = undefined;
+        await this.startSketch(s, it, turnNow);
+      }
     // Their answer to the sketches is applied before the next move is chosen: it can settle the
     // last one, or start a new version.
     const reviewed = { approved: [] as string[], redrawing: [] as string[] };
@@ -792,6 +800,14 @@ export class SessionStore {
         const fresh = s.build.items.filter((i) => i.status === 'ready' && !i.announced);
         extras.finished = fresh.map((i) => i.name);
         for (const i of fresh) i.announced = true;
+        // A sketch the gate is unsure of is not drawn on a guess: they are asked how it looks.
+        const held = s.build.items.filter((i) => i.held && i.status === 'waiting');
+        const ask = held.filter((i) => (i.heldAsks ?? 0) < 2);
+        extras.held = ask.map((i) => (i.isDreamer ? 'you' : i.name));
+        for (const i of ask) i.heldAsks = (i.heldAsks ?? 0) + 1;
+        // Asked twice and still unsure: left undrawn, and said so.
+        for (const i of held.filter((x) => (x.heldAsks ?? 0) >= 2 && !ask.includes(x)))
+          Object.assign(i, { status: 'failed', error: `not drawn: still unsure how it looks (${(i.held ?? []).join('; ')})` });
       }
     }
     const brief = renderBrief(overlaid, move, this.cfg, { phase, extras });
@@ -1408,25 +1424,35 @@ export class SessionStore {
       (item.kind === 'character'
         ? vague('appearance') || vague('wardrobe')
         : (item.kind === 'location' || item.kind === 'prop') && LOOK[item.kind].every(vague));
+    const others =
+      item.kind === 'character'
+        ? (s.build?.items ?? [])
+            .filter((i) => i.kind === 'character' && i.id !== item.id)
+            .map((i) => (i.isDreamer ? 'the dreamer' : i.name))
+        : [];
     const looked = unknown
-      ? this.deps.proposeLook!(
-          item.name,
-          item.fields,
-          renderTranscript(s.transcript),
-          item.kind === 'character'
-            ? (s.build?.items ?? [])
-                .filter((i) => i.kind === 'character' && i.id !== item.id)
-                .map((i) => (i.isDreamer ? 'the dreamer' : i.name))
-            : [],
-          kind,
-        )
+      ? this.deps.proposeLook!(item.name, item.fields, renderTranscript(s.transcript), others, kind)
           .catch(() => item.fields)
           .then((fields) => (snapshot.fields = fields))
       : Promise.resolve(null);
     looked
       .then(async () => {
         // The gate, before the sketch is paid for.
-        const findings = await this.gateFindings(s, snapshot, sheetPrompt(snapshot, style), [], []);
+        let findings = await this.gateFindings(s, snapshot, sheetPrompt(snapshot, style), [], []);
+        // A look it is unsure of is proposed once more, every word left to us guessed afresh, before
+        // anyone is asked; what they said themselves is kept.
+        if (findings.length && this.deps.proposeLook && !snapshot.heldAsks) {
+          const open = Object.fromEntries(
+            Object.entries(snapshot.fields).map(([k, d]) => [k, d.said ? d : { value: null, said: false }]),
+          );
+          const fields = await this.deps
+            .proposeLook(item.name, open, renderTranscript(s.transcript), others, kind)
+            .catch(() => null);
+          if (fields) {
+            snapshot.fields = fields;
+            findings = await this.gateFindings(s, snapshot, sheetPrompt(snapshot, style), [], []);
+          }
+        }
         if (findings.length) throw new Held(findings);
         return sheets.start({
           item: snapshot,

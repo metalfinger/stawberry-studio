@@ -511,6 +511,8 @@ export type BriefExtras = {
   failed?: string[];
   /** Pictures on show that later moments are drawn from, waiting for their verdict. */
   waitsOnThem?: string[];
+  /** Sketches held back because how they look is not yet clear enough to draw. */
+  held?: string[];
 };
 
 export function renderBrief(
@@ -643,6 +645,9 @@ function renderMove(move: Move, state: State, cfg: GoalsFile, extras: BriefExtra
         extras.finished?.length
           ? `${extras.finished.join(' and ')} ${extras.finished.length > 1 ? 'are' : 'is'} up on the right now: ask if it looks the way they remember.`
           : "The rest are still on their way; if they ask, say they'll appear on the right soon.",
+        extras.held?.length
+          ? `Before you draw ${extras.held.join(' and ')}, you need a little more about how ${extras.held.length > 1 ? 'they look' : 'it looks'}: ask them plainly, in one short question, or say you can picture it yourself if they'd rather.`
+          : '',
       ];
       return `while_drawing. ${parts.filter(Boolean).join(' ')}`;
     }

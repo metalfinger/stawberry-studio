@@ -60,6 +60,8 @@ export type Item = {
   held?: string[];
   /** A moment's words reworded before it was drawn, because the gate found them at odds. */
   reworded?: string[];
+  /** How many times they have been asked how it looks because the gate held its sketch. */
+  heldAsks?: number;
   /** Jev's reading of the prompt it was last to be drawn from. */
   gate?: { contradicts: number; twice: number; clear: number; refsClear: number | null };
   /** The judge's continuity check: the take beside the pictures it was drawn from. */
