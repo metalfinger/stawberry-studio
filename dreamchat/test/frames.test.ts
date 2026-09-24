@@ -19,7 +19,7 @@ const style = {
   name: 'ink',
   line: 'quiet',
   tokens: ['one loaded brush'],
-  palette_hex: ['#111111'],
+  palette_hex: ['#111111', '#C8553D', '#2A6F97'],
   lighting_rules: '',
 };
 
@@ -277,6 +277,26 @@ describe('a moment drawn from earlier moments', () => {
     );
     // An earlier moment says what it shows, so the model knows which picture is which.
     expect(prompt).toContain('Image 3: picture 1 (Ana stands at the counter): the same place from the same side.');
+  });
+
+  test('a picture from the other side gives its light; who is in it comes from their own images', () => {
+    const use = { id: 'm1', kind: 'cut' as const, role: 'lighting' as const, relation: 'other_side' as const, carries: 'x' };
+    const inputs = [{ use, item: drawn('m1', 1) }];
+    expect(framePrompt(moment('m2', 2, [use]), [ana, kitchen], style, inputs).prompt).toContain(
+      'the same place from the other side, a moment earlier. Take only its light: the time of day and where the light comes from. Everyone else in it is drawn from their own images above;',
+    );
+    // Someone with no sketch of their own takes their look from it too.
+    expect(framePrompt(moment('m2', 2, [use]), [{ ...ana, review: undefined }, kitchen], style, inputs).prompt).toContain(
+      'Take only its light: the time of day and where the light comes from, and how ana looks, who has no image of their own above.',
+    );
+  });
+
+  test('in a style made in one colour, each image says to draw its person in the picture’s shades', () => {
+    const blueInk = { ...style, medium: 'ink wash', palette_hex: ['#001E3C', '#0077B6', '#CAF0F8'] };
+    expect(framePrompt(moment('m1', 1), [ana, kitchen], blueInk).prompt).toContain(
+      "Image 1: who ana is: their face, hair, build and clothes, exactly, drawn in this picture's shades of one colour.",
+    );
+    expect(framePrompt(moment('m1', 1), [ana, kitchen], style).prompt).not.toContain('shades of one colour');
   });
 
   test('one image says who someone is: their sketch, or the picture they were last seen in', () => {

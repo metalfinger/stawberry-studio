@@ -131,7 +131,7 @@ export const inViewAt = (m: Moment) => new Set([...m.visible, ...m.things, ...(m
 const CARRIES: Record<Relation, string> = {
   same_setup: 'the same view a moment earlier: the room, the light and where everyone is',
   same_side: 'the same place from the same side: where its walls, furniture and people are, and its light',
-  other_side: 'the same place from the other side: its light, and how everyone looks; not its walls',
+  other_side: 'the same place from the other side: its light; not its walls, nor who is in it',
   other_place: 'how everyone in it looks right now; not its background',
   shift: 'the picture just before the dream jumps: its framing and where everyone is',
 };

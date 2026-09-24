@@ -7,7 +7,7 @@
 // in view is said out loud, and the style tokens are quoted word for word.
 import { type ContinuityPlan, type PlanRef, pictureName } from './continuity';
 import type { Breakdown, Moment, StyleOption } from './producer';
-import { VAGUE } from './producer';
+import { oneColour, VAGUE } from './producer';
 import { groupMembers, isGroup, type Item, LOOK, type Shape, shapeOf, styleBlock, toldColours } from './sheets';
 
 /** Where the line that says who "you" is goes, when anything told to the picture says "you". */
@@ -169,6 +169,7 @@ export function framePrompt(
   if (!f) throw new Error(`${frame.name} is not a moment`);
   const plan = f.plan;
   const inView = inViewOf(frame, sheets);
+  const seenHere = inView.filter((s) => s.kind === 'character').map((s) => s.id);
   const usable = inputs.filter((x) => approved(x.item) && x.item.mediaId);
   const base = usable.find((x) => x.use.role === 'base');
   const roomFromCut = usable.some(
@@ -236,6 +237,9 @@ export function framePrompt(
       .join('; ');
   };
   const facts: string[] = [];
+  // In one colour, a sketch drawn with a colour of its own passes it on: the family's yellow onesie
+  // came into a blue ink moment, and the dreamer's hair turned auburn beside it (24 Sep).
+  const shades = oneColour(style) ? ", drawn in this picture's shades of one colour" : '';
   // Where each sketch went, so a group and someone in it who has their own sketch are told to be
   // one and the same: "the family" with a baby, and "the baby" (24 Sep).
   const imageOf = new Map<string, number>();
@@ -263,7 +267,7 @@ export function framePrompt(
         s.mediaId,
         'identity',
         `${who(s)}: this exact person, with the same face, build and clothes`,
-        `who ${who(s)} ${isGroup(s) ? 'are' : 'is'}${look ? ` (${look})` : ''}: their ${changed.some((st) => /head|face/i.test(st.what)) ? 'build and clothes' : 'face, hair, build and clothes'}, exactly${base && baseWho.includes(s.id) ? ', as Image 1 already shows them' : ''}. Nothing else from it: not its pose, background or framing.${except}`,
+        `who ${who(s)} ${isGroup(s) ? 'are' : 'is'}${look ? ` (${look})` : ''}: their ${changed.some((st) => /head|face/i.test(st.what)) ? 'build and clothes' : 'face, hair, build and clothes'}, exactly${base && baseWho.includes(s.id) ? ', as Image 1 already shows them' : ''}${shades}. Nothing else from it: not its pose, background or framing.${except}`,
       );
       imageOf.set(s.id, references.length);
     } else if (s.kind === 'location') {
@@ -289,7 +293,7 @@ export function framePrompt(
         s.mediaId,
         'prop',
         `${who(s)}: this exact object, with the same shape and materials`,
-        `${who(s)}${look ? ` (${look})` : ''}: its exact shape, materials and colours, the same in every picture. Nothing else from it.`,
+        `${who(s)}${look ? ` (${look})` : ''}: its exact shape, materials and colours, the same in every picture${shades}. Nothing else from it.`,
       );
     }
   }
@@ -307,6 +311,16 @@ export function framePrompt(
   // model off them (an expression variant beside an identity sheet lost a character's glasses, in
   // the first Strawberry Studio), and Jev read the two as claiming the same thing (0.42-0.46 on
   // what each image is for; 0.87-0.89 with the sketch alone, 24 Sep).
+  // A picture from the other side gives its light; who is in it comes from their own images, one
+  // each. "Its light and how everyone looks" read as a second image of each person (what each
+  // image is for 0.61-0.67; 0.72-0.76 with its light alone, 24 Sep).
+  const lightFrom = (x: PlannedInput, shows: string) => {
+    const own = seenHere.filter((id) => !imageOf.has(id)).map((id) => nameOf(sheets, id));
+    return `${pictureNo(x)}${shows}: the same place from the other side, a moment earlier. Take only its light: the time of day and where the light comes from${
+      own.length ? `, and how ${own.join(' and ')} look${own.length > 1 ? '' : 's'}, who ${own.length > 1 ? 'have' : 'has'} no image of their own above` : ''
+    }. Everyone else in it is drawn from their own images above; what is behind them here is what that picture faced away from.`;
+  };
+
   const lastSeen = (x: PlannedInput, ids: string[]) => {
     const names = ids.map((id) => nameOf(sheets, id));
     const shows = x.item.fields.action?.value ? ` (${x.item.fields.action.value.replace(/\.$/, '')})` : '';
@@ -351,7 +365,7 @@ export function framePrompt(
         : x.use.role === 'composition'
           ? `${pictureNo(x)}${shows}: the same place from the same side. Take where everything and everyone in it are, and its light; this frame is framed ${f.distance}.`
           : x.use.role === 'lighting'
-            ? `${pictureNo(x)}${shows}: the same place from the other side, a moment earlier. Take only its light and how everyone looks; what is behind them here is what that picture faced away from.`
+            ? lightFrom(x, shows)
             : unsketched.length
               ? lastSeen(x, unsketched)
               : `${pictureNo(x)}${shows}: take only ${x.use.carries.replace(/;.*$/, '')}. Nothing of its place, framing or background.`) +

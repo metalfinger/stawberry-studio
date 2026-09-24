@@ -48,6 +48,7 @@ import {
   type Detail,
   moments,
   normalizeBreakdown,
+  oneColour,
   VAGUE,
   ownStyle,
   type StyleOption,
@@ -1100,7 +1101,7 @@ export class SessionStore {
     }
     // A take the judge still finds wrong after its one repair is theirs to see, never a source: what
     // is drawn from it keeps what is wrong with it.
-    const { serious } = this.seriousFailures(n);
+    const { serious } = this.seriousFailures(n, s.style);
     if (serious.length) {
       n.waitsForPerson = `the judge found: ${serious.join('; ').slice(0, 300)}`;
       return;
@@ -1877,7 +1878,9 @@ export class SessionStore {
   private async repairSheet(s: Session, it: Item): Promise<void> {
     const c = it.check;
     if (it.review || (it.repairs ?? 0) >= MAX_REPAIRS || !c || c.error) return;
-    const SERIOUS = ['subject', 'wardrobe', 'features', 'pose'];
+    // A sketch's colours go into every moment it is in: in a style made in one colour, a colour of its
+    // own is as wrong as the wrong clothes (a yellow onesie in a blue ink wash, 24 Sep).
+    const SERIOUS = ['subject', 'wardrobe', 'features', 'pose', ...(s.style && oneColour(s.style) ? ['palette'] : [])];
     const at = c.failed.map((_, i) => i).filter((i) => SERIOUS.includes((c.failedIds?.[i] ?? '').split(':')[0]));
     const facts = at.map((i) => c.failed[i]);
     if (!facts.length) return;
@@ -1909,10 +1912,21 @@ export class SessionStore {
    * (a viewer's hands kept in one picture are kept by every edit of it, 23 Sep); and a person or
    * room that does not match what the moment follows.
    */
-  private seriousFailures(it: Item): { factAt: number[]; fixes: Criterion[]; serious: string[] } {
+  private seriousFailures(it: Item, style?: StyleOption | null): { factAt: number[]; fixes: Criterion[]; serious: string[] } {
     const c = it.check;
     if (!c || c.error) return { factAt: [], fixes: [], serious: [] };
-    const SERIOUS = ['cast', 'location', 'prop', 'state', 'wardrobe', 'features', 'pose', 'undeclared'];
+    // In one colour, a colour of its own is passed on to every picture drawn from it.
+    const SERIOUS = [
+      'cast',
+      'location',
+      'prop',
+      'state',
+      'wardrobe',
+      'features',
+      'pose',
+      'undeclared',
+      ...(style && oneColour(style) ? ['palette'] : []),
+    ];
     const factAt = c.failed.map((_, i) => i).filter((i) => SERIOUS.includes((c.failedIds?.[i] ?? '').split(':')[0]));
     const fixes = (it.frame?.plan?.criteria ?? []).filter(
       (k) =>
@@ -1926,7 +1940,7 @@ export class SessionStore {
     if (it.review || (it.repairs ?? 0) >= MAX_REPAIRS || !it.mediaId || !it.nodeId) return false;
     const c = it.check;
     if (!c || c.error) return false;
-    const { factAt, fixes, serious } = this.seriousFailures(it);
+    const { factAt, fixes, serious } = this.seriousFailures(it, s.style);
     if (!serious.length) return false;
     it.repairs = (it.repairs ?? 0) + 1;
     // Said to the image model as instructions: a judge's question means nothing to it.
