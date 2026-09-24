@@ -1384,6 +1384,13 @@ export class SessionStore {
     let built = framePrompt(frame, s.build.items, s.style, this.plannedInputs(s, frame), layout);
     const inView = inViewOf(frame, s.build.items);
     let findings = await this.gateFindings(s, frame, built.prompt, built.references, inView);
+    // The brief is the one line a model wrote from the view: where the gate finds the prompt at odds
+    // with itself there, the view read off the render says the same without it.
+    if (frame.shot && findings.length && frame.gate?.around?.line.startsWith('The shot')) {
+      frame.shot = undefined;
+      built = framePrompt(frame, s.build.items, s.style, this.plannedInputs(s, frame), layout);
+      findings = await this.gateFindings(s, frame, built.prompt, built.references, inView);
+    }
     // What only its words got wrong is put right in words first, and read again: twice at most.
     for (let pass = 0; pass < 2; pass++) {
       if (!findings.length || !this.deps.reword || !findings.every((f) => WORDING.test(f))) break;

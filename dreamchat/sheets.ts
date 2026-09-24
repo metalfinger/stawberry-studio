@@ -73,7 +73,14 @@ export type Item = {
   /** How many times they have been asked how it looks because the gate held its sketch. */
   heldAsks?: number;
   /** Jev's reading of the prompt it was last to be drawn from. */
-  gate?: { contradicts: number; twice: number; clear: number; refsClear: number | null };
+  gate?: {
+    contradicts: number;
+    twice: number;
+    clear: number;
+    refsClear: number | null;
+    /** The line a contradiction reading rests on, and how much leaving it out lowers the reading. */
+    around?: { line: string; drop: number };
+  };
   /** The judge's continuity check: the take beside the pictures it was drawn from. */
   continuity?: { questions: number; passed: number; failed: string[]; notes?: string[]; error?: string };
   /** Downloads of the current take retried after failing. */

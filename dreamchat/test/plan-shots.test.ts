@@ -59,7 +59,9 @@ describe('the shots, planned while the chat goes on', () => {
     expect(briefs).toHaveLength(2);
     expect(prep.shots.m2.text).toBe('A first-person view, turned left to the board on the wall.');
     expect(prep.shots.m2.view).toContain('toward the departure board');
-    expect(prep.shots.m1.view).toStartWith('Seen from in front of them');
+    // One person is named, never "them", and the picture says nobody else is in it.
+    expect(prep.shots.m1.view).toStartWith('Seen from in front of the dreamer');
+    expect(prep.shots.m1.view).toContain('Nobody else is in the picture.');
     expect(prep.blocking.s1.front).toBe('the stove');
 
     // Kept on the conversation for this dream, its floor plans with it; never for a dream since changed.

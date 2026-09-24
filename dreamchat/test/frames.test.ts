@@ -750,11 +750,13 @@ describe("a moment's previs", () => {
     expect(prompt).toContain('Image 1: EDIT THIS PICTURE. It is a rough grey mock-up of this exact picture');
     expect(prompt).toContain("keep nothing of the mock-up's look: no grey clay, no outlines, no labels or letters.");
     expect(prompt).toContain("What the dreamer sees, the camera being their own eyes, as the mock-up in Image 1 shows it");
-    expect(prompt).toContain('Where everything stands, and which way the picture looks, come from Image 1, the mock-up, not from this image.');
+    expect(prompt).toContain(
+      'Where everything stands, and which way the picture looks, come from Image 1, the mock-up, not from this image; any of its objects the shot has outside the picture stay out of it.',
+    );
     // Without a previs, as before.
     const bare = framePrompt(pov, [place], style).prompt;
     expect(bare).not.toContain('mock-up');
-    expect(bare).toContain('come from the shot above, not from this image.');
+    expect(bare).toContain('come from the shot above, not from this image;');
   });
 
   test('seen from outside, the camera sees what the mock-up shows, and an earlier picture gives only its look', () => {
@@ -820,6 +822,11 @@ describe("a moment's previs", () => {
     expect(prompt).toContain('One picture from the dream, in a landscape 16:9 frame: a medium shot, at eye level.');
     expect(prompt).not.toContain('The subject occupies about half the frame height');
     expect(prompt).toContain(`What the camera sees, as the mock-up in Image 1 shows it: ${view}`);
-    expect(prompt).toContain('Take only how it looks there (its surfaces, colours and light) and how everyone in it looks; where everyone and everything is comes from Image 1, the mock-up.');
+    expect(prompt).toContain(
+      'the same place. Take only how it looks there (its surfaces, colours and light) and how everyone in it looks; where everyone and everything is, and which way this picture looks, come from Image 1, the mock-up.',
+    );
+    // The place's sketch gives what it is made of: where things stand comes from the mock-up alone.
+    expect(prompt).not.toContain('where things stand comes from the earlier picture');
+    expect(prompt).toContain('come from Image 1, the mock-up, not from this image');
   });
 });

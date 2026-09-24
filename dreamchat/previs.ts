@@ -991,13 +991,16 @@ export function outsideShot(
   const d = eye.d;
   const lens = eye.lens ?? LENS[size];
   const toward = together > 0 ? (sum.x * d.x + sum.y * d.y) / Math.hypot(sum.x, sum.y) : 0;
+  // One person is named, never "them": "seen from behind them" of a woman walking off alone came
+  // back with a man standing beside her (24 Sep).
+  const them = people.length === 1 ? name(people[0].id) : 'them';
   const from = pair
     ? 'from the side, as they face each other'
     : toward > 0.5
-      ? 'from behind them'
+      ? `from behind ${them}`
       : toward < -0.5
-        ? 'from in front of them'
-        : 'from beside them';
+        ? `from in front of ${them}`
+        : `from beside ${them}`;
   const solids = solidsOf(plan, [], name);
   const rr = render(solids, eye, 384, 216);
   const min = 384 * 216 * 0.002;
@@ -1015,14 +1018,21 @@ export function outsideShot(
   const whatShown = shown.filter((x) => subjects.includes(x.s.id) && !isPerson(x.s));
   const behind = shown.filter((x) => !subjects.includes(x.s.id));
   const sentences = [
-    `Seen ${from}, ${where}, at the height of their eyes: the camera looks toward ${wall(d, plan.front)}. A ${lens}mm lens.`,
+    `Seen ${from}, ${where}, at the height of ${people.length === 1 ? `${them}'s eyes` : 'their eyes'}: the camera looks toward ${wall(d, plan.front)}. A ${lens}mm lens.`,
     whoShown.length
-      ? `From left to right across the picture: ${whoShown.map(({ s, seen }) => words(s, seen)).join('; then ')}. They keep these places in every picture of this scene.`
+      ? `From left to right across the picture: ${whoShown.map(({ s, seen }) => words(s, seen)).join('; then ')}. ${
+          whoShown.length === 1
+            ? 'Nobody else is in the picture.'
+            : `Nobody else is in the picture. They keep these places in every picture of this scene.`
+        }`
       : '',
     ...whatShown.map(({ s, seen }) => `${cap(words(s, seen))}.`),
     behind.length ? `Also in the picture: ${behind.map(({ s, seen }) => words(s, seen)).join('; ')}.` : '',
+    // Whatever of the place is not in the picture is said to be out of it, and where: the woman
+    // walking off came back with the autoclave, behind the camera, drawn beside her where the
+    // room's sketch has it (24 Sep).
     ...spots
-      .filter((s) => subjects.includes(s.id) && !shown.some((x) => x.s.id === s.id))
+      .filter((s) => !shown.some((x) => x.s.id === s.id) && (subjects.includes(s.id) || !isPerson(s)))
       .map((s) => `Outside the picture, ${offTo(eye, s)}: ${name(s.id)}.`),
     frontLine(plan, eye, rr, min),
   ].filter(Boolean);
