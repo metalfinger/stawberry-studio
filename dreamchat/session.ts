@@ -718,6 +718,10 @@ export class SessionStore {
         it.announced = false;
         it.review = undefined;
         it.continuityApproved = false;
+        // Redrawn from its plan made again, so the harness as it is now draws it: a correction of
+        // where a moment was seen from was redrawn from a plan made before the dreamer's seat was
+        // part of it (24 Sep).
+        if (it.kind === 'cut') await this.replan(s);
         if (it.kind === 'cut') await this.startFrame(s, it, turnNow, before);
         else await this.startSketch(s, it, turnNow);
         reviewed.redrawing.push(it.name);
