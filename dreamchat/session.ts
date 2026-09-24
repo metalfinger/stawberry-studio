@@ -1287,6 +1287,7 @@ export class SessionStore {
     const read = await readPrompt(this.deps.gate, prompt, {
       sheet,
       kind: sheet ? (item.kind as 'character' | 'location' | 'prop') : undefined,
+      edit: item.kind === 'ghost',
     });
     if (read.reading) item.gate = read.reading;
     return [...fixed, ...read.findings];

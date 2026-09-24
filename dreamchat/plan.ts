@@ -59,6 +59,7 @@ async function gateOf(
   inView: Item[],
   issues: string[],
   sheet = false,
+  edit = false,
 ) {
   const fixed = [
     ...preflight(inView, issues),
@@ -67,7 +68,7 @@ async function gateOf(
       mustInclude: inView.filter((x) => x.mediaId).map((x) => ({ name: x.name, mediaId: x.mediaId as string })),
     }),
   ];
-  const read = await readPrompt(callJev, prompt, { sheet });
+  const read = await readPrompt(callJev, prompt, { sheet, edit });
   const r = read.reading;
   return `gate: ${[...fixed, ...read.findings].length ? `HOLD: ${[...fixed, ...read.findings].join('; ')}` : 'draw'}${r ? ` | contradicts ${r.contradicts.toFixed(2)} twice ${r.twice.toFixed(2)} clear ${r.clear.toFixed(2)}${r.refsClear !== null ? ` refs ${r.refsClear.toFixed(2)}` : ''}` : ''}`;
 }
@@ -106,7 +107,7 @@ for (const pid of drawOrder(plan)) {
     const inView = it.kind === 'ghost' ? [] : inViewOf(it, sheets);
     const order = it.frame?.order;
     const issues = order ? plan.issues.filter((x) => x.startsWith(`picture ${order} `) || x.startsWith(`picture ${order}:`)) : [];
-    console.log(await gateOf(out.prompt, out.references, inView, issues));
+    console.log(await gateOf(out.prompt, out.references, inView, issues, false, it.kind === 'ghost'));
     continue;
   }
   console.log(out.prompt);

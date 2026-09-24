@@ -27,6 +27,12 @@ export const MAX_CONTRADICTS_MOMENT = 0.45;
 export const MAX_TWICE = 0.4;
 /** Below this, the prompt is not clear enough to draw. */
 export const MIN_CLEAR = 0.7;
+/**
+ * An in-between picture is an edit of a sketch, and is asked whether its one change is plain: sound
+ * edits read 0.61-0.85, the same edits with the change made vague 0.08-0.21 (24 Sep). Asked as a
+ * scene ("who, where, what happens"), every one of them was held.
+ */
+export const MIN_EDIT_CLEAR = 0.5;
 /** Below this, it is not clear what to take from each attached image. */
 // Real problems with what an image is for read 0.31-0.46 (a baby drawn twice, a seat on a train
 // roof); clean prompts 0.6 and up (24 Sep).
@@ -77,13 +83,40 @@ export const FACETS: Record<'character' | 'location' | 'prop', Record<string, st
   },
 };
 
+const EDIT_CLEAR: Question = {
+  type: 'noul',
+  instructions:
+    'These instructions edit an attached reference picture of one person, place or thing to make one change. Is the change said plainly enough that two artists editing the same picture would make recognisably the same change, and is it plain what stays as it was?',
+  criteria: {
+    true: 'the change, and what stays as it was, are both plain',
+    false: 'the change is vague, or it is unclear what stays as it was',
+  },
+};
+
+const EDIT_REFS: Question = {
+  type: 'noul',
+  instructions:
+    'The instructions name each attached image ("Image 1 is …"). Is it plain which image is the one to edit, and what, if anything, to take from each other image?',
+  criteria: {
+    true: 'the image to edit, and what each other image gives, are plain',
+    false: 'which image to edit, or what another image is for, is unclear',
+  },
+};
+
 /** The questions Jev is asked about one picture's prompt: one narrow judgment each. */
 export function gateQuestions(
   withImages: boolean,
   sheet = false,
   kind?: 'character' | 'location' | 'prop',
+  edit = false,
 ): Record<string, Question> {
   const facets = sheet && kind ? FACETS[kind] : {};
+  if (edit)
+    return {
+      ...gateQuestions(withImages),
+      clear: EDIT_CLEAR,
+      ...(withImages ? { refs_clear: EDIT_REFS } : {}),
+    };
   return {
     ...Object.fromEntries(
       Object.entries(facets).map(([id, what]) => [
@@ -186,10 +219,10 @@ export function checkReferences(
 export async function readPrompt(
   jev: JevFn,
   prompt: string,
-  opts: { withImages?: boolean; sheet?: boolean; kind?: 'character' | 'location' | 'prop' } = {},
+  opts: { withImages?: boolean; sheet?: boolean; kind?: 'character' | 'location' | 'prop'; edit?: boolean } = {},
 ): Promise<GateResult> {
   const withImages = opts.withImages ?? /\bImage 1(?::| is\b)/.test(prompt);
-  const call = await jev(prompt, gateQuestions(withImages, opts.sheet, opts.kind));
+  const call = await jev(prompt, gateQuestions(withImages, opts.sheet, opts.kind, opts.edit));
   const noul = (id: string) => {
     const a = call.answers?.[id];
     return a && a.type === 'noul' ? a.noul : null;
@@ -205,7 +238,7 @@ export async function readPrompt(
   if (contradicts > (opts.sheet ? MAX_CONTRADICTS : MAX_CONTRADICTS_MOMENT))
     findings.push(`its instructions may contradict each other (${contradicts.toFixed(2)})`);
   if (twice > MAX_TWICE) findings.push(`someone may be drawn twice (${twice.toFixed(2)})`);
-  if (clear < MIN_CLEAR) {
+  if (clear < (opts.edit ? MIN_EDIT_CLEAR : MIN_CLEAR)) {
     // Which parts of its look are missing, when a sketch is unclear: what its rewording must fill.
     const missing = Object.entries(opts.sheet && opts.kind ? FACETS[opts.kind] : {})
       .filter(([id]) => (noul(`has_${id}`) ?? 1) < 0.5)
