@@ -15,7 +15,16 @@ import type { Item } from './sheets';
 // no description at all read 0.56, rightly: its artist would have had to invent it.
 /** Above this, a reading counts as a real risk and the picture is held. */
 export const MAX_CONTRADICTS = 0.3;
-export const MAX_TWICE = 0.25;
+/**
+ * A moment asks for more than a sketch, and Jev's reading of a contradiction rises with how much
+ * a prompt asks: taking out any one line of a rich, sound moment lowered it by 0.05-0.11, none by
+ * more, from 0.35-0.45. Real ones read higher: a seat on a train roof 0.48, a baby drawn twice
+ * 0.66-0.81, a recast moment still naming the conductor 0.83-0.91, a deliberately broken prompt
+ * 0.96 (24 Sep).
+ */
+export const MAX_CONTRADICTS_MOMENT = 0.45;
+/** Someone drawn twice read 0.75-0.83; the same person merely named twice, 0.25-0.31. */
+export const MAX_TWICE = 0.4;
 /** Below this, the prompt is not clear enough to draw. */
 export const MIN_CLEAR = 0.7;
 /** Below this, it is not clear what to take from each attached image. */
@@ -193,7 +202,7 @@ export async function readPrompt(
   if (contradicts === null || twice === null || clear === null || (withImages && refsClear === null))
     return { findings: [`the prompt could not be checked (${call.error ?? 'no answer'})`], reading: null };
   const findings: string[] = [];
-  if (contradicts > MAX_CONTRADICTS)
+  if (contradicts > (opts.sheet ? MAX_CONTRADICTS : MAX_CONTRADICTS_MOMENT))
     findings.push(`its instructions may contradict each other (${contradicts.toFixed(2)})`);
   if (twice > MAX_TWICE) findings.push(`someone may be drawn twice (${twice.toFixed(2)})`);
   if (clear < MIN_CLEAR) {

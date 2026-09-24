@@ -132,7 +132,7 @@ Mark every detail "said": true ONLY when the person's own words give it. Anythin
 - Each scene holds moments in order. A moment is ONE still picture: one decisive visible action, where it is, who and what is in view. A beat with two actions is two moments.
 - 3 to 10 moments for the whole dream, in the person's order and words. A dream that is a single image still gets at least 3: where it is (wide), the thing itself, and the detail that matters most (close). Framing the same told moment differently is not inventing.
 - "action" says what happens or what is there, in plain words. Never the camera: "wide view of", "close-up of" and the like belong in "distance", not in the action.
-- Write a moment's action, feeling, visual_point and dream in the third person, the dreamer as "the dreamer" ("the dreamer stands at the window"), never "you": they are instructions for a picture, and to a picture "you" is whoever looks at it.
+- Write a moment's action, feeling, visual_point, shift and dream in the third person, the dreamer as "the dreamer" or "they" ("the dreamer stands at the window"), never "you" and never "he" or "she": they are instructions for a picture, to a picture "you" is whoever looks at it, and the dreamer's own sketch shows who they are.
 - "visible" lists only people ids; objects go in "things".
 - Mark exactly one moment "key": true — the moment they said stays with them, or would pause on.
 - "eyes": "dreamer" when we see through the dreamer's eyes, "outside" when the dreamer is seen. Follow what they said about how they were in it.
@@ -266,7 +266,7 @@ export async function rewordLook(
   return changed ? out : null;
 }
 
-const REWORD_MOMENT = `One moment of a person's dream is about to be drawn from the instructions below, and a checker holding it back found a problem in them. Find what in the moment's own words causes it (its action, the one thing it must show, its feeling, or its part in the story): a detail that contradicts where it happens or who is there, something that cannot be in the picture, or something left unsaid. Rewrite every one of those words that takes part in the problem (if who is in the picture changed, each field that still names someone no longer there), as little as possible, keeping strictly to the dream as told and adding nothing it did not have. Write them in the third person, the dreamer as "the dreamer", never "you": to a picture "you" is whoever looks at it. Never mention the camera or a viewer. Return JSON only: {"fields": {"action": "", "visual_point": "", "feeling": "", "purpose": ""}} with only the fields you changed; {"fields": {}} if the problem is not in these words.`;
+const REWORD_MOMENT = `One moment of a person's dream is about to be drawn from the instructions below, and a checker holding it back found a problem in them. Find what in the moment's own words causes it (its action, the one thing it must show, its feeling, its part in the story, the dream's jump, or what in it is dreamlike): a detail that contradicts where it happens or who is there, something that cannot be in the picture, or something left unsaid. Rewrite every one of those words that takes part in the problem (if who is in the picture changed, each field that still names someone no longer there), as little as possible, keeping strictly to the dream as told and adding nothing it did not have. Write them in the third person, the dreamer as "the dreamer" or "they", never "you" (to a picture "you" is whoever looks at it) and never "he" or "she" (their sketch shows who they are; a "him" beside a woman's sketch reads as someone else). Never mention the camera or a viewer. Return JSON only: {"fields": {"action": "", "visual_point": "", "feeling": "", "purpose": "", "shift": "", "dream": ""}} with only the fields you changed; {"fields": {}} if the problem is not in these words.`;
 
 /**
  * A moment's words, reworded before anything is paid for, when the gate found its instructions
@@ -281,7 +281,9 @@ export async function rewordMoment(
   // "in sync with the conductor's hand" (24 Sep).
   cast: { in: string[]; out: string[] } = { in: [], out: [] },
 ): Promise<Record<string, Detail> | null> {
-  const words = ['action', 'visual_point', 'feeling', 'purpose'];
+  // Every word of the moment a picture is told, the jump and the dream's own strangeness included:
+  // a jump left "…and you are on top of it" when the rest was put in the third person (24 Sep).
+  const words = ['action', 'visual_point', 'feeling', 'purpose', 'shift', 'dream'];
   const current = Object.fromEntries(words.map((k) => [k, fields[k]?.value ?? null]));
   const res = await callDeepseek(
     [

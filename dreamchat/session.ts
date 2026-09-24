@@ -1144,6 +1144,20 @@ export class SessionStore {
       Object.assign(frame, { status: 'failed', error: 'this moment is not in the production' });
       return;
     }
+    // A moment still telling the dreamer "you" is put in the third person before anything else: to a
+    // picture "you" is whoever looks at it (older drafts, and words a rewording left behind).
+    const WORDS = ['action', 'visual_point', 'feeling', 'purpose', 'shift', 'dream'];
+    if (this.deps.reword && WORDS.some((k) => /\byou(r|rs|rself)?\b/i.test(frame.fields[k]?.value ?? ''))) {
+      const probe = framePrompt(frame, s.build.items, s.style, this.plannedInputs(s, frame));
+      const fields = await this.deps
+        .reword(probe.prompt, ['its words call the dreamer "you": put every one of them in the third person'], frame.fields)
+        .catch(() => null);
+      if (fields) {
+        const changed = Object.keys(fields).filter((k) => fields[k]?.value !== frame.fields[k]?.value);
+        frame.reworded = [...new Set([...(frame.reworded ?? []), ...changed])];
+        frame.fields = fields;
+      }
+    }
     let built = framePrompt(frame, s.build.items, s.style, this.plannedInputs(s, frame));
     const inView = inViewOf(frame, s.build.items);
     let findings = await this.gateFindings(s, frame, built.prompt, built.references, inView);
@@ -1336,6 +1350,8 @@ export class SessionStore {
       feeling: 'beat.emotional_intent',
       purpose: 'beat.purpose',
     };
+    // (The jump and the dream's strangeness are the picture's words only; Strawberry keeps the shift
+    // as the moment's own record, unchanged.)
     const words = Object.fromEntries(
       (frame.reworded ?? [])
         .filter((k) => ENGINE[k] && frame.fields[k]?.value)
