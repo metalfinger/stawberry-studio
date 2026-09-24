@@ -1,0 +1,975 @@
+// Previs: a shot drawn as plain grey blocks from its exact camera, before it is painted.
+//
+// A storyboard artist blocks a scene on a floor plan, and a previs artist renders what each camera
+// sees of it; the crew then shoots to match that frame. Told in words where everything was from the
+// dreamer's seat, the image model drew the room from somewhere else, and put the roller coaster
+// across the room instead of beside the friend (24 Sep): it follows a picture of a layout far
+// better than a description of one. So the layout is rendered here, from the floor plan that
+// decides every camera, and what the words say the camera sees is read off the same render: the
+// picture and the words cannot disagree.
+import { deflateSync } from 'node:zlib';
+import {
+  type Blocking,
+  type Eye,
+  facing,
+  HALF_VIEW,
+  type Lean,
+  reach,
+  rightOf,
+  type Spot,
+  unit,
+  wall,
+} from './blocking';
+
+type V2 = { x: number; y: number };
+type V3 = { x: number; y: number; z: number };
+
+/** A solid block: its middle on the plan, its bottom and size, turned to face `f`. */
+type Block = { x: number; y: number; z: number; w: number; d: number; h: number; f: V2 };
+
+/** A flat face of something, and the way it faces out. */
+type Face = { p: V3[]; n: V3; solid: number };
+
+/** Something in the previs: a person, a thing, a crowd, a wall; and what it is called, if anything. */
+type Solid = { id: string; label?: string; tone: number; faces: Face[] };
+
+/** How high someone's eyes are, by how they are. */
+export const eyeHeight = (pose?: Spot['pose']) => (pose === 'sitting' ? 1.2 : pose === 'lying' ? 0.35 : 1.62);
+
+/** The room's height where the plan does not say: an ordinary ceiling. */
+const CEILING = 3.2;
+/** A seated or standing eye looks a little down, as people do at what is before them. */
+const PITCH = (-4 * Math.PI) / 180;
+
+/**
+ * A person as a previs artist's mannequin, facing `f`: a round head on a neck, shoulders, arms,
+ * and legs as they sit or stand. Two stacked blocks read as boxes, not as someone (24 Sep).
+ */
+function mannequin(x: number, y: number, f: V2, pose: Spot['pose']): (Block | Face[])[] {
+  const r = rightOf(f);
+  const at = (ahead: number, side: number, z: number, w: number, d: number, h: number): Block => ({
+    x: x + f.x * ahead + r.x * side,
+    y: y + f.y * ahead + r.y * side,
+    z,
+    w,
+    d,
+    h,
+    f,
+  });
+  const head = (ahead: number, z: number) => sphere(v3(x + f.x * ahead, y + f.y * ahead, z), 0.1, 0.12);
+  if (pose === 'lying') return [at(0, 0, 0, 0.45, 1.5, 0.25), head(0.85, 0.15)];
+  if (pose === 'sitting')
+    return [
+      at(-0.1, 0, 0.45, 0.34, 0.22, 0.32), // the waist, on the seat
+      at(-0.1, 0, 0.77, 0.42, 0.24, 0.3), // the chest and shoulders
+      at(-0.1, 0, 1.07, 0.1, 0.1, 0.05), // the neck
+      at(-0.1, 0.25, 0.74, 0.09, 0.1, 0.32), // the upper arms, down the sides
+      at(-0.1, -0.25, 0.74, 0.09, 0.1, 0.32),
+      at(0.08, 0.2, 0.62, 0.08, 0.34, 0.08), // the forearms, forward along the thighs
+      at(0.08, -0.2, 0.62, 0.08, 0.34, 0.08),
+      at(0.15, 0.1, 0.45, 0.15, 0.45, 0.15), // the thighs
+      at(0.15, -0.1, 0.45, 0.15, 0.45, 0.15),
+      at(0.4, 0.1, 0, 0.12, 0.12, 0.47), // the shins, down to the floor
+      at(0.4, -0.1, 0, 0.12, 0.12, 0.47),
+      head(-0.1, 1.23),
+    ];
+  return [
+    at(0, 0.1, 0, 0.13, 0.15, 0.86), // the legs
+    at(0, -0.1, 0, 0.13, 0.15, 0.86),
+    at(0, 0, 0.86, 0.36, 0.22, 0.3), // the waist
+    at(0, 0, 1.16, 0.42, 0.24, 0.3), // the chest and shoulders
+    at(0, 0, 1.46, 0.1, 0.1, 0.05), // the neck
+    at(0, 0.25, 0.86, 0.09, 0.1, 0.58), // the arms, down the sides
+    at(0, -0.25, 0.86, 0.09, 0.1, 0.58),
+    head(0, 1.62),
+  ];
+}
+
+/** A round solid: a head. Faces of a ball, each facing out from its middle. */
+function sphere(c: V3, radius: number, tall: number): Face[] {
+  const faces: Face[] = [];
+  const [rings, around] = [6, 10];
+  const p = (i: number, j: number): V3 => {
+    const a = (Math.PI * i) / rings - Math.PI / 2;
+    const b = (2 * Math.PI * j) / around;
+    return v3(
+      c.x + radius * Math.cos(a) * Math.cos(b),
+      c.y + radius * Math.cos(a) * Math.sin(b),
+      c.z + tall * Math.sin(a),
+    );
+  };
+  for (let i = 0; i < rings; i++)
+    for (let j = 0; j < around; j++) {
+      const q = [p(i, j), p(i, j + 1), p(i + 1, j + 1), p(i + 1, j)];
+      const m = q.reduce((s, v) => v3(s.x + v.x / 4, s.y + v.y / 4, s.z + v.z / 4), v3(0, 0, 0));
+      const n = Math.hypot(m.x - c.x, m.y - c.y, m.z - c.z) || 1;
+      faces.push({ p: q, n: v3((m.x - c.x) / n, (m.y - c.y) / n, (m.z - c.z) / n), solid: 0 });
+    }
+  return faces;
+}
+
+/** A block's six faces, each facing out. */
+function blockFaces(b: Block, solid: number): Face[] {
+  const r = rightOf(b.f);
+  const at = (sr: number, sf: number, z: number): V3 => ({
+    x: b.x + r.x * (b.w / 2) * sr + b.f.x * (b.d / 2) * sf,
+    y: b.y + r.y * (b.w / 2) * sr + b.f.y * (b.d / 2) * sf,
+    z,
+  });
+  const [lo, hi] = [b.z, b.z + b.h];
+  const face = (p: V3[], n: V3): Face => ({ p, n, solid });
+  return [
+    face([at(-1, -1, hi), at(1, -1, hi), at(1, 1, hi), at(-1, 1, hi)], { x: 0, y: 0, z: 1 }),
+    face([at(-1, -1, lo), at(-1, 1, lo), at(1, 1, lo), at(1, -1, lo)], { x: 0, y: 0, z: -1 }),
+    face([at(-1, 1, lo), at(-1, 1, hi), at(1, 1, hi), at(1, 1, lo)], { x: b.f.x, y: b.f.y, z: 0 }),
+    face([at(-1, -1, lo), at(1, -1, lo), at(1, -1, hi), at(-1, -1, hi)], { x: -b.f.x, y: -b.f.y, z: 0 }),
+    face([at(1, -1, lo), at(1, 1, lo), at(1, 1, hi), at(1, -1, hi)], { x: r.x, y: r.y, z: 0 }),
+    face([at(-1, -1, lo), at(-1, -1, hi), at(-1, 1, hi), at(-1, 1, lo)], { x: -r.x, y: -r.y, z: 0 }),
+  ];
+}
+
+/** A small number from a string and an index, the same every time: where each of a crowd sits. */
+function jitter(seed: string, i: number): number {
+  let h = 2166136261 ^ i;
+  for (let k = 0; k < seed.length; k++) h = Math.imul(h ^ seed.charCodeAt(k), 16777619);
+  return ((h >>> 0) % 1000) / 1000 - 0.5;
+}
+
+/** Where each of a crowd is: in rows across the way they face, spread over the ground they fill. */
+function crowdSpots(s: Spot, plan: Blocking, avoid: Spot[]): V2[] {
+  const f = facing(s, plan);
+  const r = rightOf(f);
+  const [across, deep] = s.spread ?? [4, 3];
+  const out: V2[] = [];
+  const cols = Math.max(1, Math.floor(across / 0.8));
+  const rows = Math.max(1, Math.floor(deep / 1.1));
+  for (let row = 0; row < rows; row++)
+    for (let col = 0; col < cols; col++) {
+      const i = row * cols + col;
+      const a = -across / 2 + (col + 0.5) * (across / cols) + jitter(s.id, i) * 0.2;
+      // Rows run back from the front of the crowd: the way they face is toward the first row.
+      const b = deep / 2 - (row + 0.5) * (deep / rows) + jitter(s.id, i + 7919) * 0.15;
+      const p = { x: s.x + r.x * a + f.x * b, y: s.y + r.y * a + f.y * b };
+      // Nobody of the crowd sits where someone or something with a place of its own is.
+      if (avoid.some((o) => Math.hypot(o.x - p.x, o.y - p.y) < 0.7 + Math.max(0, ...(o.size ?? [0]).slice(0, 2)) / 2))
+        continue;
+      out.push(p);
+    }
+  return out;
+}
+
+/**
+ * Everything the camera could see, as solids: the room (walls, floor, ceiling, its front named),
+ * then everyone and everything on the plan but `leaveOut` (the dreamer, whose eyes it is).
+ */
+function solidsOf(plan: Blocking, leaveOut: string[], name: (id: string) => string): Solid[] {
+  const solids: Solid[] = [];
+  const add = (id: string, tone: number, parts: (Block | Face[])[], label?: string) => {
+    const solid = solids.length;
+    const faces = parts.flatMap((b) => (Array.isArray(b) ? b.map((f) => ({ ...f, solid })) : blockFaces(b, solid)));
+    solids.push({ id, tone, faces, label });
+  };
+  const quad = (p: V3[], n: V3): Face[] => [{ p, n, solid: 0 }];
+  // People are the lightest, things darker, the place darker still: each reads as what it is at a
+  // glance, as clay figures on a darker set do.
+  if (plan.indoors) {
+    const h = plan.ceiling ?? CEILING;
+    add('floor', 0.3, [quad([v3(0, 0, 0), v3(10, 0, 0), v3(10, 10, 0), v3(0, 10, 0)], v3(0, 0, 1))]);
+    add('ceiling', 0.22, [quad([v3(0, 0, h), v3(0, 10, h), v3(10, 10, h), v3(10, 0, h)], v3(0, 0, -1))]);
+    add('left wall', 0.46, [quad([v3(0, 0, 0), v3(0, 10, 0), v3(0, 10, h), v3(0, 0, h)], v3(1, 0, 0))]);
+    add('right wall', 0.44, [quad([v3(10, 0, 0), v3(10, 0, h), v3(10, 10, h), v3(10, 10, 0)], v3(-1, 0, 0))]);
+    add('back wall', 0.4, [quad([v3(0, 10, 0), v3(10, 10, 0), v3(10, 10, h), v3(0, 10, h)], v3(0, -1, 0))]);
+    add('front', 0.62, [quad([v3(0, 0, 0), v3(0, 0, h), v3(10, 0, h), v3(10, 0, 0)], v3(0, 1, 0))], plan.front);
+  } else add('ground', 0.34, [quad([v3(-60, -60, 0), v3(70, -60, 0), v3(70, 70, 0), v3(-60, 70, 0)], v3(0, 0, 1))]);
+  const placed = plan.spots.filter((s) => !s.many && !leaveOut.includes(s.id));
+  const people = plan.spots.filter((s) => isPerson(s));
+  for (const s of plan.spots) {
+    if (leaveOut.includes(s.id)) continue;
+    const f = facing(s, plan);
+    if (s.many) {
+      const where = crowdSpots(s, plan, placed);
+      add(
+        s.id,
+        0.8,
+        where.flatMap((p) => mannequin(p.x, p.y, f, s.pose ?? 'standing')),
+        name(s.id),
+      );
+      // A crowd sitting sits on something: rows of seats under them, or the model makes up its own
+      // seating around the people (a raised block of armchairs off to one side, 24 Sep).
+      if (s.pose === 'sitting')
+        add(
+          `${s.id} seats`,
+          0.55,
+          where.flatMap((p) => [
+            { x: p.x, y: p.y, z: 0, w: 0.62, d: 0.6, h: 0.42, f },
+            { x: p.x - f.x * 0.27, y: p.y - f.y * 0.27, z: 0.42, w: 0.62, d: 0.12, h: 0.5, f },
+          ]),
+        );
+    } else if (isPerson(s)) add(s.id, 0.97, mannequin(s.x, s.y, f, s.pose ?? 'standing'), name(s.id));
+    else {
+      const [w, d, h] = s.size ?? [1, 1, 1];
+      // Something someone sits on is a seat and a back, so who sits on it sits on it, not in it:
+      // one solid block the height of a sofa's back buried the friend to her waist (24 Sep).
+      const seat = people.some((p) => p.pose === 'sitting' && within(p, s, w, d, f));
+      const back = Math.min(0.25, d / 3);
+      add(
+        s.id,
+        0.62,
+        seat && h > 0.5
+          ? [
+              { x: s.x, y: s.y, z: 0, w, d, h: 0.45, f },
+              {
+                x: s.x - f.x * (d / 2 - back / 2),
+                y: s.y - f.y * (d / 2 - back / 2),
+                z: 0.45,
+                w,
+                d: back,
+                h: h - 0.45,
+                f,
+              },
+            ]
+          : [{ x: s.x, y: s.y, z: 0, w, d, h, f }],
+        name(s.id),
+      );
+    }
+  }
+  return solids;
+}
+
+/** Someone or a crowd, rather than a thing. */
+const isPerson = (s: Spot) => s.kind === 'person' || (!s.kind && (!!s.pose || !!s.many));
+
+/** Whether a spot is on a thing's footprint: sitting on it, lying on it, standing on it. */
+function within(p: V2, s: Spot, w: number, d: number, f: V2): boolean {
+  const r = rightOf(f);
+  const v = { x: p.x - s.x, y: p.y - s.y };
+  return Math.abs(v.x * r.x + v.y * r.y) <= w / 2 + 0.05 && Math.abs(v.x * f.x + v.y * f.y) <= d / 2 + 0.05;
+}
+
+const v3 = (x: number, y: number, z: number): V3 => ({ x, y, z });
+const dot = (a: V3, b: V3) => a.x * b.x + a.y * b.y + a.z * b.z;
+
+/** A polygon in camera space, cut where it passes behind the camera. */
+function clipNear(poly: V3[], near: number): V3[] {
+  const out: V3[] = [];
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i];
+    const b = poly[(i + 1) % poly.length];
+    if (a.z >= near) out.push(a);
+    if (a.z >= near !== b.z >= near) {
+      const t = (near - a.z) / (b.z - a.z);
+      out.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: near });
+    }
+  }
+  return out;
+}
+
+/** What one solid came to in the render: how much shows, where, and what hides the rest of it. */
+export type Seen = {
+  id: string;
+  label?: string;
+  /** Pixels of it that show, and pixels of it drawn at all (in the frame, hidden or not). */
+  visible: number;
+  drawn: number;
+  /** The share of the frame it covers, and where it is: across (0 left, 1 right) and down (0 top). */
+  share: number;
+  cx: number;
+  cy: number;
+  x0: number;
+  x1: number;
+  y0: number;
+  y1: number;
+  /** What hides the most of it, where something does. */
+  hiddenBy?: string;
+};
+
+export type Render = {
+  width: number;
+  height: number;
+  lum: Float32Array;
+  solid: Int32Array;
+  solids: Solid[];
+  seen: Map<string, Seen>;
+  /** Where a point on the plan, at a height, lands in the picture; null behind the camera. */
+  project: (p: V3) => { x: number; y: number } | null;
+};
+
+const BACKGROUND = 0.9;
+const NEAR = 0.05;
+
+/** The solids as the eye sees them: flat grey, lit from behind the camera, outlined. */
+function render(solids: Solid[], eye: Eye, width: number, height: number): Render {
+  const d = unit(eye.d);
+  const pitch = eye.pitch ?? 0;
+  const F = v3(d.x * Math.cos(pitch), d.y * Math.cos(pitch), Math.sin(pitch));
+  const U = v3(-d.x * Math.sin(pitch), -d.y * Math.sin(pitch), Math.cos(pitch));
+  const R = v3(-d.y, d.x, 0);
+  const C = v3(eye.at.x, eye.at.y, eye.height);
+  const focal = width / 2 / Math.tan((HALF_VIEW * Math.PI) / 180);
+  // Lit from behind the camera, high and to its left, the way a previs is: faces toward it are light.
+  const L = (() => {
+    const l = v3(
+      -F.x * 0.55 + U.x * 0.75 - R.x * 0.35,
+      -F.y * 0.55 + U.y * 0.75 - R.y * 0.35,
+      -F.z * 0.55 + U.z * 0.75,
+    );
+    const n = Math.hypot(l.x, l.y, l.z);
+    return v3(l.x / n, l.y / n, l.z / n);
+  })();
+  const n = width * height;
+  const depth = new Float32Array(n);
+  const lum = new Float32Array(n).fill(BACKGROUND);
+  const solidAt = new Int32Array(n).fill(-1);
+  const faceAt = new Int32Array(n).fill(-1);
+  const drawn = new Array<number>(solids.length).fill(0);
+  const hidden = solids.map(() => new Map<number, number>());
+  const hide = (who: number, by: number) => hidden[who].set(by, (hidden[who].get(by) ?? 0) + 1);
+
+  let faceNo = 0;
+  for (const solid of solids)
+    for (const face of solid.faces) {
+      const k = faceNo++;
+      // Only the faces turned toward the camera are drawn: a closed block is then drawn once.
+      const to = v3(C.x - face.p[0].x, C.y - face.p[0].y, C.z - face.p[0].z);
+      if (dot(face.n, to) <= 0) continue;
+      const cam = face.p.map((q) => {
+        const v = v3(q.x - C.x, q.y - C.y, q.z - C.z);
+        return v3(dot(v, R), dot(v, U), dot(v, F));
+      });
+      const poly = clipNear(cam, NEAR);
+      if (poly.length < 3) continue;
+      const pts = poly.map((q) => ({
+        x: width / 2 + (focal * q.x) / q.z,
+        y: height / 2 - (focal * q.y) / q.z,
+        iz: 1 / q.z,
+      }));
+      const shade = solid.tone * (0.55 + 0.45 * Math.max(0, dot(face.n, L)));
+      for (let t = 1; t + 1 < pts.length; t++) {
+        const [a, b, c] = [pts[0], pts[t], pts[t + 1]];
+        const area = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+        if (Math.abs(area) < 1e-9) continue;
+        const x0 = Math.max(0, Math.floor(Math.min(a.x, b.x, c.x)));
+        const x1 = Math.min(width - 1, Math.ceil(Math.max(a.x, b.x, c.x)));
+        const y0 = Math.max(0, Math.floor(Math.min(a.y, b.y, c.y)));
+        const y1 = Math.min(height - 1, Math.ceil(Math.max(a.y, b.y, c.y)));
+        for (let y = y0; y <= y1; y++)
+          for (let x = x0; x <= x1; x++) {
+            const px = x + 0.5;
+            const py = y + 0.5;
+            const wa = ((b.x - px) * (c.y - py) - (b.y - py) * (c.x - px)) / area;
+            const wb = ((c.x - px) * (a.y - py) - (c.y - py) * (a.x - px)) / area;
+            const wc = 1 - wa - wb;
+            if (wa < -1e-7 || wb < -1e-7 || wc < -1e-7) continue;
+            const iz = wa * a.iz + wb * b.iz + wc * c.iz;
+            const i = y * width + x;
+            const s = face.solid;
+            drawn[s]++;
+            if (iz > depth[i]) {
+              if (solidAt[i] >= 0 && solidAt[i] !== s) hide(solidAt[i], s);
+              depth[i] = iz;
+              solidAt[i] = s;
+              faceAt[i] = k;
+              // Further off is paler, as air makes it: depth reads at a glance.
+              const fog = 1 - Math.exp(-1 / iz / 22);
+              lum[i] = shade * (1 - fog) + BACKGROUND * fog;
+            } else if (solidAt[i] !== s) hide(s, solidAt[i]);
+          }
+      }
+    }
+
+  // Outlines: darker where one thing meets another, lighter where one face of a thing meets the next.
+  const edged = Float32Array.from(lum);
+  for (let y = 0; y < height; y++)
+    for (let x = 0; x < width; x++) {
+      const i = y * width + x;
+      for (const j of [x + 1 < width ? i + 1 : -1, y + 1 < height ? i + width : -1]) {
+        if (j < 0 || faceAt[i] === faceAt[j]) continue;
+        const k = solidAt[i] !== solidAt[j] ? 0.45 : 0.8;
+        edged[i] = Math.min(edged[i], lum[i] * k);
+        edged[j] = Math.min(edged[j], lum[j] * k);
+      }
+    }
+
+  const seen = new Map<string, Seen>();
+  const acc = solids.map(() => ({ count: 0, sx: 0, sy: 0, x0: Infinity, x1: -Infinity, y0: Infinity, y1: -Infinity }));
+  for (let i = 0; i < n; i++) {
+    const s = solidAt[i];
+    if (s < 0) continue;
+    const a = acc[s];
+    const x = i % width;
+    const y = (i - x) / width;
+    a.count++;
+    a.sx += x;
+    a.sy += y;
+    a.x0 = Math.min(a.x0, x);
+    a.x1 = Math.max(a.x1, x);
+    a.y0 = Math.min(a.y0, y);
+    a.y1 = Math.max(a.y1, y);
+  }
+  solids.forEach((solid, s) => {
+    const a = acc[s];
+    if (!a.count) return;
+    const worst = [...hidden[s].entries()].sort((p, q) => q[1] - p[1])[0];
+    const hiddenPart = drawn[s] ? 1 - a.count / drawn[s] : 0;
+    seen.set(solid.id, {
+      id: solid.id,
+      label: solid.label,
+      visible: a.count,
+      drawn: drawn[s],
+      share: a.count / n,
+      cx: a.sx / a.count / width,
+      cy: a.sy / a.count / height,
+      x0: a.x0 / width,
+      x1: (a.x1 + 1) / width,
+      y0: a.y0 / height,
+      y1: (a.y1 + 1) / height,
+      ...(worst && hiddenPart >= 0.2 && worst[1] / drawn[s] >= 0.1 ? { hiddenBy: solids[worst[0]].id } : {}),
+    });
+  });
+  const project = (q: V3) => {
+    const v = v3(q.x - C.x, q.y - C.y, q.z - C.z);
+    const z = dot(v, F);
+    return z < NEAR ? null : { x: width / 2 + (focal * dot(v, R)) / z, y: height / 2 - (focal * dot(v, U)) / z };
+  };
+  return { width, height, lum: edged, solid: solidAt, solids, seen, project };
+}
+
+// A 5x7 pixel font for the labels: capitals, digits and a few marks.
+const GLYPHS: Record<string, string> = {
+  A: '.###.#...##...#######...##...##...#',
+  B: '####.#...##...#####.#...##...#####.',
+  C: '.###.#...##....#....#....#...#.###.',
+  D: '####.#...##...##...##...##...#####.',
+  E: '######....#....####.#....#....#####',
+  F: '######....#....####.#....#....#....',
+  G: '.###.#...##....#.####...##...#.####',
+  H: '#...##...##...#######...##...##...#',
+  I: '.###...#....#....#....#....#...###.',
+  J: '..###...#....#....#....##..#..##...',
+  K: '#...##..#.#.#..##...#.#..#..#.#...#',
+  L: '#....#....#....#....#....#....#####',
+  M: '#...###.###.#.##.#.##...##...##...#',
+  N: '#...##...###..##.#.##..###...##...#',
+  O: '.###.#...##...##...##...##...#.###.',
+  P: '####.#...##...#####.#....#....#....',
+  Q: '.###.#...##...##...##.#.##..#..##.#',
+  R: '####.#...##...#####.#.#..#..#.#...#',
+  S: '.#####....#.....###.....#....#####.',
+  T: '#####..#....#....#....#....#....#..',
+  U: '#...##...##...##...##...##...#.###.',
+  V: '#...##...##...##...##...#.#.#...#..',
+  W: '#...##...##...##.#.##.#.##.#.#.#.#.',
+  X: '#...##...#.#.#...#...#.#.#...##...#',
+  Y: '#...##...#.#.#...#....#....#....#..',
+  Z: '#####....#...#...#...#...#....#####',
+  '0': '.###.#...##..###.#.###..##...#.###.',
+  '1': '..#...##....#....#....#....#...###.',
+  '2': '.###.#...#....#...#...#...#...#####',
+  '3': '#####...#...#.....#.....##...#.###.',
+  '4': '...#...##..#.#.#..#.#####...#....#.',
+  '5': '######....####.....#....##...#.###.',
+  '6': '..##..#...#....####.#...##...#.###.',
+  '7': '#####....#...#...#...#....#....#...',
+  '8': '.###.#...##...#.###.#...##...#.###.',
+  '9': '.###.#...##...#.####....#...#..##..',
+  '-': '...............#####...............',
+  '.': '..........................##...##..',
+  ',': '.....................##....#...#...',
+  "'": '..#....#...#.......................',
+  '(': '...#...#...#....#....#.....#.....#.',
+  ')': '.#.....#.....#....#....#...#...#...',
+  '/': '.........#...#...#...#...#.........',
+  '&': '.##..#..#.#.#...#...#.#.##..#..##.#',
+  ' ': '...................................',
+};
+
+/** A label's words as the font can draw them: capitals, no accents, without "the" or a gloss. */
+export function labelText(name: string): string {
+  return name
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/\s*\(.*?\)\s*/g, ' ')
+    .replace(/^\s*(the|a|an)\s+/i, '')
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9\-.,'()/& ]/g, '')
+    .slice(0, 26);
+}
+
+/** The render as a picture: grey, with each named thing's label on it. */
+function paint(r: Render, labelled: boolean): Uint8Array {
+  const { width, height } = r;
+  const rgb = new Uint8Array(width * height * 3);
+  for (let i = 0; i < width * height; i++) {
+    const v = Math.max(0, Math.min(255, Math.round(r.lum[i] * 255)));
+    rgb[i * 3] = rgb[i * 3 + 1] = rgb[i * 3 + 2] = v;
+  }
+  if (!labelled) return rgb;
+  const scale = Math.max(2, Math.round(width / 460));
+  const set = (x: number, y: number, v: number) => {
+    if (x < 0 || y < 0 || x >= width || y >= height) return;
+    const i = (y * width + x) * 3;
+    rgb[i] = rgb[i + 1] = rgb[i + 2] = v;
+  };
+  const placed: { x0: number; y0: number; x1: number; y1: number }[] = [];
+  const min = width * height * 0.002;
+  for (const s of [...r.seen.values()]
+    .filter((s) => s.label && s.visible >= min)
+    .sort((a, b) => b.visible - a.visible)) {
+    const text = labelText(s.label!);
+    if (!text) continue;
+    const w = text.length * 6 * scale + 4 * scale;
+    const h = 9 * scale + 2 * scale;
+    const [px, py] = roomiest(r, s);
+    let x0 = Math.round(px - w / 2);
+    let y0 = Math.round(py - h / 2);
+    x0 = Math.max(2, Math.min(width - w - 2, x0));
+    y0 = Math.max(2, Math.min(height - h - 2, y0));
+    // Labels never cover each other: one that would is moved down, then up, until it is clear.
+    for (
+      let step = 1;
+      placed.some((p) => x0 < p.x1 && x0 + w > p.x0 && y0 < p.y1 && y0 + h > p.y0) && step < 12;
+      step++
+    )
+      y0 = Math.max(2, Math.min(height - h - 2, y0 + (step % 2 ? 1 : -1) * step * (h + 2)));
+    placed.push({ x0, y0, x1: x0 + w, y1: y0 + h });
+    for (let y = y0; y < y0 + h; y++)
+      for (let x = x0; x < x0 + w; x++)
+        set(x, y, y - y0 < scale || y0 + h - y <= scale || x - x0 < scale || x0 + w - x <= scale ? 30 : 250);
+    [...text].forEach((ch, c) => {
+      const g = GLYPHS[ch] ?? GLYPHS[' '];
+      for (let gy = 0; gy < 7; gy++)
+        for (let gx = 0; gx < 5; gx++)
+          if (g[gy * 5 + gx] === '#')
+            for (let sy = 0; sy < scale; sy++)
+              for (let sx = 0; sx < scale; sx++)
+                set(x0 + 2 * scale + (c * 6 + gx) * scale + sx, y0 + 2 * scale + gy * scale + sy, 20);
+    });
+  }
+  return rgb;
+}
+
+/**
+ * Where on a solid its label goes: the point of it with the most of it around, near its middle. Its
+ * middle alone can be on something in front of it: the sofa's label landed on the friend's legs.
+ */
+function roomiest(r: Render, s: Seen): [number, number] {
+  const { width, height, solid } = r;
+  const k = r.solids.findIndex((x) => x.id === s.id);
+  const step = Math.max(4, Math.round(width / 170));
+  const [cx, cy] = [s.cx * width, s.cy * height];
+  let best: [number, number, number] = [cx, cy, -Infinity];
+  for (let y = Math.floor(s.y0 * height); y < s.y1 * height; y += step)
+    for (let x = Math.floor(s.x0 * width); x < s.x1 * width; x += step) {
+      if (solid[y * width + x] !== k) continue;
+      // How far it runs on in each of eight ways before it ends: the least of them is its room.
+      let room = Infinity;
+      for (const [dx, dy] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+        [1, 1],
+        [1, -1],
+        [-1, 1],
+        [-1, -1],
+      ]) {
+        let n = 0;
+        for (let xx = x, yy = y; n < width / 4; n += step, xx += dx * step, yy += dy * step)
+          if (xx < 0 || yy < 0 || xx >= width || yy >= height || solid[yy * width + xx] !== k) break;
+        // A label is wide and short: room above and below counts for more than room to the sides.
+        room = Math.min(room, n * (dx && dy ? 1.4 : dx ? 1 : 4));
+      }
+      const score = room - Math.hypot(x - cx, y - cy) * 0.15;
+      if (score > best[2]) best = [x, y, score];
+    }
+  return [best[0], best[1]];
+}
+
+const CRC = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+
+/** A picture as a PNG file: 8-bit RGB, one unfiltered scanline at a time. */
+export function png(width: number, height: number, rgb: Uint8Array): Uint8Array {
+  const raw = new Uint8Array((width * 3 + 1) * height);
+  for (let y = 0; y < height; y++) raw.set(rgb.subarray(y * width * 3, (y + 1) * width * 3), y * (width * 3 + 1) + 1);
+  const chunk = (type: string, data: Uint8Array) => {
+    const out = new Uint8Array(12 + data.length);
+    const view = new DataView(out.buffer);
+    view.setUint32(0, data.length);
+    for (let i = 0; i < 4; i++) out[4 + i] = type.charCodeAt(i);
+    out.set(data, 8);
+    let c = 0xffffffff;
+    for (let i = 4; i < 8 + data.length; i++) c = CRC[(c ^ out[i]) & 0xff] ^ (c >>> 8);
+    view.setUint32(8 + data.length, (c ^ 0xffffffff) >>> 0);
+    return out;
+  };
+  const header = new Uint8Array(13);
+  const hv = new DataView(header.buffer);
+  hv.setUint32(0, width);
+  hv.setUint32(4, height);
+  header.set([8, 2, 0, 0, 0], 8);
+  const parts = [
+    Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', header),
+    chunk('IDAT', new Uint8Array(deflateSync(raw))),
+    chunk('IEND', new Uint8Array(0)),
+  ];
+  const out = new Uint8Array(parts.reduce((a, p) => a + p.length, 0));
+  let o = 0;
+  for (const p of parts) {
+    out.set(p, o);
+    o += p.length;
+  }
+  return out;
+}
+
+/** The previs frame of a camera on a plan, as a PNG a picture can be drawn over. */
+export function previsImage(
+  plan: Blocking,
+  eye: Eye,
+  leaveOut: string[],
+  name: (id: string) => string,
+  width = 1376,
+  height = 768,
+): Uint8Array {
+  const r = render(solidsOf(plan, leaveOut, name), eye, width, height);
+  return png(width, height, paint(r, true));
+}
+
+/** Where across the picture a span is, in words. */
+function across(s: Seen): string {
+  const region = (x: number) =>
+    x < 0.12
+      ? 'the left edge'
+      : x < 0.38
+        ? 'the left third'
+        : x <= 0.62
+          ? 'the middle'
+          : x <= 0.88
+            ? 'the right third'
+            : 'the right edge';
+  const [a, b] = [region(s.x0 + 0.01), region(s.x1 - 0.01)];
+  if (s.x1 - s.x0 >= 0.45 && a !== b) return `across the picture from ${a} to ${b}`;
+  const c = region(s.cx);
+  return c.endsWith('edge') ? `at ${c} of the picture` : `in ${c} of the picture`;
+}
+
+/** How a person is turned to the camera, and which way across the picture they look. */
+export function turnedTo(s: Spot, plan: Blocking, eye: Eye): string {
+  const f = facing(s, plan);
+  const to = unit({ x: eye.at.x - s.x, y: eye.at.y - s.y });
+  const angle = (Math.acos(Math.max(-1, Math.min(1, f.x * to.x + f.y * to.y))) * 180) / Math.PI;
+  const r = rightOf(unit(eye.d));
+  const side = f.x * r.x + f.y * r.y > 0 ? 'right' : 'left';
+  const many = !!s.many;
+  if (angle < 30) return many ? 'facing the camera' : 'facing the camera';
+  if (angle < 70) return `turned three-quarters toward the camera, looking toward the ${side} of the picture`;
+  if (angle < 110) return `${many ? 'side on' : 'in profile'}, looking toward the ${side} of the picture`;
+  if (angle < 150) return `seen three-quarters from behind, looking toward the ${side} of the picture`;
+  return many ? 'seen from behind' : 'their back to the camera';
+}
+
+const LEAN_WORDS: Record<Lean, string> = {
+  back: 'leaning back a little',
+  forward: 'leaning forward a little',
+  left: 'leaning a little to their left',
+  right: 'leaning a little to their right',
+};
+
+/**
+ * The dreamer's own view, as a camera operator finds it: at their eyes where they are, turned to
+ * what they look at, leaning a little where someone close would otherwise hide it. Every lean and a
+ * few small turns are rendered, small, and the one showing the most of what they look at, nearest
+ * the middle, is kept; plain, when leaning shows no more. Then what it sees is read off the render:
+ * who and what is where across the picture, nearest first, how each person is turned, what is
+ * partly hidden and by whom, and what is outside it, the place's front included.
+ */
+export function dreamerShot(
+  plan: Blocking,
+  dreamer: string,
+  toward: string | undefined,
+  name: (id: string) => string,
+): { eye: Eye; text: string; inPicture: string[] } | null {
+  const me = plan.spots.find((s) => s.id === dreamer);
+  if (!me) return null;
+  const own = facing(me, plan);
+  const side = rightOf(own);
+  const target = toward ? plan.spots.find((s) => s.id === toward && s.id !== dreamer) : undefined;
+  const solids = solidsOf(plan, [dreamer], name);
+  const height = eyeHeight(me.pose);
+  // How far someone can lean from where they sit or stand, each way, to see past someone close.
+  const leans: [Lean | undefined, V2, number][] = [[undefined, { x: 0, y: 0 }, 0]];
+  for (const m of [0.3, 0.5])
+    leans.push(
+      ['back', { x: -own.x * m, y: -own.y * m }, m],
+      ['forward', { x: own.x * m, y: own.y * m }, m],
+      ['left', { x: -side.x * m, y: -side.y * m }, m],
+      ['right', { x: side.x * m, y: side.y * m }, m],
+    );
+  const turn = (d: V2, deg: number) => {
+    const a = (deg * Math.PI) / 180;
+    const r = rightOf(d);
+    return unit({ x: d.x * Math.cos(a) + r.x * Math.sin(a), y: d.y * Math.cos(a) + r.y * Math.sin(a) });
+  };
+  // The middle of what they look at, at half its height: the one point that must show.
+  const heart = target
+    ? v3(target.x, target.y, isPerson(target) ? eyeHeight(target.pose) - 0.1 : (target.size?.[2] ?? 1) / 2)
+    : null;
+  const near = plan.spots.filter((s) => s.id !== dreamer && s.id !== target?.id && isPerson(s) && !s.many);
+  let best: { eye: Eye; score: number } | undefined;
+  for (const [lean, off, how] of target ? leans : leans.slice(0, 1))
+    for (const aim of target ? [0, -8, 8, -15, 15, -22, 22] : [0]) {
+      const at = { x: me.x + off.x, y: me.y + off.y };
+      const d = turn(target ? unit({ x: target.x - at.x, y: target.y - at.y }) : own, aim);
+      const eye: Eye = { at, d, height, pitch: PITCH, ...(lean ? { lean } : {}) };
+      if (!target || !heart) {
+        best = { eye, score: 0 };
+        continue;
+      }
+      const r = render(solids, eye, 192, 108);
+      const t = r.seen.get(target.id);
+      if (!t) continue;
+      // As a camera operator frames past someone close: the heart of what the picture is about
+      // shows, near the middle, and whoever is close is kept to an edge rather than across it.
+      const k = r.solids.findIndex((x) => x.id === target.id);
+      const p = r.project(heart);
+      let clear = 0;
+      if (p)
+        for (let dy = -3; dy <= 3; dy++)
+          for (let dx = -3; dx <= 3; dx++) {
+            const [x, y] = [Math.round(p.x) + dx * 2, Math.round(p.y) + dy * 2];
+            if (x >= 0 && y >= 0 && x < r.width && y < r.height && r.solid[y * r.width + x] === k) clear++;
+          }
+      const centred = 1 - Math.abs(t.cx - 0.5) * 2;
+      // Big in the frame, up to a third of it; whoever is close takes an edge, not a third of it.
+      const big = Math.min(1, t.share / 0.3);
+      const close = near.reduce((a, s) => Math.max(a, r.seen.get(s.id)?.share ?? 0), 0);
+      const score =
+        (2 * clear) / 49 +
+        t.visible / Math.max(1, t.drawn) +
+        centred +
+        1.5 * big -
+        3 * Math.max(0, close - 0.12) -
+        how -
+        Math.abs(aim) * 0.01;
+      if (!best || score > best.score + 1e-9) best = { eye, score };
+    }
+  if (!best) return null;
+  const eye = best!.eye;
+  const r = render(solids, eye, 384, 216);
+  const min = 384 * 216 * 0.002;
+
+  // What they are on (the seat under them) is where they are, not something before them.
+  const at = plan.spots
+    .filter(
+      (s) => s.id !== dreamer && !isPerson(s) && within(me, s, s.size?.[0] ?? 1, s.size?.[1] ?? 1, facing(s, plan)),
+    )
+    .map((s) => s.id);
+  const turnAngle = (() => {
+    const d = unit(eye.d);
+    const a = (Math.atan2(d.x * rightOf(own).x + d.y * rightOf(own).y, d.x * own.x + d.y * own.y) * 180) / Math.PI;
+    return a;
+  })();
+  const turned =
+    Math.abs(turnAngle) < 20
+      ? 'looking straight ahead'
+      : Math.abs(turnAngle) > 150
+        ? 'turned right round'
+        : `turned to their ${turnAngle < 0 ? 'left' : 'right'}`;
+  const pose =
+    me.pose === 'sitting' ? ', at the height of their eyes sitting' : me.pose === 'lying' ? ', lying down' : '';
+  const spots = plan.spots.filter((s) => s.id !== dreamer && !at.includes(s.id));
+  const distance = (s: Spot) => Math.hypot(s.x - eye.at.x, s.y - eye.at.y);
+  const shown = spots
+    .map((s) => ({ s, seen: r.seen.get(s.id) }))
+    .filter((x): x is { s: Spot; seen: Seen } => !!x.seen && x.seen.visible >= min)
+    .sort((a, b) => distance(a.s) - distance(b.s));
+  const called = (id: string) => name(id);
+  const sentences = [
+    `The camera is the dreamer's eyes${at.length ? `, on ${at.map(called).join(' and ')}` : ''}${pose}${eye.lean ? `, ${LEAN_WORDS[eye.lean]}` : ''}, ${turned}${toward ? `, toward ${called(toward)}` : ''}: it looks toward ${wall(eye.d, plan.front)}. A wide lens, about 24mm.`,
+    ...shown.map(({ s, seen }, i) => {
+      const lead = i === 0 ? 'Nearest' : i === shown.length - 1 && shown.length > 1 ? 'Farthest' : 'Then';
+      // Who sits on what, and what stands right beside what: said as the plan has it, or the model
+      // gives the friend an armchair of her own and puts the roller coaster out on the floor (24 Sep).
+      const on = isPerson(s) && !s.many ? seatOf(s, plan) : undefined;
+      const sitting = on
+        ? at.includes(on.id)
+          ? `, sitting beside the dreamer on the same ${bareName(called(on.id))}`
+          : `, ${s.pose === 'lying' ? 'lying' : 'sitting'} on ${called(on.id)}`
+        : '';
+      const next = !isPerson(s)
+        ? besideOf(s, plan, [...at, ...spots.filter((o) => !isPerson(o)).map((o) => o.id)])
+        : undefined;
+      const how =
+        sitting +
+        (isPerson(s) && !s.many ? `, ${turnedTo(s, plan, eye)}` : '') +
+        (next ? `, right beside ${called(next.id)}` : '');
+      const behind =
+        seen.hiddenBy && seen.hiddenBy !== s.id && spots.some((o) => o.id === seen.hiddenBy)
+          ? `, partly hidden behind ${called(seen.hiddenBy)}`
+          : '';
+      // How big it is in the frame, read off the render: the image model keeps where each thing is
+      // across the picture from the words, and makes up how big it is. The friend beside the
+      // dreamer, seen from the waist up in the previs, came back whole and two metres off (24 Sep).
+      const size = !s.many ? `, ${isPerson(s) ? `${cropOf(s, eye)} and ` : ''}filling the picture ${upDown(seen)}` : '';
+      return `${lead}, ${reach(distance(s))}, ${across(seen)}: ${called(s.id)}${s.many ? `, many of them${rows(s, me)}, ${turnedTo({ ...s, ...nearestOf(s, seen, eye, plan) }, plan, eye)}` : how}${size}${behind}.`;
+    }),
+    ...spots
+      .filter((s) => !shown.some((x) => x.s.id === s.id))
+      .map((s) => `Outside the picture, ${offTo(eye, s)}: ${called(s.id)}.`),
+    frontLine(plan, eye, r, min),
+  ];
+  return { eye, text: sentences.join(' '), inPicture: [...at, ...shown.map((x) => x.s.id)] };
+}
+
+/**
+ * Where on a crowd the camera sees it: the first of the ground it fills along the line through the
+ * middle of what shows. A crowd's middle can be off to one side of the part in the picture.
+ */
+function nearestOf(s: Spot, seen: Seen, eye: Eye, plan: Blocking): V2 {
+  const d = unit(eye.d);
+  const r = rightOf(d);
+  const a = Math.atan((seen.cx - 0.5) * 2 * Math.tan((HALF_VIEW * Math.PI) / 180));
+  const ray = { x: d.x * Math.cos(a) + r.x * Math.sin(a), y: d.y * Math.cos(a) + r.y * Math.sin(a) };
+  const [w, dp] = s.spread ?? [4, 3];
+  const face = facing(s, plan);
+  const fr = rightOf(face);
+  for (let t = 0.2; t < 40; t += 0.1) {
+    const p = { x: eye.at.x + ray.x * t, y: eye.at.y + ray.y * t };
+    const v = { x: p.x - s.x, y: p.y - s.y };
+    if (Math.abs(v.x * fr.x + v.y * fr.y) <= w / 2 && Math.abs(v.x * face.x + v.y * face.y) <= dp / 2) return p;
+  }
+  return { x: s.x, y: s.y };
+}
+
+/** A name without its article or gloss: "the same blue sofa", not "the same the blue sofa". */
+const bareName = (x: string) =>
+  x
+    .replace(/\s*\(.*?\)\s*/g, ' ')
+    .replace(/^\s*(the|a|an)\s+/i, '')
+    .trim();
+
+/** Half the height of the frame's view, in degrees, for a 16:9 frame with HALF_VIEW across. */
+const HALF_TALL = (Math.atan(Math.tan((HALF_VIEW * Math.PI) / 180) * (9 / 16)) * 180) / Math.PI;
+
+/**
+ * How much of someone the frame holds, where the bottom of the picture cuts them: from the waist
+ * up, head and shoulders, or all of them.
+ */
+function cropOf(s: Spot, eye: Eye): string {
+  const d = unit(eye.d);
+  const along = (s.x - eye.at.x) * d.x + (s.y - eye.at.y) * d.y;
+  const low = eye.height + along * Math.tan((eye.pitch ?? 0) + (-HALF_TALL * Math.PI) / 180);
+  const sitting = s.pose === 'sitting';
+  const [head, shoulders, waist, knees] = sitting
+    ? [1.1, 0.85, 0.5, 0.2]
+    : s.pose === 'lying'
+      ? [0.3, 0.25, 0.15, 0.05]
+      : [1.5, 1.25, 0.85, 0.45];
+  return low >= head
+    ? 'only the head in the picture'
+    : low >= shoulders
+      ? 'seen from the shoulders up'
+      : low >= waist
+        ? 'seen from the waist up'
+        : low >= knees
+          ? 'seen from the knees up'
+          : 'seen whole';
+}
+
+/** Where down the picture something reaches, from its top to its bottom, in words. */
+function upDown(s: Seen): string {
+  const top =
+    s.y0 < 0.05
+      ? 'its top edge'
+      : s.y0 < 0.2
+        ? 'near its top'
+        : s.y0 < 0.4
+          ? 'a third of the way down'
+          : s.y0 < 0.6
+            ? 'its middle'
+            : 'low down';
+  const bottom =
+    s.y1 > 0.97
+      ? 'its bottom edge'
+      : s.y1 > 0.8
+        ? 'near its bottom'
+        : s.y1 > 0.6
+          ? 'two thirds of the way down'
+          : s.y1 > 0.4
+            ? 'its middle'
+            : 'a third of the way down';
+  return `from ${top} to ${bottom}`;
+}
+
+/**
+ * Where a crowd is from the dreamer's place, front to back of the room: in the rows behind theirs,
+ * in front of them, or around them, and on seats if they sit.
+ */
+function rows(s: Spot, me: Spot): string {
+  const deep = (s.spread?.[1] ?? 3) / 2;
+  const where =
+    s.y - deep > me.y + 0.3 ? " behind the dreamer's row" : s.y + deep < me.y - 0.3 ? ' in front of the dreamer' : '';
+  return s.pose === 'sitting' ? `, sitting in rows of seats${where}` : where ? `,${where}` : '';
+}
+
+/** How far a thing reaches from its middle toward a direction: half its footprint that way. */
+function extent(s: Spot, plan: Blocking, u: V2): number {
+  if (isPerson(s)) return 0.25;
+  const [w, d] = s.size ?? [1, 1];
+  const f = facing(s, plan);
+  const r = rightOf(f);
+  return (Math.abs(u.x * r.x + u.y * r.y) * w) / 2 + (Math.abs(u.x * f.x + u.y * f.y) * d) / 2;
+}
+
+/** The thing someone is on, where they are on one. */
+function seatOf(p: Spot, plan: Blocking): Spot | undefined {
+  return plan.spots.find(
+    (t) => t.id !== p.id && !isPerson(t) && within(p, t, t.size?.[0] ?? 1, t.size?.[1] ?? 1, facing(t, plan)),
+  );
+}
+
+/** The thing among `ids` that a thing stands right beside, its edge within a hand's width of it. */
+function besideOf(s: Spot, plan: Blocking, ids: string[]): Spot | undefined {
+  return plan.spots
+    .filter((o) => o.id !== s.id && ids.includes(o.id) && !isPerson(o))
+    .map((o) => {
+      const dist = Math.hypot(o.x - s.x, o.y - s.y) || 1e-6;
+      const u = { x: (o.x - s.x) / dist, y: (o.y - s.y) / dist };
+      return { o, gap: dist - extent(s, plan, u) - extent(o, plan, u) };
+    })
+    .filter((x) => x.gap < 0.3)
+    .sort((a, b) => a.gap - b.gap)[0]?.o;
+}
+
+/** Which way off the picture something is: to the left, the right, or behind the camera. */
+function offTo(eye: Eye, s: V2): string {
+  const d = unit(eye.d);
+  const v = { x: s.x - eye.at.x, y: s.y - eye.at.y };
+  const r = rightOf(d);
+  const angle = (Math.atan2(v.x * r.x + v.y * r.y, v.x * d.x + v.y * d.y) * 180) / Math.PI;
+  return Math.abs(angle) > 135 ? 'behind the camera' : angle < 0 ? 'off to the left' : 'off to the right';
+}
+
+/** Where the place's front is: in the picture, and where across it, or off to which side. */
+function frontLine(plan: Blocking, eye: Eye, r: Render, min: number): string {
+  const f = r.seen.get('front');
+  if (f && f.visible >= min) return `${cap(across(f))}: ${plan.front}, the front of the place.`;
+  const d = unit(eye.d);
+  const toFront = { x: 0, y: -1 };
+  const rr = rightOf(d);
+  const angle = (Math.atan2(toFront.x * rr.x + toFront.y * rr.y, toFront.x * d.x + toFront.y * d.y) * 180) / Math.PI;
+  return Math.abs(angle) <= 50
+    ? `At the back of the picture: ${plan.front}.`
+    : `Outside the picture, ${Math.abs(angle) > 135 ? 'behind the camera' : angle < 0 ? 'off to the left' : 'off to the right'}: ${plan.front}.`;
+}
+
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);

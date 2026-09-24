@@ -328,13 +328,14 @@ export async function rewordLook(
 
 const BLOCK = `You are a storyboard artist making the floor plan of each scene of a dream before anything in it is drawn, so that every picture of the scene agrees about where everyone and everything is.
 
-For each scene, seen from above: its "front" (what the people in it face, or its main feature, in a few words: "the screen", "the window", "the stove"), and a spot for every person and thing that is ever in it. x runs across the place from its left side (0) to its right side (10), for someone facing its front; y runs from its front (0) to its back (10). One unit is about a metre.
+For each scene, seen from above: its "front" (what the people in it face, or its main feature, in a few words: "the screen", "the window", "the stove"), whether it is indoors (a room, whose walls are the plan's edges) and how high its ceiling is, and a spot for every person and thing that is ever in it. x runs across the place from its left side (0) to its right side (10), for someone facing its front; y runs from its front (0) to its back (10). One unit is a metre.
 - Keep everything the dream says: who sits or stands next to whom and on which side, what is next to what, who is in front of or behind whom, what faces what.
-- Where it says nothing, choose what is ordinary for such a place, and put people who are together side by side.
-- People face the front unless the dream says otherwise: "faces" is "front", "back", "left", "right", or the id of whom or what they face.
-- A crowd or an audience is one spot with "many": true, at the middle of where they are.
+- Where it says nothing, choose what is ordinary for such a place, at the distances it really has (a cinema's front row is a few metres from its screen; people side by side sit about 0.8 apart), and put people who are together side by side.
+- People face the front unless the dream says otherwise: "faces" is "front", "back", "left", "right", or the id of whom or what they face. Each person is "sitting", "standing" or "lying", as they are in the scene.
+- A thing's spot is its middle, with its "size" in metres: [across, deep, high], across being side to side as it faces. Someone sitting on it has their spot on it.
+- A crowd or an audience is one spot with "many": true, at the middle of where they are, with "spread": [across, deep] in metres for the ground they fill, and how they are ("sitting" in rows of seats, "standing").
 
-Return JSON only: {"scenes": [{"id": "s1", "front": "", "spots": [{"id": "p1", "x": 4, "y": 1, "faces": "front", "many": false}]}]}`;
+Return JSON only: {"scenes": [{"id": "s1", "front": "", "indoors": true, "ceiling": 3.5, "spots": [{"id": "p1", "x": 4, "y": 3, "faces": "front", "pose": "sitting"}, {"id": "t1", "x": 4, "y": 3, "size": [1.9, 0.9, 0.85]}, {"id": "p3", "x": 5, "y": 7, "many": true, "pose": "sitting", "spread": [9, 5]}]}]}`;
 
 /**
  * Each scene's floor plan, made before any picture: where everyone and everything is. The moment
@@ -377,19 +378,39 @@ export async function blockScenes(b: Breakdown): Promise<{ breakdown: Breakdown;
     const spots: Spot[] = list(g.spots)
       .map((x) => x as Record<string, unknown>)
       .filter((x) => typeof x.id === 'string' && ids.has(x.id) && Number.isFinite(Number(x.x)) && Number.isFinite(Number(x.y)))
-      .map((x) => ({
-        id: x.id as string,
-        x: Math.max(0, Math.min(10, Number(x.x))),
-        y: Math.max(0, Math.min(10, Number(x.y))),
-        ...(typeof x.faces === 'string' && x.faces ? { faces: x.faces } : {}),
-        ...(x.many === true || b.people.find((p) => p.id === x.id)?.extras ? { many: true } : {}),
-      }));
+      .map((x): Spot => {
+        const person = b.people.some((p) => p.id === x.id);
+        const many = x.many === true || !!b.people.find((p) => p.id === x.id)?.extras;
+        const metres = (v: unknown, n: number, most: number) =>
+          Array.isArray(v) && v.length === n && v.every((m) => Number.isFinite(Number(m)) && Number(m) > 0)
+            ? v.map((m) => Math.min(most, Number(m)))
+            : undefined;
+        const size = metres(x.size, 3, 10);
+        const spread = metres(x.spread, 2, 10);
+        return {
+          id: x.id as string,
+          x: Math.max(0, Math.min(10, Number(x.x))),
+          y: Math.max(0, Math.min(10, Number(x.y))),
+          kind: person ? 'person' : 'thing',
+          ...(typeof x.faces === 'string' && x.faces ? { faces: x.faces } : {}),
+          ...(many ? { many: true } : {}),
+          ...(person && ['sitting', 'standing', 'lying'].includes(x.pose as string) ? { pose: x.pose as Spot['pose'] } : {}),
+          ...(!person && size ? { size: size as [number, number, number] } : {}),
+          ...(many && spread ? { spread: spread as [number, number] } : {}),
+        };
+      });
     const missing = [...ids].filter((id) => !spots.some((s) => s.id === id));
     if (missing.length) {
       notes.push(`blocking: scene ${sc.id} has no spot for ${missing.join(', ')}; left without a plan`);
       continue;
     }
-    sc.blocking = { front: str(g.front, 60) || 'the front', spots };
+    const ceiling = Number((g as { ceiling?: unknown }).ceiling);
+    sc.blocking = {
+      front: str(g.front, 60) || 'the front',
+      spots,
+      ...((g as { indoors?: unknown }).indoors === true ? { indoors: true } : {}),
+      ...((g as { indoors?: unknown }).indoors === true && Number.isFinite(ceiling) && ceiling >= 2 && ceiling <= 30 ? { ceiling } : {}),
+    };
   }
   return { breakdown: out, notes };
 }
@@ -398,7 +419,7 @@ const SHOT = `You are the director of photography for one picture from someone's
 
 Write the shot as a cinematographer briefs a camera crew, in four to six plain sentences:
 1. The shot: a first-person view or seen from outside; a lens (a focal length); the camera's height and angle.
-2. Foreground, middle distance and background: exactly what is in each, and where across the picture (left third, middle, right third), with how each person is placed (sitting, standing) as the moments so far have them. The background is the side of the place the camera looks toward. Keep every fact given: never move anything to another side of the picture, never bring in what is outside it, never leave out what is in it. Someone close to the camera who would hide what the picture is about is framed at the edge of the middle, partly, as a shoulder or the side of a head, softer than what is beyond.
+2. Foreground, middle distance and background: exactly what is in each, and where across the picture (left third, middle, right third), with how each person is placed (sitting, standing) as the moments so far have them and turned as the facts say. The background is the side of the place the camera looks toward. Keep every fact given, as given: the facts are read off a rendered layout of this exact shot, so never move anything to another side of the picture, never make it bigger or smaller, never bring in what is outside it, never leave out what is in it. Someone close to the camera is softer than what the picture is about, which is in sharp focus.
 3. The light, from a real source in the place (a screen, a window, a lamp) on the side the facts put it.
 4. What is just outside the picture, briefly, only where it tells the eye where it is.
 

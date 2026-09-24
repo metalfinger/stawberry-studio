@@ -66,6 +66,8 @@ export type Item = {
   extras?: boolean;
   /** A moment's shot as briefed from its worked-out view, and the view it was briefed from. */
   shot?: { text: string; view: string };
+  /** A moment's previs in the production, known by its picture's sha256 (see previs.ts). */
+  layout?: { mediaId: string; key: string; path: string };
   /** A moment's words reworded before it was drawn, because the gate found them at odds. */
   reworded?: string[];
   /** How many times they have been asked how it looks because the gate held its sketch. */
@@ -474,6 +476,11 @@ export type SheetEngine = {
   }): Promise<void>;
   /** Collect a finished picture again after its download failed. Costs nothing: no new generation. */
   retryCollection(jobId: string): Promise<void>;
+  /**
+   * A picture made here, not generated (a shot's previs), put on a node and approved by the chat as
+   * a reference: what a frame's layout is drawn over. Its media id.
+   */
+  layout?(nodeId: string, path: string, label: string): Promise<string>;
   /** Set a cut's record to what its plan says, where it differs. */
   record?(nodeId: string, record: CutRecord): Promise<void>;
   /** Prepare, approve and queue a moment's frame, with the approved sheets as references. */
@@ -651,6 +658,20 @@ export const liveSheets: SheetEngine = {
 
   async retryCollection(jobId) {
     await call('retry_collection', { id: jobId });
+  },
+
+  async layout(nodeId, path, label) {
+    const media = (await call('import_media', { node_id: nodeId, path, label })) as { id: string };
+    await liveSheets.review({
+      mediaId: media.id,
+      nodeId,
+      approved: true,
+      author: 'assistant',
+      decision: 'The shot as its previs: grey blocks from its camera, rendered from the floor plan. The layout a frame is drawn over, never a take.',
+      depicted: [],
+      select: false,
+    });
+    return media.id;
   },
 
   async record(nodeId, record) {

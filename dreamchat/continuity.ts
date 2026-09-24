@@ -7,7 +7,8 @@
 // change too much at once, or several cuts need the same changed look, a ghost is made first:
 // an in-between picture that is never a cut. Everything here is pure: the breakdown in, the plan
 // out, and the same breakdown always gives the same plan.
-import { dreamerView, outsideOrder } from './blocking';
+import { type Blocking, type Eye, outsideOrder } from './blocking';
+import { dreamerShot } from './previs';
 import { type Breakdown, type Moment, moments, POSITION, type State } from './producer';
 
 export type Relation = 'same_setup' | 'same_side' | 'other_side' | 'other_place' | 'shift' | 'seat';
@@ -73,9 +74,11 @@ export type CutPlan = {
   matchFrame?: string;
   /**
    * Through the dreamer's eyes, on a scene with a floor plan: what they see from where they are,
-   * worked out in code (blocking.ts).
+   * read off the render of their view (previs.ts).
    */
   view?: string;
+  /** The camera that view is from: where their eyes are on the plan, how high, which way they look. */
+  eye?: Eye;
   /** Who and what that view has in the picture: drawn from their sketches like anyone in view. */
   sees?: string[];
   /** Seen from outside, on a scene with a floor plan: who and what is where, left to right. */
@@ -139,6 +142,20 @@ export const pictureName = (name: string) =>
  * their own hands or feet show, never their face (the glass world's point-of-view moments were
  * given the dreamer's face sheet, and checked for "the same face").
  */
+/**
+ * A moment's scene's floor plan with only who and what is there by then: whoever has been seen in
+ * the scene so far, and what has been in it, and the dreamer. Someone who comes in later is not in
+ * the room yet, for the camera or its previs.
+ */
+export function planBy(b: Breakdown, momentId: string): Blocking | undefined {
+  const scene = b.scenes.find((sc) => sc.moments.some((x) => x.id === momentId));
+  if (!scene?.blocking) return undefined;
+  const upTo = scene.moments.slice(0, scene.moments.findIndex((x) => x.id === momentId) + 1);
+  const there = new Set(upTo.flatMap((x) => [...x.visible, ...x.things]));
+  const dreamerId = b.people.find((p) => p.is_dreamer)?.id;
+  return { ...scene.blocking, spots: scene.blocking.spots.filter((s) => there.has(s.id) || s.id === dreamerId) };
+}
+
 export const seenIn = (m: Pick<Moment, 'visible' | 'eyes'>, dreamerId?: string) =>
   m.eyes === 'dreamer' && dreamerId ? m.visible.filter((p) => p !== dreamerId) : m.visible;
 
@@ -538,9 +555,10 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
       )?.id;
     };
     if (m.eyes === 'dreamer' && dreamerId) {
-      const v = dreamerView(plan, dreamerId, target(m.looks_at), plan.spots.map((s) => s.id).filter((id) => id !== dreamerId), now);
+      const v = dreamerShot(planBy(b, m.id) ?? plan, dreamerId, target(m.looks_at), now);
       if (v) {
         c.view = v.text;
+        c.eye = v.eye;
         c.sees = v.inPicture;
       }
     } else {

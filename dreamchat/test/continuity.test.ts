@@ -262,6 +262,45 @@ describe('ghosts', () => {
     expect(plan.cuts[1].criteria.some((k) => k.text.startsWith('From left to right'))).toBe(false);
   });
 
+  test("on a floor plan, the dreamer's view is found from their seat, with only who is there by then", () => {
+    const person = (id: string, name: string, dreamer = false) => ({
+      id,
+      name,
+      is_dreamer: dreamer,
+      protagonist: dreamer,
+      fields: { identity: detail(), appearance: detail(), wardrobe: detail(), distinctive_features: detail() },
+    });
+    const b = breakdown(
+      [
+        moment({ id: 'm1', visible: ['p1', 'p2'], things: ['t1'] }),
+        moment({ id: 'm2', things: ['t1'], eyes: 'dreamer', looks_at: 'the board', from: 'm1' }),
+        // Someone who only comes in later is not in the room yet in m2.
+        moment({ id: 'm3', visible: ['p1', 'p2', 'p3'], from: 'm2' }),
+      ],
+      {
+        people: [person('p1', 'you', true), person('p2', 'ana'), person('p3', 'the waiter')],
+      },
+    );
+    b.scenes[0].blocking = {
+      front: 'the counter',
+      indoors: true,
+      spots: [
+        { id: 'p1', x: 5, y: 5, kind: 'person', pose: 'standing' },
+        { id: 'p2', x: 4, y: 5, kind: 'person', pose: 'standing' },
+        { id: 'p3', x: 2, y: 5, kind: 'person', pose: 'standing' },
+        { id: 't1', x: 1, y: 5, kind: 'thing', size: [1.2, 0.1, 0.9] },
+      ],
+    };
+    const pov = planContinuity(b).cuts[1];
+    // Turned to their left, toward the board: ana stands between, the waiter has not come in.
+    expect(pov.eye?.height).toBe(1.62);
+    expect(pov.view).toContain('turned to their left, toward the board');
+    expect(pov.view).toContain(': ana, ');
+    expect(pov.view).not.toContain('waiter');
+    expect(pov.sees).toEqual(expect.arrayContaining(['p2', 't1']));
+    expect(pov.sees).not.toContain('p3');
+  });
+
   test("through the dreamer's own eyes the dreamer is the camera: never staged, never checked for a face", () => {
     const b = breakdown(
       [

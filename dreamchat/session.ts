@@ -55,7 +55,8 @@ import {
   ownStyle,
   type StyleOption,
 } from './producer';
-import { type ContinuityPlan, type Criterion, drawOrder, pictureName, planContinuity, seenIn } from './continuity';
+import { type ContinuityPlan, type Criterion, drawOrder, pictureName, planBy, planContinuity, seenIn } from './continuity';
+import { previsImage } from './previs';
 import {
   buildFrames,
   buildGhosts,
@@ -735,7 +736,7 @@ export class SessionStore {
         const fix =
           named && this.deps.fix && it.kind === 'cut' && s.build && s.style
             ? await this.deps
-                .fix(text, framePrompt(it, s.build.items, s.style, this.plannedInputs(s, it)).prompt)
+                .fix(text, framePrompt(it, s.build.items, s.style, this.plannedInputs(s, it), it.layout?.mediaId).prompt)
                 .catch(() => null)
             : null;
         it.repairFor = named ? (fix === '' ? undefined : [fix ?? `${named}: "${text.slice(0, 200)}"`]) : undefined;
@@ -1208,7 +1209,7 @@ export class SessionStore {
     // picture "you" is whoever looks at it (older drafts, and words a rewording left behind).
     const WORDS = ['action', 'visual_point', 'feeling', 'purpose', 'shift', 'dream'];
     if (this.deps.reword && WORDS.some((k) => /\byou(r|rs|rself)?\b/i.test(frame.fields[k]?.value ?? ''))) {
-      const probe = framePrompt(frame, s.build.items, s.style, this.plannedInputs(s, frame));
+      const probe = framePrompt(frame, s.build.items, s.style, this.plannedInputs(s, frame), frame.layout?.mediaId);
       const fields = await this.deps
         .reword(probe.prompt, ['its words call the dreamer "you": put every one of them in the third person'], frame.fields)
         .catch(() => null);
@@ -1222,13 +1223,18 @@ export class SessionStore {
     // The shot, briefed by a director of photography from the view worked out on the floor plan,
     // and briefed again whenever that view changes.
     const view = frame.frame?.plan?.view;
+    const changed = [...(frame.frame?.plan?.own ?? []), ...(frame.frame?.plan?.states ?? [])];
+    const called = (id: string) => {
+      const st = changed.find((x) => x.who === id && WHOLE.test(x.what));
+      const it = s.build?.items.find((i) => i.id === id);
+      return st ? st.now : it?.isDreamer ? 'the dreamer' : (it?.name ?? id);
+    };
+    // Without its previs the frame is drawn from words alone, as before there was one.
+    const layout = await this.layoutFor(s, frame, called).catch((e) => {
+      console.error(`previs for ${frame.id}: ${String(e).slice(0, 300)}`);
+      return undefined;
+    });
     if (view && this.deps.shot && frame.shot?.view !== view) {
-      const changed = [...(frame.frame?.plan?.own ?? []), ...(frame.frame?.plan?.states ?? [])];
-      const called = (id: string) => {
-        const st = changed.find((x) => x.who === id && WHOLE.test(x.what));
-        const it = s.build?.items.find((i) => i.id === id);
-        return st ? st.now : it?.isDreamer ? 'the dreamer' : (it?.name ?? id);
-      };
       // How everyone is placed comes from what has happened in this place so far.
       const scene = s.draft?.breakdown?.scenes.find((sc) => sc.moments.some((m) => m.id === frame.id));
       const before = (scene?.moments ?? []).slice(0, scene?.moments.findIndex((m) => m.id === frame.id)).map((m) => m.action);
@@ -1237,7 +1243,7 @@ export class SessionStore {
         .catch(() => null);
       frame.shot = text ? { text, view } : undefined;
     }
-    let built = framePrompt(frame, s.build.items, s.style, this.plannedInputs(s, frame));
+    let built = framePrompt(frame, s.build.items, s.style, this.plannedInputs(s, frame), layout);
     const inView = inViewOf(frame, s.build.items);
     let findings = await this.gateFindings(s, frame, built.prompt, built.references, inView);
     // What only its words got wrong is put right in words first, and read again: twice at most.
@@ -1255,7 +1261,7 @@ export class SessionStore {
       frame.reworded = [...new Set([...(frame.reworded ?? []), ...changed])];
       frame.fields = fields;
       await this.keepWords(s, frame);
-      built = framePrompt(frame, s.build.items, s.style, this.plannedInputs(s, frame));
+      built = framePrompt(frame, s.build.items, s.style, this.plannedInputs(s, frame), layout);
       findings = await this.gateFindings(s, frame, built.prompt, built.references, inView);
     }
     if (findings.length) {
@@ -1278,6 +1284,35 @@ export class SessionStore {
       record: this.recordOf(s, frame),
       reason: `The person asked to see their dream drawn and settled everything in it; approved within the ${IMAGE_CAP}-picture limit.`,
     });
+  }
+
+  /**
+   * A moment's previs: its scene's floor plan rendered as grey blocks through its camera, put in
+   * the production on its shot and approved there as the picture the frame is made from. Put in
+   * again only when the picture differs. Only a moment with a worked-out camera has one: the
+   * dreamer's own view, where words alone failed (24 Sep).
+   */
+  private async layoutFor(s: Session, frame: Item, called: (id: string) => string): Promise<string | undefined> {
+    const cut = frame.frame?.plan;
+    const b = s.draft?.breakdown;
+    const eye = cut?.eye;
+    const plan = b ? planBy(b, frame.id) : undefined;
+    const dreamer = b?.people.find((p) => p.is_dreamer)?.id;
+    if (!cut || !eye || !plan || !dreamer || !this.deps.sheets?.layout || !this.deps.dir) return undefined;
+    const names = Object.fromEntries(plan.spots.map((x) => [x.id, called(x.id)]));
+    // Rendered every time, and known by what it is: the picture itself. Known by what it was made
+    // from, a previs drawn before the audience had seats was used again after they had them (24 Sep).
+    const png = previsImage(plan, eye, [dreamer], (id) => names[id] ?? id);
+    const key = new Bun.CryptoHasher('sha256').update(png).digest('hex');
+    if (frame.layout?.key === key) return frame.layout.mediaId;
+    const shot = s.production?.result?.ids[`shot_${cut.shot.replace(/\./g, '_')}`];
+    if (!shot) return undefined;
+    const path = join(this.deps.dir, s.id, `previs-${frame.id}-${frame.version + 1}.png`);
+    mkdirSync(join(this.deps.dir, s.id), { recursive: true });
+    await Bun.write(path, png);
+    const mediaId = await this.deps.sheets.layout(shot, path, `Previs: ${frame.name}`);
+    frame.layout = { mediaId, key, path };
+    return mediaId;
   }
 
   /**
@@ -1347,6 +1382,8 @@ export class SessionStore {
         .filter((i) => i.status === 'ready' && i.mediaId && (i.kind === 'ghost' || i.review || i.continuityApproved))
         .map((i) => i.mediaId as string),
     );
+    // Its own previs, approved by the chat as its layout when it was put in the production.
+    if (item.layout) approved.add(item.layout.mediaId);
     const fixed = [
       ...preflight(inView, issues),
       ...checkReferences(prompt, references, {

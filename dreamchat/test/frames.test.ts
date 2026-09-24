@@ -694,3 +694,66 @@ describe('what the pictures are made as', () => {
     expect(framePrompt(frame('A board.'), [], asSeen).prompt).not.toMatch(/storyboard/i);
   });
 });
+
+describe("a moment's previs", () => {
+  test('goes first, as the layout, and the place gives only what it is made of', () => {
+    const place: Item = {
+      id: 'l1',
+      kind: 'location',
+      name: 'the theater',
+      fields: {},
+      status: 'ready',
+      version: 1,
+      mediaId: 'media-l1',
+      review: 'approved',
+    };
+    const view = "The camera is the dreamer's eyes, on the blue sofa, turned to their left, toward the roller coaster.";
+    const pov: Item = {
+      id: 'm3',
+      kind: 'cut',
+      name: 'm3',
+      fields: { action: { value: 'The roller coaster where the big sofa was.', said: false } },
+      status: 'waiting',
+      version: 0,
+      frame: {
+        visible: [],
+        things: [],
+        place: 'l1',
+        distance: 'close',
+        eyes: 'dreamer',
+        key: true,
+        order: 3,
+        plan: {
+          id: 'm3',
+          order: 3,
+          scene: 's1',
+          shot: 's1.sh3',
+          refs: [],
+          own: [],
+          staging: [],
+          states: [],
+          sheetLayout: false,
+          changes: [],
+          needs: [],
+          criteria: [],
+          depth: 1,
+          transition: '',
+          why: '',
+          view,
+        },
+      },
+    };
+    const { prompt, references } = framePrompt(pov, [place], style, [], 'media-previs');
+    // Made real, as a blockout is rendered: the picture to edit, first and only.
+    expect(references[0]).toMatchObject({ media_id: 'media-previs', role: 'base' });
+    expect(references.filter((r) => r.role === 'base')).toHaveLength(1);
+    expect(prompt).toContain('Image 1: EDIT THIS PICTURE. It is a rough grey mock-up of this exact picture');
+    expect(prompt).toContain("keep nothing of the mock-up's look: no grey clay, no outlines, no labels or letters.");
+    expect(prompt).toContain("What the dreamer sees, the camera being their own eyes, as the mock-up in Image 1 shows it");
+    expect(prompt).toContain('Where everything stands, and which way the picture looks, come from Image 1, the mock-up, not from this image.');
+    // Without a previs, as before.
+    const bare = framePrompt(pov, [place], style).prompt;
+    expect(bare).not.toContain('mock-up');
+    expect(bare).toContain('come from the shot above, not from this image.');
+  });
+});

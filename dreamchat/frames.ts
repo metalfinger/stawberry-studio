@@ -38,6 +38,12 @@ export function turnedInto(frame: Item): Set<string> {
   return new Set([...(plan?.own ?? []), ...(plan?.states ?? [])].filter((st) => WHOLE.test(st.what)).map((st) => st.who));
 }
 
+/** A thing named with its article: "turned into roller coaster" read as broken English. */
+export const aNoun = (x: string) =>
+  /^(a|an|the|some|this|that|his|her|their|its|one|two|three|several|many|[0-9])\b/i.test(x.trim())
+    ? x.trim()
+    : `${/^[aeiou]/i.test(x.trim()) ? 'an' : 'a'} ${x.trim()}`;
+
 /** The frame's shape in words, as sent in its settings: the model's own examples say both. */
 const SHAPE_WORDS: Record<Shape, string> = {
   '16:9': 'a landscape 16:9 frame',
@@ -177,6 +183,8 @@ export function framePrompt(
   sheets: Item[],
   style: StyleOption,
   inputs: PlannedInput[] = [],
+  /** The shot's previs: grey blocks from its exact camera, rendered from the floor plan (previs.ts). */
+  layout?: string,
 ): { prompt: string; references: FrameReference[]; depicted: string[] } {
   const f = frame.frame;
   if (!f) throw new Error(`${frame.name} is not a moment`);
@@ -236,6 +244,20 @@ export function framePrompt(
         : `EDIT THIS PICTURE. It is ${pictureNo(base)}, the same view a moment earlier. Keep its camera, framing, room, light and everyone in it exactly as they are, faces and clothes included; change only what this moment changes.${strays(base)}`,
     );
 
+  // The previs is the picture made real, where there is no other picture to edit: a previs frame
+  // is turned into the shot, as a 3D blockout is rendered, never only consulted. Told only in words
+  // where everything was from the dreamer's seat, the model drew the room from the aisle, facing
+  // the screen; given the previs as a layout to consult, it kept who is left and right but moved the
+  // roller coaster out onto the floor and gave the friend an armchair of her own (24 Sep).
+  const mockUp = !base && layout ? layout : undefined;
+  if (mockUp)
+    attach(
+      mockUp,
+      'base',
+      'the previs of this exact picture, from its camera: make it real, keeping where everyone and everything is and how big',
+      "EDIT THIS PICTURE. It is a rough grey mock-up of this exact picture, rendered from the floor plan of the place through this very camera: make it real. Every labelled grey shape becomes the person or thing its label names, exactly where it is and exactly as big, looking as their own images below show; the unlabelled shapes under people become what they sit on, and the plain grey surfaces the walls, floor and ceiling of the place. Keep the camera, the framing and where everything is exactly; keep nothing of the mock-up's look: no grey clay, no outlines, no labels or letters.",
+    );
+
   // What each sheet says in words, so the manifest ties each image to who or what it is.
   // Someone in a group's look who also has their own sketch is drawn from their own sketch: the
   // group's words about them go ("the family … baby: yellow onesie" beside the baby's own white one).
@@ -275,7 +297,7 @@ export function framePrompt(
     // themselves (24 Sep).
     facts.push(
       whole
-        ? `${who(s)} (${kind}): it has turned into ${whole.now}.`
+        ? `${who(s)} (${kind}): it has turned into ${aNoun(whole.now)}.`
         : `${who(s)} (${kind})${known ? `: ${known}` : ''}.`,
     );
     // Every sheet of what is in view always goes in: consistency starts from them.
@@ -312,7 +334,7 @@ export function framePrompt(
             ? `${who(s)}${look ? ` (${look})` : ''}: only its materials, colours and objects; where things stand comes from ${base ? 'Image 1' : 'the earlier picture of this place'}.`
             : plan?.view
               ? // Its layout pulls a view back to the one it shows: only what the place is made of.
-                `${who(s)}${look ? ` (${look})` : ''}: only what it is made of and its colours (its walls, floor, seats and lamps). Where everything stands, and which way the picture looks, come from the shot above, not from this image.`
+                `${who(s)}${look ? ` (${look})` : ''}: only what it is made of and its colours (its walls, floor, seats and lamps). Where everything stands, and which way the picture looks, come from ${mockUp ? 'Image 1, the mock-up' : 'the shot above'}, not from this image.`
               : `${who(s)}${look ? ` (${look})` : ''}: only its materials, colours, objects and light. It shows the place from another side: this frame faces ${f.looksAt || 'the other way'}.`,
       );
     } else {
@@ -379,7 +401,7 @@ export function framePrompt(
         g.kind === 'view'
           ? `${nameOf(sheets, g.of)} seen facing ${g.looksAt || 'the other way'}: the side this frame faces. Keep everything in it where it puts it.`
           : g.state && WHOLE.test(g.state.what)
-            ? `what ${nameOf(sheets, g.of)} has turned into (${g.state.now}): draw it exactly so, where ${nameOf(sheets, g.of)} was. Nothing else from it.`
+            ? `what ${nameOf(sheets, g.of)} has turned into, ${aNoun(g.state.now)}: draw it exactly so, where ${nameOf(sheets, g.of)} was. Nothing else from it.`
             : `how ${nameOf(sheets, g.of)} looks now (${g.state?.what}: ${g.state?.now}): draw ${g.of === f.place ? 'it' : 'them'} exactly so. Nothing else from it.`,
       );
       continue;
@@ -462,8 +484,8 @@ export function framePrompt(
     // facing the screen, the default for a theater (24 Sep).
     plan?.view
       ? frame.shot && frame.shot.view === plan.view
-        ? `The shot (${own}): ${frame.shot.text}`
-        : `What the dreamer sees, the camera being their own eyes (${own}): ${plan.view}`
+        ? `The shot${mockUp ? ', as the mock-up in Image 1 shows it' : ''} (${own}): ${frame.shot.text}`
+        : `What the dreamer sees, the camera being their own eyes${mockUp ? ', as the mock-up in Image 1 shows it' : ''} (${own}): ${plan.view}`
       : '',
     manifest.length
       ? `The attached images, in order, and the one thing to take from each:\n${manifest.join('\n')}`
@@ -587,7 +609,7 @@ export function ghostPrompt(
         : 'the same shape and materials, the same angle, the same plain background';
   // Turned into something else entirely, the whole of it is the change: "form is now roller
   // coaster" beside "keep the same shape and materials" asked for both (24 Sep).
-  const change = becomes ? `it has turned into ${g.state?.now}, entirely` : `${g.state?.what} is now ${g.state?.now}`;
+  const change = becomes ? `it has turned into ${aNoun(g.state?.now ?? '')}, entirely` : `${g.state?.what} is now ${g.state?.now}`;
   // Its look in words, as a moment lists what is in it: said only through its image, an edit read
   // as unclear about what it shows (0.53 against 0.64, 24 Sep).
   const look = LOOK[sheet.kind]
