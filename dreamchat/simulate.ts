@@ -61,7 +61,8 @@ async function lookAt(store: SessionStore, id: string): Promise<string> {
       view?.phase === 'review'
         ? (view.build?.items ?? [])
         : (view?.build?.frames ?? []).filter((f) => f.kind === 'cut');
-    const frames = pieces.filter((f) => f.status === 'ready' && f.announced && !f.review);
+    // Everything drawn is on the right, whether or not Berry has mentioned it yet.
+    const frames = pieces.filter((f) => f.status === 'ready' && !f.review);
     const judged = frames.filter((f) => f.check);
     if (judged.length === frames.length || Date.now() > until) {
       return judged
@@ -119,6 +120,14 @@ async function run(file: string, max: number, resume?: string) {
       dreamer.push({ role: e.role === 'assistant' ? 'user' : 'assistant', content: e.content });
     listener = lines.at(-1)?.role === 'assistant' ? (lines.at(-1)?.content ?? '') : '';
     await store.resume(resume);
+    // They look at what is on the right before answering, as after every other reply: resumed
+    // blind, the simulated dreamer called a picture right before the judge had seen it (24 Sep).
+    const phase = store.view(resume)?.phase;
+    if (phase === 'review' || phase === 'frames') {
+      await store.settle(resume);
+      const seen = await lookAt(store, resume);
+      if (seen) listener += `\n\n(What you see in the pictures on the right, which only you know: ${seen})`;
+    }
   } else listener = (await store.open(id)).messages.join('\n');
   let closed = false;
   for (let i = 0; i < max && !closed; i++) {
