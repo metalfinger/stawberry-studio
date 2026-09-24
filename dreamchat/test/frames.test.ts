@@ -357,6 +357,14 @@ describe('what a redraw is told', () => {
     expect(
       asInstruction('Is everything in this frame declared? The cut names the room. Is there no other person?'),
     ).toBe('nothing is in the picture that the dream does not have: no other person, face, hand, limb, creature or tool');
+    // The palette by name, never as codes, and the style, light and action as what is so.
+    expect(
+      asInstruction("Are the image's values confined to this palette, with no colour outside it: #001E3C, #0077B6, #CAF0F8?"),
+    ).toBe('every colour in it, hair, skin and clothes included, is one of dark navy, blue, pale blue');
+    expect(asInstruction('Does the image actually show this: soft bleeding edges?')).toBe('the picture shows soft bleeding edges');
+    expect(asInstruction('Does the frame show this happening: The family sits on the roof.?')).toBe(
+      'the frame shows this happening: The family sits on the roof.',
+    );
   });
 });
 

@@ -67,6 +67,7 @@ import { checkReferences, preflight, readPrompt } from './gate';
 import {
   type Check,
   CREDITS_PER_IMAGE,
+  colourName,
   type CutRecord,
   type Item,
   LOOK,
@@ -374,6 +375,18 @@ export function asInstruction(question: string): string {
       /^Is everything in this frame declared\?/,
       () => 'nothing is in the picture that the dream does not have: no other person, face, hand, limb, creature or tool',
     ],
+    // The palette by name: a hex code in a prompt is drawn as a label, and "make this true: Are the
+    // image's values confined to this palette: #001E3C…" read as a contradiction to the gate (24 Sep).
+    [
+      /^Are the image's values confined to this palette[^:]*: (.+)\?$/,
+      (_, hexes) =>
+        `every colour in it, hair, skin and clothes included, is one of ${[...new Set((hexes.match(/#[0-9a-f]{6}/gi) ?? []).map(colourName))].join(', ')}`,
+    ],
+    [/^Is the image rendered in this style: (.+)\?$/, (_, a) => `it is drawn in this style: ${a}`],
+    [/^Does the image actually show this: (.+)\?$/, (_, a) => `the picture shows ${a}`],
+    [/^Does the light in this frame follow: (.+?)\??$/, (_, a) => `its light: ${a}`],
+    [/^Does the frame show this happening: (.+?)\??$/, (_, a) => `the frame shows this happening: ${a}`],
+    [/^Does the frame carry this: (.+?)\??$/, (_, a) => `the frame shows ${a}`],
   ];
   for (const [re, f] of rules) {
     const m = q.match(re);
