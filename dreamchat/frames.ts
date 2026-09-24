@@ -8,7 +8,7 @@
 import { type ContinuityPlan, type PlanRef, pictureName } from './continuity';
 import type { Breakdown, Moment, StyleOption } from './producer';
 import { VAGUE } from './producer';
-import { groupMembers, isGroup, type Item, LOOK, styleBlock, toldColours } from './sheets';
+import { groupMembers, isGroup, type Item, LOOK, type Shape, shapeOf, styleBlock, toldColours } from './sheets';
 
 /** Where the line that says who "you" is goes, when anything told to the picture says "you". */
 const YOU = '\u0000you';
@@ -23,8 +23,19 @@ const FRAMING: Record<Moment['distance'], string> = {
 };
 
 // A "little round convertible" came back with a real maker's badge on its bonnet (23 Sep).
-const NO_WORDS =
+// Said as what is there rather than what is not: the model is prompted best by describing what is
+// wanted ("an empty street", not "no cars"), its makers say.
+const NO_WORDS = 'Every surface in it is free of writing, logos and brand badges: signs, pages and screens stay blank.';
+const NO_WORDS_EDIT =
   'Do not write any words, letters, numbers or labels anywhere in the image, and no logos or brand badges.';
+
+/** The frame's shape in words, as sent in its settings: the model's own examples say both. */
+const SHAPE_WORDS: Record<Shape, string> = {
+  '16:9': 'a landscape 16:9 frame',
+  '4:3': 'a landscape 4:3 frame',
+  '2:3': 'a portrait 2:3 frame',
+  '1:1': 'a square frame',
+};
 
 /**
  * Writing the dream itself contains, from quoted words in the moment: 'zikery' on a board.
@@ -47,7 +58,7 @@ function writingLine(words: string[]): string {
     const letters = w.toUpperCase().replace(/[^A-Z0-9]/g, '');
     return `"${w.toUpperCase()}" (${letters.length} letters: ${letters.split('').join(' ')})`;
   });
-  return `The only writing anywhere in the picture is ${spelled.join(' and ')}, exactly as spelled, and nothing else: no other words, letters, numbers, labels, logos or brand badges.`;
+  return `The only writing anywhere in the picture is ${spelled.join(' and ')}, exactly as spelled; every other surface is free of writing, logos and brand badges.`;
 }
 
 /** The moments to draw, one per cut, each with its entry in the continuity plan. */
@@ -234,6 +245,9 @@ export function framePrompt(
     // cooking") into every moment they are in.
     const known = lookOf(s, LOOK[s.kind]);
     const kind = s.kind === 'character' ? 'person' : s.kind === 'location' ? 'place' : 'thing';
+    // Everything in view is listed with its look, its image or not: said only beside the images,
+    // the pictures read as less clear to Jev (0.78 against 0.82) and more likely to contradict
+    // themselves (24 Sep).
     facts.push(`${who(s)} (${kind})${known ? `: ${known}` : ''}.`);
     // Every sheet of what is in view always goes in: consistency starts from them.
     if (!approved(s) || !s.mediaId) continue;
@@ -288,22 +302,15 @@ export function framePrompt(
     manifest[m - 1] += ` They are the ${word} in ${who(group)}'s picture (Image ${g}): one and the same, drawn as this image shows.`;
   }
 
-  // Where someone was last seen keeps them drawn the same way; their sketch still says who they
-  // are, and wins where the two differ. Both said "take their face, hair and clothes", and Jev
-  // read two images claiming the same thing (0.42-0.46 on what each is for; 0.70-0.72 once the
-  // sketch was named the authority, 24 Sep).
+  // One image says who each person is: their sketch. The picture they were last seen in goes in
+  // only for someone whose sketch is not there. A second face image for the same person pulls the
+  // model off them (an expression variant beside an identity sheet lost a character's glasses, in
+  // the first Strawberry Studio), and Jev read the two as claiming the same thing (0.42-0.46 on
+  // what each image is for; 0.87-0.89 with the sketch alone, 24 Sep).
   const lastSeen = (x: PlannedInput, ids: string[]) => {
     const names = ids.map((id) => nameOf(sheets, id));
-    const own = ids.map((id) => imageOf.get(id)).filter((n): n is number => n !== undefined);
-    const are = names.length > 1 ? 'were' : 'was';
     const shows = x.item.fields.action?.value ? ` (${x.item.fields.action.value.replace(/\.$/, '')})` : '';
-    return `${pictureNo(x)}${shows}: where ${names.join(' and ')} ${are} last seen, only so they are drawn the same way from picture to picture.${
-      own.length > 1
-        ? ` Who they are is Images ${own.join(' and ')}: where this picture differs from them, they are right.`
-        : own.length
-          ? ` Who they are is Image ${own[0]}: where the two differ, Image ${own[0]} is right.`
-          : ''
-    } Nothing of its place, framing or background.`;
+    return `${pictureNo(x)}${shows}: who ${names.join(' and ')} ${names.length > 1 ? 'are' : 'is'}, as last drawn: their face, hair, build and clothes, exactly. Nothing else from it: not its pose, background or framing.`;
   };
 
   // Ghosts, then earlier moments, while there is room: the model takes 14 images, and a dozen
@@ -323,6 +330,8 @@ export function framePrompt(
       );
       continue;
     }
+    const unsketched = x.use.who?.filter((id) => !imageOf.has(id)) ?? [];
+    if (x.use.who?.length && !unsketched.length) continue;
     const r = x.use.relation;
     const shows = x.item.fields.action?.value ? ` (${x.item.fields.action.value.replace(/\.$/, '')})` : '';
     const role: FrameReference['role'] =
@@ -343,8 +352,8 @@ export function framePrompt(
           ? `${pictureNo(x)}${shows}: the same place from the same side. Take where everything and everyone in it are, and its light; this frame is framed ${f.distance}.`
           : x.use.role === 'lighting'
             ? `${pictureNo(x)}${shows}: the same place from the other side, a moment earlier. Take only its light and how everyone looks; what is behind them here is what that picture faced away from.`
-            : x.use.who?.length
-              ? lastSeen(x, x.use.who)
+            : unsketched.length
+              ? lastSeen(x, unsketched)
               : `${pictureNo(x)}${shows}: take only ${x.use.carries.replace(/;.*$/, '')}. Nothing of its place, framing or background.`) +
         strays(x),
     );
@@ -369,27 +378,27 @@ export function framePrompt(
       : '';
   const feeling = frame.fields.feeling?.value;
   const point = frame.fields.visual_point?.value;
-  const purpose = frame.fields.purpose?.value;
+  // (Its part in the story, "the turn" or "the waking", stays on record for the judge: a picture
+  // can only draw it by inventing something.)
   // Someone drawn with their group stands with it, not beside it.
   const staged = (plan?.staging ?? []).filter((id) => !members.some((m) => m.member.id === id));
   const lines = [
-    `One picture from the dream, ${f.distance}, ${angle}${f.looksAt ? `, facing ${f.looksAt}` : ''}. ${FRAMING[f.distance]}`,
+    `One picture from the dream, in ${SHAPE_WORDS[shapeOf(frame)]}: a ${f.distance} shot, ${angle}${f.looksAt ? `, facing ${f.looksAt}` : ''}. ${FRAMING[f.distance]}`,
     manifest.length
       ? `The attached images, in order, and the one thing to take from each:\n${manifest.join('\n')}`
       : '',
     `What happens in this frame: ${action}`,
     // The dream's own strangeness, where this moment has it: shown as plain fact, never as an effect.
     frame.fields.dream?.value
-      ? `The dream in it, drawn as plain fact the way dreams make it feel, never as a special effect: ${sentence(frame.fields.dream.value)}`
+      ? `The dream in it, drawn as plain fact, as solid and ordinary as everything around it: ${sentence(frame.fields.dream.value)}`
       : '',
     pov,
     staged.length >= 2
-      ? `Where they stand, from left to right: ${staged.map((id) => nameOf(sheets, id)).join(', then ')}. The same in every picture of this scene: they never swap sides.${members.map((m) => ` ${who(m.member)} ${isGroup(m.member) ? 'are' : 'is'} with ${who(m.group)}.`).join('')}`
+      ? `Where they stand, from left to right: ${staged.map((id) => nameOf(sheets, id)).join(', then ')}. They keep these sides in every picture of this scene.${members.map((m) => ` ${who(m.member)} ${isGroup(m.member) ? 'are' : 'is'} with ${who(m.group)}.`).join('')}`
       : '',
     YOU,
     facts.length ? `In it:\n${facts.join('\n')}` : '',
     states.length ? `Still so from earlier in the dream: ${states.join('; ')}.` : '',
-    purpose ? `Its part in the story: ${sentence(purpose)}` : '',
     feeling ? `It should feel: ${sentence(feeling)}` : '',
     point ? `The one thing this frame must show: ${sentence(point)}` : '',
     // The judge's findings on the last attempt, when it was drawn again for them.
@@ -409,7 +418,7 @@ export function framePrompt(
       : '',
     // The dream's writing can live in what is in view as well as in the action: a frame of the
     // board without the word quoted in its action came back reading "NONSENSICAL" (23 Sep).
-    `One single picture, not a sheet or a grid. ${writingLine(writingIn(action, point, ...inView.flatMap((x) => Object.values(x.fields).map((d) => d.value))))}`,
+    `One single picture filling the whole frame. ${writingLine(writingIn(action, point, ...inView.flatMap((x) => Object.values(x.fields).map((d) => d.value))))}`,
   ];
   // The moments are told to the dreamer ("she stands before you"), and to a picture "you" is the
   // viewer: a moment seen from outside came back with a viewer's hands reaching in (23 Sep). "You"
@@ -473,12 +482,32 @@ export function ghostPrompt(
         ? { media_id: useFrom.mediaId, role: 'lighting', instruction: `inside ${sheet.name}: its light` }
         : { media_id: useFrom.mediaId, role: 'identity', instruction: `the moment the change happened: how it looks` },
     );
+  // What stays is everything the change does not replace: "make their head an ice block" beside
+  // "keep the same face and hair" read as a contradiction (0.51-0.54 on what it shows, 24 Sep).
+  const what = g.state?.what ?? '';
+  const parts =
+    sheet.kind === 'character'
+      ? [
+          ...(/head|face/i.test(what) ? [] : ['face']),
+          'build',
+          ...(/head|hair/i.test(what) ? [] : ['hair']),
+          ...(/cloth|dress|shirt|coat|jacket|trousers|skirt|shoe|wear|outfit/i.test(what) ? [] : ['clothes']),
+        ]
+      : [];
+  const listed = (xs: string[]) => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs.at(-1)}` : (xs[0] ?? ''));
   const keep =
     sheet.kind === 'character'
-      ? 'the same face, build, hair and clothes, the same pose and framing, the same plain background'
+      ? `the same ${listed(parts)}, the same pose and framing, the same plain background`
       : sheet.kind === 'location'
         ? 'the same walls, windows, objects, materials and colours, the same view'
         : 'the same shape and materials, the same angle, the same plain background';
+  // Its look in words, as a moment lists what is in it: said only through its image, an edit read
+  // as unclear about what it shows (0.53 against 0.64, 24 Sep).
+  const look = LOOK[sheet.kind]
+    .map((k) => sheet.fields[k]?.value)
+    .filter((v): v is string => !!v && !VAGUE.test(v))
+    .join('; ');
+  const kind = sheet.kind === 'character' ? 'person' : sheet.kind === 'location' ? 'place' : 'thing';
   const lines =
     g.kind === 'view'
       ? [
@@ -489,17 +518,20 @@ export function ghostPrompt(
       : [
           `A reference picture of ${name}, on their own: not a scene from the story.`,
           before
-            ? `Image 1 is ${name} as they looked a moment before, after the change before this one: edit it. Make exactly one change: ${g.state?.what} is now ${g.state?.now}. Image 2 is their reference sheet: who they are.`
+            ? `Image 1 is ${name} as they looked a moment before, after the change before this one: edit it. Make exactly one change: ${g.state?.what} is now ${g.state?.now}. Image 2 is their reference sheet: ${sheet.kind === 'character' ? `their ${listed(parts)}` : 'what it is'}.`
             : `Image 1 is ${name}'s reference sheet: edit it. Make exactly one change: ${g.state?.what} is now ${g.state?.now}.`,
           useFrom
             ? `Image ${references.length} is the moment it happened in the dream: make the change look as it does there, and take nothing else from it.`
             : '',
+          `${name} (${kind})${look ? `: ${look}` : ''}.`,
           `Keep everything else exactly as in image 1: ${keep}.`,
         ];
   const prompt = [
     ...lines,
     styleBlock(style, toldColours(sheet), { fromImages: true }),
-    `One single picture, not a sheet or a grid. ${NO_WORDS}`,
+    // An edit of a reference sheet keeps the plain ends it was measured with: said as what is
+    // there, the edit read as more likely to contradict itself (0.35 against 0.27, 24 Sep).
+    `One single picture, not a sheet or a grid. ${NO_WORDS_EDIT}`,
   ]
     .filter(Boolean)
     .join('\n\n');

@@ -21,8 +21,8 @@ export type PlanRef = {
   /** What it gives this picture, in plain words for the prompt and the panel. */
   carries: string;
   /**
-   * The people it keeps drawn the same way, when it is only where they were last seen: their
-   * sketches still say who they are.
+   * The people it shows as last drawn, when it is only the picture they were last seen in: it goes
+   * in for those whose sketch is not in the picture, since a sketch alone says who someone is.
    */
   who?: string[];
 };
@@ -378,10 +378,10 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
   }
   for (const c of cuts) c.changes = countChanges(c);
 
-  // Every person in a moment, as last drawn: their sheet says who they are, and their latest
-  // picture keeps them drawn the same way, so they look as they did a moment ago. The sheet
-  // stays the authority: two images each claiming how the dreamer looks read as a clash
-  // (0.42-0.46 on what each image is for), and the later picture had drawn her hair auburn.
+  // Every person in a moment, as last drawn: the picture they were last seen in, for a moment
+  // drawn without their sketch. With it, the sketch alone says who they are: two images each
+  // claiming how the dreamer looks read as a clash (0.42-0.46 on what each image is for), and the
+  // later picture had drawn her hair auburn (24 Sep).
   const MAX_CUTS = MAX_EARLIER + 2;
   for (const c of cuts) {
     const m = byId.get(c.id)!;
@@ -403,7 +403,7 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
           kind: 'cut',
           role: 'identity',
           relation: relation(m, lastSeen),
-          carries: `where ${name(p)} was last seen: drawn the same way; their sketch says who they are`,
+          carries: `who ${name(p)} is, as last drawn, when their sketch is not there`,
           who: [p],
         });
     }

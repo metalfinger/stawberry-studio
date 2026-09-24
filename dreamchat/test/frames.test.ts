@@ -42,7 +42,7 @@ describe('writing in the dream', () => {
 
   test('a moment without quoted writing forbids all writing', () => {
     const { prompt } = framePrompt(frame('The boat reaches the round window.'), [], style);
-    expect(prompt).toContain('Do not write any words');
+    expect(prompt).toContain('Every surface in it is free of writing, logos and brand badges');
   });
 
   test('an apostrophe in a word is not a quotation', () => {
@@ -225,7 +225,7 @@ describe('a moment drawn from earlier moments', () => {
     const two = moment('m1', 1);
     two.frame = { ...two.frame!, visible: ['p1', 'p2'], plan: { ...two.frame!.plan!, staging: ['p2', 'p1'] } };
     expect(framePrompt(two, [ana, bo, kitchen], style).prompt).toContain(
-      'Where they stand, from left to right: the dreamer, then ana. The same in every picture of this scene: they never swap sides.',
+      'Where they stand, from left to right: the dreamer, then ana. They keep these sides in every picture of this scene.',
     );
     expect(framePrompt(moment('m1', 1), [ana, kitchen], style).prompt).not.toContain('Where they stand');
   });
@@ -279,21 +279,24 @@ describe('a moment drawn from earlier moments', () => {
     expect(prompt).toContain('Image 3: picture 1 (Ana stands at the counter): the same place from the same side.');
   });
 
-  test('where someone was last seen keeps them drawn the same way, and their sketch wins', () => {
+  test('one image says who someone is: their sketch, or the picture they were last seen in', () => {
     const use = {
       id: 'm1',
       kind: 'cut' as const,
       role: 'identity' as const,
       relation: 'other_place' as const,
-      carries: 'where ana was last seen: drawn the same way; their sketch says who they are',
+      carries: 'who ana is, as last drawn, when their sketch is not there',
       who: ['p1'],
     };
-    const { prompt, references } = framePrompt(moment('m2', 2, [use]), [ana, kitchen], style, [
-      { use, item: drawn('m1', 1) },
-    ]);
-    expect(references.map((r) => r.role)).toEqual(['identity', 'location', 'identity']);
-    expect(prompt).toContain(
-      'Image 3: picture 1 (Ana stands at the counter): where ana was last seen, only so they are drawn the same way from picture to picture. Who they are is Image 1: where the two differ, Image 1 is right. Nothing of its place, framing or background.',
+    const inputs = [{ use, item: drawn('m1', 1) }];
+    // With her sketch, only the sketch: a second face image for one person pulls the model off her.
+    const sketched = framePrompt(moment('m2', 2, [use]), [ana, kitchen], style, inputs);
+    expect(sketched.references.map((r) => r.role)).toEqual(['identity', 'location']);
+    // Without it, the picture she was last seen in says who she is.
+    const unsketched = framePrompt(moment('m2', 2, [use]), [{ ...ana, review: undefined }, kitchen], style, inputs);
+    expect(unsketched.references.map((r) => r.role)).toEqual(['location', 'identity']);
+    expect(unsketched.prompt).toContain(
+      "Image 2: picture 1 (Ana stands at the counter): who ana is, as last drawn: their face, hair, build and clothes, exactly. Nothing else from it: not its pose, background or framing.",
     );
   });
 });
@@ -396,7 +399,7 @@ describe('how a picture feels like a dream', () => {
     const odd = frame('A room larger than the house it is in.');
     odd.fields.dream = { value: 'the room is larger than the house it is in', said: true };
     expect(framePrompt(odd, [], style).prompt).toContain(
-      'The dream in it, drawn as plain fact the way dreams make it feel, never as a special effect: the room is larger than the house it is in.',
+      'The dream in it, drawn as plain fact, as solid and ordinary as everything around it: the room is larger than the house it is in.',
     );
     expect(framePrompt(frame('A board.'), [], style).prompt).not.toContain('The dream in it');
   });
