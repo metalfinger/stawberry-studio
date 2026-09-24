@@ -285,6 +285,8 @@ export async function cleanStyles(b: Breakdown, jev: JevFn): Promise<{ breakdown
   out.style_options.forEach((o, i) => {
     o.tokens.forEach((t, j) => ask(`tok_${i}_${j}`, t));
     sentences(o.lighting_rules).forEach((t, j) => ask(`light_${i}_${j}`, t));
+    // How it feels like a dream is drawn into every picture, so it may carry no content either.
+    if (o.dream) ask(`dream_${i}`, o.dream);
   });
   if (!Object.keys(questions).length) return { breakdown: out, dropped: [] };
   const call = await jev('Ways a dream could be drawn, proposed for a storyboard.', questions);
@@ -302,6 +304,10 @@ export async function cleanStyles(b: Breakdown, jev: JevFn): Promise<{ breakdown
     });
     // Never empty a style: if every token named content, the least bad stays.
     o.tokens = tokens.length ? tokens : o.tokens.slice(0, 1);
+    if (o.dream && (content(`dream_${i}`) || namesStory(o.dream, story))) {
+      dropped.push(`${o.name} dream: "${o.dream}"`);
+      o.dream = '';
+    }
     o.lighting_rules = sentences(o.lighting_rules)
       .map((t, j) => {
         if (content(`light_${i}_${j}`) || namesStory(t, story)) {

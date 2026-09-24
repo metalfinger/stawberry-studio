@@ -58,6 +58,10 @@ export type Item = {
    * paid for on a guess; it is tried again once what held it is put right.
    */
   held?: string[];
+  /** It stands for more than one person, as the producer said (a family, a couple). */
+  several?: boolean;
+  /** The group it belongs to, when it also has a sketch of its own. */
+  partOf?: string;
   /** A moment's words reworded before it was drawn, because the gate found them at odds. */
   reworded?: string[];
   /** How many times they have been asked how it looks because the gate held its sketch. */
@@ -230,6 +234,10 @@ export function toldColours(...items: Item[]): string[] {
  * pictures: they already fix everyone's colours, so the palette rules the light and whatever no
  * image gives a colour ("colours, and no others" beside the dreamer's blue jeans asked for both).
  */
+/** For a style that says nothing of it: the stillness of something remembered, no haze or effects. */
+export const DREAM_QUALITY =
+  'the stillness of a remembered moment, light a little softer than real and edges a little less sure, with no fog, haze or effects added';
+
 export function styleBlock(style: StyleOption, told: string[] = [], opts: { fromImages?: boolean } = {}): string {
   const colours = [...new Set(style.palette_hex.map(colourName))];
   // A photograph of a person in a cold palette still has warm skin.
@@ -241,6 +249,8 @@ export function styleBlock(style: StyleOption, told: string[] = [], opts: { from
     // style's name and its technique reach a picture.
     `Style: ${style.name}.`,
     `Made as: ${mediumOf(style)}. Every part of the picture is made this way, the same as every other picture of this dream.`,
+    // A dream should feel like one whatever it is made as: from how this one felt, never a filter.
+    `It feels like a dream, in every picture: ${style.dream?.trim() || DREAM_QUALITY}.`,
     style.tokens.length ? `Technique, followed exactly: ${style.tokens.join('; ')}.` : '',
     colours.length
       ? opts.fromImages
@@ -280,8 +290,12 @@ export const LOOK: Record<ItemKind, string[]> = {
   ghost: [],
 };
 
-/** A character that is several people: named or described as more than one. */
+/**
+ * A character that is several people. The producer says so for any dream; its words are read
+ * only for a dream drafted before it did.
+ */
 export function isGroup(item: Item): boolean {
+  if (item.several !== undefined) return item.several;
   const said = `${item.name} ${item.fields.appearance?.value ?? ''}`;
   return /\b(people|persons|couple of|group of|crowd|pair of|twins|children|kids|famil(?:y|ies)(?! (?:friend|member|doctor|pet|dog|cat|car|home|house))|(?:two|three|four|five|both|several) (?:\w+ )?(?:men|women|people|children|girls|boys|kids|friends|sisters|brothers|figures))\b/i.test(
     said,
@@ -304,7 +318,13 @@ export function headWord(name: string): string | null {
  */
 export function groupMembers(people: Item[]): { group: Item; member: Item; word: string }[] {
   const out: { group: Item; member: Item; word: string }[] = [];
-  for (const group of people.filter((p) => p.kind === 'character' && isGroup(p))) {
+  // The producer's own links first; a group with none is read from its words.
+  const linked = people.filter((p) => p.partOf);
+  for (const member of linked) {
+    const group = people.find((g) => g.id === member.partOf);
+    if (group) out.push({ group, member, word: headWord(member.name) ?? member.name });
+  }
+  for (const group of people.filter((p) => p.kind === 'character' && isGroup(p) && !linked.some((m) => m.partOf === p.id))) {
     const look = LOOK.character
       .map((k) => group.fields[k]?.value ?? '')
       .join(' ')

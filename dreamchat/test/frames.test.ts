@@ -3,7 +3,7 @@ import type { CutPlan } from '../continuity';
 import { framePrompt, writingIn } from '../frames';
 import { VAGUE } from '../producer';
 import { asInstruction } from '../session';
-import { isGroup, type Item, sheetPrompt, styleBlock, toldColours } from '../sheets';
+import { DREAM_QUALITY, groupMembers, isGroup, type Item, sheetPrompt, styleBlock, toldColours } from '../sheets';
 
 const style = {
   id: 'd',
@@ -299,6 +299,31 @@ describe('a group and someone in it who has their own sketch', () => {
     const { prompt } = framePrompt(moment, [family, baby, roof], style);
     expect(prompt).toContain('The baby in it is the baby, drawn from Image 2: one baby, never two.');
     expect(prompt).toContain("They are the baby in the family's picture (Image 1): one and the same");
+  });
+});
+
+describe('groups, as the producer marks them', () => {
+  test('a group needs no group words, and its members are linked by id', () => {
+    const band: Item = { id: 'p7', kind: 'character', name: 'the Hendersons', fields: {}, status: 'ready', version: 1, several: true };
+    const lead: Item = { id: 'p8', kind: 'character', name: 'Ruth', fields: {}, status: 'ready', version: 1, partOf: 'p7' };
+    expect(isGroup(band)).toBe(true);
+    expect(isGroup({ ...band, several: false, name: 'a couple of people' })).toBe(false);
+    expect(groupMembers([band, lead]).map((m) => `${m.group.name} > ${m.member.name}`)).toEqual(['the Hendersons > Ruth']);
+  });
+});
+
+describe('how a picture feels like a dream', () => {
+  test("every style carries it, and a moment's own strangeness is drawn as plain fact", () => {
+    expect(styleBlock({ ...style, dream: 'light that comes from nowhere' })).toContain(
+      'It feels like a dream, in every picture: light that comes from nowhere.',
+    );
+    expect(styleBlock(style)).toContain(`It feels like a dream, in every picture: ${DREAM_QUALITY}.`);
+    const odd = frame('A room larger than the house it is in.');
+    odd.fields.dream = { value: 'the room is larger than the house it is in', said: true };
+    expect(framePrompt(odd, [], style).prompt).toContain(
+      'The dream in it, drawn as plain fact the way dreams make it feel, never as a special effect: the room is larger than the house it is in.',
+    );
+    expect(framePrompt(frame('A board.'), [], style).prompt).not.toContain('The dream in it');
   });
 });
 

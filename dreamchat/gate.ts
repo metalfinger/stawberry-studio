@@ -54,7 +54,7 @@ export function gateQuestions(withImages: boolean): Record<string, Question> {
     twice: {
       type: 'noul',
       instructions:
-        'Following these instructions, would the picture show any one person, animal or object twice, or two different versions of someone who is one individual (a baby described once inside a family and again on her own, say)?',
+        'Following these instructions, would the picture show any one person, animal or object twice, or two different versions of someone who is one individual (someone described once inside a group and again on their own, say)?',
       criteria: {
         true: 'someone or something would appear twice, or as two versions of one individual',
         false: 'each one appears once',

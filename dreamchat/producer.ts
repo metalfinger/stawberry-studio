@@ -16,6 +16,10 @@ export type Person = {
   /** The dreamer themself, when they are seen in the pictures. */
   is_dreamer: boolean;
   protagonist: boolean;
+  /** The entry stands for more than one person: a family, a couple, a crowd of friends. */
+  several?: boolean;
+  /** The group entry this person belongs to, when they also have one of their own. */
+  part_of?: string;
   fields: { identity: Detail; appearance: Detail; wardrobe: Detail; distinctive_features: Detail };
 };
 export type Place = { id: string; name: string; fields: { geography: Detail; landmarks: Detail; light: Detail } };
@@ -53,6 +57,11 @@ export type Moment = {
    * kitchen becomes a station platform around her". Continuity must not smooth it away.
    */
   shift: string;
+  /**
+   * What in this moment is impossible, or wrong the way dreams are, that the dreamer simply
+   * accepted: drawn as plain fact, never as an effect. Empty when nothing in it is.
+   */
+  dream?: string;
   /** Earlier moments in the same place that face the same side of it. Decided by Jev. */
   sameSide?: string[];
   /** The changes still in force here for what is in view, from earlier moments. Decided by Jev. */
@@ -72,6 +81,11 @@ export type StyleOption = {
   name: string;
   /** What every picture is made as: "a photograph", "soft pencil on paper". */
   medium?: string;
+  /**
+   * How this way of drawing makes every picture feel like a dream, from how this one felt to
+   * them: technique only ("light that comes from nowhere; edges a little too soft to hold").
+   */
+  dream?: string;
   line: string;
   tokens: string[];
   palette_hex: string[];
@@ -123,19 +137,21 @@ Mark every detail "said": true ONLY when the person's own words give it. Anythin
 - "eyes": "dreamer" when we see through the dreamer's eyes, "outside" when the dreamer is seen. Follow what they said about how they were in it.
 - "distance": "close", "medium" or "wide" — how near the viewer is to what matters.
 - "feeling" is what the moment should feel like, in their words where possible. "visual_point" is the one thing the picture must carry. "purpose" is what the moment does in the story, in a few words: "sets the scene", "the turn", "the payoff", "the waking".
-- "leaves": what this moment changes in how someone or something LOOKS, that later pictures must keep showing, as {"who": an id, "what": the part or attribute, "now": its new state}. For example, when her head turns to ice: {"who": "p1", "what": "head", "now": "a block of glittering ice"}. Never where someone is or what they are doing (walking off, sitting down, being at the far end): only how they look. Empty when nothing about a look lasts.
+- "leaves": what this moment changes in how someone or something LOOKS, that later pictures must keep showing, as {"who": an id, "what": the part or attribute, "now": its new state}. For example, when someone's hair turns white: {"who": "p1", "what": "hair", "now": "white"}. Never where someone is or what they are doing (walking off, sitting down, being at the far end): only how they look. Empty when nothing about a look lasts.
 - "looks_at": what the camera faces in the place, a landmark of it in a few words ("the window", "the door to the hall", "the stove"). Two pictures facing the same side of a place get the same words. Through the dreamer's eyes it is what they face.
 - "shift": only where the person said the dream itself jumped: the place, a person or a thing abruptly became something else. Say what changes, from their words: "the kitchen becomes a station platform around her". Empty otherwise; an ordinary cut to a new place or time is not a shift.
+- "dream": what in this moment is impossible, or wrong the way dreams are, that the dreamer simply accepted, in their words: something that has become something else, a place larger or smaller than it could be, someone who is two people at once, a feeling that does not fit what is happening. Empty when nothing in the moment is. It is drawn as plain fact, so never invent one to make it dreamlike.
 - "continues": true when the moment carries straight on from the one before it in the same scene (the same people and things, a moment later), false when it jumps: a new place, a new time, or a different part of the story. The first moment of each scene is false.
 
 ## People, places, things (Production Designer)
 - Only real presences get an entry. Ambient things (fog, glow, rain) belong to the look or a scene's mood. A crowd is not a person. Clothes and body features belong to the person, never separate things.
 - The dreamer is a person entry ("is_dreamer": true) only if they are seen in some moment ("eyes": "outside").
 - One "protagonist": true — the person the dream is most about.
+- "several": true when one entry stands for more than one person (a family, a couple, a band). When someone in such a group matters on their own and has their own entry, give them "part_of": the group's id, and leave them out of the group's own fields: they are drawn from their own entry.
 - A thing gets an entry only if someone holds or uses it, or it is the main subject of a moment. Parts of a place (a window, shelves, a door), what is seen through them (the moon, the sky) and collections (floating books, leaves) are the place's landmarks, never things. Most dreams have 0-2 things.
 - "name" is how the person would say it, in lowercase with its article: "the old man", "the flooded library", "the boat". The dreamer is "you".
 - People fields: identity (who they are to the dreamer), appearance (age, build, face, hair), wardrobe, distinctive_features. Places: geography (what kind of place, inside or out, layout), landmarks (what's in it), light. Things: appearance, materials.
-- A profile is how someone or something ordinarily looks, before anything happens to it in the dream. What happens to them (a head turning to ice, a room going dark, a person starting to glow) is a moment's action, never part of the profile: it would be drawn on every picture of them. If a woman's head turns to ice, her profile describes an ordinary woman's head and face (a guess if they didn't say), and the ice belongs to the moments.
+- A profile is how someone or something ordinarily looks, before anything happens to it in the dream. What happens to them (a part of them changing into something else, a room going dark, a person starting to glow) is a moment's action, never part of the profile: it would be drawn on every picture of them. If someone's hands turn to stone, their profile describes ordinary hands (a guess if they didn't say), and the stone belongs to the moments.
 
 ## Look (Director)
 - "look" is what the dream looked like to them: colours, light, texture.
@@ -144,21 +160,22 @@ Mark every detail "said": true ONLY when the person's own words give it. Anythin
 ## Output
 JSON only, exactly this shape (ids like p1, l1, t1, s1, m1, a/b/c/d):
 {"title": "", "logline": "", "look": {"colours": D, "light": D, "texture": D}, "world_logic": "",
- "people": [{"id": "p1", "name": "", "is_dreamer": false, "protagonist": true, "fields": {"identity": D, "appearance": D, "wardrobe": D, "distinctive_features": D}}],
+ "people": [{"id": "p1", "name": "", "is_dreamer": false, "protagonist": true, "several": false, "part_of": "", "fields": {"identity": D, "appearance": D, "wardrobe": D, "distinctive_features": D}}],
  "places": [{"id": "l1", "name": "", "fields": {"geography": D, "landmarks": D, "light": D}}],
  "things": [{"id": "t1", "name": "", "fields": {"appearance": D, "materials": D}}],
- "scenes": [{"id": "s1", "title": "", "place": "l1", "mood": "", "moments": [{"id": "m1", "action": "", "visible": ["p1"], "things": ["t1"], "place": "l1", "eyes": "dreamer", "distance": "medium", "looks_at": "", "feeling": "", "visual_point": "", "purpose": "", "continues": false, "leaves": [], "shift": "", "key": false, "said": true}]}],
+ "scenes": [{"id": "s1", "title": "", "place": "l1", "mood": "", "moments": [{"id": "m1", "action": "", "visible": ["p1"], "things": ["t1"], "place": "l1", "eyes": "dreamer", "distance": "medium", "looks_at": "", "feeling": "", "visual_point": "", "purpose": "", "continues": false, "leaves": [], "shift": "", "dream": "", "key": false, "said": true}]}],
  "unknowns": ["what the dream leaves open that a picture will need"]}
 where D is {"value": "..." or null, "said": true or false}. Moment "said" is true when the person described that moment happening.`;
 
 const STYLE_SYSTEM = `You help turn a person's dream into pictures. From the conversation below, propose how the pictures could be drawn. Return JSON only:
-{"style_options": [{"id": "a", "name": "", "medium": "", "line": "", "tokens": [""], "palette_hex": ["#000000"], "lighting_rules": ""}]}
+{"style_options": [{"id": "a", "name": "", "medium": "", "dream": "", "line": "", "tokens": [""], "palette_hex": ["#000000"], "lighting_rules": ""}]}
 
 - Exactly 4 options: 3 ways suited to this dream's feeling and look, then "d", as close as possible to how the dream looked to them.
 - "name": plain words anyone would understand, like "an old woodcut print" or "soft watercolour". No art jargon, no artist names.
 - "medium": what every picture is made as, in a few plain words: "a photograph", "soft pencil on paper", "watercolour on rough paper", "flat black ink". For "d", when the dream looked like real life, "a photograph".
+- "dream": one technique phrase for how this way of drawing makes every picture feel like a dream, taken from how this dream felt to them, even when it looked real: "light that comes from nowhere and casts no clear shadow", "the stillness of a held breath", "edges a little too soft to hold". How it is drawn only: nothing from the story, no objects, no fog or haze added just to say "dream".
 - "line": one plain sentence on how it would feel.
-- "tokens": 4-6 concrete technique phrases a renderer can follow, each under 120 characters ("flat black ink with hard carved edges" is a token; "dreamy style" is not). Tokens say how everything is drawn, never what is in the dream: no ice, glass, horses, glowing objects or other content, or every picture will be made of it.
+- "tokens": 4-6 concrete technique phrases a renderer can follow, each under 120 characters ("flat black ink with hard carved edges" is a token; "dreamy style" is not). Tokens say how everything is drawn, never what is in the dream: no objects, materials, creatures or anything else from it, or every picture will be made of it.
 - "palette_hex": 4-6 colours as #RRGGBB.
 - "lighting_rules": 2-3 sentences on light, shadow and edges.`;
 
@@ -282,7 +299,7 @@ export async function reviseItem(
 
 const PROPOSE_LOOK = `Someone from a person's dream is about to be drawn, and nothing is known of how they look: the person left it to us. From the conversation, fill in ONLY the empty fields of their profile with a plain, specific, ordinary guess a picture can keep to: age range, hair (colour, length, how it's worn), build, and clothes with their colours. Nothing from the story's events (no transformations, nothing that happens to them), nothing remarkable unless the conversation says so, and nothing that contradicts what the conversation says. Return JSON only: {"fields": {...}} with exactly the same keys as the profile, each value a short plain phrase; keep every value already given exactly as it is.`;
 
-const PROPOSE_LOOK_THING = `Something from a person's dream is about to be drawn, and little is known of how it looks: the person left it to us. From the conversation, fill in ONLY the empty fields of its profile with a plain, specific, ordinary guess a picture can keep to: for a place, how it is laid out and what stands in it; for a thing, its shape, size, materials and colours, as it would be where the dream has it (the lever a streetcar's driver turns is a crank handle on top of the controller at the front). Nothing from the story's events, nothing remarkable unless the conversation says so, and nothing that contradicts what the conversation says. Return JSON only: {"fields": {...}} with exactly the same keys as the profile, each value a short plain phrase; keep every value already given exactly as it is.`;
+const PROPOSE_LOOK_THING = `Something from a person's dream is about to be drawn, and little is known of how it looks: the person left it to us. From the conversation, fill in ONLY the empty fields of its profile with a plain, specific, ordinary guess a picture can keep to: for a place, how it is laid out and what stands in it; for a thing, its shape, size, materials and colours, as it would be where the dream has it: a part of something looks like that thing's own part, as it would really be made. Nothing from the story's events, nothing remarkable unless the conversation says so, and nothing that contradicts what the conversation says. Return JSON only: {"fields": {...}} with exactly the same keys as the profile, each value a short plain phrase; keep every value already given exactly as it is.`;
 
 /**
  * Words for a look nobody described. A person drawn only from an image drifts as soon as they
@@ -434,6 +451,8 @@ export function normalizeBreakdown(raw: string): { breakdown: Breakdown; notes: 
       name: str(o.name, 120) || `person ${i + 1}`,
       is_dreamer: o.is_dreamer === true,
       protagonist: o.protagonist === true,
+      several: o.several === true,
+      part_of: str(o.part_of, 20),
       fields: {
         identity: detail(f.identity),
         appearance: detail(f.appearance),
@@ -517,6 +536,7 @@ export function normalizeBreakdown(raw: string): { breakdown: Breakdown; notes: 
           .slice(0, 6),
         // The first picture of the dream has nothing to jump from.
         shift: momentNo > 1 ? str(mo.shift, 200) : '',
+        dream: str(mo.dream, 240),
         key: mo.key === true,
         said: mo.said !== false,
       };
@@ -590,6 +610,7 @@ export function normalizeStyles(raw: unknown): StyleOption[] {
         id: str(so.id, 4) || 'abcd'[i],
         name: str(so.name, 80) || `option ${i + 1}`,
         medium: str(so.medium, 80),
+        dream: str(so.dream, 160),
         line: str(so.line, 240),
         tokens,
         palette_hex: palette,

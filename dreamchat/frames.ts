@@ -65,6 +65,7 @@ export function buildFrames(b: Breakdown, plan: ContinuityPlan): Item[] {
         visual_point: { value: m.visual_point || null, said: false },
         purpose: { value: m.purpose || null, said: false },
         shift: { value: m.shift || null, said: !!m.shift },
+        dream: { value: m.dream || null, said: !!m.dream },
       },
       status: 'waiting',
       version: 0,
@@ -343,6 +344,10 @@ export function framePrompt(
       ? `The attached images, in order, and the one thing to take from each:\n${manifest.join('\n')}`
       : '',
     `What happens in this frame: ${action}`,
+    // The dream's own strangeness, where this moment has it: shown as plain fact, never as an effect.
+    frame.fields.dream?.value
+      ? `The dream in it, drawn as plain fact the way dreams make it feel, never as a special effect: ${sentence(frame.fields.dream.value)}`
+      : '',
     pov,
     staged.length >= 2
       ? `Where they stand, from left to right: ${staged.map((id) => nameOf(sheets, id)).join(', then ')}. The same in every picture of this scene: they never swap sides.${members.map((m) => ` ${who(m.member)} ${isGroup(m.member) ? 'are' : 'is'} with ${who(m.group)}.`).join('')}`

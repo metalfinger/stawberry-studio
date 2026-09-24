@@ -300,6 +300,9 @@ export function buildItems(b: Breakdown): Item[] {
   const items = [
     ...others.map((p) => {
       const it = item(p.id, 'character', p.name, p.fields);
+      // Whether it is several people, and whose group someone belongs to, as the producer says.
+      if (p.several !== undefined) it.several = p.several;
+      if (p.part_of) it.partOf = p.part_of;
       it.ask = people < MAX_PEOPLE_ASKED && guessed(p.fields, ['appearance', 'wardrobe', 'distinctive_features']);
       if (it.ask) people += 1;
       return it;
