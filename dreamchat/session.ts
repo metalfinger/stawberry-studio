@@ -47,6 +47,7 @@ import {
   callProducer,
   type Detail,
   moments,
+  completeViews,
   normalizeBreakdown,
   oneColour,
   VAGUE,
@@ -321,6 +322,8 @@ export function buildItems(b: Breakdown): Item[] {
       // Whether it is several people, and whose group someone belongs to, as the producer says.
       if (p.several !== undefined) it.several = p.several;
       if (p.part_of) it.partOf = p.part_of;
+      // A crowd is said in words wherever it is, and needs nothing from anyone.
+      if (p.extras) return Object.assign(it, { extras: true, status: 'ready' as const, review: 'approved' as const });
       it.ask = people < MAX_PEOPLE_ASKED && guessed(p.fields, ['appearance', 'wardrobe', 'distinctive_features']);
       if (it.ask) people += 1;
       return it;
@@ -1018,6 +1021,8 @@ export class SessionStore {
    */
   private async startFrames(s: Session, turn: number): Promise<void> {
     if (!s.build || !s.draft?.breakdown) return;
+    // What each moment shows, completed from its words, for a dream drafted before this was done.
+    completeViews(s.draft.breakdown);
     await Promise.all(
       [...this.reviews.entries()].filter(([k]) => k.startsWith(`${s.id}:`)).map(([, p]) => p.catch(() => undefined)),
     );

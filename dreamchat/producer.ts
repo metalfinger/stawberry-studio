@@ -20,6 +20,11 @@ export type Person = {
   several?: boolean;
   /** The group entry this person belongs to, when they also have one of their own. */
   part_of?: string;
+  /**
+   * Seen only as a crowd (an audience, passers-by, the other people in a room): described in the
+   * moments' words and never sketched. No one would know them again.
+   */
+  extras?: boolean;
   fields: { identity: Detail; appearance: Detail; wardrobe: Detail; distinctive_features: Detail };
 };
 export type Place = { id: string; name: string; fields: { geography: Detail; landmarks: Detail; light: Detail } };
@@ -189,7 +194,8 @@ Mark every detail "said": true ONLY when the person's own words give it. Anythin
 - "continues": true when the moment carries straight on from the one before it in the same scene (the same people and things, a moment later), false when it jumps: a new place, a new time, or a different part of the story. The first moment of each scene is false.
 
 ## People, places, things (Production Designer)
-- Only real presences get an entry. Ambient things (fog, glow, rain) belong to the look or a scene's mood. A crowd is not a person. Clothes and body features belong to the person, never separate things.
+- Only real presences get an entry. Ambient things (fog, glow, rain) belong to the look or a scene's mood. Clothes and body features belong to the person, never separate things.
+- People seen only as a crowd (an audience, passers-by, the other people in a room) are one entry with "several": true and "extras": true: they are described in the moments' words and never drawn on their own.
 - The dreamer is a person entry ("is_dreamer": true) only if they are seen in some moment ("eyes": "outside").
 - One "protagonist": true — the person the dream is most about.
 - "several": true when one entry stands for more than one person (a family, a couple, a band). When someone in such a group matters on their own and has their own entry, give them "part_of": the group's id, and leave them out of the group's own fields: they are drawn from their own entry.
@@ -205,7 +211,7 @@ Mark every detail "said": true ONLY when the person's own words give it. Anythin
 ## Output
 JSON only, exactly this shape (ids like p1, l1, t1, s1, m1, a/b/c/d):
 {"title": "", "logline": "", "look": {"colours": D, "light": D, "texture": D}, "world_logic": "",
- "people": [{"id": "p1", "name": "", "is_dreamer": false, "protagonist": true, "several": false, "part_of": "", "fields": {"identity": D, "appearance": D, "wardrobe": D, "distinctive_features": D}}],
+ "people": [{"id": "p1", "name": "", "is_dreamer": false, "protagonist": true, "several": false, "extras": false, "part_of": "", "fields": {"identity": D, "appearance": D, "wardrobe": D, "distinctive_features": D}}],
  "places": [{"id": "l1", "name": "", "fields": {"geography": D, "landmarks": D, "light": D}}],
  "things": [{"id": "t1", "name": "", "fields": {"appearance": D, "materials": D}}],
  "scenes": [{"id": "s1", "title": "", "place": "l1", "mood": "", "moments": [{"id": "m1", "action": "", "visible": ["p1"], "things": ["t1"], "place": "l1", "eyes": "dreamer", "distance": "medium", "looks_at": "", "feeling": "", "visual_point": "", "purpose": "", "continues": false, "leaves": [], "shift": "", "dream": "", "key": false, "said": true}]}],
@@ -483,8 +489,10 @@ export const POSITION =
   /^(location|position|place|where|whereabouts|posture|pose|activity|action|movement|direction|distance|mood|emotion|feeling|expression)$/i;
 
 /** A value that says nothing a picture can show. */
+// A whole value that says nothing ("none", "n/a") is no look either: written to the engine, "none"
+// for a friend's distinctive features was refused as a placeholder and her sketch never drawn (24 Sep).
 export const VAGUE =
-  /\b(undefined|unknown|unclear|indeterminate|unspecified|ambiguous|indistinct|nondescript|hazy memory|blends? into|(?:none|nothing|not) (?:notable|remarkable|special|distinctive|in particular)|no (?:distinctive|distinguishing|notable|remarkable) features?|not (?:remembered|specified|known|sure|clear|described|given)|no specific|(?:can't|cannot|don't|do not) remember)\b/i;
+  /^\s*(?:none|nothing|n\/a|null|nil|-+|—)\s*\.?\s*$|\b(undefined|unknown|unclear|indeterminate|unspecified|ambiguous|indistinct|nondescript|hazy memory|blends? into|(?:none|nothing|not) (?:notable|remarkable|special|distinctive|in particular)|no (?:distinctive|distinguishing|notable|remarkable) features?|not (?:remembered|specified|known|sure|clear|described|given)|no specific|(?:can't|cannot|don't|do not) remember)\b/i;
 
 /** Their own description of how it should look, as one style option. */
 export async function ownStyle(transcript: string): Promise<StyleOption | null> {
@@ -539,6 +547,10 @@ export function normalizeBreakdown(raw: string): { breakdown: Breakdown; notes: 
   }
   const b = (typeof value === 'object' && value !== null ? value : {}) as Record<string, unknown>;
 
+  // A crowd made a person anyway, told not to ("the crowd", "other people in the theater"): its
+  // sketch of twenty people "standing side by side" read as contradicting "seated in rows" (24 Sep).
+  const crowd = (o: Record<string, unknown>) =>
+    CROWD.test(`${str(o.name, 120)} ${str(((o.fields ?? {}) as Record<string, { value?: unknown }>).identity?.value, 200)}`);
   const people: Person[] = list(b.people).map((p, i) => {
     const o = (p ?? {}) as Record<string, unknown>;
     const f = (o.fields ?? {}) as Record<string, unknown>;
@@ -547,8 +559,9 @@ export function normalizeBreakdown(raw: string): { breakdown: Breakdown; notes: 
       name: str(o.name, 120) || `person ${i + 1}`,
       is_dreamer: o.is_dreamer === true,
       protagonist: o.protagonist === true,
-      several: o.several === true,
+      several: o.several === true || crowd(o),
       part_of: str(o.part_of, 20),
+      extras: o.extras === true || crowd(o),
       fields: {
         identity: detail(f.identity),
         appearance: detail(f.appearance),
@@ -668,24 +681,23 @@ export function normalizeBreakdown(raw: string): { breakdown: Breakdown; notes: 
   if (style_options.length < 2) notes.push(`only ${style_options.length} style options`);
 
   const look = (b.look ?? {}) as Record<string, unknown>;
-  return {
-    breakdown: {
-      title: str(b.title, 120) || 'Untitled dream',
-      logline: str(b.logline, 400),
-      look: { colours: detail(look.colours), light: detail(look.light), texture: detail(look.texture) },
-      world_logic: str(b.world_logic),
-      people,
-      places,
-      things,
-      scenes,
-      style_options,
-      unknowns: list(b.unknowns)
-        .filter((x): x is string => typeof x === 'string')
-        .map((x) => x.slice(0, 240))
-        .slice(0, 12),
-    },
-    notes,
+  const breakdown: Breakdown = {
+    title: str(b.title, 120) || 'Untitled dream',
+    logline: str(b.logline, 400),
+    look: { colours: detail(look.colours), light: detail(look.light), texture: detail(look.texture) },
+    world_logic: str(b.world_logic),
+    people,
+    places,
+    things,
+    scenes,
+    style_options,
+    unknowns: list(b.unknowns)
+      .filter((x): x is string => typeof x === 'string')
+      .map((x) => x.slice(0, 240))
+      .slice(0, 12),
   };
+  notes.push(...completeViews(breakdown));
+  return { breakdown, notes };
 }
 
 export function normalizeStyles(raw: unknown): StyleOption[] {
@@ -765,4 +777,37 @@ export function stripCamera(action: string): string {
 
 export function moments(b: Breakdown): Moment[] {
   return b.scenes.flatMap((s) => s.moments);
+}
+
+/** People who are only ever a crowd. */
+export const CROWD =
+  /\b(crowds?|audiences?|onlookers|passers-?by|spectators|bystanders|strangers|(?:other|many|lots of|a lot of|some|several) people|people (?:everywhere|around))\b/i;
+
+/**
+ * The things each moment shows, completed from its own words: a thing is in view where its change
+ * happens, where the moment names what it has become, or where it is named and no other thing
+ * shares its name. The sofa that became a roller coaster was listed in neither the moment it
+ * changed in nor the one showing the roller coaster, so neither was drawn from its sketch (24 Sep).
+ */
+export function completeViews(b: Breakdown): string[] {
+  const notes: string[] = [];
+  const bare = (x: string) => x.toLowerCase().replace(/^(the|a|an)\s+/, '').trim();
+  const head = (x: string) => bare(x).split(/\s+/).at(-1) ?? '';
+  const says = (text: string, words: string) => words.length > 2 && new RegExp(`\\b${words.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}s?\\b`, 'i').test(text);
+  const now = new Map<string, string>();
+  for (const m of moments(b)) {
+    const text = `${m.action} ${m.visual_point ?? ''}`;
+    for (const t of b.things) {
+      if (m.things.includes(t.id)) continue;
+      const changes = (m.leaves ?? []).some((l) => l.who === t.id);
+      const become = now.get(t.id);
+      const unique = b.things.filter((x) => head(x.name) === head(t.name)).length === 1;
+      if (changes || (become && says(text, bare(become))) || says(text, bare(t.name)) || (unique && says(text, head(t.name)))) {
+        m.things.push(t.id);
+        notes.push(`${m.id} shows ${t.name}`);
+      }
+    }
+    for (const l of m.leaves ?? []) if (b.things.some((t) => t.id === l.who)) now.set(l.who, l.now);
+  }
+  return notes;
 }

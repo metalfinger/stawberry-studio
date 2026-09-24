@@ -250,7 +250,7 @@ export function framePrompt(
     // How it looks, as its sketch was drawn: "who they are" carries the story ("a young woman
     // cooking") into every moment they are in.
     const known = lookOf(s, LOOK[s.kind]);
-    const kind = s.kind === 'character' ? 'person' : s.kind === 'location' ? 'place' : 'thing';
+    const kind = s.kind === 'character' ? (isGroup(s) ? 'people' : 'person') : s.kind === 'location' ? 'place' : 'thing';
     // Everything in view is listed with its look, its image or not: said only beside the images,
     // the pictures read as less clear to Jev (0.78 against 0.82) and more likely to contradict
     // themselves (24 Sep).

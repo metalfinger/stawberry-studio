@@ -111,6 +111,13 @@ const server = Bun.serve({
         return json(await store.open(String(b.id ?? '')));
       }
 
+      // Picks a dream's drawing up with the harness as it is now: held pictures are read again,
+      // what failed before it was submitted is drawn again. For a server restarted on new code.
+      if (req.method === 'POST' && url.pathname === '/api/resume') {
+        const b = await body(req);
+        return json({ restarted: await store.resume(String(b.id ?? '')) });
+      }
+
       if (req.method === 'POST' && url.pathname === '/api/message') {
         const b = await body(req);
         const text = typeof b.text === 'string' ? b.text.trim() : '';

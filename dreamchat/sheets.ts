@@ -62,6 +62,8 @@ export type Item = {
   several?: boolean;
   /** The group it belongs to, when it also has a sketch of its own. */
   partOf?: string;
+  /** Only ever a crowd: described in the moments' words, never sketched. */
+  extras?: boolean;
   /** A moment's words reworded before it was drawn, because the gate found them at odds. */
   reworded?: string[];
   /** How many times they have been asked how it looks because the gate held its sketch. */
@@ -577,7 +579,7 @@ export const liveSheets: SheetEngine = {
     const said: Record<string, { op: 'set'; value: string }> = {};
     const proposed: Record<string, { op: 'set'; value: string }> = {};
     for (const [k, d] of Object.entries(item.fields))
-      if (d.value) (d.said ? said : proposed)[k] = { op: 'set', value: d.value };
+      if (d.value && !VAGUE.test(d.value)) (d.said ? said : proposed)[k] = { op: 'set', value: d.value };
     let revision = node.node.revision;
     for (const [changes, source, why] of [
       [said, sources.said, 'as they told or confirmed it'],

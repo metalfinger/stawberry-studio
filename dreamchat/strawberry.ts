@@ -8,7 +8,7 @@
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { type CutPlan, planContinuity, seenIn } from './continuity';
-import { type Breakdown, type Detail, mediumOf, moments, type State, type StyleOption } from './producer';
+import { type Breakdown, type Detail, mediumOf, moments, type State, type StyleOption, VAGUE } from './producer';
 
 export const REPO = resolve(import.meta.dir, '..');
 export const STRAWBERRY_PYTHON = process.env.STRAWBERRY_PYTHON ?? join(REPO, 'venv', 'bin', 'python');
@@ -80,7 +80,8 @@ function stateMap(states: Pick<State, 'who' | 'what' | 'now'>[]): Record<string,
 function split(fields: Record<string, Detail>): { said: Record<string, Value>; guessed: Record<string, Value> } {
   const said: Record<string, Value> = {};
   const guessed: Record<string, Value> = {};
-  for (const [k, d] of Object.entries(fields)) if (d.value) (d.said ? said : guessed)[k] = d.value;
+  // A value that says nothing is left unset: the engine refuses placeholders, rightly.
+  for (const [k, d] of Object.entries(fields)) if (d.value && !VAGUE.test(d.value)) (d.said ? said : guessed)[k] = d.value;
   return { said, guessed };
 }
 
