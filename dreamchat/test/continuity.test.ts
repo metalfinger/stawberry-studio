@@ -294,6 +294,9 @@ describe('ghosts', () => {
     expect(texts.some((t) => t.includes('the dreamer the same person'))).toBe(false);
     expect(texts.some((t) => t.startsWith('sheet:p2'))).toBe(false);
     expect(texts.some((t) => t.startsWith('sheet:p1'))).toBe(true);
+    // The camera is where the dreamer was seen: that picture places it, and the judge checks it.
+    expect(pov.refs.map((r) => `${r.id}:${r.relation}`)).toContain('m1:seat');
+    expect(texts.some((t) => t.startsWith('m1: Is the second picture seen through the dreamer'))).toBe(true);
   });
 
   test('a place seen so far only from another side still gives its light', () => {

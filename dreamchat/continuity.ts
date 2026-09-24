@@ -9,7 +9,7 @@
 // out, and the same breakdown always gives the same plan.
 import { type Breakdown, type Moment, moments, POSITION, type State } from './producer';
 
-export type Relation = 'same_setup' | 'same_side' | 'other_side' | 'other_place' | 'shift';
+export type Relation = 'same_setup' | 'same_side' | 'other_side' | 'other_place' | 'shift' | 'seat';
 export type RefRole = 'base' | 'composition' | 'lighting' | 'identity' | 'prop' | 'location';
 
 export type PlanRef = {
@@ -139,6 +139,7 @@ const CARRIES: Record<Relation, string> = {
   other_side: 'the same place from the other side: the light to keep, said in words and checked against it; not drawn from',
   other_place: 'how everyone in it looks right now; not its background',
   shift: 'the picture just before the dream jumps: its framing and where everyone is',
+  seat: 'where the dreamer is: the camera is at their eyes there, turned toward what this moment faces',
 };
 
 const ROLE: Record<Relation, RefRole> = {
@@ -147,6 +148,7 @@ const ROLE: Record<Relation, RefRole> = {
   other_side: 'lighting',
   other_place: 'identity',
   shift: 'composition',
+  seat: 'composition',
 };
 
 export function planContinuity(b: Breakdown): ContinuityPlan {
@@ -278,6 +280,22 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
     if (m.place && !refs.some((r) => inPlace(r) || r.relation === 'other_side')) {
       const lit = earlier.filter((e) => rel.get(e.id) === 'other_side').at(-1);
       if (lit) add(lit, 'lighting', 'other_side');
+    }
+
+    // Through the dreamer's own eyes, after they were seen in this place: the camera is where they
+    // are in that picture. Told only "through the dreamer's eyes, facing the roller coaster", a
+    // moment was drawn from the aisle, as if the dreamer had got up, not from their seat beside it
+    // (24 Sep). A jump that changes the place in between leaves their seat behind.
+    if (m.eyes === 'dreamer' && dreamerId && m.place) {
+      const jumpBetween = (e: Moment) => ms.some((k, at) => !!k.shift && index.get(e.id)! < at && at <= i);
+      const seat = earlier
+        .filter((e) => e.place === m.place && e.eyes === 'outside' && e.visible.includes(dreamerId) && !jumpBetween(e))
+        .at(-1);
+      if (seat) {
+        const known = refs.find((r) => r.id === seat.id);
+        if (known) Object.assign(known, { role: 'composition', relation: 'seat', carries: CARRIES.seat, who: undefined });
+        else add(seat, 'composition', 'seat');
+      }
     }
 
     // The location sheet shows the place from one side: the side its first picture faces.
@@ -537,6 +555,12 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
           with: r.id,
           text: 'Is the light the same in both pictures: the same time of day and the same light sources?',
           fix: `keep the light of picture ${k}: the same time of day and the same light`,
+        });
+      if (r.relation === 'seat')
+        out.push({
+          with: r.id,
+          text: 'Is the second picture seen through the dreamer\'s eyes from where they are in the first: from their place, at their eye height, with what is beside them there beside the camera?',
+          fix: `seen from where the dreamer is in picture ${k}: from their place, at their eye height, with what is beside them there beside the camera`,
         });
       if (r.relation === 'shift')
         out.push(

@@ -405,7 +405,9 @@ export function framePrompt(
             : x.use.turned
               ? `${pictureNo(x)}${shows}, just before the dream changes it. Keep only its composition: where the main shapes and figures sit in the frame, so the two pictures cut together; this picture faces ${f.looksAt || 'another side of the place'}. The dream changes this: ${frame.fields.shift?.value ?? ''}.`
             : `${pictureNo(x)}${shows}, just before the dream jumps. ${keepAcross(x)}; the dream changes this: ${frame.fields.shift?.value ?? ''}.`
-        : x.use.role === 'composition'
+        : r === 'seat'
+          ? `${pictureNo(x)}${shows}: the camera is where the dreamer is in it, at their eye height, turned toward ${f.looksAt || 'what this moment shows'}; what is beside them there is beside the camera here, seen from their place. Nothing else from it: not its camera, framing or angle.`
+          : x.use.role === 'composition'
           ? `${pictureNo(x)}${shows}: the same place from the same side. Take where everything and everyone in it are, and its light; this frame is framed ${f.distance}.`
           : unsketched.length
               ? lastSeen(x, unsketched)
