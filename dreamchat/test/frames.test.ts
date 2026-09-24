@@ -304,8 +304,15 @@ describe('a moment drawn from earlier moments', () => {
     const use = { id: 'm1', kind: 'cut' as const, role: 'lighting' as const, relation: 'other_side' as const, carries: 'x' };
     const inputs = [{ use, item: drawn('m1', 1) }];
     expect(framePrompt(moment('m2', 2, [use]), [ana, kitchen], style, inputs).prompt).toContain(
-      'the same place from the other side, a moment earlier. Take only its light: the time of day and where the light comes from. Everyone else in it is drawn from their own images above;',
+      'the same place from the other side, a moment earlier. Take only its light: the time of day and where the light comes from. Everyone here is drawn from their own images above;',
     );
+    // Who is in it and not here is said.
+    const withConductor: Item = { ...drawn('m1', 1), frame: { ...drawn('m1', 1).frame!, visible: ['p1', 'p2'] } };
+    expect(
+      framePrompt(moment('m2', 2, [use]), [ana, sheet('p2', 'character', 'the conductor'), kitchen], style, [
+        { use, item: withConductor },
+      ]).prompt,
+    ).toContain('the conductor is in it but not in this picture. Everyone here is drawn from their own images above;');
     // Someone with no sketch of their own takes their look from it too.
     expect(framePrompt(moment('m2', 2, [use]), [{ ...ana, review: undefined }, kitchen], style, inputs).prompt).toContain(
       'Take only its light: the time of day and where the light comes from, and how ana looks, who has no image of their own above.',

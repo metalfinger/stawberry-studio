@@ -23,6 +23,16 @@ export const MAX_CONTRADICTS = 0.3;
  * 0.96 (24 Sep).
  */
 export const MAX_CONTRADICTS_MOMENT = 0.45;
+/**
+ * Up to here, a moment's contradiction reading may be the diffuse rise that comes with a long
+ * prompt: it is held only when one line of it carries the reading. m6 of the streetcar read 0.47
+ * and no line left out lowered it by more than 0.04; the same prompt with the family planted on
+ * the roof it says they are not on read 0.57, and a dreamer planted in a seat reading a newspaper
+ * 0.90, falling to 0.32 without that line (24 Sep).
+ */
+export const DIFFUSE_UP_TO = 0.55;
+/** What leaving one line out must lower a reading by for that line to be what it is about. */
+export const LOCAL_DROP = 0.08;
 /** Someone drawn twice read 0.75-0.83; the same person merely named twice, 0.25-0.31. */
 export const MAX_TWICE = 0.4;
 /** Below this, the prompt is not clear enough to draw. */
@@ -40,7 +50,14 @@ export const MIN_REFS_CLEAR = 0.6;
 /** The model takes 14 images; a dozen leaves each one legible. */
 export const MAX_REFERENCES = 12;
 
-export type GateReading = { contradicts: number; twice: number; clear: number; refsClear: number | null };
+export type GateReading = {
+  contradicts: number;
+  twice: number;
+  clear: number;
+  refsClear: number | null;
+  /** The line a contradiction reading rests on, and how much leaving it out lowers the reading. */
+  around?: { line: string; drop: number };
+};
 export type GateResult = { findings: string[]; reading: GateReading | null };
 
 /**
@@ -235,8 +252,17 @@ export async function readPrompt(
   if (contradicts === null || twice === null || clear === null || (withImages && refsClear === null))
     return { findings: [`the prompt could not be checked (${call.error ?? 'no answer'})`], reading: null };
   const findings: string[] = [];
-  if (contradicts > (opts.sheet ? MAX_CONTRADICTS : MAX_CONTRADICTS_MOMENT))
-    findings.push(`its instructions may contradict each other (${contradicts.toFixed(2)})`);
+  let around: GateReading['around'];
+  if (contradicts > (opts.sheet ? MAX_CONTRADICTS : MAX_CONTRADICTS_MOMENT)) {
+    // Which line it rests on: said with the finding, so a rewording knows where to look; and for a
+    // reading that may be only the prompt's length, whether any line carries it at all.
+    around = opts.sheet ? undefined : await carrier(jev, prompt, contradicts);
+    const diffuse = !opts.sheet && contradicts <= DIFFUSE_UP_TO && (around?.drop ?? 0) < LOCAL_DROP;
+    if (!diffuse)
+      findings.push(
+        `its instructions may contradict each other (${contradicts.toFixed(2)})${around && around.drop >= LOCAL_DROP ? `, around: "${around.line.slice(0, 160)}"` : ''}`,
+      );
+  }
   if (twice > MAX_TWICE) findings.push(`someone may be drawn twice (${twice.toFixed(2)})`);
   if (clear < (opts.edit ? MIN_EDIT_CLEAR : MIN_CLEAR)) {
     // Which parts of its look are missing, when a sketch is unclear: what its rewording must fill.
@@ -249,5 +275,20 @@ export async function readPrompt(
   }
   if (refsClear !== null && refsClear < MIN_REFS_CLEAR)
     findings.push(`what to take from each image is not clear enough (${refsClear.toFixed(2)})`);
-  return { findings, reading: { contradicts, twice, clear, refsClear } };
+  return { findings, reading: { contradicts, twice, clear, refsClear, ...(around ? { around } : {}) } };
+}
+
+/** The line whose leaving out lowers a contradiction reading most, and by how much. */
+async function carrier(jev: JevFn, prompt: string, whole: number): Promise<GateReading['around']> {
+  const only = { contradicts: gateQuestions(false).contradicts };
+  const lines = prompt.split('\n');
+  const without = await Promise.all(
+    lines.map(async (line, i) => {
+      if (!line.trim()) return null;
+      const call = await jev(lines.filter((_, j) => j !== i).join('\n'), only);
+      const a = call.answers?.contradicts;
+      return a && a.type === 'noul' ? { line, drop: whole - a.noul } : null;
+    }),
+  );
+  return without.filter((x): x is { line: string; drop: number } => !!x).sort((a, b) => b.drop - a.drop)[0];
 }

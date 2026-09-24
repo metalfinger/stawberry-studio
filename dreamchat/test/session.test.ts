@@ -545,7 +545,8 @@ describe('a whole conversation', () => {
     const held = await toTheMoments(undefined, { gate });
     expect(held.framesStarted).toEqual([]);
     const m1 = held.store.get(held.id)!.build!.frames!.find((f) => f.id === 'm1')!;
-    expect([m1.status, m1.held?.[0]]).toEqual(['waiting', 'its instructions may contradict each other (0.90)']);
+    expect(m1.status).toBe('waiting');
+    expect(m1.held?.[0]).toStartWith('its instructions may contradict each other (0.90)');
 
     const reworded = await toTheMoments(undefined, {
       gate,

@@ -316,11 +316,14 @@ export function framePrompt(
   // A picture from the other side gives its light; who is in it comes from their own images, one
   // each. "Its light and how everyone looks" read as a second image of each person (what each
   // image is for 0.61-0.67; 0.72-0.76 with its light alone, 24 Sep).
+  // Who is in that picture and not in this one is said: "everyone in it is drawn from their own
+  // images" of a picture with the family in it, for a moment without them, read as asking for them.
   const lightFrom = (x: PlannedInput, shows: string) => {
     const own = seenHere.filter((id) => !imageOf.has(id)).map((id) => nameOf(sheets, id));
+    const gone = (x.item.frame?.visible ?? []).filter((id) => !f.visible.includes(id)).map((id) => nameOf(sheets, id));
     return `${pictureNo(x)}${shows}: the same place from the other side, a moment earlier. Take only its light: the time of day and where the light comes from${
       own.length ? `, and how ${own.join(' and ')} look${own.length > 1 ? '' : 's'}, who ${own.length > 1 ? 'have' : 'has'} no image of their own above` : ''
-    }. Everyone else in it is drawn from their own images above; what is behind them here is what that picture faced away from.`;
+    }.${gone.length ? ` ${gone.join(' and ')} ${gone.length > 1 ? 'are' : 'is'} in it but not in this picture.` : ''} Everyone here is drawn from their own images above; what is behind them is what that picture faced away from.`;
   };
 
   const lastSeen = (x: PlannedInput, ids: string[]) => {
