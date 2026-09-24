@@ -52,7 +52,7 @@ import {
   ownStyle,
   type StyleOption,
 } from './producer';
-import { type ContinuityPlan, drawOrder, planContinuity } from './continuity';
+import { type ContinuityPlan, drawOrder, planContinuity, seenIn } from './continuity';
 import {
   buildFrames,
   buildGhosts,
@@ -662,7 +662,17 @@ export class SessionStore {
         // Nothing is drawn again without something to draw differently: "it looks a little off,
         // I can't say what, go with it" redrew the family unchanged (24 Sep). What they point at
         // goes into the redraw; a vague unease leaves the picture as it is.
-        const changed = JSON.stringify(revised) !== JSON.stringify(before);
+        // Who is in it changes too, when they say so: the moment's cast, its plan and its record.
+        const cast = it.kind === 'cut' ? await this.castChanges(s, it, text) : { out: [], in: [] };
+        if ((cast.out.length || cast.in.length) && it.frame && s.draft?.breakdown) {
+          const visible = [...it.frame.visible.filter((p) => !cast.out.includes(p)), ...cast.in];
+          it.frame.visible = visible;
+          for (const sc of s.draft.breakdown.scenes)
+            for (const m of sc.moments) if (m.id === it.id) m.visible = visible;
+          await this.replan(s);
+        }
+        const recast = cast.out.length + cast.in.length > 0;
+        const changed = recast || JSON.stringify(revised) !== JSON.stringify(before);
         const named = changed ? null : await this.namedFlaw(text, it.isDreamer ? 'you' : it.name);
         if (!changed && !named) {
           this.reviewSketch(s, it, 'left', `They were unsure but named nothing to change: "${text.slice(0, 400)}"`);
@@ -1247,6 +1257,58 @@ export class SessionStore {
   }
 
   /**
+   * The continuity plan made again for every moment not yet approved: after a correction that
+   * changes who is in a moment, or with a planner fixed since. An approved moment keeps the plan
+   * it was drawn from; a plan that needs a picture this dream never planned is left as it was.
+   */
+  private async replan(s: Session, opts: { syncRecords?: boolean } = {}): Promise<void> {
+    if (!s.build?.frames || !s.draft?.breakdown) return;
+    const plan = planContinuity(s.draft.breakdown);
+    const known = new Set(s.build.frames.map((f) => f.id));
+    for (const f of s.build.frames) {
+      const next = plan.cuts.find((c) => c.id === f.id);
+      if (f.kind !== 'cut' || !f.frame || !next || f.review || f.continuityApproved) continue;
+      if (![...next.needs, ...next.refs.map((r) => r.id)].every((n) => known.has(n))) continue;
+      f.frame.plan = next;
+      f.needs = next.needs;
+      const record = this.recordOf(s, f);
+      if (opts.syncRecords && f.nodeId && record && f.status !== 'waiting')
+        await this.deps.sheets?.record?.(f.nodeId, record);
+    }
+  }
+
+  /**
+   * Who a correction takes out of a moment or puts into it: "the conductor isn't in it, it's just
+   * me" left him cast, and the redraw was told both (24 Sep).
+   */
+  private async castChanges(s: Session, frame: Item, text: string): Promise<{ out: string[]; in: string[] }> {
+    const b = s.draft?.breakdown;
+    const f = frame.frame;
+    if (!b || !f) return { out: [], in: [] };
+    const action = frame.fields.action?.value ?? frame.name;
+    const name = (p: Breakdown['people'][number]) => (p.is_dreamer ? 'the dreamer (the person telling the dream)' : p.name);
+    const questions: Record<string, Question> = {};
+    for (const p of b.people)
+      questions[`${f.visible.includes(p.id) ? 'out' : 'in'}_${p.id}`] = {
+        type: 'noul',
+        instructions: f.visible.includes(p.id)
+          ? `The person corrected a picture of their dream showing "${action}": "${text.slice(0, 300)}". Do they say ${name(p)} should not be in this picture?`
+          : `The person corrected a picture of their dream showing "${action}": "${text.slice(0, 300)}". Do they say ${name(p)} should be in this picture too?`,
+        criteria: { true: 'they say so', false: 'they do not say so' },
+      };
+    if (!Object.keys(questions).length) return { out: [], in: [] };
+    const call = await this.deps.jev(text, questions);
+    const yes = (k: string) => {
+      const a = call.answers?.[k];
+      return !!a && a.type === 'noul' && a.noul >= 0.7;
+    };
+    return {
+      out: b.people.filter((p) => f.visible.includes(p.id) && yes(`out_${p.id}`)).map((p) => p.id),
+      in: b.people.filter((p) => !f.visible.includes(p.id) && yes(`in_${p.id}`)).map((p) => p.id),
+    };
+  }
+
+  /**
    * The cut's record as its plan says; a source that failed is left out of it as well as its
    * references.
    */
@@ -1267,8 +1329,13 @@ export class SessionStore {
         .filter((k) => ENGINE[k] && frame.fields[k]?.value)
         .map((k) => [ENGINE[k], frame.fields[k].value as string]),
     );
+    // Who is in it, as it is drawn: a correction can take someone out or put someone in.
+    const dreamerId = s.draft?.breakdown?.people.find((p) => p.is_dreamer)?.id;
+    const cast = frame.frame
+      ? { visible_cast: seenIn(frame.frame, dreamerId).map((p) => ids[p]).filter((x): x is string => !!x) }
+      : {};
     return {
-      fields: { ...cutRecord(plan, ids, failedCuts), ...words },
+      fields: { ...cutRecord(plan, ids, failedCuts), ...cast, ...words },
       source: ids.proposal,
       reason: failedCuts.length
         ? `Drawn without ${failedCuts.map((d) => s.build?.frames?.find((x) => x.id === d)?.name ?? d).join(', ')}, which could not be drawn`
@@ -1844,23 +1911,12 @@ export class SessionStore {
       // already under way; an approved one keeps the plan it was drawn from. A plan that needs a
       // picture this dream never planned is left as it was.
       // Its record follows, so the judge asks about what the moment should now show.
-      if (s.build?.frames && s.draft?.breakdown) {
-        const plan = planContinuity(s.draft.breakdown);
-        const known = new Set(s.build.frames.map((f) => f.id));
-        for (const f of s.build.frames) {
-          const next = plan.cuts.find((c) => c.id === f.id);
-          if (f.kind !== 'cut' || !f.frame || !next || f.review || f.continuityApproved) continue;
-          if (![...next.needs, ...next.refs.map((r) => r.id)].every((n) => known.has(n))) continue;
-          f.frame.plan = next;
-          f.needs = next.needs;
-          const record = this.recordOf(s, f);
-          if (f.nodeId && record && f.status !== 'waiting') await this.deps.sheets?.record?.(f.nodeId, record);
-        }
-      }
+      await this.replan(s, { syncRecords: true });
       const again: string[] = [];
-      // What was held is put through the gate again, with whatever has been put right since.
+      // What was held is put through the gate again, with whatever has been put right since, and
+      // may be reworded once more by the harness as it is now.
       const held = [...(s.build?.items ?? []), ...(s.build?.frames ?? [])].filter((i) => i.held);
-      for (const it of held) it.held = undefined;
+      for (const it of held) Object.assign(it, { held: undefined, reworded: undefined });
       for (const it of held) if (it.kind !== 'cut' && it.kind !== 'ghost') again.push(it.id);
       for (const it of [...(s.build?.items ?? []), ...(s.build?.frames ?? [])])
         if (it.status === 'failed' && (!it.jobId || opts.redraw?.includes(it.id))) {

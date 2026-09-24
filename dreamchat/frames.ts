@@ -193,12 +193,17 @@ export function framePrompt(
     return found.length ? ` Leave out what it shows that is not in the dream: ${found.join('; ')}.` : '';
   };
 
+  // Who leaves the picture being edited, and who joins it: "keep everyone in it" of a conductor
+  // the dreamer said was not there (24 Sep).
+  const baseWho = base?.item.frame?.visible ?? [];
+  const leaving = baseWho.filter((id) => !f.visible.includes(id)).map((id) => nameOf(sheets, id));
+  const joining = base ? f.visible.filter((id) => !baseWho.includes(id)).map((id) => nameOf(sheets, id)) : [];
   if (base?.item.mediaId)
     attach(
       base.item.mediaId,
       'base',
       'the same view a moment earlier: edit it into this moment',
-      `EDIT THIS PICTURE. It is ${pictureNo(base)}, the same view a moment earlier. Keep its camera, framing, room, light and everyone in it exactly as they are, faces and clothes included; change only what this moment changes.${strays(base)}`,
+      `EDIT THIS PICTURE. It is ${pictureNo(base)}, the same view a moment earlier. Keep its camera, framing, room, light and everyone in it exactly as they are, faces and clothes included; change only what this moment changes.${leaving.length ? ` ${leaving.join(' and ')} ${leaving.length > 1 ? 'are' : 'is'} not in this moment: take ${leaving.length > 1 ? 'them' : 'them'} out.` : ''}${joining.length ? ` ${joining.join(' and ')} ${joining.length > 1 ? 'join' : 'joins'} it, drawn from ${joining.length > 1 ? 'their' : 'their'} sketch.` : ''}${strays(base)}`,
     );
 
   // What each sheet says in words, so the manifest ties each image to who or what it is.
@@ -306,7 +311,11 @@ export function framePrompt(
       (r === 'shift'
         ? f.eyes === 'dreamer' && x.item.frame?.eyes !== 'dreamer'
           ? `${pictureNo(x)}${shows}, just before the dream jumps. Keep its framing and the shapes in it where they are; the dreamer in it is now the camera, so they are not in this picture. The dream changes this: ${frame.fields.shift?.value ?? ''}.`
-          : `${pictureNo(x)}${shows}, just before the dream jumps. ${keepAcross(x)}; the dream changes this: ${frame.fields.shift?.value ?? ''}.`
+          : x.item.frame?.place && x.item.frame.place !== f.place
+            ? // Into another place, only where things sit in the frame carries: "keep its framing
+              // exactly" of a streetcar's aisle for a wide view of a train roof (24 Sep).
+              `${pictureNo(x)}${shows}, just before the dream jumps to another place. Keep only its composition: where the main shapes and figures sit in the frame, so the two pictures cut together; the place and everything in it are this picture's own. The dream changes this: ${frame.fields.shift?.value ?? ''}.`
+            : `${pictureNo(x)}${shows}, just before the dream jumps. ${keepAcross(x)}; the dream changes this: ${frame.fields.shift?.value ?? ''}.`
         : x.use.role === 'composition'
           ? `${pictureNo(x)}${shows}: the same place from the same side. Take where everything and everyone in it are, and its light; this frame is framed ${f.distance}.`
           : x.use.role === 'lighting'

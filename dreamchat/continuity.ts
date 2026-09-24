@@ -512,11 +512,19 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
           fix: `keep the light of picture ${k}: the same time of day and the same light`,
         });
       if (r.relation === 'shift')
-        out.push({
-          with: r.id,
-          text: `Does the second picture keep the first one's framing, while ${m.shift}?`,
-          fix: `keep the framing of picture ${k}, while ${m.shift}`,
-        });
+        out.push(
+          e.place !== m.place
+            ? {
+                with: r.id,
+                text: `Does the second picture keep the first one's composition, where the main shapes sit in the frame, while ${m.shift}?`,
+                fix: `keep where the main shapes sit in picture ${k}'s frame, while ${m.shift}`,
+              }
+            : {
+                with: r.id,
+                text: `Does the second picture keep the first one's framing, while ${m.shift}?`,
+                fix: `keep the framing of picture ${k}, while ${m.shift}`,
+              },
+        );
       for (const p of people)
         out.push({
           with: r.id,

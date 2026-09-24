@@ -132,6 +132,7 @@ Mark every detail "said": true ONLY when the person's own words give it. Anythin
 - Each scene holds moments in order. A moment is ONE still picture: one decisive visible action, where it is, who and what is in view. A beat with two actions is two moments.
 - 3 to 10 moments for the whole dream, in the person's order and words. A dream that is a single image still gets at least 3: where it is (wide), the thing itself, and the detail that matters most (close). Framing the same told moment differently is not inventing.
 - "action" says what happens or what is there, in plain words. Never the camera: "wide view of", "close-up of" and the like belong in "distance", not in the action.
+- Write a moment's action, feeling, visual_point and dream in the third person, the dreamer as "the dreamer" ("the dreamer stands at the window"), never "you": they are instructions for a picture, and to a picture "you" is whoever looks at it.
 - "visible" lists only people ids; objects go in "things".
 - Mark exactly one moment "key": true — the moment they said stays with them, or would pause on.
 - "eyes": "dreamer" when we see through the dreamer's eyes, "outside" when the dreamer is seen. Follow what they said about how they were in it.
@@ -265,7 +266,7 @@ export async function rewordLook(
   return changed ? out : null;
 }
 
-const REWORD_MOMENT = `One moment of a person's dream is about to be drawn from the instructions below, and a checker holding it back found a problem in them. Find what in the moment's own words causes it (its action, the one thing it must show, its feeling, or its part in the story): a detail that contradicts where it happens or who is there, something that cannot be in the picture, or something left unsaid. Rewrite only those words, as little as possible, keeping strictly to the dream as told and adding nothing it did not have. Never mention the camera, the viewer or "you" as someone looking on. Return JSON only: {"fields": {"action": "", "visual_point": "", "feeling": "", "purpose": ""}} with only the fields you changed; {"fields": {}} if the problem is not in these words.`;
+const REWORD_MOMENT = `One moment of a person's dream is about to be drawn from the instructions below, and a checker holding it back found a problem in them. Find what in the moment's own words causes it (its action, the one thing it must show, its feeling, or its part in the story): a detail that contradicts where it happens or who is there, something that cannot be in the picture, or something left unsaid. Rewrite only those words, as little as possible, keeping strictly to the dream as told and adding nothing it did not have. Write them in the third person, the dreamer as "the dreamer", never "you": to a picture "you" is whoever looks at it. Never mention the camera or a viewer. Return JSON only: {"fields": {"action": "", "visual_point": "", "feeling": "", "purpose": ""}} with only the fields you changed; {"fields": {}} if the problem is not in these words.`;
 
 /**
  * A moment's words, reworded before anything is paid for, when the gate found its instructions

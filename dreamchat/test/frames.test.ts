@@ -202,6 +202,15 @@ describe('a moment drawn from earlier moments', () => {
     expect(framePrompt(moment('m1', 1), [ana, kitchen], style).prompt).not.toContain('Where they stand');
   });
 
+  test('an edit names who leaves the picture and who joins it', () => {
+    const conductor = sheet('p2', 'character', 'the conductor');
+    const use = { id: 'm1', kind: 'cut' as const, role: 'base' as const, relation: 'same_setup' as const, carries: 'x' };
+    const before: Item = { ...drawn('m1', 1) };
+    before.frame = { ...before.frame!, visible: ['p1', 'p2'] };
+    const { prompt } = framePrompt(moment('m2', 2, [use]), [ana, conductor, kitchen], style, [{ use, item: before }]);
+    expect(prompt).toContain('the conductor is not in this moment: take them out.');
+  });
+
   test('what the judge found invented in the picture being edited is left out of the edit', () => {
     const use = { id: 'm1', kind: 'cut' as const, role: 'base' as const, relation: 'same_setup' as const, carries: 'x' };
     const flawed: Item = {

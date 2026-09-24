@@ -19,7 +19,9 @@ export const MAX_TWICE = 0.25;
 /** Below this, the prompt is not clear enough to draw. */
 export const MIN_CLEAR = 0.7;
 /** Below this, it is not clear what to take from each attached image. */
-export const MIN_REFS_CLEAR = 0.7;
+// Real problems with what an image is for read 0.31-0.46 (a baby drawn twice, a seat on a train
+// roof); clean prompts 0.6 and up (24 Sep).
+export const MIN_REFS_CLEAR = 0.6;
 /** The model takes 14 images; a dozen leaves each one legible. */
 export const MAX_REFERENCES = 12;
 
