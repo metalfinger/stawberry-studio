@@ -208,7 +208,12 @@ export type StoreDeps = {
   /** The image judge: checks a finished take against its declared facts. Absent: no check. */
   judge?: (mediaId: string, opts?: JudgeOptions) => Promise<JudgedCheck | null>;
   /** Words for a person's look when nobody described it, filled in as guesses before the sketch. */
-  proposeLook?: (name: string, fields: Record<string, Detail>, transcript: string) => Promise<Record<string, Detail>>;
+  proposeLook?: (
+    name: string,
+    fields: Record<string, Detail>,
+    transcript: string,
+    others?: string[],
+  ) => Promise<Record<string, Detail>>;
   /** The continuity check: a take beside the pictures it was drawn from. Absent: no check. */
   judgeContinuity?: (mediaId: string, checks: { with: string | null; text: string }[]) => Promise<Check>;
   dir?: string;
@@ -1278,7 +1283,14 @@ export class SessionStore {
     // whatever came to hand, and every moment had to guess again (23 Sep).
     const unknown = item.kind === 'character' && (vague('appearance') || vague('wardrobe')) && this.deps.proposeLook;
     const looked = unknown
-      ? this.deps.proposeLook!(item.name, item.fields, renderTranscript(s.transcript))
+      ? this.deps.proposeLook!(
+          item.name,
+          item.fields,
+          renderTranscript(s.transcript),
+          (s.build?.items ?? [])
+            .filter((i) => i.kind === 'character' && i.id !== item.id)
+            .map((i) => (i.isDreamer ? 'the dreamer' : i.name)),
+        )
           .catch(() => item.fields)
           .then((fields) => (snapshot.fields = fields))
       : Promise.resolve(null);

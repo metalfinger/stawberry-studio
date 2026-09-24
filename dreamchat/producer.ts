@@ -249,6 +249,9 @@ export async function proposeLook(
   name: string,
   fields: Record<string, Detail>,
   transcript: string,
+  // The others drawn on their own: "the family" was given a baby in a yellow onesie while "the
+  // baby" had her own sketch in a white one, and a moment would have shown two (24 Sep).
+  others: string[] = [],
 ): Promise<Record<string, Detail>> {
   // A guess that says nothing ("young, but no specific features remembered") is filled in too;
   // what they said is never touched.
@@ -260,7 +263,11 @@ export async function proposeLook(
         { role: 'system', content: PROPOSE_LOOK + extra },
         {
           role: 'user',
-          content: `The conversation:\n\n${transcript}\n\nThe profile of ${name}:\n${JSON.stringify(current)}`,
+          content: `The conversation:\n\n${transcript}\n\nThe profile of ${name}:\n${JSON.stringify(current)}${
+            others.length
+              ? `\n\nDrawn on their own, each in their own picture, so never part of this profile: ${others.join(', ')}.`
+              : ''
+          }`,
         },
       ],
       { json: true, thinking: PRODUCER_THINKING },
