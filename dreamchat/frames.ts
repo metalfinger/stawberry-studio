@@ -288,6 +288,24 @@ export function framePrompt(
     manifest[m - 1] += ` They are the ${word} in ${who(group)}'s picture (Image ${g}): one and the same, drawn as this image shows.`;
   }
 
+  // Where someone was last seen keeps them drawn the same way; their sketch still says who they
+  // are, and wins where the two differ. Both said "take their face, hair and clothes", and Jev
+  // read two images claiming the same thing (0.42-0.46 on what each is for; 0.70-0.72 once the
+  // sketch was named the authority, 24 Sep).
+  const lastSeen = (x: PlannedInput, ids: string[]) => {
+    const names = ids.map((id) => nameOf(sheets, id));
+    const own = ids.map((id) => imageOf.get(id)).filter((n): n is number => n !== undefined);
+    const are = names.length > 1 ? 'were' : 'was';
+    const shows = x.item.fields.action?.value ? ` (${x.item.fields.action.value.replace(/\.$/, '')})` : '';
+    return `${pictureNo(x)}${shows}: where ${names.join(' and ')} ${are} last seen, only so they are drawn the same way from picture to picture.${
+      own.length > 1
+        ? ` Who they are is Images ${own.join(' and ')}: where this picture differs from them, they are right.`
+        : own.length
+          ? ` Who they are is Image ${own[0]}: where the two differ, Image ${own[0]} is right.`
+          : ''
+    } Nothing of its place, framing or background.`;
+  };
+
   // Ghosts, then earlier moments, while there is room: the model takes 14 images, and a dozen
   // leaves each one legible. A person's latest picture, the last kind added, is the first to go.
   const MAX_IMAGES = 12;
@@ -325,7 +343,9 @@ export function framePrompt(
           ? `${pictureNo(x)}${shows}: the same place from the same side. Take where everything and everyone in it are, and its light; this frame is framed ${f.distance}.`
           : x.use.role === 'lighting'
             ? `${pictureNo(x)}${shows}: the same place from the other side, a moment earlier. Take only its light and how everyone looks; what is behind them here is what that picture faced away from.`
-            : `${pictureNo(x)}${shows}: take only ${x.use.carries.replace(/;.*$/, '')}. Nothing of its place, framing or background.`) +
+            : x.use.who?.length
+              ? lastSeen(x, x.use.who)
+              : `${pictureNo(x)}${shows}: take only ${x.use.carries.replace(/;.*$/, '')}. Nothing of its place, framing or background.`) +
         strays(x),
     );
   }

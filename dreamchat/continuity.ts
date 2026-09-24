@@ -20,6 +20,11 @@ export type PlanRef = {
   relation?: Relation;
   /** What it gives this picture, in plain words for the prompt and the panel. */
   carries: string;
+  /**
+   * The people it keeps drawn the same way, when it is only where they were last seen: their
+   * sketches still say who they are.
+   */
+  who?: string[];
 };
 
 /**
@@ -374,13 +379,20 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
   for (const c of cuts) c.changes = countChanges(c);
 
   // Every person in a moment, as last drawn: their sheet says who they are, and their latest
-  // picture says how they look in this storyboard, so they look as they did a moment ago.
+  // picture keeps them drawn the same way, so they look as they did a moment ago. The sheet
+  // stays the authority: two images each claiming how the dreamer looks read as a clash
+  // (0.42-0.46 on what each image is for), and the later picture had drawn her hair auburn.
   const MAX_CUTS = MAX_EARLIER + 2;
   for (const c of cuts) {
     const m = byId.get(c.id)!;
     for (const p of seen(m)) {
       const cutRefs = c.refs.filter((r) => r.kind === 'cut');
-      if (cutRefs.length >= MAX_CUTS || cutRefs.some((r) => inViewAt(byId.get(r.id)!).has(p))) continue;
+      const showing = cutRefs.find((r) => inViewAt(byId.get(r.id)!).has(p));
+      if (showing) {
+        if (showing.who && !showing.who.includes(p)) showing.who.push(p);
+        continue;
+      }
+      if (cutRefs.length >= MAX_CUTS) continue;
       const lastSeen = ms
         .slice(0, c.order - 1)
         .filter((e) => seen(e).includes(p))
@@ -391,7 +403,8 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
           kind: 'cut',
           role: 'identity',
           relation: relation(m, lastSeen),
-          carries: `how ${name(p)} looks in the storyboard so far: face, hair and clothes; nothing else from it`,
+          carries: `where ${name(p)} was last seen: drawn the same way; their sketch says who they are`,
+          who: [p],
         });
     }
   }

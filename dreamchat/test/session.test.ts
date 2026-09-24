@@ -600,6 +600,32 @@ describe('a whole conversation', () => {
     expect(store.get(id)!.build!.frames![0]).toMatchObject({ repairs: 1, version: 2 });
   });
 
+  test('a moment the judge fails twice is never what follows is drawn from: it waits for them', async () => {
+    const { store, id, framesStarted, verdicts, statuses } = await toTheMoments(async (_mediaId, opts) =>
+      opts?.facts
+        ? {
+            questions: 4,
+            passed: 3,
+            failed: ['Is the departure board the one from its sketch?'],
+            failedIds: ['prop:node-t1'],
+            unseen: [],
+          }
+        : null,
+    );
+    statuses.set('job-m1', 'ready');
+    await store.settle(id, 150);
+    statuses.set('job-m1', 'ready');
+    await store.settle(id, 150);
+    // One repair, then no approval on the judge's word: the close-up is not drawn from it.
+    expect(framesStarted.map((f) => f.id)).toEqual(['m1', 'm1']);
+    expect(verdicts.filter(([, ok, author]) => ok && author === 'assistant')).toEqual([]);
+    const m1 = store.get(id)!.build!.frames![0];
+    expect([!!m1.continuityApproved, m1.waitsForPerson]).toEqual([
+      false,
+      'the judge found: Is the departure board the one from its sketch?',
+    ]);
+  });
+
   test('each probe is counted, and a goal is asked at most twice', async () => {
     const store = new SessionStore(cfg, {
       jev: fakeJev(() => ({ ...told('telling', 1), finished_telling: noul(0.9) })),

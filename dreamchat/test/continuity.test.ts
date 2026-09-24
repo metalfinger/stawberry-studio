@@ -347,8 +347,10 @@ describe('ghosts', () => {
     ]);
     const plan = planContinuity(b);
     expect(plan.cuts[1].refs.map((r) => `${r.id}:${r.relation}`)).toEqual(['m1:shift']);
-    // After the jump, the picture before it gives only how she looks, never the room.
+    // After the jump, the picture before it is only where she was last seen, never the room; her
+    // sketch still says who she is.
     expect(plan.cuts[2].refs.map((r) => `${r.id}:${r.role}:${r.relation}`)).toEqual(['m2:identity:other_place']);
+    expect(plan.cuts[2].refs[0].who).toEqual(['p1']);
     expect(plan.cuts[2].shot).not.toBe(plan.cuts[0].shot);
   });
 

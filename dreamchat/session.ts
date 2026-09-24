@@ -52,7 +52,7 @@ import {
   ownStyle,
   type StyleOption,
 } from './producer';
-import { type ContinuityPlan, drawOrder, pictureName, planContinuity, seenIn } from './continuity';
+import { type ContinuityPlan, type Criterion, drawOrder, pictureName, planContinuity, seenIn } from './continuity';
 import {
   buildFrames,
   buildGhosts,
@@ -1098,6 +1098,13 @@ export class SessionStore {
           : 'no judge here';
       return;
     }
+    // A take the judge still finds wrong after its one repair is theirs to see, never a source: what
+    // is drawn from it keeps what is wrong with it.
+    const { serious } = this.seriousFailures(n);
+    if (serious.length) {
+      n.waitsForPerson = `the judge found: ${serious.join('; ').slice(0, 300)}`;
+      return;
+    }
     if (!this.deps.sheets) return;
     try {
       await this.deps.sheets.review({
@@ -1876,23 +1883,30 @@ export class SessionStore {
     await this.startSketch(s, it, it.startedAtTurn ?? 0);
   }
 
-  private async repair(s: Session, it: Item): Promise<boolean> {
-    if (it.review || (it.repairs ?? 0) >= MAX_REPAIRS || !it.mediaId || !it.nodeId) return false;
+  /**
+   * What the judge found in a moment that later pictures must not inherit: who or what is missing,
+   * a changed look not carried, the wrong clothes or features, a broken body, something invented
+   * (a viewer's hands kept in one picture are kept by every edit of it, 23 Sep); and a person or
+   * room that does not match what the moment follows.
+   */
+  private seriousFailures(it: Item): { factAt: number[]; fixes: Criterion[]; serious: string[] } {
     const c = it.check;
-    if (!c || c.error) return false;
-    // Who or what is missing, a changed look not carried, the wrong clothes or features, a broken
-    // body; and a person or room that does not match what the moment follows.
-    // Something invented counts too: a viewer's hands kept in one picture are kept by every edit
-    // of it (23 Sep).
+    if (!c || c.error) return { factAt: [], fixes: [], serious: [] };
     const SERIOUS = ['cast', 'location', 'prop', 'state', 'wardrobe', 'features', 'pose', 'undeclared'];
     const factAt = c.failed.map((_, i) => i).filter((i) => SERIOUS.includes((c.failedIds?.[i] ?? '').split(':')[0]));
-    const facts = factAt.map((i) => c.failed[i]);
     const fixes = (it.frame?.plan?.criteria ?? []).filter(
       (k) =>
         (it.continuity?.failed ?? []).includes(k.text) &&
         /same person|same side|same view|reference sheet|framing|made the same way|left to right/.test(k.text),
     );
-    const serious = [...facts, ...fixes.map((k) => k.text)];
+    return { factAt, fixes, serious: [...factAt.map((i) => c.failed[i]), ...fixes.map((k) => k.text)] };
+  }
+
+  private async repair(s: Session, it: Item): Promise<boolean> {
+    if (it.review || (it.repairs ?? 0) >= MAX_REPAIRS || !it.mediaId || !it.nodeId) return false;
+    const c = it.check;
+    if (!c || c.error) return false;
+    const { factAt, fixes, serious } = this.seriousFailures(it);
     if (!serious.length) return false;
     it.repairs = (it.repairs ?? 0) + 1;
     // Said to the image model as instructions: a judge's question means nothing to it.
