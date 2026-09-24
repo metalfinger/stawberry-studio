@@ -1163,6 +1163,7 @@ export class SessionStore {
         const changed = Object.keys(fields).filter((k) => fields[k]?.value !== frame.fields[k]?.value);
         frame.reworded = [...new Set([...(frame.reworded ?? []), ...changed])];
         frame.fields = fields;
+        await this.keepWords(s, frame);
       }
     }
     let built = framePrompt(frame, s.build.items, s.style, this.plannedInputs(s, frame));
@@ -1182,6 +1183,7 @@ export class SessionStore {
       const changed = Object.keys(fields).filter((k) => fields[k]?.value !== frame.fields[k]?.value);
       frame.reworded = [...new Set([...(frame.reworded ?? []), ...changed])];
       frame.fields = fields;
+      await this.keepWords(s, frame);
       built = framePrompt(frame, s.build.items, s.style, this.plannedInputs(s, frame));
       findings = await this.gateFindings(s, frame, built.prompt, built.references, inView);
     }
@@ -1294,6 +1296,22 @@ export class SessionStore {
    * changes who is in a moment, or with a planner fixed since. An approved moment keeps the plan
    * it was drawn from; a plan that needs a picture this dream never planned is left as it was.
    */
+  /**
+   * A moment's words as reworded become the dream's own, as a correction of who is in it does, so
+   * everything planned from them reads as the picture does: a jump's check still told the judge
+   * "you are on top of it" after the moment itself was put in the third person (24 Sep).
+   */
+  private async keepWords(s: Session, frame: Item): Promise<void> {
+    for (const sc of s.draft?.breakdown?.scenes ?? [])
+      for (const m of sc.moments)
+        if (m.id === frame.id)
+          for (const k of ['action', 'visual_point', 'feeling', 'purpose', 'shift', 'dream'] as const) {
+            const v = frame.fields[k]?.value;
+            if (typeof v === 'string' && v.trim()) m[k] = v;
+          }
+    await this.replan(s);
+  }
+
   private async replan(s: Session, opts: { syncRecords?: boolean } = {}): Promise<void> {
     if (!s.build?.frames || !s.draft?.breakdown) return;
     const plan = planContinuity(s.draft.breakdown);

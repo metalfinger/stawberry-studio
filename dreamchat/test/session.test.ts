@@ -600,6 +600,28 @@ describe('a whole conversation', () => {
     expect(store.get(id)!.build!.frames![0]).toMatchObject({ repairs: 1, version: 2 });
   });
 
+  test('a moment telling the dreamer "you" is put in the third person, and the dream keeps its words', async () => {
+    const withYou = structuredClone(breakdown);
+    withYou.scenes[0].moments[0].action = 'You see the board on your kitchen wall.';
+    const { store, id, framesStarted, statuses } = await toTheMoments(undefined, {
+      producer: async () => ({ breakdown: withYou, downgraded: [], notes: [], ms: 1 }),
+      reword: async (_prompt, findings, fields) => ({
+        ...fields,
+        action: {
+          value: findings[0].includes('third person') ? 'The dreamer sees the board on their kitchen wall.' : 'x',
+          said: false,
+        },
+      }),
+    });
+    statuses.set('job-m1', 'ready');
+    await store.settle(id, 50);
+    expect(framesStarted[0].prompt).toContain('What happens in this frame: The dreamer sees the board on their kitchen wall.');
+    const s = store.get(id)!;
+    expect(s.build!.frames![0].reworded).toEqual(['action']);
+    // Everything planned from the moment reads as its picture does.
+    expect(s.draft!.breakdown!.scenes[0].moments[0].action).toBe('The dreamer sees the board on their kitchen wall.');
+  });
+
   test('a moment the judge fails twice is never what follows is drawn from: it waits for them', async () => {
     const { store, id, framesStarted, verdicts, statuses } = await toTheMoments(async (_mediaId, opts) =>
       opts?.facts
