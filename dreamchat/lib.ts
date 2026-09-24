@@ -644,9 +644,13 @@ function renderMove(move: Move, state: State, cfg: GoalsFile, extras: BriefExtra
           : '',
         extras.finished?.length
           ? `${extras.finished.join(' and ')} ${extras.finished.length > 1 ? 'are' : 'is'} up on the right now: ask if it looks the way they remember.`
-          : "The rest are still on their way; if they ask, say they'll appear on the right soon.",
+          : extras.held?.length
+            ? ''
+            : "The rest are still on their way; if they ask, say they'll appear on the right soon.",
+        // Held back, not on its way: say so, and ask. The host once said "the others are still
+        // coming" about two sketches that were waiting on the person (24 Sep).
         extras.held?.length
-          ? `Before you draw ${extras.held.join(' and ')}, you need a little more about how ${extras.held.length > 1 ? 'they look' : 'it looks'}: ask them plainly, in one short question, or say you can picture it yourself if they'd rather.`
+          ? `${extras.held.join(' and ')} ${extras.held.length > 1 ? "aren't" : "isn't"} being drawn yet: you need a little more about how ${extras.held.length > 1 ? 'they look' : 'it looks'} first. Ask them now, in one short question about ${extras.held.join(' and ')}, and don't say ${extras.held.length > 1 ? "they're" : "it's"} on the way.`
           : '',
       ];
       return `while_drawing. ${parts.filter(Boolean).join(' ')}`;

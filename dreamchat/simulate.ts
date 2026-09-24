@@ -77,7 +77,7 @@ async function lookAt(store: SessionStore, id: string): Promise<string> {
   }
 }
 
-async function run(file: string, max: number) {
+async function run(file: string, max: number, resume?: string) {
   const slug = basename(file, '.md');
   const raw = readFileSync(file, 'utf8');
   const dream = raw
@@ -105,11 +105,21 @@ async function run(file: string, max: number) {
     // pictures, plan and all, after the page is restarted.
     dir: join(import.meta.dir, 'state'),
   });
-  const { id } = store.create(`simulated: ${slug}`);
-
-  const opened = await store.open(id);
+  // A saved conversation goes on where it stopped, with the harness as it is now: the pictures it
+  // already paid for are kept, and nothing before the last reply is asked again.
+  const id = resume ?? store.create(`simulated: ${slug}`).id;
   const dreamer: ChatMessage[] = [{ role: 'system', content: DREAMER(dream) }];
-  let listener = opened.messages.join('\n');
+  let listener = '';
+  if (resume) {
+    const saved = store.view(resume);
+    if (!saved) throw new Error(`no saved conversation ${resume}`);
+    const lines = saved.transcript;
+    // The dreamer's own history: what Berry said is what they heard; what they said is theirs.
+    for (const e of lines.slice(0, -1))
+      dreamer.push({ role: e.role === 'assistant' ? 'user' : 'assistant', content: e.content });
+    listener = lines.at(-1)?.role === 'assistant' ? (lines.at(-1)?.content ?? '') : '';
+    await store.resume(resume);
+  } else listener = (await store.open(id)).messages.join('\n');
   let closed = false;
   for (let i = 0; i < max && !closed; i++) {
     dreamer.push({ role: 'user', content: listener });
@@ -308,9 +318,14 @@ function print(r: Report) {
 const args = process.argv.slice(2);
 const maxIdx = args.indexOf('--max');
 const max = maxIdx === -1 ? 30 : Number(args[maxIdx + 1]);
-const files = args.filter((a, i) => !a.startsWith('--') && (maxIdx === -1 || i !== maxIdx + 1));
-if (!files.length) {
-  console.error('usage: bun run simulate.ts dreams/<name>.md [more.md …] [--max 30]');
+// --resume <session id>: carry a saved simulated conversation on with the current harness.
+const resumeIdx = args.indexOf('--resume');
+const resume = resumeIdx === -1 ? undefined : args[resumeIdx + 1];
+const files = args.filter(
+  (a, i) => !a.startsWith('--') && (maxIdx === -1 || i !== maxIdx + 1) && (resumeIdx === -1 || i !== resumeIdx + 1),
+);
+if (!files.length || (resume && files.length > 1)) {
+  console.error('usage: bun run simulate.ts dreams/<name>.md [more.md …] [--max 30] [--resume <session id>]');
   process.exit(1);
 }
 
@@ -325,7 +340,7 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const)
     process.exit(130);
   });
 console.log(`sketches drawn with ${PROVIDER} into ${STRAWBERRY_HOME}`);
-const reports = await Promise.all(files.map((f) => run(f, max)));
+const reports = await Promise.all(files.map((f) => run(f, max, resume)));
 worker?.stop();
 for (const r of reports) print(r);
 const path = join(out, `sim-${stamp}-${process.env.DREAMCHAT_HOST_THINKING ?? 'low'}.json`);
