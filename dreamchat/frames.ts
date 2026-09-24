@@ -173,6 +173,15 @@ export function framePrompt(
     manifest.push(`Image ${references.length}: ${line}`);
   };
   const pictureNo = (x: PlannedInput) => (x.item.frame ? `picture ${x.item.frame.order}` : 'an in-between reference');
+  // Across a jump, only who is in both pictures keeps their place: the streetcar's conductor is
+  // not on the train roof (24 Sep).
+  const keepAcross = (x: PlannedInput) => {
+    const shared = (x.item.frame?.visible ?? []).filter((id) => f.visible.includes(id));
+    const names = shared.map((id) => nameOf(sheets, id));
+    return names.length
+      ? `Keep its framing and where ${names.join(' and ')} ${names.length > 1 ? 'are' : 'is'} exactly; no one else from it`
+      : 'Keep its framing exactly; none of the people in it';
+  };
   // What the judge found invented in an earlier picture stays out of this one: a viewer's hands in
   // picture 3 were kept by the edit made from it (23 Sep).
   const strays = (x: PlannedInput) => {
@@ -192,11 +201,18 @@ export function framePrompt(
     );
 
   // What each sheet says in words, so the manifest ties each image to who or what it is.
-  const lookOf = (s: Item, keys: string[]) =>
-    keys
+  // Someone in a group's look who also has their own sketch is drawn from their own sketch: the
+  // group's words about them go ("the family … baby: yellow onesie" beside the baby's own white one).
+  const members = groupMembers(inView);
+  const lookOf = (s: Item, keys: string[]) => {
+    const own = members.filter((m) => m.group === s).map((m) => new RegExp(`\\b${m.word}s?\\b`, 'i'));
+    return keys
       .map((k) => s.fields[k]?.value)
       .filter((v): v is string => !!v && !VAGUE.test(v))
+      .flatMap((v) => v.split(/;\s*/))
+      .filter((part) => part.trim() && !own.some((re) => re.test(part)))
       .join('; ');
+  };
   const facts: string[] = [];
   // Where each sketch went, so a group and someone in it who has their own sketch are told to be
   // one and the same: "the family" with a baby, and "the baby" (24 Sep).
@@ -234,10 +250,10 @@ export function framePrompt(
         s.mediaId,
         'location',
         layout
-          ? `${who(s)}: this exact place. Keep its walls, windows and doors on the sides the reference puts them; do not mirror or rearrange them`
+          ? `${who(s)}: this exact place. Keep everything in it on the sides the reference puts it; do not mirror or rearrange it`
           : `${who(s)}: its materials, colours and objects only; the layout comes from ${base ? 'the picture being edited' : 'the earlier picture'}`,
         layout
-          ? `${who(s)}${look ? ` (${look})` : ''}: the camera stands inside this place. Keep its walls, windows, doors and furniture where it puts them; do not mirror or rearrange them.`
+          ? `${who(s)}${look ? ` (${look})` : ''}: the camera stands in this place. Keep everything in it where it puts it (walls, doors, paths, furniture, whatever it has); do not mirror or rearrange it.`
           : base || roomFromCut
             ? `${who(s)}${look ? ` (${look})` : ''}: only its materials, colours and objects; where things stand comes from ${base ? 'Image 1' : 'the earlier picture of this place'}.`
             : `${who(s)}${look ? ` (${look})` : ''}: only its materials, colours and objects. It shows the place from another side: this frame faces ${f.looksAt || 'the other way'}.`,
@@ -253,7 +269,7 @@ export function framePrompt(
     }
   }
 
-  for (const { group, member, word } of groupMembers(inView)) {
+  for (const { group, member, word } of members) {
     const g = imageOf.get(group.id);
     const m = imageOf.get(member.id);
     if (!g || !m) continue;
@@ -273,7 +289,7 @@ export function framePrompt(
         x.use.role === 'location' ? 'location' : x.use.role === 'prop' ? 'prop' : 'identity',
         x.use.carries,
         g.kind === 'view'
-          ? `${nameOf(sheets, g.of)} seen facing ${g.looksAt || 'the other way'}: the side this frame faces. Keep its walls, windows and objects where it puts them.`
+          ? `${nameOf(sheets, g.of)} seen facing ${g.looksAt || 'the other way'}: the side this frame faces. Keep everything in it where it puts it.`
           : `how ${nameOf(sheets, g.of)} looks now (${g.state?.what}: ${g.state?.now}): draw ${g.of === f.place ? 'it' : 'them'} exactly so. Nothing else from it.`,
       );
       continue;
@@ -289,11 +305,11 @@ export function framePrompt(
       (r === 'shift'
         ? f.eyes === 'dreamer' && x.item.frame?.eyes !== 'dreamer'
           ? `${pictureNo(x)}${shows}, just before the dream jumps. Keep its framing and the shapes in it where they are; the dreamer in it is now the camera, so they are not in this picture. The dream changes this: ${frame.fields.shift?.value ?? ''}.`
-          : `${pictureNo(x)}${shows}, just before the dream jumps. Keep its framing and where everyone is exactly; the dream changes this: ${frame.fields.shift?.value ?? ''}.`
+          : `${pictureNo(x)}${shows}, just before the dream jumps. ${keepAcross(x)}; the dream changes this: ${frame.fields.shift?.value ?? ''}.`
         : x.use.role === 'composition'
-          ? `${pictureNo(x)}${shows}: the same place from the same side. Take where its walls, windows, furniture and people are, and its light; this frame is framed ${f.distance}.`
+          ? `${pictureNo(x)}${shows}: the same place from the same side. Take where everything and everyone in it are, and its light; this frame is framed ${f.distance}.`
           : x.use.role === 'lighting'
-            ? `${pictureNo(x)}${shows}: the same place from the other side, a moment earlier. Take only its light and how everyone looks; the walls behind are the ones opposite to that picture's.`
+            ? `${pictureNo(x)}${shows}: the same place from the other side, a moment earlier. Take only its light and how everyone looks; what is behind them here is what that picture faced away from.`
             : `${pictureNo(x)}${shows}: take only ${x.use.carries.replace(/;.*$/, '')}. Nothing of its place, framing or background.`) +
         strays(x),
     );
@@ -319,6 +335,8 @@ export function framePrompt(
   const feeling = frame.fields.feeling?.value;
   const point = frame.fields.visual_point?.value;
   const purpose = frame.fields.purpose?.value;
+  // Someone drawn with their group stands with it, not beside it.
+  const staged = (plan?.staging ?? []).filter((id) => !members.some((m) => m.member.id === id));
   const lines = [
     `One picture from the dream, ${f.distance}, ${angle}${f.looksAt ? `, facing ${f.looksAt}` : ''}. ${FRAMING[f.distance]}`,
     manifest.length
@@ -326,8 +344,8 @@ export function framePrompt(
       : '',
     `What happens in this frame: ${action}`,
     pov,
-    (plan?.staging?.length ?? 0) >= 2
-      ? `Where they stand, from left to right: ${plan!.staging.map((id) => nameOf(sheets, id)).join(', then ')}. The same in every picture of this scene: they never swap sides.`
+    staged.length >= 2
+      ? `Where they stand, from left to right: ${staged.map((id) => nameOf(sheets, id)).join(', then ')}. The same in every picture of this scene: they never swap sides.${members.map((m) => ` ${who(m.member)} ${isGroup(m.member) ? 'are' : 'is'} with ${who(m.group)}.`).join('')}`
       : '',
     YOU,
     facts.length ? `In it:\n${facts.join('\n')}` : '',
