@@ -228,6 +228,8 @@ describe('a whole conversation', () => {
         const out = script(q);
         if (q.profile_reply) out.profile_reply = pick(replies.shift() ?? 'confirmed');
         if (q.sketch_reaction || Object.keys(q).some((k) => k.startsWith('touches_'))) Object.assign(out, reaction);
+        // A correction in this conversation names what is wrong ("too dark", "should be green").
+        if (q.named) out.named = noul(0.9);
         return out;
       }),
       host,
@@ -429,6 +431,8 @@ describe('a whole conversation', () => {
         const out = script(q);
         if (q.profile_reply) out.profile_reply = pick('confirmed');
         if (q.sketch_reaction) Object.assign(out, reaction.now);
+        // A correction in these conversations names what is wrong.
+        if (q.named) out.named = noul(0.9);
         return out;
       }),
       host,

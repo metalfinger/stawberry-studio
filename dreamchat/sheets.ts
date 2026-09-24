@@ -435,6 +435,8 @@ export type SheetEngine = {
      * about the states its record holds.
      */
     record?: CutRecord;
+    /** Its shape; a moment is a 16:9 storyboard frame, an in-between reference its sketch's shape. */
+    shape?: Shape;
   }): Promise<{ recipeId: string; jobId: string; usd: number | null }>;
 };
 
@@ -465,12 +467,29 @@ const MODEL =
     : PROVIDER === 'higgsfield'
       ? (process.env.DREAMCHAT_MODEL ?? 'nano_banana_2')
       : 'fixture';
-const SETTINGS: Record<string, string> =
-  PROVIDER === 'fal'
-    ? { aspect_ratio: '16:9' }
+/**
+ * The shape of each kind of picture, sent to the model as its own setting rather than asked for
+ * in words: a person's full-length sketch was drawn small in a wide frame (24 Sep). An in-between
+ * reference keeps the shape of the sketch it edits; every moment is a storyboard frame.
+ */
+export type Shape = '2:3' | '4:3' | '16:9' | '1:1';
+export function shapeOf(item: Item): Shape {
+  if (item.kind === 'character') return isGroup(item) ? '4:3' : '2:3';
+  if (item.kind === 'prop') return '1:1';
+  return '16:9';
+}
+
+/**
+ * What the model is asked for, by shape. 2K costs fal what 1K does, so nothing is drawn at 1K,
+ * its default when no resolution is sent.
+ */
+function settingsFor(shape: Shape): Record<string, string> {
+  return PROVIDER === 'fal'
+    ? { aspect_ratio: shape, resolution: '2K' }
     : PROVIDER === 'higgsfield'
-      ? { aspect_ratio: '16:9', resolution: '2k' }
+      ? { aspect_ratio: shape, resolution: '2k' }
       : {};
+}
 /** The most one picture may cost, in the provider's own unit: US dollars on fal, credits on Higgsfield. */
 export const MAX_PER_IMAGE = PROVIDER === 'higgsfield' ? 2.5 : 0.2;
 /**
@@ -532,7 +551,7 @@ export const liveSheets: SheetEngine = {
       model: MODEL,
       prompt: sheetPrompt(item, style),
       intent: `Reference sheet for ${item.name}${item.version > 1 ? `, version ${item.version}` : ''}`,
-      settings: SETTINGS,
+      settings: settingsFor(shapeOf(item)),
     })) as { id: string; fingerprint: string; spec: { estimate?: { credits?: number | null } } };
     const usd = recipe.spec.estimate?.credits ?? null;
     await call('approve', { id: recipe.id, request: approval(recipe, reason, maxUsd) });
@@ -592,7 +611,7 @@ export const liveSheets: SheetEngine = {
       });
   },
 
-  async startFrame({ item, prompt, references, changes, source, reason, maxUsd, intent, record }) {
+  async startFrame({ item, prompt, references, changes, source, reason, maxUsd, intent, record, shape }) {
     if (!item.nodeId) throw new Error(`${item.name} is not in the production yet`);
     if (record) await liveSheets.record!(item.nodeId, record);
     if (changes && Object.keys(changes).length && source) {
@@ -614,7 +633,7 @@ export const liveSheets: SheetEngine = {
       prompt,
       references,
       intent: `${intent ?? `Frame: ${item.name}`}${item.version > 1 ? `, version ${item.version}` : ''}`,
-      settings: SETTINGS,
+      settings: settingsFor(shape ?? '16:9'),
     })) as { id: string; fingerprint: string; spec: { estimate?: { credits?: number | null } } };
     await call('approve', { id: recipe.id, request: approval(recipe, reason, maxUsd) });
     const job = (await call('enqueue', { id: recipe.id })) as { id: string };

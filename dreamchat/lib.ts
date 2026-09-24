@@ -513,6 +513,8 @@ export type BriefExtras = {
   waitsOnThem?: string[];
   /** Sketches held back because how they look is not yet clear enough to draw. */
   held?: string[];
+  /** Pictures they were unsure of but named nothing to change in: kept as they are. */
+  kept?: string[];
 };
 
 export function renderBrief(
@@ -639,6 +641,9 @@ function renderMove(move: Move, state: State, cfg: GoalsFile, extras: BriefExtra
     case 'while_drawing': {
       const parts = [
         extras.approved?.length ? `Take in that they're happy with ${extras.approved.join(' and ')}.` : '',
+        extras.kept?.length
+          ? `They weren't sure about ${extras.kept.join(' and ')} but named nothing to change: say you'll keep ${extras.kept.length > 1 ? 'them' : 'it'} as ${extras.kept.length > 1 ? 'they are' : 'it is'}, simply, and that they can say what to change any time.`
+          : '',
         extras.redrawing?.length
           ? `Say you're redrawing ${extras.redrawing.join(' and ')} with their change; the new version will appear on the right.`
           : '',
@@ -658,6 +663,9 @@ function renderMove(move: Move, state: State, cfg: GoalsFile, extras: BriefExtra
     case 'frames_drawing': {
       const parts = [
         extras.approved?.length ? `Take in that they're happy with ${extras.approved.join(' and ')}.` : '',
+        extras.kept?.length
+          ? `They weren't sure about ${extras.kept.join(' and ')} but named nothing to change: say you'll keep ${extras.kept.length > 1 ? 'them' : 'it'} as ${extras.kept.length > 1 ? 'they are' : 'it is'}, simply, and that they can say what to change any time.`
+          : '',
         extras.redrawing?.length
           ? `Say you're redrawing ${extras.redrawing.join(' and ')} with their change; it will appear on the right.`
           : '',

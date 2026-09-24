@@ -3,7 +3,16 @@ import type { CutPlan } from '../continuity';
 import { framePrompt, writingIn } from '../frames';
 import { VAGUE } from '../producer';
 import { asInstruction } from '../session';
-import { DREAM_QUALITY, groupMembers, isGroup, type Item, sheetPrompt, styleBlock, toldColours } from '../sheets';
+import {
+  DREAM_QUALITY,
+  groupMembers,
+  isGroup,
+  type Item,
+  shapeOf,
+  sheetPrompt,
+  styleBlock,
+  toldColours,
+} from '../sheets';
 
 const style = {
   id: 'd',
@@ -299,6 +308,16 @@ describe('a group and someone in it who has their own sketch', () => {
     const { prompt } = framePrompt(moment, [family, baby, roof], style);
     expect(prompt).toContain('The baby in it is the baby, drawn from Image 2: one baby, never two.');
     expect(prompt).toContain("They are the baby in the family's picture (Image 1): one and the same");
+  });
+});
+
+describe('the shape of each picture', () => {
+  test('is sent as a setting: a person tall, a group and a place wide, a thing square', () => {
+    const base = { fields: {}, status: 'waiting' as const, version: 0 };
+    expect(shapeOf({ ...base, id: 'p1', kind: 'character', name: 'the conductor' })).toBe('2:3');
+    expect(shapeOf({ ...base, id: 'p2', kind: 'character', name: 'the family', several: true })).toBe('4:3');
+    expect(shapeOf({ ...base, id: 'l1', kind: 'location', name: 'the streetcar' })).toBe('16:9');
+    expect(shapeOf({ ...base, id: 't1', kind: 'prop', name: 'the lever' })).toBe('1:1');
   });
 });
 

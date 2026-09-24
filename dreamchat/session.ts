@@ -73,6 +73,8 @@ import {
   PROVIDER,
   profileOf,
   type SheetEngine,
+  type Shape,
+  shapeOf,
   sheetPrompt,
 } from './sheets';
 import type { JudgedCheck, JudgeOptions } from './judge';
@@ -628,7 +630,7 @@ export class SessionStore {
       }
     // Their answer to the sketches is applied before the next move is chosen: it can settle the
     // last one, or start a new version.
-    const reviewed = { approved: [] as string[], redrawing: [] as string[] };
+    const reviewed = { approved: [] as string[], redrawing: [] as string[], kept: [] as string[] };
     let whichUnclear = false;
     if ((s.phase === 'review' || s.phase === 'frames') && pending.length) {
       const reaction = overlaid.signals.sketch_reaction ?? 'no_reaction';
@@ -652,11 +654,25 @@ export class SessionStore {
           this.reviewSketch(s, it, 'approved', `They said it looks right: "${text.slice(0, 400)}"`);
           reviewed.approved.push(it.name);
         }
-      for (const it of wrong) {
-        this.reviewSketch(s, it, 'rejected', `They said it isn't right: "${text.slice(0, 400)}"`);
+      for (const it of [...wrong]) {
         const before = structuredClone(it.fields);
-        if (this.deps.reviseItem)
-          it.fields = await this.deps.reviseItem(it.name, it.fields, renderTranscript(s.transcript));
+        const revised = this.deps.reviseItem
+          ? await this.deps.reviseItem(it.name, it.fields, renderTranscript(s.transcript))
+          : it.fields;
+        // Nothing is drawn again without something to draw differently: "it looks a little off,
+        // I can't say what, go with it" redrew the family unchanged (24 Sep). What they point at
+        // goes into the redraw; a vague unease leaves the picture as it is.
+        const changed = JSON.stringify(revised) !== JSON.stringify(before);
+        const named = changed ? null : await this.namedFlaw(text, it.isDreamer ? 'you' : it.name);
+        if (!changed && !named) {
+          this.reviewSketch(s, it, 'left', `They were unsure but named nothing to change: "${text.slice(0, 400)}"`);
+          wrong.splice(wrong.indexOf(it), 1);
+          reviewed.kept.push(it.name);
+          continue;
+        }
+        this.reviewSketch(s, it, 'rejected', `They said it isn't right: "${text.slice(0, 400)}"`);
+        it.fields = revised;
+        if (named) it.repairFor = [`${named} (they said: "${text.slice(0, 200)}")`];
         it.announced = false;
         it.review = undefined;
         it.continuityApproved = false;
@@ -783,6 +799,7 @@ export class SessionStore {
     if (s.build && (move.kind === 'frames_drawing' || move.kind === 'all_done')) {
       extras.approved = reviewed.approved;
       extras.redrawing = reviewed.redrawing;
+      extras.kept = reviewed.kept;
       const moments = (s.build.frames ?? []).filter((i) => i.kind === 'cut');
       extras.frameCount = moments.length;
       extras.failed = moments.filter((i) => i.status === 'failed').map((i) => i.name);
@@ -807,6 +824,7 @@ export class SessionStore {
     if (s.build && (move.kind === 'while_drawing' || move.kind === 'sheets_done' || move.kind === 'ask_which')) {
       extras.approved = reviewed.approved;
       extras.redrawing = reviewed.redrawing;
+      extras.kept = reviewed.kept;
       extras.shown = pending.map((i) => i.name);
       if (move.kind === 'while_drawing') {
         const fresh = s.build.items.filter((i) => i.status === 'ready' && !i.announced);
@@ -1169,6 +1187,27 @@ export class SessionStore {
     return true;
   }
 
+  /**
+   * The flaw they point at in a picture, said as an instruction for its redraw, or null when they
+   * only feel something is off.
+   */
+  private async namedFlaw(text: string, name: string): Promise<string | null> {
+    const call = await this.deps.jev(text, {
+      named: {
+        type: 'noul',
+        instructions: `The person was shown a picture of ${name} from their dream. In this message, "${text.slice(0, 300)}", do they name something specific that is wrong with it (something missing or extra, or the wrong colour, shape, size, age, clothes or look), rather than only a feeling that it is off?`,
+        criteria: {
+          true: 'they point at something specific to change',
+          false: "only a vague feeling, or that they can't say what",
+        },
+      },
+    });
+    const a = call.answers?.named;
+    // No reading, no dropping their correction: only a clear "just a feeling" keeps the picture.
+    if (a && a.type === 'noul' && a.noul < 0.5) return null;
+    return `put right what they pointed at in the picture of ${name}`;
+  }
+
   private async gateFindings(
     s: Session,
     item: Item,
@@ -1259,6 +1298,7 @@ export class SessionStore {
     await this.launch(s, ghost, {
       prompt,
       references,
+      shape: shapeOf(sheet),
       intent: `Ghost reference: ${ghost.name}`,
       reason: `An in-between reference the storyboard needs for continuity (${g.why}); approved within the ${IMAGE_CAP}-picture limit.`,
     });
@@ -1275,6 +1315,7 @@ export class SessionStore {
       reason: string;
       intent?: string;
       record?: CutRecord;
+      shape?: Shape;
     },
   ): Promise<void> {
     item.status = 'drawing';
@@ -1300,6 +1341,7 @@ export class SessionStore {
         maxUsd: MAX_PER_IMAGE,
         intent: job.intent,
         record: job.record,
+        shape: job.shape,
       })
       .then(
         (r) =>
@@ -1490,7 +1532,9 @@ export class SessionStore {
               if (!it) return;
               it.jobId = r.jobId;
               it.recipeId = r.recipeId;
-              if (unknown) it.fields = snapshot.fields;
+              // The words it was drawn from, proposed or reworded on the way, are its words now:
+              // the conductor was drawn from a full look and kept as "adult; uniform" (24 Sep).
+              it.fields = snapshot.fields;
               it.gate = snapshot.gate;
               it.held = undefined;
               spend(x, r.usd);
