@@ -205,6 +205,44 @@ or paid for. A held moment is reworded once, in text, then read again. A held sk
 proposed afresh, then the person is asked. `resume.ts` and `plan.ts --gate` put held pictures
 through the gate again.
 
+Each kind of picture is asked what matters for it:
+- **A sketch** is asked whether its look is given (age, build, hair, clothes; a place's kind,
+  layout and contents; a thing's shape, materials, colours).
+- **An in-between picture** is an edit, and is asked whether its one change is plain and what
+  stays. Asked as a scene, every in-between picture of five dreams was held.
+- **A moment's contradiction reading** rises with how much it asks. Between 0.45 and 0.55 it is
+  held only when leaving one of its lines out lowers the reading by 0.08 or more. The finding
+  names that line, so a rewording knows where to look.
+
+### How pictures are prompted
+
+What Nano Banana Pro follows, from its makers' guidance, from the first Strawberry Studio's
+lessons and from Jev's readings of every moment in five dreams (`frames.ts`, `sheets.ts`):
+
+- **One image says who each person is: their sketch.** A second face image for the same person
+  pulls the model off them. The first Strawberry Studio lost a character's glasses to an
+  expression variant beside the sketch, and Jev read two such images as claiming the same thing.
+  The picture they were last seen in goes in only for someone without a sketch. A picture from
+  the other side of a place gives its light only, and says who in it is not in this one.
+- **Every image is numbered and says what to take from it and what to leave out** ("Nothing
+  else from it: not its pose, background or framing"). Without the leave-out, what each image is
+  for read less clear (0.75 against 0.70).
+- **Everyone in view is listed with their look**, even though their images carry it. Said only
+  beside the images, moments read as less clear (0.82 against 0.78).
+- **Lines about the whole picture say what is there**: surfaces free of writing and badges, one
+  picture filling the frame, the dream's strangeness as solid and ordinary as everything around
+  it. The line against double exposure stays as it was, since it fixed a failure we saw.
+- **The frame's shape is said in words and sent as a setting**, with 2K resolution: each sketch
+  in its own shape, every moment 16:9.
+- **A moment's part in the story** ("the turn", "the waking") stays on its record. A picture can
+  only draw it by inventing something.
+- **In a style made in one colour**, colours in a look that was filled in are said as tones
+  ("medium brown hair" is "dark hair"), and every image is told to draw its person in the
+  picture's shades. A colour of its own is a serious failure, repaired like the wrong clothes.
+  What the person said keeps its colour.
+- **A redraw is told what to put right as instructions**, the palette by name and never as hex
+  codes, with what the judge saw last time.
+
 ### Feeling like a dream
 
 Each moment says what in it is impossible, or wrong the way dreams are, that the dreamer simply
