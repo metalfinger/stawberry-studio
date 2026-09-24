@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Breakdown } from '../producer';
-import { applyPrep, planShots, type Session } from '../session';
+import { applyPrep, planShots, reconcileGhosts, type Session } from '../session';
 
 const detail = (value: string | null = null) => ({ value, said: false });
 
@@ -50,6 +50,8 @@ describe('the shots, planned while the chat goes on', () => {
         briefs.push(moment);
         return 'A first-person view, turned left to the board on the wall.';
       },
+      // The script supervisor finds a lasting change the breakdown missed.
+      supervise: async () => [{ moment: 'm1', who: 't1', what: 'its slats', now: 'all blank but one' }],
       dir,
     });
     // Every camera is worked out, a previs and a brief each: seen from outside, and through the
@@ -67,13 +69,56 @@ describe('the shots, planned while the chat goes on', () => {
     // Kept on the conversation for this dream, its floor plans with it; never for a dream since changed.
     const s: Pick<Session, 'draft' | 'prep'> = { draft: { status: 'ready', basedOn: 1, breakdown: b } };
     applyPrep(s, prep);
-    expect(s.prep).toBe(prep);
+    expect(s.prep?.shots).toBe(prep.shots);
     expect(s.draft?.breakdown?.scenes[0].blocking?.front).toBe('the stove');
+    // The change is written into the moment it happens at, and the plan is known by the dream as it
+    // now stands: planned again for it, it would not be planned twice.
+    expect(s.draft?.breakdown?.scenes[0].moments[0].leaves).toContainEqual({ who: 't1', what: 'its slats', now: 'all blank but one' });
+    expect(s.prep?.basedOn).not.toBe(prep.basedOn);
     const changed: Pick<Session, 'draft' | 'prep'> = {
       draft: { status: 'ready', basedOn: 2, breakdown: { ...kitchen(), title: 'another dream' } },
     };
     applyPrep(changed, prep);
     expect(changed.prep).toBeUndefined();
     expect(changed.draft?.breakdown?.scenes[0].blocking).toBeUndefined();
+  });
+});
+
+describe('a plan made again mid-dream', () => {
+  test('knows its in-between references by what they show, not their number', () => {
+    const state = (now: string, since: string) => ({ who: 'p1', what: 'head', now, since });
+    const ghost = (id: string, now: string, since: string, after?: string) => ({
+      id,
+      kind: 'state' as const,
+      of: 'p1',
+      label: now,
+      change: now,
+      from: null,
+      ...(after ? { after } : {}),
+      needs: after ? [after] : [],
+      usedBy: [],
+      why: '',
+      state: state(now, since),
+      depth: 1,
+    });
+    // Drawn before the ice block was found: g1 is the horse head.
+    const drawn = [{ id: 'g1', kind: 'ghost', name: 'horse', fields: {}, status: 'ready', version: 1, ghost: ghost('g1', 'a horse head', 'm5') }];
+    // Planned again with the ice block first: g1 is the ice block, g2 the horse head after it.
+    const plan = {
+      cuts: [
+        { id: 'm4', refs: [{ id: 'g1', kind: 'ghost', role: 'identity', carries: '' }], needs: ['g1'] },
+        { id: 'm5', refs: [{ id: 'g2', kind: 'ghost', role: 'identity', carries: '' }], needs: ['g2'] },
+      ],
+      ghosts: [ghost('g1', 'an ice block', 'm3'), ghost('g2', 'a horse head', 'm5', 'g1')],
+      issues: [],
+    };
+    const out = reconcileGhosts(plan as never, drawn as never);
+    // The horse head keeps the picture drawn for it; the ice block gets an id no picture has.
+    expect(out.ghosts.map((g) => [g.id, g.state?.now])).toEqual([
+      ['g2', 'an ice block'],
+      ['g1', 'a horse head'],
+    ]);
+    expect(out.ghosts[1].after).toBe('g2');
+    expect(out.cuts.map((c) => c.needs)).toEqual([['g2'], ['g1']]);
   });
 });

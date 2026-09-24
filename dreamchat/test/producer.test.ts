@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { type Breakdown, completeViews, normalizeBreakdown, readBlocking, VAGUE } from '../producer';
+import { addChanges, type Breakdown, completeViews, normalizeBreakdown, readBlocking, VAGUE } from '../producer';
 
 const detail = (value: string | null, said = false) => ({ value, said });
 const person = (id: string, name: string, identity: string) => ({
@@ -139,5 +139,30 @@ describe('the floor plan a model gives', () => {
     expect(plan.spots.find((s) => s.id === 'x1')).toMatchObject({ fixture: true, name: 'the autoclave', size: [0.9, 0.7, 1.5] });
     expect(Object.keys(plan.moves ?? {})).toEqual(['m2', 'm3']);
     expect(plan.moves?.m2[0]).toMatchObject({ id: 'p1', y: 8.5, faces: 'back' });
+  });
+});
+
+describe('a change the script supervisor finds', () => {
+  test('is written where it happens and carried into every later moment that shows them, until the same part changes', () => {
+    const b = {
+      scenes: [
+        {
+          id: 's1',
+          moments: [
+            { ...moment('m3', 'She comes back with a block of ice for a head.'), leaves: [] },
+            { ...moment('m4', 'The ice melts and carves itself.'), leaves: [], states: [] },
+            { ...moment('m5', 'It is a horse head of ice.'), leaves: [{ who: 'p1', what: 'head', now: 'a horse head of clear ice' }] },
+            { ...moment('m6', 'She stands there.'), leaves: [] },
+          ],
+        },
+      ],
+    } as unknown as Breakdown;
+    addChanges(b, [{ moment: 'm3', who: 'p1', what: 'head', now: 'an irregular block of glittering ice' }]);
+    const [m3, m4, m5, m6] = b.scenes[0].moments;
+    expect(m3.leaves).toEqual([{ who: 'p1', what: 'head', now: 'an irregular block of glittering ice' }]);
+    expect(m4.states).toEqual([{ who: 'p1', what: 'head', now: 'an irregular block of glittering ice', since: 'm3' }]);
+    // The horse head replaces it from m5 on: nothing of the ice block is carried past it.
+    expect(m5.states ?? []).toEqual([]);
+    expect(m6.states ?? []).toEqual([]);
   });
 });

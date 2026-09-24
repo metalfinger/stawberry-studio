@@ -466,6 +466,87 @@ export function readBlocking(b: Breakdown, raw: unknown, notes: string[] = []): 
   return { breakdown: out, notes };
 }
 
+const CHANGES = `You are the script supervisor of a dream being drawn as pictures, one picture per moment, in order. Each moment lists in "leaves" the changes to how someone or something looks that the pictures after it must keep showing. Read every moment's action: where it changes how someone or something looks in a way that lasts into the moments after it (a part of them replaced, turned into something else, a new colour or shape), and its "leaves" does not already have that change, give it, at the moment it first happens. Never where someone is or what they are doing: only how they look. Say "now" as what it looks like, in a few words from the dream.
+
+Return JSON only: {"add": [{"moment": "m3", "who": "p1", "what": "head", "now": "an irregular block of glittering ice"}]}, with "add" empty when nothing is missing.`;
+
+/** A lasting change to how someone or something looks, at the moment it first happens. */
+export type Change = { moment: string; who: string; what: string; now: string };
+
+/**
+ * The lasting changes the breakdown missed, read from each moment's own words by a script
+ * supervisor: a woman came back with a block of ice for a head, and only the horse's head it became
+ * was recorded, so the melting was told to keep her face (24 Sep). Only changes to people and
+ * things of the dream, at moments of it, not already there.
+ */
+export async function superviseChanges(b: Breakdown): Promise<Change[]> {
+  const moments = b.scenes.flatMap((sc) => sc.moments);
+  const brief = {
+    people: b.people.map((p) => ({ id: p.id, name: p.is_dreamer ? 'the dreamer' : p.name })),
+    things: b.things.map((t) => ({ id: t.id, name: t.name })),
+    moments: moments.map((m) => ({ id: m.id, action: m.action, who: m.visible, things: m.things, leaves: m.leaves })),
+  };
+  try {
+    const res = await callDeepseek(
+      [
+        { role: 'system', content: CHANGES },
+        { role: 'user', content: JSON.stringify(brief) },
+      ],
+      { json: true, thinking: 'low' },
+    );
+    const ids = new Set([...b.people.map((p) => p.id), ...b.things.map((t) => t.id)]);
+    return list((JSON.parse(res.content) as { add?: unknown }).add)
+      .map((x) => x as Record<string, unknown>)
+      .filter(
+        (x) =>
+          typeof x.moment === 'string' &&
+          moments.some((m) => m.id === x.moment) &&
+          typeof x.who === 'string' &&
+          ids.has(x.who) &&
+          typeof x.what === 'string' &&
+          !!x.what.trim() &&
+          typeof x.now === 'string' &&
+          !!x.now.trim(),
+      )
+      .map((x) => ({ moment: x.moment as string, who: x.who as string, what: str(x.what, 40), now: str(x.now, 120) }))
+      .filter(
+        (c) =>
+          !(moments.find((m) => m.id === c.moment)!.leaves ?? []).some(
+            (l) => l.who === c.who && bareWords(l.what) === bareWords(c.what),
+          ),
+      );
+  } catch {
+    return [];
+  }
+}
+
+/** A change's part, for comparing: "the head", "head" and "Head" are one. */
+const bareWords = (x: string) => x.toLowerCase().replace(/^(the|a|an|its|their|his|her)\s+/, '').trim();
+
+/**
+ * The changes the supervisor found, written into the moments they happen at, and carried into every
+ * later moment of the dream that shows who changed, until the same part of them changes again. Found
+ * after the continuity was linked, the ice head was written at the moment she came back and never
+ * reached the melting after it (24 Sep).
+ */
+export function addChanges(b: Breakdown, changes: Change[]): void {
+  const all = b.scenes.flatMap((sc) => sc.moments);
+  for (const c of changes) {
+    const at = all.findIndex((x) => x.id === c.moment);
+    const m = all[at];
+    if (!m) continue;
+    m.leaves ??= [];
+    if (m.leaves.some((l) => l.who === c.who && bareWords(l.what) === bareWords(c.what))) continue;
+    m.leaves.push({ who: c.who, what: c.what, now: c.now });
+    for (const later of all.slice(at + 1)) {
+      if ((later.leaves ?? []).some((l) => l.who === c.who && bareWords(l.what) === bareWords(c.what))) break;
+      if (![...later.visible, ...later.things].includes(c.who)) continue;
+      const kept = (later.states ?? []).filter((st) => !(st.who === c.who && bareWords(st.what) === bareWords(c.what)));
+      later.states = [...kept, { who: c.who, what: c.what, now: c.now, since: c.moment }];
+    }
+  }
+}
+
 const SHOT = `You are the director of photography for one picture from someone's dream. An image model will draw it from your shot description, and follows it closely. Below are the moment and the fixed facts of the shot, worked out from a floor plan of the place: where the camera is, which way it looks, who and what is where in the picture (left, middle or right; close or far), and what is outside it.
 
 Write the shot as a cinematographer briefs a camera crew, in four to six plain sentences:

@@ -43,7 +43,9 @@ import {
   type Thinking,
 } from './llm';
 import {
+  addChanges,
   type Breakdown,
+  type Change,
   callProducer,
   type Detail,
   moments,
@@ -214,6 +216,8 @@ export type Prep = {
   shots: Record<string, { text: string; view: string }>;
   /** Each moment's previs as rendered then: a file in the conversation's folder. */
   previs: Record<string, string>;
+  /** Lasting changes to how someone looks the breakdown missed, found then and written into it. */
+  changes?: Change[];
   /** How long the planning took. */
   ms: number;
 };
@@ -243,15 +247,20 @@ const fixtureName = (b: Breakdown, id: string) =>
 export async function planShots(
   b: Breakdown,
   style: StyleOption,
-  deps: { block?: StoreDeps['block']; shot?: StoreDeps['shot']; dir?: string },
+  deps: { block?: StoreDeps['block']; shot?: StoreDeps['shot']; supervise?: StoreDeps['supervise']; dir?: string },
 ): Promise<Prep> {
   const t0 = Date.now();
   const draft: Breakdown = structuredClone(b);
   completeViews(draft);
-  const blocked =
+  // The script supervisor and the floor plan read the same dream, at once.
+  const [changes, blockedOrNot] = await Promise.all([
+    deps.supervise ? deps.supervise(draft).catch(() => []) : Promise.resolve([] as Change[]),
     deps.block && draft.scenes.some((sc) => !sc.blocking)
-      ? ((await deps.block(draft).catch(() => null))?.breakdown ?? draft)
-      : draft;
+      ? deps.block(draft).then((r) => r.breakdown).catch(() => draft)
+      : Promise.resolve(draft),
+  ]);
+  const blocked = blockedOrNot;
+  addChanges(blocked, changes);
   const plan = planContinuity(blocked);
   const dreamer = blocked.people.find((p) => p.is_dreamer)?.id;
   const prep: Prep = {
@@ -259,6 +268,7 @@ export async function planShots(
     blocking: Object.fromEntries(blocked.scenes.filter((sc) => sc.blocking).map((sc) => [sc.id, sc.blocking as Blocking])),
     shots: {},
     previs: {},
+    changes,
     ms: 0,
   };
   await Promise.all(
@@ -289,12 +299,58 @@ export async function planShots(
   return prep;
 }
 
+/**
+ * A plan made again, its in-between references known by what they show rather than their number:
+ * found later, a change before the others renumbered them, and the moment of the melting would have
+ * been drawn from the picture of the horse's head (24 Sep). A reference already drawn keeps its
+ * id; one not drawn gets an id no picture has.
+ */
+export function reconcileGhosts(plan: ContinuityPlan, frames: Item[]): ContinuityPlan {
+  const drawn = frames.filter((f) => f.kind === 'ghost' && f.ghost);
+  const same = (a: ContinuityPlan['ghosts'][number], b: ContinuityPlan['ghosts'][number]) =>
+    a.kind === b.kind &&
+    a.of === b.of &&
+    (a.kind === 'view'
+      ? a.looksAt === b.looksAt
+      : a.state?.what === b.state?.what && a.state?.now === b.state?.now);
+  const used = new Set(frames.map((f) => f.id));
+  const rename = new Map<string, string>();
+  for (const g of plan.ghosts) {
+    const match = drawn.find((f) => same(f.ghost!, g));
+    if (match) rename.set(g.id, match.id);
+  }
+  for (const g of plan.ghosts) {
+    if (rename.has(g.id)) continue;
+    let n = 1;
+    while (used.has(`g${n}`) || [...rename.values()].includes(`g${n}`)) n++;
+    rename.set(g.id, `g${n}`);
+    used.add(`g${n}`);
+  }
+  const to = (id: string) => rename.get(id) ?? id;
+  return {
+    ...plan,
+    ghosts: plan.ghosts.map((g) => ({
+      ...g,
+      id: to(g.id),
+      needs: g.needs.map(to),
+      ...(g.after ? { after: to(g.after) } : {}),
+    })),
+    cuts: plan.cuts.map((c) => ({
+      ...c,
+      needs: c.needs.map(to),
+      refs: c.refs.map((r) => (r.kind === 'ghost' ? { ...r, id: to(r.id) } : r)),
+    })),
+  };
+}
+
 /** The shots planned in the background, kept on the conversation if they are for this dream. */
 export function applyPrep(s: Pick<Session, 'draft' | 'prep'>, prep: Prep): void {
   const b = s.draft?.breakdown;
   if (!b || planKey(b) !== prep.basedOn) return;
   for (const sc of b.scenes) sc.blocking ??= prep.blocking[sc.id];
-  s.prep = prep;
+  addChanges(b, prep.changes ?? []);
+  // Known from now on by the dream as it stands, the changes found written into it.
+  s.prep = { ...prep, basedOn: planKey(b) };
 }
 
 /** What a dream's plans are made from, whatever floor plans it has been given since. */
@@ -348,6 +404,8 @@ export type StoreDeps = {
   ) => Promise<Record<string, Detail> | null>;
   /** A moment's shot briefed from its worked-out view, as a director of photography would. */
   shot?: (moment: string, facts: string, medium: string, mustName: string[], before?: string[]) => Promise<string | null>;
+  /** The lasting changes to how someone looks that the breakdown missed, read by a script supervisor. */
+  supervise?: (b: Breakdown) => Promise<Change[]>;
   /** A person's correction of a picture, as an instruction for its next version; "" when its instructions already give it. */
   fix?: (words: string, instructions: string) => Promise<string | null>;
   /** Each scene's floor plan, made before any moment is drawn: where everyone and everything is. */
@@ -1164,6 +1222,7 @@ export class SessionStore {
     const work = planShots(b, style, {
       block: this.deps.block,
       shot: this.deps.shot,
+      supervise: this.deps.supervise,
       dir: this.deps.dir ? join(this.deps.dir, id) : undefined,
     }).catch(() => null);
     this.preps.set(id, work);
@@ -1573,7 +1632,12 @@ export class SessionStore {
 
   private async replan(s: Session, opts: { syncRecords?: boolean } = {}): Promise<void> {
     if (!s.build?.frames || !s.draft?.breakdown) return;
-    const plan = planContinuity(s.draft.breakdown);
+    const plan = reconcileGhosts(planContinuity(s.draft.breakdown), s.build.frames);
+    // In-between references the plan now needs and none was drawn for are added, to be drawn.
+    const ids = s.production?.result?.ids ?? {};
+    for (const g of buildGhosts(plan))
+      if (!s.build.frames.some((f) => f.id === g.id))
+        s.build.frames.push({ ...g, nodeId: ids[g.ghost?.of ?? ''] });
     const known = new Set(s.build.frames.map((f) => f.id));
     for (const f of s.build.frames) {
       const next = plan.cuts.find((c) => c.id === f.id);
