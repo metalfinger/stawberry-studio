@@ -26,13 +26,29 @@ export type Spot = {
   size?: [number, number, number];
   /** How far a crowd spreads, in metres: across the way they face, and deep. */
   spread?: [number, number];
+  /**
+   * A fixture of the place itself (an autoclave, a stove, a window): no one's sketch, drawn as the
+   * place's sketch shows it, and there from the start. Its name is what it is called.
+   */
+  fixture?: boolean;
+  name?: string;
 };
+
+/** Where someone has moved to at a moment: their new spot, which way they face, how they are. */
+export type Move = { id: string; x: number; y: number; faces?: string; pose?: Spot['pose'] };
 
 /**
  * A scene's floor plan: what its front is, and where everyone and everything is. Indoors, the plan's
- * edges are the walls (and `ceiling` metres up, the ceiling); outdoors, the ground runs on.
+ * edges are the walls (and `ceiling` metres up, the ceiling); outdoors, the ground runs on. People
+ * who move during the scene have a move at each moment they are somewhere else, by moment id.
  */
-export type Blocking = { front: string; spots: Spot[]; indoors?: boolean; ceiling?: number };
+export type Blocking = {
+  front: string;
+  spots: Spot[];
+  indoors?: boolean;
+  ceiling?: number;
+  moves?: Record<string, Move[]>;
+};
 
 type Vec = { x: number; y: number };
 

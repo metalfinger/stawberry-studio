@@ -5,7 +5,7 @@
 // Every detail it writes is marked as said by the person, or guessed. Jev then checks each
 // "said" against the person's own messages (ground.ts). Strawberry's own rule is that missing
 // facts are unknown, not invented defaults presented as the user's decisions.
-import type { Blocking, Spot } from './blocking';
+import type { Blocking, Move, Spot } from './blocking';
 import { type ChatMessage, callDeepseek, type Thinking } from './llm';
 
 /** A detail and whether the person said it. `null` when nobody knows and nothing is needed. */
@@ -328,14 +328,16 @@ export async function rewordLook(
 
 const BLOCK = `You are a storyboard artist making the floor plan of each scene of a dream before anything in it is drawn, so that every picture of the scene agrees about where everyone and everything is.
 
-For each scene, seen from above: its "front" (what the people in it face, or its main feature, in a few words: "the screen", "the window", "the stove"), whether it is indoors (a room, whose walls are the plan's edges) and how high its ceiling is, and a spot for every person and thing that is ever in it. x runs across the place from its left side (0) to its right side (10), for someone facing its front; y runs from its front (0) to its back (10). One unit is a metre.
-- Keep everything the dream says: who sits or stands next to whom and on which side, what is next to what, who is in front of or behind whom, what faces what.
+For each scene, seen from above: its "front" (the side of the place its people face, or its main side, in a few words: "the screen", "the window wall", "the wall with the stove"), whether it is indoors (a room, whose walls are the plan's edges) and how high its ceiling is, and a spot for every person and thing that is ever in it. x runs across the place from its left side (0) to its right side (10), for someone facing its front; y runs from its front (0) to its back (10). One unit is a metre.
+- Keep everything the dream says: who sits or stands next to whom and on which side, what is next to what, who is in front of or behind whom, what faces what. Someone "by" or "at" something is within a metre of it.
 - Where it says nothing, choose what is ordinary for such a place, at the distances it really has (a cinema's front row is a few metres from its screen; people side by side sit about 0.8 apart), and put people who are together side by side.
-- People face the front unless the dream says otherwise: "faces" is "front", "back", "left", "right", or the id of whom or what they face. Each person is "sitting", "standing" or "lying", as they are in the scene.
+- "faces" is whom or what someone faces: an id from this plan, or "front", "back", "left" or "right". People talking together face each other; otherwise people face the front. Each person is "sitting", "standing" or "lying", as they are in the scene.
 - A thing's spot is its middle, with its "size" in metres: [across, deep, high], across being side to side as it faces. Someone sitting on it has their spot on it.
+- The place's own fixtures that the moments happen by, face or act on (an autoclave, a stove, a window, a door, a counter) get a spot too, with an id x1, x2 and so on, their "name" in a few words and their size. They are part of the place, not people or things of the story.
 - A crowd or an audience is one spot with "many": true, at the middle of where they are, with "spread": [across, deep] in metres for the ground they fill, and how they are ("sitting" in rows of seats, "standing").
+- When someone moves during the scene (walks off, comes back, sits down, turns to someone), give where they are in each moment's picture where that has changed, by the moment's id: "moves": {"m2": [{"id": "p1", "x": 4, "y": 8, "faces": "back", "pose": "standing"}]}. A move holds until their next one, so someone who comes back needs a move back: in the moment they return they are where it has them (in front of whoever they come back to, facing them), and they stay there until they move again.
 
-Return JSON only: {"scenes": [{"id": "s1", "front": "", "indoors": true, "ceiling": 3.5, "spots": [{"id": "p1", "x": 4, "y": 3, "faces": "front", "pose": "sitting"}, {"id": "t1", "x": 4, "y": 3, "size": [1.9, 0.9, 0.85]}, {"id": "p3", "x": 5, "y": 7, "many": true, "pose": "sitting", "spread": [9, 5]}]}]}`;
+Return JSON only: {"scenes": [{"id": "s1", "front": "", "indoors": true, "ceiling": 3.5, "spots": [{"id": "p1", "x": 4, "y": 3, "faces": "p2", "pose": "standing"}, {"id": "t1", "x": 4, "y": 3, "size": [1.9, 0.9, 0.85]}, {"id": "x1", "name": "the stove", "x": 2, "y": 0.5, "size": [0.8, 0.6, 0.9]}, {"id": "p3", "x": 5, "y": 7, "many": true, "pose": "sitting", "spread": [9, 5]}], "moves": {}}]}`;
 
 /**
  * Each scene's floor plan, made before any picture: where everyone and everything is. The moment
@@ -353,31 +355,53 @@ export async function blockScenes(b: Breakdown): Promise<{ breakdown: Breakdown;
     scenes: b.scenes.map((sc) => ({
       id: sc.id,
       place: sc.place,
-      moments: sc.moments.map((m) => ({ action: m.action, who: m.visible, things: m.things, faces: m.looks_at })),
+      moments: sc.moments.map((m) => ({ id: m.id, action: m.action, who: m.visible, things: m.things, faces: m.looks_at })),
     })),
   };
   let raw: unknown;
   try {
+    // Made in the background while the chat goes on, so it thinks: without, a woman who came
+    // back was left at the far end of the room for the rest of the scene (24 Sep).
     const res = await callDeepseek(
       [
         { role: 'system', content: BLOCK },
         { role: 'user', content: JSON.stringify(brief) },
       ],
-      { json: true, thinking: PRODUCER_THINKING },
+      { json: true, thinking: 'low' },
     );
     raw = JSON.parse(res.content);
   } catch (e) {
     notes.push(`blocking: ${String(e).slice(0, 160)}`);
     return { breakdown: out, notes };
   }
+  return readBlocking(out, raw, notes);
+}
+
+/**
+ * The floor plans a model gave, checked against the dream: only its own people and things and the
+ * place's fixtures, whom or what someone faces only if it is in the plan, moves only for moments
+ * of the scene. A scene missing someone is left without a plan.
+ */
+export function readBlocking(b: Breakdown, raw: unknown, notes: string[] = []): { breakdown: Breakdown; notes: string[] } {
+  const out: Breakdown = structuredClone(b);
   const given = list((raw as { scenes?: unknown })?.scenes);
   for (const sc of out.scenes) {
-    const g = given.find((x) => (x as { id?: unknown })?.id === sc.id) as { front?: unknown; spots?: unknown } | undefined;
+    const g = given.find((x) => (x as { id?: unknown })?.id === sc.id) as
+      | { front?: unknown; spots?: unknown; moves?: unknown }
+      | undefined;
     if (!g) continue;
     const ids = new Set(sc.moments.flatMap((m) => [...m.visible, ...m.things]));
+    // A fixture of the place: its own id and name, as the plan gives it.
+    const fixture = (x: Record<string, unknown>) => typeof x.id === 'string' && /^x\d+$/.test(x.id) && typeof x.name === 'string' && !!x.name.trim();
     const spots: Spot[] = list(g.spots)
       .map((x) => x as Record<string, unknown>)
-      .filter((x) => typeof x.id === 'string' && ids.has(x.id) && Number.isFinite(Number(x.x)) && Number.isFinite(Number(x.y)))
+      .filter(
+        (x) =>
+          typeof x.id === 'string' &&
+          (ids.has(x.id) || fixture(x)) &&
+          Number.isFinite(Number(x.x)) &&
+          Number.isFinite(Number(x.y)),
+      )
       .map((x): Spot => {
         const person = b.people.some((p) => p.id === x.id);
         const many = x.many === true || !!b.people.find((p) => p.id === x.id)?.extras;
@@ -397,8 +421,34 @@ export async function blockScenes(b: Breakdown): Promise<{ breakdown: Breakdown;
           ...(person && ['sitting', 'standing', 'lying'].includes(x.pose as string) ? { pose: x.pose as Spot['pose'] } : {}),
           ...(!person && size ? { size: size as [number, number, number] } : {}),
           ...(many && spread ? { spread: spread as [number, number] } : {}),
+          ...(fixture(x) ? { fixture: true, name: str(x.name, 60) } : {}),
         };
       });
+    // Whom or what someone faces must be in the plan: "t1", in a room with no t1, turned two
+    // people talking to face a wall (24 Sep).
+    const known = new Set(spots.map((s) => s.id));
+    const faces = (f: unknown) =>
+      typeof f === 'string' && (['front', 'back', 'left', 'right'].includes(f) || known.has(f)) ? f : undefined;
+    for (const s of spots) if (s.faces && !faces(s.faces)) delete s.faces;
+    const moments = new Set(sc.moments.map((m) => m.id));
+    const people = new Set(spots.filter((s) => s.kind === 'person' && !s.many).map((s) => s.id));
+    const moves: Record<string, Move[]> = {};
+    for (const [mid, list_] of Object.entries((g.moves ?? {}) as Record<string, unknown>)) {
+      if (!moments.has(mid)) continue;
+      const mv = list(list_)
+        .map((x) => x as Record<string, unknown>)
+        .filter((x) => typeof x.id === 'string' && people.has(x.id) && Number.isFinite(Number(x.x)) && Number.isFinite(Number(x.y)))
+        .map(
+          (x): Move => ({
+            id: x.id as string,
+            x: Math.max(0, Math.min(10, Number(x.x))),
+            y: Math.max(0, Math.min(10, Number(x.y))),
+            ...(faces(x.faces) ? { faces: faces(x.faces) } : {}),
+            ...(['sitting', 'standing', 'lying'].includes(x.pose as string) ? { pose: x.pose as Spot['pose'] } : {}),
+          }),
+        );
+      if (mv.length) moves[mid] = mv;
+    }
     const missing = [...ids].filter((id) => !spots.some((s) => s.id === id));
     if (missing.length) {
       notes.push(`blocking: scene ${sc.id} has no spot for ${missing.join(', ')}; left without a plan`);
@@ -408,6 +458,7 @@ export async function blockScenes(b: Breakdown): Promise<{ breakdown: Breakdown;
     sc.blocking = {
       front: str(g.front, 60) || 'the front',
       spots,
+      ...(Object.keys(moves).length ? { moves } : {}),
       ...((g as { indoors?: unknown }).indoors === true ? { indoors: true } : {}),
       ...((g as { indoors?: unknown }).indoors === true && Number.isFinite(ceiling) && ceiling >= 2 && ceiling <= 30 ? { ceiling } : {}),
     };

@@ -91,7 +91,7 @@ describe('previs', () => {
   });
 
   test('seen from outside, the camera faces them from where they look, inside the room', () => {
-    const shot = outsideShot(theater, ['p1', 'p2', 't1', 't2'], false, 'medium', name)!;
+    const shot = outsideShot(theater, ['p1', 'p2', 't1', 't2'], 'medium', name)!;
     // Between them and the screen, looking at them, never through the wall.
     expect(shot.eye.at.y).toBeGreaterThanOrEqual(0.3);
     expect(shot.eye.at.y).toBeLessThan(2.5);
@@ -103,8 +103,30 @@ describe('previs', () => {
     expect(shot.text).toContain('with the dreamer and the friend sitting on it');
     expect(shot.text).toContain('Outside the picture, behind the camera: the screen.');
     // From behind them, facing the screen, the other way round.
-    const back = outsideShot(theater, ['p1', 'p2', 't1', 't2'], true, 'medium', name)!;
+    const back = outsideShot(theater, ['p1', 'p2', 't1', 't2'], 'medium', name, { way: { x: 0, y: -1 } })!;
     expect(back.eye.d.y).toBeLessThan(-0.9);
+    expect(back.text).toStartWith('Seen from behind them');
     expect(back.text).toMatch(/From left to right across the picture: the friend, [^;]+; then the dreamer, /);
+  });
+
+  test('two people talking are taken from the side, where the room has space, with what the moment looks at behind them', () => {
+    const lab: Blocking = {
+      front: 'the wall with the autoclave',
+      indoors: true,
+      spots: [
+        { id: 'p1', x: 4, y: 2, kind: 'person', pose: 'standing', faces: 'p2' },
+        { id: 'p2', x: 5.2, y: 2, kind: 'person', pose: 'standing', faces: 'p1' },
+        { id: 'x1', x: 4.6, y: 0.6, kind: 'thing', fixture: true, name: 'the autoclave', size: [0.9, 0.7, 1.5] },
+      ],
+    };
+    const called = (id: string) => ({ p1: 'the young woman', p2: 'the dreamer' })[id] ?? id;
+    // No aim: side on, from the open room behind them rather than against the autoclave's wall.
+    const side = outsideShot(lab, ['p1', 'p2'], 'medium', called)!;
+    expect(side.text).toStartWith('Seen from the side, as they face each other');
+    expect(side.eye.d.y).toBeLessThan(-0.9);
+    // Looking at the autoclave: it is behind them, and named by its own name.
+    const aimed = outsideShot(lab, ['p1', 'p2'], 'medium', called, { at: { x: 4.6, y: 0.6 } })!;
+    expect(aimed.text).toContain('the autoclave');
+    expect(aimed.inPicture).toContain('x1');
   });
 });

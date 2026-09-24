@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { drawOrder, planContinuity } from '../continuity';
+import { drawOrder, planBy, planContinuity } from '../continuity';
 import type { Breakdown, Moment } from '../producer';
 
 const detail = (value: string | null = null) => ({ value, said: false });
@@ -451,5 +451,25 @@ describe('ghosts', () => {
       'm2:base',
       'm3:composition',
     ]);
+  });
+
+  test('a floor plan by moment: each person where their latest move leaves them, fixtures always there', () => {
+    const b = breakdown([
+      moment({ id: 'm1', visible: ['p1'] }),
+      moment({ id: 'm2', visible: ['p1'] }),
+      moment({ id: 'm3', visible: ['p1'] }),
+    ]);
+    b.scenes[0].blocking = {
+      front: 'the stove',
+      spots: [
+        { id: 'p1', x: 4, y: 2, kind: 'person' },
+        { id: 'x1', x: 5, y: 0.5, kind: 'thing', fixture: true, name: 'the stove' },
+      ],
+      moves: { m2: [{ id: 'p1', x: 4, y: 8, faces: 'back' }] },
+    };
+    const at = (id: string) => planBy(b, id)!.spots.find((s) => s.id === 'p1')!;
+    expect([at('m1').y, at('m2').y, at('m3').y]).toEqual([2, 8, 8]);
+    expect(at('m2').faces).toBe('back');
+    expect(planBy(b, 'm1')!.spots.some((s) => s.id === 'x1')).toBe(true);
   });
 });

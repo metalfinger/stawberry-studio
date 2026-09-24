@@ -11,6 +11,7 @@ import { deflateSync } from 'node:zlib';
 import {
   type Blocking,
   type Eye,
+  DIRECTIONS,
   facing,
   halfViewOf,
   type Lean,
@@ -162,8 +163,10 @@ function crowdSpots(s: Spot, plan: Blocking, avoid: Spot[]): V2[] {
  * Everything the camera could see, as solids: the room (walls, floor, ceiling, its front named),
  * then everyone and everything on the plan but `leaveOut` (the dreamer, whose eyes it is).
  */
-function solidsOf(plan: Blocking, leaveOut: string[], name: (id: string) => string): Solid[] {
+function solidsOf(plan: Blocking, leaveOut: string[], called: (id: string) => string): Solid[] {
   const solids: Solid[] = [];
+  // A fixture of the place is labelled with its own name; everyone and everything else as the story calls them.
+  const name = (id: string) => plan.spots.find((s) => s.id === id)?.name ?? called(id);
   const add = (id: string, tone: number, parts: (Block | Face[])[], label?: string) => {
     const solid = solids.length;
     const faces = parts.flatMap((b) => (Array.isArray(b) ? b.map((f) => ({ ...f, solid })) : blockFaces(b, solid)));
@@ -281,6 +284,8 @@ export type Seen = {
   y1: number;
   /** What hides the most of it, where something does. */
   hiddenBy?: string;
+  /** How much of it other things hide, 0 to 1: what hides part of it from itself does not count. */
+  occluded: number;
 };
 
 export type Render = {
@@ -411,6 +416,7 @@ function render(solids: Solid[], eye: Eye, width: number, height: number): Rende
     if (!a.count) return;
     const worst = [...hidden[s].entries()].sort((p, q) => q[1] - p[1])[0];
     const hiddenPart = drawn[s] ? 1 - a.count / drawn[s] : 0;
+    const byOthers = [...hidden[s].values()].reduce((x, y) => x + y, 0);
     seen.set(solid.id, {
       id: solid.id,
       label: solid.label,
@@ -423,6 +429,7 @@ function render(solids: Solid[], eye: Eye, width: number, height: number): Rende
       x1: (a.x1 + 1) / width,
       y0: a.y0 / height,
       y1: (a.y1 + 1) / height,
+      occluded: drawn[s] ? Math.min(1, byOthers / drawn[s]) : 0,
       ...(worst && hiddenPart >= 0.2 && worst[1] / drawn[s] >= 0.1 ? { hiddenBy: solids[worst[0]].id } : {}),
     });
   });
@@ -800,7 +807,7 @@ export function dreamerShot(
     .map((s) => ({ s, seen: r.seen.get(s.id) }))
     .filter((x): x is { s: Spot; seen: Seen } => !!x.seen && x.seen.visible >= min)
     .sort((a, b) => distance(a.s) - distance(b.s));
-  const called = (id: string) => name(id);
+  const called = (id: string) => plan.spots.find((s) => s.id === id)?.name ?? name(id);
   const sentences = [
     `The camera is the dreamer's eyes${at.length ? `, on ${at.map(called).join(' and ')}` : ''}${pose}${eye.lean ? `, ${LEAN_WORDS[eye.lean]}` : ''}, ${turned}${toward ? `, toward ${called(toward)}` : ''}: it looks toward ${wall(eye.d, plan.front)}. A wide lens, about 24mm.`,
     ...shown.map(({ s, seen }, i) => {
@@ -875,10 +882,15 @@ const LENS: Record<'close' | 'medium' | 'wide', number> = { close: 50, medium: 3
 export function outsideShot(
   plan: Blocking,
   subjects: string[],
-  facesFront: boolean,
   size: 'close' | 'medium' | 'wide',
-  name: (id: string) => string,
+  called: (id: string) => string,
+  /**
+   * What the moment looks at: a point on the plan (something in the place), or a way (a side of
+   * the place). The camera faces it, with the people it shows before it.
+   */
+  lookAt?: { at?: V2; way?: V2 },
 ): { eye: Eye; text: string; inPicture: string[] } | null {
+  const name = (id: string) => plan.spots.find((s) => s.id === id)?.name ?? called(id);
   const inIt = subjects.map((id) => plan.spots.find((s) => s.id === id)).filter((s): s is Spot => !!s && !s.many);
   const people = inIt.filter((s) => isPerson(s));
   const group = people.length ? people : inIt;
@@ -887,37 +899,105 @@ export function outsideShot(
     x: group.reduce((a, s) => a + s.x, 0) / group.length,
     y: group.reduce((a, s) => a + s.y, 0) / group.length,
   };
-  const look = unit(
-    group.map((s) => facing(s, plan)).reduce((a, v) => ({ x: a.x + v.x, y: a.y + v.y }), { x: 0, y: 0 }),
-  );
-  // The camera faces them, so it looks the other way to them; or behind them, the way they look.
-  const d = facesFront ? look : { x: -look.x, y: -look.y };
-  const r = rightOf(d);
+  const facings = (people.length ? people : group).map((s) => facing(s, plan));
+  const sum = facings.reduce((a, v) => ({ x: a.x + v.x, y: a.y + v.y }), { x: 0, y: 0 });
+  // 1 when they all face one way, 0 when they face each other.
+  const together = Math.hypot(sum.x, sum.y) / facings.length;
+  // How far the camera can stand back from the middle of them, going the other way to d.
+  const room = (d: V2) => {
+    if (!plan.indoors) return 30;
+    const t = [
+      d.x > 0 ? c.x / d.x : d.x < 0 ? (c.x - 10) / d.x : Infinity,
+      d.y > 0 ? c.y / d.y : d.y < 0 ? (c.y - 10) / d.y : Infinity,
+    ];
+    return Math.min(...t.map(Math.abs));
+  };
+  const pair = facings.length >= 2 && together < 0.4;
+  // Which way the moment looks, if it says.
+  const looks = lookAt?.way
+    ? unit(lookAt.way)
+    : lookAt?.at && Math.hypot(lookAt.at.x - c.x, lookAt.at.y - c.y) > 0.8
+      ? unit({ x: lookAt.at.x - c.x, y: lookAt.at.y - c.y })
+      : undefined;
+  let d0: V2;
+  if (pair) {
+    // Facing each other, as two people talking: a two-shot from the side, the side turned toward
+    // what the moment looks at, or where the room leaves most space. Looking "toward the
+    // autoclave" along the line between them put the camera behind one, hiding the other (24 Sep).
+    const u = unit({ x: group[group.length - 1].x - group[0].x, y: group[group.length - 1].y - group[0].y });
+    const sides = [rightOf(u), { x: -rightOf(u).x, y: -rightOf(u).y }];
+    const toward = (v: V2) => (looks ? v.x * looks.x + v.y * looks.y : 0);
+    d0 =
+      Math.abs(toward(sides[0]) - toward(sides[1])) > 0.2
+        ? toward(sides[0]) > toward(sides[1])
+          ? sides[0]
+          : sides[1]
+        : room(sides[0]) >= room(sides[1])
+          ? sides[0]
+          : sides[1];
+  } else if (looks)
+    // What the moment looks at is behind them, and the camera looks at it past them.
+    d0 = looks;
+  else d0 = together > 0 ? unit({ x: -sum.x, y: -sum.y }) : DIRECTIONS.back;
   const tallest = Math.max(...group.map((s) => (isPerson(s) ? eyeHeight(s.pose) + 0.15 : (s.size?.[2] ?? 1))));
   const lowest = size === 'close' ? tallest - 0.7 : size === 'medium' ? tallest * 0.45 : 0;
-  // How much of the place across the camera the group takes, side to side.
-  const offsets = group.map((s) => (s.x - c.x) * r.x + (s.y - c.y) * r.y);
-  const wide = Math.max(...offsets) - Math.min(...offsets) + (size === 'close' ? 0.4 : size === 'medium' ? 1 : 2.5);
-  const tall = (tallest - lowest) * (size === 'close' ? 1.3 : size === 'medium' ? 1.25 : 1.8);
-  // What the frame must hold, and so how far off a lens of this size must be.
-  const frameTall = Math.max(tall, (wide * 9) / 16);
-  let lens = LENS[size];
-  const tallAt = (l: number) => Math.atan(Math.tan(Math.atan(18 / l)) * (9 / 16));
-  let far = frameTall / 2 / Math.tan(tallAt(lens));
-  let at = { x: c.x - d.x * far, y: c.y - d.y * far };
-  // Indoors, never through a wall: closer, with a lens wide enough to hold the same.
-  if (plan.indoors) {
-    const inside = (p: V2) => p.x >= 0.3 && p.x <= 9.7 && p.y >= 0.3 && p.y <= 9.7;
-    while (!inside(at) && far > 0.6) {
-      far -= 0.1;
-      at = { x: c.x - d.x * far, y: c.y - d.y * far };
-    }
-    const need = Math.atan(frameTall / 2 / far);
-    if (need > tallAt(lens)) lens = Math.max(14, Math.round(18 / Math.tan(Math.atan(Math.tan(need) * (16 / 9)))));
-  }
   const height = people.length ? people.reduce((a, s) => a + eyeHeight(s.pose), 0) / people.length : 1.5;
   const aim = (tallest + lowest) / 2;
-  const eye: Eye = { at, d, height, pitch: Math.atan2(aim - height, far), lens };
+  const tallAt = (l: number) => Math.atan(Math.tan(Math.atan(18 / l)) * (9 / 16));
+  // The camera for a way of looking: as far off as the shot needs, never through a wall.
+  const place = (d: V2): { eye: Eye; far: number } => {
+    const r = rightOf(d);
+    // How much of the place across the camera the group takes, side to side.
+    const offsets = group.map((s) => (s.x - c.x) * r.x + (s.y - c.y) * r.y);
+    const wide = Math.max(...offsets) - Math.min(...offsets) + (size === 'close' ? 0.4 : size === 'medium' ? 1 : 2.5);
+    const tall = (tallest - lowest) * (size === 'close' ? 1.3 : size === 'medium' ? 1.25 : 1.8);
+    // What the frame must hold, and so how far off a lens of this size must be.
+    const frameTall = Math.max(tall, (wide * 9) / 16);
+    let lens = LENS[size];
+    let far = frameTall / 2 / Math.tan(tallAt(lens));
+    let at = { x: c.x - d.x * far, y: c.y - d.y * far };
+    // Indoors, never through a wall: closer, with a lens wide enough to hold the same.
+    if (plan.indoors) {
+      const inside = (p: V2) => p.x >= 0.3 && p.x <= 9.7 && p.y >= 0.3 && p.y <= 9.7;
+      while (!inside(at) && far > 0.6) {
+        far -= 0.1;
+        at = { x: c.x - d.x * far, y: c.y - d.y * far };
+      }
+      const need = Math.atan(frameTall / 2 / far);
+      if (need > tallAt(lens)) lens = Math.max(14, Math.round(18 / Math.tan(Math.atan(Math.tan(need) * (16 / 9)))));
+    }
+    return { eye: { at, d, height, pitch: Math.atan2(aim - height, far), lens }, far };
+  };
+  const turnBy = (v: V2, deg: number) => {
+    const a = (deg * Math.PI) / 180;
+    const r = rightOf(v);
+    return unit({ x: v.x * Math.cos(a) + r.x * Math.sin(a), y: v.y * Math.cos(a) + r.y * Math.sin(a) });
+  };
+  // As a camera operator walks round to where nobody the moment shows is hidden: its way of looking,
+  // and a little either side of it, each rendered small; the one showing them most, least turned.
+  const solidsSmall = solidsOf(plan, [], name);
+  const shows = inIt.filter((s) => subjects.includes(s.id));
+  let best: { eye: Eye; far: number; score: number } | undefined;
+  for (const deg of [0, -20, 20, -40, 40]) {
+    const cand = place(turnBy(d0, deg));
+    const rs = render(solidsSmall, cand.eye, 192, 108);
+    const seen = shows.map((s) => rs.seen.get(s.id));
+    // Shown, and not hidden by anything else; turned only where that shows them clearly better.
+    const score =
+      seen.reduce((a, x) => a + (x ? 1 - x.occluded : 0), 0) / Math.max(1, shows.length) - Math.abs(deg) * 0.006;
+    if (!best || score > best.score + 1e-9) best = { ...cand, score };
+  }
+  const { eye, far } = best!;
+  const d = eye.d;
+  const lens = eye.lens ?? LENS[size];
+  const toward = together > 0 ? (sum.x * d.x + sum.y * d.y) / Math.hypot(sum.x, sum.y) : 0;
+  const from = pair
+    ? 'from the side, as they face each other'
+    : toward > 0.5
+      ? 'from behind them'
+      : toward < -0.5
+        ? 'from in front of them'
+        : 'from beside them';
   const solids = solidsOf(plan, [], name);
   const rr = render(solids, eye, 384, 216);
   const min = 384 * 216 * 0.002;
@@ -935,7 +1015,7 @@ export function outsideShot(
   const whatShown = shown.filter((x) => subjects.includes(x.s.id) && !isPerson(x.s));
   const behind = shown.filter((x) => !subjects.includes(x.s.id));
   const sentences = [
-    `Seen from ${facesFront ? 'behind them' : 'in front of them'}, ${where}, at the height of their eyes: the camera looks toward ${wall(d, plan.front)}. A ${lens}mm lens.`,
+    `Seen ${from}, ${where}, at the height of their eyes: the camera looks toward ${wall(d, plan.front)}. A ${lens}mm lens.`,
     whoShown.length
       ? `From left to right across the picture: ${whoShown.map(({ s, seen }) => words(s, seen)).join('; then ')}. They keep these places in every picture of this scene.`
       : '',

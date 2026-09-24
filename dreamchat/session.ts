@@ -226,9 +226,13 @@ function calledIn(b: Breakdown, c: { own: { who: string; what: string; now: stri
     if (st) return st.now;
     const p = b.people.find((x) => x.id === id);
     if (p) return p.is_dreamer ? 'the dreamer' : p.name;
-    return b.things.find((x) => x.id === id)?.name ?? b.places.find((x) => x.id === id)?.name ?? id;
+    return b.things.find((x) => x.id === id)?.name ?? b.places.find((x) => x.id === id)?.name ?? fixtureName(b, id) ?? id;
   };
 }
+
+/** A fixture of a place, by its name in the floor plan: "the autoclave", never "x1". */
+const fixtureName = (b: Breakdown, id: string) =>
+  b.scenes.flatMap((sc) => sc.blocking?.spots ?? []).find((s) => s.id === id && s.fixture)?.name;
 
 /**
  * The shots of a settled dream, planned without drawing anything: each scene's floor plan (asked
@@ -1358,7 +1362,8 @@ export class SessionStore {
     const called = (id: string) => {
       const st = changed.find((x) => x.who === id && WHOLE.test(x.what));
       const it = s.build?.items.find((i) => i.id === id);
-      return st ? st.now : it?.isDreamer ? 'the dreamer' : (it?.name ?? id);
+      const fixture = s.draft?.breakdown ? fixtureName(s.draft.breakdown, id) : undefined;
+      return st ? st.now : it?.isDreamer ? 'the dreamer' : (it?.name ?? fixture ?? id);
     };
     // Without its previs the frame is drawn from words alone, as before there was one.
     const layout = await this.layoutFor(s, frame, called).catch((e) => {
@@ -2263,6 +2268,9 @@ export class SessionStore {
       const turn = s.turns.at(-1)?.turn ?? 0;
       for (const it of s.build?.items ?? []) if (again.includes(it.id)) await this.startSketch(s, it, turn);
       if (s.phase === 'frames' || s.phase === 'done') await this.fillFrames(s, turn);
+      // The shots are planned again in the background where the moments have not begun and
+      // there is no plan for the dream as it stands: after a restart, or a fix to the planner.
+      if (s.production?.status === 'written' && !s.build?.frames?.length) this.prepareShots(s);
       await this.save(s);
       if ([...(s.build?.items ?? []), ...(s.build?.frames ?? [])].some((i) => i.status === 'drawing')) this.watch(id);
       return again;

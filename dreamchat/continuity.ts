@@ -7,7 +7,7 @@
 // change too much at once, or several cuts need the same changed look, a ghost is made first:
 // an in-between picture that is never a cut. Everything here is pure: the breakdown in, the plan
 // out, and the same breakdown always gives the same plan.
-import { type Blocking, type Eye, outsideOrder } from './blocking';
+import { type Blocking, DIRECTIONS, type Eye, type Move, outsideOrder } from './blocking';
 import { dreamerShot, outsideShot } from './previs';
 import { type Breakdown, type Moment, moments, POSITION, type State } from './producer';
 
@@ -153,7 +153,20 @@ export function planBy(b: Breakdown, momentId: string): Blocking | undefined {
   const upTo = scene.moments.slice(0, scene.moments.findIndex((x) => x.id === momentId) + 1);
   const there = new Set(upTo.flatMap((x) => [...x.visible, ...x.things]));
   const dreamerId = b.people.find((p) => p.is_dreamer)?.id;
-  return { ...scene.blocking, spots: scene.blocking.spots.filter((s) => there.has(s.id) || s.id === dreamerId) };
+  // Where each person is by now: their spot, as their latest move up to this moment leaves them.
+  // She walked to the far end of the room and came back; a spot for the whole scene kept her
+  // standing where she started (24 Sep).
+  const moved = new Map<string, Move>();
+  for (const x of upTo) for (const mv of scene.blocking.moves?.[x.id] ?? []) moved.set(mv.id, mv);
+  return {
+    ...scene.blocking,
+    spots: scene.blocking.spots
+      .filter((s) => there.has(s.id) || s.id === dreamerId || s.fixture)
+      .map((s) => {
+        const mv = moved.get(s.id);
+        return mv ? { ...s, x: mv.x, y: mv.y, ...(mv.faces ? { faces: mv.faces } : {}), ...(mv.pose ? { pose: mv.pose } : {}) } : s;
+      }),
+  };
 }
 
 /**
@@ -557,15 +570,30 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
       const st = changed.find((x) => x.who === id && /^\s*(?:its |their )?(?:form|shape|whole|self|itself|kind)\s*$/i.test(x.what));
       return st ? `${/^(a|an|the)\s/i.test(st.now) ? '' : 'the '}${st.now} (what ${name(id)} turned into)` : name(id);
     };
+    // A fixture of the place goes by its own name; everyone and everything else as the story calls them.
+    const nameOf = (s: { id: string; name?: string }) => s.name ?? name(s.id);
     const target = (words: string) => {
       const w = bare(words);
       if (!w) return undefined;
       return plan.spots.find(
         (s) =>
-          w.includes(bare(name(s.id))) ||
-          bare(name(s.id)).includes(w) ||
+          w.includes(bare(nameOf(s))) ||
+          bare(nameOf(s)).includes(w) ||
           changed.some((st) => st.who === s.id && (w.includes(bare(st.now)) || bare(st.now).includes(w))),
       )?.id;
+    };
+    // Where on the plan a moment looks: what it names there, the place's front, or a side of it.
+    const lookAt = (words: string, where: Blocking): { at?: { x: number; y: number }; way?: { x: number; y: number } } | undefined => {
+      const w = bare(words);
+      if (!w) return undefined;
+      const id = target(words);
+      const s = id ? where.spots.find((x) => x.id === id) : undefined;
+      if (s) return { at: { x: s.x, y: s.y } };
+      if (w.includes(bare(plan.front)) || bare(plan.front).includes(w)) return { way: DIRECTIONS.front };
+      if (/\b(back|far end|far side|rear)\b/.test(w)) return { way: DIRECTIONS.back };
+      if (/\bleft\b/.test(w)) return { way: DIRECTIONS.left };
+      if (/\bright\b/.test(w)) return { way: DIRECTIONS.right };
+      return undefined;
     };
     if (m.eyes === 'dreamer' && dreamerId) {
       const v = dreamerShot(shotPlan(b, m.id) ?? plan, dreamerId, target(m.looks_at), now);
@@ -583,8 +611,18 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
       // A moment that edits an earlier picture of the same view keeps that picture's layout: it
       // was made from the same set. Every other camera is placed on the floor plan and made from
       // its previs: the image model draws people and things well, and a new camera badly.
+      // Editing it is right only when the same people are in view: made an edit of the two-shot, a
+      // moment showing only her would have taken the dreamer out of a room they never left (24 Sep).
+      // With anyone in or out of view, the moment gets its own camera, and the earlier picture
+      // gives only how the place looks.
+      const base = c.refs.find((r) => r.role === 'base');
+      const baseCast = base ? (byId.get(base.id) ? seen(byId.get(base.id)!) : []) : [];
+      const sameCast = baseCast.length === seen(m).length && baseCast.every((id) => seen(m).includes(id));
+      if (base && !sameCast)
+        Object.assign(base, { role: 'composition', relation: 'same_side', carries: CARRIES.same_side });
       const edits = c.refs.some((r) => r.role === 'base');
-      const v = edits ? null : outsideShot(shotPlan(b, m.id) ?? plan, ids, fromBehind, m.distance, now);
+      const where = shotPlan(b, m.id) ?? plan;
+      const v = edits ? null : outsideShot(where, ids, m.distance, now, lookAt(m.looks_at, where));
       if (v) {
         c.view = v.text;
         c.eye = v.eye;
