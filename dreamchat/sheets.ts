@@ -4,7 +4,7 @@
 // the engine's worker draws it.
 import type { CutPlan, GhostPlan } from './continuity';
 import { pictureName } from './continuity';
-import { type Detail, mediumOf, oneColour, type StyleOption, VAGUE } from './producer';
+import { type Detail, mediumOf, oneColour, paletteHue, type StyleOption, VAGUE } from './producer';
 import { cli, REPO, STRAWBERRY_HOME, STRAWBERRY_PYTHON } from './strawberry';
 
 export type ItemKind = 'character' | 'location' | 'prop' | 'cut' | 'ghost';
@@ -206,6 +206,41 @@ export function colourName(hex: string): string {
 const COLOUR_WORDS =
   /\b(red|scarlet|crimson|blue|navy|turquoise|green|emerald|yellow|golden|gold|orange|purple|violet|pink|white|black|grey|gray|brown|silver|beige)\b/gi;
 
+/** Each colour word's hue, and how dark it is drawn: 0 dark, 1 mid-toned, 2 pale. */
+const HUED: Record<string, [number, number]> = {
+  red: [0, 1], scarlet: [0, 1], crimson: [350, 0], maroon: [350, 0], burgundy: [345, 0], pink: [340, 2],
+  rose: [345, 2], orange: [30, 1], brown: [25, 0], brunette: [25, 0], auburn: [15, 0], chestnut: [20, 0],
+  copper: [25, 1], ginger: [25, 1], tan: [30, 1], beige: [35, 2], cream: [45, 2], golden: [45, 2], gold: [45, 2],
+  blonde: [45, 2], blond: [45, 2], yellow: [55, 2], olive: [60, 0], green: [120, 1], emerald: [140, 0],
+  teal: [180, 1], turquoise: [175, 1], cyan: [185, 2], blue: [215, 1], navy: [225, 0], indigo: [250, 0],
+  purple: [280, 0], violet: [275, 1], lavender: [270, 2], magenta: [300, 1],
+  reddish: [0, 1], pinkish: [340, 2], orangey: [30, 1], brownish: [25, 0], yellowish: [55, 2], greenish: [120, 1],
+  bluish: [215, 1], purplish: [280, 0],
+};
+const TONE = ['dark', 'mid-toned', 'pale'];
+
+/**
+ * A look said in a style made in one colour: each colour of another hue becomes how dark or pale it
+ * is drawn. Told "medium brown hair" beside a line saying hair is drawn in shades of blue, a blue ink
+ * wash drew it auburn in two moments of six (24 Sep). Black, white, grey and the palette's own hue
+ * say nothing against it and stay.
+ */
+export function inShades(text: string, style: StyleOption): string {
+  if (!oneColour(style)) return text;
+  const hue = paletteHue(style);
+  const words = Object.keys(HUED).join('|');
+  // A colour of two ("red-brown", "blue-green") is its last.
+  return text.replace(new RegExp(`\\b(?:${words})-(${words})\\b`, 'gi'), '$1').replace(
+    new RegExp(`\\b(?:(light|pale|dark|deep|medium|bright)[ -])?(${words})\\b`, 'gi'),
+    (all, mod: string | undefined, word: string) => {
+      const [h, tone] = HUED[word.toLowerCase()];
+      if (hue !== null && Math.min(Math.abs(h - hue), 360 - Math.abs(h - hue)) <= 35) return all;
+      const shift = /light|pale/i.test(mod ?? '') ? 1 : /dark|deep/i.test(mod ?? '') ? -1 : 0;
+      return TONE[Math.max(0, Math.min(2, tone + shift))];
+    },
+  );
+}
+
 /**
  * The colours a dream itself gives, from what the person said: "a string of blue balloons" is
  * blue whatever the chosen look. A muted palette drew them silver (23 Sep); the dream's own
@@ -349,7 +384,11 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
   // would be drawn as a blur.
   const facts = Object.keys(item.fields)
     .filter((k) => LOOK[item.kind].includes(k) && !VAGUE.test(value(item, k)))
-    .map((k) => (value(item, k) ? `${FIELD_WORDS[k] ?? k}: ${value(item, k)}` : ''))
+    .map((k) => {
+      const v = value(item, k);
+      // What they said keeps its colours; what was filled in is said in the style's shades.
+      return v ? `${FIELD_WORDS[k] ?? k}: ${item.fields[k]?.said ? v : inShades(v, style)}` : '';
+    })
     .filter(Boolean)
     .join('\n');
   // One picture per item, not a grid of views: named views came back captioned ("Front",

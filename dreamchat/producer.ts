@@ -113,7 +113,7 @@ export function mediumOf(style: StyleOption): string {
 }
 
 /** A colour's hue in degrees, or null for a grey. */
-function hueOf(hex: string): number | null {
+export function hueOf(hex: string): number | null {
   const n = Number.parseInt(hex.replace('#', ''), 16);
   const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
   const max = Math.max(r, g, b);
@@ -121,6 +121,15 @@ function hueOf(hex: string): number | null {
   if (c < 20) return null;
   const h = max === r ? ((g - b) / c) % 6 : max === g ? (b - r) / c + 2 : (r - g) / c + 4;
   return (h * 60 + 360) % 360;
+}
+
+/** The hue a style's palette is made in, or null when it is only greys. */
+export function paletteHue(style: StyleOption): number | null {
+  const hues = style.palette_hex.map(hueOf).filter((h): h is number => h !== null);
+  if (!hues.length) return null;
+  const x = hues.reduce((a, h) => a + Math.cos((h * Math.PI) / 180), 0);
+  const y = hues.reduce((a, h) => a + Math.sin((h * Math.PI) / 180), 0);
+  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
 }
 
 /**

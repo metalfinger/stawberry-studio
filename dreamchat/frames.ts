@@ -8,7 +8,7 @@
 import { type ContinuityPlan, type PlanRef, pictureName } from './continuity';
 import type { Breakdown, Moment, StyleOption } from './producer';
 import { oneColour, VAGUE } from './producer';
-import { groupMembers, isGroup, type Item, LOOK, type Shape, shapeOf, styleBlock, toldColours } from './sheets';
+import { groupMembers, inShades, isGroup, type Item, LOOK, type Shape, shapeOf, styleBlock, toldColours } from './sheets';
 
 /** Where the line that says who "you" is goes, when anything told to the picture says "you". */
 const YOU = '\u0000you';
@@ -230,8 +230,10 @@ export function framePrompt(
   const lookOf = (s: Item, keys: string[]) => {
     const own = members.filter((m) => m.group === s).map((m) => new RegExp(`\\b${m.word}s?\\b`, 'i'));
     return keys
-      .map((k) => s.fields[k]?.value)
-      .filter((v): v is string => !!v && !VAGUE.test(v))
+      .map((k) => s.fields[k])
+      .filter((d) => !!d?.value && !VAGUE.test(d.value))
+      // What was filled in is said in the style's shades; what they said keeps its colours.
+      .map((d) => (d?.said ? (d.value as string) : inShades(d?.value as string, style)))
       .flatMap((v) => v.split(/;\s*/))
       .filter((part) => part.trim() && !own.some((re) => re.test(part)))
       .join('; ');
@@ -518,8 +520,9 @@ export function ghostPrompt(
   // Its look in words, as a moment lists what is in it: said only through its image, an edit read
   // as unclear about what it shows (0.53 against 0.64, 24 Sep).
   const look = LOOK[sheet.kind]
-    .map((k) => sheet.fields[k]?.value)
-    .filter((v): v is string => !!v && !VAGUE.test(v))
+    .map((k) => sheet.fields[k])
+    .filter((d) => !!d?.value && !VAGUE.test(d.value))
+    .map((d) => (d?.said ? (d.value as string) : inShades(d?.value as string, style)))
     .join('; ');
   const kind = sheet.kind === 'character' ? 'person' : sheet.kind === 'location' ? 'place' : 'thing';
   const lines =

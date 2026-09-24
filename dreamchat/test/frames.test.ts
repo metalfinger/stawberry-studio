@@ -6,6 +6,7 @@ import { asInstruction } from '../session';
 import {
   DREAM_QUALITY,
   groupMembers,
+  inShades,
   isGroup,
   type Item,
   shapeOf,
@@ -103,6 +104,26 @@ describe('colours the dream gives', () => {
     expect(oneColour({ ...blueInk, palette_hex: ['#0077B6', '#E07A1F'] })).toBe(false);
     expect(oneColour({ ...blueInk, one_colour: false })).toBe(false);
     expect(styleBlock({ ...blueInk, palette_hex: ['#0077B6', '#E07A1F'] })).not.toContain('shades of this one colour');
+  });
+
+  test('in one colour, a filled-in look names how dark things are, not their colours', () => {
+    const blueInk = { ...style, medium: 'ink wash', palette_hex: ['#001E3C', '#0077B6', '#CAF0F8'] };
+    expect(inShades('medium brown hair; a light blue blouse, brown trousers, a yellow onesie, a red-brown coat', blueInk)).toBe(
+      'dark hair; a light blue blouse, dark trousers, a pale onesie, a dark coat',
+    );
+    // Black and white: every colour is a tone; black, white and grey already are.
+    const bw = { ...blueInk, palette_hex: ['#111111', '#EEEEEE'] };
+    expect(inShades('a light blue blouse and short black hair', bw)).toBe('a pale blouse and short black hair');
+    // A style in colour keeps them.
+    expect(inShades('brown trousers', { ...blueInk, palette_hex: ['#0077B6', '#E07A1F'] })).toBe('brown trousers');
+    // What they said keeps its colour; what was filled in is told in shades.
+    const said: Item = {
+      id: 'p1', kind: 'character', name: 'ana', status: 'ready', version: 1, mediaId: 'm', review: 'approved',
+      fields: { appearance: { value: 'red hair', said: true }, wardrobe: { value: 'a brown coat', said: false } },
+    };
+    expect(framePrompt({ ...frame('Ana waits.'), frame: { ...frame('x').frame!, visible: ['p1'], eyes: 'outside' } }, [said], blueInk).prompt).toContain(
+      'ana (person): red hair; a dark coat.',
+    );
   });
 });
 
