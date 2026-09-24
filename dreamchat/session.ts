@@ -1269,7 +1269,10 @@ export class SessionStore {
     const call = await this.deps.jev(text, {
       named: {
         type: 'noul',
-        instructions: `The person was shown a picture of ${name} from their dream. In this message, "${text.slice(0, 300)}", do they name something specific that is wrong with it (something missing or extra, or the wrong colour, shape, size, age, clothes or look), rather than only a feeling that it is off?`,
+        // Where it is seen from is as specific as a colour: "it should be from my perspective; it
+        // feels like I changed my position" was read as a vague feeling, the picture kept, and the
+        // dream closed on it (24 Sep).
+        instructions: `The person was shown a picture of ${name} from their dream. In this message, "${text.slice(0, 300)}", do they name something specific that is wrong with it (something missing or extra; the wrong colour, shape, size, age, clothes or look; where it is seen from or who sees it; who or what is where; or what is happening), rather than only a feeling that it is off?`,
         criteria: {
           true: 'they point at something specific to change',
           false: "only a vague feeling, or that they can't say what",
