@@ -142,10 +142,14 @@ export function inViewOf(frame: Item, sheets: Item[]): Item[] {
   const f = frame.frame;
   if (!f) return [];
   const byId = new Map(sheets.map((s) => [s.id, s]));
+  // Whoever the dreamer's worked-out view has in the picture is in it, listed or not: the friend
+  // beside them is between them and what they turn to (24 Sep).
+  const sees = (f.plan?.sees ?? []).filter((id) => !f.visible.includes(id) && !f.things.includes(id));
   return [
     // Through the dreamer's own eyes the dreamer is the camera, never a face in the picture.
     ...f.visible.filter((id) => !(f.eyes === 'dreamer' && byId.get(id)?.isDreamer)).map((id) => byId.get(id)),
     ...f.things.map((id) => byId.get(id)),
+    ...sees.map((id) => byId.get(id)),
     byId.get(f.place),
   ].filter((s): s is Item => !!s);
 }
@@ -379,6 +383,9 @@ export function framePrompt(
     }
     const unsketched = x.use.who?.filter((id) => !imageOf.has(id)) ?? [];
     if (x.use.who?.length && !unsketched.length) continue;
+    // With the view worked out from the floor plan, the picture showing the dreamer from outside
+    // would only pull its own layout back into their view.
+    if (x.use.relation === 'seat' && plan?.view) continue;
     // No image goes in for its light alone: the model takes more than light from it (a moment of
     // the family drew the dreamer in the pose of the picture attached for its light, 24 Sep). The
     // light is said in words, and the place's own sketch shows it. A picture from the other side
@@ -440,7 +447,11 @@ export function framePrompt(
   // Someone drawn with their group stands with it, not beside it.
   const staged = (plan?.staging ?? []).filter((id) => !members.some((m) => m.member.id === id));
   const lines = [
-    `One picture from the dream, in ${SHAPE_WORDS[shapeOf(frame)]}: a ${f.distance} shot, ${angle}${f.looksAt ? `, facing ${f.looksAt}` : ''}. ${FRAMING[f.distance]}`,
+    // With the dreamer's view worked out, the view is the framing: "the subject fills the frame"
+    // beside what is close and what is beyond read as a contradiction (0.70, 24 Sep).
+    plan?.view
+      ? `One picture from the dream, in ${SHAPE_WORDS[shapeOf(frame)]}: ${angle}${f.looksAt ? `, facing ${f.looksAt}` : ''}.`
+      : `One picture from the dream, in ${SHAPE_WORDS[shapeOf(frame)]}: a ${f.distance} shot, ${angle}${f.looksAt ? `, facing ${f.looksAt}` : ''}. ${FRAMING[f.distance]}`,
     manifest.length
       ? `The attached images, in order, and the one thing to take from each:\n${manifest.join('\n')}`
       : '',
@@ -450,9 +461,12 @@ export function framePrompt(
       ? `The dream in it, drawn as plain fact, as solid and ordinary as everything around it: ${sentence(frame.fields.dream.value)}`
       : '',
     pov,
-    staged.length >= 2
-      ? `Where they stand, from left to right: ${staged.map((id) => nameOf(sheets, id)).join(', then ')}. They keep these sides in every picture of this scene.${members.map((m) => ` ${who(m.member)} ${isGroup(m.member) ? 'are' : 'is'} with ${who(m.group)}.`).join('')}`
-      : '',
+    plan?.view ? `What the dreamer sees from where they are: ${plan.view}` : '',
+    plan?.camera && (plan.across?.length ?? 0) >= 2
+      ? `Seen ${plan.camera}. From left to right across the picture: ${plan.across!.map((id) => nameOf(sheets, id)).join(', then ')}. They keep these places in every picture of this scene.${members.map((m) => ` ${who(m.member)} ${isGroup(m.member) ? 'are' : 'is'} with ${who(m.group)}.`).join('')}`
+      : staged.length >= 2
+        ? `Where they stand, from left to right: ${staged.map((id) => nameOf(sheets, id)).join(', then ')}. They keep these sides in every picture of this scene.${members.map((m) => ` ${who(m.member)} ${isGroup(m.member) ? 'are' : 'is'} with ${who(m.group)}.`).join('')}`
+        : '',
     YOU,
     facts.length ? `In it:\n${facts.join('\n')}` : '',
     states.length ? `Still so from earlier in the dream: ${states.join('; ')}.` : '',

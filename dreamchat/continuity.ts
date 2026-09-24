@@ -7,6 +7,7 @@
 // change too much at once, or several cuts need the same changed look, a ghost is made first:
 // an in-between picture that is never a cut. Everything here is pure: the breakdown in, the plan
 // out, and the same breakdown always gives the same plan.
+import { dreamerView, outsideOrder } from './blocking';
 import { type Breakdown, type Moment, moments, POSITION, type State } from './producer';
 
 export type Relation = 'same_setup' | 'same_side' | 'other_side' | 'other_place' | 'shift' | 'seat';
@@ -70,6 +71,17 @@ export type CutPlan = {
   depth: number;
   transition: string;
   matchFrame?: string;
+  /**
+   * Through the dreamer's eyes, on a scene with a floor plan: what they see from where they are,
+   * worked out in code (blocking.ts).
+   */
+  view?: string;
+  /** Who and what that view has in the picture: drawn from their sketches like anyone in view. */
+  sees?: string[];
+  /** Seen from outside, on a scene with a floor plan: who and what is where, left to right. */
+  across?: string[];
+  /** Seen from outside, on a scene with a floor plan: where the camera stands, in words. */
+  camera?: string;
   why: string;
 };
 
@@ -499,6 +511,48 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
     }
     const inView = line.filter((p) => people.includes(p));
     c.staging = inView.length >= 2 ? inView : [];
+  }
+
+  // With a floor plan, every camera is placed on it: what each picture sees is worked out, and who
+  // stands where across it follows from where they are, not from the order they were first named.
+  const blockOf = new Map(b.scenes.map((sc) => [sc.id, sc.blocking]));
+  const bare = (x: string) => x.toLowerCase().replace(/^(the|a|an)\s+/, '').trim();
+  for (const c of cuts) {
+    const plan = blockOf.get(c.scene);
+    if (!plan) continue;
+    const m = byId.get(c.id)!;
+    const changed = [...c.own, ...c.states];
+    // What something is called now: the big sofa that has become a roller coaster is the roller coaster.
+    const now = (id: string) => {
+      const st = changed.find((x) => x.who === id && /^\s*(?:its |their )?(?:form|shape|whole|self|itself|kind)\s*$/i.test(x.what));
+      return st ? `${/^(a|an|the)\s/i.test(st.now) ? '' : 'the '}${st.now} (what ${name(id)} turned into)` : name(id);
+    };
+    const target = (words: string) => {
+      const w = bare(words);
+      if (!w) return undefined;
+      return plan.spots.find(
+        (s) =>
+          w.includes(bare(name(s.id))) ||
+          bare(name(s.id)).includes(w) ||
+          changed.some((st) => st.who === s.id && (w.includes(bare(st.now)) || bare(st.now).includes(w))),
+      )?.id;
+    };
+    if (m.eyes === 'dreamer' && dreamerId) {
+      const v = dreamerView(plan, dreamerId, target(m.looks_at), plan.spots.map((s) => s.id).filter((id) => id !== dreamerId), now);
+      if (v) {
+        c.view = v.text;
+        c.sees = v.inPicture;
+      }
+    } else {
+      const fromBehind = !!m.looks_at && bare(m.looks_at).includes(bare(plan.front));
+      const ids = [...seen(m), ...m.things].filter((id) => plan.spots.some((s) => s.id === id && !s.many));
+      c.across = outsideOrder(plan, ids, fromBehind);
+      c.camera = fromBehind
+        ? `from behind them, facing ${plan.front}`
+        : `from in front of them, looking at them, with ${plan.front} behind the camera`;
+      const people = c.across.filter((id) => seen(m).includes(id));
+      c.staging = people.length >= 2 ? people : [];
+    }
   }
 
   // Needs, depth, checks, transitions and a line of why, now the references are final.

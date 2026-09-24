@@ -238,6 +238,8 @@ export type StoreDeps = {
     findings: string[],
     transcript: string,
   ) => Promise<Record<string, Detail> | null>;
+  /** Each scene's floor plan, made before any moment is drawn: where everyone and everything is. */
+  block?: (b: Breakdown) => Promise<{ breakdown: Breakdown; notes: string[] }>;
   /** A held moment's own words, reworded once before it is given up on; text is nearly free. */
   reword?: (
     prompt: string,
@@ -1036,6 +1038,9 @@ export class SessionStore {
     if (!s.build || !s.draft?.breakdown) return;
     // What each moment shows, completed from its words, for a dream drafted before this was done.
     completeViews(s.draft.breakdown);
+    // Where everyone and everything is, decided before the first moment is drawn.
+    if (this.deps.block && s.draft.breakdown.scenes.some((sc) => !sc.blocking))
+      s.draft.breakdown = (await this.deps.block(s.draft.breakdown).catch(() => null))?.breakdown ?? s.draft.breakdown;
     await Promise.all(
       [...this.reviews.entries()].filter(([k]) => k.startsWith(`${s.id}:`)).map(([, p]) => p.catch(() => undefined)),
     );

@@ -5,6 +5,7 @@
 // Every detail it writes is marked as said by the person, or guessed. Jev then checks each
 // "said" against the person's own messages (ground.ts). Strawberry's own rule is that missing
 // facts are unknown, not invented defaults presented as the user's decisions.
+import type { Blocking, Spot } from './blocking';
 import { type ChatMessage, callDeepseek, type Thinking } from './llm';
 
 /** A detail and whether the person said it. `null` when nobody knows and nothing is needed. */
@@ -78,7 +79,15 @@ export type Moment = {
 /** A lasting change in force at a moment: who changed, what, into what, and since which moment. */
 export type State = { who: string; what: string; now: string; since: string };
 
-export type Scene = { id: string; title: string; place: string; mood: string; moments: Moment[] };
+export type Scene = {
+  id: string;
+  title: string;
+  place: string;
+  mood: string;
+  moments: Moment[];
+  /** Its floor plan, made before any picture: where everyone and everything is (see blocking.ts). */
+  blocking?: Blocking;
+};
 
 export type StyleOption = {
   id: string;
@@ -315,6 +324,74 @@ export async function rewordLook(
     } else out[k] = d;
   }
   return changed ? out : null;
+}
+
+const BLOCK = `You are a storyboard artist making the floor plan of each scene of a dream before anything in it is drawn, so that every picture of the scene agrees about where everyone and everything is.
+
+For each scene, seen from above: its "front" (what the people in it face, or its main feature, in a few words: "the screen", "the window", "the stove"), and a spot for every person and thing that is ever in it. x runs across the place from its left side (0) to its right side (10), for someone facing its front; y runs from its front (0) to its back (10). One unit is about a metre.
+- Keep everything the dream says: who sits or stands next to whom and on which side, what is next to what, who is in front of or behind whom, what faces what.
+- Where it says nothing, choose what is ordinary for such a place, and put people who are together side by side.
+- People face the front unless the dream says otherwise: "faces" is "front", "back", "left", "right", or the id of whom or what they face.
+- A crowd or an audience is one spot with "many": true, at the middle of where they are.
+
+Return JSON only: {"scenes": [{"id": "s1", "front": "", "spots": [{"id": "p1", "x": 4, "y": 1, "faces": "front", "many": false}]}]}`;
+
+/**
+ * Each scene's floor plan, made before any picture: where everyone and everything is. The moment
+ * seen through the dreamer's eyes was drawn from the aisle when the harness knew only "through the
+ * dreamer's eyes, facing the roller coaster" (24 Sep); with a plan, what each camera sees is worked
+ * out in code. A scene the model gives no plan for, or a plan missing someone, is left without one.
+ */
+export async function blockScenes(b: Breakdown): Promise<{ breakdown: Breakdown; notes: string[] }> {
+  const out: Breakdown = structuredClone(b);
+  const notes: string[] = [];
+  const brief = {
+    people: b.people.map((p) => ({ id: p.id, name: p.is_dreamer ? 'the dreamer' : p.name, crowd: !!p.extras })),
+    things: b.things.map((t) => ({ id: t.id, name: t.name })),
+    places: b.places.map((l) => ({ id: l.id, name: l.name, layout: l.fields.geography?.value, has: l.fields.landmarks?.value })),
+    scenes: b.scenes.map((sc) => ({
+      id: sc.id,
+      place: sc.place,
+      moments: sc.moments.map((m) => ({ action: m.action, who: m.visible, things: m.things, faces: m.looks_at })),
+    })),
+  };
+  let raw: unknown;
+  try {
+    const res = await callDeepseek(
+      [
+        { role: 'system', content: BLOCK },
+        { role: 'user', content: JSON.stringify(brief) },
+      ],
+      { json: true, thinking: PRODUCER_THINKING },
+    );
+    raw = JSON.parse(res.content);
+  } catch (e) {
+    notes.push(`blocking: ${String(e).slice(0, 160)}`);
+    return { breakdown: out, notes };
+  }
+  const given = list((raw as { scenes?: unknown })?.scenes);
+  for (const sc of out.scenes) {
+    const g = given.find((x) => (x as { id?: unknown })?.id === sc.id) as { front?: unknown; spots?: unknown } | undefined;
+    if (!g) continue;
+    const ids = new Set(sc.moments.flatMap((m) => [...m.visible, ...m.things]));
+    const spots: Spot[] = list(g.spots)
+      .map((x) => x as Record<string, unknown>)
+      .filter((x) => typeof x.id === 'string' && ids.has(x.id) && Number.isFinite(Number(x.x)) && Number.isFinite(Number(x.y)))
+      .map((x) => ({
+        id: x.id as string,
+        x: Math.max(0, Math.min(10, Number(x.x))),
+        y: Math.max(0, Math.min(10, Number(x.y))),
+        ...(typeof x.faces === 'string' && x.faces ? { faces: x.faces } : {}),
+        ...(x.many === true || b.people.find((p) => p.id === x.id)?.extras ? { many: true } : {}),
+      }));
+    const missing = [...ids].filter((id) => !spots.some((s) => s.id === id));
+    if (missing.length) {
+      notes.push(`blocking: scene ${sc.id} has no spot for ${missing.join(', ')}; left without a plan`);
+      continue;
+    }
+    sc.blocking = { front: str(g.front, 60) || 'the front', spots };
+  }
+  return { breakdown: out, notes };
 }
 
 const REWORD_MOMENT = `One moment of a person's dream is about to be drawn from the instructions below, and a checker holding it back found a problem in them. Find what in the moment's own words causes it (its action, the one thing it must show, its feeling, its part in the story, the dream's jump, or what in it is dreamlike): a detail that contradicts where it happens or who is there, something that cannot be in the picture, or something left unsaid. Rewrite every one of those words that takes part in the problem (if who is in the picture changed, each field that still names someone no longer there), as little as possible, keeping strictly to the dream as told and adding nothing it did not have. Write them in the third person, the dreamer as "the dreamer" or "they", never "you" (to a picture "you" is whoever looks at it) and never "he" or "she" (their sketch shows who they are; a "him" beside a woman's sketch reads as someone else). Never mention the camera or a viewer. Return JSON only: {"fields": {"action": "", "visual_point": "", "feeling": "", "purpose": "", "shift": "", "dream": ""}} with only the fields you changed; {"fields": {}} if the problem is not in these words.`;
