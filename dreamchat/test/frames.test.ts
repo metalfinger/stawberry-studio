@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { CutPlan } from '../continuity';
 import { framePrompt, writingIn } from '../frames';
-import { VAGUE } from '../producer';
+import { oneColour, VAGUE } from '../producer';
 import { asInstruction } from '../session';
 import {
   DREAM_QUALITY,
@@ -64,7 +64,7 @@ describe('colours the dream gives', () => {
       version: 0,
     };
     expect(toldColours(balloons)).toEqual(['blue balloons']);
-    const muted = { ...style, palette_hex: ['#8a8a8a'] };
+    const muted = { ...style, palette_hex: ['#8a8a8a', '#a08f7a', '#6f7f8f'] };
     expect(styleBlock(muted, toldColours(balloons))).toContain(
       'except what the dream itself gives a colour, which keeps it exactly: blue balloons',
     );
@@ -75,6 +75,34 @@ describe('colours the dream gives', () => {
     );
     expect(styleBlock({ ...muted, medium: 'a photograph' })).toContain('Skin keeps its natural tone.');
     expect(styleBlock(muted)).not.toContain('Skin');
+  });
+
+  test('in a style made in one colour, a colour a look names is a shade of it', () => {
+    const blueInk = {
+      ...style,
+      medium: 'ink wash on smooth paper',
+      palette_hex: ['#001E3C', '#003A70', '#0077B6', '#90E0EF', '#CAF0F8'],
+    };
+    expect(oneColour(blueInk)).toBe(true);
+    for (const fromImages of [true, false])
+      expect(styleBlock(blueInk, [], { fromImages })).toContain(
+        'it is drawn as a lighter or darker shade of it, never in its own colour.',
+      );
+    // What the dream itself gives a colour is still that colour.
+    expect(styleBlock(blueInk, ['red balloons'], { fromImages: true })).toContain(
+      'Only what the dream itself gives a colour keeps it exactly: red balloons.',
+    );
+    // A photograph in cold light is a grade, and skin keeps its tone; in black and white it does not.
+    const coldPhoto = { ...blueInk, medium: 'a photograph' };
+    expect(oneColour(coldPhoto)).toBe(false);
+    expect(styleBlock(coldPhoto, [], { fromImages: true })).toContain('Skin keeps its natural tone.');
+    const blackAndWhite = { ...coldPhoto, palette_hex: ['#111111', '#777777', '#EEEEEE'] };
+    expect(oneColour(blackAndWhite)).toBe(true);
+    expect(styleBlock(blackAndWhite)).not.toContain('Skin');
+    // Colours that span the wheel are not one colour, and the style's own word wins over its palette.
+    expect(oneColour({ ...blueInk, palette_hex: ['#0077B6', '#E07A1F'] })).toBe(false);
+    expect(oneColour({ ...blueInk, one_colour: false })).toBe(false);
+    expect(styleBlock({ ...blueInk, palette_hex: ['#0077B6', '#E07A1F'] })).not.toContain('shades of this one colour');
   });
 });
 
@@ -249,6 +277,24 @@ describe('a moment drawn from earlier moments', () => {
     );
     // An earlier moment says what it shows, so the model knows which picture is which.
     expect(prompt).toContain('Image 3: picture 1 (Ana stands at the counter): the same place from the same side.');
+  });
+
+  test('where someone was last seen keeps them drawn the same way, and their sketch wins', () => {
+    const use = {
+      id: 'm1',
+      kind: 'cut' as const,
+      role: 'identity' as const,
+      relation: 'other_place' as const,
+      carries: 'where ana was last seen: drawn the same way; their sketch says who they are',
+      who: ['p1'],
+    };
+    const { prompt, references } = framePrompt(moment('m2', 2, [use]), [ana, kitchen], style, [
+      { use, item: drawn('m1', 1) },
+    ]);
+    expect(references.map((r) => r.role)).toEqual(['identity', 'location', 'identity']);
+    expect(prompt).toContain(
+      'Image 3: picture 1 (Ana stands at the counter): where ana was last seen, only so they are drawn the same way from picture to picture. Who they are is Image 1: where the two differ, Image 1 is right. Nothing of its place, framing or background.',
+    );
   });
 });
 

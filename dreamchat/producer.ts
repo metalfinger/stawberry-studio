@@ -86,6 +86,11 @@ export type StyleOption = {
    * them: technique only ("light that comes from nowhere; edges a little too soft to hold").
    */
   dream?: string;
+  /**
+   * Every picture is made in shades of one colour (one ink, a cyanotype, black and white): a
+   * colour a look names is then a shade of it, never its own hue.
+   */
+  one_colour?: boolean;
   line: string;
   tokens: string[];
   palette_hex: string[];
@@ -105,6 +110,36 @@ export function mediumOf(style: StyleOption): string {
   if (style.medium?.trim()) return style.medium.trim();
   if (MEDIUM.test(style.name)) return style.name;
   return style.tokens.find((t) => MEDIUM.test(t)) ?? 'a photograph';
+}
+
+/** A colour's hue in degrees, or null for a grey. */
+function hueOf(hex: string): number | null {
+  const n = Number.parseInt(hex.replace('#', ''), 16);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  const max = Math.max(r, g, b);
+  const c = max - Math.min(r, g, b);
+  if (c < 20) return null;
+  const h = max === r ? ((g - b) / c) % 6 : max === g ? (b - r) / c + 2 : (r - g) / c + 4;
+  return (h * 60 + 360) % 360;
+}
+
+/**
+ * Whether a style makes everything in shades of one colour. A style that does not say is read
+ * from its palette: greys only, or a single hue in anything but a photograph (a photograph in cold
+ * light still has warm skin; an ink wash in one blue drew "medium brown hair" auburn, 24 Sep).
+ */
+export function oneColour(style: StyleOption): boolean {
+  if (style.one_colour !== undefined) return style.one_colour;
+  if (!style.palette_hex.length) return false;
+  const hues = style.palette_hex
+    .map(hueOf)
+    .filter((h): h is number => h !== null)
+    .sort((a, b) => a - b);
+  if (!hues.length) return true;
+  if (/photo|camera|film still/i.test(mediumOf(style))) return false;
+  // The arc the hues span: the whole circle less the widest gap between neighbours.
+  const gaps = hues.map((h, i) => (i ? h - hues[i - 1] : h + 360 - hues[hues.length - 1]));
+  return 360 - Math.max(...gaps) <= 40;
 }
 
 export type Breakdown = {
@@ -169,12 +204,13 @@ JSON only, exactly this shape (ids like p1, l1, t1, s1, m1, a/b/c/d):
 where D is {"value": "..." or null, "said": true or false}. Moment "said" is true when the person described that moment happening.`;
 
 const STYLE_SYSTEM = `You help turn a person's dream into pictures. From the conversation below, propose how the pictures could be drawn. Return JSON only:
-{"style_options": [{"id": "a", "name": "", "medium": "", "dream": "", "line": "", "tokens": [""], "palette_hex": ["#000000"], "lighting_rules": ""}]}
+{"style_options": [{"id": "a", "name": "", "medium": "", "dream": "", "one_colour": false, "line": "", "tokens": [""], "palette_hex": ["#000000"], "lighting_rules": ""}]}
 
 - Exactly 4 options: 3 ways suited to this dream's feeling and look, then "d", as close as possible to how the dream looked to them.
 - "name": plain words anyone would understand, like "an old woodcut print" or "soft watercolour". No art jargon, no artist names.
 - "medium": what every picture is made as, in a few plain words: "a photograph", "soft pencil on paper", "watercolour on rough paper", "flat black ink". For "d", when the dream looked like real life, "a photograph".
 - "dream": one technique phrase for how this way of drawing makes every picture feel like a dream, taken from how this dream felt to them, even when it looked real: "light that comes from nowhere and casts no clear shadow", "the stillness of a held breath", "edges a little too soft to hold". How it is drawn only: nothing from the story, no objects, no fog or haze added just to say "dream".
+- "one_colour": true when every picture is made in shades of a single colour (one ink, a cyanotype, black and white), so hair, skin and clothes are shades of it too; false when things keep their own colours, however the light tints them.
 - "line": one plain sentence on how it would feel.
 - "tokens": 4-6 concrete technique phrases a renderer can follow, each under 120 characters ("flat black ink with hard carved edges" is a token; "dreamy style" is not). Tokens say how everything is drawn, never what is in the dream: no objects, materials, creatures or anything else from it, or every picture will be made of it.
 - "palette_hex": 4-6 colours as #RRGGBB.
@@ -662,6 +698,7 @@ export function normalizeStyles(raw: unknown): StyleOption[] {
         name: str(so.name, 80) || `option ${i + 1}`,
         medium: str(so.medium, 80),
         dream: str(so.dream, 160),
+        ...(typeof so.one_colour === 'boolean' ? { one_colour: so.one_colour } : {}),
         line: str(so.line, 240),
         tokens,
         palette_hex: palette,

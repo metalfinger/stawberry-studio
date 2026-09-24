@@ -4,7 +4,7 @@
 // the engine's worker draws it.
 import type { CutPlan, GhostPlan } from './continuity';
 import { pictureName } from './continuity';
-import { type Detail, mediumOf, type StyleOption, VAGUE } from './producer';
+import { type Detail, mediumOf, oneColour, type StyleOption, VAGUE } from './producer';
 import { cli, REPO, STRAWBERRY_HOME, STRAWBERRY_PYTHON } from './strawberry';
 
 export type ItemKind = 'character' | 'location' | 'prop' | 'cut' | 'ghost';
@@ -240,9 +240,13 @@ export const DREAM_QUALITY =
 
 export function styleBlock(style: StyleOption, told: string[] = [], opts: { fromImages?: boolean } = {}): string {
   const colours = [...new Set(style.palette_hex.map(colourName))];
-  // A photograph of a person in a cold palette still has warm skin.
-  const skin = /photo|camera|film still/i.test(mediumOf(style)) ? 'Skin keeps its natural tone.' : '';
+  const mono = oneColour(style);
+  // A photograph of a person in a cold palette still has warm skin; one in black and white does not.
+  const skin = !mono && /photo|camera|film still/i.test(mediumOf(style)) ? 'Skin keeps its natural tone.' : '';
   const keep = told.length ? ` What the dream itself gives a colour keeps it exactly: ${told.join('; ')}.` : '';
+  // Made in one colour, a colour a look names is a shade of it: a blue ink wash told "medium brown
+  // hair" drew it auburn, beside the same woman's blue-black hair in the picture before (24 Sep).
+  const shades = `Colours: ${colours.join(', ')}. The whole picture is shades of this one colour: wherever anyone or anything is given a colour above (hair, skin, clothes), it is drawn as a lighter or darker shade of it, never in its own colour.${told.length ? ` Only what the dream itself gives a colour keeps it exactly: ${told.join('; ')}.` : ''}`;
   return [
     // The line describing a style is written for the person, and it can carry the dream itself
     // ("…precise details on the horse head" put ice horses in every sketch, 23 Sep): only the
@@ -253,7 +257,9 @@ export function styleBlock(style: StyleOption, told: string[] = [], opts: { from
     `It feels like a dream, in every picture: ${style.dream?.trim() || DREAM_QUALITY}.`,
     style.tokens.length ? `Technique, followed exactly: ${style.tokens.join('; ')}.` : '',
     colours.length
-      ? opts.fromImages
+      ? mono
+        ? shades
+        : opts.fromImages
         ? `Colours: ${colours.join(', ')}, for the light and everything no image above gives a colour to; each person and thing keeps the colours of its image.${keep}${skin ? ` ${skin}` : ''}`
         : told.length
           ? `Colours: ${colours.join(', ')}, except what the dream itself gives a colour, which keeps it exactly: ${told.join('; ')}.${skin ? ` ${skin}` : ''}`

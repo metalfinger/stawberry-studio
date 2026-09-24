@@ -133,8 +133,11 @@ export function planWrites(b: Breakdown, style: StyleOption, transcript: string)
     });
 
   for (const p of b.people) {
-    ops.push({ op: 'create', ref: `$${p.id}`, kind: 'character', name: p.name, parent: '$project' });
-    ops.push(...patches(`$${p.id}`, p.fields, p.name));
+    // Named for whoever reads the production, the judge among them: "Is you in frame?" asks about
+    // the viewer.
+    const name = p.is_dreamer ? 'the dreamer' : p.name;
+    ops.push({ op: 'create', ref: `$${p.id}`, kind: 'character', name, parent: '$project' });
+    ops.push(...patches(`$${p.id}`, p.fields, name));
   }
   for (const l of b.places) {
     ops.push({ op: 'create', ref: `$${l.id}`, kind: 'location', name: l.name, parent: '$project' });
