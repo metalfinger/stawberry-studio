@@ -405,7 +405,12 @@ export function framePrompt(
           ? `${nameOf(sheets, g.of)} seen facing ${g.looksAt || 'the other way'}: the side this frame faces. Keep everything in it where it puts it.`
           : g.state && WHOLE.test(g.state.what)
             ? `what ${nameOf(sheets, g.of)} has turned into, ${aNoun(g.state.now)}: draw it exactly so, where ${nameOf(sheets, g.of)} was. Nothing else from it.`
-            : `how ${nameOf(sheets, g.of)} looks now (${g.state?.what}: ${g.state?.now}): draw ${g.of === f.place ? 'it' : 'them'} exactly so. Nothing else from it.`,
+            : g.of === f.place || !g.state
+              ? `how ${nameOf(sheets, g.of)} looks now (${g.state?.what}: ${g.state?.now}): draw it exactly so. Nothing else from it.`
+              : // Only the part that changed: "how she looks now: draw them exactly so" beside her sketch for
+                // her build and clothes, and the picture being edited, gave three images one look
+                // (what to take from each, 0.49, 24 Sep).
+                `${nameOf(sheets, g.of)}'s ${g.state.what} as it is now (${g.state.now}): draw their ${g.state.what} exactly so, and take nothing else from it.`,
       );
       continue;
     }
