@@ -560,6 +560,9 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
         c.view = v.text;
         c.eye = v.eye;
         c.sees = v.inPicture;
+        // Made from its previs, the view needs nothing from the picture the dreamer was seen in:
+        // it is neither drawn from nor waited for, so it can be drawn alongside it.
+        c.refs = c.refs.filter((r) => r.relation !== 'seat');
       }
     } else {
       const fromBehind = !!m.looks_at && bare(m.looks_at).includes(bare(plan.front));

@@ -107,6 +107,11 @@ summary { cursor: pointer; color: var(--muted); font-size: .82rem; padding: 3px 
 .moment .n { color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; }
 .moment .n.key { color: var(--accent); }
 .moment .meta { grid-column: 2; color: var(--muted); font-size: .75rem; }
+.moment .plan { grid-column: 2; margin-top: 4px; }
+.moment .plan img { display: block; width: min(260px, 100%); border: 1px solid var(--line); }
+.sketch .planned { position: relative; }
+.sketch .planned img { opacity: .9; }
+.sketch .planned span { position: absolute; left: 8px; bottom: 8px; background: rgba(0,0,0,.6); color: #fff; font-size: .72rem; padding: 2px 6px; }
 .entity { padding: 8px 0; border-bottom: 1px solid var(--line); }
 .entity b { font-weight: 600; font-size: .88rem; }
 .field { display: flex; gap: 8px; align-items: baseline; font-size: .8rem; margin-top: 3px; }
@@ -337,11 +342,23 @@ function sketchCard(it, where = 'chat') {
       }
       card.append(line);
     } else if (k && k.error) card.append(el('div', { class: 'judge' }, 'Continuity check unavailable'));
+  } else if (it.kind === 'cut' && (it.status === 'drawing' || it.status === 'waiting') && planFor(it.id, where)) {
+    // Until it is drawn, the shot as planned: where everyone is, from its camera.
+    const box = el('div', { class: 'planned' });
+    box.append(planFor(it.id, where), el('span', {}, it.status === 'drawing' ? 'planned shot · drawing…' : 'planned shot'));
+    card.append(box);
   } else if (it.status === 'drawing') card.append(el('div', { class: 'wait' }, 'sketching…'));
   else if (it.status === 'failed') card.append(el('div', { class: 'muted', style: 'padding:0 11px 9px' }, it.error || 'something went wrong'));
   if (it.held && it.held.length) card.append(el('div', { class: 'bad', style: 'padding:0 11px 9px' }, `Held before drawing: ${it.held.join('; ')}`));
   if (it.reworded && it.reworded.length) card.append(el('div', { class: 'muted', style: 'padding:0 11px 9px' }, `Reworded before drawing: ${it.reworded.join(', ')}`));
   return card;
+}
+
+/** A moment's planned shot: its previs, rendered from the floor plan while the chat went on. */
+function planFor(id, where) {
+  const p = session && session.prep && session.prep.previs && session.prep.previs[id];
+  if (!p) return null;
+  return imageFor(`/api/plan?id=${encodeURIComponent(session.id)}&item=${encodeURIComponent(id)}&v=${session.prep.basedOn.slice(0, 8)}`, 'The planned shot: where everyone is, from its camera', where);
 }
 
 /** How the panel names a picture: its place in the story, or the ghost it is. */
@@ -435,6 +452,8 @@ function renderProduction() {
     const txt = el('span', {}, m.action + ' ');
     if (!m.said) txt.append(tag(false));
     row.append(txt, el('span', { class: 'meta' }, `${m.distance} · ${m.eyes === 'dreamer' ? 'through their eyes' : 'seen from outside'}${m.looks_at ? ` · facing ${m.looks_at}` : ''}${m.feeling ? ` · ${m.feeling}` : ''}${m.shift ? ` · the dream jumps: ${m.shift}` : ''}${m.from ? ` · follows ${m.from}` : ''}`));
+    const planned = planFor(m.id, 'moments');
+    if (planned) { const box = el('div', { class: 'plan' }); box.append(planned); row.append(box); }
     pane.append(row);
   }
 

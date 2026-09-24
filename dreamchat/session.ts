@@ -56,6 +56,7 @@ import {
   type StyleOption,
 } from './producer';
 import { type ContinuityPlan, type Criterion, drawOrder, pictureName, planBy, planContinuity, seenIn } from './continuity';
+import type { Blocking } from './blocking';
 import { previsImage } from './previs';
 import {
   buildFrames,
@@ -196,7 +197,107 @@ export type Session = {
   spentUsd: number;
   /** Higgsfield credits so far: its estimates, or its charge per picture where it gives none. */
   spentCredits?: number;
+  /** The shots, planned in the background while the chat went on (see prepareShots). */
+  prep?: Prep;
 };
+
+/**
+ * The shots, planned while the chat goes on: each scene's floor plan, and for every moment seen
+ * through the dreamer's eyes its previs and its director of photography's brief.
+ */
+export type Prep = {
+  /** The dream they were planned from, without its floor plans: stale once it changes. */
+  basedOn: string;
+  /** Each scene's floor plan, by scene. */
+  blocking: Record<string, Blocking>;
+  /** Each moment's brief, with the view it was briefed from. */
+  shots: Record<string, { text: string; view: string }>;
+  /** Each moment's previs as rendered then: a file in the conversation's folder. */
+  previs: Record<string, string>;
+  /** How long the planning took. */
+  ms: number;
+};
+
+/** What a moment calls who and what is in it: the dreamer, and what has turned into something else by what it is now. */
+function calledIn(b: Breakdown, c: { own: { who: string; what: string; now: string }[]; states: { who: string; what: string; now: string }[] }) {
+  const changed = [...c.own, ...c.states];
+  return (id: string) => {
+    const st = changed.find((x) => x.who === id && WHOLE.test(x.what));
+    if (st) return st.now;
+    const p = b.people.find((x) => x.id === id);
+    if (p) return p.is_dreamer ? 'the dreamer' : p.name;
+    return b.things.find((x) => x.id === id)?.name ?? b.places.find((x) => x.id === id)?.name ?? id;
+  };
+}
+
+/**
+ * The shots of a settled dream, planned without drawing anything: each scene's floor plan (asked
+ * for where a scene has none), every camera, and for every moment seen through the dreamer's eyes
+ * its previs, written into `dir`, and its director of photography's brief. The briefs are asked
+ * for all at once.
+ */
+export async function planShots(
+  b: Breakdown,
+  style: StyleOption,
+  deps: { block?: StoreDeps['block']; shot?: StoreDeps['shot']; dir?: string },
+): Promise<Prep> {
+  const t0 = Date.now();
+  const draft: Breakdown = structuredClone(b);
+  completeViews(draft);
+  const blocked =
+    deps.block && draft.scenes.some((sc) => !sc.blocking)
+      ? ((await deps.block(draft).catch(() => null))?.breakdown ?? draft)
+      : draft;
+  const plan = planContinuity(blocked);
+  const dreamer = blocked.people.find((p) => p.is_dreamer)?.id;
+  const prep: Prep = {
+    basedOn: planKey(b),
+    blocking: Object.fromEntries(blocked.scenes.filter((sc) => sc.blocking).map((sc) => [sc.id, sc.blocking as Blocking])),
+    shots: {},
+    previs: {},
+    ms: 0,
+  };
+  await Promise.all(
+    plan.cuts
+      .filter((c) => c.view && c.eye)
+      .map(async (c) => {
+        const called = calledIn(blocked, c);
+        const scene = blocked.scenes.find((sc) => sc.id === c.scene);
+        const at = scene?.moments.findIndex((x) => x.id === c.id) ?? -1;
+        const m = scene?.moments[at];
+        const where = planBy(blocked, c.id);
+        if (where && dreamer && deps.dir) {
+          const path = join(deps.dir, `plan-${c.id}.png`);
+          mkdirSync(deps.dir, { recursive: true });
+          await Bun.write(path, previsImage(where, c.eye!, [dreamer], called));
+          prep.previs[c.id] = path;
+        }
+        if (deps.shot && m) {
+          const before = (scene?.moments ?? []).slice(0, at).map((x) => x.action);
+          const text = await deps
+            .shot(m.action, c.view!, mediumOf(style), (c.sees ?? []).map(called), before)
+            .catch(() => null);
+          if (text) prep.shots[c.id] = { text, view: c.view! };
+        }
+      }),
+  );
+  prep.ms = Date.now() - t0;
+  return prep;
+}
+
+/** The shots planned in the background, kept on the conversation if they are for this dream. */
+export function applyPrep(s: Pick<Session, 'draft' | 'prep'>, prep: Prep): void {
+  const b = s.draft?.breakdown;
+  if (!b || planKey(b) !== prep.basedOn) return;
+  for (const sc of b.scenes) sc.blocking ??= prep.blocking[sc.id];
+  s.prep = prep;
+}
+
+/** What a dream's plans are made from, whatever floor plans it has been given since. */
+const planKey = (b: Breakdown) =>
+  new Bun.CryptoHasher('sha256')
+    .update(JSON.stringify({ ...b, scenes: b.scenes.map(({ blocking: _, ...sc }) => sc) }))
+    .digest('hex');
 
 export type TurnResult = {
   messages: string[];
@@ -431,6 +532,8 @@ export class SessionStore {
   private memoryDetails = new Map<string, TurnDetail>();
   private drafts = new Map<string, { basedOn: number; promise: Promise<DraftResult> }>();
   private writes = new Map<string, Promise<unknown>>();
+  /** The shots being planned in the background, by conversation. */
+  private preps = new Map<string, Promise<Prep | null>>();
   private watching = new Set<string>();
   private reviews = new Map<string, Promise<unknown>>();
 
@@ -937,7 +1040,10 @@ export class SessionStore {
     s.phase = phase;
     s.closed = CLOSED.includes(phase);
     s.state = { ...overlaid, last_move: moveKey(move) };
-    if (move.kind === 'start') this.startWrite(s);
+    if (move.kind === 'start') {
+      this.startWrite(s);
+      this.prepareShots(s);
+    }
     if ([...(s.build?.items ?? []), ...(s.build?.frames ?? [])].some((i) => i.status === 'drawing')) this.watch(s.id);
 
     await this.commit(
@@ -1039,6 +1145,28 @@ export class SessionStore {
     );
   }
 
+  /**
+   * The shots, planned in the background as soon as the dream is settled, while the chat goes on to
+   * its sketches: each scene's floor plan, every camera, and for every moment seen through the
+   * dreamer's eyes its previs and its director of photography's brief. Made when the moments
+   * begin, they held each one up: the brief alone took 23 s a moment, the floor plan 4 s (24 Sep).
+   * Nothing here is paid for but words.
+   */
+  private prepareShots(s: Session): void {
+    const b = s.draft?.breakdown;
+    const style = s.style;
+    if (!b || !style || this.preps.has(s.id) || s.prep?.basedOn === planKey(b)) return;
+    const id = s.id;
+    const work = planShots(b, style, {
+      block: this.deps.block,
+      shot: this.deps.shot,
+      dir: this.deps.dir ? join(this.deps.dir, id) : undefined,
+    }).catch(() => null);
+    this.preps.set(id, work);
+    // Kept on the conversation when ready, unless the dream has changed meanwhile.
+    void work.then((prep) => (prep ? this.serial(id, () => this.update(id, (x) => applyPrep(x, prep))) : undefined));
+  }
+
   /** The next profile to show. What isn't asked about is sketched without its own question. */
   private nextItem(b: Build): Item | undefined {
     const at = b.items.findIndex((i) => i.id === b.current);
@@ -1052,6 +1180,9 @@ export class SessionStore {
    */
   private async startFrames(s: Session, turn: number): Promise<void> {
     if (!s.build || !s.draft?.breakdown) return;
+    // What was planned in the background while the chat went on, when it is for this dream.
+    const prep = await this.preps.get(s.id)?.catch(() => null);
+    if (prep) applyPrep(s, prep);
     // What each moment shows, completed from its words, for a dream drafted before this was done.
     completeViews(s.draft.breakdown);
     // Where everyone and everything is, decided before the first moment is drawn.
@@ -1234,6 +1365,8 @@ export class SessionStore {
       console.error(`previs for ${frame.id}: ${String(e).slice(0, 300)}`);
       return undefined;
     });
+    const ready = s.prep?.shots[frame.id];
+    if (view && frame.shot?.view !== view && ready?.view === view) frame.shot = ready;
     if (view && this.deps.shot && frame.shot?.view !== view) {
       // How everyone is placed comes from what has happened in this place so far.
       const scene = s.draft?.breakdown?.scenes.find((sc) => sc.moments.some((m) => m.id === frame.id));
