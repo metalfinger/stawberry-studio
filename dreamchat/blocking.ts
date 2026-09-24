@@ -115,8 +115,11 @@ const place = (angle: number) =>
   Math.abs(angle) <= 10 ? 'in the middle' : angle < 0 ? (angle < -25 ? 'at the left edge' : 'left of the middle') : angle > 25 ? 'at the right edge' : 'right of the middle';
 
 /**
- * What the dreamer sees through their own eyes, in words an illustrator can draw from: who and
- * what is where in the frame, near to far, and what is behind them and out of view.
+ * What the dreamer sees through their own eyes, in words an illustrator can draw from: where the
+ * camera looks, who and what is where in the frame from nearest to farthest, and what is outside
+ * the picture, the room's front included. Said in one sentence with the front left out, the view
+ * came back facing the screen, the default for a theater, instead of turned to the roller coaster
+ * beside her (24 Sep).
  */
 export function dreamerView(
   plan: Blocking,
@@ -131,6 +134,11 @@ export function dreamerView(
   // What is right where they are (the seat under them) is where they are, not something before them.
   const at = plan.spots.filter((s) => s.id !== dreamer && !s.many && Math.hypot(s.x - me.x, s.y - me.y) < 0.9).map((s) => s.id);
   const others = ids.filter((id) => id !== dreamer && !at.includes(id));
+  // The room's front is a whole side of it: in the picture when the camera looks that way, else
+  // off to one side of it or behind it.
+  const front = bearing({ x: 0, y: 0 }, cam.d, DIRECTIONS.front).angle;
+  const withFront = plan;
+  const called = name;
   const { inView, outOfView } = framing(cam, plan, others);
   const own = facing(me, plan);
   const turn = bearing({ x: 0, y: 0 }, own, cam.d).angle;
@@ -142,26 +150,30 @@ export function dreamerView(
         : `turned to their ${turn < 0 ? 'left' : 'right'}`;
   const seen = inView
     .map((id) => {
-      const s = plan.spots.find((x) => x.id === id)!;
+      const s = withFront.spots.find((x) => x.id === id)!;
       const b = bearing(cam.at, cam.d, s);
-      return { id, b, words: `${reach(b.distance)}, ${place(b.angle)}: ${name(id)}${s.many ? ', many of them' : ''}` };
+      return { id, b, many: !!s.many };
     })
     .sort((a, b) => a.b.distance - b.b.distance);
-  // What stands in the line of sight to what they look at, closer than it, is seen first.
-  const lines = seen.map((x) => x.words);
-  const away = outOfView.map((id) => {
-    const s = plan.spots.find((x) => x.id === id)!;
-    const b = bearing(cam.at, cam.d, s);
-    return `${name(id)} (${Math.abs(b.angle) > 135 ? 'behind them' : b.angle < 0 ? 'off to their left' : 'off to their right'})`;
-  });
-  const text = [
-    `From where the dreamer is${at.length ? `, on ${at.map(name).join(' and ')}` : ''}, ${turned}${toward ? `, toward ${name(toward)}` : ''}; beyond everything, ${wall(cam.d, plan.front)}.`,
-    lines.length ? `In the picture, nearest first: ${lines.join('; ')}.` : '',
-    away.length ? `Out of the picture: ${away.join(', ')}.` : '',
-  ]
-    .filter(Boolean)
-    .join(' ');
-  return { text, inPicture: [...at, ...inView] };
+  const sentences = [
+    `The camera is the dreamer's eyes${at.length ? `, on ${at.map(name).join(' and ')}` : ''}, ${turned}${toward ? `, toward ${name(toward)}` : ''}: it looks toward ${wall(cam.d, plan.front)}.`,
+    ...seen.map((x, i) => {
+      const where = place(x.b.angle);
+      const how = reach(x.b.distance);
+      const lead = i === 0 ? 'Nearest' : i === seen.length - 1 && seen.length > 1 ? 'Farthest' : 'Then';
+      return `${lead}, ${how}, ${where} of the picture: ${called(x.id)}${x.many ? ', many of them' : ''}.`;
+    }),
+    ...outOfView.map((id) => {
+      const s = withFront.spots.find((x) => x.id === id)!;
+      const b = bearing(cam.at, cam.d, s);
+      const side = Math.abs(b.angle) > 135 ? 'behind the camera' : b.angle < 0 ? 'off to the left' : 'off to the right';
+      return `Outside the picture, ${side}: ${called(id)}.`;
+    }),
+    Math.abs(front) <= 50
+      ? `At the back of the picture: ${plan.front}.`
+      : `Outside the picture, ${Math.abs(front) > 135 ? 'behind the camera' : front < 0 ? 'off to the left' : 'off to the right'}: ${plan.front}.`,
+  ];
+  return { text: sentences.join(' '), inPicture: [...at, ...inView] };
 }
 
 /** Everyone and everything a camera from outside sees, left to right across the picture. */

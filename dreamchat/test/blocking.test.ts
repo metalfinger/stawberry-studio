@@ -27,16 +27,18 @@ describe('blocking', () => {
     const { text: view, inPicture } = dreamerView(theater, 'p1', 't2', ['p2', 't2', 'p3'], name)!;
     expect(inPicture).toEqual(['p2', 't2']);
     // She turns to her own left: the friend sits there, close, with the roller coaster beyond her.
-    expect(view).toContain('turned to their left, toward the roller coaster');
-    expect(view).toContain('In the picture, nearest first: close, in the middle: the friend; a little way off, in the middle: the roller coaster.');
-    // The audience is behind her now, and the room's left side beyond everything.
-    expect(view).toContain('Out of the picture: the audience (off to their left)');
-    expect(view).toContain('beyond everything, the left side of the room');
+    expect(view).toContain('turned to their left, toward the roller coaster: it looks toward the left side of the room.');
+    expect(view).toContain('Nearest, close, in the middle of the picture: the friend.');
+    expect(view).toContain('Farthest, a little way off, in the middle of the picture: the roller coaster.');
+    // The audience is off to her left now, and the screen, the room's front, to her right.
+    expect(view).toContain('Outside the picture, off to the left: the audience.');
+    expect(view).toContain('Outside the picture, off to the right: the screen.');
   });
 
   test('looking where she faces, she looks straight ahead at the front', () => {
     const view = dreamerView(theater, 'p1', undefined, ['p2', 't2', 'p3'], name)!.text;
     expect(view).toContain('looking straight ahead');
-    expect(view).toContain('beyond everything, the screen');
+    expect(view).toContain('it looks toward the screen');
+    expect(view).toContain('At the back of the picture: the screen.');
   });
 });
