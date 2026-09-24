@@ -183,6 +183,35 @@ Known limits:
 - A submission cut off before the provider answered (Higgsfield's 503) stays in doubt until
   someone checks the account; `resume.ts --redraw` draws it again once they have.
 
+### Nothing is drawn on a guess
+
+Every sketch, in-between reference and moment passes a confidence gate before it is paid for
+(`gate.ts`):
+- **Code** checks what it can know for certain:
+  - the plan has nothing open for the picture;
+  - every attached image is described with what to take from it;
+  - an edit base is the first and only one;
+  - every image is approved;
+  - everyone in view brings their sketch;
+  - the images fit the model.
+- **Jev** reads the exact prompt and answers four questions:
+  - does it disagree with itself about what is shown?
+  - would someone be drawn twice?
+  - does it say who, where and what without the artist inventing it?
+  - is each image's purpose clear?
+
+A picture that fails is held with its reasons, and what depends on it waits. Nothing is counted
+or paid for. A held moment is reworded once, in text, then read again. A held sketch has its look
+proposed afresh, then the person is asked. `resume.ts` and `plan.ts --gate` put held pictures
+through the gate again.
+
+### Feeling like a dream
+
+Each moment says what in it is impossible, or wrong the way dreams are, that the dreamer simply
+accepted, and it is drawn as plain fact. Each style says how its pictures feel like a dream,
+taken from how this dream felt, as technique only. A style that says nothing gets the stillness
+of a remembered moment, never added fog or haze.
+
 ### Resuming a dream
 
 ```sh
@@ -258,4 +287,5 @@ It writes the full transcripts to `runs/`.
 | `produce.ts` | Runs the producer and the check on a saved simulated conversation |
 | `resume.ts` | Picks a saved dream's drawing up where it stopped |
 | `judge.ts` | The assistant as judge: the queue folder, and the answers recorded as facts |
-| `plan.ts` | Prints a saved dream's continuity plan and every picture's prompt, before anything is paid for |
+| `plan.ts` | Prints a saved dream's continuity plan and every picture's prompt, before anything is paid for; `--gate` reads each through the gate |
+| `gate.ts` | The confidence gate every picture passes before it is paid for |
