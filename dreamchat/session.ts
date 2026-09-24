@@ -238,6 +238,8 @@ export type StoreDeps = {
     findings: string[],
     transcript: string,
   ) => Promise<Record<string, Detail> | null>;
+  /** A person's correction of a picture, as an instruction for its next version; "" when its instructions already give it. */
+  fix?: (words: string, instructions: string) => Promise<string | null>;
   /** Each scene's floor plan, made before any moment is drawn: where everyone and everything is. */
   block?: (b: Breakdown) => Promise<{ breakdown: Breakdown; notes: string[] }>;
   /** A held moment's own words, reworded once before it is given up on; text is nearly free. */
@@ -716,7 +718,6 @@ export class SessionStore {
         this.reviewSketch(s, it, 'rejected', `They said it isn't right: "${text.slice(0, 400)}"`);
         it.fields = revised;
         // Their correction is what this redraw puts right; what the judge found in an earlier take is not.
-        it.repairFor = named ? [`${named}: "${text.slice(0, 200)}"`] : undefined;
         it.announced = false;
         it.review = undefined;
         it.continuityApproved = false;
@@ -724,6 +725,16 @@ export class SessionStore {
         // where a moment was seen from was redrawn from a plan made before the dreamer's seat was
         // part of it (24 Sep).
         if (it.kind === 'cut') await this.replan(s);
+        // Said as what the picture must show, beside the instructions it will be drawn from: their
+        // words are about an earlier picture. Nothing, when those instructions already give it.
+        it.repairFor = undefined;
+        const fix =
+          named && this.deps.fix && it.kind === 'cut' && s.build && s.style
+            ? await this.deps
+                .fix(text, framePrompt(it, s.build.items, s.style, this.plannedInputs(s, it)).prompt)
+                .catch(() => null)
+            : null;
+        it.repairFor = named ? (fix === '' ? undefined : [fix ?? `${named}: "${text.slice(0, 200)}"`]) : undefined;
         if (it.kind === 'cut') await this.startFrame(s, it, turnNow, before);
         else await this.startSketch(s, it, turnNow);
         reviewed.redrawing.push(it.name);

@@ -10,7 +10,7 @@ import { dreamConfig } from './dream';
 import { callJev } from './jev';
 import { assistantJudge, judgeKind } from './judge';
 import { callHost } from './llm';
-import { blockScenes, proposeLook, reviseItem, rewordLook, rewordMoment } from './producer';
+import { blockScenes, fixFrom, proposeLook, reviseItem, rewordLook, rewordMoment } from './producer';
 import { liveProducer, ownStyle, SessionStore } from './session';
 import { judgeAvailable, judgeContinuity, judgeTake, liveSheets, PROVIDER, spawnWorker } from './sheets';
 import { REPO, STRAWBERRY_HOME, STRAWBERRY_PYTHON, strawberryAvailable, writeProduction } from './strawberry';
@@ -35,6 +35,7 @@ const store = new SessionStore(dreamConfig(), {
   // Nothing is paid for until Jev has read its prompt and the harness is sure of it.
   gate: process.env.DREAMCHAT_GATE === 'off' ? undefined : callJev,
   block: blockScenes,
+  fix: fixFrom,
   reword: rewordMoment,
   rewordLook,
   judge: judgeKind === 'assistant' ? assistantJudge : judgeKind === 'pc' && judgeAvailable() ? judgeTake : undefined,

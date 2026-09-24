@@ -436,8 +436,10 @@ export function framePrompt(
   // Their own hands or feet may show, in their own clothes.
   const dreamer = sheets.find((x) => x.isDreamer);
   const wear = dreamer ? lookOf(dreamer, ['wardrobe']) : '';
+  // Said once: with the view worked out, where the camera is and what it faces are in the view.
+  const own = `at most their own hands, arms or feet show${wear ? `, in ${wear.charAt(0).toLowerCase()}${wear.slice(1)}` : ''}`;
   const pov =
-    f.eyes === 'dreamer'
+    f.eyes === 'dreamer' && !plan?.view
       ? `The camera is the dreamer's own eyes: the dreamer is not in the picture, except perhaps their own hands, arms or feet${wear ? `, in ${wear.charAt(0).toLowerCase()}${wear.slice(1)}` : ''}.`
       : '';
   const feeling = frame.fields.feeling?.value;
@@ -450,7 +452,7 @@ export function framePrompt(
     // With the dreamer's view worked out, the view is the framing: "the subject fills the frame"
     // beside what is close and what is beyond read as a contradiction (0.70, 24 Sep).
     plan?.view
-      ? `One picture from the dream, in ${SHAPE_WORDS[shapeOf(frame)]}: ${angle}${f.looksAt ? `, facing ${f.looksAt}` : ''}.`
+      ? `One picture from the dream, in ${SHAPE_WORDS[shapeOf(frame)]}, through the dreamer's own eyes.`
       : `One picture from the dream, in ${SHAPE_WORDS[shapeOf(frame)]}: a ${f.distance} shot, ${angle}${f.looksAt ? `, facing ${f.looksAt}` : ''}. ${FRAMING[f.distance]}`,
     manifest.length
       ? `The attached images, in order, and the one thing to take from each:\n${manifest.join('\n')}`
@@ -461,7 +463,7 @@ export function framePrompt(
       ? `The dream in it, drawn as plain fact, as solid and ordinary as everything around it: ${sentence(frame.fields.dream.value)}`
       : '',
     pov,
-    plan?.view ? `What the dreamer sees from where they are: ${plan.view}` : '',
+    plan?.view ? `What the dreamer sees, the camera being their own eyes (${own}): ${plan.view}` : '',
     plan?.camera && (plan.across?.length ?? 0) >= 2
       ? `Seen ${plan.camera}. From left to right across the picture: ${plan.across!.map((id) => nameOf(sheets, id)).join(', then ')}. They keep these places in every picture of this scene.${members.map((m) => ` ${who(m.member)} ${isGroup(m.member) ? 'are' : 'is'} with ${who(m.group)}.`).join('')}`
       : staged.length >= 2

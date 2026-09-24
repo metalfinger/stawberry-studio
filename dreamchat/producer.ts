@@ -394,6 +394,31 @@ export async function blockScenes(b: Breakdown): Promise<{ breakdown: Breakdown;
   return { breakdown: out, notes };
 }
 
+const FIX = `A person looked at a picture of a moment from their dream and said what is wrong with it. Below are the instructions its next version will be drawn from. If they already give what the person asked for, return an empty fix. Otherwise write what the next picture must show so that it is right, as one or two sentences an illustrator can follow who sees only those instructions: what the picture shows and how, in its own terms, agreeing with the instructions. Never refer to earlier pictures, "the last frame" or "again", nor to what was wrong before; keep strictly to what they asked, adding nothing. Return JSON only: {"fix": ""}.`;
+
+/**
+ * A person's correction as an instruction for the picture it corrects. Quoted as they said it, "the
+ * left and right sofas are still the same as in the last two frames" meant little to a model that
+ * sees no earlier frames, and read to the gate as the redraw contradicting itself (24 Sep).
+ */
+export async function fixFrom(words: string, instructions: string): Promise<string | null> {
+  try {
+    const res = await callDeepseek(
+      [
+        { role: 'system', content: FIX },
+        { role: 'user', content: `What they said about its picture: "${words}"\n\nThe instructions its next version will be drawn from:\n\n${instructions}` },
+      ],
+      { json: true, thinking: PRODUCER_THINKING },
+    );
+    // Empty when the instructions already give it (a worked-out view is the fix for "not from my
+    // eyes"); a guess without them read "the dreamer on the roller coaster, things tilted".
+    const fix = (JSON.parse(res.content) as { fix?: unknown }).fix;
+    return typeof fix === 'string' ? fix.trim().slice(0, 400) : null;
+  } catch {
+    return null;
+  }
+}
+
 const REWORD_MOMENT = `One moment of a person's dream is about to be drawn from the instructions below, and a checker holding it back found a problem in them. Find what in the moment's own words causes it (its action, the one thing it must show, its feeling, its part in the story, the dream's jump, or what in it is dreamlike): a detail that contradicts where it happens or who is there, something that cannot be in the picture, or something left unsaid. Rewrite every one of those words that takes part in the problem (if who is in the picture changed, each field that still names someone no longer there), as little as possible, keeping strictly to the dream as told and adding nothing it did not have. Write them in the third person, the dreamer as "the dreamer" or "they", never "you" (to a picture "you" is whoever looks at it) and never "he" or "she" (their sketch shows who they are; a "him" beside a woman's sketch reads as someone else). Never mention the camera or a viewer. Return JSON only: {"fields": {"action": "", "visual_point": "", "feeling": "", "purpose": "", "shift": "", "dream": ""}} with only the fields you changed; {"fields": {}} if the problem is not in these words.`;
 
 /**
