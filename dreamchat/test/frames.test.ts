@@ -208,7 +208,8 @@ describe('a moment drawn from earlier moments', () => {
     const before: Item = { ...drawn('m1', 1) };
     before.frame = { ...before.frame!, visible: ['p1', 'p2'] };
     const { prompt } = framePrompt(moment('m2', 2, [use]), [ana, conductor, kitchen], style, [{ use, item: before }]);
-    expect(prompt).toContain('the conductor is not in this moment: take them out.');
+    expect(prompt).toContain('who is in it changes: the conductor is no longer there.');
+    expect(prompt).not.toContain('everyone in it exactly');
   });
 
   test('what the judge found invented in the picture being edited is left out of the edit', () => {

@@ -203,7 +203,12 @@ export function framePrompt(
       base.item.mediaId,
       'base',
       'the same view a moment earlier: edit it into this moment',
-      `EDIT THIS PICTURE. It is ${pictureNo(base)}, the same view a moment earlier. Keep its camera, framing, room, light and everyone in it exactly as they are, faces and clothes included; change only what this moment changes.${leaving.length ? ` ${leaving.join(' and ')} ${leaving.length > 1 ? 'are' : 'is'} not in this moment: take ${leaving.length > 1 ? 'them' : 'them'} out.` : ''}${joining.length ? ` ${joining.join(' and ')} ${joining.length > 1 ? 'join' : 'joins'} it, drawn from ${joining.length > 1 ? 'their' : 'their'} sketch.` : ''}${strays(base)}`,
+      leaving.length || joining.length
+        ? `EDIT THIS PICTURE. It is ${pictureNo(base)}, the same view a moment earlier. Keep its camera, framing, room and light exactly; who is in it changes: ${[
+            ...(leaving.length ? [`${leaving.join(' and ')} ${leaving.length > 1 ? 'are' : 'is'} no longer there`] : []),
+            ...(joining.length ? [`${joining.join(' and ')} ${joining.length > 1 ? 'are' : 'is'} there now, drawn from their sketch`] : []),
+          ].join('; ')}. Change only that and what this moment changes.${strays(base)}`
+        : `EDIT THIS PICTURE. It is ${pictureNo(base)}, the same view a moment earlier. Keep its camera, framing, room, light and everyone in it exactly as they are, faces and clothes included; change only what this moment changes.${strays(base)}`,
     );
 
   // What each sheet says in words, so the manifest ties each image to who or what it is.
@@ -244,7 +249,7 @@ export function framePrompt(
         s.mediaId,
         'identity',
         `${who(s)}: this exact person, with the same face, build and clothes`,
-        `who ${who(s)} ${isGroup(s) ? 'are' : 'is'}${look ? ` (${look})` : ''}: their ${changed.some((st) => /head|face/i.test(st.what)) ? 'build and clothes' : 'face, hair, build and clothes'}, exactly${base ? ', as Image 1 already shows them' : ''}. Nothing else from it: not its pose, background or framing.${except}`,
+        `who ${who(s)} ${isGroup(s) ? 'are' : 'is'}${look ? ` (${look})` : ''}: their ${changed.some((st) => /head|face/i.test(st.what)) ? 'build and clothes' : 'face, hair, build and clothes'}, exactly${base && baseWho.includes(s.id) ? ', as Image 1 already shows them' : ''}. Nothing else from it: not its pose, background or framing.${except}`,
       );
       imageOf.set(s.id, references.length);
     } else if (s.kind === 'location') {

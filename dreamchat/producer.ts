@@ -266,7 +266,7 @@ export async function rewordLook(
   return changed ? out : null;
 }
 
-const REWORD_MOMENT = `One moment of a person's dream is about to be drawn from the instructions below, and a checker holding it back found a problem in them. Find what in the moment's own words causes it (its action, the one thing it must show, its feeling, or its part in the story): a detail that contradicts where it happens or who is there, something that cannot be in the picture, or something left unsaid. Rewrite only those words, as little as possible, keeping strictly to the dream as told and adding nothing it did not have. Write them in the third person, the dreamer as "the dreamer", never "you": to a picture "you" is whoever looks at it. Never mention the camera or a viewer. Return JSON only: {"fields": {"action": "", "visual_point": "", "feeling": "", "purpose": ""}} with only the fields you changed; {"fields": {}} if the problem is not in these words.`;
+const REWORD_MOMENT = `One moment of a person's dream is about to be drawn from the instructions below, and a checker holding it back found a problem in them. Find what in the moment's own words causes it (its action, the one thing it must show, its feeling, or its part in the story): a detail that contradicts where it happens or who is there, something that cannot be in the picture, or something left unsaid. Rewrite every one of those words that takes part in the problem (if who is in the picture changed, each field that still names someone no longer there), as little as possible, keeping strictly to the dream as told and adding nothing it did not have. Write them in the third person, the dreamer as "the dreamer", never "you": to a picture "you" is whoever looks at it. Never mention the camera or a viewer. Return JSON only: {"fields": {"action": "", "visual_point": "", "feeling": "", "purpose": ""}} with only the fields you changed; {"fields": {}} if the problem is not in these words.`;
 
 /**
  * A moment's words, reworded before anything is paid for, when the gate found its instructions
@@ -277,6 +277,9 @@ export async function rewordMoment(
   prompt: string,
   findings: string[],
   fields: Record<string, Detail>,
+  // Who is in the picture and who is not: told only "take the conductor out", a rewording kept
+  // "in sync with the conductor's hand" (24 Sep).
+  cast: { in: string[]; out: string[] } = { in: [], out: [] },
 ): Promise<Record<string, Detail> | null> {
   const words = ['action', 'visual_point', 'feeling', 'purpose'];
   const current = Object.fromEntries(words.map((k) => [k, fields[k]?.value ?? null]));
@@ -285,7 +288,7 @@ export async function rewordMoment(
       { role: 'system', content: REWORD_MOMENT },
       {
         role: 'user',
-        content: `What the checker found:\n${findings.map((f) => `- ${f}`).join('\n')}\n\nThe moment's words:\n${JSON.stringify(current)}\n\nThe instructions the picture would be drawn from:\n\n${prompt}`,
+        content: `What the checker found:\n${findings.map((f) => `- ${f}`).join('\n')}\n\n${cast.in.length ? `Who is in this picture: ${cast.in.join(', ')}.\n` : ''}${cast.out.length ? `Not in this picture, so never named in its words: ${cast.out.join(', ')}.\n\n` : '\n'}The moment's words:\n${JSON.stringify(current)}\n\nThe instructions the picture would be drawn from:\n\n${prompt}`,
       },
     ],
     { json: true, thinking: PRODUCER_THINKING },

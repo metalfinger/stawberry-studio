@@ -52,7 +52,7 @@ import {
   ownStyle,
   type StyleOption,
 } from './producer';
-import { type ContinuityPlan, drawOrder, planContinuity, seenIn } from './continuity';
+import { type ContinuityPlan, drawOrder, pictureName, planContinuity, seenIn } from './continuity';
 import {
   buildFrames,
   buildGhosts,
@@ -235,7 +235,12 @@ export type StoreDeps = {
     transcript: string,
   ) => Promise<Record<string, Detail> | null>;
   /** A held moment's own words, reworded once before it is given up on; text is nearly free. */
-  reword?: (prompt: string, findings: string[], fields: Record<string, Detail>) => Promise<Record<string, Detail> | null>;
+  reword?: (
+    prompt: string,
+    findings: string[],
+    fields: Record<string, Detail>,
+    cast?: { in: string[]; out: string[] },
+  ) => Promise<Record<string, Detail> | null>;
   /** Words for a person's look when nobody described it, filled in as guesses before the sketch. */
   proposeLook?: (
     name: string,
@@ -682,7 +687,7 @@ export class SessionStore {
         }
         this.reviewSketch(s, it, 'rejected', `They said it isn't right: "${text.slice(0, 400)}"`);
         it.fields = revised;
-        if (named) it.repairFor = [`${named} (they said: "${text.slice(0, 200)}")`];
+        if (named) it.repairFor = [`${named}: "${text.slice(0, 200)}"`];
         it.announced = false;
         it.review = undefined;
         it.continuityApproved = false;
@@ -1142,15 +1147,22 @@ export class SessionStore {
     let built = framePrompt(frame, s.build.items, s.style, this.plannedInputs(s, frame));
     const inView = inViewOf(frame, s.build.items);
     let findings = await this.gateFindings(s, frame, built.prompt, built.references, inView);
-    // What only its words got wrong is put right in words first, once, and read again.
-    if (findings.length && this.deps.reword && !frame.reworded && findings.every((f) => WORDING.test(f))) {
-      const fields = await this.deps.reword(built.prompt, findings, frame.fields).catch(() => null);
-      if (fields) {
-        frame.reworded = Object.keys(fields).filter((k) => fields[k]?.value !== frame.fields[k]?.value);
-        frame.fields = fields;
-        built = framePrompt(frame, s.build.items, s.style, this.plannedInputs(s, frame));
-        findings = await this.gateFindings(s, frame, built.prompt, built.references, inView);
-      }
+    // What only its words got wrong is put right in words first, and read again: twice at most.
+    for (let pass = 0; pass < 2; pass++) {
+      if (!findings.length || !this.deps.reword || !findings.every((f) => WORDING.test(f))) break;
+      const people = s.draft?.breakdown?.people ?? [];
+      const named = (p: (typeof people)[number]) => (p.is_dreamer ? 'the dreamer' : pictureName(p.name));
+      const cast = {
+        in: people.filter((p) => frame.frame?.visible.includes(p.id)).map(named),
+        out: people.filter((p) => !frame.frame?.visible.includes(p.id)).map(named),
+      };
+      const fields = await this.deps.reword(built.prompt, findings, frame.fields, cast).catch(() => null);
+      if (!fields) break;
+      const changed = Object.keys(fields).filter((k) => fields[k]?.value !== frame.fields[k]?.value);
+      frame.reworded = [...new Set([...(frame.reworded ?? []), ...changed])];
+      frame.fields = fields;
+      built = framePrompt(frame, s.build.items, s.style, this.plannedInputs(s, frame));
+      findings = await this.gateFindings(s, frame, built.prompt, built.references, inView);
     }
     if (findings.length) {
       Object.assign(frame, { status: 'waiting', held: findings });
@@ -1215,7 +1227,7 @@ export class SessionStore {
     const a = call.answers?.named;
     // No reading, no dropping their correction: only a clear "just a feeling" keeps the picture.
     if (a && a.type === 'noul' && a.noul < 0.5) return null;
-    return `put right what they pointed at in the picture of ${name}`;
+    return 'put right what they said is wrong';
   }
 
   private async gateFindings(
