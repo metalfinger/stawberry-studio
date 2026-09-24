@@ -3,6 +3,7 @@
 // their source, a recipe is prepared, approved within the conversation's image cap, queued, and
 // the engine's worker draws it.
 import type { CutPlan, GhostPlan } from './continuity';
+import { pictureName } from './continuity';
 import { type Detail, mediumOf, type StyleOption, VAGUE } from './producer';
 import { cli, REPO, STRAWBERRY_HOME, STRAWBERRY_PYTHON } from './strawberry';
 
@@ -52,6 +53,15 @@ export type Item = {
   ghost?: GhostPlan;
   /** For a ghost: the planned requirement on its asset that its take covers. */
   requirementId?: string;
+  /**
+   * Why it has not been drawn: what made the harness unsure, from the confidence gate. Nothing is
+   * paid for on a guess; it is tried again once what held it is put right.
+   */
+  held?: string[];
+  /** A moment's words reworded before it was drawn, because the gate found them at odds. */
+  reworded?: string[];
+  /** Jev's reading of the prompt it was last to be drawn from. */
+  gate?: { contradicts: number; twice: number; clear: number; refsClear: number | null };
   /** The judge's continuity check: the take beside the pictures it was drawn from. */
   continuity?: { questions: number; passed: number; failed: string[]; notes?: string[]; error?: string };
   /** Downloads of the current take retried after failing. */
@@ -276,6 +286,36 @@ export function isGroup(item: Item): boolean {
   );
 }
 
+/** A name's own word: "the baby" is found as "baby", "your aunt" as "aunt". */
+export function headWord(name: string): string | null {
+  const words = name
+    .toLowerCase()
+    .replace(/[^a-z\s'-]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w && !/^(the|a|an|my|your|our|his|her|their|of|you|people|person|one|someone)$/.test(w));
+  return words.at(-1) ?? null;
+}
+
+/**
+ * Someone who has their own sketch and is also inside a group's look ("the baby", and "the
+ * family" of a father, a mother and a baby): one individual in two images.
+ */
+export function groupMembers(people: Item[]): { group: Item; member: Item; word: string }[] {
+  const out: { group: Item; member: Item; word: string }[] = [];
+  for (const group of people.filter((p) => p.kind === 'character' && isGroup(p))) {
+    const look = LOOK.character
+      .map((k) => group.fields[k]?.value ?? '')
+      .join(' ')
+      .toLowerCase();
+    for (const member of people) {
+      if (member === group || member.kind !== 'character') continue;
+      const word = headWord(member.name);
+      if (word && new RegExp(`\\b${word}s?\\b`).test(look)) out.push({ group, member, word });
+    }
+  }
+  return out;
+}
+
 export function sheetPrompt(item: Item, style: StyleOption): string {
   // A look that says nothing a picture can keep ("indistinct, like a figure in a hazy memory")
   // would be drawn as a blur.
@@ -289,14 +329,16 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
   // copied. A single clear picture is the identity the moments are drawn from.
   // Some of a dream's people are a group ("a couple of people", "the twins"): "one person only"
   // sketched them as a single man.
+  // Named for the picture: the dreamer's sketch said "a single full-length picture of you" (24 Sep).
+  const name = item.isDreamer ? 'the dreamer' : pictureName(item.name);
   const layout =
     item.kind === 'character'
       ? isGroup(item)
-        ? `A single full-length picture of ${item.name}, all of them together and no one else, as they ordinarily look: standing side by side in a relaxed three-quarter view, every figure from head to feet, each face clearly visible.`
-        : `A single full-length picture of ${item.name}, one person only, as they ordinarily look: standing in a relaxed three-quarter view, the whole figure from head to feet, the face clearly visible.`
+        ? `A single full-length picture of ${name}, all of them together and no one else, as they ordinarily look: standing side by side in a relaxed three-quarter view, every figure from head to feet, each face clearly visible.`
+        : `A single full-length picture of ${name}, one person only, as they ordinarily look: standing in a relaxed three-quarter view, the whole figure from head to feet, the face clearly visible.`
       : item.kind === 'location'
-        ? `A single wide picture of ${item.name}, as it ordinarily looks, with no people in it, showing the whole place and how it is laid out.`
-        : `A single clear picture of ${item.name} on its own, as it ordinarily looks, seen at a slight angle so its shape and materials read.`;
+        ? `A single wide picture of ${name}, as it ordinarily looks, with no people in it, showing the whole place and how it is laid out.`
+        : `A single clear picture of ${name} on its own, as it ordinarily looks, seen at a slight angle so its shape and materials read.`;
   const background = item.kind === 'location' ? '' : 'Plain, uncluttered background. ';
   // A person's sheet is the face every moment draws them from, so nothing may stand between
   // them and the viewer: a glass-world style drew the dreamer three times behind a frosted

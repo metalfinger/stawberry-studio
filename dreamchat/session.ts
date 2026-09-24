@@ -53,16 +53,27 @@ import {
   type StyleOption,
 } from './producer';
 import { type ContinuityPlan, drawOrder, planContinuity } from './continuity';
-import { buildFrames, buildGhosts, type FrameReference, framePrompt, ghostPrompt, type PlannedInput } from './frames';
+import {
+  buildFrames,
+  buildGhosts,
+  type FrameReference,
+  framePrompt,
+  ghostPrompt,
+  inViewOf,
+  type PlannedInput,
+} from './frames';
+import { checkReferences, preflight, readPrompt } from './gate';
 import {
   type Check,
   CREDITS_PER_IMAGE,
   type CutRecord,
   type Item,
+  LOOK,
   MAX_PER_IMAGE,
   PROVIDER,
   profileOf,
   type SheetEngine,
+  sheetPrompt,
 } from './sheets';
 import type { JudgedCheck, JudgeOptions } from './judge';
 import { cutRecord, type WriteResult } from './strawberry';
@@ -207,12 +218,20 @@ export type StoreDeps = {
   watchEveryMs?: number;
   /** The image judge: checks a finished take against its declared facts. Absent: no check. */
   judge?: (mediaId: string, opts?: JudgeOptions) => Promise<JudgedCheck | null>;
+  /**
+   * The confidence gate: Jev reads every picture's prompt before it is paid for, and a picture it
+   * is unsure of is held, never drawn on a guess. Absent: no gate (the tests).
+   */
+  gate?: JevFn;
+  /** A held moment's own words, reworded once before it is given up on; text is nearly free. */
+  reword?: (prompt: string, findings: string[], fields: Record<string, Detail>) => Promise<Record<string, Detail> | null>;
   /** Words for a person's look when nobody described it, filled in as guesses before the sketch. */
   proposeLook?: (
     name: string,
     fields: Record<string, Detail>,
     transcript: string,
     others?: string[],
+    kind?: 'character' | 'location' | 'prop',
   ) => Promise<Record<string, Detail>>;
   /** The continuity check: a take beside the pictures it was drawn from. Absent: no check. */
   judgeContinuity?: (mediaId: string, checks: { with: string | null; text: string }[]) => Promise<Check>;
@@ -341,6 +360,17 @@ export function asInstruction(question: string): string {
     if (m) return f(...m);
   }
   return `make this true: ${q.replace(/\?$/, '')}`;
+}
+
+/** The gate's findings that rewording a moment can put right, as opposed to its images. */
+const WORDING =
+  /^(its instructions may contradict|someone may be drawn twice|what it shows is not clear|what to take from each image)/;
+
+/** A picture the confidence gate held back, with its reasons. */
+class Held extends Error {
+  constructor(readonly findings: string[]) {
+    super(`held before drawing: ${findings.join('; ')}`);
+  }
 }
 
 /** A picture's cost, in its provider's own unit: fal's list price in dollars, Higgsfield's credits. */
@@ -941,7 +971,7 @@ export class SessionStore {
     const frames = s.build?.frames ?? [];
     for (const f of frames) {
       if (frames.filter((x) => x.status === 'drawing').length >= FRAMES_AT_ONCE) break;
-      if (f.status !== 'waiting') continue;
+      if (f.status !== 'waiting' || f.held) continue;
       const needs = (f.needs ?? []).map((id) => frames.find((x) => x.id === id)).filter((x): x is Item => !!x);
       if (needs.some((n) => n.status !== 'ready' && n.status !== 'failed')) continue;
       let approvedAll = true;
@@ -1053,7 +1083,25 @@ export class SessionStore {
       Object.assign(frame, { status: 'failed', error: 'this moment is not in the production' });
       return;
     }
-    const { prompt, references, depicted } = framePrompt(frame, s.build.items, s.style, this.plannedInputs(s, frame));
+    let built = framePrompt(frame, s.build.items, s.style, this.plannedInputs(s, frame));
+    const inView = inViewOf(frame, s.build.items);
+    let findings = await this.gateFindings(s, frame, built.prompt, built.references, inView);
+    // What only its words got wrong is put right in words first, once, and read again.
+    if (findings.length && this.deps.reword && !frame.reworded && findings.every((f) => WORDING.test(f))) {
+      const fields = await this.deps.reword(built.prompt, findings, frame.fields).catch(() => null);
+      if (fields) {
+        frame.reworded = Object.keys(fields).filter((k) => fields[k]?.value !== frame.fields[k]?.value);
+        frame.fields = fields;
+        built = framePrompt(frame, s.build.items, s.style, this.plannedInputs(s, frame));
+        findings = await this.gateFindings(s, frame, built.prompt, built.references, inView);
+      }
+    }
+    if (findings.length) {
+      Object.assign(frame, { status: 'waiting', held: findings });
+      return;
+    }
+    frame.held = undefined;
+    const { prompt, references, depicted } = built;
     const changes: Record<string, string> = {};
     if (before)
       for (const [k, d] of Object.entries(frame.fields))
@@ -1071,6 +1119,63 @@ export class SessionStore {
   }
 
   /**
+   * The confidence gate, before anything is paid for: code checks what it can know (someone drawn
+   * twice, a plan finding for this picture, an image attached with no word on what it is for, an
+   * edit base out of place, an unapproved or missing sketch) and Jev reads the prompt itself. A
+   * picture with any finding is held with the reasons and stays waiting; what depends on it
+   * waits too. True when held.
+   */
+  private async hold(
+    s: Session,
+    item: Item,
+    prompt: string,
+    references: { media_id: string; role: string }[],
+    inView: Item[],
+  ): Promise<boolean> {
+    const findings = await this.gateFindings(s, item, prompt, references, inView);
+    if (!findings.length) {
+      item.held = undefined;
+      return false;
+    }
+    Object.assign(item, { status: 'waiting', held: findings });
+    return true;
+  }
+
+  private async gateFindings(
+    s: Session,
+    item: Item,
+    prompt: string,
+    references: { media_id: string; role: string }[],
+    inView: Item[],
+  ): Promise<string[]> {
+    if (!this.deps.gate) return [];
+    const order = item.frame?.order;
+    const issues =
+      order && s.draft?.breakdown
+        ? planContinuity(s.draft.breakdown).issues.filter(
+            (x) => x.startsWith(`picture ${order} `) || x.startsWith(`picture ${order}:`),
+          )
+        : [];
+    const approved = new Set(
+      [...(s.build?.items ?? []), ...(s.build?.frames ?? [])]
+        .filter((i) => i.status === 'ready' && i.mediaId && (i.kind === 'ghost' || i.review || i.continuityApproved))
+        .map((i) => i.mediaId as string),
+    );
+    const fixed = [
+      ...preflight(inView, issues),
+      ...checkReferences(prompt, references, {
+        approved,
+        mustInclude: inView
+          .filter((x) => x.mediaId && x.status === 'ready')
+          .map((x) => ({ name: x.name, mediaId: x.mediaId as string })),
+      }),
+    ];
+    const read = await readPrompt(this.deps.gate, prompt);
+    if (read.reading) item.gate = read.reading;
+    return [...fixed, ...read.findings];
+  }
+
+  /**
    * The cut's record as its plan says; a source that failed is left out of it as well as its
    * references.
    */
@@ -1079,12 +1184,26 @@ export class SessionStore {
     const plan = frame.frame?.plan;
     if (!plan || !ids.proposal) return undefined;
     const failedCuts = (frame.dropped ?? []).filter((d) => s.build?.frames?.find((x) => x.id === d)?.kind === 'cut');
+    // Words reworded before drawing go on record too, so the judge checks the moment as drawn.
+    const ENGINE: Record<string, string> = {
+      action: 'action',
+      visual_point: 'beat.visual_point',
+      feeling: 'beat.emotional_intent',
+      purpose: 'beat.purpose',
+    };
+    const words = Object.fromEntries(
+      (frame.reworded ?? [])
+        .filter((k) => ENGINE[k] && frame.fields[k]?.value)
+        .map((k) => [ENGINE[k], frame.fields[k].value as string]),
+    );
     return {
-      fields: cutRecord(plan, ids, failedCuts),
+      fields: { ...cutRecord(plan, ids, failedCuts), ...words },
       source: ids.proposal,
       reason: failedCuts.length
         ? `Drawn without ${failedCuts.map((d) => s.build?.frames?.find((x) => x.id === d)?.name ?? d).join(', ')}, which could not be drawn`
-        : 'The continuity this moment is drawn with',
+        : Object.keys(words).length
+          ? 'Reworded before it was drawn, so its instructions agree'
+          : 'The continuity this moment is drawn with',
     };
   }
 
@@ -1103,6 +1222,7 @@ export class SessionStore {
     // A change that goes on changing is edited from its last look, one change at a time.
     const previous = g.after ? s.build.frames?.find((x) => x.id === g.after && x.status === 'ready') : undefined;
     const { prompt, references, depicted } = ghostPrompt(ghost, sheet, from, s.style, previous);
+    if (await this.hold(s, ghost, prompt, references, [])) return;
     ghost.depicted = depicted;
     await this.launch(s, ghost, {
       prompt,
@@ -1280,30 +1400,42 @@ export class SessionStore {
       return !d?.value || (!d.said && VAGUE.test(d.value));
     };
     // Either half of a look left open is filled: "a young woman" with no clothes named was drawn in
-    // whatever came to hand, and every moment had to guess again (23 Sep).
-    const unknown = item.kind === 'character' && (vague('appearance') || vague('wardrobe')) && this.deps.proposeLook;
+    // whatever came to hand, and every moment had to guess again (23 Sep). A place or thing with no
+    // description at all gets one too: "the lever" was drawn from its name alone (24 Sep).
+    const kind = item.kind === 'location' || item.kind === 'prop' ? item.kind : 'character';
+    const unknown =
+      !!this.deps.proposeLook &&
+      (item.kind === 'character'
+        ? vague('appearance') || vague('wardrobe')
+        : (item.kind === 'location' || item.kind === 'prop') && LOOK[item.kind].every(vague));
     const looked = unknown
       ? this.deps.proposeLook!(
           item.name,
           item.fields,
           renderTranscript(s.transcript),
-          (s.build?.items ?? [])
-            .filter((i) => i.kind === 'character' && i.id !== item.id)
-            .map((i) => (i.isDreamer ? 'the dreamer' : i.name)),
+          item.kind === 'character'
+            ? (s.build?.items ?? [])
+                .filter((i) => i.kind === 'character' && i.id !== item.id)
+                .map((i) => (i.isDreamer ? 'the dreamer' : i.name))
+            : [],
+          kind,
         )
           .catch(() => item.fields)
           .then((fields) => (snapshot.fields = fields))
       : Promise.resolve(null);
     looked
-      .then(() =>
-        sheets.start({
+      .then(async () => {
+        // The gate, before the sketch is paid for.
+        const findings = await this.gateFindings(s, snapshot, sheetPrompt(snapshot, style), [], []);
+        if (findings.length) throw new Held(findings);
+        return sheets.start({
           item: snapshot,
           style,
           sources: { said: ids.said, proposal: ids.proposal },
           reason: `The person asked to see their dream drawn and settled this profile in conversation; approved within the ${IMAGE_CAP}-picture limit.`,
           maxUsd: MAX_PER_IMAGE,
-        }),
-      )
+        });
+      })
       .then(
         (r) =>
           this.serial(s.id, () =>
@@ -1313,6 +1445,8 @@ export class SessionStore {
               it.jobId = r.jobId;
               it.recipeId = r.recipeId;
               if (unknown) it.fields = snapshot.fields;
+              it.gate = snapshot.gate;
+              it.held = undefined;
               spend(x, r.usd);
             }),
           ).then(() => this.watch(s.id)),
@@ -1320,7 +1454,18 @@ export class SessionStore {
           this.serial(s.id, () =>
             this.update(s.id, (x) => {
               const it = x.build?.items.find((i) => i.id === item.id);
-              if (it) Object.assign(it, { status: 'failed', error: String(e).slice(0, 300) });
+              if (!it) return;
+              if (e instanceof Held) {
+                // Held, not drawn: nothing was started, counted or paid for.
+                Object.assign(it, {
+                  status: 'waiting',
+                  held: e.findings,
+                  version: Math.max(0, it.version - 1),
+                  gate: snapshot.gate,
+                  ...(unknown ? { fields: snapshot.fields } : {}),
+                });
+                x.images = Math.max(0, x.images - 1);
+              } else Object.assign(it, { status: 'failed', error: String(e).slice(0, 300) });
             }),
           ),
       );
@@ -1622,6 +1767,10 @@ export class SessionStore {
         }
       }
       const again: string[] = [];
+      // What was held is put through the gate again, with whatever has been put right since.
+      const held = [...(s.build?.items ?? []), ...(s.build?.frames ?? [])].filter((i) => i.held);
+      for (const it of held) it.held = undefined;
+      for (const it of held) if (it.kind !== 'cut' && it.kind !== 'ghost') again.push(it.id);
       for (const it of [...(s.build?.items ?? []), ...(s.build?.frames ?? [])])
         if (it.status === 'failed' && (!it.jobId || opts.redraw?.includes(it.id))) {
           it.jobId = undefined;

@@ -339,6 +339,8 @@ function sketchCard(it, where = 'chat') {
     } else if (k && k.error) card.append(el('div', { class: 'judge' }, 'Continuity check unavailable'));
   } else if (it.status === 'drawing') card.append(el('div', { class: 'wait' }, 'sketching…'));
   else if (it.status === 'failed') card.append(el('div', { class: 'muted', style: 'padding:0 11px 9px' }, it.error || 'something went wrong'));
+  if (it.held && it.held.length) card.append(el('div', { class: 'bad', style: 'padding:0 11px 9px' }, `Held before drawing: ${it.held.join('; ')}`));
+  if (it.reworded && it.reworded.length) card.append(el('div', { class: 'muted', style: 'padding:0 11px 9px' }, `Reworded before drawing: ${it.reworded.join(', ')}`));
   return card;
 }
 

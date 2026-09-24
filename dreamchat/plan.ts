@@ -7,13 +7,21 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { drawOrder, planContinuity } from './continuity';
-import { buildFrames, buildGhosts, framePrompt, ghostPrompt, type PlannedInput } from './frames';
+import { buildFrames, buildGhosts, framePrompt, ghostPrompt, inViewOf, type PlannedInput } from './frames';
+import { checkReferences, preflight, readPrompt } from './gate';
+import { callJev } from './jev';
+import { loadedKeys } from './boot';
 import type { Session } from './session';
-import type { Item } from './sheets';
+import { type Item, sheetPrompt } from './sheets';
 
-const [id, ...only] = process.argv.slice(2);
+void loadedKeys;
+
+const args = process.argv.slice(2);
+// --gate: also put every picture through the confidence gate (Jev reads each prompt; no images).
+const gating = args.includes('--gate');
+const [id, ...only] = args.filter((a) => a !== '--gate');
 if (!id) {
-  console.error('usage: bun run plan.ts <session id> [m5 g2 …]');
+  console.error('usage: bun run plan.ts <session id> [m5 g2 …] [--gate]');
   process.exit(1);
 }
 const s = JSON.parse(readFileSync(join(import.meta.dir, 'state', `${id}.json`), 'utf8')) as Session;
@@ -44,6 +52,27 @@ for (const c of plan.cuts)
     `${c.id} ${c.shot} ${c.transition} | ${c.why}${c.staging.length ? ` | left to right: ${c.staging.join(', ')}` : ''}${c.own.length ? ` | changes: ${c.own.map((st) => `${st.who} ${st.what} → ${st.now}`).join('; ')}` : ''}${c.states.length ? ` | still: ${c.states.map((st) => `${st.who} ${st.what} ${st.now}`).join('; ')}` : ''}`,
   );
 
+const approved = new Set([...sheets, ...pictures].map((x) => x.mediaId).filter((x): x is string => !!x));
+async function gateOf(prompt: string, references: { media_id: string; role: string }[], inView: Item[], issues: string[]) {
+  const fixed = [
+    ...preflight(inView, issues),
+    ...checkReferences(prompt, references, {
+      approved,
+      mustInclude: inView.filter((x) => x.mediaId).map((x) => ({ name: x.name, mediaId: x.mediaId as string })),
+    }),
+  ];
+  const read = await readPrompt(callJev, prompt);
+  const r = read.reading;
+  return `gate: ${[...fixed, ...read.findings].length ? `HOLD: ${[...fixed, ...read.findings].join('; ')}` : 'draw'}${r ? ` | contradicts ${r.contradicts.toFixed(2)} twice ${r.twice.toFixed(2)} clear ${r.clear.toFixed(2)}${r.refsClear !== null ? ` refs ${r.refsClear.toFixed(2)}` : ''}` : ''}`;
+}
+
+if (gating)
+  for (const sk of sheets) {
+    if (only.length && !only.includes(sk.id)) continue;
+    const prompt = sheetPrompt(sk, s.style);
+    console.log(`\n── sketch ${sk.id} ${sk.name}: ${await gateOf(prompt, [], [], [])}`);
+  }
+
 for (const pid of drawOrder(plan)) {
   if (only.length && !only.includes(pid)) continue;
   const it = byId.get(pid);
@@ -67,6 +96,13 @@ for (const pid of drawOrder(plan)) {
     out = framePrompt(it, sheets, s.style, inputs);
   }
   console.log(`\n══ ${pid} ${it.name}\nreferences: ${out.references.map((r) => `${r.role}:${r.media_id}`).join(', ')}\n`);
+  if (gating) {
+    const inView = it.kind === 'ghost' ? [] : inViewOf(it, sheets);
+    const order = it.frame?.order;
+    const issues = order ? plan.issues.filter((x) => x.startsWith(`picture ${order} `) || x.startsWith(`picture ${order}:`)) : [];
+    console.log(await gateOf(out.prompt, out.references, inView, issues));
+    continue;
+  }
   console.log(out.prompt);
   for (const k of it.frame?.plan?.criteria ?? []) console.log(`  check${k.with ? ` with ${k.with}` : ''}: ${k.text}`);
 }

@@ -201,7 +201,49 @@ export const callProducer: ProducerFn = async (transcript, previous) => {
   return { raw: JSON.stringify(parsed), ms: Date.now() - t0 };
 };
 
-const REVISE_ITEM = `The person was shown a profile of something from their dream and answered it (their latest message). Apply what they changed or added, and nothing else. Return JSON only: {"fields": {...}} with exactly the same keys as the profile, each value a short plain phrase, or null when nothing is known. Keep every value they didn't change exactly as it was.`;
+const REVISE_ITEM = `The person was shown a profile of something from their dream and answered it (their latest message). Apply what they changed or added, and nothing else. The fields say how it looks: a remark about a pose, a movement or what someone is doing belongs to the moments, never here ("he's too still" changes nothing in his look). Return JSON only: {"fields": {...}} with exactly the same keys as the profile, each value a short plain phrase, or null when nothing is known. Keep every value they didn't change exactly as it was.`;
+
+const REWORD_MOMENT = `One moment of a person's dream is about to be drawn from the instructions below, and a checker holding it back found a problem in them. Find what in the moment's own words causes it (its action, the one thing it must show, its feeling, or its part in the story): a detail that contradicts where it happens or who is there, something that cannot be in the picture, or something left unsaid. Rewrite only those words, as little as possible, keeping strictly to the dream as told and adding nothing it did not have. Never mention the camera, the viewer or "you" as someone looking on. Return JSON only: {"fields": {"action": "", "visual_point": "", "feeling": "", "purpose": ""}} with only the fields you changed; {"fields": {}} if the problem is not in these words.`;
+
+/**
+ * A moment's words, reworded before anything is paid for, when the gate found its instructions
+ * at odds ("gripping the edge of your seat" on the roof of a train, 24 Sep). Only what the checker
+ * points at changes; text is nearly free, a picture is not.
+ */
+export async function rewordMoment(
+  prompt: string,
+  findings: string[],
+  fields: Record<string, Detail>,
+): Promise<Record<string, Detail> | null> {
+  const words = ['action', 'visual_point', 'feeling', 'purpose'];
+  const current = Object.fromEntries(words.map((k) => [k, fields[k]?.value ?? null]));
+  const res = await callDeepseek(
+    [
+      { role: 'system', content: REWORD_MOMENT },
+      {
+        role: 'user',
+        content: `What the checker found:\n${findings.map((f) => `- ${f}`).join('\n')}\n\nThe moment's words:\n${JSON.stringify(current)}\n\nThe instructions the picture would be drawn from:\n\n${prompt}`,
+      },
+    ],
+    { json: true, thinking: PRODUCER_THINKING },
+  );
+  let next: Record<string, unknown> = {};
+  try {
+    next = ((JSON.parse(res.content) as { fields?: Record<string, unknown> }).fields ?? {}) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+  const out = { ...fields };
+  let changed = false;
+  for (const k of words) {
+    const v = typeof next[k] === 'string' ? (next[k] as string).trim().slice(0, 600) : '';
+    if (v && v !== fields[k]?.value) {
+      out[k] = { value: v, said: false };
+      changed = true;
+    }
+  }
+  return changed ? out : null;
+}
 
 /**
  * Apply the person's answer to a profile. Returns the new fields; any value that changed is
@@ -240,6 +282,8 @@ export async function reviseItem(
 
 const PROPOSE_LOOK = `Someone from a person's dream is about to be drawn, and nothing is known of how they look: the person left it to us. From the conversation, fill in ONLY the empty fields of their profile with a plain, specific, ordinary guess a picture can keep to: age range, hair (colour, length, how it's worn), build, and clothes with their colours. Nothing from the story's events (no transformations, nothing that happens to them), nothing remarkable unless the conversation says so, and nothing that contradicts what the conversation says. Return JSON only: {"fields": {...}} with exactly the same keys as the profile, each value a short plain phrase; keep every value already given exactly as it is.`;
 
+const PROPOSE_LOOK_THING = `Something from a person's dream is about to be drawn, and little is known of how it looks: the person left it to us. From the conversation, fill in ONLY the empty fields of its profile with a plain, specific, ordinary guess a picture can keep to: for a place, how it is laid out and what stands in it; for a thing, its shape, size, materials and colours, as it would be where the dream has it (the lever a streetcar's driver turns is a crank handle on top of the controller at the front). Nothing from the story's events, nothing remarkable unless the conversation says so, and nothing that contradicts what the conversation says. Return JSON only: {"fields": {...}} with exactly the same keys as the profile, each value a short plain phrase; keep every value already given exactly as it is.`;
+
 /**
  * Words for a look nobody described. A person drawn only from an image drifts as soon as they
  * are seen another way: the dreamer, seen from behind, came back as someone else (23 Sep). The
@@ -252,6 +296,9 @@ export async function proposeLook(
   // The others drawn on their own: "the family" was given a baby in a yellow onesie while "the
   // baby" had her own sketch in a white one, and a moment would have shown two (24 Sep).
   others: string[] = [],
+  // A place or thing with no description was sketched from its name alone: "the lever" came back
+  // a see-saw bar while the streetcar's own sketch had a crank handle (24 Sep).
+  kind: 'character' | 'location' | 'prop' = 'character',
 ): Promise<Record<string, Detail>> {
   // A guess that says nothing ("young, but no specific features remembered") is filled in too;
   // what they said is never touched.
@@ -260,7 +307,7 @@ export async function proposeLook(
   const ask = async (extra: string) => {
     const res = await callDeepseek(
       [
-        { role: 'system', content: PROPOSE_LOOK + extra },
+        { role: 'system', content: (kind === 'character' ? PROPOSE_LOOK : PROPOSE_LOOK_THING) + extra },
         {
           role: 'user',
           content: `The conversation:\n\n${transcript}\n\nThe profile of ${name}:\n${JSON.stringify(current)}${
@@ -299,6 +346,7 @@ export async function proposeLook(
   let next = await ask('');
   // Once more if it left placeholders, or too little to draw the same person twice.
   if (
+    kind === 'character' &&
     Object.entries(fields).some(
       ([k, d]) => open(d) && ['appearance', 'wardrobe'].includes(k) && !specific(k, usable(next[k])),
     )

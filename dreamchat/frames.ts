@@ -8,7 +8,7 @@
 import { type ContinuityPlan, type PlanRef, pictureName } from './continuity';
 import type { Breakdown, Moment, StyleOption } from './producer';
 import { VAGUE } from './producer';
-import { isGroup, type Item, LOOK, styleBlock, toldColours } from './sheets';
+import { groupMembers, isGroup, type Item, LOOK, styleBlock, toldColours } from './sheets';
 
 /** Where the line that says who "you" is goes, when anything told to the picture says "you". */
 const YOU = '\u0000you';
@@ -116,6 +116,19 @@ export type FrameReference = {
 /** An earlier picture the plan draws this one from, with the plan's reason for it. */
 export type PlannedInput = { use: PlanRef; item: Item };
 
+/** The people, things and place a moment shows, by their sketches. */
+export function inViewOf(frame: Item, sheets: Item[]): Item[] {
+  const f = frame.frame;
+  if (!f) return [];
+  const byId = new Map(sheets.map((s) => [s.id, s]));
+  return [
+    // Through the dreamer's own eyes the dreamer is the camera, never a face in the picture.
+    ...f.visible.filter((id) => !(f.eyes === 'dreamer' && byId.get(id)?.isDreamer)).map((id) => byId.get(id)),
+    ...f.things.map((id) => byId.get(id)),
+    byId.get(f.place),
+  ].filter((s): s is Item => !!s);
+}
+
 // "You" in an instruction to a picture is anyone, a viewer's hands included: the dreamer is "the dreamer".
 const nameOf = (sheets: Item[], id: string) => {
   const s = sheets.find((x) => x.id === id);
@@ -143,13 +156,7 @@ export function framePrompt(
   const f = frame.frame;
   if (!f) throw new Error(`${frame.name} is not a moment`);
   const plan = f.plan;
-  const byId = new Map(sheets.map((s) => [s.id, s]));
-  const inView = [
-    // Through the dreamer's own eyes the dreamer is the camera, never a face in the picture.
-    ...f.visible.filter((id) => !(f.eyes === 'dreamer' && byId.get(id)?.isDreamer)).map((id) => byId.get(id)),
-    ...f.things.map((id) => byId.get(id)),
-    byId.get(f.place),
-  ].filter((s): s is Item => !!s);
+  const inView = inViewOf(frame, sheets);
   const usable = inputs.filter((x) => approved(x.item) && x.item.mediaId);
   const base = usable.find((x) => x.use.role === 'base');
   const roomFromCut = usable.some(
@@ -191,6 +198,9 @@ export function framePrompt(
       .filter((v): v is string => !!v && !VAGUE.test(v))
       .join('; ');
   const facts: string[] = [];
+  // Where each sketch went, so a group and someone in it who has their own sketch are told to be
+  // one and the same: "the family" with a baby, and "the baby" (24 Sep).
+  const imageOf = new Map<string, number>();
   for (const s of inView) {
     if (s.nodeId) depicted.push(s.nodeId);
     // How it looks, as its sketch was drawn: "who they are" carries the story ("a young woman
@@ -214,6 +224,7 @@ export function framePrompt(
         `${who(s)}: this exact person, with the same face, build and clothes`,
         `who ${who(s)} ${isGroup(s) ? 'are' : 'is'}${look ? ` (${look})` : ''}: their ${changed.some((st) => /head|face/i.test(st.what)) ? 'build and clothes' : 'face, hair, build and clothes'}, exactly${base ? ', as Image 1 already shows them' : ''}. Nothing else from it: not its pose, background or framing.${except}`,
       );
+      imageOf.set(s.id, references.length);
     } else if (s.kind === 'location') {
       // An edit base or an earlier picture of this side sets where things stand; a view ghost shows
       // the side this frame faces. Then the sheet gives the place's materials, colours and objects.
@@ -240,6 +251,14 @@ export function framePrompt(
         `${who(s)}${look ? ` (${look})` : ''}: its exact shape, materials and colours, the same in every picture. Nothing else from it.`,
       );
     }
+  }
+
+  for (const { group, member, word } of groupMembers(inView)) {
+    const g = imageOf.get(group.id);
+    const m = imageOf.get(member.id);
+    if (!g || !m) continue;
+    manifest[g - 1] += ` The ${word} in it is ${who(member)}, drawn from Image ${m}: one ${word}, never two.`;
+    manifest[m - 1] += ` They are the ${word} in ${who(group)}'s picture (Image ${g}): one and the same, drawn as this image shows.`;
   }
 
   // Ghosts, then earlier moments, while there is room: the model takes 14 images, and a dozen

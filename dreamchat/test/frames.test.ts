@@ -273,6 +273,35 @@ describe('a group of people', () => {
   });
 });
 
+describe('a group and someone in it who has their own sketch', () => {
+  test('are told to be one and the same', () => {
+    const family: Item = {
+      id: 'p3',
+      kind: 'character',
+      name: 'the family',
+      fields: { wardrobe: { value: 'father in jeans; mother in a sundress; baby in a onesie', said: false } },
+      status: 'ready',
+      version: 1,
+      mediaId: 'media-p3',
+      review: 'approved',
+    };
+    const baby: Item = { ...family, id: 'p4', name: 'the baby', fields: {}, mediaId: 'media-p4' };
+    const roof: Item = { ...family, id: 'l2', kind: 'location', name: 'the top of the train', fields: {}, mediaId: 'media-l2' };
+    const moment: Item = {
+      id: 'm6',
+      kind: 'cut',
+      name: 'm6',
+      fields: { action: { value: 'A family sits on the train with a thrilled baby.', said: true } },
+      status: 'waiting',
+      version: 0,
+      frame: { visible: ['p3', 'p4'], things: [], place: 'l2', distance: 'medium', eyes: 'outside', key: false, order: 6 },
+    };
+    const { prompt } = framePrompt(moment, [family, baby, roof], style);
+    expect(prompt).toContain('The baby in it is the baby, drawn from Image 2: one baby, never two.');
+    expect(prompt).toContain("They are the baby in the family's picture (Image 1): one and the same");
+  });
+});
+
 describe('a sketch drawn again', () => {
   test('carries what the judge found as corrections', () => {
     const woman: Item = {

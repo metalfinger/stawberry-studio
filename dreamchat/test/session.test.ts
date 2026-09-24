@@ -417,7 +417,7 @@ describe('a whole conversation', () => {
   });
 
   /** A conversation taken to the moments, with the engine and the judge faked as asked. */
-  async function toTheMoments(judge?: StoreDeps['judge']) {
+  async function toTheMoments(judge?: StoreDeps['judge'], extra: Partial<StoreDeps> = {}) {
     const framesStarted: { id: string; refs: string[]; prompt: string }[] = [];
     const verdicts: [string, boolean, string][] = [];
     const reaction: { now: Record<string, Answer> } = { now: {} };
@@ -471,6 +471,7 @@ describe('a whole conversation', () => {
       },
       judge,
       watchEveryMs: 10,
+      ...extra,
     });
     const { id } = store.create();
     await store.open(id);
@@ -519,6 +520,40 @@ describe('a whole conversation', () => {
       id: 'm2',
       refs: ['prop:media-node-t1-job-t1', 'location:media-node-l1-job-l1', 'composition:media-cut-m1-job-m1'],
     });
+  });
+
+  test('a moment the gate is unsure of is held, never paid for; reworded, it is read again and drawn', async () => {
+    // Jev is sure of the sketches, and of a moment only once its words are put right.
+    const reading = (state: string) =>
+      !state.startsWith('One picture from the dream') || state.includes('REWORDED')
+        ? { contradicts: 0.05, twice: 0.05, clear: 0.9, refs_clear: 0.9 }
+        : { contradicts: 0.9, twice: 0.05, clear: 0.9, refs_clear: 0.9 };
+    const gate: StoreDeps['gate'] = async (state, questions) => ({
+      questions,
+      state,
+      answers: Object.fromEntries(
+        Object.entries(reading(state)).map(([k, v]) => [k, { type: 'noul' as const, noul: v }]),
+      ),
+      error: null,
+      ms: 1,
+      usage: null,
+    });
+    const held = await toTheMoments(undefined, { gate });
+    expect(held.framesStarted).toEqual([]);
+    const m1 = held.store.get(held.id)!.build!.frames!.find((f) => f.id === 'm1')!;
+    expect([m1.status, m1.held?.[0]]).toEqual(['waiting', 'its instructions may contradict each other (0.90)']);
+
+    const reworded = await toTheMoments(undefined, {
+      gate,
+      reword: async (_prompt, _findings, fields) => ({
+        ...fields,
+        visual_point: { value: 'REWORDED: the board on the wall', said: false },
+      }),
+    });
+    expect(reworded.framesStarted.map((f) => f.id)).toEqual(['m1']);
+    expect(reworded.framesStarted[0].prompt).toContain('REWORDED: the board on the wall');
+    const m1r = reworded.store.get(reworded.id)!.build!.frames!.find((f) => f.id === 'm1')!;
+    expect([m1r.held, m1r.reworded]).toEqual([undefined, ['visual_point']]);
   });
 
   test('a moment the judge fails is drawn once more with what was wrong, then released on a pass', async () => {
