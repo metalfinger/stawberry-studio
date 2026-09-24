@@ -440,7 +440,10 @@ export function framePrompt(
         : r === 'seat'
           ? `${pictureNo(x)}${shows}: the camera is where the dreamer is in it, at their eye height, turned toward ${f.looksAt || 'what this moment shows'}; what is beside them there is beside the camera here, seen from their place. Nothing else from it: not its camera, framing or angle.`
           : x.use.role === 'composition'
-          ? `${pictureNo(x)}${shows}: the same place from the same side. Take where everything and everyone in it are, and its light; this frame is framed ${f.distance}.`
+          ? mockUp
+            ? // Where everyone is comes from the previs; the earlier picture gives how it all looks.
+              `${pictureNo(x)}${shows}: the same place from the same side. Take only how it looks there (its surfaces, colours and light) and how everyone in it looks; where everyone and everything is comes from Image 1, the mock-up.`
+            : `${pictureNo(x)}${shows}: the same place from the same side. Take where everything and everyone in it are, and its light; this frame is framed ${f.distance}.`
           : unsketched.length
               ? lastSeen(x, unsketched)
               : `${pictureNo(x)}${shows}: take only ${x.use.carries.replace(/;.*$/, '')}. Nothing of its place, framing or background.`) +
@@ -477,15 +480,20 @@ export function framePrompt(
     // With the dreamer's view worked out, the view is the framing: "the subject fills the frame"
     // beside what is close and what is beyond read as a contradiction (0.70, 24 Sep).
     plan?.view
-      ? `One picture from the dream, in ${SHAPE_WORDS[shapeOf(frame)]}, through the dreamer's own eyes.`
+      ? f.eyes === 'dreamer'
+        ? `One picture from the dream, in ${SHAPE_WORDS[shapeOf(frame)]}, through the dreamer's own eyes.`
+        : // Seen from outside with the camera worked out, how big each thing is comes from the view.
+          `One picture from the dream, in ${SHAPE_WORDS[shapeOf(frame)]}: a ${f.distance} shot, ${angle}${f.looksAt ? `, facing ${f.looksAt}` : ''}.`
       : `One picture from the dream, in ${SHAPE_WORDS[shapeOf(frame)]}: a ${f.distance} shot, ${angle}${f.looksAt ? `, facing ${f.looksAt}` : ''}. ${FRAMING[f.distance]}`,
     // The shot comes first, before the images: its director of photography's brief where there is
     // one, else the view worked out on the floor plan. Said after the images, the view was drawn
     // facing the screen, the default for a theater (24 Sep).
     plan?.view
       ? frame.shot && frame.shot.view === plan.view
-        ? `The shot${mockUp ? ', as the mock-up in Image 1 shows it' : ''} (${own}): ${frame.shot.text}`
-        : `What the dreamer sees, the camera being their own eyes${mockUp ? ', as the mock-up in Image 1 shows it' : ''} (${own}): ${plan.view}`
+        ? `The shot${mockUp ? ', as the mock-up in Image 1 shows it' : ''}${f.eyes === 'dreamer' ? ` (${own})` : ''}: ${frame.shot.text}`
+        : f.eyes === 'dreamer'
+          ? `What the dreamer sees, the camera being their own eyes${mockUp ? ', as the mock-up in Image 1 shows it' : ''} (${own}): ${plan.view}`
+          : `What the camera sees${mockUp ? ', as the mock-up in Image 1 shows it' : ''}: ${plan.view}`
       : '',
     manifest.length
       ? `The attached images, in order, and the one thing to take from each:\n${manifest.join('\n')}`

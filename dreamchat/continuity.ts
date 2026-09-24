@@ -8,7 +8,7 @@
 // an in-between picture that is never a cut. Everything here is pure: the breakdown in, the plan
 // out, and the same breakdown always gives the same plan.
 import { type Blocking, type Eye, outsideOrder } from './blocking';
-import { dreamerShot } from './previs';
+import { dreamerShot, outsideShot } from './previs';
 import { type Breakdown, type Moment, moments, POSITION, type State } from './producer';
 
 export type Relation = 'same_setup' | 'same_side' | 'other_side' | 'other_place' | 'shift' | 'seat';
@@ -154,6 +154,19 @@ export function planBy(b: Breakdown, momentId: string): Blocking | undefined {
   const there = new Set(upTo.flatMap((x) => [...x.visible, ...x.things]));
   const dreamerId = b.people.find((p) => p.is_dreamer)?.id;
   return { ...scene.blocking, spots: scene.blocking.spots.filter((s) => there.has(s.id) || s.id === dreamerId) };
+}
+
+/**
+ * What a moment's camera is rendered from: its scene's floor plan as it is by then. Through the
+ * dreamer's eyes, everyone there is where they are; seen from outside, the people are those the
+ * moment shows, as the dream tells it, and the things are all there.
+ */
+export function shotPlan(b: Breakdown, momentId: string): Blocking | undefined {
+  const where = planBy(b, momentId);
+  const m = b.scenes.flatMap((sc) => sc.moments).find((x) => x.id === momentId);
+  if (!where || !m || m.eyes === 'dreamer') return where;
+  const people = new Set(b.people.map((p) => p.id));
+  return { ...where, spots: where.spots.filter((s) => !people.has(s.id) || m.visible.includes(s.id)) };
 }
 
 export const seenIn = (m: Pick<Moment, 'visible' | 'eyes'>, dreamerId?: string) =>
@@ -555,7 +568,7 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
       )?.id;
     };
     if (m.eyes === 'dreamer' && dreamerId) {
-      const v = dreamerShot(planBy(b, m.id) ?? plan, dreamerId, target(m.looks_at), now);
+      const v = dreamerShot(shotPlan(b, m.id) ?? plan, dreamerId, target(m.looks_at), now);
       if (v) {
         c.view = v.text;
         c.eye = v.eye;
@@ -567,12 +580,24 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
     } else {
       const fromBehind = !!m.looks_at && bare(m.looks_at).includes(bare(plan.front));
       const ids = [...seen(m), ...m.things].filter((id) => plan.spots.some((s) => s.id === id && !s.many));
-      c.across = outsideOrder(plan, ids, fromBehind);
-      c.camera = fromBehind
-        ? `from behind them, facing ${plan.front}`
-        : `from in front of them, looking at them, with ${plan.front} behind the camera`;
-      const people = c.across.filter((id) => seen(m).includes(id));
-      c.staging = people.length >= 2 ? people : [];
+      // A moment that edits an earlier picture of the same view keeps that picture's layout: it
+      // was made from the same set. Every other camera is placed on the floor plan and made from
+      // its previs: the image model draws people and things well, and a new camera badly.
+      const edits = c.refs.some((r) => r.role === 'base');
+      const v = edits ? null : outsideShot(shotPlan(b, m.id) ?? plan, ids, fromBehind, m.distance, now);
+      if (v) {
+        c.view = v.text;
+        c.eye = v.eye;
+        c.sees = v.inPicture;
+        c.staging = [];
+      } else {
+        c.across = outsideOrder(plan, ids, fromBehind);
+        c.camera = fromBehind
+          ? `from behind them, facing ${plan.front}`
+          : `from in front of them, looking at them, with ${plan.front} behind the camera`;
+        const people = c.across.filter((id) => seen(m).includes(id));
+        c.staging = people.length >= 2 ? people : [];
+      }
     }
   }
 

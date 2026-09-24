@@ -55,7 +55,7 @@ import {
   ownStyle,
   type StyleOption,
 } from './producer';
-import { type ContinuityPlan, type Criterion, drawOrder, pictureName, planBy, planContinuity, seenIn } from './continuity';
+import { type ContinuityPlan, type Criterion, drawOrder, pictureName, planContinuity, seenIn, shotPlan } from './continuity';
 import type { Blocking } from './blocking';
 import { previsImage } from './previs';
 import {
@@ -265,11 +265,11 @@ export async function planShots(
         const scene = blocked.scenes.find((sc) => sc.id === c.scene);
         const at = scene?.moments.findIndex((x) => x.id === c.id) ?? -1;
         const m = scene?.moments[at];
-        const where = planBy(blocked, c.id);
-        if (where && dreamer && deps.dir) {
+        const where = shotPlan(blocked, c.id);
+        if (where && deps.dir) {
           const path = join(deps.dir, `plan-${c.id}.png`);
           mkdirSync(deps.dir, { recursive: true });
-          await Bun.write(path, previsImage(where, c.eye!, [dreamer], called));
+          await Bun.write(path, previsImage(where, c.eye!, m?.eyes === 'dreamer' && dreamer ? [dreamer] : [], called));
           prep.previs[c.id] = path;
         }
         if (deps.shot && m) {
@@ -1429,13 +1429,14 @@ export class SessionStore {
     const cut = frame.frame?.plan;
     const b = s.draft?.breakdown;
     const eye = cut?.eye;
-    const plan = b ? planBy(b, frame.id) : undefined;
+    const plan = b ? shotPlan(b, frame.id) : undefined;
     const dreamer = b?.people.find((p) => p.is_dreamer)?.id;
-    if (!cut || !eye || !plan || !dreamer || !this.deps.sheets?.layout || !this.deps.dir) return undefined;
+    if (!cut || !eye || !plan || !this.deps.sheets?.layout || !this.deps.dir) return undefined;
     const names = Object.fromEntries(plan.spots.map((x) => [x.id, called(x.id)]));
     // Rendered every time, and known by what it is: the picture itself. Known by what it was made
     // from, a previs drawn before the audience had seats was used again after they had them (24 Sep).
-    const png = previsImage(plan, eye, [dreamer], (id) => names[id] ?? id);
+    // Through the dreamer's eyes, the dreamer is the camera, not in the picture.
+    const png = previsImage(plan, eye, frame.frame?.eyes === 'dreamer' && dreamer ? [dreamer] : [], (id) => names[id] ?? id);
     const key = new Bun.CryptoHasher('sha256').update(png).digest('hex');
     if (frame.layout?.key === key) return frame.layout.mediaId;
     const shot = s.production?.result?.ids[`shot_${cut.shot.replace(/\./g, '_')}`];

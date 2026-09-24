@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { Blocking } from '../blocking';
-import { dreamerShot, labelText, previsImage, turnedTo } from '../previs';
+import { dreamerShot, labelText, outsideShot, previsImage, turnedTo } from '../previs';
 
 // The theater, as its floor plan has it: the dreamer and her friend on a blue two-seater in the
 // front row, the big sofa (now a roller coaster) beside the friend, the audience in rows behind.
@@ -88,5 +88,23 @@ describe('previs', () => {
     expect(turnedTo({ id: 'p2', x: 3, y: 2.5, faces: 'right' }, theater, eye)).toBe('facing the camera');
     // Their back to it.
     expect(turnedTo({ id: 'p2', x: 3, y: 2.5, faces: 'left' }, theater, eye)).toBe('their back to the camera');
+  });
+
+  test('seen from outside, the camera faces them from where they look, inside the room', () => {
+    const shot = outsideShot(theater, ['p1', 'p2', 't1', 't2'], false, 'medium', name)!;
+    // Between them and the screen, looking at them, never through the wall.
+    expect(shot.eye.at.y).toBeGreaterThanOrEqual(0.3);
+    expect(shot.eye.at.y).toBeLessThan(2.5);
+    expect(shot.eye.d.y).toBeGreaterThan(0.9);
+    expect(shot.eye.lens).toBeLessThanOrEqual(35);
+    // Facing them, their right is the picture's left: the dreamer, then the friend.
+    expect(shot.text).toMatch(/From left to right across the picture: the dreamer, [^;]+; then the friend, /);
+    expect(shot.text).toContain('the blue sofa, ');
+    expect(shot.text).toContain('with the dreamer and the friend sitting on it');
+    expect(shot.text).toContain('Outside the picture, behind the camera: the screen.');
+    // From behind them, facing the screen, the other way round.
+    const back = outsideShot(theater, ['p1', 'p2', 't1', 't2'], true, 'medium', name)!;
+    expect(back.eye.d.y).toBeLessThan(-0.9);
+    expect(back.text).toMatch(/From left to right across the picture: the friend, [^;]+; then the dreamer, /);
   });
 });

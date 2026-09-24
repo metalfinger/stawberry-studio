@@ -756,4 +756,70 @@ describe("a moment's previs", () => {
     expect(bare).not.toContain('mock-up');
     expect(bare).toContain('come from the shot above, not from this image.');
   });
+
+  test('seen from outside, the camera sees what the mock-up shows, and an earlier picture gives only its look', () => {
+    const place: Item = {
+      id: 'l1',
+      kind: 'location',
+      name: 'the theater',
+      fields: {},
+      status: 'ready',
+      version: 1,
+      mediaId: 'media-l1',
+      review: 'approved',
+    };
+    const before: Item = {
+      id: 'm1',
+      kind: 'cut',
+      name: 'm1',
+      fields: { action: { value: 'They sit down.', said: true } },
+      status: 'ready',
+      version: 1,
+      mediaId: 'media-m1',
+      review: 'approved',
+      frame: { visible: [], things: [], place: 'l1', distance: 'wide', eyes: 'outside', key: false, order: 1 },
+    };
+    const view = 'Seen from in front of them, a few metres off, at the height of their eyes: the camera looks toward the back of the room.';
+    const outside: Item = {
+      id: 'm2',
+      kind: 'cut',
+      name: 'm2',
+      fields: { action: { value: 'The big sofa turns into a roller coaster.', said: false } },
+      status: 'waiting',
+      version: 0,
+      frame: {
+        visible: [],
+        things: [],
+        place: 'l1',
+        distance: 'medium',
+        eyes: 'outside',
+        key: true,
+        order: 2,
+        plan: {
+          id: 'm2',
+          order: 2,
+          scene: 's1',
+          shot: 's1.sh2',
+          refs: [{ id: 'm1', kind: 'cut', role: 'composition', relation: 'same_side', carries: 'where everything is' }],
+          own: [],
+          staging: [],
+          states: [],
+          sheetLayout: false,
+          changes: [],
+          needs: ['m1'],
+          criteria: [],
+          depth: 2,
+          transition: '',
+          why: '',
+          view,
+        },
+      },
+    };
+    const inputs = [{ use: outside.frame!.plan!.refs[0], item: before }];
+    const { prompt } = framePrompt(outside, [place], style, inputs, 'media-previs');
+    expect(prompt).toContain('One picture from the dream, in a landscape 16:9 frame: a medium shot, at eye level.');
+    expect(prompt).not.toContain('The subject occupies about half the frame height');
+    expect(prompt).toContain(`What the camera sees, as the mock-up in Image 1 shows it: ${view}`);
+    expect(prompt).toContain('Take only how it looks there (its surfaces, colours and light) and how everyone in it looks; where everyone and everything is comes from Image 1, the mock-up.');
+  });
 });

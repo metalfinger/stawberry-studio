@@ -72,8 +72,15 @@ export type Camera = { at: Vec; d: Vec };
 /** Which way someone leans, from where they sit or stand, to see past someone close. */
 export type Lean = 'back' | 'forward' | 'left' | 'right';
 
-/** A camera with a height: someone's eyes, or the lens, and how it tilts (radians, down negative). */
-export type Eye = Camera & { height: number; pitch?: number; lean?: Lean };
+/**
+ * A camera with a height: someone's eyes, or the lens, and how it tilts (radians, down negative).
+ * `lens` is its focal length in millimetres on a full frame; 24mm (HALF_VIEW) where not said.
+ */
+export type Eye = Camera & { height: number; pitch?: number; lean?: Lean; lens?: number };
+
+/** Half the width of a lens's view, in degrees, on a full frame 36mm across. */
+export const halfViewOf = (eye: { lens?: number }) =>
+  eye.lens ? (Math.atan(18 / eye.lens) * 180) / Math.PI : HALF_VIEW;
 
 /** Half the width of a 16:9 frame's view, in degrees (a 24mm lens): what is further round is out of it. */
 export const HALF_VIEW = 38;

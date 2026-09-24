@@ -52,12 +52,14 @@ describe('the shots, planned while the chat goes on', () => {
       },
       dir,
     });
-    // Only the moment through the dreamer's eyes has a camera worked out, a previs and a brief.
-    expect(Object.keys(prep.previs)).toEqual(['m2']);
-    expect(existsSync(prep.previs.m2)).toBe(true);
-    expect(briefs).toHaveLength(1);
+    // Every camera is worked out, a previs and a brief each: seen from outside, and through the
+    // dreamer's own eyes.
+    expect(Object.keys(prep.previs).sort()).toEqual(['m1', 'm2']);
+    expect(existsSync(prep.previs.m1) && existsSync(prep.previs.m2)).toBe(true);
+    expect(briefs).toHaveLength(2);
     expect(prep.shots.m2.text).toBe('A first-person view, turned left to the board on the wall.');
     expect(prep.shots.m2.view).toContain('toward the departure board');
+    expect(prep.shots.m1.view).toStartWith('Seen from in front of them');
     expect(prep.blocking.s1.front).toBe('the stove');
 
     // Kept on the conversation for this dream, its floor plans with it; never for a dream since changed.

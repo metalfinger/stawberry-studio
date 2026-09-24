@@ -12,7 +12,7 @@ import {
   type Blocking,
   type Eye,
   facing,
-  HALF_VIEW,
+  halfViewOf,
   type Lean,
   reach,
   rightOf,
@@ -305,7 +305,7 @@ function render(solids: Solid[], eye: Eye, width: number, height: number): Rende
   const U = v3(-d.x * Math.sin(pitch), -d.y * Math.sin(pitch), Math.cos(pitch));
   const R = v3(-d.y, d.x, 0);
   const C = v3(eye.at.x, eye.at.y, eye.height);
-  const focal = width / 2 / Math.tan((HALF_VIEW * Math.PI) / 180);
+  const focal = width / 2 / Math.tan((halfViewOf(eye) * Math.PI) / 180);
   // Lit from behind the camera, high and to its left, the way a previs is: faces toward it are light.
   const L = (() => {
     const l = v3(
@@ -649,17 +649,25 @@ function across(s: Seen): string {
   const region = (x: number) =>
     x < 0.12
       ? 'the left edge'
-      : x < 0.38
+      : x < 0.33
         ? 'the left third'
-        : x <= 0.62
-          ? 'the middle'
-          : x <= 0.88
-            ? 'the right third'
-            : 'the right edge';
+        : x < 0.45
+          ? 'left of the middle'
+          : x <= 0.55
+            ? 'the middle'
+            : x < 0.67
+              ? 'right of the middle'
+              : x <= 0.88
+                ? 'the right third'
+                : 'the right edge';
   const [a, b] = [region(s.x0 + 0.01), region(s.x1 - 0.01)];
   if (s.x1 - s.x0 >= 0.45 && a !== b) return `across the picture from ${a} to ${b}`;
   const c = region(s.cx);
-  return c.endsWith('edge') ? `at ${c} of the picture` : `in ${c} of the picture`;
+  return c.endsWith('edge')
+    ? `at ${c} of the picture`
+    : c.includes('middle') && c !== 'the middle'
+      ? `${c} of the picture`
+      : `in ${c} of the picture`;
 }
 
 /** How a person is turned to the camera, and which way across the picture they look. */
@@ -797,30 +805,7 @@ export function dreamerShot(
     `The camera is the dreamer's eyes${at.length ? `, on ${at.map(called).join(' and ')}` : ''}${pose}${eye.lean ? `, ${LEAN_WORDS[eye.lean]}` : ''}, ${turned}${toward ? `, toward ${called(toward)}` : ''}: it looks toward ${wall(eye.d, plan.front)}. A wide lens, about 24mm.`,
     ...shown.map(({ s, seen }, i) => {
       const lead = i === 0 ? 'Nearest' : i === shown.length - 1 && shown.length > 1 ? 'Farthest' : 'Then';
-      // Who sits on what, and what stands right beside what: said as the plan has it, or the model
-      // gives the friend an armchair of her own and puts the roller coaster out on the floor (24 Sep).
-      const on = isPerson(s) && !s.many ? seatOf(s, plan) : undefined;
-      const sitting = on
-        ? at.includes(on.id)
-          ? `, sitting beside the dreamer on the same ${bareName(called(on.id))}`
-          : `, ${s.pose === 'lying' ? 'lying' : 'sitting'} on ${called(on.id)}`
-        : '';
-      const next = !isPerson(s)
-        ? besideOf(s, plan, [...at, ...spots.filter((o) => !isPerson(o)).map((o) => o.id)])
-        : undefined;
-      const how =
-        sitting +
-        (isPerson(s) && !s.many ? `, ${turnedTo(s, plan, eye)}` : '') +
-        (next ? `, right beside ${called(next.id)}` : '');
-      const behind =
-        seen.hiddenBy && seen.hiddenBy !== s.id && spots.some((o) => o.id === seen.hiddenBy)
-          ? `, partly hidden behind ${called(seen.hiddenBy)}`
-          : '';
-      // How big it is in the frame, read off the render: the image model keeps where each thing is
-      // across the picture from the words, and makes up how big it is. The friend beside the
-      // dreamer, seen from the waist up in the previs, came back whole and two metres off (24 Sep).
-      const size = !s.many ? `, ${isPerson(s) ? `${cropOf(s, eye)} and ` : ''}filling the picture ${upDown(seen)}` : '';
-      return `${lead}, ${reach(distance(s))}, ${across(seen)}: ${called(s.id)}${s.many ? `, many of them${rows(s, me)}, ${turnedTo({ ...s, ...nearestOf(s, seen, eye, plan) }, plan, eye)}` : how}${size}${behind}.`;
+      return `${lead}, ${reach(distance(s))}, ${across(seen)}: ${called(s.id)}${thingWords(s, seen, plan, eye, called, { spots, on: at, anchor: me })}.`;
     }),
     ...spots
       .filter((s) => !shown.some((x) => x.s.id === s.id))
@@ -831,13 +816,147 @@ export function dreamerShot(
 }
 
 /**
+ * What a camera's words say of one thing it shows: what someone sits on, how they are turned, what
+ * a thing stands right beside, how big it is in the frame, and what partly hides it, all read off
+ * the render. `on` is what the dreamer is on, when the camera is their eyes.
+ */
+function thingWords(
+  s: Spot,
+  seen: Seen,
+  plan: Blocking,
+  eye: Eye,
+  called: (id: string) => string,
+  ctx: { spots: Spot[]; on: string[]; anchor?: Spot },
+): string {
+  // Who sits on what, and what stands right beside what: said as the plan has it, or the model
+  // gives the friend an armchair of her own and puts the roller coaster out on the floor (24 Sep).
+  const on = isPerson(s) && !s.many ? seatOf(s, plan) : undefined;
+  const sitting = on
+    ? ctx.on.includes(on.id)
+      ? `, sitting beside the dreamer on the same ${bareName(called(on.id))}`
+      : `, ${s.pose === 'lying' ? 'lying' : 'sitting'} on ${called(on.id)}`
+    : '';
+  const next = !isPerson(s)
+    ? besideOf(s, plan, [...ctx.on, ...ctx.spots.filter((o) => !isPerson(o)).map((o) => o.id)])
+    : undefined;
+  const sitters = !isPerson(s)
+    ? ctx.spots.filter((o) => isPerson(o) && !o.many && seatOf(o, plan)?.id === s.id).map((o) => called(o.id))
+    : [];
+  const how =
+    sitting +
+    (isPerson(s) && !s.many ? `, ${turnedTo(s, plan, eye)}` : '') +
+    (sitters.length ? `, with ${sitters.join(' and ')} sitting on it` : '') +
+    (next ? `, right beside ${called(next.id)}` : '');
+  const behind =
+    seen.hiddenBy && seen.hiddenBy !== s.id && ctx.spots.some((o) => o.id === seen.hiddenBy)
+      ? `, partly hidden behind ${called(seen.hiddenBy)}`
+      : '';
+  // How big it is in the frame, read off the render: the image model keeps where each thing is
+  // across the picture from the words, and makes up how big it is. The friend beside the
+  // dreamer, seen from the waist up in the previs, came back whole and two metres off (24 Sep).
+  const size = !s.many ? `, ${isPerson(s) ? `${cropOf(s, eye)} and ` : ''}filling the picture ${upDown(seen)}` : '';
+  return s.many
+    ? `, many of them${ctx.anchor ? rows(s, ctx.anchor) : ''}, ${turnedTo({ ...s, ...nearestOf(s, seen, eye, plan) }, plan, eye)}${behind}`
+    : `${how}${size}${behind}`;
+}
+
+/** The lens for a shot seen from outside, by how close it is: a portrait lens close, a wide one for the whole place. */
+const LENS: Record<'close' | 'medium' | 'wide', number> = { close: 50, medium: 35, wide: 24 };
+
+/**
+ * A moment seen from outside, as a camera operator places the camera on the floor plan: in front of
+ * the people it shows, facing them, or behind them when the moment faces the place's front; as far
+ * off as its size needs (close: a head and shoulders fill the frame; medium: from the waist up;
+ * wide: all of them and room around them), at the height of their eyes, never through a wall: a
+ * camera the room is too small for comes closer with a wider lens. What it sees is read off its
+ * render, left to right, as the dreamer's own view is. Told only who is left and right in words,
+ * the model made up how far off the camera was and what furniture stood where (24 Sep).
+ */
+export function outsideShot(
+  plan: Blocking,
+  subjects: string[],
+  facesFront: boolean,
+  size: 'close' | 'medium' | 'wide',
+  name: (id: string) => string,
+): { eye: Eye; text: string; inPicture: string[] } | null {
+  const inIt = subjects.map((id) => plan.spots.find((s) => s.id === id)).filter((s): s is Spot => !!s && !s.many);
+  const people = inIt.filter((s) => isPerson(s));
+  const group = people.length ? people : inIt;
+  if (!group.length) return null;
+  const c = {
+    x: group.reduce((a, s) => a + s.x, 0) / group.length,
+    y: group.reduce((a, s) => a + s.y, 0) / group.length,
+  };
+  const look = unit(
+    group.map((s) => facing(s, plan)).reduce((a, v) => ({ x: a.x + v.x, y: a.y + v.y }), { x: 0, y: 0 }),
+  );
+  // The camera faces them, so it looks the other way to them; or behind them, the way they look.
+  const d = facesFront ? look : { x: -look.x, y: -look.y };
+  const r = rightOf(d);
+  const tallest = Math.max(...group.map((s) => (isPerson(s) ? eyeHeight(s.pose) + 0.15 : (s.size?.[2] ?? 1))));
+  const lowest = size === 'close' ? tallest - 0.7 : size === 'medium' ? tallest * 0.45 : 0;
+  // How much of the place across the camera the group takes, side to side.
+  const offsets = group.map((s) => (s.x - c.x) * r.x + (s.y - c.y) * r.y);
+  const wide = Math.max(...offsets) - Math.min(...offsets) + (size === 'close' ? 0.4 : size === 'medium' ? 1 : 2.5);
+  const tall = (tallest - lowest) * (size === 'close' ? 1.3 : size === 'medium' ? 1.25 : 1.8);
+  // What the frame must hold, and so how far off a lens of this size must be.
+  const frameTall = Math.max(tall, (wide * 9) / 16);
+  let lens = LENS[size];
+  const tallAt = (l: number) => Math.atan(Math.tan(Math.atan(18 / l)) * (9 / 16));
+  let far = frameTall / 2 / Math.tan(tallAt(lens));
+  let at = { x: c.x - d.x * far, y: c.y - d.y * far };
+  // Indoors, never through a wall: closer, with a lens wide enough to hold the same.
+  if (plan.indoors) {
+    const inside = (p: V2) => p.x >= 0.3 && p.x <= 9.7 && p.y >= 0.3 && p.y <= 9.7;
+    while (!inside(at) && far > 0.6) {
+      far -= 0.1;
+      at = { x: c.x - d.x * far, y: c.y - d.y * far };
+    }
+    const need = Math.atan(frameTall / 2 / far);
+    if (need > tallAt(lens)) lens = Math.max(14, Math.round(18 / Math.tan(Math.atan(Math.tan(need) * (16 / 9)))));
+  }
+  const height = people.length ? people.reduce((a, s) => a + eyeHeight(s.pose), 0) / people.length : 1.5;
+  const aim = (tallest + lowest) / 2;
+  const eye: Eye = { at, d, height, pitch: Math.atan2(aim - height, far), lens };
+  const solids = solidsOf(plan, [], name);
+  const rr = render(solids, eye, 384, 216);
+  const min = 384 * 216 * 0.002;
+  const spots = plan.spots;
+  const shown = spots
+    .map((s) => ({ s, seen: rr.seen.get(s.id) }))
+    .filter((x): x is { s: Spot; seen: Seen } => !!x.seen && x.seen.visible >= min)
+    .sort((a, b) => a.seen.cx - b.seen.cx);
+  const anchor = people[0];
+  const where = far < 1.6 ? 'close' : far < 4 ? 'a few metres off' : 'from across the place';
+  const words = (s: Spot, seen: Seen) =>
+    `${name(s.id)}, ${across(seen).replace(/^(in|at) /, '')}${thingWords(s, seen, plan, eye, name, { spots, on: [], anchor })}`;
+  // The people it shows, left to right, then the things it shows; then what is behind them.
+  const whoShown = shown.filter((x) => subjects.includes(x.s.id) && isPerson(x.s));
+  const whatShown = shown.filter((x) => subjects.includes(x.s.id) && !isPerson(x.s));
+  const behind = shown.filter((x) => !subjects.includes(x.s.id));
+  const sentences = [
+    `Seen from ${facesFront ? 'behind them' : 'in front of them'}, ${where}, at the height of their eyes: the camera looks toward ${wall(d, plan.front)}. A ${lens}mm lens.`,
+    whoShown.length
+      ? `From left to right across the picture: ${whoShown.map(({ s, seen }) => words(s, seen)).join('; then ')}. They keep these places in every picture of this scene.`
+      : '',
+    ...whatShown.map(({ s, seen }) => `${cap(words(s, seen))}.`),
+    behind.length ? `Also in the picture: ${behind.map(({ s, seen }) => words(s, seen)).join('; ')}.` : '',
+    ...spots
+      .filter((s) => subjects.includes(s.id) && !shown.some((x) => x.s.id === s.id))
+      .map((s) => `Outside the picture, ${offTo(eye, s)}: ${name(s.id)}.`),
+    frontLine(plan, eye, rr, min),
+  ].filter(Boolean);
+  return { eye, text: sentences.join(' '), inPicture: shown.map((x) => x.s.id) };
+}
+
+/**
  * Where on a crowd the camera sees it: the first of the ground it fills along the line through the
  * middle of what shows. A crowd's middle can be off to one side of the part in the picture.
  */
 function nearestOf(s: Spot, seen: Seen, eye: Eye, plan: Blocking): V2 {
   const d = unit(eye.d);
   const r = rightOf(d);
-  const a = Math.atan((seen.cx - 0.5) * 2 * Math.tan((HALF_VIEW * Math.PI) / 180));
+  const a = Math.atan((seen.cx - 0.5) * 2 * Math.tan((halfViewOf(eye) * Math.PI) / 180));
   const ray = { x: d.x * Math.cos(a) + r.x * Math.sin(a), y: d.y * Math.cos(a) + r.y * Math.sin(a) };
   const [w, dp] = s.spread ?? [4, 3];
   const face = facing(s, plan);
@@ -857,8 +976,8 @@ const bareName = (x: string) =>
     .replace(/^\s*(the|a|an)\s+/i, '')
     .trim();
 
-/** Half the height of the frame's view, in degrees, for a 16:9 frame with HALF_VIEW across. */
-const HALF_TALL = (Math.atan(Math.tan((HALF_VIEW * Math.PI) / 180) * (9 / 16)) * 180) / Math.PI;
+/** Half the height of a camera's view, in degrees, for a 16:9 frame. */
+const halfTall = (eye: Eye) => (Math.atan(Math.tan((halfViewOf(eye) * Math.PI) / 180) * (9 / 16)) * 180) / Math.PI;
 
 /**
  * How much of someone the frame holds, where the bottom of the picture cuts them: from the waist
@@ -867,7 +986,7 @@ const HALF_TALL = (Math.atan(Math.tan((HALF_VIEW * Math.PI) / 180) * (9 / 16)) *
 function cropOf(s: Spot, eye: Eye): string {
   const d = unit(eye.d);
   const along = (s.x - eye.at.x) * d.x + (s.y - eye.at.y) * d.y;
-  const low = eye.height + along * Math.tan((eye.pitch ?? 0) + (-HALF_TALL * Math.PI) / 180);
+  const low = eye.height + along * Math.tan((eye.pitch ?? 0) + (-halfTall(eye) * Math.PI) / 180);
   const sitting = s.pose === 'sitting';
   const [head, shoulders, waist, knees] = sitting
     ? [1.1, 0.85, 0.5, 0.2]
