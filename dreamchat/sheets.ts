@@ -271,7 +271,7 @@ export const LOOK: Record<ItemKind, string[]> = {
 /** A character that is several people: named or described as more than one. */
 export function isGroup(item: Item): boolean {
   const said = `${item.name} ${item.fields.appearance?.value ?? ''}`;
-  return /\b(people|persons|couple of|group of|crowd|pair of|twins|children|kids|(?:two|three|four|five|both|several) (?:\w+ )?(?:men|women|people|children|girls|boys|kids|friends|sisters|brothers|figures))\b/i.test(
+  return /\b(people|persons|couple of|group of|crowd|pair of|twins|children|kids|famil(?:y|ies)(?! (?:friend|member|doctor|pet|dog|cat|car|home|house))|(?:two|three|four|five|both|several) (?:\w+ )?(?:men|women|people|children|girls|boys|kids|friends|sisters|brothers|figures))\b/i.test(
     said,
   );
 }

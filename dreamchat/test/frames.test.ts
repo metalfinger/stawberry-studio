@@ -267,6 +267,8 @@ describe('a group of people', () => {
     expect(sheetPrompt(couple, style)).not.toContain('one person only');
     expect(isGroup(person('the old men', 'two old men in caps'))).toBe(true);
     expect(isGroup(person('the girl', 'a girl with two braids'))).toBe(false);
+    expect(isGroup(person('the family', ''))).toBe(true);
+    expect(isGroup(person('a family friend', 'a tall man'))).toBe(false);
     expect(sheetPrompt(person('your aunt', 'shoulder-length brown hair'), style)).toContain('one person only');
   });
 });
