@@ -829,4 +829,31 @@ describe("a moment's previs", () => {
     expect(prompt).not.toContain('where things stand comes from the earlier picture');
     expect(prompt).toContain('come from Image 1, the mock-up, not from this image');
   });
+
+  test('an edit keeps the framing of the picture it edits: no shot-size words beside it', () => {
+    const earlier: Item = {
+      id: 'm4',
+      kind: 'cut',
+      name: 'm4',
+      fields: { action: { value: 'The ice melts.', said: true } },
+      status: 'ready',
+      version: 1,
+      mediaId: 'media-m4',
+      review: 'approved',
+      frame: { visible: [], things: [], place: 'l1', distance: 'close', eyes: 'outside', key: false, order: 4 },
+    };
+    const edit: Item = {
+      id: 'm5',
+      kind: 'cut',
+      name: 'm5',
+      fields: { action: { value: 'It becomes a horse head of ice.', said: true } },
+      status: 'waiting',
+      version: 0,
+      frame: { visible: [], things: [], place: 'l1', distance: 'close', eyes: 'outside', key: true, order: 5 },
+    };
+    const use = { id: 'm4', kind: 'cut' as const, role: 'base' as const, relation: 'same_setup' as const, carries: 'the same view' };
+    const { prompt } = framePrompt(edit, [], style, [{ use, item: earlier }]);
+    expect(prompt).toContain('EDIT THIS PICTURE');
+    expect(prompt).not.toContain('The subject fills nearly the whole frame');
+  });
 });

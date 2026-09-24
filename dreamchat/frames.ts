@@ -494,7 +494,10 @@ export function framePrompt(
         ? `One picture from the dream, in ${SHAPE_WORDS[shapeOf(frame)]}, through the dreamer's own eyes.`
         : // Seen from outside with the camera worked out, how big each thing is comes from the view.
           `One picture from the dream, in ${SHAPE_WORDS[shapeOf(frame)]}: a ${f.distance} shot, ${angle}${f.looksAt ? `, facing ${f.looksAt}` : ''}.`
-      : `One picture from the dream, in ${SHAPE_WORDS[shapeOf(frame)]}: a ${f.distance} shot, ${angle}${f.looksAt ? `, facing ${f.looksAt}` : ''}. ${FRAMING[f.distance]}`,
+      : // An edit keeps the framing of the picture it edits: "the subject fills the whole frame, the
+        // background a thin strip" beside "keep its camera, framing and room" came back as a close
+        // head against a sky, the room gone (24 Sep).
+        `One picture from the dream, in ${SHAPE_WORDS[shapeOf(frame)]}: a ${f.distance} shot, ${angle}${f.looksAt ? `, facing ${f.looksAt}` : ''}.${base ? '' : ` ${FRAMING[f.distance]}`}`,
     // The shot comes first, before the images: its director of photography's brief where there is
     // one, else the view worked out on the floor plan. Said after the images, the view was drawn
     // facing the screen, the default for a theater (24 Sep).
