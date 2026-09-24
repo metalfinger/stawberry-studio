@@ -121,7 +121,7 @@ function label(action: string): string {
 
 export type FrameReference = {
   media_id: string;
-  role: 'identity' | 'location' | 'prop' | 'base' | 'lighting' | 'composition';
+  role: 'identity' | 'location' | 'prop' | 'base' | 'composition';
   instruction: string;
 };
 
@@ -284,10 +284,10 @@ export function framePrompt(
           ? `${who(s)}: this exact place. Keep everything in it on the sides the reference puts it; do not mirror or rearrange it`
           : `${who(s)}: its materials, colours and objects only; the layout comes from ${base ? 'the picture being edited' : 'the earlier picture'}`,
         layout
-          ? `${who(s)}${look ? ` (${look})` : ''}: the camera stands in this place. Keep everything in it where it puts it (walls, doors, paths, furniture, whatever it has); do not mirror or rearrange it.`
+          ? `${who(s)}${look ? ` (${look})` : ''}: the camera stands in this place. Keep everything in it where it puts it (walls, doors, paths, furniture, whatever it has), and its light; do not mirror or rearrange it.`
           : base || roomFromCut
             ? `${who(s)}${look ? ` (${look})` : ''}: only its materials, colours and objects; where things stand comes from ${base ? 'Image 1' : 'the earlier picture of this place'}.`
-            : `${who(s)}${look ? ` (${look})` : ''}: only its materials, colours and objects. It shows the place from another side: this frame faces ${f.looksAt || 'the other way'}.`,
+            : `${who(s)}${look ? ` (${look})` : ''}: only its materials, colours, objects and light. It shows the place from another side: this frame faces ${f.looksAt || 'the other way'}.`,
       );
     } else {
       const look = lookOf(s, ['appearance', 'materials']);
@@ -313,23 +313,25 @@ export function framePrompt(
   // model off them (an expression variant beside an identity sheet lost a character's glasses, in
   // the first Strawberry Studio), and Jev read the two as claiming the same thing (0.42-0.46 on
   // what each image is for; 0.87-0.89 with the sketch alone, 24 Sep).
-  // A picture from the other side gives its light; who is in it comes from their own images, one
-  // each. "Its light and how everyone looks" read as a second image of each person (what each
-  // image is for 0.61-0.67; 0.72-0.76 with its light alone, 24 Sep).
-  // Who is in that picture and not in this one is said: "everyone in it is drawn from their own
-  // images" of a picture with the family in it, for a moment without them, read as asking for them.
-  const lightFrom = (x: PlannedInput, shows: string) => {
-    const own = seenHere.filter((id) => !imageOf.has(id)).map((id) => nameOf(sheets, id));
-    const gone = (x.item.frame?.visible ?? []).filter((id) => !f.visible.includes(id)).map((id) => nameOf(sheets, id));
-    return `${pictureNo(x)}${shows}: the same place from the other side, a moment earlier. Take only its light: the time of day and where the light comes from${
-      own.length ? `, and how ${own.join(' and ')} look${own.length > 1 ? '' : 's'}, who ${own.length > 1 ? 'have' : 'has'} no image of their own above` : ''
-    }.${gone.length ? ` ${gone.join(' and ')} ${gone.length > 1 ? 'are' : 'is'} in it but not in this picture.` : ''} Everyone here is drawn from their own images above; what is behind them is what that picture faced away from.`;
+  // An earlier picture is named by who and where it is, never by what happens in it: "picture 4
+  // (The dreamer nearly falls off, their hands flying out to grab air)", attached to a moment of
+  // the family on the roof, came back with the dreamer lunging off the train in picture 4's pose
+  // (24 Sep). The number says which image it is; the action only primes it.
+  const whoWhere = (x: PlannedInput) => {
+    const fr = x.item.frame;
+    if (!fr) return '';
+    const pov = fr.eyes === 'dreamer';
+    const people = fr.visible
+      .filter((id) => !(pov && sheets.find((s) => s.id === id)?.isDreamer))
+      .map((id) => nameOf(sheets, id));
+    const parts = [people.join(' and '), fr.place ? `at ${nameOf(sheets, fr.place)}` : '', pov ? "through the dreamer's eyes" : ''];
+    const said = parts.filter(Boolean).join(', ');
+    return said ? ` (${said})` : '';
   };
 
   const lastSeen = (x: PlannedInput, ids: string[]) => {
     const names = ids.map((id) => nameOf(sheets, id));
-    const shows = x.item.fields.action?.value ? ` (${x.item.fields.action.value.replace(/\.$/, '')})` : '';
-    return `${pictureNo(x)}${shows}: who ${names.join(' and ')} ${names.length > 1 ? 'are' : 'is'}, as last drawn: their face, hair, build and clothes, exactly. Nothing else from it: not its pose, background or framing.`;
+    return `${pictureNo(x)}${whoWhere(x)}: who ${names.join(' and ')} ${names.length > 1 ? 'are' : 'is'}, as last drawn: their face, hair, build and clothes, exactly. Nothing else from it: not its pose, background or framing.`;
   };
 
   // Ghosts, then earlier moments, while there is room: the model takes 14 images, and a dozen
@@ -351,10 +353,18 @@ export function framePrompt(
     }
     const unsketched = x.use.who?.filter((id) => !imageOf.has(id)) ?? [];
     if (x.use.who?.length && !unsketched.length) continue;
+    // No image goes in for its light alone: the model takes more than light from it (a moment of
+    // the family drew the dreamer in the pose of the picture attached for its light, 24 Sep). The
+    // light is said in words, and the place's own sketch shows it. A picture from the other side
+    // goes in only for someone in it who has no sketch of their own, as who they are.
+    if (x.use.role === 'lighting') {
+      const own = seenHere.filter((id) => !imageOf.has(id) && (x.item.frame?.visible ?? []).includes(id));
+      if (own.length) attach(x.item.mediaId, 'identity', `${own.map((id) => nameOf(sheets, id)).join(' and ')}: as last drawn`, lastSeen(x, own));
+      continue;
+    }
     const r = x.use.relation;
-    const shows = x.item.fields.action?.value ? ` (${x.item.fields.action.value.replace(/\.$/, '')})` : '';
-    const role: FrameReference['role'] =
-      x.use.role === 'lighting' ? 'lighting' : x.use.role === 'composition' ? 'composition' : 'identity';
+    const shows = whoWhere(x);
+    const role: FrameReference['role'] = x.use.role === 'composition' ? 'composition' : 'identity';
     attach(
       x.item.mediaId,
       role,
@@ -369,9 +379,7 @@ export function framePrompt(
             : `${pictureNo(x)}${shows}, just before the dream jumps. ${keepAcross(x)}; the dream changes this: ${frame.fields.shift?.value ?? ''}.`
         : x.use.role === 'composition'
           ? `${pictureNo(x)}${shows}: the same place from the same side. Take where everything and everyone in it are, and its light; this frame is framed ${f.distance}.`
-          : x.use.role === 'lighting'
-            ? lightFrom(x, shows)
-            : unsketched.length
+          : unsketched.length
               ? lastSeen(x, unsketched)
               : `${pictureNo(x)}${shows}: take only ${x.use.carries.replace(/;.*$/, '')}. Nothing of its place, framing or background.`) +
         strays(x),
@@ -494,13 +502,12 @@ export function ghostPrompt(
           instruction: `${sheet.name}'s reference sheet: edit it with one change`,
         },
       ];
-  const useFrom = from && approved(from) && from.mediaId ? from : undefined;
+  // A new side of a place is an edit of its sketch alone: a picture from inside it went in for its
+  // light only, and no image goes in for its light alone (see framePrompt). The moment a change
+  // happened goes in for how the change looks.
+  const useFrom = g.kind !== 'view' && from && approved(from) && from.mediaId ? from : undefined;
   if (useFrom?.mediaId)
-    references.push(
-      g.kind === 'view'
-        ? { media_id: useFrom.mediaId, role: 'lighting', instruction: `inside ${sheet.name}: its light` }
-        : { media_id: useFrom.mediaId, role: 'identity', instruction: `the moment the change happened: how it looks` },
-    );
+    references.push({ media_id: useFrom.mediaId, role: 'identity', instruction: `the moment the change happened: how it looks` });
   // What stays is everything the change does not replace: "make their head an ice block" beside
   // "keep the same face and hair" read as a contradiction (0.51-0.54 on what it shows, 24 Sep).
   const what = g.state?.what ?? '';
@@ -532,8 +539,7 @@ export function ghostPrompt(
     g.kind === 'view'
       ? [
           `A reference picture of ${sheet.name}, with nobody in it: not a scene from the story.`,
-          `Image 1 is ${sheet.name}'s reference sheet. Show the same place with the camera turned to face ${g.looksAt || 'the other way'}: what was behind the camera is now in view. Everything stays true to image 1: the same materials, colours and style, and objects consistent with it.`,
-          useFrom ? `Image 2 is a picture from inside ${sheet.name}: keep its light.` : '',
+          `Image 1 is ${sheet.name}'s reference sheet. Show the same place with the camera turned to face ${g.looksAt || 'the other way'}: what was behind the camera is now in view. Everything stays true to image 1: the same materials, colours, light and style, and objects consistent with it.`,
         ]
       : [
           `A reference picture of ${name}, on their own: not a scene from the story.`,

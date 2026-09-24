@@ -222,8 +222,14 @@ lessons and from Jev's readings of every moment in five dreams (`frames.ts`, `sh
 - **One image says who each person is: their sketch.** A second face image for the same person
   pulls the model off them. The first Strawberry Studio lost a character's glasses to an
   expression variant beside the sketch, and Jev read two such images as claiming the same thing.
-  The picture they were last seen in goes in only for someone without a sketch. A picture from
-  the other side of a place gives its light only, and says who in it is not in this one.
+  The picture they were last seen in goes in only for someone without a sketch.
+- **No image goes in for its light alone.** The model takes more than light from a picture: m5
+  of the streetcar drew the dreamer in the pose of the picture attached for its light. Light is
+  said in words, and the place's sketch gives its light as well as its look. The judge still
+  compares the light with the picture before. Without those images, moments read clearer on
+  what each image is for (0.81 against 0.75), and fewer are held (29 reads of 136 against 40).
+- **Earlier pictures are named by who and where they are** ("picture 4 (the dreamer, at the top
+  of the train)"), never by what happens in them, which would be drawn again.
 - **Every image is numbered and says what to take from it and what to leave out** ("Nothing
   else from it: not its pose, background or framing"). Without the leave-out, what each image is
   for read less clear (0.75 against 0.70).

@@ -297,26 +297,25 @@ describe('a moment drawn from earlier moments', () => {
       'Image 2: the kitchen: only its materials, colours and objects; where things stand comes from the earlier picture of this place.',
     );
     // An earlier moment says what it shows, so the model knows which picture is which.
-    expect(prompt).toContain('Image 3: picture 1 (Ana stands at the counter): the same place from the same side.');
+    // By who and where it is, never by what happens in it: its action would be drawn again.
+    expect(prompt).toContain('Image 3: picture 1 (ana, at the kitchen): the same place from the same side.');
   });
 
-  test('a picture from the other side gives its light; who is in it comes from their own images', () => {
+  test('no picture goes in for its light alone: the place gives its light, and words say it', () => {
     const use = { id: 'm1', kind: 'cut' as const, role: 'lighting' as const, relation: 'other_side' as const, carries: 'x' };
     const inputs = [{ use, item: drawn('m1', 1) }];
-    expect(framePrompt(moment('m2', 2, [use]), [ana, kitchen], style, inputs).prompt).toContain(
-      'the same place from the other side, a moment earlier. Take only its light: the time of day and where the light comes from. Everyone here is drawn from their own images above;',
+    const lit = framePrompt(moment('m2', 2, [use]), [ana, kitchen], style, inputs);
+    // Everyone has their sketch: the picture from the other side is not attached at all.
+    expect(lit.references.map((r) => r.role)).toEqual(['identity', 'location']);
+    expect(lit.prompt).toContain('the kitchen: the camera stands in this place. Keep everything in it where it puts it');
+    expect(lit.prompt).toContain('and its light; do not mirror or rearrange it.');
+    // Someone in it with no sketch of their own: it goes in, as who they are.
+    const unsketched = framePrompt(moment('m2', 2, [use]), [{ ...ana, review: undefined }, kitchen], style, inputs);
+    expect(unsketched.references.map((r) => r.role)).toEqual(['location', 'identity']);
+    expect(unsketched.prompt).toContain(
+      'Image 2: picture 1 (ana, at the kitchen): who ana is, as last drawn: their face, hair, build and clothes, exactly.',
     );
-    // Who is in it and not here is said.
-    const withConductor: Item = { ...drawn('m1', 1), frame: { ...drawn('m1', 1).frame!, visible: ['p1', 'p2'] } };
-    expect(
-      framePrompt(moment('m2', 2, [use]), [ana, sheet('p2', 'character', 'the conductor'), kitchen], style, [
-        { use, item: withConductor },
-      ]).prompt,
-    ).toContain('the conductor is in it but not in this picture. Everyone here is drawn from their own images above;');
-    // Someone with no sketch of their own takes their look from it too.
-    expect(framePrompt(moment('m2', 2, [use]), [{ ...ana, review: undefined }, kitchen], style, inputs).prompt).toContain(
-      'Take only its light: the time of day and where the light comes from, and how ana looks, who has no image of their own above.',
-    );
+    expect(unsketched.prompt).not.toContain('Ana stands at the counter)');
   });
 
   test('in a style made in one colour, each image says to draw its person in the picture’s shades', () => {
@@ -344,7 +343,7 @@ describe('a moment drawn from earlier moments', () => {
     const unsketched = framePrompt(moment('m2', 2, [use]), [{ ...ana, review: undefined }, kitchen], style, inputs);
     expect(unsketched.references.map((r) => r.role)).toEqual(['location', 'identity']);
     expect(unsketched.prompt).toContain(
-      "Image 2: picture 1 (Ana stands at the counter): who ana is, as last drawn: their face, hair, build and clothes, exactly. Nothing else from it: not its pose, background or framing.",
+      "Image 2: picture 1 (ana, at the kitchen): who ana is, as last drawn: their face, hair, build and clothes, exactly. Nothing else from it: not its pose, background or framing.",
     );
   });
 });

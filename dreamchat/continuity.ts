@@ -131,7 +131,7 @@ export const inViewAt = (m: Moment) => new Set([...m.visible, ...m.things, ...(m
 const CARRIES: Record<Relation, string> = {
   same_setup: 'the same view a moment earlier: the room, the light and where everyone is',
   same_side: 'the same place from the same side: where its walls, furniture and people are, and its light',
-  other_side: 'the same place from the other side: its light; not its walls, nor who is in it',
+  other_side: 'the same place from the other side: the light to keep, said in words and checked against it; not drawn from',
   other_place: 'how everyone in it looks right now; not its background',
   shift: 'the picture just before the dream jumps: its framing and where everyone is',
 };
@@ -308,8 +308,12 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
         const g = ghosts.find((x) => x.id === r.id);
         return !!g?.state && stateKey(g.state) === stateKey(st);
       }
+      // A picture kept only for its light is not drawn from, so it carries no change.
       return (
-        r.relation !== 'shift' && index.get(r.id)! >= index.get(st.since)! && inViewAt(byId.get(r.id)!).has(st.who)
+        r.relation !== 'shift' &&
+        r.role !== 'lighting' &&
+        index.get(r.id)! >= index.get(st.since)! &&
+        inViewAt(byId.get(r.id)!).has(st.who)
       );
     });
   const countChanges = (c: CutPlan) => {
