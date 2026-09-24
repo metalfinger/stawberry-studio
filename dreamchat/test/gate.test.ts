@@ -65,6 +65,30 @@ describe('the confidence gate', () => {
     expect(diffuse.findings).toEqual([]);
   });
 
+  test('someone drawn twice just over the line is held only when one line carries it', async () => {
+    const long = 'One picture.\nThe blue sofa they sit on.\nThe baby, again, on her own.\nIt feels cold.';
+    const reading = (local: boolean): JevFn => async (state, questions) => ({
+      questions,
+      state,
+      answers: Object.fromEntries(
+        Object.keys(questions).map((k) => [
+          k,
+          {
+            type: 'noul' as const,
+            noul: k === 'twice' ? (local && !state.includes('The baby, again') ? 0.1 : 0.45) : k === 'contradicts' ? 0.1 : 0.9,
+          },
+        ]),
+      ),
+      error: null,
+      ms: 1,
+      usage: null,
+    });
+    expect((await readPrompt(reading(true), long)).findings).toEqual([
+      'someone may be drawn twice (0.45), around: "The baby, again, on her own."',
+    ]);
+    expect((await readPrompt(reading(false), long)).findings).toEqual([]);
+  });
+
   test('an in-between picture is read as an edit: is its one change plain, and what stays', async () => {
     const edit = 'Image 1 is the young woman\'s reference sheet: edit it. Make exactly one change: her head is now a block of ice.';
     const qs = gateQuestions(true, false, undefined, true);

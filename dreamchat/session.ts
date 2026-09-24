@@ -63,6 +63,7 @@ import {
   ghostPrompt,
   inViewOf,
   type PlannedInput,
+  turnedInto,
 } from './frames';
 import { checkReferences, preflight, readPrompt } from './gate';
 import {
@@ -1297,8 +1298,9 @@ export class SessionStore {
       ...preflight(inView, issues),
       ...checkReferences(prompt, references, {
         approved,
+        // Whoever has turned into something else is drawn from what they became, not their sketch.
         mustInclude: inView
-          .filter((x) => x.mediaId && x.status === 'ready')
+          .filter((x) => x.mediaId && x.status === 'ready' && !turnedInto(item).has(x.id))
           .map((x) => ({ name: x.name, mediaId: x.mediaId as string })),
       }),
     ];
@@ -1407,8 +1409,16 @@ export class SessionStore {
     );
     // Who is in it, as it is drawn: a correction can take someone out or put someone in.
     const dreamerId = s.draft?.breakdown?.people.find((p) => p.is_dreamer)?.id;
+    // A crowd is in the words only: the engine refuses a cut whose cast has no sketch, and a crowd
+    // never has one (24 Sep).
+    const extras = new Set((s.build?.items ?? []).filter((i) => i.extras).map((i) => i.id));
     const cast = frame.frame
-      ? { visible_cast: seenIn(frame.frame, dreamerId).map((p) => ids[p]).filter((x): x is string => !!x) }
+      ? {
+          visible_cast: seenIn(frame.frame, dreamerId)
+            .filter((p) => !extras.has(p))
+            .map((p) => ids[p])
+            .filter((x): x is string => !!x),
+        }
       : {};
     return {
       fields: { ...cutRecord(plan, ids, failedCuts), ...cast, ...words },

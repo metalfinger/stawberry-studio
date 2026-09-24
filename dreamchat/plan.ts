@@ -7,7 +7,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { drawOrder, planContinuity } from './continuity';
-import { buildFrames, buildGhosts, framePrompt, ghostPrompt, inViewOf, type PlannedInput } from './frames';
+import { completeViews } from './producer';
+import { buildFrames, buildGhosts, framePrompt, ghostPrompt, inViewOf, type PlannedInput, turnedInto } from './frames';
 import { checkReferences, preflight, readPrompt } from './gate';
 import { callJev } from './jev';
 import { loadedKeys } from './boot';
@@ -32,12 +33,14 @@ if (!b || !s.style) {
 }
 
 // Every sketch as approved, with a stand-in image where none was drawn.
+// (A crowd has no sketch, ever: it is said in words.)
 const sheets: Item[] = (s.build?.items ?? []).map((i) => ({
   ...i,
   status: 'ready',
-  mediaId: i.mediaId ?? `sketch-${i.id}`,
+  mediaId: i.mediaId ?? (i.extras ? undefined : `sketch-${i.id}`),
   review: i.review ?? 'approved',
 }));
+completeViews(b);
 const plan = planContinuity(b);
 const pictures = [...buildFrames(b, plan), ...buildGhosts(plan)].map(
   (p): Item => ({ ...p, status: 'ready', mediaId: `picture-${p.id}`, continuityApproved: true }),
@@ -60,12 +63,15 @@ async function gateOf(
   issues: string[],
   sheet = false,
   edit = false,
+  item?: Item,
 ) {
   const fixed = [
     ...preflight(inView, issues),
     ...checkReferences(prompt, references, {
       approved,
-      mustInclude: inView.filter((x) => x.mediaId).map((x) => ({ name: x.name, mediaId: x.mediaId as string })),
+      mustInclude: inView
+        .filter((x) => x.mediaId && !(item && turnedInto(item).has(x.id)))
+        .map((x) => ({ name: x.name, mediaId: x.mediaId as string })),
     }),
   ];
   const read = await readPrompt(callJev, prompt, { sheet, edit });
@@ -107,7 +113,7 @@ for (const pid of drawOrder(plan)) {
     const inView = it.kind === 'ghost' ? [] : inViewOf(it, sheets);
     const order = it.frame?.order;
     const issues = order ? plan.issues.filter((x) => x.startsWith(`picture ${order} `) || x.startsWith(`picture ${order}:`)) : [];
-    console.log(await gateOf(out.prompt, out.references, inView, issues, false, it.kind === 'ghost'));
+    console.log(await gateOf(out.prompt, out.references, inView, issues, false, it.kind === 'ghost', it));
     continue;
   }
   console.log(out.prompt);

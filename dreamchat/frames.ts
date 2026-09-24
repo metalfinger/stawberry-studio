@@ -29,6 +29,15 @@ const NO_WORDS = 'Every surface in it is free of writing, logos and brand badges
 const NO_WORDS_EDIT =
   'Do not write any words, letters, numbers or labels anywhere in the image, and no logos or brand badges.';
 
+/** A change of what something is altogether, not of a part of it: its form, its shape, itself. */
+export const WHOLE = /^\s*(?:its |their |the )?(?:form|shape|whole|whole body|body and all|self|itself|themselves|kind|what it is|nature|entire \w+)\s*$/i;
+
+/** Who and what in a moment has turned into something else entirely: drawn from no sketch. */
+export function turnedInto(frame: Item): Set<string> {
+  const plan = frame.frame?.plan;
+  return new Set([...(plan?.own ?? []), ...(plan?.states ?? [])].filter((st) => WHOLE.test(st.what)).map((st) => st.who));
+}
+
 /** The frame's shape in words, as sent in its settings: the model's own examples say both. */
 const SHAPE_WORDS: Record<Shape, string> = {
   '16:9': 'a landscape 16:9 frame',
@@ -235,7 +244,8 @@ export function framePrompt(
       // What was filled in is said in the style's shades; what they said keeps its colours.
       .map((d) => (d?.said ? (d.value as string) : inShades(d?.value as string, style)))
       .flatMap((v) => v.split(/;\s*/))
-      .filter((part) => part.trim() && !own.some((re) => re.test(part)))
+      .map((part) => part.trim().replace(/[.\s]+$/, ''))
+      .filter((part) => part && !own.some((re) => re.test(part)))
       .join('; ');
   };
   const facts: string[] = [];
@@ -251,12 +261,21 @@ export function framePrompt(
     // cooking") into every moment they are in.
     const known = lookOf(s, LOOK[s.kind]);
     const kind = s.kind === 'character' ? (isGroup(s) ? 'people' : 'person') : s.kind === 'location' ? 'place' : 'thing';
+    // Someone or something that has turned into something else entirely is no longer drawn from
+    // its old sketch: its in-between picture shows what it became. The sofa's sketch beside "the
+    // roller coaster that was a sofa" read as the prompt contradicting itself, and as the same
+    // thing drawn twice (0.52; 0.46, 24 Sep).
+    const whole = [...(plan?.own ?? []), ...(plan?.states ?? [])].find((st) => st.who === s.id && WHOLE.test(st.what));
     // Everything in view is listed with its look, its image or not: said only beside the images,
     // the pictures read as less clear to Jev (0.78 against 0.82) and more likely to contradict
     // themselves (24 Sep).
-    facts.push(`${who(s)} (${kind})${known ? `: ${known}` : ''}.`);
+    facts.push(
+      whole
+        ? `${who(s)} (${kind}): it has turned into ${whole.now}.`
+        : `${who(s)} (${kind})${known ? `: ${known}` : ''}.`,
+    );
     // Every sheet of what is in view always goes in: consistency starts from them.
-    if (!approved(s) || !s.mediaId) continue;
+    if (!approved(s) || !s.mediaId || whole) continue;
     if (s.kind === 'character') {
       const look = lookOf(s, ['appearance', 'wardrobe', 'distinctive_features']);
       // A change that replaces part of them overrides their sheet for that part: told to keep
@@ -291,11 +310,16 @@ export function framePrompt(
       );
     } else {
       const look = lookOf(s, ['appearance', 'materials']);
+      // A part of it that has changed is no longer as its sketch shows, as for a person.
+      const changed = [...(plan?.own ?? []), ...(plan?.states ?? [])].filter((st) => st.who === s.id);
+      const except = changed.length
+        ? ` Except its ${changed.map((st) => `${st.what}, which is no longer as it shows: it is now ${st.now}`).join('; ')}.`
+        : '';
       attach(
         s.mediaId,
         'prop',
         `${who(s)}: this exact object, with the same shape and materials`,
-        `${who(s)}${look ? ` (${look})` : ''}: its exact shape, materials and colours, the same in every picture${shades}. Nothing else from it.`,
+        `${who(s)}${look ? ` (${look})` : ''}: its exact shape, materials and colours, the same in every picture${shades}. Nothing else from it.${except}`,
       );
     }
   }
@@ -347,7 +371,9 @@ export function framePrompt(
         x.use.carries,
         g.kind === 'view'
           ? `${nameOf(sheets, g.of)} seen facing ${g.looksAt || 'the other way'}: the side this frame faces. Keep everything in it where it puts it.`
-          : `how ${nameOf(sheets, g.of)} looks now (${g.state?.what}: ${g.state?.now}): draw ${g.of === f.place ? 'it' : 'them'} exactly so. Nothing else from it.`,
+          : g.state && WHOLE.test(g.state.what)
+            ? `what ${nameOf(sheets, g.of)} has turned into (${g.state.now}): draw it exactly so, where ${nameOf(sheets, g.of)} was. Nothing else from it.`
+            : `how ${nameOf(sheets, g.of)} looks now (${g.state?.what}: ${g.state?.now}): draw ${g.of === f.place ? 'it' : 'them'} exactly so. Nothing else from it.`,
       );
       continue;
     }
@@ -376,6 +402,8 @@ export function framePrompt(
             ? // Into another place, only where things sit in the frame carries: "keep its framing
               // exactly" of a streetcar's aisle for a wide view of a train roof (24 Sep).
               `${pictureNo(x)}${shows}, just before the dream jumps to another place. Keep only its composition: where the main shapes and figures sit in the frame, so the two pictures cut together; the place and everything in it are this picture's own. The dream changes this: ${frame.fields.shift?.value ?? ''}.`
+            : x.use.turned
+              ? `${pictureNo(x)}${shows}, just before the dream changes it. Keep only its composition: where the main shapes and figures sit in the frame, so the two pictures cut together; this picture faces ${f.looksAt || 'another side of the place'}. The dream changes this: ${frame.fields.shift?.value ?? ''}.`
             : `${pictureNo(x)}${shows}, just before the dream jumps. ${keepAcross(x)}; the dream changes this: ${frame.fields.shift?.value ?? ''}.`
         : x.use.role === 'composition'
           ? `${pictureNo(x)}${shows}: the same place from the same side. Take where everything and everyone in it are, and its light; this frame is framed ${f.distance}.`
@@ -401,7 +429,7 @@ export function framePrompt(
   const wear = dreamer ? lookOf(dreamer, ['wardrobe']) : '';
   const pov =
     f.eyes === 'dreamer'
-      ? `The camera is the dreamer's own eyes: the dreamer is not in the picture, except perhaps their own hands, arms or feet${wear ? `, in ${wear}` : ''}.`
+      ? `The camera is the dreamer's own eyes: the dreamer is not in the picture, except perhaps their own hands, arms or feet${wear ? `, in ${wear.charAt(0).toLowerCase()}${wear.slice(1)}` : ''}.`
       : '';
   const feeling = frame.fields.feeling?.value;
   const point = frame.fields.visual_point?.value;
@@ -521,12 +549,17 @@ export function ghostPrompt(
         ]
       : [];
   const listed = (xs: string[]) => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs.at(-1)}` : (xs[0] ?? ''));
-  const keep =
-    sheet.kind === 'character'
+  const becomes = WHOLE.test(what);
+  const keep = becomes
+    ? 'the same angle and framing, the same plain background'
+    : sheet.kind === 'character'
       ? `the same ${listed(parts)}, the same pose and framing, the same plain background`
       : sheet.kind === 'location'
         ? 'the same walls, windows, objects, materials and colours, the same view'
         : 'the same shape and materials, the same angle, the same plain background';
+  // Turned into something else entirely, the whole of it is the change: "form is now roller
+  // coaster" beside "keep the same shape and materials" asked for both (24 Sep).
+  const change = becomes ? `it has turned into ${g.state?.now}, entirely` : `${g.state?.what} is now ${g.state?.now}`;
   // Its look in words, as a moment lists what is in it: said only through its image, an edit read
   // as unclear about what it shows (0.53 against 0.64, 24 Sep).
   const look = LOOK[sheet.kind]
@@ -544,8 +577,8 @@ export function ghostPrompt(
       : [
           `A reference picture of ${name}, on their own: not a scene from the story.`,
           before
-            ? `Image 1 is ${name} as they looked a moment before, after the change before this one: edit it. Make exactly one change: ${g.state?.what} is now ${g.state?.now}. Image 2 is their reference sheet: ${sheet.kind === 'character' ? `their ${listed(parts)}` : 'what it is'}.`
-            : `Image 1 is ${name}'s reference sheet: edit it. Make exactly one change: ${g.state?.what} is now ${g.state?.now}.`,
+            ? `Image 1 is ${name} as they looked a moment before, after the change before this one: edit it. Make exactly one change: ${change}. Image 2 is their reference sheet: ${sheet.kind === 'character' ? `their ${listed(parts)}` : 'what it is'}.`
+            : `Image 1 is ${name}'s reference sheet: edit it. Make exactly one change: ${change}.`,
           useFrom
             ? `Image ${references.length} is the moment it happened in the dream: make the change look as it does there, and take nothing else from it.`
             : '',

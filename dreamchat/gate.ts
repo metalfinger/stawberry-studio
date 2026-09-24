@@ -263,7 +263,15 @@ export async function readPrompt(
         `its instructions may contradict each other (${contradicts.toFixed(2)})${around && around.drop >= LOCAL_DROP ? `, around: "${around.line.slice(0, 160)}"` : ''}`,
       );
   }
-  if (twice > MAX_TWICE) findings.push(`someone may be drawn twice (${twice.toFixed(2)})`);
+  if (twice > MAX_TWICE) {
+    // The same for someone drawn twice: in a theater of identical blue sofas it read 0.41-0.43 with
+    // no line carrying it (none lowered it by more than 0.06), where a baby drawn twice read 0.75+.
+    const at = opts.sheet ? undefined : await carrier(jev, prompt, twice, 'twice');
+    if (opts.sheet || twice > DIFFUSE_UP_TO || (at?.drop ?? 0) >= LOCAL_DROP)
+      findings.push(
+        `someone may be drawn twice (${twice.toFixed(2)})${at && at.drop >= LOCAL_DROP ? `, around: "${at.line.slice(0, 160)}"` : ''}`,
+      );
+  }
   if (clear < (opts.edit ? MIN_EDIT_CLEAR : MIN_CLEAR)) {
     // Which parts of its look are missing, when a sketch is unclear: what its rewording must fill.
     const missing = Object.entries(opts.sheet && opts.kind ? FACETS[opts.kind] : {})
@@ -278,15 +286,20 @@ export async function readPrompt(
   return { findings, reading: { contradicts, twice, clear, refsClear, ...(around ? { around } : {}) } };
 }
 
-/** The line whose leaving out lowers a contradiction reading most, and by how much. */
-async function carrier(jev: JevFn, prompt: string, whole: number): Promise<GateReading['around']> {
-  const only = { contradicts: gateQuestions(false).contradicts };
+/** The line whose leaving out lowers a reading most, and by how much. */
+async function carrier(
+  jev: JevFn,
+  prompt: string,
+  whole: number,
+  question: 'contradicts' | 'twice' = 'contradicts',
+): Promise<GateReading['around']> {
+  const only = { [question]: gateQuestions(false)[question] };
   const lines = prompt.split('\n');
   const without = await Promise.all(
     lines.map(async (line, i) => {
       if (!line.trim()) return null;
       const call = await jev(lines.filter((_, j) => j !== i).join('\n'), only);
-      const a = call.answers?.contradicts;
+      const a = call.answers?.[question];
       return a && a.type === 'noul' ? { line, drop: whole - a.noul } : null;
     }),
   );

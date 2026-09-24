@@ -204,7 +204,10 @@ export function planWrites(b: Breakdown, style: StyleOption, transcript: string)
       ops.push({ op: 'create', ref: `$${m.id}`, kind: 'cut', name, parent: shot, notes: m.action });
       const cut: Record<string, Value> = {
         action: m.action,
-        visible_cast: seenIn(m, dreamerId).map((id) => `$${id}`),
+        // A crowd is in the words only: the engine asks a sketch of everyone in a cast.
+        visible_cast: seenIn(m, dreamerId)
+          .filter((id) => !b.people.find((p) => p.id === id)?.extras)
+          .map((id) => `$${id}`),
         required_props: m.things.map((id) => `$${id}`),
         story_order: order,
       };

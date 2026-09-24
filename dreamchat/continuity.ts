@@ -25,6 +25,11 @@ export type PlanRef = {
    * in for those whose sketch is not in the picture, since a sketch alone says who someone is.
    */
   who?: string[];
+  /**
+   * A jump the dream made within the same place, facing another side of it: only where things sit
+   * in the frame carries, never the framing itself.
+   */
+  turned?: boolean;
 };
 
 /**
@@ -238,6 +243,11 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
     let matchFrame: string | undefined;
     if (m.shift && i > 0) {
       add(ms[i - 1], 'composition', 'shift', `${CARRIES.shift}; the dream changes: ${m.shift}`);
+      // Facing another side of the same place, its framing cannot be kept: "keep its framing
+      // exactly" beside "facing the roller coaster", of a picture facing the screen, read as the
+      // prompt contradicting itself (0.50, 24 Sep).
+      const jump = refs.find((r) => r.id === ms[i - 1].id && r.relation === 'shift');
+      if (jump && ms[i - 1].place === m.place && !sides(m, ms[i - 1])) jump.turned = true;
       matchFrame = ms[i - 1].id;
     }
 
@@ -530,7 +540,7 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
         });
       if (r.relation === 'shift')
         out.push(
-          e.place !== m.place
+          e.place !== m.place || r.turned
             ? {
                 with: r.id,
                 text: `Does the second picture keep the first one's composition, where the main shapes sit in the frame, while ${m.shift}?`,

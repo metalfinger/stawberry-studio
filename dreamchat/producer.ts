@@ -794,7 +794,7 @@ export function completeViews(b: Breakdown): string[] {
   const bare = (x: string) => x.toLowerCase().replace(/^(the|a|an)\s+/, '').trim();
   const head = (x: string) => bare(x).split(/\s+/).at(-1) ?? '';
   const says = (text: string, words: string) => words.length > 2 && new RegExp(`\\b${words.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}s?\\b`, 'i').test(text);
-  const now = new Map<string, string>();
+  const now = new Map<string, State>();
   for (const m of moments(b)) {
     const text = `${m.action} ${m.visual_point ?? ''}`;
     for (const t of b.things) {
@@ -802,12 +802,15 @@ export function completeViews(b: Breakdown): string[] {
       const changes = (m.leaves ?? []).some((l) => l.who === t.id);
       const become = now.get(t.id);
       const unique = b.things.filter((x) => head(x.name) === head(t.name)).length === 1;
-      if (changes || (become && says(text, bare(become))) || says(text, bare(t.name)) || (unique && says(text, head(t.name)))) {
+      if (changes || (become && says(text, bare(become.now))) || says(text, bare(t.name)) || (unique && says(text, head(t.name)))) {
         m.things.push(t.id);
         notes.push(`${m.id} shows ${t.name}`);
+        // Brought into view here, it comes as it last was: a change made earlier still holds.
+        if (become && !changes && !(m.states ?? []).some((st) => st.who === t.id)) m.states = [...(m.states ?? []), become];
       }
     }
-    for (const l of m.leaves ?? []) if (b.things.some((t) => t.id === l.who)) now.set(l.who, l.now);
+    for (const l of m.leaves ?? [])
+      if (b.things.some((t) => t.id === l.who)) now.set(l.who, { who: l.who, what: l.what, now: l.now, since: m.id });
   }
   return notes;
 }
