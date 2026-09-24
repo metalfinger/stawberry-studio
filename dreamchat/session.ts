@@ -621,9 +621,14 @@ export class SessionStore {
 
     const styles = s.draft?.breakdown?.style_options ?? [];
     const onShow = s.build?.items.find((i) => i.id === s.build?.current);
-    // Sketches they have been shown and not yet answered about.
+    // Pictures on the page they have not answered about: everything drawn is there as soon as it
+    // is ready, mentioned or not, and what they say of it counts. Counted only once Berry had
+    // mentioned it, "I approve the generated image" of a moment that landed between turns approved
+    // nothing, and what follows it waited (24 Sep). Saying nothing leaves only what Berry has shown
+    // them. In-between pictures are never shown as the dream.
     const pieces = s.phase === 'frames' ? (s.build?.frames ?? []) : (s.build?.items ?? []);
-    const pending = pieces.filter((i) => i.status === 'ready' && i.announced && !i.review);
+    const onPage = pieces.filter((i) => i.status === 'ready' && !i.review && i.kind !== 'ghost');
+    const pending = onPage.filter((i) => i.announced);
     const questions = bookkeeperQuestions(
       this.cfg,
       s.transcript,
@@ -631,7 +636,7 @@ export class SessionStore {
       s.phase,
       styles,
       onShow?.name,
-      s.phase === 'review' || s.phase === 'frames' ? pending.map(({ id, name }) => ({ id, name })) : [],
+      s.phase === 'review' || s.phase === 'frames' ? onPage.map(({ id, name }) => ({ id, name })) : [],
     );
     const call = await this.deps.jev(renderTranscript(s.transcript), questions);
     const { next, notes } = readState(prev, this.cfg, s.transcript, call, turnNow, s.phase);
@@ -655,22 +660,25 @@ export class SessionStore {
     // last one, or start a new version.
     const reviewed = { approved: [] as string[], redrawing: [] as string[], kept: [] as string[] };
     let whichUnclear = false;
-    if ((s.phase === 'review' || s.phase === 'frames') && pending.length) {
+    if ((s.phase === 'review' || s.phase === 'frames') && onPage.length) {
       const reaction = overlaid.signals.sketch_reaction ?? 'no_reaction';
       const verdicts = overlaid.signals.sketch_verdicts ?? {};
-      const right = pending.filter((i) => verdicts[i.id] === 'right');
-      const wrong = pending.filter((i) => verdicts[i.id] === 'wrong');
+      const right = onPage.filter((i) => verdicts[i.id] === 'right');
+      const wrong = onPage.filter((i) => verdicts[i.id] === 'wrong');
+      // A reaction to no picture in particular is about what Berry has shown them; one that names a
+      // picture, or tells Berry to go ahead with it, counts for anything on the page.
+      const meant = pending;
       if (reaction === 'no_reaction' && !right.length && !wrong.length) {
         for (const it of pending)
           this.reviewSketch(s, it, 'left', 'Shown to them in the chat; they raised nothing against it.');
       } else if (!right.length && !wrong.length) {
         // A reaction, but to no picture in particular: "it looks great" with one or all on show.
         if (reaction === 'looks_right')
-          for (const it of pending) {
+          for (const it of meant) {
             this.reviewSketch(s, it, 'approved', `They said it looks right: "${text.slice(0, 400)}"`);
             reviewed.approved.push(it.name);
           }
-        else if (pending.length === 1) wrong.push(pending[0]);
+        else if (meant.length === 1) wrong.push(meant[0]);
         else whichUnclear = true;
       } else
         for (const it of right) {

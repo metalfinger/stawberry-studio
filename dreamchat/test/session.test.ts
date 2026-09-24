@@ -526,6 +526,18 @@ describe('a whole conversation', () => {
     });
   });
 
+  test('a moment they approve as soon as it is up counts, though Berry has not mentioned it yet', async () => {
+    const { store, id, framesStarted, statuses, reaction } = await toTheMoments();
+    statuses.set('job-m1', 'ready');
+    await store.settle(id, 100);
+    expect(store.get(id)!.build!.frames!.find((f) => f.id === 'm1')!.announced).toBeFalsy();
+    // On the page it is there; they approve it by telling Berry to go ahead.
+    reaction.now = { sketch_reaction: pick('looks_right'), ok_m1: noul(0.9) };
+    await store.message(id, 'go ahead, i approve the generated image');
+    expect(store.get(id)!.build!.frames!.find((f) => f.id === 'm1')!.review).toBe('approved');
+    expect(framesStarted.map((f) => f.id)).toEqual(['m1', 'm2']);
+  });
+
   test('a moment the gate is unsure of is held, never paid for; reworded, it is read again and drawn', async () => {
     // Jev is sure of the sketches, and of a moment only once its words are put right.
     const reading = (state: string) =>
