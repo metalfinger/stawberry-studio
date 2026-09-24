@@ -223,6 +223,15 @@ export type StoreDeps = {
    * is unsure of is held, never drawn on a guess. Absent: no gate (the tests).
    */
   gate?: JevFn;
+  /** A held sketch's profile, reworded to describe only its look and filled where it is thin. */
+  rewordLook?: (
+    name: string,
+    kind: 'character' | 'location' | 'prop',
+    fields: Record<string, Detail>,
+    prompt: string,
+    findings: string[],
+    transcript: string,
+  ) => Promise<Record<string, Detail> | null>;
   /** A held moment's own words, reworded once before it is given up on; text is nearly free. */
   reword?: (prompt: string, findings: string[], fields: Record<string, Detail>) => Promise<Record<string, Detail> | null>;
   /** Words for a person's look when nobody described it, filled in as guesses before the sketch. */
@@ -1189,8 +1198,10 @@ export class SessionStore {
           .map((x) => ({ name: x.name, mediaId: x.mediaId as string })),
       }),
     ];
+    const sheet = item.kind === 'character' || item.kind === 'location' || item.kind === 'prop';
     const read = await readPrompt(this.deps.gate, prompt, {
-      sheet: item.kind === 'character' || item.kind === 'location' || item.kind === 'prop',
+      sheet,
+      kind: sheet ? (item.kind as 'character' | 'location' | 'prop') : undefined,
     });
     if (read.reading) item.gate = read.reading;
     return [...fixed, ...read.findings];
@@ -1444,14 +1455,18 @@ export class SessionStore {
       .then(async () => {
         // The gate, before the sketch is paid for.
         let findings = await this.gateFindings(s, snapshot, sheetPrompt(snapshot, style), [], []);
-        // A look it is unsure of is proposed once more, every word left to us guessed afresh, before
-        // anyone is asked; what they said themselves is kept.
-        if (findings.length && this.deps.proposeLook && !snapshot.heldAsks) {
-          const open = Object.fromEntries(
-            Object.entries(snapshot.fields).map(([k, d]) => [k, d.said ? d : { value: null, said: false }]),
-          );
+        // A look it is unsure of is reworded, described as a look only and filled where it is thin,
+        // before anyone is asked, and read again; what they said keeps its meaning.
+        if (findings.length && this.deps.rewordLook) {
           const fields = await this.deps
-            .proposeLook(item.name, open, renderTranscript(s.transcript), others, kind)
+            .rewordLook(
+              item.name,
+              kind,
+              snapshot.fields,
+              sheetPrompt(snapshot, style),
+              findings,
+              renderTranscript(s.transcript),
+            )
             .catch(() => null);
           if (fields) {
             snapshot.fields = fields;

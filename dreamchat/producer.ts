@@ -220,6 +220,51 @@ export const callProducer: ProducerFn = async (transcript, previous) => {
 
 const REVISE_ITEM = `The person was shown a profile of something from their dream and answered it (their latest message). Apply what they changed or added, and nothing else. The fields say how it looks: a remark about a pose, a movement or what someone is doing belongs to the moments, never here ("he's too still" changes nothing in his look). Return JSON only: {"fields": {...}} with exactly the same keys as the profile, each value a short plain phrase, or null when nothing is known. Keep every value they didn't change exactly as it was.`;
 
+const REWORD_LOOK = `A reference picture of something from a person's dream is about to be drawn from the profile below, and a checker holding it back found a problem in it. Rewrite the profile so it can be drawn without guessing and without contradiction. It describes only how it ordinarily looks: never other people, what anyone does, or what happens in the dream. Keep every fact the person gave, reworded only so it describes a look ("the lever the driver turns" is "a lever at the front"). Fill what is missing with a plain, ordinary guess that fits the conversation: for a person their age, build, hair and clothes with colours; for a group who is in it and how each looks; for a place what kind it is, its layout, what stands in it and its light; for a thing its shape, size, materials and colours. Return JSON only: {"fields": {...}} with exactly the same keys as the profile, each value a short plain phrase.`;
+
+/**
+ * A sketch's profile, reworded before anything is paid for, when the gate found it unclear or at
+ * odds with itself: a streetcar with "no people in it" was described by "the lever the conductor
+ * turns", and a place by its landmarks alone (24 Sep). What the person said keeps its meaning.
+ */
+export async function rewordLook(
+  name: string,
+  kind: 'character' | 'location' | 'prop',
+  fields: Record<string, Detail>,
+  prompt: string,
+  findings: string[],
+  transcript: string,
+): Promise<Record<string, Detail> | null> {
+  const current = Object.fromEntries(Object.entries(fields).map(([k, d]) => [k, d.value]));
+  const res = await callDeepseek(
+    [
+      { role: 'system', content: REWORD_LOOK },
+      {
+        role: 'user',
+        content: `The conversation:\n\n${transcript}\n\nWhat the checker found:\n${findings.map((f) => `- ${f}`).join('\n')}\n\nThe ${kind === 'character' ? 'person' : kind === 'location' ? 'place' : 'thing'}: ${name}\nIts profile:\n${JSON.stringify(current)}\n\nThe instructions the picture would be drawn from:\n\n${prompt}`,
+      },
+    ],
+    { json: true, thinking: PRODUCER_THINKING },
+  );
+  let next: Record<string, unknown> = {};
+  try {
+    next = ((JSON.parse(res.content) as { fields?: Record<string, unknown> }).fields ?? {}) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+  const out: Record<string, Detail> = {};
+  let changed = false;
+  for (const [k, d] of Object.entries(fields)) {
+    const v = typeof next[k] === 'string' ? (next[k] as string).trim().slice(0, 300) : '';
+    if (v && !VAGUE.test(v) && v !== d.value) {
+      // A fact they gave stays theirs, reworded; a gap filled is our guess.
+      out[k] = { value: v, said: d.said && !!d.value };
+      changed = true;
+    } else out[k] = d;
+  }
+  return changed ? out : null;
+}
+
 const REWORD_MOMENT = `One moment of a person's dream is about to be drawn from the instructions below, and a checker holding it back found a problem in them. Find what in the moment's own words causes it (its action, the one thing it must show, its feeling, or its part in the story): a detail that contradicts where it happens or who is there, something that cannot be in the picture, or something left unsaid. Rewrite only those words, as little as possible, keeping strictly to the dream as told and adding nothing it did not have. Never mention the camera, the viewer or "you" as someone looking on. Return JSON only: {"fields": {"action": "", "visual_point": "", "feeling": "", "purpose": ""}} with only the fields you changed; {"fields": {}} if the problem is not in these words.`;
 
 /**

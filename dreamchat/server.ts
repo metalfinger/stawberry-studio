@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { dreamConfig } from './dream';
 import { callJev, jevAvailable } from './jev';
 import { callHost, HOST_MODEL } from './llm';
-import { proposeLook, reviseItem, rewordMoment } from './producer';
+import { proposeLook, reviseItem, rewordLook, rewordMoment } from './producer';
 import { IMAGE_CAP, liveProducer, ownStyle, SessionStore } from './session';
 import { assistantJudge, judgeKind } from './judge';
 import { judgeAvailable, judgeContinuity, judgeTake, liveSheets, PROVIDER, spawnWorker } from './sheets';
@@ -28,6 +28,7 @@ const store = new SessionStore(cfg, {
   // Nothing is paid for until Jev has read its prompt and the harness is sure of it.
   gate: process.env.DREAMCHAT_GATE === 'off' ? undefined : callJev,
   reword: rewordMoment,
+  rewordLook,
   // The assistant is the judge unless the PC's judge is asked for (DREAMCHAT_JUDGE=pc).
   judge: judgeKind === 'assistant' ? assistantJudge : judgeKind === 'pc' && judgeAvailable() ? judgeTake : undefined,
   judgeContinuity: judgeKind === 'pc' && judgeAvailable() ? judgeContinuity : undefined,
