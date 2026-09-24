@@ -297,7 +297,9 @@ export function bookkeeperQuestions(
       type: 'choice',
       instructions: `The person was shown sketches from their dream (${shown.map((x) => x.name).join(', ')}) and asked if they look the way they remember. How do they answer in this message: "${latest.slice(0, 240)}"?`,
       criteria: {
-        looks_right: 'it looks right, or close enough, or they like it',
+        // "go ahead please", said of the sketches on show, was read as no answer and they were asked
+        // again (24 Sep).
+        looks_right: 'it looks right, or close enough, or they like it, or they tell you to go ahead with it',
         not_right: 'something about it is wrong or different from their dream, and they say what',
         no_reaction: "they didn't say anything about the sketches",
       },
@@ -308,7 +310,7 @@ export function bookkeeperQuestions(
     for (const x of shown) {
       q[`ok_${x.id}`] = {
         type: 'noul',
-        instructions: `In this message, does the person say the picture of ${x.name} looks right, either by name or by saying all of them, or the others, look right: "${latest.slice(0, 240)}"?`,
+        instructions: `In this message, does the person say the picture of ${x.name} looks right, either by name, or by saying all of them, or the others, look right, or by telling you to go ahead with them: "${latest.slice(0, 240)}"?`,
       };
       q[`bad_${x.id}`] = {
         type: 'noul',
