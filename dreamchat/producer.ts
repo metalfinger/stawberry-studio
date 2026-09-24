@@ -394,6 +394,50 @@ export async function blockScenes(b: Breakdown): Promise<{ breakdown: Breakdown;
   return { breakdown: out, notes };
 }
 
+const SHOT = `You are the director of photography for one picture from someone's dream. An image model will draw it from your shot description, and follows it closely. Below are the moment and the fixed facts of the shot, worked out from a floor plan of the place: where the camera is, which way it looks, who and what is where in the picture (left, middle or right; close or far), and what is outside it.
+
+Write the shot as a cinematographer briefs a camera crew, in four to six plain sentences:
+1. The shot: a first-person view or seen from outside; a lens (a focal length); the camera's height and angle.
+2. Foreground, middle distance and background: exactly what is in each, and where across the picture (left third, middle, right third), with how each person is placed (sitting, standing) as the moments so far have them. The background is the side of the place the camera looks toward. Keep every fact given: never move anything to another side of the picture, never bring in what is outside it, never leave out what is in it. Someone close to the camera who would hide what the picture is about is framed at the edge of the middle, partly, as a shoulder or the side of a head, softer than what is beyond.
+3. The light, from a real source in the place (a screen, a window, a lamp) on the side the facts put it.
+4. What is just outside the picture, briefly, only where it tells the eye where it is.
+
+Plain, concrete words an illustrator can draw from; nothing from the story that is not in the facts, no mood words, no camera jargon that could be drawn (no frame lines, no labels). Return JSON only: {"shot": ""}.`;
+
+/**
+ * A moment's shot as its director of photography would brief it, from the geometry worked out on
+ * the floor plan: code knows exactly where everything is, a model knows how a shot is put into
+ * words. Given the dreamer's view as bare facts in one sentence, the picture came back facing the
+ * screen, the default for a theater (24 Sep). Every name the facts put in the picture must be in the
+ * brief, or it is not used.
+ */
+export async function shotFor(
+  moment: string,
+  facts: string,
+  medium: string,
+  mustName: string[],
+  before: string[] = [],
+): Promise<string | null> {
+  try {
+    const res = await callDeepseek(
+      [
+        { role: 'system', content: SHOT },
+        {
+          role: 'user',
+          content: `The picture is made as: ${medium}.\n\n${before.length ? `What has happened in this place so far:\n${before.map((x) => `- ${x}`).join('\n')}\n\n` : ''}The moment: ${moment}\n\nThe fixed facts of the shot:\n${facts}`,
+        },
+      ],
+      { json: true, thinking: 'low' },
+    );
+    const shot = (JSON.parse(res.content) as { shot?: unknown }).shot;
+    if (typeof shot !== 'string' || !shot.trim()) return null;
+    const bare = (x: string) => x.toLowerCase().replace(/^(the|a|an)\s+/, '').replace(/\s*\(.*\)\s*$/, '').trim();
+    return mustName.every((n) => shot.toLowerCase().includes(bare(n))) ? shot.trim().slice(0, 1400) : null;
+  } catch {
+    return null;
+  }
+}
+
 const FIX = `A person looked at a picture of a moment from their dream and said what is wrong with it. Below are the instructions its next version will be drawn from. If they already give what the person asked for, return an empty fix. Otherwise write what the next picture must show so that it is right, as one or two sentences an illustrator can follow who sees only those instructions: what the picture shows and how, in its own terms, agreeing with the instructions. Never refer to earlier pictures, "the last frame" or "again", nor to what was wrong before; keep strictly to what they asked, adding nothing. Return JSON only: {"fix": ""}.`;
 
 /**

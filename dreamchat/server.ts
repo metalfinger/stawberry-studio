@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { dreamConfig } from './dream';
 import { callJev, jevAvailable } from './jev';
 import { callHost, HOST_MODEL } from './llm';
-import { blockScenes, fixFrom, proposeLook, reviseItem, rewordLook, rewordMoment } from './producer';
+import { blockScenes, fixFrom, shotFor, proposeLook, reviseItem, rewordLook, rewordMoment } from './producer';
 import { IMAGE_CAP, liveProducer, ownStyle, SessionStore } from './session';
 import { assistantJudge, judgeKind } from './judge';
 import { judgeAvailable, judgeContinuity, judgeTake, liveSheets, PROVIDER, spawnWorker } from './sheets';
@@ -29,6 +29,7 @@ const store = new SessionStore(cfg, {
   gate: process.env.DREAMCHAT_GATE === 'off' ? undefined : callJev,
   block: blockScenes,
   fix: fixFrom,
+  shot: shotFor,
   reword: rewordMoment,
   rewordLook,
   // The assistant is the judge unless the PC's judge is asked for (DREAMCHAT_JUDGE=pc).

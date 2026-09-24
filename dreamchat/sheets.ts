@@ -64,6 +64,8 @@ export type Item = {
   partOf?: string;
   /** Only ever a crowd: described in the moments' words, never sketched. */
   extras?: boolean;
+  /** A moment's shot as briefed from its worked-out view, and the view it was briefed from. */
+  shot?: { text: string; view: string };
   /** A moment's words reworded before it was drawn, because the gate found them at odds. */
   reworded?: string[];
   /** How many times they have been asked how it looks because the gate held its sketch. */

@@ -10,7 +10,7 @@ import { dreamConfig } from './dream';
 import { callJev } from './jev';
 import { assistantJudge, judgeKind } from './judge';
 import { callHost } from './llm';
-import { blockScenes, fixFrom, proposeLook, reviseItem, rewordLook, rewordMoment } from './producer';
+import { blockScenes, fixFrom, shotFor, proposeLook, reviseItem, rewordLook, rewordMoment } from './producer';
 import { liveProducer, ownStyle, SessionStore } from './session';
 import { judgeAvailable, judgeContinuity, judgeTake, liveSheets, PROVIDER, spawnWorker } from './sheets';
 import { REPO, STRAWBERRY_HOME, STRAWBERRY_PYTHON, strawberryAvailable, writeProduction } from './strawberry';
@@ -36,6 +36,7 @@ const store = new SessionStore(dreamConfig(), {
   gate: process.env.DREAMCHAT_GATE === 'off' ? undefined : callJev,
   block: blockScenes,
   fix: fixFrom,
+  shot: shotFor,
   reword: rewordMoment,
   rewordLook,
   judge: judgeKind === 'assistant' ? assistantJudge : judgeKind === 'pc' && judgeAvailable() ? judgeTake : undefined,

@@ -310,7 +310,10 @@ export function framePrompt(
           ? `${who(s)}${look ? ` (${look})` : ''}: the camera stands in this place. Keep everything in it where it puts it (walls, doors, paths, furniture, whatever it has), and its light; do not mirror or rearrange it.`
           : base || roomFromCut
             ? `${who(s)}${look ? ` (${look})` : ''}: only its materials, colours and objects; where things stand comes from ${base ? 'Image 1' : 'the earlier picture of this place'}.`
-            : `${who(s)}${look ? ` (${look})` : ''}: only its materials, colours, objects and light. It shows the place from another side: this frame faces ${f.looksAt || 'the other way'}.`,
+            : plan?.view
+              ? // Its layout pulls a view back to the one it shows: only what the place is made of.
+                `${who(s)}${look ? ` (${look})` : ''}: only what it is made of and its colours (its walls, floor, seats and lamps). Where everything stands, and which way the picture looks, come from the shot above, not from this image.`
+              : `${who(s)}${look ? ` (${look})` : ''}: only its materials, colours, objects and light. It shows the place from another side: this frame faces ${f.looksAt || 'the other way'}.`,
       );
     } else {
       const look = lookOf(s, ['appearance', 'materials']);
@@ -454,6 +457,14 @@ export function framePrompt(
     plan?.view
       ? `One picture from the dream, in ${SHAPE_WORDS[shapeOf(frame)]}, through the dreamer's own eyes.`
       : `One picture from the dream, in ${SHAPE_WORDS[shapeOf(frame)]}: a ${f.distance} shot, ${angle}${f.looksAt ? `, facing ${f.looksAt}` : ''}. ${FRAMING[f.distance]}`,
+    // The shot comes first, before the images: its director of photography's brief where there is
+    // one, else the view worked out on the floor plan. Said after the images, the view was drawn
+    // facing the screen, the default for a theater (24 Sep).
+    plan?.view
+      ? frame.shot && frame.shot.view === plan.view
+        ? `The shot (${own}): ${frame.shot.text}`
+        : `What the dreamer sees, the camera being their own eyes (${own}): ${plan.view}`
+      : '',
     manifest.length
       ? `The attached images, in order, and the one thing to take from each:\n${manifest.join('\n')}`
       : '',
@@ -463,7 +474,6 @@ export function framePrompt(
       ? `The dream in it, drawn as plain fact, as solid and ordinary as everything around it: ${sentence(frame.fields.dream.value)}`
       : '',
     pov,
-    plan?.view ? `What the dreamer sees, the camera being their own eyes (${own}): ${plan.view}` : '',
     plan?.camera && (plan.across?.length ?? 0) >= 2
       ? `Seen ${plan.camera}. From left to right across the picture: ${plan.across!.map((id) => nameOf(sheets, id)).join(', then ')}. They keep these places in every picture of this scene.${members.map((m) => ` ${who(m.member)} ${isGroup(m.member) ? 'are' : 'is'} with ${who(m.group)}.`).join('')}`
       : staged.length >= 2

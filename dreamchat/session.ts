@@ -48,6 +48,7 @@ import {
   type Detail,
   moments,
   completeViews,
+  mediumOf,
   normalizeBreakdown,
   oneColour,
   VAGUE,
@@ -64,6 +65,7 @@ import {
   inViewOf,
   type PlannedInput,
   turnedInto,
+  WHOLE,
 } from './frames';
 import { checkReferences, preflight, readPrompt } from './gate';
 import {
@@ -238,6 +240,8 @@ export type StoreDeps = {
     findings: string[],
     transcript: string,
   ) => Promise<Record<string, Detail> | null>;
+  /** A moment's shot briefed from its worked-out view, as a director of photography would. */
+  shot?: (moment: string, facts: string, medium: string, mustName: string[], before?: string[]) => Promise<string | null>;
   /** A person's correction of a picture, as an instruction for its next version; "" when its instructions already give it. */
   fix?: (words: string, instructions: string) => Promise<string | null>;
   /** Each scene's floor plan, made before any moment is drawn: where everyone and everything is. */
@@ -1214,6 +1218,24 @@ export class SessionStore {
         frame.fields = fields;
         await this.keepWords(s, frame);
       }
+    }
+    // The shot, briefed by a director of photography from the view worked out on the floor plan,
+    // and briefed again whenever that view changes.
+    const view = frame.frame?.plan?.view;
+    if (view && this.deps.shot && frame.shot?.view !== view) {
+      const changed = [...(frame.frame?.plan?.own ?? []), ...(frame.frame?.plan?.states ?? [])];
+      const called = (id: string) => {
+        const st = changed.find((x) => x.who === id && WHOLE.test(x.what));
+        const it = s.build?.items.find((i) => i.id === id);
+        return st ? st.now : it?.isDreamer ? 'the dreamer' : (it?.name ?? id);
+      };
+      // How everyone is placed comes from what has happened in this place so far.
+      const scene = s.draft?.breakdown?.scenes.find((sc) => sc.moments.some((m) => m.id === frame.id));
+      const before = (scene?.moments ?? []).slice(0, scene?.moments.findIndex((m) => m.id === frame.id)).map((m) => m.action);
+      const text = await this.deps
+        .shot(frame.fields.action?.value ?? frame.name, view, mediumOf(s.style), (frame.frame?.plan?.sees ?? []).map(called), before)
+        .catch(() => null);
+      frame.shot = text ? { text, view } : undefined;
     }
     let built = framePrompt(frame, s.build.items, s.style, this.plannedInputs(s, frame));
     const inView = inViewOf(frame, s.build.items);

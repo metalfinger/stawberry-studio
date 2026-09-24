@@ -11,7 +11,7 @@ import { basename, join } from 'node:path';
 import { dreamConfig } from './dream';
 import { callJev } from './jev';
 import { callDeepseek, callHost, type ChatMessage } from './llm';
-import { blockScenes, fixFrom, details, moments, proposeLook, reviseItem, rewordLook, rewordMoment } from './producer';
+import { blockScenes, fixFrom, shotFor, details, moments, proposeLook, reviseItem, rewordLook, rewordMoment } from './producer';
 import { liveProducer, ownStyle, SessionStore } from './session';
 import { assistantJudge, judgeKind } from './judge';
 import { judgeAvailable, judgeContinuity, judgeTake, liveSheets, PROVIDER, spawnWorker } from './sheets';
@@ -99,6 +99,7 @@ async function run(file: string, max: number, resume?: string) {
     gate: process.env.DREAMCHAT_GATE === 'off' ? undefined : callJev,
     block: blockScenes,
     fix: fixFrom,
+    shot: shotFor,
     reword: rewordMoment,
     rewordLook,
     // The assistant is the judge unless the PC's judge is asked for (DREAMCHAT_JUDGE=pc).
