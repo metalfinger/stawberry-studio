@@ -53,7 +53,13 @@ for (const c of plan.cuts)
   );
 
 const approved = new Set([...sheets, ...pictures].map((x) => x.mediaId).filter((x): x is string => !!x));
-async function gateOf(prompt: string, references: { media_id: string; role: string }[], inView: Item[], issues: string[]) {
+async function gateOf(
+  prompt: string,
+  references: { media_id: string; role: string }[],
+  inView: Item[],
+  issues: string[],
+  sheet = false,
+) {
   const fixed = [
     ...preflight(inView, issues),
     ...checkReferences(prompt, references, {
@@ -61,7 +67,7 @@ async function gateOf(prompt: string, references: { media_id: string; role: stri
       mustInclude: inView.filter((x) => x.mediaId).map((x) => ({ name: x.name, mediaId: x.mediaId as string })),
     }),
   ];
-  const read = await readPrompt(callJev, prompt);
+  const read = await readPrompt(callJev, prompt, { sheet });
   const r = read.reading;
   return `gate: ${[...fixed, ...read.findings].length ? `HOLD: ${[...fixed, ...read.findings].join('; ')}` : 'draw'}${r ? ` | contradicts ${r.contradicts.toFixed(2)} twice ${r.twice.toFixed(2)} clear ${r.clear.toFixed(2)}${r.refsClear !== null ? ` refs ${r.refsClear.toFixed(2)}` : ''}` : ''}`;
 }
@@ -70,7 +76,7 @@ if (gating)
   for (const sk of sheets) {
     if (only.length && !only.includes(sk.id)) continue;
     const prompt = sheetPrompt(sk, s.style);
-    console.log(`\n── sketch ${sk.id} ${sk.name}: ${await gateOf(prompt, [], [], [])}`);
+    console.log(`\n── sketch ${sk.id} ${sk.name}: ${await gateOf(prompt, [], [], [], true)}`);
   }
 
 for (const pid of drawOrder(plan)) {

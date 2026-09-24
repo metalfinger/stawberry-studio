@@ -26,8 +26,23 @@ export const MAX_REFERENCES = 12;
 export type GateReading = { contradicts: number; twice: number; clear: number; refsClear: number | null };
 export type GateResult = { findings: string[]; reading: GateReading | null };
 
+/**
+ * How clear a sketch must be is not how clear a moment must be: a sketch is where a face is first
+ * invented, then kept. Asked whether the artist would have to invent anything, every person's
+ * sketch read 0.16-0.68, the plainly described ones included (24 Sep).
+ */
+const SHEET_CLEAR: Question = {
+  type: 'noul',
+  instructions:
+    'This describes a reference picture of one person, group, place or thing, drawn once so that every later picture can copy it. Does it give enough of how it looks that two artists would draw recognisably the same one? For a person: age, build, hair and clothes; for a group: who is in it and how each looks; for a place: what kind of place it is, its layout and what stands in it; for a thing: its shape, materials and colours. The face, small details and the pose are the artist\'s to choose and do not count.',
+  criteria: {
+    true: 'what kind it is and what makes it recognisable are given',
+    false: 'something that decides how it looks is missing and would have to be invented',
+  },
+};
+
 /** The questions Jev is asked about one picture's prompt: one narrow judgment each. */
-export function gateQuestions(withImages: boolean): Record<string, Question> {
+export function gateQuestions(withImages: boolean, sheet = false): Record<string, Question> {
   return {
     ...(withImages
       ? {
@@ -60,15 +75,17 @@ export function gateQuestions(withImages: boolean): Record<string, Question> {
         false: 'each one appears once',
       },
     },
-    clear: {
-      type: 'noul',
-      instructions:
-        'Could an artist draw this picture from these instructions without having to invent who or what is in it, where it is, or what is happening (for a reference picture of one person, place or thing: without inventing what it looks like)?',
-      criteria: {
-        true: 'who or what, where and what happens are all given; only ordinary detail is left to the artist',
-        false: 'the artist would have to invent who is there, where it is, or what happens',
-      },
-    },
+    clear: sheet
+      ? SHEET_CLEAR
+      : {
+          type: 'noul',
+          instructions:
+            'Could an artist draw this picture from these instructions without having to invent who or what is in it, where it is, or what is happening?',
+          criteria: {
+            true: 'who or what, where and what happens are all given; only ordinary detail is left to the artist',
+            false: 'the artist would have to invent who is there, where it is, or what happens',
+          },
+        },
   };
 }
 
@@ -118,9 +135,10 @@ export function checkReferences(
 export async function readPrompt(
   jev: JevFn,
   prompt: string,
-  withImages = /\bImage 1(?::| is\b)/.test(prompt),
+  opts: { withImages?: boolean; sheet?: boolean } = {},
 ): Promise<GateResult> {
-  const call = await jev(prompt, gateQuestions(withImages));
+  const withImages = opts.withImages ?? /\bImage 1(?::| is\b)/.test(prompt);
+  const call = await jev(prompt, gateQuestions(withImages, opts.sheet));
   const noul = (id: string) => {
     const a = call.answers?.[id];
     return a && a.type === 'noul' ? a.noul : null;

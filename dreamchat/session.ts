@@ -1189,7 +1189,9 @@ export class SessionStore {
           .map((x) => ({ name: x.name, mediaId: x.mediaId as string })),
       }),
     ];
-    const read = await readPrompt(this.deps.gate, prompt);
+    const read = await readPrompt(this.deps.gate, prompt, {
+      sheet: item.kind === 'character' || item.kind === 'location' || item.kind === 'prop',
+    });
     if (read.reading) item.gate = read.reading;
     return [...fixed, ...read.findings];
   }
@@ -1486,12 +1488,13 @@ export class SessionStore {
               if (!it) return;
               if (e instanceof Held) {
                 // Held, not drawn: nothing was started, counted or paid for.
+                // What was proposed for it is kept: asked about next, it starts from there.
                 Object.assign(it, {
                   status: 'waiting',
                   held: e.findings,
                   version: Math.max(0, it.version - 1),
                   gate: snapshot.gate,
-                  ...(unknown ? { fields: snapshot.fields } : {}),
+                  fields: snapshot.fields,
                 });
                 x.images = Math.max(0, x.images - 1);
               } else Object.assign(it, { status: 'failed', error: String(e).slice(0, 300) });
