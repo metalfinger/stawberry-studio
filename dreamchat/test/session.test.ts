@@ -599,6 +599,8 @@ describe('a whole conversation', () => {
     expect(verdicts.at(-1)).toEqual(['media-cut-m1-job-m1-v2', true, 'assistant']);
     expect(framesStarted.map((f) => f.id)).toEqual(['m1', 'm1', 'm2']);
     expect(store.get(id)!.build!.frames![0]).toMatchObject({ repairs: 1, version: 2 });
+    // What was wrong with the first take is not told to any later redraw.
+    expect(store.get(id)!.build!.frames![0].repairFor).toBeUndefined();
   });
 
   test('a moment telling the dreamer "you" is put in the third person, and the dream keeps its words', async () => {

@@ -701,7 +701,8 @@ export class SessionStore {
         }
         this.reviewSketch(s, it, 'rejected', `They said it isn't right: "${text.slice(0, 400)}"`);
         it.fields = revised;
-        if (named) it.repairFor = [`${named}: "${text.slice(0, 200)}"`];
+        // Their correction is what this redraw puts right; what the judge found in an earlier take is not.
+        it.repairFor = named ? [`${named}: "${text.slice(0, 200)}"`] : undefined;
         it.announced = false;
         it.review = undefined;
         it.continuityApproved = false;
@@ -1787,6 +1788,9 @@ export class SessionStore {
                     mediaId: st.mediaId,
                     mediaPath: st.mediaPath,
                     check: undefined,
+                    // What went wrong with the take before this one is history now: carried on, a
+                    // later redraw was told "last time her hair was auburn" of a take two back (24 Sep).
+                    repairFor: undefined,
                   });
                 else Object.assign(cur, { status: 'failed', error: st.error ?? st.state });
               }),
