@@ -420,7 +420,7 @@ describe('a whole conversation', () => {
 
   /** A conversation taken to the moments, with the engine and the judge faked as asked. */
   async function toTheMoments(judge?: StoreDeps['judge'], extra: Partial<StoreDeps> = {}) {
-    const framesStarted: { id: string; refs: string[]; prompt: string }[] = [];
+    const framesStarted: { id: string; refs: string[]; prompt: string; record?: { fields: Record<string, unknown> } }[] = [];
     const verdicts: [string, boolean, string][] = [];
     const reaction: { now: Record<string, Answer> } = { now: {} };
     const statuses = new Map<string, string>();
@@ -466,8 +466,8 @@ describe('a whole conversation', () => {
           verdicts.push([mediaId, approved, author ?? 'human']);
         },
         retryCollection: async () => {},
-        startFrame: async ({ item, references, prompt }) => {
-          framesStarted.push({ id: item.id, refs: references.map((r) => `${r.role}:${r.media_id}`), prompt });
+        startFrame: async ({ item, references, prompt, record }) => {
+          framesStarted.push({ id: item.id, refs: references.map((r) => `${r.role}:${r.media_id}`), prompt, record });
           statuses.set(`job-${item.id}`, 'running');
           versions.set(`job-${item.id}`, item.version);
           return { recipeId: `r-${item.id}`, jobId: `job-${item.id}`, usd: 0.15 };
@@ -618,8 +618,9 @@ describe('a whole conversation', () => {
     expect(framesStarted[0].prompt).toContain('What happens in this frame: The dreamer sees the board on their kitchen wall.');
     const s = store.get(id)!;
     expect(s.build!.frames![0].reworded).toEqual(['action']);
-    // Everything planned from the moment reads as its picture does.
+    // Everything planned from the moment reads as its picture does, its record included.
     expect(s.draft!.breakdown!.scenes[0].moments[0].action).toBe('The dreamer sees the board on their kitchen wall.');
+    expect(framesStarted[0].record?.fields.action).toBe('The dreamer sees the board on their kitchen wall.');
   });
 
   test('a moment the judge fails twice is never what follows is drawn from: it waits for them', async () => {

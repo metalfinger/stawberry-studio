@@ -1368,7 +1368,9 @@ export class SessionStore {
     const plan = frame.frame?.plan;
     if (!plan || !ids.proposal) return undefined;
     const failedCuts = (frame.dropped ?? []).filter((d) => s.build?.frames?.find((x) => x.id === d)?.kind === 'cut');
-    // Words reworded before drawing go on record too, so the judge checks the moment as drawn.
+    // The moment's words as it is drawn go on record, so the judge checks the moment as drawn:
+    // only what differs is written, and a person's correction is written first, with its source.
+    // Sent only when marked reworded, words a resume unmarked stayed "you" on record (24 Sep).
     const ENGINE: Record<string, string> = {
       action: 'action',
       visual_point: 'beat.visual_point',
@@ -1378,8 +1380,8 @@ export class SessionStore {
     // (The jump and the dream's strangeness are the picture's words only; Strawberry keeps the shift
     // as the moment's own record, unchanged.)
     const words = Object.fromEntries(
-      (frame.reworded ?? [])
-        .filter((k) => ENGINE[k] && frame.fields[k]?.value)
+      Object.keys(ENGINE)
+        .filter((k) => frame.fields[k]?.value)
         .map((k) => [ENGINE[k], frame.fields[k].value as string]),
     );
     // Who is in it, as it is drawn: a correction can take someone out or put someone in.
@@ -1392,7 +1394,7 @@ export class SessionStore {
       source: ids.proposal,
       reason: failedCuts.length
         ? `Drawn without ${failedCuts.map((d) => s.build?.frames?.find((x) => x.id === d)?.name ?? d).join(', ')}, which could not be drawn`
-        : Object.keys(words).length
+        : frame.reworded?.some((k) => ENGINE[k])
           ? 'Reworded before it was drawn, so its instructions agree'
           : 'The continuity this moment is drawn with',
     };
@@ -1976,7 +1978,8 @@ export class SessionStore {
       // What was held is put through the gate again, with whatever has been put right since, and
       // may be reworded once more by the harness as it is now.
       const held = [...(s.build?.items ?? []), ...(s.build?.frames ?? [])].filter((i) => i.held);
-      for (const it of held) Object.assign(it, { held: undefined, reworded: undefined });
+      // What was reworded keeps saying so: its record carries the words it is drawn with.
+      for (const it of held) Object.assign(it, { held: undefined });
       for (const it of held) if (it.kind !== 'cut' && it.kind !== 'ghost') again.push(it.id);
       for (const it of [...(s.build?.items ?? []), ...(s.build?.frames ?? [])])
         if (it.status === 'failed' && (!it.jobId || opts.redraw?.includes(it.id))) {

@@ -619,7 +619,8 @@ export const liveSheets: SheetEngine = {
 
   async startFrame({ item, prompt, references, changes, source, reason, maxUsd, intent, record, shape }) {
     if (!item.nodeId) throw new Error(`${item.name} is not in the production yet`);
-    if (record) await liveSheets.record!(item.nodeId, record);
+    // Their correction first, with their words as its source; the record then writes only what
+    // still differs.
     if (changes && Object.keys(changes).length && source) {
       const node = (await call('inspect', { id: item.nodeId })) as { node: { revision: number } };
       await call('patch', {
@@ -632,6 +633,7 @@ export const liveSheets: SheetEngine = {
         },
       });
     }
+    if (record) await liveSheets.record!(item.nodeId, record);
     const recipe = (await call('prepare', {
       node_id: item.nodeId,
       provider: PROVIDER,
