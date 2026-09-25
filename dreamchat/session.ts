@@ -1855,6 +1855,19 @@ export class SessionStore {
     if (onCamera.length && view && (await this.replanForHold(s, frame, { view, reasons: onCamera })))
       return this.startFrame(s, frame, turn, before);
     if (findings.length) {
+      // Reworded, and planned again where its camera was at odds, and still held: left undrawn, and
+      // what follows is drawn without it. Held, it held up every moment after it: the night market's
+      // first moment kept all seven after it waiting (26 Sep).
+      const scene = s.draft?.breakdown?.scenes.find((x) => x.moments.some((y) => y.id === frame.id));
+      const tried = !onCamera.length || (!!scene && this.replannedScenes.has(`${s.id}:${scene.id}`));
+      if (tried && this.deps.block) {
+        Object.assign(frame, {
+          status: 'failed',
+          held: undefined,
+          error: `not drawn: still unsure of its instructions after rewording${onCamera.length ? ' and planning again' : ''} (${findings.join('; ')})`,
+        });
+        return;
+      }
       Object.assign(frame, { status: 'waiting', held: findings });
       return;
     }
