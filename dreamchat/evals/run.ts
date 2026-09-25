@@ -205,7 +205,7 @@ if (which === 'storyboard') {
   // Who is a group or a crowd, and what a change is: the grounding call's questions, as it asks them.
   type Set = {
     people: { name: string; identity: string; several: boolean; crowd: boolean | null }[];
-    changes: { who: string; what: string; now: string; look: boolean; whole: boolean }[];
+    changes: { who: string; what: string; now: string; change: boolean; whole: boolean; first?: boolean }[];
   };
   const set = load<Set>('kinds');
   const b = {
@@ -254,9 +254,10 @@ if (which === 'storyboard') {
     });
     set.changes.forEach((c, i) => {
       // Kept, as the harness keeps it: a change of look, or into something else altogether.
-      const kept = n(`look_k${i}`) >= KIND_BARS.look || n(`whole_k${i}`) >= KIND_BARS.whole;
-      score('kept', kept ? 1 : 0, c.look || c.whole, 0.5, `${c.who}: ${c.what} → ${c.now}`, false);
-      if (c.look) score('whole', n(`whole_k${i}`), c.whole, KIND_BARS.whole, `${c.who}: ${c.what} → ${c.now}`, false);
+      // Recorded where its subject is first shown, code drops it, whatever Jev reads (hasBefore).
+      const kept = !c.first && (n(`change_k${i}`) >= KIND_BARS.look || n(`whole_k${i}`) >= KIND_BARS.whole);
+      score('kept', kept ? 1 : 0, c.change || c.whole, 0.5, `${c.who}: ${c.what} → ${c.now}`, false);
+      if (c.change) score('whole', n(`whole_k${i}`), c.whole, KIND_BARS.whole, `${c.who}: ${c.what} → ${c.now}`, false);
     });
   }
   for (const [family, t] of Object.entries(tally))

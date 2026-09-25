@@ -58,6 +58,8 @@ export function siteOf(keys: string[]): string {
   const has = (re: RegExp) => keys.some((k) => re.test(k));
   if (has(/^(sb_|shot_)/)) return 'storyboard';
   if (has(/^(outdoors$|shape_|holder_|looks_)/)) return 'plan';
+  if (has(/^(said_|where_|state_)/)) return 'grounding';
+  if (has(/^(change_|whole_)/)) return 'changes';
   if (has(/^(contradicts|twice|clear|refs_clear|has_)/)) return 'gate';
   if (has(/^is_retelling$/)) return 'retell';
   if (has(/^(said_|where_|state_)/)) return 'grounding';

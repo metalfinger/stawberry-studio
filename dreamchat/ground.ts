@@ -37,10 +37,13 @@ export function changeQuestions(
   const q: Record<string, Question> = {};
   for (const c of list) {
     const who = nameIn(b, c.who);
-    q[`look_${c.key}`] = {
+    q[`change_${c.key}`] = {
       type: 'noul',
-      instructions: `In a dream, ${who} changes: "${c.what}" becomes "${c.now}". Is that a change in how ${who} looks, rather than in where ${who} is or what ${who} does?`,
-      criteria: { true: 'how it looks changes', false: 'where it is, or what it does, changes; not how it looks' },
+      instructions: `A dream's breakdown says ${who}'s "${c.what}" becomes "${c.now}". Does ${who} look different from then on than before: a lasting change in how ${who} looks? Not a change: how ${who} simply looks as first shown, or where ${who} is, or what ${who} does.`,
+      criteria: {
+        true: `${who} looks different from then on`,
+        false: `it is how ${who} looks anyway, or where ${who} is or what ${who} does`,
+      },
     };
     q[`whole_${c.key}`] = {
       type: 'noul',
@@ -79,18 +82,63 @@ export function crowdQuestions(b: Breakdown): Record<string, Question> {
   return q;
 }
 
+/**
+ * Whether a change has a before: its subject is in a moment earlier than the one it changes in
+ * (the dreamer always is). Recorded where someone or something is first shown, it is how they look,
+ * not a change: "the Pied-Piper man's appearance becomes a man with curly hair" in the moment he
+ * appears. Asked of Jev without the moments before, such descriptions read as changes (0.36-0.52)
+ * as often as real ones (0.42-0.68); code knows the order of the moments.
+ */
+export function hasBefore(b: Breakdown, momentId: string, who: string): boolean {
+  if (b.people.find((p) => p.id === who)?.is_dreamer) return moments(b).findIndex((m) => m.id === momentId) > 0;
+  const all = moments(b);
+  const at = all.findIndex((m) => m.id === momentId);
+  return all
+    .slice(0, Math.max(0, at))
+    .some((m) => m.visible.includes(who) || m.things.includes(who) || m.place === who);
+}
+
 /** A change's kind from Jev's answers: undefined where Jev gave no reading. */
 export function changeKind(answers: Record<string, Answer> | null, key: string): { look?: boolean; whole?: boolean } {
   const n = (k: string) => {
     const a = answers?.[k];
     return a?.type === 'noul' ? a.noul : undefined;
   };
-  const look = n(`look_${key}`);
+  const look = n(`change_${key}`);
   const whole = n(`whole_${key}`);
   return {
     ...(look !== undefined ? { look: look >= KIND_BARS.look } : {}),
     ...(whole !== undefined ? { whole: whole >= KIND_BARS.whole } : {}),
   };
+}
+
+/**
+ * The breakdown's own changes, read by Jev before anything is planned from them: dropped where
+ * nothing changes, marked where something turns into something else. The breakdown recorded how
+ * five people and things simply looked as lasting changes ("appearance: little round
+ * convertible"), and each would have been drawn as an in-between picture that changed nothing, and
+ * its moments drawn from that instead of the sketch (25 Sep). Changes the dream's grounding has
+ * already read are asked again: a dream grounded before this was asked.
+ */
+export async function judgeLeaves(jev: JevFn, b: Breakdown): Promise<string[]> {
+  const list = changes(b);
+  if (!list.length) return [];
+  const call = await jev(
+    JSON.stringify({ changes: list.map((c) => `${nameIn(b, c.who)}: "${c.what}" becomes "${c.now}"`) }),
+    changeQuestions(b, list),
+  );
+  const dropped: string[] = [];
+  for (const m of moments(b)) {
+    const kept: typeof m.leaves = [];
+    (m.leaves ?? []).forEach((l, i) => {
+      const kind = changeKind(call.answers, `${m.id}_${i}`);
+      if (!hasBefore(b, m.id, l.who) || (kind.look === false && kind.whole !== true))
+        dropped.push(`${m.id}: ${nameIn(b, l.who)} ${l.what}`);
+      else kept.push({ ...l, ...(kind.whole !== undefined ? { whole: kind.whole } : {}) });
+    });
+    if (m.leaves) m.leaves = kept;
+  }
+  return dropped;
 }
 
 /**
@@ -505,8 +553,9 @@ export async function ground(
     (m.leaves ?? []).forEach((l, i) => {
       const kind = changeKind(call.answers, `${m.id}_${i}`);
       // A change into something else altogether always changes how it looks: "the house becomes a
-      // boat" read as not a change of look (0.28), and would have been dropped.
-      if (kind.look === false && kind.whole !== true) {
+      // boat" read as not a change of look (0.28), and would have been dropped. And nothing changes
+      // where it is first shown.
+      if (!hasBefore(out, m.id, l.who) || (kind.look === false && kind.whole !== true)) {
         downgraded.push({
           path: `${m.id}.leaves`,
           label: 'not a change of how it looks',

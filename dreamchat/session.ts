@@ -6,7 +6,7 @@
 // run strictly one at a time.
 import { existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { cleanStyles, type GroundingNote, ground, judgeChanges, linkContinuity } from './ground';
+import { cleanStyles, type GroundingNote, ground, judgeChanges, judgeLeaves, linkContinuity } from './ground';
 import {
   bookkeeperQuestions,
   type Exchange,
@@ -264,6 +264,8 @@ export async function planShots(
 ): Promise<Prep> {
   const t0 = Date.now();
   const draft: Breakdown = structuredClone(b);
+  // What changes in the dream, read by Jev before anything is planned or carried from it.
+  if (deps.jev) await judgeLeaves(deps.jev, draft).catch(() => []);
   completeViews(draft);
   // The script supervisor and the floor plan read the same dream, at once.
   const [changes, blockedOrNot] = await Promise.all([
@@ -334,13 +336,20 @@ export async function planShots(
   // A scene with a moment "storyboard complete?" held is planned once more, told what each such
   // moment's camera saw and what the check found, and keeps whichever plan more of its moments'
   // facts pass on: the check found the faults, and only the planner can move what it placed.
-  const held = blocked.scenes.filter((sc) => sc.moments.some((m) => prep.storyboard?.[m.id] && !prep.storyboard[m.id].ok));
+  // Only what the plan decides is planned again: someone missing, a contradiction, something extra.
+  // A camera fact or the framing is the camera's, placed by code on whatever plan; planning the
+  // stairs and the cook's room again for their camera alone cost minutes and changed nothing.
+  const planFault = (id: string) => {
+    const c = prep.storyboard?.[id];
+    return !!c && !c.ok && c.readings.some((r) => !r.ok && r.question !== 'sb_camera');
+  };
+  const held = blocked.scenes.filter((sc) => sc.moments.some((m) => planFault(m.id)));
   if (deps.jev && deps.block && held.length) {
     const fix = Object.fromEntries(
       held.map((sc) => [
         sc.id,
         sc.moments
-          .filter((m) => prep.storyboard?.[m.id] && !prep.storyboard[m.id].ok)
+          .filter((m) => planFault(m.id))
           .map(
             (m) =>
               `Moment ${m.id} ("${m.action}") was planned so that its camera sees this: ${prep.storyboard![m.id].view} Checked against the dream: ${prep.storyboard![m.id].reasons.join('; ')}.`,

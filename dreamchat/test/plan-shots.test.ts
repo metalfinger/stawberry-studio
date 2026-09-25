@@ -58,9 +58,9 @@ describe('the shots, planned while the chat goes on', () => {
       // "Storyboard complete?": m1's shot clears; m2's contradicts its moment.
       jev: async (state, questions) => {
         // What the script supervisor found: a change of how the board looks, of a part of it.
-        if (Object.keys(questions).some((k) => k.startsWith('look_'))) {
+        if (Object.keys(questions).some((k) => k.startsWith('change_'))) {
           const answers = Object.fromEntries(
-            Object.keys(questions).map((k) => [k, { type: 'noul' as const, noul: k.startsWith('look_') ? 0.9 : 0.1 }]),
+            Object.keys(questions).map((k) => [k, { type: 'noul' as const, noul: k.startsWith('change_') ? 0.9 : 0.1 }]),
           );
           return { questions, state, answers, error: null, ms: 1, usage: null };
         }
