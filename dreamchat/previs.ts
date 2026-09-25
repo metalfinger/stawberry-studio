@@ -146,10 +146,15 @@ function jitter(seed: string, i: number): number {
  * someone else is or inside something solid, and never nobody: "a couple of people" on the sofa
  * beside the dreamer were all left out as too close to someone (25 Sep).
  */
-function crowdSpots(s: Spot, plan: Blocking, avoid: Spot[]): V2[] {
+function crowdSpots(s: Spot, plan: Blocking, avoid: Spot[], eye?: Eye): V2[] {
   const f = facing(s, plan);
   const r = rightOf(f);
+  // A lane from the camera to the nearest of the others, as a crew clears one through a crowd: the
+  // sisters "surrounded by hundreds of people" were shot through rows of them, and hidden (night
+  // market, 26 Sep).
+  const lane = eye ? laneOf(eye, avoid) : undefined;
   const taken = (p: V2) =>
+    (!!lane && lane(p)) ||
     avoid.some((o) =>
       isPerson(o)
         ? Math.hypot(o.x - p.x, o.y - p.y) < 0.6
@@ -186,10 +191,37 @@ function crowdSpots(s: Spot, plan: Blocking, avoid: Spot[]): V2[] {
 }
 
 /**
- * Everything the camera could see, as solids: the room (walls, floor, ceiling, its front named),
- * then everyone and everything on the plan but `leaveOut` (the dreamer, whose eyes it is).
+ * Whether a point is in the way between a camera and the nearest person before it: a wedge from the
+ * camera, widening as a lens's view does, up to half a metre short of them.
  */
-function solidsOf(plan: Blocking, leaveOut: string[], called: (id: string) => string): Solid[] {
+function laneOf(eye: Eye, people: Spot[]): ((p: V2) => boolean) | undefined {
+  const d = unit(eye.d);
+  const r = rightOf(d);
+  const at = (o: V2) => ({ t: (o.x - eye.at.x) * d.x + (o.y - eye.at.y) * d.y, side: (o.x - eye.at.x) * r.x + (o.y - eye.at.y) * r.y });
+  // Each of them as the camera sees them: how far, which way, and half a body's width of the view.
+  const them = people
+    .filter((o) => isPerson(o) && !o.many)
+    .map(at)
+    .filter((o) => o.t > 0.3)
+    .map((o) => ({ t: o.t, angle: Math.atan2(o.side, o.t), half: Math.atan2(0.35, o.t) }));
+  if (!them.length) return undefined;
+  // Only a figure that would stand in front of one of them steps aside: the rows behind the couple in
+  // the theater stay, the heads either side of them kept (26 Sep).
+  return (p: V2) => {
+    const q = at(p);
+    if (q.t < -0.5) return false;
+    if (q.t < 0.3) return Math.abs(q.side) < 0.6;
+    const angle = Math.atan2(q.side, q.t);
+    return them.some((o) => q.t < o.t - 0.4 && Math.abs(angle - o.angle) < o.half + Math.atan2(0.3, q.t));
+  };
+}
+
+/**
+ * Everything the camera could see, as solids: the room (walls, floor, ceiling, its front named),
+ * then everyone and everything on the plan but `leaveOut` (the dreamer, whose eyes it is). With the
+ * camera, a crowd leaves a lane from it to the nearest person before it.
+ */
+function solidsOf(plan: Blocking, leaveOut: string[], called: (id: string) => string, eye?: Eye): Solid[] {
   const solids: Solid[] = [];
   // A fixture of the place is labelled with its own name; everyone and everything else as the story calls them.
   const name = (id: string) => plan.spots.find((s) => s.id === id)?.name ?? called(id);
@@ -224,7 +256,7 @@ function solidsOf(plan: Blocking, leaveOut: string[], called: (id: string) => st
     if (leaveOut.includes(s.id)) continue;
     const f = facing(s, plan);
     if (s.many) {
-      const where = crowdSpots(s, plan, placed);
+      const where = crowdSpots(s, plan, placed, eye);
       add(
         s.id,
         0.8,
@@ -333,6 +365,21 @@ function thingBlocks(s: Spot, plan: Blocking): Block[] {
     ];
   }
   if (shape === 'vehicle') return [{ x: s.x, y: s.y, z: 0, w, d, h: Math.min(h, 1.6) * 0.6, f }];
+  // A small thing lying where a table, a stall or a counter stands is on it, not inside it: the talking
+  // fish lay inside its stall, and no camera could see it (night market, 26 Sep).
+  if (shape === 'block' && h < 0.6) {
+    const under = plan.spots.find(
+      (t) =>
+        t.id !== s.id &&
+        !isPerson(t) &&
+        !t.heldBy &&
+        shapeOf(t, plan) === 'block' &&
+        sizeOf(t)[2] > h &&
+        sizeOf(t)[2] < 1.6 &&
+        onFootprint(s, t, plan, 0),
+    );
+    if (under) return [{ x: s.x, y: s.y, z: sizeOf(under)[2], w, d, h, f }];
+  }
   if (shape === 'steps') {
     const n = stepsOf(h);
     return Array.from({ length: n }, (_, i) => {
@@ -741,7 +788,9 @@ export function previsImage(
   width = 1376,
   height = 768,
 ): Uint8Array {
-  const r = render(solidsOf(plan, leaveOut, name), eye, width, height);
+  // Seen from outside, the crowd leaves a lane to whoever the moment is about, as the view's own words
+  // were measured; through the dreamer's eyes, it stands where it stands.
+  const r = render(solidsOf(plan, leaveOut, name, leaveOut.length ? undefined : eye), eye, width, height);
   return png(width, height, paint(r, true));
 }
 
@@ -1143,11 +1192,18 @@ export function outsideShot(
   const apart = !atIt && group.length === 2 && people.length === 2 && ends > 4;
   const pair = !apart && ((facings.length >= 2 && together < 0.4 && ends > 0.4) || atIt);
   // Which way the moment looks, if it says.
+  // What the moment looks at can be what they are on (the stairs they climb, the road they walk):
+  // then it is ahead of them, the way they go. Taken as too close to look toward, the dog running up
+  // the stairs was shot from in front, looking down them (lighthouse, 26 Sep). Not what they hold:
+  // the key held up is seen from in front.
+  const lookedSpot = lookAt?.id ? plan.spots.find((s) => s.id === lookAt.id) : undefined;
+  const underfoot =
+    !!lookedSpot && !lookedSpot.heldBy && ['steps', 'ground', 'vehicle'].includes(shapeOf(lookedSpot, plan) ?? '');
   const looks = lookAt?.way
     ? unit(lookAt.way)
-    : lookAt?.at && Math.hypot(lookAt.at.x - c.x, lookAt.at.y - c.y) > 0.8
+    : lookAt?.at && Math.hypot(lookAt.at.x - c.x, lookAt.at.y - c.y) > 0.8 && !underfoot
       ? unit({ x: lookAt.at.x - c.x, y: lookAt.at.y - c.y })
-      : lookAt?.theirs && together > 0.5
+      : (lookAt?.theirs || underfoot) && together > 0.5
         ? unit(sum)
         : undefined;
   let d0: V2;
@@ -1250,6 +1306,7 @@ export function outsideShot(
   // further off, each rendered small; the one holding them all, clearest, least turned and nearest.
   // Aimed at the car past the group, the frame left the dreamer out of the picture (25 Sep).
   const solidsSmall = solidsOf(plan, [], name);
+  const crowded = plan.spots.some((s) => s.many);
   const tiny = 192 * 108 * 0.001;
   let best: { eye: Eye; far: number; cramped: number; score: number } | undefined;
   // What the moment's words also name, and the ways round to it: walked all the way round only when
@@ -1263,18 +1320,22 @@ export function outsideShot(
   for (const deg of degs)
     for (const back of [1, 1.35, 1.8]) {
       const cand = place(turnBy(d0, deg), back);
-      const rs = render(solidsSmall, cand.eye, 192, 108);
+      const rs = render(crowded ? solidsOf(plan, [], name, cand.eye) : solidsSmall, cand.eye, 192, 108);
       const seen = holdAll.map((s) => rs.seen.get(s.id));
       const inFrame = seen.filter((x) => x && x.visible >= tiny).length / holdAll.length;
       const clear = seen.reduce((a, x) => a + (x ? 1 - x.occluded : 0), 0) / holdAll.length;
       const framed = framing(rs, framedPeople, size, name, plan).score;
       const named = extra.length ? extra.filter((s) => (rs.seen.get(s.id)?.visible ?? 0) >= tiny).length / extra.length : 0;
+      // What the moment is about is in the picture above all: two people facing each other were shot
+      // from the side with the talking fish, the moment's whole point, off to the left (night market).
+      const keyShown = lookedSpot && !lookedSpot.many && (rs.seen.get(lookedSpot.id)?.visible ?? 0) >= tiny ? 1 : 0;
       const facesFront = front ? Math.max(0, -cand.eye.d.y) : 0;
       const score =
         2 * inFrame +
         clear +
         0.8 * framed +
         named +
+        (lookedSpot && !lookedSpot.many ? 2 * keyShown : 0) +
         facesFront -
         Math.abs(deg) * 0.006 -
         (back - 1) * 0.2 -
@@ -1299,7 +1360,7 @@ export function outsideShot(
         : toward < -0.5
           ? `from in front of ${them}`
           : `from beside ${them}`;
-  const solids = solidsOf(plan, [], name);
+  const solids = solidsOf(plan, [], name, eye);
   const rr = render(solids, eye, 384, 216);
   const min = 384 * 216 * 0.002;
   const spots = plan.spots;
@@ -1473,7 +1534,9 @@ export function onOf(p: Spot, plan: Blocking): { t: Spot; how: 'on' | 'in' } | u
   const under = plan.spots.filter((t) => t.id !== p.id && !isPerson(t) && !t.heldBy && onFootprint(p, t, plan));
   const by = (shape: Shape) => under.find((t) => shapeOf(t, plan) === shape);
   const v = by('vehicle');
-  if (v && p.pose !== 'standing') return { t: v, how: 'in' };
+  // Ridden on, not in, when it is narrower than a metre (a bicycle, a motorbike, a horse): the
+  // sisters were said to be "in the bicycle" (night market, 26 Sep).
+  if (v && p.pose !== 'standing') return { t: v, how: sizeOf(v)[0] < 1 ? 'on' : 'in' };
   const seat = by('seat');
   if (seat && p.pose !== 'standing') return { t: seat, how: 'on' };
   const ground = by('steps') ?? by('ground');

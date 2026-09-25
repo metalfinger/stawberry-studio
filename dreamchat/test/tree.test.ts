@@ -569,7 +569,8 @@ describe('C. elements', () => {
 
   test('theater: what a moment names that its previs does not show', () => {
     const t = treeOf('theater');
-    expect(cutIn(t, 'm1').unseen).toEqual(['p2', 't2']);
+    // With the audience clearing the couple's sightline (26 Sep), the first shows everyone it names.
+    expect(cutIn(t, 'm1').unseen).toEqual([]);
     expect(cutIn(t, 'm2').unseen).toEqual(['p2']);
     expect(cutIn(t, 'm3').unseen).toEqual([]);
   });
@@ -669,7 +670,8 @@ describe('D. where each value comes from', () => {
     expect(sceneIn(fourth, 's3/l5').sheet.line.value).toEqual(['p4', 'p1']);
     expect(['m6', 'm7', 'm8'].map((c) => cutIn(fourth, c).sheet.side.value)).toEqual(['established', null, 'on']);
     expect(cutIn(treeOf('ice-head'), 'm1').sheet.side.value).toBe('established');
-    expect(sceneIn(treeOf('theater'), 's1/l1').sheet.line.value).toBeNull();
+    // The couple both seen in the first moment, it is the theater's first two-shot and sets the line.
+    expect(sceneIn(treeOf('theater'), 's1/l1').sheet.line.value).toEqual(['p2', 'p1']);
   });
 
   test('the side of the line is null, and says why, while both ride in the same car', () => {
