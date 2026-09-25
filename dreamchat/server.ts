@@ -10,8 +10,9 @@ import { callJev, jevAvailable } from './jev';
 import { jevTotals, readJevLog } from './jevlog';
 import { callHost, HOST_MODEL } from './llm';
 import { blockScenes, fixFrom, shotFor, superviseChanges, proposeLook, reviseItem, rewordLook, rewordMoment } from './producer';
-import { IMAGE_CAP, liveProducer, ownStyle, SessionStore } from './session';
+import { IMAGE_CAP, liveProducer, ownStyle, SessionStore, treeInputOf } from './session';
 import { momentStage, STAGES, stageOf, STORYBOARD } from './stages';
+import { contextOf, type DreamTree, resolveTree } from './tree';
 import { assistantJudge, judgeKind } from './judge';
 import { judgeAvailable, judgeContinuity, judgeTake, liveSheets, PROVIDER, spawnWorker } from './sheets';
 import { REPO, STRAWBERRY_HOME, STRAWBERRY_PYTHON, strawberryAvailable, writeProduction } from './strawberry';
@@ -59,6 +60,8 @@ async function body(req: Request): Promise<Record<string, unknown>> {
     return {};
   }
 }
+
+const trees = new Map<string, { at: number; tree: DreamTree }>();
 
 const server = Bun.serve({
   hostname: '127.0.0.1',
@@ -124,6 +127,21 @@ const server = Bun.serve({
           totals: jevTotals(log),
           log: log.slice(-400),
         });
+      }
+
+      // The dream's resolved tree: scenes, shots and cuts with complete sheets, the looks ledger,
+      // questions for the dreamer and flags. Made again only when the conversation changes.
+      if (url.pathname === '/api/tree') {
+        const s = store.get(id);
+        if (!s) return fail(404, 'no such conversation');
+        const input = treeInputOf(s, cfg.confidence_threshold);
+        if (!input) return fail(409, 'no breakdown yet');
+        let hit = trees.get(id);
+        if (hit?.at !== s.updatedAt) trees.set(id, (hit = { at: s.updatedAt, tree: resolveTree(input) }));
+        const cut = url.searchParams.get('cut');
+        if (!cut) return json(hit!.tree);
+        const ctx = contextOf(hit!.tree, cut);
+        return ctx ? json(ctx) : fail(404, 'no such cut');
       }
 
       if (url.pathname === '/api/turn') {

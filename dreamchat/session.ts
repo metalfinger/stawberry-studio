@@ -74,6 +74,7 @@ import {
 // Moved to continuity.ts; kept here for older imports.
 export { calledIn };
 import type { Blocking } from './blocking';
+import type { TreeInput } from './tree';
 import { atSite, inSession, recordJev } from './jevlog';
 import { askFacts, decide, type Reading, STORYBOARD } from './stages';
 import { planFacts } from './planfacts';
@@ -436,6 +437,30 @@ export function reconcileGhosts(plan: ContinuityPlan, frames: Item[]): Continuit
       needs: c.needs.map(to),
       refs: c.refs.map((r) => (r.kind === 'ghost' ? { ...r, id: to(r.id) } : r)),
     })),
+  };
+}
+
+/**
+ * What the dream's resolved tree is made from (tree.ts): the breakdown as stored, the continuity plan
+ * as a re-plan would make it now (never the plan kept since the moments began, whose in-between
+ * references may be numbered otherwise), the prep and whether it is for this version of the dream,
+ * the sketches and frames, the chosen look, the grounding notes and the goals.
+ */
+export function treeInputOf(s: Session, threshold: number): TreeInput | null {
+  const b = s.draft?.breakdown;
+  if (!b) return null;
+  const frames = s.build?.frames ?? [];
+  return {
+    breakdown: b,
+    plan: reconcileGhosts(planContinuity(b), frames),
+    ...(s.prep ? { prep: s.prep, prepFresh: planKey(b) === s.prep.basedOn } : {}),
+    items: s.build?.items ?? [],
+    frames,
+    style: s.style ?? null,
+    downgraded: s.draft?.downgraded ?? [],
+    goals: Object.fromEntries(
+      Object.keys(s.state.goals).map((g) => [g, { status: goalStatus(s.state.goals[g], threshold), asked: s.askCounts[g] ?? 0 }]),
+    ),
   };
 }
 
