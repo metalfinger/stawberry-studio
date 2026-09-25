@@ -401,6 +401,10 @@ export function groupMembers(people: Item[]): { group: Item; member: Item; word:
   return out;
 }
 
+/** A place's name that says who is there or what they do in it, rather than what the place is. */
+const PEOPLE_IN_NAME =
+  /\b(people|persons?|couple of|crowd|someone|sitting|standing|talking|playing|waiting|with (?:the |a |my |your |her |his )?(?:\w+ )?(?:man|woman|men|women|girl|boy|friends?|aunt|uncle|mother|father|brother|sister|family))\b/i;
+
 export function sheetPrompt(item: Item, style: StyleOption): string {
   // A look that says nothing a picture can keep ("indistinct, like a figure in a hazy memory")
   // would be drawn as a blur.
@@ -427,7 +431,11 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
     ? who && !VAGUE.test(who) && !/^(the dreamer|you|me|myself|i)$/i.test(who.trim())
       ? `the dreamer, ${who.replace(/^the dreamer,?\s*/i, '').replace(/[\s,.;]+$/, '')}`
       : 'the dreamer'
-    : pictureName(item.name);
+    : item.kind === 'location' && PEOPLE_IN_NAME.test(item.name)
+      ? // A place named for what happened there ("inside, sitting with couple of people") beside
+        // "with no people in it" read as a contradiction, and the sketch was held (Meads, 25 Sep).
+        'this place'
+      : pictureName(item.name);
   const layout =
     item.kind === 'character'
       ? isGroup(item)

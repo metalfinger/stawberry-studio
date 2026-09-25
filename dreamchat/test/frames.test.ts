@@ -413,6 +413,20 @@ describe('a group of people', () => {
     expect(sheetPrompt(person('your aunt', 'shoulder-length brown hair'), style)).toContain('one person only');
   });
 
+  test('a place named for who was there is drawn as the place', () => {
+    const place = (name: string): Item => ({
+      id: 'l6',
+      kind: 'location',
+      name,
+      fields: { geography: { value: 'a small plain room with two chairs by a round table', said: false } },
+      status: 'waiting',
+      version: 0,
+    });
+    expect(sheetPrompt(place('inside, sitting with couple of people'), style)).toStartWith('A single wide picture of this place,');
+    expect(sheetPrompt(place("the grandmother's kitchen"), style)).toContain("picture of the grandmother's kitchen");
+    expect(sheetPrompt(place('the room with the blue balloons'), style)).toContain('picture of the room with the blue balloons');
+  });
+
   test("the dreamer's sketch says who they are: their name says nothing of it", () => {
     const dreamer = (identity: string): Item => ({
       id: 'p1',

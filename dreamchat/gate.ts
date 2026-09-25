@@ -68,7 +68,7 @@ export type GateResult = { findings: string[]; reading: GateReading | null };
 const SHEET_CLEAR: Question = {
   type: 'noul',
   instructions:
-    'This describes a reference picture of one person, group, place or thing, drawn once so that every later picture can copy it. Does it give enough of how it looks that two artists would draw recognisably the same one? For a person: age, build, hair and clothes; for a group: who is in it and how each looks; for a place: what kind of place it is, its layout and what stands in it; for a thing: its shape, materials and colours. The face, small details and the pose are the artist\'s to choose and do not count.',
+    "This describes a reference picture of one person, group, place or thing, drawn once so that every later picture can copy it. Does it give enough of how it looks that two artists would draw recognisably the same one? For a person: age, build, hair and clothes; for a group: who is in it and how each looks; for a place: what kind of place it is, its layout and what stands in it; for a thing: its shape, materials and colours. The face, small details and the pose are the artist's to choose and do not count.",
   criteria: {
     true: 'what kind it is and what makes it recognisable are given',
     false: 'something that decides how it looks is missing and would have to be invented',
@@ -256,7 +256,9 @@ export async function readPrompt(
   if (contradicts > (opts.sheet ? MAX_CONTRADICTS : MAX_CONTRADICTS_MOMENT)) {
     // Which line it rests on: said with the finding, so a rewording knows where to look; and for a
     // reading that may be only the prompt's length, whether any line carries it at all.
-    around = opts.sheet ? undefined : await carrier(jev, prompt, contradicts);
+    // A sketch's too, so its rewording is told where: "a European village just inside the house"
+    // carried 0.47-0.57 of a village's reading, and 0.09 without it (Meads, 25 Sep).
+    around = await carrier(jev, prompt, contradicts);
     const diffuse = !opts.sheet && contradicts <= DIFFUSE_UP_TO && (around?.drop ?? 0) < LOCAL_DROP;
     if (!diffuse)
       findings.push(

@@ -1166,10 +1166,17 @@ export class SessionStore {
         // Said as what the picture must show, beside the instructions it will be drawn from: their
         // words are about an earlier picture. Nothing, when those instructions already give it.
         it.repairFor = undefined;
+        // A sketch's too: its whole message was pasted in ("they look right to me. only the Meads's
+        // house: …"), praise of the other sketches and all, and the redraw was held (25 Sep).
         const fix =
-          named && this.deps.fix && it.kind === 'cut' && s.build && s.style
+          named && this.deps.fix && s.build && s.style
             ? await this.deps
-                .fix(text, framePrompt(it, s.build.items, s.style, this.plannedInputs(s, it), it.layout?.mediaId).prompt)
+                .fix(
+                  text,
+                  it.kind === 'cut'
+                    ? framePrompt(it, s.build.items, s.style, this.plannedInputs(s, it), it.layout?.mediaId).prompt
+                    : sheetPrompt(it, s.style),
+                )
                 .catch(() => null)
             : null;
         it.repairFor = named ? (fix === '' ? undefined : [fix ?? `${named}: "${text.slice(0, 200)}"`]) : undefined;
@@ -2243,7 +2250,9 @@ export class SessionStore {
         let findings = await this.gateFindings(s, snapshot, sheetPrompt(snapshot, style), [], []);
         // A look it is unsure of is reworded, described as a look only and filled where it is thin,
         // before anyone is asked, and read again; what they said keeps its meaning.
-        if (findings.length && this.deps.rewordLook) {
+        // Twice at most, text being nearly free: the Meads's house, reworded to its outside, still
+        // listed the stairs and the hallway inside it, and read as unclear (25 Sep).
+        for (let round = 0; round < 2 && findings.length && this.deps.rewordLook; round++) {
           const fields = await this.deps
             .rewordLook(
               item.name,
@@ -2254,10 +2263,9 @@ export class SessionStore {
               renderTranscript(s.transcript),
             )
             .catch(() => null);
-          if (fields) {
-            snapshot.fields = fields;
-            findings = await this.gateFindings(s, snapshot, sheetPrompt(snapshot, style), [], []);
-          }
+          if (!fields) break;
+          snapshot.fields = fields;
+          findings = await this.gateFindings(s, snapshot, sheetPrompt(snapshot, style), [], []);
         }
         if (findings.length) throw new Held(findings);
         return sheets.start({
