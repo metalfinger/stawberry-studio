@@ -9,7 +9,7 @@
 // out, and the same breakdown always gives the same plan.
 import { type Blocking, DIRECTIONS, type Eye, type Move, outsideOrder, settle } from './blocking';
 import { dreamerShot, outsideShot } from './previs';
-import { type Breakdown, isWhole, type Moment, moments, POSITION, type State } from './producer';
+import { type Breakdown, hasBefore, isWhole, type Moment, moments, POSITION, type State } from './producer';
 
 export type Relation = 'same_setup' | 'same_side' | 'other_side' | 'other_place' | 'shift' | 'seat';
 export type RefRole = 'base' | 'composition' | 'lighting' | 'identity' | 'prop' | 'location';
@@ -290,8 +290,10 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
     looks_at: m.looks_at ?? '',
     shift: m.shift ?? '',
     // Only a look lasts: "location: at the far end of the room" in an older breakdown became a
-    // ghost of her standing somewhere.
-    leaves: (m.leaves ?? []).filter((l) => !POSITION.test(l.what.trim())),
+    // ghost of her standing somewhere. And only a change: recorded where its subject is first shown,
+    // it is how they look, and its in-between picture changes nothing (five of them were drawn for
+    // Meads, from a breakdown judged before this was known, 25 Sep).
+    leaves: (m.leaves ?? []).filter((l) => !POSITION.test(l.what.trim()) && hasBefore(b, m.id, l.who)),
   }));
   const index = new Map(ms.map((m, i) => [m.id, i]));
   const byId = new Map(ms.map((m) => [m.id, m]));

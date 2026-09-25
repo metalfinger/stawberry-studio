@@ -1936,6 +1936,12 @@ export class SessionStore {
     for (const g of buildGhosts(plan))
       if (!s.build.frames.some((f) => f.id === g.id))
         s.build.frames.push({ ...g, nodeId: ids[g.ghost?.of ?? ''] });
+    // And one it no longer needs is not drawn: a first look's in-between picture, planned before
+    // first looks were known to change nothing, waited to be drawn (Meads g4, g5, 25 Sep). One that
+    // is drawn or drawing is kept; it was paid for.
+    s.build.frames = s.build.frames.filter(
+      (f) => f.kind !== 'ghost' || f.status !== 'waiting' || plan.ghosts.some((g) => g.id === f.id),
+    );
     const known = new Set(s.build.frames.map((f) => f.id));
     for (const f of s.build.frames) {
       const next = plan.cuts.find((c) => c.id === f.id);

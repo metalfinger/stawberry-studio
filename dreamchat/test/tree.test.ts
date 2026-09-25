@@ -737,19 +737,20 @@ describe('E. the looks ledger', () => {
         .filter((r) => r.stages[0].firstLooks)
         .map((r) => [r.element, r.stages[0].firstLooks!.map((f) => [f.cut, f.ghost])]),
     );
+    // Continuity plans no in-between picture for a first look any more (25 Sep): none changes anything.
     expect(first).toEqual({
-      p2: [['m2', 'g1']],
-      p3: [['m5', 'g2']],
-      t1: [['m5', 'g3']],
-      t2: [['m6', 'g4']],
-      t3: [['m9', 'g5']],
+      p2: [['m2', null]],
+      p3: [['m5', null]],
+      t1: [['m5', null]],
+      t2: [['m6', null]],
+      t3: [['m9', null]],
     });
     // Design correction: meads-third has no sketches (no build.items), so there is no sketch of t2
     // to redraw; today's Meads has one.
-    expect(rowIn(t, 't2').stages[0].redraw).toEqual({ items: [], ghosts: ['g4'], cuts: ['m6', 'm7', 'm8'], maybe: [] });
+    expect(rowIn(t, 't2').stages[0].redraw).toEqual({ items: [], ghosts: [], cuts: ['m6', 'm7', 'm8'], maybe: [] });
     expect(rowIn(treeOf('meads-fourth'), 't2').stages[0].redraw).toEqual({
       items: ['t2'],
-      ghosts: ['g4'],
+      ghosts: [],
       cuts: ['m6', 'm7', 'm8'],
       maybe: [],
     });
@@ -919,13 +920,12 @@ describe('G. flags on real drift', () => {
         'faces_off_plan:m4:faces',
       ].sort(),
     );
-    const plan = inputOf('meads-third').plan;
+    // Still said of the breakdown, which calls them changes; continuity plans nothing for them.
+    expect(inputOf('meads-third').plan.ghosts.filter((g) => g.kind === 'state')).toEqual([]);
     for (const f of t.flags.filter((x) => x.code === 'first_look')) {
-      const g = plan.ghosts.find((x) => x.id === f.now)!;
-      expect(g.of).toBe(f.element!);
-      expect(f.text).toContain(g.usedBy.join(', '));
+      expect(f.now).toBeNull();
+      expect(f.text).toContain('is how it looks where it is first shown, not a change');
     }
-    expect(t.flags.filter((f) => f.code === 'first_look').map((f) => f.now)).toEqual(['g1', 'g2', 'g3', 'g4', 'g5']);
   });
 
   test("meads-fourth: the plan the prep made drifted from the breakdown's, at the village", () => {

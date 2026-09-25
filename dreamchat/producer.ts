@@ -1141,6 +1141,23 @@ export function moments(b: Breakdown): Moment[] {
   return b.scenes.flatMap((s) => s.moments);
 }
 
+/**
+ * Whether a change has a before: its subject is in a moment earlier than the one it changes in
+ * (the dreamer always is). Recorded where someone or something is first shown, it is how they look,
+ * not a change: "the Pied-Piper man's appearance becomes a man with curly hair" in the moment he
+ * appears. Asked of Jev without the moments before, such descriptions read as changes (0.36-0.52)
+ * as often as real ones (0.42-0.68); code knows the order of the moments.
+ */
+export function hasBefore(b: Breakdown, momentId: string, who: string): boolean {
+  if (b.people.find((p) => p.id === who)?.is_dreamer) return moments(b).findIndex((m) => m.id === momentId) > 0;
+  const all = moments(b);
+  const at = all.findIndex((m) => m.id === momentId);
+  return all
+    .slice(0, Math.max(0, at))
+    .some((m) => m.visible.includes(who) || m.things.includes(who) || m.place === who);
+}
+
+
 /** People who are only ever a crowd. */
 export const CROWD =
   /\b(crowds?|audiences?|onlookers|passers-?by|spectators|bystanders|strangers|(?:other|many|lots of|a lot of|some|several) people|people (?:everywhere|around))\b/i;

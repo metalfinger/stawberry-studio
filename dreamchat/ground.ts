@@ -4,7 +4,9 @@
 // guess, and the person is asked to confirm it before anything is drawn from it.
 import type { Answer, Exchange, JevFn, Question } from './jev';
 import { renderTranscript } from './jev';
-import { type Breakdown, type Detail, type Moment, type State, details, moments } from './producer';
+import { type Breakdown, type Detail, type Moment, type State, details, hasBefore, moments } from './producer';
+
+export { hasBefore };
 
 const SAID_BAR = 0.6;
 const STATE_BAR = 0.7;
@@ -82,21 +84,6 @@ export function crowdQuestions(b: Breakdown): Record<string, Question> {
   return q;
 }
 
-/**
- * Whether a change has a before: its subject is in a moment earlier than the one it changes in
- * (the dreamer always is). Recorded where someone or something is first shown, it is how they look,
- * not a change: "the Pied-Piper man's appearance becomes a man with curly hair" in the moment he
- * appears. Asked of Jev without the moments before, such descriptions read as changes (0.36-0.52)
- * as often as real ones (0.42-0.68); code knows the order of the moments.
- */
-export function hasBefore(b: Breakdown, momentId: string, who: string): boolean {
-  if (b.people.find((p) => p.id === who)?.is_dreamer) return moments(b).findIndex((m) => m.id === momentId) > 0;
-  const all = moments(b);
-  const at = all.findIndex((m) => m.id === momentId);
-  return all
-    .slice(0, Math.max(0, at))
-    .some((m) => m.visible.includes(who) || m.things.includes(who) || m.place === who);
-}
 
 /** A change's kind from Jev's answers: undefined where Jev gave no reading. */
 export function changeKind(answers: Record<string, Answer> | null, key: string): { look?: boolean; whole?: boolean } {
