@@ -14,10 +14,9 @@ import { dreamConfig } from '../dream';
 import { bookkeeperQuestions, callJev, type Exchange, renderTranscript, verdictQuestions } from '../jev';
 import { FINISHED_BAR, GOES_ON_BAR } from '../lib';
 import { changeQuestions, crowdQuestions, KIND_BARS } from '../ground';
-import { calledIn, planContinuity } from '../continuity';
-import { PLAN_BARS, planFacts, planQuestions } from '../planfacts';
-import { blockScenes, type Breakdown, type Moment } from '../producer';
-import { around, planUnplanned, storyboardCheck } from '../session';
+import { PLAN_BARS, planQuestions } from '../planfacts';
+import { blockScenes, type Breakdown, type Moment, type StyleOption } from '../producer';
+import { planShots } from '../session';
 import { askFacts, CLOSE, decide, STORYBOARD } from '../stages';
 
 void loadedKeys;
@@ -388,49 +387,32 @@ if (which === 'storyboard') {
   }
   console.log(`\npictures right ${pct(right, pics)}; redrawn for nothing: ${redrawn}; wrong ones missed: ${missed}`);
 } else if (which === 'planner') {
-  // The floor planner on one scene of a frozen dream: planned afresh N times, each plan's moments
-  // put through "storyboard complete?" as the harness would, so a change to the planner's words is
-  // measured by how often its shots pass.
-  //   bun run evals/run.ts planner <source> <scene> [--times 3]
-  const [source, scene] = process.argv.slice(3);
+  // The floor planner on one scene of a frozen dream, planned afresh N times through the harness's
+  // own planning (planShots: plans, their facts, each shot's "storyboard complete?", and planning
+  // again what is held), and how often each moment's shot then passes.
+  //   bun run evals/run.ts planner <source> [scene] [--times 3]
+  const [source, scene] = process.argv.slice(3).filter((x, i, all) => !x.startsWith('--') && !all[i - 1]?.startsWith('--'));
   const s = JSON.parse(readFileSync(join(import.meta.dir, 'sources', `${source}.json`), 'utf8')) as {
     draft: { breakdown: Breakdown };
+    style: StyleOption;
   };
   const b = structuredClone(s.draft.breakdown);
-  for (const sc of b.scenes) if (sc.id === scene) delete sc.blocking;
+  // Every scene is planned afresh, as a dream's are together; one scene's moments are reported if named.
+  for (const sc of b.scenes) delete sc.blocking;
+  const moments = b.scenes.filter((sc) => !scene || sc.id === scene).flatMap((sc) => sc.moments.map((m) => m.id));
   const runs = await Promise.all(
-    Array.from({ length: times }, async () => {
-      // As the harness plans: once, then once more for a scene the first left without a plan.
-      const planned = await planUnplanned(blockScenes, (await blockScenes(b, { only: [scene] })).breakdown, [scene]);
-      const facts = (await planFacts(callJev, planned, [scene])).breakdown;
-      const plan = planContinuity(facts);
-      const sc = facts.scenes.find((x) => x.id === scene)!;
-      const dreamer = facts.people.find((p) => p.is_dreamer)?.id;
-      return Promise.all(
-        sc.moments.map(async (m) => {
-          const c = plan.cuts.find((x) => x.id === m.id);
-          if (!sc.blocking || !c?.view) return { m: m.id, ok: false, why: sc.blocking ? 'no view' : 'no plan' };
-          const called = calledIn(facts, c);
-          const r = await storyboardCheck(
-            callJev,
-            m,
-            c.view,
-            called,
-            dreamer,
-            around(facts, c, m, called, dreamer),
-            c.framing ?? [],
-          );
-          return { m: m.id, ok: r.ok, why: r.reasons.join('; ').slice(0, 140) };
-        }),
-      );
-    }),
+    Array.from({ length: times }, () => planShots(b, s.style, { block: blockScenes, jev: callJev }).catch(() => null)),
   );
-  const ids = [...new Set(runs.flat().map((r) => r.m))];
-  for (const id of ids) {
-    const rs = runs.flat().filter((r) => r.m === id);
-    console.log(`${id}: passes ${pct(rs.filter((r) => r.ok).length, rs.length)}`);
-    for (const r of rs.filter((x) => !x.ok)) console.log(`   ${r.why}`);
+  let passed = 0;
+  let all = 0;
+  for (const id of moments) {
+    const rs = runs.map((p) => p?.storyboard?.[id]);
+    passed += rs.filter((r) => r?.ok).length;
+    all += rs.length;
+    console.log(`${id}: passes ${pct(rs.filter((r) => r?.ok).length, rs.length)}`);
+    for (const r of rs) if (!r?.ok) console.log(`   ${r ? r.reasons.join('; ').slice(0, 140) : 'no shot'}`);
   }
+  console.log(`\nshots passing "storyboard complete?": ${pct(passed, all)}`);
 } else {
   console.error('usage: bun run evals/run.ts storyboard|plan-facts|kinds|ending|goes-on|verdicts|planner [--times 2]');
   process.exit(1);

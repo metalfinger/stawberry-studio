@@ -113,19 +113,20 @@ describe('the shots, planned while the chat goes on', () => {
     expect(checks.every((st) => st.includes('"moment"') && !st.includes('"on_the_plan"'))).toBe(true);
     expect(seen.some((st) => st.includes('"on_the_plan"'))).toBe(true);
     expect(prep.blocking.s1.indoors).toBe(true);
-    // m2 held, so its scene was planned once more, told what its camera saw and what was wrong; the
-    // new plan did no better, so the first is kept.
-    expect(replanned).toHaveLength(1);
-    expect(replanned[0].only).toEqual(['s1']);
+    // m2 held, so its scene was planned again three ways: once told what its camera saw and what was
+    // wrong, and twice afresh; none did better, so the first is kept.
+    expect(replanned).toHaveLength(3);
+    expect(replanned.every((r) => r.only?.join() === 's1')).toBe(true);
     expect(replanned[0].fix?.s1[0]).toContain('Moment m2');
     expect(replanned[0].fix?.s1[0]).toContain('the shot disagrees with the moment');
+    expect(replanned.slice(1).every((r) => !r.fix)).toBe(true);
     expect(prep.previs.m2).not.toContain('-again');
     // Every camera is worked out, a previs and a brief each: seen from outside, and through the
     // dreamer's own eyes.
     expect(Object.keys(prep.previs).sort()).toEqual(['m1', 'm2']);
     expect(existsSync(prep.previs.m1) && existsSync(prep.previs.m2)).toBe(true);
-    // Briefed on each plan: the first, and the one made again for the held scene.
-    expect(briefs).toHaveLength(4);
+    // Briefed on each plan: the first, and the three made again for the held scene.
+    expect(briefs).toHaveLength(8);
     expect(prep.shots.m2.text).toBe('A first-person view, turned left to the board on the wall.');
     expect(prep.shots.m2.view).toContain('toward the departure board');
     // One person is named, never "them", and the picture says nobody else is in it.

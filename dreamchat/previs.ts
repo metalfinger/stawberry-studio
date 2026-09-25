@@ -843,7 +843,13 @@ export function dreamerShot(
     for (const aim of target ? [0, -8, 8, -15, 15, -22, 22] : [0]) {
       const at = { x: me.x + off.x, y: me.y + off.y };
       const d = turn(target ? unit({ x: target.x - at.x, y: target.y - at.y }) : own, aim);
-      const eye: Eye = { at, d, height, pitch: PITCH, ...(lean ? { lean } : {}) };
+      // Tilted to what they look at when it is well above or below them (over 20 degrees): looking
+      // straight ahead up a staircase, the dog running up it far above was out of the picture
+      // (lighthouse, 25 Sep). Nearer level, the view stays as the approved shots had it.
+      const pitch = heart
+        ? Math.max(-0.6, Math.min(0.6, Math.atan2(heart.z - height, Math.max(0.5, Math.hypot(heart.x - at.x, heart.y - at.y)))))
+        : PITCH;
+      const eye: Eye = { at, d, height, pitch: Math.abs(pitch) < 0.35 ? PITCH : pitch, ...(lean ? { lean } : {}) };
       if (!target || !heart) {
         best = { eye, score: 0 };
         continue;

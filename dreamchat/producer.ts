@@ -474,7 +474,17 @@ function readPlan(b: Breakdown, g: Record<string, unknown>, moments: Moment[], l
         ...(typeof x.faces === 'string' && x.faces ? { faces: x.faces } : {}),
         ...(many ? { many: true } : {}),
         ...(person && ['sitting', 'standing', 'lying'].includes(x.pose as string) ? { pose: x.pose as Spot['pose'] } : {}),
-        ...(!person && size ? { size: size as [number, number, number] } : {}),
+        // A flight of steps rises at most 0.8 m for every metre it runs, as a steep real one does: a
+        // spiral staircase given as 12 m up in 4 m put the dog running up it far above the picture.
+        ...(!person && size
+          ? {
+              size: (x.shape === 'steps' ? [size[0], size[1], Math.min(size[2], size[1] * 0.8)] : size) as [
+                number,
+                number,
+                number,
+              ],
+            }
+          : {}),
         ...(!person && SHAPES.includes(x.shape as Shape) ? { shape: x.shape as Shape } : {}),
         ...(!person && typeof x.held_by === 'string' && b.people.some((p) => p.id === x.held_by) ? { heldBy: x.held_by } : {}),
         ...(many && spread ? { spread: spread as [number, number] } : {}),

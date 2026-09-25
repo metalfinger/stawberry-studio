@@ -377,23 +377,25 @@ export async function planShots(
     );
   };
   await shoot(blocked, prep);
-  // A scene with a moment "storyboard complete?" held is planned once more, told what each such
-  // moment's camera saw and what the check found, and keeps whichever plan more of its moments'
-  // facts pass on: the check found the faults, and only the planner can move what it placed.
-  // Only what the plan decides is planned again: someone missing, a contradiction, something extra.
-  // A camera fact or the framing is the camera's, placed by code on whatever plan; planning the
-  // stairs and the cook's room again for their camera alone cost minutes and changed nothing.
-  const planFault = (id: string) => {
+  // A scene with a moment "storyboard complete?" held is planned again, several ways at once: once
+  // told what each such moment's camera saw and what the check found, and afresh; each scene keeps
+  // whichever plan passes most of its moments. The planner's plans vary a great deal from one run to
+  // the next (the round room's two moments passed 4 times in 6 runs, then none in the next 6), so
+  // picking among several beats telling one what to fix. Held on its camera alone it is planned
+  // again too: the camera is placed by code, but on the plan (lighthouse, 25 Sep).
+  const heldMoment = (id: string) => {
     const c = prep.storyboard?.[id];
-    return !!c && !c.ok && c.readings.some((r) => !r.ok && r.question !== 'sb_camera');
+    return !!c && !c.ok;
   };
-  const held = blocked.scenes.filter((sc) => sc.moments.some((m) => planFault(m.id)));
+  const held = blocked.scenes.filter((sc) => sc.moments.some((m) => heldMoment(m.id)));
   if (deps.jev && deps.block && held.length) {
+    const jev = deps.jev;
+    const block = deps.block;
     const fix = Object.fromEntries(
       held.map((sc) => [
         sc.id,
         sc.moments
-          .filter((m) => planFault(m.id))
+          .filter((m) => heldMoment(m.id))
           .map(
             (m) =>
               `Moment ${m.id} ("${m.action}") was planned so that its camera sees this: ${prep.storyboard![m.id].view} Checked against the dream: ${prep.storyboard![m.id].reasons.join('; ')}.`,
@@ -401,37 +403,52 @@ export async function planShots(
       ]),
     );
     const only = held.map((sc) => sc.id);
-    const again = await deps
-      .block(blocked, { only, fix })
-      .then((r) => r.breakdown)
-      .catch(() => null);
-    if (again) {
-      const second = (await planFacts(deps.jev, again, only)).breakdown;
-      const trial: Prep = { ...prep, shots: {}, previs: {}, storyboard: {} };
-      await shoot(second, trial, only, '-again');
-      const passing = (p: Prep, sc: Breakdown['scenes'][number]) =>
-        sc.moments.reduce((a, m) => a + (p.storyboard?.[m.id]?.readings.filter((r) => r.ok).length ?? 0), 0);
-      for (const sc of held) {
-        const before = passing(prep, sc);
-        const after = passing(trial, sc);
-        const better = after > before;
-        recordJev({
-          kind: 'transition',
-          stage: 'plan',
-          to: 'previs',
-          moment: sc.id,
-          facts: [],
-          decision: better ? 'replanned' : 'kept',
-          reason: `planned again after "storyboard complete?" held it: ${after} facts pass on the new plan, ${before} on the first; ${better ? 'the new one is kept' : 'the first is kept'}`,
-        });
-        if (!better) continue;
-        const i = blocked.scenes.findIndex((x) => x.id === sc.id);
-        blocked.scenes[i] = second.scenes.find((x) => x.id === sc.id)!;
-        for (const m of sc.moments) {
-          if (trial.previs[m.id]) prep.previs[m.id] = trial.previs[m.id];
-          if (trial.shots[m.id]) prep.shots[m.id] = trial.shots[m.id];
-          if (trial.storyboard?.[m.id]) (prep.storyboard ??= {})[m.id] = trial.storyboard[m.id];
-        }
+    const tries: { fix?: Record<string, string[]> }[] = [{ fix }, {}, {}];
+    const candidates = (
+      await Promise.all(
+        tries.map(async (opts, k) => {
+          const again = await block(blocked, { only, ...opts })
+            .then((r) => r.breakdown)
+            .catch(() => null);
+          if (!again) return null;
+          const second = (await planFacts(jev, await planUnplanned(block, again, only), only)).breakdown;
+          const trial: Prep = { ...prep, shots: {}, previs: {}, storyboard: {} };
+          await shoot(second, trial, only, `-again${k ? k + 1 : ''}`);
+          return { second, trial };
+        }),
+      )
+    ).filter((c): c is { second: Breakdown; trial: Prep } => !!c);
+    // Moments passing first, then facts passing, so a plan that gets one more moment right wins.
+    const score = (p: Prep, sc: Breakdown['scenes'][number]) =>
+      sc.moments.reduce(
+        (a, m) =>
+          a + (p.storyboard?.[m.id]?.ok ? 100 : 0) + (p.storyboard?.[m.id]?.readings.filter((r) => r.ok).length ?? 0),
+        0,
+      );
+    for (const sc of held) {
+      const before = score(prep, sc);
+      let best: { score: number; c: (typeof candidates)[number] } | null = null;
+      for (const c of candidates) {
+        if (!c.second.scenes.find((x) => x.id === sc.id)?.blocking) continue;
+        const now = score(c.trial, sc);
+        if (now > (best?.score ?? before)) best = { score: now, c };
+      }
+      recordJev({
+        kind: 'transition',
+        stage: 'plan',
+        to: 'previs',
+        moment: sc.id,
+        facts: [],
+        decision: best ? 'replanned' : 'kept',
+        reason: `planned again ${candidates.length} ways after "storyboard complete?" held it: best ${best ? Math.floor(best.score / 100) : Math.floor(before / 100)} of ${sc.moments.length} moments pass (${Math.floor(before / 100)} on the first); ${best ? 'the best new one is kept' : 'the first is kept'}`,
+      });
+      if (!best) continue;
+      const i = blocked.scenes.findIndex((x) => x.id === sc.id);
+      blocked.scenes[i] = best.c.second.scenes.find((x) => x.id === sc.id)!;
+      for (const m of sc.moments) {
+        if (best.c.trial.previs[m.id]) prep.previs[m.id] = best.c.trial.previs[m.id];
+        if (best.c.trial.shots[m.id]) prep.shots[m.id] = best.c.trial.shots[m.id];
+        if (best.c.trial.storyboard?.[m.id]) (prep.storyboard ??= {})[m.id] = best.c.trial.storyboard[m.id];
       }
     }
   }
