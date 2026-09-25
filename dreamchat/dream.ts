@@ -63,6 +63,15 @@ export const DREAM_GOALS: GoalsFile['goals'] = [
     label: 'What was dreamlike',
     probe_hint: 'anything impossible, shifting or strange that they simply accepted while dreaming',
   },
+  // → the first frame: people start with the part that stuck, and the lighthouse's beach, key and
+  // door were never told, so never drawn (25 Sep)
+  {
+    id: 'beginning',
+    label: 'How it began',
+    probe_hint: 'how the dream started: the first thing they remember, and where they were',
+    told_when:
+      'Told when what they tell first is where the dream starts, or when they say what came before it. Not told when they began partway through ("the part that stuck with me is…") and nothing before that has come up.',
+  },
   // → the last frame
   {
     id: 'ending',

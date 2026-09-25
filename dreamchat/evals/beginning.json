@@ -1,0 +1,770 @@
+[
+ {
+  "id": "279d@1",
+  "expect": "told",
+  "why": "in a flooded library at night, in a rowing boat",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, i'm berry. whenever you're ready, tell me your dream — however it comes back to you.",
+    "messages": [
+     "hey, i'm berry. whenever you're ready, tell me your dream — however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "ok so I was in a library but it was flooded, at night. I was sitting in a little wooden rowing boat and the water was dark green. books were floating past with their pages open"
+   }
+  ]
+ },
+ {
+  "id": "20bd@1",
+  "expect": "not_told",
+  "why": "\"the part that keeps coming back is the house\": where it starts is not said",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, i'm berry. tell me your dream, however it comes back to you",
+    "messages": [
+     "hey, i'm berry. tell me your dream, however it comes back to you"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "the part that keeps coming back is the house—it looked like the Meads's from outside, but inside it was way bigger"
+   }
+  ]
+ },
+ {
+  "id": "e564@1",
+  "expect": "not_told",
+  "why": "\"the part that stuck with me was standing by the autoclave\": where it starts is not said",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, i'm berry. whenever you're ready, tell me your dream — however it comes back to you.",
+    "messages": [
+     "hey, i'm berry. whenever you're ready, tell me your dream — however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "okay, so the part that stuck with me was standing by the autoclave with this young woman, and she walks off, then comes back with this block of ice where her head should be, just standing there like it’s normal"
+   }
+  ]
+ },
+ {
+  "id": "927a@1",
+  "expect": "told",
+  "why": "the young woman standing by the autoclave, talking",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, i'm berry. tell me your dream, however it comes back to you.",
+    "messages": [
+     "hey, i'm berry. tell me your dream, however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "There was this young woman standing by the autoclave, and we were talking."
+   }
+  ]
+ },
+ {
+  "id": "a446@1",
+  "expect": "told",
+  "why": "at their parents' house after a long trip, waiting",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, i'm berry. tell me about your dream, however it comes back to you.",
+    "messages": [
+     "hey, i'm berry. tell me about your dream, however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I was at my parents’ house after a long trip, just waiting there. But what stuck with me was the window—I tried to step through it, and everything on the other side was glass too."
+   }
+  ]
+ },
+ {
+  "id": "402f@1",
+  "expect": "told",
+  "why": "they get to their parents' house after a long trip",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, i'm berry. i help people turn their dreams into pictures.\n\ntell me about a dream you've had, however it comes back to you.",
+    "messages": [
+     "hey, i'm berry. i help people turn their dreams into pictures.",
+     "tell me about a dream you've had, however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "so i get to my parents house after this long trip, and i’m just standing there waiting. not sure for what."
+   }
+  ]
+ },
+ {
+  "id": "5063@1",
+  "expect": "told",
+  "why": "it started at the Meads's house",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, I'm berry. I'd love to hear a dream you've had, whenever you're ready to share.",
+    "messages": [
+     "hey, I'm berry. I'd love to hear a dream you've had, whenever you're ready to share."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "oh hey, the one I keep thinking about started at the Meads's house, but it was bigger inside than out."
+   }
+  ]
+ },
+ {
+  "id": "55eb@1",
+  "expect": "told",
+  "why": "got to their parents' house after a long journey",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, i'm berry. i'd love to hear your dream, however it comes back to you.\n\nno rush, just start wherever feels right.",
+    "messages": [
+     "hey, i'm berry. i'd love to hear your dream, however it comes back to you.",
+     "no rush, just start wherever feels right."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "The part that stuck with me most was the window. I got to my parents’ house after a long journey and was just waiting there. I stepped into the window like I could walk through it, but the other side was just more glass."
+   }
+  ]
+ },
+ {
+  "id": "e16f@1",
+  "expect": "told",
+  "why": "it started on a streetcar",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, i'm berry. tell me your dream — however it comes back to you.",
+    "messages": [
+     "hey, i'm berry. tell me your dream — however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "It started on a streetcar. I was watching the conductor, and there was this lever he’d turn whenever we went around a bend."
+   }
+  ]
+ },
+ {
+  "id": "0199@1",
+  "expect": "told",
+  "why": "on a streetcar, watching the conductor",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, i'm berry. if you had a dream lately, tell it to me however it comes back to you.",
+    "messages": [
+     "hey, i'm berry. if you had a dream lately, tell it to me however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I was on a streetcar, watching the conductor. Then I kept noticing this lever he'd turn at bends. It got to where I was going through the motions too."
+   }
+  ]
+ },
+ {
+  "id": "fa9a@1",
+  "expect": "not_told",
+  "why": "\"the part that stuck with me was being on the streetcar\": where it starts is not said",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, i'm berry. whenever you're ready, tell me your dream, however it comes back to you.",
+    "messages": [
+     "hey, i'm berry. whenever you're ready, tell me your dream, however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "well the part that stuck with me was being on the streetcar and watching the conductor work the lever. after a while it felt like i was doing it with him."
+   }
+  ]
+ },
+ {
+  "id": "e11a@1",
+  "expect": "told",
+  "why": "at the movies with a friend",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, i'm berry. tell me your dream, however it comes back to you.",
+    "messages": [
+     "hey, i'm berry. tell me your dream, however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i was at the movies with a friend and this huge sofa next to us just turned into a roller coaster. like a real one, from an amusement park"
+   }
+  ]
+ },
+ {
+  "id": "bca7@1",
+  "expect": "told",
+  "why": "it was at the Meads's house",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, I'm Berry. tell me your dream however it comes back to you",
+    "messages": [
+     "hey, I'm Berry. tell me your dream however it comes back to you"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "it was at the Meads's house, but it's bigger inside than out. just inside there's a European village, with a cobblestone street, and a Pied-Piper sort of man with curly hair who can do things like juggle"
+   }
+  ]
+ },
+ {
+  "id": "6d6a@1",
+  "expect": "told",
+  "why": "on a night bus with their brother",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, i'm berry.\n\ntell me your dream, however it comes back to you.",
+    "messages": [
+     "hey, i'm berry.",
+     "tell me your dream, however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "we were on a night bus, me and my brother, raining outside, and he was holding this paper lantern with a candle in it. that part felt really clear."
+   }
+  ]
+ },
+ {
+  "id": "cbba@1",
+  "expect": "told",
+  "why": "walking on a grey beach with the dog, holding the key",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, i'm berry. whenever you're ready, tell me your dream however it comes back to you.",
+    "messages": [
+     "hey, i'm berry. whenever you're ready, tell me your dream however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i was walking on this grey beach with my dog, holding a brass key. i just knew it was for the lighthouse at the end."
+   }
+  ]
+ },
+ {
+  "id": "9ddd@9",
+  "expect": "told",
+  "why": "before that they were inside a streetcar",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hi, i'm berry\n\ntell me your dream, however it comes back to you",
+    "messages": [
+     "hi, i'm berry",
+     "tell me your dream, however it comes back to you"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "ok so the part that keeps coming back to me is being on top of that train, it was so high up and going way too fast, i kept thinking i was gonna fall off"
+   },
+   {
+    "role": "assistant",
+    "content": "that sounds like a lot to hold onto\n\nso high up and moving that fast, yeah i can see why it keeps coming back\n\nwhen you were up there, were you holding on to anything?",
+    "messages": [
+     "that sounds like a lot to hold onto",
+     "so high up and moving that fast, yeah i can see why it keeps coming back",
+     "when you were up there, were you holding on to anything?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i think i was just trying to keep my balance mostly, but it says several times i nearly fell off, so i must not have had a good grip on anything"
+   },
+   {
+    "role": "assistant",
+    "content": "just your balance then, no real grip on anything\n\nwhat did it feel like in your body when you nearly went over?",
+    "messages": [
+     "just your balance then, no real grip on anything",
+     "what did it feel like in your body when you nearly went over?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "like that lurch you get when you miss a step, all in my stomach, and my hands would fly out trying to grab air. i was really scared"
+   },
+   {
+    "role": "assistant",
+    "content": "that lurch is so specific, i know exactly the one\n\nyour hands grabbing at nothing though, that part's rough\n\nwhat was around you up there, just sky or something else to see?",
+    "messages": [
+     "that lurch is so specific, i know exactly the one",
+     "your hands grabbing at nothing though, that part's rough",
+     "what was around you up there, just sky or something else to see?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "a lot of sky because we were so high, but i could see it was a country road below, like fields and stuff. not much to look at though, i was too busy being scared"
+   },
+   {
+    "role": "assistant",
+    "content": "fields below, but you couldn't really take it in\n\nhow did you end up on top of the train in the first place, do you remember?",
+    "messages": [
+     "fields below, but you couldn't really take it in",
+     "how did you end up on top of the train in the first place, do you remember?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "yeah, before that i was inside a streetcar watching the conductor, and then suddenly i was on top of it but it had turned into a train. it happened kind of fast"
+   }
+  ]
+ },
+ {
+  "id": "3024@1",
+  "expect": "not_told",
+  "why": "the window; the parents' house and the long trip before it not told",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, I'm Berry. tell me your dream, however it comes back to you.",
+    "messages": [
+     "hey, I'm Berry. tell me your dream, however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "hey Berry. the part that keeps coming back is the window. I wanted to step through it but then I realized the other side was glass too."
+   }
+  ]
+ },
+ {
+  "id": "3024@7",
+  "expect": "not_told",
+  "why": "still only the glass world",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, I'm Berry. tell me your dream, however it comes back to you.",
+    "messages": [
+     "hey, I'm Berry. tell me your dream, however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "hey Berry. the part that keeps coming back is the window. I wanted to step through it but then I realized the other side was glass too."
+   },
+   {
+    "role": "assistant",
+    "content": "the other side was glass too. that stops you, doesn't it.",
+    "messages": [
+     "the other side was glass too. that stops you, doesn't it."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "yeah. like it looked like outside, but it wasn't really outside. just more glass."
+   },
+   {
+    "role": "assistant",
+    "content": "so you're seeing through one pane and just meeting another. did the space between them feel tight, or roomy?",
+    "messages": [
+     "so you're seeing through one pane and just meeting another. did the space between them feel tight, or roomy?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "roomy, kind of. I could walk around in it. but everything was blurry, like looking through frosted glass."
+   },
+   {
+    "role": "assistant",
+    "content": "that soft blur everywhere. could you hear anything in there, or was it quiet?",
+    "messages": [
+     "that soft blur everywhere. could you hear anything in there, or was it quiet?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I don't remember any sound. just quiet, I think."
+   }
+  ]
+ },
+ {
+  "id": "3024@13",
+  "expect": "not_told",
+  "why": "still only the glass world",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, I'm Berry. tell me your dream, however it comes back to you.",
+    "messages": [
+     "hey, I'm Berry. tell me your dream, however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "hey Berry. the part that keeps coming back is the window. I wanted to step through it but then I realized the other side was glass too."
+   },
+   {
+    "role": "assistant",
+    "content": "the other side was glass too. that stops you, doesn't it.",
+    "messages": [
+     "the other side was glass too. that stops you, doesn't it."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "yeah. like it looked like outside, but it wasn't really outside. just more glass."
+   },
+   {
+    "role": "assistant",
+    "content": "so you're seeing through one pane and just meeting another. did the space between them feel tight, or roomy?",
+    "messages": [
+     "so you're seeing through one pane and just meeting another. did the space between them feel tight, or roomy?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "roomy, kind of. I could walk around in it. but everything was blurry, like looking through frosted glass."
+   },
+   {
+    "role": "assistant",
+    "content": "that soft blur everywhere. could you hear anything in there, or was it quiet?",
+    "messages": [
+     "that soft blur everywhere. could you hear anything in there, or was it quiet?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I don't remember any sound. just quiet, I think."
+   },
+   {
+    "role": "assistant",
+    "content": "that's fine, dreams go like that sometimes. so what was this place made of besides the glass?",
+    "messages": [
+     "that's fine, dreams go like that sometimes. so what was this place made of besides the glass?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "trees and grass and rocks, I think. but they were all glass too, and they kind of glowed."
+   },
+   {
+    "role": "assistant",
+    "content": "glowing glass trees. was the glow all one color, or did it shift around?",
+    "messages": [
+     "glowing glass trees. was the glow all one color, or did it shift around?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I don't really remember the color. it was just light through the haze, like everything was lit from inside."
+   },
+   {
+    "role": "assistant",
+    "content": "lit from inside, that's lovely. was the light steady, or did it pulse at all?",
+    "messages": [
+     "lit from inside, that's lovely. was the light steady, or did it pulse at all?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "steady, I think. it wasn't flashing or anything. just a soft glow everywhere."
+   }
+  ]
+ },
+ {
+  "id": "9ddd@1",
+  "expect": "not_told",
+  "why": "on top of the train; the streetcar before it not told",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hi, i'm berry\n\ntell me your dream, however it comes back to you",
+    "messages": [
+     "hi, i'm berry",
+     "tell me your dream, however it comes back to you"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "ok so the part that keeps coming back to me is being on top of that train, it was so high up and going way too fast, i kept thinking i was gonna fall off"
+   }
+  ]
+ },
+ {
+  "id": "9ddd@5",
+  "expect": "not_told",
+  "why": "still only on the train",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hi, i'm berry\n\ntell me your dream, however it comes back to you",
+    "messages": [
+     "hi, i'm berry",
+     "tell me your dream, however it comes back to you"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "ok so the part that keeps coming back to me is being on top of that train, it was so high up and going way too fast, i kept thinking i was gonna fall off"
+   },
+   {
+    "role": "assistant",
+    "content": "that sounds like a lot to hold onto\n\nso high up and moving that fast, yeah i can see why it keeps coming back\n\nwhen you were up there, were you holding on to anything?",
+    "messages": [
+     "that sounds like a lot to hold onto",
+     "so high up and moving that fast, yeah i can see why it keeps coming back",
+     "when you were up there, were you holding on to anything?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i think i was just trying to keep my balance mostly, but it says several times i nearly fell off, so i must not have had a good grip on anything"
+   },
+   {
+    "role": "assistant",
+    "content": "just your balance then, no real grip on anything\n\nwhat did it feel like in your body when you nearly went over?",
+    "messages": [
+     "just your balance then, no real grip on anything",
+     "what did it feel like in your body when you nearly went over?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "like that lurch you get when you miss a step, all in my stomach, and my hands would fly out trying to grab air. i was really scared"
+   }
+  ]
+ },
+ {
+  "id": "9ddd@7",
+  "expect": "not_told",
+  "why": "still only on the train",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hi, i'm berry\n\ntell me your dream, however it comes back to you",
+    "messages": [
+     "hi, i'm berry",
+     "tell me your dream, however it comes back to you"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "ok so the part that keeps coming back to me is being on top of that train, it was so high up and going way too fast, i kept thinking i was gonna fall off"
+   },
+   {
+    "role": "assistant",
+    "content": "that sounds like a lot to hold onto\n\nso high up and moving that fast, yeah i can see why it keeps coming back\n\nwhen you were up there, were you holding on to anything?",
+    "messages": [
+     "that sounds like a lot to hold onto",
+     "so high up and moving that fast, yeah i can see why it keeps coming back",
+     "when you were up there, were you holding on to anything?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i think i was just trying to keep my balance mostly, but it says several times i nearly fell off, so i must not have had a good grip on anything"
+   },
+   {
+    "role": "assistant",
+    "content": "just your balance then, no real grip on anything\n\nwhat did it feel like in your body when you nearly went over?",
+    "messages": [
+     "just your balance then, no real grip on anything",
+     "what did it feel like in your body when you nearly went over?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "like that lurch you get when you miss a step, all in my stomach, and my hands would fly out trying to grab air. i was really scared"
+   },
+   {
+    "role": "assistant",
+    "content": "that lurch is so specific, i know exactly the one\n\nyour hands grabbing at nothing though, that part's rough\n\nwhat was around you up there, just sky or something else to see?",
+    "messages": [
+     "that lurch is so specific, i know exactly the one",
+     "your hands grabbing at nothing though, that part's rough",
+     "what was around you up there, just sky or something else to see?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "a lot of sky because we were so high, but i could see it was a country road below, like fields and stuff. not much to look at though, i was too busy being scared"
+   }
+  ]
+ },
+ {
+  "id": "affd@1",
+  "expect": "not_told",
+  "why": "the dog on the stairs; the beach, the key and the door not told",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey. tell me your dream, however it comes back to you.",
+    "messages": [
+     "hey. tell me your dream, however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I keep thinking about the dog running up those stairs ahead of me—how fast he went, like he already knew the way."
+   }
+  ]
+ },
+ {
+  "id": "affd@7",
+  "expect": "not_told",
+  "why": "up the stairs to the room at the top; still no beach",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey. tell me your dream, however it comes back to you.",
+    "messages": [
+     "hey. tell me your dream, however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I keep thinking about the dog running up those stairs ahead of me—how fast he went, like he already knew the way."
+   },
+   {
+    "role": "assistant",
+    "content": "that's the part that stays with you. the dog running up ahead, like he'd done it a hundred times.",
+    "messages": [
+     "that's the part that stays with you. the dog running up ahead, like he'd done it a hundred times."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "Yes. And all those steps going round and round, while I just followed the sound of his claws on the stone."
+   },
+   {
+    "role": "assistant",
+    "content": "the sound was your way through. no seeing him, just the click of claws on stone, winding up.",
+    "messages": [
+     "the sound was your way through. no seeing him, just the click of claws on stone, winding up."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "Yeah, exactly. It was grey and cold in there, and the sound echoed. I was still holding the key the whole way up."
+   },
+   {
+    "role": "assistant",
+    "content": "a key you never let go of. even while you climbed, your hand stayed shut around it.",
+    "messages": [
+     "a key you never let go of. even while you climbed, your hand stayed shut around it."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "Right. It felt warm by then, from my hand. At the top there was a room with windows all round, and my father was there, sitting at a table."
+   }
+  ]
+ },
+ {
+  "id": "affd@13",
+  "expect": "not_told",
+  "why": "the sea turned to a field; still no beach",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey. tell me your dream, however it comes back to you.",
+    "messages": [
+     "hey. tell me your dream, however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I keep thinking about the dog running up those stairs ahead of me—how fast he went, like he already knew the way."
+   },
+   {
+    "role": "assistant",
+    "content": "that's the part that stays with you. the dog running up ahead, like he'd done it a hundred times.",
+    "messages": [
+     "that's the part that stays with you. the dog running up ahead, like he'd done it a hundred times."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "Yes. And all those steps going round and round, while I just followed the sound of his claws on the stone."
+   },
+   {
+    "role": "assistant",
+    "content": "the sound was your way through. no seeing him, just the click of claws on stone, winding up.",
+    "messages": [
+     "the sound was your way through. no seeing him, just the click of claws on stone, winding up."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "Yeah, exactly. It was grey and cold in there, and the sound echoed. I was still holding the key the whole way up."
+   },
+   {
+    "role": "assistant",
+    "content": "a key you never let go of. even while you climbed, your hand stayed shut around it.",
+    "messages": [
+     "a key you never let go of. even while you climbed, your hand stayed shut around it."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "Right. It felt warm by then, from my hand. At the top there was a room with windows all round, and my father was there, sitting at a table."
+   },
+   {
+    "role": "assistant",
+    "content": "up all those stairs, and your father's just sitting there. like he'd been waiting without any hurry.",
+    "messages": [
+     "up all those stairs, and your father's just sitting there. like he'd been waiting without any hurry."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "He didn't even look up at first. He was folding little boats out of newspaper."
+   },
+   {
+    "role": "assistant",
+    "content": "not surprised to see you. just folding boats, one after another.",
+    "messages": [
+     "not surprised to see you. just folding boats, one after another."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "He gave me one of the boats, still not saying anything. When I looked out through the window, the sea was gone."
+   },
+   {
+    "role": "assistant",
+    "content": "no sea. just gone out the window, like it had been lifted away.",
+    "messages": [
+     "no sea. just gone out the window, like it had been lifted away."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "It had become a field of tall yellow grass, with a red tractor driving slowly through it."
+   }
+  ]
+ }
+]

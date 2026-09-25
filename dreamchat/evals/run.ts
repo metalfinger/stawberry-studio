@@ -267,22 +267,23 @@ if (which === 'storyboard') {
     console.log(
       `${family.padEnd(8)} right ${pct(t.right, t.all)}${t.undecided ? `; left to the breakdown (unsure): ${t.undecided}` : ''}`,
     );
-} else if (which === 'ending') {
-  // "How it ended" as the conversation reads it while listening: the goal's own question, on the
-  // conversation cut after one of their messages, against the bar that settles a goal.
+} else if (which === 'ending' || which === 'beginning') {
+  // "How it ended" or "how it began" as the conversation reads it while listening: the goal's own
+  // question, on the conversation cut after one of their messages, against the bar that settles a goal.
   type Case = { id: string; expect: 'told' | 'not_told'; why: string; transcript: Exchange[] };
   const cfg = dreamConfig();
+  const goal = `goal_${which}`;
   const rows = (
     await Promise.all(
-      load<Case[]>('ending').flatMap((c) =>
+      load<Case[]>(which).flatMap((c) =>
         Array.from({ length: times }, async () => {
           const q = bookkeeperQuestions(cfg, c.transcript, undefined, 'listen');
           const call = await callJev(renderTranscript(c.transcript), {
-            goal_ending: q.goal_ending,
+            [goal]: q[goal],
             finished_telling: q.finished_telling,
           });
           const n = (k: string) => (call.answers?.[k]?.type === 'noul' ? call.answers[k].noul : Number.NaN);
-          return { c, error: call.error, told: n('goal_ending'), finished: n('finished_telling') };
+          return { c, error: call.error, told: n(goal), finished: n('finished_telling') };
         }),
       ),
     )
@@ -291,13 +292,13 @@ if (which === 'storyboard') {
   for (const r of rows) {
     const got = r.told >= bar ? 'told' : 'not_told';
     console.log(
-      `${got === r.c.expect ? ' ok ' : 'MISS'} ${r.c.id.padEnd(16)} expect ${r.c.expect.padEnd(8)} ending ${r.told.toFixed(2)}  finished ${r.finished.toFixed(2)}  ${r.c.why}`,
+      `${got === r.c.expect ? ' ok ' : 'MISS'} ${r.c.id.padEnd(16)} expect ${r.c.expect.padEnd(8)} ${which} ${r.told.toFixed(2)}  finished ${r.finished.toFixed(2)}  ${r.c.why}`,
     );
   }
   const right = rows.filter((r) => (r.told >= bar ? 'told' : 'not_told') === r.c.expect).length;
   const early = rows.filter((r) => r.c.expect === 'not_told' && r.told >= bar).length;
   const fin = rows.filter((r) => (r.finished >= FINISHED_BAR ? 'told' : 'not_told') === r.c.expect).length;
-  console.log(`\nending right ${pct(right, rows.length)}; read as ended mid-dream: ${early}`);
+  console.log(`\n${which} right ${pct(right, rows.length)}; read as told when it was not: ${early}`);
   console.log(`finished_telling right ${pct(fin, rows.length)} (bar ${FINISHED_BAR})`);
 } else if (which === 'goes-on') {
   // "The dream goes on past the retelling?", asked beside how they answered the retelling, on
@@ -391,7 +392,9 @@ if (which === 'storyboard') {
   // own planning (planShots: plans, their facts, each shot's "storyboard complete?", and planning
   // again what is held), and how often each moment's shot then passes.
   //   bun run evals/run.ts planner <source> [scene] [--times 3]
-  const [source, scene] = process.argv.slice(3).filter((x, i, all) => !x.startsWith('--') && !all[i - 1]?.startsWith('--'));
+  const [source, scene] = process.argv
+    .slice(3)
+    .filter((x, i, all) => !x.startsWith('--') && !all[i - 1]?.startsWith('--'));
   const s = JSON.parse(readFileSync(join(import.meta.dir, 'sources', `${source}.json`), 'utf8')) as {
     draft: { breakdown: Breakdown };
     style: StyleOption;

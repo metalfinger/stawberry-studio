@@ -808,6 +808,8 @@ export function dreamerShot(
   name: (id: string) => string,
   /** What they look at that the plan does not hold (a field beyond the windscreen): named, ahead. */
   beyond?: string,
+  /** Who the moment shows, to be in the picture: the driver beside them in the cab (25 Sep). */
+  want: string[] = [],
 ): { eye: Eye; text: string; inPicture: string[] } | null {
   const me = plan.spots.find((s) => s.id === dreamer);
   if (!me) return null;
@@ -841,8 +843,13 @@ export function dreamerShot(
     : null;
   const near = plan.spots.filter((s) => s.id !== dreamer && s.id !== target?.id && isPerson(s) && !s.many);
   let best: { eye: Eye; score: number } | undefined;
+  // Who the moment shows besides what it looks at: in the picture, where the view can hold them. Looking
+  // straight ahead from the tractor's seat left out the driver it was about (lighthouse, 25 Sep).
+  const wanted = want.filter((id) => id !== dreamer && id !== target?.id && plan.spots.some((s) => s.id === id));
+  const shows = (r: ReturnType<typeof render>) =>
+    wanted.length ? wanted.filter((id) => (r.seen.get(id)?.visible ?? 0) >= 192 * 108 * 0.002).length / wanted.length : 0;
   for (const [lean, off, how] of target ? leans : leans.slice(0, 1))
-    for (const aim of target ? [0, -8, 8, -15, 15, -22, 22] : [0]) {
+    for (const aim of target ? [0, -8, 8, -15, 15, -22, 22] : wanted.length ? [0, -15, 15, -30, 30, -45, 45] : [0]) {
       const at = { x: me.x + off.x, y: me.y + off.y };
       const d = turn(target ? unit({ x: target.x - at.x, y: target.y - at.y }) : own, aim);
       // Tilted to what they look at when it is well above or below them (over 20 degrees): looking
@@ -853,7 +860,10 @@ export function dreamerShot(
         : PITCH;
       const eye: Eye = { at, d, height, pitch: Math.abs(pitch) < 0.35 ? PITCH : pitch, ...(lean ? { lean } : {}) };
       if (!target || !heart) {
-        best = { eye, score: 0 };
+        // Nothing it looks at on the plan: straight ahead, turned only as far as it takes to show who
+        // the moment shows.
+        const score = wanted.length ? 2 * shows(render(solids, eye, 192, 108)) - Math.abs(aim) * 0.01 : 0;
+        if (!best || score > best.score + 1e-9) best = { eye, score };
         continue;
       }
       const r = render(solids, eye, 192, 108);
@@ -881,7 +891,8 @@ export function dreamerShot(
         1.5 * big -
         3 * Math.max(0, close - 0.12) -
         how -
-        Math.abs(aim) * 0.01;
+        Math.abs(aim) * 0.01 +
+        shows(r);
       if (!best || score > best.score + 1e-9) best = { eye, score };
     }
   if (!best) return null;
