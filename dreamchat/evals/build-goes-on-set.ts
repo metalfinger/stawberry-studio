@@ -24,8 +24,15 @@ const GOES_ON: Record<string, string> = {
   '20bd@43': 'the drive over the bridge and back: what happened next',
 };
 
+// The saved dreams it was labelled from (25 Sep), by the end of their id: a dream saved since is
+// not labelled.
+const FROM = new Set(
+  '6a4d 4cf3 fa9a 3024 e564 279d ded5 502a 6d6a bca7 402f 96bd e16f 5063 20bd 0199 55eb bbba e11a 927a 9ddd 5454 a446'.split(
+    ' ',
+  ),
+);
 const cases: Case[] = [];
-for (const f of readdirSync(STATE).filter((f) => /^dream-.*\.json$/.test(f))) {
+for (const f of readdirSync(STATE).filter((f) => /^dream-.*\.json$/.test(f) && FROM.has(f.slice(-9, -5)))) {
   const s = JSON.parse(readFileSync(join(STATE, f), 'utf8')) as Session;
   for (const t of s.turns ?? []) {
     if (!['retell', 'take_correction', 'retell_check'].includes(t.move.kind)) continue;
