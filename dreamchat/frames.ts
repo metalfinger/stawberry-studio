@@ -7,7 +7,7 @@
 // in view is said out loud, and the style tokens are quoted word for word.
 import { type ContinuityPlan, type PlanRef, pictureName } from './continuity';
 import type { Breakdown, Moment, StyleOption } from './producer';
-import { isWhole, momentLabel, oneColour, VAGUE, WHOLE } from './producer';
+import { BECOMING, isWhole, momentLabel, oneColour, VAGUE, WHOLE } from './producer';
 
 // Kept here too for older imports.
 export { isWhole, WHOLE };
@@ -40,10 +40,13 @@ export function turnedInto(frame: Item): Set<string> {
 }
 
 /** A thing named with its article: "turned into roller coaster" read as broken English. */
-export const aNoun = (x: string) =>
-  /^(a|an|the|some|this|that|his|her|their|its|one|two|three|several|many|[0-9])\b/i.test(x.trim())
-    ? x.trim()
-    : `${/^[aeiou]/i.test(x.trim()) ? 'an' : 'a'} ${x.trim()}`;
+// "turned into a transformed into a grey heron": what it is now, never the turning (26 Sep).
+export const aNoun = (raw: string) => {
+  const x = raw.replace(BECOMING, '').trim();
+  return /^(a|an|the|some|this|that|his|her|their|its|one|two|three|several|many|[0-9])\b/i.test(x)
+    ? x
+    : `${/^[aeiou]/i.test(x) ? 'an' : 'a'} ${x}`;
+};
 
 /** The frame's shape in words, as sent in its settings: the model's own examples say both. */
 const SHAPE_WORDS: Record<Shape, string> = {

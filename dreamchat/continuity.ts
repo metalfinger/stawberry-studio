@@ -315,7 +315,11 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
     // ghost of her standing somewhere. And only a change: recorded where its subject is first shown,
     // it is how they look, and its in-between picture changes nothing (five of them were drawn for
     // Meads, from a breakdown judged before this was known, 25 Sep).
-    leaves: (m.leaves ?? []).filter((l) => !POSITION.test(l.what.trim()) && hasBefore(b, m.id, l.who)),
+    // A crowd has no sketch to draw a change on: its new look is said in the moments' words (the
+    // faceless students' in-between picture had nothing to edit, 26 Sep).
+    leaves: (m.leaves ?? []).filter(
+      (l) => !POSITION.test(l.what.trim()) && hasBefore(b, m.id, l.who) && !b.people.find((p) => p.id === l.who)?.extras,
+    ),
     // Nor is it carried: a first look written into the moments after it was held as "carried in
     // words only" (Meads m7, the convertible's look, 25 Sep).
     states: (m.states ?? []).filter((st) => !st.since || hasBefore(b, st.since, st.who)),

@@ -244,6 +244,13 @@ describe('someone who turns into someone the dream also lists', () => {
     expect(b.scenes[0].moments[1].leaves[0].now).toBe('a tall grey heron in a red cardigan');
   });
 
+  test('is one person too when the change is said as a turning of one part, before Jev reads it', () => {
+    const b = dream();
+    b.scenes[0].moments[1].leaves = [{ who: 'p2', what: 'body', now: 'transformed into a grey heron with red cardigan' }];
+    expect(mergeBecomings(b)).toHaveLength(1);
+    expect(b.scenes[0].moments[1].leaves[0].now).toBe('a grey heron with red cardigan');
+  });
+
   test('is two when both are in one moment', () => {
     const b = dream(true);
     expect(mergeBecomings(b)).toEqual([]);

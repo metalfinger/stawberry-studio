@@ -1116,7 +1116,8 @@ export function normalizeBreakdown(raw: string): { breakdown: Breakdown; notes: 
 }
 
 /** "becomes a tall grey heron" is "a tall grey heron": what it is now, not the turning. */
-const BECOMING = /^\s*(?:it\s+|she\s+|he\s+|they\s+)?(?:has\s+|have\s+)?(?:becomes?|became|turns?\s+into|turned\s+into|changes?\s+into|changed\s+into|is\s+now|are\s+now|now)\s+/i;
+export const BECOMING =
+  /^\s*(?:it\s+|she\s+|he\s+|they\s+)?(?:has\s+|have\s+|is\s+|are\s+)?(?:becomes?|became|turns?\s+into|turned\s+into|changes?\s+into|changed\s+into|transforms?\s+into|transformed\s+into|morphs?\s+into|morphed\s+into|is\s+now|are\s+now|now)\s+/i;
 
 /**
  * Someone who turns into someone or something the dream also lists as a person of its own: one
@@ -1126,14 +1127,20 @@ const BECOMING = /^\s*(?:it\s+|she\s+|he\s+|they\s+)?(?:has\s+|have\s+)?(?:becom
  */
 export function mergeBecomings(b: Breakdown): string[] {
   const notes: string[] = [];
+  // Said as a turning ("transformed into a grey heron"), it is a turning into something else: the
+  // whole of them, whatever part it names ("body").
+  const turned = new Set<object>();
   for (const m of moments(b))
     for (const l of m.leaves ?? []) {
       const bare = l.now.replace(BECOMING, '');
-      if (bare !== l.now) l.now = bare;
+      if (bare !== l.now) {
+        l.now = bare;
+        turned.add(l);
+      }
     }
   for (const m of moments(b))
     for (const l of m.leaves ?? []) {
-      if (!(l.whole ?? isWhole(l))) continue;
+      if (!(l.whole ?? (isWhole(l) || turned.has(l)))) continue;
       const who = b.people.find((p) => p.id === l.who);
       if (!who) continue;
       const others = b.people.filter((p) => p.id !== l.who && !p.is_dreamer && !p.extras);

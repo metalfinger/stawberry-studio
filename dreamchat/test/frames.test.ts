@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { CutPlan } from '../continuity';
-import { framePrompt, writingIn } from '../frames';
+import { aNoun, framePrompt, writingIn } from '../frames';
 import { oneColour, VAGUE } from '../producer';
 import { asInstruction } from '../session';
 import {
@@ -437,6 +437,12 @@ describe('a group of people', () => {
     // What they are, not what is said of them (night market, 26 Sep).
     const seller = { ...dog, name: 'the old man', fields: { identity: { value: 'an old man selling fish at a stall', said: true } } };
     expect(sheetPrompt(seller, style)).toContain('one person only');
+  });
+
+  test('what something turned into is named as what it is now', () => {
+    expect(aNoun('transformed into a grey heron')).toBe('a grey heron');
+    expect(aNoun('becomes owl')).toBe('an owl');
+    expect(aNoun('roller coaster')).toBe('a roller coaster');
   });
 
   test("a place is sketched without the story's things, which have pictures of their own", () => {
