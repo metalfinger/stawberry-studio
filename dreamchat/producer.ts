@@ -1110,8 +1110,48 @@ export function normalizeBreakdown(raw: string): { breakdown: Breakdown; notes: 
       .map((x) => x.slice(0, 240))
       .slice(0, 12),
   };
+  notes.push(...mergeBecomings(breakdown));
   notes.push(...completeViews(breakdown));
   return { breakdown, notes };
+}
+
+/** "becomes a tall grey heron" is "a tall grey heron": what it is now, not the turning. */
+const BECOMING = /^\s*(?:it\s+|she\s+|he\s+|they\s+)?(?:has\s+|have\s+)?(?:becomes?|became|turns?\s+into|turned\s+into|changes?\s+into|changed\s+into|is\s+now|are\s+now|now)\s+/i;
+
+/**
+ * Someone who turns into someone or something the dream also lists as a person of its own: one
+ * individual, not two. "Mrs Okafor becomes a tall grey heron", with "the heron" a person too, drew the
+ * heron beside her change and in the classroom before it (heron dream, 26 Sep). The later moments
+ * show the one who changed; the other is dropped. A change's "now" says only what it is.
+ */
+export function mergeBecomings(b: Breakdown): string[] {
+  const notes: string[] = [];
+  for (const m of moments(b))
+    for (const l of m.leaves ?? []) {
+      const bare = l.now.replace(BECOMING, '');
+      if (bare !== l.now) l.now = bare;
+    }
+  for (const m of moments(b))
+    for (const l of m.leaves ?? []) {
+      if (!(l.whole ?? isWhole(l))) continue;
+      const who = b.people.find((p) => p.id === l.who);
+      if (!who) continue;
+      const others = b.people.filter((p) => p.id !== l.who && !p.is_dreamer && !p.extras);
+      const as = others.find((p) => {
+        const head = p.name.toLowerCase().replace(/[^a-z\s]/g, ' ').trim().split(/\s+/).at(-1);
+        return !!head && head.length > 2 && new RegExp(`\\b${head}s?\\b`, 'i').test(l.now);
+      });
+      if (!as) continue;
+      // Both in one moment are two: someone watching the heron that the teacher is not.
+      if (moments(b).some((x) => x.visible.includes(as.id) && x.visible.includes(who.id))) continue;
+      for (const x of moments(b)) {
+        x.visible = [...new Set(x.visible.map((id) => (id === as.id ? who.id : id)))];
+        for (const y of x.leaves ?? []) if (y.who === as.id) y.who = who.id;
+      }
+      b.people = b.people.filter((p) => p.id !== as.id);
+      notes.push(`${as.name} is what ${who.name} turns into: one person, not two`);
+    }
+  return notes;
 }
 
 export function normalizeStyles(raw: unknown): StyleOption[] {

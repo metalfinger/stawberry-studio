@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { rawPlanBy } from '../continuity';
-import { addChanges, type Breakdown, completeViews, normalizeBreakdown, readBlocking, VAGUE } from '../producer';
+import { addChanges, type Breakdown, completeViews, mergeBecomings, normalizeBreakdown, readBlocking, VAGUE } from '../producer';
 
 const detail = (value: string | null, said = false) => ({ value, said });
 const person = (id: string, name: string, identity: string) => ({
@@ -209,6 +209,45 @@ describe('the floor plan a model gives', () => {
     expect(plan({ id: 't1', held_by: 'p2' })?.spots.find((s) => s.id === 't1')).toMatchObject({ x: 4.8, y: 1.5, heldBy: 'p2' });
     // Held by nobody in the plan, it still has no spot, and the scene no plan.
     expect(plan({ id: 't1', held_by: 'p9' })).toBeUndefined();
+  });
+});
+
+describe('someone who turns into someone the dream also lists', () => {
+  const dream = (heronWithHer = false): Breakdown =>
+    ({
+      people: [
+        { ...person('p1', 'you', 'the dreamer'), is_dreamer: true },
+        person('p2', 'Mrs Okafor', 'the maths teacher'),
+        person('p3', 'the heron', 'a tall grey heron'),
+      ],
+      scenes: [
+        {
+          id: 's1',
+          moments: [
+            { ...moment('m1', 'Mrs Okafor writes on the board.'), visible: ['p2'] },
+            {
+              ...moment('m2', 'She turns round, a heron now.'),
+              visible: heronWithHer ? ['p2', 'p3'] : ['p3'],
+              leaves: [{ who: 'p2', what: 'entire body', now: 'becomes a tall grey heron in a red cardigan', whole: true }],
+            },
+            { ...moment('m3', 'The heron flies out of the window.'), visible: ['p1', 'p3'] },
+          ],
+        },
+      ],
+    }) as unknown as Breakdown;
+
+  test('is one person: the later moments show the one who changed, and the change says what they are now', () => {
+    const b = dream();
+    expect(mergeBecomings(b)).toEqual(['the heron is what Mrs Okafor turns into: one person, not two']);
+    expect(b.people.map((p) => p.id)).toEqual(['p1', 'p2']);
+    expect(b.scenes[0].moments.map((m) => m.visible)).toEqual([['p2'], ['p2'], ['p1', 'p2']]);
+    expect(b.scenes[0].moments[1].leaves[0].now).toBe('a tall grey heron in a red cardigan');
+  });
+
+  test('is two when both are in one moment', () => {
+    const b = dream(true);
+    expect(mergeBecomings(b)).toEqual([]);
+    expect(b.people).toHaveLength(3);
   });
 });
 
