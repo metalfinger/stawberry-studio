@@ -89,6 +89,7 @@ Other rules:
 - **Staging.** A scene places its people once, left to right, from the first picture that shows
   two or more of them; newcomers stand to their right. Every later picture of the scene is told
   the order and checked for it, so the line between them is never crossed. A jump starts it again.
+  With a floor plan, the previs places everyone instead (below).
 - **Medium.** Every style says what the pictures are made as (a photograph when it names none),
   every prompt states it, and each moment is checked for being made the same way as the picture
   it follows.
@@ -214,6 +215,61 @@ Each kind of picture is asked what matters for it:
   held only when leaving one of its lines out lowers the reading by 0.08 or more. The finding
   names that line, so a rewording knows where to look.
 
+### Every shot on a floor plan
+
+The image model draws people and things well and a new camera badly. Told in words where
+everything was from the dreamer's seat, it drew the theater from the aisle four times; given a
+layout to consult, it kept who was left and right but moved the roller coaster out onto the
+floor. So each scene gets a floor plan, and every new camera is placed on it and rendered as a
+previs before anything is drawn (`blocking.ts`, `previs.ts`).
+
+- **The floor plan** (`blockScenes`, made with the model thinking) holds:
+  - where everyone and everything is, in metres, with their sizes and how they are (sitting,
+    standing);
+  - the place's own fixtures (an autoclave, a stove) as sized things with names, not a wall;
+  - who faces whom (people talking face each other);
+  - where people move to at each moment (she walks to the far end, then comes back).
+
+  Every id it names is checked against the dream.
+- **It is planned during the chat.** As soon as the look is chosen, the floor plans, every
+  camera, each moment's previs and its director of photography's brief are made in the
+  background while the chat goes on to the sketches (58-144 s that nobody waits for). The panel
+  shows each moment's planned shot.
+- **A script supervisor** reads every moment for lasting changes to how someone looks that the
+  breakdown missed (a head turned to ice), and carries each into every later moment that shows
+  them. Missed, the melting was told to keep her face.
+- **Each cut goes the way that suits it:**
+
+| The cut | Made from |
+|---|---|
+| The same people in the same view as a picture before | an edit of that picture, keeping its framing |
+| Anything else: a new angle, a reverse, the dreamer's own eyes, someone in or out of view | its previs, as the picture made real |
+| No one and nothing to place (a place alone) | words and the place's sketch |
+
+- **Cameras.**
+  - **Through the dreamer's eyes:** at their eyes on their seat, leaning and turning a little
+    where someone close would cover what they look at.
+  - **From outside:** the camera faces what the moment looks at, past the people it shows. It
+    stands as far off as the shot size needs, with a lens to match, and never goes through a
+    wall.
+  - **Two people facing each other:** a side two-shot.
+  - **Every camera:** a small search keeps the view that hides nobody.
+- **The previs** is grey mannequins and blocks, each labelled. People are lighter than things.
+  What someone sits on is drawn as a seat and a back, and a sitting crowd sits in rows of seats.
+- **Its words are read off the same render,** so picture and words agree. They give:
+  - who is where across the picture, and how much of the frame each fills;
+  - where the frame cuts a person, and how each is turned;
+  - who shares a seat, and what stands right beside what;
+  - what is out of the picture, and where.
+
+  A lone subject is named, never "them", and nobody else is in the picture. Told only where
+  things were, the model kept positions and made up how big they were.
+- **The previs says where things are; other pictures say how they look.** An earlier picture of
+  the place is "the same place", and the place's sketch gives only its materials.
+
+On the ice-head dream all five moments came out in one room, with the autoclave where the plan
+put it: three at the first take, two at the second.
+
 ### How pictures are prompted
 
 What Nano Banana Pro follows, from its makers' guidance, from the first Strawberry Studio's
@@ -324,6 +380,9 @@ It writes the full transcripts to `runs/`.
 | `strawberry.ts` | Writes the production into Strawberry through its JSON CLI |
 | `sheets.ts` | Profiles, sketch prompts, and the engine calls that draw, approve and select them |
 | `continuity.ts` | The continuity plan: what each moment is drawn from, and the in-between references it needs. Pure |
+| `blocking.ts` | A scene's floor plan: spots, sizes, fixtures, who faces whom, moves by moment |
+| `previs.ts` | Renders a camera's view of a floor plan as a labelled grey previs, finds each camera, and reads what it sees off the render |
+| `talk.ts` | A terminal client for the server: start, message, show and resume a conversation |
 | `frames.ts` | The moments and in-between references: their prompts, with the sketches and earlier moments as references |
 | `judge.py` | Bridge to the engine's remote judge, which checks a take against its declared facts |
 | `boot.ts` | Loads the keys before any module reads them |
