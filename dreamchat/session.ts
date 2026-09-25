@@ -1776,7 +1776,14 @@ export class SessionStore {
    * Start (or redraw) one frame. When the person corrected the moment, its revised fields are
    * patched onto the cut first, sourced to their words.
    */
-  private async startFrame(s: Session, frame: Item, turn: number, before?: Item['fields']): Promise<void> {
+  private async startFrame(
+    s: Session,
+    frame: Item,
+    turn: number,
+    before?: Item['fields'],
+    /** Its words before any rewording on this attempt, carried through a planning again. */
+    told?: { fields: Item['fields']; reworded?: string[] },
+  ): Promise<void> {
     frame.startedAtTurn = turn;
     if (!this.deps.sheets || !s.style || !s.build) {
       Object.assign(frame, {
@@ -1855,7 +1862,7 @@ export class SessionStore {
       frame.overrode = checked.reasons.map((r) => `storyboard: ${r}`);
     else if (view && checked && checked.view === view && !checked.ok) {
       // Planned once more, told what was found; kept only if the shot then passes, and drawn from it.
-      if (await this.replanForHold(s, frame, checked)) return this.startFrame(s, frame, turn, before);
+      if (await this.replanForHold(s, frame, checked)) return this.startFrame(s, frame, turn, before, told);
       // Planned again and still held: left undrawn, said so, and what follows is drawn without it.
       // Held, it held up every moment after it: the stairs held the tiny room, the drive and the
       // balloons (Meads, 25 Sep).
@@ -1907,8 +1914,14 @@ export class SessionStore {
       findings = await this.gateFindings(s, frame, built.prompt, built.references, inView);
     }
     // What only its words got wrong is put right in words first, and read again: twice at most.
+    // Never what is at odds only on the line that says what the camera sees: that is the plan's,
+    // and a rewording told to settle it walked "a third person" in between the dreamer, their
+    // grandfather and the red door (snow train, 26 Sep).
+    const wordsBefore = told?.fields ?? structuredClone(frame.fields);
+    const rewordedBefore = told ? told.reworded : frame.reworded;
     for (let pass = 0; pass < 2; pass++) {
       if (!findings.length || !this.deps.reword || !findings.every((f) => WORDING.test(f))) break;
+      if (findings.every((f) => f.includes('around: "What the camera sees'))) break;
       const people = s.draft?.breakdown?.people ?? [];
       const named = (p: (typeof people)[number]) => (p.is_dreamer ? 'the dreamer' : pictureName(p.name));
       const cast = {
@@ -1933,7 +1946,7 @@ export class SessionStore {
       findings = [];
     }
     if (onCamera.length && view && findings.length && (await this.replanForHold(s, frame, { view, reasons: onCamera })))
-      return this.startFrame(s, frame, turn, before);
+      return this.startFrame(s, frame, turn, before, { fields: wordsBefore, reworded: rewordedBefore });
     if (findings.length) {
       // Reworded, and planned again where its camera was at odds, and still held: left undrawn, and
       // what follows is drawn without it. Held, it held up every moment after it: the night market's
@@ -1943,6 +1956,14 @@ export class SessionStore {
       if (tried && this.deps.block && givesWay(findings)) {
         frame.overrode = [...(frame.overrode ?? []), ...findings];
         findings = [];
+        // Drawn from its words as told: a rewording the gate still held is no better, and one lost
+        // the grandfather's nod at the door (snow train, 26 Sep).
+        if (JSON.stringify(frame.fields) !== JSON.stringify(wordsBefore)) {
+          frame.fields = wordsBefore;
+          frame.reworded = rewordedBefore;
+          await this.keepWords(s, frame);
+          built = framePrompt(frame, s.build.items, s.style, this.plannedInputs(s, frame), layout);
+        }
       } else if (tried && this.deps.block) {
         Object.assign(frame, {
           status: 'failed',

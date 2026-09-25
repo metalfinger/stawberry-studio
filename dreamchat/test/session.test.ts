@@ -760,6 +760,23 @@ describe('a whole conversation', () => {
     expect(tried.framesStarted.map((f) => f.id)).toEqual(['m1']);
     const m1t = tried.store.get(tried.id)!.build!.frames!.find((f) => f.id === 'm1')!;
     expect(m1t.overrode?.[0]).toStartWith('its instructions may contradict each other (0.90)');
+    // Reworded and still held, it is drawn from its words as told: a rewording the gate still held
+    // walked a third person into the snow (snow train, 26 Sep).
+    const stubborn: StoreDeps['gate'] = async (state, questions) =>
+      gate(state.startsWith('One picture from the dream') ? state.replace(/REWORDED/g, 'still') : state, questions);
+    const kept = await toTheMoments(undefined, {
+      gate: stubborn,
+      block,
+      reword: async (_prompt, _findings, fields) => ({
+        ...fields,
+        action: { value: 'REWORDED: a third person walks in', said: false },
+      }),
+    });
+    expect(kept.framesStarted.map((f) => f.id)).toEqual(['m1']);
+    expect(kept.framesStarted[0].prompt).not.toContain('a third person');
+    const m1k = kept.store.get(kept.id)!.build!.frames!.find((f) => f.id === 'm1')!;
+    expect(m1k.reworded).toBeUndefined();
+    expect(m1k.overrode?.length).toBeGreaterThan(0);
     process.env.DREAMCHAT_HELD = 'fail';
     try {
       const left = await toTheMoments(undefined, { gate, block });
