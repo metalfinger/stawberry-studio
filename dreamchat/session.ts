@@ -908,11 +908,13 @@ const unclearOnly = (f: string) => f.startsWith('what it shows is not clear enou
  * What a moment was held for that, once it has been planned again and reworded, gives way to its
  * picture. Of eight moments drawn although these still held them, five came out right, the cab and
  * the window among them (lighthouse, 26 Sep); left undrawn, all eight were lost. A moment held for
- * anything else (drawn twice, its images, no reading at all) is still left undrawn.
+ * anything else (drawn twice, no reading at all) is still left undrawn. Unsure what to take from
+ * each image gives way too, not yet measured on pictures: the grandfather handing over the
+ * suitcase (0.54) was lost for it (snow train, 26 Sep), and a lost moment is never right.
  * DREAMCHAT_HELD=fail leaves every moment still held undrawn, as before.
  */
 const GIVES_WAY =
-  /^(storyboard: |its instructions may contradict each other|what it shows is not clear enough to draw)/;
+  /^(storyboard: |its instructions may contradict each other|what it shows is not clear enough to draw|what to take from each image is not clear enough)/;
 const givesWay = (findings: string[]) =>
   process.env.DREAMCHAT_HELD !== 'fail' && findings.length > 0 && findings.every((f) => GIVES_WAY.test(f));
 
