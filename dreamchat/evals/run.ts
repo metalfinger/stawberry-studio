@@ -14,8 +14,10 @@ import { dreamConfig } from '../dream';
 import { bookkeeperQuestions, callJev, type Exchange, renderTranscript, verdictQuestions } from '../jev';
 import { FINISHED_BAR, GOES_ON_BAR } from '../lib';
 import { changeQuestions, crowdQuestions, KIND_BARS } from '../ground';
-import { PLAN_BARS, planQuestions } from '../planfacts';
-import type { Breakdown, Moment } from '../producer';
+import { calledIn, planContinuity } from '../continuity';
+import { PLAN_BARS, planFacts, planQuestions } from '../planfacts';
+import { blockScenes, type Breakdown, type Moment } from '../producer';
+import { around, storyboardCheck } from '../session';
 import { askFacts, CLOSE, decide, STORYBOARD } from '../stages';
 
 void loadedKeys;
@@ -385,7 +387,50 @@ if (which === 'storyboard') {
     }
   }
   console.log(`\npictures right ${pct(right, pics)}; redrawn for nothing: ${redrawn}; wrong ones missed: ${missed}`);
+} else if (which === 'planner') {
+  // The floor planner on one scene of a frozen dream: planned afresh N times, each plan's moments
+  // put through "storyboard complete?" as the harness would, so a change to the planner's words is
+  // measured by how often its shots pass.
+  //   bun run evals/run.ts planner <source> <scene> [--times 3]
+  const [source, scene] = process.argv.slice(3);
+  const s = JSON.parse(readFileSync(join(import.meta.dir, 'sources', `${source}.json`), 'utf8')) as {
+    draft: { breakdown: Breakdown };
+  };
+  const b = structuredClone(s.draft.breakdown);
+  for (const sc of b.scenes) if (sc.id === scene) delete sc.blocking;
+  const runs = await Promise.all(
+    Array.from({ length: times }, async () => {
+      const planned = (await blockScenes(b, { only: [scene] })).breakdown;
+      const facts = (await planFacts(callJev, planned, [scene])).breakdown;
+      const plan = planContinuity(facts);
+      const sc = facts.scenes.find((x) => x.id === scene)!;
+      const dreamer = facts.people.find((p) => p.is_dreamer)?.id;
+      return Promise.all(
+        sc.moments.map(async (m) => {
+          const c = plan.cuts.find((x) => x.id === m.id);
+          if (!sc.blocking || !c?.view) return { m: m.id, ok: false, why: sc.blocking ? 'no view' : 'no plan' };
+          const called = calledIn(facts, c);
+          const r = await storyboardCheck(
+            callJev,
+            m,
+            c.view,
+            called,
+            dreamer,
+            around(facts, c, m, called, dreamer),
+            c.framing ?? [],
+          );
+          return { m: m.id, ok: r.ok, why: r.reasons.join('; ').slice(0, 140) };
+        }),
+      );
+    }),
+  );
+  const ids = [...new Set(runs.flat().map((r) => r.m))];
+  for (const id of ids) {
+    const rs = runs.flat().filter((r) => r.m === id);
+    console.log(`${id}: passes ${pct(rs.filter((r) => r.ok).length, rs.length)}`);
+    for (const r of rs.filter((x) => !x.ok)) console.log(`   ${r.why}`);
+  }
 } else {
-  console.error('usage: bun run evals/run.ts storyboard|plan-facts|kinds|ending|goes-on|verdicts [--times 2]');
+  console.error('usage: bun run evals/run.ts storyboard|plan-facts|kinds|ending|goes-on|verdicts|planner [--times 2]');
   process.exit(1);
 }

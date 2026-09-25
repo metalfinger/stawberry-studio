@@ -562,7 +562,7 @@ export function around(
  * the dream tells it with its shot as the previs renders it, one moment at a time and never the
  * whole conversation, and code decides from the answers. Each decision is logged with its facts.
  */
-async function storyboardCheck(
+export async function storyboardCheck(
   jev: JevFn,
   m: Moment,
   view: string,
