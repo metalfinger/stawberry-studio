@@ -46,6 +46,7 @@ import {
   addChanges,
   type Breakdown,
   type Change,
+  type Moment,
   callProducer,
   type Detail,
   moments,
@@ -59,7 +60,8 @@ import {
 } from './producer';
 import { type ContinuityPlan, type Criterion, drawOrder, pictureName, planContinuity, seenIn, shotPlan } from './continuity';
 import type { Blocking } from './blocking';
-import { inSession } from './jevlog';
+import { atSite, inSession, recordJev } from './jevlog';
+import { decide, factQuestions, type Reading, STORYBOARD } from './stages';
 import { previsImage } from './previs';
 import {
   buildFrames,
@@ -219,6 +221,8 @@ export type Prep = {
   previs: Record<string, string>;
   /** Lasting changes to how someone looks the breakdown missed, found then and written into it. */
   changes?: Change[];
+  /** Each moment's "storyboard complete?": Jev's facts on its shot against the moment, and code's decision. */
+  storyboard?: Record<string, { ok: boolean; view: string; readings: Reading[]; reasons: string[] }>;
   /** How long the planning took. */
   ms: number;
 };
@@ -248,7 +252,14 @@ const fixtureName = (b: Breakdown, id: string) =>
 export async function planShots(
   b: Breakdown,
   style: StyleOption,
-  deps: { block?: StoreDeps['block']; shot?: StoreDeps['shot']; supervise?: StoreDeps['supervise']; dir?: string },
+  deps: {
+    block?: StoreDeps['block'];
+    shot?: StoreDeps['shot'];
+    supervise?: StoreDeps['supervise'];
+    /** Jev, for each moment's "storyboard complete?" on its previs, before anything is paid for. */
+    jev?: JevFn;
+    dir?: string;
+  },
 ): Promise<Prep> {
   const t0 = Date.now();
   const draft: Breakdown = structuredClone(b);
@@ -294,6 +305,7 @@ export async function planShots(
             .catch(() => null);
           if (text) prep.shots[c.id] = { text, view: c.view! };
         }
+        if (deps.jev && m) (prep.storyboard ??= {})[c.id] = await storyboardCheck(deps.jev, m, c.view!, called, dreamer);
       }),
   );
   prep.ms = Date.now() - t0;
@@ -342,6 +354,47 @@ export function reconcileGhosts(plan: ContinuityPlan, frames: Item[]): Continuit
       refs: c.refs.map((r) => (r.kind === 'ghost' ? { ...r, id: to(r.id) } : r)),
     })),
   };
+}
+
+/**
+ * "Storyboard complete?" for one moment, the previs-to-prompt transition: Jev compares the moment as
+ * the dream tells it with its shot as the previs renders it, one moment at a time and never the
+ * whole conversation, and code decides from the answers. Each decision is logged with its facts.
+ */
+async function storyboardCheck(
+  jev: JevFn,
+  m: Moment,
+  view: string,
+  called: (id: string) => string,
+  dreamer: string | undefined,
+): Promise<{ ok: boolean; view: string; readings: Reading[]; reasons: string[] }> {
+  const state = JSON.stringify(
+    {
+      moment: {
+        action: m.action,
+        ...(m.visual_point ? { must_show: m.visual_point } : {}),
+        ...(m.dream ? { dream: m.dream } : {}),
+        seen: m.eyes === 'dreamer' ? "through the dreamer's own eyes" : 'from outside',
+        ...(m.looks_at ? { looks_at: m.looks_at } : {}),
+        in_it: [...m.visible.filter((id) => !(m.eyes === 'dreamer' && id === dreamer)), ...m.things].map(called),
+      },
+      shot: view,
+    },
+    null,
+    1,
+  );
+  const call = await atSite('storyboard', () => jev(state, factQuestions(STORYBOARD, m.id)));
+  const { ok, readings, reasons } = decide(STORYBOARD, m.id, call.answers);
+  recordJev({
+    kind: 'transition',
+    stage: STORYBOARD.from,
+    to: ok ? STORYBOARD.to : STORYBOARD.from,
+    moment: m.id,
+    facts: readings,
+    decision: ok ? 'cleared' : 'held',
+    reason: ok ? 'every fact passed its bar' : reasons.join('; '),
+  });
+  return { ok, view, readings, reasons };
 }
 
 /** The shots planned in the background, kept on the conversation if they are for this dream. */
@@ -1226,6 +1279,7 @@ export class SessionStore {
       block: this.deps.block,
       shot: this.deps.shot,
       supervise: this.deps.supervise,
+      jev: this.deps.jev,
       dir: this.deps.dir ? join(this.deps.dir, id) : undefined,
     }).catch(() => null);
     this.preps.set(id, work);
@@ -1432,6 +1486,13 @@ export class SessionStore {
       console.error(`previs for ${frame.id}: ${String(e).slice(0, 300)}`);
       return undefined;
     });
+    // Held by "storyboard complete?" on this very shot: it waits, with the reason, and nothing is
+    // paid for. A shot planned again is checked again.
+    const checked = s.prep?.storyboard?.[frame.id];
+    if (view && checked && checked.view === view && !checked.ok) {
+      Object.assign(frame, { status: 'waiting', held: checked.reasons.map((r) => `storyboard: ${r}`) });
+      return;
+    }
     const ready = s.prep?.shots[frame.id];
     if (view && frame.shot?.view !== view && ready?.view === view) frame.shot = ready;
     if (view && this.deps.shot && frame.shot?.view !== view) {

@@ -32,6 +32,7 @@ describe('the shots, planned while the chat goes on', () => {
   test('floor plans, cameras, previs and briefs, before anything is drawn', async () => {
     const b = kitchen();
     const briefs: string[] = [];
+    const seen: string[] = [];
     const dir = mkdtempSync(join(tmpdir(), 'plan-shots-'));
     const prep = await planShots(b, b.style_options[0], {
       block: async (x) => {
@@ -52,8 +53,35 @@ describe('the shots, planned while the chat goes on', () => {
       },
       // The script supervisor finds a lasting change the breakdown missed.
       supervise: async () => [{ moment: 'm1', who: 't1', what: 'its slats', now: 'all blank but one' }],
+      // "Storyboard complete?": m1's shot clears; m2's contradicts its moment.
+      jev: async (state, questions) => {
+        const m2 = Object.keys(questions).some((k) => k.endsWith('_m2'));
+        const answer = (k: string) => ({
+          type: 'noul' as const,
+          noul:
+            k.startsWith('sb_contradicts') && m2
+              ? 0.9
+              : k.startsWith('sb_contradicts') || k.startsWith('sb_extra')
+                ? 0.1
+                : 0.9,
+        });
+        seen.push(state);
+        return {
+          questions,
+          state,
+          answers: Object.fromEntries(Object.keys(questions).map((k) => [k, answer(k)])),
+          error: null,
+          ms: 1,
+          usage: null,
+        };
+      },
       dir,
     });
+    expect(prep.storyboard?.m1.ok).toBe(true);
+    expect(prep.storyboard?.m2.ok).toBe(false);
+    expect(prep.storyboard?.m2.reasons[0]).toContain('the shot disagrees with the moment');
+    // Jev sees one moment and its shot, never the conversation.
+    expect(seen.every((st) => st.includes('"moment"') && st.includes('"shot"'))).toBe(true);
     // Every camera is worked out, a previs and a brief each: seen from outside, and through the
     // dreamer's own eyes.
     expect(Object.keys(prep.previs).sort()).toEqual(['m1', 'm2']);
@@ -73,7 +101,11 @@ describe('the shots, planned while the chat goes on', () => {
     expect(s.draft?.breakdown?.scenes[0].blocking?.front).toBe('the stove');
     // The change is written into the moment it happens at, and the plan is known by the dream as it
     // now stands: planned again for it, it would not be planned twice.
-    expect(s.draft?.breakdown?.scenes[0].moments[0].leaves).toContainEqual({ who: 't1', what: 'its slats', now: 'all blank but one' });
+    expect(s.draft?.breakdown?.scenes[0].moments[0].leaves).toContainEqual({
+      who: 't1',
+      what: 'its slats',
+      now: 'all blank but one',
+    });
     expect(s.prep?.basedOn).not.toBe(prep.basedOn);
     const changed: Pick<Session, 'draft' | 'prep'> = {
       draft: { status: 'ready', basedOn: 2, breakdown: { ...kitchen(), title: 'another dream' } },
@@ -102,7 +134,17 @@ describe('a plan made again mid-dream', () => {
       depth: 1,
     });
     // Drawn before the ice block was found: g1 is the horse head.
-    const drawn = [{ id: 'g1', kind: 'ghost', name: 'horse', fields: {}, status: 'ready', version: 1, ghost: ghost('g1', 'a horse head', 'm5') }];
+    const drawn = [
+      {
+        id: 'g1',
+        kind: 'ghost',
+        name: 'horse',
+        fields: {},
+        status: 'ready',
+        version: 1,
+        ghost: ghost('g1', 'a horse head', 'm5'),
+      },
+    ];
     // Planned again with the ice block first: g1 is the ice block, g2 the horse head after it.
     const plan = {
       cuts: [
