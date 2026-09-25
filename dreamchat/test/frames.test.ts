@@ -439,6 +439,25 @@ describe('a group of people', () => {
     expect(sheetPrompt(seller, style)).toContain('one person only');
   });
 
+  test("a place is sketched without the story's things, which have pictures of their own", () => {
+    const field: Item = {
+      id: 'l3',
+      kind: 'location',
+      name: 'the field of tall yellow grass',
+      fields: {
+        geography: { value: 'a vast flat field of tall yellow grass', said: false },
+        landmarks: { value: 'a small paper boat lying in the grass and a red tractor parked at the edge', said: false },
+      },
+      status: 'waiting',
+      version: 0,
+      leaveOut: ['the paper boat', 'the key'],
+    };
+    const prompt = sheetPrompt(field, style);
+    expect(prompt).toContain("what's in it: a red tractor parked at the edge");
+    expect(prompt).not.toMatch(/paper boat lying/);
+    expect(prompt).toContain("without the story's things in it (the paper boat, the key)");
+  });
+
   test('a place named for who was there is drawn as the place', () => {
     const place = (name: string): Item => ({
       id: 'l6',

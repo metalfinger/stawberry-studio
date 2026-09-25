@@ -2340,6 +2340,10 @@ export class SessionStore {
    */
   private async startSketch(s: Session, item: Item, turn: number): Promise<void> {
     item.startedAtTurn = turn;
+    // A place is sketched as itself: the story's things have pictures of their own, and drawn into
+    // the place the paper boat lay in the field before it was ever put down (lighthouse, 26 Sep).
+    if (item.kind === 'location')
+      item.leaveOut = (s.build?.items ?? []).filter((i) => i.kind === 'prop').map((i) => pictureName(i.name));
     if (!this.deps.sheets || !s.style) {
       item.status = 'failed';
       item.error = 'nothing can be drawn here: the Strawberry engine is not set up';

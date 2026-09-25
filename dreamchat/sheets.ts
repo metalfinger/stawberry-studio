@@ -74,6 +74,8 @@ export type Item = {
   heldAsks?: number;
   /** The turn they were last asked, so only their answer to it draws it again. */
   heldAskedAt?: number;
+  /** For a place: the story's things, which have pictures of their own and are left out of its. */
+  leaveOut?: string[];
   /** Jev's reading of the prompt it was last to be drawn from. */
   gate?: {
     contradicts: number;
@@ -439,7 +441,16 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
           .trim();
         return coat ? `coat: ${coat}` : '';
       }
-      const v = value(item, k);
+      const heads = item.kind === 'location' ? (item.leaveOut ?? []).map(headWord).filter((w): w is string => !!w) : [];
+      // The story's things are taken out of a place's own words, part by part: "a small paper boat
+      // lying in the grass and a red tractor parked at the edge" keeps only the tractor.
+      const v = heads.length
+        ? value(item, k)
+            .split(/;|,|\s+and\s+/)
+            .map((x) => x.trim())
+            .filter((x) => x && !heads.some((w) => new RegExp(`\\b${w}s?\\b`, 'i').test(x)))
+            .join(', ')
+        : value(item, k);
       // What they said keeps its colours; what was filled in is said in the style's shades.
       return v ? `${FIELD_WORDS[k] ?? k}: ${item.fields[k]?.said ? v : inShades(v, style)}` : '';
     })
@@ -478,6 +489,10 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
         ? `A single wide picture of ${name}, as it ordinarily looks, with no people in it, showing the whole place and how it is laid out.`
         : `A single clear picture of ${name} on its own, as it ordinarily looks, seen at a slight angle so its shape and materials read.`;
   const background = item.kind === 'location' ? '' : 'Plain, uncluttered background. ';
+  const without =
+    item.kind === 'location' && item.leaveOut?.length
+      ? `Only the place itself, without the story's things in it (${item.leaveOut.join(', ')}): they have pictures of their own.`
+      : '';
   // A person's sheet is the face every moment draws them from, so nothing may stand between
   // them and the viewer: a glass-world style drew the dreamer three times behind a frosted
   // shower door, face blurred (23 Sep).
@@ -492,7 +507,7 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
     ? `The last attempt at this sheet got these wrong. Put each right:\n${item.repairFor.map((q) => `- ${q}`).join('\n')}`
     : '';
   const ownColours = new RegExp(COLOUR_WORDS.source, 'i').test(facts);
-  return [layout, facts, clear, repair, styleBlock(style, toldColours(item), { ownColours }), `${background}${NO_WORDS}`]
+  return [layout, facts, without, clear, repair, styleBlock(style, toldColours(item), { ownColours }), `${background}${NO_WORDS}`]
     .filter(Boolean)
     .join('\n\n');
 }
