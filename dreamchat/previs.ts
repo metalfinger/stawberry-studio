@@ -263,7 +263,7 @@ const isPerson = (s: Spot) => s.kind === 'person' || (!s.kind && (!!s.pose || !!
  * What a thing is to whoever is at it: as the plan says, or, where it says nothing, a seat when
  * someone sits on it and otherwise a solid block.
  */
-function shapeOf(t: Spot, plan: Blocking): Shape {
+export function shapeOf(t: Spot, plan: Blocking): Shape {
   if (t.shape) return t.shape;
   return plan.spots.some((p) => isPerson(p) && !p.many && p.pose === 'sitting' && onFootprint(p, t, plan))
     ? 'seat'
@@ -1418,7 +1418,7 @@ function extent(s: Spot, plan: Blocking, u: V2): number {
  * seat, on the steps or the ground they stand on. Never a solid: the dreamer sat "on" a string of
  * balloons and "on" the house when everything under someone was a seat (25 Sep).
  */
-function onOf(p: Spot, plan: Blocking): { t: Spot; how: 'on' | 'in' } | undefined {
+export function onOf(p: Spot, plan: Blocking): { t: Spot; how: 'on' | 'in' } | undefined {
   const under = plan.spots.filter((t) => t.id !== p.id && !isPerson(t) && !t.heldBy && onFootprint(p, t, plan));
   const by = (shape: Shape) => under.find((t) => shapeOf(t, plan) === shape);
   const v = by('vehicle');

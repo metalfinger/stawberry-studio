@@ -833,6 +833,21 @@ export const POSITION =
 export const VAGUE =
   /^\s*(?:none|nothing|n\/a|null|nil|-+|—)\s*\.?\s*$|\b(undefined|unknown|unclear|indeterminate|unspecified|ambiguous|indistinct|nondescript|hazy memory|blends? into|(?:none|nothing|not) (?:notable|remarkable|special|distinctive|in particular)|no (?:distinctive|distinguishing|notable|remarkable) features?|not (?:remembered|specified|known|sure|clear|described|given)|no specific|(?:can't|cannot|don't|do not) remember)\b/i;
 
+/** A change of what something is altogether, not of a part of it: its form, its shape, itself. */
+export const WHOLE = /^\s*(?:its |their |the )?(?:form|shape|whole|whole body|body and all|self|itself|themselves|kind|what it is|nature|entire \w+)\s*$/i;
+
+/**
+ * Whether a change turns something into something else altogether: as Jev read it when the change
+ * was recorded, and from its words only where Jev gave no reading.
+ */
+export const isWhole = (st: { what: string; whole?: boolean }) => st.whole ?? WHOLE.test(st.what);
+
+/** A moment in a few words, for a label: its first nine. */
+export function momentLabel(action: string): string {
+  const words = action.replace(/[.,;:—-]+$/, '').split(/\s+/);
+  return words.length > 9 ? `${words.slice(0, 9).join(' ')}…` : words.join(' ');
+}
+
 /** Their own description of how it should look, as one style option. */
 export async function ownStyle(transcript: string): Promise<StyleOption | null> {
   const res = await callDeepseek(

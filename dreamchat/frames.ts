@@ -7,7 +7,10 @@
 // in view is said out loud, and the style tokens are quoted word for word.
 import { type ContinuityPlan, type PlanRef, pictureName } from './continuity';
 import type { Breakdown, Moment, StyleOption } from './producer';
-import { oneColour, VAGUE } from './producer';
+import { isWhole, momentLabel, oneColour, VAGUE, WHOLE } from './producer';
+
+// Kept here too for older imports.
+export { isWhole, WHOLE };
 import { groupMembers, inShades, isGroup, type Item, LOOK, type Shape, shapeOf, styleBlock, toldColours } from './sheets';
 
 /** Where the line that says who "you" is goes, when anything told to the picture says "you". */
@@ -29,14 +32,6 @@ const NO_WORDS = 'Every surface in it is free of writing, logos and brand badges
 const NO_WORDS_EDIT =
   'Do not write any words, letters, numbers or labels anywhere in the image, and no logos or brand badges.';
 
-/** A change of what something is altogether, not of a part of it: its form, its shape, itself. */
-export const WHOLE = /^\s*(?:its |their |the )?(?:form|shape|whole|whole body|body and all|self|itself|themselves|kind|what it is|nature|entire \w+)\s*$/i;
-
-/**
- * Whether a change turns something into something else altogether: as Jev read it when the change
- * was recorded, and from its words only where Jev gave no reading.
- */
-export const isWhole = (st: { what: string; whole?: boolean }) => st.whole ?? WHOLE.test(st.what);
 
 /** Who and what in a moment has turned into something else entirely: drawn from no sketch. */
 export function turnedInto(frame: Item): Set<string> {
@@ -135,10 +130,7 @@ export function buildGhosts(plan: ContinuityPlan): Item[] {
 }
 
 /** A short name for a moment, as the chat and the panel show it. */
-function label(action: string): string {
-  const words = action.replace(/[.,;:—-]+$/, '').split(/\s+/);
-  return words.length > 9 ? `${words.slice(0, 9).join(' ')}…` : words.join(' ');
-}
+const label = momentLabel;
 
 export type FrameReference = {
   media_id: string;

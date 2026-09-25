@@ -9,7 +9,7 @@
 // out, and the same breakdown always gives the same plan.
 import { type Blocking, DIRECTIONS, type Eye, type Move, outsideOrder, settle } from './blocking';
 import { dreamerShot, outsideShot } from './previs';
-import { type Breakdown, type Moment, moments, POSITION, type State } from './producer';
+import { type Breakdown, isWhole, type Moment, moments, POSITION, type State } from './producer';
 
 export type Relation = 'same_setup' | 'same_side' | 'other_side' | 'other_place' | 'shift' | 'seat';
 export type RefRole = 'base' | 'composition' | 'lighting' | 'identity' | 'prop' | 'location';
@@ -166,6 +166,25 @@ export function sameWords(a: string, b: string): boolean {
   return norm(a) === norm(b);
 }
 
+/** What a moment calls who and what is in it: the dreamer, and what has turned into something else by what it is now. */
+export function calledIn(b: Breakdown, c: { own: { who: string; what: string; now: string }[]; states: { who: string; what: string; now: string }[] }) {
+  const changed = [...c.own, ...c.states];
+  return (id: string) => {
+    const st = changed.find((x) => x.who === id && isWhole(x));
+    if (st) return st.now;
+    const p = b.people.find((x) => x.id === id);
+    if (p) return p.is_dreamer ? 'the dreamer' : p.name;
+    return b.things.find((x) => x.id === id)?.name ?? b.places.find((x) => x.id === id)?.name ?? fixtureName(b, id) ?? id;
+  };
+}
+
+/** A fixture of a place, by its name in the floor plan: "the autoclave", never "x1". */
+export const fixtureName = (b: Breakdown, id: string) =>
+  b.scenes.flatMap((sc) => sc.blocking?.spots ?? []).find((s) => s.id === id && s.fixture)?.name;
+
+/** A lasting change's key: who, what, what it is now, and since which moment. */
+export const stateKey = (st: State) => `${st.who}/${st.what}/${st.now}/${st.since}`;
+
 /**
  * A name as a picture is told it. The people of a dream are named as the dreamer said them, and
  * "your aunt" in an instruction to a picture brings a viewer ("you") into it: she is "the
@@ -196,6 +215,12 @@ export function placePlan(b: Breakdown, momentId: string): Blocking | undefined 
 }
 
 export function planBy(b: Breakdown, momentId: string): Blocking | undefined {
+  const raw = rawPlanBy(b, momentId);
+  return raw ? settle(raw) : undefined;
+}
+
+/** The plan by a moment as the planner made it: its spots where their latest moves put them, before settling. */
+export function rawPlanBy(b: Breakdown, momentId: string): Blocking | undefined {
   const scene = b.scenes.find((sc) => sc.moments.some((x) => x.id === momentId));
   const plan = placePlan(b, momentId);
   if (!scene || !plan) return undefined;
@@ -210,7 +235,7 @@ export function planBy(b: Breakdown, momentId: string): Blocking | undefined {
   // kept her standing where she started (24 Sep).
   const moved = new Map<string, Move>();
   for (const x of upTo) for (const mv of plan.moves?.[x.id] ?? []) moved.set(mv.id, mv);
-  return settle({
+  return {
     ...plan,
     spots: plan.spots
       .filter((s) => there.has(s.id) || s.id === dreamerId || s.fixture)
@@ -218,7 +243,7 @@ export function planBy(b: Breakdown, momentId: string): Blocking | undefined {
         const mv = moved.get(s.id);
         return mv ? { ...s, x: mv.x, y: mv.y, ...(mv.faces ? { faces: mv.faces } : {}), ...(mv.pose ? { pose: mv.pose } : {}) } : s;
       }),
-  });
+  };
 }
 
 /**
@@ -434,7 +459,6 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
   const cutOf = new Map(cuts.map((c) => [c.id, c]));
 
   const ghosts: GhostPlan[] = [];
-  const stateKey = (st: State) => `${st.who}/${st.what}/${st.now}/${st.since}`;
   // A state is carried by its ghost, or by a referenced cut drawn at or after the change that
   // shows who changed. The picture before a dream's jump carries nothing of what the jump changes.
   const carriedBy = (c: CutPlan, st: State) =>

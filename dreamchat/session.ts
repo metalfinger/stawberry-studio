@@ -58,7 +58,21 @@ import {
   ownStyle,
   type StyleOption,
 } from './producer';
-import { type ContinuityPlan, type Criterion, drawOrder, pictureName, planBy, planContinuity, seenIn, shotPlan } from './continuity';
+import {
+  calledIn,
+  type ContinuityPlan,
+  type Criterion,
+  drawOrder,
+  fixtureName,
+  pictureName,
+  planBy,
+  planContinuity,
+  seenIn,
+  shotPlan,
+} from './continuity';
+
+// Moved to continuity.ts; kept here for older imports.
+export { calledIn };
 import type { Blocking } from './blocking';
 import { atSite, inSession, recordJev } from './jevlog';
 import { askFacts, decide, type Reading, STORYBOARD } from './stages';
@@ -228,21 +242,6 @@ export type Prep = {
   ms: number;
 };
 
-/** What a moment calls who and what is in it: the dreamer, and what has turned into something else by what it is now. */
-export function calledIn(b: Breakdown, c: { own: { who: string; what: string; now: string }[]; states: { who: string; what: string; now: string }[] }) {
-  const changed = [...c.own, ...c.states];
-  return (id: string) => {
-    const st = changed.find((x) => x.who === id && isWhole(x));
-    if (st) return st.now;
-    const p = b.people.find((x) => x.id === id);
-    if (p) return p.is_dreamer ? 'the dreamer' : p.name;
-    return b.things.find((x) => x.id === id)?.name ?? b.places.find((x) => x.id === id)?.name ?? fixtureName(b, id) ?? id;
-  };
-}
-
-/** A fixture of a place, by its name in the floor plan: "the autoclave", never "x1". */
-const fixtureName = (b: Breakdown, id: string) =>
-  b.scenes.flatMap((sc) => sc.blocking?.spots ?? []).find((s) => s.id === id && s.fixture)?.name;
 
 /**
  * The shots of a settled dream, planned without drawing anything: each scene's floor plan (asked
