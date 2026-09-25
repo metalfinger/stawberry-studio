@@ -69,7 +69,7 @@ aside { border-left: 1px solid var(--line); background: #12161d; }
 aside nav { display: flex; border-bottom: 1px solid var(--line); flex-shrink: 0; }
 aside nav button {
   flex: 1; background: none; color: var(--muted); border: 0; border-bottom: 2px solid transparent;
-  border-radius: 0; padding: 10px 4px; font-size: .82rem; font-weight: 500;
+  border-radius: 0; padding: 10px 4px; font-size: .82rem; font-weight: 500; white-space: nowrap;
 }
 aside nav button.on { color: var(--text); border-bottom-color: var(--accent); }
 .pane { display: none; overflow-y: auto; padding: 14px 16px 24px; flex: 1; }
@@ -176,6 +176,80 @@ summary { cursor: pointer; color: var(--muted); font-size: .82rem; padding: 3px 
 .sites td { padding: 3px 4px; border-bottom: 1px solid var(--line); }
 .sites .num { text-align: right; }
 .sites td.err { color: var(--held); }
+/* Tree: the resolved tree of the dream, and where each value in it came from. */
+button.lnk {
+  background: none; border: 0; padding: 0; border-radius: 0; color: inherit; font-weight: inherit;
+  text-decoration: underline dotted; text-underline-offset: 2px; cursor: pointer;
+}
+.toggle { display: flex; gap: 6px; align-items: center; font-size: .76rem; color: var(--muted); margin: 2px 0 6px; cursor: pointer; }
+.toggle input { accent-color: var(--accent); margin: 0; }
+.outline { font-size: .82rem; margin: 0 -6px; }
+.outline details { margin: 0; }
+/* The row picks the node; only the arrow opens and closes a scene. */
+.outline summary { display: flex; align-items: baseline; list-style: none; color: var(--text); font-size: inherit; padding: 0; }
+.outline summary::-webkit-details-marker { display: none; }
+.outline .tw { width: 12px; flex-shrink: 0; color: var(--muted); font-size: .7rem; cursor: pointer; }
+.outline .tw::before { content: '▸'; }
+.outline details[open] > summary .tw::before { content: '▾'; }
+.onode {
+  display: flex; gap: 6px; align-items: baseline; flex: 1; min-width: 0; width: 100%; text-align: left;
+  background: none; color: var(--text); border: 0; border-radius: 6px; padding: 3px 6px; font-weight: 400;
+}
+.onode:hover { background: var(--panel); }
+.onode.sel { background: var(--panel2); box-shadow: inset 2px 0 0 var(--accent); }
+.onode .n { color: var(--muted); font-variant-numeric: tabular-nums; flex-shrink: 0; min-width: 2.3em; }
+.onode .n.key { color: var(--accent); }
+.onode .nm { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.onode .sub { display: block; color: var(--muted); font-size: .74rem; }
+.onode.cut .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); }
+.onode .pills { margin-top: 3px; gap: 3px; }
+.onode .pill { font-size: .66rem; padding: 0 6px; }
+.d1 { padding-left: 14px; } .d2 { margin-left: 8px; } .d3 { padding-left: 32px; } .d4 { padding-left: 50px; }
+.mk { font-size: .7rem; white-space: nowrap; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.mk .q { color: var(--forgot); }
+.mk .f { color: var(--open); margin-left: 4px; }
+.trail { font-size: .78rem; color: var(--muted); margin-bottom: 4px; }
+.trail b { color: var(--text); font-weight: 600; }
+.tnote { font-size: .78rem; margin: 3px 0; overflow-wrap: anywhere; }
+.tnote.f { color: var(--open); }
+.tnote.q { color: var(--forgot); }
+.vals { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: .74rem; }
+.vals col.k { width: 6.7em; } .vals col.l { width: 4.9em; } .vals col.b { width: 5.2em; }
+.vals th { text-align: left; color: var(--muted); font-weight: 500; font-size: .68rem; padding: 3px 4px; border-bottom: 1px solid var(--line); }
+.vals td { padding: 3px 4px; border-bottom: 1px solid var(--line); vertical-align: top; overflow-wrap: anywhere; }
+.vals td.k, .vals td.v { color: var(--muted); }
+.vals tr.own td.k { color: var(--text); font-weight: 650; }
+.vals tr.own td.v { color: var(--text); }
+/* Long values (briefs, views) are clipped to three lines until clicked. */
+.vals td.v { cursor: pointer; }
+.vals td.v > span { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.vals td.v.full > span { display: block; }
+.vals td.v .none { color: var(--na); }
+.vals del { display: block; color: var(--na); }
+.lvl { font-size: .6rem; letter-spacing: .05em; padding: 0 4px; border-radius: 4px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.lvl.here { border-color: var(--accent); color: var(--text); }
+.basis { font-size: .7rem; white-space: nowrap; color: var(--muted); }
+.basis.said { color: var(--told); }
+.basis.chosen { color: var(--accent); }
+.basis.guessed { color: var(--open); }
+.basis.forgotten { color: var(--forgot); }
+.basis.unknown { color: var(--na); }
+.tree-img img { display: block; width: min(260px, 100%); border: 1px solid var(--line); margin: 4px 0; }
+.ledger-wrap { overflow-x: auto; }
+.ledger { border-collapse: collapse; font-size: .72rem; font-variant-numeric: tabular-nums; }
+.ledger th, .ledger td { padding: 2px 3px; border-bottom: 1px solid var(--line); text-align: center; min-width: 1.9em; font-weight: 500; }
+.ledger th { color: var(--muted); font-size: .68rem; }
+.ledger .el { text-align: left; max-width: 11em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+.ledger .sc { border-left: 1px solid var(--line); }
+.ledger .brk { background: repeating-linear-gradient(135deg, transparent 0 4px, var(--panel2) 4px 8px); }
+.ledger td button { background: none; border: 0; padding: 0; border-radius: 3px; color: var(--muted); font-weight: 500; line-height: 1.25; min-width: 1.6em; }
+.ledger td button.start { color: var(--accent); }
+.ledger td button.first { color: var(--open); }
+.ledger td button.on { outline: 1px solid var(--accent); }
+.ledger td small { display: block; font-size: .6rem; color: var(--muted); }
+.ledger th.rd { color: var(--text); background: rgba(229, 107, 134, .2); }
+.ledger th.maybe { color: var(--text); outline: 1px dashed var(--open); outline-offset: -1px; }
+.glevel { font-size: .7rem; color: var(--muted); margin: 10px 0 2px; }
 </style>
 </head>
 <body>
@@ -208,12 +282,14 @@ summary { cursor: pointer; color: var(--muted); font-size: .82rem; padding: 3px 
       <button data-pane="dream" class="on">The dream</button>
       <button data-pane="production" id="productionTab">Production</button>
       <button data-pane="stages" id="stagesTab">Stages</button>
+      <button data-pane="tree">Tree</button>
       <button data-pane="turn">Turn</button>
       <button data-pane="calls">Calls</button>
     </nav>
     <div class="pane on" id="pane-dream"><p class="muted">Start a conversation to see what Berry has understood.</p></div>
     <div class="pane" id="pane-production"><p class="muted">Once Berry tells the dream back, the producer drafts it here: the moments to draw, the people, places and things, and ways it could look.</p></div>
     <div class="pane" id="pane-stages"><p class="muted">Where the dream is in making its storyboard, what Jev decided at each step and why, and what its calls cost.</p></div>
+    <div class="pane" id="pane-tree"><p class="muted">The dream as a tree: sequences, scenes, shots and cuts, where each value in their sheets came from, how each thing looks from cut to cut, and what is left to ask.</p></div>
     <div class="pane" id="pane-turn"><p class="muted">Pick a reply's label in the chat to see why it was said.</p></div>
     <div class="pane" id="pane-calls"><p class="muted">The exact judge questions and model input for the selected turn.</p></div>
   </aside>
@@ -401,6 +477,8 @@ function label(x) {
   return x.kind === 'cut' ? `picture ${x.frame ? x.frame.order : '?'}` : x.kind === 'ghost' ? `in-between “${x.name}”` : `${x.name}’s sheet`;
 }
 
+const REF_ROLES = { base: 'edited from', composition: 'room from', lighting: 'light from', identity: 'look from', location: 'place from', prop: 'thing from' };
+
 /** What a moment or a ghost is drawn from, and why: the continuity plan, in plain words. */
 function drawnFrom(it, pieces) {
   const box = el('div', { class: 'from' });
@@ -418,12 +496,11 @@ function drawnFrom(it, pieces) {
     const [scene, shot] = plan.shot.split('.');
     box.append(el('div', { class: 'muted' }, `scene ${scene.replace(/^s/, '')} · shot ${shot.replace(/^sh/, '')}`));
   }
-  const roles = { base: 'edited from', composition: 'room from', lighting: 'light from', identity: 'look from', location: 'place from', prop: 'thing from' };
   if (!plan.refs.length) box.append(el('div', {}, 'Drawn from the sheets alone.'));
   for (const r of plan.refs) {
     const src = find(r.id);
     const row = el('div', {});
-    row.append(el('b', {}, `${roles[r.role] || r.role} ${src ? label(src) : r.id}`), ` — ${r.carries}`);
+    row.append(el('b', {}, `${REF_ROLES[r.role] || r.role} ${src ? label(src) : r.id}`), ` — ${r.carries}`);
     if ((it.dropped || []).includes(r.id)) row.append(el('span', { class: 'bad' }, ' (it failed, so drawn without it)'));
     box.append(row);
   }
@@ -659,6 +736,11 @@ function stagesInto(pane, d) {
     if (past.length > 1) body.append(el('div', { class: 'history' }, `Checked ${past.length} times: ${past.map((e) => `${e.decision} ${clock(e.at)}`).join(' → ')}`));
     const planned = planFor(m.id, 'stages');
     if (planned) { const box = el('div', { class: 'plan' }); box.append(planned); body.append(box); }
+    const see = el('button', { class: 'lnk', type: 'button' }, 'its cut in the tree');
+    see.onclick = () => { treeSel = m.id; treeJump = true; showPane('tree'); };
+    const link = el('div', { class: 'history' });
+    link.append(see);
+    body.append(link);
     row.append(body);
     pane.append(row);
   });
@@ -696,11 +778,436 @@ function stagesInto(pane, d) {
   pane.append(recent);
 }
 
+// ── tree ────────────────────────────────────────────────────────────────────
+const LEVEL_CHIP = { cut: 'CUT', shot: 'SHOT', scene: 'SCENE', sequence: 'SEQ', dream: 'DREAM', sheet: 'SHEET', default: 'DEFAULT' };
+const LEVEL_ORDER = Object.keys(LEVEL_CHIP);
+const LEVEL_NAME = { dream: 'Dream', sequence: 'Sequence', scene: 'Scene', shot: 'Shot', cut: 'Cut' };
+const CATEGORY = { held_prop: 'hand prop', set_dressing: 'dressing', look_change: 'look change' };
+const catLabel = (c) => CATEGORY[c] || c;
+const GAP_LEVEL = { scene: 'About a scene', ledger: 'About a change that should last', sheet: 'About how someone or something looks', cut: 'About a moment' };
+const PRESENCE = { listed: 'named', sees: 'in view', linked: 'linked', camera: 'the camera' };
+const many = (n, one, other = `${one}s`) => `${n} ${n === 1 ? one : other}`;
+const clip = (s, n = 160) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+
+// The panel is rebuilt on every refresh and every pick; what they chose to look at is kept here.
+let tree = null;
+let treeSel = 'dream';
+let treeJump = false;
+let treeOwnOnly = false;
+let treeAllRows = false;
+let treeStage = null;
+const treeFull = new Set();
+
+/** The Tree panel: the dream's resolved tree. It runs to ~200 KB, so it is fetched only while open. */
+async function renderTree() {
+  if (!session || !paneOn('tree')) return;
+  const id = session.id;
+  let t;
+  try { t = await api(`/api/tree?id=${encodeURIComponent(id)}`); } catch (e) {
+    if (session && session.id === id) {
+      const early = e.message === 'no breakdown yet';
+      $('pane-tree').replaceChildren(el('p', { class: early ? 'muted' : 'bad' }, early ? 'The tree is built once the producer has drafted the moments.' : e.message));
+    }
+    return;
+  }
+  // An answer that lands after they switched conversation belongs to the one they left.
+  if (!session || session.id !== id) return;
+  tree = t;
+  drawTree();
+}
+
+function drawTree() {
+  const pane = $('pane-tree');
+  if (!tree) return;
+  // As in Stages: keep where they were reading, what they opened or closed, and where focus was.
+  const was = pane.scrollTop;
+  const shown = new Map([...pane.querySelectorAll('details[data-key]')].map((x) => [x.dataset.key, x.open]));
+  const focus = pane.contains(document.activeElement) ? document.activeElement.dataset.focus : undefined;
+  pane.replaceChildren();
+  treeInto(pane, tree);
+  for (const x of pane.querySelectorAll('details[data-key]')) if (shown.has(x.dataset.key)) x.open = shown.get(x.dataset.key);
+  pane.scrollTop = was;
+  if (focus) pane.querySelector(`[data-focus="${CSS.escape(focus)}"]`)?.focus({ preventScroll: true });
+  if (treeJump) {
+    // A pick should show its node, but only scroll when that section is out of sight.
+    treeJump = false;
+    const r = $('tree-picked').getBoundingClientRect();
+    const p = pane.getBoundingClientRect();
+    if (r.top < p.top || r.top > p.bottom - 160) pane.scrollTop += r.top - p.top - 8;
+  }
+}
+
+function pickNode(id) {
+  treeSel = id; treeJump = true;
+  // The address names the picked node too, so a reload or a shared link opens on it.
+  if (session) history.replaceState(null, '', `#${encodeURIComponent(session.id)}/tree/${id}`);
+  drawTree();
+}
+
+function treeInto(pane, t) {
+  const name = (id) => (t.elements[id] ? t.elements[id].name : id);
+  const nodes = new Map();
+  const walk = (n) => { nodes.set(n.id, n); for (const k of n.sequences || n.scenes || n.shots || n.cuts || []) walk(k); };
+  walk(t.dream);
+  if (!nodes.has(treeSel)) treeSel = 'dream';
+  const flags = new Map(t.flags.map((f) => [f.id, f]));
+  const gaps = new Map(t.gaps.map((g) => [g.id, g]));
+  const stages = new Map(t.ledger.rows.flatMap((r) => r.stages.map((s) => [s.key, s])));
+  const short = (n) => n.level === 'dream' ? 'Dream' : n.level === 'sequence' ? n.name.replace(/ \(.*\)$/, '')
+    : n.level === 'scene' ? `scene ${n.number}` : n.level === 'shot' ? `shot ${n.number}` : n.id;
+  const pick = (id, text) => {
+    if (!nodes.has(id)) return el('span', {}, text || id);
+    const b = el('button', { class: 'lnk', type: 'button', 'data-focus': `lnk-${id}` }, text || short(nodes.get(id)));
+    b.onclick = () => pickNode(id);
+    return b;
+  };
+  const toggle = (key, text, on, set) => {
+    const lab = el('label', { class: 'toggle' });
+    const cb = el('input', { type: 'checkbox', 'data-focus': `toggle-${key}` });
+    cb.checked = on;
+    cb.onchange = () => { set(cb.checked); drawTree(); };
+    lab.append(cb, text);
+    return lab;
+  };
+  const xy = (p) => `${+p.x.toFixed(1)}, ${+p.y.toFixed(1)}`;
+  // Sheet values in words: element ids by their names, the camera as where it stands and faces.
+  const show = (k, v) => {
+    if (v === null || v === undefined || v === '' || (Array.isArray(v) && !v.length)) return null;
+    if (typeof v === 'boolean') return v ? 'yes' : 'no';
+    if (typeof v === 'number') return k === 'lens' ? `${v}mm` : String(v);
+    if (typeof v === 'string') return k === 'place' || k === 'subject' ? name(v) : k === 'previs' ? v.split('/').pop() : v;
+    if (Array.isArray(v)) return k === 'room' ? `${v[0]} × ${v[1]} m` : k === 'line' || k === 'screen' ? v.map(name).join(' · ') : v.join('; ');
+    if (k === 'style') return `${v.id}) ${v.name}`;
+    if (k === 'faces') return v.on ? `${v.words} → ${name(v.on)}` : v.words;
+    if (k === 'background') return `${v.side}${v.sheetShowsIt ? '' : ' (its sheet does not show it)'}`;
+    if (k === 'camera' && v.at && v.d) return `at ${xy(v.at)} m, facing ${xy(v.d)}${v.height != null ? `, ${v.height.toFixed(1)} m up` : ''}${v.lens ? `, ${v.lens}mm` : ''}`;
+    return JSON.stringify(v);
+  };
+  const where = (s) => [`${LEVEL_CHIP[s.level] || s.level} ${s.node}`, s.path, s.rule && `rule: ${s.rule}`, s.since && `carried from ${s.since}`,
+    s.evidence != null && `evidence: ${s.evidence}`, s.downgraded && 'called said, but not in their words: a guess',
+    s.stale && 'read from a plan made for an earlier version'].filter(Boolean).join('\n');
+  const current = (v) => v == null ? '' : typeof v === 'string' ? v : Array.isArray(v) ? v.join(' / ')
+    : typeof v === 'object' ? Object.entries(v).filter(([, x]) => x != null).map(([k, x]) => `${k}: ${x}`).join('; ') : String(v);
+
+  // What the tree holds, and what it was built from.
+  const c = t.counts;
+  pane.append(el('h4', {}, 'Tree'));
+  pane.append(el('p', { class: 'tally' }, [many(c.sequences, 'sequence'), many(c.scenes, 'scene'), many(c.shots, 'shot'), many(c.cuts, 'cut'),
+    many(c.elements, 'element'), many(c.gaps, 'question'), many(c.flags, 'flag')].join(' · ')));
+  const b = t.basedOn;
+  const planned = { fresh: 'Planned for this version of the dream', stale: 'Planned for an earlier version: plan facts may be out of date',
+    unknown: 'Planned, for a version it does not record', none: 'Not prepped yet: no previs, shot briefs or storyboard checks' }[b.prep] || b.prep;
+  pane.append(el('p', { class: b.prep === 'stale' ? 'bad' : 'tally' }, `${planned} · ${many(b.items, 'sketch', 'sketches')} · ${many(b.frames, 'picture')}`));
+
+  // The outline: dream → sequences → scenes → shots → cuts. A row picks its node.
+  const marks = (n) => {
+    const box = el('span', { class: 'mk' });
+    if (n.gaps.length) box.append(el('span', { class: 'q', title: n.gaps.join('\n') }, `?${n.gaps.length}`));
+    if (n.flags.length) box.append(el('span', { class: 'f', title: n.flags.map((id) => (flags.get(id) || { text: id }).text).join('\n') }, `⚑${n.flags.length}`));
+    return box;
+  };
+  const outlineRow = (n, cls, num, text, sub) => {
+    const on = n.id === treeSel;
+    const btn = el('button', { class: `onode ${cls}${on ? ' sel' : ''}`, type: 'button', 'data-focus': `node-${n.id}`, 'aria-pressed': String(on) });
+    if (num) btn.append(el('span', { class: `n${n.level === 'cut' && n.sheet.key.value ? ' key' : ''}` }, num));
+    const nm = el('span', { class: 'nm' }, text);
+    if (sub) nm.append(sub);
+    btn.append(nm, marks(n));
+    // Inside a scene's summary the row must pick, not open or close the scene.
+    btn.onclick = (e) => { e.preventDefault(); pickNode(n.id); };
+    return btn;
+  };
+  pane.append(el('h4', {}, 'Outline'));
+  const out = el('div', { class: 'outline' });
+  const medium = t.dream.sheet.medium?.value;
+  out.append(outlineRow(t.dream, 'd0', '', t.dream.name, medium ? el('span', { class: 'sub' }, medium) : null));
+  for (const q of t.dream.sequences) {
+    const opens = q.sheet.opens?.value;
+    out.append(outlineRow(q, 'd1', '', q.name, opens ? el('span', { class: 'sub' }, `opens on a jump: ${opens}`) : null));
+    for (const sc of q.scenes) {
+      const det = el('details', { 'data-key': `scene-${sc.id}`, open: '' });
+      const sum = el('summary', { class: 'd2' });
+      const pills = el('span', { class: 'pills' });
+      for (const cat of sc.tags) {
+        const ids = sc.elements.filter((id) => t.elements[id] && t.elements[id].category.value === cat);
+        const nums = cat === 'cast' ? ids.map((id) => t.elements[id].number).filter(Boolean).sort((x, y) => x - y) : [];
+        pills.append(el('span', { class: 'pill', title: ids.map(name).join(', ') }, `${catLabel(cat)} ${nums.length ? nums.join(' ') : ids.length}`));
+      }
+      const head = outlineRow(sc, '', sc.number, sc.breakdown.heading, pills);
+      head.title = `${sc.name} (${sc.id})`;
+      sum.append(el('span', { class: 'tw', 'aria-hidden': 'true' }), head);
+      det.append(sum);
+      for (const sh of sc.shots) {
+        det.append(outlineRow(sh, 'd3', sh.number, sh.name));
+        for (const cu of sh.cuts) {
+          const r = outlineRow(cu, 'd4 cut', `${cu.id}${cu.sheet.key.value ? ' ★' : ''}`, cu.name);
+          r.title = cu.sheet.action.value || cu.name;
+          det.append(r);
+        }
+      }
+      out.append(det);
+    }
+  }
+  pane.append(out);
+
+  // The picked node: its complete sheet, and where each value came from.
+  const n = nodes.get(treeSel);
+  pane.append(el('h4', { id: 'tree-picked' }, `${LEVEL_NAME[n.level]}${n.level === 'scene' || n.level === 'shot' ? ` ${n.number}` : n.level === 'cut' ? ` ${n.id}` : ''}`));
+  const trail = el('div', { class: 'trail' });
+  const chain = [];
+  for (let p = n.parent; p; p = nodes.get(p) && nodes.get(p).parent) chain.unshift(p);
+  for (const id of chain) trail.append(pick(id), ' › ');
+  trail.append(el('b', {}, n.level === 'cut' ? (n.sheet.action.value || n.name) : n.name));
+  pane.append(trail);
+  const meta = {
+    sequence: () => `starts at ${n.startsAt} · ${n.splitBy === 'jump' ? 'opens on a dream jump' : 'the start of the dream'}`,
+    scene: () => `${n.plan ? `drawn from ${n.plan}` : 'no floor plan'} · ${n.places.map(name).join(' → ')}${n.intercut ? ' · intercut: its cuts are not one run' : ''}`,
+    shot: () => `camera read from ${n.lead || 'no cut: each is an edit of an earlier picture'} · ${many(n.cuts.length, 'cut')}`,
+    cut: () => `picture ${n.order} · ${n.status}${n.prevInShot ? ` · follows ${n.prevInShot} in its shot` : ''}`,
+  }[n.level];
+  if (meta) pane.append(el('div', { class: 'tnote muted' }, meta()));
+  for (const id of n.flags) pane.append(el('div', { class: 'tnote f' }, `⚑ ${(flags.get(id) || { text: id }).text}`));
+  for (const id of n.gaps) {
+    const g = gaps.get(id);
+    pane.append(el('div', { class: 'tnote q' }, `? ${g ? `${g.kind.replace(/_/g, ' ')}: ${g.fields.join(', ')}` : id}`));
+  }
+
+  pane.append(toggle('own', 'only what it sets itself', treeOwnOnly, (v) => { treeOwnOnly = v; }));
+  const own = new Set(n.own);
+  // Most specific first, as values resolve: what the node sets, then what it inherits from further up.
+  const keys = Object.keys(n.sheet).filter((k) => !treeOwnOnly || own.has(k))
+    .sort((x, y) => LEVEL_ORDER.indexOf(n.sheet[x].from.level) - LEVEL_ORDER.indexOf(n.sheet[y].from.level));
+  const vals = el('table', { class: 'vals' });
+  const cols = el('colgroup');
+  for (const k of ['k', 'v', 'l', 'b']) cols.append(el('col', { class: k }));
+  const head = el('tr');
+  for (const h of ['key', 'value', 'from', 'basis']) head.append(el('th', {}, h));
+  vals.append(cols, head);
+  for (const k of keys) {
+    const f = n.sheet[k];
+    const id = `${n.id}|${k}`;
+    const tr = el('tr', { class: own.has(k) ? 'own' : 'inh', title: where(f.from) });
+    const v = el('td', { class: `v${treeFull.has(id) ? ' full' : ''}` });
+    const text = show(k, f.value);
+    v.append(text === null ? el('span', { class: 'none' }, '—') : el('span', {}, text));
+    if (f.over) v.append(el('del', { title: `replaces, from\n${where(f.over.from)}` }, clip(show(k, f.over.value) ?? '—')));
+    v.onclick = () => { if (treeFull.has(id)) treeFull.delete(id); else treeFull.add(id); v.classList.toggle('full'); };
+    const lv = el('td');
+    lv.append(el('span', { class: `lvl${f.from.node === n.id ? ' here' : ''}` }, LEVEL_CHIP[f.from.level] || f.from.level));
+    tr.append(el('td', { class: 'k' }, k), v, lv, el('td', { class: `basis ${f.from.basis}` }, `${f.from.basis}${f.from.downgraded || f.from.stale ? ' *' : ''}`));
+    vals.append(tr);
+  }
+  pane.append(vals);
+
+  if (n.level === 'dream' && n.library.length) {
+    pane.append(el('h4', {}, 'Sheet library'));
+    const lib = el('div', { class: 'pills' });
+    for (const l of n.library) lib.append(el('span', { class: 'pill', title: `item ${l.item}${l.variants.length ? ` · variants ${l.variants.join(', ')}` : ''}` }, `${name(l.element)} · ${l.status}${l.variants.length ? ` · +${l.variants.length}` : ''}`));
+    pane.append(lib);
+  }
+
+  if (n.level === 'scene') {
+    // The 1st AD's breakdown sheet: what the scene needs, block by block.
+    pane.append(el('h4', {}, 'Breakdown sheet'));
+    pane.append(el('p', { class: 'stagenow' }, n.breakdown.heading));
+    for (const blk of n.breakdown.blocks) {
+      const f = el('div', { class: 'field' });
+      const v = el('span', { class: 'v' });
+      blk.entries.forEach((e, i) => {
+        if (i) v.append(', ');
+        v.append(`${e.number ? `${e.number} ` : ''}${e.name}`);
+        if (e.note) v.append(el('span', { class: 'muted' }, ` (${e.note})`));
+      });
+      f.append(el('span', { class: 'k' }, catLabel(blk.category)), v);
+      pane.append(f);
+    }
+    for (const x of n.breakdown.notes) pane.append(el('div', { class: 'tnote' }, x));
+    // The notes already say what the break is; what matters here is what crosses it.
+    for (const br of n.breaks) pane.append(el('div', { class: 'tnote muted' }, `Across the ${br.kind} at ${br.at}, not carried: ${br.breaks.join(', ')}; kept: ${br.keeps.map(name).join(', ') || 'nothing'}.`));
+  }
+
+  if (n.level === 'shot') {
+    pane.append(el('h4', {}, 'Planned shot'));
+    const img = n.lead && planFor(n.lead, 'tree');
+    if (img) {
+      const box = el('div', { class: 'tree-img' });
+      box.append(img);
+      pane.append(box, el('div', { class: 'tnote muted' }, `the previs of ${n.lead}, the cut its camera is read from`));
+    } else pane.append(el('p', { class: 'muted' }, n.lead ? `No previs for ${n.lead} yet.` : 'No cut in it has its own camera: each is an edit of an earlier picture.'));
+    pane.append(el('h4', {}, 'Held across its cuts'));
+    if (n.cuts.length < 2) pane.append(el('p', { class: 'muted' }, 'One cut: nothing to hold.'));
+    else if (!n.locks.length) pane.append(el('p', { class: 'muted' }, 'Nothing held across its cuts.'));
+    else {
+      // One line per element and run of cuts, not one per field.
+      const by = new Map();
+      for (const l of n.locks) {
+        const k = `${l.element ?? ''}|${l.cuts.join(',')}`;
+        if (!by.has(k)) by.set(k, { element: l.element, cuts: l.cuts, fields: [] });
+        by.get(k).fields.push(l.field);
+      }
+      for (const g of by.values()) {
+        const f = el('div', { class: 'field' });
+        f.append(el('span', { class: 'k' }, g.element ? name(g.element) : 'the camera'), el('span', { class: 'v' }, `${g.fields.join(', ')} · ${g.cuts.join(', ')}`));
+        pane.append(f);
+      }
+    }
+  }
+
+  if (n.level === 'cut') {
+    pane.append(el('h4', {}, 'In the picture'));
+    const tbl = el('table', { class: 'sites' });
+    const hr = el('tr');
+    for (const h of ['element', 'category', 'how', 'stage']) hr.append(el('th', {}, h));
+    tbl.append(hr);
+    for (const a of Object.values(n.at)) {
+      // "Also on the plan" is not in the picture; the elements list leaves it out too.
+      if (a.present === 'on_plan') continue;
+      const e = t.elements[a.id];
+      const s = stages.get(a.stage.value);
+      const [via, to] = (a.via || '').split(':');
+      const tr = el('tr', { title: `${a.id}${a.inPicture === false ? '\nnot in its planned picture' : ''}` });
+      tr.append(el('td', {}, a.called.value || name(a.id)), el('td', {}, e ? catLabel(e.category.value) : '?'),
+        el('td', {}, a.via ? `${via.replace(/_/g, ' ')} ${t.elements[to] ? name(to) : to}` : PRESENCE[a.present] || a.present),
+        el('td', { title: a.stage.value ? `${a.stage.value}\n${where(a.stage.from)}` : '' }, s ? (s.n ? `${s.n} · ${s.part}${a.stage.from.since ? ', carried' : ''}` : '0') : '—'));
+      tbl.append(tr);
+    }
+    pane.append(tbl);
+
+    pane.append(el('h4', {}, 'Drawn from'));
+    if (!n.refs.length) pane.append(el('p', { class: 'muted' }, 'The sheets alone.'));
+    for (const r of n.refs) {
+      const d = el('div', { class: 'tnote' });
+      d.append(el('b', {}, `${REF_ROLES[r.role] || r.role} `), r.kind === 'cut' ? pick(r.id, r.id) : el('span', {}, `in-between ${r.id}`),
+        el('span', { class: 'muted' }, `${r.relation ? ` · ${r.relation.replace(/_/g, ' ')}` : ''}${r.who ? ` · for ${r.who.map(name).join(', ')}` : ''}${r.realises ? ` · makes ${r.realises} real` : ''}`));
+      pane.append(d);
+    }
+    if (n.differs.length) pane.append(el('div', { class: 'tnote muted' }, `What differs from them: ${n.differs.join('; ')}`));
+    if (n.unseen.length) pane.append(el('div', { class: 'tnote f' }, `Named, but not in its planned picture: ${n.unseen.map(name).join(', ')}`));
+
+    pane.append(el('h4', {}, 'Storyboard check'));
+    const sb = n.storyboard;
+    const verdict = !sb || sb.ok == null ? 'unchecked' : sb.ok ? 'cleared' : 'held';
+    const line = el('div', { class: 'tnote' });
+    line.append(el('span', { class: `verdict ${verdict}` }, verdict === 'unchecked' ? 'not checked' : verdict));
+    if (sb && sb.stale) line.append(el('span', { class: 'muted' }, ' · it read another view than its plan’s now'));
+    pane.append(line);
+    for (const x of (sb && sb.reasons) || []) pane.append(el('div', { class: 'bad' }, x));
+
+    if (n.drawn) {
+      const dr = n.drawn;
+      pane.append(el('h4', {}, 'As drawn'));
+      const review = { approved: ' · looks right', left: ' · kept' }[dr.review] || '';
+      pane.append(el('div', { class: 'tnote' }, `${dr.status}${dr.version > 1 ? ` · v${dr.version}` : ''}${review}${dr.check ? ` · judge ${dr.check.passed} of ${dr.check.questions}` : ''}`));
+      for (const x of dr.continuityFailed || []) pane.append(el('div', { class: 'tnote f' }, x));
+      for (const x of dr.held || []) pane.append(el('div', { class: 'bad' }, `Held: ${x}`));
+      if (dr.status === 'ready') {
+        const box = el('div', { class: 'tree-img' });
+        box.append(imageFor(`/api/sketch?id=${encodeURIComponent(session.id)}&item=${encodeURIComponent(n.id)}&v=${dr.version}`, `The moment as drawn: ${n.name}`, 'tree'));
+        pane.append(box);
+      }
+    }
+  }
+
+  // The looks ledger: which stage of each element's look is in force at each cut.
+  pane.append(el('h4', {}, 'Looks ledger'));
+  const cuts = Object.keys(t.index).sort((x, y) => t.index[x].order - t.index[y].order);
+  const changes = (r) => r.stages.length > 1 || r.stages.some((s) => s.firstLooks && s.firstLooks.length);
+  const rows = t.ledger.rows.filter((r) => treeAllRows || changes(r));
+  pane.append(toggle('rows', `every element (${t.ledger.rows.length}), not only those whose look changes`, treeAllRows, (v) => { treeAllRows = v; }));
+  if (!rows.length) pane.append(el('p', { class: 'muted' }, 'Every element keeps its sketched look through the dream.'));
+  else {
+    const sel = treeStage && stages.get(treeStage);
+    const breakAt = new Set(t.ledger.breaks.map((x) => x.at));
+    const colClass = (cu, i) => [i && t.index[cu].scene !== t.index[cuts[i - 1]].scene ? 'sc' : '', breakAt.has(cu) ? 'brk' : ''].filter(Boolean).join(' ');
+    const wrap = el('div', { class: 'ledger-wrap' });
+    const grid = el('table', { class: 'ledger' });
+    const hr = el('tr');
+    hr.append(el('th', { class: 'el' }));
+    cuts.forEach((cu, i) => {
+      const redraw = sel && (sel.redraw.cuts.includes(cu) ? 'rd' : sel.redraw.maybe.includes(cu) ? 'maybe' : '');
+      const th = el('th', { class: [colClass(cu, i), redraw].filter(Boolean).join(' '), title: `${cu} · scene ${nodes.get(t.index[cu].scene)?.number}` });
+      th.append(pick(cu, cu));
+      hr.append(th);
+    });
+    grid.append(hr);
+    for (const r of rows) {
+      const tr = el('tr');
+      const e = t.elements[r.element];
+      tr.append(el('td', { class: 'el', title: `${name(r.element)} · ${r.element} · ${catLabel(r.category)}` }, `${e && e.number ? `${e.number} ` : ''}${name(r.element)}`));
+      const first = new Map(((r.stages[0] && r.stages[0].firstLooks) || []).map((f) => [f.cut, f]));
+      cuts.forEach((cu, i) => {
+        const td = el('td', { class: colClass(cu, i) });
+        const s = r.plot[cu] ? stages.get(r.plot[cu]) : null;
+        const fl = first.get(cu);
+        if (s || fl) {
+          const start = s && s.startsAt === cu;
+          const btn = el('button', { type: 'button', class: [start ? 'start' : '', fl ? 'first' : '', s && s.key === treeStage ? 'on' : ''].filter(Boolean).join(' '), 'data-focus': `cell-${r.element}-${cu}` },
+            `${start ? '▲' : ''}${s ? s.n : ''}${fl ? '⚑' : ''}`);
+          btn.title = [s && `${s.key}${s.n ? `: ${s.part} now ${s.now}` : ': as sketched'}`,
+            start && s.ghost && `made real by in-between ${s.ghost}, edited from ${s.ghostFrom}`,
+            fl && `first shown here: ${fl.what}, ${fl.now}${fl.ghost ? `; in-between ${fl.ghost} changes nothing` : ''}`].filter(Boolean).join('\n');
+          if (s) btn.onclick = () => { treeStage = treeStage === s.key ? null : s.key; drawTree(); };
+          td.append(btn);
+          if (start && s.ghost) td.append(el('small', {}, s.ghost));
+        }
+        tr.append(td);
+      });
+      grid.append(tr);
+    }
+    wrap.append(grid);
+    pane.append(wrap);
+    pane.append(el('div', { class: 'tnote muted' }, '▲ a change starts here, with the in-between that makes it · ⚑ how it looks where first shown · hatched: a dream jump or morph · pick a stage to see what it would redraw'));
+    if (sel) {
+      const box = el('div', { class: 'tnote' });
+      box.append(el('b', {}, `${name(sel.element)}, stage ${sel.n}`), sel.n ? `: ${sel.part} now ${sel.now}, from ${sel.startsAt}${sel.told === false ? ' (a guess)' : ''}` : ': as sketched');
+      pane.append(box);
+      const rd = sel.redraw;
+      const again = [...rd.items.map((i) => `${name(i)}’s sheet`), ...rd.ghosts.map((g) => `in-between ${g}`), ...rd.cuts];
+      pane.append(el('div', { class: 'tnote muted' }, `If it changes, draw again: ${again.join(', ') || 'nothing'}${rd.maybe.length ? `; perhaps ${rd.maybe.join(', ')}` : ''}.`));
+    }
+  }
+
+  // What only the dreamer can settle, in the order Berry would ask it.
+  pane.append(el('h4', {}, `Questions for the dreamer · ${t.gaps.length}`));
+  if (!t.gaps.length) pane.append(el('p', { class: 'muted' }, 'Nothing left that only the dreamer can settle.'));
+  let level = null;
+  for (const g of [...t.gaps].sort((x, y) => x.priority - y.priority || (x.id < y.id ? -1 : 1))) {
+    if (g.level !== level) { level = g.level; pane.append(el('div', { class: 'glevel' }, GAP_LEVEL[level] || level)); }
+    const box = el('div', { class: 'goal' });
+    const top = el('div', { class: 'top' });
+    const about = g.element ? name(g.element) : nodes.has(g.node) ? nodes.get(g.node).name : g.node;
+    top.append(el('span', { class: 'pill' }, g.kind.replace(/_/g, ' ')), el('span', { class: 'label', title: g.id }, about), el('span', { class: `basis ${g.basis}` }, g.basis));
+    box.append(top);
+    const facts = el('div', { class: 'ev' });
+    facts.append(`${g.fields.join(', ')}${g.asked ? ` · asked ${g.asked}×` : ''}${g.askedBy === 'profile' ? ' · its sketch asks for it' : ''}${g.after && g.after.length ? ` · after ${g.after.join(', ')}` : ''} · affects `);
+    g.affects.forEach((cu, i) => { if (i) facts.append(' '); facts.append(pick(cu, cu)); });
+    box.append(facts);
+    const now = current(g.current);
+    if (now) box.append(el('div', { class: 'ev', title: now }, `now: ${clip(now, 140)}`));
+    pane.append(box);
+  }
+
+  // What code sees is off: for the checks and the harness, never asked of the dreamer.
+  pane.append(el('h4', {}, `Flags · ${t.flags.length}`));
+  if (!t.flags.length) pane.append(el('p', { class: 'muted' }, 'Nothing flagged.'));
+  const byCode = new Map();
+  for (const f of t.flags) { if (!byCode.has(f.code)) byCode.set(f.code, []); byCode.get(f.code).push(f); }
+  for (const [code, list] of byCode) {
+    pane.append(el('div', { class: 'glevel' }, `${code.replace(/_/g, ' ')} · ${list.length}`));
+    for (const f of list) {
+      const d = el('div', { class: 'tnote' });
+      d.append(pick(f.node, f.node), ` ${f.text}`);
+      pane.append(d);
+    }
+  }
+}
+
 function showPane(name) {
   for (const b of document.querySelectorAll('aside nav button')) b.classList.toggle('on', b.dataset.pane === name);
   for (const p of document.querySelectorAll('.pane')) p.classList.toggle('on', p.id === `pane-${name}`);
-  if (session) history.replaceState(null, '', `#${encodeURIComponent(session.id)}/${name}`);
+  if (session) history.replaceState(null, '', `#${encodeURIComponent(session.id)}/${name}${name === 'tree' && treeSel !== 'dream' ? `/${treeSel}` : ''}`);
   if (name === 'stages') renderStages();
+  if (name === 'tree') renderTree();
 }
 for (const b of document.querySelectorAll('aside nav button')) b.onclick = () => showPane(b.dataset.pane);
 
@@ -708,7 +1215,7 @@ for (const b of document.querySelectorAll('aside nav button')) b.onclick = () =>
 let poll = null;
 async function refresh() {
   session = await api(`/api/session?id=${encodeURIComponent(session.id)}`);
-  renderChat(); renderSteps(); renderDream(); renderProduction(); renderStages();
+  renderChat(); renderSteps(); renderDream(); renderProduction(); renderStages(); renderTree();
   if (busy) typing(true);
   // Background work finishes between turns; watch for it while any is running.
   const drawing = session.build && [...session.build.items, ...(session.build.frames || [])].some((i) => i.status === 'drawing' || ((i.kind === 'cut' || i.kind === 'ghost') && i.status === 'waiting'));
@@ -783,9 +1290,11 @@ $('sessions').onchange = async (ev) => {
   if (last) selectTurn(last.turn);
 };
 
-/** Open a conversation, and one of its panels, from the address: #<id> or #<id>/<panel>. */
+/** Open a conversation, and one of its panels, from the address: #<id>, #<id>/<panel> or #<id>/tree/<node>. */
 async function openFromAddress() {
-  const [id, pane] = decodeURIComponent(location.hash.slice(1)).split('/');
+  const [id, pane, ...node] = decodeURIComponent(location.hash.slice(1)).split('/');
+  // Scene ids hold a slash themselves (s3/l5).
+  if (pane === 'tree' && node.length) { treeSel = node.join('/'); treeJump = true; }
   session = { id };
   await refresh();
   await loadSessions(id);
