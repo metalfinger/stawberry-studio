@@ -119,7 +119,10 @@ export function facing(spot: Spot, plan: Blocking): Vec {
   const to = spot.faces ?? 'front';
   if (DIRECTIONS[to]) return DIRECTIONS[to];
   const target = plan.spots.find((s) => s.id === to);
-  return target ? unit({ x: target.x - spot.x, y: target.y - spot.y }) : DIRECTIONS.front;
+  // Facing what is on their own spot (what they hold, the corner they stand at) is no way at all:
+  // they face the front. A way of no length turned the balloons and the camera to nowhere (25 Sep).
+  if (!target || Math.hypot(target.x - spot.x, target.y - spot.y) < 0.05) return DIRECTIONS.front;
+  return unit({ x: target.x - spot.x, y: target.y - spot.y });
 }
 
 /** Where something is from a camera at `from` facing `d`: its angle (negative to the left) and distance. */

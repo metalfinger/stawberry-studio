@@ -1099,7 +1099,11 @@ export function outsideShot(
   const faced =
     people.length === 1 && people[0].faces ? holdAll.find((t) => t.id === people[0].faces && !isPerson(t)) : undefined;
   const at = faced ? nearestPart(faced, people[0]) : undefined;
-  const atIt = !!at && Math.hypot(at.x - people[0].x, at.y - people[0].y) < 2;
+  // Something they hold, or stand at the very spot of, has no side to be taken from: the dreamer
+  // "facing" the balloons in their hands, or the corner they stood on, turned the camera to face
+  // nothing, and everyone was out of the picture (25 Sep).
+  const gap = at ? Math.hypot(at.x - people[0].x, at.y - people[0].y) : 0;
+  const atIt = !!at && !faced?.heldBy && gap > 0.3 && gap < 2;
   const ends =
     group.length >= 2 ? Math.hypot(group[group.length - 1].x - group[0].x, group[group.length - 1].y - group[0].y) : 0;
   // Two people far apart (one waiting, the other arriving) cannot share a two-shot from the side:

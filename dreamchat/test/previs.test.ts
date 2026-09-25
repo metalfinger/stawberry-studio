@@ -254,6 +254,31 @@ describe('what things are to whoever is at them', () => {
     expect(shot.inPicture).toContain('p5');
   });
 
+  test('someone facing what they hold, or the spot they stand on, is still framed', () => {
+    const lounge: Blocking = {
+      front: 'the window wall',
+      indoors: true,
+      room: [6, 5],
+      spots: [
+        { id: 'p1', x: 2, y: 2.5, kind: 'person', pose: 'sitting', faces: 't3' },
+        { id: 't3', x: 2, y: 2.5, kind: 'thing', heldBy: 'p1', shape: 'block' },
+        {
+          id: 'x1',
+          x: 2.75,
+          y: 2.5,
+          kind: 'thing',
+          size: [2.4, 0.9, 0.8],
+          shape: 'seat',
+          fixture: true,
+          name: 'the sofa',
+        },
+      ],
+    };
+    const shot = outsideShot(lounge, ['p1', 't3'], 'medium', (id) => (id === 'p1' ? 'the dreamer' : 'the balloons'))!;
+    expect(shot.inPicture).toEqual(expect.arrayContaining(['p1', 't3']));
+    expect(shot.text).not.toContain('Outside the picture, off to the right: the dreamer');
+  });
+
   test('a cook at her stove is taken from the side, both in the picture', () => {
     const kitchen: Blocking = {
       front: 'the doorway',
