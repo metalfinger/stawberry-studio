@@ -34,6 +34,36 @@ const frame = (action: string): Item => ({
   frame: { visible: [], things: [], place: 'l1', distance: 'close', eyes: 'dreamer', key: true, order: 1 },
 });
 
+describe('an animal in a moment', () => {
+  test('is kept as an animal: its kind, size, coat and markings, never a face and clothes', () => {
+    // The terrier, kept by "their face, hair, build and clothes", came back another dog (lighthouse m3).
+    const dog: Item = {
+      id: 'p2',
+      kind: 'character',
+      name: 'the dog',
+      fields: {
+        identity: { value: "the dreamer's dog", said: true },
+        appearance: { value: 'a small brown terrier with upright ears', said: true },
+      },
+      status: 'ready',
+      version: 1,
+      mediaId: 'media-dog',
+      review: 'approved',
+    };
+    const m = {
+      ...frame('The dog looks back at the dreamer.'),
+      frame: { ...frame('').frame!, visible: ['p2'], eyes: 'outside' as const },
+    };
+    const { prompt, references } = framePrompt(m, [dog], style);
+    expect(prompt).toContain('the dog (animal): a small brown terrier with upright ears.');
+    expect(prompt).toContain(
+      'what the dog is (a small brown terrier with upright ears): its kind, its size, its build, its coat and its markings, exactly',
+    );
+    expect(prompt).not.toContain('face, hair, build and clothes');
+    expect(references.find((r) => r.media_id === 'media-dog')?.role).toBe('identity');
+  });
+});
+
 describe('writing in the dream', () => {
   test('quoted words are the only writing, spelled out', () => {
     expect(writingIn("one slat reads 'zikery', the rest blank")).toEqual(['zikery']);

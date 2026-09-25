@@ -15,6 +15,7 @@ import {
   coloursIn,
   groupMembers,
   inShades,
+  isAnimal,
   isGroup,
   type Item,
   LOOK,
@@ -322,8 +323,19 @@ export function framePrompt(
     // How it looks, as its sketch was drawn: "who they are" carries the story ("a young woman
     // cooking") into every moment they are in.
     const known = lookOf(s, LOOK[s.kind]);
+    // An animal is not a person: the dog, told to keep "their face, hair, build and clothes" from
+    // its terrier sketch, came back a bigger dog of another breed (lighthouse m3, 26 Sep).
+    const animal = isAnimal(s);
     const kind =
-      s.kind === 'character' ? (isGroup(s) ? 'people' : 'person') : s.kind === 'location' ? 'place' : 'thing';
+      s.kind === 'character'
+        ? animal
+          ? 'animal'
+          : isGroup(s)
+            ? 'people'
+            : 'person'
+        : s.kind === 'location'
+          ? 'place'
+          : 'thing';
     // Someone or something that has turned into something else entirely is no longer drawn from
     // its old sketch: its in-between picture shows what it became. The sofa's sketch beside "the
     // roller coaster that was a sofa" read as the prompt contradicting itself, and as the same
@@ -350,8 +362,12 @@ export function framePrompt(
       attach(
         s.mediaId,
         'identity',
-        `${who(s)}: this exact person, with the same face, build and clothes`,
-        `who ${who(s)} ${isGroup(s) ? 'are' : 'is'}${look ? ` (${look})` : ''}: their ${changed.some((st) => /head|face/i.test(st.what)) ? 'build and clothes' : 'face, hair, build and clothes'}, exactly${base && baseWho.includes(s.id) ? ', as Image 1 already shows them' : ''}${shades}. Nothing else from it: not its pose, background or framing.${except}`,
+        animal
+          ? `${who(s)}: this exact animal, the same kind, size, build, coat and markings`
+          : `${who(s)}: this exact person, with the same face, build and clothes`,
+        animal
+          ? `what ${who(s)} is${look ? ` (${look})` : ''}: its kind, its size, its build, its coat and its markings, exactly${base && baseWho.includes(s.id) ? ', as Image 1 already shows it' : ''}${shades}. Nothing else from it: not its pose, background or framing.${except}`
+          : `who ${who(s)} ${isGroup(s) ? 'are' : 'is'}${look ? ` (${look})` : ''}: their ${changed.some((st) => /head|face/i.test(st.what)) ? 'build and clothes' : 'face, hair, build and clothes'}, exactly${base && baseWho.includes(s.id) ? ', as Image 1 already shows them' : ''}${shades}. Nothing else from it: not its pose, background or framing.${except}`,
       );
       imageOf.set(s.id, references.length);
     } else if (s.kind === 'location') {
