@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { drawOrder, planBy, planContinuity } from '../continuity';
+import { drawOrder, placePlan, planBy, planContinuity } from '../continuity';
 import type { Breakdown, Moment } from '../producer';
 
 const detail = (value: string | null = null) => ({ value, said: false });
@@ -471,5 +471,32 @@ describe('ghosts', () => {
     expect([at('m1').y, at('m2').y, at('m3').y]).toEqual([2, 8, 8]);
     expect(at('m2').faces).toBe('back');
     expect(planBy(b, 'm1')!.spots.some((s) => s.id === 'x1')).toBe(true);
+  });
+
+  test('a moment in another place of its scene gets that place\'s plan, with who was there', () => {
+    const b = breakdown([
+      moment({ id: 'm1', visible: ['p1'], place: 'l1' }),
+      moment({ id: 'm2', visible: ['p1'], things: ['t1'], place: 'l2' }),
+    ]);
+    b.scenes[0].blocking = {
+      front: 'the stairs',
+      spots: [{ id: 'p1', x: 1, y: 1, kind: 'person' }],
+      places: {
+        l2: {
+          front: 'the stove',
+          room: [2.4, 2.2],
+          spots: [
+            { id: 'p1', x: 1.2, y: 1.6, kind: 'person' },
+            { id: 't1', x: 1.2, y: 0.5, kind: 'thing', size: [2, 0.8, 0.9] },
+          ],
+        },
+      },
+    };
+    expect(placePlan(b, 'm1')?.front).toBe('the stairs');
+    expect(placePlan(b, 'm2')?.room).toEqual([2.4, 2.2]);
+    expect(planBy(b, 'm2')!.spots.map((s) => [s.id, s.y])).toEqual([
+      ['p1', 1.6],
+      ['t1', 0.5],
+    ]);
   });
 });

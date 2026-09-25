@@ -147,20 +147,35 @@ export const pictureName = (name: string) =>
  * the scene so far, and what has been in it, and the dreamer. Someone who comes in later is not in
  * the room yet, for the camera or its previs.
  */
+/**
+ * The floor plan of the place a moment happens in: its scene's own plan, or the plan of another
+ * place the scene moves through. None where the scene has no plan.
+ */
+export function placePlan(b: Breakdown, momentId: string): Blocking | undefined {
+  const scene = b.scenes.find((sc) => sc.moments.some((x) => x.id === momentId));
+  const m = scene?.moments.find((x) => x.id === momentId);
+  if (!scene?.blocking || !m) return undefined;
+  return scene.blocking.places?.[m.place] ?? scene.blocking;
+}
+
 export function planBy(b: Breakdown, momentId: string): Blocking | undefined {
   const scene = b.scenes.find((sc) => sc.moments.some((x) => x.id === momentId));
-  if (!scene?.blocking) return undefined;
-  const upTo = scene.moments.slice(0, scene.moments.findIndex((x) => x.id === momentId) + 1);
+  const plan = placePlan(b, momentId);
+  if (!scene || !plan) return undefined;
+  // Only the moments in the same place count: who was in the tiny room, not who was on the stairs.
+  const own = (x: Moment) =>
+    plan === scene.blocking ? !scene.blocking?.places?.[x.place] : scene.blocking?.places?.[x.place] === plan;
+  const upTo = scene.moments.slice(0, scene.moments.findIndex((x) => x.id === momentId) + 1).filter(own);
   const there = new Set(upTo.flatMap((x) => [...x.visible, ...x.things]));
   const dreamerId = b.people.find((p) => p.is_dreamer)?.id;
-  // Where each person is by now: their spot, as their latest move up to this moment leaves them.
-  // She walked to the far end of the room and came back; a spot for the whole scene kept her
-  // standing where she started (24 Sep).
+  // Where each person (or car) is by now: their spot, as their latest move up to this moment
+  // leaves them. She walked to the far end of the room and came back; a spot for the whole scene
+  // kept her standing where she started (24 Sep).
   const moved = new Map<string, Move>();
-  for (const x of upTo) for (const mv of scene.blocking.moves?.[x.id] ?? []) moved.set(mv.id, mv);
+  for (const x of upTo) for (const mv of plan.moves?.[x.id] ?? []) moved.set(mv.id, mv);
   return {
-    ...scene.blocking,
-    spots: scene.blocking.spots
+    ...plan,
+    spots: plan.spots
       .filter((s) => there.has(s.id) || s.id === dreamerId || s.fixture)
       .map((s) => {
         const mv = moved.get(s.id);
@@ -558,10 +573,10 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
 
   // With a floor plan, every camera is placed on it: what each picture sees is worked out, and who
   // stands where across it follows from where they are, not from the order they were first named.
-  const blockOf = new Map(b.scenes.map((sc) => [sc.id, sc.blocking]));
+
   const bare = (x: string) => x.toLowerCase().replace(/^(the|a|an)\s+/, '').trim();
   for (const c of cuts) {
-    const plan = blockOf.get(c.scene);
+    const plan = placePlan(b, c.id);
     if (!plan) continue;
     const m = byId.get(c.id)!;
     const changed = [...c.own, ...c.states];

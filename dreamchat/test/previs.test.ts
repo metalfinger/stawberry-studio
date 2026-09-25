@@ -129,4 +129,28 @@ describe('previs', () => {
     expect(aimed.text).toContain('the autoclave');
     expect(aimed.inPicture).toContain('x1');
   });
+
+  test('in a tiny room the camera stays inside it, with a lens wide enough for what it must hold', () => {
+    const tiny: Blocking = {
+      front: 'the stove',
+      indoors: true,
+      room: [2.4, 2.2],
+      spots: [
+        { id: 'p3', x: 1.2, y: 1.3, kind: 'person', pose: 'standing', faces: 't1' },
+        { id: 't1', x: 1.2, y: 0.5, kind: 'thing', size: [2, 0.8, 0.9] },
+      ],
+    };
+    const shot = outsideShot(
+      tiny,
+      ['p3', 't1'],
+      'medium',
+      (id) => ({ p3: 'the young woman', t1: 'the stove' })[id] ?? id,
+    )!;
+    expect(shot.eye.at.x).toBeGreaterThanOrEqual(0.15);
+    expect(shot.eye.at.x).toBeLessThanOrEqual(2.25);
+    expect(shot.eye.at.y).toBeGreaterThanOrEqual(0.15);
+    expect(shot.eye.at.y).toBeLessThanOrEqual(2.05);
+    expect(shot.eye.lens).toBeLessThan(35);
+    expect(shot.inPicture).toEqual(expect.arrayContaining(['p3', 't1']));
+  });
 });

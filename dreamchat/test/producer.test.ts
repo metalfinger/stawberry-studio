@@ -166,3 +166,73 @@ describe('a change the script supervisor finds', () => {
     expect(m6.states ?? []).toEqual([]);
   });
 });
+
+describe('a scene through several places', () => {
+  test('gets a plan for each place, each the size it is, and a car moves with who rides in it', () => {
+    const b = {
+      title: 'the house',
+      people: [person('p1', 'you', 'the dreamer'), person('p3', 'the young woman', 'a young woman'), person('p4', 'the aunt', 'an aunt')],
+      things: [
+        { id: 't1', name: 'the stove', fields: {} },
+        { id: 't2', name: 'the little round convertible', fields: {} },
+      ],
+      places: [],
+      scenes: [
+        {
+          id: 's2',
+          place: 'l3',
+          moments: [
+            { ...moment('m3', 'Up the back stairs.'), visible: ['p1'], place: 'l3' },
+            { ...moment('m5', 'She cooks at a stove that almost fills the tiny room.', ['t1']), visible: ['p3'], place: 'l4' },
+          ],
+        },
+        {
+          id: 's3',
+          place: 'l5',
+          moments: [
+            { ...moment('m6', 'The aunt arrives.', ['t2']), visible: ['p1', 'p4'], place: 'l5' },
+            { ...moment('m7', 'They drive over the bridge.', ['t2']), visible: ['p1', 'p4'], place: 'l5' },
+          ],
+        },
+      ],
+    } as unknown as Breakdown;
+    const { breakdown } = readBlocking(b, {
+      scenes: [
+        {
+          id: 's2',
+          front: 'the stairs',
+          indoors: true,
+          room: [3, 8],
+          spots: [{ id: 'p1', x: 1, y: 1, pose: 'standing' }, { id: 'x1', name: 'the back stairs', x: 1.5, y: 4, size: [1, 3, 2.5] }],
+          places: { l4: { front: 'the stove', indoors: true, room: [2.4, 2.2], spots: [{ id: 'p3', x: 1.2, y: 1.4, faces: 't1', pose: 'standing' }, { id: 't1', x: 1.2, y: 0.5, size: [2, 0.8, 0.9] }, { id: 'p9', x: 9, y: 9 }] } },
+        },
+        {
+          id: 's3',
+          front: 'the house',
+          room: [30, 60],
+          spots: [
+            { id: 'p1', x: 15, y: 5, pose: 'standing' },
+            { id: 'p4', x: 15, y: 20, pose: 'sitting' },
+            { id: 't2', x: 15, y: 20, size: [1.6, 3.2, 1.3] },
+            { id: 'x1', name: 'the little bridge', x: 15, y: 40, size: [4, 6, 1] },
+          ],
+          moves: {
+            m7: [
+              { id: 't2', x: 15, y: 40 },
+              { id: 'p4', x: 15, y: 40, pose: 'sitting' },
+              { id: 'p1', x: 15.5, y: 40, pose: 'sitting' },
+            ],
+          },
+        },
+      ],
+    });
+    const [s2, s3] = breakdown.scenes;
+    // The tiny room is its own plan, as small as it is, with only who is there.
+    expect(s2.blocking?.room).toEqual([3, 8]);
+    expect(s2.blocking?.places?.l4.room).toEqual([2.4, 2.2]);
+    expect(s2.blocking?.places?.l4.spots.map((s) => s.id)).toEqual(['p3', 't1']);
+    // A street beyond ten metres keeps its ground, and the car drives over the bridge with them.
+    expect(s3.blocking?.spots.find((s) => s.id === 'x1')?.y).toBe(40);
+    expect(s3.blocking?.moves?.m7.map((m) => m.id)).toEqual(['t2', 'p4', 'p1']);
+  });
+});

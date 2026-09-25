@@ -17,6 +17,7 @@ import {
   type Lean,
   reach,
   rightOf,
+  roomOf,
   type Spot,
   unit,
   wall,
@@ -177,13 +178,21 @@ function solidsOf(plan: Blocking, leaveOut: string[], called: (id: string) => st
   // glance, as clay figures on a darker set do.
   if (plan.indoors) {
     const h = plan.ceiling ?? CEILING;
-    add('floor', 0.3, [quad([v3(0, 0, 0), v3(10, 0, 0), v3(10, 10, 0), v3(0, 10, 0)], v3(0, 0, 1))]);
-    add('ceiling', 0.22, [quad([v3(0, 0, h), v3(0, 10, h), v3(10, 10, h), v3(10, 0, h)], v3(0, 0, -1))]);
-    add('left wall', 0.46, [quad([v3(0, 0, 0), v3(0, 10, 0), v3(0, 10, h), v3(0, 0, h)], v3(1, 0, 0))]);
-    add('right wall', 0.44, [quad([v3(10, 0, 0), v3(10, 0, h), v3(10, 10, h), v3(10, 10, 0)], v3(-1, 0, 0))]);
-    add('back wall', 0.4, [quad([v3(0, 10, 0), v3(10, 10, 0), v3(10, 10, h), v3(0, 10, h)], v3(0, -1, 0))]);
-    add('front', 0.62, [quad([v3(0, 0, 0), v3(0, 0, h), v3(10, 0, h), v3(10, 0, 0)], v3(0, 1, 0))], plan.front);
-  } else add('ground', 0.34, [quad([v3(-60, -60, 0), v3(70, -60, 0), v3(70, 70, 0), v3(-60, 70, 0)], v3(0, 0, 1))]);
+    // The room is as big as the plan says: a tiny room is tiny, and its stove almost fills it.
+    const [w, dp] = roomOf(plan);
+    add('floor', 0.3, [quad([v3(0, 0, 0), v3(w, 0, 0), v3(w, dp, 0), v3(0, dp, 0)], v3(0, 0, 1))]);
+    add('ceiling', 0.22, [quad([v3(0, 0, h), v3(0, dp, h), v3(w, dp, h), v3(w, 0, h)], v3(0, 0, -1))]);
+    add('left wall', 0.46, [quad([v3(0, 0, 0), v3(0, dp, 0), v3(0, dp, h), v3(0, 0, h)], v3(1, 0, 0))]);
+    add('right wall', 0.44, [quad([v3(w, 0, 0), v3(w, 0, h), v3(w, dp, h), v3(w, dp, 0)], v3(-1, 0, 0))]);
+    add('back wall', 0.4, [quad([v3(0, dp, 0), v3(w, dp, 0), v3(w, dp, h), v3(0, dp, h)], v3(0, -1, 0))]);
+    add('front', 0.62, [quad([v3(0, 0, 0), v3(0, 0, h), v3(w, 0, h), v3(w, 0, 0)], v3(0, 1, 0))], plan.front);
+  } else {
+    // Outdoors the ground runs on well past the plan, however far the place goes.
+    const [w, dp] = roomOf(plan);
+    add('ground', 0.34, [
+      quad([v3(-80, -80, 0), v3(w + 80, -80, 0), v3(w + 80, dp + 80, 0), v3(-80, dp + 80, 0)], v3(0, 0, 1)),
+    ]);
+  }
   const placed = plan.spots.filter((s) => !s.many && !leaveOut.includes(s.id));
   const people = plan.spots.filter((s) => isPerson(s));
   for (const s of plan.spots) {
@@ -907,8 +916,8 @@ export function outsideShot(
   const room = (d: V2) => {
     if (!plan.indoors) return 30;
     const t = [
-      d.x > 0 ? c.x / d.x : d.x < 0 ? (c.x - 10) / d.x : Infinity,
-      d.y > 0 ? c.y / d.y : d.y < 0 ? (c.y - 10) / d.y : Infinity,
+      d.x > 0 ? c.x / d.x : d.x < 0 ? (c.x - roomOf(plan)[0]) / d.x : Infinity,
+      d.y > 0 ? c.y / d.y : d.y < 0 ? (c.y - roomOf(plan)[1]) / d.y : Infinity,
     ];
     return Math.min(...t.map(Math.abs));
   };
@@ -958,7 +967,9 @@ export function outsideShot(
     let at = { x: c.x - d.x * far, y: c.y - d.y * far };
     // Indoors, never through a wall: closer, with a lens wide enough to hold the same.
     if (plan.indoors) {
-      const inside = (p: V2) => p.x >= 0.3 && p.x <= 9.7 && p.y >= 0.3 && p.y <= 9.7;
+      const [rw, rd] = roomOf(plan);
+      // Against a wall at worst: in a tiny room the camera stands with its back to the wall.
+      const inside = (p: V2) => p.x >= 0.15 && p.x <= rw - 0.15 && p.y >= 0.15 && p.y <= rd - 0.15;
       while (!inside(at) && far > 0.6) {
         far -= 0.1;
         at = { x: c.x - d.x * far, y: c.y - d.y * far };

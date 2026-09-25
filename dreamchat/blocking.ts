@@ -34,7 +34,7 @@ export type Spot = {
   name?: string;
 };
 
-/** Where someone has moved to at a moment: their new spot, which way they face, how they are. */
+/** Where someone or something (a car, a boat) has moved to at a moment: its new spot, which way it faces, how they are. */
 export type Move = { id: string; x: number; y: number; faces?: string; pose?: Spot['pose'] };
 
 /**
@@ -47,8 +47,19 @@ export type Blocking = {
   spots: Spot[];
   indoors?: boolean;
   ceiling?: number;
+  /** How big the place is, in metres: across and deep. 10 by 10 where not said; a tiny room is 2 by 2. */
+  room?: [number, number];
   moves?: Record<string, Move[]>;
+  /**
+   * The other places the scene moves through, each with its own plan, by place id: up the stairs,
+   * down a hallway, into a tiny room almost filled by its stove. One plan for all three made the
+   * tiny room ten metres across (25 Sep).
+   */
+  places?: Record<string, Blocking>;
 };
+
+/** A place's size, across and deep, in metres. */
+export const roomOf = (plan: Pick<Blocking, 'room'>): [number, number] => plan.room ?? [10, 10];
 
 type Vec = { x: number; y: number };
 
