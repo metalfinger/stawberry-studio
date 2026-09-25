@@ -641,9 +641,12 @@ function renderMove(move: Move, state: State, cfg: GoalsFile, extras: BriefExtra
     case 'follow':
       return state.last_move === 'retell' || state.last_move === 'take_correction' || state.last_move === 'retell_check'
         ? "follow. You told the dream back, and they say it went on after that. Don't tell anything back now: just ask, simply, what happened next, and let them tell it."
-        : "follow. They're still telling the dream. React to what they just said, then invite what happened next. Don't ask about details yet.";
+        : // Never a guess at it: "did you go through it, out into whatever was on the other side?" was
+          // answered "yeah, we went out", and a dreamer who only saw out of the window went through it
+          // in every picture after (flooded library, 26 Sep).
+          "follow. They're still telling the dream. React to what they just said, then invite what happened next, openly, without guessing what it was. Don't ask about details yet.";
     case 'explore_thread':
-      return `explore_thread → ${threadSummary(state, move.threadId)}. Be curious about it: ask one thing about it, in their words.`;
+      return `explore_thread → ${threadSummary(state, move.threadId)}. Be curious about it: ask one thing about it, in their words, never suggesting what happened.`;
     case 'circle_back':
       return `circle_back → they mentioned "${threadSummary(state, move.threadId)}" earlier and it never got picked up. Return to it naturally.`;
     case 'probe_goal': {

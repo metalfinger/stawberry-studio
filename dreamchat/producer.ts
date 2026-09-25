@@ -240,7 +240,7 @@ const STYLE_SYSTEM = `You help turn a person's dream into pictures. From the con
 - "line": one plain sentence on how it would feel.
 - "tokens": 4-6 concrete technique phrases a renderer can follow, each under 120 characters ("flat black ink with hard carved edges" is a token; "dreamy style" is not). Tokens say how everything is drawn, never what is in the dream: no objects, materials, creatures or anything else from it, or every picture will be made of it.
 - "palette_hex": 4-6 colours as #RRGGBB.
-- "lighting_rules": 2-3 sentences on light, shadow and edges.`;
+- "lighting_rules": 2-3 sentences on light, shadow and edges, true of every place in the dream, indoors and out: never tied to one place ("light seems to come from within the room" read as at odds with the flooded city outside).`;
 
 const OWN_STYLE = `The person has described, in their own words, how they want the pictures to look (their latest message). Return exactly ONE option, id "own", built from their words, in the same shape.`;
 
