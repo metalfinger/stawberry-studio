@@ -993,7 +993,12 @@ export function dreamerShot(
       ? [
           `The inside of ${called(at.find((id) => plan.spots.find((x) => x.id === id)?.shape === 'vehicle') ?? at[0])} frames the picture: its front ahead and the edges of its window around the view.`,
         ]
-      : []),
+      : plan.inside
+        ? // The place is the inside of it (the tractor's cab), which has no spot of its own.
+          [
+            `The inside of ${name(plan.inside)} frames the picture: its front ahead and the edges of its window around the view.`,
+          ]
+        : []),
     ...shown.map(({ s, seen }, i) => {
       const lead = i === 0 ? 'Nearest' : i === shown.length - 1 && shown.length > 1 ? 'Farthest' : 'Then';
       return `${lead}, ${reach(distance(s))}, ${across(seen)}: ${called(s.id)}${thingWords(s, seen, plan, eye, called, { spots, on: at, anchor: me })}.`;
@@ -1445,11 +1450,15 @@ export function outsideShot(
       )
       .map((s) => `Outside the picture, ${offTo(eye, s)}: ${name(s.id)}.`),
     frontLine(plan, eye, rr, min),
+    // The place is the inside of something (the red tractor, for its cab): all of it is in there.
+    // Said nowhere once the tractor was off the plan, the moments in its cab read as missing it.
+    plan.inside ? `All of this is inside ${name(plan.inside)}: its walls, seats and windows around them.` : '',
   ].filter(Boolean);
   return {
     eye,
     text: sentences.join(' '),
     inPicture: [
+      ...(plan.inside ? [plan.inside] : []),
       ...shown.map((x) => x.s.id),
       ...spots.filter((s) => riding(s) && !shown.some((x) => x.s.id === s.id)).map((s) => s.id),
     ],

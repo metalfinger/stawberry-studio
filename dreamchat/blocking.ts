@@ -84,6 +84,8 @@ export type Blocking = {
    * on the plan: put on it, it stood inside the room by the window (lighthouse, 26 Sep).
    */
   outside?: Record<string, Side>;
+  /** The thing this place is the inside of: the red tractor, for "the tractor cab". Never on the plan. */
+  inside?: string;
 };
 
 /** A side of a place, for someone facing its front. */

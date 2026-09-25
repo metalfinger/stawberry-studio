@@ -268,6 +268,29 @@ describe('the floor plan a model gives', () => {
     expect(plan?.spots.some((s) => s.id === 't1')).toBe(false);
     expect(plan?.outside).toEqual({ t1: 'front' });
   });
+
+  test('a place that is the inside of one of its things has no spot for it, and is enclosed', () => {
+    // "The tractor cab" with "the red tractor" standing in it (lighthouse, 26 Sep).
+    const b = lab();
+    b.places[0].name = 'the tractor cab';
+    b.things = [{ id: 't1', name: 'the red tractor', fields: {} }] as unknown as Breakdown['things'];
+    b.scenes[0].moments[0].things = ['t1'];
+    const plan = readBlocking(b, {
+      scenes: [
+        {
+          id: 's1',
+          room: [2, 2],
+          spots: [
+            { id: 'p1', x: 0.7, y: 1.5, pose: 'sitting' },
+            { id: 'p2', x: 1.3, y: 1.5, pose: 'sitting' },
+            { id: 't1', x: 1, y: 1, size: [2, 2, 1.5], shape: 'vehicle' },
+          ],
+        },
+      ],
+    }).breakdown.scenes[0].blocking;
+    expect(plan?.spots.some((s) => s.id === 't1')).toBe(false);
+    expect([plan?.inside, plan?.indoors]).toEqual(['t1', true]);
+  });
 });
 
 describe("a moment's words", () => {

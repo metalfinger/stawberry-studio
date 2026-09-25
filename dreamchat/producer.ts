@@ -512,11 +512,29 @@ function readPlan(
   const outside: Record<string, Side> = {};
   for (const x of given)
     if (typeof x.id === 'string' && ids.has(x.id) && SIDES.includes(x.beyond as Side)) outside[x.id] = x.beyond as Side;
+  // A place that is the inside of one of its things ("the tractor cab" of "the red tractor") has no
+  // spot for that thing: planned as a vehicle standing in its own cab, the dreamer and the driver
+  // were "in the red tractor, partly hidden behind" it, seen from three metres off in the open, and
+  // every shot read as at odds with its moment (lighthouse, 26 Sep). The place is enclosed.
+  const placeNames = [...new Set(moments.map((m) => m.place))].map(
+    (id) => b.places.find((l) => l.id === id)?.name ?? '',
+  );
+  const inside = b.things.find((t) => {
+    const head =
+      t.name
+        .toLowerCase()
+        .split(/\s+(?:of|with|from|in|on)\s+/)[0]
+        .trim()
+        .split(/\s+/)
+        .at(-1) ?? '';
+    return ids.has(t.id) && head.length > 2 && placeNames.some((n) => new RegExp(`\\b${head}\\b`, 'i').test(n));
+  })?.id;
   const spots: Spot[] = given
     .filter(
       (x) =>
         typeof x.id === 'string' &&
         !outside[x.id] &&
+        x.id !== inside &&
         (ids.has(x.id) || fixture(x)) &&
         Number.isFinite(Number(x.x)) &&
         Number.isFinite(Number(x.y)),
@@ -600,12 +618,12 @@ function readPlan(
       });
     if (mv.length) moves[mid] = mv;
   }
-  const missing = [...ids].filter((id) => !spots.some((s) => s.id === id) && !outside[id]);
+  const missing = [...ids].filter((id) => !spots.some((s) => s.id === id) && !outside[id] && id !== inside);
   if (missing.length) {
     notes.push(`blocking: ${label} has no spot for ${missing.join(', ')}; left without a plan`);
     return null;
   }
-  const indoors = g.indoors === true;
+  const indoors = g.indoors === true || !!inside;
   const ceiling = Number(g.ceiling);
   return {
     front: str(g.front, 60) || 'the front',
@@ -615,6 +633,7 @@ function readPlan(
     ...(indoors ? { indoors: true } : {}),
     ...(indoors && Number.isFinite(ceiling) && ceiling >= 2 && ceiling <= 30 ? { ceiling } : {}),
     ...(Object.keys(outside).length ? { outside } : {}),
+    ...(inside ? { inside } : {}),
   };
 }
 
