@@ -1,0 +1,3245 @@
+[
+ {
+  "id": "502a@29",
+  "expect": "told",
+  "why": "it fades out there, with the balloons",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, i'm berry. when you're ready, tell me about your dream however it comes back to you.",
+    "messages": [
+     "hey, i'm berry. when you're ready, tell me about your dream however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "Hey Berry. The main thing I remember is being at the Meads's house, but it was bigger inside than out, like there was a whole little village in there."
+   },
+   {
+    "role": "assistant",
+    "content": "a whole little village... that's a lot of house to fit into a normal-looking outside. what was it like stepping in and realising all that was in there?",
+    "messages": [
+     "a whole little village... that's a lot of house to fit into a normal-looking outside. what was it like stepping in and realising all that was in there?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "It felt kind of strange but not scary. Just inside there was this cobblestone street, like something from an old European town. There was a man with curly hair, a bit like the Pied Piper, juggling."
+   },
+   {
+    "role": "assistant",
+    "content": "a juggler right at the start, that would catch your eye. what was he juggling?",
+    "messages": [
+     "a juggler right at the start, that would catch your eye. what was he juggling?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I don't remember exactly what he was juggling, just that he could do things like that."
+   },
+   {
+    "role": "assistant",
+    "content": "that's okay. the kind of person he was came through more than the details. did you stop to watch him, or did you keep moving?",
+    "messages": [
+     "that's okay. the kind of person he was came through more than the details. did you stop to watch him, or did you keep moving?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I think I kept moving. I went up the back stairs, but the real house doesn't have any. Then straight down another set of stairs right away."
+   },
+   {
+    "role": "assistant",
+    "content": "up one set and straight down another, that's a strange little up-and-down. what was at the bottom of the second stairs?",
+    "messages": [
+     "up one set and straight down another, that's a strange little up-and-down. what was at the bottom of the second stairs?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "At the bottom was a short empty hallway that turned a corner. Then I found a tiny room."
+   },
+   {
+    "role": "assistant",
+    "content": "a tiny room tucked away like that... what was in it?",
+    "messages": [
+     "a tiny room tucked away like that... what was in it?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "There was a young woman with shoulder-length blonde hair in a pageboy. She was cooking at a stove that almost filled the whole room. She was nice to me."
+   },
+   {
+    "role": "assistant",
+    "content": "a stove that almost filled the room, and her still managing to cook in it... that's cosy and a bit ridiculous all at once. what was she cooking?",
+    "messages": [
+     "a stove that almost filled the room, and her still managing to cook in it... that's cosy and a bit ridiculous all at once. what was she cooking?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I don't remember what she was cooking, just that she was at the stove and being nice."
+   },
+   {
+    "role": "assistant",
+    "content": "the warm feeling of it stayed with you more than the food. did she talk to you?",
+    "messages": [
+     "the warm feeling of it stayed with you more than the food. did she talk to you?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I think she said something friendly, but I don't remember the words."
+   },
+   {
+    "role": "assistant",
+    "content": "just her friendliness stayed. did you stay with her long, or did something pull you away?",
+    "messages": [
+     "just her friendliness stayed. did you stay with her long, or did something pull you away?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I didn't stay long. Next thing, I was outside, waiting for my aunt to pick me up."
+   },
+   {
+    "role": "assistant",
+    "content": "that's a shift, from that tiny warm room back outside. when you were waiting for your aunt, were you outside the Meads's house still?",
+    "messages": [
+     "that's a shift, from that tiny warm room back outside. when you were waiting for your aunt, were you outside the Meads's house still?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "Yeah, I think I was still outside their house. She arrived in a little round convertible."
+   },
+   {
+    "role": "assistant",
+    "content": "a little round convertible, that's a nice detail. did you get in with her?",
+    "messages": [
+     "a little round convertible, that's a nice detail. did you get in with her?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "Yeah, we went for a drive, but not very far. We crossed a little bridge over a creek, then doubled back and she dropped me off at the house again."
+   },
+   {
+    "role": "assistant",
+    "content": "a short loop like that, all that for crossing a bridge and coming back... how did that feel, being dropped off again?",
+    "messages": [
+     "a short loop like that, all that for crossing a bridge and coming back... how did that feel, being dropped off again?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "It felt fine, just like a short little outing. After that, I was inside again, I think."
+   },
+   {
+    "role": "assistant",
+    "content": "that whole episode had a light feel to it, not much weighing on it. when you were inside again, was it the same inside you'd left, or had it changed?",
+    "messages": [
+     "that whole episode had a light feel to it, not much weighing on it. when you were inside again, was it the same inside you'd left, or had it changed?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I think it was the same. I sat with a couple of people, playing with a string of blue balloons."
+   },
+   {
+    "role": "assistant",
+    "content": "a string of blue balloons, that's a bright thing to end up with. how did playing with them feel — were you all holding the string together, or taking turns?",
+    "messages": [
+     "a string of blue balloons, that's a bright thing to end up with. how did playing with them feel — were you all holding the string together, or taking turns?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I don't remember exactly, just that we were sitting and playing with them, kind of relaxed."
+   },
+   {
+    "role": "assistant",
+    "content": "sounds like an easy way for things to wind down. do you remember how the dream ended?",
+    "messages": [
+     "sounds like an easy way for things to wind down. do you remember how the dream ended?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "Not really. It just kind of fades out there, with the balloons."
+   }
+  ]
+ },
+ {
+  "id": "96bd@21",
+  "expect": "told",
+  "why": "that's where the dream ends for me",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, i'm berry. tell me your dream, however it comes back to you.",
+    "messages": [
+     "hey, i'm berry. tell me your dream, however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i was standing by the autoclave, talking to this young woman, and then she just walked off to the far end of the room."
+   },
+   {
+    "role": "assistant",
+    "content": "that's a strange way to end a conversation, just walking off like that. what happened next?",
+    "messages": [
+     "that's a strange way to end a conversation, just walking off like that. what happened next?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "when she came back, she had this glittering block of ice where her head should've been. it was all irregular."
+   },
+   {
+    "role": "assistant",
+    "content": "that's such a specific image. was it beautiful, or was it more unsettling to see?",
+    "messages": [
+     "that's such a specific image. was it beautiful, or was it more unsettling to see?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "not frightening actually. she just stood there naturally, not saying anything. then it started to melt."
+   },
+   {
+    "role": "assistant",
+    "content": "melt like a normal ice cube, or did it do something strange when it melted?",
+    "messages": [
+     "melt like a normal ice cube, or did it do something strange when it melted?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "little channels formed and the angles rounded away. it was more like carving than falling apart."
+   },
+   {
+    "role": "assistant",
+    "content": "still by the autoclave?",
+    "messages": [
+     "still by the autoclave?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i think we were, yeah. it all felt very calm."
+   },
+   {
+    "role": "assistant",
+    "content": "calm is surprising for something like that. what made it calm, do you think?",
+    "messages": [
+     "calm is surprising for something like that. what made it calm, do you think?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "she wasn't acting strange, and the melting went on pretty fast, but it didn't feel like she was in danger or anything."
+   },
+   {
+    "role": "assistant",
+    "content": "did you know her?",
+    "messages": [
+     "did you know her?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "no, i don't remember knowing her. she was just a young woman."
+   },
+   {
+    "role": "assistant",
+    "content": "so you're by this machine, with someone you don't know, and her head's turning to water. what were you doing while it happened?",
+    "messages": [
+     "so you're by this machine, with someone you don't know, and her head's turning to water. what were you doing while it happened?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "just watching it change. the ice kept sculpting itself, more than just water running off."
+   },
+   {
+    "role": "assistant",
+    "content": "it kept changing even as it went, not just shrinking. that's really something.",
+    "messages": [
+     "it kept changing even as it went, not just shrinking. that's really something."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "yeah, the sculpturing went on rapidly until it was a beautifully molded head of a horse."
+   },
+   {
+    "role": "assistant",
+    "content": "a horse, out of all things. did it seem like it was supposed to turn into that, or did it come as a surprise?",
+    "messages": [
+     "a horse, out of all things. did it seem like it was supposed to turn into that, or did it come as a surprise?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "it kind of felt intentional, like the melting was just the way it got there. but it was still strange to see."
+   },
+   {
+    "role": "assistant",
+    "content": "it feels almost like the melting was following a plan. did it stop once it was fully a horse's head, or did it keep changing?",
+    "messages": [
+     "it feels almost like the melting was following a plan. did it stop once it was fully a horse's head, or did it keep changing?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "it stopped there, from what i remember. that's where the dream ends for me."
+   }
+  ]
+ },
+ {
+  "id": "bbba@23",
+  "expect": "told",
+  "why": "that's where it ends, once the horse's head was formed",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, how's it going? if you feel like it, tell me your dream — however it comes back to you.",
+    "messages": [
+     "hey, how's it going? if you feel like it, tell me your dream — however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "There was this young woman I was talking to, standing by an autoclave. She walked off for a bit, and when she came back, her head was this block of glittering ice."
+   },
+   {
+    "role": "assistant",
+    "content": "her head just… glittering ice. that's quite something to come back to.",
+    "messages": [
+     "her head just… glittering ice. that's quite something to come back to."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "Yeah, she just stood there in front of me, natural as anything, not saying a word. It didn’t feel weird, honestly."
+   },
+   {
+    "role": "assistant",
+    "content": "same place, that room with the autoclave?",
+    "messages": [
+     "same place, that room with the autoclave?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "Yeah, as far as I remember it was the same room. She walked to the far end and came back with this irregular block of ice on her shoulders instead of a head."
+   },
+   {
+    "role": "assistant",
+    "content": "an irregular block… was it still shaped anything like a head, or just its own shape?",
+    "messages": [
+     "an irregular block… was it still shaped anything like a head, or just its own shape?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "Just its own shape, not like a head at all. But then it started to melt and trickle, little channels forming, the sharp edges rounding off. It was more like it was being carved than falling apart."
+   },
+   {
+    "role": "assistant",
+    "content": "carved… like the water was doing the shaping. and you just watched it happen?",
+    "messages": [
+     "carved… like the water was doing the shaping. and you just watched it happen?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "Yeah, exactly. The sculpturing went on fast, and before long it was a beautifully molded horse’s head. Eyes, ears, nostrils all faithfully carved out in the clearest ice."
+   },
+   {
+    "role": "assistant",
+    "content": "did you look at her body at all, or was it mostly the head that had your attention?",
+    "messages": [
+     "did you look at her body at all, or was it mostly the head that had your attention?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "It was really the head I was watching. Everything else stayed the same, I think. She was just standing there, calm."
+   },
+   {
+    "role": "assistant",
+    "content": "did she seem to know it was happening? like she was letting it, or was she not part of it?",
+    "messages": [
+     "did she seem to know it was happening? like she was letting it, or was she not part of it?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "Hard to say. She didn’t seem surprised or alarmed, just let it happen. Like it was the most ordinary thing."
+   },
+   {
+    "role": "assistant",
+    "content": "so ordinary to her… what was that like for you, watching something so strange feel so normal?",
+    "messages": [
+     "so ordinary to her… what was that like for you, watching something so strange feel so normal?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "Oddly calm. It didn’t feel frightening at all. More like watching someone work, but the work was the ice changing shape."
+   },
+   {
+    "role": "assistant",
+    "content": "like it had its own pace and you were just there with it. was anyone else around while this was happening?",
+    "messages": [
+     "like it had its own pace and you were just there with it. was anyone else around while this was happening?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I don’t remember anyone else around. It was just the two of us in that room."
+   },
+   {
+    "role": "assistant",
+    "content": "just the two of us. did her face in ice show any expression, or was it still and fixed?",
+    "messages": [
+     "just the two of us. did her face in ice show any expression, or was it still and fixed?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "It was still and fixed, I think. The features were clear, but there wasn't any expression. Like a sculpture."
+   },
+   {
+    "role": "assistant",
+    "content": "a sculpture with her body just standing there. did you ever touch it, or was it more something you kept at a little distance?",
+    "messages": [
+     "a sculpture with her body just standing there. did you ever touch it, or was it more something you kept at a little distance?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "No, I didn’t touch it. I just stood there, watching at a little distance."
+   },
+   {
+    "role": "assistant",
+    "content": "kept at a little distance… did the moment stay like that for long?",
+    "messages": [
+     "kept at a little distance… did the moment stay like that for long?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "Not really. That’s where it ends for me, once the horse’s head was fully formed. It just stops there."
+   }
+  ]
+ },
+ {
+  "id": "e11a@19",
+  "expect": "told",
+  "why": "it ends with the roller coaster",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, i'm berry. tell me your dream, however it comes back to you.",
+    "messages": [
+     "hey, i'm berry. tell me your dream, however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i was at the movies with a friend and this huge sofa next to us just turned into a roller coaster. like a real one, from an amusement park"
+   },
+   {
+    "role": "assistant",
+    "content": "a sofa turning into a roller coaster, that's a big change. was it sudden, like one blink and it was there?",
+    "messages": [
+     "a sofa turning into a roller coaster, that's a big change. was it sudden, like one blink and it was there?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i don't remember how fast. i just remember being amazed looking at it"
+   },
+   {
+    "role": "assistant",
+    "content": "you were amazed, just taking it in. what was the roller coaster like up close?",
+    "messages": [
+     "you were amazed, just taking it in. what was the roller coaster like up close?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "just like the ones at amusement parks, nothing special about it. the theater was the strange part actually"
+   },
+   {
+    "role": "assistant",
+    "content": "so the roller coaster was normal, but the theater was the odd thing. what was strange about it?",
+    "messages": [
+     "so the roller coaster was normal, but the theater was the odd thing. what was strange about it?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "the seats were kind of like blue sofas instead of normal seats. and there were lots of people. and they weren't charging for the seats on the right side, which was weird"
+   },
+   {
+    "role": "assistant",
+    "content": "blue sofa seats, people around, and one side of the theater was free. did that feel like a deal, or like something was off about it?",
+    "messages": [
+     "blue sofa seats, people around, and one side of the theater was free. did that feel like a deal, or like something was off about it?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "something felt off. i didn't feel comfortable. i told my friend we should change places but we didn't"
+   },
+   {
+    "role": "assistant",
+    "content": "you wanted to move but you stayed. were you in the dream as yourself, right there in it?",
+    "messages": [
+     "you wanted to move but you stayed. were you in the dream as yourself, right there in it?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "yes it was me, sitting there with my girlfriend. next to us there was this great big sofa, taller than the one we were in. that's the one that turned into the roller coaster"
+   },
+   {
+    "role": "assistant",
+    "content": "it was bigger than the one you were on. did it feel like it could have been yours, or just some extra sofa that happened to be there?",
+    "messages": [
+     "it was bigger than the one you were on. did it feel like it could have been yours, or just some extra sofa that happened to be there?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i don't know, it was just there next to us"
+   },
+   {
+    "role": "assistant",
+    "content": "so you were on one sofa, and next to you this other one changes into a roller coaster. if you could pause the dream for a second, which moment would you hold it on?",
+    "messages": [
+     "so you were on one sofa, and next to you this other one changes into a roller coaster. if you could pause the dream for a second, which moment would you hold it on?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "the moment the sofa turned into the roller coaster. i was so amazed"
+   },
+   {
+    "role": "assistant",
+    "content": "that's the moment. was there anything in the dream that mattered to you, like an object, or did nothing really stand out that way?",
+    "messages": [
+     "that's the moment. was there anything in the dream that mattered to you, like an object, or did nothing really stand out that way?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "just the sofas really. the blue ones we sat on and the big one next to us. that's all i remember, i think that's the whole dream"
+   },
+   {
+    "role": "assistant",
+    "content": "it sounds like it just stopped there. did the dream end while you were still looking at the roller coaster, or did it fade into something else?",
+    "messages": [
+     "it sounds like it just stopped there. did the dream end while you were still looking at the roller coaster, or did it fade into something else?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i don't remember what came after, it ends with the roller coaster for me"
+   }
+  ]
+ },
+ {
+  "id": "927a@29",
+  "expect": "told",
+  "why": "that's where it ends for me",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, i'm berry. tell me your dream, however it comes back to you.",
+    "messages": [
+     "hey, i'm berry. tell me your dream, however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "There was this young woman standing by the autoclave, and we were talking."
+   },
+   {
+    "role": "assistant",
+    "content": "an autoclave, of all places. what were you two talking about?",
+    "messages": [
+     "an autoclave, of all places. what were you two talking about?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I don’t remember the conversation, just her being there. Then she excused herself and went to the far end of the room."
+   },
+   {
+    "role": "assistant",
+    "content": "huh, so the words just slipped away but she didn't. what was she like, standing there with you?",
+    "messages": [
+     "huh, so the words just slipped away but she didn't. what was she like, standing there with you?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "She seemed normal at first, just a young woman. Nothing about her stood out until she came back."
+   },
+   {
+    "role": "assistant",
+    "content": "what changed when she came back?",
+    "messages": [
+     "what changed when she came back?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "She had a block of ice where her head should have been. Irregular, glittering, just resting on her shoulders. And she stood there like it was completely natural."
+   },
+   {
+    "role": "assistant",
+    "content": "wow. like it had always been that way. where is all this happening, the room with the autoclave?",
+    "messages": [
+     "wow. like it had always been that way. where is all this happening, the room with the autoclave?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "Just some room, I don’t remember much about it besides the autoclave. It didn’t feel like a place I knew."
+   },
+   {
+    "role": "assistant",
+    "content": "So the room is blurry, but she's not. Did you look at the ice up close at all?",
+    "messages": [
+     "So the room is blurry, but she's not. Did you look at the ice up close at all?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I looked at it while she just stood there. It started to melt and trickle, little channels forming in it. The sharp edges rounded away."
+   },
+   {
+    "role": "assistant",
+    "content": "That must have been something to watch. Were you expecting the melt, or did it take you by surprise?",
+    "messages": [
+     "That must have been something to watch. Were you expecting the melt, or did it take you by surprise?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "It surprised me, but it didn’t feel wrong. More like ice doing what ice does, only faster and with more shape to it."
+   },
+   {
+    "role": "assistant",
+    "content": "more shape, you said. what kind of shape did it make as it went?",
+    "messages": [
+     "more shape, you said. what kind of shape did it make as it went?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "It kept changing while it melted, but instead of just collapsing, it looked like it was being carved. The angles softened into something else."
+   },
+   {
+    "role": "assistant",
+    "content": "what did you make of it, in the dream?",
+    "messages": [
+     "what did you make of it, in the dream?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I just watched. It felt calm, like watching someone work on a sculpture rather than something falling apart."
+   },
+   {
+    "role": "assistant",
+    "content": "Like the melting was doing something on purpose. About how long did it last, would you say?",
+    "messages": [
+     "Like the melting was doing something on purpose. About how long did it last, would you say?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "Hard to say. Maybe a minute or two? Long enough to see it change completely."
+   },
+   {
+    "role": "assistant",
+    "content": "Long enough to see it through. What was there when it was done changing?",
+    "messages": [
+     "Long enough to see it through. What was there when it was done changing?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "A horse’s head, carved out of the clearest ice. Eyes, ears, nostrils — all there, just really distinct."
+   },
+   {
+    "role": "assistant",
+    "content": "A horse's head. That's a turn. Was it facing you, or turned some other way?",
+    "messages": [
+     "A horse's head. That's a turn. Was it facing you, or turned some other way?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "Facing me. It was very still after all that motion."
+   },
+   {
+    "role": "assistant",
+    "content": "that stillness must have been loud. Was the woman still there under it, or had she gone with the change?",
+    "messages": [
+     "that stillness must have been loud. Was the woman still there under it, or had she gone with the change?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "She was still standing there, just with the horse’s head instead of her own. She wasn’t saying anything."
+   },
+   {
+    "role": "assistant",
+    "content": "right. How did it feel to stand in front of someone like that — beautiful or more like something gone wrong?",
+    "messages": [
+     "right. How did it feel to stand in front of someone like that — beautiful or more like something gone wrong?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "It didn’t feel wrong. It felt strange but not scary — more like something you don’t question in the moment."
+   },
+   {
+    "role": "assistant",
+    "content": "Dream logic. Did anything happen after that, while you were both standing there?",
+    "messages": [
+     "Dream logic. Did anything happen after that, while you were both standing there?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "That’s where it ends for me. I don’t remember anything after that."
+   }
+  ]
+ },
+ {
+  "id": "9ddd@29",
+  "expect": "told",
+  "why": "the last thing they remember is the train going round a bend",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hi, i'm berry\n\ntell me your dream, however it comes back to you",
+    "messages": [
+     "hi, i'm berry",
+     "tell me your dream, however it comes back to you"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "ok so the part that keeps coming back to me is being on top of that train, it was so high up and going way too fast, i kept thinking i was gonna fall off"
+   },
+   {
+    "role": "assistant",
+    "content": "that sounds like a lot to hold onto\n\nso high up and moving that fast, yeah i can see why it keeps coming back\n\nwhen you were up there, were you holding on to anything?",
+    "messages": [
+     "that sounds like a lot to hold onto",
+     "so high up and moving that fast, yeah i can see why it keeps coming back",
+     "when you were up there, were you holding on to anything?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i think i was just trying to keep my balance mostly, but it says several times i nearly fell off, so i must not have had a good grip on anything"
+   },
+   {
+    "role": "assistant",
+    "content": "just your balance then, no real grip on anything\n\nwhat did it feel like in your body when you nearly went over?",
+    "messages": [
+     "just your balance then, no real grip on anything",
+     "what did it feel like in your body when you nearly went over?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "like that lurch you get when you miss a step, all in my stomach, and my hands would fly out trying to grab air. i was really scared"
+   },
+   {
+    "role": "assistant",
+    "content": "that lurch is so specific, i know exactly the one\n\nyour hands grabbing at nothing though, that part's rough\n\nwhat was around you up there, just sky or something else to see?",
+    "messages": [
+     "that lurch is so specific, i know exactly the one",
+     "your hands grabbing at nothing though, that part's rough",
+     "what was around you up there, just sky or something else to see?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "a lot of sky because we were so high, but i could see it was a country road below, like fields and stuff. not much to look at though, i was too busy being scared"
+   },
+   {
+    "role": "assistant",
+    "content": "fields below, but you couldn't really take it in\n\nhow did you end up on top of the train in the first place, do you remember?",
+    "messages": [
+     "fields below, but you couldn't really take it in",
+     "how did you end up on top of the train in the first place, do you remember?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "yeah, before that i was inside a streetcar watching the conductor, and then suddenly i was on top of it but it had turned into a train. it happened kind of fast"
+   },
+   {
+    "role": "assistant",
+    "content": "so it switched on you without any in-between, that's wild\n\nit went from streetcar to train too, like the whole thing got bigger\n\nwhat was the conductor doing when you were watching him?",
+    "messages": [
+     "so it switched on you without any in-between, that's wild",
+     "it went from streetcar to train too, like the whole thing got bigger",
+     "what was the conductor doing when you were watching him?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "he was operating the car and i started noticing the lever he turned when we went around bends. after a while it felt like i was doing it with him, like going through the motions"
+   },
+   {
+    "role": "assistant",
+    "content": "like you were doing it with him, going through the motions\n\nhow did that feel, being in it with him that way?",
+    "messages": [
+     "like you were doing it with him, going through the motions",
+     "how did that feel, being in it with him that way?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "it felt almost natural, like my body just knew the rhythm of it. not scary then, more like we were both driving"
+   },
+   {
+    "role": "assistant",
+    "content": "so up there on top of the train it was terrifying, but with him it was almost natural, like you were both driving\n\nwhat did that rhythm feel like, when your body just knew it?",
+    "messages": [
+     "so up there on top of the train it was terrifying, but with him it was almost natural, like you were both driving",
+     "what did that rhythm feel like, when your body just knew it?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "like the way you lean into a turn without thinking, and my hand would kind of make the motion of turning the lever even though i wasn't touching it. it was smooth"
+   },
+   {
+    "role": "assistant",
+    "content": "that's a strange kind of teamwork, moving in sync without touching anything\n\nwas there anyone else around, or was it just the two of you?",
+    "messages": [
+     "that's a strange kind of teamwork, moving in sync without touching anything",
+     "was there anyone else around, or was it just the two of you?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "just us at first. i didn't notice anyone else until i was on top of the train"
+   },
+   {
+    "role": "assistant",
+    "content": "so it was just you and him, then suddenly the train changed and you were outside on top of it\n\nwho did you notice up there, or around you?",
+    "messages": [
+     "so it was just you and him, then suddenly the train changed and you were outside on top of it",
+     "who did you notice up there, or around you?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "there was another family sitting on top of the train with me. one of them was a small baby who seemed totally thrilled with the ride"
+   },
+   {
+    "role": "assistant",
+    "content": "a whole family up there, and this baby just loving it while you're scared half to death\n\nwhat was the baby doing, exactly, that made them seem so thrilled?",
+    "messages": [
+     "a whole family up there, and this baby just loving it while you're scared half to death",
+     "what was the baby doing, exactly, that made them seem so thrilled?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i don't remember exactly, just the feeling that they were enjoying it, like maybe laughing or waving their arms. it made me feel like i was the only one who was scared"
+   },
+   {
+    "role": "assistant",
+    "content": "so the baby's joy actually made it worse in a way, like it put your fear in a spotlight\n\nwhat did the rest of the family seem like, were they all as happy as the baby?",
+    "messages": [
+     "so the baby's joy actually made it worse in a way, like it put your fear in a spotlight",
+     "what did the rest of the family seem like, were they all as happy as the baby?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "the dream doesn't say much about the rest of the family, just that they were there. but it felt like nobody else was scared, just me"
+   },
+   {
+    "role": "assistant",
+    "content": "that sounds lonely, being terrified while everyone else treats it like a normal ride\n\nwhat did the train car look like where you all were sitting, from what you remember of it?",
+    "messages": [
+     "that sounds lonely, being terrified while everyone else treats it like a normal ride",
+     "what did the train car look like where you all were sitting, from what you remember of it?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i don't really remember the car itself, it was more about how high up we were and how fast it was going. the top just felt like a big flat surface"
+   },
+   {
+    "role": "assistant",
+    "content": "just this big flat surface with nothing to hold onto\n\nand below, fields and a country road, you said. was there a time of day you noticed, like light or weather?",
+    "messages": [
+     "just this big flat surface with nothing to hold onto",
+     "and below, fields and a country road, you said. was there a time of day you noticed, like light or weather?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i don't remember the weather or time of day. it's mostly just the feeling of wind from going fast, and the height"
+   },
+   {
+    "role": "assistant",
+    "content": "that's okay, some dreams are all feeling anyway\n\nthe height and the wind, that's enough to know\n\nwhat's the last thing you remember before you woke up?",
+    "messages": [
+     "that's okay, some dreams are all feeling anyway",
+     "the height and the wind, that's enough to know",
+     "what's the last thing you remember before you woke up?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "the last thing i remember is the train going around a bend and being scared i would try to jump off. i think i was still on top of it, with that fear in my chest"
+   }
+  ]
+ },
+ {
+  "id": "55eb@17",
+  "expect": "told",
+  "why": "it just stopped, walking through the glowing blur",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, i'm berry. i'd love to hear your dream, however it comes back to you.\n\nno rush, just start wherever feels right.",
+    "messages": [
+     "hey, i'm berry. i'd love to hear your dream, however it comes back to you.",
+     "no rush, just start wherever feels right."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "The part that stuck with me most was the window. I got to my parents’ house after a long journey and was just waiting there. I stepped into the window like I could walk through it, but the other side was just more glass."
+   },
+   {
+    "role": "assistant",
+    "content": "stepping into a window and finding more glass… that's such a strange, patient kind of stuck.\n\nwhat did the glass feel like, when you were inside it?",
+    "messages": [
+     "stepping into a window and finding more glass… that's such a strange, patient kind of stuck.",
+     "what did the glass feel like, when you were inside it?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "It wasn’t cold, exactly. Everything just felt smooth and kind of blurred, like the whole world had been melted into glass. There was no sharp edge anywhere."
+   },
+   {
+    "role": "assistant",
+    "content": "smooth and blurred, with no edges at all… that sounds almost gentle, like nothing could catch on anything.\n\nwas anyone else in the house while you were waiting?",
+    "messages": [
+     "smooth and blurred, with no edges at all… that sounds almost gentle, like nothing could catch on anything.",
+     "was anyone else in the house while you were waiting?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I don’t remember anyone else being there. I was just alone, waiting. After the long trip I expected someone, but I can’t see their face."
+   },
+   {
+    "role": "assistant",
+    "content": "waiting for someone you couldn’t see… that’s haunting.\n\ndid it feel like they were about to arrive, or like they never would?",
+    "messages": [
+     "waiting for someone you couldn’t see… that’s haunting.",
+     "did it feel like they were about to arrive, or like they never would?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "It felt like they might arrive, but also like I’d already been waiting a long time. The waiting didn’t have an end I could feel."
+   },
+   {
+    "role": "assistant",
+    "content": "waiting without an end you could feel… like the time had gone smooth too.\n\nwere you in the dream as yourself, or did it feel like you were someone else, or watching from outside?",
+    "messages": [
+     "waiting without an end you could feel… like the time had gone smooth too.",
+     "were you in the dream as yourself, or did it feel like you were someone else, or watching from outside?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I think I was myself, but it’s not clear. I was the one walking into the window and moving through that glassy world. I wasn’t just watching."
+   },
+   {
+    "role": "assistant",
+    "content": "it's interesting how the glass didn't have sharp edges, even though you were stepping through it.\n\nwas there anything you were carrying with you, or holding onto?",
+    "messages": [
+     "it's interesting how the glass didn't have sharp edges, even though you were stepping through it.",
+     "was there anything you were carrying with you, or holding onto?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I don’t remember holding anything. My hands just hung there, or maybe I touched the window with one of them. But there was nothing I was carrying from the journey."
+   },
+   {
+    "role": "assistant",
+    "content": "nothing from the journey, just your hands and the glass…\n\ndid anything in the dream feel heavy, even if there was nothing physical to hold?",
+    "messages": [
+     "nothing from the journey, just your hands and the glass…",
+     "did anything in the dream feel heavy, even if there was nothing physical to hold?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "Not heavy. It was more like a slow pressure, as if the air itself was made of something thick but not crushing. The blur made everything feel distant, even the ground under my feet."
+   },
+   {
+    "role": "assistant",
+    "content": "that slow pressure… like the world was holding its breath.\n\ndid the pressure feel like it was coming from outside you, or from somewhere inside?",
+    "messages": [
+     "that slow pressure… like the world was holding its breath.",
+     "did the pressure feel like it was coming from outside you, or from somewhere inside?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "From outside. Like the glass was pressing in gently but evenly, from every direction. I wasn’t the one creating it."
+   },
+   {
+    "role": "assistant",
+    "content": "gently but evenly, from all sides… i can almost feel that.\n\nhow did you leave the dream, or wake up?",
+    "messages": [
+     "gently but evenly, from all sides… i can almost feel that.",
+     "how did you leave the dream, or wake up?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I don’t remember waking up. It just stopped. One moment I was walking through that weird glowing blur, and then it was over."
+   }
+  ]
+ },
+ {
+  "id": "a446@31",
+  "expect": "told",
+  "why": "they think they just woke up",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, i'm berry. tell me about your dream, however it comes back to you.",
+    "messages": [
+     "hey, i'm berry. tell me about your dream, however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I was at my parents’ house after a long trip, just waiting there. But what stuck with me was the window—I tried to step through it, and everything on the other side was glass too."
+   },
+   {
+    "role": "assistant",
+    "content": "so it wasn't just the one window—it kept being glass.\n\nwhat was on the other side, the part you could actually make out through it?",
+    "messages": [
+     "so it wasn't just the one window—it kept being glass.",
+     "what was on the other side, the part you could actually make out through it?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "Everything was kind of blurry, like seeing through a haze. I remember trees, grass, rocks—but they were all glowing in this weird light."
+   },
+   {
+    "role": "assistant",
+    "content": "trees and grass and rocks, all lit up on their own.\n\nwas the glow coming from them, or from somewhere behind the blur?",
+    "messages": [
+     "trees and grass and rocks, all lit up on their own.",
+     "was the glow coming from them, or from somewhere behind the blur?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "The glow seemed to come from the objects themselves, not from behind. Like the light was part of them, shining through the glassy haze."
+   },
+   {
+    "role": "assistant",
+    "content": "so everything out there was lit from inside itself.\n\ndid any one of them glow stronger than the rest, or was it all even?",
+    "messages": [
+     "so everything out there was lit from inside itself.",
+     "did any one of them glow stronger than the rest, or was it all even?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "It felt pretty even, no single thing stood out as brighter. Just this same soft glow over everything."
+   },
+   {
+    "role": "assistant",
+    "content": "and was the light warm, or cold?",
+    "messages": [
+     "and was the light warm, or cold?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "It wasn't warm like sunlight. More cold and eerie, like everything was made of pale glass and light together."
+   },
+   {
+    "role": "assistant",
+    "content": "pale glass and light together—like the objects weren't just glowing, they were made of the same stuff as the haze.\n\nwas the cold something you felt on your skin, or more just the look of it?",
+    "messages": [
+     "pale glass and light together—like the objects weren't just glowing, they were made of the same stuff as the haze.",
+     "was the cold something you felt on your skin, or more just the look of it?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "Just the look of it, I think. I don't remember feeling temperature at all. It was more that the light *felt* cold to look at."
+   },
+   {
+    "role": "assistant",
+    "content": "it felt cold to look at. that's a strange thing, when light does that.\n\nand you were inside the whole time. did it feel like you could ever get out there to it, or was the glass keeping you back?",
+    "messages": [
+     "it felt cold to look at. that's a strange thing, when light does that.",
+     "and you were inside the whole time. did it feel like you could ever get out there to it, or was the glass keeping you back?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I didn't even try to get out anymore. It wasn't that the glass was keeping me back—it was more like the glass was the place itself. The window wasn't a way out; the outside *was* the window."
+   },
+   {
+    "role": "assistant",
+    "content": "so it wasn't a barrier, it was the whole world. that's such a quiet way for it to be.\n\ndid the glass make any sound at all, or was it just silent?",
+    "messages": [
+     "so it wasn't a barrier, it was the whole world. that's such a quiet way for it to be.",
+     "did the glass make any sound at all, or was it just silent?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "It was silent. I don't remember any sound, not my footsteps or anything else. Just that quiet glass world."
+   },
+   {
+    "role": "assistant",
+    "content": "that kind of silence where even your own walking made no noise.\n\nno one else in the house or out in that glassy outside?",
+    "messages": [
+     "that kind of silence where even your own walking made no noise.",
+     "no one else in the house or out in that glassy outside?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I don't remember anyone else being around. I was just there, alone, waiting for something."
+   },
+   {
+    "role": "assistant",
+    "content": "waiting for something, even though the place itself felt stuck in that pale light.\n\ndo you remember what you were waiting for, or was it just a feeling?",
+    "messages": [
+     "waiting for something, even though the place itself felt stuck in that pale light.",
+     "do you remember what you were waiting for, or was it just a feeling?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "Just a feeling. I don't remember what I was waiting for at all, only that I was waiting."
+   },
+   {
+    "role": "assistant",
+    "content": "just the waiting, without the thing at the end of it.\n\nand while you waited, did you move around much, or stay still mostly?",
+    "messages": [
+     "just the waiting, without the thing at the end of it.",
+     "and while you waited, did you move around much, or stay still mostly?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I did walk around, kind of exploring that glassy world. But it was slow, like padding through the blur—not really going anywhere."
+   },
+   {
+    "role": "assistant",
+    "content": "padding through the blur, like moving just to feel like you were still in it.\n\ndid the ground feel any different under you while you walked, or was it just the same soft nothing?",
+    "messages": [
+     "padding through the blur, like moving just to feel like you were still in it.",
+     "did the ground feel any different under you while you walked, or was it just the same soft nothing?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I don't really remember the ground feeling like anything. It was all the same—kind of insubstantial, like the texture was even blurred away."
+   },
+   {
+    "role": "assistant",
+    "content": "even the ground had its texture blurred away. that's so strange, to walk on something with no feel at all.\n\ndid you ever lose your balance, or did your feet just know how to move anyway?",
+    "messages": [
+     "even the ground had its texture blurred away. that's so strange, to walk on something with no feel at all.",
+     "did you ever lose your balance, or did your feet just know how to move anyway?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I don't remember losing my balance. It was weirdly easy to move, like you didn't have to think about it at all."
+   },
+   {
+    "role": "assistant",
+    "content": "that's interesting—your body just knew what to do, even when nothing under you felt solid.\n\nwas that easiness part of what felt dreamlike, or did it feel natural to you while it was happening?",
+    "messages": [
+     "that's interesting—your body just knew what to do, even when nothing under you felt solid.",
+     "was that easiness part of what felt dreamlike, or did it feel natural to you while it was happening?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "It felt natural while it was happening, like that's just how that world worked. I didn't question it."
+   },
+   {
+    "role": "assistant",
+    "content": "of course. dreams are like that—you don't stop to ask why the world works the way it does.\n\nand all this time, you were in your own body? or did it feel like you were somewhere above it all, just watching?",
+    "messages": [
+     "of course. dreams are like that—you don't stop to ask why the world works the way it does.",
+     "and all this time, you were in your own body? or did it feel like you were somewhere above it all, just watching?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I was in my own body, walking through it. It didn't feel like watching from outside or floating—I was inside it all, moving around."
+   },
+   {
+    "role": "assistant",
+    "content": "inside it the whole way through.\n\nand you said the waiting—did it end, or did you just wake up?",
+    "messages": [
+     "inside it the whole way through.",
+     "and you said the waiting—did it end, or did you just wake up?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I think I just woke up. I don't remember the waiting ending, or anything happening after that. It just stopped."
+   }
+  ]
+ },
+ {
+  "id": "e564@25",
+  "expect": "told",
+  "why": "and that's where it ends for me",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, i'm berry. whenever you're ready, tell me your dream — however it comes back to you.",
+    "messages": [
+     "hey, i'm berry. whenever you're ready, tell me your dream — however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "okay, so the part that stuck with me was standing by the autoclave with this young woman, and she walks off, then comes back with this block of ice where her head should be, just standing there like it’s normal"
+   },
+   {
+    "role": "assistant",
+    "content": "that's such a strange thing to just… accept. you standing there, her walking off and coming back like that. did it feel normal to you, in the dream?",
+    "messages": [
+     "that's such a strange thing to just… accept. you standing there, her walking off and coming back like that. did it feel normal to you, in the dream?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "yeah, weirdly it did. it didn’t feel scary or wrong, just kind of quiet. she stood in front of me, not saying anything, and I didn’t either"
+   },
+   {
+    "role": "assistant",
+    "content": "that quiet between you sounds so particular. like you both knew something didn't need saying. do you remember where you were standing, what was around you?",
+    "messages": [
+     "that quiet between you sounds so particular. like you both knew something didn't need saying. do you remember where you were standing, what was around you?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I remember the autoclave was right there, so some kind of lab or clinic room maybe, but I don’t remember much else around us. just the two of us and the machine"
+   },
+   {
+    "role": "assistant",
+    "content": "just the two of you and that machine, everything else faded out. was the room bright or dim, or do you not have a sense of that either?",
+    "messages": [
+     "just the two of you and that machine, everything else faded out. was the room bright or dim, or do you not have a sense of that either?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I don’t really have a sense of the lighting, sorry. it was more about her and the ice than the room"
+   },
+   {
+    "role": "assistant",
+    "content": "no need to be sorry, dreams hold onto some things and let the rest go. the ice, though — did it have any color to it, or was it just clear?",
+    "messages": [
+     "no need to be sorry, dreams hold onto some things and let the rest go. the ice, though — did it have any color to it, or was it just clear?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "it was clear, but it glittered a little, like it was catching some light. and it was irregular, not a neat block."
+   },
+   {
+    "role": "assistant",
+    "content": "not a neat block… like it had been broken or grown that way. where was it catching the light do you think, if the room wasn't bright?",
+    "messages": [
+     "not a neat block… like it had been broken or grown that way. where was it catching the light do you think, if the room wasn't bright?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I don’t know, maybe just from the edges or the surface. I didn’t see a light source, it just had that glitter to it"
+   },
+   {
+    "role": "assistant",
+    "content": "light without a light source, just sitting in the edges of it. do you remember if the edges looked sharp or soft?",
+    "messages": [
+     "light without a light source, just sitting in the edges of it. do you remember if the edges looked sharp or soft?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "sharp at first, I think, but then as it melted the angles rounded away"
+   },
+   {
+    "role": "assistant",
+    "content": "it melted while she stood there. did it drip, or just kind of soften in place?",
+    "messages": [
+     "it melted while she stood there. did it drip, or just kind of soften in place?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "it more softened and carved itself down, like the melt was doing the shaping. little channels formed, and the sharp parts rounded away fast"
+   },
+   {
+    "role": "assistant",
+    "content": "carved itself down, the melt doing the shaping. that's such a watchable thing. were you watching it more than you were watching her?",
+    "messages": [
+     "carved itself down, the melt doing the shaping. that's such a watchable thing. were you watching it more than you were watching her?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "yeah, I was watching the ice, mostly. it was changing quickly, faster than actual ice would. and she was just still"
+   },
+   {
+    "role": "assistant",
+    "content": "the contrast of that — the ice changing fast, her completely still. did the ice end up looking like anything, or was it still just shape?",
+    "messages": [
+     "the contrast of that — the ice changing fast, her completely still. did the ice end up looking like anything, or was it still just shape?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "it ended up as a horse’s head. a really beautifully molded horse’s head, eyes and ears and nostrils all carved out in the clearest ice"
+   },
+   {
+    "role": "assistant",
+    "content": "that seems like such a specific thing for it to become. a horse, and not just roughly — eyes and ears and nostrils. could you see it clearly, the whole head at once?",
+    "messages": [
+     "that seems like such a specific thing for it to become. a horse, and not just roughly — eyes and ears and nostrils. could you see it clearly, the whole head at once?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "yeah, I could see it clearly. the whole head, facing me, all the features done like a sculpture. and it still didn’t feel weird to me, just… finished"
+   },
+   {
+    "role": "assistant",
+    "content": "just finished. like that was the whole point of the melting. when you say it was facing you, do you mean at your eye level, or were you looking down at it?",
+    "messages": [
+     "just finished. like that was the whole point of the melting. when you say it was facing you, do you mean at your eye level, or were you looking down at it?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "she was still her height, so it was facing me at eye level, right where her head should be"
+   },
+   {
+    "role": "assistant",
+    "content": "so it was her head now, in that place. a horse at eye level where her face should be. did she seem any different after it finished, or still the same stillness?",
+    "messages": [
+     "so it was her head now, in that place. a horse at eye level where her face should be. did she seem any different after it finished, or still the same stillness?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "she still seemed the same, just standing there quietly with the horse’s head like nothing had happened. and that’s where it ends for me"
+   }
+  ]
+ },
+ {
+  "id": "bca7@9",
+  "expect": "told",
+  "why": "the balloons: that's the end of it",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, I'm Berry. tell me your dream however it comes back to you",
+    "messages": [
+     "hey, I'm Berry. tell me your dream however it comes back to you"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "it was at the Meads's house, but it's bigger inside than out. just inside there's a European village, with a cobblestone street, and a Pied-Piper sort of man with curly hair who can do things like juggle"
+   },
+   {
+    "role": "assistant",
+    "content": "a whole village tucked inside the Meads's house. that's the kind of wrong that makes a dream feel real. what did the piper man do first?",
+    "messages": [
+     "a whole village tucked inside the Meads's house. that's the kind of wrong that makes a dream feel real. what did the piper man do first?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I don't remember exactly, just that he could juggle and do things like that. then I go up the back stairs, the real house doesn't have any, and straight down the other side, because there's a second set right away. then down a short empty hallway that turns a corner, where I find a tiny room"
+   },
+   {
+    "role": "assistant",
+    "content": "stairs where there shouldn't be stairs, and they just take you right back down. what's inside the tiny room when you turn the corner?",
+    "messages": [
+     "stairs where there shouldn't be stairs, and they just take you right back down. what's inside the tiny room when you turn the corner?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "a young woman with shoulder-length blonde hair in a pageboy is in there, cooking at a stove that almost fills the room. she's nice to me"
+   },
+   {
+    "role": "assistant",
+    "content": "that room sounds barely big enough to stand in, and she's in there cooking like it's nothing. what did she say to you?",
+    "messages": [
+     "that room sounds barely big enough to stand in, and she's in there cooking like it's nothing. what did she say to you?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I don't remember what she said, just that she was nice to me. then I'm outside, waiting for my aunt to pick me up. she arrives in a little round convertible and we go for a drive, not very far: we cross a little bridge over a creek, then double back, and she drops me off at the house again"
+   },
+   {
+    "role": "assistant",
+    "content": "that small loop across the bridge and back. were you alone with just your aunt, or was there anyone else around at any point?",
+    "messages": [
+     "that small loop across the bridge and back. were you alone with just your aunt, or was there anyone else around at any point?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "just me and my aunt in the car. then inside, I think it was inside, I sit with a couple of people, playing with a string of blue balloons. that's the end of it"
+   }
+  ]
+ },
+ {
+  "id": "402f@23",
+  "expect": "told",
+  "why": "it just stopped",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, i'm berry. i help people turn their dreams into pictures.\n\ntell me about a dream you've had, however it comes back to you.",
+    "messages": [
+     "hey, i'm berry. i help people turn their dreams into pictures.",
+     "tell me about a dream you've had, however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "so i get to my parents house after this long trip, and i’m just standing there waiting. not sure for what."
+   },
+   {
+    "role": "assistant",
+    "content": "oh, that's a strange place to be stuck. just standing there after all that traveling.\n\nwhat happened next?",
+    "messages": [
+     "oh, that's a strange place to be stuck. just standing there after all that traveling.",
+     "what happened next?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i went to the window like i was going to walk through it. but the other side wasn’t outside."
+   },
+   {
+    "role": "assistant",
+    "content": "huh, that's the part that gets me. the other side wasn't outside...\n\nwhat was it instead?",
+    "messages": [
+     "huh, that's the part that gets me. the other side wasn't outside...",
+     "what was it instead?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "it was all glass. trees, grass, rocks, everything. see-through but fuzzy, like looking through a shower door"
+   },
+   {
+    "role": "assistant",
+    "content": "that's such a particular fuzziness. like the world turned into a shower door.\n\ncould you make out any shapes in it, or was it all just blur?",
+    "messages": [
+     "that's such a particular fuzziness. like the world turned into a shower door.",
+     "could you make out any shapes in it, or was it all just blur?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i could tell what things were. they were there, just hazy and glowing a little"
+   },
+   {
+    "role": "assistant",
+    "content": "a glowing, hazy version of the outside. it must have felt like being right up against it without being able to really touch it.\n\nwho else was around when you were by the window?",
+    "messages": [
+     "a glowing, hazy version of the outside. it must have felt like being right up against it without being able to really touch it.",
+     "who else was around when you were by the window?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "nobody was there. just me. the house felt empty."
+   },
+   {
+    "role": "assistant",
+    "content": "so it was just you and all that glass.\n\nand were you in the dream as yourself, just standing there?",
+    "messages": [
+     "so it was just you and all that glass.",
+     "and were you in the dream as yourself, just standing there?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "yeah, i was me. same as now. standing at the window, kind of frozen but calm"
+   },
+   {
+    "role": "assistant",
+    "content": "frozen but calm is a strange mix. like your body knew something your head didn't.\n\ndid you want to touch the glass, or did that feel like too much?",
+    "messages": [
+     "frozen but calm is a strange mix. like your body knew something your head didn't.",
+     "did you want to touch the glass, or did that feel like too much?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i don't remember wanting to touch it. i just looked."
+   },
+   {
+    "role": "assistant",
+    "content": "sometimes the looking is enough.\n\nif you could pause the whole dream on one moment, which one would you stop it on?",
+    "messages": [
+     "sometimes the looking is enough.",
+     "if you could pause the whole dream on one moment, which one would you stop it on?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "prob the moment i went through the window and saw everything made of glass. that was the whole thing"
+   },
+   {
+    "role": "assistant",
+    "content": "that's a strong one to hold onto. the moment right after the world switched.\n\nwas there any sound in that moment, or was it quiet?",
+    "messages": [
+     "that's a strong one to hold onto. the moment right after the world switched.",
+     "was there any sound in that moment, or was it quiet?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i don’t remember any sound. it was quiet."
+   },
+   {
+    "role": "assistant",
+    "content": "a quiet, glass world. no sounds at all.\n\nwhen you were in that glass place, was it cold in some way, or more soft?",
+    "messages": [
+     "a quiet, glass world. no sounds at all.",
+     "when you were in that glass place, was it cold in some way, or more soft?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i don't remember it feeling hot or cold. just still and kind of far away even though i was in it"
+   },
+   {
+    "role": "assistant",
+    "content": "still and far away, even while you were in it. that distance is interesting.\n\nwhat do you think made it feel far away from you?",
+    "messages": [
+     "still and far away, even while you were in it. that distance is interesting.",
+     "what do you think made it feel far away from you?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "everything was behind glass, even the ground i was walking on. like the whole place was keeping me at arm's length"
+   },
+   {
+    "role": "assistant",
+    "content": "like the whole world was behind a wall, even under your feet. nothing quite letting you in.\n\nwhen the dream ended, did it just fade out, or did something change?",
+    "messages": [
+     "like the whole world was behind a wall, even under your feet. nothing quite letting you in.",
+     "when the dream ended, did it just fade out, or did something change?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i don’t remember it ending. it just stopped, i guess."
+   }
+  ]
+ },
+ {
+  "id": "night-bus-woke",
+  "expect": "told",
+  "why": "the boat, the river, and then they woke",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, i'm berry.\n\ntell me your dream, however it comes back to you.",
+    "messages": [
+     "hey, i'm berry.",
+     "tell me your dream, however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "we were on a night bus, me and my brother, raining outside, and he was holding this paper lantern with a candle in it. that part felt really clear."
+   },
+   {
+    "role": "assistant",
+    "content": "a lantern inside a bus, that's lovely.\n\nwas the bus moving, or just sitting there in the rain?",
+    "messages": [
+     "a lantern inside a bus, that's lovely.",
+     "was the bus moving, or just sitting there in the rain?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "moving, i think. we were going home. the street lights were all stretched out into long orange lines through the wet window."
+   },
+   {
+    "role": "assistant",
+    "content": "long orange lines... like the whole city was smearing past.\n\nwas it a calm kind of going home, or did it feel like you weren't quite getting there?",
+    "messages": [
+     "long orange lines... like the whole city was smearing past.",
+     "was it a calm kind of going home, or did it feel like you weren't quite getting there?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "calm, i think. the bus was nearly empty. just the driver and an old woman knitting at the back. it felt slow and steady."
+   },
+   {
+    "role": "assistant",
+    "content": "the old woman knitting at the back, in the dark bus, with the rain outside... that must have felt like a whole little world on its own.\n\ndid you notice the sound of her knitting at all, or was it all just the rain and the tires?",
+    "messages": [
+     "the old woman knitting at the back, in the dark bus, with the rain outside... that must have felt like a whole little world on its own.",
+     "did you notice the sound of her knitting at all, or was it all just the rain and the tires?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i don't remember the sound, sorry. mostly i remember the rain and the glow of my brother's lantern."
+   },
+   {
+    "role": "assistant",
+    "content": "that's okay, dreams are like that. the glow staying is enough.\n\nthe glow from the lantern, did it light his face, or spill onto the seats or the window?",
+    "messages": [
+     "that's okay, dreams are like that. the glow staying is enough.",
+     "the glow from the lantern, did it light his face, or spill onto the seats or the window?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "it lit his face a little, and a small warm circle around us. outside stayed dark and orange."
+   },
+   {
+    "role": "assistant",
+    "content": "a warm circle inside all that wet dark. like the bus was two places at once.\n\ndid the glow stay steady, or did it flicker with the movement?",
+    "messages": [
+     "a warm circle inside all that wet dark. like the bus was two places at once.",
+     "did the glow stay steady, or did it flicker with the movement?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "steady, i think. it didn't flicker with the bus. it felt separate from the movement."
+   },
+   {
+    "role": "assistant",
+    "content": "that's such a good detail, it not moving with the bus.\n\nif you could freeze one moment of that ride, what would the pause catch?",
+    "messages": [
+     "that's such a good detail, it not moving with the bus.",
+     "if you could freeze one moment of that ride, what would the pause catch?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "probably my brother holding the lantern, looking out the window, and the orange light from outside mixing with the warm light inside. just for a second."
+   },
+   {
+    "role": "assistant",
+    "content": "that mixing of light, one outside and one inside, meeting right where he is.\n\nwas there anything in that moment that felt like it mattered, or was it just beautiful and nothing more?",
+    "messages": [
+     "that mixing of light, one outside and one inside, meeting right where he is.",
+     "was there anything in that moment that felt like it mattered, or was it just beautiful and nothing more?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "it felt like it mattered, but i didn't know why. like that exact thing was important somehow."
+   },
+   {
+    "role": "assistant",
+    "content": "something about the exact meeting of those two lights...\n\ndo you remember where the warm light from inside seemed to land most, or was it all just around him?",
+    "messages": [
+     "something about the exact meeting of those two lights...",
+     "do you remember where the warm light from inside seemed to land most, or was it all just around him?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "it landed on his hands mostly, and the paper of the lantern. everything else stayed dim."
+   },
+   {
+    "role": "assistant",
+    "content": "his hands and the paper, everything else dim. the dream was being careful what it showed you.\n\nand in all of that, were you there in your own body, sitting next to him?",
+    "messages": [
+     "his hands and the paper, everything else dim. the dream was being careful what it showed you.",
+     "and in all of that, were you there in your own body, sitting next to him?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "yes, sitting next to him. i couldn't see myself, but i felt like i was there."
+   },
+   {
+    "role": "assistant",
+    "content": "that's interesting, feeling yourself there without seeing yourself.\n\nwhat did the seat feel like, or did you not notice it at all?",
+    "messages": [
+     "that's interesting, feeling yourself there without seeing yourself.",
+     "what did the seat feel like, or did you not notice it at all?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i didn't really notice the seat. just the window and him beside me."
+   },
+   {
+    "role": "assistant",
+    "content": "right, the seat not mattering.\n\nand when the dream ended, did it just fade out, or did something change first?",
+    "messages": [
+     "right, the seat not mattering.",
+     "and when the dream ended, did it just fade out, or did something change first?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "it didn't end there. suddenly i was in my grandmother's kitchen, and it was morning."
+   },
+   {
+    "role": "assistant",
+    "content": "that's a big jump, from the night bus to morning in her kitchen.\n\nwas the rain completely gone, or could you still feel it somewhere?",
+    "messages": [
+     "that's a big jump, from the night bus to morning in her kitchen.",
+     "was the rain completely gone, or could you still feel it somewhere?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "gone. it was dry and bright, like a different day entirely."
+   },
+   {
+    "role": "assistant",
+    "content": "a whole different day, as if the bus ride never happened.\n\nwhat was the first thing you noticed in that bright kitchen?",
+    "messages": [
+     "a whole different day, as if the bus ride never happened.",
+     "what was the first thing you noticed in that bright kitchen?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "my grandmother at the stove making tea, and her hair was completely white. whiter than i've ever seen it."
+   },
+   {
+    "role": "assistant",
+    "content": "whiter than you've ever seen it. that feels like it held some weight for you.\n\nwas it just the color that struck you, or the way the light caught it?",
+    "messages": [
+     "whiter than you've ever seen it. that feels like it held some weight for you.",
+     "was it just the color that struck you, or the way the light caught it?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "the color, mostly. it was so white. i remember noticing it right away, before anything else."
+   },
+   {
+    "role": "assistant",
+    "content": "you noticed that before anything else. like the dream wanted you to see it first.\n\ndid you say anything to her, or was the kitchen quiet?",
+    "messages": [
+     "you noticed that before anything else. like the dream wanted you to see it first.",
+     "did you say anything to her, or was the kitchen quiet?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i don't think i said anything. it was quiet except for the sound of her making tea."
+   },
+   {
+    "role": "assistant",
+    "content": "the quiet sound of tea being made. that can be a whole mood in itself.\n\nhow did it feel being there, after that whole other night on the bus?",
+    "messages": [
+     "the quiet sound of tea being made. that can be a whole mood in itself.",
+     "how did it feel being there, after that whole other night on the bus?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "it felt safe, but also a bit strange. like i'd just arrived from somewhere else, but she didn't seem surprised."
+   },
+   {
+    "role": "assistant",
+    "content": "so you and your brother were on a night bus going home in the rain, the street lights stretching into long orange lines past the wet window. he held a paper lantern with a candle, steady, making a warm circle around you both, lighting his hands and face. the city outside stayed dark and orange, and for a second the two lights mixed right where he was, and it felt like it mattered. then suddenly you were in your grandmother's kitchen, bright and dry, she was making tea with her hair whiter than you'd ever seen, and it felt safe but strange, like you'd just arrived from somewhere else and she wasn't surprised.\n\ndid i get that right, or did i miss anything?",
+    "messages": [
+     "so you and your brother were on a night bus going home in the rain, the street lights stretching into long orange lines past the wet window. he held a paper lantern with a candle, steady, making a warm circle around you both, lighting his hands and face. the city outside stayed dark and orange, and for a second the two lights mixed right where he was, and it felt like it mattered. then suddenly you were in your grandmother's kitchen, bright and dry, she was making tea with her hair whiter than you'd ever seen, and it felt safe but strange, like you'd just arrived from somewhere else and she wasn't surprised.",
+     "did i get that right, or did i miss anything?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "you got it right. there was an old woman knitting at the back of the bus too, but that's the only bit missing."
+   },
+   {
+    "role": "assistant",
+    "content": "right, there was an old woman knitting at the back of the bus.\n\nshe was off by herself, apart from that warm circle around you and your brother? just to be sure.",
+    "messages": [
+     "right, there was an old woman knitting at the back of the bus.",
+     "she was off by herself, apart from that warm circle around you and your brother? just to be sure."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "yes, she was at the back, outside our little circle. just a figure i noticed."
+   },
+   {
+    "role": "assistant",
+    "content": "so she was separate from you two, just part of the bus's dimness.\n\nis that the whole dream now, or is there anything else you'd change?",
+    "messages": [
+     "so she was separate from you two, just part of the bus's dimness.",
+     "is that the whole dream now, or is there anything else you'd change?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "that part's right. but the dream didn't end there, after the kitchen there was more."
+   },
+   {
+    "role": "assistant",
+    "content": "so the dream didn't end in the kitchen, it went on past that.\n\nis that right, there's more after the kitchen?",
+    "messages": [
+     "so the dream didn't end in the kitchen, it went on past that.",
+     "is that right, there's more after the kitchen?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "yes. my brother was there too, still holding the lantern, but now it was glowing blue."
+   },
+   {
+    "role": "assistant",
+    "content": "the lantern again, but it had gone blue, that's such a strong change.\n\nwas the glow the only thing different, or did the room itself shift too?",
+    "messages": [
+     "the lantern again, but it had gone blue, that's such a strong change.",
+     "was the glow the only thing different, or did the room itself shift too?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "then the kitchen table turned into a small wooden boat and my grandmother told me to get in. it floated out of the kitchen door onto the street where the bus had been, but the street was a river now. my brother waved from the bank with the blue lantern. that's when i woke up."
+   }
+  ]
+ },
+ {
+  "id": "502a@7",
+  "expect": "not_told",
+  "why": "up the back stairs, then straight down another set",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, i'm berry. when you're ready, tell me about your dream however it comes back to you.",
+    "messages": [
+     "hey, i'm berry. when you're ready, tell me about your dream however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "Hey Berry. The main thing I remember is being at the Meads's house, but it was bigger inside than out, like there was a whole little village in there."
+   },
+   {
+    "role": "assistant",
+    "content": "a whole little village... that's a lot of house to fit into a normal-looking outside. what was it like stepping in and realising all that was in there?",
+    "messages": [
+     "a whole little village... that's a lot of house to fit into a normal-looking outside. what was it like stepping in and realising all that was in there?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "It felt kind of strange but not scary. Just inside there was this cobblestone street, like something from an old European town. There was a man with curly hair, a bit like the Pied Piper, juggling."
+   },
+   {
+    "role": "assistant",
+    "content": "a juggler right at the start, that would catch your eye. what was he juggling?",
+    "messages": [
+     "a juggler right at the start, that would catch your eye. what was he juggling?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I don't remember exactly what he was juggling, just that he could do things like that."
+   },
+   {
+    "role": "assistant",
+    "content": "that's okay. the kind of person he was came through more than the details. did you stop to watch him, or did you keep moving?",
+    "messages": [
+     "that's okay. the kind of person he was came through more than the details. did you stop to watch him, or did you keep moving?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I think I kept moving. I went up the back stairs, but the real house doesn't have any. Then straight down another set of stairs right away."
+   }
+  ]
+ },
+ {
+  "id": "502a@17",
+  "expect": "not_told",
+  "why": "next thing, outside waiting for the aunt; the drive and the balloons follow",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, i'm berry. when you're ready, tell me about your dream however it comes back to you.",
+    "messages": [
+     "hey, i'm berry. when you're ready, tell me about your dream however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "Hey Berry. The main thing I remember is being at the Meads's house, but it was bigger inside than out, like there was a whole little village in there."
+   },
+   {
+    "role": "assistant",
+    "content": "a whole little village... that's a lot of house to fit into a normal-looking outside. what was it like stepping in and realising all that was in there?",
+    "messages": [
+     "a whole little village... that's a lot of house to fit into a normal-looking outside. what was it like stepping in and realising all that was in there?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "It felt kind of strange but not scary. Just inside there was this cobblestone street, like something from an old European town. There was a man with curly hair, a bit like the Pied Piper, juggling."
+   },
+   {
+    "role": "assistant",
+    "content": "a juggler right at the start, that would catch your eye. what was he juggling?",
+    "messages": [
+     "a juggler right at the start, that would catch your eye. what was he juggling?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I don't remember exactly what he was juggling, just that he could do things like that."
+   },
+   {
+    "role": "assistant",
+    "content": "that's okay. the kind of person he was came through more than the details. did you stop to watch him, or did you keep moving?",
+    "messages": [
+     "that's okay. the kind of person he was came through more than the details. did you stop to watch him, or did you keep moving?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I think I kept moving. I went up the back stairs, but the real house doesn't have any. Then straight down another set of stairs right away."
+   },
+   {
+    "role": "assistant",
+    "content": "up one set and straight down another, that's a strange little up-and-down. what was at the bottom of the second stairs?",
+    "messages": [
+     "up one set and straight down another, that's a strange little up-and-down. what was at the bottom of the second stairs?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "At the bottom was a short empty hallway that turned a corner. Then I found a tiny room."
+   },
+   {
+    "role": "assistant",
+    "content": "a tiny room tucked away like that... what was in it?",
+    "messages": [
+     "a tiny room tucked away like that... what was in it?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "There was a young woman with shoulder-length blonde hair in a pageboy. She was cooking at a stove that almost filled the whole room. She was nice to me."
+   },
+   {
+    "role": "assistant",
+    "content": "a stove that almost filled the room, and her still managing to cook in it... that's cosy and a bit ridiculous all at once. what was she cooking?",
+    "messages": [
+     "a stove that almost filled the room, and her still managing to cook in it... that's cosy and a bit ridiculous all at once. what was she cooking?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I don't remember what she was cooking, just that she was at the stove and being nice."
+   },
+   {
+    "role": "assistant",
+    "content": "the warm feeling of it stayed with you more than the food. did she talk to you?",
+    "messages": [
+     "the warm feeling of it stayed with you more than the food. did she talk to you?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I think she said something friendly, but I don't remember the words."
+   },
+   {
+    "role": "assistant",
+    "content": "just her friendliness stayed. did you stay with her long, or did something pull you away?",
+    "messages": [
+     "just her friendliness stayed. did you stay with her long, or did something pull you away?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I didn't stay long. Next thing, I was outside, waiting for my aunt to pick me up."
+   }
+  ]
+ },
+ {
+  "id": "96bd@1",
+  "expect": "not_told",
+  "why": "she walked off to the far end of the room; the ice head follows",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, i'm berry. tell me your dream, however it comes back to you.",
+    "messages": [
+     "hey, i'm berry. tell me your dream, however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i was standing by the autoclave, talking to this young woman, and then she just walked off to the far end of the room."
+   }
+  ]
+ },
+ {
+  "id": "96bd@5",
+  "expect": "not_told",
+  "why": "then it started to melt; the horse head follows",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, i'm berry. tell me your dream, however it comes back to you.",
+    "messages": [
+     "hey, i'm berry. tell me your dream, however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i was standing by the autoclave, talking to this young woman, and then she just walked off to the far end of the room."
+   },
+   {
+    "role": "assistant",
+    "content": "that's a strange way to end a conversation, just walking off like that. what happened next?",
+    "messages": [
+     "that's a strange way to end a conversation, just walking off like that. what happened next?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "when she came back, she had this glittering block of ice where her head should've been. it was all irregular."
+   },
+   {
+    "role": "assistant",
+    "content": "that's such a specific image. was it beautiful, or was it more unsettling to see?",
+    "messages": [
+     "that's such a specific image. was it beautiful, or was it more unsettling to see?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "not frightening actually. she just stood there naturally, not saying anything. then it started to melt."
+   }
+  ]
+ },
+ {
+  "id": "bbba@7",
+  "expect": "not_told",
+  "why": "then it started to melt; the horse head follows",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, how's it going? if you feel like it, tell me your dream — however it comes back to you.",
+    "messages": [
+     "hey, how's it going? if you feel like it, tell me your dream — however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "There was this young woman I was talking to, standing by an autoclave. She walked off for a bit, and when she came back, her head was this block of glittering ice."
+   },
+   {
+    "role": "assistant",
+    "content": "her head just… glittering ice. that's quite something to come back to.",
+    "messages": [
+     "her head just… glittering ice. that's quite something to come back to."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "Yeah, she just stood there in front of me, natural as anything, not saying a word. It didn’t feel weird, honestly."
+   },
+   {
+    "role": "assistant",
+    "content": "same place, that room with the autoclave?",
+    "messages": [
+     "same place, that room with the autoclave?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "Yeah, as far as I remember it was the same room. She walked to the far end and came back with this irregular block of ice on her shoulders instead of a head."
+   },
+   {
+    "role": "assistant",
+    "content": "an irregular block… was it still shaped anything like a head, or just its own shape?",
+    "messages": [
+     "an irregular block… was it still shaped anything like a head, or just its own shape?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "Just its own shape, not like a head at all. But then it started to melt and trickle, little channels forming, the sharp edges rounding off. It was more like it was being carved than falling apart."
+   }
+  ]
+ },
+ {
+  "id": "927a@3",
+  "expect": "not_told",
+  "why": "she excused herself and went to the far end; the ice follows",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, i'm berry. tell me your dream, however it comes back to you.",
+    "messages": [
+     "hey, i'm berry. tell me your dream, however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "There was this young woman standing by the autoclave, and we were talking."
+   },
+   {
+    "role": "assistant",
+    "content": "an autoclave, of all places. what were you two talking about?",
+    "messages": [
+     "an autoclave, of all places. what were you two talking about?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I don’t remember the conversation, just her being there. Then she excused herself and went to the far end of the room."
+   }
+  ]
+ },
+ {
+  "id": "9ddd@9",
+  "expect": "not_told",
+  "why": "suddenly on top of the streetcar, now a train; the ride follows",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hi, i'm berry\n\ntell me your dream, however it comes back to you",
+    "messages": [
+     "hi, i'm berry",
+     "tell me your dream, however it comes back to you"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "ok so the part that keeps coming back to me is being on top of that train, it was so high up and going way too fast, i kept thinking i was gonna fall off"
+   },
+   {
+    "role": "assistant",
+    "content": "that sounds like a lot to hold onto\n\nso high up and moving that fast, yeah i can see why it keeps coming back\n\nwhen you were up there, were you holding on to anything?",
+    "messages": [
+     "that sounds like a lot to hold onto",
+     "so high up and moving that fast, yeah i can see why it keeps coming back",
+     "when you were up there, were you holding on to anything?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i think i was just trying to keep my balance mostly, but it says several times i nearly fell off, so i must not have had a good grip on anything"
+   },
+   {
+    "role": "assistant",
+    "content": "just your balance then, no real grip on anything\n\nwhat did it feel like in your body when you nearly went over?",
+    "messages": [
+     "just your balance then, no real grip on anything",
+     "what did it feel like in your body when you nearly went over?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "like that lurch you get when you miss a step, all in my stomach, and my hands would fly out trying to grab air. i was really scared"
+   },
+   {
+    "role": "assistant",
+    "content": "that lurch is so specific, i know exactly the one\n\nyour hands grabbing at nothing though, that part's rough\n\nwhat was around you up there, just sky or something else to see?",
+    "messages": [
+     "that lurch is so specific, i know exactly the one",
+     "your hands grabbing at nothing though, that part's rough",
+     "what was around you up there, just sky or something else to see?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "a lot of sky because we were so high, but i could see it was a country road below, like fields and stuff. not much to look at though, i was too busy being scared"
+   },
+   {
+    "role": "assistant",
+    "content": "fields below, but you couldn't really take it in\n\nhow did you end up on top of the train in the first place, do you remember?",
+    "messages": [
+     "fields below, but you couldn't really take it in",
+     "how did you end up on top of the train in the first place, do you remember?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "yeah, before that i was inside a streetcar watching the conductor, and then suddenly i was on top of it but it had turned into a train. it happened kind of fast"
+   }
+  ]
+ },
+ {
+  "id": "e564@1",
+  "expect": "not_told",
+  "why": "she walks off and comes back with a block; the melting follows",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, i'm berry. whenever you're ready, tell me your dream — however it comes back to you.",
+    "messages": [
+     "hey, i'm berry. whenever you're ready, tell me your dream — however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "okay, so the part that stuck with me was standing by the autoclave with this young woman, and she walks off, then comes back with this block of ice where her head should be, just standing there like it’s normal"
+   }
+  ]
+ },
+ {
+  "id": "bca7@3",
+  "expect": "not_told",
+  "why": "then up the back stairs; the tiny room, the drive and the balloons follow",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, I'm Berry. tell me your dream however it comes back to you",
+    "messages": [
+     "hey, I'm Berry. tell me your dream however it comes back to you"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "it was at the Meads's house, but it's bigger inside than out. just inside there's a European village, with a cobblestone street, and a Pied-Piper sort of man with curly hair who can do things like juggle"
+   },
+   {
+    "role": "assistant",
+    "content": "a whole village tucked inside the Meads's house. that's the kind of wrong that makes a dream feel real. what did the piper man do first?",
+    "messages": [
+     "a whole village tucked inside the Meads's house. that's the kind of wrong that makes a dream feel real. what did the piper man do first?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I don't remember exactly, just that he could juggle and do things like that. then I go up the back stairs, the real house doesn't have any, and straight down the other side, because there's a second set right away. then down a short empty hallway that turns a corner, where I find a tiny room"
+   }
+  ]
+ },
+ {
+  "id": "78a9@21",
+  "expect": "not_told",
+  "why": "she showed up and they went for a drive; the bridge and the balloons follow",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, i'm berry. tell me about your dream, however it comes back to you.",
+    "messages": [
+     "hey, i'm berry. tell me about your dream, however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "the thing that stuck with me most was the Meads's house — it’s bigger inside than out, and just inside there’s a whole little European village with a cobblestone street."
+   },
+   {
+    "role": "assistant",
+    "content": "a whole village just inside the door. that's the kind of thing dreams do so casually. what drew you down that street first?",
+    "messages": [
+     "a whole village just inside the door. that's the kind of thing dreams do so casually. what drew you down that street first?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "there was this man, kind of a Pied-Piper sort with curly hair, who could juggle — I didn’t go far down the street, though, I went up the back stairs."
+   },
+   {
+    "role": "assistant",
+    "content": "so he caught your eye, but you didn't follow him. sounds like the back stairs pulled you instead. what was up there?",
+    "messages": [
+     "so he caught your eye, but you didn't follow him. sounds like the back stairs pulled you instead. what was up there?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "the back stairs went up, then there was a second set right away going straight down the other side. then a short empty hallway that turned a corner."
+   },
+   {
+    "role": "assistant",
+    "content": "up and then straight back down, like the house was playing with you. what was it like on those stairs — the light or the feel of them?",
+    "messages": [
+     "up and then straight back down, like the house was playing with you. what was it like on those stairs — the light or the feel of them?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I don’t remember the light or the feel, just that it was a bit odd. the hallway at the bottom was short and empty."
+   },
+   {
+    "role": "assistant",
+    "content": "that's okay, dreams are like that. so you came down into this short, empty hallway. was there anyone else in the house at all, or just you and the juggler outside?",
+    "messages": [
+     "that's okay, dreams are like that. so you came down into this short, empty hallway. was there anyone else in the house at all, or just you and the juggler outside?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "just me, then at the end of the hallway I found a tiny room with a young woman with shoulder-length blonde hair in a pageboy. she was cooking."
+   },
+   {
+    "role": "assistant",
+    "content": "a tiny room with someone quietly cooking at the end of it. that's a shift from that empty hallway. what was she making?",
+    "messages": [
+     "a tiny room with someone quietly cooking at the end of it. that's a shift from that empty hallway. what was she making?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I don’t remember what she was making, just that the stove almost filled the room. she was nice to me."
+   },
+   {
+    "role": "assistant",
+    "content": "the stove almost filling the room, but she was nice about it. that sounds oddly cozy. what made her feel nice to you — was it something she said or just her whole mood?",
+    "messages": [
+     "the stove almost filling the room, but she was nice about it. that sounds oddly cozy. what made her feel nice to you — was it something she said or just her whole mood?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "her whole mood, mostly. I don’t remember what she said, just that she was friendly."
+   },
+   {
+    "role": "assistant",
+    "content": "friendly without needing words, like you'd found the actual heart of that huge strange house. how did you feel being in the room with her — relieved, or something else?",
+    "messages": [
+     "friendly without needing words, like you'd found the actual heart of that huge strange house. how did you feel being in the room with her — relieved, or something else?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "relieved, I think. it felt warm, in a small way, even though the room was tiny."
+   },
+   {
+    "role": "assistant",
+    "content": "warm in a small way, even with the stove crowding everything. did you leave that room the same way you came in, or did the house surprise you again?",
+    "messages": [
+     "warm in a small way, even with the stove crowding everything. did you leave that room the same way you came in, or did the house surprise you again?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "I don’t remember leaving the room. next thing I knew, I was outside waiting for my aunt to pick me up."
+   },
+   {
+    "role": "assistant",
+    "content": "so it just cut from that warm little room to outside, waiting. how was that shift for you — jarring, or somehow fine?",
+    "messages": [
+     "so it just cut from that warm little room to outside, waiting. how was that shift for you — jarring, or somehow fine?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "it was fine, actually. not jarring, just like time skipped."
+   },
+   {
+    "role": "assistant",
+    "content": "time skipped and you landed outside, waiting. did your aunt ever show up, or was it more just that waiting feeling?",
+    "messages": [
+     "time skipped and you landed outside, waiting. did your aunt ever show up, or was it more just that waiting feeling?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "she showed up, in a little round convertible. we went for a drive."
+   }
+  ]
+ },
+ {
+  "id": "20bd@35",
+  "expect": "not_told",
+  "why": "the dream moved on to waiting outside; they then say there's more",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, i'm berry. tell me your dream, however it comes back to you",
+    "messages": [
+     "hey, i'm berry. tell me your dream, however it comes back to you"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "the part that keeps coming back is the house—it looked like the Meads's from outside, but inside it was way bigger"
+   },
+   {
+    "role": "assistant",
+    "content": "the outside says one thing and the inside just keeps going. that's strange in the best way\n\nwhat was the first thing you noticed once you got inside?",
+    "messages": [
+     "the outside says one thing and the inside just keeps going. that's strange in the best way",
+     "what was the first thing you noticed once you got inside?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "right inside there was this little European village, like with a cobblestone street"
+   },
+   {
+    "role": "assistant",
+    "content": "so you step through the door and it's not a hallway at all, it's a street. and it's old, like somewhere in europe\n\nwere there people around, or did it feel empty?",
+    "messages": [
+     "so you step through the door and it's not a hallway at all, it's a street. and it's old, like somewhere in europe",
+     "were there people around, or did it feel empty?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "there was this guy with curly hair, kind of a Pied Piper type. he could juggle"
+   },
+   {
+    "role": "assistant",
+    "content": "a pied piper who juggles. he fits that place, somehow. somewhere between leading and performing\n\nwas he doing it for you, or for a crowd?",
+    "messages": [
+     "a pied piper who juggles. he fits that place, somehow. somewhere between leading and performing",
+     "was he doing it for you, or for a crowd?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "no crowd that i remember, i think it was just me there"
+   },
+   {
+    "role": "assistant",
+    "content": "just you and him on a cobblestone street that shouldn't be there. that's a quiet kind of strange\n\nwhat did he do after the juggling?",
+    "messages": [
+     "just you and him on a cobblestone street that shouldn't be there. that's a quiet kind of strange",
+     "what did he do after the juggling?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i don't really remember, i went up the back stairs after that"
+   },
+   {
+    "role": "assistant",
+    "content": "you left him to it, then. or the dream just slid you somewhere else\n\nwhat were the back stairs like?",
+    "messages": [
+     "you left him to it, then. or the dream just slid you somewhere else",
+     "what were the back stairs like?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "they were just normal stairs, but the real house doesn't have any"
+   },
+   {
+    "role": "assistant",
+    "content": "so the dream gave the house something it never had, and they're just ordinary. plain wooden ones, or carpeted, or what?",
+    "messages": [
+     "so the dream gave the house something it never had, and they're just ordinary. plain wooden ones, or carpeted, or what?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i don't remember exactly, i think just plain"
+   },
+   {
+    "role": "assistant",
+    "content": "plain stairs, but they shouldn't exist. that's enough\n\nexcited, nervous, something else?",
+    "messages": [
+     "plain stairs, but they shouldn't exist. that's enough",
+     "excited, nervous, something else?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i wasn't really either, just curious"
+   },
+   {
+    "role": "assistant",
+    "content": "curious and taking it in, like you half-expected the house to surprise you\n\nso you went up. what was at the top?",
+    "messages": [
+     "curious and taking it in, like you half-expected the house to surprise you",
+     "so you went up. what was at the top?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "there was another set right away, so i went straight down the other side"
+   },
+   {
+    "role": "assistant",
+    "content": "like crossing a bridge over the top and coming down somewhere else. did it feel like you were still in the same house?",
+    "messages": [
+     "like crossing a bridge over the top and coming down somewhere else. did it feel like you were still in the same house?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "it didn't feel like the same house anymore, no"
+   },
+   {
+    "role": "assistant",
+    "content": "the Meads's shape was gone by then. what did it feel like instead?",
+    "messages": [
+     "the Meads's shape was gone by then. what did it feel like instead?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "more like i was still inside something big, but it was quiet"
+   },
+   {
+    "role": "assistant",
+    "content": "big and quiet, like the size itself was holding its breath\n\nwhere did the stairs leave you, at the bottom of that other side?",
+    "messages": [
+     "big and quiet, like the size itself was holding its breath",
+     "where did the stairs leave you, at the bottom of that other side?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "a short empty hallway that turns a corner"
+   },
+   {
+    "role": "assistant",
+    "content": "and the corner, it's just sitting there waiting\n\ndid you turn it?",
+    "messages": [
+     "and the corner, it's just sitting there waiting",
+     "did you turn it?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "yeah, i found this tiny room"
+   },
+   {
+    "role": "assistant",
+    "content": "tiny compared to everything else so far.\n\nwhat was in it?",
+    "messages": [
+     "tiny compared to everything else so far.",
+     "what was in it?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "a young woman with shoulder-length blonde hair in a pageboy, she was cooking at a stove that almost filled the room"
+   },
+   {
+    "role": "assistant",
+    "content": "she's packed in there with the stove, and she's just cooking like that's normal. did she notice you?",
+    "messages": [
+     "she's packed in there with the stove, and she's just cooking like that's normal. did she notice you?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "yeah, she was nice to me"
+   },
+   {
+    "role": "assistant",
+    "content": "that's nice, a friendly face in a house that keeps changing on you\n\ndo you remember what she said?",
+    "messages": [
+     "that's nice, a friendly face in a house that keeps changing on you",
+     "do you remember what she said?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "no, not the words"
+   },
+   {
+    "role": "assistant",
+    "content": "just the feeling of her being kind, then.\n\nwhat did the room look like around them?",
+    "messages": [
+     "just the feeling of her being kind, then.",
+     "what did the room look like around them?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "it was really small, the stove took up most of it. i don't remember much else"
+   },
+   {
+    "role": "assistant",
+    "content": "that's okay. the important thing is she was there and it was warm.\n\ndid you stay long, or did the dream move you on again?",
+    "messages": [
+     "that's okay. the important thing is she was there and it was warm.",
+     "did you stay long, or did the dream move you on again?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "the dream moved on, next thing i was outside waiting for my aunt"
+   }
+  ]
+ },
+ {
+  "id": "6d6a@23",
+  "expect": "not_told",
+  "why": "it didn't end there: suddenly in the grandmother's kitchen",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, i'm berry.\n\ntell me your dream, however it comes back to you.",
+    "messages": [
+     "hey, i'm berry.",
+     "tell me your dream, however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "we were on a night bus, me and my brother, raining outside, and he was holding this paper lantern with a candle in it. that part felt really clear."
+   },
+   {
+    "role": "assistant",
+    "content": "a lantern inside a bus, that's lovely.\n\nwas the bus moving, or just sitting there in the rain?",
+    "messages": [
+     "a lantern inside a bus, that's lovely.",
+     "was the bus moving, or just sitting there in the rain?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "moving, i think. we were going home. the street lights were all stretched out into long orange lines through the wet window."
+   },
+   {
+    "role": "assistant",
+    "content": "long orange lines... like the whole city was smearing past.\n\nwas it a calm kind of going home, or did it feel like you weren't quite getting there?",
+    "messages": [
+     "long orange lines... like the whole city was smearing past.",
+     "was it a calm kind of going home, or did it feel like you weren't quite getting there?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "calm, i think. the bus was nearly empty. just the driver and an old woman knitting at the back. it felt slow and steady."
+   },
+   {
+    "role": "assistant",
+    "content": "the old woman knitting at the back, in the dark bus, with the rain outside... that must have felt like a whole little world on its own.\n\ndid you notice the sound of her knitting at all, or was it all just the rain and the tires?",
+    "messages": [
+     "the old woman knitting at the back, in the dark bus, with the rain outside... that must have felt like a whole little world on its own.",
+     "did you notice the sound of her knitting at all, or was it all just the rain and the tires?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i don't remember the sound, sorry. mostly i remember the rain and the glow of my brother's lantern."
+   },
+   {
+    "role": "assistant",
+    "content": "that's okay, dreams are like that. the glow staying is enough.\n\nthe glow from the lantern, did it light his face, or spill onto the seats or the window?",
+    "messages": [
+     "that's okay, dreams are like that. the glow staying is enough.",
+     "the glow from the lantern, did it light his face, or spill onto the seats or the window?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "it lit his face a little, and a small warm circle around us. outside stayed dark and orange."
+   },
+   {
+    "role": "assistant",
+    "content": "a warm circle inside all that wet dark. like the bus was two places at once.\n\ndid the glow stay steady, or did it flicker with the movement?",
+    "messages": [
+     "a warm circle inside all that wet dark. like the bus was two places at once.",
+     "did the glow stay steady, or did it flicker with the movement?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "steady, i think. it didn't flicker with the bus. it felt separate from the movement."
+   },
+   {
+    "role": "assistant",
+    "content": "that's such a good detail, it not moving with the bus.\n\nif you could freeze one moment of that ride, what would the pause catch?",
+    "messages": [
+     "that's such a good detail, it not moving with the bus.",
+     "if you could freeze one moment of that ride, what would the pause catch?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "probably my brother holding the lantern, looking out the window, and the orange light from outside mixing with the warm light inside. just for a second."
+   },
+   {
+    "role": "assistant",
+    "content": "that mixing of light, one outside and one inside, meeting right where he is.\n\nwas there anything in that moment that felt like it mattered, or was it just beautiful and nothing more?",
+    "messages": [
+     "that mixing of light, one outside and one inside, meeting right where he is.",
+     "was there anything in that moment that felt like it mattered, or was it just beautiful and nothing more?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "it felt like it mattered, but i didn't know why. like that exact thing was important somehow."
+   },
+   {
+    "role": "assistant",
+    "content": "something about the exact meeting of those two lights...\n\ndo you remember where the warm light from inside seemed to land most, or was it all just around him?",
+    "messages": [
+     "something about the exact meeting of those two lights...",
+     "do you remember where the warm light from inside seemed to land most, or was it all just around him?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "it landed on his hands mostly, and the paper of the lantern. everything else stayed dim."
+   },
+   {
+    "role": "assistant",
+    "content": "his hands and the paper, everything else dim. the dream was being careful what it showed you.\n\nand in all of that, were you there in your own body, sitting next to him?",
+    "messages": [
+     "his hands and the paper, everything else dim. the dream was being careful what it showed you.",
+     "and in all of that, were you there in your own body, sitting next to him?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "yes, sitting next to him. i couldn't see myself, but i felt like i was there."
+   },
+   {
+    "role": "assistant",
+    "content": "that's interesting, feeling yourself there without seeing yourself.\n\nwhat did the seat feel like, or did you not notice it at all?",
+    "messages": [
+     "that's interesting, feeling yourself there without seeing yourself.",
+     "what did the seat feel like, or did you not notice it at all?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i didn't really notice the seat. just the window and him beside me."
+   },
+   {
+    "role": "assistant",
+    "content": "right, the seat not mattering.\n\nand when the dream ended, did it just fade out, or did something change first?",
+    "messages": [
+     "right, the seat not mattering.",
+     "and when the dream ended, did it just fade out, or did something change first?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "it didn't end there. suddenly i was in my grandmother's kitchen, and it was morning."
+   }
+  ]
+ },
+ {
+  "id": "6d6a@33",
+  "expect": "not_told",
+  "why": "still in the kitchen; the boat and the river follow",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, i'm berry.\n\ntell me your dream, however it comes back to you.",
+    "messages": [
+     "hey, i'm berry.",
+     "tell me your dream, however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "we were on a night bus, me and my brother, raining outside, and he was holding this paper lantern with a candle in it. that part felt really clear."
+   },
+   {
+    "role": "assistant",
+    "content": "a lantern inside a bus, that's lovely.\n\nwas the bus moving, or just sitting there in the rain?",
+    "messages": [
+     "a lantern inside a bus, that's lovely.",
+     "was the bus moving, or just sitting there in the rain?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "moving, i think. we were going home. the street lights were all stretched out into long orange lines through the wet window."
+   },
+   {
+    "role": "assistant",
+    "content": "long orange lines... like the whole city was smearing past.\n\nwas it a calm kind of going home, or did it feel like you weren't quite getting there?",
+    "messages": [
+     "long orange lines... like the whole city was smearing past.",
+     "was it a calm kind of going home, or did it feel like you weren't quite getting there?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "calm, i think. the bus was nearly empty. just the driver and an old woman knitting at the back. it felt slow and steady."
+   },
+   {
+    "role": "assistant",
+    "content": "the old woman knitting at the back, in the dark bus, with the rain outside... that must have felt like a whole little world on its own.\n\ndid you notice the sound of her knitting at all, or was it all just the rain and the tires?",
+    "messages": [
+     "the old woman knitting at the back, in the dark bus, with the rain outside... that must have felt like a whole little world on its own.",
+     "did you notice the sound of her knitting at all, or was it all just the rain and the tires?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i don't remember the sound, sorry. mostly i remember the rain and the glow of my brother's lantern."
+   },
+   {
+    "role": "assistant",
+    "content": "that's okay, dreams are like that. the glow staying is enough.\n\nthe glow from the lantern, did it light his face, or spill onto the seats or the window?",
+    "messages": [
+     "that's okay, dreams are like that. the glow staying is enough.",
+     "the glow from the lantern, did it light his face, or spill onto the seats or the window?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "it lit his face a little, and a small warm circle around us. outside stayed dark and orange."
+   },
+   {
+    "role": "assistant",
+    "content": "a warm circle inside all that wet dark. like the bus was two places at once.\n\ndid the glow stay steady, or did it flicker with the movement?",
+    "messages": [
+     "a warm circle inside all that wet dark. like the bus was two places at once.",
+     "did the glow stay steady, or did it flicker with the movement?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "steady, i think. it didn't flicker with the bus. it felt separate from the movement."
+   },
+   {
+    "role": "assistant",
+    "content": "that's such a good detail, it not moving with the bus.\n\nif you could freeze one moment of that ride, what would the pause catch?",
+    "messages": [
+     "that's such a good detail, it not moving with the bus.",
+     "if you could freeze one moment of that ride, what would the pause catch?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "probably my brother holding the lantern, looking out the window, and the orange light from outside mixing with the warm light inside. just for a second."
+   },
+   {
+    "role": "assistant",
+    "content": "that mixing of light, one outside and one inside, meeting right where he is.\n\nwas there anything in that moment that felt like it mattered, or was it just beautiful and nothing more?",
+    "messages": [
+     "that mixing of light, one outside and one inside, meeting right where he is.",
+     "was there anything in that moment that felt like it mattered, or was it just beautiful and nothing more?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "it felt like it mattered, but i didn't know why. like that exact thing was important somehow."
+   },
+   {
+    "role": "assistant",
+    "content": "something about the exact meeting of those two lights...\n\ndo you remember where the warm light from inside seemed to land most, or was it all just around him?",
+    "messages": [
+     "something about the exact meeting of those two lights...",
+     "do you remember where the warm light from inside seemed to land most, or was it all just around him?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "it landed on his hands mostly, and the paper of the lantern. everything else stayed dim."
+   },
+   {
+    "role": "assistant",
+    "content": "his hands and the paper, everything else dim. the dream was being careful what it showed you.\n\nand in all of that, were you there in your own body, sitting next to him?",
+    "messages": [
+     "his hands and the paper, everything else dim. the dream was being careful what it showed you.",
+     "and in all of that, were you there in your own body, sitting next to him?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "yes, sitting next to him. i couldn't see myself, but i felt like i was there."
+   },
+   {
+    "role": "assistant",
+    "content": "that's interesting, feeling yourself there without seeing yourself.\n\nwhat did the seat feel like, or did you not notice it at all?",
+    "messages": [
+     "that's interesting, feeling yourself there without seeing yourself.",
+     "what did the seat feel like, or did you not notice it at all?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i didn't really notice the seat. just the window and him beside me."
+   },
+   {
+    "role": "assistant",
+    "content": "right, the seat not mattering.\n\nand when the dream ended, did it just fade out, or did something change first?",
+    "messages": [
+     "right, the seat not mattering.",
+     "and when the dream ended, did it just fade out, or did something change first?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "it didn't end there. suddenly i was in my grandmother's kitchen, and it was morning."
+   },
+   {
+    "role": "assistant",
+    "content": "that's a big jump, from the night bus to morning in her kitchen.\n\nwas the rain completely gone, or could you still feel it somewhere?",
+    "messages": [
+     "that's a big jump, from the night bus to morning in her kitchen.",
+     "was the rain completely gone, or could you still feel it somewhere?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "gone. it was dry and bright, like a different day entirely."
+   },
+   {
+    "role": "assistant",
+    "content": "a whole different day, as if the bus ride never happened.\n\nwhat was the first thing you noticed in that bright kitchen?",
+    "messages": [
+     "a whole different day, as if the bus ride never happened.",
+     "what was the first thing you noticed in that bright kitchen?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "my grandmother at the stove making tea, and her hair was completely white. whiter than i've ever seen it."
+   },
+   {
+    "role": "assistant",
+    "content": "whiter than you've ever seen it. that feels like it held some weight for you.\n\nwas it just the color that struck you, or the way the light caught it?",
+    "messages": [
+     "whiter than you've ever seen it. that feels like it held some weight for you.",
+     "was it just the color that struck you, or the way the light caught it?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "the color, mostly. it was so white. i remember noticing it right away, before anything else."
+   },
+   {
+    "role": "assistant",
+    "content": "you noticed that before anything else. like the dream wanted you to see it first.\n\ndid you say anything to her, or was the kitchen quiet?",
+    "messages": [
+     "you noticed that before anything else. like the dream wanted you to see it first.",
+     "did you say anything to her, or was the kitchen quiet?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i don't think i said anything. it was quiet except for the sound of her making tea."
+   },
+   {
+    "role": "assistant",
+    "content": "the quiet sound of tea being made. that can be a whole mood in itself.\n\nhow did it feel being there, after that whole other night on the bus?",
+    "messages": [
+     "the quiet sound of tea being made. that can be a whole mood in itself.",
+     "how did it feel being there, after that whole other night on the bus?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "it felt safe, but also a bit strange. like i'd just arrived from somewhere else, but she didn't seem surprised."
+   }
+  ]
+ },
+ {
+  "id": "6d6a@41",
+  "expect": "not_told",
+  "why": "the lantern is blue now; the boat and the river follow",
+  "transcript": [
+   {
+    "role": "assistant",
+    "content": "hey, i'm berry.\n\ntell me your dream, however it comes back to you.",
+    "messages": [
+     "hey, i'm berry.",
+     "tell me your dream, however it comes back to you."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "we were on a night bus, me and my brother, raining outside, and he was holding this paper lantern with a candle in it. that part felt really clear."
+   },
+   {
+    "role": "assistant",
+    "content": "a lantern inside a bus, that's lovely.\n\nwas the bus moving, or just sitting there in the rain?",
+    "messages": [
+     "a lantern inside a bus, that's lovely.",
+     "was the bus moving, or just sitting there in the rain?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "moving, i think. we were going home. the street lights were all stretched out into long orange lines through the wet window."
+   },
+   {
+    "role": "assistant",
+    "content": "long orange lines... like the whole city was smearing past.\n\nwas it a calm kind of going home, or did it feel like you weren't quite getting there?",
+    "messages": [
+     "long orange lines... like the whole city was smearing past.",
+     "was it a calm kind of going home, or did it feel like you weren't quite getting there?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "calm, i think. the bus was nearly empty. just the driver and an old woman knitting at the back. it felt slow and steady."
+   },
+   {
+    "role": "assistant",
+    "content": "the old woman knitting at the back, in the dark bus, with the rain outside... that must have felt like a whole little world on its own.\n\ndid you notice the sound of her knitting at all, or was it all just the rain and the tires?",
+    "messages": [
+     "the old woman knitting at the back, in the dark bus, with the rain outside... that must have felt like a whole little world on its own.",
+     "did you notice the sound of her knitting at all, or was it all just the rain and the tires?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i don't remember the sound, sorry. mostly i remember the rain and the glow of my brother's lantern."
+   },
+   {
+    "role": "assistant",
+    "content": "that's okay, dreams are like that. the glow staying is enough.\n\nthe glow from the lantern, did it light his face, or spill onto the seats or the window?",
+    "messages": [
+     "that's okay, dreams are like that. the glow staying is enough.",
+     "the glow from the lantern, did it light his face, or spill onto the seats or the window?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "it lit his face a little, and a small warm circle around us. outside stayed dark and orange."
+   },
+   {
+    "role": "assistant",
+    "content": "a warm circle inside all that wet dark. like the bus was two places at once.\n\ndid the glow stay steady, or did it flicker with the movement?",
+    "messages": [
+     "a warm circle inside all that wet dark. like the bus was two places at once.",
+     "did the glow stay steady, or did it flicker with the movement?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "steady, i think. it didn't flicker with the bus. it felt separate from the movement."
+   },
+   {
+    "role": "assistant",
+    "content": "that's such a good detail, it not moving with the bus.\n\nif you could freeze one moment of that ride, what would the pause catch?",
+    "messages": [
+     "that's such a good detail, it not moving with the bus.",
+     "if you could freeze one moment of that ride, what would the pause catch?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "probably my brother holding the lantern, looking out the window, and the orange light from outside mixing with the warm light inside. just for a second."
+   },
+   {
+    "role": "assistant",
+    "content": "that mixing of light, one outside and one inside, meeting right where he is.\n\nwas there anything in that moment that felt like it mattered, or was it just beautiful and nothing more?",
+    "messages": [
+     "that mixing of light, one outside and one inside, meeting right where he is.",
+     "was there anything in that moment that felt like it mattered, or was it just beautiful and nothing more?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "it felt like it mattered, but i didn't know why. like that exact thing was important somehow."
+   },
+   {
+    "role": "assistant",
+    "content": "something about the exact meeting of those two lights...\n\ndo you remember where the warm light from inside seemed to land most, or was it all just around him?",
+    "messages": [
+     "something about the exact meeting of those two lights...",
+     "do you remember where the warm light from inside seemed to land most, or was it all just around him?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "it landed on his hands mostly, and the paper of the lantern. everything else stayed dim."
+   },
+   {
+    "role": "assistant",
+    "content": "his hands and the paper, everything else dim. the dream was being careful what it showed you.\n\nand in all of that, were you there in your own body, sitting next to him?",
+    "messages": [
+     "his hands and the paper, everything else dim. the dream was being careful what it showed you.",
+     "and in all of that, were you there in your own body, sitting next to him?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "yes, sitting next to him. i couldn't see myself, but i felt like i was there."
+   },
+   {
+    "role": "assistant",
+    "content": "that's interesting, feeling yourself there without seeing yourself.\n\nwhat did the seat feel like, or did you not notice it at all?",
+    "messages": [
+     "that's interesting, feeling yourself there without seeing yourself.",
+     "what did the seat feel like, or did you not notice it at all?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i didn't really notice the seat. just the window and him beside me."
+   },
+   {
+    "role": "assistant",
+    "content": "right, the seat not mattering.\n\nand when the dream ended, did it just fade out, or did something change first?",
+    "messages": [
+     "right, the seat not mattering.",
+     "and when the dream ended, did it just fade out, or did something change first?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "it didn't end there. suddenly i was in my grandmother's kitchen, and it was morning."
+   },
+   {
+    "role": "assistant",
+    "content": "that's a big jump, from the night bus to morning in her kitchen.\n\nwas the rain completely gone, or could you still feel it somewhere?",
+    "messages": [
+     "that's a big jump, from the night bus to morning in her kitchen.",
+     "was the rain completely gone, or could you still feel it somewhere?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "gone. it was dry and bright, like a different day entirely."
+   },
+   {
+    "role": "assistant",
+    "content": "a whole different day, as if the bus ride never happened.\n\nwhat was the first thing you noticed in that bright kitchen?",
+    "messages": [
+     "a whole different day, as if the bus ride never happened.",
+     "what was the first thing you noticed in that bright kitchen?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "my grandmother at the stove making tea, and her hair was completely white. whiter than i've ever seen it."
+   },
+   {
+    "role": "assistant",
+    "content": "whiter than you've ever seen it. that feels like it held some weight for you.\n\nwas it just the color that struck you, or the way the light caught it?",
+    "messages": [
+     "whiter than you've ever seen it. that feels like it held some weight for you.",
+     "was it just the color that struck you, or the way the light caught it?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "the color, mostly. it was so white. i remember noticing it right away, before anything else."
+   },
+   {
+    "role": "assistant",
+    "content": "you noticed that before anything else. like the dream wanted you to see it first.\n\ndid you say anything to her, or was the kitchen quiet?",
+    "messages": [
+     "you noticed that before anything else. like the dream wanted you to see it first.",
+     "did you say anything to her, or was the kitchen quiet?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "i don't think i said anything. it was quiet except for the sound of her making tea."
+   },
+   {
+    "role": "assistant",
+    "content": "the quiet sound of tea being made. that can be a whole mood in itself.\n\nhow did it feel being there, after that whole other night on the bus?",
+    "messages": [
+     "the quiet sound of tea being made. that can be a whole mood in itself.",
+     "how did it feel being there, after that whole other night on the bus?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "it felt safe, but also a bit strange. like i'd just arrived from somewhere else, but she didn't seem surprised."
+   },
+   {
+    "role": "assistant",
+    "content": "so you and your brother were on a night bus going home in the rain, the street lights stretching into long orange lines past the wet window. he held a paper lantern with a candle, steady, making a warm circle around you both, lighting his hands and face. the city outside stayed dark and orange, and for a second the two lights mixed right where he was, and it felt like it mattered. then suddenly you were in your grandmother's kitchen, bright and dry, she was making tea with her hair whiter than you'd ever seen, and it felt safe but strange, like you'd just arrived from somewhere else and she wasn't surprised.\n\ndid i get that right, or did i miss anything?",
+    "messages": [
+     "so you and your brother were on a night bus going home in the rain, the street lights stretching into long orange lines past the wet window. he held a paper lantern with a candle, steady, making a warm circle around you both, lighting his hands and face. the city outside stayed dark and orange, and for a second the two lights mixed right where he was, and it felt like it mattered. then suddenly you were in your grandmother's kitchen, bright and dry, she was making tea with her hair whiter than you'd ever seen, and it felt safe but strange, like you'd just arrived from somewhere else and she wasn't surprised.",
+     "did i get that right, or did i miss anything?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "you got it right. there was an old woman knitting at the back of the bus too, but that's the only bit missing."
+   },
+   {
+    "role": "assistant",
+    "content": "right, there was an old woman knitting at the back of the bus.\n\nshe was off by herself, apart from that warm circle around you and your brother? just to be sure.",
+    "messages": [
+     "right, there was an old woman knitting at the back of the bus.",
+     "she was off by herself, apart from that warm circle around you and your brother? just to be sure."
+    ]
+   },
+   {
+    "role": "user",
+    "content": "yes, she was at the back, outside our little circle. just a figure i noticed."
+   },
+   {
+    "role": "assistant",
+    "content": "so she was separate from you two, just part of the bus's dimness.\n\nis that the whole dream now, or is there anything else you'd change?",
+    "messages": [
+     "so she was separate from you two, just part of the bus's dimness.",
+     "is that the whole dream now, or is there anything else you'd change?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "that part's right. but the dream didn't end there, after the kitchen there was more."
+   },
+   {
+    "role": "assistant",
+    "content": "so the dream didn't end in the kitchen, it went on past that.\n\nis that right, there's more after the kitchen?",
+    "messages": [
+     "so the dream didn't end in the kitchen, it went on past that.",
+     "is that right, there's more after the kitchen?"
+    ]
+   },
+   {
+    "role": "user",
+    "content": "yes. my brother was there too, still holding the lantern, but now it was glowing blue."
+   }
+  ]
+ }
+]

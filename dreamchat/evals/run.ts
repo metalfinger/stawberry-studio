@@ -10,7 +10,9 @@ import { loadedKeys } from '../boot';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Blocking, Spot } from '../blocking';
-import { callJev } from '../jev';
+import { dreamConfig } from '../dream';
+import { bookkeeperQuestions, callJev, type Exchange, renderTranscript } from '../jev';
+import { FINISHED_BAR, GOES_ON_BAR } from '../lib';
 import { changeQuestions, crowdQuestions, KIND_BARS } from '../ground';
 import { PLAN_BARS, planQuestions } from '../planfacts';
 import type { Breakdown, Moment } from '../producer';
@@ -264,7 +266,80 @@ if (which === 'storyboard') {
     console.log(
       `${family.padEnd(8)} right ${pct(t.right, t.all)}${t.undecided ? `; left to the breakdown (unsure): ${t.undecided}` : ''}`,
     );
+} else if (which === 'ending') {
+  // "How it ended" as the conversation reads it while listening: the goal's own question, on the
+  // conversation cut after one of their messages, against the bar that settles a goal.
+  type Case = { id: string; expect: 'told' | 'not_told'; why: string; transcript: Exchange[] };
+  const cfg = dreamConfig();
+  const rows = (
+    await Promise.all(
+      load<Case[]>('ending').flatMap((c) =>
+        Array.from({ length: times }, async () => {
+          const q = bookkeeperQuestions(cfg, c.transcript, undefined, 'listen');
+          const call = await callJev(renderTranscript(c.transcript), {
+            goal_ending: q.goal_ending,
+            finished_telling: q.finished_telling,
+          });
+          const n = (k: string) => (call.answers?.[k]?.type === 'noul' ? call.answers[k].noul : Number.NaN);
+          return { c, error: call.error, told: n('goal_ending'), finished: n('finished_telling') };
+        }),
+      ),
+    )
+  ).filter((r) => !r.error);
+  const bar = cfg.confidence_threshold;
+  for (const r of rows) {
+    const got = r.told >= bar ? 'told' : 'not_told';
+    console.log(
+      `${got === r.c.expect ? ' ok ' : 'MISS'} ${r.c.id.padEnd(16)} expect ${r.c.expect.padEnd(8)} ending ${r.told.toFixed(2)}  finished ${r.finished.toFixed(2)}  ${r.c.why}`,
+    );
+  }
+  const right = rows.filter((r) => (r.told >= bar ? 'told' : 'not_told') === r.c.expect).length;
+  const early = rows.filter((r) => r.c.expect === 'not_told' && r.told >= bar).length;
+  const fin = rows.filter((r) => (r.finished >= FINISHED_BAR ? 'told' : 'not_told') === r.c.expect).length;
+  console.log(`\nending right ${pct(right, rows.length)}; read as ended mid-dream: ${early}`);
+  console.log(`finished_telling right ${pct(fin, rows.length)} (bar ${FINISHED_BAR})`);
+} else if (which === 'goes-on') {
+  // "The dream goes on past the retelling?", asked beside how they answered the retelling, on
+  // every answer to one in the saved conversations.
+  type Case = { id: string; expect: boolean; why: string; transcript: Exchange[] };
+  const cfg = dreamConfig();
+  const rows = (
+    await Promise.all(
+      load<Case[]>('goes-on').flatMap((c) =>
+        Array.from({ length: times }, async () => {
+          const q = bookkeeperQuestions(cfg, c.transcript, undefined, 'retell');
+          const call = await callJev(renderTranscript(c.transcript), {
+            goes_on: q.goes_on,
+            retell_reply: q.retell_reply,
+          });
+          const on = call.answers?.goes_on;
+          const reply = call.answers?.retell_reply;
+          return {
+            c,
+            error: call.error,
+            p: on?.type === 'noul' ? on.noul : Number.NaN,
+            reply: reply?.type === 'choice' ? reply.choice : '?',
+          };
+        }),
+      ),
+    )
+  ).filter((r) => !r.error);
+  for (const r of rows) {
+    const got = r.p >= GOES_ON_BAR;
+    console.log(
+      `${got === r.c.expect ? ' ok ' : 'MISS'} ${r.c.id.padEnd(14)} expect ${r.c.expect ? 'goes on' : 'not   '}  ${r.p.toFixed(2)}  reply ${r.reply.padEnd(10)} ${r.c.why}`,
+    );
+  }
+  const right = rows.filter((r) => r.p >= GOES_ON_BAR === r.c.expect).length;
+  const wrongly = rows.filter((r) => !r.c.expect && r.p >= GOES_ON_BAR).length;
+  const lost = rows.filter((r) => r.c.expect && r.p < GOES_ON_BAR).length;
+  console.log(`\nright ${pct(right, rows.length)}; back to listening wrongly: ${wrongly}; the rest lost: ${lost}`);
+  const on = rows.filter((r) => r.c.expect).map((r) => r.p);
+  const off = rows.filter((r) => !r.c.expect).map((r) => r.p);
+  console.log(
+    `going on read ${Math.min(...on).toFixed(2)}+; the rest up to ${Math.max(...off).toFixed(2)} (bar ${GOES_ON_BAR})`,
+  );
 } else {
-  console.error('usage: bun run evals/run.ts storyboard|plan-facts|kinds [--times 2]');
+  console.error('usage: bun run evals/run.ts storyboard|plan-facts|kinds|ending|goes-on [--times 2]');
   process.exit(1);
 }

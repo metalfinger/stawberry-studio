@@ -68,6 +68,8 @@ export const DREAM_GOALS: GoalsFile['goals'] = [
     id: 'ending',
     label: 'How it ended',
     probe_hint: 'how the dream ended, or how they woke up',
+    told_when:
+      'Told only when they say the dream stopped there, faded, or that they woke. Moving on to a new place or time, with the dream going on after it, is not its ending.',
   },
   // → sound; kept if they mention it, never asked for
   {
