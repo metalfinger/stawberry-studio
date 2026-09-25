@@ -252,10 +252,27 @@ previs before anything is drawn (`blocking.ts`, `previs.ts`).
   - **From outside:** the camera faces what the moment looks at, past the people it shows. It
     stands as far off as the shot size needs, with a lens to match, and never goes through a
     wall.
-  - **Two people facing each other:** a side two-shot.
-  - **Every camera:** a small search keeps the view that hides nobody.
+  - **Two people facing each other, or someone at something close (a cook at her stove):** from
+    the side, both in the picture.
+  - **Two people far apart (one waiting, one arriving):** over the shoulder of the one away from
+    what the moment looks at.
+  - **Every camera:** a small search walks round and steps back until everyone and everything
+    the moment shows, and what it looks at, is in the picture, hidden by nobody, each person tall
+    enough for the shot's size and none cut by the picture's side.
 - **The previs** is grey mannequins and blocks, each labelled. People are lighter than things.
-  What someone sits on is drawn as a seat and a back, and a sitting crowd sits in rows of seats.
+  Each thing is drawn as what it is to the people at it:
+
+  | Shape | Drawn as | Said as |
+  |---|---|---|
+  | seat (a sofa, a bench) | a seat and a back | "sitting on it" |
+  | vehicle (a car, a boat) | a body as high as its doors | "in it" |
+  | ground (a street, a bridge, a rug) | a slab as high as it rises; people stand on top | "standing on it" |
+  | steps (stairs) | steps; people stand at their height | "on it" |
+  | block (anything else) | a solid; nobody is ever inside one | never sat on |
+
+  Something held is in one hand at its holder's side. A crowd the dream counts ("a couple of
+  people") is that many, side by side, on the seat under them; an audience sits in rows.
+  Riders face the way their car goes and sit side by side in it.
 - **Its words are read off the same render,** so picture and words agree. They give:
   - who is where across the picture, and how much of the frame each fills;
   - where the frame cuts a person, and how each is turned;
@@ -346,6 +363,43 @@ the continuity checks against the pictures it was drawn from. The answers go bes
 "yes" | "no" | {answer, where}}}`. They are recorded in Strawberry as the take's facts, and
 what the judge saw travels with a repair.
 
+### Jev decides, code acts
+
+Small decisions (is this place outdoors? which of these does the camera face?) are asked of Jev,
+one typed question each, answered in under a second. Code turns the answers into what happens,
+against a bar. The planning model, asked the same things inside one long answer, planned a
+village street as an indoor room. The stages and their transitions are data in `stages.ts`.
+
+| Where | Jev is asked | Code does |
+|---|---|---|
+| Grounding the breakdown | was each detail said? a group or one person? a crowd? is a change a change of look, and of the whole or a part? | keeps said details, marks groups and crowds, keeps and marks changes |
+| The floor plan (`planfacts.ts`) | outdoors? what each thing is (seat, vehicle, ground, steps, block)? who holds it? what each camera faces? | applies what Jev is sure of; plans a scene again, told what failed, when it has no plan or lacks what a camera faces |
+| "Storyboard complete?" (previs to prompt) | everyone in the picture? anything contradicting the moment? camera right? anything extra? | holds or clears each moment. A held scene is planned once more, told what its camera saw, and keeps whichever plan more facts pass on |
+| How the shot is framed | nothing: it is measured exactly off the render | holds a shot whose people are specks or cut by its edge |
+| The gate (prompt to picture) | does the prompt contradict itself, say someone twice, leave anything to invent? | holds or rewords |
+
+The questions are templates written once; the dream fills them in (its places, things, people,
+moments and names). So the same question is asked of every dream, and how often Jev is right
+can be measured. That is done on labelled sets built from real dreams (`evals/`):
+
+```sh
+bun run evals/run.ts plan-facts --times 2   # outdoors, shape, holder, what the camera faces
+bun run evals/run.ts storyboard --times 3   # "storyboard complete?" on shots checked by eye or approved
+bun run evals/run.ts kinds --times 3        # groups, crowds, what a change is
+```
+
+Every bar is set from these runs, and a question's wording changes only when its set scores
+better. Three wordings that read well were dropped on 25 Sep: one held approved shots, one
+cleared a wrong one. The same question asked again moves by about 0.05, so a storyboard answer
+within 0.08 of its bar is asked once more and averaged.
+
+Every Jev call's tokens and time, and every decision with its facts, are logged in the
+conversation (`state/<id>/jev.jsonl`), and the Stages tab shows them. `replan.ts` plans a saved
+dream's shots again without drawing anything, to try a change to the planner on a real dream.
+
+On Meads's house (25 Sep), the check held all nine moments of the first plans, each for a real
+fault. After the fixes above, six of nine clear on the same dream, none of them wrongly.
+
 ## Test
 
 ```sh
@@ -363,6 +417,10 @@ to the real harness until it closes. It reports:
 - how faithful the retelling was, as judged by Jev.
 
 It writes the full transcripts to `runs/`.
+
+`test/approved-shots.test.ts` checks that the planner still puts the camera where each approved
+picture's was, from the floor plans they were drawn from: two changes on 25 Sep moved one, and
+only these caught it.
 
 ## Files
 
@@ -392,3 +450,8 @@ It writes the full transcripts to `runs/`.
 | `judge.ts` | The assistant as judge: the queue folder, and the answers recorded as facts |
 | `plan.ts` | Prints a saved dream's continuity plan and every picture's prompt, before anything is paid for; `--gate` reads each through the gate |
 | `gate.ts` | The confidence gate every picture passes before it is paid for |
+| `stages.ts` | The stages and their transitions as data: "storyboard complete?", its facts and bars |
+| `planfacts.ts` | Jev's facts on each floor plan, and what the planner must fix |
+| `jevlog.ts` | Every Jev call's cost and every decision, logged per conversation |
+| `replan.ts` | Plans a saved dream's shots again without drawing anything |
+| `evals/` | Labelled sets from real dreams, their frozen sources, and the runner that measures Jev on them |
