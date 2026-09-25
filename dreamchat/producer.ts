@@ -327,7 +327,7 @@ export async function rewordLook(
   return changed ? out : null;
 }
 
-const BLOCK = `You are a storyboard artist making the floor plan of each scene of a dream before anything in it is drawn, so that every picture of the scene agrees about where everyone and everything is.
+export const BLOCK = `You are a storyboard artist making the floor plan of each scene of a dream before anything in it is drawn, so that every picture of the scene agrees about where everyone and everything is.
 
 For each scene, seen from above: its "front" (the side of the place its people face, or its main side, in a few words: "the screen", "the window wall", "the wall with the stove"), how big the place is ("room": [across, deep] in metres; a tiny room is about 2 by 2, a hallway about 1.2 across, a street or a field as far as the moments need), whether it is indoors (a room, whose walls are the plan's edges; a street, a village or a field is outdoors, even when someone looks at it from a doorway: then they stand at its front edge) and how high its ceiling is, and a spot for every person and thing in it. x runs across the place from its left side (0) to its right side, for someone facing its front; y runs from its front (0) to its back.
 - Keep everything the dream says: who sits or stands next to whom and on which side, what is next to what, who is in front of or behind whom, what faces what, how big a place is beside what fills it. Someone "by" or "at" something is within a metre of it.
@@ -436,8 +436,16 @@ function readPlan(b: Breakdown, g: Record<string, unknown>, moments: Moment[], l
   // A fixture of the place: its own id and name, as the plan gives it.
   const fixture = (x: Record<string, unknown>) =>
     typeof x.id === 'string' && /^x\d+$/.test(x.id) && typeof x.name === 'string' && !!x.name.trim();
-  const spots: Spot[] = list(g.spots)
-    .map((x) => x as Record<string, unknown>)
+  const given = list(g.spots).map((x) => x as Record<string, unknown>);
+  // A thing someone holds is where they are. Given only as {"id": "t1", "held_by": "p2"}, the
+  // brother's lantern had no spot in two runs of five, and the night bus was left without a plan
+  // (25 Sep): it takes its holder's spot, and settling puts it at their side.
+  for (const x of given) {
+    if (Number.isFinite(Number(x.x)) && Number.isFinite(Number(x.y)) || typeof x.held_by !== 'string') continue;
+    const holder = given.find((h) => h.id === x.held_by && b.people.some((p) => p.id === h.id));
+    if (holder && Number.isFinite(Number(holder.x)) && Number.isFinite(Number(holder.y))) Object.assign(x, { x: holder.x, y: holder.y });
+  }
+  const spots: Spot[] = given
     .filter(
       (x) => typeof x.id === 'string' && (ids.has(x.id) || fixture(x)) && Number.isFinite(Number(x.x)) && Number.isFinite(Number(x.y)),
     )

@@ -156,6 +156,36 @@ describe('the shots, planned while the chat goes on', () => {
   });
 });
 
+describe('a scene its plan left someone or something out of', () => {
+  test('is planned once more, told to give everyone and everything in it a spot', async () => {
+    const b = kitchen();
+    const calls: ({ only?: string[]; fix?: Record<string, string[]> } | undefined)[] = [];
+    const prep = await planShots(b, b.style_options[0], {
+      block: async (x, again) => {
+        calls.push(again);
+        const out = structuredClone(x);
+        // The first plan gave the board no spot, so the scene was left without one.
+        if (again)
+          out.scenes[0].blocking = {
+            front: 'the stove',
+            indoors: true,
+            spots: [
+              { id: 'p1', x: 5, y: 5, kind: 'person', pose: 'standing' },
+              { id: 't1', x: 1, y: 5, kind: 'thing', size: [0.1, 1.5, 1] },
+            ],
+          };
+        return { breakdown: out, notes: [] };
+      },
+    });
+    expect(calls).toHaveLength(2);
+    expect(calls[1]?.only).toEqual(['s1']);
+    expect(calls[1]?.fix?.s1[0]).toContain('had no spot');
+    expect(calls[1]?.fix?.s1[0]).toContain('the dreamer (p1)');
+    expect(calls[1]?.fix?.s1[0]).toContain('(t1)');
+    expect(prep.blocking.s1.front).toBe('the stove');
+  });
+});
+
 describe('a plan made again mid-dream', () => {
   test('knows its in-between references by what they show, not their number', () => {
     const state = (now: string, since: string) => ({ who: 'p1', what: 'head', now, since });

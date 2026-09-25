@@ -167,6 +167,25 @@ describe('the floor plan a model gives', () => {
     expect(plan.spots.find((s) => s.id === 'x2')).toMatchObject({ shape: 'ground' });
     expect(plan.spots.find((s) => s.id === 'x2')?.heldBy).toBeUndefined();
   });
+
+  test('a held thing given with no spot of its own is where its holder is', () => {
+    const b = lab();
+    b.things = [{ id: 't1', name: 'the paper lantern', fields: {} }] as unknown as Breakdown['things'];
+    b.scenes[0].moments[0].things = ['t1'];
+    const plan = (held: Record<string, unknown>) =>
+      readBlocking(b, {
+        scenes: [
+          {
+            id: 's1',
+            spots: [{ id: 'p1', x: 4, y: 1.5, pose: 'sitting' }, { id: 'p2', x: 4.8, y: 1.5, pose: 'sitting' }, held],
+          },
+        ],
+      }).breakdown.scenes[0].blocking;
+    // The night bus's lantern, as the plan gave it in two runs of five.
+    expect(plan({ id: 't1', held_by: 'p2' })?.spots.find((s) => s.id === 't1')).toMatchObject({ x: 4.8, y: 1.5, heldBy: 'p2' });
+    // Held by nobody in the plan, it still has no spot, and the scene no plan.
+    expect(plan({ id: 't1', held_by: 'p9' })).toBeUndefined();
+  });
 });
 
 describe('a change the script supervisor finds', () => {

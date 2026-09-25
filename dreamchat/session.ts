@@ -281,6 +281,35 @@ export async function planShots(
       : Promise.resolve(draft),
   ]);
   let blocked = blockedOrNot;
+  // A scene whose plan left someone or something out is left without one, and nothing after this
+  // plans it again: in one run of three the night bus's plan gave the brother's lantern no spot, and
+  // the bus had no plan, so none of its moments had a camera worked out (25 Sep). Planned once more,
+  // told to give everyone and everything in its moments a spot.
+  const unplanned = blocked.scenes.filter((sc) => !sc.blocking).map((sc) => sc.id);
+  if (deps.block && unplanned.length) {
+    const named = (id: string) =>
+      blocked.people.find((p) => p.id === id && p.is_dreamer)
+        ? 'the dreamer'
+        : (blocked.people.find((p) => p.id === id)?.name ?? blocked.things.find((t) => t.id === id)?.name ?? id);
+    const fix = Object.fromEntries(
+      blocked.scenes
+        .filter((sc) => unplanned.includes(sc.id))
+        .map((sc) => {
+          const ids = [...new Set(sc.moments.flatMap((m) => [...m.visible, ...m.things]))];
+          return [
+            sc.id,
+            [
+              `it was left without a plan because someone or something in its moments had no spot: give every one of these a spot, and a thing someone holds a spot beside them: ${ids.map((id) => `${named(id)} (${id})`).join(', ')}`,
+            ],
+          ];
+        }),
+    );
+    const before = blocked;
+    blocked = await deps
+      .block(blocked, { only: unplanned, fix })
+      .then((r) => r.breakdown)
+      .catch(() => before);
+  }
   const found = deps.jev ? await judgeChanges(deps.jev, blocked, changes).catch(() => changes) : changes;
   addChanges(blocked, found);
   // The plans' facts from Jev (outdoors, what each thing is, who holds what, what each camera
