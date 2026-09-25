@@ -859,6 +859,8 @@ export class SessionStore {
   private chains = new Map<string, Promise<unknown>>();
   private memoryDetails = new Map<string, TurnDetail>();
   private drafts = new Map<string, { basedOn: number; promise: Promise<DraftResult> }>();
+  /** Scenes planned again while their moments were being drawn, by conversation and scene: once each. */
+  private replannedScenes = new Set<string>();
   private writes = new Map<string, Promise<unknown>>();
   /** The shots being planned in the background, by conversation. */
   private preps = new Map<string, Promise<Prep | null>>();
@@ -1759,6 +1761,8 @@ export class SessionStore {
       if (again) checked = (s.prep.storyboard ??= {})[frame.id] = again;
     }
     if (view && checked && checked.view === view && !checked.ok) {
+      // Planned once more, told what was found; kept only if the shot then passes, and drawn from it.
+      if (await this.replanForHold(s, frame, checked)) return this.startFrame(s, frame, turn, before);
       Object.assign(frame, { status: 'waiting', held: checked.reasons.map((r) => `storyboard: ${r}`) });
       return;
     }
@@ -1961,6 +1965,71 @@ export class SessionStore {
             if (typeof v === 'string' && v.trim()) m[k] = v;
           }
     await this.replan(s);
+  }
+
+  /**
+   * A moment "storyboard complete?" holds while the moments are being drawn: its scene is planned
+   * once more, told what its camera saw and what was found, and the new plan is kept only if this
+   * moment's shot then passes. Held on the camera alone it is planned again too: the stairs the
+   * dreamer "goes up" were planned knee-high beside them, and it was the camera that read wrong
+   * (Meads m3, 25 Sep). The plan of another place in the scene whose moments have begun is kept.
+   */
+  private async replanForHold(s: Session, frame: Item, checked: { view: string; reasons: string[] }): Promise<boolean> {
+    const b = s.draft?.breakdown;
+    if (!b || !s.prep || !this.deps.block) return false;
+    const sc = b.scenes.find((x) => x.moments.some((m) => m.id === frame.id));
+    const m = sc?.moments.find((x) => x.id === frame.id);
+    if (!sc || !m || this.replannedScenes.has(`${s.id}:${sc.id}`)) return false;
+    this.replannedScenes.add(`${s.id}:${sc.id}`);
+    const fix = {
+      [sc.id]: [
+        `Moment ${m.id} ("${m.action}") was planned so that its camera sees this: ${checked.view} Checked against the dream: ${checked.reasons.join('; ')}.`,
+      ],
+    };
+    const again = await this.deps
+      .block(b, { only: [sc.id], fix })
+      .then((r) => r.breakdown)
+      .catch(() => null);
+    if (!again) return false;
+    const second = (await planFacts(this.deps.jev, again, [sc.id]).catch(() => ({ breakdown: again }))).breakdown;
+    const c = planContinuity(second).cuts.find((x) => x.id === frame.id);
+    if (!c?.view) return false;
+    const called = calledIn(second, c);
+    const dreamer = second.people.find((p) => p.is_dreamer)?.id;
+    const check = await storyboardCheck(
+      this.deps.jev,
+      m,
+      c.view,
+      called,
+      dreamer,
+      around(second, c, m, called, dreamer),
+      c.framing ?? [],
+    ).catch(() => null);
+    recordJev({
+      kind: 'transition',
+      stage: 'plan',
+      to: 'previs',
+      moment: m.id,
+      facts: [],
+      decision: check?.ok ? 'replanned' : 'kept',
+      reason: `planned again while drawing, after "storyboard complete?" held ${m.id}: ${check?.ok ? 'the new plan passes and is kept' : 'the new plan does not pass; the first is kept'}`,
+    });
+    if (!check?.ok) return false;
+    const next = second.scenes.find((x) => x.id === sc.id)?.blocking;
+    if (!next) return false;
+    const begun = new Set(
+      (s.build?.frames ?? []).filter((f) => f.kind === 'cut' && f.status !== 'waiting').map((f) => f.id),
+    );
+    const keep = Object.fromEntries(
+      Object.entries(sc.blocking?.places ?? {}).filter(([pl]) =>
+        sc.moments.some((x) => x.place === pl && begun.has(x.id)),
+      ),
+    );
+    sc.blocking = { ...next, ...(next.places || Object.keys(keep).length ? { places: { ...next.places, ...keep } } : {}) };
+    s.prep.blocking[sc.id] = sc.blocking;
+    (s.prep.storyboard ??= {})[frame.id] = check;
+    await this.replan(s);
+    return true;
   }
 
   private async replan(s: Session, opts: { syncRecords?: boolean } = {}): Promise<void> {
