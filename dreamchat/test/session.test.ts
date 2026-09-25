@@ -128,7 +128,9 @@ describe('the dream goes on past the retelling', () => {
 
   test('a change taken as it stands at the retell limit is drafted before the offer', async () => {
     const drafted: number[] = [];
-    const breakdown = JSON.parse(readFileSync(join(import.meta.dir, 'fixtures', 'breakdown.json'), 'utf8')) as Breakdown;
+    const breakdown = JSON.parse(
+      readFileSync(join(import.meta.dir, 'fixtures', 'breakdown.json'), 'utf8'),
+    ) as Breakdown;
     const store = new SessionStore(cfg, {
       jev: fakeJev((q) => {
         if (q.is_retelling) return { is_retelling: noul(0.9) };
@@ -478,7 +480,12 @@ describe('a whole conversation', () => {
 
   /** A conversation taken to the moments, with the engine and the judge faked as asked. */
   async function toTheMoments(judge?: StoreDeps['judge'], extra: Partial<StoreDeps> = {}) {
-    const framesStarted: { id: string; refs: string[]; prompt: string; record?: { fields: Record<string, unknown> } }[] = [];
+    const framesStarted: {
+      id: string;
+      refs: string[];
+      prompt: string;
+      record?: { fields: Record<string, unknown> };
+    }[] = [];
     const verdicts: [string, boolean, string][] = [];
     const reaction: { now: Record<string, Answer> } = { now: {} };
     const statuses = new Map<string, string>();
@@ -556,6 +563,90 @@ describe('a whole conversation', () => {
     await store.settle(id, 50);
     return { store, id, framesStarted, verdicts, statuses, host, reaction };
   }
+
+  test('a sketch the gate still holds after two asks is left undrawn, and the moments begin', async () => {
+    // Held on every reading: the board's sketch. Put through the gate again every turn, it once held
+    // the sketches forty turns running and no moment was drawn (night market, 26 Sep).
+    const gate: StoreDeps['gate'] = async (state, questions) => ({
+      questions,
+      state,
+      answers: Object.fromEntries(
+        Object.keys(questions).map((k) => [
+          k,
+          {
+            type: 'noul' as const,
+            noul:
+              k === 'contradicts' && /A single clear picture of/.test(state)
+                ? 0.9
+                : k === 'contradicts' || k === 'twice'
+                  ? 0.05
+                  : 0.9,
+          },
+        ]),
+      ),
+      error: null,
+      ms: 1,
+      usage: null,
+    });
+    const statuses = new Map<string, string>();
+    const store = new SessionStore(cfg, {
+      jev: fakeJev((q) => {
+        const out = script(q);
+        if (q.profile_reply) out.profile_reply = pick('confirmed');
+        if (q.sketch_reaction) out.sketch_reaction = pick('looks_right');
+        return out;
+      }),
+      host: fakeHost(),
+      gate,
+      producer: async () => ({ breakdown, downgraded: [], notes: [], ms: 1 }),
+      write: async () => ({
+        projectId: 'p',
+        ids: { said: 'src-said', proposal: 'src-proposal', l1: 'node-l1', t1: 'node-t1', m1: 'cut-m1', m2: 'cut-m2' },
+        home: '/tmp',
+        created: { project: 1, scene: 1, shot: 2, cut: 2, character: 0, location: 1, prop: 1 },
+        cuts: 2,
+        readyCuts: 0,
+        issues: [],
+        ms: 1,
+      }),
+      sheets: {
+        start: async ({ item }) => {
+          statuses.set(`job-${item.id}`, 'ready');
+          return { recipeId: `r-${item.id}`, jobId: `job-${item.id}`, usd: 0.15 };
+        },
+        status: async (jobId, nodeId) =>
+          statuses.get(jobId) === 'ready'
+            ? { state: 'ready', mediaId: `media-${nodeId}`, mediaPath: `${nodeId}.png` }
+            : { state: 'running' },
+        review: async () => {},
+        retryCollection: async () => {},
+        startFrame: async ({ item }) => ({ recipeId: `r-${item.id}`, jobId: `job-${item.id}`, usd: 0.15 }),
+      },
+      watchEveryMs: 10,
+    });
+    const { id } = store.create();
+    await store.open(id);
+    for (const text of [
+      'a train board in my kitchen',
+      'it said zikery, then I woke',
+      'yes',
+      'yes please',
+      'the poster one',
+    ])
+      await store.message(id, text);
+    await store.message(id, 'yes, that is the kitchen');
+    await store.settle(id, 200);
+    const held = () => store.get(id)!.build!.items.find((i) => i.kind === 'prop')!;
+    expect(held().held?.length).toBeGreaterThan(0);
+    let phase = store.get(id)!.phase;
+    for (let i = 0; i < 6 && phase === 'review'; i++) {
+      phase = (await store.message(id, 'it is just a plain board, they look right')).phase;
+      await store.settle(id, 200);
+    }
+    expect(held().status).toBe('failed');
+    expect(held().error).toContain('not drawn');
+    expect(phase).toBe('frames');
+  });
 
   test('without a judge, a moment drawn from another waits for their verdict on it', async () => {
     const { store, id, framesStarted, verdicts, statuses, host, reaction } = await toTheMoments();
@@ -688,7 +779,9 @@ describe('a whole conversation', () => {
     });
     statuses.set('job-m1', 'ready');
     await store.settle(id, 50);
-    expect(framesStarted[0].prompt).toContain('What happens in this frame: The dreamer sees the board on their kitchen wall.');
+    expect(framesStarted[0].prompt).toContain(
+      'What happens in this frame: The dreamer sees the board on their kitchen wall.',
+    );
     const s = store.get(id)!;
     expect(s.build!.frames![0].reworded).toEqual(['action']);
     // Everything planned from the moment reads as its picture does, its record included.

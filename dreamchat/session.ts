@@ -1137,9 +1137,16 @@ export class SessionStore {
     // put through the gate again. Twice asked and still unsure, it is left undrawn.
     if (s.phase === 'review' && s.build)
       for (const it of s.build.items.filter((i) => i.held && i.status === 'waiting' && i.heldAsks)) {
-        if (this.deps.reviseItem) it.fields = await this.deps.reviseItem(it.name, it.fields, renderTranscript(s.transcript));
-        it.held = undefined;
-        await this.startSketch(s, it, turnNow);
+        // Only their answer to the question they were just asked draws it again. Drawn again on every
+        // turn, its gate's answer came after each turn, so it was never seen held to be asked again,
+        // and the old man was put through the gate forty turns running while no moment was ever drawn
+        // (night market, 26 Sep). Asked twice and held again: left undrawn, so the sketches settle.
+        if (it.heldAskedAt === turnNow - 1) {
+          if (this.deps.reviseItem) it.fields = await this.deps.reviseItem(it.name, it.fields, renderTranscript(s.transcript));
+          it.held = undefined;
+          await this.startSketch(s, it, turnNow);
+        } else if ((it.heldAsks ?? 0) >= 2)
+          Object.assign(it, { status: 'failed', error: `not drawn: still unsure how it looks (${(it.held ?? []).join('; ')})` });
       }
     // Their answer to the sketches is applied before the next move is chosen: it can settle the
     // last one, or start a new version.
@@ -1389,7 +1396,7 @@ export class SessionStore {
         const held = s.build.items.filter((i) => i.held && i.status === 'waiting');
         const ask = held.filter((i) => (i.heldAsks ?? 0) < 2);
         extras.held = ask.map((i) => (i.isDreamer ? 'you' : i.name));
-        for (const i of ask) i.heldAsks = (i.heldAsks ?? 0) + 1;
+        for (const i of ask) Object.assign(i, { heldAsks: (i.heldAsks ?? 0) + 1, heldAskedAt: turnNow });
         // Asked twice and still unsure: left undrawn, and said so.
         for (const i of held.filter((x) => (x.heldAsks ?? 0) >= 2 && !ask.includes(x)))
           Object.assign(i, { status: 'failed', error: `not drawn: still unsure how it looks (${(i.held ?? []).join('; ')})` });

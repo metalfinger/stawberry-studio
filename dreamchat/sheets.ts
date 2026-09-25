@@ -72,6 +72,8 @@ export type Item = {
   reworded?: string[];
   /** How many times they have been asked how it looks because the gate held its sketch. */
   heldAsks?: number;
+  /** The turn they were last asked, so only their answer to it draws it again. */
+  heldAskedAt?: number;
   /** Jev's reading of the prompt it was last to be drawn from. */
   gate?: {
     contradicts: number;
@@ -403,12 +405,21 @@ export function groupMembers(people: Item[]): { group: Item; member: Item; word:
 
 /** Words for an animal: a character that is one is sketched as one, never as "one person only". */
 const ANIMAL =
-  /\b(dog|dogs|puppy|terrier|spaniel|retriever|poodle|hound|cat|cats|kitten|horse|pony|foal|cow|calf|bull|sheep|lamb|goat|pig|rabbit|hare|fox|wolf|bear|deer|bird|birds|crow|raven|owl|gull|seagull|duck|swan|goose|hen|chicken|parrot|fish|whale|dolphin|snake|lizard|frog|mouse|mice|rat|squirrel|monkey|elephant|lion|tiger|donkey|camel)\b/i;
+  /\b(dog|dogs|puppy|terrier|spaniel|retriever|poodle|hound|cat|cats|kitten|horse|pony|foal|cow|calf|bull|sheep|lamb|goat|pig|rabbit|hare|fox|wolf|bear|deer|bird|birds|crow|raven|owl|gull|seagull|duck|swan|goose|hen|chicken|parrot|heron|sparrow|pigeon|eagle|hawk|stork|robin|butterfly|moth|bee|spider|seal|otter|badger|hedgehog|fish|whale|dolphin|snake|lizard|frog|mouse|mice|rat|squirrel|monkey|elephant|lion|tiger|donkey|camel)\b/i;
 
 /** A person of the dream who is an animal: the dog walking beside them, the horse they ride. */
 export function isAnimal(item: Pick<Item, 'kind' | 'name' | 'fields' | 'isDreamer'>): boolean {
   if (item.kind !== 'character' || item.isDreamer) return false;
-  return ANIMAL.test(`${item.name} ${item.fields.identity?.value ?? ''}`);
+  // What they are, not what is said of them: "an old man selling fish" is a man (night market, 26 Sep).
+  const what = (x: string) =>
+    x
+      .toLowerCase()
+      .split(/,|;|\b(?:who|that|which|with|at|in|on|from|by|selling|holding|carrying|wearing|of)\b/)[0]
+      .trim()
+      .split(/\s+/)
+      .at(-1) ?? '';
+  const words = [what(item.name), what(item.fields.identity?.value ?? '')];
+  return words.some((w) => ANIMAL.test(w)) && !words.some((w) => /^(man|woman|men|women|boy|girl|person|people|child|driver|seller|vendor|keeper|owner)$/.test(w));
 }
 
 /** A place's name that says who is there or what they do in it, rather than what the place is. */

@@ -1257,7 +1257,9 @@ export function outsideShot(
   const extra = also
     .map((id) => plan.spots.find((s) => s.id === id))
     .filter((s): s is Spot => !!s && !holdAll.includes(s));
-  const degs = extra.length ? [0, -20, 20, -40, 40, -70, 70, -110, 110, 180] : [0, -20, 20, -40, 40, -70, 70];
+  // The place's front, when the words name it: faced, so it is behind whoever is in the picture.
+  const front = also.includes('front');
+  const degs = extra.length || front ? [0, -20, 20, -40, 40, -70, 70, -110, 110, 180] : [0, -20, 20, -40, 40, -70, 70];
   for (const deg of degs)
     for (const back of [1, 1.35, 1.8]) {
       const cand = place(turnBy(d0, deg), back);
@@ -1267,8 +1269,16 @@ export function outsideShot(
       const clear = seen.reduce((a, x) => a + (x ? 1 - x.occluded : 0), 0) / holdAll.length;
       const framed = framing(rs, framedPeople, size, name, plan).score;
       const named = extra.length ? extra.filter((s) => (rs.seen.get(s.id)?.visible ?? 0) >= tiny).length / extra.length : 0;
+      const facesFront = front ? Math.max(0, -cand.eye.d.y) : 0;
       const score =
-        2 * inFrame + clear + 0.8 * framed + named - Math.abs(deg) * 0.006 - (back - 1) * 0.2 - cand.cramped * 0.5;
+        2 * inFrame +
+        clear +
+        0.8 * framed +
+        named +
+        facesFront -
+        Math.abs(deg) * 0.006 -
+        (back - 1) * 0.2 -
+        cand.cramped * 0.5;
       if (!best || score > best.score + 1e-9) best = { ...cand, score };
     }
   const { eye, far } = best!;

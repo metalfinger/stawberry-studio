@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { rawPlanBy } from '../continuity';
 import { addChanges, type Breakdown, completeViews, normalizeBreakdown, readBlocking, VAGUE } from '../producer';
 
 const detail = (value: string | null, said = false) => ({ value, said });
@@ -166,6 +167,29 @@ describe('the floor plan a model gives', () => {
     expect(plan.spots.find((s) => s.id === 'x1')?.shape).toBeUndefined();
     expect(plan.spots.find((s) => s.id === 'x2')).toMatchObject({ shape: 'ground' });
     expect(plan.spots.find((s) => s.id === 'x2')?.heldBy).toBeUndefined();
+  });
+
+  test('a thing handed over partway is held by each in turn, from the moment it changes hands', () => {
+    const b = lab();
+    b.things = [{ id: 't1', name: 'the paper boat', fields: {} }] as unknown as Breakdown['things'];
+    for (const m of b.scenes[0].moments) m.things = ['t1'];
+    const { breakdown } = readBlocking(b, {
+      scenes: [
+        {
+          id: 's1',
+          spots: [
+            { id: 'p1', x: 2, y: 2, pose: 'sitting' },
+            { id: 'p2', x: 3, y: 2, pose: 'standing' },
+            { id: 't1', held_by: 'p1' },
+          ],
+          // The father hands the boat over at m2, and it is put down at m3.
+          moves: { m2: [{ id: 't1', held_by: 'p2' }], m3: [{ id: 't1', held_by: '', x: 4, y: 4 }] },
+        },
+      ],
+    });
+    expect(breakdown.scenes[0].blocking?.moves?.m2).toEqual([{ id: 't1', x: 2, y: 2, heldBy: 'p2' }]);
+    const heldAt = (m: string) => rawPlanBy(breakdown, m)?.spots.find((x) => x.id === 't1')?.heldBy;
+    expect([heldAt('m1'), heldAt('m2'), heldAt('m3')]).toEqual(['p1', 'p2', undefined]);
   });
 
   test('a held thing given with no spot of its own is where its holder is', () => {

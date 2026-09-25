@@ -434,6 +434,9 @@ describe('a group of people', () => {
     expect(sheetPrompt({ ...dog, name: 'the aunt', fields: { identity: { value: 'my aunt', said: true } } }, style)).toContain(
       'one person only',
     );
+    // What they are, not what is said of them (night market, 26 Sep).
+    const seller = { ...dog, name: 'the old man', fields: { identity: { value: 'an old man selling fish at a stall', said: true } } };
+    expect(sheetPrompt(seller, style)).toContain('one person only');
   });
 
   test('a place named for who was there is drawn as the place', () => {

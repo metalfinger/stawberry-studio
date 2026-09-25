@@ -947,6 +947,7 @@ describe('G. flags on real drift', () => {
         'plan_drift:s1/l2',
         'stale_reading:m1',
         'stale_reading:m2',
+        'stale_reading:m3',
         'stale_reading:m5',
         'stale_reading:m6',
         'stale_reading:m7',

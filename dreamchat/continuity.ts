@@ -256,7 +256,14 @@ export function rawPlanBy(b: Breakdown, momentId: string): Blocking | undefined 
       .filter((s) => there.has(s.id) || s.id === dreamerId || s.fixture)
       .map((s) => {
         const mv = moved.get(s.id);
-        return mv ? { ...s, x: mv.x, y: mv.y, ...(mv.faces ? { faces: mv.faces } : {}), ...(mv.pose ? { pose: mv.pose } : {}) } : s;
+        if (!mv) return s;
+        const at = { ...s, x: mv.x, y: mv.y, ...(mv.faces ? { faces: mv.faces } : {}), ...(mv.pose ? { pose: mv.pose } : {}) };
+        // Handed over or put down: whoever holds it from this moment, or nobody.
+        if (mv.heldBy !== undefined) {
+          if (mv.heldBy) at.heldBy = mv.heldBy;
+          else delete at.heldBy;
+        }
+        return at;
       }),
   };
 }
@@ -743,9 +750,12 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
       // What its words name on the plan besides who and what is in it, to be in the picture too where
       // the camera can hold it: holding up the key "for the lighthouse" with the lighthouse behind
       // the camera read as the shot at odds with the moment (lighthouse, 25 Sep).
-      const also = mentioned(`${m.action} ${m.visual_point ?? ''}`, where.spots.map((x) => ({ id: x.id, name: nameOf(x) }))).filter(
-        (id) => !ids.includes(id) && id !== dreamerId,
-      );
+      // The place's own side too, when its words name it: putting the boat down "at the edge where the
+      // beach used to be", the front the plan named so, was shot facing away from it (lighthouse, 25 Sep).
+      const also = mentioned(`${m.action} ${m.visual_point ?? ''}`, [
+        ...where.spots.map((x) => ({ id: x.id, name: nameOf(x) })),
+        ...(where.front ? [{ id: 'front', name: where.front }] : []),
+      ]).filter((id) => !ids.includes(id) && id !== dreamerId);
       const v = edits ? null : outsideShot(where, ids, m.distance, now, lookAt(m, where), also);
       if (v) {
         c.view = v.text;

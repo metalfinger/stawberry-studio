@@ -141,7 +141,10 @@ export function applyPlanFacts(
       changed.push(`${s.id} ${shape}`);
       s.shape = shape as Shape;
     }
-    const holder = sure(answers[`holder_${s.id}`], PLAN_BARS.holder);
+    // Handed over during the scene, as the plan's moves say: who holds it is by the moment, and a
+    // reading for the whole scene would say only one of them.
+    const handed = Object.values(plan.moves ?? {}).some((mvs) => mvs.some((mv) => mv.id === s.id && mv.heldBy !== undefined));
+    const holder = handed ? undefined : sure(answers[`holder_${s.id}`], PLAN_BARS.holder);
     if (holder && people.has(holder) && holder !== s.heldBy) {
       changed.push(`${s.id} held by ${holder}`);
       s.heldBy = holder;

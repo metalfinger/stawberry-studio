@@ -47,7 +47,12 @@ export type Spot = {
 };
 
 /** Where someone or something (a car, a boat) has moved to at a moment: its new spot, which way it faces, how they are. */
-export type Move = { id: string; x: number; y: number; faces?: string; pose?: Spot['pose'] };
+/**
+ * Where someone or something is at a moment of the scene, when that differs from before; for a thing,
+ * who holds it from then on ("" once it is put down): the boat the father hands over is his, then
+ * theirs (lighthouse, 25 Sep).
+ */
+export type Move = { id: string; x: number; y: number; faces?: string; pose?: Spot['pose']; heldBy?: string };
 
 /**
  * A scene's floor plan: what its front is, and where everyone and everything is. Indoors, the plan's

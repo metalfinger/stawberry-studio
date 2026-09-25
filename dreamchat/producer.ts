@@ -335,7 +335,7 @@ For each scene, seen from above: its "front" (the side of the place its people f
 - Where it says nothing, choose what is ordinary for such a place, at the distances it really has (a cinema's front row is a few metres from its screen; people side by side sit about 0.8 apart), and put people who are together side by side.
 - "faces" is whom or what someone faces: an id from this plan, or "front", "back", "left" or "right". People talking together face each other; someone doing something at a thing (cooking at a stove, working at a desk, looking out of a window) faces it; otherwise people face the front. Each person is "sitting", "standing" or "lying", as they are in the scene.
 - A thing's spot is its middle, with its "size" in metres: [across, deep, high], across being side to side as it faces, and its "shape": what it is to whoever is at it. "seat": sat on (a sofa, a bench, a bed). "vehicle": ridden in (a car, a boat, a cart). "ground": stood and walked on, as high as it rises (a street or a road 0.05, a bridge or a stage as high as its deck). "steps": climbed (stairs), as high as they climb (a flight up to the next floor about 2.7, a few steps 0.5). "block": anything else. Every thing and fixture has a size and a shape; a street, a road or a river runs as far as the place goes. Someone sitting on a seat, riding in a vehicle, or standing on ground or steps has their spot on it; nobody stands inside a block.
-- A thing someone holds or carries (a lantern, a string of balloons, a phone) has "held_by": their id.
+- A thing someone holds or carries (a lantern, a string of balloons, a phone) has "held_by": their id, as it is at the scene's first moment. When it changes hands, is picked up or is put down during the scene (handed over, given, set down), give it a move at that moment with its new "held_by" ("" once it is put down, with where it lies): {"id": "t1", "held_by": "p1"}.
 - The place's own fixtures that the moments happen by, face or act on (an autoclave, a stove, the stairs, a bridge, a door, a counter) get a spot too, with an id x1, x2 and so on, their "name" in a few words, their size and their shape. They are part of the place, not people or things of the story. A hallway, a corridor, a corner, a doorway or an aisle is not a fixture: it is the shape of the place itself (a hallway is a place about 1.2 across and as long as it is). Only when a moment faces one ("faces": "the corner") does it get a small spot, with that name, where it is, so the camera can face it.
 - A crowd or an audience is one spot with "many": true, at the middle of where they are, with "spread": [across, deep] in metres for the ground they fill, how they are ("sitting" in rows of seats, "standing"), and "count" when the dream says how many ("a couple of people": 2).
 - A moment "seen_through_the_eyes_of" someone has them in it, where they are: their spot is the camera, facing what the moment faces.
@@ -524,18 +524,29 @@ function readPlan(b: Breakdown, g: Record<string, unknown>, moments: Moment[], l
   const moves: Record<string, Move[]> = {};
   for (const [mid, list_] of Object.entries((g.moves && typeof g.moves === 'object' ? g.moves : {}) as Record<string, unknown>)) {
     if (!at.has(mid)) continue;
+    // A thing changing hands needs no place of its own: it is where its new holder is.
+    const handed = (x: Record<string, unknown>) =>
+      typeof x.held_by === 'string' && !b.people.some((p) => p.id === x.id) && (x.held_by === '' || known.has(x.held_by));
     const mv = list(list_)
       .map((x) => x as Record<string, unknown>)
-      .filter((x) => typeof x.id === 'string' && movers.has(x.id) && Number.isFinite(Number(x.x)) && Number.isFinite(Number(x.y)))
-      .map(
-        (x): Move => ({
+      .filter(
+        (x) =>
+          typeof x.id === 'string' &&
+          movers.has(x.id) &&
+          ((Number.isFinite(Number(x.x)) && Number.isFinite(Number(x.y))) || handed(x)),
+      )
+      .map((x): Move => {
+        const was = spots.find((s) => s.id === x.id)!;
+        const fixed = Number.isFinite(Number(x.x)) && Number.isFinite(Number(x.y));
+        return {
           id: x.id as string,
-          x: onX(x.x),
-          y: onY(x.y),
+          x: fixed ? onX(x.x) : was.x,
+          y: fixed ? onY(x.y) : was.y,
           ...(faces(x.faces) ? { faces: faces(x.faces) } : {}),
           ...(['sitting', 'standing', 'lying'].includes(x.pose as string) ? { pose: x.pose as Spot['pose'] } : {}),
-        }),
-      );
+          ...(handed(x) ? { heldBy: x.held_by as string } : {}),
+        };
+      });
     if (mv.length) moves[mid] = mv;
   }
   const missing = [...ids].filter((id) => !spots.some((s) => s.id === id));
