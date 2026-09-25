@@ -904,6 +904,9 @@ export function resolveTree(input: TreeInput): DreamTree {
     const shape = shapeOf(s, p);
     const derived = !s.shape && shape !== 'block';
     const category: Category = shape === 'block' ? (s.fixture ? 'set_dressing' : 'prop') : shape;
+    // A fixture the plan gives no shape is the place's set dressing: read from its fixture flag.
+    if (!s.shape && shape === 'block' && s.fixture)
+      return { category, from: src('dream', 'dream', `${key}.spots.${s.id}.fixture`, 'read') };
     return {
       category,
       from: derived
@@ -1185,8 +1188,8 @@ export function resolveTree(input: TreeInput): DreamTree {
       present,
       ...(via ? { via } : {}),
       inPicture: sees ? sees.includes(id) : null,
-      called: F('', src('dream', 'dream', '', 'derived')),
-      stage: F('', src('sheet', id, '', 'derived')),
+      called: F(elements[id]?.name ?? id, src('dream', 'dream', `b:${id}.name`, 'read')),
+      stage: F<string>(null, src('sheet', id, 'none:stage', 'unknown', { rule: 'no looks of its own' })),
       parts: {},
     });
     const add = (id: string, present: Presence, via?: string) => {
@@ -1223,20 +1226,18 @@ export function resolveTree(input: TreeInput): DreamTree {
       const list = stagesOf.get(e.id);
       if (list) {
         const actual =
-          [...list]
-            .reverse()
-            .find(
-              (s) =>
-                s.startsAt &&
-                inForce.has(
-                  stateKey({
-                    who: s.element,
-                    what: Object.keys(s.parts).find((p) => p.trim().toLowerCase() === s.part) ?? s.part!,
-                    now: s.now!,
-                    since: s.startsAt,
-                  }),
-                ),
-            ) ?? list[0];
+          [...list].reverse().find(
+            (s) =>
+              s.startsAt &&
+              inForce.has(
+                stateKey({
+                  who: s.element,
+                  what: Object.keys(s.parts).find((p) => p.trim().toLowerCase() === s.part) ?? s.part!,
+                  now: s.now!,
+                  since: s.startsAt,
+                }),
+              ),
+          ) ?? list[0];
         const expected = expectedStage(e.id, m.id)!;
         const use = e.present === 'listed' || e.present === 'camera' ? actual : expected;
         e.stage =
@@ -1374,6 +1375,7 @@ export function resolveTree(input: TreeInput): DreamTree {
         if (!at[s.key] && elements[s.key])
           at[s.key] = {
             ...base(s.key, 'linked', `subject_of:${e.id}`),
+            called: F(elements[s.key].name, src('dream', 'dream', 'code:changeName', 'derived', { rule: 'change' })),
             stage: F(s.key, src('cut', s.startsAt!, `b:${s.startsAt}.leaves`, 'read')),
           };
     }
@@ -1529,8 +1531,21 @@ export function resolveTree(input: TreeInput): DreamTree {
     const sheet = {} as Sheet<K>;
     const set: K[] = [];
     for (const k of keys) {
-      const mine = own[k];
+      const given = own[k];
       const from = parent?.[k];
+      const inherited = !!from && from.value !== null && from.value !== undefined;
+      // A default or a sketch's value is a fallback: under whatever is inherited, never the node's own.
+      const fallback = given && (given.from.node !== node || given.from.level !== level) ? given : null;
+      const mine = fallback ? null : given;
+      if (fallback && !inherited) {
+        (sheet as Record<string, Field<unknown>>)[k] = forget(fallback, k);
+        continue;
+      }
+      // Unknown for a reason code can name ("riding together"): said so, rather than left blank.
+      if (mine && mine.value === null && mine.from.rule && !inherited) {
+        (sheet as Record<string, Field<unknown>>)[k] = mine;
+        continue;
+      }
       if (
         FIELDS[k].setAt.includes(level) &&
         mine &&
@@ -1710,9 +1725,6 @@ export function resolveTree(input: TreeInput): DreamTree {
           lightSource,
           line,
         });
-        // A scene sheet's light: the place's sketch, where the scene sets none.
-        if (lightSource && sceneSheet.sheet.lightSource.from.node === sid)
-          sceneSheet.sheet.lightSource = forget({ ...lightSource }, 'lightSource');
 
         const scene: SceneNode = {
           id: sid,
@@ -1824,7 +1836,7 @@ export function resolveTree(input: TreeInput): DreamTree {
             lens: eye
               ? eye.lens
                 ? F(eye.lens, src('shot', shot, `cont:${lm.id}.eye.lens`, 'derived', { rule: 'lead-cut' }))
-                : F(DEFAULT_LENS, src('default', '-', 'default:lens', 'default', { rule: 'previs wide lens' }))
+                : F(DEFAULT_LENS, src('default', '-', 'default:HALF_VIEW', 'default', { rule: 'HALF_VIEW' }))
               : null,
             faces: lm.looks_at
               ? F<Faces>(
@@ -1835,16 +1847,17 @@ export function resolveTree(input: TreeInput): DreamTree {
             subject: subject
               ? F(
                   subject,
-                  src('shot', shot, facesOn === subject ? `${lkey}.looks.${lm.id}` : `cont:${lm.id}.sees`, 'derived'),
+                  src('shot', shot, facesOn === subject ? `${lkey}.looks.${lm.id}` : `cont:${lm.id}.sees`, 'derived', {
+                    rule: 'lead-cut',
+                  }),
                 )
               : null,
             role: role ? F(role, src('shot', shot, `code:role(${lm.id})`, 'derived')) : null,
             side: leadSide.value
-              ? F(
-                  leadSide.value,
-                  src('shot', shot, `code:side(${lm.id})`, 'derived', leadSide.rule ? { rule: leadSide.rule } : {}),
-                )
-              : null,
+              ? F(leadSide.value, src('shot', shot, `code:side(${lm.id})`, 'derived'))
+              : leadSide.rule
+                ? F<Side>(null, src('shot', shot, `code:side(${lm.id})`, 'derived', { rule: leadSide.rule }))
+                : null,
             screen: screen ? F(screen, src('shot', shot, `code:bearing(cont:${lm.id}.eye)`, 'derived')) : null,
             background:
               eye && lplan
@@ -1929,6 +1942,20 @@ export function resolveTree(input: TreeInput): DreamTree {
                 );
               const s = sideOf(m);
               if (s.value) own.side = F(s.value, src('cut', cid, `code:side(${cid})`, 'derived'));
+              // Its own left-to-right order, read from its own camera: turned away, it sees other people.
+              const ckey = planKeyOf(m);
+              const cpb = planBy(b, cid);
+              if (cpb)
+                own.screen = F(
+                  (cp.sees ?? [])
+                    .map((x) => ({ x: elementOfSpot(ckey, x), s: cpb.spots.find((y) => y.id === x) }))
+                    .filter((v): v is { x: string; s: Spot } => !!v.s)
+                    .sort(
+                      (u, v) => bearing(cp.eye!.at, cp.eye!.d, u.s).angle - bearing(cp.eye!.at, cp.eye!.d, v.s).angle,
+                    )
+                    .map((v) => v.x),
+                  src('cut', cid, `code:bearing(cont:${cid}.eye)`, 'derived'),
+                );
               if (!brk) {
                 const mv = cameraMoved(cp.eye, eye);
                 flag({
@@ -2068,7 +2095,7 @@ export function resolveTree(input: TreeInput): DreamTree {
         const indoors = scene.sheet.indoors.value;
         const time = scene.sheet.time.value;
         scene.breakdown = {
-          heading: `${indoors === null ? 'INT/EXT?' : indoors ? 'INT' : 'EXT'}. ${baseName(first.place).toUpperCase()} — ${time ? String(time).toUpperCase() : 'TIME UNKNOWN'}`,
+          heading: `${indoors === null ? 'INT/EXT?' : indoors ? 'INT.' : 'EXT.'} ${(first.place ? baseName(first.place) : 'somewhere').toUpperCase()} — ${time ? String(time).toUpperCase() : 'TIME UNKNOWN'}`,
           blocks: SHEET_ORDER.map((category) => ({
             category,
             entries: scene.elements
@@ -2145,7 +2172,11 @@ export function resolveTree(input: TreeInput): DreamTree {
             'stage',
             p.stage.value,
             e.stage.value,
-            [...stagesOf.values()].flat().some((s) => s.element === id && s.startsAt === c.id),
+            // A change between the two cuts, in another shot, marks it: the woman's head turned to ice in
+            // the close-ups between two medium shots of her (23 Sep).
+            [...stagesOf.values()]
+              .flat()
+              .some((s) => s.element === id && !!s.startsAt && between.some((x) => x.id === s.startsAt)),
           ],
           [
             'at',
@@ -2264,6 +2295,22 @@ export function resolveTree(input: TreeInput): DreamTree {
           affects: s.span.filter((c) => orderOf.get(c)! >= orderOf.get(brk.at)!),
         });
   }
+  // A scene the breakdown gave no place: where was it?
+  for (const sc of allScenes)
+    if (/\/-(@|$)/.test(sc.id))
+      addGap({
+        id: `where:${sc.id}`,
+        kind: 'where',
+        level: 'scene',
+        node: sc.id,
+        fields: ['place'],
+        basis: 'unknown',
+        current: null,
+        from: [sc.sheet.place.from],
+        slots: { scene: sc.name },
+        firstAt: sc.span[0],
+        affects: sc.span,
+      });
   // Places: what kind of place, and whether it is another place again.
   for (const l of b.places) {
     const scene = firstSceneOf(l.id);
@@ -2290,9 +2337,10 @@ export function resolveTree(input: TreeInput): DreamTree {
         meant(l.name, [{ id: q.id, name: q.name }]) === q.id ||
         ms.some((m) => m.place === l.id && m.looks_at && meant(m.looks_at, [{ id: q.id, name: q.name }]) === q.id);
       if (!matched) continue;
-      const pair = [l.id, q.id].sort();
+      // P is the place whose name or moment matched; one question for the pair.
+      if (gaps.some((g) => g.id === `same_place:${q.id}:${l.id}`)) continue;
       addGap({
-        id: `same_place:${pair[0]}:${pair[1]}`,
+        id: `same_place:${l.id}:${q.id}`,
         kind: 'same_place',
         level: 'scene',
         node: scene.id,
@@ -2445,6 +2493,14 @@ export function resolveTree(input: TreeInput): DreamTree {
         affects: [m.id],
       });
   gaps.sort((x, y) => x.priority - y.priority || (x.id < y.id ? -1 : 1));
+
+  // Cameras go by their shot's number, as a shot list numbers them: "camera 3-1".
+  for (const sh of shotNodes.values()) {
+    const cam = elements[`cam:${sh.id}`];
+    if (!cam) continue;
+    cam.name = `camera ${sh.number}`;
+    for (const c of sh.cuts) if (c.at[cam.id]) c.at[cam.id].called = { ...c.at[cam.id].called, value: cam.name };
+  }
 
   // Every flag and gap on the nodes it concerns.
   const nodeOf = (id: string) => cutNodes.get(id) ?? shotNodes.get(id) ?? sceneNodes.get(id);
