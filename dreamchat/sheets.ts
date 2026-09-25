@@ -76,6 +76,8 @@ export type Item = {
   heldAskedAt?: number;
   /** For a place: the story's things, which have pictures of their own and are left out of its. */
   leaveOut?: string[];
+  /** Drawn although a check would have held it (measuring the checks only): what the checks said. */
+  overrode?: string[];
   /** Jev's reading of the prompt it was last to be drawn from. */
   gate?: {
     contradicts: number;

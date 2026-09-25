@@ -1791,7 +1791,12 @@ export class SessionStore {
       ).catch(() => undefined);
       if (again) checked = (s.prep.storyboard ??= {})[frame.id] = again;
     }
-    if (view && checked && checked.view === view && !checked.ok) {
+    // For measuring the checks on real pictures only (DREAMCHAT_DRAW_HELD=1): drawn anyway, from the
+    // plan it has, the reasons it would have been held kept on it to judge them against.
+    const drawHeld = process.env.DREAMCHAT_DRAW_HELD === '1';
+    if (drawHeld && view && checked && checked.view === view && !checked.ok)
+      frame.overrode = checked.reasons.map((r) => `storyboard: ${r}`);
+    else if (view && checked && checked.view === view && !checked.ok) {
       // Planned once more, told what was found; kept only if the shot then passes, and drawn from it.
       if (await this.replanForHold(s, frame, checked)) return this.startFrame(s, frame, turn, before);
       // Planned again and still held: left undrawn, said so, and what follows is drawn without it.
@@ -1852,7 +1857,11 @@ export class SessionStore {
     // planned as a block hiding the couple, the room's front named for a sofa standing in its middle
     // (Meads m9, 25 Sep). Planned once more as for "storyboard complete?", told what was found.
     const onCamera = findings.filter((f) => f.includes('around: "What the camera sees'));
-    if (onCamera.length && view && (await this.replanForHold(s, frame, { view, reasons: onCamera })))
+    if (drawHeld && findings.length) {
+      frame.overrode = [...(frame.overrode ?? []), ...findings];
+      findings = [];
+    }
+    if (onCamera.length && view && findings.length && (await this.replanForHold(s, frame, { view, reasons: onCamera })))
       return this.startFrame(s, frame, turn, before);
     if (findings.length) {
       // Reworded, and planned again where its camera was at odds, and still held: left undrawn, and
