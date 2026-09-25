@@ -39,6 +39,20 @@ export function turnedInto(frame: Item): Set<string> {
   return new Set([...(plan?.own ?? []), ...(plan?.states ?? [])].filter(isWhole).map((st) => st.who));
 }
 
+/**
+ * A look without the pose and framing of the sketch it was written for: "standing in a relaxed
+ * three-quarter view, whole figure from head to feet, face clearly visible" came into the father's
+ * look, and a moment of him sitting read as at odds with itself (0.89, lighthouse, 26 Sep). A
+ * moment's plan decides how anyone stands and is seen.
+ */
+const POSE_PHRASE =
+  /\s+standing\s+in\s+a\s+(?:relaxed\s+)?pose\b|(?:^|,\s*)(?:(?:standing|sitting|seated|posed)\b[^,;]*|(?:in\s+(?:a\s+)?)?(?:relaxed\s+)?three-quarter\s+view[^,;]*|(?:the\s+)?whole\s+(?:figure|body)[^,;]*(?:visible|head to (?:feet|toe)|beak to tail|nose to tail)[^,;]*|(?:the\s+)?full[- ]length[^,;]*|(?:the\s+|its\s+|their\s+)?(?:face|head)\s+(?:clearly\s+)?visible[^,;]*|head\s+turned[^,;]*(?:viewer|camera)[^,;]*|facing\s+the\s+(?:viewer|camera)[^,;]*|(?:with\s+)?(?:a\s+)?(?:calm|neutral)\s+expression[^,;]*|looking\s+(?:slightly\s+)?(?:at|toward|towards|down|up)[^,;]*)/gi;
+
+export function withoutPose(look: string): string {
+  const out = look.replace(POSE_PHRASE, '').replace(/^\s*[,;]\s*/, '').replace(/\s*,\s*,/g, ',').trim();
+  return out.length >= 3 ? out : look;
+}
+
 /** A thing named with its article: "turned into roller coaster" read as broken English. */
 // "turned into a transformed into a grey heron": what it is now, never the turning (26 Sep).
 export const aNoun = (raw: string) => {
@@ -271,7 +285,7 @@ export function framePrompt(
       // What was filled in is said in the style's shades; what they said keeps its colours.
       .map((d) => (d?.said ? (d.value as string) : inShades(d?.value as string, style)))
       .flatMap((v) => v.split(/;\s*/))
-      .map((part) => part.trim().replace(/[.\s]+$/, ''))
+      .map((part) => withoutPose(part).trim().replace(/[.\s]+$/, ''))
       .filter((part) => part && !own.some((re) => re.test(part)))
       .join('; ');
   };

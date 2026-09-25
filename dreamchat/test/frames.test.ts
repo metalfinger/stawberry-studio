@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { CutPlan } from '../continuity';
-import { aNoun, framePrompt, writingIn } from '../frames';
+import { aNoun, framePrompt, withoutPose, writingIn } from '../frames';
 import { oneColour, VAGUE } from '../producer';
 import { asInstruction } from '../session';
 import {
@@ -437,6 +437,18 @@ describe('a group of people', () => {
     // What they are, not what is said of them (night market, 26 Sep).
     const seller = { ...dog, name: 'the old man', fields: { identity: { value: 'an old man selling fish at a stall', said: true } } };
     expect(sheetPrompt(seller, style)).toContain('one person only');
+  });
+
+  test("a look listed in a moment keeps no pose or framing from its sketch", () => {
+    // "standing … face clearly visible" in the father's look, in a moment of him sitting, read as the
+    // prompt at odds with itself (0.89, lighthouse, 26 Sep).
+    expect(
+      withoutPose(
+        'standing in a relaxed three-quarter view, whole figure from head to feet, face clearly visible, with a calm expression; a man in his 60s with grey hair',
+      ),
+    ).toBe('a man in his 60s with grey hair');
+    expect(withoutPose('a tall grey heron standing in a relaxed pose, whole body visible from beak to tail')).toBe('a tall grey heron');
+    expect(withoutPose('curly brown hair, thin build')).toBe('curly brown hair, thin build');
   });
 
   test('what something turned into is named as what it is now', () => {
