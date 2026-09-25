@@ -124,7 +124,7 @@ export const STORYBOARD: Transition = {
       id: 'sb_all_in',
       label: 'Everyone and everything in it?',
       instructions:
-        '`shot` describes a planned storyboard picture of `moment`. Does the shot have in the picture everyone and everything that `moment.in_it` lists and `moment.action` is about?',
+        '`shot` is a grey layout of a planned storyboard picture of `moment`: where everyone and everything is and where the camera is, never how anything looks. Is everyone and everything `moment.in_it` lists in the picture? Partly hidden behind someone or something is still in it; wholly hidden or outside the picture is not.',
       criteria: {
         true: 'everyone and everything the moment is about is in the picture',
         false: 'someone or something the moment needs is outside the picture, hidden, or missing',
@@ -136,7 +136,7 @@ export const STORYBOARD: Transition = {
       id: 'sb_contradicts',
       label: 'Contradicts the moment?',
       instructions:
-        'Does anything in `shot` contradict `moment`: where someone or something is, what they are in or on, which way they face, or how big the place is beside what fills it?',
+        '`shot` is a grey layout of a planned picture: it says where people and things are, never how they look (a head of ice, melting, colours cannot show in it). Does it contradict `moment` about where someone or something is, what they are in or on, which way they face, or how big the place is beside what fills it?',
       criteria: {
         true: 'the shot disagrees with the moment about where someone or something is, what they are in or on, or how big',
         false: 'they agree; the shot only adds detail the moment leaves open',
@@ -148,10 +148,11 @@ export const STORYBOARD: Transition = {
       id: 'sb_camera',
       label: 'Camera where the moment needs it?',
       instructions:
-        "Is the camera in `shot` where `moment` needs it: the dreamer's own eyes when `moment.seen` says the moment is seen through them, otherwise outside, and facing what `moment.looks_at` names?",
+        "Is the camera in `shot` where `moment` needs it: the dreamer's own eyes when `moment.seen` says the moment is seen through them, otherwise outside; and does the picture show what `moment.looks_at` names, or face toward it?",
       criteria: {
-        true: 'the camera is where the moment needs it and faces what it looks at',
-        false: "the camera is on the wrong side, is or is not the dreamer's eyes wrongly, or faces something else",
+        true: 'the camera is where the moment needs it, and what the moment looks at is in the picture or ahead of it',
+        false:
+          "the camera is or is not the dreamer's eyes wrongly, or what the moment looks at is behind it or off to one side",
       },
       pass: 'yes',
       bar: 0.6,
@@ -160,13 +161,16 @@ export const STORYBOARD: Transition = {
       id: 'sb_extra',
       label: 'Anything extra that changes it?',
       instructions:
-        'Does `shot` put in the picture anyone or anything that `moment` does not have, in a way that changes what the picture says?',
+        'Does `shot` put in the picture anyone or anything that is neither in `moment.in_it` nor in `moment.also_there` (who and what else is in the place by then), in a way that changes what the picture says?',
       criteria: {
         true: 'someone or something extra in the picture changes what it shows',
         false: "nothing extra, or only the place's ordinary surroundings",
       },
       pass: 'no',
-      bar: 0.5,
+      // From the labelled set (evals/storyboard.json, 25 Sep): at 0.5 it held the approved roller
+      // coaster for the girlfriend and the audience beside it (0.54-0.63); at 0.65 it clears
+      // nothing that should hold.
+      bar: 0.65,
     },
   ],
 };

@@ -1,0 +1,341 @@
+[
+  {
+    "id": "meads-village-first",
+    "place": {
+      "name": "the European village",
+      "geography": "a European village with cobblestone street, just inside the house"
+    },
+    "front": "the entrance side",
+    "people": [
+      { "id": "p1", "name": "the dreamer" },
+      { "id": "p2", "name": "the Pied-Piper sort of man" }
+    ],
+    "things": [{ "id": "x1", "name": "the cobblestone street", "fixture": true }],
+    "moments": [
+      {
+        "id": "m1",
+        "action": "The dreamer stands just inside the Meads's house, facing a European village with a cobblestone street.",
+        "looks_at": "the village street"
+      },
+      {
+        "id": "m2",
+        "action": "A Pied-Piper sort of man with curly hair juggles on the cobblestone street.",
+        "looks_at": "the piper man"
+      }
+    ],
+    "expect": { "outdoors": true, "shape": { "x1": ["ground"] }, "looks": { "m1": ["x1"], "m2": ["p2"] } }
+  },
+  {
+    "id": "meads-village-second",
+    "place": {
+      "name": "the European village",
+      "geography": "a European village with cobblestone street, just inside the house"
+    },
+    "front": "the entrance to the village",
+    "people": [
+      { "id": "p1", "name": "the dreamer" },
+      { "id": "p2", "name": "the Pied-Piper sort of man" }
+    ],
+    "things": [
+      { "id": "x1", "name": "village houses left", "fixture": true },
+      { "id": "x2", "name": "village houses right", "fixture": true }
+    ],
+    "moments": [
+      {
+        "id": "m1",
+        "action": "The dreamer stands just inside the Meads's house, facing a European village with a cobblestone street.",
+        "looks_at": "the village street"
+      },
+      {
+        "id": "m2",
+        "action": "A Pied-Piper sort of man with curly hair juggles on the cobblestone street.",
+        "looks_at": "the piper man"
+      }
+    ],
+    "expect": {
+      "outdoors": true,
+      "shape": { "x1": ["block"], "x2": ["block"] },
+      "looks": { "m1": ["missing"], "m2": ["p2"] }
+    }
+  },
+  {
+    "id": "meads-stairs",
+    "place": {
+      "name": "the back stairs and hallway",
+      "geography": "a set of back stairs going up, then straight down another set; a short empty hallway that turns a corner to a tiny room"
+    },
+    "front": "the entrance",
+    "people": [{ "id": "p1", "name": "the dreamer" }],
+    "things": [
+      { "id": "x1", "name": "the back stairs", "fixture": true },
+      { "id": "x2", "name": "the second set of stairs", "fixture": true }
+    ],
+    "moments": [
+      {
+        "id": "m3",
+        "action": "The dreamer goes up the back stairs, then straight down the other side.",
+        "looks_at": "the stairs"
+      },
+      {
+        "id": "m4",
+        "action": "The dreamer walks down a short empty hallway and turns a corner to find a tiny room.",
+        "looks_at": "the corner"
+      }
+    ],
+    "expect": {
+      "outdoors": false,
+      "shape": { "x1": ["steps"], "x2": ["steps"] },
+      "looks": { "m3": ["x1", "x2"], "m4": ["missing"] }
+    }
+  },
+  {
+    "id": "meads-tiny-room",
+    "place": { "name": "the tiny room", "geography": "a tiny room with a stove that almost fills it" },
+    "front": "the wall with the stove",
+    "people": [{ "id": "p3", "name": "the young woman" }],
+    "things": [{ "id": "t1", "name": "the stove" }],
+    "moments": [
+      {
+        "id": "m5",
+        "action": "A young woman with shoulder-length blonde hair in a pageboy cooks at a stove that almost fills the tiny room; she is nice to the dreamer.",
+        "looks_at": "the woman at the stove"
+      }
+    ],
+    "expect": {
+      "outdoors": false,
+      "shape": { "t1": ["block"] },
+      "holder": { "t1": ["nobody"] },
+      "looks": { "m5": ["p3"] }
+    }
+  },
+  {
+    "id": "meads-outside",
+    "place": { "name": "outside the house" },
+    "front": "the house side",
+    "people": [
+      { "id": "p1", "name": "the dreamer" },
+      { "id": "p4", "name": "the aunt" }
+    ],
+    "things": [
+      { "id": "t2", "name": "the little round convertible" },
+      { "id": "x1", "name": "the little bridge", "fixture": true },
+      { "id": "x2", "name": "the creek", "fixture": true }
+    ],
+    "moments": [
+      {
+        "id": "m6",
+        "action": "The dreamer waits outside for the aunt; the aunt arrives in a little round convertible.",
+        "looks_at": "the arriving convertible"
+      },
+      {
+        "id": "m7",
+        "action": "The dreamer and the aunt drive across a little bridge over a creek, then double back.",
+        "looks_at": "the little bridge"
+      },
+      { "id": "m8", "action": "The aunt drops the dreamer off at the house again.", "looks_at": "the house" }
+    ],
+    "expect": {
+      "outdoors": true,
+      "shape": { "t2": ["vehicle"], "x1": ["ground"], "x2": ["ground"] },
+      "holder": { "t2": ["nobody"] },
+      "looks": { "m6": ["t2"], "m7": ["x1"], "m8": ["front", "missing"] }
+    }
+  },
+  {
+    "id": "meads-sitting",
+    "place": { "name": "inside, sitting with couple of people" },
+    "front": "the window wall",
+    "people": [
+      { "id": "p1", "name": "the dreamer" },
+      { "id": "p5", "name": "the couple of people" }
+    ],
+    "things": [
+      { "id": "t3", "name": "the string of blue balloons" },
+      { "id": "x1", "name": "the sofa", "fixture": true }
+    ],
+    "moments": [
+      {
+        "id": "m9",
+        "action": "The dreamer sits with a couple of people, playing with a string of blue balloons.",
+        "looks_at": "the balloons"
+      }
+    ],
+    "expect": {
+      "outdoors": false,
+      "shape": { "t3": ["block"], "x1": ["seat"] },
+      "holder": { "t3": ["p1"] },
+      "looks": { "m9": ["t3"] }
+    }
+  },
+  {
+    "id": "ice-head-room",
+    "place": { "name": "the room", "geography": "a room with an autoclave near where they stood, and a far end" },
+    "front": "the wall with the autoclave",
+    "people": [
+      { "id": "p1", "name": "the young woman" },
+      { "id": "p2", "name": "the dreamer" }
+    ],
+    "things": [{ "id": "x1", "name": "the autoclave", "fixture": true }],
+    "moments": [
+      {
+        "id": "m1",
+        "action": "The dreamer and the young woman stand talking by the autoclave.",
+        "looks_at": "the autoclave"
+      },
+      {
+        "id": "m2",
+        "action": "The young woman excuses herself and walks off to the far end of the room.",
+        "looks_at": "the far end"
+      },
+      {
+        "id": "m3",
+        "action": "The young woman stands with an irregular block of glittering ice set upon her shoulders in place of her head.",
+        "looks_at": "the autoclave side of the room"
+      }
+    ],
+    "expect": {
+      "outdoors": false,
+      "shape": { "x1": ["block"] },
+      "looks": { "m1": ["x1"], "m2": ["missing", "beyond"], "m3": ["x1", "front"] }
+    }
+  },
+  {
+    "id": "theater",
+    "place": {
+      "name": "the movie theater",
+      "geography": "indoors, rows of seats facing a screen, with one side of seating"
+    },
+    "front": "the screen",
+    "people": [
+      { "id": "p1", "name": "the dreamer" },
+      { "id": "p2", "name": "the girlfriend" }
+    ],
+    "things": [
+      { "id": "t1", "name": "the blue sofa" },
+      { "id": "t2", "name": "the big sofa" }
+    ],
+    "moments": [
+      {
+        "id": "m1",
+        "action": "The dreamer and their girlfriend sit on a blue sofa in a movie theater filled with people sitting on blue sofas.",
+        "looks_at": "the screen or seating area"
+      },
+      {
+        "id": "m2",
+        "action": "The large sofa next to the dreamer turns into a roller coaster, like a real one from an amusement park.",
+        "looks_at": "the roller coaster"
+      }
+    ],
+    "expect": {
+      "outdoors": false,
+      "shape": { "t1": ["seat"] },
+      "holder": { "t1": ["nobody"], "t2": ["nobody"] },
+      "looks": { "m1": ["front"], "m2": ["t2"] }
+    }
+  },
+  {
+    "id": "flooded-library",
+    "place": {
+      "name": "Flooded Library",
+      "geography": "inside a library, flooded with water, with bookshelves, and at one end a huge round window"
+    },
+    "front": "the huge round window",
+    "people": [
+      { "id": "p1", "name": "the dreamer" },
+      { "id": "p2", "name": "the old man in a yellow raincoat" }
+    ],
+    "things": [
+      { "id": "t1", "name": "Wooden Rowing Boat" },
+      { "id": "x1", "name": "the bookshelves", "fixture": true }
+    ],
+    "moments": [
+      {
+        "id": "m1",
+        "action": "The dreamer is sitting in a little wooden rowing boat in a flooded library at night, surrounded by dark green water.",
+        "looks_at": ""
+      },
+      {
+        "id": "m4",
+        "action": "The boat reaches the huge round window with the bright silvery moon filling it, and the old man stops rowing.",
+        "looks_at": "the round window"
+      }
+    ],
+    "expect": {
+      "outdoors": false,
+      "shape": { "t1": ["vehicle"], "x1": ["block"] },
+      "holder": { "t1": ["nobody"] },
+      "looks": { "m4": ["front"] }
+    }
+  },
+  {
+    "id": "train-roof",
+    "place": {
+      "name": "the top of the train",
+      "geography": "high up on top of a train, looking down at a country road and fields"
+    },
+    "front": "the front of the train",
+    "people": [
+      { "id": "p1", "name": "the dreamer" },
+      { "id": "p2", "name": "the family" }
+    ],
+    "things": [{ "id": "x1", "name": "the train roof", "fixture": true }],
+    "moments": [
+      {
+        "id": "m3",
+        "action": "Suddenly you are on top of the train, which is now much bigger, going very fast and high up.",
+        "looks_at": "the flat surface of the train and the sky"
+      },
+      {
+        "id": "m5",
+        "action": "You see a family sitting on top of the train with you, including a small baby laughing.",
+        "looks_at": "the family"
+      },
+      {
+        "id": "m6",
+        "action": "The train goes around a bend, and the dreamer is scared they will try to jump off.",
+        "looks_at": "the bend ahead and the fields below"
+      }
+    ],
+    "expect": {
+      "outdoors": true,
+      "shape": { "x1": ["ground"] },
+      "looks": { "m3": ["x1"], "m5": ["p2"], "m6": ["beyond", "front"] }
+    }
+  },
+  {
+    "id": "streetcar",
+    "place": { "name": "the streetcar", "geography": "inside a moving streetcar" },
+    "front": "the front of the streetcar",
+    "people": [
+      { "id": "p1", "name": "the dreamer" },
+      { "id": "p2", "name": "the conductor" }
+    ],
+    "things": [{ "id": "x1", "name": "the lever", "fixture": true }],
+    "moments": [
+      {
+        "id": "m1",
+        "action": "You are on the streetcar, watching the conductor work the lever.",
+        "looks_at": "the conductor at the lever"
+      }
+    ],
+    "expect": { "outdoors": false, "shape": { "x1": ["block"] }, "looks": { "m1": ["p2", "x1"] } }
+  },
+  {
+    "id": "glassy-outside",
+    "place": {
+      "name": "the glassy outside",
+      "geography": "outside world made of glass, ground underfoot, trees, grass, rocks"
+    },
+    "front": "the window",
+    "people": [{ "id": "p1", "name": "the dreamer" }],
+    "things": [{ "id": "x1", "name": "the glass trees", "fixture": true }],
+    "moments": [
+      {
+        "id": "m4",
+        "action": "You walk through the weird glowing blur; trees, grass, and rocks radiate light through the haze.",
+        "looks_at": "the glowing trees, grass, and rocks through haze"
+      }
+    ],
+    "expect": { "outdoors": true, "shape": { "x1": ["block"] }, "looks": { "m4": ["x1"] } }
+  }
+]

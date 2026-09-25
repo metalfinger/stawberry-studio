@@ -47,6 +47,18 @@ describe('a plan where a person can be', () => {
     expect(settle(street).spots.find((s) => s.id === 't3')).toMatchObject({ x: p1.x, y: p1.y });
   });
 
+  test('someone sitting on a thing the plan gives no shape sits on it, not beside it', () => {
+    const theater: Blocking = {
+      front: 'the screen',
+      indoors: true,
+      spots: [
+        { id: 'p1', x: 4, y: 2.5, kind: 'person', pose: 'sitting' },
+        { id: 't1', x: 3.55, y: 2.55, kind: 'thing', size: [1.9, 0.95, 0.85] },
+      ],
+    };
+    expect(settle(theater).spots.find((s) => s.id === 'p1')).toMatchObject({ x: 4, y: 2.5 });
+  });
+
   test('two riding in one car sit side by side in it, facing the way it goes', () => {
     const bridge: Blocking = {
       front: 'the house side',

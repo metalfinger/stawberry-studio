@@ -338,6 +338,7 @@ For each scene, seen from above: its "front" (the side of the place its people f
 - A crowd or an audience is one spot with "many": true, at the middle of where they are, with "spread": [across, deep] in metres for the ground they fill, how they are ("sitting" in rows of seats, "standing"), and "count" when the dream says how many ("a couple of people": 2).
 - When someone or something moves during the scene (walks off, comes back, sits down, drives away), give where it is in each moment's picture where that has changed, by the moment's id: "moves": {"m2": [{"id": "p1", "x": 4, "y": 8, "faces": "back", "pose": "standing"}]}. A move holds until its next one, so someone who comes back needs a move back: in the moment they return they are where it has them (in front of whoever they come back to, facing them). People riding in something move with it.
 - When a scene's moments happen in more than one place (a moment's "place" differs from its scene's), plan the scene's own place as above, and give every other place its own plan in "places", by the place's id, with the same fields, for the moments that happen there.
+- A scene given with "fix" was planned before ("previous") and failed the checks "fix" lists. Plan it again so that none of them holds, keeping what was right.
 
 Return JSON only: {"scenes": [{"id": "s1", "front": "", "room": [8, 6], "indoors": true, "ceiling": 3.5, "spots": [{"id": "p1", "x": 4, "y": 3, "faces": "p2", "pose": "standing"}, {"id": "t1", "x": 4, "y": 3, "size": [1.9, 0.9, 0.85], "shape": "seat"}, {"id": "x1", "name": "the stove", "x": 2, "y": 0.5, "size": [0.8, 0.6, 0.9], "shape": "block"}, {"id": "p3", "x": 5, "y": 5, "many": true, "pose": "sitting", "spread": [7, 2]}], "moves": {}, "places": {"l4": {"front": "", "room": [2, 2], "indoors": true, "ceiling": 2.4, "spots": [], "moves": {}}}}]}`;
 
@@ -347,18 +348,25 @@ Return JSON only: {"scenes": [{"id": "s1", "front": "", "room": [8, 6], "indoors
  * dreamer's eyes, facing the roller coaster" (24 Sep); with a plan, what each camera sees is worked
  * out in code. A scene the model gives no plan for, or a plan missing someone, is left without one.
  */
-export async function blockScenes(b: Breakdown): Promise<{ breakdown: Breakdown; notes: string[] }> {
+export async function blockScenes(
+  b: Breakdown,
+  /** Plan only these scenes again, each told what its last plan failed. */
+  again: { only?: string[]; fix?: Record<string, string[]> } = {},
+): Promise<{ breakdown: Breakdown; notes: string[] }> {
   const out: Breakdown = structuredClone(b);
   const notes: string[] = [];
   const brief = {
     people: b.people.map((p) => ({ id: p.id, name: p.is_dreamer ? 'the dreamer' : p.name, crowd: !!p.extras })),
     things: b.things.map((t) => ({ id: t.id, name: t.name })),
     places: b.places.map((l) => ({ id: l.id, name: l.name, layout: l.fields.geography?.value, has: l.fields.landmarks?.value })),
-    scenes: b.scenes.map((sc) => ({
-      id: sc.id,
-      place: sc.place,
-      moments: sc.moments.map((m) => ({ id: m.id, place: m.place, action: m.action, who: m.visible, things: m.things, faces: m.looks_at })),
-    })),
+    scenes: b.scenes
+      .filter((sc) => !again.only || again.only.includes(sc.id))
+      .map((sc) => ({
+        id: sc.id,
+        place: sc.place,
+        moments: sc.moments.map((m) => ({ id: m.id, place: m.place, action: m.action, who: m.visible, things: m.things, faces: m.looks_at })),
+        ...(again.fix?.[sc.id] ? { fix: again.fix[sc.id], ...(sc.blocking ? { previous: sc.blocking } : {}) } : {}),
+      })),
   };
   let raw: unknown;
   try {

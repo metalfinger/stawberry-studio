@@ -68,6 +68,11 @@ export type Blocking = {
    * tiny room ten metres across (25 Sep).
    */
   places?: Record<string, Blocking>;
+  /**
+   * What each moment's camera faces on this plan, by moment id, as Jev read it from the moment's
+   * words: a spot's id, "front", or "missing" or "beyond" when it is not on the plan.
+   */
+  looks?: Record<string, string>;
 };
 
 /** A place's size, across and deep, in metres. */
@@ -175,7 +180,11 @@ const solidOf = (t: Spot) =>
  * be to where the plan had them; the render hid them inside it (25 Sep).
  */
 export function settle(plan: Blocking): Blocking {
-  const solids = plan.spots.filter(solidOf);
+  // A thing the plan gives no shape that someone sits on is their seat, as the previs draws it: a
+  // sofa taken for a solid moved the dreamer off it, half a metre from where she sat (25 Sep).
+  const sat = (t: Spot) =>
+    !t.shape && plan.spots.some((p) => p.kind === 'person' && !p.many && p.pose === 'sitting' && onFootprint(p, t, plan));
+  const solids = plan.spots.filter((t) => solidOf(t) && !sat(t));
   const [rw, rd] = roomOf(plan);
   const free = (p: Vec, self: Spot) =>
     !plan.spots.some(

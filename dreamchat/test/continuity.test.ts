@@ -519,5 +519,7 @@ describe('what a moment looks at', () => {
     expect(meant('the sky', names)).toBeUndefined();
     // One word in passing is not the same thing.
     expect(meant('the village street', [{ id: 'x1', name: 'village houses left' }])).toBeUndefined();
+    // Every word of a name said is that thing, whatever else is said.
+    expect(meant('the autoclave side of the room', [{ id: 'x1', name: 'the autoclave' }])).toBe('x1');
   });
 });

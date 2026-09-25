@@ -58,10 +58,11 @@ import {
   ownStyle,
   type StyleOption,
 } from './producer';
-import { type ContinuityPlan, type Criterion, drawOrder, pictureName, planContinuity, seenIn, shotPlan } from './continuity';
+import { type ContinuityPlan, type Criterion, drawOrder, pictureName, planBy, planContinuity, seenIn, shotPlan } from './continuity';
 import type { Blocking } from './blocking';
 import { atSite, inSession, recordJev } from './jevlog';
 import { decide, factQuestions, type Reading, STORYBOARD } from './stages';
+import { planFacts } from './planfacts';
 import { previsImage } from './previs';
 import {
   buildFrames,
@@ -228,7 +229,7 @@ export type Prep = {
 };
 
 /** What a moment calls who and what is in it: the dreamer, and what has turned into something else by what it is now. */
-function calledIn(b: Breakdown, c: { own: { who: string; what: string; now: string }[]; states: { who: string; what: string; now: string }[] }) {
+export function calledIn(b: Breakdown, c: { own: { who: string; what: string; now: string }[]; states: { who: string; what: string; now: string }[] }) {
   const changed = [...c.own, ...c.states];
   return (id: string) => {
     const st = changed.find((x) => x.who === id && WHOLE.test(x.what));
@@ -256,7 +257,7 @@ export async function planShots(
     block?: StoreDeps['block'];
     shot?: StoreDeps['shot'];
     supervise?: StoreDeps['supervise'];
-    /** Jev, for each moment's "storyboard complete?" on its previs, before anything is paid for. */
+    /** Jev, for the floor plans' facts and each moment's "storyboard complete?", before anything is paid for. */
     jev?: JevFn;
     dir?: string;
   },
@@ -271,43 +272,108 @@ export async function planShots(
       ? deps.block(draft).then((r) => r.breakdown).catch(() => draft)
       : Promise.resolve(draft),
   ]);
-  const blocked = blockedOrNot;
+  let blocked = blockedOrNot;
   addChanges(blocked, changes);
-  const plan = planContinuity(blocked);
+  // The plans' facts from Jev (outdoors, what each thing is, who holds what, what each camera
+  // faces), applied by code, which then checks each plan whole. A scene that fails is planned once
+  // more, told what failed: a scene left with no plan lost its moment's check (25 Sep).
+  if (deps.jev) {
+    const first = await planFacts(deps.jev, blocked);
+    blocked = first.breakdown;
+    const failing = Object.keys(first.fix);
+    if (deps.block && failing.length) {
+      const again = await deps
+        .block(blocked, { only: failing, fix: first.fix })
+        .then((r) => r.breakdown)
+        .catch(() => null);
+      if (again) blocked = (await planFacts(deps.jev, again, failing)).breakdown;
+    }
+  }
   const dreamer = blocked.people.find((p) => p.is_dreamer)?.id;
-  const prep: Prep = {
-    basedOn: planKey(b),
-    blocking: Object.fromEntries(blocked.scenes.filter((sc) => sc.blocking).map((sc) => [sc.id, sc.blocking as Blocking])),
-    shots: {},
-    previs: {},
-    changes,
-    ms: 0,
+  const prep: Prep = { basedOn: planKey(b), blocking: {}, shots: {}, previs: {}, changes, ms: 0 };
+  // Every camera of a set of plans placed, rendered and briefed, and each shot checked against its moment.
+  const shoot = async (plans: Breakdown, into: Prep, scenes?: string[], suffix = '') => {
+    const plan = planContinuity(plans);
+    await Promise.all(
+      plan.cuts
+        .filter((c) => c.view && c.eye && (!scenes || scenes.includes(c.scene)))
+        .map(async (c) => {
+          const called = calledIn(plans, c);
+          const scene = plans.scenes.find((sc) => sc.id === c.scene);
+          const at = scene?.moments.findIndex((x) => x.id === c.id) ?? -1;
+          const m = scene?.moments[at];
+          const where = shotPlan(plans, c.id);
+          if (where && deps.dir) {
+            const path = join(deps.dir, `plan-${c.id}${suffix}.png`);
+            mkdirSync(deps.dir, { recursive: true });
+            await Bun.write(path, previsImage(where, c.eye!, m?.eyes === 'dreamer' && dreamer ? [dreamer] : [], called));
+            into.previs[c.id] = path;
+          }
+          if (deps.shot && m) {
+            const before = (scene?.moments ?? []).slice(0, at).map((x) => x.action);
+            const text = await deps
+              .shot(m.action, c.view!, mediumOf(style), (c.sees ?? []).map(called), before)
+              .catch(() => null);
+            if (text) into.shots[c.id] = { text, view: c.view! };
+          }
+          if (deps.jev && m)
+            (into.storyboard ??= {})[c.id] = await storyboardCheck(deps.jev, m, c.view!, called, dreamer, around(plans, c, m, called, dreamer));
+        }),
+    );
   };
-  await Promise.all(
-    plan.cuts
-      .filter((c) => c.view && c.eye)
-      .map(async (c) => {
-        const called = calledIn(blocked, c);
-        const scene = blocked.scenes.find((sc) => sc.id === c.scene);
-        const at = scene?.moments.findIndex((x) => x.id === c.id) ?? -1;
-        const m = scene?.moments[at];
-        const where = shotPlan(blocked, c.id);
-        if (where && deps.dir) {
-          const path = join(deps.dir, `plan-${c.id}.png`);
-          mkdirSync(deps.dir, { recursive: true });
-          await Bun.write(path, previsImage(where, c.eye!, m?.eyes === 'dreamer' && dreamer ? [dreamer] : [], called));
-          prep.previs[c.id] = path;
+  await shoot(blocked, prep);
+  // A scene with a moment "storyboard complete?" held is planned once more, told what each such
+  // moment's camera saw and what the check found, and keeps whichever plan more of its moments'
+  // facts pass on: the check found the faults, and only the planner can move what it placed.
+  const held = blocked.scenes.filter((sc) => sc.moments.some((m) => prep.storyboard?.[m.id] && !prep.storyboard[m.id].ok));
+  if (deps.jev && deps.block && held.length) {
+    const fix = Object.fromEntries(
+      held.map((sc) => [
+        sc.id,
+        sc.moments
+          .filter((m) => prep.storyboard?.[m.id] && !prep.storyboard[m.id].ok)
+          .map(
+            (m) =>
+              `Moment ${m.id} ("${m.action}") was planned so that its camera sees this: ${prep.storyboard![m.id].view} Checked against the dream: ${prep.storyboard![m.id].reasons.join('; ')}.`,
+          ),
+      ]),
+    );
+    const only = held.map((sc) => sc.id);
+    const again = await deps
+      .block(blocked, { only, fix })
+      .then((r) => r.breakdown)
+      .catch(() => null);
+    if (again) {
+      const second = (await planFacts(deps.jev, again, only)).breakdown;
+      const trial: Prep = { ...prep, shots: {}, previs: {}, storyboard: {} };
+      await shoot(second, trial, only, '-again');
+      const passing = (p: Prep, sc: Breakdown['scenes'][number]) =>
+        sc.moments.reduce((a, m) => a + (p.storyboard?.[m.id]?.readings.filter((r) => r.ok).length ?? 0), 0);
+      for (const sc of held) {
+        const before = passing(prep, sc);
+        const after = passing(trial, sc);
+        const better = after > before;
+        recordJev({
+          kind: 'transition',
+          stage: 'plan',
+          to: 'previs',
+          moment: sc.id,
+          facts: [],
+          decision: better ? 'replanned' : 'kept',
+          reason: `planned again after "storyboard complete?" held it: ${after} facts pass on the new plan, ${before} on the first; ${better ? 'the new one is kept' : 'the first is kept'}`,
+        });
+        if (!better) continue;
+        const i = blocked.scenes.findIndex((x) => x.id === sc.id);
+        blocked.scenes[i] = second.scenes.find((x) => x.id === sc.id)!;
+        for (const m of sc.moments) {
+          if (trial.previs[m.id]) prep.previs[m.id] = trial.previs[m.id];
+          if (trial.shots[m.id]) prep.shots[m.id] = trial.shots[m.id];
+          if (trial.storyboard?.[m.id]) (prep.storyboard ??= {})[m.id] = trial.storyboard[m.id];
         }
-        if (deps.shot && m) {
-          const before = (scene?.moments ?? []).slice(0, at).map((x) => x.action);
-          const text = await deps
-            .shot(m.action, c.view!, mediumOf(style), (c.sees ?? []).map(called), before)
-            .catch(() => null);
-          if (text) prep.shots[c.id] = { text, view: c.view! };
-        }
-        if (deps.jev && m) (prep.storyboard ??= {})[c.id] = await storyboardCheck(deps.jev, m, c.view!, called, dreamer);
-      }),
-  );
+      }
+    }
+  }
+  prep.blocking = Object.fromEntries(blocked.scenes.filter((sc) => sc.blocking).map((sc) => [sc.id, sc.blocking as Blocking]));
   prep.ms = Date.now() - t0;
   return prep;
 }
@@ -357,6 +423,57 @@ export function reconcileGhosts(plan: ContinuityPlan, frames: Item[]): Continuit
 }
 
 /**
+ * What "storyboard complete?" reads for one moment: the moment as the dream tells it, and its shot as
+ * the previs renders it. Nothing else: never the conversation, never another moment.
+ */
+export function storyboardState(
+  m: Moment,
+  view: string,
+  called: (id: string) => string,
+  dreamer: string | undefined,
+  /**
+   * Who and what else the floor plan has there by then (the girlfriend beside the dreamer, the
+   * audience), and how people and things look by now (her head a block of ice). Without them, a
+   * right shot was held for an "extra" girlfriend and a "missing" ice block (25 Sep).
+   */
+  around: { there?: string[]; now?: string[] } = {},
+): string {
+  const inIt = [...m.visible.filter((id) => !(m.eyes === 'dreamer' && id === dreamer)), ...m.things];
+  return JSON.stringify(
+    {
+      moment: {
+        action: m.action,
+        ...(m.visual_point ? { must_show: m.visual_point } : {}),
+        ...(m.dream ? { dream: m.dream } : {}),
+        seen: m.eyes === 'dreamer' ? "through the dreamer's own eyes" : 'from outside',
+        ...(m.looks_at ? { looks_at: m.looks_at } : {}),
+        in_it: inIt.map(called),
+        ...(around.there?.length ? { also_there: around.there } : {}),
+        ...(around.now?.length ? { how_they_look_now: around.now } : {}),
+      },
+      shot: view,
+    },
+    null,
+    1,
+  );
+}
+
+/** For "storyboard complete?": who and what else is on a moment's plan, and how everyone looks by now. */
+export function around(
+  plans: Breakdown,
+  c: { id: string; own: { who: string; what: string; now: string }[]; states: { who: string; what: string; now: string }[] },
+  m: Moment,
+  called: (id: string) => string,
+  dreamer: string | undefined,
+): { there: string[]; now: string[] } {
+  const named = new Set([...m.visible, ...m.things, ...(m.eyes === 'dreamer' && dreamer ? [dreamer] : [])]);
+  const there = (planBy(plans, m.id)?.spots ?? []).filter((s) => !named.has(s.id)).map((s) => s.name ?? called(s.id));
+  // A change of its whole form is already its name ("the roller coaster"); a part's change is said.
+  const now = [...c.own, ...c.states].filter((st) => !WHOLE.test(st.what)).map((st) => `${called(st.who)}: ${st.what} is ${st.now}`);
+  return { there: [...new Set(there)], now };
+}
+
+/**
  * "Storyboard complete?" for one moment, the previs-to-prompt transition: Jev compares the moment as
  * the dream tells it with its shot as the previs renders it, one moment at a time and never the
  * whole conversation, and code decides from the answers. Each decision is logged with its facts.
@@ -367,22 +484,9 @@ async function storyboardCheck(
   view: string,
   called: (id: string) => string,
   dreamer: string | undefined,
+  near: { there?: string[]; now?: string[]; } = {},
 ): Promise<{ ok: boolean; view: string; readings: Reading[]; reasons: string[] }> {
-  const state = JSON.stringify(
-    {
-      moment: {
-        action: m.action,
-        ...(m.visual_point ? { must_show: m.visual_point } : {}),
-        ...(m.dream ? { dream: m.dream } : {}),
-        seen: m.eyes === 'dreamer' ? "through the dreamer's own eyes" : 'from outside',
-        ...(m.looks_at ? { looks_at: m.looks_at } : {}),
-        in_it: [...m.visible.filter((id) => !(m.eyes === 'dreamer' && id === dreamer)), ...m.things].map(called),
-      },
-      shot: view,
-    },
-    null,
-    1,
-  );
+  const state = storyboardState(m, view, called, dreamer, near);
   const call = await atSite('storyboard', () => jev(state, factQuestions(STORYBOARD, m.id)));
   const { ok, readings, reasons } = decide(STORYBOARD, m.id, call.answers);
   recordJev({
@@ -463,7 +567,10 @@ export type StoreDeps = {
   /** A person's correction of a picture, as an instruction for its next version; "" when its instructions already give it. */
   fix?: (words: string, instructions: string) => Promise<string | null>;
   /** Each scene's floor plan, made before any moment is drawn: where everyone and everything is. */
-  block?: (b: Breakdown) => Promise<{ breakdown: Breakdown; notes: string[] }>;
+  block?: (
+    b: Breakdown,
+    again?: { only?: string[]; fix?: Record<string, string[]> },
+  ) => Promise<{ breakdown: Breakdown; notes: string[] }>;
   /** A held moment's own words, reworded once before it is given up on; text is nearly free. */
   reword?: (
     prompt: string,

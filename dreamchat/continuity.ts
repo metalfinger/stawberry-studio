@@ -144,9 +144,11 @@ export function meant(words: string, names: { id: string; name: string }[]): str
     if (has.join(' ') === w.join(' ') && w.length) return n.id;
     const shared = w.filter((x) => has.includes(x)).length;
     const heads = !!head && headOf(n.name) === head;
+    // Every word of its name said: "the autoclave side of the room" is by the autoclave.
+    const whole = has.length > 0 && has.every((x) => w.includes(x));
     const score = shared + (heads ? 1 : 0) + (head && has.includes(head) ? 0.5 : 0);
     // One word in passing is not the same thing: "the village street" is not "village houses left".
-    if ((heads || shared >= 2) && (!best || score > best.score)) best = { id: n.id, score };
+    if ((heads || whole || shared >= 2) && (!best || score > best.score)) best = { id: n.id, score };
   }
   return best?.id;
 }
@@ -628,13 +630,26 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
             ...changed.flatMap((st) => (plan.spots.some((s) => s.id === st.who) ? [{ id: st.who, name: st.now }] : [])),
           ])
         : undefined;
-    // Where on the plan a moment looks: what it names there, the place's front, or a side of it.
+    // Where on the plan a moment looks: what Jev read its camera to face there, else what its words
+    // name there, the place's front, or a side of it.
     const lookAt = (
-      words: string,
+      m: Moment,
       where: Blocking,
     ): { at?: { x: number; y: number }; way?: { x: number; y: number }; id?: string; theirs?: boolean } | undefined => {
+      const said = where.looks?.[m.id];
+      if (said === 'front') return { way: DIRECTIONS.front };
+      const spot = said ? where.spots.find((x) => x.id === said) : undefined;
+      if (spot) return { at: { x: spot.x, y: spot.y }, id: spot.id };
+      const words = m.looks_at;
       const w = bare(words);
       if (!w) return undefined;
+      // Not on the plan: a side of the place its words name, else the way its people face.
+      if (said === 'missing' || said === 'beyond') {
+        if (/\b(back|far end|far side|rear)\b/.test(w)) return { way: DIRECTIONS.back };
+        if (/\bleft\b/.test(w)) return { way: DIRECTIONS.left };
+        if (/\bright\b/.test(w)) return { way: DIRECTIONS.right };
+        return { theirs: true };
+      }
       const id = target(words);
       const s = id ? where.spots.find((x) => x.id === id) : undefined;
       if (s) return { at: { x: s.x, y: s.y }, id: s.id };
@@ -648,7 +663,9 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
       return { theirs: true };
     };
     if (m.eyes === 'dreamer' && dreamerId) {
-      const v = dreamerShot(shotPlan(b, m.id) ?? plan, dreamerId, target(m.looks_at), now);
+      const pov = shotPlan(b, m.id) ?? plan;
+      const said = pov.looks?.[m.id];
+      const v = dreamerShot(pov, dreamerId, said && pov.spots.some((s) => s.id === said) ? said : target(m.looks_at), now);
       if (v) {
         c.view = v.text;
         c.eye = v.eye;
@@ -674,7 +691,7 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
         Object.assign(base, { role: 'composition', relation: 'same_side', carries: CARRIES.same_side });
       const edits = c.refs.some((r) => r.role === 'base');
       const where = shotPlan(b, m.id) ?? plan;
-      const v = edits ? null : outsideShot(where, ids, m.distance, now, lookAt(m.looks_at, where));
+      const v = edits ? null : outsideShot(where, ids, m.distance, now, lookAt(m, where));
       if (v) {
         c.view = v.text;
         c.eye = v.eye;

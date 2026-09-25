@@ -33,9 +33,11 @@ describe('the shots, planned while the chat goes on', () => {
     const b = kitchen();
     const briefs: string[] = [];
     const seen: string[] = [];
+    const replanned: { only?: string[]; fix?: Record<string, string[]> }[] = [];
     const dir = mkdtempSync(join(tmpdir(), 'plan-shots-'));
     const prep = await planShots(b, b.style_options[0], {
-      block: async (x) => {
+      block: async (x, again) => {
+        if (again) replanned.push(again);
         const out = structuredClone(x);
         out.scenes[0].blocking = {
           front: 'the stove',
@@ -55,6 +57,24 @@ describe('the shots, planned while the chat goes on', () => {
       supervise: async () => [{ moment: 'm1', who: 't1', what: 'its slats', now: 'all blank but one' }],
       // "Storyboard complete?": m1's shot clears; m2's contradicts its moment.
       jev: async (state, questions) => {
+        // The floor plan's facts: a room, and the board is on the wall, held by nobody.
+        if ('outdoors' in questions) {
+          seen.push(state);
+          const answers = Object.fromEntries(
+            Object.entries(questions).map(([k, q]) => [
+              k,
+              q.type === 'noul'
+                ? { type: 'noul' as const, noul: 0.05 }
+                : {
+                    type: 'choice' as const,
+                    choice: k.startsWith('shape_') ? 'block' : k.startsWith('holder_') ? 'nobody' : 't1',
+                    confidence: 0.9,
+                    probabilities: {},
+                  },
+            ]),
+          );
+          return { questions, state, answers, error: null, ms: 1, usage: null };
+        }
         const m2 = Object.keys(questions).some((k) => k.endsWith('_m2'));
         const answer = (k: string) => ({
           type: 'noul' as const,
@@ -80,13 +100,25 @@ describe('the shots, planned while the chat goes on', () => {
     expect(prep.storyboard?.m1.ok).toBe(true);
     expect(prep.storyboard?.m2.ok).toBe(false);
     expect(prep.storyboard?.m2.reasons[0]).toContain('the shot disagrees with the moment');
-    // Jev sees one moment and its shot, never the conversation.
-    expect(seen.every((st) => st.includes('"moment"') && st.includes('"shot"'))).toBe(true);
+    // Jev sees one moment and its shot, never the conversation; and each place's plan, for its facts.
+    const checks = seen.filter((st) => st.includes('"shot"'));
+    expect(checks.length).toBeGreaterThan(0);
+    expect(checks.every((st) => st.includes('"moment"') && !st.includes('"on_the_plan"'))).toBe(true);
+    expect(seen.some((st) => st.includes('"on_the_plan"'))).toBe(true);
+    expect(prep.blocking.s1.indoors).toBe(true);
+    // m2 held, so its scene was planned once more, told what its camera saw and what was wrong; the
+    // new plan did no better, so the first is kept.
+    expect(replanned).toHaveLength(1);
+    expect(replanned[0].only).toEqual(['s1']);
+    expect(replanned[0].fix?.s1[0]).toContain('Moment m2');
+    expect(replanned[0].fix?.s1[0]).toContain('the shot disagrees with the moment');
+    expect(prep.previs.m2).not.toContain('-again');
     // Every camera is worked out, a previs and a brief each: seen from outside, and through the
     // dreamer's own eyes.
     expect(Object.keys(prep.previs).sort()).toEqual(['m1', 'm2']);
     expect(existsSync(prep.previs.m1) && existsSync(prep.previs.m2)).toBe(true);
-    expect(briefs).toHaveLength(2);
+    // Briefed on each plan: the first, and the one made again for the held scene.
+    expect(briefs).toHaveLength(4);
     expect(prep.shots.m2.text).toBe('A first-person view, turned left to the board on the wall.');
     expect(prep.shots.m2.view).toContain('toward the departure board');
     // One person is named, never "them", and the picture says nobody else is in it.
