@@ -1763,6 +1763,18 @@ export class SessionStore {
     if (view && checked && checked.view === view && !checked.ok) {
       // Planned once more, told what was found; kept only if the shot then passes, and drawn from it.
       if (await this.replanForHold(s, frame, checked)) return this.startFrame(s, frame, turn, before);
+      // Planned again and still held: left undrawn, said so, and what follows is drawn without it.
+      // Held, it held up every moment after it: the stairs held the tiny room, the drive and the
+      // balloons (Meads, 25 Sep).
+      const sc = s.draft?.breakdown?.scenes.find((x) => x.moments.some((y) => y.id === frame.id));
+      if (sc && this.replannedScenes.has(`${s.id}:${sc.id}`)) {
+        Object.assign(frame, {
+          status: 'failed',
+          held: undefined,
+          error: `not drawn: planned again, its shot still disagrees with the moment (${checked.reasons.join('; ')})`,
+        });
+        return;
+      }
       Object.assign(frame, { status: 'waiting', held: checked.reasons.map((r) => `storyboard: ${r}`) });
       return;
     }
