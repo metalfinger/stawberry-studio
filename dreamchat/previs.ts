@@ -1335,7 +1335,9 @@ export function outsideShot(
         clear +
         0.8 * framed +
         named +
-        (lookedSpot && !lookedSpot.many ? 2 * keyShown : 0) +
+        // Worth more than framing, never more than losing a person from a picture of two: at 2, the
+        // dreamer going to the window was framed out for the window (lighthouse, 26 Sep).
+        (lookedSpot && !lookedSpot.many ? 0.7 * keyShown : 0) +
         facesFront -
         Math.abs(deg) * 0.006 -
         (back - 1) * 0.2 -
