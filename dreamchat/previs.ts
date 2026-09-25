@@ -15,9 +15,12 @@ import {
   facing,
   halfViewOf,
   type Lean,
+  onFootprint,
   reach,
   rightOf,
   roomOf,
+  type Shape,
+  sizeOf,
   type Spot,
   unit,
   wall,
@@ -47,18 +50,18 @@ const PITCH = (-4 * Math.PI) / 180;
  * A person as a previs artist's mannequin, facing `f`: a round head on a neck, shoulders, arms,
  * and legs as they sit or stand. Two stacked blocks read as boxes, not as someone (24 Sep).
  */
-function mannequin(x: number, y: number, f: V2, pose: Spot['pose']): (Block | Face[])[] {
+function mannequin(x: number, y: number, f: V2, pose: Spot['pose'], z0 = 0): (Block | Face[])[] {
   const r = rightOf(f);
   const at = (ahead: number, side: number, z: number, w: number, d: number, h: number): Block => ({
     x: x + f.x * ahead + r.x * side,
     y: y + f.y * ahead + r.y * side,
-    z,
+    z: z + z0,
     w,
     d,
     h,
     f,
   });
-  const head = (ahead: number, z: number) => sphere(v3(x + f.x * ahead, y + f.y * ahead, z), 0.1, 0.12);
+  const head = (ahead: number, z: number) => sphere(v3(x + f.x * ahead, y + f.y * ahead, z + z0), 0.1, 0.12);
   if (pose === 'lying') return [at(0, 0, 0, 0.45, 1.5, 0.25), head(0.85, 0.15)];
   if (pose === 'sitting')
     return [
@@ -137,12 +140,33 @@ function jitter(seed: string, i: number): number {
   return ((h >>> 0) % 1000) / 1000 - 0.5;
 }
 
-/** Where each of a crowd is: in rows across the way they face, spread over the ground they fill. */
+/**
+ * Where each of a crowd is: in rows across the way they face, spread over the ground they fill; or,
+ * where the dream says how many, that many side by side, nearest their middle first. Never where
+ * someone else is or inside something solid, and never nobody: "a couple of people" on the sofa
+ * beside the dreamer were all left out as too close to someone (25 Sep).
+ */
 function crowdSpots(s: Spot, plan: Blocking, avoid: Spot[]): V2[] {
   const f = facing(s, plan);
   const r = rightOf(f);
+  const taken = (p: V2) =>
+    avoid.some((o) =>
+      isPerson(o)
+        ? Math.hypot(o.x - p.x, o.y - p.y) < 0.6
+        : shapeOf(o, plan) === 'block' && sizeOf(o)[2] > 0.5 && onFootprint(p, o, plan, 0.2),
+    );
+  if (s.count && s.count <= 12) {
+    const out: V2[] = [];
+    // 0, then 0.7 either side, then 1.4: side by side, as people sit together.
+    for (let k = 0; out.length < s.count && k < 60; k++) {
+      const a = (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.7;
+      const p = { x: s.x + r.x * a, y: s.y + r.y * a };
+      if (!taken(p)) out.push(p);
+    }
+    return out;
+  }
   const [across, deep] = s.spread ?? [4, 3];
-  const out: V2[] = [];
+  const all: V2[] = [];
   const cols = Math.max(1, Math.floor(across / 0.8));
   const rows = Math.max(1, Math.floor(deep / 1.1));
   for (let row = 0; row < rows; row++)
@@ -151,13 +175,10 @@ function crowdSpots(s: Spot, plan: Blocking, avoid: Spot[]): V2[] {
       const a = -across / 2 + (col + 0.5) * (across / cols) + jitter(s.id, i) * 0.2;
       // Rows run back from the front of the crowd: the way they face is toward the first row.
       const b = deep / 2 - (row + 0.5) * (deep / rows) + jitter(s.id, i + 7919) * 0.15;
-      const p = { x: s.x + r.x * a + f.x * b, y: s.y + r.y * a + f.y * b };
-      // Nobody of the crowd sits where someone or something with a place of its own is.
-      if (avoid.some((o) => Math.hypot(o.x - p.x, o.y - p.y) < 0.7 + Math.max(0, ...(o.size ?? [0]).slice(0, 2)) / 2))
-        continue;
-      out.push(p);
+      all.push({ x: s.x + r.x * a + f.x * b, y: s.y + r.y * a + f.y * b });
     }
-  return out;
+  const out = all.filter((p) => !taken(p));
+  return out.length ? out : all;
 }
 
 /**
@@ -193,8 +214,8 @@ function solidsOf(plan: Blocking, leaveOut: string[], called: (id: string) => st
       quad([v3(-80, -80, 0), v3(w + 80, -80, 0), v3(w + 80, dp + 80, 0), v3(-80, dp + 80, 0)], v3(0, 0, 1)),
     ]);
   }
-  const placed = plan.spots.filter((s) => !s.many && !leaveOut.includes(s.id));
-  const people = plan.spots.filter((s) => isPerson(s));
+  // Where a crowd may not be: where anyone else is, the dreamer whose eyes the camera is included.
+  const placed = plan.spots.filter((s) => !s.many);
   for (const s of plan.spots) {
     if (leaveOut.includes(s.id)) continue;
     const f = facing(s, plan);
@@ -203,47 +224,30 @@ function solidsOf(plan: Blocking, leaveOut: string[], called: (id: string) => st
       add(
         s.id,
         0.8,
-        where.flatMap((p) => mannequin(p.x, p.y, f, s.pose ?? 'standing')),
+        where.flatMap((p) => mannequin(p.x, p.y, f, s.pose ?? 'standing', groundAt(p, plan))),
         name(s.id),
       );
       // A crowd sitting sits on something: rows of seats under them, or the model makes up its own
-      // seating around the people (a raised block of armchairs off to one side, 24 Sep).
-      if (s.pose === 'sitting')
+      // seating around the people (a raised block of armchairs off to one side, 24 Sep). Not where
+      // they sit on a sofa or in a car of the plan's own.
+      const seatless = where.filter(
+        (p) =>
+          !plan.spots.some(
+            (t) => !isPerson(t) && ['seat', 'vehicle'].includes(shapeOf(t, plan)) && onFootprint(p, t, plan),
+          ),
+      );
+      if (s.pose === 'sitting' && seatless.length)
         add(
           `${s.id} seats`,
           0.55,
-          where.flatMap((p) => [
+          seatless.flatMap((p) => [
             { x: p.x, y: p.y, z: 0, w: 0.62, d: 0.6, h: 0.42, f },
             { x: p.x - f.x * 0.27, y: p.y - f.y * 0.27, z: 0.42, w: 0.62, d: 0.12, h: 0.5, f },
           ]),
         );
-    } else if (isPerson(s)) add(s.id, 0.97, mannequin(s.x, s.y, f, s.pose ?? 'standing'), name(s.id));
-    else {
-      const [w, d, h] = s.size ?? [1, 1, 1];
-      // Something someone sits on is a seat and a back, so who sits on it sits on it, not in it:
-      // one solid block the height of a sofa's back buried the friend to her waist (24 Sep).
-      const seat = people.some((p) => p.pose === 'sitting' && within(p, s, w, d, f));
-      const back = Math.min(0.25, d / 3);
-      add(
-        s.id,
-        0.62,
-        seat && h > 0.5
-          ? [
-              { x: s.x, y: s.y, z: 0, w, d, h: 0.45, f },
-              {
-                x: s.x - f.x * (d / 2 - back / 2),
-                y: s.y - f.y * (d / 2 - back / 2),
-                z: 0.45,
-                w,
-                d: back,
-                h: h - 0.45,
-                f,
-              },
-            ]
-          : [{ x: s.x, y: s.y, z: 0, w, d, h, f }],
-        name(s.id),
-      );
-    }
+    } else if (isPerson(s))
+      add(s.id, 0.97, mannequin(s.x, s.y, f, s.pose ?? 'standing', groundAt(s, plan)), name(s.id));
+    else add(s.id, shapeOf(s, plan) === 'ground' ? 0.5 : 0.62, thingBlocks(s, plan), name(s.id));
   }
   return solids;
 }
@@ -251,11 +255,84 @@ function solidsOf(plan: Blocking, leaveOut: string[], called: (id: string) => st
 /** Someone or a crowd, rather than a thing. */
 const isPerson = (s: Spot) => s.kind === 'person' || (!s.kind && (!!s.pose || !!s.many));
 
-/** Whether a spot is on a thing's footprint: sitting on it, lying on it, standing on it. */
-function within(p: V2, s: Spot, w: number, d: number, f: V2): boolean {
-  const r = rightOf(f);
-  const v = { x: p.x - s.x, y: p.y - s.y };
-  return Math.abs(v.x * r.x + v.y * r.y) <= w / 2 + 0.05 && Math.abs(v.x * f.x + v.y * f.y) <= d / 2 + 0.05;
+/**
+ * What a thing is to whoever is at it: as the plan says, or, where it says nothing, a seat when
+ * someone sits on it and otherwise a solid block.
+ */
+function shapeOf(t: Spot, plan: Blocking): Shape {
+  if (t.shape) return t.shape;
+  return plan.spots.some((p) => isPerson(p) && !p.many && p.pose === 'sitting' && onFootprint(p, t, plan))
+    ? 'seat'
+    : 'block';
+}
+
+/** How many steps a flight of stairs this high has: a step about 18 centimetres. */
+const stepsOf = (h: number) => Math.max(3, Math.round(h / 0.18));
+
+/**
+ * How high the ground is under a point: the deck of a bridge or a stage, the step of the stairs it
+ * is on (stairs rise from the side they face to their back); nothing where it is the floor.
+ */
+function groundAt(p: V2, plan: Blocking): number {
+  let z = 0;
+  for (const t of plan.spots) {
+    if (isPerson(t) || t.heldBy) continue;
+    const shape = shapeOf(t, plan);
+    if ((shape !== 'ground' && shape !== 'steps') || !onFootprint(p, t, plan, 0)) continue;
+    const [, d, h] = sizeOf(t);
+    if (shape === 'ground') z = Math.max(z, h);
+    else {
+      const f = facing(t, plan);
+      const along = d / 2 - ((p.x - t.x) * f.x + (p.y - t.y) * f.y);
+      const n = stepsOf(h);
+      z = Math.max(z, (Math.min(n, Math.floor((along / d) * n) + 1) * h) / n);
+    }
+  }
+  return z;
+}
+
+/**
+ * A thing as blocks, by what it is: a seat and its back, so who sits on it sits on it, not in it
+ * (one block the height of a sofa's back buried the friend to her waist, 24 Sep); a vehicle's body
+ * as high as its doors, whoever rides in it showing from the shoulders up; stairs as steps; ground
+ * as a slab as high as it rises; what someone holds, before them at the height of their hands.
+ */
+function thingBlocks(s: Spot, plan: Blocking): Block[] {
+  const [w, d, h] = sizeOf(s);
+  const f = facing(s, plan);
+  const holder = s.heldBy ? plan.spots.find((o) => o.id === s.heldBy) : undefined;
+  if (holder) {
+    const hf = facing(holder, plan);
+    const hands = groundAt(holder, plan) + (holder.pose === 'sitting' ? 0.6 : holder.pose === 'lying' ? 0.3 : 0.9);
+    return [
+      {
+        x: holder.x + hf.x * 0.35,
+        y: holder.y + hf.y * 0.35,
+        z: hands,
+        w: Math.min(w, 0.8),
+        d: Math.min(d, 0.8),
+        h: Math.min(h, 1.5),
+        f: hf,
+      },
+    ];
+  }
+  const shape = shapeOf(s, plan);
+  if (shape === 'seat' && h > 0.5) {
+    const back = Math.min(0.25, d / 3);
+    return [
+      { x: s.x, y: s.y, z: 0, w, d, h: 0.45, f },
+      { x: s.x - f.x * (d / 2 - back / 2), y: s.y - f.y * (d / 2 - back / 2), z: 0.45, w, d: back, h: h - 0.45, f },
+    ];
+  }
+  if (shape === 'vehicle') return [{ x: s.x, y: s.y, z: 0, w, d, h: Math.min(h, 1.6) * 0.6, f }];
+  if (shape === 'steps') {
+    const n = stepsOf(h);
+    return Array.from({ length: n }, (_, i) => {
+      const mid = d / 2 - ((i + 0.5) * d) / n;
+      return { x: s.x + f.x * mid, y: s.y + f.y * mid, z: 0, w, d: d / n, h: ((i + 1) * h) / n, f };
+    });
+  }
+  return [{ x: s.x, y: s.y, z: 0, w, d, h, f }];
 }
 
 const v3 = (x: number, y: number, z: number): V3 => ({ x, y, z });
@@ -728,7 +805,8 @@ export function dreamerShot(
   const side = rightOf(own);
   const target = toward ? plan.spots.find((s) => s.id === toward && s.id !== dreamer) : undefined;
   const solids = solidsOf(plan, [dreamer], name);
-  const height = eyeHeight(me.pose);
+  // Their eyes, on whatever they stand on: a bridge's deck, a step of the stairs.
+  const height = eyeHeight(me.pose) + groundAt(me, plan);
   // How far someone can lean from where they sit or stand, each way, to see past someone close.
   const leans: [Lean | undefined, V2, number][] = [[undefined, { x: 0, y: 0 }, 0]];
   for (const m of [0.3, 0.5])
@@ -745,7 +823,11 @@ export function dreamerShot(
   };
   // The middle of what they look at, at half its height: the one point that must show.
   const heart = target
-    ? v3(target.x, target.y, isPerson(target) ? eyeHeight(target.pose) - 0.1 : (target.size?.[2] ?? 1) / 2)
+    ? v3(
+        target.x,
+        target.y,
+        groundAt(target, plan) + (isPerson(target) ? eyeHeight(target.pose) - 0.1 : sizeOf(target)[2] / 2),
+      )
     : null;
   const near = plan.spots.filter((s) => s.id !== dreamer && s.id !== target?.id && isPerson(s) && !s.many);
   let best: { eye: Eye; score: number } | undefined;
@@ -791,12 +873,14 @@ export function dreamerShot(
   const r = render(solids, eye, 384, 216);
   const min = 384 * 216 * 0.002;
 
-  // What they are on (the seat under them) is where they are, not something before them.
+  // What they are on or in (the seat under them, the car they ride in) is where they are, not
+  // something before them.
   const at = plan.spots
     .filter(
-      (s) => s.id !== dreamer && !isPerson(s) && within(me, s, s.size?.[0] ?? 1, s.size?.[1] ?? 1, facing(s, plan)),
+      (s) => s.id !== dreamer && !isPerson(s) && !s.heldBy && shapeOf(s, plan) !== 'block' && onFootprint(me, s, plan),
     )
     .map((s) => s.id);
+  const inIt = at.some((id) => plan.spots.find((s) => s.id === id)?.shape === 'vehicle');
   const turnAngle = (() => {
     const d = unit(eye.d);
     const a = (Math.atan2(d.x * rightOf(own).x + d.y * rightOf(own).y, d.x * own.x + d.y * own.y) * 180) / Math.PI;
@@ -818,7 +902,7 @@ export function dreamerShot(
     .sort((a, b) => distance(a.s) - distance(b.s));
   const called = (id: string) => plan.spots.find((s) => s.id === id)?.name ?? name(id);
   const sentences = [
-    `The camera is the dreamer's eyes${at.length ? `, on ${at.map(called).join(' and ')}` : ''}${pose}${eye.lean ? `, ${LEAN_WORDS[eye.lean]}` : ''}, ${turned}${toward ? `, toward ${called(toward)}` : ''}: it looks toward ${wall(eye.d, plan.front)}. A wide lens, about 24mm.`,
+    `The camera is the dreamer's eyes${at.length ? `, ${inIt ? 'in' : 'on'} ${at.map(called).join(' and ')}` : ''}${pose}${eye.lean ? `, ${LEAN_WORDS[eye.lean]}` : ''}, ${turned}${toward ? `, toward ${called(toward)}` : ''}: it looks toward ${wall(eye.d, plan.front, !!plan.indoors)}. A wide lens, about 24mm.`,
     ...shown.map(({ s, seen }, i) => {
       const lead = i === 0 ? 'Nearest' : i === shown.length - 1 && shown.length > 1 ? 'Farthest' : 'Then';
       return `${lead}, ${reach(distance(s))}, ${across(seen)}: ${called(s.id)}${thingWords(s, seen, plan, eye, called, { spots, on: at, anchor: me })}.`;
@@ -844,24 +928,38 @@ function thingWords(
   called: (id: string) => string,
   ctx: { spots: Spot[]; on: string[]; anchor?: Spot },
 ): string {
-  // Who sits on what, and what stands right beside what: said as the plan has it, or the model
-  // gives the friend an armchair of her own and puts the roller coaster out on the floor (24 Sep).
-  const on = isPerson(s) && !s.many ? seatOf(s, plan) : undefined;
+  // Who sits on what, who rides in what, what stands right beside what, and who holds what: said
+  // as the plan has it, or the model gives the friend an armchair of her own and puts the roller
+  // coaster out on the floor (24 Sep).
+  const on = isPerson(s) && !s.many ? onOf(s, plan) : undefined;
+  const pose = s.pose === 'lying' ? 'lying' : s.pose === 'sitting' ? 'sitting' : 'standing';
   const sitting = on
-    ? ctx.on.includes(on.id)
-      ? `, sitting beside the dreamer on the same ${bareName(called(on.id))}`
-      : `, ${s.pose === 'lying' ? 'lying' : 'sitting'} on ${called(on.id)}`
+    ? ctx.on.includes(on.t.id)
+      ? on.how === 'in'
+        ? `, beside the dreamer in the same ${bareName(called(on.t.id))}`
+        : `, ${pose} beside the dreamer on the same ${bareName(called(on.t.id))}`
+      : on.how === 'in'
+        ? `, in ${called(on.t.id)}`
+        : `, ${pose} on ${called(on.t.id)}`
     : '';
-  const next = !isPerson(s)
-    ? besideOf(s, plan, [...ctx.on, ...ctx.spots.filter((o) => !isPerson(o)).map((o) => o.id)])
-    : undefined;
-  const sitters = !isPerson(s)
-    ? ctx.spots.filter((o) => isPerson(o) && !o.many && seatOf(o, plan)?.id === s.id).map((o) => called(o.id))
+  const holder = !isPerson(s) && s.heldBy ? s.heldBy : undefined;
+  const holds = isPerson(s) && !s.many ? plan.spots.filter((o) => o.heldBy === s.id).map((o) => called(o.id)) : [];
+  const next =
+    !isPerson(s) && !holder
+      ? besideOf(s, plan, [...ctx.on, ...ctx.spots.filter((o) => !isPerson(o)).map((o) => o.id)])
+      : undefined;
+  const riders = !isPerson(s)
+    ? ctx.spots.filter((o) => isPerson(o) && !o.many && onOf(o, plan)?.t.id === s.id).map((o) => called(o.id))
     : [];
+  const shape = !isPerson(s) ? shapeOf(s, plan) : undefined;
   const how =
     sitting +
     (isPerson(s) && !s.many ? `, ${turnedTo(s, plan, eye)}` : '') +
-    (sitters.length ? `, with ${sitters.join(' and ')} sitting on it` : '') +
+    (holds.length ? `, holding ${holds.join(' and ')}` : '') +
+    (holder ? `, in ${called(holder)}'s hands` : '') +
+    (riders.length
+      ? `, with ${riders.join(' and ')} ${shape === 'vehicle' ? 'in it' : shape === 'seat' ? 'sitting on it' : 'on it'}`
+      : '') +
     (next ? `, right beside ${called(next.id)}` : '');
   const behind =
     seen.hiddenBy && seen.hiddenBy !== s.id && ctx.spots.some((o) => o.id === seen.hiddenBy)
@@ -897,7 +995,7 @@ export function outsideShot(
    * What the moment looks at: a point on the plan (something in the place), or a way (a side of
    * the place). The camera faces it, with the people it shows before it.
    */
-  lookAt?: { at?: V2; way?: V2 },
+  lookAt?: { at?: V2; way?: V2; id?: string; theirs?: boolean },
 ): { eye: Eye; text: string; inPicture: string[] } | null {
   const name = (id: string) => plan.spots.find((s) => s.id === id)?.name ?? called(id);
   const inIt = subjects.map((id) => plan.spots.find((s) => s.id === id)).filter((s): s is Spot => !!s && !s.many);
@@ -907,6 +1005,22 @@ export function outsideShot(
   const c = {
     x: group.reduce((a, s) => a + s.x, 0) / group.length,
     y: group.reduce((a, s) => a + s.y, 0) / group.length,
+  };
+  // What the moment looks at is in the picture too: the village the dreamer faces, not only the
+  // dreamer with the village behind the camera (25 Sep).
+  const looked = lookAt?.id ? plan.spots.find((s) => s.id === lookAt.id && !s.many && !inIt.includes(s)) : undefined;
+  const holdAll = [...inIt, ...(looked ? [looked] : [])];
+  // Where a thing is, for framing: its part nearest `to`, so a long street under someone's feet
+  // frames as the ground they stand on, and a house as its wall beside them.
+  const nearestPart = (t: Spot, to: V2): V2 => {
+    if (isPerson(t)) return t;
+    const [w, d] = sizeOf(t);
+    const f = facing(t, plan);
+    const r = rightOf(f);
+    const v = { x: to.x - t.x, y: to.y - t.y };
+    const a = Math.max(-w / 2, Math.min(w / 2, v.x * r.x + v.y * r.y));
+    const b = Math.max(-d / 2, Math.min(d / 2, v.x * f.x + v.y * f.y));
+    return { x: t.x + r.x * a + f.x * b, y: t.y + r.y * a + f.y * b };
   };
   const facings = (people.length ? people : group).map((s) => facing(s, plan));
   const sum = facings.reduce((a, v) => ({ x: a.x + v.x, y: a.y + v.y }), { x: 0, y: 0 });
@@ -921,19 +1035,30 @@ export function outsideShot(
     ];
     return Math.min(...t.map(Math.abs));
   };
-  const pair = facings.length >= 2 && together < 0.4;
+  // Someone at something close they face (a cook at her stove) is shot as two facing each other are:
+  // from the side, both in the picture. From in front, her back was to the stove (25 Sep).
+  const faced =
+    people.length === 1 && people[0].faces ? holdAll.find((t) => t.id === people[0].faces && !isPerson(t)) : undefined;
+  const at = faced ? nearestPart(faced, people[0]) : undefined;
+  const atIt = !!at && Math.hypot(at.x - people[0].x, at.y - people[0].y) < 2;
+  const ends =
+    group.length >= 2 ? Math.hypot(group[group.length - 1].x - group[0].x, group[group.length - 1].y - group[0].y) : 0;
+  const pair = (facings.length >= 2 && together < 0.4 && ends > 0.4) || atIt;
   // Which way the moment looks, if it says.
   const looks = lookAt?.way
     ? unit(lookAt.way)
     : lookAt?.at && Math.hypot(lookAt.at.x - c.x, lookAt.at.y - c.y) > 0.8
       ? unit({ x: lookAt.at.x - c.x, y: lookAt.at.y - c.y })
-      : undefined;
+      : lookAt?.theirs && together > 0.5
+        ? unit(sum)
+        : undefined;
   let d0: V2;
   if (pair) {
     // Facing each other, as two people talking: a two-shot from the side, the side turned toward
     // what the moment looks at, or where the room leaves most space. Looking "toward the
     // autoclave" along the line between them put the camera behind one, hiding the other (24 Sep).
-    const u = unit({ x: group[group.length - 1].x - group[0].x, y: group[group.length - 1].y - group[0].y });
+    const [one, other] = atIt ? [people[0], at!] : [group[0], group[group.length - 1]];
+    const u = unit({ x: other.x - one.x, y: other.y - one.y });
     const sides = [rightOf(u), { x: -rightOf(u).x, y: -rightOf(u).y }];
     const toward = (v: V2) => (looks ? v.x * looks.x + v.y * looks.y : 0);
     d0 =
@@ -948,23 +1073,43 @@ export function outsideShot(
     // What the moment looks at is behind them, and the camera looks at it past them.
     d0 = looks;
   else d0 = together > 0 ? unit({ x: -sum.x, y: -sum.y }) : DIRECTIONS.back;
-  const tallest = Math.max(...group.map((s) => (isPerson(s) ? eyeHeight(s.pose) + 0.15 : (s.size?.[2] ?? 1))));
+  const tallest = Math.max(
+    ...group.map((s) => groundAt(s, plan) + (isPerson(s) ? eyeHeight(s.pose) + 0.15 : sizeOf(s)[2])),
+  );
   const lowest = size === 'close' ? tallest - 0.7 : size === 'medium' ? tallest * 0.45 : 0;
-  const height = people.length ? people.reduce((a, s) => a + eyeHeight(s.pose), 0) / people.length : 1.5;
+  const height = people.length
+    ? people.reduce((a, s) => a + eyeHeight(s.pose) + groundAt(s, plan), 0) / people.length
+    : 1.5;
   const aim = (tallest + lowest) / 2;
   const tallAt = (l: number) => Math.atan(Math.tan(Math.atan(18 / l)) * (9 / 16));
-  // The camera for a way of looking: as far off as the shot needs, never through a wall.
-  const place = (d: V2): { eye: Eye; far: number } => {
+  // The camera for a way of looking: as far off as the shot needs, `back` times that if it must
+  // stand further off to hold everyone, never through a wall.
+  const place = (d: V2, back = 1): { eye: Eye; far: number; cramped: number } => {
     const r = rightOf(d);
-    // How much of the place across the camera the group takes, side to side.
-    const offsets = group.map((s) => (s.x - c.x) * r.x + (s.y - c.y) * r.y);
+    // How much of the place across the camera everyone and everything it holds takes, side to side:
+    // a thing as its part nearest them, and as much of it either side as a frame can hold.
+    const offsets = holdAll.flatMap((t) => {
+      const q = nearestPart(t, c);
+      const o = (q.x - c.x) * r.x + (q.y - c.y) * r.y;
+      const half = isPerson(t) ? 0 : Math.min(1.5, extent(t, plan, r));
+      return [o - half, o + half];
+    });
     const wide = Math.max(...offsets) - Math.min(...offsets) + (size === 'close' ? 0.4 : size === 'medium' ? 1 : 2.5);
     const tall = (tallest - lowest) * (size === 'close' ? 1.3 : size === 'medium' ? 1.25 : 1.8);
     // What the frame must hold, and so how far off a lens of this size must be.
     const frameTall = Math.max(tall, (wide * 9) / 16);
     let lens = LENS[size];
-    let far = frameTall / 2 / Math.tan(tallAt(lens));
+    let far = (frameTall / 2 / Math.tan(tallAt(lens))) * back;
     let at = { x: c.x - d.x * far, y: c.y - d.y * far };
+    // Never on top of anyone it holds: the nearest of them at least as far off as the shot's size
+    // needs. Behind the dreamer to look at the car past them, the camera stood a metre off and the
+    // dreamer filled the picture (25 Sep).
+    const ahead = () => Math.min(...people.map((q) => (q.x - at.x) * d.x + (q.y - at.y) * d.y));
+    const minNear = { close: 0.8, medium: 1.6, wide: 3 }[size];
+    if (people.length && ahead() < minNear) {
+      far += minNear - ahead();
+      at = { x: c.x - d.x * far, y: c.y - d.y * far };
+    }
     // Indoors, never through a wall: closer, with a lens wide enough to hold the same.
     if (plan.indoors) {
       const [rw, rd] = roomOf(plan);
@@ -977,27 +1122,33 @@ export function outsideShot(
       const need = Math.atan(frameTall / 2 / far);
       if (need > tallAt(lens)) lens = Math.max(14, Math.round(18 / Math.tan(Math.atan(Math.tan(need) * (16 / 9)))));
     }
-    return { eye: { at, d, height, pitch: Math.atan2(aim - height, far), lens }, far };
+    // How much closer than the shot needs a wall kept it: a wide moment taken from a step behind
+    // the dreamer at the entrance, on a 14mm lens (25 Sep).
+    const cramped = people.length ? Math.max(0, minNear - ahead()) : 0;
+    return { eye: { at, d, height, pitch: Math.atan2(aim - height, far), lens }, far, cramped };
   };
   const turnBy = (v: V2, deg: number) => {
     const a = (deg * Math.PI) / 180;
     const r = rightOf(v);
     return unit({ x: v.x * Math.cos(a) + r.x * Math.sin(a), y: v.y * Math.cos(a) + r.y * Math.sin(a) });
   };
-  // As a camera operator walks round to where nobody the moment shows is hidden: its way of looking,
-  // and a little either side of it, each rendered small; the one showing them most, least turned.
+  // As a camera operator walks round and steps back until everyone and everything the moment shows
+  // is in the picture and nobody is hidden: its way of looking, a little either side of it, and
+  // further off, each rendered small; the one holding them all, clearest, least turned and nearest.
+  // Aimed at the car past the group, the frame left the dreamer out of the picture (25 Sep).
   const solidsSmall = solidsOf(plan, [], name);
-  const shows = inIt.filter((s) => subjects.includes(s.id));
-  let best: { eye: Eye; far: number; score: number } | undefined;
-  for (const deg of [0, -20, 20, -40, 40]) {
-    const cand = place(turnBy(d0, deg));
-    const rs = render(solidsSmall, cand.eye, 192, 108);
-    const seen = shows.map((s) => rs.seen.get(s.id));
-    // Shown, and not hidden by anything else; turned only where that shows them clearly better.
-    const score =
-      seen.reduce((a, x) => a + (x ? 1 - x.occluded : 0), 0) / Math.max(1, shows.length) - Math.abs(deg) * 0.006;
-    if (!best || score > best.score + 1e-9) best = { ...cand, score };
-  }
+  const tiny = 192 * 108 * 0.001;
+  let best: { eye: Eye; far: number; cramped: number; score: number } | undefined;
+  for (const deg of [0, -20, 20, -40, 40, -70, 70])
+    for (const back of [1, 1.35, 1.8]) {
+      const cand = place(turnBy(d0, deg), back);
+      const rs = render(solidsSmall, cand.eye, 192, 108);
+      const seen = holdAll.map((s) => rs.seen.get(s.id));
+      const inFrame = seen.filter((x) => x && x.visible >= tiny).length / holdAll.length;
+      const clear = seen.reduce((a, x) => a + (x ? 1 - x.occluded : 0), 0) / holdAll.length;
+      const score = 2 * inFrame + clear - Math.abs(deg) * 0.006 - (back - 1) * 0.2 - cand.cramped * 0.5;
+      if (!best || score > best.score + 1e-9) best = { ...cand, score };
+    }
   const { eye, far } = best!;
   const d = eye.d;
   const lens = eye.lens ?? LENS[size];
@@ -1006,7 +1157,9 @@ export function outsideShot(
   // back with a man standing beside her (24 Sep).
   const them = people.length === 1 ? name(people[0].id) : 'them';
   const from = pair
-    ? 'from the side, as they face each other'
+    ? atIt
+      ? `from the side, as ${them} faces ${name(faced!.id)}`
+      : 'from the side, as they face each other'
     : toward > 0.5
       ? `from behind ${them}`
       : toward < -0.5
@@ -1016,12 +1169,23 @@ export function outsideShot(
   const rr = render(solids, eye, 384, 216);
   const min = 384 * 216 * 0.002;
   const spots = plan.spots;
+  // Whoever rides in something the picture shows is in it, however little of them shows above its
+  // sides: the aunt in her car was said to be outside the picture (25 Sep).
+  const riding = (s: Spot) => {
+    const on = isPerson(s) && !s.many ? onOf(s, plan) : undefined;
+    return on?.how === 'in' && (rr.seen.get(on.t.id)?.visible ?? 0) >= min;
+  };
   const shown = spots
     .map((s) => ({ s, seen: rr.seen.get(s.id) }))
-    .filter((x): x is { s: Spot; seen: Seen } => !!x.seen && x.seen.visible >= min)
+    .filter(
+      (x): x is { s: Spot; seen: Seen } => !!x.seen && (x.seen.visible >= min || (x.seen.visible > 0 && riding(x.s))),
+    )
     .sort((a, b) => a.seen.cx - b.seen.cx);
   const anchor = people[0];
   const where = far < 1.6 ? 'close' : far < 4 ? 'a few metres off' : 'from across the place';
+  // What the moment looks at, by name, where the picture shows it: "the camera looks toward the right
+  // side of the room" did not say it faced the cook the moment is about (25 Sep).
+  const lookedAt = lookAt?.id && shown.some((x) => x.s.id === lookAt.id) ? name(lookAt.id) : undefined;
   const words = (s: Spot, seen: Seen) =>
     `${name(s.id)}, ${across(seen).replace(/^(in|at) /, '')}${thingWords(s, seen, plan, eye, name, { spots, on: [], anchor })}`;
   // The people it shows, left to right, then the things it shows; then what is behind them.
@@ -1029,7 +1193,7 @@ export function outsideShot(
   const whatShown = shown.filter((x) => subjects.includes(x.s.id) && !isPerson(x.s));
   const behind = shown.filter((x) => !subjects.includes(x.s.id));
   const sentences = [
-    `Seen ${from}, ${where}, at the height of ${people.length === 1 ? `${them}'s eyes` : 'their eyes'}: the camera looks toward ${wall(d, plan.front)}. A ${lens}mm lens.`,
+    `Seen ${from}, ${where}, at the height of ${people.length === 1 ? `${them}'s eyes` : 'their eyes'}: the camera looks ${lookedAt ? `at ${lookedAt}, ` : ''}toward ${wall(d, plan.front, !!plan.indoors)}. A ${lens}mm lens.`,
     whoShown.length
       ? `From left to right across the picture: ${whoShown.map(({ s, seen }) => words(s, seen)).join('; then ')}. ${
           whoShown.length === 1
@@ -1043,11 +1207,18 @@ export function outsideShot(
     // walking off came back with the autoclave, behind the camera, drawn beside her where the
     // room's sketch has it (24 Sep).
     ...spots
-      .filter((s) => !shown.some((x) => x.s.id === s.id) && (subjects.includes(s.id) || !isPerson(s)))
+      .filter((s) => !shown.some((x) => x.s.id === s.id) && !riding(s) && (subjects.includes(s.id) || !isPerson(s)))
       .map((s) => `Outside the picture, ${offTo(eye, s)}: ${name(s.id)}.`),
     frontLine(plan, eye, rr, min),
   ].filter(Boolean);
-  return { eye, text: sentences.join(' '), inPicture: shown.map((x) => x.s.id) };
+  return {
+    eye,
+    text: sentences.join(' '),
+    inPicture: [
+      ...shown.map((x) => x.s.id),
+      ...spots.filter((s) => riding(s) && !shown.some((x) => x.s.id === s.id)).map((s) => s.id),
+    ],
+  };
 }
 
 /**
@@ -1144,23 +1315,32 @@ function rows(s: Spot, me: Spot): string {
 /** How far a thing reaches from its middle toward a direction: half its footprint that way. */
 function extent(s: Spot, plan: Blocking, u: V2): number {
   if (isPerson(s)) return 0.25;
-  const [w, d] = s.size ?? [1, 1];
+  const [w, d] = sizeOf(s);
   const f = facing(s, plan);
   const r = rightOf(f);
   return (Math.abs(u.x * r.x + u.y * r.y) * w) / 2 + (Math.abs(u.x * f.x + u.y * f.y) * d) / 2;
 }
 
-/** The thing someone is on, where they are on one. */
-function seatOf(p: Spot, plan: Blocking): Spot | undefined {
-  return plan.spots.find(
-    (t) => t.id !== p.id && !isPerson(t) && within(p, t, t.size?.[0] ?? 1, t.size?.[1] ?? 1, facing(t, plan)),
-  );
+/**
+ * What someone is in or on, where they are in or on something: in a vehicle, sitting or lying on a
+ * seat, on the steps or the ground they stand on. Never a solid: the dreamer sat "on" a string of
+ * balloons and "on" the house when everything under someone was a seat (25 Sep).
+ */
+function onOf(p: Spot, plan: Blocking): { t: Spot; how: 'on' | 'in' } | undefined {
+  const under = plan.spots.filter((t) => t.id !== p.id && !isPerson(t) && !t.heldBy && onFootprint(p, t, plan));
+  const by = (shape: Shape) => under.find((t) => shapeOf(t, plan) === shape);
+  const v = by('vehicle');
+  if (v && p.pose !== 'standing') return { t: v, how: 'in' };
+  const seat = by('seat');
+  if (seat && p.pose !== 'standing') return { t: seat, how: 'on' };
+  const ground = by('steps') ?? by('ground');
+  return ground ? { t: ground, how: 'on' } : undefined;
 }
 
 /** The thing among `ids` that a thing stands right beside, its edge within a hand's width of it. */
 function besideOf(s: Spot, plan: Blocking, ids: string[]): Spot | undefined {
   return plan.spots
-    .filter((o) => o.id !== s.id && ids.includes(o.id) && !isPerson(o))
+    .filter((o) => o.id !== s.id && ids.includes(o.id) && !isPerson(o) && !o.heldBy)
     .map((o) => {
       const dist = Math.hypot(o.x - s.x, o.y - s.y) || 1e-6;
       const u = { x: (o.x - s.x) / dist, y: (o.y - s.y) / dist };
@@ -1181,6 +1361,9 @@ function offTo(eye: Eye, s: V2): string {
 
 /** Where the place's front is: in the picture, and where across it, or off to which side. */
 function frontLine(plan: Blocking, eye: Eye, r: Render, min: number): string {
+  // A front named for something the picture already places ("the road") is said once, where it is.
+  const same = plan.spots.find((s) => s.name && s.name.toLowerCase() === plan.front.toLowerCase());
+  if (same && (r.seen.get(same.id)?.visible ?? 0) >= min) return '';
   const f = r.seen.get('front');
   if (f && f.visible >= min) return `${cap(across(f))}: ${plan.front}, the front of the place.`;
   const d = unit(eye.d);

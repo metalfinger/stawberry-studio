@@ -140,6 +140,33 @@ describe('the floor plan a model gives', () => {
     expect(Object.keys(plan.moves ?? {})).toEqual(['m2', 'm3']);
     expect(plan.moves?.m2[0]).toMatchObject({ id: 'p1', y: 8.5, faces: 'back' });
   });
+
+  test('keeps what each thing is to whoever is at it, who holds what, and how many a crowd is', () => {
+    const b = lab();
+    b.things = [{ id: 't1', name: 'a string of blue balloons', fields: {} }] as unknown as Breakdown['things'];
+    b.scenes[0].moments[0].things = ['t1'];
+    const { breakdown } = readBlocking(b, {
+      scenes: [
+        {
+          id: 's1',
+          front: 'the wall with the autoclave',
+          spots: [
+            { id: 'p1', x: 4, y: 1.5, pose: 'standing' },
+            { id: 'p2', x: 5.2, y: 1.5, pose: 'standing' },
+            { id: 't1', x: 4, y: 1.5, size: [0.5, 0.5, 1], shape: 'block', held_by: 'p2' },
+            { id: 'x1', name: 'the autoclave', x: 4.6, y: 0.5, size: [0.9, 0.7, 1.5], shape: 'a machine' },
+            { id: 'x2', name: 'the floor mat', x: 3, y: 3, size: [2, 1, 0.02], shape: 'ground', held_by: 'p9' },
+          ],
+        },
+      ],
+    });
+    const plan = breakdown.scenes[0].blocking!;
+    expect(plan.spots.find((s) => s.id === 't1')).toMatchObject({ shape: 'block', heldBy: 'p2' });
+    // A shape that is none of the five, and a holder nobody is, are left out.
+    expect(plan.spots.find((s) => s.id === 'x1')?.shape).toBeUndefined();
+    expect(plan.spots.find((s) => s.id === 'x2')).toMatchObject({ shape: 'ground' });
+    expect(plan.spots.find((s) => s.id === 'x2')?.heldBy).toBeUndefined();
+  });
 });
 
 describe('a change the script supervisor finds', () => {

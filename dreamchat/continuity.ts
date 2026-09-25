@@ -7,7 +7,7 @@
 // change too much at once, or several cuts need the same changed look, a ghost is made first:
 // an in-between picture that is never a cut. Everything here is pure: the breakdown in, the plan
 // out, and the same breakdown always gives the same plan.
-import { type Blocking, DIRECTIONS, type Eye, type Move, outsideOrder } from './blocking';
+import { type Blocking, DIRECTIONS, type Eye, type Move, outsideOrder, settle } from './blocking';
 import { dreamerShot, outsideShot } from './previs';
 import { type Breakdown, type Moment, moments, POSITION, type State } from './producer';
 
@@ -118,6 +118,39 @@ const MAX_BASE_RUN = 2;
 const TOO_MANY = 3;
 const WIDTH: Record<Moment['distance'], number> = { wide: 3, medium: 2, close: 1 };
 
+/** Words that say what something is, not how it is said: plural or not, without the little words. */
+const WEAK = new Set(['the', 'a', 'an', 'of', 'at', 'on', 'in', 'to', 'by', 'with', 'from', 'and', 'its', 'their', 'his', 'her', 'sort', 'kind', 'some']);
+const said = (x: string) =>
+  x
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w.length > 1 && !WEAK.has(w))
+    .map((w) => (w.length > 3 && w.endsWith('s') && !w.endsWith('ss') ? w.slice(0, -1) : w));
+/** What a name is about: its last word before "at", "on", "with" and the like ("the woman at the stove": woman). */
+const headOf = (x: string) => said(x.toLowerCase().split(/\s(?:at|on|in|with|by|near|from|beside|behind|under|over)\s/)[0]).at(-1);
+
+/**
+ * Which of `names` some words mean: the one sharing most of what they say, what each is about
+ * counting double; none where they share nothing. "The village street" is "the cobblestone
+ * street", and "the woman at the stove" is the woman: matched letter for letter, the street was
+ * missed and the camera turned its back on the village (25 Sep).
+ */
+export function meant(words: string, names: { id: string; name: string }[]): string | undefined {
+  const w = said(words);
+  const head = headOf(words);
+  let best: { id: string; score: number } | undefined;
+  for (const n of names) {
+    const has = said(n.name);
+    if (has.join(' ') === w.join(' ') && w.length) return n.id;
+    const shared = w.filter((x) => has.includes(x)).length;
+    const heads = !!head && headOf(n.name) === head;
+    const score = shared + (heads ? 1 : 0) + (head && has.includes(head) ? 0.5 : 0);
+    // One word in passing is not the same thing: "the village street" is not "village houses left".
+    if ((heads || shared >= 2) && (!best || score > best.score)) best = { id: n.id, score };
+  }
+  return best?.id;
+}
+
 /** Two `looks_at` in the same words face the same side. */
 export function sameWords(a: string, b: string): boolean {
   const norm = (x: string) =>
@@ -173,7 +206,7 @@ export function planBy(b: Breakdown, momentId: string): Blocking | undefined {
   // kept her standing where she started (24 Sep).
   const moved = new Map<string, Move>();
   for (const x of upTo) for (const mv of plan.moves?.[x.id] ?? []) moved.set(mv.id, mv);
-  return {
+  return settle({
     ...plan,
     spots: plan.spots
       .filter((s) => there.has(s.id) || s.id === dreamerId || s.fixture)
@@ -181,7 +214,7 @@ export function planBy(b: Breakdown, momentId: string): Blocking | undefined {
         const mv = moved.get(s.id);
         return mv ? { ...s, x: mv.x, y: mv.y, ...(mv.faces ? { faces: mv.faces } : {}), ...(mv.pose ? { pose: mv.pose } : {}) } : s;
       }),
-  };
+  });
 }
 
 /**
@@ -587,28 +620,32 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
     };
     // A fixture of the place goes by its own name; everyone and everything else as the story calls them.
     const nameOf = (s: { id: string; name?: string }) => s.name ?? name(s.id);
-    const target = (words: string) => {
-      const w = bare(words);
-      if (!w) return undefined;
-      return plan.spots.find(
-        (s) =>
-          w.includes(bare(nameOf(s))) ||
-          bare(nameOf(s)).includes(w) ||
-          changed.some((st) => st.who === s.id && (w.includes(bare(st.now)) || bare(st.now).includes(w))),
-      )?.id;
-    };
+    // What the moment looks at, by what it is called now or was: the one its words mean most.
+    const target = (words: string) =>
+      bare(words)
+        ? meant(words, [
+            ...plan.spots.map((s) => ({ id: s.id, name: nameOf(s) })),
+            ...changed.flatMap((st) => (plan.spots.some((s) => s.id === st.who) ? [{ id: st.who, name: st.now }] : [])),
+          ])
+        : undefined;
     // Where on the plan a moment looks: what it names there, the place's front, or a side of it.
-    const lookAt = (words: string, where: Blocking): { at?: { x: number; y: number }; way?: { x: number; y: number } } | undefined => {
+    const lookAt = (
+      words: string,
+      where: Blocking,
+    ): { at?: { x: number; y: number }; way?: { x: number; y: number }; id?: string; theirs?: boolean } | undefined => {
       const w = bare(words);
       if (!w) return undefined;
       const id = target(words);
       const s = id ? where.spots.find((x) => x.id === id) : undefined;
-      if (s) return { at: { x: s.x, y: s.y } };
+      if (s) return { at: { x: s.x, y: s.y }, id: s.id };
       if (w.includes(bare(plan.front)) || bare(plan.front).includes(w)) return { way: DIRECTIONS.front };
       if (/\b(back|far end|far side|rear)\b/.test(w)) return { way: DIRECTIONS.back };
       if (/\bleft\b/.test(w)) return { way: DIRECTIONS.left };
       if (/\bright\b/.test(w)) return { way: DIRECTIONS.right };
-      return undefined;
+      // Something the plan does not have (a village beyond the door, the sky): what they face,
+      // since the floor plan turned them toward it. The camera looked back at the dreamer with the
+      // village behind it (25 Sep).
+      return { theirs: true };
     };
     if (m.eyes === 'dreamer' && dreamerId) {
       const v = dreamerShot(shotPlan(b, m.id) ?? plan, dreamerId, target(m.looks_at), now);

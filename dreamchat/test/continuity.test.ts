@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { drawOrder, placePlan, planBy, planContinuity } from '../continuity';
+import { drawOrder, meant, placePlan, planBy, planContinuity } from '../continuity';
 import type { Breakdown, Moment } from '../producer';
 
 const detail = (value: string | null = null) => ({ value, said: false });
@@ -498,5 +498,26 @@ describe('ghosts', () => {
       ['p1', 1.6],
       ['t1', 0.5],
     ]);
+  });
+});
+
+describe('what a moment looks at', () => {
+  const names = [
+    { id: 'p1', name: 'the dreamer' },
+    { id: 'p2', name: 'the Pied-Piper sort of man' },
+    { id: 'p3', name: 'the young woman' },
+    { id: 'x1', name: 'the cobblestone street' },
+    { id: 't1', name: 'the stove' },
+    { id: 't3', name: 'the string of blue balloons' },
+  ];
+  test('is the name sharing most of its words, what each is about counting double', () => {
+    expect(meant('the village street', names)).toBe('x1');
+    expect(meant('the woman at the stove', names)).toBe('p3');
+    expect(meant('the piper man', names)).toBe('p2');
+    expect(meant('the balloons', names)).toBe('t3');
+    expect(meant('the stove', names)).toBe('t1');
+    expect(meant('the sky', names)).toBeUndefined();
+    // One word in passing is not the same thing.
+    expect(meant('the village street', [{ id: 'x1', name: 'village houses left' }])).toBeUndefined();
   });
 });

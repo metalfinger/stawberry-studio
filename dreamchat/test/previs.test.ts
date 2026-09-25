@@ -92,8 +92,9 @@ describe('previs', () => {
 
   test('seen from outside, the camera faces them from where they look, inside the room', () => {
     const shot = outsideShot(theater, ['p1', 'p2', 't1', 't2'], 'medium', name)!;
-    // Between them and the screen, looking at them, never through the wall.
-    expect(shot.eye.at.y).toBeGreaterThanOrEqual(0.3);
+    // Between them and the screen, looking at them, never through the wall: holding the roller
+    // coaster beside the sofa too, it stands back against the wall.
+    expect(shot.eye.at.y).toBeGreaterThanOrEqual(0.15);
     expect(shot.eye.at.y).toBeLessThan(2.5);
     expect(shot.eye.d.y).toBeGreaterThan(0.9);
     expect(shot.eye.lens).toBeLessThanOrEqual(35);
@@ -151,6 +152,105 @@ describe('previs', () => {
     expect(shot.eye.at.y).toBeGreaterThanOrEqual(0.15);
     expect(shot.eye.at.y).toBeLessThanOrEqual(2.05);
     expect(shot.eye.lens).toBeLessThan(35);
+    expect(shot.inPicture).toEqual(expect.arrayContaining(['p3', 't1']));
+  });
+});
+
+describe('what things are to whoever is at them', () => {
+  const outside: Blocking = {
+    front: 'the road',
+    room: [20, 15],
+    spots: [
+      { id: 'p1', x: 10, y: 3.5, kind: 'person', pose: 'standing', faces: 'back' },
+      { id: 'p4', x: 2, y: 5, kind: 'person', pose: 'sitting', faces: 'right' },
+      { id: 't2', x: 2, y: 5, kind: 'thing', size: [2.5, 1.5, 1.4], shape: 'vehicle' },
+      { id: 'x1', x: 10, y: 5, kind: 'thing', fixture: true, name: 'the road', size: [20, 3, 0.05], shape: 'ground' },
+    ],
+  };
+  const called = (id: string) => ({ p1: 'the dreamer', p4: 'the aunt', t2: 'the little round convertible' })[id] ?? id;
+
+  test('the aunt rides in her car, the dreamer stands on the road, and the frame holds them both', () => {
+    const shot = outsideShot(outside, ['p1', 'p4', 't2'], 'wide', called, { at: { x: 2, y: 5 }, id: 't2' })!;
+    expect(shot.text).toContain('the aunt, ');
+    expect(shot.text).toContain(', in the little round convertible');
+    expect(shot.text).not.toContain('sitting on the little round convertible');
+    expect(shot.text).toContain('with the aunt in it');
+    expect(shot.inPicture).toEqual(expect.arrayContaining(['p1', 'p4', 't2']));
+    expect(shot.text).not.toContain('Outside the picture, off to the right: the dreamer');
+    // Outdoors, no room.
+    expect(shot.text).not.toContain('of the room');
+  });
+
+  test('a juggler on a street stands on it, not in a block of it', () => {
+    const village: Blocking = {
+      front: 'the far end of the street',
+      room: [8, 30],
+      spots: [
+        { id: 'p2', x: 4, y: 5, kind: 'person', pose: 'standing', faces: 'front' },
+        {
+          id: 'x1',
+          x: 4,
+          y: 15,
+          kind: 'thing',
+          fixture: true,
+          name: 'the cobblestone street',
+          size: [6, 30, 0.05],
+          shape: 'ground',
+        },
+      ],
+    };
+    const shot = outsideShot(village, ['p2'], 'medium', (id) => (id === 'p2' ? 'the juggler' : id))!;
+    expect(shot.text).toContain('the juggler, ');
+    expect(shot.text).toContain('standing on the cobblestone street');
+    expect(shot.text).not.toMatch(/the juggler[^.]*partly hidden behind the cobblestone street/);
+  });
+
+  test('the dreamer holds the balloons and sits on the sofa, with the couple beside them on it', () => {
+    const lounge: Blocking = {
+      front: 'the window wall',
+      indoors: true,
+      room: [6, 5],
+      spots: [
+        { id: 'p1', x: 2.8, y: 3.5, kind: 'person', pose: 'sitting', faces: 'front' },
+        {
+          id: 'p5',
+          x: 3.4,
+          y: 3.5,
+          kind: 'person',
+          pose: 'sitting',
+          faces: 'front',
+          many: true,
+          count: 2,
+          spread: [0.8, 0.8],
+        },
+        { id: 't3', x: 2.5, y: 3.2, kind: 'thing', size: [0.5, 0.5, 1], heldBy: 'p1' },
+        { id: 'x1', x: 3, y: 3.5, kind: 'thing', size: [2.5, 1, 1], fixture: true, name: 'the sofa', shape: 'seat' },
+      ],
+    };
+    const names2 = (id: string) =>
+      ({ p1: 'the dreamer', p5: 'the couple of people', t3: 'the string of blue balloons' })[id] ?? id;
+    const shot = outsideShot(lounge, ['p1', 'p5', 't3'], 'medium', names2)!;
+    expect(shot.text).toContain('sitting on the sofa');
+    expect(shot.text).toContain('holding the string of blue balloons');
+    expect(shot.text).not.toContain('sitting on the string of blue balloons');
+    expect(shot.inPicture).toContain('p5');
+  });
+
+  test('a cook at her stove is taken from the side, both in the picture', () => {
+    const kitchen: Blocking = {
+      front: 'the doorway',
+      indoors: true,
+      room: [2.5, 2.5],
+      spots: [
+        { id: 'p3', x: 1.25, y: 1.4, kind: 'person', pose: 'standing', faces: 't1' },
+        { id: 't1', x: 1.25, y: 2.1, kind: 'thing', size: [1.8, 0.6, 0.9] },
+      ],
+    };
+    const shot = outsideShot(kitchen, ['p3', 't1'], 'medium', (id) => (id === 'p3' ? 'the young woman' : 'the stove'), {
+      at: { x: 1.25, y: 1.4 },
+      id: 'p3',
+    })!;
+    expect(shot.text).toStartWith('Seen from the side, as the young woman faces the stove');
     expect(shot.inPicture).toEqual(expect.arrayContaining(['p3', 't1']));
   });
 });

@@ -24,6 +24,18 @@ export type Spot = {
   pose?: 'sitting' | 'standing' | 'lying';
   /** A thing's size in metres: across (side to side as it faces), deep, and high. */
   size?: [number, number, number];
+  /**
+   * What a thing is to whoever is at it: sat on ("seat": a sofa, a bench, a bed), ridden in
+   * ("vehicle": a car, a boat, a cart), stood and walked on ("ground": a street, a bridge, a rug, a
+   * stage), climbed ("steps": stairs), or a solid ("block", where not said). With every thing a
+   * block, the dreamer sat "on" the balloons and the house, the aunt sat "on" her car, and a street
+   * a metre high hid the juggler standing in it (25 Sep).
+   */
+  shape?: Shape;
+  /** A thing someone holds or carries: who holds it. It is in their hands, wherever they are. */
+  heldBy?: string;
+  /** How many a crowd is, where the dream says: "a couple of people" is 2. */
+  count?: number;
   /** How far a crowd spreads, in metres: across the way they face, and deep. */
   spread?: [number, number];
   /**
@@ -60,6 +72,26 @@ export type Blocking = {
 
 /** A place's size, across and deep, in metres. */
 export const roomOf = (plan: Pick<Blocking, 'room'>): [number, number] => plan.room ?? [10, 10];
+
+/** What a thing is to whoever is at it (see `Spot.shape`). */
+export type Shape = 'block' | 'seat' | 'vehicle' | 'ground' | 'steps';
+export const SHAPES: readonly Shape[] = ['block', 'seat', 'vehicle', 'ground', 'steps'];
+
+/**
+ * A thing's size, or where the plan gives none, an ordinary one for its shape: a cube a metre
+ * across stood in for a street, and buried the juggler standing in it (25 Sep).
+ */
+export function sizeOf(s: Spot): [number, number, number] {
+  if (s.size) return s.size;
+  const ordinary: Record<Shape, [number, number, number]> = {
+    block: [1, 1, 1],
+    seat: [1.8, 0.9, 0.85],
+    vehicle: [4, 1.8, 1.4],
+    ground: [4, 4, 0.05],
+    steps: [1.2, 3, 2.5],
+  };
+  return ordinary[s.shape ?? 'block'];
+}
 
 type Vec = { x: number; y: number };
 
@@ -112,11 +144,94 @@ export const halfViewOf = (eye: { lens?: number }) =>
 /** Half the width of a 16:9 frame's view, in degrees (a 24mm lens): what is further round is out of it. */
 export const HALF_VIEW = 38;
 
-/** Which side of the room a direction points at, in plain words. */
-export function wall(d: Vec, front: string): string {
+/**
+ * Which side of the place a direction points at, in plain words: of the room indoors, of the place
+ * outdoors. A camera on a village street "looked toward the back of the room" (25 Sep).
+ */
+export function wall(d: Vec, front: string, indoors = true): string {
+  const of = indoors ? 'of the room' : 'of the place';
   if (d.y < -0.7) return front;
-  if (d.y > 0.7) return 'the back of the room';
-  return d.x < 0 ? 'the left side of the room' : 'the right side of the room';
+  if (d.y > 0.7) return indoors ? 'the back of the room' : `the far side of the place, away from ${front}`;
+  return d.x < 0 ? `the left side ${of}` : `the right side ${of}`;
+}
+
+/** Whether a point is on a thing's footprint, `margin` metres round it included. */
+export function onFootprint(p: Vec, t: Spot, plan: Blocking, margin = 0.05): boolean {
+  const [w, d] = sizeOf(t);
+  const f = facing(t, plan);
+  const r = rightOf(f);
+  const v = { x: p.x - t.x, y: p.y - t.y };
+  return Math.abs(v.x * r.x + v.y * r.y) <= w / 2 + margin && Math.abs(v.x * f.x + v.y * f.y) <= d / 2 + margin;
+}
+
+/** A solid no one can be inside: a thing that is neither sat on, ridden in, stood on nor held. */
+const solidOf = (t: Spot) =>
+  t.kind !== 'person' && !t.many && !t.heldBy && (t.shape ?? 'block') === 'block' && sizeOf(t)[2] > 0.5;
+
+/**
+ * The plan with everyone where a person can be: nobody inside something solid, and what someone
+ * holds in their hands. Someone put in the middle of a house (dropped off "at the house") stands
+ * just outside it instead, at the nearest spot free of anything solid or ridden in, as close as can
+ * be to where the plan had them; the render hid them inside it (25 Sep).
+ */
+export function settle(plan: Blocking): Blocking {
+  const solids = plan.spots.filter(solidOf);
+  const [rw, rd] = roomOf(plan);
+  const free = (p: Vec, self: Spot) =>
+    !plan.spots.some(
+      (t) => t.id !== self.id && (solidOf(t) || t.shape === 'vehicle') && onFootprint(p, t, plan, 0.1),
+    ) &&
+    (!plan.indoors || (p.x >= 0.2 && p.x <= rw - 0.2 && p.y >= 0.2 && p.y <= rd - 0.2));
+  // Someone standing is beside a car, not in it: dropped off at the house, the dreamer was said to
+  // be in the car still (25 Sep).
+  const vehicles = plan.spots.filter((t) => t.shape === 'vehicle');
+  const spots = plan.spots.map((s0) => {
+    const s = { ...s0 };
+    if (s.kind !== 'person' || s.many) return s;
+    const riding = s.pose !== 'standing' ? vehicles.find((v) => onFootprint(s, v, plan)) : undefined;
+    // Whoever rides in something faces the way it goes: the dreamer and the aunt sat back to back in
+    // her car over the bridge (25 Sep).
+    if (riding) return { ...s, faces: riding.faces ?? 'front' };
+    const t =
+      solids.find((b) => onFootprint(s, b, plan, -0.05)) ??
+      (s.pose === 'standing' ? vehicles.find((v) => onFootprint(s, v, plan, -0.05)) : undefined);
+    if (!t) return s;
+    // Round its edge, a little way out, every quarter metre: the nearest free spot.
+    const [w, d] = sizeOf(t);
+    const f = facing(t, plan);
+    const r = rightOf(f);
+    const m = 0.35;
+    const round: Vec[] = [];
+    for (let u = -w / 2 - m; u <= w / 2 + m + 1e-9; u += 0.25) round.push({ x: u, y: d / 2 + m }, { x: u, y: -d / 2 - m });
+    for (let v = -d / 2 - m; v <= d / 2 + m + 1e-9; v += 0.25) round.push({ x: w / 2 + m, y: v }, { x: -w / 2 - m, y: v });
+    const out = round
+      .map((o) => ({ x: t.x + r.x * o.x + f.x * o.y, y: t.y + r.y * o.x + f.y * o.y }))
+      .filter((p) => free(p, s))
+      .sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
+    return out ? { ...s, x: out.x, y: out.y } : s;
+  });
+  // Two people on one spot are side by side, across the way they face: in one car over the bridge,
+  // the aunt hid the dreamer (25 Sep).
+  const people = spots.filter((s) => s.kind === 'person' && !s.many);
+  const done = new Set<string>();
+  for (const a of people) {
+    if (done.has(a.id)) continue;
+    const together = people.filter((b) => !done.has(b.id) && Math.hypot(b.x - a.x, b.y - a.y) < 0.3);
+    together.forEach((b) => done.add(b.id));
+    if (together.length < 2) continue;
+    const r = rightOf(facing(a, { ...plan, spots }));
+    const mid = { x: a.x, y: a.y };
+    together.forEach((b, k) => {
+      const off = (k - (together.length - 1) / 2) * 0.6;
+      Object.assign(b, { x: mid.x + r.x * off, y: mid.y + r.y * off });
+    });
+  }
+  // What someone holds is where they are.
+  const held = spots.map((s) => {
+    const by = s.heldBy ? spots.find((o) => o.id === s.heldBy) : undefined;
+    return by ? { ...s, x: by.x, y: by.y } : s;
+  });
+  return { ...plan, spots: held };
 }
 
 /**

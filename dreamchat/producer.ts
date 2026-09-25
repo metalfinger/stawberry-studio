@@ -5,7 +5,7 @@
 // Every detail it writes is marked as said by the person, or guessed. Jev then checks each
 // "said" against the person's own messages (ground.ts). Strawberry's own rule is that missing
 // facts are unknown, not invented defaults presented as the user's decisions.
-import type { Blocking, Move, Spot } from './blocking';
+import { SHAPES, type Blocking, type Move, type Shape, type Spot } from './blocking';
 import { type ChatMessage, callDeepseek, type Thinking } from './llm';
 
 /** A detail and whether the person said it. `null` when nobody knows and nothing is needed. */
@@ -328,17 +328,18 @@ export async function rewordLook(
 
 const BLOCK = `You are a storyboard artist making the floor plan of each scene of a dream before anything in it is drawn, so that every picture of the scene agrees about where everyone and everything is.
 
-For each scene, seen from above: its "front" (the side of the place its people face, or its main side, in a few words: "the screen", "the window wall", "the wall with the stove"), how big the place is ("room": [across, deep] in metres; a tiny room is about 2 by 2, a hallway about 1.2 across, a street or a field as far as the moments need), whether it is indoors (a room, whose walls are the plan's edges) and how high its ceiling is, and a spot for every person and thing in it. x runs across the place from its left side (0) to its right side, for someone facing its front; y runs from its front (0) to its back.
+For each scene, seen from above: its "front" (the side of the place its people face, or its main side, in a few words: "the screen", "the window wall", "the wall with the stove"), how big the place is ("room": [across, deep] in metres; a tiny room is about 2 by 2, a hallway about 1.2 across, a street or a field as far as the moments need), whether it is indoors (a room, whose walls are the plan's edges; a street, a village or a field is outdoors, even when someone looks at it from a doorway: then they stand at its front edge) and how high its ceiling is, and a spot for every person and thing in it. x runs across the place from its left side (0) to its right side, for someone facing its front; y runs from its front (0) to its back.
 - Keep everything the dream says: who sits or stands next to whom and on which side, what is next to what, who is in front of or behind whom, what faces what, how big a place is beside what fills it. Someone "by" or "at" something is within a metre of it.
 - Where it says nothing, choose what is ordinary for such a place, at the distances it really has (a cinema's front row is a few metres from its screen; people side by side sit about 0.8 apart), and put people who are together side by side.
-- "faces" is whom or what someone faces: an id from this plan, or "front", "back", "left" or "right". People talking together face each other; otherwise people face the front. Each person is "sitting", "standing" or "lying", as they are in the scene.
-- A thing's spot is its middle, with its "size" in metres: [across, deep, high], across being side to side as it faces. Someone sitting on or in it (a sofa, a car) has their spot on it.
-- The place's own fixtures that the moments happen by, face or act on (an autoclave, a stove, the stairs, a bridge, a door, a counter) get a spot too, with an id x1, x2 and so on, their "name" in a few words and their size. They are part of the place, not people or things of the story.
-- A crowd or an audience is one spot with "many": true, at the middle of where they are, with "spread": [across, deep] in metres for the ground they fill, and how they are ("sitting" in rows of seats, "standing").
+- "faces" is whom or what someone faces: an id from this plan, or "front", "back", "left" or "right". People talking together face each other; someone doing something at a thing (cooking at a stove, working at a desk, looking out of a window) faces it; otherwise people face the front. Each person is "sitting", "standing" or "lying", as they are in the scene.
+- A thing's spot is its middle, with its "size" in metres: [across, deep, high], across being side to side as it faces, and its "shape": what it is to whoever is at it. "seat": sat on (a sofa, a bench, a bed). "vehicle": ridden in (a car, a boat, a cart). "ground": stood and walked on, as high as it rises (a street or a road 0.05, a bridge or a stage as high as its deck). "steps": climbed (stairs). "block": anything else. Every thing and fixture has a size and a shape; a street, a road or a river runs as far as the place goes. Someone sitting on a seat, riding in a vehicle, or standing on ground or steps has their spot on it; nobody stands inside a block.
+- A thing someone holds or carries (a lantern, a string of balloons, a phone) has "held_by": their id.
+- The place's own fixtures that the moments happen by, face or act on (an autoclave, a stove, the stairs, a bridge, a door, a counter) get a spot too, with an id x1, x2 and so on, their "name" in a few words, their size and their shape. They are part of the place, not people or things of the story. A hallway, a corridor, a corner, a doorway or an aisle is not a fixture: it is the shape of the place itself (a hallway is a place about 1.2 across and as long as it is).
+- A crowd or an audience is one spot with "many": true, at the middle of where they are, with "spread": [across, deep] in metres for the ground they fill, how they are ("sitting" in rows of seats, "standing"), and "count" when the dream says how many ("a couple of people": 2).
 - When someone or something moves during the scene (walks off, comes back, sits down, drives away), give where it is in each moment's picture where that has changed, by the moment's id: "moves": {"m2": [{"id": "p1", "x": 4, "y": 8, "faces": "back", "pose": "standing"}]}. A move holds until its next one, so someone who comes back needs a move back: in the moment they return they are where it has them (in front of whoever they come back to, facing them). People riding in something move with it.
 - When a scene's moments happen in more than one place (a moment's "place" differs from its scene's), plan the scene's own place as above, and give every other place its own plan in "places", by the place's id, with the same fields, for the moments that happen there.
 
-Return JSON only: {"scenes": [{"id": "s1", "front": "", "room": [8, 6], "indoors": true, "ceiling": 3.5, "spots": [{"id": "p1", "x": 4, "y": 3, "faces": "p2", "pose": "standing"}, {"id": "t1", "x": 4, "y": 3, "size": [1.9, 0.9, 0.85]}, {"id": "x1", "name": "the stove", "x": 2, "y": 0.5, "size": [0.8, 0.6, 0.9]}, {"id": "p3", "x": 5, "y": 5, "many": true, "pose": "sitting", "spread": [7, 2]}], "moves": {}, "places": {"l4": {"front": "", "room": [2, 2], "indoors": true, "ceiling": 2.4, "spots": [], "moves": {}}}}]}`;
+Return JSON only: {"scenes": [{"id": "s1", "front": "", "room": [8, 6], "indoors": true, "ceiling": 3.5, "spots": [{"id": "p1", "x": 4, "y": 3, "faces": "p2", "pose": "standing"}, {"id": "t1", "x": 4, "y": 3, "size": [1.9, 0.9, 0.85], "shape": "seat"}, {"id": "x1", "name": "the stove", "x": 2, "y": 0.5, "size": [0.8, 0.6, 0.9], "shape": "block"}, {"id": "p3", "x": 5, "y": 5, "many": true, "pose": "sitting", "spread": [7, 2]}], "moves": {}, "places": {"l4": {"front": "", "room": [2, 2], "indoors": true, "ceiling": 2.4, "spots": [], "moves": {}}}}]}`;
 
 /**
  * Each scene's floor plan, made before any picture: where everyone and everything is. The moment
@@ -445,7 +446,10 @@ function readPlan(b: Breakdown, g: Record<string, unknown>, moments: Moment[], l
         ...(many ? { many: true } : {}),
         ...(person && ['sitting', 'standing', 'lying'].includes(x.pose as string) ? { pose: x.pose as Spot['pose'] } : {}),
         ...(!person && size ? { size: size as [number, number, number] } : {}),
+        ...(!person && SHAPES.includes(x.shape as Shape) ? { shape: x.shape as Shape } : {}),
+        ...(!person && typeof x.held_by === 'string' && b.people.some((p) => p.id === x.held_by) ? { heldBy: x.held_by } : {}),
         ...(many && spread ? { spread: spread as [number, number] } : {}),
+        ...(many && Number.isInteger(x.count) && Number(x.count) >= 1 && Number(x.count) <= 500 ? { count: Number(x.count) } : {}),
         ...(fixture(x) ? { fixture: true, name: str(x.name, 60) } : {}),
       };
     });
@@ -455,6 +459,7 @@ function readPlan(b: Breakdown, g: Record<string, unknown>, moments: Moment[], l
   const faces = (f: unknown) =>
     typeof f === 'string' && (['front', 'back', 'left', 'right'].includes(f) || known.has(f)) ? f : undefined;
   for (const s of spots) if (s.faces && !faces(s.faces)) delete s.faces;
+  for (const s of spots) if (s.heldBy && !known.has(s.heldBy)) delete s.heldBy;
   const at = new Set(moments.map((m) => m.id));
   // Who and what can move: people, and things that are not the place's own (a car drives off).
   const movers = new Set(spots.filter((s) => !s.many && !s.fixture).map((s) => s.id));
