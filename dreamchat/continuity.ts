@@ -155,6 +155,21 @@ export function meant(words: string, names: { id: string; name: string }[]): str
   return best?.id;
 }
 
+/**
+ * Every one of `names` some words mention, by all the words of its name or by what it is about:
+ * "knowing it is for the lighthouse" mentions "the white lighthouse".
+ */
+export function mentioned(words: string, names: { id: string; name: string }[]): string[] {
+  const w = said(words);
+  return names
+    .filter((n) => {
+      const has = said(n.name);
+      const head = headOf(n.name);
+      return (has.length > 0 && has.every((x) => w.includes(x))) || (!!head && w.includes(head));
+    })
+    .map((n) => n.id);
+}
+
 /** Two `looks_at` in the same words face the same side. */
 export function sameWords(a: string, b: string): boolean {
   const norm = (x: string) =>
@@ -724,7 +739,13 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
         Object.assign(base, { role: 'composition', relation: 'same_side', carries: CARRIES.same_side });
       const edits = c.refs.some((r) => r.role === 'base');
       const where = shotPlan(b, m.id) ?? plan;
-      const v = edits ? null : outsideShot(where, ids, m.distance, now, lookAt(m, where));
+      // What its words name on the plan besides who and what is in it, to be in the picture too where
+      // the camera can hold it: holding up the key "for the lighthouse" with the lighthouse behind
+      // the camera read as the shot at odds with the moment (lighthouse, 25 Sep).
+      const also = mentioned(`${m.action} ${m.visual_point ?? ''}`, where.spots.map((x) => ({ id: x.id, name: nameOf(x) }))).filter(
+        (id) => !ids.includes(id) && id !== dreamerId,
+      );
+      const v = edits ? null : outsideShot(where, ids, m.distance, now, lookAt(m, where), also);
       if (v) {
         c.view = v.text;
         c.eye = v.eye;

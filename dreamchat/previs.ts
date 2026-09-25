@@ -1055,6 +1055,8 @@ export function outsideShot(
    * the place). The camera faces it, with the people it shows before it.
    */
   lookAt?: { at?: V2; way?: V2; id?: string; theirs?: boolean },
+  /** What else the moment's words name on the plan: in the picture too, where it can be. */
+  also: string[] = [],
 ): { eye: Eye; text: string; inPicture: string[]; framing: string[] } | null {
   const name = (id: string) => plan.spots.find((s) => s.id === id)?.name ?? called(id);
   const inIt = subjects.map((id) => plan.spots.find((s) => s.id === id)).filter((s): s is Spot => !!s && !s.many);
@@ -1227,7 +1229,13 @@ export function outsideShot(
   const solidsSmall = solidsOf(plan, [], name);
   const tiny = 192 * 108 * 0.001;
   let best: { eye: Eye; far: number; cramped: number; score: number } | undefined;
-  for (const deg of [0, -20, 20, -40, 40, -70, 70])
+  // What the moment's words also name, and the ways round to it: walked all the way round only when
+  // there is something named to find.
+  const extra = also
+    .map((id) => plan.spots.find((s) => s.id === id))
+    .filter((s): s is Spot => !!s && !holdAll.includes(s));
+  const degs = extra.length ? [0, -20, 20, -40, 40, -70, 70, -110, 110, 180] : [0, -20, 20, -40, 40, -70, 70];
+  for (const deg of degs)
     for (const back of [1, 1.35, 1.8]) {
       const cand = place(turnBy(d0, deg), back);
       const rs = render(solidsSmall, cand.eye, 192, 108);
@@ -1235,7 +1243,9 @@ export function outsideShot(
       const inFrame = seen.filter((x) => x && x.visible >= tiny).length / holdAll.length;
       const clear = seen.reduce((a, x) => a + (x ? 1 - x.occluded : 0), 0) / holdAll.length;
       const framed = framing(rs, framedPeople, size, name, plan).score;
-      const score = 2 * inFrame + clear + 0.8 * framed - Math.abs(deg) * 0.006 - (back - 1) * 0.2 - cand.cramped * 0.5;
+      const named = extra.length ? extra.filter((s) => (rs.seen.get(s.id)?.visible ?? 0) >= tiny).length / extra.length : 0;
+      const score =
+        2 * inFrame + clear + 0.8 * framed + named - Math.abs(deg) * 0.006 - (back - 1) * 0.2 - cand.cramped * 0.5;
       if (!best || score > best.score + 1e-9) best = { ...cand, score };
     }
   const { eye, far } = best!;
