@@ -78,22 +78,27 @@ describe('colours the dream gives', () => {
     expect(styleBlock(muted)).not.toContain('Skin');
   });
 
-  test("a sketch keeps the colours its own look gives, and the palette rules the rest", () => {
+  test('a sketch keeps the colours its own look gives, and the palette rules the rest', () => {
     const sofa: Item = {
       id: 't1',
       kind: 'prop',
       name: 'the blue sofa',
-      fields: { appearance: { value: 'a two-seater sofa', said: false }, materials: { value: 'medium blue fabric', said: false } },
+      fields: {
+        appearance: { value: 'a two-seater sofa', said: false },
+        materials: { value: 'medium blue fabric', said: false },
+      },
       status: 'waiting',
       version: 0,
     };
     const colourful = { ...style, palette_hex: ['#8a8a8a', '#a08f7a', '#6f7f8f'] };
-    expect(sheetPrompt(sofa, colourful)).toContain('for the light and everything its look above gives no colour to; what the look gives a colour keeps it.');
+    expect(sheetPrompt(sofa, colourful)).toContain(
+      'for the light and everything its look above gives no colour to; what the look gives a colour keeps it.',
+    );
     expect(sheetPrompt(sofa, colourful)).not.toContain('Colours, and no others');
     // A look with no colour of its own keeps to the palette.
-    expect(sheetPrompt({ ...sofa, fields: { appearance: { value: 'a two-seater sofa', said: false } } }, colourful)).toContain(
-      'Colours, and no others',
-    );
+    expect(
+      sheetPrompt({ ...sofa, fields: { appearance: { value: 'a two-seater sofa', said: false } } }, colourful),
+    ).toContain('Colours, and no others');
   });
 
   test('in a style made in one colour, a colour a look names is a shade of it', () => {
@@ -126,9 +131,9 @@ describe('colours the dream gives', () => {
 
   test('in one colour, a filled-in look names how dark things are, not their colours', () => {
     const blueInk = { ...style, medium: 'ink wash', palette_hex: ['#001E3C', '#0077B6', '#CAF0F8'] };
-    expect(inShades('medium brown hair; a light blue blouse, brown trousers, a yellow onesie, a red-brown coat', blueInk)).toBe(
-      'dark hair; a light blue blouse, dark trousers, a pale onesie, a dark coat',
-    );
+    expect(
+      inShades('medium brown hair; a light blue blouse, brown trousers, a yellow onesie, a red-brown coat', blueInk),
+    ).toBe('dark hair; a light blue blouse, dark trousers, a pale onesie, a dark coat');
     // Black and white: every colour is a tone; black, white and grey already are.
     const bw = { ...blueInk, palette_hex: ['#111111', '#EEEEEE'] };
     expect(inShades('a light blue blouse and short black hair', bw)).toBe('a pale blouse and short black hair');
@@ -136,12 +141,22 @@ describe('colours the dream gives', () => {
     expect(inShades('brown trousers', { ...blueInk, palette_hex: ['#0077B6', '#E07A1F'] })).toBe('brown trousers');
     // What they said keeps its colour; what was filled in is told in shades.
     const said: Item = {
-      id: 'p1', kind: 'character', name: 'ana', status: 'ready', version: 1, mediaId: 'm', review: 'approved',
+      id: 'p1',
+      kind: 'character',
+      name: 'ana',
+      status: 'ready',
+      version: 1,
+      mediaId: 'm',
+      review: 'approved',
       fields: { appearance: { value: 'red hair', said: true }, wardrobe: { value: 'a brown coat', said: false } },
     };
-    expect(framePrompt({ ...frame('Ana waits.'), frame: { ...frame('x').frame!, visible: ['p1'], eyes: 'outside' } }, [said], blueInk).prompt).toContain(
-      'ana (person): red hair; a dark coat.',
-    );
+    expect(
+      framePrompt(
+        { ...frame('Ana waits.'), frame: { ...frame('x').frame!, visible: ['p1'], eyes: 'outside' } },
+        [said],
+        blueInk,
+      ).prompt,
+    ).toContain('ana (person): red hair; a dark coat.');
   });
 });
 
@@ -271,7 +286,13 @@ describe('a moment drawn from earlier moments', () => {
 
   test('an edit names who leaves the picture and who joins it', () => {
     const conductor = sheet('p2', 'character', 'the conductor');
-    const use = { id: 'm1', kind: 'cut' as const, role: 'base' as const, relation: 'same_setup' as const, carries: 'x' };
+    const use = {
+      id: 'm1',
+      kind: 'cut' as const,
+      role: 'base' as const,
+      relation: 'same_setup' as const,
+      carries: 'x',
+    };
     const before: Item = { ...drawn('m1', 1) };
     before.frame = { ...before.frame!, visible: ['p1', 'p2'] };
     const { prompt } = framePrompt(moment('m2', 2, [use]), [ana, conductor, kitchen], style, [{ use, item: before }]);
@@ -280,7 +301,13 @@ describe('a moment drawn from earlier moments', () => {
   });
 
   test('what the judge found invented in the picture being edited is left out of the edit', () => {
-    const use = { id: 'm1', kind: 'cut' as const, role: 'base' as const, relation: 'same_setup' as const, carries: 'x' };
+    const use = {
+      id: 'm1',
+      kind: 'cut' as const,
+      role: 'base' as const,
+      relation: 'same_setup' as const,
+      carries: 'x',
+    };
     const flawed: Item = {
       ...drawn('m1', 1),
       check: {
@@ -288,14 +315,16 @@ describe('a moment drawn from earlier moments', () => {
         passed: 14,
         failed: ['Is everything in this frame declared?'],
         failedIds: ['undeclared'],
-        notes: ["a pair of hands reaches in from the bottom corners, as if from a viewer"],
+        notes: ['a pair of hands reaches in from the bottom corners, as if from a viewer'],
       },
     };
     const { prompt } = framePrompt(moment('m2', 2, [use]), [ana, kitchen], style, [{ use, item: flawed }]);
     expect(prompt).toContain(
       'Leave out what it shows that is not in the dream: a pair of hands reaches in from the bottom corners, as if from a viewer.',
     );
-    const { prompt: clean } = framePrompt(moment('m2', 2, [use]), [ana, kitchen], style, [{ use, item: drawn('m1', 1) }]);
+    const { prompt: clean } = framePrompt(moment('m2', 2, [use]), [ana, kitchen], style, [
+      { use, item: drawn('m1', 1) },
+    ]);
     expect(clean).not.toContain('Leave out what it shows');
   });
 
@@ -320,12 +349,20 @@ describe('a moment drawn from earlier moments', () => {
   });
 
   test('no picture goes in for its light alone: the place gives its light, and words say it', () => {
-    const use = { id: 'm1', kind: 'cut' as const, role: 'lighting' as const, relation: 'other_side' as const, carries: 'x' };
+    const use = {
+      id: 'm1',
+      kind: 'cut' as const,
+      role: 'lighting' as const,
+      relation: 'other_side' as const,
+      carries: 'x',
+    };
     const inputs = [{ use, item: drawn('m1', 1) }];
     const lit = framePrompt(moment('m2', 2, [use]), [ana, kitchen], style, inputs);
     // Everyone has their sketch: the picture from the other side is not attached at all.
     expect(lit.references.map((r) => r.role)).toEqual(['identity', 'location']);
-    expect(lit.prompt).toContain('the kitchen: the camera stands in this place. Keep everything in it where it puts it');
+    expect(lit.prompt).toContain(
+      'the kitchen: the camera stands in this place. Keep everything in it where it puts it',
+    );
     expect(lit.prompt).toContain('and its light; do not mirror or rearrange it.');
     // Someone in it with no sketch of their own: it goes in, as who they are.
     const unsketched = framePrompt(moment('m2', 2, [use]), [{ ...ana, review: undefined }, kitchen], style, inputs);
@@ -361,7 +398,7 @@ describe('a moment drawn from earlier moments', () => {
     const unsketched = framePrompt(moment('m2', 2, [use]), [{ ...ana, review: undefined }, kitchen], style, inputs);
     expect(unsketched.references.map((r) => r.role)).toEqual(['location', 'identity']);
     expect(unsketched.prompt).toContain(
-      "Image 2: picture 1 (ana, at the kitchen): who ana is, as last drawn: their face, hair, build and clothes, exactly. Nothing else from it: not its pose, background or framing.",
+      'Image 2: picture 1 (ana, at the kitchen): who ana is, as last drawn: their face, hair, build and clothes, exactly. Nothing else from it: not its pose, background or framing.',
     );
   });
 });
@@ -380,15 +417,66 @@ describe('what a redraw is told', () => {
     );
     expect(
       asInstruction('Is everything in this frame declared? The cut names the room. Is there no other person?'),
-    ).toBe('nothing is in the picture that the dream does not have: no other person, face, hand, limb, creature or tool');
+    ).toBe(
+      'nothing is in the picture that the dream does not have: no other person, face, hand, limb, creature or tool',
+    );
     // The palette by name, never as codes, and the style, light and action as what is so.
     expect(
-      asInstruction("Are the image's values confined to this palette, with no colour outside it: #001E3C, #0077B6, #CAF0F8?"),
+      asInstruction(
+        "Are the image's values confined to this palette, with no colour outside it: #001E3C, #0077B6, #CAF0F8?",
+      ),
     ).toBe('every colour in it, hair, skin and clothes included, is one of dark navy, blue, pale blue');
-    expect(asInstruction('Does the image actually show this: soft bleeding edges?')).toBe('the picture shows soft bleeding edges');
+    expect(asInstruction('Does the image actually show this: soft bleeding edges?')).toBe(
+      'the picture shows soft bleeding edges',
+    );
     expect(asInstruction('Does the frame show this happening: The family sits on the roof.?')).toBe(
       'the frame shows this happening: The family sits on the roof.',
     );
+  });
+});
+
+describe("a person's sketch", () => {
+  const father: Item = {
+    id: 'p2',
+    kind: 'character',
+    name: 'the father',
+    fields: {
+      identity: { value: 'a man in his sixties with short grey hair and a medium build', said: false },
+      appearance: {
+        value:
+          'standing in a relaxed three-quarter view, whole figure from head to feet, face clearly visible, with a calm expression, looking slightly downward',
+        said: true,
+      },
+      wardrobe: { value: 'plain pale grey long-sleeved shirt', said: false },
+    },
+    status: 'waiting',
+    version: 0,
+  };
+
+  test('says their age from who they are when their look does not, and never a pose as their look', () => {
+    // Held for "missing roughly how old they are; their build; their hair" (lighthouse, 26 Sep).
+    const p = sheetPrompt(father, style);
+    expect(p).toContain(
+      'A single full-length picture of the father, a man in his sixties with short grey hair and a medium build, one person only',
+    );
+    expect(p).not.toContain('looks: standing');
+    expect(p).not.toContain('looking slightly downward');
+  });
+
+  test('keeps to their look when it says their age, and never names who they are in the story', () => {
+    const told = {
+      ...father,
+      fields: { ...father.fields, appearance: { value: 'in his forties, short brown hair', said: true } },
+    };
+    expect(sheetPrompt(told, style)).toContain('A single full-length picture of the father, one person only');
+    const cooking = {
+      ...father,
+      name: 'the cook',
+      fields: { identity: { value: 'a young woman cooking', said: true } },
+    };
+    expect(sheetPrompt(cooking, style)).toContain('picture of the cook, a young woman, one person only');
+    const named = { ...father, name: 'the young woman', fields: { identity: { value: 'a young woman', said: true } } };
+    expect(sheetPrompt(named, style)).toContain('picture of the young woman, one person only');
   });
 });
 
@@ -431,15 +519,19 @@ describe('a group of people', () => {
     expect(prompt).not.toContain('one person only');
     expect(prompt).toContain('coat: natural brown wiry coat');
     expect(prompt).not.toContain('wears:');
-    expect(sheetPrompt({ ...dog, name: 'the aunt', fields: { identity: { value: 'my aunt', said: true } } }, style)).toContain(
-      'one person only',
-    );
+    expect(
+      sheetPrompt({ ...dog, name: 'the aunt', fields: { identity: { value: 'my aunt', said: true } } }, style),
+    ).toContain('one person only');
     // What they are, not what is said of them (night market, 26 Sep).
-    const seller = { ...dog, name: 'the old man', fields: { identity: { value: 'an old man selling fish at a stall', said: true } } };
+    const seller = {
+      ...dog,
+      name: 'the old man',
+      fields: { identity: { value: 'an old man selling fish at a stall', said: true } },
+    };
     expect(sheetPrompt(seller, style)).toContain('one person only');
   });
 
-  test("a look listed in a moment keeps no pose or framing from its sketch", () => {
+  test('a look listed in a moment keeps no pose or framing from its sketch', () => {
     // "standing … face clearly visible" in the father's look, in a moment of him sitting, read as the
     // prompt at odds with itself (0.89, lighthouse, 26 Sep).
     expect(
@@ -447,7 +539,9 @@ describe('a group of people', () => {
         'standing in a relaxed three-quarter view, whole figure from head to feet, face clearly visible, with a calm expression; a man in his 60s with grey hair',
       ),
     ).toBe('a man in his 60s with grey hair');
-    expect(withoutPose('a tall grey heron standing in a relaxed pose, whole body visible from beak to tail')).toBe('a tall grey heron');
+    expect(withoutPose('a tall grey heron standing in a relaxed pose, whole body visible from beak to tail')).toBe(
+      'a tall grey heron',
+    );
     expect(withoutPose('curly brown hair, thin build')).toBe('curly brown hair, thin build');
   });
 
@@ -485,9 +579,13 @@ describe('a group of people', () => {
       status: 'waiting',
       version: 0,
     });
-    expect(sheetPrompt(place('inside, sitting with couple of people'), style)).toStartWith('A single wide picture of this place,');
+    expect(sheetPrompt(place('inside, sitting with couple of people'), style)).toStartWith(
+      'A single wide picture of this place,',
+    );
     expect(sheetPrompt(place("the grandmother's kitchen"), style)).toContain("picture of the grandmother's kitchen");
-    expect(sheetPrompt(place('the room with the blue balloons'), style)).toContain('picture of the room with the blue balloons');
+    expect(sheetPrompt(place('the room with the blue balloons'), style)).toContain(
+      'picture of the room with the blue balloons',
+    );
   });
 
   test("the dreamer's sketch says who they are: their name says nothing of it", () => {
@@ -524,7 +622,14 @@ describe('a group and someone in it who has their own sketch', () => {
       review: 'approved',
     };
     const baby: Item = { ...family, id: 'p4', name: 'the baby', fields: {}, mediaId: 'media-p4' };
-    const roof: Item = { ...family, id: 'l2', kind: 'location', name: 'the top of the train', fields: {}, mediaId: 'media-l2' };
+    const roof: Item = {
+      ...family,
+      id: 'l2',
+      kind: 'location',
+      name: 'the top of the train',
+      fields: {},
+      mediaId: 'media-l2',
+    };
     const moment: Item = {
       id: 'm6',
       kind: 'cut',
@@ -532,7 +637,15 @@ describe('a group and someone in it who has their own sketch', () => {
       fields: { action: { value: 'A family sits on the train with a thrilled baby.', said: true } },
       status: 'waiting',
       version: 0,
-      frame: { visible: ['p3', 'p4'], things: [], place: 'l2', distance: 'medium', eyes: 'outside', key: false, order: 6 },
+      frame: {
+        visible: ['p3', 'p4'],
+        things: [],
+        place: 'l2',
+        distance: 'medium',
+        eyes: 'outside',
+        key: false,
+        order: 6,
+      },
     };
     const { prompt } = framePrompt(moment, [family, baby, roof], style);
     expect(prompt).toContain('The baby in it is the baby, drawn from Image 2: one baby, never two.');
@@ -552,11 +665,29 @@ describe('the shape of each picture', () => {
 
 describe('groups, as the producer marks them', () => {
   test('a group needs no group words, and its members are linked by id', () => {
-    const band: Item = { id: 'p7', kind: 'character', name: 'the Hendersons', fields: {}, status: 'ready', version: 1, several: true };
-    const lead: Item = { id: 'p8', kind: 'character', name: 'Ruth', fields: {}, status: 'ready', version: 1, partOf: 'p7' };
+    const band: Item = {
+      id: 'p7',
+      kind: 'character',
+      name: 'the Hendersons',
+      fields: {},
+      status: 'ready',
+      version: 1,
+      several: true,
+    };
+    const lead: Item = {
+      id: 'p8',
+      kind: 'character',
+      name: 'Ruth',
+      fields: {},
+      status: 'ready',
+      version: 1,
+      partOf: 'p7',
+    };
     expect(isGroup(band)).toBe(true);
     expect(isGroup({ ...band, several: false, name: 'a couple of people' })).toBe(false);
-    expect(groupMembers([band, lead]).map((m) => `${m.group.name} > ${m.member.name}`)).toEqual(['the Hendersons > Ruth']);
+    expect(groupMembers([band, lead]).map((m) => `${m.group.name} > ${m.member.name}`)).toEqual([
+      'the Hendersons > Ruth',
+    ]);
   });
 });
 
@@ -780,7 +911,11 @@ describe('a change that replaces part of someone', () => {
 
 describe('what the pictures are made as', () => {
   test('every picture names its medium; a style that names none is a photograph', () => {
-    const asSeen = { ...style, name: 'the dream exactly as it looked to you', tokens: ['water drops catching the light'] };
+    const asSeen = {
+      ...style,
+      name: 'the dream exactly as it looked to you',
+      tokens: ['water drops catching the light'],
+    };
     expect(styleBlock(asSeen)).toContain('Made as: a photograph.');
     expect(styleBlock({ ...asSeen, medium: 'soft pencil on paper' })).toContain('Made as: soft pencil on paper.');
     expect(styleBlock({ ...asSeen, name: 'soft watercolour' })).toContain('Made as: soft watercolour.');
@@ -846,7 +981,9 @@ describe("a moment's previs", () => {
     expect(references.filter((r) => r.role === 'base')).toHaveLength(1);
     expect(prompt).toContain('Image 1: EDIT THIS PICTURE. It is a rough grey mock-up of this exact picture');
     expect(prompt).toContain("keep nothing of the mock-up's look: no grey clay, no outlines, no labels or letters.");
-    expect(prompt).toContain("What the dreamer sees, the camera being their own eyes, as the mock-up in Image 1 shows it");
+    expect(prompt).toContain(
+      'What the dreamer sees, the camera being their own eyes, as the mock-up in Image 1 shows it',
+    );
     expect(prompt).toContain(
       'Where everything stands, and which way the picture looks, come from Image 1, the mock-up, not from this image; any of its objects the shot has outside the picture stay out of it.',
     );
@@ -878,7 +1015,8 @@ describe("a moment's previs", () => {
       review: 'approved',
       frame: { visible: [], things: [], place: 'l1', distance: 'wide', eyes: 'outside', key: false, order: 1 },
     };
-    const view = 'Seen from in front of them, a few metres off, at the height of their eyes: the camera looks toward the back of the room.';
+    const view =
+      'Seen from in front of them, a few metres off, at the height of their eyes: the camera looks toward the back of the room.';
     const outside: Item = {
       id: 'm2',
       kind: 'cut',
@@ -948,7 +1086,13 @@ describe("a moment's previs", () => {
       version: 0,
       frame: { visible: [], things: [], place: 'l1', distance: 'close', eyes: 'outside', key: true, order: 5 },
     };
-    const use = { id: 'm4', kind: 'cut' as const, role: 'base' as const, relation: 'same_setup' as const, carries: 'the same view' };
+    const use = {
+      id: 'm4',
+      kind: 'cut' as const,
+      role: 'base' as const,
+      relation: 'same_setup' as const,
+      carries: 'the same view',
+    };
     const { prompt } = framePrompt(edit, [], style, [{ use, item: earlier }]);
     expect(prompt).toContain('EDIT THIS PICTURE');
     expect(prompt).not.toContain('The subject fills nearly the whole frame');

@@ -76,8 +76,13 @@ export type Item = {
   heldAskedAt?: number;
   /** For a place: the story's things, which have pictures of their own and are left out of its. */
   leaveOut?: string[];
-  /** Drawn although a check would have held it (measuring the checks only): what the checks said. */
+  /**
+   * Drawn although a check would have held it: what the checks said. For a moment, only while the
+   * checks are measured; for a sketch still unclear after they were asked, drawn on our guess.
+   */
   overrode?: string[];
+  /** A sketch drawn on our guess once they had been asked twice: never guessed again. */
+  guessed?: boolean;
   /** Jev's reading of the prompt it was last to be drawn from. */
   gate?: {
     contradicts: number;
@@ -227,14 +232,49 @@ const COLOUR_WORDS =
 
 /** Each colour word's hue, and how dark it is drawn: 0 dark, 1 mid-toned, 2 pale. */
 const HUED: Record<string, [number, number]> = {
-  red: [0, 1], scarlet: [0, 1], crimson: [350, 0], maroon: [350, 0], burgundy: [345, 0], pink: [340, 2],
-  rose: [345, 2], orange: [30, 1], brown: [25, 0], brunette: [25, 0], auburn: [15, 0], chestnut: [20, 0],
-  copper: [25, 1], ginger: [25, 1], tan: [30, 1], beige: [35, 2], cream: [45, 2], golden: [45, 2], gold: [45, 2],
-  blonde: [45, 2], blond: [45, 2], yellow: [55, 2], olive: [60, 0], green: [120, 1], emerald: [140, 0],
-  teal: [180, 1], turquoise: [175, 1], cyan: [185, 2], blue: [215, 1], navy: [225, 0], indigo: [250, 0],
-  purple: [280, 0], violet: [275, 1], lavender: [270, 2], magenta: [300, 1],
-  reddish: [0, 1], pinkish: [340, 2], orangey: [30, 1], brownish: [25, 0], yellowish: [55, 2], greenish: [120, 1],
-  bluish: [215, 1], purplish: [280, 0],
+  red: [0, 1],
+  scarlet: [0, 1],
+  crimson: [350, 0],
+  maroon: [350, 0],
+  burgundy: [345, 0],
+  pink: [340, 2],
+  rose: [345, 2],
+  orange: [30, 1],
+  brown: [25, 0],
+  brunette: [25, 0],
+  auburn: [15, 0],
+  chestnut: [20, 0],
+  copper: [25, 1],
+  ginger: [25, 1],
+  tan: [30, 1],
+  beige: [35, 2],
+  cream: [45, 2],
+  golden: [45, 2],
+  gold: [45, 2],
+  blonde: [45, 2],
+  blond: [45, 2],
+  yellow: [55, 2],
+  olive: [60, 0],
+  green: [120, 1],
+  emerald: [140, 0],
+  teal: [180, 1],
+  turquoise: [175, 1],
+  cyan: [185, 2],
+  blue: [215, 1],
+  navy: [225, 0],
+  indigo: [250, 0],
+  purple: [280, 0],
+  violet: [275, 1],
+  lavender: [270, 2],
+  magenta: [300, 1],
+  reddish: [0, 1],
+  pinkish: [340, 2],
+  orangey: [30, 1],
+  brownish: [25, 0],
+  yellowish: [55, 2],
+  greenish: [120, 1],
+  bluish: [215, 1],
+  purplish: [280, 0],
 };
 const TONE = ['dark', 'mid-toned', 'pale'];
 
@@ -249,15 +289,17 @@ export function inShades(text: string, style: StyleOption): string {
   const hue = paletteHue(style);
   const words = Object.keys(HUED).join('|');
   // A colour of two ("red-brown", "blue-green") is its last.
-  return text.replace(new RegExp(`\\b(?:${words})-(${words})\\b`, 'gi'), '$1').replace(
-    new RegExp(`\\b(?:(light|pale|dark|deep|medium|bright)[ -])?(${words})\\b`, 'gi'),
-    (all, mod: string | undefined, word: string) => {
-      const [h, tone] = HUED[word.toLowerCase()];
-      if (hue !== null && Math.min(Math.abs(h - hue), 360 - Math.abs(h - hue)) <= 35) return all;
-      const shift = /light|pale/i.test(mod ?? '') ? 1 : /dark|deep/i.test(mod ?? '') ? -1 : 0;
-      return TONE[Math.max(0, Math.min(2, tone + shift))];
-    },
-  );
+  return text
+    .replace(new RegExp(`\\b(?:${words})-(${words})\\b`, 'gi'), '$1')
+    .replace(
+      new RegExp(`\\b(?:(light|pale|dark|deep|medium|bright)[ -])?(${words})\\b`, 'gi'),
+      (all, mod: string | undefined, word: string) => {
+        const [h, tone] = HUED[word.toLowerCase()];
+        if (hue !== null && Math.min(Math.abs(h - hue), 360 - Math.abs(h - hue)) <= 35) return all;
+        const shift = /light|pale/i.test(mod ?? '') ? 1 : /dark|deep/i.test(mod ?? '') ? -1 : 0;
+        return TONE[Math.max(0, Math.min(2, tone + shift))];
+      },
+    );
 }
 
 /**
@@ -306,7 +348,8 @@ export function styleBlock(
   const mono = oneColour(style);
   // A photograph of a person in a cold palette still has warm skin; one in black and white does not,
   // nor someone turned into a heron.
-  const skin = !mono && !opts.noSkin && /photo|camera|film still/i.test(mediumOf(style)) ? 'Skin keeps its natural tone.' : '';
+  const skin =
+    !mono && !opts.noSkin && /photo|camera|film still/i.test(mediumOf(style)) ? 'Skin keeps its natural tone.' : '';
   const keep = told.length ? ` What the dream itself gives a colour keeps it exactly: ${told.join('; ')}.` : '';
   // Made in one colour, a colour a look names is a shade of it: a blue ink wash told "medium brown
   // hair" drew it auburn, beside the same woman's blue-black hair in the picture before (24 Sep).
@@ -324,15 +367,15 @@ export function styleBlock(
       ? mono
         ? shades
         : opts.fromImages
-        ? `Colours: ${colours.join(', ')}, for the light and everything no image above gives a colour to; each person and thing keeps the colours of its image.${keep}${skin ? ` ${skin}` : ''}`
-        : opts.ownColours
-          ? // A sketch is where its colours are first set: "and no others" beside a sofa "in medium
-            // blue", a colour the dreamer said, read as the sketch contradicting itself (0.35;
-            // 0.08 without that line, 24 Sep).
-            `Colours: ${colours.join(', ')}, for the light and everything its look above gives no colour to; what the look gives a colour keeps it.${keep}${skin ? ` ${skin}` : ''}`
-        : told.length
-          ? `Colours: ${colours.join(', ')}, except what the dream itself gives a colour, which keeps it exactly: ${told.join('; ')}.${skin ? ` ${skin}` : ''}`
-          : `Colours, and no others: ${colours.join(', ')}.${skin ? ` ${skin}` : ''}`
+          ? `Colours: ${colours.join(', ')}, for the light and everything no image above gives a colour to; each person and thing keeps the colours of its image.${keep}${skin ? ` ${skin}` : ''}`
+          : opts.ownColours
+            ? // A sketch is where its colours are first set: "and no others" beside a sofa "in medium
+              // blue", a colour the dreamer said, read as the sketch contradicting itself (0.35;
+              // 0.08 without that line, 24 Sep).
+              `Colours: ${colours.join(', ')}, for the light and everything its look above gives no colour to; what the look gives a colour keeps it.${keep}${skin ? ` ${skin}` : ''}`
+            : told.length
+              ? `Colours: ${colours.join(', ')}, except what the dream itself gives a colour, which keeps it exactly: ${told.join('; ')}.${skin ? ` ${skin}` : ''}`
+              : `Colours, and no others: ${colours.join(', ')}.${skin ? ` ${skin}` : ''}`
       : '',
     style.lighting_rules ? `Light: ${style.lighting_rules}` : '',
   ]
@@ -399,7 +442,9 @@ export function groupMembers(people: Item[]): { group: Item; member: Item; word:
     const group = people.find((g) => g.id === member.partOf);
     if (group) out.push({ group, member, word: headWord(member.name) ?? member.name });
   }
-  for (const group of people.filter((p) => p.kind === 'character' && isGroup(p) && !linked.some((m) => m.partOf === p.id))) {
+  for (const group of people.filter(
+    (p) => p.kind === 'character' && isGroup(p) && !linked.some((m) => m.partOf === p.id),
+  )) {
     const look = LOOK.character
       .map((k) => group.fields[k]?.value ?? '')
       .join(' ')
@@ -429,8 +474,34 @@ export function isAnimal(item: Pick<Item, 'kind' | 'name' | 'fields' | 'isDreame
       .split(/\s+/)
       .at(-1) ?? '';
   const words = [what(item.name), what(item.fields.identity?.value ?? '')];
-  return words.some((w) => ANIMAL.test(w)) && !words.some((w) => /^(man|woman|men|women|boy|girl|person|people|child|driver|seller|vendor|keeper|owner)$/.test(w));
+  return (
+    words.some((w) => ANIMAL.test(w)) &&
+    !words.some((w) => /^(man|woman|men|women|boy|girl|person|people|child|driver|seller|vendor|keeper|owner)$/.test(w))
+  );
 }
+
+/**
+ * A look without the pose and framing of the sketch it was written for: "standing in a relaxed
+ * three-quarter view, whole figure from head to feet, face clearly visible" came into the father's
+ * look, and a moment of him sitting read as at odds with itself (0.89, lighthouse, 26 Sep). A
+ * moment's plan decides how anyone stands and is seen.
+ */
+const POSE_PHRASE =
+  /\s+standing\s+in\s+a\s+(?:relaxed\s+)?pose\b|(?:^|,\s*)(?:(?:standing|sitting|seated|posed)\b[^,;]*|(?:in\s+(?:a\s+)?)?(?:relaxed\s+)?three-quarter\s+view[^,;]*|(?:the\s+)?whole\s+(?:figure|body)[^,;]*(?:visible|head to (?:feet|toe)|beak to tail|nose to tail)[^,;]*|(?:the\s+)?full[- ]length[^,;]*|(?:the\s+|its\s+|their\s+)?(?:face|head)\s+(?:clearly\s+)?visible[^,;]*|head\s+turned[^,;]*(?:viewer|camera)[^,;]*|facing\s+the\s+(?:viewer|camera)[^,;]*|(?:with\s+)?(?:a\s+)?(?:calm|neutral)\s+expression[^,;]*|looking\s+(?:slightly\s+)?(?:at|toward|towards|down|up)[^,;]*)/gi;
+
+export function withoutPose(look: string, keep = true): string {
+  const out = look
+    .replace(POSE_PHRASE, '')
+    .replace(/^\s*[,;]\s*/, '')
+    .replace(/\s*,\s*,/g, ',')
+    .trim();
+  // A look that was nothing but a pose is kept as it was, or, where the rest says the look, dropped.
+  return out.length >= 3 ? out : keep ? look : '';
+}
+
+/** Words that say roughly how old someone is. */
+const AGE =
+  /\b(?:baby|toddler|child|kid|boy|girl|teen\w*|young|younger|old|older|elderly|aged|middle-aged|adult|\d+s|\d+\s*years?|(?:twent|thirt|fort|fift|sixt|sevent|eight|ninet)ies)\b/i;
 
 /** A place's name that says who is there or what they do in it, rather than what the place is. */
 const PEOPLE_IN_NAME =
@@ -452,13 +523,17 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
       const heads = item.kind === 'location' ? (item.leaveOut ?? []).map(headWord).filter((w): w is string => !!w) : [];
       // The story's things are taken out of a place's own words, part by part: "a small paper boat
       // lying in the grass and a red tractor parked at the edge" keeps only the tractor.
+      // A person's look is how they look, never how the sheet poses them: "standing in a relaxed
+      // three-quarter view, whole figure from head to feet" stood as the father's whole look, and
+      // his age, hair and build were never said (lighthouse, 26 Sep).
+      const own = item.kind === 'character' ? withoutPose(value(item, k), false) : value(item, k);
       const v = heads.length
-        ? value(item, k)
+        ? own
             .split(/;|,|\s+and\s+/)
             .map((x) => x.trim())
             .filter((x) => x && !heads.some((w) => new RegExp(`\\b${w}s?\\b`, 'i').test(x)))
             .join(', ')
-        : value(item, k);
+        : own;
       // What they said keeps its colours; what was filled in is said in the style's shades.
       return v ? `${FIELD_WORDS[k] ?? k}: ${item.fields[k]?.said ? v : inShades(v, style)}` : '';
     })
@@ -474,6 +549,22 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
   // adult woman in her early twenties" was left out, and the gate held the sketch for "missing
   // roughly how old they are" after they had said "however you imagine me" (night bus, 25 Sep).
   const who = item.isDreamer ? value(item, 'identity') : '';
+  // Anyone else is named with who they are when only that says their age: the father's guessed
+  // "a man in his sixties with short grey hair and a medium build" was left out, and his sketch
+  // was held for "missing roughly how old they are; their build; their hair" (lighthouse, 26 Sep).
+  // Who they are, without what they do in the story: "a young woman cooking" is a young woman.
+  const identity = withoutPose(value(item, 'identity'), false)
+    .split(/\s+(?:who|that|which)\b|\s+(?!wearing\b|during\b)[a-z]+ing\b/i)[0]
+    .replace(/[\s,.;]+$/, '');
+  const aged =
+    item.kind === 'character' &&
+    !item.isDreamer &&
+    !isAnimal(item) &&
+    !isGroup(item) &&
+    !VAGUE.test(identity) &&
+    AGE.test(identity) &&
+    !AGE.test(facts) &&
+    !AGE.test(item.name);
   const name = item.isDreamer
     ? who && !VAGUE.test(who) && !/^(the dreamer|you|me|myself|i)$/i.test(who.trim())
       ? `the dreamer, ${who.replace(/^the dreamer,?\s*/i, '').replace(/[\s,.;]+$/, '')}`
@@ -482,7 +573,9 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
       ? // A place named for what happened there ("inside, sitting with couple of people") beside
         // "with no people in it" read as a contradiction, and the sketch was held (Meads, 25 Sep).
         'this place'
-      : pictureName(item.name);
+      : aged
+        ? `${pictureName(item.name)}, ${identity}`
+        : pictureName(item.name);
   // A dog sketched as "one person only", "the face and clothes clearly seen", read as unclear and
   // was held (lighthouse, 25 Sep).
   const animal = isAnimal(item);
@@ -490,12 +583,12 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
     item.kind === 'character' && animal
       ? `A single picture of ${name}, the one animal only, as it ordinarily looks: standing in a relaxed three-quarter view, the whole of it from nose to tail, its head clearly visible.`
       : item.kind === 'character'
-      ? isGroup(item)
-        ? `A single full-length picture of ${name}, all of them together and no one else, as they ordinarily look: standing side by side in a relaxed three-quarter view, every figure from head to feet, each face clearly visible.`
-        : `A single full-length picture of ${name}, one person only, as they ordinarily look: standing in a relaxed three-quarter view, the whole figure from head to feet, the face clearly visible.`
-      : item.kind === 'location'
-        ? `A single wide picture of ${name}, as it ordinarily looks, with no people in it, showing the whole place and how it is laid out.`
-        : `A single clear picture of ${name} on its own, as it ordinarily looks, seen at a slight angle so its shape and materials read.`;
+        ? isGroup(item)
+          ? `A single full-length picture of ${name}, all of them together and no one else, as they ordinarily look: standing side by side in a relaxed three-quarter view, every figure from head to feet, each face clearly visible.`
+          : `A single full-length picture of ${name}, one person only, as they ordinarily look: standing in a relaxed three-quarter view, the whole figure from head to feet, the face clearly visible.`
+        : item.kind === 'location'
+          ? `A single wide picture of ${name}, as it ordinarily looks, with no people in it, showing the whole place and how it is laid out.`
+          : `A single clear picture of ${name} on its own, as it ordinarily looks, seen at a slight angle so its shape and materials read.`;
   const background = item.kind === 'location' ? '' : 'Plain, uncluttered background. ';
   const without =
     item.kind === 'location' && item.leaveOut?.length
@@ -508,14 +601,22 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
     item.kind === 'character' && animal
       ? 'Nothing between it and the viewer: no glass, pane, screen, door, veil, mist or reflection over it; its head and coat clearly seen.'
       : item.kind === 'character'
-      ? 'Nothing between them and the viewer: no glass, pane, screen, door, veil, mist or reflection over them; the face and clothes clearly seen. Whatever the style, it is how the picture is drawn, not something in front of them.'
-      : '';
+        ? 'Nothing between them and the viewer: no glass, pane, screen, door, veil, mist or reflection over them; the face and clothes clearly seen. Whatever the style, it is how the picture is drawn, not something in front of them.'
+        : '';
   // The judge's findings on the last attempt, when it was drawn again for them.
   const repair = item.repairFor?.length
     ? `The last attempt at this sheet got these wrong. Put each right:\n${item.repairFor.map((q) => `- ${q}`).join('\n')}`
     : '';
   const ownColours = new RegExp(COLOUR_WORDS.source, 'i').test(facts);
-  return [layout, facts, without, clear, repair, styleBlock(style, toldColours(item), { ownColours }), `${background}${NO_WORDS}`]
+  return [
+    layout,
+    facts,
+    without,
+    clear,
+    repair,
+    styleBlock(style, toldColours(item), { ownColours }),
+    `${background}${NO_WORDS}`,
+  ]
     .filter(Boolean)
     .join('\n\n');
 }
@@ -748,7 +849,8 @@ export const liveSheets: SheetEngine = {
       nodeId,
       approved: true,
       author: 'assistant',
-      decision: 'The shot as its previs: grey blocks from its camera, rendered from the floor plan. The layout a frame is drawn over, never a take.',
+      decision:
+        'The shot as its previs: grey blocks from its camera, rendered from the floor plan. The layout a frame is drawn over, never a take.',
       depicted: [],
       select: false,
     });

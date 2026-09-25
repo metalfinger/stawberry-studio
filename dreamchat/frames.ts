@@ -11,7 +11,21 @@ import { BECOMING, isWhole, momentLabel, oneColour, VAGUE, WHOLE } from './produ
 
 // Kept here too for older imports.
 export { isWhole, WHOLE };
-import { coloursIn, groupMembers, inShades, isGroup, type Item, LOOK, type Shape, shapeOf, styleBlock, toldColours } from './sheets';
+import {
+  coloursIn,
+  groupMembers,
+  inShades,
+  isGroup,
+  type Item,
+  LOOK,
+  type Shape,
+  shapeOf,
+  styleBlock,
+  toldColours,
+  withoutPose,
+} from './sheets';
+
+export { withoutPose };
 
 /** Where the line that says who "you" is goes, when anything told to the picture says "you". */
 const YOU = '\u0000you';
@@ -32,25 +46,10 @@ const NO_WORDS = 'Every surface in it is free of writing, logos and brand badges
 const NO_WORDS_EDIT =
   'Do not write any words, letters, numbers or labels anywhere in the image, and no logos or brand badges.';
 
-
 /** Who and what in a moment has turned into something else entirely: drawn from no sketch. */
 export function turnedInto(frame: Item): Set<string> {
   const plan = frame.frame?.plan;
   return new Set([...(plan?.own ?? []), ...(plan?.states ?? [])].filter(isWhole).map((st) => st.who));
-}
-
-/**
- * A look without the pose and framing of the sketch it was written for: "standing in a relaxed
- * three-quarter view, whole figure from head to feet, face clearly visible" came into the father's
- * look, and a moment of him sitting read as at odds with itself (0.89, lighthouse, 26 Sep). A
- * moment's plan decides how anyone stands and is seen.
- */
-const POSE_PHRASE =
-  /\s+standing\s+in\s+a\s+(?:relaxed\s+)?pose\b|(?:^|,\s*)(?:(?:standing|sitting|seated|posed)\b[^,;]*|(?:in\s+(?:a\s+)?)?(?:relaxed\s+)?three-quarter\s+view[^,;]*|(?:the\s+)?whole\s+(?:figure|body)[^,;]*(?:visible|head to (?:feet|toe)|beak to tail|nose to tail)[^,;]*|(?:the\s+)?full[- ]length[^,;]*|(?:the\s+|its\s+|their\s+)?(?:face|head)\s+(?:clearly\s+)?visible[^,;]*|head\s+turned[^,;]*(?:viewer|camera)[^,;]*|facing\s+the\s+(?:viewer|camera)[^,;]*|(?:with\s+)?(?:a\s+)?(?:calm|neutral)\s+expression[^,;]*|looking\s+(?:slightly\s+)?(?:at|toward|towards|down|up)[^,;]*)/gi;
-
-export function withoutPose(look: string): string {
-  const out = look.replace(POSE_PHRASE, '').replace(/^\s*[,;]\s*/, '').replace(/\s*,\s*,/g, ',').trim();
-  return out.length >= 3 ? out : look;
 }
 
 /** A thing named with its article: "turned into roller coaster" read as broken English. */
@@ -253,8 +252,12 @@ export function framePrompt(
       'the same view a moment earlier: edit it into this moment',
       leaving.length || joining.length
         ? `EDIT THIS PICTURE. It is ${pictureNo(base)}, the same view a moment earlier. Keep its camera, framing, room and light exactly; who is in it changes: ${[
-            ...(leaving.length ? [`${leaving.join(' and ')} ${leaving.length > 1 ? 'are' : 'is'} no longer there`] : []),
-            ...(joining.length ? [`${joining.join(' and ')} ${joining.length > 1 ? 'are' : 'is'} there now, drawn from their sketch`] : []),
+            ...(leaving.length
+              ? [`${leaving.join(' and ')} ${leaving.length > 1 ? 'are' : 'is'} no longer there`]
+              : []),
+            ...(joining.length
+              ? [`${joining.join(' and ')} ${joining.length > 1 ? 'are' : 'is'} there now, drawn from their sketch`]
+              : []),
           ].join('; ')}. Change only that and what this moment changes.${strays(base)}`
         : `EDIT THIS PICTURE. It is ${pictureNo(base)}, the same view a moment earlier. Keep its camera, framing, room, light and everyone in it exactly as they are, faces and clothes included; change only what this moment changes.${strays(base)}`,
     );
@@ -279,15 +282,21 @@ export function framePrompt(
   const members = groupMembers(inView);
   const lookOf = (s: Item, keys: string[]) => {
     const own = members.filter((m) => m.group === s).map((m) => new RegExp(`\\b${m.word}s?\\b`, 'i'));
-    return keys
-      .map((k) => s.fields[k])
-      .filter((d) => !!d?.value && !VAGUE.test(d.value))
-      // What was filled in is said in the style's shades; what they said keeps its colours.
-      .map((d) => (d?.said ? (d.value as string) : inShades(d?.value as string, style)))
-      .flatMap((v) => v.split(/;\s*/))
-      .map((part) => withoutPose(part).trim().replace(/[.\s]+$/, ''))
-      .filter((part) => part && !own.some((re) => re.test(part)))
-      .join('; ');
+    return (
+      keys
+        .map((k) => s.fields[k])
+        .filter((d) => !!d?.value && !VAGUE.test(d.value))
+        // What was filled in is said in the style's shades; what they said keeps its colours.
+        .map((d) => (d?.said ? (d.value as string) : inShades(d?.value as string, style)))
+        .flatMap((v) => v.split(/;\s*/))
+        .map((part) =>
+          withoutPose(part, false)
+            .trim()
+            .replace(/[.\s]+$/, ''),
+        )
+        .filter((part) => part && !own.some((re) => re.test(part)))
+        .join('; ')
+    );
   };
   const facts: string[] = [];
   // In one colour, a sketch drawn with a colour of its own passes it on: the family's yellow onesie
@@ -301,7 +310,8 @@ export function framePrompt(
     // How it looks, as its sketch was drawn: "who they are" carries the story ("a young woman
     // cooking") into every moment they are in.
     const known = lookOf(s, LOOK[s.kind]);
-    const kind = s.kind === 'character' ? (isGroup(s) ? 'people' : 'person') : s.kind === 'location' ? 'place' : 'thing';
+    const kind =
+      s.kind === 'character' ? (isGroup(s) ? 'people' : 'person') : s.kind === 'location' ? 'place' : 'thing';
     // Someone or something that has turned into something else entirely is no longer drawn from
     // its old sketch: its in-between picture shows what it became. The sofa's sketch beside "the
     // roller coaster that was a sofa" read as the prompt contradicting itself, and as the same
@@ -376,7 +386,8 @@ export function framePrompt(
     const m = imageOf.get(member.id);
     if (!g || !m) continue;
     manifest[g - 1] += ` The ${word} in it is ${who(member)}, drawn from Image ${m}: one ${word}, never two.`;
-    manifest[m - 1] += ` They are the ${word} in ${who(group)}'s picture (Image ${g}): one and the same, drawn as this image shows.`;
+    manifest[m - 1] +=
+      ` They are the ${word} in ${who(group)}'s picture (Image ${g}): one and the same, drawn as this image shows.`;
   }
 
   // One image says who each person is: their sketch. The picture they were last seen in goes in
@@ -395,7 +406,11 @@ export function framePrompt(
     const people = fr.visible
       .filter((id) => !(pov && sheets.find((s) => s.id === id)?.isDreamer))
       .map((id) => nameOf(sheets, id));
-    const parts = [people.join(' and '), fr.place ? `at ${nameOf(sheets, fr.place)}` : '', pov ? "through the dreamer's eyes" : ''];
+    const parts = [
+      people.join(' and '),
+      fr.place ? `at ${nameOf(sheets, fr.place)}` : '',
+      pov ? "through the dreamer's eyes" : '',
+    ];
     const said = parts.filter(Boolean).join(', ');
     return said ? ` (${said})` : '';
   };
@@ -440,7 +455,13 @@ export function framePrompt(
     // goes in only for someone in it who has no sketch of their own, as who they are.
     if (x.use.role === 'lighting') {
       const own = seenHere.filter((id) => !imageOf.has(id) && (x.item.frame?.visible ?? []).includes(id));
-      if (own.length) attach(x.item.mediaId, 'identity', `${own.map((id) => nameOf(sheets, id)).join(' and ')}: as last drawn`, lastSeen(x, own));
+      if (own.length)
+        attach(
+          x.item.mediaId,
+          'identity',
+          `${own.map((id) => nameOf(sheets, id)).join(' and ')}: as last drawn`,
+          lastSeen(x, own),
+        );
       continue;
     }
     const r = x.use.relation;
@@ -459,17 +480,17 @@ export function framePrompt(
               `${pictureNo(x)}${shows}, just before the dream jumps to another place. Keep only its composition: where the main shapes and figures sit in the frame, so the two pictures cut together; the place and everything in it are this picture's own. The dream changes this: ${frame.fields.shift?.value ?? ''}.`
             : x.use.turned
               ? `${pictureNo(x)}${shows}, just before the dream changes it. Keep only its composition: where the main shapes and figures sit in the frame, so the two pictures cut together; this picture faces ${f.looksAt || 'another side of the place'}. The dream changes this: ${frame.fields.shift?.value ?? ''}.`
-            : `${pictureNo(x)}${shows}, just before the dream jumps. ${keepAcross(x)}; the dream changes this: ${frame.fields.shift?.value ?? ''}.`
+              : `${pictureNo(x)}${shows}, just before the dream jumps. ${keepAcross(x)}; the dream changes this: ${frame.fields.shift?.value ?? ''}.`
         : r === 'seat'
           ? `${pictureNo(x)}${shows}: the camera is where the dreamer is in it, at their eye height, turned toward ${f.looksAt || 'what this moment shows'}; what is beside them there is beside the camera here, seen from their place. Nothing else from it: not its camera, framing or angle.`
           : x.use.role === 'composition'
-          ? mockUp
-            ? // Where everyone is comes from the previs; the earlier picture gives how it all looks,
-              // from whichever side it was taken: "from the same side" of a picture facing another
-              // wall read to the gate as the prompt contradicting itself (0.51, 24 Sep).
-              `${pictureNo(x)}${shows}: the same place. Take only how it looks there (its surfaces, colours and light) and how anyone in it who is also in this picture looks; no one else from it comes into this one. Where everyone and everything is, and which way this picture looks, come from Image 1, the mock-up.`
-            : `${pictureNo(x)}${shows}: the same place from the same side. Take where everything and everyone in it are, and its light; this frame is framed ${f.distance}.`
-          : unsketched.length
+            ? mockUp
+              ? // Where everyone is comes from the previs; the earlier picture gives how it all looks,
+                // from whichever side it was taken: "from the same side" of a picture facing another
+                // wall read to the gate as the prompt contradicting itself (0.51, 24 Sep).
+                `${pictureNo(x)}${shows}: the same place. Take only how it looks there (its surfaces, colours and light) and how anyone in it who is also in this picture looks; no one else from it comes into this one. Where everyone and everything is, and which way this picture looks, come from Image 1, the mock-up.`
+              : `${pictureNo(x)}${shows}: the same place from the same side. Take where everything and everyone in it are, and its light; this frame is framed ${f.distance}.`
+            : unsketched.length
               ? lastSeen(x, unsketched)
               : `${pictureNo(x)}${shows}: take only ${x.use.carries.replace(/;.*$/, '')}. Nothing of its place, framing or background.`) +
         strays(x),
@@ -621,7 +642,11 @@ export function ghostPrompt(
   // happened goes in for how the change looks.
   const useFrom = g.kind !== 'view' && from && approved(from) && from.mediaId ? from : undefined;
   if (useFrom?.mediaId)
-    references.push({ media_id: useFrom.mediaId, role: 'identity', instruction: `the moment the change happened: how it looks` });
+    references.push({
+      media_id: useFrom.mediaId,
+      role: 'identity',
+      instruction: `the moment the change happened: how it looks`,
+    });
   // What stays is everything the change does not replace: "make their head an ice block" beside
   // "keep the same face and hair" read as a contradiction (0.51-0.54 on what it shows, 24 Sep).
   const what = g.state?.what ?? '';
@@ -645,7 +670,9 @@ export function ghostPrompt(
         : 'the same shape and materials, the same angle, the same plain background';
   // Turned into something else entirely, the whole of it is the change: "form is now roller
   // coaster" beside "keep the same shape and materials" asked for both (24 Sep).
-  const change = becomes ? `it has turned into ${aNoun(g.state?.now ?? '')}, entirely` : `${g.state?.what} is now ${g.state?.now}`;
+  const change = becomes
+    ? `it has turned into ${aNoun(g.state?.now ?? '')}, entirely`
+    : `${g.state?.what} is now ${g.state?.now}`;
   // Its look in words, as a moment lists what is in it: said only through its image, an edit read
   // as unclear about what it shows (0.53 against 0.64, 24 Sep).
   const look = LOOK[sheet.kind]
@@ -680,7 +707,10 @@ export function ghostPrompt(
     ...lines,
     // Turned into something else entirely, its colours are those of what it is now ("grey heron",
     // "red cardigan"), never of its blouse and skin before (heron dream, 26 Sep).
-    styleBlock(style, becomes ? coloursIn(g.state?.now ?? '') : toldColours(sheet), { fromImages: true, noSkin: becomes }),
+    styleBlock(style, becomes ? coloursIn(g.state?.now ?? '') : toldColours(sheet), {
+      fromImages: true,
+      noSkin: becomes,
+    }),
     // An edit of a reference sheet keeps the plain ends it was measured with: said as what is
     // there, the edit read as more likely to contradict itself (0.35 against 0.27, 24 Sep).
     `One single picture, not a sheet or a grid. ${NO_WORDS_EDIT}`,

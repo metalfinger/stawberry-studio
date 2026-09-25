@@ -253,14 +253,17 @@ export type Prep = {
   ms: number;
 };
 
-
 /**
  * Each scene its floor plan left without one, planned once more, told to give everyone and
  * everything in its moments a spot: a plan that leaves someone or something out is dropped whole,
  * and nothing after this plans it again. In one run of three the night bus's plan gave the brother's
  * lantern no spot, and the bus had no plan, so none of its moments had a camera worked out (25 Sep).
  */
-export async function planUnplanned(block: NonNullable<StoreDeps['block']>, b: Breakdown, only?: string[]): Promise<Breakdown> {
+export async function planUnplanned(
+  block: NonNullable<StoreDeps['block']>,
+  b: Breakdown,
+  only?: string[],
+): Promise<Breakdown> {
   const unplanned = b.scenes.filter((sc) => !sc.blocking && (!only || only.includes(sc.id))).map((sc) => sc.id);
   if (!unplanned.length) return b;
   const named = (id: string) =>
@@ -272,7 +275,9 @@ export async function planUnplanned(block: NonNullable<StoreDeps['block']>, b: B
       .filter((sc) => unplanned.includes(sc.id))
       .map((sc) => {
         const ids = [
-          ...new Set(sc.moments.flatMap((m) => [...m.visible, ...m.things, ...(throughEyes(b, m) ? [throughEyes(b, m)!] : [])])),
+          ...new Set(
+            sc.moments.flatMap((m) => [...m.visible, ...m.things, ...(throughEyes(b, m) ? [throughEyes(b, m)!] : [])]),
+          ),
         ];
         return [
           sc.id,
@@ -318,7 +323,10 @@ export async function planShots(
   const [changes, blockedOrNot] = await Promise.all([
     deps.supervise ? deps.supervise(draft).catch(() => []) : Promise.resolve([] as Change[]),
     deps.block && draft.scenes.some((sc) => !sc.blocking)
-      ? deps.block(draft).then((r) => r.breakdown).catch(() => draft)
+      ? deps
+          .block(draft)
+          .then((r) => r.breakdown)
+          .catch(() => draft)
       : Promise.resolve(draft),
   ]);
   let blocked = blockedOrNot;
@@ -357,7 +365,10 @@ export async function planShots(
           if (where && deps.dir) {
             const path = join(deps.dir, `plan-${c.id}${suffix}.png`);
             mkdirSync(deps.dir, { recursive: true });
-            await Bun.write(path, previsImage(where, c.eye!, m?.eyes === 'dreamer' && dreamer ? [dreamer] : [], called));
+            await Bun.write(
+              path,
+              previsImage(where, c.eye!, m?.eyes === 'dreamer' && dreamer ? [dreamer] : [], called),
+            );
             into.previs[c.id] = path;
           }
           if (deps.shot && m) {
@@ -456,8 +467,11 @@ export async function planShots(
       }
     }
   }
-  prep.blocking = Object.fromEntries(blocked.scenes.filter((sc) => sc.blocking).map((sc) => [sc.id, sc.blocking as Blocking]));
-  if (judged) prep.leaves = Object.fromEntries(draft.scenes.flatMap((sc) => sc.moments.map((m) => [m.id, m.leaves ?? []])));
+  prep.blocking = Object.fromEntries(
+    blocked.scenes.filter((sc) => sc.blocking).map((sc) => [sc.id, sc.blocking as Blocking]),
+  );
+  if (judged)
+    prep.leaves = Object.fromEntries(draft.scenes.flatMap((sc) => sc.moments.map((m) => [m.id, m.leaves ?? []])));
   prep.ms = Date.now() - t0;
   return prep;
 }
@@ -473,9 +487,7 @@ export function reconcileGhosts(plan: ContinuityPlan, frames: Item[]): Continuit
   const same = (a: ContinuityPlan['ghosts'][number], b: ContinuityPlan['ghosts'][number]) =>
     a.kind === b.kind &&
     a.of === b.of &&
-    (a.kind === 'view'
-      ? a.looksAt === b.looksAt
-      : a.state?.what === b.state?.what && a.state?.now === b.state?.now);
+    (a.kind === 'view' ? a.looksAt === b.looksAt : a.state?.what === b.state?.what && a.state?.now === b.state?.now);
   const used = new Set(frames.map((f) => f.id));
   const rename = new Map<string, string>();
   for (const g of plan.ghosts) {
@@ -525,7 +537,10 @@ export function treeInputOf(s: Session, threshold: number): TreeInput | null {
     style: s.style ?? null,
     downgraded: s.draft?.downgraded ?? [],
     goals: Object.fromEntries(
-      Object.keys(s.state.goals).map((g) => [g, { status: goalStatus(s.state.goals[g], threshold), asked: s.askCounts[g] ?? 0 }]),
+      Object.keys(s.state.goals).map((g) => [
+        g,
+        { status: goalStatus(s.state.goals[g], threshold), asked: s.askCounts[g] ?? 0 },
+      ]),
     ),
   };
 }
@@ -569,7 +584,11 @@ export function storyboardState(
 /** For "storyboard complete?": who and what else is on a moment's plan, and how everyone looks by now. */
 export function around(
   plans: Breakdown,
-  c: { id: string; own: { who: string; what: string; now: string }[]; states: { who: string; what: string; now: string }[] },
+  c: {
+    id: string;
+    own: { who: string; what: string; now: string }[];
+    states: { who: string; what: string; now: string }[];
+  },
   m: Moment,
   called: (id: string) => string,
   dreamer: string | undefined,
@@ -577,7 +596,9 @@ export function around(
   const named = new Set([...m.visible, ...m.things, ...(m.eyes === 'dreamer' && dreamer ? [dreamer] : [])]);
   const there = (planBy(plans, m.id)?.spots ?? []).filter((s) => !named.has(s.id)).map((s) => s.name ?? called(s.id));
   // A change of its whole form is already its name ("the roller coaster"); a part's change is said.
-  const now = [...c.own, ...c.states].filter((st) => !isWhole(st)).map((st) => `${called(st.who)}: ${st.what} is ${st.now}`);
+  const now = [...c.own, ...c.states]
+    .filter((st) => !isWhole(st))
+    .map((st) => `${called(st.who)}: ${st.what} is ${st.now}`);
   return { there: [...new Set(there)], now };
 }
 
@@ -600,7 +621,15 @@ export async function storyboardCheck(
   // a shot framed badly waits, and Jev is not asked about it.
   if (framed.length) {
     const reasons = framed.map((f) => `framing: ${f}`);
-    recordJev({ kind: 'transition', stage: STORYBOARD.from, to: STORYBOARD.from, moment: m.id, facts: [], decision: 'held', reason: reasons.join('; ') });
+    recordJev({
+      kind: 'transition',
+      stage: STORYBOARD.from,
+      to: STORYBOARD.from,
+      moment: m.id,
+      facts: [],
+      decision: 'held',
+      reason: reasons.join('; '),
+    });
     return { ok: false, view, readings: [], reasons };
   }
   const answers = await atSite('storyboard', () => askFacts(STORYBOARD, m.id, state, jev));
@@ -690,7 +719,13 @@ export type StoreDeps = {
     transcript: string,
   ) => Promise<Record<string, Detail> | null>;
   /** A moment's shot briefed from its worked-out view, as a director of photography would. */
-  shot?: (moment: string, facts: string, medium: string, mustName: string[], before?: string[]) => Promise<string | null>;
+  shot?: (
+    moment: string,
+    facts: string,
+    medium: string,
+    mustName: string[],
+    before?: string[],
+  ) => Promise<string | null>;
   /** The lasting changes to how someone looks that the breakdown missed, read by a script supervisor. */
   supervise?: (b: Breakdown) => Promise<Change[]>;
   /** A person's correction of a picture, as an instruction for its next version; "" when its instructions already give it. */
@@ -839,7 +874,8 @@ export function asInstruction(question: string): string {
     [/^Is (.+?)'s (\w+) (.+)\?$/, (_, a, b, c) => `${a}'s ${b} is ${c}`],
     [
       /^Is everything in this frame declared\?/,
-      () => 'nothing is in the picture that the dream does not have: no other person, face, hand, limb, creature or tool',
+      () =>
+        'nothing is in the picture that the dream does not have: no other person, face, hand, limb, creature or tool',
     ],
     // The palette by name: a hex code in a prompt is drawn as a label, and "make this true: Are the
     // image's values confined to this palette: #001E3C…" read as a contradiction to the gate (24 Sep).
@@ -866,6 +902,9 @@ const WORDING =
   /^(its instructions may contradict|someone may be drawn twice|what it shows is not clear|what to take from each image)/;
 
 /** A picture the confidence gate held back, with its reasons. */
+/** A finding that says only that the words leave something open, which a picture can decide. */
+const unclearOnly = (f: string) => f.startsWith('what it shows is not clear enough to draw');
+
 class Held extends Error {
   constructor(readonly findings: string[]) {
     super(`held before drawing: ${findings.join('; ')}`);
@@ -1003,8 +1042,10 @@ export class SessionStore {
     const s = this.sessions.get(id);
     const it = [...(s?.build?.items ?? []), ...(s?.build?.frames ?? [])].find((i) => i.id === itemId);
     if (!s?.build || !s.style || !it) return null;
-    if (it.kind !== 'cut' && it.kind !== 'ghost') return { prompt: sheetPrompt(it, s.style), references: [], held: it.held };
-    if (it.kind === 'ghost') return { prompt: '(an in-between picture: see its ghost plan)', references: [], held: it.held };
+    if (it.kind !== 'cut' && it.kind !== 'ghost')
+      return { prompt: sheetPrompt(it, s.style), references: [], held: it.held };
+    if (it.kind === 'ghost')
+      return { prompt: '(an in-between picture: see its ghost plan)', references: [], held: it.held };
     const built = framePrompt(it, s.build.items, s.style, this.plannedInputs(s, it), it.layout?.mediaId);
     return { prompt: built.prompt, references: built.references, held: it.held };
   }
@@ -1142,11 +1183,11 @@ export class SessionStore {
         // and the old man was put through the gate forty turns running while no moment was ever drawn
         // (night market, 26 Sep). Asked twice and held again: left undrawn, so the sketches settle.
         if (it.heldAskedAt === turnNow - 1) {
-          if (this.deps.reviseItem) it.fields = await this.deps.reviseItem(it.name, it.fields, renderTranscript(s.transcript));
+          if (this.deps.reviseItem)
+            it.fields = await this.deps.reviseItem(it.name, it.fields, renderTranscript(s.transcript));
           it.held = undefined;
           await this.startSketch(s, it, turnNow);
-        } else if ((it.heldAsks ?? 0) >= 2)
-          Object.assign(it, { status: 'failed', error: `not drawn: still unsure how it looks (${(it.held ?? []).join('; ')})` });
+        } else if ((it.heldAsks ?? 0) >= 2) await this.guessOrLeave(s, it, turnNow);
       }
     // Their answer to the sketches is applied before the next move is chosen: it can settle the
     // last one, or start a new version.
@@ -1397,9 +1438,9 @@ export class SessionStore {
         const ask = held.filter((i) => (i.heldAsks ?? 0) < 2);
         extras.held = ask.map((i) => (i.isDreamer ? 'you' : i.name));
         for (const i of ask) Object.assign(i, { heldAsks: (i.heldAsks ?? 0) + 1, heldAskedAt: turnNow });
-        // Asked twice and still unsure: left undrawn, and said so.
+        // Asked twice and still unsure: drawn on our guess, or left undrawn and said so.
         for (const i of held.filter((x) => (x.heldAsks ?? 0) >= 2 && !ask.includes(x)))
-          Object.assign(i, { status: 'failed', error: `not drawn: still unsure how it looks (${(i.held ?? []).join('; ')})` });
+          await this.guessOrLeave(s, i, turnNow);
       }
     }
     if (move.kind === 'retell' && s.resumed) extras.toldBefore = true;
@@ -1746,7 +1787,11 @@ export class SessionStore {
     if (this.deps.reword && WORDS.some((k) => /\byou(r|rs|rself)?\b/i.test(frame.fields[k]?.value ?? ''))) {
       const probe = framePrompt(frame, s.build.items, s.style, this.plannedInputs(s, frame), frame.layout?.mediaId);
       const fields = await this.deps
-        .reword(probe.prompt, ['its words call the dreamer "you": put every one of them in the third person'], frame.fields)
+        .reword(
+          probe.prompt,
+          ['its words call the dreamer "you": put every one of them in the third person'],
+          frame.fields,
+        )
         .catch(() => null);
       if (fields) {
         const changed = Object.keys(fields).filter((k) => fields[k]?.value !== frame.fields[k]?.value);
@@ -1819,9 +1864,20 @@ export class SessionStore {
     if (view && this.deps.shot && frame.shot?.view !== view) {
       // How everyone is placed comes from what has happened in this place so far.
       const scene = s.draft?.breakdown?.scenes.find((sc) => sc.moments.some((m) => m.id === frame.id));
-      const before = (scene?.moments ?? []).slice(0, scene?.moments.findIndex((m) => m.id === frame.id)).map((m) => m.action);
+      const before = (scene?.moments ?? [])
+        .slice(
+          0,
+          scene?.moments.findIndex((m) => m.id === frame.id),
+        )
+        .map((m) => m.action);
       const text = await this.deps
-        .shot(frame.fields.action?.value ?? frame.name, view, mediumOf(s.style), (frame.frame?.plan?.sees ?? []).map(called), before)
+        .shot(
+          frame.fields.action?.value ?? frame.name,
+          view,
+          mediumOf(s.style),
+          (frame.frame?.plan?.sees ?? []).map(called),
+          before,
+        )
         .catch(() => null);
       frame.shot = text ? { text, view } : undefined;
     }
@@ -1915,7 +1971,12 @@ export class SessionStore {
     // Rendered every time, and known by what it is: the picture itself. Known by what it was made
     // from, a previs drawn before the audience had seats was used again after they had them (24 Sep).
     // Through the dreamer's eyes, the dreamer is the camera, not in the picture.
-    const png = previsImage(plan, eye, frame.frame?.eyes === 'dreamer' && dreamer ? [dreamer] : [], (id) => names[id] ?? id);
+    const png = previsImage(
+      plan,
+      eye,
+      frame.frame?.eyes === 'dreamer' && dreamer ? [dreamer] : [],
+      (id) => names[id] ?? id,
+    );
     const key = new Bun.CryptoHasher('sha256').update(png).digest('hex');
     if (frame.layout?.key === key) return frame.layout.mediaId;
     const shot = s.production?.result?.ids[`shot_${cut.shot.replace(/\./g, '_')}`];
@@ -2096,7 +2157,10 @@ export class SessionStore {
         sc.moments.some((x) => x.place === pl && begun.has(x.id)),
       ),
     );
-    sc.blocking = { ...next, ...(next.places || Object.keys(keep).length ? { places: { ...next.places, ...keep } } : {}) };
+    sc.blocking = {
+      ...next,
+      ...(next.places || Object.keys(keep).length ? { places: { ...next.places, ...keep } } : {}),
+    };
     s.prep.blocking[sc.id] = sc.blocking;
     (s.prep.storyboard ??= {})[frame.id] = check;
     await this.replan(s);
@@ -2109,8 +2173,7 @@ export class SessionStore {
     // In-between references the plan now needs and none was drawn for are added, to be drawn.
     const ids = s.production?.result?.ids ?? {};
     for (const g of buildGhosts(plan))
-      if (!s.build.frames.some((f) => f.id === g.id))
-        s.build.frames.push({ ...g, nodeId: ids[g.ghost?.of ?? ''] });
+      if (!s.build.frames.some((f) => f.id === g.id)) s.build.frames.push({ ...g, nodeId: ids[g.ghost?.of ?? ''] });
     // And one it no longer needs is not drawn: a first look's in-between picture, planned before
     // first looks were known to change nothing, waited to be drawn (Meads g4, g5, 25 Sep). One that
     // is drawn or drawing is kept; it was paid for.
@@ -2139,7 +2202,8 @@ export class SessionStore {
     const f = frame.frame;
     if (!b || !f) return { out: [], in: [] };
     const action = frame.fields.action?.value ?? frame.name;
-    const name = (p: Breakdown['people'][number]) => (p.is_dreamer ? 'the dreamer (the person telling the dream)' : p.name);
+    const name = (p: Breakdown['people'][number]) =>
+      p.is_dreamer ? 'the dreamer (the person telling the dream)' : p.name;
     const questions: Record<string, Question> = {};
     for (const p of b.people)
       questions[`${f.visible.includes(p.id) ? 'out' : 'in'}_${p.id}`] = {
@@ -2365,7 +2429,24 @@ export class SessionStore {
    * Start one sketch. The engine calls run in the background; their result, and every later
    * change of the sketch's state, comes back through the turn queue.
    */
-  private async startSketch(s: Session, item: Item, turn: number): Promise<void> {
+  /**
+   * A sketch still held once they were asked twice. Held only because its words leave it unclear,
+   * it is drawn once on our guess, a picture deciding what the words left open: the father, held for
+   * his age and build, took three moments with him when he was left undrawn (lighthouse, 26 Sep).
+   * Held for anything else, or already guessed, it is left undrawn.
+   */
+  private async guessOrLeave(s: Session, it: Item, turn: number): Promise<void> {
+    const held = it.held ?? [];
+    if (!it.guessed && held.length && held.every(unclearOnly)) {
+      it.guessed = true;
+      it.held = undefined;
+      await this.startSketch(s, it, turn, { guess: true });
+      return;
+    }
+    Object.assign(it, { status: 'failed', error: `not drawn: still unsure how it looks (${held.join('; ')})` });
+  }
+
+  private async startSketch(s: Session, item: Item, turn: number, opts: { guess?: boolean } = {}): Promise<void> {
     item.startedAtTurn = turn;
     // A place is sketched as itself: the story's things have pictures of their own, and drawn into
     // the place the paper boat lay in the field before it was ever put down (lighthouse, 26 Sep).
@@ -2468,7 +2549,8 @@ export class SessionStore {
           snapshot.fields = fields;
           findings = await this.gateFindings(s, snapshot, sheetPrompt(snapshot, style), [], []);
         }
-        if (findings.length) throw new Held(findings);
+        if (findings.length && opts.guess && findings.every(unclearOnly)) snapshot.overrode = findings;
+        else if (findings.length) throw new Held(findings);
         return sheets.start({
           item: snapshot,
           style,
@@ -2491,6 +2573,7 @@ export class SessionStore {
               it.repairFor = snapshot.repairFor;
               it.gate = snapshot.gate;
               it.held = undefined;
+              if (snapshot.overrode) it.overrode = snapshot.overrode;
               spend(x, r.usd);
             }),
           ).then(() => this.watch(s.id)),
@@ -2546,7 +2629,8 @@ export class SessionStore {
             // A verdict on a take that has since been redrawn fails harmlessly: the redraw moved
             // the production on. Only a failure on the take still shown is theirs to know.
             const it = [...(x.build?.items ?? []), ...(x.build?.frames ?? [])].find((i) => i.id === item.id);
-            if (it && it.mediaId === item.mediaId) it.error = `recording their verdict failed: ${String(e).slice(0, 200)}`;
+            if (it && it.mediaId === item.mediaId)
+              it.error = `recording their verdict failed: ${String(e).slice(0, 200)}`;
           }),
         ),
       );
@@ -2748,7 +2832,10 @@ export class SessionStore {
    * (a viewer's hands kept in one picture are kept by every edit of it, 23 Sep); and a person or
    * room that does not match what the moment follows.
    */
-  private seriousFailures(it: Item, style?: StyleOption | null): { factAt: number[]; fixes: Criterion[]; serious: string[] } {
+  private seriousFailures(
+    it: Item,
+    style?: StyleOption | null,
+  ): { factAt: number[]; fixes: Criterion[]; serious: string[] } {
     const c = it.check;
     if (!c || c.error) return { factAt: [], fixes: [], serious: [] };
     // In one colour, a colour of its own is passed on to every picture drawn from it.
@@ -2876,7 +2963,11 @@ export class SessionStore {
       const startable = (i: Item) =>
         (i.needs ?? []).every((n) => {
           const x = frames.find((y) => y.id === n);
-          return !x || x.status === 'failed' || (x.status === 'ready' && (x.kind === 'ghost' || !!x.review || !!x.continuityApproved));
+          return (
+            !x ||
+            x.status === 'failed' ||
+            (x.status === 'ready' && (x.kind === 'ghost' || !!x.review || !!x.continuityApproved))
+          );
         });
       const drawing = [...(s?.build?.items ?? []), ...frames].some(
         (i) => i.status === 'drawing' || (i.status === 'waiting' && s?.phase === 'frames' && startable(i)),

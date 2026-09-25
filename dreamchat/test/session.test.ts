@@ -564,9 +564,8 @@ describe('a whole conversation', () => {
     return { store, id, framesStarted, verdicts, statuses, host, reaction };
   }
 
-  test('a sketch the gate still holds after two asks is left undrawn, and the moments begin', async () => {
-    // Held on every reading: the board's sketch. Put through the gate again every turn, it once held
-    // the sketches forty turns running and no moment was drawn (night market, 26 Sep).
+  // The board's sketch is held on every reading, for what `reading` says; they are asked twice.
+  async function askedTwice(reading: (question: string, prompt: string) => number) {
     const gate: StoreDeps['gate'] = async (state, questions) => ({
       questions,
       state,
@@ -575,12 +574,7 @@ describe('a whole conversation', () => {
           k,
           {
             type: 'noul' as const,
-            noul:
-              k === 'contradicts' && /A single clear picture of/.test(state)
-                ? 0.9
-                : k === 'contradicts' || k === 'twice'
-                  ? 0.05
-                  : 0.9,
+            noul: reading(k, state),
           },
         ]),
       ),
@@ -639,12 +633,40 @@ describe('a whole conversation', () => {
     const held = () => store.get(id)!.build!.items.find((i) => i.kind === 'prop')!;
     expect(held().held?.length).toBeGreaterThan(0);
     let phase = store.get(id)!.phase;
-    for (let i = 0; i < 6 && phase === 'review'; i++) {
+    for (let i = 0; i < 9 && phase === 'review'; i++) {
       phase = (await store.message(id, 'it is just a plain board, they look right')).phase;
       await store.settle(id, 200);
     }
+    return { held, phase, store, id };
+  }
+
+  test('a sketch the gate still holds after two asks is left undrawn, and the moments begin', async () => {
+    // Held on every reading: the board's sketch. Put through the gate again every turn, it once held
+    // the sketches forty turns running and no moment was drawn (night market, 26 Sep).
+    const { held, phase } = await askedTwice((k, prompt) =>
+      k === 'contradicts' && /A single clear picture of/.test(prompt)
+        ? 0.9
+        : k === 'contradicts' || k === 'twice'
+          ? 0.05
+          : 0.9,
+    );
     expect(held().status).toBe('failed');
     expect(held().error).toContain('not drawn');
+    expect(phase).toBe('frames');
+  });
+
+  test('a sketch held only because its words leave it unclear is drawn on our guess after two asks', async () => {
+    // The father, held for his age and build, took three moments with him (lighthouse, 26 Sep).
+    const { held, phase } = await askedTwice((k, prompt) =>
+      k === 'clear' && /A single clear picture of/.test(prompt)
+        ? 0.3
+        : k === 'contradicts' || k === 'twice'
+          ? 0.05
+          : 0.9,
+    );
+    expect(held().status).not.toBe('failed');
+    expect(held().guessed).toBe(true);
+    expect(held().overrode?.[0]).toContain('not clear enough to draw');
     expect(phase).toBe('frames');
   });
 
