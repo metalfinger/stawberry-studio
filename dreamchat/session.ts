@@ -1817,6 +1817,12 @@ export class SessionStore {
       built = framePrompt(frame, s.build.items, s.style, this.plannedInputs(s, frame), layout);
       findings = await this.gateFindings(s, frame, built.prompt, built.references, inView);
     }
+    // At odds on the line that says what the camera sees, the plan is what is at odds: the balloons
+    // planned as a block hiding the couple, the room's front named for a sofa standing in its middle
+    // (Meads m9, 25 Sep). Planned once more as for "storyboard complete?", told what was found.
+    const onCamera = findings.filter((f) => f.includes('around: "What the camera sees'));
+    if (onCamera.length && view && (await this.replanForHold(s, frame, { view, reasons: onCamera })))
+      return this.startFrame(s, frame, turn, before);
     if (findings.length) {
       Object.assign(frame, { status: 'waiting', held: findings });
       return;
