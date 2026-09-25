@@ -182,6 +182,46 @@ export function factQuestions(t: Transition, key: string): Record<string, Questi
   );
 }
 
+/** How near its bar an answer must be for Jev to be asked once more. */
+export const CLOSE = 0.08;
+
+type Answers = Record<string, { type: string; noul?: number }> | null;
+
+/**
+ * Jev's answers to a transition's facts. The same question asked again moves by about 0.05, so
+ * where any answer is that close to its bar Jev is asked once more and the two are averaged: a
+ * close call is not decided by the noise. On the same plans, two moments flipped from cleared to
+ * held between runs on answers of 0.61 and 0.59 (25 Sep).
+ */
+export async function askFacts(
+  t: Transition,
+  key: string,
+  state: string,
+  jev: (state: string, questions: Record<string, Question>) => Promise<{ answers: Answers }>,
+  within = CLOSE,
+): Promise<Answers> {
+  const questions = factQuestions(t, key);
+  const first = (await jev(state, questions)).answers;
+  const close = t.facts.some((f) => {
+    const a = first?.[`${f.id}_${key}`];
+    return a?.type === 'noul' && typeof a.noul === 'number' && Math.abs(a.noul - f.bar) < within;
+  });
+  if (!first || !close) return first;
+  const again = (await jev(state, questions)).answers;
+  if (!again) return first;
+  return Object.fromEntries(
+    Object.entries(first).map(([k, a]) => {
+      const b = again[k];
+      return [
+        k,
+        a.type === 'noul' && typeof a.noul === 'number' && b?.type === 'noul' && typeof b.noul === 'number'
+          ? { ...a, noul: (a.noul + b.noul) / 2 }
+          : a,
+      ];
+    }),
+  );
+}
+
 /** One fact as Jev answered it, against its bar. */
 export type Reading = { question: string; answer: number; bar: number; ok: boolean };
 

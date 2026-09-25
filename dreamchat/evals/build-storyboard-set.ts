@@ -2,7 +2,10 @@
 // the check reads (the moment, and its shot as the previs rendered it), with what the check should
 // decide and why. Written to evals/storyboard.json, so a run needs no saved conversation.
 //
-//   bun run evals/build-storyboard-set.ts <meads first-plans json>
+//   bun run evals/build-storyboard-set.ts
+//
+// Its sources are slim copies of saved dreams in evals/sources (the breakdown, its plans and the
+// views checked), frozen when each case was labelled: a dream planned again has other views.
 //
 // Should clear: shots whose pictures were approved (the ice head, the theater's roller coaster) and
 // a shot checked by eye (the drive over the bridge). Should hold: shots with a fault seen in their
@@ -15,13 +18,8 @@ import { around, calledIn, type Session, storyboardState } from '../session';
 
 type Case = { id: string; dream: string; moment: string; expect: 'clear' | 'hold'; why: string; state: string };
 
-const state = (id: string) => join(import.meta.dir, '..', 'state', `${id}.json`);
-const read = (path: string) => JSON.parse(readFileSync(path, 'utf8')) as Session;
-const firstPlans = process.argv[2];
-if (!firstPlans) {
-  console.error('usage: bun run evals/build-storyboard-set.ts <meads first-plans json>');
-  process.exit(1);
-}
+const read = (name: string) =>
+  JSON.parse(readFileSync(join(import.meta.dir, 'sources', `${name}.json`), 'utf8')) as Session;
 
 /**
  * The state the check reads for one moment of a saved dream. `view` is the shot as it was checked;
@@ -54,7 +52,7 @@ function caseOf(s: Session, dream: string, moment: string, view: string, expect:
 const cases: Case[] = [];
 
 // The ice head: every picture approved, drawn from these views.
-const ice = read(state('dream-0924-203532-5454'));
+const ice = read('ice-head');
 for (const [m, why] of [
   ['m1', 'approved: the two of them talking by the autoclave, side on'],
   ['m2', 'approved at the second take: she walks off to the far end, seen from behind her'],
@@ -64,7 +62,7 @@ for (const [m, why] of [
   cases.push(caseOf(ice, 'ice-head', m, 'now', 'clear', why));
 
 // The theater: the roller coaster from the dreamer's seat, approved at the seventh take.
-const theater = read(state('dream-0924-102852-e11a'));
+const theater = read('theater');
 cases.push(
   caseOf(
     theater,
@@ -77,7 +75,7 @@ cases.push(
 );
 
 // Meads's house, first plans: every shot had a fault seen in its previs.
-const first = read(firstPlans);
+const first = read('meads-first');
 for (const [m, why] of [
   ['m1', 'the camera faces the dreamer head-on with the village behind it'],
   ['m2', 'the street is a metre-high block the juggler is "sitting on", half hidden by it'],
@@ -92,7 +90,7 @@ for (const [m, why] of [
   cases.push(caseOf(first, 'meads-first', m, first.prep!.storyboard![m].view, 'hold', why));
 
 // Meads's house, second plans: the drive over the bridge checked by eye; the rest still wrong.
-const second = read(state('dream-0925-115615-bca7'));
+const second = read('meads-second');
 cases.push(
   caseOf(
     second,
@@ -110,6 +108,21 @@ for (const [m, why] of [
   ['m8', 'there is no house to be dropped off at'],
 ] as const)
   cases.push(caseOf(second, 'meads-second', m, second.prep!.storyboard![m].view, 'hold', why));
+
+// Meads's house, third plans (Jev's plan facts): close calls on the camera, checked by eye.
+const third = read('meads-third');
+cases.push(
+  caseOf(
+    third,
+    'meads-third',
+    'm5',
+    third.prep!.storyboard!.m5.view,
+    'clear',
+    'checked by eye: across the stove that fills the room, to the woman cooking at it',
+  ),
+);
+// Its m6 (the aunt cut by the edge, the dreamer a speck) is a fault of framing, which code now
+// measures off the render and holds before Jev is asked: not a case for Jev's facts.
 
 writeFileSync(join(import.meta.dir, 'storyboard.json'), `${JSON.stringify(cases, null, 1)}\n`);
 console.log(

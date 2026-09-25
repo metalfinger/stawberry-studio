@@ -8,6 +8,110 @@ import { type Breakdown, type Detail, type Moment, type State, details, moments 
 
 const SAID_BAR = 0.6;
 const STATE_BAR = 0.7;
+/**
+ * How sure Jev must be to overrule the breakdown on who is a group or a crowd (at or above the bar,
+ * yes; at or below one minus it, no; between, the breakdown's own reading stands), and on what a
+ * change is. Set from evals/kinds.json (25 Sep): groups 0.72-0.90 and single people 0.26-0.39 on
+ * "more than one person"; crowds 0.79-0.85 and everyone else 0.06-0.19 on "a crowd".
+ */
+export const KIND_BARS = { several: 0.55, crowd: 0.6, look: 0.3, whole: 0.5 } as const;
+
+/** What a dream calls someone or something, for a question about them. */
+const nameIn = (b: Breakdown, id: string) =>
+  b.people.find((p) => p.id === id)?.is_dreamer
+    ? 'the dreamer'
+    : (b.people.find((p) => p.id === id)?.name ??
+      b.things.find((t) => t.id === id)?.name ??
+      b.places.find((l) => l.id === id)?.name ??
+      id);
+
+/**
+ * What a lasting change is, asked of Jev: a change in how something looks at all (not where it is
+ * or what it does), and whether it turns into something else altogether rather than changing a
+ * part. A word list decided the second ("form", "itself"); a change of "location" was kept as a look.
+ */
+export function changeQuestions(
+  b: Breakdown,
+  list: { key: string; who: string; what: string; now: string }[],
+): Record<string, Question> {
+  const q: Record<string, Question> = {};
+  for (const c of list) {
+    const who = nameIn(b, c.who);
+    q[`look_${c.key}`] = {
+      type: 'noul',
+      instructions: `In a dream, ${who} changes: "${c.what}" becomes "${c.now}". Is that a change in how ${who} looks, rather than in where ${who} is or what ${who} does?`,
+      criteria: { true: 'how it looks changes', false: 'where it is, or what it does, changes; not how it looks' },
+    };
+    q[`whole_${c.key}`] = {
+      type: 'noul',
+      instructions: `In a dream, ${who}'s "${c.what}" becomes "${c.now}". Does ${who} turn into something else altogether (a sofa into a roller coaster, a man into a bird), rather than one part or quality of it changing (a head into a block of ice, hair turning white)?`,
+      criteria: {
+        true: 'it turns into something else altogether',
+        false: 'one part or quality of it changes; it is still what it was',
+      },
+    };
+  }
+  return q;
+}
+
+/**
+ * Who is a group and who is a crowd, asked of Jev: the breakdown's flags and a word list missed "a
+ * couple of people", and a crowd drawn as a person was sketched standing in a line (24 Sep).
+ */
+export function crowdQuestions(b: Breakdown): Record<string, Question> {
+  const q: Record<string, Question> = {};
+  for (const p of b.people.filter((x) => !x.is_dreamer)) {
+    const who = `"${p.name}"${p.fields.identity?.value ? ` (${p.fields.identity.value})` : ''}`;
+    q[`several_${p.id}`] = {
+      type: 'noul',
+      instructions: `In a dream, does ${who} stand for more than one person: a family, a couple, a band, a crowd?`,
+      criteria: { true: 'more than one person', false: 'one person' },
+    };
+    q[`crowd_${p.id}`] = {
+      type: 'noul',
+      instructions: `In a dream, is ${who} a crowd: many people seen together, none of them looked at or known on their own, like an audience, passers-by, or the other people in a room?`,
+      criteria: {
+        true: 'a crowd: many people, none of them anyone in particular',
+        false: 'one person, or a few people the dream looks at or knows: a family, a couple, friends',
+      },
+    };
+  }
+  return q;
+}
+
+/** A change's kind from Jev's answers: undefined where Jev gave no reading. */
+export function changeKind(answers: Record<string, Answer> | null, key: string): { look?: boolean; whole?: boolean } {
+  const n = (k: string) => {
+    const a = answers?.[k];
+    return a?.type === 'noul' ? a.noul : undefined;
+  };
+  const look = n(`look_${key}`);
+  const whole = n(`whole_${key}`);
+  return {
+    ...(look !== undefined ? { look: look >= KIND_BARS.look } : {}),
+    ...(whole !== undefined ? { whole: whole >= KIND_BARS.whole } : {}),
+  };
+}
+
+/**
+ * The script supervisor's finds, each read by Jev as the breakdown's own changes are: kept only if
+ * it changes how something looks, and marked when it turns something into something else.
+ */
+export async function judgeChanges<
+  C extends { moment: string; who: string; what: string; now: string; whole?: boolean },
+>(jev: JevFn, b: Breakdown, found: C[]): Promise<C[]> {
+  if (!found.length) return found;
+  const keyed = found.map((c, i) => ({ key: `s${i}`, who: c.who, what: c.what, now: c.now }));
+  const call = await jev(
+    JSON.stringify({ changes: keyed.map((k) => `${nameIn(b, k.who)}: ${k.what} becomes ${k.now}`) }),
+    changeQuestions(b, keyed),
+  );
+  return found.flatMap((c, i) => {
+    const kind = changeKind(call.answers, `s${i}`);
+    if (kind.look === false && kind.whole !== true) return [];
+    return [{ ...c, ...(kind.whole !== undefined ? { whole: kind.whole } : {}) }];
+  });
+}
 
 export type GroundingNote = { path: string; label: string; value: string; p: number; evidence: number | null };
 
@@ -52,7 +156,9 @@ export function groundingQuestions(b: Breakdown, transcript: Exchange[]): Record
             false: 'it describes how they ordinarily look, or what the place is and holds, or says nothing is known',
           },
         };
+  Object.assign(q, crowdQuestions(b), changeQuestions(b, changes(b)));
   // A moment is judged on what is in it, not on how near it is shown: the same told moment,
+
   // framed wide and then close, is still what they said.
   for (const m of moments(b))
     if (m.said) add(m.id, `this was in the dream, however near or far it is shown — "${m.action}"?`);
@@ -379,6 +485,40 @@ export async function ground(
       m.said = false;
       downgraded.push({ path: m.id, label: 'moment', value: m.action, p: Number(p.toFixed(2)), evidence });
     }
+  }
+  // Who is a group or a crowd, where Jev is sure; between the bars the breakdown's reading stands.
+  for (const p of out.people.filter((x) => !x.is_dreamer)) {
+    const n = (k: string) => {
+      const a = call.answers?.[`${k}_${p.id}`];
+      return a?.type === 'noul' ? a.noul : undefined;
+    };
+    const crowd = n('crowd');
+    const several = n('several');
+    if (crowd !== undefined && crowd >= KIND_BARS.crowd) Object.assign(p, { extras: true, several: true });
+    else if (crowd !== undefined && crowd <= 1 - KIND_BARS.crowd) p.extras = false;
+    if (several !== undefined && several >= KIND_BARS.several) p.several = true;
+    else if (several !== undefined && several <= 1 - KIND_BARS.several && !p.extras) p.several = false;
+  }
+  // What each lasting change is: a change of look at all, and of the whole or a part.
+  for (const m of moments(out)) {
+    const kept: typeof m.leaves = [];
+    (m.leaves ?? []).forEach((l, i) => {
+      const kind = changeKind(call.answers, `${m.id}_${i}`);
+      // A change into something else altogether always changes how it looks: "the house becomes a
+      // boat" read as not a change of look (0.28), and would have been dropped.
+      if (kind.look === false && kind.whole !== true) {
+        downgraded.push({
+          path: `${m.id}.leaves`,
+          label: 'not a change of how it looks',
+          value: `${l.what}: ${l.now}`,
+          p: 0,
+          evidence: null,
+        });
+        return;
+      }
+      kept.push({ ...l, ...(kind.whole !== undefined ? { whole: kind.whole } : {}) });
+    });
+    if (m.leaves) m.leaves = kept;
   }
   // An invented jump would be a lie about their dream, and would break continuity for nothing.
   for (const m of moments(out)) {

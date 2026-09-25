@@ -11,14 +11,18 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Blocking, Spot } from '../blocking';
 import { callJev } from '../jev';
+import { changeQuestions, crowdQuestions, KIND_BARS } from '../ground';
 import { PLAN_BARS, planQuestions } from '../planfacts';
 import type { Breakdown, Moment } from '../producer';
-import { decide, STORYBOARD } from '../stages';
+import { askFacts, CLOSE, decide, STORYBOARD } from '../stages';
 
 void loadedKeys;
 const which = process.argv[2];
 const at = process.argv.indexOf('--times');
 const times = at > 0 ? Math.max(1, Number(process.argv[at + 1]) || 1) : 1;
+// --close 0 decides on one answer each, as the harness did before it asked again on close calls.
+const ci = process.argv.indexOf('--close');
+const within = ci > 0 ? Number(process.argv[ci + 1]) : CLOSE;
 const load = <T>(name: string) => JSON.parse(readFileSync(join(import.meta.dir, `${name}.json`), 'utf8')) as T;
 const pct = (a: number, b: number) => `${a}/${b} (${b ? Math.round((100 * a) / b) : 0}%)`;
 
@@ -29,16 +33,9 @@ if (which === 'storyboard') {
     await Promise.all(
       cases.flatMap((c) =>
         Array.from({ length: times }, async () => {
-          const call = await callJev(
-            c.state,
-            Object.fromEntries(
-              STORYBOARD.facts.map((f) => [
-                `${f.id}_${c.moment}`,
-                { type: 'noul' as const, instructions: f.instructions, criteria: f.criteria },
-              ]),
-            ),
-          );
-          return { c, call, d: decide(STORYBOARD, c.moment, call.answers) };
+          // As the harness decides: asked once more, and averaged, where an answer is close to its bar.
+          const answers = await askFacts(STORYBOARD, c.moment, c.state, callJev, within);
+          return { c, call: { error: answers ? null : 'no answer' }, d: decide(STORYBOARD, c.moment, answers) };
         }),
       ),
     )
@@ -102,6 +99,10 @@ if (which === 'storyboard') {
       `best bars on this set: ${STORYBOARD.facts.map((f, i) => `${f.id.replace('sb_', '')} ${f.pass === 'yes' ? '≥' : '<'} ${best!.bars[i]}`).join(', ')}: cleared what should hold ${best.falseClears}, held what should clear ${best.falseHolds}`,
     );
   if (times > 1) {
+    const flips = cases.filter((c) => new Set(rows.filter((r) => r.c.id === c.id).map((r) => r.d.ok)).size > 1);
+    console.log(
+      `decided differently between asks: ${flips.length} of ${cases.length} shots${flips.length ? ` (${flips.map((c) => c.id).join(', ')})` : ''}`,
+    );
     const spread = cases.map((c) => {
       const same = rows.filter((r) => r.c.id === c.id);
       return Math.max(
@@ -200,7 +201,69 @@ if (which === 'storyboard') {
     console.log(
       `${family.padEnd(9)} right ${pct(t.right, t.all)}${family === 'outdoors' ? '' : `; sure enough to use (≥ ${bars[family]}): ${pct(t.sure, t.all)}, of which right ${pct(t.sureRight, t.sure)}`}`,
     );
+} else if (which === 'kinds') {
+  // Who is a group or a crowd, and what a change is: the grounding call's questions, as it asks them.
+  type Set = {
+    people: { name: string; identity: string; several: boolean; crowd: boolean | null }[];
+    changes: { who: string; what: string; now: string; look: boolean; whole: boolean }[];
+  };
+  const set = load<Set>('kinds');
+  const b = {
+    people: set.people.map((p, i) => ({
+      id: `q${i}`,
+      name: p.name,
+      is_dreamer: false,
+      fields: { identity: { value: p.identity || null } },
+    })),
+    things: set.changes.map((c, i) => ({ id: `c${i}`, name: c.who })),
+    places: [],
+  } as unknown as Breakdown;
+  const state = 'Questions about the people and the changes of some dreams.';
+  const tally: Record<string, { right: number; all: number; undecided: number }> = {};
+  for (let k = 0; k < times; k++) {
+    const call = await callJev(state, {
+      ...crowdQuestions(b),
+      ...changeQuestions(
+        b,
+        set.changes.map((c, i) => ({ key: `k${i}`, who: `c${i}`, what: c.what, now: c.now })),
+      ),
+    });
+    if (!call.answers) {
+      console.log(`no answer: ${call.error}`);
+      continue;
+    }
+    const a = call.answers;
+    const n = (key: string) => (a[key]?.type === 'noul' ? (a[key] as { noul: number }).noul : Number.NaN);
+    const score = (family: string, p: number, expected: boolean | null, bar: number, label: string, sure = true) => {
+      if (expected === null) return;
+      const t = (tally[family] ??= { right: 0, all: 0, undecided: 0 });
+      // Between the bars the breakdown's own reading stands: an answer there decides nothing.
+      const decided = sure ? p >= bar || p <= 1 - bar : true;
+      if (!decided) {
+        t.undecided++;
+        return;
+      }
+      t.all++;
+      const got = p >= bar;
+      if (got === expected) t.right++;
+      else console.log(`MISS ${family} ${label}: ${p.toFixed(2)}, should be ${expected}`);
+    };
+    set.people.forEach((p, i) => {
+      score('several', n(`several_q${i}`), p.several, KIND_BARS.several, p.name);
+      score('crowd', n(`crowd_q${i}`), p.crowd, KIND_BARS.crowd, p.name);
+    });
+    set.changes.forEach((c, i) => {
+      // Kept, as the harness keeps it: a change of look, or into something else altogether.
+      const kept = n(`look_k${i}`) >= KIND_BARS.look || n(`whole_k${i}`) >= KIND_BARS.whole;
+      score('kept', kept ? 1 : 0, c.look || c.whole, 0.5, `${c.who}: ${c.what} → ${c.now}`, false);
+      if (c.look) score('whole', n(`whole_k${i}`), c.whole, KIND_BARS.whole, `${c.who}: ${c.what} → ${c.now}`, false);
+    });
+  }
+  for (const [family, t] of Object.entries(tally))
+    console.log(
+      `${family.padEnd(8)} right ${pct(t.right, t.all)}${t.undecided ? `; left to the breakdown (unsure): ${t.undecided}` : ''}`,
+    );
 } else {
-  console.error('usage: bun run evals/run.ts storyboard|plan-facts [--times 2]');
+  console.error('usage: bun run evals/run.ts storyboard|plan-facts|kinds [--times 2]');
   process.exit(1);
 }

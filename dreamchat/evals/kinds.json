@@ -1,0 +1,79 @@
+{
+  "people": [
+    { "name": "the crowd", "identity": "other people in the theater", "several": true, "crowd": true },
+    {
+      "name": "the couple of people",
+      "identity": "a couple of people sitting with the dreamer, unspecified",
+      "several": true,
+      "crowd": null
+    },
+    {
+      "name": "the family",
+      "identity": "a family sitting on top of the train with you, with a small baby",
+      "several": true,
+      "crowd": null
+    },
+    { "name": "the passers-by", "identity": "people walking past on the street", "several": true, "crowd": true },
+    { "name": "the audience", "identity": "", "several": true, "crowd": true },
+    { "name": "my two sisters", "identity": "the dreamer's sisters", "several": true, "crowd": false },
+    { "name": "the band", "identity": "four musicians the dreamer knows from school", "several": true, "crowd": false },
+    { "name": "the baby", "identity": "a small baby laughing", "several": false, "crowd": false },
+    { "name": "Old Man", "identity": "a stranger", "several": false, "crowd": false },
+    { "name": "the conductor", "identity": "streetcar conductor", "several": false, "crowd": false },
+    { "name": "the girlfriend", "identity": "the dreamer's girlfriend", "several": false, "crowd": false },
+    { "name": "the aunt", "identity": "the dreamer's aunt", "several": false, "crowd": false },
+    {
+      "name": "the Pied-Piper sort of man",
+      "identity": "a man with curly hair, kind of a Pied Piper type, who could juggle",
+      "several": false,
+      "crowd": false
+    },
+    { "name": "the young woman", "identity": "a young woman", "several": false, "crowd": false }
+  ],
+  "changes": [
+    { "who": "the big sofa", "what": "form", "now": "roller coaster", "look": true, "whole": true },
+    {
+      "who": "the young woman",
+      "what": "head",
+      "now": "a block of irregular, glittering ice",
+      "look": true,
+      "whole": false
+    },
+    {
+      "who": "the young woman",
+      "what": "head",
+      "now": "melting ice with softened edges and channels",
+      "look": true,
+      "whole": false
+    },
+    {
+      "who": "the young woman",
+      "what": "head",
+      "now": "a horse's head carved of clearest ice",
+      "look": true,
+      "whole": false
+    },
+    {
+      "who": "the young woman",
+      "what": "location",
+      "now": "at the far end of the room",
+      "look": false,
+      "whole": false
+    },
+    {
+      "who": "the dreamer",
+      "what": "position",
+      "now": "sitting on the roof of the train",
+      "look": false,
+      "whole": false
+    },
+    { "who": "the streetcar", "what": "itself", "now": "a train", "look": true, "whole": true },
+    { "who": "the man", "what": "body", "now": "a large black bird", "look": true, "whole": true },
+    { "who": "the house", "what": "what it is", "now": "a boat on the sea", "look": true, "whole": true },
+    { "who": "the dreamer", "what": "hair", "now": "white", "look": true, "whole": false },
+    { "who": "the door", "what": "colour", "now": "bright red", "look": true, "whole": false },
+    { "who": "the car", "what": "size", "now": "as small as a toy", "look": true, "whole": false },
+    { "who": "the aunt", "what": "activity", "now": "driving the car", "look": false, "whole": false },
+    { "who": "the window", "what": "material", "now": "glass that is soft like water", "look": true, "whole": false }
+  ]
+}

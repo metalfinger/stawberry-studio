@@ -156,13 +156,17 @@ function crowdSpots(s: Spot, plan: Blocking, avoid: Spot[]): V2[] {
         : shapeOf(o, plan) === 'block' && sizeOf(o)[2] > 0.5 && onFootprint(p, o, plan, 0.2),
     );
   if (s.count && s.count <= 12) {
+    // Side by side, as people sit together: 0, then 0.7 either side, then 1.4; sitting, on the seat
+    // under them first. Two people "sitting with the dreamer" were put one on the sofa, one off it.
+    const seats = s.pose === 'sitting' ? avoid.filter((o) => !isPerson(o) && shapeOf(o, plan) === 'seat') : [];
+    const onSeat = (p: V2) => seats.some((o) => onFootprint(p, o, plan));
+    const ways = Array.from({ length: 60 }, (_, k) => (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.35)
+      .map((a) => ({ x: s.x + r.x * a, y: s.y + r.y * a }))
+      .filter((p) => !taken(p))
+      .sort((p, q) => Number(onSeat(q)) - Number(onSeat(p)));
     const out: V2[] = [];
-    // 0, then 0.7 either side, then 1.4: side by side, as people sit together.
-    for (let k = 0; out.length < s.count && k < 60; k++) {
-      const a = (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.7;
-      const p = { x: s.x + r.x * a, y: s.y + r.y * a };
-      if (!taken(p)) out.push(p);
-    }
+    for (const p of ways)
+      if (out.length < s.count && out.every((o) => Math.hypot(o.x - p.x, o.y - p.y) >= 0.65)) out.push(p);
     return out;
   }
   const [across, deep] = s.spread ?? [4, 3];
@@ -302,12 +306,16 @@ function thingBlocks(s: Spot, plan: Blocking): Block[] {
   const f = facing(s, plan);
   const holder = s.heldBy ? plan.spots.find((o) => o.id === s.heldBy) : undefined;
   if (holder) {
+    // In one hand, at their side: held square before them, a string of balloons hid the dreamer's
+    // face and chest (25 Sep).
     const hf = facing(holder, plan);
+    const hr = rightOf(hf);
     const hands = groundAt(holder, plan) + (holder.pose === 'sitting' ? 0.6 : holder.pose === 'lying' ? 0.3 : 0.9);
+    const side = 0.3 + Math.min(w, 0.8) / 2;
     return [
       {
-        x: holder.x + hf.x * 0.35,
-        y: holder.y + hf.y * 0.35,
+        x: holder.x + hf.x * 0.15 + hr.x * side,
+        y: holder.y + hf.y * 0.15 + hr.y * side,
         z: hands,
         w: Math.min(w, 0.8),
         d: Math.min(d, 0.8),
@@ -969,9 +977,54 @@ function thingWords(
   // across the picture from the words, and makes up how big it is. The friend beside the
   // dreamer, seen from the waist up in the previs, came back whole and two metres off (24 Sep).
   const size = !s.many ? `, ${isPerson(s) ? `${cropOf(s, eye)} and ` : ''}filling the picture ${upDown(seen)}` : '';
+  // A crowd the dream counts is said by its count: "a couple of people" are the two of them.
+  const counted = ['', 'one', 'two', 'three', 'four', 'five', 'six'][s.count ?? 0];
   return s.many
-    ? `, many of them${ctx.anchor ? rows(s, ctx.anchor) : ''}, ${turnedTo({ ...s, ...nearestOf(s, seen, eye, plan) }, plan, eye)}${behind}`
+    ? `, ${counted ? `the ${counted} of them` : 'many of them'}${ctx.anchor ? rows(s, ctx.anchor, plan, called) : ''}, ${turnedTo({ ...s, ...nearestOf(s, seen, eye, plan) }, plan, eye)}${behind}`
     : `${how}${size}${behind}`;
+}
+
+/** How tall a person must be in the picture, as a share of its height, for a shot of each size. */
+const TALL: Record<'close' | 'medium' | 'wide', number> = { close: 0.5, medium: 0.3, wide: 0.15 };
+
+/**
+ * How well a render frames the people it must show: each tall enough for the shot's size, and none
+ * cut by the picture's side. Read off the render, so it is exact; what is wrong is said in words.
+ * From across the place, the aunt in her car was a speck cut by the left edge and the dreamer a
+ * speck at the right, and "storyboard complete?" cleared it: its questions are about where things
+ * are, not how well they are framed (25 Sep).
+ */
+function framing(
+  r: Render,
+  people: Spot[],
+  size: 'close' | 'medium' | 'wide',
+  name: (id: string) => string,
+  plan: Blocking,
+): { score: number; issues: string[] } {
+  const issues: string[] = [];
+  let sum = 0;
+  let cut = 0;
+  for (const p of people) {
+    // Their whole height and width as the camera sees them, whatever hides part of them: being
+    // partly behind a sofa's back is scored apart, and a seated pair seen over it measured short.
+    const z = groundAt(p, plan);
+    const head = r.project(v3(p.x, p.y, z + eyeHeight(p.pose) + 0.15));
+    const feet = r.project(v3(p.x, p.y, z));
+    if (!head || !feet) continue;
+    const top = Math.max(0, head.y) / r.height;
+    const bottom = Math.min(r.height, feet.y) / r.height;
+    const tall = Math.max(0, bottom - top);
+    if (!tall) continue;
+    sum += Math.min(1, tall / TALL[size]);
+    if (tall < TALL[size] * 0.6) issues.push(`${name(p.id)} is too small in the picture to read`);
+    const across = (feet.x + head.x) / 2 / r.width;
+    const half = Math.abs(feet.y - head.y) / r.width / 7;
+    if (across - half < 0 || across + half > 1) {
+      cut++;
+      issues.push(`${name(p.id)} is cut by the picture's ${across < 0.5 ? 'left' : 'right'} edge`);
+    }
+  }
+  return { score: people.length ? (sum - 0.5 * cut) / people.length : 1, issues };
 }
 
 /** The lens for a shot seen from outside, by how close it is: a portrait lens close, a wide one for the whole place. */
@@ -996,20 +1049,26 @@ export function outsideShot(
    * the place). The camera faces it, with the people it shows before it.
    */
   lookAt?: { at?: V2; way?: V2; id?: string; theirs?: boolean },
-): { eye: Eye; text: string; inPicture: string[] } | null {
+): { eye: Eye; text: string; inPicture: string[]; framing: string[] } | null {
   const name = (id: string) => plan.spots.find((s) => s.id === id)?.name ?? called(id);
   const inIt = subjects.map((id) => plan.spots.find((s) => s.id === id)).filter((s): s is Spot => !!s && !s.many);
   const people = inIt.filter((s) => isPerson(s));
   const group = people.length ? people : inIt;
   if (!group.length) return null;
-  const c = {
+  let c = {
     x: group.reduce((a, s) => a + s.x, 0) / group.length,
     y: group.reduce((a, s) => a + s.y, 0) / group.length,
   };
   // What the moment looks at is in the picture too: the village the dreamer faces, not only the
   // dreamer with the village behind the camera (25 Sep).
   const looked = lookAt?.id ? plan.spots.find((s) => s.id === lookAt.id && !s.many && !inIt.includes(s)) : undefined;
-  const holdAll = [...inIt, ...(looked ? [looked] : [])];
+  // A crowd the moment is about is in the picture too: "a couple of people" sitting with the dreamer
+  // were left out of a frame that held only the dreamer and the balloons (25 Sep).
+  const crowds = subjects.map((id) => plan.spots.find((s) => s.id === id)).filter((s): s is Spot => !!s && !!s.many);
+  const holdAll = [...inIt, ...crowds, ...(looked ? [looked] : [])];
+  // Whose framing is measured: each person, and a few the dream counts; an audience overflows any
+  // frame, and swung the camera off the screen to keep from cutting it (25 Sep).
+  const framedPeople = [...people, ...crowds.filter((x) => x.count && x.count <= 6)];
   // Where a thing is, for framing: its part nearest `to`, so a long street under someone's feet
   // frames as the ground they stand on, and a house as its wall beside them.
   const nearestPart = (t: Spot, to: V2): V2 => {
@@ -1043,7 +1102,11 @@ export function outsideShot(
   const atIt = !!at && Math.hypot(at.x - people[0].x, at.y - people[0].y) < 2;
   const ends =
     group.length >= 2 ? Math.hypot(group[group.length - 1].x - group[0].x, group[group.length - 1].y - group[0].y) : 0;
-  const pair = (facings.length >= 2 && together < 0.4 && ends > 0.4) || atIt;
+  // Two people far apart (one waiting, the other arriving) cannot share a two-shot from the side:
+  // from across the place both were specks at the picture's edges, the car cut in half (25 Sep).
+  // The camera stands behind the one away from what the moment looks at, over their shoulder.
+  const apart = !atIt && group.length === 2 && people.length === 2 && ends > 4;
+  const pair = !apart && ((facings.length >= 2 && together < 0.4 && ends > 0.4) || atIt);
   // Which way the moment looks, if it says.
   const looks = lookAt?.way
     ? unit(lookAt.way)
@@ -1053,7 +1116,18 @@ export function outsideShot(
         ? unit(sum)
         : undefined;
   let d0: V2;
-  if (pair) {
+  const [near, far_] = apart
+    ? lookAt?.at
+      ? [...group].sort(
+          (a, b) =>
+            Math.hypot(b.x - lookAt.at!.x, b.y - lookAt.at!.y) - Math.hypot(a.x - lookAt.at!.x, a.y - lookAt.at!.y),
+        )
+      : group
+    : [];
+  if (apart) {
+    c = { x: near.x, y: near.y };
+    d0 = unit({ x: far_.x - near.x, y: far_.y - near.y });
+  } else if (pair) {
     // Facing each other, as two people talking: a two-shot from the side, the side turned toward
     // what the moment looks at, or where the room leaves most space. Looking "toward the
     // autoclave" along the line between them put the camera behind one, hiding the other (24 Sep).
@@ -1091,7 +1165,11 @@ export function outsideShot(
     const offsets = holdAll.flatMap((t) => {
       const q = nearestPart(t, c);
       const o = (q.x - c.x) * r.x + (q.y - c.y) * r.y;
-      const half = isPerson(t) ? 0 : Math.min(1.5, extent(t, plan, r));
+      const half = t.many
+        ? Math.min(1.5, t.count ? ((t.count - 1) * 0.7) / 2 + 0.3 : (t.spread?.[0] ?? 2) / 2)
+        : isPerson(t)
+          ? 0
+          : Math.min(1.5, extent(t, plan, r));
       return [o - half, o + half];
     });
     const wide = Math.max(...offsets) - Math.min(...offsets) + (size === 'close' ? 0.4 : size === 'medium' ? 1 : 2.5);
@@ -1146,7 +1224,8 @@ export function outsideShot(
       const seen = holdAll.map((s) => rs.seen.get(s.id));
       const inFrame = seen.filter((x) => x && x.visible >= tiny).length / holdAll.length;
       const clear = seen.reduce((a, x) => a + (x ? 1 - x.occluded : 0), 0) / holdAll.length;
-      const score = 2 * inFrame + clear - Math.abs(deg) * 0.006 - (back - 1) * 0.2 - cand.cramped * 0.5;
+      const framed = framing(rs, framedPeople, size, name, plan).score;
+      const score = 2 * inFrame + clear + 0.8 * framed - Math.abs(deg) * 0.006 - (back - 1) * 0.2 - cand.cramped * 0.5;
       if (!best || score > best.score + 1e-9) best = { ...cand, score };
     }
   const { eye, far } = best!;
@@ -1156,15 +1235,17 @@ export function outsideShot(
   // One person is named, never "them": "seen from behind them" of a woman walking off alone came
   // back with a man standing beside her (24 Sep).
   const them = people.length === 1 ? name(people[0].id) : 'them';
-  const from = pair
-    ? atIt
-      ? `from the side, as ${them} faces ${name(faced!.id)}`
-      : 'from the side, as they face each other'
-    : toward > 0.5
-      ? `from behind ${them}`
-      : toward < -0.5
-        ? `from in front of ${them}`
-        : `from beside ${them}`;
+  const from = apart
+    ? `from behind ${name(near.id)}, over their shoulder`
+    : pair
+      ? atIt
+        ? `from the side, as ${them} faces ${name(faced!.id)}`
+        : 'from the side, as they face each other'
+      : toward > 0.5
+        ? `from behind ${them}`
+        : toward < -0.5
+          ? `from in front of ${them}`
+          : `from beside ${them}`;
   const solids = solidsOf(plan, [], name);
   const rr = render(solids, eye, 384, 216);
   const min = 384 * 216 * 0.002;
@@ -1218,6 +1299,7 @@ export function outsideShot(
       ...shown.map((x) => x.s.id),
       ...spots.filter((s) => riding(s) && !shown.some((x) => x.s.id === s.id)).map((s) => s.id),
     ],
+    framing: framing(rr, framedPeople, size, name, plan).issues,
   };
 }
 
@@ -1305,7 +1387,13 @@ function upDown(s: Seen): string {
  * Where a crowd is from the dreamer's place, front to back of the room: in the rows behind theirs,
  * in front of them, or around them, and on seats if they sit.
  */
-function rows(s: Spot, me: Spot): string {
+function rows(s: Spot, me: Spot, plan: Blocking, called: (id: string) => string): string {
+  // A few people the dream counts sit where they are, not in rows: "the two of them, sitting in rows
+  // of seats" of a couple on the sofa beside the dreamer (25 Sep).
+  if (s.count && s.count <= 12) {
+    const seat = plan.spots.find((t) => !isPerson(t) && shapeOf(t, plan) === 'seat' && onFootprint(s, t, plan, 0.4));
+    return s.pose === 'sitting' ? `, sitting${seat ? ` on ${seat.name ?? called(seat.id)}` : ''}` : '';
+  }
   const deep = (s.spread?.[1] ?? 3) / 2;
   const where =
     s.y - deep > me.y + 0.3 ? " behind the dreamer's row" : s.y + deep < me.y - 0.3 ? ' in front of the dreamer' : '';

@@ -179,6 +179,24 @@ describe('what things are to whoever is at them', () => {
     expect(shot.text).not.toContain('Outside the picture, off to the right: the dreamer');
     // Outdoors, no room.
     expect(shot.text).not.toContain('of the room');
+    // Eight metres apart, one waiting and the other arriving: over the shoulder of the one waiting,
+    // toward the car, both framed well enough to read.
+    expect(shot.text).toStartWith('Seen from behind the dreamer, over their shoulder');
+    expect(shot.framing).toEqual([]);
+  });
+
+  test('a shot that frames someone as a speck, or cut by its edge, says so', () => {
+    const far: Blocking = {
+      front: 'the road',
+      room: [60, 60],
+      spots: [
+        { id: 'p1', x: 30, y: 10, kind: 'person', pose: 'standing', faces: 'back' },
+        { id: 'p2', x: 30.4, y: 10, kind: 'person', pose: 'standing', faces: 'back' },
+      ],
+    };
+    // A close shot of two people side by side: the frame holds them, and says nothing is wrong.
+    const near = outsideShot(far, ['p1', 'p2'], 'close', (id) => (id === 'p1' ? 'the dreamer' : 'the aunt'))!;
+    expect(near.framing).toEqual([]);
   });
 
   test('a juggler on a street stands on it, not in a block of it', () => {

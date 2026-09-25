@@ -6,7 +6,7 @@
 // run strictly one at a time.
 import { existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { cleanStyles, type GroundingNote, ground, linkContinuity } from './ground';
+import { cleanStyles, type GroundingNote, ground, judgeChanges, linkContinuity } from './ground';
 import {
   bookkeeperQuestions,
   type Exchange,
@@ -61,7 +61,7 @@ import {
 import { type ContinuityPlan, type Criterion, drawOrder, pictureName, planBy, planContinuity, seenIn, shotPlan } from './continuity';
 import type { Blocking } from './blocking';
 import { atSite, inSession, recordJev } from './jevlog';
-import { decide, factQuestions, type Reading, STORYBOARD } from './stages';
+import { askFacts, decide, type Reading, STORYBOARD } from './stages';
 import { planFacts } from './planfacts';
 import { previsImage } from './previs';
 import {
@@ -73,7 +73,7 @@ import {
   inViewOf,
   type PlannedInput,
   turnedInto,
-  WHOLE,
+  isWhole,
 } from './frames';
 import { checkReferences, preflight, readPrompt } from './gate';
 import {
@@ -232,7 +232,7 @@ export type Prep = {
 export function calledIn(b: Breakdown, c: { own: { who: string; what: string; now: string }[]; states: { who: string; what: string; now: string }[] }) {
   const changed = [...c.own, ...c.states];
   return (id: string) => {
-    const st = changed.find((x) => x.who === id && WHOLE.test(x.what));
+    const st = changed.find((x) => x.who === id && isWhole(x));
     if (st) return st.now;
     const p = b.people.find((x) => x.id === id);
     if (p) return p.is_dreamer ? 'the dreamer' : p.name;
@@ -273,7 +273,8 @@ export async function planShots(
       : Promise.resolve(draft),
   ]);
   let blocked = blockedOrNot;
-  addChanges(blocked, changes);
+  const found = deps.jev ? await judgeChanges(deps.jev, blocked, changes).catch(() => changes) : changes;
+  addChanges(blocked, found);
   // The plans' facts from Jev (outdoors, what each thing is, who holds what, what each camera
   // faces), applied by code, which then checks each plan whole. A scene that fails is planned once
   // more, told what failed: a scene left with no plan lost its moment's check (25 Sep).
@@ -290,7 +291,7 @@ export async function planShots(
     }
   }
   const dreamer = blocked.people.find((p) => p.is_dreamer)?.id;
-  const prep: Prep = { basedOn: planKey(b), blocking: {}, shots: {}, previs: {}, changes, ms: 0 };
+  const prep: Prep = { basedOn: planKey(b), blocking: {}, shots: {}, previs: {}, changes: found, ms: 0 };
   // Every camera of a set of plans placed, rendered and briefed, and each shot checked against its moment.
   const shoot = async (plans: Breakdown, into: Prep, scenes?: string[], suffix = '') => {
     const plan = planContinuity(plans);
@@ -317,7 +318,15 @@ export async function planShots(
             if (text) into.shots[c.id] = { text, view: c.view! };
           }
           if (deps.jev && m)
-            (into.storyboard ??= {})[c.id] = await storyboardCheck(deps.jev, m, c.view!, called, dreamer, around(plans, c, m, called, dreamer));
+            (into.storyboard ??= {})[c.id] = await storyboardCheck(
+              deps.jev,
+              m,
+              c.view!,
+              called,
+              dreamer,
+              around(plans, c, m, called, dreamer),
+              c.framing ?? [],
+            );
         }),
     );
   };
@@ -469,7 +478,7 @@ export function around(
   const named = new Set([...m.visible, ...m.things, ...(m.eyes === 'dreamer' && dreamer ? [dreamer] : [])]);
   const there = (planBy(plans, m.id)?.spots ?? []).filter((s) => !named.has(s.id)).map((s) => s.name ?? called(s.id));
   // A change of its whole form is already its name ("the roller coaster"); a part's change is said.
-  const now = [...c.own, ...c.states].filter((st) => !WHOLE.test(st.what)).map((st) => `${called(st.who)}: ${st.what} is ${st.now}`);
+  const now = [...c.own, ...c.states].filter((st) => !isWhole(st)).map((st) => `${called(st.who)}: ${st.what} is ${st.now}`);
   return { there: [...new Set(there)], now };
 }
 
@@ -484,11 +493,19 @@ async function storyboardCheck(
   view: string,
   called: (id: string) => string,
   dreamer: string | undefined,
-  near: { there?: string[]; now?: string[]; } = {},
+  near: { there?: string[]; now?: string[] } = {},
+  framed: string[] = [],
 ): Promise<{ ok: boolean; view: string; readings: Reading[]; reasons: string[] }> {
   const state = storyboardState(m, view, called, dreamer, near);
-  const call = await atSite('storyboard', () => jev(state, factQuestions(STORYBOARD, m.id)));
-  const { ok, readings, reasons } = decide(STORYBOARD, m.id, call.answers);
+  // How well the shot frames its people is measured exactly off the render, so code decides it:
+  // a shot framed badly waits, and Jev is not asked about it.
+  if (framed.length) {
+    const reasons = framed.map((f) => `framing: ${f}`);
+    recordJev({ kind: 'transition', stage: STORYBOARD.from, to: STORYBOARD.from, moment: m.id, facts: [], decision: 'held', reason: reasons.join('; ') });
+    return { ok: false, view, readings: [], reasons };
+  }
+  const answers = await atSite('storyboard', () => askFacts(STORYBOARD, m.id, state, jev));
+  const { ok, readings, reasons } = decide(STORYBOARD, m.id, answers);
   recordJev({
     kind: 'transition',
     stage: STORYBOARD.from,
@@ -1583,7 +1600,7 @@ export class SessionStore {
     const view = frame.frame?.plan?.view;
     const changed = [...(frame.frame?.plan?.own ?? []), ...(frame.frame?.plan?.states ?? [])];
     const called = (id: string) => {
-      const st = changed.find((x) => x.who === id && WHOLE.test(x.what));
+      const st = changed.find((x) => x.who === id && isWhole(x));
       const it = s.build?.items.find((i) => i.id === id);
       const fixture = s.draft?.breakdown ? fixtureName(s.draft.breakdown, id) : undefined;
       return st ? st.now : it?.isDreamer ? 'the dreamer' : (it?.name ?? fixture ?? id);

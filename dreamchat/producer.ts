@@ -57,7 +57,7 @@ export type Moment = {
   /** The earlier moment this one must match to read as continuous, or null. Decided by Jev. */
   from?: string | null;
   /** What this moment changes that later pictures must keep showing (Strawberry's continuity.after). */
-  leaves: { who: string; what: string; now: string }[];
+  leaves: { who: string; what: string; now: string; whole?: boolean }[];
   /**
    * An intended dream discontinuity from the moment before, only when the person told it: "the
    * kitchen becomes a station platform around her". Continuity must not smooth it away.
@@ -77,7 +77,8 @@ export type Moment = {
 };
 
 /** A lasting change in force at a moment: who changed, what, into what, and since which moment. */
-export type State = { who: string; what: string; now: string; since: string };
+/** `whole`: it has turned into something else altogether (Jev's reading; the words' where it gave none). */
+export type State = { who: string; what: string; now: string; since: string; whole?: boolean };
 
 export type Scene = {
   id: string;
@@ -334,7 +335,7 @@ For each scene, seen from above: its "front" (the side of the place its people f
 - "faces" is whom or what someone faces: an id from this plan, or "front", "back", "left" or "right". People talking together face each other; someone doing something at a thing (cooking at a stove, working at a desk, looking out of a window) faces it; otherwise people face the front. Each person is "sitting", "standing" or "lying", as they are in the scene.
 - A thing's spot is its middle, with its "size" in metres: [across, deep, high], across being side to side as it faces, and its "shape": what it is to whoever is at it. "seat": sat on (a sofa, a bench, a bed). "vehicle": ridden in (a car, a boat, a cart). "ground": stood and walked on, as high as it rises (a street or a road 0.05, a bridge or a stage as high as its deck). "steps": climbed (stairs). "block": anything else. Every thing and fixture has a size and a shape; a street, a road or a river runs as far as the place goes. Someone sitting on a seat, riding in a vehicle, or standing on ground or steps has their spot on it; nobody stands inside a block.
 - A thing someone holds or carries (a lantern, a string of balloons, a phone) has "held_by": their id.
-- The place's own fixtures that the moments happen by, face or act on (an autoclave, a stove, the stairs, a bridge, a door, a counter) get a spot too, with an id x1, x2 and so on, their "name" in a few words, their size and their shape. They are part of the place, not people or things of the story. A hallway, a corridor, a corner, a doorway or an aisle is not a fixture: it is the shape of the place itself (a hallway is a place about 1.2 across and as long as it is).
+- The place's own fixtures that the moments happen by, face or act on (an autoclave, a stove, the stairs, a bridge, a door, a counter) get a spot too, with an id x1, x2 and so on, their "name" in a few words, their size and their shape. They are part of the place, not people or things of the story. A hallway, a corridor, a corner, a doorway or an aisle is not a fixture: it is the shape of the place itself (a hallway is a place about 1.2 across and as long as it is). Only when a moment faces one ("faces": "the corner") does it get a small spot, with that name, where it is, so the camera can face it.
 - A crowd or an audience is one spot with "many": true, at the middle of where they are, with "spread": [across, deep] in metres for the ground they fill, how they are ("sitting" in rows of seats, "standing"), and "count" when the dream says how many ("a couple of people": 2).
 - When someone or something moves during the scene (walks off, comes back, sits down, drives away), give where it is in each moment's picture where that has changed, by the moment's id: "moves": {"m2": [{"id": "p1", "x": 4, "y": 8, "faces": "back", "pose": "standing"}]}. A move holds until its next one, so someone who comes back needs a move back: in the moment they return they are where it has them (in front of whoever they come back to, facing them). People riding in something move with it.
 - When a scene's moments happen in more than one place (a moment's "place" differs from its scene's), plan the scene's own place as above, and give every other place its own plan in "places", by the place's id, with the same fields, for the moments that happen there.
@@ -510,7 +511,7 @@ const CHANGES = `You are the script supervisor of a dream being drawn as picture
 Return JSON only: {"add": [{"moment": "m3", "who": "p1", "what": "head", "now": "an irregular block of glittering ice"}]}, with "add" empty when nothing is missing.`;
 
 /** A lasting change to how someone or something looks, at the moment it first happens. */
-export type Change = { moment: string; who: string; what: string; now: string };
+export type Change = { moment: string; who: string; what: string; now: string; whole?: boolean };
 
 /**
  * The lasting changes the breakdown missed, read from each moment's own words by a script
@@ -576,12 +577,12 @@ export function addChanges(b: Breakdown, changes: Change[]): void {
     if (!m) continue;
     m.leaves ??= [];
     if (m.leaves.some((l) => l.who === c.who && bareWords(l.what) === bareWords(c.what))) continue;
-    m.leaves.push({ who: c.who, what: c.what, now: c.now });
+    m.leaves.push({ who: c.who, what: c.what, now: c.now, ...(c.whole !== undefined ? { whole: c.whole } : {}) });
     for (const later of all.slice(at + 1)) {
       if ((later.leaves ?? []).some((l) => l.who === c.who && bareWords(l.what) === bareWords(c.what))) break;
       if (![...later.visible, ...later.things].includes(c.who)) continue;
       const kept = (later.states ?? []).filter((st) => !(st.who === c.who && bareWords(st.what) === bareWords(c.what)));
-      later.states = [...kept, { who: c.who, what: c.what, now: c.now, since: c.moment }];
+      later.states = [...kept, { who: c.who, what: c.what, now: c.now, since: c.moment, ...(c.whole !== undefined ? { whole: c.whole } : {}) }];
     }
   }
 }
@@ -1148,7 +1149,8 @@ export function completeViews(b: Breakdown): string[] {
       }
     }
     for (const l of m.leaves ?? [])
-      if (b.things.some((t) => t.id === l.who)) now.set(l.who, { who: l.who, what: l.what, now: l.now, since: m.id });
+      if (b.things.some((t) => t.id === l.who))
+        now.set(l.who, { who: l.who, what: l.what, now: l.now, since: m.id, ...(l.whole !== undefined ? { whole: l.whole } : {}) });
   }
   return notes;
 }

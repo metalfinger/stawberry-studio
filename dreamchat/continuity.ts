@@ -81,6 +81,8 @@ export type CutPlan = {
   eye?: Eye;
   /** Who and what that view has in the picture: drawn from their sketches like anyone in view. */
   sees?: string[];
+  /** What is wrong with how that view frames the people it shows, read off its render; none when it is framed well. */
+  framing?: string[];
   /** Seen from outside, on a scene with a floor plan: who and what is where, left to right. */
   across?: string[];
   /** Seen from outside, on a scene with a floor plan: where the camera stands, in words. */
@@ -409,7 +411,7 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
 
     // A moment that changes a part again replaces what it was: the horse's head was told "still
     // a melting ice block" and judged against it (23 Sep).
-    const own = m.leaves.map((l) => ({ who: l.who, what: l.what, now: l.now, since: m.id }));
+    const own = m.leaves.map((l) => ({ who: l.who, what: l.what, now: l.now, since: m.id, ...(l.whole !== undefined ? { whole: l.whole } : {}) }));
     return {
       id: m.id,
       order: i + 1,
@@ -484,7 +486,7 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
   const ghostOf = new Map<string, GhostPlan>(); // by state key
   for (const m of ms)
     for (const l of m.leaves) {
-      const state: State = { who: l.who, what: l.what, now: l.now, since: m.id };
+      const state: State = { who: l.who, what: l.what, now: l.now, since: m.id, ...(l.whole !== undefined ? { whole: l.whole } : {}) };
       const prev = latest.get(l.who);
       const g: GhostPlan = {
         id: `g${ghosts.length + 1}`,
@@ -676,7 +678,9 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
       }
     } else {
       const fromBehind = !!m.looks_at && bare(m.looks_at).includes(bare(plan.front));
-      const ids = [...seen(m), ...m.things].filter((id) => plan.spots.some((s) => s.id === id && !s.many));
+      // A crowd the moment is about goes to the camera too, to be framed and said: "the couple of
+      // people" never reached it, and the picture said nobody else was there (25 Sep).
+      const ids = [...seen(m), ...m.things].filter((id) => plan.spots.some((s) => s.id === id));
       // A moment that edits an earlier picture of the same view keeps that picture's layout: it
       // was made from the same set. Every other camera is placed on the floor plan and made from
       // its previs: the image model draws people and things well, and a new camera badly.
@@ -696,6 +700,7 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
         c.view = v.text;
         c.eye = v.eye;
         c.sees = v.inPicture;
+        c.framing = v.framing;
         c.staging = [];
       } else {
         c.across = outsideOrder(plan, ids, fromBehind);

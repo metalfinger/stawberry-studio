@@ -32,10 +32,16 @@ const NO_WORDS_EDIT =
 /** A change of what something is altogether, not of a part of it: its form, its shape, itself. */
 export const WHOLE = /^\s*(?:its |their |the )?(?:form|shape|whole|whole body|body and all|self|itself|themselves|kind|what it is|nature|entire \w+)\s*$/i;
 
+/**
+ * Whether a change turns something into something else altogether: as Jev read it when the change
+ * was recorded, and from its words only where Jev gave no reading.
+ */
+export const isWhole = (st: { what: string; whole?: boolean }) => st.whole ?? WHOLE.test(st.what);
+
 /** Who and what in a moment has turned into something else entirely: drawn from no sketch. */
 export function turnedInto(frame: Item): Set<string> {
   const plan = frame.frame?.plan;
-  return new Set([...(plan?.own ?? []), ...(plan?.states ?? [])].filter((st) => WHOLE.test(st.what)).map((st) => st.who));
+  return new Set([...(plan?.own ?? []), ...(plan?.states ?? [])].filter(isWhole).map((st) => st.who));
 }
 
 /** A thing named with its article: "turned into roller coaster" read as broken English. */
@@ -291,7 +297,7 @@ export function framePrompt(
     // its old sketch: its in-between picture shows what it became. The sofa's sketch beside "the
     // roller coaster that was a sofa" read as the prompt contradicting itself, and as the same
     // thing drawn twice (0.52; 0.46, 24 Sep).
-    const whole = [...(plan?.own ?? []), ...(plan?.states ?? [])].find((st) => st.who === s.id && WHOLE.test(st.what));
+    const whole = [...(plan?.own ?? []), ...(plan?.states ?? [])].find((st) => st.who === s.id && isWhole(st));
     // Everything in view is listed with its look, its image or not: said only beside the images,
     // the pictures read as less clear to Jev (0.78 against 0.82) and more likely to contradict
     // themselves (24 Sep).
@@ -403,7 +409,7 @@ export function framePrompt(
         x.use.carries,
         g.kind === 'view'
           ? `${nameOf(sheets, g.of)} seen facing ${g.looksAt || 'the other way'}: the side this frame faces. Keep everything in it where it puts it.`
-          : g.state && WHOLE.test(g.state.what)
+          : g.state && isWhole(g.state)
             ? `what ${nameOf(sheets, g.of)} has turned into, ${aNoun(g.state.now)}: draw it exactly so, where ${nameOf(sheets, g.of)} was. Nothing else from it.`
             : g.of === f.place || !g.state
               ? `how ${nameOf(sheets, g.of)} looks now (${g.state?.what}: ${g.state?.now}): draw it exactly so. Nothing else from it.`
@@ -620,7 +626,7 @@ export function ghostPrompt(
         ]
       : [];
   const listed = (xs: string[]) => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs.at(-1)}` : (xs[0] ?? ''));
-  const becomes = WHOLE.test(what);
+  const becomes = g.state ? isWhole(g.state) : false;
   const keep = becomes
     ? 'the same angle and framing, the same plain background'
     : sheet.kind === 'character'

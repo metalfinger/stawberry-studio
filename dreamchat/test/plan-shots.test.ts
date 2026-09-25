@@ -57,6 +57,13 @@ describe('the shots, planned while the chat goes on', () => {
       supervise: async () => [{ moment: 'm1', who: 't1', what: 'its slats', now: 'all blank but one' }],
       // "Storyboard complete?": m1's shot clears; m2's contradicts its moment.
       jev: async (state, questions) => {
+        // What the script supervisor found: a change of how the board looks, of a part of it.
+        if (Object.keys(questions).some((k) => k.startsWith('look_'))) {
+          const answers = Object.fromEntries(
+            Object.keys(questions).map((k) => [k, { type: 'noul' as const, noul: k.startsWith('look_') ? 0.9 : 0.1 }]),
+          );
+          return { questions, state, answers, error: null, ms: 1, usage: null };
+        }
         // The floor plan's facts: a room, and the board is on the wall, held by nobody.
         if ('outdoors' in questions) {
           seen.push(state);
@@ -137,6 +144,7 @@ describe('the shots, planned while the chat goes on', () => {
       who: 't1',
       what: 'its slats',
       now: 'all blank but one',
+      whole: false,
     });
     expect(s.prep?.basedOn).not.toBe(prep.basedOn);
     const changed: Pick<Session, 'draft' | 'prep'> = {
