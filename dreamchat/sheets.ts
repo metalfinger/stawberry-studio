@@ -315,18 +315,34 @@ export function toldColours(...items: Item[]): string[] {
 }
 
 /** Each colour some words give, with the phrase around it so it lands on the right thing: "blue balloons". */
+/** Words that end what a colour colours. */
+const COLOUR_STOP =
+  /^(?:on|in|at|of|with|over|under|beneath|behind|beside|near|the|a|an|its|their|his|her|to|from|by|for|is|are|was|were|as|that|which|who|while|but)$/i;
+
 export function coloursIn(text: string): string[] {
   const out = new Set<string>();
-  for (const m of text.matchAll(new RegExp(COLOUR_WORDS.source, 'gi')))
-    out.add(
-      text
-        .slice(m.index ?? 0)
-        .split(/[,;.]/)[0]
-        .split(/\s+/)
-        .slice(0, 3)
-        .join(' ')
-        .toLowerCase(),
-    );
+  const colour = new RegExp(`^(?:${COLOUR_WORDS.source})$`, 'i');
+  for (const m of text.matchAll(new RegExp(COLOUR_WORDS.source, 'gi'))) {
+    // The colour and what it colours, up to three words: "red cardigan", "blue or black", never
+    // "black on its" (the letters' "handwritten dark ink in blue or black on its front", 26 Sep).
+    const words = text
+      .slice(m.index ?? 0)
+      .split(/[,;.]/)[0]
+      .split(/\s+/)
+      .filter(Boolean);
+    const kept = [words[0]];
+    for (let i = 1; i < words.length && kept.length < 3; i++) {
+      if (/^(?:or|and)$/i.test(words[i])) {
+        if (!colour.test(words[i + 1] ?? '')) break;
+        kept.push(words[i], words[i + 1]);
+        i++;
+      } else if (COLOUR_STOP.test(words[i])) break;
+      else kept.push(words[i]);
+    }
+    const phrase = kept.slice(0, 3).join(' ').toLowerCase();
+    // "black" of "blue or black" is already said.
+    if (![...out].some((o) => ` ${o} `.includes(` ${phrase} `))) out.add(phrase);
+  }
   return [...out];
 }
 
@@ -387,6 +403,16 @@ export function styleBlock(
 // with "front view" under each view, a ruler, and the palette drawn as labelled swatches.
 const NO_WORDS =
   'Do not write any words, letters, numbers, labels or colour codes anywhere in the image, and no logos or brand badges. Do not draw colour swatches, rulers or captions.';
+
+/**
+ * For a thing that carries writing (letters, a newspaper, a sign): its writing is marks no one can
+ * read, and there is none anywhere else. "Do not write any words, letters…" beside hundreds of
+ * handwritten letters read as at odds with itself, and the sketch was held (snow train, 26 Sep).
+ */
+const WRITTEN_ON =
+  /\b(?:handwrit\w*|hand-written|writing|written|ink|printed|print|text|words|letters?|envelopes?|newspapers?|books?|pages?|signs?|labels?|notes?|cards?|postcards?|posters?|maps?)\b/i;
+const MARKS_ONLY =
+  'Whatever is written or printed on it is drawn as marks no one could read, never as real words; nothing else in the image has writing, numbers, labels, logos or brand badges. Do not draw colour swatches, rulers or captions.';
 
 const value = (item: Item, field: string) => item.fields[field]?.value ?? '';
 
@@ -503,6 +529,20 @@ export function withoutPose(look: string, keep = true): string {
 const AGE =
   /\b(?:baby|toddler|child|kid|boy|girl|teen\w*|young|younger|old|older|elderly|aged|middle-aged|adult|\d+s|\d+\s*years?|(?:twent|thirt|fort|fift|sixt|sevent|eight|ninet)ies)\b/i;
 
+/** A thing that is many of one kind: "the letters", "a stack of old newspapers". */
+export function isMany(item: Pick<Item, 'kind' | 'name'>): boolean {
+  if (item.kind !== 'prop') return false;
+  const n = item.name.toLowerCase().replace(/^(the|a|an|some|my|your|his|her|their)\s+/, '');
+  if (/\b(?:pile|stack|heap|bundle|bunch|handful|hundreds|dozens|lots|collection|pair) of\b/.test(n)) return true;
+  const head =
+    n
+      .split(/\s+(?:of|in|on|with|from|for)\s+/)[0]
+      .trim()
+      .split(/\s+/)
+      .at(-1) ?? '';
+  return /[^s]s$/.test(head) && !/(?:us|is|ss|ous|ics|news)$/.test(head);
+}
+
 /** A place's name that says who is there or what they do in it, rather than what the place is. */
 const PEOPLE_IN_NAME =
   /\b(people|persons?|couple of|crowd|someone|sitting|standing|talking|playing|waiting|with (?:the |a |my |your |her |his )?(?:\w+ )?(?:man|woman|men|women|girl|boy|friends?|aunt|uncle|mother|father|brother|sister|family))\b/i;
@@ -588,7 +628,11 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
           : `A single full-length picture of ${name}, one person only, as they ordinarily look: standing in a relaxed three-quarter view, the whole figure from head to feet, the face clearly visible.`
         : item.kind === 'location'
           ? `A single wide picture of ${name}, as it ordinarily looks, with no people in it, showing the whole place and how it is laid out.`
-          : `A single clear picture of ${name} on its own, as it ordinarily looks, seen at a slight angle so its shape and materials read.`;
+          : isMany(item)
+            ? // "The letters", hundreds of them, as "a single clear picture of the letters on its own, as
+              // it ordinarily looks" read as at odds with itself, and the sketch was held (snow train, 26 Sep).
+              `A single clear picture of ${name}, all of them together, as they ordinarily lie, seen at a slight angle, the few nearest the front clear enough that their shape and materials read.`
+            : `A single clear picture of ${name} on its own, as it ordinarily looks, seen at a slight angle so its shape and materials read.`;
   const background = item.kind === 'location' ? '' : 'Plain, uncluttered background. ';
   const without =
     item.kind === 'location' && item.leaveOut?.length
@@ -608,6 +652,7 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
     ? `The last attempt at this sheet got these wrong. Put each right:\n${item.repairFor.map((q) => `- ${q}`).join('\n')}`
     : '';
   const ownColours = new RegExp(COLOUR_WORDS.source, 'i').test(facts);
+  const noWords = item.kind === 'prop' && WRITTEN_ON.test(`${item.name} ${facts}`) ? MARKS_ONLY : NO_WORDS;
   return [
     layout,
     facts,
@@ -615,7 +660,7 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
     clear,
     repair,
     styleBlock(style, toldColours(item), { ownColours }),
-    `${background}${NO_WORDS}`,
+    `${background}${noWords}`,
   ]
     .filter(Boolean)
     .join('\n\n');
@@ -867,7 +912,10 @@ export const liveSheets: SheetEngine = {
         id: nodeId,
         request: {
           expected_revision: node.node.revision,
-          changes: Object.fromEntries(differs.map(([k, v]) => [k, { op: 'set', value: v }])),
+          // Nothing, where the plan has nothing: a place whose sketch could not be drawn is let go.
+          changes: Object.fromEntries(
+            differs.map(([k, v]) => [k, v === null ? { op: 'clear' } : { op: 'set', value: v }]),
+          ),
           source_id: record.source,
           reason: record.reason,
         },

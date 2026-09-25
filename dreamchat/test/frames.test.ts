@@ -4,6 +4,7 @@ import { aNoun, framePrompt, withoutPose, writingIn } from '../frames';
 import { oneColour, VAGUE } from '../producer';
 import { asInstruction } from '../session';
 import {
+  coloursIn,
   DREAM_QUALITY,
   groupMembers,
   inShades,
@@ -511,6 +512,38 @@ describe("a person's sketch", () => {
     expect(sheetPrompt(cooking, style)).toContain('picture of the cook, a young woman, one person only');
     const named = { ...father, name: 'the young woman', fields: { identity: { value: 'a young woman', said: true } } };
     expect(sheetPrompt(named, style)).toContain('picture of the young woman, one person only');
+  });
+});
+
+describe('a sketch of many things that carry writing', () => {
+  test('lies as they do, its writing unreadable marks, and says its colours whole', () => {
+    // "The letters", hundreds of them, handwritten: held as at odds with itself (snow train, 26 Sep).
+    const letters: Item = {
+      id: 't2',
+      kind: 'prop',
+      name: 'the letters',
+      fields: {
+        appearance: {
+          value:
+            'hundreds of envelopes stacked loosely in a messy pile; each has handwritten dark ink in blue or black on its front',
+          said: true,
+        },
+      },
+      status: 'waiting',
+      version: 0,
+    };
+    const p = sheetPrompt(letters, style);
+    expect(p).toContain('A single clear picture of the letters, all of them together, as they ordinarily lie');
+    expect(p).toContain('drawn as marks no one could read');
+    expect(p).not.toContain('Do not write any words, letters');
+    expect(coloursIn('handwritten dark ink in blue or black on its front')).toEqual(['blue or black']);
+    expect(coloursIn('a red cardigan over blue jeans')).toEqual(['red cardigan', 'blue jeans']);
+    expect(
+      sheetPrompt(
+        { ...letters, name: 'the suitcase', fields: { appearance: { value: 'brown leather', said: true } } },
+        style,
+      ),
+    ).toContain('the suitcase on its own');
   });
 });
 

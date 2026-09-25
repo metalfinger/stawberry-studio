@@ -2274,22 +2274,43 @@ export class SessionStore {
     // A crowd is in the words only: the engine refuses a cut whose cast has no sketch, and a crowd
     // never has one (24 Sep).
     const extras = new Set((s.build?.items ?? []).filter((i) => i.extras).map((i) => i.id));
-    const cast = frame.frame
+    // A sketch that could not be drawn: who or what it is, is in the moment's words only. Kept in the
+    // cast, the engine refused every moment the father was in, for want of his sketch (lighthouse, 26 Sep).
+    const unsketched = new Set((s.build?.items ?? []).filter((i) => i.status === 'failed').map((i) => i.id));
+    const f = frame.frame;
+    const cast = f
       ? {
-          visible_cast: seenIn(frame.frame, dreamerId)
-            .filter((p) => !extras.has(p))
+          visible_cast: seenIn(f, dreamerId)
+            .filter((p) => !extras.has(p) && !unsketched.has(p))
             .map((p) => ids[p])
             .filter((x): x is string => !!x),
+          ...(f.things.some((t) => unsketched.has(t))
+            ? {
+                required_props: f.things
+                  .filter((t) => !unsketched.has(t))
+                  .map((t) => ids[t])
+                  .filter((x): x is string => !!x),
+              }
+            : {}),
+          ...(unsketched.has(f.place) ? { location_id: null } : {}),
         }
       : {};
+    const without = (s.build?.items ?? []).filter(
+      (i) =>
+        unsketched.has(i.id) &&
+        f &&
+        (seenIn(f, dreamerId).includes(i.id) || f.things.includes(i.id) || f.place === i.id),
+    );
     return {
       fields: { ...cutRecord(plan, ids, failedCuts), ...cast, ...words },
       source: ids.proposal,
       reason: failedCuts.length
         ? `Drawn without ${failedCuts.map((d) => s.build?.frames?.find((x) => x.id === d)?.name ?? d).join(', ')}, which could not be drawn`
-        : frame.reworded?.some((k) => ENGINE[k])
-          ? 'Reworded before it was drawn, so its instructions agree'
-          : 'The continuity this moment is drawn with',
+        : without.length
+          ? `Drawn with ${without.map((i) => (i.isDreamer ? 'the dreamer' : i.name)).join(', ')} in words only: ${without.length > 1 ? 'their sketches' : 'its sketch'} could not be drawn`
+          : frame.reworded?.some((k) => ENGINE[k])
+            ? 'Reworded before it was drawn, so its instructions agree'
+            : 'The continuity this moment is drawn with',
     };
   }
 

@@ -1063,7 +1063,9 @@ function thingWords(
   // How big it is in the frame, read off the render: the image model keeps where each thing is
   // across the picture from the words, and makes up how big it is. The friend beside the
   // dreamer, seen from the waist up in the previs, came back whole and two metres off (24 Sep).
-  const size = !s.many ? `, ${isPerson(s) ? `${cropOf(s, eye)} and ` : ''}filling the picture ${upDown(seen)}` : '';
+  const size = !s.many
+    ? `, ${isPerson(s) ? `${cropOf(s, eye, seen)} and ` : ''}filling the picture ${upDown(seen)}`
+    : '';
   // A crowd the dream counts is said by its count: "a couple of people" are the two of them.
   const counted = ['', 'one', 'two', 'three', 'four', 'five', 'six'][s.count ?? 0];
   return s.many
@@ -1489,7 +1491,7 @@ const halfTall = (eye: Eye) => (Math.atan(Math.tan((halfViewOf(eye) * Math.PI) /
  * How much of someone the frame holds, where the bottom of the picture cuts them: from the waist
  * up, head and shoulders, or all of them.
  */
-function cropOf(s: Spot, eye: Eye): string {
+function cropOf(s: Spot, eye: Eye, seen?: Seen): string {
   const d = unit(eye.d);
   const along = (s.x - eye.at.x) * d.x + (s.y - eye.at.y) * d.y;
   const low = eye.height + along * Math.tan((eye.pitch ?? 0) + (-halfTall(eye) * Math.PI) / 180);
@@ -1499,9 +1501,11 @@ function cropOf(s: Spot, eye: Eye): string {
     : s.pose === 'lying'
       ? [0.3, 0.25, 0.15, 0.05]
       : [1.5, 1.25, 0.85, 0.45];
-  // Cut at the top too: a close look at their hands has their head out of the picture above.
+  // Cut at the top too: a close look at their hands has their head out of the picture above. Only
+  // where the render has them reach the top edge: by the numbers alone, the dreamer a third of the
+  // way down a 14mm picture was said to have their head cut off.
   const high = eye.height + along * Math.tan((eye.pitch ?? 0) + (halfTall(eye) * Math.PI) / 180);
-  if (high < head + 0.2 && low < shoulders)
+  if (high < head + 0.2 && low < shoulders && (!seen || seen.y0 < 0.02))
     return `their head out of the picture above, seen from ${high >= shoulders ? 'the shoulders' : 'the chest'} down to ${
       low >= waist ? 'the waist' : low >= knees ? 'the knees' : 'their feet'
     }`;

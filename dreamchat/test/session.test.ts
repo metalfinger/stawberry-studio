@@ -583,6 +583,7 @@ describe('a whole conversation', () => {
       usage: null,
     });
     const statuses = new Map<string, string>();
+    const records = new Map<string, Record<string, unknown>>();
     const store = new SessionStore(cfg, {
       jev: fakeJev((q) => {
         const out = script(q);
@@ -614,7 +615,10 @@ describe('a whole conversation', () => {
             : { state: 'running' },
         review: async () => {},
         retryCollection: async () => {},
-        startFrame: async ({ item }) => ({ recipeId: `r-${item.id}`, jobId: `job-${item.id}`, usd: 0.15 }),
+        startFrame: async ({ item, record }) => {
+          records.set(item.id, record?.fields ?? {});
+          return { recipeId: `r-${item.id}`, jobId: `job-${item.id}`, usd: 0.15 };
+        },
       },
       watchEveryMs: 10,
     });
@@ -637,13 +641,14 @@ describe('a whole conversation', () => {
       phase = (await store.message(id, 'it is just a plain board, they look right')).phase;
       await store.settle(id, 200);
     }
-    return { held, phase, store, id };
+    await store.settle(id, 200);
+    return { held, phase, store, id, records };
   }
 
   test('a sketch the gate still holds after two asks is left undrawn, and the moments begin', async () => {
     // Held on every reading: the board's sketch. Put through the gate again every turn, it once held
     // the sketches forty turns running and no moment was drawn (night market, 26 Sep).
-    const { held, phase } = await askedTwice((k, prompt) =>
+    const { held, phase, records } = await askedTwice((k, prompt) =>
       k === 'contradicts' && /A single clear picture of/.test(prompt)
         ? 0.9
         : k === 'contradicts' || k === 'twice'
@@ -653,6 +658,9 @@ describe('a whole conversation', () => {
     expect(held().status).toBe('failed');
     expect(held().error).toContain('not drawn');
     expect(phase).toBe('frames');
+    // The moments are drawn with the board in words only: kept among its things, the engine refuses
+    // a moment whose sketch is missing (the father, lighthouse, 26 Sep).
+    expect(records.get('m1')?.required_props).toEqual([]);
   });
 
   test('a sketch held only because its words leave it unclear is drawn on our guess after two asks', async () => {
