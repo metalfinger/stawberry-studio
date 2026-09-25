@@ -411,8 +411,18 @@ export function selectMove(state: State, cfg: GoalsFile, ctx: MoveContext): { mo
   // 4. They are still telling it. Follow, don't interview: the checklist waits until the
   // story has reached its end, however many goals are open. But not for ever in a row.
   const mayFollow = ctx.followStreak < MAX_FOLLOW_STREAK;
+  // What they raised most recently is what a listener follows: the oldest detail still open was
+  // asked about while "then the table changed" went by (night bus, 25 Sep).
+  const newest = (ok: (t: Thread) => boolean) => [...state.threads].reverse().find(ok);
   if (!finished && state.rapport.verbosity !== 'clipped' && mayFollow) {
-    const worth = state.threads.find((t) => t.strength !== 'low' && fresh(t));
+    // One detail at a time, then back to the story. Chained, the questions about a detail ran the
+    // listening out mid-dream: the lantern's flame, the heaviness on the bus and who was watching
+    // took 17 of 18 turns, and the boat and the river were never told (night bus, 25 Sep).
+    const asked = /^(explore_thread|probe_goal|circle_back):/.test(state.last_move);
+    const adds = state.signals.adds_story;
+    if (asked && adds !== null && adds !== undefined && adds < 0.5)
+      return { move: { kind: 'follow' }, rule: '4: a detail answered — back to the story' };
+    const worth = newest((t) => t.strength !== 'low' && fresh(t));
     if (worth)
       return {
         move: { kind: 'explore_thread', threadId: worth.id },
@@ -429,7 +439,7 @@ export function selectMove(state: State, cfg: GoalsFile, ctx: MoveContext): { mo
     return { move: { kind: 'acknowledge' }, rule: '5: winding down — soften' };
 
   // 6. A fresh thread they raised with energy outranks the checklist.
-  const hot = mayFollow && state.threads.find((t) => t.strength === 'high' && fresh(t));
+  const hot = mayFollow && newest((t) => t.strength === 'high' && fresh(t));
   if (hot) return { move: { kind: 'explore_thread', threadId: hot.id }, rule: '6: hot fresh thread' };
 
   // 7. A real gap in the story remains.
@@ -646,6 +656,8 @@ function renderMove(move: Move, state: State, cfg: GoalsFile, extras: BriefExtra
     case 'retell':
       if (extras.toldBefore)
         return "retell. You told the dream back once already, and they went on with it. Tell back just what they've told since then, in a few plain sentences, in order and in their own words where you can, picking up from where your last telling stopped. Add nothing they didn't say. Then ask whether you got it right, and whether that's where the dream ended.";
+      if (state.signals.finished_telling < FINISHED_BAR)
+        return "retell. You have their dream as far as they've told it. Tell it back to them in a few plain sentences, in order and in their own words where you can: what happened, where, who was there, how it felt and how it looked. Add nothing they didn't say. Then ask whether you got it right, and whether that's where the dream ended or more happened after.";
       return "retell. You have their dream. Tell it back to them in a few plain sentences, in order and in their own words where you can: what happened, where, who was there, how it felt and how it looked. Add nothing they didn't say. Then ask whether you got it right or missed anything.";
     case 'retell_check':
       return "retell_check. It isn't clear whether you have it right. Ask them simply whether that's how it went, or if there's anything to change.";

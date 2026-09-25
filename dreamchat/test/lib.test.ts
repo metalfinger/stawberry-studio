@@ -126,6 +126,27 @@ describe('listening', () => {
     expect(selectMove(s, cfg, listen({ followStreak: 3 })).move).toEqual({ kind: 'probe_goal', goalId: 'places' });
   });
 
+  test('one detail at a time: an answer about a detail that adds nothing is followed by the story', () => {
+    const s = { ...state({ threads: [thread('msg_5', 'high')], last_move: 'explore_thread:msg_3' }) };
+    s.signals = { ...s.signals, adds_story: 0.1 };
+    expect(selectMove(s, cfg, listen()).move).toEqual({ kind: 'follow' });
+    // What they said added to the story: what they raised is followed.
+    s.signals = { ...s.signals, adds_story: 0.8 };
+    expect(selectMove(s, cfg, listen()).move).toEqual({ kind: 'explore_thread', threadId: 'msg_5' });
+  });
+
+  test('the newest thing they raised is followed first', () => {
+    const s = state({ threads: [thread('msg_1', 'medium'), thread('msg_29', 'medium')] });
+    expect(selectMove(s, cfg, listen()).move).toEqual({ kind: 'explore_thread', threadId: 'msg_29' });
+  });
+
+  test('told back before the story is known to have ended, it asks whether that is where it ended', () => {
+    const early = renderBrief(state({ finished: 0.2 }), { kind: 'retell' }, cfg, { phase: 'retell' });
+    expect(early).toContain("whether that's where the dream ended or more happened after");
+    const done = renderBrief(state({ finished: 0.9 }), { kind: 'retell' }, cfg, { phase: 'retell' });
+    expect(done).not.toContain("whether that's where the dream ended");
+  });
+
   test('a detail they raised mid-telling is followed, even a medium one', () => {
     const { move } = selectMove(state({ threads: [thread('msg_1', 'medium')] }), cfg, listen());
     expect(move).toEqual({ kind: 'explore_thread', threadId: 'msg_1' });
