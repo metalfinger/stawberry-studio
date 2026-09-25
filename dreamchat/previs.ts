@@ -197,7 +197,10 @@ function crowdSpots(s: Spot, plan: Blocking, avoid: Spot[], eye?: Eye): V2[] {
 function laneOf(eye: Eye, people: Spot[]): ((p: V2) => boolean) | undefined {
   const d = unit(eye.d);
   const r = rightOf(d);
-  const at = (o: V2) => ({ t: (o.x - eye.at.x) * d.x + (o.y - eye.at.y) * d.y, side: (o.x - eye.at.x) * r.x + (o.y - eye.at.y) * r.y });
+  const at = (o: V2) => ({
+    t: (o.x - eye.at.x) * d.x + (o.y - eye.at.y) * d.y,
+    side: (o.x - eye.at.x) * r.x + (o.y - eye.at.y) * r.y,
+  });
   // Each of them as the camera sees them: how far, which way, and half a body's width of the view.
   const them = people
     .filter((o) => isPerson(o) && !o.many)
@@ -896,7 +899,9 @@ export function dreamerShot(
   // straight ahead from the tractor's seat left out the driver it was about (lighthouse, 25 Sep).
   const wanted = want.filter((id) => id !== dreamer && id !== target?.id && plan.spots.some((s) => s.id === id));
   const shows = (r: ReturnType<typeof render>) =>
-    wanted.length ? wanted.filter((id) => (r.seen.get(id)?.visible ?? 0) >= 192 * 108 * 0.002).length / wanted.length : 0;
+    wanted.length
+      ? wanted.filter((id) => (r.seen.get(id)?.visible ?? 0) >= 192 * 108 * 0.002).length / wanted.length
+      : 0;
   for (const [lean, off, how] of target ? leans : leans.slice(0, 1))
     for (const aim of target ? [0, -8, 8, -15, 15, -22, 22] : wanted.length ? [0, -15, 15, -30, 30, -45, 45] : [0]) {
       const at = { x: me.x + off.x, y: me.y + off.y };
@@ -905,7 +910,10 @@ export function dreamerShot(
       // straight ahead up a staircase, the dog running up it far above was out of the picture
       // (lighthouse, 25 Sep). Nearer level, the view stays as the approved shots had it.
       const pitch = heart
-        ? Math.max(-0.6, Math.min(0.6, Math.atan2(heart.z - height, Math.max(0.5, Math.hypot(heart.x - at.x, heart.y - at.y)))))
+        ? Math.max(
+            -0.6,
+            Math.min(0.6, Math.atan2(heart.z - height, Math.max(0.5, Math.hypot(heart.x - at.x, heart.y - at.y)))),
+          )
         : PITCH;
       const eye: Eye = { at, d, height, pitch: Math.abs(pitch) < 0.35 ? PITCH : pitch, ...(lean ? { lean } : {}) };
       if (!target || !heart) {
@@ -1239,10 +1247,19 @@ export function outsideShot(
     // What the moment looks at is behind them, and the camera looks at it past them.
     d0 = looks;
   else d0 = together > 0 ? unit({ x: -sum.x, y: -sum.y }) : DIRECTIONS.back;
-  const tallest = Math.max(
-    ...group.map((s) => groundAt(s, plan) + (isPerson(s) ? eyeHeight(s.pose) + 0.15 : sizeOf(s)[2])),
-  );
-  const lowest = size === 'close' ? tallest - 0.7 : size === 'medium' ? tallest * 0.45 : 0;
+  // A close look at what someone holds frames their hands, not their face: "the key in hand" was
+  // framed head and shoulders, and the camera stepped back until the dreamer stood there from the
+  // knees up (lighthouse m2, 26 Sep).
+  const holder = size === 'close' && lookedSpot?.heldBy ? people.find((s) => s.id === lookedSpot.heldBy) : undefined;
+  const hands = holder
+    ? groundAt(holder, plan) + (holder.pose === 'sitting' ? 0.6 : holder.pose === 'lying' ? 0.3 : 0.9)
+    : undefined;
+  const tallest =
+    hands !== undefined
+      ? hands + 0.35
+      : Math.max(...group.map((s) => groundAt(s, plan) + (isPerson(s) ? eyeHeight(s.pose) + 0.15 : sizeOf(s)[2])));
+  const lowest =
+    hands !== undefined ? hands - 0.2 : size === 'close' ? tallest - 0.7 : size === 'medium' ? tallest * 0.45 : 0;
   const height = people.length
     ? people.reduce((a, s) => a + eyeHeight(s.pose) + groundAt(s, plan), 0) / people.length
     : 1.5;
@@ -1326,7 +1343,9 @@ export function outsideShot(
       const inFrame = seen.filter((x) => x && x.visible >= tiny).length / holdAll.length;
       const clear = seen.reduce((a, x) => a + (x ? 1 - x.occluded : 0), 0) / holdAll.length;
       const framed = framing(rs, framedPeople, size, name, plan).score;
-      const named = extra.length ? extra.filter((s) => (rs.seen.get(s.id)?.visible ?? 0) >= tiny).length / extra.length : 0;
+      const named = extra.length
+        ? extra.filter((s) => (rs.seen.get(s.id)?.visible ?? 0) >= tiny).length / extra.length
+        : 0;
       // What the moment is about is in the picture above all: two people facing each other were shot
       // from the side with the talking fish, the moment's whole point, off to the left (night market).
       const keyShown = lookedSpot && !lookedSpot.many && (rs.seen.get(lookedSpot.id)?.visible ?? 0) >= tiny ? 1 : 0;
@@ -1385,7 +1404,13 @@ export function outsideShot(
   const where = far < 1.6 ? 'close' : far < 4 ? `about ${Math.round(far)} metres off` : 'from across the place';
   // What the moment looks at, by name, where the picture shows it: "the camera looks toward the right
   // side of the room" did not say it faced the cook the moment is about (25 Sep).
-  const lookedAt = lookAt?.id && shown.some((x) => x.s.id === lookAt.id) ? name(lookAt.id) : undefined;
+  // Something small in someone's hands is where their hands are: the brass key, too small to show
+  // on the mock-up, left "the camera looks toward the sea" for a close look at it (lighthouse m2).
+  const heldBy = lookAt?.id ? spots.find((s) => s.id === lookAt.id)?.heldBy : undefined;
+  const lookedAt =
+    lookAt?.id && (shown.some((x) => x.s.id === lookAt.id) || (heldBy && shown.some((x) => x.s.id === heldBy)))
+      ? `${name(lookAt.id)}${heldBy && !shown.some((x) => x.s.id === lookAt.id) ? ` in ${name(heldBy)}'s hands` : ''}`
+      : undefined;
   const words = (s: Spot, seen: Seen) =>
     `${name(s.id)}, ${across(seen).replace(/^(in|at) /, '')}${thingWords(s, seen, plan, eye, name, { spots, on: [], anchor })}`;
   // The people it shows, left to right, then the things it shows; then what is behind them.
@@ -1474,6 +1499,12 @@ function cropOf(s: Spot, eye: Eye): string {
     : s.pose === 'lying'
       ? [0.3, 0.25, 0.15, 0.05]
       : [1.5, 1.25, 0.85, 0.45];
+  // Cut at the top too: a close look at their hands has their head out of the picture above.
+  const high = eye.height + along * Math.tan((eye.pitch ?? 0) + (halfTall(eye) * Math.PI) / 180);
+  if (high < head + 0.2 && low < shoulders)
+    return `their head out of the picture above, seen from ${high >= shoulders ? 'the shoulders' : 'the chest'} down to ${
+      low >= waist ? 'the waist' : low >= knees ? 'the knees' : 'their feet'
+    }`;
   return low >= head
     ? 'only the head in the picture'
     : low >= shoulders

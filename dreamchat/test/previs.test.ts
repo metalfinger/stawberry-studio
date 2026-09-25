@@ -296,4 +296,20 @@ describe('what things are to whoever is at them', () => {
     expect(shot.text).toStartWith('Seen from the side, as the young woman faces the stove');
     expect(shot.inPicture).toEqual(expect.arrayContaining(['p3', 't1']));
   });
+  test('a close look at what someone holds frames their hands, and says what it looks at', () => {
+    // "The dreamer's hand holding the old brass key" came back as the dreamer from the knees up
+    // (lighthouse m2, 26 Sep).
+    const beach: Blocking = {
+      front: 'the sea',
+      spots: [
+        { id: 'p1', x: 20, y: 10, kind: 'person', pose: 'standing', faces: 'front' },
+        { id: 't1', x: 20, y: 10, kind: 'thing', size: [0.05, 0.02, 0.01], shape: 'block', heldBy: 'p1' },
+      ],
+    };
+    const called = (id: string) => ({ p1: 'the dreamer', t1: 'the brass key' })[id] ?? id;
+    const shot = outsideShot(beach, ['p1', 't1'], 'close', called, { at: { x: 20, y: 10 }, id: 't1' })!;
+    expect(shot.text).toContain("the camera looks at the brass key in the dreamer's hands");
+    expect(shot.text).toContain('their head out of the picture above');
+    expect(shot.eye.pitch).toBeLessThan(-0.2);
+  });
 });
