@@ -2216,7 +2216,12 @@ export class SessionStore {
     // A change that goes on changing is edited from its last look, one change at a time.
     const previous = g.after ? s.build.frames?.find((x) => x.id === g.after && x.status === 'ready') : undefined;
     const { prompt, references, depicted } = ghostPrompt(ghost, sheet, from, s.style, previous);
-    if (await this.hold(s, ghost, prompt, references, [])) return;
+    // An in-between picture the gate holds is left undrawn, and what needed it is drawn without it
+    // from the sketch: held, the heron's change kept every moment after it waiting (26 Sep).
+    if (await this.hold(s, ghost, prompt, references, [])) {
+      if (this.deps.block) fail(`not drawn: unsure of its instructions (${(ghost.held ?? []).join('; ')})`);
+      return;
+    }
     ghost.depicted = depicted;
     await this.launch(s, ghost, {
       prompt,
