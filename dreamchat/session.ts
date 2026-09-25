@@ -2250,6 +2250,17 @@ export class SessionStore {
         let findings = await this.gateFindings(s, snapshot, sheetPrompt(snapshot, style), [], []);
         // A look it is unsure of is reworded, described as a look only and filled where it is thin,
         // before anyone is asked, and read again; what they said keeps its meaning.
+        // A redraw's own instruction can be what is at odds: the dreamer's sketch kept a correction
+        // meant for the house ("only the Meads's house: …") and was held on it (Meads, 25 Sep). The
+        // instruction the reading rests on is dropped, and it is read again.
+        const blamed = (snapshot.repairFor ?? []).filter((r) =>
+          findings.some((f) => f.includes(`around: "- ${r.slice(0, 40)}`)),
+        );
+        if (blamed.length) {
+          snapshot.repairFor = (snapshot.repairFor ?? []).filter((r) => !blamed.includes(r));
+          if (!snapshot.repairFor.length) snapshot.repairFor = undefined;
+          findings = await this.gateFindings(s, snapshot, sheetPrompt(snapshot, style), [], []);
+        }
         // Twice at most, text being nearly free: the Meads's house, reworded to its outside, still
         // listed the stairs and the hallway inside it, and read as unclear (25 Sep).
         for (let round = 0; round < 2 && findings.length && this.deps.rewordLook; round++) {
@@ -2287,6 +2298,7 @@ export class SessionStore {
               // The words it was drawn from, proposed or reworded on the way, are its words now:
               // the conductor was drawn from a full look and kept as "adult; uniform" (24 Sep).
               it.fields = snapshot.fields;
+              it.repairFor = snapshot.repairFor;
               it.gate = snapshot.gate;
               it.held = undefined;
               spend(x, r.usd);
@@ -2306,6 +2318,7 @@ export class SessionStore {
                   version: Math.max(0, it.version - 1),
                   gate: snapshot.gate,
                   fields: snapshot.fields,
+                  repairFor: snapshot.repairFor,
                 });
                 x.images = Math.max(0, x.images - 1);
               } else Object.assign(it, { status: 'failed', error: String(e).slice(0, 300) });
