@@ -76,6 +76,8 @@ export type Item = {
   heldAskedAt?: number;
   /** For a place: the story's things, which have pictures of their own and are left out of its. */
   leaveOut?: string[];
+  /** For a place: what of it a moment opens later ("the red door"), shut in its own picture. */
+  shut?: string[];
   /**
    * Drawn although a check would have held it: what the checks said. For a moment, only while the
    * checks are measured; for a sketch still unclear after they were asked, drawn on our guess.
@@ -543,6 +545,21 @@ export function isMany(item: Pick<Item, 'kind' | 'name'>): boolean {
   return /[^s]s$/.test(head) && !/(?:us|is|ss|ous|ics|news)$/.test(head);
 }
 
+/** What a place's moments open that the place itself has: "the red door" of the snowy field. */
+export function openedLater(place: Item, actions: string[]): string[] {
+  const own = `${value(place, 'landmarks')} ${value(place, 'geography')} ${place.name}`.toLowerCase();
+  const out = new Set<string>();
+  for (const a of actions)
+    for (const m of a.matchAll(
+      /\bopen(?:s|ed|ing)?\s+(?:the\s+|a\s+|its\s+|their\s+)?((?:[a-z]+\s+){0,2}?(?:door|doors|gate|window|lid|curtains?|shutters?|hatch|trapdoor|cupboard|wardrobe|drawer|chest))\b/gi,
+    )) {
+      const phrase = m[1].toLowerCase();
+      const head = phrase.split(/\s+/).at(-1)!.replace(/s$/, '');
+      if (new RegExp(`\\b${head}s?\\b`).test(own)) out.add(`the ${phrase}`);
+    }
+  return [...out];
+}
+
 /** A place's name that says who is there or what they do in it, rather than what the place is. */
 const PEOPLE_IN_NAME =
   /\b(people|persons?|couple of|crowd|someone|sitting|standing|talking|playing|waiting|with (?:the |a |my |your |her |his )?(?:\w+ )?(?:man|woman|men|women|girl|boy|friends?|aunt|uncle|mother|father|brother|sister|family))\b/i;
@@ -634,6 +651,12 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
               `A single clear picture of ${name}, all of them together, as they ordinarily lie, seen at a slight angle, the few nearest the front clear enough that their shape and materials read.`
             : `A single clear picture of ${name} on its own, as it ordinarily looks, seen at a slight angle so its shape and materials read.`;
   const background = item.kind === 'location' ? '' : 'Plain, uncluttered background. ';
+  // What the story opens later is shut in the place's own picture: the red door, drawn ajar with
+  // light behind it in the field's sketch, stood open before the dreamer opened it (snow train, 26 Sep).
+  const shut =
+    item.kind === 'location' && item.shut?.length
+      ? `${item.shut.map((x, i) => (i ? x : x[0].toUpperCase() + x.slice(1))).join(' and ')} ${item.shut.length > 1 || /s$/.test(item.shut[0]) ? 'are' : 'is'} shut, as before anyone opens ${item.shut.length > 1 || /s$/.test(item.shut[0]) ? 'them' : 'it'}.`
+      : '';
   const without =
     item.kind === 'location' && item.leaveOut?.length
       ? `Only the place itself, without the story's things in it (${item.leaveOut.join(', ')}): they have pictures of their own.`
@@ -656,6 +679,7 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
   return [
     layout,
     facts,
+    shut,
     without,
     clear,
     repair,

@@ -6,6 +6,7 @@ import { asInstruction } from '../session';
 import {
   coloursIn,
   DREAM_QUALITY,
+  openedLater,
   groupMembers,
   inShades,
   isGroup,
@@ -544,6 +545,27 @@ describe('a sketch of many things that carry writing', () => {
         style,
       ),
     ).toContain('the suitcase on its own');
+  });
+});
+
+describe("a place's sketch", () => {
+  test('keeps shut what a later moment opens', () => {
+    // The red door, drawn ajar in the field's sketch, stood open before it was opened (snow train).
+    const field: Item = {
+      id: 'l2',
+      kind: 'location',
+      name: 'the snowy field',
+      fields: { landmarks: { value: 'a red door standing on its own in its frame', said: true } },
+      status: 'waiting',
+      version: 0,
+    };
+    const shut = openedLater(field, [
+      'The grandfather nods at the door.',
+      'The dreamer opens the red door; warm light.',
+    ]);
+    expect(shut).toEqual(['the red door']);
+    expect(sheetPrompt({ ...field, shut }, style)).toContain('The red door is shut, as before anyone opens it.');
+    expect(openedLater(field, ['She opens the window.'])).toEqual([]);
   });
 });
 

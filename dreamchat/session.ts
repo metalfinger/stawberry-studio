@@ -102,6 +102,7 @@ import {
   type Item,
   LOOK,
   MAX_PER_IMAGE,
+  openedLater,
   PROVIDER,
   profileOf,
   type SheetEngine,
@@ -2513,8 +2514,15 @@ export class SessionStore {
     item.startedAtTurn = turn;
     // A place is sketched as itself: the story's things have pictures of their own, and drawn into
     // the place the paper boat lay in the field before it was ever put down (lighthouse, 26 Sep).
-    if (item.kind === 'location')
+    if (item.kind === 'location') {
       item.leaveOut = (s.build?.items ?? []).filter((i) => i.kind === 'prop').map((i) => pictureName(i.name));
+      const actions = (s.draft?.breakdown?.scenes ?? []).flatMap((sc) => sc.moments).filter((m) => m.place === item.id);
+      const shut = openedLater(
+        item,
+        actions.map((m) => m.action),
+      );
+      item.shut = shut.length ? shut : undefined;
+    }
     if (!this.deps.sheets || !s.style) {
       item.status = 'failed';
       item.error = 'nothing can be drawn here: the Strawberry engine is not set up';
