@@ -419,7 +419,15 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
   // Some of a dream's people are a group ("a couple of people", "the twins"): "one person only"
   // sketched them as a single man.
   // Named for the picture: the dreamer's sketch said "a single full-length picture of you" (24 Sep).
-  const name = item.isDreamer ? 'the dreamer' : pictureName(item.name);
+  // The dreamer's name says nothing of who they are, so who they are is said with it: "a young
+  // adult woman in her early twenties" was left out, and the gate held the sketch for "missing
+  // roughly how old they are" after they had said "however you imagine me" (night bus, 25 Sep).
+  const who = item.isDreamer ? value(item, 'identity') : '';
+  const name = item.isDreamer
+    ? who && !VAGUE.test(who) && !/^(the dreamer|you|me|myself|i)$/i.test(who.trim())
+      ? `the dreamer, ${who.replace(/^the dreamer,?\s*/i, '').replace(/[\s,.;]+$/, '')}`
+      : 'the dreamer'
+    : pictureName(item.name);
   const layout =
     item.kind === 'character'
       ? isGroup(item)

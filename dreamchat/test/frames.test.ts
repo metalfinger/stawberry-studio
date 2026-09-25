@@ -412,6 +412,26 @@ describe('a group of people', () => {
     expect(isGroup(person('a family friend', 'a tall man'))).toBe(false);
     expect(sheetPrompt(person('your aunt', 'shoulder-length brown hair'), style)).toContain('one person only');
   });
+
+  test("the dreamer's sketch says who they are: their name says nothing of it", () => {
+    const dreamer = (identity: string): Item => ({
+      id: 'p1',
+      kind: 'character',
+      name: 'you',
+      isDreamer: true,
+      fields: {
+        identity: { value: identity, said: true },
+        appearance: { value: 'long dark hair worn loose, slender build', said: false },
+      },
+      status: 'waiting',
+      version: 0,
+    });
+    // Left out, the gate held it for "missing roughly how old they are" (night bus, 25 Sep).
+    expect(sheetPrompt(dreamer('a young adult woman in her early twenties'), style)).toContain(
+      'A single full-length picture of the dreamer, a young adult woman in her early twenties, one person only',
+    );
+    expect(sheetPrompt(dreamer('the dreamer'), style)).toContain('picture of the dreamer, one person only');
+  });
 });
 
 describe('a group and someone in it who has their own sketch', () => {
