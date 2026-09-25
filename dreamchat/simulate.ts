@@ -53,6 +53,9 @@ type Report = Awaited<ReturnType<typeof run>>;
  * for the judge on every moment on show, so no flaw is waved through unseen.
  */
 async function lookAt(store: SessionStore, id: string): Promise<string> {
+  // With no judge there is nothing to wait for: the dreamer is told nothing, and says it looks right.
+  // Waiting as if there were stalled a run twenty minutes a turn (lighthouse, 25 Sep).
+  if (judgeKind === 'off') return '';
   const until = Date.now() + Number(process.env.DREAMCHAT_SIM_LOOK_MS ?? 20 * 60_000);
   for (;;) {
     // The sketches while they are on show, then the moments: whatever they are asked about.
