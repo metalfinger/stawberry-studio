@@ -439,6 +439,16 @@ function readPlan(b: Breakdown, g: Record<string, unknown>, moments: Moment[], l
   const fixture = (x: Record<string, unknown>) =>
     typeof x.id === 'string' && /^x\d+$/.test(x.id) && typeof x.name === 'string' && !!x.name.trim();
   const given = list(g.spots).map((x) => x as Record<string, unknown>);
+  // Someone who comes in partway is given only by where they are in the moments they are in: the
+  // dreamer reaching the top of the lighthouse had moves and no spot, and the room was left without
+  // a plan in three runs of three (25 Sep). They start where they are first seen.
+  const movesGiven = (g.moves && typeof g.moves === 'object' ? g.moves : {}) as Record<string, unknown>;
+  for (const m of moments)
+    for (const x of list(movesGiven[m.id]).map((y) => y as Record<string, unknown>)) {
+      if (typeof x.id !== 'string' || !b.people.some((p) => p.id === x.id) || given.some((y) => y.id === x.id)) continue;
+      if (!Number.isFinite(Number(x.x)) || !Number.isFinite(Number(x.y))) continue;
+      given.push({ ...x });
+    }
   // A thing someone holds is where they are. Given only as {"id": "t1", "held_by": "p2"}, the
   // brother's lantern had no spot in two runs of five, and the night bus was left without a plan
   // (25 Sep): it takes its holder's spot, and settling puts it at their side.

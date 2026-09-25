@@ -17,7 +17,7 @@ import { changeQuestions, crowdQuestions, KIND_BARS } from '../ground';
 import { calledIn, planContinuity } from '../continuity';
 import { PLAN_BARS, planFacts, planQuestions } from '../planfacts';
 import { blockScenes, type Breakdown, type Moment } from '../producer';
-import { around, storyboardCheck } from '../session';
+import { around, planUnplanned, storyboardCheck } from '../session';
 import { askFacts, CLOSE, decide, STORYBOARD } from '../stages';
 
 void loadedKeys;
@@ -400,7 +400,8 @@ if (which === 'storyboard') {
   for (const sc of b.scenes) if (sc.id === scene) delete sc.blocking;
   const runs = await Promise.all(
     Array.from({ length: times }, async () => {
-      const planned = (await blockScenes(b, { only: [scene] })).breakdown;
+      // As the harness plans: once, then once more for a scene the first left without a plan.
+      const planned = await planUnplanned(blockScenes, (await blockScenes(b, { only: [scene] })).breakdown, [scene]);
       const facts = (await planFacts(callJev, planned, [scene])).breakdown;
       const plan = planContinuity(facts);
       const sc = facts.scenes.find((x) => x.id === scene)!;
