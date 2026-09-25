@@ -74,12 +74,24 @@ const SHAPE_WORDS: Record<Shape, string> = {
  * Told only that writing was allowed, the zikery board came back reading "KITCHEN", the
  * place's own name (23 Sep); the exact word, spelled out, is the only writing allowed.
  */
+/** Words just before a quote that make it speech. */
+const SPOKEN =
+  /\b(?:say|says|said|saying|asks?|asked|asking|shouts?|shouted|whispers?|whispered|calls?(?: out)?|called(?: out)?|tells?|told|mutters?|muttered|repl(?:y|ies|ied)|answers?|answered|sings?|sang|yells?|yelled|cr(?:y|ies|ied)(?: out)?|barks?|barked)\s*[,:]?\s*$/i;
+/** Words just before a quote that put it on something to read. */
+const WRITTEN_ON =
+  /\b(?:reads?|reading|written|printed|painted|carved|spelled|spelt|signs?|board|poster|label|note|card|screen|page|letter|banner|plate|slats?|headline|title)\b/i;
+
 export function writingIn(...texts: (string | null | undefined)[]): string[] {
   const found = new Set<string>();
   for (const t of texts)
     // A quote mark counts only outside a word, so "the dreamer's kitchen" quotes nothing.
-    for (const m of (t ?? '').matchAll(/(?<![A-Za-z])["'“‘]([^"'“”‘’]{2,40})["'”’](?![A-Za-z])/g))
+    for (const m of (t ?? '').matchAll(/(?<![A-Za-z])["'“‘]([^"'“”‘’]{2,40})["'”’](?![A-Za-z])/g)) {
+      // What someone says is not writing: the dog looking back "as if to say 'come on'" came back
+      // with COME ON painted across the sky (lighthouse, 26 Sep). What a sign or board says is.
+      const before = (t ?? '').slice(Math.max(0, (m.index ?? 0) - 40), m.index);
+      if (SPOKEN.test(before) && !WRITTEN_ON.test(before)) continue;
       found.add(m[1].trim());
+    }
   return [...found].filter((w) => /[a-z]/i.test(w));
 }
 

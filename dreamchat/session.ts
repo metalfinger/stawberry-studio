@@ -901,10 +901,22 @@ export function asInstruction(question: string): string {
 const WORDING =
   /^(its instructions may contradict|someone may be drawn twice|what it shows is not clear|what to take from each image)/;
 
-/** A picture the confidence gate held back, with its reasons. */
 /** A finding that says only that the words leave something open, which a picture can decide. */
 const unclearOnly = (f: string) => f.startsWith('what it shows is not clear enough to draw');
 
+/**
+ * What a moment was held for that, once it has been planned again and reworded, gives way to its
+ * picture. Of eight moments drawn although these still held them, five came out right, the cab and
+ * the window among them (lighthouse, 26 Sep); left undrawn, all eight were lost. A moment held for
+ * anything else (drawn twice, its images, no reading at all) is still left undrawn.
+ * DREAMCHAT_HELD=fail leaves every moment still held undrawn, as before.
+ */
+const GIVES_WAY =
+  /^(storyboard: |its instructions may contradict each other|what it shows is not clear enough to draw)/;
+const givesWay = (findings: string[]) =>
+  process.env.DREAMCHAT_HELD !== 'fail' && findings.length > 0 && findings.every((f) => GIVES_WAY.test(f));
+
+/** A picture the confidence gate held back, with its reasons. */
 class Held extends Error {
   constructor(readonly findings: string[]) {
     super(`held before drawing: ${findings.join('; ')}`);
@@ -1848,16 +1860,19 @@ export class SessionStore {
       // Held, it held up every moment after it: the stairs held the tiny room, the drive and the
       // balloons (Meads, 25 Sep).
       const sc = s.draft?.breakdown?.scenes.find((x) => x.moments.some((y) => y.id === frame.id));
-      if (sc && this.replannedScenes.has(`${s.id}:${sc.id}`)) {
+      const reasons = checked.reasons.map((r) => `storyboard: ${r}`);
+      if (sc && this.replannedScenes.has(`${s.id}:${sc.id}`) && givesWay(reasons)) frame.overrode = reasons;
+      else if (sc && this.replannedScenes.has(`${s.id}:${sc.id}`)) {
         Object.assign(frame, {
           status: 'failed',
           held: undefined,
           error: `not drawn: planned again, its shot still disagrees with the moment (${checked.reasons.join('; ')})`,
         });
         return;
+      } else {
+        Object.assign(frame, { status: 'waiting', held: reasons });
+        return;
       }
-      Object.assign(frame, { status: 'waiting', held: checked.reasons.map((r) => `storyboard: ${r}`) });
-      return;
     }
     const ready = s.prep?.shots[frame.id];
     if (view && frame.shot?.view !== view && ready?.view === view) frame.shot = ready;
@@ -1925,16 +1940,20 @@ export class SessionStore {
       // first moment kept all seven after it waiting (26 Sep).
       const scene = s.draft?.breakdown?.scenes.find((x) => x.moments.some((y) => y.id === frame.id));
       const tried = !onCamera.length || (!!scene && this.replannedScenes.has(`${s.id}:${scene.id}`));
-      if (tried && this.deps.block) {
+      if (tried && this.deps.block && givesWay(findings)) {
+        frame.overrode = [...(frame.overrode ?? []), ...findings];
+        findings = [];
+      } else if (tried && this.deps.block) {
         Object.assign(frame, {
           status: 'failed',
           held: undefined,
           error: `not drawn: still unsure of its instructions after rewording${onCamera.length ? ' and planning again' : ''} (${findings.join('; ')})`,
         });
         return;
+      } else {
+        Object.assign(frame, { status: 'waiting', held: findings });
+        return;
       }
-      Object.assign(frame, { status: 'waiting', held: findings });
-      return;
     }
     frame.held = undefined;
     const { prompt, references, depicted } = built;

@@ -742,6 +742,24 @@ describe('a whole conversation', () => {
     expect(reworded.framesStarted[0].prompt).toContain('REWORDED: the board on the wall');
     const m1r = reworded.store.get(reworded.id)!.build!.frames!.find((f) => f.id === 'm1')!;
     expect([m1r.held, m1r.reworded]).toEqual([undefined, ['visual_point']]);
+
+    // Where it could have been planned again and still reads so after rewording, it is drawn, and
+    // what held it is kept: five of eight such moments came out right (lighthouse, 26 Sep).
+    const block: StoreDeps['block'] = async () => {
+      throw new Error('no floor plan here');
+    };
+    const tried = await toTheMoments(undefined, { gate, block });
+    expect(tried.framesStarted.map((f) => f.id)).toEqual(['m1']);
+    const m1t = tried.store.get(tried.id)!.build!.frames!.find((f) => f.id === 'm1')!;
+    expect(m1t.overrode?.[0]).toStartWith('its instructions may contradict each other (0.90)');
+    process.env.DREAMCHAT_HELD = 'fail';
+    try {
+      const left = await toTheMoments(undefined, { gate, block });
+      expect(left.framesStarted).toEqual([]);
+      expect(left.store.get(left.id)!.build!.frames!.find((f) => f.id === 'm1')!.error).toContain('not drawn');
+    } finally {
+      delete process.env.DREAMCHAT_HELD;
+    }
   });
 
   test('a moment the judge fails is drawn once more with what was wrong, then released on a pass', async () => {

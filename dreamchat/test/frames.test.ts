@@ -48,6 +48,10 @@ describe('writing in the dream', () => {
 
   test('an apostrophe in a word is not a quotation', () => {
     expect(writingIn("the dreamer's kitchen, where the board's slats hang")).toEqual([]);
+    // Speech is not writing; a sign that says something is.
+    expect(writingIn("The dog looks back at the dreamer, ears up, as if to say 'come on'.")).toEqual([]);
+    expect(writingIn('the fish said "hello" to me')).toEqual([]);
+    expect(writingIn("a sign that says 'EXIT' above the door")).toEqual(['EXIT']);
   });
 });
 
