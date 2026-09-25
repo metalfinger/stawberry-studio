@@ -1046,7 +1046,7 @@ export function normalizeBreakdown(raw: string): { breakdown: Breakdown; notes: 
         distance: mo.distance === 'close' || mo.distance === 'wide' ? mo.distance : 'medium',
         looks_at: str(mo.looks_at, 80),
         feeling: str(mo.feeling, 240),
-        visual_point: str(mo.visual_point, 240),
+        visual_point: str(mo.visual_point, 240).replace(CAMERA_CLAUSE, '').trim(),
         purpose: str(mo.purpose, 120),
         // Code decides the edge case: a scene's first moment continues from nothing.
         continues: j > 0 && mo.continues !== false,
@@ -1230,8 +1230,22 @@ export function details(b: Breakdown): { path: string; label: string; detail: De
 const CAMERA_LEAD =
   /^(?:(?:a|an|the)\s+)?(?:extreme\s+)?(?:wide|close|medium|long|establishing)\b(?:[-\s]?(?:up|shot|view|angle)\b)?\s*(?:(?:on|of|at|showing)\b)?\s*[:,—-]?\s*/i;
 
+/**
+ * Camera words anywhere in it: which way someone is turned to the camera, and where it is seen from.
+ * "The grey heron stands facing the blackboard, its back to the camera", with the floor plan turning
+ * her round as the dream says, read as the shot at odds with itself, and was never drawn (heron
+ * dream, 26 Sep). Where the camera stands is the plan's to decide.
+ */
+const CAMERA_CLAUSE =
+  /,\s*(?:(?:with\s+)?(?:its|his|her|their)\s+back\s+(?:turned\s+)?to\s+the\s+(?:camera|viewer)|(?:facing|towards?|turned\s+to)\s+the\s+(?:camera|viewer)|(?:as\s+)?seen\s+from\s+(?:behind|the\s+front|the\s+side|above|below|the\s+back)(?:\s+(?:of\s+)?(?:them|her|him|it))?|from\s+the\s+(?:camera|viewer)'?s?\s+(?:point\s+of\s+view|view))\b/gi;
+
 export function stripCamera(action: string): string {
-  const stripped = action.replace(CAMERA_LEAD, '');
+  const lead = action.replace(CAMERA_LEAD, '');
+  const stripped = (lead === action || lead.length < 3 ? action : lead)
+    .replace(CAMERA_CLAUSE, '')
+    .replace(/\s+([.,;])/g, '$1')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
   if (stripped === action || stripped.length < 3) return action;
   return stripped[0].toUpperCase() + stripped.slice(1);
 }

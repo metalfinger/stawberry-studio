@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { rawPlanBy } from '../continuity';
-import { addChanges, type Breakdown, completeViews, mergeBecomings, normalizeBreakdown, readBlocking, VAGUE } from '../producer';
+import { addChanges, type Breakdown, completeViews, mergeBecomings, normalizeBreakdown, readBlocking, stripCamera, VAGUE } from '../producer';
 
 const detail = (value: string | null, said = false) => ({ value, said });
 const person = (id: string, name: string, identity: string) => ({
@@ -209,6 +209,17 @@ describe('the floor plan a model gives', () => {
     expect(plan({ id: 't1', held_by: 'p2' })?.spots.find((s) => s.id === 't1')).toMatchObject({ x: 4.8, y: 1.5, heldBy: 'p2' });
     // Held by nobody in the plan, it still has no spot, and the scene no plan.
     expect(plan({ id: 't1', held_by: 'p9' })).toBeUndefined();
+  });
+});
+
+describe("a moment's words", () => {
+  test('say what happens, never where the camera is: the plan decides that', () => {
+    expect(stripCamera('The grey heron stands facing the blackboard, its back to the camera.')).toBe(
+      'The grey heron stands facing the blackboard.',
+    );
+    expect(stripCamera('Wide view of the beach, the dreamer walking, seen from behind')).toBe('The beach, the dreamer walking');
+    // Only a clause of its own: taken from the middle of a sentence it would break it.
+    expect(stripCamera('The dreamer turned to the camera and smiling.')).toBe('The dreamer turned to the camera and smiling.');
   });
 });
 
