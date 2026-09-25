@@ -78,7 +78,16 @@ export type Blocking = {
    * words: a spot's id, "front", or "missing" or "beyond" when it is not on the plan.
    */
   looks?: Record<string, string>;
+  /**
+   * Who and what its moments see only out past the place's edges, through a window or an opening,
+   * by the side they are seen on: the tractor in the field below the lighthouse's round room. Never
+   * on the plan: put on it, it stood inside the room by the window (lighthouse, 26 Sep).
+   */
+  outside?: Record<string, Side>;
 };
+
+/** A side of a place, for someone facing its front. */
+export type Side = 'front' | 'back' | 'left' | 'right';
 
 /** A place's size, across and deep, in metres. */
 export const roomOf = (plan: Pick<Blocking, 'room'>): [number, number] => plan.room ?? [10, 10];
@@ -191,7 +200,8 @@ export function settle(plan: Blocking): Blocking {
   // A thing the plan gives no shape that someone sits on is their seat, as the previs draws it: a
   // sofa taken for a solid moved the dreamer off it, half a metre from where she sat (25 Sep).
   const sat = (t: Spot) =>
-    !t.shape && plan.spots.some((p) => p.kind === 'person' && !p.many && p.pose === 'sitting' && onFootprint(p, t, plan));
+    !t.shape &&
+    plan.spots.some((p) => p.kind === 'person' && !p.many && p.pose === 'sitting' && onFootprint(p, t, plan));
   const solids = plan.spots.filter((t) => solidOf(t) && !sat(t));
   const [rw, rd] = roomOf(plan);
   const free = (p: Vec, self: Spot) =>
@@ -219,8 +229,10 @@ export function settle(plan: Blocking): Blocking {
     const r = rightOf(f);
     const m = 0.35;
     const round: Vec[] = [];
-    for (let u = -w / 2 - m; u <= w / 2 + m + 1e-9; u += 0.25) round.push({ x: u, y: d / 2 + m }, { x: u, y: -d / 2 - m });
-    for (let v = -d / 2 - m; v <= d / 2 + m + 1e-9; v += 0.25) round.push({ x: w / 2 + m, y: v }, { x: -w / 2 - m, y: v });
+    for (let u = -w / 2 - m; u <= w / 2 + m + 1e-9; u += 0.25)
+      round.push({ x: u, y: d / 2 + m }, { x: u, y: -d / 2 - m });
+    for (let v = -d / 2 - m; v <= d / 2 + m + 1e-9; v += 0.25)
+      round.push({ x: w / 2 + m, y: v }, { x: -w / 2 - m, y: v });
     const out = round
       .map((o) => ({ x: t.x + r.x * o.x + f.x * o.y, y: t.y + r.y * o.x + f.y * o.y }))
       .filter((p) => free(p, s))
@@ -258,8 +270,13 @@ export function settle(plan: Blocking): Blocking {
 export function outsideCamera(plan: Blocking, ids: string[], facesFront: boolean): Camera | null {
   const people = plan.spots.filter((s) => ids.includes(s.id) && !s.many);
   if (!people.length) return null;
-  const c = { x: people.reduce((a, s) => a + s.x, 0) / people.length, y: people.reduce((a, s) => a + s.y, 0) / people.length };
-  const look = unit(people.map((s) => facing(s, plan)).reduce((a, v) => ({ x: a.x + v.x, y: a.y + v.y }), { x: 0, y: 0 }));
+  const c = {
+    x: people.reduce((a, s) => a + s.x, 0) / people.length,
+    y: people.reduce((a, s) => a + s.y, 0) / people.length,
+  };
+  const look = unit(
+    people.map((s) => facing(s, plan)).reduce((a, v) => ({ x: a.x + v.x, y: a.y + v.y }), { x: 0, y: 0 }),
+  );
   // Facing them: stand where they look, and look back at them. Facing the front: stand behind them.
   const d = facesFront ? look : { x: -look.x, y: -look.y };
   return { at: { x: c.x - d.x * 4, y: c.y - d.y * 4 }, d };

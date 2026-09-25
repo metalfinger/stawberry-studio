@@ -121,7 +121,27 @@ const TOO_MANY = 3;
 const WIDTH: Record<Moment['distance'], number> = { wide: 3, medium: 2, close: 1 };
 
 /** Words that say what something is, not how it is said: plural or not, without the little words. */
-const WEAK = new Set(['the', 'a', 'an', 'of', 'at', 'on', 'in', 'to', 'by', 'with', 'from', 'and', 'its', 'their', 'his', 'her', 'sort', 'kind', 'some']);
+const WEAK = new Set([
+  'the',
+  'a',
+  'an',
+  'of',
+  'at',
+  'on',
+  'in',
+  'to',
+  'by',
+  'with',
+  'from',
+  'and',
+  'its',
+  'their',
+  'his',
+  'her',
+  'sort',
+  'kind',
+  'some',
+]);
 const said = (x: string) =>
   x
     .toLowerCase()
@@ -129,7 +149,8 @@ const said = (x: string) =>
     .filter((w) => w.length > 1 && !WEAK.has(w))
     .map((w) => (w.length > 3 && w.endsWith('s') && !w.endsWith('ss') ? w.slice(0, -1) : w));
 /** What a name is about: its last word before "at", "on", "with" and the like ("the woman at the stove": woman). */
-const headOf = (x: string) => said(x.toLowerCase().split(/\s(?:at|on|in|with|by|near|from|beside|behind|under|over)\s/)[0]).at(-1);
+const headOf = (x: string) =>
+  said(x.toLowerCase().split(/\s(?:at|on|in|with|by|near|from|beside|behind|under|over)\s/)[0]).at(-1);
 
 /**
  * Which of `names` some words mean: the one sharing most of what they say, what each is about
@@ -182,14 +203,19 @@ export function sameWords(a: string, b: string): boolean {
 }
 
 /** What a moment calls who and what is in it: the dreamer, and what has turned into something else by what it is now. */
-export function calledIn(b: Breakdown, c: { own: { who: string; what: string; now: string }[]; states: { who: string; what: string; now: string }[] }) {
+export function calledIn(
+  b: Breakdown,
+  c: { own: { who: string; what: string; now: string }[]; states: { who: string; what: string; now: string }[] },
+) {
   const changed = [...c.own, ...c.states];
   return (id: string) => {
     const st = changed.find((x) => x.who === id && isWhole(x));
     if (st) return st.now;
     const p = b.people.find((x) => x.id === id);
     if (p) return p.is_dreamer ? 'the dreamer' : p.name;
-    return b.things.find((x) => x.id === id)?.name ?? b.places.find((x) => x.id === id)?.name ?? fixtureName(b, id) ?? id;
+    return (
+      b.things.find((x) => x.id === id)?.name ?? b.places.find((x) => x.id === id)?.name ?? fixtureName(b, id) ?? id
+    );
   };
 }
 
@@ -257,7 +283,13 @@ export function rawPlanBy(b: Breakdown, momentId: string): Blocking | undefined 
       .map((s) => {
         const mv = moved.get(s.id);
         if (!mv) return s;
-        const at = { ...s, x: mv.x, y: mv.y, ...(mv.faces ? { faces: mv.faces } : {}), ...(mv.pose ? { pose: mv.pose } : {}) };
+        const at = {
+          ...s,
+          x: mv.x,
+          y: mv.y,
+          ...(mv.faces ? { faces: mv.faces } : {}),
+          ...(mv.pose ? { pose: mv.pose } : {}),
+        };
         // Handed over or put down: whoever holds it from this moment, or nobody.
         if (mv.heldBy !== undefined) {
           if (mv.heldBy) at.heldBy = mv.heldBy;
@@ -290,7 +322,8 @@ export const inViewAt = (m: Moment) => new Set([...m.visible, ...m.things, ...(m
 const CARRIES: Record<Relation, string> = {
   same_setup: 'the same view a moment earlier: the room, the light and where everyone is',
   same_side: 'the same place from the same side: where its walls, furniture and people are, and its light',
-  other_side: 'the same place from the other side: the light to keep, said in words and checked against it; not drawn from',
+  other_side:
+    'the same place from the other side: the light to keep, said in words and checked against it; not drawn from',
   other_place: 'how everyone in it looks right now; not its background',
   shift: 'the picture just before the dream jumps: its framing and where everyone is',
   seat: 'where the dreamer is: the camera is at their eyes there, turned toward what this moment faces',
@@ -459,7 +492,8 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
         .at(-1);
       if (seat) {
         const known = refs.find((r) => r.id === seat.id);
-        if (known) Object.assign(known, { role: 'composition', relation: 'seat', carries: CARRIES.seat, who: undefined });
+        if (known)
+          Object.assign(known, { role: 'composition', relation: 'seat', carries: CARRIES.seat, who: undefined });
         else add(seat, 'composition', 'seat');
       }
     }
@@ -470,7 +504,13 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
 
     // A moment that changes a part again replaces what it was: the horse's head was told "still
     // a melting ice block" and judged against it (23 Sep).
-    const own = m.leaves.map((l) => ({ who: l.who, what: l.what, now: l.now, since: m.id, ...(l.whole !== undefined ? { whole: l.whole } : {}) }));
+    const own = m.leaves.map((l) => ({
+      who: l.who,
+      what: l.what,
+      now: l.now,
+      since: m.id,
+      ...(l.whole !== undefined ? { whole: l.whole } : {}),
+    }));
     return {
       id: m.id,
       order: i + 1,
@@ -544,7 +584,13 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
   const ghostOf = new Map<string, GhostPlan>(); // by state key
   for (const m of ms)
     for (const l of m.leaves) {
-      const state: State = { who: l.who, what: l.what, now: l.now, since: m.id, ...(l.whole !== undefined ? { whole: l.whole } : {}) };
+      const state: State = {
+        who: l.who,
+        what: l.what,
+        now: l.now,
+        since: m.id,
+        ...(l.whole !== undefined ? { whole: l.whole } : {}),
+      };
       const prev = latest.get(l.who);
       const g: GhostPlan = {
         id: `g${ghosts.length + 1}`,
@@ -669,7 +715,11 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
   // With a floor plan, every camera is placed on it: what each picture sees is worked out, and who
   // stands where across it follows from where they are, not from the order they were first named.
 
-  const bare = (x: string) => x.toLowerCase().replace(/^(the|a|an)\s+/, '').trim();
+  const bare = (x: string) =>
+    x
+      .toLowerCase()
+      .replace(/^(the|a|an)\s+/, '')
+      .trim();
   for (const c of cuts) {
     const plan = placePlan(b, c.id);
     if (!plan) continue;
@@ -677,7 +727,9 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
     const changed = [...c.own, ...c.states];
     // What something is called now: the big sofa that has become a roller coaster is the roller coaster.
     const now = (id: string) => {
-      const st = changed.find((x) => x.who === id && /^\s*(?:its |their )?(?:form|shape|whole|self|itself|kind)\s*$/i.test(x.what));
+      const st = changed.find(
+        (x) => x.who === id && /^\s*(?:its |their )?(?:form|shape|whole|self|itself|kind)\s*$/i.test(x.what),
+      );
       return st ? `${/^(a|an|the)\s/i.test(st.now) ? '' : 'the '}${st.now} (what ${name(id)} turned into)` : name(id);
     };
     // A fixture of the place goes by its own name; everyone and everything else as the story calls them.
@@ -726,7 +778,11 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
       const pov = shotPlan(b, m.id) ?? plan;
       const said = pov.looks?.[m.id];
       const toward = said && pov.spots.some((s) => s.id === said) ? said : target(m.looks_at);
-      const v = dreamerShot(pov, dreamerId, toward, now, toward ? undefined : m.looks_at || undefined, seen(m));
+      // Who and what they see out past the place's edges is named where they look: the tractor in
+      // the field below, out of the lighthouse's window (26 Sep).
+      const far = [...m.things, ...seen(m)].filter((id) => pov.outside?.[id]).map(now);
+      const beyond = [m.looks_at, far.length ? `${far.join(' and ')}, far off` : ''].filter(Boolean).join(': ');
+      const v = dreamerShot(pov, dreamerId, toward, now, toward ? undefined : beyond || undefined, seen(m));
       if (v) {
         c.view = v.text;
         c.eye = v.eye;
@@ -839,7 +895,7 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
       if (r.relation === 'seat')
         out.push({
           with: r.id,
-          text: 'Is the second picture seen through the dreamer\'s eyes from where they are in the first: from their place, at their eye height, with what is beside them there beside the camera?',
+          text: "Is the second picture seen through the dreamer's eyes from where they are in the first: from their place, at their eye height, with what is beside them there beside the camera?",
           fix: `seen from where the dreamer is in picture ${k}: from their place, at their eye height, with what is beside them there beside the camera`,
         });
       if (r.relation === 'shift')

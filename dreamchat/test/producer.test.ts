@@ -1,6 +1,15 @@
 import { describe, expect, test } from 'bun:test';
 import { rawPlanBy } from '../continuity';
-import { addChanges, type Breakdown, completeViews, mergeBecomings, normalizeBreakdown, readBlocking, stripCamera, VAGUE } from '../producer';
+import {
+  addChanges,
+  type Breakdown,
+  completeViews,
+  mergeBecomings,
+  normalizeBreakdown,
+  readBlocking,
+  stripCamera,
+  VAGUE,
+} from '../producer';
 
 const detail = (value: string | null, said = false) => ({ value, said });
 const person = (id: string, name: string, identity: string) => ({
@@ -15,7 +24,12 @@ const person = (id: string, name: string, identity: string) => ({
     distinctive_features: detail('none'),
   },
 });
-const moment = (id: string, action: string, things: string[] = [], leaves: Breakdown['scenes'][number]['moments'][number]['leaves'] = []) => ({
+const moment = (
+  id: string,
+  action: string,
+  things: string[] = [],
+  leaves: Breakdown['scenes'][number]['moments'][number]['leaves'] = [],
+) => ({
   id,
   action,
   visible: ['p1'],
@@ -37,7 +51,10 @@ const moment = (id: string, action: string, things: string[] = [], leaves: Break
 describe('the breakdown, as the harness completes it', () => {
   const raw = {
     title: 'The theater',
-    people: [person('p1', 'the girlfriend', "the dreamer's friend"), person('p2', 'the crowd', 'other people in the theater')],
+    people: [
+      person('p1', 'the girlfriend', "the dreamer's friend"),
+      person('p2', 'the crowd', 'other people in the theater'),
+    ],
     places: [{ id: 'l1', name: 'the theater', fields: {} }],
     things: [
       { id: 't1', name: 'the blue sofa', fields: {} },
@@ -51,9 +68,12 @@ describe('the breakdown, as the harness completes it', () => {
         mood: '',
         moments: [
           moment('m1', 'They sit on the blue sofa beside the big sofa.', ['t1', 't2']),
-          moment('m2', 'The large sofa next to them turns into a roller coaster.', ['t1'], [
-            { who: 't2', what: 'form', now: 'a roller coaster' },
-          ]),
+          moment(
+            'm2',
+            'The large sofa next to them turns into a roller coaster.',
+            ['t1'],
+            [{ who: 't2', what: 'form', now: 'a roller coaster' }],
+          ),
           moment('m3', 'The roller coaster stands where the sofa was, like one at a fair.'),
         ],
       },
@@ -90,8 +110,17 @@ describe('the floor plan a model gives', () => {
       logline: '',
       look: { colours: detail(null), light: detail(null), texture: detail(null) },
       world_logic: '',
-      people: [person('p1', 'the young woman', 'a young woman'), { ...person('p2', 'you', 'the dreamer'), is_dreamer: true }],
-      places: [{ id: 'l1', name: 'the room', fields: { geography: detail(null), landmarks: detail('an autoclave'), light: detail(null) } }],
+      people: [
+        person('p1', 'the young woman', 'a young woman'),
+        { ...person('p2', 'you', 'the dreamer'), is_dreamer: true },
+      ],
+      places: [
+        {
+          id: 'l1',
+          name: 'the room',
+          fields: { geography: detail(null), landmarks: detail('an autoclave'), light: detail(null) },
+        },
+      ],
       things: [],
       scenes: [
         {
@@ -137,7 +166,11 @@ describe('the floor plan a model gives', () => {
     expect(plan.spots.map((s) => s.id)).toEqual(['p1', 'p2', 'x1']);
     expect(plan.spots.find((s) => s.id === 'p1')?.faces).toBe('p2');
     expect(plan.spots.find((s) => s.id === 'p2')?.faces).toBeUndefined();
-    expect(plan.spots.find((s) => s.id === 'x1')).toMatchObject({ fixture: true, name: 'the autoclave', size: [0.9, 0.7, 1.5] });
+    expect(plan.spots.find((s) => s.id === 'x1')).toMatchObject({
+      fixture: true,
+      name: 'the autoclave',
+      size: [0.9, 0.7, 1.5],
+    });
     expect(Object.keys(plan.moves ?? {})).toEqual(['m2', 'm3']);
     expect(plan.moves?.m2[0]).toMatchObject({ id: 'p1', y: 8.5, faces: 'back' });
   });
@@ -206,9 +239,34 @@ describe('the floor plan a model gives', () => {
         ],
       }).breakdown.scenes[0].blocking;
     // The night bus's lantern, as the plan gave it in two runs of five.
-    expect(plan({ id: 't1', held_by: 'p2' })?.spots.find((s) => s.id === 't1')).toMatchObject({ x: 4.8, y: 1.5, heldBy: 'p2' });
+    expect(plan({ id: 't1', held_by: 'p2' })?.spots.find((s) => s.id === 't1')).toMatchObject({
+      x: 4.8,
+      y: 1.5,
+      heldBy: 'p2',
+    });
     // Held by nobody in the plan, it still has no spot, and the scene no plan.
     expect(plan({ id: 't1', held_by: 'p9' })).toBeUndefined();
+  });
+
+  test('a thing seen only out past the place is off the plan, on the side it is seen', () => {
+    const b = lab();
+    b.things = [{ id: 't1', name: 'the red tractor', fields: {} }] as unknown as Breakdown['things'];
+    b.scenes[0].moments[0].things = ['t1'];
+    const plan = readBlocking(b, {
+      scenes: [
+        {
+          id: 's1',
+          spots: [
+            { id: 'p1', x: 4, y: 1.5, pose: 'standing' },
+            { id: 'p2', x: 4.8, y: 1.5, pose: 'standing' },
+            // Out in the field below the round room's window, even where given a spot.
+            { id: 't1', beyond: 'front', x: 4, y: 0 },
+          ],
+        },
+      ],
+    }).breakdown.scenes[0].blocking;
+    expect(plan?.spots.some((s) => s.id === 't1')).toBe(false);
+    expect(plan?.outside).toEqual({ t1: 'front' });
   });
 });
 
@@ -217,9 +275,13 @@ describe("a moment's words", () => {
     expect(stripCamera('The grey heron stands facing the blackboard, its back to the camera.')).toBe(
       'The grey heron stands facing the blackboard.',
     );
-    expect(stripCamera('Wide view of the beach, the dreamer walking, seen from behind')).toBe('The beach, the dreamer walking');
+    expect(stripCamera('Wide view of the beach, the dreamer walking, seen from behind')).toBe(
+      'The beach, the dreamer walking',
+    );
     // Only a clause of its own: taken from the middle of a sentence it would break it.
-    expect(stripCamera('The dreamer turned to the camera and smiling.')).toBe('The dreamer turned to the camera and smiling.');
+    expect(stripCamera('The dreamer turned to the camera and smiling.')).toBe(
+      'The dreamer turned to the camera and smiling.',
+    );
   });
 });
 
@@ -239,7 +301,9 @@ describe('someone who turns into someone the dream also lists', () => {
             {
               ...moment('m2', 'She turns round, a heron now.'),
               visible: heronWithHer ? ['p2', 'p3'] : ['p3'],
-              leaves: [{ who: 'p2', what: 'entire body', now: 'becomes a tall grey heron in a red cardigan', whole: true }],
+              leaves: [
+                { who: 'p2', what: 'entire body', now: 'becomes a tall grey heron in a red cardigan', whole: true },
+              ],
             },
             { ...moment('m3', 'The heron flies out of the window.'), visible: ['p1', 'p3'] },
           ],
@@ -257,7 +321,9 @@ describe('someone who turns into someone the dream also lists', () => {
 
   test('is one person too when the change is said as a turning of one part, before Jev reads it', () => {
     const b = dream();
-    b.scenes[0].moments[1].leaves = [{ who: 'p2', what: 'body', now: 'transformed into a grey heron with red cardigan' }];
+    b.scenes[0].moments[1].leaves = [
+      { who: 'p2', what: 'body', now: 'transformed into a grey heron with red cardigan' },
+    ];
     expect(mergeBecomings(b)).toHaveLength(1);
     expect(b.scenes[0].moments[1].leaves[0].now).toBe('a grey heron with red cardigan');
   });
@@ -278,7 +344,10 @@ describe('a change the script supervisor finds', () => {
           moments: [
             { ...moment('m3', 'She comes back with a block of ice for a head.'), leaves: [] },
             { ...moment('m4', 'The ice melts and carves itself.'), leaves: [], states: [] },
-            { ...moment('m5', 'It is a horse head of ice.'), leaves: [{ who: 'p1', what: 'head', now: 'a horse head of clear ice' }] },
+            {
+              ...moment('m5', 'It is a horse head of ice.'),
+              leaves: [{ who: 'p1', what: 'head', now: 'a horse head of clear ice' }],
+            },
             { ...moment('m6', 'She stands there.'), leaves: [] },
           ],
         },
@@ -298,7 +367,11 @@ describe('a scene through several places', () => {
   test('gets a plan for each place, each the size it is, and a car moves with who rides in it', () => {
     const b = {
       title: 'the house',
-      people: [person('p1', 'you', 'the dreamer'), person('p3', 'the young woman', 'a young woman'), person('p4', 'the aunt', 'an aunt')],
+      people: [
+        person('p1', 'you', 'the dreamer'),
+        person('p3', 'the young woman', 'a young woman'),
+        person('p4', 'the aunt', 'an aunt'),
+      ],
       things: [
         { id: 't1', name: 'the stove', fields: {} },
         { id: 't2', name: 'the little round convertible', fields: {} },
@@ -310,7 +383,11 @@ describe('a scene through several places', () => {
           place: 'l3',
           moments: [
             { ...moment('m3', 'Up the back stairs.'), visible: ['p1'], place: 'l3' },
-            { ...moment('m5', 'She cooks at a stove that almost fills the tiny room.', ['t1']), visible: ['p3'], place: 'l4' },
+            {
+              ...moment('m5', 'She cooks at a stove that almost fills the tiny room.', ['t1']),
+              visible: ['p3'],
+              place: 'l4',
+            },
           ],
         },
         {
@@ -330,8 +407,22 @@ describe('a scene through several places', () => {
           front: 'the stairs',
           indoors: true,
           room: [3, 8],
-          spots: [{ id: 'p1', x: 1, y: 1, pose: 'standing' }, { id: 'x1', name: 'the back stairs', x: 1.5, y: 4, size: [1, 3, 2.5] }],
-          places: { l4: { front: 'the stove', indoors: true, room: [2.4, 2.2], spots: [{ id: 'p3', x: 1.2, y: 1.4, faces: 't1', pose: 'standing' }, { id: 't1', x: 1.2, y: 0.5, size: [2, 0.8, 0.9] }, { id: 'p9', x: 9, y: 9 }] } },
+          spots: [
+            { id: 'p1', x: 1, y: 1, pose: 'standing' },
+            { id: 'x1', name: 'the back stairs', x: 1.5, y: 4, size: [1, 3, 2.5] },
+          ],
+          places: {
+            l4: {
+              front: 'the stove',
+              indoors: true,
+              room: [2.4, 2.2],
+              spots: [
+                { id: 'p3', x: 1.2, y: 1.4, faces: 't1', pose: 'standing' },
+                { id: 't1', x: 1.2, y: 0.5, size: [2, 0.8, 0.9] },
+                { id: 'p9', x: 9, y: 9 },
+              ],
+            },
+          },
         },
         {
           id: 's3',

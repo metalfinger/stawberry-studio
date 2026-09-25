@@ -5,7 +5,7 @@
 // Every detail it writes is marked as said by the person, or guessed. Jev then checks each
 // "said" against the person's own messages (ground.ts). Strawberry's own rule is that missing
 // facts are unknown, not invented defaults presented as the user's decisions.
-import { SHAPES, type Blocking, type Move, type Shape, type Spot } from './blocking';
+import { SHAPES, type Blocking, type Move, type Shape, type Side, type Spot } from './blocking';
 import { type ChatMessage, callDeepseek, type Thinking } from './llm';
 
 /** A detail and whether the person said it. `null` when nobody knows and nothing is needed. */
@@ -339,6 +339,7 @@ For each scene, seen from above: its "front" (the side of the place its people f
 - The place's own fixtures that the moments happen by, face or act on (an autoclave, a stove, the stairs, a bridge, a door, a counter) get a spot too, with an id x1, x2 and so on, their "name" in a few words, their size and their shape. They are part of the place, not people or things of the story. A hallway, a corridor, a corner, a doorway or an aisle is not a fixture: it is the shape of the place itself (a hallway is a place about 1.2 across and as long as it is). Only when a moment faces one ("faces": "the corner") does it get a small spot, with that name, where it is, so the camera can face it.
 - A crowd or an audience is one spot with "many": true, at the middle of where they are, with "spread": [across, deep] in metres for the ground they fill, how they are ("sitting" in rows of seats, "standing"), and "count" when the dream says how many ("a couple of people": 2).
 - A moment "seen_through_the_eyes_of" someone has them in it, where they are: their spot is the camera, facing what the moment faces.
+- Someone or something the moments see only out of a window or through an opening, out past the place's edges (a tractor in the field below a lighthouse room, a ship out at sea, a figure across the street), is not in the place and gets no x or y: give it {"id": "t3", "beyond": "front"}, with the side of the place it is seen on ("front", "back", "left" or "right").
 - A moment in which someone goes up, down, across, along or through something (climbs the stairs, crosses the bridge, walks down the hallway) shows them partway: their spot, or their move for that moment, is on it or in it, not beside it.
 - When someone or something moves during the scene (walks off, comes back, sits down, drives away), give where it is in each moment's picture where that has changed, by the moment's id: "moves": {"m2": [{"id": "p1", "x": 4, "y": 8, "faces": "back", "pose": "standing"}]}. A move holds until its next one, so someone who comes back needs a move back: in the moment they return they are where it has them (in front of whoever they come back to, facing them). People riding in something move with it.
 - When a scene's moments happen in more than one place (a moment's "place" differs from its scene's), plan the scene's own place as above, and give every other place its own plan in "places", by the place's id, with the same fields, for the moments that happen there.
@@ -362,7 +363,12 @@ export async function blockScenes(
   const brief = {
     people: b.people.map((p) => ({ id: p.id, name: p.is_dreamer ? 'the dreamer' : p.name, crowd: !!p.extras })),
     things: b.things.map((t) => ({ id: t.id, name: t.name })),
-    places: b.places.map((l) => ({ id: l.id, name: l.name, layout: l.fields.geography?.value, has: l.fields.landmarks?.value })),
+    places: b.places.map((l) => ({
+      id: l.id,
+      name: l.name,
+      layout: l.fields.geography?.value,
+      has: l.fields.landmarks?.value,
+    })),
     scenes: b.scenes
       .filter((sc) => !again.only || again.only.includes(sc.id))
       .map((sc) => ({
@@ -414,7 +420,11 @@ export function throughEyes(b: Breakdown, m: Moment): string | undefined {
  * place's fixtures, whom or what someone faces only if it is in the plan, moves only for moments
  * of the scene. A scene missing someone is left without a plan.
  */
-export function readBlocking(b: Breakdown, raw: unknown, notes: string[] = []): { breakdown: Breakdown; notes: string[] } {
+export function readBlocking(
+  b: Breakdown,
+  raw: unknown,
+  notes: string[] = [],
+): { breakdown: Breakdown; notes: string[] } {
   const out: Breakdown = structuredClone(b);
   const given = list((raw as { scenes?: unknown })?.scenes);
   for (const sc of out.scenes) {
@@ -422,14 +432,26 @@ export function readBlocking(b: Breakdown, raw: unknown, notes: string[] = []): 
     if (!g) continue;
     // The scene's own place, and every other place its moments happen in, each planned apart.
     const elsewhere = [...new Set(sc.moments.map((m) => m.place).filter((pl) => !!pl && pl !== sc.place))];
-    const main = readPlan(b, g, sc.moments.filter((m) => !elsewhere.includes(m.place)), `scene ${sc.id}`, notes);
+    const main = readPlan(
+      b,
+      g,
+      sc.moments.filter((m) => !elsewhere.includes(m.place)),
+      `scene ${sc.id}`,
+      notes,
+    );
     if (!main) continue;
     const given_ = (g.places && typeof g.places === 'object' ? g.places : {}) as Record<string, unknown>;
     const places: Record<string, Blocking> = {};
     for (const pl of elsewhere) {
       const sub = given_[pl];
       if (!sub || typeof sub !== 'object') continue;
-      const plan = readPlan(b, sub as Record<string, unknown>, sc.moments.filter((m) => m.place === pl), `scene ${sc.id}, ${pl}`, notes);
+      const plan = readPlan(
+        b,
+        sub as Record<string, unknown>,
+        sc.moments.filter((m) => m.place === pl),
+        `scene ${sc.id}, ${pl}`,
+        notes,
+      );
       if (plan) places[pl] = plan;
     }
     sc.blocking = { ...main, ...(Object.keys(places).length ? { places } : {}) };
@@ -448,8 +470,16 @@ const metres = (v: unknown, n: number, most: number) =>
  * and things and the place's fixtures, on the place's own ground, whom or what someone faces only
  * if it is in the plan, moves only at those moments. Left without a plan where someone is missing.
  */
-function readPlan(b: Breakdown, g: Record<string, unknown>, moments: Moment[], label: string, notes: string[]): Blocking | null {
-  const ids = new Set(moments.flatMap((m) => [...m.visible, ...m.things, ...(throughEyes(b, m) ? [throughEyes(b, m)!] : [])]));
+function readPlan(
+  b: Breakdown,
+  g: Record<string, unknown>,
+  moments: Moment[],
+  label: string,
+  notes: string[],
+): Blocking | null {
+  const ids = new Set(
+    moments.flatMap((m) => [...m.visible, ...m.things, ...(throughEyes(b, m) ? [throughEyes(b, m)!] : [])]),
+  );
   const room = metres(g.room, 2, 200) as [number, number] | undefined;
   const [w, d] = room ?? [10, 10];
   const onX = (v: unknown) => Math.max(0, Math.min(w, Number(v)));
@@ -464,7 +494,8 @@ function readPlan(b: Breakdown, g: Record<string, unknown>, moments: Moment[], l
   const movesGiven = (g.moves && typeof g.moves === 'object' ? g.moves : {}) as Record<string, unknown>;
   for (const m of moments)
     for (const x of list(movesGiven[m.id]).map((y) => y as Record<string, unknown>)) {
-      if (typeof x.id !== 'string' || !b.people.some((p) => p.id === x.id) || given.some((y) => y.id === x.id)) continue;
+      if (typeof x.id !== 'string' || !b.people.some((p) => p.id === x.id) || given.some((y) => y.id === x.id))
+        continue;
       if (!Number.isFinite(Number(x.x)) || !Number.isFinite(Number(x.y))) continue;
       given.push({ ...x });
     }
@@ -472,13 +503,23 @@ function readPlan(b: Breakdown, g: Record<string, unknown>, moments: Moment[], l
   // brother's lantern had no spot in two runs of five, and the night bus was left without a plan
   // (25 Sep): it takes its holder's spot, and settling puts it at their side.
   for (const x of given) {
-    if (Number.isFinite(Number(x.x)) && Number.isFinite(Number(x.y)) || typeof x.held_by !== 'string') continue;
+    if ((Number.isFinite(Number(x.x)) && Number.isFinite(Number(x.y))) || typeof x.held_by !== 'string') continue;
     const holder = given.find((h) => h.id === x.held_by && b.people.some((p) => p.id === h.id));
-    if (holder && Number.isFinite(Number(holder.x)) && Number.isFinite(Number(holder.y))) Object.assign(x, { x: holder.x, y: holder.y });
+    if (holder && Number.isFinite(Number(holder.x)) && Number.isFinite(Number(holder.y)))
+      Object.assign(x, { x: holder.x, y: holder.y });
   }
+  // Seen only out past the place's edges: never on the plan, whose every spot is inside it.
+  const outside: Record<string, Side> = {};
+  for (const x of given)
+    if (typeof x.id === 'string' && ids.has(x.id) && SIDES.includes(x.beyond as Side)) outside[x.id] = x.beyond as Side;
   const spots: Spot[] = given
     .filter(
-      (x) => typeof x.id === 'string' && (ids.has(x.id) || fixture(x)) && Number.isFinite(Number(x.x)) && Number.isFinite(Number(x.y)),
+      (x) =>
+        typeof x.id === 'string' &&
+        !outside[x.id] &&
+        (ids.has(x.id) || fixture(x)) &&
+        Number.isFinite(Number(x.x)) &&
+        Number.isFinite(Number(x.y)),
     )
     .map((x): Spot => {
       const person = b.people.some((p) => p.id === x.id);
@@ -492,7 +533,9 @@ function readPlan(b: Breakdown, g: Record<string, unknown>, moments: Moment[], l
         kind: person ? 'person' : 'thing',
         ...(typeof x.faces === 'string' && x.faces ? { faces: x.faces } : {}),
         ...(many ? { many: true } : {}),
-        ...(person && ['sitting', 'standing', 'lying'].includes(x.pose as string) ? { pose: x.pose as Spot['pose'] } : {}),
+        ...(person && ['sitting', 'standing', 'lying'].includes(x.pose as string)
+          ? { pose: x.pose as Spot['pose'] }
+          : {}),
         // A flight of steps rises at most 0.8 m for every metre it runs, as a steep real one does: a
         // spiral staircase given as 12 m up in 4 m put the dog running up it far above the picture.
         ...(!person && size
@@ -505,9 +548,13 @@ function readPlan(b: Breakdown, g: Record<string, unknown>, moments: Moment[], l
             }
           : {}),
         ...(!person && SHAPES.includes(x.shape as Shape) ? { shape: x.shape as Shape } : {}),
-        ...(!person && typeof x.held_by === 'string' && b.people.some((p) => p.id === x.held_by) ? { heldBy: x.held_by } : {}),
+        ...(!person && typeof x.held_by === 'string' && b.people.some((p) => p.id === x.held_by)
+          ? { heldBy: x.held_by }
+          : {}),
         ...(many && spread ? { spread: spread as [number, number] } : {}),
-        ...(many && Number.isInteger(x.count) && Number(x.count) >= 1 && Number(x.count) <= 500 ? { count: Number(x.count) } : {}),
+        ...(many && Number.isInteger(x.count) && Number(x.count) >= 1 && Number(x.count) <= 500
+          ? { count: Number(x.count) }
+          : {}),
         ...(fixture(x) ? { fixture: true, name: str(x.name, 60) } : {}),
       };
     });
@@ -522,11 +569,15 @@ function readPlan(b: Breakdown, g: Record<string, unknown>, moments: Moment[], l
   // Who and what can move: people, and things that are not the place's own (a car drives off).
   const movers = new Set(spots.filter((s) => !s.many && !s.fixture).map((s) => s.id));
   const moves: Record<string, Move[]> = {};
-  for (const [mid, list_] of Object.entries((g.moves && typeof g.moves === 'object' ? g.moves : {}) as Record<string, unknown>)) {
+  for (const [mid, list_] of Object.entries(
+    (g.moves && typeof g.moves === 'object' ? g.moves : {}) as Record<string, unknown>,
+  )) {
     if (!at.has(mid)) continue;
     // A thing changing hands needs no place of its own: it is where its new holder is.
     const handed = (x: Record<string, unknown>) =>
-      typeof x.held_by === 'string' && !b.people.some((p) => p.id === x.id) && (x.held_by === '' || known.has(x.held_by));
+      typeof x.held_by === 'string' &&
+      !b.people.some((p) => p.id === x.id) &&
+      (x.held_by === '' || known.has(x.held_by));
     const mv = list(list_)
       .map((x) => x as Record<string, unknown>)
       .filter(
@@ -549,7 +600,7 @@ function readPlan(b: Breakdown, g: Record<string, unknown>, moments: Moment[], l
       });
     if (mv.length) moves[mid] = mv;
   }
-  const missing = [...ids].filter((id) => !spots.some((s) => s.id === id));
+  const missing = [...ids].filter((id) => !spots.some((s) => s.id === id) && !outside[id]);
   if (missing.length) {
     notes.push(`blocking: ${label} has no spot for ${missing.join(', ')}; left without a plan`);
     return null;
@@ -563,8 +614,11 @@ function readPlan(b: Breakdown, g: Record<string, unknown>, moments: Moment[], l
     ...(Object.keys(moves).length ? { moves } : {}),
     ...(indoors ? { indoors: true } : {}),
     ...(indoors && Number.isFinite(ceiling) && ceiling >= 2 && ceiling <= 30 ? { ceiling } : {}),
+    ...(Object.keys(outside).length ? { outside } : {}),
   };
 }
+
+const SIDES: Side[] = ['front', 'back', 'left', 'right'];
 
 const CHANGES = `You are the script supervisor of a dream being drawn as pictures, one picture per moment, in order. Each moment lists in "leaves" the changes to how someone or something looks that the pictures after it must keep showing. Read every moment's action: where it changes how someone or something looks in a way that lasts into the moments after it (a part of them replaced, turned into something else, a new colour or shape), and its "leaves" does not already have that change, give it, at the moment it first happens. Never where someone is or what they are doing: only how they look. Say "now" as what it looks like, in a few words from the dream.
 
@@ -621,7 +675,11 @@ export async function superviseChanges(b: Breakdown): Promise<Change[]> {
 }
 
 /** A change's part, for comparing: "the head", "head" and "Head" are one. */
-const bareWords = (x: string) => x.toLowerCase().replace(/^(the|a|an|its|their|his|her)\s+/, '').trim();
+const bareWords = (x: string) =>
+  x
+    .toLowerCase()
+    .replace(/^(the|a|an|its|their|his|her)\s+/, '')
+    .trim();
 
 /**
  * The changes the supervisor found, written into the moments they happen at, and carried into every
@@ -642,7 +700,10 @@ export function addChanges(b: Breakdown, changes: Change[]): void {
       if ((later.leaves ?? []).some((l) => l.who === c.who && bareWords(l.what) === bareWords(c.what))) break;
       if (![...later.visible, ...later.things].includes(c.who)) continue;
       const kept = (later.states ?? []).filter((st) => !(st.who === c.who && bareWords(st.what) === bareWords(c.what)));
-      later.states = [...kept, { who: c.who, what: c.what, now: c.now, since: c.moment, ...(c.whole !== undefined ? { whole: c.whole } : {}) }];
+      later.states = [
+        ...kept,
+        { who: c.who, what: c.what, now: c.now, since: c.moment, ...(c.whole !== undefined ? { whole: c.whole } : {}) },
+      ];
     }
   }
 }
@@ -684,7 +745,12 @@ export async function shotFor(
     );
     const shot = (JSON.parse(res.content) as { shot?: unknown }).shot;
     if (typeof shot !== 'string' || !shot.trim()) return null;
-    const bare = (x: string) => x.toLowerCase().replace(/^(the|a|an)\s+/, '').replace(/\s*\(.*\)\s*$/, '').trim();
+    const bare = (x: string) =>
+      x
+        .toLowerCase()
+        .replace(/^(the|a|an)\s+/, '')
+        .replace(/\s*\(.*\)\s*$/, '')
+        .trim();
     return mustName.every((n) => shot.toLowerCase().includes(bare(n))) ? shot.trim().slice(0, 1400) : null;
   } catch {
     return null;
@@ -703,7 +769,10 @@ export async function fixFrom(words: string, instructions: string): Promise<stri
     const res = await callDeepseek(
       [
         { role: 'system', content: FIX },
-        { role: 'user', content: `What they said about its picture: "${words}"\n\nThe instructions its next version will be drawn from:\n\n${instructions}` },
+        {
+          role: 'user',
+          content: `What they said about its picture: "${words}"\n\nThe instructions its next version will be drawn from:\n\n${instructions}`,
+        },
       ],
       { json: true, thinking: PRODUCER_THINKING },
     );
@@ -894,7 +963,8 @@ export const VAGUE =
   /^\s*(?:none|nothing|n\/a|null|nil|-+|—)\s*\.?\s*$|\b(undefined|unknown|unclear|indeterminate|unspecified|ambiguous|indistinct|nondescript|hazy memory|blends? into|(?:none|nothing|not) (?:notable|remarkable|special|distinctive|in particular)|no (?:distinctive|distinguishing|notable|remarkable) features?|not (?:remembered|specified|known|sure|clear|described|given)|no specific|(?:can't|cannot|don't|do not) remember)\b/i;
 
 /** A change of what something is altogether, not of a part of it: its form, its shape, itself. */
-export const WHOLE = /^\s*(?:its |their |the )?(?:form|shape|whole|whole body|body and all|self|itself|themselves|kind|what it is|nature|entire \w+)\s*$/i;
+export const WHOLE =
+  /^\s*(?:its |their |the )?(?:form|shape|whole|whole body|body and all|self|itself|themselves|kind|what it is|nature|entire \w+)\s*$/i;
 
 /**
  * Whether a change turns something into something else altogether: as Jev read it when the change
@@ -964,7 +1034,9 @@ export function normalizeBreakdown(raw: string): { breakdown: Breakdown; notes: 
   // A crowd made a person anyway, told not to ("the crowd", "other people in the theater"): its
   // sketch of twenty people "standing side by side" read as contradicting "seated in rows" (24 Sep).
   const crowd = (o: Record<string, unknown>) =>
-    CROWD.test(`${str(o.name, 120)} ${str(((o.fields ?? {}) as Record<string, { value?: unknown }>).identity?.value, 200)}`);
+    CROWD.test(
+      `${str(o.name, 120)} ${str(((o.fields ?? {}) as Record<string, { value?: unknown }>).identity?.value, 200)}`,
+    );
   const people: Person[] = list(b.people).map((p, i) => {
     const o = (p ?? {}) as Record<string, unknown>;
     const f = (o.fields ?? {}) as Record<string, unknown>;
@@ -1145,7 +1217,12 @@ export function mergeBecomings(b: Breakdown): string[] {
       if (!who) continue;
       const others = b.people.filter((p) => p.id !== l.who && !p.is_dreamer && !p.extras);
       const as = others.find((p) => {
-        const head = p.name.toLowerCase().replace(/[^a-z\s]/g, ' ').trim().split(/\s+/).at(-1);
+        const head = p.name
+          .toLowerCase()
+          .replace(/[^a-z\s]/g, ' ')
+          .trim()
+          .split(/\s+/)
+          .at(-1);
         return !!head && head.length > 2 && new RegExp(`\\b${head}s?\\b`, 'i').test(l.now);
       });
       if (!as) continue;
@@ -1270,7 +1347,6 @@ export function hasBefore(b: Breakdown, momentId: string, who: string): boolean 
     .some((m) => m.visible.includes(who) || m.things.includes(who) || m.place === who);
 }
 
-
 /** People who are only ever a crowd. */
 export const CROWD =
   /\b(crowds?|audiences?|onlookers|passers-?by|spectators|bystanders|strangers|(?:other|many|lots of|a lot of|some|several) people|people (?:everywhere|around))\b/i;
@@ -1283,9 +1359,14 @@ export const CROWD =
  */
 export function completeViews(b: Breakdown): string[] {
   const notes: string[] = [];
-  const bare = (x: string) => x.toLowerCase().replace(/^(the|a|an)\s+/, '').trim();
+  const bare = (x: string) =>
+    x
+      .toLowerCase()
+      .replace(/^(the|a|an)\s+/, '')
+      .trim();
   const head = (x: string) => bare(x).split(/\s+/).at(-1) ?? '';
-  const says = (text: string, words: string) => words.length > 2 && new RegExp(`\\b${words.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}s?\\b`, 'i').test(text);
+  const says = (text: string, words: string) =>
+    words.length > 2 && new RegExp(`\\b${words.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}s?\\b`, 'i').test(text);
   const now = new Map<string, State>();
   for (const m of moments(b)) {
     const text = `${m.action} ${m.visual_point ?? ''}`;
@@ -1294,16 +1375,28 @@ export function completeViews(b: Breakdown): string[] {
       const changes = (m.leaves ?? []).some((l) => l.who === t.id);
       const become = now.get(t.id);
       const unique = b.things.filter((x) => head(x.name) === head(t.name)).length === 1;
-      if (changes || (become && says(text, bare(become.now))) || says(text, bare(t.name)) || (unique && says(text, head(t.name)))) {
+      if (
+        changes ||
+        (become && says(text, bare(become.now))) ||
+        says(text, bare(t.name)) ||
+        (unique && says(text, head(t.name)))
+      ) {
         m.things.push(t.id);
         notes.push(`${m.id} shows ${t.name}`);
         // Brought into view here, it comes as it last was: a change made earlier still holds.
-        if (become && !changes && !(m.states ?? []).some((st) => st.who === t.id)) m.states = [...(m.states ?? []), become];
+        if (become && !changes && !(m.states ?? []).some((st) => st.who === t.id))
+          m.states = [...(m.states ?? []), become];
       }
     }
     for (const l of m.leaves ?? [])
       if (b.things.some((t) => t.id === l.who))
-        now.set(l.who, { who: l.who, what: l.what, now: l.now, since: m.id, ...(l.whole !== undefined ? { whole: l.whole } : {}) });
+        now.set(l.who, {
+          who: l.who,
+          what: l.what,
+          now: l.now,
+          since: m.id,
+          ...(l.whole !== undefined ? { whole: l.whole } : {}),
+        });
   }
   return notes;
 }
