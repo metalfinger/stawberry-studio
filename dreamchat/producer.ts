@@ -205,6 +205,7 @@ Mark every detail "said": true ONLY when the person's own words give it. Anythin
 - "continues": true when the moment carries straight on from the one before it in the same scene (the same people and things, a moment later), false when it jumps: a new place, a new time, or a different part of the story. The first moment of each scene is false.
 
 ## People, places, things (Production Designer)
+- Every person and every animal that appears in any moment gets a person entry, however briefly they appear: a whale that swims past once is "the whale", with its kind, size and skin in "appearance" (left out, the whale filling the library's aisle had no picture of its own, 26 Sep), and every moment it is in lists it in "visible".
 - Only real presences get an entry. Ambient things (fog, glow, rain) belong to the look or a scene's mood. Clothes and body features belong to the person, never separate things.
 - People seen only as a crowd (an audience, passers-by, the other people in a room) are one entry with "several": true and "extras": true: they are described in the moments' words and never drawn on their own.
 - The dreamer is a person entry ("is_dreamer": true) only if they are seen in some moment ("eyes": "outside").
