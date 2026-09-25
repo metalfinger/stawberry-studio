@@ -806,6 +806,8 @@ export function dreamerShot(
   dreamer: string,
   toward: string | undefined,
   name: (id: string) => string,
+  /** What they look at that the plan does not hold (a field beyond the windscreen): named, ahead. */
+  beyond?: string,
 ): { eye: Eye; text: string; inPicture: string[] } | null {
   const me = plan.spots.find((s) => s.id === dreamer);
   if (!me) return null;
@@ -917,6 +919,13 @@ export function dreamerShot(
   const called = (id: string) => plan.spots.find((s) => s.id === id)?.name ?? name(id);
   const sentences = [
     `The camera is the dreamer's eyes${at.length ? `, ${inIt ? 'in' : 'on'} ${at.map(called).join(' and ')}` : ''}${pose}${eye.lean ? `, ${LEAN_WORDS[eye.lean]}` : ''}, ${turned}${toward ? `, toward ${called(toward)}` : ''}: it looks toward ${wall(eye.d, plan.front, !!plan.indoors)}. A wide lens, about 24mm.`,
+    // Riding in something, what they are in is in the picture: through the dreamer's eyes in the
+    // tractor's cab, the tractor was read as missing from its own moment (lighthouse, 25 Sep).
+    ...(inIt && at.length
+      ? [
+          `The inside of ${called(at.find((id) => plan.spots.find((x) => x.id === id)?.shape === 'vehicle') ?? at[0])} frames the picture: its front ahead and the edges of its window around the view.`,
+        ]
+      : []),
     ...shown.map(({ s, seen }, i) => {
       const lead = i === 0 ? 'Nearest' : i === shown.length - 1 && shown.length > 1 ? 'Farthest' : 'Then';
       return `${lead}, ${reach(distance(s))}, ${across(seen)}: ${called(s.id)}${thingWords(s, seen, plan, eye, called, { spots, on: at, anchor: me })}.`;
@@ -925,6 +934,9 @@ export function dreamerShot(
       .filter((s) => !shown.some((x) => x.s.id === s.id))
       .map((s) => `Outside the picture, ${offTo(eye, s)}: ${called(s.id)}.`),
     frontLine(plan, eye, r, min),
+    // Beyond everything the plan holds, what the moment looks at: the view from the tractor's cab
+    // ended at its windscreen, and the field it drove through was read as missing (lighthouse, 25 Sep).
+    ...(beyond && !toward ? [`Beyond it all, ahead where they look: ${beyond.replace(/[.\s]+$/, '')}.`] : []),
   ];
   return { eye, text: sentences.join(' '), inPicture: [...at, ...shown.map((x) => x.s.id)] };
 }

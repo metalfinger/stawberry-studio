@@ -80,7 +80,12 @@ const SHEET_CLEAR: Question = {
  * says what it lacks and its rewording fills exactly that ("not clear enough" alone left a train
  * roof as thin as before, 24 Sep).
  */
-export const FACETS: Record<'character' | 'location' | 'prop', Record<string, string>> = {
+export const FACETS: Record<'character' | 'animal' | 'location' | 'prop', Record<string, string>> = {
+  animal: {
+    kind: 'what kind of animal it is',
+    size: 'its size',
+    coat: 'its coat, fur, feathers or skin, with colours',
+  },
   character: {
     age: 'roughly how old they are',
     build: 'their build',
@@ -124,7 +129,7 @@ const EDIT_REFS: Question = {
 export function gateQuestions(
   withImages: boolean,
   sheet = false,
-  kind?: 'character' | 'location' | 'prop',
+  kind?: 'character' | 'animal' | 'location' | 'prop',
   edit = false,
 ): Record<string, Question> {
   const facets = sheet && kind ? FACETS[kind] : {};
@@ -236,7 +241,7 @@ export function checkReferences(
 export async function readPrompt(
   jev: JevFn,
   prompt: string,
-  opts: { withImages?: boolean; sheet?: boolean; kind?: 'character' | 'location' | 'prop'; edit?: boolean } = {},
+  opts: { withImages?: boolean; sheet?: boolean; kind?: 'character' | 'animal' | 'location' | 'prop'; edit?: boolean } = {},
 ): Promise<GateResult> {
   const withImages = opts.withImages ?? /\bImage 1(?::| is\b)/.test(prompt);
   const call = await jev(prompt, gateQuestions(withImages, opts.sheet, opts.kind, opts.edit));

@@ -711,7 +711,8 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
     if (m.eyes === 'dreamer' && dreamerId) {
       const pov = shotPlan(b, m.id) ?? plan;
       const said = pov.looks?.[m.id];
-      const v = dreamerShot(pov, dreamerId, said && pov.spots.some((s) => s.id === said) ? said : target(m.looks_at), now);
+      const toward = said && pov.spots.some((s) => s.id === said) ? said : target(m.looks_at);
+      const v = dreamerShot(pov, dreamerId, toward, now, toward ? undefined : m.looks_at || undefined);
       if (v) {
         c.view = v.text;
         c.eye = v.eye;

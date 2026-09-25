@@ -413,6 +413,29 @@ describe('a group of people', () => {
     expect(sheetPrompt(person('your aunt', 'shoulder-length brown hair'), style)).toContain('one person only');
   });
 
+  test('an animal is sketched as an animal: never one person only, never its clothes', () => {
+    const dog: Item = {
+      id: 'p2',
+      kind: 'character',
+      name: 'the dog',
+      fields: {
+        identity: { value: 'a small brown terrier', said: true },
+        appearance: { value: 'small, wiry, alert', said: false },
+        wardrobe: { value: 'no clothing, natural brown wiry coat', said: false },
+      },
+      status: 'waiting',
+      version: 0,
+    };
+    const prompt = sheetPrompt(dog, style);
+    expect(prompt).toStartWith('A single picture of the dog, the one animal only');
+    expect(prompt).not.toContain('one person only');
+    expect(prompt).toContain('coat: natural brown wiry coat');
+    expect(prompt).not.toContain('wears:');
+    expect(sheetPrompt({ ...dog, name: 'the aunt', fields: { identity: { value: 'my aunt', said: true } } }, style)).toContain(
+      'one person only',
+    );
+  });
+
   test('a place named for who was there is drawn as the place', () => {
     const place = (name: string): Item => ({
       id: 'l6',

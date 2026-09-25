@@ -107,6 +107,7 @@ import {
   type SheetEngine,
   type Shape,
   shapeOf,
+  isAnimal,
   sheetPrompt,
 } from './sheets';
 import type { JudgedCheck, JudgeOptions } from './judge';
@@ -1980,7 +1981,7 @@ export class SessionStore {
     const sheet = item.kind === 'character' || item.kind === 'location' || item.kind === 'prop';
     const read = await readPrompt(this.deps.gate, prompt, {
       sheet,
-      kind: sheet ? (item.kind as 'character' | 'location' | 'prop') : undefined,
+      kind: sheet ? (isAnimal(item) ? 'animal' : (item.kind as 'character' | 'location' | 'prop')) : undefined,
       edit: item.kind === 'ghost',
     });
     if (read.reading) item.gate = read.reading;

@@ -401,6 +401,16 @@ export function groupMembers(people: Item[]): { group: Item; member: Item; word:
   return out;
 }
 
+/** Words for an animal: a character that is one is sketched as one, never as "one person only". */
+const ANIMAL =
+  /\b(dog|dogs|puppy|terrier|spaniel|retriever|poodle|hound|cat|cats|kitten|horse|pony|foal|cow|calf|bull|sheep|lamb|goat|pig|rabbit|hare|fox|wolf|bear|deer|bird|birds|crow|raven|owl|gull|seagull|duck|swan|goose|hen|chicken|parrot|fish|whale|dolphin|snake|lizard|frog|mouse|mice|rat|squirrel|monkey|elephant|lion|tiger|donkey|camel)\b/i;
+
+/** A person of the dream who is an animal: the dog walking beside them, the horse they ride. */
+export function isAnimal(item: Pick<Item, 'kind' | 'name' | 'fields' | 'isDreamer'>): boolean {
+  if (item.kind !== 'character' || item.isDreamer) return false;
+  return ANIMAL.test(`${item.name} ${item.fields.identity?.value ?? ''}`);
+}
+
 /** A place's name that says who is there or what they do in it, rather than what the place is. */
 const PEOPLE_IN_NAME =
   /\b(people|persons?|couple of|crowd|someone|sitting|standing|talking|playing|waiting|with (?:the |a |my |your |her |his )?(?:\w+ )?(?:man|woman|men|women|girl|boy|friends?|aunt|uncle|mother|father|brother|sister|family))\b/i;
@@ -411,6 +421,13 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
   const facts = Object.keys(item.fields)
     .filter((k) => LOOK[item.kind].includes(k) && !VAGUE.test(value(item, k)))
     .map((k) => {
+      // An animal wears nothing: "wears: no clothing, natural brown wiry coat" is said as its coat.
+      if (isAnimal(item) && k === 'wardrobe') {
+        const coat = value(item, k)
+          .replace(/\b(no|without)\s+(clothing|clothes)[,;.]?\s*/i, '')
+          .trim();
+        return coat ? `coat: ${coat}` : '';
+      }
       const v = value(item, k);
       // What they said keeps its colours; what was filled in is said in the style's shades.
       return v ? `${FIELD_WORDS[k] ?? k}: ${item.fields[k]?.said ? v : inShades(v, style)}` : '';
@@ -436,8 +453,13 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
         // "with no people in it" read as a contradiction, and the sketch was held (Meads, 25 Sep).
         'this place'
       : pictureName(item.name);
+  // A dog sketched as "one person only", "the face and clothes clearly seen", read as unclear and
+  // was held (lighthouse, 25 Sep).
+  const animal = isAnimal(item);
   const layout =
-    item.kind === 'character'
+    item.kind === 'character' && animal
+      ? `A single picture of ${name}, the one animal only, as it ordinarily looks: standing in a relaxed three-quarter view, the whole of it from nose to tail, its head clearly visible.`
+      : item.kind === 'character'
       ? isGroup(item)
         ? `A single full-length picture of ${name}, all of them together and no one else, as they ordinarily look: standing side by side in a relaxed three-quarter view, every figure from head to feet, each face clearly visible.`
         : `A single full-length picture of ${name}, one person only, as they ordinarily look: standing in a relaxed three-quarter view, the whole figure from head to feet, the face clearly visible.`
@@ -449,7 +471,9 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
   // them and the viewer: a glass-world style drew the dreamer three times behind a frosted
   // shower door, face blurred (23 Sep).
   const clear =
-    item.kind === 'character'
+    item.kind === 'character' && animal
+      ? 'Nothing between it and the viewer: no glass, pane, screen, door, veil, mist or reflection over it; its head and coat clearly seen.'
+      : item.kind === 'character'
       ? 'Nothing between them and the viewer: no glass, pane, screen, door, veil, mist or reflection over them; the face and clothes clearly seen. Whatever the style, it is how the picture is drawn, not something in front of them.'
       : '';
   // The judge's findings on the last attempt, when it was drawn again for them.
