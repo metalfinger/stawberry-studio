@@ -338,6 +338,7 @@ For each scene, seen from above: its "front" (the side of the place its people f
 - A thing someone holds or carries (a lantern, a string of balloons, a phone) has "held_by": their id.
 - The place's own fixtures that the moments happen by, face or act on (an autoclave, a stove, the stairs, a bridge, a door, a counter) get a spot too, with an id x1, x2 and so on, their "name" in a few words, their size and their shape. They are part of the place, not people or things of the story. A hallway, a corridor, a corner, a doorway or an aisle is not a fixture: it is the shape of the place itself (a hallway is a place about 1.2 across and as long as it is). Only when a moment faces one ("faces": "the corner") does it get a small spot, with that name, where it is, so the camera can face it.
 - A crowd or an audience is one spot with "many": true, at the middle of where they are, with "spread": [across, deep] in metres for the ground they fill, how they are ("sitting" in rows of seats, "standing"), and "count" when the dream says how many ("a couple of people": 2).
+- A moment "seen_through_the_eyes_of" someone has them in it, where they are: their spot is the camera, facing what the moment faces.
 - A moment in which someone goes up, down, across, along or through something (climbs the stairs, crosses the bridge, walks down the hallway) shows them partway: their spot, or their move for that moment, is on it or in it, not beside it.
 - When someone or something moves during the scene (walks off, comes back, sits down, drives away), give where it is in each moment's picture where that has changed, by the moment's id: "moves": {"m2": [{"id": "p1", "x": 4, "y": 8, "faces": "back", "pose": "standing"}]}. A move holds until its next one, so someone who comes back needs a move back: in the moment they return they are where it has them (in front of whoever they come back to, facing them). People riding in something move with it.
 - When a scene's moments happen in more than one place (a moment's "place" differs from its scene's), plan the scene's own place as above, and give every other place its own plan in "places", by the place's id, with the same fields, for the moments that happen there.
@@ -367,7 +368,15 @@ export async function blockScenes(
       .map((sc) => ({
         id: sc.id,
         place: sc.place,
-        moments: sc.moments.map((m) => ({ id: m.id, place: m.place, action: m.action, who: m.visible, things: m.things, faces: m.looks_at })),
+        moments: sc.moments.map((m) => ({
+          id: m.id,
+          place: m.place,
+          action: m.action,
+          who: throughEyes(b, m) ? [...m.visible, throughEyes(b, m)!] : m.visible,
+          ...(throughEyes(b, m) ? { seen_through_the_eyes_of: throughEyes(b, m) } : {}),
+          things: m.things,
+          faces: m.looks_at,
+        })),
         ...(again.fix?.[sc.id] ? { fix: again.fix[sc.id], ...(sc.blocking ? { previous: sc.blocking } : {}) } : {}),
       })),
   };
@@ -388,6 +397,16 @@ export async function blockScenes(
     return { breakdown: out, notes };
   }
   return readBlocking(out, raw, notes);
+}
+
+/**
+ * The dreamer, for a moment seen through their eyes that does not list them: they are there, as the
+ * camera. Left out of what the planner was told, the lighthouse's view out of the window and the
+ * tractor stopping at the field's edge had no dreamer on their plans, and no camera (25 Sep).
+ */
+export function throughEyes(b: Breakdown, m: Moment): string | undefined {
+  const dreamer = b.people.find((p) => p.is_dreamer)?.id;
+  return m.eyes === 'dreamer' && dreamer && !m.visible.includes(dreamer) ? dreamer : undefined;
 }
 
 /**
@@ -430,7 +449,7 @@ const metres = (v: unknown, n: number, most: number) =>
  * if it is in the plan, moves only at those moments. Left without a plan where someone is missing.
  */
 function readPlan(b: Breakdown, g: Record<string, unknown>, moments: Moment[], label: string, notes: string[]): Blocking | null {
-  const ids = new Set(moments.flatMap((m) => [...m.visible, ...m.things]));
+  const ids = new Set(moments.flatMap((m) => [...m.visible, ...m.things, ...(throughEyes(b, m) ? [throughEyes(b, m)!] : [])]));
   const room = metres(g.room, 2, 200) as [number, number] | undefined;
   const [w, d] = room ?? [10, 10];
   const onX = (v: unknown) => Math.max(0, Math.min(w, Number(v)));

@@ -59,6 +59,7 @@ import {
   VAGUE,
   ownStyle,
   type StyleOption,
+  throughEyes,
 } from './producer';
 import {
   calledIn,
@@ -269,7 +270,9 @@ export async function planUnplanned(block: NonNullable<StoreDeps['block']>, b: B
     b.scenes
       .filter((sc) => unplanned.includes(sc.id))
       .map((sc) => {
-        const ids = [...new Set(sc.moments.flatMap((m) => [...m.visible, ...m.things]))];
+        const ids = [
+          ...new Set(sc.moments.flatMap((m) => [...m.visible, ...m.things, ...(throughEyes(b, m) ? [throughEyes(b, m)!] : [])])),
+        ];
         return [
           sc.id,
           [
