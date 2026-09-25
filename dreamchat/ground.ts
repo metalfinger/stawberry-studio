@@ -4,7 +4,7 @@
 // guess, and the person is asked to confirm it before anything is drawn from it.
 import type { Answer, Exchange, JevFn, Question } from './jev';
 import { renderTranscript } from './jev';
-import { type Breakdown, type Detail, type Moment, type State, details, hasBefore, moments } from './producer';
+import { type Breakdown, type Detail, type Moment, type State, details, hasBefore, isWhole, moments } from './producer';
 
 export { hasBefore };
 
@@ -119,7 +119,10 @@ export async function judgeLeaves(jev: JevFn, b: Breakdown): Promise<string[]> {
     const kept: typeof m.leaves = [];
     (m.leaves ?? []).forEach((l, i) => {
       const kind = changeKind(call.answers, `${m.id}_${i}`);
-      if (!hasBefore(b, m.id, l.who) || (kind.look === false && kind.whole !== true))
+      // Turned into something else is a change even where they are first shown: Mrs Okafor, first
+      // seen as she turned round a heron, was drawn a woman ever after (heron dream, 26 Sep).
+      const turns = kind.whole ?? l.whole ?? isWhole(l);
+      if ((!hasBefore(b, m.id, l.who) && !turns) || (kind.look === false && kind.whole !== true))
         dropped.push(`${m.id}: ${nameIn(b, l.who)} ${l.what}`);
       else kept.push({ ...l, ...(kind.whole !== undefined ? { whole: kind.whole } : {}) });
     });
@@ -542,7 +545,7 @@ export async function ground(
       // A change into something else altogether always changes how it looks: "the house becomes a
       // boat" read as not a change of look (0.28), and would have been dropped. And nothing changes
       // where it is first shown.
-      if (!hasBefore(out, m.id, l.who) || (kind.look === false && kind.whole !== true)) {
+      if ((!hasBefore(out, m.id, l.who) && !(kind.whole ?? l.whole ?? isWhole(l))) || (kind.look === false && kind.whole !== true)) {
         downgraded.push({
           path: `${m.id}.leaves`,
           label: 'not a change of how it looks',

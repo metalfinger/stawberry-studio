@@ -1061,7 +1061,7 @@ export function resolveTree(input: TreeInput): DreamTree {
       const st = { who: l.who, what: l.what, now: l.now, since: m.id };
       const ghost = ghostOfState.get(stateKey(st)) ?? null;
       // How it looks where it is first shown is no change: nothing came before it (25 Sep).
-      if (!hasBefore(b, m.id, l.who)) {
+      if (!hasBefore(b, m.id, l.who) && !isWhole(l)) {
         firstLooks.push({ who: l.who, cut: m.id, what: l.what, now: l.now, ghost: ghost?.id ?? null });
         return;
       }

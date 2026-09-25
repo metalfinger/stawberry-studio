@@ -358,6 +358,23 @@ describe('ghosts', () => {
     expect(plan.cuts[1].own).toEqual([]);
   });
 
+  test('turning into something else is a change even where they are first shown', () => {
+    // Mrs Okafor, first seen as she turned round a heron, was drawn a woman ever after (26 Sep).
+    const b = breakdown([
+      moment({ id: 'm1', visible: ['p1'], leaves: [{ who: 'p1', what: 'body', now: 'a tall grey heron', whole: true }] }),
+      // Carried into the moment after, as the pipeline writes it (addChanges).
+      moment({
+        id: 'm2',
+        visible: ['p1'],
+        from: 'm1',
+        states: [{ who: 'p1', what: 'body', now: 'a tall grey heron', since: 'm1', whole: true }],
+      }),
+    ]);
+    const plan = planContinuity(b);
+    expect(plan.cuts[0].own.map((st) => st.now)).toEqual(['a tall grey heron']);
+    expect(plan.cuts[1].states.map((st) => st.now)).toEqual(['a tall grey heron']);
+  });
+
   test('a change still in force is carried into a moment that changes something else', () => {
     // Seen before the change: where they are first shown, how they look is no change (25 Sep).
     const b = breakdown([
