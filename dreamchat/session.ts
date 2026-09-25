@@ -2826,6 +2826,13 @@ export class SessionStore {
           s.images = Math.max(0, s.images - 1);
         }
       const turn = s.turns.at(-1)?.turn ?? 0;
+      // Moments to draw again in a dream already done: it is drawing again, so the conversation is
+      // back with the moments, and their verdicts can let the rest go on. Left done, the night market's
+      // redrawn moments waited for a verdict a closed conversation could never give (26 Sep).
+      if (s.phase === 'done' && (s.build?.frames ?? []).some((f) => f.kind === 'cut' && f.status === 'waiting')) {
+        s.phase = 'frames';
+        s.closed = false;
+      }
       for (const it of s.build?.items ?? []) if (again.includes(it.id)) await this.startSketch(s, it, turn);
       if (s.phase === 'frames' || s.phase === 'done') await this.fillFrames(s, turn);
       // The shots are planned again in the background where the moments have not begun and
