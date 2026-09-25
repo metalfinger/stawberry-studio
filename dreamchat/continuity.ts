@@ -294,6 +294,9 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
     // it is how they look, and its in-between picture changes nothing (five of them were drawn for
     // Meads, from a breakdown judged before this was known, 25 Sep).
     leaves: (m.leaves ?? []).filter((l) => !POSITION.test(l.what.trim()) && hasBefore(b, m.id, l.who)),
+    // Nor is it carried: a first look written into the moments after it was held as "carried in
+    // words only" (Meads m7, the convertible's look, 25 Sep).
+    states: (m.states ?? []).filter((st) => !st.since || hasBefore(b, st.since, st.who)),
   }));
   const index = new Map(ms.map((m, i) => [m.id, i]));
   const byId = new Map(ms.map((m) => [m.id, m]));

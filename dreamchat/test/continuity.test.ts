@@ -359,8 +359,10 @@ describe('ghosts', () => {
   });
 
   test('a change still in force is carried into a moment that changes something else', () => {
+    // Seen before the change: where they are first shown, how they look is no change (25 Sep).
     const b = breakdown([
-      moment({ id: 'm1', visible: ['p1'], leaves: [{ who: 'p1', what: 'head', now: 'a block of ice' }] }),
+      moment({ id: 'm0', visible: ['p1'] }),
+      moment({ id: 'm1', visible: ['p1'], from: 'm0', leaves: [{ who: 'p1', what: 'head', now: 'a block of ice' }] }),
       moment({
         id: 'm2',
         visible: ['p1'],
@@ -369,7 +371,7 @@ describe('ghosts', () => {
         leaves: [{ who: 'p1', what: 'coat', now: 'soaked through' }],
       }),
     ]);
-    const m2 = planContinuity(b).cuts[1];
+    const m2 = planContinuity(b).cuts[2];
     expect(m2.own.map((st) => `${st.what}: ${st.now}`)).toEqual(['coat: soaked through']);
     expect(m2.states.map((st) => `${st.what}: ${st.now}`)).toEqual(['head: a block of ice']);
   });
