@@ -243,6 +243,8 @@ export type Prep = {
   previs: Record<string, string>;
   /** Lasting changes to how someone looks the breakdown missed, found then and written into it. */
   changes?: Change[];
+  /** Each moment's own changes as Jev read them, first looks left out: written into it (see prepReplaces). */
+  leaves?: Record<string, Moment['leaves']>;
   /** Each moment's "storyboard complete?": Jev's facts on its shot against the moment, and code's decision. */
   storyboard?: Record<string, { ok: boolean; view: string; readings: Reading[]; reasons: string[] }>;
   /** How long the planning took. */
@@ -271,7 +273,11 @@ export async function planShots(
   const t0 = Date.now();
   const draft: Breakdown = structuredClone(b);
   // What changes in the dream, read by Jev before anything is planned or carried from it.
-  if (deps.jev) await judgeLeaves(deps.jev, draft).catch(() => []);
+  const judged = deps.jev
+    ? await judgeLeaves(deps.jev, draft)
+        .then(() => true)
+        .catch(() => false)
+    : false;
   completeViews(draft);
   // The script supervisor and the floor plan read the same dream, at once.
   const [changes, blockedOrNot] = await Promise.all([
@@ -427,6 +433,7 @@ export async function planShots(
     }
   }
   prep.blocking = Object.fromEntries(blocked.scenes.filter((sc) => sc.blocking).map((sc) => [sc.id, sc.blocking as Blocking]));
+  if (judged) prep.leaves = Object.fromEntries(draft.scenes.flatMap((sc) => sc.moments.map((m) => [m.id, m.leaves ?? []])));
   prep.ms = Date.now() - t0;
   return prep;
 }
@@ -587,10 +594,23 @@ async function storyboardCheck(
 }
 
 /** The shots planned in the background, kept on the conversation if they are for this dream. */
+/**
+ * A fresh prep replaces what the dream had: its floor plans, and its moments' changes as Jev read
+ * them. Kept instead, an older plan stayed on the dream while its shots were made from the new one
+ * (Meads s1), and first looks stayed "changes" with in-between pictures that change nothing (Meads
+ * g1-g5). DREAMCHAT_PREP_REPLACES=off keeps what was there, as before (25 Sep).
+ */
+export const prepReplaces = () => process.env.DREAMCHAT_PREP_REPLACES !== 'off';
+
 export function applyPrep(s: Pick<Session, 'draft' | 'prep'>, prep: Prep): void {
   const b = s.draft?.breakdown;
   if (!b || planKey(b) !== prep.basedOn) return;
-  for (const sc of b.scenes) sc.blocking ??= prep.blocking[sc.id];
+  const replace = prepReplaces();
+  for (const sc of b.scenes) {
+    if (replace && prep.blocking[sc.id]) sc.blocking = prep.blocking[sc.id];
+    else sc.blocking ??= prep.blocking[sc.id];
+    if (replace && prep.leaves) for (const m of sc.moments) if (prep.leaves[m.id]) m.leaves = prep.leaves[m.id];
+  }
   addChanges(b, prep.changes ?? []);
   // Known from now on by the dream as it stands, the changes found written into it.
   s.prep = { ...prep, basedOn: planKey(b) };

@@ -186,6 +186,51 @@ describe('a scene its plan left someone or something out of', () => {
   });
 });
 
+describe('a fresh prep on a dream that already had plans', () => {
+  test('replaces its floor plans and its changes as Jev read them, unless turned off', () => {
+    const fresh = {
+      front: 'the stove',
+      indoors: true,
+      spots: [{ id: 'p1', x: 5, y: 5, kind: 'person' as const, pose: 'standing' as const }],
+    };
+    const make = () => {
+      const b = kitchen();
+      b.scenes[0].blocking = { front: 'missing', indoors: true, spots: [] };
+      b.scenes[0].moments[0].leaves = [{ who: 'p1', what: 'hair', now: 'white' }];
+      const s: Pick<Session, 'draft' | 'prep'> = { draft: { status: 'ready', basedOn: 1, breakdown: b } };
+      return { s, b };
+    };
+    const { s, b } = make();
+    const prep = {
+      basedOn: '',
+      blocking: { s1: fresh },
+      shots: {},
+      previs: {},
+      // Where the dreamer is first shown, their white hair is how they look, not a change.
+      leaves: { m1: [], m2: [] },
+      ms: 0,
+    };
+    // Known by the dream as it stands, without its plans.
+    const key = (x: typeof b) => {
+      const plain = { ...x, scenes: x.scenes.map(({ blocking: _, ...sc }) => sc) };
+      return new Bun.CryptoHasher('sha256').update(JSON.stringify(plain)).digest('hex');
+    };
+    applyPrep(s, { ...prep, basedOn: key(b) });
+    expect(s.draft?.breakdown?.scenes[0].blocking?.front).toBe('the stove');
+    expect(s.draft?.breakdown?.scenes[0].moments[0].leaves).toEqual([]);
+
+    process.env.DREAMCHAT_PREP_REPLACES = 'off';
+    try {
+      const kept = make();
+      applyPrep(kept.s, { ...prep, basedOn: key(kept.b) });
+      expect(kept.s.draft?.breakdown?.scenes[0].blocking?.front).toBe('missing');
+      expect(kept.s.draft?.breakdown?.scenes[0].moments[0].leaves).toHaveLength(1);
+    } finally {
+      delete process.env.DREAMCHAT_PREP_REPLACES;
+    }
+  });
+});
+
 describe('a plan made again mid-dream', () => {
   test('knows its in-between references by what they show, not their number', () => {
     const state = (now: string, since: string) => ({ who: 'p1', what: 'head', now, since });
