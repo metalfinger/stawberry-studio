@@ -11,7 +11,7 @@ import { BECOMING, isWhole, momentLabel, oneColour, VAGUE, WHOLE } from './produ
 
 // Kept here too for older imports.
 export { isWhole, WHOLE };
-import { groupMembers, inShades, isGroup, type Item, LOOK, type Shape, shapeOf, styleBlock, toldColours } from './sheets';
+import { coloursIn, groupMembers, inShades, isGroup, type Item, LOOK, type Shape, shapeOf, styleBlock, toldColours } from './sheets';
 
 /** Where the line that says who "you" is goes, when anything told to the picture says "you". */
 const YOU = '\u0000you';
@@ -654,12 +654,19 @@ export function ghostPrompt(
           useFrom
             ? `Image ${references.length} is the moment it happened in the dream: make the change look as it does there, and take nothing else from it.`
             : '',
-          `${name} (${kind})${look ? `: ${look}` : ''}.`,
+          // Turned into something else entirely, what it was is not to be drawn: "turned into a grey
+          // heron" beside "a woman in her 50s, hair in a bun, glasses" read as the edit at odds with
+          // itself (0.68), and it was held (heron dream, 26 Sep).
+          becomes
+            ? `${name} was ${aNoun(kind)}; now the whole of them is ${aNoun(g.state?.now ?? '')}, and nothing of how they looked before stays but what that says.`
+            : `${name} (${kind})${look ? `: ${look}` : ''}.`,
           `Keep everything else exactly as in image 1: ${keep}.`,
         ];
   const prompt = [
     ...lines,
-    styleBlock(style, toldColours(sheet), { fromImages: true }),
+    // Turned into something else entirely, its colours are those of what it is now ("grey heron",
+    // "red cardigan"), never of its blouse and skin before (heron dream, 26 Sep).
+    styleBlock(style, becomes ? coloursIn(g.state?.now ?? '') : toldColours(sheet), { fromImages: true, noSkin: becomes }),
     // An edit of a reference sheet keeps the plain ends it was measured with: said as what is
     // there, the edit read as more likely to contradict itself (0.35 against 0.27, 24 Sep).
     `One single picture, not a sheet or a grid. ${NO_WORDS_EDIT}`,

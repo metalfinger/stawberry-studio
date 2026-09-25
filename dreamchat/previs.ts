@@ -990,8 +990,9 @@ export function dreamerShot(
       const lead = i === 0 ? 'Nearest' : i === shown.length - 1 && shown.length > 1 ? 'Farthest' : 'Then';
       return `${lead}, ${reach(distance(s))}, ${across(seen)}: ${called(s.id)}${thingWords(s, seen, plan, eye, called, { spots, on: at, anchor: me })}.`;
     }),
+    // What someone holds is with them: never "outside the picture" while they are in it.
     ...spots
-      .filter((s) => !shown.some((x) => x.s.id === s.id))
+      .filter((s) => !shown.some((x) => x.s.id === s.id) && !(s.heldBy && shown.some((x) => x.s.id === s.heldBy)))
       .map((s) => `Outside the picture, ${offTo(eye, s)}: ${called(s.id)}.`),
     frontLine(plan, eye, r, min),
     // Beyond everything the plan holds, what the moment looks at: the view from the tractor's cab
@@ -1405,8 +1406,16 @@ export function outsideShot(
     // Whatever of the place is not in the picture is said to be out of it, and where: the woman
     // walking off came back with the autoclave, behind the camera, drawn beside her where the
     // room's sketch has it (24 Sep).
+    // What someone holds is with them: "holding the brass key" beside "outside the picture: the brass
+    // key", too small to show from behind them, read as the shot at odds with itself (26 Sep).
     ...spots
-      .filter((s) => !shown.some((x) => x.s.id === s.id) && !riding(s) && (subjects.includes(s.id) || !isPerson(s)))
+      .filter(
+        (s) =>
+          !shown.some((x) => x.s.id === s.id) &&
+          !riding(s) &&
+          (subjects.includes(s.id) || !isPerson(s)) &&
+          !(s.heldBy && shown.some((x) => x.s.id === s.heldBy)),
+      )
       .map((s) => `Outside the picture, ${offTo(eye, s)}: ${name(s.id)}.`),
     frontLine(plan, eye, rr, min),
   ].filter(Boolean);

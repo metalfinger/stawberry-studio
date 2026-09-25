@@ -266,18 +266,23 @@ export function inShades(text: string, style: StyleOption): string {
 export function toldColours(...items: Item[]): string[] {
   const out = new Set<string>();
   for (const it of items)
-    for (const d of Object.values(it.fields))
-      if (d.said && d.value)
-        for (const m of d.value.matchAll(new RegExp(COLOUR_WORDS.source, 'gi'))) {
-          // The phrase around the colour, so it lands on the right thing: "blue balloons".
-          const phrase = d.value
-            .slice(m.index ?? 0)
-            .split(/[,;.]/)[0]
-            .split(/\s+/)
-            .slice(0, 3)
-            .join(' ');
-          out.add(phrase.toLowerCase());
-        }
+    for (const d of Object.values(it.fields)) if (d.said && d.value) for (const c of coloursIn(d.value)) out.add(c);
+  return [...out];
+}
+
+/** Each colour some words give, with the phrase around it so it lands on the right thing: "blue balloons". */
+export function coloursIn(text: string): string[] {
+  const out = new Set<string>();
+  for (const m of text.matchAll(new RegExp(COLOUR_WORDS.source, 'gi')))
+    out.add(
+      text
+        .slice(m.index ?? 0)
+        .split(/[,;.]/)[0]
+        .split(/\s+/)
+        .slice(0, 3)
+        .join(' ')
+        .toLowerCase(),
+    );
   return [...out];
 }
 
@@ -293,12 +298,13 @@ export const DREAM_QUALITY =
 export function styleBlock(
   style: StyleOption,
   told: string[] = [],
-  opts: { fromImages?: boolean; ownColours?: boolean } = {},
+  opts: { fromImages?: boolean; ownColours?: boolean; noSkin?: boolean } = {},
 ): string {
   const colours = [...new Set(style.palette_hex.map(colourName))];
   const mono = oneColour(style);
-  // A photograph of a person in a cold palette still has warm skin; one in black and white does not.
-  const skin = !mono && /photo|camera|film still/i.test(mediumOf(style)) ? 'Skin keeps its natural tone.' : '';
+  // A photograph of a person in a cold palette still has warm skin; one in black and white does not,
+  // nor someone turned into a heron.
+  const skin = !mono && !opts.noSkin && /photo|camera|film still/i.test(mediumOf(style)) ? 'Skin keeps its natural tone.' : '';
   const keep = told.length ? ` What the dream itself gives a colour keeps it exactly: ${told.join('; ')}.` : '';
   // Made in one colour, a colour a look names is a shade of it: a blue ink wash told "medium brown
   // hair" drew it auburn, beside the same woman's blue-black hair in the picture before (24 Sep).
