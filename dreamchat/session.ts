@@ -21,9 +21,11 @@ import {
   askableGoals,
   type BriefExtras,
   CLOSED,
+  dryRun,
   type GoalsFile,
   goalStatus,
   initialState,
+  invitesMore,
   isFollowing,
   type Move,
   moveKey,
@@ -127,8 +129,10 @@ export type TurnRecord = {
   notes: JevReadNote[];
   /** Their message said they don't remember (while listening). */
   forgot?: boolean;
-  /** Their message added nothing new to what happened (while listening). */
+  /** Invited to go on, their message added nothing new to what happened (while listening). */
   dry?: boolean;
+  /** Their message added something new to what happened (while listening): a dry run starts again. */
+  adds?: boolean;
   at: number;
 };
 
@@ -206,6 +210,8 @@ export type Session = {
   askCounts: Record<string, number>;
   exploredThreads: string[];
   retells: number;
+  /** Listening again because the dream went on past a retelling: how many times, and their message count then. */
+  resumed?: { times: number; at: number };
   offers: number;
   styleAsks: number;
   draft: Draft | null;
@@ -1146,10 +1152,13 @@ export class SessionStore {
     const forgot = s.phase === 'listen' && (overlaid.signals.recall_spent ?? 0) >= 0.5;
     let forgotStreak = forgot ? 1 : 0;
     for (let i = s.turns.length - 1; forgot && i >= 0 && s.turns[i].forgot; i--) forgotStreak++;
-    const adds = overlaid.signals.adds_story;
-    const dry = s.phase === 'listen' && adds !== null && adds !== undefined && adds < 0.5;
-    let dryStreak = dry ? 1 : 0;
-    for (let i = s.turns.length - 1; dry && i >= 0 && s.turns[i].dry; i--) dryStreak++;
+    // Dry only when they were invited to go on and didn't; an answer about a detail they were asked
+    // about neither counts nor breaks the run (see invitesMore).
+    const addsP = overlaid.signals.adds_story;
+    const read = s.phase === 'listen' && addsP !== null && addsP !== undefined;
+    const adds = read && addsP >= 0.5;
+    const dry = read && !adds && !!lastTurn && invitesMore(lastTurn.move);
+    const dryStreak = dryRun(s.turns, dry);
     const { move, rule } = selectMove(overlaid, this.cfg, {
       phase: s.phase,
       askCounts: s.askCounts,
@@ -1158,6 +1167,7 @@ export class SessionStore {
       followStreak,
       forgotStreak,
       dryStreak,
+      resumed: s.resumed ? { times: s.resumed.times, since: turnNow - s.resumed.at } : undefined,
       offers: s.offers,
       styleAsks: s.styleAsks,
       styleIds: styles.map((o) => o.id),
@@ -1172,6 +1182,10 @@ export class SessionStore {
     // The producer drafts the breakdown while the dream is told back, so it is usually done
     // by the time the person has answered; a correction redrafts it from the previous one.
     if (move.kind === 'retell' || move.kind === 'take_correction') this.startDraft(s);
+    // A change taken as it stands at the retell limit is in the breakdown too: the blue lantern,
+    // told as the offer was made, was never drafted (night bus, 25 Sep).
+    const amended = overlaid.signals.retell_reply === 'corrected' || overlaid.signals.retell_reply === 'added_more';
+    if (move.kind === 'offer_visualize' && s.phase === 'retell' && amended) this.startDraft(s);
     // The moves that offer or apply a way of drawing it need the breakdown. Wait if needed.
     let waitMs = 0;
     if (move.kind === 'choose_style' || move.kind === 'style_help' || move.kind === 'start') {
@@ -1282,6 +1296,7 @@ export class SessionStore {
           Object.assign(i, { status: 'failed', error: `not drawn: still unsure how it looks (${(i.held ?? []).join('; ')})` });
       }
     }
+    if (move.kind === 'retell' && s.resumed) extras.toldBefore = true;
     const brief = renderBrief(overlaid, move, this.cfg, { phase, extras });
     if (move.kind === 'probe_goal') s.askCounts[move.goalId] = (s.askCounts[move.goalId] ?? 0) + 1;
     s.briefs[turnNow] = brief;
@@ -1310,6 +1325,11 @@ export class SessionStore {
     if ((move.kind === 'explore_thread' || move.kind === 'circle_back') && !s.exploredThreads.includes(move.threadId))
       s.exploredThreads.push(move.threadId);
     if ((move.kind === 'retell' && told) || move.kind === 'take_correction') s.retells += 1;
+    // The dream went on past the retelling: listening again, with its own rounds of telling back.
+    if (s.phase === 'retell' && phase === 'listen') {
+      s.resumed = { times: (s.resumed?.times ?? 0) + 1, at: turnNow };
+      s.retells = 0;
+    }
     if (move.kind === 'offer_visualize' || move.kind === 'offer_later') s.offers += 1;
     if (move.kind === 'choose_style' || move.kind === 'style_help') s.styleAsks += 1;
     s.phase = phase;
@@ -1337,6 +1357,7 @@ export class SessionStore {
         notes,
         forgot: forgot || undefined,
         dry: dry || undefined,
+        adds: adds || undefined,
         at: this.now(),
       },
       {

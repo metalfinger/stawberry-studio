@@ -12,6 +12,8 @@ export type GoalDef = {
   id: string;
   label: string;
   probe_hint: string;
+  /** What counts as told, for Jev's reading, where the hint the host asks from is not enough. */
+  told_when?: string;
   /** Tracked when volunteered, never asked for, and never waited on. */
   optional?: boolean;
 };
@@ -72,6 +74,8 @@ export type Signals = {
   adds_story?: number | null;
   /** How they answered the retelling. Only read on the turn after one. */
   retell_reply: RetellReply | null;
+  /** P(their answer to the retelling says the dream went on past where it stopped). Read with it. */
+  goes_on?: number | null;
   /** How they answered "would you like to see it?". Only read while that is open. */
   wants_to_see: WantsToSee | null;
   /** Which way of drawing it they chose: an option id, "own" (they described their own), or "unsure". */
@@ -249,6 +253,19 @@ export const MAX_STYLE_ASKS = 2;
 /** Rounds of telling back (the retelling plus each correction) before a change is simply taken as it stands. */
 export const MAX_RETELLS = 3;
 
+/**
+ * Jev's P(the dream went on past the retelling) at or above this sends the conversation back to
+ * listening. Kept low on purpose: a wrong return costs a few turns of listening, a missed one loses
+ * the rest of the dream. Measured on evals/goes-on.json (35 answers to retellings, 25 Sep): 97% right,
+ * none going on missed; the two wrong returns were a detail told while the rest of that dream was
+ * being told piece by piece, answers from 0.48 to 0.59 against 0.56 for the next piece.
+ */
+export const GOES_ON_BAR = 0.5;
+/** Times the dream may go on past a retelling before what they add is taken as a correction. */
+export const MAX_RESUMES = 3;
+/** Messages heard after listening resumes (the rest of the dream) before it is told back again. */
+export const RESUMED_LISTEN_LIMIT = 8;
+
 export type MoveContext = {
   phase: Phase;
   askCounts: Record<string, number>;
@@ -260,8 +277,10 @@ export type MoveContext = {
   followStreak: number;
   /** How many of their messages in a row, this one included, said they don't remember. */
   forgotStreak?: number;
-  /** How many of their messages in a row, this one included, added nothing new to what happened. */
+  /** How many times in a row, this message included, they were invited to go on and added nothing new. */
   dryStreak?: number;
+  /** Listening again because the dream went on past a retelling: how many times, and messages since the last. */
+  resumed?: { times: number; since: number };
   /** How many times "would you like to see it?" has been put. */
   offers?: number;
   /** How many times the style has been asked about. */
@@ -340,6 +359,13 @@ export function selectMove(state: State, cfg: GoalsFile, ctx: MoveContext): { mo
 
   if (ctx.phase === 'retell') {
     const reply = state.signals.retell_reply;
+    // The dream went on past where the retelling stopped ("after the kitchen there was more"):
+    // listening again, whatever the count. Taken as a correction instead, the rest was never
+    // told: the retell limit sent "there's more" straight to "would you like to see it?", and a
+    // table that became a boat, a street that became a river and the waking were lost (night
+    // bus, 25 Sep).
+    if ((state.signals.goes_on ?? 0) >= GOES_ON_BAR && (ctx.resumed?.times ?? 0) < MAX_RESUMES)
+      return { move: { kind: 'follow' }, rule: 'R4: the dream goes on past the retelling — back to listening' };
     if (reply === 'confirmed') return { move: { kind: 'offer_visualize' }, rule: 'R1: retelling confirmed' };
     if (reply === 'corrected' || reply === 'added_more') {
       if (ctx.retells >= MAX_RETELLS)
@@ -375,8 +401,10 @@ export function selectMove(state: State, cfg: GoalsFile, ctx: MoveContext): { mo
   if (finished && (ctx.forgotStreak ?? 0) >= FORGOT_STREAK)
     return { move: { kind: 'retell' }, rule: "2: told all they remember" };
 
-  // 3. Don't listen forever. Tell back what is known; the person fills the rest.
-  if (ctx.listenTurns >= LISTEN_TURN_LIMIT) return { move: { kind: 'retell' }, rule: '3: listening limit reached' };
+  // 3. Don't listen forever. Tell back what is known; the person fills the rest. Listening again
+  // after a retelling has its own, shorter stretch: it is only the rest of the dream.
+  if (ctx.resumed ? ctx.resumed.since >= RESUMED_LISTEN_LIMIT : ctx.listenTurns >= LISTEN_TURN_LIMIT)
+    return { move: { kind: 'retell' }, rule: '3: listening limit reached' };
 
   const fresh = (t: Thread) => !t.explored && state.last_move !== `explore_thread:${t.id}`;
 
@@ -446,13 +474,14 @@ export function phaseAfter(phase: Phase, move: Move): Phase {
       return 'kept';
     case 'wrap':
       return 'ended';
+    // Only ever chosen while listening, or to go back to it when the dream goes on past a retelling.
     case 'open_ended':
     case 'follow':
     case 'explore_thread':
     case 'circle_back':
     case 'probe_goal':
     case 'acknowledge':
-      return phase;
+      return 'listen';
     default:
       return unreachable(move);
   }
@@ -488,6 +517,8 @@ const OPENING =
 /** What the brief needs from the production, once the producer has written it. */
 export type BriefExtras = {
   styles?: { id: string; name: string; line: string }[];
+  /** The dream was told back before, and they went on with it: tell back only what came after. */
+  toldBefore?: boolean;
   /** The first thing that would be drawn, in plain words ("the young woman"). */
   firstSubject?: string;
   /** The profile to show with this move: its name, what they said, and what was guessed. */
@@ -598,7 +629,9 @@ function renderMove(move: Move, state: State, cfg: GoalsFile, extras: BriefExtra
     case 'open_ended':
       return 'open_ended. Nothing to chase. Let them lead.';
     case 'follow':
-      return "follow. They're still telling the dream. React to what they just said, then invite what happened next. Don't ask about details yet.";
+      return state.last_move === 'retell' || state.last_move === 'take_correction' || state.last_move === 'retell_check'
+        ? "follow. You told the dream back, and they say it went on after that. Don't tell anything back now: just ask, simply, what happened next, and let them tell it."
+        : "follow. They're still telling the dream. React to what they just said, then invite what happened next. Don't ask about details yet.";
     case 'explore_thread':
       return `explore_thread → ${threadSummary(state, move.threadId)}. Be curious about it: ask one thing about it, in their words.`;
     case 'circle_back':
@@ -611,6 +644,8 @@ function renderMove(move: Move, state: State, cfg: GoalsFile, extras: BriefExtra
     case 'acknowledge':
       return "acknowledge. They're winding down. React warmly to what they just said, then leave ONE light open door — easy to pick up, easy to ignore. Not a probe.";
     case 'retell':
+      if (extras.toldBefore)
+        return "retell. You told the dream back once already, and they went on with it. Tell back just what they've told since then, in a few plain sentences, in order and in their own words where you can, picking up from where your last telling stopped. Add nothing they didn't say. Then ask whether you got it right, and whether that's where the dream ended.";
       return "retell. You have their dream. Tell it back to them in a few plain sentences, in order and in their own words where you can: what happened, where, who was there, how it felt and how it looked. Add nothing they didn't say. Then ask whether you got it right or missed anything.";
     case 'retell_check':
       return "retell_check. It isn't clear whether you have it right. Ask them simply whether that's how it went, or if there's anything to change.";
@@ -707,6 +742,28 @@ function renderMove(move: Move, state: State, cfg: GoalsFile, extras: BriefExtra
 /** Following the telling, as opposed to asking about a gap or changing phase. */
 export function isFollowing(move: Move): boolean {
   return move.kind === 'follow' || move.kind === 'explore_thread';
+}
+
+/**
+ * The moves that leave room for what happened next. Only an answer to one of these can show the
+ * telling has run dry: an answer to a question about a detail is about that detail. Counted on
+ * every answer, three about the grandmother's white hair, the quiet and how it felt ended the
+ * listening halfway through the dream (night bus, 25 Sep).
+ */
+export function invitesMore(move: Move): boolean {
+  return move.kind === 'follow' || move.kind === 'open_ended' || move.kind === 'acknowledge';
+}
+
+/**
+ * How many times in a row, this message included, they were invited to go on and added nothing new.
+ * Answers about a detail are passed over; anything new that happened, or a retelling, ends the run.
+ */
+export function dryRun(earlier: { dry?: boolean; adds?: boolean; phase: Phase }[], dry: boolean): number {
+  if (!dry) return 0;
+  let n = 1;
+  for (let i = earlier.length - 1; i >= 0 && !earlier[i].adds && earlier[i].phase === 'listen'; i--)
+    if (earlier[i].dry) n++;
+  return n;
 }
 
 /**

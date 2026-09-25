@@ -95,6 +95,64 @@ describe('the retelling', () => {
   });
 });
 
+describe('the dream goes on past the retelling', () => {
+  const allTold = (): Record<string, Answer> => {
+    const out: Record<string, Answer> = { finished_telling: noul(0.9) };
+    for (const id of required) Object.assign(out, told(id, 1));
+    return out;
+  };
+
+  test('"there was more" goes back to listening, and the rest alone is told back', async () => {
+    const host = fakeHost();
+    const store = new SessionStore(cfg, {
+      jev: fakeJev((q) => {
+        if (q.is_retelling) return { is_retelling: noul(0.9) };
+        if (q.goes_on) return { retell_reply: pick('added_more'), goes_on: noul(0.9) };
+        return allTold();
+      }),
+      host,
+    });
+    const { id } = store.create();
+    await store.open(id);
+    expect((await store.message(id, 'that was on the bus')).move).toEqual({ kind: 'retell' });
+    const back = await store.message(id, "that's right, but after the kitchen there was more");
+    expect(back.move).toEqual({ kind: 'follow' });
+    expect(back.phase).toBe('listen');
+    expect(store.get(id)!.resumed).toEqual({ times: 1, at: 2 });
+    expect(store.get(id)!.retells).toBe(0);
+    const again = await store.message(id, 'the table became a boat, and then i woke up');
+    expect(again.move).toEqual({ kind: 'retell' });
+    const brief = host.calls.at(-1)!.find((m) => m.content.startsWith('<brief>'))!.content;
+    expect(brief).toContain("just what they've told since then");
+  });
+
+  test('a change taken as it stands at the retell limit is drafted before the offer', async () => {
+    const drafted: number[] = [];
+    const breakdown = JSON.parse(readFileSync(join(import.meta.dir, 'fixtures', 'breakdown.json'), 'utf8')) as Breakdown;
+    const store = new SessionStore(cfg, {
+      jev: fakeJev((q) => {
+        if (q.is_retelling) return { is_retelling: noul(0.9) };
+        if (q.goes_on) return { retell_reply: pick('corrected'), goes_on: noul(0.1) };
+        return allTold();
+      }),
+      host: fakeHost(),
+      producer: async (t) => {
+        drafted.push(t.filter((e) => e.role === 'user').length);
+        return { breakdown, downgraded: [], notes: [], ms: 1 };
+      },
+    });
+    const { id } = store.create();
+    await store.open(id);
+    await store.message(id, 'the whole dream');
+    const moves: string[] = [];
+    for (const text of ['no, it was blue', 'and she was older', 'and the lantern was blue'])
+      moves.push((await store.message(id, text)).move?.kind ?? 'none');
+    expect(moves).toEqual(['take_correction', 'take_correction', 'offer_visualize']);
+    // The retelling, each correction, and the change taken as it stands.
+    expect(drafted).toEqual([1, 2, 3, 4]);
+  });
+});
+
 describe('a whole conversation', () => {
   const breakdown = JSON.parse(readFileSync(join(import.meta.dir, 'fixtures', 'breakdown.json'), 'utf8')) as Breakdown;
   breakdown.style_options = [

@@ -147,7 +147,7 @@ export function bookkeeperQuestions(
   for (const g of cfg.goals) {
     q[`goal_${g.id}`] = {
       type: 'noul',
-      instructions: `About the dream the person is telling: "${g.label}" (looking for: ${g.probe_hint}). Has the person told this?`,
+      instructions: `About the dream the person is telling: "${g.label}" (looking for: ${g.probe_hint}).${g.told_when ? ` ${g.told_when}` : ''} Has the person told this?`,
       criteria: {
         true: 'their own words tell it, quotably',
         false: 'not raised, or glanced off it with no real content',
@@ -267,6 +267,16 @@ export function bookkeeperQuestions(
         corrected: 'they said part of it was wrong, and put it right',
         added_more: 'they added a detail that was missing from it',
         unclear: "they didn't say whether it was right",
+      },
+    };
+    // Asked beside it, not as a fifth answer: "that's right, but after the kitchen there was more"
+    // both confirms the retelling and says the dream went on (night bus, 25 Sep).
+    q.goes_on = {
+      type: 'noul',
+      instructions: `The listener has just told the person's dream back to them. In this message: "${latest.slice(0, 240)}", does the person say the dream went on past where the telling back stopped: that something else happened after that, or that there is more still to tell?`,
+      criteria: {
+        true: "the dream carried on after the part told back: they tell what happened next, or say there's more after it",
+        false: 'they confirm it, correct it, or add a detail to a part already told, and nothing comes after it',
       },
     };
   }
@@ -609,6 +619,7 @@ export function readState(
         recall_spent: phase === 'listen' ? noul(a.recall_spent) : null,
         adds_story: phase === 'listen' ? noul(a.adds_story) : null,
         retell_reply: retellReply,
+        goes_on: phase === 'retell' ? noul(a.goes_on) : null,
         wants_to_see: wantsToSee,
         style_choice: styleChoice,
         profile_reply: profileReply,

@@ -1,13 +1,17 @@
 import { describe, expect, test } from 'bun:test';
 import { dreamConfig } from '../dream';
 import {
+  dryRun,
   initialState,
+  invitesMore,
   LISTEN_TURN_LIMIT,
   MAX_OFFERS,
+  MAX_RESUMES,
   MAX_RETELLS,
   MAX_STYLE_ASKS,
   type MoveContext,
   phaseAfter,
+  RESUMED_LISTEN_LIMIT,
   renderBrief,
   selectMove,
   type State,
@@ -26,6 +30,7 @@ function state(over: {
   threads?: Thread[];
   last_move?: string;
   retell_reply?: State['signals']['retell_reply'];
+  goes_on?: number;
   wants_to_see?: State['signals']['wants_to_see'];
   style_choice?: string;
 }): State {
@@ -35,6 +40,7 @@ function state(over: {
   s.signals = {
     finished_telling: over.finished ?? 0,
     retell_reply: over.retell_reply ?? null,
+    goes_on: over.goes_on ?? null,
     wants_to_see: over.wants_to_see ?? null,
     style_choice: over.style_choice ?? null,
   };
@@ -76,6 +82,36 @@ describe('listening', () => {
     const place = state({ covered: ['telling'] });
     expect(selectMove(place, cfg, listen({ dryStreak: 2 })).move.kind).toBe('follow');
     expect(selectMove(place, cfg, listen({ dryStreak: 3 })).move.kind).toBe('probe_goal');
+  });
+
+  test('only an answer to an invitation to go on can show the telling has run dry', () => {
+    // Asked about the grandmother's white hair, "the colour, mostly" is about the hair, not the end.
+    expect(invitesMore({ kind: 'follow' })).toBe(true);
+    expect(invitesMore({ kind: 'open_ended' })).toBe(true);
+    expect(invitesMore({ kind: 'acknowledge' })).toBe(true);
+    expect(invitesMore({ kind: 'explore_thread', threadId: 'msg_27' })).toBe(false);
+    expect(invitesMore({ kind: 'probe_goal', goalId: 'strange' })).toBe(false);
+  });
+
+  test('a dry run counts invitations to go on that brought nothing new, and passes over answers about details', () => {
+    const t = (dry?: boolean, adds?: boolean, phase: 'listen' | 'retell' = 'listen') => ({ dry, adds, phase });
+    // The night bus: asked about the white hair, then about the quiet, then invited to go on.
+    expect(dryRun([t(), t()], true)).toBe(1);
+    expect(dryRun([t(true), t(), t(true)], true)).toBe(3);
+    // Something new that happened ends the run, and so does a retelling.
+    expect(dryRun([t(true), t(false, true), t(true)], true)).toBe(2);
+    expect(dryRun([t(true), t(undefined, undefined, 'retell'), t(true)], true)).toBe(2);
+    expect(dryRun([t(true), t(true)], false)).toBe(0);
+  });
+
+  test('listening again after a retelling has its own, shorter stretch', () => {
+    const s = state({ covered: ['telling'] });
+    // Well past the first stretch's limit, the rest of the dream is still heard.
+    const again = listen({ listenTurns: LISTEN_TURN_LIMIT + 3 });
+    expect(selectMove(s, cfg, { ...again, resumed: { times: 1, since: 1 } }).move.kind).not.toBe('retell');
+    expect(selectMove(s, cfg, { ...again, resumed: { times: 1, since: RESUMED_LISTEN_LIMIT } }).move).toEqual({
+      kind: 'retell',
+    });
   });
 
   test('while they are still telling it, the host follows instead of asking about gaps', () => {
@@ -179,6 +215,31 @@ describe('the retelling', () => {
   test('after the last retelling, a correction is accepted as it stands', () => {
     const { move } = selectMove(state({ retell_reply: 'added_more' }), cfg, retell({ retells: MAX_RETELLS }));
     expect(move).toEqual({ kind: 'offer_visualize' });
+  });
+
+  test('the dream going on past the retelling goes back to listening, whatever the count', () => {
+    // "that part's right. but the dream didn't end there, after the kitchen there was more" (night bus).
+    for (const reply of ['confirmed', 'added_more', 'unclear'] as const) {
+      const { move } = selectMove(state({ retell_reply: reply, goes_on: 0.9 }), cfg, retell({ retells: MAX_RETELLS }));
+      expect(move).toEqual({ kind: 'follow' });
+      expect(phaseAfter('retell', move)).toBe('listen');
+    }
+    // A detail added to a part already told back stays a correction.
+    expect(selectMove(state({ retell_reply: 'added_more', goes_on: 0.1 }), cfg, retell()).move.kind).toBe(
+      'take_correction',
+    );
+    // Gone on too many times: what they add is taken as a correction.
+    const worn = retell({ resumed: { times: MAX_RESUMES, since: 0 } });
+    expect(selectMove(state({ retell_reply: 'added_more', goes_on: 0.9 }), cfg, worn).move.kind).toBe('take_correction');
+  });
+
+  test('told back again after the dream went on, only the rest is told', () => {
+    const b = renderBrief(state({}), { kind: 'retell' }, cfg, { phase: 'retell', extras: { toldBefore: true } });
+    expect(b).toContain("just what they've told since then");
+    expect(b).toContain("whether that's where the dream ended");
+    const f = renderBrief(state({ last_move: 'retell' }), { kind: 'follow' }, cfg, { phase: 'listen' });
+    expect(f).toContain('what happened next');
+    expect(f).toContain("Don't tell anything back now");
   });
 
   test('no clear answer is asked about once, then taken as right', () => {
