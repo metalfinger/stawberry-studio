@@ -7,19 +7,86 @@
 // provisional until each question has a labelled set of real cases to set it from.
 import type { Question } from './jev';
 
-/** The stages a dream goes through, in order, and what each does. */
+/**
+ * The stages a dream goes through, in order: what each does, how it is left today, and where the
+ * Jev calls it makes are logged (`site` in jevlog.ts). Where a stage is left on Jev's facts, code
+ * still makes the move: the conversation's rules in lib.ts, the gate's bars in gate.ts, and the
+ * transitions written as data below.
+ */
 export const STAGES = [
-  { id: 'listen', does: 'Berry listens to the dream, one prompt per move' },
-  { id: 'retell', does: 'Berry tells it back' },
-  { id: 'confirm', does: 'the person says whether the retelling is right' },
-  { id: 'breakdown', does: 'the producer turns it into people, places, things and moments' },
-  { id: 'style', does: 'the person chooses how it is drawn' },
-  { id: 'sheets', does: 'a sketch of each person, place and thing' },
-  { id: 'plan', does: 'the floor plans, and the lasting changes the breakdown missed' },
-  { id: 'previs', does: 'every camera placed and rendered as a grey previs, its view read off the render' },
-  { id: 'prompt', does: 'the picture prompt, checked by the gate before anything is paid for' },
-  { id: 'image', does: 'the picture is drawn' },
-  { id: 'review', does: 'the picture is looked at, and approved or corrected' },
+  {
+    id: 'listen',
+    does: 'Berry listens to the dream, one prompt per move',
+    leftBy:
+      'Jev reads every turn for how much of each goal is told and whether they have finished; code retells once the story is told to the end, or at the listening limit',
+    sites: ['turn'],
+  },
+  {
+    id: 'retell',
+    does: 'Berry tells it back',
+    leftBy: 'Jev checks that what Berry wrote is a retelling before it is sent',
+    sites: ['retell'],
+  },
+  {
+    id: 'confirm',
+    does: 'the person says whether the retelling is right',
+    leftBy:
+      'Jev reads their answer as confirmed, amended or unclear; code offers to draw it once it is confirmed, or after one more check',
+    sites: ['turn'],
+  },
+  {
+    id: 'breakdown',
+    does: 'the producer turns it into people, places, things and moments',
+    leftBy:
+      'Jev grounds every field in what they said and every moment in the pictures before it; they are asked whether they would like to see it',
+    sites: ['grounding', 'continuity', 'turn'],
+  },
+  {
+    id: 'style',
+    does: 'the person chooses how it is drawn',
+    leftBy:
+      'Jev reads which of the offered looks they chose; code starts once one is chosen, or the closest one if they stay unsure',
+    sites: ['styles', 'turn'],
+  },
+  {
+    id: 'sheets',
+    does: 'a sketch of each person, place and thing',
+    leftBy: 'Jev reads their reaction to each sketch; code moves on to the moments once every sketch is settled',
+    sites: ['turn', 'correction'],
+  },
+  {
+    id: 'plan',
+    does: 'the floor plans, and the lasting changes the breakdown missed',
+    leftBy:
+      'code: every floor plan is checked (who faces whom names someone there, everything inside its room) before a camera is placed',
+    sites: [],
+  },
+  {
+    id: 'previs',
+    does: 'every camera placed and rendered as a grey previs, its view read off the render',
+    leftBy: 'storyboard complete?',
+    sites: ['storyboard'],
+  },
+  {
+    id: 'prompt',
+    does: 'the picture prompt, checked by the gate before anything is paid for',
+    leftBy:
+      'the gate: Jev reads the prompt for anything it contradicts or says twice, and whether it and its pictures are clear; code holds it below the bars',
+    sites: ['gate'],
+  },
+  {
+    id: 'image',
+    does: 'the picture is drawn',
+    leftBy: 'code: the provider returns the picture',
+    sites: [],
+  },
+  {
+    id: 'review',
+    does: 'the picture is looked at, and approved or corrected',
+    leftBy:
+      'they approve or correct it in the chat; Jev reads a correction for what else it touches, and code redraws those',
+    sites: ['turn', 'correction'],
+  },
 ] as const;
 
 export type StageId = (typeof STAGES)[number]['id'];
@@ -30,6 +97,8 @@ export type StageId = (typeof STAGES)[number]['id'];
  */
 export type Fact = {
   id: string;
+  /** What the fact asks, in a few words, for the Stages panel. */
+  label: string;
   instructions: string;
   criteria: { true: string; false: string };
   pass: 'yes' | 'no';
@@ -53,6 +122,7 @@ export const STORYBOARD: Transition = {
   facts: [
     {
       id: 'sb_all_in',
+      label: 'Everyone and everything in it?',
       instructions:
         '`shot` describes a planned storyboard picture of `moment`. Does the shot have in the picture everyone and everything that `moment.in_it` lists and `moment.action` is about?',
       criteria: {
@@ -64,6 +134,7 @@ export const STORYBOARD: Transition = {
     },
     {
       id: 'sb_contradicts',
+      label: 'Contradicts the moment?',
       instructions:
         'Does anything in `shot` contradict `moment`: where someone or something is, what they are in or on, which way they face, or how big the place is beside what fills it?',
       criteria: {
@@ -75,6 +146,7 @@ export const STORYBOARD: Transition = {
     },
     {
       id: 'sb_camera',
+      label: 'Camera where the moment needs it?',
       instructions:
         "Is the camera in `shot` where `moment` needs it: the dreamer's own eyes when `moment.seen` says the moment is seen through them, otherwise outside, and facing what `moment.looks_at` names?",
       criteria: {
@@ -86,6 +158,7 @@ export const STORYBOARD: Transition = {
     },
     {
       id: 'sb_extra',
+      label: 'Anything extra that changes it?',
       instructions:
         'Does `shot` put in the picture anyone or anything that `moment` does not have, in a way that changes what the picture says?',
       criteria: {
@@ -132,4 +205,45 @@ export function decide(
         : `${r.question}: no answer`;
     });
   return { ok: readings.every((r) => r.ok), readings, reasons };
+}
+
+/** Where one moment is: from its frame once it has one, otherwise from its planning. */
+export function momentStage(
+  id: string,
+  prep: { previs?: Record<string, string>; storyboard?: Record<string, { ok: boolean }> } | undefined,
+  frame: { status: string; held?: string[] } | undefined,
+): StageId {
+  if (frame?.status === 'drawing') return 'image';
+  if (frame?.status === 'ready') return 'review';
+  if (frame?.held?.length) return frame.held.every((h) => h.startsWith('storyboard:')) ? 'previs' : 'prompt';
+  const checked = prep?.storyboard?.[id];
+  if (checked) return checked.ok ? 'prompt' : 'previs';
+  return prep?.previs?.[id] ? 'previs' : 'plan';
+}
+
+/**
+ * Where a conversation is, as a stage: from its phase, and while its moments are drawn, the moment
+ * furthest behind. Null once it has closed without pictures (kept as told, or they left).
+ */
+export function stageOf(s: {
+  phase: string;
+  build?: { frames?: { id: string; kind: string; status: string; held?: string[] }[] } | null;
+  prep?: { previs?: Record<string, string>; storyboard?: Record<string, { ok: boolean }> };
+}): StageId | null {
+  const at: Record<string, StageId> = {
+    listen: 'listen',
+    retell: 'confirm',
+    offer: 'breakdown',
+    style: 'style',
+    build: 'sheets',
+    review: 'sheets',
+    ready: 'breakdown',
+    done: 'review',
+  };
+  if (s.phase !== 'frames') return at[s.phase] ?? null;
+  const order = STAGES.map((x) => x.id as StageId);
+  const behind = (s.build?.frames ?? [])
+    .filter((f) => f.kind === 'cut' && f.status !== 'failed')
+    .map((f) => order.indexOf(momentStage(f.id, s.prep, f)));
+  return behind.length ? order[Math.min(...behind)] : 'plan';
 }

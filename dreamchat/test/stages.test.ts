@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { decide, factQuestions, STAGES, STORYBOARD } from '../stages';
+import { decide, factQuestions, momentStage, STAGES, stageOf, STORYBOARD } from '../stages';
 
 const noul = (n: number) => ({ type: 'noul', noul: n });
 
@@ -29,5 +29,40 @@ describe('the storyboard transition', () => {
     // No answer is never a pass: nothing is paid for on a guess.
     expect(decide(STORYBOARD, 'm7', null).ok).toBe(false);
     expect(decide(STORYBOARD, 'm7', { ...good, sb_camera_m7: noul(0.6) }).ok).toBe(true);
+  });
+});
+
+describe('where a dream is', () => {
+  const prep = {
+    previs: { m1: 'a.png', m2: 'b.png', m3: 'c.png' },
+    storyboard: { m1: { ok: true }, m2: { ok: false } },
+  };
+
+  test('a moment is where its frame is, or where its planning got to', () => {
+    expect(momentStage('m1', prep, undefined)).toBe('prompt');
+    expect(momentStage('m2', prep, undefined)).toBe('previs');
+    expect(momentStage('m3', prep, undefined)).toBe('previs');
+    expect(momentStage('m4', prep, undefined)).toBe('plan');
+    expect(momentStage('m1', prep, { status: 'drawing' })).toBe('image');
+    expect(momentStage('m1', prep, { status: 'ready' })).toBe('review');
+    // Held by the gate on its prompt, or by "storyboard complete?" on its shot.
+    expect(momentStage('m1', prep, { status: 'waiting', held: ['the prompt says the car twice'] })).toBe('prompt');
+    expect(momentStage('m2', prep, { status: 'waiting', held: ['storyboard: the camera faces away'] })).toBe('previs');
+  });
+
+  test('a conversation is at its phase, and while moments are drawn, at the one furthest behind', () => {
+    expect(stageOf({ phase: 'listen' })).toBe('listen');
+    expect(stageOf({ phase: 'retell' })).toBe('confirm');
+    expect(stageOf({ phase: 'review', prep })).toBe('sheets');
+    const frames = [
+      { id: 'm1', kind: 'cut', status: 'ready' },
+      { id: 'm2', kind: 'cut', status: 'waiting', held: ['storyboard: the camera faces away'] },
+      { id: 'g1', kind: 'ghost', status: 'waiting' },
+    ];
+    expect(stageOf({ phase: 'frames', build: { frames }, prep })).toBe('previs');
+    expect(stageOf({ phase: 'done', build: { frames }, prep })).toBe('review');
+    expect(stageOf({ phase: 'kept' })).toBeNull();
+    // Every stage says how it is left.
+    for (const st of STAGES) expect(st.leftBy.length).toBeGreaterThan(10);
   });
 });

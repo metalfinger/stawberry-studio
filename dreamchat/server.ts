@@ -7,9 +7,11 @@ import { loadedKeys } from './boot';
 import { join } from 'node:path';
 import { dreamConfig } from './dream';
 import { callJev, jevAvailable } from './jev';
+import { jevTotals, readJevLog } from './jevlog';
 import { callHost, HOST_MODEL } from './llm';
 import { blockScenes, fixFrom, shotFor, superviseChanges, proposeLook, reviseItem, rewordLook, rewordMoment } from './producer';
 import { IMAGE_CAP, liveProducer, ownStyle, SessionStore } from './session';
+import { momentStage, STAGES, stageOf, STORYBOARD } from './stages';
 import { assistantJudge, judgeKind } from './judge';
 import { judgeAvailable, judgeContinuity, judgeTake, liveSheets, PROVIDER, spawnWorker } from './sheets';
 import { REPO, STRAWBERRY_HOME, STRAWBERRY_PYTHON, strawberryAvailable, writeProduction } from './strawberry';
@@ -104,6 +106,24 @@ const server = Bun.serve({
         const path = store.get(id)?.prep?.previs[url.searchParams.get('item') ?? ''];
         if (!path || !path.startsWith(join(import.meta.dir, 'state', id ?? '')) || !path.endsWith('.png')) return fail(404, 'no plan');
         return new Response(Bun.file(path), { headers: { 'cache-control': 'private, max-age=600' } });
+      }
+
+      // The Stages panel: where the conversation and each moment are, and what Jev decided and cost
+      // in it, from the conversation's own log.
+      if (url.pathname === '/api/jev') {
+        const s = store.get(id);
+        if (!s) return fail(404, 'no such conversation');
+        const log = readJevLog(join(import.meta.dir, 'state'), id);
+        const frames = s.build?.frames ?? [];
+        const moments = (s.draft?.breakdown?.scenes ?? []).flatMap((sc) => sc.moments);
+        return json({
+          stages: STAGES,
+          transitions: [STORYBOARD],
+          stage: stageOf(s),
+          moments: Object.fromEntries(moments.map((m) => [m.id, momentStage(m.id, s.prep, frames.find((f) => f.id === m.id))])),
+          totals: jevTotals(log),
+          log: log.slice(-400),
+        });
       }
 
       if (url.pathname === '/api/turn') {

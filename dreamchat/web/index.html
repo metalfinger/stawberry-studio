@@ -8,7 +8,7 @@
 :root {
   --bg: #0f1218; --panel: #171b23; --panel2: #1d222c; --line: #2a303c;
   --text: #ebe6dc; --muted: #8d95a3; --accent: #e56b86;
-  --told: #6cc08b; --forgot: #a99be0; --na: #6b7280; --open: #d9a45b;
+  --told: #6cc08b; --forgot: #a99be0; --na: #6b7280; --open: #d9a45b; --held: #ef8f86;
 }
 * { box-sizing: border-box; }
 html, body { height: 100%; }
@@ -143,6 +143,39 @@ summary { cursor: pointer; color: var(--muted); font-size: .82rem; padding: 3px 
 .sketch .judge.miss b { color: var(--open); }
 .sketches { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .sketches .sketch { width: 100%; }
+/* Stages: where the dream is, what Jev decided at each step, and what it cost. */
+.stages { display: flex; flex-wrap: wrap; gap: 4px; }
+.stages span { font-size: .72rem; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
+.stages span.done { color: var(--told); border-color: transparent; }
+.stages span.now { color: var(--text); border-color: var(--accent); }
+.stagenow { font-size: .82rem; margin: 8px 0 4px; }
+.stagenow b { font-weight: 600; }
+.table-stages { display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; font-size: .78rem; margin-top: 6px; }
+.table-stages b { font-weight: 600; white-space: nowrap; }
+.table-stages .by { color: var(--muted); }
+.tally { font-size: .8rem; color: var(--muted); margin-bottom: 4px; font-variant-numeric: tabular-nums; }
+.check { padding: 9px 0; border-bottom: 1px solid var(--line); font-size: .84rem; }
+.check .top { display: flex; gap: 8px; align-items: baseline; }
+.check .top .n { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 1.6em; text-align: right; }
+.check .top .what { flex: 1; }
+.check .body { margin-left: calc(1.6em + 8px); }
+.verdict { font-size: .7rem; padding: 1px 8px; border-radius: 99px; border: 1px solid currentColor; white-space: nowrap; }
+.verdict.cleared { color: var(--told); }
+.verdict.held { color: var(--held); }
+.verdict.unchecked { color: var(--na); border-style: dashed; }
+.facts { display: grid; grid-template-columns: 1fr auto auto; gap: 1px 10px; font-size: .76rem; margin-top: 6px; font-variant-numeric: tabular-nums; }
+.facts .bar { color: var(--muted); }
+.facts .ok { color: var(--told); }
+.facts .no { color: var(--held); }
+.check .why { color: var(--held); font-size: .78rem; margin-top: 4px; }
+.check .history { color: var(--muted); font-size: .74rem; margin-top: 4px; }
+.check .plan img { display: block; width: min(260px, 100%); border: 1px solid var(--line); margin-top: 6px; }
+.check details { margin: 4px 0 0; }
+.sites { width: 100%; border-collapse: collapse; font-size: .76rem; font-variant-numeric: tabular-nums; }
+.sites th { text-align: left; color: var(--muted); font-weight: 500; font-size: .7rem; padding: 3px 4px; border-bottom: 1px solid var(--line); }
+.sites td { padding: 3px 4px; border-bottom: 1px solid var(--line); }
+.sites .num { text-align: right; }
+.sites td.err { color: var(--held); }
 </style>
 </head>
 <body>
@@ -174,11 +207,13 @@ summary { cursor: pointer; color: var(--muted); font-size: .82rem; padding: 3px 
     <nav>
       <button data-pane="dream" class="on">The dream</button>
       <button data-pane="production" id="productionTab">Production</button>
+      <button data-pane="stages" id="stagesTab">Stages</button>
       <button data-pane="turn">Turn</button>
       <button data-pane="calls">Calls</button>
     </nav>
     <div class="pane on" id="pane-dream"><p class="muted">Start a conversation to see what Berry has understood.</p></div>
     <div class="pane" id="pane-production"><p class="muted">Once Berry tells the dream back, the producer drafts it here: the moments to draw, the people, places and things, and ways it could look.</p></div>
+    <div class="pane" id="pane-stages"><p class="muted">Where the dream is in making its storyboard, what Jev decided at each step and why, and what its calls cost.</p></div>
     <div class="pane" id="pane-turn"><p class="muted">Pick a reply's label in the chat to see why it was said.</p></div>
     <div class="pane" id="pane-calls"><p class="muted">The exact judge questions and model input for the selected turn.</p></div>
   </aside>
@@ -543,9 +578,129 @@ async function selectTurn(n) {
   }
 }
 
+// ── stages ──────────────────────────────────────────────────────────────────
+const num = (n) => n >= 10000 ? `${Math.round(n / 1000)}k` : n.toLocaleString();
+const clock = (at) => new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+const paneOn = (name) => $(`pane-${name}`).classList.contains('on');
+
+/** The Stages panel, read from the conversation's own log of Jev's calls and decisions. */
+async function renderStages() {
+  if (!session || !paneOn('stages')) return;
+  let d;
+  try { d = await api(`/api/jev?id=${encodeURIComponent(session.id)}`); } catch (e) { $('pane-stages').replaceChildren(el('p', { class: 'bad' }, e.message)); return; }
+  // It is rebuilt on every refresh while pictures draw: keep where they were reading, and what they opened.
+  const pane = $('pane-stages');
+  const was = pane.scrollTop;
+  const open = new Set([...pane.querySelectorAll('details[open]')].map((x) => x.dataset.key));
+  pane.replaceChildren();
+  stagesInto(pane, d);
+  for (const x of pane.querySelectorAll('details')) if (open.has(x.dataset.key)) x.open = true;
+  pane.scrollTop = was;
+}
+
+function stagesInto(pane, d) {
+
+  // Where the conversation is.
+  pane.append(el('h4', {}, 'Stages'));
+  const strip = el('div', { class: 'stages' });
+  const at = d.stages.findIndex((x) => x.id === d.stage);
+  d.stages.forEach((x, i) => strip.append(el('span', { class: i === at ? 'now' : at >= 0 && i < at ? 'done' : '', title: x.does }, x.id)));
+  pane.append(strip);
+  const now = d.stages[at];
+  if (now) {
+    const line = el('p', { class: 'stagenow' });
+    line.append(el('b', {}, `Now: ${now.id}`), ` · ${now.does}`);
+    pane.append(line);
+  } else pane.append(el('p', { class: 'stagenow muted' }, 'This conversation has closed without pictures.'));
+  const table = el('details', { 'data-key': 'table' });
+  table.append(el('summary', {}, 'How each stage is left'));
+  const grid = el('div', { class: 'table-stages' });
+  for (const x of d.stages) grid.append(el('b', {}, x.id), el('span', { class: 'by' }, x.leftBy));
+  table.append(grid);
+  pane.append(table);
+
+  // "Storyboard complete?" for every moment, as the planning decided it.
+  const t = d.transitions[0];
+  const b = session.draft && session.draft.breakdown;
+  pane.append(el('h4', {}, `${t.from} → ${t.to}: ${t.name}`));
+  const moments = b ? b.scenes.flatMap((sc) => sc.moments) : [];
+  const checks = (session.prep && session.prep.storyboard) || {};
+  if (!moments.length) pane.append(el('p', { class: 'muted' }, 'Once the moments are drafted and planned, each planned shot is checked against its moment here, before anything is paid for.'));
+  else {
+    const ids = moments.map((m) => m.id);
+    const cleared = ids.filter((id) => checks[id] && checks[id].ok).length;
+    const held = ids.filter((id) => checks[id] && !checks[id].ok).length;
+    pane.append(el('p', { class: 'tally' }, `${moments.length} moments · ${cleared} cleared · ${held} held · ${moments.length - cleared - held} not checked yet`));
+  }
+  const history = d.log.filter((e) => e.kind === 'transition' && e.stage === t.from);
+  const facts = Object.fromEntries(t.facts.map((f) => [f.id, f]));
+  moments.forEach((m, i) => {
+    const c = checks[m.id];
+    const row = el('div', { class: 'check' });
+    const top = el('div', { class: 'top' });
+    top.append(el('span', { class: 'n' }, String(i + 1)), el('span', { class: 'what' }, m.action),
+      el('span', { class: `verdict ${c ? (c.ok ? 'cleared' : 'held') : 'unchecked'}` }, c ? (c.ok ? 'cleared' : 'held') : (d.moments[m.id] || 'not checked')));
+    row.append(top);
+    const body = el('div', { class: 'body' });
+    if (c) {
+      const list = el('div', { class: 'facts' });
+      for (const r of c.readings) {
+        const f = facts[r.question];
+        const bar = f ? (f.pass === 'yes' ? `needs ≥ ${r.bar.toFixed(2)}` : `needs < ${r.bar.toFixed(2)}`) : '';
+        list.append(el('span', {}, f ? f.label : r.question), el('span', { class: r.ok ? 'ok' : 'no' }, Number.isFinite(r.answer) ? `${r.answer.toFixed(2)} ${r.ok ? '✓' : '✗'}` : 'no answer ✗'), el('span', { class: 'bar' }, bar));
+      }
+      body.append(list);
+      if (!c.ok) body.append(el('div', { class: 'why' }, `Held: ${c.reasons.join('; ')}`));
+      const view = el('details', { 'data-key': `view-${m.id}` });
+      view.append(el('summary', {}, 'What Jev compared: the shot, read off its previs'), el('pre', {}, c.view));
+      body.append(view);
+    }
+    const past = history.filter((e) => e.moment === m.id);
+    if (past.length > 1) body.append(el('div', { class: 'history' }, `Checked ${past.length} times: ${past.map((e) => `${e.decision} ${clock(e.at)}`).join(' → ')}`));
+    const planned = planFor(m.id, 'stages');
+    if (planned) { const box = el('div', { class: 'plan' }); box.append(planned); body.append(box); }
+    row.append(body);
+    pane.append(row);
+  });
+
+  // What Jev's calls cost, and where they were made.
+  const all = d.totals.all;
+  pane.append(el('h4', {}, 'Jev’s calls'));
+  if (!all.calls) { pane.append(el('p', { class: 'muted' }, 'No calls logged in this conversation yet.')); return; }
+  pane.append(el('p', { class: 'tally' }, `${all.calls} calls · ${num(all.inputTokens)} tokens in · ${num(all.outputTokens)} out · ${Math.round(all.ms / 1000)} s waited`));
+  const sites = el('table', { class: 'sites' });
+  const head = el('tr');
+  for (const [h, cls] of [['Where', ''], ['Calls', 'num'], ['In per call', 'num'], ['In', 'num'], ['Avg s', 'num']]) head.append(el('th', { class: cls }, h));
+  sites.append(head);
+  for (const [site, x] of Object.entries(d.totals.bySite).sort((a, b2) => b2[1].inputTokens - a[1].inputTokens)) {
+    const tr = el('tr');
+    tr.append(el('td', {}, site), el('td', { class: 'num' }, String(x.calls)), el('td', { class: 'num' }, num(Math.round(x.inputTokens / x.calls))),
+      el('td', { class: 'num' }, num(x.inputTokens)), el('td', { class: 'num' }, (x.ms / x.calls / 1000).toFixed(1)));
+    sites.append(tr);
+  }
+  pane.append(sites);
+  const recent = el('details', { 'data-key': 'recent' });
+  recent.append(el('summary', {}, 'Latest calls'));
+  const calls = el('table', { class: 'sites' });
+  const h2 = el('tr');
+  for (const [h, cls] of [['At', ''], ['Where', ''], ['Qs', 'num'], ['In', 'num'], ['Out', 'num'], ['s', 'num']]) h2.append(el('th', { class: cls }, h));
+  calls.append(h2);
+  for (const e of d.log.filter((x) => x.kind === 'call').slice(-15).reverse()) {
+    const tr = el('tr');
+    tr.append(el('td', {}, clock(e.at)), el('td', { class: e.error ? 'err' : '', title: e.error || e.questions.join(', ') }, e.error ? `${e.site} · failed` : e.site),
+      el('td', { class: 'num' }, String(e.questions.length)), el('td', { class: 'num' }, e.inputTokens == null ? '–' : num(e.inputTokens)),
+      el('td', { class: 'num' }, e.outputTokens == null ? '–' : num(e.outputTokens)), el('td', { class: 'num' }, (e.ms / 1000).toFixed(1)));
+    calls.append(tr);
+  }
+  recent.append(calls);
+  pane.append(recent);
+}
+
 function showPane(name) {
   for (const b of document.querySelectorAll('aside nav button')) b.classList.toggle('on', b.dataset.pane === name);
   for (const p of document.querySelectorAll('.pane')) p.classList.toggle('on', p.id === `pane-${name}`);
+  if (session) history.replaceState(null, '', `#${encodeURIComponent(session.id)}/${name}`);
+  if (name === 'stages') renderStages();
 }
 for (const b of document.querySelectorAll('aside nav button')) b.onclick = () => showPane(b.dataset.pane);
 
@@ -553,7 +708,7 @@ for (const b of document.querySelectorAll('aside nav button')) b.onclick = () =>
 let poll = null;
 async function refresh() {
   session = await api(`/api/session?id=${encodeURIComponent(session.id)}`);
-  renderChat(); renderSteps(); renderDream(); renderProduction();
+  renderChat(); renderSteps(); renderDream(); renderProduction(); renderStages();
   if (busy) typing(true);
   // Background work finishes between turns; watch for it while any is running.
   const drawing = session.build && [...session.build.items, ...(session.build.frames || [])].some((i) => i.status === 'drawing' || ((i.kind === 'cut' || i.kind === 'ghost') && i.status === 'waiting'));
@@ -585,6 +740,7 @@ async function start() {
   busy = true;
   try {
     const { id } = await api('/api/new', {});
+    history.replaceState(null, '', `#${encodeURIComponent(id)}`);
     session = { id, transcript: [], turns: [], closed: false, phase: 'listen' };
     renderChat(); renderSteps(); typing(true);
     await api('/api/open', { id });
@@ -620,15 +776,26 @@ $('start').onclick = start;
 $('sessions').onchange = async (ev) => {
   if (!ev.target.value) return;
   session = { id: ev.target.value };
+  history.replaceState(null, '', `#${encodeURIComponent(session.id)}`);
   await refresh();
   $('chat').scrollTop = $('chat').scrollHeight;
   const last = session.turns.at(-1);
   if (last) selectTurn(last.turn);
 };
 
+/** Open a conversation, and one of its panels, from the address: #<id> or #<id>/<panel>. */
+async function openFromAddress() {
+  const [id, pane] = decodeURIComponent(location.hash.slice(1)).split('/');
+  session = { id };
+  await refresh();
+  await loadSessions(id);
+  if (pane && $(`pane-${pane}`)) showPane(pane);
+}
+
 let cfg = null;
 api('/api/config').then((c) => { cfg = c; }).catch(() => {});
-loadSessions();
+if (location.hash.length > 1) openFromAddress().catch((e) => $('chat').append(el('div', { class: 'notice error' }, e.message)));
+else loadSessions();
 </script>
 </body>
 </html>
