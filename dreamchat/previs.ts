@@ -1267,7 +1267,9 @@ export function outsideShot(
     )
     .sort((a, b) => a.seen.cx - b.seen.cx);
   const anchor = people[0];
-  const where = far < 1.6 ? 'close' : far < 4 ? 'a few metres off' : 'from across the place';
+  // Said in metres: "a few metres off" in a room two metres across read as the prompt at odds with
+  // itself, and the tiny room's moment was held (Meads, 25 Sep).
+  const where = far < 1.6 ? 'close' : far < 4 ? `about ${Math.round(far)} metres off` : 'from across the place';
   // What the moment looks at, by name, where the picture shows it: "the camera looks toward the right
   // side of the room" did not say it faced the cook the moment is about (25 Sep).
   const lookedAt = lookAt?.id && shown.some((x) => x.s.id === lookAt.id) ? name(lookAt.id) : undefined;

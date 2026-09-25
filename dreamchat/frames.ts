@@ -335,7 +335,7 @@ export function framePrompt(
             : plan?.view || mockUp
               ? // Its layout pulls a view back to the one it shows: only what the place is made of,
                 // and none of its objects but those the view has in the picture.
-                `${who(s)}${look ? ` (${look})` : ''}: only what it is made of and its colours (its walls, floor, seats and lamps). Where everything stands, and which way the picture looks, come from ${mockUp ? 'Image 1, the mock-up' : 'the shot above'}, not from this image; any of its objects the shot has outside the picture stay out of it.`
+                `${who(s)}${look ? ` (${look})` : ''}: only what it is made of and its colours (its ground or floor, its walls or buildings, what stands in it). Where everything stands, and which way the picture looks, come from ${mockUp ? 'Image 1, the mock-up' : 'the shot above'}, not from this image; any of its objects the shot has outside the picture stay out of it.`
               : `${who(s)}${look ? ` (${look})` : ''}: only its materials, colours, objects and light. It shows the place from another side: this frame faces ${f.looksAt || 'the other way'}.`,
       );
     } else {
@@ -450,7 +450,7 @@ export function framePrompt(
             ? // Where everyone is comes from the previs; the earlier picture gives how it all looks,
               // from whichever side it was taken: "from the same side" of a picture facing another
               // wall read to the gate as the prompt contradicting itself (0.51, 24 Sep).
-              `${pictureNo(x)}${shows}: the same place. Take only how it looks there (its surfaces, colours and light) and how everyone in it looks; where everyone and everything is, and which way this picture looks, come from Image 1, the mock-up.`
+              `${pictureNo(x)}${shows}: the same place. Take only how it looks there (its surfaces, colours and light) and how anyone in it who is also in this picture looks; no one else from it comes into this one. Where everyone and everything is, and which way this picture looks, come from Image 1, the mock-up.`
             : `${pictureNo(x)}${shows}: the same place from the same side. Take where everything and everyone in it are, and its light; this frame is framed ${f.distance}.`
           : unsketched.length
               ? lastSeen(x, unsketched)

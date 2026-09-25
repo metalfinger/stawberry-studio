@@ -966,6 +966,23 @@ export class SessionStore {
     return { ...s, goals };
   }
 
+  /**
+   * The words and images a picture would be drawn from as it stands now, and why it is held: for
+   * looking into a hold from a terminal (talk.ts prompt) rather than the page.
+   */
+  promptFor(
+    id: string,
+    itemId: string,
+  ): { prompt: string; references: { media_id: string; role: string }[]; held?: string[] } | null {
+    const s = this.sessions.get(id);
+    const it = [...(s?.build?.items ?? []), ...(s?.build?.frames ?? [])].find((i) => i.id === itemId);
+    if (!s?.build || !s.style || !it) return null;
+    if (it.kind !== 'cut' && it.kind !== 'ghost') return { prompt: sheetPrompt(it, s.style), references: [], held: it.held };
+    if (it.kind === 'ghost') return { prompt: '(an in-between picture: see its ghost plan)', references: [], held: it.held };
+    const built = framePrompt(it, s.build.items, s.style, this.plannedInputs(s, it), it.layout?.mediaId);
+    return { prompt: built.prompt, references: built.references, held: it.held };
+  }
+
   detail(id: string, turn: number): TurnDetail | null {
     if (!this.deps.dir) return this.memoryDetails.get(`${id}:${turn}`) ?? null;
     const path = join(this.deps.dir, id, `turn-${turn}.json`);
@@ -1722,7 +1739,25 @@ export class SessionStore {
     });
     // Held by "storyboard complete?" on this very shot: it waits, with the reason, and nothing is
     // paid for. A shot planned again is checked again.
-    const checked = s.prep?.storyboard?.[frame.id];
+    let checked = s.prep?.storyboard?.[frame.id];
+    // Checked again when its shot is worded otherwise than when it was checked: its reading is of
+    // another shot, and it was drawn unchecked (Meads, after its distances were said in metres, 25 Sep).
+    const plan = frame.frame?.plan;
+    const b = s.draft?.breakdown;
+    const m = b ? moments(b).find((x) => x.id === frame.id) : undefined;
+    if (view && s.prep && b && m && plan && (!checked || checked.view !== view)) {
+      const dreamer = b.people.find((p) => p.is_dreamer)?.id;
+      const again = await storyboardCheck(
+        this.deps.jev,
+        m,
+        view,
+        called,
+        dreamer,
+        around(b, plan, m, called, dreamer),
+        plan.framing ?? [],
+      ).catch(() => undefined);
+      if (again) checked = (s.prep.storyboard ??= {})[frame.id] = again;
+    }
     if (view && checked && checked.view === view && !checked.ok) {
       Object.assign(frame, { status: 'waiting', held: checked.reasons.map((r) => `storyboard: ${r}`) });
       return;

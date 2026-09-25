@@ -105,6 +105,11 @@ const server = Bun.serve({
       }
 
       // A moment's planned shot, as the store planned it: only files it named, in its own folder.
+      if (url.pathname === '/api/prompt') {
+        const out = store.promptFor(id ?? '', url.searchParams.get('item') ?? '');
+        return out ? json(out) : fail(404, 'no such picture');
+      }
+
       if (url.pathname === '/api/plan') {
         const path = store.get(id)?.prep?.previs[url.searchParams.get('item') ?? ''];
         if (!path || !path.startsWith(join(import.meta.dir, 'state', id ?? '')) || !path.endsWith('.png')) return fail(404, 'no plan');

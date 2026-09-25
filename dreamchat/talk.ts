@@ -6,6 +6,7 @@
 //   bun run talk.ts show <id>             the stage it is at, and every sketch and moment
 //   bun run talk.ts wait <id> [seconds]   waits until nothing is being drawn, then shows what is up
 //   bun run talk.ts resume <id>           picks the drawing up on the server's current code
+//   bun run talk.ts prompt <id> <item>    the words and images it would be drawn from, and why it is held
 //
 // DREAMCHAT_URL picks the server (default http://127.0.0.1:8790).
 import { join } from 'node:path';
@@ -86,6 +87,15 @@ if (cmd === 'new') {
   const r = await call('/api/resume', { id });
   console.log(`restarted: ${((r.restarted as string[]) ?? []).join(', ') || 'nothing'}`);
   console.log(list(await view(id)));
+} else if (cmd === 'prompt' && id && rest[0]) {
+  const r = (await call(`/api/prompt?id=${encodeURIComponent(id)}&item=${encodeURIComponent(rest[0])}`)) as {
+    prompt: string;
+    references: { media_id: string; role: string }[];
+    held?: string[];
+  };
+  if (r.held?.length) console.log(`held before drawing: ${r.held.join('; ')}\n`);
+  console.log(r.prompt);
+  for (const ref of r.references) console.log(`\nimage ${ref.media_id.slice(0, 12)}: ${ref.role}`);
 } else if (cmd === 'show' && id) {
   console.log(list(await view(id)));
 } else if (cmd === 'wait' && id) {
@@ -100,6 +110,6 @@ if (cmd === 'new') {
     await Bun.sleep(5000);
   }
 } else {
-  console.error('usage: bun run talk.ts new [name] | say <id> <words…> | show <id> | wait <id> [seconds] | resume <id>');
+  console.error('usage: bun run talk.ts new [name] | say <id> <words…> | show <id> | wait <id> [seconds] | resume <id> | prompt <id> <item>');
   process.exit(1);
 }
