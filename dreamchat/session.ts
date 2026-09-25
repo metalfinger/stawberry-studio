@@ -59,6 +59,7 @@ import {
 } from './producer';
 import { type ContinuityPlan, type Criterion, drawOrder, pictureName, planContinuity, seenIn, shotPlan } from './continuity';
 import type { Blocking } from './blocking';
+import { inSession } from './jevlog';
 import { previsImage } from './previs';
 import {
   buildFrames,
@@ -722,7 +723,9 @@ export class SessionStore {
   // Reads (`get`, `view`, `list`) never wait on this.
   private serial<T>(id: string, fn: () => Promise<T>): Promise<T> {
     const prev = this.chains.get(id) ?? Promise.resolve();
-    const run = prev.then(fn, fn);
+    // Everything done for a conversation logs its Jev calls there, however deep they are made.
+    const inIt = () => inSession(this.deps.dir, id, fn);
+    const run = prev.then(inIt, inIt);
     this.chains.set(
       id,
       run.catch(() => undefined),
@@ -2057,7 +2060,8 @@ export class SessionStore {
     this.watching.add(id);
     const sheets = this.deps.sheets;
     const every = this.deps.watchEveryMs ?? 3000;
-    const loop = async () => {
+    const loop = () => inSession(this.deps.dir, id, watching);
+    const watching = async () => {
       try {
         for (;;) {
           const s = this.sessions.get(id);

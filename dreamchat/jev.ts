@@ -25,6 +25,7 @@ import type {
   WantsToSee,
 } from './lib';
 import { reconcileThreads } from './lib';
+import { recordJev } from './jevlog';
 
 const ENDPOINT = 'https://api.typesafe.ai/v1/systemone';
 const MODEL = process.env.JEV_MODEL ?? 'jev-latest';
@@ -59,6 +60,21 @@ export type JevCall = {
 export type JevFn = (state: string, questions: Record<string, Question>) => Promise<JevCall>;
 
 export const callJev: JevFn = async (state, questions) => {
+  const call = await askJev(state, questions);
+  // Every live call is logged with its tokens and time, in the conversation it is part of.
+  recordJev({
+    kind: 'call',
+    questions: Object.keys(questions),
+    inputTokens: call.usage?.input_tokens ?? null,
+    outputTokens: call.usage?.output_tokens ?? null,
+    stateChars: state.length,
+    ms: call.ms,
+    error: call.error,
+  });
+  return call;
+};
+
+async function askJev(state: string, questions: Record<string, Question>): Promise<JevCall> {
   const key = apiKey();
   const t0 = Date.now();
   if (key === null) return { questions, state, answers: null, error: 'no JEV_API_KEY', ms: 0, usage: null };
@@ -76,7 +92,7 @@ export const callJev: JevFn = async (state, questions) => {
   } catch (e) {
     return { questions, state, answers: null, error: String(e), ms: Date.now() - t0, usage: null };
   }
-};
+}
 
 // ── what we ask ─────────────────────────────────────────────────────────────
 
