@@ -1,0 +1,1813 @@
+[
+ {
+  "id": "6a4d/24",
+  "message": "Thank you. I’ll keep it.",
+  "shown": [
+   {
+    "id": "p2",
+    "name": "the guy with curly hair"
+   },
+   {
+    "id": "p3",
+    "name": "the young woman"
+   },
+   {
+    "id": "p4",
+    "name": "your aunt"
+   },
+   {
+    "id": "p5",
+    "name": "the couple of people"
+   },
+   {
+    "id": "l1",
+    "name": "the Meads' house exterior"
+   },
+   {
+    "id": "l2",
+    "name": "inside the Meads' house"
+   },
+   {
+    "id": "l3",
+    "name": "the cobblestone street with the village"
+   },
+   {
+    "id": "l4",
+    "name": "the back stairs"
+   },
+   {
+    "id": "l5",
+    "name": "the short empty hallway"
+   },
+   {
+    "id": "l6",
+    "name": "the tiny room"
+   },
+   {
+    "id": "l7",
+    "name": "the road by the creek"
+   },
+   {
+    "id": "l8",
+    "name": "inside the house at the end"
+   },
+   {
+    "id": "t1",
+    "name": "the string of blue balloons"
+   },
+   {
+    "id": "p1",
+    "name": "you"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "6a4d/26",
+  "message": "The part with the stairway and the hallway looks right too.",
+  "shown": [
+   {
+    "id": "m1",
+    "name": "You are inside the Meads' house, which is bigger…"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "6d6a/26",
+  "message": "okay, i'll look.",
+  "shown": [
+   {
+    "id": "p2",
+    "name": "the brother"
+   },
+   {
+    "id": "p3",
+    "name": "the old woman knitting"
+   },
+   {
+    "id": "p4",
+    "name": "the grandmother"
+   },
+   {
+    "id": "l1",
+    "name": "the night bus"
+   },
+   {
+    "id": "l2",
+    "name": "the grandmother's kitchen"
+   },
+   {
+    "id": "t1",
+    "name": "the paper lantern"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "6d6a/27",
+  "message": "i don't know, i never saw myself in it.",
+  "shown": [
+   {
+    "id": "p2",
+    "name": "the brother"
+   },
+   {
+    "id": "p3",
+    "name": "the old woman knitting"
+   },
+   {
+    "id": "p4",
+    "name": "the grandmother"
+   },
+   {
+    "id": "l1",
+    "name": "the night bus"
+   },
+   {
+    "id": "l2",
+    "name": "the grandmother's kitchen"
+   },
+   {
+    "id": "t1",
+    "name": "the paper lantern"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "9ddd/26",
+  "message": "that looks right, the conductor especially. it's all coming together like the dream",
+  "shown": [
+   {
+    "id": "p1",
+    "name": "the conductor"
+   },
+   {
+    "id": "p3",
+    "name": "you"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "9ddd/27",
+  "message": "ok, i'll wait for the rest",
+  "shown": [
+   {
+    "id": "p3",
+    "name": "you"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "9ddd/31",
+  "message": "alright",
+  "shown": [
+   {
+    "id": "p2",
+    "name": "the family"
+   },
+   {
+    "id": "l2",
+    "name": "the top of the train"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "9ddd/32",
+  "message": "i can see it now, and it looks right to me. the cold blue ink wash really does feel like the dream",
+  "shown": [
+   {
+    "id": "l1",
+    "name": "the streetcar"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "9ddd/34",
+  "message": "yeah it does, it's the calm part before it all changes",
+  "shown": [
+   {
+    "id": "m1",
+    "name": "You watch the conductor operating the streetcar"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "9ddd/36",
+  "message": "yes, but the conductor isn't in it. it's just me going through the motions",
+  "shown": [
+   {
+    "id": "m2",
+    "name": "You go through the motions of turning the lever…"
+   }
+  ],
+  "wrong": [
+   "m2"
+  ]
+ },
+ {
+  "id": "9ddd/40",
+  "message": "that redrawn one looks right now, just me with my hand in the air like i'm turning the lever",
+  "shown": [
+   {
+    "id": "m2",
+    "name": "You go through the motions of turning the lever…"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "9ddd/43",
+  "message": "it looks right, just like the panic i had up there",
+  "shown": [
+   {
+    "id": "m3",
+    "name": "Suddenly you are on top of the train, which…"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "9ddd/46",
+  "message": "it's the whole image, the way it's framed feels wrong. it's not the one with my hands flying out, that one's right.",
+  "shown": [
+   {
+    "id": "m3",
+    "name": "Suddenly you are on top of the train, which…"
+   }
+  ],
+  "wrong": [
+   "m3"
+  ]
+ },
+ {
+  "id": "9ddd/47",
+  "message": "yeah, the near-fall one is exactly right. the family one is off too, but i can't say how. it's just not right.",
+  "shown": [
+   {
+    "id": "m4",
+    "name": "You nearly fall off, your hands flying out to…"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "9ddd/48",
+  "message": "try drawing it again with a different feel, like the baby's arms maybe mid-wave and more joy in it",
+  "shown": [
+   {
+    "id": "m5",
+    "name": "You see a family sitting on top of the…"
+   }
+  ],
+  "wrong": [
+   "m5"
+  ]
+ },
+ {
+  "id": "9ddd/50",
+  "message": "the family still looks off, but the baby with the arms mid-wave is a little better. it's closer, but not quite it.",
+  "shown": [
+   {
+    "id": "m5",
+    "name": "You see a family sitting on top of the…"
+   }
+  ],
+  "wrong": [
+   "m5"
+  ]
+ },
+ {
+  "id": "9ddd/51",
+  "message": "it mostly looks right, but the family isn't in it and they should be up there with me on the train.",
+  "shown": [
+   {
+    "id": "m6",
+    "name": "The train goes around a bend, and you are…"
+   }
+  ],
+  "wrong": [
+   "m6"
+  ]
+ },
+ {
+  "id": "9ddd/53",
+  "message": "the moment of me on top of the train with my hands flying out still feels right. i don't need to change anything else",
+  "shown": [
+   {
+    "id": "m6",
+    "name": "The train goes around a bend, and you are…"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "20bd/29",
+  "message": "i think you got the quiet feeling right",
+  "shown": [
+   {
+    "id": "p2",
+    "name": "the pied piper guy"
+   },
+   {
+    "id": "p3",
+    "name": "the young woman"
+   },
+   {
+    "id": "p4",
+    "name": "my aunt"
+   },
+   {
+    "id": "l1",
+    "name": "the house"
+   },
+   {
+    "id": "l2",
+    "name": "the european village street"
+   },
+   {
+    "id": "l3",
+    "name": "the back stairs"
+   },
+   {
+    "id": "l4",
+    "name": "the other side stairs"
+   },
+   {
+    "id": "l5",
+    "name": "the short empty hallway"
+   },
+   {
+    "id": "l6",
+    "name": "the tiny room"
+   },
+   {
+    "id": "l7",
+    "name": "outside"
+   },
+   {
+    "id": "t1",
+    "name": "the little round convertible"
+   },
+   {
+    "id": "p1",
+    "name": "you"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "20bd/31",
+  "message": "yeah, that's how i saw it—she was sort of tucked in there with the stove, but it felt cozy, not cramped",
+  "shown": [
+   {
+    "id": "m1",
+    "name": "you step through the front door and find yourself…"
+   },
+   {
+    "id": "m3",
+    "name": "you climb the back stairs, plain ones that the…"
+   },
+   {
+    "id": "m5",
+    "name": "you come down into a short empty hallway that…"
+   },
+   {
+    "id": "m6",
+    "name": "you turn the corner and find a tiny room…"
+   },
+   {
+    "id": "m7",
+    "name": "you are outside waiting for your aunt"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "20bd/32",
+  "message": "it's good. thanks for drawing it, it means a lot",
+  "shown": [
+   {
+    "id": "m2",
+    "name": "a man with curly hair, kind of a Pied…"
+   },
+   {
+    "id": "m4",
+    "name": "at the top, there is another set right away,…"
+   },
+   {
+    "id": "m8",
+    "name": "your aunt comes to pick you up in a…"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "55eb/16",
+  "message": "Good, I can see it. The glow in the trees and rocks comes through, and the glass feels like it goes on forever.",
+  "shown": [
+   {
+    "id": "l1",
+    "name": "the parents' house"
+   },
+   {
+    "id": "l2",
+    "name": "the glassy outside"
+   },
+   {
+    "id": "p1",
+    "name": "you"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "55eb/17",
+  "message": "It’s strange seeing it like that, but it fits. The outside being the window is the part I keep looking at.",
+  "shown": [
+   {
+    "id": "l1",
+    "name": "the parents' house"
+   },
+   {
+    "id": "p1",
+    "name": "you"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "55eb/19",
+  "message": "Yes, it does. The smooth blur is right. No sharp edges anywhere.",
+  "shown": [
+   {
+    "id": "m1",
+    "name": "You stand alone in your parents' house, waiting, after…"
+   },
+   {
+    "id": "m3",
+    "name": "The other side of the window is just more…"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "55eb/21",
+  "message": "Okay. I’m watching for it.",
+  "shown": [
+   {
+    "id": "m2",
+    "name": "You step into the window as if you could…"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "55eb/23",
+  "message": "Yeah, it’s exactly how I remember it, as much as a dream can be. Thanks.",
+  "shown": [
+   {
+    "id": "m4",
+    "name": "You walk through the weird glowing blur; trees, grass,…"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "96bd/22",
+  "message": "the room looks right, and the young woman looks how i remember her.",
+  "shown": [
+   {
+    "id": "p2",
+    "name": "the young woman"
+   },
+   {
+    "id": "l1",
+    "name": "the room with the autoclave"
+   },
+   {
+    "id": "p1",
+    "name": "you"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "96bd/23",
+  "message": "you look the way i remember.",
+  "shown": [
+   {
+    "id": "p1",
+    "name": "you"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "96bd/25",
+  "message": "that looks right too, the block of ice where her head was.",
+  "shown": [
+   {
+    "id": "m1",
+    "name": "You stand by the autoclave, talking to a young…"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "0199/23",
+  "message": "The conductor one is a little too still, I think. But the others look right.",
+  "shown": [
+   {
+    "id": "p2",
+    "name": "the conductor"
+   },
+   {
+    "id": "p3",
+    "name": "the family"
+   },
+   {
+    "id": "p4",
+    "name": "the baby"
+   },
+   {
+    "id": "l1",
+    "name": "the streetcar"
+   },
+   {
+    "id": "l2",
+    "name": "the top of the train"
+   },
+   {
+    "id": "t1",
+    "name": "the lever"
+   },
+   {
+    "id": "p1",
+    "name": "you"
+   }
+  ],
+  "wrong": [
+   "p2"
+  ]
+ },
+ {
+  "id": "0199/25",
+  "message": "Yeah, that's him. The motion is right. He looks the way I remember.",
+  "shown": [
+   {
+    "id": "p2",
+    "name": "the conductor"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "279d/25",
+  "message": "yes, they all look right, the one at the window especially",
+  "shown": [
+   {
+    "id": "m2",
+    "name": "Books float past the boat with their pages open"
+   },
+   {
+    "id": "m3",
+    "name": "The old man in a yellow raincoat rows the…"
+   },
+   {
+    "id": "m5",
+    "name": "The boat starts sinking slowly into the dark green…"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "402f/20",
+  "message": "no, that’s pretty much it once the glow is on the things",
+  "shown": [
+   {
+    "id": "l1",
+    "name": "the parents' house"
+   },
+   {
+    "id": "l2",
+    "name": "the glass world"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "402f/22",
+  "message": "wait, the picture on the right, it's not just me in it.",
+  "shown": [
+   {
+    "id": "p1",
+    "name": "you"
+   }
+  ],
+  "wrong": [
+   "p1"
+  ]
+ },
+ {
+  "id": "402f/24",
+  "message": "no, it's wrong again.",
+  "shown": [
+   {
+    "id": "p1",
+    "name": "you"
+   }
+  ],
+  "wrong": [
+   "p1"
+  ]
+ },
+ {
+  "id": "502a/24",
+  "message": "Okay, looking now. It mostly looks right. The aunt isn't in the picture of the little convertible though.",
+  "shown": [
+   {
+    "id": "p2",
+    "name": "the juggler"
+   },
+   {
+    "id": "p3",
+    "name": "the young woman"
+   },
+   {
+    "id": "p4",
+    "name": "my aunt"
+   },
+   {
+    "id": "p5",
+    "name": "the couple of people"
+   },
+   {
+    "id": "l1",
+    "name": "outside the Meads's house"
+   },
+   {
+    "id": "l2",
+    "name": "the cobblestone street"
+   },
+   {
+    "id": "l3",
+    "name": "the back stairs and the second stairs"
+   },
+   {
+    "id": "l4",
+    "name": "the tiny room"
+   },
+   {
+    "id": "l5",
+    "name": "the little bridge over a creek"
+   },
+   {
+    "id": "l6",
+    "name": "the room with the blue balloons"
+   },
+   {
+    "id": "t1",
+    "name": "the string of blue balloons"
+   },
+   {
+    "id": "t2",
+    "name": "the little round convertible"
+   },
+   {
+    "id": "p1",
+    "name": "you"
+   }
+  ],
+  "wrong": [
+   "t2"
+  ]
+ },
+ {
+  "id": "502a/25",
+  "message": "Thanks, I'll check the new one.",
+  "shown": [
+   {
+    "id": "p2",
+    "name": "the juggler"
+   },
+   {
+    "id": "p3",
+    "name": "the young woman"
+   },
+   {
+    "id": "p5",
+    "name": "the couple of people"
+   },
+   {
+    "id": "l2",
+    "name": "the cobblestone street"
+   },
+   {
+    "id": "l3",
+    "name": "the back stairs and the second stairs"
+   },
+   {
+    "id": "l4",
+    "name": "the tiny room"
+   },
+   {
+    "id": "l5",
+    "name": "the little bridge over a creek"
+   },
+   {
+    "id": "l6",
+    "name": "the room with the blue balloons"
+   },
+   {
+    "id": "t1",
+    "name": "the string of blue balloons"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "502a/26",
+  "message": "Yeah, that looks right now. She's there with the convertible.",
+  "shown": [
+   {
+    "id": "p4",
+    "name": "my aunt"
+   },
+   {
+    "id": "l1",
+    "name": "outside the Meads's house"
+   },
+   {
+    "id": "t2",
+    "name": "the little round convertible"
+   },
+   {
+    "id": "p1",
+    "name": "you"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "502a/27",
+  "message": "I'll keep an eye out.",
+  "shown": [
+   {
+    "id": "p1",
+    "name": "you"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "502a/29",
+  "message": "Everything looks right now. The street and the tiny room are just how I remembered them.",
+  "shown": [
+   {
+    "id": "m1",
+    "name": "Stepping into the house and seeing a cobblestone street…"
+   },
+   {
+    "id": "m3",
+    "name": "The dreamer goes up the back stairs that the…"
+   },
+   {
+    "id": "m6",
+    "name": "In the tiny room, a young woman with shoulder-length…"
+   },
+   {
+    "id": "m8",
+    "name": "The dreamer is outside the Meads's house, waiting for…"
+   },
+   {
+    "id": "m10",
+    "name": "The dreamer and aunt cross a little bridge over…"
+   },
+   {
+    "id": "m12",
+    "name": "Inside again, the dreamer sits with a couple of…"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "502a/30",
+  "message": "The juggler and the convertible look right. But the picture of going straight down the second stairs doesn't actually show me going down them.",
+  "shown": [
+   {
+    "id": "m2",
+    "name": "A man with curly hair, a bit like the…"
+   },
+   {
+    "id": "m3",
+    "name": "The dreamer goes up the back stairs that the…"
+   },
+   {
+    "id": "m4",
+    "name": "Right away the dreamer goes straight down another set…"
+   },
+   {
+    "id": "m7",
+    "name": "The woman is being nice to the dreamer, perhaps…"
+   },
+   {
+    "id": "m8",
+    "name": "The dreamer is outside the Meads's house, waiting for…"
+   },
+   {
+    "id": "m9",
+    "name": "The aunt arrives in a little round convertible"
+   },
+   {
+    "id": "m10",
+    "name": "The dreamer and aunt cross a little bridge over…"
+   },
+   {
+    "id": "m11",
+    "name": "They double back and the aunt drops the dreamer…"
+   },
+   {
+    "id": "m12",
+    "name": "Inside again, the dreamer sits with a couple of…"
+   }
+  ],
+  "wrong": [
+   "m4"
+  ]
+ },
+ {
+  "id": "502a/31",
+  "message": "The hallway looks right. I'm still waiting to see the new stairs one come up.",
+  "shown": [
+   {
+    "id": "m5",
+    "name": "At the bottom is a short empty hallway that…"
+   },
+   {
+    "id": "m7",
+    "name": "The woman is being nice to the dreamer, perhaps…"
+   },
+   {
+    "id": "m8",
+    "name": "The dreamer is outside the Meads's house, waiting for…"
+   },
+   {
+    "id": "m12",
+    "name": "Inside again, the dreamer sits with a couple of…"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "502a/32",
+  "message": "Yes, that looks right now. It shows me going up and then straight down the other side.",
+  "shown": [
+   {
+    "id": "m3",
+    "name": "The dreamer goes up the back stairs that the…"
+   },
+   {
+    "id": "m7",
+    "name": "The woman is being nice to the dreamer, perhaps…"
+   },
+   {
+    "id": "m8",
+    "name": "The dreamer is outside the Meads's house, waiting for…"
+   },
+   {
+    "id": "m12",
+    "name": "Inside again, the dreamer sits with a couple of…"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "502a/33",
+  "message": "Still looks good so far.",
+  "shown": [
+   {
+    "id": "m7",
+    "name": "The woman is being nice to the dreamer, perhaps…"
+   },
+   {
+    "id": "m8",
+    "name": "The dreamer is outside the Meads's house, waiting for…"
+   },
+   {
+    "id": "m12",
+    "name": "Inside again, the dreamer sits with a couple of…"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "927a/26",
+  "message": "That’s right. The ice block on her shoulders looks like what I saw — irregular and glittering, no face or features.",
+  "shown": [
+   {
+    "id": "p2",
+    "name": "the young woman"
+   },
+   {
+    "id": "l1",
+    "name": "the room with the autoclave"
+   },
+   {
+    "id": "t1",
+    "name": "the block of ice"
+   },
+   {
+    "id": "p1",
+    "name": "you"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "927a/27",
+  "message": "Looks right so far.",
+  "shown": [
+   {
+    "id": "p2",
+    "name": "the young woman"
+   },
+   {
+    "id": "l1",
+    "name": "the room with the autoclave"
+   },
+   {
+    "id": "p1",
+    "name": "you"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "927a/28",
+  "message": "The details are right. The horse’s head is very clear, eyes and nostrils and ears all there.",
+  "shown": [
+   {
+    "id": "p1",
+    "name": "you"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "927a/31",
+  "message": "Something’s off in the first one. There’s a thing in the room that shouldn’t be there, and the outlines feel sharper than the misty look we had.",
+  "shown": [
+   {
+    "id": "m1",
+    "name": "The young woman stands by the autoclave, and you…"
+   }
+  ],
+  "wrong": [
+   "m1"
+  ]
+ },
+ {
+  "id": "1177/25",
+  "message": "the ones that are there look right to me.",
+  "shown": [
+   {
+    "id": "p2",
+    "name": "your younger brother"
+   },
+   {
+    "id": "p3",
+    "name": "your grandmother"
+   },
+   {
+    "id": "l2",
+    "name": "your grandmother's kitchen"
+   },
+   {
+    "id": "t1",
+    "name": "the paper lantern"
+   },
+   {
+    "id": "p1",
+    "name": "you"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "3024/25",
+  "message": "This one's better. The window feels like it belongs there now. But the glow should be quieter, not so bright.",
+  "shown": [
+   {
+    "id": "l1",
+    "name": "the glass world"
+   },
+   {
+    "id": "p1",
+    "name": "you"
+   }
+  ],
+  "wrong": [
+   "l1"
+  ]
+ },
+ {
+  "id": "3024/27",
+  "message": "The figure looks okay, I guess. I don't remember much about how I looked, so that's fine. Maybe make me walking through the space, not just standing.",
+  "shown": [
+   {
+    "id": "l1",
+    "name": "the glass world"
+   },
+   {
+    "id": "p1",
+    "name": "you"
+   }
+  ],
+  "wrong": [
+   "p1"
+  ]
+ },
+ {
+  "id": "3024/29",
+  "message": "Yes, it does. It looks the way I remember. The world is the window.",
+  "shown": [
+   {
+    "id": "l1",
+    "name": "the glass world"
+   },
+   {
+    "id": "p1",
+    "name": "you"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "3024/30",
+  "message": "Thanks. It's strange seeing it like that outside my head, but it looks right.",
+  "shown": [
+   {
+    "id": "p1",
+    "name": "you"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "3024/32",
+  "message": "Yes, that's how it looked. The window isn't an opening, it's just more glass. That came through.",
+  "shown": [
+   {
+    "id": "m1",
+    "name": "The dreamer stands before a window, seeing it as…"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "3024/34",
+  "message": "It does. It shows the glass place opening around me, and the ground and things not being quite real. It's still a bit bright, but not as bright as before.",
+  "shown": [
+   {
+    "id": "m2",
+    "name": "The dreamer walks through the glass world, surrounded by…"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "3024/36",
+  "message": "Sure. I'll look when it's there.",
+  "shown": [
+   {
+    "id": "m3",
+    "name": "The dreamer walks on, never touching the glass forms,…"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "3024/38",
+  "message": "Yes, that would be nice to see.",
+  "shown": [
+   {
+    "id": "m4",
+    "name": "The dreamer pauses, or nearly pauses, within the silent,…"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "5063/24",
+  "message": "it looks right, everything's there.",
+  "shown": [
+   {
+    "id": "p2",
+    "name": "the Pied-Piper sort of man"
+   },
+   {
+    "id": "p4",
+    "name": "your aunt"
+   },
+   {
+    "id": "p5",
+    "name": "a couple of people"
+   },
+   {
+    "id": "l1",
+    "name": "inside the front door at the Meads's house"
+   },
+   {
+    "id": "l2",
+    "name": "the back stairs"
+   },
+   {
+    "id": "l3",
+    "name": "the second set of stairs"
+   },
+   {
+    "id": "l4",
+    "name": "the short hallway"
+   },
+   {
+    "id": "l5",
+    "name": "the tiny room"
+   },
+   {
+    "id": "l6",
+    "name": "outside the house"
+   },
+   {
+    "id": "l8",
+    "name": "the little bridge over a creek"
+   },
+   {
+    "id": "l9",
+    "name": "inside the house, sitting with people"
+   },
+   {
+    "id": "t1",
+    "name": "the little round convertible"
+   },
+   {
+    "id": "p1",
+    "name": "you"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "5063/26",
+  "message": "for the convertible, it just doesn't feel like the one from the dream. redo it and keep it round and small, closer to how i pictured it.",
+  "shown": [
+   {
+    "id": "t2",
+    "name": "the string of blue balloons"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "5063/28",
+  "message": "she's there now, that fits.",
+  "shown": [
+   {
+    "id": "t2",
+    "name": "the string of blue balloons"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "5454/13",
+  "message": "they all look right, go ahead",
+  "shown": [
+   {
+    "id": "p1",
+    "name": "the young woman"
+   },
+   {
+    "id": "l1",
+    "name": "the room"
+   },
+   {
+    "id": "p2",
+    "name": "the dreamer"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "5454/14",
+  "message": "yes, that's exactly how it was, the two of us talking by the autoclave",
+  "shown": [
+   {
+    "id": "m1",
+    "name": "The dreamer and the young woman stand talking by…"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "5454/15",
+  "message": "not quite. there's a man standing there who wasn't in the dream, it was only her walking off to the far end. and the autoclave was by where we'd been talking, not over there",
+  "shown": [
+   {
+    "id": "m2",
+    "name": "The young woman excuses herself and walks off to…"
+   }
+  ],
+  "wrong": [
+   "m2"
+  ]
+ },
+ {
+  "id": "5454/16",
+  "message": "yes, that's it, her walking off to the far end",
+  "shown": [
+   {
+    "id": "m2",
+    "name": "The young woman excuses herself and walks off to…"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "5454/17",
+  "message": "yes! that's exactly her coming back with the ice",
+  "shown": [
+   {
+    "id": "m3",
+    "name": "She returns with an irregular block of glittering ice…"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "5454/18",
+  "message": "yes, that's it starting to melt and trickle",
+  "shown": [
+   {
+    "id": "m4",
+    "name": "The ice starts to melt and trickle, little channels…"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "5454/19",
+  "message": "the horse head is beautiful, but she's outside with hills behind her. it should still be in the room with the autoclave, just like the picture before",
+  "shown": [
+   {
+    "id": "m5",
+    "name": "It becomes a beautifully molded head of a horse,…"
+   }
+  ],
+  "wrong": [
+   "m5"
+  ]
+ },
+ {
+  "id": "5454/20",
+  "message": "yes, that's the end of it exactly, the horse head in clear ice, right there in the room",
+  "shown": [
+   {
+    "id": "m5",
+    "name": "It becomes a beautifully molded head of a horse,…"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "a446/23",
+  "message": "It looks pretty close. The cold, soft blur over everything is how I remember it. The plants and rocks feel right too—like they're glowing quietly from inside.",
+  "shown": [
+   {
+    "id": "l1",
+    "name": "the glass window world"
+   },
+   {
+    "id": "p1",
+    "name": "you"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "a446/24",
+  "message": "It's good. The figure doesn't quite feel like me, but the world around it is right—especially the hazy, glassy light on the trees.",
+  "shown": [
+   {
+    "id": "p1",
+    "name": "you"
+   }
+  ],
+  "wrong": [
+   "p1"
+  ]
+ },
+ {
+  "id": "a446/28",
+  "message": "It looks right. It has that same pale, silent feel. I can almost see myself walking around in it.",
+  "shown": [
+   {
+    "id": "p1",
+    "name": "you"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "a446/30",
+  "message": "This one looks right too. The haze and the soft light around the rocks match what I remember. You're getting the coldness in it.",
+  "shown": [
+   {
+    "id": "m1",
+    "name": "You stand at your parents' house after a long…"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "a446/31",
+  "message": "Not quite. It feels off in this one—maybe too sharp, like the edges are too clear. In the dream everything just stayed blurry, even up close.",
+  "shown": [
+   {
+    "id": "m2",
+    "name": "You try to step through the window, and everything…"
+   }
+  ],
+  "wrong": [
+   "m2"
+  ]
+ },
+ {
+  "id": "bbba/22",
+  "message": "Yeah, it looks like I remember it, especially her and the autoclave. The dream had that soft, kind of ordinary calm to it.",
+  "shown": [
+   {
+    "id": "p1",
+    "name": "the young woman"
+   },
+   {
+    "id": "l1",
+    "name": "the room"
+   },
+   {
+    "id": "p2",
+    "name": "you"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "bbba/23",
+  "message": "The picture of me looks right too. Feels a bit strange seeing myself in it, but it’s the right sort of setting.",
+  "shown": [
+   {
+    "id": "p2",
+    "name": "you"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "bca7/16",
+  "message": "they look right to me. only the Meads's house: from outside it should just look like an ordinary house, not a village gate. the village is what's inside it.",
+  "shown": [
+   {
+    "id": "p2",
+    "name": "the Pied-Piper sort of man"
+   },
+   {
+    "id": "p3",
+    "name": "the young woman"
+   },
+   {
+    "id": "p4",
+    "name": "the aunt"
+   },
+   {
+    "id": "l1",
+    "name": "the Meads's house"
+   },
+   {
+    "id": "l3",
+    "name": "the back stairs and hallway"
+   },
+   {
+    "id": "l4",
+    "name": "the tiny room"
+   },
+   {
+    "id": "l5",
+    "name": "outside the house"
+   },
+   {
+    "id": "t1",
+    "name": "the stove"
+   },
+   {
+    "id": "t2",
+    "name": "the little round convertible"
+   },
+   {
+    "id": "t3",
+    "name": "the string of blue balloons"
+   },
+   {
+    "id": "p1",
+    "name": "you"
+   }
+  ],
+  "wrong": [
+   "l1"
+  ]
+ },
+ {
+  "id": "ded5/24",
+  "message": "It does, mostly. The house looks bigger inside than out, like I said. And that tiny room with the stove — she was cooking in it, so she should be right by the stove like that.",
+  "shown": [
+   {
+    "id": "p2",
+    "name": "a Pied-Piper sort of man"
+   },
+   {
+    "id": "p3",
+    "name": "a young woman"
+   },
+   {
+    "id": "p4",
+    "name": "your aunt"
+   },
+   {
+    "id": "p5",
+    "name": "a couple of people"
+   },
+   {
+    "id": "l1",
+    "name": "the Meads's place"
+   },
+   {
+    "id": "l2",
+    "name": "the back stairs"
+   },
+   {
+    "id": "l3",
+    "name": "the tiny room"
+   },
+   {
+    "id": "l4",
+    "name": "outside"
+   },
+   {
+    "id": "l5",
+    "name": "the little bridge over a creek"
+   },
+   {
+    "id": "l6",
+    "name": "inside, playing with balloons"
+   },
+   {
+    "id": "t1",
+    "name": "a little round convertible"
+   },
+   {
+    "id": "t2",
+    "name": "a string of blue balloons"
+   },
+   {
+    "id": "p1",
+    "name": "you"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "ded5/25",
+  "message": "I think the moment inside with the blue balloons would be the one. Just sitting with a couple of people, playing with them.",
+  "shown": [
+   {
+    "id": "p2",
+    "name": "a Pied-Piper sort of man"
+   },
+   {
+    "id": "p3",
+    "name": "a young woman"
+   },
+   {
+    "id": "p4",
+    "name": "your aunt"
+   },
+   {
+    "id": "p5",
+    "name": "a couple of people"
+   },
+   {
+    "id": "l2",
+    "name": "the back stairs"
+   },
+   {
+    "id": "l4",
+    "name": "outside"
+   },
+   {
+    "id": "l5",
+    "name": "the little bridge over a creek"
+   },
+   {
+    "id": "l6",
+    "name": "inside, playing with balloons"
+   },
+   {
+    "id": "t1",
+    "name": "a little round convertible"
+   },
+   {
+    "id": "t2",
+    "name": "a string of blue balloons"
+   },
+   {
+    "id": "p1",
+    "name": "you"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "ded5/27",
+  "message": "The rest looks right to me. The aunt isn't in this one, but that's fine, she was in the car before.",
+  "shown": [
+   {
+    "id": "m1",
+    "name": "You step inside the Meads's place and see a…"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "ded5/29",
+  "message": "He does, yeah. Curly hair, juggling. There wasn't much else to him in the dream.",
+  "shown": [
+   {
+    "id": "m2",
+    "name": "A Pied-Piper sort of man with curly hair juggles"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "ded5/31",
+  "message": "The back stairs look right. They were just there, leading up, even though the real house doesn't have them.",
+  "shown": [
+   {
+    "id": "m3",
+    "name": "You go up the back stairs — stairs that…"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "ded5/33",
+  "message": "I can see the outside now, me waiting, and the little round convertible arriving. That's right. It was a little drive, no distance at all.",
+  "shown": [
+   {
+    "id": "m3",
+    "name": "You go up the back stairs — stairs that…"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "ded5/35",
+  "message": "Yeah, the second set is right there, right after the first set going down.",
+  "shown": [
+   {
+    "id": "m4",
+    "name": "You go straight down the other side of the…"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "ded5/37",
+  "message": "That's the whole thing, I think. The village, the stairs, the room, the drive, and then the balloons. It all matches the dream.",
+  "shown": [
+   {
+    "id": "m5",
+    "name": "You encounter a second set of stairs, then a…"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "ded5/39",
+  "message": "I'll remember that. Good talking with you.",
+  "shown": [
+   {
+    "id": "m6",
+    "name": "You find a tiny room and see a young…"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "e11a/17",
+  "message": "go ahead please",
+  "shown": [
+   {
+    "id": "p2",
+    "name": "the girlfriend"
+   },
+   {
+    "id": "l1",
+    "name": "the movie theater"
+   },
+   {
+    "id": "t1",
+    "name": "the blue sofa"
+   },
+   {
+    "id": "t2",
+    "name": "the big sofa"
+   },
+   {
+    "id": "p1",
+    "name": "you"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "e11a/19",
+  "message": "got it. go ahead i appriove generated image. move on pelase",
+  "shown": [
+   {
+    "id": "m1",
+    "name": "The dreamer and their girlfriend sit on a blue…"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "e11a/20",
+  "message": "works. go on",
+  "shown": [
+   {
+    "id": "m2",
+    "name": "The large sofa next to the dreamer turns into…"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "e11a/21",
+  "message": "Hey I think it's wrong. If I'm seeing it, then it should be from my perspective, right? This doesn't feel like it's from my perspective. This feels like I changed my position from the previous frame and then I'm looking at something else",
+  "shown": [
+   {
+    "id": "m3",
+    "name": "The roller coaster that was a sofa, looking just…"
+   }
+  ],
+  "wrong": [
+   "m3"
+  ]
+ },
+ {
+  "id": "e11a/22",
+  "message": "Hey I think it's wrong. If I'm seeing it, then it should be from my perspective, right? This doesn't feel like it's from my perspective. This feels like I changed my position from the previous frame and then I'm looking at something else",
+  "shown": [
+   {
+    "id": "m3",
+    "name": "The roller coaster that was a sofa, looking just…"
+   }
+  ],
+  "wrong": [
+   "m3"
+  ]
+ },
+ {
+  "id": "e11a/23",
+  "message": "I feel the left and right sofas are still the same as in the last two frames, which is still wrong. If it is from that person's perspective, then other things also should change, right?",
+  "shown": [
+   {
+    "id": "m3",
+    "name": "The roller coaster that was a sofa, looking just…"
+   }
+  ],
+  "wrong": [
+   "m3"
+  ]
+ },
+ {
+  "id": "e11a/24",
+  "message": "nah, still not right. it's not what I'd see from where I'm sitting next to my friend, turned to the roller coaster beside us",
+  "shown": [
+   {
+    "id": "m3",
+    "name": "The roller coaster that was a sofa, looking just…"
+   }
+  ],
+  "wrong": [
+   "m3"
+  ]
+ },
+ {
+  "id": "e11a/25",
+  "message": "not yet. the roller coaster should be right next to us, in our row, where the big sofa was, just past my girlfriend, not out in the middle of the room. and it's the same theater as before",
+  "shown": [
+   {
+    "id": "m3",
+    "name": "The roller coaster that was a sofa, looking just…"
+   }
+  ],
+  "wrong": [
+   "m3"
+  ]
+ },
+ {
+  "id": "e11a/26",
+  "message": "nice, it is better than it was. one thing it still got wrong is how the sofas and other things appear from my perspective",
+  "shown": [
+   {
+    "id": "m3",
+    "name": "The roller coaster that was a sofa, looking just…"
+   }
+  ],
+  "wrong": [
+   "m3"
+  ]
+ },
+ {
+  "id": "e11a/27",
+  "message": "closer, but my girlfriend was sitting right beside me on our sofa, not in a chair in front of me. from where i sit she's right there at my side, and the roller coaster is right past her",
+  "shown": [
+   {
+    "id": "m3",
+    "name": "The roller coaster that was a sofa, looking just…"
+   }
+  ],
+  "wrong": [
+   "m3"
+  ]
+ },
+ {
+  "id": "e11a/28",
+  "message": "Yeah. This is quite close to what I was thinking",
+  "shown": [
+   {
+    "id": "m3",
+    "name": "The roller coaster that was a sofa, looking just…"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "e11a/29",
+  "message": "yes, that's the final version, keep it as it is",
+  "shown": [
+   {
+    "id": "m3",
+    "name": "The roller coaster that was a sofa, looking just…"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "e564/24",
+  "message": "yeah, it does. the quiet is right",
+  "shown": [
+   {
+    "id": "p2",
+    "name": "the young woman"
+   },
+   {
+    "id": "l1",
+    "name": "the lab room"
+   },
+   {
+    "id": "p1",
+    "name": "you"
+   }
+  ],
+  "wrong": []
+ },
+ {
+  "id": "e564/25",
+  "message": "thanks, it’s like seeing the same moment from a little way off",
+  "shown": [
+   {
+    "id": "p2",
+    "name": "the young woman"
+   }
+  ],
+  "wrong": []
+ }
+]

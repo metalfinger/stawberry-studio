@@ -118,6 +118,47 @@ export function renderTranscript(transcript: Exchange[]): string {
   return transcript.map((e) => (e.role === 'user' ? `Person: ${e.content}` : `Listener: ${e.content}`)).join('\n');
 }
 
+/**
+ * One pair of judgments per picture on show, so an answer about several at once reads right: "the
+ * window one is exactly it, and the others look right too" once approved only the picture it named
+ * first, because a single "which one" could hold only one answer. Measured on evals/verdicts.json.
+ */
+export function verdictQuestions(shown: { id: string; name: string }[], latest: string): Record<string, Question> {
+  const q: Record<string, Question> = {};
+  // The dreamer's own picture is "you" to the person; to Jev, "the picture of you" is ambiguous.
+  const called = (name: string) => (name === 'you' ? 'the person themselves' : name);
+  q.sketch_reaction = {
+    type: 'choice',
+    instructions: `The person was shown sketches from their dream (${shown.map((x) => x.name).join(', ')}) and asked if they look the way they remember. How do they answer in this message: "${latest.slice(0, 240)}"?`,
+    criteria: {
+      // "go ahead please", said of the sketches on show, was read as no answer and they were asked
+      // again (24 Sep).
+      looks_right: 'it looks right, or close enough, or they like it, or they tell you to go ahead with it',
+      not_right: 'something about it is wrong or different from their dream, and they say what',
+      no_reaction: "they didn't say anything about the sketches",
+    },
+  };
+  for (const x of shown) {
+    q[`ok_${x.id}`] = {
+      type: 'noul',
+      instructions: `In this message, does the person say the picture of ${x.name} looks right, either by name, or by saying all of them, or the others, look right, or by telling you to go ahead with them: "${latest.slice(0, 240)}"?`,
+    };
+    // Asked with every picture on show, and of this one in particular: asked of one picture alone,
+    // a complaint about the convertible marked the aunt, the young woman, the couple, the house and
+    // the dreamer wrong too, each to be drawn again (evals/verdicts.json: 39 redrawn for nothing).
+    q[`bad_${x.id}`] = {
+      type: 'noul',
+      instructions: `The person was shown ${shown.length > 1 ? `these pictures from their dream: ${shown.map((y) => called(y.name)).join('; ')}` : `a picture from their dream: ${called(x.name)}`}. In this message: "${latest.slice(0, 240)}", do they say that the picture of ${called(x.name)} in particular is wrong or should change?`,
+      criteria: {
+        true: `their complaint is about this picture: by its name, by what it shows${shown.length > 1 ? '' : ', or simply because it is the one on show'}`,
+        false:
+          'they say it looks right, say nothing against it, or their complaint is about another of the pictures, or about something not shown',
+      },
+    };
+  }
+  return q;
+}
+
 export function bookkeeperQuestions(
   cfg: GoalsFile,
   transcript: Exchange[],
@@ -318,32 +359,7 @@ export function bookkeeperQuestions(
     };
   }
 
-  if (shown.length) {
-    q.sketch_reaction = {
-      type: 'choice',
-      instructions: `The person was shown sketches from their dream (${shown.map((x) => x.name).join(', ')}) and asked if they look the way they remember. How do they answer in this message: "${latest.slice(0, 240)}"?`,
-      criteria: {
-        // "go ahead please", said of the sketches on show, was read as no answer and they were asked
-        // again (24 Sep).
-        looks_right: 'it looks right, or close enough, or they like it, or they tell you to go ahead with it',
-        not_right: 'something about it is wrong or different from their dream, and they say what',
-        no_reaction: "they didn't say anything about the sketches",
-      },
-    };
-    // One pair of judgments per picture on show, so an answer about several at once reads
-    // right: "the window one is exactly it, and the others look right too" once approved only
-    // the picture it named first, because a single "which one" could hold only one answer.
-    for (const x of shown) {
-      q[`ok_${x.id}`] = {
-        type: 'noul',
-        instructions: `In this message, does the person say the picture of ${x.name} looks right, either by name, or by saying all of them, or the others, look right, or by telling you to go ahead with them: "${latest.slice(0, 240)}"?`,
-      };
-      q[`bad_${x.id}`] = {
-        type: 'noul',
-        instructions: `In this message, does the person say something about the picture of ${x.name} is wrong or should change: "${latest.slice(0, 240)}"?`,
-      };
-    }
-  }
+  if (shown.length) Object.assign(q, verdictQuestions(shown, latest));
 
   // Threads: something they raised that was not asked about. A summary cannot
   // be generated here, so the thread IS the message, chosen rather than written.

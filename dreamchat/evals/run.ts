@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Blocking, Spot } from '../blocking';
 import { dreamConfig } from '../dream';
-import { bookkeeperQuestions, callJev, type Exchange, renderTranscript } from '../jev';
+import { bookkeeperQuestions, callJev, type Exchange, renderTranscript, verdictQuestions } from '../jev';
 import { FINISHED_BAR, GOES_ON_BAR } from '../lib';
 import { changeQuestions, crowdQuestions, KIND_BARS } from '../ground';
 import { PLAN_BARS, planQuestions } from '../planfacts';
@@ -339,7 +339,53 @@ if (which === 'storyboard') {
   console.log(
     `going on read ${Math.min(...on).toFixed(2)}+; the rest up to ${Math.max(...off).toFixed(2)} (bar ${GOES_ON_BAR})`,
   );
+} else if (which === 'verdicts') {
+  // Which of the pictures on show they say is wrong: read as wrong, it is drawn again and paid for.
+  type Case = { id: string; message: string; shown: { id: string; name: string }[]; wrong: string[] };
+  const rows = (
+    await Promise.all(
+      load<Case[]>('verdicts').flatMap((c) =>
+        Array.from({ length: times }, async () => {
+          const call = await callJev(c.message, verdictQuestions(c.shown, c.message));
+          const n = (k: string) => (call.answers?.[k]?.type === 'noul' ? call.answers[k].noul : Number.NaN);
+          const r = call.answers?.sketch_reaction;
+          return {
+            c,
+            error: call.error,
+            bad: Object.fromEntries(c.shown.map((x) => [x.id, n(`bad_${x.id}`)])),
+            ok: Object.fromEntries(c.shown.map((x) => [x.id, n(`ok_${x.id}`)])),
+            reaction: r?.type === 'choice' ? r.choice : 'no_reaction',
+          };
+        }),
+      ),
+    )
+  ).filter((r) => !r.error);
+  let pics = 0;
+  let right = 0;
+  let redrawn = 0;
+  let missed = 0;
+  for (const r of rows) {
+    // As the conversation decides (session.ts): read wrong at 0.6, else right at 0.6; with neither,
+    // a "not right" with one picture on show is about that one.
+    let got = r.c.shown.filter((x) => r.bad[x.id] >= 0.6).map((x) => x.id);
+    const anyRight = r.c.shown.some((x) => r.bad[x.id] < 0.6 && r.ok[x.id] >= 0.6);
+    if (!got.length && !anyRight && r.reaction === 'not_right' && r.c.shown.length === 1) got = [r.c.shown[0].id];
+    const extra = got.filter((x) => !r.c.wrong.includes(x));
+    const lost = r.c.wrong.filter((x) => !got.includes(x));
+    pics += r.c.shown.length;
+    right += r.c.shown.length - extra.length - lost.length;
+    redrawn += extra.length;
+    missed += lost.length;
+    if (extra.length || lost.length) {
+      const name = (id: string) =>
+        `${id} (${r.c.shown.find((x) => x.id === id)?.name.slice(0, 40)}) ${r.bad[id].toFixed(2)}`;
+      console.log(`MISS ${r.c.id.padEnd(9)} ${JSON.stringify(r.c.message.slice(0, 110))}`);
+      if (extra.length) console.log(`       read wrong: ${extra.map(name).join('; ')}`);
+      if (lost.length) console.log(`       missed: ${lost.map(name).join('; ')}`);
+    }
+  }
+  console.log(`\npictures right ${pct(right, pics)}; redrawn for nothing: ${redrawn}; wrong ones missed: ${missed}`);
 } else {
-  console.error('usage: bun run evals/run.ts storyboard|plan-facts|kinds|ending|goes-on [--times 2]');
+  console.error('usage: bun run evals/run.ts storyboard|plan-facts|kinds|ending|goes-on|verdicts [--times 2]');
   process.exit(1);
 }
