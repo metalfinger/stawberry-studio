@@ -649,7 +649,7 @@ function renderMove(move: Move, state: State, cfg: GoalsFile, extras: BriefExtra
     case 'probe_goal': {
       const g = goalOf(cfg, move.goalId);
       const want = g ? ` What we'd like to know: ${g.probe_hint}.` : '';
-      return `probe_goal → ${g?.label.toLowerCase() ?? move.goalId}.${want} Ask it plainly, as curiosity, hung off something they said. If they don't remember, that's fine.`;
+      return `probe_goal → ${g?.label.toLowerCase() ?? move.goalId}.${want} Ask it plainly, as curiosity, hung off something they said in their own words (never words of yours, and never say they said something they did not). If they don't remember, that's fine.`;
     }
     case 'acknowledge':
       return "acknowledge. They're winding down. React warmly to what they just said, then leave ONE light open door — easy to pick up, easy to ignore. Not a probe.";
