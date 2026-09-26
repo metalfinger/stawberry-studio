@@ -6,7 +6,7 @@
 // a sheet comes back mirrored unless told which side its walls are on; every detail of what is
 // in view is said out loud, and the style tokens are quoted word for word.
 import { type ContinuityPlan, type PlanRef, pictureName } from './continuity';
-import type { Breakdown, Moment, StyleOption } from './producer';
+import type { Breakdown, Moment, State, StyleOption } from './producer';
 import { BECOMING, isWhole, momentLabel, oneColour, VAGUE, WHOLE } from './producer';
 
 // Kept here too for older imports.
@@ -654,6 +654,43 @@ export function framePrompt(
   return { prompt, references, depicted: [...new Set(depicted)] };
 }
 
+// A change of how old or how big someone is: their face and build change with it.
+const AGED = /\b(?:age|aged|ageing|aging|young|younger|old|older|child|size|height|tall|small|big|grown)\b/i;
+// The words of a look that say how old someone is and how they are built, which such a change replaces.
+const AGE_WORDS =
+  /\b(?:age|aged|adult|grown[- ]up|child|children|kid|baby|infant|toddler|teens?|teenager|boy|girl|man|woman|men|women|lady|gentleman|young|younger|old|older|elderly|middle[- ]aged|years?|\d0s|build|built|height|tall|stature|physique|slim|slender|stocky|heavyset|muscular|petite|plump|chubby|stout|lanky)\b/i;
+const CLOTHES =
+  /cloth|dress|shirt|coat|jacket|trousers|skirt|shoe|wear|outfit|wardrobe|cardigan|sweater|jumper|uniform/i;
+
+/** The words a change names its part by: "houses" names "houses leaning over the street". */
+function namesOf(what: string): RegExp | undefined {
+  const words = what
+    .toLowerCase()
+    .split(/[^a-z]+/)
+    .filter((w) => w.length > 2 && !/^(?:the|and|its|his|her|their)$/.test(w))
+    .map((w) => w.replace(/(?<!s)s$/, ''));
+  return words.length ? new RegExp(`\\b(?:${words.join('|')})(?:e?s)?\\b`, 'i') : undefined;
+}
+
+/**
+ * A look without the phrases that name what a change replaces. What hangs on such a phrase by
+ * "with" goes with it ("houses with red doors"), except where the phrase only says who someone
+ * is: an age change leaves out "a middle-aged woman" and keeps "short brown hair".
+ */
+function without(look: string, names: RegExp, tails = true): string {
+  const bits = look.split(/(\s*[;,]\s*|\s+with\s+)/i);
+  let out = '';
+  let dropped = false;
+  for (let i = 0; i < bits.length; i += 2) {
+    const sep = bits[i - 1] ?? '';
+    const tail = /^\s+with\s+$/i.test(sep);
+    const drop: boolean = names.test(bits[i]) || (tails && dropped && tail);
+    if (!drop && bits[i].trim()) out += out ? (tail && dropped ? ', ' : sep) + bits[i] : bits[i];
+    dropped = drop;
+  }
+  return out;
+}
+
 /**
  * A ghost's prompt: one edit of its asset's approved sheet, with the moment the change happened
  * (or a picture from inside the place, for its light) beside it. A ghost is a reference, never a
@@ -704,34 +741,87 @@ export function ghostPrompt(
     });
   // What stays is everything the change does not replace: "make their head an ice block" beside
   // "keep the same face and hair" read as a contradiction (0.51-0.54 on what it shows, 24 Sep).
+  // A change of how old or how big someone is takes their face and build with it: "age now a small
+  // child" beside "the same face, build and hair" was held, and the dreamer never became a child
+  // in any picture (grandmother's kitchen, 26 Sep).
   const what = g.state?.what ?? '';
-  const parts =
+  const aged = (w: string) => sheet.kind === 'character' && AGED.test(w);
+  const partsWithout = (whats: string[]) =>
     sheet.kind === 'character'
       ? [
-          ...(/head|face/i.test(what) ? [] : ['face']),
-          'build',
-          ...(/head|hair/i.test(what) ? [] : ['hair']),
-          ...(/cloth|dress|shirt|coat|jacket|trousers|skirt|shoe|wear|outfit/i.test(what) ? [] : ['clothes']),
+          ...(whats.some((w) => /head|face/i.test(w) || aged(w)) ? [] : ['face']),
+          ...(whats.some(aged) ? [] : ['build']),
+          ...(whats.some((w) => /head|hair/i.test(w)) ? [] : ['hair']),
+          ...(whats.some((w) => CLOTHES.test(w)) ? [] : ['clothes']),
         ]
       : [];
+  const parts = partsWithout([what]);
+  // The sketch gives only what neither this change nor the one before replaced: the picture
+  // edited already shows the change before.
+  const earlier = before?.ghost?.state;
+  const sheetParts = partsWithout([what, earlier?.what ?? '']);
   const listed = (xs: string[]) => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs.at(-1)}` : (xs[0] ?? ''));
   const becomes = g.state ? isWhole(g.state) : false;
+  const names = namesOf(what);
+  const same = (xs: string[]) => {
+    const kept = xs.filter((x) => !names?.test(x));
+    return kept.length ? `the same ${listed(kept)}, ` : '';
+  };
   const keep = becomes
     ? 'the same angle and framing, the same plain background'
     : sheet.kind === 'character'
-      ? `the same ${listed(parts)}, the same pose and framing, the same plain background`
+      ? `${same(parts)}the same pose and framing, the same plain background`
       : sheet.kind === 'location'
-        ? 'the same walls, windows, objects, materials and colours, the same view'
-        : 'the same shape and materials, the same angle, the same plain background';
+        ? `${same(['walls', 'windows', 'objects', 'materials', 'colours'])}the same view`
+        : `${same(['shape', 'materials'])}the same angle, the same plain background`;
+  // Everything else is kept from image 1, and the change is named as its one exception: "keep
+  // everything else exactly as in image 1" beside the change read as asking for both
+  // (grandmother's kitchen, 26 Sep).
+  const attr = what.replace(/^(?:the|its|his|her|their)\s+/i, '').replace(/\s*\/\s*/g, ' and ');
+  const many = /\band\b/i.test(attr) || /[^s]s$/i.test(attr);
+  const whose = sheet.kind === 'character' ? 'their' : 'its';
+  const only =
+    becomes || !attr
+      ? ''
+      : `; only ${whose} ${attr} ${many ? 'change' : 'changes'}${aged(what) ? ', and their face and build change with it' : ''}`;
   // Turned into something else entirely, the whole of it is the change: "form is now roller
   // coaster" beside "keep the same shape and materials" asked for both (24 Sep).
+  // The change is said as whose it is: "their age and size are now little again, child" read as
+  // less at odds than "age/size is now little again, child" (0.25 against 0.33, grandmother's
+  // kitchen, 26 Sep).
   const change = becomes
     ? `it has turned into ${aNoun(g.state?.now ?? '')}, entirely`
-    : `${g.state?.what} is now ${g.state?.now}`;
+    : `${whose} ${attr} ${many ? 'are' : 'is'} now ${g.state?.now}`;
   // Its look in words, as a moment lists what is in it: said only through its image, an edit read
   // as unclear about what it shows (0.53 against 0.64, 24 Sep).
+  // It leaves out what this change and the one before replace: "the dreamer (person): adult"
+  // beside "age now a small child", and "houses leaning over the street" beside "houses now
+  // folded down flat", were each held as contradicting themselves (grandmother's kitchen, paper
+  // city, 26 Sep). A change of clothes replaces the old clothes whole.
+  const replaced = [g.state, earlier].filter((st): st is State => !!st && !isWhole(st));
+  const unsaid = (value: string) =>
+    replaced.reduce((v, st) => {
+      const named = namesOf(st.what);
+      const rest = named ? without(v, named) : v;
+      return aged(st.what) ? without(rest, AGE_WORDS, false) : rest;
+    }, value);
+  const unchanged: Item = {
+    ...sheet,
+    fields: Object.fromEntries(
+      Object.entries(sheet.fields).map(([k, d]) => [
+        k,
+        {
+          ...d,
+          value:
+            (k === 'wardrobe' && replaced.some((st) => CLOTHES.test(st.what))) || !d.value
+              ? null
+              : unsaid(d.value) || null,
+        },
+      ]),
+    ),
+  };
   const look = LOOK[sheet.kind]
-    .map((k) => sheet.fields[k])
+    .map((k) => unchanged.fields[k])
     .filter((d) => !!d?.value && !VAGUE.test(d.value))
     .map((d) => (d?.said ? (d.value as string) : inShades(d?.value as string, style)))
     .join('; ');
@@ -745,7 +835,7 @@ export function ghostPrompt(
       : [
           `A reference picture of ${name}, on their own: not a scene from the story.`,
           before
-            ? `Image 1 is ${name} as they looked a moment before, after the change before this one: edit it. Make exactly one change: ${change}. Image 2 is their reference sheet: ${sheet.kind === 'character' ? `their ${listed(parts)}` : 'what it is'}.`
+            ? `Image 1 is ${name} as they looked a moment before, after the change before this one: edit it. Make exactly one change: ${change}. Image 2 is their reference sheet: ${sheet.kind !== 'character' ? 'what it is' : sheetParts.length ? `their ${listed(sheetParts)}` : 'who they are'}.`
             : `Image 1 is ${name}'s reference sheet: edit it. Make exactly one change: ${change}.`,
           useFrom
             ? `Image ${references.length} is the moment it happened in the dream: make the change look as it does there, and take nothing else from it.`
@@ -756,13 +846,14 @@ export function ghostPrompt(
           becomes
             ? `${name} was ${aNoun(kind)}; now the whole of them is ${aNoun(g.state?.now ?? '')}, and nothing of how they looked before stays but what that says.`
             : `${name} (${kind})${look ? `: ${look}` : ''}.`,
-          `Keep everything else exactly as in image 1: ${keep}.`,
+          `Keep everything else from image 1: ${keep}${only}.`,
         ];
   const prompt = [
     ...lines,
     // Turned into something else entirely, its colours are those of what it is now ("grey heron",
-    // "red cardigan"), never of its blouse and skin before (heron dream, 26 Sep).
-    styleBlock(style, becomes ? coloursIn(g.state?.now ?? '') : toldColours(sheet), {
+    // "red cardigan"), never of its blouse and skin before (heron dream, 26 Sep). Otherwise the
+    // colours the dream gave are those of what the change leaves as it was.
+    styleBlock(style, becomes ? coloursIn(g.state?.now ?? '') : toldColours(unchanged), {
       fromImages: true,
       noSkin: becomes,
     }),
