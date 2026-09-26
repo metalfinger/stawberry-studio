@@ -417,6 +417,90 @@ describe('a change the script supervisor finds', () => {
     expect(b.scenes[0].moments[1].states).toEqual([]);
   });
 
+  test('a change to how it already looks in its profile is no change, and is not carried', () => {
+    // The classroom's desks "covered in seaweed", already so in its landmarks (sea school, 26 Sep).
+    const landmarks = { value: 'desks covered in seaweed, a board at the front, windows, a doorway', said: true };
+    const b = {
+      people: [],
+      things: [],
+      places: [
+        {
+          id: 'l2',
+          name: 'the old classroom',
+          fields: { geography: { value: 'a room within the underwater school', said: true }, landmarks },
+        },
+      ],
+      scenes: [
+        {
+          id: 's1',
+          moments: [
+            { ...moment('m2', 'You swim in through the doorway.'), place: 'l2', leaves: [] },
+            { ...moment('m3', 'Seaweed sways over the desks.'), place: 'l2', leaves: [] },
+            { ...moment('m4', 'Mr Hale turns from the board.'), place: 'l2', leaves: [] },
+          ],
+        },
+      ],
+    } as unknown as Breakdown;
+    addChanges(b, [{ moment: 'm3', who: 'l2', what: 'desks', now: 'covered in seaweed' }]);
+    const [, m3, m4] = b.scenes[0].moments;
+    expect(m3.leaves).toEqual([]);
+    expect(m4.states).toEqual([]);
+    expect(b.places[0].fields.landmarks).toEqual(landmarks);
+  });
+
+  test('is still a change when its words are of another part, when it goes back after a change, or when it turns', () => {
+    // A white beard says nothing of white hair.
+    const b = {
+      people: [
+        {
+          ...person('p2', 'Mr Hale', "the dreamer's old teacher"),
+          fields: {
+            identity: detail("the dreamer's old teacher"),
+            appearance: detail('middle-aged, short brown hair, white beard'),
+            wardrobe: detail('brown jacket'),
+            distinctive_features: detail(null),
+          },
+        },
+      ],
+      things: [
+        { id: 't1', name: 'the sofa', fields: { appearance: detail('a big blue sofa'), materials: detail(null) } },
+      ],
+      places: [{ id: 'l2', name: 'the old classroom', fields: { landmarks: detail('desks covered in seaweed') } }],
+      scenes: [
+        {
+          id: 's1',
+          moments: [
+            { ...moment('m2', 'Mr Hale waits by the sofa.', ['t1']), visible: ['p2'], place: 'l2', leaves: [] },
+            {
+              ...moment('m3', 'His hair goes white, the desks are swept clean and the sofa is a roller coaster.', [
+                't1',
+              ]),
+              visible: ['p2'],
+              place: 'l2',
+              leaves: [
+                { who: 'p2', what: 'hair', now: 'white' },
+                { who: 'l2', what: 'desks', now: 'swept clean' },
+                { who: 't1', what: 'form', now: 'a roller coaster', whole: true },
+              ],
+            },
+            {
+              ...moment('m4', 'The seaweed grows back and the roller coaster turns into the sofa.', ['t1']),
+              visible: ['p2'],
+              place: 'l2',
+              leaves: [
+                { who: 'l2', what: 'desks', now: 'covered in seaweed' },
+                { who: 't1', what: 'shape', now: 'a big blue sofa', whole: true },
+              ],
+            },
+          ],
+        },
+      ],
+    } as unknown as Breakdown;
+    expect(foldFirstLooks(b)).toEqual([]);
+    expect(b.scenes[0].moments[1].leaves).toHaveLength(3);
+    expect(b.scenes[0].moments[2].leaves).toHaveLength(2);
+  });
+
   test('a change carried from a moment that no longer has it is dropped', () => {
     // Tomas's "age and clothing", read again as his "body" (hotel orchard, 26 Sep).
     const b = {
