@@ -1,62 +1,60 @@
-// The listening test (HARNESS_PLAN.md, step S8): every reply Berry sent in a saved conversation,
-// scored against the move and brief code gave it, the questions it asked, the facts the conversation
-// then recorded as said, and the flow around the retelling, the ways of drawing it and the profiles.
-// Nothing is drawn and no conversation is changed: saved conversations are only read.
+// The listening test (HARNESS_PLAN.md, step S8): every reply Berry sent in a simulated conversation,
+// scored against the move and brief code gave it, the questions it asked and the details it brought in,
+// the facts the conversation then recorded as said, and the flow around the retelling, the ways of
+// drawing it and the profiles. Nothing is drawn and no conversation is changed: they are only read.
 //
-//   bun --env-file=$HOME/.config/strawberry/dreamchat.env run evals/listening.ts --label baseline
-//   bun run evals/listening.ts --label s8 --against baseline [dream-0926-095122-b91f …] [dreams/office-snow.md …]
+//   bun --env-file=$HOME/.config/strawberry/dreamchat.env run evals/listening.ts --label before \
+//     --data evals/listening-before --summary evals/listening-before-scores.json
+//   bun run evals/listening.ts --label s8 --data <folder> --against evals/listening-before-scores.json
 //   bun run evals/listening.ts --label fresh runs/sim-<stamp>-<dreams>-low.json   (a simulate.ts report)
+//   bun run evals/listening.ts --audit        (the hand-labelled replies, evals/listening-audit.json)
 //
-// New conversations to score, with nothing paid for (listening, the retelling, the offer and the style fit in 16
-// of their messages; --max 30 reaches the profiles where the Strawberry engine is installed):
+// The before (26 Sep): the 20 dreams with a simulated conversation, simulated twice each at the base the
+// step starts from, with nothing paid for, frozen in evals/listening-before/ (--freeze) and scored into
+// evals/listening-before-scores.json. The same for the step's own conversations:
 //
 //   DREAMCHAT_PROVIDER=fake DREAMCHAT_JUDGE=off bun --env-file=$HOME/.config/strawberry/dreamchat.env \
-//     run simulate.ts dreams/office-snow.md dreams/car-park.md dreams/moon-market.md --max 16
+//     run simulate.ts dreams/<a>.md dreams/<b>.md … --max 30
+//   bun run evals/listening.ts --freeze runs/listening-after runs/sim-<stamp>-<dreams>-low.json
+//   bun run evals/listening.ts --label after --data runs/listening-after --against evals/listening-before-scores.json
 //
-// simulate.ts keeps them in this checkout's state/ and names them in its report (runs/sim-…json): pass the report.
-// A checkout with a state/ of its own is where the saved set is read from too, unless DREAMCHAT_DATA or --data
-// names another dreamchat folder.
+// (--max 30 reaches the style offer, the retelling and the profiles; profiles need the Strawberry engine,
+// STRAWBERRY_PYTHON, and a DREAMCHAT_STRAWBERRY_HOME of their own.)
 //
-// Which conversations: with no arguments, every simulated one (named "simulated: <dream>") in the saved
-// conversations (DREAMCHAT_DATA, this checkout's state/, or another worktree's; see evals/saved.ts) and
-// the fake-picture replays' (runs/replay-fake*/**/state, runs/record-fake*/**/state). Arguments narrow
-// it: a session id, a session file, a folder of them, a simulate.ts report (its conversations by id), or
-// a dream (dreams/<name>.md or its name: every simulated conversation of it). A replay repeats its
-// source conversation word for word up to the choice of how it looks: those replies are marked copied
-// and left out of every count, so only what the replay said anew is scored; its dream-file coverage and
-// goal readings are its source's, and are counted once, on the source.
+// Which conversations: --data names a folder of conversations (frozen, or a dreamchat folder with state/
+// and its fake-picture replays under runs/); without it, the saved conversations (DREAMCHAT_DATA, this
+// checkout's state/, or another worktree's; see evals/saved.ts). Arguments narrow it: session ids,
+// session files, folders, simulate.ts reports, or dreams (dreams/<name>.md or a name). Only simulated
+// conversations are read. A replay repeats its source word for word up to the choice of how it looks:
+// those replies are marked copied and never counted; replays are shown apart from the headline.
 //
 // What is scored:
-// 1. Move compliance. Each reply, and one yes-or-no question to Jev shaped by its move ("does it ask
-//    the person about how the dream looked?" for probe_goal:look, "does it tell the dream back?" for
-//    retell). The S8 target counts the conversation before the pictures (listen, retell, offer, style,
-//    build); the picture turns are scored and shown apart.
-// 2. Question shape, on the listening replies that ask something: either/or (a code check and Jev),
-//    leading (Jev: does it suggest an answer the person had not given?), and whether the next message
-//    only agreed ("yeah"); and on every reply, how many questions it asked, before and after the
-//    one-question repair (llm.ts), and questions asked where the brief said to ask nothing.
-// 3. Facts. Every clause the breakdown or a sketch's profile marks said, asked of Jev against
-//    everything the person said (one fact per question): said but not in their words is the count S8
-//    must bring to 0; each is also asked against the dream file the simulated dreamer knew
-//    (dreams/<name>.md), and whether the listener said it and the person agreed. Beside it, coverage:
-//    the facts the pictures need that each dream file holds (evals/listening-facts.json: who, where,
-//    look, light, size, position), whether the person ever told each, and if not, whether Berry ever
-//    asked. And each goal read as told: does the message it rests on tell it?
-// 4. Flow. The ways of drawing it offered, and how many the reply kept (before and after the repair);
-//    the retelling, and whether it ends with the list of moments; and clear answers read as unclear:
-//    every answer to a profile or a retelling, whether Jev finds it answers the question, against the
-//    reading the turn recorded (and the saved choice's summed settling probability).
+// 1. Move compliance: one yes-or-no question to Jev per reply, shaped by its move. The target is on the
+//    listening turns; the rest are shown. A thread older than the message the reply answers passes on the
+//    thread or on the newest message: answering what was just said is not a fault of the reply.
+// 2. On every listening reply: whether it leads (Jev, the whole reply: a detail the person had not given,
+//    asked or stated), whether it asks an either/or question (Jev), how many questions it asks; and on
+//    every reply, questions before and after the one-question repair, and where the brief said to ask none.
+// 3. Facts: every clause the breakdown or a sketch's profile marks said (a moment's action whole), asked
+//    against everything the person said, one fact per question, said of what it is about (never a field's
+//    stem, which changed the claim); also against the dream file, and whether the person agreed to it.
+//    Coverage: the facts pictures need that each dream file holds (evals/listening-facts.json), whether
+//    the person told each, if not whether Berry asked, and if told whether the conversation kept it as said.
+// 4. Flow: the ways of drawing it kept; the retelling, and whether it ends with a list covering every
+//    moment of the breakdown; every answer to a profile or a retelling, clear or not, against the reading
+//    the turn recorded; how many conversations reached the retelling, the style offer and the profiles.
 //
 // Jev is asked by one model by name (JEV_EVAL_MODEL, pinned as the prompt cases pin it); questions over
-// the same state go in one call, and every answer is kept by the hash of the model, the question as
-// asked and its state (runs/listening/jev-cache.json), so a run again asks only what changed. --no-ask
-// asks nothing new. Results go to runs/listening/<label>.json; --against <label> prints what moved.
+// one state go in one call; answers are kept by the hash of the model, the question and its state
+// (runs/listening/jev-cache.json). --no-ask asks nothing new. Results: runs/listening/<label>.json, with the
+// data folder, the hash of every conversation and of the question wordings; --summary <path> writes the
+// counts alone; --against <label or file> compares dream by dream; --flags lists every remaining flag.
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, join, relative, resolve } from 'node:path';
 import type { Answer, JevFn, Question } from '../jev';
 import { type Move, moveKey } from '../lib';
 import { type Breakdown, type Detail, VAGUE } from '../producer';
-import type { Session, TurnRecord } from '../session';
+import type { Entry, Session, TurnRecord } from '../session';
 import { commitOf, DIR, dataDir, sha256, switches } from './saved';
 
 // ── the conversation, reply by reply ─────────────────────────────────────────────────────────────
@@ -64,7 +62,7 @@ import { commitOf, DIR, dataDir, sha256, switches } from './saved';
 /** Which part of the conversation a move belongs to. */
 export type Group = 'listen' | 'retell' | 'offer' | 'style' | 'build' | 'pictures' | 'close';
 export const GROUPS: readonly Group[] = ['listen', 'retell', 'offer', 'style', 'build', 'pictures', 'close'];
-/** The parts the S8 target is measured on: the conversation before the pictures. */
+/** The conversation before the pictures, shown beside the listening target. */
 export const S8_GROUPS: readonly Group[] = ['listen', 'retell', 'offer', 'style', 'build'];
 
 export function groupOf(kind: Move['kind']): Group {
@@ -175,35 +173,6 @@ export function questionsOf(text: string): string[] {
     .filter((x) => /\?["'”’)\]]*$/.test(x));
 }
 
-/** What may follow a last "or" and leave the question open: "or something else?", "or not?". */
-const OPEN_TAIL =
-  /^(?:not|anything|something|nothing|anyone|someone|anybody|somebody|anywhere|somewhere|whatever|so|else|no|none|more|less|other|otherwise)\b/;
-/** A tail's opening words that ask again without adding a choice: "or was it …", "or did you …". */
-const AUX =
-  /^(?:(?:was|is|were|are|did|do|does|had|has|could|would|will|can)\s+(?:it|there|that|they|you|he|she|we|this|the)?\s*)/;
-
-/**
- * Whether a question offers a choice between named answers ("was it this or that?"). A tail that is
- * only an opening ("or something else?", "or not?") offers nothing; a question that is itself the
- * second half of a choice ("…? or would you describe your own?") does.
- */
-export function eitherOrCode(question: string): boolean {
-  const q = question.toLowerCase().replace(/[“”"]/g, '').trim();
-  let tail: string;
-  if (/^or\b/.test(q)) tail = q.slice(2);
-  else {
-    const parts = q.split(/\bor\b/);
-    if (parts.length < 2) return false;
-    tail = parts.at(-1) ?? '';
-  }
-  tail = tail
-    .replace(/^[\s,]+/, '')
-    .replace(AUX, '')
-    .replace(/^(?:just|maybe|perhaps|even)\s+/, '')
-    .trim();
-  return tail.replace(/[?.!,\s]/g, '').length > 0 && !OPEN_TAIL.test(tail);
-}
-
 /** The ways of drawing it a choose_style brief offers: each one's name and its line. */
 export function offeredStyles(brief: string): { name: string; line: string }[] {
   const lead = "whether they'd describe their own: ";
@@ -226,7 +195,7 @@ const nameWords = (x: string) =>
     .filter((w) => w.length > 2 && !NAME_STOP.has(w))
     .map((w) => (w.length > 3 && w.endsWith('s') ? w.slice(0, -1) : w));
 
-/** Whether a reply names a way of drawing it: most of the name's words are in it. */
+/** Whether a reply names a way of drawing it by the name's own words: a cross-check beside Jev's reading. */
 export function mentions(reply: string, name: string): boolean {
   const want = nameWords(name);
   if (!want.length) return false;
@@ -238,21 +207,26 @@ export function mentions(reply: string, name: string): boolean {
 const ITEM = /^\s*(?:[-*•–]|\d{1,2}[.)]|[a-z][.)])\s+\S/;
 
 /**
- * Whether a message ends with a list of at least `min` items, its closing question aside: the moments,
- * told one by one after the telling. Items on separate lines, or numbered on one line.
+ * The list a message ends with, its closing question aside: items on separate lines, or numbered on one
+ * line. Fewer than `min` items is no list.
  */
-export function endsWithList(text: string, min = 3): boolean {
+export function endingList(text: string, min = 3): string[] {
   const lines = text
     .split('\n')
     .map((l) => l.trim())
     .filter(Boolean);
   while (lines.length && (lines.at(-1) ?? '').includes('?') && !ITEM.test(lines.at(-1) ?? '')) lines.pop();
-  let n = 0;
-  for (let i = lines.length - 1; i >= 0 && ITEM.test(lines[i]); i--) n++;
-  if (n >= min) return true;
-  const inline = (lines.at(-1) ?? '').match(/(?:^|\s)\d{1,2}[.)]\s+\S/g) ?? [];
-  return inline.length >= min;
+  const items: string[] = [];
+  for (let i = lines.length - 1; i >= 0 && ITEM.test(lines[i]); i--)
+    items.unshift(lines[i].replace(ITEM, (m) => m.slice(-1)));
+  if (items.length >= min) return items.map((x) => x.trim());
+  const last = lines.at(-1) ?? '';
+  const inline = last.split(/(?:^|\s)\d{1,2}[.)]\s+/).slice(1);
+  return inline.length >= min ? inline.map((x) => x.trim()) : [];
 }
+
+/** Whether a message ends with a list of at least `min` items. */
+export const endsWithList = (text: string, min = 3) => endingList(text, min).length > 0;
 
 /** A brief that says to ask nothing. */
 const NO_ASK = /Don't ask anything|No question needed|no question needed|Do not ask another question/;
@@ -281,6 +255,13 @@ export function readingOf(kind: 'profile' | 'retell', t: Pick<TurnRecord, 'rule'
 export function settledOf(a: Answer | undefined | null): number | null {
   if (!a || a.type !== 'choice') return null;
   return 1 - (a.probabilities.unclear ?? 0);
+}
+
+/** Whether an explore_thread move names a message older than the one its reply answers (message 2t-1). */
+export function staleThread(move: Move, turn: number): boolean | undefined {
+  if (move.kind !== 'explore_thread') return undefined;
+  const idx = Number(move.threadId.match(/^msg_(\d+)$/)?.[1] ?? Number.NaN);
+  return Number.isFinite(idx) && idx < 2 * turn - 1;
 }
 
 // ── facts ────────────────────────────────────────────────────────────────────────────────────────
@@ -315,76 +296,67 @@ export function clausesOf(text: string): string[] {
     .filter((x) => x && !VAGUE.test(x) && !/^(?:the dreamer|you|themselves|themself|the person)$/i.test(x));
 }
 
-/** A clause marked said, as the statement Jev is asked about, and every field it is in. */
-export type SaidFact = { statement: string; from: string[] };
+/**
+ * A clause marked said: what it says, what it is said of, and every field it is in. It is asked as said
+ * of its subject, never inside a field's stem: "the light in the tiny lift is stuffy" was a claim nobody
+ * made about "stuffy", said of the lift (review, 26 Sep).
+ */
+export type SaidFact = { about: string; claim: string; statement: string; from: string[] };
 
-const LOOK_STEM: Record<string, string> = {
-  colours: 'the colours in the dream were',
-  light: 'the light in the dream was',
-  texture: 'the dream looked',
-};
-const stemOf = (group: 'person' | 'place' | 'thing', name: string, field: string): string => {
-  if (group === 'person')
-    return (
-      {
-        identity: `${name} is`,
-        appearance: `${name} looks`,
-        wardrobe: `${name} wears`,
-        distinctive_features: `${name} has`,
-      }[field] ?? `${name}'s ${field}:`
-    );
-  if (group === 'place')
-    return (
-      { geography: `the place "${name}" is`, landmarks: `in "${name}" there is`, light: `the light in "${name}" is` }[
-        field
-      ] ?? `"${name}" ${field}:`
-    );
-  return { appearance: `"${name}" looks like`, materials: `"${name}" is made of` }[field] ?? `"${name}" ${field}:`;
+const LOOK_ABOUT: Record<string, string> = {
+  colours: 'the colours of their dream',
+  light: 'the light in their dream',
+  texture: 'how their dream looked',
 };
 
 /** Where a said fact comes from: the breakdown's look, a person, place or thing, a moment, or a sketch's profile. */
 export const sourceOf = (from: string) => from.split(':')[0];
 
 /**
- * Every clause the conversation marks as said: the breakdown's details and moments, and the profiles
- * the sketches were drawn from (a correction's revision marks all it changed as said). One statement
- * once, with every field it came from.
+ * Every clause the conversation marks as said: the breakdown's details, its moments (each action whole,
+ * one thing that happened), and the profiles the sketches were drawn from (a correction's revision marks
+ * all it changed as said). One claim about one subject once, with every field it came from.
  */
 export function saidFacts(s: Pick<Session, 'draft' | 'build'>): SaidFact[] {
   const found = new Map<string, SaidFact>();
-  const add = (stem: string, d: Detail | undefined, from: string) => {
+  const put = (about: string, claim: string, from: string) => {
+    const statement = `${about}: ${claim}`;
+    const k = statement.toLowerCase();
+    const f = found.get(k) ?? { about, claim, statement, from: [] };
+    if (!f.from.includes(from)) f.from.push(from);
+    found.set(k, f);
+  };
+  const add = (about: string, d: Detail | undefined, from: string) => {
     if (!d?.said || typeof d.value !== 'string') return;
-    for (const c of clausesOf(d.value)) {
-      const statement = `${stem} ${c}`;
-      const k = statement.toLowerCase();
-      const f = found.get(k) ?? { statement, from: [] };
-      if (!f.from.includes(from)) f.from.push(from);
-      found.set(k, f);
-    }
+    for (const c of clausesOf(d.value)) put(about, c, from);
   };
   const b: Breakdown | undefined = s.draft?.breakdown;
   if (b) {
-    for (const [k, d] of Object.entries(b.look ?? {})) add(LOOK_STEM[k] ?? `the dream's ${k}:`, d, `look:${k}`);
+    for (const [k, d] of Object.entries(b.look ?? {})) add(LOOK_ABOUT[k] ?? `their dream's ${k}`, d, `look:${k}`);
     for (const p of b.people ?? []) {
-      const name = p.is_dreamer ? 'the dreamer' : p.name;
-      for (const [k, d] of Object.entries(p.fields ?? {})) add(stemOf('person', name, k), d, `person:${p.id}.${k}`);
+      const name = p.is_dreamer ? 'the dreamer themselves' : p.name;
+      for (const [k, d] of Object.entries(p.fields ?? {})) add(name, d, `person:${p.id}.${k}`);
     }
     for (const l of b.places ?? [])
-      for (const [k, d] of Object.entries(l.fields ?? {})) add(stemOf('place', l.name, k), d, `place:${l.id}.${k}`);
+      for (const [k, d] of Object.entries(l.fields ?? {})) add(l.name, d, `place:${l.id}.${k}`);
     for (const t of b.things ?? [])
-      for (const [k, d] of Object.entries(t.fields ?? {})) add(stemOf('thing', t.name, k), d, `thing:${t.id}.${k}`);
+      for (const [k, d] of Object.entries(t.fields ?? {})) add(t.name, d, `thing:${t.id}.${k}`);
     for (const sc of b.scenes ?? [])
       for (const m of sc.moments ?? [])
-        add('in the dream,', { value: m.action, said: m.said !== false }, `moment:${m.id}`);
+        if (m.said !== false && m.action?.trim())
+          put('what happened in their dream', m.action.trim().replace(/\.$/, ''), `moment:${m.id}`);
   }
   for (const it of s.build?.items ?? []) {
     if (it.kind === 'cut' || it.kind === 'ghost') continue;
-    const group = it.kind === 'location' ? 'place' : it.kind === 'prop' ? 'thing' : 'person';
-    const name = it.isDreamer ? 'the dreamer' : it.name;
-    for (const [k, d] of Object.entries(it.fields ?? {})) add(stemOf(group, name, k), d, `sketch:${it.id}.${k}`);
+    const name = it.isDreamer ? 'the dreamer themselves' : it.name;
+    for (const [k, d] of Object.entries(it.fields ?? {})) add(name, d, `sketch:${it.id}.${k}`);
   }
   return [...found.values()];
 }
+
+/** The breakdown's moments, in order: what a retelling's closing list must cover. */
+export const momentsOf = (s: Pick<Session, 'draft'>) =>
+  (s.draft?.breakdown?.scenes ?? []).flatMap((sc) => sc.moments ?? []).filter((m) => m.action?.trim());
 
 /** The facts a dream file holds that pictures need, written by hand (evals/listening-facts.json). */
 export type DreamFact = { id: string; kind: 'who' | 'where' | 'look' | 'light' | 'size' | 'position'; fact: string };
@@ -515,12 +487,22 @@ export function complianceQuestion(r: Reply, s: Pick<Session, 'transcript'>): Qu
             'it asks what happened next, or invites them to carry on, without guessing what it was',
             'it asks about a detail of something already told (how it looked, who it was, how it felt), puts forward its own guess of what happened next ("did you go in?"), or asks nothing',
           );
-    case 'explore_thread':
-      return yesNo(
-        `Does \`listener_reply\` ask the person about something they raised in this message of theirs: "${threadText(s, m.threadId, r.brief)}"?`,
-        'its question is about something in that message',
-        'its question is about something else, or it asks nothing',
-      );
+    case 'explore_thread': {
+      const thread = threadText(s, m.threadId, r.brief);
+      // A thread older than the message just answered: the reply that follows the newest message is not
+      // wrong, the move is (135 of 326 explore_thread moves, baseline 26 Sep).
+      return staleThread(m, r.turn) && r.last
+        ? yesNo(
+            `Does \`listener_reply\` ask the person about something they raised, either in this earlier message of theirs: "${thread}", or in their latest one: "${r.last.slice(0, 400)}"?`,
+            'its question is about something in one of those messages',
+            'its question is about something else, or it asks nothing',
+          )
+        : yesNo(
+            `Does \`listener_reply\` ask the person about something they raised in this message of theirs: "${thread}"?`,
+            'its question is about something in that message',
+            'its question is about something else, or it asks nothing',
+          );
+    }
     case 'circle_back':
       return yesNo(
         `Does \`listener_reply\` come back to something the person said earlier, in this message of theirs: "${threadText(s, m.threadId, r.brief)}", and ask about it?`,
@@ -659,10 +641,18 @@ export function complianceQuestion(r: Reply, s: Pick<Session, 'transcript'>): Qu
 }
 
 export const Q = {
+  // A reply leads when its question puts forward an answer, or when it states as the dream's a detail nobody
+  // gave: "a guy with curly hair … juggling, just for you" (review, 26 Sep). Asked as one question of the
+  // whole reply, both kinds read near the bar (7 of 12 hand labels); asked apart, 11 of 12.
   leading: yesNo(
     "Does the listener's question in `listener_questions` put forward a possible answer of its own: a detail (a thing, a place, an event, a feeling, a look, or something the person did) that the person has not said anywhere in `person_said_before`, for them to agree or disagree with?",
     'it names a detail of its own for them to agree or disagree with, such as "did you go through it?" when they never said they went through anything, or "was it cold?" when they never said how it felt',
     'it asks openly ("what happened next?", "how did it feel?"), or names only details the person already gave',
+  ),
+  invents: yesNo(
+    'Does `listener_reply` say that something was in the dream, or happened in it, that nothing in `person_said_before` says? Only what it states as the dream\'s facts counts: its own impressions and feelings about it ("that sounds calm", "that\'s strange") and its questions do not.',
+    'it states a fact of the dream nobody gave, such as "a guy juggling, just for you" when they never said who it was for, or "the knife sliding through the soft white cake" when they never said the cake was white',
+    'every fact of the dream it states, the person gave; it only reflects, reacts or asks',
   ),
   eitherOr: yesNo(
     'Look at the question the listener asks in `listener_questions`. Does it offer the person a choice between two or more specific answers ("was it this or that?"), rather than leaving the answer open?',
@@ -680,23 +670,35 @@ export const Q = {
     'after the telling, the moments are listed as separate items',
     'it is told as running prose, with no list of the moments at its end',
   ),
-  told: (statement: string) =>
+  inList: (action: string) =>
     yesNo(
-      `Did the person say this about their dream, in their own words or plainly in other words: "${statement}"?`,
+      `Does \`retelling_list\` include this moment of the dream, in these words or its own: "${action}"?`,
+      'an item of the list is that moment',
+      'no item is that moment',
+    ),
+  told: (claim: string, about = 'their dream') =>
+    yesNo(
+      `Did the person say this about ${about}, in their own words or plainly in other words: "${claim}"?`,
       'a message in `person_said` says it, or plainly means it',
       'no message says it: it is only implied, filled in, or not there at all',
     ),
-  inDream: (statement: string) =>
+  inDream: (claim: string, about = 'the dream') =>
     yesNo(
-      `Does this account of the dream say this, or plainly mean it: "${statement}"?`,
+      `Does this account of the dream say this about ${about}, or plainly mean it: "${claim}"?`,
       'the account says it, or plainly means it',
       'the account does not say it, leaves it open, or says otherwise',
     ),
-  confirmed: (statement: string) =>
+  confirmed: (claim: string, about: string) =>
     yesNo(
-      `In \`conversation\`, did the listener say this to the person, and did the person then say it was right: "${statement}"?`,
+      `In \`conversation\`, did the listener say this about ${about} to the person, and did the person then say it was right: "${claim}"?`,
       'the listener said it and the person agreed that it was right or fitted',
       'the listener never said it, or the person only left it to the listener, corrected it, or did not answer',
+    ),
+  carried: (fact: string) =>
+    yesNo(
+      `\`kept_as_said\` is what a conversation recorded as the person's own words about their dream. Does any of it say this, in those words or others: "${fact}"?`,
+      'something in the list says it, or plainly means it',
+      'nothing in the list says it',
     ),
   asked: (fact: string) =>
     yesNo(
@@ -722,6 +724,71 @@ export const Q = {
   ),
 };
 
+/**
+ * The hash of every question's wording, as a run asks it: runs whose hashes differ asked in other words,
+ * and their numbers are not the same measure. Built from each move's question on a fixed reply and each
+ * fixed question with fixed arguments.
+ */
+export function questionsHash(): string {
+  const kinds: Move['kind'][] = [
+    'open_ended',
+    'follow',
+    'explore_thread',
+    'circle_back',
+    'probe_goal',
+    'acknowledge',
+    'retell',
+    'retell_check',
+    'take_correction',
+    'offer_visualize',
+    'offer_later',
+    'choose_style',
+    'style_help',
+    'start',
+    'confirm_profile',
+    'profile_check',
+    'build_done',
+    'while_drawing',
+    'ask_which',
+    'sheets_done',
+    'frames_drawing',
+    'all_done',
+    'keep',
+    'wrap',
+  ];
+  const briefs = [
+    'Move: x.',
+    "Move: follow. You told the dream back, and they say it went on. describe how you picture X on their own. It isn't clear whether X is right as you described. couldn't be drawn",
+    "Move: start. ask gently how they'd like to be drawn. Ask them now, in one short question about X, and don't say. The moment they said they'd pause on is up on the right now",
+    "Move: frames_drawing. More of the dream is up on the right (X). X is up on the right now: ask if it looks. Say you're redrawing X with their change",
+  ];
+  const s = { transcript: [{ role: 'user', content: 'M' }] as Entry[] };
+  const out: unknown[] = [];
+  for (const kind of kinds)
+    for (const brief of briefs)
+      for (const turn of [0, 3]) {
+        const move = { kind, goalId: 'look', threadId: 'msg_0', itemId: 'p1', styleId: 'a' } as unknown as Move;
+        const r: Reply = {
+          turn,
+          move,
+          key: kind,
+          rule: '',
+          phase: 'listen',
+          brief,
+          group: groupOf(kind),
+          text: 'T',
+          raw: null,
+          said: ['M'],
+          last: 'L',
+          copied: false,
+        };
+        out.push(complianceQuestion(r, s));
+      }
+  for (const [k, v] of Object.entries(Q))
+    out.push([k, typeof v === 'function' ? (v as (...a: string[]) => Question)('A', 'B') : v]);
+  return sha256(JSON.stringify(out)).slice(0, 16);
+}
+
 // ── asking Jev ───────────────────────────────────────────────────────────────────────────────────
 
 /** The Jev model the evals ask, by name (as evals/prompt-cases.ts pins it). */
@@ -737,6 +804,8 @@ export const askKey = (a: Ask, model = JEV_MODEL()) => sha256(`${model}\n${JSON.
 export const YES = 0.5;
 /** Within this of the bar an answer is close (the same question asked again moved by up to 0.06). */
 export const CLOSE = 0.1;
+/** A said fact Jev finds at or above this, though under the bar, is near the bar and listed apart. */
+export const NEAR = 0.3;
 
 /**
  * Asks Jev every question not already answered. Questions over the same state go in one call (they
@@ -791,9 +860,16 @@ export async function askAll(
 
 // ── scoring one conversation ─────────────────────────────────────────────────────────────────────
 
-/** A saved conversation as read. */
+/** What the test reads of a turn's saved detail (turn-<n>.json beside the conversation, or frozen with it). */
+export type TurnDetail = {
+  hostRaw?: string;
+  jevAnswers?: Record<string, Answer> | null;
+  stateAfter?: { signals?: Record<string, unknown>; goals?: Record<string, { confidence: number; evidence: string }> };
+};
+
+/** A conversation as read. */
 export type Loaded = {
-  /** Its id, or where it is when it is not in state/ ("runs/replay-fake/car-park/state/dream-…"). */
+  /** Its id, or where it is when it is not in a state folder ("runs/replay-fake/car-park/state/dream-…"). */
   key: string;
   path: string;
   session: Session;
@@ -804,6 +880,8 @@ export type Loaded = {
   /** A replay's source conversation. */
   source: Session | null;
   sourceId: string | null;
+  /** A frozen conversation's turn details, kept with it. */
+  details?: Record<string, TurnDetail>;
 };
 
 /** What a conversation's name says: its dream, and for a replay the conversation it replays. */
@@ -816,11 +894,6 @@ export function nameOf(name: string): { dream: string; origin: Loaded['origin'];
 }
 
 type Frac = [number, number];
-type TurnDetail = {
-  hostRaw?: string;
-  jevAnswers?: Record<string, Answer> | null;
-  stateAfter?: { signals?: Record<string, unknown>; goals?: Record<string, { confidence: number; evidence: string }> };
-};
 
 export type ReplyScore = {
   turn: number;
@@ -837,15 +910,22 @@ export type ReplyScore = {
   questions: number;
   rawQuestions: number | null;
   askedWhenTold: boolean;
-  eitherOrCode?: boolean;
+  /**
+   * A listening reply: whether it leads (the higher of its question putting forward an answer and its
+   * statements bringing in a detail), each of the two, and whether its question is either/or.
+   */
   eitherOr?: number | null;
   leading?: number | null;
-  /** The person's next message only agreed, after a question Jev read as leading. */
+  leadingAsked?: number | null;
+  invents?: number | null;
+  /** The person's next message only agreed, after a reply Jev read as leading. */
   agreed?: boolean;
   /** An explore_thread move whose thread is a message before the one this reply answers. */
   staleThread?: boolean;
+  /** A retelling: Jev's reading of a closing list, the list code finds, and the breakdown's moments it covers. */
   momentsList?: number | null;
-  momentsListCode?: boolean;
+  listItems?: number;
+  listCovers?: [number, number] | null;
   /**
    * A choose_style reply: the ways its brief offered, how many the reply offers (Jev, one question a
    * way), how many the host's own words offered before the repair, and how many the reply names by
@@ -858,13 +938,7 @@ export type ReplyScore = {
   text: string;
 };
 
-export type FactScore = {
-  statement: string;
-  from: string[];
-  told: number | null;
-  inDream: number | null;
-  confirmed?: number | null;
-};
+export type FactScore = SaidFact & { told: number | null; inDream: number | null; confirmed?: number | null };
 
 export type CoverageScore = {
   id: string;
@@ -872,6 +946,8 @@ export type CoverageScore = {
   fact: string;
   told: number | null;
   asked?: number | null;
+  /** Told, and kept by the conversation among what it records as said. */
+  carried?: number | null;
 };
 export type GoalScore = { goal: string; evidence: string; backed: number | null };
 export type AnswerScore = {
@@ -896,12 +972,17 @@ export type AnswerSums = {
   readUnclear: number;
   /** Read unclear, though it answered a reply that asked the question, and the test found it clear. */
   clearReadUnclear: number;
+  /** Read as settling it (right, changed, left to us), though the test found it no answer to the question asked. */
+  unclearReadSettled: number;
   /** Read unclear after a reply that never asked the question. */
   unasked: number;
   settledReadUnclear: number;
 };
 
 export type Sums = {
+  conversations: number;
+  /** Conversations that reached the retelling, the style offer, and a profile put to them. */
+  stages: { retelling: number; style: number; profile: number };
   replies: number;
   compliance: Record<Group, Frac>;
   s8: Frac;
@@ -910,25 +991,42 @@ export type Sums = {
   /** Move compliance by kind of move. */
   byMove: Record<string, Frac>;
   questions: { replies: number; total: number; multi: number; rawMulti: number; askedWhenTold: number };
+  /** Listening replies: how many, their questions, those asking one; either/or among those; leading among all. */
   listening: {
+    replies: number;
+    questions: number;
     asking: number;
     eitherOr: number;
-    eitherOrCode: number;
-    eitherOrBoth: number;
     leading: number;
+    /** Of the leading: by its question, and by what it states. */
+    leadingAsked: number;
+    invents: number;
+    both: number;
     agreed: number;
   };
   facts: {
     said: number;
     told: number;
     notTold: number;
+    /** Not told, Jev under NEAR: the count S8 must bring to 0. */
+    notToldFirm: number;
+    /** Not told, Jev between NEAR and the bar: listed apart, hand-checked. */
+    notToldNear: number;
     confirmed: number;
     notToldInDream: number;
     notToldNotInDream: number;
     toldNotInDream: number;
     bySource: Record<string, Frac>;
   };
-  coverage: { facts: number; told: number; askedNotTold: number; never: number; byKind: Record<string, Frac> };
+  coverage: {
+    facts: number;
+    told: number;
+    askedNotTold: number;
+    never: number;
+    /** Told facts the conversation kept among what it records as said. */
+    carried: number;
+    byKind: Record<string, Frac>;
+  };
   goals: { covered: number; backed: number; byGoal: Record<string, Frac> };
   /** explore_thread moves, those naming a message before the one just answered, and how many of each did their move. */
   threads: { explore: number; stale: number; staleDid: number; freshDid: number };
@@ -941,13 +1039,8 @@ export type Sums = {
     allKept: number;
     noneKept: number;
   };
-  retell: {
-    sessions: number;
-    present: number;
-    retellings: number;
-    endsWithMoments: number;
-    endsWithMomentsCode: number;
-  };
+  /** Retellings: those Jev reads as ending on a list, those code finds a list in, and lists covering every moment. */
+  retell: { retellings: number; endsWithMoments: number; endsWithMomentsCode: number; coversAll: number };
   answers: { profile: AnswerSums; retell: AnswerSums };
   unanswered: number;
   close: number;
@@ -960,6 +1053,7 @@ export type SessionScore = {
   dream: string | null;
   origin: Loaded['origin'];
   source: string | null;
+  hash: string;
   replies: ReplyScore[];
   facts: FactScore[];
   coverage: CoverageScore[];
@@ -969,6 +1063,9 @@ export type SessionScore = {
 };
 
 const yes = (p: number | null | undefined) => p !== null && p !== undefined && p >= YES;
+/** A reply leads when either its question or its statements do; unanswered while either is. */
+const leadingOf = (asked: number | null | undefined, invents: number | null | undefined) =>
+  asked === null || invents === null || invents === undefined ? null : Math.max(asked ?? 0, invents);
 const no = (p: number | null | undefined) => p !== null && p !== undefined && p < YES;
 const isClose = (p: number | null | undefined) => p !== null && p !== undefined && Math.abs(p - YES) < CLOSE;
 const json = (x: unknown) => JSON.stringify(x, null, 1);
@@ -981,44 +1078,67 @@ export type Env = {
 };
 
 /**
+ * The questions one reply is scored on: its move; for a listening reply, whether it states a detail nobody
+ * gave, and, where it asks, whether its question leads and whether it is either/or.
+ */
+export function replyAsks(
+  r: Reply,
+  s: Pick<Session, 'transcript'>,
+): { move: Ask; leading?: Ask; invents?: Ask; eitherOr?: Ask; questions: string[] } {
+  const qs = questionsOf(r.text);
+  const listening = r.group === 'listen';
+  const state = json({
+    person_said_before: listening ? r.said : r.said.slice(-1),
+    listener_reply: r.text,
+    listener_questions: qs,
+  });
+  return {
+    move: { state, question: complianceQuestion(r, s) },
+    ...(listening && r.turn > 0 ? { invents: { state, question: Q.invents } } : {}),
+    ...(listening && r.turn > 0 && qs.length ? { leading: { state, question: Q.leading } } : {}),
+    ...(listening && qs.length ? { eitherOr: { state, question: Q.eitherOr } } : {}),
+    questions: qs,
+  };
+}
+
+/**
  * Scores one conversation. `get` gives Jev's answer to a question, or null when it has none yet: the
  * run asks what the scorer needed and scores again, so questions that depend on an earlier answer (was
- * a fact the person did not say confirmed? was a fact they never told asked about?) are asked second.
+ * a fact the person did not say agreed to? was a fact they never told asked about?) are asked second.
  */
 export function scoreSession(l: Loaded, env: Env, get: (a: Ask) => number | null): SessionScore {
   const s = l.session;
   const replies = repliesOf(s, (t) => rawText(env.detail(l, t)?.hostRaw), l.source);
   const person = s.transcript.filter((e) => e.role === 'user').map((e) => e.content);
+  const moments = momentsOf(s);
 
-  // 1 and 2: each reply against its move, and its questions.
+  // 1 and 2: each reply against its move, what it brings in, and its questions.
   const scored: ReplyScore[] = replies.map((r) => {
-    const qs = questionsOf(r.text);
-    const rawQs = r.raw === null ? null : questionsOf(r.raw).length;
-    const question = complianceQuestion(r, s);
+    const asks = replyAsks(r, s);
     const base: ReplyScore = {
       turn: r.turn,
       move: r.key,
       group: r.group,
       rule: r.rule,
       copied: r.copied,
-      question: question.instructions,
+      question: asks.move.question.instructions,
       p: null,
       pass: null,
       close: false,
-      questions: qs.length,
-      rawQuestions: rawQs,
-      askedWhenTold: NO_ASK.test(r.brief) && qs.length > 0,
+      questions: asks.questions.length,
+      rawQuestions: r.raw === null ? null : questionsOf(r.raw).length,
+      askedWhenTold: NO_ASK.test(r.brief) && asks.questions.length > 0,
       text: r.text,
     };
+    const stale = staleThread(r.move, r.turn);
+    if (stale !== undefined) base.staleThread = stale;
     const ways = r.move.kind === 'choose_style' ? offeredStyles(r.brief) : [];
     if (ways.length) {
       base.offered = ways.length;
       base.keptCode = ways.filter((w) => mentions(r.text, w.name)).length;
     }
-    if (r.move.kind === 'retell') base.momentsListCode = endsWithList(r.text);
-    // The thread is a message by its index in the transcript; the message this reply answers is 2t-1.
-    if (r.move.kind === 'explore_thread')
-      base.staleThread = Number(r.move.threadId.match(/^msg_(\d+)$/)?.[1] ?? 2 * r.turn - 1) < 2 * r.turn - 1;
+    const items = r.move.kind === 'retell' ? endingList(r.text) : [];
+    if (r.move.kind === 'retell') base.listItems = items.length;
     if (r.copied) return base;
     if (ways.length) {
       // Each way asked of Jev apart: the host words them its own way ("a light pencil drawing" for
@@ -1030,23 +1150,25 @@ export function scoreSession(l: Loaded, env: Env, get: (a: Ask) => number | null
       base.kept = keptIn(r.text);
       base.rawKept = r.raw === null || r.raw === r.text ? base.kept : keptIn(r.raw);
     }
-    const listening = r.group === 'listen';
-    const state = json({
-      person_said_before: listening ? r.said : r.said.slice(-1),
-      listener_reply: r.text,
-      listener_questions: qs,
-    });
-    base.p = get({ state, question });
+    base.p = get(asks.move);
     base.pass = base.p === null ? null : yes(base.p);
     base.close = isClose(base.p);
-    if (listening && qs.length) {
-      base.eitherOrCode = qs.some(eitherOrCode);
-      base.eitherOr = get({ state, question: Q.eitherOr });
-      base.leading = get({ state, question: Q.leading });
+    if (asks.invents) {
+      base.invents = get(asks.invents);
+      base.leadingAsked = asks.leading ? get(asks.leading) : undefined;
+      base.leading = leadingOf(base.leadingAsked, base.invents);
       const next = person[r.turn];
       base.agreed = yes(base.leading) && next !== undefined && AGREES.test(next);
     }
-    if (r.move.kind === 'retell') base.momentsList = get({ state, question: Q.momentsList });
+    if (asks.eitherOr) base.eitherOr = get(asks.eitherOr);
+    if (r.move.kind === 'retell') {
+      base.momentsList = get({ state: asks.move.state, question: Q.momentsList });
+      // A closing list is held to the breakdown's moments: every one of them in it.
+      if (items.length && moments.length) {
+        const ps = moments.map((m) => get({ state: json({ retelling_list: items }), question: Q.inList(m.action) }));
+        base.listCovers = ps.some((p) => p === null) ? null : [ps.filter(yes).length, moments.length];
+      }
+    }
     return base;
   });
 
@@ -1075,21 +1197,22 @@ export function scoreSession(l: Loaded, env: Env, get: (a: Ask) => number | null
     });
   }
 
-  // 3: every clause marked said, against their words, the dream file, and what they agreed to.
+  // 3: every claim marked said, against their words, the dream file, and what they agreed to.
   const saidState = json({ person_said: person });
   const dream = l.dream ? env.dreamText(l.dream) : null;
   const dreamState = dream ? json({ dream }) : null;
   const convState = json({
     conversation: s.transcript.map((e) => `${e.role === 'user' ? 'Person' : 'Listener'}: ${e.content}`),
   });
-  const facts: FactScore[] = saidFacts(s).map((f) => {
-    const told = get({ state: saidState, question: Q.told(f.statement) });
+  const said = saidFacts(s);
+  const facts: FactScore[] = said.map((f) => {
+    const told = get({ state: saidState, question: Q.told(f.claim, f.about) });
     const out: FactScore = {
       ...f,
       told,
-      inDream: dreamState ? get({ state: dreamState, question: Q.inDream(f.statement) }) : null,
+      inDream: dreamState ? get({ state: dreamState, question: Q.inDream(f.claim, f.about) }) : null,
     };
-    if (no(told)) out.confirmed = get({ state: convState, question: Q.confirmed(f.statement) });
+    if (no(told)) out.confirmed = get({ state: convState, question: Q.confirmed(f.claim, f.about) });
     return out;
   });
 
@@ -1100,10 +1223,12 @@ export function scoreSession(l: Loaded, env: Env, get: (a: Ask) => number | null
     const asked = json({
       listener_questions: replies.filter((r) => S8_GROUPS.includes(r.group)).flatMap((r) => questionsOf(r.text)),
     });
+    const kept = json({ kept_as_said: said.map((f) => f.statement) });
     for (const f of (l.dream && env.facts.dreams[l.dream]) || []) {
       const told = get({ state: saidState, question: Q.told(f.fact) });
       const c: CoverageScore = { id: f.id, kind: f.kind, fact: f.fact, told };
       if (no(told)) c.asked = get({ state: asked, question: Q.asked(f.fact) });
+      if (yes(told)) c.carried = get({ state: kept, question: Q.carried(f.fact) });
       coverage.push(c);
     }
     // The goals as they stood when the dream was first told back: what listening had settled, and so
@@ -1120,14 +1245,14 @@ export function scoreSession(l: Loaded, env: Env, get: (a: Ask) => number | null
     }
   }
 
-  const id = basename(l.path, '.json');
   const out: SessionScore = {
     key: l.key,
-    id,
+    id: basename(l.path, '.json'),
     name: s.name,
     dream: l.dream,
     origin: l.origin,
     source: l.sourceId,
+    hash: l.hash,
     replies: scored,
     facts,
     coverage,
@@ -1135,8 +1260,22 @@ export function scoreSession(l: Loaded, env: Env, get: (a: Ask) => number | null
     answers,
     sums: emptySums(),
   };
-  out.sums = sumsOf(out);
+  out.sums = sumsOf(out, stagesOf(s));
   return out;
+}
+
+/** Which parts a conversation reached: the retelling, the style offer, a profile put to them. */
+export function stagesOf(s: Pick<Session, 'turns'>): Sums['stages'] {
+  const has = (ok: (t: TurnRecord) => boolean) => (s.turns.some(ok) ? 1 : 0);
+  return {
+    retelling: has((t) => t.move.kind === 'retell'),
+    style: has((t) => t.move.kind === 'choose_style'),
+    profile: has(
+      (t) =>
+        (t.move.kind === 'start' || t.move.kind === 'confirm_profile') &&
+        profileAsked((t.brief ?? '').slice((t.brief ?? '').indexOf('Move:'))) !== null,
+    ),
+  };
 }
 
 const emptyAnswers = (): AnswerSums => ({
@@ -1144,11 +1283,14 @@ const emptyAnswers = (): AnswerSums => ({
   clear: 0,
   readUnclear: 0,
   clearReadUnclear: 0,
+  unclearReadSettled: 0,
   unasked: 0,
   settledReadUnclear: 0,
 });
 export function emptySums(): Sums {
   return {
+    conversations: 0,
+    stages: { retelling: 0, style: 0, profile: 0 },
     replies: 0,
     compliance: Object.fromEntries(GROUPS.map((g) => [g, [0, 0]])) as unknown as Record<Group, Frac>,
     s8: [0, 0],
@@ -1156,22 +1298,34 @@ export function emptySums(): Sums {
     probeByGoal: {},
     byMove: {},
     questions: { replies: 0, total: 0, multi: 0, rawMulti: 0, askedWhenTold: 0 },
-    listening: { asking: 0, eitherOr: 0, eitherOrCode: 0, eitherOrBoth: 0, leading: 0, agreed: 0 },
+    listening: {
+      replies: 0,
+      questions: 0,
+      asking: 0,
+      eitherOr: 0,
+      leading: 0,
+      leadingAsked: 0,
+      invents: 0,
+      both: 0,
+      agreed: 0,
+    },
     facts: {
       said: 0,
       told: 0,
       notTold: 0,
+      notToldFirm: 0,
+      notToldNear: 0,
       confirmed: 0,
       notToldInDream: 0,
       notToldNotInDream: 0,
       toldNotInDream: 0,
       bySource: {},
     },
-    coverage: { facts: 0, told: 0, askedNotTold: 0, never: 0, byKind: {} },
+    coverage: { facts: 0, told: 0, askedNotTold: 0, never: 0, carried: 0, byKind: {} },
     goals: { covered: 0, backed: 0, byGoal: {} },
     threads: { explore: 0, stale: 0, staleDid: 0, freshDid: 0 },
     styles: { offers: 0, options: 0, kept: 0, rawKept: 0, keptCode: 0, allKept: 0, noneKept: 0 },
-    retell: { sessions: 0, present: 0, retellings: 0, endsWithMoments: 0, endsWithMomentsCode: 0 },
+    retell: { retellings: 0, endsWithMoments: 0, endsWithMomentsCode: 0, coversAll: 0 },
     answers: { profile: emptyAnswers(), retell: emptyAnswers() },
     unanswered: 0,
     close: 0,
@@ -1184,13 +1338,20 @@ const bump = (f: Frac, ok: boolean) => {
 };
 
 /** A conversation's counts. Unanswered questions are counted apart and never as a pass or a fail. */
-export function sumsOf(x: Pick<SessionScore, 'replies' | 'facts' | 'coverage' | 'goals' | 'answers' | 'origin'>): Sums {
+export function sumsOf(
+  x: Pick<SessionScore, 'replies' | 'facts' | 'coverage' | 'goals' | 'answers' | 'origin'>,
+  stages: Sums['stages'] = { retelling: 0, style: 0, profile: 0 },
+): Sums {
   const t = emptySums();
   const note = (p: number | null | undefined) => {
     if (p === null) t.unanswered += 1;
     else if (isClose(p)) t.close += 1;
   };
-  let retold = false;
+  // A replay's conversation up to the look is its source's, and is counted there.
+  if (x.origin === 'simulated') {
+    t.conversations = 1;
+    t.stages = { ...stages };
+  }
   for (const r of x.replies.filter((r) => !r.copied)) {
     t.replies += 1;
     note(r.p);
@@ -1215,26 +1376,30 @@ export function sumsOf(x: Pick<SessionScore, 'replies' | 'facts' | 'coverage' | 
         if (yes(r.p)) t.threads.staleDid += 1;
       } else if (yes(r.p)) t.threads.freshDid += 1;
     }
-    if (r.eitherOr !== undefined) {
-      note(r.eitherOr);
-      note(r.leading);
-    }
-    if (r.eitherOr !== undefined && r.eitherOr !== null && r.leading !== null && r.leading !== undefined) {
-      t.listening.asking += 1;
-      if (yes(r.eitherOr)) t.listening.eitherOr += 1;
-      if (r.eitherOrCode) t.listening.eitherOrCode += 1;
-      if (yes(r.eitherOr) && r.eitherOrCode) t.listening.eitherOrBoth += 1;
-      if (yes(r.leading)) t.listening.leading += 1;
-      if (r.agreed) t.listening.agreed += 1;
-    }
-    if (r.move === 'retell') {
-      note(r.momentsList);
-      if (yes(r.p)) {
-        retold = true;
-        t.retell.retellings += 1;
-        if (yes(r.momentsList)) t.retell.endsWithMoments += 1;
-        if (r.momentsListCode) t.retell.endsWithMomentsCode += 1;
+    if (r.group === 'listen' && r.turn > 0) {
+      note(r.invents);
+      if (r.leadingAsked !== undefined) note(r.leadingAsked);
+      if (r.eitherOr !== undefined) note(r.eitherOr);
+      if (r.leading !== null && r.leading !== undefined && r.eitherOr !== null) {
+        t.listening.replies += 1;
+        t.listening.questions += r.questions;
+        if (yes(r.leading)) t.listening.leading += 1;
+        if (yes(r.leadingAsked)) t.listening.leadingAsked += 1;
+        if (yes(r.invents)) t.listening.invents += 1;
+        if (r.agreed) t.listening.agreed += 1;
+        if (r.eitherOr !== undefined) {
+          t.listening.asking += 1;
+          if (yes(r.eitherOr)) t.listening.eitherOr += 1;
+          if (yes(r.eitherOr) && yes(r.leading)) t.listening.both += 1;
+        }
       }
+    }
+    if (r.move === 'retell' && yes(r.p)) {
+      note(r.momentsList);
+      t.retell.retellings += 1;
+      if (yes(r.momentsList)) t.retell.endsWithMoments += 1;
+      if ((r.listItems ?? 0) > 0) t.retell.endsWithMomentsCode += 1;
+      if (yes(r.momentsList) && r.listCovers && r.listCovers[0] === r.listCovers[1]) t.retell.coversAll += 1;
     }
     if (r.offered !== undefined && r.offered > 0) {
       if (r.kept === null || r.kept === undefined) t.unanswered += 1;
@@ -1249,11 +1414,6 @@ export function sumsOf(x: Pick<SessionScore, 'replies' | 'facts' | 'coverage' | 
       }
     }
   }
-  // A replay's retelling is its source's, and is counted there.
-  if (x.origin === 'simulated') {
-    t.retell.sessions = 1;
-    t.retell.present = retold ? 1 : 0;
-  }
   for (const f of x.facts) {
     note(f.told);
     note(f.inDream);
@@ -1265,6 +1425,8 @@ export function sumsOf(x: Pick<SessionScore, 'replies' | 'facts' | 'coverage' | 
       if (no(f.inDream)) t.facts.toldNotInDream += 1;
     } else {
       t.facts.notTold += 1;
+      if (f.told < NEAR) t.facts.notToldFirm += 1;
+      else t.facts.notToldNear += 1;
       note(f.confirmed);
       if (yes(f.confirmed)) t.facts.confirmed += 1;
       if (yes(f.inDream)) t.facts.notToldInDream += 1;
@@ -1276,8 +1438,10 @@ export function sumsOf(x: Pick<SessionScore, 'replies' | 'facts' | 'coverage' | 
     if (c.told === null) continue;
     t.coverage.facts += 1;
     bump((t.coverage.byKind[c.kind] ??= [0, 0]), yes(c.told));
-    if (yes(c.told)) t.coverage.told += 1;
-    else if (yes(c.asked)) t.coverage.askedNotTold += 1;
+    if (yes(c.told)) {
+      t.coverage.told += 1;
+      if (yes(c.carried)) t.coverage.carried += 1;
+    } else if (yes(c.asked)) t.coverage.askedNotTold += 1;
     else t.coverage.never += 1;
   }
   for (const g of x.goals) {
@@ -1298,7 +1462,7 @@ export function sumsOf(x: Pick<SessionScore, 'replies' | 'facts' | 'coverage' | 
       if (no(a.asked)) s.unasked += 1;
       else if (yes(a.clear)) s.clearReadUnclear += 1;
       if ((a.settled ?? 0) >= YES) s.settledReadUnclear += 1;
-    }
+    } else if (a.reading !== 'unknown' && no(a.clear) && !no(a.asked)) s.unclearReadSettled += 1;
   }
   return t;
 }
@@ -1313,10 +1477,13 @@ export function addSums(all: Sums[]): Sums {
   const addMap = (a: Record<string, Frac>, b: Record<string, Frac>) => {
     for (const [k, f] of Object.entries(b)) addFrac((a[k] ??= [0, 0]), f);
   };
-  const addNums = <T extends Record<string, number>>(a: T, b: T) => {
-    for (const k of Object.keys(b) as (keyof T)[]) (a[k] as number) += b[k] as number;
+  const addNums = <T extends object>(a: T, b: T) => {
+    const x = a as unknown as Record<string, number>;
+    for (const [k, v] of Object.entries(b as unknown as Record<string, unknown>)) if (typeof v === 'number') x[k] += v;
   };
   for (const s of all) {
+    t.conversations += s.conversations;
+    addNums(t.stages, s.stages);
     t.replies += s.replies;
     for (const g of GROUPS) addFrac(t.compliance[g], s.compliance[g]);
     addFrac(t.s8, s.s8);
@@ -1325,15 +1492,12 @@ export function addSums(all: Sums[]): Sums {
     addMap(t.byMove, s.byMove);
     addNums(t.questions, s.questions);
     addNums(t.listening, s.listening);
-    const { bySource, ...facts } = s.facts;
-    addNums(t.facts as unknown as Record<string, number>, facts as unknown as Record<string, number>);
-    addMap(t.facts.bySource, bySource);
-    const { byKind, ...cov } = s.coverage;
-    addNums(t.coverage as unknown as Record<string, number>, cov as unknown as Record<string, number>);
-    addMap(t.coverage.byKind, byKind);
-    const { byGoal, ...goals } = s.goals;
-    addNums(t.goals as unknown as Record<string, number>, goals as unknown as Record<string, number>);
-    addMap(t.goals.byGoal, byGoal);
+    addNums(t.facts, s.facts);
+    addMap(t.facts.bySource, s.facts.bySource);
+    addNums(t.coverage, s.coverage);
+    addMap(t.coverage.byKind, s.coverage.byKind);
+    addNums(t.goals, s.goals);
+    addMap(t.goals.byGoal, s.goals.byGoal);
     addNums(t.threads, s.threads);
     addNums(t.styles, s.styles);
     addNums(t.retell, s.retell);
@@ -1349,63 +1513,102 @@ export function addSums(all: Sums[]): Sums {
 
 const pct = (a: number, b: number) => (b ? `${Math.round((100 * a) / b)}%` : '—');
 const frac = (f: Frac) => `${f[0]}/${f[1]} (${pct(f[0], f[1])})`;
+const rate = (a: number, b: number) => (b ? a / b : null);
 
-/** The S8 targets, each as a number and whether it is met. */
-export function headline(t: Sums): { name: string; value: string; target: string; met: boolean | null }[] {
-  const rate = (a: number, b: number) => (b ? a / b : null);
-  const s8 = rate(t.s8[0], t.s8[1]);
+/** The floors: numbers S8 must not push down (or, for "never asked nor told", up) to meet its targets. */
+export function floors(t: Sums) {
+  return {
+    questionsPerListeningReply: rate(t.listening.questions, t.listening.replies),
+    toldOrAsked: rate(t.coverage.told + t.coverage.askedNotTold, t.coverage.facts),
+    neverAskedNorTold: rate(t.coverage.never, t.coverage.facts),
+    toldCarriedAsSaid: rate(t.coverage.carried, t.coverage.told),
+  };
+}
+
+export type Headline = { name: string; value: string; target: string; met: boolean | null };
+
+/**
+ * The S8 targets, each as a number and whether it is met; with the run before, the floors too. A target
+ * of 0 is met when nothing is flagged; what is flagged near the bar is listed apart and hand-checked.
+ */
+export function headline(t: Sums, before?: Sums | null): Headline[] {
+  const listen = rate(t.compliance.listen[0], t.compliance.listen[1]);
   const eo = rate(t.listening.eitherOr, t.listening.asking);
-  return [
+  const out: Headline[] = [
     {
-      name: 'move compliance (before the pictures)',
-      value: frac(t.s8),
-      target: '>= 90%',
-      met: s8 === null ? null : s8 >= 0.9,
+      name: 'conversations reaching the retelling, the style offer, a profile',
+      value: `${t.stages.retelling}, ${t.stages.style}, ${t.stages.profile} of ${t.conversations}`,
+      target: '(shown)',
+      met: null,
     },
-    { name: 'goal questions that asked their goal', value: frac(t.probe), target: '(in move compliance)', met: null },
     {
-      name: 'either/or listening questions (Jev)',
-      value: `${t.listening.eitherOr}/${t.listening.asking} (${pct(t.listening.eitherOr, t.listening.asking)}); code ${t.listening.eitherOrCode}, both ${t.listening.eitherOrBoth}`,
+      name: 'move compliance, listening turns',
+      value: `${frac(t.compliance.listen)}; goal questions ${frac(t.probe)}; before the pictures ${frac(t.s8)}`,
+      target: '>= 90%',
+      met: listen === null ? null : listen >= 0.9,
+    },
+    {
+      name: 'either/or among listening questions',
+      value: `${t.listening.eitherOr}/${t.listening.asking} (${pct(t.listening.eitherOr, t.listening.asking)})`,
       target: '< 5%',
       met: eo === null ? null : eo < 0.05,
     },
     {
-      name: 'leading listening questions',
-      value: `${t.listening.leading}/${t.listening.asking} (${pct(t.listening.leading, t.listening.asking)}); answered only "yeah" ${t.listening.agreed}`,
+      name: 'listening replies bringing in a detail not given (leading)',
+      value: `${t.listening.leading}/${t.listening.replies} (${pct(t.listening.leading, t.listening.replies)}): by its question ${t.listening.leadingAsked}, by what it states ${t.listening.invents}; also either/or ${t.listening.both}; answered only "yeah" ${t.listening.agreed}`,
       target: '0',
-      met: t.listening.asking ? t.listening.leading === 0 : null,
+      met: t.listening.replies ? t.listening.leading === 0 : null,
     },
     {
       name: 'said but not in their words',
-      value: `${t.facts.notTold}/${t.facts.said} (${pct(t.facts.notTold, t.facts.said)}); of them agreed to ${t.facts.confirmed}, in the dream file ${t.facts.notToldInDream}, not in it ${t.facts.notToldNotInDream}`,
-      target: '0',
-      met: t.facts.said ? t.facts.notTold === 0 : null,
+      value: `${t.facts.notToldFirm}/${t.facts.said} (${pct(t.facts.notToldFirm, t.facts.said)}); near the bar ${t.facts.notToldNear} more; agreed to ${t.facts.confirmed}; in the dream file ${t.facts.notToldInDream}`,
+      target: '0 (near-bar hand-checked)',
+      met: t.facts.said ? t.facts.notToldFirm === 0 : null,
     },
     {
       name: 'style offers that kept every way',
-      value: `${t.styles.allKept}/${t.styles.offers}; none kept ${t.styles.noneKept}; ways kept ${t.styles.kept}/${t.styles.options} (the host wrote ${t.styles.rawKept} before the repair; named in their words ${t.styles.keptCode})`,
+      value: `${t.styles.allKept}/${t.styles.offers}; none kept ${t.styles.noneKept}; ways ${t.styles.kept}/${t.styles.options} (the host wrote ${t.styles.rawKept} before the repair)`,
       target: 'all',
       met: t.styles.offers ? t.styles.allKept === t.styles.offers : null,
     },
     {
-      name: 'retellings that end with the moments',
-      value: `${t.retell.endsWithMoments}/${t.retell.retellings} (code ${t.retell.endsWithMomentsCode}); conversations with a retelling ${t.retell.present}/${t.retell.sessions}`,
+      name: 'retellings ending with a list of every breakdown moment',
+      value: `${t.retell.coversAll}/${t.retell.retellings}; ending on a list ${t.retell.endsWithMoments} (code ${t.retell.endsWithMomentsCode})`,
       target: 'all',
-      met: t.retell.retellings ? t.retell.endsWithMoments === t.retell.retellings : null,
+      met: t.retell.retellings ? t.retell.coversAll === t.retell.retellings : null,
     },
     {
-      name: 'clear profile answers read as unclear',
-      value: `${t.answers.profile.clearReadUnclear} of ${t.answers.profile.readUnclear} read unclear (${t.answers.profile.n} answers; ${t.answers.profile.unasked} more answered a reply that never asked; the saved choice summed to settled in ${t.answers.profile.settledReadUnclear})`,
+      name: 'answers misread',
+      value: `clear read unclear: profile ${t.answers.profile.clearReadUnclear}, retelling ${t.answers.retell.clearReadUnclear}; no answer read as settled: profile ${t.answers.profile.unclearReadSettled}, retelling ${t.answers.retell.unclearReadSettled} (of ${t.answers.profile.n} and ${t.answers.retell.n})`,
       target: '0',
-      met: t.answers.profile.n ? t.answers.profile.clearReadUnclear === 0 : null,
-    },
-    {
-      name: 'clear retelling answers read as unclear',
-      value: `${t.answers.retell.clearReadUnclear} of ${t.answers.retell.readUnclear} read unclear (${t.answers.retell.n} answers; ${t.answers.retell.unasked} more answered a reply that never asked)`,
-      target: '0',
-      met: t.answers.retell.n ? t.answers.retell.clearReadUnclear === 0 : null,
+      met:
+        t.answers.profile.n + t.answers.retell.n
+          ? t.answers.profile.clearReadUnclear +
+              t.answers.retell.clearReadUnclear +
+              t.answers.profile.unclearReadSettled +
+              t.answers.retell.unclearReadSettled ===
+            0
+          : null,
     },
   ];
+  const now = floors(t);
+  const was = before ? floors(before) : null;
+  const f2 = (x: number | null) => (x === null ? '—' : x.toFixed(2));
+  const floor = (name: string, k: keyof ReturnType<typeof floors>, up: boolean) => {
+    const a = now[k];
+    const b = was?.[k] ?? null;
+    out.push({
+      name: `floor: ${name}`,
+      value: `${f2(a)}${was ? ` (before ${f2(b)})` : ''}`,
+      target: was ? `${up ? '>=' : '<='} before` : '(needs --against)',
+      met: a === null || b === null ? null : up ? a >= b - 1e-9 : a <= b + 1e-9,
+    });
+  };
+  floor('questions per listening reply', 'questionsPerListeningReply', true);
+  floor('dream-file facts told or asked', 'toldOrAsked', true);
+  floor('dream-file facts never asked nor told', 'neverAskedNorTold', false);
+  floor('told dream-file facts kept as said', 'toldCarriedAsSaid', true);
+  return out;
 }
 
 /** The rest of the totals, in lines. */
@@ -1421,10 +1624,10 @@ export function detailLines(t: Sums): string[] {
     `goal questions by goal: ${byMap(t.probeByGoal)}`,
     `questions per reply ${t.questions.replies ? (t.questions.total / t.questions.replies).toFixed(2) : '—'}; replies with more than one ${t.questions.multi} (the host wrote ${t.questions.rawMulti} before the repair); asked where told to ask nothing ${t.questions.askedWhenTold}`,
     `said facts in their words, by where they are: ${byMap(t.facts.bySource)}; told but not in the dream file ${t.facts.toldNotInDream}`,
-    `dream-file facts the person told: ${t.coverage.told}/${t.coverage.facts}; asked but not told ${t.coverage.askedNotTold}; never asked nor told ${t.coverage.never}; by kind: ${byMap(t.coverage.byKind)}`,
+    `dream-file facts the person told: ${t.coverage.told}/${t.coverage.facts}, kept as said ${t.coverage.carried}; asked but not told ${t.coverage.askedNotTold}; never asked nor told ${t.coverage.never}; by kind: ${byMap(t.coverage.byKind)}`,
     `goals read as told when the dream was first told back, that their message tells: ${t.goals.backed}/${t.goals.covered}; by goal: ${byMap(t.goals.byGoal)}`,
     `explore_thread moves naming a message before the one just answered: ${t.threads.stale}/${t.threads.explore}, of them done ${t.threads.staleDid}; the rest done ${t.threads.freshDid}/${t.threads.explore - t.threads.stale}`,
-    `answers the test found clear: profile ${t.answers.profile.clear}/${t.answers.profile.n}, retelling ${t.answers.retell.clear}/${t.answers.retell.n}`,
+    `answers the test found clear: profile ${t.answers.profile.clear}/${t.answers.profile.n}, retelling ${t.answers.retell.clear}/${t.answers.retell.n}; read unclear after a reply that never asked: ${t.answers.profile.unasked + t.answers.retell.unasked}`,
     `Jev: ${t.unanswered} questions unanswered, ${t.close} answers within ${CLOSE} of the bar`,
   ];
 }
@@ -1438,73 +1641,216 @@ export function sessionLine(s: SessionScore): string {
     (s.dream ?? '?').padEnd(16),
     s.origin === 'replay' ? 'replay' : 'sim   ',
     `n ${String(t.replies).padStart(2)}`,
-    `S8 ${frac(t.s8).padEnd(14)}`,
+    `listen ${frac(t.compliance.listen).padEnd(13)}`,
     `goal ${`${t.probe[0]}/${t.probe[1]}`.padEnd(5)}`,
     `e/o ${`${t.listening.eitherOr}/${t.listening.asking}`.padEnd(5)}`,
-    `lead ${`${t.listening.leading}`.padEnd(2)}`,
-    `unsaid ${`${t.facts.notTold}/${t.facts.said}`.padEnd(6)}`,
+    `lead ${`${t.listening.leading}/${t.listening.replies}`.padEnd(5)}`,
+    `unsaid ${`${t.facts.notToldFirm}+${t.facts.notToldNear}/${t.facts.said}`.padEnd(8)}`,
     `told ${`${t.coverage.told}/${t.coverage.facts}`.padEnd(5)}`,
     `ways ${t.styles.offers ? `${t.styles.kept}/${t.styles.options}` : '—'}`.padEnd(9),
-    `list ${t.retell.retellings ? `${t.retell.endsWithMoments}/${t.retell.retellings}` : '—'}`.padEnd(8),
-    `unclear ${t.answers.profile.clearReadUnclear + t.answers.retell.clearReadUnclear}`,
+    `list ${t.retell.retellings ? `${t.retell.coversAll}/${t.retell.retellings}` : '—'}`.padEnd(8),
+    `misread ${t.answers.profile.clearReadUnclear + t.answers.retell.clearReadUnclear + t.answers.profile.unclearReadSettled + t.answers.retell.unclearReadSettled}`,
   ];
   return cells.join('  ');
 }
 
 // ── a run, and two runs compared ─────────────────────────────────────────────────────────────────
 
-export type RunFile = {
+export type Inputs = {
+  /** The folder the conversations were read from, relative to this dreamchat folder where it is inside it. */
+  data: string;
+  sessions: Record<string, string>;
+  facts: string;
+  dreams: Record<string, string>;
+  /** The hash of every question's wording (questionsHash). */
+  questions: string;
+};
+
+/** A run's counts, without the replies: what --summary writes and --against reads. */
+export type Summary = {
   label: string;
   at: string;
   commit: string | null;
   switches: Record<string, string>;
   jevModel: string;
-  inputs: { sessions: Record<string, string>; facts: string; dreams: Record<string, string> };
+  inputs: Inputs;
+  /** The headline: the simulated conversations only. */
   totals: Sums;
-  /** The same counts over the saved simulated conversations only, and over what the replays said anew. */
-  byOrigin: Record<string, Sums>;
-  sessions: SessionScore[];
+  /** The same counts over what the replays said anew. */
+  replays: Sums;
+  /** The simulated conversations' counts, dream by dream. */
+  byDream: Record<string, Sums>;
+  sessions: { key: string; dream: string | null; origin: Loaded['origin']; hash: string; sums: Sums }[];
+  /** Every remaining flag of a 0 target, for a hand check: said facts (firm, and near the bar) and leading replies. */
+  flags: {
+    unsaid: { key: string; statement: string; told: number; from: string[] }[];
+    near: { key: string; statement: string; told: number; from: string[] }[];
+    leading: { key: string; turn: number; p: number; text: string }[];
+  };
 };
+export type RunFile = Summary & { sessions: (Summary['sessions'][number] & Partial<SessionScore>)[] };
 
-/** What moved between two runs: the headline numbers, each conversation's, and every reply whose verdict changed. */
-export function compare(before: RunFile, now: RunFile): string[] {
+/** A run's counts and flags, from its scored conversations. */
+export function summarize(
+  head: Omit<Summary, 'totals' | 'replays' | 'byDream' | 'sessions' | 'flags'>,
+  scores: SessionScore[],
+): Summary {
+  const sims = scores.filter((s) => s.origin === 'simulated');
+  const byDream: Record<string, Sums> = {};
+  for (const d of [...new Set(sims.map((s) => s.dream ?? '?'))].sort())
+    byDream[d] = addSums(sims.filter((s) => (s.dream ?? '?') === d).map((s) => s.sums));
+  const flagged = (lo: number, hi: number) =>
+    sims.flatMap((s) =>
+      s.facts
+        .filter((f) => f.told !== null && f.told >= lo && f.told < hi)
+        .map((f) => ({ key: s.key, statement: f.statement, told: f.told as number, from: f.from })),
+    );
+  return {
+    ...head,
+    totals: addSums(sims.map((s) => s.sums)),
+    replays: addSums(scores.filter((s) => s.origin === 'replay').map((s) => s.sums)),
+    byDream,
+    sessions: scores.map((s) => ({ key: s.key, dream: s.dream, origin: s.origin, hash: s.hash, sums: s.sums })),
+    flags: {
+      unsaid: flagged(0, NEAR),
+      near: flagged(NEAR, YES),
+      leading: sims.flatMap((s) =>
+        s.replies
+          .filter((r) => !r.copied && yes(r.leading))
+          .map((r) => ({ key: s.key, turn: r.turn, p: r.leading as number, text: r.text.slice(0, 400) })),
+      ),
+    },
+  };
+}
+
+/** One dream's row of the comparison table. */
+function dreamRow(t: Sums | undefined): string[] {
+  if (!t) return ['—', '—', '—', '—', '—', '—', '—'];
+  const r = (a: number, b: number) => (b ? `${Math.round((100 * a) / b)}%` : '—');
+  return [
+    String(t.conversations),
+    r(t.compliance.listen[0], t.compliance.listen[1]),
+    r(t.listening.eitherOr, t.listening.asking),
+    r(t.listening.leading, t.listening.replies),
+    r(t.facts.notToldFirm, t.facts.said),
+    r(t.coverage.told + t.coverage.askedNotTold, t.coverage.facts),
+    `${t.stages.retelling}/${t.stages.style}/${t.stages.profile}`,
+  ];
+}
+
+/**
+ * What moved between two runs: the headline numbers and floors, and a table dream by dream (fresh
+ * conversations are new every run, so they pair by dream, never by conversation). Replies are compared
+ * one by one only where a conversation is the very same file in both.
+ */
+export function compare(before: Summary | RunFile, now: Summary | RunFile): string[] {
   const lines: string[] = [`\n${before.label} -> ${now.label}`];
-  const changed = Object.keys(now.inputs.sessions).filter(
-    (k) => before.inputs.sessions[k] && before.inputs.sessions[k] !== now.inputs.sessions[k],
-  );
-  if (changed.length) lines.push(`conversations changed since ${before.label}: ${changed.join(', ')}`);
   if (before.inputs.facts !== now.inputs.facts) lines.push('the dream facts file changed');
+  if (before.inputs.questions !== now.inputs.questions) lines.push('the questions are worded differently');
   if (before.jevModel !== now.jevModel) lines.push(`Jev model ${before.jevModel} -> ${now.jevModel}`);
   const a = headline(before.totals);
-  const b = headline(now.totals);
+  const b = headline(now.totals, before.totals);
   for (let i = 0; i < b.length; i++)
-    if (a[i]?.value !== b[i].value) lines.push(`  ${b[i].name}: ${a[i]?.value ?? '—'}  ->  ${b[i].value}`);
-  const prev = new Map(before.sessions.map((s) => [s.key, s]));
-  for (const s of now.sessions) {
-    const p = prev.get(s.key);
-    if (!p) continue;
-    const moved = s.replies
-      .map((r) => ({ r, o: p.replies.find((x) => x.turn === r.turn && x.move === r.move) }))
-      .filter(({ r, o }) => o && o.pass !== r.pass && r.pass !== null && o.pass !== null);
-    for (const { r, o } of moved)
-      lines.push(
-        `  ${s.key} turn ${r.turn} ${r.move}: ${o?.pass ? 'did' : 'missed'} (${o?.p?.toFixed(2)}) -> ${r.pass ? 'did' : 'missed'} (${r.p?.toFixed(2)})`,
-      );
-    if (p.sums.facts.notTold !== s.sums.facts.notTold)
-      lines.push(`  ${s.key} said but not in their words: ${p.sums.facts.notTold} -> ${s.sums.facts.notTold}`);
+    lines.push(
+      `  ${b[i].met === null ? ' ' : b[i].met ? '✓' : '✗'} ${b[i].name}: ${a[i]?.value ?? '—'}  ->  ${b[i].value}`,
+    );
+  const head = ['dream', 'convs', 'listen', 'either/or', 'leading', 'unsaid', 'told/asked', 'ret/style/prof'];
+  lines.push('', `  ${head.map((h, i) => h.padEnd(i ? 11 : 17)).join('')}`);
+  for (const d of [...new Set([...Object.keys(before.byDream), ...Object.keys(now.byDream)])].sort()) {
+    const x = dreamRow(before.byDream[d]);
+    const y = dreamRow(now.byDream[d]);
+    lines.push(`  ${d.padEnd(17)}${x.map((v, i) => `${v}${v === y[i] ? '' : `>${y[i]}`}`.padEnd(11)).join('')}`);
   }
-  const gone = before.sessions.filter((s) => !now.sessions.some((x) => x.key === s.key)).map((s) => s.key);
-  const fresh = now.sessions.filter((s) => !prev.has(s.key)).map((s) => s.key);
-  if (gone.length) lines.push(`  only in ${before.label}: ${gone.join(', ')}`);
-  if (fresh.length) lines.push(`  only in ${now.label}: ${fresh.join(', ')}`);
+  const same = new Map(before.sessions.map((s) => [`${s.key}#${s.hash}`, s]));
+  for (const s of now.sessions as Partial<SessionScore>[]) {
+    const p = same.get(`${s.key}#${s.hash}`) as Partial<SessionScore> | undefined;
+    if (!p?.replies || !s.replies) continue;
+    for (const r of s.replies) {
+      const o = p.replies.find((x) => x.turn === r.turn && x.move === r.move);
+      if (o && o.pass !== r.pass && r.pass !== null && o.pass !== null)
+        lines.push(
+          `  ${s.key} turn ${r.turn} ${r.move}: ${o.pass ? 'did' : 'missed'} (${o.p?.toFixed(2)}) -> ${r.pass ? 'did' : 'missed'} (${r.p?.toFixed(2)})`,
+        );
+    }
+  }
   return lines;
 }
 
-// ── finding the conversations ────────────────────────────────────────────────────────────────────
+// ── the hand-labelled replies ────────────────────────────────────────────────────────────────────
 
-/** Every folder of saved conversations read by default: state/, and the fake-picture runs' own state folders. */
+/** A reply read by hand, kept whole so its questions can be asked anywhere (evals/listening-audit.json). */
+export type AuditItem = {
+  id: string;
+  session: string;
+  dream: string;
+  turn: number;
+  move: Move;
+  rule: string;
+  phase: string;
+  /** Its brief, from the move on. */
+  brief: string;
+  /** The conversation up to and including the reply. */
+  transcript: { role: 'user' | 'assistant'; content: string }[];
+  /** What the hand read found: the reply did its move, asked an either/or question, brought in a detail. */
+  labels: { move: boolean; eitherOr?: boolean; leading?: boolean };
+  note?: string;
+};
+export const AUDIT_FILE = join(import.meta.dir, 'listening-audit.json');
+
+/** An audited reply as the scorer sees it. */
+export function auditReply(a: AuditItem): Reply {
+  const person = a.transcript.filter((e) => e.role === 'user').map((e) => e.content);
+  return {
+    turn: a.turn,
+    move: a.move,
+    key: moveKey(a.move),
+    rule: a.rule,
+    phase: a.phase,
+    brief: a.brief,
+    group: groupOf(a.move.kind),
+    text: a.transcript.at(-1)?.content ?? '',
+    raw: null,
+    said: person.slice(0, a.turn),
+    last: a.turn > 0 ? (person[a.turn - 1] ?? null) : null,
+    copied: false,
+  };
+}
+
+/** Each label against Jev's answer: agreed, and the ones that did not. */
+export function auditAgreement(items: AuditItem[], get: (a: Ask) => number | null) {
+  const out: Record<'move' | 'eitherOr' | 'leading', { agree: number; of: number; missed: string[] }> = {
+    move: { agree: 0, of: 0, missed: [] },
+    eitherOr: { agree: 0, of: 0, missed: [] },
+    leading: { agree: 0, of: 0, missed: [] },
+  };
+  for (const it of items) {
+    const asks = replyAsks(auditReply(it), { transcript: it.transcript as Entry[] });
+    for (const k of ['move', 'eitherOr', 'leading'] as const) {
+      const want = it.labels[k];
+      if (want === undefined) continue;
+      const p =
+        k === 'leading'
+          ? asks.invents
+            ? leadingOf(asks.leading ? get(asks.leading) : undefined, get(asks.invents))
+            : null
+          : asks[k]
+            ? get(asks[k] as Ask)
+            : null;
+      if (p === null) continue;
+      out[k].of += 1;
+      if (yes(p) === want) out[k].agree += 1;
+      else out[k].missed.push(`${it.id} (${p.toFixed(2)}, hand ${want ? 'yes' : 'no'})`);
+    }
+  }
+  return out;
+}
+
+// ── finding and freezing the conversations ───────────────────────────────────────────────────────
+
+/** Every folder of conversations under a data folder: its state/ and fake-picture runs, or the folder itself. */
 export function stateDirs(data: string): string[] {
-  const out = [join(data, 'state')].filter((d) => existsSync(d));
+  if (!existsSync(join(data, 'state'))) return existsSync(data) && sessionFiles(data).length ? [data] : [];
+  const out = [join(data, 'state')];
   const runs = join(data, 'runs');
   const walk = (d: string, depth: number) => {
     for (const e of readdirSync(d)) {
@@ -1526,14 +1872,20 @@ const sessionFiles = (dir: string) =>
     .sort()
     .map((f) => join(dir, f));
 
+/** A frozen conversation: what the test reads, with its turn details kept inside it. */
+type Frozen = Session & { listening_details?: Record<string, TurnDetail> };
+
 /** Reads a conversation, with its dream and a replay's source; null when it is not a simulated one. */
 export function load(path: string, data: string, sources: Map<string, string>): Loaded | null {
   const text = readFileSync(path, 'utf8');
-  const session = JSON.parse(text) as Session;
+  const session = JSON.parse(text) as Frozen;
   const named = nameOf(session.name ?? '');
   if (!named) return null;
   const rel = relative(data, path);
-  const key = rel.startsWith('..') || /^state\//.test(rel) ? basename(path, '.json') : rel.replace(/\.json$/, '');
+  const key =
+    rel.startsWith('..') || /^state\//.test(rel) || !rel.includes('/')
+      ? basename(path, '.json')
+      : rel.replace(/\.json$/, '');
   const sp = named.source ? sources.get(named.source) : undefined;
   return {
     key,
@@ -1544,11 +1896,13 @@ export function load(path: string, data: string, sources: Map<string, string>): 
     origin: named.origin,
     source: sp ? (JSON.parse(readFileSync(sp, 'utf8')) as Session) : null,
     sourceId: named.source,
+    ...(session.listening_details ? { details: session.listening_details } : {}),
   };
 }
 
-/** A conversation's saved turn detail (turn-<n>.json beside it), where there is one. */
-export function readDetail(l: Pick<Loaded, 'path'>, turn: number): TurnDetail | null {
+/** A conversation's turn detail: frozen with it, or turn-<n>.json beside it. */
+export function readDetail(l: Pick<Loaded, 'path' | 'details'>, turn: number): TurnDetail | null {
+  if (l.details) return l.details[String(turn)] ?? null;
   const p = join(l.path.replace(/\.json$/, ''), `turn-${turn}.json`);
   if (!existsSync(p)) return null;
   try {
@@ -1556,6 +1910,90 @@ export function readDetail(l: Pick<Loaded, 'path'>, turn: number): TurnDetail | 
   } catch {
     return null;
   }
+}
+
+/** A brief from its move on: all the test reads of it. */
+const fromMove = (brief: string) => (brief.includes('Move:') ? brief.slice(brief.indexOf('Move:')) : brief);
+
+/**
+ * A conversation cut to what the listening test reads, its turn details inside it, so a set can be kept
+ * in the repository and scored on any machine: the transcript, each turn's move and brief from the move
+ * on, the goals, the breakdown's looks, people, places, things and moments, the sketches' profiles; per
+ * turn, the host's words where the repair changed them, the readings of profile and retelling answers,
+ * and the goals when the dream was first told back.
+ */
+export function freeze(l: Loaded, detail: (turn: number) => TurnDetail | null): Frozen {
+  const s = l.session;
+  const b = s.draft?.breakdown;
+  const assistant = s.transcript.filter((e) => e.role === 'assistant').map((e) => e.content);
+  const details: Record<string, TurnDetail> = {};
+  const retold = s.turns.find((t) => t.move.kind === 'retell' && t.phase === 'retell')?.turn;
+  s.turns.forEach((t, i) => {
+    const d = detail(t.turn);
+    if (!d) return;
+    const out: TurnDetail = {};
+    const raw = rawText(d.hostRaw);
+    if (d.hostRaw && raw !== assistant[i]) out.hostRaw = d.hostRaw;
+    const sig = d.stateAfter?.signals ?? {};
+    const signals = Object.fromEntries(
+      ['profile_reply', 'retell_reply'].filter((k) => sig[k] !== undefined && sig[k] !== null).map((k) => [k, sig[k]]),
+    );
+    if (Object.keys(signals).length || (t.turn === retold && d.stateAfter?.goals))
+      out.stateAfter = {
+        ...(Object.keys(signals).length ? { signals } : {}),
+        ...(t.turn === retold && d.stateAfter?.goals ? { goals: d.stateAfter.goals } : {}),
+      };
+    const ans = Object.fromEntries(
+      ['profile_reply', 'retell_reply'].filter((k) => d.jevAnswers?.[k]).map((k) => [k, d.jevAnswers?.[k] as Answer]),
+    );
+    if (Object.keys(ans).length) out.jevAnswers = ans;
+    if (Object.keys(out).length) details[String(t.turn)] = out;
+  });
+  return {
+    id: s.id,
+    name: s.name,
+    phase: s.phase,
+    transcript: s.transcript.map((e) => ({ role: e.role, content: e.content })),
+    turns: s.turns.map((t) => ({
+      turn: t.turn,
+      move: t.move,
+      rule: t.rule,
+      phase: t.phase,
+      brief: fromMove(t.brief ?? ''),
+    })),
+    state: { goals: s.state?.goals },
+    ...(b
+      ? {
+          draft: {
+            status: s.draft?.status,
+            breakdown: {
+              look: b.look,
+              people: b.people.map((p) => ({ id: p.id, name: p.name, is_dreamer: p.is_dreamer, fields: p.fields })),
+              places: b.places.map((p) => ({ id: p.id, name: p.name, fields: p.fields })),
+              things: b.things.map((p) => ({ id: p.id, name: p.name, fields: p.fields })),
+              scenes: b.scenes.map((sc) => ({
+                id: sc.id,
+                moments: sc.moments.map((m) => ({ id: m.id, action: m.action, said: m.said, key: m.key })),
+              })),
+            },
+          },
+        }
+      : {}),
+    ...(s.build
+      ? {
+          build: {
+            items: s.build.items.map((i) => ({
+              id: i.id,
+              kind: i.kind,
+              name: i.name,
+              fields: i.fields,
+              ...(i.isDreamer ? { isDreamer: true } : {}),
+            })),
+          },
+        }
+      : {}),
+    listening_details: details,
+  } as unknown as Frozen;
 }
 
 /**
@@ -1608,7 +2046,7 @@ export const RUNS = join(DIR, 'runs', 'listening');
 if (import.meta.main) {
   const { jevAvailable, jevWithModel } = await import('../jev');
   const args = process.argv.slice(2);
-  const valued = new Set(['--label', '--against', '--data']);
+  const valued = new Set(['--label', '--against', '--data', '--summary', '--freeze']);
   const valueOf = (name: string) => {
     const i = args.indexOf(name);
     return i >= 0 ? args[i + 1] : undefined;
@@ -1616,9 +2054,61 @@ if (import.meta.main) {
   const label = valueOf('--label') ?? 'latest';
   const against = valueOf('--against');
   const noAsk = args.includes('--no-ask');
-  const show = args.includes('--show');
   const positional = args.filter((a, i) => !a.startsWith('--') && !(i > 0 && valued.has(args[i - 1])));
   const data = valueOf('--data') ? resolve(valueOf('--data') as string) : dataDir();
+
+  mkdirSync(RUNS, { recursive: true });
+  const cacheFile = join(RUNS, 'jev-cache.json');
+  const cache: JevCache = existsSync(cacheFile) ? (JSON.parse(readFileSync(cacheFile, 'utf8')) as JevCache) : {};
+  const model = JEV_MODEL();
+  const canAsk = !noAsk && jevAvailable();
+  const jev = jevWithModel(model);
+  /** Scores until nothing more can be asked: `score` is given Jev's answers so far and collects what it lacks. */
+  const scoreAll = async <T>(score: (get: (a: Ask) => number | null) => T): Promise<T> => {
+    let out = score(() => null);
+    for (let round = 0; round < 5; round++) {
+      const need: Ask[] = [];
+      out = score((a) => {
+        const hit = cache[askKey(a, model)];
+        if (hit) return hit.p;
+        need.push(a);
+        return null;
+      });
+      if (!need.length || !canAsk) break;
+      const before = Object.keys(cache).length;
+      let last = 0;
+      const errors = await askAll(need, jev, cache, {
+        model,
+        progress: (done, of) => {
+          if (done - last >= 50 || done === of) {
+            last = done;
+            console.log(`  Jev: ${done}/${of} calls`);
+            writeFileSync(cacheFile, `${JSON.stringify(cache)}\n`);
+          }
+        },
+      });
+      writeFileSync(cacheFile, `${JSON.stringify(cache)}\n`);
+      console.log(`Jev (${model}), round ${round + 1}: ${Object.keys(cache).length - before} questions asked`);
+      for (const e of errors.slice(0, 5)) console.log(`Jev: ${e}`);
+      if (Object.keys(cache).length === before) break;
+    }
+    if (!canAsk)
+      console.log(
+        noAsk
+          ? '--no-ask: questions not in the cache are left unanswered'
+          : 'no JEV_API_KEY: questions not in the cache are left unanswered (run with --env-file)',
+      );
+    return out;
+  };
+
+  if (args.includes('--audit')) {
+    const items = (JSON.parse(readFileSync(AUDIT_FILE, 'utf8')) as { items: AuditItem[] }).items;
+    const agreement = await scoreAll((get) => auditAgreement(items, get));
+    console.log(`\nhand-labelled replies (${AUDIT_FILE}), Jev ${model}, questions ${questionsHash()}:`);
+    for (const [k, v] of Object.entries(agreement))
+      console.log(`  ${k}: ${v.agree}/${v.of} agree${v.missed.length ? `; not: ${v.missed.join(', ')}` : ''}`);
+    process.exit(0);
+  }
 
   const { paths, dreams, unknown } = resolveArgs(positional, data);
   if (unknown.length) {
@@ -1636,72 +2126,36 @@ if (import.meta.main) {
     process.exit(1);
   }
 
-  const facts = loadFacts();
+  const freezeTo = valueOf('--freeze');
+  if (freezeTo) {
+    const out = resolve(freezeTo);
+    mkdirSync(out, { recursive: true });
+    for (const l of loaded.filter((x) => x.origin === 'simulated'))
+      writeFileSync(join(out, `${basename(l.path)}`), `${JSON.stringify(freeze(l, (t) => readDetail(l, t)))}\n`);
+    console.log(`frozen ${loaded.filter((x) => x.origin === 'simulated').length} conversations into ${out}`);
+    process.exit(0);
+  }
+
   const texts = new Map<string, string | null>();
   const env: Env = {
-    facts,
+    facts: loadFacts(),
     dreamText: (n) => {
       if (!texts.has(n)) texts.set(n, dreamFileText(n));
       return texts.get(n) ?? null;
     },
     detail: readDetail,
   };
+  const scores = await scoreAll((get) => loaded.map((l) => scoreSession(l, env, get)));
 
-  mkdirSync(RUNS, { recursive: true });
-  const cacheFile = join(RUNS, 'jev-cache.json');
-  const cache: JevCache = existsSync(cacheFile) ? (JSON.parse(readFileSync(cacheFile, 'utf8')) as JevCache) : {};
-  const model = JEV_MODEL();
-  const canAsk = !noAsk && jevAvailable();
-  const jev = jevWithModel(model);
-
-  // Scored, then asked what the scoring needed, until nothing more can be asked.
-  let scores: SessionScore[] = [];
-  for (let round = 0; round < 4; round++) {
-    const need: Ask[] = [];
-    const get = (a: Ask) => {
-      const hit = cache[askKey(a, model)];
-      if (hit) return hit.p;
-      need.push(a);
-      return null;
-    };
-    scores = loaded.map((l) => scoreSession(l, env, get));
-    if (!need.length || !canAsk) break;
-    const before = Object.keys(cache).length;
-    let last = 0;
-    const errors = await askAll(need, jev, cache, {
-      model,
-      progress: (done, of) => {
-        if (done - last >= 50 || done === of) {
-          last = done;
-          console.log(`  Jev: ${done}/${of} calls`);
-          writeFileSync(cacheFile, `${JSON.stringify(cache)}\n`);
-        }
-      },
-    });
-    writeFileSync(cacheFile, `${JSON.stringify(cache)}\n`);
-    console.log(`Jev (${model}), round ${round + 1}: ${Object.keys(cache).length - before} questions asked`);
-    for (const e of errors.slice(0, 5)) console.log(`Jev: ${e}`);
-    if (Object.keys(cache).length === before) break;
-  }
-  if (!canAsk)
-    console.log(
-      noAsk
-        ? '--no-ask: questions not in the cache are left unanswered'
-        : 'no JEV_API_KEY: questions not in the cache are left unanswered (run with --env-file)',
-    );
-
-  const byOrigin: Record<string, Sums> = {
-    simulated: addSums(scores.filter((s) => s.origin === 'simulated').map((s) => s.sums)),
-    replay: addSums(scores.filter((s) => s.origin === 'replay').map((s) => s.sums)),
-  };
-  const totals = addSums(scores.map((s) => s.sums));
-  const run: RunFile = {
+  const rel = relative(DIR, data);
+  const head = {
     label,
     at: new Date().toISOString(),
     commit: commitOf(),
     switches: switches(),
     jevModel: model,
     inputs: {
+      data: rel.startsWith('..') ? data : rel || '.',
       sessions: Object.fromEntries(loaded.map((l) => [l.key, l.hash])),
       facts: sha256(readFileSync(FACTS_FILE, 'utf8')),
       dreams: Object.fromEntries(
@@ -1710,43 +2164,53 @@ if (import.meta.main) {
           sha256(env.dreamText(d) ?? ''),
         ]),
       ),
+      questions: questionsHash(),
     },
-    totals,
-    byOrigin,
-    sessions: scores,
+  };
+  const summary = summarize(head, scores);
+  const run: RunFile = {
+    ...summary,
+    sessions: scores.map((s) => ({ ...s, key: s.key, dream: s.dream, origin: s.origin, hash: s.hash, sums: s.sums })),
   };
 
-  if (show)
-    for (const s of scores) {
-      console.log(`\n━━ ${s.key} (${s.dream})`);
-      for (const r of s.replies.filter((r) => !r.copied && (r.pass === false || yes(r.leading) || yes(r.eitherOr))))
-        console.log(
-          `  turn ${r.turn} ${r.move}: ${r.pass === false ? `missed (${r.p?.toFixed(2)})` : 'did'}${yes(r.eitherOr) ? ' either/or' : ''}${yes(r.leading) ? ' leading' : ''}\n    ${r.text.replace(/\n+/g, ' / ').slice(0, 300)}`,
-        );
-      for (const f of s.facts.filter((f) => no(f.told)))
-        console.log(
-          `  said, not in their words: ${f.statement} [${f.from.join(', ')}]${yes(f.inDream) ? ' (in the dream file)' : ''}`,
-        );
-    }
+  if (args.includes('--flags')) {
+    console.log('\nsaid, not in their words (Jev under 0.3):');
+    for (const f of summary.flags.unsaid)
+      console.log(`  ${f.told.toFixed(2)} ${f.key} ${f.statement} [${f.from.join(', ')}]`);
+    console.log(`\nnear the bar (${NEAR}-${YES}):`);
+    for (const f of summary.flags.near)
+      console.log(`  ${f.told.toFixed(2)} ${f.key} ${f.statement} [${f.from.join(', ')}]`);
+    console.log('\nleading replies:');
+    for (const f of summary.flags.leading)
+      console.log(`  ${f.p.toFixed(2)} ${f.key} turn ${f.turn}: ${f.text.replace(/\n+/g, ' / ')}`);
+  }
+  const sims = loaded.filter((l) => l.origin === 'simulated').length;
   console.log(
-    `\n${label}: ${scores.length} conversations (${loaded.filter((l) => l.origin === 'simulated').length} simulated, ${loaded.filter((l) => l.origin === 'replay').length} replays), read from ${data}`,
+    `\n${label}: ${scores.length} conversations (${sims} simulated, ${loaded.length - sims} replays), read from ${head.inputs.data}; questions ${head.inputs.questions}`,
   );
   for (const s of scores) console.log(`  ${sessionLine(s)}`);
-  for (const [name, t] of [['all', totals] as const, ...Object.entries(byOrigin).filter(([, t]) => t.replies)]) {
-    console.log(
-      `\n${name === 'all' ? 'Totals' : name === 'simulated' ? 'Saved simulated conversations' : 'What the replays said anew'}:`,
-    );
-    for (const h of headline(t))
-      console.log(`  ${h.met === null ? ' ' : h.met ? '✓' : '✗'} ${h.name}: ${h.value}  [target ${h.target}]`);
-    if (name === 'all') for (const l of detailLines(t)) console.log(`    ${l}`);
-  }
+
   // Read before this run is written: --against its own label compares with the run it replaces.
-  const againstPath = against ? join(RUNS, `${against}.json`) : null;
+  const againstPath = against ? (existsSync(against) ? resolve(against) : join(RUNS, `${against}.json`)) : null;
   const before =
-    againstPath && existsSync(againstPath) ? (JSON.parse(readFileSync(againstPath, 'utf8')) as RunFile) : null;
+    againstPath && existsSync(againstPath) ? (JSON.parse(readFileSync(againstPath, 'utf8')) as Summary) : null;
+  console.log('\nSimulated conversations (the headline):');
+  for (const h of headline(summary.totals, before?.totals))
+    console.log(`  ${h.met === null ? ' ' : h.met ? '✓' : '✗'} ${h.name}: ${h.value}  [target ${h.target}]`);
+  for (const l of detailLines(summary.totals)) console.log(`    ${l}`);
+  if (summary.replays.replies) {
+    console.log('\nWhat the replays said anew (shown, not the headline):');
+    for (const h of headline(summary.replays).filter((x) => !x.name.startsWith('floor')))
+      console.log(`    ${h.name}: ${h.value}`);
+  }
   const file = join(RUNS, `${label}.json`);
   writeFileSync(file, `${JSON.stringify(run, null, 1)}\n`);
   console.log(`\nwritten ${file}`);
+  const summaryTo = valueOf('--summary');
+  if (summaryTo) {
+    writeFileSync(resolve(summaryTo), `${JSON.stringify(summary, null, 1)}\n`);
+    console.log(`written ${resolve(summaryTo)}`);
+  }
   if (against) {
     if (!before) console.log(`no run labelled ${against} (${againstPath})`);
     else for (const l of compare(before, run)) console.log(l);

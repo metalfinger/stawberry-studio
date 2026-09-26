@@ -2,7 +2,8 @@
 // question, either/or, style and list checks, the facts marked said, and how the counts add up. Jev is
 // never asked here: its answers are stood in for, so the counting can be checked exactly.
 import { describe, expect, test } from 'bun:test';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DREAM_GOALS } from '../dream';
 import {
@@ -10,30 +11,40 @@ import {
   type Ask,
   askAll,
   askKey,
+  type AuditItem,
+  auditAgreement,
+  auditReply,
   clausesOf,
   compare,
   complianceQuestion,
+  endingList,
   endsWithList,
   type Env,
-  eitherOrCode,
+  floors,
+  freeze,
   groupOf,
   GROUPS,
   headline,
   type JevCache,
   type Loaded,
+  load,
   loadFacts,
   mentions,
   nameOf,
   offeredStyles,
+  questionsHash,
   questionsOf,
   rawText,
   readingOf,
   repliesOf,
-  type RunFile,
+  replyAsks,
   S8_GROUPS,
   saidFacts,
   scoreSession,
   settledOf,
+  staleThread,
+  stagesOf,
+  summarize,
   TOPIC,
 } from '../evals/listening';
 import type { JevFn, Question } from '../jev';
@@ -109,26 +120,6 @@ describe('questions in a reply', () => {
     expect(questionsOf('still and gone, but not in a bad way. i like that.')).toEqual([]);
   });
 
-  test('either/or: a choice between named answers, never an open tail', () => {
-    for (const q of [
-      'do you remember if you were about to throw it, or just holding it?',
-      'did it feel funny or was it normal in the dream?',
-      'do you remember whether it was day or night?',
-      'or would you describe your own?',
-      'were there people around, or did it feel empty?',
-    ])
-      expect([q, eitherOrCode(q)]).toEqual([q, true]);
-    for (const q of [
-      'what happened next?',
-      'was it a boat, or something else?',
-      'did you go in, or not?',
-      'was it more or less the same?',
-      'was anyone else in the house while you were waiting?',
-      'or was it something else?',
-    ])
-      expect([q, eitherOrCode(q)]).toEqual([q, false]);
-  });
-
   test("the host's own words, before the repair, from the JSON it returned", () => {
     expect(rawText('{"response":["hey.","what happened next?"]}')).toBe('hey.\n\nwhat happened next?');
     expect(rawText('["one","two"]')).toBe('one\n\ntwo');
@@ -181,6 +172,19 @@ describe('the retelling ends with the moments', () => {
     expect(endsWithList('the moments: 1. the office 2. the snowman 3. the snowball')).toBe(true);
     expect(endsWithList('- the office\n- the snowman\n\nright?')).toBe(false);
   });
+
+  test("the items of the closing list, to be held to the breakdown's moments", () => {
+    expect(endingList('so:\n1. the office\n2. the snowman\n3. the snowball\n\nright?')).toEqual([
+      'the office',
+      'the snowman',
+      'the snowball',
+    ]);
+    expect(endingList('the moments: 1. the office 2. the snowman 3. the snowball')).toEqual([
+      'the office',
+      'the snowman',
+      'the snowball',
+    ]);
+  });
 });
 
 describe('moves', () => {
@@ -212,12 +216,24 @@ describe('moves', () => {
     }
   });
 
+  test('a thread older than the message answered passes on either message', () => {
+    // crayon cat, turn 3: the thread is the tiny dreamer in the grass (message 3); the reply answers message 5, Biscuit.
+    expect(staleThread({ kind: 'explore_thread', threadId: 'msg_3' }, 3)).toBe(true);
+    expect(staleThread({ kind: 'explore_thread', threadId: 'msg_5' }, 3)).toBe(false);
+    expect(staleThread({ kind: 'follow' }, 3)).toBeUndefined();
+    const r = repliesOf(snow, () => null)[5];
+    const q = complianceQuestion({ ...r, move: { kind: 'explore_thread', threadId: 'msg_1' } }, snow);
+    expect(q.instructions).toContain('or in their latest one');
+    expect(q.instructions).toContain(r.last?.slice(0, 40) ?? '');
+  });
+
   test('a goal question names the goal, a thread question quotes the message', () => {
     const r = repliesOf(snow, () => null)[5];
     const look = complianceQuestion({ ...r, move: { kind: 'probe_goal', goalId: 'look' } }, snow);
     expect(look.instructions).toContain(TOPIC.look);
-    const thread = complianceQuestion({ ...r, move: { kind: 'explore_thread', threadId: 'msg_3' } }, snow);
-    expect(thread.instructions).toContain(snow.transcript[3].content.slice(0, 60));
+    const thread = complianceQuestion({ ...r, move: { kind: 'explore_thread', threadId: 'msg_9' } }, snow);
+    expect(thread.instructions).toContain(snow.transcript[9].content.slice(0, 60));
+    expect(thread.instructions).not.toContain('latest one');
   });
 
   test('a profile question names who is described, from the brief', () => {
@@ -302,11 +318,16 @@ describe('facts marked said', () => {
     expect(clausesOf('the dreamer')).toEqual([]);
   });
 
-  test("the breakdown's said clauses and the sketches', each statement once with every field it is in", () => {
+  test("the breakdown's said clauses and the sketches', each once, said of their subject, with every field", () => {
     const facts = saidFacts(snow);
-    const suit = facts.find((f) => f.statement === 'the manager, dele wears a blue suit');
+    const suit = facts.find((f) => f.statement === 'the manager, dele: a blue suit');
+    expect(suit).toMatchObject({ about: 'the manager, dele', claim: 'a blue suit' });
     expect(suit?.from).toEqual(['person:p2.wardrobe', 'sketch:p2.wardrobe']);
-    expect(facts.some((f) => f.statement.startsWith('in the dream, '))).toBe(true);
+    // A moment is asked whole: one thing that happened.
+    const m1 = facts.find((f) => f.from.includes('moment:m1'));
+    expect(m1?.claim).toBe('snow starts falling inside the office; no one else looks up');
+    // Never a field's stem around the claim: "the light in the office is …" claimed light nobody spoke of.
+    expect(facts.every((f) => !/ is$| looks$| wears$/.test(f.about))).toBe(true);
     // A guess is not a said fact.
     expect(facts.some((f) => f.statement.includes('adult in his 40s'))).toBe(false);
     expect(facts.some((f) => f.statement.includes('soft, even indoor light'))).toBe(false);
@@ -324,15 +345,25 @@ describe('facts marked said', () => {
 });
 
 describe('scoring a conversation', () => {
-  test('every reply scored against its move; either/or and leading only on listening questions', () => {
+  test('every reply scored against its move; leading on every listening reply, either/or where it asks', () => {
     const s = scoreSession(loaded(snow), env(), answering(0.9));
     const t = s.sums;
     expect(t.replies).toBe(snow.turns.length);
     const s8 = s.replies.filter((r) => S8_GROUPS.includes(r.group)).length;
     expect(t.s8).toEqual([s8, s8]);
-    const asking = s.replies.filter((r) => r.group === 'listen' && r.questions > 0).length;
+    const listening = s.replies.filter((r) => r.group === 'listen' && r.turn > 0);
+    const asking = listening.filter((r) => r.questions > 0).length;
+    expect(t.listening.replies).toBe(listening.length);
     expect(t.listening.asking).toBe(asking);
     expect(t.listening.eitherOr).toBe(asking);
+    expect(t.listening.leading).toBe(listening.length);
+    expect(t.listening.both).toBe(asking);
+    // A statement is read too: the leading question is asked of the reply with no question in it.
+    // (moon market, turn 1: "oh wow... all that color against grey. that must have made everything feel kind of electric.")
+    const statement = scoreSession(loaded(moon), env(), answering(0.9)).replies.find((r) => r.turn === 1);
+    expect(statement?.questions).toBe(0);
+    expect(statement?.leading).toBe(0.9);
+    expect(statement?.eitherOr).toBeUndefined();
     // The picture turns are scored but kept out of the S8 count.
     expect(t.compliance.pictures[1]).toBeGreaterThan(0);
     expect(s.replies.find((r) => r.group === 'build')?.eitherOr).toBeUndefined();
@@ -348,6 +379,19 @@ describe('scoring a conversation', () => {
     const youInIt = probes.filter((r) => r.move === 'probe_goal:you_in_it').length;
     expect(s.sums.probe).toEqual([probes.length - youInIt, probes.length]);
     expect(s.sums.probeByGoal.you_in_it).toEqual([0, youInIt]);
+  });
+
+  test('an answer that says nothing read as settled is counted too', () => {
+    const s = scoreSession(
+      loaded(snow),
+      env(),
+      answering(0.9, (a) =>
+        a.question === undefined ? 0.9 : a.question.instructions.startsWith('The listener described') ? 0.1 : undefined,
+      ),
+    );
+    // Every profile answer found no answer; those read as confirmed or left to us are misread.
+    const settled = s.answers.filter((a) => a.kind === 'profile' && a.reading !== 'unclear').length;
+    expect(s.sums.answers.profile.unclearReadSettled).toBe(settled);
   });
 
   test('a clear answer read as unclear is counted only when the reply asked the question', () => {
@@ -370,7 +414,7 @@ describe('scoring a conversation', () => {
       env(),
       answering(0.9, (a) => {
         const q = a.question.instructions;
-        const suit = q.includes('"the manager, dele wears a blue suit"');
+        const suit = q.includes('about the manager, dele,') && q.includes('"a blue suit"');
         if (suit && q.startsWith('Did the person say')) return 0.1;
         if (suit && q.startsWith('Does this account')) return 0.2;
         if (suit && q.startsWith('In `conversation`')) return 0.1;
@@ -378,6 +422,7 @@ describe('scoring a conversation', () => {
       }),
     );
     expect(s.sums.facts.notTold).toBe(1);
+    expect(s.sums.facts.notToldFirm).toBe(1);
     expect(s.sums.facts.notToldNotInDream).toBe(1);
     expect(s.sums.facts.said).toBe(s.facts.length);
     expect(s.sums.facts.bySource.sketch[1]).toBeGreaterThan(0);
@@ -408,6 +453,48 @@ describe('scoring a conversation', () => {
     expect(s.coverage).toEqual([]);
     const own = scoreSession(loaded(snow), env({ facts }), answering(0.9));
     expect(own.sums.coverage).toMatchObject({ facts: 1, told: 1 });
+  });
+
+  test('said facts near the bar are listed apart from the firm ones', () => {
+    const s = scoreSession(
+      loaded(snow),
+      env(),
+      answering(0.9, (a) => {
+        const q = a.question.instructions;
+        if (q.startsWith('Did the person say') && q.includes('"a blue suit"')) return 0.1;
+        if (q.startsWith('Did the person say') && q.includes('"desks')) return 0.4;
+        return undefined;
+      }),
+    );
+    expect(s.sums.facts.notToldFirm).toBe(1);
+    expect(s.sums.facts.notToldNear).toBeGreaterThan(0);
+    const sum = summarize({ label: 'x', at: '', commit: null, switches: {}, jevModel: 'm', inputs: {} as never }, [s]);
+    expect(sum.flags.unsaid.map((f) => f.statement)).toEqual(['the manager, dele: a blue suit']);
+    expect(sum.flags.near.length).toBe(s.sums.facts.notToldNear);
+  });
+
+  test('coverage: told facts kept as said, and what was never asked nor told', () => {
+    const facts = {
+      about: '',
+      dreams: {
+        'office-snow': [
+          { id: 'a', kind: 'who' as const, fact: 'Dele is there.' },
+          { id: 'b', kind: 'size' as const, fact: 'Dele is tall.' },
+        ],
+      },
+    };
+    const s = scoreSession(
+      loaded(snow),
+      env({ facts }),
+      answering(0.9, (a) => {
+        const q = a.question.instructions;
+        if (q.includes('"Dele is tall."') && !q.includes('any of it')) return 0.1;
+        if (q.includes('kept_as_said')) return 0.2;
+        return undefined;
+      }),
+    );
+    expect(s.sums.coverage).toMatchObject({ facts: 2, told: 1, carried: 0, askedNotTold: 0, never: 1 });
+    expect(floors(s.sums)).toMatchObject({ toldOrAsked: 0.5, neverAskedNorTold: 0.5, toldCarriedAsSaid: 0 });
   });
 
   test('a leading question the person only agreed to', () => {
@@ -459,6 +546,11 @@ describe('asking Jev', () => {
 });
 
 describe('totals and two runs compared', () => {
+  test('which parts a conversation reached', () => {
+    expect(stagesOf(snow)).toEqual({ retelling: 1, style: 1, profile: 1 });
+    expect(stagesOf({ turns: snow.turns.slice(0, 8) })).toEqual({ retelling: 0, style: 0, profile: 0 });
+  });
+
   test('conversations add up, and the headline says which targets are met', () => {
     const a = scoreSession(loaded(snow), env(), answering(0.9)).sums;
     const b = scoreSession(loaded(moon), env(), answering(0.1)).sums;
@@ -466,30 +558,94 @@ describe('totals and two runs compared', () => {
     expect(t.replies).toBe(a.replies + b.replies);
     expect(t.s8).toEqual([a.s8[0] + b.s8[0], a.s8[1] + b.s8[1]]);
     expect(t.facts.said).toBe(a.facts.said + b.facts.said);
+    expect(t.conversations).toBe(2);
     const h = headline(t);
     expect(h.find((x) => x.name.startsWith('move compliance'))?.met).toBe(false);
     expect(headline(a).find((x) => x.name.startsWith('move compliance'))?.met).toBe(true);
+    // Floors need the run before; a run that asks less than before misses its floor.
+    expect(h.find((x) => x.name === 'floor: questions per listening reply')?.met).toBeNull();
+    const fewer = { ...a, listening: { ...a.listening, questions: 0 } };
+    expect(headline(fewer, a).find((x) => x.name === 'floor: questions per listening reply')?.met).toBe(false);
+    expect(headline(a, a).find((x) => x.name === 'floor: questions per listening reply')?.met).toBe(true);
   });
 
-  test('--against lists every reply whose verdict moved', () => {
+  test('--against pairs dream by dream, and replies one by one only in the very same conversation', () => {
+    const head = (label: string) => ({
+      label,
+      at: '',
+      commit: null,
+      switches: {},
+      jevModel: 'm',
+      inputs: { data: 'x', sessions: {}, facts: 'f', dreams: {}, questions: 'q' },
+    });
     const before = scoreSession(loaded(snow), env(), answering(0.9));
     const now = scoreSession(
       loaded(snow),
       env(),
       answering(0.9, (a) => (a.question.instructions.includes(TOPIC.telling) ? 0.1 : undefined)),
     );
-    const run = (label: string, s: typeof before): RunFile => ({
-      label,
-      at: '',
-      commit: null,
-      switches: {},
-      jevModel: 'm',
-      inputs: { sessions: { [s.key]: 'h' }, facts: 'f', dreams: {} },
-      totals: s.sums,
-      byOrigin: {},
-      sessions: [s],
-    });
-    const lines = compare(run('a', before), run('b', now));
+    const other = scoreSession(loaded(moon), env(), answering(0.9));
+    const a = { ...summarize(head('a'), [before, other]), sessions: [before, other] };
+    const b = { ...summarize(head('b'), [now]), sessions: [now] };
+    const lines = compare(a, b);
+    expect(lines.some((l) => l.includes('office-snow') && l.includes('>'))).toBe(true);
+    expect(lines.some((l) => l.startsWith('  moon-market') && l.includes('>—'))).toBe(true);
     expect(lines.some((l) => /turn 1 probe_goal:telling: did \(0\.90\) -> missed \(0\.10\)/.test(l))).toBe(true);
+    const renamed = { ...now, hash: 'another conversation' };
+    expect(
+      compare(a, { ...summarize(head('c'), [renamed]), sessions: [renamed] }).some((l) => /turn 1 probe/.test(l)),
+    ).toBe(false);
+  });
+
+  test('the question wordings have one hash, which moves with any of them', () => {
+    expect(questionsHash()).toMatch(/^[0-9a-f]{16}$/);
+    expect(questionsHash()).toBe(questionsHash());
+  });
+});
+
+describe('frozen conversations', () => {
+  test('a conversation frozen with its turn details scores as it did', () => {
+    const details = (t: number) =>
+      t === 14
+        ? { stateAfter: { signals: { profile_reply: 'unclear' } }, hostRaw: '{"response":["other words"]}' }
+        : null;
+    const live = scoreSession(loaded(snow), env({ detail: (_l, t) => details(t) }), answering(0.9));
+    const dir = mkdtempSync(join(tmpdir(), 'listening-'));
+    const path = join(dir, `${snow.id}.json`);
+    writeFileSync(path, JSON.stringify(freeze(loaded(snow), details)));
+    const l = load(path, dir, new Map());
+    expect(l?.key).toBe(snow.id);
+    const frozen = scoreSession(l as Loaded, env({ detail: (x, t) => x.details?.[String(t)] ?? null }), answering(0.9));
+    expect(frozen.sums).toEqual(live.sums);
+    expect(frozen.replies.find((r) => r.turn === 14)?.rawQuestions).toBe(0);
+  });
+});
+
+describe('the hand-labelled replies', () => {
+  const items = (
+    JSON.parse(readFileSync(join(import.meta.dir, '..', 'evals', 'listening-audit.json'), 'utf8')) as {
+      items: AuditItem[];
+    }
+  ).items;
+
+  test("each is kept whole: its reply last, the person's messages before it, a label for its move", () => {
+    expect(items.length).toBeGreaterThanOrEqual(20);
+    for (const it of items) {
+      expect(it.transcript).toHaveLength(2 * it.turn + 1);
+      expect(it.transcript.at(-1)?.role).toBe('assistant');
+      expect(typeof it.labels.move).toBe('boolean');
+      const r = auditReply(it);
+      if (r.group !== 'listen') expect(it.labels.leading).toBeUndefined();
+      expect(
+        replyAsks(r, { transcript: it.transcript as Session['transcript'] }).move.question.instructions,
+      ).toBeTruthy();
+    }
+  });
+
+  test('agreement counts each label against the answer', () => {
+    const all = auditAgreement(items, () => 0.9);
+    expect(all.move.of).toBe(items.length);
+    expect(all.move.agree).toBe(items.filter((i) => i.labels.move).length);
+    expect(all.leading.missed.length).toBe(items.filter((i) => i.labels.leading === false).length);
   });
 });
