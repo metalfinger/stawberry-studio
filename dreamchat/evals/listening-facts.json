@@ -1,0 +1,485 @@
+{
+  "about": "What each dream file says that its pictures need, one fact per line and one thing per fact, for the listening test (evals/listening.ts): whether the simulated dreamer, who knows only the file, ever told it, and whether Berry ever asked about it. Written by hand from dreams/<name>.md (26 Sep), for the 20 dreams with simulated conversations; a fact joining two things (\"a tall man in a blue suit\") read as not told when only one was, so each is its own line. Kinds: who (someone or something alive in it), where (a place), look (how someone, something or the dream looks), light (the time of day, the light), size (a size, a scale or a height), position (where someone is, or what they hold). Nothing the file does not say.",
+  "dreams": {
+    "car-park": [
+      { "id": "car-park-look-1", "kind": "look", "fact": "The dream looks like an old black and white film." },
+      { "id": "car-park-look-2", "kind": "look", "fact": "The picture is grainy and flickering." },
+      { "id": "car-park-where-1", "kind": "where", "fact": "The dream is in a big concrete car park." },
+      { "id": "car-park-light-1", "kind": "light", "fact": "It is night." },
+      { "id": "car-park-who-1", "kind": "who", "fact": "There is a thin grey dog." },
+      { "id": "car-park-position-1", "kind": "position", "fact": "The dog sits on the ramp." },
+      { "id": "car-park-look-3", "kind": "look", "fact": "The same number, level 4, is painted on every wall." },
+      { "id": "car-park-where-2", "kind": "where", "fact": "The dreamer comes out on the roof of the car park." },
+      { "id": "car-park-look-4", "kind": "look", "fact": "The rain falls upwards, from the ground into the sky." },
+      { "id": "car-park-look-5", "kind": "look", "fact": "The dreamer's car is a little wooden rowing boat." },
+      { "id": "car-park-position-2", "kind": "position", "fact": "The boat is parked in a space between the lines." },
+      { "id": "car-park-position-3", "kind": "position", "fact": "The grey dog is already sitting in the boat." }
+    ],
+    "crayon-cat": [
+      {
+        "id": "crayon-cat-look-1",
+        "kind": "look",
+        "fact": "The dream looks like a crayon drawing a six-year-old did."
+      },
+      {
+        "id": "crayon-cat-look-2",
+        "kind": "look",
+        "fact": "The lines are thick and waxy, with colours going over the edges."
+      },
+      { "id": "crayon-cat-size-1", "kind": "size", "fact": "The dreamer is tiny, as small as a mouse." },
+      { "id": "crayon-cat-where-1", "kind": "where", "fact": "The dream is in the dreamer's mum's back garden." },
+      { "id": "crayon-cat-size-2", "kind": "size", "fact": "The grass is taller than the dreamer." },
+      { "id": "crayon-cat-who-1", "kind": "who", "fact": "There is their old cat, Biscuit." },
+      { "id": "crayon-cat-look-3", "kind": "look", "fact": "Biscuit is ginger." },
+      { "id": "crayon-cat-look-4", "kind": "look", "fact": "Biscuit has one white ear." },
+      { "id": "crayon-cat-size-3", "kind": "size", "fact": "Biscuit is enormous, as big as a bus to the dreamer." },
+      {
+        "id": "crayon-cat-position-1",
+        "kind": "position",
+        "fact": "Biscuit carries the dreamer by the back of their jumper."
+      },
+      { "id": "crayon-cat-where-2", "kind": "where", "fact": "Biscuit climbs up onto the roof of the house." },
+      {
+        "id": "crayon-cat-who-2",
+        "kind": "who",
+        "fact": "There is a cat in every garden in the street, dozens of them."
+      },
+      { "id": "crayon-cat-position-2", "kind": "position", "fact": "The cats in the gardens all look up at them." }
+    ],
+    "desert-station": [
+      { "id": "desert-station-look-1", "kind": "look", "fact": "The dream looks like a comic book." },
+      { "id": "desert-station-look-2", "kind": "look", "fact": "It has thick black lines and flat colours." },
+      { "id": "desert-station-light-1", "kind": "light", "fact": "The sun is straight overhead." },
+      { "id": "desert-station-light-2", "kind": "light", "fact": "Every shadow is a hard black shape." },
+      {
+        "id": "desert-station-where-1",
+        "kind": "where",
+        "fact": "The dream is at a tiny train station in the middle of a desert."
+      },
+      { "id": "desert-station-look-3", "kind": "look", "fact": "The station has just one bench." },
+      { "id": "desert-station-look-4", "kind": "look", "fact": "There is a clock on a pole." },
+      { "id": "desert-station-size-1", "kind": "size", "fact": "The sand goes on forever in every direction." },
+      { "id": "desert-station-who-1", "kind": "who", "fact": "There is an old man." },
+      { "id": "desert-station-look-5", "kind": "look", "fact": "The old man wears a white suit." },
+      { "id": "desert-station-position-1", "kind": "position", "fact": "The old man sits on the bench." },
+      { "id": "desert-station-who-2", "kind": "who", "fact": "A camel stands next to the old man." },
+      {
+        "id": "desert-station-look-6",
+        "kind": "look",
+        "fact": "The clock is melting, dripping down the pole like wax."
+      },
+      {
+        "id": "desert-station-size-2",
+        "kind": "size",
+        "fact": "The old man and the camel get smaller as they walk away."
+      }
+    ],
+    "flooded-library": [
+      {
+        "id": "flooded-library-where-1",
+        "kind": "where",
+        "fact": "The dream is in the big reading room of the old city library."
+      },
+      { "id": "flooded-library-look-1", "kind": "look", "fact": "There is a green glass lamp on every desk." },
+      { "id": "flooded-library-size-1", "kind": "size", "fact": "The shelves go up to the ceiling." },
+      { "id": "flooded-library-look-2", "kind": "look", "fact": "Water comes in under the doors." },
+      { "id": "flooded-library-size-2", "kind": "size", "fact": "The water rises over the desks." },
+      { "id": "flooded-library-look-3", "kind": "look", "fact": "Books float off the shelves." },
+      { "id": "flooded-library-look-4", "kind": "look", "fact": "The floating books are open like birds." },
+      { "id": "flooded-library-who-1", "kind": "who", "fact": "The dreamer's older sister is there." },
+      { "id": "flooded-library-look-5", "kind": "look", "fact": "The sister is in a little yellow rowing boat." },
+      { "id": "flooded-library-who-2", "kind": "who", "fact": "A whale swims past under the water." },
+      { "id": "flooded-library-size-3", "kind": "size", "fact": "The whale is so big it fills the whole aisle." },
+      {
+        "id": "flooded-library-where-2",
+        "kind": "where",
+        "fact": "There is a high round window at the top of the room."
+      },
+      { "id": "flooded-library-light-1", "kind": "light", "fact": "Outside the window it is morning." },
+      { "id": "flooded-library-look-6", "kind": "look", "fact": "Outside, the whole city is underwater." },
+      {
+        "id": "flooded-library-look-7",
+        "kind": "look",
+        "fact": "Only rooftops and the tops of trees show above the water."
+      }
+    ],
+    "glass-window": [
+      { "id": "glass-window-where-1", "kind": "where", "fact": "The dreamer is at their parents' house." },
+      {
+        "id": "glass-window-where-2",
+        "kind": "where",
+        "fact": "On the other side of the window is a world made of glass."
+      },
+      { "id": "glass-window-look-1", "kind": "look", "fact": "The view is translucent but blurry." },
+      { "id": "glass-window-look-2", "kind": "look", "fact": "The trees, grass and rocks there are made of glass." },
+      { "id": "glass-window-light-1", "kind": "light", "fact": "Everything there gives off light." },
+      { "id": "glass-window-light-2", "kind": "light", "fact": "There is an eerie haze." }
+    ],
+    "grandma-kitchen": [
+      { "id": "grandma-kitchen-look-1", "kind": "look", "fact": "The dream is in black and white." },
+      { "id": "grandma-kitchen-look-2", "kind": "look", "fact": "It looks like an old film with scratches on it." },
+      {
+        "id": "grandma-kitchen-where-1",
+        "kind": "where",
+        "fact": "The dream is in the dreamer's grandmother's kitchen from when they were little."
+      },
+      { "id": "grandma-kitchen-look-3", "kind": "look", "fact": "The kitchen has a checked floor." },
+      { "id": "grandma-kitchen-look-4", "kind": "look", "fact": "The kitchen has a big round clock." },
+      { "id": "grandma-kitchen-who-1", "kind": "who", "fact": "The dreamer's grandmother is there." },
+      {
+        "id": "grandma-kitchen-position-1",
+        "kind": "position",
+        "fact": "The grandmother is at the table cutting a cake."
+      },
+      { "id": "grandma-kitchen-who-2", "kind": "who", "fact": "The dreamer's uncle Ray is there." },
+      { "id": "grandma-kitchen-position-2", "kind": "position", "fact": "Uncle Ray leans in the doorway." },
+      { "id": "grandma-kitchen-look-5", "kind": "look", "fact": "Uncle Ray is smoking." },
+      { "id": "grandma-kitchen-look-6", "kind": "look", "fact": "There is a phone on the wall." },
+      { "id": "grandma-kitchen-look-7", "kind": "look", "fact": "The phone has a long curly cord." },
+      {
+        "id": "grandma-kitchen-size-1",
+        "kind": "size",
+        "fact": "The kitchen gets smaller around them, the walls moving in."
+      },
+      { "id": "grandma-kitchen-size-2", "kind": "size", "fact": "The dreamer becomes a child again." },
+      { "id": "grandma-kitchen-look-8", "kind": "look", "fact": "The dreamer wears a red cardigan." }
+    ],
+    "hotel-orchard": [
+      { "id": "hotel-orchard-where-1", "kind": "where", "fact": "The dream is in an old hotel." },
+      { "id": "hotel-orchard-size-1", "kind": "size", "fact": "The dreamer is in a tiny lift." },
+      { "id": "hotel-orchard-look-1", "kind": "look", "fact": "The lift has brass walls." },
+      { "id": "hotel-orchard-look-2", "kind": "look", "fact": "The lift has a folding metal gate." },
+      {
+        "id": "hotel-orchard-who-1",
+        "kind": "who",
+        "fact": "The dreamer's best friend from school, Tomas, is with them."
+      },
+      { "id": "hotel-orchard-look-3", "kind": "look", "fact": "The dreamer and Tomas are adults at first." },
+      { "id": "hotel-orchard-look-4", "kind": "look", "fact": "Tomas becomes about ten years old." },
+      { "id": "hotel-orchard-look-5", "kind": "look", "fact": "Tomas wears their old school uniform." },
+      {
+        "id": "hotel-orchard-where-2",
+        "kind": "where",
+        "fact": "The lift opens onto an orchard with rows of apple trees."
+      },
+      { "id": "hotel-orchard-light-1", "kind": "light", "fact": "The orchard is at dusk." },
+      { "id": "hotel-orchard-light-2", "kind": "light", "fact": "Every apple glows softly like a lamp." },
+      { "id": "hotel-orchard-who-2", "kind": "who", "fact": "There is a white horse." },
+      { "id": "hotel-orchard-position-1", "kind": "position", "fact": "The horse stands in the middle of the orchard." }
+    ],
+    "icehead": [
+      { "id": "icehead-who-1", "kind": "who", "fact": "The dreamer is talking to a young woman." },
+      { "id": "icehead-where-1", "kind": "where", "fact": "They are standing by the autoclave." },
+      {
+        "id": "icehead-position-1",
+        "kind": "position",
+        "fact": "The woman walks off to the far end of the room and comes back."
+      },
+      {
+        "id": "icehead-look-1",
+        "kind": "look",
+        "fact": "The woman has a block of glittering ice on her shoulders in place of her head."
+      },
+      {
+        "id": "icehead-position-2",
+        "kind": "position",
+        "fact": "The woman stands in front of the dreamer, not saying anything."
+      },
+      { "id": "icehead-look-2", "kind": "look", "fact": "The ice melts into the head of a horse." },
+      { "id": "icehead-look-3", "kind": "look", "fact": "The horse's head is clear ice, with eyes, ears and nostrils." }
+    ],
+    "jellyfish-city": [
+      { "id": "jellyfish-city-look-1", "kind": "look", "fact": "The dream looks like an anime." },
+      { "id": "jellyfish-city-look-2", "kind": "look", "fact": "It has sharp lines and really saturated colours." },
+      { "id": "jellyfish-city-light-1", "kind": "light", "fact": "The sky is an orange sunset." },
+      {
+        "id": "jellyfish-city-where-1",
+        "kind": "where",
+        "fact": "The dreamer is on the roof of their apartment block."
+      },
+      { "id": "jellyfish-city-where-2", "kind": "where", "fact": "The apartment block is in a big city." },
+      { "id": "jellyfish-city-who-1", "kind": "who", "fact": "There is a girl the dreamer doesn't know." },
+      { "id": "jellyfish-city-look-3", "kind": "look", "fact": "The girl has short blue hair." },
+      { "id": "jellyfish-city-look-4", "kind": "look", "fact": "The girl wears a yellow raincoat." },
+      { "id": "jellyfish-city-look-5", "kind": "look", "fact": "The girl has an old red bicycle." },
+      { "id": "jellyfish-city-who-2", "kind": "who", "fact": "A giant jellyfish floats over the city." },
+      { "id": "jellyfish-city-look-6", "kind": "look", "fact": "The jellyfish is pink." },
+      { "id": "jellyfish-city-look-7", "kind": "look", "fact": "The jellyfish is see-through." },
+      { "id": "jellyfish-city-size-1", "kind": "size", "fact": "The jellyfish is as big as a stadium." },
+      {
+        "id": "jellyfish-city-look-8",
+        "kind": "look",
+        "fact": "The jellyfish's long tentacles hang down between the buildings."
+      },
+      {
+        "id": "jellyfish-city-position-1",
+        "kind": "position",
+        "fact": "The dreamer sits on the back of the girl's bicycle."
+      },
+      { "id": "jellyfish-city-light-2", "kind": "light", "fact": "The city's lights are coming on below them." }
+    ],
+    "lighthouse": [
+      { "id": "lighthouse-where-1", "kind": "where", "fact": "The dreamer walks along a grey beach." },
+      { "id": "lighthouse-who-1", "kind": "who", "fact": "The dreamer's dog is with them." },
+      { "id": "lighthouse-look-1", "kind": "look", "fact": "The dog is a small brown terrier." },
+      {
+        "id": "lighthouse-position-1",
+        "kind": "position",
+        "fact": "The dreamer carries an old brass key in their hand."
+      },
+      { "id": "lighthouse-where-2", "kind": "where", "fact": "There is a white lighthouse at the end of the beach." },
+      {
+        "id": "lighthouse-where-3",
+        "kind": "where",
+        "fact": "Inside is a spiral staircase that goes round and round."
+      },
+      {
+        "id": "lighthouse-where-4",
+        "kind": "where",
+        "fact": "At the top is a round room with windows all the way round."
+      },
+      { "id": "lighthouse-who-2", "kind": "who", "fact": "The dreamer's father is there." },
+      { "id": "lighthouse-position-2", "kind": "position", "fact": "The father sits at a table." },
+      { "id": "lighthouse-look-2", "kind": "look", "fact": "The father folds paper boats out of newspaper." },
+      { "id": "lighthouse-look-3", "kind": "look", "fact": "The sea turns into a field of tall yellow grass." },
+      { "id": "lighthouse-look-4", "kind": "look", "fact": "A red tractor drives slowly through the grass." },
+      { "id": "lighthouse-who-3", "kind": "who", "fact": "A driver the dreamer doesn't know drives the tractor." },
+      {
+        "id": "lighthouse-position-3",
+        "kind": "position",
+        "fact": "The dreamer is in the tractor's cab, next to the driver."
+      }
+    ],
+    "meads-house": [
+      { "id": "meads-house-where-1", "kind": "where", "fact": "The dream is at the Meads's house." },
+      { "id": "meads-house-size-1", "kind": "size", "fact": "The house is bigger inside than out." },
+      { "id": "meads-house-where-2", "kind": "where", "fact": "Just inside there is a European village." },
+      { "id": "meads-house-look-1", "kind": "look", "fact": "The village has a cobblestone street." },
+      { "id": "meads-house-who-1", "kind": "who", "fact": "There is a Pied-Piper sort of man." },
+      { "id": "meads-house-look-2", "kind": "look", "fact": "The Pied-Piper man has curly hair." },
+      {
+        "id": "meads-house-where-3",
+        "kind": "where",
+        "fact": "There are back stairs, with a second set going straight down the other side."
+      },
+      { "id": "meads-house-where-4", "kind": "where", "fact": "There is a short empty hallway that turns a corner." },
+      { "id": "meads-house-size-2", "kind": "size", "fact": "The room at the end of the hallway is tiny." },
+      { "id": "meads-house-who-2", "kind": "who", "fact": "A young woman is in the tiny room, cooking." },
+      { "id": "meads-house-look-3", "kind": "look", "fact": "The young woman has blonde hair." },
+      { "id": "meads-house-look-4", "kind": "look", "fact": "Her hair is shoulder-length, in a pageboy." },
+      { "id": "meads-house-size-3", "kind": "size", "fact": "The stove almost fills the room." },
+      { "id": "meads-house-who-3", "kind": "who", "fact": "The dreamer's aunt picks them up." },
+      { "id": "meads-house-look-5", "kind": "look", "fact": "The aunt drives a little round convertible." },
+      { "id": "meads-house-where-5", "kind": "where", "fact": "They cross a little bridge over a creek." },
+      { "id": "meads-house-who-4", "kind": "who", "fact": "The dreamer sits with a couple of people." },
+      { "id": "meads-house-look-6", "kind": "look", "fact": "They play with a string of blue balloons." }
+    ],
+    "moon-market": [
+      {
+        "id": "moon-market-look-1",
+        "kind": "look",
+        "fact": "The dream is super bright and colourful, like neon signs at night."
+      },
+      { "id": "moon-market-look-2", "kind": "look", "fact": "Pinks, blues and greens glow against the grey." },
+      { "id": "moon-market-where-1", "kind": "where", "fact": "The dream is at a night market on the moon." },
+      { "id": "moon-market-look-3", "kind": "look", "fact": "The stalls are in rows." },
+      { "id": "moon-market-look-4", "kind": "look", "fact": "The ground is grey and dusty." },
+      { "id": "moon-market-look-5", "kind": "look", "fact": "The Earth hangs big and blue in the sky." },
+      { "id": "moon-market-light-1", "kind": "light", "fact": "The sky is black." },
+      {
+        "id": "moon-market-who-1",
+        "kind": "who",
+        "fact": "Lots of people are there in ordinary clothes, no spacesuits."
+      },
+      { "id": "moon-market-who-2", "kind": "who", "fact": "A robot sells noodles at one stall." },
+      { "id": "moon-market-look-6", "kind": "look", "fact": "The robot is tall and thin." },
+      { "id": "moon-market-look-7", "kind": "look", "fact": "The robot is silver." },
+      { "id": "moon-market-look-8", "kind": "look", "fact": "The robot has a round head." },
+      { "id": "moon-market-light-2", "kind": "light", "fact": "The noodles are in glowing bowls." },
+      { "id": "moon-market-who-3", "kind": "who", "fact": "The dreamer's best friend Priya is with them." },
+      { "id": "moon-market-look-9", "kind": "look", "fact": "Paper lanterns float up from the stalls into the sky." },
+      {
+        "id": "moon-market-position-1",
+        "kind": "position",
+        "fact": "The dreamer and Priya jump until they are above the stalls."
+      }
+    ],
+    "night-bus": [
+      { "id": "night-bus-where-1", "kind": "where", "fact": "The dreamer is on a night bus." },
+      { "id": "night-bus-light-1", "kind": "light", "fact": "It is night." },
+      { "id": "night-bus-look-1", "kind": "look", "fact": "It is raining." },
+      { "id": "night-bus-who-1", "kind": "who", "fact": "The dreamer's younger brother is with them." },
+      { "id": "night-bus-who-2", "kind": "who", "fact": "An old woman sits knitting at the back of the bus." },
+      { "id": "night-bus-look-2", "kind": "look", "fact": "The brother holds a paper lantern with a candle inside." },
+      { "id": "night-bus-look-3", "kind": "look", "fact": "The street lights outside melt into long orange ribbons." },
+      { "id": "night-bus-where-2", "kind": "where", "fact": "Then the dreamer is in their grandmother's kitchen." },
+      { "id": "night-bus-light-2", "kind": "light", "fact": "In the kitchen it is morning." },
+      { "id": "night-bus-position-1", "kind": "position", "fact": "The grandmother is at the stove making tea." },
+      { "id": "night-bus-look-4", "kind": "look", "fact": "The grandmother's hair is completely white." },
+      { "id": "night-bus-light-3", "kind": "light", "fact": "The lantern is now glowing blue." },
+      { "id": "night-bus-who-3", "kind": "who", "fact": "About eight or ten neighbours are there, watching quietly." },
+      { "id": "night-bus-position-2", "kind": "position", "fact": "The neighbours are squeezed into the doorway." },
+      { "id": "night-bus-look-5", "kind": "look", "fact": "The kitchen table turns into a small wooden boat." },
+      { "id": "night-bus-look-6", "kind": "look", "fact": "The street where the bus was is a river now." },
+      { "id": "night-bus-position-3", "kind": "position", "fact": "The brother waves from the bank." }
+    ],
+    "night-market": [
+      { "id": "night-market-where-1", "kind": "where", "fact": "The dream is at a night market." },
+      { "id": "night-market-who-1", "kind": "who", "fact": "The dreamer's older sister is with them." },
+      { "id": "night-market-who-2", "kind": "who", "fact": "The market is crowded with hundreds of people." },
+      {
+        "id": "night-market-light-1",
+        "kind": "light",
+        "fact": "Strings of little yellow lights hang over the stalls."
+      },
+      { "id": "night-market-who-3", "kind": "who", "fact": "An old man sells fish at a stall." },
+      { "id": "night-market-look-1", "kind": "look", "fact": "The fish are laid out on ice." },
+      { "id": "night-market-look-2", "kind": "look", "fact": "One fish is silver." },
+      { "id": "night-market-size-1", "kind": "size", "fact": "The fish is about as long as the dreamer's arm." },
+      { "id": "night-market-look-3", "kind": "look", "fact": "The old man wraps the fish in newspaper." },
+      {
+        "id": "night-market-position-1",
+        "kind": "position",
+        "fact": "The dreamer holds the fish against their chest."
+      },
+      {
+        "id": "night-market-position-2",
+        "kind": "position",
+        "fact": "The sister and the dreamer ride one bicycle together."
+      },
+      {
+        "id": "night-market-position-3",
+        "kind": "position",
+        "fact": "The sister pedals and the dreamer sits on the back."
+      },
+      { "id": "night-market-where-2", "kind": "where", "fact": "They ride over a narrow iron bridge." },
+      { "id": "night-market-where-3", "kind": "where", "fact": "The bridge is above a black river." },
+      { "id": "night-market-look-4", "kind": "look", "fact": "It rains big warm drops." },
+      { "id": "night-market-light-2", "kind": "light", "fact": "The lights of the market are behind them." }
+    ],
+    "office-snow": [
+      { "id": "office-snow-look-1", "kind": "look", "fact": "The dream looks like a watercolour painting." },
+      { "id": "office-snow-look-2", "kind": "look", "fact": "The colours run into each other." },
+      {
+        "id": "office-snow-where-1",
+        "kind": "where",
+        "fact": "The dreamer is at their desk in the office where they work."
+      },
+      { "id": "office-snow-where-2", "kind": "where", "fact": "The office is open-plan." },
+      { "id": "office-snow-light-1", "kind": "light", "fact": "It is a normal grey afternoon." },
+      { "id": "office-snow-size-1", "kind": "size", "fact": "The snowflakes are big and slow." },
+      { "id": "office-snow-position-1", "kind": "position", "fact": "The snow comes down from the ceiling lights." },
+      { "id": "office-snow-who-1", "kind": "who", "fact": "The other people in the office keep typing." },
+      { "id": "office-snow-look-3", "kind": "look", "fact": "The snow covers the desks and keyboards." },
+      { "id": "office-snow-look-4", "kind": "look", "fact": "The whole office turns white." },
+      {
+        "id": "office-snow-size-2",
+        "kind": "size",
+        "fact": "Only the tops of the computer screens show above the snow."
+      },
+      { "id": "office-snow-who-2", "kind": "who", "fact": "The dreamer's manager, Dele, comes over." },
+      { "id": "office-snow-size-3", "kind": "size", "fact": "Dele is tall." },
+      { "id": "office-snow-look-5", "kind": "look", "fact": "Dele wears a blue suit." },
+      { "id": "office-snow-look-6", "kind": "look", "fact": "Dele turns into a snowman." },
+      { "id": "office-snow-position-2", "kind": "position", "fact": "The snowman still holds Dele's coffee mug." },
+      { "id": "office-snow-light-2", "kind": "light", "fact": "The snowball glows a little in the dreamer's hand." }
+    ],
+    "paper-city": [
+      {
+        "id": "paper-city-look-1",
+        "kind": "look",
+        "fact": "Everything looks flat, like it was cut out of coloured paper."
+      },
+      { "id": "paper-city-look-2", "kind": "look", "fact": "The colours are bright reds, yellows and blues." },
+      { "id": "paper-city-light-1", "kind": "light", "fact": "There is no shading at all." },
+      { "id": "paper-city-where-1", "kind": "where", "fact": "The dreamer walks through a city made of paper." },
+      { "id": "paper-city-look-3", "kind": "look", "fact": "Paper houses lean over a narrow street." },
+      { "id": "paper-city-who-1", "kind": "who", "fact": "There are people everywhere, flat like cardboard cutouts." },
+      { "id": "paper-city-position-1", "kind": "position", "fact": "The people all go the same way." },
+      { "id": "paper-city-who-2", "kind": "who", "fact": "The dreamer's mum is at a corner." },
+      { "id": "paper-city-look-4", "kind": "look", "fact": "The mum gives the dreamer a little red paper bird." },
+      { "id": "paper-city-look-5", "kind": "look", "fact": "The rain is hundreds of tiny paper birds of all colours." },
+      {
+        "id": "paper-city-look-6",
+        "kind": "look",
+        "fact": "The houses fold down flat one after another, like a pop-up book closing."
+      },
+      {
+        "id": "paper-city-where-2",
+        "kind": "where",
+        "fact": "The dreamer and their mum end up standing on a big sheet of white paper."
+      }
+    ],
+    "school-bird": [
+      { "id": "school-bird-where-1", "kind": "where", "fact": "The dreamer is back at their old school." },
+      { "id": "school-bird-where-2", "kind": "where", "fact": "The dreamer walks down a very long green corridor." },
+      { "id": "school-bird-look-1", "kind": "look", "fact": "There are lockers on both sides of the corridor." },
+      { "id": "school-bird-look-2", "kind": "look", "fact": "There is a wooden door at the end of the corridor." },
+      { "id": "school-bird-look-3", "kind": "look", "fact": "The door has a small round window." },
+      { "id": "school-bird-where-3", "kind": "where", "fact": "The classroom is full of students at rows of desks." },
+      { "id": "school-bird-look-4", "kind": "look", "fact": "None of the students have faces, just smooth skin." },
+      { "id": "school-bird-who-1", "kind": "who", "fact": "Their old maths teacher, Mrs Okafor, is there." },
+      { "id": "school-bird-look-5", "kind": "look", "fact": "Mrs Okafor wears a red cardigan." },
+      {
+        "id": "school-bird-position-1",
+        "kind": "position",
+        "fact": "Mrs Okafor is writing numbers on the blackboard."
+      },
+      { "id": "school-bird-look-6", "kind": "look", "fact": "Mrs Okafor becomes a tall grey heron." },
+      { "id": "school-bird-look-7", "kind": "look", "fact": "The heron still wears the red cardigan." },
+      { "id": "school-bird-where-4", "kind": "where", "fact": "The dreamer flies next to her over the town." },
+      { "id": "school-bird-size-1", "kind": "size", "fact": "The school roof is far below them." },
+      { "id": "school-bird-light-1", "kind": "light", "fact": "The river is shining below." },
+      { "id": "school-bird-size-2", "kind": "size", "fact": "The dreamer feels very small, like a sparrow." }
+    ],
+    "sea-school": [
+      { "id": "sea-school-look-1", "kind": "look", "fact": "Everything is murky blue and green." },
+      { "id": "sea-school-look-2", "kind": "look", "fact": "It looks like a fish tank that needs cleaning." },
+      { "id": "sea-school-light-1", "kind": "light", "fact": "Light comes down in wobbly beams from above." },
+      { "id": "sea-school-where-1", "kind": "where", "fact": "The dreamer is back at their primary school." },
+      { "id": "sea-school-where-2", "kind": "where", "fact": "The whole school is underwater." },
+      { "id": "sea-school-position-1", "kind": "position", "fact": "The dreamer swims down the corridor." },
+      { "id": "sea-school-look-3", "kind": "look", "fact": "The desks in the old classroom are covered in seaweed." },
+      {
+        "id": "sea-school-who-1",
+        "kind": "who",
+        "fact": "The other pupils are little silver fish sitting at the desks."
+      },
+      { "id": "sea-school-who-2", "kind": "who", "fact": "Their teacher, Mr Hale, is at the front." },
+      { "id": "sea-school-look-4", "kind": "look", "fact": "Mr Hale wears a brown jacket." },
+      { "id": "sea-school-look-5", "kind": "look", "fact": "Mr Hale turns into a huge orange octopus." },
+      { "id": "sea-school-position-2", "kind": "position", "fact": "The octopus still holds the chalk in one arm." },
+      { "id": "sea-school-look-6", "kind": "look", "fact": "The school bell comes out as a big stream of bubbles." },
+      { "id": "sea-school-position-3", "kind": "position", "fact": "All the fish swim out of the window at once." }
+    ],
+    "snow-train": [
+      { "id": "snow-train-where-1", "kind": "where", "fact": "The dreamer is on an old train going through snow." },
+      { "id": "snow-train-light-1", "kind": "light", "fact": "It is night." },
+      { "id": "snow-train-who-1", "kind": "who", "fact": "The dreamer's grandfather, who died years ago, is there." },
+      { "id": "snow-train-position-1", "kind": "position", "fact": "The dreamer sits across from their grandfather." },
+      { "id": "snow-train-look-1", "kind": "look", "fact": "The grandfather has a brown leather suitcase." },
+      { "id": "snow-train-position-2", "kind": "position", "fact": "The suitcase is on the grandfather's knees." },
+      { "id": "snow-train-look-2", "kind": "look", "fact": "Outside the window everything is white and blue." },
+      { "id": "snow-train-look-3", "kind": "look", "fact": "The suitcase is full of letters." },
+      { "id": "snow-train-look-4", "kind": "look", "fact": "The letters are all addressed to the dreamer." },
+      { "id": "snow-train-where-2", "kind": "where", "fact": "The train stops in the middle of a snowy field." },
+      { "id": "snow-train-size-1", "kind": "size", "fact": "The snow is deep." },
+      { "id": "snow-train-look-5", "kind": "look", "fact": "There is a red door standing on its own." },
+      { "id": "snow-train-look-6", "kind": "look", "fact": "There is no house around the door." },
+      { "id": "snow-train-position-3", "kind": "position", "fact": "The grandfather gives the dreamer the suitcase." },
+      { "id": "snow-train-light-2", "kind": "light", "fact": "On the other side of the door is warm yellow light." }
+    ],
+    "streetcar": [
+      { "id": "streetcar-where-1", "kind": "where", "fact": "The dreamer is riding on a streetcar." },
+      { "id": "streetcar-who-1", "kind": "who", "fact": "The conductor operates the car." },
+      { "id": "streetcar-look-1", "kind": "look", "fact": "The conductor turns a lever when they round a bend." },
+      { "id": "streetcar-look-2", "kind": "look", "fact": "The streetcar turns into a train." },
+      { "id": "streetcar-position-1", "kind": "position", "fact": "The dreamer is on top of the train." },
+      { "id": "streetcar-size-1", "kind": "size", "fact": "It is very high up." },
+      { "id": "streetcar-look-3", "kind": "look", "fact": "The train is travelling very fast." },
+      { "id": "streetcar-who-2", "kind": "who", "fact": "Another family is sitting on top of the train too." },
+      { "id": "streetcar-who-3", "kind": "who", "fact": "A small baby is there, thrilled with the ride." },
+      { "id": "streetcar-where-2", "kind": "where", "fact": "The train is on a country road." }
+    ]
+  }
+}
