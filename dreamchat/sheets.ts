@@ -214,7 +214,30 @@ const NAMED: [string, number, number, number][] = [
   ['green', 50, 140, 70],
   ['dark green', 25, 70, 40],
   ['olive', 120, 120, 50],
+  // Neon and bright colours, and the plain greys: neon green was said as "gold", and a black and
+  // white film's greys as "sage" and "slate grey" (moon market, grandmother's kitchen, 26 Sep).
+  ['bright green', 110, 230, 40],
+  ['neon green', 57, 255, 20],
+  ['mint', 160, 230, 190],
+  ['hot pink', 255, 60, 170],
+  ['electric blue', 40, 120, 255],
+  ['dark grey', 80, 80, 80],
+  ['light grey', 170, 170, 170],
+  ['pale grey', 210, 210, 210],
 ];
+
+/** The names for a colour with almost no hue: a grey is never named for a tint it barely has. */
+const NEUTRAL = new Set([
+  'black',
+  'charcoal',
+  'dark grey',
+  'grey',
+  'light grey',
+  'pale grey',
+  'silver',
+  'off-white',
+  'white',
+]);
 
 /** A colour's nearest plain name: a hex code in a prompt gets drawn as a label. */
 export function colourName(hex: string): string {
@@ -222,7 +245,9 @@ export function colourName(hex: string): string {
   const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
   let best = NAMED[0];
   let bestD = Infinity;
+  const neutral = Math.max(r, g, b) - Math.min(r, g, b) <= 16;
   for (const c of NAMED) {
+    if (neutral && !NEUTRAL.has(c[0])) continue;
     const d = (c[1] - r) ** 2 + (c[2] - g) ** 2 + (c[3] - b) ** 2;
     if (d < bestD) [best, bestD] = [c, d];
   }

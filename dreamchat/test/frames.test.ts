@@ -4,6 +4,7 @@ import { aNoun, framePrompt, withoutGone, withoutPose, writingIn } from '../fram
 import { oneColour, VAGUE } from '../producer';
 import { asInstruction } from '../session';
 import {
+  colourName,
   coloursIn,
   DREAM_QUALITY,
   openedLater,
@@ -63,6 +64,15 @@ describe('an animal in a moment', () => {
     );
     expect(prompt).not.toContain('face, hair, build and clothes');
     expect(references.find((r) => r.media_id === 'media-dog')?.role).toBe('identity');
+  });
+});
+
+describe('a colour named', () => {
+  test('is a grey when it has almost no hue, and neon when it is bright', () => {
+    // A black and white film's greys were "sage" and "slate grey"; neon green was "gold" (26 Sep).
+    expect(['#999999', '#666666', '#DDDDDD'].map(colourName)).toEqual(['light grey', 'dark grey', 'pale grey']);
+    expect(colourName('#7CFC00')).toBe('bright green');
+    expect(colourName('#2F3B4C')).toBe('dark slate');
   });
 });
 

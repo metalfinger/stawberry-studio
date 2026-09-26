@@ -347,7 +347,15 @@ export async function linkContinuity(
         inForce.delete(`${c.who}/${c.what}`);
         continue;
       }
-      inForce.set(`${c.who}/${c.what}`, { who: c.who, what: c.what, now: c.now, since: c.at });
+      // Whole or not, as the change was given: dropped, Mr Hale's turning into an octopus stopped being
+      // whole a moment later, and he was drawn from his own sketch beside the octopus (sea school, 26 Sep).
+      inForce.set(`${c.who}/${c.what}`, {
+        who: c.who,
+        what: c.what,
+        now: c.now,
+        since: c.at,
+        ...(c.whole !== undefined ? { whole: c.whole } : {}),
+      });
     }
     m.states = [...inForce.values()];
   }
