@@ -134,6 +134,31 @@ export function rebuild(s: Pick<Session, 'draft' | 'style' | 'build' | 'prep'> &
   return { title: b.title, b, plan, sheets, pictures: out };
 }
 
+/** An in-between picture named by what it shows, which survives planning again (its number may not). */
+export const ghostName = (g: { of: string; kind: string; state?: { what: string }; looksAt?: string }) =>
+  `ghost:${g.of}:${g.kind === 'view' ? 'view' : (g.state?.what ?? '')}`;
+
+/**
+ * An image named by what it is, never by a store's id: `sketch:p1`, `picture:m3`, `previs:m5`, or an
+ * in-between picture by its subject and change (`ghost:t1:lid`). The same dream names its images
+ * the same on any machine, whatever was drawn.
+ */
+export function imageName(r: Rebuilt, media: string): string {
+  const sheet = r.sheets.find((s) => s.mediaId === media);
+  if (sheet) return `sketch:${sheet.id}`;
+  if (media.startsWith(standIn.previs(''))) return `previs:${media.slice(standIn.previs('').length)}`;
+  if (media.startsWith(standIn.picture(''))) {
+    const id = media.slice(standIn.picture('').length);
+    const g = r.plan.ghosts.find((x) => x.id === id);
+    return g ? ghostName(g) : `picture:${id}`;
+  }
+  return `other:${media}`;
+}
+
+/** A picture's images, in order, as "role name". */
+export const imagesOf = (r: Rebuilt, p: RebuiltPicture) =>
+  p.references.map((x) => `${x.role} ${imageName(r, x.media_id)}`);
+
 if (import.meta.main) {
   // Keys for the gate's reading, loaded only when run as a script.
   await import('./boot');

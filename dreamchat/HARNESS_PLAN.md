@@ -49,12 +49,12 @@ One **cut sheet** per cut is the spine everything is assembled from:
 
 | # | Step | Status | Eval that proves it |
 | --- | --- | --- | --- |
-| S0 | Eval foundation: a prompt-case set from the person's 122 verdicts and notes, a runner that rebuilds prompts from saved dreams and scores them, the free simulation corpus as regression | built | Every noted fault has a case; the runner reproduces today's failures. Baseline: 2 of 38 failing cases met, 28 of 28 passing cases met (below) |
-| S1 | Story record carries state (water, suitcase, who holds what, presence) into continuity, in-between pictures and prompts | building | The state cases in S0 pass; no regressions on the corpus |
+| S0 | Eval foundation: a prompt-case set from the person's 122 verdicts and notes, a runner that rebuilds prompts from saved dreams and scores them, the free simulation corpus as regression | built | Every noted fault has a case; the runner reproduces today's failures. Baseline: 6 of 33 counted fault cases met (all six guards against editing the picture before), 36 of 36 passing cases met (below) |
+| S1 | Story record carries state (water, suitcase, who holds what, presence) into continuity, in-between pictures and prompts | building | The S1 cases pass (`--step S1`: library-2 m5/m9 water, snow-train m4/m5, snow-train-2 m1, lighthouse-fresh m13, orchard m7; library-1 m3/m5, library-3 m7, snow-train-2 m5/m7 need a model step); no regressions on the corpus |
 | S2 | Stop stand-in checks deciding: the pre-draw prompt check and storyboard check only log | not started | No moment held or reworded; corpus unchanged otherwise |
 | S3 | The cut sheet: tree (vertical) + record (horizontal) + relations + tags, one per cut | not started | Every input the prompt needs comes from the sheet; no fact computed in two places |
-| S4 | Camera rules and shot roles: the scene's line, a reverse angle turns the room (what is now left, right, behind), point-of-view shots show at most hands, vehicle screen direction, same setup means the same camera | not started | The camera cases in S0 pass (snow train m2/m3, lighthouse m2, orchard m2/m7) |
-| S5 | References and variants: one image per subject; in-between pictures only when an edit carries several changes; variants kept and reusable; the grey mock-up as a reference chosen by tag | not started | Reference cases pass; no moment gets two images of one subject |
+| S4 | Camera rules and shot roles: the scene's line, a reverse angle turns the room (what is now left, right, behind), point-of-view shots show at most hands, vehicle screen direction, same setup means the same camera | not started | The S4 cases pass (`--step S4`: snow-train m2 reverse and m3 seat, snow-train-2 m2 same setup, lighthouse-fresh m12 heading, lighthouse-first m3, night-market m2, library-1 m4/m5, orchard m4 hands and m7 legs; lighthouse-fresh m10 needs a new floor plan) |
+| S5 | References and variants: one image per subject; in-between pictures only when an edit carries several changes; variants kept and reusable; the grey mock-up as a reference chosen by tag | not started | The S5 cases stay met or pass (`--step S5`: never editing a picture from another side; library-1 m5 wall); its hypotheses (mock-up only, one image per subject) are for a paid check, not proven here |
 | S6 | `assembleCut`: prompt and references from the sheet, each fact once, action as visible facts; retire the regex clean-ups one by one | not started | All S0 cases pass; word-level diff reviewed on every saved dream |
 | S7 | Jev layer 2: checks routed by tags, a question library from the film rules, a labelled set per question; a check may hold a picture only if it predicts pictures | not started | Each question meets its bar on its labelled set |
 | S8 | Listening: every reply checked against its move; major picture gaps asked openly, minor ones imagined and marked; the retelling ends with the moments | not started | Listening cases on the simulated dreams pass |
@@ -77,29 +77,40 @@ One **cut sheet** per cut is the spine everything is assembled from:
 - `docs/rules.md`: 46 general rules from two days of dreams (film grammar, continuity, the image model's habits,
   references and ghosts, prompt writing, listening, measuring), each with evidence, status and how the system holds
   it, ranked by what the owner's verdicts weigh; and the contradictions to resolve.
+- S0, the prompt cases: `evals/prompt-cases.json`, 85 cases. 49 from faults the owner noted: 33 counted (8 of them
+  need a model to make something again, a floor plan or a reading of what lasts, since the fact is written nowhere
+  in the saved dream), 9 hypotheses (seen in one drawing while another with the same first image was right), 5 the
+  image model's alone, 2 set aside (the note disagrees with the dream as told); 36 moments the owner called right,
+  one guard each. Each case keeps the owner's verdict on every drawing of its moment and the drawings its fault was
+  seen in; a fault seen only in the edit of the picture before is the first image's. Every counted fault has a
+  check on the images or floor plan, or a question Jev must answer no about the faulty fact, so rewording the fault
+  and adding the right fact beside it does not meet it.
+  `bun --env-file=$HOME/.config/strawberry/dreamchat.env run evals/prompt-cases.ts --label <name> [--against
+  <name>] [--step S4] [--only <case> …] [--show] [--live]` rebuilds each moment exactly as `plan.ts` does
+  (`rebuild`, under the environment's switches) from the frozen dreams in `evals/sources/<session id>.json`,
+  runs its checks, asks Jev (jev-1.13.0 by name; answers cached by the model, the question as sent and the prompt)
+  and writes `runs/prompt-cases/<label>.json` with the hash of the case file and of every dream it read;
+  `--against` warns when two runs read different ones and lists every check and answer that moved.
+- The frozen dreams: the ten real dreams and the five benchmark dreams, frozen by `evals/freeze-session.ts` with
+  every field `rebuild` reads (`bun run evals/corpus.ts --verify`: each rebuilds as its saved conversation does,
+  every picture). For the 62 drawn moments they also keep what was really sent: 15 of 62 prompts rebuild word for
+  word and 620 of 699 paragraphs (the rest is code changed since); a rebuild takes every sketch and earlier
+  picture as drawn, and 12 moments were drawn without one it now attaches (lighthouse-first m3/m6, night-market
+  m1, heron m4, lighthouse-fresh m10, library-2 m5-m9 (the boat was never sketched), library-3 m7, snow-train-2 m7).
+- S0, the corpus: `bun run evals/corpus.ts --label <name> [--against <name>] [--set benchmark] [--live]` rebuilds
+  the frozen dreams (15 dreams, 115 moments, 25 in-between pictures), or with `--live` every saved conversation and
+  the fake replays' (59 dreams, 411 moments, 66 in-between pictures on 26 Sep), and writes `runs/corpus/<label>.json`;
+  `--against` writes what changed, picture by picture, each changed paragraph as the words that changed in it.
+- Baseline (26 Sep, today's defaults), counted fault cases met per class: state_carried 0/9, presence 0/2, holding
+  0/2, camera_turn_layout 0/6, pov 0/2, action 0/2, reference_conflict 6/9, proportion_or_paste 0/1; all 6/33. The
+  six met are guards against editing the picture before across a move of the camera, which today's routing never
+  does. Passing cases 36/36. Jev reads one concrete fact per question reliably and not joined, implied, absent or
+  whole-prompt facts: every question is one fact, and answers within 0.1 of the bar are marked.
 
 ## Open questions for the owner
 
 - In `evals/paired-verdicts.json`, the sketches-only version of lighthouse-first m7 carries the same note as orchard
   m7 (about Tomas), on a picture rated right: probably typed on the wrong picture. Left as is until confirmed.
-- S0, the prompt cases: `evals/prompt-cases.json` (75 cases: 47 from faults the owner noted, of which 7 are the
-  image model's alone and 2 are set aside as disagreeing with the dream as told, and 28 moments the owner called
-  right, as regression guards). `bun --env-file=$HOME/.config/strawberry/dreamchat.env run evals/prompt-cases.ts
-  --label <name> [--against <name>] [--only <case> …] [--show]` rebuilds each moment exactly as `plan.ts` does
-  (`rebuild`, under the environment's switches), runs its code checks and asks Jev its yes-or-no questions about
-  the prompt (answers cached by hash, `runs/prompt-cases/jev-cache.json`), and writes
-  `runs/prompt-cases/<label>.json`. The rebuild matches the prompts sent on 25-26 Sep in 620 of 699 paragraphs;
-  the rest is code changed since. Cases by step: S1 the state_carried, holding and presence cases; S4
-  camera_turn_layout and pov; S5 reference_conflict and the one-image-per-subject checks; S6 all.
-- S0, the corpus: `bun run evals/corpus.ts --label <name> [--against <name>] [--set benchmark]` rebuilds every
-  saved dream with a settled breakdown and look (54 dreams, 379 moments, 58 in-between pictures on 26 Sep) and
-  writes `runs/corpus/<label>.json`; `--against` writes what changed, picture by picture. No model calls.
-- Baseline (26 Sep, today's defaults), failing cases met per class: state_carried 0/11, presence 0/2, holding 0/2,
-  camera_turn_layout 1/7, pov 0/5, action 0/4, reference_conflict 1/4, proportion_or_paste 0/3; all 2/38. The two
-  met are faults of the edit version only, which today's routing does not draw (lighthouse-fresh m2, library-1
-  m4). Passing cases 28/28; the 9 kept out all met. Jev is reliable on one concrete fact per question and not on
-  joined, implied or consistency questions: every question is one fact, and answers within 0.1 of the bar are
-  marked.
 
 ## Log
 
@@ -114,3 +125,10 @@ One **cut sheet** per cut is the spine everything is assembled from:
   draws). Baseline: 2/38 failing cases met, 28/28 passing. The runners see only what `rebuild` sees
   (planContinuity, framePrompt, plan.ts); a step that changes the preparation must change it there. Floor plans
   and shot briefs are the ones saved with each dream: a fix to how they are made shows once they are made again.
+- 26 Sep: S0 hardened. Every counted fault now has a check on the images or floor plan
+  or a question expecting no on the faulty fact (a cosmetic rewording, or rewording the fault and adding the fact,
+  no longer meets snow-train m2/m3, snow-train-2 m1, night-market m2, orchard m7 legs or the open door); the
+  reverse angle and the tractor's heading are checked by their named side; the dreams are frozen in the repository
+  and each run keeps their hashes; faults seen in one drawing are counted by one rule, and nine are hypotheses;
+  eight that no change to the code alone can meet are marked as needing a model step. Baseline: 6/33 counted,
+  36/36 passing.
