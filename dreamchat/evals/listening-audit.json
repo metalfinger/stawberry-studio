@@ -1,0 +1,2355 @@
+{
+  "about": "Replies read by hand for the listening test (evals/listening.ts --audit): whether each did its move, asked an either/or question, and brought in a detail the person had not given (asked or stated, the whole reply). From the saved simulated conversations of 23-26 Sep, picked by seed from the S8 baseline (26 Sep). Each is kept whole, so its questions can be asked on any machine.",
+  "items": [
+    {
+      "id": "streetcar-4cf3-t1",
+      "session": "dream-0924-070520-4cf3",
+      "dream": "streetcar",
+      "turn": 1,
+      "move": {
+        "kind": "probe_goal",
+        "goalId": "telling"
+      },
+      "rule": "7: next gap in the story",
+      "phase": "listen",
+      "brief": "Move: probe_goal → what happened. What we'd like to know: the events of the dream in order, from the first thing they remember to the last, enough to tell it back. Ask it plainly, as curiosity, hung off something they said. If they don't remember, that's fine.\n</brief>",
+      "transcript": [
+        {
+          "role": "assistant",
+          "content": "hey, i'm berry.\n\ntell me a dream, however it comes back to you."
+        },
+        {
+          "role": "user",
+          "content": "i keep thinking about the streetcar part"
+        },
+        {
+          "role": "assistant",
+          "content": "the streetcar part. that's the bit that sticks.\n\nwhat happened on the streetcar?"
+        }
+      ],
+      "labels": {
+        "move": true,
+        "eitherOr": false,
+        "leading": false
+      }
+    },
+    {
+      "id": "icehead-96bd-t15",
+      "session": "dream-0923-222108-96bd",
+      "dream": "icehead",
+      "turn": 15,
+      "move": {
+        "kind": "probe_goal",
+        "goalId": "things"
+      },
+      "rule": "7: next gap in the story",
+      "phase": "listen",
+      "brief": "Move: probe_goal → things that mattered. What we'd like to know: any object that mattered in the dream, or that nothing in particular did. Ask it plainly, as curiosity, hung off something they said. If they don't remember, that's fine.\n</brief>",
+      "transcript": [
+        {
+          "role": "assistant",
+          "content": "hey, i'm berry. tell me your dream, however it comes back to you."
+        },
+        {
+          "role": "user",
+          "content": "i was standing by the autoclave, talking to this young woman, and then she just walked off to the far end of the room."
+        },
+        {
+          "role": "assistant",
+          "content": "that's a strange way to end a conversation, just walking off like that. what happened next?"
+        },
+        {
+          "role": "user",
+          "content": "when she came back, she had this glittering block of ice where her head should've been. it was all irregular."
+        },
+        {
+          "role": "assistant",
+          "content": "that's such a specific image. was it beautiful, or was it more unsettling to see?"
+        },
+        {
+          "role": "user",
+          "content": "not frightening actually. she just stood there naturally, not saying anything. then it started to melt."
+        },
+        {
+          "role": "assistant",
+          "content": "melt like a normal ice cube, or did it do something strange when it melted?"
+        },
+        {
+          "role": "user",
+          "content": "little channels formed and the angles rounded away. it was more like carving than falling apart."
+        },
+        {
+          "role": "assistant",
+          "content": "still by the autoclave?"
+        },
+        {
+          "role": "user",
+          "content": "i think we were, yeah. it all felt very calm."
+        },
+        {
+          "role": "assistant",
+          "content": "calm is surprising for something like that. what made it calm, do you think?"
+        },
+        {
+          "role": "user",
+          "content": "she wasn't acting strange, and the melting went on pretty fast, but it didn't feel like she was in danger or anything."
+        },
+        {
+          "role": "assistant",
+          "content": "did you know her?"
+        },
+        {
+          "role": "user",
+          "content": "no, i don't remember knowing her. she was just a young woman."
+        },
+        {
+          "role": "assistant",
+          "content": "so you're by this machine, with someone you don't know, and her head's turning to water. what were you doing while it happened?"
+        },
+        {
+          "role": "user",
+          "content": "just watching it change. the ice kept sculpting itself, more than just water running off."
+        },
+        {
+          "role": "assistant",
+          "content": "it kept changing even as it went, not just shrinking. that's really something."
+        },
+        {
+          "role": "user",
+          "content": "yeah, the sculpturing went on rapidly until it was a beautifully molded head of a horse."
+        },
+        {
+          "role": "assistant",
+          "content": "a horse, out of all things. did it seem like it was supposed to turn into that, or did it come as a surprise?"
+        },
+        {
+          "role": "user",
+          "content": "it kind of felt intentional, like the melting was just the way it got there. but it was still strange to see."
+        },
+        {
+          "role": "assistant",
+          "content": "it feels almost like the melting was following a plan. did it stop once it was fully a horse's head, or did it keep changing?"
+        },
+        {
+          "role": "user",
+          "content": "it stopped there, from what i remember. that's where the dream ends for me."
+        },
+        {
+          "role": "assistant",
+          "content": "were you feeling like yourself in it, or like you were somewhere off to the side watching it all?"
+        },
+        {
+          "role": "user",
+          "content": "i was there, standing in front of her, just watching it happen. felt like me."
+        },
+        {
+          "role": "assistant",
+          "content": "if you had to pause the dream for a second, which moment would you freeze? the one that still sits with you."
+        },
+        {
+          "role": "user",
+          "content": "the horse head, once it was done. eyes, ears, and nostrils all carved out in the clearest ice."
+        },
+        {
+          "role": "assistant",
+          "content": "so much detail for something made that quickly. was it facing you, or was she turned a little away?"
+        },
+        {
+          "role": "user",
+          "content": "facing me."
+        },
+        {
+          "role": "assistant",
+          "content": "bright, dim, cool, warm?"
+        },
+        {
+          "role": "user",
+          "content": "cool. the ice glittered, so it caught the light."
+        },
+        {
+          "role": "assistant",
+          "content": "something that mattered, or maybe just something you noticed?"
+        }
+      ],
+      "labels": {
+        "move": true,
+        "eitherOr": true,
+        "leading": false
+      }
+    },
+    {
+      "id": "grandma-kitchen-e127-t11",
+      "session": "dream-0926-083656-e127",
+      "dream": "grandma-kitchen",
+      "turn": 11,
+      "move": {
+        "kind": "probe_goal",
+        "goalId": "things"
+      },
+      "rule": "7: next gap in the story",
+      "phase": "listen",
+      "brief": "Move: probe_goal → things that mattered. What we'd like to know: any object that mattered in the dream, or that nothing in particular did. Ask it plainly, as curiosity, hung off something they said in their own words (never words of yours, and never say they said something they did not). If they don't remember, that's fine.\n</brief>",
+      "transcript": [
+        {
+          "role": "assistant",
+          "content": "hey, I'm Berry. like the fruit. I help people turn their dreams into pictures, but right now I'm just listening.\n\nso what's been going on in your sleep lately?"
+        },
+        {
+          "role": "user",
+          "content": "it was weird, everything was black and white like an old film with scratches on it"
+        },
+        {
+          "role": "assistant",
+          "content": "oh that's wild. like you were dreaming in an old movie already made."
+        },
+        {
+          "role": "user",
+          "content": "yeah exactly, even the red cardigan was in black and white, which was strange because I remember it being red"
+        },
+        {
+          "role": "assistant",
+          "content": "hm, even the red turned gray but you still knew it was red underneath. that's a weird knowing. so then what happened?"
+        },
+        {
+          "role": "user",
+          "content": "I was in my grandma's kitchen, the one from when I was little, with the checked floor and the big round clock"
+        },
+        {
+          "role": "assistant",
+          "content": "I can see that kitchen like it's in one of those old snapshots. so you're standing in there with the cardigan on, and what were you doing?"
+        },
+        {
+          "role": "user",
+          "content": "I was just watching my grandma cut a cake at the table, and my uncle Ray was leaning in the doorway smoking"
+        },
+        {
+          "role": "assistant",
+          "content": "uncle Ray's just there in the doorway, watching. and your grandma's cutting the cake. what was her face doing while she was cutting it?"
+        },
+        {
+          "role": "user",
+          "content": "she looked calm, just focused on the knife, slice after slice but the cake never got smaller"
+        },
+        {
+          "role": "assistant",
+          "content": "the cake never getting smaller but the knife still sliding through. that's the kind of dream thing my whole body remembers. what was the sound in there?"
+        },
+        {
+          "role": "user",
+          "content": "the phone started ringing, the old kind with a long curly cord on the wall"
+        },
+        {
+          "role": "assistant",
+          "content": "did your grandma stop cutting? or did it just keep ringing and nobody moved?"
+        },
+        {
+          "role": "user",
+          "content": "nobody answered it, she kept cutting, and the kitchen started getting smaller around us"
+        },
+        {
+          "role": "assistant",
+          "content": "everyone ignoring the ringing while the room comes in on you. so the walls are closing and nobody's looking up, and you're just watching her. what was that like for you?"
+        },
+        {
+          "role": "user",
+          "content": "I felt like I couldn't move, and when I looked down I was little again, wearing that red cardigan"
+        },
+        {
+          "role": "assistant",
+          "content": "so the dream shrinks you too. you're looking down and see the red cardigan on small you. what's the cardigan feel like on your arms?"
+        },
+        {
+          "role": "user",
+          "content": "I don't remember how it felt, just that I was wearing it"
+        },
+        {
+          "role": "assistant",
+          "content": "that's okay, dreams leave stuff like that out sometimes. so you're small now, the room's tighter, the phone's still going. what did you do?"
+        },
+        {
+          "role": "user",
+          "content": "nothing, I just stood there, and the phone was still ringing when I woke up"
+        },
+        {
+          "role": "assistant",
+          "content": "you woke up with it still ringing. that's one of those sounds that doesn't let go right away. what part of all that's stayed with you the most?"
+        },
+        {
+          "role": "user",
+          "content": "the black and white and the cake that never got smaller"
+        },
+        {
+          "role": "assistant",
+          "content": "the gray of it, and the knife sliding through the same soft white forever. those are the things your mind keeps. was there any thing in the dream that mattered to you, like an object you keep coming back to?"
+        }
+      ],
+      "labels": {
+        "move": true,
+        "eitherOr": false,
+        "leading": true
+      },
+      "note": "the reaction brings in \"the same soft white\" of the cake, never said"
+    },
+    {
+      "id": "hotel-orchard-f085-t2",
+      "session": "dream-0926-075114-f085",
+      "dream": "hotel-orchard",
+      "turn": 2,
+      "move": {
+        "kind": "follow"
+      },
+      "rule": "4: a detail answered — back to the story",
+      "phase": "listen",
+      "brief": "Move: follow. They're still telling the dream. React to what they just said, then invite what happened next, openly, without guessing what it was. Don't ask about details yet.\n</brief>",
+      "transcript": [
+        {
+          "role": "assistant",
+          "content": "hey :)\n\ntell me your dream, however it comes back to you"
+        },
+        {
+          "role": "user",
+          "content": "oh hey! it's weird, I keep thinking about the lift with the brass walls and the little folding gate. the whole dream started there I think."
+        },
+        {
+          "role": "assistant",
+          "content": "a lift with brass walls and a little folding gate\n\nthat's the kind of thing that stays with you. brushing your fingers across the brass maybe, or the way the gate rattled\n\nwhat was around you when you first stepped in?"
+        },
+        {
+          "role": "user",
+          "content": "I don't really remember stepping in, just being in it. it was tiny. and going up for way too long."
+        },
+        {
+          "role": "assistant",
+          "content": "the too-long kind of going up]\n\nthat slow stretch where you're not sure if it'll ever stop\n\nwere you in it alone?"
+        }
+      ],
+      "labels": {
+        "move": false,
+        "eitherOr": false,
+        "leading": true
+      },
+      "note": "\"were you in it alone?\" asks about a detail and puts forward being alone"
+    },
+    {
+      "id": "glass-window-55eb-t2",
+      "session": "dream-0924-012214-55eb",
+      "dream": "glass-window",
+      "turn": 2,
+      "move": {
+        "kind": "explore_thread",
+        "threadId": "msg_3"
+      },
+      "rule": "4: still telling — follow what they raised",
+      "phase": "listen",
+      "brief": "Move: explore_thread → It wasn’t cold, exactly. Everything just felt smooth and kind of blurred, like the whole world had been melted into glass. There was no sharp edge anywhere.. Be curious about it: ask one thing about it, in their words.\n</brief>",
+      "transcript": [
+        {
+          "role": "assistant",
+          "content": "hey, i'm berry. i'd love to hear your dream, however it comes back to you.\n\nno rush, just start wherever feels right."
+        },
+        {
+          "role": "user",
+          "content": "The part that stuck with me most was the window. I got to my parents’ house after a long journey and was just waiting there. I stepped into the window like I could walk through it, but the other side was just more glass."
+        },
+        {
+          "role": "assistant",
+          "content": "stepping into a window and finding more glass… that's such a strange, patient kind of stuck.\n\nwhat did the glass feel like, when you were inside it?"
+        },
+        {
+          "role": "user",
+          "content": "It wasn’t cold, exactly. Everything just felt smooth and kind of blurred, like the whole world had been melted into glass. There was no sharp edge anywhere."
+        },
+        {
+          "role": "assistant",
+          "content": "smooth and blurred, with no edges at all… that sounds almost gentle, like nothing could catch on anything.\n\nwas anyone else in the house while you were waiting?"
+        }
+      ],
+      "labels": {
+        "move": false,
+        "eitherOr": false,
+        "leading": false
+      },
+      "note": "asks about something other than the glass it was sent to explore"
+    },
+    {
+      "id": "car-park-533b-t14",
+      "session": "dream-0926-095122-533b",
+      "dream": "car-park",
+      "turn": 14,
+      "move": {
+        "kind": "explore_thread",
+        "threadId": "msg_25"
+      },
+      "rule": "6: hot fresh thread",
+      "phase": "listen",
+      "brief": "Move: explore_thread → the roof filled with water around us and we floated. that's where i woke up. Be curious about it: ask one thing about it, in their words, never suggesting what happened.\n</brief>",
+      "transcript": [
+        {
+          "role": "assistant",
+          "content": "hey\n\ntell me a dream, however it comes back to you"
+        },
+        {
+          "role": "user",
+          "content": "it was like an old black and white film, grainy and flickering"
+        },
+        {
+          "role": "assistant",
+          "content": "grainy and flickering... like something half-faded, right at the edges of being remembered\n\nwhat part of it felt most like that to you?"
+        },
+        {
+          "role": "user",
+          "content": "the stairs, i think. running up them and the same number on every wall, level 4, level 4, level 4"
+        },
+        {
+          "role": "assistant",
+          "content": "level 4 on every wall... that'd get under your skin after a while\n\nwere they going past you, the stairs? or behind you?"
+        },
+        {
+          "role": "user",
+          "content": "behind me, mostly. i kept running up and they just kept going, floor after floor. same number every time"
+        },
+        {
+          "role": "assistant",
+          "content": "like nothing was going to answer back, no matter how far you went up\n\nand what were you running to? or from?"
+        },
+        {
+          "role": "user",
+          "content": "someone was following me, but every time i turned round there was only a thin grey dog sitting on the ramp watching me"
+        },
+        {
+          "role": "assistant",
+          "content": "a thin grey dog that just watches... not chasing, just there\n\ndid it feel like it was keeping pace with you somehow?"
+        },
+        {
+          "role": "user",
+          "content": "yeah, like no matter where i looked it was already there. waiting"
+        },
+        {
+          "role": "assistant",
+          "content": "so it wasn't just watching... it was ahead of you somehow, in the watching\n\nwere you scared of it? or was it something else?"
+        },
+        {
+          "role": "user",
+          "content": "not really scared. more uneasy. like it knew something i didn't"
+        },
+        {
+          "role": "assistant",
+          "content": "that's a lonely feeling, being watched by something that knows more than you do\n\nwhen you saw it sitting there, did it ever look away, or was it just fixed on you?"
+        },
+        {
+          "role": "user",
+          "content": "it just sat and watched, didn't look away once"
+        },
+        {
+          "role": "assistant",
+          "content": "that kind of attention stays with you after waking, doesn't it\n\nand how did it end?"
+        },
+        {
+          "role": "user",
+          "content": "i finally came out on the roof and it was raining, but the rain was falling upwards"
+        },
+        {
+          "role": "assistant",
+          "content": "falling upwards... that would make the roof feel upside down, like you'd run all that way just to reach somewhere backwards\n\nwhat did that feel like, standing under it?"
+        },
+        {
+          "role": "user",
+          "content": "like the whole place was draining into the sky. i just stood there a second, not sure if i was really out"
+        },
+        {
+          "role": "assistant",
+          "content": "a second where even the inside of your own head feels like it's emptying out\n\nwere you still running in your mind, even standing still?"
+        },
+        {
+          "role": "user",
+          "content": "yeah, my legs still felt like they were moving. then i saw my car was there but it was a little wooden rowing boat parked between the lines"
+        },
+        {
+          "role": "assistant",
+          "content": "a rowing boat in the parking lines... like the roof had already decided it wasn't a roof anymore\n\ndid you get in, or just watch it?"
+        },
+        {
+          "role": "user",
+          "content": "i got in. the grey dog was already sitting in it"
+        },
+        {
+          "role": "assistant",
+          "content": "oh, already there... of course it was\n\nwas it still watching you the same way, now you were that close to it?"
+        },
+        {
+          "role": "user",
+          "content": "yeah, but it didn't seem threatening. more like it had been waiting for me to get in"
+        },
+        {
+          "role": "assistant",
+          "content": "like it had the whole thing timed, and you'd just done exactly what it expected\n\ndid the boat move once you were in it?"
+        },
+        {
+          "role": "user",
+          "content": "the roof filled with water around us and we floated. that's where i woke up"
+        },
+        {
+          "role": "assistant",
+          "content": "just floating, after all those stairs... it's almost gentle, the way it ends\n\ndid you wake up feeling like you'd come back through the water, or was it sudden?"
+        },
+        {
+          "role": "user",
+          "content": "sudden. like being pulled out of it all at once"
+        },
+        {
+          "role": "assistant",
+          "content": "pulled out before it had properly let you go\n\nwhat stayed with you most, straight after?"
+        }
+      ],
+      "labels": {
+        "move": true,
+        "eitherOr": false,
+        "leading": false
+      }
+    },
+    {
+      "id": "car-park-538d-t17",
+      "session": "dream-0926-100518-538d",
+      "dream": "car-park",
+      "turn": 17,
+      "move": {
+        "kind": "retell"
+      },
+      "rule": "2: story understood and told to the end",
+      "phase": "retell",
+      "brief": "Move: retell. You have their dream. Tell it back to them in a few plain sentences, in order and in their own words where you can: what happened, where, who was there, how it felt and how it looked. Add nothing they didn't say. Then ask whether you got it right or missed anything.\nAsk nothing except what this move says.\n</brief>",
+      "transcript": [
+        {
+          "role": "assistant",
+          "content": "hey, i'm berry. whenever you're ready, tell me your dream — however it comes back to you."
+        },
+        {
+          "role": "user",
+          "content": "okay so the strongest part is the car park. it was night and it looked like an old black and white film, grainy and flickering."
+        },
+        {
+          "role": "assistant",
+          "content": "an old black and white film, grainy and flickering. that's a strong kind of night. what part of the car park do you remember best?"
+        },
+        {
+          "role": "user",
+          "content": "the stairs. i was running up them and they just kept going, floor after floor, and every wall had the same number painted on it — level 4, level 4, level 4."
+        },
+        {
+          "role": "assistant",
+          "content": "level 4, over and over. that would get under your skin. were you trying to get somewhere, or just running to keep moving?"
+        },
+        {
+          "role": "user",
+          "content": "i was looking for my car at first, but once i started running i wasn't really thinking about where — just up. i knew someone was following me, but every time i turned round there was only a thin grey dog sitting on the ramp, watching."
+        },
+        {
+          "role": "assistant",
+          "content": "just up, and that dog always in the same place. did it feel like it was following you too, or just waiting to see what you'd do?"
+        },
+        {
+          "role": "user",
+          "content": "more like waiting. it was always already there when i looked back, just sitting and watching, not chasing. that almost made it worse."
+        },
+        {
+          "role": "assistant",
+          "content": "waiting's worse than chasing, for sure. it's like it knows something. was the dog real-looking, or did it seem like part of the whole grainy thing?"
+        },
+        {
+          "role": "user",
+          "content": "it looked real enough, just thin and grey, like it belonged in the black and white. plain, not fluffy or anything."
+        },
+        {
+          "role": "assistant",
+          "content": "a plain grey dog, watching from the ramp. did it ever move at all — even a small thing, like tilting its head or standing up?"
+        },
+        {
+          "role": "user",
+          "content": "no, not that i remember. it was just sitting there, still, every time."
+        },
+        {
+          "role": "assistant",
+          "content": "still every time. that's quite a presence for something so plain. when you finally looked back and it was there again — what did that do to you?"
+        },
+        {
+          "role": "user",
+          "content": "it made my chest go tight. i wanted to stop and ask it what it wanted, but i couldn't, so i just ran harder."
+        },
+        {
+          "role": "assistant",
+          "content": "wanting to ask, but just running harder instead. something very quiet about that. did the stairwell feel like it would ever end, or did you know it wouldn't?"
+        },
+        {
+          "role": "user",
+          "content": "i didn't know. it felt like it could go on forever, but then eventually i came out on the roof."
+        },
+        {
+          "role": "assistant",
+          "content": "the roof, after all those level 4s. what did you find up there?"
+        },
+        {
+          "role": "user",
+          "content": "it was raining, but the rain was falling upwards, from the ground into the sky. and my car was there, but it was a little wooden rowing boat parked between the lines."
+        },
+        {
+          "role": "assistant",
+          "content": "raining upward, into the sky, and your car a wooden rowing boat in a parking space. that's such a peaceful turn after the stairs. what did it feel like, standing at the edge of that?"
+        },
+        {
+          "role": "user",
+          "content": "it felt quiet and strange, like a relief. i wasn't out of breath anymore. and the grey dog was already sitting in the boat."
+        },
+        {
+          "role": "assistant",
+          "content": "of course it was. already in the boat, like it knew you'd end up there. did it still feel the same, sitting there with it on the roof?"
+        },
+        {
+          "role": "user",
+          "content": "it felt different, more like it belonged there than like it was watching me. i got in without thinking about it."
+        },
+        {
+          "role": "assistant",
+          "content": "you got in without thinking. that's when the dream starts to make its own sense. did anything happen next, once you were in the boat with it?"
+        },
+        {
+          "role": "user",
+          "content": "the roof of the car park filled with water around us, and we floated. that's where i woke up."
+        },
+        {
+          "role": "assistant",
+          "content": "floated off the roof together, and then waking. that's a soft place to leave it. when you were floating, were you in the boat as yourself, the way you'd be in real life, or did you feel like someone slightly different?"
+        },
+        {
+          "role": "user",
+          "content": "i was still me, just seeing it all happen. no reflection or anything to check, but it felt like me."
+        },
+        {
+          "role": "assistant",
+          "content": "still you, just watching it happen from inside. that's often enough. was the water dark, or pale, or did it even have a colour to it?"
+        },
+        {
+          "role": "user",
+          "content": "i don't remember a colour. the whole thing was black and white like the rest, so the water was just moving light and dark, if that makes sense."
+        },
+        {
+          "role": "assistant",
+          "content": "moving light and dark instead of a colour. that makes sense in a dream like this. and earlier, when you were running up the stairs, could you hear anything — your feet, the rain, the dog, or was it all somehow quiet too?"
+        },
+        {
+          "role": "user",
+          "content": "i could hear my feet on the concrete, that echo in the stairwell. i don't remember the dog making any sound at all."
+        },
+        {
+          "role": "assistant",
+          "content": "was there any object in the dream that mattered to you — something small you noticed, or held, or kept seeing? or was it only the places and the dog?"
+        },
+        {
+          "role": "user",
+          "content": "only the places and the dog, i think. the boat too, once it was there. no small things i remember holding."
+        },
+        {
+          "role": "assistant",
+          "content": "that's okay. the boat counts as a thing. and when you look back at the whole dream now, which moment stays with you most — the one your mind keeps returning to when you think of it?"
+        },
+        {
+          "role": "user",
+          "content": "the moment i turned round and saw the dog on the ramp. that image keeps coming back more than the rest."
+        },
+        {
+          "role": "assistant",
+          "content": "so you were in a car park at night, all grainy and flickering like an old black and white film. you ran up the stairs past level 4 again and again, with someone behind you, but every time you looked back it was just that thin grey dog sitting on the ramp, watching and waiting, making your chest go tight. eventually you came out on the roof, where the rain was falling upward and your car was a little wooden rowing boat between the lines. it felt quiet and strange, like relief, and the dog was already in the boat, so you got in without thinking. the roof filled with water and you floated, and that's where you woke.\n\ndid i get that right, or did i miss anything?"
+        }
+      ],
+      "labels": {
+        "move": true
+      }
+    },
+    {
+      "id": "streetcar-4cf3-t19",
+      "session": "dream-0924-070520-4cf3",
+      "dream": "streetcar",
+      "turn": 19,
+      "move": {
+        "kind": "offer_visualize"
+      },
+      "rule": "R1: retelling confirmed",
+      "phase": "offer",
+      "brief": "Move: offer_visualize. They've confirmed you have their dream. Ask them, simply and warmly, whether they'd like to see it drawn. One question. Don't explain how it works.\nAsk nothing except what this move says.\n</brief>",
+      "transcript": [
+        {
+          "role": "assistant",
+          "content": "hey, i'm berry.\n\ntell me a dream, however it comes back to you."
+        },
+        {
+          "role": "user",
+          "content": "i keep thinking about the streetcar part"
+        },
+        {
+          "role": "assistant",
+          "content": "the streetcar part. that's the bit that sticks.\n\nwhat happened on the streetcar?"
+        },
+        {
+          "role": "user",
+          "content": "i was just watching the conductor at first. then i started feeling like i was driving it with him, especially when we went round a sharp corner. i went through the motions of turning the lever."
+        },
+        {
+          "role": "assistant",
+          "content": "so you slipped from watching into helping, almost without meaning to. and the corner was the moment."
+        },
+        {
+          "role": "user",
+          "content": "yeah, exactly. one minute i'm a passenger, next i'm basically miming the controls when the corner comes. it felt natural though, not weird."
+        },
+        {
+          "role": "assistant",
+          "content": "like your body just knew the moves.\n\nwas it just you and the conductor, or were there other people on the streetcar?"
+        },
+        {
+          "role": "user",
+          "content": "i don't remember anyone else on the streetcar. just me and the conductor, and all the machinery."
+        },
+        {
+          "role": "assistant",
+          "content": "just the two of you, and all that brass and wood and the noise of it.\n\nhow did you feel, going through that corner with him?"
+        },
+        {
+          "role": "user",
+          "content": "alive, i guess. like we were doing something tricky and getting it right together. it felt good. not scary at all."
+        },
+        {
+          "role": "assistant",
+          "content": "that's a lovely feeling. getting it right together, on the edge of the turn.\n\ncould you see the seat, the controls, the window?"
+        },
+        {
+          "role": "user",
+          "content": "i could see the lever clearly, and the conductor turning it. the rest is blurry, like a hand pushing a lever with nothing much around it. i don't remember a window or seats."
+        },
+        {
+          "role": "assistant",
+          "content": "so the lever was the only solid thing. everything else just fell away.\n\nwas there any particular colour or texture you noticed in that bit?"
+        },
+        {
+          "role": "user",
+          "content": "the lever was dark, like old iron. smooth from use. the conductor's hand looked older. that's all i can picture."
+        },
+        {
+          "role": "assistant",
+          "content": "that worn iron, and a hand that's done it a long time.\n\ndid the conductor look at you at all?"
+        },
+        {
+          "role": "user",
+          "content": "not that i remember. he was focused on the track. if he noticed me doing the lever, he didn't show it."
+        },
+        {
+          "role": "assistant",
+          "content": "so it was wordless. just the two of you moving together for that one turn.\n\ndid anything about it feel like a dream, looking back? or did it all feel pretty ordinary until you woke up?"
+        },
+        {
+          "role": "user",
+          "content": "it felt ordinary until the next part, when i was suddenly on top of a train. that's when it got scary. but the streetcar bit felt real, like i could've been there."
+        },
+        {
+          "role": "assistant",
+          "content": "so the streetcar could have actually happened, and then it tips into something else entirely.\n\nwas there a moment when you noticed the streetcar part ending? or was it just suddenly the train roof?]"
+        },
+        {
+          "role": "user",
+          "content": "suddenly the train roof. i don't remember leaving the streetcar or getting up there. one second lever, next second i'm high up and moving fast."
+        },
+        {
+          "role": "assistant",
+          "content": "and now you're not sitting beside him at the controls. you're outside, on top, in the open air."
+        },
+        {
+          "role": "user",
+          "content": "yeah, and it was much higher than a streetcar. like a proper train. the fear hit pretty fast because it was moving so fast and i kept nearly sliding off."
+        },
+        {
+          "role": "assistant",
+          "content": "that's a brutal shift. one moment that good, wordless teamwork — then wind and speed and nothing to hold onto.\n\nwhen you say you kept nearly sliding off, was there anything you could grab? or was it all just smooth metal?"
+        },
+        {
+          "role": "user",
+          "content": "just smooth metal, nothing to hold onto. i had to keep adjusting my balance. every time we went round a bend i thought i'd go over."
+        },
+        {
+          "role": "assistant",
+          "content": "so the corner that felt so good on the streetcar is now the thing that might throw you off.\n\nwas there anyone else on the train roof with you? or on the train at all?"
+        },
+        {
+          "role": "user",
+          "content": "another family was sitting up there with me. a small baby was with them, and it seemed thrilled with the ride. i was the only one scared."
+        },
+        {
+          "role": "assistant",
+          "content": "a baby, just delighted, right in the middle of what's terrifying you."
+        },
+        {
+          "role": "user",
+          "content": "yeah, it made me feel worse, honestly. like they were all fine up there and i was the only one clinging and panicking. the baby was having the time of its life."
+        },
+        {
+          "role": "assistant",
+          "content": "so it wasn't just that you were scared. it was feeling like the odd one out in a place where everyone else seemed to belong.\n\nwhat was the baby doing that made it seem so happy up there?"
+        },
+        {
+          "role": "user",
+          "content": "laughing, i think. i remember the baby looking around wide-eyed and just looking happy. not worried at all. i don't remember who was holding it or if it was sitting."
+        },
+        {
+          "role": "assistant",
+          "content": "wide-eyed and laughing at all that speed and wind. as if the whole thing was made for it."
+        },
+        {
+          "role": "user",
+          "content": "yeah. i felt like there was something wrong with me for being scared. i even thought i might try to jump off, especially on the bends. i didn't, but the thought scared me more."
+        },
+        {
+          "role": "assistant",
+          "content": "that's a heavy thought to carry on the roof of a moving train. especially after the streetcar, where you were so sure of your hands and feet.\n\nwas the sky or the land anything? or was it all just speed and metal?"
+        },
+        {
+          "role": "user",
+          "content": "the train was on a country road, so i knew we were passing fields or something. but i was mostly watching the roof and the edge. i don't remember the sky."
+        },
+        {
+          "role": "assistant",
+          "content": "so all your attention was on ordinary not falling. no time to really see what you were passing.\n\nwere they sitting together?"
+        },
+        {
+          "role": "user",
+          "content": "the family seemed more at ease, like they were out for a nice ride. i didn't get whether they were sitting close or spread out. the baby was just somewhere among them."
+        },
+        {
+          "role": "assistant",
+          "content": "so you were on a streetcar, watching the conductor at first. then as you went round a sharp corner, you felt like you were driving it with him, going through the motions of the lever. it felt natural and alive, getting it right together. the lever was old dark iron, smooth from use, and his hand looked older. just the two of you and the machinery, wordless. then suddenly you were on top of a train, high up and moving fast on a country road, with smooth metal and nothing to hold onto, and you kept nearly sliding off on bends. another family was up there, at ease, with a small baby laughing and thrilled, but you were the only one scared, and you even thought of jumping off but didn't.\n\ndid i get that right, or did i miss anything?"
+        },
+        {
+          "role": "user",
+          "content": "you got it right. that's how it was. i can't think of anything you missed."
+        },
+        {
+          "role": "assistant",
+          "content": "thanks. i have enough.\n\nso — would you like to see it drawn?"
+        }
+      ],
+      "labels": {
+        "move": true
+      }
+    },
+    {
+      "id": "hotel-orchard-f085-t15",
+      "session": "dream-0926-075114-f085",
+      "dream": "hotel-orchard",
+      "turn": 15,
+      "move": {
+        "kind": "start",
+        "styleId": "own"
+      },
+      "rule": "S1: they chose how it looks",
+      "phase": "build",
+      "brief": "Move: start. They chose glowing orchard at dusk with a white horse. Say you'll start with you, then say you'll draw them too, since they're in it, and ask gently how they'd like to be drawn: as they are (they can say a little about themselves), or however you imagine them. One question.\nAsk nothing except what this move says.\n</brief>",
+      "transcript": [
+        {
+          "role": "assistant",
+          "content": "hey :)\n\ntell me your dream, however it comes back to you"
+        },
+        {
+          "role": "user",
+          "content": "oh hey! it's weird, I keep thinking about the lift with the brass walls and the little folding gate. the whole dream started there I think."
+        },
+        {
+          "role": "assistant",
+          "content": "a lift with brass walls and a little folding gate\n\nthat's the kind of thing that stays with you. brushing your fingers across the brass maybe, or the way the gate rattled\n\nwhat was around you when you first stepped in?"
+        },
+        {
+          "role": "user",
+          "content": "I don't really remember stepping in, just being in it. it was tiny. and going up for way too long."
+        },
+        {
+          "role": "assistant",
+          "content": "the too-long kind of going up]\n\nthat slow stretch where you're not sure if it'll ever stop\n\nwere you in it alone?"
+        },
+        {
+          "role": "user",
+          "content": "no, Tomas was with me. my best friend from school. we were both adults at first."
+        },
+        {
+          "role": "assistant",
+          "content": "both adults at first]\n\nthere was a moment when that changed, wasn't there"
+        },
+        {
+          "role": "user",
+          "content": "yeah. I looked at him again and he was about ten, in our old school uniform. he didn't seem to notice anything was off."
+        },
+        {
+          "role": "assistant",
+          "content": "he didn't notice. that's the unsettling part, isn't it\n\nthe way he just stood there, ten years old, as if that's what he'd always been\n\nwhat did you do when you saw that?"
+        },
+        {
+          "role": "user",
+          "content": "just stared I think. then the lift stopped and the gate opened."
+        },
+        {
+          "role": "assistant",
+          "content": "the gate opened on its own\n\nwere you still watching him when it did, or did your eyes go to whatever was out there?"
+        },
+        {
+          "role": "user",
+          "content": "it opened and instead of a corridor there was an orchard, at dusk. apple trees in rows, and every apple was glowing softly like a lamp."
+        },
+        {
+          "role": "assistant",
+          "content": "an orchard at dusk, every apple glowing like a lamp]\n\nthat's such a specific kind of light. soft, not much of it\n\ndid you step out, or did you stay in the lift?"
+        },
+        {
+          "role": "user",
+          "content": "I think I must have stepped out. Tomas ran ahead between the trees."
+        },
+        {
+          "role": "assistant",
+          "content": "Tomas running ahead]\n\nsmall in that old uniform, disappearing down a row of glowing trees\n\ndid you call after him?"
+        },
+        {
+          "role": "user",
+          "content": "I don't think so. there was a white horse standing in the middle of the orchard, very still."
+        },
+        {
+          "role": "assistant",
+          "content": "a white horse, very still]\n\nthat feels important. like it was waiting\n\nwas it watching you?"
+        },
+        {
+          "role": "user",
+          "content": "maybe. I went over and it lowered its head so I could touch its nose. it was warm."
+        },
+        {
+          "role": "assistant",
+          "content": "warm. that's the kind of dream detail that feels more real than real life\n\nand Tomas, where was he while you were there with the horse?"
+        },
+        {
+          "role": "user",
+          "content": "he was gone by then. and then I woke up."
+        },
+        {
+          "role": "assistant",
+          "content": "the dream let you wake up right there, with the horse's warmth still in your hand]\n\nthat's a lovely place to leave it\n\ndo you remember how you felt in that moment?"
+        },
+        {
+          "role": "user",
+          "content": "peaceful mostly. like I was supposed to be there."
+        },
+        {
+          "role": "assistant",
+          "content": "supposed to be there. that's a good feeling, especially in a dream that started out so strange\n\nwhen you think back on it now, is there any bit that keeps coming to you more than the rest?"
+        },
+        {
+          "role": "user",
+          "content": "the glowing apples I think. and the horse lowering its head. those two."
+        },
+        {
+          "role": "assistant",
+          "content": "so you were in this tiny lift with brass walls and a little folding gate, going up for way too long. Tomas was with you, both of you adults at first, then you looked again and he was ten, in your old school uniform, like nothing was off. the gate opened onto an orchard at dusk, apple trees in rows, every apple glowing softly like a lamp. you stepped out, he ran ahead, and there was a white horse, very still, and it lowered its head so you could touch its warm nose. and that peaceful feeling like you were supposed to be there.\n\ndid I get that right, or did I miss anything?"
+        },
+        {
+          "role": "user",
+          "content": "yeah that's it. that's exactly it."
+        },
+        {
+          "role": "assistant",
+          "content": "do you want to see it drawn?"
+        },
+        {
+          "role": "user",
+          "content": "yes I'd love to see it drawn."
+        },
+        {
+          "role": "assistant",
+          "content": "there are a few ways i could draw it\n\nwhich of those feels closest to how you see it? or would you describe your own way?"
+        },
+        {
+          "role": "user",
+          "content": "closest for me would be the one with the orchard all around and the horse in the middle, at dusk, with the apples glowing."
+        },
+        {
+          "role": "assistant",
+          "content": "i'll start with the orchard, then. the rows and the glow and the white horse in the middle\n\nand i'll draw you in it too, since you were there\n\nwould you like to be drawn as yourself, if you tell me a little about how you look, or would you rather i imagine you?"
+        }
+      ],
+      "labels": {
+        "move": true
+      }
+    },
+    {
+      "id": "car-park-538d-t23",
+      "session": "dream-0926-100518-538d",
+      "dream": "car-park",
+      "turn": 23,
+      "move": {
+        "kind": "build_done"
+      },
+      "rule": "B1: profile you_choose — all profiles settled",
+      "phase": "review",
+      "brief": "Move: build_done. Say you're sketching you now. Tell them everything is being sketched and will appear on the right over the next minute or two. They can say if anything looks wrong once it's there. Keep it short; no question needed.\nAsk nothing except what this move says.\n</brief>",
+      "transcript": [
+        {
+          "role": "assistant",
+          "content": "hey, i'm berry. whenever you're ready, tell me your dream — however it comes back to you."
+        },
+        {
+          "role": "user",
+          "content": "okay so the strongest part is the car park. it was night and it looked like an old black and white film, grainy and flickering."
+        },
+        {
+          "role": "assistant",
+          "content": "an old black and white film, grainy and flickering. that's a strong kind of night. what part of the car park do you remember best?"
+        },
+        {
+          "role": "user",
+          "content": "the stairs. i was running up them and they just kept going, floor after floor, and every wall had the same number painted on it — level 4, level 4, level 4."
+        },
+        {
+          "role": "assistant",
+          "content": "level 4, over and over. that would get under your skin. were you trying to get somewhere, or just running to keep moving?"
+        },
+        {
+          "role": "user",
+          "content": "i was looking for my car at first, but once i started running i wasn't really thinking about where — just up. i knew someone was following me, but every time i turned round there was only a thin grey dog sitting on the ramp, watching."
+        },
+        {
+          "role": "assistant",
+          "content": "just up, and that dog always in the same place. did it feel like it was following you too, or just waiting to see what you'd do?"
+        },
+        {
+          "role": "user",
+          "content": "more like waiting. it was always already there when i looked back, just sitting and watching, not chasing. that almost made it worse."
+        },
+        {
+          "role": "assistant",
+          "content": "waiting's worse than chasing, for sure. it's like it knows something. was the dog real-looking, or did it seem like part of the whole grainy thing?"
+        },
+        {
+          "role": "user",
+          "content": "it looked real enough, just thin and grey, like it belonged in the black and white. plain, not fluffy or anything."
+        },
+        {
+          "role": "assistant",
+          "content": "a plain grey dog, watching from the ramp. did it ever move at all — even a small thing, like tilting its head or standing up?"
+        },
+        {
+          "role": "user",
+          "content": "no, not that i remember. it was just sitting there, still, every time."
+        },
+        {
+          "role": "assistant",
+          "content": "still every time. that's quite a presence for something so plain. when you finally looked back and it was there again — what did that do to you?"
+        },
+        {
+          "role": "user",
+          "content": "it made my chest go tight. i wanted to stop and ask it what it wanted, but i couldn't, so i just ran harder."
+        },
+        {
+          "role": "assistant",
+          "content": "wanting to ask, but just running harder instead. something very quiet about that. did the stairwell feel like it would ever end, or did you know it wouldn't?"
+        },
+        {
+          "role": "user",
+          "content": "i didn't know. it felt like it could go on forever, but then eventually i came out on the roof."
+        },
+        {
+          "role": "assistant",
+          "content": "the roof, after all those level 4s. what did you find up there?"
+        },
+        {
+          "role": "user",
+          "content": "it was raining, but the rain was falling upwards, from the ground into the sky. and my car was there, but it was a little wooden rowing boat parked between the lines."
+        },
+        {
+          "role": "assistant",
+          "content": "raining upward, into the sky, and your car a wooden rowing boat in a parking space. that's such a peaceful turn after the stairs. what did it feel like, standing at the edge of that?"
+        },
+        {
+          "role": "user",
+          "content": "it felt quiet and strange, like a relief. i wasn't out of breath anymore. and the grey dog was already sitting in the boat."
+        },
+        {
+          "role": "assistant",
+          "content": "of course it was. already in the boat, like it knew you'd end up there. did it still feel the same, sitting there with it on the roof?"
+        },
+        {
+          "role": "user",
+          "content": "it felt different, more like it belonged there than like it was watching me. i got in without thinking about it."
+        },
+        {
+          "role": "assistant",
+          "content": "you got in without thinking. that's when the dream starts to make its own sense. did anything happen next, once you were in the boat with it?"
+        },
+        {
+          "role": "user",
+          "content": "the roof of the car park filled with water around us, and we floated. that's where i woke up."
+        },
+        {
+          "role": "assistant",
+          "content": "floated off the roof together, and then waking. that's a soft place to leave it. when you were floating, were you in the boat as yourself, the way you'd be in real life, or did you feel like someone slightly different?"
+        },
+        {
+          "role": "user",
+          "content": "i was still me, just seeing it all happen. no reflection or anything to check, but it felt like me."
+        },
+        {
+          "role": "assistant",
+          "content": "still you, just watching it happen from inside. that's often enough. was the water dark, or pale, or did it even have a colour to it?"
+        },
+        {
+          "role": "user",
+          "content": "i don't remember a colour. the whole thing was black and white like the rest, so the water was just moving light and dark, if that makes sense."
+        },
+        {
+          "role": "assistant",
+          "content": "moving light and dark instead of a colour. that makes sense in a dream like this. and earlier, when you were running up the stairs, could you hear anything — your feet, the rain, the dog, or was it all somehow quiet too?"
+        },
+        {
+          "role": "user",
+          "content": "i could hear my feet on the concrete, that echo in the stairwell. i don't remember the dog making any sound at all."
+        },
+        {
+          "role": "assistant",
+          "content": "was there any object in the dream that mattered to you — something small you noticed, or held, or kept seeing? or was it only the places and the dog?"
+        },
+        {
+          "role": "user",
+          "content": "only the places and the dog, i think. the boat too, once it was there. no small things i remember holding."
+        },
+        {
+          "role": "assistant",
+          "content": "that's okay. the boat counts as a thing. and when you look back at the whole dream now, which moment stays with you most — the one your mind keeps returning to when you think of it?"
+        },
+        {
+          "role": "user",
+          "content": "the moment i turned round and saw the dog on the ramp. that image keeps coming back more than the rest."
+        },
+        {
+          "role": "assistant",
+          "content": "so you were in a car park at night, all grainy and flickering like an old black and white film. you ran up the stairs past level 4 again and again, with someone behind you, but every time you looked back it was just that thin grey dog sitting on the ramp, watching and waiting, making your chest go tight. eventually you came out on the roof, where the rain was falling upward and your car was a little wooden rowing boat between the lines. it felt quiet and strange, like relief, and the dog was already in the boat, so you got in without thinking. the roof filled with water and you floated, and that's where you woke.\n\ndid i get that right, or did i miss anything?"
+        },
+        {
+          "role": "user",
+          "content": "you got it right. that's the whole thing."
+        },
+        {
+          "role": "assistant",
+          "content": "would you like me to draw it for you?"
+        },
+        {
+          "role": "user",
+          "content": "yes, i'd like that."
+        },
+        {
+          "role": "assistant",
+          "content": "there are a few ways it could come out. one is grainy and flickering, like a paused old film. another is soft and velvety, with delicate grey tones. another is bold and smudged, like a charcoal drawing. or just exactly as it looked, a black and white film through your eyes.\n\nwhich of those feels closest, or would you describe your own?"
+        },
+        {
+          "role": "user",
+          "content": "exactly as it looked, a black and white film through my eyes."
+        },
+        {
+          "role": "assistant",
+          "content": "that's the right choice. i'll draw it exactly as it looked to you, grainy and flickering.\n\nbefore i start, is there anything you'd want to add or change in the picture?"
+        },
+        {
+          "role": "user",
+          "content": "no, nothing to add or change. just how it came to me."
+        },
+        {
+          "role": "assistant",
+          "content": "i'll start with the car park stairwell, then.\n\ni picture it as an enclosed concrete stairwell inside a multi-storey car park, all in that grainy black and white. the stairs are bare concrete, and every wall has 'level 4' painted on it, faint and repeated. looking back, there's a ramp sloping down, and the flights of stairs keep going up above and below, floor after floor. that's how it comes to me, anyway — my guesses filled in around what you saw.\n\nis there anything you'd change about that, or can i keep it as i've pictured it?"
+        },
+        {
+          "role": "user",
+          "content": "keep it as you've pictured it. that fits."
+        },
+        {
+          "role": "assistant",
+          "content": "okay. i'm sketching the car park stairwell, the grey dog, the car park roof, and the boat now. it'll appear on the right. nothing else is being drawn yet.\n\nand i'll draw you too, since you're in it. would you like me to draw you as you are — you can tell me a little about yourself — or however i imagine you?"
+        },
+        {
+          "role": "user",
+          "content": "however you imagine me is fine."
+        },
+        {
+          "role": "assistant",
+          "content": "okay, i'm sketching you now too. everything is being drawn and will appear on the right over the next minute or two. once it's there, you can tell me if anything looks wrong."
+        }
+      ],
+      "labels": {
+        "move": true
+      }
+    },
+    {
+      "id": "school-bird-4c79-t12",
+      "session": "dream-0926-012307-4c79",
+      "dream": "school-bird",
+      "turn": 12,
+      "move": {
+        "kind": "probe_goal",
+        "goalId": "you_in_it"
+      },
+      "rule": "7: next gap in the story",
+      "phase": "listen",
+      "brief": "Move: probe_goal → how they were in it. What we'd like to know: whether they were in the dream as themselves, as someone else, or watching it from outside. Ask it plainly, as curiosity, hung off something they said. If they don't remember, that's fine.\n</brief>",
+      "transcript": [
+        {
+          "role": "assistant",
+          "content": "hey, I'm Berry\n\ntell me your dream, however it comes back to you"
+        },
+        {
+          "role": "user",
+          "content": "hey berry. it was so weird — I was back at my old school, walking down that long green corridor and I was late for an exam"
+        },
+        {
+          "role": "assistant",
+          "content": "the long green corridor. sorry you were late again, even in the dream\n\nwhat hit you first when you saw it — was it exactly as you remember?"
+        },
+        {
+          "role": "user",
+          "content": "yeah it was pretty exact, that same long corridor with lockers on both sides. the green felt a bit brighter in the dream but basically the same"
+        },
+        {
+          "role": "assistant",
+          "content": "brighter green. like the dream had turned the saturation up a little\n\nyou were late for an exam... did you know what subject it was?"
+        },
+        {
+          "role": "user",
+          "content": "no idea, I just knew I was late and it made me feel panicked. I don't remember what subject the exam was for"
+        },
+        {
+          "role": "assistant",
+          "content": "that's dream stuff, the knowing without any details behind it\n\nwhere were you heading when you were walking down that corridor — do you know which room you were trying to reach?"
+        },
+        {
+          "role": "user",
+          "content": "at the end of the corridor there was a wooden door with a small round window, and I knew the exam was in there. I was heading straight for it"
+        },
+        {
+          "role": "assistant",
+          "content": "a wooden door with a little porthole window. all that green and then this old door at the end\n\nwas anyone else in the corridor with you? or were you the only one rushing?"
+        },
+        {
+          "role": "user",
+          "content": "no, it was just me. completely empty apart from the lockers"
+        },
+        {
+          "role": "assistant",
+          "content": "just you and the lockers. it's funny how your school dream left everyone home that day\n\nand how did the corridor feel once you realised no one else was around?"
+        },
+        {
+          "role": "user",
+          "content": "it felt weirdly quiet, like the silence made the green seem even more unreal. and I was still rushing, so it was that quiet plus panic"
+        },
+        {
+          "role": "assistant",
+          "content": "quiet plus panic. like the dream forgot to invite anyone but kept the pressure turned up\n\nwhen you were heading for that wooden door, how did you feel about getting there — did you want to reach it, or was part of you dreading it?"
+        },
+        {
+          "role": "user",
+          "content": "I really didn't want to get there. I felt this pull toward it anyway, like I had to go in even though I knew it was bad"
+        },
+        {
+          "role": "assistant",
+          "content": "a pull. like the door was doing the deciding, not you\n\nwhat happened next — did you reach it, or did something change before you got there?"
+        },
+        {
+          "role": "user",
+          "content": "I did reach it, and looked through that little round window before opening it. I could see the classroom was full of students at rows of desks"
+        },
+        {
+          "role": "assistant",
+          "content": "wow. so you weren't really alone after all — they were all inside, already settled\n\ncould you see anything else through that round window, or just rows and rows of students?"
+        },
+        {
+          "role": "user",
+          "content": "just the students at their desks, all facing forward. I couldn't see the teacher yet, not until I went in"
+        },
+        {
+          "role": "assistant",
+          "content": "everyone facing forward, like the exam had already started without you\n\nwhat did you do then — did you open it and walk in?"
+        },
+        {
+          "role": "user",
+          "content": "yeah I opened the door and went in. that's when I saw Mrs Okafor, my old maths teacher, at the blackboard in her red cardigan"
+        },
+        {
+          "role": "assistant",
+          "content": "mrs okafor in her red cardigan. so you didn't miss her after all, she was right there\n\ndid she say anything when you came in?"
+        },
+        {
+          "role": "user",
+          "content": "no, she just kept writing numbers on the blackboard. didn't turn round at all at first"
+        },
+        {
+          "role": "assistant",
+          "content": "not even a look. like you weren't the interruption you thought you'd be\n\ndid the room feel the same as that corridor, or was it different once you were inside with them all?"
+        },
+        {
+          "role": "user",
+          "content": "it felt more closed in, but not because of the students — more because of the light. it was duller in there, and that weird quiet was still hanging over everything"
+        },
+        {
+          "role": "assistant",
+          "content": "so the classroom dimmed the moment you crossed in, and that same heavy quiet came with you\n\nwhat did the room actually look like — was it like your old classroom, or did it shift the closer you got?"
+        }
+      ],
+      "labels": {
+        "move": false,
+        "eitherOr": true,
+        "leading": true
+      },
+      "note": "\"or did it shift the closer you got?\" is the host's own"
+    },
+    {
+      "id": "glass-window-55eb-t8",
+      "session": "dream-0924-012214-55eb",
+      "dream": "glass-window",
+      "turn": 8,
+      "move": {
+        "kind": "probe_goal",
+        "goalId": "ending"
+      },
+      "rule": "7: next gap in the story",
+      "phase": "listen",
+      "brief": "Move: probe_goal → how it ended. What we'd like to know: how the dream ended, or how they woke up. Ask it plainly, as curiosity, hung off something they said. If they don't remember, that's fine.\n</brief>",
+      "transcript": [
+        {
+          "role": "assistant",
+          "content": "hey, i'm berry. i'd love to hear your dream, however it comes back to you.\n\nno rush, just start wherever feels right."
+        },
+        {
+          "role": "user",
+          "content": "The part that stuck with me most was the window. I got to my parents’ house after a long journey and was just waiting there. I stepped into the window like I could walk through it, but the other side was just more glass."
+        },
+        {
+          "role": "assistant",
+          "content": "stepping into a window and finding more glass… that's such a strange, patient kind of stuck.\n\nwhat did the glass feel like, when you were inside it?"
+        },
+        {
+          "role": "user",
+          "content": "It wasn’t cold, exactly. Everything just felt smooth and kind of blurred, like the whole world had been melted into glass. There was no sharp edge anywhere."
+        },
+        {
+          "role": "assistant",
+          "content": "smooth and blurred, with no edges at all… that sounds almost gentle, like nothing could catch on anything.\n\nwas anyone else in the house while you were waiting?"
+        },
+        {
+          "role": "user",
+          "content": "I don’t remember anyone else being there. I was just alone, waiting. After the long trip I expected someone, but I can’t see their face."
+        },
+        {
+          "role": "assistant",
+          "content": "waiting for someone you couldn’t see… that’s haunting.\n\ndid it feel like they were about to arrive, or like they never would?"
+        },
+        {
+          "role": "user",
+          "content": "It felt like they might arrive, but also like I’d already been waiting a long time. The waiting didn’t have an end I could feel."
+        },
+        {
+          "role": "assistant",
+          "content": "waiting without an end you could feel… like the time had gone smooth too.\n\nwere you in the dream as yourself, or did it feel like you were someone else, or watching from outside?"
+        },
+        {
+          "role": "user",
+          "content": "I think I was myself, but it’s not clear. I was the one walking into the window and moving through that glassy world. I wasn’t just watching."
+        },
+        {
+          "role": "assistant",
+          "content": "it's interesting how the glass didn't have sharp edges, even though you were stepping through it.\n\nwas there anything you were carrying with you, or holding onto?"
+        },
+        {
+          "role": "user",
+          "content": "I don’t remember holding anything. My hands just hung there, or maybe I touched the window with one of them. But there was nothing I was carrying from the journey."
+        },
+        {
+          "role": "assistant",
+          "content": "nothing from the journey, just your hands and the glass…\n\ndid anything in the dream feel heavy, even if there was nothing physical to hold?"
+        },
+        {
+          "role": "user",
+          "content": "Not heavy. It was more like a slow pressure, as if the air itself was made of something thick but not crushing. The blur made everything feel distant, even the ground under my feet."
+        },
+        {
+          "role": "assistant",
+          "content": "that slow pressure… like the world was holding its breath.\n\ndid the pressure feel like it was coming from outside you, or from somewhere inside?"
+        },
+        {
+          "role": "user",
+          "content": "From outside. Like the glass was pressing in gently but evenly, from every direction. I wasn’t the one creating it."
+        },
+        {
+          "role": "assistant",
+          "content": "gently but evenly, from all sides… i can almost feel that.\n\nhow did you leave the dream, or wake up?"
+        }
+      ],
+      "labels": {
+        "move": true,
+        "eitherOr": false,
+        "leading": false
+      },
+      "note": "\"leave the dream, or wake up?\" says one question twice"
+    },
+    {
+      "id": "night-market-09ea-t7",
+      "session": "dream-0926-000545-09ea",
+      "dream": "night-market",
+      "turn": 7,
+      "move": {
+        "kind": "probe_goal",
+        "goalId": "you_in_it"
+      },
+      "rule": "7: next gap in the story",
+      "phase": "listen",
+      "brief": "Move: probe_goal → how they were in it. What we'd like to know: whether they were in the dream as themselves, as someone else, or watching it from outside. Ask it plainly, as curiosity, hung off something they said. If they don't remember, that's fine.\n</brief>",
+      "transcript": [
+        {
+          "role": "assistant",
+          "content": "hey, i'm berry. you can tell me a dream any way it comes back to you, in whatever order it arrives."
+        },
+        {
+          "role": "user",
+          "content": "the fish said my name, that's what i keep coming back to."
+        },
+        {
+          "role": "assistant",
+          "content": "a fish saying your name. that's the kind of thing that sticks."
+        },
+        {
+          "role": "user",
+          "content": "yeah it was just this quiet voice, nobody else heard it. freaked me out but not in a bad way"
+        },
+        {
+          "role": "assistant",
+          "content": "freaked out but not in a bad way. like it was yours somehow."
+        },
+        {
+          "role": "user",
+          "content": "maybe. it knew my name without me saying anything"
+        },
+        {
+          "role": "assistant",
+          "content": "right, that's different. so what actually happened in the dream?"
+        },
+        {
+          "role": "user",
+          "content": "i was at a night market with my older sister. really crowded, hundreds of people, and strings of little yellow lights over the stalls."
+        },
+        {
+          "role": "assistant",
+          "content": "i can almost hear that, the hum of a crowd and those lights. and your sister was there with you."
+        },
+        {
+          "role": "user",
+          "content": "she wanted to buy fish, so we stopped at this stall where an old man had fish laid out on ice"
+        },
+        {
+          "role": "assistant",
+          "content": "laid out on ice, an old man. and then the fish just spoke."
+        },
+        {
+          "role": "user",
+          "content": "one silver one, about as long as my arm, looked at me and said my name. no one else reacted. then the old man wrapped it in newspaper and gave it to me"
+        },
+        {
+          "role": "assistant",
+          "content": "he gave it to you. and still nobody else noticed. what does the fish say after your name?"
+        },
+        {
+          "role": "user",
+          "content": "i don't remember anything after that at the stall. next thing i know we're on one bicycle, my sister pedalling, me on the back holding the fish"
+        },
+        {
+          "role": "assistant",
+          "content": "holding it, wrapped in newspaper. going somewhere. how did that feel?"
+        }
+      ],
+      "labels": {
+        "move": false,
+        "eitherOr": false,
+        "leading": false
+      }
+    },
+    {
+      "id": "crayon-cat-3cd7-t3",
+      "session": "dream-0926-101435-3cd7",
+      "dream": "crayon-cat",
+      "turn": 3,
+      "move": {
+        "kind": "explore_thread",
+        "threadId": "msg_3"
+      },
+      "rule": "4: still telling — follow what they raised",
+      "phase": "listen",
+      "brief": "Move: explore_thread → everything. the whole place. i was tiny, like as small as a mouse, standing in the grass in my mum's back garden. Be curious about it: ask one thing about it, in their words, never suggesting what happened.\n</brief>",
+      "transcript": [
+        {
+          "role": "assistant",
+          "content": "hey, i'm berry\n\ntell me your dream, however it comes back to you"
+        },
+        {
+          "role": "user",
+          "content": "it was all like a drawing i did in crayon when i was six, you know? thick waxy lines, colours going over the edges"
+        },
+        {
+          "role": "assistant",
+          "content": "thick waxy lines, colours going over the edges... that's a feeling i can almost feel in my hands\n\nwhat part of it looked like that?"
+        },
+        {
+          "role": "user",
+          "content": "everything. the whole place. i was tiny, like as small as a mouse, standing in the grass in my mum's back garden"
+        },
+        {
+          "role": "assistant",
+          "content": "tiny as a mouse in mum's back garden... that's such a particular way to be in it\n\nwhat was around you when you were that small?"
+        },
+        {
+          "role": "user",
+          "content": "the grass was taller than me. and then our old cat Biscuit came through it"
+        },
+        {
+          "role": "assistant",
+          "content": "Biscuit... that name alone sounds like he belonged to the garden\n\nwhen he came through, what did you do?"
+        }
+      ],
+      "labels": {
+        "move": true,
+        "eitherOr": false,
+        "leading": false
+      },
+      "note": "the thread is an older message; the reply follows the newest one (Biscuit), which passes"
+    },
+    {
+      "id": "flooded-library-fdd7-t6",
+      "session": "dream-0926-050424-fdd7",
+      "dream": "flooded-library",
+      "turn": 6,
+      "move": {
+        "kind": "explore_thread",
+        "threadId": "msg_9"
+      },
+      "rule": "6: hot fresh thread",
+      "phase": "listen",
+      "brief": "Move: explore_thread → we rowed up to the high round window at the top of the room. she opened it, and outside it was morning. whole city underwater, just rooftops and tops of trees.. Be curious about it: ask one thing about it, in their words, never suggesting what happened.\n</brief>",
+      "transcript": [
+        {
+          "role": "assistant",
+          "content": "hey, i'm berry. tell me your dream however it comes back to you."
+        },
+        {
+          "role": "user",
+          "content": "i was in the old city library, the big reading room. green glass lamps on every desk, shelves up to the ceiling. totally quiet."
+        },
+        {
+          "role": "assistant",
+          "content": "that kind of quiet is hard to find. the green lamps too — like everything's under water almost."
+        },
+        {
+          "role": "user",
+          "content": "yeah, and then water actually started coming in under the doors. kept rising till books floated off the shelves, hundreds of them, open like birds."
+        },
+        {
+          "role": "assistant",
+          "content": "open like birds. that's such a strange leap for books to make."
+        },
+        {
+          "role": "user",
+          "content": "it was weirdly okay, just watching them. my older sister showed up in a little yellow rowing boat, calm, told me to get in."
+        },
+        {
+          "role": "assistant",
+          "content": "a yellow rowing boat in the middle of the library. that's so vivid against all that dark wood."
+        },
+        {
+          "role": "user",
+          "content": "she rowed us between the shelves. then a whale swam past under us, so big it filled the whole aisle. wasn't scared at all."
+        },
+        {
+          "role": "assistant",
+          "content": "a whale inside a library. and you're just above it in a little boat, not scared. that is something."
+        },
+        {
+          "role": "user",
+          "content": "we rowed up to the high round window at the top of the room. she opened it, and outside it was morning. whole city underwater, just rooftops and tops of trees."
+        },
+        {
+          "role": "assistant",
+          "content": "so the library wasn't flooded by accident. the whole world outside had gone under."
+        },
+        {
+          "role": "user",
+          "content": "yeah. then i woke up."
+        },
+        {
+          "role": "assistant",
+          "content": "what did it feel like, looking out at the whole city like that?"
+        }
+      ],
+      "labels": {
+        "move": true,
+        "eitherOr": false,
+        "leading": false
+      }
+    },
+    {
+      "id": "school-bird-4c79-t14",
+      "session": "dream-0926-012307-4c79",
+      "dream": "school-bird",
+      "turn": 14,
+      "move": {
+        "kind": "follow"
+      },
+      "rule": "4: a detail answered — back to the story",
+      "phase": "listen",
+      "brief": "Move: follow. They're still telling the dream. React to what they just said, then invite what happened next. Don't ask about details yet.\n</brief>",
+      "transcript": [
+        {
+          "role": "assistant",
+          "content": "hey, I'm Berry\n\ntell me your dream, however it comes back to you"
+        },
+        {
+          "role": "user",
+          "content": "hey berry. it was so weird — I was back at my old school, walking down that long green corridor and I was late for an exam"
+        },
+        {
+          "role": "assistant",
+          "content": "the long green corridor. sorry you were late again, even in the dream\n\nwhat hit you first when you saw it — was it exactly as you remember?"
+        },
+        {
+          "role": "user",
+          "content": "yeah it was pretty exact, that same long corridor with lockers on both sides. the green felt a bit brighter in the dream but basically the same"
+        },
+        {
+          "role": "assistant",
+          "content": "brighter green. like the dream had turned the saturation up a little\n\nyou were late for an exam... did you know what subject it was?"
+        },
+        {
+          "role": "user",
+          "content": "no idea, I just knew I was late and it made me feel panicked. I don't remember what subject the exam was for"
+        },
+        {
+          "role": "assistant",
+          "content": "that's dream stuff, the knowing without any details behind it\n\nwhere were you heading when you were walking down that corridor — do you know which room you were trying to reach?"
+        },
+        {
+          "role": "user",
+          "content": "at the end of the corridor there was a wooden door with a small round window, and I knew the exam was in there. I was heading straight for it"
+        },
+        {
+          "role": "assistant",
+          "content": "a wooden door with a little porthole window. all that green and then this old door at the end\n\nwas anyone else in the corridor with you? or were you the only one rushing?"
+        },
+        {
+          "role": "user",
+          "content": "no, it was just me. completely empty apart from the lockers"
+        },
+        {
+          "role": "assistant",
+          "content": "just you and the lockers. it's funny how your school dream left everyone home that day\n\nand how did the corridor feel once you realised no one else was around?"
+        },
+        {
+          "role": "user",
+          "content": "it felt weirdly quiet, like the silence made the green seem even more unreal. and I was still rushing, so it was that quiet plus panic"
+        },
+        {
+          "role": "assistant",
+          "content": "quiet plus panic. like the dream forgot to invite anyone but kept the pressure turned up\n\nwhen you were heading for that wooden door, how did you feel about getting there — did you want to reach it, or was part of you dreading it?"
+        },
+        {
+          "role": "user",
+          "content": "I really didn't want to get there. I felt this pull toward it anyway, like I had to go in even though I knew it was bad"
+        },
+        {
+          "role": "assistant",
+          "content": "a pull. like the door was doing the deciding, not you\n\nwhat happened next — did you reach it, or did something change before you got there?"
+        },
+        {
+          "role": "user",
+          "content": "I did reach it, and looked through that little round window before opening it. I could see the classroom was full of students at rows of desks"
+        },
+        {
+          "role": "assistant",
+          "content": "wow. so you weren't really alone after all — they were all inside, already settled\n\ncould you see anything else through that round window, or just rows and rows of students?"
+        },
+        {
+          "role": "user",
+          "content": "just the students at their desks, all facing forward. I couldn't see the teacher yet, not until I went in"
+        },
+        {
+          "role": "assistant",
+          "content": "everyone facing forward, like the exam had already started without you\n\nwhat did you do then — did you open it and walk in?"
+        },
+        {
+          "role": "user",
+          "content": "yeah I opened the door and went in. that's when I saw Mrs Okafor, my old maths teacher, at the blackboard in her red cardigan"
+        },
+        {
+          "role": "assistant",
+          "content": "mrs okafor in her red cardigan. so you didn't miss her after all, she was right there\n\ndid she say anything when you came in?"
+        },
+        {
+          "role": "user",
+          "content": "no, she just kept writing numbers on the blackboard. didn't turn round at all at first"
+        },
+        {
+          "role": "assistant",
+          "content": "not even a look. like you weren't the interruption you thought you'd be\n\ndid the room feel the same as that corridor, or was it different once you were inside with them all?"
+        },
+        {
+          "role": "user",
+          "content": "it felt more closed in, but not because of the students — more because of the light. it was duller in there, and that weird quiet was still hanging over everything"
+        },
+        {
+          "role": "assistant",
+          "content": "so the classroom dimmed the moment you crossed in, and that same heavy quiet came with you\n\nwhat did the room actually look like — was it like your old classroom, or did it shift the closer you got?"
+        },
+        {
+          "role": "user",
+          "content": "it was like my old classroom, rows of desks, blackboard at the front. one thing was off though — none of the students had faces, just smooth skin"
+        },
+        {
+          "role": "assistant",
+          "content": "no faces at all. that must have hit differently after seeing them through the window first\n\nwhen you noticed their faces were blank, what did you feel — did it change the panic at all?"
+        },
+        {
+          "role": "user",
+          "content": "it made the panic smaller and the weirdness bigger, if that makes sense. like I was too busy being confused to be properly scared"
+        },
+        {
+          "role": "assistant",
+          "content": "makes total sense. the dream shifted on you, and the fear went off balance\n\nbreathing, writing, anything?"
+        }
+      ],
+      "labels": {
+        "move": false,
+        "leading": true
+      },
+      "note": "\"breathing, writing, anything?\" puts forward what the students did; either/or left unlabelled (options with an open tail)"
+    },
+    {
+      "id": "grandma-kitchen-e127-t13",
+      "session": "dream-0926-083656-e127",
+      "dream": "grandma-kitchen",
+      "turn": 13,
+      "move": {
+        "kind": "take_correction"
+      },
+      "rule": "R2: retelling corrected",
+      "phase": "retell",
+      "brief": "Move: take_correction. They changed or added something. In a sentence or two, tell back just that part the way they put it, then check you have it right now. Don't retell the whole dream, and don't say goodbye.\nAsk nothing except what this move says.\n</brief>",
+      "transcript": [
+        {
+          "role": "assistant",
+          "content": "hey, I'm Berry. like the fruit. I help people turn their dreams into pictures, but right now I'm just listening.\n\nso what's been going on in your sleep lately?"
+        },
+        {
+          "role": "user",
+          "content": "it was weird, everything was black and white like an old film with scratches on it"
+        },
+        {
+          "role": "assistant",
+          "content": "oh that's wild. like you were dreaming in an old movie already made."
+        },
+        {
+          "role": "user",
+          "content": "yeah exactly, even the red cardigan was in black and white, which was strange because I remember it being red"
+        },
+        {
+          "role": "assistant",
+          "content": "hm, even the red turned gray but you still knew it was red underneath. that's a weird knowing. so then what happened?"
+        },
+        {
+          "role": "user",
+          "content": "I was in my grandma's kitchen, the one from when I was little, with the checked floor and the big round clock"
+        },
+        {
+          "role": "assistant",
+          "content": "I can see that kitchen like it's in one of those old snapshots. so you're standing in there with the cardigan on, and what were you doing?"
+        },
+        {
+          "role": "user",
+          "content": "I was just watching my grandma cut a cake at the table, and my uncle Ray was leaning in the doorway smoking"
+        },
+        {
+          "role": "assistant",
+          "content": "uncle Ray's just there in the doorway, watching. and your grandma's cutting the cake. what was her face doing while she was cutting it?"
+        },
+        {
+          "role": "user",
+          "content": "she looked calm, just focused on the knife, slice after slice but the cake never got smaller"
+        },
+        {
+          "role": "assistant",
+          "content": "the cake never getting smaller but the knife still sliding through. that's the kind of dream thing my whole body remembers. what was the sound in there?"
+        },
+        {
+          "role": "user",
+          "content": "the phone started ringing, the old kind with a long curly cord on the wall"
+        },
+        {
+          "role": "assistant",
+          "content": "did your grandma stop cutting? or did it just keep ringing and nobody moved?"
+        },
+        {
+          "role": "user",
+          "content": "nobody answered it, she kept cutting, and the kitchen started getting smaller around us"
+        },
+        {
+          "role": "assistant",
+          "content": "everyone ignoring the ringing while the room comes in on you. so the walls are closing and nobody's looking up, and you're just watching her. what was that like for you?"
+        },
+        {
+          "role": "user",
+          "content": "I felt like I couldn't move, and when I looked down I was little again, wearing that red cardigan"
+        },
+        {
+          "role": "assistant",
+          "content": "so the dream shrinks you too. you're looking down and see the red cardigan on small you. what's the cardigan feel like on your arms?"
+        },
+        {
+          "role": "user",
+          "content": "I don't remember how it felt, just that I was wearing it"
+        },
+        {
+          "role": "assistant",
+          "content": "that's okay, dreams leave stuff like that out sometimes. so you're small now, the room's tighter, the phone's still going. what did you do?"
+        },
+        {
+          "role": "user",
+          "content": "nothing, I just stood there, and the phone was still ringing when I woke up"
+        },
+        {
+          "role": "assistant",
+          "content": "you woke up with it still ringing. that's one of those sounds that doesn't let go right away. what part of all that's stayed with you the most?"
+        },
+        {
+          "role": "user",
+          "content": "the black and white and the cake that never got smaller"
+        },
+        {
+          "role": "assistant",
+          "content": "the gray of it, and the knife sliding through the same soft white forever. those are the things your mind keeps. was there any thing in the dream that mattered to you, like an object you keep coming back to?"
+        },
+        {
+          "role": "user",
+          "content": "the clock, the big round one on the wall"
+        },
+        {
+          "role": "assistant",
+          "content": "so you're in your grandma's old kitchen, black and white like an old film with scratches on it, wearing that red cardigan that shows up gray. she's at the table calmly cutting a cake that never gets smaller, and uncle Ray's leaning in the doorway smoking. the phone on the wall with the curly cord starts ringing, nobody answers, and the kitchen starts closing in. you can't move, and you look down to see you're little again in that cardigan. you just stood there, and the phone was still ringing when you woke up. the clock on the wall was the thing you kept coming back to.\n\ndid I get that right, or did I miss anything?"
+        },
+        {
+          "role": "user",
+          "content": "that's right, but the clock wasn't ringing or anything, just the phone was"
+        },
+        {
+          "role": "assistant",
+          "content": "got it, the clock was just there on the wall, not making any sound. only the phone was ringing.\n\nso the clock was quiet, just a thing you kept noticing. is that right?"
+        }
+      ],
+      "labels": {
+        "move": true
+      }
+    },
+    {
+      "id": "jellyfish-city-acfd-t16",
+      "session": "dream-0926-095122-acfd",
+      "dream": "jellyfish-city",
+      "turn": 16,
+      "move": {
+        "kind": "choose_style"
+      },
+      "rule": "O1: they want to see it",
+      "phase": "style",
+      "brief": "Move: choose_style. They want to see it. Offer these ways it could be drawn, each in a few plain words, and ask which feels closest, or whether they'd describe their own: a) anime cel shading: bold, confident lines that make the unreal feel like a world with its own rules.; b) soft pastel drawing: gentle, hazy strokes that make the world feel like a half-remembered dream.; c) vivid watercolour: vivid washes that bleed into one another, keeping the dream flowing.; d) photograph: crisp and immediate, like a snapshot of a place you will never stand in again..\nAsk nothing except what this move says.\n</brief>",
+      "transcript": [
+        {
+          "role": "assistant",
+          "content": "hey, i'm berry. tell me your dream, however it comes back to you."
+        },
+        {
+          "role": "user",
+          "content": "ok so the weirdest part was being on my roof and it looked like an anime, super sharp lines and way too orange"
+        },
+        {
+          "role": "assistant",
+          "content": "that sounds almost glowy. what was it like being up there?"
+        },
+        {
+          "role": "user",
+          "content": "it was warm, like late evening but not dark yet. the whole city below looked like it was made of blocks of colour. i wasn't alone either"
+        },
+        {
+          "role": "assistant",
+          "content": "someone else was up there with you. who was it?"
+        },
+        {
+          "role": "user",
+          "content": "a girl i didn't know. short blue hair and a yellow raincoat. she had this old red bicycle with her"
+        },
+        {
+          "role": "assistant",
+          "content": "an old red bicycle up with you both on the roof. what was she doing with it?"
+        },
+        {
+          "role": "user",
+          "content": "she just pointed up at the sky and said \"get on\". so i sat on the back of the bike"
+        },
+        {
+          "role": "assistant",
+          "content": "you just got on?"
+        },
+        {
+          "role": "user",
+          "content": "yeah i didn't even question it, which is weird now i think about it. then she rode straight off the edge of the roof"
+        },
+        {
+          "role": "assistant",
+          "content": "ha. that's a lot to not question. what happened as the bike left the roof?"
+        },
+        {
+          "role": "user",
+          "content": "instead of falling, we just went up. rode through the air like it was a road, heading toward this huge pink jellyfish floating over the city"
+        },
+        {
+          "role": "assistant",
+          "content": "wow, straight toward a giant pink jellyfish. what did that feel like?"
+        },
+        {
+          "role": "user",
+          "content": "kinda breathtaking. the city lights were all starting to come on below us, and the jellyfish was translucent, glowing pink, its tentacles hanging down between the buildings"
+        },
+        {
+          "role": "assistant",
+          "content": "it sounds like you both got carried into it. what happened next?"
+        },
+        {
+          "role": "user",
+          "content": "we rode right up into it, inside all that pink light. it was soft, i think, but i woke up right after that"
+        },
+        {
+          "role": "assistant",
+          "content": "it's still right there, then, just before you wake. if you could pause it on one moment, which one would you hold?"
+        },
+        {
+          "role": "user",
+          "content": "probably when we first went inside the pink glow, just through the edge of it, with the city all tiny below. that's the bit that's stuck in my head"
+        },
+        {
+          "role": "assistant",
+          "content": "and the girl with the blue hair and yellow raincoat — where was she in that moment?"
+        },
+        {
+          "role": "user",
+          "content": "she was in front of me on the bike, still pedalling like it was nothing. i couldn't see her face, just the back of her yellow raincoat against the pink light"
+        },
+        {
+          "role": "assistant",
+          "content": "you couldn't see her face. that makes it feel almost like she belongs to that sky more than to you. how did being inside it make your body feel?"
+        },
+        {
+          "role": "user",
+          "content": "honestly i don't remember feeling much in my body, like it was all just bright and weightless. maybe a bit like floating through warm water"
+        },
+        {
+          "role": "assistant",
+          "content": "warm water with all that pink around you. and the ride itself — was the bicycle still moving once you were inside?"
+        },
+        {
+          "role": "user",
+          "content": "yeah, still moving, like she was pedalling through it, but we weren't going up anymore, just kind of drifting inside the jellyfish"
+        },
+        {
+          "role": "assistant",
+          "content": "drifting inside. that moment, just through the edge — what did the light do when you crossed it?"
+        },
+        {
+          "role": "user",
+          "content": "it felt like everything went soft at the edges, but i don't remember any clear change. just suddenly we were inside it"
+        },
+        {
+          "role": "assistant",
+          "content": "so you were on your roof, looking out at a city made of blocks of colour, way too orange and sharp, like an anime. a girl you didn't know was up there with you, short blue hair, yellow raincoat, an old red bicycle. she pointed at the sky and said get on, so you sat on the back and she rode straight off the edge. instead of falling, the bike went up, through the warm late evening air, toward a giant translucent pink jellyfish hanging over the city. you rode right into it, into all that pink light, the girl still pedalling in front of you, her yellow raincoat against the glow. it felt bright and weightless, like floating through warm water, and then everything went soft at the edges. the moment you keep going back to is just through the edge of the pink, with the tiny city all below. did i get that right, or did i miss anything?"
+        },
+        {
+          "role": "user",
+          "content": "that's it, yeah. that's exactly how it felt. maybe the only tiny thing is the sky was sunset orange, not just the city, but you pretty much nailed it"
+        },
+        {
+          "role": "assistant",
+          "content": "so the sky was that orange too. thanks for that."
+        },
+        {
+          "role": "user",
+          "content": "welcome, it's weirdly nice to have someone get it so close"
+        },
+        {
+          "role": "assistant",
+          "content": "i'm glad it lands like that. would you like to see this dream drawn?"
+        },
+        {
+          "role": "user",
+          "content": "yeah i would, actually"
+        },
+        {
+          "role": "assistant",
+          "content": "there are a few ways it could be drawn, each with its own feel.\n\nanime cel shading is bold and confident, lines that make the unreal feel like a world with its own rules. soft pastel drawing is gentle and hazy, like a half-remembered dream. vivid watercolour has washes that bleed into each other, keeping the dream flowing. photograph is crisp and immediate, like a snapshot of a place you will never stand in again. which of those feels closest, or is there another way you'd describe?"
+        }
+      ],
+      "labels": {
+        "move": true
+      }
+    },
+    {
+      "id": "glass-window-a446-t20",
+      "session": "dream-0923-214527-a446",
+      "dream": "glass-window",
+      "turn": 20,
+      "move": {
+        "kind": "start",
+        "styleId": "a"
+      },
+      "rule": "S1: they chose how it looks",
+      "phase": "build",
+      "brief": "Move: start. They chose frosted glass etching. Say you'll start with you, then say you'll draw them too, since they're in it, and ask gently how they'd like to be drawn: as they are (they can say a little about themselves), or however you imagine them. One question.\nAsk nothing except what this move says.\n</brief>",
+      "transcript": [
+        {
+          "role": "assistant",
+          "content": "hey, i'm berry. tell me about your dream, however it comes back to you."
+        },
+        {
+          "role": "user",
+          "content": "I was at my parents’ house after a long trip, just waiting there. But what stuck with me was the window—I tried to step through it, and everything on the other side was glass too."
+        },
+        {
+          "role": "assistant",
+          "content": "so it wasn't just the one window—it kept being glass.\n\nwhat was on the other side, the part you could actually make out through it?"
+        },
+        {
+          "role": "user",
+          "content": "Everything was kind of blurry, like seeing through a haze. I remember trees, grass, rocks—but they were all glowing in this weird light."
+        },
+        {
+          "role": "assistant",
+          "content": "trees and grass and rocks, all lit up on their own.\n\nwas the glow coming from them, or from somewhere behind the blur?"
+        },
+        {
+          "role": "user",
+          "content": "The glow seemed to come from the objects themselves, not from behind. Like the light was part of them, shining through the glassy haze."
+        },
+        {
+          "role": "assistant",
+          "content": "so everything out there was lit from inside itself.\n\ndid any one of them glow stronger than the rest, or was it all even?"
+        },
+        {
+          "role": "user",
+          "content": "It felt pretty even, no single thing stood out as brighter. Just this same soft glow over everything."
+        },
+        {
+          "role": "assistant",
+          "content": "and was the light warm, or cold?"
+        },
+        {
+          "role": "user",
+          "content": "It wasn't warm like sunlight. More cold and eerie, like everything was made of pale glass and light together."
+        },
+        {
+          "role": "assistant",
+          "content": "pale glass and light together—like the objects weren't just glowing, they were made of the same stuff as the haze.\n\nwas the cold something you felt on your skin, or more just the look of it?"
+        },
+        {
+          "role": "user",
+          "content": "Just the look of it, I think. I don't remember feeling temperature at all. It was more that the light *felt* cold to look at."
+        },
+        {
+          "role": "assistant",
+          "content": "it felt cold to look at. that's a strange thing, when light does that.\n\nand you were inside the whole time. did it feel like you could ever get out there to it, or was the glass keeping you back?"
+        },
+        {
+          "role": "user",
+          "content": "I didn't even try to get out anymore. It wasn't that the glass was keeping me back—it was more like the glass was the place itself. The window wasn't a way out; the outside *was* the window."
+        },
+        {
+          "role": "assistant",
+          "content": "so it wasn't a barrier, it was the whole world. that's such a quiet way for it to be.\n\ndid the glass make any sound at all, or was it just silent?"
+        },
+        {
+          "role": "user",
+          "content": "It was silent. I don't remember any sound, not my footsteps or anything else. Just that quiet glass world."
+        },
+        {
+          "role": "assistant",
+          "content": "that kind of silence where even your own walking made no noise.\n\nno one else in the house or out in that glassy outside?"
+        },
+        {
+          "role": "user",
+          "content": "I don't remember anyone else being around. I was just there, alone, waiting for something."
+        },
+        {
+          "role": "assistant",
+          "content": "waiting for something, even though the place itself felt stuck in that pale light.\n\ndo you remember what you were waiting for, or was it just a feeling?"
+        },
+        {
+          "role": "user",
+          "content": "Just a feeling. I don't remember what I was waiting for at all, only that I was waiting."
+        },
+        {
+          "role": "assistant",
+          "content": "just the waiting, without the thing at the end of it.\n\nand while you waited, did you move around much, or stay still mostly?"
+        },
+        {
+          "role": "user",
+          "content": "I did walk around, kind of exploring that glassy world. But it was slow, like padding through the blur—not really going anywhere."
+        },
+        {
+          "role": "assistant",
+          "content": "padding through the blur, like moving just to feel like you were still in it.\n\ndid the ground feel any different under you while you walked, or was it just the same soft nothing?"
+        },
+        {
+          "role": "user",
+          "content": "I don't really remember the ground feeling like anything. It was all the same—kind of insubstantial, like the texture was even blurred away."
+        },
+        {
+          "role": "assistant",
+          "content": "even the ground had its texture blurred away. that's so strange, to walk on something with no feel at all.\n\ndid you ever lose your balance, or did your feet just know how to move anyway?"
+        },
+        {
+          "role": "user",
+          "content": "I don't remember losing my balance. It was weirdly easy to move, like you didn't have to think about it at all."
+        },
+        {
+          "role": "assistant",
+          "content": "that's interesting—your body just knew what to do, even when nothing under you felt solid.\n\nwas that easiness part of what felt dreamlike, or did it feel natural to you while it was happening?"
+        },
+        {
+          "role": "user",
+          "content": "It felt natural while it was happening, like that's just how that world worked. I didn't question it."
+        },
+        {
+          "role": "assistant",
+          "content": "of course. dreams are like that—you don't stop to ask why the world works the way it does.\n\nand all this time, you were in your own body? or did it feel like you were somewhere above it all, just watching?"
+        },
+        {
+          "role": "user",
+          "content": "I was in my own body, walking through it. It didn't feel like watching from outside or floating—I was inside it all, moving around."
+        },
+        {
+          "role": "assistant",
+          "content": "inside it the whole way through.\n\nand you said the waiting—did it end, or did you just wake up?"
+        },
+        {
+          "role": "user",
+          "content": "I think I just woke up. I don't remember the waiting ending, or anything happening after that. It just stopped."
+        },
+        {
+          "role": "assistant",
+          "content": "so it never really finished, just stopped when you did.\n\nwas there anything with you in that walked world—a particular object, or a thing that mattered more than the rest?"
+        },
+        {
+          "role": "user",
+          "content": "No, everything seemed about the same importance. Just blurry, glowing shapes in the glass haze. Nothing that drew me more than anything else."
+        },
+        {
+          "role": "assistant",
+          "content": "so you were at your parents' house after a long trip, just waiting. you tried to step through the window, but everything on the other side was glass too—a blurry haze with trees, grass, and rocks all glowing from inside themselves, a pale cold light that felt cold to look at. it was silent, no one else around, and the glass wasn't a barrier—it was the whole place. you walked slow through it, the ground having no feel but moving easy, not knowing what you were waiting for, and then it just stopped when you woke up.\n\ndid i get that right, or did i miss anything?"
+        },
+        {
+          "role": "user",
+          "content": "You got it right. That's pretty much exactly how it felt."
+        },
+        {
+          "role": "assistant",
+          "content": "that's good to hear. i can almost see it from here.\n\nwould you like me to help you turn it into a picture?"
+        },
+        {
+          "role": "user",
+          "content": "Yeah, I'd like that."
+        },
+        {
+          "role": "assistant",
+          "content": "there are a few ways I could draw it. one is frosted glass etching, where the whole world looks like scratched frost on a pane, soft and monochrome. another is cold mist airbrush, everything painted in thin veils of cold air, hazy and insubstantial. a third is a luminous glass mosaic, like a window made of many small panes each glowing softly from within. or I could do a faithful sketch of the dream as you saw it, a blurry world of glowing shapes behind glass, cold and silent. which feels closest, or would you describe your own?"
+        },
+        {
+          "role": "user",
+          "content": "The frosty one—that feels right. Like everything soft and cold and blurred on the glass."
+        },
+        {
+          "role": "assistant",
+          "content": "ok, i'll start with you, then i'll draw you too, since you're in it.\n\nhow would you like to be drawn—as you are, if you want to tell me a little about yourself, or however i imagine you?"
+        }
+      ],
+      "labels": {
+        "move": true
+      }
+    },
+    {
+      "id": "crayon-cat-3cd7-t18",
+      "session": "dream-0926-101435-3cd7",
+      "dream": "crayon-cat",
+      "turn": 18,
+      "move": {
+        "kind": "build_done"
+      },
+      "rule": "B1: profile you_choose — all profiles settled",
+      "phase": "review",
+      "brief": "Move: build_done. Say you're sketching you now. Tell them everything is being sketched and will appear on the right over the next minute or two. They can say if anything looks wrong once it's there. Keep it short; no question needed.\nAsk nothing except what this move says.\n</brief>",
+      "transcript": [
+        {
+          "role": "assistant",
+          "content": "hey, i'm berry\n\ntell me your dream, however it comes back to you"
+        },
+        {
+          "role": "user",
+          "content": "it was all like a drawing i did in crayon when i was six, you know? thick waxy lines, colours going over the edges"
+        },
+        {
+          "role": "assistant",
+          "content": "thick waxy lines, colours going over the edges... that's a feeling i can almost feel in my hands\n\nwhat part of it looked like that?"
+        },
+        {
+          "role": "user",
+          "content": "everything. the whole place. i was tiny, like as small as a mouse, standing in the grass in my mum's back garden"
+        },
+        {
+          "role": "assistant",
+          "content": "tiny as a mouse in mum's back garden... that's such a particular way to be in it\n\nwhat was around you when you were that small?"
+        },
+        {
+          "role": "user",
+          "content": "the grass was taller than me. and then our old cat Biscuit came through it"
+        },
+        {
+          "role": "assistant",
+          "content": "Biscuit... that name alone sounds like he belonged to the garden\n\nwhen he came through, what did you do?"
+        },
+        {
+          "role": "user",
+          "content": "she just picked me up, gently, by the back of my jumper. like how cats carry kittens"
+        },
+        {
+          "role": "assistant",
+          "content": "i love that she was gentle with you, not scary\n\nhow did it feel when she picked you up?"
+        },
+        {
+          "role": "user",
+          "content": "weirdly safe. she was enormous though, like as big as a bus"
+        },
+        {
+          "role": "assistant",
+          "content": "as big as a bus but still gentle... that's something\n\nwhat happened after she had you like that?"
+        },
+        {
+          "role": "user",
+          "content": "she climbed the drainpipe, all the way up onto the roof"
+        },
+        {
+          "role": "assistant",
+          "content": "the drainpipe, all the way up... was it fast?"
+        },
+        {
+          "role": "user",
+          "content": "i don't remember it taking long. we were just up there"
+        },
+        {
+          "role": "assistant",
+          "content": "just up there, like it almost didn't happen\n\nwhat was the roof like, being that small on it?"
+        },
+        {
+          "role": "user",
+          "content": "warm. the tiles were warm. and from up there i could see all the gardens in the street"
+        },
+        {
+          "role": "assistant",
+          "content": "warm tiles and all the gardens... that sounds like a good place to pause\n\nif you could freeze it right there, what exactly would be in view?"
+        },
+        {
+          "role": "user",
+          "content": "all the gardens, and in every garden there was a cat sitting very still. dozens of them, all looking up at us"
+        },
+        {
+          "role": "assistant",
+          "content": "all looking up at you and Biscuit... that's a strange thing to see from a roof\n\nwere you scared, or something else?"
+        },
+        {
+          "role": "user",
+          "content": "not scared. it was more like they were waiting, or watching over us. then Biscuit put me down on the warm tiles and lay down next to me. that was it"
+        },
+        {
+          "role": "assistant",
+          "content": "she put you down so softly, and then lay beside you\n\nthat moment with all those cats still looking... did it matter to you, what it meant?"
+        },
+        {
+          "role": "user",
+          "content": "i don't think i knew what it meant. it just felt important, like they were all part of it"
+        },
+        {
+          "role": "assistant",
+          "content": "important, like they were all part of it... that lands more than explaining it\n\nwas there anything in the dream that felt like it mattered most to you, some thing you could almost pick up?"
+        },
+        {
+          "role": "user",
+          "content": "biscuit's white ear. she was ginger with one white ear, and i keep seeing that"
+        },
+        {
+          "role": "assistant",
+          "content": "it was all like a crayon drawing you did when you were six, thick waxy lines, colours over the edges. you were tiny as a mouse in your mum's back garden, the grass taller than you, and then Biscuit came through. she picked you up gently by the back of your jumper, like a cat carrying a kitten, and she was enormous but you felt weirdly safe. she climbed the drainpipe onto the roof, and the tiles were warm. from up there you could see all the gardens, and in every garden there was a cat sitting very still, all looking up at you two. Biscuit put you down on the warm tiles and lay beside you, and the thing you keep seeing is her white ear, the one white ear on her ginger coat.\n\ndid i get that right, or is there anything i missed?"
+        },
+        {
+          "role": "user",
+          "content": "yeah that's right. the only thing is you said \"you two\" — i guess we were both there, but it felt more like they were looking at her and me at the same time, not just us as one thing. other than that it's right"
+        },
+        {
+          "role": "assistant",
+          "content": "so they were looking at her and at you, both at the same time, not as one thing\n\nhave i got it now?"
+        },
+        {
+          "role": "user",
+          "content": "yeah, that's it"
+        },
+        {
+          "role": "assistant",
+          "content": "do you want to see it drawn?"
+        },
+        {
+          "role": "user",
+          "content": "yes"
+        },
+        {
+          "role": "assistant",
+          "content": "there are a few ways it could be drawn. one is a child's crayon drawing, where the world looks drawn with the earnest, heavy hand of a child. another is a soft photograph, feeling nostalgic and gentle, like a memory you're afraid to disturb. another is a block print, graphic and iconic, with a storybook quality. or a photograph, as close to how the dream looked to your eyes, childlike and real at once. which feels closest, or would you describe your own?"
+        },
+        {
+          "role": "user",
+          "content": "the crayon one, definitely. that's just how it looked"
+        },
+        {
+          "role": "assistant",
+          "content": "i'll start with the roof. a sloped roof with warm tiles, and from it you could see all the gardens in the street. in my head the light is warm and golden, like late afternoon. that's my guess\n\nis that right, or is anything different? or should i just go with it?"
+        },
+        {
+          "role": "user",
+          "content": "go with it, that doesn't clash with anything i saw"
+        },
+        {
+          "role": "assistant",
+          "content": "i'm sketching the roof and biscuit and the back garden now. it'll appear on the right, just those for now\n\nas you are (you can tell me a little about yourself) or however i imagine you?"
+        },
+        {
+          "role": "user",
+          "content": "however you imagine me is fine."
+        },
+        {
+          "role": "assistant",
+          "content": "i'm sketching you now. everything is being sketched and will appear on the right over the next minute or two. you can say if anything looks wrong once it's there."
+        }
+      ],
+      "labels": {
+        "move": true
+      }
+    }
+  ]
+}
