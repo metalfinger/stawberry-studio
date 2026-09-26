@@ -38,14 +38,14 @@ const write: WriteFn = async (messages) => {
     usage: { prompt_tokens: 400, completion_tokens: 30 },
   };
 };
-// Jev: the water meant, and how the room is from then on; the drifting meant, and not how the boat
-// looks; the light a guess. At m2, the water over the desks just within the bar.
+// Jev: the water meant, and none of motion, drawing style, its look or its feel; the drifting meant,
+// and not how the boat looks; the light a guess. At m2, the water over the desks just within the bar.
 const jevAsked: string[] = [];
 const jev: JevFn = async (state, questions) => {
   jevAsked.push(state);
   const m2 = (JSON.parse(state) as { moment: { action: string } }).moment.action.includes('under the doors');
   const p: Record<string, number> = m2
-    ? { implied_0: 0.65, stays_0: 0.8, motion_0: 0.1 }
+    ? { implied_0: 0.65, motion_0: 0.1 }
     : {
         implied_0: 0.9,
         motion_0: 0.1,
@@ -93,9 +93,7 @@ describe('what a moment implies, read once and checked', () => {
       ['light', false],
     ]);
     expect(implied.m5[0]).toMatchObject({ p: 0.9, motion: 0.1, drawn: 0.05, inlook: 0.1, basis: 'implied' });
-    // The last moment in the library: nothing after it there for the water to stay for.
-    expect(implied.m5[0].stays).toBeUndefined();
-    expect(implied.m2[0].stays).toBe(0.8);
+    expect(implied.m5[0].feel).toBe(0);
     expect(implied.m5[1]).toMatchObject({ p: 0.9, look: 0.1, basis: 'implied' });
     expect(implied.m5[0].look).toBeUndefined();
     expect(implied.m5.some((x) => x.close)).toBe(false);
@@ -110,27 +108,21 @@ describe('what a moment implies, read once and checked', () => {
     expect(brief.moment.action).toContain('high round window');
     expect(brief.the_record_holds.join(' ')).toContain('rising over the desks');
     const { state, questions } = impliedQuestions(f.breakdown, recordOf(f).record, m5, proposals.m5);
-    // A place is asked four things besides, one fact each (whether it stays so only where a later
-    // moment is there, and m5 is the library's last); a thing, whether it is how it looks.
+    // A place is asked four things besides, one fact each, every one to be answered no; a thing,
+    // whether it is how it looks.
     expect(Object.keys(questions)).toEqual([
       'implied_0',
       'motion_0',
       'drawn_0',
       'inlook_0',
+      'feel_0',
       'implied_1',
       'look_1',
       'implied_2',
       'motion_2',
       'drawn_2',
       'inlook_2',
-    ]);
-    const m2 = moments(f.breakdown).find((m) => m.id === 'm2')!;
-    expect(Object.keys(impliedQuestions(f.breakdown, recordOf(f).record, m2, proposals.m2).questions)).toEqual([
-      'implied_0',
-      'stays_0',
-      'motion_0',
-      'drawn_0',
-      'inlook_0',
+      'feel_2',
     ]);
     // Jev reads the moment's words and those around it in the same place, and the place's look as the
     // record has it there, never what the writer was told.
@@ -149,6 +141,7 @@ describe('what a moment implies, read once and checked', () => {
             { who: 'l1', what: 'Water', now: 'deeper' },
             { who: 'l9', what: 'door', now: 'open' },
             { who: 'l1', what: 'place', now: 'vast and empty' },
+            { who: 'l1', what: 'crowd', now: 'crowded' },
             { who: 'p1', what: 'hair', now: 'wet' },
           ],
         }),

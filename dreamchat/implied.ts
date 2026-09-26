@@ -96,6 +96,24 @@ export function clip(text: string, n: number): string {
   );
 }
 
+/**
+ * What says only the part again, adding nothing: "crowd: crowded". Each of its words is a word of the
+ * part, or grown from one.
+ */
+export function restatesPart(what: string, now: string): boolean {
+  const words = (t: string) =>
+    t
+      .toLowerCase()
+      .match(/[a-z]+/g)
+      ?.filter((w) => w.length > 2 && w !== 'the') ?? [];
+  const part = words(what);
+  const said = words(now);
+  return (
+    !!said.length &&
+    said.every((w) => part.some((p) => Math.min(p.length, w.length) >= 4 && (w.startsWith(p) || p.startsWith(w))))
+  );
+}
+
 /** Words that name no part of a place or thing, only all of it or how it looks. */
 const NO_PART = /^(?:the\s+)?(?:place|thing|look|looks|appearance|state|scene|setting|whole|it)$/i;
 
@@ -118,6 +136,7 @@ export function parseImplied(content: string, b: Breakdown, m: Moment): { who: s
         typeof x.what === 'string' &&
         !!x.what.trim() &&
         !NO_PART.test(x.what.trim()) &&
+        !(typeof x.now === 'string' && restatesPart(x.what, x.now)) &&
         typeof x.now === 'string' &&
         !!x.now.trim(),
     )
@@ -139,10 +158,10 @@ export const CLOSE = 0.1;
 
 /** The readings of a place's proposal besides whether it is meant, each one fact, and the answer each must have. */
 export const PLACE_CHECKS = [
-  { key: 'stays', want: 'yes', says: 'stays so after this moment' },
   { key: 'motion', want: 'no', says: 'something it is doing at this moment' },
   { key: 'drawn', want: 'no', says: 'how the pictures are drawn' },
   { key: 'inlook', want: 'no', says: 'what its look already says' },
+  { key: 'feel', want: 'no', says: 'how it feels or what is known of it' },
 ] as const;
 
 /**
@@ -170,15 +189,18 @@ export function impliedFacts(
  * - of a thing, whether it is how the thing looks, rather than where it is, what it does or how it
  *   feels (the key heavy and cold, the boat set down: meant, 0.90 and 0.93, and neither how it looks,
  *   0.04 and 0.06; the snowball glowing, 0.77);
- * - of a place, four questions (PLACE_CHECKS), since one joined question rejected the water risen to
- *   the window (0.28 and 0.26) with the snow and the dusk: whether it stays so after this moment, asked
- *   only where a later moment is in the same place (with none, there is nothing it could not stay for,
- *   and the water at the window read 0.58 to 0.64 from one asking to the next); whether it is something
- *   the place is doing at this moment (the train leaning into the bend, 0.96; the water levels and
- *   the windows opened, 0.04 to 0.13); whether it is how the pictures are drawn (black and white like
- *   an old film, 0.87; everything else, 0.04 to 0.48); and whether its look already says it (snow deep,
- *   0.97 and 0.99; dusk, 0.95; the grass tall, 0.91; the grass towering over the mouse-sized dreamer,
- *   0.74; the water levels, 0.05 to 0.27). Measured with evals/probes/place-question.ts (27 Sep).
+ * - of a place, four questions each to be answered no (PLACE_CHECKS), since one joined question
+ *   rejected the water risen to the window (0.28 and 0.26) with the snow and the dusk: whether it is
+ *   something the place is doing at this moment (the train leaning into the bend, 0.96; the water
+ *   levels and the windows opened, 0.04 to 0.13); whether it is how the pictures are drawn (black and
+ *   white like an old film, 0.86; a light gone "warm yellow", 0.80, the one true state it rejects; all
+ *   else under 0.55); whether its look already says it (snow deep, 0.97 and 0.99; dusk, 0.94; the
+ *   grass tall, 0.90; the grass towering over the mouse-sized dreamer, 0.75; the water levels, 0.02 to
+ *   0.16); and whether it is how it feels or what is known of it rather than anything a picture shows
+ *   (the tiles warm, 0.73; the door unlocked, 0.70; the water levels, 0.07 to 0.33). Not asked: whether it stays so after this moment, which read 0.06 to 0.59 on
+ *   true water levels a later moment raises, and caught nothing the others miss; nor "how it looks in
+ *   the picture", as things are asked, which read the water at the window 0.50 to 0.54. Measured on
+ *   every live dream with evals/probes/place-question.ts (27 Sep).
  */
 export function impliedQuestions(
   b: Breakdown,
@@ -190,7 +212,6 @@ export function impliedQuestions(
   const isPlace = (id: string) => b.places.some((l) => l.id === id);
   const all = momentsOf(b);
   const at = all.findIndex((x) => x.id === m.id);
-  const later = all.slice(at + 1).some((x) => x.place === m.place);
   const questions: Record<string, Question> = {};
   proposed.forEach((x, i) => {
     const n = name(x.who);
@@ -203,11 +224,6 @@ export function impliedQuestions(
       },
     };
     if (isPlace(x.who)) {
-      if (later)
-        questions[`stays_${i}`] = {
-          type: 'noul',
-          instructions: `After this moment, does ${n} stay so (${x.what}: ${x.now}) until something in the dream changes it?`,
-        };
       questions[`motion_${i}`] = {
         type: 'noul',
         instructions: `Is "${x.what}: ${x.now}" something ${n} is doing at this moment (leaning, swaying, shaking, flickering), rather than a state it is in (open, dark, flooded, risen)?`,
@@ -219,6 +235,10 @@ export function impliedQuestions(
       questions[`inlook_${i}`] = {
         type: 'noul',
         instructions: `Does ${n}'s look, as given, already say that its ${x.what} is ${x.now}?`,
+      };
+      questions[`feel_${i}`] = {
+        type: 'noul',
+        instructions: `Is "${x.what}: ${x.now}" about how ${n} feels to the touch or what someone knows about it (warm, cold, locked, unlocked), rather than anything a picture shows?`,
       };
     } else
       questions[`look_${i}`] = {
