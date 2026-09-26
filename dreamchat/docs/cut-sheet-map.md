@@ -2,6 +2,13 @@
 
 A map of the code as of 26 Sep 2026 (lab/dream-chat at 68ecd85), for step S3 of HARNESS_PLAN.md.
 
+Built in S3 (27 Sep): `cutsheet.ts` (the sheet, its tags, the switch) and `assemble.ts` (`assembleCut`). Where the
+build differs from the design below: the sheet keeps today's choice of images inside `assembleCut` (no `chooseRefs`
+yet, S5); an element's image is its sketch only (no in-between picture of its stage in force yet, S5); the text
+clean-ups are done while the sheet is built, as framePrompt does them (S6 retires them); `role` is counted from who
+is in view, since `outsideShot` still returns only words; the tree's looks and stages come from the record when
+DREAMCHAT_RECORD=on. HARNESS_PLAN.md lists what the sheet still computes twice.
+
 `tree.ts` already holds most of what a cut needs, but only the panel reads it (`server.ts:145`). The prompt is still built from four other sources, each working things out again: the moment's copy on the item (`Item.frame`/`Item.fields`), the continuity plan (`CutPlan`), the sketch items, and the view text.
 
 ## 1. What a cut's prompt and references need

@@ -22,6 +22,7 @@
 // dream keeps what was really sent for a moment, the dump says whether its rebuilt images are those.
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { tagWords } from '../cutsheet';
 import { imagesOf, type Rebuilt, rebuild } from '../plan';
 import type { Session } from '../session';
 import { sectionsOf } from './prompt-cases';
@@ -48,6 +49,9 @@ export type DumpPicture = {
   };
   /** Where what was sent is known: whether the rebuilt images are the ones sent, and which were. */
   sent?: { same_images: boolean; images: string[]; same_prompt: boolean };
+  /** With DREAMCHAT_CUT_SHEET=shadow or on: the moment's tags, and where its sheet assembles otherwise than framePrompt. */
+  tags?: string[];
+  sheet_differs?: string[];
 };
 export type DumpDream = { title?: string; error?: string; hash?: string; pictures: DumpPicture[] };
 export type Dump = {
@@ -87,6 +91,7 @@ export function dumpOf(r: Rebuilt, sent: Record<string, Sent> = {}): DumpDream {
               },
             }
           : {}),
+        ...(p.sheet ? { tags: tagWords(p.sheet.tags), sheet_differs: p.differs ?? [] } : {}),
         ...(was
           ? {
               sent: {
@@ -350,6 +355,31 @@ if (import.meta.main) {
     const other = sent.filter((x) => !x.p.sent!.same_images);
     console.log(
       `what was really sent is known for ${sent.length} moments: ${sent.filter((x) => x.p.sent!.same_prompt).length} rebuilt word for word; ${other.length} rebuilt with other images than were sent${other.length ? ` (${other.map((x) => `${x.id.slice(-4)} ${x.p.id}`).join(', ')})` : ''}`,
+    );
+  }
+  const sheets = pics.filter((p) => p.tags);
+  if (sheets.length) {
+    const differ = sheets.filter((p) => p.sheet_differs?.length);
+    console.log(
+      `cut sheets: ${sheets.length} moments, ${differ.length} where the sheet assembles otherwise than framePrompt${
+        differ.length
+          ? `:\n${Object.entries(dump.dreams)
+              .flatMap(([id, d]) =>
+                d.pictures
+                  .filter((p) => p.sheet_differs?.length)
+                  .map((p) => `  ${id} ${p.id}: ${p.sheet_differs!.join('; ')}`),
+              )
+              .join('\n')}`
+          : ''
+      }`,
+    );
+    const count = new Map<string, number>();
+    for (const p of sheets) for (const t of p.tags ?? []) count.set(t, (count.get(t) ?? 0) + 1);
+    console.log(
+      `tags: ${[...count]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([t, n]) => `${t} ${n}`)
+        .join(', ')}`,
     );
   }
   if (costs.length) console.log(costLine(costs));

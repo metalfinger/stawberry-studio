@@ -25,12 +25,12 @@ import {
   buildFrames,
   buildGhosts,
   type FrameReference,
-  framePrompt,
   ghostPrompt,
   inViewOf,
   type PlannedInput,
   turnedInto,
 } from './frames';
+import { type CutSheet, cutSheetMode, framed, sheetDream } from './cutsheet';
 import { checkReferences, preflight, readPrompt } from './gate';
 import { callJev } from './jev';
 import { recordForPlan, recordInputsOf } from './record';
@@ -50,6 +50,9 @@ export type RebuiltPicture = {
   criteria: Criterion[];
   /** Who and what it shows, by their sketches (none for an in-between picture). */
   inView: Item[];
+  /** With DREAMCHAT_CUT_SHEET=shadow or on: the moment's cut sheet, and where its assembly differs from framePrompt's. */
+  sheet?: CutSheet;
+  differs?: string[];
 };
 
 /** A saved dream's plan and every picture of it, in the order they would be drawn. */
@@ -97,6 +100,21 @@ export function rebuild(
   const inputs = recordInputsOf(s);
   const rec = recordForPlan(b, inputs.items, s.draft?.readings, { words: inputs.words, style });
   const plan = planContinuity(b, rec);
+  // With DREAMCHAT_CUT_SHEET=shadow or on, every moment's cut sheet, read from the dream as drawing reads
+  // it (session.ts sheetDreamOf): the story record, and the tree resolved from this plan.
+  const mode = cutSheetMode();
+  const dream =
+    mode === 'off'
+      ? null
+      : sheetDream({
+          breakdown: b,
+          plan,
+          prep: s.prep,
+          items: inputs.items,
+          style,
+          readings: s.draft?.readings,
+          words: inputs.words,
+        });
   const pictures = [...buildFrames(b, plan), ...buildGhosts(plan)].map((p): Item => ({
     ...p,
     status: 'ready',
@@ -133,10 +151,10 @@ export function rebuild(
     if (shot) it.shot = shot;
     // The mock-up, where the moment has a worked-out camera on a floor plan (session.ts layoutFor).
     const layout = cut?.eye && shotPlan(b, pid, rec) ? standIn.previs(pid) : undefined;
-    const inputs: PlannedInput[] = (cut?.refs ?? [])
+    const planned: PlannedInput[] = (cut?.refs ?? [])
       .map((use) => ({ use, item: byId.get(use.id) }))
       .filter((x): x is PlannedInput => !!x.item);
-    const built = framePrompt(it, sheets, style, inputs, layout);
+    const built = framed({ frame: it, sheets, style, inputs: planned, layout, dream }, mode, 'rebuild');
     out.push({
       id: pid,
       kind: 'cut',
@@ -145,6 +163,7 @@ export function rebuild(
       references: built.references,
       criteria: cut?.criteria ?? [],
       inView: inViewOf(it, sheets),
+      ...(built.sheet ? { sheet: built.sheet, differs: built.differs ?? [] } : {}),
     });
   }
   return { title: b.title, b, plan, sheets, pictures: out, ...(rec ? { rec } : {}) };

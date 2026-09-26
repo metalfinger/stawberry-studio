@@ -32,9 +32,9 @@ export { withoutPose };
 const YOU = '\u0000you';
 
 /** A phrase ended as one sentence, however the model ended it. */
-const sentence = (text: string) => `${text.trim().replace(/[.!?;,:\s]+$/, '')}.`;
+export const sentence = (text: string) => `${text.trim().replace(/[.!?;,:\s]+$/, '')}.`;
 
-const FRAMING: Record<Moment['distance'], string> = {
+export const FRAMING: Record<Moment['distance'], string> = {
   close: 'The subject fills nearly the whole frame edge to edge; the background is a thin strip and little more.',
   medium: 'The subject occupies about half the frame height, with the space around them clearly visible.',
   wide: 'The whole space is in frame and the subject, if any, is small within it.',
@@ -93,7 +93,7 @@ export const aNoun = (raw: string) => {
 };
 
 /** The frame's shape in words, as sent in its settings: the model's own examples say both. */
-const SHAPE_WORDS: Record<Shape, string> = {
+export const SHAPE_WORDS: Record<Shape, string> = {
   '16:9': 'a landscape 16:9 frame',
   '4:3': 'a landscape 4:3 frame',
   '2:3': 'a portrait 2:3 frame',
@@ -126,7 +126,7 @@ export function writingIn(...texts: (string | null | undefined)[]): string[] {
   return [...found].filter((w) => /[a-z]/i.test(w));
 }
 
-function writingLine(words: string[]): string {
+export function writingLine(words: string[]): string {
   if (!words.length) return NO_WORDS;
   // "Spelled Z-I-K-E-R-Y" still came back "ZIIKERY" (23 Sep); the letter count pins it.
   const spelled = words.map((w) => {
@@ -224,7 +224,44 @@ const nameOf = (sheets: Item[], id: string) => {
   return s ? (s.isDreamer ? 'the dreamer' : pictureName(s.name)) : id;
 };
 
-const approved = (s: Item) => s.status === 'ready' && !!s.mediaId && (!!s.review || !!s.continuityApproved);
+export const approved = (s: Item) => s.status === 'ready' && !!s.mediaId && (!!s.review || !!s.continuityApproved);
+
+/**
+ * A sketch's look in words, as a moment is told it: the fields named, each clause once, without vague
+ * words, pose or framing, and without words of the look from after a change (made from the story record).
+ * What was filled in is said in the style's shades; what they said keeps its colours. Someone in a
+ * group's look who also has their own sketch is drawn from their own sketch: the group's words about
+ * them go ("the family … baby: yellow onesie" beside the baby's own white one).
+ */
+export function lookIn(
+  s: Item,
+  keys: string[],
+  ctx: { members: { group: Item; word: string }[]; unsaid?: Record<string, string[]>; style: StyleOption },
+): string {
+  const own = ctx.members.filter((m) => m.group === s).map((m) => new RegExp(`\\b${m.word}s?\\b`, 'i'));
+  const unsaid = ctx.unsaid?.[s.id];
+  return keys
+    .map((k) => s.fields[k])
+    .map((d) => (d?.value && unsaid ? { ...d, value: withoutWords(d.value, unsaid) } : d))
+    .filter((d) => !!d?.value && !VAGUE.test(d.value))
+    .map((d) => (d?.said ? (d.value as string) : inShades(d?.value as string, ctx.style)))
+    .flatMap((v) => v.split(/;\s*/))
+    .map((part) =>
+      withoutPose(part, false)
+        .trim()
+        .replace(/[.\s]+$/, ''),
+    )
+    .filter((part) => part && !own.some((re) => re.test(part)))
+    .join('; ');
+}
+
+/** What the judge found invented in an earlier picture, from its check: kept out of any picture drawn from it. */
+export function straysOf(x: Item): string[] {
+  const c = x.check;
+  return (c?.failedIds ?? [])
+    .map((id, i) => (id === 'undeclared' ? c?.notes?.[i] : undefined))
+    .filter((n): n is string => !!n);
+}
 
 /**
  * The frame's prompt and its references, in the order the images are attached. Only approved
@@ -277,10 +314,7 @@ export function framePrompt(
   // What the judge found invented in an earlier picture stays out of this one: a viewer's hands in
   // picture 3 were kept by the edit made from it (23 Sep).
   const strays = (x: PlannedInput) => {
-    const c = x.item.check;
-    const found = (c?.failedIds ?? [])
-      .map((id, i) => (id === 'undeclared' ? c?.notes?.[i] : undefined))
-      .filter((n): n is string => !!n);
+    const found = straysOf(x.item);
     return found.length ? ` Leave out what it shows that is not in the dream: ${found.join('; ')}.` : '';
   };
 
@@ -321,29 +355,8 @@ export function framePrompt(
     );
 
   // What each sheet says in words, so the manifest ties each image to who or what it is.
-  // Someone in a group's look who also has their own sketch is drawn from their own sketch: the
-  // group's words about them go ("the family … baby: yellow onesie" beside the baby's own white one).
   const members = groupMembers(inView);
-  const lookOf = (s: Item, keys: string[]) => {
-    const own = members.filter((m) => m.group === s).map((m) => new RegExp(`\\b${m.word}s?\\b`, 'i'));
-    return (
-      keys
-        .map((k) => s.fields[k])
-        // Made from the story record, words of the look from after a change are left out of it.
-        .map((d) => (d?.value && plan?.unsaid?.[s.id] ? { ...d, value: withoutWords(d.value, plan.unsaid[s.id]) } : d))
-        .filter((d) => !!d?.value && !VAGUE.test(d.value))
-        // What was filled in is said in the style's shades; what they said keeps its colours.
-        .map((d) => (d?.said ? (d.value as string) : inShades(d?.value as string, style)))
-        .flatMap((v) => v.split(/;\s*/))
-        .map((part) =>
-          withoutPose(part, false)
-            .trim()
-            .replace(/[.\s]+$/, ''),
-        )
-        .filter((part) => part && !own.some((re) => re.test(part)))
-        .join('; ')
-    );
-  };
+  const lookOf = (s: Item, keys: string[]) => lookIn(s, keys, { members, unsaid: plan?.unsaid, style });
   const facts: string[] = [];
   // In one colour, a sketch drawn with a colour of its own passes it on: the family's yellow onesie
   // came into a blue ink moment, and the dreamer's hair turned auburn beside it (24 Sep).

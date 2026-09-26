@@ -10,6 +10,7 @@
 import { type Blocking, DIRECTIONS, type Eye, type Move, outsideOrder, settle } from './blocking';
 import { dreamerShot, outsideShot } from './previs';
 import { type Breakdown, hasBefore, isWhole, type Moment, moments, POSITION, type State } from './producer';
+import type { NowOf } from './record';
 
 export type Relation = 'same_setup' | 'same_side' | 'other_side' | 'other_place' | 'shift' | 'seat';
 export type RefRole = 'base' | 'composition' | 'lighting' | 'identity' | 'prop' | 'location';
@@ -94,6 +95,8 @@ export type CutPlan = {
   visible?: string[];
   things?: string[];
   now?: { of: string; text: string }[];
+  /** Made from the story record: how each one is right then, as typed facts (`now` is them in words). */
+  facts?: NowOf[];
   /** Made from the story record: by who or what, words of its look from after a change, left out of it. */
   unsaid?: Record<string, string[]>;
   why: string;
@@ -143,6 +146,8 @@ export type RecordPlan = {
       gone: string[];
       held: Record<string, string>;
       now: { of: string; text: string }[];
+      /** The same, as typed facts: what `now` says, before it is put in words. */
+      facts: NowOf[];
     }
   >;
   before: Record<string, { text: string; said: boolean }[]>;
@@ -414,6 +419,45 @@ const ROLE: Record<Relation, RefRole> = {
   seat: 'composition',
 };
 
+/** Which earlier moments face the same side of the place: Jev's answer, or the same words. */
+const sameSide = (m: Moment, e: Moment) =>
+  m.sameSide
+    ? m.sameSide.includes(e.id)
+    : e.place === m.place && (!e.looks_at || !m.looks_at || sameWords(e.looks_at, m.looks_at));
+
+/**
+ * How a later moment's camera stands to an earlier one's, over moments in story order: the picture
+ * just before a jump the dream made, another place, the other side of the same place, the same side,
+ * or the same setup (the same side, size and eyes). A dream's jump is a boundary: what came before it
+ * shares no place with what comes after, even filed under the same name (the room before the glass
+ * world was drawn again after the jump, 23 Sep). Only the jump's own picture is matched to the one
+ * just before it.
+ */
+export function relationIn(ms: Moment[]): (m: Moment, e: Moment) => Relation {
+  const index = new Map(ms.map((m, i) => [m.id, i]));
+  const acrossJump = (e: Moment, m: Moment) =>
+    ms.some((k, at) => {
+      const ei = index.get(e.id)!;
+      const mi = index.get(m.id)!;
+      return !!k.shift && ((ei < at && at <= mi) || (ei === at && at < mi));
+    });
+  return (m, e) => {
+    if (m.shift && index.get(e.id) === (index.get(m.id) ?? 0) - 1) return 'shift';
+    if (acrossJump(e, m)) return 'other_place';
+    if (!m.place || e.place !== m.place) return 'other_place';
+    if (!sameSide(m, e)) return 'other_side';
+    return e.distance === m.distance && e.eyes === m.eyes ? 'same_setup' : 'same_side';
+  };
+}
+
+/** How one moment's camera stands to an earlier one's, as the continuity plan reads it; none for an unknown moment. */
+export function relation(b: Breakdown, later: string, earlier: string): Relation | undefined {
+  const ms = moments(b).map((m) => ({ ...m, looks_at: m.looks_at ?? '', shift: m.shift ?? '' }));
+  const m = ms.find((x) => x.id === later);
+  const e = ms.find((x) => x.id === earlier);
+  return m && e ? relationIn(ms)(m, e) : undefined;
+}
+
 /**
  * The continuity plan. With the story record (DREAMCHAT_RECORD=on), each moment's changes and those
  * carried into it are the record's, known by their keys, and so is who and what is in it: a change the
@@ -468,27 +512,8 @@ export function planContinuity(b: Breakdown, rec?: RecordPlan): ContinuityPlan {
   const kindOf = (id: string): 'person' | 'place' | 'thing' =>
     b.places.some((p) => p.id === id) ? 'place' : b.things.some((t) => t.id === id) ? 'thing' : 'person';
 
-  // Which earlier moments face the same side of the place: Jev's answer, or the same words.
-  const sides = (m: Moment, e: Moment) =>
-    m.sameSide
-      ? m.sameSide.includes(e.id)
-      : e.place === m.place && (!e.looks_at || !m.looks_at || sameWords(e.looks_at, m.looks_at));
-  // A dream's jump is a boundary: what came before it shares no place with what comes after,
-  // even filed under the same name (the room before the glass world was drawn again after the
-  // jump, 23 Sep). Only the jump's own picture is matched to the one just before it.
-  const acrossJump = (e: Moment, m: Moment) =>
-    ms.some((k, at) => {
-      const ei = index.get(e.id)!;
-      const mi = index.get(m.id)!;
-      return !!k.shift && ((ei < at && at <= mi) || (ei === at && at < mi));
-    });
-  const relation = (m: Moment, e: Moment): Relation => {
-    if (m.shift && index.get(e.id) === (index.get(m.id) ?? 0) - 1) return 'shift';
-    if (acrossJump(e, m)) return 'other_place';
-    if (!m.place || e.place !== m.place) return 'other_place';
-    if (!sides(m, e)) return 'other_side';
-    return e.distance === m.distance && e.eyes === m.eyes ? 'same_setup' : 'same_side';
-  };
+  const sides = sameSide;
+  const relation = relationIn(ms);
 
   const sceneOf = new Map<string, string>();
   for (const sc of b.scenes) for (const mo of sc.moments) sceneOf.set(mo.id, sc.id);
@@ -624,6 +649,7 @@ export function planContinuity(b: Breakdown, rec?: RecordPlan): ContinuityPlan {
             visible: m.visible,
             things: m.things,
             now: r.now,
+            facts: r.facts,
             unsaid: Object.fromEntries(
               [...m.visible, ...m.things, m.place, ...r.present]
                 .filter((id) => rec?.unsaid[id]?.length)
