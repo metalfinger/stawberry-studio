@@ -49,7 +49,7 @@ One **cut sheet** per cut is the spine everything is assembled from:
 
 | # | Step | Status | Eval that proves it |
 | --- | --- | --- | --- |
-| S0 | Eval foundation: a prompt-case set from the person's 122 verdicts and notes, a runner that rebuilds prompts from saved dreams and scores them, the free simulation corpus as regression | not started | Every noted fault has a case; the runner reproduces today's failures |
+| S0 | Eval foundation: a prompt-case set from the person's 122 verdicts and notes, a runner that rebuilds prompts from saved dreams and scores them, the free simulation corpus as regression | built | Every noted fault has a case; the runner reproduces today's failures. Baseline: 2 of 38 failing cases met, 28 of 28 passing cases met (below) |
 | S1 | Story record carries state (water, suitcase, who holds what, presence) into continuity, in-between pictures and prompts | building | The state cases in S0 pass; no regressions on the corpus |
 | S2 | Stop stand-in checks deciding: the pre-draw prompt check and storyboard check only log | not started | No moment held or reworded; corpus unchanged otherwise |
 | S3 | The cut sheet: tree (vertical) + record (horizontal) + relations + tags, one per cut | not started | Every input the prompt needs comes from the sheet; no fact computed in two places |
@@ -82,6 +82,24 @@ One **cut sheet** per cut is the spine everything is assembled from:
 
 - In `evals/paired-verdicts.json`, the sketches-only version of lighthouse-first m7 carries the same note as orchard
   m7 (about Tomas), on a picture rated right: probably typed on the wrong picture. Left as is until confirmed.
+- S0, the prompt cases: `evals/prompt-cases.json` (75 cases: 47 from faults the owner noted, of which 7 are the
+  image model's alone and 2 are set aside as disagreeing with the dream as told, and 28 moments the owner called
+  right, as regression guards). `bun --env-file=$HOME/.config/strawberry/dreamchat.env run evals/prompt-cases.ts
+  --label <name> [--against <name>] [--only <case> …] [--show]` rebuilds each moment exactly as `plan.ts` does
+  (`rebuild`, under the environment's switches), runs its code checks and asks Jev its yes-or-no questions about
+  the prompt (answers cached by hash, `runs/prompt-cases/jev-cache.json`), and writes
+  `runs/prompt-cases/<label>.json`. The rebuild matches the prompts sent on 25-26 Sep in 620 of 699 paragraphs;
+  the rest is code changed since. Cases by step: S1 the state_carried, holding and presence cases; S4
+  camera_turn_layout and pov; S5 reference_conflict and the one-image-per-subject checks; S6 all.
+- S0, the corpus: `bun run evals/corpus.ts --label <name> [--against <name>] [--set benchmark]` rebuilds every
+  saved dream with a settled breakdown and look (54 dreams, 379 moments, 58 in-between pictures on 26 Sep) and
+  writes `runs/corpus/<label>.json`; `--against` writes what changed, picture by picture. No model calls.
+- Baseline (26 Sep, today's defaults), failing cases met per class: state_carried 0/11, presence 0/2, holding 0/2,
+  camera_turn_layout 1/7, pov 0/5, action 0/4, reference_conflict 1/4, proportion_or_paste 0/3; all 2/38. The two
+  met are faults of the edit version only, which today's routing does not draw (lighthouse-fresh m2, library-1
+  m4). Passing cases 28/28; the 9 kept out all met. Jev is reliable on one concrete fact per question and not on
+  joined, implied or consistency questions: every question is one fact, and answers within 0.1 of the bar are
+  marked.
 
 ## Log
 
@@ -91,3 +109,8 @@ One **cut sheet** per cut is the spine everything is assembled from:
   default, unchanged; 2-3 takes drawn different ways, the judge picks through the judge queue, the others kept as
   alternates). Parked until S1 lands, since both touch session.ts; merge then, off by default.
 - 26 Sep: `docs/cut-sheet-map.md` and `docs/rules.md` written; the owner's plan doc filled in.
+- 26 Sep: S0 built. 75 prompt cases from the owner's 122 verdicts, the case runner and the corpus runner, both on
+  `plan.ts rebuild` (which now gives a moment its mock-up and saved shot brief, as the harness does when it
+  draws). Baseline: 2/38 failing cases met, 28/28 passing. The runners see only what `rebuild` sees
+  (planContinuity, framePrompt, plan.ts); a step that changes the preparation must change it there. Floor plans
+  and shot briefs are the ones saved with each dream: a fix to how they are made shows once they are made again.
