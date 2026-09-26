@@ -1,5 +1,5 @@
 {
- "about": "Every moment drawn with real pictures on the night of 25-26 Sep, judged right, partly or wrong as a story strip beside its neighbours (story, note), with what the storyboard check read of its plan (readings; state is exactly what it was asked). story_question is a trial story-level check ('could a picture drawn from this layout tell the moment?'), never shipped. For calibrating plan checks against pictures. blind and blind_reason are a second judge that did not see these verdicts, viewing each run as a strip against the dream as told: it agreed exactly on 33 of 62, and called 25 of the 39 moments judged right only partly right, never wrong. human and human_note are a person's own verdicts on the same 62 pictures, judged on a page that showed the dream in the dreamer's words, the moment's line and the run's other pictures, and hid both judges' verdicts: 36 right, 17 partly, 9 wrong. The maker agreed with them exactly on 36, the blind judge on 31; on right against not right, the maker on 39 and the blind judge on 37 (the blind judge called 23 of the person's 36 right only partly right). The person is the reference both judges are measured against.",
+ "about": "Every moment drawn with real pictures on the night of 25-26 Sep, judged right, partly or wrong as a story strip beside its neighbours (story, note), with what the storyboard check read of its plan (readings; state is exactly what it was asked). story_question is a trial story-level check ('could a picture drawn from this layout tell the moment?'), never shipped. For calibrating plan checks against pictures. blind and blind_reason are a second judge that did not see these verdicts, viewing each run as a strip against the dream as told: it agreed exactly on 33 of 62, and called 25 of the 39 moments judged right only partly right, never wrong. human and human_note are a person's own verdicts on the same 62 pictures, judged on a page that showed the dream in the dreamer's words, the moment's line and the run's other pictures, and hid both judges' verdicts: 36 right, 17 partly, 9 wrong. The maker agreed with them exactly on 36, the blind judge on 31; on right against not right, the maker on 39 and the blind judge on 37 (the blind judge called 23 of the person's 36 right only partly right). The person is the reference both judges are measured against. judge and judge_reason are the picture judge in evals/picture-judge.md (one pass per run, the run's pictures in order, the dreamer's words, no other verdicts), written from the person's notes on five runs (lighthouse-fresh, library-2, snow-train, orchard, night-market) and then run once on the other five: on right against not right it agrees with the person on 23 of 36 on the first five and 19 of 26 on the other five, 42 of 62 in all.",
  "rows": [
   {
    "id": "lighthouse-first-m3",
@@ -34,7 +34,9 @@
    "blind": "partly",
    "blind_reason": "A stone spiral staircase with the dreamer holding the brass key is shown, but the terrier stands in plain view at the dreamer's feet instead of unseen ahead, and the view looks down the stairwell into a dark pit rather than up the winding steps.",
    "human": "partly",
-   "human_note": "I don't think something is off that way. Something is off in terms of perspective. Maybe it works, maybe it doesn't work. As in, the camera perspective is like I can see the spiral and I can see the dog and the person, but maybe my physical laws, something is wrong."
+   "human_note": "I don't think something is off that way. Something is off in terms of perspective. Maybe it works, maybe it doesn't work. As in, the camera perspective is like I can see the spiral and I can see the dog and the person, but maybe my physical laws, something is wrong.",
+   "judge": "right",
+   "judge_reason": "Grey stone steps spiralling round, the dog ahead and the key held in the dreamer's hand read at once as the climb up the tower."
   },
   {
    "id": "lighthouse-first-m6",
@@ -68,7 +70,9 @@
    "story_question": 0.56,
    "blind": "partly",
    "blind_reason": "The round room's windows show the yellow grass field with the red tractor and the dreamer holds the boat, but the father's table and chair are empty, although the dream has him sitting there folding boats.",
-   "human": "right"
+   "human": "right",
+   "judge": "partly",
+   "judge_reason": "The round room of windows, the yellow field, the red tractor and the paper boat in hand all read, but the father's table and chair are empty when he should be sitting there."
   },
   {
    "id": "lighthouse-first-m7",
@@ -102,7 +106,9 @@
    "story_question": 0.63,
    "blind": "partly",
    "blind_reason": "A close POV of the creased, rough newspaper boat in the hands matches the moment, but the room is now square-cornered with a single window showing only grey (no yellow field), unlike the round, window-ringed room of m6, and the father's chair is still empty.",
-   "human": "right"
+   "human": "right",
+   "judge": "partly",
+   "judge_reason": "The close look at the folded newspaper boat in the dreamer's hands reads well and follows on from the last picture, but the father is still missing from his empty table in the background."
   },
   {
    "id": "lighthouse-first-m8",
@@ -136,7 +142,9 @@
    "story_question": 0.83,
    "blind": "partly",
    "blind_reason": "The long-haired dreamer in the grey top holds the newspaper boat next to an unknown middle-aged woman with grass outside, but the cab looks like a van or minibus with two separate seats and no steering wheel or controls, so neither the tractor nor the stranger as its driver comes across.",
-   "human": "right"
+   "human": "right",
+   "judge": "partly",
+   "judge_reason": "The dreamer sits in the cab holding the boat with the field outside, but the stranger beside them is a woman who isn't driving, when the dreamer remembers an unknown man at the wheel."
   },
   {
    "id": "night-market-m1",
@@ -170,7 +178,9 @@
    "story_question": 0.69,
    "blind": "right",
    "blind_reason": "A dense crowd under strings of yellow bulbs fills the market aisle, with the long-haired dreamer in a grey tee and the ponytailed sister in a blue tee and shorts among the people.",
-   "human": "right"
+   "human": "right",
+   "judge": "right",
+   "judge_reason": "The dreamer and her ponytailed sister move through a packed night market under strings of little yellow lights, which reads at a glance as the opening of the dream."
   },
   {
    "id": "night-market-m2",
@@ -205,7 +215,9 @@
    "blind": "partly",
    "blind_reason": "The same dreamer and sister stand at a stall with a silver fish on ice and a grey-haired old man, but he stands on the customer side of the stall rather than behind it as the seller, and the sister is just staring at him with nothing to show she wants to buy fish, while the dreamer poses facing the camera.",
    "human": "partly",
-   "human_note": "What I would have liked is maybe the dreamer looking towards fish or something. Otherwise, it looks fine, I guess."
+   "human_note": "What I would have liked is maybe the dreamer looking towards fish or something. Otherwise, it looks fine, I guess.",
+   "judge": "right",
+   "judge_reason": "The same two sisters have stopped at a stall where an old man has fish on ice, with a big silver fish up front; the staging is a little stiff, but nothing jolts from the picture before."
   },
   {
    "id": "heron-m1",
@@ -239,7 +251,9 @@
    "story_question": 0.65,
    "blind": "right",
    "blind_reason": "The dreamer, short black hair, grey tee and jeans, walks down a corridor lined with green lockers on both sides toward a wooden door at the end with a small round window.",
-   "human": "right"
+   "human": "right",
+   "judge": "right",
+   "judge_reason": "The dreamer is clearly hurrying alone down the long green-lockered corridor toward the wooden door at the end; the round window being hard to see is a small detail."
   },
   {
    "id": "heron-m4",
@@ -274,7 +288,9 @@
    "blind": "partly",
    "blind_reason": "The dreamer stands inside looking at still, bald, featureless students, but they are a single row of five mannequin-like figures all dressed in the dreamer's own grey tee and jeans and seen mostly from behind, not a full room of desks. The blackboard is blank with no Mrs Okafor, and the door has no round window, unlike the door in m1.",
    "human": "partly",
-   "human_note": "Partially because, physically, I think this can be better. Otherwise, I think it is not bad."
+   "human_note": "Partially because, physically, I think this can be better. Otherwise, I think it is not bad.",
+   "judge": "partly",
+   "judge_reason": "The still, smooth-faced students read well, but Mrs Okafor, who was at the blackboard writing when the dreamer walked in, is missing from the room."
   },
   {
    "id": "lighthouse-fresh-m1",
@@ -308,7 +324,9 @@
    "story_question": 0.51,
    "blind": "partly",
    "blind_reason": "Dreamer in grey tee and jeans stands on the grey beach holding the key with the white lighthouse far off, but the tan dog is trotting back toward the dreamer and camera, not running ahead toward the lighthouse.",
-   "human": "right"
+   "human": "right",
+   "judge": "right",
+   "judge_reason": "Grey flat beach, dreamer holding the brass key, small tan dog heading out and the white lighthouse standing clean against the pale sky; the moment reads at a glance."
   },
   {
    "id": "lighthouse-fresh-m2",
@@ -342,7 +360,9 @@
    "story_question": 0.44,
    "blind": "partly",
    "blind_reason": "The action asks for a close-up of the hand and key, but the picture is a mid shot of the whole standing dreamer on the beach, and the key is painted silver-grey, not brass.",
-   "human": "right"
+   "human": "right",
+   "judge": "right",
+   "judge_reason": "The same dreamer (grey tee, jeans, short brown hair) on the grey beach, now turned to camera and holding up the old key; the dog being out of frame fits him running ahead."
   },
   {
    "id": "lighthouse-fresh-m3",
@@ -376,7 +396,9 @@
    "story_question": 0.46,
    "blind": "wrong",
    "blind_reason": "The words 'COME ON' are painted into the sky, which the dream does not have, and the dog is drawn bigger and patchier than the small tan dog in m1 and m5.",
-   "human": "right"
+   "human": "right",
+   "judge": "partly",
+   "judge_reason": "The dog pausing in front of the lighthouse reads, but the words 'COME ON' are painted into the sky, and the dreamer would want that caption taken out."
   },
   {
    "id": "lighthouse-fresh-m4",
@@ -410,7 +432,9 @@
    "story_question": 0.46,
    "blind": "partly",
    "blind_reason": "The dreamer turns a brass key in a door, but she is already inside with the spiral staircase behind her, so the outside lighthouse door is not what we see.",
-   "human": "right"
+   "human": "right",
+   "judge": "partly",
+   "judge_reason": "The key turning in the door reads, but the dreamer is already inside the lighthouse with the staircase behind them, unlocking the door from the wrong side instead of from the beach."
   },
   {
    "id": "lighthouse-fresh-m5",
@@ -444,7 +468,9 @@
    "story_question": 0.61,
    "blind": "right",
    "blind_reason": "The same small tan dog stands a few white steps up a curving stair, looking back, while the dreamer waits below holding the key.",
-   "human": "right"
+   "human": "right",
+   "judge": "right",
+   "judge_reason": "Whitewashed curving stairs with the dog a few steps up looking down and the dreamer following below, key still in hand; it follows naturally from the door."
   },
   {
    "id": "lighthouse-fresh-m9",
@@ -478,7 +504,9 @@
    "story_question": 0.57,
    "blind": "right",
    "blind_reason": "Through an arched window of the tower there is a field of tall yellow grass with a red cab tractor in it, and no sea.",
-   "human": "right"
+   "human": "right",
+   "judge": "right",
+   "judge_reason": "Through the lighthouse window the sea is gone and there is a field of tall yellow grass with a red tractor in it, just as the dreamer described."
   },
   {
    "id": "lighthouse-fresh-m10",
@@ -513,7 +541,9 @@
    "blind": "wrong",
    "blind_reason": "A red tractor stands inside the round room, the dreamer appears twice (a figure seen from behind plus separate first-person hands holding the boat), and the windows show grey sea again after m9 replaced it with grass.",
    "human": "wrong",
-   "human_note": "I don't think this frame was defined in the script, as far as I remember. Why is the tractor inside that room, or whatever this is?"
+   "human_note": "I don't think this frame was defined in the script, as far as I remember. Why is the tractor inside that room, or whatever this is?",
+   "judge": "wrong",
+   "judge_reason": "A red tractor is standing inside the round window room, and the boat is held by a pair of disembodied hands that look pasted on behind the dreamer's back; neither is in the dream."
   },
   {
    "id": "lighthouse-fresh-m11",
@@ -547,7 +577,9 @@
    "story_question": 0.65,
    "blind": "partly",
    "blind_reason": "The dreamer is in the red tractor cab with the boat and yellow grass outside, but she sits at the steering wheel while the driver sits back with his hands on his lap, so she looks like the driver.",
-   "human": "right"
+   "human": "right",
+   "judge": "right",
+   "judge_reason": "The dreamer is suddenly in the tractor cab beside an unknown driver, holding the paper boat in both hands with yellow grass all round, which is the jump the dreamer described."
   },
   {
    "id": "lighthouse-fresh-m12",
@@ -582,7 +614,9 @@
    "blind": "partly",
    "blind_reason": "Seen from behind, the dreamer holds the boat next to the driver in the cab with grass outside, but no wheels or grass bending away from them are shown and nothing shows the rumble or the trembling.",
    "human": "partly",
-   "human_note": "Maybe the tractor's perspective didn't change. Could be better, maybe."
+   "human_note": "Maybe the tractor's perspective didn't change. Could be better, maybe.",
+   "judge": "right",
+   "judge_reason": "Still in the cab, the dreamer holds the boat beside the driver as they move through the yellow grass; the ride carries on without a jolt."
   },
   {
    "id": "lighthouse-fresh-m13",
@@ -617,7 +651,9 @@
    "blind": "partly",
    "blind_reason": "The same blue-shirted driver is shown in profile looking ahead, but only one hand is on the wheel and the other rests on his lap, where the action asks for both hands on the wheel.",
    "human": "wrong",
-   "human_note": "The dreamer is gone from this frame. Or if this comes before the dreamer enters the structure, then maybe."
+   "human_note": "The dreamer is gone from this frame. Or if this comes before the dreamer enters the structure, then maybe.",
+   "judge": "partly",
+   "judge_reason": "The driver in profile staring ahead reads, but the shot is from the same side angle as before and the seat beside him is empty, so the dreamer has vanished from the cab."
   },
   {
    "id": "lighthouse-fresh-m14",
@@ -652,7 +688,9 @@
    "blind": "partly",
    "blind_reason": "The tractor is stopped at the edge of the yellow field, but a grey sea and shoreline are back on the horizon where the sea should be gone, and the dreamer now has a longer bob haircut instead of the short crop in the other pictures.",
    "human": "partly",
-   "human_note": "The reference of the dreamer is wrong. It feels like it's a different person who is sitting beside the father."
+   "human_note": "The reference of the dreamer is wrong. It feels like it's a different person who is sitting beside the father.",
+   "judge": "right",
+   "judge_reason": "The tractor has stopped where the yellow grass meets the flat grey of the old beach, with both of them still in the cab; it clearly shows the edge where the sea used to be."
   },
   {
    "id": "lighthouse-fresh-m15",
@@ -687,7 +725,9 @@
    "blind": "partly",
    "blind_reason": "The dreamer kneels beside the tractor setting the paper boat in the grass, but she is still holding it upright rather than letting it rest tilted and held by the grass, and the sea is visible again on the horizon.",
    "human": "wrong",
-   "human_note": "Dreamer is supposed to be putting the boat into the sea. In the image, he is putting it on the ground, which is completely wrong."
+   "human_note": "Dreamer is supposed to be putting the boat into the sea. In the image, he is putting it on the ground, which is completely wrong.",
+   "judge": "right",
+   "judge_reason": "The dreamer kneels out of the stopped tractor and sets the newspaper boat down in the grass; the boat sits upright rather than tilted, which is a small detail the dreamer would not mind."
   },
   {
    "id": "snow-train-m1",
@@ -721,7 +761,9 @@
    "story_question": 0.69,
    "blind": "right",
    "blind_reason": "In an old wooden train carriage with a snowy night outside the windows, the white-haired grandfather in a brown jacket (seen from behind) sits facing the young dark-haired dreamer in a navy sweater.",
-   "human": "right"
+   "human": "right",
+   "judge": "right",
+   "judge_reason": "An old wooden train with snow and blue night outside, the grandfather and the dreamer facing each other, reads at a glance even though they sit a couple of rows apart rather than right across."
   },
   {
    "id": "snow-train-m2",
@@ -756,7 +798,9 @@
    "blind": "right",
    "blind_reason": "The same white-haired grandfather in the brown jacket sits in the snow-night carriage holding a brown leather suitcase on his knees, waiting, drawn as if from the dreamer's seat.",
    "human": "wrong",
-   "human_note": "Considering the previous frame, maybe I would have liked it if things would have changed. I'm guessing this frame is from the perspective of the dreamer, but the rest of the things and everything look the same, which is wrong. In terms of continuity, this fails from the previous frame."
+   "human_note": "Considering the previous frame, maybe I would have liked it if things would have changed. I'm guessing this frame is from the perspective of the dreamer, but the rest of the things and everything look the same, which is wrong. In terms of continuity, this fails from the previous frame.",
+   "judge": "partly",
+   "judge_reason": "The brown suitcase on his knees reads well, but in the same view as before the dreamer who sat across from him has vanished and the grandfather has switched to a different seat facing the other way."
   },
   {
    "id": "snow-train-m3",
@@ -791,7 +835,9 @@
    "blind": "right",
    "blind_reason": "The grandfather holds the open brown suitcase out toward the dreamer's hands (navy sleeves) and it is packed with many letters, with the carriage and snowy night still around them.",
    "human": "wrong",
-   "human_note": "Again, in terms of continuity, this frame fails. Grandma is suddenly sitting on the chair compared to the last frame."
+   "human_note": "Again, in terms of continuity, this frame fails. Grandma is suddenly sitting on the chair compared to the last frame.",
+   "judge": "right",
+   "judge_reason": "The image the dreamer remembers most lands clearly: the grandfather holds out the open suitcase stuffed with envelopes, the dreamer's own hands reaching toward it."
   },
   {
    "id": "snow-train-m4",
@@ -826,7 +872,9 @@
    "blind": "partly",
    "blind_reason": "The stopped train, the snowy field and the red door standing alone in its frame are all there, but the dreamer is drawn as a short-bobbed woman instead of the young man from m1, m3 and m5, the door already stands ajar with yellow light spilling out before anyone opens it, and nobody is carrying the suitcase.",
    "human": "partly",
-   "human_note": "The suitcase is missing from grandpa, and I don't know, maybe the dreamer has changed."
+   "human_note": "The suitcase is missing from grandpa, and I don't know, maybe the dreamer has changed.",
+   "judge": "partly",
+   "judge_reason": "The stopped train, the snowy field and the lone red door frame are all there, but the dreamer seen from behind has a lighter chin-length bob and reads as a different person from the short-haired young man elsewhere."
   },
   {
    "id": "snow-train-m5",
@@ -860,7 +908,9 @@
    "story_question": 0.53,
    "blind": "partly",
    "blind_reason": "The grandfather stands beside the dreamer, who now holds the brown suitcase, with the lone red door ahead, but that door is already wide open with warm light pouring out, which belongs to the next moment where the dreamer opens it.",
-   "human": "partly"
+   "human": "partly",
+   "judge": "right",
+   "judge_reason": "The dreamer now holds the suitcase while the smiling grandfather, hand at his back, looks toward the red door in the snow, which reads as the handover and the nod."
   },
   {
    "id": "snow-train-m6",
@@ -894,7 +944,9 @@
    "story_question": 0.15,
    "blind": "partly",
    "blind_reason": "The lone red door is open onto warm yellow light in the snowy field, but the dreamer is not opening it: only an arm holding the suitcase is visible, standing well back from a door that is already open, and the suitcase now has straps and buckles it did not have before.",
-   "human": "right"
+   "human": "right",
+   "judge": "partly",
+   "judge_reason": "The warm yellow light through the red door is the right ending, but the dreamer stands well back holding the suitcase while the door is already open, so he is not the one opening it."
   },
   {
    "id": "library-1-m1",
@@ -928,7 +980,9 @@
    "story_question": 0.76,
    "blind": "right",
    "blind_reason": "The dreamer stands alone in the central aisle of a vaulted reading room, with shelves up to the ceiling, a green glass lamp on every desk and no one else there.",
-   "human": "right"
+   "human": "right",
+   "judge": "right",
+   "judge_reason": "The quiet big reading room with green glass lamps on every desk and shelves to the ceiling reads at a glance, with the dreamer standing in it."
   },
   {
    "id": "library-1-m2",
@@ -945,7 +999,9 @@
    "blind": "partly",
    "blind_reason": "Books lie open on the desks and in the water, but the water only reaches the dreamer's ankles (the splashes on the desk tops don't match that), the shelves are still full, and no books are shown floating off them.",
    "human": "partly",
-   "human_note": "Partially okay because the book, I think, is supposed to be flying or in the air, maybe."
+   "human_note": "Partially okay because the book, I think, is supposed to be flying or in the air, maybe.",
+   "judge": "right",
+   "judge_reason": "Water has come in across the floor and open books are scattered over the water and desks, clearly the flood beginning in the same room, even if it is still shallow and the books are not lifting off the shelves."
   },
   {
    "id": "library-1-m3",
@@ -980,7 +1036,9 @@
    "blind": "partly",
    "blind_reason": "The calm sister in a yellow coat sits in a yellow rowing boat and the dreamer steps in, but the boat rests on a dry stone floor with no water, and the room has turned into a plain stone wall with no vault, unlike its neighbours.",
    "human": "wrong",
-   "human_note": "Oh, the sister showed up with the boat, but the water is gone. It breaks the continuity of the story."
+   "human_note": "Oh, the sister showed up with the boat, but the water is gone. It breaks the continuity of the story.",
+   "judge": "wrong",
+   "judge_reason": "The room is completely dry and the yellow boat sits on a bare stone floor, so the flood that the whole moment depends on is gone right after the picture before showed it rising."
   },
   {
    "id": "library-1-m4",
@@ -1015,7 +1073,9 @@
    "blind": "partly",
    "blind_reason": "A whale fills the flooded central aisle in front of the yellow boat, but it lies on top of the water, not under it, and the sister and dreamer just sit facing the camera with no oars, so no one is rowing.",
    "human": "wrong",
-   "human_note": "This is such a bad frame. Why does the whale feel like it's photoshopped? I didn't like this frame in terms of composition, and it also feels like a bad Photoshop edit."
+   "human_note": "This is such a bad frame. Why does the whale feel like it's photoshopped? I didn't like this frame in terms of composition, and it also feels like a bad Photoshop edit.",
+   "judge": "partly",
+   "judge_reason": "The two are in the yellow boat on the flooded room with a huge whale, but the whale lies on the surface in front of them rather than swimming past underneath the boat."
   },
   {
    "id": "library-1-m5",
@@ -1050,7 +1110,9 @@
    "blind": "wrong",
    "blind_reason": "The round window is open onto a flooded city, but the boat sits in a completely dry room at floor level, far below the window. The dreamer holds the oars, and the sister only waves at the window from the floor, so they have not rowed up to it and she cannot be opening it.",
    "human": "wrong",
-   "human_note": "I don't know where they are supposed to go out from the above thing, and the perspective stays the same in all the frames, which is wrong. The camera is moving, and it should have shifted. The water is gone, and this was a very bad generation."
+   "human_note": "I don't know where they are supposed to go out from the above thing, and the perspective stays the same in all the frames, which is wrong. The camera is moving, and it should have shifted. The water is gone, and this was a very bad generation.",
+   "judge": "wrong",
+   "judge_reason": "The boat sits down at desk level in a room with no visible water, far below the high window the sister is reaching toward, so they never rowed up to it as the dreamer describes, even though the opened window shows the drowned city in morning light."
   },
   {
    "id": "library-2-m1",
@@ -1084,7 +1146,9 @@
    "story_question": 0.72,
    "blind": "partly",
    "blind_reason": "The dark-haired dreamer in a white tee and jeans stands alone and quiet in a reading room with a round window. The dream says there is a green glass lamp on every desk, but only two green lamps sit on a back counter and none of the reading desks have one, although they do in m2 to m4.",
-   "human": "right"
+   "human": "right",
+   "judge": "right",
+   "judge_reason": "The dreamer stands quietly in a big reading room with green lamps, which reads at a glance."
   },
   {
    "id": "library-2-m2",
@@ -1100,7 +1164,9 @@
    "state": null,
    "blind": "right",
    "blind_reason": "Water seeps under the closed double doors and spreads in puddles across the tiled floor, with a green lamp on every desk. The room is still quiet.",
-   "human": "right"
+   "human": "right",
+   "judge": "right",
+   "judge_reason": "Water is clearly seeping under the double doors across the reading room floor, seen as if from the dreamer's view."
   },
   {
    "id": "library-2-m3",
@@ -1116,7 +1182,9 @@
    "state": null,
    "blind": "partly",
    "blind_reason": "The floor is flooded between the rows of desks, but every desk top and lamp stands dry above the water. The water has not risen over the desks as the action states.",
-   "human": "right"
+   "human": "right",
+   "judge": "right",
+   "judge_reason": "The reading room is flooded up to the desks with the green lamps still lit, so the rising water reads clearly."
   },
   {
    "id": "library-2-m4",
@@ -1132,7 +1200,9 @@
    "state": null,
    "blind": "partly",
    "blind_reason": "Open books fly through the air like birds above the flooded aisle. There are only about twenty of them, not hundreds, and every shelf stays completely full.",
-   "human": "right"
+   "human": "right",
+   "judge": "right",
+   "judge_reason": "Open books fly off the shelves like birds above the flooded room, just as the dreamer described."
   },
   {
    "id": "library-2-m5",
@@ -1167,7 +1237,9 @@
    "blind": "partly",
    "blind_reason": "The black-haired sister stands in a yellow rowing boat next to the dreamer. The boat rests on a completely dry floor, so the flood of m4 and m7 is gone, and she has no oars and is not shown speaking to the dreamer.",
    "human": "partly",
-   "human_note": "Okay, this is partially good because the right side of the tables and all is gone, and maybe water can be more reasonable. The way both of them are standing is partially wrong, I feel."
+   "human_note": "Okay, this is partially good because the right side of the tables and all is gone, and maybe water can be more reasonable. The way both of them are standing is partially wrong, I feel.",
+   "judge": "wrong",
+   "judge_reason": "The room is completely dry: the yellow boat sits on a bare floor, so the flood the dreamer described is gone."
   },
   {
    "id": "library-2-m6",
@@ -1183,7 +1255,9 @@
    "state": null,
    "blind": "partly",
    "blind_reason": "The dreamer steps up into the yellow boat beside the standing sister. The boat still sits on dry ground with no water anywhere, which contradicts the flooded room in the pictures before and after.",
-   "human": "right"
+   "human": "right",
+   "judge": "wrong",
+   "judge_reason": "The dreamer climbs into a boat resting on a dry floor, which contradicts the flooded library where the sister rowed up."
   },
   {
    "id": "library-2-m7",
@@ -1217,7 +1291,9 @@
    "story_question": 0.55,
    "blind": "right",
    "blind_reason": "The sister, with black hair and a white blouse, rows the yellow boat with oars down a flooded aisle between shelves and desks. The dreamer sits facing her, and both look as they did in the earlier pictures.",
-   "human": "right"
+   "human": "right",
+   "judge": "right",
+   "judge_reason": "The sister rows the yellow boat with the dreamer aboard between flooded shelves under the green lamps."
   },
   {
    "id": "library-2-m8",
@@ -1251,7 +1327,9 @@
    "story_question": 0.66,
    "blind": "partly",
    "blind_reason": "A huge humpback whale looms across the aisle beside the two sisters in the boat. Its head and back rise high out of the water instead of swimming past under it, as the dream and the action say.",
-   "human": "right"
+   "human": "right",
+   "judge": "partly",
+   "judge_reason": "The huge calm whale fills the aisle, but it rears up out of the water instead of swimming past under it."
   },
   {
    "id": "library-2-m9",
@@ -1286,7 +1364,9 @@
    "blind": "partly",
    "blind_reason": "The sister reaches up and opens the round window onto rooftops and trees, but the room is dry: the boat sits on a wooden floor between dry desks with lamps. Outside looks like a submerged underwater scene, not a morning city with rooftops and treetops above the water.",
    "human": "partly",
-   "human_note": "The water is suddenly gone, and the size of the boat and everything is inconsistent."
+   "human_note": "The water is suddenly gone, and the size of the boat and everything is inconsistent.",
+   "judge": "wrong",
+   "judge_reason": "The library is suddenly dry with the boat on a wooden floor, and the window is within easy reach with no clear bright underwater city beyond it."
   },
   {
    "id": "library-3-m1",
@@ -1320,7 +1400,9 @@
    "story_question": 0.38,
    "blind": "right",
    "blind_reason": "The short-haired woman in a grey T-shirt stands beside the tall wooden double doors, water is spreading across the floor from under them, and green desk lamps and shelves are behind her.",
-   "human": "right"
+   "human": "right",
+   "judge": "right",
+   "judge_reason": "The dreamer stands by the library doors with water spreading in under them and green lamps on the desks, so the opening reads at a glance."
   },
   {
    "id": "library-3-m2",
@@ -1355,7 +1437,9 @@
    "blind": "partly",
    "blind_reason": "Lots of open books fly off the shelves like birds around the dreamer (seen from behind), but the floor is completely dry even though water was already coming in at m1 and is waist-deep at m3, and the room has no desks or green lamps, only a hall of arches.",
    "human": "partly",
-   "human_note": "I guess there is supposed to be water before the book starts, so I think that is something missing."
+   "human_note": "I guess there is supposed to be water before the book starts, so I think that is something missing.",
+   "judge": "partly",
+   "judge_reason": "The books fly off the shelves like birds, but the floor is bone dry right after the water started coming in, and the water is what the dreamer cared about most."
   },
   {
    "id": "library-3-m3",
@@ -1389,7 +1473,9 @@
    "story_question": 0.48,
    "blind": "partly",
    "blind_reason": "The dreamer wades waist-deep and the water has reached the reading desks, but the desk tops and their green lamps are still dry above the surface, so the water is not 'over the desks', and only about a dozen books are in the air after the swarm at m2.",
-   "human": "right"
+   "human": "right",
+   "judge": "right",
+   "judge_reason": "The dreamer stands deep in the water, which has risen to the desks under the green lamps, with books still flying, so the rising flood reads clearly."
   },
   {
    "id": "library-3-m4",
@@ -1423,7 +1509,9 @@
    "story_question": 0.78,
    "blind": "right",
    "blind_reason": "A calm long-haired woman in a white blouse sits in a small yellow rowing boat among the flooded desks and flying books, and the same East Asian short-haired dreamer from m1 stands in the water at the right.",
-   "human": "right"
+   "human": "right",
+   "judge": "right",
+   "judge_reason": "The sister sits calmly in a little yellow rowing boat in the flooded library while the dreamer stands in the water looking at her, just as described."
   },
   {
    "id": "library-3-m5",
@@ -1440,7 +1528,9 @@
    "blind": "wrong",
    "blind_reason": "The person stepping into the boat has the dreamer's grey T-shirt and jeans but the face of a young man, not the middle-aged East Asian woman from m1 and m4, and the rowing boat is white/grey instead of yellow.",
    "human": "partly",
-   "human_note": "I think continuity is missing, but not that bad."
+   "human_note": "I think continuity is missing, but not that bad.",
+   "judge": "partly",
+   "judge_reason": "Climbing into the boat reads, but the person getting in looks like a different man instead of the short-haired dreamer, and the yellow boat has turned white."
   },
   {
    "id": "library-3-m6",
@@ -1474,7 +1564,9 @@
    "story_question": 0.49,
    "blind": "partly",
    "blind_reason": "A huge whale fills the aisle beside the boat with the dreamer and sister in it, but the boat is white, not yellow as it is in m4 and m7, the whale's back sits above the water rather than under it, and the sister sits there without rowing.",
-   "human": "right"
+   "human": "right",
+   "judge": "partly",
+   "judge_reason": "A huge calm whale glides past the boat in the flooded room, but the little yellow boat has turned white again, which jolts against the sister's boat as the dreamer described it."
   },
   {
    "id": "library-3-m7",
@@ -1508,7 +1600,9 @@
    "story_question": 0.56,
    "blind": "partly",
    "blind_reason": "The yellow boat is back and the sister stands reaching toward the round window, but the boat is still in the middle of the room with the window far out of reach, so she has not rowed up to it or opened it, and the seated dreamer now has a younger, different face from m1 and m4.",
-   "human": "partly"
+   "human": "partly",
+   "judge": "partly",
+   "judge_reason": "The sister stands in the yellow boat reaching for the round window, but the boat is still down at desk level far below it, not rowed up to the top of the room where she could open it."
   },
   {
    "id": "library-3-m8",
@@ -1542,7 +1636,9 @@
    "story_question": 0.84,
    "blind": "partly",
    "blind_reason": "Through the round window from the yellow boat there is a morning city flooded up to its rooftops and treetops, but the companion's arm at the right belongs to someone in the dreamer's grey T-shirt with a hairy, man's forearm, not the sister in her white blouse.",
-   "human": "right"
+   "human": "right",
+   "judge": "right",
+   "judge_reason": "Looking out from the yellow boat through the open round window at a morning city drowned to its rooftops and treetops, the ending reads just as the dreamer said."
   },
   {
    "id": "snow-train-2-m1",
@@ -1577,7 +1673,9 @@
    "blind": "partly",
    "blind_reason": "The dreamer and the grandfather sit facing each other in a compartment with snow at the window, and the grandfather watches calmly, but the brown suitcase stands on the floor at the dreamer's feet instead of being with the grandfather (the dream puts it on his knees, and m2 does too), and the dreamer's smooth young face doesn't match the older, lined face in m2 to m7.",
    "human": "partly",
-   "human_note": "Oh, I thought the bag is supposed to be with the grandpa, not the dreamer, so that is wrong with this frame."
+   "human_note": "Oh, I thought the bag is supposed to be with the grandpa, not the dreamer, so that is wrong with this frame.",
+   "judge": "right",
+   "judge_reason": "Grandfather and dreamer sit facing each other in a quiet old train carriage with snow outside, and he calmly looks across at the dreamer; the suitcase on the floor rather than his knees is a small detail."
   },
   {
    "id": "snow-train-2-m2",
@@ -1612,7 +1710,9 @@
    "blind": "partly",
    "blind_reason": "The worn brown suitcase with metal corners sits on the grandfather's knees, but only one hand rests on it, and the train has changed from m1's facing-bench compartment to an open carriage with an aisle, where the dreamer sits across the aisle looking away out of the window instead of facing him.",
    "human": "partly",
-   "human_note": "Now, this is a totally different frame than the previous frame I saw, so continuity is wrong. Otherwise, this is not bad, actually."
+   "human_note": "Now, this is a totally different frame than the previous frame I saw, so continuity is wrong. Otherwise, this is not bad, actually.",
+   "judge": "partly",
+   "judge_reason": "The suitcase is on his knees under his hands as described, but the carriage has changed and the dreamer now sits across the aisle facing forward and gazing out the window instead of sitting across from him."
   },
   {
    "id": "snow-train-2-m3",
@@ -1628,7 +1728,9 @@
    "state": null,
    "blind": "partly",
    "blind_reason": "The grandfather opens the suitcase to show bundled letters, but it stays on his lap with its lid raised on the dreamer's side, so the contents face the camera and not the dreamer, and the dreamer still sits across the aisle, not across from him.",
-   "human": "right"
+   "human": "right",
+   "judge": "right",
+   "judge_reason": "He has opened the worn suitcase to show bundles of letters while the dreamer watches him; the lid faces the dreamer rather than the inside, but the moment reads at a glance."
   },
   {
    "id": "snow-train-2-m4",
@@ -1662,7 +1764,9 @@
    "story_question": 0.41,
    "blind": "partly",
    "blind_reason": "The two stand outside a stopped steam locomotive in a flat snowy plain, but the grandfather already holds the suitcase open with its letters showing, as if handing it over (the giving belongs to m6), the snow is a flat shallow surface rather than deep, and the locomotive is oddly toy-sized and has no carriages.",
-   "human": "right"
+   "human": "right",
+   "judge": "right",
+   "judge_reason": "The two of them stand off the stopped train in an empty snowy blue-evening landscape; the grandfather still carrying the open suitcase is odd but does not break the story."
   },
   {
    "id": "snow-train-2-m5",
@@ -1696,7 +1800,9 @@
    "story_question": 0.78,
    "blind": "right",
    "blind_reason": "Seen from behind, the dreamer and the grandfather walk side by side through snow toward a lone red door in its frame with no house or wall, and the grandfather carries the closed suitcase.",
-   "human": "right"
+   "human": "right",
+   "judge": "right",
+   "judge_reason": "They walk side by side through the snow toward a lone red door with no house or wall, the grandfather carrying the suitcase, just as the dreamer described."
   },
   {
    "id": "snow-train-2-m6",
@@ -1730,7 +1836,9 @@
    "story_question": 0.49,
    "blind": "right",
    "blind_reason": "In front of the lone red door, the grandfather holds the suitcase of letters out to the dreamer, who takes it, and both faces match the earlier pictures.",
-   "human": "right"
+   "human": "right",
+   "judge": "right",
+   "judge_reason": "In front of the red door the grandfather gently passes the suitcase of letters into the dreamer's hands, matching the quiet handing over the dreamer described."
   },
   {
    "id": "snow-train-2-m7",
@@ -1765,7 +1873,9 @@
    "blind": "partly",
    "blind_reason": "The red door stands open with warm yellow light spilling onto the snow, but nobody is opening it: both stand metres away, back at m5's distance (after being right at the door in m6) and with swapped sides, while the dreamer dangles the suitcase with its lid hanging open.",
    "human": "partly",
-   "human_note": "I don't know where this frame makes sense, but the person holding the bag open, I think, feels wrong."
+   "human_note": "I don't know where this frame makes sense, but the person holding the bag open, I think, feels wrong.",
+   "judge": "wrong",
+   "judge_reason": "The door stands open with warm yellow light but nobody is opening it, and both have jumped back several metres from where they stood at the door in the previous picture, so the dreamer opening the door is not what is shown."
   },
   {
    "id": "orchard-m1",
@@ -1799,7 +1909,9 @@
    "story_question": 0.58,
    "blind": "wrong",
    "blind_reason": "The brass lift and folding gate are right, but Tomas is already a small boy in shorts and knee socks beside the adult dreamer, when the dream says they were both adults at this point, so the change of age happens one moment too early.",
-   "human": "right"
+   "human": "right",
+   "judge": "partly",
+   "judge_reason": "The brass lift and folding gate read well, but Tomas is already a ten-year-old in shorts before the dreamer has turned and noticed the change, so the adult friend from the start of the dream is missing."
   },
   {
    "id": "orchard-m2",
@@ -1833,7 +1945,9 @@
    "story_question": 0.65,
    "blind": "partly",
    "blind_reason": "A boy of about ten stands in profile looking toward the gate while the adult dreamer's arm rests on the rail, but he wears a plaid flannel shirt instead of a school uniform, which also differs from the plain grey shirt and shorts he has in m1, m3 and m5 (the lift light also changes from a dome lamp to a bare bulb).",
-   "human": "right"
+   "human": "right",
+   "judge": "partly",
+   "judge_reason": "The reveal reads at a glance, a small boy staring toward the gate beside the adult in the brass lift, but he wears a plaid flannel shirt instead of the grey school uniform the dreamer remembers most clearly and that he wore in the picture before."
   },
   {
    "id": "orchard-m3",
@@ -1849,7 +1963,9 @@
    "state": null,
    "blind": "right",
    "blind_reason": "The adult dreamer and the boy Tomas, in grey shirt, shorts and knee socks, stand silently side by side facing the closed folding gate of the brass lift.",
-   "human": "right"
+   "human": "right",
+   "judge": "right",
+   "judge_reason": "Both stand silently facing the gate in the tiny brass lift, with Tomas back in the grey shirt and shorts, which is exactly this quiet waiting moment."
   },
   {
    "id": "orchard-m4",
@@ -1883,7 +1999,9 @@
    "story_question": 0.3,
    "blind": "partly",
    "blind_reason": "Seen from the dreamer's eyes, the folding gate is open onto rows of apple trees under a dim sky with many softly glowing apples, but the dreamer's hands grip the gate rods as if pulling it open, when the dream says it opens on its own.",
-   "human": "partly"
+   "human": "partly",
+   "judge": "wrong",
+   "judge_reason": "The glowing orchard through the open gate is lovely, but the dreamer is suddenly seated with legs stretched out, pushing the gate open by hand, which contradicts the standing figures just before and a gate that opened on its own."
   },
   {
    "id": "orchard-m5",
@@ -1917,7 +2035,9 @@
    "story_question": 0.16,
    "blind": "partly",
    "blind_reason": "The boy Tomas, in the same grey shirt, shorts and knee socks, runs away down the path between rows of trees, but the trees are bare and dark with no glowing apples, which disagrees with m4 and with the dream's every apple glowing.",
-   "human": "right"
+   "human": "right",
+   "judge": "right",
+   "judge_reason": "The boy in grey shorts and shirt runs off down the row between the orchard trees at dusk; the apples not glowing here is a detail the dreamer would let go."
   },
   {
    "id": "orchard-m6",
@@ -1951,7 +2071,9 @@
    "story_question": 0.43,
    "blind": "partly",
    "blind_reason": "A white horse stands in the orchard with its muzzle held low to the dreamer's hands, which touch its nose, but the trees around it are again bare with no glowing apples, unlike m4.",
-   "human": "right"
+   "human": "right",
+   "judge": "right",
+   "judge_reason": "A still white horse stands in the middle of the orchard with the dreamer's hands on its nose, the part the dreamer most wants to keep, even though the apples are not glowing in this one."
   },
   {
    "id": "orchard-m7",
@@ -1986,7 +2108,9 @@
    "blind": "partly",
    "blind_reason": "The path between the trees is empty and Tomas is gone, but the orchard has no glowing apples (unlike m4), and the dreamer's hands are pulling at their own shirt hem, which does not read as looking around for him.",
    "human": "wrong",
-   "human_note": "What is this? The person should be gone then. Why is the partial invisibility there? It's wrong."
+   "human_note": "What is this? The person should be gone then. Why is the partial invisibility there? It's wrong.",
+   "judge": "partly",
+   "judge_reason": "The empty orchard row does say Tomas is gone, but the strange foreground of the dreamer's hands stretching out their own shirt hem looks pasted on, and the horse they were just touching has vanished too."
   }
  ]
 }
