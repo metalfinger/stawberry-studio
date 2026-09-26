@@ -72,6 +72,8 @@ One **cut sheet** per cut is the spine everything is assembled from:
   owner marked most: state not carried from the picture before, the room not turning when the camera turns,
   point-of-view shots drawn in third person, the dreamer changing, proportions in edits.
 - The tree's own design: step 1 was designed in full; steps 2-8 of that design are folded into S3-S9 above.
+- `docs/cut-sheet-map.md`: every input a cut's prompt needs, where it is worked out today (often in 3-6 places), what
+  the tree already holds, the proposed `CutSheet` and `assembleCut`, and the safe order for S3 and S6.
 
 ## Log
 
