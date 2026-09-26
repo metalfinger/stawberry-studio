@@ -192,6 +192,16 @@ One **cut sheet** per cut is the spine everything is assembled from:
   dream's drawing path and rebuild give the same sheet. Review: what the sheet still computes twice, and what S4-S6
   will need.
 
+- **S4 eval (camera rules).** Switch `DREAMCHAT_CAMERA=on`. Film grammar from `docs/rules.md` group A as rules over
+  consecutive cut sheets: a reverse angle (the `reverse` tag) says what is now left, right and behind the camera,
+  worked out from the floor plan, and is never edited from the picture before; a crossing of the line is flagged;
+  a cut to the same subject must move the camera or change size; through the dreamer's eyes at most hands show and a
+  held thing sits at the hands, not its floor-plan spot; what is seen beyond a place stays out of it; the mock-up's
+  heights follow the record (water level, a boat rowed up to a window); the moment after a jump in the same place is
+  not "another place" (relationIn bug). Proven on the S4 prompt cases (camera_turn_layout, pov, and the two S1
+  water-level cases left for S4), guards all still met, the corpus diff reviewed, S3's tags as the input, and a
+  live-flow check. Picture checkpoint after S4 (~$3, owner-judged) only if the prompt cases pass.
+
 ## Where steps overlap (read before starting any step)
 
 Work found in one step that belongs to, or touches, another. Keep this list current; nothing here may be dropped
