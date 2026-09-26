@@ -728,7 +728,9 @@ export function addChanges(b: Breakdown, changes: Change[]): void {
     m.leaves.push({ who: c.who, what: c.what, now: c.now, ...(c.whole !== undefined ? { whole: c.whole } : {}) });
     for (const later of all.slice(at + 1)) {
       if ((later.leaves ?? []).some((l) => l.who === c.who && bareWords(l.what) === bareWords(c.what))) break;
-      if (![...later.visible, ...later.things].includes(c.who)) continue;
+      // A place's change carries into every later moment there: the flooded library's water was
+      // never carried, and the boat sat on a dry floor (26 Sep).
+      if (![...later.visible, ...later.things, later.place].includes(c.who)) continue;
       const kept = (later.states ?? []).filter((st) => !(st.who === c.who && bareWords(st.what) === bareWords(c.what)));
       later.states = [
         ...kept,

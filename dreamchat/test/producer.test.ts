@@ -384,6 +384,26 @@ describe('a change the script supervisor finds', () => {
     expect(m5.states ?? []).toEqual([]);
     expect(m6.states ?? []).toEqual([]);
   });
+
+  test("a place's change is carried into every later moment there", () => {
+    // The library filled with water, and the boat sat on a dry floor after it (26 Sep).
+    const b = {
+      scenes: [
+        {
+          id: 's1',
+          moments: [
+            { ...moment('m2', 'The water rises over the desks.'), place: 'l1', leaves: [] },
+            { ...moment('m3', 'The sister rows between the shelves.'), place: 'l1', leaves: [] },
+            { ...moment('m4', 'Outside, the city is underwater.'), place: 'l2', leaves: [] },
+          ],
+        },
+      ],
+    } as unknown as Breakdown;
+    addChanges(b, [{ moment: 'm2', who: 'l1', what: 'water', now: 'up over the tops of the desks' }]);
+    const [, m3, m4] = b.scenes[0].moments;
+    expect(m3.states).toEqual([{ who: 'l1', what: 'water', now: 'up over the tops of the desks', since: 'm2' }]);
+    expect(m4.states ?? []).toEqual([]);
+  });
 });
 
 describe('a scene through several places', () => {
