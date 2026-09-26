@@ -297,6 +297,18 @@ export const callProducer: ProducerFn = async (transcript, previous) => {
 
 const REVISE_ITEM = `The person was shown a profile of something from their dream and answered it (their latest message). Apply what they changed or added, and nothing else. The fields say how it looks: a remark about a pose, a movement or what someone is doing belongs to the moments, never here ("he's too still" changes nothing in his look). Return JSON only: {"fields": {...}} with exactly the same keys as the profile, each value a short plain phrase, or null when nothing is known. Keep every value they didn't change exactly as it was.`;
 
+/**
+ * With S8 on, the dreamer's words are kept apart from ours (docs/rules.md F1): a field written from what
+ * they said holds only their words, and a guess goes where nothing was said. Merged, the field was said
+ * whole with our detail in it (256 of 258 sketch clauses said but never said, the listening test's
+ * before), or, checked clause by clause, it was said no longer and what they told was lost with it
+ * (told facts kept as said 0.87 before, 0.86 in the first after-run).
+ */
+const THEIR_WORDS_REVISE =
+  " Write what they changed in their own words, as a short plain phrase, and add nothing they didn't say: what isn't known stays as it was.";
+const THEIR_WORDS_REWORD =
+  ' The fields listed as theirs hold what the person said: keep each to their words, reworded only to describe a look, and put any guess of yours in the other fields.';
+
 const REWORD_LOOK = `A reference picture of something from a person's dream is about to be drawn from the profile below, and a checker holding it back found a problem in it. Rewrite the profile so it can be drawn without guessing and without contradiction. It describes only how it ordinarily looks: never other people, what anyone does, or what happens in the dream (where the dream changes them later, their age or clothes afterwards is never their look: "What changes later" lists it), and never how it stands or is framed in a picture (standing, a three-quarter view, face clearly visible): each picture decides that. Keep every fact the person gave, reworded only so it describes a look ("the lever the driver turns" is "a lever at the front"). A place is described as itself, on its own: never as inside, beyond or part of another place ("a village just inside the house" is "a village"), and never by who is in it. Fill what is missing with a plain, ordinary guess that fits the conversation: for a person their age, build, hair and clothes with colours; for an animal what kind it is, its size, and its coat and colours (never clothes); for a group who is in it and how each looks; for a place what kind it is, its layout, what stands in it and its light; for a thing its shape, size, materials and colours. Return JSON only: {"fields": {...}} with exactly the same keys as the profile, each value a short plain phrase.`;
 
 /**
@@ -318,10 +330,10 @@ export async function rewordLook(
   const current = Object.fromEntries(Object.entries(fields).map(([k, d]) => [k, d.value]));
   const res = await callDeepseek(
     [
-      { role: 'system', content: REWORD_LOOK },
+      { role: 'system', content: REWORD_LOOK + (listenOn() ? THEIR_WORDS_REWORD : '') },
       {
         role: 'user',
-        content: `The conversation:\n\n${transcript}\n\nWhat the checker found:\n${findings.map((f) => `- ${f}`).join('\n')}\n\nThe ${kind === 'character' ? 'person' : kind === 'location' ? 'place' : 'thing'}: ${name}\nIts profile:\n${JSON.stringify(current)}${later.length ? `\n\nWhat changes later (never part of this profile, which is how it looks before that): ${later.join('; ')}.` : ''}\n\nThe instructions the picture would be drawn from:\n\n${prompt}`,
+        content: `The conversation:\n\n${transcript}\n\nWhat the checker found:\n${findings.map((f) => `- ${f}`).join('\n')}\n\nThe ${kind === 'character' ? 'person' : kind === 'location' ? 'place' : 'thing'}: ${name}\nIts profile:\n${JSON.stringify(current)}${theirs(fields)}${later.length ? `\n\nWhat changes later (never part of this profile, which is how it looks before that): ${later.join('; ')}.` : ''}\n\nThe instructions the picture would be drawn from:\n\n${prompt}`,
       },
     ],
     { json: true, thinking: PRODUCER_THINKING },
@@ -906,6 +918,14 @@ const carrying = (x: string) =>
     .filter((w) => w.length > 2 && !WORD_STOP.has(w))
     .map((w) => w.slice(0, 5));
 
+/** With S8 on, which of a profile's fields hold what the person said, for a rewrite to keep to. */
+const theirs = (fields: Record<string, Detail>) => {
+  const said = Object.entries(fields)
+    .filter(([, d]) => d.said && d.value)
+    .map(([k]) => k);
+  return listenOn() && said.length ? `\nTheirs: ${said.join(', ')}.` : '';
+};
+
 /** What the person said, from a rendered conversation: their lines only. */
 export const personLines = (transcript: string) =>
   transcript
@@ -943,7 +963,7 @@ export async function reviseItem(
   const current = Object.fromEntries(Object.entries(fields).map(([k, d]) => [k, d.value]));
   const res = await callDeepseek(
     [
-      { role: 'system', content: REVISE_ITEM },
+      { role: 'system', content: REVISE_ITEM + (listenOn() ? THEIR_WORDS_REVISE : '') },
       {
         role: 'user',
         content: `The conversation:\n\n${transcript}\n\nThe profile of ${name}:\n${JSON.stringify(current)}`,
