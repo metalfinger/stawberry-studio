@@ -74,6 +74,14 @@ One **cut sheet** per cut is the spine everything is assembled from:
 - The tree's own design: step 1 was designed in full; steps 2-8 of that design are folded into S3-S9 above.
 - `docs/cut-sheet-map.md`: every input a cut's prompt needs, where it is worked out today (often in 3-6 places), what
   the tree already holds, the proposed `CutSheet` and `assembleCut`, and the safe order for S3 and S6.
+- `docs/rules.md`: 46 general rules from two days of dreams (film grammar, continuity, the image model's habits,
+  references and ghosts, prompt writing, listening, measuring), each with evidence, status and how the system holds
+  it, ranked by what the owner's verdicts weigh; and the contradictions to resolve.
+
+## Open questions for the owner
+
+- In `evals/paired-verdicts.json`, the sketches-only version of lighthouse-first m7 carries the same note as orchard
+  m7 (about Tomas), on a picture rated right: probably typed on the wrong picture. Left as is until confirmed.
 
 ## Log
 
