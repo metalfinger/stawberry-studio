@@ -6,32 +6,37 @@
 // picture right. Nothing is drawn: every step of the harness is proven here on its preparation.
 //
 //   bun --env-file=$HOME/.config/strawberry/dreamchat.env run evals/prompt-cases.ts --label baseline
-//   bun run evals/prompt-cases.ts --label record-on --against baseline [--only library-1-m3-water …]
+//   bun run evals/prompt-cases.ts --label record-on --against baseline [--only library-1-m3-water …] [--step S1]
 //   bun run evals/prompt-cases.ts --only snow-train-m4-suitcase --show
 //
-// Each moment is rebuilt from its saved dream exactly as plan.ts rebuilds it (plan.ts `rebuild`),
-// by today's code under the environment's switches (DREAMCHAT_RECORD and the like), so a step's
-// switch can be measured on and off. Two kinds of expectation:
-// - code: a named check on the rebuilt references and prompt text (CHECKS below);
-// - ask: a yes-or-no question Jev answers about the prompt text alone. Answers are kept by the hash
-//   of model, question and prompt (runs/prompt-cases/jev-cache.json), so a run again is cheap and
-//   gives the same answers; only a prompt that changed is asked again. --no-ask asks nothing new.
-// A case passes when every expectation holds. Cases whose fault is the image model's alone
-// (model_only) and cases whose note is set aside (set_aside: the note disagrees with the dream as
-// told) are run and shown, but kept out of the pass rates.
+// Each moment is rebuilt from its dream exactly as plan.ts rebuilds it (plan.ts `rebuild`), by
+// today's code under the environment's switches (DREAMCHAT_RECORD and the like), so a step's switch
+// can be measured on and off. The dreams are the frozen copies in evals/sources (--live: the saved
+// conversations themselves); every run records the hash of the case file and of every dream it read,
+// and --against warns when two runs read different ones. Two kinds of expectation:
+// - code: a named check on the rebuilt images, the floor plan and the prompt text (CHECKS below);
+// - ask: a yes-or-no question Jev answers about the prompt text alone. Every fault case has one that
+//   must be answered no about the faulty fact itself, so rewording the fault and adding the right
+//   fact beside it does not meet the case. Jev is asked by one model by name (JEV_EVAL_MODEL, pinned);
+//   answers are kept by the hash of that model, the question as asked and the prompt
+//   (runs/prompt-cases/jev-cache.json), so a run again gives the same answers and only a prompt
+//   that changed is asked again. --no-ask asks nothing new.
+// A case passes when every expectation holds. Kept out of the pass rates, but run and shown: cases
+// whose fault is the image model's alone (model_only), whose note disagrees with the dream as told
+// (set_aside), and whose cause the pictures do not settle (hypothesis). Cases whose fix needs a model
+// to make again something saved with the dream (needs_model_step: a floor plan, a reading of what
+// lasts) are counted, and shown apart: no change to the code alone can meet them here.
 //
-// Results go to runs/prompt-cases/<label>.json; --against <label> compares with an earlier run.
-// Saved dreams are read from DREAMCHAT_DATA, this checkout or another worktree (evals/saved.ts).
-// Nothing is drawn and the engine is never called: the only model asked is Jev, about text.
-import { createHash } from 'node:crypto';
+// Results go to runs/prompt-cases/<label>.json. Nothing is drawn and the engine is never called.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { CutPlan } from '../continuity';
+import type { Blocking } from '../blocking';
+import { type CutPlan, shotPlan } from '../continuity';
 import type { JevFn, Question } from '../jev';
-import { type Rebuilt, type RebuiltPicture, rebuild, standIn } from '../plan';
+import { imagesOf, type Rebuilt, type RebuiltPicture, rebuild, standIn } from '../plan';
 import { type Moment, moments } from '../producer';
 import type { Session } from '../session';
-import { commitOf, DIR } from './saved';
+import { commitOf, DIR, type Inputs, inputsDiffer, sha256 } from './saved';
 
 // ── the cases ────────────────────────────────────────────────────────────────────────────────────
 
@@ -55,6 +60,14 @@ export type FaultClass = (typeof CLASSES)[number];
 /** A row of one of the two verdict files: a picture of a moment (and, for the paired set, one version of it). */
 export type Source = { file: 'story-pictures.json' | 'paired-verdicts.json'; row: string; version?: string };
 
+/**
+ * A drawing of a moment: the story's own (drawn on the night, with today's routing then: the
+ * mock-up as image 1 where the moment had a camera), or one of the three paired versions, which
+ * differ only in image 1: the mock-up, an edit of the picture before, or none.
+ */
+export const DRAWS = ['story', 'mockup', 'edit', 'free'] as const;
+export type Draw = (typeof DRAWS)[number];
+
 export type CodeExpectation = {
   kind: 'code';
   check: CheckName;
@@ -76,10 +89,16 @@ export type PromptCase = {
   /** failing: the person found a fault; passing: they called the picture right, and it must stay so. */
   kind: 'failing' | 'passing';
   class: FaultClass;
+  /** The step of HARNESS_PLAN.md whose eval this case is. */
+  step: string;
   /** The fault is the image model's alone: nothing in the preparation could prevent it. */
   model_only?: boolean;
   /** Why the note is not taken as a fault of the preparation (it disagrees with the dream as told). */
   set_aside?: string;
+  /** Why the pictures do not settle the cause: the case is shown, not counted. */
+  hypothesis?: string;
+  /** What only a model can make again to meet it (the fact is nowhere in the saved dream): counted, shown apart. */
+  needs_model_step?: string;
   session: string;
   moment: string;
   source: Source;
@@ -87,6 +106,10 @@ export type PromptCase = {
   note: string | null;
   /** Other pictures of the same moment where the person noted the same fault. */
   also?: (Source & { note: string | null })[];
+  /** The person's verdict on every drawing of the moment: the story's and the paired versions'. */
+  verdicts: Partial<Record<Draw, 'right' | 'partly' | 'wrong'>>;
+  /** The drawings the fault was seen in (the source and `also`). */
+  seen_in: Draw[];
   /** The fault (or, for a passing case, what made it right), in plain words. */
   fault: string;
   /** Where the fault was read from, when not from the person's note: the blind judge's or the picture judge's reason. */
@@ -115,6 +138,7 @@ export function validateCases(cases: PromptCase[]): string[] {
     seen.add(c.id);
     if (c.kind !== 'failing' && c.kind !== 'passing') out.push(`${at}: kind must be failing or passing`);
     if (!CLASSES.includes(c.class)) out.push(`${at}: unknown class ${c.class}`);
+    if (!/^S\d+$/.test(c.step ?? '')) out.push(`${at}: step must be one of HARNESS_PLAN.md's (S1, S4 …)`);
     if (!/^dream-\d{4}-\d{6}-[0-9a-f]{4}$/.test(c.session ?? ''))
       out.push(`${at}: session ${c.session} is not a saved dream's id`);
     if (!/^m\d+$/.test(c.moment ?? '')) out.push(`${at}: moment ${c.moment} is not a moment id`);
@@ -123,8 +147,12 @@ export function validateCases(cases: PromptCase[]): string[] {
     if (c.kind === 'failing' && c.note === null && !c.fault_from)
       out.push(`${at}: no note, so fault_from must say where the fault was read`);
     if (!c.fault) out.push(`${at}: no fault`);
-    if (c.kind === 'passing' && (c.model_only || c.set_aside))
-      out.push(`${at}: a passing case is never model_only or set aside`);
+    if (c.kind === 'passing' && (c.model_only || c.set_aside || c.hypothesis || c.needs_model_step))
+      out.push(`${at}: a passing case is never model_only, set aside, a hypothesis or waiting on a model`);
+    if (!Array.isArray(c.seen_in) || c.seen_in.some((d) => !DRAWS.includes(d)))
+      out.push(`${at}: seen_in lists drawings (${DRAWS.join(', ')})`);
+    if (!c.verdicts || Object.keys(c.verdicts).some((d) => !DRAWS.includes(d as Draw)))
+      out.push(`${at}: verdicts are by drawing`);
     if (!c.expectations?.length) out.push(`${at}: no expectations`);
     for (const [i, e] of (c.expectations ?? []).entries()) {
       if (e.kind === 'ask') {
@@ -150,6 +178,9 @@ export function validateCases(cases: PromptCase[]): string[] {
             }
         if (args.section !== undefined && !SECTIONS.includes(args.section as Section))
           out.push(`${at} #${i}: unknown section ${String(args.section)}`);
+        for (const k of ['expect', 'not'])
+          for (const h of args[k] === undefined ? [] : Array.isArray(args[k]) ? args[k] : [args[k]])
+            if (!(h in HEADINGS)) out.push(`${at} #${i}: ${String(h)} is not a heading (${Object.keys(HEADINGS)})`);
         if (!e.says) out.push(`${at} #${i}: says what it checks in words`);
       } else out.push(`${at} #${i}: kind must be code or ask`);
     }
@@ -236,6 +267,8 @@ export type Ctx = {
   /** Who and what the picture shows, by their ids: the dreamer is not in their own view. */
   shown: Set<string>;
   dreamer?: string;
+  /** The floor plan the moment is shot on, where it has one. */
+  floor?: Blocking;
 };
 
 /** The images of a moment, each known by what it is. */
@@ -288,6 +321,7 @@ export function contextOf(r: Rebuilt, moment: string): Ctx {
     sections: sectionsOf(p.prompt),
     shown: new Set(p.inView.map((x) => x.id)),
     dreamer: r.b.people.find((x) => x.is_dreamer)?.id,
+    floor: shotPlan(r.b, moment),
   };
 }
 
@@ -314,10 +348,36 @@ const angle = (a: { x: number; y: number }, b: { x: number; y: number }) => {
   return Math.round(d > 180 ? 360 - d : d);
 };
 const cameraOf = (c: Ctx, id: unknown) => c.r.plan.cuts.find((x) => x.id === String(id))?.eye;
+const spotOf = (c: Ctx, id: string) => c.floor?.spots.find((s) => s.id === id);
+
+/** A moving thing's way across the picture, as a sentence says it: a verb of moving, then where to. */
+const MOVING =
+  '(?:drives?|driving|heads?|heading|moves?|moving|travels?|travell?ing|rolls?|rolling|goes|going|comes?|coming|runs?|running|pulls?|pulling)';
+export const HEADINGS = {
+  away: new RegExp(
+    `\\b${MOVING}\\b[^.;]*\\b(?:away from the camera|away from us|into the picture|into the distance|toward the windshield|towards the windshield)`,
+    'i',
+  ),
+  toward: new RegExp(
+    `\\b${MOVING}\\b[^.;]*\\b(?:toward the camera|towards the camera|at the camera|toward us|towards us|out of the picture)`,
+    'i',
+  ),
+  left: new RegExp(
+    `\\b${MOVING}\\b[^.;]*\\b(?:toward the left|towards the left|to the left|from right to left|from the right of the picture toward the left)`,
+    'i',
+  ),
+  right: new RegExp(
+    `\\b${MOVING}\\b[^.;]*\\b(?:toward the right|towards the right|to the right|from left to right|from the left of the picture toward the right)`,
+    'i',
+  ),
+};
+export type Heading = keyof typeof HEADINGS;
+const OPPOSITE: Record<Heading, Heading> = { away: 'toward', toward: 'away', left: 'right', right: 'left' };
 
 /**
  * The checks a case may name. Each is general (who is in view, how many images say who someone
- * is, what a part of the prompt says); what it is asked about comes from the case.
+ * is, where the floor plan puts something, what a part of the prompt says); what it is asked about
+ * comes from the case.
  */
 export const CHECKS = {
   /** An image says how this person or thing looks (their sketch, an in-between picture of them, or a picture attached for who they are). */
@@ -350,6 +410,11 @@ export const CHECKS = {
     pass: c.refs.length <= a.n,
     detail: `${c.refs.length} images`,
   }),
+  /** The floor plan's mock-up is not image 1. */
+  no_mockup: (c: Ctx): CheckResult => {
+    const m = c.refs.find((x) => x.source === 'mockup');
+    return { pass: !m, detail: m ? `image ${m.index} is the mock-up` : 'no mock-up' };
+  },
   /** Who and what the picture shows (what it lists and what its worked-out view has in it). */
   in_view: (c: Ctx, a: { who: string }): CheckResult => ({
     pass: c.shown.has(a.who),
@@ -359,6 +424,78 @@ export const CHECKS = {
     pass: !c.shown.has(a.who),
     detail: `${nameOf(c, a.who)} ${c.shown.has(a.who) ? 'is' : 'is not'} in view (shown: ${[...c.shown].join(', ')})`,
   }),
+  /**
+   * Not placed on the moment's floor plan: what is seen only out past the place (the tractor in the
+   * field below the window) may be in the picture, far off, but never standing in the place.
+   */
+  not_on_floor_plan: (c: Ctx, a: { who: string }): CheckResult => {
+    const s = spotOf(c, a.who);
+    const out = c.floor?.outside?.[a.who];
+    return {
+      pass: !s,
+      detail: s
+        ? `${nameOf(c, a.who)} stands on the plan at (${s.x}, ${s.y})`
+        : out
+          ? `off the plan, seen out past the place (${out})`
+          : 'off the plan',
+    };
+  },
+  /** On the floor plan, the thing is held or carried by this person. */
+  held_by: (c: Ctx, a: { who: string; by: string }): CheckResult => {
+    const s = spotOf(c, a.who);
+    return {
+      pass: s?.heldBy === a.by,
+      detail: !s
+        ? `${nameOf(c, a.who)} is not on the plan`
+        : s.heldBy
+          ? `held by ${nameOf(c, s.heldBy)}`
+          : `held by no one, at (${s.x}, ${s.y})`,
+    };
+  },
+  /** On the floor plan, this person faces one of these (a spot's id). */
+  faces: (c: Ctx, a: { who: string; toward: string[] }): CheckResult => {
+    const s = spotOf(c, a.who);
+    return {
+      pass: !!s?.faces && list(a.toward).includes(s.faces),
+      detail: s ? `faces ${s.faces ?? 'the front'}` : `${nameOf(c, a.who)} is not on the plan`,
+    };
+  },
+  /** On the floor plan, the two face each other. */
+  faces_each_other: (c: Ctx, a: { a: string; b: string }): CheckResult => {
+    const x = spotOf(c, a.a);
+    const y = spotOf(c, a.b);
+    return {
+      pass: x?.faces === a.b && y?.faces === a.a,
+      detail: `${a.a} faces ${x?.faces ?? 'nothing on the plan'}, ${a.b} faces ${y?.faces ?? 'nothing on the plan'}`,
+    };
+  },
+  /**
+   * The prompt says which way something moving goes across the picture (away from the camera, toward
+   * it, to the left, to the right), and never the opposite way (or any way in `not`).
+   */
+  heading_said: (c: Ctx, a: { expect: Heading; not?: Heading[] }): CheckResult => {
+    const said = c.p.prompt.match(HEADINGS[a.expect]);
+    const against = (a.not ?? [OPPOSITE[a.expect]])
+      .map((h) => ({ h, m: c.p.prompt.match(HEADINGS[h]) }))
+      .filter((x) => x.m);
+    return {
+      pass: !!said && !against.length,
+      detail: [
+        said ? `says ${a.expect}: "${said[0].slice(0, 100)}"` : `never says it goes ${a.expect}`,
+        ...against.map((x) => `says ${x.h}: "${x.m![0].slice(0, 100)}"`),
+      ].join('; '),
+    };
+  },
+  /** The sketch of who or what it is says this part of its look (its wardrobe, its appearance …), matching `pattern` if given. */
+  look_has: (c: Ctx, a: { who: string; field: string; pattern?: string }): CheckResult => {
+    const it = c.r.sheets.find((s) => s.id === a.who);
+    const value = it?.fields[a.field]?.value ?? '';
+    const ok = !!value.trim() && (!a.pattern || re(a.pattern).test(value));
+    return {
+      pass: ok,
+      detail: !it ? `${a.who} has no sketch` : value ? `${a.field}: "${value.slice(0, 120)}"` : `no ${a.field} said`,
+    };
+  },
   /** The dreamer is in the picture, or the picture is what their own eyes see. */
   dreamer_seen_or_pov: (c: Ctx): CheckResult => {
     const pov = c.m.eyes === 'dreamer';
@@ -375,19 +512,21 @@ export const CHECKS = {
   },
   /**
    * The moment's plan holds a state of `who` (its part `what`, its value `now`): one this moment
-   * makes or one still so from earlier. Where the plan holds none, `text` found in the prompt counts.
+   * makes or one still so from earlier. Where the plan holds none, `text` counts only where a
+   * prompt says what is still so from earlier: a word anywhere else ("flooded with warm light")
+   * is not a state carried.
    */
   state_carried: (c: Ctx, a: { who: string; what?: string; now?: string; text?: string }): CheckResult => {
     const hit = statesOf(c.cut).find(
       (st) => st.who === a.who && (!a.what || re(a.what).test(st.what)) && (!a.now || re(a.now).test(st.now)),
     );
     if (hit) return { pass: true, detail: `${hit.who}'s ${hit.what}: ${hit.now}` };
-    const said = a.text ? c.p.prompt.match(re(a.text)) : null;
+    const said = a.text ? (c.sections.still ?? '').match(re(a.text)) : null;
     const held = statesOf(c.cut).map((st) => `${st.who}'s ${st.what}: ${st.now}`);
     return {
       pass: !!said,
       detail: said
-        ? `not in the plan, but said: "${said[0]}"`
+        ? `not in the plan, but said as still so: "${said[0]}"`
         : `no such state (the plan holds ${held.length ? held.join('; ') : 'none'})`,
     };
   },
@@ -474,8 +613,15 @@ export const CHECK_ARGS: Record<CheckName, { required: string[]; optional: strin
   no_image_of: { required: ['who'], optional: [] },
   images_per_subject_at_most: { required: ['n'], optional: ['who'] },
   images_at_most: { required: ['n'], optional: [] },
+  no_mockup: { required: [], optional: [] },
   in_view: { required: ['who'], optional: [] },
   not_in_view: { required: ['who'], optional: [] },
+  not_on_floor_plan: { required: ['who'], optional: [] },
+  held_by: { required: ['who', 'by'], optional: [] },
+  faces: { required: ['who', 'toward'], optional: [] },
+  faces_each_other: { required: ['a', 'b'], optional: [] },
+  heading_said: { required: ['expect'], optional: ['not'] },
+  look_has: { required: ['who', 'field'], optional: ['pattern'] },
   dreamer_seen_or_pov: { required: [], optional: [] },
   no_dreamer_image: { required: [], optional: [] },
   state_carried: { required: ['who'], optional: ['what', 'now', 'text'] },
@@ -498,7 +644,11 @@ export function runCheck(c: Ctx, e: CodeExpectation): CheckResult {
 
 // ── the questions Jev answers ────────────────────────────────────────────────────────────────────
 
-export const JEV_MODEL = () => process.env.JEV_MODEL ?? 'jev-latest';
+/**
+ * The Jev model the evals ask, by name: "jev-latest" answered as jev-1.13.0 on 26 Sep, and would move
+ * with Jev's next release, and every cached answer with it.
+ */
+export const JEV_MODEL = () => process.env.JEV_EVAL_MODEL ?? 'jev-1.13.0';
 
 /** One yes-or-no question about a prompt, as Jev is asked it. */
 export function askQuestion(question: string): Question {
@@ -512,11 +662,12 @@ export function askQuestion(question: string): Question {
   };
 }
 
-/** Jev's answers so far, by the hash of model, question and prompt: a run again asks only what changed. */
-export type JevCache = Record<string, { p: number; model: string; at: string }>;
+/** Jev's answers so far, by the hash of the model, the question as asked and the prompt. */
+export type JevCache = Record<string, { p: number; model: string; served?: string; at: string }>;
 
+/** The key of one answer: the model asked, the question exactly as sent (its instructions and criteria), the prompt. */
 export const askKey = (prompt: string, question: string, model = JEV_MODEL()) =>
-  createHash('sha256').update(`${model}\n${question}\n\n${prompt}`).digest('hex');
+  sha256(`${model}\n${JSON.stringify(askQuestion(question))}\n\n${prompt}`);
 
 /** Above this, Jev's answer is yes. */
 export const YES = 0.5;
@@ -529,7 +680,8 @@ export const CLOSE = 0.1;
 
 /**
  * Asks Jev every question not already answered, a few at a time, each in a call of its own so its
- * answer depends only on its prompt and question. Answers land in the cache; failures are returned.
+ * answer depends only on its prompt and question. Answers land in the cache; failures, and answers
+ * from another model than the one named, are returned.
  */
 export async function askAll(
   items: { prompt: string; question: string }[],
@@ -550,12 +702,16 @@ export async function askAll(
       const [key, x] = todo[next++];
       const call = await jev(x.prompt, { q: askQuestion(x.question) });
       const a = call.answers?.q;
-      if (a?.type === 'noul') cache[key] = { p: a.noul, model, at: new Date().toISOString() };
-      else errors.push(`${x.question.slice(0, 60)}…: ${call.error ?? 'no answer'}`);
+      if (a?.type !== 'noul') {
+        errors.push(`${x.question.slice(0, 60)}…: ${call.error ?? 'no answer'}`);
+        continue;
+      }
+      if (call.model && call.model !== model) errors.push(`answered by ${call.model}, not ${model}`);
+      cache[key] = { p: a.noul, model, ...(call.model ? { served: call.model } : {}), at: new Date().toISOString() };
     }
   };
   await Promise.all(Array.from({ length: Math.min(concurrency, todo.length) }, worker));
-  return errors;
+  return [...new Set(errors)];
 }
 
 // ── a run ────────────────────────────────────────────────────────────────────────────────────────
@@ -579,18 +735,24 @@ export type CaseResult = {
   id: string;
   kind: PromptCase['kind'];
   class: FaultClass;
+  step: string;
   model_only: boolean;
   set_aside: boolean;
+  hypothesis: boolean;
+  needs_model_step: boolean;
   session: string;
   moment: string;
   /** Every expectation met; null when one is unanswered and none failed. */
   pass: boolean | null;
   expectations: ExpectationResult[];
+  /** Where the dream keeps what was really sent: the images sent, when the rebuild attaches others. */
+  sent_images?: { sent: string[]; rebuilt: string[] };
   error?: string;
 };
 
 /** Whether a case counts toward the pass rates. */
-export const counted = (r: Pick<CaseResult, 'model_only' | 'set_aside'>) => !r.model_only && !r.set_aside;
+export const counted = (r: Pick<CaseResult, 'model_only' | 'set_aside' | 'hypothesis'>) =>
+  !r.model_only && !r.set_aside && !r.hypothesis;
 
 /** A case's result from its checks and Jev's answers (those not in the cache are unanswered). */
 export function judgeCase(c: PromptCase, ctx: Ctx | Error, cache: JevCache): CaseResult {
@@ -598,8 +760,11 @@ export function judgeCase(c: PromptCase, ctx: Ctx | Error, cache: JevCache): Cas
     id: c.id,
     kind: c.kind,
     class: c.class,
+    step: c.step,
     model_only: !!c.model_only,
     set_aside: !!c.set_aside,
+    hypothesis: !!c.hypothesis,
+    needs_model_step: !!c.needs_model_step,
     session: c.session,
     moment: c.moment,
   };
@@ -633,18 +798,38 @@ export function judgeCase(c: PromptCase, ctx: Ctx | Error, cache: JevCache): Cas
 }
 
 type Tally = { cases: number; pass: number; unknown: number };
-export type Totals = Record<string, { failing: Tally; passing: Tally; out: Tally }>;
+export type Totals = Record<
+  string,
+  { failing: Tally; model_step: Tally; passing: Tally; hypothesis: Tally; out: Tally }
+>;
 
-/** Per class: failing and passing cases in the pass rates, and those kept out (model_only, set aside). */
+/**
+ * Per class: failing and passing cases in the pass rates (the failing ones that need a model step
+ * also counted apart), hypotheses, and those kept out (model_only, set aside).
+ */
 export function totalsOf(results: CaseResult[]): Totals {
   const out: Totals = {};
   const empty = (): Tally => ({ cases: 0, pass: 0, unknown: 0 });
+  const add = (t: Tally, r: CaseResult) => {
+    t.cases++;
+    if (r.pass === true) t.pass++;
+    if (r.pass === null) t.unknown++;
+  };
   for (const r of results) {
-    const t = (out[r.class] ??= { failing: empty(), passing: empty(), out: empty() });
-    const bucket = !counted(r) ? t.out : r.kind === 'failing' ? t.failing : t.passing;
-    bucket.cases++;
-    if (r.pass === true) bucket.pass++;
-    if (r.pass === null) bucket.unknown++;
+    const t = (out[r.class] ??= {
+      failing: empty(),
+      model_step: empty(),
+      passing: empty(),
+      hypothesis: empty(),
+      out: empty(),
+    });
+    if (r.model_only || r.set_aside) add(t.out, r);
+    else if (r.hypothesis) add(t.hypothesis, r);
+    else if (r.kind === 'passing') add(t.passing, r);
+    else {
+      add(t.failing, r);
+      if (r.needs_model_step) add(t.model_step, r);
+    }
   }
   return out;
 }
@@ -656,7 +841,8 @@ export type RunFile = {
   /** The dream chat's switches in force (DREAMCHAT_RECORD and the like). */
   switches: Record<string, string>;
   jevModel: string;
-  data: string;
+  /** What the run read: the case file and every dream, by hash. */
+  inputs: Inputs;
   totals: Totals;
   cases: CaseResult[];
 };
@@ -666,23 +852,40 @@ export type Comparison = {
   worse: string[];
   /** Answered now, not before, or the other way. */
   unsure: string[];
+  /** Expectations whose result or whose Jev answer moved, case by case. */
+  moved: string[];
+  /** Where the two runs read different inputs. */
+  warnings: string[];
   lines: string[];
 };
 
-/** What changed between an earlier run and this one, case by case and class by class. */
+/** What changed between an earlier run and this one: inputs, cases, the checks and answers inside them, classes. */
 export function compare(before: RunFile, now: RunFile): Comparison {
   const was = new Map(before.cases.map((c) => [c.id, c]));
   const better: string[] = [];
   const worse: string[] = [];
   const unsure: string[] = [];
+  const moved: string[] = [];
+  const mark = (p: boolean | null) => (p === true ? 'met' : p === false ? 'not met' : 'unanswered');
   for (const c of now.cases) {
     const b = was.get(c.id);
-    if (!b || b.pass === c.pass) continue;
-    if (b.pass === false && c.pass === true) better.push(c.id);
-    else if (b.pass === true && c.pass === false) worse.push(c.id);
-    else unsure.push(c.id);
+    if (!b) continue;
+    if (b.pass !== c.pass) {
+      if (b.pass === false && c.pass === true) better.push(c.id);
+      else if (b.pass === true && c.pass === false) worse.push(c.id);
+      else unsure.push(c.id);
+    }
+    c.expectations.forEach((e, i) => {
+      const x = b.expectations[i];
+      if (!x || (x.check ?? x.question) !== (e.check ?? e.question)) return;
+      const score = e.p !== undefined && x.p !== undefined ? ` (${x.p.toFixed(2)} -> ${e.p.toFixed(2)})` : '';
+      if (x.pass !== e.pass || (score && Math.abs((e.p ?? 0) - (x.p ?? 0)) >= CLOSE))
+        moved.push(`${c.id} #${i} ${e.check ?? `ask: ${e.question}`}: ${mark(x.pass)} -> ${mark(e.pass)}${score}`);
+    });
   }
+  const warnings = inputsDiffer(before.inputs, now.inputs);
   const lines = [`against ${before.label} (${before.commit ?? '?'}, ${before.at}):`];
+  for (const w of warnings) lines.push(`  warning: ${w}`);
   for (const k of Object.keys({ ...before.totals, ...now.totals }).sort()) {
     const a = before.totals[k];
     const b = now.totals[k];
@@ -695,30 +898,35 @@ export function compare(before: RunFile, now: RunFile): Comparison {
   if (better.length) lines.push(`  now met: ${better.join(', ')}`);
   if (worse.length) lines.push(`  no longer met: ${worse.join(', ')}`);
   if (unsure.length) lines.push(`  answered differently or not at all: ${unsure.join(', ')}`);
-  if (!better.length && !worse.length && !unsure.length) lines.push('  no case changed');
-  return { better, worse, unsure, lines };
+  if (moved.length) lines.push('  moved:', ...moved.map((m) => `    ${m}`));
+  if (!better.length && !worse.length && !unsure.length && !moved.length) lines.push('  no case changed');
+  return { better, worse, unsure, moved, warnings, lines };
 }
 
 const pct = (a: number, b: number) => `${a}/${b}${b ? ` (${Math.round((100 * a) / b)}%)` : ''}`;
 
 /** The table printed at the end of a run. */
 export function totalsLines(t: Totals): string[] {
-  const sum = (k: 'failing' | 'passing' | 'out') =>
+  const sum = (k: keyof Totals[string]) =>
     Object.values(t).reduce(
       (a, x) => ({ cases: a.cases + x[k].cases, pass: a.pass + x[k].pass, unknown: a.unknown + x[k].unknown }),
       { cases: 0, pass: 0, unknown: 0 },
     );
   const cell = (x: Tally) => (x.cases ? `${pct(x.pass, x.cases)}${x.unknown ? ` ?${x.unknown}` : ''}` : '-');
+  const row = (name: string, x: Totals[string]) =>
+    `${name.padEnd(20)} ${cell(x.failing).padEnd(16)} ${cell(x.model_step).padEnd(16)} ${cell(x.passing).padEnd(16)} ${cell(x.hypothesis).padEnd(16)} ${cell(x.out)}`;
   const lines = [
-    `${'class'.padEnd(20)} ${'failing cases met'.padEnd(20)} ${'passing cases met'.padEnd(20)} kept out (met)`,
+    `${'class'.padEnd(20)} ${'failing met'.padEnd(16)} ${'(model step)'.padEnd(16)} ${'passing met'.padEnd(16)} ${'hypotheses'.padEnd(16)} kept out`,
   ];
-  for (const k of CLASSES) {
-    const x = t[k];
-    if (!x) continue;
-    lines.push(`${k.padEnd(20)} ${cell(x.failing).padEnd(20)} ${cell(x.passing).padEnd(20)} ${cell(x.out)}`);
-  }
+  for (const k of CLASSES) if (t[k]) lines.push(row(k, t[k]));
   lines.push(
-    `${'all'.padEnd(20)} ${cell(sum('failing')).padEnd(20)} ${cell(sum('passing')).padEnd(20)} ${cell(sum('out'))}`,
+    row('all', {
+      failing: sum('failing'),
+      model_step: sum('model_step'),
+      passing: sum('passing'),
+      hypothesis: sum('hypothesis'),
+      out: sum('out'),
+    }),
   );
   return lines;
 }
@@ -729,8 +937,9 @@ export const RUNS = join(DIR, 'runs', 'prompt-cases');
 
 if (import.meta.main) {
   // Nothing here draws or reaches the engine: a rebuild only writes prompts, and Jev only reads them.
-  const { callJev, jevAvailable } = await import('../jev');
-  const { dataDir, readSession, switches } = await import('./saved');
+  const { jevAvailable, jevWithModel } = await import('../jev');
+  const { loadDream, switches } = await import('./saved');
+  const { sentOf } = await import('./corpus');
   const args = process.argv.slice(2);
   const valueOf = (name: string) => {
     const i = args.indexOf(name);
@@ -748,9 +957,11 @@ if (import.meta.main) {
   };
   const label = valueOf('--label') ?? 'latest';
   const against = valueOf('--against');
+  const step = valueOf('--step');
   const only = listOf('--only');
   const show = args.includes('--show');
   const noAsk = args.includes('--no-ask');
+  const live = args.includes('--live');
 
   const all = loadCases();
   const unknown = only.filter((id) => !all.some((c) => c.id === id));
@@ -758,20 +969,22 @@ if (import.meta.main) {
     console.error(`no such case: ${unknown.join(', ')}`);
     process.exit(1);
   }
-  const cases = only.length ? all.filter((c) => only.includes(c.id)) : all;
-  const data = dataDir([...new Set(cases.map((c) => c.session))]);
+  const cases = all.filter((c) => (!only.length || only.includes(c.id)) && (!step || c.step === step));
 
   // Every dream rebuilt once, as plan.ts rebuilds it.
-  const rebuilt = new Map<string, Rebuilt | Error>();
+  const dreams = new Map<string, { r: Rebuilt | Error; hash: string; sent: ReturnType<typeof sentOf> }>();
   for (const id of new Set(cases.map((c) => c.session))) {
+    const d = loadDream(id, live);
+    let r: Rebuilt | Error;
     try {
-      rebuilt.set(id, rebuild(readSession(data, id) as Session));
+      r = rebuild(d.session as Session);
     } catch (e) {
-      rebuilt.set(id, e instanceof Error ? e : new Error(String(e)));
+      r = e instanceof Error ? e : new Error(String(e));
     }
+    dreams.set(id, { r, hash: d.hash, sent: sentOf(d.session) });
   }
   const ctxOf = (c: PromptCase): Ctx | Error => {
-    const r = rebuilt.get(c.session);
+    const r = dreams.get(c.session)?.r;
     if (!r || r instanceof Error) return r ?? new Error('not rebuilt');
     try {
       return contextOf(r, c.moment);
@@ -791,10 +1004,10 @@ if (import.meta.main) {
   });
   if (!noAsk && jevAvailable()) {
     const before = Object.keys(cache).length;
-    const errors = await askAll(asks, callJev, cache);
+    const errors = await askAll(asks, jevWithModel(JEV_MODEL()), cache);
     writeFileSync(cacheFile, `${JSON.stringify(cache, null, 1)}\n`);
-    console.log(`Jev: ${Object.keys(cache).length - before} questions asked, the rest from the cache`);
-    for (const e of errors) console.log(`Jev failed: ${e}`);
+    console.log(`Jev (${JEV_MODEL()}): ${Object.keys(cache).length - before} questions asked, the rest from the cache`);
+    for (const e of errors) console.log(`Jev: ${e}`);
   } else if (asks.some((x) => !cache[askKey(x.prompt, x.question)]))
     console.log(
       noAsk
@@ -802,18 +1015,41 @@ if (import.meta.main) {
         : 'no JEV_API_KEY: questions not in the cache are left unanswered (run with --env-file)',
     );
 
-  const results = cases.map((c) => judgeCase(c, ctxOf(c), cache));
+  const results = cases.map((c) => {
+    const ctx = ctxOf(c);
+    const r = judgeCase(c, ctx, cache);
+    // What was really sent, where the dream keeps it: a rebuild takes every sketch and earlier picture
+    // as drawn, and the night did not always have them.
+    const sent = dreams.get(c.session)?.sent[c.moment];
+    if (sent && !(ctx instanceof Error)) {
+      const rebuilt = imagesOf(ctx.r, ctx.p);
+      if (JSON.stringify(rebuilt) !== JSON.stringify(sent.images)) r.sent_images = { sent: sent.images, rebuilt };
+    }
+    return r;
+  });
   for (const r of results) {
     const c = cases.find((x) => x.id === r.id)!;
     const mark = r.pass === true ? 'MET ' : r.pass === false ? 'FAIL' : ' ?  ';
-    const out = !counted(r) ? (r.model_only ? ' [model only]' : ' [set aside]') : '';
-    console.log(`${mark} ${r.kind.padEnd(7)} ${r.class.padEnd(19)} ${r.id}${out}`);
+    const tag = r.model_only
+      ? ' [model only]'
+      : r.set_aside
+        ? ' [set aside]'
+        : r.hypothesis
+          ? ' [hypothesis]'
+          : r.needs_model_step
+            ? ' [needs a model step]'
+            : '';
+    console.log(`${mark} ${r.kind.padEnd(7)} ${r.step.padEnd(3)} ${r.class.padEnd(19)} ${r.id}${tag}`);
     if (r.error) console.log(`       error: ${r.error}`);
     for (const e of r.expectations)
       if (e.pass !== true || e.close || show)
         console.log(
           `       ${e.pass === true ? 'ok' : e.pass === false ? 'x ' : '? '} ${e.kind === 'code' ? `${e.check}: ${e.says}` : `ask (${e.expect}): ${e.question}`} -> ${e.detail}`,
         );
+    if (r.sent_images && show)
+      console.log(
+        `       images sent: ${r.sent_images.sent.join(', ')}\n       images now:  ${r.sent_images.rebuilt.join(', ')}`,
+      );
     if (show) {
       const ctx = ctxOf(c);
       if (!(ctx instanceof Error)) {
@@ -835,14 +1071,25 @@ if (import.meta.main) {
     commit: commitOf(),
     switches: switches(),
     jevModel: JEV_MODEL(),
-    data,
+    inputs: {
+      from: live ? 'live' : 'frozen',
+      cases: sha256(readFileSync(CASES_FILE, 'utf8')),
+      dreams: Object.fromEntries([...dreams].map(([id, d]) => [id, d.hash])),
+    },
     totals: totalsOf(results),
     cases: results,
   };
-  console.log(`\n${label}: ${cases.length} cases${only.length ? ' (--only)' : ''}`);
+  console.log(
+    `\n${label}: ${cases.length} cases${only.length || step ? ' (a subset)' : ''}, dreams read ${run.inputs.from}`,
+  );
   for (const l of totalsLines(run.totals)) console.log(l);
   const close = results.filter((r) => r.expectations.some((e) => e.close)).map((r) => r.id);
   if (close.length) console.log(`answers close to the bar, in: ${close.join(', ')}`);
+  const other = results.filter((r) => r.sent_images).map((r) => r.id);
+  if (other.length)
+    console.log(
+      `rebuilt with other images than were sent that night (a rebuild takes every sketch and earlier picture as drawn): ${other.join(', ')}`,
+    );
   const file = join(RUNS, `${label}.json`);
   writeFileSync(file, `${JSON.stringify(run, null, 1)}\n`);
   console.log(`\nwritten ${file}`);

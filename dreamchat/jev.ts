@@ -55,6 +55,8 @@ export type JevCall = {
   error: string | null;
   ms: number;
   usage: { input_tokens: number; output_tokens: number } | null;
+  /** The model that answered, as Jev names it ("jev-1.13.0" for "jev-latest"). */
+  model?: string;
 };
 
 export type JevFn = (state: string, questions: Record<string, Question>) => Promise<JevCall>;
@@ -74,7 +76,16 @@ export const callJev: JevFn = async (state, questions) => {
   return call;
 };
 
-async function askJev(state: string, questions: Record<string, Question>): Promise<JevCall> {
+/**
+ * Jev asked by one model by name, for the evals that must give the same answers from one run to the
+ * next (evals/prompt-cases.ts): "jev-latest" moves when Jev is updated. Not logged to a conversation.
+ */
+export const jevWithModel =
+  (model: string): JevFn =>
+  (state, questions) =>
+    askJev(state, questions, model);
+
+async function askJev(state: string, questions: Record<string, Question>, model = MODEL): Promise<JevCall> {
   const key = apiKey();
   const t0 = Date.now();
   if (key === null) return { questions, state, answers: null, error: 'no JEV_API_KEY', ms: 0, usage: null };
@@ -82,13 +93,13 @@ async function askJev(state: string, questions: Record<string, Question>): Promi
     const res = await fetch(ENDPOINT, {
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ state, model: MODEL, questions }),
+      body: JSON.stringify({ state, model, questions }),
     });
     const ms = Date.now() - t0;
     if (!res.ok)
       return { questions, state, answers: null, error: `${res.status} ${await res.text()}`, ms, usage: null };
-    const body = (await res.json()) as { answers: Record<string, Answer>; usage: JevCall['usage'] };
-    return { questions, state, answers: body.answers, error: null, ms, usage: body.usage };
+    const body = (await res.json()) as { answers: Record<string, Answer>; usage: JevCall['usage']; model?: string };
+    return { questions, state, answers: body.answers, error: null, ms, usage: body.usage, model: body.model };
   } catch (e) {
     return { questions, state, answers: null, error: String(e), ms: Date.now() - t0, usage: null };
   }

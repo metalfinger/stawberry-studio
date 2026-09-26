@@ -1,23 +1,33 @@
-// Every picture of every saved dream, as it would be told now: each dream whose breakdown and look
-// are settled is rebuilt exactly as plan.ts rebuilds it (plan.ts `rebuild`), and each moment's and
-// in-between picture's prompt, images and plan are written as a normalised dump, so two labels can be
-// compared picture by picture. What a change to the harness changes in the preparation of every
-// saved dream, seen before anything is drawn. No model is called and nothing is drawn.
+// Every picture of every dream the evals keep, as it would be told now: each dream is rebuilt exactly
+// as plan.ts rebuilds it (plan.ts `rebuild`), and each moment's and in-between picture's prompt,
+// images and plan are written as a normalised dump, so two labels can be compared picture by
+// picture. What a change to the harness changes in the preparation, seen before anything is drawn.
+// No model is called and nothing is drawn.
 //
 //   bun run evals/corpus.ts --label baseline
 //   DREAMCHAT_RECORD=on bun run evals/corpus.ts --label record-on --against baseline
 //   bun run evals/corpus.ts --label bench --set benchmark        (the five replay dreams, evals/benchmark.json)
 //   bun run evals/corpus.ts --label one --only dream-0926-043003-b0cb
+//   bun run evals/corpus.ts --label all --live                  (every saved conversation, and the fake replays')
+//   bun run evals/corpus.ts --verify                            (each frozen dream rebuilds as its saved conversation does)
 //
-// The dump is runs/corpus/<label>.json. --against <label> writes what changed, picture by picture
-// (paragraphs gone and new, images, plan), to runs/corpus/<label>-vs-<against>.txt and prints its
-// totals. Images are named by what they are (sketch:p1, picture:m3, ghost:g1, previs:m5), never by
-// a store's id, so the same dream gives the same dump on any machine.
+// By default the frozen dreams (evals/sources/<session id>.json); with --live every saved
+// conversation whose breakdown and look are settled, the fake-picture replays' included
+// (runs/replay-fake/<dream>/state). The dump is runs/corpus/<label>.json, with the hash of every
+// dream it read; --against <label> warns where the two read different dreams and writes what
+// changed, picture by picture, to runs/corpus/<label>-vs-<against>.txt: plan fields and images that
+// moved, and each changed paragraph as the words that changed in it, whole. Images are named by what
+// they are (sketch:p1, picture:m3, ghost:t1:lid, previs:m5), never by a store's id. Where a frozen
+// dream keeps what was really sent for a moment, the dump says whether its rebuilt images are those.
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { type Rebuilt, rebuild, standIn } from '../plan';
+import { imagesOf, type Rebuilt, rebuild } from '../plan';
 import type { Session } from '../session';
-import { commitOf, DIR } from './saved';
+import { sectionsOf } from './prompt-cases';
+import { commitOf, DIR, type Inputs, inputsDiffer } from './saved';
+
+/** What was really sent for a moment, when a frozen dream keeps it. */
+type Sent = { prompt: string; images: string[] };
 
 /** One picture as it would be told: its prompt, its images by what they are, and its plan. */
 export type DumpPicture = {
@@ -35,41 +45,33 @@ export type DumpPicture = {
     staging: string[];
     sees: string[];
   };
+  /** Where what was sent is known: whether the rebuilt images are the ones sent, and which were. */
+  sent?: { same_images: boolean; images: string[]; same_prompt: boolean };
 };
-export type DumpDream = { title?: string; error?: string; pictures: DumpPicture[] };
+export type DumpDream = { title?: string; error?: string; hash?: string; pictures: DumpPicture[] };
 export type Dump = {
   label: string;
   at: string;
   commit: string | null;
   switches: Record<string, string>;
-  data: string;
+  inputs: Inputs;
   dreams: Record<string, DumpDream>;
 };
 
-/** An image named by what it is: its sketch's item, the earlier picture, the in-between picture, the mock-up. */
-export function imageName(r: Rebuilt, media: string): string {
-  const sheet = r.sheets.find((s) => s.mediaId === media);
-  if (sheet) return `sketch:${sheet.id}`;
-  if (media.startsWith(standIn.previs(''))) return `previs:${media.slice(standIn.previs('').length)}`;
-  if (media.startsWith(standIn.picture(''))) {
-    const id = media.slice(standIn.picture('').length);
-    return r.plan.ghosts.some((g) => g.id === id) ? `ghost:${id}` : `picture:${id}`;
-  }
-  return `other:${media}`;
-}
-
-/** A rebuilt dream as its normalised dump. */
-export function dumpOf(r: Rebuilt): DumpDream {
+/** A rebuilt dream as its normalised dump; `sent` is what was drawn from, by moment, where known. */
+export function dumpOf(r: Rebuilt, sent: Record<string, Sent> = {}): DumpDream {
   return {
     title: r.title,
     pictures: r.pictures.map((p): DumpPicture => {
       const cut = p.kind === 'cut' ? r.plan.cuts.find((c) => c.id === p.id) : undefined;
       const st = (x: { who: string; what: string; now: string }) => `${x.who} ${x.what}: ${x.now}`;
+      const images = imagesOf(r, p);
+      const was = p.kind === 'cut' ? sent[p.id] : undefined;
       return {
         id: p.id,
         kind: p.kind,
         name: p.item.name,
-        images: p.references.map((x) => `${x.role} ${imageName(r, x.media_id)}`),
+        images,
         prompt: p.prompt,
         ...(cut
           ? {
@@ -84,9 +86,48 @@ export function dumpOf(r: Rebuilt): DumpDream {
               },
             }
           : {}),
+        ...(was
+          ? {
+              sent: {
+                same_images: JSON.stringify(was.images) === JSON.stringify(images),
+                images: was.images,
+                same_prompt: was.prompt === p.prompt,
+              },
+            }
+          : {}),
       };
     }),
   };
+}
+
+/** What a frozen dream keeps of what was sent, by moment. */
+export const sentOf = (s: Session) =>
+  Object.fromEntries(
+    (s.build?.frames ?? []).flatMap((f) => {
+      const x = (f as { sent?: Sent }).sent;
+      return x ? [[f.id, x]] : [];
+    }),
+  ) as Record<string, Sent>;
+
+/**
+ * The words that changed between two versions of a paragraph, with what they share at either end
+ * kept to a few words: a change anywhere in a long paragraph shows, and nothing is cut from it.
+ */
+export function wordDiff(before: string, now: string, context = 8): string {
+  const a = before.split(/(\s+)/);
+  const b = now.split(/(\s+)/);
+  let start = 0;
+  while (start < a.length && start < b.length && a[start] === b[start]) start++;
+  let end = 0;
+  while (end < a.length - start && end < b.length - start && a[a.length - 1 - end] === b[b.length - 1 - end]) end++;
+  const words = (xs: string[]) => xs.join('');
+  const head = a.slice(0, start);
+  const tail = a.slice(a.length - end);
+  const lead = head.length > context * 2 ? `…${words(head.slice(-context * 2))}` : words(head);
+  const trail = tail.length > context * 2 ? `${words(tail.slice(0, context * 2))}…` : words(tail);
+  const gone = words(a.slice(start, a.length - end));
+  const added = words(b.slice(start, b.length - end));
+  return `${lead}${gone ? `[-${gone}-]` : ''}${added ? `[+${added}+]` : ''}${trail}`;
 }
 
 export type PictureChange = {
@@ -105,7 +146,7 @@ export type CorpusDiff = {
 };
 
 /** Two dumps, compared picture by picture: which paragraphs went and came, and which images and plan fields moved. */
-export function diffDumps(before: Dump, now: Dump): CorpusDiff {
+export function diffDumps(before: Pick<Dump, 'dreams'>, now: Pick<Dump, 'dreams'>): CorpusDiff {
   const out: CorpusDiff = {
     dreams: { same: 0, changed: 0, only_before: [], only_now: [] },
     pictures: { same: 0, changed: 0, only_before: [], only_now: [] },
@@ -161,24 +202,48 @@ export function diffDumps(before: Dump, now: Dump): CorpusDiff {
   return out;
 }
 
-/** What changed, as lines to read. */
-export function diffLines(diff: CorpusDiff, cut = 400): string[] {
-  const clip = (s: string) => (s.length > cut ? `${s.slice(0, cut)}…` : s);
+/** What changed, as lines to read: a paragraph changed in place as its changed words, a new or gone one whole. */
+export function diffLines(diff: CorpusDiff): string[] {
+  const sectionOf = (para: string) => Object.keys(sectionsOf(para))[0];
   const lines: string[] = [];
   for (const c of diff.changes) {
     lines.push(`\n── ${c.dream} ${c.id}`);
     for (const p of c.plan ?? []) lines.push(`  plan ${p.field}: ${p.before} -> ${p.now}`);
     if (c.images) lines.push(`  images: ${c.images.before.join(', ')}\n       -> ${c.images.now.join(', ')}`);
-    for (const g of c.gone) lines.push(`  - ${clip(g).replace(/\n/g, '\n    ')}`);
-    for (const a of c.added) lines.push(`  + ${clip(a).replace(/\n/g, '\n    ')}`);
+    const added = [...c.added];
+    for (const g of c.gone) {
+      // The same part of the prompt, changed: shown as the words that changed in it.
+      const at = added.findIndex((a) => sectionOf(a) === sectionOf(g) && sectionOf(g) !== 'other');
+      if (at >= 0) {
+        lines.push(`  ~ ${wordDiff(g, added[at]).replace(/\n/g, '\n    ')}`);
+        added.splice(at, 1);
+      } else lines.push(`  - ${g.replace(/\n/g, '\n    ')}`);
+    }
+    for (const a of added) lines.push(`  + ${a.replace(/\n/g, '\n    ')}`);
   }
   return lines;
+}
+
+/** Each frozen dream against its saved conversation: every picture's prompt and images, rebuilt from both. */
+export function verifyFrozen(frozen: Session, live: Session): string[] {
+  const a = rebuild(frozen);
+  const b = rebuild(live);
+  const out: string[] = [];
+  const pb = new Map(b.pictures.map((p) => [p.id, p]));
+  for (const p of a.pictures) {
+    const q = pb.get(p.id);
+    if (!q) out.push(`${p.id}: only in the frozen copy`);
+    else if (p.prompt !== q.prompt) out.push(`${p.id}: prompt differs`);
+    else if (JSON.stringify(imagesOf(a, p)) !== JSON.stringify(imagesOf(b, q))) out.push(`${p.id}: images differ`);
+  }
+  for (const q of b.pictures) if (!a.pictures.some((p) => p.id === q.id)) out.push(`${q.id}: only in the saved one`);
+  return out;
 }
 
 export const RUNS = join(DIR, 'runs', 'corpus');
 
 if (import.meta.main) {
-  const { dataDir, readSession, savedSessions, switches } = await import('./saved');
+  const { dataDir, frozenDreams, liveDreams, loadDream, readLive, switches } = await import('./saved');
   const args = process.argv.slice(2);
   const valueOf = (name: string) => {
     const i = args.indexOf(name);
@@ -194,64 +259,95 @@ if (import.meta.main) {
     }
     return out;
   };
+  const live = args.includes('--live');
+
+  if (args.includes('--verify')) {
+    let bad = 0;
+    for (const id of frozenDreams()) {
+      const diffs = verifyFrozen(loadDream(id, false).session, loadDream(id, true).session);
+      console.log(`${id}: ${diffs.length ? `DIFFERS\n  ${diffs.join('\n  ')}` : 'the same, every picture'}`);
+      if (diffs.length) bad++;
+    }
+    process.exit(bad ? 1 : 0);
+  }
+
   const label = valueOf('--label') ?? 'latest';
   const against = valueOf('--against');
   const set = valueOf('--set');
-  const only = listOf('--only');
+  if (set && set !== 'benchmark') {
+    console.error('--set takes only: benchmark');
+    process.exit(1);
+  }
   const bench =
     set === 'benchmark'
       ? (
           JSON.parse(readFileSync(join(import.meta.dir, 'benchmark.json'), 'utf8')) as { dreams: { session: string }[] }
         ).dreams.map((d) => d.session)
       : [];
-  if (set && set !== 'benchmark') {
-    console.error('--set takes only: benchmark');
-    process.exit(1);
-  }
+  const only = listOf('--only');
   const wanted = only.length ? only : bench;
-  const data = dataDir(wanted);
-  const ids = wanted.length ? wanted : savedSessions(data);
+  const dreams = live
+    ? (() => {
+        const all = liveDreams(dataDir(wanted.filter((x) => !x.includes('/'))));
+        return (wanted.length ? all.filter((x) => wanted.includes(x.id)) : all).map(readLive);
+      })()
+    : (wanted.length ? wanted : frozenDreams()).map((id) => loadDream(id, false));
 
   const dump: Dump = {
     label,
     at: new Date().toISOString(),
     commit: commitOf(),
     switches: switches(),
-    data,
+    inputs: { from: live ? 'live' : 'frozen', dreams: Object.fromEntries(dreams.map((d) => [d.id, d.hash])) },
     dreams: {},
   };
   let skipped = 0;
-  for (const id of ids) {
-    const s = readSession(data, id) as Session;
+  for (const d of dreams) {
     // Only a dream whose breakdown and look are settled has pictures to tell.
-    if (!s.draft?.breakdown || !s.style) {
+    if (!d.session.draft?.breakdown || !d.session.style) {
       skipped++;
       continue;
     }
     try {
-      dump.dreams[id] = dumpOf(rebuild(s));
+      dump.dreams[d.id] = { ...dumpOf(rebuild(d.session), sentOf(d.session)), hash: d.hash };
     } catch (e) {
-      dump.dreams[id] = { error: String(e instanceof Error ? e.message : e).slice(0, 500), pictures: [] };
+      dump.dreams[d.id] = {
+        error: String(e instanceof Error ? e.message : e).slice(0, 500),
+        hash: d.hash,
+        pictures: [],
+      };
     }
   }
   mkdirSync(RUNS, { recursive: true });
   const file = join(RUNS, `${label}.json`);
   writeFileSync(file, `${JSON.stringify(dump, null, 1)}\n`);
-  const dreams = Object.values(dump.dreams);
-  const failed = Object.entries(dump.dreams).filter(([, d]) => d.error);
+  const all = Object.values(dump.dreams);
+  const pics = all.flatMap((d) => d.pictures);
   console.log(
-    `${label}: ${dreams.length} dreams rebuilt (${skipped} without a settled breakdown and look skipped), ${dreams.reduce((a, d) => a + d.pictures.filter((p) => p.kind === 'cut').length, 0)} moments, ${dreams.reduce((a, d) => a + d.pictures.filter((p) => p.kind === 'ghost').length, 0)} in-between pictures`,
+    `${label}: ${all.length} dreams rebuilt from ${dump.inputs.from} copies (${skipped} without a settled breakdown and look skipped), ${pics.filter((p) => p.kind === 'cut').length} moments, ${pics.filter((p) => p.kind === 'ghost').length} in-between pictures`,
   );
-  for (const [id, d] of failed) console.log(`  ${id} could not be rebuilt: ${d.error}`);
+  for (const [id, d] of Object.entries(dump.dreams))
+    if (d.error) console.log(`  ${id} could not be rebuilt: ${d.error}`);
+  const sent = Object.entries(dump.dreams).flatMap(([id, d]) =>
+    d.pictures.filter((p) => p.sent).map((p) => ({ id, p })),
+  );
+  if (sent.length) {
+    const other = sent.filter((x) => !x.p.sent!.same_images);
+    console.log(
+      `what was really sent is known for ${sent.length} moments: ${sent.filter((x) => x.p.sent!.same_prompt).length} rebuilt word for word; ${other.length} rebuilt with other images than were sent${other.length ? ` (${other.map((x) => `${x.id.slice(-4)} ${x.p.id}`).join(', ')})` : ''}`,
+    );
+  }
   console.log(`written ${file}`);
   if (against) {
     const before = JSON.parse(readFileSync(join(RUNS, `${against}.json`), 'utf8')) as Dump;
+    for (const w of inputsDiffer(before.inputs, dump.inputs)) console.log(`warning: ${w}`);
     const diff = diffDumps(before, dump);
     const out = join(RUNS, `${label}-vs-${against}.txt`);
     writeFileSync(
       out,
       [
         `${label} (${dump.commit}, ${JSON.stringify(dump.switches)}) against ${against} (${before.commit}, ${JSON.stringify(before.switches)})`,
+        ...inputsDiffer(before.inputs, dump.inputs).map((w) => `warning: ${w}`),
         ...diffLines(diff),
       ].join('\n'),
     );
