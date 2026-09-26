@@ -57,7 +57,7 @@ One **cut sheet** per cut is the spine everything is assembled from:
 | S5 | References and variants: one image per subject; in-between pictures only when an edit carries several changes; variants kept and reusable; the grey mock-up as a reference chosen by tag | not started | The S5 cases stay met or pass (`--step S5`: never editing a picture from another side; library-1 m5 wall); its hypotheses (mock-up only, one image per subject) are for a paid check, not proven here |
 | S6 | `assembleCut`: prompt and references from the sheet, each fact once, action as visible facts; retire the regex clean-ups one by one | not started | All S0 cases pass; word-level diff reviewed on every saved dream |
 | S7 | Jev layer 2: checks routed by tags, a question library from the film rules, a labelled set per question; a check may hold a picture only if it predicts pictures | not started | Each question meets its bar on its labelled set |
-| S8 | Listening: every reply checked against its move; major picture gaps asked openly, minor ones imagined and marked; the retelling ends with the moments | not started | Listening cases on the simulated dreams pass |
+| S8 | Listening: every reply checked against its move; major picture gaps asked openly, minor ones imagined and marked; the retelling ends with the moments | eval written (26 Sep), not built | `evals/listening.ts` on the simulated conversations (below): move compliance before the pictures at least 90%, either/or under 5%, leading 0, said but not in their words 0, every way of drawing it kept, every retelling ends with the moments, no clear answer read as unclear |
 | S9 | Record of what was drawn, and staleness; sequences and look keys | not started | Stale pictures found on saved dreams |
 | S10 | Only after S0-S9 pass: a paid benchmark on the five replay dreams, judged by the owner | waiting | Owner's first-take rate against today's |
 
@@ -115,6 +115,38 @@ One **cut sheet** per cut is the spine everything is assembled from:
   checks' readings are still logged for every moment (so S7 can label them); Jev calls per dream fall; the prompt
   cases and the corpus are unchanged apart from the reworded prompts that no longer happen (listed and explained).
   Review: that nothing a check found is lost, only no longer acted on.
+- **S8 (listening).** `bun --env-file=$HOME/.config/strawberry/dreamchat.env run evals/listening.ts --label <name>
+  [--against <name>] [session ids | dreams/<name>.md | a simulate.ts report]` scores every saved simulated
+  conversation reply by reply (51 in state/, and what the 20 fake-picture replays said anew: replies a replay
+  repeats from its source are left out) and writes `runs/listening/<label>.json`. Each reply gets one Jev question
+  shaped by its move ("does it ask the person about how the dream looked?" for probe_goal:look, "does it tell the
+  dream back?" for retell). Each listening question is checked for either/or (code and Jev) and for leading (Jev:
+  does it put forward an answer the person had not given?). Every clause the breakdown or a sketch's profile marks
+  said is asked against everything the person said, one fact per question, and against the dream file; the facts
+  each dream file holds that pictures need (`evals/listening-facts.json`, 276, one thing each) are checked as told or
+  asked. The ways of drawing it are counted in the reply and in the host's words before the one-question repair; the
+  retelling is checked for ending with the moments; every answer to a profile or a retelling is checked for
+  answering the question, against the reading the turn recorded. Jev is pinned (jev-1.13.0), answers cached by hash.
+  A hand audit of 20 replies agreed on all 20 move answers and 22 of 24 question-shape answers, and on all 16 clear
+  answers counted as read unclear and 20 sampled facts, after eight misreads found on the way were fixed in how the
+  questions are shaped and counted (the audit is in the log below).
+  **Targets:** move compliance before the pictures at least 90%; either/or under 5% of listening questions; leading
+  0; said but not in their words 0; every way of drawing it offered is kept; every retelling ends with the moments;
+  no clear answer read as unclear.
+  **Baseline (26 Sep, today's defaults, 71 conversations):** move compliance 727/1146 (63%): listening 390/762
+  (51%), follow 38/119, goal questions that asked their goal 115/266 (43%, as the hand count found), explore_thread
+  186/326 (135 named a message older than the one answered, and only 30 of those were done). Either/or 225/638
+  (35%); leading 236/638 (37%), 30 answered only "yeah". Said but not in their words 574/2682 (21%): 481 in sketch
+  profiles, 460 not in the dream file either, 4 agreed to. Every way kept in 43/50 offers; none in the 4 the repair
+  emptied (the host had written all four). Retellings ending with the moments 0/54. Clear answers read as unclear:
+  profiles 9 of the 18 read unclear (9 more answered a reply that never asked), retellings 7 of 9. Shown, not
+  targets: dream-file facts the person told 630/680, never asked nor told 37; goals read as told whose message tells
+  them 398/467; picture turns 525/843.
+  New conversations: `DREAMCHAT_PROVIDER=fake DREAMCHAT_JUDGE=off bun --env-file=… run simulate.ts dreams/<a>.md
+  dreams/<b>.md … --max 16` (nothing paid for; listening, the retelling, the offer and the style fit in 16 messages;
+  `--max 30` reaches the profiles where the engine is installed), then `bun run evals/listening.ts --label <name>
+  runs/sim-<stamp>-<dreams>-low.json`. The run keeps its conversations in this checkout's state/, which the saved
+  set is then read from too unless DREAMCHAT_DATA or `--data` names another.
 
 - **S3 eval (the cut sheet).** Switch `DREAMCHAT_CUT_SHEET=off|shadow|on`. One `CutSheet` per cut built from the
   tree (vertical), the story record (horizontal), relations and tags (`docs/cut-sheet-map.md`), and an
@@ -219,3 +251,13 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   `dreamchat/evals/probes/place-question.ts`;
   then rerun `--step S1` off/on, all cases, the frozen and live corpus with the reading, the in-between counts, and
   the live-flow check on fresh fake replays (`evals/live-flow.ts`), as one follow-up commit.
+- 26 Sep: S8's eval written on branch `s8-evals` (`evals/listening.ts`, above), before the step. Baseline: move
+  compliance 63%, either/or 35%, leading 37%, said but not in their words 21%, 0 retellings ending with the moments,
+  16 clear answers read as unclear. Found on the way: most explore_thread misses are the move, not the reply (a
+  thread older than the message answered, done 30 of 135 times, against 156 of 191 when it is the latest), and in
+  15 of the 16 clear answers read as unclear (the 16th kept no turn detail) the choice summed to settled while its top
+  label fell under the bar (confirmed 0.55, you_choose 0.45). Hand audit: Jev's answers agreed on 20 of 20 moves,
+  22 of 24 question shapes, 16 of 16 answers and 20 of 20 facts, after fixing eight misreads (generic criteria read
+  "would you like to see it drawn?" 0.45-0.49; a guessed next event passed as following; joined conditions; ways of
+  drawing named in other words; dream facts joining two things; answers to a reply that never asked). Not measured
+  yet: details a reply's reaction invents outside its question.
