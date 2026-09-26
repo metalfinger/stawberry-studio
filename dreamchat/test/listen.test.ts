@@ -185,6 +185,10 @@ describe('every reply against its move', () => {
       'it asks 2 questions: ask one, and let the rest wait',
       'its question offers them choices: ask one open question instead',
     ]);
+    // A lead is sent back from a lower bar than the rest.
+    expect(
+      replyFailures({ ...base, messages: ['did you go through it?'] }, { ...yes('move', 0.9), ...yes('leads', 0.35) }),
+    ).toEqual(['its question puts an answer of its own to them: ask openly, and leave the answer to them']);
     // The judge down fails nothing it would have read.
     expect(replyFailures({ ...base, messages: ['who else was there?'] }, null)).toEqual([]);
   });

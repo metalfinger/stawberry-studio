@@ -58,6 +58,7 @@ One **cut sheet** per cut is the spine everything is assembled from:
 | S6 | `assembleCut`: prompt and references from the sheet, each fact once, action as visible facts; retire the regex clean-ups one by one | not started | All S0 cases pass; word-level diff reviewed on every saved dream |
 | S7 | Jev layer 2: checks routed by tags, a question library from the film rules, a labelled set per question; a check may hold a picture only if it predicts pictures | not started | Each question meets its bar on its labelled set |
 | S8 | Listening: every reply checked against its move; major picture gaps asked openly, minor ones imagined and marked; the retelling ends with the moments | test merged (27 Sep: before frozen, 40 conversations); fixes building | `evals/listening.ts` against the frozen before (`evals/listening-before`, 40 fresh simulated conversations): listening-turn compliance at least 90%, either/or under 5%, leading 0, said but not in their words 0, every way of drawing it kept, every retelling ends with a list of the breakdown's moments, no answer misread; floors not below the before (below) |
+| S8 | Listening: every reply checked against its move; major picture gaps asked openly, minor ones imagined and marked; the retelling ends with the moments | built on branch `s8-listening` behind DREAMCHAT_LISTEN=on (off by default, and off is today word for word), 27 Sep; measured on 40 fresh conversations at ee6c1e3: compliance 96%, either/or 0%, style offers 40/40, no answer misread and the floors on questions and on facts kept as said met; leading 3 (2 real by hand), said but not in their words 12 (breakdown fields graded whole), 3 retellings changed by the correction that followed, and dream-file facts told or asked 0.944 against 0.949 (3 facts): see the log; not yet reviewed | `evals/listening.ts` against the frozen before (`evals/listening-before`, 40 fresh simulated conversations): listening-turn compliance at least 90%, either/or under 5%, leading 0, said but not in their words 0, every way of drawing it kept, every retelling ends with a list of the breakdown's moments, no answer misread; floors not below the before (below) |
 | S9 | Record of what was drawn, and staleness; sequences and look keys | not started | Stale pictures found on saved dreams |
 | S10 | Only after S0-S9 pass: a paid benchmark on the five replay dreams, judged by the owner | waiting | Owner's first-take rate against today's |
 
@@ -206,9 +207,13 @@ between sessions.
 | S1 | S2 | The live-flow check (`evals/live-flow.ts`) passes a moment the checks acted on: drawn again from a list of what went wrong, or drawn without its brief because the pre-draw check set it aside (5 of 26 moments on the fake replays, 27 Sep). A rebuild cannot know these; once S2 makes the checks log only, those moments should rebuild word for word. |
 | S1 | S9 | The Strawberry production is written at `start`, before planning and the implied reading, so implied changes have no production coverage. |
 | S2 | S7 | S2 makes the checks log only; their logged readings become S7's labelled sets. |
-| S7 | S8 | Jev choice readings apply the confidence bar to the top label instead of summing labels that lead to the same action ("confirmed 0.55 + you_choose 0.45" read as unclear, 15 of 16 cases): fix in the Jev layer, measured by the S8 listening test. |
-| S8 | S1 | 22% of "said" facts were never said (the before: 273 of 1227, 258 from sketch profiles): the record's basis per clause (S1) and listening (S8) both own this; S8's fact check is the measure. |
-| S8 | S8 | 121 of 201 explore-thread moves (the before) point at an older message than the one answered: a move-selection fault, not a reply fault; the test passes a reply that follows the newest message. |
+| S7 | S8 | Done in S8 (27 Sep, behind DREAMCHAT_LISTEN=on): `jev.ts choiceByAction` sums the labels that lead to one action before the bar (profile, retelling, "would you like to see it"); clear answers read as unclear 14 before, 0 in three after-runs. |
+| S8 | S1 | 22% of "said" facts were never said (the before: 273 of 1227, 258 from sketch profiles). S8 fixed the sketch side (a reworded or revised profile keeps their words apart from ours: 1% left, 12 of 912), but the breakdown's own fields are still graded whole by `ground.ts` ("the corridor: perhaps lockers or doors" passes because the corridor was said): every one of the 12 left. A `Detail` holds one said flag, so a field with their words and a guess is either said whole or not at all; the basis belongs per clause in the breakdown, the record and the sheet (S1, S3). |
+| S8 | S8 | Done: an explore_thread move follows only what the message just answered raised (0 of 131 older, from 121 of 201 in the before); an older thread is come back to as earlier (circle_back) once the story is told. |
+| S8 | S7 | Every reply is checked against its move (`jev.ts replyCheck`), and the check is kept in each turn's detail (`replyCheck`). Picture turns are checked but not sent back: their briefs hold conditions ("if they ask, say…") a check on the brief cannot read, a second try fixed none of five, and their compliance by the listening test was 54% (61% before, in shorter conversations). S7 can label these checks; the picture briefs need their own questions. |
+| S8 | S1 | `test/record.test.ts` ("every saved session derives, and derives again to nothing new") fails on a simulated flooded-library conversation of this step's smoke run: "round window open" is both a change at m9 and the window's first look (`passing` then `first_look`). It reads saved sessions, so only a checkout with them sees it. |
+| S8 | S3 | The producer can write "not applicable" into a field (the lighthouse dog's wardrobe, third after-run), which `VAGUE` does not catch and the Strawberry engine refuses as a placeholder: that conversation's production failed. |
+| S8 | every step | Cost of listening: a listening reply now takes a median 4.5 s (p90 13 s) with the check and, for about half of them, a second try that thinks first; the retelling waits for the breakdown (median 14 s) and takes a median 27 s to write. The check shares its judge, and close wording, with the listening test: in the second round they agreed on 554 of 564 move verdicts, and the test found 10 the check had passed, none the other way. |
 | best-of-takes branch | S5, S10 | Built, off by default (9371476), parked; touches session.ts; merge after S1 lands. |
 | S1 | S6 | The in-between picture's instruction "Image N: the newspaper's newspaper … draw their newspaper" repeats a thing's name (3 prompts, off and on): same class as the fixed "its the block of ice", only fixed in the "Except" sentence. |
 | S8 | S1 | `test/record.test.ts` failed on one newly saved simulated session ("round window open" folded twice) — the record's first-look fold on implied states; check when saved sessions change. |
@@ -409,3 +414,55 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   framePrompt on every moment (frozen 115, live 411, benchmark 33; record off and on); tags fixed after review (reverse
   = turned >=135 deg from the cut before, crossed = other side of the line, kinds count only what is in the picture).
   Fresh fake replays with record on and sheet in shadow are running to prove the sheet-as-sent check. S2 started.
+
+- 27 Sep: S8 built on branch `s8-listening`, behind DREAMCHAT_LISTEN=on (off by default; with it off the prompt cases
+  and the frozen corpus are unchanged, 0 cases and 0 of 140 pictures moved, and with it on too). The fixes, each a
+  general rule: move selection follows only what the message just answered raised, and once the story is told comes
+  back to older threads as earlier; every reply is checked by Jev against its move (on listening replies also for
+  leading, either/or, details nobody gave and more than one question; the style offer for each way; the retelling
+  for its closing list), and one that fails is written once more, thinking first, with the failure named, the first
+  kept on a tie; nothing is cut from a reply any more; listening briefs ask one open question on the dreamer's words,
+  each goal by an open example ("who were you, in the dream?", "what did <the lift> look like?"), a thread by what
+  could be seen of it; choice readings sum the labels that lead to one action; the retelling waits for the breakdown
+  (drafted once more if it failed) and ends with its moments as a numbered list; a profile revised or reworded keeps
+  the dreamer's words apart from our guesses, and is said only where the words are theirs; only major gaps in how
+  something looks are asked about (in two moments or more and would be rejected if wrong, by Jev, or in the key
+  moment or the strange thing), openly and with no guess put forward; minor ones are imagined and marked.
+  Measured on 40 fresh conversations each time (the 20 dreams twice, fake pictures, --max 30), against the frozen
+  before, three rounds: ce869f0, 1b62461, ee6c1e3. At ee6c1e3 (three of its four simulation processes were stopped
+  by DeepSeek's concurrency limit at messages 16-27, after every conversation had reached the retelling, the style
+  offer and a profile):
+
+  | measure | before | ce869f0 | 1b62461 | ee6c1e3 | target |
+  | --- | --- | --- | --- | --- | --- |
+  | listening-turn compliance | 335/555 (60%) | 469/485 (97%) | 583/604 (97%) | 528/552 (96%) | >= 90% |
+  | goal questions | 91/202 (45%) | 169/181 (93%) | 107/114 (94%) | 110/116 (95%) | |
+  | either/or | 107/447 (24%) | 0/445 | 1/563 | 0/509 | < 5% |
+  | leading | 129/515 (25%) | 1/445 | 4/564 | 3/512 | 0 |
+  | said but not in their words | 273/1227 (22%) | 14/829 | 20/878 | 12/912 | 0 |
+  | style offers keeping every way | 36/38 | 40/40 | 39/40 | 40/40 | all |
+  | retellings ending with every moment | 0/42 | 35/41 | 37/40 | 38/41 | all |
+  | answers misread | 14 | 0 | 0 | 0 | 0 |
+  | questions per listening reply | 0.89 | 1.00 | 1.00 | 0.99 | >= 0.89 |
+  | dream-file facts told or asked | 0.949 | 0.942 | 0.938 | 0.944 | >= 0.949 |
+  | never asked nor told | 0.051 | 0.058 | 0.062 | 0.056 | <= 0.051 |
+  | told facts kept as said | 0.867 | 0.865 | 0.909 | 0.885 | >= 0.867 |
+
+  Hand checks at ee6c1e3. Leading, 3 flags: two real ("did you go through it?", "and the boat, did you go toward
+  it?", both follow moves the check read 0.34-0.35), one not ("was anyone else there?"); the check's bar for leading
+  is now 0.3 (after ee6c1e3, not simulated again: on the stored checks it sends back 7 more of 512, both real ones
+  among them). Said but not in their words, 12: all breakdown fields, graded whole by `ground.ts` and copied into the
+  sketches; about 10 real ("the bus: seats", "the sky above the town: open sky" where they said they don't remember
+  the sky, "just ordinary cats" where they said "go with whatever"), 2 said after all ("not dim"; "greyish" of the
+  light inside): see the S8-S1 overlap. Retellings: all 41 end on the numbered list of the breakdown they were written
+  from; the 3 that miss a moment of the final breakdown were followed by the dreamer correcting it (2) or the dream
+  going on (1), which is the list doing its job: the test holds the first list to the breakdown drafted after the
+  correction, which no list written before it can meet (in the first round, 6 of 6 the same, each missing exactly
+  the moments the correction changed). Dream-file facts told or asked: 521 against 524 of 552; per fact, 22 were
+  covered less often than before and 19 more often, mostly one conversation of two, and the before's own two halves
+  differ as much (0.946 and 0.953; bootstrap over its dreams, 90% of draws 0.929-0.968). Open: what they tell
+  answering open questions is a little less than what leading questions drew out ("was it busy?"); the threads
+  (explore and circle back) now ask what could be seen of what they raised. Also found: in the second round one style offer
+  kept every way but one, reworded past knowing (now: each by its name as written); a retelling
+  whose breakdown failed fell back to today's words (now: drafted once more); simulate.ts cannot write its report for
+  twenty dreams at once (the file name is too long), so the runs were made in halves.

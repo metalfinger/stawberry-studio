@@ -599,6 +599,15 @@ export function replyCheck(x: ReplyCheckInput): { state: string; questions: Reco
 }
 
 /**
+ * The bar a leading question is sent back at: lower than the others, since a lead the check lets
+ * through is a guess the picture may be drawn from, and one it sends back costs a second try. In the
+ * third after-run (27 Sep) the listening test read three replies as leading; by hand two were ("did you
+ * go through it?", "did you go toward it?"), and they had read 0.34 and 0.35 here. At 0.3, seven of
+ * 512 more are sent back, those two among them.
+ */
+export const LEADS_BAR = 0.3;
+
+/**
  * What a reply failed, in words its second try can act on: from Jev's answers to `replyCheck`, and
  * from counting (one question on a listening reply; a retelling's closing list holding every moment).
  * A question Jev left unanswered fails nothing: the judge being down never holds a reply.
@@ -616,7 +625,7 @@ export function replyFailures(x: ReplyCheckInput, answers: Record<string, Answer
   if (LISTENING.has(x.move.kind)) {
     const n = questionsIn(text).length;
     if (n > 1) out.push(`it asks ${n} questions: ask one, and let the rest wait`);
-    if (yes('leads'))
+    if ((p('leads') ?? 0) >= LEADS_BAR)
       out.push('its question puts an answer of its own to them: ask openly, and leave the answer to them');
     if (yes('either_or')) out.push('its question offers them choices: ask one open question instead');
     if (yes('states_unsaid'))
