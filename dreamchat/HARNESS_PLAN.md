@@ -107,6 +107,15 @@ One **cut sheet** per cut is the spine everything is assembled from:
   does. Passing cases 36/36. Jev reads one concrete fact per question reliably and not joined, implied, absent or
   whole-prompt facts: every question is one fact, and answers within 0.1 of the bar are marked.
 
+## Step evals, written before each step is built
+
+- **S2 (checks only log).** Switch `DREAMCHAT_CHECKS=log`. On the five benchmark dreams and five other simulated
+  dreams replayed with fake pictures (`evals/replay.ts`, `DREAMCHAT_PROVIDER=fake`), off against on: moments held,
+  reworded, re-planned or left undrawn because of a check go to 0 with the switch on; every moment is drawn; the
+  checks' readings are still logged for every moment (so S7 can label them); Jev calls per dream fall; the prompt
+  cases and the corpus are unchanged apart from the reworded prompts that no longer happen (listed and explained).
+  Review: that nothing a check found is lost, only no longer acted on.
+
 ## Open questions for the owner
 
 - In `evals/paired-verdicts.json`, the sketches-only version of lighthouse-first m7 carries the same note as orchard
