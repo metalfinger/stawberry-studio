@@ -920,6 +920,21 @@ const GIVES_WAY =
 const givesWay = (findings: string[]) =>
   process.env.DREAMCHAT_HELD !== 'fail' && findings.length > 0 && findings.every((f) => GIVES_WAY.test(f));
 
+/**
+ * A sketch still held once it is reworded is drawn, with what held it kept on it: its look is a
+ * detail the harness fills, never a question for the dreamer, who sees every sketch and can correct
+ * it. Asked instead, they got "was the yellow paint fresh, or a little worn?", and most such holds
+ * were the sketch's own words at odds with the chosen look ("Style: green lamplight on dark clear
+ * water" on a boat), which no answer of theirs could settle; held twice, a sketch was lost with every
+ * moment it is in (25-26 Sep). DREAMCHAT_SKETCH_HELD=ask asks them first, as before.
+ */
+const sketchGivesWay = (findings: string[]) =>
+  process.env.DREAMCHAT_SKETCH_HELD !== 'ask' &&
+  findings.length > 0 &&
+  findings.every((f) =>
+    /^(its instructions may contradict each other|what it shows is not clear enough to draw)/.test(f),
+  );
+
 /** A picture the confidence gate held back, with its reasons. */
 class Held extends Error {
   constructor(readonly findings: string[]) {
@@ -2630,7 +2645,8 @@ export class SessionStore {
           snapshot.fields = fields;
           findings = await this.gateFindings(s, snapshot, sheetPrompt(snapshot, style), [], []);
         }
-        if (findings.length && opts.guess && findings.every(unclearOnly)) snapshot.overrode = findings;
+        if (findings.length && ((opts.guess && findings.every(unclearOnly)) || sketchGivesWay(findings)))
+          snapshot.overrode = findings;
         else if (findings.length) throw new Held(findings);
         return sheets.start({
           item: snapshot,

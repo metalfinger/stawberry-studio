@@ -565,7 +565,9 @@ describe('a whole conversation', () => {
   }
 
   // The board's sketch is held on every reading, for what `reading` says; they are asked twice.
+  // Asked about first, as before (DREAMCHAT_SKETCH_HELD=ask): by default a held sketch is drawn.
   async function askedTwice(reading: (question: string, prompt: string) => number) {
+    process.env.DREAMCHAT_SKETCH_HELD = 'ask';
     const gate: StoreDeps['gate'] = async (state, questions) => ({
       questions,
       state,
@@ -642,6 +644,7 @@ describe('a whole conversation', () => {
       await store.settle(id, 200);
     }
     await store.settle(id, 200);
+    delete process.env.DREAMCHAT_SKETCH_HELD;
     return { held, phase, store, id, records };
   }
 
@@ -661,6 +664,82 @@ describe('a whole conversation', () => {
     // The moments are drawn with the board in words only: kept among its things, the engine refuses
     // a moment whose sketch is missing (the father, lighthouse, 26 Sep).
     expect(records.get('m1')?.required_props).toEqual([]);
+  });
+
+  test('by default a sketch still held after rewording is drawn at once, with what held it kept', async () => {
+    // "Was the yellow paint fresh, or a little worn?": never asked; the dreamer sees the sketch.
+    const gate: StoreDeps['gate'] = async (state, questions) => ({
+      questions,
+      state,
+      answers: Object.fromEntries(
+        Object.keys(questions).map((k) => [
+          k,
+          {
+            type: 'noul' as const,
+            noul:
+              k === 'contradicts' && /A single clear picture of/.test(state)
+                ? 0.9
+                : k === 'contradicts' || k === 'twice'
+                  ? 0.05
+                  : 0.9,
+          },
+        ]),
+      ),
+      error: null,
+      ms: 1,
+      usage: null,
+    });
+    const statuses = new Map<string, string>();
+    const store = new SessionStore(cfg, {
+      jev: fakeJev((q) => {
+        const out = script(q);
+        if (q.profile_reply) out.profile_reply = pick('confirmed');
+        return out;
+      }),
+      host: fakeHost(),
+      gate,
+      producer: async () => ({ breakdown, downgraded: [], notes: [], ms: 1 }),
+      write: async () => ({
+        projectId: 'p',
+        ids: { said: 'src-said', proposal: 'src-proposal', l1: 'node-l1', t1: 'node-t1', m1: 'cut-m1', m2: 'cut-m2' },
+        home: '/tmp',
+        created: { project: 1, scene: 1, shot: 2, cut: 2, character: 0, location: 1, prop: 1 },
+        cuts: 2,
+        readyCuts: 0,
+        issues: [],
+        ms: 1,
+      }),
+      sheets: {
+        start: async ({ item }) => {
+          statuses.set(`job-${item.id}`, 'ready');
+          return { recipeId: `r-${item.id}`, jobId: `job-${item.id}`, usd: 0.15 };
+        },
+        status: async (jobId, nodeId) =>
+          statuses.get(jobId) === 'ready'
+            ? { state: 'ready', mediaId: `media-${nodeId}`, mediaPath: `${nodeId}.png` }
+            : { state: 'running' },
+        review: async () => {},
+        retryCollection: async () => {},
+        startFrame: async ({ item }) => ({ recipeId: `r-${item.id}`, jobId: `job-${item.id}`, usd: 0.15 }),
+      },
+      watchEveryMs: 10,
+    });
+    const { id } = store.create();
+    await store.open(id);
+    for (const text of [
+      'a train board in my kitchen',
+      'it said zikery, then I woke',
+      'yes',
+      'yes please',
+      'the poster one',
+    ])
+      await store.message(id, text);
+    await store.message(id, 'yes, that is the kitchen');
+    await store.settle(id, 200);
+    const board = store.get(id)!.build!.items.find((i) => i.kind === 'prop')!;
+    expect(board.held).toBeUndefined();
+    expect(board.status).not.toBe('failed');
+    expect(board.overrode?.[0]).toStartWith('its instructions may contradict each other');
   });
 
   test('a sketch held only because its words leave it unclear is drawn on our guess after two asks', async () => {
