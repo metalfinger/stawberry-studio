@@ -113,6 +113,7 @@ import {
   sheetPrompt,
 } from './sheets';
 import type { JudgedCheck, JudgeOptions } from './judge';
+import { diffPlan, type Readings, type RecordOptions, recordMode, storyRecord } from './record';
 import { cutRecord, type WriteResult } from './strawberry';
 
 export type Entry = { role: 'user' | 'assistant'; content: string; messages?: string[] };
@@ -161,6 +162,11 @@ export type Draft = {
   notes?: string[];
   ms?: number;
   error?: string;
+  /**
+   * Jev's readings the story record uses (record.ts), kept here and never on the moments: a change to
+   * the breakdown throws away the shots planned from it. Nothing writes them yet.
+   */
+  readings?: Readings;
 };
 
 export type DraftResult = { breakdown: Breakdown; downgraded: GroundingNote[]; notes: string[]; ms: number };
@@ -474,8 +480,62 @@ export async function planShots(
   );
   if (judged)
     prep.leaves = Object.fromEntries(draft.scenes.flatMap((sc) => sc.moments.map((m) => [m.id, m.leaves ?? []])));
+  // The story record beside the plan, logged and changing nothing (DREAMCHAT_RECORD=shadow).
+  if (recordMode() !== 'off') shadowRecord('plan', blocked, planContinuity(blocked));
   prep.ms = Date.now() - t0;
   return prep;
+}
+
+/**
+ * The story record (record.ts) worked out beside the continuity plan and logged with the plan's own
+ * decisions, changing nothing: what each of its rules found and repaired, and where its changes in each
+ * moment differ from the plan's. Measured in shadow on real dreams before anything reads it, so a rule
+ * that misfires is seen first. A record that fails is logged as failed and never stops the dream.
+ */
+export function shadowRecord(
+  site: string,
+  b: Breakdown,
+  plan: ContinuityPlan,
+  items: Item[] = [],
+  opts: RecordOptions = {},
+  readings?: Readings,
+): void {
+  const log = (decision: string, reason: string, moment?: string) =>
+    recordJev({
+      kind: 'transition',
+      stage: 'record',
+      to: 'record',
+      ...(moment ? { moment } : {}),
+      facts: [],
+      decision,
+      reason: reason.slice(0, 4000),
+    });
+  try {
+    const { record, violations } = storyRecord(b, items, readings, opts);
+    const rules = [...new Set(violations.map((v) => v.rule))];
+    const count = (r: string) => violations.filter((v) => v.rule === r).length;
+    log(
+      'shadow',
+      `${site}: ${violations.length} found${rules.length ? `: ${rules.map((r) => `${r} ${count(r)}`).join(', ')}` : ''}`,
+    );
+    for (const r of rules)
+      log(
+        r,
+        `${site}: ${violations
+          .filter((v) => v.rule === r)
+          .map((v) => `[${v.fix}] ${v.detail}`)
+          .join('; ')}`,
+      );
+    const keys = (xs: string[]) => (xs.length ? xs.join(', ') : 'none');
+    for (const d of diffPlan(record, plan))
+      log(
+        'differs',
+        `${site}: own, only in the record ${keys(d.own.record)}, only in the plan ${keys(d.own.plan)}; carried, only in the record ${keys(d.carried.record)}, only in the plan ${keys(d.carried.plan)}`,
+        d.moment,
+      );
+  } catch (e) {
+    log('failed', `${site}: ${String(e).slice(0, 300)}`);
+  }
 }
 
 /**
@@ -1690,6 +1750,16 @@ export class SessionStore {
     const ids = s.production?.result?.ids ?? {};
     const plan = planContinuity(s.draft.breakdown);
     s.build.plan = plan;
+    // The story record beside the plan the moments are drawn from, logged and changing nothing.
+    if (recordMode() !== 'off')
+      shadowRecord(
+        'frames',
+        s.draft.breakdown,
+        plan,
+        s.build.items,
+        { words: s.transcript.filter((e) => e.role === 'user').map((e) => e.content), style: s.style },
+        s.draft.readings,
+      );
     const pictures = new Map(
       [
         ...buildFrames(s.draft.breakdown, plan).map((f) => ({ ...f, nodeId: ids[f.id] })),
