@@ -281,7 +281,10 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
 
 - **Blocking (27 Sep, ~03:30): DeepSeek balance is empty** (402 Insufficient Balance). Simulations, replays, the
   implied-state reading and the listening re-proof are stalled until it is topped up; code, unit tests and rescoring
-  stored conversations continue. The S3 sheet-as-sent replay (`runs/s3-flow`) died on it and must be rerun.
+  stored conversations continue. Waiting for the top-up, in order: (1) S8's fresh simulation, 20 dreams x 1, low
+  concurrency (targets, floors, especially repeated questions and "told all they remember" retellings); (2) S3's
+  sheet-as-sent replay (`runs/s3-flow` died on it); (3) S2's replay measurements; (4) new implied readings on
+  live dreams.
 - **DeepSeek balance (27 Sep, ~03:00):** simulations hit DeepSeek's concurrency limit tied to the remaining
   balance (it fell from 121 to 84 during S8's rounds). Simulations and the implied-state reading use it; it may need
   a top-up before S10. Until then, prefer rescoring stored conversations over new simulations.
