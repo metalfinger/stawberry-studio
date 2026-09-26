@@ -210,6 +210,7 @@ between sessions.
 | S8 | S1 | 22% of "said" facts were never said (the before: 273 of 1227, 258 from sketch profiles): the record's basis per clause (S1) and listening (S8) both own this; S8's fact check is the measure. |
 | S8 | S8 | 121 of 201 explore-thread moves (the before) point at an older message than the one answered: a move-selection fault, not a reply fault; the test passes a reply that follows the newest message. |
 | best-of-takes branch | S5, S10 | Built, off by default (9371476), parked; touches session.ts; merge after S1 lands. |
+| S1 | S6 | The in-between picture's instruction "Image N: the newspaper's newspaper … draw their newspaper" repeats a thing's name (3 prompts, off and on): same class as the fixed "its the block of ice", only fixed in the "Except" sentence. |
 | S3 | S6 | `docs/cut-sheet-map.md` lists every prompt input and where it is computed today; S6's `assembleCut` reads only the sheet S3 builds. |
 ## Known debt, by the step that clears it
 
