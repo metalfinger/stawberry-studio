@@ -1,0 +1,165 @@
+{
+  "about": "Twenty moments from story-pictures.json, each to be drawn three ways with everything else equal (evals/paired.ts): today's routing with its floor-plan mock-up (mockup), an edit of the previous picture the same run drew (edit), and the sketches alone (free). Spread over the kinds of moment the dreams have; every one has an earlier drawn moment in its run to edit, and today's plan gives every one a camera and a mock-up. The Flooded Library (library-2) is left out: its rowing boat was never sketched, so the engine refuses any picture with the boat in it, and its water moments have no floor-plan camera.",
+  "rows": [
+    {
+      "id": "orchard-m2",
+      "run": "orchard",
+      "session": "dream-0926-070314-0f40",
+      "moment": "m2",
+      "kind": "through the dreamer's eyes",
+      "reason": "Tomas as a boy beside the dreamer in the tiny lift, through their eyes: a person whose age has changed, which only today's plan brings in-between pictures for."
+    },
+    {
+      "id": "orchard-m7",
+      "run": "orchard",
+      "session": "dream-0926-070314-0f40",
+      "moment": "m7",
+      "kind": "through the dreamer's eyes",
+      "reason": "An empty orchard where Tomas was: a view of a place with nobody in it, judged only partly right."
+    },
+    {
+      "id": "snow-train-m6",
+      "run": "snow-train",
+      "session": "dream-0926-043003-b0cb",
+      "moment": "m6",
+      "kind": "through the dreamer's eyes",
+      "reason": "The dreamer's own hand opening the red door on warm light: a point-of-view action on a thing standing alone in a field."
+    },
+    {
+      "id": "lighthouse-first-m7",
+      "run": "lighthouse-first",
+      "session": "dream-0925-231131-affd",
+      "moment": "m7",
+      "kind": "close-up of something held",
+      "reason": "The paper boat in the dreamer's hands, through their eyes, the father's table behind: judged partly right because the father went missing."
+    },
+    {
+      "id": "snow-train-m3",
+      "run": "snow-train",
+      "session": "dream-0926-043003-b0cb",
+      "moment": "m3",
+      "kind": "close-up of something held",
+      "reason": "The open suitcase of letters held out toward the dreamer: a held thing whose look has changed (opened), carried by an in-between picture only in today's plan."
+    },
+    {
+      "id": "lighthouse-fresh-m2",
+      "run": "lighthouse-fresh",
+      "session": "dream-0926-022102-aeea",
+      "moment": "m2",
+      "kind": "close-up of something held",
+      "reason": "The hand holding the brass key, judged wrong (drawn as the whole dreamer); today's floor plan renders a different mock-up from the run's."
+    },
+    {
+      "id": "lighthouse-fresh-m10",
+      "run": "lighthouse-fresh",
+      "session": "dream-0926-022102-aeea",
+      "moment": "m10",
+      "kind": "close-up of something held",
+      "reason": "The paper boat held up in the round room, judged wrong (the tractor inside the room, the dreamer twice); today's mock-up differs from the run's."
+    },
+    {
+      "id": "snow-train-2-m5",
+      "run": "snow-train-2",
+      "session": "dream-0926-062232-a44a",
+      "moment": "m5",
+      "kind": "outside wide shot",
+      "reason": "Two people small in a snowy nowhere walking to a red door standing alone: a wide outdoor shot with a lot of empty space."
+    },
+    {
+      "id": "library-1-m4",
+      "run": "library-1",
+      "session": "dream-0926-050424-fdd7",
+      "moment": "m4",
+      "kind": "outside wide shot",
+      "reason": "The yellow boat between flooded shelves with a whale under it: a wide shot of three sketched things at very different sizes."
+    },
+    {
+      "id": "library-1-m5",
+      "run": "library-1",
+      "session": "dream-0926-050424-fdd7",
+      "moment": "m5",
+      "kind": "outside wide shot",
+      "reason": "The boat risen to the high round window over the drowned city, judged partly right (the boat stayed low): height in a wide shot."
+    },
+    {
+      "id": "library-3-m2",
+      "run": "library-3",
+      "session": "dream-0926-055141-6e80",
+      "moment": "m2",
+      "kind": "a place changing state",
+      "reason": "Books lifting off the shelves like birds as the water comes in: the library's change of state, with its in-between picture in today's plan."
+    },
+    {
+      "id": "library-3-m3",
+      "run": "library-3",
+      "session": "dream-0926-055141-6e80",
+      "moment": "m3",
+      "kind": "a place changing state",
+      "reason": "The water risen over the desks, the dreamer standing in it: the second step of the same change, from a picture of the first."
+    },
+    {
+      "id": "night-market-m2",
+      "run": "night-market",
+      "session": "dream-0926-000545-09ea",
+      "moment": "m2",
+      "kind": "crowd",
+      "reason": "The two sisters at the fish stall in a packed night market: a crowd said only in words, around three sketched people."
+    },
+    {
+      "id": "heron-m4",
+      "run": "heron",
+      "session": "dream-0926-012307-4c79",
+      "moment": "m4",
+      "kind": "crowd",
+      "reason": "A classroom of still, faceless students, judged partly right (not the classroom of its sketch); the last picture drawn before it is of another place, the corridor."
+    },
+    {
+      "id": "lighthouse-fresh-m12",
+      "run": "lighthouse-fresh",
+      "session": "dream-0926-022102-aeea",
+      "moment": "m12",
+      "kind": "vehicle",
+      "reason": "Inside the tractor cab from behind, the grass bending outside: a vehicle seen from within, after a picture of its other side."
+    },
+    {
+      "id": "snow-train-m2",
+      "run": "snow-train",
+      "session": "dream-0926-043003-b0cb",
+      "moment": "m2",
+      "kind": "vehicle",
+      "reason": "The grandfather with the suitcase on his knees in the old train at night, snow outside: seated people in a railway carriage."
+    },
+    {
+      "id": "lighthouse-first-m8",
+      "run": "lighthouse-first",
+      "session": "dream-0925-231131-affd",
+      "moment": "m8",
+      "kind": "vehicle",
+      "reason": "The dream's jump into the tractor beside a stranger, judged partly right (the cab read as a van's): an edit across a jump to another place."
+    },
+    {
+      "id": "lighthouse-fresh-m3",
+      "run": "lighthouse-fresh",
+      "session": "dream-0926-022102-aeea",
+      "moment": "m3",
+      "kind": "an animal with the dreamer",
+      "reason": "The dog looking back at the dreamer on the beach, judged wrong (writing in the sky, a different dog): an animal that must match its sketch."
+    },
+    {
+      "id": "orchard-m6",
+      "run": "orchard",
+      "session": "dream-0926-070314-0f40",
+      "moment": "m6",
+      "kind": "an animal with the dreamer",
+      "reason": "The white horse lowering its nose to the dreamer's hand, through their eyes, judged partly right (the apples stopped glowing)."
+    },
+    {
+      "id": "snow-train-2-m6",
+      "run": "snow-train-2",
+      "session": "dream-0926-062232-a44a",
+      "moment": "m6",
+      "kind": "a person with the dreamer",
+      "reason": "The grandfather handing the suitcase to the dreamer before the red door: two people and a handed-over thing, facing each other."
+    }
+  ]
+}
