@@ -11,7 +11,18 @@ import { basename, join } from 'node:path';
 import { dreamConfig } from './dream';
 import { callJev } from './jev';
 import { callDeepseek, callHost, type ChatMessage } from './llm';
-import { blockScenes, fixFrom, shotFor, superviseChanges, details, moments, proposeLook, reviseItem, rewordLook, rewordMoment } from './producer';
+import {
+  blockScenes,
+  fixFrom,
+  shotFor,
+  superviseChanges,
+  details,
+  moments,
+  proposeLook,
+  reviseItem,
+  rewordLook,
+  rewordMoment,
+} from './producer';
 import { liveProducer, ownStyle, SessionStore } from './session';
 import { assistantJudge, judgeKind } from './judge';
 import { judgeAvailable, judgeContinuity, judgeTake, liveSheets, PROVIDER, spawnWorker } from './sheets';
@@ -152,9 +163,7 @@ async function run(file: string, max: number, resume?: string) {
       // dreamer said the whole dream was there with six moments still to come (24 Sep).
       const v = store.view(id);
       const shown =
-        v?.phase === 'review'
-          ? (v.build?.items ?? [])
-          : (v?.build?.frames ?? []).filter((f) => f.kind === 'cut');
+        v?.phase === 'review' ? (v.build?.items ?? []) : (v?.build?.frames ?? []).filter((f) => f.kind === 'cut');
       const up = shown.filter((f) => f.status === 'ready').length;
       listener += `\n(on the right now: ${up} of the ${shown.length} pictures${up < shown.length ? '; the rest are not there yet' : ''})`;
       const seen = await lookAt(store, id);
@@ -324,7 +333,9 @@ function print(r: Report) {
   }
   for (const k of r.sketches)
     console.log(`  sketch ${k.name}: ${k.status}${k.error ? ` (${k.error})` : ''}${k.file ? ` ${k.file}` : ''}`);
-  console.log(`images ${r.images} · $${r.spentUsd.toFixed(2)} at fal's list price · ${r.spentCredits ?? 0} Higgsfield credits`);
+  console.log(
+    `images ${r.images} · $${r.spentUsd.toFixed(2)} at fal's list price · ${r.spentCredits ?? 0} Higgsfield credits`,
+  );
   const p = r.production;
   console.log(
     `strawberry: ${p?.status ?? '—'}${p?.result ? ` · ${p.result.cuts} cuts, ${JSON.stringify(p.result.created)}, issues: ${p.result.issues.length}` : ''}${p?.error ? ` · ${p.error.slice(0, 200)}` : ''}`,
@@ -359,6 +370,9 @@ console.log(`sketches drawn with ${PROVIDER} into ${STRAWBERRY_HOME}`);
 const reports = await Promise.all(files.map((f) => run(f, max, resume)));
 worker?.stop();
 for (const r of reports) print(r);
-const path = join(out, `sim-${stamp}-${process.env.DREAMCHAT_HOST_THINKING ?? 'low'}.json`);
+// Named for its dreams too: two runs started in the same second wrote one file, and the office snow
+// transcripts were lost under the jellyfish's (26 Sep).
+const names = files.map((f) => basename(f, '.md')).join('+');
+const path = join(out, `sim-${stamp}-${names}-${process.env.DREAMCHAT_HOST_THINKING ?? 'low'}.json`);
 await Bun.write(path, JSON.stringify(reports, null, 2));
 console.log(`\nfull transcripts: ${path}`);
