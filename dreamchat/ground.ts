@@ -224,7 +224,9 @@ const sameWords = (a: string, b: string) => {
 const inViewAt = (m: Moment) => new Set([...m.visible, ...m.things, m.place]);
 
 /** Every lasting change in the story, in order, keyed for Jev. */
-export function changes(b: Breakdown): { key: string; at: string; who: string; what: string; now: string }[] {
+export function changes(
+  b: Breakdown,
+): { key: string; at: string; who: string; what: string; now: string; whole?: boolean }[] {
   return moments(b).flatMap((m) => (m.leaves ?? []).map((l, i) => ({ key: `${m.id}_${i}`, at: m.id, ...l })));
 }
 
