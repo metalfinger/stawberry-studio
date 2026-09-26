@@ -56,3 +56,16 @@ describe("a look's name", () => {
     expect(out.breakdown.style_options[0].name).toBe('a soft watercolour');
   });
 });
+
+describe("a look's light", () => {
+  test('left with a sentence that answered a dropped one, stands on its own', async () => {
+    // The moon market's light began "However," and followed nothing (26 Sep).
+    const s = {
+      ...style('a lifelike digital painting', 'digital painting'),
+      lighting_rules: 'Neon glows on the grey dust. However, shadows stay soft.',
+    };
+    const jev = fakeJev((q): Record<string, Answer> => (q.light_0_0 ? { light_0_0: noul(0.9) } : {}));
+    const out = await cleanStyles(breakdown(s), jev);
+    expect(out.breakdown.style_options[0].lighting_rules).toBe('Shadows stay soft.');
+  });
+});

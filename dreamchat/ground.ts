@@ -508,6 +508,15 @@ export async function cleanStyles(b: Breakdown, jev: JevFn): Promise<{ breakdown
         if (kept !== t) dropped.push(`${o.name} light: "${t}" → "${kept}"`);
         return kept;
       })
+      // A sentence that answered one now dropped stands on its own: the moon market's light began
+      // "However," and followed nothing (26 Sep).
+      .map((t, j, all) =>
+        j === 0 || !all[j - 1]
+          ? t.replace(/^(?:however|but|yet|still|and|so|instead|even so|otherwise),?\s+(\w)/i, (_, c: string) =>
+              c.toUpperCase(),
+            )
+          : t,
+      )
       .filter(Boolean)
       .join(' ');
   });
