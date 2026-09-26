@@ -1,0 +1,40 @@
+{
+  "about": "The fixed benchmark of evals/replay.ts: five saved simulated conversations, each replayed from the dreamer's choice of how it should look, so pictures drawn before and after a change to the harness come from the same conversation. Each is the latest saved run of its dream that got past the style choice. The saved conversations live in state/ on the machine that ran them (26 Sep); they are only ever read.",
+  "dreams": [
+    {
+      "name": "jellyfish-city",
+      "dream": "dreams/jellyfish-city.md",
+      "session": "dream-0926-095122-acfd",
+      "style": "a) anime cel shading",
+      "why": "Anime: a bright saturated look at sunset, a stranger with a bicycle, a jellyfish as big as a stadium over the city, riding off a roof through the air, the city seen from above. The only saved run of this dream."
+    },
+    {
+      "name": "crayon-cat",
+      "dream": "dreams/crayon-cat.md",
+      "session": "dream-0926-101435-3cd7",
+      "style": "a) a child's crayon drawing",
+      "why": "Crayon: a child's drawing, the dreamer as small as a mouse, a cat as big as a bus carrying them up a drainpipe, a garden from the ground and a street of cats from the roof. Its retelling was corrected, so the breakdown is drafted twice. Latest of two saved runs."
+    },
+    {
+      "name": "office-snow",
+      "dream": "dreams/office-snow.md",
+      "session": "dream-0926-095122-b91f",
+      "style": "a) a soft watercolour",
+      "why": "Watercolour: snow falling indoors and burying an office, colleagues who don't react, a manager who turns into a snowman in his suit, a glowing snowball. The only saved run of this dream."
+    },
+    {
+      "name": "car-park",
+      "dream": "dreams/car-park.md",
+      "session": "dream-0926-100518-538d",
+      "style": "d) just as it looked (a black and white film photograph)",
+      "why": "Old film: grainy black and white, stairs that never end, a dog that is always already there, rain falling upwards, a car that is a rowing boat, the roof filling with water. Its look was asked about twice before it was chosen. Latest of two saved runs."
+    },
+    {
+      "name": "sea-school",
+      "dream": "dreams/sea-school.md",
+      "session": "dream-0926-083656-8ceb",
+      "style": "own) paint that looks like looking through dirty glass",
+      "why": "An underwater school in murky blue-green: swimming down a corridor, pupils who are fish, a teacher who turns into an octopus, a bell that rings as bubbles. The look is the dreamer's own words, not one offered. The only saved run of this dream."
+    }
+  ]
+}
