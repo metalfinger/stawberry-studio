@@ -50,7 +50,7 @@ One **cut sheet** per cut is the spine everything is assembled from:
 | # | Step | Status | Eval that proves it |
 | --- | --- | --- | --- |
 | S0 | Eval foundation: a prompt-case set from the person's 122 verdicts and notes, a runner that rebuilds prompts from saved dreams and scores them, the free simulation corpus as regression | done: reviewed, fixed, merged (26 Sep) | Every noted fault has a case; the runner reproduces today's failures. Baseline: 6 of 33 counted fault cases met (all six guards against editing the picture before), 36 of 36 passing cases met (below) |
-| S1 | Story record carries state (water, suitcase, who holds what, presence) into continuity, in-between pictures and prompts | merged behind DREAMCHAT_RECORD=on (off by default); last fix pending: the place question | The S1 cases pass (`--step S1`: library-2 m5/m9 water, snow-train m4/m5, snow-train-2 m1, lighthouse-fresh m13, orchard m7; library-1 m3/m5, library-3 m7, snow-train-2 m5/m7 need a model step); no regressions on the corpus |
+| S1 | Story record carries state (water, suitcase, who holds what, presence) into continuity, in-between pictures and prompts | merged behind DREAMCHAT_RECORD=on (off by default); place question split and measured (27 Sep) | The S1 cases pass (`--step S1`: library-2 m5/m9 water, snow-train m4/m5, snow-train-2 m1, lighthouse-fresh m13, orchard m7; library-1 m3/m5, library-3 m7, snow-train-2 m5/m7 need a model step); no regressions on the corpus |
 | S2 | Stop stand-in checks deciding: the pre-draw prompt check and storyboard check only log | not started | No moment held or reworded; corpus unchanged otherwise |
 | S3 | The cut sheet: tree (vertical) + record (horizontal) + relations + tags, one per cut | not started | Every input the prompt needs comes from the sheet; no fact computed in two places |
 | S4 | Camera rules and shot roles: the scene's line, a reverse angle turns the room (what is now left, right, behind), point-of-view shots show at most hands, vehicle screen direction, same setup means the same camera | not started | The S4 cases pass (`--step S4`: snow-train m2 reverse and m3 seat, snow-train-2 m2 same setup, lighthouse-fresh m12 heading, lighthouse-first m3, night-market m2, library-1 m4/m5, orchard m4 hands and m7 legs; lighthouse-fresh m10 needs a new floor plan) |
@@ -203,6 +203,7 @@ between sessions.
 | S1 | S4 | Water level and boat height come from floor-plan heights (library-1 m5, library-3 m7 still fail on the mock-up's layout); a held thing in a through-the-eyes view is placed at its floor-plan spot instead of the hands; the "Nobody else is in the picture" line can list people who are. |
 | S1 | S5 | Implied changes make no in-between picture of their own until S5 settles the owner's rule (one only when an edit carries several changes); the per-change in-between pictures from before remain for S5. `shutAway` closes anything opened when carried to another place (right for a suitcase, wrong for an umbrella or book). |
 | S1 | S6 | `withoutWords` is another regex clean-up in frames.ts; S6 retires these. Text rendering bugs of the record land in the prompt until S6 builds it from the sheet. |
+| S1 | S2 | The live-flow check (`evals/live-flow.ts`) passes a moment the checks acted on: drawn again from a list of what went wrong, or drawn without its brief because the pre-draw check set it aside (5 of 26 moments on the fake replays, 27 Sep). A rebuild cannot know these; once S2 makes the checks log only, those moments should rebuild word for word. |
 | S1 | S9 | The Strawberry production is written at `start`, before planning and the implied reading, so implied changes have no production coverage. |
 | S2 | S7 | S2 makes the checks log only; their logged readings become S7's labelled sets. |
 | S7 | S8 | Jev choice readings apply the confidence bar to the top label instead of summing labels that lead to the same action ("confirmed 0.55 + you_choose 0.45" read as unclear, 15 of 16 cases): fix in the Jev layer, measured by the S8 listening test. |
@@ -310,3 +311,10 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   cannot be met by asking or recording less. Before: listening compliance 60%, either/or 24%, leading 25%, said but
   not told 22%, retelling ends with the moments 0/42. The listening fixes are now being built behind DREAMCHAT_LISTEN.
   Known: evals/probes/place-question.ts does not typecheck on its own (top-level await); fix with S1's follow-up.
+- 27 Sep: the place question split into four one-fact questions (stays after this moment, asked only where a later
+  moment is in the same place; something it is doing now; how the pictures are drawn; what its look already says),
+  answers within 0.1 of the bar marked. The review's rejects fail (the train leaning 0.96, "like an old film" 0.87,
+  the towering grass 0.74, snow deep 0.97-0.99, dusk 0.95) and both water levels are taken again. S1 11/13 (model
+  step 4/6), all faults 18/33, guards 36/36, off unchanged; in-between pictures 25 frozen (as off), 71 live (66
+  off). Fake replays with the record on: all five pinned, each rebuilds from drawing's record with its pin as
+  drawn; 21 of 26 moments word for word, the other 5 changed by the checks (see the overlaps table).

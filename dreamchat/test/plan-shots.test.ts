@@ -312,7 +312,13 @@ describe('one story record for planning and drawing (DREAMCHAT_RECORD=on)', () =
       ? {
           questions,
           state,
-          answers: Object.fromEntries(Object.keys(questions).map((k) => [k, { type: 'noul' as const, noul: 0.9 }])),
+          // Meant and staying; not a motion, nor how it is drawn, nor already in its look.
+          answers: Object.fromEntries(
+            Object.keys(questions).map((k) => [
+              k,
+              { type: 'noul' as const, noul: /^(?:implied|stays|look)_/.test(k) ? 0.9 : 0.1 },
+            ]),
+          ),
           error: null,
           ms: 0,
           usage: null,

@@ -5,7 +5,10 @@
 // - a rebuild (plan.ts) reads the record drawing reads (session.ts planRecord), whole;
 // - the pin is the structure drawing read, so a rebuild places the cameras as drawing did;
 // - every moment drawn rebuilds as it was sent, prompt and images, where its Strawberry store is at
-//   hand (<dir>/home-<name>/production.sqlite).
+//   hand (<dir>/home-<name>/production.sqlite). A rebuild takes every picture as drawn and approved and
+//   knows nothing of the checks, so a moment is also passed, and said why, where the checks acted on it
+//   (drawn again from a list of what went wrong; drawn without its brief, which the pre-draw check set
+//   aside) or where an earlier picture it would take was never drawn: that is S2's to settle.
 // Nothing is drawn and no model is called.
 //
 //   DREAMCHAT_RECORD=on bun run evals/live-flow.ts <replay folder> [more folders]
@@ -28,6 +31,8 @@ export type FlowCheck = {
   sameImages: string[];
   /** The first paragraph that differs, by moment, where the prompt does not rebuild as sent. */
   differs: Record<string, { sent: string; rebuilt: string }>;
+  /** Of those, why each differs where the checks or an undrawn picture explain it. */
+  explained: Record<string, string>;
 };
 
 /** One dream the chat planned and drew, checked against its rebuild. */
@@ -44,7 +49,9 @@ export function checkFlow(dream: string, s: Session, store?: string): FlowCheck 
     samePrompt: [],
     sameImages: [],
     differs: {},
+    explained: {},
   };
+  const frames = new Map((s.build?.frames ?? []).map((f) => [f.id, f]));
   for (const p of r.pictures) {
     const was = sent[p.id];
     if (!was) continue;
@@ -55,6 +62,17 @@ export function checkFlow(dream: string, s: Session, store?: string): FlowCheck 
       const z = p.prompt.split('\n');
       const i = a.findIndex((x, k) => x !== z[k]);
       out.differs[p.id] = { sent: a[i] ?? '', rebuilt: z[i] ?? '' };
+      const sameImages = JSON.stringify(was.images) === JSON.stringify(imagesOf(r, p));
+      const why = /^The last attempt at this frame/m.test(was.prompt)
+        ? 'drawn again from what went wrong'
+        : !frames.get(p.id)?.shot &&
+            /^What the (?:dreamer|camera) sees/m.test(was.prompt) &&
+            /^The shot/m.test(p.prompt)
+          ? 'drawn without its brief, set aside by the pre-draw check'
+          : !sameImages
+            ? 'an earlier picture it takes was not drawn as a rebuild takes it'
+            : '';
+      if (why) out.explained[p.id] = why;
     }
     if (JSON.stringify(was.images) === JSON.stringify(imagesOf(r, p))) out.sameImages.push(p.id);
   }
@@ -92,13 +110,17 @@ if (import.meta.main) {
       continue;
     }
     pinned++;
-    const ok = c.sameRecord && !c.pinDiffers.length && c.samePrompt.length === c.drawn;
+    const ok = c.sameRecord && !c.pinDiffers.length && Object.keys(c.differs).every((id) => c.explained[id]);
     if (!ok) failed++;
     console.log(
       `${ok ? 'ok  ' : 'FAIL'} ${c.dream}: rebuild reads drawing's record ${c.sameRecord ? 'yes' : 'NO'}; pin as drawing read it ${c.pinDiffers.length ? `NO (${c.pinDiffers.join('; ')})` : 'yes'}; ${c.drawn} moments drawn, ${c.samePrompt.length} rebuilt word for word, ${c.sameImages.length} with the same images`,
     );
     for (const [id, d] of Object.entries(c.differs))
-      console.log(`       ${id} sent:    ${d.sent.slice(0, 240)}\n       ${id} rebuilt: ${d.rebuilt.slice(0, 240)}`);
+      console.log(
+        c.explained[id]
+          ? `       ${id}: ${c.explained[id]}`
+          : `       ${id} sent:    ${d.sent.slice(0, 240)}\n       ${id} rebuilt: ${d.rebuilt.slice(0, 240)}`,
+      );
   }
   console.log(`${pinned} dreams with a pin, ${failed} failing`);
   process.exit(failed ? 1 : 0);

@@ -137,16 +137,48 @@ export function parseImplied(content: string, b: Breakdown, m: Moment): { who: s
 /** How near an answer may be to the bar before it is marked as close. */
 export const CLOSE = 0.1;
 
+/** The readings of a place's proposal besides whether it is meant, each one fact, and the answer each must have. */
+export const PLACE_CHECKS = [
+  { key: 'stays', want: 'yes', says: 'stays so after this moment' },
+  { key: 'motion', want: 'no', says: 'something it is doing at this moment' },
+  { key: 'drawn', want: 'no', says: 'how the pictures are drawn' },
+  { key: 'inlook', want: 'no', says: 'what its look already says' },
+] as const;
+
+/**
+ * Every reading of one proposal as a fact: the question, Jev's answer, the answer it must have, and
+ * whether it has it (for "no", an answer under the bar).
+ */
+export function impliedFacts(
+  x: ImpliedReading,
+): { question: string; answer: number; want: 'yes' | 'no'; ok: boolean }[] {
+  const fact = (question: string, answer: number | undefined, want: 'yes' | 'no') =>
+    answer === undefined
+      ? []
+      : [{ question, answer, want, ok: want === 'yes' ? answer >= IMPLIED_BAR : answer < IMPLIED_BAR }];
+  return [
+    ...fact('meant', x.p, 'yes'),
+    ...fact('how it looks', x.look, 'yes'),
+    ...PLACE_CHECKS.flatMap((c) => fact(c.says, x[c.key], c.want)),
+  ];
+}
+
 /**
  * Jev's questions on each proposal, one fact each, and the state it reads: the moment's own words, the
  * moments just before and after it in the same place, and the look of the place as the record has it
- * there. Whether the words mean it; and a second question by what it is of:
+ * there. Whether the words mean it; and by what it is of:
  * - of a thing, whether it is how the thing looks, rather than where it is, what it does or how it
  *   feels (the key heavy and cold, the boat set down: meant, 0.90 and 0.93, and neither how it looks,
  *   0.04 and 0.06; the snowball glowing, 0.77);
- * - of a place, whether it is how the place is from now on: not a motion or something in passing (the
- *   train leaning into the bend), not how the pictures are drawn (black and white like an old film),
- *   and not what its look already says. Only what passes both is taken.
+ * - of a place, four questions (PLACE_CHECKS), since one joined question rejected the water risen to
+ *   the window (0.28 and 0.26) with the snow and the dusk: whether it stays so after this moment, asked
+ *   only where a later moment is in the same place (with none, there is nothing it could not stay for,
+ *   and the water at the window read 0.58 to 0.64 from one asking to the next); whether it is something
+ *   the place is doing at this moment (the train leaning into the bend, 0.96; the water levels and
+ *   the windows opened, 0.04 to 0.13); whether it is how the pictures are drawn (black and white like
+ *   an old film, 0.87; everything else, 0.04 to 0.48); and whether its look already says it (snow deep,
+ *   0.97 and 0.99; dusk, 0.95; the grass tall, 0.91; the grass towering over the mouse-sized dreamer,
+ *   0.74; the water levels, 0.05 to 0.27). Measured with evals/probes/place-question.ts (27 Sep).
  */
 export function impliedQuestions(
   b: Breakdown,
@@ -158,30 +190,40 @@ export function impliedQuestions(
   const isPlace = (id: string) => b.places.some((l) => l.id === id);
   const all = momentsOf(b);
   const at = all.findIndex((x) => x.id === m.id);
+  const later = all.slice(at + 1).some((x) => x.place === m.place);
   const questions: Record<string, Question> = {};
   proposed.forEach((x, i) => {
+    const n = name(x.who);
     questions[`implied_${i}`] = {
       type: 'noul',
-      instructions: `Do this moment's words mean that ${name(x.who)}'s ${x.what} is now ${x.now}: said, or bound to be so for what they say to happen?`,
+      instructions: `Do this moment's words mean that ${n}'s ${x.what} is now ${x.now}: said, or bound to be so for what they say to happen?`,
       criteria: {
         true: 'the words say it, or what they say could not happen without it (a boat rowed up to a window high in a wall means the water has risen to it)',
         false: 'it is a guess: possible, but the words do not need it',
       },
     };
-    if (isPlace(x.who))
-      questions[`lasting_${i}`] = {
+    if (isPlace(x.who)) {
+      if (later)
+        questions[`stays_${i}`] = {
+          type: 'noul',
+          instructions: `After this moment, does ${n} stay so (${x.what}: ${x.now}) until something in the dream changes it?`,
+        };
+      questions[`motion_${i}`] = {
         type: 'noul',
-        instructions: `Is "${name(x.who)}'s ${x.what} is now ${x.now}" how ${name(x.who)} is from this moment on, as the moments after it go on: not a motion or something in passing, not how the pictures are drawn, and not what its look already says?`,
-        criteria: {
-          true: 'a new state of the place that stays: water risen to a height, a door or window opened, the room gone dark',
-          false:
-            'a motion or something in passing, how the pictures are drawn (black and white, like an old film), what its look already says, or what the moments after it contradict',
-        },
+        instructions: `Is "${x.what}: ${x.now}" something ${n} is doing at this moment (leaning, swaying, shaking, flickering), rather than a state it is in (open, dark, flooded, risen)?`,
       };
-    else
+      questions[`drawn_${i}`] = {
+        type: 'noul',
+        instructions: `Is "${x.what}: ${x.now}" about how the pictures are drawn or filmed (black and white, like an old film, a painting, a colour scheme), rather than about ${n} itself?`,
+      };
+      questions[`inlook_${i}`] = {
+        type: 'noul',
+        instructions: `Does ${n}'s look, as given, already say that its ${x.what} is ${x.now}?`,
+      };
+    } else
       questions[`look_${i}`] = {
         type: 'noul',
-        instructions: `Is "${name(x.who)}'s ${x.what} is now ${x.now}" how it looks in the picture (its lid or door open or shut, glowing, broken, wet), rather than where it is, what it is doing, or how it feels?`,
+        instructions: `Is "${n}'s ${x.what} is now ${x.now}" how it looks in the picture (its lid or door open or shut, glowing, broken, wet), rather than where it is, what it is doing, or how it feels?`,
         criteria: {
           true: 'how it looks: open or shut, glowing, broken, wet, torn',
           false: 'where it is or how it is set down, a motion or something it does, how it feels to the touch',
@@ -251,18 +293,18 @@ export async function readImplied(
         return a?.type === 'noul' ? a.noul : 0;
       };
       const out = proposed.map((x, i): Implied => {
-        const p = noul(`implied_${i}`);
-        const second = questions[`look_${i}`] ? 'look' : 'lasting';
-        const q = noul(`${second}_${i}`);
-        const close = [p, q].some((v) => Math.abs(v - IMPLIED_BAR) < CLOSE);
-        return {
+        const asked = (k: string) => (questions[`${k}_${i}`] ? { [k]: noul(`${k}_${i}`) } : {});
+        const read: Implied = {
           ...x,
           basis: 'implied',
-          p,
-          [second]: q,
-          ok: p >= IMPLIED_BAR && q >= IMPLIED_BAR,
-          ...(close ? { close: true } : {}),
+          p: noul(`implied_${i}`),
+          ...asked('look'),
+          ...PLACE_CHECKS.reduce((o, c) => ({ ...o, ...asked(c.key) }), {}),
+          ok: false,
         };
+        const facts = impliedFacts(read);
+        const close = facts.some((f) => Math.abs(f.answer - IMPLIED_BAR) < CLOSE);
+        return { ...read, ok: facts.every((f) => f.ok), ...(close ? { close: true } : {}) };
       });
       log?.(m.id, out);
       return [m.id, out];

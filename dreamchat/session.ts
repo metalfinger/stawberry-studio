@@ -114,7 +114,7 @@ import {
   sheetPrompt,
 } from './sheets';
 import type { JudgedCheck, JudgeOptions } from './judge';
-import { IMPLIED_BAR, readImplied, type WriteFn } from './implied';
+import { IMPLIED_BAR, impliedFacts, readImplied, type WriteFn } from './implied';
 import {
   diffPlan,
   type Readings,
@@ -606,29 +606,14 @@ async function impliedReadings(
         stage: 'record',
         to: 'implied',
         moment,
-        facts: read.flatMap((x) => [
-          { question: `meant: ${x.who} ${x.what}: ${x.now}`, answer: x.p, bar: IMPLIED_BAR, ok: x.p >= IMPLIED_BAR },
-          ...(x.look === undefined
-            ? []
-            : [
-                {
-                  question: `how it looks: ${x.who} ${x.what}: ${x.now}`,
-                  answer: x.look,
-                  bar: IMPLIED_BAR,
-                  ok: x.look >= IMPLIED_BAR,
-                },
-              ]),
-          ...(x.lasting === undefined
-            ? []
-            : [
-                {
-                  question: `from now on: ${x.who} ${x.what}: ${x.now}`,
-                  answer: x.lasting,
-                  bar: IMPLIED_BAR,
-                  ok: x.lasting >= IMPLIED_BAR,
-                },
-              ]),
-        ]),
+        facts: read.flatMap((x) =>
+          impliedFacts(x).map((f) => ({
+            question: `${f.question} (${f.want}): ${x.who} ${x.what}: ${x.now}`,
+            answer: f.answer,
+            bar: IMPLIED_BAR,
+            ok: f.ok,
+          })),
+        ),
         decision: `${read.filter((x) => x.ok).length} of ${read.length} implied${read.some((x) => x.close) ? `, ${read.filter((x) => x.close).length} close to the bar` : ''}`,
         reason: `the writer proposed ${read.map((x) => `${x.who}'s ${x.what} "${x.now}"`).join('; ')}; Jev read each on the moment's words`,
       }),

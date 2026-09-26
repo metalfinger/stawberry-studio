@@ -187,12 +187,17 @@ export type ImpliedReading = {
   now: string;
   basis: 'implied';
   /**
-   * Jev's readings: that the moment's words mean it; of a thing, that it is how the thing looks; of a
-   * place, that it is how the place is from then on. `close`: an answer within 0.1 of the bar.
+   * Jev's readings (implied.ts): that the moment's words mean it; of a thing, that it is how the thing
+   * looks; of a place, that it stays so (asked where a later moment is there), and that it is not
+   * something it is doing, not how the pictures are drawn, not what its look already says. `close`:
+   * an answer within 0.1 of the bar.
    */
   p: number;
   look?: number;
-  lasting?: number;
+  stays?: number;
+  motion?: number;
+  drawn?: number;
+  inlook?: number;
   ok: boolean;
   close?: true;
 };
