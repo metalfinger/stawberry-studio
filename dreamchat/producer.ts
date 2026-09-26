@@ -1242,6 +1242,42 @@ export function normalizeBreakdown(raw: string): { breakdown: Breakdown; notes: 
   return { breakdown, notes };
 }
 
+/** The fields of a profile that say how it looks. */
+const PLACE_LOOK = ['geography', 'landmarks'];
+const THING_LOOK = ['appearance', 'materials'];
+const PERSON_LOOK = ['appearance', 'wardrobe', 'distinctive_features'];
+
+/** Words that say nothing of a look by themselves. */
+const FILLER = new Set('a an the its their his her is are now still already all in on of with and'.split(' '));
+
+/** A look's words, for comparing: "Desks" and "desk" are one. */
+const lookWords = (x: string) =>
+  x
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter((w) => w && !FILLER.has(w))
+    .map((w) => (w.length > 3 && w.endsWith('s') && !w.endsWith('ss') ? w.slice(0, -1) : w));
+
+/** A change's part that names no part: how it looks as a whole. */
+const NO_PART = /^\s*(?:its |their |the )?(?:appearance|look|looks|state|condition)\s*$/i;
+
+/**
+ * Whether a change's new look is already said by the profile: its words, and the part's, all in one
+ * phrase of one of the fields that say how it looks. A white beard says nothing of white hair.
+ */
+function looksSoAlready(fields: object, keys: string[], l: { what: string; now: string }): boolean {
+  const words = [...lookWords(l.now), ...(NO_PART.test(l.what) ? [] : lookWords(l.what))];
+  return (
+    !!words.length &&
+    keys.some((k) =>
+      ((fields as Record<string, Detail | undefined>)[k]?.value ?? '').split(/[,;.]/).some((phrase) => {
+        const has = new Set(lookWords(phrase));
+        return words.every((w) => has.has(w));
+      }),
+    )
+  );
+}
+
 /**
  * How someone or something looks where it is first shown is its look, not a change: the orchard's
  * apples glowing "like little lamps", given as a change at the moment the lift opened onto it, never
@@ -1251,13 +1287,37 @@ export function normalizeBreakdown(raw: string): { breakdown: Breakdown; notes: 
 export function foldFirstLooks(b: Breakdown): string[] {
   const notes: string[] = [];
   const all = moments(b);
-  for (const m of all) {
+  const uncarry = (m: Moment, l: { who: string; what: string }) => {
+    for (const later of all)
+      if (later.states?.length)
+        later.states = later.states.filter(
+          (st) => !(st.since === m.id && st.who === l.who && bareWords(st.what) === bareWords(l.what)),
+        );
+  };
+  for (const [at, m] of all.entries()) {
     const keep: NonNullable<Moment['leaves']> = [];
     for (const l of m.leaves ?? []) {
       const place = (b.places ?? []).find((x) => x.id === l.who);
       const thing = (b.things ?? []).find((x) => x.id === l.who);
       const person = (b.people ?? []).find((x) => x.id === l.who);
       const item = place ?? thing ?? person;
+      // A change to how it already looks in its own profile is no change, shown before or not: the
+      // classroom's desks "covered in seaweed", with its landmarks already "desks covered in seaweed",
+      // made an in-between picture of it now covered in seaweed that contradicted itself and failed,
+      // and every moment drawn from it was lost (sea school, 26 Sep). Turning into something else
+      // stays a change, and so does going back to that look after the same part changed before.
+      if (
+        item &&
+        !isWhole(l) &&
+        looksSoAlready(item.fields, place ? PLACE_LOOK : thing ? THING_LOOK : PERSON_LOOK, l) &&
+        !all
+          .slice(0, at)
+          .some((x) => (x.leaves ?? []).some((e) => e.who === l.who && bareWords(e.what) === bareWords(l.what)))
+      ) {
+        notes.push(`${item.name}: ${l.what} "${l.now}" is how it already looks, not a change`);
+        uncarry(m, l);
+        continue;
+      }
       if (l.whole || !item || person?.is_dreamer || hasBefore(b, m.id, l.who)) {
         keep.push(l);
         continue;
@@ -1272,11 +1332,7 @@ export function foldFirstLooks(b: Breakdown): string[] {
           said: true,
         };
       notes.push(`${item.name}: "${add}" is how it looks where it is first shown, not a change`);
-      for (const later of all)
-        if (later.states?.length)
-          later.states = later.states.filter(
-            (st) => !(st.since === m.id && st.who === l.who && bareWords(st.what) === bareWords(l.what)),
-          );
+      uncarry(m, l);
     }
     m.leaves = keep;
   }
