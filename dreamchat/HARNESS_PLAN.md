@@ -138,6 +138,10 @@ between sessions.
 
 ## Open questions for the owner
 
+- **Blocking (26 Sep, ~23:30):** the Jev (TypeSafe) account is out of credits; every Jev call returns 402
+  billing_error. Every test that asks Jev (prompt-case questions, the implied-state reading's checks, listening
+  scores, simulations) is stalled until it is topped up. Work that needs no Jev continues meanwhile.
+
 - In `evals/paired-verdicts.json`, the sketches-only version of lighthouse-first m7 carries the same note as orchard
   m7 (about Tomas), on a picture rated right: probably typed on the wrong picture. Left as is until confirmed.
 
