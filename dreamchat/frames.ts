@@ -314,7 +314,16 @@ export function framePrompt(
   const facts: string[] = [];
   // In one colour, a sketch drawn with a colour of its own passes it on: the family's yellow onesie
   // came into a blue ink moment, and the dreamer's hair turned auburn beside it (24 Sep).
-  const shades = oneColour(style) ? ", drawn in this picture's shades of one colour" : '';
+  // What the dream itself gives a colour keeps it, in its image's words too: "the yellow rowing boat
+  // … drawn in this picture's shades of one colour" beside "what the dream gives a colour keeps
+  // it" drew the boat pale blue in two pictures of four (flooded library, 26 Sep).
+  const shadesOf = (s: Item) => {
+    if (!oneColour(style)) return '';
+    const told = toldColours(s);
+    return told.length
+      ? `, drawn in this picture's shades of one colour except what the dream itself gives a colour, which keeps it exactly: ${told.join('; ')}`
+      : ", drawn in this picture's shades of one colour";
+  };
   // Where each sketch went, so a group and someone in it who has their own sketch are told to be
   // one and the same: "the family" with a baby, and "the baby" (24 Sep).
   const imageOf = new Map<string, number>();
@@ -366,8 +375,8 @@ export function framePrompt(
           ? `${who(s)}: this exact animal, the same kind, size, build, coat and markings`
           : `${who(s)}: this exact person, with the same face, build and clothes`,
         animal
-          ? `what ${who(s)} is${look ? ` (${look})` : ''}: its kind, its size, its build, its coat and its markings, exactly${base && baseWho.includes(s.id) ? ', as Image 1 already shows it' : ''}${shades}. Nothing else from it: not its pose, background or framing.${except}`
-          : `who ${who(s)} ${isGroup(s) ? 'are' : 'is'}${look ? ` (${look})` : ''}: their ${changed.some((st) => /head|face/i.test(st.what)) ? 'build and clothes' : 'face, hair, build and clothes'}, exactly${base && baseWho.includes(s.id) ? ', as Image 1 already shows them' : ''}${shades}. Nothing else from it: not its pose, background or framing.${except}`,
+          ? `what ${who(s)} is${look ? ` (${look})` : ''}: its kind, its size, its build, its coat and its markings, exactly${base && baseWho.includes(s.id) ? ', as Image 1 already shows it' : ''}${shadesOf(s)}. Nothing else from it: not its pose, background or framing.${except}`
+          : `who ${who(s)} ${isGroup(s) ? 'are' : 'is'}${look ? ` (${look})` : ''}: their ${changed.some((st) => /head|face/i.test(st.what)) ? 'build and clothes' : 'face, hair, build and clothes'}, exactly${base && baseWho.includes(s.id) ? ', as Image 1 already shows them' : ''}${shadesOf(s)}. Nothing else from it: not its pose, background or framing.${except}`,
       );
       imageOf.set(s.id, references.length);
     } else if (s.kind === 'location') {
@@ -404,7 +413,7 @@ export function framePrompt(
         s.mediaId,
         'prop',
         `${who(s)}: this exact object, with the same shape and materials`,
-        `${who(s)}${look ? ` (${look})` : ''}: its exact shape, materials and colours, the same in every picture${shades}. Nothing else from it.${except}`,
+        `${who(s)}${look ? ` (${look})` : ''}: its exact shape, materials and colours, the same in every picture${shadesOf(s)}. Nothing else from it.${except}`,
       );
     }
   }
