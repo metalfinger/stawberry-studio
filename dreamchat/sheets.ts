@@ -31,6 +31,8 @@ export type Item = {
   startedAtTurn?: number;
   /** Whether the person has been told it is ready. */
   announced?: boolean;
+  /** The turn whose reply last put it to them by name: a reaction naming no picture is about that reply's. */
+  announcedAt?: number;
   /**
    * Their verdict on the current version: approved (it looks right) or left (shown, no
    * objection); undefined while it waits. A correction rejects the version and draws a new one.

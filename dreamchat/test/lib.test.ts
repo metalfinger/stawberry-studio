@@ -69,7 +69,7 @@ const thread = (id: string, strength: Thread['strength']): Thread => ({
 });
 
 describe('listening', () => {
-  test("once the story has reached its end, two \"I don't remember\"s in a row mean it is told back", () => {
+  test('once the story has reached its end, two "I don\'t remember"s in a row mean it is told back', () => {
     const told = state({ covered: ['telling'], finished: 0.9 });
     expect(selectMove(told, cfg, listen({ forgotStreak: 2 })).move).toEqual({ kind: 'retell' });
     // One is only a gap they don't remember: the next one is asked.
@@ -251,7 +251,9 @@ describe('the retelling', () => {
     );
     // Gone on too many times: what they add is taken as a correction.
     const worn = retell({ resumed: { times: MAX_RESUMES, since: 0 } });
-    expect(selectMove(state({ retell_reply: 'added_more', goes_on: 0.9 }), cfg, worn).move.kind).toBe('take_correction');
+    expect(selectMove(state({ retell_reply: 'added_more', goes_on: 0.9 }), cfg, worn).move.kind).toBe(
+      'take_correction',
+    );
   });
 
   test('told back again after the dream went on, only the rest is told', () => {
@@ -365,6 +367,41 @@ describe('briefs for the pictures', () => {
       extras: { frameCount: 13, drawnCount: 13 },
     });
     expect(done).not.toContain('still to come');
+  });
+
+  test('the moments up are named, and one that could not be drawn is never still to come', () => {
+    // Told "2 of the 7 moments are on the right so far; the other 5 are still to come" with four
+    // of them failed, Berry said the bell ringing was up (sea school, 26 Sep).
+    const drawing = renderBrief(state({}), { kind: 'frames_drawing' }, cfg, {
+      phase: 'frames',
+      extras: {
+        frameCount: 7,
+        drawnCount: 2,
+        onPage: ['the corridor', 'the doorway'],
+        failed: ['the bell rings', 'the fish zoom out'],
+      },
+    });
+    expect(drawing).toContain(
+      '2 of the 7 moments are on the right so far (only these: the corridor; the doorway); the other 3 are still to come.',
+    );
+    expect(drawing).toContain(
+      "2 moments couldn't be drawn because of a problem on our side (the bell rings; the fish zoom out)",
+    );
+    // Nothing left to come: nothing is said to be on its way.
+    const ended = renderBrief(state({}), { kind: 'frames_drawing' }, cfg, {
+      phase: 'frames',
+      extras: { frameCount: 3, drawnCount: 2, onPage: ['the corridor', 'the doorway'], failed: ['the bell rings'] },
+    });
+    expect(ended).not.toContain('still');
+    expect(ended).toContain("One moment couldn't be drawn because of a problem on our side (the bell rings)");
+    // What lands with the moment they'd pause on is named with it (desert station, 26 Sep).
+    const key = renderBrief(state({}), { kind: 'frames_drawing' }, cfg, {
+      phase: 'frames',
+      extras: { keyReady: 'the clock melts', finished: ['the platform'] },
+    });
+    expect(key).toContain(
+      "up on the right now (the clock melts), and with it the platform. Ask if that's how they saw them.",
+    );
   });
 
   test('a structured move asks nothing of its own', () => {

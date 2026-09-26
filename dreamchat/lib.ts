@@ -399,7 +399,7 @@ export function selectMove(state: State, cfg: GoalsFile, ctx: MoveContext): { mo
   // 2b. Their memory is spent: the story has reached its end and the last answers were "I don't
   // remember". Asking after every gap left only collects more of them.
   if (finished && (ctx.forgotStreak ?? 0) >= FORGOT_STREAK)
-    return { move: { kind: 'retell' }, rule: "2: told all they remember" };
+    return { move: { kind: 'retell' }, rule: '2: told all they remember' };
 
   // 3. Don't listen forever. Tell back what is known; the person fills the rest. Listening again
   // after a retelling has its own, shorter stretch: it is only the rest of the dream.
@@ -548,6 +548,8 @@ export type BriefExtras = {
   frameCount?: number;
   /** How many are up on the right so far. */
   drawnCount?: number;
+  /** The moments up on the right, by name. */
+  onPage?: string[];
   /** Pieces that could not be drawn, by name. */
   failed?: string[];
   /** Pictures on show that later moments are drawn from, waiting for their verdict. */
@@ -600,15 +602,37 @@ function profileLine(p: NonNullable<BriefExtras['profile']>): string {
   return `describe how you picture ${p.name} on their own, briefly, in plain words: not the scene around them, not anyone or anything else, and not the rest of the dream.${said}${guessed} Then ask if anything's different, or if they'd leave it to you.`;
 }
 
+/** How many moments are still to come: neither up on the right nor failed. */
+function toCome(extras: BriefExtras): number {
+  const all = extras.frameCount ?? 0;
+  return all - (extras.drawnCount ?? all) - (extras.failed?.length ?? 0);
+}
+
 /**
- * How far the moments have got, when some are still to come. Told "that's the whole thing", Berry
- * once said the whole dream was drawn with six of its thirteen moments still waiting (24 Sep).
+ * How far the moments have got, when some are still to come or could not be drawn. Told "that's
+ * the whole thing", Berry once said the whole dream was drawn with six of its thirteen moments still
+ * waiting (24 Sep). Told only a count that took the failed ones as still to come, Berry said the bell
+ * ringing was up when it could not be drawn (sea school, 26 Sep): what is up is named, and what
+ * failed is said plainly.
  */
 function stillToCome(extras: BriefExtras): string {
   const all = extras.frameCount ?? 0;
   const drawn = extras.drawnCount ?? all;
-  if (!all || drawn >= all) return '';
-  return `${drawn} of the ${all} moments are on the right so far; the other ${all - drawn} are still to come. Never say the whole dream is drawn while any are.`;
+  const failed = extras.failed ?? [];
+  const coming = toCome(extras);
+  if (!all || (coming <= 0 && !failed.length)) return '';
+  const up = extras.onPage?.length ? ` (only these: ${extras.onPage.join('; ')})` : '';
+  return [
+    coming > 0
+      ? `${drawn} of the ${all} moments are on the right so far${up}; ${coming > 1 ? `the other ${coming} are` : 'one more is'} still to come.`
+      : `${drawn} of the ${all} moments are on the right${up}.`,
+    failed.length
+      ? `${failed.length > 1 ? `${failed.length} moments` : 'One moment'} couldn't be drawn because of a problem on our side (${failed.join('; ')}): if you haven't said so already, say so plainly, and that you're sorry. Never speak of ${failed.length > 1 ? 'them' : 'it'} as drawn.`
+      : '',
+    coming > 0 ? 'Never say the whole dream is drawn while any are.' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 }
 
 function closingInstruction(note: ClosingNote | undefined): string {
@@ -719,11 +743,15 @@ function renderMove(move: Move, state: State, cfg: GoalsFile, extras: BriefExtra
         extras.redrawing?.length
           ? `Say you're redrawing ${extras.redrawing.join(' and ')} with their change; it will appear on the right.`
           : '',
+        // Everything that has just landed is named with the moment they'd pause on: the first moment
+        // of the desert station landed with it, was never named, and was approved (26 Sep).
         extras.keyReady
-          ? `The moment they said they'd pause on is up on the right now (${extras.keyReady}). Ask if that's how they saw it.`
+          ? `The moment they said they'd pause on is up on the right now (${extras.keyReady})${extras.finished?.length ? `, and with it ${extras.finished.join('; ')}` : ''}. Ask if that's how they saw ${extras.finished?.length ? 'them' : 'it'}.`
           : extras.finished?.length
             ? `More of the dream is up on the right (${extras.finished.join('; ')}). Ask if it looks the way they remember.`
-            : "The rest of the moments are still being drawn; if they ask, say they'll appear on the right soon.",
+            : !extras.frameCount || toCome(extras) > 0
+              ? "The rest of the moments are still being drawn; if they ask, say they'll appear on the right soon."
+              : '',
         extras.waitsOnThem?.length
           ? `The next moments carry on from ${extras.waitsOnThem.join(' and ')}, so they're drawn once they say it looks right, or what to change. If you haven't said so already, say it once, simply, in passing.`
           : '',

@@ -1187,13 +1187,16 @@ export class SessionStore {
     const styles = s.draft?.breakdown?.style_options ?? [];
     const onShow = s.build?.items.find((i) => i.id === s.build?.current);
     // Pictures on the page they have not answered about: everything drawn is there as soon as it
-    // is ready, mentioned or not, and what they say of it counts. Counted only once Berry had
-    // mentioned it, "I approve the generated image" of a moment that landed between turns approved
-    // nothing, and what follows it waited (24 Sep). Saying nothing leaves only what Berry has shown
-    // them. In-between pictures are never shown as the dream.
+    // is ready, mentioned or not, and a correction of any of it counts. Only what Berry has put to
+    // them by name is approved: "waiting is fine." approved a moment of the moon market Berry had
+    // never named, and "it's all there now" the phone of grandma's kitchen (26 Sep). One that lands
+    // between turns is put to them in the next reply, and their word on it counts from then. A
+    // reaction naming no picture is about what Berry's last reply put to them, and saying nothing
+    // leaves only what Berry has shown them. In-between pictures are never shown as the dream.
     const pieces = s.phase === 'frames' ? (s.build?.frames ?? []) : (s.build?.items ?? []);
     const onPage = pieces.filter((i) => i.status === 'ready' && !i.review && i.kind !== 'ghost');
     const pending = onPage.filter((i) => i.announced);
+    const lastShown = pending.filter((i) => i.announcedAt === turnNow - 1);
     const questions = bookkeeperQuestions(
       this.cfg,
       s.transcript,
@@ -1235,15 +1238,18 @@ export class SessionStore {
     if ((s.phase === 'review' || s.phase === 'frames') && onPage.length) {
       const reaction = overlaid.signals.sketch_reaction ?? 'no_reaction';
       const verdicts = overlaid.signals.sketch_verdicts ?? {};
-      const right = onPage.filter((i) => verdicts[i.id] === 'right');
-      const wrong = onPage.filter((i) => verdicts[i.id] === 'wrong');
-      // A reaction to no picture in particular is about what Berry has shown them; one that names a
-      // picture, or tells Berry to go ahead with it, counts for anything on the page.
-      const meant = pending;
-      if (reaction === 'no_reaction' && !right.length && !wrong.length) {
+      const named = onPage.filter((i) => verdicts[i.id]);
+      const right = named.filter((i) => verdicts[i.id] === 'right' && i.announced);
+      const wrong = named.filter((i) => verdicts[i.id] === 'wrong');
+      // A reaction to no picture in particular is about what Berry's last reply put to them: "It looks
+      // right. The clock is dripping down like that." approved the first moment of the desert station
+      // too, which that reply never named (26 Sep). One naming a picture Berry has not put to them yet
+      // approves nothing, neither it nor what was shown.
+      const meant = lastShown;
+      if (reaction === 'no_reaction' && !named.length) {
         for (const it of pending)
           this.reviewSketch(s, it, 'left', 'Shown to them in the chat; they raised nothing against it.');
-      } else if (!right.length && !wrong.length) {
+      } else if (!named.length) {
         // A reaction, but to no picture in particular: "it looks great" with one or all on show.
         if (reaction === 'looks_right')
           for (const it of meant) {
@@ -1432,19 +1438,23 @@ export class SessionStore {
       if (item) extras.profile = profileOf(item);
     }
     if (s.build && move.kind === 'sheets_done') await this.startFrames(s, turnNow);
-    // How far the moments have got, whenever they are being drawn: leaving included.
-    if (s.build?.frames?.length && (move.kind === 'frames_drawing' || move.kind === 'wrap')) {
+    // How far the moments have got, whenever they are being drawn: leaving and the end included.
+    // What is up is named, and what failed is kept apart from what is still to come (sea school, 26 Sep).
+    if (
+      s.build?.frames?.length &&
+      (move.kind === 'frames_drawing' || move.kind === 'wrap' || move.kind === 'all_done')
+    ) {
       const moments = s.build.frames.filter((i) => i.kind === 'cut');
       extras.frameCount = moments.length;
       extras.drawnCount = moments.filter((i) => i.status === 'ready').length;
+      extras.onPage = moments.filter((i) => i.status === 'ready').map((i) => i.name);
+      extras.failed = moments.filter((i) => i.status === 'failed').map((i) => i.name);
     }
     if (s.build && (move.kind === 'frames_drawing' || move.kind === 'all_done')) {
       extras.approved = reviewed.approved;
       extras.redrawing = reviewed.redrawing;
       extras.kept = reviewed.kept;
       const moments = (s.build.frames ?? []).filter((i) => i.kind === 'cut');
-      extras.frameCount = moments.length;
-      extras.failed = moments.filter((i) => i.status === 'failed').map((i) => i.name);
       // Moments on show that what follows is waiting on: the person's verdict lets it go on.
       extras.waitsOnThem = moments
         .filter(
@@ -1460,7 +1470,7 @@ export class SessionStore {
         const key = fresh.find((i) => i.frame?.key);
         if (key) extras.keyReady = key.fields.action?.value ?? key.name;
         extras.finished = fresh.filter((i) => i !== key).map((i) => i.name);
-        for (const i of fresh) i.announced = true;
+        for (const i of fresh) Object.assign(i, { announced: true, announcedAt: turnNow });
       }
     }
     if (s.build && (move.kind === 'while_drawing' || move.kind === 'sheets_done' || move.kind === 'ask_which')) {
@@ -1468,10 +1478,12 @@ export class SessionStore {
       extras.redrawing = reviewed.redrawing;
       extras.kept = reviewed.kept;
       extras.shown = pending.map((i) => i.name);
+      // Asked which they meant, every picture named is put to them again, and "all of them" is about those.
+      if (move.kind === 'ask_which') for (const i of pending) i.announcedAt = turnNow;
       if (move.kind === 'while_drawing') {
         const fresh = s.build.items.filter((i) => i.status === 'ready' && !i.announced);
         extras.finished = fresh.map((i) => i.name);
-        for (const i of fresh) i.announced = true;
+        for (const i of fresh) Object.assign(i, { announced: true, announcedAt: turnNow });
         // A sketch the gate is unsure of is not drawn on a guess: they are asked how it looks.
         const held = s.build.items.filter((i) => i.held && i.status === 'waiting');
         const ask = held.filter((i) => (i.heldAsks ?? 0) < 2);
