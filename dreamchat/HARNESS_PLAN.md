@@ -319,3 +319,10 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   step 4/6), all faults 18/33, guards 36/36, off unchanged; in-between pictures 25 frozen (as off), 71 live (66
   off). Fake replays with the record on: all five pinned, each rebuilds from drawing's record with its pin as
   drawn; 21 of 26 moments word for word, the other 5 changed by the checks (see the overlaps table).
+- 27 Sep: S1's place questions settled. "Stays after this moment" dropped: it rejected true rising water on live
+  dreams (0.06-0.59) and caught nothing the others missed. A place is now asked four questions to be answered no:
+  a motion, how the pictures are drawn, what its look already says, and how it feels or what is known of it (the
+  tiles warm 0.73, the door unlocked 0.70; the water levels 0.07-0.33). A reading that only says its part again
+  ("crowd: crowded") is never asked. Live readings 85, 50 taken (43 of 79 before): the rising water in 279d, de6c
+  and 6081 is taken now; the tiles, the door and the crowd are not. S1 11/13, all faults 18/33, guards 36/36, no
+  case moved; off unchanged.
