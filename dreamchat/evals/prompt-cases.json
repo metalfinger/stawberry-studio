@@ -1,0 +1,2508 @@
+{
+  "about": "Prompt-level cases from a person's verdicts and notes on 122 pictures (evals/story-pictures.json: human, human_note; evals/paired-verdicts.json: per version human, human_note, way). A failing case is a fault the person noted (or, for a picture judged partly or wrong without a note, the fault the blind judge or the picture judge named: fault_from), with expectations on the moment's preparation (its rebuilt prompt and references) that, met, would have prevented it. A passing case is a moment the person called right, with what must stay true of it. code expectations name a check in evals/prompt-cases.ts (CHECKS); ask expectations are yes-or-no questions Jev answers about the prompt text. model_only: nothing in the preparation could have prevented the fault (it already does its part); set_aside: the note disagrees with the dream as the dreamer told it. Both are run and shown, and kept out of the pass rates. Ids in args are the saved dream's own (p1 is the dreamer in every one of these dreams). unused: notes that gave no case, and why.",
+  "classes": [
+    "state_carried",
+    "presence",
+    "holding",
+    "camera_turn_layout",
+    "pov",
+    "identity",
+    "action",
+    "invented_moment",
+    "reference_conflict",
+    "proportion_or_paste",
+    "style_leak",
+    "other"
+  ],
+  "cases": [
+    {
+      "id": "lighthouse-first-m3-view",
+      "kind": "failing",
+      "class": "pov",
+      "session": "dream-0925-231131-affd",
+      "moment": "m3",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "lighthouse-first-m3"
+      },
+      "note": "I don't think something is off that way. Something is off in terms of perspective. Maybe it works, maybe it doesn't work. As in, the camera perspective is like I can see the spiral and I can see the dog and the person, but maybe my physical laws, something is wrong.",
+      "fault": "Through the dreamer's eyes the view should look up the winding stairs with the dog unseen ahead; the picture looked down the stairwell with the dog (and a person) in view, and its perspective read as physically wrong.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "not_in_view",
+          "args": {
+            "who": "p2"
+          },
+          "says": "the dog, unseen ahead, is not among what the view shows"
+        },
+        {
+          "kind": "code",
+          "check": "no_image_of",
+          "args": {
+            "who": "p2"
+          },
+          "says": "no image of the dog is attached"
+        },
+        {
+          "kind": "code",
+          "check": "no_dreamer_image",
+          "says": "no image of the dreamer is attached: they are the camera"
+        },
+        {
+          "kind": "ask",
+          "question": "Does this prompt say the view looks up the winding stairs?"
+        }
+      ]
+    },
+    {
+      "id": "night-market-m2-gaze",
+      "kind": "failing",
+      "class": "action",
+      "session": "dream-0926-000545-09ea",
+      "moment": "m2",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "night-market-m2"
+      },
+      "note": "What I would have liked is maybe the dreamer looking towards fish or something. Otherwise, it looks fine, I guess.",
+      "also": [
+        {
+          "file": "paired-verdicts.json",
+          "row": "night-market-m2",
+          "version": "night-market-m2-b",
+          "note": "I don't know why both sisters are looking at the camera."
+        },
+        {
+          "file": "paired-verdicts.json",
+          "row": "night-market-m2",
+          "version": "night-market-m2-c",
+          "note": "One of the girls looks different, I think, or I'm not sure. Again, both of them are looking at the camera for, I don't know, what reason?"
+        }
+      ],
+      "fault": "The dreamer (and her sister) should be turned to the fish on the stall; they face the camera instead.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "prompt_lacks",
+          "args": {
+            "section": "shot",
+            "pattern": "the dreamer, [^;.]*facing the camera"
+          },
+          "says": "the view does not turn the dreamer to face the camera"
+        },
+        {
+          "kind": "ask",
+          "question": "Does this prompt say the dreamer is looking at the fish?"
+        }
+      ]
+    },
+    {
+      "id": "lighthouse-fresh-m10-tractor",
+      "kind": "failing",
+      "class": "camera_turn_layout",
+      "session": "dream-0926-022102-aeea",
+      "moment": "m10",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "lighthouse-fresh-m10"
+      },
+      "note": "I don't think this frame was defined in the script, as far as I remember. Why is the tractor inside that room, or whatever this is?",
+      "also": [
+        {
+          "file": "paired-verdicts.json",
+          "row": "lighthouse-fresh-m10",
+          "version": "lighthouse-fresh-m10-a",
+          "note": "Why is the tractor suddenly inside the room?"
+        },
+        {
+          "file": "paired-verdicts.json",
+          "row": "lighthouse-fresh-m10",
+          "version": "lighthouse-fresh-m10-c",
+          "note": "Suddenly, the tractor is inside the room, which is wrong."
+        }
+      ],
+      "fault": "The red tractor, which is out in the field seen through the window, was drawn standing inside the round room.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "not_in_view",
+          "args": {
+            "who": "t3"
+          },
+          "says": "the tractor, out in the field, is not placed in the room's view"
+        },
+        {
+          "kind": "ask",
+          "question": "Does this prompt say the red tractor is outside the room, in the field beyond the windows?"
+        }
+      ]
+    },
+    {
+      "id": "lighthouse-fresh-m10-script",
+      "kind": "failing",
+      "class": "invented_moment",
+      "set_aside": "The dreamer told this moment ('I was still holding it in both hands, just in front of me, but I was looking past it at the field'): it is theirs, not invented. The tractor in the room is its own case (lighthouse-fresh-m10-tractor).",
+      "session": "dream-0926-022102-aeea",
+      "moment": "m10",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "lighthouse-fresh-m10"
+      },
+      "note": "I don't think this frame was defined in the script, as far as I remember. Why is the tractor inside that room, or whatever this is?",
+      "fault": "The person did not remember this frame being in the story.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "prompt_has",
+          "args": {
+            "section": "happens",
+            "pattern": "holding the paper boat in both hands"
+          },
+          "says": "the moment is the one the dreamer told"
+        }
+      ]
+    },
+    {
+      "id": "lighthouse-fresh-m12-heading",
+      "kind": "failing",
+      "class": "camera_turn_layout",
+      "session": "dream-0926-022102-aeea",
+      "moment": "m12",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "lighthouse-fresh-m12"
+      },
+      "note": "Maybe the tractor's perspective didn't change. Could be better, maybe.",
+      "also": [
+        {
+          "file": "paired-verdicts.json",
+          "row": "lighthouse-fresh-m12",
+          "version": "lighthouse-fresh-m12-a",
+          "note": "Just one thing: the orientation of the tractor is wrong. Otherwise, good shot."
+        }
+      ],
+      "fault": "The tractor's orientation, the way it drives across the picture, is wrong against the picture before.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "prompt_has",
+          "args": {
+            "pattern": "\\b(?:heading|driving|drives|moving|moves|travel\\w*)\\b[^.]*\\b(?:left|right)\\b"
+          },
+          "says": "the prompt says which way the tractor drives across the picture"
+        },
+        {
+          "kind": "ask",
+          "question": "Does this prompt say which way the tractor is driving across the picture?"
+        }
+      ]
+    },
+    {
+      "id": "lighthouse-fresh-m13-dreamer",
+      "kind": "failing",
+      "class": "presence",
+      "session": "dream-0926-022102-aeea",
+      "moment": "m13",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "lighthouse-fresh-m13"
+      },
+      "note": "The dreamer is gone from this frame. Or if this comes before the dreamer enters the structure, then maybe.",
+      "fault": "The dreamer, who sits beside the driver in the cab, is missing from the picture.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "dreamer_seen_or_pov",
+          "says": "the dreamer is in the picture, or it is seen through their own eyes"
+        },
+        {
+          "kind": "ask",
+          "question": "Does this prompt say the dreamer is in the cab beside the driver?"
+        }
+      ]
+    },
+    {
+      "id": "lighthouse-fresh-m14-identity",
+      "kind": "failing",
+      "class": "identity",
+      "model_only": true,
+      "session": "dream-0926-022102-aeea",
+      "moment": "m14",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "lighthouse-fresh-m14"
+      },
+      "note": "The reference of the dreamer is wrong. It feels like it's a different person who is sitting beside the father.",
+      "fault": "The dreamer beside the driver looks like a different person.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "image_of",
+          "args": {
+            "who": "p1"
+          },
+          "says": "the dreamer's sketch is attached"
+        },
+        {
+          "kind": "code",
+          "check": "images_per_subject_at_most",
+          "args": {
+            "n": 1,
+            "who": "p1"
+          },
+          "says": "one image says who the dreamer is"
+        }
+      ]
+    },
+    {
+      "id": "lighthouse-fresh-m15-sea",
+      "kind": "failing",
+      "class": "action",
+      "set_aside": "The dreamer said 'when the tractor stopped, I got out and put the paper boat down in the grass': the sea had become the field, so the boat in the grass is the dream as told.",
+      "session": "dream-0926-022102-aeea",
+      "moment": "m15",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "lighthouse-fresh-m15"
+      },
+      "note": "Dreamer is supposed to be putting the boat into the sea. In the image, he is putting it on the ground, which is completely wrong.",
+      "fault": "The person expected the boat to be put into the sea, not on the ground.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "prompt_has",
+          "args": {
+            "section": "happens",
+            "pattern": "down in the grass"
+          },
+          "says": "the boat is put down in the grass, as the dreamer told it"
+        }
+      ]
+    },
+    {
+      "id": "snow-train-m2-reverse",
+      "kind": "failing",
+      "class": "camera_turn_layout",
+      "session": "dream-0926-043003-b0cb",
+      "moment": "m2",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "snow-train-m2"
+      },
+      "note": "Considering the previous frame, maybe I would have liked it if things would have changed. I'm guessing this frame is from the perspective of the dreamer, but the rest of the things and everything look the same, which is wrong. In terms of continuity, this fails from the previous frame.",
+      "also": [
+        {
+          "file": "paired-verdicts.json",
+          "row": "snow-train-m2",
+          "version": "snow-train-m2-a",
+          "note": "If I consider the previous shot, in this shot, the grandpa should be on the right side. He should be sitting on the right side. I think that is something which is wrong."
+        },
+        {
+          "file": "paired-verdicts.json",
+          "row": "snow-train-m2",
+          "version": "snow-train-m2-b",
+          "note": "Compared to the last shot, again, the background is all the same, but the grandpa has rotated, which feels wrong. I guess the ideal way is that we rotate the camera 180°, and now it's in front of the grandpa. I'm considering the last picture, the before picture, to judge."
+        },
+        {
+          "file": "paired-verdicts.json",
+          "row": "snow-train-m2",
+          "version": "snow-train-m2-c",
+          "note": "Again, the same thing: if the camera is changing and the person is sitting there, only then the environment should rotate right. Here, the environment feels safe, looks very much like a big flow in continuity, and the same thing: the grandpa should have a window on the right side. I think that it's the same category as having the perspective of the previous frame, how the construct of the space was, and how it is in the current frame."
+        }
+      ],
+      "fault": "The camera turned round to face the grandfather, but the carriage behind him stayed as in the picture before: the room did not turn with the camera, and his window should now be on the other side.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "camera_turned_from",
+          "args": {
+            "moment": "m1",
+            "degrees": 120
+          },
+          "says": "the plan has the camera facing the other way from picture 1"
+        },
+        {
+          "kind": "code",
+          "check": "prompt_has",
+          "args": {
+            "section": "shot",
+            "pattern": "window"
+          },
+          "says": "the view says where the carriage's windows are from this side"
+        },
+        {
+          "kind": "ask",
+          "question": "Does this prompt say on which side of the picture the train's windows are?"
+        }
+      ]
+    },
+    {
+      "id": "snow-train-m3-seat",
+      "kind": "failing",
+      "class": "camera_turn_layout",
+      "session": "dream-0926-043003-b0cb",
+      "moment": "m3",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "snow-train-m3"
+      },
+      "note": "Again, in terms of continuity, this frame fails. Grandma is suddenly sitting on the chair compared to the last frame.",
+      "also": [
+        {
+          "file": "paired-verdicts.json",
+          "row": "snow-train-m3",
+          "version": "snow-train-m3-a",
+          "note": "Compared to the previous frame, the position of the grandfather is changing, which feels wrong. Otherwise, it's correct."
+        },
+        {
+          "file": "paired-verdicts.json",
+          "row": "snow-train-m3",
+          "version": "snow-train-m3-b",
+          "note": "The position of granddad is wrong compared to the previous one. Otherwise, it's correct."
+        },
+        {
+          "file": "paired-verdicts.json",
+          "row": "snow-train-m3",
+          "version": "snow-train-m3-c",
+          "note": "The position of granddad is wrong compared to the previous one. Otherwise, it's correct."
+        }
+      ],
+      "fault": "The grandfather changed position from the picture before: he sits across from the dreamer, not beside them.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "prompt_lacks",
+          "args": {
+            "section": "shot",
+            "pattern": "beside the dreamer on the same seat"
+          },
+          "says": "the view does not seat the grandfather beside the dreamer"
+        },
+        {
+          "kind": "ask",
+          "question": "Does this prompt say the grandfather sits across from the dreamer, facing them?"
+        }
+      ]
+    },
+    {
+      "id": "snow-train-m4-suitcase",
+      "kind": "failing",
+      "class": "holding",
+      "session": "dream-0926-043003-b0cb",
+      "moment": "m4",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "snow-train-m4"
+      },
+      "note": "The suitcase is missing from grandpa, and I don't know, maybe the dreamer has changed.",
+      "fault": "The grandfather should still be carrying the suitcase; it is missing.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "in_view",
+          "args": {
+            "who": "t1"
+          },
+          "says": "the suitcase is among what the picture shows"
+        },
+        {
+          "kind": "ask",
+          "question": "Does this prompt say the grandfather is carrying the suitcase?"
+        }
+      ]
+    },
+    {
+      "id": "snow-train-m4-dreamer",
+      "kind": "failing",
+      "class": "identity",
+      "model_only": true,
+      "session": "dream-0926-043003-b0cb",
+      "moment": "m4",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "snow-train-m4"
+      },
+      "note": "The suitcase is missing from grandpa, and I don't know, maybe the dreamer has changed.",
+      "fault": "The dreamer may have changed: they look like someone else.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "image_of",
+          "args": {
+            "who": "p1"
+          },
+          "says": "the dreamer's sketch is attached"
+        },
+        {
+          "kind": "code",
+          "check": "images_per_subject_at_most",
+          "args": {
+            "n": 1,
+            "who": "p1"
+          },
+          "says": "one image says who the dreamer is"
+        }
+      ]
+    },
+    {
+      "id": "snow-train-m5-door",
+      "kind": "failing",
+      "class": "state_carried",
+      "session": "dream-0926-043003-b0cb",
+      "moment": "m5",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "snow-train-m5"
+      },
+      "note": null,
+      "fault": "The red door already stands open with warm light pouring out, before the dreamer opens it in the next moment.",
+      "fault_from": "blind_reason",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "prompt_lacks",
+          "args": {
+            "pattern": "spilling from the doorway|light (?:pours|pouring|spills|spilling) (?:out|from)"
+          },
+          "says": "nothing says light already spills from the doorway"
+        },
+        {
+          "kind": "ask",
+          "question": "Does this prompt say the red door is shut?"
+        }
+      ]
+    },
+    {
+      "id": "library-1-m2-books",
+      "kind": "failing",
+      "class": "action",
+      "session": "dream-0926-050424-fdd7",
+      "moment": "m2",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "library-1-m2"
+      },
+      "note": "Partially okay because the book, I think, is supposed to be flying or in the air, maybe.",
+      "fault": "The books should be up in the air, flying off the shelves like birds; they lie on the water.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "prompt_lacks",
+          "args": {
+            "section": "must_show",
+            "pattern": "in the water"
+          },
+          "says": "what the picture must show does not put the books in the water"
+        },
+        {
+          "kind": "ask",
+          "question": "Does this prompt say the books are flying through the air?"
+        }
+      ]
+    },
+    {
+      "id": "library-1-m3-water",
+      "kind": "failing",
+      "class": "state_carried",
+      "session": "dream-0926-050424-fdd7",
+      "moment": "m3",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "library-1-m3"
+      },
+      "note": "Oh, the sister showed up with the boat, but the water is gone. It breaks the continuity of the story.",
+      "fault": "The flood of the picture before is gone: the boat stands on a dry floor.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "state_carried",
+          "args": {
+            "who": "l1",
+            "what": "water|flood",
+            "text": "\\bflood(?:ed|ing)?\\b|water (?:covers|fills|reaches|is up to|up to|over|has risen)"
+          },
+          "says": "the room's water is carried into this moment"
+        },
+        {
+          "kind": "ask",
+          "question": "Does this prompt say the desks stand in water?"
+        }
+      ]
+    },
+    {
+      "id": "library-1-m4-whale",
+      "kind": "failing",
+      "class": "proportion_or_paste",
+      "session": "dream-0926-050424-fdd7",
+      "moment": "m4",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "library-1-m4"
+      },
+      "note": "This is such a bad frame. Why does the whale feel like it's photoshopped? I didn't like this frame in terms of composition, and it also feels like a bad Photoshop edit.",
+      "also": [
+        {
+          "file": "paired-verdicts.json",
+          "row": "library-1-m4",
+          "version": "library-1-m4-a",
+          "note": "Not bad. Just the composition looks a little off. Otherwise, not bad."
+        }
+      ],
+      "fault": "The whale looks pasted in (a bad edit), lined up with the two in the boat and lying on the water, rather than swimming past underneath; the composition is off.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "prompt_lacks",
+          "args": {
+            "section": "shot",
+            "pattern": "From left to right across the picture:[^.]*\\bwhale\\b"
+          },
+          "says": "the view does not line the whale up with the people in the boat"
+        },
+        {
+          "kind": "ask",
+          "question": "Does this prompt say the whale is under the water, beneath the boat?"
+        }
+      ]
+    },
+    {
+      "id": "library-1-m4-edit",
+      "kind": "failing",
+      "class": "reference_conflict",
+      "session": "dream-0926-050424-fdd7",
+      "moment": "m4",
+      "source": {
+        "file": "paired-verdicts.json",
+        "row": "library-1-m4",
+        "version": "library-1-m4-c"
+      },
+      "note": "I don't know. Things are overlapping, and it all looks very wrong.",
+      "fault": "Drawn as an edit of the picture before, taken from the other side: things overlap, and the whale is pasted onto the old scene.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "no_edit_of_earlier",
+          "says": "no earlier picture is the one edited: the camera faces another side"
+        }
+      ]
+    },
+    {
+      "id": "library-1-m5-water",
+      "kind": "failing",
+      "class": "state_carried",
+      "session": "dream-0926-050424-fdd7",
+      "moment": "m5",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "library-1-m5"
+      },
+      "note": "I don't know where they are supposed to go out from the above thing, and the perspective stays the same in all the frames, which is wrong. The camera is moving, and it should have shifted. The water is gone, and this was a very bad generation.",
+      "also": [
+        {
+          "file": "paired-verdicts.json",
+          "row": "library-1-m5",
+          "version": "library-1-m5-b",
+          "note": "The water is gone, so wrong."
+        }
+      ],
+      "fault": "The water is gone from the room.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "state_carried",
+          "args": {
+            "who": "l1",
+            "what": "water|flood",
+            "text": "\\bflood(?:ed|ing)?\\b|water (?:covers|fills|reaches|is up to|up to|over|has risen)"
+          },
+          "says": "the room's water is carried into this moment"
+        },
+        {
+          "kind": "ask",
+          "question": "Does this prompt say the desks stand in water?"
+        }
+      ]
+    },
+    {
+      "id": "library-1-m5-level",
+      "kind": "failing",
+      "class": "state_carried",
+      "session": "dream-0926-050424-fdd7",
+      "moment": "m5",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "library-1-m5"
+      },
+      "note": "I don't know where they are supposed to go out from the above thing, and the perspective stays the same in all the frames, which is wrong. The camera is moving, and it should have shifted. The water is gone, and this was a very bad generation.",
+      "fault": "They row up to the high round window, so the water has risen to it; the boat stays low on the floor, far below the window they are to go out of.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "state_carried",
+          "args": {
+            "who": "l1",
+            "what": "water",
+            "now": "window|ceiling|top of the room"
+          },
+          "says": "the water is carried as risen to the high window, where the boat now is"
+        },
+        {
+          "kind": "ask",
+          "question": "Does this prompt say the water inside the room has risen almost to the ceiling?"
+        }
+      ]
+    },
+    {
+      "id": "library-1-m5-camera",
+      "kind": "failing",
+      "class": "camera_turn_layout",
+      "session": "dream-0926-050424-fdd7",
+      "moment": "m5",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "library-1-m5"
+      },
+      "note": "I don't know where they are supposed to go out from the above thing, and the perspective stays the same in all the frames, which is wrong. The camera is moving, and it should have shifted. The water is gone, and this was a very bad generation.",
+      "fault": "The camera stays where it was in the earlier pictures while the boat moves: it should have shifted.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "camera_differs_from",
+          "args": {
+            "moment": "m3",
+            "degrees": 30,
+            "height": 1
+          },
+          "says": "the camera is not picture 3's again: turned or raised"
+        },
+        {
+          "kind": "code",
+          "check": "camera_differs_from",
+          "args": {
+            "moment": "m1",
+            "degrees": 30,
+            "height": 1
+          },
+          "says": "the camera is not picture 1's again: turned or raised"
+        }
+      ]
+    },
+    {
+      "id": "library-1-m5-window",
+      "kind": "failing",
+      "class": "proportion_or_paste",
+      "session": "dream-0926-050424-fdd7",
+      "moment": "m5",
+      "source": {
+        "file": "paired-verdicts.json",
+        "row": "library-1-m5",
+        "version": "library-1-m5-a"
+      },
+      "note": "The proportion of things looks very off, and I don't know. The wall which is in front has become a city or something.",
+      "fault": "The proportions are off, and the whole wall in front has become the city, instead of the city showing through the round window.",
+      "expectations": [
+        {
+          "kind": "ask",
+          "question": "Does this prompt say the wall around the round window is still a solid wall?"
+        }
+      ]
+    },
+    {
+      "id": "library-2-m5-water",
+      "kind": "failing",
+      "class": "state_carried",
+      "session": "dream-0926-052843-6081",
+      "moment": "m5",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "library-2-m5"
+      },
+      "note": "Okay, this is partially good because the right side of the tables and all is gone, and maybe water can be more reasonable. The way both of them are standing is partially wrong, I feel.",
+      "fault": "The room should still be flooded; the boat and the two stand on a dry floor.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "state_carried",
+          "args": {
+            "who": "l1",
+            "what": "water|flood",
+            "text": "\\bflood(?:ed|ing)?\\b|water (?:covers|fills|reaches|is up to|up to|over|has risen)"
+          },
+          "says": "the room's water is carried into this moment"
+        },
+        {
+          "kind": "ask",
+          "question": "Does this prompt say the desks stand in water?"
+        }
+      ]
+    },
+    {
+      "id": "library-2-m5-standing",
+      "kind": "failing",
+      "class": "action",
+      "session": "dream-0926-052843-6081",
+      "moment": "m5",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "library-2-m5"
+      },
+      "note": "Okay, this is partially good because the right side of the tables and all is gone, and maybe water can be more reasonable. The way both of them are standing is partially wrong, I feel.",
+      "fault": "The way both of them stand is wrong: the sister stands up in the rowing boat, the dreamer stands on the floor beside it.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "prompt_lacks",
+          "args": {
+            "section": "shot",
+            "pattern": "standing in it"
+          },
+          "says": "the view does not stand the sister up in the boat"
+        },
+        {
+          "kind": "ask",
+          "question": "Does this prompt say the older sister is sitting in the boat?"
+        }
+      ]
+    },
+    {
+      "id": "library-2-m9-water",
+      "kind": "failing",
+      "class": "state_carried",
+      "session": "dream-0926-052843-6081",
+      "moment": "m9",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "library-2-m9"
+      },
+      "note": "The water is suddenly gone, and the size of the boat and everything is inconsistent.",
+      "fault": "The water is suddenly gone.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "state_carried",
+          "args": {
+            "who": "l1",
+            "what": "water|flood",
+            "text": "\\bflood(?:ed|ing)?\\b|water (?:covers|fills|reaches|is up to|up to|over|has risen)"
+          },
+          "says": "the room's water is carried into this moment"
+        },
+        {
+          "kind": "ask",
+          "question": "Does this prompt say the desks stand in water?"
+        }
+      ]
+    },
+    {
+      "id": "library-2-m9-boat-size",
+      "kind": "failing",
+      "class": "proportion_or_paste",
+      "model_only": true,
+      "session": "dream-0926-052843-6081",
+      "moment": "m9",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "library-2-m9"
+      },
+      "note": "The water is suddenly gone, and the size of the boat and everything is inconsistent.",
+      "fault": "The boat's size (and everything's) is inconsistent with the pictures before.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "prompt_has",
+          "args": {
+            "pattern": "about 2\\.5 met"
+          },
+          "says": "the prompt gives the boat's size"
+        }
+      ]
+    },
+    {
+      "id": "library-3-m2-water",
+      "kind": "failing",
+      "class": "state_carried",
+      "session": "dream-0926-055141-6e80",
+      "moment": "m2",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "library-3-m2"
+      },
+      "note": "I guess there is supposed to be water before the book starts, so I think that is something missing.",
+      "fault": "Water was already coming in before the books start flying; the room is dry.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "state_carried",
+          "args": {
+            "who": "l1",
+            "what": "water"
+          },
+          "says": "the water coming in is carried into this moment"
+        },
+        {
+          "kind": "ask",
+          "question": "Does this prompt say there is water on the library floor?"
+        }
+      ]
+    },
+    {
+      "id": "library-3-m5-continuity",
+      "kind": "failing",
+      "class": "identity",
+      "model_only": true,
+      "session": "dream-0926-055141-6e80",
+      "moment": "m5",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "library-3-m5"
+      },
+      "note": "I think continuity is missing, but not that bad.",
+      "fault": "Continuity is missing: the person getting in looks like a different man instead of the dreamer, and the yellow boat has turned white.",
+      "fault_from": "judge_reason",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "image_of",
+          "args": {
+            "who": "p1"
+          },
+          "says": "the dreamer's sketch is attached"
+        },
+        {
+          "kind": "code",
+          "check": "prompt_has",
+          "args": {
+            "section": "style",
+            "pattern": "keeps it exactly: [^.]*yellow rowing boat"
+          },
+          "says": "the style keeps the boat yellow"
+        }
+      ]
+    },
+    {
+      "id": "library-3-m7-level",
+      "kind": "failing",
+      "class": "state_carried",
+      "session": "dream-0926-055141-6e80",
+      "moment": "m7",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "library-3-m7"
+      },
+      "note": null,
+      "fault": "The sister stands reaching for the round window, but the boat is still down at desk level far below it, not rowed up to the top of the room.",
+      "fault_from": "judge_reason",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "state_carried",
+          "args": {
+            "who": "l1",
+            "what": "water",
+            "now": "window|ceiling|top of the room"
+          },
+          "says": "the water is carried as risen to the high window, where the boat now is"
+        },
+        {
+          "kind": "ask",
+          "question": "Does this prompt say the water inside the room has risen almost to the ceiling?"
+        }
+      ]
+    },
+    {
+      "id": "snow-train-2-m1-suitcase",
+      "kind": "failing",
+      "class": "holding",
+      "session": "dream-0926-062232-a44a",
+      "moment": "m1",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "snow-train-2-m1"
+      },
+      "note": "Oh, I thought the bag is supposed to be with the grandpa, not the dreamer, so that is wrong with this frame.",
+      "fault": "The suitcase should be with the grandfather, not at the dreamer's feet.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "prompt_lacks",
+          "args": {
+            "section": "shot",
+            "pattern": "suitcase, [^.;]*right beside the back seat"
+          },
+          "says": "the view does not put the suitcase by the dreamer's seat"
+        },
+        {
+          "kind": "ask",
+          "question": "Does this prompt say the suitcase is with the grandfather?"
+        }
+      ]
+    },
+    {
+      "id": "snow-train-2-m2-carriage",
+      "kind": "failing",
+      "class": "camera_turn_layout",
+      "session": "dream-0926-062232-a44a",
+      "moment": "m2",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "snow-train-2-m2"
+      },
+      "note": "Now, this is a totally different frame than the previous frame I saw, so continuity is wrong. Otherwise, this is not bad, actually.",
+      "fault": "A totally different carriage from the picture before, though the camera is where it was: the same view should keep the same compartment.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "relation_to",
+          "args": {
+            "moment": "m1",
+            "relation": ["same_setup", "same_side"]
+          },
+          "says": "the plan reads this as picture 1's side of the carriage (its camera is picture 1's)"
+        },
+        {
+          "kind": "code",
+          "check": "ref_of_picture",
+          "args": {
+            "moment": "m1",
+            "roles": ["base", "composition"]
+          },
+          "says": "picture 1 is attached for where the carriage's seats and walls are"
+        }
+      ]
+    },
+    {
+      "id": "snow-train-2-m5-shut",
+      "kind": "failing",
+      "class": "state_carried",
+      "session": "dream-0926-062232-a44a",
+      "moment": "m5",
+      "source": {
+        "file": "paired-verdicts.json",
+        "row": "snow-train-2-m5",
+        "version": "snow-train-2-m5-a"
+      },
+      "note": "Partially right. I don't know why the bag is open in Grandpa's, and maybe it is because, in the previous picture also, it was open. Should be shut",
+      "also": [
+        {
+          "file": "paired-verdicts.json",
+          "row": "snow-train-2-m5",
+          "version": "snow-train-2-m5-b",
+          "note": "The suitcase should be shut and should not be open."
+        }
+      ],
+      "fault": "The suitcase should be shut; it stays open because its opening in picture 3 is carried on.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "state_not_carried",
+          "args": {
+            "who": "t1",
+            "now": "\\bopen"
+          },
+          "says": "the suitcase's opening is not carried into this moment"
+        },
+        {
+          "kind": "ask",
+          "question": "Does this prompt say the suitcase is shut?"
+        }
+      ]
+    },
+    {
+      "id": "snow-train-2-m7-open",
+      "kind": "failing",
+      "class": "state_carried",
+      "session": "dream-0926-062232-a44a",
+      "moment": "m7",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "snow-train-2-m7"
+      },
+      "note": "I don't know where this frame makes sense, but the person holding the bag open, I think, feels wrong.",
+      "fault": "The dreamer holds the suitcase open, which feels wrong: it should be shut by now.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "state_not_carried",
+          "args": {
+            "who": "t1",
+            "now": "\\bopen"
+          },
+          "says": "the suitcase's opening is not carried into this moment"
+        },
+        {
+          "kind": "ask",
+          "question": "Does this prompt say the suitcase is shut?"
+        }
+      ]
+    },
+    {
+      "id": "snow-train-2-m6-two-suitcases",
+      "kind": "failing",
+      "class": "reference_conflict",
+      "session": "dream-0926-062232-a44a",
+      "moment": "m6",
+      "source": {
+        "file": "paired-verdicts.json",
+        "row": "snow-train-2-m6",
+        "version": "snow-train-2-m6-b"
+      },
+      "note": "There are suddenly two suitcases in the frame.",
+      "fault": "Two suitcases in the picture: the suitcase's sketch and its in-between picture are both attached.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "images_per_subject_at_most",
+          "args": {
+            "n": 1,
+            "who": "t1"
+          },
+          "says": "one image says how the suitcase looks"
+        }
+      ]
+    },
+    {
+      "id": "snow-train-2-m6-size",
+      "kind": "failing",
+      "class": "proportion_or_paste",
+      "model_only": true,
+      "session": "dream-0926-062232-a44a",
+      "moment": "m6",
+      "source": {
+        "file": "paired-verdicts.json",
+        "row": "snow-train-2-m6",
+        "version": "snow-train-2-m6-a"
+      },
+      "note": "proportion ab suit kaise super wrong",
+      "fault": "The suitcase's proportions are badly wrong in the edit.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "prompt_has",
+          "args": {
+            "pattern": "about 60 cm"
+          },
+          "says": "the prompt gives the suitcase's size"
+        }
+      ]
+    },
+    {
+      "id": "orchard-m4-gate",
+      "kind": "failing",
+      "class": "pov",
+      "session": "dream-0926-070314-0f40",
+      "moment": "m4",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "orchard-m4"
+      },
+      "note": null,
+      "fault": "The gate opens on its own, but the dreamer's hands grip it as if pulling it open (the picture judge saw them seated, legs stretched out, pushing it).",
+      "fault_from": "blind_reason",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "prompt_lacks",
+          "args": {
+            "pattern": "hands, arms or feet"
+          },
+          "says": "the prompt does not invite the dreamer's hands, arms or feet into a moment where they touch nothing"
+        },
+        {
+          "kind": "ask",
+          "question": "Does this prompt say no hands are touching the gate?"
+        }
+      ]
+    },
+    {
+      "id": "orchard-m7-gone",
+      "kind": "failing",
+      "class": "presence",
+      "session": "dream-0926-070314-0f40",
+      "moment": "m7",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "orchard-m7"
+      },
+      "note": "What is this? The person should be gone then. Why is the partial invisibility there? It's wrong.",
+      "also": [
+        {
+          "file": "paired-verdicts.json",
+          "row": "orchard-m7",
+          "version": "orchard-m7-b",
+          "note": "If we say Dreamer looks for Tomas and finds him gone, then this is wrong. Also, why is Tomas holding the camera, and why is it half disappearing?"
+        }
+      ],
+      "fault": "Tomas should be gone; he is still there, half invisible (in another version, holding a camera).",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "not_in_view",
+          "args": {
+            "who": "p2"
+          },
+          "says": "Tomas is not among what the view shows"
+        },
+        {
+          "kind": "code",
+          "check": "no_image_of",
+          "args": {
+            "who": "p2"
+          },
+          "says": "no image of Tomas is attached"
+        },
+        {
+          "kind": "ask",
+          "question": "Does this prompt say Tomas is nowhere in the picture?"
+        }
+      ]
+    },
+    {
+      "id": "orchard-m7-legs",
+      "kind": "failing",
+      "class": "pov",
+      "session": "dream-0926-070314-0f40",
+      "moment": "m7",
+      "source": {
+        "file": "paired-verdicts.json",
+        "row": "orchard-m7",
+        "version": "orchard-m7-c"
+      },
+      "note": "Why does it feel like a perspective of a person is standing or sleeping? Legs and all should not be visible, right?",
+      "fault": "Through the dreamer's eyes their legs show, as if they were standing or lying down.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "prompt_lacks",
+          "args": {
+            "pattern": "\\b(?:feet|legs)\\b"
+          },
+          "says": "a view through the dreamer's eyes does not invite their legs or feet"
+        }
+      ]
+    },
+    {
+      "id": "orchard-m2-pov",
+      "kind": "failing",
+      "class": "pov",
+      "session": "dream-0926-070314-0f40",
+      "moment": "m2",
+      "source": {
+        "file": "paired-verdicts.json",
+        "row": "orchard-m2",
+        "version": "orchard-m2-a"
+      },
+      "note": "Why does it feel like a dreamer is holding something, and then it's also third person?",
+      "also": [
+        {
+          "file": "paired-verdicts.json",
+          "row": "orchard-m2",
+          "version": "orchard-m2-b",
+          "note": "No, it doesn't look like from the perspective. It looks like a third person's perspective. Doesn't look like Dreamer's perspective"
+        }
+      ],
+      "fault": "Through the dreamer's eyes only the boy Tomas should be there; it reads as third person, with someone holding something (the picture judge saw an extra adult).",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "images_per_subject_at_most",
+          "args": {
+            "n": 1,
+            "who": "p2"
+          },
+          "says": "one image says who Tomas is"
+        },
+        {
+          "kind": "code",
+          "check": "no_dreamer_image",
+          "says": "no image of the dreamer is attached: they are the camera"
+        },
+        {
+          "kind": "code",
+          "check": "prompt_has",
+          "args": {
+            "section": "framing",
+            "pattern": "through the dreamer's own eyes"
+          },
+          "says": "the prompt says the picture is through the dreamer's own eyes"
+        }
+      ]
+    },
+    {
+      "id": "heron-m4-clothes",
+      "kind": "failing",
+      "class": "reference_conflict",
+      "session": "dream-0926-012307-4c79",
+      "moment": "m4",
+      "source": {
+        "file": "paired-verdicts.json",
+        "row": "heron-m4",
+        "version": "heron-m4-c"
+      },
+      "note": "This also works. Just a little extreme in terms of all the people being completely naked",
+      "fault": "Made real from the grey mock-up, the students came out completely naked: nothing says what they wear, and they have no image of their own.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "prompt_has",
+          "args": {
+            "section": "in_it",
+            "pattern": "faceless students \\(people\\):[^\\n]*\\b(?:uniforms?|shirts?|jumpers?|sweaters?|blouses?|clothes|clothing|dress\\w*|cardigans?|ties?|trousers|skirts?|wearing)\\b"
+          },
+          "says": "the students' line says what they wear"
+        },
+        {
+          "kind": "ask",
+          "question": "Does this prompt say what the students are wearing?"
+        }
+      ]
+    },
+    {
+      "id": "lighthouse-first-m7-room",
+      "kind": "failing",
+      "class": "state_carried",
+      "session": "dream-0925-231131-affd",
+      "moment": "m7",
+      "source": {
+        "file": "paired-verdicts.json",
+        "row": "lighthouse-first-m7",
+        "version": "lighthouse-first-m7-a"
+      },
+      "note": "This is not wrong, but partial because it doesn't look continuous with the last. Otherwise, nothing wrong with the shot.",
+      "fault": "Not continuous with the picture before: the same round room, with the field where the sea was, should carry on.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "ref_of_picture",
+          "args": {
+            "moment": "m6"
+          },
+          "says": "the picture before, of this same room, is attached"
+        },
+        {
+          "kind": "ask",
+          "question": "Does this prompt say the windows show a field of tall yellow grass?"
+        }
+      ]
+    },
+    {
+      "id": "lighthouse-first-m8-driver",
+      "kind": "failing",
+      "class": "action",
+      "session": "dream-0925-231131-affd",
+      "moment": "m8",
+      "source": {
+        "file": "paired-verdicts.json",
+        "row": "lighthouse-first-m8",
+        "version": "lighthouse-first-m8-b"
+      },
+      "note": "The other person doesn't look like a driver. Otherwise, also not bad, though.",
+      "also": [
+        {
+          "file": "paired-verdicts.json",
+          "row": "lighthouse-first-m8",
+          "version": "lighthouse-first-m8-c",
+          "note": "Composition is wrong. The driver is sitting, and the trimmer is sitting. Both of them look wrong."
+        }
+      ],
+      "fault": "The stranger does not look like a driver: nobody is at the wheel, and the two just sit.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "prompt_has",
+          "args": {
+            "pattern": "steering wheel|at the wheel|on the wheel"
+          },
+          "says": "the prompt puts the driver at the wheel"
+        },
+        {
+          "kind": "ask",
+          "question": "Does this prompt say the driver has his hands on the steering wheel?"
+        }
+      ]
+    },
+    {
+      "id": "lighthouse-fresh-m2-reverse",
+      "kind": "failing",
+      "class": "camera_turn_layout",
+      "session": "dream-0926-022102-aeea",
+      "moment": "m2",
+      "source": {
+        "file": "paired-verdicts.json",
+        "row": "lighthouse-fresh-m2",
+        "version": "lighthouse-fresh-m2-a"
+      },
+      "note": "The key is too big, but I think the main problem is that, compared to the picture just before, the camera perspective is changing. The lighthouse, which is in the background in the previous picture, in this picture should not be there because the camera just came in front of the dreamer, right?",
+      "fault": "The camera came round in front of the dreamer, so the lighthouse behind them should not be in the background; the edit kept the view of the picture before.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "prompt_has",
+          "args": {
+            "section": "shot",
+            "pattern": "behind the camera: the lighthouse"
+          },
+          "says": "the view puts the lighthouse behind the camera"
+        },
+        {
+          "kind": "code",
+          "check": "no_edit_of_earlier",
+          "says": "the picture before is not the one edited"
+        }
+      ]
+    },
+    {
+      "id": "lighthouse-fresh-m2-key-size",
+      "kind": "failing",
+      "class": "proportion_or_paste",
+      "model_only": true,
+      "session": "dream-0926-022102-aeea",
+      "moment": "m2",
+      "source": {
+        "file": "paired-verdicts.json",
+        "row": "lighthouse-fresh-m2",
+        "version": "lighthouse-fresh-m2-a"
+      },
+      "note": "The key is too big, but I think the main problem is that, compared to the picture just before, the camera perspective is changing. The lighthouse, which is in the background in the previous picture, in this picture should not be there because the camera just came in front of the dreamer, right?",
+      "fault": "The key is drawn too big.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "prompt_has",
+          "args": {
+            "pattern": "about 5 cm"
+          },
+          "says": "the prompt gives the key's size"
+        }
+      ]
+    },
+    {
+      "id": "night-market-m2-identity",
+      "kind": "failing",
+      "class": "identity",
+      "model_only": true,
+      "session": "dream-0926-000545-09ea",
+      "moment": "m2",
+      "source": {
+        "file": "paired-verdicts.json",
+        "row": "night-market-m2",
+        "version": "night-market-m2-c"
+      },
+      "note": "One of the girls looks different, I think, or I'm not sure. Again, both of them are looking at the camera for, I don't know, what reason?",
+      "fault": "One of the girls looks different.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "image_of",
+          "args": {
+            "who": "p1"
+          },
+          "says": "the dreamer's sketch is attached"
+        },
+        {
+          "kind": "code",
+          "check": "image_of",
+          "args": {
+            "who": "p2"
+          },
+          "says": "the sister's sketch is attached"
+        },
+        {
+          "kind": "code",
+          "check": "images_per_subject_at_most",
+          "args": {
+            "n": 1
+          },
+          "says": "one image says who each of them is"
+        }
+      ]
+    },
+    {
+      "id": "snow-train-m6-open-door",
+      "kind": "failing",
+      "class": "reference_conflict",
+      "session": "dream-0926-043003-b0cb",
+      "moment": "m6",
+      "source": {
+        "file": "paired-verdicts.json",
+        "row": "snow-train-m6",
+        "version": "snow-train-m6-b"
+      },
+      "note": "There is a door inside the door, and the bag is visible. The hand and other thing are not visible.",
+      "fault": "There is a door inside the door.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "prompt_lacks",
+          "args": {
+            "section": "shot",
+            "pattern": "around the edges of the (?:red )?door"
+          },
+          "says": "the view does not show the door shut, with light round its edges, in the moment it opens"
+        }
+      ]
+    },
+    {
+      "id": "snow-train-m6-hand",
+      "kind": "failing",
+      "class": "pov",
+      "session": "dream-0926-043003-b0cb",
+      "moment": "m6",
+      "source": {
+        "file": "paired-verdicts.json",
+        "row": "snow-train-m6",
+        "version": "snow-train-m6-b"
+      },
+      "note": "There is a door inside the door, and the bag is visible. The hand and other thing are not visible.",
+      "fault": "The dreamer's hand opening the door is not visible; only the suitcase is.",
+      "expectations": [
+        {
+          "kind": "ask",
+          "question": "Does this prompt say the dreamer's hand is on the red door, opening it?"
+        }
+      ]
+    },
+    {
+      "id": "library-3-m3-door-size",
+      "kind": "failing",
+      "class": "proportion_or_paste",
+      "session": "dream-0926-055141-6e80",
+      "moment": "m3",
+      "source": {
+        "file": "paired-verdicts.json",
+        "row": "library-3-m3",
+        "version": "library-3-m3-c"
+      },
+      "note": "The door looks a little weird in terms of proportion.",
+      "fault": "The door looks a little weird in proportion.",
+      "expectations": [
+        {
+          "kind": "ask",
+          "question": "Does this prompt say how tall the doors are compared with the dreamer?"
+        }
+      ]
+    },
+    {
+      "id": "pass-lighthouse-first-m6",
+      "kind": "passing",
+      "class": "pov",
+      "session": "dream-0925-231131-affd",
+      "moment": "m6",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "lighthouse-first-m6"
+      },
+      "note": null,
+      "fault": "Through the dreamer's eyes: the round room's windows, the field with the red tractor where the sea was, the boat in their hands.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "no_dreamer_image",
+          "says": "no image of the dreamer is attached"
+        },
+        {
+          "kind": "code",
+          "check": "prompt_has",
+          "args": {
+            "pattern": "yellow grass"
+          },
+          "says": "the field of yellow grass is said"
+        },
+        {
+          "kind": "code",
+          "check": "prompt_has",
+          "args": {
+            "pattern": "tractor"
+          },
+          "says": "the tractor is said"
+        },
+        {
+          "kind": "ask",
+          "question": "Does this prompt say the sea outside the window has become a field of tall yellow grass?"
+        }
+      ]
+    },
+    {
+      "id": "pass-night-market-m1",
+      "kind": "passing",
+      "class": "presence",
+      "session": "dream-0926-000545-09ea",
+      "moment": "m1",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "night-market-m1"
+      },
+      "note": null,
+      "fault": "The two sisters walking into the packed market under strings of yellow lights.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "in_view",
+          "args": {
+            "who": "p1"
+          },
+          "says": "the dreamer is in the picture"
+        },
+        {
+          "kind": "code",
+          "check": "in_view",
+          "args": {
+            "who": "p2"
+          },
+          "says": "the sister is in the picture"
+        },
+        {
+          "kind": "code",
+          "check": "prompt_has",
+          "args": {
+            "pattern": "yellow lights"
+          },
+          "says": "the yellow lights are said"
+        }
+      ]
+    },
+    {
+      "id": "pass-heron-m1",
+      "kind": "passing",
+      "class": "presence",
+      "session": "dream-0926-012307-4c79",
+      "moment": "m1",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "heron-m1"
+      },
+      "note": null,
+      "fault": "The dreamer hurrying down the green locker corridor toward the door with the round window.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "image_of",
+          "args": {
+            "who": "p1"
+          },
+          "says": "the dreamer's sketch is attached"
+        },
+        {
+          "kind": "code",
+          "check": "prompt_has",
+          "args": {
+            "pattern": "lockers"
+          },
+          "says": "the lockers are said"
+        },
+        {
+          "kind": "code",
+          "check": "prompt_has",
+          "args": {
+            "pattern": "round window"
+          },
+          "says": "the round window is said"
+        }
+      ]
+    },
+    {
+      "id": "pass-lighthouse-fresh-m1",
+      "kind": "passing",
+      "class": "holding",
+      "session": "dream-0926-022102-aeea",
+      "moment": "m1",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "lighthouse-fresh-m1"
+      },
+      "note": null,
+      "fault": "The dreamer on the grey beach with the key in hand, the dog ahead, the lighthouse far off.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "in_view",
+          "args": {
+            "who": "p1"
+          },
+          "says": "the dreamer is in the picture"
+        },
+        {
+          "kind": "code",
+          "check": "in_view",
+          "args": {
+            "who": "p2"
+          },
+          "says": "the dog is in the picture"
+        },
+        {
+          "kind": "code",
+          "check": "image_of",
+          "args": {
+            "who": "t1"
+          },
+          "says": "the key's sketch is attached"
+        },
+        {
+          "kind": "code",
+          "check": "prompt_has",
+          "args": {
+            "pattern": "lighthouse"
+          },
+          "says": "the lighthouse is said"
+        }
+      ]
+    },
+    {
+      "id": "pass-lighthouse-fresh-m3",
+      "kind": "passing",
+      "class": "style_leak",
+      "session": "dream-0926-022102-aeea",
+      "moment": "m3",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "lighthouse-fresh-m3"
+      },
+      "note": null,
+      "fault": "The dog pausing and looking back; the 'come on' it seems to say is never written in the picture.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "prompt_has",
+          "args": {
+            "section": "last",
+            "pattern": "free of writing"
+          },
+          "says": "every surface stays free of writing"
+        },
+        {
+          "kind": "code",
+          "check": "prompt_lacks",
+          "args": {
+            "pattern": "only writing anywhere"
+          },
+          "says": "'come on' is not taken for writing to draw"
+        }
+      ]
+    },
+    {
+      "id": "pass-lighthouse-fresh-m4",
+      "kind": "passing",
+      "class": "action",
+      "session": "dream-0926-022102-aeea",
+      "moment": "m4",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "lighthouse-fresh-m4"
+      },
+      "note": null,
+      "fault": "The dreamer turning the key in the lighthouse door.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "image_of",
+          "args": {
+            "who": "t1"
+          },
+          "says": "the key's sketch is attached"
+        },
+        {
+          "kind": "code",
+          "check": "prompt_has",
+          "args": {
+            "section": "happens",
+            "pattern": "key in the lighthouse door"
+          },
+          "says": "the key turns in the door"
+        }
+      ]
+    },
+    {
+      "id": "pass-lighthouse-fresh-m5",
+      "kind": "passing",
+      "class": "presence",
+      "session": "dream-0926-022102-aeea",
+      "moment": "m5",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "lighthouse-fresh-m5"
+      },
+      "note": null,
+      "fault": "The dog a few turns up the spiral stairs, the dreamer following below.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "in_view",
+          "args": {
+            "who": "p2"
+          },
+          "says": "the dog is in the picture"
+        },
+        {
+          "kind": "code",
+          "check": "in_view",
+          "args": {
+            "who": "p1"
+          },
+          "says": "the dreamer is in the picture"
+        },
+        {
+          "kind": "code",
+          "check": "prompt_has",
+          "args": {
+            "pattern": "spiral"
+          },
+          "says": "the spiral stairs are said"
+        }
+      ]
+    },
+    {
+      "id": "pass-lighthouse-fresh-m9",
+      "kind": "passing",
+      "class": "pov",
+      "session": "dream-0926-022102-aeea",
+      "moment": "m9",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "lighthouse-fresh-m9"
+      },
+      "note": null,
+      "fault": "Through the dreamer's eyes, out of the window: the red tractor in the field of yellow grass.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "no_dreamer_image",
+          "says": "no image of the dreamer is attached"
+        },
+        {
+          "kind": "code",
+          "check": "prompt_has",
+          "args": {
+            "pattern": "yellow grass"
+          },
+          "says": "the field of yellow grass is said"
+        },
+        {
+          "kind": "code",
+          "check": "prompt_has",
+          "args": {
+            "pattern": "tractor"
+          },
+          "says": "the tractor is said"
+        },
+        {
+          "kind": "ask",
+          "question": "Does this prompt say the dreamer looks out of a window?"
+        }
+      ]
+    },
+    {
+      "id": "pass-lighthouse-fresh-m11",
+      "kind": "passing",
+      "class": "holding",
+      "session": "dream-0926-022102-aeea",
+      "moment": "m11",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "lighthouse-fresh-m11"
+      },
+      "note": null,
+      "fault": "In the cab beside the driver, the paper boat in both hands.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "in_view",
+          "args": {
+            "who": "p1"
+          },
+          "says": "the dreamer is in the picture"
+        },
+        {
+          "kind": "code",
+          "check": "in_view",
+          "args": {
+            "who": "p4"
+          },
+          "says": "the driver is in the picture"
+        },
+        {
+          "kind": "code",
+          "check": "in_view",
+          "args": {
+            "who": "t2"
+          },
+          "says": "the paper boat is in the picture"
+        },
+        {
+          "kind": "ask",
+          "question": "Does this prompt say the dreamer is holding the paper boat?"
+        }
+      ]
+    },
+    {
+      "id": "pass-snow-train-m1",
+      "kind": "passing",
+      "class": "camera_turn_layout",
+      "session": "dream-0926-043003-b0cb",
+      "moment": "m1",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "snow-train-m1"
+      },
+      "note": null,
+      "fault": "The old train at night, snow outside, the grandfather and the dreamer facing each other.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "in_view",
+          "args": {
+            "who": "p1"
+          },
+          "says": "the dreamer is in the picture"
+        },
+        {
+          "kind": "code",
+          "check": "in_view",
+          "args": {
+            "who": "p2"
+          },
+          "says": "the grandfather is in the picture"
+        },
+        {
+          "kind": "code",
+          "check": "prompt_has",
+          "args": {
+            "pattern": "across from"
+          },
+          "says": "they sit across from each other"
+        },
+        {
+          "kind": "ask",
+          "question": "Does this prompt say the dreamer sits across from their grandfather?"
+        }
+      ]
+    },
+    {
+      "id": "pass-snow-train-m6",
+      "kind": "passing",
+      "class": "pov",
+      "session": "dream-0926-043003-b0cb",
+      "moment": "m6",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "snow-train-m6"
+      },
+      "note": null,
+      "fault": "The red door open on warm yellow light, the suitcase in the dreamer’s hand.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "no_dreamer_image",
+          "says": "no image of the dreamer is attached"
+        },
+        {
+          "kind": "code",
+          "check": "prompt_has",
+          "args": {
+            "pattern": "yellow light"
+          },
+          "says": "the warm yellow light is said"
+        }
+      ]
+    },
+    {
+      "id": "pass-library-1-m1",
+      "kind": "passing",
+      "class": "identity",
+      "session": "dream-0926-050424-fdd7",
+      "moment": "m1",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "library-1-m1"
+      },
+      "note": null,
+      "fault": "The big reading room, green glass lamps on every desk, shelves to the ceiling, the dreamer alone.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "image_of",
+          "args": {
+            "who": "l1"
+          },
+          "says": "the library's sketch is attached"
+        },
+        {
+          "kind": "code",
+          "check": "prompt_has",
+          "args": {
+            "pattern": "green"
+          },
+          "says": "the green lamps are said"
+        }
+      ]
+    },
+    {
+      "id": "pass-library-2-m2",
+      "kind": "passing",
+      "class": "state_carried",
+      "session": "dream-0926-052843-6081",
+      "moment": "m2",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "library-2-m2"
+      },
+      "note": null,
+      "fault": "Water sliding in under the double doors.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "state_carried",
+          "args": {
+            "who": "l1",
+            "what": "water"
+          },
+          "says": "the water coming in is this moment’s change"
+        }
+      ]
+    },
+    {
+      "id": "pass-library-2-m3",
+      "kind": "passing",
+      "class": "state_carried",
+      "session": "dream-0926-052843-6081",
+      "moment": "m3",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "library-2-m3"
+      },
+      "note": null,
+      "fault": "The water risen over the desks.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "state_carried",
+          "args": {
+            "who": "l1",
+            "what": "water",
+            "now": "desks"
+          },
+          "says": "the water is over the desks"
+        }
+      ]
+    },
+    {
+      "id": "pass-library-2-m4",
+      "kind": "passing",
+      "class": "action",
+      "session": "dream-0926-052843-6081",
+      "moment": "m4",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "library-2-m4"
+      },
+      "note": null,
+      "fault": "The books lifting off the shelves, open, like birds.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "prompt_has",
+          "args": {
+            "pattern": "open like birds"
+          },
+          "says": "the books open like birds"
+        },
+        {
+          "kind": "code",
+          "check": "state_carried",
+          "args": {
+            "who": "l1",
+            "what": "books"
+          },
+          "says": "the books leaving the shelves is this moment’s change"
+        }
+      ]
+    },
+    {
+      "id": "pass-library-2-m7",
+      "kind": "passing",
+      "class": "action",
+      "session": "dream-0926-052843-6081",
+      "moment": "m7",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "library-2-m7"
+      },
+      "note": null,
+      "fault": "The sister rowing between the shelves on deep water.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "in_view",
+          "args": {
+            "who": "p2"
+          },
+          "says": "the sister is in the picture"
+        },
+        {
+          "kind": "code",
+          "check": "in_view",
+          "args": {
+            "who": "t1"
+          },
+          "says": "the boat is in the picture"
+        },
+        {
+          "kind": "code",
+          "check": "prompt_has",
+          "args": {
+            "section": "happens",
+            "pattern": "rows"
+          },
+          "says": "she rows"
+        }
+      ]
+    },
+    {
+      "id": "pass-library-2-m8",
+      "kind": "passing",
+      "class": "presence",
+      "session": "dream-0926-052843-6081",
+      "moment": "m8",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "library-2-m8"
+      },
+      "note": null,
+      "fault": "The whale, huge, beside the boat in the aisle.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "in_view",
+          "args": {
+            "who": "p3"
+          },
+          "says": "the whale is in the picture"
+        },
+        {
+          "kind": "ask",
+          "question": "Does this prompt say the whale swims under the water?"
+        }
+      ]
+    },
+    {
+      "id": "pass-library-3-m1",
+      "kind": "passing",
+      "class": "state_carried",
+      "session": "dream-0926-055141-6e80",
+      "moment": "m1",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "library-3-m1"
+      },
+      "note": null,
+      "fault": "The dreamer by the doors, water slipping in under them.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "prompt_has",
+          "args": {
+            "section": "happens",
+            "pattern": "water"
+          },
+          "says": "the water coming in under the doors is said"
+        },
+        {
+          "kind": "code",
+          "check": "image_of",
+          "args": {
+            "who": "p1"
+          },
+          "says": "the dreamer's sketch is attached"
+        }
+      ]
+    },
+    {
+      "id": "pass-library-3-m3",
+      "kind": "passing",
+      "class": "state_carried",
+      "session": "dream-0926-055141-6e80",
+      "moment": "m3",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "library-3-m3"
+      },
+      "note": null,
+      "fault": "The water risen over the desks, the dreamer standing in it.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "state_carried",
+          "args": {
+            "who": "l1",
+            "what": "water",
+            "now": "desks"
+          },
+          "says": "the water is over the desks"
+        }
+      ]
+    },
+    {
+      "id": "pass-library-3-m4",
+      "kind": "passing",
+      "class": "state_carried",
+      "session": "dream-0926-055141-6e80",
+      "moment": "m4",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "library-3-m4"
+      },
+      "note": null,
+      "fault": "The sister in the little yellow boat on the flood, the dreamer waist-deep beside it.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "state_carried",
+          "args": {
+            "who": "l1",
+            "what": "water"
+          },
+          "says": "the flood is carried"
+        },
+        {
+          "kind": "code",
+          "check": "in_view",
+          "args": {
+            "who": "p2"
+          },
+          "says": "the sister is in the picture"
+        },
+        {
+          "kind": "code",
+          "check": "in_view",
+          "args": {
+            "who": "t1"
+          },
+          "says": "the boat is in the picture"
+        }
+      ]
+    },
+    {
+      "id": "pass-library-3-m8",
+      "kind": "passing",
+      "class": "pov",
+      "session": "dream-0926-055141-6e80",
+      "moment": "m8",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "library-3-m8"
+      },
+      "note": null,
+      "fault": "From the boat, through the round window: morning, the whole city underwater, rooftops and treetops.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "no_dreamer_image",
+          "says": "no image of the dreamer is attached"
+        },
+        {
+          "kind": "code",
+          "check": "prompt_has",
+          "args": {
+            "pattern": "rooftops"
+          },
+          "says": "the rooftops are said"
+        }
+      ]
+    },
+    {
+      "id": "pass-snow-train-2-m3",
+      "kind": "passing",
+      "class": "holding",
+      "session": "dream-0926-062232-a44a",
+      "moment": "m3",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "snow-train-2-m3"
+      },
+      "note": null,
+      "fault": "He opens the suitcase and turns it toward the dreamer: letters, many of them.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "in_view",
+          "args": {
+            "who": "t1"
+          },
+          "says": "the suitcase is in the picture"
+        },
+        {
+          "kind": "code",
+          "check": "state_carried",
+          "args": {
+            "who": "t1",
+            "now": "\\bopen"
+          },
+          "says": "the suitcase opens here"
+        },
+        {
+          "kind": "code",
+          "check": "prompt_has",
+          "args": {
+            "pattern": "letters"
+          },
+          "says": "the letters are said"
+        }
+      ]
+    },
+    {
+      "id": "pass-snow-train-2-m5",
+      "kind": "passing",
+      "class": "presence",
+      "session": "dream-0926-062232-a44a",
+      "moment": "m5",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "snow-train-2-m5"
+      },
+      "note": null,
+      "fault": "Walking side by side through the deep snow toward the red door standing on its own.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "in_view",
+          "args": {
+            "who": "p1"
+          },
+          "says": "the dreamer is in the picture"
+        },
+        {
+          "kind": "code",
+          "check": "in_view",
+          "args": {
+            "who": "p2"
+          },
+          "says": "the grandfather is in the picture"
+        },
+        {
+          "kind": "code",
+          "check": "in_view",
+          "args": {
+            "who": "t2"
+          },
+          "says": "the red door is in the picture"
+        },
+        {
+          "kind": "code",
+          "check": "prompt_has",
+          "args": {
+            "pattern": "side by side"
+          },
+          "says": "they walk side by side"
+        }
+      ]
+    },
+    {
+      "id": "pass-snow-train-2-m6",
+      "kind": "passing",
+      "class": "holding",
+      "session": "dream-0926-062232-a44a",
+      "moment": "m6",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "snow-train-2-m6"
+      },
+      "note": null,
+      "fault": "The grandfather hands over the suitcase in front of the red door.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "in_view",
+          "args": {
+            "who": "p1"
+          },
+          "says": "the dreamer is in the picture"
+        },
+        {
+          "kind": "code",
+          "check": "in_view",
+          "args": {
+            "who": "p2"
+          },
+          "says": "the grandfather is in the picture"
+        },
+        {
+          "kind": "code",
+          "check": "in_view",
+          "args": {
+            "who": "t1"
+          },
+          "says": "the suitcase is in the picture"
+        },
+        {
+          "kind": "ask",
+          "question": "Does this prompt say the grandfather gives the suitcase to the dreamer?"
+        }
+      ]
+    },
+    {
+      "id": "pass-orchard-m1",
+      "kind": "passing",
+      "class": "presence",
+      "session": "dream-0926-070314-0f40",
+      "moment": "m1",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "orchard-m1"
+      },
+      "note": null,
+      "fault": "The dreamer and Tomas in the tiny brass lift.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "in_view",
+          "args": {
+            "who": "p1"
+          },
+          "says": "the dreamer is in the picture"
+        },
+        {
+          "kind": "code",
+          "check": "in_view",
+          "args": {
+            "who": "p2"
+          },
+          "says": "Tomas is in the picture"
+        }
+      ]
+    },
+    {
+      "id": "pass-orchard-m3",
+      "kind": "passing",
+      "class": "identity",
+      "session": "dream-0926-070314-0f40",
+      "moment": "m3",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "orchard-m3"
+      },
+      "note": null,
+      "fault": "Both waiting in the lift, Tomas still the boy.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "in_view",
+          "args": {
+            "who": "p1"
+          },
+          "says": "the dreamer is in the picture"
+        },
+        {
+          "kind": "code",
+          "check": "in_view",
+          "args": {
+            "who": "p2"
+          },
+          "says": "Tomas is in the picture"
+        },
+        {
+          "kind": "code",
+          "check": "state_carried",
+          "args": {
+            "who": "p2",
+            "what": "age"
+          },
+          "says": "Tomas is still about ten"
+        }
+      ]
+    },
+    {
+      "id": "pass-orchard-m5",
+      "kind": "passing",
+      "class": "identity",
+      "session": "dream-0926-070314-0f40",
+      "moment": "m5",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "orchard-m5"
+      },
+      "note": null,
+      "fault": "Tomas running ahead between the trees, in his school uniform.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "in_view",
+          "args": {
+            "who": "p2"
+          },
+          "says": "Tomas is in the picture"
+        },
+        {
+          "kind": "code",
+          "check": "state_carried",
+          "args": {
+            "who": "p2",
+            "what": "wardrobe"
+          },
+          "says": "Tomas still wears the school uniform"
+        }
+      ]
+    },
+    {
+      "id": "pass-orchard-m6",
+      "kind": "passing",
+      "class": "pov",
+      "session": "dream-0926-070314-0f40",
+      "moment": "m6",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "orchard-m6"
+      },
+      "note": null,
+      "fault": "The horse lowering its nose to the dreamer's hand.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "no_dreamer_image",
+          "says": "no image of the dreamer is attached"
+        },
+        {
+          "kind": "code",
+          "check": "in_view",
+          "args": {
+            "who": "p3"
+          },
+          "says": "the horse is in the picture"
+        },
+        {
+          "kind": "code",
+          "check": "prompt_has",
+          "args": {
+            "pattern": "nose"
+          },
+          "says": "its nose is said"
+        },
+        {
+          "kind": "code",
+          "check": "prompt_has",
+          "args": {
+            "pattern": "\\bhands?\\b"
+          },
+          "says": "the dreamer's hand may show, touching the nose"
+        }
+      ]
+    }
+  ],
+  "unused": [
+    {
+      "source": {
+        "file": "story-pictures.json",
+        "row": "heron-m4"
+      },
+      "note": "Partially because, physically, I think this can be better. Otherwise, I think it is not bad.",
+      "why": "The note names no fault ('physically, I think this can be better'); the judges disagree on what is wrong (the room, Mrs Okafor, the students' clothes). The students' missing clothes are a case from the paired version (heron-m4-clothes)."
+    },
+    {
+      "source": {
+        "file": "paired-verdicts.json",
+        "row": "lighthouse-first-m7",
+        "version": "lighthouse-first-m7-b"
+      },
+      "note": "If we say Dreamer looks for Tomas and finds him gone, then this is wrong. Also, why is Tomas holding the camera, and why is it half disappearing?",
+      "why": "This note is the note of orchard-m7-b word for word (Tomas, the camera), a copy on the wrong row; the person called this version right."
+    }
+  ]
+}
