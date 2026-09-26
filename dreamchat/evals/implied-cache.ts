@@ -27,9 +27,9 @@ type Cache = Record<
 export async function withImplied(
   s: Session,
   opts: { write?: WriteFn; writer?: string; jev: JevFn; jevModel: string; cacheFile?: string },
-): Promise<{ session: Session; cost: ImpliedCost; asked: number; cached: number }> {
+): Promise<{ session: Session; cost: ImpliedCost; asked: number; cached: number; close: string[] }> {
   const b = s.draft?.breakdown && structuredClone(s.draft.breakdown);
-  if (!b || !s.style) return { session: s, cost: zero(), asked: 0, cached: 0 };
+  if (!b || !s.style) return { session: s, cost: zero(), asked: 0, cached: 0, close: [] };
   const file = opts.cacheFile ?? IMPLIED_CACHE;
   const cache: Cache = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : {};
   const writer = opts.writer ?? `${HOST_MODEL} thinking ${IMPLIED_THINKING}`;
@@ -71,20 +71,30 @@ export async function withImplied(
   // The record the reading is given, made as a rebuild makes it (plan.ts rebuild).
   completeViews(b);
   const inputs = recordInputsOf(s);
-  const record = storyRecord(b, inputs.items, s.draft?.readings, { words: inputs.words, style: s.style }).record;
+  // Without an earlier reading of what the moments imply, as the harness reads it (session.ts).
+  const record = storyRecord(
+    b,
+    inputs.items,
+    { ...s.draft?.readings, implied: undefined },
+    { words: inputs.words, style: s.style },
+  ).record;
   const { implied, cost } = await readImplied(b, record, cachedWrite, cachedJev);
   mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, `${JSON.stringify(cache)}\n`);
   const session = structuredClone(s);
   session.draft = { ...session.draft!, readings: { ...(session.draft?.readings ?? {}), implied } };
-  return { session, cost, asked, cached };
+  // Every reading with an answer within 0.1 of the bar, taken or not: where the bar decides.
+  const close = Object.entries(implied).flatMap(([m, xs]) =>
+    xs.filter((x) => x.close).map((x) => `${m} ${x.who} ${x.what} (${x.ok ? 'taken' : 'not taken'})`),
+  );
+  return { session, cost, asked, cached, close };
 }
 
 const zero = (): ImpliedCost => ({ writerCalls: 0, writerIn: 0, writerOut: 0, jevCalls: 0, jevIn: 0, jevOut: 0 });
 
 /** What the readings cost, in all and a dream on average, as an eval prints it. */
-export function costLine(costs: { cost: ImpliedCost; asked: number; cached: number }[]): string {
+export function costLine(costs: { cost: ImpliedCost; asked: number; cached: number; close: string[] }[]): string {
   const sum = (k: keyof ImpliedCost) => costs.reduce((a, x) => a + x.cost[k], 0);
   const per = (k: keyof ImpliedCost) => Math.round(sum(k) / Math.max(1, costs.length));
-  return `what the moments imply, read for ${costs.length} dreams (${costs.reduce((a, x) => a + x.asked, 0)} calls asked now, ${costs.reduce((a, x) => a + x.cached, 0)} from the cache): writer ${sum('writerCalls')} calls, ${sum('writerIn')} tokens in, ${sum('writerOut')} out; Jev ${sum('jevCalls')} calls, ${sum('jevIn')} tokens in, ${sum('jevOut')} out. A dream on average: writer ${per('writerCalls')} calls, ${per('writerIn')} in, ${per('writerOut')} out; Jev ${per('jevCalls')} calls, ${per('jevIn')} in, ${per('jevOut')} out`;
+  return `what the moments imply, read for ${costs.length} dreams (${costs.reduce((a, x) => a + x.asked, 0)} calls asked now, ${costs.reduce((a, x) => a + x.cached, 0)} from the cache): writer ${sum('writerCalls')} calls, ${sum('writerIn')} tokens in, ${sum('writerOut')} out; Jev ${sum('jevCalls')} calls, ${sum('jevIn')} tokens in, ${sum('jevOut')} out. A dream on average: writer ${per('writerCalls')} calls, ${per('writerIn')} in, ${per('writerOut')} out; Jev ${per('jevCalls')} calls, ${per('jevIn')} in, ${per('jevOut')} out. Readings with an answer close to the bar: ${costs.reduce((a, x) => a + x.close.length, 0)}`;
 }

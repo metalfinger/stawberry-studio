@@ -77,7 +77,9 @@ export const standIn = {
  * Pure and deterministic: the environment's switches (DREAMCHAT_RECORD and the like) apply as they
  * do when the harness draws.
  */
-export function rebuild(s: Pick<Session, 'draft' | 'style' | 'build' | 'prep'> & { id?: string }): Rebuilt {
+export function rebuild(
+  s: Pick<Session, 'draft' | 'style' | 'build' | 'prep'> & { id?: string; transcript?: Session['transcript'] },
+): Rebuilt {
   const b = structuredClone(s.draft?.breakdown);
   const style = s.style;
   if (!b || !style) throw new Error(`${s.id ?? 'this dream'} has no breakdown and chosen style yet`);
@@ -90,10 +92,9 @@ export function rebuild(s: Pick<Session, 'draft' | 'style' | 'build' | 'prep'> &
     review: i.review ?? 'approved',
   }));
   completeViews(b);
-  // With DREAMCHAT_RECORD=on, planned from the story record: from what a frozen dream keeps (its
-  // sketches' words, or those its shots were planned with, its readings and look), so a frozen dream
-  // and its saved conversation plan alike.
-  const inputs = recordInputsOf({ build: s.build, prep: s.prep });
+  // With DREAMCHAT_RECORD=on, planned from the story record as drawing reads it (session.ts planRecord):
+  // the sketches' words, the dreamer's messages where the dream keeps them, its readings and look.
+  const inputs = recordInputsOf(s);
   const rec = recordForPlan(b, inputs.items, s.draft?.readings, { words: inputs.words, style });
   const plan = planContinuity(b, rec);
   const pictures = [...buildFrames(b, plan), ...buildGhosts(plan)].map((p): Item => ({

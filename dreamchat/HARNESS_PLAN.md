@@ -135,6 +135,23 @@ between sessions.
 | S8 | S8 | 135 of 326 explore-thread moves point at an older message than the one answered: a move-selection fault, not a reply fault. |
 | best-of-takes branch | S5, S10 | Built, off by default (9371476), parked; touches session.ts; merge after S1 lands. |
 | S3 | S6 | `docs/cut-sheet-map.md` lists every prompt input and where it is computed today; S6's `assembleCut` reads only the sheet S3 builds. |
+## Known debt, by the step that clears it
+
+Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays one change.
+
+- **S3 (the cut sheet).** `nowAt` writes English inside `record.ts` ("the suitcase is shut, in the grandfather's
+  hands"); the record should hand typed facts to the sheet and the words be written once, at assembly. The
+  production is written into Strawberry at the start, from the record as it is then, before what the moments imply
+  is read, so its cuts lack the implied states the pictures are drawn with. `shutAway` shuts anything opened once it
+  is carried to another place, so an umbrella or a book opened there would be closed too; the rule should be a
+  typed fact about containers, not every "open".
+- **S4 (camera rules).** A thing held in a view through the dreamer's eyes is placed at its floor-plan spot, not
+  in the hands that hold it; and the "Nobody else is in the picture" line can stand beside a list of people who
+  are in it.
+- **S6 (`assembleCut`).** The record's new word lists (`FILLS`, `OPENS`, `STATE_VERB`, `NOT_THERE`, `SELF`,
+  `TAKEN`, `HOLDS_NAME`, which has 'bowl' twice) overlap what the implied reading now reads with a model and Jev;
+  each should be retired once the reading covers it. `withoutWords` in `frames.ts` is one more text clean-up to
+  retire with the others.
 
 ## Open questions for the owner
 
@@ -182,3 +199,14 @@ between sessions.
   owner's rule, place readings letting motion and drawing style through, and broken prompt text. Being fixed.
   Lesson for every step's eval: the frozen dreams do not exercise the live path (pins, re-plans, corrections), so
   each step now also needs a live-flow check.
+- 26 Sep: S1 review fixes committed, without Jev (its credits ran out mid-run): a re-plan keeps the implied states;
+  the pin is the record's structure only (looks from the sketches as drawn; a scene is placed again before drawing
+  where presence or holdings differ); implied changes get no in-between picture (frozen 25, as off); places get a
+  second question; broken text fixed. Measured from cached answers: S1 10/13 with 1 unanswered, guards 36/36, off
+  unchanged. **First item for S1, once Jev is back:** the place question, asked as one joined question, rejects the
+  two water levels (library-1 m5 0.28, library-3 m7 0.26) while rightly rejecting snow deep, grass tall and dusk.
+  Split it into four one-fact questions (stays after this moment; a motion; how the pictures are drawn; already in
+  its look), tuned on the review's rejects and the two water levels with the probe
+  `/private/tmp/claude-501/-Users-hirenk-Documents-code-stawberry-studio-dream-chat/88a78d04-d810-4716-af4f-348eec8a3e14/scratchpad/rs-placeq.ts`;
+  then rerun `--step S1` off/on, all cases, the frozen and live corpus with the reading, the in-between counts, and
+  the live-flow check on fresh fake replays (`evals/live-flow.ts`), as one follow-up commit.

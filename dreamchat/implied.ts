@@ -11,7 +11,7 @@ import { type CallResult, type ChatMessage, callDeepseek, type Thinking } from '
 import type { Breakdown, Moment } from './producer';
 import { moments as momentsOf } from './producer';
 import type { ImpliedReading, Readings, StoryRecord } from './record';
-import { nowAt } from './record';
+import { lookAt, nowAt } from './record';
 
 /** How sure Jev must be of each: provisional, as the other facts' bars are. */
 export const IMPLIED_BAR = 0.6;
@@ -41,13 +41,13 @@ export const writeImplied: WriteFn = async (messages) => {
   return { ...second, ms: first.ms + second.ms };
 };
 
-const SYSTEM = `You read one moment of a dream that is being drawn as pictures, one picture per moment, and say what its words imply about how a place or a thing looks now that the picture must show, where the record of the dream does not already say it. Only what must be so for the words to happen: a boat rowed up to a window high in the wall means the water in the room has risen almost to that window; someone opening a door means the door is open; the lights going out means the room is dark; snow that has fallen all night means the snow is deep now.
+const SYSTEM = `You read one moment of a dream that is being drawn as pictures, one picture per moment, and say what its words imply about how a place or a thing looks now that the picture must show, where the record of the dream does not already say it. Only what must be so for the words to happen: a boat rowed up to a window high in the wall means the water in the room has risen almost to that window; someone opening a door means the door is open; the lights going out means the room is dark.
 
-Only a change that lasts: how a part looks from this moment on, until something changes it again (how high the water stands, a door open or shut, a room dark, snow deep, a glass broken). Never a motion or what something is doing (moving, drifting, falling, swimming), never where a thing is or who has it, never how it looked all along (its colour, size, what it is made of), never that it is there.
+Only a change that lasts: how a part looks from this moment on, until something changes it again (how high the water stands, a door open or shut, a room dark, a glass broken). Never a motion or what something is doing (moving, drifting, falling, swimming, leaning), never where a thing is or who has it, never how it looked all along (its colour, size, what it is made of), never that it is there, never how the pictures are drawn (in colour or black and white, like an old film or a painting).
 
 The record says how each part was last written, which can be earlier than this moment: when it has the water up over the desks and now a boat is rowed up to a window near the ceiling, the water is no longer only over the desks, so say where it is now. What you say takes the place of what the record said about that part, so keep in it what of the old still holds (the desks and shelves are still under the water). Say nothing for a part whose record already gives how it is now.
 
-Water, light, snow, air and the like belong to the place they fill: name them by the place's id. Never about people (how they look, where they are, what they do), never a guess of what might be, never a place or thing that is not listed. Name each by its id, the part that changes in one or two words ("water", "door", "light"), and what it is now in a few plain words that read after "is" ("open", "dark", "deep").
+Water, light, air and the like belong to the place they fill: name them by the place's id. Never about people (how they look, where they are, what they do), never a guess of what might be, never a place or thing that is not listed. Name each by its id, the part that changes in one or two words ("water", "door", "light"), and what it is now in a few plain words that read after "is" ("open", "dark", "deep").
 
 Return JSON only: {"implied": [{"who": "l1", "what": "water", "now": "almost up to the ceiling, over the desks and shelves, up to the high round window"}]}, with "implied" empty when the words imply nothing more.`;
 
@@ -84,6 +84,18 @@ export function impliedAsk(b: Breakdown, record: StoryRecord, m: Moment): ChatMe
   ];
 }
 
+/** Text cut to at most `n` characters at a word, never inside one, without a dangling comma or "and". */
+export function clip(text: string, n: number): string {
+  const t = text.trim().replace(/\s+/g, ' ');
+  if (t.length <= n) return t;
+  const cut = t.slice(0, n + 1);
+  const at = cut.lastIndexOf(' ');
+  return (at > 0 ? cut.slice(0, at) : t.slice(0, n)).replace(
+    /(?:[\s,;:-]+|\s+(?:and|or|with|the|a|an|of|to|up|over|in|on|at))+$/i,
+    '',
+  );
+}
+
 /** Words that name no part of a place or thing, only all of it or how it looks. */
 const NO_PART = /^(?:the\s+)?(?:place|thing|look|looks|appearance|state|scene|setting|whole|it)$/i;
 
@@ -111,8 +123,8 @@ export function parseImplied(content: string, b: Breakdown, m: Moment): { who: s
     )
     .map((x) => ({
       who: x.who as string,
-      what: (x.what as string).trim().slice(0, 40),
-      now: (x.now as string).trim().slice(0, 120),
+      what: clip(x.what as string, 40),
+      now: clip(x.now as string, 120),
     }))
     .filter((x) => {
       const key = `${x.who}:${x.what.toLowerCase()}`;
@@ -122,19 +134,28 @@ export function parseImplied(content: string, b: Breakdown, m: Moment): { who: s
     });
 }
 
+/** How near an answer may be to the bar before it is marked as close. */
+export const CLOSE = 0.1;
+
 /**
- * Jev's questions on each proposal, one fact each, and the state it reads: the moment's own words and
- * the moments just before it in the same place. Whether the words mean it; and, of a thing, whether it
- * is how the thing looks. What a place's water, light or door is, is how the place looks; a thing can
- * be set down, held, moved or felt, which is no look of it (the key heavy and cold, the boat set
- * down: meant, 0.90 and 0.93, and neither how it looks, 0.04 and 0.06; the snowball glowing, 0.77).
+ * Jev's questions on each proposal, one fact each, and the state it reads: the moment's own words, the
+ * moments just before and after it in the same place, and the look of the place as the record has it
+ * there. Whether the words mean it; and a second question by what it is of:
+ * - of a thing, whether it is how the thing looks, rather than where it is, what it does or how it
+ *   feels (the key heavy and cold, the boat set down: meant, 0.90 and 0.93, and neither how it looks,
+ *   0.04 and 0.06; the snowball glowing, 0.77);
+ * - of a place, whether it is how the place is from now on: not a motion or something in passing (the
+ *   train leaning into the bend), not how the pictures are drawn (black and white like an old film),
+ *   and not what its look already says. Only what passes both is taken.
  */
 export function impliedQuestions(
   b: Breakdown,
+  record: StoryRecord,
   m: Moment,
   proposed: { who: string; what: string; now: string }[],
 ): { state: string; questions: Record<string, Question> } {
   const name = (id: string) => b.places.find((l) => l.id === id)?.name ?? b.things.find((t) => t.id === id)?.name ?? id;
+  const isPlace = (id: string) => b.places.some((l) => l.id === id);
   const all = momentsOf(b);
   const at = all.findIndex((x) => x.id === m.id);
   const questions: Record<string, Question> = {};
@@ -147,7 +168,17 @@ export function impliedQuestions(
         false: 'it is a guess: possible, but the words do not need it',
       },
     };
-    if (b.things.some((t) => t.id === x.who))
+    if (isPlace(x.who))
+      questions[`lasting_${i}`] = {
+        type: 'noul',
+        instructions: `Is "${name(x.who)}'s ${x.what} is now ${x.now}" how ${name(x.who)} is from this moment on, as the moments after it go on: not a motion or something in passing, not how the pictures are drawn, and not what its look already says?`,
+        criteria: {
+          true: 'a new state of the place that stays: water risen to a height, a door or window opened, the room gone dark',
+          false:
+            'a motion or something in passing, how the pictures are drawn (black and white, like an old film), what its look already says, or what the moments after it contradict',
+        },
+      };
+    else
       questions[`look_${i}`] = {
         type: 'noul',
         instructions: `Is "${name(x.who)}'s ${x.what} is now ${x.now}" how it looks in the picture (its lid or door open or shut, glowing, broken, wet), rather than where it is, what it is doing, or how it feels?`,
@@ -157,10 +188,10 @@ export function impliedQuestions(
         },
       };
   });
-  const before = all
-    .slice(Math.max(0, at - 2), Math.max(0, at))
-    .filter((x) => x.place === m.place)
-    .map((x) => x.action);
+  const same = (xs: Moment[]) => xs.filter((x) => x.place === m.place).map((x) => x.action);
+  const before = same(all.slice(Math.max(0, at - 2), Math.max(0, at)));
+  const after = same(all.slice(at + 1, at + 3));
+  const places = [...new Set(proposed.filter((x) => isPlace(x.who)).map((x) => x.who))];
   const state = JSON.stringify({
     ...(before.length ? { before } : {}),
     moment: {
@@ -168,7 +199,9 @@ export function impliedQuestions(
       ...(m.dream ? { dream: m.dream } : {}),
       ...(m.visual_point ? { must_show: m.visual_point } : {}),
     },
+    ...(after.length ? { after } : {}),
     place: name(m.place),
+    ...(places.length ? { looks: Object.fromEntries(places.map((id) => [name(id), lookAt(record, m.id, id)])) } : {}),
   });
   return { state, questions };
 }
@@ -208,7 +241,7 @@ export async function readImplied(
         proposed = [];
       }
       if (!proposed.length) return [m.id, []];
-      const { state, questions } = impliedQuestions(b, m, proposed);
+      const { state, questions } = impliedQuestions(b, record, m, proposed);
       const call = await jev(state, questions);
       cost.jevCalls += 1;
       cost.jevIn += call.usage?.input_tokens ?? 0;
@@ -219,9 +252,17 @@ export async function readImplied(
       };
       const out = proposed.map((x, i): Implied => {
         const p = noul(`implied_${i}`);
-        if (!questions[`look_${i}`]) return { ...x, basis: 'implied', p, ok: p >= IMPLIED_BAR };
-        const look = noul(`look_${i}`);
-        return { ...x, basis: 'implied', p, look, ok: p >= IMPLIED_BAR && look >= IMPLIED_BAR };
+        const second = questions[`look_${i}`] ? 'look' : 'lasting';
+        const q = noul(`${second}_${i}`);
+        const close = [p, q].some((v) => Math.abs(v - IMPLIED_BAR) < CLOSE);
+        return {
+          ...x,
+          basis: 'implied',
+          p,
+          [second]: q,
+          ok: p >= IMPLIED_BAR && q >= IMPLIED_BAR,
+          ...(close ? { close: true } : {}),
+        };
       });
       log?.(m.id, out);
       return [m.id, out];

@@ -57,7 +57,7 @@ export const slimItem = (i: SavedItem) => ({
 });
 
 /** What was really sent for each moment drawn: its prompt and its images, named as rebuild names them. */
-function sentOf(s: Session, store: string): Record<string, { prompt: string; images: string[] }> {
+export function sentFromStore(s: Session, store: string): Record<string, { prompt: string; images: string[] }> {
   const db = `file:${store}?immutable=1`;
   const sql = (q: string) => spawnSync('sqlite3', ['-json', db, q], { encoding: 'utf8', maxBuffer: 1 << 28 });
   const frames = s.build?.frames ?? [];
@@ -99,7 +99,7 @@ function sentOf(s: Session, store: string): Record<string, { prompt: string; ima
 /** A saved conversation as its fixture. */
 export function freeze(id: string, s: Session, store?: string) {
   const threshold = dreamConfig().confidence_threshold;
-  const sent = store && existsSync(store) ? sentOf(s, store) : {};
+  const sent = store && existsSync(store) ? sentFromStore(s, store) : {};
   return {
     frozen: FROZEN,
     from: id,

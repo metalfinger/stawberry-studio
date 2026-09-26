@@ -688,6 +688,10 @@ export function planContinuity(b: Breakdown, rec?: RecordPlan): ContinuityPlan {
   const ghostOf = new Map<string, GhostPlan>(); // by change key
   for (const m of ms)
     for (const state of ownOf(m)) {
+      // What a moment implies, written nowhere, is carried in words and on the floor plan, never by an
+      // in-between picture of its own: in-between pictures are for an edit carrying several changes,
+      // and a place's in-between picture did not carry its state (the library's water, 26 Sep).
+      if (state.implied) continue;
       const l = state;
       // With the record, a ghost is edited from the one before only if that change has not ended by
       // here: the suitcase shut again is drawn from its sketch, not from its picture open.
@@ -698,8 +702,9 @@ export function planContinuity(b: Breakdown, rec?: RecordPlan): ContinuityPlan {
         id: `g${ghosts.length + 1}`,
         kind: 'state',
         of: l.who,
-        label: `${name(l.who)}, ${l.what} now ${l.now}`,
-        change: `${name(l.who)}'s ${l.what} is now ${l.now}`,
+        label: l.part === '' ? `${name(l.who)}, now ${l.now}` : `${name(l.who)}, ${l.part ?? l.what} now ${l.now}`,
+        change:
+          l.part === '' ? `${name(l.who)} is now ${l.now}` : `${name(l.who)}'s ${l.part ?? l.what} is now ${l.now}`,
         from: null,
         after: prev?.id,
         needs: prev ? [prev.id] : [],

@@ -6,8 +6,7 @@ import type { WriteFn } from '../implied';
 import type { JevFn } from '../jev';
 import { rebuild } from '../plan';
 import { type Breakdown, completeViews } from '../producer';
-import { recordForPlan } from '../record';
-import { applyPrep, planRecord, planShots, reconcileGhosts, type Session } from '../session';
+import { applyPrep, planRecord, planShots, reconcileGhosts, restage, type Session } from '../session';
 
 const detail = (value: string | null = null) => ({ value, said: false });
 
@@ -291,15 +290,18 @@ describe('a plan made again mid-dream', () => {
 });
 
 describe('one story record for planning and drawing (DREAMCHAT_RECORD=on)', () => {
-  // A saved dream (evals/sources): the red door in the snow, its suitcase opened on the train.
+  // A saved dream (evals/sources): the red door in the snow, its suitcase opened on the train (m3).
   const saved = () =>
     JSON.parse(
       readFileSync(join(import.meta.dir, '..', 'evals', 'sources', 'dream-0926-062232-a44a.json'), 'utf8'),
     ) as Session;
-  // The writer finds the suitcase shut when it is handed over; Jev reads that as meant and lasting.
+  // The writer finds the snow deep where they walk through it, unless the record already says so.
   const imply: WriteFn = async (messages) => ({
     content: JSON.stringify({
-      implied: messages[1].content.includes('gives the suitcase') ? [{ who: 't1', what: 'lid', now: 'shut' }] : [],
+      implied:
+        messages[1].content.includes('walk side by side') && !messages[1].content.includes('snow is deep')
+          ? [{ who: 'l2', what: 'snow', now: 'deep' }]
+          : [],
     }),
     model: 'fake',
     ms: 0,
@@ -316,60 +318,100 @@ describe('one story record for planning and drawing (DREAMCHAT_RECORD=on)', () =
           usage: null,
         }
       : { questions, state, answers: null, error: 'not answered here', ms: 0, usage: null };
-
-  test('drawing reads the record the shots were planned from, whatever is drawn or said after', async () => {
+  const withRecord = async (fn: () => Promise<void>) => {
     const was = process.env.DREAMCHAT_RECORD;
     process.env.DREAMCHAT_RECORD = 'on';
     try {
-      const s = saved();
-      // When the shots are planned, no sketch is drawn yet, and the dreamer has said this much.
-      const said = ['I was on an old train with my grandfather and he had his old brown suitcase on his knees.'];
-      const waiting = s.build!.items.map((i) => ({ ...i, status: 'waiting' as const, mediaId: undefined }));
-      s.build!.items = waiting;
-      s.transcript = said.map((content) => ({ role: 'user', content })) as Session['transcript'];
-      s.prep = undefined;
-      const prep = await planShots(
-        s.draft!.breakdown!,
-        s.style!,
-        { jev, imply },
-        { items: s.build!.items, words: said, readings: s.draft?.readings },
-      );
-      applyPrep(s, prep);
-      completeViews(s.draft!.breakdown!);
-      const planned = planRecord(s);
-      expect(planned).toBeDefined();
-      // The reading made while planning is the dream's, and in the record both read.
-      expect(s.draft?.readings?.implied?.m6?.map((x) => [x.who, x.what, x.ok])).toEqual([['t1', 'lid', true]]);
-      expect(planned!.moments.m6.own.map((x) => `${x.who} ${x.what}: ${x.now}`)).toContain('t1 lid: shut');
-
-      // Then the sketches are drawn, the suitcase's from words the dreamer changed, and more is said.
-      s.build!.items = waiting.map((i) => ({
-        ...i,
-        status: 'ready' as const,
-        mediaId: `sketch-${i.id}`,
-        ...(i.id === 't1'
-          ? { fields: { ...i.fields, appearance: { value: 'a small red cardboard suitcase', said: true } } }
-          : {}),
-      }));
-      s.transcript = [
-        ...s.transcript,
-        { role: 'user', content: 'The suitcase was red, actually, and small.' },
-      ] as Session['transcript'];
-      const drawing = planRecord(s);
-      expect(drawing).toEqual(planned);
-      // The record the dream as it now stands would give is another: drawing no longer reads that one.
-      const now = recordForPlan(s.draft!.breakdown!, s.build!.items, s.draft?.readings, {
-        words: s.transcript.filter((e) => e.role === 'user').map((e) => e.content),
-        style: s.style,
-      });
-      expect(now).not.toEqual(planned);
-      // Saved and made again as the evals make it, the dream reads the same record.
-      expect(rebuild(s).rec).toEqual(planned);
+      await fn();
     } finally {
       if (was === undefined) delete process.env.DREAMCHAT_RECORD;
       else process.env.DREAMCHAT_RECORD = was;
     }
-  });
+  };
+  // Planned at the start, before any sketch is drawn, as the live chat plans it.
+  const plannedAtStart = async () => {
+    const s = saved();
+    const said = ['I was on an old train with my grandfather and he had his old brown suitcase on his knees.'];
+    s.build!.items = s.build!.items.map((i) => ({ ...i, status: 'waiting' as const, mediaId: undefined }));
+    s.transcript = said.map((content) => ({ role: 'user', content })) as Session['transcript'];
+    s.prep = undefined;
+    const prep = await planShots(
+      s.draft!.breakdown!,
+      s.style!,
+      { jev, imply },
+      { items: s.build!.items, words: said, readings: s.draft?.readings },
+    );
+    applyPrep(s, prep);
+    completeViews(s.draft!.breakdown!);
+    return s;
+  };
+
+  test('a correction made while sketching reaches the pictures drawn after it', () =>
+    withRecord(async () => {
+      const s = await plannedAtStart();
+      expect(s.prep?.record?.m3.own).toContain('t1@m3:lid');
+      // While sketching, the dreamer corrects the suitcase, and its sketch is drawn from the correction.
+      s.build!.items = s.build!.items.map((i) => ({
+        ...i,
+        status: 'ready' as const,
+        mediaId: `sketch-${i.id}`,
+        ...(i.id === 't1' ? { fields: { ...i.fields, materials: { value: 'red cardboard', said: true } } } : {}),
+      }));
+      s.transcript = [
+        ...s.transcript,
+        { role: 'user', content: 'The suitcase was red cardboard, actually.' },
+      ] as Session['transcript'];
+      // Who is where and who holds what are as planned: nothing is placed again. (Drawn, the field's
+      // sketch shows its snow deep, so that change is none; the structure kept says so.)
+      expect(await restage(s, {})).toEqual([]);
+      expect(s.prep?.record?.m5.own).not.toContain('l2@m5:snow');
+      // The in-between picture of the suitcase opened is drawn from how it looks now, as corrected, and
+      // so is every picture with it; a rebuild of the saved dream reads the same record as drawing.
+      const r = rebuild(s);
+      expect(r.rec).toEqual(planRecord(s));
+      const lid = r.pictures.find((p) => p.kind === 'ghost' && p.item.ghost?.key === 't1@m3:lid');
+      // Its look as the sketch now has it (its name is still its name).
+      expect(lid?.prompt).toMatch(/\(thing\): [^\n]*red cardboard/);
+      expect(lid?.prompt).not.toMatch(/\(thing\): [^\n]*brown leather/);
+      expect(r.pictures.find((p) => p.id === 'm2')?.prompt).toContain('red cardboard');
+    }));
+
+  test('a scene whose record changed since its shots were planned is placed again, and only that scene', () =>
+    withRecord(async () => {
+      const s = await plannedAtStart();
+      const planned = structuredClone(s.prep!.record!);
+      // As if the shots had been planned with nobody holding the suitcase at m6.
+      expect(s.prep!.record!.m6.held.t1).toBeDefined();
+      s.prep!.record!.m6 = { ...s.prep!.record!.m6, held: {} };
+      const briefed: string[] = [];
+      const again = await restage(s, {
+        shot: async (action) => {
+          briefed.push(action);
+          return 'A shot.';
+        },
+      });
+      expect(again).toEqual(['s2']);
+      expect(briefed.length).toBeGreaterThan(0);
+      expect(briefed.every((a) => s.draft!.breakdown!.scenes[1].moments.some((m) => m.action === a))).toBe(true);
+      // The structure kept is the one drawing reads, so it is not placed again twice.
+      expect(s.prep!.record).toEqual(planned);
+      expect(await restage(s, {})).toEqual([]);
+    }));
+
+  test('planned again, the dream keeps what its moments imply', () =>
+    withRecord(async () => {
+      const s = await plannedAtStart();
+      const first = structuredClone(s.draft?.readings?.implied);
+      expect(first?.m5?.map((x) => [x.who, x.what, x.now, x.ok])).toEqual([['l2', 'snow', 'deep', true]]);
+      const prep = await planShots(
+        s.draft!.breakdown!,
+        s.style!,
+        { jev, imply },
+        { items: s.build!.items, words: [], readings: s.draft?.readings },
+      );
+      applyPrep(s, prep);
+      expect(s.draft?.readings?.implied).toEqual(first);
+    }));
 
   test('off, planning keeps nothing of the record and asks the writer nothing', async () => {
     const was = process.env.DREAMCHAT_RECORD;

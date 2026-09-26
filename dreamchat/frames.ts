@@ -439,9 +439,13 @@ export function framePrompt(
       const look = lookOf(s, ['appearance', 'materials']);
       // A part of it that has changed is no longer as its sketch shows, as for a person.
       const changed = [...(plan?.own ?? []), ...(plan?.states ?? [])].filter((st) => st.who === s.id);
-      const except = changed.length
-        ? ` Except its ${changed.map((st) => `${st.what}, which is no longer as it shows: it is now ${st.now}`).join('; ')}.`
-        : '';
+      // With the record, each by the part it names, or the whole of it: "Except its the block of ice"
+      // named the thing as a part of itself (ice head, 26 Sep).
+      const except = !changed.length
+        ? ''
+        : changed.some((st) => st.part !== undefined)
+          ? ` Except ${changed.map((st) => `${st.part === '' ? 'the whole of it' : `its ${st.part ?? st.what}`}, which is no longer as it shows: it is now ${st.now}`).join('; ')}.`
+          : ` Except its ${changed.map((st) => `${st.what}, which is no longer as it shows: it is now ${st.now}`).join('; ')}.`;
       attach(
         s.mediaId,
         'prop',

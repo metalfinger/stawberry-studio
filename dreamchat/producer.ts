@@ -79,7 +79,18 @@ export type Moment = {
 /** A lasting change in force at a moment: who changed, what, into what, and since which moment. */
 /** `whole`: it has turned into something else altogether (Jev's reading; the words' where it gave none). */
 /** `key`: the story record's key for the change ('p1@m3:hair'), where the plan was made from the record. */
-export type State = { who: string; what: string; now: string; since: string; whole?: boolean; key?: string };
+/** `implied`: written nowhere, implied by the moment's words (the record's reading): carried in words only. */
+/** `part`: with the record, the part as a picture is told it; empty where it is the thing itself. */
+export type State = {
+  who: string;
+  what: string;
+  now: string;
+  since: string;
+  whole?: boolean;
+  key?: string;
+  implied?: boolean;
+  part?: string;
+};
 
 export type Scene = {
   id: string;

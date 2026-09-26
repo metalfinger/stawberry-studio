@@ -118,13 +118,15 @@ import { IMPLIED_BAR, readImplied, type WriteFn } from './implied';
 import {
   diffPlan,
   type Readings,
+  diffStructure,
   type RecordInputs,
   type RecordOptions,
+  type RecordStructure,
   recordForPlan,
   recordInputsOf,
-  recordItems,
   recordMode,
   storyRecord,
+  structureOf,
 } from './record';
 import { cutRecord, type WriteResult } from './strawberry';
 
@@ -272,10 +274,11 @@ export type Prep = {
   /** How long the planning took. */
   ms: number;
   /**
-   * With DREAMCHAT_RECORD=on: what the story record was made from while planning, the sketches' words
-   * and the dreamer's messages then, which drawing reads too; and the readings made then.
+   * With DREAMCHAT_RECORD=on: the structure of the story record the cameras were placed from (who is
+   * there or gone, who holds what, the changes and where they end, never how anything looks), and the
+   * readings made while planning, the dream's own from then on.
    */
-  record?: RecordInputs;
+  record?: RecordStructure;
   readings?: Readings;
 };
 
@@ -378,64 +381,22 @@ export async function planShots(
       if (again) blocked = (await planFacts(deps.jev, again, failing)).breakdown;
     }
   }
-  const dreamer = blocked.people.find((p) => p.is_dreamer)?.id;
   const prep: Prep = { basedOn: planKey(b), blocking: {}, shots: {}, previs: {}, changes: found, ms: 0 };
-  // With DREAMCHAT_RECORD=on, the story record is made from the sketches' words and the dreamer's
-  // messages as they stand now, kept on the prep so that drawing reads the same record, with what each
-  // moment's words imply read once here and kept in the dream's readings.
-  const pinned: RecordInputs = { items: recordItems(inputs.items), words: [...inputs.words] };
+  // With DREAMCHAT_RECORD=on, what each moment's words imply is read once here and kept in the dream's
+  // readings; the story record is made from the sketches' words and the dreamer's messages as they
+  // stand now.
   let readings = inputs.readings;
   if (recordMode() === 'on') {
-    prep.record = pinned;
-    const implied = await impliedReadings(blocked, style, { ...pinned, readings }, deps);
+    const implied = await impliedReadings(blocked, style, { ...inputs, readings }, deps);
     if (implied) {
       readings = { ...readings, implied };
       prep.readings = { implied };
     }
   }
+  const recOf = (plans: Breakdown) => recordForPlan(plans, inputs.items, readings, { words: inputs.words, style });
   // Every camera of a set of plans placed, rendered and briefed, and each shot checked against its moment.
-  const shoot = async (plans: Breakdown, into: Prep, scenes?: string[], suffix = '') => {
-    // With DREAMCHAT_RECORD=on, the cameras are placed from the story record's floor plans.
-    const rec = recordForPlan(plans, pinned.items, readings, { words: pinned.words, style });
-    const plan = planContinuity(plans, rec);
-    await Promise.all(
-      plan.cuts
-        .filter((c) => c.view && c.eye && (!scenes || scenes.includes(c.scene)))
-        .map(async (c) => {
-          const called = calledIn(plans, c);
-          const scene = plans.scenes.find((sc) => sc.id === c.scene);
-          const at = scene?.moments.findIndex((x) => x.id === c.id) ?? -1;
-          const m = scene?.moments[at];
-          const where = shotPlan(plans, c.id, rec);
-          if (where && deps.dir) {
-            const path = join(deps.dir, `plan-${c.id}${suffix}.png`);
-            mkdirSync(deps.dir, { recursive: true });
-            await Bun.write(
-              path,
-              previsImage(where, c.eye!, m?.eyes === 'dreamer' && dreamer ? [dreamer] : [], called),
-            );
-            into.previs[c.id] = path;
-          }
-          if (deps.shot && m) {
-            const before = (scene?.moments ?? []).slice(0, at).map((x) => x.action);
-            const text = await deps
-              .shot(m.action, c.view!, mediumOf(style), (c.sees ?? []).map(called), before)
-              .catch(() => null);
-            if (text) into.shots[c.id] = { text, view: c.view! };
-          }
-          if (deps.jev && m)
-            (into.storyboard ??= {})[c.id] = await storyboardCheck(
-              deps.jev,
-              m,
-              c.view!,
-              called,
-              dreamer,
-              around(plans, c, m, called, dreamer),
-              c.framing ?? [],
-            );
-        }),
-    );
-  };
+  const shoot = (plans: Breakdown, into: Prep, scenes?: string[], suffix = '') =>
+    shootScenes(plans, style, deps, recOf(plans), into, scenes, suffix);
   await shoot(blocked, prep);
   // A scene with a moment "storyboard complete?" held is planned again, several ways at once: once
   // told what each such moment's camera saw and what the check found, and afresh; each scene keeps
@@ -517,11 +478,105 @@ export async function planShots(
   );
   if (judged)
     prep.leaves = Object.fromEntries(draft.scenes.flatMap((sc) => sc.moments.map((m) => [m.id, m.leaves ?? []])));
+  // What the cameras were placed from, kept with them: who is there or gone, who holds what, and the
+  // changes and where they end. Never how anything looks, which drawing takes from the sketches as
+  // they are by then (restage).
+  const planned = recOf(blocked);
+  if (planned) prep.record = structureOf(planned);
   prep.ms = Date.now() - t0;
   // The story record beside the plan, logged and changing nothing (DREAMCHAT_RECORD=shadow). The plan
   // is worked out inside its guard, so a plan that cannot be made never throws away the prep.
   if (recordMode() !== 'off') shadowRecord('plan', blocked, () => planContinuity(blocked));
   return prep;
+}
+
+/**
+ * Every camera of a set of plans placed, rendered and briefed, and each shot checked against its moment:
+ * those of `scenes`, or all. With DREAMCHAT_RECORD=on (`rec`), the cameras are placed from the story
+ * record's floor plans.
+ */
+export async function shootScenes(
+  plans: Breakdown,
+  style: StyleOption,
+  deps: { shot?: StoreDeps['shot']; jev?: JevFn; dir?: string },
+  rec: RecordPlan | undefined,
+  into: Pick<Prep, 'previs' | 'shots' | 'storyboard'>,
+  scenes?: string[],
+  suffix = '',
+): Promise<void> {
+  const dreamer = plans.people.find((p) => p.is_dreamer)?.id;
+  const plan = planContinuity(plans, rec);
+  await Promise.all(
+    plan.cuts
+      .filter((c) => c.view && c.eye && (!scenes || scenes.includes(c.scene)))
+      .map(async (c) => {
+        const called = calledIn(plans, c);
+        const scene = plans.scenes.find((sc) => sc.id === c.scene);
+        const at = scene?.moments.findIndex((x) => x.id === c.id) ?? -1;
+        const m = scene?.moments[at];
+        const where = shotPlan(plans, c.id, rec);
+        if (where && deps.dir) {
+          const path = join(deps.dir, `plan-${c.id}${suffix}.png`);
+          mkdirSync(deps.dir, { recursive: true });
+          await Bun.write(path, previsImage(where, c.eye!, m?.eyes === 'dreamer' && dreamer ? [dreamer] : [], called));
+          into.previs[c.id] = path;
+        }
+        if (deps.shot && m) {
+          const before = (scene?.moments ?? []).slice(0, at).map((x) => x.action);
+          const text = await deps
+            .shot(m.action, c.view!, mediumOf(style), (c.sees ?? []).map(called), before)
+            .catch(() => null);
+          if (text) into.shots[c.id] = { text, view: c.view! };
+        }
+        if (deps.jev && m)
+          (into.storyboard ??= {})[c.id] = await storyboardCheck(
+            deps.jev,
+            m,
+            c.view!,
+            called,
+            dreamer,
+            around(plans, c, m, called, dreamer),
+            c.framing ?? [],
+          );
+      }),
+  );
+}
+
+/**
+ * Before the moments are drawn (DREAMCHAT_RECORD=on): the story record as the dream stands by now, its
+ * sketches drawn and every correction made while sketching in them, against the structure the shots
+ * were planned from. Looks always come from the sketches as they are. Where who is in view, there or
+ * gone, or who holds what differs, what the cameras are placed from, the scenes it differs in are
+ * placed, rendered and briefed again; where only the changes in force differ (a drawn sketch already
+ * showing the snow deep makes that change none), nothing is placed again. Either way it is logged, and
+ * the structure kept is the new one. Returns the scenes placed again.
+ */
+export async function restage(
+  s: Session,
+  deps: { shot?: StoreDeps['shot']; jev?: JevFn; dir?: string },
+): Promise<string[]> {
+  const b = s.draft?.breakdown;
+  const pinned = s.prep?.record;
+  const rec = b ? planRecord(s) : undefined;
+  if (!b || !s.style || !s.prep || !pinned || !rec) return [];
+  const now = structureOf(rec);
+  const differs = diffStructure(pinned, now);
+  if (!differs.length) return [];
+  const placed = differs.filter((d) => d.what.some((f) => f !== 'own' && f !== 'carried'));
+  const scenes = b.scenes
+    .filter((sc) => sc.moments.some((m) => placed.some((d) => d.moment === m.id)))
+    .map((sc) => sc.id);
+  recordJev({
+    kind: 'transition',
+    stage: 'record',
+    to: 'plan',
+    facts: [],
+    decision: scenes.length ? 'restaged' : 'changes differ',
+    reason: `the record has changed since the shots were planned, in ${differs.map((d) => `${d.moment} (${d.what.join(', ')})`).join('; ')}: ${scenes.length ? `${scenes.join(', ')} placed again` : 'nothing to place again'}`,
+  });
+  if (scenes.length) await shootScenes(b, s.style, deps, rec, s.prep, scenes, '-drawn');
+  s.prep.record = now;
+  return scenes;
 }
 
 /**
@@ -537,7 +592,14 @@ async function impliedReadings(
 ): Promise<Readings['implied'] | undefined> {
   if (!deps.imply || !deps.jev) return undefined;
   try {
-    const record = storyRecord(b, inputs.items, inputs.readings, { words: inputs.words, style }).record;
+    // The writer is told what the record holds without an earlier reading of what the moments imply:
+    // told the water has risen, it would propose nothing, and planning again would drop the rise.
+    const record = storyRecord(
+      b,
+      inputs.items,
+      { ...inputs.readings, implied: undefined },
+      { words: inputs.words, style },
+    ).record;
     const { implied, cost } = await readImplied(b, record, deps.imply, deps.jev, (moment, read) =>
       recordJev({
         kind: 'transition',
@@ -556,8 +618,18 @@ async function impliedReadings(
                   ok: x.look >= IMPLIED_BAR,
                 },
               ]),
+          ...(x.lasting === undefined
+            ? []
+            : [
+                {
+                  question: `from now on: ${x.who} ${x.what}: ${x.now}`,
+                  answer: x.lasting,
+                  bar: IMPLIED_BAR,
+                  ok: x.lasting >= IMPLIED_BAR,
+                },
+              ]),
         ]),
-        decision: `${read.filter((x) => x.ok).length} of ${read.length} implied`,
+        decision: `${read.filter((x) => x.ok).length} of ${read.length} implied${read.some((x) => x.close) ? `, ${read.filter((x) => x.close).length} close to the bar` : ''}`,
         reason: `the writer proposed ${read.map((x) => `${x.who}'s ${x.what} "${x.now}"`).join('; ')}; Jev read each on the moment's words`,
       }),
     );
@@ -641,7 +713,10 @@ export function shadowRecord(
  * dream as it stands, its sketches' words, the dreamer's own messages and the chosen look. Nothing
  * otherwise, and the plan is made as it always was.
  */
-export function planRecord(s: Session, b = s.draft?.breakdown): RecordPlan | undefined {
+export function planRecord(
+  s: Pick<Session, 'build' | 'transcript' | 'draft' | 'style'>,
+  b = s.draft?.breakdown,
+): RecordPlan | undefined {
   if (!b) return undefined;
   const { items, words } = recordInputsOf(s);
   return recordForPlan(b, items, s.draft?.readings, { words, style: s.style });
@@ -1878,6 +1953,14 @@ export class SessionStore {
       [...this.reviews.entries()].filter(([k]) => k.startsWith(`${s.id}:`)).map(([, p]) => p.catch(() => undefined)),
     );
     const ids = s.production?.result?.ids ?? {};
+    // With DREAMCHAT_RECORD=on, the record read now, from the sketches as drawn: a scene whose structure
+    // differs from the one its shots were planned from is placed again first.
+    if (recordMode() === 'on')
+      await restage(s, {
+        shot: this.deps.shot,
+        jev: this.deps.jev,
+        dir: this.deps.dir ? join(this.deps.dir, s.id) : undefined,
+      }).catch(() => []);
     const plan = planContinuity(s.draft.breakdown, planRecord(s));
     s.build.plan = plan;
     // The story record beside the plan the moments are drawn from, logged and changing nothing: made

@@ -186,10 +186,15 @@ export type ImpliedReading = {
   what: string;
   now: string;
   basis: 'implied';
-  /** Jev's reading that the moment's words mean it; and, of a thing, that it is how the thing looks. */
+  /**
+   * Jev's readings: that the moment's words mean it; of a thing, that it is how the thing looks; of a
+   * place, that it is how the place is from then on. `close`: an answer within 0.1 of the bar.
+   */
   p: number;
   look?: number;
+  lasting?: number;
   ok: boolean;
+  close?: true;
 };
 
 export type RecordOptions = {
@@ -1015,13 +1020,20 @@ function passing(ctx: Ctx): Violation[] {
       const part = partName(whole ? e.name : x.what);
       if (Object.values(changes).some((c) => c.who === e.id && c.at === m.id && !c.copy && (c.part ?? c.what) === part))
         continue;
+      // Each fact once: a clause another of its parts already says by here is left out ("the water is
+      // high enough to row the boat, with books floating open like birds", the books said of the books).
+      const said = Object.values(changes)
+        .filter((c) => c.who === e.id && !c.copy && (c.part ?? c.what) !== part && at(ctx, c.at) <= at(ctx, m.id))
+        .map((c) => wordsOf(`${c.what} ${c.now}`));
+      const [first, ...rest] = x.now.split(/\s*[,;]\s*/);
+      const now = [first, ...rest.filter((k) => !said.some((w) => covers(w, pieceWords(k))))].join(', ');
       const c = addChange(ctx, {
         who: e.id,
         at: m.id,
         kind: e.kind === 'place' ? 'place' : 'part',
         part,
         what: x.what,
-        now: x.now,
+        now,
         told: m.told,
         from: `implied:${m.id}`,
         basis: 'implied',
@@ -1031,7 +1043,7 @@ function passing(ctx: Ctx): Violation[] {
         who: e.id,
         at: m.id,
         key: c.key,
-        detail: `${m.id}'s words imply ${whole ? e.called : `${poss(e.called)} ${x.what}`} is now ${quote(x.now)}: a change there, implied`,
+        detail: `${m.id}'s words imply ${whole ? e.called : `${poss(e.called)} ${x.what}`} is now ${quote(now)}: a change there, implied`,
         fix: 'add',
       });
     }
@@ -1782,6 +1794,15 @@ function saidByThem(ctx: Ctx): Violation[] {
 }
 
 /** The field a folded first look goes in. */
+/**
+ * A change as a clause of a look: its part and what it is now, the part named once. "water starts
+ * coming under the doors" is said as it is, never "water water starts coming under the doors".
+ */
+function partText(c: Pick<Change, 'what' | 'now'>): string {
+  const part = bare(c.what);
+  return part && !LABEL.has(part) && !c.now.toLowerCase().includes(part) ? `${part} ${c.now}` : c.now;
+}
+
 function foldField(e: RecElement, part: string | null): string {
   if (e.kind === 'place') return 'landmarks';
   if (e.kind === 'thing') return 'appearance';
@@ -1804,8 +1825,7 @@ function firstLook(ctx: Ctx): Violation[] {
     const e = ctx.record.elements[c.who];
     if (!e || firstShown(ctx, c.who) !== c.at) continue;
     const field = foldField(e, c.part);
-    const part = bare(c.what);
-    const text = part && !LABEL.has(part) && !c.now.toLowerCase().includes(part) ? `${part} ${c.now}` : c.now;
+    const text = partText(c);
     const has = Object.values(e.base).flat();
     if (!has.some((f) => covers(wordsOf(f.text), pieceWords(text))))
       (e.base[field] ??= []).push({
@@ -2475,7 +2495,7 @@ export function lookBefore(
       (x) =>
         x.kind !== 'becomes' && x.part !== c.part && (!turned || (order.get(x.at) ?? 0) >= (order.get(turned.at) ?? 0)),
     )
-    .map((x): Fact => ({ text: `${x.what} ${x.now}`, basis: x.told ? 'read' : 'guessed', from: x.key }));
+    .map((x): Fact => ({ text: partText(x), basis: x.told ? 'read' : 'guessed', from: x.key }));
   return { of: c.who, ...(turned ? { becomes: turned.now } : {}), facts: [...facts, ...parts] };
 }
 
@@ -2485,25 +2505,35 @@ export function lookBefore(
  * ("the dreamer looks down and sees they are little again", grandma's kitchen, 26 Sep). For a check
  * that reads a final prompt against the record.
  */
+/**
+ * How someone or something looks at a moment, as the record has it: the first clauses of its look, and
+ * each changed part as it is by then, or what it has turned into.
+ */
+export function lookAt(record: StoryRecord, momentId: string, id: string): string {
+  const m = record.moments.find((x) => x.id === momentId);
+  const e = record.elements[id];
+  if (!m || !e) return '';
+  const seen = m.looks[id];
+  if (seen?.becomes) return `turned into ${seen.becomes}`;
+  const their = living(e) ? 'their' : 'its';
+  const facts = LOOK_FIELDS[group(e)]
+    .flatMap((k) => (e.base[k] ?? []).map((f) => f.text))
+    .slice(0, 6)
+    .join('; ');
+  return [facts, ...Object.entries(seen?.parts ?? {}).map(([p, v]) => `${their} ${p} now ${v}`)]
+    .filter(Boolean)
+    .join('; ');
+}
+
 export function describeAt(record: StoryRecord, momentId: string): string {
   const m = record.moments.find((x) => x.id === momentId);
   if (!m) return '';
-  const their = (e: RecElement | undefined) => (e && living(e) ? 'their' : 'its');
   const lookOf = (id: string) => {
     const e = record.elements[id];
     if (!e) return id;
     const seen = m.looks[id];
-    const facts = LOOK_FIELDS[group(e)]
-      .flatMap((k) => (e.base[k] ?? []).map((f) => f.text))
-      .slice(0, 6)
-      .join('; ');
-    const now = seen?.becomes
-      ? `turned into ${seen.becomes}`
-      : [facts, ...Object.entries(seen?.parts ?? {}).map(([p, v]) => `${their(e)} ${p} now ${v}`)]
-          .filter(Boolean)
-          .join('; ');
     const held = seen?.heldBy ? `; in ${poss(record.elements[seen.heldBy]?.called ?? seen.heldBy)} hands` : '';
-    return `${e.called}${e.kind === 'crowd' ? ' (a crowd)' : ''}: ${now || 'no look given'}${held}`;
+    return `${e.called}${e.kind === 'crowd' ? ' (a crowd)' : ''}: ${lookAt(record, m.id, id) || 'no look given'}${held}`;
   };
   const place = m.place ? `, in ${lookOf(m.place)}` : '';
   const who = m.shows.map((id) => `- ${lookOf(id)}`);
@@ -2656,6 +2686,15 @@ export function nowAt(record: StoryRecord, momentId: string): { of: string; text
   return out;
 }
 
+/**
+ * The part a change names, as a picture is told it: "lid" of the suitcase, and nothing where the part
+ * is the thing itself ("the block of ice" or "ice" of the block of ice). Said so, a change reads "the
+ * block of ice is now melting", never "the block of ice's the block of ice".
+ */
+export function partOf(name: string, what: string): string {
+  return withoutName(what.trim(), name).replace(/^(?:the|its|his|her|their)\s+/i, '');
+}
+
 /** "Is" or "are", by what a name is about: "the two bowls of noodles are", "Tomas is". */
 const isAre = (name: string) => {
   const h = headOf(name);
@@ -2706,13 +2745,15 @@ function partSays(e: RecElement, what: string, now: string, afterIs = false): st
 }
 
 /** A change as the continuity plan carries it, known by its key. */
-const asState = (c: Change): State => ({
+const asState = (c: Change, name: string): State => ({
   who: c.who,
   what: c.what,
   now: c.now,
   since: c.at,
   whole: c.kind === 'becomes',
   key: c.key,
+  ...(c.basis === 'implied' ? { implied: true } : {}),
+  part: partOf(name, c.what),
 });
 
 /** What the continuity plan reads of the record, moment by moment (continuity.ts, RecordPlan). */
@@ -2722,7 +2763,7 @@ export function forPlan(record: StoryRecord): RecordPlan {
     keys
       .map((k) => record.changes[k])
       .filter((c): c is Change => !!c && c.kind !== 'presence')
-      .map(asState);
+      .map((c) => asState(c, record.elements[c.who]?.name ?? ''));
   const before: RecordPlan['before'] = {};
   const ends: RecordPlan['ends'] = {};
   for (const c of Object.values(record.changes)) {
@@ -2779,37 +2820,69 @@ export function recordForPlan(
 /** What a dream's story record is made from besides its breakdown: its sketches' words and the dreamer's own messages. */
 export type RecordInputs = { items: Item[]; words: string[] };
 
-/**
- * The sketches' words as a record reads them, a copy that later edits to the sketches leave as it was:
- * who and what each is, its look, and whether it is drawn.
- */
-export const recordItems = (items: Item[]): Item[] =>
-  items.map((i) => ({
-    id: i.id,
-    kind: i.kind,
-    name: i.name,
-    fields: structuredClone(i.fields),
-    status: i.status,
-    version: i.version,
-    ...(i.mediaId ? { mediaId: i.mediaId } : {}),
-    ...(i.extras ? { extras: i.extras } : {}),
-    ...(i.several !== undefined ? { several: i.several } : {}),
-    ...(i.isDreamer ? { isDreamer: i.isDreamer } : {}),
-  }));
-
-/**
- * What a dream's record is made from: the sketches' words and the dreamer's messages as they stood
- * when its shots were planned (kept on the prep), while the dream has the same sketches, so planning
- * and drawing read one record; else as they stand now.
- */
+/** What a dream's record is made from as the dream stands: its sketches' words and the dreamer's messages. */
 export function recordInputsOf(s: {
   build?: { items?: Item[] } | null;
   transcript?: { role: string; content: string }[];
-  prep?: { record?: RecordInputs } | null;
 }): RecordInputs {
-  const pinned = s.prep?.record;
-  const items = s.build?.items ?? [];
-  const ids = (xs: Item[]) => JSON.stringify(xs.map((i) => i.id).sort());
-  if (pinned && ids(pinned.items) === ids(items)) return pinned;
-  return { items, words: (s.transcript ?? []).filter((e) => e.role === 'user').map((e) => e.content) };
+  return {
+    items: s.build?.items ?? [],
+    words: (s.transcript ?? []).filter((e) => e.role === 'user').map((e) => e.content),
+  };
+}
+
+/**
+ * What a record says happens, without how anything looks: by moment, who and what is in view, there or
+ * gone, who holds what, and the changes made there and still in force, by key. What the cameras are
+ * placed from; the looks are the sketches', whenever they are read.
+ */
+export type RecordStructure = Record<
+  string,
+  {
+    own: string[];
+    carried: string[];
+    visible: string[];
+    things: string[];
+    present: string[];
+    gone: string[];
+    held: Record<string, string>;
+  }
+>;
+
+export function structureOf(rec: RecordPlan): RecordStructure {
+  const keys = (xs: { key?: string; who: string; what: string }[]) =>
+    xs.map((x) => x.key ?? `${x.who}:${x.what}`).sort();
+  return Object.fromEntries(
+    Object.entries(rec.moments).map(([id, m]) => [
+      id,
+      {
+        own: keys(m.own),
+        carried: keys(m.carried),
+        visible: [...m.visible].sort(),
+        things: [...m.things].sort(),
+        present: [...m.present].sort(),
+        gone: [...m.gone].sort(),
+        held: Object.fromEntries(Object.entries(m.held).sort(([x], [y]) => x.localeCompare(y))),
+      },
+    ]),
+  );
+}
+
+/**
+ * Where two structures of a record differ, moment by moment, and in what: the one the shots were
+ * planned from against the one drawing reads.
+ */
+export function diffStructure(
+  planned: RecordStructure,
+  now: RecordStructure,
+): { moment: string; what: (keyof RecordStructure[string])[] }[] {
+  const out: { moment: string; what: (keyof RecordStructure[string])[] }[] = [];
+  for (const id of uniq([...Object.keys(planned), ...Object.keys(now)])) {
+    const a = planned[id];
+    const z = now[id];
+    const fields = ['own', 'carried', 'visible', 'things', 'present', 'gone', 'held'] as const;
+    const what = fields.filter((f) => JSON.stringify(a?.[f] ?? null) !== JSON.stringify(z?.[f] ?? null));
+    if (what.length) out.push({ moment: id, what });
+  }
+  return out;
 }

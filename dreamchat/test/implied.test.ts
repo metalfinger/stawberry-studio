@@ -1,10 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { impliedAsk, impliedQuestions, parseImplied, readImplied, type WriteFn } from '../implied';
+import { clip, impliedAsk, impliedQuestions, parseImplied, readImplied, type WriteFn } from '../implied';
 import type { JevFn } from '../jev';
 import { type Breakdown, moments, type StyleOption } from '../producer';
-import { nowAt, type Readings, storyRecord } from '../record';
+import { planContinuity } from '../continuity';
+import { forPlan, lookBefore, nowAt, type Readings, storyRecord } from '../record';
 import type { Item } from '../sheets';
 
 // The library underwater (test/fixtures/record): the water comes in under the doors at m2, and at m5
@@ -37,16 +38,22 @@ const write: WriteFn = async (messages) => {
     usage: { prompt_tokens: 400, completion_tokens: 30 },
   };
 };
-// Jev: the water meant; the drifting meant, and not how the boat looks; the light a guess.
+// Jev: the water meant, and how the room is from then on; the drifting meant, and not how the boat
+// looks; the light a guess. At m2, the water over the desks just within the bar.
 const jevAsked: string[] = [];
 const jev: JevFn = async (state, questions) => {
   jevAsked.push(state);
-  const p: Record<string, number> = {
-    implied_0: 0.9,
-    implied_1: 0.9,
-    look_1: 0.1,
-    implied_2: 0.2,
-  };
+  const m2 = (JSON.parse(state) as { moment: { action: string } }).moment.action.includes('under the doors');
+  const p: Record<string, number> = m2
+    ? { implied_0: 0.65, lasting_0: 0.8 }
+    : {
+        implied_0: 0.9,
+        lasting_0: 0.85,
+        implied_1: 0.9,
+        look_1: 0.1,
+        implied_2: 0.2,
+        lasting_2: 0.9,
+      };
   return {
     questions,
     state,
@@ -77,14 +84,18 @@ describe('what a moment implies, read once and checked', () => {
       jevIn: 600,
       jevOut: 40,
     });
-    // Only what Jev reads as meant, and of a thing as how it looks, is taken; every reading is kept.
+    // Only what Jev reads as meant, and as how a thing looks or how a place is from then on, is taken;
+    // every reading is kept, and an answer within 0.1 of the bar is marked.
     expect(implied.m5.map((x) => [x.what, x.ok])).toEqual([
       ['water', true],
       ['boat', false],
       ['light', false],
     ]);
+    expect(implied.m5[0]).toMatchObject({ p: 0.9, lasting: 0.85, basis: 'implied' });
     expect(implied.m5[1]).toMatchObject({ p: 0.9, look: 0.1, basis: 'implied' });
     expect(implied.m5[0].look).toBeUndefined();
+    expect(implied.m5.some((x) => x.close)).toBe(false);
+    expect(implied.m2[0]).toMatchObject({ ok: true, close: true });
     expect(Object.keys(implied).sort()).toEqual(['m2', 'm5']);
   });
 
@@ -94,11 +105,16 @@ describe('what a moment implies, read once and checked', () => {
     const brief = JSON.parse(impliedAsk(f.breakdown, recordOf(f).record, m5)[1].content);
     expect(brief.moment.action).toContain('high round window');
     expect(brief.the_record_holds.join(' ')).toContain('rising over the desks');
-    const { state, questions } = impliedQuestions(f.breakdown, m5, proposals.m5);
-    expect(Object.keys(questions)).toEqual(['implied_0', 'implied_1', 'look_1', 'implied_2']);
-    // Jev reads the moment's words and those just before it in the same place, never the record.
-    expect(JSON.parse(state).moment.action).toBe(m5.action);
-    expect(JSON.parse(state).before).toHaveLength(2);
+    const { state, questions } = impliedQuestions(f.breakdown, recordOf(f).record, m5, proposals.m5);
+    // A place is asked whether it is so from then on; a thing whether it is how it looks.
+    expect(Object.keys(questions)).toEqual(['implied_0', 'lasting_0', 'implied_1', 'look_1', 'implied_2', 'lasting_2']);
+    // Jev reads the moment's words and those around it in the same place, and the place's look as the
+    // record has it there, never what the writer was told.
+    const read = JSON.parse(state);
+    expect(read.moment.action).toBe(m5.action);
+    expect(read.before).toHaveLength(2);
+    expect(read.after).toBeUndefined();
+    expect(Object.values(read.looks as Record<string, string>)[0]).toContain('its water now');
     expect(state).not.toContain('the_record_holds');
     // Kept to the moment's own places and things, each by a part.
     expect(
@@ -117,6 +133,9 @@ describe('what a moment implies, read once and checked', () => {
       ),
     ).toEqual([{ who: 'l1', what: 'water', now: 'deep' }]);
     expect(parseImplied('not json', f.breakdown, m5)).toEqual([]);
+    // Cut at a word, never inside one, and without a dangling word.
+    expect(clip('high enough to row the boat between the shelves', 30)).toBe('high enough to row the boat');
+    expect(clip('almost up to the ceiling, over the desks', 26)).toBe('almost up to the ceiling');
   });
 
   test('the record takes what was read and checked as a change, implied, carried on from there', async () => {
@@ -182,5 +201,37 @@ describe('what a moment implies, read once and checked', () => {
     const m5 = nowAt(record, 'm5').map((x) => x.text);
     expect(m5).toContain('the yellow rowing boat is half sunk');
     expect(m5.join(' ')).not.toContain('dripping');
+  });
+
+  test('has no in-between picture of its own: it is carried in words', () => {
+    const f = library();
+    const { record } = recordOf(f, {
+      implied: { m5: [{ ...proposals.m5[0], basis: 'implied', p: 0.9, lasting: 0.9, ok: true }] },
+    });
+    const plan = planContinuity(f.breakdown, forPlan(record));
+    expect(plan.ghosts.some((g) => g.key === 'l1@m5:water')).toBe(false);
+    expect(plan.ghosts.some((g) => g.key === 'l1@m2:water')).toBe(true);
+    const m5 = plan.cuts.find((c) => c.id === 'm5')!;
+    expect(m5.own.some((st) => st.key === 'l1@m5:water' && st.implied)).toBe(true);
+    expect(m5.now?.map((x) => x.text)).toContain('the water is almost up to the ceiling, over the desks and shelves');
+  });
+
+  test('says each fact once, and a part and what it is with the part named once', () => {
+    // The flooded library: the books float off the shelves at m4, the water rises over the desks at m3.
+    const f = JSON.parse(
+      readFileSync(join(import.meta.dir, 'fixtures', 'record', 'flooded-library.json'), 'utf8'),
+    ) as Frozen;
+    const now =
+      'high enough to row the boat between the shelves, over the desks, with books floating open like birds off the shelves';
+    const { record } = recordOf(f, {
+      implied: { m7: [{ who: 'l1', what: 'water', now, basis: 'implied', p: 0.9, lasting: 0.9, ok: true }] },
+    });
+    expect(record.changes['l1@m7:water'].now).toBe('high enough to row the boat between the shelves, over the desks');
+    // What the in-between picture of a later change is told the room looked like: "water rises over
+    // the desks", never "water water rises over the desks".
+    const later = Object.values(record.changes).find((c) => c.who === 'l1' && c.at === 'm9' && !c.basis);
+    const before = lookBefore(record, later!.key)!.facts.map((x) => x.text);
+    expect(before.some((t) => /^water rises over the desks/.test(t))).toBe(true);
+    expect(before.join(' ')).not.toMatch(/\bwater water\b/);
   });
 });
