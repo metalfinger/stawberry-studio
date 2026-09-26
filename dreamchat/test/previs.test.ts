@@ -312,4 +312,86 @@ describe('what things are to whoever is at them', () => {
     expect(shot.text).toContain('their head out of the picture above');
     expect(shot.eye.pitch).toBeLessThan(-0.2);
   });
+
+  test('a clock on a pole is at its top, in the picture when the dreamer looks at it', () => {
+    // The clock lay inside the platform at the pole's foot: looking at it melting, the dreamer saw a
+    // bare pole, and the words put the clock outside the picture (desert station m3, 26 Sep).
+    const station: Blocking = {
+      front: 'the train tracks',
+      room: [24, 20],
+      spots: [
+        { id: 'p1', x: 10, y: 3.5, kind: 'person', pose: 'standing', faces: 't1' },
+        { id: 't1', x: 8.5, y: 4, kind: 'thing', size: [0.3, 0.3, 0.3], shape: 'block' },
+        {
+          id: 'x1',
+          x: 12,
+          y: 4,
+          kind: 'thing',
+          size: [8, 2, 0.3],
+          shape: 'ground',
+          fixture: true,
+          name: 'the platform',
+        },
+        {
+          id: 'x4',
+          x: 8.5,
+          y: 4,
+          kind: 'thing',
+          size: [0.2, 0.2, 2.5],
+          shape: 'block',
+          fixture: true,
+          name: 'the clock pole',
+        },
+      ],
+    };
+    const called = (id: string) => ({ p1: 'the dreamer', t1: 'the clock' })[id] ?? id;
+    const shot = dreamerShot(station, 'p1', 't1', called)!;
+    expect(shot.inPicture).toEqual(expect.arrayContaining(['t1', 'x4']));
+    expect(shot.text).toMatch(/: the clock, /);
+    expect(shot.text).not.toMatch(/Outside the picture[^.]*: the clock\./);
+    // Up at the top of the pole, above their eyes: the camera looks up to it.
+    expect(shot.eye.pitch).toBeGreaterThan(0.2);
+  });
+
+  test('a phone on the kitchen wall and a clock on a tall dresser are at eye height, a shoe and a cake where they rest', () => {
+    // The phone ringing on the wall and the big round clock were drawn near the kitchen floor
+    // (grandma's kitchen, 26 Sep).
+    const kitchen: Blocking = {
+      front: 'the doorway',
+      indoors: true,
+      room: [4, 4],
+      spots: [
+        { id: 'p1', x: 1.5, y: 2, kind: 'person', pose: 'standing', faces: 'right' },
+        { id: 't1', x: 3.9, y: 1, kind: 'thing', size: [0.2, 0.15, 0.3] },
+        {
+          id: 'x1',
+          x: 3.7,
+          y: 3,
+          kind: 'thing',
+          size: [1.2, 0.6, 2],
+          fixture: true,
+          name: 'the tall dresser',
+          faces: 'left',
+        },
+        { id: 't2', x: 3.7, y: 3, kind: 'thing', size: [0.3, 0.1, 0.3] },
+        { id: 't3', x: 2, y: 3.9, kind: 'thing', size: [0.3, 0.1, 0.15] },
+        { id: 'x2', x: 1.2, y: 3.2, kind: 'thing', size: [1.2, 0.8, 0.75], fixture: true, name: 'the kitchen table' },
+        { id: 't4', x: 1.2, y: 3.2, kind: 'thing', size: [0.3, 0.3, 0.15] },
+      ],
+    };
+    const called = (id: string) =>
+      ({ p1: 'the dreamer', t1: 'the phone', t2: 'the little clock', t3: 'the shoe', t4: 'the cake' })[id] ?? id;
+    // On the wall and on the dresser's side, at about their eyes: the camera looks at them level.
+    for (const id of ['t1', 't2']) {
+      const shot = dreamerShot(kitchen, 'p1', id, called)!;
+      expect(shot.inPicture).toContain(id);
+      expect(shot.eye.pitch).toBeGreaterThan(-0.2);
+    }
+    // A shoe by the wall stays on the floor, looked down at, and the cake on the table: both in the picture.
+    for (const id of ['t3', 't4']) {
+      const shot = dreamerShot(kitchen, 'p1', id, called)!;
+      expect(shot.inPicture).toContain(id);
+    }
+    expect(dreamerShot(kitchen, 'p1', 't3', called)!.eye.pitch).toBeLessThan(-0.35);
+  });
 });
