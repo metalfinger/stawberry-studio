@@ -455,6 +455,30 @@ to the real harness until it closes. It reports:
 
 It writes the full transcripts to `runs/`.
 
+### The same five dreams, before and after a change
+
+```sh
+DREAMCHAT_PROVIDER=fake bun run evals/replay.ts --out runs/replay-fake --label fake --dry
+DREAMCHAT_PROVIDER=fal bun run evals/replay.ts --out runs/replay-baseline --label baseline
+```
+
+`evals/replay.ts` replays the five saved conversations of `evals/benchmark.json` (or the ids
+given) from the dreamer's choice of how it should look:
+- **Kept as said:** every message up to that choice, and the choice itself, said again word for
+  word. The ways to draw it are kept as offered, and the look chosen stays the one chosen.
+- **Made again by the code as it is now:** the breakdown (drafted from the same messages as then),
+  the floor plans and shots, the production, the sketches and the moments. The simulated dreamer
+  of `simulate.ts` carries the conversation on until it closes.
+- **Each dream apart:** a new conversation in `<dir>/<name>/state`, its own Strawberry store in
+  `<dir>/home-<name>`, the judge off, and at most `DREAMCHAT_IMAGE_CAP` pictures (15 unless set).
+  The saved conversations are only read.
+
+It prints what it cuts and an estimate before anything runs; `--dry` stops there. It writes
+`<dir>/<name>/pictures.json` (every moment picture in story order) and
+`<dir>/judge-data-<label>.json` for the judging page, with its pictures in `<dir>/judge-img/`.
+Only the conversation up to the choice is fixed: the words after it, and so the pictures, vary a
+little from run to run with the same code.
+
 `test/approved-shots.test.ts` checks that the planner still puts the camera where each approved
 picture's was, from the floor plans they were drawn from: two changes on 25 Sep moved one, and
 only these caught it.
@@ -491,5 +515,6 @@ only these caught it.
 | `planfacts.ts` | Jev's facts on each floor plan, and what the planner must fix |
 | `jevlog.ts` | Every Jev call's cost and every decision, logged per conversation |
 | `replan.ts` | Plans a saved dream's shots again without drawing anything |
+| `evals/replay.ts` | Replays saved simulated dreams from the style choice with the harness as it is now: the fixed benchmark of `evals/benchmark.json` |
 | `evals/` | Labelled sets from real dreams, their frozen sources, and the runner that measures Jev on them |
 | `evals/paired.ts` | Three ways to draw each of 20 moments, differing only in image 1: a dry run, and the drawing for blind judging |

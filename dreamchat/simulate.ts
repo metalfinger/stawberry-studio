@@ -5,6 +5,9 @@
 //
 //   bun run simulate.ts dreams/icehead.md
 //   bun run simulate.ts dreams/*.md --max 30
+//
+// The dreamer, the harness it talks to and the conversation loop are exported, so a replay of a
+// saved conversation (evals/replay.ts) carries it on exactly as a run here would.
 import { loadedKeys } from './boot';
 import { mkdirSync, readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
@@ -23,14 +26,14 @@ import {
   rewordLook,
   rewordMoment,
 } from './producer';
-import { liveProducer, ownStyle, SessionStore } from './session';
+import { liveProducer, ownStyle, SessionStore, type StoreDeps } from './session';
 import { assistantJudge, judgeKind } from './judge';
 import { judgeAvailable, judgeContinuity, judgeTake, liveSheets, PROVIDER, spawnWorker } from './sheets';
 import { REPO, STRAWBERRY_HOME, STRAWBERRY_PYTHON, strawberryAvailable, writeProduction } from './strawberry';
 
 void loadedKeys;
 
-const DREAMER = (
+export const DREAMER = (
   dream: string,
 ) => `You had a dream, and you're telling someone about it in a chat. This is the dream as you remember it:
 
@@ -55,7 +58,15 @@ Reply with only your next message, nothing else.`;
 const FILM_WORDS =
   /\b(shots?|scenes?|frames?|angles?|palettes?|cinematic|composition|storyboard|character sheets?|lens)\b/gi;
 
-type Report = Awaited<ReturnType<typeof run>>;
+export type Report = Awaited<ReturnType<typeof report>>;
+
+/** A dream file as the simulated dreamer knows it: its title and source lines left out. */
+export function dreamText(file: string): string {
+  return readFileSync(file, 'utf8')
+    .replace(/^#.*\n/, '')
+    .replace(/^Source:.*\n/m, '')
+    .trim();
+}
 
 /**
  * What the simulated dreamer sees in the moments on show: the judge's findings, as a person
@@ -63,7 +74,7 @@ type Report = Awaited<ReturnType<typeof run>>;
  * stand in for their eyes, and a real flaw gets the correction a real person would give. Waits
  * for the judge on every moment on show, so no flaw is waved through unseen.
  */
-async function lookAt(store: SessionStore, id: string): Promise<string> {
+export async function lookAt(store: SessionStore, id: string): Promise<string> {
   // With no judge there is nothing to wait for: the dreamer is told nothing, and says it looks right.
   // Waiting as if there were stalled a run twenty minutes a turn (lighthouse, 25 Sep).
   if (judgeKind === 'off') return '';
@@ -92,15 +103,12 @@ async function lookAt(store: SessionStore, id: string): Promise<string> {
   }
 }
 
-async function run(file: string, max: number, resume?: string) {
-  const slug = basename(file, '.md');
-  const raw = readFileSync(file, 'utf8');
-  const dream = raw
-    .replace(/^#.*\n/, '')
-    .replace(/^Source:.*\n/m, '')
-    .trim();
-  const cfg = dreamConfig();
-  const store = new SessionStore(cfg, {
+/**
+ * The harness as a simulated run talks to it, with its conversations saved in `dir`. `over` swaps
+ * a dependency (a replay keeps the look the dreamer chose).
+ */
+export function liveStore(dir: string, over: Partial<StoreDeps> = {}): SessionStore {
+  return new SessionStore(dreamConfig(), {
     jev: callJev,
     host: callHost,
     producer: liveProducer(callJev),
@@ -120,37 +128,55 @@ async function run(file: string, max: number, resume?: string) {
     // The assistant is the judge unless the PC's judge is asked for (DREAMCHAT_JUDGE=pc).
     judge: judgeKind === 'assistant' ? assistantJudge : judgeKind === 'pc' && judgeAvailable() ? judgeTake : undefined,
     judgeContinuity: judgeKind === 'pc' && judgeAvailable() ? judgeContinuity : undefined,
-    // Kept beside the web page's own conversations, so a simulated run can be opened there,
-    // pictures, plan and all, after the page is restarted.
-    dir: join(import.meta.dir, 'state'),
+    dir,
+    ...over,
   });
-  // A saved conversation goes on where it stopped, with the harness as it is now: the pictures it
-  // already paid for are kept, and nothing before the last reply is asked again.
-  const id = resume ?? store.create(`simulated: ${slug}`).id;
-  const dreamer: ChatMessage[] = [{ role: 'system', content: DREAMER(dream) }];
-  let listener = '';
-  if (resume) {
-    const saved = store.view(resume);
-    if (!saved) throw new Error(`no saved conversation ${resume}`);
-    const lines = saved.transcript;
-    // The dreamer's own history: what Berry said is what they heard; what they said is theirs.
-    for (const e of lines.slice(0, -1))
-      dreamer.push({ role: e.role === 'assistant' ? 'user' : 'assistant', content: e.content });
-    listener = lines.at(-1)?.role === 'assistant' ? (lines.at(-1)?.content ?? '') : '';
-    await store.resume(resume);
-    // They look at what is on the right before answering, as after every other reply: resumed
-    // blind, the simulated dreamer called a picture right before the judge had seen it (24 Sep).
-    const phase = store.view(resume)?.phase;
-    if (phase === 'review' || phase === 'frames') {
-      await store.settle(resume);
-      const seen = await lookAt(store, resume);
-      if (seen) listener += `\n\n(What you see in the pictures on the right, which only you know: ${seen})`;
-    }
-  } else listener = (await store.open(id)).messages.join('\n');
+}
+
+/**
+ * A saved conversation picked up where it stopped, with the harness as it is now: the pictures it
+ * already paid for are kept, and nothing before the last reply is asked again. The dreamer is given
+ * its history, and what they hear next is returned.
+ */
+export async function pickUp(store: SessionStore, id: string, dreamer: ChatMessage[]): Promise<string> {
+  const saved = store.view(id);
+  if (!saved) throw new Error(`no saved conversation ${id}`);
+  const lines = saved.transcript;
+  // The dreamer's own history: what Berry said is what they heard; what they said is theirs.
+  for (const e of lines.slice(0, -1))
+    dreamer.push({ role: e.role === 'assistant' ? 'user' : 'assistant', content: e.content });
+  let listener = lines.at(-1)?.role === 'assistant' ? (lines.at(-1)?.content ?? '') : '';
+  await store.resume(id);
+  // They look at what is on the right before answering, as after every other reply: resumed
+  // blind, the simulated dreamer called a picture right before the judge had seen it (24 Sep).
+  const phase = store.view(id)?.phase;
+  if (phase === 'review' || phase === 'frames') {
+    await store.settle(id);
+    const seen = await lookAt(store, id);
+    if (seen) listener += `\n\n(What you see in the pictures on the right, which only you know: ${seen})`;
+  }
+  return listener;
+}
+
+/**
+ * The simulated dreamer answers what they last heard, and the conversation goes on until it closes
+ * or they have sent `max` messages. `first` is their next message when it is already known (a
+ * replay says it as it was said).
+ */
+export async function converse(
+  store: SessionStore,
+  id: string,
+  dreamer: ChatMessage[],
+  heard: string,
+  max: number,
+  first?: string,
+): Promise<void> {
+  let listener = heard;
   let closed = false;
   for (let i = 0; i < max && !closed; i++) {
     dreamer.push({ role: 'user', content: listener });
-    const reply = (await callDeepseek(dreamer, { thinking: 'disabled' })).content.trim();
+    const reply =
+      i === 0 && first !== undefined ? first : (await callDeepseek(dreamer, { thinking: 'disabled' })).content.trim();
     dreamer.push({ role: 'assistant', content: reply });
     const r = await store.message(id, reply);
     listener = r.messages.join('\n');
@@ -170,7 +196,23 @@ async function run(file: string, max: number, resume?: string) {
       if (seen) listener += `\n\n(What you see in the pictures on the right, which only you know: ${seen})`;
     }
   }
+}
 
+async function run(file: string, max: number, resume?: string) {
+  const slug = basename(file, '.md');
+  // Kept beside the web page's own conversations, so a simulated run can be opened there,
+  // pictures, plan and all, after the page is restarted.
+  const store = liveStore(join(import.meta.dir, 'state'));
+  // A saved conversation goes on where it stopped, with the harness as it is now.
+  const id = resume ?? store.create(`simulated: ${slug}`).id;
+  const dreamer: ChatMessage[] = [{ role: 'system', content: DREAMER(dreamText(file)) }];
+  const listener = resume ? await pickUp(store, id, dreamer) : (await store.open(id)).messages.join('\n');
+  await converse(store, id, dreamer, listener, max);
+  return report(store, id, slug);
+}
+
+/** What a finished simulated conversation did, for the terminal and the runs folder. */
+export async function report(store: SessionStore, id: string, slug: string) {
   await store.settle(id);
   const s = store.view(id)!;
   const b = s.draft?.breakdown;
@@ -299,7 +341,7 @@ async function judgeRetelling(told: string, retelling: string) {
   };
 }
 
-function print(r: Report) {
+export function print(r: Report) {
   console.log(`\n━━ ${r.dream} ━━ ${r.phase}${r.closed ? '' : ' (not closed)'} after ${r.messages} messages`);
   console.log(`first retelling at message ${r.firstRetellAt ?? '—'}, retellings ${r.retells}`);
   for (const m of r.moves) console.log(`  ${m}`);
@@ -342,37 +384,39 @@ function print(r: Report) {
   );
 }
 
-const args = process.argv.slice(2);
-const maxIdx = args.indexOf('--max');
-const max = maxIdx === -1 ? 30 : Number(args[maxIdx + 1]);
-// --resume <session id>: carry a saved simulated conversation on with the current harness.
-const resumeIdx = args.indexOf('--resume');
-const resume = resumeIdx === -1 ? undefined : args[resumeIdx + 1];
-const files = args.filter(
-  (a, i) => !a.startsWith('--') && (maxIdx === -1 || i !== maxIdx + 1) && (resumeIdx === -1 || i !== resumeIdx + 1),
-);
-if (!files.length || (resume && files.length > 1)) {
-  console.error('usage: bun run simulate.ts dreams/<name>.md [more.md …] [--max 30] [--resume <session id>]');
-  process.exit(1);
-}
+if (import.meta.main) {
+  const args = process.argv.slice(2);
+  const maxIdx = args.indexOf('--max');
+  const max = maxIdx === -1 ? 30 : Number(args[maxIdx + 1]);
+  // --resume <session id>: carry a saved simulated conversation on with the current harness.
+  const resumeIdx = args.indexOf('--resume');
+  const resume = resumeIdx === -1 ? undefined : args[resumeIdx + 1];
+  const files = args.filter(
+    (a, i) => !a.startsWith('--') && (maxIdx === -1 || i !== maxIdx + 1) && (resumeIdx === -1 || i !== resumeIdx + 1),
+  );
+  if (!files.length || (resume && files.length > 1)) {
+    console.error('usage: bun run simulate.ts dreams/<name>.md [more.md …] [--max 30] [--resume <session id>]');
+    process.exit(1);
+  }
 
-const out = join(import.meta.dir, 'runs');
-mkdirSync(out, { recursive: true });
-const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-const worker = strawberryAvailable() ? spawnWorker(STRAWBERRY_PYTHON, REPO) : null;
-// A run stopped early takes its worker with it, or workers pile up on the store.
-for (const signal of ['SIGINT', 'SIGTERM'] as const)
-  process.on(signal, () => {
-    worker?.stop();
-    process.exit(130);
-  });
-console.log(`sketches drawn with ${PROVIDER} into ${STRAWBERRY_HOME}`);
-const reports = await Promise.all(files.map((f) => run(f, max, resume)));
-worker?.stop();
-for (const r of reports) print(r);
-// Named for its dreams too: two runs started in the same second wrote one file, and the office snow
-// transcripts were lost under the jellyfish's (26 Sep).
-const names = files.map((f) => basename(f, '.md')).join('+');
-const path = join(out, `sim-${stamp}-${names}-${process.env.DREAMCHAT_HOST_THINKING ?? 'low'}.json`);
-await Bun.write(path, JSON.stringify(reports, null, 2));
-console.log(`\nfull transcripts: ${path}`);
+  const out = join(import.meta.dir, 'runs');
+  mkdirSync(out, { recursive: true });
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  const worker = strawberryAvailable() ? spawnWorker(STRAWBERRY_PYTHON, REPO) : null;
+  // A run stopped early takes its worker with it, or workers pile up on the store.
+  for (const signal of ['SIGINT', 'SIGTERM'] as const)
+    process.on(signal, () => {
+      worker?.stop();
+      process.exit(130);
+    });
+  console.log(`sketches drawn with ${PROVIDER} into ${STRAWBERRY_HOME}`);
+  const reports = await Promise.all(files.map((f) => run(f, max, resume)));
+  worker?.stop();
+  for (const r of reports) print(r);
+  // Named for its dreams too: two runs started in the same second wrote one file, and the office snow
+  // transcripts were lost under the jellyfish's (26 Sep).
+  const names = files.map((f) => basename(f, '.md')).join('+');
+  const path = join(out, `sim-${stamp}-${names}-${process.env.DREAMCHAT_HOST_THINKING ?? 'low'}.json`);
+  await Bun.write(path, JSON.stringify(reports, null, 2));
+  console.log(`\nfull transcripts: ${path}`);
+}
