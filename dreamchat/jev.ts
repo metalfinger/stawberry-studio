@@ -171,6 +171,25 @@ export function verdictQuestions(shown: { id: string; name: string }[], latest: 
   return q;
 }
 
+/**
+ * S8's wording of how they answered a profile. Worded as before, an answer that adds a
+ * detail and leaves the rest to us ("the uniform was dark trousers, a white shirt and a striped tie; go
+ * with your guess on his face") was read as leaving it to us at 0.8 to 1.0, and the detail was never
+ * written into the profile: 19 to 22 changes read as settled in each after-run, where the listening test
+ * asked of each answer whether it changes or adds anything (review, 27 Sep). A detail wins over leaving
+ * the rest to us, and over "that's right". Only the profile's: read again over the stored answers of the
+ * second after-run, a profile's changes read as settled fell from 26 to 6 of 187 answers, and what now reads
+ * as a change without one only restates the profile, which the revision keeps as it is; the retelling's
+ * answers so worded read a plain "yeah, that's right" as a correction (0.84), and keep today's words.
+ */
+export const PROFILE_REPLY_S8: Record<string, string> = {
+  confirmed: "it's right as described, and they add or change nothing",
+  changes:
+    'they give any detail of how it looks that was different or missing, even one, even while saying the rest is right or leaving the rest to the listener',
+  you_choose: "they don't mind or don't remember, and give no detail of how it looks",
+  unclear: "they didn't answer that",
+};
+
 export function bookkeeperQuestions(
   cfg: GoalsFile,
   transcript: Exchange[],
@@ -180,6 +199,8 @@ export function bookkeeperQuestions(
   profileName?: string,
   /** Sketches they have been shown and not yet answered about, by id and name. */
   shown: { id: string; name: string }[] = [],
+  /** S8's wording of the answer to a profile (DREAMCHAT_LISTEN=on). */
+  listen = false,
 ): Record<string, Question> {
   const msgs = respondentMessages(transcript);
 
@@ -362,12 +383,14 @@ export function bookkeeperQuestions(
     q.profile_reply = {
       type: 'choice',
       instructions: `The listener described how they picture ${profileName} and asked whether anything is different. How does the person answer in this message: "${latest.slice(0, 240)}"?`,
-      criteria: {
-        confirmed: "it's right, or near enough, with nothing to change",
-        changes: 'they changed, corrected or added a detail about it',
-        you_choose: "they don't mind, don't remember, or leave it to the listener",
-        unclear: "they didn't answer that",
-      },
+      criteria: listen
+        ? PROFILE_REPLY_S8
+        : {
+            confirmed: "it's right, or near enough, with nothing to change",
+            changes: 'they changed, corrected or added a detail about it',
+            you_choose: "they don't mind, don't remember, or leave it to the listener",
+            unclear: "they didn't answer that",
+          },
     };
   }
 
@@ -690,29 +713,53 @@ function choice<T extends string>(
  * A choice read by what it leads to (S8, DREAMCHAT_LISTEN=on). The bar is for the decision, and labels
  * that lead to the same action are one decision: "confirmed 0.55, you_choose 0.45" settles a profile as
  * surely as "confirmed 1.0", yet the top label alone fell under the bar and was read as no answer (15 of
- * the 16 clear answers read as unclear, the listening test's before). The top label still wins when it
- * clears the bar alone; otherwise each action's labels are summed, and the likeliest action is taken
- * once every label but the fallback's clears it together; its likeliest label names it.
+ * the 16 clear answers read as unclear, the listening test's before). So each action's labels are summed,
+ * and the likeliest action is taken when it clears the bar; its likeliest label names it.
+ * Limits, from the review of the after-runs (27 Sep):
+ * - `prefer`: the action that loses nothing when taken wrongly (revising a profile keeps every field
+ *   they did not touch; taking a correction tells the part back and checks it) is taken as soon as it has
+ *   `RIVAL` or more. Summed past it, "a small brown terrier, short rough fur, no collar, go with your guess
+ *   on the rest" read as "you choose" and was never revised (after2 e7cf), and additions to a retelling
+ *   read as confirmed were never drafted. Read again by this rule, the stored readings of the three
+ *   after-runs change 15 profile and 21 retelling answers, each to the change: 14 of the 15 profile ones
+ *   tell something of its look ("it was thin, and it just watched me"), one only that they don't remember; of the retelling ones 14 add or correct something ("the only thing is the lights of the
+ *   market were behind us") and 6 are a plain "yes, that's right" (Jev gave a change 0.28-0.37), which
+ *   now costs a turn telling back.
+ * - `joins`: a label that goes with another once that one has `RIVAL` or more ("you choose" beside a
+ *   change is part of the change).
+ * - otherwise, no action is taken while another has `RIVAL` or more: it is asked again.
+ * The fallback's own group ("unclear", "not yet") is no rival: it only asks again.
  */
+export const RIVAL = 0.25;
 export function choiceByAction<T extends string>(
   a: Answer | undefined,
   actions: readonly (readonly T[])[],
   fallback: T,
   minConfidence: number,
+  opts: { joins?: Partial<Record<T, T>>; prefer?: T } = {},
 ): { value: T; lowConfidence: boolean } {
   if (a?.type !== 'choice') return { value: fallback, lowConfidence: false };
   const labels = actions.flat() as string[];
   if (!labels.includes(a.choice)) return { value: fallback, lowConfidence: false };
-  if (a.confidence >= minConfidence) return { value: a.choice as T, lowConfidence: false };
-  const p = (l: T) => a.probabilities?.[l] ?? (l === a.choice ? a.confidence : 0);
-  const others = actions.filter((g) => !g.includes(fallback));
-  const sums = others.map((g) => ({
-    sum: g.reduce((n, l) => n + p(l), 0),
-    top: [...g].sort((x, y) => p(y) - p(x))[0],
-  }));
-  const settled = sums.reduce((n, x) => n + x.sum, 0);
-  const best = sums.sort((x, y) => y.sum - x.sum)[0];
-  if (best && settled >= minConfidence) return { value: best.top, lowConfidence: false };
+  const joins: Partial<Record<T, T>> = opts.joins ?? {};
+  const raw = (l: T) => a.probabilities?.[l] ?? (l === a.choice ? a.confidence : 0);
+  const joined = (l: T) => {
+    const to = joins[l];
+    return to !== undefined && raw(to) >= RIVAL;
+  };
+  const p = (l: T) =>
+    joined(l)
+      ? 0
+      : raw(l) + labels.filter((x) => joins[x as T] === l && joined(x as T)).reduce((n, x) => n + raw(x as T), 0);
+  const groups = actions
+    .filter((g) => !g.includes(fallback))
+    .map((g) => ({ labels: g, sum: g.reduce((n, l) => n + p(l), 0), top: [...g].sort((x, y) => p(y) - p(x))[0] }))
+    .sort((x, y) => y.sum - x.sum);
+  const safe = opts.prefer === undefined ? undefined : groups.find((g) => g.labels.includes(opts.prefer as T));
+  if (safe && safe.sum >= RIVAL) return { value: safe.top, lowConfidence: false };
+  const [best, rival] = groups;
+  if (best && best.sum >= minConfidence && !(rival && rival.sum >= RIVAL))
+    return { value: best.top, lowConfidence: false };
   return { value: fallback, lowConfidence: true };
 }
 
@@ -721,6 +768,13 @@ export const ACTIONS = {
   retell_reply: [['confirmed'], ['corrected', 'added_more'], ['unclear']],
   profile_reply: [['confirmed', 'you_choose'], ['changes'], ['unclear']],
   wants_to_see: [['yes'], ['no'], ['not_yet', 'unclear']],
+} as const;
+
+/** How each reading is summed and which action is safe to take (see `choiceByAction`). */
+export const READ_BY = {
+  retell_reply: { prefer: 'corrected' },
+  profile_reply: { joins: { you_choose: 'changes' }, prefer: 'changes' },
+  wants_to_see: {},
 } as const;
 
 export type JevReadNote = { goalId: string; reason: string; attempted: number };
@@ -803,7 +857,8 @@ export function readState(
     actions: readonly (readonly T[])[],
     fallback: T,
     bar: number,
-  ) => (listen ? choiceByAction(a, actions, fallback, bar) : choice(a, allowed, fallback, bar));
+    opts: { joins?: Partial<Record<T, T>>; prefer?: T } = {},
+  ) => (listen ? choiceByAction(a, actions, fallback, bar, opts) : choice(a, allowed, fallback, bar));
   const notes: JevReadNote[] = [];
   // A failed judge must never blank the ledger. Degrade to the previous reading.
   if (call.answers === null) {
@@ -856,6 +911,7 @@ export function readState(
       ACTIONS.retell_reply,
       'unclear',
       RETELL_CONFIDENCE,
+      READ_BY.retell_reply,
     );
     if (r.lowConfidence)
       notes.push({ goalId: 'retell_reply', reason: 'unsure how they answered, read as unclear', attempted: -1 });
@@ -889,6 +945,7 @@ export function readState(
       ACTIONS.wants_to_see,
       'unclear',
       RETELL_CONFIDENCE,
+      READ_BY.wants_to_see,
     ).value;
   const reaction = choice<SketchReaction>(
     a.sketch_reaction,
@@ -913,6 +970,7 @@ export function readState(
       ACTIONS.profile_reply,
       'unclear',
       RETELL_CONFIDENCE,
+      READ_BY.profile_reply,
     ).value;
   let styleChoice: string | null = null;
   if (phase === 'style') {

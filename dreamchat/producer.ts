@@ -326,6 +326,8 @@ export async function rewordLook(
   // What changes about them later in the dream: reworded from the conversation, Tomas became "a boy
   // of ten years old" in who he is, though he is an adult until the lift (hotel orchard, 26 Sep).
   later: string[] = [],
+  /** What the person said, message by message (S8: whether a reworded field is still their words). */
+  said?: string[],
 ): Promise<Record<string, Detail> | null> {
   const current = Object.fromEntries(Object.entries(fields).map(([k, d]) => [k, d.value]));
   const res = await callDeepseek(
@@ -351,7 +353,8 @@ export async function rewordLook(
     if (v && !VAGUE.test(v) && v !== d.value) {
       // A fact they gave stays theirs, reworded; a gap filled is our guess. With S8 on, a reworded
       // fact is theirs only while it keeps to their words: detail added to it is ours.
-      const theirs = d.said && !!d.value && (!listenOn() || inTheirWords(v, `${personLines(transcript)}\n${d.value}`));
+      const theirs =
+        d.said && !!d.value && (!listenOn() || inTheirWords(v, `${personLines(transcript, said)}\n${d.value}`));
       out[k] = { value: v, said: theirs };
       changed = true;
     } else out[k] = d;
@@ -926,13 +929,19 @@ const theirs = (fields: Record<string, Detail>) => {
   return listenOn() && said.length ? `\nTheirs: ${said.join(', ')}.` : '';
 };
 
-/** What the person said, from a rendered conversation: their lines only. */
-export const personLines = (transcript: string) =>
-  transcript
-    .split('\n')
-    .filter((l) => l.startsWith('Person: '))
-    .map((l) => l.slice('Person: '.length))
-    .join('\n');
+/**
+ * What the person said: their messages as the conversation keeps them (`said`), or, where a caller has
+ * only the rendered conversation, its "Person:" turns, each to the next speaker (a message can run over
+ * several lines, and read line by line only its first was theirs).
+ */
+export const personLines = (transcript: string, said?: string[]) =>
+  said
+    ? said.join('\n')
+    : transcript
+        .split(/\n(?=(?:Person|Listener): )/)
+        .filter((l) => l.startsWith('Person: '))
+        .map((l) => l.slice('Person: '.length))
+        .join('\n');
 
 /**
  * Whether a value is the person's own words, clause by clause (S8, docs/rules.md F1: only their words
@@ -959,6 +968,8 @@ export async function reviseItem(
   name: string,
   fields: Record<string, Detail>,
   transcript: string,
+  /** What the person said, message by message (S8: whether a revised field is their words). */
+  said?: string[],
 ): Promise<Record<string, Detail>> {
   const current = Object.fromEntries(Object.entries(fields).map(([k, d]) => [k, d.value]));
   const res = await callDeepseek(
@@ -981,9 +992,11 @@ export async function reviseItem(
   for (const [k, d] of Object.entries(fields)) {
     const v =
       typeof next[k] === 'string' && (next[k] as string).trim() ? (next[k] as string).trim().slice(0, 600) : null;
-    const said =
-      listenOn() && v !== null ? inTheirWords(v, `${personLines(transcript)}\n${d.said ? (d.value ?? '') : ''}`) : true;
-    out[k] = v !== null && v !== d.value ? { value: v, said } : d;
+    const theirs =
+      listenOn() && v !== null
+        ? inTheirWords(v, `${personLines(transcript, said)}\n${d.said ? (d.value ?? '') : ''}`)
+        : true;
+    out[k] = v !== null && v !== d.value ? { value: v, said: theirs } : d;
   }
   return out;
 }
