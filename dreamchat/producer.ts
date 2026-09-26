@@ -193,7 +193,7 @@ Mark every detail "said": true ONLY when the person's own words give it. Anythin
 - "action" says what happens or what is there, in plain words. Never the camera: "wide view of", "close-up of" and the like belong in "distance", not in the action.
 - A moment is one instant, the one a single picture shows. Where the dream tells steps one after another ("goes up the stairs, then down the other side", "walks down the hallway and turns the corner to find a room"), each step that matters is its own moment, or the moment is the one instant that shows it best (at the top of the stairs, the second flight going down ahead). Never "then" inside one moment.
 - Write a moment's action, feeling, visual_point, shift and dream in the third person, the dreamer as "the dreamer" or "they" ("the dreamer stands at the window"), never "you" and never "he" or "she": they are instructions for a picture, to a picture "you" is whoever looks at it, and the dreamer's own sketch shows who they are.
-- "visible" lists only people ids; objects go in "things".
+- "visible" lists only people ids; objects go in "things". It lists everyone the moment shows, however far off: someone watched as they walk away and grow smaller is in it (left out, the old man and the camel the dreamer watches leaving were drawn nowhere in the picture, 26 Sep).
 - Mark exactly one moment "key": true — the moment they said stays with them, or would pause on.
 - "eyes": "dreamer" when we see through the dreamer's eyes, "outside" when the dreamer is seen. Follow what they said about how they were in it.
 - "distance": "close", "medium" or "wide" — how near the viewer is to what matters.
