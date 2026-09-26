@@ -25,6 +25,11 @@ General film-making rules apply to every dream; nothing is patched for one dream
 5. **Tests green, typecheck clean** on every commit; commit prefixes `feat:`/`fix:`/`test:`/`docs:`.
 6. **Report every finished step to the owner:** what improved, the tests run and their results, with a push
    notification. Otherwise keep going step by step until the whole harness is ready.
+7. **Improve from every test.** When a step's tests or review find a gap or a better way, fix it (as a general
+   rule) before moving on, and log what was found and what changed.
+8. **Money:** $21 is left and there is no more after it. Spend only where a picture is the only way to prove a
+   step (planned: about $3 after S4, about $3 after S5, about $10 for S10), redrawing only the moments that failed
+   for that reason, old against new, judged by the owner. Record every cost in the log.
 
 ## The system being built
 
