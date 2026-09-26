@@ -764,6 +764,13 @@ export function listenMove(move: Move, state: State, cfg: GoalsFile, extras: Bri
           : 'Then, last, ask whether you got it right or missed anything.';
       return `${told} Then end the telling with the moments of the dream as they'll be drawn, every one of these, in this order, as one message that is a numbered list, one moment to a line ("1. …" on its own line), each said to them in a few plain words ("you …"), with "(my guess)" after any marked [filled in]. This once, a list is right. The moments: ${list} ${ask}`;
     }
+    // Each way by its name: told to say each "in a few plain words", the host once reworded one past
+    // knowing (a way lost in 1 of 40 offers, the second after-run, 27 Sep).
+    case 'choose_style': {
+      const styles = extras.styles ?? [];
+      if (!styles.length) return null;
+      return `choose_style. They want to see it. Offer every one of these ways it could be drawn, each by its name as written here with a few plain words about it, and ask which feels closest, or whether they'd describe their own: ${styles.map((o) => `${o.id}) ${o.name}: ${o.line}`).join('; ')}.`;
+    }
     case 'start':
     case 'confirm_profile': {
       const p = extras.profile;

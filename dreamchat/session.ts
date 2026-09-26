@@ -1713,6 +1713,13 @@ export class SessionStore {
     ) {
       const t0 = this.now();
       await this.readyDraft(s);
+      // S8: a breakdown that failed is drafted once more, or the retelling has no moments to end with
+      // (1 of 40 retellings in the second after-run, 27 Sep).
+      if (listen && move.kind === 'retell' && s.draft?.status === 'failed') {
+        this.drafts.delete(s.id);
+        this.startDraft(s);
+        await this.readyDraft(s);
+      }
       waitMs = this.now() - t0;
     }
     if (move.kind === 'start') {
