@@ -15,6 +15,7 @@ import type {
   GoalDef,
   GoalsFile,
   GoalState,
+  Move,
   Phase,
   ProfileReply,
   SketchReaction,
@@ -24,7 +25,7 @@ import type {
   Thread,
   WantsToSee,
 } from './lib';
-import { reconcileThreads } from './lib';
+import { LISTENING, reconcileThreads } from './lib';
 import { recordJev } from './jevlog';
 
 const ENDPOINT = 'https://api.typesafe.ai/v1/systemone';
@@ -413,6 +414,234 @@ export function retellingQuestion(reply: string): Record<string, Question> {
   };
 }
 
+// ── every reply against its move (S8) ───────────────────────────────────────
+
+/** Everything the check of one reply reads. */
+export type ReplyCheckInput = {
+  move: Move;
+  /** The brief's move line: what the reply was told to do. */
+  moveLine: string;
+  /** Every message the person has sent, the latest last. */
+  said: string[];
+  /** The reply as the person would read it, message by message. */
+  messages: string[];
+  /** explore_thread and circle_back: the message of theirs the move names. */
+  thread?: string;
+  /** probe_goal: what the goal asks about, in plain words, and an open question about it. */
+  topic?: string;
+  example?: string;
+  /** choose_style: the ways of drawing it the reply must offer. */
+  styles?: { id: string; name: string; line: string }[];
+  /** retell: how many moments its closing list must hold. */
+  moments?: number;
+  /** A follow that picks the dream up again after it was told back. */
+  resumed?: boolean;
+  /** start, confirm_profile, profile_check: whose look the reply puts to them. */
+  profile?: string;
+};
+
+/** The sentences of a reply that ask something: each one ending in a question mark. */
+export function questionsIn(text: string): string[] {
+  return text
+    .split(/(?<=[.!?…])\s+|\n+/)
+    .map((x) => x.trim())
+    .filter((x) => /\?["'”’)\]]*$/.test(x));
+}
+
+/** How many numbered lines a reply ends with, its closing question aside. */
+export function closingListLength(text: string): number {
+  const lines = text
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const item = /^\d{1,2}[.)]\s+\S/;
+  while (lines.length && !item.test(lines.at(-1) ?? '') && (lines.at(-1) ?? '').includes('?')) lines.pop();
+  let n = 0;
+  for (let i = lines.length - 1; i >= 0 && item.test(lines[i]); i--) n++;
+  return n;
+}
+
+const check = (instructions: string, yes: string, no: string): Question => ({
+  type: 'noul',
+  instructions,
+  criteria: { true: yes, false: no },
+});
+
+/** What a listening move asks of its reply, as one yes-or-no question; yes is done. */
+function listeningMoveQuestion(x: ReplyCheckInput): Question {
+  switch (x.move.kind) {
+    case 'follow':
+      return x.resumed
+        ? check(
+            'Does `reply` simply ask the person what happened next in their dream, without telling the dream back to them?',
+            'it asks what happened next, and tells nothing back',
+            'it tells the dream back, or asks about something else',
+          )
+        : check(
+            'Does `reply` invite the person, openly, to tell what happened next in their dream, without guessing what it was?',
+            'it asks what happened next or invites them to go on, with no guess of its own',
+            'it asks about a detail of something already told, guesses what happened next, or asks nothing',
+          );
+    case 'open_ended':
+      return check(
+        'Does `reply` leave it to the person to go on however they like, without asking about a particular detail?',
+        'it leaves them free to go on in their own way',
+        'it asks about a particular detail, or closes the telling',
+      );
+    case 'explore_thread':
+      return check(
+        `Does \`reply\` ask the person about something they raised in this message of theirs: "${(x.thread ?? '').slice(0, 400)}"?`,
+        'its question is about something in that message',
+        'its question is about something else, or it asks nothing',
+      );
+    case 'circle_back':
+      return check(
+        `Does \`reply\` come back to this, which the person said earlier, and ask about it: "${(x.thread ?? '').slice(0, 400)}"?`,
+        'it returns to that and asks about it',
+        'it asks about something else, or asks nothing',
+      );
+    case 'probe_goal':
+      return check(
+        `Does the question in \`reply\` ask the person about ${x.topic ?? 'what it was told to'}?`,
+        'its question is about that',
+        'its question is about something else, or it asks nothing',
+      );
+    default:
+      return check(
+        'Does `reply` react warmly to what the person said and leave at most one light, easy-to-ignore opening, without probing for a detail?',
+        'it reacts warmly and asks at most a light, easy-to-ignore question',
+        'it probes for a detail, or does not react to what they said',
+      );
+  }
+}
+
+/** What each failed question tells the reply's second try. */
+function moveFailure(x: ReplyCheckInput): string {
+  switch (x.move.kind) {
+    case 'follow':
+      return x.resumed
+        ? 'it should only ask, simply, what happened next'
+        : 'it should invite them to tell what happened next, openly, with no guess and no question about a detail';
+    case 'open_ended':
+      return 'it should leave them to go on in their own way, asking about no detail';
+    case 'explore_thread':
+      return `its question should be about something in what they just said: "${(x.thread ?? '').slice(0, 200)}"`;
+    case 'circle_back':
+      return `it should come back to what they said earlier, "${(x.thread ?? '').slice(0, 200)}", and ask about it`;
+    case 'probe_goal':
+      return `its question should be about ${x.topic ?? 'what the move names'}${x.example ? `, asked openly, such as "${x.example}"` : ''}`;
+    case 'acknowledge':
+      return 'it should react warmly and leave only a light opening, probing for nothing';
+    default:
+      if (x.profile) return `it should say how you picture ${x.profile}, and then ask them about it`;
+      return `it should do what its move says: ${x.moveLine.slice(0, 400)}`;
+  }
+}
+
+/**
+ * The questions one reply is checked on (S8): whether it did its move; on a listening reply, whether its
+ * question puts an answer forward, offers a choice, or states a detail of the dream nobody gave; on the
+ * style offer, each way of drawing it. Yes to `move` and `offers_*` is done, yes to the rest is a fault.
+ */
+export function replyCheck(x: ReplyCheckInput): { state: string; questions: Record<string, Question> } {
+  const text = x.messages.join('\n');
+  const asks = questionsIn(text);
+  const listening = LISTENING.has(x.move.kind);
+  const state = JSON.stringify(
+    {
+      person_said: listening ? x.said : x.said.slice(-1),
+      reply: text,
+      questions_in_reply: asks,
+    },
+    null,
+    1,
+  );
+  const q: Record<string, Question> = {};
+  q.move = listening
+    ? listeningMoveQuestion(x)
+    : x.profile
+      ? check(
+          `Does \`reply\` say how the listener pictures ${x.profile}, and then ask the person about it: what they remember of it, whether anything is different, or whether they would leave it to the listener?`,
+          'it says how it pictures them and asks about it',
+          'it does not say how it pictures them, or asks nothing about it',
+        )
+      : check(
+          `The listener was told to do this in its reply: "${x.moveLine.slice(0, 1200)}". Does \`reply\` do it?`,
+          'it does what it was told, leaving nothing it was told to do out',
+          'it leaves out part of what it was told, does something else, or asks what it was told not to',
+        );
+  if (listening && x.said.length) {
+    q.states_unsaid = check(
+      'Does `reply` say that something was in the dream, or happened in it, or looked or felt some way, that nothing in `person_said` says? Its own reactions and impressions ("that sounds calm", "how strange") and its questions do not count.',
+      'it states a fact of the dream the person never gave',
+      'every fact of the dream it states, the person gave; it only reacts, reflects or asks',
+    );
+    if (asks.length) {
+      q.leads = check(
+        'Does the question in `questions_in_reply` put forward an answer of its own for the person to agree or disagree with: a thing, place, event, feeling, look, or something they did, that they have not said in `person_said`?',
+        'it names a detail of its own for them to confirm, such as "did you go in?" when they never said they went in, or "was it cold?" when they never said how it felt',
+        'it asks openly ("what happened next?", "how did it feel?"), or names only what the person already said',
+      );
+      q.either_or = check(
+        'Does the question in `questions_in_reply` offer the person a choice between two or more specific answers ("was it this or that?"), rather than leaving the answer open?',
+        'it names two or more possibilities for them to pick from',
+        'it asks openly, or names only one possibility, or ends on an open "or something else"',
+      );
+    }
+  }
+  for (const o of x.styles ?? [])
+    q[`offers_${o.id}`] = check(
+      `Does \`reply\` offer this way the dream could be drawn, in these words or its own: "${o.name}" (${o.line})?`,
+      'the reply offers that way of drawing it',
+      'the reply does not offer it',
+    );
+  return { state, questions: q };
+}
+
+/**
+ * What a reply failed, in words its second try can act on: from Jev's answers to `replyCheck`, and
+ * from counting (one question on a listening reply; a retelling's closing list holding every moment).
+ * A question Jev left unanswered fails nothing: the judge being down never holds a reply.
+ */
+export function replyFailures(x: ReplyCheckInput, answers: Record<string, Answer> | null): string[] {
+  const text = x.messages.join('\n');
+  const p = (k: string) => {
+    const a = answers?.[k];
+    return a?.type === 'noul' ? a.noul : null;
+  };
+  const yes = (k: string) => (p(k) ?? 0) >= 0.5;
+  const no = (k: string) => p(k) !== null && (p(k) ?? 0) < 0.5;
+  const out: string[] = [];
+  if (no('move')) out.push(moveFailure(x));
+  if (LISTENING.has(x.move.kind)) {
+    const n = questionsIn(text).length;
+    if (n > 1) out.push(`it asks ${n} questions: ask one, and let the rest wait`);
+    if (yes('leads'))
+      out.push('its question puts an answer of its own to them: ask openly, and leave the answer to them');
+    if (yes('either_or')) out.push('its question offers them choices: ask one open question instead');
+    if (yes('states_unsaid'))
+      out.push(
+        'it says something about the dream they never told you: say only what they said, and ask about the rest',
+      );
+  }
+  const left = (x.styles ?? []).filter((o) => no(`offers_${o.id}`)).map((o) => o.name);
+  if (left.length)
+    out.push(`it leaves out ${left.length > 1 ? 'these ways' : 'this way'} of drawing it: ${left.join('; ')}`);
+  if (x.move.kind === 'retell' && x.moments) {
+    const n = closingListLength(text);
+    if (n < x.moments)
+      out.push(
+        `it must end with the numbered list of all ${x.moments} moments, one to a line, before the question${n ? ` (it lists ${n})` : ''}`,
+      );
+  }
+  return out;
+}
+
+/** The note that sends a reply back once, with what it failed named. */
+export function retryNote(messages: string[], failures: string[]): string {
+  return `<check>\nYour last reply to this brief was: ${JSON.stringify({ response: messages })}\nIt did not do what the brief asks: ${failures.join('; ')}.\nWrite the whole reply again, doing the move in the brief, and keep what it did right. Delete nothing they need: fix only what is named.\n</check>`;
+}
+
 // ── what we do with the answers ─────────────────────────────────────────────
 
 function noul(a: Answer | undefined): number | null {
@@ -447,6 +676,43 @@ function choice<T extends string>(
   if (a.confidence < minConfidence) return { value: fallback, lowConfidence: true };
   return { value: a.choice as T, lowConfidence: false };
 }
+
+/**
+ * A choice read by what it leads to (S8, DREAMCHAT_LISTEN=on). The bar is for the decision, and labels
+ * that lead to the same action are one decision: "confirmed 0.55, you_choose 0.45" settles a profile as
+ * surely as "confirmed 1.0", yet the top label alone fell under the bar and was read as no answer (15 of
+ * the 16 clear answers read as unclear, the listening test's before). The top label still wins when it
+ * clears the bar alone; otherwise each action's labels are summed, and the likeliest action is taken
+ * once every label but the fallback's clears it together; its likeliest label names it.
+ */
+export function choiceByAction<T extends string>(
+  a: Answer | undefined,
+  actions: readonly (readonly T[])[],
+  fallback: T,
+  minConfidence: number,
+): { value: T; lowConfidence: boolean } {
+  if (a?.type !== 'choice') return { value: fallback, lowConfidence: false };
+  const labels = actions.flat() as string[];
+  if (!labels.includes(a.choice)) return { value: fallback, lowConfidence: false };
+  if (a.confidence >= minConfidence) return { value: a.choice as T, lowConfidence: false };
+  const p = (l: T) => a.probabilities?.[l] ?? (l === a.choice ? a.confidence : 0);
+  const others = actions.filter((g) => !g.includes(fallback));
+  const sums = others.map((g) => ({
+    sum: g.reduce((n, l) => n + p(l), 0),
+    top: [...g].sort((x, y) => p(y) - p(x))[0],
+  }));
+  const settled = sums.reduce((n, x) => n + x.sum, 0);
+  const best = sums.sort((x, y) => y.sum - x.sum)[0];
+  if (best && settled >= minConfidence) return { value: best.top, lowConfidence: false };
+  return { value: fallback, lowConfidence: true };
+}
+
+/** What each reading leads to: its labels, grouped by the action the conversation takes on them. */
+export const ACTIONS = {
+  retell_reply: [['confirmed'], ['corrected', 'added_more'], ['unclear']],
+  profile_reply: [['confirmed', 'you_choose'], ['changes'], ['unclear']],
+  wants_to_see: [['yes'], ['no'], ['not_yet', 'unclear']],
+} as const;
 
 export type JevReadNote = { goalId: string; reason: string; attempted: number };
 
@@ -519,7 +785,16 @@ export function readState(
   turnNow: number,
   phase: Phase,
   threadStrengthFloor = 0.5,
+  /** S8's readings (DREAMCHAT_LISTEN=on): choices read by the action they lead to. */
+  listen = false,
 ): { next: State; notes: JevReadNote[] } {
+  const pickBy = <T extends string>(
+    a: Answer | undefined,
+    allowed: readonly T[],
+    actions: readonly (readonly T[])[],
+    fallback: T,
+    bar: number,
+  ) => (listen ? choiceByAction(a, actions, fallback, bar) : choice(a, allowed, fallback, bar));
   const notes: JevReadNote[] = [];
   // A failed judge must never blank the ledger. Degrade to the previous reading.
   if (call.answers === null) {
@@ -566,9 +841,10 @@ export function readState(
   const finished = phase === 'listen' ? noul(a.finished_telling) : null;
   let retellReply: RetellReply | null = null;
   if (phase === 'retell') {
-    const r = choice<RetellReply>(
+    const r = pickBy<RetellReply>(
       a.retell_reply,
       ['confirmed', 'corrected', 'added_more', 'unclear'] as const,
+      ACTIONS.retell_reply,
       'unclear',
       RETELL_CONFIDENCE,
     );
@@ -598,9 +874,10 @@ export function readState(
 
   let wantsToSee: WantsToSee | null = null;
   if (phase === 'offer')
-    wantsToSee = choice<WantsToSee>(
+    wantsToSee = pickBy<WantsToSee>(
       a.wants_to_see,
       ['yes', 'not_yet', 'no', 'unclear'] as const,
+      ACTIONS.wants_to_see,
       'unclear',
       RETELL_CONFIDENCE,
     ).value;
@@ -621,9 +898,10 @@ export function readState(
   }
   let profileReply: ProfileReply | null = null;
   if (a.profile_reply)
-    profileReply = choice<ProfileReply>(
+    profileReply = pickBy<ProfileReply>(
       a.profile_reply,
       ['confirmed', 'changes', 'you_choose', 'unclear'] as const,
+      ACTIONS.profile_reply,
       'unclear',
       RETELL_CONFIDENCE,
     ).value;

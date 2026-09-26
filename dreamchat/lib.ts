@@ -16,6 +16,14 @@ export type GoalDef = {
   told_when?: string;
   /** Tracked when volunteered, never asked for, and never waited on. */
   optional?: boolean;
+  /**
+   * What an open question about it asks, with no answers offered (DREAMCHAT_LISTEN=on): the hint
+   * above lists answers ("as themselves, as someone else, or watching"), and the host put them to
+   * the person as a choice (either/or in 24% of listening questions, the listening test's before).
+   */
+  ask_openly?: string;
+  /** An open question about it, as an example for the host: no answers offered. */
+  open_question?: string;
 };
 
 export type GoalsFile = {
@@ -266,7 +274,17 @@ export const MAX_RESUMES = 3;
 /** Messages heard after listening resumes (the rest of the dream) before it is told back again. */
 export const RESUMED_LISTEN_LIMIT = 8;
 
+/**
+ * Step S8 (listening), behind its switch until measured: the newest thing they raised is followed,
+ * every reply is checked against its move, questions are open and on their own words, readings that
+ * lead to the same action are summed, the retelling ends with the moments, and only their words are
+ * said. Off: today's behaviour.
+ */
+export const listenOn = () => process.env.DREAMCHAT_LISTEN === 'on';
+
 export type MoveContext = {
+  /** S8's listening rules (DREAMCHAT_LISTEN=on). */
+  listen?: boolean;
   phase: Phase;
   askCounts: Record<string, number>;
   /** How many messages they have sent so far. */
@@ -413,7 +431,14 @@ export function selectMove(state: State, cfg: GoalsFile, ctx: MoveContext): { mo
   const mayFollow = ctx.followStreak < MAX_FOLLOW_STREAK;
   // What they raised most recently is what a listener follows: the oldest detail still open was
   // asked about while "then the table changed" went by (night bus, 25 Sep).
-  const newest = (ok: (t: Thread) => boolean) => [...state.threads].reverse().find(ok);
+  // With S8 on, only what the message just answered raised is followed: the threads are kept
+  // strongest first, so the last one that passed was the weakest and oldest, and 135 of 326
+  // explore_thread moves named an older message than the one answered (the listening test's before).
+  // An older thread is circled back to later (rule 8), never followed past the newest message.
+  const newest = (ok: (t: Thread) => boolean) =>
+    ctx.listen
+      ? state.threads.find((t) => t.opened_turn === state.turn && ok(t))
+      : [...state.threads].reverse().find(ok);
   if (!finished && state.rapport.verbosity !== 'clipped' && mayFollow) {
     // One detail at a time, then back to the story. Chained, the questions about a detail ran the
     // listening out mid-dream: the lantern's flame, the heaviness on the bus and who was watching
@@ -532,7 +557,16 @@ export type BriefExtras = {
   /** The first thing that would be drawn, in plain words ("the young woman"). */
   firstSubject?: string;
   /** The profile to show with this move: its name, what they said, and what was guessed. */
-  profile?: { name: string; kind: string; said: string[]; guessed: string[]; dreamer?: boolean; unknownLook?: boolean };
+  profile?: {
+    name: string;
+    kind: string;
+    said: string[];
+    guessed: string[];
+    dreamer?: boolean;
+    unknownLook?: boolean;
+    /** What isn't known of how it looks, in words for the person (S8: a major gap, asked openly). */
+    gaps?: string[];
+  };
   /** The sketch just started this turn, by name. */
   sketching?: string;
   /** Sketches that have finished since they last heard, by name. */
@@ -558,13 +592,36 @@ export type BriefExtras = {
   held?: string[];
   /** Pictures they were unsure of but named nothing to change in: kept as they are. */
   kept?: string[];
+  /**
+   * The breakdown's moments, in order, for the retelling to end with (S8): as the pictures will be
+   * drawn, each marked whether they told it or it was filled in.
+   */
+  moments?: { action: string; said: boolean }[];
 };
+
+/** Moves that listen: the person is telling the dream, and the reply asks at most one open question. */
+export const LISTENING: ReadonlySet<Move['kind']> = new Set<Move['kind']>([
+  'open_ended',
+  'follow',
+  'explore_thread',
+  'circle_back',
+  'probe_goal',
+  'acknowledge',
+]);
+
+/**
+ * How a listening reply asks (S8). Written into every listening brief, and checked on the reply
+ * (jev.ts replyCheck): the before asked either/or in 24% of its listening questions, led in 25% of its
+ * replies, and asked about something else than its goal in 55% of its goal questions.
+ */
+export const ASK_OPENLY =
+  "How to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.";
 
 export function renderBrief(
   state: State,
   move: Move,
   cfg: GoalsFile,
-  opts: { opening?: boolean; phase?: Phase; extras?: BriefExtras } = {},
+  opts: { opening?: boolean; phase?: Phase; extras?: BriefExtras; listen?: boolean } = {},
 ): string {
   const t = cfg.confidence_threshold;
   const labels = (status: GoalStatus, required = false) =>
@@ -581,10 +638,11 @@ export function renderBrief(
     !opts.opening && heard.length > 0 && `Already told you: ${heard.join(', ')}.`,
     forgotten.length > 0 && `They don't remember: ${forgotten.join(', ')}. Don't ask about these again.`,
     !opts.opening && listening && (open.length ? `Not heard yet: ${open.join(', ')}.` : 'You have the whole story.'),
-    `Move: ${renderMove(move, state, cfg, opts.extras ?? {})}`,
+    `Move: ${(opts.listen && listenMove(move, state, cfg, opts.extras ?? {})) || renderMove(move, state, cfg, opts.extras ?? {})}`,
     // A reply once added its own question to a move that already had one, and the one-ask repair
     // then kept the wrong question (live test, 23 Sep).
     STRUCTURED.has(move.kind) && 'Ask nothing except what this move says.',
+    opts.listen && !opts.opening && LISTENING.has(move.kind) && ASK_OPENLY,
   ].filter(Boolean);
 
   return `<brief>\n${lines.join('\n')}\n</brief>`;
@@ -654,6 +712,69 @@ function threadSummary(state: State, id: string): string {
 
 function goalOf(cfg: GoalsFile, id: string): GoalDef | undefined {
   return cfg.goals.find((g) => g.id === id);
+}
+
+/**
+ * The moves S8 words differently (DREAMCHAT_LISTEN=on); null for the rest, which keep their words.
+ * - a goal is asked about openly, by its topic, never by its list of possible answers;
+ * - what they raised is named as what they just said;
+ * - the retelling ends with the breakdown's moments, every one, as a list;
+ * - a profile whose look is a gap asks openly what they remember, and puts no guess to them.
+ */
+export function listenMove(move: Move, state: State, cfg: GoalsFile, extras: BriefExtras): string | null {
+  switch (move.kind) {
+    case 'probe_goal': {
+      const g = goalOf(cfg, move.goalId);
+      const topic = g?.ask_openly ?? g?.probe_hint ?? move.goalId.replace(/_/g, ' ');
+      const example = g?.open_question ? `, such as "${g.open_question}"` : '';
+      return `probe_goal → ${g?.label.toLowerCase() ?? move.goalId}. React to what they just said in a few words, then ask them one open question about ${topic}${example}, in your own words. Your question is about this and nothing else, and leaves the answer to them. If they don't remember, that's fine.`;
+    }
+    case 'follow': {
+      if (state.last_move === 'retell' || state.last_move === 'take_correction' || state.last_move === 'retell_check')
+        return null;
+      return 'follow. They\'re still telling the dream. React to what they just said, then invite what happened next, openly, such as "and then what happened?", without guessing what it was and without asking about anything they already told.';
+    }
+    case 'explore_thread':
+      return `explore_thread → what they just told you: "${threadSummary(state, move.threadId)}". Be curious about something in it: ask one open question about it, in their words, never suggesting what happened or how it was.`;
+    case 'retell': {
+      const moments = extras.moments ?? [];
+      if (!moments.length) return null;
+      const told = extras.toldBefore
+        ? "retell. You told the dream back once already, and they went on with it. Tell back just what they've told since then, in a sentence or two, in their own words where you can. Add nothing they didn't say."
+        : "retell. You have their dream. Tell it back to them in a few plain sentences, in their own words where you can: where it was, who was there, how it felt and how it looked. Add nothing they didn't say.";
+      const list = moments.map((m, i) => `${i + 1}. ${m.action}${m.said ? '' : ' [filled in]'}`).join(' ');
+      const ask =
+        extras.toldBefore || state.signals.finished_telling < FINISHED_BAR
+          ? "Then, last, ask whether you got it right, and whether that's where the dream ended or more happened after."
+          : 'Then, last, ask whether you got it right or missed anything.';
+      return `${told} Then end the telling with the moments of the dream as they'll be drawn, every one of these, in this order, as one message that is a numbered list, one moment to a line ("1. …" on its own line), each said to them in a few plain words ("you …"), with "(my guess)" after any marked [filled in]. This once, a list is right. The moments: ${list} ${ask}`;
+    }
+    case 'start':
+    case 'confirm_profile': {
+      const p = extras.profile;
+      if (!p?.gaps?.length || (p.dreamer && p.unknownLook)) return null;
+      const line = openProfileLine(p);
+      return move.kind === 'start'
+        ? `start. They chose ${styleNameOf(extras, move.styleId)}. Say you'll start with ${p.name}, then ${line}`
+        : `confirm_profile. ${extras.sketching ? `First say, in a few words, that you're sketching ${extras.sketching} now and it'll appear on the right: only that, nothing else is being drawn yet. Then ` : ''}${line}`;
+    }
+    default:
+      return null;
+  }
+}
+
+const styleNameOf = (extras: BriefExtras, id: string) =>
+  (extras.styles ?? []).find((o) => o.id === id)?.name ?? 'the way they described';
+
+/**
+ * A profile with a gap in how it looks, asked openly (S8): what they told, then what isn't known,
+ * named by what it is and never by a guess of it, and an open question.
+ */
+function openProfileLine(p: NonNullable<BriefExtras['profile']>): string {
+  const said = p.said.length ? ` From what they told you: ${p.said.join('; ')}.` : '';
+  const gaps = p.gaps ?? [];
+  const whose = p.name === 'you' ? 'they looked' : `${p.name} looked`;
+  return `describe how you picture ${p.name} on their own, briefly, in plain words, from what they told you only: not the scene around them, not anyone or anything else, and not the rest of the dream.${said} Say plainly that you don't know yet ${gaps.join(', ')}, and that you'd imagine ${gaps.length > 1 ? 'those' : 'it'} if they don't remember. Then ask them, openly, what they remember of how ${whose}, or if they'd leave it to you. Don't put a guess of yours to them.`;
 }
 
 function renderMove(move: Move, state: State, cfg: GoalsFile, extras: BriefExtras): string {

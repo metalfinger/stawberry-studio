@@ -202,8 +202,13 @@ function repairExtraQuestions(messages: string[], violations: string[]): string[
  * Enforce the turn contract in CODE, never trusting the provider. Degrades rather
  * than throws: an unparseable turn still reaches the person as text, because a
  * broken conversation is worse than a malformed one.
+ *
+ * `keepWords` (S8, DREAMCHAT_LISTEN=on): no word is deleted. The one-question repair kept the trailing
+ * question and dropped the rest, and so emptied two style offers of their ways of drawing it (the
+ * listening test's before); a reply asking more than one question is sent back once instead, with that
+ * named (session.ts, jev.ts replyFailures).
  */
-export function parseTurnResponse(raw: string): ParsedTurn {
+export function parseTurnResponse(raw: string, opts: { keepWords?: boolean } = {}): ParsedTurn {
   const violations: string[] = [];
   if (TOOL_MARKUP.test(raw))
     return { messages: [RECOVERY], violations: ['tool-call markup leaked into content — reply suppressed'] };
@@ -240,7 +245,13 @@ export function parseTurnResponse(raw: string): ParsedTurn {
   if (messages.length !== list.length) violations.push('dropped blank or non-string messages');
   if (messages.length === 0) return { messages: [RECOVERY], violations: [...violations, 'every message was blank'] };
 
-  const repaired = repairExtraQuestions(messages, violations);
+  const repaired = opts.keepWords
+    ? (() => {
+        const n = messages.reduce((k, m) => k + QUESTION_COUNT(m), 0);
+        if (n > 1) violations.push(`${n} question marks, kept for the reply check`);
+        return messages;
+      })()
+    : repairExtraQuestions(messages, violations);
   // The ask goes last. A single question followed by a softener ("just a feeling, even if it
   // didn't make sense") left the person answering a statement (live test, 23 Sep).
   const asks = repaired.filter((m) => m.includes('?'));

@@ -13,12 +13,16 @@ export const DREAM_GOALS: GoalsFile['goals'] = [
     label: 'What happened',
     probe_hint:
       'the events of the dream in order, from the first thing they remember to the last, enough to tell it back',
+    ask_openly: 'what happened in the dream, as they remember it',
+    open_question: 'what happened?',
   },
   // → locations
   {
     id: 'places',
     label: 'Where it happened',
     probe_hint: 'each place the dream happened in, enough to picture it: inside or outside, what kind of place',
+    ask_openly: 'the place it happened in, and what it was like there',
+    open_question: 'what was the place like?',
   },
   // → cast, protagonist first
   {
@@ -26,42 +30,56 @@ export const DREAM_GOALS: GoalsFile['goals'] = [
     label: 'Who was there',
     probe_hint:
       'the people, animals or creatures in the dream besides them: who they were to them, that they were strangers, or that there was no one else',
+    ask_openly: 'who else was there, if anyone',
+    open_question: 'was anyone else there?',
   },
   // → point of view, and whether the dreamer is drawn at all
   {
     id: 'you_in_it',
     label: 'How they were in it',
     probe_hint: 'whether they were in the dream as themselves, as someone else, or watching it from outside',
+    ask_openly: 'who they themselves were in the dream (not how they felt)',
+    open_question: 'who were you, in the dream?',
   },
   // → emotional intent per scene
   {
     id: 'feeling',
     label: 'How it felt',
     probe_hint: 'the feeling of the dream, and whether it changed along the way',
+    ask_openly: 'how the dream felt to them',
+    open_question: 'how did it feel?',
   },
   // → the key frame
   {
     id: 'key_moment',
     label: 'The moment that stayed',
     probe_hint: 'the one moment they would pause the dream on, and what was in view at that instant',
+    ask_openly: 'the one moment of it that stays with them most',
+    open_question: 'if you could pause it on one moment, which would it be?',
   },
   // → style: palette and lighting
   {
     id: 'look',
     label: 'What it looked like',
     probe_hint: 'the colours, the light, the time of day or the texture of it: how the dream looked to them',
+    ask_openly: 'how it looked to them',
+    open_question: 'how did it look to you?',
   },
   // → props
   {
     id: 'things',
     label: 'Things that mattered',
     probe_hint: 'any object that mattered in the dream, or that nothing in particular did',
+    ask_openly: 'whether any thing or object in it mattered to them',
+    open_question: 'did any thing in it matter to you?',
   },
   // → world logic
   {
     id: 'strange',
     label: 'What was dreamlike',
     probe_hint: 'anything impossible, shifting or strange that they simply accepted while dreaming',
+    ask_openly: 'what in it was strange, if anything',
+    open_question: 'was anything about it strange?',
   },
   // → the first frame: people start with the part that stuck, and the lighthouse's beach, key and
   // door were never told, so never drawn (25 Sep)
@@ -69,6 +87,8 @@ export const DREAM_GOALS: GoalsFile['goals'] = [
     id: 'beginning',
     label: 'How it began',
     probe_hint: 'how the dream started: the first thing they remember, and where they were',
+    ask_openly: 'how it began: the first thing they remember',
+    open_question: 'how did it begin?',
     told_when:
       'Told when what they tell first is where the dream starts, or when they say what came before it. Not told when they began partway through ("the part that stuck with me is…") and nothing before that has come up.',
   },
@@ -77,6 +97,8 @@ export const DREAM_GOALS: GoalsFile['goals'] = [
     id: 'ending',
     label: 'How it ended',
     probe_hint: 'how the dream ended, or how they woke up',
+    ask_openly: 'how it ended',
+    open_question: 'how did it end?',
     told_when:
       'Told only when they say the dream stopped there, faded, or that they woke. Moving on to a new place or time, with the dream going on after it, is not its ending.',
   },

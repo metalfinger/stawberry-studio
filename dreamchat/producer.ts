@@ -6,6 +6,7 @@
 // "said" against the person's own messages (ground.ts). Strawberry's own rule is that missing
 // facts are unknown, not invented defaults presented as the user's decisions.
 import { SHAPES, type Blocking, type Move, type Shape, type Side, type Spot } from './blocking';
+import { listenOn } from './lib';
 import { type ChatMessage, callDeepseek, type Thinking } from './llm';
 
 /** A detail and whether the person said it. `null` when nobody knows and nothing is needed. */
@@ -336,8 +337,10 @@ export async function rewordLook(
   for (const [k, d] of Object.entries(fields)) {
     const v = typeof next[k] === 'string' ? (next[k] as string).trim().slice(0, 300) : '';
     if (v && !VAGUE.test(v) && v !== d.value) {
-      // A fact they gave stays theirs, reworded; a gap filled is our guess.
-      out[k] = { value: v, said: d.said && !!d.value };
+      // A fact they gave stays theirs, reworded; a gap filled is our guess. With S8 on, a reworded
+      // fact is theirs only while it keeps to their words: detail added to it is ours.
+      const theirs = d.said && !!d.value && (!listenOn() || inTheirWords(v, `${personLines(transcript)}\n${d.value}`));
+      out[k] = { value: v, said: theirs };
       changed = true;
     } else out[k] = d;
   }
@@ -890,9 +893,47 @@ export async function rewordMoment(
   return changed ? out : null;
 }
 
+const WORD_STOP = new Set(
+  'a an the of in on to as and or with like it its is was were be at by for from that this they them their there he she his her him you your very just some who what which'.split(
+    ' ',
+  ),
+);
+/** The words that carry a clause, cut to their first five letters so "floated" meets "floating". */
+const carrying = (x: string) =>
+  x
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter((w) => w.length > 2 && !WORD_STOP.has(w))
+    .map((w) => w.slice(0, 5));
+
+/** What the person said, from a rendered conversation: their lines only. */
+export const personLines = (transcript: string) =>
+  transcript
+    .split('\n')
+    .filter((l) => l.startsWith('Person: '))
+    .map((l) => l.slice('Person: '.length))
+    .join('\n');
+
+/**
+ * Whether a value is the person's own words, clause by clause (S8, docs/rules.md F1: only their words
+ * are said). A clause is theirs when most of the words that carry it are words they used, in `theirs`
+ * (what they said, and a value of theirs it was written from). 256 of the 258 sketch clauses marked
+ * said but never said were a said look reworded with our own detail ("small brown terrier, energetic"
+ * became "…about 30 cm tall and 9 kg, with a wiry tan coat, … alert dark eyes"): marked said whole.
+ */
+export function inTheirWords(value: string, theirs: string): boolean {
+  const have = new Set(carrying(theirs));
+  const clauses = value
+    .split(/\s*;\s*|,\s+|\.\s+|\s+(?:with|and|but)\s+/)
+    .map((c) => carrying(c))
+    .filter((w) => w.length);
+  return clauses.every((w) => w.filter((x) => have.has(x)).length / w.length >= 0.6);
+}
+
 /**
  * Apply the person's answer to a profile. Returns the new fields; any value that changed is
- * now theirs, so it is marked as said.
+ * now theirs, so it is marked as said. With S8 on, only a value in their own words is said: the
+ * rewrite of a profile brings in words of its own.
  */
 export async function reviseItem(
   name: string,
@@ -920,7 +961,9 @@ export async function reviseItem(
   for (const [k, d] of Object.entries(fields)) {
     const v =
       typeof next[k] === 'string' && (next[k] as string).trim() ? (next[k] as string).trim().slice(0, 600) : null;
-    out[k] = v !== null && v !== d.value ? { value: v, said: true } : d;
+    const said =
+      listenOn() && v !== null ? inTheirWords(v, `${personLines(transcript)}\n${d.said ? (d.value ?? '') : ''}`) : true;
+    out[k] = v !== null && v !== d.value ? { value: v, said } : d;
   }
   return out;
 }

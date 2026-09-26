@@ -10,6 +10,7 @@ import { cleanStyles, type GroundingNote, ground, judgeChanges, judgeLeaves, lin
 import {
   bookkeeperQuestions,
   type Exchange,
+  type ReplyCheckInput,
   type JevFn,
   type JevReadNote,
   type Question,
@@ -27,6 +28,7 @@ import {
   initialState,
   invitesMore,
   isFollowing,
+  listenOn,
   type Move,
   moveKey,
   needsThought,
@@ -80,6 +82,7 @@ import {
 // Moved to continuity.ts; kept here for older imports.
 export { calledIn };
 import type { Blocking } from './blocking';
+import { checkedReply, gapMatters, gapsOf, majorGaps, type ReplyCheckRecord } from './listen';
 import type { TreeInput } from './tree';
 import { atSite, inSession, recordJev } from './jevlog';
 import { askFacts, decide, type Reading, STORYBOARD } from './stages';
@@ -175,6 +178,8 @@ export type TurnDetail = {
   hostInput: ChatMessage[];
   hostRaw: string;
   stateAfter: State;
+  /** S8: the reply checked against its move, and sent back once if it failed. */
+  replyCheck?: ReplyCheckRecord;
 };
 
 /** The producer's breakdown of the dream, drafted in the background. */
@@ -226,6 +231,8 @@ export type Build = {
   frames?: Item[];
   /** Which earlier pictures each moment is drawn from, and why; made before any is drawn. */
   plan?: ContinuityPlan;
+  /** S8: the sketches whose look is a major gap, asked about openly (listen.ts majorGaps). */
+  gaps?: string[];
 };
 
 /** A moment or a ghost that needs nothing more from anyone: drawn and looked at, or failed. */
@@ -1524,7 +1531,8 @@ export class SessionStore {
       s.phase === 'review' || s.phase === 'frames' ? onPage.map(({ id, name }) => ({ id, name })) : [],
     );
     const call = await this.deps.jev(renderTranscript(s.transcript), questions);
-    const { next, notes } = readState(prev, this.cfg, s.transcript, call, turnNow, s.phase);
+    const listen = listenOn();
+    const { next, notes } = readState(prev, this.cfg, s.transcript, call, turnNow, s.phase, 0.5, listen);
 
     // Session facts beat state facts: which move was just made and which threads were
     // already explored come from this conversation's own record, not the judge.
@@ -1667,6 +1675,7 @@ export class SessionStore {
     const dry = read && !adds && !!lastTurn && invitesMore(lastTurn.move);
     const dryStreak = dryRun(s.turns, dry);
     const { move, rule } = selectMove(overlaid, this.cfg, {
+      listen,
       phase: s.phase,
       askCounts: s.askCounts,
       listenTurns: turnNow,
@@ -1695,7 +1704,13 @@ export class SessionStore {
     if (move.kind === 'offer_visualize' && s.phase === 'retell' && amended) this.startDraft(s);
     // The moves that offer or apply a way of drawing it need the breakdown. Wait if needed.
     let waitMs = 0;
-    if (move.kind === 'choose_style' || move.kind === 'style_help' || move.kind === 'start') {
+    // S8: the retelling ends with the moments as the breakdown has them, so it waits for the breakdown.
+    if (
+      move.kind === 'choose_style' ||
+      move.kind === 'style_help' ||
+      move.kind === 'start' ||
+      (listen && move.kind === 'retell')
+    ) {
       const t0 = this.now();
       await this.readyDraft(s);
       waitMs = this.now() - t0;
@@ -1716,16 +1731,33 @@ export class SessionStore {
     };
     if (s.style?.id === 'own')
       extras.styles = [...(extras.styles ?? []), { id: 'own', name: s.style.name, line: s.style.line }];
+    if (listen && move.kind === 'retell' && s.draft?.breakdown)
+      extras.moments = moments(s.draft.breakdown).map((m) => ({ action: m.action, said: m.said }));
+    // S8: a profile whose look is a major gap is asked about openly; a minor one is never asked.
+    const profileFor = (it: Item) =>
+      listen && s.build?.gaps?.includes(it.id) ? { ...profileOf(it), gaps: gapsOf(it) } : profileOf(it);
 
     // Building: the answer settles the profile on show, its sketch starts, and the next one is shown.
     if (move.kind === 'start') {
       const items = s.draft?.breakdown ? buildItems(s.draft.breakdown) : [];
+      // S8: only the major gaps in how it looks are asked about (docs/rules.md F2).
+      let gaps: string[] | undefined;
+      if (listen && s.draft?.breakdown && items.length) {
+        const b = s.draft.breakdown;
+        const major = majorGaps(b, items, await gapMatters(b, items, renderTranscript(s.transcript), this.deps.jev));
+        gaps = [...major];
+        for (const it of items) if (!it.extras) it.ask = major.has(it.id);
+        if (!items.some((i) => i.ask)) {
+          const shown = items.find((i) => i.kind !== 'prop' && !i.extras);
+          if (shown) shown.ask = true;
+        }
+      }
       const first = items.find((i) => i.ask) ?? items[0];
       if (!items.length || !first || !this.deps.sheets || !this.deps.write) phase = 'ready';
       else {
         first.status = 'confirming';
-        s.build = { items, current: first.id, checks: 0 };
-        extras.profile = profileOf(first);
+        s.build = { items, current: first.id, checks: 0, ...(gaps ? { gaps } : {}) };
+        extras.profile = profileFor(first);
       }
     }
     if (s.build && (move.kind === 'confirm_profile' || move.kind === 'build_done')) {
@@ -1742,7 +1774,7 @@ export class SessionStore {
       const next = move.kind === 'confirm_profile' ? s.build.items.find((i) => i.id === move.itemId) : undefined;
       if (next) {
         next.status = 'confirming';
-        extras.profile = profileOf(next);
+        extras.profile = profileFor(next);
       }
       s.build.current = next?.id ?? null;
       s.build.checks = 0;
@@ -1750,7 +1782,7 @@ export class SessionStore {
     if (s.build && move.kind === 'profile_check') {
       s.build.checks += 1;
       const item = s.build.items.find((i) => i.id === move.itemId);
-      if (item) extras.profile = profileOf(item);
+      if (item) extras.profile = profileFor(item);
     }
     if (s.build && move.kind === 'sheets_done') await this.startFrames(s, turnNow);
     // How far the moments have got, whenever they are being drawn: leaving and the end included.
@@ -1810,14 +1842,30 @@ export class SessionStore {
       }
     }
     if (move.kind === 'retell' && s.resumed) extras.toldBefore = true;
-    const brief = renderBrief(overlaid, move, this.cfg, { phase, extras });
+    const brief = renderBrief(overlaid, move, this.cfg, { phase, extras, listen });
     if (move.kind === 'probe_goal') s.askCounts[move.goalId] = (s.askCounts[move.goalId] ?? 0) + 1;
     s.briefs[turnNow] = brief;
 
     const hostInput = this.hostHistory(s);
     const thinking = needsThought(move) ? HOST_THINKING_DEEP : HOST_THINKING;
-    const res = await this.deps.host(hostInput, { thinking });
-    const parsed = parseTurnResponse(res.content);
+    // S8: every reply checked against its move, and written once more with what it failed named.
+    // The picture turns are checked and the check kept, but not sent back: their briefs hold conditions
+    // ("if they ask, say…") the check cannot read, and a second try fixed none of five (smoke run, 27 Sep).
+    const checked = listen
+      ? await checkedReply(
+          this.deps.host,
+          this.deps.jev,
+          hostInput,
+          thinking,
+          this.checkInput(s, move, brief, extras),
+          {
+            retry: !['while_drawing', 'frames_drawing', 'sheets_done', 'all_done', 'ask_which'].includes(move.kind),
+            retryThinking: HOST_THINKING_DEEP,
+          },
+        )
+      : null;
+    const res = checked?.res ?? (await this.deps.host(hostInput, { thinking }));
+    const parsed = checked?.parsed ?? parseTurnResponse(res.content);
     s.transcript.push({ role: 'assistant', content: parsed.messages.join('\n\n'), messages: parsed.messages });
 
     // A retelling that never happened must not move the conversation on.
@@ -1880,9 +1928,35 @@ export class SessionStore {
         hostInput,
         hostRaw: res.content,
         stateAfter: s.state,
+        ...(checked ? { replyCheck: checked.record } : {}),
       },
     );
     return { messages: parsed.messages, phase, closed: s.closed, move, rule };
+  }
+
+  /** What the check of a reply reads (S8): the move, what it names, and what the person has said. */
+  private checkInput(s: Session, move: Move, brief: string, extras: BriefExtras): Omit<ReplyCheckInput, 'messages'> {
+    const said = s.transcript.filter((e) => e.role === 'user').map((e) => e.content);
+    const moveLine = brief.match(/Move: ([\s\S]*?)(?:\n|<\/brief>|$)/)?.[1] ?? '';
+    const thread =
+      move.kind === 'explore_thread' || move.kind === 'circle_back'
+        ? (s.transcript[Number(move.threadId.match(/^msg_(\d+)$/)?.[1] ?? Number.NaN)]?.content ??
+          s.state.threads.find((t) => t.id === move.threadId)?.summary)
+        : undefined;
+    const goal = move.kind === 'probe_goal' ? this.cfg.goals.find((g) => g.id === move.goalId) : undefined;
+    return {
+      move,
+      moveLine,
+      said,
+      ...(thread ? { thread } : {}),
+      ...(goal ? { topic: goal.ask_openly ?? goal.probe_hint, example: goal.open_question } : {}),
+      ...(move.kind === 'choose_style' && extras.styles?.length ? { styles: extras.styles } : {}),
+      ...(move.kind === 'retell' && extras.moments?.length ? { moments: extras.moments.length } : {}),
+      ...(move.kind === 'follow' && s.phase === 'retell' ? { resumed: true } : {}),
+      ...((move.kind === 'start' || move.kind === 'confirm_profile' || move.kind === 'profile_check') && extras.profile
+        ? { profile: extras.profile.name }
+        : {}),
+    };
   }
 
   // ── Background work ───────────────────────────────────────────────────────
