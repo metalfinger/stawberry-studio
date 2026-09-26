@@ -745,8 +745,12 @@ export function listenMove(move: Move, state: State, cfg: GoalsFile, extras: Bri
         return null;
       return 'follow. They\'re still telling the dream. React to what they just said, then invite what happened next, openly, such as "and then what happened?", without guessing what it was and without asking about anything they already told.';
     }
+    // What is seen: a question about what it meant or how it felt tells no picture anything, and those
+    // were most of the questions on an older thread (circle_back, the second after-run, 27 Sep).
     case 'explore_thread':
-      return `explore_thread → what they just told you: "${threadSummary(state, move.threadId)}". Be curious about something in it: ask one open question about it, in their words, never suggesting what happened or how it was.`;
+      return `explore_thread → what they just told you: "${threadSummary(state, move.threadId)}". Be curious about something in it that could be seen and that they haven't described yet: what it looked like, where it was, or who was there. Ask one open question about it, in their words, never suggesting what happened or how it was.`;
+    case 'circle_back':
+      return `circle_back → they mentioned "${threadSummary(state, move.threadId)}" earlier and it never got picked up. Come back to it, saying it was earlier, and ask one open question about something in it that could be seen and that they haven't described yet: what it looked like, where it was, or who was there.`;
     case 'retell': {
       const moments = extras.moments ?? [];
       if (!moments.length) return null;

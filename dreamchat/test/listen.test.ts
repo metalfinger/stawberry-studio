@@ -82,6 +82,17 @@ describe('the briefs', () => {
     expect(off).toContain('as someone else, or watching');
   });
 
+  test('a thread, new or earlier, is asked about what could be seen of it; off, anything about it', () => {
+    const s = at(6, [thread('msg_9', 5)]);
+    for (const move of [
+      { kind: 'explore_thread', threadId: 'msg_9' },
+      { kind: 'circle_back', threadId: 'msg_9' },
+    ] as const) {
+      expect(renderBrief(s, move, cfg, { phase: 'listen', listen: true })).toContain('could be seen');
+      expect(renderBrief(s, move, cfg, { phase: 'listen' })).not.toContain('could be seen');
+    }
+  });
+
   test('the retelling ends with every moment of the breakdown, marking the ones filled in', () => {
     const b = renderBrief({ ...initialState('t', cfg) }, { kind: 'retell' }, cfg, {
       phase: 'retell',
