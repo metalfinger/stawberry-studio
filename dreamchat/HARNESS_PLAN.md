@@ -116,6 +116,26 @@ One **cut sheet** per cut is the spine everything is assembled from:
   cases and the corpus are unchanged apart from the reworded prompts that no longer happen (listed and explained).
   Review: that nothing a check found is lost, only no longer acted on.
 
+## Where steps overlap (read before starting any step)
+
+Work found in one step that belongs to, or touches, another. Keep this list current; nothing here may be dropped
+between sessions.
+
+| From | To | What |
+| --- | --- | --- |
+| S0 | every step | Frozen dreams have no pins, re-plans or corrections: each step also needs a live-flow check (S1's review found two faults only the live path shows). |
+| S1 | S3 | `record.ts` renders English sentences (`nowAt`); the cut sheet should carry typed facts (who, part, now, held by, basis) rendered once at assembly. New word lists in S1 (FILLS, OPENS, STATE_VERB, NOT_THERE, SELF, TAKEN, HOLDS_NAME) overlap the implied-state reading and should give way to it. |
+| S1 | S4 | Water level and boat height come from floor-plan heights (library-1 m5, library-3 m7 still fail on the mock-up's layout); a held thing in a through-the-eyes view is placed at its floor-plan spot instead of the hands; the "Nobody else is in the picture" line can list people who are. |
+| S1 | S5 | Implied changes make no in-between picture of their own until S5 settles the owner's rule (one only when an edit carries several changes); the per-change in-between pictures from before remain for S5. `shutAway` closes anything opened when carried to another place (right for a suitcase, wrong for an umbrella or book). |
+| S1 | S6 | `withoutWords` is another regex clean-up in frames.ts; S6 retires these. Text rendering bugs of the record land in the prompt until S6 builds it from the sheet. |
+| S1 | S9 | The Strawberry production is written at `start`, before planning and the implied reading, so implied changes have no production coverage. |
+| S2 | S7 | S2 makes the checks log only; their logged readings become S7's labelled sets. |
+| S7 | S8 | Jev choice readings apply the confidence bar to the top label instead of summing labels that lead to the same action ("confirmed 0.55 + you_choose 0.45" read as unclear, 15 of 16 cases): fix in the Jev layer, measured by the S8 listening test. |
+| S8 | S1 | 21% of "said" facts were never said, 481 of 574 in sketch profiles: the record's basis per clause (S1) and listening (S8) both own this; S8's fact check is the measure. |
+| S8 | S8 | 135 of 326 explore-thread moves point at an older message than the one answered: a move-selection fault, not a reply fault. |
+| best-of-takes branch | S5, S10 | Built, off by default (9371476), parked; touches session.ts; merge after S1 lands. |
+| S3 | S6 | `docs/cut-sheet-map.md` lists every prompt input and where it is computed today; S6's `assembleCut` reads only the sheet S3 builds. |
+
 ## Open questions for the owner
 
 - In `evals/paired-verdicts.json`, the sketches-only version of lighthouse-first m7 carries the same note as orchard
