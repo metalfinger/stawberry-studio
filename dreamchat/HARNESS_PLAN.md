@@ -49,7 +49,7 @@ One **cut sheet** per cut is the spine everything is assembled from:
 
 | # | Step | Status | Eval that proves it |
 | --- | --- | --- | --- |
-| S0 | Eval foundation: a prompt-case set from the person's 122 verdicts and notes, a runner that rebuilds prompts from saved dreams and scores them, the free simulation corpus as regression | built | Every noted fault has a case; the runner reproduces today's failures. Baseline: 6 of 33 counted fault cases met (all six guards against editing the picture before), 36 of 36 passing cases met (below) |
+| S0 | Eval foundation: a prompt-case set from the person's 122 verdicts and notes, a runner that rebuilds prompts from saved dreams and scores them, the free simulation corpus as regression | done: reviewed, fixed, merged (26 Sep) | Every noted fault has a case; the runner reproduces today's failures. Baseline: 6 of 33 counted fault cases met (all six guards against editing the picture before), 36 of 36 passing cases met (below) |
 | S1 | Story record carries state (water, suitcase, who holds what, presence) into continuity, in-between pictures and prompts | building | The S1 cases pass (`--step S1`: library-2 m5/m9 water, snow-train m4/m5, snow-train-2 m1, lighthouse-fresh m13, orchard m7; library-1 m3/m5, library-3 m7, snow-train-2 m5/m7 need a model step); no regressions on the corpus |
 | S2 | Stop stand-in checks deciding: the pre-draw prompt check and storyboard check only log | not started | No moment held or reworded; corpus unchanged otherwise |
 | S3 | The cut sheet: tree (vertical) + record (horizontal) + relations + tags, one per cut | not started | Every input the prompt needs comes from the sheet; no fact computed in two places |
@@ -132,3 +132,8 @@ One **cut sheet** per cut is the spine everything is assembled from:
   and each run keeps their hashes; faults seen in one drawing are counted by one rule, and nine are hypotheses;
   eight that no change to the code alone can meet are marked as needing a model step. Baseline: 6/33 counted,
   36/36 passing.
+- 26 Sep: S0 done. An independent review found a reworded prompt could still meet some cases and the camera
+  checks did not check the side; fixed (a no-question on every faulty fact, named sides, frozen dreams with hashes,
+  word-level corpus diffs, 8 cases tagged as needing a model step), re-measured with the review's own probe prompts
+  (cosmetic rewordings now fail, genuine fixes still pass), merged, baseline reproduced on the merged branch:
+  6/33 counted faults met, 36/36 guards.
