@@ -57,7 +57,7 @@ One **cut sheet** per cut is the spine everything is assembled from:
 | S5 | References and variants: one image per subject; in-between pictures only when an edit carries several changes; variants kept and reusable; the grey mock-up as a reference chosen by tag | not started | The S5 cases stay met or pass (`--step S5`: never editing a picture from another side; library-1 m5 wall); its hypotheses (mock-up only, one image per subject) are for a paid check, not proven here |
 | S6 | `assembleCut`: prompt and references from the sheet, each fact once, action as visible facts; retire the regex clean-ups one by one | not started | All S0 cases pass; word-level diff reviewed on every saved dream |
 | S7 | Jev layer 2: checks routed by tags, a question library from the film rules, a labelled set per question; a check may hold a picture only if it predicts pictures | not started | Each question meets its bar on its labelled set |
-| S8 | Listening: every reply checked against its move; major picture gaps asked openly, minor ones imagined and marked; the retelling ends with the moments | eval written and reviewed (26 Sep), not built | `evals/listening.ts` against the frozen before (`evals/listening-before`, 40 fresh simulated conversations): listening-turn compliance at least 90%, either/or under 5%, leading 0, said but not in their words 0, every way of drawing it kept, every retelling ends with a list of the breakdown's moments, no answer misread; floors not below the before (below) |
+| S8 | Listening: every reply checked against its move; major picture gaps asked openly, minor ones imagined and marked; the retelling ends with the moments | test merged (27 Sep: before frozen, 40 conversations); fixes building | `evals/listening.ts` against the frozen before (`evals/listening-before`, 40 fresh simulated conversations): listening-turn compliance at least 90%, either/or under 5%, leading 0, said but not in their words 0, every way of drawing it kept, every retelling ends with a list of the breakdown's moments, no answer misread; floors not below the before (below) |
 | S9 | Record of what was drawn, and staleness; sequences and look keys | not started | Stale pictures found on saved dreams |
 | S10 | Only after S0-S9 pass: a paid benchmark on the five replay dreams, judged by the owner | waiting | Owner's first-take rate against today's |
 
@@ -306,3 +306,7 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   following the newest message over a stale thread passes; the audit is a regression set. Hand checks of the before's
   flags (seed 5): 10/10 said-but-not-told real, near-bar mixed as meant (2 of 6 said after all), 9/10 leading real
   (one restated what was said).
+- 27 Sep: S8's listening test merged after review fixes: a frozen before of 40 simulated conversations (20 dreams x 2), targets that
+  cannot be met by asking or recording less. Before: listening compliance 60%, either/or 24%, leading 25%, said but
+  not told 22%, retelling ends with the moments 0/42. The listening fixes are now being built behind DREAMCHAT_LISTEN.
+  Known: evals/probes/place-question.ts does not typecheck on its own (top-level await); fix with S1's follow-up.
