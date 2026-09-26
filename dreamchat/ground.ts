@@ -84,7 +84,6 @@ export function crowdQuestions(b: Breakdown): Record<string, Question> {
   return q;
 }
 
-
 /** A change's kind from Jev's answers: undefined where Jev gave no reading. */
 export function changeKind(answers: Record<string, Answer> | null, key: string): { look?: boolean; whole?: boolean } {
   const n = (k: string) => {
@@ -416,10 +415,17 @@ const sentences = (text: string) =>
 export async function cleanStyles(b: Breakdown, jev: JevFn): Promise<{ breakdown: Breakdown; dropped: string[] }> {
   const out: Breakdown = structuredClone(b);
   const questions: Record<string, Question> = {};
+  // Asked of every picture the dream has, whatever it shows: asked of a picture in general, "glowing
+  // highlights on the apples" read as adding nothing, the apples being in the orchard anyway, and put
+  // the orchard behind the dreamer's sketch and Tomas's (26 Sep). On 12 labelled tokens that bring
+  // content this catches 8 (3 before), and flags 1 of 47 that do not. The name is asked the same
+  // way: "Style: green lamplight on dark clear water" held the boat's sketch as at odds with itself
+  // (25 Sep); of 152 names, all 6 that bring content are caught, and 1 of 141 that do not
+  // ("as it appeared in the dream", said as "a photograph" instead).
   const ask = (key: string, text: string) => {
     questions[key] = {
       type: 'noul',
-      instructions: `A way of drawing a dream is described by this phrase: "${text}". If a picture followed it, would something appear in the picture that is not there anyway: a place, room, building, street, object, person or animal; a substance or particles such as water drops, rain, snow, dust, smoke or sparks; a particular light source such as lamps, stoves, candles or a fire; or anything from the dream's story? A comparison counts ("like an equipment room" brings the room). Or does it only change how the picture is drawn (the medium, the line, the texture, the colour treatment, the general quality and direction of light)?`,
+      instructions: `A way of drawing a dream is described by this phrase: "${text}". Every picture of the dream is drawn this way, whatever it shows: a room indoors, one person alone on a plain ground, a single object. If every such picture followed it, would something appear in it that is not there anyway: a place, room, building, street, village, town, water, object, person or animal; a substance or particles such as water drops, rain, snow, dust, smoke or sparks; a particular light source such as lamps, stoves, candles or a fire; or anything from the dream's story? A comparison counts ("like an equipment room" brings the room). Or does it only change how the picture is drawn (the medium, the line, the texture, the colour treatment, the general quality and direction of light)?`,
       criteria: {
         true: 'following it adds things to the picture: places, objects, people, water drops or other particles, particular light sources, or story content, even by comparison',
         false: 'it only changes how the picture is drawn, or the general quality and direction of light',
@@ -427,6 +433,7 @@ export async function cleanStyles(b: Breakdown, jev: JevFn): Promise<{ breakdown
     };
   };
   out.style_options.forEach((o, i) => {
+    ask(`name_${i}`, o.name);
     o.tokens.forEach((t, j) => ask(`tok_${i}_${j}`, t));
     sentences(o.lighting_rules).forEach((t, j) => ask(`light_${i}_${j}`, t));
     // How it feels like a dream is drawn into every picture, so it may carry no content either.
@@ -441,6 +448,12 @@ export async function cleanStyles(b: Breakdown, jev: JevFn): Promise<{ breakdown
   const dropped: string[] = [];
   const story = storyWords(out);
   out.style_options.forEach((o, i) => {
+    // A name that brings content is said as what it is made as.
+    const medium = typeof o.medium === 'string' && o.medium.trim() && o.medium !== 'undefined' ? o.medium.trim() : '';
+    if (medium && (content(`name_${i}`) || namesStory(o.name, story)) && o.name !== medium) {
+      dropped.push(`${o.name}: its name, now "${medium}"`);
+      o.name = medium;
+    }
     const tokens = o.tokens.filter((t, j) => {
       if (!content(`tok_${i}_${j}`) && !namesStory(t, story)) return true;
       dropped.push(`${o.name}: "${t}"`);
@@ -545,7 +558,10 @@ export async function ground(
       // A change into something else altogether always changes how it looks: "the house becomes a
       // boat" read as not a change of look (0.28), and would have been dropped. And nothing changes
       // where it is first shown.
-      if ((!hasBefore(out, m.id, l.who) && !(kind.whole ?? l.whole ?? isWhole(l))) || (kind.look === false && kind.whole !== true)) {
+      if (
+        (!hasBefore(out, m.id, l.who) && !(kind.whole ?? l.whole ?? isWhole(l))) ||
+        (kind.look === false && kind.whole !== true)
+      ) {
         downgraded.push({
           path: `${m.id}.leaves`,
           label: 'not a change of how it looks',
