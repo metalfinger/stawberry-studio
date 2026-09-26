@@ -27,7 +27,9 @@ import {
   goalStatus,
   initialState,
   invitesMore,
-  isFollowing,
+  FINISHED_BAR,
+  followStreakOf,
+  LISTENING,
   listenOn,
   type Move,
   moveKey,
@@ -1025,7 +1027,12 @@ export type StoreDeps = {
   /** Draws reference sheets through the engine. Absent: nothing is sketched. */
   sheets?: SheetEngine;
   /** Applies the person's answer to a profile. */
-  reviseItem?: (name: string, fields: Record<string, Detail>, transcript: string) => Promise<Record<string, Detail>>;
+  reviseItem?: (
+    name: string,
+    fields: Record<string, Detail>,
+    transcript: string,
+    said?: string[],
+  ) => Promise<Record<string, Detail>>;
   /** How often a running sketch is checked, in ms. */
   watchEveryMs?: number;
   /** The image judge: checks a finished take against its declared facts. Absent: no check. */
@@ -1044,6 +1051,7 @@ export type StoreDeps = {
     findings: string[],
     transcript: string,
     later?: string[],
+    said?: string[],
   ) => Promise<Record<string, Detail> | null>;
   /** A moment's shot briefed from its worked-out view, as a director of photography would. */
   shot?: (
@@ -1105,6 +1113,8 @@ export function liveProducer(jev: JevFn): NonNullable<StoreDeps['producer']> {
 export { ownStyle };
 
 const userTurns = (s: Session) => s.transcript.filter((e) => e.role === 'user').length;
+/** Everything the person has said, message by message, as the conversation keeps it. */
+const theirSay = (s: Session) => s.transcript.filter((e) => e.role === 'user').map((e) => e.content);
 
 /**
  * The sheets to draw, in Strawberry's order: the protagonist, the other people, the places, the
@@ -1521,6 +1531,7 @@ export class SessionStore {
     const onPage = pieces.filter((i) => i.status === 'ready' && !i.review && i.kind !== 'ghost');
     const pending = onPage.filter((i) => i.announced);
     const lastShown = pending.filter((i) => i.announcedAt === turnNow - 1);
+    const listen = listenOn();
     const questions = bookkeeperQuestions(
       this.cfg,
       s.transcript,
@@ -1529,9 +1540,9 @@ export class SessionStore {
       styles,
       onShow?.name,
       s.phase === 'review' || s.phase === 'frames' ? onPage.map(({ id, name }) => ({ id, name })) : [],
+      listen,
     );
     const call = await this.deps.jev(renderTranscript(s.transcript), questions);
-    const listen = listenOn();
     const { next, notes } = readState(prev, this.cfg, s.transcript, call, turnNow, s.phase, 0.5, listen);
 
     // Session facts beat state facts: which move was just made and which threads were
@@ -1551,7 +1562,7 @@ export class SessionStore {
         // (night market, 26 Sep). Asked twice and held again: left undrawn, so the sketches settle.
         if (it.heldAskedAt === turnNow - 1) {
           if (this.deps.reviseItem)
-            it.fields = await this.deps.reviseItem(it.name, it.fields, renderTranscript(s.transcript));
+            it.fields = await this.deps.reviseItem(it.name, it.fields, renderTranscript(s.transcript), theirSay(s));
           it.held = undefined;
           await this.startSketch(s, it, turnNow);
         } else if ((it.heldAsks ?? 0) >= 2) await this.guessOrLeave(s, it, turnNow);
@@ -1591,7 +1602,7 @@ export class SessionStore {
       for (const it of [...wrong]) {
         const before = structuredClone(it.fields);
         const revised = this.deps.reviseItem
-          ? await this.deps.reviseItem(it.name, it.fields, renderTranscript(s.transcript))
+          ? await this.deps.reviseItem(it.name, it.fields, renderTranscript(s.transcript), theirSay(s))
           : it.fields;
         // Nothing is drawn again without something to draw differently: "it looks a little off,
         // I can't say what, go with it" redrew the family unchanged (24 Sep). What they point at
@@ -1662,8 +1673,10 @@ export class SessionStore {
     const settled = !!s.build && s.build.items.every(isSettled);
     const framesSettled = !!s.build?.frames?.length && s.build.frames.every(isSettled);
 
-    let followStreak = 0;
-    for (let i = s.turns.length - 1; i >= 0 && isFollowing(s.turns[i].move); i--) followStreak++;
+    const followStreak = followStreakOf(
+      s.turns.map((t) => t.move),
+      listen,
+    );
     const forgot = s.phase === 'listen' && (overlaid.signals.recall_spent ?? 0) >= 0.5;
     let forgotStreak = forgot ? 1 : 0;
     for (let i = s.turns.length - 1; forgot && i >= 0 && s.turns[i].forgot; i--) forgotStreak++;
@@ -1697,7 +1710,13 @@ export class SessionStore {
 
     // The producer drafts the breakdown while the dream is told back, so it is usually done
     // by the time the person has answered; a correction redrafts it from the previous one.
+    // S8: a breakdown started while the dream was being finished is the retelling's, when nothing told since
+    // added to what happened; waiting for one started at the retelling took a median 14 s (third after-run).
+    const early = listen && move.kind === 'retell' ? this.earlyDraft(s, turnNow, adds) : null;
     if (move.kind === 'retell' || move.kind === 'take_correction') this.startDraft(s);
+    // S8: once the dream looks told, its breakdown is started ahead of the retelling, at most every third turn.
+    if (listen && s.phase === 'listen' && LISTENING.has(move.kind) && overlaid.signals.finished_telling >= FINISHED_BAR)
+      if ((this.drafts.get(s.id)?.basedOn ?? Number.NEGATIVE_INFINITY) < turnNow - 2) this.startDraft(s);
     // A change taken as it stands at the retell limit is in the breakdown too: the blue lantern,
     // told as the offer was made, was never drafted (night bus, 25 Sep).
     const amended = overlaid.signals.retell_reply === 'corrected' || overlaid.signals.retell_reply === 'added_more';
@@ -1705,11 +1724,20 @@ export class SessionStore {
     // The moves that offer or apply a way of drawing it need the breakdown. Wait if needed.
     let waitMs = 0;
     // S8: the retelling ends with the moments as the breakdown has them, so it waits for the breakdown.
+    let retold: Breakdown | undefined;
+    if (early) {
+      const t0 = this.now();
+      retold = await early.then(
+        (r) => r.breakdown,
+        () => undefined,
+      );
+      waitMs = this.now() - t0;
+    }
     if (
       move.kind === 'choose_style' ||
       move.kind === 'style_help' ||
       move.kind === 'start' ||
-      (listen && move.kind === 'retell')
+      (listen && move.kind === 'retell' && !retold)
     ) {
       const t0 = this.now();
       await this.readyDraft(s);
@@ -1738,8 +1766,9 @@ export class SessionStore {
     };
     if (s.style?.id === 'own')
       extras.styles = [...(extras.styles ?? []), { id: 'own', name: s.style.name, line: s.style.line }];
-    if (listen && move.kind === 'retell' && s.draft?.breakdown)
-      extras.moments = moments(s.draft.breakdown).map((m) => ({ action: m.action, said: m.said }));
+    const toRetell = retold ?? s.draft?.breakdown;
+    if (listen && move.kind === 'retell' && toRetell)
+      extras.moments = moments(toRetell).map((m) => ({ action: m.action, said: m.said }));
     // S8: a profile whose look is a major gap is asked about openly; a minor one is never asked.
     const profileFor = (it: Item) =>
       listen && s.build?.gaps?.includes(it.id) ? { ...profileOf(it), gaps: gapsOf(it) } : profileOf(it);
@@ -1771,7 +1800,12 @@ export class SessionStore {
       const settling = s.build.items.find((i) => i.id === s.build?.current);
       if (settling) {
         if (overlaid.signals.profile_reply === 'changes' && this.deps.reviseItem)
-          settling.fields = await this.deps.reviseItem(settling.name, settling.fields, renderTranscript(s.transcript));
+          settling.fields = await this.deps.reviseItem(
+            settling.name,
+            settling.fields,
+            renderTranscript(s.transcript),
+            theirSay(s),
+          );
         await this.startSketch(s, settling, turnNow);
         // What isn't asked about goes with the first profile settled: drawn from what was said.
         const things = s.build.items.filter((i) => !i.ask && i.status === 'waiting');
@@ -1989,6 +2023,17 @@ export class SessionStore {
           }),
         ),
     );
+  }
+
+  /**
+   * S8: the breakdown already being drafted, when the retelling can use it: started at most three messages
+   * ago, and none of the messages since (this one included) added to what happened.
+   */
+  private earlyDraft(s: Session, turnNow: number, addsNow: boolean): Promise<DraftResult> | null {
+    const d = this.drafts.get(s.id);
+    if (!d || d.basedOn < turnNow - 3 || d.basedOn >= turnNow || addsNow) return null;
+    if (s.turns.some((t) => t.turn > d.basedOn && t.adds)) return null;
+    return d.promise;
   }
 
   private applyDraft(s: Session, basedOn: number, r: DraftResult): void {
@@ -3133,6 +3178,7 @@ export class SessionStore {
               findings,
               renderTranscript(s.transcript),
               laterOf(s, item.id),
+              theirSay(s),
             )
             .catch(() => null);
           if (!fields) break;

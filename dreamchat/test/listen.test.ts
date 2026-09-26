@@ -1,5 +1,7 @@
 // Step S8 (listening), behind DREAMCHAT_LISTEN=on: each rule, and that off is today.
 import { afterEach, describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { dreamConfig } from '../dream';
 import {
   type Answer,
@@ -11,11 +13,22 @@ import {
   type ReplyCheckInput,
   replyFailures,
 } from '../jev';
-import { ASK_OPENLY, initialState, type MoveContext, renderBrief, selectMove, type State, type Thread } from '../lib';
+import {
+  ASK_OPENLY,
+  followStreakOf,
+  initialState,
+  MAX_FOLLOW_STREAK,
+  type Move,
+  type MoveContext,
+  renderBrief,
+  selectMove,
+  type State,
+  type Thread,
+} from '../lib';
 import { checkedReply, majorGaps } from '../listen';
 import type { ChatMessage, HostFn } from '../llm';
 import { parseTurnResponse } from '../llm';
-import { type Breakdown, inTheirWords } from '../producer';
+import { type Breakdown, inTheirWords, personLines } from '../producer';
 import { buildItems, SessionStore } from '../session';
 import { fakeHost, fakeJev, noul, told } from './fakes';
 
@@ -62,11 +75,44 @@ describe('move selection follows the newest thing they raised', () => {
     expect(selectMove(s, cfg, listening({ listen: true })).move).toEqual({ kind: 'follow' });
   });
 
+  const told = (s: State): State => ({ ...s, signals: { ...s.signals, finished_telling: 0.9 } });
+
   test('once the story is told, what they raised earlier is come back to, as earlier, before the gaps', () => {
-    const s = { ...at(6, [thread('msg_9', 5)]), signals: { ...initialState('t', cfg).signals, finished_telling: 0.9 } };
-    expect(selectMove(s, cfg, listening({ listen: true })).move).toEqual({ kind: 'circle_back', threadId: 'msg_9' });
+    const s = told(at(6, [thread('msg_7', 4)]));
+    expect(selectMove(s, cfg, listening({ listen: true })).move).toEqual({ kind: 'circle_back', threadId: 'msg_7' });
     // Off, the gaps come first, and it waits for rule 8, after every one of them.
     expect(selectMove(s, cfg, listening()).move).toEqual({ kind: 'probe_goal', goalId: 'telling' });
+  });
+
+  test('never on the message just before the latest: that one is not "earlier"', () => {
+    const s = told(at(6, [thread('msg_9', 5)]));
+    expect(selectMove(s, cfg, listening({ listen: true })).move.kind).toBe('probe_goal');
+  });
+
+  test('never twice in a row', () => {
+    const s = { ...told(at(7, [thread('msg_5', 3), thread('msg_7', 4)])), last_move: 'circle_back:msg_5' };
+    expect(selectMove(s, cfg, listening({ listen: true })).move.kind).toBe('probe_goal');
+  });
+
+  test('the follow cap hit while the dream is still being told does not bring an earlier thread back', () => {
+    // Still telling, and three turns in a row followed it: rule 4 stands aside, and the gaps are asked, as
+    // off; before the fix, rule 6b came back to an earlier thread here (38 of 117 in the third after-run).
+    const s = at(8, [thread('msg_7', 4)]);
+    const capped = listening({ listen: true, followStreak: MAX_FOLLOW_STREAK });
+    expect(selectMove(s, cfg, capped).move.kind).toBe('probe_goal');
+    // And once told, a capped streak blocks it too: coming back is following.
+    expect(selectMove(told(s), cfg, capped).move.kind).toBe('probe_goal');
+  });
+
+  test('coming back to an earlier thread counts toward the follow cap, with the switch on only', () => {
+    const moves: Move[] = [
+      { kind: 'probe_goal', goalId: 'look' },
+      { kind: 'follow' },
+      { kind: 'circle_back', threadId: 'msg_3' },
+      { kind: 'explore_thread', threadId: 'msg_9' },
+    ];
+    expect(followStreakOf(moves, true)).toBe(3);
+    expect(followStreakOf(moves, false)).toBe(1);
   });
 });
 
@@ -141,6 +187,29 @@ describe('choices read by the action they lead to', () => {
   test('"confirmed 0.55, you_choose 0.45" settles the profile', () => {
     const a = ans('confirmed', { confirmed: 0.55, you_choose: 0.4, unclear: 0.05 });
     expect(choiceByAction(a, profile, 'unclear', 0.6)).toEqual({ value: 'confirmed', lowConfidence: false });
+  });
+
+  test('the action that loses nothing is taken at 0.25; otherwise a rival at 0.25 is asked again', () => {
+    const retell = [['confirmed'], ['corrected', 'added_more'], ['unclear']] as const;
+    // "draw me as i was in the dream, a kid in a red cardigan": a change, whatever else it reads as.
+    const a = ans('changes', { changes: 0.65, confirmed: 0.3, unclear: 0.01, you_choose: 0.04 });
+    expect(choiceByAction(a, profile, 'unclear', 0.5, { prefer: 'changes' }).value).toBe('changes');
+    // "you got it right. the only thing is the lights of the market were behind us": an addition.
+    const r = ans('confirmed', { confirmed: 0.55, added_more: 0.42, corrected: 0.03 });
+    expect(choiceByAction(r, retell, 'unclear', 0.5, { prefer: 'corrected' }).value).toBe('added_more');
+    // Neither side safe: yes against no is asked again.
+    const w = ans('yes', { yes: 0.6, no: 0.3, not_yet: 0.05, unclear: 0.05 });
+    expect(choiceByAction(w, [['yes'], ['no'], ['not_yet', 'unclear']], 'unclear', 0.5).value).toBe('unclear');
+  });
+
+  test('leaving the rest to us while changing one thing is a change', () => {
+    const by = { joins: { you_choose: 'changes' }, prefer: 'changes' } as const;
+    // "He was just a small brown terrier, short rough fur. No collar. Go with your guess on the rest."
+    const a = ans('you_choose', { you_choose: 0.55, changes: 0.35, confirmed: 0.1, unclear: 0 });
+    expect(choiceByAction(a, profile, 'unclear', 0.5, by).value).toBe('changes');
+    // Without a change in it, leaving it to us stays as it was.
+    const b = ans('you_choose', { you_choose: 0.8, changes: 0.1, confirmed: 0.05, unclear: 0.05 });
+    expect(choiceByAction(b, profile, 'unclear', 0.5, by).value).toBe('you_choose');
   });
 
   test('an answer mostly unclear stays unclear', () => {
@@ -263,6 +332,12 @@ describe('said is only their words', () => {
     expect(inTheirWords('Small brown terrier', theirs)).toBe(true);
     expect(inTheirWords('Small brown terrier, about 30 cm tall, alert dark eyes', theirs)).toBe(false);
   });
+
+  test('their words are read from their messages, a message over several lines whole', () => {
+    const rendered = 'Listener: how did he look?\nPerson: tall\nwith a red scarf\nListener: and then?';
+    expect(personLines(rendered)).toBe('tall\nwith a red scarf');
+    expect(personLines(rendered, ['tall', 'with a red scarf, and green boots'])).toContain('green boots');
+  });
 });
 
 describe('major gaps are asked, minor ones imagined', () => {
@@ -348,5 +423,55 @@ describe('a turn with the switch on', () => {
       expect(detail?.replyCheck !== undefined).toBe(on);
       if (on) expect(detail?.replyCheck?.failures).toEqual([]);
     }
+  });
+});
+
+describe('the retelling with the switch on', () => {
+  const breakdown = JSON.parse(readFileSync(join(import.meta.dir, 'fixtures', 'breakdown.json'), 'utf8')) as Breakdown;
+
+  // First reading: all told but who was there, and the dream at its end; after, everything told. `adds`:
+  // whether the answer to the question added to what happened.
+  const run = async (adds: number) => {
+    process.env.DREAMCHAT_LISTEN = 'on';
+    const drafted: number[] = [];
+    let readings = 0;
+    const jev = fakeJev((q) => {
+      if (q.move) return { move: noul(0.9) };
+      if (q.is_retelling) return { is_retelling: noul(0.9) };
+      if (!q.eviD_telling) return {};
+      readings += 1;
+      const out: Record<string, Answer> = { finished_telling: noul(0.9), adds_story: noul(adds) };
+      for (const g of required.filter((x) => readings > 1 || x !== 'people')) Object.assign(out, told(g, 1));
+      return out;
+    });
+    const store = new SessionStore(cfg, {
+      jev,
+      host: fakeHost(),
+      producer: async (t) => {
+        const n = t.filter((e) => e.role === 'user').length;
+        drafted.push(n);
+        const b = structuredClone(breakdown);
+        b.scenes[0].moments[0].action = `drafted from ${n} messages`;
+        return { breakdown: b, downgraded: [], notes: [], ms: 1 };
+      },
+    });
+    const { id } = store.create();
+    await store.open(id);
+    expect((await store.message(id, 'I was on a train and then I woke')).move?.kind).toBe('probe_goal');
+    expect((await store.message(id, 'just me and a conductor')).move?.kind).toBe('retell');
+    return { drafted, brief: store.get(id)?.briefs[2] ?? '' };
+  };
+
+  test('its breakdown is started once the dream looks told, and used when nothing told since added to it', async () => {
+    const { drafted, brief } = await run(0.1);
+    // Drafted ahead from the first message; at the retelling, drafted again for what comes after it.
+    expect(drafted).toEqual([1, 2]);
+    expect(brief).toContain('The moments: 1. drafted from 1 messages');
+  });
+
+  test('an answer that added to what happened is waited for', async () => {
+    const { drafted, brief } = await run(0.9);
+    expect(drafted).toEqual([1, 2]);
+    expect(brief).toContain('The moments: 1. drafted from 2 messages');
   });
 });

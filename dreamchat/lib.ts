@@ -469,10 +469,19 @@ export function selectMove(state: State, cfg: GoalsFile, ctx: MoveContext): { mo
 
   // 6b. With S8 on: something they raised earlier and nobody took up is come back to, as earlier, before
   // the checklist. Followed as if just said, those older threads were 121 of the before's 201 explore
-  // moves; left for rule 8, which comes after every gap, they were never asked, and dream-file facts told
-  // or asked fell from 0.95 to 0.94 (the listening test, 27 Sep).
+  // moves; left for rule 8, which comes after every gap, they were never asked.
+  // Only once the dream is told, never twice in a row, only on a thread older than the turn before, and
+  // counted with following (session.ts followStreak): firing whenever the follow cap stopped rule 4, it
+  // came back to "earlier" threads mid-telling (38 of 117) and to the message just before the latest (72 of
+  // 117), and made the chat an interrogation: "I don't remember" rose from 15% to 19% of answers (36% after a
+  // circle_back), and "told all they remember" ended the listening in 11 of 40 conversations against 2
+  // (review of the third after-run, 27 Sep).
   const earlier =
-    ctx.listen && state.threads.find((t) => t.opened_turn < state.turn && t.strength !== 'low' && fresh(t));
+    ctx.listen &&
+    finished &&
+    mayFollow &&
+    !state.last_move.startsWith('circle_back:') &&
+    state.threads.find((t) => t.opened_turn < state.turn - 1 && t.strength !== 'low' && fresh(t));
   if (earlier)
     return { move: { kind: 'circle_back', threadId: earlier.id }, rule: '6b: raised earlier, never taken up' };
 
@@ -743,7 +752,9 @@ export function listenMove(move: Move, state: State, cfg: GoalsFile, extras: Bri
     case 'follow': {
       if (state.last_move === 'retell' || state.last_move === 'take_correction' || state.last_move === 'retell_check')
         return null;
-      return 'follow. They\'re still telling the dream. React to what they just said, then invite what happened next, openly, such as "and then what happened?", without guessing what it was and without asking about anything they already told.';
+      // No example question: given "and then what happened?", the host wrote it word for word, and the chat
+      // read like a form ("what happened next" in 111 of 512 listening replies, review, 27 Sep).
+      return "follow. They're still telling the dream. React to what they just said, in your own words, then leave the way open for what came next, without guessing what it was and without asking about anything they already told. Don't word it the way you worded your last invitation.";
     }
     // What is seen: a question about what it meant or how it felt tells no picture anything, and those
     // were most of the questions on an older thread (circle_back, the second after-run, 27 Sep).
@@ -756,13 +767,13 @@ export function listenMove(move: Move, state: State, cfg: GoalsFile, extras: Bri
       if (!moments.length) return null;
       const told = extras.toldBefore
         ? "retell. You told the dream back once already, and they went on with it. Tell back just what they've told since then, in a sentence or two, in their own words where you can. Add nothing they didn't say."
-        : "retell. You have their dream. Tell it back to them in a few plain sentences, in their own words where you can: where it was, who was there, how it felt and how it looked. Add nothing they didn't say.";
+        : "retell. You have their dream. Tell it back to them in two or three short sentences, in their own words where you can: where it was, who was there, how it felt and how it looked. Add nothing they didn't say.";
       const list = moments.map((m, i) => `${i + 1}. ${m.action}${m.said ? '' : ' [filled in]'}`).join(' ');
       const ask =
         extras.toldBefore || state.signals.finished_telling < FINISHED_BAR
           ? "Then, last, ask whether you got it right, and whether that's where the dream ended or more happened after."
           : 'Then, last, ask whether you got it right or missed anything.';
-      return `${told} Then end the telling with the moments of the dream as they'll be drawn, every one of these, in this order, as one message that is a numbered list, one moment to a line ("1. …" on its own line), each said to them in a few plain words ("you …"), with "(my guess)" after any marked [filled in]. This once, a list is right. The moments: ${list} ${ask}`;
+      return `${told} Then end the telling with the moments of the dream as they'll be drawn, every one of these, in this order, as one message that is a numbered list, one moment to a line ("1. …" on its own line), each said to them in a few plain words ("you …"), with "(my guess)" after any marked [filled in]. This once, a list is right. Keep the whole reply short: the list carries the story, so the sentences before it don't retell it (the retelling had grown to a median 237 words, from 130). The moments: ${list} ${ask}`;
     }
     // Each way by its name: told to say each "in a few plain words", the host once reworded one past
     // knowing (a way lost in 1 of 40 offers, the second after-run, 27 Sep).
@@ -928,6 +939,18 @@ function renderMove(move: Move, state: State, cfg: GoalsFile, extras: BriefExtra
 /** Following the telling, as opposed to asking about a gap or changing phase. */
 export function isFollowing(move: Move): boolean {
   return move.kind === 'follow' || move.kind === 'explore_thread';
+}
+
+/**
+ * How many turns in a row, up to the last one, followed the telling rather than asking (the follow cap's
+ * count). With S8 on, coming back to an earlier thread counts too: left out, rule 6b fired whenever the
+ * cap stopped following, and so dodged it (review, 27 Sep).
+ */
+export function followStreakOf(moves: Move[], listen = false): number {
+  let n = 0;
+  for (let i = moves.length - 1; i >= 0 && (isFollowing(moves[i]) || (listen && moves[i].kind === 'circle_back')); i--)
+    n++;
+  return n;
 }
 
 /**
