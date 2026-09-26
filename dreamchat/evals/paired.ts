@@ -1,26 +1,34 @@
-// For a moment of a dream, which way of drawing it comes out right more often, with everything else
-// equal? Each moment of evals/paired-set.json drawn three ways (evals/paired-arms.ts): today's
-// routing with its floor-plan mock-up, an edit of the previous picture the run drew, and the sketches
-// alone, from the same words.
+// For a moment of a dream, which first image makes it come out right more often, with everything
+// else equal? Each moment of evals/paired-set.json drawn three ways (evals/paired-arms.ts) that
+// differ only in image 1: the floor-plan mock-up (mockup: today's routing, without earlier moments),
+// the previous picture the run drew (edit), or nothing (free). After it, the same sketches and
+// in-between pictures in the same order, and the same words.
 //
 //   bun run evals/paired.ts --dry [--only orchard-m2 …] [--dry-file <path>]
-//   bun --env-file=$HOME/.config/strawberry/dreamchat.env run evals/paired.ts --draw [--only orchard-m2 …] [--judge <dir>]
+//   bun --env-file=$HOME/.config/strawberry/dreamchat.env run evals/paired.ts --draw [--only orchard-m2 …] [--redraw-paid] [--judge <dir>]
 //
-// --dry prints every moment's three prompts, the images each attaches (role and file) and the cost,
-// and writes it to the dry file; no model calls, no images, no network. --draw draws each (moment,
-// arm) once on fal (Nano Banana Pro, 2K, 16:9, as the harness draws a moment) through the Strawberry
-// engine: a production per dream in the test's own store (runs/paired-home, never the dream chat's
-// store or the shared one), every sketch and picture an arm attaches imported there and approved as
-// the run approved it, then each picture prepared, approved and queued there and drawn by the engine's
-// worker, its provider job id and receipt kept. It refuses to start over $10 and stops at $10; a
-// picture that fails is reported and drawn again only when its moment is named with --only. Results
-// go to runs/paired/<date>/ (results.json, and each picture as <moment>-<arm>.jpg), and the judging
-// page's data, the arms shuffled and unnamed, to the judge folder (data-paired.json, paired-key.json).
+// --dry prints every moment's three prompts, the images each attaches (role and file), the camera's
+// move from the previous picture and the cost, and writes it to the dry file; no model calls, no
+// images, no network. --draw draws each (moment, arm) once on fal (Nano Banana Pro, 2K, 16:9, as the
+// harness draws a moment) through the Strawberry engine: a production per dream in the test's own
+// store (runs/paired-home, never the dream chat's store or the shared one), every sketch and picture
+// an arm attaches imported there and approved as the run approved it, then each picture prepared,
+// approved and queued there and drawn by the engine's worker, its provider job id and receipt kept.
+//
+// One results file for the whole test, runs/paired/results.json (each picture beside it as
+// <moment>-<arm>.jpg), and one $10 cap: what it has spent, every earlier attempt and any older
+// runs/paired/*/results.json included, counts against it. It refuses to start over $10, or while
+// the test's store has a job queued or running that its results do not know, and stops at $10.
+// Nothing is drawn again on its own: a picture that failed is drawn again only when its moment is
+// named with --only, and one that may already have been paid for (its submission unknown, or its
+// collection failed) only when named with --only and --redraw-paid too. The judging page's data,
+// the arms in a balanced order and unnamed, goes to the judge folder (data-paired.json); the answer
+// key stays with the results (runs/paired/paired-key.json).
 //
 // Saved conversations are read from the checkout that has them: DREAMCHAT_DATA, or this one, or
 // another worktree of the repository (a worktree has no state/ of its own). Nothing there is changed.
 import { spawnSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 // Types only: no module that reads the engine's store is loaded before the store is set below.
 import type { Session } from '../session';
@@ -42,12 +50,23 @@ for (const a of args.includes('--only') ? args.slice(args.indexOf('--only') + 1)
   only.push(a);
 }
 const drawing = args.includes('--draw');
+/** Draw again, for a moment named with --only, a picture that may already have been paid for. */
+const redrawPaid = args.includes('--redraw-paid');
 if (!drawing && !args.includes('--dry')) {
-  console.error('usage: bun run evals/paired.ts --dry | --draw [--only <run-m> …]');
+  console.error('usage: bun run evals/paired.ts --dry | --draw [--only <run-m> …] [--redraw-paid]');
   process.exit(1);
 }
 
-type SetRow = { id: string; run: string; session: string; moment: string; kind: string; reason: string };
+type SetRow = {
+  id: string;
+  run: string;
+  session: string;
+  moment: string;
+  kind: string;
+  /** The camera's move from the previous picture the run drew: MOVES in paired-arms.ts. */
+  move: string;
+  reason: string;
+};
 const setFile = valueOf('--set') ?? join(import.meta.dir, 'paired-set.json');
 const allRows = (JSON.parse(readFileSync(setFile, 'utf8')) as { rows: SetRow[] }).rows;
 const unknown = only.filter((id) => !allRows.some((r) => r.id === id));
@@ -90,7 +109,20 @@ process.env.STRAWBERRY_PYTHON ??=
   [join(REPO, 'venv', 'bin', 'python'), join(DATA, '..', 'venv', 'bin', 'python')].find((p) => existsSync(p)) ??
   join(REPO, 'venv', 'bin', 'python');
 
-const { ARMS, fileOf, judgeSet, pairedArms, prepare, toldOf, USD_PER_PICTURE, wordsOf } = await import('./paired-arms');
+const {
+  afterImage1,
+  ARMS,
+  fileOf,
+  judgeSet,
+  MOVES,
+  othersAgree,
+  pairedArms,
+  placeCounts,
+  prepare,
+  toldOf,
+  USD_PER_PICTURE,
+  wordsAgree,
+} = await import('./paired-arms');
 
 const sessions = new Map<string, { s: Session; p: Prepared }>();
 const sessionOf = (id: string) => {
@@ -132,14 +164,20 @@ function whatIs(e: Entry, key: string): string {
   return `picture ${id} from the run (${e.p.pictures.get(id)?.name ?? ''})`;
 }
 
-/** Whether a moment's three prompts say the same about it, the lines about the images aside. */
-const sameWords = (r: Paired) =>
-  ARMS.every((a) => JSON.stringify(wordsOf(r.arms[a].prompt)) === JSON.stringify(wordsOf(r.arms.mockup.prompt)));
+/** The camera's move from the previous picture, as today's code reads it. */
+const moveOf = (e: Entry) => MOVES[e.paired.prev.relation];
+
+/** How often each arm is shown first, second and third to the judge, over the whole set. */
+function orderLine(): string {
+  const counts = placeCounts(allRows.length);
+  return `Shown to the judge in turn through all six orders, in set order: ${ARMS.map((a) => `${a} first ${counts[a][0]}, second ${counts[a][1]}, third ${counts[a][2]}`).join('; ')}.`;
+}
 
 function dry(): string {
+  // The person's own verdicts on the run's pictures: the reference every judge is measured against.
   const judged = (
     JSON.parse(readFileSync(join(import.meta.dir, 'story-pictures.json'), 'utf8')) as {
-      rows: { id: string; story: string; picture: string }[];
+      rows: { id: string; human: string; human_note?: string; picture: string }[];
     }
   ).rows;
   const n = entries.length * ARMS.length;
@@ -147,7 +185,8 @@ function dry(): string {
   const out = [
     `Three ways to draw ${entries.length} moments: ${n} pictures, ${cost}.`,
     `Saved conversations from ${DATA}/state; sketches and pictures from ${MEDIA}.`,
-    "Arms: mockup = today's routing (its mock-up as image 1 where today's plan uses one, and the earlier pictures it attaches); edit = the previous picture the run drew as image 1, then the sketches; free = the sketches alone.",
+    "Arms, which differ only in image 1: mockup = today's routing without earlier moments, its mock-up as image 1; edit = the previous picture the run drew as image 1; free = no image 1. After it, every arm attaches the same sketches of who and what is in view and the same in-between pictures today's plan attaches, in the same order.",
+    orderLine(),
   ];
   for (const e of entries) {
     const r = e.paired;
@@ -158,9 +197,15 @@ function dry(): string {
       `${e.row.id}: ${e.p.b.title}, ${e.row.moment} (${e.row.kind})`,
       `what happens: ${r.action}`,
       `why this one: ${e.row.reason}`,
-      ...(own ? [`the run's own picture: ${join(MEDIA, own.picture)} (judged ${own.story})`] : []),
-      `edited from: ${r.prev.id}, ${r.prev.samePlace ? 'in the same place' : 'in another place'} (the continuity plan's relation: ${r.prev.relation.replace('_', ' ')})`,
-      `words about the moment in the three arms: ${sameWords(r) ? 'the same' : 'DIFFERENT'}`,
+      ...(own
+        ? [
+            `the run's own picture: ${join(MEDIA, own.picture)} (the person judged it ${own.human}${own.human_note ? `: "${own.human_note}"` : ''})`,
+          ]
+        : []),
+      `camera move from the previous picture: ${moveOf(e)}${moveOf(e) === e.row.move ? '' : ` (MISMATCH: paired-set.json says ${e.row.move})`}`,
+      `edited from: ${r.prev.id}, ${r.prev.samePlace ? 'in the same place' : 'in another place'}`,
+      `words about the moment in the three arms: ${wordsAgree(r) ? 'the same' : 'DIFFERENT'}`,
+      `images after image 1 in the three arms: ${othersAgree(r) ? `the same (${afterImage1(r, 'free').length})` : 'DIFFERENT'}`,
       ...r.notes.map((x) => `note: ${x}`),
     );
     for (const a of ARMS) {
@@ -176,10 +221,14 @@ function dry(): string {
       out.push('', arm.prompt);
     }
   }
+  const moves = [...new Set(entries.map(moveOf))].map((m) => `${m} ${entries.filter((e) => moveOf(e) === m).length}`);
   out.push(
     '',
     '═'.repeat(100),
-    `${n} pictures, ${cost}. The words about the moment are the same in all three arms for ${entries.filter((e) => sameWords(e.paired)).length} of ${entries.length} moments.`,
+    `${n} pictures, ${cost}.`,
+    `The words about the moment are the same in all three arms for ${entries.filter((e) => wordsAgree(e.paired)).length} of ${entries.length} moments; the images after image 1, for ${entries.filter((e) => othersAgree(e.paired)).length}.`,
+    `Camera moves from the previous picture: ${moves.join(', ')}; the set agrees on ${entries.filter((e) => moveOf(e) === e.row.move).length} of ${entries.length}.`,
+    orderLine(),
   );
   return out.join('\n');
 }
@@ -220,6 +269,8 @@ type Result = {
   moment: string;
   arm: Arm;
   kind: string;
+  /** The camera's move from the previous picture, for results by camera move. */
+  move: string;
   prompt: string;
   images: Sent[];
   /** The engine's job state, or `refused` (the engine would not prepare it) or `capped`: nothing paid for either. */
@@ -238,40 +289,70 @@ type Result = {
   output?: string;
   copy?: string;
   at: string;
+  /** Its earlier attempts that reached the worker, each kept when it was drawn again: all count as spent. */
+  earlier?: Result[];
 };
 type Results = { about: string; home: string; provider: string; model: string; entries: Record<string, Result> };
 
-const day = new Date();
-const date = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
-const OUT = join(RUNS, 'paired', date);
+// One results file for the whole test, whatever the day.
+const OUT = join(RUNS, 'paired');
 mkdirSync(OUT, { recursive: true });
 const resultsFile = join(OUT, 'results.json');
 const results: Results = existsSync(resultsFile)
   ? (JSON.parse(readFileSync(resultsFile, 'utf8')) as Results)
   : {
       about:
-        "Each moment of evals/paired-set.json drawn three ways by evals/paired.ts: mockup (today's routing), edit (the previous picture the run drew as image 1) and free (the sketches alone).",
+        "Each moment of evals/paired-set.json drawn three ways by evals/paired.ts, which differ only in image 1: mockup (today's routing without earlier moments: the floor-plan mock-up), edit (the previous picture the run drew) and free (none). After it, the same sketches and in-between pictures in all three. One file for the whole test: its spending counts against one $10 cap.",
       home: HOME,
       provider: 'fal',
       model: 'nano_banana_pro',
       entries: {},
     };
 if (results.home !== HOME) {
-  console.error(`today's results were drawn into ${results.home}: set PAIRED_HOME to it, or move ${resultsFile} aside`);
+  console.error(`this test's results were drawn into ${results.home}: set PAIRED_HOME to it`);
   process.exit(1);
 }
 const save = () => writeFileSync(resultsFile, `${JSON.stringify(results, null, 2)}\n`);
 /** Job states nothing more comes of, and the two outcomes that never reached the provider. */
 const DONE = new Set(['ready', 'failed', 'cancelled', 'submission_unknown', 'collection_failed', 'refused', 'capped']);
 const NEVER_SENT = new Set(['refused', 'capped']);
+/** Outcomes that may already have been paid for: fal may have drawn the picture. */
+const MAYBE_PAID = new Set(['submission_unknown', 'collection_failed']);
+/** A job's states while the engine still has it in hand. */
+const IN_FLIGHT = new Set(['queued', 'submitting', 'running', 'collecting']);
+/** Every attempt a results file records: each entry and the attempts before it. */
+const attempts = (rs: Results) => Object.values(rs.entries).flatMap((r) => [r, ...(r.earlier ?? [])]);
 /** Spent, as the engine estimates it: every picture that went to the worker counts, drawn or not. */
-const spentSoFar = () =>
-  Object.values(results.entries)
+const spentIn = (rs: Results) =>
+  attempts(rs)
     .filter((r) => r.jobId)
     .reduce((a, r) => a + (r.usd ?? USD_PER_PICTURE), 0);
+// Results of the test kept per day before it had one file: what they spent counts too.
+const older = readdirSync(OUT, { withFileTypes: true })
+  .filter((d) => d.isDirectory())
+  .map((d) => join(OUT, d.name, 'results.json'))
+  .filter((f) => existsSync(f));
+const spentBefore = older.reduce((a, f) => a + spentIn(JSON.parse(readFileSync(f, 'utf8')) as Results), 0);
+const spentSoFar = () => spentBefore + spentIn(results);
+
+// Nothing starts while the test's store has a job in flight its results do not know: it may be
+// paid for, and nothing here would wait for it or count it.
+const known = new Set(attempts(results).map((r) => r.jobId));
+const stray: string[] = [];
+for (const project of (await call('projects', {})) as { id: string }[]) {
+  const { jobs } = (await call('project', { id: project.id })) as { jobs: { id: string; state: string }[] };
+  for (const j of jobs) if (IN_FLIGHT.has(j.state) && !known.has(j.id)) stray.push(`${j.id} (${j.state})`);
+}
+if (stray.length) {
+  console.error(
+    `refused: ${HOME} has ${stray.length > 1 ? 'jobs' : 'a job'} in flight that ${resultsFile} does not know: ${stray.join(', ')}. Settle ${stray.length > 1 ? 'them' : 'it'} in the engine first.`,
+  );
+  process.exit(1);
+}
 
 // What to draw: each (moment, arm) not drawn yet. One sent before and failed is drawn again only when
-// its moment is named with --only; one still in the worker's hands is waited for, never sent again.
+// its moment is named with --only, and one that may already have been paid for only with
+// --redraw-paid too; one still in the worker's hands is waited for, never sent again.
 const todo: { e: Entry; arm: Arm; key: string }[] = [];
 const waiting: Result[] = [];
 for (const e of entries)
@@ -281,6 +362,12 @@ for (const e of entries)
     if (was?.state === 'ready') continue;
     if (was?.jobId && !DONE.has(was.state)) {
       waiting.push(was);
+      continue;
+    }
+    if (was && MAYBE_PAID.has(was.state) && !(only.includes(e.row.id) && redrawPaid)) {
+      console.log(
+        `${key}: ${was.state} before, as job ${was.jobId} (${was.error ?? 'no error given'}); it may already have been paid for, so it is drawn again only when named with --only and --redraw-paid`,
+      );
       continue;
     }
     if (was && !NEVER_SENT.has(was.state) && !only.includes(e.row.id)) {
@@ -294,7 +381,7 @@ for (const e of entries)
 const before = spentSoFar();
 const estimate = todo.length * USD_PER_PICTURE;
 console.log(
-  `${todo.length} pictures to draw, about $${estimate.toFixed(2)}; $${before.toFixed(2)} already spent on this test today; cap $${CAP_USD}.`,
+  `${todo.length} pictures to draw, about $${estimate.toFixed(2)}; $${before.toFixed(2)} already spent on this test; cap $${CAP_USD}.`,
 );
 if (before + estimate > CAP_USD + 1e-9) {
   console.error(`refused: $${(before + estimate).toFixed(2)} would pass the $${CAP_USD} cap`);
@@ -326,6 +413,9 @@ try {
       mediaId: setup.media.get(im.key),
       instruction: im.instruction,
     }));
+    // An attempt that reached the worker is kept when it is drawn again: it counts as spent.
+    const was = results.entries[key];
+    const earlier = [...(was?.earlier ?? []), ...(was?.jobId ? [{ ...was, earlier: undefined }] : [])];
     const r: Result = {
       id: e.row.id,
       run: e.row.run,
@@ -333,11 +423,13 @@ try {
       moment: e.row.moment,
       arm,
       kind: e.row.kind,
+      move: e.row.move,
       prompt: a.prompt,
       images,
       state: 'refused',
       nodeId: setup.ids[e.row.moment],
       at: new Date().toISOString(),
+      ...(earlier.length ? { earlier } : {}),
     };
     results.entries[key] = r;
     const lost = images.filter((im) => !im.mediaId).map((im) => im.key);
@@ -427,7 +519,7 @@ try {
   save();
 }
 
-// ── The judging page's data: one "run" per moment, its drawn arms shuffled and unnamed ─────────────
+// ── The judging page's data: one "run" per moment, its drawn arms in a balanced order and unnamed ──
 
 const judge = resolve(valueOf('--judge') ?? process.env.PAIRED_JUDGE ?? join(OUT, 'judge'));
 const set = judgeSet(
@@ -452,12 +544,14 @@ const set = judgeSet(
 mkdirSync(join(judge, 'img', 'paired'), { recursive: true });
 for (const c of set.copies) copyFileSync(c.from, join(judge, c.to));
 writeFileSync(join(judge, 'data-paired.json'), `${JSON.stringify(set.data, null, 1)}\n`);
-writeFileSync(join(judge, 'paired-key.json'), `${JSON.stringify(set.key, null, 1)}\n`);
+// The answer key stays with the results, away from the page the judge sees.
+const keyFile = join(OUT, 'paired-key.json');
+writeFileSync(keyFile, `${JSON.stringify(set.key, null, 1)}\n`);
 writeFileSync(
   join(judge, 'files-paired.json'),
   `${JSON.stringify(Object.fromEntries(set.copies.map((c) => [c.to, join(judge, c.to)])), null, 1)}\n`,
 );
 const all = Object.values(results.entries);
 console.log(
-  `\n${all.filter((r) => r.state === 'ready').length} drawn, ${all.filter((r) => r.state !== 'ready' && DONE.has(r.state)).length} not; $${spentSoFar().toFixed(2)} spent at fal's list price. Results: ${resultsFile}. Judging data: ${join(judge, 'data-paired.json')}, key ${join(judge, 'paired-key.json')}.`,
+  `\n${all.filter((r) => r.state === 'ready').length} drawn, ${all.filter((r) => r.state !== 'ready' && DONE.has(r.state)).length} not; $${spentSoFar().toFixed(2)} spent at fal's list price. Results: ${resultsFile}. Judging data: ${join(judge, 'data-paired.json')}; its key: ${keyFile}.`,
 );
