@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { CutPlan } from '../continuity';
-import { aNoun, framePrompt, withoutPose, writingIn } from '../frames';
+import { aNoun, framePrompt, withoutGone, withoutPose, writingIn } from '../frames';
 import { oneColour, VAGUE } from '../producer';
 import { asInstruction } from '../session';
 import {
@@ -63,6 +63,18 @@ describe('an animal in a moment', () => {
     );
     expect(prompt).not.toContain('face, hair, build and clothes');
     expect(references.find((r) => r.media_id === 'media-dog')?.role).toBe('identity');
+  });
+});
+
+describe('what is gone', () => {
+  test('is never named to the picture', () => {
+    // The sea back on the horizon after it had turned into the field (lighthouse, 26 Sep).
+    expect(
+      withoutGone(
+        'The tractor slows and stops at the edge of the field, where the beach had been, where the sea used to be.',
+      ),
+    ).toBe('The tractor slows and stops at the edge of the field.');
+    expect(withoutGone('The dreamer walks to the window.')).toBe('The dreamer walks to the window.');
   });
 });
 

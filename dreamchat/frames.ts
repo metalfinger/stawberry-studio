@@ -53,6 +53,24 @@ export function turnedInto(frame: Item): Set<string> {
   return new Set([...(plan?.own ?? []), ...(plan?.states ?? [])].filter(isWhole).map((st) => st.who));
 }
 
+/**
+ * A moment's words without what is gone from it: named, it is drawn. "The tractor stops at the edge
+ * of the field, where the beach had been, where the sea used to be" put the sea back on the horizon,
+ * though the sea had turned into the field (lighthouse, 26 Sep). The story keeps the words; the
+ * picture is told only what is there.
+ */
+export function withoutGone(action: string): string {
+  const out = action
+    .replace(
+      /,?\s*(?:where|in place of where|in the place where)\s+(?:the\s+|a\s+|an\s+)?[\w' -]{1,30}?\s+(?:used to be|had been|once was|once were|was before|were before)\b/gi,
+      '',
+    )
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\s+([,.;])/g, '$1')
+    .trim();
+  return out.length >= 8 ? out : action;
+}
+
 /** A thing named with its article: "turned into roller coaster" read as broken English. */
 // "turned into a transformed into a grey heron": what it is now, never the turning (26 Sep).
 export const aNoun = (raw: string) => {
@@ -535,7 +553,7 @@ export function framePrompt(
   }
 
   const states = (plan?.states ?? []).map((st) => `${nameOf(sheets, st.who)}'s ${st.what}: ${st.now}`);
-  const action = frame.fields.action?.value ?? '';
+  const action = withoutGone(frame.fields.action?.value ?? '');
   // Seen from outside, the dreamer is a person in the picture only when the moment has them in it:
   // "the dreamer seen from outside" of a moment without them invites a second figure.
   const angle =
