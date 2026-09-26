@@ -87,3 +87,7 @@ One **cut sheet** per cut is the spine everything is assembled from:
 
 - 26 Sep: plan written. S1 building (story record into continuity and prompts). A keep-the-best-of-takes switch is
   being added, off by default, as a later safety net.
+- 26 Sep: the keep-the-best-of-takes switch is built on branch `best-of-takes` (9371476; DREAMCHAT_TAKES=1 by
+  default, unchanged; 2-3 takes drawn different ways, the judge picks through the judge queue, the others kept as
+  alternates). Parked until S1 lands, since both touch session.ts; merge then, off by default.
+- 26 Sep: `docs/cut-sheet-map.md` and `docs/rules.md` written; the owner's plan doc filled in.
