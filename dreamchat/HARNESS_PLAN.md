@@ -57,8 +57,7 @@ One **cut sheet** per cut is the spine everything is assembled from:
 | S5 | References and variants: one image per subject; in-between pictures only when an edit carries several changes; variants kept and reusable; the grey mock-up as a reference chosen by tag | not started | The S5 cases stay met or pass (`--step S5`: never editing a picture from another side; library-1 m5 wall); its hypotheses (mock-up only, one image per subject) are for a paid check, not proven here |
 | S6 | `assembleCut`: prompt and references from the sheet, each fact once, action as visible facts; retire the regex clean-ups one by one | not started | All S0 cases pass; word-level diff reviewed on every saved dream |
 | S7 | Jev layer 2: checks routed by tags, a question library from the film rules, a labelled set per question; a check may hold a picture only if it predicts pictures | not started | Each question meets its bar on its labelled set |
-| S8 | Listening: every reply checked against its move; major picture gaps asked openly, minor ones imagined and marked; the retelling ends with the moments | built and merged behind DREAMCHAT_LISTEN (off); review: fixes in progress (circle-back rule, choice readings, retelling latency) | `evals/listening.ts` against the frozen before (`evals/listening-before`, 40 fresh simulated conversations): listening-turn compliance at least 90%, either/or under 5%, leading 0, said but not in their words 0, every way of drawing it kept, every retelling ends with a list of the breakdown's moments, no answer misread; floors not below the before (below) |
-| S8 | Listening: every reply checked against its move; major picture gaps asked openly, minor ones imagined and marked; the retelling ends with the moments | built on branch `s8-listening` behind DREAMCHAT_LISTEN=on (off by default, and off is today word for word), 27 Sep; measured on 40 fresh conversations at ee6c1e3: compliance 96%, either/or 0%, style offers 40/40, no answer misread and the floors on questions and on facts kept as said met; leading 3 (2 real by hand), said but not in their words 12 (breakdown fields graded whole), 3 retellings changed by the correction that followed, and dream-file facts told or asked 0.944 against 0.949 (3 facts): see the log; not yet reviewed | `evals/listening.ts` against the frozen before (`evals/listening-before`, 40 fresh simulated conversations): listening-turn compliance at least 90%, either/or under 5%, leading 0, said but not in their words 0, every way of drawing it kept, every retelling ends with a list of the breakdown's moments, no answer misread; floors not below the before (below) |
+| S8 | Listening: every reply checked against its move; major picture gaps asked openly, minor ones imagined and marked; the retelling ends with the moments | built and merged behind DREAMCHAT_LISTEN (off); review fixes on `s8-listening` (27 Sep): the come-back rule restricted, choice readings that keep changes, the retelling's breakdown started early, and the test's move-selection floors; proven offline (replayed moves, re-read answers, a hand-labelled set), and a fresh simulation still owed (the writer model's balance is spent) | `evals/listening.ts` against the frozen before (`evals/listening-before`, 40 fresh simulated conversations): listening-turn compliance at least 90%, either/or under 5%, leading 0, said but not in their words 0, every way of drawing it kept, every retelling ends with a list of the breakdown's moments, no answer misread; floors not below the before (below) |
 | S9 | Record of what was drawn, and staleness; sequences and look keys | not started | Stale pictures found on saved dreams |
 | S10 | Only after S0-S9 pass: a paid benchmark on the five replay dreams, judged by the owner | waiting | Owner's first-take rate against today's |
 
@@ -217,8 +216,8 @@ between sessions.
 | S1 | S2 | The live-flow check (`evals/live-flow.ts`) passes a moment the checks acted on: drawn again from a list of what went wrong, or drawn without its brief because the pre-draw check set it aside (5 of 26 moments on the fake replays, 27 Sep). A rebuild cannot know these; once S2 makes the checks log only, those moments should rebuild word for word. |
 | S1 | S9 | The Strawberry production is written at `start`, before planning and the implied reading, so implied changes have no production coverage. |
 | S2 | S7 | S2 makes the checks log only; their logged readings become S7's labelled sets. |
-| S7 | S8 | Done in S8 (27 Sep, behind DREAMCHAT_LISTEN=on): `jev.ts choiceByAction` sums the labels that lead to one action before the bar (profile, retelling, "would you like to see it"); clear answers read as unclear 14 before, 0 in three after-runs. |
-| S8 | S1 | 22% of "said" facts were never said (the before: 273 of 1227, 258 from sketch profiles). S8 fixed the sketch side (a reworded or revised profile keeps their words apart from ours: 1% left, 12 of 912), but the breakdown's own fields are still graded whole by `ground.ts` ("the corridor: perhaps lockers or doors" passes because the corridor was said): every one of the 12 left. A `Detail` holds one said flag, so a field with their words and a guess is either said whole or not at all; the basis belongs per clause in the breakdown, the record and the sheet (S1, S3). |
+| S7 | S8 | Done in S8 for now (behind DREAMCHAT_LISTEN=on), and S7's to own: `jev.ts choiceByAction` sums the labels that lead to one action before the bar; the action that loses nothing (revise a profile, take a correction) is taken from 0.25, "you choose" beside a change is the change, and otherwise a rival at 0.25 is asked again; the profile's answer is worded so a detail beside "leave the rest to you" is a change (`PROFILE_REPLY_S8`). Read again over the three after-runs' stored answers: changes read as settled 31/26/17 to 9/7/3, clear answers read as unclear 0, and answers changing nothing now read as changes 12/18/12 (27 of 37 a profile answer that only restates it, which the revision keeps; 10 a plain "yes, that's right" to a retelling, which costs a turn telling back). These bars, and the reply check's questions (`jev.ts replyCheck`), are hand-set: each needs the labelled set S7 builds for its questions. The check lets through follows that guess what happened next ("did you go through it?", 3 of 4 on `evals/listening-audit-s8.json`, where the listening test catches all 4). |
+| S8 | S1 | `producer.ts inTheirWords` is provisional: whether a reworded or revised profile field is still the dreamer's words is a word-overlap rule over their messages (read from the conversation as kept, not the rendered text), standing in for the per-clause said basis S1 owns; it goes once the record carries the basis per clause. 22% of "said" facts were never said (the before: 273 of 1227, 258 from sketch profiles). S8 fixed the sketch side (a reworded or revised profile keeps their words apart from ours: 1% left, 12 of 912), but the breakdown's own fields are still graded whole by `ground.ts` ("the corridor: perhaps lockers or doors" passes because the corridor was said): every one of the 12 left. A `Detail` holds one said flag, so a field with their words and a guess is either said whole or not at all; the basis belongs per clause in the breakdown, the record and the sheet (S1, S3). |
 | S8 | S8 | Done: an explore_thread move follows only what the message just answered raised (0 of 131 older, from 121 of 201 in the before); an older thread is come back to as earlier (circle_back) once the story is told. |
 | S8 | S7 | Every reply is checked against its move (`jev.ts replyCheck`), and the check is kept in each turn's detail (`replyCheck`). Picture turns are checked but not sent back: their briefs hold conditions ("if they ask, say…") a check on the brief cannot read, a second try fixed none of five, and their compliance by the listening test was 54% (61% before, in shorter conversations). S7 can label these checks; the picture briefs need their own questions. |
 | S8 | S1 | `test/record.test.ts` ("every saved session derives, and derives again to nothing new") fails on a simulated flooded-library conversation of this step's smoke run: "round window open" is both a change at m9 and the window's first look (`passing` then `first_look`). It reads saved sessions, so only a checkout with them sees it. |
@@ -484,3 +483,40 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   last message, turning chats into interrogations ('don't remember' 15->19%, facts pictures need lost), which the
   test could not see; choice readings now lose mixed answers; the retelling waits ~40 s. Not to be switched on
   until fixed; the listening test gains move-selection floors.
+
+- 27 Sep: S8 review fixes on `s8-listening`, rebased on the merge (all behind DREAMCHAT_LISTEN; off unchanged, the prompt
+  cases and the frozen corpus with the switch off and on: no case changed, 140 of 140 pictures the same). No fresh
+  simulation: the writer model's balance is spent (402), so each fix is proven offline.
+  - Rule 6b (come back to an earlier thread) fires only once the dream is told, never twice in a row, only on a
+    thread older than the turn before, and counts toward the follow cap (`lib.ts followStreakOf`). Move selection
+    replayed on the stored conversations (`evals/probes/listen-moves.ts`; at the merged head it picks the recorded
+    move 552 of 552 times): of the third after-run's 117 circle_backs, 4 still fire, none while the dream is still
+    being told and none on the message just before the latest (before: 40 and 72); in the first after-run, which
+    had no rule 6b, it would fire 75 times, all once the dream was told. Replayed one step at a time, the other
+    decisions shift because the stored history holds the old circle_backs.
+  - The listening test gains move selection (review: the reply checks passed the interrogation): answers "I don't
+    remember", questions asked again, retellings begun as "told all they remember", and, shown, replies reading like
+    a form; misread gains "a change read as settled". Rescored (the before's own numbers reproduce exactly):
+
+    | measure | before | after1 (ce869f0) | after2 (1b62461) | after3 (ee6c1e3) |
+    | --- | --- | --- | --- | --- |
+    | answered "I don't remember" | 43/515 (8%) | 38/445 (9%) | 52/564 (9%) | 65/512 (13%) |
+    | asked again about what was asked | 50/408 (12%) | 68/407 (17%) | 151/523 (29%) | 112/471 (24%) |
+    | retellings begun as told all they remember | 2 | 3 | 2 | 11 |
+    | "what happened next" / "what did X look like" | 26 / 10 | 84 / 15 | 116 / 13 | 107 / 131 |
+    | a change read as settled | 11 | 31 | 26 | 17 |
+    | retelling words, mean | 133 | 249 | 256 | 258 |
+
+    Asked again comes from follow ("and then what happened?" word for word: 62 of 131 follows in after3) and from
+    circle_back (29 of 117); the follow brief no longer gives the example and asks for other words than last time.
+    Not provable without a simulation.
+  - Choice readings: see the S7-S8 overlap (changes read as settled 31/26/17 to 9/7/3 on the stored answers).
+  - The retelling's breakdown is started once the dream looks told (at most every third turn) and used at the
+    retelling when nothing told since added to what happened; its prose is two or three short sentences before the
+    list. Latency and length need a simulation.
+  - Independence: `evals/listening-audit-s8.json`, 38 replies written with S8 on, labelled by hand and used to tune
+    neither the test nor the check. The test agrees on 38/38 moves, 37/37 either/or, 36/38 leading; the check on
+    35/38, 37/37, 34/38 (it passes 3 follows that guess or ask a detail; at 0.3 it reads 4 open questions as leading).
+  - Still to prove with a fresh simulation (20 dreams once, at low concurrency, stopping on a writer-model error):
+    every target and floor, above all "I don't remember", asked again, retellings begun as told all they remember,
+    and the retelling's wait and length.
