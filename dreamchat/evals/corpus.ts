@@ -2,7 +2,8 @@
 // as plan.ts rebuilds it (plan.ts `rebuild`), and each moment's and in-between picture's prompt,
 // images and plan are written as a normalised dump, so two labels can be compared picture by
 // picture. What a change to the harness changes in the preparation, seen before anything is drawn.
-// No model is called and nothing is drawn.
+// Nothing is drawn; with DREAMCHAT_RECORD=on, what each moment implies is read once and kept
+// (evals/implied-cache.ts, --no-imply to read nothing).
 //
 //   bun run evals/corpus.ts --label baseline
 //   DREAMCHAT_RECORD=on bun run evals/corpus.ts --label record-on --against baseline
@@ -302,6 +303,14 @@ if (import.meta.main) {
     dreams: {},
   };
   let skipped = 0;
+  // With DREAMCHAT_RECORD=on, what each moment's words imply is read for each dream first, as the
+  // harness reads it while planning, and kept (evals/implied-cache.ts); --no-imply reads nothing.
+  const { recordMode } = await import('../record');
+  const { costLine, withImplied } = await import('./implied-cache');
+  const { jevWithModel } = await import('../jev');
+  const { JEV_MODEL } = await import('./prompt-cases');
+  const imply = recordMode() === 'on' && !args.includes('--no-imply');
+  const costs: Awaited<ReturnType<typeof withImplied>>[] = [];
   for (const d of dreams) {
     // Only a dream whose breakdown and look are settled has pictures to tell.
     if (!d.session.draft?.breakdown || !d.session.style) {
@@ -309,7 +318,13 @@ if (import.meta.main) {
       continue;
     }
     try {
-      dump.dreams[d.id] = { ...dumpOf(rebuild(d.session), sentOf(d.session)), hash: d.hash };
+      let session = d.session;
+      if (imply) {
+        const read = await withImplied(session, { jev: jevWithModel(JEV_MODEL()), jevModel: JEV_MODEL() });
+        costs.push(read);
+        session = read.session;
+      }
+      dump.dreams[d.id] = { ...dumpOf(rebuild(session), sentOf(d.session)), hash: d.hash };
     } catch (e) {
       dump.dreams[d.id] = {
         error: String(e instanceof Error ? e.message : e).slice(0, 500),
@@ -337,6 +352,7 @@ if (import.meta.main) {
       `what was really sent is known for ${sent.length} moments: ${sent.filter((x) => x.p.sent!.same_prompt).length} rebuilt word for word; ${other.length} rebuilt with other images than were sent${other.length ? ` (${other.map((x) => `${x.id.slice(-4)} ${x.p.id}`).join(', ')})` : ''}`,
     );
   }
+  if (costs.length) console.log(costLine(costs));
   console.log(`written ${file}`);
   if (against) {
     const before = JSON.parse(readFileSync(join(RUNS, `${against}.json`), 'utf8')) as Dump;

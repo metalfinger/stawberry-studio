@@ -33,7 +33,7 @@ import {
 } from './frames';
 import { checkReferences, preflight, readPrompt } from './gate';
 import { callJev } from './jev';
-import { recordForPlan } from './record';
+import { recordForPlan, recordInputsOf } from './record';
 import type { Breakdown } from './producer';
 import type { Session } from './session';
 import { type Item, sheetPrompt } from './sheets';
@@ -91,8 +91,10 @@ export function rebuild(s: Pick<Session, 'draft' | 'style' | 'build' | 'prep'> &
   }));
   completeViews(b);
   // With DREAMCHAT_RECORD=on, planned from the story record: from what a frozen dream keeps (its
-  // sketches' words, readings and look), so a frozen dream and its saved conversation plan alike.
-  const rec = recordForPlan(b, s.build?.items ?? [], s.draft?.readings, { style });
+  // sketches' words, or those its shots were planned with, its readings and look), so a frozen dream
+  // and its saved conversation plan alike.
+  const inputs = recordInputsOf({ build: s.build, prep: s.prep });
+  const rec = recordForPlan(b, inputs.items, s.draft?.readings, { words: inputs.words, style });
   const plan = planContinuity(b, rec);
   const pictures = [...buildFrames(b, plan), ...buildGhosts(plan)].map((p): Item => ({
     ...p,

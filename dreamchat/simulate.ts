@@ -12,6 +12,7 @@ import { loadedKeys } from './boot';
 import { mkdirSync, readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { dreamConfig } from './dream';
+import { writeImplied } from './implied';
 import { callJev } from './jev';
 import { callDeepseek, callHost, type ChatMessage } from './llm';
 import {
@@ -123,6 +124,7 @@ export function liveStore(dir: string, over: Partial<StoreDeps> = {}): SessionSt
     fix: fixFrom,
     shot: shotFor,
     supervise: superviseChanges,
+    imply: writeImplied,
     reword: rewordMoment,
     rewordLook,
     // The assistant is the judge unless the PC's judge is asked for (DREAMCHAT_JUDGE=pc).

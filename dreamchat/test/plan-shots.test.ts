@@ -2,8 +2,12 @@ import { describe, expect, test } from 'bun:test';
 import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { Breakdown } from '../producer';
-import { applyPrep, planShots, reconcileGhosts, type Session } from '../session';
+import type { WriteFn } from '../implied';
+import type { JevFn } from '../jev';
+import { rebuild } from '../plan';
+import { type Breakdown, completeViews } from '../producer';
+import { recordForPlan } from '../record';
+import { applyPrep, planRecord, planShots, reconcileGhosts, type Session } from '../session';
 
 const detail = (value: string | null = null) => ({ value, said: false });
 
@@ -283,5 +287,113 @@ describe('a plan made again mid-dream', () => {
     ]);
     expect(out.ghosts[1].after).toBe('g2');
     expect(out.cuts.map((c) => c.needs)).toEqual([['g2'], ['g1']]);
+  });
+});
+
+describe('one story record for planning and drawing (DREAMCHAT_RECORD=on)', () => {
+  // A saved dream (evals/sources): the red door in the snow, its suitcase opened on the train.
+  const saved = () =>
+    JSON.parse(
+      readFileSync(join(import.meta.dir, '..', 'evals', 'sources', 'dream-0926-062232-a44a.json'), 'utf8'),
+    ) as Session;
+  // The writer finds the suitcase shut when it is handed over; Jev reads that as meant and lasting.
+  const imply: WriteFn = async (messages) => ({
+    content: JSON.stringify({
+      implied: messages[1].content.includes('gives the suitcase') ? [{ who: 't1', what: 'lid', now: 'shut' }] : [],
+    }),
+    model: 'fake',
+    ms: 0,
+  });
+  // Jev answers the reading only; the plans' own questions go unanswered, and the plans stand as saved.
+  const jev: JevFn = async (state, questions) =>
+    Object.keys(questions).some((k) => k.startsWith('implied_'))
+      ? {
+          questions,
+          state,
+          answers: Object.fromEntries(Object.keys(questions).map((k) => [k, { type: 'noul' as const, noul: 0.9 }])),
+          error: null,
+          ms: 0,
+          usage: null,
+        }
+      : { questions, state, answers: null, error: 'not answered here', ms: 0, usage: null };
+
+  test('drawing reads the record the shots were planned from, whatever is drawn or said after', async () => {
+    const was = process.env.DREAMCHAT_RECORD;
+    process.env.DREAMCHAT_RECORD = 'on';
+    try {
+      const s = saved();
+      // When the shots are planned, no sketch is drawn yet, and the dreamer has said this much.
+      const said = ['I was on an old train with my grandfather and he had his old brown suitcase on his knees.'];
+      const waiting = s.build!.items.map((i) => ({ ...i, status: 'waiting' as const, mediaId: undefined }));
+      s.build!.items = waiting;
+      s.transcript = said.map((content) => ({ role: 'user', content })) as Session['transcript'];
+      s.prep = undefined;
+      const prep = await planShots(
+        s.draft!.breakdown!,
+        s.style!,
+        { jev, imply },
+        { items: s.build!.items, words: said, readings: s.draft?.readings },
+      );
+      applyPrep(s, prep);
+      completeViews(s.draft!.breakdown!);
+      const planned = planRecord(s);
+      expect(planned).toBeDefined();
+      // The reading made while planning is the dream's, and in the record both read.
+      expect(s.draft?.readings?.implied?.m6?.map((x) => [x.who, x.what, x.ok])).toEqual([['t1', 'lid', true]]);
+      expect(planned!.moments.m6.own.map((x) => `${x.who} ${x.what}: ${x.now}`)).toContain('t1 lid: shut');
+
+      // Then the sketches are drawn, the suitcase's from words the dreamer changed, and more is said.
+      s.build!.items = waiting.map((i) => ({
+        ...i,
+        status: 'ready' as const,
+        mediaId: `sketch-${i.id}`,
+        ...(i.id === 't1'
+          ? { fields: { ...i.fields, appearance: { value: 'a small red cardboard suitcase', said: true } } }
+          : {}),
+      }));
+      s.transcript = [
+        ...s.transcript,
+        { role: 'user', content: 'The suitcase was red, actually, and small.' },
+      ] as Session['transcript'];
+      const drawing = planRecord(s);
+      expect(drawing).toEqual(planned);
+      // The record the dream as it now stands would give is another: drawing no longer reads that one.
+      const now = recordForPlan(s.draft!.breakdown!, s.build!.items, s.draft?.readings, {
+        words: s.transcript.filter((e) => e.role === 'user').map((e) => e.content),
+        style: s.style,
+      });
+      expect(now).not.toEqual(planned);
+      // Saved and made again as the evals make it, the dream reads the same record.
+      expect(rebuild(s).rec).toEqual(planned);
+    } finally {
+      if (was === undefined) delete process.env.DREAMCHAT_RECORD;
+      else process.env.DREAMCHAT_RECORD = was;
+    }
+  });
+
+  test('off, planning keeps nothing of the record and asks the writer nothing', async () => {
+    const was = process.env.DREAMCHAT_RECORD;
+    delete process.env.DREAMCHAT_RECORD;
+    try {
+      const s = saved();
+      let asked = 0;
+      const prep = await planShots(
+        s.draft!.breakdown!,
+        s.style!,
+        {
+          jev,
+          imply: async (m) => {
+            asked++;
+            return imply(m);
+          },
+        },
+        { items: s.build!.items, words: [] },
+      );
+      expect(asked).toBe(0);
+      expect(prep.record).toBeUndefined();
+      expect(prep.readings).toBeUndefined();
+    } finally {
+      if (was !== undefined) process.env.DREAMCHAT_RECORD = was;
+    }
   });
 });

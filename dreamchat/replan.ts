@@ -16,6 +16,8 @@ import { join } from 'node:path';
 import { callJev } from './jev';
 import { inSession } from './jevlog';
 import { blockScenes, shotFor, superviseChanges } from './producer';
+import { writeImplied } from './implied';
+import { recordInputsOf } from './record';
 import { applyPrep, planShots, type Session } from './session';
 
 void loadedKeys;
@@ -55,13 +57,19 @@ const block: typeof blockScenes = async (x) => {
   return r;
 };
 const prep = await inSession(dir, id, () =>
-  planShots(b, s.style!, {
-    block: keep ? undefined : block,
-    shot: shotFor,
-    supervise: superviseChanges,
-    jev: callJev,
-    dir: join(dir, id),
-  }),
+  planShots(
+    b,
+    s.style!,
+    {
+      block: keep ? undefined : block,
+      shot: shotFor,
+      supervise: superviseChanges,
+      jev: callJev,
+      imply: writeImplied,
+      dir: join(dir, id),
+    },
+    { ...recordInputsOf({ build: s.build, transcript: s.transcript }), readings: s.draft?.readings },
+  ),
 );
 applyPrep(s, prep);
 await Bun.write(file, JSON.stringify(s, null, 2));

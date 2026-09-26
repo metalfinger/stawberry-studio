@@ -103,7 +103,11 @@ export function freeze(id: string, s: Session, store?: string) {
   return {
     frozen: FROZEN,
     from: id,
-    draft: { breakdown: s.draft?.breakdown, downgraded: s.draft?.downgraded ?? [] },
+    draft: {
+      breakdown: s.draft?.breakdown,
+      downgraded: s.draft?.downgraded ?? [],
+      ...(s.draft?.readings ? { readings: s.draft.readings } : {}),
+    },
     prep: s.prep
       ? {
           basedOn: s.prep.basedOn,
@@ -111,6 +115,7 @@ export function freeze(id: string, s: Session, store?: string) {
           shots: s.prep.shots,
           previs: Object.fromEntries(Object.entries(s.prep.previs ?? {}).map(([k, v]) => [k, v.split('/').at(-1)])),
           storyboard: s.prep.storyboard,
+          ...(s.prep.record ? { record: s.prep.record } : {}),
         }
       : undefined,
     style: s.style ?? null,

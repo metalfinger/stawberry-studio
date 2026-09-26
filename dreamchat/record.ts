@@ -28,8 +28,11 @@ import { hashOf, slug } from './tree';
 
 // ── the record ──────────────────────────────────────────────────────────────
 
-/** How sure a clause of a look is: the dreamer said it, confirmed our guess, we guessed it, or read it from the story. */
-export type Basis = 'said' | 'confirmed' | 'guessed' | 'read';
+/**
+ * How sure a clause of a look is: the dreamer said it, confirmed our guess, we guessed it, read it
+ * from the story, or it is implied by what a moment's words say happens (read by a model, checked).
+ */
+export type Basis = 'said' | 'confirmed' | 'guessed' | 'read' | 'implied';
 
 /**
  * One clause of a look, how sure it is, and where it came from ('item:p1.wardrobe', 'b:m3.leaves.0').
@@ -67,6 +70,8 @@ export type Change = {
   guessed?: string[];
   /** Known only from a stored state, from no moment's own changes: the rules merge or drop it. */
   copy?: true;
+  /** Implied by the moment's words, written nowhere (readings.implied): never said. */
+  basis?: 'implied';
 };
 
 export type ElementKind = 'person' | 'animal' | 'group' | 'crowd' | 'place' | 'thing';
@@ -153,9 +158,9 @@ export type StoryRecord = {
 };
 
 /**
- * Jev's readings the record uses, to be kept in `draft.readings` by later steps and never on the
- * moments: a change to the breakdown throws away the planning made from it. None are stored yet, so
- * a rule that wants one does what code alone can without it.
+ * Jev's readings the record uses, kept in `draft.readings` and never on the moments: a change to the
+ * breakdown throws away the planning made from it. A rule whose reading is not stored does what code
+ * alone can without it.
  */
 export type Readings = {
   /** By moment: the changes that no longer hold there (their holds_ answered no). */
@@ -168,6 +173,23 @@ export type Readings = {
   fixtureOf?: Record<string, string>;
   /** By where a look came from ('item:p1.wardrobe'): the clauses the harness filled in. */
   filled?: Record<string, string[]>;
+  /**
+   * By moment: what its words imply about how a place or a thing is now, written nowhere, as the
+   * writer proposed it and Jev read it (implied.ts); only those Jev reads as meant (ok) are changes.
+   */
+  implied?: Record<string, ImpliedReading[]>;
+};
+
+/** One implied state of a moment: proposed by the writer, and Jev's reading of it on the moment's words. */
+export type ImpliedReading = {
+  who: string;
+  what: string;
+  now: string;
+  basis: 'implied';
+  /** Jev's reading that the moment's words mean it; and, of a thing, that it is how the thing looks. */
+  p: number;
+  look?: number;
+  ok: boolean;
 };
 
 export type RecordOptions = {
@@ -892,7 +914,8 @@ function addChange(ctx: Ctx, c: Omit<Change, 'key'>): Change {
  * into a look ("a clock on a pole, melting like wax") is what happens to it where a moment's words say
  * so ("the clock melts, dripping down like wax"): taken out of both copies of its look, so the look is
  * from before, and made a change there. What comes into a place and fills it ("water starts coming in
- * under the doors"), where no change of the place says so, is a change of the place there.
+ * under the doors"), where no change of the place says so, is a change of the place there. So is what
+ * the words imply that nothing writes, where a reading of the moment has it and Jev reads it as meant.
  */
 function passing(ctx: Ctx): Violation[] {
   const out: Violation[] = [];
@@ -977,7 +1000,42 @@ function passing(ctx: Ctx): Violation[] {
       fix: 'add',
     });
   }
-  return [...out, ...openings(ctx)];
+  out.push(...openings(ctx));
+  // What a moment's words imply about a place or a thing, read and checked (readings.implied), is a
+  // change there, known as implied: the water risen to the window the boat is rowed up to. Read last,
+  // so what the words say of the same part at the same moment is the change, not what they imply.
+  for (const m of moments)
+    for (const x of ctx.readings.implied?.[m.id] ?? []) {
+      const e = elements[x?.who];
+      if (!x?.ok || !e || (e.kind !== 'place' && e.kind !== 'thing')) continue;
+      // Named by its own name ("ice" of the block of ice), it is all of it: one part, so that what it
+      // is later takes the place of what it was.
+      const own = wordsOf(e.name);
+      const whole = wordsOf(x.what).length > 0 && wordsOf(x.what).every((w) => own.includes(w));
+      const part = partName(whole ? e.name : x.what);
+      if (Object.values(changes).some((c) => c.who === e.id && c.at === m.id && !c.copy && (c.part ?? c.what) === part))
+        continue;
+      const c = addChange(ctx, {
+        who: e.id,
+        at: m.id,
+        kind: e.kind === 'place' ? 'place' : 'part',
+        part,
+        what: x.what,
+        now: x.now,
+        told: m.told,
+        from: `implied:${m.id}`,
+        basis: 'implied',
+      });
+      out.push({
+        rule: 'passing',
+        who: e.id,
+        at: m.id,
+        key: c.key,
+        detail: `${m.id}'s words imply ${whole ? e.called : `${poss(e.called)} ${x.what}`} is now ${quote(x.now)}: a change there, implied`,
+        fix: 'add',
+      });
+    }
+  return out;
 }
 
 /** A moment's words opening something: "opens the door", "open the red door". */
@@ -1025,7 +1083,7 @@ function openings(ctx: Ctx): Violation[] {
           c.who === e.id &&
           !c.copy &&
           at(ctx, c.at) <= at(ctx, m.id) &&
-          OPENED.test(c.now) &&
+          saysOpen(c.now) &&
           (e.kind === 'thing' || wordsOf(c.what).includes(head)),
       );
       if (opened && !cut.length) continue;
@@ -1752,7 +1810,7 @@ function firstLook(ctx: Ctx): Violation[] {
     if (!has.some((f) => covers(wordsOf(f.text), pieceWords(text))))
       (e.base[field] ??= []).push({
         text,
-        basis: c.told ? 'read' : 'guessed',
+        basis: c.basis ?? (c.told ? 'read' : 'guessed'),
         from: c.from,
         first: { part: c.part ?? c.what, what: c.what, now: c.now },
       });
@@ -2009,7 +2067,13 @@ function inForce(ctx: Ctx, m: AtMoment): string[] {
 }
 
 /** Said of a thing's part, it is open: "an open suitcase full of letters", "lid: open". */
-const OPENED = /(?<![\p{L}-])open(?:ed)?(?![\p{L}-])(?!\s+(?:onto|on to|into|out))/iu;
+const OPEN_WORD = /(?<![\p{L}-])open(?:ed)?(?![\p{L}-])(?!\s+(?:onto|on to|into|out))/iu;
+
+/**
+ * Whether what a part is now says it is open: in what it says first, not in what goes with it. The
+ * water "high enough to row the boat, with books floating open like birds" is not opened.
+ */
+const saysOpen = (now: string) => OPEN_WORD.test(now.split(/[,;]|\s(?:with|while|where)\s/i)[0] ?? '');
 
 /**
  * The first moment after a thing was opened where it is there in another place: carried away, it was
@@ -2017,7 +2081,7 @@ const OPENED = /(?<![\p{L}-])open(?:ed)?(?![\p{L}-])(?!\s+(?:onto|on to|into|out
  */
 function shutAway(ctx: Ctx, c: Change): string | undefined {
   const e = ctx.record.elements[c.who];
-  if (e?.kind !== 'thing' || c.kind !== 'part' || !OPENED.test(c.now)) return undefined;
+  if (e?.kind !== 'thing' || c.kind !== 'part' || !saysOpen(c.now)) return undefined;
   const ms = ctx.record.moments;
   const place = ms[at(ctx, c.at)]?.place;
   return ms.slice(at(ctx, c.at) + 1).find((m) => m.place !== place && there(m, c.who))?.id;
@@ -2539,7 +2603,7 @@ export function nowAt(record: StoryRecord, momentId: string): { of: string; text
     const be = isAre(e.called);
     const says: string[] = [];
     const sentences: string[] = [];
-    const add = (part: string, what: string, now: string) => {
+    const add = (part: string, what: string, now: string, implied = false) => {
       if (part === 'clothes') says.push(`wears ${now.replace(/^(?:wearing|dressed in|in)\s+/i, '')}`);
       else if (SAID_OF_THEM(part)) {
         // "a young woman with blonde hair" of the young woman: what it adds to her name.
@@ -2552,7 +2616,7 @@ export function nowAt(record: StoryRecord, momentId: string): { of: string; text
               ? rest.replace(/^\S+\s+/, '')
               : `${be} ${now}`,
         );
-      } else sentences.push(partSays(e, what, now));
+      } else sentences.push(partSays(e, what, now, implied));
     };
     // A first look is said where the rest of the look does not already say all of it.
     const look = LOOK_FIELDS[group(e)].flatMap((k) => e.base[k] ?? []);
@@ -2561,13 +2625,13 @@ export function nowAt(record: StoryRecord, momentId: string): { of: string; text
       for (const f of look)
         if (f.first && !latest.has(f.first.part) && !wordsOf(f.first.now).every((w) => shown.has(w) || LABEL.has(w)))
           add(f.first.part, f.first.what, f.first.now);
-    for (const c of latest.values()) add(c.part ?? c.what, c.what, c.now);
-    if ((seen.ended ?? []).some((k) => OPENED.test(record.changes[k]?.now ?? ''))) says.push(`${be} shut`);
+    for (const c of latest.values()) add(c.part ?? c.what, c.what, c.now, c.basis === 'implied');
+    if ((seen.ended ?? []).some((k) => saysOpen(record.changes[k]?.now ?? ''))) says.push(`${be} shut`);
     // What a later moment opens is shut until then, where this moment's words name it.
     const named = new Set(wordsOf(`${m.words.action} ${m.words.visual_point}`));
     for (const c of Object.values(record.changes)) {
-      if (c.who !== id || !OPENED.test(c.now) || (order.get(c.at) ?? 0) <= (order.get(m.id) ?? 0)) continue;
-      if (OPENED.test(latest.get(c.part ?? c.what)?.now ?? '')) continue;
+      if (c.who !== id || !saysOpen(c.now) || (order.get(c.at) ?? 0) <= (order.get(m.id) ?? 0)) continue;
+      if (saysOpen(latest.get(c.part ?? c.what)?.now ?? '')) continue;
       const noun = e.kind === 'place' ? c.what.trim().toLowerCase() : '';
       const head = sing((noun || headOf(e.name).toLowerCase()).split(/\s+/).at(-1) ?? '');
       if (!named.has(head)) continue;
@@ -2621,9 +2685,10 @@ const PREDICATE =
 /**
  * A changed part in a sentence: "the water is up over the desks", "the dreamer's hair is white". A part
  * that is the whole of it is it ("the newspaper is wet"); a value that is no predicate is said after a
- * colon ("the water: fills the roof").
+ * colon ("the water: fills the roof"). What a moment implies was written to be said after "is"
+ * (implied.ts): "the water is high enough to row the boat".
  */
-function partSays(e: RecElement, what: string, now: string): string {
+function partSays(e: RecElement, what: string, now: string, afterIs = false): string {
   const part = withoutName(what.trim().toLowerCase(), e.name);
   const subject = !part ? e.called : e.kind === 'place' ? `the ${part}` : `${poss(e.called)} ${part}`;
   const be = part ? isAre(part) : isAre(e.called);
@@ -2637,7 +2702,7 @@ function partSays(e: RecElement, what: string, now: string): string {
     const tail = rest.join(' ');
     return /^\p{L}+ing\b/u.test(tail) ? `${subject} ${be} ${tail}` : `${subject} ${tail}`;
   }
-  return PREDICATE.test(first) || COLOUR.test(first) ? `${subject} ${be} ${value}` : `${subject}: ${value}`;
+  return afterIs || PREDICATE.test(first) || COLOUR.test(first) ? `${subject} ${be} ${value}` : `${subject}: ${value}`;
 }
 
 /** A change as the continuity plan carries it, known by its key. */
@@ -2709,4 +2774,42 @@ export function recordForPlan(
   } catch {
     return undefined;
   }
+}
+
+/** What a dream's story record is made from besides its breakdown: its sketches' words and the dreamer's own messages. */
+export type RecordInputs = { items: Item[]; words: string[] };
+
+/**
+ * The sketches' words as a record reads them, a copy that later edits to the sketches leave as it was:
+ * who and what each is, its look, and whether it is drawn.
+ */
+export const recordItems = (items: Item[]): Item[] =>
+  items.map((i) => ({
+    id: i.id,
+    kind: i.kind,
+    name: i.name,
+    fields: structuredClone(i.fields),
+    status: i.status,
+    version: i.version,
+    ...(i.mediaId ? { mediaId: i.mediaId } : {}),
+    ...(i.extras ? { extras: i.extras } : {}),
+    ...(i.several !== undefined ? { several: i.several } : {}),
+    ...(i.isDreamer ? { isDreamer: i.isDreamer } : {}),
+  }));
+
+/**
+ * What a dream's record is made from: the sketches' words and the dreamer's messages as they stood
+ * when its shots were planned (kept on the prep), while the dream has the same sketches, so planning
+ * and drawing read one record; else as they stand now.
+ */
+export function recordInputsOf(s: {
+  build?: { items?: Item[] } | null;
+  transcript?: { role: string; content: string }[];
+  prep?: { record?: RecordInputs } | null;
+}): RecordInputs {
+  const pinned = s.prep?.record;
+  const items = s.build?.items ?? [];
+  const ids = (xs: Item[]) => JSON.stringify(xs.map((i) => i.id).sort());
+  if (pinned && ids(pinned.items) === ids(items)) return pinned;
+  return { items, words: (s.transcript ?? []).filter((e) => e.role === 'user').map((e) => e.content) };
 }

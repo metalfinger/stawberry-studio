@@ -114,7 +114,18 @@ import {
   sheetPrompt,
 } from './sheets';
 import type { JudgedCheck, JudgeOptions } from './judge';
-import { diffPlan, type Readings, type RecordOptions, recordForPlan, recordMode, storyRecord } from './record';
+import { IMPLIED_BAR, readImplied, type WriteFn } from './implied';
+import {
+  diffPlan,
+  type Readings,
+  type RecordInputs,
+  type RecordOptions,
+  recordForPlan,
+  recordInputsOf,
+  recordItems,
+  recordMode,
+  storyRecord,
+} from './record';
 import { cutRecord, type WriteResult } from './strawberry';
 
 export type Entry = { role: 'user' | 'assistant'; content: string; messages?: string[] };
@@ -260,6 +271,12 @@ export type Prep = {
   storyboard?: Record<string, { ok: boolean; view: string; readings: Reading[]; reasons: string[] }>;
   /** How long the planning took. */
   ms: number;
+  /**
+   * With DREAMCHAT_RECORD=on: what the story record was made from while planning, the sketches' words
+   * and the dreamer's messages then, which drawing reads too; and the readings made then.
+   */
+  record?: RecordInputs;
+  readings?: Readings;
 };
 
 /**
@@ -316,8 +333,12 @@ export async function planShots(
     supervise?: StoreDeps['supervise'];
     /** Jev, for the floor plans' facts and each moment's "storyboard complete?", before anything is paid for. */
     jev?: JevFn;
+    /** The writer, for what each moment's words imply (implied.ts): with DREAMCHAT_RECORD=on. */
+    imply?: WriteFn;
     dir?: string;
   },
+  /** What the story record is made from besides the breakdown, as the dream stands now, and its readings. */
+  inputs: RecordInputs & { readings?: Readings } = { items: [], words: [] },
 ): Promise<Prep> {
   const t0 = Date.now();
   const draft: Breakdown = structuredClone(b);
@@ -359,10 +380,23 @@ export async function planShots(
   }
   const dreamer = blocked.people.find((p) => p.is_dreamer)?.id;
   const prep: Prep = { basedOn: planKey(b), blocking: {}, shots: {}, previs: {}, changes: found, ms: 0 };
+  // With DREAMCHAT_RECORD=on, the story record is made from the sketches' words and the dreamer's
+  // messages as they stand now, kept on the prep so that drawing reads the same record, with what each
+  // moment's words imply read once here and kept in the dream's readings.
+  const pinned: RecordInputs = { items: recordItems(inputs.items), words: [...inputs.words] };
+  let readings = inputs.readings;
+  if (recordMode() === 'on') {
+    prep.record = pinned;
+    const implied = await impliedReadings(blocked, style, { ...pinned, readings }, deps);
+    if (implied) {
+      readings = { ...readings, implied };
+      prep.readings = { implied };
+    }
+  }
   // Every camera of a set of plans placed, rendered and briefed, and each shot checked against its moment.
   const shoot = async (plans: Breakdown, into: Prep, scenes?: string[], suffix = '') => {
     // With DREAMCHAT_RECORD=on, the cameras are placed from the story record's floor plans.
-    const rec = recordForPlan(plans, [], null, { style });
+    const rec = recordForPlan(plans, pinned.items, readings, { words: pinned.words, style });
     const plan = planContinuity(plans, rec);
     await Promise.all(
       plan.cuts
@@ -491,6 +525,65 @@ export async function planShots(
 }
 
 /**
+ * What each moment's words imply about a place or a thing that the record does not hold (implied.ts):
+ * the writer proposes, Jev checks each on the moment's words, and both are logged. None without the
+ * writer or Jev; a reading that fails leaves the record as it is.
+ */
+async function impliedReadings(
+  b: Breakdown,
+  style: StyleOption,
+  inputs: RecordInputs & { readings?: Readings },
+  deps: { imply?: WriteFn; jev?: JevFn },
+): Promise<Readings['implied'] | undefined> {
+  if (!deps.imply || !deps.jev) return undefined;
+  try {
+    const record = storyRecord(b, inputs.items, inputs.readings, { words: inputs.words, style }).record;
+    const { implied, cost } = await readImplied(b, record, deps.imply, deps.jev, (moment, read) =>
+      recordJev({
+        kind: 'transition',
+        stage: 'record',
+        to: 'implied',
+        moment,
+        facts: read.flatMap((x) => [
+          { question: `meant: ${x.who} ${x.what}: ${x.now}`, answer: x.p, bar: IMPLIED_BAR, ok: x.p >= IMPLIED_BAR },
+          ...(x.look === undefined
+            ? []
+            : [
+                {
+                  question: `how it looks: ${x.who} ${x.what}: ${x.now}`,
+                  answer: x.look,
+                  bar: IMPLIED_BAR,
+                  ok: x.look >= IMPLIED_BAR,
+                },
+              ]),
+        ]),
+        decision: `${read.filter((x) => x.ok).length} of ${read.length} implied`,
+        reason: `the writer proposed ${read.map((x) => `${x.who}'s ${x.what} "${x.now}"`).join('; ')}; Jev read each on the moment's words`,
+      }),
+    );
+    recordJev({
+      kind: 'transition',
+      stage: 'record',
+      to: 'implied',
+      facts: [],
+      decision: 'read',
+      reason: `what the moments imply: ${cost.writerCalls} writer calls (${cost.writerIn} tokens in, ${cost.writerOut} out), ${cost.jevCalls} Jev calls`,
+    });
+    return implied;
+  } catch (e) {
+    recordJev({
+      kind: 'transition',
+      stage: 'record',
+      to: 'implied',
+      facts: [],
+      decision: 'failed',
+      reason: String(e).slice(0, 300),
+    });
+    return undefined;
+  }
+}
+
+/**
  * The story record (record.ts) worked out beside the continuity plan and logged with the plan's own
  * decisions, changing nothing: what each of its rules found and repaired, and where its changes in each
  * moment differ from the plan's. Measured in shadow on real dreams before anything reads it, so a rule
@@ -550,8 +643,8 @@ export function shadowRecord(
  */
 export function planRecord(s: Session, b = s.draft?.breakdown): RecordPlan | undefined {
   if (!b) return undefined;
-  const words = (s.transcript ?? []).filter((e) => e.role === 'user').map((e) => e.content);
-  return recordForPlan(b, s.build?.items ?? [], s.draft?.readings, { words, style: s.style });
+  const { items, words } = recordInputsOf(s);
+  return recordForPlan(b, items, s.draft?.readings, { words, style: s.style });
 }
 
 /**
@@ -748,6 +841,8 @@ export function applyPrep(s: Pick<Session, 'draft' | 'prep'>, prep: Prep): void 
     if (replace && prep.leaves) for (const m of sc.moments) if (prep.leaves[m.id]) m.leaves = prep.leaves[m.id];
   }
   addChanges(b, prep.changes ?? []);
+  // The readings made while planning are the dream's own from now on.
+  if (prep.readings && s.draft) s.draft.readings = { ...s.draft.readings, ...prep.readings };
   // Known from now on by the dream as it stands, the changes found written into it.
   s.prep = { ...prep, basedOn: planKey(b) };
 }
@@ -782,6 +877,11 @@ export type StoreDeps = {
    * is made from the story record, when one is given (DREAMCHAT_RECORD=on).
    */
   write?: (b: Breakdown, style: StyleOption, transcript: string, rec?: RecordPlan) => Promise<WriteResult>;
+  /**
+   * The writer that reads what each moment's words imply about places and things (implied.ts), while
+   * the shots are planned, with DREAMCHAT_RECORD=on. Absent: nothing is read.
+   */
+  imply?: WriteFn;
   /** Draws reference sheets through the engine. Absent: nothing is sketched. */
   sheets?: SheetEngine;
   /** Applies the person's answer to a profile. */
@@ -1735,13 +1835,19 @@ export class SessionStore {
     const style = s.style;
     if (!b || !style || this.preps.has(s.id) || s.prep?.basedOn === planKey(b)) return;
     const id = s.id;
-    const work = planShots(b, style, {
-      block: this.deps.block,
-      shot: this.deps.shot,
-      supervise: this.deps.supervise,
-      jev: this.deps.jev,
-      dir: this.deps.dir ? join(this.deps.dir, id) : undefined,
-    }).catch(() => null);
+    const work = planShots(
+      b,
+      style,
+      {
+        block: this.deps.block,
+        shot: this.deps.shot,
+        supervise: this.deps.supervise,
+        jev: this.deps.jev,
+        imply: this.deps.imply,
+        dir: this.deps.dir ? join(this.deps.dir, id) : undefined,
+      },
+      { ...recordInputsOf({ build: s.build, transcript: s.transcript }), readings: s.draft?.readings },
+    ).catch(() => null);
     this.preps.set(id, work);
     // Kept on the conversation when ready, unless the dream has changed meanwhile.
     void work.then((prep) => (prep ? this.serial(id, () => this.update(id, (x) => applyPrep(x, prep))) : undefined));
@@ -1774,16 +1880,19 @@ export class SessionStore {
     const ids = s.production?.result?.ids ?? {};
     const plan = planContinuity(s.draft.breakdown, planRecord(s));
     s.build.plan = plan;
-    // The story record beside the plan the moments are drawn from, logged and changing nothing.
-    if (recordMode() !== 'off')
+    // The story record beside the plan the moments are drawn from, logged and changing nothing: made
+    // from what the plan's record is made from.
+    if (recordMode() !== 'off') {
+      const inputs = recordInputsOf(s);
       shadowRecord(
         'frames',
         s.draft.breakdown,
         plan,
-        s.build.items,
-        { words: s.transcript.filter((e) => e.role === 'user').map((e) => e.content), style: s.style },
+        inputs.items,
+        { words: inputs.words, style: s.style },
         s.draft.readings,
       );
+    }
     const pictures = new Map(
       [
         ...buildFrames(s.draft.breakdown, plan).map((f) => ({ ...f, nodeId: ids[f.id] })),

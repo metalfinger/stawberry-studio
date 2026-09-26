@@ -973,13 +973,25 @@ if (import.meta.main) {
   }
   const cases = all.filter((c) => (!only.length || only.includes(c.id)) && (!step || c.step === step));
 
+  // With DREAMCHAT_RECORD=on, what each moment's words imply is read for each dream first, as the
+  // harness reads it while planning, and kept (evals/implied-cache.ts); --no-imply reads nothing.
+  const { recordMode } = await import('../record');
+  const { costLine, withImplied } = await import('./implied-cache');
+  const imply = recordMode() === 'on' && !args.includes('--no-imply');
+  const costs: Awaited<ReturnType<typeof withImplied>>[] = [];
   // Every dream rebuilt once, as plan.ts rebuilds it.
   const dreams = new Map<string, { r: Rebuilt | Error; hash: string; sent: ReturnType<typeof sentOf> }>();
   for (const id of new Set(cases.map((c) => c.session))) {
     const d = loadDream(id, live);
     let r: Rebuilt | Error;
     try {
-      r = rebuild(d.session as Session);
+      let session = d.session as Session;
+      if (imply) {
+        const read = await withImplied(session, { jev: jevWithModel(JEV_MODEL()), jevModel: JEV_MODEL() });
+        costs.push(read);
+        session = read.session;
+      }
+      r = rebuild(session);
     } catch (e) {
       r = e instanceof Error ? e : new Error(String(e));
     }
@@ -1087,6 +1099,7 @@ if (import.meta.main) {
   for (const l of totalsLines(run.totals)) console.log(l);
   const close = results.filter((r) => r.expectations.some((e) => e.close)).map((r) => r.id);
   if (close.length) console.log(`answers close to the bar, in: ${close.join(', ')}`);
+  if (costs.length) console.log(costLine(costs));
   const other = results.filter((r) => r.sent_images).map((r) => r.id);
   if (other.length)
     console.log(
