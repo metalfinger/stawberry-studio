@@ -286,7 +286,7 @@ function solidsOf(plan: Blocking, leaveOut: string[], called: (id: string) => st
         );
     } else if (isPerson(s))
       add(s.id, 0.97, mannequin(s.x, s.y, f, s.pose ?? 'standing', groundAt(s, plan)), name(s.id));
-    else add(s.id, shapeOf(s, plan) === 'ground' ? 0.5 : 0.62, thingBlocks(s, plan), name(s.id));
+    else add(s.id, shapeOf(s, plan) === 'ground' ? 0.5 : 0.62, thingBlocks(s, plan, name(s.id)), name(s.id));
   }
   return solids;
 }
@@ -334,9 +334,10 @@ function groundAt(p: V2, plan: Blocking): number {
  * A thing as blocks, by what it is: a seat and its back, so who sits on it sits on it, not in it
  * (one block the height of a sofa's back buried the friend to her waist, 24 Sep); a vehicle's body
  * as high as its doors, whoever rides in it showing from the shoulders up; stairs as steps; ground
- * as a slab as high as it rises; what someone holds, before them at the height of their hands.
+ * as a slab as high as it rises; what someone holds, before them at the height of their hands; a
+ * small thing on something, where `restOf` puts it. `called` is what it is called.
  */
-function thingBlocks(s: Spot, plan: Blocking): Block[] {
+function thingBlocks(s: Spot, plan: Blocking, called: string): Block[] {
   const [w, d, h] = sizeOf(s);
   const f = facing(s, plan);
   const holder = s.heldBy ? plan.spots.find((o) => o.id === s.heldBy) : undefined;
@@ -368,21 +369,8 @@ function thingBlocks(s: Spot, plan: Blocking): Block[] {
     ];
   }
   if (shape === 'vehicle') return [{ x: s.x, y: s.y, z: 0, w, d, h: Math.min(h, 1.6) * 0.6, f }];
-  // A small thing lying where a table, a stall or a counter stands is on it, not inside it: the talking
-  // fish lay inside its stall, and no camera could see it (night market, 26 Sep).
-  if (shape === 'block' && h < 0.6) {
-    const under = plan.spots.find(
-      (t) =>
-        t.id !== s.id &&
-        !isPerson(t) &&
-        !t.heldBy &&
-        shapeOf(t, plan) === 'block' &&
-        sizeOf(t)[2] > h &&
-        sizeOf(t)[2] < 1.6 &&
-        onFootprint(s, t, plan, 0),
-    );
-    if (under) return [{ x: s.x, y: s.y, z: sizeOf(under)[2], w, d, h, f }];
-  }
+  const rest = restOf(s, plan, called);
+  if (rest) return [{ x: rest.x, y: rest.y, z: rest.z, w, d, h, f: rest.f ?? f }];
   if (shape === 'steps') {
     const n = stepsOf(h);
     return Array.from({ length: n }, (_, i) => {
@@ -391,6 +379,61 @@ function thingBlocks(s: Spot, plan: Blocking): Block[] {
     });
   }
   return [{ x: s.x, y: s.y, z: 0, w, d, h, f }];
+}
+
+/** How high the middle of something on a wall or a tall cabinet is: about eye height. */
+const MOUNTED = 1.5;
+
+/** What a small thing is called when it hangs on a wall: a wall phone, a clock, a mounted sign. */
+const ON_A_WALL = /\b(wall|hanging|hung|hangs|mounted|clocks?|(tele)?phones?)\b/i;
+
+/**
+ * Where a small thing on something is, as its middle on the plan, its bottom, and on the side of
+ * something the way it faces out, rather than on the floor: on the top of a table, a stall or a
+ * counter under it; on the top of a pole or a post; on the side of a tall cabinet or wall block
+ * toward the middle of the place, about eye high; and indoors, against the room's wall with nothing
+ * under it, on the wall about eye high when what it is called (`called`) says it hangs there. The
+ * talking fish lay inside its stall, and no camera could see it (night market, 26 Sep); the clock
+ * on its pole lay inside the platform at the pole's foot, and "the clock melting" showed a bare pole
+ * with the clock said to be outside the picture (desert station m3, 26 Sep); the phone and the
+ * clock on the kitchen wall were drawn near its floor (grandma's kitchen, 26 Sep).
+ */
+function restOf(s: Spot, plan: Blocking, called: string): (V3 & { f?: V2 }) | undefined {
+  if (isPerson(s) || s.heldBy || shapeOf(s, plan) !== 'block') return undefined;
+  const [w, d, h] = sizeOf(s);
+  if (h >= 0.6) return undefined;
+  const under = plan.spots.filter(
+    (t) => t.id !== s.id && !isPerson(t) && !t.heldBy && shapeOf(t, plan) === 'block' && sizeOf(t)[2] > h,
+  );
+  const low = under.find((t) => sizeOf(t)[2] < 1.6 && onFootprint(s, t, plan, 0));
+  if (low) return { x: s.x, y: s.y, z: sizeOf(low)[2] };
+  // Only something small every way hangs on something tall.
+  if (Math.max(w, d, h) > 0.6) return undefined;
+  const tall = under.find((t) => onFootprint(s, t, plan, Math.min(w, d) / 2));
+  if (tall) {
+    const [tw, td, th] = sizeOf(tall);
+    // A pole or a post, thin every way: the thing is at its top.
+    if (Math.max(tw, td) < 0.6) return { x: s.x, y: s.y, z: th };
+    // A cabinet or a wall: on the side of it facing the middle of the place, facing out from it,
+    // where a camera in the place sees it, and not inside it.
+    const f = facing(tall, plan);
+    const r = rightOf(f);
+    const [rw, rd] = roomOf(plan);
+    const to = { x: rw / 2 - tall.x, y: rd / 2 - tall.y };
+    const sides: [V2, number][] = [
+      [f, td / 2],
+      [{ x: -f.x, y: -f.y }, td / 2],
+      [r, tw / 2],
+      [{ x: -r.x, y: -r.y }, tw / 2],
+    ];
+    const [n, half] = sides.reduce((a, b) => (b[0].x * to.x + b[0].y * to.y > a[0].x * to.x + a[0].y * to.y ? b : a));
+    const out = half + d / 2 - ((s.x - tall.x) * n.x + (s.y - tall.y) * n.y);
+    return { x: s.x + n.x * out, y: s.y + n.y * out, z: MOUNTED - h / 2, f: n };
+  }
+  if (!plan.indoors || !ON_A_WALL.test(called)) return undefined;
+  const [rw, rd] = roomOf(plan);
+  if (Math.min(s.x, s.y, rw - s.x, rd - s.y) > 0.5) return undefined;
+  return { x: s.x, y: s.y, z: groundAt(s, plan) + MOUNTED - h / 2 };
 }
 
 const v3 = (x: number, y: number, z: number): V3 => ({ x, y, z });
@@ -885,13 +928,18 @@ export function dreamerShot(
     const r = rightOf(d);
     return unit({ x: d.x * Math.cos(a) + r.x * Math.sin(a), y: d.y * Math.cos(a) + r.y * Math.sin(a) });
   };
-  // The middle of what they look at, at half its height: the one point that must show.
+  // The middle of what they look at, at half its height: the one point that must show. A small thing
+  // on something is where it rests: looking at the clock on its pole, the camera looked down at the
+  // pole's foot (desert station m3, 26 Sep).
+  const rest = target ? restOf(target, plan, target.name ?? name(target.id)) : undefined;
   const heart = target
-    ? v3(
-        target.x,
-        target.y,
-        groundAt(target, plan) + (isPerson(target) ? eyeHeight(target.pose) - 0.1 : sizeOf(target)[2] / 2),
-      )
+    ? rest
+      ? v3(rest.x, rest.y, rest.z + sizeOf(target)[2] / 2)
+      : v3(
+          target.x,
+          target.y,
+          groundAt(target, plan) + (isPerson(target) ? eyeHeight(target.pose) - 0.1 : sizeOf(target)[2] / 2),
+        )
     : null;
   const near = plan.spots.filter((s) => s.id !== dreamer && s.id !== target?.id && isPerson(s) && !s.many);
   let best: { eye: Eye; score: number } | undefined;
@@ -905,7 +953,7 @@ export function dreamerShot(
   for (const [lean, off, how] of target ? leans : leans.slice(0, 1))
     for (const aim of target ? [0, -8, 8, -15, 15, -22, 22] : wanted.length ? [0, -15, 15, -30, 30, -45, 45] : [0]) {
       const at = { x: me.x + off.x, y: me.y + off.y };
-      const d = turn(target ? unit({ x: target.x - at.x, y: target.y - at.y }) : own, aim);
+      const d = turn(heart ? unit({ x: heart.x - at.x, y: heart.y - at.y }) : own, aim);
       // Tilted to what they look at when it is well above or below them (over 20 degrees): looking
       // straight ahead up a staircase, the dog running up it far above was out of the picture
       // (lighthouse, 25 Sep). Nearer level, the view stays as the approved shots had it.
@@ -1264,7 +1312,13 @@ export function outsideShot(
   const tallest =
     hands !== undefined
       ? hands + 0.35
-      : Math.max(...group.map((s) => groundAt(s, plan) + (isPerson(s) ? eyeHeight(s.pose) + 0.15 : sizeOf(s)[2])));
+      : Math.max(
+          ...group.map(
+            (s) =>
+              (restOf(s, plan, name(s.id))?.z ?? groundAt(s, plan)) +
+              (isPerson(s) ? eyeHeight(s.pose) + 0.15 : sizeOf(s)[2]),
+          ),
+        );
   const lowest =
     hands !== undefined ? hands - 0.2 : size === 'close' ? tallest - 0.7 : size === 'medium' ? tallest * 0.45 : 0;
   const height = people.length
