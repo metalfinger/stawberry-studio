@@ -112,6 +112,19 @@ export type GhostPlan = {
 
 export type ContinuityPlan = { cuts: CutPlan[]; ghosts: GhostPlan[]; issues: string[] };
 
+/**
+ * What an in-between picture is, as a key that survives planning again: its subject, its kind and
+ * its change. Keyed by its place in the list ("g1"), the classroom's seaweed, found after the
+ * production was written, took Mr Hale's octopus requirement, its approval was refused, and every
+ * moment drawn from it after (sea school, 26 Sep).
+ */
+export const ghostKey = (g: Pick<GhostPlan, 'of' | 'kind' | 'state' | 'looksAt' | 'label'>): string =>
+  `req:${g.of}:${g.kind}:${
+    g.state
+      ? `${g.state.what.toLowerCase().trim()}=${g.state.now.toLowerCase().trim()}`
+      : (g.looksAt ?? g.label).toLowerCase().trim()
+  }`;
+
 /** At most this many earlier cuts per picture: more references blur what each one is for. */
 const MAX_EARLIER = 3;
 /** At most this many base edits in a row; the next re-anchors on the sheets, so drift stops. */

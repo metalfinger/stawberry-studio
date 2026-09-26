@@ -67,6 +67,7 @@ import {
   type Criterion,
   drawOrder,
   fixtureName,
+  ghostKey,
   pictureName,
   planBy,
   planContinuity,
@@ -1681,7 +1682,11 @@ export class SessionStore {
       [
         ...buildFrames(s.draft.breakdown, plan).map((f) => ({ ...f, nodeId: ids[f.id] })),
         // A ghost is drawn on the asset it shows, covering the requirement planned there.
-        ...buildGhosts(plan).map((g) => ({ ...g, nodeId: ids[g.ghost?.of ?? ''], requirementId: ids[g.id] })),
+        ...buildGhosts(plan).map((g) => ({
+          ...g,
+          nodeId: ids[g.ghost?.of ?? ''],
+          requirementId: g.ghost ? ids[ghostKey(g.ghost)] : undefined,
+        })),
       ].map((i) => [i.id, i as Item]),
     );
     s.build.frames = drawOrder(plan)
@@ -1728,21 +1733,28 @@ export class SessionStore {
   private async approveGhost(s: Session, n: Item): Promise<void> {
     if (n.continuityApproved) return;
     const users = (s.build?.frames ?? []).filter((x) => x.needs?.includes(n.id)).map((x) => x.name);
-    if (this.deps.sheets && n.mediaId && n.nodeId)
-      try {
-        await this.deps.sheets.review({
-          mediaId: n.mediaId,
-          nodeId: n.nodeId,
+    if (this.deps.sheets && n.mediaId && n.nodeId) {
+      const review = (requirementIds: string[]) =>
+        this.deps.sheets!.review({
+          mediaId: n.mediaId!,
+          nodeId: n.nodeId!,
           approved: true,
           author: 'assistant',
           decision: `An in-between reference, approved by the chat for continuity: ${n.ghost?.why ?? ''}. Used by: ${users.join('; ')}.`,
-          depicted: [n.nodeId],
-          requirementIds: n.requirementId ? [n.requirementId] : [],
+          depicted: [n.nodeId!],
+          requirementIds,
           select: false,
         });
+      try {
+        await review(n.requirementId ? [n.requirementId] : []);
       } catch (e) {
-        n.error = `approving it for continuity failed: ${String(e).slice(0, 200)}`;
+        // Its planned coverage refused (planned on another asset, or planned since the production was
+        // written): approved as a reference all the same, or every moment drawn from it is refused.
+        if (n.requirementId && /requirement_invalid/.test(String(e)))
+          await review([]).catch((e2) => (n.error = `approving it for continuity failed: ${String(e2).slice(0, 200)}`));
+        else n.error = `approving it for continuity failed: ${String(e).slice(0, 200)}`;
       }
+    }
     n.continuityApproved = true;
     n.review = 'approved';
   }

@@ -7,7 +7,7 @@
 // not invented defaults presented as user decisions").
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { type CutPlan, planContinuity, seenIn } from './continuity';
+import { type CutPlan, ghostKey, planContinuity, seenIn } from './continuity';
 import { type Breakdown, type Detail, mediumOf, moments, type State, type StyleOption, VAGUE } from './producer';
 
 export const REPO = resolve(import.meta.dir, '..');
@@ -81,7 +81,8 @@ function split(fields: Record<string, Detail>): { said: Record<string, Value>; g
   const said: Record<string, Value> = {};
   const guessed: Record<string, Value> = {};
   // A value that says nothing is left unset: the engine refuses placeholders, rightly.
-  for (const [k, d] of Object.entries(fields)) if (d.value && !VAGUE.test(d.value)) (d.said ? said : guessed)[k] = d.value;
+  for (const [k, d] of Object.entries(fields))
+    if (d.value && !VAGUE.test(d.value)) (d.said ? said : guessed)[k] = d.value;
   return { said, guessed };
 }
 
@@ -155,7 +156,7 @@ export function planWrites(b: Breakdown, style: StyleOption, transcript: string)
   for (const g of plan.ghosts)
     ops.push({
       op: 'requirement',
-      ref: `$${g.id}`,
+      ref: `$${ghostKey(g)}`,
       node: `$${g.of}`,
       kind: g.kind,
       label: g.label.slice(0, 120),
