@@ -480,9 +480,10 @@ export async function planShots(
   );
   if (judged)
     prep.leaves = Object.fromEntries(draft.scenes.flatMap((sc) => sc.moments.map((m) => [m.id, m.leaves ?? []])));
-  // The story record beside the plan, logged and changing nothing (DREAMCHAT_RECORD=shadow).
-  if (recordMode() !== 'off') shadowRecord('plan', blocked, planContinuity(blocked));
   prep.ms = Date.now() - t0;
+  // The story record beside the plan, logged and changing nothing (DREAMCHAT_RECORD=shadow). The plan
+  // is worked out inside its guard, so a plan that cannot be made never throws away the prep.
+  if (recordMode() !== 'off') shadowRecord('plan', blocked, () => planContinuity(blocked));
   return prep;
 }
 
@@ -495,7 +496,7 @@ export async function planShots(
 export function shadowRecord(
   site: string,
   b: Breakdown,
-  plan: ContinuityPlan,
+  plan: ContinuityPlan | (() => ContinuityPlan),
   items: Item[] = [],
   opts: RecordOptions = {},
   readings?: Readings,
@@ -511,6 +512,7 @@ export function shadowRecord(
       reason: reason.slice(0, 4000),
     });
   try {
+    const planned = typeof plan === 'function' ? plan() : plan;
     const { record, violations } = storyRecord(b, items, readings, opts);
     const rules = [...new Set(violations.map((v) => v.rule))];
     const count = (r: string) => violations.filter((v) => v.rule === r).length;
@@ -527,7 +529,7 @@ export function shadowRecord(
           .join('; ')}`,
       );
     const keys = (xs: string[]) => (xs.length ? xs.join(', ') : 'none');
-    for (const d of diffPlan(record, plan))
+    for (const d of diffPlan(record, planned))
       log(
         'differs',
         `${site}: own, only in the record ${keys(d.own.record)}, only in the plan ${keys(d.own.plan)}; carried, only in the record ${keys(d.carried.record)}, only in the plan ${keys(d.carried.plan)}`,
