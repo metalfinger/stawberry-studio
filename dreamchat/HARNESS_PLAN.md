@@ -146,3 +146,8 @@ One **cut sheet** per cut is the spine everything is assembled from:
   word-level corpus diffs, 8 cases tagged as needing a model step), re-measured with the review's own probe prompts
   (cosmetic rewordings now fail, genuine fixes still pass), merged, baseline reproduced on the merged branch:
   6/33 counted faults met, 36/36 guards.
+- 26 Sep: S1 built on branch `record-state` (464df89; DREAMCHAT_RECORD=on). Its cases: state 7/9, presence 2/2,
+  holding 2/2 (0/13 before), 4 of 6 model-step cases met anyway, guards 36/36; off and shadow identical to before on
+  all 59 dreams. Two gaps found and being closed in S1 before review: facts a moment implies about a place are
+  written nowhere (the library water rising to the window), so an implied-state reading is being added; and
+  planning and drawing built the record from different inputs.
