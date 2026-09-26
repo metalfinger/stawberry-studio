@@ -718,6 +718,7 @@ export type StoreDeps = {
     prompt: string,
     findings: string[],
     transcript: string,
+    later?: string[],
   ) => Promise<Record<string, Detail> | null>;
   /** A moment's shot briefed from its worked-out view, as a director of photography would. */
   shot?: (
@@ -902,6 +903,12 @@ export function asInstruction(question: string): string {
 /** The gate's findings that rewording a moment can put right, as opposed to its images. */
 const WORDING =
   /^(its instructions may contradict|someone may be drawn twice|what it shows is not clear|what to take from each image)/;
+
+/** What changes about someone or something later in the dream, which their look is from before. */
+const laterOf = (s: Session, id: string) =>
+  (s.draft?.breakdown?.scenes ?? [])
+    .flatMap((sc) => sc.moments)
+    .flatMap((m) => (m.leaves ?? []).filter((l) => l.who === id).map((l) => `${l.what}: ${l.now}`));
 
 /** A finding that says only that the words leave something open, which a picture can decide. */
 const unclearOnly = (f: string) => f.startsWith('what it shows is not clear enough to draw');
@@ -2604,9 +2611,7 @@ export class SessionStore {
           renderTranscript(s.transcript),
           others,
           kind,
-          (s.draft?.breakdown?.scenes ?? [])
-            .flatMap((sc) => sc.moments)
-            .flatMap((m) => (m.leaves ?? []).filter((l) => l.who === item.id).map((l) => `${l.what}: ${l.now}`)),
+          laterOf(s, item.id),
         )
           .catch(() => item.fields)
           .then((fields) => (snapshot.fields = fields))
@@ -2639,6 +2644,7 @@ export class SessionStore {
               sheetPrompt(snapshot, style),
               findings,
               renderTranscript(s.transcript),
+              laterOf(s, item.id),
             )
             .catch(() => null);
           if (!fields) break;

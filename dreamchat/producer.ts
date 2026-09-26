@@ -284,7 +284,7 @@ export const callProducer: ProducerFn = async (transcript, previous) => {
 
 const REVISE_ITEM = `The person was shown a profile of something from their dream and answered it (their latest message). Apply what they changed or added, and nothing else. The fields say how it looks: a remark about a pose, a movement or what someone is doing belongs to the moments, never here ("he's too still" changes nothing in his look). Return JSON only: {"fields": {...}} with exactly the same keys as the profile, each value a short plain phrase, or null when nothing is known. Keep every value they didn't change exactly as it was.`;
 
-const REWORD_LOOK = `A reference picture of something from a person's dream is about to be drawn from the profile below, and a checker holding it back found a problem in it. Rewrite the profile so it can be drawn without guessing and without contradiction. It describes only how it ordinarily looks: never other people, what anyone does, or what happens in the dream, and never how it stands or is framed in a picture (standing, a three-quarter view, face clearly visible): each picture decides that. Keep every fact the person gave, reworded only so it describes a look ("the lever the driver turns" is "a lever at the front"). A place is described as itself, on its own: never as inside, beyond or part of another place ("a village just inside the house" is "a village"), and never by who is in it. Fill what is missing with a plain, ordinary guess that fits the conversation: for a person their age, build, hair and clothes with colours; for an animal what kind it is, its size, and its coat and colours (never clothes); for a group who is in it and how each looks; for a place what kind it is, its layout, what stands in it and its light; for a thing its shape, size, materials and colours. Return JSON only: {"fields": {...}} with exactly the same keys as the profile, each value a short plain phrase.`;
+const REWORD_LOOK = `A reference picture of something from a person's dream is about to be drawn from the profile below, and a checker holding it back found a problem in it. Rewrite the profile so it can be drawn without guessing and without contradiction. It describes only how it ordinarily looks: never other people, what anyone does, or what happens in the dream (where the dream changes them later, their age or clothes afterwards is never their look: "What changes later" lists it), and never how it stands or is framed in a picture (standing, a three-quarter view, face clearly visible): each picture decides that. Keep every fact the person gave, reworded only so it describes a look ("the lever the driver turns" is "a lever at the front"). A place is described as itself, on its own: never as inside, beyond or part of another place ("a village just inside the house" is "a village"), and never by who is in it. Fill what is missing with a plain, ordinary guess that fits the conversation: for a person their age, build, hair and clothes with colours; for an animal what kind it is, its size, and its coat and colours (never clothes); for a group who is in it and how each looks; for a place what kind it is, its layout, what stands in it and its light; for a thing its shape, size, materials and colours. Return JSON only: {"fields": {...}} with exactly the same keys as the profile, each value a short plain phrase.`;
 
 /**
  * A sketch's profile, reworded before anything is paid for, when the gate found it unclear or at
@@ -298,6 +298,9 @@ export async function rewordLook(
   prompt: string,
   findings: string[],
   transcript: string,
+  // What changes about them later in the dream: reworded from the conversation, Tomas became "a boy
+  // of ten years old" in who he is, though he is an adult until the lift (hotel orchard, 26 Sep).
+  later: string[] = [],
 ): Promise<Record<string, Detail> | null> {
   const current = Object.fromEntries(Object.entries(fields).map(([k, d]) => [k, d.value]));
   const res = await callDeepseek(
@@ -305,7 +308,7 @@ export async function rewordLook(
       { role: 'system', content: REWORD_LOOK },
       {
         role: 'user',
-        content: `The conversation:\n\n${transcript}\n\nWhat the checker found:\n${findings.map((f) => `- ${f}`).join('\n')}\n\nThe ${kind === 'character' ? 'person' : kind === 'location' ? 'place' : 'thing'}: ${name}\nIts profile:\n${JSON.stringify(current)}\n\nThe instructions the picture would be drawn from:\n\n${prompt}`,
+        content: `The conversation:\n\n${transcript}\n\nWhat the checker found:\n${findings.map((f) => `- ${f}`).join('\n')}\n\nThe ${kind === 'character' ? 'person' : kind === 'location' ? 'place' : 'thing'}: ${name}\nIts profile:\n${JSON.stringify(current)}${later.length ? `\n\nWhat changes later (never part of this profile, which is how it looks before that): ${later.join('; ')}.` : ''}\n\nThe instructions the picture would be drawn from:\n\n${prompt}`,
       },
     ],
     { json: true, thinking: PRODUCER_THINKING },
