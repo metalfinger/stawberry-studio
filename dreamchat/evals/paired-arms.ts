@@ -1,18 +1,24 @@
-// Three ways to draw one moment of a saved dream, with everything else equal, for evals/paired.ts:
+// Three ways to draw one moment of a saved dream, for evals/paired.ts, which differ only in their
+// first image:
 //
-// - mockup: today's routing, exactly as the harness would draw the moment now: its previs (the grey
-//   floor-plan mock-up) as image 1 where today's plan uses one, then the sketches and the earlier
-//   pictures today's plan attaches;
-// - edit: no mock-up; the previous moment the run drew, the real picture, edited as image 1, then the
-//   sketches of who and what is in view;
-// - free: no mock-up and no earlier picture; the sketches of who and what is in view, and the words.
+// - mockup: today's routing, without earlier moments: its previs (the grey floor-plan mock-up) as
+//   image 1, where today's plan has a camera for the moment;
+// - edit: the previous moment the run drew, the real picture, edited as image 1;
+// - free: no image 1.
+//
+// After image 1, all three attach exactly the same images, in the same order and with the same
+// lines in the manifest: the sketches of who and what is in view, then the in-between (ghost)
+// pictures today's plan attaches for the moment. The earlier moments today's plan would also attach
+// (for composition, light, or who someone is) go in no arm, so the mockup arm is today's routing
+// without them.
 //
 // Every prompt is built by today's code: planContinuity, framePrompt and its helpers, the same calls
-// plan.ts makes. The arms differ only in the reference set passed in, so the words about the moment
-// (what happens, who is where, how they look, the style) come out the same; the lines that say what
-// each image is for differ. Where today's code has no words for an image set (an edit from a
-// picture of another setup), the one line naming image 1 is written here. Pure: no model calls, no
-// images, no network.
+// plan.ts makes, so the words about the moment (what happens, who is where, how they look, the
+// style) come out the same. "Nothing from another picture shows through this one", which
+// framePrompt says only beside an earlier moment, is said in all three. They differ only in the
+// manifest lines of their images, the line for image 1, and ", as the mock-up in Image 1 shows it".
+// Where today's code has no words for an image set (an edit from a picture of another setup), the
+// one line naming image 1 is written here. Pure: no model calls, no images, no network.
 import { calledIn, pictureName, planContinuity, type Relation, sameWords, shotPlan } from '../continuity';
 import { buildFrames, buildGhosts, type FrameReference, framePrompt, type PlannedInput, turnedInto } from '../frames';
 import { previsImage } from '../previs';
@@ -40,7 +46,7 @@ export type Paired = {
   action: string;
   /** The previous moment the run drew, edited in the edit arm, and how this moment follows it. */
   prev: { id: string; relation: Relation; samePlace: boolean };
-  /** The previs today's plan draws from, where it uses one: the render and its sha256. */
+  /** The mockup arm's image 1, where today's plan has a camera for the moment: the render and its sha256. */
   previs?: { png: Uint8Array; key: string };
   /** Where the moment's shot brief came from: the run's own brief for this view, or none (the view's words). */
   brief: 'frame' | 'prep' | 'none';
@@ -130,6 +136,16 @@ export function relationTo(b: Breakdown, mid: string, eid: string): Relation {
   return e.distance === m.distance && e.eyes === m.eyes ? 'same_setup' : 'same_side';
 }
 
+/** The camera's move from the previous picture, in the set's words (paired-set.json `move`). */
+export const MOVES: Record<Relation, string> = {
+  same_setup: 'same setup',
+  same_side: 'same side',
+  other_side: 'other side',
+  other_place: 'another place',
+  shift: 'dream jump',
+  seat: 'from their seat',
+};
+
 /**
  * Whether the picture of `e` shows the place `m` happens in, as it is then: the same place, with no
  * jump of the dream after `e` up to `m`. (planContinuity also keeps apart a jump's own picture from
@@ -167,39 +183,66 @@ export function previsOf(p: Prepared, mid: string): { png: Uint8Array; key: stri
   return { png, key: new Bun.CryptoHasher('sha256').update(png).digest('hex') };
 }
 
-/** Lines of a prompt that say what an attached image is for: everything else is the words about the moment. */
-const IMAGE_LINES = [
-  /^The attached images, in order, and the one thing to take from each:/,
-  /^Everyone and everything looks exactly as in their images above/,
-  /^Nothing from another picture shows through this one/,
-];
+/** The one paragraph of a prompt that says what each attached image is for: its manifest. */
+const MANIFEST = /^The attached images, in order, and the one thing to take from each:/;
 const MOCKUP_PHRASE = ', as the mock-up in Image 1 shows it';
+/** Said by framePrompt only beside an earlier moment; here in all three arms. */
+const SHOWS_THROUGH = /^Nothing from another picture shows through this one/;
+const LAST_LINE = /^One single picture filling the whole frame\./;
 
 /**
- * A prompt's words about the moment: every paragraph but those that say what the attached images
- * are for, and without the phrase that points its shot at the mock-up. The three arms of a moment
- * must agree on these exactly.
+ * A prompt's words about the moment: every paragraph but the manifest, and without the phrase that
+ * points its shot at the mock-up. The three arms of a moment must agree on these exactly.
  */
 export function wordsOf(prompt: string): string[] {
   return prompt
     .split('\n\n')
-    .filter((para) => !IMAGE_LINES.some((re) => re.test(para)))
+    .filter((para) => !MANIFEST.test(para))
     .map((para) => para.replace(MOCKUP_PHRASE, ''));
 }
 
 /** The manifest's lines, one per image, without their "Image n: " numbers. */
-const manifestOf = (prompt: string) =>
-  (prompt.split('\n\n').find((x) => IMAGE_LINES[0].test(x)) ?? '')
+export const manifestOf = (prompt: string) =>
+  (prompt.split('\n\n').find((x) => MANIFEST.test(x)) ?? '')
     .split('\n')
     .slice(1)
     .map((l) => l.replace(/^Image \d+: /, ''));
+
+/** Whether an arm has an image 1 of its own: the picture it edits (the mock-up, or the picture before). */
+const hasImage1 = (r: Paired, a: Arm) => r.arms[a].images[0]?.role === 'base';
+/** The images an arm attaches after its image 1: every image, in an arm without one (free, or a mockup with no camera). */
+export const afterImage1 = (r: Paired, a: Arm): Sent[] => r.arms[a].images.slice(hasImage1(r, a) ? 1 : 0);
+/** Their manifest lines, likewise. */
+export const linesAfterImage1 = (r: Paired, a: Arm): string[] =>
+  manifestOf(r.arms[a].prompt).slice(hasImage1(r, a) ? 1 : 0);
+
+/** Whether a moment's three prompts say the same about it, the manifest aside. */
+export const wordsAgree = (r: Paired) =>
+  ARMS.every((a) => JSON.stringify(wordsOf(r.arms[a].prompt)) === JSON.stringify(wordsOf(r.arms.mockup.prompt)));
+
+/** Whether the three arms attach the same images, in the same order and for the same use, after image 1. */
+export const othersAgree = (r: Paired) =>
+  ARMS.every(
+    (a) =>
+      JSON.stringify(afterImage1(r, a).map((im) => [im.key, im.role])) ===
+      JSON.stringify(afterImage1(r, 'free').map((im) => [im.key, im.role])),
+  );
+
+/** A prompt with a paragraph put in before its last line, unless it has it already. */
+function withParagraph(prompt: string, para: string): string {
+  const paras = prompt.split('\n\n');
+  if (paras.includes(para)) return prompt;
+  const at = paras.findIndex((x) => LAST_LINE.test(x));
+  paras.splice(at >= 0 ? at : paras.length, 0, para);
+  return paras.join('\n\n');
+}
 
 /** A prompt with the manifest line of one image replaced. */
 function withManifestLine(prompt: string, index: number, line: string): string {
   return prompt
     .split('\n\n')
     .map((para) => {
-      if (!IMAGE_LINES[0].test(para)) return para;
+      if (!MANIFEST.test(para)) return para;
       const rows = para.split('\n');
       rows[index + 1] = `Image ${index + 1}: ${line}`;
       return rows.join('\n');
@@ -242,28 +285,35 @@ export function pairedArms(p: Prepared, mid: string): Paired {
   const relation = relationTo(p.b, mid, prevId);
   const samePlace = placeKept(p.b, mid, prevId);
 
-  // 1. mockup: today's plan, its earlier pictures as the harness finds them drawn, and its previs.
+  // What every arm attaches after its image 1, besides the sketches: the in-between pictures today's
+  // plan attaches for the moment, in its order, as the harness finds them drawn. The earlier moments
+  // today's routing would also attach go in no arm, so that the arms differ only in image 1.
   const planned: PlannedInput[] = cut.refs
     .map((use) => ({ use, item: p.pictures.get(use.id) }))
     .filter((x): x is PlannedInput => !!x.item && x.item.status === 'ready' && !!x.item.mediaId);
-  const missing = cut.refs.filter((r) => !planned.some((x) => x.use.id === r.id)).map((r) => r.id);
-  if (missing.length)
+  const ghosts = planned.filter((x) => x.use.kind === 'ghost');
+  const undrawn = cut.refs.filter((r) => r.kind === 'ghost' && !ghosts.some((x) => x.use.id === r.id)).map((r) => r.id);
+  if (undrawn.length)
     notes.push(
-      `today's plan also names ${listed(missing)}, which the run never drew: left out, as the harness leaves out a picture that failed`,
+      `today's plan also names in-between ${undrawn.length > 1 ? 'pictures' : 'picture'} ${listed(undrawn)}, which the run never drew: left out of every arm, as the harness leaves out a picture that failed`,
     );
   const previs = previsOf(p, mid);
   const base = planned.find((x) => x.use.role === 'base');
-  const mockup = framePrompt(it, p.sheets, p.style, planned, previs && !base ? `previs:${mid}` : undefined);
-  if (!previs)
+  const today = framePrompt(it, p.sheets, p.style, planned, previs && !base ? `previs:${mid}` : undefined);
+  const dropped = today.references.filter((r) => r.media_id.startsWith('picture:'));
+  if (dropped.length)
     notes.push(
-      "today's plan has no camera for this moment, so no mock-up: the mockup arm is today's routing without one",
+      `today's routing would also attach ${listed(dropped.map((r) => `${r.media_id.slice('picture:'.length)} (${r.role === 'base' ? 'edited, in place of the mock-up' : r.role})`))}, ${dropped.length > 1 ? 'earlier moments' : 'an earlier moment'}: left out of every arm, so the three differ only in image 1`,
     );
-  else if (base) notes.push(`today's plan edits ${base.use.id} here, so the harness would not use the mock-up`);
 
-  // 2. free: the sketches and the words.
-  const free = framePrompt(it, p.sheets, p.style, []);
+  // 1. mockup: today's routing without earlier moments: its previs as image 1.
+  const mockup = framePrompt(it, p.sheets, p.style, ghosts, previs ? `previs:${mid}` : undefined);
+  if (!previs) notes.push("today's plan has no camera for this moment, so no mock-up: the mockup arm has no image 1");
 
-  // 3. edit: the previous picture as image 1, then the sketches.
+  // 2. free: no image 1.
+  const free = framePrompt(it, p.sheets, p.style, ghosts);
+
+  // 3. edit: the previous picture as image 1.
   const use = {
     id: prevId,
     kind: 'cut' as const,
@@ -279,7 +329,7 @@ export function pairedArms(p: Prepared, mid: string): Paired {
   // it ("as Image 1 already shows them") only for someone it shows: not the dreamer it was seen through.
   const edited =
     relation === 'same_setup' ? prevItem : { ...prevItem, frame: { ...prevFrame, visible: shown(prevFrame) } };
-  const built = framePrompt(it, p.sheets, p.style, [{ use, item: edited }]);
+  const built = framePrompt(it, p.sheets, p.style, [{ use, item: edited }, ...ghosts]);
   let edit = built.prompt;
   const references = built.references.map((r, i) =>
     i === 0 && relation !== 'same_setup' ? { ...r, instruction: use.carries } : r,
@@ -343,8 +393,12 @@ export function pairedArms(p: Prepared, mid: string): Paired {
   const turned = turnedInto(it);
   if (turned.size)
     notes.push(
-      `${listed([...turned])} has turned into something else: no sketch of it goes in, and only today's plan has its in-between picture`,
+      `${listed([...turned])} has turned into something else: no sketch of it goes in, in any arm; its in-between picture does, in every arm, where the run drew it`,
     );
+
+  // framePrompt says this only beside an earlier moment, as in the edit arm: all three say it.
+  const through = edit.split('\n\n').find((x) => SHOWS_THROUGH.test(x));
+  if (!through) throw new Error(`${mid}: the edit arm does not say that nothing shows through from another picture`);
 
   const arm = (a: Arm, prompt: string, refs: FrameReference[]): ArmPrompt => ({
     arm: a,
@@ -356,26 +410,40 @@ export function pairedArms(p: Prepared, mid: string): Paired {
     name: frame.name,
     action: frame.fields.action?.value ?? '',
     prev: { id: prevId, relation, samePlace },
-    ...(previs && !base ? { previs } : {}),
+    ...(previs ? { previs } : {}),
     brief,
     arms: {
-      mockup: arm('mockup', mockup.prompt, mockup.references),
+      mockup: arm('mockup', withParagraph(mockup.prompt, through), mockup.references),
       edit: arm('edit', edit, references),
-      free: arm('free', free.prompt, free.references),
+      free: arm('free', withParagraph(free.prompt, through), free.references),
     },
     notes,
   };
 }
 
-/** The arms of a moment in an order fixed by its id, so its letters stay put however often it is built. */
-export function shuffled(id: string): Arm[] {
-  const h = new Bun.CryptoHasher('sha256').update(`paired:${id}`).digest();
-  const out = [...ARMS];
-  for (let i = out.length - 1; i > 0; i--) {
-    const j = h[i] % (i + 1);
-    [out[i], out[j]] = [out[j], out[i]];
-  }
-  return out;
+/**
+ * The six orders the three arms can be shown in. The moments of the set take them in turn, in set
+ * order, so each arm is shown first, second and third equally often over every six moments; the
+ * first two share no place, so over the 20 moments (three turns and two) each arm is shown in each
+ * place 6 or 7 times.
+ */
+export const ORDERS: Arm[][] = [
+  ['mockup', 'edit', 'free'],
+  ['edit', 'free', 'mockup'],
+  ['free', 'mockup', 'edit'],
+  ['mockup', 'free', 'edit'],
+  ['free', 'edit', 'mockup'],
+  ['edit', 'mockup', 'free'],
+];
+
+/** The order the arms of the set's `i`-th moment (from 0, in set order) are shown in. */
+export const orderAt = (i: number): Arm[] => ORDERS[i % ORDERS.length];
+
+/** How often each arm is shown first, second and third over the set's first `n` moments. */
+export function placeCounts(n: number): Record<Arm, [number, number, number]> {
+  const counts = Object.fromEntries(ARMS.map((a) => [a, [0, 0, 0]])) as Record<Arm, [number, number, number]>;
+  for (let i = 0; i < n; i++) orderAt(i).forEach((a, at) => counts[a][at]++);
+  return counts;
 }
 
 /** One moment's pictures for the judging page: its drawn arms, each a picture file. */
@@ -390,8 +458,9 @@ export type ToJudge = {
 
 /**
  * The judging page's data for the pictures drawn (its `data-first62.json` format): one "run" per
- * moment, its pictures in a shuffled order as `<id>-a`, `-b`, `-c`, nothing on the page saying which
- * way each was drawn; the key says it, and each picture is copied to the page's `img/paired/`.
+ * moment, given in set order, its pictures in the order its place in the set gives it (orderAt) as
+ * `<id>-a`, `-b`, `-c`, nothing on the page saying which way each was drawn; the key says it, and
+ * each picture is copied to the page's `img/paired/`.
  */
 export function judgeSet(
   moments: ToJudge[],
@@ -404,11 +473,11 @@ export function judgeSet(
   const key: Record<string, Arm> = {};
   const copies: { from: string; to: string }[] = [];
   const runs = moments
-    .map((m) => ({
+    .map((m, at) => ({
       run: m.id,
       title: m.title,
       told: m.told,
-      moments: shuffled(m.id)
+      moments: orderAt(at)
         .filter((a) => m.drawn[a])
         .map((a, i) => {
           const id = `${m.id}-${'abc'[i]}`;

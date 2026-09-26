@@ -359,25 +359,37 @@ draws nothing.
 
 ```sh
 bun run evals/paired.ts --dry [--only orchard-m2 …] [--dry-file <path>]
-bun --env-file=$HOME/.config/strawberry/dreamchat.env run evals/paired.ts --draw [--only …] [--judge <dir>]
+bun --env-file=$HOME/.config/strawberry/dreamchat.env run evals/paired.ts --draw [--only …] [--redraw-paid] [--judge <dir>]
 ```
 
-For a moment, which way of drawing it comes out right more often, with everything else equal? Each
-of the 20 moments in `evals/paired-set.json` is drawn three ways, from the same words:
+For a moment, which first image makes it come out right more often, with everything else equal?
+Each of the 20 moments in `evals/paired-set.json` is drawn three ways that differ only in image 1:
 
-| Arm | Image 1 | Then |
+| Arm | Image 1 | Then, the same in all three |
 |---|---|---|
-| `mockup` | the previs, where today's plan uses one | the sketches and earlier pictures today's plan attaches |
-| `edit` | the previous picture the run drew, edited | the sketches of who and what is in view |
-| `free` | none | the sketches of who and what is in view |
+| `mockup` | the previs (today's routing, without earlier moments) | the sketches of who and what is in view, then the in-between pictures today's plan attaches |
+| `edit` | the previous picture the run drew, edited | the same |
+| `free` | none | the same |
 
-Every prompt is built by today's code (`planContinuity`, `framePrompt`); only the lines saying what
-each image is for differ, and the test checks that. `--dry` prints each prompt, its images and the
-cost (60 pictures, about $9 on fal) without calling anything. `--draw` writes each dream into a store
-of its own (`runs/paired-home`), draws through the engine as a moment is drawn, keeps every job's id
-and receipt in `runs/paired/<date>/results.json`, and writes the judging page's data with the arms
-shuffled and unnamed. It refuses to start over $10, stops at $10, and never draws a failed picture
-again unless its moment is named with `--only`. Saved conversations are read from the checkout that
+The earlier moments today's plan would also attach (for composition, light or who someone is) go
+in no arm. Every prompt is built by today's code (`planContinuity`, `framePrompt`), and the words
+are the same in all three, "Nothing from another picture shows through this one" included; they
+differ only in the manifest lines of their images, the line for image 1, and ", as the mock-up in
+Image 1 shows it". The test checks that, and that the images after image 1 are the same.
+
+`--dry` prints each prompt, its images, the camera's move from the previous picture (same setup,
+same side, other side, another place or dream jump, also in the set as `move`, so results can be
+reported by it), the person's own verdict on the run's picture, and the cost (60 pictures, about
+$9 on fal), without calling anything. `--draw` writes each dream into a store of its own
+(`runs/paired-home`), draws through the engine as a moment is drawn, and keeps every job's id and
+receipt in one results file for the whole test, `runs/paired/results.json`. One $10 cap covers the
+whole test, every attempt counted: it refuses to start over it, or while the store has a job queued
+or running that the results do not know, and stops at it. Nothing is drawn again on its own: a
+failed picture only when its moment is named with `--only`, and one that may already have been
+paid for (its submission unknown or its collection failed) only with `--redraw-paid` too. The
+judging page's data (`data-paired.json`) shows the arms unnamed, taking the six orders in turn in
+set order, so each arm is shown first, second and third 6 or 7 times; the answer key stays with
+the results (`runs/paired/paired-key.json`). Saved conversations are read from the checkout that
 has them (`DREAMCHAT_DATA`, or another worktree).
 
 ### The assistant as judge
@@ -480,4 +492,4 @@ only these caught it.
 | `jevlog.ts` | Every Jev call's cost and every decision, logged per conversation |
 | `replan.ts` | Plans a saved dream's shots again without drawing anything |
 | `evals/` | Labelled sets from real dreams, their frozen sources, and the runner that measures Jev on them |
-| `evals/paired.ts` | Three ways to draw each of 20 moments, the same words each way: a dry run, and the drawing for blind judging |
+| `evals/paired.ts` | Three ways to draw each of 20 moments, differing only in image 1: a dry run, and the drawing for blind judging |
