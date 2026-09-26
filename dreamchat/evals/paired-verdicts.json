@@ -1,0 +1,519 @@
+{
+ "about": "Each moment of evals/paired-set.json drawn three ways on 26 Sep 2026 ($9.00, evals/paired.ts), identical but for image 1: mockup (the floor-plan mock-up), edit (the previous picture the run drew), free (none). human: a person's verdicts, judged blind in a rotated order beside the picture before. Right by way: edit 11/20, mockup 10/20, free 9/20: no clear winner (the rule set before judging needs 12 of 15 moments that differ). In 18 of 20 moments at least one version was right. judge and judge_pick: the picture judge (evals/picture-judge.md) shown the picture before and all three versions and asked to keep the best: its pick was right by the person in 16 of 20 moments, one of the person's best in 18, against 10 of 20 expected from one take; its per-version verdicts agree with the person's on right against not right in 45 of 60.",
+ "rows": [
+  {
+   "id": "heron-m4",
+   "kind": "crowd",
+   "move": "another place",
+   "versions": {
+    "heron-m4-a": {
+     "way": "edit",
+     "human": "right",
+     "judge": "partly"
+    },
+    "heron-m4-b": {
+     "way": "free",
+     "human": "right",
+     "judge": "right",
+     "human_note": "I would say almost right. I don't think there is anything wrong with this. This also works."
+    },
+    "heron-m4-c": {
+     "way": "mockup",
+     "human": "partly",
+     "judge": "partly",
+     "human_note": "This also works. Just a little extreme in terms of all the people being completely naked"
+    }
+   },
+   "judge_pick": "heron-m4-b",
+   "judge_reason": "B's rows of identical smooth, bald, still students read as eerie and faceless at a glance; A's students look mostly like ordinary kids with hair, and C's are naked mannequins rather than students."
+  },
+  {
+   "id": "library-1-m4",
+   "kind": "inside wide shot",
+   "move": "other side",
+   "versions": {
+    "library-1-m4-a": {
+     "way": "free",
+     "human": "partly",
+     "judge": "wrong",
+     "human_note": "Not bad. Just the composition looks a little off. Otherwise, not bad."
+    },
+    "library-1-m4-b": {
+     "way": "mockup",
+     "human": "right",
+     "judge": "right"
+    },
+    "library-1-m4-c": {
+     "way": "edit",
+     "human": "wrong",
+     "judge": "wrong",
+     "human_note": "I don't know. Things are overlapping, and it all looks very wrong."
+    }
+   },
+   "judge_pick": "library-1-m4-b",
+   "judge_reason": "b has the yellow boat floating in clear high water between the shelves with the whale filling the aisle beneath, while a's whale looks pasted over near-dry desks and c pastes the whale onto the previous picture with the dreamer still stepping into a boat on a dry floor."
+  },
+  {
+   "id": "library-1-m5",
+   "kind": "inside wide shot",
+   "move": "other side",
+   "versions": {
+    "library-1-m5-a": {
+     "way": "mockup",
+     "human": "wrong",
+     "judge": "partly",
+     "human_note": "The proportion of things looks very off, and I don't know. The wall which is in front has become a city or something."
+    },
+    "library-1-m5-b": {
+     "way": "free",
+     "human": "wrong",
+     "judge": "wrong",
+     "human_note": "The water is gone, so wrong."
+    },
+    "library-1-m5-c": {
+     "way": "edit",
+     "human": "right",
+     "judge": "partly"
+    }
+   },
+   "judge_pick": "library-1-m5-a",
+   "judge_reason": "A is the only one where the sister opens the round window with the flooded morning city outside, though the whole back wall opens onto the city too; B's boat sits on a completely dry floor, and C is nearly the same view as the last picture with the city only a speck in a far-off window."
+  },
+  {
+   "id": "library-3-m2",
+   "kind": "a place changing state",
+   "move": "other side",
+   "versions": {
+    "library-3-m2-a": {
+     "way": "free",
+     "human": "right",
+     "judge": "partly"
+    },
+    "library-3-m2-b": {
+     "way": "edit",
+     "human": "right",
+     "judge": "partly"
+    },
+    "library-3-m2-c": {
+     "way": "mockup",
+     "human": "right",
+     "judge": "partly"
+    }
+   },
+   "judge_pick": "library-3-m2-b",
+   "judge_reason": "All three show books flying open like birds, but none shows the water the dreamer says mattered most; B is the one to keep, with the green-lamp desks, the wooden doors from the picture before and the high round window."
+  },
+  {
+   "id": "library-3-m3",
+   "kind": "a place changing state",
+   "move": "other side",
+   "versions": {
+    "library-3-m3-a": {
+     "way": "edit",
+     "human": "right",
+     "judge": "right"
+    },
+    "library-3-m3-b": {
+     "way": "mockup",
+     "human": "right",
+     "judge": "right"
+    },
+    "library-3-m3-c": {
+     "way": "free",
+     "human": "partly",
+     "judge": "partly",
+     "human_note": "The door looks a little weird in terms of proportion."
+    }
+   },
+   "judge_pick": "library-3-m3-a",
+   "judge_reason": "a keeps the dreamer in the same place and pose as before, now waist-deep with the water up to the desks, so the rising flood reads at once; b works too with the dreamer off to the side, while c puts the dreamer dry in the doorway when they said they were in the water."
+  },
+  {
+   "id": "lighthouse-first-m7",
+   "kind": "close-up of something held",
+   "move": "another place",
+   "versions": {
+    "lighthouse-first-m7-a": {
+     "way": "mockup",
+     "human": "partly",
+     "judge": "right",
+     "human_note": "This is not wrong, but partial because it doesn't look continuous with the last. Otherwise, nothing wrong with the shot."
+    },
+    "lighthouse-first-m7-b": {
+     "way": "free",
+     "human": "right",
+     "judge": "right",
+     "human_note": "If we say Dreamer looks for Tomas and finds him gone, then this is wrong. Also, why is Tomas holding the camera, and why is it half disappearing?"
+    },
+    "lighthouse-first-m7-c": {
+     "way": "edit",
+     "human": "right",
+     "judge": "right",
+     "human_note": "Respect to the last view, I think this looks more correct than the previous one. In the previous one, I'm seeing the picture just before it. It doesn't look like the perspective of Dreamer, but the little side one looks better than that."
+    }
+   },
+   "judge_pick": "lighthouse-first-m7-b",
+   "judge_reason": "b is a clean look down at the folded newspaper boat in the dreamer's hands in the same grey window room, so the moment reads at once; a works too but its upward tilt and hanging table are a little disorienting, and c is almost a repeat of the picture before with the table moved."
+  },
+  {
+   "id": "lighthouse-first-m8",
+   "kind": "vehicle",
+   "move": "dream jump",
+   "versions": {
+    "lighthouse-first-m8-a": {
+     "way": "free",
+     "human": "right",
+     "judge": "right"
+    },
+    "lighthouse-first-m8-b": {
+     "way": "edit",
+     "human": "partly",
+     "judge": "right",
+     "human_note": "The other person doesn't look like a driver. Otherwise, also not bad, though."
+    },
+    "lighthouse-first-m8-c": {
+     "way": "mockup",
+     "human": "wrong",
+     "judge": "partly",
+     "human_note": "Composition is wrong. The driver is sitting, and the trimmer is sitting. Both of them look wrong."
+    }
+   },
+   "judge_pick": "lighthouse-first-m8-a",
+   "judge_reason": "a clearly shows the dreamer holding the paper boat beside a stranger who is driving through the yellow field, b reads but nobody is visibly driving, and c leaves the steering wheel unattended between the two seats."
+  },
+  {
+   "id": "lighthouse-fresh-m10",
+   "kind": "close-up of something held",
+   "move": "other side",
+   "versions": {
+    "lighthouse-fresh-m10-a": {
+     "way": "mockup",
+     "human": "wrong",
+     "judge": "wrong",
+     "human_note": "Why is the tractor suddenly inside the room?"
+    },
+    "lighthouse-fresh-m10-b": {
+     "way": "edit",
+     "human": "right",
+     "judge": "right"
+    },
+    "lighthouse-fresh-m10-c": {
+     "way": "free",
+     "human": "wrong",
+     "judge": "wrong",
+     "human_note": "Suddenly, the tractor is inside the room, which is wrong."
+    }
+   },
+   "judge_pick": "lighthouse-fresh-m10-b",
+   "judge_reason": "Only B keeps the tractor outside in the yellow field, seen through the window while the dreamer holds the boat; A and C put the tractor inside the lighthouse room, which is not in the dream."
+  },
+  {
+   "id": "lighthouse-fresh-m12",
+   "kind": "vehicle",
+   "move": "other side",
+   "versions": {
+    "lighthouse-fresh-m12-a": {
+     "way": "free",
+     "human": "partly",
+     "judge": "right",
+     "human_note": "Just one thing: the orientation of the tractor is wrong. Otherwise, good shot."
+    },
+    "lighthouse-fresh-m12-b": {
+     "way": "mockup",
+     "human": "right",
+     "judge": "right"
+    },
+    "lighthouse-fresh-m12-c": {
+     "way": "edit",
+     "human": "right",
+     "judge": "right"
+    }
+   },
+   "judge_pick": "lighthouse-fresh-m12-a",
+   "judge_reason": "All three keep the dreamer beside the driver in the red cab in the yellow grass with the boat in hand; A is the closest view, with the boat front and centre, visibly trembling, and the tall grass pressing against the cab."
+  },
+  {
+   "id": "lighthouse-fresh-m2",
+   "kind": "close-up of something held",
+   "move": "other side",
+   "versions": {
+    "lighthouse-fresh-m2-a": {
+     "way": "edit",
+     "human": "partly",
+     "judge": "partly",
+     "human_note": "The key is too big, but I think the main problem is that, compared to the picture just before, the camera perspective is changing. The lighthouse, which is in the background in the previous picture, in this picture should not be there because the camera just came in front of the dreamer, right?"
+    },
+    "lighthouse-fresh-m2-b": {
+     "way": "mockup",
+     "human": "right",
+     "judge": "right"
+    },
+    "lighthouse-fresh-m2-c": {
+     "way": "free",
+     "human": "right",
+     "judge": "right"
+    }
+   },
+   "judge_pick": "lighthouse-fresh-m2-c",
+   "judge_reason": "C is a clear close-up of the dreamer's hands weighing the old key on the grey beach, B also works as a mid shot, and A's key is blown up to prop size so it looks pasted on."
+  },
+  {
+   "id": "lighthouse-fresh-m3",
+   "kind": "an animal with the dreamer",
+   "move": "other side",
+   "versions": {
+    "lighthouse-fresh-m3-a": {
+     "way": "edit",
+     "human": "right",
+     "judge": "right"
+    },
+    "lighthouse-fresh-m3-b": {
+     "way": "mockup",
+     "human": "right",
+     "judge": "right"
+    },
+    "lighthouse-fresh-m3-c": {
+     "way": "free",
+     "human": "right",
+     "judge": "partly"
+    }
+   },
+   "judge_pick": "lighthouse-fresh-m3-a",
+   "judge_reason": "A's terrier stops with its ears up and looks back over its shoulder at the dreamer, with the lighthouse behind, which is the 'come on' moment; B is close behind, and C's dog looks away off-frame instead of back at the dreamer."
+  },
+  {
+   "id": "night-market-m2",
+   "kind": "people with the dreamer",
+   "move": "same side",
+   "versions": {
+    "night-market-m2-a": {
+     "way": "mockup",
+     "human": "right",
+     "judge": "right",
+     "human_note": "Not bad, almost right."
+    },
+    "night-market-m2-b": {
+     "way": "edit",
+     "human": "partly",
+     "judge": "partly",
+     "human_note": "I don't know why both sisters are looking at the camera."
+    },
+    "night-market-m2-c": {
+     "way": "free",
+     "human": "partly",
+     "judge": "partly",
+     "human_note": "One of the girls looks different, I think, or I'm not sure. Again, both of them are looking at the camera for, I don't know, what reason?"
+    }
+   },
+   "judge_pick": "night-market-m2-a",
+   "judge_reason": "a reads at once as the two sisters stopped at the old man's fish stall with a silver fish on ice, whereas in b and c the old man stands apart from the fish table facing away and the dreamer is stranded behind it in an emptied market."
+  },
+  {
+   "id": "orchard-m2",
+   "kind": "through the dreamer's eyes",
+   "move": "other side",
+   "versions": {
+    "orchard-m2-a": {
+     "way": "mockup",
+     "human": "wrong",
+     "judge": "wrong",
+     "human_note": "Why does it feel like a dreamer is holding something, and then it's also third person?"
+    },
+    "orchard-m2-b": {
+     "way": "edit",
+     "human": "wrong",
+     "judge": "right",
+     "human_note": "No, it doesn't look like from the perspective. It looks like a third person's perspective. Doesn't look like Dreamer's perspective"
+    },
+    "orchard-m2-c": {
+     "way": "free",
+     "human": "right",
+     "judge": "right"
+    }
+   },
+   "judge_pick": "orchard-m2-c",
+   "judge_reason": "c is a clean turn-and-see of the boy Tomas staring at the gate in the brass lift, b reads too but adds the dreamer's hands on the gate, and a has the dreamer holding up a camera with an extra adult standing in the lift."
+  },
+  {
+   "id": "orchard-m6",
+   "kind": "an animal with the dreamer",
+   "move": "other side",
+   "versions": {
+    "orchard-m6-a": {
+     "way": "mockup",
+     "human": "right",
+     "judge": "right"
+    },
+    "orchard-m6-b": {
+     "way": "edit",
+     "human": "right",
+     "judge": "right"
+    },
+    "orchard-m6-c": {
+     "way": "free",
+     "human": "right",
+     "judge": "right"
+    }
+   },
+   "judge_pick": "orchard-m6-c",
+   "judge_reason": "All three show the dreamer's hand on the still white horse's nose in the orchard; C is the image the dreamer said they would keep, the horse with apples all around, while A and B follow on from the bare trees before but leave out the apples."
+  },
+  {
+   "id": "orchard-m7",
+   "kind": "through the dreamer's eyes",
+   "move": "other side",
+   "versions": {
+    "orchard-m7-a": {
+     "way": "edit",
+     "human": "right",
+     "judge": "right"
+    },
+    "orchard-m7-b": {
+     "way": "free",
+     "human": "wrong",
+     "judge": "wrong",
+     "human_note": "If we say Dreamer looks for Tomas and finds him gone, then this is wrong. Also, why is Tomas holding the camera, and why is it half disappearing?"
+    },
+    "orchard-m7-c": {
+     "way": "mockup",
+     "human": "partly",
+     "judge": "wrong",
+     "human_note": "Why does it feel like a perspective of a person is standing or sleeping? Legs and all should not be visible, right?"
+    }
+   },
+   "judge_pick": "orchard-m7-a",
+   "judge_reason": "A keeps the dreamer's view and empty hands in the same orchard, which reads straight away as looking around and finding nobody; B puts a headless man with a camera in the dream, and in C the dreamer is suddenly sitting down."
+  },
+  {
+   "id": "snow-train-2-m5",
+   "kind": "outside wide shot",
+   "move": "other side",
+   "versions": {
+    "snow-train-2-m5-a": {
+     "way": "edit",
+     "human": "partly",
+     "judge": "partly",
+     "human_note": "Partially right. I don't know why the bag is open in Grandpa's, and maybe it is because, in the previous picture also, it was open. Should be shut"
+    },
+    "snow-train-2-m5-b": {
+     "way": "free",
+     "human": "partly",
+     "judge": "right",
+     "human_note": "The suitcase should be shut and should not be open."
+    },
+    "snow-train-2-m5-c": {
+     "way": "mockup",
+     "human": "right",
+     "judge": "right"
+    }
+   },
+   "judge_pick": "snow-train-2-m5-c",
+   "judge_reason": "c shows the two walking side by side through the snow toward the lone red door with the suitcase now closed and carried, a natural follow-on; b reads as well but carries the suitcase open, and a keeps the exact standing pose from before with the train swapped for the door, so nobody is walking."
+  },
+  {
+   "id": "snow-train-2-m6",
+   "kind": "a person with the dreamer",
+   "move": "other side",
+   "versions": {
+    "snow-train-2-m6-a": {
+     "way": "edit",
+     "human": "wrong",
+     "judge": "partly",
+     "human_note": "proportion ab suit kaise super wrong"
+    },
+    "snow-train-2-m6-b": {
+     "way": "free",
+     "human": "wrong",
+     "judge": "partly",
+     "human_note": "There are suddenly two suitcases in the frame."
+    },
+    "snow-train-2-m6-c": {
+     "way": "mockup",
+     "human": "right",
+     "judge": "right"
+    }
+   },
+   "judge_pick": "snow-train-2-m6-c",
+   "judge_reason": "c shows the gentle hand-over the dreamer described, both holding the suitcase between them in front of the red door; a skips to the dreamer already holding an oversized suitcase with the grandfather empty-handed, and b gives the dreamer a second suitcase of their own."
+  },
+  {
+   "id": "snow-train-m2",
+   "kind": "vehicle",
+   "move": "other side",
+   "versions": {
+    "snow-train-m2-a": {
+     "way": "mockup",
+     "human": "partly",
+     "judge": "right",
+     "human_note": "If I consider the previous shot, in this shot, the grandpa should be on the right side. He should be sitting on the right side. I think that is something which is wrong."
+    },
+    "snow-train-m2-b": {
+     "way": "free",
+     "human": "partly",
+     "judge": "partly",
+     "human_note": "Compared to the last shot, again, the background is all the same, but the grandpa has rotated, which feels wrong. I guess the ideal way is that we rotate the camera 180°, and now it's in front of the grandpa. I'm considering the last picture, the before picture, to judge."
+    },
+    "snow-train-m2-c": {
+     "way": "edit",
+     "human": "partly",
+     "judge": "partly",
+     "human_note": "Again, the same thing: if the camera is changing and the person is sitting there, only then the environment should rotate right. Here, the environment feels safe, looks very much like a big flow in continuity, and the same thing: the grandpa should have a window on the right side. I think that it's the same category as having the perspective of the previous frame, how the construct of the space was, and how it is in the current frame."
+    }
+   },
+   "judge_pick": "snow-train-m2-a",
+   "judge_reason": "a is a fresh view of the grandfather across from the dreamer, waiting with his hand on the brown suitcase (beside him rather than on his knees, a small change); b and c reuse the exact carriage view from before but turn the grandfather to face the other way and leave the dreamer's seat empty."
+  },
+  {
+   "id": "snow-train-m3",
+   "kind": "close-up of something held",
+   "move": "same side",
+   "versions": {
+    "snow-train-m3-a": {
+     "way": "free",
+     "human": "partly",
+     "judge": "right",
+     "human_note": "Compared to the previous frame, the position of the grandfather is changing, which feels wrong. Otherwise, it's correct."
+    },
+    "snow-train-m3-b": {
+     "way": "edit",
+     "human": "partly",
+     "judge": "right",
+     "human_note": "The position of granddad is wrong compared to the previous one. Otherwise, it's correct."
+    },
+    "snow-train-m3-c": {
+     "way": "mockup",
+     "human": "partly",
+     "judge": "right",
+     "human_note": "The position of granddad is wrong compared to the previous one. Otherwise, it's correct."
+    }
+   },
+   "judge_pick": "snow-train-m3-a",
+   "judge_reason": "a shows the grandfather squarely across from the dreamer holding the open suitcase of letters out to them, which is exactly the remembered image, while b pushes him small to one side and c has the dreamer already pulling letters out."
+  },
+  {
+   "id": "snow-train-m6",
+   "kind": "through the dreamer's eyes",
+   "move": "other side",
+   "versions": {
+    "snow-train-m6-a": {
+     "way": "free",
+     "human": "right",
+     "judge": "right"
+    },
+    "snow-train-m6-b": {
+     "way": "mockup",
+     "human": "wrong",
+     "judge": "wrong",
+     "human_note": "There is a door inside the door, and the bag is visible. The hand and other thing are not visible."
+    },
+    "snow-train-m6-c": {
+     "way": "edit",
+     "human": "right",
+     "judge": "right"
+    }
+   },
+   "judge_pick": "snow-train-m6-c",
+   "judge_reason": "C shows the dreamer's hands on the suitcase before the red door with warm yellow light pouring out, on the same bare night snowfield as the picture before; A reads just as well but adds bushes to the empty field, and in B the door opens onto more snow instead of warm light, in a confusing frame that looks like windows."
+  }
+ ]
+}
