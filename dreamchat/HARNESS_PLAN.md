@@ -23,6 +23,8 @@ General film-making rules apply to every dream; nothing is patched for one dream
    or corrects a general rule; no incident-specific regex or word list without a test over every saved dream.
 4. **Behind a switch** until measured; the default stays today's behaviour until the step passes.
 5. **Tests green, typecheck clean** on every commit; commit prefixes `feat:`/`fix:`/`test:`/`docs:`.
+6. **Report every finished step to the owner:** what improved, the tests run and their results, with a push
+   notification. Otherwise keep going step by step until the whole harness is ready.
 
 ## The system being built
 
