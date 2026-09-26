@@ -883,3 +883,37 @@ export function moveKey(move: Move): string {
 export function unreachable(x: never): never {
   throw new Error(`unhandled variant: ${JSON.stringify(x)}`);
 }
+
+/** A name as an id: lower case, without a leading article, words joined by '-'. */
+export const slug = (name: string) =>
+  name
+    .toLowerCase()
+    .trim()
+    .replace(/^(the|a|an)\s+/, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'thing';
+
+/** A pure 53-bit hash of a value, its keys sorted: the same inputs give the same hex. */
+export function hashOf(value: unknown): string {
+  const text = stable(value);
+  let h1 = 0xdeadbeef;
+  let h2 = 0x41c6ce57;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16);
+}
+/** A value as text, its keys sorted and undefined left out: the same value always reads the same. */
+export const stable = (v: unknown): string => {
+  if (v === null || typeof v !== 'object') return JSON.stringify(v) ?? 'null';
+  if (Array.isArray(v)) return `[${v.map(stable).join(',')}]`;
+  return `{${Object.keys(v as object)
+    .sort()
+    .filter((k) => (v as Record<string, unknown>)[k] !== undefined)
+    .map((k) => `${JSON.stringify(k)}:${stable((v as Record<string, unknown>)[k])}`)
+    .join(',')}}`;
+};

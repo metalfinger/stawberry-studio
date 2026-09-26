@@ -64,6 +64,7 @@ import {
 import {
   calledIn,
   type ContinuityPlan,
+  type CutPlan,
   type Criterion,
   drawOrder,
   fixtureName,
@@ -88,7 +89,6 @@ import {
   buildFrames,
   buildGhosts,
   type FrameReference,
-  framePrompt,
   ghostPrompt,
   inViewOf,
   type PlannedInput,
@@ -96,6 +96,7 @@ import {
   isWhole,
 } from './frames';
 import { checkReferences, preflight, readPrompt } from './gate';
+import { type CutSheet, cutSheet, cutSheetMode, type Framed, framed, type SheetDream, sheetDream } from './cutsheet';
 import {
   type Check,
   CREDITS_PER_IMAGE,
@@ -125,6 +126,7 @@ import {
   recordForPlan,
   recordInputsOf,
   recordMode,
+  type StoryRecord,
   storyRecord,
   structureOf,
 } from './record';
@@ -693,6 +695,56 @@ export function shadowRecord(
   }
 }
 
+/** The earlier pictures the plan draws a moment from, that are drawn and usable. */
+export function plannedInputsOf(s: Pick<Session, 'build'>, frame: Item): PlannedInput[] {
+  const frames = s.build?.frames ?? [];
+  return (frame.frame?.plan?.refs ?? [])
+    .map((use) => ({ use, item: frames.find((x) => x.id === use.id) }))
+    .filter((x): x is PlannedInput => !!x.item && x.item.status === 'ready' && !!x.item.mediaId);
+}
+
+/**
+ * A moment's cut sheet as the drawing path builds it (startFrame): the moment as held, the sketches, the
+ * earlier pictures drawn, its mock-up as last put in the production, and the dream. For checking that
+ * drawing and a rebuild give a moment the same sheet (evals/live-flow.ts).
+ */
+export function drawingSheet(s: Session, momentId: string): CutSheet | null {
+  const frame = s.build?.frames?.find((f) => f.id === momentId && f.kind === 'cut');
+  if (!frame || !s.build || !s.style) return null;
+  return cutSheet({
+    frame,
+    sheets: s.build.items,
+    style: s.style,
+    inputs: plannedInputsOf(s, frame),
+    layout: frame.layout?.mediaId,
+    dream: sheetDreamOf(s),
+  });
+}
+
+/**
+ * The dream as its moments' cut sheets read it on the drawing path (cutsheet.ts sheetDream): the plan
+ * the moments are drawn from, the prep, the sketches, the story record from the sketches' words and the
+ * dreamer's messages. A rebuild (plan.ts) reads the same, so both give a moment the same sheet.
+ */
+export function sheetDreamOf(s: Pick<Session, 'draft' | 'build' | 'prep' | 'style' | 'transcript'>): SheetDream | null {
+  const b = s.draft?.breakdown;
+  const plan = s.build?.plan;
+  if (!b || !plan) return null;
+  const { items, words } = recordInputsOf(s);
+  // A moment planned again keeps its new plan on the moment itself: each is read as it is drawn.
+  const frames = s.build?.frames ?? [];
+  const drawnFrom = (c: CutPlan) => frames.find((f) => f.id === c.id && f.kind === 'cut')?.frame?.plan ?? c;
+  return sheetDream({
+    breakdown: b,
+    plan: { ...plan, cuts: plan.cuts.map(drawnFrom) },
+    prep: s.prep,
+    items,
+    style: s.style ?? null,
+    readings: s.draft?.readings,
+    words,
+  });
+}
+
 /**
  * What the continuity plan reads of the story record when DREAMCHAT_RECORD=on (record.ts): from the
  * dream as it stands, its sketches' words, the dreamer's own messages and the chosen look. Nothing
@@ -771,6 +823,7 @@ export function treeInputOf(s: Session, threshold: number): TreeInput | null {
     items: s.build?.items ?? [],
     frames,
     style: s.style ?? null,
+    ...(recordMode() === 'on' ? recordOfTree(s, b) : {}),
     downgraded: s.draft?.downgraded ?? [],
     goals: Object.fromEntries(
       Object.keys(s.state.goals).map((g) => [
@@ -779,6 +832,16 @@ export function treeInputOf(s: Session, threshold: number): TreeInput | null {
       ]),
     ),
   };
+}
+
+/** The story record the tree's looks and stages are read from (DREAMCHAT_RECORD=on); none if it cannot be made. */
+function recordOfTree(s: Session, b: Breakdown): { record?: StoryRecord } {
+  try {
+    const { items, words } = recordInputsOf(s);
+    return { record: storyRecord(b, items, s.draft?.readings, { words, style: s.style }).record };
+  } catch {
+    return {};
+  }
 }
 
 /**
@@ -1329,7 +1392,7 @@ export class SessionStore {
       return { prompt: sheetPrompt(it, s.style), references: [], held: it.held };
     if (it.kind === 'ghost')
       return { prompt: '(an in-between picture: see its ghost plan)', references: [], held: it.held };
-    const built = framePrompt(it, s.build.items, s.style, this.plannedInputs(s, it), it.layout?.mediaId);
+    const built = this.framed(s, it, it.layout?.mediaId, 'prompt');
     return { prompt: built.prompt, references: built.references, held: it.held };
   }
 
@@ -1553,9 +1616,7 @@ export class SessionStore {
             ? await this.deps
                 .fix(
                   text,
-                  it.kind === 'cut'
-                    ? framePrompt(it, s.build.items, s.style, this.plannedInputs(s, it), it.layout?.mediaId).prompt
-                    : sheetPrompt(it, s.style),
+                  it.kind === 'cut' ? this.framed(s, it, it.layout?.mediaId, 'fix').prompt : sheetPrompt(it, s.style),
                 )
                 .catch(() => null)
             : null;
@@ -2085,12 +2146,25 @@ export class SessionStore {
     }
   }
 
+  /**
+   * A moment's prompt and images as it would be drawn now: framePrompt's (DREAMCHAT_CUT_SHEET=off), or
+   * with its cut sheet built beside it and logged (shadow), or the sheet's (on).
+   */
+  private framed(s: Session, frame: Item, layout: string | undefined, site: string): Framed {
+    const input = {
+      frame,
+      sheets: s.build?.items ?? [],
+      style: s.style as StyleOption,
+      inputs: this.plannedInputs(s, frame),
+      layout,
+    };
+    const mode = cutSheetMode();
+    return framed(mode === 'off' ? input : { ...input, dream: sheetDreamOf(s) }, mode, site);
+  }
+
   /** The earlier pictures the plan draws this moment from, that are drawn and usable. */
   private plannedInputs(s: Session, frame: Item): PlannedInput[] {
-    const frames = s.build?.frames ?? [];
-    return (frame.frame?.plan?.refs ?? [])
-      .map((use) => ({ use, item: frames.find((x) => x.id === use.id) }))
-      .filter((x): x is PlannedInput => !!x.item && x.item.status === 'ready' && !!x.item.mediaId);
+    return plannedInputsOf(s, frame);
   }
 
   /**
@@ -2125,7 +2199,7 @@ export class SessionStore {
     // picture "you" is whoever looks at it (older drafts, and words a rewording left behind).
     const WORDS = ['action', 'visual_point', 'feeling', 'purpose', 'shift', 'dream'];
     if (this.deps.reword && WORDS.some((k) => /\byou(r|rs|rself)?\b/i.test(frame.fields[k]?.value ?? ''))) {
-      const probe = framePrompt(frame, s.build.items, s.style, this.plannedInputs(s, frame), frame.layout?.mediaId);
+      const probe = this.framed(s, frame, frame.layout?.mediaId, 'reword');
       const fields = await this.deps
         .reword(
           probe.prompt,
@@ -2224,14 +2298,14 @@ export class SessionStore {
         .catch(() => null);
       frame.shot = text ? { text, view } : undefined;
     }
-    let built = framePrompt(frame, s.build.items, s.style, this.plannedInputs(s, frame), layout);
+    let built = this.framed(s, frame, layout, 'frames');
     const inView = inViewOf(frame, s.build.items);
     let findings = await this.gateFindings(s, frame, built.prompt, built.references, inView);
     // The brief is the one line a model wrote from the view: where the gate finds the prompt at odds
     // with itself there, the view read off the render says the same without it.
     if (frame.shot && findings.length && frame.gate?.around?.line.startsWith('The shot')) {
       frame.shot = undefined;
-      built = framePrompt(frame, s.build.items, s.style, this.plannedInputs(s, frame), layout);
+      built = this.framed(s, frame, layout, 'frames');
       findings = await this.gateFindings(s, frame, built.prompt, built.references, inView);
     }
     // What only its words got wrong is put right in words first, and read again: twice at most.
@@ -2255,7 +2329,7 @@ export class SessionStore {
       frame.reworded = [...new Set([...(frame.reworded ?? []), ...changed])];
       frame.fields = fields;
       await this.keepWords(s, frame);
-      built = framePrompt(frame, s.build.items, s.style, this.plannedInputs(s, frame), layout);
+      built = this.framed(s, frame, layout, 'frames');
       findings = await this.gateFindings(s, frame, built.prompt, built.references, inView);
     }
     // At odds on the line that says what the camera sees, the plan is what is at odds: the balloons
@@ -2283,7 +2357,7 @@ export class SessionStore {
           frame.fields = wordsBefore;
           frame.reworded = rewordedBefore;
           await this.keepWords(s, frame);
-          built = framePrompt(frame, s.build.items, s.style, this.plannedInputs(s, frame), layout);
+          built = this.framed(s, frame, layout, 'frames');
         }
       } else if (tried && this.deps.block) {
         Object.assign(frame, {

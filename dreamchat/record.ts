@@ -24,7 +24,7 @@ import {
   WHOLE,
 } from './producer';
 import { isAnimal, isGroup, type Item, withoutPose } from './sheets';
-import { hashOf, slug } from './tree';
+import { hashOf, slug } from './lib';
 
 // ── the record ──────────────────────────────────────────────────────────────
 
@@ -145,7 +145,12 @@ export type AtMoment = {
   /** Whether a floor plan of people standing, sitting or lying can show it. */
   stageable: boolean;
   why?: string;
+  /** What kind of moment a floor plan cannot show, where it cannot: its why, typed. */
+  unstaged?: Unstaged;
 };
+
+/** Moments a floor plan cannot stage: in the air, in water, in weather, a turning, a jump, or read so by Jev. */
+export type Unstaged = 'flight' | 'water' | 'weather' | 'transformation' | 'jump' | 'other';
 
 export type StoryRecord = {
   hash: string;
@@ -2397,6 +2402,19 @@ function finish(ctx: Ctx, hash: string): void {
     m.stageable = read ? read.ok : !why;
     if (!m.stageable && why) m.why = why;
     else delete m.why;
+    const kind: Unstaged = read
+      ? 'other'
+      : turns
+        ? 'transformation'
+        : m.shift
+          ? 'jump'
+          : /^(?:swim|swam|underwater|under water)/i.test(air ?? '')
+            ? 'water'
+            : /^(?:rain|snow|storm)/i.test(air ?? '')
+              ? 'weather'
+              : 'flight';
+    if (!m.stageable) m.unstaged = kind;
+    else delete m.unstaged;
   }
   record.hash = hash;
 }
@@ -2613,17 +2631,30 @@ export function recordMode(): 'off' | 'shadow' | 'on' {
 const SAID_OF_THEM = (part: string) => LABEL.has(part) || part === 'age' || part === 'size';
 
 /**
- * How each one in a moment is right then, in words, each fact once: a part changed and still so ("the
- * water is up over the tops of the desks"), a first look no sketch shows, a thing opened and carried away
- * shut, and who holds what ("the suitcase is shut, in the grandfather's hands"). What has turned into
- * something else is said where its look is, never here.
+ * One fact of how someone or something is at a moment, typed: a part as it is now (a change in force,
+ * or a first look no sketch shows yet), a thing shut (again, or until a later moment opens it), or who
+ * holds it. Said in words only where a prompt is written (sayNow).
  */
-export function nowAt(record: StoryRecord, momentId: string): { of: string; text: string }[] {
+export type NowFact =
+  | { kind: 'part'; part: string; what: string; now: string; implied?: true }
+  | { kind: 'shut'; why: 'ended' | 'later'; part?: string }
+  | { kind: 'held'; by: string; byCalled: string; from?: string; fromCalled?: string };
+
+/** Everything that is so of one element at a moment, with what a sentence about it needs. */
+export type NowOf = { of: string; called: string; name: string; kind: ElementKind; facts: NowFact[] };
+
+/**
+ * How each one in a moment is right then, as typed facts, each fact once: a part changed and still so
+ * (the water up over the tops of the desks), a first look no sketch shows, a thing opened and carried
+ * away shut, and who holds what. What has turned into something else is said where its look is, never
+ * here. Only those with something to say are listed.
+ */
+export function factsAt(record: StoryRecord, momentId: string): NowOf[] {
   const m = record.moments.find((x) => x.id === momentId);
   if (!m) return [];
   const order = new Map(record.moments.map((x, i) => [x.id, i]));
   const called = (id: string) => record.elements[id]?.called ?? id;
-  const out: { of: string; text: string }[] = [];
+  const out: NowOf[] = [];
   for (const id of uniq([...m.shows, ...m.present, ...(m.place ? [m.place] : [])])) {
     const e = record.elements[id];
     const seen = m.looks[id];
@@ -2635,33 +2666,24 @@ export function nowAt(record: StoryRecord, momentId: string): { of: string; text
     const turned = !!seen.becomes;
     const latest = new Map<string, Change>();
     for (const c of on) if (seen.parts[c.part ?? c.what] === c.now) latest.set(c.part ?? c.what, c);
-    const be = isAre(e.called);
-    const says: string[] = [];
-    const sentences: string[] = [];
-    const add = (part: string, what: string, now: string, implied = false) => {
-      if (part === 'clothes') says.push(`wears ${now.replace(/^(?:wearing|dressed in|in)\s+/i, '')}`);
-      else if (SAID_OF_THEM(part)) {
-        // "a young woman with blonde hair" of the young woman: what it adds to her name.
-        const rest = withoutName(now, e.name);
-        if (!rest) return;
-        says.push(
-          /^with\s/i.test(rest)
-            ? `${be === 'are' ? 'have' : 'has'} ${rest.slice(5)}`
-            : /^(?:that|which|who)\s/i.test(rest)
-              ? rest.replace(/^\S+\s+/, '')
-              : `${be} ${now}`,
-        );
-      } else sentences.push(partSays(e, what, now, implied));
-    };
+    const facts: NowFact[] = [];
     // A first look is said where the rest of the look does not already say all of it.
     const look = LOOK_FIELDS[group(e)].flatMap((k) => e.base[k] ?? []);
     const shown = new Set(look.filter((f) => !f.first).flatMap((f) => wordsOf(f.text)));
     if (!turned)
       for (const f of look)
         if (f.first && !latest.has(f.first.part) && !wordsOf(f.first.now).every((w) => shown.has(w) || LABEL.has(w)))
-          add(f.first.part, f.first.what, f.first.now);
-    for (const c of latest.values()) add(c.part ?? c.what, c.what, c.now, c.basis === 'implied');
-    if ((seen.ended ?? []).some((k) => saysOpen(record.changes[k]?.now ?? ''))) says.push(`${be} shut`);
+          facts.push({ kind: 'part', part: f.first.part, what: f.first.what, now: f.first.now });
+    for (const c of latest.values())
+      facts.push({
+        kind: 'part',
+        part: c.part ?? c.what,
+        what: c.what,
+        now: c.now,
+        ...(c.basis === 'implied' ? { implied: true as const } : {}),
+      });
+    if ((seen.ended ?? []).some((k) => saysOpen(record.changes[k]?.now ?? '')))
+      facts.push({ kind: 'shut', why: 'ended' });
     // What a later moment opens is shut until then, where this moment's words name it.
     const named = new Set(wordsOf(`${m.words.action} ${m.words.visual_point}`));
     for (const c of Object.values(record.changes)) {
@@ -2670,25 +2692,73 @@ export function nowAt(record: StoryRecord, momentId: string): { of: string; text
       const noun = e.kind === 'place' ? c.what.trim().toLowerCase() : '';
       const head = sing((noun || headOf(e.name).toLowerCase()).split(/\s+/).at(-1) ?? '');
       if (!named.has(head)) continue;
-      if (noun) sentences.push(`the ${noun} ${isAre(noun)} shut`);
-      else says.push(`${be} shut`);
+      facts.push({ kind: 'shut', why: 'later', ...(noun ? { part: noun } : {}) });
     }
-    const holder = seen.heldBy ? called(seen.heldBy) : '';
-    const hands = !holder
-      ? ''
-      : seen.handedBy
-        ? `${be === 'are' ? 'pass' : 'passes'} from ${poss(called(seen.handedBy))} hands to ${poss(holder)}`
-        : `in ${poss(holder)} hands`;
-    if (says.length || hands)
-      out.push({
-        of: id,
-        text: says.length
-          ? `${e.called} ${listOf(uniq(says))}${hands ? `, ${seen.handedBy ? 'and ' : ''}${hands}` : ''}`
-          : `${e.called} ${seen.handedBy ? hands : `${be} ${hands}`}`,
+    if (seen.heldBy)
+      facts.push({
+        kind: 'held',
+        by: seen.heldBy,
+        byCalled: called(seen.heldBy),
+        ...(seen.handedBy ? { from: seen.handedBy, fromCalled: called(seen.handedBy) } : {}),
       });
-    for (const s of uniq(sentences)) out.push({ of: id, text: s });
+    if (facts.length) out.push({ of: id, called: e.called, name: e.name, kind: e.kind, facts });
   }
   return out;
+}
+
+/**
+ * Typed facts in words, each fact once: "the suitcase is shut, in the grandfather's hands", "the water
+ * is up over the tops of the desks". What is said of the whole of someone (what they wear, that it is
+ * shut, who holds it) is one sentence; each changed part is a sentence of its own.
+ */
+export function sayNow(xs: NowOf[]): { of: string; text: string }[] {
+  const out: { of: string; text: string }[] = [];
+  for (const x of xs) {
+    const be = isAre(x.called);
+    const says: string[] = [];
+    const sentences: string[] = [];
+    let hands = '';
+    let handed = false;
+    for (const f of x.facts) {
+      if (f.kind === 'part') {
+        if (f.part === 'clothes') says.push(`wears ${f.now.replace(/^(?:wearing|dressed in|in)\s+/i, '')}`);
+        else if (SAID_OF_THEM(f.part)) {
+          // "a young woman with blonde hair" of the young woman: what it adds to her name.
+          const rest = withoutName(f.now, x.name);
+          if (!rest) continue;
+          says.push(
+            /^with\s/i.test(rest)
+              ? `${be === 'are' ? 'have' : 'has'} ${rest.slice(5)}`
+              : /^(?:that|which|who)\s/i.test(rest)
+                ? rest.replace(/^\S+\s+/, '')
+                : `${be} ${f.now}`,
+          );
+        } else sentences.push(partSays(x, f.what, f.now, f.implied === true));
+      } else if (f.kind === 'shut') {
+        if (f.part) sentences.push(`the ${f.part} ${isAre(f.part)} shut`);
+        else says.push(`${be} shut`);
+      } else {
+        handed = !!f.from;
+        hands = f.from
+          ? `${be === 'are' ? 'pass' : 'passes'} from ${poss(f.fromCalled ?? f.from)} hands to ${poss(f.byCalled)}`
+          : `in ${poss(f.byCalled)} hands`;
+      }
+    }
+    if (says.length || hands)
+      out.push({
+        of: x.of,
+        text: says.length
+          ? `${x.called} ${listOf(uniq(says))}${hands ? `, ${handed ? 'and ' : ''}${hands}` : ''}`
+          : `${x.called} ${handed ? hands : `${be} ${hands}`}`,
+      });
+    for (const t of uniq(sentences)) out.push({ of: x.of, text: t });
+  }
+  return out;
+}
+
+/** How each one in a moment is right then, in words: its typed facts (factsAt), said once (sayNow). */
+export function nowAt(record: StoryRecord, momentId: string): { of: string; text: string }[] {
+  return sayNow(factsAt(record, momentId));
 }
 
 /**
@@ -2732,7 +2802,7 @@ const PREDICATE =
  * colon ("the water: fills the roof"). What a moment implies was written to be said after "is"
  * (implied.ts): "the water is high enough to row the boat".
  */
-function partSays(e: RecElement, what: string, now: string, afterIs = false): string {
+function partSays(e: Pick<RecElement, 'name' | 'called' | 'kind'>, what: string, now: string, afterIs = false): string {
   const part = withoutName(what.trim().toLowerCase(), e.name);
   const subject = !part ? e.called : e.kind === 'place' ? `the ${part}` : `${poss(e.called)} ${part}`;
   const be = part ? isAre(part) : isAre(e.called);
@@ -2760,6 +2830,9 @@ const asState = (c: Change, name: string): State => ({
   ...(c.basis === 'implied' ? { implied: true } : {}),
   part: partOf(name, c.what),
 });
+
+/** A moment's typed facts and the same in words, as the continuity plan carries both. */
+const withWords = (facts: NowOf[]) => ({ now: sayNow(facts), facts });
 
 /** What the continuity plan reads of the record, moment by moment (continuity.ts, RecordPlan). */
 export function forPlan(record: StoryRecord): RecordPlan {
@@ -2790,7 +2863,7 @@ export function forPlan(record: StoryRecord): RecordPlan {
           present: [...m.present],
           gone: [...m.gone],
           held: { ...m.held },
-          now: nowAt(record, m.id),
+          ...withWords(factsAt(record, m.id)),
         },
       ]),
     ),

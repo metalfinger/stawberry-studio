@@ -28,7 +28,7 @@ import {
   stateKey,
 } from './continuity';
 import { type GroundingNote, hasBefore } from './ground';
-import type { GoalStatus } from './lib';
+import { type GoalStatus, hashOf, slug, stable } from './lib';
 import { SIDE } from './planfacts';
 import { onOf, shapeOf } from './previs';
 import {
@@ -46,6 +46,7 @@ import {
   VAGUE,
 } from './producer';
 import type { Item } from './sheets';
+import type { StoryRecord } from './record';
 import { momentStage, type Reading, type StageId } from './stages';
 
 // ── constants ───────────────────────────────────────────────────────────────
@@ -614,6 +615,11 @@ export type TreeInput = {
   style?: StyleOption | null;
   downgraded?: GroundingNote[];
   goals?: Goals;
+  /**
+   * The story record (DREAMCHAT_RECORD=on): the ledger's stages are its changes, and each cut's stage in
+   * force, changed parts and holders are the record's, worked out there once.
+   */
+  record?: StoryRecord;
 };
 export type DreamTree = {
   version: 1;
@@ -646,38 +652,9 @@ export type CutContext = {
 };
 
 // ── small helpers ───────────────────────────────────────────────────────────
-/** A name as an id: lower case, without a leading article, words joined by '-'. */
-export const slug = (name: string) =>
-  name
-    .toLowerCase()
-    .trim()
-    .replace(/^(the|a|an)\s+/, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '') || 'thing';
-
-/** A pure 53-bit hash of a value, its keys sorted: the same inputs give the same hex. */
-export function hashOf(value: unknown): string {
-  const text = stable(value);
-  let h1 = 0xdeadbeef;
-  let h2 = 0x41c6ce57;
-  for (let i = 0; i < text.length; i++) {
-    const ch = text.charCodeAt(i);
-    h1 = Math.imul(h1 ^ ch, 2654435761);
-    h2 = Math.imul(h2 ^ ch, 1597334677);
-  }
-  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
-  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
-  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16);
-}
-const stable = (v: unknown): string => {
-  if (v === null || typeof v !== 'object') return JSON.stringify(v) ?? 'null';
-  if (Array.isArray(v)) return `[${v.map(stable).join(',')}]`;
-  return `{${Object.keys(v as object)
-    .sort()
-    .filter((k) => (v as Record<string, unknown>)[k] !== undefined)
-    .map((k) => `${JSON.stringify(k)}:${stable((v as Record<string, unknown>)[k])}`)
-    .join(',')}}`;
-};
+// A name as an id and a value's hash live in lib.ts, so the story record can use them without
+// importing the tree, and the tree can read the record. Kept here too for older imports.
+export { hashOf, slug };
 const same = (a: unknown, b: unknown) => stable(a) === stable(b);
 const F = <T>(value: T | null, from: Source, over?: Field<unknown>): Field<T> => ({
   value,
@@ -1055,7 +1032,50 @@ export function resolveTree(input: TreeInput): DreamTree {
     .filter((e) => !['camera', 'light'].includes(e.category.value ?? ''))
     .map((e) => e.id);
   for (const id of ledgerIds) stagesOf.set(id, [stage0(id)]);
-  for (const m of ms)
+  const record = input.record;
+  const recOrder = new Map((record?.moments ?? []).map((m, i) => [m.id, i]));
+  if (record) {
+    // With the story record, its changes are the stages, in story order, each known by the record's key;
+    // what it folded in as how something looks where it is first shown is a first look, not a stage.
+    const changes = Object.values(record.changes)
+      .filter((c) => c.kind !== 'presence' && !c.copy)
+      .map((c, i) => ({ c, i }))
+      .sort((x, y) => (recOrder.get(x.c.at) ?? 0) - (recOrder.get(y.c.at) ?? 0) || x.i - y.i)
+      .map(({ c }) => c);
+    for (const c of changes) {
+      if (!stagesOf.has(c.who)) stagesOf.set(c.who, [stage0(c.who)]);
+      const list = stagesOf.get(c.who)!;
+      const prev = list.at(-1)!;
+      const ghost =
+        plan.ghosts.find((g) => g.key === c.key) ??
+        ghostOfState.get(stateKey({ who: c.who, what: c.what, now: c.now, since: c.at })) ??
+        null;
+      const whole = F(c.kind === 'becomes', src('cut', c.at, `rec:${c.key}.kind`, 'read'));
+      list.push({
+        key: c.key,
+        n: list.length,
+        element: c.who,
+        kind: whole.value ? 'transformation' : 'look_change',
+        part: c.what.trim().toLowerCase(),
+        now: c.now,
+        whole,
+        ...(c.replaces ? { replaces: c.replaces } : {}),
+        parts: { ...prev.parts, [c.what]: c.now },
+        startsAt: c.at,
+        told: c.told,
+        ghost: ghost?.id ?? null,
+        ghostFrom: ghost ? (ghost.after ?? 'sheet') : null,
+        usedBy: [],
+        redraw: { items: [], ghosts: [], cuts: [], maybe: [] },
+        hash: '',
+      });
+    }
+    for (const e of Object.values(record.elements))
+      for (const f of Object.values(e.base).flat())
+        if (f.first)
+          firstLooks.push({ who: e.id, cut: e.firstShown ?? '', what: f.first.what, now: f.first.now, ghost: null });
+  }
+  for (const m of record ? [] : ms)
     m.leaves.forEach((l, i) => {
       if (!stagesOf.has(l.who)) stagesOf.set(l.who, [stage0(l.who)]);
       const st = { who: l.who, what: l.what, now: l.now, since: m.id };
@@ -1222,9 +1242,41 @@ export function resolveTree(input: TreeInput): DreamTree {
     // The look in force: what the continuity plan carries here (actual), against story order (expected).
     const inForce = new Set([...(cp?.own ?? []), ...(cp?.states ?? [])].map(stateKey));
     const cc = cp ? calledIn(b, cp) : (id: string) => baseName(id);
+    const rm = record?.moments.find((x) => x.id === m.id);
     for (const e of Object.values(at)) {
       const list = stagesOf.get(e.id);
-      if (list) {
+      const seen = rm?.looks[e.id];
+      if (list && seen) {
+        // With the story record, the stage in force and its changed parts are the record's.
+        const use = list.find((s) => s.key === seen.stage) ?? list[0];
+        e.stage =
+          use.n === 0
+            ? F(use.key, src('sheet', e.id, `items:${e.id}`, 'derived', { rule: 'sheet' }))
+            : F(
+                use.key,
+                src(
+                  'cut',
+                  use.startsAt!,
+                  `rec:${m.id}.looks.${e.id}`,
+                  'read',
+                  use.startsAt !== m.id ? { since: use.startsAt! } : {},
+                ),
+              );
+        const on = [...(rm?.own ?? []), ...(rm?.carried ?? [])].map((k) => record!.changes[k]).filter((c) => !!c);
+        for (const [part, now] of Object.entries(seen.parts)) {
+          const c = on.find((x) => x.who === e.id && (x.part ?? x.what) === part && x.now === now);
+          e.parts[part] = F(
+            now,
+            src(
+              'cut',
+              c?.at ?? m.id,
+              c ? `rec:${c.key}` : `rec:${m.id}.looks.${e.id}`,
+              'read',
+              c && c.at !== m.id ? { since: c.at } : {},
+            ),
+          );
+        }
+      } else if (list) {
         const actual =
           [...list].reverse().find(
             (s) =>
@@ -1256,7 +1308,12 @@ export function resolveTree(input: TreeInput): DreamTree {
                   use.startsAt !== m.id ? { since: use.startsAt! } : {},
                 ),
               );
-        if ((e.present === 'listed' || e.present === 'camera') && actual.key !== expected.key && expected.n > 0) {
+        if (
+          !record &&
+          (e.present === 'listed' || e.present === 'camera') &&
+          actual.key !== expected.key &&
+          expected.n > 0
+        ) {
           flag({
             code: 'stage_not_carried',
             node: m.id,
@@ -1345,7 +1402,10 @@ export function resolveTree(input: TreeInput): DreamTree {
               src('cut', m.id, `code:onOf(${key.slice(5)},${m.id})`, 'derived'),
             );
         }
-        if (s.heldBy)
+        // With the story record, a thing it knows is in someone's hands only where it has it there.
+        if (rm && record?.elements[e.id]) {
+          if (rm.held[e.id]) e.holder = F(rm.held[e.id], src('cut', m.id, `rec:${m.id}.held.${e.id}`, 'read'));
+        } else if (s.heldBy)
           e.holder = F(s.heldBy, src('scene', sceneOfCut.get(m.id)!, `${key}.spots.${s.id}.heldBy`, 'read'));
         if (s.kind !== 'person' && pb) {
           const shape = shapeOf(settled ?? s, pb);
