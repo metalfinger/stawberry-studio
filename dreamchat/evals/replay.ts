@@ -14,6 +14,8 @@
 // state/, or --from <folder>). Each replay is a new conversation in <dir>/<name>/state, drawn into
 // its own Strawberry store <dir>/home-<name>, with the judge off and at most DREAMCHAT_IMAGE_CAP
 // pictures (15 unless set). --dry prints what would be cut and kept, and calls no model.
+// DREAMCHAT_TAKES=2 or 3 draws each moment that many ways (takes.ts), every take counted against
+// that limit; the estimate says what more it could cost.
 //
 // Kept as it was: the ways to draw it that were offered, and the one chosen (Jev's reading of the
 // message that chose it is replaced by the choice made then, so "the second one" still means the
@@ -260,7 +262,15 @@ type Meta = {
   saved: { images: number; breakdownTitle: string | null; breakdownKey: string | null; moments: number };
 };
 
-type Picture = { id: string; action: string; file: string; key: boolean; version: number };
+type Picture = {
+  id: string;
+  action: string;
+  file: string;
+  key: boolean;
+  version: number;
+  /** Drawn more than once (DREAMCHAT_TAKES): every take of it, and whether it is the one kept. */
+  takes?: { id: string; way: string; status: string; file: string | null; kept: boolean; verdict?: string }[];
+};
 type Pictures = {
   dream: string;
   label: string;
@@ -381,6 +391,10 @@ async function main(args: string[]): Promise<void> {
     });
   }
 
+  // Each moment drawn this many ways (DREAMCHAT_TAKES, takes.ts), read as the harness reads it.
+  const takes = Math.min(3, Math.max(1, Math.floor(Number(process.env.DREAMCHAT_TAKES ?? 1)) || 1));
+  const extraOf = (moments: number) => moments * (takes - 1);
+
   // What would be cut and kept, and what it could cost.
   for (const [i, m] of metas.entries()) {
     const c = cuts[i];
@@ -400,10 +414,15 @@ async function main(args: string[]): Promise<void> {
     console.log(
       `  made again by the code as it is now: the breakdown, drafted from ${c.draftPoints.map((p) => `${p}`).join(' then ')} of their messages as it was then, and everything after`,
     );
+    if (takes > 1)
+      console.log(
+        `  takes: each moment drawn ${takes} ways (DREAMCHAT_TAKES): its ${m.saved.moments} moments are up to ${extraOf(m.saved.moments)} pictures more than one take each ($${(extraOf(m.saved.moments) * PRICE).toFixed(2)} more at fal); the ${cap}-picture limit still stops the dream there`,
+      );
   }
   const saved = metas.reduce((k, m) => k + m.saved.images, 0);
+  const extra = extraOf(metas.reduce((k, m) => k + m.saved.moments, 0));
   console.log(
-    `\nestimate: at most ${cap} pictures a dream (DREAMCHAT_IMAGE_CAP), $${(cap * PRICE).toFixed(2)} a dream and $${(cap * PRICE * metas.length).toFixed(2)} for ${metas.length} at fal's $${PRICE}; the saved runs drew ${saved} ($${(saved * PRICE).toFixed(2)}).`,
+    `\nestimate: at most ${cap} pictures a dream (DREAMCHAT_IMAGE_CAP), $${(cap * PRICE).toFixed(2)} a dream and $${(cap * PRICE * metas.length).toFixed(2)} for ${metas.length} at fal's $${PRICE}; the saved runs drew ${saved} ($${(saved * PRICE).toFixed(2)}).${takes > 1 ? ` Every moment drawn ${takes} ways is up to ${extra} pictures more than one take each ($${(extra * PRICE).toFixed(2)} more), every take counted against the limit, which stops a dream there.` : ''}`,
   );
   console.log(
     provider === 'fake'
@@ -678,6 +697,18 @@ async function runOne(dir: string): Promise<void> {
       file: join(STRAWBERRY_HOME, 'media', f.mediaPath ?? ''),
       key: !!f.frame?.key,
       version: f.version,
+      ...(f.takes?.length
+        ? {
+            takes: f.takes.map((t) => ({
+              id: t.id,
+              way: t.way,
+              status: t.status,
+              file: t.mediaPath ? join(STRAWBERRY_HOME, 'media', t.mediaPath) : null,
+              kept: t.id === f.pick?.kept,
+              ...(t.verdict ? { verdict: t.verdict } : {}),
+            })),
+          }
+        : {}),
     })),
     undrawn: moments
       .filter((f) => !drawn(f))

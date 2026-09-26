@@ -133,6 +133,33 @@ export type Item = {
   isDreamer?: boolean;
   /** Shown to the person as a profile to confirm; otherwise sketched from what they told, unasked. */
   ask?: boolean;
+  /**
+   * For a moment drawn more than once (DREAMCHAT_TAKES, see takes.ts): every take of its current
+   * version, the one kept among them. Its media is the kept take's; the others stay as alternates.
+   */
+  takes?: Take[];
+  /** How the kept take was chosen from its takes: by the judge, or take 1 kept without one. */
+  pick?: { kept: string; judged: boolean; reason?: string };
+};
+
+/**
+ * One of the ways a moment was drawn: take 1 today's routing, take 2 an edit of the previous drawn
+ * moment, take 3 its sketches and words only. Known by a letter the judge sees, never by its way.
+ */
+export type Take = {
+  id: string;
+  /** Its number: 1 is today's routing, kept when no judge picks. */
+  n: number;
+  way: 'today' | 'edit' | 'free';
+  status: 'drawing' | 'ready' | 'failed';
+  jobId?: string;
+  recipeId?: string;
+  mediaId?: string;
+  mediaPath?: string;
+  error?: string;
+  collectRetries?: number;
+  /** The judge's verdict on it, where it picked. */
+  verdict?: 'right' | 'partly' | 'wrong';
 };
 
 const FIELD_WORDS: Record<string, string> = {

@@ -9,11 +9,20 @@ import { dreamConfig } from './dream';
 import { callJev, jevAvailable } from './jev';
 import { jevTotals, readJevLog } from './jevlog';
 import { callHost, HOST_MODEL } from './llm';
-import { blockScenes, fixFrom, shotFor, superviseChanges, proposeLook, reviseItem, rewordLook, rewordMoment } from './producer';
+import {
+  blockScenes,
+  fixFrom,
+  shotFor,
+  superviseChanges,
+  proposeLook,
+  reviseItem,
+  rewordLook,
+  rewordMoment,
+} from './producer';
 import { IMAGE_CAP, liveProducer, ownStyle, SessionStore, treeInputOf } from './session';
 import { momentStage, STAGES, stageOf, STORYBOARD } from './stages';
 import { contextOf, type DreamTree, resolveTree } from './tree';
-import { assistantJudge, judgeKind } from './judge';
+import { assistantJudge, assistantPick, judgeKind } from './judge';
 import { judgeAvailable, judgeContinuity, judgeTake, liveSheets, PROVIDER, spawnWorker } from './sheets';
 import { REPO, STRAWBERRY_HOME, STRAWBERRY_PYTHON, strawberryAvailable, writeProduction } from './strawberry';
 
@@ -39,6 +48,8 @@ const store = new SessionStore(cfg, {
   // The assistant is the judge unless the PC's judge is asked for (DREAMCHAT_JUDGE=pc).
   judge: judgeKind === 'assistant' ? assistantJudge : judgeKind === 'pc' && judgeAvailable() ? judgeTake : undefined,
   judgeContinuity: judgeKind === 'pc' && judgeAvailable() ? judgeContinuity : undefined,
+  // With DREAMCHAT_TAKES=2 or 3, the assistant keeps one of each moment's takes; otherwise take 1.
+  pick: judgeKind === 'assistant' ? assistantPick : undefined,
   dir: join(import.meta.dir, 'state'),
 });
 // The engine's own worker draws the sketches the chat queues, for this store only.
@@ -112,7 +123,8 @@ const server = Bun.serve({
 
       if (url.pathname === '/api/plan') {
         const path = store.get(id)?.prep?.previs[url.searchParams.get('item') ?? ''];
-        if (!path || !path.startsWith(join(import.meta.dir, 'state', id ?? '')) || !path.endsWith('.png')) return fail(404, 'no plan');
+        if (!path || !path.startsWith(join(import.meta.dir, 'state', id ?? '')) || !path.endsWith('.png'))
+          return fail(404, 'no plan');
         return new Response(Bun.file(path), { headers: { 'cache-control': 'private, max-age=600' } });
       }
 
@@ -128,7 +140,16 @@ const server = Bun.serve({
           stages: STAGES,
           transitions: [STORYBOARD],
           stage: stageOf(s),
-          moments: Object.fromEntries(moments.map((m) => [m.id, momentStage(m.id, s.prep, frames.find((f) => f.id === m.id))])),
+          moments: Object.fromEntries(
+            moments.map((m) => [
+              m.id,
+              momentStage(
+                m.id,
+                s.prep,
+                frames.find((f) => f.id === m.id),
+              ),
+            ]),
+          ),
           totals: jevTotals(log),
           log: log.slice(-400),
         });

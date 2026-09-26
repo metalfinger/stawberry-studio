@@ -18,13 +18,18 @@
 // framePrompt says only beside an earlier moment, is said in all three. They differ only in the
 // manifest lines of their images, the line for image 1, and ", as the mock-up in Image 1 shows it".
 // Where today's code has no words for an image set (an edit from a picture of another setup), the
-// one line naming image 1 is written here. Pure: no model calls, no images, no network.
-import { calledIn, pictureName, planContinuity, type Relation, sameWords, shotPlan } from '../continuity';
-import { buildFrames, buildGhosts, type FrameReference, framePrompt, type PlannedInput, turnedInto } from '../frames';
+// one line naming image 1 is written in takes.ts (waysOf), which builds the arms here and the
+// harness's own takes of a moment alike. Pure: no model calls, no images, no network.
+import { calledIn, planContinuity, type Relation, shotPlan } from '../continuity';
+import { buildFrames, buildGhosts, type FrameReference, framePrompt, type PlannedInput } from '../frames';
 import { previsImage } from '../previs';
-import { type Breakdown, completeViews, type Moment, moments, type StyleOption } from '../producer';
+import { type Breakdown, completeViews, moments, type StyleOption } from '../producer';
 import { reconcileGhosts, type Session } from '../session';
-import { isGroup, type Item } from '../sheets';
+import type { Item } from '../sheets';
+import { listed, manifestOf, placeKept, relationTo, waysOf, wordsOf } from '../takes';
+
+// Moved to takes.ts, where the harness draws a moment these ways too; kept here for older imports.
+export { manifestOf, placeKept, relationTo, wordsOf };
 
 export type Arm = 'mockup' | 'edit' | 'free';
 export const ARMS: Arm[] = ['mockup', 'edit', 'free'];
@@ -109,33 +114,6 @@ export function prepare(saved: SavedDream): Prepared {
   return { saved, b, style, plan, sheets, pictures };
 }
 
-/** The moment's shape as planContinuity reads it, with the defaults it gives an older breakdown. */
-const asPlanned = (m: Moment) => ({ ...m, looks_at: m.looks_at ?? '', shift: m.shift ?? '' });
-
-/**
- * How moment `m` follows the earlier moment `e`, as planContinuity decides it (its `relation`,
- * which it keeps to itself): a jump the dream made from the moment just before, another place
- * (or anything across a jump), the other side of the same place, or the same side, the same setup
- * when the distance and whose eyes are the same too.
- */
-export function relationTo(b: Breakdown, mid: string, eid: string): Relation {
-  const ms = moments(b).map(asPlanned);
-  const mi = ms.findIndex((x) => x.id === mid);
-  const ei = ms.findIndex((x) => x.id === eid);
-  const m = ms[mi];
-  const e = ms[ei];
-  if (!m || !e) throw new Error(`no moment ${!m ? mid : eid}`);
-  const sides = m.sameSide
-    ? m.sameSide.includes(e.id)
-    : e.place === m.place && (!e.looks_at || !m.looks_at || sameWords(e.looks_at, m.looks_at));
-  const acrossJump = ms.some((k, at) => !!k.shift && ((ei < at && at <= mi) || (ei === at && at < mi)));
-  if (m.shift && ei === mi - 1) return 'shift';
-  if (acrossJump) return 'other_place';
-  if (!m.place || e.place !== m.place) return 'other_place';
-  if (!sides) return 'other_side';
-  return e.distance === m.distance && e.eyes === m.eyes ? 'same_setup' : 'same_side';
-}
-
 /** The camera's move from the previous picture, in the set's words (paired-set.json `move`). */
 export const MOVES: Record<Relation, string> = {
   same_setup: 'same setup',
@@ -145,18 +123,6 @@ export const MOVES: Record<Relation, string> = {
   shift: 'dream jump',
   seat: 'from their seat',
 };
-
-/**
- * Whether the picture of `e` shows the place `m` happens in, as it is then: the same place, with no
- * jump of the dream after `e` up to `m`. (planContinuity also keeps apart a jump's own picture from
- * what follows it; its picture already shows the place as the jump left it.)
- */
-export function placeKept(b: Breakdown, mid: string, eid: string): boolean {
-  const ms = moments(b).map(asPlanned);
-  const mi = ms.findIndex((x) => x.id === mid);
-  const ei = ms.findIndex((x) => x.id === eid);
-  return !!ms[mi]?.place && ms[ei]?.place === ms[mi].place && !ms.some((k, at) => !!k.shift && ei < at && at <= mi);
-}
 
 /** The latest moment before this one, in story order, that the run drew. */
 export function previousDrawn(p: Prepared, mid: string): string | undefined {
@@ -183,31 +149,6 @@ export function previsOf(p: Prepared, mid: string): { png: Uint8Array; key: stri
   return { png, key: new Bun.CryptoHasher('sha256').update(png).digest('hex') };
 }
 
-/** The one paragraph of a prompt that says what each attached image is for: its manifest. */
-const MANIFEST = /^The attached images, in order, and the one thing to take from each:/;
-const MOCKUP_PHRASE = ', as the mock-up in Image 1 shows it';
-/** Said by framePrompt only beside an earlier moment; here in all three arms. */
-const SHOWS_THROUGH = /^Nothing from another picture shows through this one/;
-const LAST_LINE = /^One single picture filling the whole frame\./;
-
-/**
- * A prompt's words about the moment: every paragraph but the manifest, and without the phrase that
- * points its shot at the mock-up. The three arms of a moment must agree on these exactly.
- */
-export function wordsOf(prompt: string): string[] {
-  return prompt
-    .split('\n\n')
-    .filter((para) => !MANIFEST.test(para))
-    .map((para) => para.replace(MOCKUP_PHRASE, ''));
-}
-
-/** The manifest's lines, one per image, without their "Image n: " numbers. */
-export const manifestOf = (prompt: string) =>
-  (prompt.split('\n\n').find((x) => MANIFEST.test(x)) ?? '')
-    .split('\n')
-    .slice(1)
-    .map((l) => l.replace(/^Image \d+: /, ''));
-
 /** Whether an arm has an image 1 of its own: the picture it edits (the mock-up, or the picture before). */
 const hasImage1 = (r: Paired, a: Arm) => r.arms[a].images[0]?.role === 'base';
 /** The images an arm attaches after its image 1: every image, in an arm without one (free, or a mockup with no camera). */
@@ -227,30 +168,6 @@ export const othersAgree = (r: Paired) =>
       JSON.stringify(afterImage1(r, a).map((im) => [im.key, im.role])) ===
       JSON.stringify(afterImage1(r, 'free').map((im) => [im.key, im.role])),
   );
-
-/** A prompt with a paragraph put in before its last line, unless it has it already. */
-function withParagraph(prompt: string, para: string): string {
-  const paras = prompt.split('\n\n');
-  if (paras.includes(para)) return prompt;
-  const at = paras.findIndex((x) => LAST_LINE.test(x));
-  paras.splice(at >= 0 ? at : paras.length, 0, para);
-  return paras.join('\n\n');
-}
-
-/** A prompt with the manifest line of one image replaced. */
-function withManifestLine(prompt: string, index: number, line: string): string {
-  return prompt
-    .split('\n\n')
-    .map((para) => {
-      if (!MANIFEST.test(para)) return para;
-      const rows = para.split('\n');
-      rows[index + 1] = `Image ${index + 1}: ${line}`;
-      return rows.join('\n');
-    })
-    .join('\n\n');
-}
-
-const listed = (xs: string[]) => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs.at(-1)}` : (xs[0] ?? ''));
 
 /** The three prompts for one moment of a prepared dream. */
 export function pairedArms(p: Prepared, mid: string): Paired {
@@ -306,99 +223,20 @@ export function pairedArms(p: Prepared, mid: string): Paired {
       `today's routing would also attach ${listed(dropped.map((r) => `${r.media_id.slice('picture:'.length)} (${r.role === 'base' ? 'edited, in place of the mock-up' : r.role})`))}, ${dropped.length > 1 ? 'earlier moments' : 'an earlier moment'}: left out of every arm, so the three differ only in image 1`,
     );
 
-  // 1. mockup: today's routing without earlier moments: its previs as image 1.
-  const mockup = framePrompt(it, p.sheets, p.style, ghosts, previs ? `previs:${mid}` : undefined);
-  if (!previs) notes.push("today's plan has no camera for this moment, so no mock-up: the mockup arm has no image 1");
-
-  // 2. free: no image 1.
-  const free = framePrompt(it, p.sheets, p.style, ghosts);
-
-  // 3. edit: the previous picture as image 1.
-  const use = {
-    id: prevId,
-    kind: 'cut' as const,
-    role: 'base' as const,
-    relation,
-    carries: 'the moment just before: edit it into this moment',
-  };
-  // Who a picture shows: through the dreamer's own eyes, never the dreamer.
-  const dreamer = p.b.people.find((x) => x.is_dreamer)?.id;
-  const shown = (f: NonNullable<Item['frame']>) => f.visible.filter((id) => !(f.eyes === 'dreamer' && id === dreamer));
-  const prevFrame = prevItem.frame as NonNullable<Item['frame']>;
-  // From another setup, the picture edited is known by who it shows, so a sketch is said to match
-  // it ("as Image 1 already shows them") only for someone it shows: not the dreamer it was seen through.
-  const edited =
-    relation === 'same_setup' ? prevItem : { ...prevItem, frame: { ...prevFrame, visible: shown(prevFrame) } };
-  const built = framePrompt(it, p.sheets, p.style, [{ use, item: edited }, ...ghosts]);
-  let edit = built.prompt;
-  const references = built.references.map((r, i) =>
-    i === 0 && relation !== 'same_setup' ? { ...r, instruction: use.carries } : r,
-  );
-  if (relation !== 'same_setup') {
-    // framePrompt names an edit base as "the same view a moment earlier", which only a same setup
-    // is. Anything else is said here, in the same words where they fit: what stays, what changes.
-    const sheetOf = (id: string) => p.sheets.find((s) => s.id === id);
-    const named = (ids: string[]) =>
-      listed(ids.map((id) => (id === dreamer ? 'the dreamer' : pictureName(sheetOf(id)?.name ?? id))));
-    const are = (ids: string[]) =>
-      ids.length > 1 || ids.some((id) => !!sheetOf(id) && isGroup(sheetOf(id) as Item)) ? 'are' : 'is';
-    const before = shown(prevFrame);
-    const now = shown(frame.frame);
-    const intoEyes = frame.frame.eyes === 'dreamer' && !!dreamer && before.includes(dreamer);
-    const leaving = before.filter((id) => !now.includes(id) && !(intoEyes && id === dreamer));
-    const joining = now.filter((id) => !before.includes(id));
-    // A crowd has no sketch: it is said in the words below.
-    const sketched = joining.filter((id) => sheetOf(id)?.mediaId);
-    const unsketched = joining.filter((id) => !sheetOf(id)?.mediaId);
-    const who = [
-      ...(intoEyes ? ['the dreamer in it is now the camera, so they are not in this picture'] : []),
-      ...(leaving.length ? [`${named(leaving)} ${are(leaving)} no longer there`] : []),
-      ...(sketched.length
-        ? [
-            `${named(sketched)} ${are(sketched)} there now, drawn from ${sketched.length > 1 ? 'their sketches' : 'their sketch'}`,
-          ]
-        : []),
-      ...(unsketched.length ? [`${named(unsketched)} ${are(unsketched)} there now, as said below`] : []),
-    ];
-    const first = manifestOf(built.prompt)[0] ?? '';
-    const strays = first.match(/ Leave out what it shows that is not in the dream: .*$/)?.[0] ?? '';
-    const n = prevItem.frame?.order;
-    const line = samePlace
-      ? `EDIT THIS PICTURE. It is picture ${n}, the moment just before, in the same place. Keep the place, its light and how everyone in it looks, faces and clothes included; the camera and framing change to this picture's own, as said above${who.length ? `; ${who.join('; ')}` : ''}. Change only that and what this moment changes.${strays}`
-      : `EDIT THIS PICTURE. It is picture ${n}, the moment just before, in another place. Keep how everyone in it who is also in this picture looks, faces and clothes included; the camera, framing, place and light change to this picture's own, as said above and as the place's own image below shows${who.length ? `; ${who.join('; ')}` : ''}. Change only that and what this moment changes.${strays}`;
-    edit = withManifestLine(edit, 0, line);
-    if (!samePlace) {
-      // Its place's image is told where things stand in it as for no earlier picture: "where things
-      // stand comes from Image 1" is not so of a picture of another place.
-      const place = p.sheets.find((s) => s.id === m.place);
-      const at = references.findIndex((r) => r.media_id === place?.mediaId);
-      const freeAt = free.references.findIndex((r) => r.media_id === place?.mediaId);
-      if (at >= 0 && freeAt >= 0) {
-        edit = withManifestLine(edit, at, manifestOf(free.prompt)[freeAt]);
-        references[at] = { ...references[at], instruction: free.references[freeAt].instruction };
-      }
-    }
-  }
-  // Without a worked-out view, framePrompt drops the framing sentence from an edit, since the
-  // picture edited keeps its own; from another setup it is this moment's framing, and said as in
-  // the other arms.
-  const [firstFree] = free.prompt.split('\n\n');
-  const [firstEdit, ...rest] = edit.split('\n\n');
-  if (firstEdit !== firstFree && relation !== 'same_setup') edit = [firstFree, ...rest].join('\n\n');
-  else if (firstEdit !== firstFree)
-    notes.push(
-      'edited from the same setup, the edit arm leaves out the framing sentence, as the harness does for an edit',
-    );
-
-  const turned = turnedInto(it);
-  if (turned.size)
-    notes.push(
-      `${listed([...turned])} has turned into something else: no sketch of it goes in, in any arm; its in-between picture does, in every arm, where the run drew it`,
-    );
-
+  // The three arms, as the harness builds its takes (takes.ts): they differ only in image 1.
+  const ways = waysOf({
+    it,
+    b: p.b,
+    sheets: p.sheets,
+    style: p.style,
+    ghosts,
+    previs: previs ? `previs:${mid}` : undefined,
+    prev: { item: prevItem, relation, samePlace },
+  });
+  notes.push(...ways.notes);
   // framePrompt says this only beside an earlier moment, as in the edit arm: all three say it.
-  const through = edit.split('\n\n').find((x) => SHOWS_THROUGH.test(x));
-  if (!through) throw new Error(`${mid}: the edit arm does not say that nothing shows through from another picture`);
+  if (!ways.edit || !ways.through)
+    throw new Error(`${mid}: the edit arm does not say that nothing shows through from another picture`);
 
   const arm = (a: Arm, prompt: string, refs: FrameReference[]): ArmPrompt => ({
     arm: a,
@@ -413,9 +251,9 @@ export function pairedArms(p: Prepared, mid: string): Paired {
     ...(previs ? { previs } : {}),
     brief,
     arms: {
-      mockup: arm('mockup', withParagraph(mockup.prompt, through), mockup.references),
-      edit: arm('edit', edit, references),
-      free: arm('free', withParagraph(free.prompt, through), free.references),
+      mockup: arm('mockup', ways.mockup.prompt, ways.mockup.references),
+      edit: arm('edit', ways.edit.prompt, ways.edit.references),
+      free: arm('free', ways.free.prompt, ways.free.references),
     },
     notes,
   };

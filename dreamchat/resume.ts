@@ -8,9 +8,18 @@ import { loadedKeys } from './boot';
 import { join } from 'node:path';
 import { dreamConfig } from './dream';
 import { callJev } from './jev';
-import { assistantJudge, judgeKind } from './judge';
+import { assistantJudge, assistantPick, judgeKind } from './judge';
 import { callHost } from './llm';
-import { blockScenes, fixFrom, shotFor, superviseChanges, proposeLook, reviseItem, rewordLook, rewordMoment } from './producer';
+import {
+  blockScenes,
+  fixFrom,
+  shotFor,
+  superviseChanges,
+  proposeLook,
+  reviseItem,
+  rewordLook,
+  rewordMoment,
+} from './producer';
 import { liveProducer, ownStyle, SessionStore } from './session';
 import { judgeAvailable, judgeContinuity, judgeTake, liveSheets, PROVIDER, spawnWorker } from './sheets';
 import { REPO, STRAWBERRY_HOME, STRAWBERRY_PYTHON, strawberryAvailable, writeProduction } from './strawberry';
@@ -42,6 +51,7 @@ const store = new SessionStore(dreamConfig(), {
   rewordLook,
   judge: judgeKind === 'assistant' ? assistantJudge : judgeKind === 'pc' && judgeAvailable() ? judgeTake : undefined,
   judgeContinuity: judgeKind === 'pc' && judgeAvailable() ? judgeContinuity : undefined,
+  pick: judgeKind === 'assistant' ? assistantPick : undefined,
   dir: join(import.meta.dir, 'state'),
 });
 const worker = strawberryAvailable() ? spawnWorker(STRAWBERRY_PYTHON, REPO) : null;
@@ -76,5 +86,7 @@ for (const f of s?.build?.frames ?? [])
   console.log(
     `${f.kind === 'ghost' ? 'ghost' : `frame ${f.frame?.order}`} ${f.id} ${f.status} v${f.version}${f.mediaPath ? ` ${join(STRAWBERRY_HOME, 'media', f.mediaPath)}` : ''}${f.error ? ` (${f.error.slice(0, 160)})` : ''}${f.check ? ` facts ${f.check.passed}/${f.check.questions}` : ''}${f.continuity ? ` continuity ${f.continuity.passed}/${f.continuity.questions}` : ''}`,
   );
-console.log(`images ${s?.images} · $${(s?.spentUsd ?? 0).toFixed(2)} at fal's list price · ${s?.spentCredits ?? 0} Higgsfield credits`);
+console.log(
+  `images ${s?.images} · $${(s?.spentUsd ?? 0).toFixed(2)} at fal's list price · ${s?.spentCredits ?? 0} Higgsfield credits`,
+);
 process.exit(0);

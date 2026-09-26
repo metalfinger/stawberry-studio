@@ -11,10 +11,20 @@
 //   answer:   judge-queue/<media>.answer.json
 //     {answers: {<question id>: {answer: "yes" | "no" | "not_visible", where}},
 //      continuity: {<index>: "yes" | "no" | {answer: "yes" | "no", where}}}
+//
+// A moment drawn more than once (DREAMCHAT_TAKES, takes.ts) is put in the same queue to have one of
+// its takes kept, once all are in; the instructions for the answer are evals/picture-pick.md.
+//
+//   request:  judge-queue/pick-<session>-<moment>-v<version>.json
+//     {kind: "pick", instructions, session, moment, version, said: [...], line,
+//      before: {moment, line, image} | null, takes: [{id, image}], answerFile}
+//   answer:   judge-queue/pick-<session>-<moment>-v<version>.answer.json
+//     {best: <take id>, verdicts: {<take id>: "right" | "partly" | "wrong"}, reason}
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Check } from './sheets';
 import { cli, STRAWBERRY_HOME } from './strawberry';
+import { type PickAnswer, type PickInput, readPick } from './takes';
 
 export const JUDGE_QUEUE = process.env.DREAMCHAT_JUDGE_QUEUE ?? join(import.meta.dir, 'judge-queue');
 const WAIT_MS = Number(process.env.DREAMCHAT_JUDGE_WAIT_MS ?? 30 * 60_000);
@@ -35,8 +45,8 @@ export type JudgeOptions = {
 };
 export type JudgedCheck = Check & { continuity?: Check };
 
-async function waitFor(path: string): Promise<unknown | null> {
-  const until = Date.now() + WAIT_MS;
+async function waitFor(path: string, waitMs = WAIT_MS, pollMs = POLL_MS): Promise<unknown | null> {
+  const until = Date.now() + waitMs;
   while (Date.now() < until) {
     if (existsSync(path))
       try {
@@ -44,7 +54,7 @@ async function waitFor(path: string): Promise<unknown | null> {
       } catch {
         // written but not finished: read again on the next pass
       }
-    await Bun.sleep(POLL_MS);
+    await Bun.sleep(pollMs);
   }
   return null;
 }
@@ -122,7 +132,11 @@ export async function assistantJudge(mediaId: string, opts: JudgeOptions = {}): 
   const asked = continuity
     .map((c, i) => {
       const a = answer.continuity?.[String(i)];
-      return { text: c.text, a: typeof a === 'object' ? a?.answer : a, where: typeof a === 'object' ? a?.where : undefined };
+      return {
+        text: c.text,
+        a: typeof a === 'object' ? a?.answer : a,
+        where: typeof a === 'object' ? a?.where : undefined,
+      };
     })
     .filter((x) => x.a);
   const missed = asked.filter((x) => x.a === 'no');
@@ -147,6 +161,46 @@ export async function assistantJudge(mediaId: string, opts: JudgeOptions = {}): 
         }
       : {}),
   };
+}
+
+/** What the assistant reads before it picks: the judging rules, and the answer's form. */
+export const PICK_INSTRUCTIONS = join(import.meta.dir, 'evals', 'picture-pick.md');
+
+/**
+ * Ask the assistant to keep one of a moment's takes: what the dreamer said, the moment's line, the
+ * picture before it and the takes, known by letter only, in one request. Null when no answer came
+ * in time (the harness then keeps take 1); an answer that names no take shown is an error.
+ */
+export async function assistantPick(
+  input: PickInput,
+  opts: { queue?: string; waitMs?: number; pollMs?: number } = {},
+): Promise<PickAnswer | null> {
+  const queue = opts.queue ?? JUDGE_QUEUE;
+  mkdirSync(queue, { recursive: true });
+  const stem = `pick-${input.session}-${input.moment}-v${input.version}`;
+  const media = (path: string) => join(STRAWBERRY_HOME, 'media', path);
+  const request = {
+    kind: 'pick',
+    instructions: PICK_INSTRUCTIONS,
+    session: input.session,
+    moment: input.moment,
+    version: input.version,
+    said: input.said,
+    line: input.line,
+    before: input.before
+      ? { moment: input.before.moment, line: input.before.line, image: media(input.before.mediaPath) }
+      : null,
+    takes: input.takes.map((t) => ({ id: t.id, image: media(t.mediaPath) })),
+    answerFile: join(queue, `${stem}.answer.json`),
+  };
+  writeFileSync(join(queue, `${stem}.json`), JSON.stringify(request, null, 2));
+  const answer = await waitFor(request.answerFile, opts.waitMs, opts.pollMs);
+  return answer === null
+    ? null
+    : readPick(
+        answer,
+        input.takes.map((t) => t.id),
+      );
 }
 
 export const judgeKind = (process.env.DREAMCHAT_JUDGE ?? 'assistant') as 'assistant' | 'pc' | 'off';

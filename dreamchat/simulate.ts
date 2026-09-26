@@ -27,7 +27,7 @@ import {
   rewordMoment,
 } from './producer';
 import { liveProducer, ownStyle, SessionStore, type StoreDeps } from './session';
-import { assistantJudge, judgeKind } from './judge';
+import { assistantJudge, assistantPick, judgeKind } from './judge';
 import { judgeAvailable, judgeContinuity, judgeTake, liveSheets, PROVIDER, spawnWorker } from './sheets';
 import { REPO, STRAWBERRY_HOME, STRAWBERRY_PYTHON, strawberryAvailable, writeProduction } from './strawberry';
 
@@ -128,6 +128,8 @@ export function liveStore(dir: string, over: Partial<StoreDeps> = {}): SessionSt
     // The assistant is the judge unless the PC's judge is asked for (DREAMCHAT_JUDGE=pc).
     judge: judgeKind === 'assistant' ? assistantJudge : judgeKind === 'pc' && judgeAvailable() ? judgeTake : undefined,
     judgeContinuity: judgeKind === 'pc' && judgeAvailable() ? judgeContinuity : undefined,
+    // With DREAMCHAT_TAKES=2 or 3, the assistant keeps one of each moment's takes; otherwise take 1.
+    pick: judgeKind === 'assistant' ? assistantPick : undefined,
     dir,
     ...over,
   });

@@ -111,8 +111,10 @@ import {
   shapeOf,
   isAnimal,
   sheetPrompt,
+  type Take,
 } from './sheets';
 import type { JudgedCheck, JudgeOptions } from './judge';
+import { applyPick, type Built, type PickAnswer, type PickInput, TAKES, takeId, type TakePlan, takesOf } from './takes';
 import { diffPlan, type Readings, type RecordOptions, recordMode, storyRecord } from './record';
 import { cutRecord, type WriteResult } from './strawberry';
 
@@ -818,6 +820,13 @@ export type StoreDeps = {
   ) => Promise<Record<string, Detail>>;
   /** The continuity check: a take beside the pictures it was drawn from. Absent: no check. */
   judgeContinuity?: (mediaId: string, checks: { with: string | null; text: string }[]) => Promise<Check>;
+  /**
+   * The judge keeps the best of a moment's takes (takes.ts), or null when none answered in time.
+   * Absent: take 1 is kept, today's picture.
+   */
+  pick?: (input: PickInput) => Promise<PickAnswer | null>;
+  /** How many ways each moment is drawn, 1 to 3; DREAMCHAT_TAKES when absent (1: today's one take). */
+  takes?: number;
   dir?: string;
   now?: () => number;
 };
@@ -2107,6 +2116,15 @@ export class SessionStore {
           changes[k === 'feeling' ? 'beat.emotional_intent' : k === 'visual_point' ? 'beat.visual_point' : k] = d.value;
     frame.depicted = depicted;
     frame.continuity = undefined;
+    // Drawn two or three ways at once where DREAMCHAT_TAKES asks for it, and the judge keeps one:
+    // one draw was right about half the time, one of three in 18 moments of 20 (26 Sep).
+    const takes = this.takePlans(s, frame, { prompt, references }, layout);
+    if (takes.length > 1)
+      return this.launchTakes(s, frame, takes, {
+        changes,
+        record: this.recordOf(s, frame),
+        reason: `The person asked to see their dream drawn and settled everything in it; approved within the ${IMAGE_CAP}-picture limit, as one of ${takes.length} takes of this moment the judge keeps one of.`,
+      });
     await this.launch(s, frame, {
       prompt,
       references,
@@ -2114,6 +2132,107 @@ export class SessionStore {
       record: this.recordOf(s, frame),
       reason: `The person asked to see their dream drawn and settled everything in it; approved within the ${IMAGE_CAP}-picture limit.`,
     });
+  }
+
+  /**
+   * The takes of a moment about to be drawn (takes.ts): none unless DREAMCHAT_TAKES asks for two or
+   * three, and never more than the picture limit leaves room for. Take 2 edits the latest earlier
+   * moment approved to be drawn from, the picture before as far as one is: never the first moment's.
+   */
+  private takePlans(s: Session, frame: Item, today: Built, layout?: string): TakePlan[] {
+    const wanted = Math.min(3, this.deps.takes ?? TAKES, IMAGE_CAP - s.images);
+    const b = s.draft?.breakdown;
+    if (frame.kind !== 'cut' || wanted < 2 || !b || !s.style || !s.build) return [];
+    const order = frame.frame?.order ?? 0;
+    const prev = (s.build.frames ?? [])
+      .filter(
+        (f) =>
+          f.kind === 'cut' &&
+          (f.frame?.order ?? 0) < order &&
+          f.status === 'ready' &&
+          !!f.mediaId &&
+          (!!f.review || !!f.continuityApproved),
+      )
+      .sort((p, q) => (q.frame?.order ?? 0) - (p.frame?.order ?? 0))[0];
+    try {
+      return takesOf({
+        today,
+        it: frame,
+        b,
+        sheets: s.build.items,
+        style: s.style,
+        inputs: this.plannedInputs(s, frame),
+        layout,
+        prev,
+        n: wanted,
+      });
+    } catch (e) {
+      // A way that cannot be built leaves the moment drawn as today draws it.
+      console.error(`takes of ${frame.id}: ${String(e).slice(0, 300)}`);
+      return [];
+    }
+  }
+
+  /**
+   * A moment drawn several ways (takes.ts): each take is queued as a picture of the moment, one
+   * after another, so the cut's record and their correction are written once, with the first. Each
+   * counts against the picture limit and the spend like any picture; a take that fails is never
+   * drawn again. Once all are in, the judge keeps one (pickWhenReady).
+   */
+  private async launchTakes(
+    s: Session,
+    frame: Item,
+    plans: TakePlan[],
+    job: { changes: Record<string, string>; record?: CutRecord; reason: string },
+  ): Promise<void> {
+    const n = plans.length;
+    frame.status = 'drawing';
+    frame.version += 1;
+    frame.error = undefined;
+    frame.jobId = undefined;
+    frame.recipeId = undefined;
+    frame.pick = undefined;
+    frame.takes = plans.map((p, k): Take => ({
+      id: takeId(frame.frame?.order ?? 1, k, n),
+      n: k + 1,
+      way: p.way,
+      status: 'drawing',
+    }));
+    s.images += n;
+    const snapshot = structuredClone(frame);
+    const sheets = this.deps.sheets as SheetEngine;
+    const onTake = (id: string, fn: (t: Take) => void, usd?: number | null) =>
+      this.serial(s.id, () =>
+        this.update(s.id, (x) => {
+          // Paid for, whatever has become of the moment since.
+          if (usd !== undefined) spend(x, usd);
+          const it = x.build?.frames?.find((i) => i.id === frame.id);
+          const t = it?.version === snapshot.version ? it.takes?.find((y) => y.id === id) : undefined;
+          if (t) fn(t);
+        }),
+      );
+    void (async () => {
+      for (const [k, plan] of plans.entries()) {
+        const id = snapshot.takes?.[k]?.id as string;
+        try {
+          const r = await sheets.startFrame({
+            item: snapshot,
+            prompt: plan.prompt,
+            references: plan.references,
+            changes: k === 0 ? job.changes : undefined,
+            source: s.production?.result?.ids.said,
+            reason: job.reason,
+            maxUsd: MAX_PER_IMAGE,
+            intent: `Frame: ${frame.name}, take ${k + 1} of ${n}`,
+            record: job.record,
+          });
+          await onTake(id, (t) => Object.assign(t, { jobId: r.jobId, recipeId: r.recipeId }), r.usd);
+        } catch (e) {
+          await onTake(id, (t) => Object.assign(t, { status: 'failed', error: String(e).slice(0, 300) }));
+        }
+      }
+      this.watch(s.id);
+    })();
   }
 
   /**
@@ -2510,6 +2629,8 @@ export class SessionStore {
     // the new job's id arrives (a repaired moment was marked ready with its old take, 23 Sep).
     item.jobId = undefined;
     item.recipeId = undefined;
+    // One take this time: the takes of a version before are that version's (the engine keeps them).
+    if (item.takes || item.pick) Object.assign(item, { takes: undefined, pick: undefined });
     s.images += 1;
     const snapshot = structuredClone(item);
     // A deps check above already failed the picture if the engine is missing.
@@ -2852,6 +2973,10 @@ export class SessionStore {
           );
           if (!running.length) return;
           for (const it of running) {
+            if (it.takes?.length) {
+              await this.watchTakes(id, it);
+              continue;
+            }
             if (!it.jobId || !it.nodeId) continue;
             let st: Awaited<ReturnType<SheetEngine['status']>>;
             try {
@@ -2914,6 +3039,126 @@ export class SessionStore {
       }
     };
     void loop();
+  }
+
+  /**
+   * The takes of a moment still drawing, each checked as a picture is; a download that failed is
+   * collected again at no cost, as for any picture. Once every take is in or has failed, the judge
+   * is asked to keep one.
+   */
+  private async watchTakes(id: string, it: Item): Promise<void> {
+    const sheets = this.deps.sheets as SheetEngine;
+    const same = (x: Session, t: Take) => {
+      const cur = x.build?.frames?.find((i) => i.id === it.id);
+      return cur?.version === it.version ? cur.takes?.find((y) => y.id === t.id && y.jobId === t.jobId) : undefined;
+    };
+    for (const t of it.takes ?? []) {
+      if (t.status !== 'drawing' || !t.jobId || !it.nodeId) continue;
+      let st: Awaited<ReturnType<SheetEngine['status']>>;
+      try {
+        st = await sheets.status(t.jobId, it.nodeId);
+      } catch {
+        continue; // a failed check is retried on the next pass
+      }
+      if (st.state === 'collection_failed' && (t.collectRetries ?? 0) < 2) {
+        try {
+          await sheets.retryCollection(t.jobId);
+          await this.serial(id, () =>
+            this.update(id, (x) => {
+              const cur = same(x, t);
+              if (cur) cur.collectRetries = (cur.collectRetries ?? 0) + 1;
+            }),
+          );
+        } catch {
+          // retried on the next pass
+        }
+        continue;
+      }
+      const failed = ['failed', 'submission_unknown', 'collection_failed', 'cancelled'].includes(st.state);
+      if (st.state !== 'ready' && !failed) continue;
+      await this.serial(id, () =>
+        this.update(id, (x) => {
+          const cur = same(x, t);
+          if (!cur) return;
+          if (st.state === 'ready')
+            Object.assign(cur, { status: 'ready', mediaId: st.mediaId, mediaPath: st.mediaPath });
+          else Object.assign(cur, { status: 'failed', error: st.error ?? st.state });
+        }),
+      );
+    }
+    const now = this.sessions.get(id)?.build?.frames?.find((i) => i.id === it.id);
+    if (now?.status === 'drawing' && now.takes?.every((t) => t.status !== 'drawing'))
+      void this.pickWhenReady(id, it.id);
+  }
+
+  private picking = new Set<string>();
+
+  /**
+   * The judge keeps one of a moment's takes once they are all in (takes.ts): shown what the dreamer
+   * said, the moment's line, the picture before it and the takes that were drawn, it keeps the one
+   * the dreamer would most want. Its pick was right in 16 moments of 20, against 10 of 20 from one
+   * take (26 Sep). Without a judge, or with no answer in time, take 1 is kept: today's picture. The
+   * kept take then goes on as any picture does: the judge's facts, a repair, the chat's approval,
+   * and every later moment drawn from it.
+   */
+  private async pickWhenReady(id: string, itemId: string): Promise<void> {
+    const s = this.sessions.get(id);
+    const it = s?.build?.frames?.find((i) => i.id === itemId);
+    if (!s || !it?.takes || it.status !== 'drawing' || it.takes.some((t) => t.status === 'drawing')) return;
+    const version = it.version;
+    const key = `${id}:${itemId}:${version}`;
+    if (this.picking.has(key)) return;
+    this.picking.add(key);
+    const ready = it.takes.filter((t) => t.status === 'ready' && !!t.mediaId && !!t.mediaPath);
+    let answer: PickAnswer | null = null;
+    let why = this.deps.pick ? 'no judge answered' : 'no judge here';
+    if (ready.length > 1 && this.deps.pick) {
+      const order = it.frame?.order ?? 0;
+      const before = (s.build?.frames ?? [])
+        .filter((f) => f.kind === 'cut' && (f.frame?.order ?? 0) < order && f.status === 'ready' && !!f.mediaPath)
+        .sort((p, q) => (q.frame?.order ?? 0) - (p.frame?.order ?? 0))[0];
+      try {
+        answer = await this.deps.pick({
+          session: id,
+          moment: itemId,
+          version,
+          said: s.transcript.filter((e) => e.role === 'user').map((e) => e.content),
+          line: it.fields.action?.value ?? it.name,
+          before: before
+            ? {
+                moment: before.id,
+                line: before.fields.action?.value ?? before.name,
+                mediaPath: before.mediaPath as string,
+              }
+            : null,
+          takes: [...ready]
+            .sort((p, q) => p.id.localeCompare(q.id))
+            .map((t) => ({ id: t.id, mediaPath: t.mediaPath as string })),
+        });
+      } catch (e) {
+        why = `the pick failed: ${String(e).slice(0, 200)}`;
+      }
+    }
+    await this.serial(id, async () => {
+      const x = structuredClone(this.require(id));
+      const cur = x.build?.frames?.find((i) => i.id === itemId);
+      if (!cur?.takes || cur.version !== version || cur.status !== 'drawing') return;
+      // A take never sent cost nothing: its place under the picture limit is given back. A moment none
+      // of whose takes was sent counts once, as a picture that failed before it was sent does.
+      const unsent = cur.takes.filter((t) => !t.jobId).length;
+      x.images = Math.max(0, x.images - (unsent < cur.takes.length ? unsent : unsent - 1));
+      applyPick(cur, answer, why);
+      await this.save(x);
+    });
+    void this.judgeWhenReady(id, itemId);
+    // A moment that landed makes room for the next one, as a picture that lands does.
+    if (this.sessions.get(id)?.build?.frames?.some((f) => f.status === 'waiting'))
+      await this.serial(id, async () => {
+        const x = structuredClone(this.require(id));
+        await this.fillFrames(x, x.turns.at(-1)?.turn ?? 0);
+        await this.save(x);
+      });
+    if (this.sessions.get(id)?.build?.frames?.some((f) => f.status === 'drawing')) this.watch(id);
   }
 
   private judged = new Set<string>();
