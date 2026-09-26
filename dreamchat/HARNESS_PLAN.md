@@ -50,7 +50,7 @@ One **cut sheet** per cut is the spine everything is assembled from:
 | # | Step | Status | Eval that proves it |
 | --- | --- | --- | --- |
 | S0 | Eval foundation: a prompt-case set from the person's 122 verdicts and notes, a runner that rebuilds prompts from saved dreams and scores them, the free simulation corpus as regression | done: reviewed, fixed, merged (26 Sep) | Every noted fault has a case; the runner reproduces today's failures. Baseline: 6 of 33 counted fault cases met (all six guards against editing the picture before), 36 of 36 passing cases met (below) |
-| S1 | Story record carries state (water, suitcase, who holds what, presence) into continuity, in-between pictures and prompts | building | The S1 cases pass (`--step S1`: library-2 m5/m9 water, snow-train m4/m5, snow-train-2 m1, lighthouse-fresh m13, orchard m7; library-1 m3/m5, library-3 m7, snow-train-2 m5/m7 need a model step); no regressions on the corpus |
+| S1 | Story record carries state (water, suitcase, who holds what, presence) into continuity, in-between pictures and prompts | merged behind DREAMCHAT_RECORD=on (off by default); last fix pending: the place question | The S1 cases pass (`--step S1`: library-2 m5/m9 water, snow-train m4/m5, snow-train-2 m1, lighthouse-fresh m13, orchard m7; library-1 m3/m5, library-3 m7, snow-train-2 m5/m7 need a model step); no regressions on the corpus |
 | S2 | Stop stand-in checks deciding: the pre-draw prompt check and storyboard check only log | not started | No moment held or reworded; corpus unchanged otherwise |
 | S3 | The cut sheet: tree (vertical) + record (horizontal) + relations + tags, one per cut | not started | Every input the prompt needs comes from the sheet; no fact computed in two places |
 | S4 | Camera rules and shot roles: the scene's line, a reverse angle turns the room (what is now left, right, behind), point-of-view shots show at most hands, vehicle screen direction, same setup means the same camera | not started | The S4 cases pass (`--step S4`: snow-train m2 reverse and m3 seat, snow-train-2 m2 same setup, lighthouse-fresh m12 heading, lighthouse-first m3, night-market m2, library-1 m4/m5, orchard m4 hands and m7 legs; lighthouse-fresh m10 needs a new floor plan) |
@@ -155,7 +155,7 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
 
 ## Open questions for the owner
 
-- **Blocking (26 Sep, ~23:30):** the Jev (TypeSafe) account is out of credits; every Jev call returns 402
+- **Resolved (27 Sep):** Jev credits restored by the owner. Was: the Jev (TypeSafe) account ran out of credits; every Jev call returns 402
   billing_error. Every test that asks Jev (prompt-case questions, the implied-state reading's checks, listening
   scores, simulations) is stalled until it is topped up. Work that needs no Jev continues meanwhile.
 
@@ -207,6 +207,6 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   two water levels (library-1 m5 0.28, library-3 m7 0.26) while rightly rejecting snow deep, grass tall and dusk.
   Split it into four one-fact questions (stays after this moment; a motion; how the pictures are drawn; already in
   its look), tuned on the review's rejects and the two water levels with the probe
-  `/private/tmp/claude-501/-Users-hirenk-Documents-code-stawberry-studio-dream-chat/88a78d04-d810-4716-af4f-348eec8a3e14/scratchpad/rs-placeq.ts`;
+  `dreamchat/evals/probes/place-question.ts`;
   then rerun `--step S1` off/on, all cases, the frozen and live corpus with the reading, the in-between counts, and
   the live-flow check on fresh fake replays (`evals/live-flow.ts`), as one follow-up commit.
