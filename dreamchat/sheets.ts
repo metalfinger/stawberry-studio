@@ -354,7 +354,7 @@ export function coloursIn(text: string): string[] {
     // "black on its" (the letters' "handwritten dark ink in blue or black on its front", 26 Sep).
     const words = text
       .slice(m.index ?? 0)
-      .split(/[,;.]/)[0]
+      .split(/[,;.()]/)[0]
       .split(/\s+/)
       .filter(Boolean);
     const kept = [words[0]];

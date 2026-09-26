@@ -561,6 +561,8 @@ describe('a sketch of many things that carry writing', () => {
     expect(p).not.toContain('Do not write any words, letters');
     expect(coloursIn('handwritten dark ink in blue or black on its front')).toEqual(['blue or black']);
     expect(coloursIn('a red cardigan over blue jeans')).toEqual(['red cardigan', 'blue jeans']);
+    // A bracket ends what a colour colours: the cardigan was given three colours at once (26 Sep).
+    expect(coloursIn('a cardigan (red, knitted) over a grey dress (worn)')).toEqual(['red', 'grey dress']);
     expect(
       sheetPrompt(
         { ...letters, name: 'the suitcase', fields: { appearance: { value: 'brown leather', said: true } } },
