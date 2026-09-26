@@ -1,5 +1,5 @@
 {
- "about": "Every moment drawn with real pictures on the night of 25-26 Sep, judged right, partly or wrong as a story strip beside its neighbours (story, note), with what the storyboard check read of its plan (readings; state is exactly what it was asked). story_question is a trial story-level check ('could a picture drawn from this layout tell the moment?'), never shipped. For calibrating plan checks against pictures.",
+ "about": "Every moment drawn with real pictures on the night of 25-26 Sep, judged right, partly or wrong as a story strip beside its neighbours (story, note), with what the storyboard check read of its plan (readings; state is exactly what it was asked). story_question is a trial story-level check ('could a picture drawn from this layout tell the moment?'), never shipped. For calibrating plan checks against pictures. blind and blind_reason are a second judge that did not see these verdicts, viewing each run as a strip against the dream as told: it agreed exactly on 33 of 62, and called 25 of the 39 moments judged right only partly right, never wrong.",
  "rows": [
   {
    "id": "lighthouse-first-m3",
@@ -30,7 +30,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"The stone steps wind round and round upward, the dog unseen ahead; the dreamer listens to claws on stone.\",\n  \"must_show\": \"the spiraling stone steps\",\n  \"seen\": \"through the dreamer's own eyes\",\n  \"looks_at\": \"the winding stone stairs ahead\",\n  \"in_it\": [\n   \"the key\"\n  ],\n  \"also_there\": [\n   \"the dog\"\n  ]\n },\n \"shot\": \"The camera is the dreamer's eyes, looking straight ahead: it looks toward the back of the room. A wide lens, about 24mm. Nearest, close, at the right edge of the picture: the key, in the dreamer's hands, filling the picture from its top edge to its bottom edge. Farthest, close, in the middle of the picture: the dog, their back to the camera, seen from the waist up and filling the picture from a third of the way down to its bottom edge. Outside the picture, behind the camera: the bottom of the stairs. Beyond it all, ahead where they look: the winding stone stairs ahead.\"\n}",
-   "story_question": 0.69
+   "story_question": 0.69,
+   "blind": "partly",
+   "blind_reason": "A stone spiral staircase with the dreamer holding the brass key is shown, but the terrier stands in plain view at the dreamer's feet instead of unseen ahead, and the view looks down the stairwell into a dark pit rather than up the winding steps."
   },
   {
    "id": "lighthouse-first-m6",
@@ -61,7 +63,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"The dreamer looks out through the window; the sea is gone, replaced by a field of tall yellow grass with a red tractor driving slowly through it.\",\n  \"must_show\": \"the sea become a yellow field with a red tractor\",\n  \"dream\": \"the sea is gone, replaced by a field\",\n  \"seen\": \"through the dreamer's own eyes\",\n  \"looks_at\": \"the window and the view beyond\",\n  \"in_it\": [\n   \"the boat\"\n  ],\n  \"also_there\": [\n   \"my father\",\n   \"the key\",\n   \"the table\",\n   \"the window\"\n  ]\n },\n \"shot\": \"The camera is the dreamer's eyes, leaning back a little, looking straight ahead, toward the window: it looks toward the back of the room. A wide lens, about 24mm. Nearest, close, in the right third of the picture: the boat, in the dreamer's hands, filling the picture from low down to its bottom edge. Farthest, close, across the picture from the left third to the right third: the window, filling the picture from its middle to its bottom edge. Outside the picture, behind the camera: my father. Outside the picture, behind the camera: the key. Outside the picture, off to the right: the table. Outside the picture, behind the camera: the wall with the door from the stairs.\"\n}",
-   "story_question": 0.56
+   "story_question": 0.56,
+   "blind": "partly",
+   "blind_reason": "The round room's windows show the yellow grass field with the red tractor and the dreamer holds the boat, but the father's table and chair are empty, although the dream has him sitting there folding boats."
   },
   {
    "id": "lighthouse-first-m7",
@@ -92,7 +96,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"The dreamer looks back down at the boat in their hand; the paper is dry and rough, with the marks of the father's folds.\",\n  \"must_show\": \"the folded newspaper boat with visible fold marks\",\n  \"seen\": \"through the dreamer's own eyes\",\n  \"looks_at\": \"the boat in the dreamer's hand\",\n  \"in_it\": [\n   \"the boat\"\n  ],\n  \"also_there\": [\n   \"my father\",\n   \"the key\",\n   \"the table\",\n   \"the window\"\n  ]\n },\n \"shot\": \"The camera is the dreamer's eyes, leaning a little to their left, turned to their right, toward the boat: it looks toward the left side of the room. A wide lens, about 24mm. Nearest, close, in the middle of the picture: the boat, in the dreamer's hands, filling the picture from low down to near its bottom. Then, close, in the left third of the picture: the window, filling the picture from its middle to its bottom edge. Farthest, a little way off, at the right edge of the picture: the table, filling the picture from near its top to its bottom edge. Outside the picture, off to the right: my father. Outside the picture, off to the right: the key. Outside the picture, off to the right: the wall with the door from the stairs.\"\n}",
-   "story_question": 0.63
+   "story_question": 0.63,
+   "blind": "partly",
+   "blind_reason": "A close POV of the creased, rough newspaper boat in the hands matches the moment, but the room is now square-cornered with a single window showing only grey (no yellow field), unlike the round, window-ringed room of m6, and the father's chair is still empty."
   },
   {
    "id": "lighthouse-first-m8",
@@ -123,7 +129,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"Suddenly the dreamer is in the tractor, sitting next to the driver, a stranger, still holding the boat.\",\n  \"must_show\": \"the dreamer beside the stranger in the tractor\",\n  \"dream\": \"the sudden change of location\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the dreamer and driver in the tractor cab\",\n  \"in_it\": [\n   \"the dreamer\",\n   \"the driver\",\n   \"the boat\"\n  ]\n },\n \"shot\": \"Seen from in front of them, about 2 metres off, at the height of their eyes: the camera looks at the dreamer, toward the far side of the place, away from the edge of the field where the beach used to be. A 35mm lens. From left to right across the picture: the dreamer, the left third of the picture, facing the camera, holding the boat, seen from the knees up and filling the picture from near its top to its bottom edge; then the driver, the right third of the picture, facing the camera, seen from the knees up and filling the picture from near its top to its bottom edge. Nobody else is in the picture. They keep these places in every picture of this scene. The boat, the left edge of the picture, in the dreamer's hands, filling the picture from low down to near its bottom. Outside the picture, behind the camera: the edge of the field where the beach used to be.\"\n}",
-   "story_question": 0.83
+   "story_question": 0.83,
+   "blind": "partly",
+   "blind_reason": "The long-haired dreamer in the grey top holds the newspaper boat next to an unknown middle-aged woman with grass outside, but the cab looks like a van or minibus with two separate seats and no steering wheel or controls, so neither the tractor nor the stranger as its driver comes across."
   },
   {
    "id": "night-market-m1",
@@ -154,7 +162,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"The dreamer and their older sister stand in a crowded night market under strings of little yellow lights, surrounded by hundreds of people.\",\n  \"must_show\": \"the fish stall\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the stalls and crowd under yellow lights\",\n  \"in_it\": [\n   \"the dreamer\",\n   \"my older sister\",\n   \"the crowd\"\n  ],\n  \"also_there\": [\n   \"the fish stall\"\n  ]\n },\n \"shot\": \"Seen from behind them, about 4 metres off, at the height of their eyes: the camera looks toward the market stalls. A 24mm lens. From left to right across the picture: the dreamer, left of the middle of the picture, their back to the camera, seen whole and filling the picture from a third of the way down to its middle, partly hidden behind the fish stall; then the crowd, across the picture from the left edge to the right edge, many of them, seen from behind; then my older sister, right of the middle of the picture, their back to the camera, seen whole and filling the picture from a third of the way down to its middle, partly hidden behind the crowd. Nobody else is in the picture. They keep these places in every picture of this scene. Also in the picture: the fish stall, the middle of the picture, filling the picture from its middle to its bottom edge, partly hidden behind the crowd. At the back of the picture: the market stalls.\"\n}",
-   "story_question": 0.69
+   "story_question": 0.69,
+   "blind": "right",
+   "blind_reason": "A dense crowd under strings of yellow bulbs fills the market aisle, with the long-haired dreamer in a grey tee and the ponytailed sister in a blue tee and shorts among the people."
   },
   {
    "id": "night-market-m2",
@@ -185,7 +195,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"They stop at a stall where an old man has fish laid out on ice. The dreamer's older sister wants to buy fish.\",\n  \"must_show\": \"the fish on ice at the stall\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the fish stall with the old man\",\n  \"in_it\": [\n   \"the dreamer\",\n   \"my older sister\",\n   \"the old man\",\n   \"the fish\"\n  ],\n  \"also_there\": [\n   \"the crowd\",\n   \"the fish stall\"\n  ]\n },\n \"shot\": \"Seen from the side, as they face each other, about 3 metres off, at the height of their eyes: the camera looks at the fish stall, toward the left side of the place. A 35mm lens. From left to right across the picture: the old man, the left third of the picture, seen three-quarters from behind, looking toward the right of the picture, seen from the knees up and filling the picture from a third of the way down to its bottom edge; then the dreamer, the middle of the picture, facing the camera, seen whole and filling the picture from a third of the way down to two thirds of the way down, partly hidden behind the fish stall; then my older sister, the right third of the picture, turned three-quarters toward the camera, looking toward the left of the picture, seen from the knees up and filling the picture from a third of the way down to two thirds of the way down, partly hidden behind the fish stall. Nobody else is in the picture. They keep these places in every picture of this scene. The fish, the middle of the picture, right beside the fish stall, filling the picture from low down to two thirds of the way down. Also in the picture: the fish stall, across the picture from the left third to the right third, right beside the fish, filling the picture from low down to its bottom edge, partly hidden behind the old man. At the back of the picture: the market stalls.\"\n}",
-   "story_question": 0.76
+   "story_question": 0.76,
+   "blind": "partly",
+   "blind_reason": "The same dreamer and sister stand at a stall with a silver fish on ice and a grey-haired old man, but he stands on the customer side of the stall rather than behind it as the seller, and the sister is just staring at him with nothing to show she wants to buy fish, while the dreamer poses facing the camera."
   },
   {
    "id": "heron-m1",
@@ -216,7 +228,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"The dreamer walks quickly down a long green corridor with lockers on both sides, heading for a wooden door with a small round window at the end.\",\n  \"must_show\": \"the long green corridor with lockers and the door at the end\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the wooden door at the end\",\n  \"in_it\": [\n   \"the dreamer\"\n  ],\n  \"also_there\": [\n   \"the wooden door with the small round window\"\n  ]\n },\n \"shot\": \"Seen from behind the dreamer, from across the place, at the height of the dreamer's eyes: the camera looks at the wooden door with the small round window, toward the door end. A 24mm lens. From left to right across the picture: the dreamer, the middle of the picture, their back to the camera, seen whole and filling the picture from a third of the way down to two thirds of the way down. Nobody else is in the picture. Also in the picture: the wooden door with the small round window, right of the middle of the picture, filling the picture from a third of the way down to its middle. In the right third of the picture: the door end, the front of the place.\"\n}",
-   "story_question": 0.65
+   "story_question": 0.65,
+   "blind": "right",
+   "blind_reason": "The dreamer, short black hair, grey tee and jeans, walks down a corridor lined with green lockers on both sides toward a wooden door at the end with a small round window."
   },
   {
    "id": "heron-m4",
@@ -247,7 +261,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"The dreamer stands inside the classroom, looking at the students. Their faces are smooth skin with no features, and they are completely still.\",\n  \"must_show\": \"the faceless students sitting motionless\",\n  \"dream\": \"The students have no faces, just smooth skin.\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the students\",\n  \"in_it\": [\n   \"the dreamer\",\n   \"the faceless students\"\n  ],\n  \"also_there\": [\n   \"Mrs Okafor\",\n   \"the blackboard\",\n   \"the door\"\n  ]\n },\n \"shot\": \"Seen from behind the dreamer, about 2 metres off, at the height of the dreamer's eyes: the camera looks at the faceless students, toward the right side of the room. A 16mm lens. From left to right across the picture: the faceless students, the left third of the picture, many of them, sitting in rows of seats in front of the dreamer, seen three-quarters from behind, looking toward the left of the picture; then the dreamer, the middle of the picture, seen three-quarters from behind, looking toward the left of the picture, seen whole and filling the picture from a third of the way down to its bottom edge. Nobody else is in the picture. They keep these places in every picture of this scene. Also in the picture: the blackboard, the left third of the picture, filling the picture from its middle to two thirds of the way down, partly hidden behind the faceless students; the door, right of the middle of the picture, filling the picture from its top edge to its bottom edge. At the left edge of the picture: the wall with the blackboard, the front of the place.\"\n}",
-   "story_question": 0.68
+   "story_question": 0.68,
+   "blind": "partly",
+   "blind_reason": "The dreamer stands inside looking at still, bald, featureless students, but they are a single row of five mannequin-like figures all dressed in the dreamer's own grey tee and jeans and seen mostly from behind, not a full room of desks. The blackboard is blank with no Mrs Okafor, and the door has no round window, unlike the door in m1."
   },
   {
    "id": "lighthouse-fresh-m1",
@@ -278,7 +294,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"The dreamer stands on the grey beach, holding the brass key, while the dog runs ahead toward the distant white lighthouse, looking back over its shoulder.\",\n  \"must_show\": \"The dreamer with key in hand, dog running ahead toward the lighthouse, seen from behind.\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the lighthouse down the beach\",\n  \"in_it\": [\n   \"the dreamer\",\n   \"the dog\",\n   \"the brass key\"\n  ],\n  \"also_there\": [\n   \"the lighthouse\"\n  ]\n },\n \"shot\": \"Seen from behind the dreamer, over their shoulder, from across the place, at the height of their eyes: the camera looks at the lighthouse, toward the far side of the place, away from the sea. A 24mm lens. From left to right across the picture: the dog, left of the middle of the picture, facing the camera, seen whole and filling the picture from a third of the way down to its middle; then the dreamer, the middle of the picture, their back to the camera, holding the brass key, seen whole and filling the picture from a third of the way down to two thirds of the way down. Nobody else is in the picture. They keep these places in every picture of this scene. Also in the picture: the lighthouse, the left third of the picture, filling the picture from its top edge to its middle. Outside the picture, behind the camera: the sea.\"\n}",
-   "story_question": 0.51
+   "story_question": 0.51,
+   "blind": "partly",
+   "blind_reason": "Dreamer in grey tee and jeans stands on the grey beach holding the key with the white lighthouse far off, but the tan dog is trotting back toward the dreamer and camera, not running ahead toward the lighthouse."
   },
   {
    "id": "lighthouse-fresh-m2",
@@ -309,7 +327,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"The dreamer's hand holding the old brass key: heavy and cold, smooth on the bow, rough along the teeth.\",\n  \"must_show\": \"The texture and weight of the key in the dreamer's hand.\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the key in hand\",\n  \"in_it\": [\n   \"the dreamer\",\n   \"the brass key\"\n  ],\n  \"also_there\": [\n   \"the dog\",\n   \"the lighthouse\"\n  ]\n },\n \"shot\": \"Seen from in front of the dreamer, about 3 metres off, at the height of the dreamer's eyes: the camera looks toward the sea. A 50mm lens. From left to right across the picture: the dreamer, the middle of the picture, facing the camera, holding the brass key, seen from the knees up and filling the picture from a third of the way down to its bottom edge. Nobody else is in the picture. Outside the picture, behind the camera: the lighthouse. At the back of the picture: the sea.\"\n}",
-   "story_question": 0.44
+   "story_question": 0.44,
+   "blind": "partly",
+   "blind_reason": "The action asks for a close-up of the hand and key, but the picture is a mid shot of the whole standing dreamer on the beach, and the key is painted silver-grey, not brass."
   },
   {
    "id": "lighthouse-fresh-m3",
@@ -340,7 +360,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"The dog pauses and looks back at the dreamer, ears up, as if to say 'come on'.\",\n  \"must_show\": \"The dog's eager, insistent expression over his shoulder.\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the lighthouse\",\n  \"in_it\": [\n   \"the dog\"\n  ],\n  \"also_there\": [\n   \"the dreamer\",\n   \"the brass key\",\n   \"the lighthouse\"\n  ]\n },\n \"shot\": \"Seen from in front of the dog, about 4 metres off, at the height of the dog's eyes: the camera looks at the lighthouse, toward the far side of the place, away from the sea. A 35mm lens. From left to right across the picture: the dog, the middle of the picture, facing the camera, seen whole and filling the picture from a third of the way down to its bottom edge. Nobody else is in the picture. Also in the picture: the lighthouse, the middle of the picture, filling the picture from its top edge to its middle. Outside the picture, behind the camera: the brass key. Outside the picture, behind the camera: the sea.\"\n}",
-   "story_question": 0.46
+   "story_question": 0.46,
+   "blind": "wrong",
+   "blind_reason": "The words 'COME ON' are painted into the sky, which the dream does not have, and the dog is drawn bigger and patchier than the small tan dog in m1 and m5."
   },
   {
    "id": "lighthouse-fresh-m4",
@@ -371,7 +393,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"The dreamer turns the brass key in the lighthouse door; it turns easily with no stiffness.\",\n  \"must_show\": \"The key turning in the lock.\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the door\",\n  \"in_it\": [\n   \"the dreamer\",\n   \"the brass key\"\n  ],\n  \"also_there\": [\n   \"the lighthouse door\",\n   \"the spiral staircase\"\n  ]\n },\n \"shot\": \"Seen from beside the dreamer, close, at the height of the dreamer's eyes: the camera looks at the lighthouse door, toward the right side of the room. A 21mm lens. From left to right across the picture: the dreamer, the middle of the picture, in profile, looking toward the left of the picture, holding the brass key, seen from the knees up and filling the picture from near its top to its bottom edge. Nobody else is in the picture. The brass key, left of the middle of the picture, in the dreamer's hands, filling the picture from its top edge to two thirds of the way down, partly hidden behind the dreamer. Also in the picture: the lighthouse door, the left third of the picture, filling the picture from its top edge to its bottom edge; the spiral staircase, the right third of the picture, filling the picture from its middle to its bottom edge. At the left edge of the picture: the door side, the front of the place.\"\n}",
-   "story_question": 0.46
+   "story_question": 0.46,
+   "blind": "partly",
+   "blind_reason": "The dreamer turns a brass key in a door, but she is already inside with the spiral staircase behind her, so the outside lighthouse door is not what we see."
   },
   {
    "id": "lighthouse-fresh-m5",
@@ -402,7 +426,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"Inside, the dog is already a few curves up the spiral staircase, nails clicking on the white steps, as the dreamer follows below.\",\n  \"must_show\": \"The tight spiral staircase with the dog above and the dreamer below.\",\n  \"dream\": \"The staircase has more turns than should fit in the lighthouse.\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the spiral staircase\",\n  \"in_it\": [\n   \"the dreamer\",\n   \"the dog\"\n  ],\n  \"also_there\": [\n   \"the brass key\",\n   \"the lighthouse door\",\n   \"the spiral staircase\"\n  ]\n },\n \"shot\": \"Seen from behind them, about 2 metres off, at the height of their eyes: the camera looks at the spiral staircase, toward the back of the room. A 23mm lens. From left to right across the picture: the dog, left of the middle of the picture, standing on the spiral staircase, seen three-quarters from behind, looking toward the left of the picture, seen from the knees up and filling the picture from near its top to its bottom edge, partly hidden behind the dreamer; then the dreamer, right of the middle of the picture, standing on the spiral staircase, seen three-quarters from behind, looking toward the left of the picture, holding the brass key, seen from the waist up and filling the picture from a third of the way down to its bottom edge. Nobody else is in the picture. They keep these places in every picture of this scene. Also in the picture: the spiral staircase, left of the middle of the picture, with the dreamer and the dog on it, filling the picture from low down to its bottom edge, partly hidden behind the dreamer; the brass key, the right third of the picture, in the dreamer's hands, filling the picture from a third of the way down to near its bottom, partly hidden behind the dreamer. Outside the picture, off to the right: the lighthouse door. Outside the picture, behind the camera: the door side.\"\n}",
-   "story_question": 0.61
+   "story_question": 0.61,
+   "blind": "right",
+   "blind_reason": "The same small tan dog stands a few white steps up a curving stair, looking back, while the dreamer waits below holding the key."
   },
   {
    "id": "lighthouse-fresh-m9",
@@ -433,7 +459,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"The dreamer goes to the window and looks out; the sea is gone, replaced by a field of tall yellow grass, and a red tractor drives slowly through it.\",\n  \"must_show\": \"The field of yellow grass with the red tractor, framed by the window.\",\n  \"dream\": \"The water is gone, replaced by a field of tall yellow grass.\",\n  \"seen\": \"through the dreamer's own eyes\",\n  \"looks_at\": \"out the window\",\n  \"in_it\": [\n   \"the paper boat\",\n   \"the red tractor\"\n  ],\n  \"also_there\": [\n   \"the window\",\n   \"the table\"\n  ]\n },\n \"shot\": \"The camera is the dreamer's eyes, leaning forward a little, looking straight ahead, toward the window: it looks toward the window. A wide lens, about 24mm. Nearest, close, across the picture from the left edge to the right edge: the window, right beside the red tractor, filling the picture from near its top to its bottom edge. Farthest, close, across the picture from the left edge to the right edge: the red tractor, right beside the window, filling the picture from low down to its bottom edge, partly hidden behind the window. Outside the picture, behind the camera: the paper boat. Outside the picture, behind the camera: the table. \"\n}",
-   "story_question": 0.57
+   "story_question": 0.57,
+   "blind": "right",
+   "blind_reason": "Through an arched window of the tower there is a field of tall yellow grass with a red cab tractor in it, and no sea."
   },
   {
    "id": "lighthouse-fresh-m10",
@@ -464,7 +492,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"The dreamer is still holding the paper boat in both hands, just in front of them, looking past it at the windows.\",\n  \"must_show\": \"The paper boat cradled in both hands, the field beyond.\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the paper boat in hands\",\n  \"in_it\": [\n   \"the dreamer\",\n   \"the paper boat\"\n  ],\n  \"also_there\": [\n   \"the window\",\n   \"the table\",\n   \"the red tractor\"\n  ]\n },\n \"shot\": \"Seen from in front of the dreamer, close, at the height of the dreamer's eyes: the camera looks at the paper boat, toward the back of the room. A 19mm lens. From left to right across the picture: the dreamer, the middle of the picture, facing the camera, holding the paper boat, seen from the waist up and filling the picture from near its top to its bottom edge. Nobody else is in the picture. The paper boat, the left third of the picture, in the dreamer's hands, filling the picture from low down to its bottom edge. Also in the picture: the table, across the picture from the left third to the right third, filling the picture from low down to its bottom edge, partly hidden behind the dreamer. Outside the picture, behind the camera: the window. Outside the picture, behind the camera: the red tractor. Outside the picture, behind the camera: the window.\"\n}",
-   "story_question": 0.29
+   "story_question": 0.29,
+   "blind": "wrong",
+   "blind_reason": "A red tractor stands inside the round room, the dreamer appears twice (a figure seen from behind plus separate first-person hands holding the boat), and the windows show grey sea again after m9 replaced it with grass."
   },
   {
    "id": "lighthouse-fresh-m11",
@@ -495,7 +525,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"The dreamer is in the cab of the red tractor, sitting next to the driver, still holding the paper boat in both hands; the paper feels a little warmer.\",\n  \"must_show\": \"The dreamer and driver sitting together, the boat in the dreamer's hands.\",\n  \"dream\": \"The dreamer is suddenly in the tractor cab, no climbing.\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the driver's profile\",\n  \"in_it\": [\n   \"the dreamer\",\n   \"the driver\",\n   \"the paper boat\",\n   \"the red tractor\"\n  ],\n  \"also_there\": [\n   \"the seat\"\n  ]\n },\n \"shot\": \"Seen from in front of them, about 3 metres off, at the height of their eyes: the camera looks at the driver, toward the far side of the place, away from the windshield. A 35mm lens. From left to right across the picture: the driver, left of the middle of the picture, in the red tractor, facing the camera, seen whole and filling the picture from a third of the way down to its middle, partly hidden behind the red tractor; then the dreamer, right of the middle of the picture, in the red tractor, facing the camera, holding the paper boat, seen whole and filling the picture from a third of the way down to its middle, partly hidden behind the red tractor. Nobody else is in the picture. They keep these places in every picture of this scene. The red tractor, across the picture from the left edge to the right edge, with the dreamer and the driver in it, right beside the seat, filling the picture from its middle to its bottom edge. Outside the picture, off to the right: the seat. Outside the picture, behind the camera: the windshield.\"\n}",
-   "story_question": 0.65
+   "story_question": 0.65,
+   "blind": "partly",
+   "blind_reason": "The dreamer is in the red tractor cab with the boat and yellow grass outside, but she sits at the steering wheel while the driver sits back with his hands on his lap, so she looks like the driver."
   },
   {
    "id": "lighthouse-fresh-m12",
@@ -526,7 +558,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"The cab vibrates with a low rumble; the paper boat trembles in the dreamer's hands; outside the windows the yellow grass bends away from the wheels.\",\n  \"must_show\": \"The yellow grass parting, the boat trembling in the dreamer's hands.\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the field through the windows\",\n  \"in_it\": [\n   \"the dreamer\",\n   \"the driver\",\n   \"the paper boat\",\n   \"the red tractor\"\n  ],\n  \"also_there\": [\n   \"the seat\"\n  ]\n },\n \"shot\": \"Seen from behind them, about 3 metres off, at the height of their eyes: the camera looks toward the windshield. A 35mm lens. From left to right across the picture: the dreamer, left of the middle of the picture, in the red tractor, their back to the camera, holding the paper boat, seen whole and filling the picture from a third of the way down to its middle, partly hidden behind the red tractor; then the driver, right of the middle of the picture, in the red tractor, their back to the camera, seen whole and filling the picture from a third of the way down to its middle, partly hidden behind the red tractor. Nobody else is in the picture. They keep these places in every picture of this scene. The red tractor, across the picture from the left edge to the right edge, with the dreamer and the driver in it, right beside the seat, filling the picture from its middle to its bottom edge. Outside the picture, off to the right: the seat. At the back of the picture: the windshield.\"\n}",
-   "story_question": 0.32
+   "story_question": 0.32,
+   "blind": "partly",
+   "blind_reason": "Seen from behind, the dreamer holds the boat next to the driver in the cab with grass outside, but no wheels or grass bending away from them are shown and nothing shows the rumble or the trembling."
   },
   {
    "id": "lighthouse-fresh-m13",
@@ -557,7 +591,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"The driver keeps looking straight ahead, both hands on the wheel; their profile is there but the face will not stay in memory.\",\n  \"must_show\": \"The unmemorable profile of the driver, kept in view but not in memory.\",\n  \"dream\": \"Their face wouldn't stay in the dreamer's head.\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the driver's profile\",\n  \"in_it\": [\n   \"the driver\",\n   \"the red tractor\"\n  ],\n  \"also_there\": [\n   \"the dreamer\",\n   \"the paper boat\",\n   \"the seat\"\n  ]\n },\n \"shot\": \"Seen from in front of the driver, about 3 metres off, at the height of the driver's eyes: the camera looks at the driver, toward the far side of the place, away from the windshield. A 50mm lens. From left to right across the picture: the driver, the middle of the picture, in the red tractor, facing the camera, seen from the knees up and filling the picture from a third of the way down to its middle, partly hidden behind the red tractor. Nobody else is in the picture. The red tractor, across the picture from the left edge to the right edge, with the driver in it, right beside the seat, filling the picture from its middle to its bottom edge. Outside the picture, off to the right: the paper boat. Outside the picture, off to the right: the seat. Outside the picture, behind the camera: the windshield.\"\n}",
-   "story_question": 0.33
+   "story_question": 0.33,
+   "blind": "partly",
+   "blind_reason": "The same blue-shirted driver is shown in profile looking ahead, but only one hand is on the wheel and the other rests on his lap, where the action asks for both hands on the wheel."
   },
   {
    "id": "lighthouse-fresh-m14",
@@ -588,7 +624,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"The tractor slows and stops at the edge of the field, where the beach had been, where the sea used to be.\",\n  \"must_show\": \"The red tractor stopped at the transition between field and beach.\",\n  \"dream\": \"This is where the beach had been, where the sea used to be.\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the edge of the field\",\n  \"in_it\": [\n   \"the dreamer\",\n   \"the driver\",\n   \"the red tractor\"\n  ]\n },\n \"shot\": \"Seen from behind them, about 4 metres off, at the height of their eyes: the camera looks toward the beach. A 24mm lens. From left to right across the picture: the dreamer, left of the middle of the picture, in the red tractor, their back to the camera, seen whole and filling the picture from a third of the way down to its middle, partly hidden behind the red tractor; then the driver, right of the middle of the picture, in the red tractor, their back to the camera, seen whole and filling the picture from a third of the way down to its middle, partly hidden behind the red tractor. Nobody else is in the picture. They keep these places in every picture of this scene. The red tractor, across the picture from the left third to the right third, with the dreamer and the driver in it, filling the picture from a third of the way down to near its bottom. At the back of the picture: the beach.\"\n}",
-   "story_question": 0.73
+   "story_question": 0.73,
+   "blind": "partly",
+   "blind_reason": "The tractor is stopped at the edge of the yellow field, but a grey sea and shoreline are back on the horizon where the sea should be gone, and the dreamer now has a longer bob haircut instead of the short crop in the other pictures."
   },
   {
    "id": "lighthouse-fresh-m15",
@@ -619,7 +657,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"The dreamer gets out of the tractor and puts the paper boat down in the grass; it rests tilted to one side, held by the grass, not falling flat.\",\n  \"must_show\": \"The paper boat resting tilted in the yellow grass.\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the paper boat in the grass\",\n  \"in_it\": [\n   \"the dreamer\",\n   \"the paper boat\",\n   \"the red tractor\"\n  ],\n  \"also_there\": [\n   \"the driver\"\n  ]\n },\n \"shot\": \"Seen from the side, as the dreamer faces the paper boat, about 4 metres off, at the height of the dreamer's eyes: the camera looks at the paper boat, toward the left side of the place. A 50mm lens. From left to right across the picture: the dreamer, the middle of the picture, in profile, looking toward the left of the picture, seen from the knees up and filling the picture from a third of the way down to its bottom edge. Nobody else is in the picture. The paper boat, the left third of the picture, right beside the red tractor, filling the picture from low down to its bottom edge, partly hidden behind the red tractor. The red tractor, across the picture from the left edge to the right third, right beside the paper boat, filling the picture from its middle to its bottom edge, partly hidden behind the paper boat. Outside the picture, off to the right: the beach.\"\n}",
-   "story_question": 0.57
+   "story_question": 0.57,
+   "blind": "partly",
+   "blind_reason": "The dreamer kneels beside the tractor setting the paper boat in the grass, but she is still holding it upright rather than letting it rest tilted and held by the grass, and the sea is visible again on the horizon."
   },
   {
    "id": "snow-train-m1",
@@ -650,7 +690,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"the dreamer sits across from their grandfather on an old train; outside it is night and snow\",\n  \"must_show\": \"the grandfather sitting across from the dreamer\",\n  \"dream\": \"the grandfather is there though he has been gone for years\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the seats facing each other\",\n  \"in_it\": [\n   \"the dreamer\",\n   \"the grandfather\"\n  ],\n  \"also_there\": [\n   \"the seats facing each other\"\n  ]\n },\n \"shot\": \"Seen from the side, as they face each other, about 2 metres off, at the height of their eyes: the camera looks at the seats facing each other, toward the front of the train. A 17mm lens. From left to right across the picture: the grandfather, left of the middle of the picture, sitting on the seats facing each other, their back to the camera, seen whole and filling the picture from a third of the way down to near its bottom; then the dreamer, the middle of the picture, sitting on the seats facing each other, facing the camera, seen whole and filling the picture from a third of the way down to two thirds of the way down, partly hidden behind the seats facing each other. Nobody else is in the picture. They keep these places in every picture of this scene. Also in the picture: the seats facing each other, across the picture from the left edge to the right edge, with the dreamer and the grandfather sitting on it, filling the picture from low down to its bottom edge. Right of the middle of the picture: the front of the train, the front of the place.\"\n}",
-   "story_question": 0.69
+   "story_question": 0.69,
+   "blind": "right",
+   "blind_reason": "In an old wooden train carriage with a snowy night outside the windows, the white-haired grandfather in a brown jacket (seen from behind) sits facing the young dark-haired dreamer in a navy sweater."
   },
   {
    "id": "snow-train-m2",
@@ -681,7 +723,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"the grandfather holds a brown leather suitcase on his knees, waiting\",\n  \"must_show\": \"the brown leather suitcase on his knees\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the grandfather with the suitcase on his knees\",\n  \"in_it\": [\n   \"the grandfather\",\n   \"the suitcase\"\n  ],\n  \"also_there\": [\n   \"the seats facing each other\",\n   \"the dreamer\"\n  ]\n },\n \"shot\": \"Seen from in front of the grandfather, about 2 metres off, at the height of the grandfather's eyes: the camera looks at the grandfather, toward the back of the room. A 35mm lens. From left to right across the picture: the grandfather, the middle of the picture, sitting on the seats facing each other, facing the camera, holding the suitcase, seen from the knees up and filling the picture from near its top to its bottom edge. Nobody else is in the picture. The suitcase, the left third of the picture, in the grandfather's hands, filling the picture from its middle to its bottom edge. Also in the picture: the seats facing each other, across the picture from the left third to the right edge, with the grandfather sitting on it, filling the picture from low down to its bottom edge, partly hidden behind the suitcase. Outside the picture, behind the camera: the front of the train.\"\n}",
-   "story_question": 0.77
+   "story_question": 0.77,
+   "blind": "right",
+   "blind_reason": "The same white-haired grandfather in the brown jacket sits in the snow-night carriage holding a brown leather suitcase on his knees, waiting, drawn as if from the dreamer's seat."
   },
   {
    "id": "snow-train-m3",
@@ -712,7 +756,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"the grandfather opens the suitcase; it is full of hundreds of letters, all addressed to the dreamer, and he holds it out so they can see\",\n  \"must_show\": \"the pile of envelopes, all with the dreamer's name\",\n  \"seen\": \"through the dreamer's own eyes\",\n  \"looks_at\": \"the open suitcase full of letters\",\n  \"in_it\": [\n   \"the grandfather\",\n   \"the suitcase\"\n  ],\n  \"also_there\": [\n   \"the seats facing each other\"\n  ],\n  \"how_they_look_now\": [\n   \"the suitcase: appearance is an open suitcase full of letters\"\n  ]\n },\n \"shot\": \"The camera is the dreamer's eyes, on the seats facing each other, at the height of their eyes sitting, looking straight ahead, toward the suitcase: it looks toward the back of the room. A wide lens, about 24mm. Nearest, close, right of the middle of the picture: the grandfather, sitting beside the dreamer on the same seats facing each other, facing the camera, holding the suitcase, their head out of the picture above, seen from the shoulders down to their feet and filling the picture from its top edge to two thirds of the way down. Farthest, close, in the left third of the picture: the suitcase, in the grandfather's hands, filling the picture from its top edge to its middle. Outside the picture, behind the camera: the front of the train.\"\n}",
-   "story_question": 0.6
+   "story_question": 0.6,
+   "blind": "right",
+   "blind_reason": "The grandfather holds the open brown suitcase out toward the dreamer's hands (navy sleeves) and it is packed with many letters, with the carriage and snowy night still around them."
   },
   {
    "id": "snow-train-m4",
@@ -743,7 +789,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"the train has stopped in the middle of a snowy field; the dreamer and their grandfather walk through deep snow toward a red door standing on its own with only a frame, no house around it\",\n  \"must_show\": \"the red door alone in the snow, the grandfather and dreamer walking toward it\",\n  \"dream\": \"a red door stands on its own, no house around it, just the frame\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the red door standing alone in the snow\",\n  \"in_it\": [\n   \"the dreamer\",\n   \"the grandfather\"\n  ],\n  \"also_there\": [\n   \"the old train\",\n   \"the red door\"\n  ]\n },\n \"shot\": \"Seen from behind them, about 4 metres off, at the height of their eyes: the camera looks at the red door, toward the far side of the place, away from the side with the train. A 24mm lens. From left to right across the picture: the grandfather, the left third of the picture, their back to the camera, seen whole and filling the picture from a third of the way down to near its bottom; then the dreamer, right of the middle of the picture, their back to the camera, seen whole and filling the picture from a third of the way down to its middle, partly hidden behind the old train. Nobody else is in the picture. They keep these places in every picture of this scene. Also in the picture: the red door, the middle of the picture, filling the picture from near its top to its middle, partly hidden behind the old train; the old train, across the picture from left of the middle to the right edge, filling the picture from its middle to its bottom edge. Outside the picture, behind the camera: the side with the train.\"\n}",
-   "story_question": 0.67
+   "story_question": 0.67,
+   "blind": "partly",
+   "blind_reason": "The stopped train, the snowy field and the red door standing alone in its frame are all there, but the dreamer is drawn as a short-bobbed woman instead of the young man from m1, m3 and m5, the door already stands ajar with yellow light spilling out before anyone opens it, and nobody is carrying the suitcase."
   },
   {
    "id": "snow-train-m5",
@@ -774,7 +822,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"the grandfather gives the suitcase to the dreamer and nods at the door\",\n  \"must_show\": \"the suitcase being handed over, the nod at the door\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the grandfather handing over the suitcase\",\n  \"in_it\": [\n   \"the grandfather\",\n   \"the dreamer\",\n   \"the suitcase\"\n  ],\n  \"also_there\": [\n   \"the old train\",\n   \"the red door\"\n  ],\n  \"how_they_look_now\": [\n   \"the suitcase: appearance is an open suitcase full of letters\"\n  ]\n },\n \"shot\": \"Seen from beside them, about 3 metres off, at the height of their eyes: the camera looks at the grandfather, toward the left side of the place. A 35mm lens. From left to right across the picture: the grandfather, left of the middle of the picture, in profile, looking toward the right of the picture, seen whole and filling the picture from a third of the way down to its bottom edge; then the dreamer, the right third of the picture, seen three-quarters from behind, looking toward the right of the picture, holding the suitcase, seen from the waist up and filling the picture from near its top to its bottom edge. Nobody else is in the picture. They keep these places in every picture of this scene. The suitcase, the right edge of the picture, in the dreamer's hands, filling the picture from low down to its bottom edge. Also in the picture: the red door, the right edge of the picture, filling the picture from its top edge to two thirds of the way down, partly hidden behind the suitcase. Outside the picture, off to the left: the old train. Outside the picture, off to the right: the side with the red door.\"\n}",
-   "story_question": 0.53
+   "story_question": 0.53,
+   "blind": "partly",
+   "blind_reason": "The grandfather stands beside the dreamer, who now holds the brown suitcase, with the lone red door ahead, but that door is already wide open with warm light pouring out, which belongs to the next moment where the dreamer opens it."
   },
   {
    "id": "snow-train-m6",
@@ -805,7 +855,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"the dreamer opens the door; on the other side there is warm yellow light\",\n  \"must_show\": \"warm yellow light glowing through the doorway in the snow\",\n  \"seen\": \"through the dreamer's own eyes\",\n  \"looks_at\": \"the open door with warm yellow light filling it\",\n  \"in_it\": [],\n  \"also_there\": [\n   \"the grandfather\",\n   \"the suitcase\",\n   \"the old train\",\n   \"the red door\"\n  ]\n },\n \"shot\": \"The camera is the dreamer's eyes, looking straight ahead, toward the red door: it looks toward the side with the red door. A wide lens, about 24mm. Nearest, close, at the right edge of the picture: the suitcase, in the dreamer's hands, filling the picture from low down to its bottom edge. Farthest, close, across the picture from the left edge to the right edge: the red door, filling the picture from its top edge to its bottom edge. Outside the picture, behind the camera: the grandfather. Outside the picture, behind the camera: the old train. At the back of the picture: the side with the red door.\"\n}",
-   "story_question": 0.15
+   "story_question": 0.15,
+   "blind": "partly",
+   "blind_reason": "The lone red door is open onto warm yellow light in the snowy field, but the dreamer is not opening it: only an arm holding the suitcase is visible, standing well back from a door that is already open, and the suitcase now has straps and buckles it did not have before."
   },
   {
    "id": "library-1-m1",
@@ -836,7 +888,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"The dreamer is in the big reading room of the old city library, with green glass lamps on every desk, shelves up to the ceiling, totally quiet.\",\n  \"must_show\": \"the big reading room with green lamps and tall shelves\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the reading room\",\n  \"in_it\": [\n   \"the dreamer\"\n  ],\n  \"also_there\": [\n   \"the high round window\",\n   \"the left door\",\n   \"the right door\",\n   \"bookshelf left\",\n   \"bookshelf right\",\n   \"desk with green lamp\"\n  ]\n },\n \"shot\": \"Seen from behind the dreamer, from across the place, at the height of the dreamer's eyes: the camera looks toward the high round window side. A 24mm lens. From left to right across the picture: the dreamer, the middle of the picture, their back to the camera, seen whole and filling the picture from a third of the way down to two thirds of the way down. Nobody else is in the picture. Also in the picture: desk with green lamp, the left edge of the picture, right beside bookshelf left, filling the picture from low down to its bottom edge; bookshelf left, the left third of the picture, right beside desk with green lamp, filling the picture from its top edge to near its bottom; desk with green lamp, the left third of the picture, filling the picture from low down to near its bottom; the high round window, the middle of the picture, filling the picture from a third of the way down to its middle, partly hidden behind the dreamer; desk with green lamp, the right third of the picture, filling the picture from low down to near its bottom; bookshelf right, the right third of the picture, right beside desk with green lamp, filling the picture from its top edge to near its bottom; desk with green lamp, the right edge of the picture, right beside bookshelf right, filling the picture from low down to its bottom edge. Outside the picture, off to the left: the left door. Outside the picture, off to the right: the right door. Across the picture from the left third to the right third: the high round window side, the front of the place.\"\n}",
-   "story_question": 0.76
+   "story_question": 0.76,
+   "blind": "right",
+   "blind_reason": "The dreamer stands alone in the central aisle of a vaulted reading room, with shelves up to the ceiling, a green glass lamp on every desk and no one else there."
   },
   {
    "id": "library-1-m2",
@@ -849,7 +903,9 @@
    "note": "The same room, water spread across the floor and books lying open on it. The moment has the water over the desks and the books lifting off the shelves like birds.",
    "held": false,
    "readings": [],
-   "state": null
+   "state": null,
+   "blind": "partly",
+   "blind_reason": "Books lie open on the desks and in the water, but the water only reaches the dreamer's ankles (the splashes on the desk tops don't match that), the shelves are still full, and no books are shown floating off them."
   },
   {
    "id": "library-1-m3",
@@ -880,7 +936,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"The older sister is in a little yellow rowing boat, calm, and the dreamer gets in.\",\n  \"must_show\": \"the sister in the yellow boat, calm\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the yellow boat\",\n  \"in_it\": [\n   \"the dreamer\",\n   \"the older sister\",\n   \"the yellow rowing boat\"\n  ],\n  \"also_there\": [\n   \"the high round window\",\n   \"the left door\",\n   \"the right door\",\n   \"bookshelf left\",\n   \"bookshelf right\",\n   \"desk with green lamp\"\n  ]\n },\n \"shot\": \"Seen from behind them, about 3 metres off, at the height of their eyes: the camera looks at the yellow rowing boat, toward the high round window side. A 35mm lens. From left to right across the picture: the dreamer, left of the middle of the picture, in the yellow rowing boat, their back to the camera, seen whole and filling the picture from a third of the way down to near its bottom; then the older sister, right of the middle of the picture, in the yellow rowing boat, their back to the camera, seen whole and filling the picture from a third of the way down to near its bottom. Nobody else is in the picture. They keep these places in every picture of this scene. The yellow rowing boat, across the picture from the left third to the right third, with the dreamer and the older sister in it, filling the picture from low down to its bottom edge. Also in the picture: desk with green lamp, the left edge of the picture, filling the picture from low down to its bottom edge; bookshelf left, the left edge of the picture, right beside desk with green lamp, filling the picture from its top edge to two thirds of the way down; the high round window, the middle of the picture, filling the picture from near its top to two thirds of the way down, partly hidden behind the older sister; bookshelf right, the right edge of the picture, right beside desk with green lamp, filling the picture from its top edge to two thirds of the way down; desk with green lamp, the right edge of the picture, filling the picture from low down to its bottom edge. Outside the picture, off to the left: the left door. Outside the picture, off to the right: the right door. Outside the picture, off to the left: desk with green lamp. Outside the picture, off to the right: desk with green lamp. Across the picture from the left third to the right third: the high round window side, the front of the place.\"\n}",
-   "story_question": 0.7
+   "story_question": 0.7,
+   "blind": "partly",
+   "blind_reason": "The calm sister in a yellow coat sits in a yellow rowing boat and the dreamer steps in, but the boat rests on a dry stone floor with no water, and the room has turned into a plain stone wall with no vault, unlike its neighbours."
   },
   {
    "id": "library-1-m4",
@@ -911,7 +969,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"She rows the boat between the shelves, and a whale swims past under the water, so big it fills the whole aisle.\",\n  \"must_show\": \"the whale filling the aisle under the boat\",\n  \"dream\": \"a whale swims through the flooded library aisle\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the whale beneath the boat\",\n  \"in_it\": [\n   \"the dreamer\",\n   \"the older sister\",\n   \"the whale\",\n   \"the yellow rowing boat\"\n  ],\n  \"also_there\": [\n   \"the high round window\",\n   \"the left door\",\n   \"the right door\",\n   \"bookshelf left\",\n   \"bookshelf right\",\n   \"desk with green lamp\"\n  ]\n },\n \"shot\": \"Seen from in front of them, about 4 metres off, at the height of their eyes: the camera looks at the whale, toward the back of the room. A 24mm lens. From left to right across the picture: the older sister, left of the middle of the picture, in the yellow rowing boat, facing the camera, seen whole and filling the picture from a third of the way down to two thirds of the way down; then the whale, the middle of the picture, facing the camera, seen whole and filling the picture from low down to near its bottom; then the dreamer, right of the middle of the picture, in the yellow rowing boat, facing the camera, seen whole and filling the picture from a third of the way down to two thirds of the way down. Nobody else is in the picture. They keep these places in every picture of this scene. The yellow rowing boat, the middle of the picture, with the dreamer and the older sister in it, filling the picture from its middle to two thirds of the way down, partly hidden behind the whale. Also in the picture: bookshelf right, the left third of the picture, right beside desk with green lamp, filling the picture from its top edge to two thirds of the way down; desk with green lamp, the left third of the picture, filling the picture from its middle to two thirds of the way down; desk with green lamp, left of the middle of the picture, right beside bookshelf right, filling the picture from its middle to its middle, partly hidden behind desk with green lamp; desk with green lamp, right of the middle of the picture, right beside bookshelf left, filling the picture from its middle to its middle, partly hidden behind desk with green lamp; desk with green lamp, the right third of the picture, filling the picture from its middle to two thirds of the way down; bookshelf left, the right third of the picture, right beside desk with green lamp, filling the picture from its top edge to two thirds of the way down. Outside the picture, behind the camera: the high round window. Outside the picture, off to the right: the left door. Outside the picture, off to the left: the right door. Outside the picture, behind the camera: the high round window side.\"\n}",
-   "story_question": 0.71
+   "story_question": 0.71,
+   "blind": "partly",
+   "blind_reason": "A whale fills the flooded central aisle in front of the yellow boat, but it lies on top of the water, not under it, and the sister and dreamer just sit facing the camera with no oars, so no one is rowing."
   },
   {
    "id": "library-1-m5",
@@ -942,7 +1002,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"They row up to the high round window at the top of the room, and the sister opens it. Outside it is morning, the whole city underwater, just rooftops and tops of trees.\",\n  \"must_show\": \"the view through the window of the drowned city\",\n  \"dream\": \"the world outside is completely underwater\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the high round window; outside it l2\",\n  \"in_it\": [\n   \"the dreamer\",\n   \"the older sister\",\n   \"the yellow rowing boat\"\n  ],\n  \"also_there\": [\n   \"the whale\",\n   \"the high round window\",\n   \"the left door\",\n   \"the right door\",\n   \"bookshelf left\",\n   \"bookshelf right\",\n   \"desk with green lamp\"\n  ]\n },\n \"shot\": \"Seen from behind them, about 4 metres off, at the height of their eyes: the camera looks at the high round window, toward the high round window side. A 24mm lens. From left to right across the picture: the older sister, the middle of the picture, their back to the camera, seen whole and filling the picture from a third of the way down to two thirds of the way down, partly hidden behind the dreamer; then the dreamer, the middle of the picture, in the yellow rowing boat, their back to the camera, seen whole and filling the picture from a third of the way down to two thirds of the way down. Nobody else is in the picture. They keep these places in every picture of this scene. The yellow rowing boat, the middle of the picture, with the dreamer in it, right beside bookshelf left, filling the picture from low down to near its bottom. Also in the picture: bookshelf left, the left edge of the picture, right beside desk with green lamp, filling the picture from its top edge to two thirds of the way down; the high round window, the middle of the picture, filling the picture from near its top to two thirds of the way down, partly hidden behind the dreamer; bookshelf right, the right edge of the picture, right beside desk with green lamp, filling the picture from its top edge to two thirds of the way down. Outside the picture, off to the left: the left door. Outside the picture, off to the right: the right door. Outside the picture, off to the left: desk with green lamp. Outside the picture, off to the right: desk with green lamp. Outside the picture, behind the camera: desk with green lamp. Outside the picture, behind the camera: desk with green lamp. Across the picture from the left edge to the right edge: the high round window side, the front of the place.\"\n}",
-   "story_question": 0.56
+   "story_question": 0.56,
+   "blind": "wrong",
+   "blind_reason": "The round window is open onto a flooded city, but the boat sits in a completely dry room at floor level, far below the window. The dreamer holds the oars, and the sister only waves at the window from the floor, so they have not rowed up to it and she cannot be opening it."
   },
   {
    "id": "library-2-m1",
@@ -973,7 +1035,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"The dreamer is in the big reading room with green lamps, quiet.\",\n  \"must_show\": \"the green lamps in the quiet reading room\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the big reading room\",\n  \"in_it\": [\n   \"the dreamer\"\n  ],\n  \"also_there\": [\n   \"the doors\",\n   \"the desks\",\n   \"the shelves\",\n   \"the high round window\",\n   \"the big reading room\",\n   \"the aisle where the whale passes\",\n   \"a green lamp\"\n  ]\n },\n \"shot\": \"Seen from behind the dreamer, from across the place, at the height of the dreamer's eyes: the camera looks at the big reading room, toward the back of the room. A 24mm lens. From left to right across the picture: the dreamer, the middle of the picture, their back to the camera, seen whole and filling the picture from a third of the way down to two thirds of the way down. Nobody else is in the picture. Also in the picture: the shelves, the left third of the picture, filling the picture from near its top to its middle; a green lamp, left of the middle of the picture, right beside the desks, filling the picture from a third of the way down to its middle; the desks, across the picture from the left third to the right edge, right beside a green lamp, filling the picture from its middle to two thirds of the way down; the big reading room, right of the middle of the picture, filling the picture from a third of the way down to its middle; the high round window, the right third of the picture, filling the picture from a third of the way down to its middle, partly hidden behind the big reading room; a green lamp, the right third of the picture, right beside the desks, filling the picture from a third of the way down to its middle. Outside the picture, off to the left: the doors. Outside the picture, off to the right: the shelves. Outside the picture, off to the right: the aisle where the whale passes. Outside the picture, behind the camera: the doors.\"\n}",
-   "story_question": 0.72
+   "story_question": 0.72,
+   "blind": "partly",
+   "blind_reason": "The dark-haired dreamer in a white tee and jeans stands alone and quiet in a reading room with a round window. The dream says there is a green glass lamp on every desk, but only two green lamps sit on a back counter and none of the reading desks have one, although they do in m2 to m4."
   },
   {
    "id": "library-2-m2",
@@ -986,7 +1050,9 @@
    "note": "Water sliding in under the double doors and spreading across the floor.",
    "held": false,
    "readings": [],
-   "state": null
+   "state": null,
+   "blind": "right",
+   "blind_reason": "Water seeps under the closed double doors and spreads in puddles across the tiled floor, with a green lamp on every desk. The room is still quiet."
   },
   {
    "id": "library-2-m3",
@@ -999,7 +1065,9 @@
    "note": "The water risen over the desks, the room half under it.",
    "held": false,
    "readings": [],
-   "state": null
+   "state": null,
+   "blind": "partly",
+   "blind_reason": "The floor is flooded between the rows of desks, but every desk top and lamp stands dry above the water. The water has not risen over the desks as the action states."
   },
   {
    "id": "library-2-m4",
@@ -1012,7 +1080,9 @@
    "note": "The books lifting off the shelves, open, like birds: the moment the dreamer would pause on.",
    "held": false,
    "readings": [],
-   "state": null
+   "state": null,
+   "blind": "partly",
+   "blind_reason": "Open books fly through the air like birds above the flooded aisle. There are only about twenty of them, not hundreds, and every shelf stays completely full."
   },
   {
    "id": "library-2-m5",
@@ -1043,7 +1113,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"The dreamer's older sister appears in a little yellow rowing boat, telling the dreamer to get in.\",\n  \"must_show\": \"the sister in the yellow boat\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the yellow boat with the sister\",\n  \"in_it\": [\n   \"the dreamer\",\n   \"the older sister\",\n   \"the yellow rowing boat\"\n  ],\n  \"also_there\": [\n   \"the doors\",\n   \"the desks\",\n   \"the shelves\",\n   \"the high round window\",\n   \"the big reading room\",\n   \"the aisle where the whale passes\",\n   \"a green lamp\"\n  ]\n },\n \"shot\": \"Seen from behind them, about 4 metres off, at the height of their eyes: the camera looks at the yellow rowing boat, toward the left side of the room. A 35mm lens. From left to right across the picture: the older sister, left of the middle of the picture, in the yellow rowing boat, in profile, looking toward the right of the picture, seen whole and filling the picture from its middle to near its bottom, partly hidden behind the desks; then the dreamer, the right third of the picture, seen three-quarters from behind, looking toward the left of the picture, seen whole and filling the picture from a third of the way down to its bottom edge. Nobody else is in the picture. They keep these places in every picture of this scene. The yellow rowing boat, the middle of the picture, with the older sister in it, right beside the desks, filling the picture from low down to its bottom edge, partly hidden behind the desks. Also in the picture: a green lamp, the left edge of the picture, right beside the desks, filling the picture from its middle to two thirds of the way down; the desks, across the picture from the left edge to left of the middle, right beside the yellow rowing boat, filling the picture from low down to its bottom edge; the shelves, across the picture from the left edge to the right third, filling the picture from near its top to two thirds of the way down. Outside the picture, off to the right: the doors. Outside the picture, behind the camera: the shelves. Outside the picture, off to the left: the high round window. Outside the picture, off to the left: the big reading room. Outside the picture, off to the left: the aisle where the whale passes. Outside the picture, off to the left: a green lamp. At the right edge of the picture: the doors, the front of the place.\"\n}",
-   "story_question": 0.73
+   "story_question": 0.73,
+   "blind": "partly",
+   "blind_reason": "The black-haired sister stands in a yellow rowing boat next to the dreamer. The boat rests on a completely dry floor, so the flood of m4 and m7 is gone, and she has no oars and is not shown speaking to the dreamer."
   },
   {
    "id": "library-2-m6",
@@ -1056,7 +1128,9 @@
    "note": "The dreamer climbing into the boat, right; the floor dry again, for the same reason.",
    "held": true,
    "readings": [],
-   "state": null
+   "state": null,
+   "blind": "partly",
+   "blind_reason": "The dreamer steps up into the yellow boat beside the standing sister. The boat still sits on dry ground with no water anywhere, which contradicts the flooded room in the pictures before and after."
   },
   {
    "id": "library-2-m7",
@@ -1087,7 +1161,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"The sister rows the boat between the shelves.\",\n  \"must_show\": \"the boat moving between shelves\",\n  \"dream\": \"rowing through the flooded library as if normal\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the shelves as the boat passes between them\",\n  \"in_it\": [\n   \"the dreamer\",\n   \"the older sister\",\n   \"the yellow rowing boat\"\n  ],\n  \"also_there\": [\n   \"the doors\",\n   \"the desks\",\n   \"the shelves\",\n   \"the high round window\",\n   \"the big reading room\",\n   \"the aisle where the whale passes\",\n   \"a green lamp\"\n  ]\n },\n \"shot\": \"Seen from behind them, from across the place, at the height of their eyes: the camera looks at the shelves, toward the doors. A 17mm lens. From left to right across the picture: the dreamer, the middle of the picture, in the yellow rowing boat, their back to the camera, seen whole and filling the picture from a third of the way down to its middle, partly hidden behind the yellow rowing boat; then the older sister, the middle of the picture, in the yellow rowing boat, their back to the camera, seen whole and filling the picture from a third of the way down to its middle, partly hidden behind the yellow rowing boat. Nobody else is in the picture. They keep these places in every picture of this scene. The yellow rowing boat, the middle of the picture, with the dreamer and the older sister in it, right beside the desks, filling the picture from its middle to two thirds of the way down. Also in the picture: the shelves, the left third of the picture, filling the picture from near its top to two thirds of the way down; the doors, right of the middle of the picture, filling the picture from a third of the way down to its middle, partly hidden behind the older sister; the desks, the right third of the picture, right beside a green lamp, filling the picture from its middle to its middle, partly hidden behind the older sister; the aisle where the whale passes, the right third of the picture, filling the picture from its middle to two thirds of the way down; the shelves, the right edge of the picture, filling the picture from a third of the way down to its middle. Outside the picture, off to the right: the high round window. Outside the picture, off to the right: the big reading room. Outside the picture, off to the left: a green lamp. Outside the picture, off to the right: a green lamp.\"\n}",
-   "story_question": 0.55
+   "story_question": 0.55,
+   "blind": "right",
+   "blind_reason": "The sister, with black hair and a white blouse, rows the yellow boat with oars down a flooded aisle between shelves and desks. The dreamer sits facing her, and both look as they did in the earlier pictures."
   },
   {
    "id": "library-2-m8",
@@ -1118,7 +1194,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"A whale swims past under the water, so big it fills the whole aisle.\",\n  \"must_show\": \"the whale filling the aisle\",\n  \"dream\": \"a whale swimming inside the library\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the aisle where the whale passes\",\n  \"in_it\": [\n   \"the dreamer\",\n   \"the older sister\",\n   \"the whale\",\n   \"the yellow rowing boat\"\n  ],\n  \"also_there\": [\n   \"the doors\",\n   \"the desks\",\n   \"the shelves\",\n   \"the high round window\",\n   \"the big reading room\",\n   \"the aisle where the whale passes\",\n   \"a green lamp\"\n  ]\n },\n \"shot\": \"Seen from beside them, about 4 metres off, at the height of their eyes: the camera looks at the aisle where the whale passes, toward the right side of the room. A 24mm lens. From left to right across the picture: the dreamer, left of the middle of the picture, in the yellow rowing boat, seen three-quarters from behind, looking toward the left of the picture, seen whole and filling the picture from a third of the way down to two thirds of the way down, partly hidden behind the yellow rowing boat; then the older sister, the middle of the picture, in the yellow rowing boat, seen three-quarters from behind, looking toward the left of the picture, seen whole and filling the picture from a third of the way down to two thirds of the way down, partly hidden behind the dreamer; then the whale, right of the middle of the picture, facing the camera, seen whole and filling the picture from its middle to two thirds of the way down, partly hidden behind the yellow rowing boat. Nobody else is in the picture. They keep these places in every picture of this scene. The yellow rowing boat, across the picture from the left third to the right third, with the dreamer and the older sister in it, right beside the desks, filling the picture from its middle to its bottom edge. Also in the picture: the doors, the left edge of the picture, filling the picture from a third of the way down to its middle, partly hidden behind the desks; a green lamp, the left third of the picture, right beside the desks, filling the picture from a third of the way down to its middle; the desks, across the picture from the left edge to right of the middle, right beside a green lamp, filling the picture from its middle to two thirds of the way down, partly hidden behind the dreamer; the aisle where the whale passes, right of the middle of the picture, filling the picture from its middle to two thirds of the way down, partly hidden behind the whale; the shelves, across the picture from left of the middle to the right edge, filling the picture from near its top to its middle. Outside the picture, off to the left: the shelves. Outside the picture, off to the right: the high round window. Outside the picture, off to the right: the big reading room. Outside the picture, off to the right: a green lamp.\"\n}",
-   "story_question": 0.66
+   "story_question": 0.66,
+   "blind": "partly",
+   "blind_reason": "A huge humpback whale looms across the aisle beside the two sisters in the boat. Its head and back rise high out of the water instead of swimming past under it, as the dream and the action say."
   },
   {
    "id": "library-2-m9",
@@ -1149,7 +1227,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"The sister opens the high round window; outside the whole city is underwater, just rooftops and tops of trees.\",\n  \"must_show\": \"the underwater city through the window\",\n  \"dream\": \"the whole city underwater outside the window\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the high round window being opened\",\n  \"in_it\": [\n   \"the dreamer\",\n   \"the older sister\",\n   \"the yellow rowing boat\"\n  ],\n  \"also_there\": [\n   \"the whale\",\n   \"the doors\",\n   \"the desks\",\n   \"the shelves\",\n   \"the high round window\",\n   \"the big reading room\",\n   \"the aisle where the whale passes\",\n   \"a green lamp\"\n  ],\n  \"how_they_look_now\": [\n   \"the old city library: outside view is outside the whole city is underwater, just rooftops and tops of trees\"\n  ]\n },\n \"shot\": \"Seen from in front of them, about 4 metres off, at the height of their eyes: the camera looks at the high round window, toward the back of the room. A 35mm lens. From left to right across the picture: the older sister, left of the middle of the picture, in the yellow rowing boat, turned three-quarters toward the camera, looking toward the left of the picture, seen whole and filling the picture from a third of the way down to near its bottom, partly hidden behind the dreamer; then the dreamer, the middle of the picture, in the yellow rowing boat, turned three-quarters toward the camera, looking toward the left of the picture, seen whole and filling the picture from a third of the way down to near its bottom, partly hidden behind the yellow rowing boat. Nobody else is in the picture. They keep these places in every picture of this scene. The yellow rowing boat, across the picture from the left edge to the right third, with the dreamer and the older sister in it, right beside the big reading room, filling the picture from low down to its bottom edge. Also in the picture: the shelves, the left edge of the picture, filling the picture from near its top to its middle; the big reading room, left of the middle of the picture, right beside the yellow rowing boat, filling the picture from its middle to two thirds of the way down, partly hidden behind the older sister; the high round window, the middle of the picture, filling the picture from near its top to two thirds of the way down, partly hidden behind the dreamer. Outside the picture, off to the left: the doors. Outside the picture, off to the left: the desks. Outside the picture, behind the camera: the shelves. Outside the picture, off to the left: the aisle where the whale passes. Outside the picture, off to the left: a green lamp. Outside the picture, off to the left: a green lamp. Outside the picture, off to the left: the doors.\"\n}",
-   "story_question": 0.41
+   "story_question": 0.41,
+   "blind": "partly",
+   "blind_reason": "The sister reaches up and opens the round window onto rooftops and trees, but the room is dry: the boat sits on a wooden floor between dry desks with lamps. Outside looks like a submerged underwater scene, not a morning city with rooftops and treetops above the water."
   },
   {
    "id": "library-3-m1",
@@ -1180,7 +1260,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"the dreamer stands by the doors as water slips in under them\",\n  \"must_show\": \"water coming in under the doors\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the doors\",\n  \"in_it\": [\n   \"the dreamer\"\n  ],\n  \"also_there\": [\n   \"the doors\",\n   \"shelves on the left\",\n   \"shelves on the right\",\n   \"the desks\",\n   \"the high round window\",\n   \"the aisle\"\n  ]\n },\n \"shot\": \"Seen from the side, as the dreamer faces the doors, about 2 metres off, at the height of the dreamer's eyes: the camera looks at the doors, toward the right side of the room. A 35mm lens. From left to right across the picture: the dreamer, the middle of the picture, in profile, looking toward the left of the picture, seen from the knees up and filling the picture from near its top to its bottom edge. Nobody else is in the picture. Also in the picture: the doors, the left edge of the picture, filling the picture from its top edge to its bottom edge; shelves on the right, across the picture from left of the middle to the right edge, filling the picture from its top edge to two thirds of the way down; the aisle, the right third of the picture, filling the picture from low down to its bottom edge. Outside the picture, off to the right: shelves on the left. Outside the picture, off to the right: the desks. Outside the picture, off to the right: the high round window. In the left third of the picture: the wall with the doors, the front of the place.\"\n}",
-   "story_question": 0.38
+   "story_question": 0.38,
+   "blind": "right",
+   "blind_reason": "The short-haired woman in a grey T-shirt stands beside the tall wooden double doors, water is spreading across the floor from under them, and green desk lamps and shelves are behind her."
   },
   {
    "id": "library-3-m2",
@@ -1211,7 +1293,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"books float off the shelves, open like birds, tons of them\",\n  \"must_show\": \"books open like birds floating off the shelves\",\n  \"dream\": \"books floating off the shelves, open like birds\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the shelves\",\n  \"in_it\": [\n   \"the dreamer\"\n  ],\n  \"also_there\": [\n   \"the doors\",\n   \"shelves on the left\",\n   \"shelves on the right\",\n   \"the desks\",\n   \"the high round window\",\n   \"the aisle\"\n  ],\n  \"how_they_look_now\": [\n   \"the library: books is floating off shelves, open like birds\"\n  ]\n },\n \"shot\": \"Seen from behind the dreamer, about 4 metres off, at the height of the dreamer's eyes: the camera looks at shelves on the left, toward the left side of the room. A 24mm lens. From left to right across the picture: the dreamer, the middle of the picture, their back to the camera, seen whole and filling the picture from a third of the way down to two thirds of the way down. Nobody else is in the picture. Also in the picture: shelves on the right, the left edge of the picture, filling the picture from its top edge to its bottom edge; the aisle, the left third of the picture, filling the picture from its middle to its bottom edge, partly hidden behind shelves on the right; shelves on the left, left of the middle of the picture, filling the picture from near its top to its middle, partly hidden behind shelves on the right; the doors, the right third of the picture, filling the picture from its top edge to near its bottom. Outside the picture, off to the left: the desks. Outside the picture, off to the left: the high round window. At the right edge of the picture: the wall with the doors, the front of the place.\"\n}",
-   "story_question": 0.42
+   "story_question": 0.42,
+   "blind": "partly",
+   "blind_reason": "Lots of open books fly off the shelves like birds around the dreamer (seen from behind), but the floor is completely dry even though water was already coming in at m1 and is waist-deep at m3, and the room has no desks or green lamps, only a hall of arches."
   },
   {
    "id": "library-3-m3",
@@ -1242,7 +1326,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"the water keeps rising, over the desks and everything\",\n  \"must_show\": \"the water rising over the desks\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the desks\",\n  \"in_it\": [\n   \"the dreamer\"\n  ],\n  \"also_there\": [\n   \"the doors\",\n   \"shelves on the left\",\n   \"shelves on the right\",\n   \"the desks\",\n   \"the high round window\",\n   \"the aisle\"\n  ],\n  \"how_they_look_now\": [\n   \"the library: water is up over the tops of the desks\",\n   \"the library: books is floating off shelves, open like birds\"\n  ]\n },\n \"shot\": \"Seen from behind the dreamer, about 2 metres off, at the height of the dreamer's eyes: the camera looks at the desks, toward the back of the room. A 14mm lens. From left to right across the picture: the dreamer, the middle of the picture, seen three-quarters from behind, looking toward the right of the picture, seen whole and filling the picture from a third of the way down to its bottom edge. Nobody else is in the picture. Also in the picture: the doors, the left edge of the picture, filling the picture from its top edge to its bottom edge; shelves on the right, the left third of the picture, filling the picture from near its top to two thirds of the way down; the desks, the right third of the picture, filling the picture from its middle to its middle; the high round window, the right third of the picture, filling the picture from a third of the way down to its middle, partly hidden behind the desks; the aisle, across the picture from left of the middle to the right edge, filling the picture from its middle to its bottom edge. Outside the picture, off to the right: shelves on the left. Outside the picture, behind the camera: the wall with the doors.\"\n}",
-   "story_question": 0.48
+   "story_question": 0.48,
+   "blind": "partly",
+   "blind_reason": "The dreamer wades waist-deep and the water has reached the reading desks, but the desk tops and their green lamps are still dry above the surface, so the water is not 'over the desks', and only about a dozen books are in the air after the swarm at m2."
   },
   {
    "id": "library-3-m4",
@@ -1273,7 +1359,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"the sister appears in a little yellow rowing boat\",\n  \"must_show\": \"the sister in the yellow rowing boat\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the sister in the boat\",\n  \"in_it\": [\n   \"the dreamer\",\n   \"the sister\",\n   \"the yellow rowing boat\"\n  ],\n  \"also_there\": [\n   \"the doors\",\n   \"shelves on the left\",\n   \"shelves on the right\",\n   \"the desks\",\n   \"the high round window\",\n   \"the aisle\"\n  ],\n  \"how_they_look_now\": [\n   \"the library: water is up over the tops of the desks\",\n   \"the library: books is floating off shelves, open like birds\"\n  ]\n },\n \"shot\": \"Seen from the side, as they face each other, about 3 metres off, at the height of their eyes: the camera looks at the sister, toward the left side of the room. A 35mm lens. From left to right across the picture: the sister, the left third of the picture, in the yellow rowing boat, turned three-quarters toward the camera, looking toward the right of the picture, seen from the knees up and filling the picture from its middle to near its bottom; then the dreamer, the right third of the picture, turned three-quarters toward the camera, looking toward the left of the picture, seen whole and filling the picture from a third of the way down to its bottom edge. Nobody else is in the picture. They keep these places in every picture of this scene. The yellow rowing boat, the left third of the picture, with the sister in it, right beside the aisle, filling the picture from low down to its bottom edge, partly hidden behind the sister. Also in the picture: shelves on the left, across the picture from the left edge to the right third, filling the picture from near its top to near its bottom; the aisle, across the picture from the left edge to right of the middle, right beside the yellow rowing boat, filling the picture from low down to its bottom edge, partly hidden behind the yellow rowing boat. Outside the picture, off to the right: the doors. Outside the picture, off to the left: shelves on the right. Outside the picture, off to the left: the desks. Outside the picture, off to the left: the high round window. At the right edge of the picture: the wall with the doors, the front of the place.\"\n}",
-   "story_question": 0.78
+   "story_question": 0.78,
+   "blind": "right",
+   "blind_reason": "A calm long-haired woman in a white blouse sits in a small yellow rowing boat among the flooded desks and flying books, and the same East Asian short-haired dreamer from m1 stands in the water at the right."
   },
   {
    "id": "library-3-m5",
@@ -1286,7 +1374,9 @@
    "note": "The dreamer climbing in, on deep water, right; but the boat has lost its yellow and reads pale grey.",
    "held": true,
    "readings": [],
-   "state": null
+   "state": null,
+   "blind": "wrong",
+   "blind_reason": "The person stepping into the boat has the dreamer's grey T-shirt and jeans but the face of a young man, not the middle-aged East Asian woman from m1 and m4, and the rowing boat is white/grey instead of yellow."
   },
   {
    "id": "library-3-m6",
@@ -1317,7 +1407,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"the sister rows the boat between the shelves, and a whale swims past under the water\",\n  \"must_show\": \"the whale filling the whole aisle underwater\",\n  \"dream\": \"a whale fills the whole aisle under the water\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the aisle with the whale\",\n  \"in_it\": [\n   \"the dreamer\",\n   \"the sister\",\n   \"the whale\",\n   \"the yellow rowing boat\"\n  ],\n  \"also_there\": [\n   \"the doors\",\n   \"shelves on the left\",\n   \"shelves on the right\",\n   \"the desks\",\n   \"the high round window\",\n   \"the aisle\"\n  ],\n  \"how_they_look_now\": [\n   \"the library: water is up over the tops of the desks\",\n   \"the library: books is floating off shelves, open like birds\"\n  ]\n },\n \"shot\": \"Seen from behind them, about 2 metres off, at the height of their eyes: the camera looks at the aisle, toward the wall with the doors. A 15mm lens. From left to right across the picture: the whale, left of the middle of the picture, lying on the aisle, their back to the camera, seen whole and filling the picture from its middle to two thirds of the way down, partly hidden behind the yellow rowing boat; then the dreamer, the middle of the picture, in the yellow rowing boat, their back to the camera, seen whole and filling the picture from a third of the way down to its middle, partly hidden behind the desks; then the sister, right of the middle of the picture, in the yellow rowing boat, seen three-quarters from behind, looking toward the left of the picture, seen whole and filling the picture from a third of the way down to its middle, partly hidden behind the desks. Nobody else is in the picture. They keep these places in every picture of this scene. The yellow rowing boat, left of the middle of the picture, with the dreamer and the sister in it, right beside the aisle, filling the picture from its middle to near its bottom, partly hidden behind the desks. Also in the picture: shelves on the left, the left edge of the picture, filling the picture from its top edge to two thirds of the way down; the aisle, the left third of the picture, with the whale on it, right beside the yellow rowing boat, filling the picture from its middle to near its bottom, partly hidden behind the desks; the doors, left of the middle of the picture, filling the picture from a third of the way down to its middle; the desks, across the picture from left of the middle to the right edge, right beside the yellow rowing boat, filling the picture from its middle to its bottom edge; shelves on the right, the right third of the picture, filling the picture from its top edge to its middle, partly hidden behind the desks. Outside the picture, off to the right: the high round window. Across the picture from the left edge to right of the middle: the wall with the doors, the front of the place.\"\n}",
-   "story_question": 0.49
+   "story_question": 0.49,
+   "blind": "partly",
+   "blind_reason": "A huge whale fills the aisle beside the boat with the dreamer and sister in it, but the boat is white, not yellow as it is in m4 and m7, the whale's back sits above the water rather than under it, and the sister sits there without rowing."
   },
   {
    "id": "library-3-m7",
@@ -1348,7 +1440,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"the sister rows up to the high round window at the top of the room and opens it\",\n  \"must_show\": \"the open high round window\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the high round window\",\n  \"in_it\": [\n   \"the dreamer\",\n   \"the sister\",\n   \"the yellow rowing boat\"\n  ],\n  \"also_there\": [\n   \"the whale\",\n   \"the doors\",\n   \"shelves on the left\",\n   \"shelves on the right\",\n   \"the desks\",\n   \"the high round window\",\n   \"the aisle\"\n  ],\n  \"how_they_look_now\": [\n   \"the library: window is open\",\n   \"the library: water is up over the tops of the desks\",\n   \"the library: books is floating off shelves, open like birds\"\n  ]\n },\n \"shot\": \"Seen from in front of them, about 3 metres off, at the height of their eyes: the camera looks at the high round window, toward the back of the room. A 35mm lens. From left to right across the picture: the sister, left of the middle of the picture, in the yellow rowing boat, facing the camera, seen whole and filling the picture from a third of the way down to its middle, partly hidden behind the desks; then the dreamer, right of the middle of the picture, in the yellow rowing boat, facing the camera, seen whole and filling the picture from a third of the way down to two thirds of the way down, partly hidden behind the desks. Nobody else is in the picture. They keep these places in every picture of this scene. Also in the picture: the desks, across the picture from the left edge to the right third, right beside the yellow rowing boat, filling the picture from its middle to its bottom edge; the high round window, right of the middle of the picture, right beside the yellow rowing boat, filling the picture from a third of the way down to two thirds of the way down, partly hidden behind the desks. Outside the picture, off to the right: the yellow rowing boat. Outside the picture, behind the camera: the doors. Outside the picture, off to the right: shelves on the left. Outside the picture, off to the left: shelves on the right. Outside the picture, off to the left: the aisle. Outside the picture, behind the camera: the wall with the doors.\"\n}",
-   "story_question": 0.56
+   "story_question": 0.56,
+   "blind": "partly",
+   "blind_reason": "The yellow boat is back and the sister stands reaching toward the round window, but the boat is still in the middle of the room with the window far out of reach, so she has not rowed up to it or opened it, and the seated dreamer now has a younger, different face from m1 and m4."
   },
   {
    "id": "library-3-m8",
@@ -1379,7 +1473,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"outside the window it is morning, and the whole city is underwater, just rooftops and tops of trees\",\n  \"must_show\": \"the city underwater, rooftops and treetops\",\n  \"dream\": \"the whole city is underwater\",\n  \"seen\": \"through the dreamer's own eyes\",\n  \"looks_at\": \"the drowned city\",\n  \"in_it\": [\n   \"the sister\",\n   \"the yellow rowing boat\"\n  ]\n },\n \"shot\": \"The camera is the dreamer's eyes, in the yellow rowing boat, at the height of their eyes sitting, looking straight ahead: it looks toward the view of the drowned city. A wide lens, about 24mm. The inside of the yellow rowing boat frames the picture: its front ahead and the edges of its window around the view. Outside the picture, off to the right: the sister. At the back of the picture: the view of the drowned city. Beyond it all, ahead where they look: the drowned city.\"\n}",
-   "story_question": 0.84
+   "story_question": 0.84,
+   "blind": "partly",
+   "blind_reason": "Through the round window from the yellow boat there is a morning city flooded up to its rooftops and treetops, but the companion's arm at the right belongs to someone in the dreamer's grey T-shirt with a hairy, man's forearm, not the sister in her white blouse."
   },
   {
    "id": "snow-train-2-m1",
@@ -1410,7 +1506,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"The dreamer and their grandfather sit across from each other on the old train. The grandfather looks at the dreamer, waiting, in no hurry.\",\n  \"must_show\": \"the grandfather's quiet waiting look\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the grandfather's face\",\n  \"in_it\": [\n   \"the dreamer\",\n   \"my grandfather\",\n   \"the brown leather suitcase\"\n  ],\n  \"also_there\": [\n   \"the front seat\",\n   \"the back seat\",\n   \"the window\"\n  ]\n },\n \"shot\": \"Seen from the side, as they face each other, close, at the height of their eyes: the camera looks at my grandfather, toward the right side of the room. A 23mm lens. From left to right across the picture: my grandfather, the left third of the picture, sitting on the front seat, turned three-quarters toward the camera, looking toward the right of the picture, seen from the knees up and filling the picture from near its top to its bottom edge; then the dreamer, the right third of the picture, sitting on the back seat, turned three-quarters toward the camera, looking toward the left of the picture, seen from the knees up and filling the picture from near its top to its bottom edge. Nobody else is in the picture. They keep these places in every picture of this scene. The brown leather suitcase, the middle of the picture, right beside the back seat, filling the picture from low down to its bottom edge, partly hidden behind my grandfather. Also in the picture: the window, the left edge of the picture, right beside the front seat, filling the picture from its middle to its bottom edge, partly hidden behind my grandfather; the front seat, the left third of the picture, with my grandfather sitting on it, right beside the brown leather suitcase, filling the picture from low down to its bottom edge, partly hidden behind my grandfather; the back seat, the right third of the picture, with the dreamer sitting on it, right beside the brown leather suitcase, filling the picture from low down to its bottom edge, partly hidden behind the dreamer. At the left edge of the picture: the window wall, the front of the place.\"\n}",
-   "story_question": 0.8
+   "story_question": 0.8,
+   "blind": "partly",
+   "blind_reason": "The dreamer and the grandfather sit facing each other in a compartment with snow at the window, and the grandfather watches calmly, but the brown suitcase stands on the floor at the dreamer's feet instead of being with the grandfather (the dream puts it on his knees, and m2 does too), and the dreamer's smooth young face doesn't match the older, lined face in m2 to m7."
   },
   {
    "id": "snow-train-2-m2",
@@ -1441,7 +1539,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"The grandfather holds the brown leather suitcase on his knees, both hands on it, old and worn at the corners.\",\n  \"must_show\": \"his hands on the worn suitcase\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the suitcase on his knees\",\n  \"in_it\": [\n   \"the dreamer\",\n   \"my grandfather\",\n   \"the brown leather suitcase\"\n  ],\n  \"also_there\": [\n   \"the front seat\",\n   \"the back seat\",\n   \"the window\"\n  ]\n },\n \"shot\": \"Seen from the side, as they face each other, close, at the height of their eyes: the camera looks at the brown leather suitcase, toward the right side of the room. A 31mm lens. From left to right across the picture: my grandfather, across the picture from the left edge to left of the middle, sitting on the front seat, turned three-quarters toward the camera, looking toward the right of the picture, holding the brown leather suitcase, their head out of the picture above, seen from the shoulders down to their feet and filling the picture from its top edge to its bottom edge, partly hidden behind the brown leather suitcase; then the dreamer, across the picture from right of the middle to the right edge, sitting on the back seat, turned three-quarters toward the camera, looking toward the left of the picture, their head out of the picture above, seen from the shoulders down to their feet and filling the picture from its top edge to its bottom edge. Nobody else is in the picture. They keep these places in every picture of this scene. The brown leather suitcase, the left third of the picture, in my grandfather's hands, filling the picture from a third of the way down to its bottom edge. Also in the picture: the front seat, left of the middle of the picture, with my grandfather sitting on it, right beside the window, filling the picture from a third of the way down to its bottom edge, partly hidden behind the brown leather suitcase; the back seat, the right third of the picture, with the dreamer sitting on it, filling the picture from a third of the way down to its bottom edge, partly hidden behind the dreamer. Outside the picture, off to the left: the window. Outside the picture, off to the left: the window wall.\"\n}",
-   "story_question": 0.74
+   "story_question": 0.74,
+   "blind": "partly",
+   "blind_reason": "The worn brown suitcase with metal corners sits on the grandfather's knees, but only one hand rests on it, and the train has changed from m1's facing-bench compartment to an open carriage with an aisle, where the dreamer sits across the aisle looking away out of the window instead of facing him."
   },
   {
    "id": "snow-train-2-m3",
@@ -1454,7 +1554,9 @@
    "note": "He opens it and turns it toward the dreamer: letters, many of them.",
    "held": true,
    "readings": [],
-   "state": null
+   "state": null,
+   "blind": "partly",
+   "blind_reason": "The grandfather opens the suitcase to show bundled letters, but it stays on his lap with its lid raised on the dreamer's side, so the contents face the camera and not the dreamer, and the dreamer still sits across the aisle, not across from him."
   },
   {
    "id": "snow-train-2-m4",
@@ -1485,7 +1587,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"The train has stopped in the middle of nowhere, all snowy. The dreamer and grandfather get off into the deep snow.\",\n  \"must_show\": \"the vast white and blue emptiness\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the snowy landscape and the stopped train\",\n  \"in_it\": [\n   \"the dreamer\",\n   \"my grandfather\",\n   \"the brown leather suitcase\"\n  ],\n  \"also_there\": [\n   \"the stopped train\"\n  ],\n  \"how_they_look_now\": [\n   \"the brown leather suitcase: lid is open revealing many letters\"\n  ]\n },\n \"shot\": \"Seen from behind them, about 4 metres off, at the height of their eyes: the camera looks at the stopped train, toward the direction of the red door. A 24mm lens. From left to right across the picture: the dreamer, the left third of the picture, their back to the camera, seen whole and filling the picture from a third of the way down to two thirds of the way down, partly hidden behind the stopped train; then my grandfather, the right third of the picture, their back to the camera, holding the brown leather suitcase, seen whole and filling the picture from a third of the way down to two thirds of the way down, partly hidden behind the stopped train. Nobody else is in the picture. They keep these places in every picture of this scene. The brown leather suitcase, the right third of the picture, in my grandfather's hands, filling the picture from a third of the way down to its middle. Also in the picture: the stopped train, across the picture from the left edge to the right edge, filling the picture from low down to its bottom edge. At the back of the picture: the direction of the red door.\"\n}",
-   "story_question": 0.41
+   "story_question": 0.41,
+   "blind": "partly",
+   "blind_reason": "The two stand outside a stopped steam locomotive in a flat snowy plain, but the grandfather already holds the suitcase open with its letters showing, as if handing it over (the giving belongs to m6), the snow is a flat shallow surface rather than deep, and the locomotive is oddly toy-sized and has no carriages."
   },
   {
    "id": "snow-train-2-m5",
@@ -1516,7 +1620,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"They walk side by side through the deep snow toward a red door standing on its own, no house or wall.\",\n  \"must_show\": \"the bright red door against the snow\",\n  \"dream\": \"a door standing on its own, no house or wall\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the red door in the distance\",\n  \"in_it\": [\n   \"the dreamer\",\n   \"my grandfather\",\n   \"the brown leather suitcase\",\n   \"the red door\"\n  ],\n  \"also_there\": [\n   \"the stopped train\"\n  ],\n  \"how_they_look_now\": [\n   \"the brown leather suitcase: lid is open revealing many letters\"\n  ]\n },\n \"shot\": \"Seen from behind them, about 4 metres off, at the height of their eyes: the camera looks at the red door, toward the direction of the red door. A 24mm lens. From left to right across the picture: the dreamer, the left third of the picture, their back to the camera, seen whole and filling the picture from a third of the way down to two thirds of the way down; then my grandfather, the right third of the picture, their back to the camera, holding the brown leather suitcase, seen whole and filling the picture from a third of the way down to two thirds of the way down. Nobody else is in the picture. They keep these places in every picture of this scene. The red door, the middle of the picture, filling the picture from a third of the way down to its middle. The brown leather suitcase, the right third of the picture, in my grandfather's hands, filling the picture from a third of the way down to its middle. Outside the picture, behind the camera: the stopped train. At the back of the picture: the direction of the red door.\"\n}",
-   "story_question": 0.78
+   "story_question": 0.78,
+   "blind": "right",
+   "blind_reason": "Seen from behind, the dreamer and the grandfather walk side by side through snow toward a lone red door in its frame with no house or wall, and the grandfather carries the closed suitcase."
   },
   {
    "id": "snow-train-2-m6",
@@ -1547,7 +1653,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"The grandfather gives the suitcase to the dreamer, holding it out without words, then nods at the door.\",\n  \"must_show\": \"the transfer of the suitcase\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the grandfather holding out the suitcase\",\n  \"in_it\": [\n   \"the dreamer\",\n   \"my grandfather\",\n   \"the brown leather suitcase\",\n   \"the red door\"\n  ],\n  \"also_there\": [\n   \"the stopped train\"\n  ],\n  \"how_they_look_now\": [\n   \"the brown leather suitcase: lid is open revealing many letters\"\n  ]\n },\n \"shot\": \"Seen from the side, as they face each other, about 2 metres off, at the height of their eyes: the camera looks at my grandfather, toward the direction of the red door. A 35mm lens. From left to right across the picture: the dreamer, the left third of the picture, in profile, looking toward the right of the picture, holding the brown leather suitcase, seen from the knees up and filling the picture from near its top to its middle, partly hidden behind the brown leather suitcase; then my grandfather, the right third of the picture, in profile, looking toward the left of the picture, seen from the knees up and filling the picture from near its top to its bottom edge. Nobody else is in the picture. They keep these places in every picture of this scene. The brown leather suitcase, the left third of the picture, in the dreamer's hands, filling the picture from its middle to its bottom edge. The red door, the middle of the picture, filling the picture from its top edge to its bottom edge. Outside the picture, behind the camera: the stopped train. At the back of the picture: the direction of the red door.\"\n}",
-   "story_question": 0.49
+   "story_question": 0.49,
+   "blind": "right",
+   "blind_reason": "In front of the lone red door, the grandfather holds the suitcase of letters out to the dreamer, who takes it, and both faces match the earlier pictures."
   },
   {
    "id": "snow-train-2-m7",
@@ -1578,7 +1686,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"The dreamer and my grandfather open the red door, and warm yellow light spills out from the other side.\",\n  \"must_show\": \"the yellow light through the door\",\n  \"dream\": \"the door leads to warm yellow light with no visible destination\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the open red door with warm yellow light\",\n  \"in_it\": [\n   \"the dreamer\",\n   \"my grandfather\",\n   \"the brown leather suitcase\",\n   \"the red door\"\n  ],\n  \"also_there\": [\n   \"the stopped train\"\n  ],\n  \"how_they_look_now\": [\n   \"the red door: state is open\",\n   \"the snowy nowhere: lighting is warm yellow light spilling from the open door\",\n   \"the brown leather suitcase: lid is open revealing many letters\"\n  ]\n },\n \"shot\": \"Seen from behind them, about 2 metres off, at the height of their eyes: the camera looks at the red door, toward the direction of the red door. A 50mm lens. From left to right across the picture: my grandfather, across the picture from the left third to right of the middle, their back to the camera, seen from the waist up and filling the picture from near its top to its bottom edge; then the dreamer, right of the middle of the picture, their back to the camera, holding the brown leather suitcase, seen from the knees up and filling the picture from near its top to its bottom edge, partly hidden behind my grandfather. Nobody else is in the picture. They keep these places in every picture of this scene. The red door, across the picture from left of the middle to the right third, filling the picture from its top edge to its bottom edge, partly hidden behind the dreamer. The brown leather suitcase, the right third of the picture, in the dreamer's hands, filling the picture from its middle to its bottom edge. Outside the picture, behind the camera: the stopped train. At the back of the picture: the direction of the red door.\"\n}",
-   "story_question": 0.64
+   "story_question": 0.64,
+   "blind": "partly",
+   "blind_reason": "The red door stands open with warm yellow light spilling onto the snow, but nobody is opening it: both stand metres away, back at m5's distance (after being right at the door in m6) and with swapped sides, while the dreamer dangles the suitcase with its lid hanging open."
   },
   {
    "id": "orchard-m1",
@@ -1609,7 +1719,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"The dreamer and Tomas wait in the tiny brass lift as it keeps climbing far too long.\",\n  \"must_show\": \"the tiny brass lift with the folding gate\",\n  \"dream\": \"the lift keeps going up way too long\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"the brass walls and folding metal gate\",\n  \"in_it\": [\n   \"the dreamer\",\n   \"Tomas\"\n  ]\n },\n \"shot\": \"Seen from behind them, close, at the height of their eyes: the camera looks toward the folding metal gate. A 14mm lens. From left to right across the picture: the dreamer, left of the middle of the picture, their back to the camera, their head out of the picture above, seen from the shoulders down to their feet and filling the picture from its top edge to its bottom edge; then Tomas, right of the middle of the picture, their back to the camera, their head out of the picture above, seen from the shoulders down to their feet and filling the picture from its top edge to its bottom edge. Nobody else is in the picture. They keep these places in every picture of this scene. Across the picture from the left third to the right third: the folding metal gate, the front of the place.\"\n}",
-   "story_question": 0.58
+   "story_question": 0.58,
+   "blind": "wrong",
+   "blind_reason": "The brass lift and folding gate are right, but Tomas is already a small boy in shorts and knee socks beside the adult dreamer, when the dream says they were both adults at this point, so the change of age happens one moment too early."
   },
   {
    "id": "orchard-m2",
@@ -1640,7 +1752,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"The dreamer turns and sees Tomas as a boy of about ten in their old school uniform, staring at the gate.\",\n  \"must_show\": \"Tomas as a child in the old school uniform, not noticing anything wrong\",\n  \"dream\": \"Tomas is a child again and doesn't notice\",\n  \"seen\": \"through the dreamer's own eyes\",\n  \"looks_at\": \"Tomas, now a child in grey shorts and shirt, staring at the gate\",\n  \"in_it\": [\n   \"Tomas\"\n  ],\n  \"how_they_look_now\": [\n   \"Tomas: age is about ten\",\n   \"Tomas: wardrobe is old school uniform, grey shorts and shirt\"\n  ]\n },\n \"shot\": \"The camera is the dreamer's eyes, looking straight ahead, toward Tomas: it looks toward the right side of the room. A wide lens, about 24mm. Nearest, close, across the picture from the left third to the right third: Tomas, in profile, looking toward the left of the picture, seen from the shoulders up and filling the picture from near its top to its bottom edge. At the left edge of the picture: the folding metal gate, the front of the place.\"\n}",
-   "story_question": 0.65
+   "story_question": 0.65,
+   "blind": "partly",
+   "blind_reason": "A boy of about ten stands in profile looking toward the gate while the adult dreamer's arm rests on the rail, but he wears a plaid flannel shirt instead of a school uniform, which also differs from the plain grey shirt and shorts he has in m1, m3 and m5 (the lift light also changes from a dome lamp to a bare bulb)."
   },
   {
    "id": "orchard-m3",
@@ -1653,7 +1767,9 @@
    "note": "both waiting in the lift",
    "held": true,
    "readings": [],
-   "state": null
+   "state": null,
+   "blind": "right",
+   "blind_reason": "The adult dreamer and the boy Tomas, in grey shirt, shorts and knee socks, stand silently side by side facing the closed folding gate of the brass lift."
   },
   {
    "id": "orchard-m4",
@@ -1684,7 +1800,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"The lift gate opens on its own onto an orchard at dusk with rows of apple trees, all the apples glowing soft like little lamps.\",\n  \"must_show\": \"the orchard glowing at dusk where a hotel corridor should be\",\n  \"dream\": \"the lift opens onto an orchard, not a corridor\",\n  \"seen\": \"through the dreamer's own eyes\",\n  \"looks_at\": \"the orchard rows with glowing apples through the open gate\",\n  \"in_it\": [],\n  \"also_there\": [\n   \"the empty rows of apple trees where Tomas was\"\n  ]\n },\n \"shot\": \"The camera is the dreamer's eyes, looking straight ahead, toward the empty rows of apple trees where Tomas was: it looks toward the far side of the place, away from the side where the lift gate opens. A wide lens, about 24mm. Nearest, a little way off, across the picture from the left edge to the right edge: the empty rows of apple trees where Tomas was, filling the picture from low down to its bottom edge. Outside the picture, behind the camera: the side where the lift gate opens.\"\n}",
-   "story_question": 0.3
+   "story_question": 0.3,
+   "blind": "partly",
+   "blind_reason": "Seen from the dreamer's eyes, the folding gate is open onto rows of apple trees under a dim sky with many softly glowing apples, but the dreamer's hands grip the gate rods as if pulling it open, when the dream says it opens on its own."
   },
   {
    "id": "orchard-m5",
@@ -1715,7 +1833,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"Tomas runs out ahead between the trees.\",\n  \"must_show\": \"Tomas running ahead into the glowing orchard\",\n  \"seen\": \"from outside\",\n  \"looks_at\": \"Tomas running between the trees\",\n  \"in_it\": [\n   \"Tomas\"\n  ],\n  \"also_there\": [\n   \"the dreamer\",\n   \"the empty rows of apple trees where Tomas was\"\n  ],\n  \"how_they_look_now\": [\n   \"Tomas: age is about ten\",\n   \"Tomas: wardrobe is old school uniform, grey shorts and shirt\"\n  ]\n },\n \"shot\": \"Seen from in front of Tomas, from across the place, at the height of Tomas's eyes: the camera looks at Tomas, toward the side where the lift gate opens. A 35mm lens. From left to right across the picture: Tomas, the middle of the picture, standing on the empty rows of apple trees where Tomas was, facing the camera, seen from the shoulders up and filling the picture from near its top to two thirds of the way down. Nobody else is in the picture. Also in the picture: the empty rows of apple trees where Tomas was, across the picture from the left third to the right third, with Tomas on it, filling the picture from low down to its bottom edge. At the back of the picture: the side where the lift gate opens.\"\n}",
-   "story_question": 0.16
+   "story_question": 0.16,
+   "blind": "partly",
+   "blind_reason": "The boy Tomas, in the same grey shirt, shorts and knee socks, runs away down the path between rows of trees, but the trees are bare and dark with no glowing apples, which disagrees with m4 and with the dream's every apple glowing."
   },
   {
    "id": "orchard-m6",
@@ -1746,7 +1866,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"The white horse stands very still in the middle of the orchard, lowering its head so the dreamer can touch its nose.\",\n  \"must_show\": \"the warm touch of the horse's nose\",\n  \"seen\": \"through the dreamer's own eyes\",\n  \"looks_at\": \"the horse's lowered head and the dreamer's hand on its warm nose\",\n  \"in_it\": [\n   \"the white horse\"\n  ],\n  \"also_there\": [\n   \"Tomas\",\n   \"the empty rows of apple trees where Tomas was\"\n  ]\n },\n \"shot\": \"The camera is the dreamer's eyes, looking straight ahead, toward the white horse: it looks toward the far side of the place, away from the side where the lift gate opens. A wide lens, about 24mm. Nearest, close, across the picture from the left third to the right third: the white horse, facing the camera, seen from the waist up and filling the picture from a third of the way down to its bottom edge. Outside the picture, off to the left: Tomas. Outside the picture, off to the left: the empty rows of apple trees where Tomas was. Outside the picture, off to the left: the side where the lift gate opens.\"\n}",
-   "story_question": 0.43
+   "story_question": 0.43,
+   "blind": "partly",
+   "blind_reason": "A white horse stands in the orchard with its muzzle held low to the dreamer's hands, which touch its nose, but the trees around it are again bare with no glowing apples, unlike m4."
   },
   {
    "id": "orchard-m7",
@@ -1777,7 +1899,9 @@
     }
    ],
    "state": "{\n \"moment\": {\n  \"action\": \"The dreamer looks for Tomas and finds him gone.\",\n  \"must_show\": \"the empty orchard where Tomas has vanished\",\n  \"seen\": \"through the dreamer's own eyes\",\n  \"looks_at\": \"the empty rows of apple trees where Tomas was\",\n  \"in_it\": [],\n  \"also_there\": [\n   \"Tomas\",\n   \"the white horse\",\n   \"the empty rows of apple trees where Tomas was\"\n  ]\n },\n \"shot\": \"The camera is the dreamer's eyes, looking straight ahead, toward the empty rows of apple trees where Tomas was: it looks toward the side where the lift gate opens. A wide lens, about 24mm. Nearest, far off, in the middle of the picture: Tomas, standing on the empty rows of apple trees where Tomas was, facing the camera, seen whole and filling the picture from a third of the way down to a third of the way down. Farthest, far off, in the middle of the picture: the empty rows of apple trees where Tomas was, with Tomas on it, filling the picture from a third of the way down to its middle. Outside the picture, off to the right: the white horse. At the back of the picture: the side where the lift gate opens.\"\n}",
-   "story_question": 0.4
+   "story_question": 0.4,
+   "blind": "partly",
+   "blind_reason": "The path between the trees is empty and Tomas is gone, but the orchard has no glowing apples (unlike m4), and the dreamer's hands are pulling at their own shirt hem, which does not read as looking around for him."
   }
  ]
 }
