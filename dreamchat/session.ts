@@ -100,7 +100,7 @@ import {
   turnedInto,
   isWhole,
 } from './frames';
-import { checkReferences, preflight, readPrompt } from './gate';
+import { actsWhenLogging, checkReferences, checksMode, gateFacts, preflight, readPrompt } from './gate';
 import {
   type CutSheet,
   cutSheet,
@@ -430,7 +430,23 @@ export async function planShots(
     return !!c && !c.ok;
   };
   const held = blocked.scenes.filter((sc) => sc.moments.some((m) => heldMoment(m.id)));
-  if (deps.jev && deps.block && held.length) {
+  // With the checks only logging (DREAMCHAT_CHECKS=log), nothing is planned again for what the check
+  // found: its readings stay on the prep and in the log, and the first plan is kept.
+  if (checksMode() === 'log')
+    for (const sc of held)
+      recordJev({
+        kind: 'transition',
+        stage: 'plan',
+        to: 'previs',
+        moment: sc.id,
+        facts: [],
+        decision: 'logged',
+        reason: `"storyboard complete?" found ${sc.moments
+          .filter((m) => heldMoment(m.id))
+          .map((m) => m.id)
+          .join(', ')} at odds with the dream; only logged, so the first plan is kept`,
+      });
+  else if (deps.jev && deps.block && held.length) {
     const jev = deps.jev;
     const block = deps.block;
     const fix = Object.fromEntries(
@@ -945,7 +961,8 @@ export async function storyboardCheck(
       to: STORYBOARD.from,
       moment: m.id,
       facts: [],
-      decision: 'held',
+      // With the checks only logging (DREAMCHAT_CHECKS=log), what it found holds nothing.
+      decision: checksMode() === 'log' ? 'logged' : 'held',
       reason: reasons.join('; '),
     });
     return { ok: false, view, readings: [], reasons };
@@ -958,7 +975,7 @@ export async function storyboardCheck(
     to: ok ? STORYBOARD.to : STORYBOARD.from,
     moment: m.id,
     facts: readings,
-    decision: ok ? 'cleared' : 'held',
+    decision: ok ? 'cleared' : checksMode() === 'log' ? 'logged' : 'held',
     reason: ok ? 'every fact passed its bar' : reasons.join('; '),
   });
   return { ok, view, readings, reasons };
@@ -1276,6 +1293,24 @@ const sketchGivesWay = (findings: string[]) =>
   findings.every((f) =>
     /^(its instructions may contradict each other|what it shows is not clear enough to draw)/.test(f),
   );
+
+/**
+ * What a check made the harness do to a picture, logged with what it found: held it, reworded it,
+ * set its brief aside, left it undrawn, or drew it although it still held (planning again is logged
+ * where it is done). Counted against the checks only logging (DREAMCHAT_CHECKS=log) by
+ * evals/checks-log.ts; with them only logging, none of these happens.
+ */
+function acted(item: Pick<Item, 'id'>, what: string, reasons: string[]): void {
+  recordJev({
+    kind: 'transition',
+    stage: 'check',
+    to: what,
+    moment: item.id,
+    facts: [],
+    decision: what,
+    reason: reasons.join('; ') || what,
+  });
+}
 
 /** A picture the confidence gate held back, with its reasons. */
 class Held extends Error {
@@ -2402,7 +2437,15 @@ export class SessionStore {
     // For measuring the checks on real pictures only (DREAMCHAT_DRAW_HELD=1): drawn anyway, from the
     // plan it has, the reasons it would have been held kept on it to judge them against.
     const drawHeld = process.env.DREAMCHAT_DRAW_HELD === '1';
-    if (drawHeld && view && checked && checked.view === view && !checked.ok)
+    // With the checks only logging (DREAMCHAT_CHECKS=log), what it found is kept on the picture, which
+    // is drawn from the plan it has: nothing is planned again, held or left undrawn for it.
+    const logOnly = checksMode() === 'log';
+    if (logOnly)
+      frame.overrode =
+        view && checked && checked.view === view && !checked.ok
+          ? checked.reasons.map((r) => `storyboard: ${r}`)
+          : undefined;
+    else if (drawHeld && view && checked && checked.view === view && !checked.ok)
       frame.overrode = checked.reasons.map((r) => `storyboard: ${r}`);
     else if (view && checked && checked.view === view && !checked.ok) {
       // Planned once more, told what was found; kept only if the shot then passes, and drawn from it.
@@ -2412,8 +2455,11 @@ export class SessionStore {
       // balloons (Meads, 25 Sep).
       const sc = s.draft?.breakdown?.scenes.find((x) => x.moments.some((y) => y.id === frame.id));
       const reasons = checked.reasons.map((r) => `storyboard: ${r}`);
-      if (sc && this.replannedScenes.has(`${s.id}:${sc.id}`) && givesWay(reasons)) frame.overrode = reasons;
-      else if (sc && this.replannedScenes.has(`${s.id}:${sc.id}`)) {
+      if (sc && this.replannedScenes.has(`${s.id}:${sc.id}`) && givesWay(reasons)) {
+        frame.overrode = reasons;
+        acted(frame, 'drawn although held', reasons);
+      } else if (sc && this.replannedScenes.has(`${s.id}:${sc.id}`)) {
+        acted(frame, 'left undrawn', reasons);
         Object.assign(frame, {
           status: 'failed',
           held: undefined,
@@ -2421,6 +2467,7 @@ export class SessionStore {
         });
         return;
       } else {
+        acted(frame, 'held', reasons);
         Object.assign(frame, { status: 'waiting', held: reasons });
         return;
       }
@@ -2452,7 +2499,8 @@ export class SessionStore {
     let findings = await this.gateFindings(s, frame, built.prompt, built.references, inView);
     // The brief is the one line a model wrote from the view: where the gate finds the prompt at odds
     // with itself there, the view read off the render says the same without it.
-    if (frame.shot && findings.length && frame.gate?.around?.line.startsWith('The shot')) {
+    if (!logOnly && frame.shot && findings.length && frame.gate?.around?.line.startsWith('The shot')) {
+      acted(frame, 'brief set aside', findings);
       frame.shot = undefined;
       built = this.framed(s, frame, layout, 'frames', once);
       findings = await this.gateFindings(s, frame, built.prompt, built.references, inView);
@@ -2474,6 +2522,7 @@ export class SessionStore {
       };
       const fields = await this.deps.reword(built.prompt, findings, frame.fields, cast).catch(() => null);
       if (!fields) break;
+      acted(frame, 'reworded', findings);
       const changed = Object.keys(fields).filter((k) => fields[k]?.value !== frame.fields[k]?.value);
       frame.reworded = [...new Set([...(frame.reworded ?? []), ...changed])];
       frame.fields = fields;
@@ -2487,11 +2536,19 @@ export class SessionStore {
     // (Meads m9, 25 Sep). Planned once more as for "storyboard complete?", told what was found.
     const onCamera = findings.filter((f) => f.includes('around: "What the camera sees'));
     if (drawHeld && findings.length) {
+      acted(frame, 'drawn although held', findings);
       frame.overrode = [...(frame.overrode ?? []), ...findings];
       findings = [];
     }
     if (onCamera.length && view && findings.length && (await this.replanForHold(s, frame, { view, reasons: onCamera })))
       return this.startFrame(s, frame, turn, before, { fields: wordsBefore, reworded: rewordedBefore });
+    if (logOnly && findings.length) {
+      // Only a fault code knows for certain is left: the images and the words disagree, which no
+      // picture can put right.
+      acted(frame, 'left undrawn', findings);
+      Object.assign(frame, { status: 'failed', held: undefined, error: `not drawn: ${findings.join('; ')}` });
+      return;
+    }
     if (findings.length) {
       // Reworded, and planned again where its camera was at odds, and still held: left undrawn, and
       // what follows is drawn without it. Held, it held up every moment after it: the night market's
@@ -2499,6 +2556,7 @@ export class SessionStore {
       const scene = s.draft?.breakdown?.scenes.find((x) => x.moments.some((y) => y.id === frame.id));
       const tried = !onCamera.length || (!!scene && this.replannedScenes.has(`${s.id}:${scene.id}`));
       if (tried && this.deps.block && givesWay(findings)) {
+        acted(frame, 'drawn although held', findings);
         frame.overrode = [...(frame.overrode ?? []), ...findings];
         findings = [];
         // Drawn from its words as told: a rewording the gate still held is no better, and one lost
@@ -2511,6 +2569,7 @@ export class SessionStore {
           built = this.framed(s, frame, layout, 'frames', once);
         }
       } else if (tried && this.deps.block) {
+        acted(frame, 'left undrawn', findings);
         Object.assign(frame, {
           status: 'failed',
           held: undefined,
@@ -2518,6 +2577,7 @@ export class SessionStore {
         });
         return;
       } else {
+        acted(frame, 'held', findings);
         Object.assign(frame, { status: 'waiting', held: findings });
         return;
       }
@@ -2674,7 +2734,27 @@ export class SessionStore {
       edit: item.kind === 'ghost',
     });
     if (read.reading) item.gate = read.reading;
-    return [...fixed, ...read.findings];
+    const all = [...fixed, ...read.findings];
+    // With the checks only logging (DREAMCHAT_CHECKS=log), only a fault code knows for certain acts;
+    // everything else found is kept on the picture as what the checks would have held it for.
+    const log = checksMode() === 'log';
+    const acting = log ? all.filter(actsWhenLogging) : all;
+    if (log) {
+      const logged = all.filter((f) => !actsWhenLogging(f));
+      const shot = (item.overrode ?? []).filter((f) => f.startsWith('storyboard: '));
+      item.overrode = shot.length || logged.length ? [...shot, ...logged] : undefined;
+    }
+    // Every reading, for every picture, with its bars: what S7 labels against the pictures drawn.
+    recordJev({
+      kind: 'transition',
+      stage: 'gate',
+      to: acting.length ? 'held' : 'draw',
+      moment: item.id,
+      facts: read.reading ? gateFacts(read.reading, { sheet, edit: item.kind === 'ghost' }) : [],
+      decision: !all.length ? 'cleared' : !log ? 'found' : acting.length ? 'held' : 'logged',
+      reason: all.join('; ') || 'every reading passed its bar',
+    });
+    return acting;
   }
 
   /**
@@ -2912,6 +2992,7 @@ export class SessionStore {
     // An in-between picture the gate holds is left undrawn, and what needed it is drawn without it
     // from the sketch: held, the heron's change kept every moment after it waiting (26 Sep).
     if (await this.hold(s, ghost, prompt, references, [])) {
+      acted(ghost, this.deps.block ? 'left undrawn' : 'held', ghost.held ?? []);
       if (this.deps.block) fail(`not drawn: unsure of its instructions (${(ghost.held ?? []).join('; ')})`);
       return;
     }
@@ -3162,6 +3243,7 @@ export class SessionStore {
           findings.some((f) => f.includes(`around: "- ${r.slice(0, 40)}`)),
         );
         if (blamed.length) {
+          acted(item, 'repair set aside', findings);
           snapshot.repairFor = (snapshot.repairFor ?? []).filter((r) => !blamed.includes(r));
           if (!snapshot.repairFor.length) snapshot.repairFor = undefined;
           findings = await this.gateFindings(s, snapshot, sheetPrompt(snapshot, style), [], []);
@@ -3182,12 +3264,17 @@ export class SessionStore {
             )
             .catch(() => null);
           if (!fields) break;
+          acted(item, 'reworded', findings);
           snapshot.fields = fields;
           findings = await this.gateFindings(s, snapshot, sheetPrompt(snapshot, style), [], []);
         }
-        if (findings.length && ((opts.guess && findings.every(unclearOnly)) || sketchGivesWay(findings)))
+        if (findings.length && ((opts.guess && findings.every(unclearOnly)) || sketchGivesWay(findings))) {
+          acted(item, 'drawn although held', findings);
           snapshot.overrode = findings;
-        else if (findings.length) throw new Held(findings);
+        } else if (findings.length) {
+          acted(item, 'held', findings);
+          throw new Held(findings);
+        }
         return sheets.start({
           item: snapshot,
           style,
@@ -3210,7 +3297,7 @@ export class SessionStore {
               it.repairFor = snapshot.repairFor;
               it.gate = snapshot.gate;
               it.held = undefined;
-              if (snapshot.overrode) it.overrode = snapshot.overrode;
+              if (snapshot.overrode || checksMode() === 'log') it.overrode = snapshot.overrode;
               spend(x, r.usd);
             }),
           ).then(() => this.watch(s.id)),

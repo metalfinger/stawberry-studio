@@ -1,13 +1,15 @@
 import { describe, expect, test } from 'bun:test';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { dreamConfig } from '../dream';
 import type { Answer, Question } from '../jev';
 import type { Breakdown } from '../producer';
 import { printDiff, sheetPrint } from '../cutsheet';
 import { imageName, rebuild } from '../plan';
+import { readJevLog } from '../jevlog';
 import { SessionStore, type StoreDeps } from '../session';
-import { fakeHost, fakeJev, noul, pick, told } from './fakes';
+import { fakeHost, fakeJev, noul, pick, told, withChecks } from './fakes';
 
 const cfg = dreamConfig();
 const required = cfg.goals.filter((g) => !g.optional).map((g) => g.id);
@@ -569,6 +571,9 @@ describe('a whole conversation', () => {
   // The board's sketch is held on every reading, for what `reading` says; they are asked twice.
   // Asked about first, as before (DREAMCHAT_SKETCH_HELD=ask): by default a held sketch is drawn.
   async function askedTwice(reading: (question: string, prompt: string) => number) {
+    return withChecks('act', () => askedTwiceActing(reading));
+  }
+  async function askedTwiceActing(reading: (question: string, prompt: string) => number) {
     process.env.DREAMCHAT_SKETCH_HELD = 'ask';
     const gate: StoreDeps['gate'] = async (state, questions) => ({
       questions,
@@ -744,6 +749,84 @@ describe('a whole conversation', () => {
     expect(board.overrode?.[0]).toStartWith('its instructions may contradict each other');
   });
 
+  test('with the checks only logging, a sketch the gate is unsure of is drawn at once as told, never reworded or asked about', () =>
+    withChecks('log', async () => {
+      process.env.DREAMCHAT_SKETCH_HELD = 'ask';
+      try {
+        const gate: StoreDeps['gate'] = async (state, questions) => ({
+          questions,
+          state,
+          answers: Object.fromEntries(
+            Object.keys(questions).map((k) => [
+              k,
+              { type: 'noul' as const, noul: k === 'clear' && /A single clear picture of/.test(state) ? 0.3 : k === 'contradicts' || k === 'twice' ? 0.05 : 0.9 },
+            ]),
+          ),
+          error: null,
+          ms: 1,
+          usage: null,
+        });
+        let reworded = 0;
+        const started: string[] = [];
+        const statuses = new Map<string, string>();
+        const store = new SessionStore(cfg, {
+          jev: fakeJev((q) => {
+            const out = script(q);
+            if (q.profile_reply) out.profile_reply = pick('confirmed');
+            return out;
+          }),
+          host: fakeHost(),
+          gate,
+          rewordLook: async () => {
+            reworded++;
+            return null;
+          },
+          producer: async () => ({ breakdown, downgraded: [], notes: [], ms: 1 }),
+          write: async () => ({
+            projectId: 'p',
+            ids: { said: 'src-said', proposal: 'src-proposal', l1: 'node-l1', t1: 'node-t1', m1: 'cut-m1', m2: 'cut-m2' },
+            home: '/tmp',
+            created: { project: 1, scene: 1, shot: 2, cut: 2, character: 0, location: 1, prop: 1 },
+            cuts: 2,
+            readyCuts: 0,
+            issues: [],
+            ms: 1,
+          }),
+          sheets: {
+            start: async ({ item }) => {
+              started.push(item.id);
+              statuses.set(`job-${item.id}`, 'ready');
+              return { recipeId: `r-${item.id}`, jobId: `job-${item.id}`, usd: 0.15 };
+            },
+            status: async (jobId, nodeId) =>
+              statuses.get(jobId) === 'ready'
+                ? { state: 'ready', mediaId: `media-${nodeId}`, mediaPath: `${nodeId}.png` }
+                : { state: 'running' },
+            review: async () => {},
+            retryCollection: async () => {},
+            startFrame: async ({ item }) => ({ recipeId: `r-${item.id}`, jobId: `job-${item.id}`, usd: 0.15 }),
+          },
+          watchEveryMs: 10,
+        });
+        const { id } = store.create();
+        await store.open(id);
+        for (const text of ['a train board in my kitchen', 'it said zikery, then I woke', 'yes', 'yes please', 'the poster one'])
+          await store.message(id, text);
+        await store.message(id, 'yes, that is the kitchen');
+        await store.settle(id, 200);
+        const items = store.get(id)!.build!.items;
+        expect(started.sort()).toEqual(['l1', 't1']);
+        expect(reworded).toBe(0);
+        for (const it of items)
+          expect([it.id, it.held, it.heldAsks, it.status]).toEqual([it.id, undefined, undefined, 'ready']);
+        // The board's reading would have held it: kept on it, as what the check found.
+        expect(items.find((i) => i.id === 't1')!.overrode).toEqual(['what it shows is not clear enough to draw (0.30)']);
+        expect(items.find((i) => i.id === 'l1')!.overrode).toBeUndefined();
+      } finally {
+        delete process.env.DREAMCHAT_SKETCH_HELD;
+      }
+    }));
+
   test('a sketch held only because its words leave it unclear is drawn on our guess after two asks', async () => {
     // The father, held for his age and build, took three moments with him (lighthouse, 26 Sep).
     const { held, phase } = await askedTwice((k, prompt) =>
@@ -881,7 +964,8 @@ describe('a whole conversation', () => {
     expect(t.move).toEqual({ kind: 'frames_drawing' });
   });
 
-  test('a moment the gate is unsure of is held, never paid for; reworded, it is read again and drawn', async () => {
+  test('a moment the gate is unsure of is held, never paid for; reworded, it is read again and drawn', () =>
+    withChecks('act', async () => {
     // Jev is sure of the sketches, and of a moment only once its words are put right.
     const reading = (state: string) =>
       !state.startsWith('One picture from the dream') || state.includes('REWORDED')
@@ -949,7 +1033,68 @@ describe('a whole conversation', () => {
     } finally {
       delete process.env.DREAMCHAT_HELD;
     }
-  });
+  }));
+
+  test('with the checks only logging, a moment the gate is unsure of is drawn at once as told, what it found kept and logged', () =>
+    withChecks('log', async () => {
+      // The gate reads every moment as contradicting itself, and would hold it, reword it and plan it again.
+      const gate: StoreDeps['gate'] = async (state, questions) => ({
+        questions,
+        state,
+        answers: Object.fromEntries(
+          Object.keys(questions).map((k) => [
+            k,
+            {
+              type: 'noul' as const,
+              noul: state.startsWith('One picture from the dream') && k === 'contradicts' ? 0.9 : k === 'contradicts' || k === 'twice' ? 0.05 : 0.9,
+            },
+          ]),
+        ),
+        error: null,
+        ms: 1,
+        usage: null,
+      });
+      let reworded = 0;
+      let planned = 0;
+      const dir = mkdtempSync(join(tmpdir(), 'checks-log-'));
+      const run = await toTheMoments(undefined, {
+        gate,
+        dir,
+        block: async (b) => {
+          planned++;
+          return { breakdown: b, notes: [] };
+        },
+        reword: async (_prompt, _findings, fields) => {
+          reworded++;
+          return { ...fields, action: { value: 'REWORDED', said: false } };
+        },
+      });
+      const plannedBefore = planned;
+      run.statuses.set('job-m1', 'ready');
+      await run.store.settle(run.id, 100);
+      expect(run.framesStarted.map((f) => f.id)).toEqual(['m1']);
+      expect(run.framesStarted[0].prompt).not.toContain('REWORDED');
+      expect(reworded).toBe(0);
+      expect(planned).toBe(plannedBefore);
+      const m1 = run.store.get(run.id)!.build!.frames!.find((f) => f.id === 'm1')!;
+      expect([m1.held, m1.reworded, m1.status]).toEqual([undefined, undefined, 'ready']);
+      expect(m1.overrode?.[0]).toStartWith('its instructions may contradict each other (0.90)');
+      // Its reading is logged with its bars; nothing a check did is.
+      const log = readJevLog(dir, run.id);
+      const read = log.find((e) => e.kind === 'transition' && e.stage === 'gate' && e.moment === 'm1');
+      expect(read?.kind === 'transition' && [read.decision, read.facts.map((f) => [f.question, f.answer, f.ok])]).toEqual([
+        'logged',
+        [
+          ['contradicts', 0.9, false],
+          ['twice', 0.05, true],
+          ['clear', 0.9, true],
+          ['refs_clear', 0.9, true],
+        ],
+      ]);
+      expect(log.filter((e) => e.kind === 'transition' && e.stage === 'check')).toEqual([]);
+      // The sketches' readings are logged too.
+      expect(log.some((e) => e.kind === 'transition' && e.stage === 'gate' && e.moment === 'l1')).toBe(true);
+    }));
 
   test('a moment the judge fails is drawn once more with what was wrong, then released on a pass', async () => {
     const judged: string[] = [];

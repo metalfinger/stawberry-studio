@@ -63,3 +63,19 @@ export function fakeHost(delayMs = 0): HostFn & { calls: ChatMessage[][] } {
   fn.calls = [];
   return fn;
 }
+
+/**
+ * Runs `fn` with the pre-draw checks acting (DREAMCHAT_CHECKS unset, the default) or only logging,
+ * whatever the environment the tests run in, and puts the switch back after.
+ */
+export async function withChecks<T>(mode: 'act' | 'log', fn: () => Promise<T>): Promise<T> {
+  const was = process.env.DREAMCHAT_CHECKS;
+  if (mode === 'log') process.env.DREAMCHAT_CHECKS = 'log';
+  else delete process.env.DREAMCHAT_CHECKS;
+  try {
+    return await fn();
+  } finally {
+    if (was === undefined) delete process.env.DREAMCHAT_CHECKS;
+    else process.env.DREAMCHAT_CHECKS = was;
+  }
+}

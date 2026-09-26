@@ -50,6 +50,41 @@ export const MIN_REFS_CLEAR = 0.6;
 /** The model takes 14 images; a dozen leaves each one legible. */
 export const MAX_REFERENCES = 12;
 
+/**
+ * Whether the checks before a picture is drawn act on what they find or only log it
+ * (DREAMCHAT_CHECKS=log). Acting (the default, as before): the gate's questions, "storyboard complete?"
+ * and the sketch gate hold, reword, plan again and leave undrawn. Logging: each still runs and its
+ * readings are logged for every picture, but none of them holds, rewords, plans again or leaves a
+ * picture undrawn, because none has shown it predicts pictures: the gate held pictures 22% right and
+ * passed pictures 26% right, and the storyboard check scored 0.49-0.58 (docs/rules.md G1). Only what
+ * code knows for certain is wrong keeps acting (`actsWhenLogging`).
+ */
+export function checksMode(): 'act' | 'log' {
+  return (process.env.DREAMCHAT_CHECKS ?? '').trim().toLowerCase() === 'log' ? 'log' : 'act';
+}
+
+/**
+ * A finding that keeps acting when the checks only log: a fault code knows for certain, which no
+ * picture can put right. What the images attached and the prompt say of them disagree (an image
+ * attached with no word on it, one described but not attached, two edit bases or a base not first,
+ * one attached twice, more than fit, an unapproved picture, a sketch of someone in view left off),
+ * and a plan that points at a picture that is not there or not earlier. The continuity plan's
+ * other warnings (a state carried in words only, many changes at once, no visible action) are its
+ * guesses at what may go wrong, never measured on pictures: they are logged.
+ */
+export function actsWhenLogging(finding: string): boolean {
+  return (
+    /^image \d+ is (attached with no word|described but not attached|not an approved picture)/.test(finding) ||
+    /^(more than one picture is marked as the one to edit|the picture to edit is not the first image|an image is attached twice)$/.test(
+      finding,
+    ) ||
+    /^\d+ images, more than \d+$/.test(finding) ||
+    / is in view but their sketch is not attached$/.test(finding) ||
+    /^picture \d+ refers to picture .*, which is not earlier$/.test(finding) ||
+    /^ghost \S+ needs .*, which is not a picture$/.test(finding)
+  );
+}
+
 export type GateReading = {
   contradicts: number;
   twice: number;
@@ -258,7 +293,21 @@ export async function readPrompt(
     return { findings: [`the prompt could not be checked (${call.error ?? 'no answer'})`], reading: null };
   const findings: string[] = [];
   let around: GateReading['around'];
-  if (contradicts > (opts.sheet ? MAX_CONTRADICTS : MAX_CONTRADICTS_MOMENT)) {
+  // With the checks only logging, a reading is never put on a line: that search asks Jev once for
+  // every line of the prompt (most of the gate's calls on the fake pictures, 27 Sep), and only tells
+  // a rewording where to look and excuses a long prompt's diffuse rise, neither of which acts any
+  // more. The reading itself is logged whole, and a finding a line might have excused says so.
+  if (checksMode() === 'log') {
+    const unplaced = ", not put on a line (it may be a long prompt's diffuse rise)";
+    if (contradicts > (opts.sheet ? MAX_CONTRADICTS : MAX_CONTRADICTS_MOMENT))
+      findings.push(
+        `its instructions may contradict each other (${contradicts.toFixed(2)})${!opts.sheet && contradicts <= DIFFUSE_UP_TO ? unplaced : ''}`,
+      );
+    if (twice > MAX_TWICE)
+      findings.push(
+        `someone may be drawn twice (${twice.toFixed(2)})${!opts.sheet && twice <= DIFFUSE_UP_TO ? unplaced : ''}`,
+      );
+  } else if (contradicts > (opts.sheet ? MAX_CONTRADICTS : MAX_CONTRADICTS_MOMENT)) {
     // Which line it rests on: said with the finding, so a rewording knows where to look; and for a
     // reading that may be only the prompt's length, whether any line carries it at all.
     // A sketch's too, so its rewording is told where: "a European village just inside the house"
@@ -270,7 +319,7 @@ export async function readPrompt(
         `its instructions may contradict each other (${contradicts.toFixed(2)})${around && around.drop >= LOCAL_DROP ? `, around: "${around.line.slice(0, 160)}"` : ''}`,
       );
   }
-  if (twice > MAX_TWICE) {
+  if (checksMode() !== 'log' && twice > MAX_TWICE) {
     // The same for someone drawn twice: in a theater of identical blue sofas it read 0.41-0.43 with
     // no line carrying it (none lowered it by more than 0.06), where a baby drawn twice read 0.75+.
     const at = opts.sheet ? undefined : await carrier(jev, prompt, twice, 'twice');
@@ -291,6 +340,25 @@ export async function readPrompt(
   if (refsClear !== null && refsClear < MIN_REFS_CLEAR)
     findings.push(`what to take from each image is not clear enough (${refsClear.toFixed(2)})`);
   return { findings, reading: { contradicts, twice, clear, refsClear, ...(around ? { around } : {}) } };
+}
+
+/**
+ * A reading as logged facts, each with the bar it is held to: what S7 labels against the pictures.
+ * The contradiction and twice bars are the ones a finding starts from (a moment's diffuse reading up
+ * to DIFFUSE_UP_TO is excused only when no line carries it, which the finding itself says).
+ */
+export function gateFacts(
+  reading: GateReading,
+  opts: { sheet?: boolean; edit?: boolean } = {},
+): { question: string; answer: number; bar: number; ok: boolean }[] {
+  const under = (question: string, answer: number, bar: number) => ({ question, answer, bar, ok: answer <= bar });
+  const over = (question: string, answer: number, bar: number) => ({ question, answer, bar, ok: answer >= bar });
+  return [
+    under('contradicts', reading.contradicts, opts.sheet ? MAX_CONTRADICTS : MAX_CONTRADICTS_MOMENT),
+    under('twice', reading.twice, MAX_TWICE),
+    over('clear', reading.clear, opts.edit ? MIN_EDIT_CLEAR : MIN_CLEAR),
+    ...(reading.refsClear !== null ? [over('refs_clear', reading.refsClear, MIN_REFS_CLEAR)] : []),
+  ];
 }
 
 /** The line whose leaving out lowers a reading most, and by how much. */

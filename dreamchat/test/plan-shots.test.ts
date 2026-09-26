@@ -6,7 +6,9 @@ import type { WriteFn } from '../implied';
 import type { JevFn } from '../jev';
 import { rebuild } from '../plan';
 import { type Breakdown, completeViews } from '../producer';
+import { inSession, readJevLog } from '../jevlog';
 import { applyPrep, planRecord, planShots, reconcileGhosts, restage, type Session } from '../session';
+import { withChecks } from './fakes';
 
 const detail = (value: string | null = null) => ({ value, said: false });
 
@@ -32,84 +34,116 @@ function kitchen(): Breakdown {
 }
 
 describe('the shots, planned while the chat goes on', () => {
-  test('floor plans, cameras, previs and briefs, before anything is drawn', async () => {
+  /** The kitchen planned, with "storyboard complete?" clearing m1 and finding m2 at odds with its moment. */
+  async function planKitchen(checks: 'act' | 'log') {
     const b = kitchen();
     const briefs: string[] = [];
     const seen: string[] = [];
     const replanned: { only?: string[]; fix?: Record<string, string[]> }[] = [];
     const dir = mkdtempSync(join(tmpdir(), 'plan-shots-'));
-    const prep = await planShots(b, b.style_options[0], {
-      block: async (x, again) => {
-        if (again) replanned.push(again);
-        const out = structuredClone(x);
-        out.scenes[0].blocking = {
-          front: 'the stove',
-          indoors: true,
-          spots: [
-            { id: 'p1', x: 5, y: 5, kind: 'person', pose: 'standing' },
-            { id: 't1', x: 1, y: 5, kind: 'thing', size: [0.1, 1.5, 1] },
-          ],
-        };
-        return { breakdown: out, notes: [] };
-      },
-      shot: async (moment) => {
-        briefs.push(moment);
-        return 'A first-person view, turned left to the board on the wall.';
-      },
-      // The script supervisor finds a lasting change the breakdown missed.
-      supervise: async () => [{ moment: 'm1', who: 't1', what: 'its slats', now: 'all blank but one' }],
-      // "Storyboard complete?": m1's shot clears; m2's contradicts its moment.
-      jev: async (state, questions) => {
-        // What the script supervisor found: a change of how the board looks, of a part of it.
-        if (Object.keys(questions).some((k) => k.startsWith('change_'))) {
-          const answers = Object.fromEntries(
-            Object.keys(questions).map((k) => [
-              k,
-              { type: 'noul' as const, noul: k.startsWith('change_') ? 0.9 : 0.1 },
-            ]),
-          );
-          return { questions, state, answers, error: null, ms: 1, usage: null };
-        }
-        // The floor plan's facts: a room, and the board is on the wall, held by nobody.
-        if ('outdoors' in questions) {
-          seen.push(state);
-          const answers = Object.fromEntries(
-            Object.entries(questions).map(([k, q]) => [
-              k,
-              q.type === 'noul'
-                ? { type: 'noul' as const, noul: 0.05 }
-                : {
-                    type: 'choice' as const,
-                    choice: k.startsWith('shape_') ? 'block' : k.startsWith('holder_') ? 'nobody' : 't1',
-                    confidence: 0.9,
-                    probabilities: {},
-                  },
-            ]),
-          );
-          return { questions, state, answers, error: null, ms: 1, usage: null };
-        }
-        const m2 = Object.keys(questions).some((k) => k.endsWith('_m2'));
-        const answer = (k: string) => ({
-          type: 'noul' as const,
-          noul:
-            k.startsWith('sb_contradicts') && m2
-              ? 0.9
-              : k.startsWith('sb_contradicts') || k.startsWith('sb_extra')
-                ? 0.1
-                : 0.9,
-        });
-        seen.push(state);
-        return {
-          questions,
-          state,
-          answers: Object.fromEntries(Object.keys(questions).map((k) => [k, answer(k)])),
-          error: null,
-          ms: 1,
-          usage: null,
-        };
-      },
-      dir,
-    });
+    const prep = await withChecks(checks, () =>
+      inSession(dir, 'log', () =>
+        planShots(b, b.style_options[0], {
+          block: async (x, again) => {
+            if (again) replanned.push(again);
+            const out = structuredClone(x);
+            out.scenes[0].blocking = {
+              front: 'the stove',
+              indoors: true,
+              spots: [
+                { id: 'p1', x: 5, y: 5, kind: 'person', pose: 'standing' },
+                { id: 't1', x: 1, y: 5, kind: 'thing', size: [0.1, 1.5, 1] },
+              ],
+            };
+            return { breakdown: out, notes: [] };
+          },
+          shot: async (moment) => {
+            briefs.push(moment);
+            return 'A first-person view, turned left to the board on the wall.';
+          },
+          // The script supervisor finds a lasting change the breakdown missed.
+          supervise: async () => [{ moment: 'm1', who: 't1', what: 'its slats', now: 'all blank but one' }],
+          // "Storyboard complete?": m1's shot clears; m2's contradicts its moment.
+          jev: async (state, questions) => {
+            // What the script supervisor found: a change of how the board looks, of a part of it.
+            if (Object.keys(questions).some((k) => k.startsWith('change_'))) {
+              const answers = Object.fromEntries(
+                Object.keys(questions).map((k) => [
+                  k,
+                  { type: 'noul' as const, noul: k.startsWith('change_') ? 0.9 : 0.1 },
+                ]),
+              );
+              return { questions, state, answers, error: null, ms: 1, usage: null };
+            }
+            // The floor plan's facts: a room, and the board is on the wall, held by nobody.
+            if ('outdoors' in questions) {
+              seen.push(state);
+              const answers = Object.fromEntries(
+                Object.entries(questions).map(([k, q]) => [
+                  k,
+                  q.type === 'noul'
+                    ? { type: 'noul' as const, noul: 0.05 }
+                    : {
+                        type: 'choice' as const,
+                        choice: k.startsWith('shape_') ? 'block' : k.startsWith('holder_') ? 'nobody' : 't1',
+                        confidence: 0.9,
+                        probabilities: {},
+                      },
+                ]),
+              );
+              return { questions, state, answers, error: null, ms: 1, usage: null };
+            }
+            const m2 = Object.keys(questions).some((k) => k.endsWith('_m2'));
+            const answer = (k: string) => ({
+              type: 'noul' as const,
+              noul:
+                k.startsWith('sb_contradicts') && m2
+                  ? 0.9
+                  : k.startsWith('sb_contradicts') || k.startsWith('sb_extra')
+                    ? 0.1
+                    : 0.9,
+            });
+            seen.push(state);
+            return {
+              questions,
+              state,
+              answers: Object.fromEntries(Object.keys(questions).map((k) => [k, answer(k)])),
+              error: null,
+              ms: 1,
+              usage: null,
+            };
+          },
+          dir,
+        }),
+      ),
+    );
+    return { b, prep, briefs, seen, replanned, log: readJevLog(dir, 'log') };
+  }
+
+  test('with the checks only logging, the check still runs and is logged, and nothing is planned again', async () => {
+    const { prep, briefs, replanned, log } = await planKitchen('log');
+    // Its readings are kept as they were read.
+    expect(prep.storyboard?.m1.ok).toBe(true);
+    expect(prep.storyboard?.m2.ok).toBe(false);
+    expect(prep.storyboard?.m2.reasons[0]).toContain('the shot disagrees with the moment');
+    // But the scene is never planned again for it: one plan, one brief a moment.
+    expect(replanned).toHaveLength(0);
+    expect(briefs).toHaveLength(2);
+    const decided = log.filter((e) => e.kind === 'transition' && e.stage === 'previs');
+    expect(decided.map((e) => e.kind === 'transition' && [e.moment, e.decision])).toEqual(
+      expect.arrayContaining([
+        ['m1', 'cleared'],
+        ['m2', 'logged'],
+      ]),
+    );
+    expect(log.some((e) => e.kind === 'transition' && e.decision === 'replanned')).toBe(false);
+    expect(
+      log.some((e) => e.kind === 'transition' && e.stage === 'plan' && e.moment === 's1' && e.decision === 'logged'),
+    ).toBe(true);
+  });
+
+  test('floor plans, cameras, previs and briefs, before anything is drawn', async () => {
+    const { b, prep, briefs, seen, replanned } = await planKitchen('act');
     expect(prep.storyboard?.m1.ok).toBe(true);
     expect(prep.storyboard?.m2.ok).toBe(false);
     expect(prep.storyboard?.m2.reasons[0]).toContain('the shot disagrees with the moment');

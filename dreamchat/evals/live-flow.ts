@@ -47,11 +47,15 @@ export type FlowCheck = {
 };
 
 /** One dream the chat planned and drew, checked against its rebuild. */
-export function checkFlow(dream: string, s: Session, store?: string): FlowCheck | null {
+export function checkFlow(
+  dream: string,
+  s: Session,
+  store?: string | Record<string, { prompt: string; images: string[] }>,
+): FlowCheck | null {
   if (!s.prep?.record || !s.draft?.breakdown || !s.style) return null;
   const r = rebuild(s);
   const drawing = planRecord(s);
-  const sent = store && existsSync(store) ? sentFromStore(s, store) : {};
+  const sent = typeof store === 'object' ? store : store && existsSync(store) ? sentFromStore(s, store) : {};
   const out: FlowCheck = {
     dream,
     sameRecord: JSON.stringify(r.rec) === JSON.stringify(drawing),
@@ -114,21 +118,40 @@ export function checkFlow(dream: string, s: Session, store?: string): FlowCheck 
   return out;
 }
 
-/** Every replayed dream under a folder: <folder>/<name>/state/<id>.json, its store <folder>/home-<name>. */
-export function replayed(folder: string): { dream: string; session: Session; store: string }[] {
-  const out: { dream: string; session: Session; store: string }[] = [];
+/**
+ * Every replayed dream under a folder: <folder>/<name>/state/<id>.json, its store <folder>/home-<name>;
+ * or, for a redraw (evals/redraw.ts), what each moment was sent, kept in <folder>/<name>/redraw.json.
+ */
+export function replayed(
+  folder: string,
+): { dream: string; session: Session; store: string | Record<string, { prompt: string; images: string[] }> }[] {
+  const out: ReturnType<typeof replayed> = [];
   for (const name of readdirSync(folder).sort()) {
     const st = join(folder, name, 'state');
     if (!existsSync(st)) continue;
-    for (const f of readdirSync(st).filter((x) => /^dream-.*\.json$/.test(x)))
+    const redrawn = join(folder, name, 'redraw.json');
+    for (const f of readdirSync(st).filter((x) => /^dream-.*\.json$/.test(x))) {
+      const session = JSON.parse(readFileSync(join(st, f), 'utf8')) as Session;
+      // The moments, as a store gives them (its in-between pictures are not compared).
+      const cuts = new Set((session.build?.frames ?? []).filter((x) => x.kind === 'cut').map((x) => x.id));
+      const sent = existsSync(redrawn)
+        ? (JSON.parse(readFileSync(redrawn, 'utf8')) as { sent: Record<string, { prompt: string; images: string[] }> })
+            .sent
+        : undefined;
       out.push({
         dream: `${name}/${f.slice(0, -5)}`,
-        session: JSON.parse(readFileSync(join(st, f), 'utf8')) as Session,
-        store: join(folder, `home-${name}`, 'production.sqlite'),
+        session,
+        store: sent
+          ? Object.fromEntries(Object.entries(sent).filter(([id]) => cuts.has(id)))
+          : join(folder, `home-${name}`, 'production.sqlite'),
       });
+    }
   }
   return out;
 }
+
+/** A difference explained only by a check acting: with the checks only logging (S2) there is none. */
+export const byCheck = (why: string | undefined) => !!why && /pre-draw check/.test(why);
 
 if (import.meta.main) {
   const folders = process.argv.slice(2);
@@ -140,6 +163,9 @@ if (import.meta.main) {
   }
   let pinned = 0;
   let failed = 0;
+  let drawn = 0;
+  let same = 0;
+  let checked = 0;
   for (const x of folders.flatMap(replayed)) {
     const c = checkFlow(x.dream, x.session, x.store);
     if (!c) {
@@ -153,6 +179,9 @@ if (import.meta.main) {
       Object.keys(c.differs).every((id) => c.explained[id]) &&
       Object.keys(c.sheetDiffers).every((id) => c.sheetExplained[id]);
     if (!ok) failed++;
+    drawn += c.drawn;
+    same += c.samePrompt.length;
+    checked += Object.values(c.explained).filter(byCheck).length;
     console.log(
       `${ok ? 'ok  ' : 'FAIL'} ${c.dream}: rebuild reads drawing's record ${c.sameRecord ? 'yes' : 'NO'}; pin as drawing read it ${c.pinDiffers.length ? `NO (${c.pinDiffers.join('; ')})` : 'yes'}; ${c.drawn} moments drawn, ${c.samePrompt.length} rebuilt word for word, ${c.sameImages.length} with the same images; sheets: ${c.sameSheet.length} as sent${c.sheetUnlogged.length ? `, ${c.sheetUnlogged.length} drawn before the sheet was kept` : ''}`,
     );
@@ -167,6 +196,8 @@ if (import.meta.main) {
           : `       ${id} sent:    ${d.sent.slice(0, 240)}\n       ${id} rebuilt: ${d.rebuilt.slice(0, 240)}`,
       );
   }
-  console.log(`${pinned} dreams with a pin, ${failed} failing`);
+  console.log(
+    `${pinned} dreams with a pin, ${failed} failing; ${drawn} moments drawn, ${same} rebuilt word for word, ${checked} differing only because a check acted`,
+  );
   process.exit(failed ? 1 : 0);
 }
