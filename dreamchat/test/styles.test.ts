@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { cleanStyles } from '../ground';
+import type { Answer } from '../jev';
 import type { Breakdown, StyleOption } from '../producer';
 import { fakeJev, noul } from './fakes';
 
@@ -33,7 +34,7 @@ const style = (name: string, medium: string): StyleOption =>
 describe("a look's name", () => {
   test('that brings content is said as what it is made as', async () => {
     // "Glowing orchard at dusk with a white horse" put the horse behind every person's sketch (26 Sep).
-    const jev = fakeJev((q) => (q.name_0 ? { name_0: noul(0.9) } : {}));
+    const jev = fakeJev((q): Record<string, Answer> => (q.name_0 ? { name_0: noul(0.9) } : {}));
     const out = await cleanStyles(
       breakdown(style('glowing orchard at dusk with a white horse', 'an oil painting')),
       jev,
