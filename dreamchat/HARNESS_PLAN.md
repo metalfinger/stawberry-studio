@@ -151,3 +151,10 @@ One **cut sheet** per cut is the spine everything is assembled from:
   all 59 dreams. Two gaps found and being closed in S1 before review: facts a moment implies about a place are
   written nowhere (the library water rising to the window), so an implied-state reading is being added; and
   planning and drawing built the record from different inputs.
+- 26 Sep: S1 gaps closed (implied state read per moment, basis implied; planning and drawing share one record),
+  S1 11/13, all faults 18/33, guards 36/36. Independent review: merge after fixes. It found two faults only the live
+  flow shows (a re-plan erased the implied states; the shared record was fixed before sketches existed, so
+  corrections made while sketching were ignored), implied changes adding ~57% more in-between pictures against the
+  owner's rule, place readings letting motion and drawing style through, and broken prompt text. Being fixed.
+  Lesson for every step's eval: the frozen dreams do not exercise the live path (pins, re-plans, corrections), so
+  each step now also needs a live-flow check.
