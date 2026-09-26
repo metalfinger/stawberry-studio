@@ -394,6 +394,14 @@ function storyWords(b: Breakdown): Set<string> {
   return out;
 }
 
+/**
+ * A way of drawing that looks through something puts that something in front of every picture: a
+ * glass-world look drew the dreamer three times behind a frosted shower door (23 Sep). Jev reads
+ * "paint that looks like looking through dirty glass" as a texture (0.35), so it is caught by name.
+ */
+const SEEN_THROUGH =
+  /\b(?:through|behind)\s+(?:a\s+|an\s+|the\s+|some\s+)?(?:[\w-]+\s+){0,2}(?:glass|window|windows|pane|door|screen|veil|curtain|fog|mist|water|fish ?tank)\b/i;
+
 const namesStory = (text: string, words: Set<string>) =>
   (text.toLowerCase().match(/[a-z]{3,}/g) ?? []).some((w) => words.has(w.replace(/s$/, '')));
 
@@ -448,11 +456,26 @@ export async function cleanStyles(b: Breakdown, jev: JevFn): Promise<{ breakdown
   const dropped: string[] = [];
   const story = storyWords(out);
   out.style_options.forEach((o, i) => {
-    // A name that brings content is said as what it is made as.
-    const medium = typeof o.medium === 'string' && o.medium.trim() && o.medium !== 'undefined' ? o.medium.trim() : '';
-    if (medium && (content(`name_${i}`) || namesStory(o.name, story)) && o.name !== medium) {
+    // A name that brings content is said as what it is made as. Their own way of drawing it has one
+    // phrase for both ("paint that looks like looking through dirty glass"): what it is like is cut
+    // off, and it is said as "paint" (sea school, 26 Sep).
+    const given = typeof o.medium === 'string' && o.medium.trim() && o.medium !== 'undefined' ? o.medium.trim() : '';
+    const plain = (x: string) =>
+      x
+        .split(
+          /\s+(?:that (?:looks|feels|seems) like|looking like|looks like|like|as if|as though|seen through|through)\b/i,
+        )[0]
+        .trim();
+    const medium = given && given !== o.name ? given : plain(given || o.name);
+    if (
+      medium &&
+      medium.length >= 3 &&
+      medium !== o.name &&
+      (content(`name_${i}`) || namesStory(o.name, story) || SEEN_THROUGH.test(o.name))
+    ) {
       dropped.push(`${o.name}: its name, now "${medium}"`);
       o.name = medium;
+      if (o.medium === given && given && given !== medium && plain(given) === medium) o.medium = medium;
     }
     const tokens = o.tokens.filter((t, j) => {
       if (!content(`tok_${i}_${j}`) && !namesStory(t, story)) return true;
