@@ -385,6 +385,30 @@ describe('a change the script supervisor finds', () => {
     expect(m6.states ?? []).toEqual([]);
   });
 
+  test('a change carried from a moment that no longer has it is dropped', () => {
+    // Tomas's "age and clothing", read again as his "body" (hotel orchard, 26 Sep).
+    const b = {
+      scenes: [
+        {
+          id: 's1',
+          moments: [
+            {
+              ...moment('m2', 'Tomas is ten years old.'),
+              leaves: [{ who: 'p2', what: 'body', now: 'a ten-year-old boy' }],
+            },
+            {
+              ...moment('m3', 'The gate opens.'),
+              leaves: [],
+              states: [{ who: 'p2', what: 'age and clothing', now: 'ten years old', since: 'm2' }],
+            },
+          ],
+        },
+      ],
+    } as unknown as Breakdown;
+    addChanges(b, [{ moment: 'm2', who: 'p2', what: 'body', now: 'a ten-year-old boy' }]);
+    expect(b.scenes[0].moments[1].states).toEqual([]);
+  });
+
   test("a place's change is carried into every later moment there", () => {
     // The library filled with water, and the boat sat on a dry floor after it (26 Sep).
     const b = {

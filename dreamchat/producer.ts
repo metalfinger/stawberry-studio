@@ -738,6 +738,15 @@ export function addChanges(b: Breakdown, changes: Change[]): void {
       ];
     }
   }
+  // A change carried from a moment that no longer has it is gone: read again while planning, Tomas's
+  // "age and clothing" became his "body", and the old one, still carried, matched no picture of him,
+  // so the moment after was held (hotel orchard, 26 Sep).
+  for (const m of all)
+    if (m.states?.length)
+      m.states = m.states.filter((st) => {
+        const from = st.since ? all.find((x) => x.id === st.since) : undefined;
+        return !from || (from.leaves ?? []).some((l) => l.who === st.who && bareWords(l.what) === bareWords(st.what));
+      });
 }
 
 const SHOT = `You are the director of photography for one picture from someone's dream. An image model will draw it from your shot description, and follows it closely. Below are the moment and the fixed facts of the shot, worked out from a floor plan of the place: where the camera is, which way it looks, who and what is where in the picture (left, middle or right; close or far), and what is outside it.
