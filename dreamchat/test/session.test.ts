@@ -784,16 +784,61 @@ describe('a whole conversation', () => {
     });
   });
 
-  test('a moment they approve as soon as it is up counts, though Berry has not mentioned it yet', async () => {
-    const { store, id, framesStarted, statuses, reaction } = await toTheMoments();
+  test('a moment Berry has not put to them yet is approved only once a reply has', async () => {
+    const { store, id, framesStarted, statuses, reaction, host } = await toTheMoments();
     statuses.set('job-m1', 'ready');
     await store.settle(id, 100);
-    expect(store.get(id)!.build!.frames!.find((f) => f.id === 'm1')!.announced).toBeFalsy();
-    // On the page it is there; they approve it by telling Berry to go ahead.
+    const m1 = () => store.get(id)!.build!.frames!.find((f) => f.id === 'm1')!;
+    expect(m1().announced).toBeFalsy();
+    // On the page, but never named to them: "waiting is fine." read as approving it approved a
+    // moment of the moon market Berry had never shown them (26 Sep). It waits, and the reply names it.
     reaction.now = { sketch_reaction: pick('looks_right'), ok_m1: noul(0.9) };
+    await store.message(id, 'waiting is fine.');
+    expect(m1().review).toBeUndefined();
+    expect(framesStarted.map((f) => f.id)).toEqual(['m1']);
+    expect(host.calls.at(-1)!.find((m) => m.content.startsWith('<brief>'))!.content).toContain(
+      'More of the dream is up on the right (The kitchen, with the board on the wall)',
+    );
+    // Put to them now, their word on it counts, and the close-up is drawn from it.
     await store.message(id, 'go ahead, i approve the generated image');
-    expect(store.get(id)!.build!.frames!.find((f) => f.id === 'm1')!.review).toBe('approved');
+    expect(m1().review).toBe('approved');
     expect(framesStarted.map((f) => f.id)).toEqual(['m1', 'm2']);
+  });
+
+  test('a reaction naming no picture is about what the last reply put to them, never an earlier one', async () => {
+    // The judge vouches for every take, so the close-up is drawn from the wide before their word.
+    const { store, id, statuses, reaction, host } = await toTheMoments(async () => ({
+      questions: 3,
+      passed: 3,
+      failed: [],
+      unseen: [],
+    }));
+    statuses.set('job-m1', 'ready');
+    await store.settle(id, 100);
+    await store.message(id, 'can I see them?');
+    statuses.set('job-m2', 'ready');
+    await store.settle(id, 100);
+    const reviews = () => store.get(id)!.build!.frames!.map((f) => [f.id, f.review ?? null]);
+    // They speak of the close-up before Berry has put it to them: nothing is approved, the wide
+    // included, and the reply puts the close-up to them.
+    reaction.now = { sketch_reaction: pick('looks_right'), ok_m2: noul(0.9) };
+    await store.message(id, 'the slat one is lovely');
+    expect(reviews()).toEqual([
+      ['m1', null],
+      ['m2', null],
+    ]);
+    expect(host.calls.at(-1)!.find((m) => m.content.startsWith('<brief>'))!.content).toContain(
+      "The moment they said they'd pause on is up on the right now (The one slat that reads zikery)",
+    );
+    // "Alright." answers that reply alone: the wide, put to them a reply earlier, still waits for
+    // their word (desert station, 26 Sep).
+    reaction.now = { sketch_reaction: pick('looks_right') };
+    const t = await store.message(id, 'Alright.');
+    expect(reviews()).toEqual([
+      ['m1', null],
+      ['m2', 'approved'],
+    ]);
+    expect(t.move).toEqual({ kind: 'frames_drawing' });
   });
 
   test('a moment the gate is unsure of is held, never paid for; reworded, it is read again and drawn', async () => {
