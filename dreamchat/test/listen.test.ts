@@ -61,6 +61,13 @@ describe('move selection follows the newest thing they raised', () => {
     const s = at(6, [thread('msg_9', 5)]);
     expect(selectMove(s, cfg, listening({ listen: true })).move).toEqual({ kind: 'follow' });
   });
+
+  test('once the story is told, what they raised earlier is come back to, as earlier, before the gaps', () => {
+    const s = { ...at(6, [thread('msg_9', 5)]), signals: { ...initialState('t', cfg).signals, finished_telling: 0.9 } };
+    expect(selectMove(s, cfg, listening({ listen: true })).move).toEqual({ kind: 'circle_back', threadId: 'msg_9' });
+    // Off, the gaps come first, and it waits for rule 8, after every one of them.
+    expect(selectMove(s, cfg, listening()).move).toEqual({ kind: 'probe_goal', goalId: 'telling' });
+  });
 });
 
 describe('the briefs', () => {

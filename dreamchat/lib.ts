@@ -467,6 +467,15 @@ export function selectMove(state: State, cfg: GoalsFile, ctx: MoveContext): { mo
   const hot = mayFollow && newest((t) => t.strength === 'high' && fresh(t));
   if (hot) return { move: { kind: 'explore_thread', threadId: hot.id }, rule: '6: hot fresh thread' };
 
+  // 6b. With S8 on: something they raised earlier and nobody took up is come back to, as earlier, before
+  // the checklist. Followed as if just said, those older threads were 121 of the before's 201 explore
+  // moves; left for rule 8, which comes after every gap, they were never asked, and dream-file facts told
+  // or asked fell from 0.95 to 0.94 (the listening test, 27 Sep).
+  const earlier =
+    ctx.listen && state.threads.find((t) => t.opened_turn < state.turn && t.strength !== 'low' && fresh(t));
+  if (earlier)
+    return { move: { kind: 'circle_back', threadId: earlier.id }, rule: '6b: raised earlier, never taken up' };
+
   // 7. A real gap in the story remains.
   if (askable.length) return { move: { kind: 'probe_goal', goalId: askable[0].id }, rule: '7: next gap in the story' };
 
@@ -726,7 +735,9 @@ export function listenMove(move: Move, state: State, cfg: GoalsFile, extras: Bri
     case 'probe_goal': {
       const g = goalOf(cfg, move.goalId);
       const topic = g?.ask_openly ?? g?.probe_hint ?? move.goalId.replace(/_/g, ' ');
-      const example = g?.open_question ? `, such as "${g.open_question}"` : '';
+      const example = g?.open_question
+        ? `, such as "${g.open_question}"${g.open_question.includes('<') ? ', with the <…> filled from what they told you, in their words' : ''}`
+        : '';
       return `probe_goal → ${g?.label.toLowerCase() ?? move.goalId}. React to what they just said in a few words, then ask them one open question about ${topic}${example}, in your own words. Your question is about this and nothing else, and leaves the answer to them. If they don't remember, that's fine.`;
     }
     case 'follow': {

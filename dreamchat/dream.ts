@@ -22,7 +22,7 @@ export const DREAM_GOALS: GoalsFile['goals'] = [
     label: 'Where it happened',
     probe_hint: 'each place the dream happened in, enough to picture it: inside or outside, what kind of place',
     ask_openly: 'the place it happened in, and what it was like there',
-    open_question: 'what was the place like?',
+    open_question: 'what was <a place they named> like?',
   },
   // → cast, protagonist first
   {
@@ -63,7 +63,7 @@ export const DREAM_GOALS: GoalsFile['goals'] = [
     label: 'What it looked like',
     probe_hint: 'the colours, the light, the time of day or the texture of it: how the dream looked to them',
     ask_openly: 'how it looked to them',
-    open_question: 'how did it look to you?',
+    open_question: 'what did <a place or thing they named> look like?',
   },
   // → props
   {
