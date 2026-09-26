@@ -417,7 +417,12 @@ if (import.meta.main) {
   for (const r of reports) print(r);
   // Named for its dreams too: two runs started in the same second wrote one file, and the office snow
   // transcripts were lost under the jellyfish's (26 Sep).
-  const names = files.map((f) => basename(f, '.md')).join('+');
+  // Named for its dreams, or for how many there are once their names would make too long a file name (20 at once).
+  const all = files.map((f) => basename(f, '.md')).join('+');
+  const names =
+    all.length <= 80
+      ? all
+      : `${files.length}-dreams-${new Bun.CryptoHasher('sha1').update(all).digest('hex').slice(0, 8)}`;
   const path = join(out, `sim-${stamp}-${names}-${process.env.DREAMCHAT_HOST_THINKING ?? 'low'}.json`);
   await Bun.write(path, JSON.stringify(reports, null, 2));
   console.log(`\nfull transcripts: ${path}`);
