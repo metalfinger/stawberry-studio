@@ -8,6 +8,7 @@
 //   bun run evals/listening.ts --label s8 --data <folder> --against evals/listening-before-scores.json
 //   bun run evals/listening.ts --label fresh runs/sim-<stamp>-<dreams>-low.json   (a simulate.ts report)
 //   bun run evals/listening.ts --audit        (the hand-labelled replies, evals/listening-audit.json)
+//   bun run evals/listening.ts --audit evals/listening-audit-s8.json   (replies written with S8 on)
 //
 // The before (26 Sep): the 20 dreams with a simulated conversation, simulated twice each at the base the
 // step starts from, with nothing paid for, frozen in evals/listening-before/ (--freeze) and scored into
@@ -41,8 +42,14 @@
 //    Coverage: the facts pictures need that each dream file holds (evals/listening-facts.json), whether
 //    the person told each, if not whether Berry asked, and if told whether the conversation kept it as said.
 // 4. Flow: the ways of drawing it kept; the retelling, and whether it ends with a list covering every
-//    moment of the breakdown; every answer to a profile or a retelling, clear or not, against the reading
-//    the turn recorded; how many conversations reached the retelling, the style offer and the profiles.
+//    moment of the breakdown; every answer to a profile or a retelling, clear or not, and whether it
+//    changes something, against the reading the turn recorded; how many conversations reached the
+//    retelling, the style offer and the profiles.
+// 5. Move selection, which the questions of 1 and 2 cannot see (review, 27 Sep: a rule that came back to
+//    "earlier" threads passed every reply check while it made the chat an interrogation): how often the
+//    answer to a listening reply is "I don't remember"; how often a listening question asks again about
+//    what was already asked; how many retellings began because they had told all they remember; and, shown,
+//    replies that read like a form (a "what happened next", a "what did X look like"), by code.
 //
 // Jev is asked by one model by name (JEV_EVAL_MODEL, pinned as the prompt cases pin it); questions over
 // one state go in one call; answers are kept by the hash of the model, the question and its state
@@ -227,6 +234,17 @@ export function endingList(text: string, min = 3): string[] {
 
 /** Whether a message ends with a list of at least `min` items. */
 export const endsWithList = (text: string, min = 3) => endingList(text, min).length > 0;
+
+/** A reply that reads like a form: it asks what happened next, or what something looked like. */
+export const FORM_NEXT = /\b(?:what happened (?:next|after|then)|and then what|what came (?:next|after))\b/i;
+export const FORM_LOOK = /\bwhat did (?:[\w'’-]+ ){1,6}look like\b|\bhow did (?:[\w'’-]+ ){1,6}look\b/i;
+export function formOf(questions: string[]): 'next' | 'look' | undefined {
+  const q = questions.join(' ');
+  return FORM_NEXT.test(q) ? 'next' : FORM_LOOK.test(q) ? 'look' : undefined;
+}
+
+/** The rule that began a retelling because they had told all they remember (lib.ts rule 2b). */
+export const SPENT = /told all they remember/;
 
 /** A brief that says to ask nothing. */
 const NO_ASK = /Don't ask anything|No question needed|no question needed|Do not ask another question/;
@@ -712,6 +730,23 @@ export const Q = {
       'the message itself tells it',
       'the message does not tell it, or only glances off it',
     ),
+  // Move selection (5). Asked of the answer to each listening reply, and of each listening question
+  // against the questions asked before it.
+  dontRemember: yesNo(
+    'The listener asked the person about their dream (`listener_asked`). Does `person_answer` mostly say that they do not remember, cannot say, or have nothing more to tell about it?',
+    'it is mostly "I don\'t remember", "no idea", or "that\'s all there was"',
+    'it tells something about the dream, even a little',
+  ),
+  repeats: yesNo(
+    '`earlier_questions` are what the listener already asked the person about their dream. Is the question in `listener_questions` about something one of them already asked about: the same thing, place, person, feeling or moment, asked again?',
+    'it asks again about something already asked about',
+    'it asks about something not asked about before, or only invites them to go on',
+  ),
+  changes: yesNo(
+    'The listener put something to the person (`listener_asked`). In `person_answer`, does the person change, correct or add to it: a detail that is different from what the listener said, or that was missing?',
+    'they change, correct or add a detail',
+    'they only agree, leave it to the listener, say they do not remember, or do not answer it',
+  ),
   profileClear: yesNo(
     "The listener described how they picture someone or something from the person's dream and asked whether anything is different (`listener_asked`). Does `person_answer` answer that: saying it is right, changing or adding something, or leaving it to the listener?",
     'it does one of those, however briefly',
@@ -920,6 +955,13 @@ export type ReplyScore = {
   invents?: number | null;
   /** The person's next message only agreed, after a reply Jev read as leading. */
   agreed?: boolean;
+  /** A listening reply: its answer is mostly "I don't remember" (Jev); its question asks again about what was asked before (Jev). */
+  forgot?: number | null;
+  repeats?: number | null;
+  /** A listening reply that reads like a form, by code: asks what happened next, or what something looked like. */
+  form?: 'next' | 'look';
+  /** A retelling: how many words it has. */
+  words?: number;
   /** An explore_thread move whose thread is a message before the one this reply answers. */
   staleThread?: boolean;
   /** A retelling: Jev's reading of a closing list, the list code finds, and the breakdown's moments it covers. */
@@ -964,6 +1006,8 @@ export type AnswerScore = {
    * about Dele, whatever Jev finds it answers.
    */
   asked: number | null;
+  /** Whether the answer changes, corrects or adds something (Jev). */
+  changes?: number | null;
 };
 
 export type AnswerSums = {
@@ -977,6 +1021,10 @@ export type AnswerSums = {
   /** Read unclear after a reply that never asked the question. */
   unasked: number;
   settledReadUnclear: number;
+  /** A change or an addition read as settling it as it was: confirmed, or left to the listener. */
+  changeReadSettled: number;
+  /** An answer that changes nothing read as a change (shown). */
+  settledReadChange: number;
 };
 
 export type Sums = {
@@ -1042,6 +1090,22 @@ export type Sums = {
   /** Retellings: those Jev reads as ending on a list, those code finds a list in, and lists covering every moment. */
   retell: { retellings: number; endsWithMoments: number; endsWithMomentsCode: number; coversAll: number };
   answers: { profile: AnswerSums; retell: AnswerSums };
+  /**
+   * Move selection: listening replies answered, those answered "I don't remember"; listening questions
+   * after an earlier one, those asking again; retellings begun because they had told all they remember;
+   * listening replies reading like a form; retellings and their words.
+   */
+  moves: {
+    answered: number;
+    forgot: number;
+    compared: number;
+    repeats: number;
+    spent: number;
+    formNext: number;
+    formLook: number;
+    retellings: number;
+    retellWords: number;
+  };
   unanswered: number;
   close: number;
 };
@@ -1159,9 +1223,26 @@ export function scoreSession(l: Loaded, env: Env, get: (a: Ask) => number | null
       base.leading = leadingOf(base.leadingAsked, base.invents);
       const next = person[r.turn];
       base.agreed = yes(base.leading) && next !== undefined && AGREES.test(next);
+      // Move selection: what the answer to it says, and whether its question was asked before.
+      if (next !== undefined)
+        base.forgot = get({
+          state: json({ listener_asked: r.text, person_answer: next }),
+          question: Q.dontRemember,
+        });
+      const earlier = replies
+        .filter((x) => x.turn < r.turn && x.group === 'listen')
+        .flatMap((x) => questionsOf(x.text));
+      if (asks.questions.length && earlier.length)
+        base.repeats = get({
+          state: json({ earlier_questions: earlier, listener_questions: asks.questions }),
+          question: Q.repeats,
+        });
+      const form = formOf(asks.questions);
+      if (form) base.form = form;
     }
     if (asks.eitherOr) base.eitherOr = get(asks.eitherOr);
     if (r.move.kind === 'retell') {
+      base.words = r.text.split(/\s+/).filter(Boolean).length;
       base.momentsList = get({ state: asks.move.state, question: Q.momentsList });
       // A closing list is held to the breakdown's moments: every one of them in it.
       if (items.length && moments.length) {
@@ -1194,6 +1275,7 @@ export function scoreSession(l: Loaded, env: Env, get: (a: Ask) => number | null
       settled: settledOf(d?.jevAnswers?.[kind === 'profile' ? 'profile_reply' : 'retell_reply']),
       clear: get({ state, question: kind === 'profile' ? Q.profileClear : Q.retellClear }),
       asked: scored[i - 1]?.p ?? null,
+      changes: get({ state, question: Q.changes }),
     });
   }
 
@@ -1286,6 +1368,8 @@ const emptyAnswers = (): AnswerSums => ({
   unclearReadSettled: 0,
   unasked: 0,
   settledReadUnclear: 0,
+  changeReadSettled: 0,
+  settledReadChange: 0,
 });
 export function emptySums(): Sums {
   return {
@@ -1327,6 +1411,17 @@ export function emptySums(): Sums {
     styles: { offers: 0, options: 0, kept: 0, rawKept: 0, keptCode: 0, allKept: 0, noneKept: 0 },
     retell: { retellings: 0, endsWithMoments: 0, endsWithMomentsCode: 0, coversAll: 0 },
     answers: { profile: emptyAnswers(), retell: emptyAnswers() },
+    moves: {
+      answered: 0,
+      forgot: 0,
+      compared: 0,
+      repeats: 0,
+      spent: 0,
+      formNext: 0,
+      formLook: 0,
+      retellings: 0,
+      retellWords: 0,
+    },
     unanswered: 0,
     close: 0,
   };
@@ -1394,6 +1489,31 @@ export function sumsOf(
         }
       }
     }
+    if (r.group === 'listen' && r.turn > 0) {
+      if (r.forgot !== undefined) {
+        note(r.forgot);
+        if (r.forgot !== null) {
+          t.moves.answered += 1;
+          if (yes(r.forgot)) t.moves.forgot += 1;
+        }
+      }
+      if (r.repeats !== undefined) {
+        note(r.repeats);
+        if (r.repeats !== null) {
+          t.moves.compared += 1;
+          if (yes(r.repeats)) t.moves.repeats += 1;
+        }
+      }
+      if (r.form === 'next') t.moves.formNext += 1;
+      if (r.form === 'look') t.moves.formLook += 1;
+    }
+    if (r.move === 'retell') {
+      if (SPENT.test(r.rule)) t.moves.spent += 1;
+      if (r.words !== undefined) {
+        t.moves.retellings += 1;
+        t.moves.retellWords += r.words;
+      }
+    }
     if (r.move === 'retell' && yes(r.p)) {
       note(r.momentsList);
       t.retell.retellings += 1;
@@ -1457,6 +1577,11 @@ export function sumsOf(
     const s = t.answers[a.kind];
     s.n += 1;
     if (yes(a.clear)) s.clear += 1;
+    if (a.changes !== undefined) note(a.changes);
+    const settledAsWas = ['confirmed', 'you_choose'].includes(a.reading);
+    const asChange = ['changes', 'corrected', 'added_more'].includes(a.reading);
+    if (settledAsWas && yes(a.changes) && !no(a.asked)) s.changeReadSettled += 1;
+    if (asChange && no(a.changes)) s.settledReadChange += 1;
     if (a.reading === 'unclear') {
       s.readUnclear += 1;
       if (no(a.asked)) s.unasked += 1;
@@ -1503,6 +1628,7 @@ export function addSums(all: Sums[]): Sums {
     addNums(t.retell, s.retell);
     addNums(t.answers.profile, s.answers.profile);
     addNums(t.answers.retell, s.answers.retell);
+    if (s.moves) addNums(t.moves, s.moves);
     t.unanswered += s.unanswered;
     t.close += s.close;
   }
@@ -1522,6 +1648,10 @@ export function floors(t: Sums) {
     toldOrAsked: rate(t.coverage.told + t.coverage.askedNotTold, t.coverage.facts),
     neverAskedNorTold: rate(t.coverage.never, t.coverage.facts),
     toldCarriedAsSaid: rate(t.coverage.carried, t.coverage.told),
+    // Move selection (5): none may rise above the before.
+    dontRemember: rate(t.moves?.forgot ?? 0, t.moves?.answered ?? 0),
+    spentPerConversation: rate(t.moves?.spent ?? 0, t.conversations),
+    repeats: rate(t.moves?.repeats ?? 0, t.moves?.compared ?? 0),
   };
 }
 
@@ -1579,14 +1709,16 @@ export function headline(t: Sums, before?: Sums | null): Headline[] {
     },
     {
       name: 'answers misread',
-      value: `clear read unclear: profile ${t.answers.profile.clearReadUnclear}, retelling ${t.answers.retell.clearReadUnclear}; no answer read as settled: profile ${t.answers.profile.unclearReadSettled}, retelling ${t.answers.retell.unclearReadSettled} (of ${t.answers.profile.n} and ${t.answers.retell.n})`,
+      value: `clear read unclear: profile ${t.answers.profile.clearReadUnclear}, retelling ${t.answers.retell.clearReadUnclear}; no answer read as settled: profile ${t.answers.profile.unclearReadSettled}, retelling ${t.answers.retell.unclearReadSettled}; a change read as settled: profile ${t.answers.profile.changeReadSettled}, retelling ${t.answers.retell.changeReadSettled} (of ${t.answers.profile.n} and ${t.answers.retell.n}); shown: no change read as one ${t.answers.profile.settledReadChange + t.answers.retell.settledReadChange}`,
       target: '0',
       met:
         t.answers.profile.n + t.answers.retell.n
           ? t.answers.profile.clearReadUnclear +
               t.answers.retell.clearReadUnclear +
               t.answers.profile.unclearReadSettled +
-              t.answers.retell.unclearReadSettled ===
+              t.answers.retell.unclearReadSettled +
+              t.answers.profile.changeReadSettled +
+              t.answers.retell.changeReadSettled ===
             0
           : null,
     },
@@ -1608,6 +1740,9 @@ export function headline(t: Sums, before?: Sums | null): Headline[] {
   floor('dream-file facts told or asked', 'toldOrAsked', true);
   floor('dream-file facts never asked nor told', 'neverAskedNorTold', false);
   floor('told dream-file facts kept as said', 'toldCarriedAsSaid', true);
+  floor('listening replies answered "I don\'t remember"', 'dontRemember', false);
+  floor('retellings begun because they had told all they remember, per conversation', 'spentPerConversation', false);
+  floor('listening questions asking again about what was asked', 'repeats', false);
   return out;
 }
 
@@ -1627,6 +1762,7 @@ export function detailLines(t: Sums): string[] {
     `dream-file facts the person told: ${t.coverage.told}/${t.coverage.facts}, kept as said ${t.coverage.carried}; asked but not told ${t.coverage.askedNotTold}; never asked nor told ${t.coverage.never}; by kind: ${byMap(t.coverage.byKind)}`,
     `goals read as told when the dream was first told back, that their message tells: ${t.goals.backed}/${t.goals.covered}; by goal: ${byMap(t.goals.byGoal)}`,
     `explore_thread moves naming a message before the one just answered: ${t.threads.stale}/${t.threads.explore}, of them done ${t.threads.staleDid}; the rest done ${t.threads.freshDid}/${t.threads.explore - t.threads.stale}`,
+    `move selection: answered "I don't remember" ${t.moves?.forgot ?? 0}/${t.moves?.answered ?? 0}; asked again ${t.moves?.repeats ?? 0}/${t.moves?.compared ?? 0}; retellings begun as told all they remember ${t.moves?.spent ?? 0}; reading like a form: "what happened next" ${t.moves?.formNext ?? 0}, "what did X look like" ${t.moves?.formLook ?? 0} of ${t.listening.replies} listening replies; retelling words, mean ${t.moves?.retellings ? Math.round(t.moves.retellWords / t.moves.retellings) : '—'}`,
     `answers the test found clear: profile ${t.answers.profile.clear}/${t.answers.profile.n}, retelling ${t.answers.retell.clear}/${t.answers.retell.n}; read unclear after a reply that never asked: ${t.answers.profile.unasked + t.answers.retell.unasked}`,
     `Jev: ${t.unanswered} questions unanswered, ${t.close} answers within ${CLOSE} of the bar`,
   ];
@@ -2102,9 +2238,13 @@ if (import.meta.main) {
   };
 
   if (args.includes('--audit')) {
-    const items = (JSON.parse(readFileSync(AUDIT_FILE, 'utf8')) as { items: AuditItem[] }).items;
+    // A set of its own may follow: evals/listening-audit-s8.json holds replies written with S8 on, never
+    // used to tune this test or the harness's reply check.
+    const next = args[args.indexOf('--audit') + 1];
+    const file = next && !next.startsWith('--') && next.endsWith('.json') ? resolve(next) : AUDIT_FILE;
+    const items = (JSON.parse(readFileSync(file, 'utf8')) as { items: AuditItem[] }).items;
     const agreement = await scoreAll((get) => auditAgreement(items, get));
-    console.log(`\nhand-labelled replies (${AUDIT_FILE}), Jev ${model}, questions ${questionsHash()}:`);
+    console.log(`\nhand-labelled replies (${file}), Jev ${model}, questions ${questionsHash()}:`);
     for (const [k, v] of Object.entries(agreement))
       console.log(`  ${k}: ${v.agree}/${v.of} agree${v.missed.length ? `; not: ${v.missed.join(', ')}` : ''}`);
     process.exit(0);

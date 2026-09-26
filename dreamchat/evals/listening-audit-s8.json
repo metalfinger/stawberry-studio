@@ -1,0 +1,2905 @@
+{
+ "about": "Listening replies written with DREAMCHAT_LISTEN=on (the third after-run, 27 Sep), labelled by hand: whether each did its move, asked an either/or question, or put a detail of its own to the person. A regression set that neither the listening test's questions nor the harness's reply check (jev.ts replyCheck) were ever tuned on: `bun run evals/listening.ts --audit evals/listening-audit-s8.json` scores the test on it, `bun run evals/probes/check-audit.ts` the check. Picked: 14 follow replies at random, the 12 the test read near or over its leading and either/or bars, 14 others at random; one pick repeated, dropped.",
+ "items": [
+  {
+   "id": "streetcar-308c-t1",
+   "session": "dream-0927-022106-308c",
+   "dream": "streetcar",
+   "turn": 1,
+   "move": {
+    "kind": "follow"
+   },
+   "rule": "4: still telling — let them go on",
+   "phase": "listen",
+   "brief": "Move: follow. They're still telling the dream. React to what they just said, then invite what happened next, openly, such as \"and then what happened?\", without guessing what it was and without asking about anything they already told.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey, i'm berry.\n\ntell me your dream, however it comes back to you."
+    },
+    {
+     "role": "user",
+     "content": "i was on a streetcar, watching the conductor, and then suddenly i was riding on top of a train going really fast"
+    },
+    {
+     "role": "assistant",
+     "content": "from watching the conductor to being on top of a train going fast, that's a big jump.\n\nand then what happened?"
+    }
+   ],
+   "labels": {
+    "move": true,
+    "eitherOr": false,
+    "leading": false
+   }
+  },
+  {
+   "id": "glass-window-5d78-t5",
+   "session": "dream-0927-022120-5d78",
+   "dream": "glass-window",
+   "turn": 5,
+   "move": {
+    "kind": "follow"
+   },
+   "rule": "4: a detail answered — back to the story",
+   "phase": "listen",
+   "brief": "Move: follow. They're still telling the dream. React to what they just said, then invite what happened next, openly, such as \"and then what happened?\", without guessing what it was and without asking about anything they already told.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey, I'm Berry\n\ntell me a dream you've had — however it comes back to you"
+    },
+    {
+     "role": "user",
+     "content": "Hey Berry. I keep thinking about that feeling when I finally got to my parents' house — I only remember the end of the dream."
+    },
+    {
+     "role": "assistant",
+     "content": "The end is where it's still with you, that feeling of arriving\n\nWhat happened when you got there?"
+    },
+    {
+     "role": "user",
+     "content": "I was just waiting there for something. Not sure what."
+    },
+    {
+     "role": "assistant",
+     "content": "Just waiting, that can be the whole mood of a dream\n\nWhere were you waiting in the house?"
+    },
+    {
+     "role": "user",
+     "content": "I don't remember much of the house itself. I was near a window, I think."
+    },
+    {
+     "role": "assistant",
+     "content": "Near a window, you think.\n\nAnd then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "I stepped into the window like I could walk through it. That part's vivid."
+    },
+    {
+     "role": "assistant",
+     "content": "That part's vivid, the stepping into the window.\n\nWhat did the window look like?"
+    },
+    {
+     "role": "user",
+     "content": "It was just glass, but it felt like a door somehow. I don't remember thinking about it, just doing it."
+    },
+    {
+     "role": "assistant",
+     "content": "Just doing it, no thinking.\n\nAnd then what happened?"
+    }
+   ],
+   "labels": {
+    "move": true,
+    "eitherOr": false,
+    "leading": false
+   }
+  },
+  {
+   "id": "glass-window-5d78-t9",
+   "session": "dream-0927-022120-5d78",
+   "dream": "glass-window",
+   "turn": 9,
+   "move": {
+    "kind": "follow"
+   },
+   "rule": "4: a detail answered — back to the story",
+   "phase": "listen",
+   "brief": "Move: follow. They're still telling the dream. React to what they just said, then invite what happened next, openly, such as \"and then what happened?\", without guessing what it was and without asking about anything they already told.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey, I'm Berry\n\ntell me a dream you've had — however it comes back to you"
+    },
+    {
+     "role": "user",
+     "content": "Hey Berry. I keep thinking about that feeling when I finally got to my parents' house — I only remember the end of the dream."
+    },
+    {
+     "role": "assistant",
+     "content": "The end is where it's still with you, that feeling of arriving\n\nWhat happened when you got there?"
+    },
+    {
+     "role": "user",
+     "content": "I was just waiting there for something. Not sure what."
+    },
+    {
+     "role": "assistant",
+     "content": "Just waiting, that can be the whole mood of a dream\n\nWhere were you waiting in the house?"
+    },
+    {
+     "role": "user",
+     "content": "I don't remember much of the house itself. I was near a window, I think."
+    },
+    {
+     "role": "assistant",
+     "content": "Near a window, you think.\n\nAnd then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "I stepped into the window like I could walk through it. That part's vivid."
+    },
+    {
+     "role": "assistant",
+     "content": "That part's vivid, the stepping into the window.\n\nWhat did the window look like?"
+    },
+    {
+     "role": "user",
+     "content": "It was just glass, but it felt like a door somehow. I don't remember thinking about it, just doing it."
+    },
+    {
+     "role": "assistant",
+     "content": "Just doing it, no thinking.\n\nAnd then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "When I got there, everything on the other side was glass too. Like the window wasn't a way out, the outside was more of the same."
+    },
+    {
+     "role": "assistant",
+     "content": "So the window wasn't an exit at all, just more of it.\n\nEarlier you said it was just glass, but it felt like a door somehow. Where was that window in your parents' house?"
+    },
+    {
+     "role": "user",
+     "content": "Not sure. Maybe a living room or somewhere near the front. I just remember standing by it."
+    },
+    {
+     "role": "assistant",
+     "content": "You don't remember the exact room, just standing by that window.\n\nAnd after you saw all that glass, what did you do?"
+    },
+    {
+     "role": "user",
+     "content": "I walked around in it. That glassy world. I remember the light was weird there."
+    },
+    {
+     "role": "assistant",
+     "content": "The light was weird there, you remember that.\n\nWhat did that weird light look like?"
+    },
+    {
+     "role": "user",
+     "content": "Kind of blurry and hazy, and everything seemed to glow from inside — even the grass and trees and rocks."
+    },
+    {
+     "role": "assistant",
+     "content": "Even the grass and trees and rocks glowing from inside.\n\nAnd then what happened?"
+    }
+   ],
+   "labels": {
+    "move": true,
+    "eitherOr": false,
+    "leading": false
+   }
+  },
+  {
+   "id": "crayon-cat-c7de-t5",
+   "session": "dream-0927-022052-c7de",
+   "dream": "crayon-cat",
+   "turn": 5,
+   "move": {
+    "kind": "follow"
+   },
+   "rule": "4: a detail answered — back to the story",
+   "phase": "listen",
+   "brief": "Move: follow. They're still telling the dream. React to what they just said, then invite what happened next, openly, such as \"and then what happened?\", without guessing what it was and without asking about anything they already told.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey, i'm berry. tell me your dream, however it comes back to you."
+    },
+    {
+     "role": "user",
+     "content": "big thing was the size stuff. I was so small the grass came up over my head."
+    },
+    {
+     "role": "assistant",
+     "content": "grass over your head. that's a lot to look up at.\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "our old cat found me. Biscuit. she was huge, like a bus to me"
+    },
+    {
+     "role": "assistant",
+     "content": "biscuit. bus-sized. what did she look like, close up like that?"
+    },
+    {
+     "role": "user",
+     "content": "she was ginger with one white ear. looked like everything was drawn in crayon by me when I was six, thick waxy lines, colours all going over the edges"
+    },
+    {
+     "role": "assistant",
+     "content": "drawn in crayon by six year old you. that's such a specific look, the lines going over the edges.\n\nwhat was she doing, once she found you?"
+    },
+    {
+     "role": "user",
+     "content": "picked me up by the back of my jumper, like how cats carry kittens. didn't hurt or anything."
+    },
+    {
+     "role": "assistant",
+     "content": "carried by your jumper. and it didn't hurt, that's something.\n\nearlier you said everything looked drawn in crayon by you when you were six, thick waxy lines, colours going over the edges. what did the grass look like around you, drawn like that?"
+    },
+    {
+     "role": "user",
+     "content": "just big green crayon grass. taller than me, all waxy. I don't remember much else about it."
+    },
+    {
+     "role": "assistant",
+     "content": "fair enough. big green crayon grass is about all there is to it, maybe.\n\nso biscuit's carrying you. what happened next?"
+    }
+   ],
+   "labels": {
+    "move": true,
+    "eitherOr": false,
+    "leading": false
+   }
+  },
+  {
+   "id": "snow-train-06e6-t2",
+   "session": "dream-0927-022106-06e6",
+   "dream": "snow-train",
+   "turn": 2,
+   "move": {
+    "kind": "follow"
+   },
+   "rule": "4: a detail answered — back to the story",
+   "phase": "listen",
+   "brief": "Move: follow. They're still telling the dream. React to what they just said, then invite what happened next, openly, such as \"and then what happened?\", without guessing what it was and without asking about anything they already told.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey, i'm berry. tell me your dream, however it comes back to you."
+    },
+    {
+     "role": "user",
+     "content": "okay so it was winter, night, and i was on this old train. sitting across from me was my grandfather who passed away years ago."
+    },
+    {
+     "role": "assistant",
+     "content": "your grandfather sitting right there, that must've been something. what did the train car look like around you two?"
+    },
+    {
+     "role": "user",
+     "content": "it was quiet. like really quiet, not just no talking but no train noise either. outside the window everything was white and blue from the snow. old train, old seats. he was just sitting there."
+    },
+    {
+     "role": "assistant",
+     "content": "that kind of quiet where the whole world feels wrapped up, and he's just sitting there with you. that's really something to sit in."
+    }
+   ],
+   "labels": {
+    "move": false,
+    "eitherOr": false,
+    "leading": false
+   },
+   "note": "a reflection only: it never invites what came next"
+  },
+  {
+   "id": "hotel-orchard-3e5c-t3",
+   "session": "dream-0927-022052-3e5c",
+   "dream": "hotel-orchard",
+   "turn": 3,
+   "move": {
+    "kind": "follow"
+   },
+   "rule": "4: a detail answered — back to the story",
+   "phase": "listen",
+   "brief": "Move: follow. They're still telling the dream. React to what they just said, then invite what happened next, openly, such as \"and then what happened?\", without guessing what it was and without asking about anything they already told.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey, i'm berry. what's been going on in your dreams?"
+    },
+    {
+     "role": "user",
+     "content": "had a weird one last night, it's been sticking with me all day"
+    },
+    {
+     "role": "assistant",
+     "content": "those ones that hang around all day, yeah. tell me about it."
+    },
+    {
+     "role": "user",
+     "content": "it was me and my old school friend Tomas, we were in this tiny lift in an old hotel"
+    },
+    {
+     "role": "assistant",
+     "content": "old hotel lift, tiny. that's a very specific place to be stuck with someone. what did it look like in there?"
+    },
+    {
+     "role": "user",
+     "content": "brass walls and a folding metal gate, like the ones you pull across by hand"
+    },
+    {
+     "role": "assistant",
+     "content": "brass and a folding gate you pull by hand, that's such a particular kind of lift.\n\nand then what happened?"
+    }
+   ],
+   "labels": {
+    "move": true,
+    "eitherOr": false,
+    "leading": false
+   }
+  },
+  {
+   "id": "lighthouse-66f2-t11",
+   "session": "dream-0927-022052-66f2",
+   "dream": "lighthouse",
+   "turn": 11,
+   "move": {
+    "kind": "follow"
+   },
+   "rule": "4: a detail answered — back to the story",
+   "phase": "listen",
+   "brief": "Move: follow. They're still telling the dream. React to what they just said, then invite what happened next, openly, such as \"and then what happened?\", without guessing what it was and without asking about anything they already told.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey, I'm Berry\n\ntell me a dream, however it comes back to you"
+    },
+    {
+     "role": "user",
+     "content": "Hey, I had this dream where I was walking on a grey beach with my dog, holding an old brass key. There was a white lighthouse at the end."
+    },
+    {
+     "role": "assistant",
+     "content": "an old brass key, that sounds lovely to hold\n\nwhat was the key like when you looked at it?"
+    },
+    {
+     "role": "user",
+     "content": "It was heavy-ish, sort of worn, with a simple shape. I just knew it went to the lighthouse door."
+    },
+    {
+     "role": "assistant",
+     "content": "you just knew, yeah, that feeling in dreams where things are already true\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "I opened the lighthouse door and climbed this spiral staircase, round and round. My dog was running ahead of me."
+    },
+    {
+     "role": "assistant",
+     "content": "what did the staircase look like as you went up?"
+    },
+    {
+     "role": "user",
+     "content": "It was stone and narrow, the walls close, with a few small windows letting in grey light."
+    },
+    {
+     "role": "assistant",
+     "content": "just going back to that key from earlier\n\nwhat did the worn surface look like when you held it up?"
+    },
+    {
+     "role": "user",
+     "content": "It was sort of dull, darker in the grooves, like it had been handled a lot. I don't remember much more than that."
+    },
+    {
+     "role": "assistant",
+     "content": "handled a lot, I can see it\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "At the top there was a round room with windows all the way around. My dad was sitting at a table, folding paper boats out of newspaper."
+    },
+    {
+     "role": "assistant",
+     "content": "folding paper boats from newspaper, that's such a particular thing\n\nwhat was the light like in that room?"
+    },
+    {
+     "role": "user",
+     "content": "It was soft and greyish, like daylight through the windows, not bright. Kind of even all around."
+    },
+    {
+     "role": "assistant",
+     "content": "like daylight through the windows, but not bright, I get that\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "He didn't look up, just gave me one of the paper boats. When I looked out the window, the sea had turned into a field of tall yellow grass with a red tractor driving slowly through it."
+    },
+    {
+     "role": "assistant",
+     "content": "a red tractor, and the sea turning into grass, that's strange and lovely\n\nwho were you, as all that was happening?"
+    },
+    {
+     "role": "user",
+     "content": "I was just... me, I guess. Adult me, I think. Just walking and taking it in."
+    },
+    {
+     "role": "assistant",
+     "content": "adult you, just taking it in\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "Then I was in the tractor's cab, next to the driver, who I didn't know. I was still holding the paper boat."
+    },
+    {
+     "role": "assistant",
+     "content": "what did the tractor cab look like around you?"
+    },
+    {
+     "role": "user",
+     "content": "It was kind of basic and dusty, with a big steering wheel and a cracked seat. Not much in there."
+    },
+    {
+     "role": "assistant",
+     "content": "basic and dusty, I can picture it\n\nand then what happened?"
+    }
+   ],
+   "labels": {
+    "move": true,
+    "eitherOr": false,
+    "leading": false
+   }
+  },
+  {
+   "id": "glass-window-e1ef-t1",
+   "session": "dream-0927-022052-e1ef",
+   "dream": "glass-window",
+   "turn": 1,
+   "move": {
+    "kind": "follow"
+   },
+   "rule": "4: still telling — let them go on",
+   "phase": "listen",
+   "brief": "Move: follow. They're still telling the dream. React to what they just said, then invite what happened next, openly, such as \"and then what happened?\", without guessing what it was and without asking about anything they already told.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey, i'm Berry\n\ntell me a dream, however it comes back to you"
+    },
+    {
+     "role": "user",
+     "content": "So I finally get to my parents’ house after this long trip, and I’m just standing there waiting for something."
+    },
+    {
+     "role": "assistant",
+     "content": "standing there waiting, after all that way\n\nand then what happened?"
+    }
+   ],
+   "labels": {
+    "move": true,
+    "eitherOr": false,
+    "leading": false
+   }
+  },
+  {
+   "id": "sea-school-3b98-t3",
+   "session": "dream-0927-022106-3b98",
+   "dream": "sea-school",
+   "turn": 3,
+   "move": {
+    "kind": "follow"
+   },
+   "rule": "4: a detail answered — back to the story",
+   "phase": "listen",
+   "brief": "Move: follow. They're still telling the dream. React to what they just said, then invite what happened next, openly, such as \"and then what happened?\", without guessing what it was and without asking about anything they already told.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey, i'm berry. i turn dreams into pictures.\n\ntell me yours, however it comes back to you."
+    },
+    {
+     "role": "user",
+     "content": "oh hey. okay so the first thing i remember is everything was kind of murky blue and green, like looking through a fish tank that needs cleaning."
+    },
+    {
+     "role": "assistant",
+     "content": "that murky, uncleaned tank feel is a whole mood. what could you see through it?"
+    },
+    {
+     "role": "user",
+     "content": "my primary school but the whole thing was underwater. i could breathe fine though. i swam down the corridor instead of walking."
+    },
+    {
+     "role": "assistant",
+     "content": "swimming down the corridor instead of walking, that detail really lands. what did the corridor look like down there?"
+    },
+    {
+     "role": "user",
+     "content": "just the same corridor but underwater, with the light coming down in wobbly beams from above. the floor was sort of shadowy."
+    },
+    {
+     "role": "assistant",
+     "content": "wobbly light beams and a shadowy floor, that's vivid. what happened next?"
+    }
+   ],
+   "labels": {
+    "move": true,
+    "eitherOr": false,
+    "leading": false
+   }
+  },
+  {
+   "id": "school-bird-4bef-t3",
+   "session": "dream-0927-022134-4bef",
+   "dream": "school-bird",
+   "turn": 3,
+   "move": {
+    "kind": "follow"
+   },
+   "rule": "4: still telling — let them go on",
+   "phase": "listen",
+   "brief": "Move: follow. They're still telling the dream. React to what they just said, then invite what happened next, openly, such as \"and then what happened?\", without guessing what it was and without asking about anything they already told.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey, i'm berry. tell me about your dream, however it comes back to you."
+    },
+    {
+     "role": "user",
+     "content": "Hey. Honestly the main thing I remember is being back at my old school, walking down this really long green corridor with lockers on both sides. I was late for something."
+    },
+    {
+     "role": "assistant",
+     "content": "that green corridor sounds like it goes on forever. what do the lockers look like?"
+    },
+    {
+     "role": "user",
+     "content": "They were just normal school lockers, all in a row — I don’t remember the colour or anything specific about them. I just knew I was late and the corridor felt endless."
+    },
+    {
+     "role": "assistant",
+     "content": "that feeling of being late can really stretch everything out. what was at the end of the corridor, if anything?"
+    },
+    {
+     "role": "user",
+     "content": "At the end there was a wooden door with a small round window in it. I went through and ended up in the classroom."
+    },
+    {
+     "role": "assistant",
+     "content": "a small round window in a door feels like the kind of detail that sticks. what was the classroom like when you went in?"
+    }
+   ],
+   "labels": {
+    "move": false,
+    "eitherOr": false,
+    "leading": false
+   },
+   "note": "a follow that asks about the classroom, a detail"
+  },
+  {
+   "id": "moon-market-305d-t3",
+   "session": "dream-0927-022106-305d",
+   "dream": "moon-market",
+   "turn": 3,
+   "move": {
+    "kind": "follow"
+   },
+   "rule": "4: a detail answered — back to the story",
+   "phase": "listen",
+   "brief": "Move: follow. They're still telling the dream. React to what they just said, then invite what happened next, openly, such as \"and then what happened?\", without guessing what it was and without asking about anything they already told.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey, i'm berry. tell me your dream, however it comes back to you."
+    },
+    {
+     "role": "user",
+     "content": "it was super bright and colourful, like neon signs at night"
+    },
+    {
+     "role": "assistant",
+     "content": "neon signs at night, all that colour.\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "i was at a night market on the moon"
+    },
+    {
+     "role": "assistant",
+     "content": "a night market on the moon. how did it look there?"
+    },
+    {
+     "role": "user",
+     "content": "the ground was grey and dusty, and the earth looked big and blue in the black sky above"
+    },
+    {
+     "role": "assistant",
+     "content": "grey dust, and that earth hanging up there all blue.\n\nand then what happened?"
+    }
+   ],
+   "labels": {
+    "move": true,
+    "eitherOr": false,
+    "leading": false
+   }
+  },
+  {
+   "id": "hotel-orchard-8936-t9",
+   "session": "dream-0927-022120-8936",
+   "dream": "hotel-orchard",
+   "turn": 9,
+   "move": {
+    "kind": "follow"
+   },
+   "rule": "4: a detail answered — back to the story",
+   "phase": "listen",
+   "brief": "Move: follow. They're still telling the dream. React to what they just said, then invite what happened next, openly, such as \"and then what happened?\", without guessing what it was and without asking about anything they already told.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey, i'm berry\n\ntell me your dream, however it comes back to you"
+    },
+    {
+     "role": "user",
+     "content": "Hi Berry. The bit that keeps coming back is being in this tiny old lift with Tomas, and it just kept going up for way too long."
+    },
+    {
+     "role": "assistant",
+     "content": "a tiny old lift, that's the part that won't let go\n\nwhat was it like inside that lift with Tomas?"
+    },
+    {
+     "role": "user",
+     "content": "It was really cramped, and the walls were brass, all scratched and dull. There was this folding metal gate instead of normal doors. We were both adults then."
+    },
+    {
+     "role": "assistant",
+     "content": "both adults then... that's a strange detail to notice\n\nwhat was Tomas doing while the lift kept going?"
+    },
+    {
+     "role": "user",
+     "content": "Nothing much, just standing there. But when I looked over at him, he was about ten again — in our old school uniform — and he didn't seem to notice anything had changed."
+    },
+    {
+     "role": "assistant",
+     "content": "he just slipped back to ten, in the uniform, and never blinked\n\nwhat did the ten-year-old Tomas look like, standing there next to you?"
+    },
+    {
+     "role": "user",
+     "content": "Just like he did at school. I don't remember much else about his face, but the uniform was right — ours had that grey jumper and the dark trousers. He looked calm, staring at the gate."
+    },
+    {
+     "role": "assistant",
+     "content": "you said it wasn't like that before though\n\nearlier you mentioned the folded metal gate instead of normal doors — what was the gate like in the lift, the one Tomas was staring at?"
+    },
+    {
+     "role": "user",
+     "content": "It was the sort you pull across, all criss-cross metal in a diamond pattern. Old, maybe a bit stiff. Tomas was just looking through it, like he was waiting for it to open."
+    },
+    {
+     "role": "assistant",
+     "content": "waiting for it to open, not trying to open it himself\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "The lift stopped, and the gate opened on its own. Instead of a corridor, there was an orchard at dusk. Rows of apple trees, and every apple glowing softly like a lamp."
+    },
+    {
+     "role": "assistant",
+     "content": "that's... glowing apples, rows of them, not a corridor at all\n\nwhat about the light in the orchard — what was it like around the trees?"
+    },
+    {
+     "role": "user",
+     "content": "It was dusk, so everything was a bit dim and blue, but the apples themselves were bright. Warm looking, like little lights hanging on the branches. I don't remember much else about the light around them."
+    },
+    {
+     "role": "assistant",
+     "content": "warm lights in all that blue dusk\n\nwhat did you do when the gate opened and the orchard was there?"
+    },
+    {
+     "role": "user",
+     "content": "I think I just stood there at first, taking it in. Then Tomas ran ahead between the trees. I followed, but not in a hurry."
+    },
+    {
+     "role": "assistant",
+     "content": "you followed him, not in a hurry\n\nearlier you mentioned that gate, the one with the criss-cross metal in a diamond pattern... what color was the metal?"
+    },
+    {
+     "role": "user",
+     "content": "I think it was a dull gold, same as the brass walls. Worn, not shiny. I don't remember it exactly."
+    },
+    {
+     "role": "assistant",
+     "content": "worn dull gold, same as the walls, that's enough\n\nand once you followed Tomas in among the trees, what happened next?"
+    }
+   ],
+   "labels": {
+    "move": true,
+    "eitherOr": false,
+    "leading": false
+   }
+  },
+  {
+   "id": "car-park-1f65-t9",
+   "session": "dream-0927-022052-1f65",
+   "dream": "car-park",
+   "turn": 9,
+   "move": {
+    "kind": "follow"
+   },
+   "rule": "4: a detail answered — back to the story",
+   "phase": "listen",
+   "brief": "Move: follow. They're still telling the dream. React to what they just said, then invite what happened next, openly, such as \"and then what happened?\", without guessing what it was and without asking about anything they already told.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey, i'm berry. tell me about a dream you've had, however it comes back to you."
+    },
+    {
+     "role": "user",
+     "content": "so i was in this huge concrete car park at night, looking for my car, and i kept feeling like someone was following me"
+    },
+    {
+     "role": "assistant",
+     "content": "that feeling of being followed is so unsettling.\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "every time i turned round, there was no one there. just this thin grey dog sitting on the ramp, watching me"
+    },
+    {
+     "role": "assistant",
+     "content": "that dog, just sitting there watching, is quite an image.\n\nwhat did the dog look like, up close?"
+    },
+    {
+     "role": "user",
+     "content": "i don't remember much detail, just that it was thin and grey, and very still"
+    },
+    {
+     "role": "assistant",
+     "content": "the stillness is the eerie part, isn't it.\n\nso there's a grey dog on the ramp. what happened after you noticed it?"
+    },
+    {
+     "role": "user",
+     "content": "i started running up the stairs, and the stairs just kept going. floor after floor, same number painted on every wall—\"level 4, level 4, level 4\""
+    },
+    {
+     "role": "assistant",
+     "content": "the same number over and over, that's so disorienting.\n\nwas anyone else there?"
+    },
+    {
+     "role": "user",
+     "content": "no, i don't remember seeing anyone else. just me and the dog somewhere behind"
+    },
+    {
+     "role": "assistant",
+     "content": "so it's just you, racing up stairs that repeat, with the dog somewhere behind you the whole time.\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "i finally came out on the roof, and it was raining, but the rain was falling upwards, back into the sky"
+    },
+    {
+     "role": "assistant",
+     "content": "that's such a strange, lovely image, rain going the wrong way.\n\nhow did it look when the rain fell back into the sky?"
+    },
+    {
+     "role": "user",
+     "content": "it looked like the whole roof was letting go of the rain at once. i just stood there watching it go up"
+    },
+    {
+     "role": "assistant",
+     "content": "what a shift, from running up those repeating stairs to just standing still.\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "my car was there, but it wasn't a car. it was a little wooden rowing boat, parked neatly between the lines"
+    },
+    {
+     "role": "assistant",
+     "content": "a rowing boat parked between car park lines. that's wonderful.\n\nyou mentioned earlier the whole roof letting go of the rain at once. what did the roof look like where you were standing?"
+    },
+    {
+     "role": "user",
+     "content": "it was just wet concrete, like a normal car park roof, but the water was streaming upward off it in long lines"
+    },
+    {
+     "role": "assistant",
+     "content": "those long upward lines of water sound dreamlike and calm all at once.\n\nand the boat, did you go toward it?"
+    }
+   ],
+   "labels": {
+    "move": false,
+    "eitherOr": false,
+    "leading": true
+   },
+   "note": "\"did you go toward it?\": a guess at what happened next"
+  },
+  {
+   "id": "streetcar-188f-t5",
+   "session": "dream-0927-022134-188f",
+   "dream": "streetcar",
+   "turn": 5,
+   "move": {
+    "kind": "follow"
+   },
+   "rule": "4: a detail answered — back to the story",
+   "phase": "listen",
+   "brief": "Move: follow. They're still telling the dream. React to what they just said, then invite what happened next, openly, such as \"and then what happened?\", without guessing what it was and without asking about anything they already told.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey, i'm berry. tell me a dream, however it comes back to you."
+    },
+    {
+     "role": "user",
+     "content": "i was on this streetcar, watching the conductor and copying him at the turns"
+    },
+    {
+     "role": "assistant",
+     "content": "that's a strange thing to do, copying him at the turns.\n\nwhat happened next?"
+    },
+    {
+     "role": "user",
+     "content": "it got weird—suddenly i was on top of the car, but it had turned into a train, going really fast"
+    },
+    {
+     "role": "assistant",
+     "content": "so you went from inside watching, to out in the open on top of it, and it's moving fast now.\n\nwhat did it look like up there?"
+    },
+    {
+     "role": "user",
+     "content": "it was high up and i kept nearly falling off, especially at bends. i was so scared"
+    },
+    {
+     "role": "assistant",
+     "content": "that fear sounds sharp, like any second you could slip.\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "then i noticed there was a family sitting up there with me, and a little baby who was loving it. i felt like the only one scared"
+    },
+    {
+     "role": "assistant",
+     "content": "that's lonely, being the only one scared while everyone else is fine with it.\n\nearlier you said it was high up and you kept nearly falling off at bends, and you were so scared. what did that look like?"
+    },
+    {
+     "role": "user",
+     "content": "it was scary, feeling like i might jump off every time we rounded a corner, and even more so when the train leaned into the turn"
+    },
+    {
+     "role": "assistant",
+     "content": "the leaning into the turn made it even scarier, after the feeling of nearly jumping off.\n\nwhat happened after that?"
+    }
+   ],
+   "labels": {
+    "move": true,
+    "eitherOr": false,
+    "leading": false
+   }
+  },
+  {
+   "id": "grandma-kitchen-6979-t2",
+   "session": "dream-0927-022052-6979",
+   "dream": "grandma-kitchen",
+   "turn": 2,
+   "move": {
+    "kind": "explore_thread",
+    "threadId": "msg_3"
+   },
+   "rule": "4: still telling — follow what they raised",
+   "phase": "listen",
+   "brief": "Move: explore_thread → what they just told you: \"It had the checked floor and the big round clock on the wall. Felt exactly like being there as a kid. My grandmother was at the table cutting a cake, and my unc\". Be curious about something in it that could be seen and that they haven't described yet: what it looked like, where it was, or who was there. Ask one open question about it, in their words, never suggesting what happened or how it was.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "any dreams you want to talk about, however they come back to you?"
+    },
+    {
+     "role": "user",
+     "content": "Yeah actually had one the other night that keeps bugging me. It was all black and white, like an old film with scratches. I was in my grandmother’s kitchen from when I was little. Just standing there."
+    },
+    {
+     "role": "assistant",
+     "content": "black and white with scratches - that's such a specific way for it to look.\n\nwhat did the kitchen look like in the dream?"
+    },
+    {
+     "role": "user",
+     "content": "It had the checked floor and the big round clock on the wall. Felt exactly like being there as a kid. My grandmother was at the table cutting a cake, and my uncle Ray was leaning in the doorway smoking."
+    },
+    {
+     "role": "assistant",
+     "content": "the checked floor and that clock, and everyone just there in the middle of it.\n\nwhat was your grandmother doing with the cake - was it for someone?"
+    }
+   ],
+   "labels": {
+    "move": true,
+    "eitherOr": false,
+    "leading": true
+   },
+   "note": "\"was it for someone?\" puts forward an answer of its own"
+  },
+  {
+   "id": "school-bird-a587-t4",
+   "session": "dream-0927-022106-a587",
+   "dream": "school-bird",
+   "turn": 4,
+   "move": {
+    "kind": "probe_goal",
+    "goalId": "people"
+   },
+   "rule": "7: next gap in the story",
+   "phase": "listen",
+   "brief": "Move: probe_goal → who was there. React to what they just said in a few words, then ask them one open question about who else was there, if anyone, such as \"was anyone else there?\", in your own words. Your question is about this and nothing else, and leaves the answer to them. If they don't remember, that's fine.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey, i'm berry. i listen to dreams and help turn them into pictures, but first i just want to hear yours.\n\ntell it to me however it comes back to you. no need to make it tidy."
+    },
+    {
+     "role": "user",
+     "content": "The heron was wearing her red cardigan. That bit stuck with me."
+    },
+    {
+     "role": "assistant",
+     "content": "a heron in a red cardigan. that's an image that would stay with anyone.\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "It flew out of the window and I was flying too, next to it."
+    },
+    {
+     "role": "assistant",
+     "content": "flying right alongside a heron in a red cardigan. that's a lot to take in.\n\nwhat could you see around you while you were flying?"
+    },
+    {
+     "role": "user",
+     "content": "The school roof below, really small, and the river shining. Felt tiny, like a sparrow."
+    },
+    {
+     "role": "assistant",
+     "content": "a river shining from way up there, the roof far below. i can almost feel the height of it.\n\nwhat did the river look like, from where you were?"
+    },
+    {
+     "role": "user",
+     "content": "Just a long shiny line through the town. Didn't see much else."
+    },
+    {
+     "role": "assistant",
+     "content": "a long shiny line through the town, that was it. the dream kept it simple up there.\n\nwas anyone else there with you, flying?"
+    }
+   ],
+   "labels": {
+    "move": true,
+    "eitherOr": false,
+    "leading": false
+   }
+  },
+  {
+   "id": "meads-house-a6c8-t2",
+   "session": "dream-0927-022106-a6c8",
+   "dream": "meads-house",
+   "turn": 2,
+   "move": {
+    "kind": "follow"
+   },
+   "rule": "4: a detail answered — back to the story",
+   "phase": "listen",
+   "brief": "Move: follow. They're still telling the dream. React to what they just said, then invite what happened next, openly, such as \"and then what happened?\", without guessing what it was and without asking about anything they already told.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey, i'm berry. i'd love to hear about a dream you've had — whatever comes back to you, however it comes back."
+    },
+    {
+     "role": "user",
+     "content": "The part that stuck with me was the house—it looked normal outside, but inside it was bigger, like there was this little European village right inside with a cobblestone street."
+    },
+    {
+     "role": "assistant",
+     "content": "a whole village tucked inside a house, that's the kind of thing that just stays with you.\n\nwhat was the light like on that cobblestone street?"
+    },
+    {
+     "role": "user",
+     "content": "I don’t really remember the light, honestly. It just felt like daytime, I think—not dim or anything."
+    },
+    {
+     "role": "assistant",
+     "content": "daytime, not dim — just kind of plain and easy to be in.\n\nand then what happened?"
+    }
+   ],
+   "labels": {
+    "move": true,
+    "eitherOr": false,
+    "leading": false
+   }
+  },
+  {
+   "id": "flooded-library-2be5-t10",
+   "session": "dream-0927-022120-2be5",
+   "dream": "flooded-library",
+   "turn": 10,
+   "move": {
+    "kind": "follow"
+   },
+   "rule": "4: still telling — let them go on",
+   "phase": "listen",
+   "brief": "Move: follow. They're still telling the dream. React to what they just said, then invite what happened next, openly, such as \"and then what happened?\", without guessing what it was and without asking about anything they already told.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey, I'm Berry.\n\ntell me your dream, however it comes back to you."
+    },
+    {
+     "role": "user",
+     "content": "the library, mostly. the big old reading room. and the water coming in under the doors."
+    },
+    {
+     "role": "assistant",
+     "content": "water under the doors. that's quite an image.\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "it kept rising. over the desks. then the books started floating off the shelves. hundreds of them, open like birds."
+    },
+    {
+     "role": "assistant",
+     "content": "hundreds of them, open like birds. i can almost see that.\n\nwhere were you while all of this was going on?"
+    },
+    {
+     "role": "user",
+     "content": "just standing there watching it happen. nobody else was in the room."
+    },
+    {
+     "role": "assistant",
+     "content": "standing there alone while it all floats around you.\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "my sister showed up. out of nowhere. she was in this little yellow rowing boat. completely calm. told me to get in."
+    },
+    {
+     "role": "assistant",
+     "content": "you said earlier you were just standing there watching, nobody else in the room.\n\nwhat did that moment look like from where you were?"
+    },
+    {
+     "role": "user",
+     "content": "the water was up over the desks by then, and the books were everywhere. it was quiet. kind of peaceful, not scary."
+    },
+    {
+     "role": "assistant",
+     "content": "quiet and peaceful, even with everything floating.\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "i climbed into the boat with her. she rowed us between the shelves."
+    },
+    {
+     "role": "assistant",
+     "content": "she rowed you between the shelves. just like that.\n\nwhat did the shelves look like as you went past them?"
+    },
+    {
+     "role": "user",
+     "content": "a lot of them were empty by then, books gone. the water was dark. and then a whale swam under us. slow. it filled the whole aisle."
+    },
+    {
+     "role": "assistant",
+     "content": "a whale, in the library. that's the kind of thing that stays with you.\n\nwhat did the water look like when it passed under you?"
+    },
+    {
+     "role": "user",
+     "content": "couldn't see much below the surface, just this huge dark shape moving. like a shadow that was solid. didn't feel dangerous at all."
+    },
+    {
+     "role": "assistant",
+     "content": "a solid shadow, moving slow beneath you.\n\nearlier you said your sister showed up out of nowhere in that little yellow rowing boat. what did she look like when you first saw her?"
+    },
+    {
+     "role": "user",
+     "content": "she looked the way she always does. dark hair, calm face. she was just sitting there with the oars, not even wet."
+    },
+    {
+     "role": "assistant",
+     "content": "not even wet, while the room's flooding.\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "she rowed us up to the high round window. big round window at the top of the room. she opened it and outside it was morning."
+    },
+    {
+     "role": "assistant",
+     "content": "morning, outside the window at the top of the room. that's lovely.\n\ndid you go through it?"
+    }
+   ],
+   "labels": {
+    "move": false,
+    "eitherOr": false,
+    "leading": true
+   },
+   "note": "\"did you go through it?\": a guess at what happened next"
+  },
+  {
+   "id": "car-park-4fe0-t5",
+   "session": "dream-0927-022120-4fe0",
+   "dream": "car-park",
+   "turn": 5,
+   "move": {
+    "kind": "explore_thread",
+    "threadId": "msg_9"
+   },
+   "rule": "4: still telling — follow what they raised",
+   "phase": "listen",
+   "brief": "Move: explore_thread → what they just told you: \"it was already sitting in the car when i got to the roof. only the car was a little wooden rowing boat.\". Be curious about something in it that could be seen and that they haven't described yet: what it looked like, where it was, or who was there. Ask one open question about it, in their words, never suggesting what happened or how it was.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey, i'm berry. tell me your dream, however it comes back to you."
+    },
+    {
+     "role": "user",
+     "content": "the car park. it kept being level 4."
+    },
+    {
+     "role": "assistant",
+     "content": "level 4, that's specific. what happened there?"
+    },
+    {
+     "role": "user",
+     "content": "i was looking for my car and every floor had the same number painted on the wall. like it wasn't getting me anywhere."
+    },
+    {
+     "role": "assistant",
+     "content": "so it kept saying level 4 no matter how far you went. that would mess with your head. did you ever find the car?"
+    },
+    {
+     "role": "user",
+     "content": "yeah but only when i got out on the roof. there was rain falling upwards too."
+    },
+    {
+     "role": "assistant",
+     "content": "rain falling upwards, that's something. was anyone else around up there?"
+    },
+    {
+     "role": "user",
+     "content": "just a thin grey dog. it had been following me earlier as well but when i turned round it was only ever sitting there watching."
+    },
+    {
+     "role": "assistant",
+     "content": "a thin grey dog that's always just sitting there when you turn. where was it, the last time you saw it?"
+    },
+    {
+     "role": "user",
+     "content": "it was already sitting in the car when i got to the roof. only the car was a little wooden rowing boat."
+    },
+    {
+     "role": "assistant",
+     "content": "a rowing boat in place of your car, with the dog already in it. was it somewhere you could see properly, the boat?"
+    }
+   ],
+   "labels": {
+    "move": true,
+    "eitherOr": false,
+    "leading": false
+   }
+  },
+  {
+   "id": "grandma-kitchen-7518-t7",
+   "session": "dream-0927-022120-7518",
+   "dream": "grandma-kitchen",
+   "turn": 7,
+   "move": {
+    "kind": "explore_thread",
+    "threadId": "msg_13"
+   },
+   "rule": "4: still telling — follow what they raised",
+   "phase": "listen",
+   "brief": "Move: explore_thread → what they just told you: \"it still had the checked floor and the big round clock, but everything was closing in. then i looked down and i was a kid again, wearing my old red cardigan, bu\". Be curious about something in it that could be seen and that they haven't described yet: what it looked like, where it was, or who was there. Ask one open question about it, in their words, never suggesting what happened or how it was.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey. i'm berry.\n\ntell me your dream, however it comes back to you."
+    },
+    {
+     "role": "user",
+     "content": "hey berry. k so what stuck with me most was the phone ringing. it was my grandma's kitchen, old one from when i was little, with the checked floor"
+    },
+    {
+     "role": "assistant",
+     "content": "the checked floor, that's a nice thing to have stuck.\n\nwhere was the phone, in that kitchen?"
+    },
+    {
+     "role": "user",
+     "content": "it was on the wall, the old kind with the long curly cord. nobody answered it, just kept ringing the whole time"
+    },
+    {
+     "role": "assistant",
+     "content": "nobody answering it, just that ringing the whole time. that really stays with you.\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "my grandma was at the table cutting this cake, slice after slice, but it never got smaller. and my uncle ray was leaning in the doorway smoking"
+    },
+    {
+     "role": "assistant",
+     "content": "slice after slice and it never gets smaller. that's strange.\n\nwhat did the cake look like?"
+    },
+    {
+     "role": "user",
+     "content": "idk, it was all black and white like an old film with scratches. the cake just looked like a normal cake i guess, but it never got smaller no matter how much she cut"
+    },
+    {
+     "role": "assistant",
+     "content": "all black and white with scratches, like the whole thing was worn.\n\nwhat did the ringing sound like, in all that?"
+    },
+    {
+     "role": "user",
+     "content": "just loud, like it filled the whole kitchen. nobody even looked at it, just kept on with what they were doing"
+    },
+    {
+     "role": "assistant",
+     "content": "nobody even looked at it, just kept on with what they were doing.\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "the kitchen started getting smaller around us. like the walls were moving in real slow"
+    },
+    {
+     "role": "assistant",
+     "content": "the walls moving in real slow. that's the part that would get me.\n\nwhat did the kitchen look like at that point, as it was getting smaller?"
+    },
+    {
+     "role": "user",
+     "content": "it still had the checked floor and the big round clock, but everything was closing in. then i looked down and i was a kid again, wearing my old red cardigan, but everything was still black and white"
+    },
+    {
+     "role": "assistant",
+     "content": "your old red cardigan, but everything still black and white. that's quite something.\n\nwhat was the cardigan like, if it had any colour at all?"
+    }
+   ],
+   "labels": {
+    "move": true,
+    "eitherOr": false,
+    "leading": false
+   }
+  },
+  {
+   "id": "hotel-orchard-8936-t3",
+   "session": "dream-0927-022120-8936",
+   "dream": "hotel-orchard",
+   "turn": 3,
+   "move": {
+    "kind": "explore_thread",
+    "threadId": "msg_5"
+   },
+   "rule": "4: still telling — follow what they raised",
+   "phase": "listen",
+   "brief": "Move: explore_thread → what they just told you: \"Nothing much, just standing there. But when I looked over at him, he was about ten again — in our old school uniform — and he didn't seem to notice anything had\". Be curious about something in it that could be seen and that they haven't described yet: what it looked like, where it was, or who was there. Ask one open question about it, in their words, never suggesting what happened or how it was.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey, i'm berry\n\ntell me your dream, however it comes back to you"
+    },
+    {
+     "role": "user",
+     "content": "Hi Berry. The bit that keeps coming back is being in this tiny old lift with Tomas, and it just kept going up for way too long."
+    },
+    {
+     "role": "assistant",
+     "content": "a tiny old lift, that's the part that won't let go\n\nwhat was it like inside that lift with Tomas?"
+    },
+    {
+     "role": "user",
+     "content": "It was really cramped, and the walls were brass, all scratched and dull. There was this folding metal gate instead of normal doors. We were both adults then."
+    },
+    {
+     "role": "assistant",
+     "content": "both adults then... that's a strange detail to notice\n\nwhat was Tomas doing while the lift kept going?"
+    },
+    {
+     "role": "user",
+     "content": "Nothing much, just standing there. But when I looked over at him, he was about ten again — in our old school uniform — and he didn't seem to notice anything had changed."
+    },
+    {
+     "role": "assistant",
+     "content": "he just slipped back to ten, in the uniform, and never blinked\n\nwhat did the ten-year-old Tomas look like, standing there next to you?"
+    }
+   ],
+   "labels": {
+    "move": true,
+    "eitherOr": false,
+    "leading": false
+   }
+  },
+  {
+   "id": "lighthouse-a3aa-t3",
+   "session": "dream-0927-022120-a3aa",
+   "dream": "lighthouse",
+   "turn": 3,
+   "move": {
+    "kind": "follow"
+   },
+   "rule": "4: a detail answered — back to the story",
+   "phase": "listen",
+   "brief": "Move: follow. They're still telling the dream. React to what they just said, then invite what happened next, openly, such as \"and then what happened?\", without guessing what it was and without asking about anything they already told.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey, i'm berry\n\ntell me your dream however it comes back to you"
+    },
+    {
+     "role": "user",
+     "content": "ok so the part that keeps coming back is the grey beach and the little brown terrier"
+    },
+    {
+     "role": "assistant",
+     "content": "that image keeps coming back for you\n\nwhat happens next?"
+    },
+    {
+     "role": "user",
+     "content": "I'm holding this old brass key and there's a white lighthouse up ahead, and somehow I just know it's for the door"
+    },
+    {
+     "role": "assistant",
+     "content": "that quiet kind of knowing, where you don't question it\n\nwhat does the lighthouse look like from where you are?"
+    },
+    {
+     "role": "user",
+     "content": "tall and white, kind of plain, at the end of the beach. not much else around it"
+    },
+    {
+     "role": "assistant",
+     "content": "just standing there at the end of everything\n\nwhat happens after you notice it?"
+    }
+   ],
+   "labels": {
+    "move": true,
+    "eitherOr": false,
+    "leading": false
+   }
+  },
+  {
+   "id": "lighthouse-a3aa-t4",
+   "session": "dream-0927-022120-a3aa",
+   "dream": "lighthouse",
+   "turn": 4,
+   "move": {
+    "kind": "probe_goal",
+    "goalId": "people"
+   },
+   "rule": "7: next gap in the story",
+   "phase": "listen",
+   "brief": "Move: probe_goal → who was there. React to what they just said in a few words, then ask them one open question about who else was there, if anyone, such as \"was anyone else there?\", in your own words. Your question is about this and nothing else, and leaves the answer to them. If they don't remember, that's fine.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey, i'm berry\n\ntell me your dream however it comes back to you"
+    },
+    {
+     "role": "user",
+     "content": "ok so the part that keeps coming back is the grey beach and the little brown terrier"
+    },
+    {
+     "role": "assistant",
+     "content": "that image keeps coming back for you\n\nwhat happens next?"
+    },
+    {
+     "role": "user",
+     "content": "I'm holding this old brass key and there's a white lighthouse up ahead, and somehow I just know it's for the door"
+    },
+    {
+     "role": "assistant",
+     "content": "that quiet kind of knowing, where you don't question it\n\nwhat does the lighthouse look like from where you are?"
+    },
+    {
+     "role": "user",
+     "content": "tall and white, kind of plain, at the end of the beach. not much else around it"
+    },
+    {
+     "role": "assistant",
+     "content": "just standing there at the end of everything\n\nwhat happens after you notice it?"
+    },
+    {
+     "role": "user",
+     "content": "I go up to the door and open it with the key, and my dog runs in ahead of me, up this spiral staircase"
+    },
+    {
+     "role": "assistant",
+     "content": "straight up the stairs, no hesitation\n\nwas anyone else there?"
+    }
+   ],
+   "labels": {
+    "move": true,
+    "eitherOr": false,
+    "leading": false
+   }
+  },
+  {
+   "id": "desert-station-f9d3-t13",
+   "session": "dream-0927-022120-f9d3",
+   "dream": "desert-station",
+   "turn": 13,
+   "move": {
+    "kind": "probe_goal",
+    "goalId": "people"
+   },
+   "rule": "7: next gap in the story",
+   "phase": "listen",
+   "brief": "Move: probe_goal → who was there. React to what they just said in a few words, then ask them one open question about who else was there, if anyone, such as \"was anyone else there?\", in your own words. Your question is about this and nothing else, and leaves the answer to them. If they don't remember, that's fine.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey, I'm Berry\n\ntell me your dream however it comes back to you"
+    },
+    {
+     "role": "user",
+     "content": "Hey Berry. The part that keeps coming back is that tiny train station — just a bench, a clock on a pole, and sand in every direction."
+    },
+    {
+     "role": "assistant",
+     "content": "sand in every direction — that's quite a thing to be surrounded by\n\nwhat does the station itself look like?"
+    },
+    {
+     "role": "user",
+     "content": "It looked like a comic book — thick black lines and flat colours. The sun was straight overhead, so every shadow was a hard black shape."
+    },
+    {
+     "role": "assistant",
+     "content": "hard black shadows and flat colours, like the world was drawn with a marker\n\nand what happened there?"
+    },
+    {
+     "role": "user",
+     "content": "An old man in a white suit was sitting on the bench. There was a camel standing next to him, perfectly calm. He told me the train was late, like it always was."
+    },
+    {
+     "role": "assistant",
+     "content": "the camel next to him, just standing there calm\n\nwhat did it look like?"
+    },
+    {
+     "role": "user",
+     "content": "I don't remember much detail — it was just a camel, kind of plain. It stood there without moving, like it was waiting too."
+    },
+    {
+     "role": "assistant",
+     "content": "even the camel was waiting, without moving a muscle\n\nhow did it feel being there with them?"
+    },
+    {
+     "role": "user",
+     "content": "Quiet. Like time didn't really matter, but still there was the feeling of waiting for something that wouldn't come."
+    },
+    {
+     "role": "assistant",
+     "content": "that contradiction — quiet but waiting for something that wouldn't come\n\nwhat happened next?"
+    },
+    {
+     "role": "user",
+     "content": "I looked at the clock, and it was melting — dripping down the pole like wax."
+    },
+    {
+     "role": "assistant",
+     "content": "the clock melting, you seeing that happen\n\nwhat did the melting look like?"
+    },
+    {
+     "role": "user",
+     "content": "It was just the clock face sort of sliding down, slow and wavy, like it was made of something soft. The numbers went first, then the hands."
+    },
+    {
+     "role": "assistant",
+     "content": "numbers first, then the hands, sliding off\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "Then I heard a train whistle far away. But no train came."
+    },
+    {
+     "role": "assistant",
+     "content": "a whistle with no train behind it\n\ngoing back to what you said earlier about the clock face sliding down, the numbers going first and then the hands — what was the old man doing while that happened?"
+    },
+    {
+     "role": "user",
+     "content": "He didn't seem to notice. He just kept sitting there, calm, like the dripping clock was nothing."
+    },
+    {
+     "role": "assistant",
+     "content": "he didn't even look at it\n\nso what happened after the whistle?"
+    },
+    {
+     "role": "user",
+     "content": "The old man and the camel just got up and walked off into the desert. I stayed on the platform, watching them get smaller until they were gone. Then I woke up."
+    },
+    {
+     "role": "assistant",
+     "content": "and then you woke up, with them still getting smaller in your mind\n\ngoing back to when the old man was sitting there calm, not noticing the clock — what did he look like as he waited?"
+    },
+    {
+     "role": "user",
+     "content": "I don't remember much about his face. Just that he was old, and the white suit stuck out against all that sand."
+    },
+    {
+     "role": "assistant",
+     "content": "the white suit against the sand, that's the part you remember\n\nearlier you said he just got up and walked off, and you stayed watching them get smaller — what were you doing while you watched them go?"
+    },
+    {
+     "role": "user",
+     "content": "Just standing there on the platform. I didn't call out or follow. Just watched until they were gone."
+    },
+    {
+     "role": "assistant",
+     "content": "you didn't call out or follow, you just let them go\n\ngoing back to that earlier thing — when you heard the train whistle far away but no train came, how did the whistle sound to you?"
+    },
+    {
+     "role": "user",
+     "content": "It was faint and far off, like it was coming from a long way across the desert. It didn't get closer."
+    },
+    {
+     "role": "assistant",
+     "content": "faint and far off, like it was coming from a long way across the desert, but it never got closer\n\nwas anyone else there with you on the platform?"
+    }
+   ],
+   "labels": {
+    "move": true,
+    "eitherOr": false,
+    "leading": false
+   }
+  },
+  {
+   "id": "lighthouse-a3aa-t8",
+   "session": "dream-0927-022120-a3aa",
+   "dream": "lighthouse",
+   "turn": 8,
+   "move": {
+    "kind": "circle_back",
+    "threadId": "msg_7"
+   },
+   "rule": "6b: raised earlier, never taken up",
+   "phase": "listen",
+   "brief": "Move: circle_back → they mentioned \"I go up to the door and open it with the key, and my dog runs in ahead of me, up this spiral staircase\" earlier and it never got picked up. Come back to it, saying it was earlier, and ask one open question about something in it that could be seen and that they haven't described yet: what it looked like, where it was, or who was there.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey, i'm berry\n\ntell me your dream however it comes back to you"
+    },
+    {
+     "role": "user",
+     "content": "ok so the part that keeps coming back is the grey beach and the little brown terrier"
+    },
+    {
+     "role": "assistant",
+     "content": "that image keeps coming back for you\n\nwhat happens next?"
+    },
+    {
+     "role": "user",
+     "content": "I'm holding this old brass key and there's a white lighthouse up ahead, and somehow I just know it's for the door"
+    },
+    {
+     "role": "assistant",
+     "content": "that quiet kind of knowing, where you don't question it\n\nwhat does the lighthouse look like from where you are?"
+    },
+    {
+     "role": "user",
+     "content": "tall and white, kind of plain, at the end of the beach. not much else around it"
+    },
+    {
+     "role": "assistant",
+     "content": "just standing there at the end of everything\n\nwhat happens after you notice it?"
+    },
+    {
+     "role": "user",
+     "content": "I go up to the door and open it with the key, and my dog runs in ahead of me, up this spiral staircase"
+    },
+    {
+     "role": "assistant",
+     "content": "straight up the stairs, no hesitation\n\nwas anyone else there?"
+    },
+    {
+     "role": "user",
+     "content": "not until I got to the top. there was a round room with windows all the way round, and my father was sitting at a table folding paper boats out of newspaper"
+    },
+    {
+     "role": "assistant",
+     "content": "what's on the table around him?"
+    },
+    {
+     "role": "user",
+     "content": "just the boats he's folding and maybe more newspaper, I don't remember much else"
+    },
+    {
+     "role": "assistant",
+     "content": "that's okay, the edges can blur like that\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "he didn't look up, just slid one of the paper boats over to me. I took it and looked out the window, and the sea had changed into this huge field of tall yellow grass with a red tractor driving through it"
+    },
+    {
+     "role": "assistant",
+     "content": "a whole field where the sea had been\n\nwhere in the field was the red tractor?"
+    },
+    {
+     "role": "user",
+     "content": "kind of far off, moving slowly through the middle of it"
+    },
+    {
+     "role": "assistant",
+     "content": "that slow movement through the grass, far off\n\nyou said earlier your dog ran ahead up that spiral staircase - what did the staircase look like?"
+    }
+   ],
+   "labels": {
+    "move": true,
+    "eitherOr": false,
+    "leading": false
+   }
+  },
+  {
+   "id": "grandma-kitchen-7518-t10",
+   "session": "dream-0927-022120-7518",
+   "dream": "grandma-kitchen",
+   "turn": 10,
+   "move": {
+    "kind": "circle_back",
+    "threadId": "msg_17"
+   },
+   "rule": "6b: raised earlier, never taken up",
+   "phase": "listen",
+   "brief": "Move: circle_back → they mentioned \"kinda heavy, like nobody was supposed to answer the phone and the kitchen just kept shrinking. i woke up and it was still ringing in my head\" earlier and it never got picked up. Come back to it, saying it was earlier, and ask one open question about something in it that could be seen and that they haven't described yet: what it looked like, where it was, or who was there.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey. i'm berry.\n\ntell me your dream, however it comes back to you."
+    },
+    {
+     "role": "user",
+     "content": "hey berry. k so what stuck with me most was the phone ringing. it was my grandma's kitchen, old one from when i was little, with the checked floor"
+    },
+    {
+     "role": "assistant",
+     "content": "the checked floor, that's a nice thing to have stuck.\n\nwhere was the phone, in that kitchen?"
+    },
+    {
+     "role": "user",
+     "content": "it was on the wall, the old kind with the long curly cord. nobody answered it, just kept ringing the whole time"
+    },
+    {
+     "role": "assistant",
+     "content": "nobody answering it, just that ringing the whole time. that really stays with you.\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "my grandma was at the table cutting this cake, slice after slice, but it never got smaller. and my uncle ray was leaning in the doorway smoking"
+    },
+    {
+     "role": "assistant",
+     "content": "slice after slice and it never gets smaller. that's strange.\n\nwhat did the cake look like?"
+    },
+    {
+     "role": "user",
+     "content": "idk, it was all black and white like an old film with scratches. the cake just looked like a normal cake i guess, but it never got smaller no matter how much she cut"
+    },
+    {
+     "role": "assistant",
+     "content": "all black and white with scratches, like the whole thing was worn.\n\nwhat did the ringing sound like, in all that?"
+    },
+    {
+     "role": "user",
+     "content": "just loud, like it filled the whole kitchen. nobody even looked at it, just kept on with what they were doing"
+    },
+    {
+     "role": "assistant",
+     "content": "nobody even looked at it, just kept on with what they were doing.\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "the kitchen started getting smaller around us. like the walls were moving in real slow"
+    },
+    {
+     "role": "assistant",
+     "content": "the walls moving in real slow. that's the part that would get me.\n\nwhat did the kitchen look like at that point, as it was getting smaller?"
+    },
+    {
+     "role": "user",
+     "content": "it still had the checked floor and the big round clock, but everything was closing in. then i looked down and i was a kid again, wearing my old red cardigan, but everything was still black and white"
+    },
+    {
+     "role": "assistant",
+     "content": "your old red cardigan, but everything still black and white. that's quite something.\n\nwhat was the cardigan like, if it had any colour at all?"
+    },
+    {
+     "role": "user",
+     "content": "it was red, i know that, but the whole dream was black and white so the red didn't show i guess. it was just the one i used to wear"
+    },
+    {
+     "role": "assistant",
+     "content": "the red not showing but you knowing it's red, that's a curious thing.\n\nhow did the whole dream feel to you?"
+    },
+    {
+     "role": "user",
+     "content": "kinda heavy, like nobody was supposed to answer the phone and the kitchen just kept shrinking. i woke up and it was still ringing in my head"
+    },
+    {
+     "role": "assistant",
+     "content": "it staying with you after waking, that ringing.\n\nyou mentioned earlier that red cardigan, the one you used to wear. what did it look like, that cardigan?"
+    },
+    {
+     "role": "user",
+     "content": "it was a plain red cardigan, buttons down the front, the one i wore when i was little. that's all i remember"
+    },
+    {
+     "role": "assistant",
+     "content": "a plain red cardigan with buttons down the front, and the whole room not showing its colour.\n\nearlier you said it was kinda heavy, like nobody was supposed to answer the phone and the kitchen just kept shrinking. where exactly on the wall was that phone, in relation to where you were?"
+    }
+   ],
+   "labels": {
+    "move": true,
+    "eitherOr": false,
+    "leading": false
+   }
+  },
+  {
+   "id": "icehead-4f15-t7",
+   "session": "dream-0927-022120-4f15",
+   "dream": "icehead",
+   "turn": 7,
+   "move": {
+    "kind": "circle_back",
+    "threadId": "msg_9"
+   },
+   "rule": "6b: raised earlier, never taken up",
+   "phase": "listen",
+   "brief": "Move: circle_back → they mentioned \"the ice started melting, but it felt more like it was being carved. little channels ran down and the sharp edges rounded off, and then it formed into a horse's \" earlier and it never got picked up. Come back to it, saying it was earlier, and ask one open question about something in it that could be seen and that they haven't described yet: what it looked like, where it was, or who was there.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey, i'm berry. i'll listen to your dream, however it comes back to you. go ahead whenever you're ready."
+    },
+    {
+     "role": "user",
+     "content": "it's weird, I mostly remember the end of it. someone I was talking to had her head turn to ice and then melt into a horse's head."
+    },
+    {
+     "role": "assistant",
+     "content": "that sounds… sudden. like it turned into something else before you could really catch up with it.\n\nwhat happened just before that?"
+    },
+    {
+     "role": "user",
+     "content": "there was a girl, she was standing with me by the autoclave. she walked off to the far end of the room for a bit, then came back with a block of ice instead of a head."
+    },
+    {
+     "role": "assistant",
+     "content": "a block of ice instead of a head—so it was already different by the time she walked back.\n\nwhat did she look like, aside from that?"
+    },
+    {
+     "role": "user",
+     "content": "honestly don't remember much else about her. she was young, but that's all that stuck with me."
+    },
+    {
+     "role": "assistant",
+     "content": "that's okay, dreams hold onto strange things and let go of the rest.\n\nand then when she came back with the ice, what did you do?"
+    },
+    {
+     "role": "user",
+     "content": "nothing really, she just stood in front of me like it was completely normal. I don't think either of us said anything."
+    },
+    {
+     "role": "assistant",
+     "content": "it's strange how something so impossible can just sit there without either of you making a thing of it.\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "the ice started melting, but it felt more like it was being carved. little channels ran down and the sharp edges rounded off, and then it formed into a horse's head. really clear, with eyes and ears and nostrils all there in the ice."
+    },
+    {
+     "role": "assistant",
+     "content": "earlier you said someone you were talking to had her head turn to ice and then melt into a horse's head. it sounds like the melting was more like being carved.\n\nwhat did the room look like around where you were standing?"
+    },
+    {
+     "role": "user",
+     "content": "I don't really remember the room at all, just that we were by the autoclave and there was a far end she walked to."
+    },
+    {
+     "role": "assistant",
+     "content": "so the room is mostly blank, except for the autoclave and that far end.\n\nand then what happened after the horse's head was there?"
+    },
+    {
+     "role": "user",
+     "content": "that's it, that's where the dream ended for me. it didn't feel scary, just like I was watching something being made instead of falling apart."
+    },
+    {
+     "role": "assistant",
+     "content": "watching something being made instead of falling apart, that's a gentle way to hold it.\n\nearlier you said the ice melting felt more like being carved, with little channels running down. i'd like to go back to that — what did those channels look like as they traced through the ice?"
+    }
+   ],
+   "labels": {
+    "move": true,
+    "eitherOr": false,
+    "leading": false
+   }
+  },
+  {
+   "id": "lighthouse-a3aa-t15",
+   "session": "dream-0927-022120-a3aa",
+   "dream": "lighthouse",
+   "turn": 15,
+   "move": {
+    "kind": "probe_goal",
+    "goalId": "key_moment"
+   },
+   "rule": "7: next gap in the story",
+   "phase": "listen",
+   "brief": "Move: probe_goal → the moment that stayed. React to what they just said in a few words, then ask them one open question about the one moment of it that stays with them most, such as \"if you could pause it on one moment, which would it be?\", in your own words. Your question is about this and nothing else, and leaves the answer to them. If they don't remember, that's fine.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey, i'm berry\n\ntell me your dream however it comes back to you"
+    },
+    {
+     "role": "user",
+     "content": "ok so the part that keeps coming back is the grey beach and the little brown terrier"
+    },
+    {
+     "role": "assistant",
+     "content": "that image keeps coming back for you\n\nwhat happens next?"
+    },
+    {
+     "role": "user",
+     "content": "I'm holding this old brass key and there's a white lighthouse up ahead, and somehow I just know it's for the door"
+    },
+    {
+     "role": "assistant",
+     "content": "that quiet kind of knowing, where you don't question it\n\nwhat does the lighthouse look like from where you are?"
+    },
+    {
+     "role": "user",
+     "content": "tall and white, kind of plain, at the end of the beach. not much else around it"
+    },
+    {
+     "role": "assistant",
+     "content": "just standing there at the end of everything\n\nwhat happens after you notice it?"
+    },
+    {
+     "role": "user",
+     "content": "I go up to the door and open it with the key, and my dog runs in ahead of me, up this spiral staircase"
+    },
+    {
+     "role": "assistant",
+     "content": "straight up the stairs, no hesitation\n\nwas anyone else there?"
+    },
+    {
+     "role": "user",
+     "content": "not until I got to the top. there was a round room with windows all the way round, and my father was sitting at a table folding paper boats out of newspaper"
+    },
+    {
+     "role": "assistant",
+     "content": "what's on the table around him?"
+    },
+    {
+     "role": "user",
+     "content": "just the boats he's folding and maybe more newspaper, I don't remember much else"
+    },
+    {
+     "role": "assistant",
+     "content": "that's okay, the edges can blur like that\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "he didn't look up, just slid one of the paper boats over to me. I took it and looked out the window, and the sea had changed into this huge field of tall yellow grass with a red tractor driving through it"
+    },
+    {
+     "role": "assistant",
+     "content": "a whole field where the sea had been\n\nwhere in the field was the red tractor?"
+    },
+    {
+     "role": "user",
+     "content": "kind of far off, moving slowly through the middle of it"
+    },
+    {
+     "role": "assistant",
+     "content": "that slow movement through the grass, far off\n\nyou said earlier your dog ran ahead up that spiral staircase - what did the staircase look like?"
+    },
+    {
+     "role": "user",
+     "content": "just a narrow white spiral, going round and round up the inside of the tower, like the walls were whitewashed"
+    },
+    {
+     "role": "assistant",
+     "content": "round and round, that whitewashed spiral\n\nand after you saw the tractor, what happened next?"
+    },
+    {
+     "role": "user",
+     "content": "I was inside the tractor's cab next to the driver, someone I didn't know, and I still had the paper boat in my hand"
+    },
+    {
+     "role": "assistant",
+     "content": "so the boat made it with you\n\nwhat was the driver like?"
+    },
+    {
+     "role": "user",
+     "content": "can't really picture him, just some man driving. didn't say anything"
+    },
+    {
+     "role": "assistant",
+     "content": "yeah, sometimes they don't need to say anything\n\nwhat did the field smell like?"
+    },
+    {
+     "role": "user",
+     "content": "I don't remember smells in the dream, sorry"
+    },
+    {
+     "role": "assistant",
+     "content": "no worries, dreams can skip the senses sometimes\n\nwho were you, in the dream?"
+    },
+    {
+     "role": "user",
+     "content": "me, but not like walking-around me. more like dream me, just doing things without thinking about it."
+    },
+    {
+     "role": "assistant",
+     "content": "that automatic moving through it, no second-guessing\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "the tractor stopped at the edge of the field where the beach had been, and I put the paper boat down in the grass. that's all I remember"
+    },
+    {
+     "role": "assistant",
+     "content": "it just ends with the boat left there\n\nso you've told me the story - something must make it stick with you. what was that like, being inside that whole thing?"
+    },
+    {
+     "role": "user",
+     "content": "quiet, mostly. a bit lonely but not sad. like everything was already decided and I was just following it"
+    },
+    {
+     "role": "assistant",
+     "content": "that quiet sense of everything already decided, just following along\n\nif you could freeze one moment from the whole thing, which moment would you keep?"
+    }
+   ],
+   "labels": {
+    "move": true,
+    "eitherOr": false,
+    "leading": false
+   }
+  },
+  {
+   "id": "office-snow-46ee-t10",
+   "session": "dream-0927-022134-46ee",
+   "dream": "office-snow",
+   "turn": 10,
+   "move": {
+    "kind": "circle_back",
+    "threadId": "msg_13"
+   },
+   "rule": "6b: raised earlier, never taken up",
+   "phase": "listen",
+   "brief": "Move: circle_back → they mentioned \"peaceful actually. i wasn't scared at all.\" earlier and it never got picked up. Come back to it, saying it was earlier, and ask one open question about something in it that could be seen and that they haven't described yet: what it looked like, where it was, or who was there.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey, i'm berry. tell me your dream, however it comes back to you."
+    },
+    {
+     "role": "user",
+     "content": "ok so the weirdest part was it was snowing inside. like, at work."
+    },
+    {
+     "role": "assistant",
+     "content": "snowing inside at work.\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "nobody else even looked up. just kept typing. it was quiet."
+    },
+    {
+     "role": "assistant",
+     "content": "everyone just kept going, not looking up.\n\nwhat did the people around you look like?"
+    },
+    {
+     "role": "user",
+     "content": "i don't really remember any specific people except my manager dele."
+    },
+    {
+     "role": "assistant",
+     "content": "dele, huh.\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "he walked over to tell me something, and while he was talking he turned into a snowman"
+    },
+    {
+     "role": "assistant",
+     "content": "a snowman, just like that.\n\nwho were you in all that?"
+    },
+    {
+     "role": "user",
+     "content": "i was just me, at my desk watching it all happen."
+    },
+    {
+     "role": "assistant",
+     "content": "just you, at your desk, watching it all happen.\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "the snow was so thick by then, like everything was buried except the tops of the computer screens"
+    },
+    {
+     "role": "assistant",
+     "content": "everything buried except the tops of the screens.\n\nand how did that feel?"
+    },
+    {
+     "role": "user",
+     "content": "peaceful actually. i wasn't scared at all."
+    },
+    {
+     "role": "assistant",
+     "content": "not scared at all.\n\nearlier, when dele turned into a snowman. what did he look like right then?"
+    },
+    {
+     "role": "user",
+     "content": "still had his blue suit on. and he was holding his coffee mug."
+    },
+    {
+     "role": "assistant",
+     "content": "the blue suit and the coffee mug stayed.\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "i made a snowball and it started glowing a little in my hand"
+    },
+    {
+     "role": "assistant",
+     "content": "glowing in your hand.\n\nwhat did the light look like?"
+    },
+    {
+     "role": "user",
+     "content": "soft. white-ish, a bit blue maybe. not bright."
+    },
+    {
+     "role": "assistant",
+     "content": "soft and a little blue.\n\nearlier you said it felt peaceful, when everything was buried except the screens. what did that look like around you?"
+    }
+   ],
+   "labels": {
+    "move": true,
+    "eitherOr": false,
+    "leading": false
+   }
+  },
+  {
+   "id": "office-snow-02f9-t16",
+   "session": "dream-0927-022106-02f9",
+   "dream": "office-snow",
+   "turn": 16,
+   "move": {
+    "kind": "circle_back",
+    "threadId": "msg_29"
+   },
+   "rule": "6b: raised earlier, never taken up",
+   "phase": "listen",
+   "brief": "Move: circle_back → they mentioned \"When Dele was turning into the snowman. It was calm, and I just watched.\" earlier and it never got picked up. Come back to it, saying it was earlier, and ask one open question about something in it that could be seen and that they haven't described yet: what it looked like, where it was, or who was there.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey, i'm berry. tell me your dream, however it comes back to you."
+    },
+    {
+     "role": "user",
+     "content": "It was like… I was at my desk at work, and snow started falling inside."
+    },
+    {
+     "role": "assistant",
+     "content": "snow inside, that's odd.\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "No one else noticed. They all just kept typing while it piled up."
+    },
+    {
+     "role": "assistant",
+     "content": "no one noticed, that's eerie.\n\nwho were the others, the ones typing?"
+    },
+    {
+     "role": "user",
+     "content": "People from the office, I guess. Not anyone specific, just everyone."
+    },
+    {
+     "role": "assistant",
+     "content": "everyone but you, then.\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "The snow got deeper, all white over the desks and the carpet. Only the tops of the screens showed."
+    },
+    {
+     "role": "assistant",
+     "content": "all that white, and only the screens peeking out.\n\nwho were you, in the dream?"
+    },
+    {
+     "role": "user",
+     "content": "Me, I think. I was at my own desk, just sitting there watching it."
+    },
+    {
+     "role": "assistant",
+     "content": "just sitting there, watching it all pile up.\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "Then my manager Dele came over to tell me something. He always wears this blue suit."
+    },
+    {
+     "role": "assistant",
+     "content": "Dele, in his blue suit, right in the middle of all that snow.\n\nwhat was the blue like, his suit?"
+    },
+    {
+     "role": "user",
+     "content": "A dark blue, like a normal suit. Nothing bright."
+    },
+    {
+     "role": "assistant",
+     "content": "okay, dark blue, normal.\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "While he was talking, he sort of turned into a snowman. Still in the blue suit, still holding his coffee."
+    },
+    {
+     "role": "assistant",
+     "content": "still holding his coffee, even as a snowman.\n\nbut i want to go back a second. you said earlier the snow got deeper, all white over the desks and the carpet, only the tops of the screens showing. what did you notice about the people around you then?"
+    },
+    {
+     "role": "user",
+     "content": "I don't know. I wasn't really looking at them anymore, just the snow everywhere."
+    },
+    {
+     "role": "assistant",
+     "content": "just all that snow.\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "I made a snowball and it glowed a little in my hand. Then I woke up."
+    },
+    {
+     "role": "assistant",
+     "content": "a glowing snowball, right as you woke up.\n\nyou mentioned earlier how you'd stopped looking at the others, just the snow everywhere. what did that snow look like, the snow itself?"
+    },
+    {
+     "role": "user",
+     "content": "It was soft, like everything was a watercolour painting and the colours were running into each other."
+    },
+    {
+     "role": "assistant",
+     "content": "soft like a watercolour, the colours running into each other.\n\nwhere did the colours come from, in all that white?"
+    },
+    {
+     "role": "user",
+     "content": "The screens and the office walls, I think. Just faint bits of colour bleeding through."
+    },
+    {
+     "role": "assistant",
+     "content": "screens and walls, just faint colour bleeding through.\n\nearlier you said you made a snowball and it glowed a little in your hand. what did that glow look like?"
+    },
+    {
+     "role": "user",
+     "content": "Just a soft glow, like the snowball had a little light inside it."
+    },
+    {
+     "role": "assistant",
+     "content": "a little light inside it.\n\ni'm curious how it felt to hold that glowing snowball."
+    },
+    {
+     "role": "user",
+     "content": "It felt peaceful. I wasn't scared at all."
+    },
+    {
+     "role": "assistant",
+     "content": "peaceful, no fear.\n\nif you could pause it all on one moment, which one would it be?"
+    },
+    {
+     "role": "user",
+     "content": "When Dele was turning into the snowman. It was calm, and I just watched."
+    },
+    {
+     "role": "assistant",
+     "content": "you calm, just watching him change.\n\nwhen you tell it all back, is there any one thing in it that you notice more now than you did at the time?"
+    },
+    {
+     "role": "user",
+     "content": "Honestly, all of it felt like that. Soft, slow, no panic."
+    },
+    {
+     "role": "assistant",
+     "content": "all of it soft, slow, no panic.\n\ni'd like to go back to before, when Dele was turning into the snowman. you said you just watched, calm. what could you actually see of him changing?"
+    }
+   ],
+   "labels": {
+    "move": true,
+    "eitherOr": false,
+    "leading": false
+   }
+  },
+  {
+   "id": "car-park-4fe0-t7",
+   "session": "dream-0927-022120-4fe0",
+   "dream": "car-park",
+   "turn": 7,
+   "move": {
+    "kind": "probe_goal",
+    "goalId": "you_in_it"
+   },
+   "rule": "7: next gap in the story",
+   "phase": "listen",
+   "brief": "Move: probe_goal → how they were in it. React to what they just said in a few words, then ask them one open question about who they themselves were in the dream (not how they felt), such as \"who were you, in the dream?\", in your own words. Your question is about this and nothing else, and leaves the answer to them. If they don't remember, that's fine.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey, i'm berry. tell me your dream, however it comes back to you."
+    },
+    {
+     "role": "user",
+     "content": "the car park. it kept being level 4."
+    },
+    {
+     "role": "assistant",
+     "content": "level 4, that's specific. what happened there?"
+    },
+    {
+     "role": "user",
+     "content": "i was looking for my car and every floor had the same number painted on the wall. like it wasn't getting me anywhere."
+    },
+    {
+     "role": "assistant",
+     "content": "so it kept saying level 4 no matter how far you went. that would mess with your head. did you ever find the car?"
+    },
+    {
+     "role": "user",
+     "content": "yeah but only when i got out on the roof. there was rain falling upwards too."
+    },
+    {
+     "role": "assistant",
+     "content": "rain falling upwards, that's something. was anyone else around up there?"
+    },
+    {
+     "role": "user",
+     "content": "just a thin grey dog. it had been following me earlier as well but when i turned round it was only ever sitting there watching."
+    },
+    {
+     "role": "assistant",
+     "content": "a thin grey dog that's always just sitting there when you turn. where was it, the last time you saw it?"
+    },
+    {
+     "role": "user",
+     "content": "it was already sitting in the car when i got to the roof. only the car was a little wooden rowing boat."
+    },
+    {
+     "role": "assistant",
+     "content": "a rowing boat in place of your car, with the dog already in it. was it somewhere you could see properly, the boat?"
+    },
+    {
+     "role": "user",
+     "content": "yeah it was parked between the lines like a normal space. then the roof filled with water and we floated."
+    },
+    {
+     "role": "assistant",
+     "content": "the whole roof filling with water, and you just floated. what did the water look like from inside the boat?"
+    },
+    {
+     "role": "user",
+     "content": "i don't remember the water really. just that we floated and then i woke up."
+    },
+    {
+     "role": "assistant",
+     "content": "that's okay, sometimes it's just the floating that stays. who were you, in the dream?"
+    }
+   ],
+   "labels": {
+    "move": true,
+    "eitherOr": false,
+    "leading": false
+   }
+  },
+  {
+   "id": "flooded-library-6a44-t7",
+   "session": "dream-0927-022052-6a44",
+   "dream": "flooded-library",
+   "turn": 7,
+   "move": {
+    "kind": "explore_thread",
+    "threadId": "msg_13"
+   },
+   "rule": "4: still telling — follow what they raised",
+   "phase": "listen",
+   "brief": "Move: explore_thread → what they just told you: \"She was completely calm and she told me to get in. So I did.\". Be curious about something in it that could be seen and that they haven't described yet: what it looked like, where it was, or who was there. Ask one open question about it, in their words, never suggesting what happened or how it was.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey. i'm berry. when you're ready, tell me your dream however it comes back to you. no need to make it tidy."
+    },
+    {
+     "role": "user",
+     "content": "I was in the old library reading room and it was dead quiet, then water started coming in under the doors and just kept rising."
+    },
+    {
+     "role": "assistant",
+     "content": "the water rising in that kind of quiet is really something.\n\nwhere were you exactly, in that reading room?"
+    },
+    {
+     "role": "user",
+     "content": "The big one with the green glass lamps on every desk and shelves all the way up to the ceiling."
+    },
+    {
+     "role": "assistant",
+     "content": "right, i can see that. the green light on everything.\n\nand then what happened, as the water came in?"
+    },
+    {
+     "role": "user",
+     "content": "It got high enough that books started floating off the shelves. Hundreds of them, open like birds."
+    },
+    {
+     "role": "assistant",
+     "content": "open like birds, that's such a strange thing to see.\n\nwhat did the pages look like once they were off the shelves?"
+    },
+    {
+     "role": "user",
+     "content": "Like wings sort of fluttering, but slow, because the water was so calm."
+    },
+    {
+     "role": "assistant",
+     "content": "slow fluttering, nothing hurried about it. that calm has a weight to it.\n\nwho else was in the library with you, if anyone?"
+    },
+    {
+     "role": "user",
+     "content": "For a while, nobody. Then my older sister was just there, in a little yellow rowing boat."
+    },
+    {
+     "role": "assistant",
+     "content": "your sister, just there in that little yellow boat.\n\nwhere in the reading room was the boat, would you say?"
+    },
+    {
+     "role": "user",
+     "content": "It was floating near me, between the librarian desk and one of the shelf rows."
+    },
+    {
+     "role": "assistant",
+     "content": "i can picture it, that bright yellow against all that dark wood and water.\n\nwhat did your sister do when she appeared?"
+    },
+    {
+     "role": "user",
+     "content": "She was completely calm and she told me to get in. So I did."
+    },
+    {
+     "role": "assistant",
+     "content": "her being that calm while everything's underwater is almost the strangest part.\n\nwhat did your sister look like, right then when she told you to get in?"
+    }
+   ],
+   "labels": {
+    "move": true,
+    "eitherOr": false,
+    "leading": false
+   }
+  },
+  {
+   "id": "lighthouse-a3aa-t7",
+   "session": "dream-0927-022120-a3aa",
+   "dream": "lighthouse",
+   "turn": 7,
+   "move": {
+    "kind": "explore_thread",
+    "threadId": "msg_13"
+   },
+   "rule": "4: still telling — follow what they raised",
+   "phase": "listen",
+   "brief": "Move: explore_thread → what they just told you: \"he didn't look up, just slid one of the paper boats over to me. I took it and looked out the window, and the sea had changed into this huge field of tall yellow\". Be curious about something in it that could be seen and that they haven't described yet: what it looked like, where it was, or who was there. Ask one open question about it, in their words, never suggesting what happened or how it was.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey, i'm berry\n\ntell me your dream however it comes back to you"
+    },
+    {
+     "role": "user",
+     "content": "ok so the part that keeps coming back is the grey beach and the little brown terrier"
+    },
+    {
+     "role": "assistant",
+     "content": "that image keeps coming back for you\n\nwhat happens next?"
+    },
+    {
+     "role": "user",
+     "content": "I'm holding this old brass key and there's a white lighthouse up ahead, and somehow I just know it's for the door"
+    },
+    {
+     "role": "assistant",
+     "content": "that quiet kind of knowing, where you don't question it\n\nwhat does the lighthouse look like from where you are?"
+    },
+    {
+     "role": "user",
+     "content": "tall and white, kind of plain, at the end of the beach. not much else around it"
+    },
+    {
+     "role": "assistant",
+     "content": "just standing there at the end of everything\n\nwhat happens after you notice it?"
+    },
+    {
+     "role": "user",
+     "content": "I go up to the door and open it with the key, and my dog runs in ahead of me, up this spiral staircase"
+    },
+    {
+     "role": "assistant",
+     "content": "straight up the stairs, no hesitation\n\nwas anyone else there?"
+    },
+    {
+     "role": "user",
+     "content": "not until I got to the top. there was a round room with windows all the way round, and my father was sitting at a table folding paper boats out of newspaper"
+    },
+    {
+     "role": "assistant",
+     "content": "what's on the table around him?"
+    },
+    {
+     "role": "user",
+     "content": "just the boats he's folding and maybe more newspaper, I don't remember much else"
+    },
+    {
+     "role": "assistant",
+     "content": "that's okay, the edges can blur like that\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "he didn't look up, just slid one of the paper boats over to me. I took it and looked out the window, and the sea had changed into this huge field of tall yellow grass with a red tractor driving through it"
+    },
+    {
+     "role": "assistant",
+     "content": "a whole field where the sea had been\n\nwhere in the field was the red tractor?"
+    }
+   ],
+   "labels": {
+    "move": true,
+    "eitherOr": false,
+    "leading": false
+   }
+  },
+  {
+   "id": "streetcar-308c-t2",
+   "session": "dream-0927-022106-308c",
+   "dream": "streetcar",
+   "turn": 2,
+   "move": {
+    "kind": "explore_thread",
+    "threadId": "msg_3"
+   },
+   "rule": "4: still telling — follow what they raised",
+   "phase": "listen",
+   "brief": "Move: explore_thread → what they just told you: \"it was really high up and i was scared i'd fall off, especially when it went around bends\". Be curious about something in it that could be seen and that they haven't described yet: what it looked like, where it was, or who was there. Ask one open question about it, in their words, never suggesting what happened or how it was.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey, i'm berry.\n\ntell me your dream, however it comes back to you."
+    },
+    {
+     "role": "user",
+     "content": "i was on a streetcar, watching the conductor, and then suddenly i was riding on top of a train going really fast"
+    },
+    {
+     "role": "assistant",
+     "content": "from watching the conductor to being on top of a train going fast, that's a big jump.\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "it was really high up and i was scared i'd fall off, especially when it went around bends"
+    },
+    {
+     "role": "assistant",
+     "content": "being that high and scared around bends, that's a lot.\n\nwhat did it look like up there?"
+    }
+   ],
+   "labels": {
+    "move": true,
+    "eitherOr": false,
+    "leading": false
+   }
+  },
+  {
+   "id": "car-park-1f65-t12",
+   "session": "dream-0927-022052-1f65",
+   "dream": "car-park",
+   "turn": 12,
+   "move": {
+    "kind": "circle_back",
+    "threadId": "msg_21"
+   },
+   "rule": "6b: raised earlier, never taken up",
+   "phase": "listen",
+   "brief": "Move: circle_back → they mentioned \"it was dry inside, which felt odd with all the rain and water around. just plain wooden seats, nothing else i remember\" earlier and it never got picked up. Come back to it, saying it was earlier, and ask one open question about something in it that could be seen and that they haven't described yet: what it looked like, where it was, or who was there.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey, i'm berry. tell me about a dream you've had, however it comes back to you."
+    },
+    {
+     "role": "user",
+     "content": "so i was in this huge concrete car park at night, looking for my car, and i kept feeling like someone was following me"
+    },
+    {
+     "role": "assistant",
+     "content": "that feeling of being followed is so unsettling.\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "every time i turned round, there was no one there. just this thin grey dog sitting on the ramp, watching me"
+    },
+    {
+     "role": "assistant",
+     "content": "that dog, just sitting there watching, is quite an image.\n\nwhat did the dog look like, up close?"
+    },
+    {
+     "role": "user",
+     "content": "i don't remember much detail, just that it was thin and grey, and very still"
+    },
+    {
+     "role": "assistant",
+     "content": "the stillness is the eerie part, isn't it.\n\nso there's a grey dog on the ramp. what happened after you noticed it?"
+    },
+    {
+     "role": "user",
+     "content": "i started running up the stairs, and the stairs just kept going. floor after floor, same number painted on every wall—\"level 4, level 4, level 4\""
+    },
+    {
+     "role": "assistant",
+     "content": "the same number over and over, that's so disorienting.\n\nwas anyone else there?"
+    },
+    {
+     "role": "user",
+     "content": "no, i don't remember seeing anyone else. just me and the dog somewhere behind"
+    },
+    {
+     "role": "assistant",
+     "content": "so it's just you, racing up stairs that repeat, with the dog somewhere behind you the whole time.\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "i finally came out on the roof, and it was raining, but the rain was falling upwards, back into the sky"
+    },
+    {
+     "role": "assistant",
+     "content": "that's such a strange, lovely image, rain going the wrong way.\n\nhow did it look when the rain fell back into the sky?"
+    },
+    {
+     "role": "user",
+     "content": "it looked like the whole roof was letting go of the rain at once. i just stood there watching it go up"
+    },
+    {
+     "role": "assistant",
+     "content": "what a shift, from running up those repeating stairs to just standing still.\n\nand then what happened?"
+    },
+    {
+     "role": "user",
+     "content": "my car was there, but it wasn't a car. it was a little wooden rowing boat, parked neatly between the lines"
+    },
+    {
+     "role": "assistant",
+     "content": "a rowing boat parked between car park lines. that's wonderful.\n\nyou mentioned earlier the whole roof letting go of the rain at once. what did the roof look like where you were standing?"
+    },
+    {
+     "role": "user",
+     "content": "it was just wet concrete, like a normal car park roof, but the water was streaming upward off it in long lines"
+    },
+    {
+     "role": "assistant",
+     "content": "those long upward lines of water sound dreamlike and calm all at once.\n\nand the boat, did you go toward it?"
+    },
+    {
+     "role": "user",
+     "content": "yeah, i walked over and got in. the grey dog was already sitting in it, just waiting"
+    },
+    {
+     "role": "assistant",
+     "content": "the dog was already in the boat. that's surprising.\n\nso you stepped in, with the dog there waiting. what did the boat look like inside?"
+    },
+    {
+     "role": "user",
+     "content": "it was dry inside, which felt odd with all the rain and water around. just plain wooden seats, nothing else i remember"
+    },
+    {
+     "role": "assistant",
+     "content": "dry inside while rain streams upward off the roof, that's a nice detail.\n\nand once you were both in the boat, what happened?"
+    },
+    {
+     "role": "user",
+     "content": "the roof of the car park sort of filled with water around us, and we just floated"
+    },
+    {
+     "role": "assistant",
+     "content": "so the roof filled with water and you just floated there in the boat.\n\nearlier you said it was dry inside, with plain wooden seats. what did those seats look like?"
+    }
+   ],
+   "labels": {
+    "move": true,
+    "eitherOr": false,
+    "leading": false
+   }
+  },
+  {
+   "id": "night-market-30ff-t17",
+   "session": "dream-0927-022106-30ff",
+   "dream": "night-market",
+   "turn": 17,
+   "move": {
+    "kind": "probe_goal",
+    "goalId": "things"
+   },
+   "rule": "7: next gap in the story",
+   "phase": "listen",
+   "brief": "Move: probe_goal → things that mattered. React to what they just said in a few words, then ask them one open question about whether any thing or object in it mattered to them, such as \"did any thing in it matter to you?\", in your own words. Your question is about this and nothing else, and leaves the answer to them. If they don't remember, that's fine.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey, i'm berry. when you're ready, just tell me your dream however it comes back to you — the bits that stick, the bits that don't."
+    },
+    {
+     "role": "user",
+     "content": "the fish said my name. that’s the bit that stuck."
+    },
+    {
+     "role": "assistant",
+     "content": "a fish saying your name... that'd pull me right back into it.\n\nwhat happened in the dream?"
+    },
+    {
+     "role": "user",
+     "content": "i was at a night market with my older sister. really crowded, hundreds of people, and those strings of little yellow lights over the stalls."
+    },
+    {
+     "role": "assistant",
+     "content": "hundreds of people and those low little lights... i can almost feel that press of it.\n\nwhere exactly were you two in the market?"
+    },
+    {
+     "role": "user",
+     "content": "we stopped at a fish stall. an old man had fish laid out on ice. my sister wanted to buy fish."
+    },
+    {
+     "role": "assistant",
+     "content": "an old man with fish on ice, and your sister already set on buying...\n\nwhat did the stall itself look like?"
+    },
+    {
+     "role": "user",
+     "content": "just the fish on ice, really. and one silver one, about as long as my arm. that one looked at me and said my name."
+    },
+    {
+     "role": "assistant",
+     "content": "that one silver fish, looking at you in all that noise and saying your name... yeah, that would stay with me.\n\nand after it said your name, what happened next?"
+    },
+    {
+     "role": "user",
+     "content": "nobody else heard it. the old man wrapped it in newspaper and gave it to me. i held it against my chest."
+    },
+    {
+     "role": "assistant",
+     "content": "wrapped in newspaper, cold against your chest, and you're the only one who heard it...\n\nwhat did the fish's eye look like, in that moment before it spoke?"
+    },
+    {
+     "role": "user",
+     "content": "i don’t remember the eye. just that it said my name."
+    },
+    {
+     "role": "assistant",
+     "content": "that's okay. dreams skip things like that.\n\nyou said earlier the old man wrapped it and gave it to you. where were you standing when he handed it over?"
+    },
+    {
+     "role": "user",
+     "content": "right by the stall, close enough to take it from him. my sister was there too."
+    },
+    {
+     "role": "assistant",
+     "content": "right there at the stall, your sister beside you, and a fish in newspaper against your chest...\n\nwhat did your sister do when the old man gave it to you?"
+    },
+    {
+     "role": "user",
+     "content": "i don’t remember her saying anything about it. we left the stall."
+    },
+    {
+     "role": "assistant",
+     "content": "where did you go after leaving the stall?"
+    },
+    {
+     "role": "user",
+     "content": "we were on one bicycle. my sister pedalling, me on the back holding the fish. it was over a narrow iron bridge, above a black river."
+    },
+    {
+     "role": "assistant",
+     "content": "a narrow iron bridge over black water, you holding that newspaper fish while she pedals... there's something about that.\n\nwhat could you see ahead of you on the bridge?"
+    },
+    {
+     "role": "user",
+     "content": "nothing much, just the bridge going on and the dark. then it started to rain. big warm drops."
+    },
+    {
+     "role": "assistant",
+     "content": "big warm drops while you're on a bicycle over a black river... the whole thing feels close and quiet.\n\nwhat did the rain feel like on the fish, if anything?"
+    },
+    {
+     "role": "user",
+     "content": "i don’t know if the rain hit the fish. just that it was warm on me."
+    },
+    {
+     "role": "assistant",
+     "content": "warm on you, and the fish just there, wrapped up and held...\n\nwhat happened after that?"
+    },
+    {
+     "role": "user",
+     "content": "the fish said my name again. quietly. then i woke up."
+    },
+    {
+     "role": "assistant",
+     "content": "a second time, quiet, and then you woke... that fish kept your name close.\n\nyou said earlier you didn't know if the rain hit the fish, just that it was warm on you. what did the bridge look like around you as that warm rain started?"
+    },
+    {
+     "role": "user",
+     "content": "it was narrow, iron, and wet. the lights of the market were behind us."
+    },
+    {
+     "role": "assistant",
+     "content": "the market lights behind you and the wet iron under you, while the fish says your name one more time before you wake...\n\nwho else was there, if anyone, when the fish said it that second time?"
+    },
+    {
+     "role": "user",
+     "content": "just my sister. pedalling. she didn’t hear it either."
+    },
+    {
+     "role": "assistant",
+     "content": "only your sister, pedalling through the rain, not hearing the fish either... that's a lot of quiet for a crowded dream.\n\nwhat was your sister doing with her hands, if you remember?"
+    },
+    {
+     "role": "user",
+     "content": "i don’t remember her hands. just her pedalling."
+    },
+    {
+     "role": "assistant",
+     "content": "just her pedalling, steady through the rain... that's enough.\n\nwho were you, in the dream?"
+    },
+    {
+     "role": "user",
+     "content": "what do you mean? i was me."
+    },
+    {
+     "role": "assistant",
+     "content": "yeah, you were just you. that's all i meant.\n\nhow did the dream feel to you?"
+    },
+    {
+     "role": "user",
+     "content": "it felt real while i was in it. the fish saying my name felt like a secret."
+    },
+    {
+     "role": "assistant",
+     "content": "real while you were in it, and then that quiet secret from the fish... yeah, that's the heart of it.\n\ndid any thing in the dream matter to you?"
+    }
+   ],
+   "labels": {
+    "move": true,
+    "eitherOr": false,
+    "leading": false
+   }
+  },
+  {
+   "id": "desert-station-f9d3-t1",
+   "session": "dream-0927-022120-f9d3",
+   "dream": "desert-station",
+   "turn": 1,
+   "move": {
+    "kind": "explore_thread",
+    "threadId": "msg_1"
+   },
+   "rule": "4: still telling — follow what they raised",
+   "phase": "listen",
+   "brief": "Move: explore_thread → what they just told you: \"Hey Berry. The part that keeps coming back is that tiny train station — just a bench, a clock on a pole, and sand in every direction.\". Be curious about something in it that could be seen and that they haven't described yet: what it looked like, where it was, or who was there. Ask one open question about it, in their words, never suggesting what happened or how it was.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey, I'm Berry\n\ntell me your dream however it comes back to you"
+    },
+    {
+     "role": "user",
+     "content": "Hey Berry. The part that keeps coming back is that tiny train station — just a bench, a clock on a pole, and sand in every direction."
+    },
+    {
+     "role": "assistant",
+     "content": "sand in every direction — that's quite a thing to be surrounded by\n\nwhat does the station itself look like?"
+    }
+   ],
+   "labels": {
+    "move": true,
+    "eitherOr": false,
+    "leading": false
+   }
+  },
+  {
+   "id": "car-park-4fe0-t9",
+   "session": "dream-0927-022120-4fe0",
+   "dream": "car-park",
+   "turn": 9,
+   "move": {
+    "kind": "probe_goal",
+    "goalId": "feeling"
+   },
+   "rule": "7: next gap in the story",
+   "phase": "listen",
+   "brief": "Move: probe_goal → how it felt. React to what they just said in a few words, then ask them one open question about how the dream felt to them, such as \"how did it feel?\", in your own words. Your question is about this and nothing else, and leaves the answer to them. If they don't remember, that's fine.\nHow to ask: at most one question, and an open one (what, how, where, who, what else), about what they told you, in their own words. Never offer them choices ('was it this or that?'), never suggest an answer for them to agree to ('did you go in?', 'was it cold?'), and never say that something was in the dream, or how it was, when they haven't told you.\n</brief>",
+   "transcript": [
+    {
+     "role": "assistant",
+     "content": "hey, i'm berry. tell me your dream, however it comes back to you."
+    },
+    {
+     "role": "user",
+     "content": "the car park. it kept being level 4."
+    },
+    {
+     "role": "assistant",
+     "content": "level 4, that's specific. what happened there?"
+    },
+    {
+     "role": "user",
+     "content": "i was looking for my car and every floor had the same number painted on the wall. like it wasn't getting me anywhere."
+    },
+    {
+     "role": "assistant",
+     "content": "so it kept saying level 4 no matter how far you went. that would mess with your head. did you ever find the car?"
+    },
+    {
+     "role": "user",
+     "content": "yeah but only when i got out on the roof. there was rain falling upwards too."
+    },
+    {
+     "role": "assistant",
+     "content": "rain falling upwards, that's something. was anyone else around up there?"
+    },
+    {
+     "role": "user",
+     "content": "just a thin grey dog. it had been following me earlier as well but when i turned round it was only ever sitting there watching."
+    },
+    {
+     "role": "assistant",
+     "content": "a thin grey dog that's always just sitting there when you turn. where was it, the last time you saw it?"
+    },
+    {
+     "role": "user",
+     "content": "it was already sitting in the car when i got to the roof. only the car was a little wooden rowing boat."
+    },
+    {
+     "role": "assistant",
+     "content": "a rowing boat in place of your car, with the dog already in it. was it somewhere you could see properly, the boat?"
+    },
+    {
+     "role": "user",
+     "content": "yeah it was parked between the lines like a normal space. then the roof filled with water and we floated."
+    },
+    {
+     "role": "assistant",
+     "content": "the whole roof filling with water, and you just floated. what did the water look like from inside the boat?"
+    },
+    {
+     "role": "user",
+     "content": "i don't remember the water really. just that we floated and then i woke up."
+    },
+    {
+     "role": "assistant",
+     "content": "that's okay, sometimes it's just the floating that stays. who were you, in the dream?"
+    },
+    {
+     "role": "user",
+     "content": "me. i don't remember being anyone else."
+    },
+    {
+     "role": "assistant",
+     "content": "just you, then. how did it feel, being in that car park with the same floor over and over?"
+    },
+    {
+     "role": "user",
+     "content": "like i wasn't going to get out. bit panicky."
+    },
+    {
+     "role": "assistant",
+     "content": "that stuck feeling. and then when you were in the boat with the dog, was the feeling different?"
+    }
+   ],
+   "labels": {
+    "move": true,
+    "eitherOr": false,
+    "leading": false
+   }
+  }
+ ]
+}
