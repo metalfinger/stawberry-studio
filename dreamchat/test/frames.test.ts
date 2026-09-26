@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { CutPlan } from '../continuity';
-import { aNoun, framePrompt, withoutGone, withoutPose, writingIn } from '../frames';
+import { aNoun, framePrompt, ghostPrompt, withoutGone, withoutPose, writingIn } from '../frames';
 import { oneColour, VAGUE } from '../producer';
 import { asInstruction } from '../session';
 import {
@@ -1019,6 +1019,99 @@ describe('a change that replaces part of someone', () => {
     expect(next).toContain("Except their head, which is no longer theirs: it is now a horse's head of ice");
     expect(next).not.toContain('Still so from earlier');
     expect(next).not.toContain('a block of ice');
+  });
+});
+
+describe('an in-between picture of one change', () => {
+  const ghostOf = (id: string, of: string, what: string, now: string, after?: string): Item => ({
+    id,
+    kind: 'ghost',
+    name: id,
+    fields: {},
+    status: 'waiting',
+    version: 0,
+    ghost: {
+      id,
+      kind: 'state',
+      of,
+      label: '',
+      change: '',
+      from: null,
+      ...(after ? { after } : {}),
+      needs: after ? [after] : [],
+      usedBy: [],
+      why: '',
+      state: { who: of, what, now, since: 'm5' },
+      depth: 1,
+    },
+  });
+
+  test('says nothing of the look the change replaces, and keeps everything else but the change', () => {
+    // Grandmother's kitchen (26 Sep): "the dreamer (person): adult" and "keep the same face, build
+    // and hair" beside "age now a small child" were held, and the dreamer never became a child.
+    const dreamer: Item = {
+      id: 'p1',
+      kind: 'character',
+      name: 'you',
+      isDreamer: true,
+      fields: {
+        appearance: { value: 'an adult woman with short brown hair, of average build', said: false },
+        wardrobe: { value: 'a red cardigan', said: true },
+      },
+      status: 'ready',
+      version: 1,
+      mediaId: 'media-p1',
+      review: 'approved',
+    };
+    const child = ghostPrompt(ghostOf('g2', 'p1', 'age', 'a small child'), dreamer, undefined, style).prompt;
+    expect(child).toContain('Make exactly one change: their age is now a small child.');
+    expect(child).toContain('the dreamer (person): short brown hair; a red cardigan.');
+    expect(child).not.toContain('adult');
+    expect(child).not.toContain('average build');
+    expect(child).toContain(
+      'Keep everything else from image 1: the same hair and clothes, the same pose and framing, the same plain background; only their age changes, and their face and build change with it.',
+    );
+
+    // Their clothes change next, edited from the child: neither the old clothes nor the adult is said.
+    const drawn = { ...ghostOf('g2', 'p1', 'age', 'a small child'), status: 'ready' as const, mediaId: 'media-g2' };
+    const cardigan = ghostPrompt(ghostOf('g3', 'p1', 'clothing', 'a grey cardigan', 'g2'), dreamer, undefined, style, {
+      ...drawn,
+      continuityApproved: true,
+    }).prompt;
+    expect(cardigan).toContain('Image 2 is their reference sheet: their hair.');
+    expect(cardigan).toContain('the dreamer (person): short brown hair.');
+    expect(cardigan).not.toContain('red cardigan');
+    expect(cardigan).toContain(
+      'Keep everything else from image 1: the same face, build and hair, the same pose and framing, the same plain background; only their clothing changes.',
+    );
+
+    // The paper city (26 Sep): "houses leaning over the street" beside "houses now folded down flat".
+    const street: Item = {
+      id: 'l1',
+      kind: 'location',
+      name: 'the paper street',
+      fields: {
+        geography: {
+          value:
+            'a street in a paper city with a flat paved surface, with houses leaning over it on both sides, walkable',
+          said: false,
+        },
+        landmarks: { value: 'houses with red doors, a corner where the road bends', said: false },
+      },
+      status: 'ready',
+      version: 1,
+      mediaId: 'media-l1',
+      review: 'approved',
+    };
+    const folded = ghostPrompt(ghostOf('g4', 'l1', 'houses', 'folded down flat'), street, undefined, style).prompt;
+    expect(folded).toContain('Make exactly one change: its houses are now folded down flat.');
+    expect(folded).toContain(
+      'the paper street (place): a street in a paper city with a flat paved surface, walkable; a corner where the road bends.',
+    );
+    expect(folded).not.toContain('red doors');
+    expect(folded).toContain(
+      'Keep everything else from image 1: the same walls, windows, objects, materials and colours, the same view; only its houses change.',
+    );
   });
 });
 
