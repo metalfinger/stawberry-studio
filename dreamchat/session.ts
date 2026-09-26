@@ -750,6 +750,7 @@ export type StoreDeps = {
     transcript: string,
     others?: string[],
     kind?: 'character' | 'location' | 'prop',
+    later?: string[],
   ) => Promise<Record<string, Detail>>;
   /** The continuity check: a take beside the pictures it was drawn from. Absent: no check. */
   judgeContinuity?: (mediaId: string, checks: { with: string | null; text: string }[]) => Promise<Check>;
@@ -2582,7 +2583,16 @@ export class SessionStore {
             .map((i) => (i.isDreamer ? 'the dreamer' : i.name))
         : [];
     const looked = unknown
-      ? this.deps.proposeLook!(item.name, item.fields, renderTranscript(s.transcript), others, kind)
+      ? this.deps.proposeLook!(
+          item.name,
+          item.fields,
+          renderTranscript(s.transcript),
+          others,
+          kind,
+          (s.draft?.breakdown?.scenes ?? [])
+            .flatMap((sc) => sc.moments)
+            .flatMap((m) => (m.leaves ?? []).filter((l) => l.who === item.id).map((l) => `${l.what}: ${l.now}`)),
+        )
           .catch(() => item.fields)
           .then((fields) => (snapshot.fields = fields))
       : Promise.resolve(null);

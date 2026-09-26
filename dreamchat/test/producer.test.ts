@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { rawPlanBy } from '../continuity';
 import {
   addChanges,
+  foldFirstLooks,
   type Breakdown,
   completeViews,
   mergeBecomings,
@@ -383,6 +384,37 @@ describe('a change the script supervisor finds', () => {
     // The horse head replaces it from m5 on: nothing of the ice block is carried past it.
     expect(m5.states ?? []).toEqual([]);
     expect(m6.states ?? []).toEqual([]);
+  });
+
+  test('a look where something is first shown goes into its profile, not a change', () => {
+    // The orchard's apples glowing, given as a change where the lift opened onto it (26 Sep).
+    const b = {
+      people: [],
+      things: [],
+      places: [{ id: 'l2', name: 'the orchard', fields: { landmarks: { value: 'rows of apple trees', said: true } } }],
+      scenes: [
+        {
+          id: 's1',
+          moments: [
+            {
+              ...moment('m4', 'The gate opens onto the orchard.'),
+              place: 'l2',
+              leaves: [{ who: 'l2', what: 'apples', now: 'glowing softly like lamps' }],
+            },
+            {
+              ...moment('m5', 'Tomas runs ahead.'),
+              place: 'l2',
+              leaves: [],
+              states: [{ who: 'l2', what: 'apples', now: 'glowing softly like lamps', since: 'm4' }],
+            },
+          ],
+        },
+      ],
+    } as unknown as Breakdown;
+    foldFirstLooks(b);
+    expect(b.places[0].fields.landmarks.value).toBe('rows of apple trees; apples glowing softly like lamps');
+    expect(b.scenes[0].moments[0].leaves).toEqual([]);
+    expect(b.scenes[0].moments[1].states).toEqual([]);
   });
 
   test('a change carried from a moment that no longer has it is dropped', () => {

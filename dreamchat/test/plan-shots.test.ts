@@ -60,7 +60,10 @@ describe('the shots, planned while the chat goes on', () => {
         // What the script supervisor found: a change of how the board looks, of a part of it.
         if (Object.keys(questions).some((k) => k.startsWith('change_'))) {
           const answers = Object.fromEntries(
-            Object.keys(questions).map((k) => [k, { type: 'noul' as const, noul: k.startsWith('change_') ? 0.9 : 0.1 }]),
+            Object.keys(questions).map((k) => [
+              k,
+              { type: 'noul' as const, noul: k.startsWith('change_') ? 0.9 : 0.1 },
+            ]),
           );
           return { questions, state, answers, error: null, ms: 1, usage: null };
         }
@@ -139,14 +142,16 @@ describe('the shots, planned while the chat goes on', () => {
     applyPrep(s, prep);
     expect(s.prep?.shots).toBe(prep.shots);
     expect(s.draft?.breakdown?.scenes[0].blocking?.front).toBe('the stove');
-    // The change is written into the moment it happens at, and the plan is known by the dream as it
-    // now stands: planned again for it, it would not be planned twice.
-    expect(s.draft?.breakdown?.scenes[0].moments[0].leaves).toContainEqual({
-      who: 't1',
-      what: 'its slats',
-      now: 'all blank but one',
-      whole: false,
-    });
+    // The change found where the board is first shown is how it looks, not a change: written into
+    // its profile, so its sketch and every moment of it carry it (the orchard's glowing apples, 26 Sep).
+    // And the plan is known by the dream as it now stands: planned again for it, it would not be
+    // planned twice.
+    expect(s.draft?.breakdown?.scenes[0].moments[0].leaves ?? []).not.toContainEqual(
+      expect.objectContaining({ who: 't1', what: 'its slats' }),
+    );
+    expect(s.draft?.breakdown?.things.find((x) => x.id === 't1')?.fields.appearance?.value).toContain(
+      'all blank but one',
+    );
     expect(s.prep?.basedOn).not.toBe(prep.basedOn);
     const changed: Pick<Session, 'draft' | 'prep'> = {
       draft: { status: 'ready', basedOn: 2, breakdown: { ...kitchen(), title: 'another dream' } },

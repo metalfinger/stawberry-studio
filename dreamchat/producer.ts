@@ -738,6 +738,8 @@ export function addChanges(b: Breakdown, changes: Change[]): void {
       ];
     }
   }
+  // Found while planning, a look where it is first shown is its look, not a change.
+  foldFirstLooks(b);
   // A change carried from a moment that no longer has it is gone: read again while planning, Tomas's
   // "age and clothing" became his "body", and the old one, still carried, matched no picture of him,
   // so the moment after was held (hotel orchard, 26 Sep).
@@ -908,7 +910,7 @@ export async function reviseItem(
   return out;
 }
 
-const PROPOSE_LOOK = `Someone from a person's dream is about to be drawn, and nothing is known of how they look: the person left it to us. From the conversation, fill in ONLY the empty fields of their profile with a plain, specific, ordinary guess a picture can keep to: age range, hair (colour, length, how it's worn), build, and clothes with their colours. Nothing from the story's events (no transformations, nothing that happens to them), nothing remarkable unless the conversation says so, nothing that contradicts what the conversation says, and never how they stand or are framed in a picture (standing, a three-quarter view, face clearly visible): each picture decides that. Return JSON only: {"fields": {...}} with exactly the same keys as the profile, each value a short plain phrase; keep every value already given exactly as it is.`;
+const PROPOSE_LOOK = `Someone from a person's dream is about to be drawn, and nothing is known of how they look: the person left it to us. From the conversation, fill in ONLY the empty fields of their profile with a plain, specific, ordinary guess a picture can keep to: age range, hair (colour, length, how it's worn), build, and clothes with their colours. Nothing from the story's events (no transformations, nothing that happens to them): where the dream changes them later (they turn young or old, their clothes change), the profile is how they look before that, never the later age or clothes, and "What changes later" below lists those changes. Nothing remarkable unless the conversation says so, nothing that contradicts what the conversation says, and never how they stand or are framed in a picture (standing, a three-quarter view, face clearly visible): each picture decides that. Return JSON only: {"fields": {...}} with exactly the same keys as the profile, each value a short plain phrase; keep every value already given exactly as it is.`;
 
 const PROPOSE_LOOK_THING = `Something from a person's dream is about to be drawn, and little is known of how it looks: the person left it to us. From the conversation, fill in ONLY the empty fields of its profile with a plain, specific, ordinary guess a picture can keep to: for a place, how it is laid out and what stands in it; for a thing, its shape, size, materials and colours, as it would be where the dream has it: a part of something looks like that thing's own part, as it would really be made. Nothing from the story's events, nothing remarkable unless the conversation says so, and nothing that contradicts what the conversation says. Return JSON only: {"fields": {...}} with exactly the same keys as the profile, each value a short plain phrase; keep every value already given exactly as it is.`;
 
@@ -927,6 +929,10 @@ export async function proposeLook(
   // A place or thing with no description was sketched from its name alone: "the lever" came back
   // a see-saw bar while the streetcar's own sketch had a crank handle (24 Sep).
   kind: 'character' | 'location' | 'prop' = 'character',
+  // What happens to them later in the dream, which their look is from before: Tomas, who turns ten
+  // in the lift, was guessed "age about 10, grey shorts and shirt school uniform" and sketched a boy
+  // from the first picture (hotel orchard, 26 Sep).
+  later: string[] = [],
 ): Promise<Record<string, Detail>> {
   // A guess that says nothing ("young, but no specific features remembered") is filled in too;
   // what they said is never touched.
@@ -941,6 +947,10 @@ export async function proposeLook(
           content: `The conversation:\n\n${transcript}\n\nThe profile of ${name}:\n${JSON.stringify(current)}${
             others.length
               ? `\n\nDrawn on their own, each in their own picture, so never part of this profile: ${others.join(', ')}.`
+              : ''
+          }${
+            later.length
+              ? `\n\nWhat changes later (about ${name}, never part of this profile, which is how they look before it): ${later.join('; ')}.`
               : ''
           }`,
         },
@@ -1224,8 +1234,50 @@ export function normalizeBreakdown(raw: string): { breakdown: Breakdown; notes: 
       .slice(0, 12),
   };
   notes.push(...mergeBecomings(breakdown));
+  notes.push(...foldFirstLooks(breakdown));
   notes.push(...completeViews(breakdown));
   return { breakdown, notes };
+}
+
+/**
+ * How someone or something looks where it is first shown is its look, not a change: the orchard's
+ * apples glowing "like little lamps", given as a change at the moment the lift opened onto it, never
+ * reached its sketch, and every picture after it drew plain trees (hotel orchard, 26 Sep). Folded
+ * into its profile, as told. Turning into something else stays a change.
+ */
+export function foldFirstLooks(b: Breakdown): string[] {
+  const notes: string[] = [];
+  const all = moments(b);
+  for (const m of all) {
+    const keep: NonNullable<Moment['leaves']> = [];
+    for (const l of m.leaves ?? []) {
+      const place = (b.places ?? []).find((x) => x.id === l.who);
+      const thing = (b.things ?? []).find((x) => x.id === l.who);
+      const person = (b.people ?? []).find((x) => x.id === l.who);
+      const item = place ?? thing ?? person;
+      if (l.whole || !item || person?.is_dreamer || hasBefore(b, m.id, l.who)) {
+        keep.push(l);
+        continue;
+      }
+      const field = place ? 'landmarks' : thing ? 'appearance' : 'distinctive_features';
+      const d = (item.fields as Record<string, Detail>)[field] ?? { value: null, said: false };
+      const add = bareWords(l.what) && !l.now.toLowerCase().includes(bareWords(l.what)) ? `${l.what} ${l.now}` : l.now;
+      if (!(d.value ?? '').toLowerCase().includes(l.now.toLowerCase()))
+        (item.fields as Record<string, Detail>)[field] = {
+          ...d,
+          value: d.value ? `${d.value}; ${add}` : add,
+          said: true,
+        };
+      notes.push(`${item.name}: "${add}" is how it looks where it is first shown, not a change`);
+      for (const later of all)
+        if (later.states?.length)
+          later.states = later.states.filter(
+            (st) => !(st.since === m.id && st.who === l.who && bareWords(st.what) === bareWords(l.what)),
+          );
+    }
+    m.leaves = keep;
+  }
+  return notes;
 }
 
 /** "becomes a tall grey heron" is "a tall grey heron": what it is now, not the turning. */
