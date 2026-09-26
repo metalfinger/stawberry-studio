@@ -96,7 +96,17 @@ import {
   isWhole,
 } from './frames';
 import { checkReferences, preflight, readPrompt } from './gate';
-import { type CutSheet, cutSheet, cutSheetMode, type Framed, framed, type SheetDream, sheetDream } from './cutsheet';
+import {
+  type CutSheet,
+  cutSheet,
+  cutSheetMode,
+  type Framed,
+  framed,
+  imageNamesOf,
+  type SheetDream,
+  sheetDream,
+  sheetPrint,
+} from './cutsheet';
 import {
   type Check,
   CREDITS_PER_IMAGE,
@@ -2150,7 +2160,14 @@ export class SessionStore {
    * A moment's prompt and images as it would be drawn now: framePrompt's (DREAMCHAT_CUT_SHEET=off), or
    * with its cut sheet built beside it and logged (shadow), or the sheet's (on).
    */
-  private framed(s: Session, frame: Item, layout: string | undefined, site: string): Framed {
+  private framed(
+    s: Session,
+    frame: Item,
+    layout: string | undefined,
+    site: string,
+    /** The dream as the sheet reads it, made once for one drawing of a moment until its words change. */
+    once: { dream?: SheetDream | null } = {},
+  ): Framed {
     const input = {
       frame,
       sheets: s.build?.items ?? [],
@@ -2159,7 +2176,10 @@ export class SessionStore {
       layout,
     };
     const mode = cutSheetMode();
-    return framed(mode === 'off' ? input : { ...input, dream: sheetDreamOf(s) }, mode, site);
+    if (mode === 'off') return framed(input, mode, site);
+    if (once.dream === undefined) once.dream = sheetDreamOf(s);
+    // Looking at a prompt from a terminal is not a drawing: it is not logged.
+    return framed({ ...input, dream: once.dream }, mode, site, site !== 'prompt');
   }
 
   /** The earlier pictures the plan draws this moment from, that are drawn and usable. */
@@ -2180,6 +2200,8 @@ export class SessionStore {
     told?: { fields: Item['fields']; reworded?: string[] },
   ): Promise<void> {
     frame.startedAtTurn = turn;
+    // The dream the moment's cut sheet reads, made once for this drawing and again after its words change.
+    const once: { dream?: SheetDream | null } = {};
     if (!this.deps.sheets || !s.style || !s.build) {
       Object.assign(frame, {
         status: 'failed',
@@ -2199,7 +2221,7 @@ export class SessionStore {
     // picture "you" is whoever looks at it (older drafts, and words a rewording left behind).
     const WORDS = ['action', 'visual_point', 'feeling', 'purpose', 'shift', 'dream'];
     if (this.deps.reword && WORDS.some((k) => /\byou(r|rs|rself)?\b/i.test(frame.fields[k]?.value ?? ''))) {
-      const probe = this.framed(s, frame, frame.layout?.mediaId, 'reword');
+      const probe = this.framed(s, frame, frame.layout?.mediaId, 'reword', once);
       const fields = await this.deps
         .reword(
           probe.prompt,
@@ -2212,6 +2234,7 @@ export class SessionStore {
         frame.reworded = [...new Set([...(frame.reworded ?? []), ...changed])];
         frame.fields = fields;
         await this.keepWords(s, frame);
+        delete once.dream;
       }
     }
     // The shot, briefed by a director of photography from the view worked out on the floor plan,
@@ -2298,14 +2321,14 @@ export class SessionStore {
         .catch(() => null);
       frame.shot = text ? { text, view } : undefined;
     }
-    let built = this.framed(s, frame, layout, 'frames');
+    let built = this.framed(s, frame, layout, 'frames', once);
     const inView = inViewOf(frame, s.build.items);
     let findings = await this.gateFindings(s, frame, built.prompt, built.references, inView);
     // The brief is the one line a model wrote from the view: where the gate finds the prompt at odds
     // with itself there, the view read off the render says the same without it.
     if (frame.shot && findings.length && frame.gate?.around?.line.startsWith('The shot')) {
       frame.shot = undefined;
-      built = this.framed(s, frame, layout, 'frames');
+      built = this.framed(s, frame, layout, 'frames', once);
       findings = await this.gateFindings(s, frame, built.prompt, built.references, inView);
     }
     // What only its words got wrong is put right in words first, and read again: twice at most.
@@ -2329,7 +2352,8 @@ export class SessionStore {
       frame.reworded = [...new Set([...(frame.reworded ?? []), ...changed])];
       frame.fields = fields;
       await this.keepWords(s, frame);
-      built = this.framed(s, frame, layout, 'frames');
+      delete once.dream;
+      built = this.framed(s, frame, layout, 'frames', once);
       findings = await this.gateFindings(s, frame, built.prompt, built.references, inView);
     }
     // At odds on the line that says what the camera sees, the plan is what is at odds: the balloons
@@ -2357,7 +2381,8 @@ export class SessionStore {
           frame.fields = wordsBefore;
           frame.reworded = rewordedBefore;
           await this.keepWords(s, frame);
-          built = this.framed(s, frame, layout, 'frames');
+          delete once.dream;
+          built = this.framed(s, frame, layout, 'frames', once);
         }
       } else if (tried && this.deps.block) {
         Object.assign(frame, {
@@ -2380,6 +2405,19 @@ export class SessionStore {
           changes[k === 'feeling' ? 'beat.emotional_intent' : k === 'visual_point' ? 'beat.visual_point' : k] = d.value;
     frame.depicted = depicted;
     frame.continuity = undefined;
+    // The sheet as sent, its images named by what they are, so a rebuild can be checked against it.
+    if (built.sheet) {
+      frame.sentSheet = sheetPrint(built.sheet, imageNamesOf(s.build.items, s.build.frames ?? []));
+      recordJev({
+        kind: 'transition',
+        stage: 'cut_sheet',
+        to: 'sent',
+        moment: frame.id,
+        facts: [],
+        decision: 'sent',
+        reason: `sheet ${frame.sentSheet.hash} (framePrompt's and the sheet's ${built.differs?.length ? 'differ' : 'are the same'})`,
+      });
+    }
     await this.launch(s, frame, {
       prompt,
       references,
