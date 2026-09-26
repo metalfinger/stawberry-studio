@@ -2942,7 +2942,11 @@ export class SessionStore {
     const c = it.check;
     if (!c || c.error) return { factAt: [], fixes: [], serious: [] };
     // In one colour, a colour of its own is passed on to every picture drawn from it.
+    // Whether it shows the moment at all is serious too: judged "no, Tomas is drawn a boy where the
+    // moment has them both adults", the first picture of the orchard dream was kept as it was; both
+    // such answers on that run were real faults (26 Sep).
     const SERIOUS = [
+      'action',
       'cast',
       'location',
       'prop',
