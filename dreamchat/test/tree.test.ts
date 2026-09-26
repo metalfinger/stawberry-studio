@@ -11,7 +11,7 @@ import { calledIn, planBy, planContinuity } from '../continuity';
 import { dreamConfig } from '../dream';
 import type { GroundingNote } from '../ground';
 import type { Breakdown, Moment, StyleOption } from '../producer';
-import { type Prep, reconcileGhosts, type Session, SessionStore, treeInputOf } from '../session';
+import { planRecord, type Prep, reconcileGhosts, type Session, SessionStore, treeInputOf } from '../session';
 import type { Item } from '../sheets';
 import {
   type Basis,
@@ -983,7 +983,8 @@ describe('H. what a conversation gives the tree', () => {
   test('the plan is made again from the dream, its drawn ghosts known by what they show, never the kept plan', () => {
     const s = sessionWith('ice-head');
     const b = s.draft!.breakdown!;
-    const fresh = planContinuity(b);
+    // As the dream would be planned now: from the story record when DREAMCHAT_RECORD=on.
+    const fresh = planContinuity(b, planRecord(s));
     const ice = fresh.ghosts.find((g) => g.of === 'p1' && g.state?.now === 'an irregular block of glittering ice')!;
     const frames = [
       { id: 'm1', kind: 'cut', name: 'm1', fields: {}, status: 'ready', version: 2, review: 'approved' },

@@ -2,15 +2,18 @@ import { describe, expect, test } from 'bun:test';
 import { existsSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { planContinuity } from '../continuity';
+import { planContinuity, rawPlanBy } from '../continuity';
 import { inSession, readJevLog } from '../jevlog';
 import type { Breakdown, StyleOption } from '../producer';
 import {
   carried,
   describeAt,
   diffPlan,
+  forPlan,
   lookBefore,
+  nowAt,
   recheckRecord,
+  recordForPlan,
   recordMode,
   storyRecord,
   type Violation,
@@ -49,12 +52,13 @@ describe('the story record, from the saved sea school (26 Sep)', () => {
     expect(record.moments.some((m) => m.carried.includes('l2@m3:desks'))).toBe(false);
   });
 
-  test('the fish leaving is who is there, not a look of the classroom, and the fish are in view until then', () => {
+  test('the fish leaving is who is there, not a look of the classroom, and the fish are there until then', () => {
     const { record, violations } = run('sea-school');
     expect(record.changes['l2@m6:desks'].kind).toBe('presence');
     expect(found(violations, 'kind').some((v) => v.key === 'l2@m6:desks')).toBe(true);
     expect(record.moments.find((m) => m.id === 'm7')!.carried).not.toContain('l2@m6:desks');
-    expect(record.moments.find((m) => m.id === 'm4')!.shows).toContain('p3');
+    // The fish stay in the classroom, out of the focus of the moments not about them.
+    expect(record.moments.find((m) => m.id === 'm4')!.present).toContain('p3');
   });
 
   test('Mr Hale stays an octopus in every moment after he turns, and the jacket he keeps is only guessed', () => {
@@ -222,18 +226,21 @@ describe('the story record, from the saved moon market (26 Sep)', () => {
     const bowls = found(violations, 'carried', 'drop').find((v) => v.who === 't1');
     expect(bowls?.detail).toContain('m5, m6 and m7');
     for (const id of ['m5', 'm6']) expect(record.moments.find((m) => m.id === id)!.held.t1).toBeUndefined();
-    for (const id of ['m3', 'm6']) expect(record.moments.find((m) => m.id === id)!.shows).toContain('p4');
+    for (const id of ['m3', 'm6']) expect(record.moments.find((m) => m.id === id)!.present).toContain('p4');
   });
 });
 
 describe("the story record, from the saved grandma's kitchen (26 Sep)", () => {
-  test('"adult" and "red cardigan" are stripped from the look, so the changes at m5 are real', () => {
+  test('"red cardigan" is stripped from the look, so the changes at m5 are real, and "adult" is how she was before', () => {
     const { record, violations } = run('grandmas-kitchen');
     const strips = found(violations, 'before', 'strip');
-    expect(strips.some((v) => v.key === 'p1@m5:age-size' && v.detail.includes('"adult"'))).toBe(true);
     expect(strips.some((v) => v.key === 'p1@m5:clothing' && v.detail.includes('"red cardigan"'))).toBe(true);
+    // "Adult" disagrees with "little again, child": it is the look before the change, and stays.
+    expect(strips.some((v) => v.detail.includes('"adult"'))).toBe(false);
     expect(record.moments.find((m) => m.id === 'm5')!.own).toEqual(['p1@m5:age-size', 'p1@m5:clothing']);
-    expect(lookText(record.elements.p1.base)).not.toMatch(/adult|cardigan/);
+    expect(lookText(record.elements.p1.base)).toContain('adult');
+    expect(lookText(record.elements.p1.base)).not.toContain('cardigan');
+    // Her in-between picture of the age change keeps nothing of her age before it.
     expect(
       lookBefore(record, 'p1@m5:age-size')!
         .facts.map((f) => f.text)
@@ -244,15 +251,24 @@ describe("the story record, from the saved grandma's kitchen (26 Sep)", () => {
   test("the old film in the kitchen's landmarks is the style, and the phone on the wall is there throughout", () => {
     const { record, violations } = run('grandmas-kitchen');
     expect(found(violations, 'style', 'strip').some((v) => v.who === 'l1' && v.detail.includes('old film'))).toBe(true);
-    expect(record.moments.every((m) => m.shows.includes('t2'))).toBe(true);
+    // There, but never what a moment is about unless it says so: never the only one in it.
+    expect(record.moments.every((m) => m.shows.includes('t2') || m.present.includes('t2'))).toBe(true);
+    for (const m of record.moments) expect(m.shows).not.toEqual(['t2']);
   });
 
   test('the moment she looks down says what changes on her, seen through her own eyes', () => {
     const { record } = run('grandmas-kitchen');
+    const m5 = record.moments.find((m) => m.id === 'm5')!;
+    // Looking at herself, the dreamer is in the moment she is the camera of.
+    expect(m5.shows).toEqual(['p1']);
+    expect(m5.present).toContain('t2');
     const words = describeAt(record, 'm5');
     expect(words).toContain("Seen through the dreamer's own eyes.");
     expect(words).toContain("- the dreamer's age/size becomes little again, child");
-    expect(describeAt(record, 'm6')).toContain('the dreamer: their age now little again, child');
+    expect(describeAt(record, 'm6')).toContain('their age now little again, child');
+    expect(nowAt(record, 'm6').map((x) => x.text)).toContain(
+      'the dreamer is little again, child and wears gray cardigan',
+    );
   });
 });
 
@@ -266,10 +282,25 @@ describe('the story record, from the saved paper city and desert station (26 Sep
   });
 
   test('the watched old man and camel are in the last moment, and the clock stays on its pole', () => {
+    const { record } = run('desert-station');
+    const at = (id: string) => record.moments.find((m) => m.id === id)!;
+    expect(at('m6').shows).toEqual(expect.arrayContaining(['p2', 'p3']));
+    // On its pole throughout, out of the focus of the moments that are not about it.
+    for (const id of ['m1', 'm2', 'm4', 'm5', 'm6']) expect(at(id).present).toContain('t1');
+    expect(at('m3').shows).toEqual(['t1']);
+  });
+
+  test('the clock melts at m3, where the words say so: its look before is unmelted', () => {
     const { record, violations } = run('desert-station');
-    expect(record.moments.find((m) => m.id === 'm6')!.shows).toEqual(expect.arrayContaining(['p2', 'p3', 't1']));
-    expect(record.moments.find((m) => m.id === 'm1')!.shows).toContain('t1');
-    expect(found(violations, 'before', 'flag').some((v) => v.who === 't1' && v.detail.includes('melting'))).toBe(true);
+    const melt = found(violations, 'passing', 'add').find((v) => v.who === 't1');
+    expect(melt?.at).toBe('m3');
+    expect(record.changes['t1@m3:appearance'].now).toBe('melting like wax');
+    expect(lookText(record.elements.t1.base)).not.toMatch(/melt/);
+    expect(lookText(record.elements.t1.stored)).not.toMatch(/melt/);
+    expect(found(violations, 'before', 'flag').some((v) => v.who === 't1')).toBe(false);
+    expect(record.moments.find((m) => m.id === 'm1')!.carried).toEqual([]);
+    expect(carried(record, 'm6').map((c) => c.key)).toEqual(['t1@m3:appearance']);
+    expect(nowAt(record, 'm6').map((x) => x.text)).toEqual(['the clock is melting like wax']);
   });
 });
 
@@ -358,8 +389,319 @@ describe('the story record, whatever it is given', () => {
   });
 });
 
+describe('what is carried from picture to picture, from the saved dreams a person marked down (26 Sep)', () => {
+  const nowIn = (record: ReturnType<typeof run>['record'], id: string) => nowAt(record, id).map((x) => x.text);
+  const at = (record: ReturnType<typeof run>['record'], id: string) => record.moments.find((m) => m.id === id)!;
+
+  test('the flood stays in the library while the dream stays there (library-2 m5, m6, m9)', () => {
+    const { record } = run('flooded-library');
+    for (const id of ['m5', 'm6', 'm9']) {
+      expect(at(record, id).carried).toEqual(['l1@m3:water', 'l1@m4:books']);
+      expect(nowIn(record, id)).toContain('the water rises over the desks');
+    }
+  });
+
+  test('water the words tell coming in, recorded nowhere, is a change of the library there (library-1 m3, m5)', () => {
+    const { record, violations } = run('library-underwater');
+    expect(found(violations, 'passing', 'add').map((v) => v.key)).toEqual(['l1@m2:water']);
+    expect(record.changes['l1@m2:water'].now).toBe(
+      'coming in under the doors, rising over the desks and up between the shelves',
+    );
+    for (const id of ['m3', 'm5']) {
+      expect(at(record, id).carried).toContain('l1@m2:water');
+      expect(nowIn(record, id)[0]).toStartWith('the water is coming in under the doors');
+    }
+  });
+
+  test('water at the first moment is how the library looks, said until it rises further (library-3 m2)', () => {
+    const { record } = run('water-rising-library');
+    expect(record.changes['l1@m1:water']).toBeUndefined();
+    expect(nowIn(record, 'm2')).toEqual([
+      'the water is beginning to cover the floor',
+      'the books are floating off shelves, open like birds',
+    ]);
+    expect(nowIn(record, 'm4')).toContain('the water is up over the tops of the desks');
+    expect(nowIn(record, 'm4').join(' ')).not.toContain('beginning');
+  });
+
+  test("the suitcase stays in the grandfather's hands between the train and the door, shut (snow-train m4)", () => {
+    const { record } = run('suitcase-letters');
+    expect(at(record, 'm4').shows).toContain('t1');
+    expect(at(record, 'm4').held).toEqual({ t1: 'p2' });
+    expect(record.changes['t1@m3:appearance'].until).toBe('m4');
+    // And the door they walk to is shut until the dreamer opens it at m6.
+    expect(nowIn(record, 'm4')).toEqual(["the suitcase is shut, in the grandfather's hands", 'the door is shut']);
+    expect(nowIn(record, 'm6')).toContain('the door is open, faint yellow glow spilling from the doorway');
+  });
+
+  test("the suitcase is the grandfather's from the start, shut once off the train, and handed over once (snow-train-2 m1, m5, m6, m7)", () => {
+    const { record } = run('red-door');
+    expect(at(record, 'm1').held).toEqual({ t1: 'p2' });
+    expect(nowIn(record, 'm1')).toEqual(["the brown leather suitcase is in my grandfather's hands"]);
+    expect(record.changes['t1@m3:lid'].until).toBe('m4');
+    for (const id of ['m4', 'm5', 'm6', 'm7']) expect(at(record, id).carried).not.toContain('t1@m3:lid');
+    expect(nowIn(record, 'm5')).toEqual([
+      "the brown leather suitcase is shut, in my grandfather's hands",
+      'the red door is shut',
+    ]);
+    expect(nowIn(record, 'm6')).toEqual([
+      "the brown leather suitcase is shut, and passes from my grandfather's hands to the dreamer's",
+      'the red door is shut',
+    ]);
+    expect(nowIn(record, 'm7')[0]).toBe("the brown leather suitcase is shut, in the dreamer's hands");
+  });
+
+  test('the dreamer beside the driver is still in the cab, the paper boat in their hands (lighthouse m13)', () => {
+    const { record } = run('key-lighthouse');
+    expect(at(record, 'm13').shows).not.toContain('p1');
+    expect(at(record, 'm13').present).toEqual(['p1', 't2']);
+    expect(at(record, 'm13').held).toEqual({ t2: 'p1' });
+    expect(at(record, 'm14').shows).toContain('t2');
+  });
+
+  test('what a moment opens is open from there, and its look saying it open before is from after', () => {
+    const { record, violations } = run('suitcase-letters');
+    const door = record.changes['l2@m6:door'];
+    expect(door.now).toBe('open, faint yellow glow spilling from the doorway');
+    expect(found(violations, 'passing', 'add').some((v) => v.key === 'l2@m6:door')).toBe(true);
+    expect(lookText(record.elements.l2.base)).not.toContain('spilling from the doorway');
+    expect(lookText(record.elements.l2.base)).toContain('blue moonlight with soft shadows');
+    expect(record.elements.l2.after).toEqual(['faint yellow glow spilling from the doorway']);
+  });
+
+  test('a thing stays in the hands of whoever holds it while the moments go on showing them, and no further', () => {
+    // The key on the stairs, and the suitcase as the dreamer opens the door: both judged right with them in hand.
+    expect(at(run('key-lighthouse').record, 'm5').held).toEqual({ t1: 'p1' });
+    expect(at(run('suitcase-letters').record, 'm6').held).toEqual({ t1: 'p1' });
+    // A moment not about Priya comes between the bowls and the jump: they are not carried into it.
+    expect(at(run('moon-market').record, 'm5').held).toEqual({});
+  });
+
+  test('Tomas, found gone, is not there (orchard m7)', () => {
+    const { record } = run('lift-orchard');
+    expect(at(record, 'm7').gone).toEqual(['p2']);
+    expect(at(record, 'm7').shows).toEqual([]);
+    expect(at(record, 'm7').present).toEqual([]);
+  });
+
+  test('a lantern in view in the hands of someone out of it is still in their hands', () => {
+    const { record, violations } = run('blue-lantern');
+    expect(at(record, 'm3').held).toEqual({ t1: 'p2' });
+    expect(at(record, 'm3').present).toContain('p2');
+    expect(at(record, 'm5').held).toEqual({});
+    expect(
+      found(violations, 'carried', 'add')
+        .filter((v) => v.who === 'p2')
+        .map((v) => v.at),
+    ).toEqual(['m3', 'm6']);
+  });
+});
+
+describe('the rules, where the first reading of them misfired', () => {
+  const tiny = (over: Partial<Breakdown>): Breakdown =>
+    ({
+      title: 'x',
+      logline: '',
+      look: {},
+      world_logic: '',
+      people: [{ id: 'p1', name: 'you', is_dreamer: true, fields: {} }],
+      places: [
+        { id: 'l1', name: 'the night market', fields: { landmarks: { value: 'fish stalls, lanterns', said: true } } },
+      ],
+      things: [],
+      scenes: [],
+      style_options: [],
+      unknowns: [],
+      ...over,
+    }) as unknown as Breakdown;
+  const moment = (id: string, action: string, visible: string[], things: string[] = []) => ({
+    id,
+    action,
+    visible,
+    things,
+    place: 'l1',
+    eyes: 'outside',
+    distance: 'medium',
+    looks_at: '',
+    feeling: '',
+    visual_point: '',
+    purpose: '',
+    continues: false,
+    leaves: [],
+    shift: '',
+    key: false,
+    said: true,
+  });
+
+  test("a family's labels say who wears what, and two of them may share a build", () => {
+    const b = tiny({
+      people: [
+        { id: 'p1', name: 'you', is_dreamer: true, fields: {} },
+        {
+          id: 'p3',
+          name: 'the family',
+          fields: {
+            appearance: {
+              value: 'man in his 30s, short brown hair, average build; woman in her 30s, average build',
+              said: true,
+            },
+            wardrobe: {
+              value:
+                'father: plain beige t-shirt and dark blue jeans; mother: light blue sundress; baby: yellow onesie',
+              said: true,
+            },
+          },
+        },
+      ],
+      scenes: [
+        {
+          id: 's1',
+          title: '',
+          place: 'l1',
+          mood: '',
+          moments: [moment('m1', 'the family stands by the stalls', ['p3'])],
+        },
+      ],
+    } as unknown as Partial<Breakdown>);
+    const { record, violations } = storyRecord(b);
+    expect(record.elements.p3.kind).toBe('group');
+    expect(record.elements.p3.base.wardrobe.map((f) => f.text)).toEqual([
+      'father: plain beige t-shirt and dark blue jeans',
+      'mother: light blue sundress',
+      'baby: yellow onesie',
+    ]);
+    expect(found(violations, 'duplicates')).toEqual([]);
+  });
+
+  test('"the fish stall" brings no fish', () => {
+    const b = tiny({
+      people: [
+        { id: 'p1', name: 'you', is_dreamer: true, fields: {} },
+        { id: 'p2', name: 'the fish', fields: { identity: { value: 'a talking fish', said: true } } },
+      ],
+      scenes: [
+        {
+          id: 's1',
+          title: '',
+          place: 'l1',
+          mood: '',
+          moments: [
+            moment('m1', 'the dreamer walks past the fish stall', ['p1']),
+            moment('m2', "the fish on the ice says the dreamer's name", ['p1', 'p2']),
+          ],
+        },
+      ],
+    } as unknown as Partial<Breakdown>);
+    const { record } = storyRecord(b);
+    expect(record.moments[0].shows).toEqual(['p1']);
+  });
+
+  test('"age about 10" is an age, and "ten" is 10', () => {
+    const { record, violations } = run('lift-orchard');
+    expect(
+      found(violations, 'before', 'strip').some((v) => v.key === 'p2@m2:age' && v.detail.includes('age about 10')),
+    ).toBe(true);
+    expect(lookBefore(record, 'p2@m2:age')!.facts.map((f) => f.text)).not.toContain('age about 10');
+  });
+
+  test("a place's in-between picture leaves out the part it replaces, and a place keeps its clock's face", () => {
+    const paper = run('paper-city').record;
+    expect(
+      lookBefore(paper, 'l1@m5:houses')!
+        .facts.map((f) => f.text)
+        .join('; '),
+    ).not.toContain('houses leaning');
+    const kitchen = run('grandmas-kitchen').record;
+    expect(
+      lookBefore(kitchen, 'l1@m4:size')!
+        .facts.map((f) => f.text)
+        .join('; '),
+    ).toContain('a large round clock');
+  });
+});
+
+describe('the continuity plan made from the record (DREAMCHAT_RECORD=on)', () => {
+  const planned = (name: string) => {
+    const f = load(name);
+    const b = structuredClone(f.breakdown);
+    const rec = forPlan(storyRecord(b, f.items, null, { words: f.words, style: f.style }).record);
+    return { b, rec, plan: planContinuity(b, rec) };
+  };
+  const cut = (plan: ReturnType<typeof planContinuity>, id: string) => plan.cuts.find((c) => c.id === id)!;
+
+  test('is made only when the switch is on, and without it the plan is as it was', () => {
+    const was = process.env.DREAMCHAT_RECORD;
+    try {
+      const f = load('red-door');
+      for (const v of ['off', 'shadow']) {
+        process.env.DREAMCHAT_RECORD = v;
+        expect(recordForPlan(f.breakdown, f.items, null, { words: f.words })).toBeUndefined();
+      }
+      process.env.DREAMCHAT_RECORD = 'on';
+      expect(recordForPlan(f.breakdown, f.items, null, { words: f.words })?.moments.m5.held).toEqual({ t1: 'p2' });
+      const plain = planContinuity(structuredClone(f.breakdown));
+      expect(plain.cuts.some((c) => 'now' in c || 'visible' in c)).toBe(false);
+      expect(plain.ghosts.some((g) => 'key' in g || 'before' in g)).toBe(false);
+      expect(JSON.stringify(planContinuity(structuredClone(f.breakdown), undefined))).toBe(JSON.stringify(plain));
+    } finally {
+      if (was === undefined) delete process.env.DREAMCHAT_RECORD;
+      else process.env.DREAMCHAT_RECORD = was;
+    }
+  });
+
+  test('the opened suitcase is no longer drawn from its picture open once off the train, and is one suitcase', () => {
+    const { plan } = planned('red-door');
+    const lid = plan.ghosts.find((g) => g.key === 't1@m3:lid')!;
+    expect(lid.usedBy).toEqual(['m3']);
+    for (const id of ['m4', 'm5', 'm6', 'm7']) expect(cut(plan, id).refs.some((r) => r.id === lid.id)).toBe(false);
+    expect(cut(plan, 'm5').now).toEqual([
+      { of: 't1', text: "the brown leather suitcase is shut, in my grandfather's hands" },
+      { of: 't2', text: 'the red door is shut' },
+    ]);
+  });
+
+  test('the flood is carried into every later moment in the library, by its key', () => {
+    const { plan } = planned('flooded-library');
+    expect(cut(plan, 'm5').states.map((st) => st.key)).toEqual(['l1@m3:water', 'l1@m4:books']);
+    const water = plan.ghosts.find((g) => g.key === 'l1@m3:water')!;
+    expect(water.usedBy).toEqual(expect.arrayContaining(['m3', 'm5', 'm6', 'm9']));
+    // Rising further, the water is edited from the picture of it coming in.
+    expect(water.after).toBe(plan.ghosts.find((g) => g.key === 'l1@m2:water')!.id);
+  });
+
+  test('no in-between picture for a first look or a change that changes nothing', () => {
+    expect(planned('water-rising-library').plan.ghosts.some((g) => g.key === 'l1@m1:water')).toBe(false);
+    expect(planned('sea-school').plan.ghosts.some((g) => g.of === 'l2' && g.state?.now === 'covered in seaweed')).toBe(
+      false,
+    );
+  });
+
+  test("the suitcase is in the field, in the grandfather's hands, on the floor plan too", () => {
+    const { b, rec, plan } = planned('suitcase-letters');
+    expect(cut(plan, 'm4').things).toContain('t1');
+    expect(rawPlanBy(b, 'm4', rec)!.spots.find((s) => s.id === 't1')?.heldBy).toBe('p2');
+    expect(rawPlanBy(b, 'm4')!.spots.some((s) => s.id === 't1')).toBe(false);
+  });
+
+  test('the bowls are not in hand while they jump, on the floor plan too', () => {
+    const { b, rec } = planned('moon-market');
+    expect(rawPlanBy(b, 'm5')!.spots.find((s) => s.id === 't1')?.heldBy).toBe('p2');
+    expect(rawPlanBy(b, 'm5', rec)!.spots.find((s) => s.id === 't1')?.heldBy).toBeUndefined();
+  });
+
+  test('the dreamer is in the cab picture beside the driver, and Tomas, gone, is in no picture', () => {
+    const cab = cut(planned('key-lighthouse').plan, 'm13');
+    expect(cab.sees).toContain('p1');
+    expect(cab.view).toContain('Also in the picture: the dreamer');
+    expect(cab.view).not.toContain('Nobody else is in the picture');
+    const orchard = cut(planned('lift-orchard').plan, 'm7');
+    expect(orchard.sees ?? []).not.toContain('p2');
+    expect(orchard.view).not.toContain('Tomas,');
+  });
+});
+
 describe('the story record in shadow', () => {
-  test('is off unless asked for, and "on" is shadow for now', () => {
+  test('is off unless asked for, in shadow or on', () => {
     const was = process.env.DREAMCHAT_RECORD;
     try {
       delete process.env.DREAMCHAT_RECORD;
@@ -367,10 +709,12 @@ describe('the story record in shadow', () => {
       for (const [v, mode] of [
         ['off', 'off'],
         ['shadow', 'shadow'],
-        ['on', 'shadow'],
+        ['on', 'on'],
+        ['ON ', 'on'],
+        ['yes', 'off'],
       ]) {
         process.env.DREAMCHAT_RECORD = v;
-        expect(recordMode()).toBe(mode as 'off' | 'shadow');
+        expect(recordMode()).toBe(mode as 'off' | 'shadow' | 'on');
       }
     } finally {
       if (was === undefined) delete process.env.DREAMCHAT_RECORD;

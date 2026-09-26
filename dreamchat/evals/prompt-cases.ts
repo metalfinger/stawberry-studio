@@ -223,7 +223,8 @@ const OPENS: [Section, RegExp][] = [
   ['staging', /^(?:Seen [\s\S]*From left to right|Where they stand)/],
   ['you', /^"You" in these words/],
   ['in_it', /^In it:/],
-  ['still', /^Still so from earlier/],
+  // What is so of each one now: still so from earlier, or, made from the story record, at this moment.
+  ['still', /^(?:Still so from earlier|How each one is at this moment)/],
   ['feel', /^It should feel:/],
   ['must_show', /^The one thing this frame must show:/],
   ['repair', /^The last attempt/],
@@ -321,7 +322,8 @@ export function contextOf(r: Rebuilt, moment: string): Ctx {
     sections: sectionsOf(p.prompt),
     shown: new Set(p.inView.map((x) => x.id)),
     dreamer: r.b.people.find((x) => x.is_dreamer)?.id,
-    floor: shotPlan(r.b, moment),
+    // The floor plan the harness shoots it on: with the story record, as the record has it.
+    floor: shotPlan(r.b, moment, r.rec),
   };
 }
 

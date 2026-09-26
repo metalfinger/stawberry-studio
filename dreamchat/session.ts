@@ -71,6 +71,7 @@ import {
   pictureName,
   planBy,
   planContinuity,
+  type RecordPlan,
   seenIn,
   shotPlan,
 } from './continuity';
@@ -113,7 +114,7 @@ import {
   sheetPrompt,
 } from './sheets';
 import type { JudgedCheck, JudgeOptions } from './judge';
-import { diffPlan, type Readings, type RecordOptions, recordMode, storyRecord } from './record';
+import { diffPlan, type Readings, type RecordOptions, recordForPlan, recordMode, storyRecord } from './record';
 import { cutRecord, type WriteResult } from './strawberry';
 
 export type Entry = { role: 'user' | 'assistant'; content: string; messages?: string[] };
@@ -360,7 +361,9 @@ export async function planShots(
   const prep: Prep = { basedOn: planKey(b), blocking: {}, shots: {}, previs: {}, changes: found, ms: 0 };
   // Every camera of a set of plans placed, rendered and briefed, and each shot checked against its moment.
   const shoot = async (plans: Breakdown, into: Prep, scenes?: string[], suffix = '') => {
-    const plan = planContinuity(plans);
+    // With DREAMCHAT_RECORD=on, the cameras are placed from the story record's floor plans.
+    const rec = recordForPlan(plans, [], null, { style });
+    const plan = planContinuity(plans, rec);
     await Promise.all(
       plan.cuts
         .filter((c) => c.view && c.eye && (!scenes || scenes.includes(c.scene)))
@@ -369,7 +372,7 @@ export async function planShots(
           const scene = plans.scenes.find((sc) => sc.id === c.scene);
           const at = scene?.moments.findIndex((x) => x.id === c.id) ?? -1;
           const m = scene?.moments[at];
-          const where = shotPlan(plans, c.id);
+          const where = shotPlan(plans, c.id, rec);
           if (where && deps.dir) {
             const path = join(deps.dir, `plan-${c.id}${suffix}.png`);
             mkdirSync(deps.dir, { recursive: true });
@@ -541,6 +544,17 @@ export function shadowRecord(
 }
 
 /**
+ * What the continuity plan reads of the story record when DREAMCHAT_RECORD=on (record.ts): from the
+ * dream as it stands, its sketches' words, the dreamer's own messages and the chosen look. Nothing
+ * otherwise, and the plan is made as it always was.
+ */
+export function planRecord(s: Session, b = s.draft?.breakdown): RecordPlan | undefined {
+  if (!b) return undefined;
+  const words = (s.transcript ?? []).filter((e) => e.role === 'user').map((e) => e.content);
+  return recordForPlan(b, s.build?.items ?? [], s.draft?.readings, { words, style: s.style });
+}
+
+/**
  * A plan made again, its in-between references known by what they show rather than their number:
  * found later, a change before the others renumbered them, and the moment of the melting would have
  * been drawn from the picture of the horse's head (24 Sep). A reference already drawn keeps its
@@ -548,10 +562,15 @@ export function shadowRecord(
  */
 export function reconcileGhosts(plan: ContinuityPlan, frames: Item[]): ContinuityPlan {
   const drawn = frames.filter((f) => f.kind === 'ghost' && f.ghost);
+  // Made from the story record, a reference is known by its change's key.
   const same = (a: ContinuityPlan['ghosts'][number], b: ContinuityPlan['ghosts'][number]) =>
-    a.kind === b.kind &&
-    a.of === b.of &&
-    (a.kind === 'view' ? a.looksAt === b.looksAt : a.state?.what === b.state?.what && a.state?.now === b.state?.now);
+    a.key && b.key
+      ? a.key === b.key
+      : a.kind === b.kind &&
+        a.of === b.of &&
+        (a.kind === 'view'
+          ? a.looksAt === b.looksAt
+          : a.state?.what === b.state?.what && a.state?.now === b.state?.now);
   const used = new Set(frames.map((f) => f.id));
   const rename = new Map<string, string>();
   for (const g of plan.ghosts) {
@@ -594,7 +613,7 @@ export function treeInputOf(s: Session, threshold: number): TreeInput | null {
   const frames = s.build?.frames ?? [];
   return {
     breakdown: b,
-    plan: reconcileGhosts(planContinuity(b), frames),
+    plan: reconcileGhosts(planContinuity(b, planRecord(s)), frames),
     ...(s.prep ? { prep: s.prep, prepFresh: planKey(b) === s.prep.basedOn } : {}),
     items: s.build?.items ?? [],
     frames,
@@ -758,8 +777,11 @@ export type StoreDeps = {
   producer?: (transcript: Exchange[], previous?: Breakdown) => Promise<DraftResult>;
   /** Their own description of how it should look, as a style option. */
   ownStyle?: (transcript: string) => Promise<StyleOption | null>;
-  /** Writes the production into Strawberry. Absent when the engine isn't installed. */
-  write?: (b: Breakdown, style: StyleOption, transcript: string) => Promise<WriteResult>;
+  /**
+   * Writes the production into Strawberry. Absent when the engine isn't installed. Its continuity plan
+   * is made from the story record, when one is given (DREAMCHAT_RECORD=on).
+   */
+  write?: (b: Breakdown, style: StyleOption, transcript: string, rec?: RecordPlan) => Promise<WriteResult>;
   /** Draws reference sheets through the engine. Absent: nothing is sketched. */
   sheets?: SheetEngine;
   /** Applies the person's answer to a profile. */
@@ -1683,7 +1705,7 @@ export class SessionStore {
       return;
     }
     s.production = { status: 'writing' };
-    const writing = this.deps.write(b, s.style, renderTranscript(s.transcript));
+    const writing = this.deps.write(b, s.style, renderTranscript(s.transcript), planRecord(s));
     this.writes.set(s.id, writing);
     writing.then(
       (result) =>
@@ -1750,7 +1772,7 @@ export class SessionStore {
       [...this.reviews.entries()].filter(([k]) => k.startsWith(`${s.id}:`)).map(([, p]) => p.catch(() => undefined)),
     );
     const ids = s.production?.result?.ids ?? {};
-    const plan = planContinuity(s.draft.breakdown);
+    const plan = planContinuity(s.draft.breakdown, planRecord(s));
     s.build.plan = plan;
     // The story record beside the plan the moments are drawn from, logged and changing nothing.
     if (recordMode() !== 'off')
@@ -2126,7 +2148,7 @@ export class SessionStore {
     const cut = frame.frame?.plan;
     const b = s.draft?.breakdown;
     const eye = cut?.eye;
-    const plan = b ? shotPlan(b, frame.id) : undefined;
+    const plan = b ? shotPlan(b, frame.id, planRecord(s)) : undefined;
     const dreamer = b?.people.find((p) => p.is_dreamer)?.id;
     if (!cut || !eye || !plan || !this.deps.sheets?.layout || !this.deps.dir) return undefined;
     const names = Object.fromEntries(plan.spots.map((x) => [x.id, called(x.id)]));
@@ -2209,7 +2231,7 @@ export class SessionStore {
     const order = item.frame?.order;
     const issues =
       order && s.draft?.breakdown
-        ? planContinuity(s.draft.breakdown).issues.filter(
+        ? planContinuity(s.draft.breakdown, planRecord(s)).issues.filter(
             (x) => x.startsWith(`picture ${order} `) || x.startsWith(`picture ${order}:`),
           )
         : [];
@@ -2286,7 +2308,7 @@ export class SessionStore {
       .catch(() => null);
     if (!again) return false;
     const second = (await planFacts(this.deps.jev, again, [sc.id]).catch(() => ({ breakdown: again }))).breakdown;
-    const c = planContinuity(second).cuts.find((x) => x.id === frame.id);
+    const c = planContinuity(second, planRecord(s, second)).cuts.find((x) => x.id === frame.id);
     if (!c?.view) return false;
     const called = calledIn(second, c);
     const dreamer = second.people.find((p) => p.is_dreamer)?.id;
@@ -2331,7 +2353,7 @@ export class SessionStore {
 
   private async replan(s: Session, opts: { syncRecords?: boolean } = {}): Promise<void> {
     if (!s.build?.frames || !s.draft?.breakdown) return;
-    const plan = reconcileGhosts(planContinuity(s.draft.breakdown), s.build.frames);
+    const plan = reconcileGhosts(planContinuity(s.draft.breakdown, planRecord(s)), s.build.frames);
     // In-between references the plan now needs and none was drawn for are added, to be drawn.
     const ids = s.production?.result?.ids ?? {};
     for (const g of buildGhosts(plan))

@@ -87,6 +87,15 @@ export type CutPlan = {
   across?: string[];
   /** Seen from outside, on a scene with a floor plan: where the camera stands, in words. */
   camera?: string;
+  /**
+   * Made from the story record: who and what the moment has in view (its own lists, and whoever the
+   * record finds there), and how each one is right then, in words, by who or what it is said of.
+   */
+  visible?: string[];
+  things?: string[];
+  now?: { of: string; text: string }[];
+  /** Made from the story record: by who or what, words of its look from after a change, left out of it. */
+  unsaid?: Record<string, string[]>;
   why: string;
 };
 
@@ -108,9 +117,40 @@ export type GhostPlan = {
   state?: State;
   looksAt?: string;
   depth: number;
+  /** Made from the story record: its change's key, and how its subject looked just before it. */
+  key?: string;
+  before?: { text: string; said: boolean }[];
 };
 
 export type ContinuityPlan = { cuts: CutPlan[]; ghosts: GhostPlan[]; issues: string[] };
+
+/**
+ * What the continuity plan takes from the story record (record.ts, DREAMCHAT_RECORD=on), by moment: the
+ * changes it makes and the ones still in force from earlier, each known by its key; who and what is in
+ * it; who is there without being what it is about (on the floor plan, drawn where the camera takes them
+ * in) and who has gone (never on it); who holds what; and how each one is right then, in words. And by
+ * change: how its subject looked just before it, for its in-between picture, and where it ends.
+ */
+export type RecordPlan = {
+  moments: Record<
+    string,
+    {
+      own: State[];
+      carried: State[];
+      visible: string[];
+      things: string[];
+      present: string[];
+      gone: string[];
+      held: Record<string, string>;
+      now: { of: string; text: string }[];
+    }
+  >;
+  before: Record<string, { text: string; said: boolean }[]>;
+  /** By change: the moment it no longer holds from, where it ends. */
+  ends: Record<string, string>;
+  /** By who or what: words its sketch's look has that are from after a change, never told as its look. */
+  unsaid: Record<string, string[]>;
+};
 
 /**
  * What an in-between picture is, as a key that survives planning again: its subject, its kind and
@@ -238,6 +278,8 @@ export const fixtureName = (b: Breakdown, id: string) =>
 
 /** A lasting change's key: who, what, what it is now, and since which moment. */
 export const stateKey = (st: State) => `${st.who}/${st.what}/${st.now}/${st.since}`;
+/** A change as the plan knows it: the story record's key where it has one, else who, what, now and since. */
+const changeKey = (st: State) => st.key ?? stateKey(st);
 
 /**
  * A name as a picture is told it. The people of a dream are named as the dreamer said them, and
@@ -268,13 +310,17 @@ export function placePlan(b: Breakdown, momentId: string): Blocking | undefined 
   return scene.blocking.places?.[m.place] ?? scene.blocking;
 }
 
-export function planBy(b: Breakdown, momentId: string): Blocking | undefined {
-  const raw = rawPlanBy(b, momentId);
+export function planBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blocking | undefined {
+  const raw = rawPlanBy(b, momentId, rec);
   return raw ? settle(raw) : undefined;
 }
 
-/** The plan by a moment as the planner made it: its spots where their latest moves put them, before settling. */
-export function rawPlanBy(b: Breakdown, momentId: string): Blocking | undefined {
+/**
+ * The plan by a moment as the planner made it: its spots where their latest moves put them, before
+ * settling. With the story record, who and what is there by now is whoever the record has there in the
+ * moments so far, never whoever it has gone, and who holds what is as the record has it.
+ */
+export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blocking | undefined {
   const scene = b.scenes.find((sc) => sc.moments.some((x) => x.id === momentId));
   const plan = placePlan(b, momentId);
   if (!scene || !plan) return undefined;
@@ -282,7 +328,15 @@ export function rawPlanBy(b: Breakdown, momentId: string): Blocking | undefined 
   const own = (x: Moment) =>
     plan === scene.blocking ? !scene.blocking?.places?.[x.place] : scene.blocking?.places?.[x.place] === plan;
   const upTo = scene.moments.slice(0, scene.moments.findIndex((x) => x.id === momentId) + 1).filter(own);
-  const there = new Set(upTo.flatMap((x) => [...x.visible, ...x.things]));
+  const r = rec?.moments[momentId];
+  const there = new Set(
+    upTo.flatMap((x) => {
+      const y = rec?.moments[x.id];
+      return [...x.visible, ...x.things, ...(y ? [...y.visible, ...y.things, ...y.present] : [])];
+    }),
+  );
+  for (const id of r?.gone ?? []) there.delete(id);
+  const things = new Set((b.things ?? []).map((t) => t.id));
   const dreamerId = b.people.find((p) => p.is_dreamer)?.id;
   // Where each person (or car) is by now: their spot, as their latest move up to this moment
   // leaves them. She walked to the far end of the room and came back; a spot for the whole scene
@@ -292,21 +346,27 @@ export function rawPlanBy(b: Breakdown, momentId: string): Blocking | undefined 
   return {
     ...plan,
     spots: plan.spots
-      .filter((s) => there.has(s.id) || s.id === dreamerId || s.fixture)
+      .filter((s) => (there.has(s.id) || s.id === dreamerId || s.fixture) && !r?.gone.includes(s.id))
       .map((s) => {
         const mv = moved.get(s.id);
-        if (!mv) return s;
-        const at = {
-          ...s,
-          x: mv.x,
-          y: mv.y,
-          ...(mv.faces ? { faces: mv.faces } : {}),
-          ...(mv.pose ? { pose: mv.pose } : {}),
-        };
+        const at = mv
+          ? {
+              ...s,
+              x: mv.x,
+              y: mv.y,
+              ...(mv.faces ? { faces: mv.faces } : {}),
+              ...(mv.pose ? { pose: mv.pose } : {}),
+            }
+          : s;
         // Handed over or put down: whoever holds it from this moment, or nobody.
-        if (mv.heldBy !== undefined) {
+        if (mv?.heldBy !== undefined) {
           if (mv.heldBy) at.heldBy = mv.heldBy;
           else delete at.heldBy;
+        }
+        // With the record, a thing is in someone's hands only where the record has it there.
+        if (r && things.has(s.id) && (r.held[s.id] ?? null) !== (at.heldBy ?? null)) {
+          const { heldBy: _, ...loose } = at;
+          return r.held[s.id] ? { ...loose, heldBy: r.held[s.id] } : loose;
         }
         return at;
       }),
@@ -318,12 +378,15 @@ export function rawPlanBy(b: Breakdown, momentId: string): Blocking | undefined 
  * dreamer's eyes, everyone there is where they are; seen from outside, the people are those the
  * moment shows, as the dream tells it, and the things are all there.
  */
-export function shotPlan(b: Breakdown, momentId: string): Blocking | undefined {
-  const where = planBy(b, momentId);
+export function shotPlan(b: Breakdown, momentId: string, rec?: RecordPlan): Blocking | undefined {
+  const where = planBy(b, momentId, rec);
   const m = b.scenes.flatMap((sc) => sc.moments).find((x) => x.id === momentId);
   if (!where || !m || m.eyes === 'dreamer') return where;
   const people = new Set(b.people.map((p) => p.id));
-  return { ...where, spots: where.spots.filter((s) => !people.has(s.id) || m.visible.includes(s.id)) };
+  // With the record, also whoever it has there out of the moment's focus: drawn where the camera takes them in.
+  const r = rec?.moments[momentId];
+  const shown = new Set([...m.visible, ...(r ? [...r.visible, ...r.present] : [])]);
+  return { ...where, spots: where.spots.filter((s) => !people.has(s.id) || shown.has(s.id)) };
 }
 
 export const seenIn = (m: Pick<Moment, 'visible' | 'eyes'>, dreamerId?: string) =>
@@ -351,28 +414,49 @@ const ROLE: Record<Relation, RefRole> = {
   seat: 'composition',
 };
 
-export function planContinuity(b: Breakdown): ContinuityPlan {
+/**
+ * The continuity plan. With the story record (DREAMCHAT_RECORD=on), each moment's changes and those
+ * carried into it are the record's, known by their keys, and so is who and what is in it: a change the
+ * record finds changes nothing, or is a first look, has no in-between picture; a change is carried
+ * until it is undone or replaced; the floor plans have whoever is there and hold what the record holds.
+ */
+export function planContinuity(b: Breakdown, rec?: RecordPlan): ContinuityPlan {
+  const crowd = (id: string) => !!b.people.find((p) => p.id === id)?.extras;
   // A breakdown drafted before these fields existed plans as if nothing lasting changes.
-  const ms = moments(b).map((m) => ({
-    ...m,
-    looks_at: m.looks_at ?? '',
-    shift: m.shift ?? '',
-    // Only a look lasts: "location: at the far end of the room" in an older breakdown became a
-    // ghost of her standing somewhere. And only a change: recorded where its subject is first shown,
-    // it is how they look, and its in-between picture changes nothing (five of them were drawn for
-    // Meads, from a breakdown judged before this was known, 25 Sep).
-    // A crowd has no sketch to draw a change on: its new look is said in the moments' words (the
-    // faceless students' in-between picture had nothing to edit, 26 Sep).
-    leaves: (m.leaves ?? []).filter(
-      (l) =>
-        !POSITION.test(l.what.trim()) &&
-        (hasBefore(b, m.id, l.who) || isWhole(l)) &&
-        !b.people.find((p) => p.id === l.who)?.extras,
-    ),
-    // Nor is it carried: a first look written into the moments after it was held as "carried in
-    // words only" (Meads m7, the convertible's look, 25 Sep).
-    states: (m.states ?? []).filter((st) => !st.since || hasBefore(b, st.since, st.who) || isWhole(st)),
-  }));
+  const ms = moments(b).map((m) => {
+    const r = rec?.moments[m.id];
+    return {
+      ...m,
+      looks_at: m.looks_at ?? '',
+      shift: m.shift ?? '',
+      // Only a look lasts: "location: at the far end of the room" in an older breakdown became a
+      // ghost of her standing somewhere. And only a change: recorded where its subject is first shown,
+      // it is how they look, and its in-between picture changes nothing (five of them were drawn for
+      // Meads, from a breakdown judged before this was known, 25 Sep).
+      // A crowd has no sketch to draw a change on: its new look is said in the moments' words (the
+      // faceless students' in-between picture had nothing to edit, 26 Sep).
+      leaves: r
+        ? r.own.filter((st) => !crowd(st.who))
+        : (m.leaves ?? []).filter(
+            (l) => !POSITION.test(l.what.trim()) && (hasBefore(b, m.id, l.who) || isWhole(l)) && !crowd(l.who),
+          ),
+      // Nor is it carried: a first look written into the moments after it was held as "carried in
+      // words only" (Meads m7, the convertible's look, 25 Sep).
+      states: r
+        ? r.carried
+        : (m.states ?? []).filter((st) => !st.since || hasBefore(b, st.since, st.who) || isWhole(st)),
+      ...(r
+        ? { visible: [...new Set([...m.visible, ...r.visible])], things: [...new Set([...m.things, ...r.things])] }
+        : {}),
+    };
+  });
+  // What a moment itself changes, each change as the plan carries it: with the record, by its key.
+  const ownOf = (m: (typeof ms)[number]): State[] =>
+    m.leaves.map((l) =>
+      'since' in l
+        ? (l as State)
+        : { who: l.who, what: l.what, now: l.now, since: m.id, ...(l.whole !== undefined ? { whole: l.whole } : {}) },
+    );
   const index = new Map(ms.map((m, i) => [m.id, i]));
   const byId = new Map(ms.map((m) => [m.id, m]));
   const names = new Map<string, string>([...b.people, ...b.places, ...b.things].map((x) => [x.id, x.name]));
@@ -517,13 +601,8 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
 
     // A moment that changes a part again replaces what it was: the horse's head was told "still
     // a melting ice block" and judged against it (23 Sep).
-    const own = m.leaves.map((l) => ({
-      who: l.who,
-      what: l.what,
-      now: l.now,
-      since: m.id,
-      ...(l.whole !== undefined ? { whole: l.whole } : {}),
-    }));
+    const own = ownOf(m);
+    const r = rec?.moments[m.id];
     return {
       id: m.id,
       order: i + 1,
@@ -540,6 +619,18 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
       depth: 0,
       transition: '',
       matchFrame,
+      ...(r
+        ? {
+            visible: m.visible,
+            things: m.things,
+            now: r.now,
+            unsaid: Object.fromEntries(
+              [...m.visible, ...m.things, m.place, ...r.present]
+                .filter((id) => rec?.unsaid[id]?.length)
+                .map((id) => [id, rec!.unsaid[id]]),
+            ),
+          }
+        : {}),
       why: '',
     };
   });
@@ -552,7 +643,7 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
     c.refs.find((r) => {
       if (r.kind === 'ghost') {
         const g = ghosts.find((x) => x.id === r.id);
-        return !!g?.state && stateKey(g.state) === stateKey(st);
+        return !!g?.state && changeKey(g.state) === changeKey(st);
       }
       // A picture kept only for its light is not drawn from, so it carries no change.
       return (
@@ -594,17 +685,15 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
   // Every moment from the change on, while it holds, takes the look from its ghost, so the
   // change is invented once and carried, never re-invented inside a whole scene.
   const latest = new Map<string, GhostPlan>();
-  const ghostOf = new Map<string, GhostPlan>(); // by state key
+  const ghostOf = new Map<string, GhostPlan>(); // by change key
   for (const m of ms)
-    for (const l of m.leaves) {
-      const state: State = {
-        who: l.who,
-        what: l.what,
-        now: l.now,
-        since: m.id,
-        ...(l.whole !== undefined ? { whole: l.whole } : {}),
-      };
-      const prev = latest.get(l.who);
+    for (const state of ownOf(m)) {
+      const l = state;
+      // With the record, a ghost is edited from the one before only if that change has not ended by
+      // here: the suitcase shut again is drawn from its sketch, not from its picture open.
+      const last = latest.get(l.who);
+      const ended = last?.state?.key ? rec?.ends[last.state.key] : undefined;
+      const prev = ended && (index.get(ended) ?? 0) <= (index.get(m.id) ?? 0) ? undefined : last;
       const g: GhostPlan = {
         id: `g${ghosts.length + 1}`,
         kind: 'state',
@@ -618,15 +707,16 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
         why: `${name(l.who)} changes at picture ${no(m.id)}: drawn on ${kindOf(l.who) === 'person' ? 'them' : 'it'} alone first, one change in one edit${prev ? ', from the change before' : ''}`,
         state,
         depth: 0,
+        ...(state.key ? { key: state.key, ...(rec?.before[state.key] ? { before: rec.before[state.key] } : {}) } : {}),
       };
       ghosts.push(g);
       latest.set(l.who, g);
-      ghostOf.set(stateKey(state), g);
+      ghostOf.set(changeKey(state), g);
     }
   for (const c of cuts) {
     // Its own change, and every change still in force on what it shows.
     for (const st of [...c.own, ...c.states]) {
-      const g = ghostOf.get(stateKey(st));
+      const g = ghostOf.get(changeKey(st));
       if (!g || c.refs.some((r) => r.id === g.id)) continue;
       g.usedBy.push(c.id);
       addGhostRef(c, g, st);
@@ -788,7 +878,7 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
       return { theirs: true };
     };
     if (m.eyes === 'dreamer' && dreamerId) {
-      const pov = shotPlan(b, m.id) ?? plan;
+      const pov = shotPlan(b, m.id, rec) ?? plan;
       const said = pov.looks?.[m.id];
       const toward = said && pov.spots.some((s) => s.id === said) ? said : target(m.looks_at);
       // Who and what they see out past the place's edges is named where they look: the tractor in
@@ -822,7 +912,7 @@ export function planContinuity(b: Breakdown): ContinuityPlan {
       if (base && !sameCast)
         Object.assign(base, { role: 'composition', relation: 'same_side', carries: CARRIES.same_side });
       const edits = c.refs.some((r) => r.role === 'base');
-      const where = shotPlan(b, m.id) ?? plan;
+      const where = shotPlan(b, m.id, rec) ?? plan;
       // What its words name on the plan besides who and what is in it, to be in the picture too where
       // the camera can hold it: holding up the key "for the lighthouse" with the lighthouse behind
       // the camera read as the shot at odds with the moment (lighthouse, 25 Sep).

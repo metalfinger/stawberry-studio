@@ -7,7 +7,7 @@
 // not invented defaults presented as user decisions").
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { type CutPlan, ghostKey, planContinuity, seenIn } from './continuity';
+import { type CutPlan, ghostKey, planContinuity, type RecordPlan, seenIn } from './continuity';
 import { type Breakdown, type Detail, mediumOf, moments, type State, type StyleOption, VAGUE } from './producer';
 
 export const REPO = resolve(import.meta.dir, '..');
@@ -97,7 +97,7 @@ function patches(node: string, fields: Record<string, Detail>, what: string): Op
 }
 
 /** The whole production as an ordered list of engine calls. Pure, so it can be tested. */
-export function planWrites(b: Breakdown, style: StyleOption, transcript: string): Op[] {
+export function planWrites(b: Breakdown, style: StyleOption, transcript: string, rec?: RecordPlan): Op[] {
   const dreamerId = b.people.find((p) => p.is_dreamer)?.id;
   const ops: Op[] = [
     { op: 'create', ref: '$project', kind: 'project', name: b.title.slice(0, 240), notes: b.logline },
@@ -151,7 +151,7 @@ export function planWrites(b: Breakdown, style: StyleOption, transcript: string)
   }
 
   // Ghosts are planned coverage on the asset they show, covered by the ghost's take once drawn.
-  const plan = planContinuity(b);
+  const plan = planContinuity(b, rec);
   const planOf = new Map(plan.cuts.map((c) => [c.id, c]));
   for (const g of plan.ghosts)
     ops.push({
@@ -274,7 +274,12 @@ export async function cli(args: string[], input?: unknown): Promise<unknown> {
 
 const call = (operation: string, body: unknown) => cli(['call', operation, '-'], body);
 
-export async function writeProduction(b: Breakdown, style: StyleOption, transcript: string): Promise<WriteResult> {
+export async function writeProduction(
+  b: Breakdown,
+  style: StyleOption,
+  transcript: string,
+  rec?: RecordPlan,
+): Promise<WriteResult> {
   const t0 = Date.now();
   const ids = new Map<string, string>();
   const revisions = new Map<string, number>();
@@ -288,7 +293,7 @@ export async function writeProduction(b: Breakdown, style: StyleOption, transcri
     return Array.isArray(v) ? v.map(resolveRef) : v;
   };
 
-  for (const op of planWrites(b, style, transcript)) {
+  for (const op of planWrites(b, style, transcript, rec)) {
     if (op.op === 'create') {
       const node = (await call('create', {
         kind: op.kind,

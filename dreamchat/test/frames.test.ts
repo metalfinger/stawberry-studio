@@ -1,7 +1,20 @@
 import { describe, expect, test } from 'bun:test';
-import type { CutPlan } from '../continuity';
-import { aNoun, framePrompt, ghostPrompt, withoutGone, withoutPose, writingIn } from '../frames';
-import { oneColour, VAGUE } from '../producer';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { type CutPlan, planContinuity } from '../continuity';
+import {
+  aNoun,
+  buildFrames,
+  buildGhosts,
+  framePrompt,
+  ghostPrompt,
+  type PlannedInput,
+  withoutGone,
+  withoutPose,
+  writingIn,
+} from '../frames';
+import { type Breakdown, completeViews, oneColour, type StyleOption, VAGUE } from '../producer';
+import { forPlan, storyRecord } from '../record';
 import { asInstruction } from '../session';
 import {
   colourName,
@@ -1302,5 +1315,114 @@ describe("a moment's previs", () => {
     const { prompt } = framePrompt(edit, [], style, [{ use, item: earlier }]);
     expect(prompt).toContain('EDIT THIS PICTURE');
     expect(prompt).not.toContain('The subject fills nearly the whole frame');
+  });
+});
+
+// Saved dreams a person marked down for what was not carried from one picture to the next, frozen in
+// test/fixtures/record; every prompt rebuilt as plan.ts does, every earlier picture drawn and approved.
+describe('a moment drawn from the story record (DREAMCHAT_RECORD=on)', () => {
+  type Frozen = { breakdown: Breakdown; items: Item[]; words: string[]; style: StyleOption };
+  const pictures = (name: string, withRecord: boolean) => {
+    const f = JSON.parse(readFileSync(join(import.meta.dir, 'fixtures', 'record', `${name}.json`), 'utf8')) as Frozen;
+    const b = structuredClone(f.breakdown);
+    completeViews(b);
+    const sheets = f.items.map((i): Item => ({
+      ...i,
+      status: 'ready',
+      mediaId: i.extras ? undefined : `sketch-${i.id}`,
+      review: 'approved',
+    }));
+    const rec = withRecord
+      ? forPlan(storyRecord(b, f.items, null, { words: f.words, style: f.style }).record)
+      : undefined;
+    const plan = planContinuity(b, rec);
+    const all = [...buildFrames(b, plan), ...buildGhosts(plan)].map((p): Item => ({
+      ...p,
+      status: 'ready',
+      mediaId: `picture-${p.id}`,
+      continuityApproved: true,
+    }));
+    const byId = new Map(all.map((p) => [p.id, p]));
+    const prompt = (id: string) => {
+      const it = byId.get(id)!;
+      if (it.ghost) {
+        const g = it.ghost;
+        const sheet = sheets.find((s) => s.id === g.of)!;
+        const from = g.from ? byId.get(g.from) : undefined;
+        return ghostPrompt(it, sheet, from, f.style, g.after ? byId.get(g.after) : undefined);
+      }
+      const inputs = (it.frame?.plan?.refs ?? [])
+        .map((use) => ({ use, item: byId.get(use.id) }))
+        .filter((x): x is PlannedInput => !!x.item);
+      return framePrompt(it, sheets, f.style, inputs);
+    };
+    return { plan, prompt };
+  };
+
+  test('says how each one is at that moment, once: the suitcase shut, in whose hands (snow-train-2 m1, m5, m6)', () => {
+    const { prompt } = pictures('red-door', true);
+    expect(prompt('m1').prompt).toContain(
+      "How each one is at this moment: the brown leather suitcase is in my grandfather's hands.",
+    );
+    const m5 = prompt('m5');
+    expect(m5.prompt).toContain(
+      "How each one is at this moment: the brown leather suitcase is shut, in my grandfather's hands; the red door is shut.",
+    );
+    expect(m5.prompt).not.toContain('Still so from earlier');
+    expect(m5.prompt).not.toContain('open revealing');
+    // One suitcase: its sketch, never also its picture open.
+    expect(m5.references.filter((r) => r.role === 'prop').map((r) => r.media_id)).toEqual(['sketch-t1', 'sketch-t2']);
+    expect(prompt('m6').prompt).toContain("passes from my grandfather's hands to the dreamer's");
+  });
+
+  test('the water is still there in the moments after it rose (library-2 m5; library-1 m3)', () => {
+    expect(pictures('flooded-library', true).prompt('m5').prompt).toContain(
+      'How each one is at this moment: the water rises over the desks; the books are floating off the shelves, open like birds.',
+    );
+    const m3 = pictures('library-underwater', true).prompt('m3');
+    expect(m3.prompt).toContain('the water is coming in under the doors, rising over the desks');
+    expect(m3.references.map((r) => r.media_id)).toContain('picture-g1');
+  });
+
+  test('a door a later moment opens is shut before it, its light from the doorway not yet said (snow-train m5)', () => {
+    const { prompt } = pictures('suitcase-letters', true);
+    const m5 = prompt('m5').prompt;
+    expect(m5).not.toMatch(/spilling from the doorway/);
+    expect(m5).toContain('the door is shut');
+    expect(m5).toContain('blue moonlight with soft shadows');
+    expect(prompt('m6').prompt).toContain('the door is open, faint yellow glow spilling from the doorway');
+  });
+
+  test("the suitcase is in the grandfather's hands as they walk to the door (snow-train m4)", () => {
+    const m4 = pictures('suitcase-letters', true).prompt('m4');
+    expect(m4.prompt).toContain("the suitcase is shut, in the grandfather's hands");
+    expect(m4.references.map((r) => r.media_id)).toContain('sketch-t1');
+    expect(m4.prompt).toContain('holding the suitcase');
+  });
+
+  test('whoever has gone is not drawn, and whoever has not is (orchard m7; lighthouse m13)', () => {
+    const orchard = pictures('lift-orchard', true).prompt('m7');
+    expect(orchard.prompt).not.toContain('Tomas (person)');
+    expect(orchard.references.map((r) => r.media_id)).not.toContain('sketch-p2');
+    const cab = pictures('key-lighthouse', true).prompt('m13');
+    expect(cab.prompt).toContain('the dreamer (person)');
+    expect(cab.references.map((r) => r.media_id)).toContain('sketch-p1');
+  });
+
+  test('an in-between picture says how its subject looked just before, the part it changes left out', () => {
+    const { plan, prompt } = pictures('paper-city', true);
+    const g = plan.ghosts.find((x) => x.key === 'l1@m5:houses')!;
+    expect(g.before?.map((f) => f.text).join('; ')).not.toContain('houses leaning');
+    expect(prompt(g.id).prompt).not.toContain('houses leaning');
+  });
+
+  test('without the record, the same moments are told as before', () => {
+    const { plan, prompt } = pictures('red-door', false);
+    expect(plan.cuts.every((c) => c.now === undefined && c.visible === undefined)).toBe(true);
+    const m5 = prompt('m5').prompt;
+    expect(m5).toContain(
+      "Still so from earlier in the dream: the brown leather suitcase's lid: open revealing many letters.",
+    );
+    expect(m5).not.toContain('How each one is at this moment');
   });
 });

@@ -22,6 +22,7 @@ const files = given.length
 /** Short column names for the table. */
 const SHORT: Record<RuleName, string> = {
   ids: 'ids',
+  passing: 'pass',
   presence: 'pres',
   kind: 'kind',
   one_name: 'name',

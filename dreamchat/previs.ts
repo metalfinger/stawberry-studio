@@ -1478,13 +1478,18 @@ export function outsideShot(
   const whoShown = shown.filter((x) => subjects.includes(x.s.id) && isPerson(x.s));
   const whatShown = shown.filter((x) => subjects.includes(x.s.id) && !isPerson(x.s));
   const behind = shown.filter((x) => !subjects.includes(x.s.id));
+  // "Nobody else" only where nobody else is: someone there out of the moment's focus (the dreamer beside
+  // the driver in the cab) is also in the picture.
+  const nobodyElse = behind.some((x) => isPerson(x.s)) ? '' : 'Nobody else is in the picture.';
   const sentences = [
     `Seen ${from}, ${where}, at the height of ${people.length === 1 ? `${them}'s eyes` : 'their eyes'}: the camera looks ${lookedAt ? `at ${lookedAt}, ` : ''}toward ${wall(d, plan.front, !!plan.indoors)}. A ${lens}mm lens.`,
     whoShown.length
-      ? `From left to right across the picture: ${whoShown.map(({ s, seen }) => words(s, seen)).join('; then ')}. ${
+      ? `From left to right across the picture: ${whoShown.map(({ s, seen }) => words(s, seen)).join('; then ')}.${
           whoShown.length === 1
-            ? 'Nobody else is in the picture.'
-            : `Nobody else is in the picture. They keep these places in every picture of this scene.`
+            ? nobodyElse
+              ? ` ${nobodyElse}`
+              : ''
+            : ` ${nobodyElse ? `${nobodyElse} ` : ''}They keep these places in every picture of this scene.`
         }`
       : '',
     ...whatShown.map(({ s, seen }) => `${cap(words(s, seen))}.`),

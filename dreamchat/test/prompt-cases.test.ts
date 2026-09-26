@@ -290,8 +290,10 @@ describe('the checks, on a frozen dream', () => {
     expect(run(m1, 'faces', { who: 'p1', toward: ['p2'] }).pass).toBe(true);
     expect(run(m1, 'faces', { who: 'p1', toward: ['x1'] }).pass).toBe(false);
     expect(run(contextOf(snow, 'm2'), 'held_by', { who: 't1', by: 'p2' }).pass).toBe(true);
-    // At m4 the suitcase is on no plan at all.
-    expect(run(contextOf(snow, 'm4'), 'held_by', { who: 't1', by: 'p2' }).detail).toContain('not on the plan');
+    // At m4 the suitcase is on no plan at all; made from the story record, it is still in his hands.
+    expect(run(contextOf(snow, 'm4'), 'held_by', { who: 't1', by: 'p2' }).detail).toContain(
+      snow.rec ? 'held by the grandfather' : 'not on the plan',
+    );
   });
 
   test('earlier pictures, the edit, and how the camera moved', () => {
@@ -310,7 +312,8 @@ describe('the checks, on a frozen dream', () => {
   test("the prompt's words, whole or by part", () => {
     expect(check('prompt_has', { pattern: 'paper boat' })).toBe(true);
     expect(check('prompt_has', { pattern: 'paper boat', section: 'happens' })).toBe(true);
-    expect(check('prompt_has', { pattern: 'paper boat', section: 'still' })).toBe(false);
+    // Made from the story record, how each one is now says whose hands the boat is in.
+    expect(check('prompt_has', { pattern: 'paper boat', section: 'still' })).toBe(!!lighthouse.rec);
     expect(check('prompt_lacks', { pattern: 'the red tractor, across the picture', section: 'shot' })).toBe(false);
   });
 
@@ -535,9 +538,10 @@ describe('the frozen dreams and the corpus dump', () => {
   test('where a dream keeps what was sent, the dump says whether its images are those', () => {
     const d = loadDream('dream-0926-022102-aeea', false);
     const dd = dumpOf(lighthouse, sentOf(d.session as Session));
-    // m10 was drawn before picture 8 was, so its picture 8 went unattached; m13's were as rebuilt.
+    // m10 was drawn before picture 8 was, so its picture 8 went unattached; m12's were as rebuilt (m13's
+    // too, but with the story record on the dreamer beside the driver goes in there as well).
     expect(dd.pictures.find((p) => p.id === 'm10')?.sent?.same_images).toBe(false);
-    expect(dd.pictures.find((p) => p.id === 'm13')?.sent?.same_images).toBe(true);
+    expect(dd.pictures.find((p) => p.id === 'm12')?.sent?.same_images).toBe(true);
   });
 
   test('the same dream twice is the same; a changed paragraph, image or plan is found', () => {

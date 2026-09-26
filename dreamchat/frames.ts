@@ -71,6 +71,18 @@ export function withoutGone(action: string): string {
   return out.length >= 8 ? out : action;
 }
 
+/** A look without some of its words, and what joined them to the rest: "moonlight and a glow from the doorway". */
+function withoutWords(look: string, words: string[]): string {
+  let out = look;
+  for (const w of words) {
+    const at = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    out = out
+      .replace(new RegExp(`\\s*(?:[,;]|\\band\\b|\\bwith\\b)\\s*${at}`, 'i'), '')
+      .replace(new RegExp(`${at}\\s*(?:[,;]\\s*|\\band\\b\\s*)?`, 'i'), '');
+  }
+  return out.replace(/\s{2,}/g, ' ').replace(/^[\s,;]+|[\s,;]+$/g, '');
+}
+
 /** A thing named with its article: "turned into roller coaster" read as broken English. */
 // "turned into a transformed into a grey heron": what it is now, never the turning (26 Sep).
 export const aNoun = (raw: string) => {
@@ -145,8 +157,9 @@ export function buildFrames(b: Breakdown, plan: ContinuityPlan): Item[] {
       version: 0,
       needs: p?.needs ?? [],
       frame: {
-        visible: m.visible,
-        things: m.things,
+        // Made from the story record, the plan also has whoever and whatever the record finds there.
+        visible: p?.visible ?? m.visible,
+        things: p?.things ?? m.things,
         place: m.place,
         distance: m.distance,
         eyes: m.eyes,
@@ -316,6 +329,8 @@ export function framePrompt(
     return (
       keys
         .map((k) => s.fields[k])
+        // Made from the story record, words of the look from after a change are left out of it.
+        .map((d) => (d?.value && plan?.unsaid?.[s.id] ? { ...d, value: withoutWords(d.value, plan.unsaid[s.id]) } : d))
         .filter((d) => !!d?.value && !VAGUE.test(d.value))
         // What was filled in is said in the style's shades; what they said keeps its colours.
         .map((d) => (d?.said ? (d.value as string) : inShades(d?.value as string, style)))
@@ -553,6 +568,10 @@ export function framePrompt(
   }
 
   const states = (plan?.states ?? []).map((st) => `${nameOf(sheets, st.who)}'s ${st.what}: ${st.now}`);
+  // Made from the story record: how each one in the picture is right now, and who holds what, each
+  // fact once, in place of what is still so from earlier.
+  const inFrame = new Set([...inView.map((s) => s.id), ...f.visible]);
+  const now = plan?.now?.filter((x) => inFrame.has(x.of)).map((x) => x.text);
   const action = withoutGone(frame.fields.action?.value ?? '');
   // Seen from outside, the dreamer is a person in the picture only when the moment has them in it:
   // "the dreamer seen from outside" of a moment without them invites a second figure.
@@ -615,7 +634,13 @@ export function framePrompt(
         : '',
     YOU,
     facts.length ? `In it:\n${facts.join('\n')}` : '',
-    states.length ? `Still so from earlier in the dream: ${states.join('; ')}.` : '',
+    now
+      ? now.length
+        ? `How each one is at this moment: ${now.join('; ')}.`
+        : ''
+      : states.length
+        ? `Still so from earlier in the dream: ${states.join('; ')}.`
+        : '',
     feeling ? `It should feel: ${sentence(feeling)}` : '',
     point ? `The one thing this frame must show: ${sentence(point)}` : '',
     // The judge's findings on the last attempt, when it was drawn again for them.
@@ -626,7 +651,7 @@ export function framePrompt(
     // The ice-head frames came back with the whole woman made of ice (23 Sep): what the action
     // changes, and nothing else, differs from the references.
     references.length
-      ? 'Everyone and everything looks exactly as in their images above, except for what this moment itself changes and what is still so from earlier.'
+      ? `Everyone and everything looks exactly as in their images above, except for what this moment itself changes and ${now?.length ? 'how each one is at this moment, as said' : 'what is still so from earlier'}.`
       : '',
     // A style's "double exposure" plus an earlier picture put a house's roof through the walls of
     // a tiny room (23 Sep): an earlier picture gives only what it is attached for.
@@ -820,11 +845,15 @@ export function ghostPrompt(
       ]),
     ),
   };
-  const look = LOOK[sheet.kind]
-    .map((k) => unchanged.fields[k])
-    .filter((d) => !!d?.value && !VAGUE.test(d.value))
-    .map((d) => (d?.said ? (d.value as string) : inShades(d?.value as string, style)))
-    .join('; ');
+  // Made from the story record, it is how they looked just before this change, the part it replaces
+  // left out.
+  const look = g.before
+    ? g.before.map((f) => (f.said ? f.text : inShades(f.text, style))).join('; ')
+    : LOOK[sheet.kind]
+        .map((k) => unchanged.fields[k])
+        .filter((d) => !!d?.value && !VAGUE.test(d.value))
+        .map((d) => (d?.said ? (d.value as string) : inShades(d?.value as string, style)))
+        .join('; ');
   const kind = sheet.kind === 'character' ? 'person' : sheet.kind === 'location' ? 'place' : 'thing';
   const lines =
     g.kind === 'view'

@@ -12,7 +12,14 @@
 // it has now. Both are known from the saved dream; nothing is asked of a model.
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { type ContinuityPlan, type Criterion, drawOrder, planContinuity, shotPlan } from './continuity';
+import {
+  type ContinuityPlan,
+  type Criterion,
+  drawOrder,
+  planContinuity,
+  type RecordPlan,
+  shotPlan,
+} from './continuity';
 import { completeViews } from './producer';
 import {
   buildFrames,
@@ -26,6 +33,7 @@ import {
 } from './frames';
 import { checkReferences, preflight, readPrompt } from './gate';
 import { callJev } from './jev';
+import { recordForPlan } from './record';
 import type { Breakdown } from './producer';
 import type { Session } from './session';
 import { type Item, sheetPrompt } from './sheets';
@@ -52,6 +60,8 @@ export type Rebuilt = {
   /** Every sketch, approved, with a stand-in image (`sketch-<id>`) where one would be drawn. */
   sheets: Item[];
   pictures: RebuiltPicture[];
+  /** What the plan read of the story record (DREAMCHAT_RECORD=on): its floor plans are shot from it. */
+  rec?: RecordPlan;
 };
 
 /** The stand-in image of a sketch, of an earlier picture, and of a moment's mock-up. */
@@ -80,7 +90,10 @@ export function rebuild(s: Pick<Session, 'draft' | 'style' | 'build' | 'prep'> &
     review: i.review ?? 'approved',
   }));
   completeViews(b);
-  const plan = planContinuity(b);
+  // With DREAMCHAT_RECORD=on, planned from the story record: from what a frozen dream keeps (its
+  // sketches' words, readings and look), so a frozen dream and its saved conversation plan alike.
+  const rec = recordForPlan(b, s.build?.items ?? [], s.draft?.readings, { style });
+  const plan = planContinuity(b, rec);
   const pictures = [...buildFrames(b, plan), ...buildGhosts(plan)].map((p): Item => ({
     ...p,
     status: 'ready',
@@ -116,7 +129,7 @@ export function rebuild(s: Pick<Session, 'draft' | 'style' | 'build' | 'prep'> &
     const shot = view ? briefs.find((x) => x?.view === view) : undefined;
     if (shot) it.shot = shot;
     // The mock-up, where the moment has a worked-out camera on a floor plan (session.ts layoutFor).
-    const layout = cut?.eye && shotPlan(b, pid) ? standIn.previs(pid) : undefined;
+    const layout = cut?.eye && shotPlan(b, pid, rec) ? standIn.previs(pid) : undefined;
     const inputs: PlannedInput[] = (cut?.refs ?? [])
       .map((use) => ({ use, item: byId.get(use.id) }))
       .filter((x): x is PlannedInput => !!x.item);
@@ -131,7 +144,7 @@ export function rebuild(s: Pick<Session, 'draft' | 'style' | 'build' | 'prep'> &
       inView: inViewOf(it, sheets),
     });
   }
-  return { title: b.title, b, plan, sheets, pictures: out };
+  return { title: b.title, b, plan, sheets, pictures: out, ...(rec ? { rec } : {}) };
 }
 
 /** An in-between picture named by what it shows, which survives planning again (its number may not). */
