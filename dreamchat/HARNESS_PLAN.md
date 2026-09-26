@@ -116,6 +116,15 @@ One **cut sheet** per cut is the spine everything is assembled from:
   cases and the corpus are unchanged apart from the reworded prompts that no longer happen (listed and explained).
   Review: that nothing a check found is lost, only no longer acted on.
 
+- **S3 eval (the cut sheet).** Switch `DREAMCHAT_CUT_SHEET=off|shadow|on`. One `CutSheet` per cut built from the
+  tree (vertical), the story record (horizontal), relations and tags (`docs/cut-sheet-map.md`), and an
+  `assembleCut` ported word for word: in shadow its prompt and references are identical to today's on every moment
+  of the frozen (15) and live (59) corpora, with the record off and on; every input the prompt uses is read from the
+  sheet, and a test fails if the assembler reads anything else; the tree's looks and stages come from the record
+  (one source); the tags exist per cut and are listed per moment in the corpus dump. Live-flow check: a saved
+  dream's drawing path and rebuild give the same sheet. Review: what the sheet still computes twice, and what S4-S6
+  will need.
+
 ## Where steps overlap (read before starting any step)
 
 Work found in one step that belongs to, or touches, another. Keep this list current; nothing here may be dropped
