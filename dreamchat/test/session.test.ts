@@ -4,6 +4,8 @@ import { join } from 'node:path';
 import { dreamConfig } from '../dream';
 import type { Answer, Question } from '../jev';
 import type { Breakdown } from '../producer';
+import { printDiff, sheetPrint } from '../cutsheet';
+import { imageName, rebuild } from '../plan';
 import { SessionStore, type StoreDeps } from '../session';
 import { fakeHost, fakeJev, noul, pick, told } from './fakes';
 
@@ -803,6 +805,44 @@ describe('a whole conversation', () => {
     await store.message(id, 'go ahead, i approve the generated image');
     expect(m1().review).toBe('approved');
     expect(framesStarted.map((f) => f.id)).toEqual(['m1', 'm2']);
+  });
+
+  test('with the cut sheet in shadow, each moment keeps the sheet it was sent with, and a rebuild gives the same', async () => {
+    const was = process.env.DREAMCHAT_CUT_SHEET;
+    process.env.DREAMCHAT_CUT_SHEET = 'shadow';
+    try {
+      const { store, id, statuses, framesStarted } = await toTheMoments(async () => ({
+        questions: 3,
+        passed: 3,
+        failed: [],
+        unseen: [],
+      }));
+      statuses.set('job-m1', 'ready');
+      await store.settle(id, 100);
+      statuses.set('job-m2', 'ready');
+      await store.settle(id, 100);
+      expect(framesStarted.map((f) => f.id)).toEqual(['m1', 'm2']);
+      const s = store.get(id)!;
+      const r = rebuild(s);
+      for (const f of s.build!.frames!.filter((x) => x.kind === 'cut')) {
+        expect(f.sentSheet?.hash).toMatch(/^[0-9a-f]+$/);
+        const p = r.pictures.find((x) => x.id === f.id)!;
+        const again = sheetPrint(p.sheet!, (m) => imageName(r, m), { earlier: f.sentSheet!.earlier });
+        expect(printDiff(f.sentSheet!, again)).toEqual([]);
+        // Its images left as the rebuild's stand-ins, the same sheet does not match what was sent.
+        expect(
+          printDiff(
+            f.sentSheet!,
+            sheetPrint(p.sheet!, (m) => m),
+          ),
+        ).toContain('inView');
+      }
+      // The close-up was sent with the wide as an earlier picture, and the rebuild names it the same.
+      expect(s.build!.frames!.find((f) => f.id === 'm2')!.sentSheet!.earlier).toEqual(['m1']);
+    } finally {
+      if (was === undefined) delete process.env.DREAMCHAT_CUT_SHEET;
+      else process.env.DREAMCHAT_CUT_SHEET = was;
+    }
   });
 
   test('a reaction naming no picture is about what the last reply put to them, never an earlier one', async () => {

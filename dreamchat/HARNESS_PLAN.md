@@ -52,7 +52,7 @@ One **cut sheet** per cut is the spine everything is assembled from:
 | S0 | Eval foundation: a prompt-case set from the person's 122 verdicts and notes, a runner that rebuilds prompts from saved dreams and scores them, the free simulation corpus as regression | done: reviewed, fixed, merged (26 Sep) | Every noted fault has a case; the runner reproduces today's failures. Baseline: 6 of 33 counted fault cases met (all six guards against editing the picture before), 36 of 36 passing cases met (below) |
 | S1 | Story record carries state (water, suitcase, who holds what, presence) into continuity, in-between pictures and prompts | done (27 Sep): reviewed twice, merged behind DREAMCHAT_RECORD=on | The S1 cases pass (`--step S1`: library-2 m5/m9 water, snow-train m4/m5, snow-train-2 m1, lighthouse-fresh m13, orchard m7; library-1 m3/m5, library-3 m7, snow-train-2 m5/m7 need a model step); no regressions on the corpus |
 | S2 | Stop stand-in checks deciding: the pre-draw prompt check and storyboard check only log | not started | No moment held or reworded; corpus unchanged otherwise |
-| S3 | The cut sheet: tree (vertical) + record (horizontal) + relations + tags, one per cut | built on branch `s3-cut-sheet` behind DREAMCHAT_CUT_SHEET (off by default); eval met, review pending | Every input the prompt needs comes from the sheet; no fact computed in two places. Met: `assembleCut` reads only the sheet and writes what framePrompt writes on every moment (0 differences in 1052 rebuilds: frozen 115 and live 411, record off and on), prompt cases unchanged on against off; what the sheet still computes twice is listed under S3 below |
+| S3 | The cut sheet: tree (vertical) + record (horizontal) + relations + tags, one per cut | built on branch `s3-cut-sheet` behind DREAMCHAT_CUT_SHEET (off by default); eval met; reviewed (merge behind the switch), review fixes in | Every input the prompt needs comes from the sheet; no fact computed in two places. Met: `assembleCut` reads only the sheet and writes what framePrompt writes on every moment (0 differences in 1052 rebuilds: frozen 115 and live 411, record off and on), prompt cases unchanged on against off; what the sheet still computes twice is listed under S3 below |
 | S4 | Camera rules and shot roles: the scene's line, a reverse angle turns the room (what is now left, right, behind), point-of-view shots show at most hands, vehicle screen direction, same setup means the same camera | not started | The S4 cases pass (`--step S4`: snow-train m2 reverse and m3 seat, snow-train-2 m2 same setup, lighthouse-fresh m12 heading, lighthouse-first m3, night-market m2, library-1 m4/m5, orchard m4 hands and m7 legs; lighthouse-fresh m10 needs a new floor plan) |
 | S5 | References and variants: one image per subject; in-between pictures only when an edit carries several changes; variants kept and reusable; the grey mock-up as a reference chosen by tag | not started | The S5 cases stay met or pass (`--step S5`: never editing a picture from another side; library-1 m5 wall); its hypotheses (mock-up only, one image per subject) are for a paid check, not proven here |
 | S6 | `assembleCut`: prompt and references from the sheet, each fact once, action as visible facts; retire the regex clean-ups one by one | not started | All S0 cases pass; word-level diff reviewed on every saved dream |
@@ -213,12 +213,13 @@ between sessions.
 | S1 | S6 | The in-between picture's instruction "Image N: the newspaper's newspaper … draw their newspaper" repeats a thing's name (3 prompts, off and on): same class as the fixed "its the block of ice", only fixed in the "Except" sentence. |
 | S3 | S6 | `docs/cut-sheet-map.md` lists every prompt input and where it is computed today; S6's `assembleCut` reads only the sheet S3 builds. |
 | S3 | S6 | The sheet still does framePrompt's text clean-ups while it is built (`withoutGone`, `lookIn`'s `withoutWords`/`VAGUE`/`withoutPose`/`inShades`, `writingIn`), so the port stays word for word; S6 retires them for typed facts. `assembleCut` returns each paragraph with an id (`framing`, `shot`, `manifest`, `now` …) and the sheet fields it says: the gate's line-text matching in session.ts (`startsWith('The shot')`, `'around: "What the camera sees'`) can use the ids. |
-| S3 | S2 | On the drawing path the gate drops a moment's brief when it finds the prompt at odds on "The shot" line; a rebuild cannot know it did, so the live-flow sheet check differs on `camera.brief` in 3 of 26 drawn moments (jellyfish-city m5, sea-school m2 and m7 of the record-fake flow replays), the same 3 whose sent prompt differs. It goes once S2 makes the checks only log. |
-| S3 | S4 | Tags `move` and `role` are the camera rules' inputs: a reverse is the camera turned at least 135° from the cut before in the same place, or across the scene's line from its first two-shot (snow-train m2 now reads as a reverse, lighthouse-fresh m12 too); `role` is counted from who is in view and the size, with the tree's over-the-shoulder, since `outsideShot` still returns only words. Consecutive sheets (`prev`) are what S4's rules read. |
+| S3 | S2 | On the drawing path the gate drops a moment's brief when it finds the prompt at odds on "The shot" line; a rebuild cannot know it did. A moment now keeps a print of the sheet it was sent with (`sentSheet`), and the live-flow check counts a sheet that differs only in the brief as explained where the prompt is (jellyfish-city m5, sea-school m2 and m7 of the record-fake flow replays, drawn before the print was kept). It goes once S2 makes the checks only log. |
+| S3 | S4 | Tags `move`, `crossed` and `role` are the camera rules' inputs: a reverse is the camera turned at least 135° from the cut before in the same place (snow-train m2 and lighthouse-fresh m12 read as reverses); `crossed` is its side of the scene's line (the tree's, from the scene's first two-shot) differing from the cut before's; `role` is counted from who is in view and the size, with the tree's over-the-shoulder, since `outsideShot` still returns only words. Consecutive sheets (`prev`) are what S4's rules read. |
+| S3 | S4 | `relationIn` (continuity.ts) calls the moment after a jump "another place" from the jump's own picture in the same place (the key-and-boat dream m7 and m9, the lift m5): a jump moment counts as a boundary behind itself. The move tag and the plan's references both read it; fixing it changes plans and prompts, so it is S4's, measured. |
 | S3 | S5 | The sheet's `inView[].image` is the sketch only; `earlier` is the plan's choice. S5's `chooseRefs` needs each element's image of the stage in force (its in-between picture, drawn and approved, or its sketch) from the tree's ledger, and chooses image 1 by the tags. |
 | S3 | S7 | Every cut has its tags (logged in shadow, listed per moment by `evals/corpus.ts`); S7 routes questions by them. |
 | S3 | S9 | A re-plan updates the moments' plans but not `build.plan`; the drawing path's sheet reads each moment's own plan. A sheet is flagged `record_moved` where the record now differs from the typed facts its plan was made from: stale, for S9. Frames saved before S3 carry the plan's words without typed facts (`nowWords` on the sheet). |
-| S3 | S1 | The story record is made twice where the record is on: once for the plan (`recordForPlan`) and once for the sheet (`sheetDream`), from the same inputs. One record per dream, passed to both, is the next step once the sheet is on. |
+| S3 | S1 | The story record is made three times from the same inputs: for the plan (`recordForPlan`), for the sheet (`sheetDream`, once per drawing of a moment) and for the panel's tree. One record per dream, passed to all three, is the next step once the sheet is on. |
 ## Known debt, by the step that clears it
 
 Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays one change.
@@ -228,15 +229,29 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   Left, and moved: the production is written into Strawberry at the start, before what the moments imply is read
   (S9); `shutAway` shuts anything opened once it is carried to another place, and should be a typed fact about
   containers (S6, with the record's other word lists).
-- **What the cut sheet still computes twice (S3 review).** Who is in view three ways (`inView` from the plan's
-  lists and view, the record's `shows`/`present`, the tree's `at`); how each looks two ways (the sketch's words
-  through `lookIn`, and the record's repaired `base` facts, which reach the prompt only as `unsaid`); the changes
-  in force as the plan carries them (`states`, `inView[].changes`) beside the record's typed `own`/`carried`, and
-  with the record off from the breakdown's own `states`; names (`pictureName` of the sketch, the record's
-  `called`, the tree's `calledIn`); the camera (the plan's view and words beside the tree's `camera`, `side`,
-  `screen`, `background`); a group or an animal (read from the sketch and typed by the record; the tags take
-  either); the relation to earlier cuts (the plan's refs, and `relationIn` again for the move tag). The prompt
-  reads the first of each, as framePrompt did; S6 makes the record and the tree the one source.
+- **What the cut sheet still computes twice or more (S3 review).** The prompt reads the first of each, as
+  framePrompt did; S6 makes the record and the tree the one source.
+  - The story record is made three times: for the plan (`recordForPlan`), for the sheet (`sheetDream`, once per
+    drawing of a moment, again after its words change), and for the panel's tree (`treeInputOf`).
+  - Two trees: the panel's (with the pictures drawn and the conversation's goals) and the sheet's (without them,
+    so that drawing and a rebuild read the same). The sheet's has no drawn or approved state in its ledger, which
+    S5's choice of images needs.
+  - Who is in view: `inViewOf` runs three times for one prompt (the sheet, framePrompt beside it, the gate), and
+    three sources say it (`inView` from the plan's lists and view, the record's `shows`/`present`, the tree's `at`).
+  - How each one is now, four ways: the plan's words (`now`), the plan's typed facts (`facts`, what the prompt says),
+    the record's facts at the sheet (`record.facts`, flagged `record_moved` where they differ), and the tree's
+    stages and parts.
+  - How each looks, two ways: the sketch's words through `lookIn`, and the record's repaired `base` facts, which reach
+    the prompt only as `unsaid`.
+  - The changes in force: the plan's (`states`, `inView[].changes`) beside the record's typed `own`/`carried`, and with
+    the record off from the breakdown's own `states`.
+  - The relation to the cut before, three ways: the plan's refs, `relationIn` for the move tag, and the tree's side
+    and camera for the reverse and crossed tags.
+  - Names three ways (`pictureName` of the sketch, the record's `called`, the tree's `calledIn`); the camera two
+    ways (the plan's view and words, the tree's `camera`, `side`, `screen`, `background`).
+  - Tags read from several sources where one is missing: a crowd, a group or an animal is the record's kind, else
+    the sketch's words, else the tree's category; `line` is the tree's line, or the plan's left-to-right order, or
+    its staging.
 - **S4 (camera rules).** A thing held in a view through the dreamer's eyes is placed at its floor-plan spot, not
   in the hands that hold it; and the "Nobody else is in the picture" line can stand beside a list of people who
   are in it.
@@ -366,3 +381,20 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   The panel's tree with the record on, against the same tree from the breakdown's own changes, over the 59 live
   dreams: 596 stages against 595, 16 stages in force and 32 changed parts differ (the record's ends and part
   names), 25 "stage not carried" and 3 "first look" flags gone (what carries is the record's to say), none new.
+- 27 Sep: S3 review fixes (the review: safe to merge behind the switch; fix the tags before S4 and S7 read them).
+  A reverse is now only the camera turned at least 135° from the cut before; crossing the scene's line is its own
+  tag, `crossed` (the tree's side against the cut before's). The kind, held and change tags count only what is in
+  the picture (the record's lists and the place, and whoever the camera takes in), never whoever is only there, and
+  take the record's kind before the sketch's. Frozen, record off: reverse 19 (26 before), crossed 7, crowd 11 (20),
+  animal 23 (27), held 44 (46), group 0 (6), crowd and group together 0 (9). Live, record on: reverse 41, crossed 17,
+  crowd 42, animal 59, held 85, group 11, crowd and group together 0; the review's false reverses (1177 m6,
+  2c51 m6, acfd m3) are no longer reverses and the night market's m4 is crossed. Each moment drawn with the sheet
+  keeps a print of it (`sentSheet`: its hash with images named by what they are, each part's hash, the earlier
+  pictures it had) and the log says so; the live-flow check compares a rebuild against that print (the fake
+  replays were drawn before it, so they are counted apart; a session test draws two moments and checks both).
+  `assembleCut` is also run with the environment made to throw on any read. A prompt only looked at (/api/prompt)
+  is not logged. The dream a sheet reads is made once per drawing of a moment, and again after its words change.
+  Re-measured on top of S1's last fix: in shadow, 0 differences between `assembleCut` and framePrompt on 115 frozen,
+  411 live and 33 benchmark moments, record off and on; with `on`, every picture the same as off; prompt cases
+  unchanged on against off (record off 6/33, 36/36; on 18/33, 36/36); `bun test` 480 pass with each of
+  DREAMCHAT_RECORD and DREAMCHAT_CUT_SHEET off, shadow and on; typecheck clean.

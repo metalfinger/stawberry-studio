@@ -37,6 +37,7 @@ import {
   type ElementKind,
   factsAt,
   type NowOf,
+  sayNow,
   type Readings,
   recordMode,
   type Seen,
@@ -125,6 +126,7 @@ export type SheetChange = Pick<Change, 'key' | 'who' | 'kind' | 'part' | 'what' 
 
 /** The story record at this cut: who and what is there, how each is, what changes and what carries. */
 export type RecordLayer = {
+  place: string;
   shows: string[];
   present: string[];
   gone: string[];
@@ -133,7 +135,7 @@ export type RecordLayer = {
   handed: Record<string, string>;
   /** Each one there: the stage in force, what it has become, its changed parts, its holder. */
   looks: Record<string, Seen>;
-  /** Of each one there: a person, animal, group, crowd, place or thing. */
+  /** Of each one there or in the picture: a person, animal, group, crowd, place or thing. */
   kinds: Record<string, ElementKind>;
   own: SheetChange[];
   carried: SheetChange[];
@@ -168,6 +170,8 @@ export type TreeLayer = {
 export type CutTags = {
   role: 'pov' | 'ots' | 'insert' | 'single' | 'two_shot' | 'group' | 'wide' | 'close_up';
   move: 'first' | 'same_setup' | 'same_side' | 'other_side' | 'reverse' | 'other_place' | 'jump' | 'seat';
+  /** Its camera is on the other side of the scene's line from the cut before's. */
+  crossed: boolean;
   pov: boolean;
   establishing: boolean;
   line: boolean;
@@ -420,10 +424,17 @@ export function cutSheet(x: CutSheetInput): CutSheet {
   const at = all.findIndex((m) => m.id === frame.id);
   const relate = relationIn(all);
   const prevMoment = at > 0 ? all[at - 1] : undefined;
-  const record = dream?.record ? recordLayer(dream.record, frame.id) : null;
+  const record = dream?.record
+    ? recordLayer(
+        dream.record,
+        frame.id,
+        inView.map((s) => s.id),
+      )
+    : null;
   const node = dream?.tree ? treeNode(dream.tree, frame.id) : null;
   const tree = node && dream?.tree ? treeLayer(dream.tree, node) : null;
   const toPrev = at > 0 ? relate(all[at], all[at - 1]) : null;
+  const prevNode = prevMoment && dream?.tree ? treeNode(dream.tree, prevMoment.id)?.node : undefined;
 
   const sheet: Omit<CutSheet, 'hash'> = {
     id: frame.id,
@@ -484,7 +495,8 @@ export function cutSheet(x: CutSheetInput): CutSheet {
       here: all[at],
       established: at > 0 && all.slice(0, at).some((e) => ['same_side', 'same_setup'].includes(relate(all[at], e))),
       dreamerId: b?.people.find((p) => p.is_dreamer)?.id,
-      prevCamera: prevMoment && dream?.tree ? cameraOf(treeNode(dream.tree, prevMoment.id)?.node) : null,
+      prevCamera: prevNode ? cameraOf(prevNode) : null,
+      prevSide: (prevNode?.sheet.side.value as string | null | undefined) ?? null,
     }),
     flags: [
       ...(tree?.flags ?? []),
@@ -550,7 +562,7 @@ function treeLayer(tree: DreamTree, n: NonNullable<ReturnType<typeof treeNode>>)
   };
 }
 
-function recordLayer(record: StoryRecord, id: string): RecordLayer | null {
+function recordLayer(record: StoryRecord, id: string, inPicture: string[]): RecordLayer | null {
   const m = record.moments.find((x) => x.id === id);
   if (!m) return null;
   const typed = (k: string): SheetChange[] => {
@@ -570,8 +582,9 @@ function recordLayer(record: StoryRecord, id: string): RecordLayer | null {
         ]
       : [];
   };
-  const there = [...new Set([...m.shows, ...m.present, ...(m.place ? [m.place] : [])])];
+  const there = [...new Set([...m.shows, ...m.present, ...(m.place ? [m.place] : []), ...inPicture])];
   return {
+    place: m.place,
     shows: [...m.shows],
     present: [...m.present],
     gone: [...m.gone],
@@ -617,6 +630,7 @@ function tagsOf(x: {
   established: boolean;
   dreamerId: string | undefined;
   prevCamera: Eye | null;
+  prevSide: string | null;
 }): CutTags {
   const cast = x.inView.filter((e) => e.kind === 'character');
   const pov = x.eyes === 'dreamer';
@@ -647,39 +661,60 @@ function tagsOf(x: {
     x.prev.place === x.here?.place &&
     !!x.dreamerId &&
     x.prev.visible.includes(x.dreamerId);
-  const side = x.tree?.sheet.side?.value as string | null | undefined;
+  const side = (x.tree?.sheet.side?.value as string | null | undefined) ?? null;
   const move: CutTags['move'] = !x.toPrev
     ? 'first'
     : x.toPrev === 'shift'
       ? 'jump'
       : seat
         ? 'seat'
-        : // In the same place, across the scene's line from where its first two-shot set it, or the camera
-          // turned round from the cut before: a reverse angle, the room turned.
-          x.toPrev !== 'other_place' && (side === 'reverse' || turnedFrom(x.tree, x.prevCamera) >= REVERSE_DEGREES)
+        : // In the same place with the camera turned round from the cut before: a reverse angle, the room turned.
+          x.toPrev !== 'other_place' && turnedFrom(x.tree, x.prevCamera) >= REVERSE_DEGREES
           ? 'reverse'
           : x.toPrev;
-  // What changes here and what carries: the record's, else the plan's.
-  const there = x.record
-    ? new Set([...x.record.shows, ...x.record.present, ...Object.keys(x.record.looks)])
-    : new Set(x.inView.map((e) => e.id));
+  // Crossing the line: on the other side of the scene's line from the cut before, each side known.
+  const sides = ['established', 'reverse'];
+  const crossed =
+    x.toPrev !== null &&
+    x.toPrev !== 'other_place' &&
+    x.toPrev !== 'shift' &&
+    !!side &&
+    !!x.prevSide &&
+    sides.includes(side) &&
+    sides.includes(x.prevSide) &&
+    side !== x.prevSide;
+  // What the picture shows: the record's moment lists and its place, and whoever the camera takes in.
+  // Whoever is only there, out of the picture, is not counted.
+  const inPicture = new Set([
+    ...x.inView.map((e) => e.id),
+    ...(x.record ? [...x.record.shows, ...(x.record.place ? [x.record.place] : [])] : []),
+  ]);
   const own = x.record
-    ? x.record.own.filter((c) => c.kind !== 'presence' && there.has(c.who)).length
+    ? x.record.own.filter((c) => c.kind !== 'presence' && inPicture.has(c.who)).length
     : (x.plan?.own ?? []).length;
   const carried = x.record
-    ? x.record.carried.filter((c) => c.kind !== 'presence' && there.has(c.who)).length
+    ? x.record.carried.filter((c) => c.kind !== 'presence' && inPicture.has(c.who)).length
     : (x.plan?.states ?? []).length;
-  const kinds = Object.entries(x.record?.kinds ?? {}).filter(([id]) => there.has(id));
+  // What each one in the picture is: the record's kind where it has one, else what its sketch says.
+  const fromSketch = (e: SheetElement): ElementKind | undefined =>
+    e.said === 'people' ? 'group' : e.said === 'animal' ? 'animal' : undefined;
+  const categoryOf = new Map((x.tree?.at ?? []).map((e) => [e.id, e.category]));
+  const kindOf = (id: string): ElementKind | Category | undefined => {
+    const e = x.inView.find((v) => v.id === id);
+    return x.record?.kinds[id] ?? (e ? fromSketch(e) : undefined) ?? categoryOf.get(id);
+  };
+  const kinds = new Set([...inPicture].map(kindOf));
   const categories = new Set((x.tree?.at ?? []).map((e) => e.category));
   const turned = x.record
-    ? Object.entries(x.record.looks).some(([id, seen]) => there.has(id) && !!seen.becomes)
+    ? Object.entries(x.record.looks).some(([id, seen]) => inPicture.has(id) && !!seen.becomes)
     : x.inView.some((e) => e.turned !== null);
   const held = x.record
-    ? Object.keys(x.record.held).some((id) => there.has(id))
-    : (x.tree?.at ?? []).some((e) => !!e.holder);
+    ? Object.entries(x.record.held).some(([thing]) => inPicture.has(thing))
+    : (x.tree?.at ?? []).some((e) => !!e.holder && inPicture.has(e.id));
   return {
     role,
     move,
+    crossed,
     pov,
     establishing: !x.established,
     line:
@@ -688,9 +723,9 @@ function tagsOf(x: {
     change: own && carried ? 'both' : own ? 'here' : carried ? 'carried' : 'none',
     turned,
     held,
-    crowd: kinds.some(([, k]) => k === 'crowd') || categories.has('crowd'),
-    group: kinds.some(([, k]) => k === 'group') || x.inView.some((e) => e.said === 'people'),
-    animal: kinds.some(([, k]) => k === 'animal') || x.inView.some((e) => e.said === 'animal'),
+    crowd: kinds.has('crowd'),
+    group: kinds.has('group'),
+    animal: kinds.has('animal'),
     vehicle: categories.has('vehicle'),
     unstaged: x.record?.unstaged ?? null,
     dreamlike: x.dreamlike,
@@ -708,6 +743,7 @@ export function tagWords(t: CutTags): string[] {
     ...(t.unstaged ? [`unstaged:${t.unstaged}`] : []),
     ...(
       [
+        'crossed',
         'pov',
         'establishing',
         'line',
@@ -723,6 +759,88 @@ export function tagWords(t: CutTags): string[] {
       ] as const
     ).filter((k) => t[k]),
   ];
+}
+
+// ── comparing sheets ─────────────────────────────────────────────────────────
+
+/** An in-between picture named by what it shows, which survives planning again (its number may not). */
+export const ghostName = (g: { of: string; kind: string; state?: { what: string } }) =>
+  `ghost:${g.of}:${g.kind === 'view' ? 'view' : (g.state?.what ?? '')}`;
+
+/** A drawn dream's images named by what they are: `sketch:p1`, `picture:m3`, `previs:m5`, `ghost:t1:lid`. */
+export function imageNamesOf(items: Item[], frames: Item[]): (media: string) => string {
+  const named = new Map<string, string>();
+  for (const i of items) if (i.mediaId) named.set(i.mediaId, `sketch:${i.id}`);
+  for (const f of frames) {
+    if (f.mediaId) named.set(f.mediaId, f.ghost ? ghostName(f.ghost) : `picture:${f.id}`);
+    if (f.layout?.mediaId) named.set(f.layout.mediaId, `previs:${f.id}`);
+  }
+  return (media) => named.get(media) ?? `other:${media}`;
+}
+
+/**
+ * A sheet with its images named by what they are and its hash left out, to compare two copies of it made
+ * with different images (drawn, or a rebuild's stand-ins). With `words`, how each one is now is compared
+ * as words: a plan saved before its facts were typed carries only the words. With `earlier`, only those
+ * earlier pictures are kept: a rebuild takes every earlier picture as drawn.
+ */
+export function namedSheet(
+  sheet: CutSheet,
+  name: (media: string) => string,
+  opts: { words?: boolean; earlier?: string[] } = {},
+): Omit<CutSheet, 'hash'> {
+  const { hash: _, ...rest } = structuredClone(sheet);
+  const kept = (id: string) => !opts.earlier || opts.earlier.includes(id);
+  return {
+    ...rest,
+    inView: rest.inView.map((e) => ({ ...e, image: e.image && name(e.image) })),
+    earlier: rest.earlier.filter((e) => kept(e.id)).map((e) => ({ ...e, image: name(e.image) })),
+    relations: { ...rest.relations, earlier: rest.relations.earlier.filter((e) => kept(e.id)) },
+    camera: { ...rest.camera, previs: rest.camera.previs && name(rest.camera.previs) },
+    ...(opts.words
+      ? {
+          now: null,
+          nowWords: rest.now ? sayNow(rest.now).map((x) => x.text) : rest.nowWords,
+          sources: { ...rest.sources, now: 'words' },
+        }
+      : {}),
+  };
+}
+
+/** Parts of a sheet compared one by one: its top level, and the camera's, story's, record's, tags' and dreamer's fields. */
+const OPENED = ['camera', 'story', 'record', 'tags', 'dreamer'];
+
+/** A sheet's parts, each hashed, by name: where two prints differ says which parts moved. */
+function partsOf(sheet: object): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(sheet))
+    if (OPENED.includes(k) && v && typeof v === 'object' && !Array.isArray(v))
+      for (const [f, w] of Object.entries(v)) out[`${k}.${f}`] = hashOf(w);
+    else out[k] = hashOf(v);
+  return out;
+}
+
+/**
+ * What a moment's sheet was when it was sent, kept on the moment: its hash with its images named by what
+ * they are, each part's hash, and the earlier pictures it had (only those drawn by then).
+ */
+export type SheetPrint = { hash: string; parts: Record<string, string>; earlier: string[] };
+
+export function sheetPrint(
+  sheet: CutSheet,
+  name: (media: string) => string,
+  opts: { words?: boolean; earlier?: string[] } = {},
+): SheetPrint {
+  const named = namedSheet(sheet, name, opts);
+  return { hash: hashOf(named), parts: partsOf(named), earlier: named.earlier.map((e) => e.id) };
+}
+
+/** The parts where two prints differ; none when they are the same. */
+export function printDiff(a: SheetPrint, z: SheetPrint): string[] {
+  if (a.hash === z.hash) return [];
+  return [...new Set([...Object.keys(a.parts), ...Object.keys(z.parts)])]
+    .filter((k) => a.parts[k] !== z.parts[k])
+    .sort();
 }
 
 // ── shadow and on ────────────────────────────────────────────────────────────
@@ -766,9 +884,10 @@ export type Framed = {
 /**
  * A moment's prompt and images by DREAMCHAT_CUT_SHEET: off writes them with framePrompt, as ever; shadow
  * also builds the sheet and assembles it, logs where the two differ, and sends framePrompt's; on sends
- * the sheet's. A sheet that cannot be built is logged and framePrompt's is sent.
+ * the sheet's. A sheet that cannot be built is logged and framePrompt's is sent. With `log` false (a prompt
+ * only looked at), nothing is logged.
  */
-export function framed(x: CutSheetInput, mode = cutSheetMode(), site = 'frames'): Framed {
+export function framed(x: CutSheetInput, mode = cutSheetMode(), site = 'frames', log = true): Framed {
   const today = framePrompt(x.frame, x.sheets, x.style, x.inputs ?? [], x.layout);
   if (mode === 'off') return today;
   let sheet: CutSheet;
@@ -777,15 +896,16 @@ export function framed(x: CutSheetInput, mode = cutSheetMode(), site = 'frames')
     sheet = cutSheet(x);
     made = assembleCut(sheet);
   } catch (e) {
-    logSheet('failed', `${site}: ${String(e).slice(0, 300)}`, x.frame.id);
+    if (log) logSheet('failed', `${site}: ${String(e).slice(0, 300)}`, x.frame.id);
     return today;
   }
   const differs = differences(today, made);
-  logSheet(
-    differs.length ? 'differs' : 'same',
-    `${site}: ${differs.length ? differs.join('; ') : 'the sheet assembles what framePrompt writes'}; tags ${tagWords(sheet.tags).join(', ')}`,
-    x.frame.id,
-  );
+  if (log)
+    logSheet(
+      differs.length ? 'differs' : 'same',
+      `${site}: ${differs.length ? differs.join('; ') : 'the sheet assembles what framePrompt writes'}; tags ${tagWords(sheet.tags).join(', ')}`,
+      x.frame.id,
+    );
   if (mode === 'on')
     return {
       prompt: made.prompt,

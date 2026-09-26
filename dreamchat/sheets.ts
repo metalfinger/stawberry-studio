@@ -115,6 +115,8 @@ export type Item = {
   waitsForPerson?: string;
   /** For a moment: the asset nodes its frame shows, confirmed on the take when approved. */
   depicted?: string[];
+  /** For a moment drawn with the cut sheet in shadow or on: its sheet as sent (cutsheet.ts sheetPrint). */
+  sentSheet?: { hash: string; parts: Record<string, string>; earlier: string[] };
   /** For a moment: what is in view, where, and how it is seen. */
   frame?: {
     visible: string[];

@@ -338,6 +338,40 @@ describe('assembleCut reads the sheet and nothing else', () => {
     expect(z).toEqual(a);
   });
 
+  test('it never reads the environment, nor do the helpers it writes with', () => {
+    const a = sheets.map((s) => assembleCut(s));
+    const env = process.env;
+    let reads = 0;
+    const refuse = () => {
+      reads++;
+      throw new Error('assembleCut read the environment');
+    };
+    Object.defineProperty(process, 'env', {
+      value: new Proxy({}, { get: refuse, has: refuse, ownKeys: refuse, getOwnPropertyDescriptor: refuse }),
+      configurable: true,
+      writable: true,
+    });
+    let z: ReturnType<typeof assembleCut>[] = [];
+    try {
+      z = sheets.map((s) => assembleCut(s));
+    } finally {
+      Object.defineProperty(process, 'env', { value: env, configurable: true, writable: true });
+    }
+    expect(reads).toBe(0);
+    expect(z).toEqual(a);
+    // The guard is real: with it in place, reading a switch throws.
+    Object.defineProperty(process, 'env', {
+      value: new Proxy({}, { get: refuse }),
+      configurable: true,
+      writable: true,
+    });
+    try {
+      expect(() => cutSheetMode()).toThrow('assembleCut read the environment');
+    } finally {
+      Object.defineProperty(process, 'env', { value: env, configurable: true, writable: true });
+    }
+  });
+
   test('its only input is the sheet, and it imports only words: no switches, no session, no files', () => {
     expect(assembleCut.length).toBe(1);
     const src = readFileSync(join(import.meta.dir, '..', 'assemble.ts'), 'utf8');
@@ -395,9 +429,32 @@ describe('the sheet of a cut', () => {
     expect(boat.m6.tags).toMatchObject({ move: 'jump', unstaged: 'jump', dreamlike: true });
     expect(boat.m3.tags.move).toBe('seat');
     const school = tags('dream-0926-083656-8ceb');
-    expect(school.m4.tags).toMatchObject({ turned: true, unstaged: 'transformation', crowd: true });
+    // The fish students are there, but out of the picture of Mr Hale turning: no crowd in it.
+    expect(school.m4.record?.present.some((id) => school.m4.record?.kinds[id] === 'crowd')).toBe(true);
+    expect(school.m4.tags).toMatchObject({ turned: true, unstaged: 'transformation', crowd: false });
     expect(tagWords(school.m4.tags)).toEqual(expect.arrayContaining(['role:single', 'change:here', 'turned']));
     expect(REVERSE_DEGREES).toBe(135);
+  });
+
+  test('a reverse is the camera turned round from the cut before; crossing the line is its own tag', () => {
+    for (const id of ['dream-0925-231131-affd', 'dream-0926-000545-09ea', 'dream-0926-043003-b0cb']) {
+      const sheets = Object.values(tags(id, 'off'));
+      for (const s of sheets) {
+        const prev = sheets.find((x) => x.id === s.prev);
+        const eye = s.tree?.sheet.camera.value as { d: { x: number; y: number } } | null;
+        const was = prev?.tree?.sheet.camera.value as { d: { x: number; y: number } } | null;
+        const turn =
+          eye && was
+            ? (Math.acos(Math.max(-1, Math.min(1, eye.d.x * was.d.x + eye.d.y * was.d.y))) * 180) / Math.PI
+            : 0;
+        if (s.tags.move === 'reverse') expect(turn).toBeGreaterThanOrEqual(REVERSE_DEGREES);
+      }
+    }
+    const market = tags('dream-0926-000545-09ea', 'off');
+    // Back across the line from the cut before: the old man wraps the fish from the other side.
+    expect(market.m4.tags.crossed).toBe(true);
+    // Nothing that is only there counts: the lighthouse's dog is on the stairs, not in the close-up of the key.
+    expect(tags('dream-0926-022102-aeea').m2.tags.animal).toBe(false);
   });
 
   test('carries the tree with its sources, the record as typed facts, and relations', () => {

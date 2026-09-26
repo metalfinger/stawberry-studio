@@ -8,13 +8,18 @@
 //   hand (<dir>/home-<name>/production.sqlite). A rebuild takes every picture as drawn and approved and
 //   knows nothing of the checks, so a moment is also passed, and said why, where the checks acted on it
 //   (drawn again from a list of what went wrong; drawn without its brief, which the pre-draw check set
-//   aside) or where an earlier picture it would take was never drawn: that is S2's to settle.
+//   aside) or where an earlier picture it would take was never drawn: that is S2's to settle;
+// - every moment drawn with the cut sheet in shadow or on had, when it was sent, the sheet a rebuild gives
+//   it (the print kept on the moment, session.ts; images named by what they are, and only the earlier
+//   pictures drawn by then). A sheet that differs only in the brief the pre-draw check set aside is
+//   explained with the prompt; a moment drawn before its sheet was kept is counted apart.
 // Nothing is drawn and no model is called.
 //
 //   DREAMCHAT_RECORD=on bun run evals/live-flow.ts <replay folder> [more folders]
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { imagesOf, rebuild } from '../plan';
+import { printDiff, sheetPrint } from '../cutsheet';
+import { imageName, imagesOf, rebuild } from '../plan';
 import { diffStructure, recordMode, structureOf } from '../record';
 import { planRecord, type Session } from '../session';
 import { sentFromStore } from './freeze-session';
@@ -33,6 +38,12 @@ export type FlowCheck = {
   differs: Record<string, { sent: string; rebuilt: string }>;
   /** Of those, why each differs where the checks or an undrawn picture explain it. */
   explained: Record<string, string>;
+  /** Moments drawn whose sheet as sent is the rebuild's; where it is not, the parts that differ, and why where known. */
+  sameSheet: string[];
+  sheetDiffers: Record<string, string[]>;
+  sheetExplained: Record<string, string>;
+  /** Moments drawn before their sheet was kept when sent. */
+  sheetUnlogged: string[];
 };
 
 /** One dream the chat planned and drew, checked against its rebuild. */
@@ -50,6 +61,10 @@ export function checkFlow(dream: string, s: Session, store?: string): FlowCheck 
     sameImages: [],
     differs: {},
     explained: {},
+    sameSheet: [],
+    sheetDiffers: {},
+    sheetExplained: {},
+    sheetUnlogged: [],
   };
   const frames = new Map((s.build?.frames ?? []).map((f) => [f.id, f]));
   for (const p of r.pictures) {
@@ -76,6 +91,26 @@ export function checkFlow(dream: string, s: Session, store?: string): FlowCheck 
     }
     if (JSON.stringify(was.images) === JSON.stringify(imagesOf(r, p))) out.sameImages.push(p.id);
   }
+  // The sheet each moment was sent with, against the rebuild's.
+  for (const p of r.pictures) {
+    const f = frames.get(p.id);
+    if (!p.sheet || f?.kind !== 'cut' || f.status !== 'ready' || !f.mediaId) continue;
+    if (!f.sentSheet) {
+      out.sheetUnlogged.push(p.id);
+      continue;
+    }
+    const d = printDiff(
+      f.sentSheet,
+      sheetPrint(p.sheet, (m) => imageName(r, m), { earlier: f.sentSheet.earlier }),
+    );
+    if (!d.length) {
+      out.sameSheet.push(p.id);
+      continue;
+    }
+    out.sheetDiffers[p.id] = d;
+    if (d.every((x) => x === 'camera.brief' || x === 'sources') && /brief/.test(out.explained[p.id] ?? ''))
+      out.sheetExplained[p.id] = out.explained[p.id];
+  }
   return out;
 }
 
@@ -97,6 +132,8 @@ export function replayed(folder: string): { dream: string; session: Session; sto
 
 if (import.meta.main) {
   const folders = process.argv.slice(2);
+  // The rebuild's sheets are compared too: built in shadow when the switch is off.
+  if ((process.env.DREAMCHAT_CUT_SHEET ?? 'off') === 'off') process.env.DREAMCHAT_CUT_SHEET = 'shadow';
   if (!folders.length || recordMode() !== 'on') {
     console.error('usage: DREAMCHAT_RECORD=on bun run evals/live-flow.ts <replay folder> [more folders]');
     process.exit(1);
@@ -110,11 +147,19 @@ if (import.meta.main) {
       continue;
     }
     pinned++;
-    const ok = c.sameRecord && !c.pinDiffers.length && Object.keys(c.differs).every((id) => c.explained[id]);
+    const ok =
+      c.sameRecord &&
+      !c.pinDiffers.length &&
+      Object.keys(c.differs).every((id) => c.explained[id]) &&
+      Object.keys(c.sheetDiffers).every((id) => c.sheetExplained[id]);
     if (!ok) failed++;
     console.log(
-      `${ok ? 'ok  ' : 'FAIL'} ${c.dream}: rebuild reads drawing's record ${c.sameRecord ? 'yes' : 'NO'}; pin as drawing read it ${c.pinDiffers.length ? `NO (${c.pinDiffers.join('; ')})` : 'yes'}; ${c.drawn} moments drawn, ${c.samePrompt.length} rebuilt word for word, ${c.sameImages.length} with the same images`,
+      `${ok ? 'ok  ' : 'FAIL'} ${c.dream}: rebuild reads drawing's record ${c.sameRecord ? 'yes' : 'NO'}; pin as drawing read it ${c.pinDiffers.length ? `NO (${c.pinDiffers.join('; ')})` : 'yes'}; ${c.drawn} moments drawn, ${c.samePrompt.length} rebuilt word for word, ${c.sameImages.length} with the same images; sheets: ${c.sameSheet.length} as sent${c.sheetUnlogged.length ? `, ${c.sheetUnlogged.length} drawn before the sheet was kept` : ''}`,
     );
+    for (const [id, d] of Object.entries(c.sheetDiffers))
+      console.log(
+        `       ${id} sheet differs in ${d.join(', ')}${c.sheetExplained[id] ? `: ${c.sheetExplained[id]}` : ''}`,
+      );
     for (const [id, d] of Object.entries(c.differs))
       console.log(
         c.explained[id]

@@ -30,7 +30,7 @@ import {
   type PlannedInput,
   turnedInto,
 } from './frames';
-import { type CutSheet, cutSheetMode, framed, sheetDream } from './cutsheet';
+import { type CutSheet, cutSheetMode, framed, ghostName, sheetDream } from './cutsheet';
 import { checkReferences, preflight, readPrompt } from './gate';
 import { callJev } from './jev';
 import { recordForPlan, recordInputsOf } from './record';
@@ -169,9 +169,8 @@ export function rebuild(
   return { title: b.title, b, plan, sheets, pictures: out, ...(rec ? { rec } : {}) };
 }
 
-/** An in-between picture named by what it shows, which survives planning again (its number may not). */
-export const ghostName = (g: { of: string; kind: string; state?: { what: string }; looksAt?: string }) =>
-  `ghost:${g.of}:${g.kind === 'view' ? 'view' : (g.state?.what ?? '')}`;
+// Kept here too for older imports.
+export { ghostName };
 
 /**
  * An image named by what it is, never by a store's id: `sketch:p1`, `picture:m3`, `previs:m5`, or an
