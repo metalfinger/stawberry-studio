@@ -15,7 +15,7 @@ context mirrors it.
 | S1 The story record carries state | Done | faults met 6/33 to 18/33, guards 36/36; with Claude reading what the moments imply, 19/33 and S1's cases 12/13 |
 | S2 Checks only log | Done | whole-dream replays on Claude: logging drew 127/127 moments, 0 held or reworded, Jev ~41 calls a dream (acting: 14 undrawn, 54 reworded, 306-324 calls); logging is the default since 27 Sep (`DREAMCHAT_CHECKS=act` brings acting back) |
 | S3 One cut sheet per picture | Done | the sheet's prompt equals the old builder's on 1052 rebuilds and 48 of 48 live builds |
-| S4 Camera rules | Fixing what review found | faults met 18/33 to 27/33, guards 36/36 (branch `s4-camera`) |
+| S4 Camera rules | Review fixes done; ready to merge | faults met 18/33 to 26/33 (its own 1/11 to 9/11), guards 36/36 (branch `s4-camera`) |
 | S5 References and in-between pictures | Test written | built after S4 merges |
 | S6 One prompt builder, clean-ups retired | Not started | after S5 |
 | S7 Jev checks routed by tags | Done (routing switch off; every Jev reading logs) | measured on the 122 pictures the owner judged (as sent): the gate and "storyboard complete?" are at chance (AUC 0.36-0.56); 16 library questions not measurable yet; 0 of 28 checks earn acting; a check earns acting only at its measured bar, counted by moments. Run the picture checkpoints with `DREAMCHAT_JEV_ROUTED=on` so the library questions' readings join the owner's new verdicts |
