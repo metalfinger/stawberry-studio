@@ -37,6 +37,7 @@ import {
   isStage,
   type RefInfo,
   SEVERAL,
+  sentAgainst,
   stageImageOf,
   storyChanges,
   waitedNotSent,
@@ -61,7 +62,7 @@ export type MomentRefs = {
   placeOnly?: boolean;
   /** How many changes its picture carries at once, counted apart from the plan (the action included). */
   changes: number;
-  /** What each change besides the action is: a reframing, a side never drawn, a change shown in no image. */
+  /** What each change besides the action is: implied (said in words, S1), or shown in no image. */
   changeKinds: string[];
   /** Each subject shown by more than one image: its images' sources, in order. */
   twice: { who: string; images: string[] }[];
@@ -69,6 +70,8 @@ export type MomentRefs = {
   notStage: { who: string; got: string[]; stage: string }[];
   /** Earlier pictures from another side, edited or taken for their layout. */
   otherSide: { of: string; role: string; relation?: string; turned: number | null }[];
+  /** Earlier pictures sent whose camera differs or cannot be compared, or whose state differs, and as what. */
+  against: ReturnType<typeof sentAgainst>;
   /** What the plan waits for and never sends. */
   waited: { id: string; why: string }[];
   /** Earlier pictures attached for their light alone. */
@@ -129,18 +132,16 @@ export function referencesOf(r: Rebuilt): Omit<DreamRefs, 'hash'> {
       changes: changes.length,
       changeKinds: changes
         .slice(1)
-        .map((x) =>
-          x.startsWith('reframed')
-            ? 'reframed'
-            : x.endsWith('never shown')
-              ? 'a side never drawn'
-              : x.endsWith('(implied)')
-                ? 'implied, said in words'
-                : 'shown in no image',
-        ),
+        .map((x) => (x.endsWith('(implied)') ? 'implied, said in words' : 'shown in no image')),
       ...(tags ? { role: tags.role, move: tags.move, unstaged: tags.unstaged, establishing: tags.establishing } : {}),
       ...(p.sheet?.inView.some(
-        (e) => e.kind === 'character' && e.group && !e.image && e.turned === null && p.sheet!.visible.includes(e.id),
+        (e) =>
+          e.kind === 'character' &&
+          e.group &&
+          e.said === 'people' &&
+          !e.image &&
+          e.turned === null &&
+          p.sheet!.visible.includes(e.id),
       )
         ? { faceless: true }
         : {}),
@@ -155,6 +156,7 @@ export function referencesOf(r: Rebuilt): Omit<DreamRefs, 'hash'> {
       })),
       waited: waitedNotSent(c),
       lightOnly,
+      against: sentAgainst(c).filter((x) => x.camera !== 'same' || x.state),
     });
   }
   const ghosts = ghostNeeds(r, OWNERS_BAR).map((g) => ({ ...g, atThree: g.most >= SEVERAL }));
@@ -186,6 +188,8 @@ export type Totals = {
   /** Subjects whose image is not their stage in force, by what they got. */
   notStage: { moments: number; subjects: number; byGot: Record<string, number> };
   otherSide: { moments: number; byRole: Record<string, number> };
+  /** Earlier pictures sent against the cut: for layout or look, by what differs. */
+  against: { layout: Record<string, number>; look: Record<string, number> };
   waited: { moments: number; pictures: number; byWhy: Record<string, number> };
   lightOnly: number;
   /** Image 1 by the sheet's role: mock-up, edit, free. */
@@ -260,6 +264,25 @@ export function totalsOf(dreams: Record<string, DreamRefs>): Totals {
       moments: ms.filter(({ m }) => m.otherSide.length).length,
       byRole: count(ms.flatMap(({ m }) => m.otherSide.map((x) => x.role))),
     },
+    against: Object.fromEntries(
+      (['layout', 'look'] as const).map((as) => [
+        as,
+        count(
+          ms.flatMap(({ m }) =>
+            (m.against ?? [])
+              .filter((x) => x.as === as)
+              .map((x) =>
+                [
+                  x.camera === 'differs' ? 'camera' : x.camera === 'unknown' ? 'camera unknown' : '',
+                  x.state ? 'state' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' and '),
+              ),
+          ),
+        ),
+      ]),
+    ) as Totals['against'],
     waited: {
       moments: ms.filter(({ m }) => m.waited.length).length,
       pictures: ms.reduce((a, { m }) => a + m.waited.length, 0),
@@ -299,6 +322,7 @@ export function totalsLines(t: Totals): string[] {
     `one image per subject: ${t.twice.moments} moments show ${t.twice.subjects} subjects by two images or more (${kv(t.twice.bySources)})`,
     `the stage in force: ${t.notStage.moments} moments, ${t.notStage.subjects} subjects not shown by the image of their stage (${kv(t.notStage.byGot)})`,
     `from another side, edited or for layout: ${t.otherSide.moments} moments (${kv(t.otherSide.byRole)})`,
+    `earlier pictures sent whose camera or state differs from the cut: for layout ${Object.values(t.against?.layout ?? {}).reduce((a, b) => a + b, 0)} (${kv(t.against?.layout ?? {})}), for look ${Object.values(t.against?.look ?? {}).reduce((a, b) => a + b, 0)} (${kv(t.against?.look ?? {})})`,
     `waits for what it never sends: ${t.waited.moments} moments, ${t.waited.pictures} pictures (${kv(t.waited.byWhy)})`,
     `images for their light alone: ${t.lightOnly}`,
     `image 1 by role (mock-up/edit/free): ${Object.entries(t.first)
