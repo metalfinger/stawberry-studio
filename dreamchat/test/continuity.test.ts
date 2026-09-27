@@ -1,6 +1,7 @@
 import { describe, expect, setDefaultTimeout, test } from 'bun:test';
-import { drawOrder, meant, placePlan, planBy, planContinuity } from '../continuity';
+import { calledIn, drawOrder, fixtureName, meant, placePlan, planBy, planContinuity } from '../continuity';
 import type { Breakdown, Moment } from '../producer';
+import { calledFor } from '../session';
 
 // Frozen dreams are planned or rebuilt whole: seconds each, and past bun's 5 s on a busy machine.
 setDefaultTimeout(30_000);
@@ -568,5 +569,50 @@ describe('what a moment looks at', () => {
     expect(meant('the village street', [{ id: 'x1', name: 'village houses left' }])).toBeUndefined();
     // Every word of a name said is that thing, whatever else is said.
     expect(meant('the autoclave side of the room', [{ id: 'x1', name: 'the autoclave' }])).toBe('x1');
+  });
+});
+
+describe("a fixture's name", () => {
+  // Written for this test: fixture ids are each floor plan's own, so two places both have an x1 (the
+  // beach's lighthouse and the round room's window in lighthouse-fresh, 27 Sep).
+  const spot = (id: string, name: string) => ({ id, x: 1, y: 1, kind: 'thing', fixture: true, name });
+  const plan = (spots: ReturnType<typeof spot>[]) => ({ front: 'the front', spots });
+  const b = breakdown([], {
+    scenes: [
+      {
+        id: 's1',
+        title: '',
+        place: 'l1',
+        mood: '',
+        blocking: { ...plan([spot('x1', 'the lighthouse')]), places: { l2: plan([spot('x1', 'the stove')]) } },
+        moments: [moment({ id: 'm1', place: 'l1' }), moment({ id: 'm2', place: 'l2' })],
+      },
+      {
+        id: 's2',
+        title: '',
+        place: 'l1',
+        mood: '',
+        blocking: plan([spot('x1', 'the window'), spot('x2', 'the table')]),
+        moments: [moment({ id: 'm3', place: 'l1' })],
+      },
+    ] as never,
+  });
+
+  test('is read from the floor plan of the place the moment happens in, never another plan with the same id', () => {
+    expect(fixtureName(b, 'x1', 'm1')).toBe('the lighthouse');
+    expect(fixtureName(b, 'x1', 'm2')).toBe('the stove');
+    expect(fixtureName(b, 'x1', 'm3')).toBe('the window');
+    // A fixture of another plan only is none of this moment's.
+    expect(fixtureName(b, 'x2', 'm1')).toBeUndefined();
+    expect(fixtureName(b, 'x2', 'm3')).toBe('the table');
+  });
+
+  test('as the previs and the brief call it, from the plan or from a drawn frame', () => {
+    const none = { own: [], states: [] };
+    expect(calledIn(b, { id: 'm3', ...none })('x1')).toBe('the window');
+    expect(calledIn(b, { id: 'm2', ...none })('x1')).toBe('the stove');
+    const s = { build: undefined, draft: { breakdown: b } } as never;
+    expect(calledFor(s, { id: 'm3', frame: undefined } as never)('x1')).toBe('the window');
+    expect(calledFor(s, { id: 'm1', frame: undefined } as never)('x1')).toBe('the lighthouse');
   });
 });

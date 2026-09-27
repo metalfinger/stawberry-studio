@@ -305,7 +305,11 @@ export function sameWords(a: string, b: string): boolean {
 /** What a moment calls who and what is in it: the dreamer, and what has turned into something else by what it is now. */
 export function calledIn(
   b: Breakdown,
-  c: { own: { who: string; what: string; now: string }[]; states: { who: string; what: string; now: string }[] },
+  c: {
+    id: string;
+    own: { who: string; what: string; now: string }[];
+    states: { who: string; what: string; now: string }[];
+  },
 ) {
   const changed = [...c.own, ...c.states];
   return (id: string) => {
@@ -314,14 +318,22 @@ export function calledIn(
     const p = b.people.find((x) => x.id === id);
     if (p) return p.is_dreamer ? 'the dreamer' : p.name;
     return (
-      b.things.find((x) => x.id === id)?.name ?? b.places.find((x) => x.id === id)?.name ?? fixtureName(b, id) ?? id
+      b.things.find((x) => x.id === id)?.name ??
+      b.places.find((x) => x.id === id)?.name ??
+      fixtureName(b, id, c.id) ??
+      id
     );
   };
 }
 
-/** A fixture of a place, by its name in the floor plan: "the autoclave", never "x1". */
-export const fixtureName = (b: Breakdown, id: string) =>
-  b.scenes.flatMap((sc) => sc.blocking?.spots ?? []).find((s) => s.id === id && s.fixture)?.name;
+/**
+ * A fixture of the place a moment happens in, by its name on that place's floor plan: "the autoclave",
+ * never "x1". Fixture ids are the plan's own (x1, x2 on every plan), so it is looked up on the moment's
+ * plan only: read across every scene, lighthouse-fresh m9's window (x1 of the round room) was called
+ * "the lighthouse", the beach's x1, and no brief of it could name it (27 Sep).
+ */
+export const fixtureName = (b: Breakdown, id: string, moment: string) =>
+  placePlan(b, moment)?.spots.find((s) => s.id === id && s.fixture)?.name;
 
 /** A lasting change's key: who, what, what it is now, and since which moment. */
 export const stateKey = (st: State) => `${st.who}/${st.what}/${st.now}/${st.since}`;
