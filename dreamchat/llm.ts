@@ -129,7 +129,20 @@ export function claudeBreach(content: string, json: boolean): string | null {
   }
 }
 
-type ClaudeBody = { result?: string; is_error?: boolean; usage?: { input_tokens?: number; output_tokens?: number } };
+type ClaudeBody = {
+  result?: string;
+  is_error?: boolean;
+  usage?: {
+    input_tokens?: number;
+    cache_creation_input_tokens?: number;
+    cache_read_input_tokens?: number;
+    output_tokens?: number;
+  };
+};
+
+/** Every token of the prompt: the CLI counts what it wrote to or read from its cache apart from `input_tokens`. */
+export const claudePromptTokens = (u: NonNullable<ClaudeBody['usage']>): number =>
+  (u.input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0);
 
 /**
  * Failures of the CLI that pass, and how long to wait before each run again. Under load the CLI gave up
@@ -219,7 +232,9 @@ export async function callClaude(
       if (CLAUDE_LIMIT.test(failure) && limitWaited < CLAUDE_LIMIT_MAX_MS) {
         const reset = limitResetIn(failure);
         const ms = Math.min(reset === null ? CLAUDE_LIMIT_POLL_MS : reset + 60_000, CLAUDE_LIMIT_MAX_MS - limitWaited);
-        console.warn(`${failure.slice(0, 160)}: the usage limit; waiting ${Math.round(ms / 60_000)} min for it to reset`);
+        console.warn(
+          `${failure.slice(0, 160)}: the usage limit; waiting ${Math.round(ms / 60_000)} min for it to reset`,
+        );
         await wait(ms);
         limitWaited += ms;
         continue;
@@ -234,9 +249,9 @@ export async function callClaude(
     const text = body.result ?? '';
     usage = body.usage
       ? {
-          prompt_tokens: (usage?.prompt_tokens ?? 0) + (body.usage.input_tokens ?? 0),
+          prompt_tokens: (usage?.prompt_tokens ?? 0) + claudePromptTokens(body.usage),
           completion_tokens: (usage?.completion_tokens ?? 0) + (body.usage.output_tokens ?? 0),
-          total_tokens: (usage?.total_tokens ?? 0) + (body.usage.input_tokens ?? 0) + (body.usage.output_tokens ?? 0),
+          total_tokens: (usage?.total_tokens ?? 0) + claudePromptTokens(body.usage) + (body.usage.output_tokens ?? 0),
         }
       : usage;
     content = opts.json ? jsonOnly(text) : text;

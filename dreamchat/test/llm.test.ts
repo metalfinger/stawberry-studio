@@ -171,7 +171,9 @@ describe('the Claude writer', () => {
 
   test('the usage limit is waited out until it resets, then the call carries on', async () => {
     const reset = Math.floor(Date.now() / 1000) + 2 * 3600;
-    const f = failing([{ out: JSON.stringify({ is_error: true, result: `Claude AI usage limit reached|${reset}` }), err: '', code: 1 }]);
+    const f = failing([
+      { out: JSON.stringify({ is_error: true, result: `Claude AI usage limit reached|${reset}` }), err: '', code: 1 },
+    ]);
     const r = await callClaude([{ role: 'user', content: 'hi' }], {}, f.run, f.wait);
     expect(r.content).toBe('fine');
     expect(f.waited).toHaveLength(1);
@@ -203,5 +205,18 @@ describe('the Claude writer', () => {
     expect(limitResetIn('resets 14:00', now)).toBe((23 * 60 + 30) * 60_000);
     expect(limitResetIn(`usage limit reached|${Math.floor(now.getTime() / 1000) + 600}`, now)).toBe(600_000);
     expect(limitResetIn('usage limit reached', now)).toBeNull();
+  });
+
+  test("a reply's prompt tokens count what the CLI read from and wrote to its cache", async () => {
+    const run: ClaudeRun = async () => ({
+      out: JSON.stringify({
+        result: 'ok',
+        usage: { input_tokens: 2, cache_creation_input_tokens: 100, cache_read_input_tokens: 50, output_tokens: 5 },
+      }),
+      err: '',
+      code: 0,
+    });
+    const r = await callClaude([{ role: 'user', content: 'hi' }], {}, run);
+    expect(r.usage).toEqual({ prompt_tokens: 152, completion_tokens: 5, total_tokens: 157 });
   });
 });
