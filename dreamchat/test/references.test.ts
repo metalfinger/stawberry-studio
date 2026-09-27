@@ -19,16 +19,18 @@ import { rebuild } from '../plan';
 import type { Session } from '../session';
 
 /**
- * With the camera rules off (DREAMCHAT_CAMERA): these tests hold today's choices, which the rules change
- * on purpose (test/camera.test.ts holds them on).
+ * With the camera rules (DREAMCHAT_CAMERA) and S5's references (DREAMCHAT_REFS) off: these tests hold
+ * today's choices, which those steps change on purpose (test/camera.test.ts and test/refs.test.ts hold them on).
  */
 function cameraOff<T>(fn: () => T): T {
-  const was = process.env.DREAMCHAT_CAMERA;
+  const was = { camera: process.env.DREAMCHAT_CAMERA, refs: process.env.DREAMCHAT_REFS };
   delete process.env.DREAMCHAT_CAMERA;
+  delete process.env.DREAMCHAT_REFS;
   try {
     return fn();
   } finally {
-    if (was !== undefined) process.env.DREAMCHAT_CAMERA = was;
+    if (was.camera !== undefined) process.env.DREAMCHAT_CAMERA = was.camera;
+    if (was.refs !== undefined) process.env.DREAMCHAT_REFS = was.refs;
   }
 }
 const frozen = (id: string) => cameraOff(() => rebuild(loadDream(id, false).session as Session));
@@ -81,6 +83,15 @@ describe('the references chosen', () => {
     ).toBe(true);
   });
 
+  test('cameras on two floor plans are never compared: two plans of one room do not share their bearings', () => {
+    // m10 and m8 are the same room on two scenes' floor plans, their cameras 180 degrees apart by the
+    // numbers alone: the words decide, and they call it the same side.
+    const aeea = frozen('dream-0926-022102-aeea');
+    const m10 = cameraOff(() => contextOf(aeea, 'm10'));
+    expect(m10.refs.some((x) => x.source === 'picture' && x.of === 'm8' && x.role === 'composition')).toBe(true);
+    expect(run(m10, 'none_from_other_side').pass).toBe(true);
+  });
+
   test('the plan waits only for what it sends', () => {
     // Across the reverse, the picture before is kept for its light alone: waited for, never sent.
     const m2 = contextOf(snow, 'm2');
@@ -97,6 +108,47 @@ describe('the references chosen', () => {
     const window = needs.find((g) => g.id === 'g3')!;
     expect([window.most, window.by, window.kept]).toEqual([2, 'm7', false]);
     expect(cameraOff(() => ghostNeeds(library3, 2)).every((g) => g.kept)).toBe(true);
+  });
+
+  test('an in-between picture another is edited from serves that edit: without it, the next carries two changes', () => {
+    // g1 is its moment's own change, drawn in one edit; g2 is edited from g1, so g1 is not for nothing.
+    const cutOf = (id: string, own: string) => ({
+      id,
+      changes: ['the action'],
+      own: [{ who: 'p1', what: own, now: 'x', since: id }],
+      states: [],
+      refs: [],
+    });
+    const r = {
+      b: { scenes: [{ moments: [{ id: 'm1' }, { id: 'm2' }] }] },
+      plan: {
+        cuts: [cutOf('m1', 'head'), cutOf('m2', 'coat')],
+        ghosts: [
+          {
+            id: 'g1',
+            kind: 'state',
+            of: 'p1',
+            label: 'g1',
+            usedBy: ['m1'],
+            state: { who: 'p1', what: 'head', now: 'x', since: 'm1' },
+          },
+          {
+            id: 'g2',
+            kind: 'state',
+            of: 'p1',
+            label: 'g2',
+            after: 'g1',
+            usedBy: ['m2'],
+            state: { who: 'p1', what: 'coat', now: 'x', since: 'm2' },
+          },
+        ],
+      },
+    } as never;
+    const needs = ghostNeeds(r, 2);
+    expect(needs.map((g) => [g.id, g.most, g.by, g.kept])).toEqual([
+      ['g1', 2, 'g2', true],
+      ['g2', 1, 'm2', false],
+    ]);
   });
 
   test('over a whole dream: counted moment by moment, and totalled', () => {

@@ -40,6 +40,7 @@ import {
   stageImageOf,
   waitedNotSent,
 } from './prompt-cases';
+import { facelessIn, SEVERAL as OWNERS_BAR } from '../refs';
 import { commitOf, DIR, type Inputs, inputsDiffer } from './saved';
 
 /** What the references of one moment show. */
@@ -51,8 +52,12 @@ export type MomentRefs = {
   role?: string;
   move?: string;
   unstaged?: string | null;
+  /** The moment is about someone with no image of their own (a crowd it lists as its own). */
+  faceless?: boolean;
   /** How many changes its picture carries at once, as the plan counts them (the action included). */
   changes: number;
+  /** What each change besides the action is: a reframing, a side never drawn, a change shown in no image. */
+  changeKinds: string[];
   /** Each subject shown by more than one image: its images' sources, in order. */
   twice: { who: string; images: string[] }[];
   /** Each subject whose image is not its stage in force: what it got, what it should be. */
@@ -65,7 +70,8 @@ export type MomentRefs = {
   lightOnly: string[];
 };
 
-export type GhostNeed = ReturnType<typeof ghostNeeds>[number] & { atTwo: boolean };
+/** Kept at the owner's bar (two, 27 Sep); `atThree` at the plan's own. */
+export type GhostNeed = ReturnType<typeof ghostNeeds>[number] & { atThree: boolean };
 
 export type DreamRefs = { title?: string; error?: string; hash?: string; moments: MomentRefs[]; ghosts: GhostNeed[] };
 
@@ -114,7 +120,17 @@ export function referencesOf(r: Rebuilt): Omit<DreamRefs, 'hash'> {
       images: c.refs.length,
       first: firstImageOf(c.refs),
       changes: c.cut.changes.length,
+      changeKinds: c.cut.changes
+        .slice(1)
+        .map((x) =>
+          x.startsWith('reframed')
+            ? 'reframed'
+            : x.endsWith('never drawn')
+              ? 'a side never drawn'
+              : 'shown in no image',
+        ),
       ...(tags ? { role: tags.role, move: tags.move, unstaged: tags.unstaged } : {}),
+      ...(p.sheet && facelessIn(p.sheet) ? { faceless: true } : {}),
       twice,
       notStage,
       otherSide: fromOtherSide(c).map(({ of, role, relation, turned }) => ({
@@ -127,18 +143,21 @@ export function referencesOf(r: Rebuilt): Omit<DreamRefs, 'hash'> {
       lightOnly,
     });
   }
-  const ghosts = ghostNeeds(r).map((g) => ({ ...g, atTwo: g.most >= SEVERAL - 1 }));
+  const ghosts = ghostNeeds(r, OWNERS_BAR).map((g) => ({ ...g, atThree: g.most >= SEVERAL }));
   return { title: r.title, moments: out, ghosts };
 }
 
 /**
  * The routing the paired test suggests for the mock-up as image 1 (a hypothesis, n=20): from outside,
- * not across a jump or to another place, and not a close-up or an insert.
+ * not across a jump or to another place, not a close-up or an insert, and not for a moment about a crowd
+ * with no image of its own (heron m4, the bare figures: the case heron-m4-route; a crowd only in the
+ * background kept it, night-market-m2-route).
  */
-export const mockupRoute = (m: Pick<MomentRefs, 'role' | 'move'>) =>
+export const mockupRoute = (m: Pick<MomentRefs, 'role' | 'move' | 'faceless'>) =>
   !!m.role &&
   !['pov', 'close_up', 'insert'].includes(m.role) &&
-  !['jump', 'other_place', 'seat'].includes(m.move ?? '');
+  !['jump', 'other_place', 'seat'].includes(m.move ?? '') &&
+  !m.faceless;
 
 export type Totals = {
   dreams: number;
@@ -159,9 +178,11 @@ export type Totals = {
    */
   mockupOffRoute: number;
   freeOnRoute: number;
-  ghosts: { all: number; state: number; view: number; kept: number; keptAtTwo: number; notKept: string[] };
+  ghosts: { all: number; state: number; view: number; kept: number; keptAtThree: number; notKept: string[] };
   /** Moments whose picture still carries several changes at once (the plan's bar): fewer in-between pictures must not raise it. */
   crowded: number;
+  /** Moments carrying the owner's bar or more at once, by what the changes besides the action are. */
+  atBar: { moments: number; byKind: Record<string, number> };
 };
 
 export function totalsOf(dreams: Record<string, DreamRefs>): Totals {
@@ -235,12 +256,16 @@ export function totalsOf(dreams: Record<string, DreamRefs>): Totals {
       state: gs.filter(({ g }) => g.kind === 'state').length,
       view: gs.filter(({ g }) => g.kind === 'view').length,
       kept: gs.filter(({ g }) => g.kept).length,
-      keptAtTwo: gs.filter(({ g }) => g.atTwo).length,
+      keptAtThree: gs.filter(({ g }) => g.atThree).length,
       notKept: gs
         .filter(({ g }) => !g.kept)
         .map(({ id, g }) => `${id.slice(-4)} ${g.id} ${g.label} (${g.most} at ${g.by ?? '-'})`),
     },
     crowded: ms.filter(({ m }) => m.changes >= SEVERAL).length,
+    atBar: {
+      moments: ms.filter(({ m }) => m.changes >= OWNERS_BAR).length,
+      byKind: count(ms.flatMap(({ m }) => (m.changes >= OWNERS_BAR ? m.changeKinds : []))),
+    },
   };
 }
 
@@ -263,8 +288,9 @@ export function totalsLines(t: Totals): string[] {
       .map(([k, v]) => `${k} ${v.mockup}/${v.edit}/${v.free}`)
       .join(', ')}`,
     `the mock-up off the paired routing (hypothesis): ${t.mockupOffRoute} moments; on it, drawn from the sketches alone: ${t.freeOnRoute}`,
-    `in-between pictures: ${t.ghosts.all} (${t.ghosts.state} of a change, ${t.ghosts.view} of a side); kept by the owner's rule at ${SEVERAL} changes: ${t.ghosts.kept}, at ${SEVERAL - 1}: ${t.ghosts.keptAtTwo}`,
+    `in-between pictures: ${t.ghosts.all} (${t.ghosts.state} of a change, ${t.ghosts.view} of a side); kept by the owner's rule at ${OWNERS_BAR} changes (the owner's bar): ${t.ghosts.kept}, at ${SEVERAL}: ${t.ghosts.keptAtThree}`,
     `moments whose picture still carries ${SEVERAL} changes or more at once: ${t.crowded}`,
+    `moments carrying ${OWNERS_BAR} changes or more at once (the action and ${kv(t.atBar.byKind)}): ${t.atBar.moments}`,
   ];
 }
 

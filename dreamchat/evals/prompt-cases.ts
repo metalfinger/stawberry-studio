@@ -31,7 +31,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Blocking } from '../blocking';
-import { type CutPlan, type GhostPlan, inViewAt, shotPlan } from '../continuity';
+import { type CutPlan, type GhostPlan, inViewAt, placePlan, shotPlan } from '../continuity';
 import { REVERSE_DEGREES } from '../cutsheet';
 import type { JevFn, Question } from '../jev';
 import { imagesOf, type Rebuilt, type RebuiltPicture, rebuild, standIn } from '../plan';
@@ -361,9 +361,15 @@ const angle = (a: { x: number; y: number }, b: { x: number; y: number }) => {
   return Math.round(d > 180 ? 360 - d : d);
 };
 
-/** How far this moment's camera is turned from an earlier moment's; null where either has none worked out. */
+/**
+ * How far this moment's camera is turned from an earlier moment's; null where either has none worked out,
+ * or where they stand on two floor plans (two plans of one room do not share their bearings: S4 found
+ * aeea m10 and m8 on two scenes' plans, 180 degrees apart by the numbers alone).
+ */
 export function turnFrom(r: Rebuilt, cut: CutPlan, moment: string): number | null {
   const e = r.plan.cuts.find((x) => x.id === moment)?.eye;
+  const plan = placePlan(r.b, cut.id);
+  if (!plan || plan !== placePlan(r.b, moment)) return null;
   return cut.eye && e ? angle(cut.eye.d, e.d) : null;
 }
 
@@ -442,8 +448,9 @@ export const isStage = (x: Pick<RefInfo, 'source' | 'of'>, want: ReturnType<type
 
 /**
  * The continuity plan's own bar for one edit carrying too much (continuity.ts TOO_MANY): the action
- * and two more changes. The owner's rule (an in-between picture only when an edit carries several
- * changes) is measured against it; whether "several" is two or three is the owner's to settle.
+ * and two more changes, the guard that no moment is left carrying that many. The owner's rule (an
+ * in-between picture only when an edit carries several changes) was measured against it and at two;
+ * the owner settled "several" at two on 27 Sep (refs.ts SEVERAL), which is the bar S5 is held to.
  */
 export const SEVERAL = 3;
 
@@ -481,7 +488,9 @@ export function changesWithout(r: Rebuilt, cut: CutPlan, g: GhostPlan): number {
 
 /**
  * Each in-between picture of a dream's plan, with the most changes any moment it is drawn for would
- * carry without it, and so whether it meets the owner's rule at `bar`.
+ * carry without it, and so whether it meets the owner's rule at `bar`. An in-between picture another is
+ * edited from serves that edit too: without it, the next one is edited from the sketch carrying both
+ * changes, its own and this one (the ice block before it melts, before the horse).
  */
 export function ghostNeeds(
   r: Rebuilt,
@@ -506,6 +515,11 @@ export function ghostNeeds(
         most = n;
         by = id;
       }
+    }
+    const next = r.plan.ghosts.find((o) => o.after === g.id);
+    if (next && most < 2) {
+      most = 2;
+      by = next.id;
     }
     return { id: g.id, kind: g.kind, of: g.of, label: g.label, most, by, kept: most >= bar };
   });
