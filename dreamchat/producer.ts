@@ -795,12 +795,132 @@ Write the shot as a cinematographer briefs a camera crew, in four to six plain s
 
 Plain, concrete words an illustrator can draw from; nothing from the story that is not in the facts, no mood words, no camera jargon that could be drawn (no frame lines, no labels). Return JSON only: {"shot": ""}.`;
 
+/** Words that open what a name says of where its thing is or what it does, after what it is. */
+const NAME_CLAUSE = new Set([
+  'with',
+  'on',
+  'in',
+  'at',
+  'by',
+  'near',
+  'from',
+  'beside',
+  'behind',
+  'under',
+  'over',
+  'above',
+  'below',
+  'where',
+  'who',
+  'that',
+  'which',
+  'facing',
+  'holding',
+  'carrying',
+  'wearing',
+  'of',
+  'for',
+  'to',
+  'into',
+]);
+/** Words that open a name without saying what it is: an article, a possessive, a count. */
+const NAME_OPENER = /^(?:the|a|an|my|your|his|her|their|our|its|this|that|these|those|some|both|one|two|three|four)$/;
+/** Words that say where a thing of the plan is, after what it is ("bookshelf left"). */
+const NAME_PLACE = /^(?:left|right|front|back|middle|centre|center|top|bottom|upper|lower|near|far|nearest|farthest)$/;
+/** A word's forms, to compare one and many: "shelves" is "shelf", "trees" is "tree", "the dreamer's" is "dreamer". */
+function wordForms(word: string): Set<string> {
+  const w = word
+    .toLowerCase()
+    .replace(/['’]s?$/, '')
+    .replace(/[^a-z0-9]/g, '');
+  const out = new Set([w]);
+  if (w.length > 3 && w.endsWith('s') && !w.endsWith('ss')) out.add(w.slice(0, -1));
+  if (w.length > 4 && /(?:ches|shes|sses|xes)$/.test(w)) out.add(w.slice(0, -2));
+  if (w.length > 4 && w.endsWith('ves')) out.add(`${w.slice(0, -3)}f`);
+  if (w.length > 4 && w.endsWith('ies')) out.add(`${w.slice(0, -3)}y`);
+  return new Set([...out].map((x) => (x.length > 3 ? x.replace(/e$/, '') : x)));
+}
+const tokensOf = (text: string) =>
+  text
+    .toLowerCase()
+    .replace(/\s*\(.*?\)\s*/g, ' ')
+    .split(/[^a-z0-9'’]+/)
+    .map((w) => w.replace(/^['’]+|['’]+$/g, ''))
+    .filter(Boolean);
+
+/**
+ * What a name is known by in a brief: what it is (its last word before a word saying where it is or what
+ * it does, and what it is "of": "the empty rows of apple trees where Tomas was" is rows, and apple
+ * trees), and the other words it has, which tell it from a name of the same kind.
+ */
+function refOf(name: string): { heads: string[]; words: string[] } {
+  const words = tokensOf(name);
+  while (words.length > 1 && (NAME_OPENER.test(words[0]) || /['’]s$/.test(words[0]))) words.shift();
+  const cut = words.findIndex((w, i) => i > 0 && NAME_CLAUSE.has(w));
+  const own = cut > 0 ? words.slice(0, cut) : [...words];
+  while (own.length > 1 && NAME_PLACE.test(own[own.length - 1])) own.pop();
+  const heads = [own[own.length - 1]];
+  if (cut > 0 && words[cut] === 'of') {
+    const rest = words.slice(cut + 1);
+    const next = rest.findIndex((w) => NAME_CLAUSE.has(w));
+    const of = (next >= 0 ? rest.slice(0, next) : rest).filter((w) => !NAME_OPENER.test(w));
+    if (of.length) heads.push(of[of.length - 1]);
+  }
+  return { heads, words: words.filter((w) => !NAME_CLAUSE.has(w) && !NAME_OPENER.test(w) && w.length > 2) };
+}
+
+/**
+ * Whether a brief names everyone and everything the facts put in the picture: each by its name, or by
+ * what it is, whatever article or possessive it has ("the grandfather" for "my grandfather", "the
+ * shelves" or "bookshelf" for "shelves on the left", "the seats" for "the seats facing each other"). Where
+ * two in the picture are of one kind ("shelves on the left", "shelves on the right"; "the older sister",
+ * "the younger sister"), what tells each apart is said beside it. A thing may be named in one word with
+ * another ("bookshelf" for the shelves); a person (`people`: those of `mustName` who are people or
+ * creatures) never is ("grandfather" is not "the father"). Held to every name word for word, about half
+ * the new views of the picture check's dry run got no brief (27 Sep).
+ */
+export function namesEvery(shot: string, mustName: string[], people: string[] = []): boolean {
+  const forms = tokensOf(shot).map(wordForms);
+  const lower = shot.toLowerCase();
+  const refs = mustName.map((n) => ({ n, ...refOf(n), person: people.includes(n) }));
+  const same = (a: string, b: string) => [...wordForms(a)].some((x) => wordForms(b).has(x));
+  // One word joined to another, either way: "bookshelf" in the brief for "shelves", "shelves" for "bookshelf left".
+  const joined = (f: Set<string>, x: string) =>
+    [...f].some(
+      (y) =>
+        (x.length >= 4 && y.length >= x.length + 3 && y.endsWith(x)) ||
+        (y.length >= 4 && x.length >= y.length + 3 && x.endsWith(y)),
+    );
+  return refs.every((r) => {
+    const bare = r.n
+      .toLowerCase()
+      .replace(/^(the|a|an)\s+/, '')
+      .replace(/\s*\(.*\)\s*$/, '')
+      .trim();
+    // Its whole name, as a word of its own ("the father" is not in "grandfather").
+    if (bare && new RegExp(`(?<![a-z0-9])${bare.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![a-z0-9])`).test(lower))
+      return true;
+    // Where the brief says what it is: its word, or a thing's word joined to another ("bookshelf").
+    const at = forms.flatMap((f, i) =>
+      r.heads.some((h) => [...wordForms(h)].some((x) => f.has(x) || (!r.person && joined(f, x)))) ? [i] : [],
+    );
+    if (!at.length) return false;
+    // Others in the picture of the same kind: the words that tell this one from them, beside it.
+    const kin = refs.filter((o) => o.n !== r.n && o.heads.some((h) => r.heads.some((x) => same(h, x))));
+    const tells = r.words.filter((w) => !kin.some((o) => o.words.some((x) => same(w, x))));
+    if (!kin.length || !tells.length) return true;
+    return at.some((i) =>
+      forms.slice(Math.max(0, i - 5), i + 6).some((f) => tells.some((w) => [...wordForms(w)].some((x) => f.has(x)))),
+    );
+  });
+}
+
 /**
  * A moment's shot as its director of photography would brief it, from the geometry worked out on
  * the floor plan: code knows exactly where everything is, a model knows how a shot is put into
  * words. Given the dreamer's view as bare facts in one sentence, the picture came back facing the
- * screen, the default for a theater (24 Sep). Every name the facts put in the picture must be in the
- * brief, or it is not used.
+ * screen, the default for a theater (24 Sep). Everyone and everything the facts put in the picture
+ * must be named in the brief (`namesEvery`), or it is not used.
  */
 export async function shotFor(
   moment: string,
@@ -808,6 +928,7 @@ export async function shotFor(
   medium: string,
   mustName: string[],
   before: string[] = [],
+  people: string[] = [],
 ): Promise<string | null> {
   try {
     const res = await callDeepseek(
@@ -822,13 +943,7 @@ export async function shotFor(
     );
     const shot = (JSON.parse(res.content) as { shot?: unknown }).shot;
     if (typeof shot !== 'string' || !shot.trim()) return null;
-    const bare = (x: string) =>
-      x
-        .toLowerCase()
-        .replace(/^(the|a|an)\s+/, '')
-        .replace(/\s*\(.*\)\s*$/, '')
-        .trim();
-    return mustName.every((n) => shot.toLowerCase().includes(bare(n))) ? shot.trim().slice(0, 1400) : null;
+    return namesEvery(shot, mustName, people) ? shot.trim().slice(0, 1400) : null;
   } catch {
     return null;
   }

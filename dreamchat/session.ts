@@ -600,8 +600,11 @@ export async function shootScenes(
         }
         if (deps.shot && m) {
           const before = (scene?.moments ?? []).slice(0, at).map((x) => x.action);
+          const sees = c.sees ?? [];
+          // Who of it are people or creatures: named by what they are, never in one word with another.
+          const people = sees.filter((id) => plans.people.some((p) => p.id === id)).map(called);
           const text = await deps
-            .shot(m.action, c.view!, mediumOf(style), (c.sees ?? []).map(called), before)
+            .shot(m.action, c.view!, mediumOf(style), sees.map(called), before, people)
             .catch(() => null);
           if (text) into.shots[c.id] = { text, view: c.view! };
         }
@@ -1236,6 +1239,8 @@ export type StoreDeps = {
     medium: string,
     mustName: string[],
     before?: string[],
+    /** Those of `mustName` who are people or creatures. */
+    people?: string[],
   ) => Promise<string | null>;
   /** The lasting changes to how someone looks that the breakdown missed, read by a script supervisor. */
   supervise?: (b: Breakdown) => Promise<Change[]>;
@@ -2690,14 +2695,10 @@ export class SessionStore {
           scene?.moments.findIndex((m) => m.id === frame.id),
         )
         .map((m) => m.action);
+      const sees = frame.frame?.plan?.sees ?? [];
+      const people = sees.filter((id) => s.draft?.breakdown?.people.some((p) => p.id === id)).map(called);
       const text = await this.deps
-        .shot(
-          frame.fields.action?.value ?? frame.name,
-          view,
-          mediumOf(s.style),
-          (frame.frame?.plan?.sees ?? []).map(called),
-          before,
-        )
+        .shot(frame.fields.action?.value ?? frame.name, view, mediumOf(s.style), sees.map(called), before, people)
         .catch(() => null);
       frame.shot = text ? { text, view } : undefined;
     }

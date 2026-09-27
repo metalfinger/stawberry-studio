@@ -470,6 +470,7 @@ export type ShotFn = (
   medium: string,
   mustName: string[],
   before?: string[],
+  people?: string[],
 ) => Promise<string | null>;
 
 async function writeBriefs(
@@ -488,7 +489,7 @@ async function writeBriefs(
     if (!t?.briefless || !b.d || t.refused.some((r) => r !== BRIEFLESS)) continue;
     const ask = core.briefAskOf(b.d, b.m.moment);
     if (!ask) continue;
-    const text = await shotFor(ask.action, ask.view, ask.medium, ask.mustName, ask.before);
+    const text = await shotFor(ask.action, ask.view, ask.medium, ask.mustName, ask.before, ask.people);
     if (!text) {
       failed.push(b.m.id);
       continue;
