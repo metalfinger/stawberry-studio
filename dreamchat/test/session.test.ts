@@ -8,6 +8,7 @@ import type { Breakdown } from '../producer';
 import { printDiff, sheetPrint } from '../cutsheet';
 import { imageName, rebuild } from '../plan';
 import { readJevLog } from '../jevlog';
+import { sha } from '../gate';
 import { SessionStore, type StoreDeps } from '../session';
 import { fakeHost, fakeJev, noul, pick, told, withChecks } from './fakes';
 
@@ -759,7 +760,15 @@ describe('a whole conversation', () => {
           answers: Object.fromEntries(
             Object.keys(questions).map((k) => [
               k,
-              { type: 'noul' as const, noul: k === 'clear' && /A single clear picture of/.test(state) ? 0.3 : k === 'contradicts' || k === 'twice' ? 0.05 : 0.9 },
+              {
+                type: 'noul' as const,
+                noul:
+                  k === 'clear' && /A single clear picture of/.test(state)
+                    ? 0.3
+                    : k === 'contradicts' || k === 'twice'
+                      ? 0.05
+                      : 0.9,
+              },
             ]),
           ),
           error: null,
@@ -784,7 +793,14 @@ describe('a whole conversation', () => {
           producer: async () => ({ breakdown, downgraded: [], notes: [], ms: 1 }),
           write: async () => ({
             projectId: 'p',
-            ids: { said: 'src-said', proposal: 'src-proposal', l1: 'node-l1', t1: 'node-t1', m1: 'cut-m1', m2: 'cut-m2' },
+            ids: {
+              said: 'src-said',
+              proposal: 'src-proposal',
+              l1: 'node-l1',
+              t1: 'node-t1',
+              m1: 'cut-m1',
+              m2: 'cut-m2',
+            },
             home: '/tmp',
             created: { project: 1, scene: 1, shot: 2, cut: 2, character: 0, location: 1, prop: 1 },
             cuts: 2,
@@ -810,7 +826,13 @@ describe('a whole conversation', () => {
         });
         const { id } = store.create();
         await store.open(id);
-        for (const text of ['a train board in my kitchen', 'it said zikery, then I woke', 'yes', 'yes please', 'the poster one'])
+        for (const text of [
+          'a train board in my kitchen',
+          'it said zikery, then I woke',
+          'yes',
+          'yes please',
+          'the poster one',
+        ])
           await store.message(id, text);
         await store.message(id, 'yes, that is the kitchen');
         await store.settle(id, 200);
@@ -820,7 +842,9 @@ describe('a whole conversation', () => {
         for (const it of items)
           expect([it.id, it.held, it.heldAsks, it.status]).toEqual([it.id, undefined, undefined, 'ready']);
         // The board's reading would have held it: kept on it, as what the check found.
-        expect(items.find((i) => i.id === 't1')!.overrode).toEqual(['what it shows is not clear enough to draw (0.30)']);
+        expect(items.find((i) => i.id === 't1')!.overrode).toEqual([
+          'what it shows is not clear enough to draw (0.30)',
+        ]);
         expect(items.find((i) => i.id === 'l1')!.overrode).toBeUndefined();
       } finally {
         delete process.env.DREAMCHAT_SKETCH_HELD;
@@ -966,74 +990,74 @@ describe('a whole conversation', () => {
 
   test('a moment the gate is unsure of is held, never paid for; reworded, it is read again and drawn', () =>
     withChecks('act', async () => {
-    // Jev is sure of the sketches, and of a moment only once its words are put right.
-    const reading = (state: string) =>
-      !state.startsWith('One picture from the dream') || state.includes('REWORDED')
-        ? { contradicts: 0.05, twice: 0.05, clear: 0.9, refs_clear: 0.9 }
-        : { contradicts: 0.9, twice: 0.05, clear: 0.9, refs_clear: 0.9 };
-    const gate: StoreDeps['gate'] = async (state, questions) => ({
-      questions,
-      state,
-      answers: Object.fromEntries(
-        Object.entries(reading(state)).map(([k, v]) => [k, { type: 'noul' as const, noul: v }]),
-      ),
-      error: null,
-      ms: 1,
-      usage: null,
-    });
-    const held = await toTheMoments(undefined, { gate });
-    expect(held.framesStarted).toEqual([]);
-    const m1 = held.store.get(held.id)!.build!.frames!.find((f) => f.id === 'm1')!;
-    expect(m1.status).toBe('waiting');
-    expect(m1.held?.[0]).toStartWith('its instructions may contradict each other (0.90)');
+      // Jev is sure of the sketches, and of a moment only once its words are put right.
+      const reading = (state: string) =>
+        !state.startsWith('One picture from the dream') || state.includes('REWORDED')
+          ? { contradicts: 0.05, twice: 0.05, clear: 0.9, refs_clear: 0.9 }
+          : { contradicts: 0.9, twice: 0.05, clear: 0.9, refs_clear: 0.9 };
+      const gate: StoreDeps['gate'] = async (state, questions) => ({
+        questions,
+        state,
+        answers: Object.fromEntries(
+          Object.entries(reading(state)).map(([k, v]) => [k, { type: 'noul' as const, noul: v }]),
+        ),
+        error: null,
+        ms: 1,
+        usage: null,
+      });
+      const held = await toTheMoments(undefined, { gate });
+      expect(held.framesStarted).toEqual([]);
+      const m1 = held.store.get(held.id)!.build!.frames!.find((f) => f.id === 'm1')!;
+      expect(m1.status).toBe('waiting');
+      expect(m1.held?.[0]).toStartWith('its instructions may contradict each other (0.90)');
 
-    const reworded = await toTheMoments(undefined, {
-      gate,
-      reword: async (_prompt, _findings, fields) => ({
-        ...fields,
-        visual_point: { value: 'REWORDED: the board on the wall', said: false },
-      }),
-    });
-    expect(reworded.framesStarted.map((f) => f.id)).toEqual(['m1']);
-    expect(reworded.framesStarted[0].prompt).toContain('REWORDED: the board on the wall');
-    const m1r = reworded.store.get(reworded.id)!.build!.frames!.find((f) => f.id === 'm1')!;
-    expect([m1r.held, m1r.reworded]).toEqual([undefined, ['visual_point']]);
+      const reworded = await toTheMoments(undefined, {
+        gate,
+        reword: async (_prompt, _findings, fields) => ({
+          ...fields,
+          visual_point: { value: 'REWORDED: the board on the wall', said: false },
+        }),
+      });
+      expect(reworded.framesStarted.map((f) => f.id)).toEqual(['m1']);
+      expect(reworded.framesStarted[0].prompt).toContain('REWORDED: the board on the wall');
+      const m1r = reworded.store.get(reworded.id)!.build!.frames!.find((f) => f.id === 'm1')!;
+      expect([m1r.held, m1r.reworded]).toEqual([undefined, ['visual_point']]);
 
-    // Where it could have been planned again and still reads so after rewording, it is drawn, and
-    // what held it is kept: five of eight such moments came out right (lighthouse, 26 Sep).
-    const block: StoreDeps['block'] = async () => {
-      throw new Error('no floor plan here');
-    };
-    const tried = await toTheMoments(undefined, { gate, block });
-    expect(tried.framesStarted.map((f) => f.id)).toEqual(['m1']);
-    const m1t = tried.store.get(tried.id)!.build!.frames!.find((f) => f.id === 'm1')!;
-    expect(m1t.overrode?.[0]).toStartWith('its instructions may contradict each other (0.90)');
-    // Reworded and still held, it is drawn from its words as told: a rewording the gate still held
-    // walked a third person into the snow (snow train, 26 Sep).
-    const stubborn: StoreDeps['gate'] = async (state, questions) =>
-      gate(state.startsWith('One picture from the dream') ? state.replace(/REWORDED/g, 'still') : state, questions);
-    const kept = await toTheMoments(undefined, {
-      gate: stubborn,
-      block,
-      reword: async (_prompt, _findings, fields) => ({
-        ...fields,
-        action: { value: 'REWORDED: a third person walks in', said: false },
-      }),
-    });
-    expect(kept.framesStarted.map((f) => f.id)).toEqual(['m1']);
-    expect(kept.framesStarted[0].prompt).not.toContain('a third person');
-    const m1k = kept.store.get(kept.id)!.build!.frames!.find((f) => f.id === 'm1')!;
-    expect(m1k.reworded).toBeUndefined();
-    expect(m1k.overrode?.length).toBeGreaterThan(0);
-    process.env.DREAMCHAT_HELD = 'fail';
-    try {
-      const left = await toTheMoments(undefined, { gate, block });
-      expect(left.framesStarted).toEqual([]);
-      expect(left.store.get(left.id)!.build!.frames!.find((f) => f.id === 'm1')!.error).toContain('not drawn');
-    } finally {
-      delete process.env.DREAMCHAT_HELD;
-    }
-  }));
+      // Where it could have been planned again and still reads so after rewording, it is drawn, and
+      // what held it is kept: five of eight such moments came out right (lighthouse, 26 Sep).
+      const block: StoreDeps['block'] = async () => {
+        throw new Error('no floor plan here');
+      };
+      const tried = await toTheMoments(undefined, { gate, block });
+      expect(tried.framesStarted.map((f) => f.id)).toEqual(['m1']);
+      const m1t = tried.store.get(tried.id)!.build!.frames!.find((f) => f.id === 'm1')!;
+      expect(m1t.overrode?.[0]).toStartWith('its instructions may contradict each other (0.90)');
+      // Reworded and still held, it is drawn from its words as told: a rewording the gate still held
+      // walked a third person into the snow (snow train, 26 Sep).
+      const stubborn: StoreDeps['gate'] = async (state, questions) =>
+        gate(state.startsWith('One picture from the dream') ? state.replace(/REWORDED/g, 'still') : state, questions);
+      const kept = await toTheMoments(undefined, {
+        gate: stubborn,
+        block,
+        reword: async (_prompt, _findings, fields) => ({
+          ...fields,
+          action: { value: 'REWORDED: a third person walks in', said: false },
+        }),
+      });
+      expect(kept.framesStarted.map((f) => f.id)).toEqual(['m1']);
+      expect(kept.framesStarted[0].prompt).not.toContain('a third person');
+      const m1k = kept.store.get(kept.id)!.build!.frames!.find((f) => f.id === 'm1')!;
+      expect(m1k.reworded).toBeUndefined();
+      expect(m1k.overrode?.length).toBeGreaterThan(0);
+      process.env.DREAMCHAT_HELD = 'fail';
+      try {
+        const left = await toTheMoments(undefined, { gate, block });
+        expect(left.framesStarted).toEqual([]);
+        expect(left.store.get(left.id)!.build!.frames!.find((f) => f.id === 'm1')!.error).toContain('not drawn');
+      } finally {
+        delete process.env.DREAMCHAT_HELD;
+      }
+    }));
 
   test('with the checks only logging, a moment the gate is unsure of is drawn at once as told, what it found kept and logged', () =>
     withChecks('log', async () => {
@@ -1046,7 +1070,12 @@ describe('a whole conversation', () => {
             k,
             {
               type: 'noul' as const,
-              noul: state.startsWith('One picture from the dream') && k === 'contradicts' ? 0.9 : k === 'contradicts' || k === 'twice' ? 0.05 : 0.9,
+              noul:
+                state.startsWith('One picture from the dream') && k === 'contradicts'
+                  ? 0.9
+                  : k === 'contradicts' || k === 'twice'
+                    ? 0.05
+                    : 0.9,
             },
           ]),
         ),
@@ -1082,7 +1111,9 @@ describe('a whole conversation', () => {
       // Its reading is logged with its bars; nothing a check did is.
       const log = readJevLog(dir, run.id);
       const read = log.find((e) => e.kind === 'transition' && e.stage === 'gate' && e.moment === 'm1');
-      expect(read?.kind === 'transition' && [read.decision, read.facts.map((f) => [f.question, f.answer, f.ok])]).toEqual([
+      expect(
+        read?.kind === 'transition' && [read.decision, read.facts.map((f) => [f.question, f.answer, f.ok])],
+      ).toEqual([
         'logged',
         [
           ['contradicts', 0.9, false],
@@ -1094,7 +1125,189 @@ describe('a whole conversation', () => {
       expect(log.filter((e) => e.kind === 'transition' && e.stage === 'check')).toEqual([]);
       // The sketches' readings are logged too.
       expect(log.some((e) => e.kind === 'transition' && e.stage === 'gate' && e.moment === 'l1')).toBe(true);
+      // Pinned to what was read: the prompt sent, the take, the questions as worded; and kept per take.
+      expect(read?.kind === 'transition' && read.ref).toEqual({
+        prompt: sha(run.framesStarted[0].prompt),
+        version: 1,
+        questions: expect.stringMatching(/^[0-9a-f]{16}$/),
+      });
+      expect(m1.checkedTakes).toEqual([
+        { version: 1, prompt: sha(run.framesStarted[0].prompt), gate: m1.gate, overrode: m1.overrode },
+      ]);
     }));
+
+  /** The kitchen's floor plan, so each moment has a camera worked out and "storyboard complete?" reads it. */
+  const kitchenPlan: StoreDeps['block'] = async (b) => {
+    const out = structuredClone(b);
+    for (const sc of out.scenes)
+      sc.blocking = {
+        front: 'the stove',
+        indoors: true,
+        spots: [{ id: 't1', x: 1, y: 5, kind: 'thing', size: [0.1, 1.5, 1] }],
+      };
+    return { breakdown: out, notes: [] };
+  };
+
+  test('with the checks only logging, a moment "storyboard complete?" fails when it is drawn is drawn from its plan, with the reasons kept', () =>
+    withChecks('log', async () => {
+      let planned = 0;
+      const run = await toTheMoments(undefined, {
+        block: async (b, again) => {
+          planned++;
+          if (
+            again?.fix &&
+            Object.values(again.fix)
+              .flat()
+              .some((f) => /was planned so that its camera sees/.test(f))
+          )
+            throw new Error('planned again for a check');
+          return kitchenPlan(b);
+        },
+      });
+      const m1 = run.store.get(run.id)!.build!.frames!.find((f) => f.id === 'm1')!;
+      // The inert reading answers every storyboard fact no: the shot is at odds with its moment.
+      expect(m1.frame?.plan?.view).toBeTruthy();
+      expect(run.store.get(run.id)!.prep?.storyboard?.m1?.ok).toBe(false);
+      expect(run.framesStarted.map((f) => f.id)).toEqual(['m1']);
+      expect([m1.status, m1.held]).toEqual(['drawing', undefined]);
+      expect(m1.overrode?.some((r) => r.startsWith('storyboard: '))).toBe(true);
+      expect(planned).toBeGreaterThan(0);
+      // Acting, its scene is planned again for it first (and drawn only once that too has failed).
+      let again = 0;
+      await withChecks('act', () =>
+        toTheMoments(undefined, {
+          block: async (b, opts) => {
+            if (
+              Object.values(opts?.fix ?? {})
+                .flat()
+                .some((f) => /was planned so that its camera sees/.test(f))
+            )
+              again++;
+            return kitchenPlan(b);
+          },
+        }),
+      );
+      expect(again).toBeGreaterThan(0);
+    }));
+
+  test('with the checks only logging, a fault code finds in the images still leaves a moment undrawn', () =>
+    withChecks('log', async () => {
+      // Jev is sure of every prompt: only the code's own check can find anything.
+      const sure: StoreDeps['gate'] = async (state, questions) => ({
+        questions,
+        state,
+        answers: Object.fromEntries(
+          Object.keys(questions).map((k) => [
+            k,
+            { type: 'noul' as const, noul: k === 'contradicts' || k === 'twice' ? 0.05 : 0.9 },
+          ]),
+        ),
+        error: null,
+        ms: 1,
+        usage: null,
+      });
+      const { store, id, framesStarted, statuses, reaction } = await toTheMoments(undefined, { gate: sure });
+      statuses.set('job-m1', 'ready');
+      await store.settle(id, 100);
+      reaction.now = {};
+      await store.message(id, 'can I see them?');
+      // The board's sketch is drawn but no longer approved: the close-up cannot attach it, though the
+      // board is in view. No picture can put that right, so it is not drawn.
+      const board = store.get(id)!.build!.items.find((i) => i.id === 't1')!;
+      Object.assign(board, { review: undefined, continuityApproved: false });
+      reaction.now = { ok_m1: noul(0.9), sketch_reaction: pick('looks_right') };
+      await store.message(id, 'the kitchen is right');
+      await store.settle(id, 100);
+      const m2 = store.get(id)!.build!.frames!.find((f) => f.id === 'm2')!;
+      expect(framesStarted.map((f) => f.id)).toEqual(['m1']);
+      expect(m2.status).toBe('failed');
+      expect(m2.error).toContain('is in view but their sketch is not attached');
+    }));
+
+  test('an in-between picture the gate is unsure of: left undrawn acting, drawn with what it found when only logging', async () => {
+    // The board's slats change at the close-up: an in-between picture of the board is drawn first.
+    const changed = structuredClone(breakdown);
+    changed.scenes[0].moments[1].leaves = [{ who: 't1', what: 'its slats', now: 'all blank but one' }];
+    const gate: StoreDeps['gate'] = async (state, questions) => ({
+      questions,
+      state,
+      answers: Object.fromEntries(
+        Object.keys(questions).map((k) => [
+          k,
+          {
+            type: 'noul' as const,
+            // An edit's change read as vague; everything else sure.
+            noul:
+              k === 'clear' && /edit an attached reference picture/.test(questions.clear.instructions)
+                ? 0.1
+                : k === 'contradicts' || k === 'twice'
+                  ? 0.05
+                  : 0.9,
+          },
+        ]),
+      ),
+      error: null,
+      ms: 1,
+      usage: null,
+    });
+    const producer: StoreDeps['producer'] = async () => ({ breakdown: changed, downgraded: [], notes: [], ms: 1 });
+    const ghostOf = (r: Awaited<ReturnType<typeof toTheMoments>>) =>
+      r.store.get(r.id)!.build!.frames!.find((f) => f.kind === 'ghost')!;
+    // The change kept as the breakdown gives it (the inert reading of what changes would drop it).
+    process.env.DREAMCHAT_PREP_REPLACES = 'off';
+    try {
+      const acting = await withChecks('act', () => toTheMoments(undefined, { gate, producer }));
+      expect(ghostOf(acting).held?.[0]).toContain('what it shows is not clear enough to draw (0.10)');
+      expect(ghostOf(acting).status).toBe('waiting');
+      const logging = await withChecks('log', () => toTheMoments(undefined, { gate, producer }));
+      const g = ghostOf(logging);
+      expect([g.status, g.held]).toEqual(['drawing', undefined]);
+      expect(g.overrode).toEqual(['what it shows is not clear enough to draw (0.10)']);
+      expect(g.checkedTakes?.[0].overrode).toEqual(g.overrode);
+    } finally {
+      delete process.env.DREAMCHAT_PREP_REPLACES;
+    }
+  });
+
+  test('a throw after a take is judged loses neither its verdict nor what is drawn from it', async () => {
+    // The gate falls over once, on the close-up drawn from the wide once the judge has passed it.
+    // Before, the verdict was kept only on a copy that was never saved, the wide stayed marked as
+    // judged, and the close-up waited for good (snow train m4, 27 Sep).
+    let moments = 0;
+    const gate: StoreDeps['gate'] = async (state, questions) => {
+      if (state.startsWith('One picture from the dream') && ++moments === 2) throw new Error('the gate fell over');
+      return {
+        questions,
+        state,
+        answers: Object.fromEntries(
+          Object.keys(questions).map((k) => [
+            k,
+            { type: 'noul' as const, noul: k === 'contradicts' || k === 'twice' ? 0.05 : 0.9 },
+          ]),
+        ),
+        error: null,
+        ms: 1,
+        usage: null,
+      };
+    };
+    const pass = async () => ({ questions: 3, passed: 3, failed: [], unseen: [] });
+    const { store, id, framesStarted, statuses } = await toTheMoments(pass, { gate });
+    statuses.set('job-m1', 'ready');
+    await store.settle(id, 100);
+    const frames = () => store.get(id)!.build!.frames!;
+    const m1 = frames().find((f) => f.id === 'm1')!;
+    expect(m1.check?.passed).toBe(3);
+    expect(m1.continuityApproved).toBe(true);
+    // The close-up is not left waiting: it failed to start, said why, and nothing was paid for it.
+    const m2 = frames().find((f) => f.id === 'm2')!;
+    expect([m2.status, m2.error]).toEqual(['failed', 'could not be started: Error: the gate fell over']);
+    expect(m2.jobId).toBeUndefined();
+    // Resuming starts it again, from the wide.
+    await store.resume(id);
+    await store.settle(id, 100);
+    expect(framesStarted.map((f) => f.id)).toEqual(['m1', 'm2']);
+    expect(framesStarted[1].refs).toContain('composition:media-cut-m1-job-m1');
+  });
 
   test('a moment the judge fails is drawn once more with what was wrong, then released on a pass', async () => {
     const judged: string[] = [];

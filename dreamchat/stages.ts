@@ -5,6 +5,7 @@
 //
 // A new check is a new fact here, worded for Jev, with its bar: not a new code path. The bars are
 // provisional until each question has a labelled set of real cases to set it from.
+import { checksMode } from './gate';
 import type { Question } from './jev';
 
 /**
@@ -261,7 +262,8 @@ export function momentStage(
   if (frame?.status === 'ready') return 'review';
   if (frame?.held?.length) return frame.held.every((h) => h.startsWith('storyboard:')) ? 'previs' : 'prompt';
   const checked = prep?.storyboard?.[id];
-  if (checked) return checked.ok ? 'prompt' : 'previs';
+  // With the checks only logging, a shot the check found at odds is not held there: it goes on.
+  if (checked) return checked.ok || checksMode() === 'log' ? 'prompt' : 'previs';
   return prep?.previs?.[id] ? 'previs' : 'plan';
 }
 

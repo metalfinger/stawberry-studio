@@ -218,6 +218,51 @@ describe('the checks only logging (DREAMCHAT_CHECKS=log)', () => {
     expect(sure.findings).toEqual(['its instructions may contradict each other (0.90)']);
   });
 
+  test('a prompt Jev could not read is read once more when only logging, and never more', async () => {
+    const prompt = 'One picture.\nThe dreamer stands alone on the roof.';
+    let calls = 0;
+    const flaky: JevFn = async (state, questions) =>
+      ++calls === 1
+        ? { questions, state, answers: null, error: '503', ms: 1, usage: null }
+        : jevSaying({ contradicts: 0.1, twice: 0.1, clear: 0.9 })(state, questions);
+    const logged = await withChecks('log', () => readPrompt(flaky, prompt));
+    expect([calls, logged.findings, logged.reading?.clear]).toEqual([2, [], 0.9]);
+    calls = 0;
+    const acting = await withChecks('act', () => readPrompt(flaky, prompt));
+    expect(calls).toBe(1);
+    expect(acting.findings[0]).toContain('could not be checked');
+    calls = 0;
+    const down: JevFn = async (state, questions) => {
+      calls++;
+      return { questions, state, answers: null, error: '503', ms: 1, usage: null };
+    };
+    const still = await withChecks('log', () => readPrompt(down, prompt));
+    expect(calls).toBe(2);
+    expect([still.reading, actsWhenLogging(still.findings[0])]).toEqual([null, false]);
+  });
+
+  test("a reading says which questions it answered, and a sketch's parts of its look are logged", async () => {
+    const sheet = await readPrompt(
+      jevSaying({ contradicts: 0.1, twice: 0.1, clear: 0.9, has_age: 0.8, has_build: 0.3, has_hair: 0.9, has_clothes: 0.7 }),
+      'A single clear picture of the conductor.',
+      { sheet: true, kind: 'character' },
+    );
+    expect(sheet.reading?.facets).toEqual({ has_age: 0.8, has_build: 0.3, has_hair: 0.9, has_clothes: 0.7 });
+    expect(gateFacts(sheet.reading!, { sheet: true }).slice(3)).toEqual([
+      { question: 'has_age', answer: 0.8, bar: 0.5, ok: true },
+      { question: 'has_build', answer: 0.3, bar: 0.5, ok: false },
+      { question: 'has_hair', answer: 0.9, bar: 0.5, ok: true },
+      { question: 'has_clothes', answer: 0.7, bar: 0.5, ok: true },
+    ]);
+    const moment = await readPrompt(jevSaying({ contradicts: 0.1, twice: 0.1, clear: 0.9 }), 'One picture.');
+    const again = await readPrompt(jevSaying({ contradicts: 0.5, twice: 0.1, clear: 0.2 }), 'Another picture.');
+    // The same questions hash the same whatever the prompt or the answers; other questions differ.
+    expect(moment.asked).toMatch(/^[0-9a-f]{16}$/);
+    expect(again.asked).toBe(moment.asked);
+    expect(sheet.asked).not.toBe(moment.asked);
+    expect(moment.reading?.facets).toBeUndefined();
+  });
+
   test('a reading is logged with the bar each answer is held to', () => {
     const reading = { contradicts: 0.5, twice: 0.1, clear: 0.6, refsClear: 0.7 };
     expect(gateFacts(reading)).toEqual([

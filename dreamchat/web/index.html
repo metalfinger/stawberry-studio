@@ -660,6 +660,10 @@ const num = (n) => n >= 10000 ? `${Math.round(n / 1000)}k` : n.toLocaleString();
 const clock = (at) => new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 const paneOn = (name) => $(`pane-${name}`).classList.contains('on');
 
+/** With the checks only logging (DREAMCHAT_CHECKS=log), a failed check holds nothing: it "would hold". Known from /api/jev. */
+let checksLogOnly = false;
+const heldWord = () => (checksLogOnly ? 'would hold' : 'held');
+
 /** The Stages panel, read from the conversation's own log of Jev's calls and decisions. */
 async function renderStages() {
   if (!session || !paneOn('stages')) return;
@@ -676,6 +680,7 @@ async function renderStages() {
 }
 
 function stagesInto(pane, d) {
+  checksLogOnly = d.checks === 'log';
 
   // Where the conversation is.
   pane.append(el('h4', {}, 'Stages'));
@@ -707,7 +712,7 @@ function stagesInto(pane, d) {
     const ids = moments.map((m) => m.id);
     const cleared = ids.filter((id) => checks[id] && checks[id].ok).length;
     const held = ids.filter((id) => checks[id] && !checks[id].ok).length;
-    pane.append(el('p', { class: 'tally' }, `${moments.length} moments · ${cleared} cleared · ${held} held · ${moments.length - cleared - held} not checked yet`));
+    pane.append(el('p', { class: 'tally' }, `${moments.length} moments · ${cleared} cleared · ${held} ${heldWord()}${checksLogOnly ? ' (only logged)' : ''} · ${moments.length - cleared - held} not checked yet`));
   }
   const history = d.log.filter((e) => e.kind === 'transition' && e.stage === t.from);
   const facts = Object.fromEntries(t.facts.map((f) => [f.id, f]));
@@ -716,7 +721,7 @@ function stagesInto(pane, d) {
     const row = el('div', { class: 'check' });
     const top = el('div', { class: 'top' });
     top.append(el('span', { class: 'n' }, String(i + 1)), el('span', { class: 'what' }, m.action),
-      el('span', { class: `verdict ${c ? (c.ok ? 'cleared' : 'held') : 'unchecked'}` }, c ? (c.ok ? 'cleared' : 'held') : (d.moments[m.id] || 'not checked')));
+      el('span', { class: `verdict ${c ? (c.ok ? 'cleared' : 'held') : 'unchecked'}` }, c ? (c.ok ? 'cleared' : heldWord()) : (d.moments[m.id] || 'not checked')));
     row.append(top);
     const body = el('div', { class: 'body' });
     if (c) {
@@ -727,7 +732,7 @@ function stagesInto(pane, d) {
         list.append(el('span', {}, f ? f.label : r.question), el('span', { class: r.ok ? 'ok' : 'no' }, Number.isFinite(r.answer) ? `${r.answer.toFixed(2)} ${r.ok ? '✓' : '✗'}` : 'no answer ✗'), el('span', { class: 'bar' }, bar));
       }
       body.append(list);
-      if (!c.ok) body.append(el('div', { class: 'why' }, `Held: ${c.reasons.join('; ')}`));
+      if (!c.ok) body.append(el('div', { class: 'why' }, `${checksLogOnly ? 'Would hold (only logged)' : 'Held'}: ${c.reasons.join('; ')}`));
       const view = el('details', { 'data-key': `view-${m.id}` });
       view.append(el('summary', {}, 'What Jev compared: the shot, read off its previs'), el('pre', {}, c.view));
       body.append(view);
@@ -1088,7 +1093,7 @@ function treeInto(pane, t) {
     const sb = n.storyboard;
     const verdict = !sb || sb.ok == null ? 'unchecked' : sb.ok ? 'cleared' : 'held';
     const line = el('div', { class: 'tnote' });
-    line.append(el('span', { class: `verdict ${verdict}` }, verdict === 'unchecked' ? 'not checked' : verdict));
+    line.append(el('span', { class: `verdict ${verdict}` }, verdict === 'unchecked' ? 'not checked' : verdict === 'held' ? heldWord() : verdict));
     if (sb && sb.stale) line.append(el('span', { class: 'muted' }, ' · it read another view than its plan’s now'));
     pane.append(line);
     for (const x of (sb && sb.reasons) || []) pane.append(el('div', { class: 'bad' }, x));

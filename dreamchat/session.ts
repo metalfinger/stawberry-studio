@@ -100,7 +100,7 @@ import {
   turnedInto,
   isWhole,
 } from './frames';
-import { actsWhenLogging, checkReferences, checksMode, gateFacts, preflight, readPrompt } from './gate';
+import { actsWhenLogging, checkReferences, checksMode, gateFacts, preflight, readPrompt, sha } from './gate';
 import {
   type CutSheet,
   cutSheet,
@@ -964,6 +964,7 @@ export async function storyboardCheck(
       // With the checks only logging (DREAMCHAT_CHECKS=log), what it found holds nothing.
       decision: checksMode() === 'log' ? 'logged' : 'held',
       reason: reasons.join('; '),
+      view,
     });
     return { ok: false, view, readings: [], reasons };
   }
@@ -977,6 +978,8 @@ export async function storyboardCheck(
     facts: readings,
     decision: ok ? 'cleared' : checksMode() === 'log' ? 'logged' : 'held',
     reason: ok ? 'every fact passed its bar' : reasons.join('; '),
+    // The shot as Jev was given it, so the reading can be told from one of another shot.
+    view,
   });
   return { ok, view, readings, reasons };
 }
@@ -2235,8 +2238,22 @@ export class SessionStore {
       }
       if (!approvedAll) continue;
       f.dropped = needs.filter((n) => n.status === 'failed').map((n) => n.id);
-      if (f.kind === 'ghost') await this.startGhost(s, f, turn);
-      else await this.startFrame(s, f, turn);
+      // A picture that throws while it is being started fails on its own, with the reason, and the
+      // pictures after it are still started: thrown out of here, it took the whole queue with it.
+      // Nothing was paid for, so resuming starts it again.
+      try {
+        if (f.kind === 'ghost') await this.startGhost(s, f, turn);
+        else await this.startFrame(s, f, turn);
+      } catch (e) {
+        console.error(`starting ${f.id}: ${String(e).slice(0, 300)}`);
+        // Already sent to be drawn, it is left drawing.
+        if ((f.status as Item['status']) !== 'drawing')
+          Object.assign(f, {
+            status: 'failed',
+            held: undefined,
+            error: `could not be started: ${String(e).slice(0, 300)}`,
+          });
+      }
     }
   }
 
@@ -2753,6 +2770,9 @@ export class SessionStore {
       facts: read.reading ? gateFacts(read.reading, { sheet, edit: item.kind === 'ghost' }) : [],
       decision: !all.length ? 'cleared' : !log ? 'found' : acting.length ? 'held' : 'logged',
       reason: all.join('; ') || 'every reading passed its bar',
+      // Which prompt, which take (a sketch counts its take before the gate, a moment when it is sent)
+      // and which wording of the questions this reading was of.
+      ref: { prompt: sha(prompt), version: sheet ? item.version : item.version + 1, questions: read.asked },
     });
     return acting;
   }
@@ -3029,6 +3049,15 @@ export class SessionStore {
     item.jobId = undefined;
     item.recipeId = undefined;
     s.images += 1;
+    item.checkedTakes = [
+      ...(item.checkedTakes ?? []),
+      {
+        version: item.version,
+        prompt: sha(job.prompt),
+        ...(item.gate ? { gate: item.gate } : {}),
+        ...(item.overrode ? { overrode: item.overrode } : {}),
+      },
+    ];
     const snapshot = structuredClone(item);
     // A deps check above already failed the picture if the engine is missing.
     const sheets = this.deps.sheets as SheetEngine;
@@ -3298,6 +3327,15 @@ export class SessionStore {
               it.gate = snapshot.gate;
               it.held = undefined;
               if (snapshot.overrode || checksMode() === 'log') it.overrode = snapshot.overrode;
+              it.checkedTakes = [
+                ...(it.checkedTakes ?? []),
+                {
+                  version: snapshot.version,
+                  prompt: sha(sheetPrompt(snapshot, style)),
+                  ...(snapshot.gate ? { gate: snapshot.gate } : {}),
+                  ...(snapshot.overrode ? { overrode: snapshot.overrode } : {}),
+                },
+              ];
               spend(x, r.usd);
             }),
           ).then(() => this.watch(s.id)),
@@ -3477,19 +3515,44 @@ export class SessionStore {
     }
     if (!check) return;
     const answered = check;
-    await this.serial(id, async () => {
-      const x = structuredClone(this.require(id));
-      const cur = [...(x.build?.items ?? []), ...(x.build?.frames ?? [])].find((i) => i.id === itemId);
-      if (!cur || cur.mediaId !== mediaId) return;
-      const { continuity, ...facts } = answered;
-      cur.check = facts;
-      if (continuity) cur.continuity = continuity;
-      if (cur.kind === 'cut') {
-        if (!(await this.repair(x, cur))) await this.vouch(x, cur);
-        await this.fillFrames(x, x.turns.at(-1)?.turn ?? 0);
-      } else if (cur.kind !== 'ghost') await this.repairSheet(x, cur);
-      await this.save(x);
-    });
+    // The verdict is saved before anything is done with it, and what is done after is saved whatever
+    // happens. Kept only on a copy that a later step threw on, the verdict was lost while the take
+    // was already marked judged, so it was never asked about again, and every moment drawn from it
+    // waited for a verdict or a restart (snow train m4 held m5-m7, 27 Sep).
+    let saved = false;
+    try {
+      await this.serial(id, async () => {
+        const x = structuredClone(this.require(id));
+        const cur = [...(x.build?.items ?? []), ...(x.build?.frames ?? [])].find((i) => i.id === itemId);
+        if (!cur || cur.mediaId !== mediaId) return;
+        const { continuity, ...facts } = answered;
+        cur.check = facts;
+        if (continuity) cur.continuity = continuity;
+        await this.save(x);
+        saved = true;
+        try {
+          if (cur.kind === 'cut') {
+            if (!(await this.repair(x, cur))) await this.vouch(x, cur);
+            await this.fillFrames(x, x.turns.at(-1)?.turn ?? 0);
+          } else if (cur.kind !== 'ghost') await this.repairSheet(x, cur);
+        } catch (e) {
+          console.error(`after judging ${itemId}: ${String(e).slice(0, 300)}`);
+          recordJev({
+            kind: 'transition',
+            stage: 'judge',
+            to: 'error',
+            moment: itemId,
+            facts: [],
+            decision: 'error',
+            reason: `after its verdict: ${String(e).slice(0, 300)}`,
+          });
+        }
+        await this.save(x);
+      });
+    } finally {
+      // Not saved: asked again the next time it is looked at.
+      if (!saved) this.judged.delete(mediaId);
+    }
     if (this.sessions.get(id)?.build?.frames?.some((f) => f.status === 'drawing')) this.watch(id);
     // A judge that sees one image at a time is asked about continuity on its own.
     if (answered.continuity || !this.deps.judgeContinuity || it.kind !== 'cut' || !checks.length) return;

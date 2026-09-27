@@ -68,7 +68,7 @@ export function checksMode(): 'act' | 'log' {
  * picture can put right. What the images attached and the prompt say of them disagree (an image
  * attached with no word on it, one described but not attached, two edit bases or a base not first,
  * one attached twice, more than fit, an unapproved picture, a sketch of someone in view left off),
- * and a plan that points at a picture that is not there or not earlier. The continuity plan's
+ * and a plan that points at a picture that is not earlier. The continuity plan's
  * other warnings (a state carried in words only, many changes at once, no visible action) are its
  * guesses at what may go wrong, never measured on pictures: they are logged.
  */
@@ -80,8 +80,7 @@ export function actsWhenLogging(finding: string): boolean {
     ) ||
     /^\d+ images, more than \d+$/.test(finding) ||
     / is in view but their sketch is not attached$/.test(finding) ||
-    /^picture \d+ refers to picture .*, which is not earlier$/.test(finding) ||
-    /^ghost \S+ needs .*, which is not a picture$/.test(finding)
+    /^picture \d+ refers to picture .*, which is not earlier$/.test(finding)
   );
 }
 
@@ -92,8 +91,14 @@ export type GateReading = {
   refsClear: number | null;
   /** The line a contradiction reading rests on, and how much leaving it out lowers the reading. */
   around?: { line: string; drop: number };
+  /** A sketch's reading of each part of its look ("has_age" …), where it was asked. */
+  facets?: Record<string, number>;
 };
-export type GateResult = { findings: string[]; reading: GateReading | null };
+/** `asked`: the hash of the questions as worded, so a reading is only compared with one asked alike. */
+export type GateResult = { findings: string[]; reading: GateReading | null; asked: string };
+
+/** A short hash of a text: which prompt, or which wording of the questions, a reading was of. */
+export const sha = (text: string) => new Bun.CryptoHasher('sha256').update(text).digest('hex').slice(0, 16);
 
 /**
  * How clear a sketch must be is not how clear a moment must be: a sketch is where a face is first
@@ -279,7 +284,16 @@ export async function readPrompt(
   opts: { withImages?: boolean; sheet?: boolean; kind?: 'character' | 'animal' | 'location' | 'prop'; edit?: boolean } = {},
 ): Promise<GateResult> {
   const withImages = opts.withImages ?? /\bImage 1(?::| is\b)/.test(prompt);
-  const call = await jev(prompt, gateQuestions(withImages, opts.sheet, opts.kind, opts.edit));
+  const questions = gateQuestions(withImages, opts.sheet, opts.kind, opts.edit);
+  const asked = sha(JSON.stringify(questions));
+  const whole = (c: Awaited<ReturnType<JevFn>>) =>
+    ['contradicts', 'twice', 'clear', ...(withImages ? ['refs_clear'] : [])].every(
+      (k) => c.answers?.[k]?.type === 'noul',
+    );
+  let call = await jev(prompt, questions);
+  // With the checks only logging, a prompt Jev could not read is drawn without a reading, so it is
+  // read once more first: a reading lost is a label S7 never gets.
+  if (checksMode() === 'log' && !whole(call)) call = await jev(prompt, questions);
   const noul = (id: string) => {
     const a = call.answers?.[id];
     return a && a.type === 'noul' ? a.noul : null;
@@ -290,7 +304,7 @@ export async function readPrompt(
   const refsClear = withImages ? noul('refs_clear') : null;
   // No reading, no confidence: it is held and tried again, never drawn blind.
   if (contradicts === null || twice === null || clear === null || (withImages && refsClear === null))
-    return { findings: [`the prompt could not be checked (${call.error ?? 'no answer'})`], reading: null };
+    return { findings: [`the prompt could not be checked (${call.error ?? 'no answer'})`], reading: null, asked };
   const findings: string[] = [];
   let around: GateReading['around'];
   // With the checks only logging, a reading is never put on a line: that search asks Jev once for
@@ -339,7 +353,23 @@ export async function readPrompt(
   }
   if (refsClear !== null && refsClear < MIN_REFS_CLEAR)
     findings.push(`what to take from each image is not clear enough (${refsClear.toFixed(2)})`);
-  return { findings, reading: { contradicts, twice, clear, refsClear, ...(around ? { around } : {}) } };
+  const facets: Record<string, number> = {};
+  for (const id of Object.keys(opts.sheet && opts.kind ? FACETS[opts.kind] : {})) {
+    const a = noul(`has_${id}`);
+    if (a !== null) facets[`has_${id}`] = a;
+  }
+  return {
+    findings,
+    reading: {
+      contradicts,
+      twice,
+      clear,
+      refsClear,
+      ...(around ? { around } : {}),
+      ...(Object.keys(facets).length ? { facets } : {}),
+    },
+    asked,
+  };
 }
 
 /**
@@ -358,6 +388,8 @@ export function gateFacts(
     under('twice', reading.twice, MAX_TWICE),
     over('clear', reading.clear, opts.edit ? MIN_EDIT_CLEAR : MIN_CLEAR),
     ...(reading.refsClear !== null ? [over('refs_clear', reading.refsClear, MIN_REFS_CLEAR)] : []),
+    // A sketch's parts of its look: under 0.5, said to be missing.
+    ...Object.entries(reading.facets ?? {}).map(([id, a]) => over(id, a, 0.5)),
   ];
 }
 

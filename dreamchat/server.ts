@@ -7,6 +7,7 @@ import { loadedKeys } from './boot';
 import { join } from 'node:path';
 import { dreamConfig } from './dream';
 import { callJev, jevAvailable } from './jev';
+import { checksMode } from './gate';
 import { jevTotals, readJevLog } from './jevlog';
 import { callHost, HOST_MODEL } from './llm';
 import { blockScenes, fixFrom, shotFor, superviseChanges, proposeLook, reviseItem, rewordLook, rewordMoment } from './producer';
@@ -129,6 +130,8 @@ const server = Bun.serve({
         return json({
           stages: STAGES,
           transitions: [STORYBOARD],
+          // Whether the checks act or only log (DREAMCHAT_CHECKS): the panel says "would hold" when they log.
+          checks: checksMode(),
           stage: stageOf(s),
           moments: Object.fromEntries(moments.map((m) => [m.id, momentStage(m.id, s.prep, frames.find((f) => f.id === m.id))])),
           totals: jevTotals(log),
