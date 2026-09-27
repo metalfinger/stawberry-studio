@@ -13,7 +13,7 @@ context mirrors it.
 | --- | --- | --- |
 | S0 The test set from the owner's verdicts | Done | 85 prompt cases from 122 verdicts |
 | S1 The story record carries state | Done | faults met 6/33 to 18/33, guards 36/36 |
-| S2 Checks only log | Eval met; switch not yet default | whole-dream replays on Claude: logging, 127/127 moments drawn, 0 held/reworded/re-planned/undrawn by a check (acting: 14 undrawn, 54 reworded, 27 scenes and 25 moments re-planned); Jev 41 calls a dream against 306-324 |
+| S2 Checks only log | Done | whole-dream replays on Claude: logging drew 127/127 moments, 0 held or reworded, Jev ~41 calls a dream (acting: 14 undrawn, 54 reworded, 306-324 calls); logging is the default since 27 Sep (`DREAMCHAT_CHECKS=act` brings acting back) |
 | S3 One cut sheet per picture | Done | the sheet's prompt equals the old builder's on 1052 rebuilds and 48 of 48 live builds |
 | S4 Camera rules | Fixing what review found | faults met 18/33 to 27/33, guards 36/36 (branch `s4-camera`) |
 | S5 References and in-between pictures | Test written | built after S4 merges |
@@ -884,3 +884,7 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   41 calls a dream; acting: 108 of 122 drawn, 14 left undrawn, 54 moments reworded, 27 scenes and 25 moments
   planned again, Jev 306-324 a dream. Live flow, logging: 62 of 63 word for word, the one a dreamer's correction the
   breakdown did not keep (S9). S2's eval is met; the switch stays off until the owner turns it on.
+
+- 27 Sep, S2 done, and logging made the default on the owner's decision: `checksMode()` now reads logging unless
+  `DREAMCHAT_CHECKS=act`. The live server picks it up on its next restart. The checks still run and log every
+  reading (S7's evidence); only code faults (`actsWhenLogging`) still hold a picture. 545 tests pass.

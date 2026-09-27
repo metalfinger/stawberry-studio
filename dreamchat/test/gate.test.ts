@@ -137,14 +137,14 @@ describe('the checks only logging (DREAMCHAT_CHECKS=log)', () => {
     { media_id: 'b', role: 'identity' },
   ];
 
-  test('acting is the default; only "log" logs', () => {
+  test('logging is the default; only "act" acts', () => {
     const was = process.env.DREAMCHAT_CHECKS;
     try {
       for (const [v, mode] of [
-        [undefined, 'act'],
-        ['', 'act'],
+        [undefined, 'log'],
+        ['', 'log'],
         ['act', 'act'],
-        ['LOG ', 'log'],
+        [' ACT ', 'act'],
         ['log', 'log'],
       ] as const) {
         if (v === undefined) delete process.env.DREAMCHAT_CHECKS;

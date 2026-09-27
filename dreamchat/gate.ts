@@ -51,16 +51,18 @@ export const MIN_REFS_CLEAR = 0.6;
 export const MAX_REFERENCES = 12;
 
 /**
- * Whether the checks before a picture is drawn act on what they find or only log it
- * (DREAMCHAT_CHECKS=log). Acting (the default, as before): the gate's questions, "storyboard complete?"
- * and the sketch gate hold, reword, plan again and leave undrawn. Logging: each still runs and its
+ * Whether the checks before a picture is drawn act on what they find or only log it. Logging is the
+ * default since 27 Sep (the owner's decision, after S2's whole-dream replays: logging drew 127 of 127
+ * moments with Jev about 41 calls a dream; acting left 14 of 122 undrawn, reworded 54, and called Jev
+ * 306-324 times). DREAMCHAT_CHECKS=act brings the old acting back: the gate's questions, "storyboard
+ * complete?" and the sketch gate hold, reword, plan again and leave undrawn. Logging: each still runs and its
  * readings are logged for every picture, but none of them holds, rewords, plans again or leaves a
  * picture undrawn, because none has shown it predicts pictures: the gate held pictures 22% right and
  * passed pictures 26% right, and the storyboard check scored 0.49-0.58 (docs/rules.md G1). Only what
  * code knows for certain is wrong keeps acting (`actsWhenLogging`).
  */
 export function checksMode(): 'act' | 'log' {
-  return (process.env.DREAMCHAT_CHECKS ?? '').trim().toLowerCase() === 'log' ? 'log' : 'act';
+  return (process.env.DREAMCHAT_CHECKS ?? '').trim().toLowerCase() === 'act' ? 'act' : 'log';
 }
 
 /**
