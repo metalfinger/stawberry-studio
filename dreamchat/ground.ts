@@ -211,7 +211,7 @@ export const CLAIM_BAR = 0.5;
  * with where each is in the value; none when it makes one claim or less, and it is asked whole. Asked whole,
  * a value with their words and one guess passed on their words ("a pied piper sort of man on the village
  * street, a stranger, the kind of guy who could do stuff like juggle": said whole, "a stranger" never
- * said), 6 of the 9 said-but-never-said the listening test found by hand (fresh simulation, 27 Sep).
+ * said), 3 of the 9 said-but-never-said the listening test found by hand (fresh simulation, 27 Sep).
  */
 export function claimsOf(value: string): { i: number; text: string }[] {
   const asked = clausePieces(value)
