@@ -6,27 +6,31 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { join } from 'node:path';
 import {
   type AsDrawn,
+  castWith,
   currentRecord,
   drawnEnv,
   driftOf,
   fieldsInForce,
+  ghostInForce,
   KEYS_VERSION,
   labelsOf,
   matchGhost,
+  recastWith,
   recordGhost,
   recordMoment,
   refreshMoment,
   staleness,
   withCopies,
 } from '../asdrawn';
-import { drawOrder, planContinuity } from '../continuity';
+import { drawOrder, type GhostPlan, planContinuity } from '../continuity';
 import { framed, ghostName } from '../cutsheet';
 import { buildFrames, buildGhosts, ghostPrompt } from '../frames';
 import { hashOf } from '../lib';
 import { rebuild } from '../plan';
-import { completeViews, moments } from '../producer';
-import { dreamNowOf, planRecord, plannedInputsOf, type Session, stalenessOf } from '../session';
+import { completeViews, type Moment, moments } from '../producer';
+import { dreamNowOf, planRecord, plannedInputsOf, reconcileGhosts, type Session, stalenessOf } from '../session';
 import type { Item } from '../sheets';
+import { DEFAULTS, withSwitches } from './fakes';
 
 const SOURCES = join(import.meta.dir, '..', 'evals', 'sources');
 const DREAMS = ['dream-0926-062232-a44a', 'dream-0926-083656-8ceb'];
@@ -369,6 +373,114 @@ for (const DREAM of DREAMS)
       expect(fieldsInForce(corrected, m).action).toEqual({ value: 'something else', said: false });
     });
   });
+
+describe("S9's fresh send never undoes the dreamer", () => {
+  test("words the dreamer's correction made theirs stay theirs once written back to the breakdown", () => {
+    const m = {
+      id: 'm1',
+      action: 'The door stands open',
+      said: true,
+      feeling: 'calm',
+      visual_point: 'the red door',
+    } as unknown as Moment;
+    // Their correction gave the point of view, in their words; keepWords then wrote it to the breakdown,
+    // which says a point of view is never said, whoever gave it.
+    const held = {
+      action: { value: 'The door stands open', said: false },
+      visual_point: { value: 'the red door', said: true },
+      feeling: { value: 'calm', said: false },
+    };
+    const now = fieldsInForce(held, m);
+    expect(now.visual_point).toEqual({ value: 'the red door', said: true });
+    // A rewording that lost the dreamer's said gets it back where the breakdown says so.
+    expect(now.action).toEqual({ value: 'The door stands open', said: true });
+    expect(now.feeling).toEqual({ value: 'calm', said: false });
+  });
+
+  test("someone the dreamer took out stays out over the plan's cast, and one put back in is in", () => {
+    const once = recastWith(undefined, { out: ['p2'], in: [] });
+    expect(castWith(['p1', 'p2', 'p3'], once)).toEqual(['p1', 'p3']);
+    const again = recastWith(once, { out: ['p3'], in: ['p2', 'p4'] });
+    expect(again).toEqual({ out: ['p3'], in: ['p2', 'p4'] });
+    expect(castWith(['p1', 'p2', 'p3'], again)).toEqual(['p1', 'p2', 'p4']);
+    expect(castWith(['p1'], undefined)).toEqual(['p1']);
+    // Sent afresh, the moment takes the plan's cast with their word over it.
+    const frame = {
+      id: 'm2',
+      kind: 'cut',
+      fields: {},
+      recast: once,
+      frame: { visible: ['p1'], things: [], plan: { visible: ['p1', 'p2'], things: ['t1'] } },
+    } as unknown as Item;
+    refreshMoment(frame, undefined);
+    expect([frame.frame!.visible, frame.frame!.things]).toEqual([['p1'], ['t1']]);
+  });
+
+  test('an in-between picture planned without its key takes the change at its own moment, never the first of its part', () => {
+    const head = (id: string, since: string, now: string, key?: string): GhostPlan =>
+      ({
+        id,
+        kind: 'state',
+        of: 'p2',
+        label: `the head, ${now}`,
+        change: `the head is now ${now}`,
+        from: null,
+        needs: [],
+        usedBy: [],
+        why: '',
+        depth: 0,
+        state: { who: 'p2', what: 'head', now, since },
+        ...(key ? { key } : {}),
+      }) as GhostPlan;
+    // The ice horse's head changes three times; the plan made now tells each otherwise, under new ids.
+    const plan = {
+      ghosts: [
+        head('g4', 'm3', 'a block of ice', 'p2@m3:head'),
+        head('g5', 'm4', 'melting ice', 'p2@m4:head'),
+        head('g6', 'm5', "a clear ice horse's head", 'p2@m5:head'),
+      ],
+    };
+    const held = head('g3', 'm5', "a horse's head of clear ice");
+    expect(ghostInForce(held, 'g3', plan)?.id).toBe('g6');
+    expect(ghostInForce(head('g1', 'm3', 'an irregular block'), 'g1', plan)?.id).toBe('g4');
+    // By its id where the plan has it.
+    expect(ghostInForce(held, 'g5', plan)?.id).toBe('g5');
+    // Two changes of one part at one moment: the one saying the same, else none (kept as it is held).
+    const two = { ghosts: [head('g7', 'm5', 'wet'), head('g8', 'm5', 'dry')] };
+    expect(ghostInForce(head('g2', 'm5', 'dry'), 'g2', two)?.id).toBe('g8');
+    expect(ghostInForce(head('g2', 'm5', 'damp'), 'g2', two)).toBeUndefined();
+  });
+});
+
+describe('S9 under the switches in force', () => {
+  test('the camera rules are kept as they act: on only with the cut sheet on', () => {
+    const on = withSwitches({ DREAMCHAT_CAMERA: 'on', DREAMCHAT_CUT_SHEET: 'on' }, () => drawnEnv());
+    expect(on.switches.DREAMCHAT_CAMERA).toBe('on');
+    const half = withSwitches({ DREAMCHAT_CAMERA: 'on', DREAMCHAT_CUT_SHEET: undefined }, () => drawnEnv());
+    const off = withSwitches({ DREAMCHAT_CAMERA: undefined, DREAMCHAT_CUT_SHEET: undefined }, () => drawnEnv());
+    expect(half).toEqual(off);
+    expect(driftOf(on, off)).toContain('DREAMCHAT_CAMERA=on');
+  });
+
+  test('the dream planned now is planned under the switches in force, never read back from another setting', async () => {
+    const s = (await Bun.file(join(SOURCES, `${DREAMS[0]}.json`)).json()) as Session;
+    const frames = s.build?.frames ?? [];
+    const fresh = () => {
+      const b = structuredClone(s.draft!.breakdown!);
+      completeViews(b);
+      return reconcileGhosts(planContinuity(b, planRecord(s, b)), frames);
+    };
+    const record = { ...DEFAULTS, DREAMCHAT_RECORD: 'on', DREAMCHAT_CUT_SHEET: 'on' };
+    const camera = { ...record, DREAMCHAT_CAMERA: 'on' };
+    const plain = withSwitches(record, () => [dreamNowOf(s).plan, fresh()]);
+    const turned = withSwitches(camera, () => [dreamNowOf(s).plan, fresh()]);
+    // The camera rules plan this dream otherwise, so a plan kept from the other setting would show.
+    expect(turned[1]).not.toEqual(plain[1]);
+    expect(plain[0]).toEqual(plain[1]);
+    expect(turned[0]).toEqual(turned[1]);
+    expect(withSwitches(record, () => dreamNowOf(s).plan)).toEqual(plain[1]);
+  }, 60_000);
+});
 
 describe('S9 keys', () => {
   test('the keys of two frozen dreams stay as they are, or KEYS_VERSION is raised', async () => {

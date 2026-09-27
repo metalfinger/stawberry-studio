@@ -32,6 +32,7 @@
 // Pure: no model, no files, no clock. Behind DREAMCHAT_AS_DRAWN: off (the default) keeps nothing, and
 // every prompt is written as before.
 import { assembleCut } from './assemble';
+import { cameraMode } from './camera';
 import type { CutPlan, GhostPlan } from './continuity';
 import { cutSheet, type CutSheet, ghostName, imageNamesOf, type SheetPrint } from './cutsheet';
 import { approved, type FrameReference, momentFields, type PlannedInput } from './frames';
@@ -104,10 +105,14 @@ export type DrawnEnv = { version: number; switches: Record<string, string> };
 /** The switches in force that change what a picture is told or how it is keyed, and the keys' version. */
 export function drawnEnv(): DrawnEnv {
   const switches: Record<string, string> = { DREAMCHAT_RECORD: recordMode() };
+  // The camera rules as they act: only with the cut sheet on (camera.ts). DREAMCHAT_CAMERA=on with the cut
+  // sheet off draws as the camera off does, and is kept so.
+  if (cameraMode() === 'on') switches.DREAMCHAT_CAMERA = 'on';
   for (const [k, v] of Object.entries(process.env))
     if (
       k.startsWith('DREAMCHAT_') &&
       k !== 'DREAMCHAT_RECORD' &&
+      k !== 'DREAMCHAT_CAMERA' &&
       !NOT_KEYED.has(k) &&
       !/KEY|TOKEN|SECRET/i.test(k) &&
       (v ?? '').trim()
@@ -370,8 +375,11 @@ export function inputsOf(frames: Item[], plan: CutPlan | undefined): PlannedInpu
 
 /**
  * A moment's words as the dream holds them now: each as the moment holds it (a correction patches the
- * moment, not the breakdown), said as the breakdown says wherever the breakdown still tells the same words
+ * moment, not the breakdown), and the dreamer's where the breakdown says so and still tells the same words
  * (a rewording written back by keepWords keeps the dreamer's words theirs; one made before lost `said`).
+ * Never the other way: the breakdown says the feeling, the point of view and the purpose are never said,
+ * whoever gave them, so words the dreamer's correction made theirs stay theirs once keepWords has written
+ * them back (their colours stay on the colour line).
  */
 export function fieldsInForce(fields: Item['fields'], m: Moment | undefined): Item['fields'] {
   if (!m) return fields;
@@ -380,24 +388,46 @@ export function fieldsInForce(fields: Item['fields'], m: Moment | undefined): It
   for (const k of WORDS) {
     const held = fields[k];
     const t = told[k];
-    if (held && t && (held.value ?? null) === (t.value ?? null) && held.said !== t.said)
-      out[k] = { ...held, said: t.said };
+    if (held && t && (held.value ?? null) === (t.value ?? null) && t.said && !held.said)
+      out[k] = { ...held, said: true };
   }
   return out;
+}
+
+/** Who the dreamer took out of a moment or put into it, by their corrections: the latest word on each wins. */
+export type Recast = { out: string[]; in: string[] };
+
+/** A moment's corrections of who is in it, with one more: someone put back in is no longer taken out. */
+export function recastWith(was: Recast | undefined, now: Recast): Recast {
+  const out = [...new Set([...(was?.out ?? []).filter((p) => !now.in.includes(p)), ...now.out])];
+  const into = [...new Set([...(was?.in ?? []).filter((p) => !now.out.includes(p)), ...now.in])];
+  return { out, in: into };
+}
+
+/**
+ * Who is in a moment by a cast made for it (its plan's, or the breakdown's), with the dreamer's corrections
+ * over it: the plan puts back whoever the breakdown's words still name (the story record reads the words
+ * as first told, not the correction), and the dreamer said they are not in it.
+ */
+export function castWith(visible: string[], recast: Recast | undefined): string[] {
+  if (!recast) return [...visible];
+  const kept = visible.filter((p) => !recast.out.includes(p));
+  return [...kept, ...recast.in.filter((p) => !kept.includes(p))];
 }
 
 /**
  * A moment's copy of itself refreshed from the plan in force, as it is sent (DREAMCHAT_FRESH_SEND=on):
  * who and what is in it from its plan, as buildFrames puts a moment in (a moment kept the cast it was
- * first put in with, and a re-plan updates only its plan), and its words' `said` as the breakdown holds
- * them where the words are the same. Changes the moment in place.
+ * first put in with, and a re-plan updates only its plan), with the dreamer's corrections of who is in it
+ * kept over the plan; and its words' `said` as the breakdown holds them where the words are the same.
+ * Changes the moment in place.
  */
 export function refreshMoment(frame: Item, m: Moment | undefined): void {
   const f = frame.frame;
   if (!f) return;
   const visible = f.plan?.visible ?? m?.visible;
   const things = f.plan?.things ?? m?.things;
-  if (visible) f.visible = [...visible];
+  if (visible) f.visible = castWith(visible, frame.recast);
   if (things) f.things = [...things];
   frame.fields = fieldsInForce(frame.fields, m);
 }
@@ -435,16 +465,26 @@ export function matchGhost<T>(g: GhostPlan, among: T[], ghostOf: (t: T) => Ghost
 
 /**
  * The plan's in-between picture for the same change as one held, made now: by its id, else by who it
- * shows and what of them changes (one planned before the record gave changes their keys is known only by
- * what it says, so a change told otherwise is planned under another id).
+ * shows, what of them changes and the moment it changes at (one planned before the record gave changes
+ * their keys is known only by what it says, so a change told otherwise is planned under another id). Where
+ * that still leaves more than one (two changes of one part at one moment), the one saying the same;
+ * otherwise none: the ice horse's head changes three times, and the first of them is not the third.
  */
 export function ghostInForce(held: GhostPlan, id: string, plan: { ghosts: GhostPlan[] } | null): GhostPlan | undefined {
   if (!plan) return held;
-  const same = (x: GhostPlan) =>
-    x.kind === held.kind &&
-    x.of === held.of &&
-    (x.kind === 'view' ? x.looksAt === held.looksAt : x.state?.what === held.state?.what);
-  return plan.ghosts.find((x) => x.id === id) ?? plan.ghosts.find(same);
+  const byId = plan.ghosts.find((x) => x.id === id);
+  if (byId) return byId;
+  const same = plan.ghosts.filter(
+    (x) =>
+      x.kind === held.kind &&
+      x.of === held.of &&
+      (x.kind === 'view'
+        ? x.looksAt === held.looksAt
+        : x.state?.what === held.state?.what && x.state?.since === held.state?.since),
+  );
+  if (same.length <= 1) return same[0];
+  const told = same.filter((x) => x.state?.now === held.state?.now);
+  return told.length === 1 ? told[0] : undefined;
 }
 
 // ── keeping a record ─────────────────────────────────────────────────────────
@@ -688,7 +728,12 @@ export function keysNow(d: DreamNow, it: Item, name: (media: string) => string):
     const frame: Item = {
       ...it,
       fields,
-      frame: { ...f, plan, ...(cast ? { visible: [...cast.visible], things: [...cast.things] } : {}) },
+      frame: {
+        ...f,
+        plan,
+        // The dreamer's corrections of who is in it stand over the plan's cast, as the fresh send keeps them.
+        ...(cast ? { visible: castWith(cast.visible, it.recast), things: [...cast.things] } : {}),
+      },
     };
     const inputs = inputsOf(d.frames, plan);
     const sheet = cutSheet({
