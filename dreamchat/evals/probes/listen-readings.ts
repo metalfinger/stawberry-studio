@@ -22,7 +22,7 @@ import {
   renderTranscript,
   retellWithAdds,
 } from '../../jev';
-import type { RetellReply } from '../../lib';
+import { moveKey, type RetellReply, type State } from '../../lib';
 import type { Session } from '../../session';
 import { JEV_MODEL } from '../listening';
 import { sha256 } from '../saved';
@@ -113,13 +113,17 @@ for (const s of run.sessions) {
     if (!answer) continue;
     let reading = choiceByAction(answer, ACTIONS[key] as never, 'unclear' as never, 0.5, READ_BY[key] as never)
       .value as string;
-    // A retelling's answer is read with what it puts right or adds, asked beside it (jev.ts retell_adds).
-    const addsQ =
-      key === 'retell_reply'
-        ? bookkeeperQuestions(cfg, seen, undefined, 'retell', [], undefined, [], true).retell_adds
-        : undefined;
-    const adds = addsQ ? await ask(addsQ) : null;
-    const p = adds?.type === 'noul' ? adds.noul : null;
+    // A retelling's answer is read with what it puts right or adds, asked beside it (jev.ts retell_adds) when
+    // the reply it answers told the whole dream back; shown for the rest too, as asked of any answer.
+    const replied = session.turns.find((t) => t.turn === a.turn - 1);
+    const prev = { last_move: replied ? moveKey(replied.move) : '' } as State;
+    const addsOf = async (p?: State) => {
+      const q = bookkeeperQuestions(cfg, seen, p, 'retell', [], undefined, [], true).retell_adds;
+      const x = q ? await ask(q) : null;
+      return x?.type === 'noul' ? x.noul : null;
+    };
+    const p = key === 'retell_reply' ? await addsOf(prev) : null;
+    const any = key === 'retell_reply' ? await addsOf() : null;
     if (key === 'retell_reply') reading = retellWithAdds(reading as RetellReply, p);
     count(was, a.reading, a as never);
     count(now, reading, a as never);
@@ -127,9 +131,9 @@ for (const s of run.sessions) {
       console.log(
         `  ${s.id.slice(-4)} ${a.kind} ${a.reading} -> ${reading} (changes ${a.changes.toFixed(2)}${p === null ? '' : `, adds ${p.toFixed(2)}`}) ${JSON.stringify((answer as { probabilities?: unknown }).probabilities)}: ${a.answer.slice(0, 160)}`,
       );
-    if (show && p !== null && reading === a.reading)
+    if (show && any !== null && reading === a.reading)
       console.log(
-        `    (${s.id.slice(-4)} retell ${reading}, adds ${p.toFixed(2)}, changes ${a.changes.toFixed(2)}): ${a.answer.slice(0, 140)}`,
+        `    (${s.id.slice(-4)} retell after ${prev.last_move}: ${reading}, adds ${any.toFixed(2)}${p === null ? ' not asked' : ''}, changes ${a.changes.toFixed(2)}): ${a.answer.slice(0, 140)}`,
       );
   }
 }

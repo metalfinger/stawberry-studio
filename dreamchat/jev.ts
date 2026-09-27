@@ -181,11 +181,15 @@ export function verdictQuestions(shown: { id: string; name: string }[], latest: 
  * second after-run, a profile's changes read as settled fell from 26 to 6 of 187 answers, and what now reads
  * as a change without one only restates the profile, which the revision keeps as it is; the retelling's
  * answers so worded read a plain "yeah, that's right" as a correction (0.84), and keep today's words.
+ * A detail of any kind, not only of how it looks: "just that he's my younger brother ... go with your guess"
+ * read 0.91 as leaving it to us, and "all i remember is the platform with the one bench and the clock on
+ * the pole ... go with whatever you think", told of a station whose profile asked what is in it, 0.59
+ * (fresh simulations, 27 Sep).
  */
 export const PROFILE_REPLY_S8: Record<string, string> = {
   confirmed: "it's right as described, and they add or change nothing",
   changes:
-    'they give any detail of it that was different or missing (who or what it is, how it looks, what it wears or is made of), even one, even while saying the rest is right or leaving the rest to the listener',
+    'they give any detail of it that was different or missing (who or what it is, how it looks, what it wears, what is in it or what it is made of), even one, even while saying the rest is right or leaving the rest to the listener',
   you_choose: "they don't mind or don't remember, and give no detail of it that was different or missing",
   unclear: "they didn't answer that",
 };
@@ -357,8 +361,12 @@ export function bookkeeperQuestions(
     // then corrects it is both, and one choice holds one: "yep that's it, you got it all right. only small
     // thing is the tractor stops at the edge of the field before i put the boat down" read 0.76 right and
     // 0.16-0.25 a change, on either side of the bar each time it was asked (the fresh simulation's
-    // answers, 27 Sep), and a change read as right is never drafted.
-    if (listen)
+    // answers, 27 Sep), and a change read as right is never drafted. Asked of the answer to the whole
+    // telling back only: told back one corrected part, they say it again in their own words and carry the
+    // story on past it ("yep that's it! snow first, then Dele comes over ... then the glowing snowball and I
+    // woke up"), which read as adding (0.54-0.91) in all 5 such answers the choice read as right, a turn
+    // telling back each time; the 2 after it that did put something right, the choice read so itself.
+    if (listen && prev?.last_move !== 'take_correction')
       q.retell_adds = {
         type: 'noul',
         instructions: `The listener has just told the person's dream back to them. In this message: "${latest.slice(0, 240)}", besides saying whether it was right, does the person put any part of it right, or add a detail it did not have?`,

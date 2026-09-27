@@ -295,6 +295,14 @@ describe('choices read by the action they lead to', () => {
     const on = bookkeeperQuestions(cfg, transcript, undefined, 'retell', [], undefined, [], true);
     expect(on.retell_adds?.type).toBe('noul');
     expect(bookkeeperQuestions(cfg, transcript, undefined, 'retell').retell_adds).toBeUndefined();
+    // Asked of the answer to the whole telling back, not to one corrected part told back: said again in their
+    // own words and carried on past it, it read as adding in 5 of 5 (both arms' answers, 27 Sep).
+    const after = (last_move: string) =>
+      bookkeeperQuestions(cfg, transcript, { ...initialState('t', cfg), last_move }, 'retell', [], undefined, [], true)
+        .retell_adds;
+    expect(after('retell')?.type).toBe('noul');
+    expect(after('retell_check')?.type).toBe('noul');
+    expect(after('take_correction')).toBeUndefined();
     // Read 0.76 right and 0.16-0.25 a change: under the bar, and never drafted.
     const read = (adds: number, listen: boolean) =>
       readState(
