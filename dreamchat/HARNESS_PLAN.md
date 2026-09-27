@@ -1836,3 +1836,8 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
 - 27 Sep, owner's go-ahead for S6: a one-time typed reading of the 526 saved moments (115 frozen, 411 live) for
   action, motion and water level, written by the Claude writer and checked by Jev (about 2,000-3,000 Jev calls),
   cached so reruns are free. It is what lets S6 retire the word lists (hands, own body, vehicle going, water).
+
+- 27 Sep, owner's decision for S5: a side of a place never drawn before is not a change toward the 2+ bar when the
+  mock-up gives the layout. Only story changes count (water rising, a door opening, someone leaving); a new side
+  comes from the mock-up for layout and the sketch for looks. S5 built on `s5-refs` (bars: subject by 2+ images
+  40→1 frozen, waited-never-sent 67→0, other side 2→0); under independent review.
