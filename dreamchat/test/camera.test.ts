@@ -1013,4 +1013,53 @@ describe("a person's, place's or thing's id in a moment's words", () => {
     withEnv(CAMERA, () => completeViews(part));
     expect(moments(part)[0].looks_at).toBe('the l2-shaped pool and the pl2 sign');
   });
+
+  test('a place whose name says only where it is, is said by what kind of place it is, and not in what the camera faces', () => {
+    // Written for this test; the library's "outside it outside the window" (library-1 m5) was the case.
+    const b = (name: string, geography: string | null, landmarks: string | null = null) => {
+      const x = dream({
+        people: ['p1'],
+        blocking: { indoors: true, spots: [{ id: 'p1', x: 5, y: 5, kind: 'person' }] },
+        moments: [
+          {
+            id: 'm1',
+            visible: ['p1'],
+            looks_at: 'the tall window; outside it l2',
+            action: 'p1 looks out at l2',
+            visual_point: 'through the window, l2',
+            shift: 'the sea rises beyond the tall window l2',
+          },
+        ],
+      });
+      const detail = (value: string | null) => ({ value, said: true });
+      x.places.push({
+        id: 'l2',
+        name,
+        fields: { geography: detail(geography), landmarks: detail(landmarks), light: detail(null) },
+      } as Breakdown['places'][number]);
+      withEnv(CAMERA, () => completeViews(x));
+      return moments(x)[0];
+    };
+    // What the place is: the first part of its geography, set off after words that say where.
+    const out = b('outside the window', 'the harbour at dawn, fishing boats at anchor; gulls.');
+    expect(out.action).toBe('person p1 looks out at the harbour at dawn, fishing boats at anchor');
+    expect(out.visual_point).toBe('through the window, the harbour at dawn, fishing boats at anchor');
+    expect(out.shift).toBe('the sea rises beyond the tall window, the harbour at dawn, fishing boats at anchor');
+    // The camera faces the window: what is out past it is the moment's to say, never "outside it outside the window".
+    expect(out.looks_at).toBe('the tall window');
+    // Without its geography, its landmarks; without either, its name.
+    expect(b('inside the tower', 'A narrow, tall room; white walls').action).toBe(
+      'person p1 looks out at a narrow, tall room',
+    );
+    expect(b('beyond the gate', null, 'a row of poplars; a bench').action).toBe(
+      'person p1 looks out at a row of poplars',
+    );
+    const bare = b('outside the window', null);
+    expect(bare.action).toBe('person p1 looks out at outside the window');
+    expect(bare.looks_at).toBe('the tall window');
+    // A name that says what the place is stays its name, in what the camera faces too.
+    const named = b('the harbour', 'a small stone harbour');
+    expect(named.looks_at).toBe('the tall window; outside it the harbour');
+    expect(named.shift).toBe('the sea rises beyond the tall window the harbour');
+  });
 });
