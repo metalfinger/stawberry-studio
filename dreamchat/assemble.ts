@@ -141,8 +141,18 @@ export function assembleCut(s: CutSheet): Assembled {
     const stageId = e.turned === null ? s.refs?.stage[e.id] : undefined;
     const stage = stageId ? usable.find((x) => x.id === stageId && x.kind === 'ghost') : undefined;
     if (stage) asStage.add(stage.id);
-    const shown = stage?.ghost ? (stage.ghost.shows ?? (stage.ghost.state ? [stage.ghost.state] : [])) : [];
-    const changes = e.changes.filter((st) => !shown.some((x) => x.what === st.what && x.now === st.now));
+    // What that picture shows, each thing once as its latest change left it; where this moment has a thing
+    // newer than the picture, the newer is said, as an exception to the picture, never both as now.
+    const thing = (w: string) => w.toLowerCase().trim();
+    const latest = new Map<string, { what: string; now: string }>();
+    for (const x of stage?.ghost ? (stage.ghost.shows ?? (stage.ghost.state ? [stage.ghost.state] : [])) : []) {
+      latest.delete(thing(x.what));
+      latest.set(thing(x.what), { what: x.what, now: x.now });
+    }
+    const shown = [...latest.values()].filter(
+      (x) => !e.changes.some((st) => thing(st.what) === thing(x.what) && st.now !== x.now),
+    );
+    const changes = e.changes.filter((st) => !shown.some((x) => thing(x.what) === thing(st.what)));
     const nowIs = shown.length ? shown.map((x) => `${x.what}: ${x.now}`).join('; ') : '';
     const image = stage?.image ?? e.image;
     // Everything in view is listed with its look, its image or not.
@@ -188,7 +198,18 @@ export function assembleCut(s: CutSheet): Assembled {
         faces !== null
           ? !roomFromCut && !base && !mockUp
           : cam.sheetLayout && !roomFromCut && !base && !viewGhost && !mockUp && !(s.refs && cam.view);
-      const called = `${e.name}${look ? ` (${look})` : ''}${faces !== null ? `, seen facing ${faces}` : nowIs ? `, as it is now (${nowIs})` : ''}`;
+      const plain = `${e.name}${look ? ` (${look})` : ''}${faces !== null ? `, seen facing ${faces}` : ''}`;
+      const called = `${plain}${nowIs ? `, as it is now (${nowIs})` : ''}`;
+      // Its one image an in-between picture of its state, where only its materials are taken from it: its state
+      // is taken too, said outright (a mock-up without the water beat the in-between picture that had it:
+      // the library runs, rules.md D5), and what has changed since is said as no longer so.
+      const state = shown.length
+        ? `, and its ${shown.map((x) => x.what).join(' and ')} exactly as in this picture (${nowIs})`
+        : '';
+      const since =
+        stage && changes.length
+          ? ` Except its ${changes.map((st) => `${st.what}, which is no longer as it shows: it is now ${st.now}`).join('; ')}.`
+          : '';
       attach(
         {
           image,
@@ -198,13 +219,14 @@ export function assembleCut(s: CutSheet): Assembled {
             : `${e.name}: its materials, colours and objects only; the layout comes from ${mockUp ? 'the previs' : base ? 'the picture being edited' : 'the earlier picture'}`,
           ...from,
         },
-        layout
+        (layout
           ? `${called}: the camera stands in this place. Keep everything in it where it puts it (walls, doors, paths, furniture, whatever it has), and its light; do not mirror or rearrange it.`
           : (base || roomFromCut) && !mockUp
-            ? `${called}: only its materials, colours and objects; where things stand comes from ${base ? 'Image 1' : 'the earlier picture of this place'}.`
+            ? `${state ? plain : called}: only its materials, colours and objects${state}; where things stand comes from ${base ? 'Image 1' : 'the earlier picture of this place'}.`
             : cam.view || mockUp
-              ? `${called}: only what it is made of and its colours (its ground or floor, its walls or buildings, what stands in it). Where everything stands, and which way the picture looks, come from ${mockUp ? 'Image 1, the mock-up' : 'the shot above'}, not from this image; any of its objects the shot has outside the picture stay out of it.`
-              : `${called}: only its materials, colours, objects and light. It shows the place from another side: this frame faces ${cam.looksAt || 'the other way'}.`,
+              ? `${state ? plain : called}: only what it is made of and its colours (its ground or floor, its walls or buildings, what stands in it)${state}. Where everything stands, and which way the picture looks, come from ${mockUp ? 'Image 1, the mock-up' : 'the shot above'}, not from this image; any of its objects the shot has outside the picture stay out of it.`
+              : `${state ? plain : called}: only its materials, colours, objects and light${state}. It shows the place from another side: this frame faces ${cam.looksAt || 'the other way'}.`) +
+          since,
       );
     } else {
       // A part of it that has changed is no longer as its sketch shows, as for a person: each by the part

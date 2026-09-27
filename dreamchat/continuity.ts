@@ -928,7 +928,11 @@ function planWith(
     const m = byId.get(c.id)!;
     const out = ['the action'];
     const edited = c.refs.some((r) => r.role === 'base');
-    if (!edited) {
+    // With S5's references, a cut whose camera is worked out on a floor plan is laid out by it (its mock-up,
+    // or its view said from the plan): a new framing or a side never drawn is the camera's, not a change to
+    // what is drawn. Only story changes count toward the owner's bar (27 Sep).
+    const laidOut = refs && !!c.eye;
+    if (!edited && !laidOut) {
       const room = c.refs.find((r) => r.relation === 'same_side' || r.relation === 'same_setup');
       if (room && byId.get(room.id)!.distance !== m.distance)
         out.push(`reframed ${m.distance} from picture ${no(room.id)}`);
@@ -1041,20 +1045,35 @@ function planWith(
       const lm = byId.get(l.id)!;
       return lm.place === m.place && sides(lm, m) && lm.distance !== 'close';
     });
-    const crowded = c.changes.length >= TOO_MANY;
+    // With S5's references at the owner's bar (two); the ones a floor plan lays out are dropped once the
+    // cameras are placed (chooseInPlan).
+    const crowded = c.changes.length >= (refs ? SEVERAL : TOO_MANY);
     if (!crowded && !(m.distance === 'close' && wider.length)) continue;
     const light = ms
       .slice(0, c.order - 1)
       .filter((e) => e.place === m.place)
       .sort((x, y) => WIDTH[y.distance] - WIDTH[x.distance] || index.get(y.id)! - index.get(x.id)!)[0];
+    // With S5's references, the place's one image: where an in-between picture of its state is in force
+    // here, the side is drawn by editing that one (the flooded library turned to face its window), so a
+    // cut takes one picture of the place, not two neither drawn from the other.
+    const states = refs
+      ? c.refs.flatMap((r) => {
+          const x = r.kind === 'ghost' ? ghosts.find((y) => y.id === r.id) : undefined;
+          return x?.kind === 'state' && x.of === m.place ? [x] : [];
+        })
+      : [];
+    const inForce = states.find((x) => !states.some((o) => o.after === x.id));
     const g: GhostPlan = {
       id: `g${ghosts.length + 1}`,
       kind: 'view',
       of: m.place,
       label: `${name(m.place)}, facing ${m.looks_at || 'the other way'}`,
       change: `the camera turned to face ${m.looks_at || 'the other way'}`,
-      from: light?.id ?? null,
-      needs: light ? [light.id] : [],
+      // Drawn by editing the place's sketch (frames.ts ghostPrompt), or with S5 its state's in-between
+      // picture: it waits for no earlier picture, which faces another side of the place and is never sent.
+      from: refs ? null : (light?.id ?? null),
+      ...(inForce ? { after: inForce.id } : {}),
+      needs: inForce ? [inForce.id] : refs || !light ? [] : [light.id],
       usedBy: [c.id, ...wider.map((l) => l.id)],
       why: crowded
         ? `picture ${c.order} faces a side of ${name(m.place)} never drawn, and would otherwise change ${c.changes.length} things at once`
@@ -1395,10 +1414,18 @@ function planWith(
   for (const g of ghosts) {
     g.depth = depth.get(g.id) ?? (g.from ? (depth.get(g.from) ?? 1) + 1 : 1);
     g.usedBy = [...new Set(g.usedBy)];
-    if (refs && g.kind === 'state')
-      g.shows = chainOf(g)
-        .reverse()
-        .flatMap((x) => (x.state ? [{ what: x.state.what, now: x.state.now }] : []));
+    // What it shows: each thing its chain changed, once, as the latest change left it (the water rising
+    // over the desks, not every level it passed on the way).
+    if (refs && chainOf(g).some((x) => !!x.state)) {
+      const latest = new Map<string, { what: string; now: string }>();
+      for (const x of chainOf(g).reverse())
+        if (x.state) {
+          const k = x.state.what.toLowerCase().trim();
+          latest.delete(k);
+          latest.set(k, { what: x.state.what, now: x.state.now });
+        }
+      g.shows = [...latest.values()];
+    }
   }
 
   /**
@@ -1439,28 +1466,15 @@ function planWith(
       if (unsent.length) c.unsent = unsent;
     }
     for (const c of cuts) c.changes = countChanges(c);
-    // How many changes a cut would carry at once without one in-between picture (evals/prompt-cases.ts
-    // changesWithout counts it alike): a side never drawn puts back one; a change the cut makes itself is
-    // its action; a change carried from earlier puts back one unless another picture drawn from shows it.
-    const sameState = (a: State, z: State) => a.who === z.who && a.what === z.what && a.now === z.now;
+    // How many changes a cut would carry at once without one in-between picture: its count with that picture
+    // taken out of what it is drawn from (a change the cut makes itself is its action; a side never drawn
+    // counts only where no floor plan lays the picture out).
     const without = (c: CutPlan, g: GhostPlan) => {
-      if (g.kind === 'view') return c.changes.length + 1;
-      const st = g.state;
-      if (!st || !c.states.some((x) => sameState(x, st))) return c.changes.length;
-      const other = c.refs.some((u) => {
-        if (u.id === g.id) return false;
-        if (u.kind === 'ghost') {
-          const o = ghosts.find((x) => x.id === u.id);
-          return !!o?.state && sameState(o.state, st);
-        }
-        return (
-          u.relation !== 'shift' &&
-          u.role !== 'lighting' &&
-          (index.get(u.id) ?? -1) >= (index.get(st.since) ?? 0) &&
-          inViewAt(byId.get(u.id)!).has(st.who)
-        );
-      });
-      return c.changes.length + (other ? 0 : 1);
+      const kept = c.refs;
+      c.refs = c.refs.filter((r) => r.id !== g.id);
+      const n = countChanges(c).length;
+      c.refs = kept;
+      return n;
     };
     for (let dropped = true; dropped;) {
       dropped = false;
@@ -1468,7 +1482,10 @@ function planWith(
         // Another in-between picture is edited from it: it stays, as that one's start.
         if (ghosts.some((o) => o.after === g.id)) continue;
         const users = cuts.filter((c) => c.refs.some((r) => r.kind === 'ghost' && r.id === g.id));
-        if (Math.max(0, ...users.map((c) => without(c, g))) >= SEVERAL) continue;
+        // It is drawn where it carries a change some cut would otherwise take on in one edit that is then
+        // too many: a picture that takes none of a cut's changes off it (a side the floor plan lays out
+        // anyway) is not drawn, however many that cut carries.
+        if (users.some((c) => without(c, g) > c.changes.length && without(c, g) >= SEVERAL)) continue;
         ghosts.splice(ghosts.indexOf(g), 1);
         for (const c of users) {
           c.refs = c.refs.filter((r) => r.id !== g.id);

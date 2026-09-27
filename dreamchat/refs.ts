@@ -3,13 +3,21 @@
 // sends, and an in-between picture only where an edit would carry several changes.
 //
 // - Image 1 by the cut's tags: the picture edited where the plan edits one (the same setup, a moment
-//   later); else the grey mock-up made real, only where the paired test found it helps (from outside, not
-//   a close-up or an insert, not across a jump, to another place or to the dreamer's seat, and not where
-//   the moment is about a crowd with no image of its own: made real shape by shape, it came out as the
-//   mock-up's bare figures, heron m4, rules.md C5; a crowd only in the background, night-market m2, did
-//   not); else nothing before the sketches. The paired test (evals/paired-verdicts.json, n=20) had the mock-up right 8 of 10
-//   on that routing and 2 of 10 off it, 1 of 6 through the dreamer's eyes; the story pictures, all drawn
-//   with it, disagree (7 of 11 through the dreamer's eyes), so the routing is the paid check's to confirm.
+//   later); else the grey mock-up made real, except where the verdicts found it hurt; else nothing before
+//   the sketches. Where the mock-up goes (evals/paired-verdicts.json, n=20, beside the story pictures, all
+//   drawn with it):
+//   - not across a jump (lighthouse-first m8: the mock-up wrong, the sketches alone right);
+//   - not a close-up or an insert (a held thing: the mock-up wrong or partly in 3 of 4);
+//   - through the dreamer's eyes only where nothing but the place is in view (orchard m7: the mock-up
+//     partly, the sketches alone wrong); with someone or something in view the sketches alone were right
+//     and the mock-up wrong (orchard m2, snow-train m6, lighthouse-first m7);
+//   - to another place only for a wide shot: the two paired moments against it were not wide (heron m4, a
+//     crowd; lighthouse-first m7, a close-up), and the story pictures had wide shots right with it 8 of 11;
+//   - not where the moment is about a crowd with no image of its own, but for a wide shot establishing the
+//     place: made real shape by shape, the crowd came out as the mock-up's bare figures (heron m4, rules.md
+//     C5); a crowd only in the background (night-market m2) or a wide establishing shot (night-market m1)
+//     was right with it.
+//   The routing is the paid check's to confirm.
 // - One image per subject (rules.md D1): each one in view is shown by the image of its stage in force,
 //   the in-between picture of its latest change where one is drawn and approved, else its sketch. An
 //   earlier picture comes in only for someone with no sketch (a crowd), as the jump's composition, or for
@@ -49,15 +57,39 @@ export function refsMode(): 'off' | 'on' | 'sketch' {
 export const SEVERAL = 2;
 
 /**
- * Where the paired test found the grey mock-up helps as image 1 (a hypothesis, n=20): see above. `faceless`:
- * the moment is about someone with no image of their own (a crowd it lists among its own people).
+ * What image 1 is chosen by: the cut's role, move and whether it establishes the place, and `faceless` (the
+ * moment is about a crowd with no image of its own) and `placeOnly` (nothing but the place is in view).
  */
-export const mockupHelps = (t: Pick<CutTags, 'role' | 'move'>, faceless = false) =>
-  !['pov', 'close_up', 'insert'].includes(t.role) && !['jump', 'other_place', 'seat'].includes(t.move) && !faceless;
+export type Route = Pick<CutTags, 'role' | 'move' | 'establishing'> & { faceless?: boolean; placeOnly?: boolean };
 
-/** Whether the moment is about someone in view with no image of their own: a crowd it lists as its own. */
+/** Whether the grey mock-up goes in as image 1, where no picture is edited (a hypothesis, n=20): see above. */
+export function mockupHelps(t: Route): boolean {
+  if (t.move === 'jump') return false;
+  if (t.role === 'pov') return !!t.placeOnly;
+  if (t.role === 'close_up' || t.role === 'insert' || t.move === 'seat') return false;
+  if (t.move === 'other_place' && t.role !== 'wide') return false;
+  if (t.faceless && !(t.role === 'wide' && t.establishing)) return false;
+  return true;
+}
+
+/**
+ * Whether the moment is about a crowd with no image of its own: a group the moment lists as its own people,
+ * with no approved sketch (a person whose sketch failed is not a crowd).
+ */
 export const facelessIn = (s: Pick<CutSheet, 'inView' | 'visible'>) =>
-  s.inView.some((e) => e.kind === 'character' && !e.image && e.turned === null && s.visible.includes(e.id));
+  s.inView.some((e) => e.kind === 'character' && e.group && !e.image && e.turned === null && s.visible.includes(e.id));
+
+/** Whether nothing but the place is in view. */
+export const placeOnlyIn = (s: Pick<CutSheet, 'inView'>) => s.inView.every((e) => e.kind === 'location');
+
+/** The route of a cut's sheet. */
+export const routeOf = (s: Pick<CutSheet, 'inView' | 'visible' | 'tags'>): Route => ({
+  role: s.tags.role,
+  move: s.tags.move,
+  establishing: s.tags.establishing,
+  faceless: facelessIn(s),
+  placeOnly: placeOnlyIn(s),
+});
 
 /** What a cut is drawn from, chosen from its sheet: kept on the sheet with DREAMCHAT_REFS on. */
 export type RefsLayer = {
@@ -86,7 +118,7 @@ export function chooseRefs(
   mode: 'on' | 'sketch' = 'on',
 ): RefsLayer {
   const base = s.earlier.some((x) => x.role === 'base');
-  const first = base ? 'edit' : s.camera.previs && mockupHelps(s.tags, facelessIn(s)) ? 'mockup' : 'free';
+  const first = base ? 'edit' : s.camera.previs && mockupHelps(routeOf(s)) ? 'mockup' : 'free';
   const stage: Record<string, string> = {};
   const several: string[] = [];
   for (const e of s.inView) {
