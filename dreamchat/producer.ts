@@ -786,6 +786,10 @@ export function addChanges(b: Breakdown, changes: Change[]): void {
       });
 }
 
+/** The longest shot brief a prompt carries, and the length the writer is asked to keep within, well under it. */
+export const BRIEF_MAX = 1400;
+export const BRIEF_ASK = 1200;
+
 const SHOT = `You are the director of photography for one picture from someone's dream. An image model will draw it from your shot description, and follows it closely. Below are the moment and the fixed facts of the shot, worked out from a floor plan of the place: where the camera is, which way it looks, who and what is where in the picture (left, middle or right; close or far), and what is outside it.
 
 Write the shot as a cinematographer briefs a camera crew, in four to six plain sentences:
@@ -794,7 +798,7 @@ Write the shot as a cinematographer briefs a camera crew, in four to six plain s
 3. The light, from a real source in the place (a screen, a window, a lamp) on the side the facts put it.
 4. What is just outside the picture, briefly, only where it tells the eye where it is.
 
-Plain, concrete words an illustrator can draw from; nothing from the story that is not in the facts, no mood words, no camera jargon that could be drawn (no frame lines, no labels). Return JSON only: {"shot": ""}.`;
+Plain, concrete words an illustrator can draw from; nothing from the story that is not in the facts, no mood words, no camera jargon that could be drawn (no frame lines, no labels). The whole shot is at most ${BRIEF_ASK.toLocaleString('en-GB')} characters (about ${Math.round(BRIEF_ASK / 6)} words). Return JSON only: {"shot": ""}.`;
 
 /** Words that open what a name says of where its thing is or what it does, after what it is. */
 const NAME_CLAUSE = new Set([
@@ -932,22 +936,41 @@ export async function shotFor(
   people: string[] = [],
 ): Promise<string | null> {
   try {
-    const res = await callDeepseek(
-      [
-        { role: 'system', content: SHOT },
-        {
-          role: 'user',
-          content: `The picture is made as: ${medium}.\n\n${before.length ? `What has happened in this place so far:\n${before.map((x) => `- ${x}`).join('\n')}\n\n` : ''}The moment: ${moment}\n\nThe fixed facts of the shot:\n${facts}`,
-        },
-      ],
-      { json: true, thinking: 'low' },
-    );
+    const res = await callDeepseek(shotAsk(moment, facts, medium, before), { json: true, thinking: 'low' });
     const shot = (JSON.parse(res.content) as { shot?: unknown }).shot;
-    if (typeof shot !== 'string' || !shot.trim()) return null;
-    return namesEvery(shot, mustName, people) ? shot.trim().slice(0, 1400) : null;
+    return typeof shot === 'string' ? briefKept(shot, mustName, people) : null;
   } catch {
     return null;
   }
+}
+
+/** What the writer is asked for a shot's brief: the brief's rules, its length among them, and the moment's facts. */
+export function shotAsk(moment: string, facts: string, medium: string, before: string[] = []): ChatMessage[] {
+  return [
+    { role: 'system', content: SHOT },
+    {
+      role: 'user',
+      content: `The picture is made as: ${medium}.\n\n${before.length ? `What has happened in this place so far:\n${before.map((x) => `- ${x}`).join('\n')}\n\n` : ''}The moment: ${moment}\n\nThe fixed facts of the shot:\n${facts}`,
+    },
+  ];
+}
+
+/**
+ * A brief as it is kept: within `BRIEF_MAX` characters, cut after its last whole sentence that fits
+ * where it runs over (none fits: not kept), and naming everyone and everything in the picture as it
+ * is kept (`namesEvery`). Cut at 1,400 characters mid-word after the check had passed, library-1 m5's
+ * ended "the green lamps glow fain", and library-3 m6's stopped mid-sentence (27 Sep).
+ */
+export function briefKept(shot: string, mustName: string[], people: string[] = []): string | null {
+  let text = shot.trim();
+  if (text.length > BRIEF_MAX) {
+    const ends = [...text.slice(0, BRIEF_MAX + 1).matchAll(/[.!?]["'”’)]*(?=\s|$)/g)];
+    const last = ends.at(-1);
+    if (!last || last.index === undefined) return null;
+    text = text.slice(0, last.index + last[0].length).trim();
+  }
+  if (!text) return null;
+  return namesEvery(text, mustName, people) ? text : null;
 }
 
 const FIX = `A person looked at a picture of a moment from their dream and said what is wrong with it. Below are the instructions its next version will be drawn from. If they already give what the person asked for, return an empty fix. Otherwise write what the next picture must show so that it is right, as one or two sentences an illustrator can follow who sees only those instructions: what the picture shows and how, in its own terms, agreeing with the instructions. Never refer to earlier pictures, "the last frame" or "again", nor to what was wrong before; keep strictly to what they asked, adding nothing. Return JSON only: {"fix": ""}.`;
