@@ -101,8 +101,9 @@ export function assembleCut(s: CutSheet): Assembled {
         : `EDIT THIS PICTURE. It is ${pictureNo(base)}, the same view a moment earlier. Keep its camera, framing, room, light and everyone in it exactly as they are, faces and clothes included; change only what this moment changes.${strays(base)}`,
     );
 
-  // The mock-up is the picture made real, where there is no other picture to edit.
-  const mockUp = !base && cam.previs ? cam.previs : undefined;
+  // The mock-up is the picture made real, where there is no other picture to edit; with S5's references,
+  // only where the cut's tags say it helps.
+  const mockUp = !base && cam.previs && (!s.refs || s.refs.first === 'mockup') ? cam.previs : undefined;
   if (mockUp)
     attach(
       {
@@ -131,9 +132,19 @@ export function assembleCut(s: CutSheet): Assembled {
   // With the camera rules: who and what is only out past the place is far off, never inside it.
   const outside = (e: SheetElement) =>
     s.rules?.outside[e.id] ? ` It is out past ${name(s.place)}, seen far off, never inside it.` : '';
+  // With S5's references, the in-between pictures that are someone's one image, attached in their place.
+  const asStage = new Set<string>();
   for (const e of s.inView) {
     if (e.nodeId) depicted.push(e.nodeId);
     const look = e.look;
+    // Its one image, where it is an in-between picture: what that shows, and the changes it does not.
+    const stageId = e.turned === null ? s.refs?.stage[e.id] : undefined;
+    const stage = stageId ? usable.find((x) => x.id === stageId && x.kind === 'ghost') : undefined;
+    if (stage) asStage.add(stage.id);
+    const shown = stage?.ghost ? (stage.ghost.shows ?? (stage.ghost.state ? [stage.ghost.state] : [])) : [];
+    const changes = e.changes.filter((st) => !shown.some((x) => x.what === st.what && x.now === st.now));
+    const nowIs = shown.length ? shown.map((x) => `${x.what}: ${x.now}`).join('; ') : '';
+    const image = stage?.image ?? e.image;
     // Everything in view is listed with its look, its image or not.
     facts.push(
       (e.turned !== null
@@ -142,67 +153,77 @@ export function assembleCut(s: CutSheet): Assembled {
     );
     // Someone or something turned into something else entirely is drawn from its in-between picture,
     // never its old sketch.
-    if (!e.image || e.turned !== null) continue;
+    if (!image || e.turned !== null) continue;
+    // Where the one image is an in-between picture, it is said as that: how it is now, as it shows it.
+    const from = stage ? { source: 'ghost' as const, of: stage.id } : { source: 'sketch' as const, of: e.id };
     if (e.kind === 'character') {
       const animal = e.said === 'animal';
       // A change that replaces part of them overrides their sketch for that part.
-      const except = e.changes.length
-        ? ` Except ${e.changes.map((st) => `their ${st.what}, which is no longer theirs: it is now ${st.now}, with nothing of the old ${st.what} inside or behind it`).join('; ')}.`
+      const except = changes.length
+        ? ` Except ${changes.map((st) => `their ${st.what}, which is no longer theirs: it is now ${st.now}, with nothing of the old ${st.what} inside or behind it`).join('; ')}.`
         : '';
+      const now = nowIs ? `, as ${animal ? 'it is' : 'they are'} now (${nowIs})` : '';
+      const shows = stage ? `, as this picture shows ${animal ? 'it' : 'them'}` : '';
       attach(
         {
-          image: e.image,
+          image,
           role: 'identity',
           instruction: animal
-            ? `${e.name}: this exact animal, the same kind, size, build, coat and markings`
-            : `${e.name}: this exact person, with the same face, build and clothes`,
-          source: 'sketch',
-          of: e.id,
+            ? `${e.name}: this exact animal, the same kind, size, build, coat and markings${now}`
+            : `${e.name}: this exact person, with the same face, build and clothes${now}`,
+          ...from,
         },
         animal
-          ? `what ${e.name} is${look ? ` (${look})` : ''}: its kind, its size, its build, its coat and its markings, exactly${inBase(e) ? ', as Image 1 already shows it' : ''}${shadesOf(e)}. Nothing else from it: not its pose, background or framing.${except}${outside(e)}`
-          : `who ${e.name} ${e.group ? 'are' : 'is'}${look ? ` (${look})` : ''}: their ${e.changes.some((st) => /head|face/i.test(st.what)) ? 'build and clothes' : 'face, hair, build and clothes'}, exactly${inBase(e) ? ', as Image 1 already shows them' : ''}${shadesOf(e)}. Nothing else from it: not its pose, background or framing.${except}${outside(e)}`,
+          ? `what ${e.name} is${look ? ` (${look})` : ''}${now}: its kind, its size, its build, its coat and its markings, exactly${shows}${inBase(e) ? ', as Image 1 already shows it' : ''}${shadesOf(e)}. Nothing else from it: not its pose, background or framing.${except}${outside(e)}`
+          : `who ${e.name} ${e.group ? 'are' : 'is'}${look ? ` (${look})` : ''}${now}: their ${changes.some((st) => /head|face/i.test(st.what)) ? 'build and clothes' : 'face, hair, build and clothes'}, exactly${shows}${inBase(e) ? ', as Image 1 already shows them' : ''}${shadesOf(e)}. Nothing else from it: not its pose, background or framing.${except}${outside(e)}`,
       );
       imageOf.set(e.id, references.length);
     } else if (e.kind === 'location') {
       // An edit base or an earlier picture of this side sets where things stand; a view ghost shows the
-      // side this frame faces; with a mock-up, where everything stands comes from it alone.
-      const layout = cam.sheetLayout && !roomFromCut && !base && !viewGhost && !mockUp;
+      // side this frame faces; with a mock-up, where everything stands comes from it alone. With S5's
+      // references, a view worked out on the floor plan says where things stand where no mock-up does, and
+      // the place's in-between picture of the side this frame faces is its one image.
+      const faces = stage?.ghost?.kind === 'view' ? stage.ghost.looksAt || 'the other way' : null;
+      const layout =
+        faces !== null
+          ? !roomFromCut && !base && !mockUp
+          : cam.sheetLayout && !roomFromCut && !base && !viewGhost && !mockUp && !(s.refs && cam.view);
+      const called = `${e.name}${look ? ` (${look})` : ''}${faces !== null ? `, seen facing ${faces}` : nowIs ? `, as it is now (${nowIs})` : ''}`;
       attach(
         {
-          image: e.image,
+          image,
           role: 'location',
           instruction: layout
             ? `${e.name}: this exact place. Keep everything in it on the sides the reference puts it; do not mirror or rearrange it`
             : `${e.name}: its materials, colours and objects only; the layout comes from ${mockUp ? 'the previs' : base ? 'the picture being edited' : 'the earlier picture'}`,
-          source: 'sketch',
-          of: e.id,
+          ...from,
         },
         layout
-          ? `${e.name}${look ? ` (${look})` : ''}: the camera stands in this place. Keep everything in it where it puts it (walls, doors, paths, furniture, whatever it has), and its light; do not mirror or rearrange it.`
+          ? `${called}: the camera stands in this place. Keep everything in it where it puts it (walls, doors, paths, furniture, whatever it has), and its light; do not mirror or rearrange it.`
           : (base || roomFromCut) && !mockUp
-            ? `${e.name}${look ? ` (${look})` : ''}: only its materials, colours and objects; where things stand comes from ${base ? 'Image 1' : 'the earlier picture of this place'}.`
+            ? `${called}: only its materials, colours and objects; where things stand comes from ${base ? 'Image 1' : 'the earlier picture of this place'}.`
             : cam.view || mockUp
-              ? `${e.name}${look ? ` (${look})` : ''}: only what it is made of and its colours (its ground or floor, its walls or buildings, what stands in it). Where everything stands, and which way the picture looks, come from ${mockUp ? 'Image 1, the mock-up' : 'the shot above'}, not from this image; any of its objects the shot has outside the picture stay out of it.`
-              : `${e.name}${look ? ` (${look})` : ''}: only its materials, colours, objects and light. It shows the place from another side: this frame faces ${cam.looksAt || 'the other way'}.`,
+              ? `${called}: only what it is made of and its colours (its ground or floor, its walls or buildings, what stands in it). Where everything stands, and which way the picture looks, come from ${mockUp ? 'Image 1, the mock-up' : 'the shot above'}, not from this image; any of its objects the shot has outside the picture stay out of it.`
+              : `${called}: only its materials, colours, objects and light. It shows the place from another side: this frame faces ${cam.looksAt || 'the other way'}.`,
       );
     } else {
       // A part of it that has changed is no longer as its sketch shows, as for a person: each by the part
       // it names, or the whole of it.
-      const except = !e.changes.length
+      const except = !changes.length
         ? ''
-        : e.changes.some((st) => st.part !== undefined)
-          ? ` Except ${e.changes.map((st) => `${st.part === '' ? 'the whole of it' : `its ${st.part ?? st.what}`}, which is no longer as it shows: it is now ${st.now}`).join('; ')}.`
-          : ` Except its ${e.changes.map((st) => `${st.what}, which is no longer as it shows: it is now ${st.now}`).join('; ')}.`;
+        : changes.some((st) => st.part !== undefined)
+          ? ` Except ${changes.map((st) => `${st.part === '' ? 'the whole of it' : `its ${st.part ?? st.what}`}, which is no longer as it shows: it is now ${st.now}`).join('; ')}.`
+          : ` Except its ${changes.map((st) => `${st.what}, which is no longer as it shows: it is now ${st.now}`).join('; ')}.`;
       attach(
         {
-          image: e.image,
+          image,
           role: 'prop',
-          instruction: `${e.name}: this exact object, with the same shape and materials`,
-          source: 'sketch',
-          of: e.id,
+          instruction: `${e.name}: this exact object, with the same shape and materials${nowIs ? `, as it is now (${nowIs})` : ''}`,
+          ...from,
         },
-        `${e.name}${look ? ` (${look})` : ''}: its exact shape, materials and colours, the same in every picture${shadesOf(e)}. Nothing else from it.${except}${outside(e)}`,
+        nowIs
+          ? `${e.name}${look ? ` (${look})` : ''}, as it is now (${nowIs}): its exact shape, materials and colours, as this picture shows it${shadesOf(e)}. Nothing else from it.${except}${outside(e)}`
+          : `${e.name}${look ? ` (${look})` : ''}: its exact shape, materials and colours, the same in every picture${shadesOf(e)}. Nothing else from it.${except}${outside(e)}`,
       );
     }
   }
@@ -240,7 +261,7 @@ export function assembleCut(s: CutSheet): Assembled {
   // last kind added, is the first to go.
   const shift = s.story.shift;
   for (const x of usable) {
-    if (x === base || references.length >= MAX_IMAGES) continue;
+    if (x === base || asStage.has(x.id) || references.length >= MAX_IMAGES) continue;
     const g = x.ghost;
     if (g) {
       attach(

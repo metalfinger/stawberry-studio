@@ -10,6 +10,7 @@ import type { GhostPlan } from '../continuity';
 import { ghostName } from '../cutsheet';
 import { type FrameReference, turnedInto } from '../frames';
 import { actsWhenLogging, checkReferences, checksMode } from '../gate';
+import { standsFor } from '../refs';
 import { imageName, type Rebuilt, rebuild, standIn } from '../plan';
 import { mediumOf, moments } from '../producer';
 import { calledFor, previsFor, reconcileGhosts, type Session } from '../session';
@@ -399,7 +400,14 @@ export function todayOf(
   const turned = turnedInto(p.item);
   const mustInclude = p.inView
     .filter((x) => x.mediaId && !turned.has(x.id))
-    .map((x) => ({ name: x.name, mediaId: x.mediaId as string }));
+    .map((x) => ({
+      name: x.name,
+      mediaId: x.mediaId as string,
+      ...standsFor(
+        r.pictures.map((q) => q.item),
+        x.id,
+      ),
+    }));
   const findings = [...planIssues, ...checkReferences(p.prompt, p.references, { mustInclude })];
   const logging = checksMode() === 'log';
   for (const f of findings)
@@ -593,6 +601,7 @@ export const STEP_SWITCHES: Record<string, string> = {
   S2: 'DREAMCHAT_CHECKS',
   S3: 'DREAMCHAT_CUT_SHEET',
   S4: 'DREAMCHAT_CAMERA',
+  S5: 'DREAMCHAT_REFS',
   S8: 'DREAMCHAT_LISTEN',
 };
 

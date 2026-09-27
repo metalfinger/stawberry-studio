@@ -121,6 +121,7 @@ import {
   readPrompt,
   sha,
 } from './gate';
+import { standsFor } from './refs';
 import { type CutFacts, cutFactsOf, routedMode } from './checks';
 import {
   type CutSheet,
@@ -3011,7 +3012,7 @@ export class SessionStore {
         // Whoever has turned into something else is drawn from what they became, not their sketch.
         mustInclude: inView
           .filter((x) => x.mediaId && x.status === 'ready' && !turnedInto(item).has(x.id))
-          .map((x) => ({ name: x.name, mediaId: x.mediaId as string })),
+          .map((x) => ({ name: x.name, mediaId: x.mediaId as string, ...standsFor(s.build?.frames ?? [], x.id) })),
       }),
     ];
     const sheet = item.kind === 'character' || item.kind === 'location' || item.kind === 'prop';

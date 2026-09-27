@@ -45,21 +45,24 @@ function withEnv<T>(vars: Record<string, string | undefined>, fn: () => T): T {
 
 /** A frozen dream rebuilt, with the record off or on, and every moment's input as a rebuild gives it. */
 function dreamOf(id: string, record: 'off' | 'on') {
-  return withEnv({ DREAMCHAT_RECORD: record, DREAMCHAT_CUT_SHEET: 'shadow', DREAMCHAT_CAMERA: undefined }, () => {
-    const s = loadDream(id, false).session as Session;
-    const r = Object.assign(rebuild(s), { style: s.style });
-    const inputs = recordInputsOf(s);
-    const dream = sheetDream({
-      breakdown: r.b,
-      plan: r.plan,
-      prep: s.prep,
-      items: inputs.items,
-      style: s.style ?? null,
-      readings: s.draft?.readings,
-      words: inputs.words,
-    });
-    return { s, r, dream };
-  });
+  return withEnv(
+    { DREAMCHAT_RECORD: record, DREAMCHAT_CUT_SHEET: 'shadow', DREAMCHAT_CAMERA: undefined, DREAMCHAT_REFS: undefined },
+    () => {
+      const s = loadDream(id, false).session as Session;
+      const r = Object.assign(rebuild(s), { style: s.style });
+      const inputs = recordInputsOf(s);
+      const dream = sheetDream({
+        breakdown: r.b,
+        plan: r.plan,
+        prep: s.prep,
+        items: inputs.items,
+        style: s.style ?? null,
+        readings: s.draft?.readings,
+        words: inputs.words,
+      });
+      return { s, r, dream };
+    },
+  );
 }
 
 /** What rebuild gives a moment's framePrompt, so a variant of it can be written both ways. */
@@ -200,7 +203,7 @@ describe('assembleCut is framePrompt, word for word', () => {
   for (const record of ['off', 'on'] as const)
     test(`on every moment of every frozen dream and ten variants of each, with the record ${record}`, () => {
       let n = 0;
-      withEnv({ DREAMCHAT_RECORD: record, DREAMCHAT_CAMERA: undefined }, () => {
+      withEnv({ DREAMCHAT_RECORD: record, DREAMCHAT_CAMERA: undefined, DREAMCHAT_REFS: undefined }, () => {
         for (const id of frozenDreams()) {
           const { r, dream } = dreamOf(id, record);
           for (const p of r.pictures.filter((x) => x.kind === 'cut'))
@@ -325,9 +328,10 @@ describe('assembleCut reads the sheet and nothing else', () => {
       expect(assembleCut(copy)).toEqual(assembleCut(s));
     }
     // It reads the prompt's fields, and never the tree, the record or the tags: those are for the checks.
-    // `rules` is on a sheet only with the camera rules on (DREAMCHAT_CAMERA), and read where it is.
+    // `rules` is on a sheet only with the camera rules on (DREAMCHAT_CAMERA), and `refs` only with S5's
+    // references on (DREAMCHAT_REFS), and each is read where it is.
     const top = new Set([...read].map((k) => k.split('.')[0]));
-    for (const k of top) expect([...Object.keys(sheets[0]), 'rules']).toContain(k);
+    for (const k of top) expect([...Object.keys(sheets[0]), 'rules', 'refs']).toContain(k);
     for (const k of ['tree', 'record', 'tags', 'relations', 'sources', 'hash', 'flags']) expect(top.has(k)).toBe(false);
   });
 
@@ -413,7 +417,7 @@ describe('assembleCut reads the sheet and nothing else', () => {
 describe('the sheet of a cut', () => {
   const tags = (id: string, record: 'off' | 'on' = 'on') => {
     const { r, dream } = dreamOf(id, record);
-    return withEnv({ DREAMCHAT_RECORD: record, DREAMCHAT_CAMERA: undefined }, () =>
+    return withEnv({ DREAMCHAT_RECORD: record, DREAMCHAT_CAMERA: undefined, DREAMCHAT_REFS: undefined }, () =>
       Object.fromEntries(
         r.pictures.filter((p) => p.kind === 'cut').map((p) => [p.id, cutSheet(inputOf(r, p.id, dream))] as const),
       ),

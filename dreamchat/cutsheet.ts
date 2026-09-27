@@ -17,7 +17,16 @@
 // framePrompt; on sends what the sheet assembles.
 import { assembleCut, type Assembled } from './assemble';
 import { DIRECTIONS, type Eye, type Side } from './blocking';
-import { cameraMode, handsIn, type RoomTurn, roomTurn, sameView, selfIn, turnedBetween } from './camera';
+import {
+  cameraMode,
+  handsIn,
+  REVERSE_DEGREES,
+  type RoomTurn,
+  roomTurn,
+  sameView,
+  selfIn,
+  turnedBetween,
+} from './camera';
 import {
   camerasOf,
   type ContinuityPlan,
@@ -59,6 +68,7 @@ import {
   storyRecord,
   type Unstaged,
 } from './record';
+import { chooseRefs, type RefsLayer, refsMode } from './refs';
 import { groupMembers, isAnimal, isGroup, type Item, LOOK, type Shape, shapeOf, toldColours } from './sheets';
 import {
   type Category,
@@ -130,6 +140,8 @@ export type SheetEarlier = {
     of: string;
     looksAt?: string;
     state?: { what: string; now: string; whole: boolean };
+    /** With S5's references: every change it shows, those it was edited from and its own. */
+    shows?: { what: string; now: string }[];
   } | null;
 };
 
@@ -287,6 +299,8 @@ export type CutSheet = {
   tags: CutTags;
   /** With the camera rules on: what they say of this cut. */
   rules?: CameraLayer;
+  /** With S5's references on (DREAMCHAT_REFS): image 1 by the tags, and each one's image of its stage in force. */
+  refs?: RefsLayer;
   flags: string[];
   /** Where each part of the sheet came from. */
   sources: Record<string, string>;
@@ -436,6 +450,7 @@ export function cutSheet(x: CutSheetInput): CutSheet {
           ...(item.ghost.state
             ? { state: { what: item.ghost.state.what, now: item.ghost.state.now, whole: isWhole(item.ghost.state) } }
             : {}),
+          ...(item.ghost.shows ? { shows: item.ghost.shows.map((x) => ({ what: x.what, now: x.now })) } : {}),
         }
       : null,
   }));
@@ -540,6 +555,14 @@ export function cutSheet(x: CutSheetInput): CutSheet {
         })
       : null;
   const drawnFrom = rules ? earlier.filter((e) => !rules.layer.dropped.includes(e.id)) : earlier;
+  const refsOn = refsMode();
+  const refs =
+    refsOn === 'off'
+      ? null
+      : chooseRefs(
+          { earlier: drawnFrom, inView: elements, visible: f.visible, camera: { previs: x.layout ?? null }, tags },
+          refsOn,
+        );
 
   const sheet: Omit<CutSheet, 'hash'> = {
     id: frame.id,
@@ -588,6 +611,7 @@ export function cutSheet(x: CutSheetInput): CutSheet {
     },
     tags,
     ...(rules ? { rules: rules.layer } : {}),
+    ...(refs ? { refs } : {}),
     flags: [
       ...(rules?.flags ?? []),
       ...(tree?.flags ?? []),
@@ -691,8 +715,7 @@ function recordLayer(record: StoryRecord, id: string, inPicture: string[]): Reco
   };
 }
 
-/** Degrees the camera turns from the cut before for a cut to be a reverse angle. */
-export const REVERSE_DEGREES = 135;
+export { REVERSE_DEGREES } from './camera';
 
 /** A cut's camera on the floor plan, its own or its shot's, as the tree has it. */
 const cameraOf = (node: CutNode | undefined): Eye | null => (node?.sheet.camera.value as Eye | null) ?? null;
