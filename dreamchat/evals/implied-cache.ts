@@ -36,6 +36,8 @@ export async function withImplied(
   const write = opts.write ?? writeImplied;
   let asked = 0;
   let cached = 0;
+  // Written back only when a reading was added: a run that reads nothing new leaves the file as it was.
+  let added = 0;
   const cachedWrite: WriteFn = async (messages) => {
     const key = sha256(`writer ${writer}\n${JSON.stringify(messages)}`);
     const hit = cache[key];
@@ -46,6 +48,7 @@ export async function withImplied(
     asked++;
     const res = await write(messages);
     cache[key] = { content: res.content, usage: res.usage };
+    added++;
     return res;
   };
   const cachedJev: JevFn = async (state, questions) => {
@@ -65,7 +68,10 @@ export async function withImplied(
     }
     asked++;
     const call = await opts.jev(state, questions);
-    if (call.answers) cache[key] = { answers: call.answers, jevUsage: call.usage };
+    if (call.answers) {
+      cache[key] = { answers: call.answers, jevUsage: call.usage };
+      added++;
+    }
     return call;
   };
   // The record the reading is given, made as a rebuild makes it (plan.ts rebuild).
@@ -79,8 +85,10 @@ export async function withImplied(
     { words: inputs.words, style: s.style },
   ).record;
   const { implied, cost } = await readImplied(b, record, cachedWrite, cachedJev);
-  mkdirSync(dirname(file), { recursive: true });
-  writeFileSync(file, `${JSON.stringify(cache)}\n`);
+  if (added) {
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, `${JSON.stringify(cache)}\n`);
+  }
   const session = structuredClone(s);
   session.draft = { ...session.draft!, readings: { ...(session.draft?.readings ?? {}), implied } };
   // Every reading with an answer within 0.1 of the bar, taken or not: where the bar decides.

@@ -10,9 +10,9 @@ import { ghostName } from '../cutsheet';
 import { type FrameReference, turnedInto } from '../frames';
 import { actsWhenLogging, checkReferences, checksMode } from '../gate';
 import { imageName, type Rebuilt, rebuild, standIn } from '../plan';
-import { moments } from '../producer';
+import { mediumOf, moments } from '../producer';
 import { calledFor, previsFor, reconcileGhosts, type Session } from '../session';
-import type { Item } from '../sheets';
+import { type Item, MAX_PER_IMAGE } from '../sheets';
 import { USD_PER_PICTURE } from './paired-arms';
 import type { DreamParts, ToDraw } from './paired-store';
 import { counted, type Draw, DRAWS, type PromptCase, type Source } from './prompt-cases';
@@ -63,8 +63,13 @@ export type CheckpointSet = {
   name: string;
   /** The step of HARNESS_PLAN.md it checks. */
   step?: string;
-  /** The most it may spend in all, in US dollars; --cap overrides it. */
+  /** The most it may spend in all, in US dollars, as reviewed; --cap can only lower it. */
   cap_usd?: number;
+  /**
+   * Where its results are kept, whole (runs/checkpoint/<name> of the checkout that has the saved
+   * conversations): what it has spent is counted there, so a draw anywhere else is refused.
+   */
+  results?: string;
   /** The switches it was proposed under, and what its changes were measured against. */
   switches?: Record<string, string>;
   base?: string;
@@ -77,14 +82,20 @@ const VERDICTS: Verdict[] = ['right', 'partly', 'wrong'];
 export function validateSet(set: CheckpointSet): string[] {
   const out: string[] = [];
   if (!/^[a-z0-9][a-z0-9-]*$/.test(set.name ?? '')) out.push(`name ${set.name} must be lower-case letters, digits and -`);
-  if (set.cap_usd !== undefined && !(set.cap_usd > 0)) out.push('cap_usd must be more than 0');
+  if (set.cap_usd !== undefined && !(typeof set.cap_usd === 'number' && Number.isFinite(set.cap_usd) && set.cap_usd > 0))
+    out.push('cap_usd must be a number of US dollars, more than 0');
+  if (set.results !== undefined && !(typeof set.results === 'string' && isAbsolute(set.results)))
+    out.push('results must be the whole path of the folder its results are kept in');
   if (!Array.isArray(set.moments) || !set.moments.length) out.push('no moments');
   const seen = new Set<string>();
+  const where = new Set<string>();
   for (const m of set.moments ?? []) {
     const at = m.id ?? '(no id)';
     if (!m.id) out.push(`${at}: no id`);
     if (seen.has(m.id)) out.push(`${at}: listed twice`);
     seen.add(m.id);
+    if (where.has(`${m.session}:${m.moment}`)) out.push(`${at}: ${m.session} ${m.moment} is listed twice`);
+    where.add(`${m.session}:${m.moment}`);
     if (m.why !== 'fault' && m.why !== 'guard') out.push(`${at}: why must be fault or guard`);
     if (!/^dream-\d{4}-\d{6}-[0-9a-f]{4}$/.test(m.session ?? '')) out.push(`${at}: session ${m.session} is not a saved dream's id`);
     if (!/^m\d+$/.test(m.moment ?? '')) out.push(`${at}: moment ${m.moment} is not a moment id`);
@@ -285,6 +296,13 @@ export type Today = {
   images: TodayImage[];
   /** Its mock-up, rendered from its floor plan as the harness renders it. */
   previs?: { png: Uint8Array; key: string };
+  /** The shot's brief it is drawn with, for the view today's plan has; null where it has none. */
+  brief: { view: string; text: string } | null;
+  /**
+   * It has a worked-out view and no brief for it: the harness would have a model write one before it
+   * draws (session.ts startFrame), so drawn without one it is not what the harness would send.
+   */
+  briefless: boolean;
   /** Why it cannot be drawn as today's harness would draw it; none when it can. */
   refused: string[];
   /** Where it may differ from what the harness would send, or what else is worth knowing; none stops it. */
@@ -294,6 +312,15 @@ export type Today = {
 };
 
 const drawnItem = (x?: Item) => !!x && x.status === 'ready' && !!x.mediaPath;
+/**
+ * A sketch or picture the harness draws from: drawn, and approved by the dreamer or for continuity
+ * (frames.ts `approved`); a picture the run drew and nobody approved is never attached.
+ */
+const usable = (x?: Item) => drawnItem(x) && (!!x?.review || !!x?.continuityApproved);
+
+/** The words of a moment the harness puts in the third person with a model before it draws it (session.ts startFrame). */
+export const YOU_WORDS = ['action', 'visual_point', 'feeling', 'purpose', 'shift', 'dream'];
+const YOU = /\byou(r|rs|rself)?\b/i;
 
 /**
  * One moment of a built dream as today's harness would send it: its prompt, and every image it attaches
@@ -317,6 +344,7 @@ export function todayOf(
   const previs = previsFor(r.b, p.item, called, r.rec);
   const found = (base: Omit<TodayImage, 'file' | 'missing'>, it: Item | undefined, never: string): TodayImage => {
     if (!drawnItem(it)) return { ...base, missing: never };
+    if (!usable(it)) return { ...base, missing: 'the run drew it, but nobody approved it: the harness never draws from it' };
     const file = join(opts.media, it?.mediaPath as string);
     return exists(file) ? { ...base, file } : { ...base, missing: `its file is not on this machine (${file})` };
   };
@@ -381,18 +409,24 @@ export function todayOf(
           ? `the pre-draw check only logs: ${f}`
           : `with the checks acting (DREAMCHAT_CHECKS is not log) the harness may hold or reword it for: ${f}`,
       );
-  // The shot's brief is the one written for the view today's plan has; for another view the harness
-  // would ask a model for a new one, and a rebuild says what the camera sees in the view's own words.
-  const view = p.item.frame?.plan?.view;
-  if (view && p.item.shot?.view !== view)
-    notes.push(
-      "no shot brief was written for the view today's plan has: the harness would ask a model to brief it first; here the view's own words say what the camera sees, as every rebuild does",
+  // Words that call the dreamer "you" are put in the third person by a model before the harness draws
+  // the moment; here they would be sent as they are.
+  const you = YOU_WORDS.filter((k) => YOU.test(p.item.fields[k]?.value ?? ''));
+  if (you.length)
+    refused.push(
+      `its words call the dreamer "you" (${you.join(', ')}): the harness has a model put them in the third person before drawing it, which is not done here`,
     );
+  // The shot's brief is the one written for the view today's plan has (--brief writes one as the harness
+  // does); without one, a rebuild says what the camera sees in the view's own words.
+  const view = p.item.frame?.plan?.view;
+  const brief = view && p.item.shot?.view === view ? { view, text: p.item.shot.text } : null;
+  const briefless = !!view && !brief;
   const hash = sha256(
     JSON.stringify({
       prompt: p.prompt,
       images: images.map((x) => [x.key, x.role, x.instruction, x.file ?? null]),
       previs: previs?.key ?? null,
+      brief: brief?.text ?? null,
     }),
   );
   return {
@@ -402,10 +436,53 @@ export function todayOf(
     prompt: p.prompt,
     images,
     ...(previs ? { previs } : {}),
+    brief,
+    briefless,
     refused,
     notes,
     hash,
   };
+}
+
+/** What the harness asks a model for when it briefs a moment's shot (session.ts startFrame, producer.ts shotFor). */
+export type BriefAsk = { action: string; view: string; medium: string; mustName: string[]; before: string[] };
+
+/**
+ * What a moment's shot brief is written from, exactly as the harness asks for it: the moment's action,
+ * the view worked out on its floor plan, how the pictures are made, everyone the view sees by what the
+ * moment calls them, and what has happened in its scene so far. None where it has no view, or a brief
+ * for it already.
+ */
+export function briefAskOf(d: DreamBuild, moment: string): BriefAsk | null {
+  const p = d.r.pictures.find((x) => x.id === moment && x.kind === 'cut');
+  const view = p?.item.frame?.plan?.view;
+  if (!p || !view || p.item.shot?.view === view || !d.saved.style) return null;
+  const called = calledFor({ build: d.saved.build, draft: d.saved.draft && { ...d.saved.draft, breakdown: d.r.b } }, p.item);
+  const scene = d.r.b.scenes.find((sc) => sc.moments.some((m) => m.id === moment));
+  const before = (scene?.moments ?? []).slice(0, scene?.moments.findIndex((m) => m.id === moment)).map((m) => m.action);
+  return {
+    action: p.item.fields.action?.value ?? p.item.name,
+    view,
+    medium: mediumOf(d.saved.style),
+    mustName: (p.item.frame?.plan?.sees ?? []).map(called),
+    before,
+  };
+}
+
+/** A brief written for a moment's view, kept with the checkpoint (briefs.json). */
+export type Brief = { view: string; text: string; writer?: string; at?: string };
+
+/**
+ * A saved dream with the checkpoint's briefs where the harness keeps one it was given in the background
+ * (its prep's shots): a rebuild takes the brief for the view each moment has now, the moment's own first.
+ */
+export function withBriefs(saved: Session, briefs: Record<string, Brief>): Session {
+  if (!Object.keys(briefs).length) return saved;
+  const s = structuredClone(saved);
+  const shots = { ...(s.prep?.shots ?? {}) };
+  for (const [moment, b] of Object.entries(briefs)) shots[moment] = { text: b.text, view: b.view };
+  s.prep = { ...(s.prep ?? ({} as NonNullable<Session['prep']>)), shots };
+  return s;
 }
 
 /** A moment's images as "role name", to compare with what was sent. */
@@ -422,7 +499,7 @@ export function partsOf(d: DreamBuild): DreamParts {
     style: d.saved.style,
     sheets: (d.saved.build?.items ?? []).map((i) => ({
       ...i,
-      mediaId: drawnItem(i) && !i.extras ? `sketch:${i.id}` : undefined,
+      mediaId: usable(i) && !i.extras ? `sketch:${i.id}` : undefined,
     })),
     ghosts: d.plan.ghosts as GhostPlan[],
     ...(d.r.rec ? { rec: d.r.rec } : {}),
@@ -598,7 +675,16 @@ export const roomUnder = (cap: number, spent: number) =>
  */
 export function proposeSet(
   measured: Measured[],
-  opts: { name: string; step: string; cap: number; spent?: number; switches: Record<string, string>; base: string },
+  opts: {
+    name: string;
+    step: string;
+    cap: number;
+    spent?: number;
+    switches: Record<string, string>;
+    base: string;
+    /** Where its results will be kept, whole: the set pins it. */
+    results?: string;
+  },
 ): {
   set: CheckpointSet;
   unchanged: Measured[];
@@ -624,6 +710,7 @@ export function proposeSet(
     name: opts.name,
     step: opts.step,
     cap_usd: opts.cap,
+    ...(opts.results ? { results: opts.results } : {}),
     switches: opts.switches,
     base: opts.base,
     moments: kept.map((m) => ({
@@ -652,16 +739,24 @@ export type AB = 'old' | 'new';
  * name and the moment: nothing in the set's order or the moments' kinds says which is which, and the same
  * set is always shown the same way.
  */
-export function abOrder(name: string, ms: { id: string; why: Why }[]): Record<string, AB> {
+export function abOrder(
+  name: string,
+  ms: { id: string; why: Why }[],
+  fixed: Record<string, AB> = {},
+): Record<string, AB> {
   const out: Record<string, AB> = {};
   let oldFirst = 0;
   let seen = 0;
   for (const why of ['fault', 'guard'] as Why[]) {
-    const group = ms
-      .filter((m) => m.why === why)
+    const inGroup = ms.filter((m) => m.why === why);
+    // What the key already says stays as it is; the rest are placed to keep the group as near half as it can.
+    const kept = inGroup.filter((m) => fixed[m.id]);
+    for (const m of kept) out[m.id] = fixed[m.id];
+    const group = inGroup
+      .filter((m) => !fixed[m.id])
       .map((m) => ({ id: m.id, h: sha256(`${name}\n${m.id}`) }))
       .sort((a, b) => a.h.localeCompare(b.h));
-    const n = group.length;
+    const n = inGroup.length;
     // An odd group's one over goes to whichever picture is behind so far; when neither is, the hash decides.
     const extra =
       n % 2 === 0
@@ -671,11 +766,13 @@ export function abOrder(name: string, ms: { id: string; why: Why }[]): Record<st
           : oldFirst * 2 > seen
             ? 0
             : Number.parseInt(sha256(`${name}\n${why}`).slice(0, 2), 16) % 2;
-    const olds = Math.floor(n / 2) + extra;
+    const want = Math.floor(n / 2) + extra;
+    const already = kept.filter((m) => fixed[m.id] === 'old').length;
+    const olds = Math.max(0, Math.min(group.length, want - already));
     group.forEach((m, i) => {
       out[m.id] = i < olds ? 'old' : 'new';
     });
-    oldFirst += olds;
+    oldFirst += already + olds;
     seen += n;
   }
   return out;
@@ -733,20 +830,24 @@ export type Results = {
 /** Job states nothing more comes of, and the two outcomes that never reached the provider. */
 export const DONE = new Set(['ready', 'failed', 'cancelled', 'submission_unknown', 'collection_failed', 'refused', 'capped']);
 export const NEVER_SENT = new Set(['refused', 'capped']);
-/** Outcomes that may already have been paid for: fal may have drawn the picture. */
-export const MAYBE_PAID = new Set(['submission_unknown', 'collection_failed']);
-/** A job's states while the engine still has it in hand. */
-export const IN_FLIGHT = new Set(['queued', 'submitting', 'running', 'collecting']);
+/**
+ * Outcomes that may already have been paid for: fal may have drawn the picture, or the run stopped while
+ * the picture was being started (`starting`, kept before the engine is asked) and no job of it was found.
+ */
+export const MAYBE_PAID = new Set(['submission_unknown', 'collection_failed', 'starting']);
 
 /** Every attempt the results record: each entry and the attempts before it. */
 export const attemptsOf = (rs: Pick<Results, 'entries'>) =>
   Object.values(rs.entries).flatMap((r) => [r, ...(r.earlier ?? [])]);
 
-/** Spent, as the engine estimates it: every picture that went to the worker counts, drawn or not. */
+/**
+ * Spent, as the engine estimates it: every picture that went to the worker counts, drawn or not; one whose
+ * estimate is unknown counts as the most one picture may cost (sheets.ts MAX_PER_IMAGE, $0.20 on fal).
+ */
 export const spentIn = (rs: Pick<Results, 'entries'>) =>
   attemptsOf(rs)
     .filter((r) => r.jobId)
-    .reduce((a, r) => a + (typeof r.usd === 'number' ? r.usd : USD_PER_PICTURE), 0);
+    .reduce((a, r) => a + (typeof r.usd === 'number' ? r.usd : MAX_PER_IMAGE), 0);
 
 /**
  * What to draw of a checkpoint's moments: each not drawn yet. Nothing is drawn again on its own: one sent
@@ -797,6 +898,33 @@ export function overCap(spent: number, pictures: number, cap: number): string | 
   return total > cap + 1e-9
     ? `$${spent.toFixed(2)} spent and ${pictures} picture${pictures === 1 ? '' : 's'} at $${USD_PER_PICTURE.toFixed(2)} would make $${total.toFixed(2)}, over the $${cap.toFixed(2)} cap`
     : null;
+}
+
+/** A job in the checkpoint's store, and the moment's node its recipe is for. */
+export type StoreJob = { id: string; state: string; node: string | null };
+
+/**
+ * The checkpoint's store against its results. Every job in it is one of the checkpoint's pictures (the store
+ * is its own), so one the results do not know, in any state, may have been paid for: `stray`. An attempt
+ * the run stopped in while starting (`starting`, no job id) takes the job of its node, if there is one:
+ * `adopted`; with none, nothing reached the engine: `unsent`.
+ */
+export function reconcileStore(
+  rs: Pick<Results, 'entries'>,
+  jobs: StoreJob[],
+): { stray: StoreJob[]; adopted: { id: string; job: StoreJob }[]; unsent: string[] } {
+  const known = new Set(attemptsOf(rs).flatMap((r) => (r.jobId ? [r.jobId] : [])));
+  const free = jobs.filter((j) => !known.has(j.id));
+  const adopted: { id: string; job: StoreJob }[] = [];
+  const unsent: string[] = [];
+  for (const r of Object.values(rs.entries)) {
+    if (r.state !== 'starting' || r.jobId) continue;
+    const job = free.find((j) => r.nodeId && j.node === r.nodeId && !adopted.some((a) => a.job.id === j.id));
+    if (job) adopted.push({ id: r.id, job });
+    else unsent.push(r.id);
+  }
+  const taken = new Set(adopted.map((a) => a.job.id));
+  return { stray: free.filter((j) => !taken.has(j.id)), adopted, unsent };
 }
 
 /** An attempt that reached the worker, kept with the ones before it when its moment is drawn again. */

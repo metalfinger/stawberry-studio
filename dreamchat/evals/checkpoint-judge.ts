@@ -5,7 +5,8 @@
 // checkpoint's results folder as it is given, so nothing is lost if the page is closed. The answer key
 // stays in the results folder and is never served; --score reads the answers against it. No account, no
 // network beyond this machine.
-import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { existsSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import { basename, extname, join } from 'node:path';
 import type { AB, CheckpointSet, Verdict, Why } from './checkpoint-set';
 
@@ -28,12 +29,29 @@ export type AnswerKey = Record<string, { a: AB; b: AB }>;
 
 export const ANSWERS = ['a', 'b', 'both', 'neither'] as const;
 export type Answer = (typeof ANSWERS)[number];
-/** The owner's answers so far, written after every answer. */
+/** The sha256 of the two pictures an answer was given on, as the page showed them. */
+export type Shown = { a: string; b: string };
+/** The owner's answers so far, written after every answer, each with the pictures it was given on. */
 export type Answers = {
   checkpoint: string;
   updated: string | null;
-  answers: Record<string, { answer: Answer | null; note: string; at: string }>;
+  answers: Record<string, { answer: Answer | null; note: string; at: string; shown?: Shown | null }>;
 };
+
+/** A file's sha256; null where there is no such file. */
+export const fileHash = (path: string): string | null =>
+  existsSync(path) && statSync(path).isFile() ? createHash('sha256').update(readFileSync(path)).digest('hex') : null;
+
+/** The sha256 of one moment's A and B pictures in the judge folder, as the page shows them now; null without both. */
+export function shownOf(dir: string, m: Pick<JudgeMoment, 'a' | 'b'>): Shown | null {
+  const a = m.a ? fileHash(join(dir, m.a)) : null;
+  const b = m.b ? fileHash(join(dir, m.b)) : null;
+  return a && b ? { a, b } : null;
+}
+
+/** The same for every moment of the page. */
+export const shownNow = (dir: string, data: Pick<JudgeData, 'moments'>): Record<string, Shown | null> =>
+  Object.fromEntries(data.moments.map((m) => [m.id, shownOf(dir, m)]));
 
 /** One moment to judge: its old and new pictures, the picture before, and what they are judged against. */
 export type ToJudge = {
@@ -96,6 +114,17 @@ export function judgeSetOf(
 export const emptyAnswers = (checkpoint: string): Answers => ({ checkpoint, updated: null, answers: {} });
 
 /**
+ * The key with the moments drawn since added: a moment already in it keeps its A and B for good, so an
+ * answer is always read against the pictures it was given on. Any attempt to change one is an error.
+ */
+export function mergeKey(before: AnswerKey, made: AnswerKey): AnswerKey {
+  for (const [id, k] of Object.entries(before))
+    if (made[id] && (made[id].a !== k.a || made[id].b !== k.b))
+      throw new Error(`the key for ${id} would change (A was the ${k.a} picture): a moment's key is never changed`);
+  return { ...made, ...before };
+}
+
+/**
  * The answers with one more: `body` is what the page sent ({ id, answer, note }). An answer is one of
  * A, B, both or neither; a note alone keeps the answer given before. Anything else is refused, said why.
  */
@@ -104,6 +133,7 @@ export function withAnswer(
   data: Pick<JudgeData, 'moments'>,
   body: unknown,
   at = new Date().toISOString(),
+  shown: Shown | null = null,
 ): { answers: Answers } | { error: string } {
   const b = body as { id?: unknown; answer?: unknown; note?: unknown } | null;
   if (!b || typeof b !== 'object') return { error: 'send { id, answer, note }' };
@@ -116,7 +146,7 @@ export function withAnswer(
   const answer = (b.answer ?? was?.answer ?? null) as Answer | null;
   const note = ((b.note as string | undefined) ?? was?.note ?? '').slice(0, 4000);
   return {
-    answers: { ...prev, updated: at, answers: { ...prev.answers, [b.id]: { answer, note, at } } },
+    answers: { ...prev, updated: at, answers: { ...prev.answers, [b.id]: { answer, note, at, shown } } },
   };
 }
 
@@ -144,6 +174,8 @@ export type Score = {
   checkpoint: string;
   judged: number;
   of: number;
+  /** Answers given on pictures that have changed since: not counted. */
+  stale: string[];
   faults: { judged: number; of: number; nowRight: number; oldRightNow: number };
   guards: { judged: number; of: number; stillRight: number; oldRightAgain: number };
   moments: MomentScore[];
@@ -152,12 +184,23 @@ export type Score = {
 /**
  * The owner's answers read against the key: for each moment whether the new picture and the old one were
  * called right, blind. A fault is put right when its new picture is right; a guard stays right when its
- * new picture is right. Moments not drawn or not answered count as not judged.
+ * new picture is right. Moments not drawn or not answered count as not judged, and so does an answer given
+ * on pictures that are not the ones the page shows now (`now`, each moment's pictures' sha256).
  */
-export function scoreOf(set: Pick<CheckpointSet, 'name' | 'moments'>, key: AnswerKey, got: Answers): Score {
+export function scoreOf(
+  set: Pick<CheckpointSet, 'name' | 'moments'>,
+  key: AnswerKey,
+  got: Answers,
+  now?: Record<string, Shown | null>,
+): Score {
+  const stale: string[] = [];
   const moments = set.moments.map((m): MomentScore => {
     const k = key[m.id];
-    const a = got.answers[m.id];
+    const given = got.answers[m.id];
+    const same =
+      !now || !given || (!!given.shown && !!now[m.id] && given.shown.a === now[m.id]?.a && given.shown.b === now[m.id]?.b);
+    if (!same && given?.answer) stale.push(m.id);
+    const a = same ? given : undefined;
     const answer = k ? (a?.answer ?? null) : null;
     const right = (which: AB) => {
       if (!k || answer === null) return null;
@@ -181,6 +224,7 @@ export function scoreOf(set: Pick<CheckpointSet, 'name' | 'moments'>, key: Answe
     checkpoint: set.name,
     judged: judged(moments).length,
     of: moments.length,
+    stale,
     faults: {
       judged: judged(faults).length,
       of: faults.length,
@@ -226,7 +270,9 @@ export function scoreLines(s: Score): string[] {
       judged.filter((x) => x.why === 'guard' && !x.newRight),
     ),
   );
-  const open = s.moments.filter((x) => x.newRight === null).map((x) => x.id);
+  const open = s.moments.filter((x) => x.newRight === null && !s.stale.includes(x.id)).map((x) => x.id);
+  if (s.stale.length)
+    lines.push('', `Answered on pictures that have changed since, so not counted: ${s.stale.join(', ')}`);
   if (open.length) lines.push('', `Not judged yet (not drawn, or not answered): ${open.join(', ')}`);
   return lines;
 }
@@ -271,8 +317,14 @@ export function serveJudge(opts: { dir: string; answersFile: string; data: Judge
         return new Response(Bun.file(path), { headers: { 'content-type': TYPES[extname(name).toLowerCase()] } });
       }
       if (req.method === 'POST' && url.pathname === '/answer') {
+        if (!(req.headers.get('content-type') ?? '').toLowerCase().startsWith('application/json'))
+          return json({ error: 'send the answer as JSON (content-type: application/json)' }, 415);
         const body = await req.json().catch(() => null);
-        const next = withAnswer(read(), opts.data, body);
+        // Kept with the answer: the pictures it was given on, as they are now.
+        const id = (body as { id?: unknown } | null)?.id;
+        const m = opts.data.moments.find((x) => x.id === id);
+        const now = m ? shownOf(opts.dir, m) : null;
+        const next = withAnswer(read(), opts.data, body, new Date().toISOString(), now);
         if ('error' in next) return json(next, 400);
         writeWhole(opts.answersFile, `${JSON.stringify(next.answers, null, 1)}\n`);
         return json(next);
@@ -402,7 +454,17 @@ function moment(m, i) {
     b.onclick = () => send(m.id, k, note.value, row, saved);
     row.append(b);
   }
-  note.onchange = () => send(m.id, undefined, note.value, row, saved);
+  // A note is saved as it is typed, a moment after the last key, and again when the box is left.
+  let timer = null;
+  note.oninput = () => {
+    saved.textContent = 'typing…';
+    clearTimeout(timer);
+    timer = setTimeout(() => send(m.id, undefined, note.value, row, saved), 700);
+  };
+  note.onchange = () => {
+    clearTimeout(timer);
+    send(m.id, undefined, note.value, row, saved);
+  };
   s.append(row, note, saved);
   return s;
 }
