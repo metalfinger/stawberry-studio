@@ -50,8 +50,8 @@ function withEnv<T>(vars: Record<string, string | undefined>, fn: () => T): T {
   }
 }
 
-/** The camera rules on: they need the cut sheet on. */
-const CAMERA = { DREAMCHAT_CAMERA: 'on', DREAMCHAT_CUT_SHEET: 'on' };
+/** The camera rules on: they need the cut sheet on. S5's references stay as today (test/refs.test.ts). */
+const CAMERA = { DREAMCHAT_CAMERA: 'on', DREAMCHAT_CUT_SHEET: 'on', DREAMCHAT_REFS: undefined };
 const ON = { ...CAMERA, DREAMCHAT_RECORD: 'on' };
 const rebuilt = (id: string, env: Record<string, string | undefined>) =>
   withEnv(env, () => rebuild(loadDream(id, false).session as Session));

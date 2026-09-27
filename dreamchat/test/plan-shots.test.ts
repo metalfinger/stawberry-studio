@@ -361,14 +361,17 @@ describe('one story record for planning and drawing (DREAMCHAT_RECORD=on)', () =
           usage: null,
         }
       : { questions, state, answers: null, error: 'not answered here', ms: 0, usage: null };
+  // With S5's references as today (test/refs.test.ts): these follow S1's in-between pictures.
   const withRecord = async (fn: () => Promise<void>) => {
-    const was = process.env.DREAMCHAT_RECORD;
+    const was = { record: process.env.DREAMCHAT_RECORD, refs: process.env.DREAMCHAT_REFS };
     process.env.DREAMCHAT_RECORD = 'on';
+    delete process.env.DREAMCHAT_REFS;
     try {
       await fn();
     } finally {
-      if (was === undefined) delete process.env.DREAMCHAT_RECORD;
-      else process.env.DREAMCHAT_RECORD = was;
+      if (was.record === undefined) delete process.env.DREAMCHAT_RECORD;
+      else process.env.DREAMCHAT_RECORD = was.record;
+      if (was.refs !== undefined) process.env.DREAMCHAT_REFS = was.refs;
     }
   };
   // Planned at the start, before any sketch is drawn, as the live chat plans it.
