@@ -15,7 +15,7 @@ context mirrors it.
 | S1 The story record carries state | Done | faults met 6/33 to 18/33, guards 36/36; with Claude reading what the moments imply, 19/33 and S1's cases 12/13 |
 | S2 Checks only log | Done | whole-dream replays on Claude: logging drew 127/127 moments, 0 held or reworded, Jev ~41 calls a dream (acting: 14 undrawn, 54 reworded, 306-324 calls); logging is the default since 27 Sep (`DREAMCHAT_CHECKS=act` brings acting back) |
 | S3 One cut sheet per picture | Done | the sheet's prompt equals the old builder's on 1052 rebuilds and 48 of 48 live builds |
-| S4 Camera rules | Merged behind DREAMCHAT_CAMERA (off; needs the cut sheet on); picture check judged | owner's blind A/B on 20 moments ($3): new right 14/20 against old 10/20; faults put right 5/7 (snow-train m2, orchard m4, m7, lighthouse-first m3, snow-train-2 m2); guards 9/13 new, 9/13 old (4 lost, 4 gained); the 6 misses being traced to root causes |
+| S4 Camera rules | Merged behind DREAMCHAT_CAMERA (off; needs the cut sheet on); picture check judged | owner's blind A/B on 20 moments ($3): new right 15/20 against old 10/20; faults put right 5/7; guards 10/13 new, 9/13 old; 5 misses being traced to root causes |
 | S5 References and in-between pictures | Built on `s5-refs` behind DREAMCHAT_REFS (off; needs the cut sheet on); reviewed, review fixes in; picture check proposed (20 pictures, $3.00), not drawn | the reference check, record and sheet on, frozen / live: a subject by two images 40 / 91 moments to 0 / 0; waited for and never sent 67 / 216 to 0 / 0; from another side 2 / 8 to 0 / 0; in-between pictures not needed under the owner's rule 17 of 29 / 32 of 67 to 0 of 14 / 1 of 74. Off: 0 of 1,864 pictures moved. Prompt cases: guards 36/36, counted 19/33 and 27/33 (camera) as before, hypotheses 5 to 10 and 7 to 12 of 18 |
 | S6 One prompt builder, clean-ups retired | Test written; typed readings of the 526 moments done (branch `s6-readings`) | a ledger of 16 clean-ups, S4's 4 word lists and 14 duplicates, in order; every moment says a fact twice (frozen 2350 facts, live 6595), 21 of 115 frozen moments say an action no picture shows (live 134 of 411); built after S5 |
 | S7 Jev checks routed by tags | Done (routing switch off; every Jev reading logs) | measured on the 122 pictures the owner judged (as sent): the gate and "storyboard complete?" are at chance (AUC 0.36-0.56); 16 library questions not measurable yet; 0 of 28 checks earn acting; a check earns acting only at its measured bar, counted by moments. Run the picture checkpoints with `DREAMCHAT_JEV_ROUTED=on` so the library questions' readings join the owner's new verdicts |
@@ -2321,3 +2321,9 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   (grandpa moved from m2: seat continuity across the reverse), lighthouse-fresh m4 (dreamer inside, should be outside;
   old wrong too), lighthouse-fresh m9 (a boat not in the prompt), snow-train-2 m6 and orchard m6 (no note). Each is
   being traced to its root cause before the S5 check. These verdicts also join S7's labelled sets.
+
+- 27 Sep, owner's notes after seeing the pictures: orchard m6 is right in both (he preferred the new one: its trees
+  match the previous frame); the page answer was corrected to "both" (the page's answer kept in
+  answers.before-correction.json). snow-train-2 m6: the new picture shows the frame after the handover, not the
+  grandfather holding the suitcase out — the action drawn at the wrong instant (S6's typed "action at one instant").
+  Score now: new 15 of 20, old 10 of 20; faults 5 of 7; guards new 10 of 13, old 9 of 13.
