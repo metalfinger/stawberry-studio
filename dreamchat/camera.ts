@@ -196,20 +196,27 @@ const DEEP =
 
 /**
  * How high water stands, in metres, from what the story record says of it (its water, a typed part of
- * the place, in the record's words) and the floor plan: by the first thing those words measure it by, a
+ * the place, in the record's words) and the floor plan: by the things those words measure it by, a
  * fixture or thing of the plan ("up to the high round window", "over the tops of the desks", "covering
  * the shelves"), the ceiling of a room ("almost to the ceiling") or a body ("knee-deep"). "Over", "above"
- * or "covering" a thing is a little above its top, "almost" or "nearly" a little below. Only where
+ * or "covering" a thing is a little above its top, "almost" or "nearly" a little below. The first thing
+ * named measures it; a later one only where the words measure by it too ("over the desks and far up the
+ * shelves": as high as the shelves), and then the highest stands. A creature of the dream it is said to be
+ * deep enough for (`beings`: "deep enough to hide a whale below the surface") is under it. Only where
  * nothing else measures it, a floor or the ground it covers: a few centimetres. Water that fills a
  * place, floods it or is deep enough to swim in, without a measure, is unmeasured: none, and nothing is
  * said of its height (a boat afloat on ten centimetres, or an underwater classroom said to have water
  * over its floor, is worse than nothing).
  */
-export function waterLevel(words: string, plan: Blocking): number | null {
+export function waterLevel(
+  words: string,
+  plan: Blocking,
+  beings: { name: string; height: number }[] = [],
+): number | null {
   const text = words.toLowerCase();
   // Only a room has a ceiling: out in the open, a roof is somewhere to stand, and the water has no cap.
   const ceiling = plan.indoors ? (plan.ceiling ?? 3.2) : Number.POSITIVE_INFINITY;
-  const marks: { at: number; top: number; thing?: boolean }[] = [];
+  const marks: { at: number; top: number; thing?: boolean; being?: boolean }[] = [];
   const ceil = plan.indoors ? text.search(/\b(?:ceiling|top of the room|roof)\b/) : -1;
   if (ceil >= 0) marks.push({ at: ceil, top: ceiling });
   for (const [re, h] of BODY) {
@@ -232,6 +239,29 @@ export function waterLevel(words: string, plan: Blocking): number | null {
     const i = text.search(new RegExp(`\\b${key.replace(/[^a-z0-9]/g, '')}(?:e?s)?\\b`));
     if (i >= 0) marks.push({ at: i, top: sizeOf(s)[2], thing: true });
   }
+  // The words just before a mark, back to the clause or the "and" before it: in "covering the floor and
+  // up to the shelves" the shelves are reached ("up to"), and "covering" is the floor's.
+  const beforeOf = (m: { at: number }) =>
+    text
+      .slice(Math.max(0, m.at - 32), m.at)
+      .split(/,|;|\band\b/)
+      .at(-1) ?? '';
+  // A creature it is deep enough for is under it: a little over its back.
+  for (const x of beings) {
+    const key = headWord(x.name);
+    if (!key) continue;
+    const i = text.search(new RegExp(`\\b${key}(?:e?s)?\\b`));
+    if (
+      i >= 0 &&
+      /\bdeep enough\b/.test(
+        text
+          .slice(Math.max(0, i - 40), i)
+          .split(/[,;]/)
+          .at(-1) ?? '',
+      )
+    )
+      marks.push({ at: i, top: x.height, being: true });
+  }
   // A thing the water comes in under, through or from is where it comes from, not how high it is: "coming
   // in under the doors, rising over the desks" stands over the desks.
   const from = (m: { at: number }) =>
@@ -242,24 +272,74 @@ export function waterLevel(words: string, plan: Blocking): number | null {
   // deep, unless the words say it is deep ("the floor is flooded, deep enough to swim": unmeasured).
   // "The floor of the hall is flooded, water up to their waists" is waist deep.
   const floor = text.search(/\b(?:floor|floors|ground)\b/);
-  const first = marks.sort((a, b) => a.at - b.at).find((m) => !from(m));
+  const measures = marks.sort((a, b) => a.at - b.at).filter((m) => !from(m));
+  const first = measures[0];
   if (!first) return floor >= 0 && !DEEP.test(text) ? 0.1 : null;
-  // The words just before what measures it, back to the clause or the "and" before it: in "covering the
-  // floor and up to the shelves" the shelves are reached ("up to"), and "covering" is the floor's.
-  const before =
-    text
-      .slice(Math.max(0, first.at - 32), first.at)
-      .split(/,|;|\band\b/)
-      .at(-1) ?? '';
-  const almost = /\b(?:almost|nearly|just below|not quite|close to)\b/.test(before);
-  const over = /\b(?:over|above|past|higher than|beyond|tops? of|covering|covers|covered|submerging|submerged)\b/.test(
-    before,
+  const levelOf = (m: (typeof marks)[number]) => {
+    const before = beforeOf(m);
+    const almost = /\b(?:almost|nearly|just below|not quite|close to)\b/.test(before);
+    const over =
+      !!m.being ||
+      /\b(?:over|above|past|higher than|beyond|tops? of|covering|covers|covered|submerging|submerged)\b/.test(before);
+    // Water covering the floor "and up to the shelves" has spread to them, across the floor: a thing it
+    // reaches is a height only where the words say how high (over it, the top of it, almost up to it).
+    const across = !!m.thing && !almost && !over && floor >= 0;
+    return across ? 0.1 : almost ? m.top - 0.2 : over ? m.top + 0.2 : m.top;
+  };
+  // A later thing named measures it too only where the words measure by it ("and far up the shelves");
+  // named for what stands in it ("and the shelves stand in it"), it does not.
+  const level = Math.max(
+    ...measures.filter((m) => m === first || m.being || HEIGHT_WORD.test(beforeOf(m))).map(levelOf),
   );
-  // Water covering the floor "and up to the shelves" has spread to them, across the floor: a thing it
-  // reaches is a height only where the words say how high (over it, the top of it, almost up to it).
-  const across = !!first.thing && !almost && !over && floor >= 0;
-  const level = across ? 0.1 : almost ? first.top - 0.2 : over ? first.top + 0.2 : first.top;
   return Math.max(0.05, Math.min(ceiling - 0.1, Math.round(level * 100) / 100));
+}
+
+/** Words that measure water by what follows them: over it, up it, almost to it, reaching it. */
+const HEIGHT_WORD =
+  /\b(?:over|above|past|beyond|higher than|tops? of|cover\w*|submerg\w*|up|almost|nearly|reach\w*|halfway)\b/;
+
+/** What a name is called by: its last word before any "with", "of" or the like ("desk with green lamp": desk). */
+function headWord(name: string): string | undefined {
+  return name
+    .toLowerCase()
+    .replace(/\s*\(.*?\)\s*/g, ' ')
+    .replace(/^\s*(?:the|a|an)\s+/, '')
+    .split(/\s(?:with|on|in|of|at|by|near|from|beside|who|that)\s/)[0]
+    .split(/\s+/)
+    .filter((w) => w.length > 2)
+    .at(-1)
+    ?.replace(/s$/, '')
+    .replace(/[^a-z0-9]/g, '');
+}
+
+/** A measure in a look: a number, a unit and what it measures ("about 60 feet long", "2 metres tall"). */
+const MEASURE = /\b(\d+(?:\.\d+)?)\s*-?\s*(feet|foot|ft|metres?|meters?|m)\b(?:\s+(tall|high|long|in length))?/gi;
+/** A clause of a look that opens by saying how big they are: far bigger than a person. */
+const HUGE =
+  /^(?:(?:a|an|the)\s+)?(?:(?:very|so|really|extremely|incredibly|truly)\s+(?:big|large)|huge|giant|gigantic|enormous|massive|colossal|immense|monstrous|towering)\b/;
+
+/**
+ * How high a creature's body stands, in metres, where its look says how big it is (the camera rules): a
+ * measure of how tall, or of how long (a body a fifth as deep as it is long), or, opening a clause of its
+ * look, a word saying it is far bigger than a person ("very big, fills the whole aisle": two metres at
+ * least). Nothing where its look says neither: a person of the plan is as tall as their pose. A whale lying
+ * in a metre of water was said to be all of it below the surface, under the boat (library, 27 Sep).
+ */
+export function bodyHeight(look: string): number | null {
+  let h: number | null = null;
+  for (const m of look.matchAll(MEASURE)) {
+    const n = Number(m[1]) * (/^f/i.test(m[2]) ? 0.3048 : 1);
+    const v = /long|length/i.test(m[3] ?? '') ? n / 5 : /tall|high/i.test(m[3] ?? '') ? n : null;
+    if (v !== null) h = Math.max(h ?? 0, Math.round(v * 100) / 100);
+  }
+  if (
+    look
+      .toLowerCase()
+      .split(/[,;.]/)
+      .some((c) => HUGE.test(c.trim()))
+  )
+    h = Math.max(h ?? 0, 2);
+  return h;
 }
 
 // ── a vehicle on the move ────────────────────────────────────────────────────────────────────────
