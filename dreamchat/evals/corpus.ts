@@ -181,10 +181,7 @@ export function diffDumps(before: Pick<Dump, 'dreams'>, now: Pick<Dump, 'dreams'
         changed = true;
         continue;
       }
-      const xs = x.prompt.split('\n\n');
-      const ys = y.prompt.split('\n\n');
-      const gone = xs.filter((p) => !ys.includes(p));
-      const added = ys.filter((p) => !xs.includes(p));
+      const { gone, added } = paragraphChanges(x.prompt, y.prompt);
       const images =
         JSON.stringify(x.images) !== JSON.stringify(y.images) ? { before: x.images, now: y.images } : undefined;
       const plan = (['transition', 'why', 'refs', 'own', 'states', 'staging', 'sees'] as const)
@@ -208,24 +205,38 @@ export function diffDumps(before: Pick<Dump, 'dreams'>, now: Pick<Dump, 'dreams'
   return out;
 }
 
+/** The paragraphs of a prompt gone from it, and added, in another version of it. */
+export function paragraphChanges(before: string, now: string): { gone: string[]; added: string[] } {
+  const xs = before.split('\n\n');
+  const ys = now.split('\n\n');
+  return { gone: xs.filter((p) => !ys.includes(p)), added: ys.filter((p) => !xs.includes(p)) };
+}
+
+/** Paragraphs gone and added, as lines to read: one changed in place as its changed words, a new or gone one whole. */
+export function changeLines(gone: string[], added: string[]): string[] {
+  const sectionOf = (para: string) => Object.keys(sectionsOf(para))[0];
+  const lines: string[] = [];
+  const left = [...added];
+  for (const g of gone) {
+    // The same part of the prompt, changed: shown as the words that changed in it.
+    const at = left.findIndex((a) => sectionOf(a) === sectionOf(g) && sectionOf(g) !== 'other');
+    if (at >= 0) {
+      lines.push(`  ~ ${wordDiff(g, left[at]).replace(/\n/g, '\n    ')}`);
+      left.splice(at, 1);
+    } else lines.push(`  - ${g.replace(/\n/g, '\n    ')}`);
+  }
+  for (const a of left) lines.push(`  + ${a.replace(/\n/g, '\n    ')}`);
+  return lines;
+}
+
 /** What changed, as lines to read: a paragraph changed in place as its changed words, a new or gone one whole. */
 export function diffLines(diff: CorpusDiff): string[] {
-  const sectionOf = (para: string) => Object.keys(sectionsOf(para))[0];
   const lines: string[] = [];
   for (const c of diff.changes) {
     lines.push(`\n── ${c.dream} ${c.id}`);
     for (const p of c.plan ?? []) lines.push(`  plan ${p.field}: ${p.before} -> ${p.now}`);
     if (c.images) lines.push(`  images: ${c.images.before.join(', ')}\n       -> ${c.images.now.join(', ')}`);
-    const added = [...c.added];
-    for (const g of c.gone) {
-      // The same part of the prompt, changed: shown as the words that changed in it.
-      const at = added.findIndex((a) => sectionOf(a) === sectionOf(g) && sectionOf(g) !== 'other');
-      if (at >= 0) {
-        lines.push(`  ~ ${wordDiff(g, added[at]).replace(/\n/g, '\n    ')}`);
-        added.splice(at, 1);
-      } else lines.push(`  - ${g.replace(/\n/g, '\n    ')}`);
-    }
-    for (const a of added) lines.push(`  + ${a.replace(/\n/g, '\n    ')}`);
+    lines.push(...changeLines(c.gone, c.added));
   }
   return lines;
 }

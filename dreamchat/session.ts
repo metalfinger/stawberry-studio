@@ -795,6 +795,47 @@ export function planRecord(
 }
 
 /**
+ * What a moment calls each one in it, as its previs and its shot's brief name them: what it has turned
+ * into where a change in force makes it something else, "the dreamer", its sketch's name, or the name
+ * of a fixture of its place.
+ */
+export function calledFor(s: Pick<Session, 'build' | 'draft'>, frame: Pick<Item, 'frame'>): (id: string) => string {
+  const changed = [...(frame.frame?.plan?.own ?? []), ...(frame.frame?.plan?.states ?? [])];
+  return (id: string) => {
+    const st = changed.find((x) => x.who === id && isWhole(x));
+    const it = s.build?.items.find((i) => i.id === id);
+    const fixture = s.draft?.breakdown ? fixtureName(s.draft.breakdown, id) : undefined;
+    return st ? st.now : it?.isDreamer ? 'the dreamer' : (it?.name ?? fixture ?? id);
+  };
+}
+
+/**
+ * A moment's previs as it is drawn from (SessionStore.layoutFor): its scene's floor plan by then, with
+ * the story record as the plan reads it, rendered as grey blocks through its camera, everyone named as
+ * the moment calls them; through the dreamer's eyes, the dreamer is the camera, not in the picture. Known
+ * by the picture's sha256. None where the moment has no worked-out camera on a floor plan.
+ */
+export function previsFor(
+  b: Breakdown,
+  frame: Pick<Item, 'id' | 'frame'>,
+  called: (id: string) => string,
+  rec?: RecordPlan,
+): { png: Uint8Array; key: string } | undefined {
+  const eye = frame.frame?.plan?.eye;
+  const plan = eye ? shotPlan(b, frame.id, rec) : undefined;
+  if (!eye || !plan) return undefined;
+  const dreamer = b.people.find((p) => p.is_dreamer)?.id;
+  const names = Object.fromEntries(plan.spots.map((x) => [x.id, called(x.id)]));
+  const png = previsImage(
+    plan,
+    eye,
+    frame.frame?.eyes === 'dreamer' && dreamer ? [dreamer] : [],
+    (id) => names[id] ?? id,
+  );
+  return { png, key: new Bun.CryptoHasher('sha256').update(png).digest('hex') };
+}
+
+/**
  * A plan made again, its in-between references known by what they show rather than their number:
  * found later, a change before the others renumbered them, and the moment of the melting would have
  * been drawn from the picture of the horse's head (24 Sep). A reference already drawn keeps its
@@ -2418,13 +2459,7 @@ export class SessionStore {
     // The shot, briefed by a director of photography from the view worked out on the floor plan,
     // and briefed again whenever that view changes.
     const view = frame.frame?.plan?.view;
-    const changed = [...(frame.frame?.plan?.own ?? []), ...(frame.frame?.plan?.states ?? [])];
-    const called = (id: string) => {
-      const st = changed.find((x) => x.who === id && isWhole(x));
-      const it = s.build?.items.find((i) => i.id === id);
-      const fixture = s.draft?.breakdown ? fixtureName(s.draft.breakdown, id) : undefined;
-      return st ? st.now : it?.isDreamer ? 'the dreamer' : (it?.name ?? fixture ?? id);
-    };
+    const called = calledFor(s, frame);
     // Without its previs the frame is drawn from words alone, as before there was one.
     const layout = await this.layoutFor(s, frame, called).catch((e) => {
       console.error(`previs for ${frame.id}: ${String(e).slice(0, 300)}`);
@@ -2639,21 +2674,12 @@ export class SessionStore {
   private async layoutFor(s: Session, frame: Item, called: (id: string) => string): Promise<string | undefined> {
     const cut = frame.frame?.plan;
     const b = s.draft?.breakdown;
-    const eye = cut?.eye;
-    const plan = b ? shotPlan(b, frame.id, planRecord(s)) : undefined;
-    const dreamer = b?.people.find((p) => p.is_dreamer)?.id;
-    if (!cut || !eye || !plan || !this.deps.sheets?.layout || !this.deps.dir) return undefined;
-    const names = Object.fromEntries(plan.spots.map((x) => [x.id, called(x.id)]));
+    if (!cut || !b || !this.deps.sheets?.layout || !this.deps.dir) return undefined;
     // Rendered every time, and known by what it is: the picture itself. Known by what it was made
     // from, a previs drawn before the audience had seats was used again after they had them (24 Sep).
-    // Through the dreamer's eyes, the dreamer is the camera, not in the picture.
-    const png = previsImage(
-      plan,
-      eye,
-      frame.frame?.eyes === 'dreamer' && dreamer ? [dreamer] : [],
-      (id) => names[id] ?? id,
-    );
-    const key = new Bun.CryptoHasher('sha256').update(png).digest('hex');
+    const rendered = previsFor(b, frame, called, planRecord(s));
+    if (!rendered) return undefined;
+    const { png, key } = rendered;
     if (frame.layout?.key === key) return frame.layout.mediaId;
     const shot = s.production?.result?.ids[`shot_${cut.shot.replace(/\./g, '_')}`];
     if (!shot) return undefined;

@@ -118,6 +118,30 @@ One **cut sheet** per cut is the spine everything is assembled from:
   every moment's images for one image per subject, its stage in force, pictures from another side, what the plan
   waits for and never sends, images for light alone, image 1 by tag, and each in-between picture against the
   owner's rule; writes `runs/references/<label>.json` (S5 eval below).
+- **Checkpoint tool** (`evals/checkpoint.ts`), for the paid picture checkpoints (S4, S5, S10): a few moments drawn
+  once more by today's full harness under the switches as set, each old against new, judged blind by the owner.
+  A set (`evals/checkpoint-<name>.json`) names each moment by dream and moment, why it is there (a counted fault
+  case of the step, or a guard the owner called right), his verdict and note on the old picture and its file.
+  `bun run evals/checkpoint.ts --set-from-cases S4` proposes one: every counted fault case of the step and every
+  guard whose prompt or images change against the step's own switch unset (`--base NAME=VALUE`, or `--base old`
+  for the prompt the old picture was drawn with), that the run's pictures can be drawn from; faults first, then
+  guards, most changed first, trimmed to the cap; printed and written for a person to confirm. `--dry <set>`
+  builds each moment as the harness would send it (plan.ts `rebuild`, then every image mapped to the run's own
+  file: sketches, earlier pictures, in-between pictures matched by what they show, the mock-up rendered now as
+  `layoutFor` renders it), prints its images, the word diff against the old prompt and the cost ($0.15 a picture),
+  and refuses a moment whose images cannot all be found (never a stand-in). No model is called: with the record on,
+  implied readings come from the cache (`--read-implied` to read, `--no-imply` to skip). `--draw <set>` (with
+  `--env-file`) draws only what the last dry run printed, into the checkpoint's own store
+  (`runs/checkpoint/<name>/home`), under a cap per checkpoint (`--cap`, else the set's `cap_usd`, else $3) that
+  counts every earlier attempt in its results, refusing to start over it and never drawing again on its own
+  (paired.ts's rules); job ids and receipts kept in `runs/checkpoint/<name>/results.json`. `--judge <set>` serves
+  a local page on 127.0.0.1 (no account): each moment's two pictures as A and B, old first in half of the faults
+  and half of the guards by a hash, beside the picture before, with the moment's line and the dreamer's words;
+  A right, B right, both or neither, and a note, each answer written to `runs/checkpoint/<name>/answers.json`
+  as given; the key stays in `key.json`, never served. `--score <set>` reads the answers against the key: faults
+  put right, guards kept. Build and draw with `DREAMCHAT_CHECKS=log` (acting, the harness may reword a moment first,
+  which a rebuild does not). The S4 set is proposed after `s4-camera` merges (on lab the camera switch changes
+  nothing): `DREAMCHAT_RECORD=on DREAMCHAT_CUT_SHEET=on DREAMCHAT_CAMERA=on DREAMCHAT_CHECKS=log`.
 - The frozen dreams: the ten real dreams and the five benchmark dreams, frozen by `evals/freeze-session.ts` with
   every field `rebuild` reads (`bun run evals/corpus.ts --verify`: each rebuilds as its saved conversation does,
   every picture). For the 62 drawn moments they also keep what was really sent: 15 of 62 prompts rebuild word for
@@ -567,6 +591,7 @@ between sessions.
 | S5 | S3, S9 | The stage in force is "the approved in-between picture, else the sketch", but the sheet's tree has no drawn or approved state in its ledger (S3 debt) and a rebuild takes every picture as approved: the fall-back to the sketch on the drawing path is only seen in a live-flow check. |
 | S5 | S6 | The evals re-derive who each attached image is for (`prompt-cases.ts refsOf`): it missed a crowd the record puts in view, which framePrompt attaches a picture for (four live moments read as images for their light alone; fixed in the S5 eval). `assembleCut` knows each image's subject; S6 could return it with `references`, so the evals read it instead of working it out again. |
 | S5 | S5 | Contradictions S5 must not settle by code alone (owner or paid check): D1 (one image per subject) against 14 guards drawn with a sketch beside its in-between pictures; D3's bar (2 or 3 changes); D5 (a place's state has one carrier, the mock-up beat the in-between picture) against a place's in-between picture as its one image; the mock-up through the dreamer's eyes (paired 1 of 6 right, story 7 of 11). |
+| Checkpoint tool | S2, S9, every step | `session.ts`: what a moment calls each one (`calledFor`) and its previs render (`previsFor`) moved out of `startFrame`/`layoutFor` unchanged, so the checkpoint renders the mock-up as the harness does (46 of 54 drawn mock-ups render byte for byte as the run's own; the other 8 are code changed since). `evals/paired-store.ts` sets up any moments (`setUpDream`, the paired test's `setUp` on it); `evals/corpus.ts` word diff shared (`changeLines`). A step that changes how a moment's images are chosen or named (S5 `chooseRefs`, S6) must keep `evals/checkpoint-set.ts todayOf` mapping every image to the run's file, and add its switch to `STEP_SWITCHES` (S5's is not named yet). The checks' Jev readings are not taken (build and draw with `DREAMCHAT_CHECKS=log`). |
 ## Known debt, by the step that clears it
 
 Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays one change.
@@ -961,3 +986,9 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   boat is still put low by the mock-up (S4). Guards 36/36. In-between pictures: frozen 29 (24 without the readings,
   25 off), live 79 (67, 66): the readings bring pictures that turn a place to face something (S1 -> S5). A reading
   of 115 moments took about 2.5 minutes, 411 about 12.
+- 27 Sep: the checkpoint tool built (`evals/checkpoint.ts`, above); nothing drawn, nothing spent. On lab (no camera
+  switch yet) `--set-from-cases S4` proposes nothing against the camera switch unset, as it should; against the old
+  pictures' prompts (`--base old`, a sample, cap $1.20) it proposed 5 S4 faults and 3 guards and refused 6 whose
+  images the run never drew (earlier pictures lighthouse-first m1 and m5, lighthouse-fresh m8; library-2's boat,
+  never sketched); `--dry` built all 8 from the run's own files, $1.20. The judging page and the score were tried
+  on stand-in pictures only.
