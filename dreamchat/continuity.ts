@@ -1112,21 +1112,25 @@ function planWith(
       const mv = plan?.moves?.[m.id]?.find((y) => y.id === v.id);
       const was = mv && plan ? before(m, v.id, plan) : undefined;
       const [w, d] = sizeOf(v);
-      // Whoever rides in it faces the way it goes (blocking.ts settle turns them so), and the picture shows
-      // them so: where they all face one way, it goes that way. Moved up the room while the two in it faced
-      // back down it, the boat was said to head at the camera behind them (library, 27 Sep).
+      // Whoever rides in it faces the way it goes, and the picture shows them as they face. Where they all
+      // face against the way it moved here, the plan gives two ways and says neither: moved up the room
+      // while the two in it faced back down it, the boat was said to head at the camera behind them
+      // (library, 27 Sep).
       const riders = where.spots
         .filter((p) => p.kind === 'person' && !p.many && !!p.faces && onOf(p, where)?.t.id === v.id)
         .map((p) => facing(p, where));
       const sum = riders.reduce((a, f) => ({ x: a.x + f.x, y: a.y + f.y }), { x: 0, y: 0 });
-      const ridersWay = riders.length && Math.hypot(sum.x, sum.y) / riders.length > 0.9 ? unitOf(sum) : undefined;
-      const moved = was && Math.hypot(v.x - was.x, v.y - was.y) > 0.2;
-      // The way it faces where the plan gives one; where it moved here, the way its riders face, or else
-      // the way it moved; or, where the place is its inside (the tractor's cab), the place's front.
+      const movedWay =
+        was && Math.hypot(v.x - was.x, v.y - was.y) > 0.2 ? unitOf({ x: v.x - was.x, y: v.y - was.y }) : undefined;
+      const against = !!movedWay && riders.length > 0 && sum.x * movedWay.x + sum.y * movedWay.y < 0;
+      // The way it faces where the plan gives one; the way it moved here, unless those in it face against
+      // it; or, where the place is its inside (the tractor's cab), the place's front.
       const way = v.faces
         ? facing(v, where)
-        : moved
-          ? (ridersWay ?? unitOf({ x: v.x - was.x, y: v.y - was.y }))
+        : movedWay
+          ? against
+            ? undefined
+            : movedWay
           : w >= rw - 0.1 && d >= rd - 0.1
             ? DIRECTIONS.front
             : undefined;

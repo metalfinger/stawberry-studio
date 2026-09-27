@@ -38,15 +38,21 @@ export function cameraMode(): 'off' | 'on' {
 /** The two claims the camera rules take out of a view where they are untrue: nothing else in it changes. */
 const CLAIMS = / ?(?:Nobody else is in the picture\.|They keep these places in every picture of this scene\.)/g;
 
+/** A span of the picture said from one band to the same band, as it was said before the camera rules. */
+const SPAN = /filling the picture from (a third of the way down|its middle) to \1/g;
+/** The same span as the camera rules say it (previs.ts filling): around there. */
+const bandOf = (v: string) => v.replace(SPAN, (_, x: string) => `filling the picture around ${x}`);
+
 /**
  * Whether a shot's brief, written for one view, still serves another: the same view, or, with the camera
  * rules, a view that differs only in the claims they take out ("Nobody else is in the picture" beside a
- * crowd, "They keep these places" across a crossing). Without it, the brief was lost for those alone.
+ * crowd, "They keep these places" across a crossing), or in a span they say as around one place. Without it,
+ * the brief was lost for those alone.
  */
 export function sameView(a: string | undefined, b: string | undefined): boolean {
   if (a === b) return true;
   if (!a || !b || cameraMode() !== 'on') return false;
-  return a.replace(CLAIMS, '') === b.replace(CLAIMS, '');
+  return bandOf(a.replace(CLAIMS, '')) === bandOf(b.replace(CLAIMS, ''));
 }
 
 // ── how far a camera turned, and whether two are the same ────────────────────────────────────────
