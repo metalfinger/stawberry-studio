@@ -333,13 +333,19 @@ One **cut sheet** per cut is the spine everything is assembled from:
   breakdown's moments, every one. Answers to a profile or a retelling are misread both ways: clear but read unclear
   (after a reply that asked), and no answer but read as settled. `--audit` scores the 20 hand-labelled replies
   (`evals/listening-audit.json`): move 20/20, either/or 10/11, leading 11/12.
-  **Targets:** listening-turn compliance at least 90%; either/or under 5% of listening questions; leading 0; said but
-  not in their words 0; every way of drawing it kept; every retelling ends with a list of every moment; no answer
-  misread. A target of 0 is met when every remaining flag (`--flags`) is hand-checked and found wrong; said facts
-  Jev reads 0.3-0.5 are listed apart (near the bar), hand-checked, and not counted.
-  **Floors** (S8 must not buy its targets by asking less or recording less; each against the before): questions per
-  listening reply at least 0.89; dream-file facts told or asked at least 0.95, never asked nor told at most 0.05; told
-  dream-file facts kept as said at least 0.87.
+  **Targets:** listening-turn compliance at least 90%; either/or under 5% of listening questions; one question per
+  listening reply (0 asking more than one); leading 0; said but not in their words 0; every way of drawing it kept;
+  every retelling ends with a list of every moment; no answer misread. A target of 0 is met when every remaining flag
+  (`--flags`) is hand-checked and found wrong; said facts Jev reads 0.3-0.5 are listed apart (near the bar),
+  hand-checked, and not counted.
+  **Floors** (S8 must not buy its targets by asking less or recording less; each against the before): listening
+  replies that ask at least the before's share; dream-file facts told or asked at least 0.95, never asked nor told at
+  most 0.05; told dream-file facts kept as said at least 0.87; and the move-selection floors (answered "I don't
+  remember", asked again, retellings begun as told all they remember) at most the before's. The first floor was
+  questions per listening reply (0.89 on DeepSeek), which a second question in one reply raises: on the Claude writer
+  every listening reply asked in both arms (133 of 133, 143 of 143) and the before's 1.13 was 17 replies asking two at
+  once, a fault S8 removes, so as written it could only be met by that fault. It now counts the replies that ask, and
+  one question per reply is its own target (27 Sep: the Claude before 17 of 133; the first after 0 of 143).
   **The before (40 conversations):** reached the retelling 40, the style offer 39, a profile 38. Listening-turn
   compliance 335/555 (60%): follow 39/112, goal questions 91/202 (45%), explore_thread 165/201 (121 name a message older
   than the one answered); before the pictures 567/809 (70%). Either/or 107/447 (24%). Leading 129/515 (25%): by the

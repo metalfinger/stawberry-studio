@@ -355,6 +355,7 @@ describe('scoring a conversation', () => {
     const asking = listening.filter((r) => r.questions > 0).length;
     expect(t.listening.replies).toBe(listening.length);
     expect(t.listening.asking).toBe(asking);
+    expect(t.listening.multi).toBe(listening.filter((r) => r.questions > 1).length);
     expect(t.listening.eitherOr).toBe(asking);
     expect(t.listening.leading).toBe(listening.length);
     expect(t.listening.both).toBe(asking);
@@ -563,10 +564,40 @@ describe('totals and two runs compared', () => {
     expect(h.find((x) => x.name.startsWith('move compliance'))?.met).toBe(false);
     expect(headline(a).find((x) => x.name.startsWith('move compliance'))?.met).toBe(true);
     // Floors need the run before; a run that asks less than before misses its floor.
-    expect(h.find((x) => x.name === 'floor: questions per listening reply')?.met).toBeNull();
-    const fewer = { ...a, listening: { ...a.listening, questions: 0 } };
-    expect(headline(fewer, a).find((x) => x.name === 'floor: questions per listening reply')?.met).toBe(false);
-    expect(headline(a, a).find((x) => x.name === 'floor: questions per listening reply')?.met).toBe(true);
+    const floor = 'floor: listening replies that ask';
+    expect(h.find((x) => x.name === floor)?.met).toBeNull();
+    const fewer = { ...a, listening: { ...a.listening, asking: 0 } };
+    expect(headline(fewer, a).find((x) => x.name === floor)?.met).toBe(false);
+    expect(headline(a, a).find((x) => x.name === floor)?.met).toBe(true);
+  });
+
+  test('the floor counts the listening replies that ask; a second question in one reply is its own target', () => {
+    // On the Claude writer every listening reply asked, in both arms (133 of 133, 143 of 143), and the
+    // before's 1.13 questions a reply was its second questions, which S8 counts as a fault.
+    const a = scoreSession(loaded(snow), env(), answering(0.9)).sums;
+    const n = a.listening.replies;
+    const before = { ...a, listening: { ...a.listening, asking: n, questions: n + 17, multi: 17 } };
+    const after = { ...a, listening: { ...a.listening, asking: n, questions: n, multi: 0 } };
+    expect(floors(after).askingListeningReplies).toBe(1);
+    const got = (t: typeof a, was?: typeof a) => (name: string) => headline(t, was).find((x) => x.name === name);
+    // Fewer questions, as many replies asking: the floor holds.
+    expect(got(after, before)('floor: listening replies that ask')?.met).toBe(true);
+    expect(got(after, before)('listening replies asking more than one question')?.met).toBe(true);
+    expect(got(before)('listening replies asking more than one question')?.value).toBe(
+      `17/${n} (${Math.round(1700 / n)}%)`,
+    );
+    expect(got(before)('listening replies asking more than one question')?.met).toBe(false);
+    // Fewer replies asking misses it, however many questions the rest hold.
+    const quieter = { ...a, listening: { ...a.listening, asking: n - 1, questions: 2 * n, multi: 0 } };
+    expect(got(quieter, before)('floor: listening replies that ask')?.met).toBe(false);
+    // A run scored before the count was kept shows none.
+    const { multi: _, ...old } = a.listening;
+    expect(
+      got({ ...a, listening: old as typeof a.listening })('listening replies asking more than one question'),
+    ).toMatchObject({
+      value: '—',
+      met: null,
+    });
   });
 
   test('--against pairs dream by dream, and replies one by one only in the very same conversation', () => {
