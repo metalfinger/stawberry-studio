@@ -12,7 +12,7 @@ import { buildFrames, buildGhosts, type PlannedInput } from '../frames';
 import { checkReferences } from '../gate';
 import { rebuild, standIn } from '../plan';
 import type { Breakdown, Moment, StyleOption } from '../producer';
-import { chooseRefs, mockupHelps, refsMode, SEVERAL, standsFor } from '../refs';
+import { chooseRefs, facelessIn, mockupHelps, type Route, refsMode, SEVERAL, standsFor } from '../refs';
 import { drawingSheet, type Session } from '../session';
 import type { Item } from '../sheets';
 
@@ -101,39 +101,67 @@ describe('the switch', () => {
 });
 
 describe('image 1, by the tags', () => {
-  const tags = (role: CutTags['role'], move: CutTags['move']) => ({ role, move });
-  test('the mock-up only from outside, not close, not across a jump, to another place or the seat, nor about a crowd', () => {
-    expect(mockupHelps(tags('two_shot', 'other_side'))).toBe(true);
-    expect(mockupHelps(tags('wide', 'reverse'))).toBe(true);
-    expect(mockupHelps(tags('single', 'first'))).toBe(true);
-    for (const role of ['pov', 'close_up', 'insert'] as const) expect(mockupHelps(tags(role, 'same_side'))).toBe(false);
-    for (const move of ['jump', 'other_place', 'seat'] as const) expect(mockupHelps(tags('wide', move))).toBe(false);
-    expect(mockupHelps(tags('group', 'same_side'), true)).toBe(false);
+  const route = (role: CutTags['role'], move: CutTags['move'], more: Partial<Route> = {}): Route => ({
+    role,
+    move,
+    establishing: false,
+    ...more,
+  });
+  test('the mock-up from outside, never across a jump, nor for a close-up, an insert or the seat', () => {
+    expect(mockupHelps(route('two_shot', 'other_side'))).toBe(true);
+    expect(mockupHelps(route('wide', 'reverse'))).toBe(true);
+    expect(mockupHelps(route('single', 'first'))).toBe(true);
+    for (const role of ['close_up', 'insert'] as const) expect(mockupHelps(route(role, 'same_side'))).toBe(false);
+    expect(mockupHelps(route('wide', 'jump'))).toBe(false);
+    expect(mockupHelps(route('pov', 'jump', { placeOnly: true }))).toBe(false);
+    expect(mockupHelps(route('two_shot', 'seat'))).toBe(false);
   });
 
-  test('a crowd with no image of its own turns the mock-up off only where the moment is about it', () => {
-    const crowd = { id: 'p9', kind: 'character', image: null, turned: null };
-    const ana = { id: 'p1', kind: 'character', image: 'sketch-p1', turned: null };
-    const sheet = (visible: string[]) => ({
+  test('to another place only for a wide shot: the verdicts against it were close shots, the wide ones right with it', () => {
+    expect(mockupHelps(route('wide', 'other_place'))).toBe(true);
+    for (const role of ['single', 'two_shot', 'group'] as const)
+      expect(mockupHelps(route(role, 'other_place'))).toBe(false);
+  });
+
+  test("through the dreamer's eyes only with nothing but the place in view", () => {
+    // Orchard m7: the empty rows of trees, the mock-up partly right and the sketches alone wrong; with
+    // someone or something in view the sketches alone were right (orchard m2, snow-train m6).
+    expect(mockupHelps(route('pov', 'other_side', { placeOnly: true }))).toBe(true);
+    expect(mockupHelps(route('pov', 'other_side'))).toBe(false);
+  });
+
+  test('about a crowd with no image of its own: no mock-up, but for a wide shot establishing the place', () => {
+    expect(mockupHelps(route('two_shot', 'other_side', { faceless: true }))).toBe(false);
+    expect(mockupHelps(route('wide', 'same_side', { faceless: true }))).toBe(false);
+    expect(mockupHelps(route('wide', 'first', { faceless: true, establishing: true }))).toBe(true);
+  });
+
+  test('a crowd is a group the moment lists with no sketch; someone whose sketch failed is not one', () => {
+    const crowd = { id: 'p9', kind: 'character', group: true, image: null, turned: null };
+    const failed = { id: 'p8', kind: 'character', group: false, image: null, turned: null };
+    const ana = { id: 'p1', kind: 'character', group: false, image: 'sketch-p1', turned: null };
+    const sheet = (inView: unknown[], visible: string[]) => ({
       earlier: [],
-      inView: [ana, crowd] as never,
+      inView: inView as never,
       visible,
       camera: { previs: 'previs-m1' },
-      tags: { role: 'two_shot', move: 'same_side' } as CutTags,
+      tags: { role: 'two_shot', move: 'same_side', establishing: false } as CutTags,
     });
     // Only in the background (the record or the floor plan put it there): the mock-up stays.
-    expect(chooseRefs(sheet(['p1'])).first).toBe('mockup');
+    expect(chooseRefs(sheet([ana, crowd], ['p1'])).first).toBe('mockup');
     // What the moment is about: made real shape by shape, it would come out as bare figures.
-    expect(chooseRefs(sheet(['p1', 'p9'])).first).toBe('free');
+    expect(chooseRefs(sheet([ana, crowd], ['p1', 'p9'])).first).toBe('free');
+    expect(facelessIn({ inView: [ana, failed] as never, visible: ['p1', 'p8'] })).toBe(false);
+    expect(chooseRefs(sheet([ana, failed], ['p1', 'p8'])).first).toBe('mockup');
   });
 
   test('an edit where the plan edits the picture before; else the mock-up where it helps; else the sketches', () => {
     const sheet = (role: CutTags['role'], earlier: { role: string }[] = [], previs: string | null = 'previs-m2') => ({
       earlier: earlier.map((e, i) => ({ id: `m${i + 1}`, kind: 'cut', role: e.role })) as never,
-      inView: [],
-      visible: [],
+      inView: [{ id: 'p1', kind: 'character', group: false, image: 'sketch-p1', turned: null }] as never,
+      visible: ['p1'],
       camera: { previs },
-      tags: { role, move: 'same_side', crowd: false } as CutTags,
+      tags: { role, move: 'same_side', establishing: false } as CutTags,
     });
     expect(chooseRefs(sheet('two_shot', [{ role: 'base' }])).first).toBe('edit');
     expect(chooseRefs(sheet('two_shot')).first).toBe('mockup');
@@ -184,7 +212,9 @@ function assembled(b: Breakdown, id: string, vars: Record<string, string>) {
     const inputs = (frame.frame?.plan?.refs ?? [])
       .map((use) => ({ use, item: pictures.find((x) => x.id === use.id) }))
       .filter((x): x is PlannedInput => !!x.item);
-    return { plan: p, pictures, made: assembleCut(cutSheet({ frame, sheets: sketches, style, inputs })) };
+    // Its mock-up, where its camera is worked out on a floor plan (session.ts layoutFor).
+    const layout = frame.frame?.plan?.eye ? standIn.previs(id) : undefined;
+    return { plan: p, pictures, made: assembleCut(cutSheet({ frame, sheets: sketches, style, inputs, layout })) };
   });
 }
 
@@ -262,7 +292,7 @@ describe('the plan waits only for what it sends', () => {
     expect(off?.who).toEqual(['p1', 'p3']);
     const on = cut(plan(b, ON), 'm3');
     expect(on.refs.find((r) => r.id === 'm1')?.who).toEqual(['p3']);
-    expect(on.needs).toEqual(['m1']);
+    expect(on.needs.filter((id) => id.startsWith('m'))).toEqual(['m1']);
     // Without the crowd, nothing earlier is waited for.
     const alone = breakdown([
       moment({ id: 'm1', visible: ['p1'], place: 'l2', looks_at: 'the gate' }),
@@ -270,7 +300,7 @@ describe('the plan waits only for what it sends', () => {
       moment({ id: 'm3', visible: ['p1'], looks_at: 'the window' }),
     ]);
     expect(cut(plan(alone, OFF), 'm3').needs).toContain('m1');
-    expect(cut(plan(alone, ON), 'm3').needs).toEqual([]);
+    expect(cut(plan(alone, ON), 'm3').needs.filter((id) => id.startsWith('m'))).toEqual([]);
   });
 
   test('never a picture from the other side of the room: turned round on the floor plan, it is neither edited nor laid out from', () => {
@@ -324,6 +354,102 @@ describe('the plan waits only for what it sends', () => {
   });
 });
 
+/** The hall's floor plan: ana and bo before the stage. */
+const withPlan = (b: Breakdown) => {
+  b.scenes[0].blocking = {
+    front: 'the stage',
+    indoors: true,
+    spots: [
+      { id: 'p1', x: 4, y: 5, kind: 'person', pose: 'standing' },
+      { id: 'p2', x: 6, y: 5, kind: 'person', pose: 'standing' },
+    ],
+  };
+  return b;
+};
+const water = { who: 'l1', what: 'water', now: 'up to the knees', since: 'm2' };
+
+describe('a side of a place never drawn, where a floor plan lays the picture out (the owner, 27 Sep)', () => {
+  // m1 faces the stage; m2 floods the hall; m3 turns to the back wall, a side never drawn, with the water.
+  const hall = () =>
+    breakdown([
+      moment({ id: 'm1', visible: ['p1', 'p2'], distance: 'wide', looks_at: 'the stage' }),
+      moment({
+        id: 'm2',
+        visible: ['p1', 'p2'],
+        distance: 'wide',
+        looks_at: 'the stage',
+        from: 'm1',
+        sameSide: ['m1'],
+        leaves: [{ who: 'l1', what: 'water', now: 'up to the knees' }],
+      }),
+      moment({ id: 'm3', visible: ['p1', 'p2'], looks_at: 'the back wall', sameSide: [], states: [water] }),
+    ]);
+
+  test('is no change: only story changes count, and no in-between picture of the side is drawn', () => {
+    const laid = plan(withPlan(hall()), ON);
+    expect(cut(laid, 'm3').eye).toBeTruthy();
+    expect(cut(laid, 'm3').changes).toEqual(['the action']);
+    expect(laid.ghosts.filter((g) => g.kind === 'view')).toEqual([]);
+    // With no floor plan, the side is a change: with the action, two, and its in-between picture is drawn.
+    const bare = plan(hall(), ON);
+    expect(cut(bare, 'm3').changes).toContain('the action');
+    expect(bare.ghosts.filter((g) => g.kind === 'view').map((g) => g.usedBy)).toEqual([['m3']]);
+  });
+
+  test("an in-between picture that takes none of a cut's changes off it is not drawn, however many it carries", () => {
+    // The crowd's soaked clothes are said in words (a crowd has no sketch to draw a change on): with the
+    // action, two changes, but the side's in-between picture would carry neither of them.
+    const soaked = { who: 'p3', what: 'clothes', now: 'soaked', since: 'm2' };
+    const people = [
+      person('p1', 'ana'),
+      person('p2', 'bo'),
+      person('p3', 'the crowd', { several: true, extras: true }),
+    ];
+    const b = withPlan(
+      breakdown(
+        [
+          moment({ id: 'm1', visible: ['p1', 'p2', 'p3'], distance: 'wide', looks_at: 'the stage' }),
+          moment({ id: 'm2', visible: ['p1', 'p2', 'p3'], distance: 'wide', looks_at: 'the stage', sameSide: ['m1'] }),
+          moment({ id: 'm3', visible: ['p1', 'p2', 'p3'], looks_at: 'the back wall', sameSide: [], states: [soaked] }),
+        ],
+        { people },
+      ),
+    );
+    const on = plan(b, ON);
+    expect(cut(on, 'm3').eye).toBeTruthy();
+    expect(cut(on, 'm3').changes).toHaveLength(2);
+    expect(on.ghosts).toEqual([]);
+  });
+
+  test("the side's in-between picture is drawn from the place's state in force, and waits for no earlier picture", () => {
+    const bare = plan(hall(), ON);
+    const view = bare.ghosts.find((g) => g.kind === 'view')!;
+    const flood = bare.ghosts.find((g) => g.kind === 'state')!;
+    expect([view.after, view.from, view.needs]).toEqual([flood.id, null, [flood.id]]);
+    expect(view.shows).toEqual([{ what: 'water', now: 'up to the knees' }]);
+    // So the cut takes one picture of the hall, which shows the water too.
+    expect(
+      cut(bare, 'm3')
+        .refs.filter((r) => r.kind === 'ghost')
+        .map((r) => r.id),
+    ).toEqual([view.id]);
+    expect(cut(bare, 'm3').changes).toEqual(['the action']);
+    // Off, none: two changes are under the plan's own bar of three.
+    const off = plan(hall(), OFF);
+    expect(off.ghosts.filter((g) => g.kind === 'view').map((g) => g.from)).toEqual([]);
+  });
+
+  test("the place's in-between picture as its one image beside the mock-up keeps its water, said outright", () => {
+    const b = withPlan(hall());
+    const on = assembled(b, 'm3', ON).made;
+    expect(on.references[0]).toMatchObject({ source: 'mockup' });
+    const line = on.prompt.split('\n').find((l) => l.includes('the hall'))!;
+    expect(line).toContain('only what it is made of and its colours');
+    expect(line).toContain('and its water exactly as in this picture (water: up to the knees)');
+    expect(on.references.find((r) => r.of === 'l1' || r.source === 'ghost')).toMatchObject({ source: 'ghost' });
+  });
+});
+
 describe("in-between pictures: only where an edit would carry two changes or more (the owner's rule)", () => {
   test('a change the moment makes in one edit of the picture before is drawn straight, with no in-between picture', () => {
     const b = breakdown([
@@ -361,6 +487,46 @@ describe("in-between pictures: only where an edit would carry two changes or mor
     const on = plan(b, ON);
     expect(on.ghosts.map((g) => g.id)).toEqual(['g1']);
     expect(cut(on, 'm3').needs).toEqual(['g1']);
+  });
+
+  test('what an in-between picture shows is each thing once, as its latest change left it', () => {
+    const short = { who: 'p1', what: 'hair', now: 'cropped short', since: 'm2' };
+    const green = { who: 'p1', what: 'hair', now: 'dyed green', since: 'm3' };
+    const coat = { who: 'p1', what: 'coat', now: 'bright red', since: 'm4' };
+    const b = breakdown([
+      moment({ id: 'm1', visible: ['p1'], looks_at: 'the stage' }),
+      moment({ id: 'm2', visible: ['p1'], place: 'l2', leaves: [{ who: 'p1', what: 'hair', now: 'cropped short' }] }),
+      moment({ id: 'm3', visible: ['p1'], states: [short], leaves: [{ who: 'p1', what: 'hair', now: 'dyed green' }] }),
+      moment({
+        id: 'm4',
+        visible: ['p1'],
+        place: 'l2',
+        states: [green],
+        leaves: [{ who: 'p1', what: 'coat', now: 'bright red' }],
+      }),
+      moment({ id: 'm5', visible: ['p1'], states: [green, coat] }),
+      moment({
+        id: 'm6',
+        visible: ['p1'],
+        place: 'l2',
+        states: [coat],
+        leaves: [{ who: 'p1', what: 'hair', now: 'shaved off' }],
+      }),
+    ]);
+    const on = plan(b, ON);
+    const last = on.ghosts.find((g) => g.state?.what === 'coat')!;
+    expect(last.shows).toEqual([
+      { what: 'hair', now: 'dyed green' },
+      { what: 'coat', now: 'bright red' },
+    ]);
+    const m5 = assembled(b, 'm5', ON).made.prompt;
+    expect(m5).toContain('as they are now (hair: dyed green; coat: bright red)');
+    expect(m5).not.toContain('cropped short');
+    // Where the moment has a thing newer than the picture, the newer is said, never both as now.
+    const m6 = assembled(b, 'm6', ON).made.prompt;
+    expect(m6).toContain('as they are now (coat: bright red)');
+    expect(m6).toContain('Except their hair, which is no longer theirs: it is now shaved off');
+    expect(m6).not.toMatch(/as they are now \([^)]*dyed green/);
   });
 
   test('of one subject, only the latest in-between picture: it was edited from the one before, and shows both', () => {
@@ -404,7 +570,7 @@ describe('the drawing path', () => {
   // worked out on a floor plan given its mock-up (session.ts layoutFor).
   const drawnAll = () =>
     withSwitches(S5, () => {
-      const s = loadDream('dream-0926-062232-a44a', false).session as Session;
+      const s = loadDream('dream-0926-070314-0f40', false).session as Session;
       const r = rebuild(s);
       const drawn: Session = {
         ...s,
