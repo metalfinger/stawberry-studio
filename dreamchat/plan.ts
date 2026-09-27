@@ -31,7 +31,7 @@ import {
   turnedInto,
 } from './frames';
 import { type CutSheet, cutSheetMode, framed, ghostName, sheetDream } from './cutsheet';
-import { checkReferences, preflight, readPrompt } from './gate';
+import { actsWhenLogging, checkReferences, checksMode, preflight, readPrompt } from './gate';
 import { callJev } from './jev';
 import { recordForPlan, recordInputsOf } from './record';
 import type { Breakdown } from './producer';
@@ -246,7 +246,15 @@ if (import.meta.main) {
     ];
     const read = await readPrompt(callJev, prompt, { sheet, edit });
     const g = read.reading;
-    return `gate: ${[...fixed, ...read.findings].length ? `HOLD: ${[...fixed, ...read.findings].join('; ')}` : 'draw'}${g ? ` | contradicts ${g.contradicts.toFixed(2)} twice ${g.twice.toFixed(2)} clear ${g.clear.toFixed(2)}${g.refsClear !== null ? ` refs ${g.refsClear.toFixed(2)}` : ''}` : ''}`;
+    // With the checks only logging (DREAMCHAT_CHECKS=log), only a code fault holds; the rest would hold.
+    const all = [...fixed, ...read.findings];
+    const holds = checksMode() === 'log' ? all.filter(actsWhenLogging) : all;
+    const would = all.filter((f) => !holds.includes(f));
+    const said = [
+      ...(holds.length ? [`HOLD: ${holds.join('; ')}`] : []),
+      ...(would.length ? [`would hold: ${would.join('; ')}`] : []),
+    ];
+    return `gate: ${said.length ? said.join(' | ') : 'draw'}${g ? ` | contradicts ${g.contradicts.toFixed(2)} twice ${g.twice.toFixed(2)} clear ${g.clear.toFixed(2)}${g.refsClear !== null ? ` refs ${g.refsClear.toFixed(2)}` : ''}` : ''}`;
   };
 
   if (gating)

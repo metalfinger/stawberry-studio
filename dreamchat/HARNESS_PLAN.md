@@ -53,7 +53,7 @@ One **cut sheet** per cut is the spine everything is assembled from:
 | S1 | Story record carries state (water, suitcase, who holds what, presence) into continuity, in-between pictures and prompts | done (27 Sep): reviewed twice, merged behind DREAMCHAT_RECORD=on | The S1 cases pass (`--step S1`: library-2 m5/m9 water, snow-train m4/m5, snow-train-2 m1, lighthouse-fresh m13, orchard m7; library-1 m3/m5, library-3 m7, snow-train-2 m5/m7 need a model step); no regressions on the corpus |
 | S2 | Stop stand-in checks deciding: the pre-draw prompt check and storyboard check only log | built and merged behind DREAMCHAT_CHECKS=log (27 Sep); review fixes in progress; whole-dream replays wait for DeepSeek | No moment held or reworded; corpus unchanged otherwise |
 | S3 | The cut sheet: tree (vertical) + record (horizontal) + relations + tags, one per cut | built, reviewed, fixed, merged behind DREAMCHAT_CUT_SHEET (27 Sep); sheet-as-sent proof on fresh replays running | Every input the prompt needs comes from the sheet; no fact computed in two places. Met: `assembleCut` reads only the sheet and writes what framePrompt writes on every moment (0 differences in 1052 rebuilds: frozen 115 and live 411, record off and on), prompt cases unchanged on against off; what the sheet still computes twice is listed under S3 below |
-| S2 | Stop stand-in checks deciding: the pre-draw prompt check and storyboard check only log | built on branch `s2-checks-log` behind DREAMCHAT_CHECKS=log (acting by default); eval met on the picture path of 10 dreams (redrawn with fake pictures, Jev only); the whole-conversation replays wait for DeepSeek to be topped up | No moment held or reworded; corpus unchanged otherwise. Met on the picture path: 0 of 61 moments held, reworded, planned again or left undrawn by a check (acting: 18-19 rewordings, 10-11 re-plans and 11-13 sketch rewordings asked for, 1-3 moments left undrawn; the saved runs: 4 undrawn, 3 reworded, 17 scenes and 13 moments planned again); every moment drawn; every moment's gate reading and every camera's storyboard reading logged; Jev 23.6 calls a dream against 106-111 acting and 245 in the saved runs; prompt cases and corpus unchanged (below) |
+| S2 | Stop stand-in checks deciding: the pre-draw prompt check and storyboard check only log | merged behind DREAMCHAT_CHECKS=log (acting by default); review fixes on branch `s2-checks-log` (27 Sep); eval met on the picture path of 10 dreams (redrawn with fake pictures, Jev only); the whole-conversation replays wait for DeepSeek to be topped up | No moment held or reworded; corpus unchanged otherwise. Met on the picture path: 0 of 61 moments held, reworded, planned again or left undrawn by the gate or "storyboard complete?" (planning again a scene on Jev's plan facts, `planFacts`, still acts: overlaps S2 → S7) (acting: 18-19 rewordings, 10-11 re-plans and 11-13 sketch rewordings asked for, 1-3 moments left undrawn; the saved runs: 4 undrawn, 3 reworded, 17 scenes and 13 moments planned again); every moment drawn; every moment's gate reading and every camera's storyboard reading logged; Jev 23.6 calls a dream against 106-111 acting and 245 in the saved runs; prompt cases and corpus unchanged (below) |
 | S3 | The cut sheet: tree (vertical) + record (horizontal) + relations + tags, one per cut | built on branch `s3-cut-sheet` behind DREAMCHAT_CUT_SHEET (off by default); eval met; reviewed (merge behind the switch), review fixes in | Every input the prompt needs comes from the sheet; no fact computed in two places. Met: `assembleCut` reads only the sheet and writes what framePrompt writes on every moment (0 differences in 1052 rebuilds: frozen 115 and live 411, record off and on), prompt cases unchanged on against off; what the sheet still computes twice is listed under S3 below |
 | S4 | Camera rules and shot roles: the scene's line, a reverse angle turns the room (what is now left, right, behind), point-of-view shots show at most hands, vehicle screen direction, same setup means the same camera | not started | The S4 cases pass (`--step S4`: snow-train m2 reverse and m3 seat, snow-train-2 m2 same setup, lighthouse-fresh m12 heading, lighthouse-first m3, night-market m2, library-1 m4/m5, orchard m4 hands and m7 legs; lighthouse-fresh m10 needs a new floor plan) |
 | S5 | References and variants: one image per subject; in-between pictures only when an edit carries several changes; variants kept and reusable; the grey mock-up as a reference chosen by tag | not started | The S5 cases stay met or pass (`--step S5`: never editing a picture from another side; library-1 m5 wall); its hypotheses (mock-up only, one image per subject) are for a paid check, not proven here |
@@ -130,11 +130,21 @@ One **cut sheet** per cut is the spine everything is assembled from:
   right (`gate.ts` `actsWhenLogging`): the images attached and the prompt disagree (an image attached with no
   word on it, one described but not attached, two edit bases or a base not first, one attached twice, more than
   twelve, an unapproved picture, someone in view without their sketch), and a plan that points at a picture
-  not earlier. The continuity plan's own warnings (a state carried in words only, many changes at once, no
+  not earlier (an in-between picture's own plan issues never reach the gate, so none of them is claimed). A
+  prompt Jev could not read is read once more, then drawn without a reading, which is logged. The continuity
+  plan's own warnings (a state carried in words only, many changes at once, no
   visible action) are guesses never measured on pictures: logged. Not checks, and unchanged: the rewording of
   "you" into the third person (code, rule E3), a scene with no plan planned again (`planUnplanned`), and a scene
   whose camera faces something its plan lacks planned once more with Jev's plan facts (`planFacts`; a fact the
-  plan is built from, not a check of a picture: S7 to decide).
+  plan is built from, not a check of a picture: S7 to decide). So "0 planned again" below is the gate's and
+  "storyboard complete?"'s only: a scene can still be planned again on a Jev reading with the checks logging.
+  **Readings pinned for S7** (review fixes, 27 Sep): each gate transition carries `ref` (the prompt's hash, the
+  take it was read for, the hash of the questions as worded) and every answer with its bar, a sketch's parts of
+  its look (`has_age` …, bar 0.5) included; each storyboard transition carries the view Jev was given; each
+  picture keeps `checkedTakes`, one per take drawn (its prompt's hash, the gate's reading, what the checks
+  found), where `gate` and `overrode` hold the latest only. The Stages panel says "would hold (only logged)"
+  when the checks log (`/api/jev` returns `checks`), and a moment is not shown waiting at the shot for a
+  storyboard reading only logged; `plan.ts --gate` prints "would hold" for what is only logged.
   **The eval as run (27 Sep).** The whole-conversation replays (`evals/replay.ts`) could not run: DeepSeek, which
   the producer, the host and the simulated dreamer call, refused every call (402, out of balance). The picture
   path was measured instead with `evals/redraw.ts`: a saved dream's picture path driven again with fake
@@ -160,8 +170,16 @@ One **cut sheet** per cut is the spine everything is assembled from:
   | Jev calls a dream (gate, storyboard and plan sites) | 245 (215) | 106 (105) | 111 (110) | 23.5 (22.7) | 23.6 (22.8) |
 
   The eight moments without a storyboard reading have no camera worked out on a floor plan, and are never
-  asked, acting or logging. The acting runs' one undrawn moment not by a check (snow-train, record on) was a
-  judge never asked about a take, a race of the redraw fixed since. Model steps asked for that are not a check's:
+  asked, acting or logging. The acting runs' one undrawn moment not by a check (snow-train, record on), and
+  snow-train m5-m7 waiting in the first logging run, were a take whose verdict was lost: not a race of the
+  redraw but a live bug (`judgeWhenReady` kept the judge's verdict on a copy saved only after acting on it; a
+  throw on the way, in vouching or in starting the next picture, lost it while the take stayed marked judged,
+  so it was never asked again and what is drawn from it waited for a verdict or a restart). Fixed in the review
+  fixes: the verdict is saved before it is acted on, a take is marked judged only once saved, and a picture that
+  throws while it is started fails on its own ("could not be started", resumed like any unpaid failure) instead
+  of taking the queue with it; a test throws after a verdict. The throw itself was not reproduced (8 more
+  redraws of snow-train and sea-school ran clean); it is now logged (`judge` transitions, `after judging`).
+  The redraw's resume workaround is gone. Model steps asked for that are not a check's:
   a new brief where a moment's view no longer matches the saved briefs (25-37 a run, both ways, the redraw's
   own: its moments go without their brief) and words for a look nobody described (3).
   Rewordings the checks made that no longer happen: in the saved runs sea-school m4 (its action; then left
@@ -188,6 +206,9 @@ One **cut sheet** per cut is the spine everything is assembled from:
   replayed whole with fake pictures, off against on, record off and on): moments held, reworded, planned again
   and undrawn with the conversation driving them (the plan-time re-plans and rewordings above are counted as
   asked for, not done); Jev calls per whole dream, the turns' included; the live-flow check on those replays.
+  They are the real measure: a redraw's logging arm starts from dreams planned and worded while the checks
+  acted, so it inherits their plans and rewordings (moon-market m7, sea-school m4 and snow-train m7 were
+  reworded then, and every scene the saved runs planned again stays planned again).
 - **S8 (listening).** Measured on fresh simulated conversations, never on the saved ones: those span four days of
   changing listener code (listening compliance 72% down to 58% by day) and replays from other branches. **The before**
   (`evals/listening-before/`, 40 conversations frozen with what the test reads, 1.4 MB): the 20 dreams with a
@@ -287,8 +308,8 @@ between sessions.
 | S1 | S5 | Implied changes make no in-between picture of their own until S5 settles the owner's rule (one only when an edit carries several changes); the per-change in-between pictures from before remain for S5. `shutAway` closes anything opened when carried to another place (right for a suitcase, wrong for an umbrella or book). |
 | S1 | S6 | `withoutWords` is another regex clean-up in frames.ts; S6 retires these. Text rendering bugs of the record land in the prompt until S6 builds it from the sheet. |
 | S1 | S2 | The live-flow check (`evals/live-flow.ts`) passes a moment the checks acted on: drawn again from a list of what went wrong, or drawn without its brief because the pre-draw check set it aside (5 of 26 moments on the fake replays, 27 Sep). A rebuild cannot know these; once S2 makes the checks log only, those moments should rebuild word for word. Done on the picture path (27 Sep): with DREAMCHAT_CHECKS=log the redraws of those dreams have 0 moments differing because a check acted (jellyfish-city m5, sea-school m2 and m7 rebuild word for word); to confirm on whole replays once DeepSeek is back. |
-| S2 | S7 | The checks' readings, logged per picture with DREAMCHAT_CHECKS=log: `gate` transitions in each dream's Jev log (every answer with its bar, what it found, and whether it acted), `previs` transitions for "storyboard complete?", and `overrode` on the picture as drawn. S7's labelled sets are these against the pictures. A reading is not put on a line when logging (the line search was 4 in 5 of the gate's calls): if S7 needs the line a reading rests on, it asks for it on the logged prompt. The Stages panel still shows a failed storyboard check as "held". |
-| S2 | S7 | Still acting with the checks only logging, and not a check of a picture: `planFacts` plans a scene once more where Jev reads that its camera faces something the plan lacks; `planUnplanned` where a scene has no plan. Only code faults hold a picture (`actsWhenLogging`); the continuity plan's warnings (carried in words only, many changes at once, no visible action) are logged, and S7 decides whether any earns acting. |
+| S2 | S7 | The checks' readings, logged per picture with DREAMCHAT_CHECKS=log: `gate` transitions in each dream's Jev log (every answer with its bar, what it found, and whether it acted), `previs` transitions for "storyboard complete?", and `overrode` on the picture as drawn. S7's labelled sets are these against the pictures. A reading is not put on a line when logging (the line search was 4 in 5 of the gate's calls): if S7 needs the line a reading rests on, it asks for it on the logged prompt. Each reading carries `ref` (prompt hash, take, question-wording hash) and each picture keeps `checkedTakes`, so a label joins the take it was read for. |
+| S2 | S7 | Still acting with the checks only logging, and not a check of a picture: `planFacts` plans a scene once more where Jev reads that its camera faces something the plan lacks (a Jev reading acting on the plan: S7 decides whether it earns it, like any check); `planUnplanned` where a scene has no plan. Only code faults hold a picture (`actsWhenLogging`); the continuity plan's warnings (carried in words only, many changes at once, no visible action) are logged, and S7 decides whether any earns acting. |
 | S2 | S9, S3 | A redraw (`evals/redraw.ts`) found moments a rebuild does not give as sent, no check's doing: the style's colour line takes a colour the dream gives something drawn later (sea-school m4 "orange octopus", snow-train m7 "red door"); an earlier picture taken as a rebuild takes it (desert-station m6, paper-city m5); desert-station m3-m6's sheets differ in `tree`; the in-between pictures' look lines are sent with commas and rebuilt with semicolons (desert-station, grandma-kitchen, paper-city, snow-train). What a rebuild reads should be the dream as it stood when the picture was drawn (S9's record of what was drawn). |
 | S1 | S9 | The Strawberry production is written at `start`, before planning and the implied reading, so implied changes have no production coverage. |
 | S2 | S7 | S2 makes the checks log only; their logged readings become S7's labelled sets. |
@@ -612,8 +633,8 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   (`evals/redraw.ts`). Logging: 61/61 moments drawn, 0 actions by a check, every gate and storyboard reading
   logged, Jev 23.6 calls a dream (acting 106-111, the saved runs 245); prompt cases and corpus unchanged; live
   flow 0 moments differing because a check acted (3 in the saved replays). Found on the way: a redraw that started
-  moments before the sketches were approved (fixed in the redraw), a take the judge was never asked about (a
-  race, fixed in the redraw by resuming), and four rebuild differences no check explains (overlaps S2 → S9, S3).
+  moments before the sketches were approved (fixed in the redraw), a take whose verdict was lost (at first
+  worked round in the redraw; a live bug, fixed in the review fixes below), and four rebuild differences no check explains (overlaps S2 → S9, S3).
   `bun test` 487 pass in every combination of DREAMCHAT_CHECKS, DREAMCHAT_RECORD and DREAMCHAT_CUT_SHEET with a
   60 s timeout (at the default 5 s, 0-3 of the heaviest rebuild tests timed out while the machine ran at load
   26, in either setting); typecheck clean.
@@ -621,3 +642,12 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   reworded or re-planned by a check, Jev calls 106 -> 24 per dream; prompt cases and corpus unchanged. Review: OK
   behind the switch; found a real live bug (a judged picture whose save fails is never re-asked, so what follows
   it waits), readings not yet pinned to prompt/take for S7, the Stages panel still says "held". Being fixed.
+- 27 Sep: S2 review fixes on `s2-checks-log`. The lost verdict: saved before it is acted on, marked judged only
+  once saved, and a picture that throws while starting fails on its own; test added (a throw after judging,
+  the dependant resumed and drawn). Readings pinned for S7 (`ref`, sketch facets, the storyboard view,
+  `checkedTakes`). The Stages panel and `plan.ts --gate` say "would hold" when only logging. The in-between
+  picture's "not a picture" pattern dropped (its plan issues never reached the gate). A prompt Jev could not read
+  is read once more when logging. Said plainly: `planFacts` still plans a scene again on a Jev reading (overlap
+  S2 → S7). Log-mode tests: a moment failing "storyboard complete?" when drawn is drawn with its reasons kept;
+  a code fault still leaves a moment undrawn; an in-between picture is drawn with what the gate found. DeepSeek
+  still out: nothing replayed.

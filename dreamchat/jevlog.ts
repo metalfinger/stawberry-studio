@@ -49,6 +49,13 @@ export type TransitionEntry = {
   facts: { question: string; answer: number; bar: number; ok: boolean }[];
   decision: string;
   reason: string;
+  /**
+   * What a picture's reading was of, so it can be matched to the take drawn from it (S7's labels):
+   * the prompt's hash, the take it was read for, and the hash of the questions as worded.
+   */
+  ref?: { prompt: string; version: number; questions: string };
+  /** For "storyboard complete?": the shot as the previs renders it, as Jev was given it. */
+  view?: string;
 };
 
 export type JevEntry = JevCallEntry | TransitionEntry;

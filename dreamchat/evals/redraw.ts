@@ -181,19 +181,8 @@ export async function redraw(source: string, out: string): Promise<Redrawn> {
   now.phase = 'frames';
   await store.resume(s.id);
   await store.settle(s.id, 1_200_000);
-  // A take the judge was never asked about (a race in the watch, seen once in 20 dreams) leaves what
-  // is drawn from it waiting, as for a person's verdict: resuming asks the judge about it.
-  for (let k = 0; k < 5; k++) {
-    const x = store.get(s.id)!;
-    const frames = x.build?.frames ?? [];
-    if (
-      !frames.some((f) => f.status === 'waiting') ||
-      !frames.some((f) => f.kind === 'cut' && f.status === 'ready' && !f.check && !f.review)
-    )
-      break;
-    await store.resume(s.id);
-    await store.settle(s.id, 1_200_000);
-  }
+  // No resuming here: a take whose verdict was lost used to leave what is drawn from it waiting
+  // (session.ts judgeWhenReady, fixed 27 Sep), and a redraw must show it if it comes back.
   const done = store.get(s.id)!;
   // Each image by what it is, as the store's own names them (evals/freeze-session.ts).
   const all: Item[] = [...(done.build?.items ?? []), ...(done.build?.frames ?? [])];

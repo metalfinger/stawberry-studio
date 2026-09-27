@@ -85,6 +85,17 @@ export type Item = {
    * checks are measured; for a sketch still unclear after they were asked, drawn on our guess.
    */
   overrode?: string[];
+  /**
+   * Each take as the checks saw it before it was drawn, oldest first: the take, its prompt's hash, the
+   * gate's reading and what the checks found (`gate` and `overrode` above are the latest only). What
+   * S7 labels against each picture drawn.
+   */
+  checkedTakes?: {
+    version: number;
+    prompt: string;
+    gate?: Item['gate'];
+    overrode?: string[];
+  }[];
   /** A sketch drawn on our guess once they had been asked twice: never guessed again. */
   guessed?: boolean;
   /** Jev's reading of the prompt it was last to be drawn from. */

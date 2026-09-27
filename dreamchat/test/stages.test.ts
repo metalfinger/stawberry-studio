@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { decide, factQuestions, momentStage, STAGES, stageOf, STORYBOARD } from '../stages';
+import { withChecks } from './fakes';
 
 const noul = (n: number) => ({ type: 'noul', noul: n });
 
@@ -38,9 +39,11 @@ describe('where a dream is', () => {
     storyboard: { m1: { ok: true }, m2: { ok: false } },
   };
 
-  test('a moment is where its frame is, or where its planning got to', () => {
+  test('a moment is where its frame is, or where its planning got to', async () => {
     expect(momentStage('m1', prep, undefined)).toBe('prompt');
-    expect(momentStage('m2', prep, undefined)).toBe('previs');
+    // A shot "storyboard complete?" found at odds waits there while the checks act; only logging, it goes on.
+    expect(await withChecks('act', async () => momentStage('m2', prep, undefined))).toBe('previs');
+    expect(await withChecks('log', async () => momentStage('m2', prep, undefined))).toBe('prompt');
     expect(momentStage('m3', prep, undefined)).toBe('previs');
     expect(momentStage('m4', prep, undefined)).toBe('plan');
     expect(momentStage('m1', prep, { status: 'drawing' })).toBe('image');
