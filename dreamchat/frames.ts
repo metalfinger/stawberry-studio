@@ -5,6 +5,7 @@
 // nothing to a generator, so say how much of the frame the subject fills; a room referenced from
 // a sheet comes back mirrored unless told which side its walls are on; every detail of what is
 // in view is said out loud, and the style tokens are quoted word for word.
+import { retired } from './cleanups';
 import { type ContinuityPlan, type PlanRef, pictureName } from './continuity';
 import type { Breakdown, Moment, State, StyleOption } from './producer';
 import { BECOMING, isWhole, momentLabel, oneColour, VAGUE, WHOLE } from './producer';
@@ -60,6 +61,7 @@ export function turnedInto(frame: Item): Set<string> {
  * picture is told only what is there.
  */
 export function withoutGone(action: string): string {
+  if (retired('gone')) return action;
   const out = action
     .replace(
       /,?\s*(?:where|in place of where|in the place where)\s+(?:the\s+|a\s+|an\s+)?[\w' -]{1,30}?\s+(?:used to be|had been|once was|once were|was before|were before)\b/gi,
@@ -113,6 +115,7 @@ const WRITTEN_ON =
   /\b(?:reads?|reading|written|printed|painted|carved|spelled|spelt|signs?|board|poster|label|note|card|screen|page|letter|banner|plate|slats?|headline|title)\b/i;
 
 export function writingIn(...texts: (string | null | undefined)[]): string[] {
+  if (retired('writing')) return [];
   const found = new Set<string>();
   for (const t of texts)
     // A quote mark counts only outside a word, so "the dreamer's kitchen" quotes nothing.
@@ -120,7 +123,7 @@ export function writingIn(...texts: (string | null | undefined)[]): string[] {
       // What someone says is not writing: the dog looking back "as if to say 'come on'" came back
       // with COME ON painted across the sky (lighthouse, 26 Sep). What a sign or board says is.
       const before = (t ?? '').slice(Math.max(0, (m.index ?? 0) - 40), m.index);
-      if (SPOKEN.test(before) && !WRITTEN_ON.test(before)) continue;
+      if (!retired('spoken') && SPOKEN.test(before) && !WRITTEN_ON.test(before)) continue;
       found.add(m[1].trim());
     }
   return [...found].filter((w) => /[a-z]/i.test(w));
@@ -243,18 +246,15 @@ export function lookIn(
 ): string {
   const own = ctx.members.filter((m) => m.group === s).map((m) => new RegExp(`\\b${m.word}s?\\b`, 'i'));
   const unsaid = ctx.unsaid?.[s.id];
+  // Each clean-up can be turned off on its own (cleanups.ts), for the eval of the step that retires them (S6).
   return keys
     .map((k) => s.fields[k])
-    .map((d) => (d?.value && unsaid ? { ...d, value: withoutWords(d.value, unsaid) } : d))
-    .filter((d) => !!d?.value && !VAGUE.test(d.value))
-    .map((d) => (d?.said ? (d.value as string) : inShades(d?.value as string, ctx.style)))
+    .map((d) => (d?.value && unsaid && !retired('after_words') ? { ...d, value: withoutWords(d.value, unsaid) } : d))
+    .filter((d) => !!d?.value && (retired('vague') || !VAGUE.test(d.value)))
+    .map((d) => (d?.said || retired('shades') ? (d?.value as string) : inShades(d?.value as string, ctx.style)))
     .flatMap((v) => v.split(/;\s*/))
-    .map((part) =>
-      withoutPose(part, false)
-        .trim()
-        .replace(/[.\s]+$/, ''),
-    )
-    .filter((part) => part && !own.some((re) => re.test(part)))
+    .map((part) => (retired('pose') ? part : withoutPose(part, false)).trim().replace(/[.\s]+$/, ''))
+    .filter((part) => part && (retired('members') || !own.some((re) => re.test(part))))
     .join('; ');
 }
 

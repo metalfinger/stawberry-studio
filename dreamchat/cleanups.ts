@@ -1,0 +1,68 @@
+// The text clean-ups and word lists S6 retires one at a time (HARNESS_PLAN.md, S6 eval), each by name, with a
+// switch that turns it off where it runs. Turned off, a clean-up does nothing: the text passes through as it came,
+// and a word list matches nothing. Every prompt that changes when one is off is a prompt it acts on today, which
+// is what `evals/retire.ts` measures before S6 replaces it with a typed fact of the cut sheet or the story record.
+//
+// DREAMCHAT_RETIRE=<name>[,<name>…] turns them off; unset, the default, every one runs as it always has. An eval
+// switch: never set it when drawing. A name that is not one of these is an error, so a misspelt switch can never
+// measure nothing. Only what the cut sheet and the record run while they are built reads it: `assembleCut`, which
+// writes from the sheet alone, never does (test/cutsheet.test.ts).
+export const CLEANUPS = {
+  gone: 'frames.ts withoutGone: a moment\'s words without what is gone from it ("where the sea used to be")',
+  after_words:
+    "frames.ts lookIn (withoutWords): a sketch's words without those the story record moved to after a change (plan.unsaid)",
+  vague: 'frames.ts lookIn: a look field that says nothing a picture can show is left out (producer.ts VAGUE)',
+  shades:
+    'frames.ts lookIn: in a style of one colour, a filled-in colour is said as a shade of it (sheets.ts inShades)',
+  pose: "frames.ts lookIn: a sketch's pose and framing are left out of its look (sheets.ts withoutPose)",
+  members: "frames.ts lookIn: a group's words about someone with a sketch of their own are left out",
+  writing: "frames.ts writingIn: quoted words in the moment's words or a look are the picture's only writing",
+  spoken: 'frames.ts writingIn: a quote after a word of speaking is speech, not writing (SPOKEN, WRITTEN_ON)',
+  state_verb: "record.ts passing: a look's passing state is a change where a moment's words tell it (STATE_VERB)",
+  fills: 'record.ts passing: water, snow, sand, fog or smoke told coming into a place is a change of it (FILLS)',
+  opens: 'record.ts openings: what a moment opens is open from there; a look that had it open is from after (OPENS)',
+  not_there: 'record.ts namedInWords: someone named as gone, looked for, heard or waited for is gone (NOT_THERE)',
+  self: "record.ts momentsOf: through the dreamer's eyes, words of them looking at themselves put them in view (SELF)",
+  taken:
+    'record.ts staysWithHolder: a thing given or taken where it is first held was not in their hands before (TAKEN)',
+  holds_name:
+    'record.ts namedInWords: a name before "stall", "tank", "bowl" names what it is of, not itself (HOLDS_NAME)',
+  shut_away: 'record.ts shutAway: a thing opened is shut once it is carried into another place',
+} as const;
+
+export type Cleanup = keyof typeof CLEANUPS;
+
+export const CLEANUP_NAMES = Object.keys(CLEANUPS) as Cleanup[];
+
+let seen: { raw: string; off: Set<Cleanup> } | null = null;
+
+/** The clean-ups turned off by DREAMCHAT_RETIRE; an unknown name throws. */
+export function retiredSet(raw = process.env.DREAMCHAT_RETIRE ?? ''): Set<Cleanup> {
+  if (seen?.raw === raw) return seen.off;
+  const names = raw
+    .split(',')
+    .map((x) => x.trim().toLowerCase())
+    .filter(Boolean);
+  const unknown = names.filter((x) => !(x in CLEANUPS));
+  if (unknown.length)
+    throw new Error(`DREAMCHAT_RETIRE: no clean-up called ${unknown.join(', ')} (${CLEANUP_NAMES.join(', ')})`);
+  seen = { raw, off: new Set(names as Cleanup[]) };
+  return seen.off;
+}
+
+/** Whether a clean-up is turned off (DREAMCHAT_RETIRE names it). */
+export const retired = (name: Cleanup): boolean => retiredSet().has(name);
+
+/** Runs `fn` with exactly these clean-ups turned off, and puts the switch back as it was, whatever happens. */
+export function withRetired<T>(names: Cleanup[], fn: () => T): T {
+  retiredSet(names.join(','));
+  const was = process.env.DREAMCHAT_RETIRE;
+  if (names.length) process.env.DREAMCHAT_RETIRE = names.join(',');
+  else delete process.env.DREAMCHAT_RETIRE;
+  try {
+    return fn();
+  } finally {
+    if (was === undefined) delete process.env.DREAMCHAT_RETIRE;
+    else process.env.DREAMCHAT_RETIRE = was;
+  }
+}
