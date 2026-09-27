@@ -701,7 +701,10 @@ One **cut sheet** per cut is the spine everything is assembled from:
   | Jev input tokens, all ten dreams | 1.84 million | 0.33 million | 0.39 million |
 
   Routed costs what logging costs in calls (the library rides in the gate's call) and 17% more tokens (the gate's
-  calls 27% more), a fifth of acting's calls and tokens. The first routed arm ended with snow train m4-m7 never
+  calls 27% more), a fifth of acting's calls and tokens. What each picture was sent, routed against logging: 76 of
+  77 the same; the other (car-park m1) had its camera face the wall's painted number in one arm and the wall in the
+  other, a plan-fact reading asked afresh in each redraw that moves between runs (G4), so its brief no longer
+  matched its view: not routing's doing. The first routed arm ended with snow train m4-m7 never
   started: the redraw returned while m3's verdict was still coming (not routing's doing; fixed in `evals/redraw.ts`,
   run again: 61/61).
 
