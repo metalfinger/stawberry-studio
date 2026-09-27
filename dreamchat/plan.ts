@@ -31,7 +31,8 @@ import {
   turnedInto,
 } from './frames';
 import { type CutSheet, cutSheetMode, framed, ghostName, sheetDream } from './cutsheet';
-import { actsWhenLogging, checkReferences, checksMode, preflight, readPrompt } from './gate';
+import { type CutFacts, cutFactsOf, routedMode } from './checks';
+import { actingOf, checkReferences, preflight, readPrompt } from './gate';
 import { callJev } from './jev';
 import { recordForPlan, recordInputsOf } from './record';
 import type { Breakdown } from './producer';
@@ -234,6 +235,8 @@ if (import.meta.main) {
     sheet = false,
     edit = false,
     item?: Item,
+    /** Routed (DREAMCHAT_JEV_ROUTED=on, with the cut sheet shadow or on): the moment's tags and facts. */
+    routing?: CutFacts,
   ) => {
     const fixed = [
       ...preflight(inView, issues),
@@ -244,11 +247,12 @@ if (import.meta.main) {
           .map((x) => ({ name: x.name, mediaId: x.mediaId as string })),
       }),
     ];
-    const read = await readPrompt(callJev, prompt, { sheet, edit });
+    const read = await readPrompt(callJev, prompt, { sheet, edit, ...(routing ? { routed: routing } : {}) });
     const g = read.reading;
     // With the checks only logging (DREAMCHAT_CHECKS=log), only a code fault holds; the rest would hold.
+    // Routed (DREAMCHAT_JEV_ROUTED=on), a code fault and what the checks that earned acting find.
     const all = [...fixed, ...read.findings];
-    const holds = checksMode() === 'log' ? all.filter(actsWhenLogging) : all;
+    const holds = actingOf(fixed, read, sheet ? 'sketch' : edit ? 'ghost' : 'moment');
     const would = all.filter((f) => !holds.includes(f));
     const said = [
       ...(holds.length ? [`HOLD: ${holds.join('; ')}`] : []),
@@ -275,7 +279,8 @@ if (import.meta.main) {
       const issues = order
         ? plan.issues.filter((x) => x.startsWith(`picture ${order} `) || x.startsWith(`picture ${order}:`))
         : [];
-      console.log(await gateOf(p.prompt, p.references, p.inView, issues, false, it.kind === 'ghost', it));
+      const routing = routedMode() && p.sheet ? cutFactsOf(p.sheet) : undefined;
+      console.log(await gateOf(p.prompt, p.references, p.inView, issues, false, it.kind === 'ghost', it, routing));
       continue;
     }
     console.log(p.prompt);

@@ -7,6 +7,8 @@
 // Code then checks the plan as a whole: every scene has one, and what each moment's camera faces is
 // on it. A scene that fails goes back to the planner once, with its problems named (`fix`).
 import { type Blocking, SHAPES, type Shape, type Spot } from './blocking';
+import { routedMode } from './checks';
+import { actsOn } from './gate';
 import type { JevFn, Question } from './jev';
 import { atSite, recordJev } from './jevlog';
 import type { Breakdown, Moment } from './producer';
@@ -109,17 +111,26 @@ export function planQuestions(
 type Answers = Record<string, { type: string; noul?: number; choice?: string; confidence?: number }> | null;
 
 /**
+ * Whether a camera read to face something the plan lacks has the scene planned again: always, as before
+ * (even with the checks only logging: it is a fact the plan is built from); routed
+ * (DREAMCHAT_JEV_ROUTED=on), only once it has earned acting on the owner's verdicts (S7), else it is logged.
+ */
+export const lackActs = () => !routedMode() || actsOn('plan.looks_missing');
+
+/**
  * One place's plan with Jev's answers applied, and what its moments' cameras face; with what the
- * planner must fix where a moment faces a part of the place the plan lacks.
+ * planner must fix where a moment faces a part of the place the plan lacks (`logged` instead, where that
+ * does not act).
  */
 export function applyPlanFacts(
   plan: Blocking,
   moments: Moment[],
   answers: Answers,
-): { plan: Blocking; fix: string[]; changed: string[] } {
+): { plan: Blocking; fix: string[]; changed: string[]; logged?: string[] } {
   const out: Blocking = structuredClone(plan);
   const fix: string[] = [];
   const changed: string[] = [];
+  const logged: string[] = [];
   if (!answers) return { plan: out, fix, changed };
   const o = answers.outdoors?.noul;
   if (typeof o === 'number') {
@@ -160,12 +171,12 @@ export function applyPlanFacts(
     looks[m.id] = at;
     // A side or an end of the place is said in words, and placed by code: never a fixture to add.
     if (at === 'missing' && !SIDE.test(m.looks_at))
-      fix.push(
+      (lackActs() ? fix : logged).push(
         `Moment ${m.id} ("${m.action}") faces ${m.looks_at}, which the plan does not have: give it a spot, as a fixture with that name, where the moment can face it.`,
       );
   }
   if (Object.keys(looks).length) out.looks = looks;
-  return { plan: out, fix, changed };
+  return { plan: out, fix, changed, ...(logged.length ? { logged } : {}) };
 }
 
 /**
@@ -212,8 +223,13 @@ export async function planFacts(
               to: r.fix.length ? 'plan' : 'previs',
               moment: `${sc.id}${placeId === sc.place ? '' : `/${placeId}`}`,
               facts: [],
-              decision: call.answers ? (r.fix.length ? 'fix' : 'cleared') : 'no answer',
-              reason: [...r.changed.map((c) => `set ${c}`), ...r.fix].join('; ') || 'the plan stands as made',
+              decision: call.answers ? (r.fix.length ? 'fix' : r.logged ? 'logged' : 'cleared') : 'no answer',
+              reason:
+                [
+                  ...r.changed.map((c) => `set ${c}`),
+                  ...r.fix,
+                  ...(r.logged ?? []).map((x) => `only logged: ${x}`),
+                ].join('; ') || 'the plan stands as made',
             });
             return { placeId, ...r };
           }),

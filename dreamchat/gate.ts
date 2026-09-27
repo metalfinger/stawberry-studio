@@ -5,6 +5,7 @@
 // on a guess; what depends on it waits. Pictures were redrawn for things a reading of their
 // prompt would have caught: a state the moment itself replaced, a baby drawn once inside a
 // family and again on her own, "you" in an instruction to a picture (23-24 Sep).
+import { type CutFacts, EARNED, isFinding, LIBRARY, routedMode, routedQuestions, routedReadings } from './checks';
 import type { JevFn, Question } from './jev';
 import type { Item } from './sheets';
 
@@ -65,6 +66,20 @@ export function checksMode(): 'act' | 'log' {
   return (process.env.DREAMCHAT_CHECKS ?? '').trim().toLowerCase() === 'act' ? 'act' : 'log';
 }
 
+/** What a gate reading is of: a moment, a sketch, or an in-between picture (an edit of a sketch). */
+export type Subject = 'moment' | 'sketch' | 'ghost';
+
+/**
+ * Whether a check acts on what it finds, by its id ("moment.contradicts", "moment.sb_camera",
+ * "plan.looks_missing"). With the checks only logging (DREAMCHAT_CHECKS=log), none does; routed
+ * (DREAMCHAT_JEV_ROUTED=on), only a check that met its bar on the owner's verdicts (checks.ts EARNED);
+ * otherwise, as before, every one does.
+ */
+export function actsOn(check: string): boolean {
+  if (checksMode() === 'log') return false;
+  return routedMode() ? EARNED.has(check) : true;
+}
+
 /**
  * A finding that keeps acting when the checks only log: a fault code knows for certain, which no
  * picture can put right. What the images attached and the prompt say of them disagree (an image
@@ -95,9 +110,14 @@ export type GateReading = {
   around?: { line: string; drop: number };
   /** A sketch's reading of each part of its look ("has_age" …), where it was asked. */
   facets?: Record<string, number>;
+  /** Routed (DREAMCHAT_JEV_ROUTED=on): each library question the cut's tags route to, its worst answer. */
+  routed?: Record<string, number>;
 };
-/** `asked`: the hash of the questions as worded, so a reading is only compared with one asked alike. */
-export type GateResult = { findings: string[]; reading: GateReading | null; asked: string };
+/**
+ * `asked`: the hash of the questions as worded, so a reading is only compared with one asked alike.
+ * `acting`, only when routed: the findings of checks that have earned the right to act.
+ */
+export type GateResult = { findings: string[]; reading: GateReading | null; asked: string; acting?: string[] };
 
 /** A short hash of a text: which prompt, or which wording of the questions, a reading was of. */
 export const sha = (text: string) => new Bun.CryptoHasher('sha256').update(text).digest('hex').slice(0, 16);
@@ -283,19 +303,32 @@ export function checkReferences(
 export async function readPrompt(
   jev: JevFn,
   prompt: string,
-  opts: { withImages?: boolean; sheet?: boolean; kind?: 'character' | 'animal' | 'location' | 'prop'; edit?: boolean } = {},
+  opts: {
+    withImages?: boolean;
+    sheet?: boolean;
+    kind?: 'character' | 'animal' | 'location' | 'prop';
+    edit?: boolean;
+    /** Routed (DREAMCHAT_JEV_ROUTED=on): the cut's tags and facts, whose library questions are asked too. */
+    routed?: CutFacts;
+  } = {},
 ): Promise<GateResult> {
   const withImages = opts.withImages ?? /\bImage 1(?::| is\b)/.test(prompt);
-  const questions = gateQuestions(withImages, opts.sheet, opts.kind, opts.edit);
+  const routed = routedMode();
+  const subject: Subject = opts.sheet ? 'sketch' : opts.edit ? 'ghost' : 'moment';
+  // A question's finding only logs with the checks logging, or routed where it has not earned acting.
+  const logs = (question: string) => !actsOn(`${subject}.${question}`);
+  // Routed, a moment is also asked each library question its tags route to, in the same call.
+  const library = routed && opts.routed ? routedQuestions(opts.routed) : null;
+  const questions = { ...gateQuestions(withImages, opts.sheet, opts.kind, opts.edit), ...(library?.questions ?? {}) };
   const asked = sha(JSON.stringify(questions));
   const whole = (c: Awaited<ReturnType<JevFn>>) =>
     ['contradicts', 'twice', 'clear', ...(withImages ? ['refs_clear'] : [])].every(
       (k) => c.answers?.[k]?.type === 'noul',
     );
   let call = await jev(prompt, questions);
-  // With the checks only logging, a prompt Jev could not read is drawn without a reading, so it is
-  // read once more first: a reading lost is a label S7 never gets.
-  if (checksMode() === 'log' && !whole(call)) call = await jev(prompt, questions);
+  // With the checks only logging (or routed), a prompt Jev could not read is drawn without a reading, so
+  // it is read once more first: a reading lost is a label S7 never gets.
+  if ((checksMode() === 'log' || routed) && !whole(call)) call = await jev(prompt, questions);
   const noul = (id: string) => {
     const a = call.answers?.[id];
     return a && a.type === 'noul' ? a.noul : null;
@@ -304,24 +337,32 @@ export async function readPrompt(
   const twice = noul('twice');
   const clear = noul('clear');
   const refsClear = withImages ? noul('refs_clear') : null;
-  // No reading, no confidence: it is held and tried again, never drawn blind.
-  if (contradicts === null || twice === null || clear === null || (withImages && refsClear === null))
-    return { findings: [`the prompt could not be checked (${call.error ?? 'no answer'})`], reading: null, asked };
-  const findings: string[] = [];
+  // No reading, no confidence: it is held and tried again, never drawn blind. Routed, it holds only where
+  // a check of this kind of picture has earned acting; otherwise it is drawn without a reading, as logging.
+  if (contradicts === null || twice === null || clear === null || (withImages && refsClear === null)) {
+    const unread = `the prompt could not be checked (${call.error ?? 'no answer'})`;
+    const holds = checksMode() !== 'log' && [...EARNED].some((id) => id.startsWith(`${subject}.`));
+    return { findings: [unread], reading: null, asked, ...(routed ? { acting: holds ? [unread] : [] } : {}) };
+  }
+  // Each finding with the question it is of, so a routed reading can say which act.
+  const found: { question: string; text: string }[] = [];
+  let current = '';
+  const findings = {
+    push: (...texts: string[]) => {
+      for (const text of texts) found.push({ question: current, text });
+    },
+  };
   let around: GateReading['around'];
   // With the checks only logging, a reading is never put on a line: that search asks Jev once for
   // every line of the prompt (most of the gate's calls on the fake pictures, 27 Sep), and only tells
   // a rewording where to look and excuses a long prompt's diffuse rise, neither of which acts any
   // more. The reading itself is logged whole, and a finding a line might have excused says so.
-  if (checksMode() === 'log') {
-    const unplaced = ", not put on a line (it may be a long prompt's diffuse rise)";
+  const unplaced = ", not put on a line (it may be a long prompt's diffuse rise)";
+  current = 'contradicts';
+  if (logs('contradicts')) {
     if (contradicts > (opts.sheet ? MAX_CONTRADICTS : MAX_CONTRADICTS_MOMENT))
       findings.push(
         `its instructions may contradict each other (${contradicts.toFixed(2)})${!opts.sheet && contradicts <= DIFFUSE_UP_TO ? unplaced : ''}`,
-      );
-    if (twice > MAX_TWICE)
-      findings.push(
-        `someone may be drawn twice (${twice.toFixed(2)})${!opts.sheet && twice <= DIFFUSE_UP_TO ? unplaced : ''}`,
       );
   } else if (contradicts > (opts.sheet ? MAX_CONTRADICTS : MAX_CONTRADICTS_MOMENT)) {
     // Which line it rests on: said with the finding, so a rewording knows where to look; and for a
@@ -335,7 +376,13 @@ export async function readPrompt(
         `its instructions may contradict each other (${contradicts.toFixed(2)})${around && around.drop >= LOCAL_DROP ? `, around: "${around.line.slice(0, 160)}"` : ''}`,
       );
   }
-  if (checksMode() !== 'log' && twice > MAX_TWICE) {
+  current = 'twice';
+  if (logs('twice')) {
+    if (twice > MAX_TWICE)
+      findings.push(
+        `someone may be drawn twice (${twice.toFixed(2)})${!opts.sheet && twice <= DIFFUSE_UP_TO ? unplaced : ''}`,
+      );
+  } else if (twice > MAX_TWICE) {
     // The same for someone drawn twice: in a theater of identical blue sofas it read 0.41-0.43 with
     // no line carrying it (none lowered it by more than 0.06), where a baby drawn twice read 0.75+.
     const at = opts.sheet ? undefined : await carrier(jev, prompt, twice, 'twice');
@@ -344,6 +391,7 @@ export async function readPrompt(
         `someone may be drawn twice (${twice.toFixed(2)})${at && at.drop >= LOCAL_DROP ? `, around: "${at.line.slice(0, 160)}"` : ''}`,
       );
   }
+  current = 'clear';
   if (clear < (opts.edit ? MIN_EDIT_CLEAR : MIN_CLEAR)) {
     // Which parts of its look are missing, when a sketch is unclear: what its rewording must fill.
     const missing = Object.entries(opts.sheet && opts.kind ? FACETS[opts.kind] : {})
@@ -353,15 +401,22 @@ export async function readPrompt(
       `what it shows is not clear enough to draw (${clear.toFixed(2)})${missing.length ? `: missing ${missing.join('; ')}` : ''}`,
     );
   }
+  current = 'refs_clear';
   if (refsClear !== null && refsClear < MIN_REFS_CLEAR)
     findings.push(`what to take from each image is not clear enough (${refsClear.toFixed(2)})`);
+  // The library questions the cut's tags route to: each its worst answer, a finding past its bar.
+  const lib = library && opts.routed ? routedReadings(opts.routed, call.answers) : null;
+  for (const f of lib?.findings ?? []) {
+    current = f.id;
+    findings.push(f.text);
+  }
   const facets: Record<string, number> = {};
   for (const id of Object.keys(opts.sheet && opts.kind ? FACETS[opts.kind] : {})) {
     const a = noul(`has_${id}`);
     if (a !== null) facets[`has_${id}`] = a;
   }
   return {
-    findings,
+    findings: found.map((f) => f.text),
     reading: {
       contradicts,
       twice,
@@ -369,9 +424,23 @@ export async function readPrompt(
       refsClear,
       ...(around ? { around } : {}),
       ...(Object.keys(facets).length ? { facets } : {}),
+      ...(lib && Object.keys(lib.readings).length ? { routed: lib.readings } : {}),
     },
     asked,
+    ...(routed ? { acting: found.filter((f) => !logs(f.question)).map((f) => f.text) } : {}),
   };
+}
+
+/**
+ * Of what code checks (`fixed`) and Jev's reading found for a picture, what acts: all of it when the checks
+ * act; only a fault code knows for certain when they log; routed, that and the findings of the checks that
+ * have earned acting, the continuity plan's warnings among them only if they have.
+ */
+export function actingOf(fixed: string[], read: Pick<GateResult, 'findings' | 'acting'>, subject: Subject): string[] {
+  const all = [...fixed, ...read.findings];
+  if (checksMode() === 'log') return all.filter(actsWhenLogging);
+  if (!routedMode()) return all;
+  return [...fixed.filter((f) => actsWhenLogging(f) || actsOn(`${subject}.plan_issue`)), ...(read.acting ?? [])];
 }
 
 /**
@@ -392,6 +461,11 @@ export function gateFacts(
     ...(reading.refsClear !== null ? [over('refs_clear', reading.refsClear, MIN_REFS_CLEAR)] : []),
     // A sketch's parts of its look: under 0.5, said to be missing.
     ...Object.entries(reading.facets ?? {}).map(([id, a]) => over(id, a, 0.5)),
+    // Routed: each library question, with the bar past which it is a finding.
+    ...Object.entries(reading.routed ?? {}).flatMap(([id, a]) => {
+      const q = LIBRARY.find((x) => x.id === id);
+      return q ? [{ question: id, answer: a, bar: q.bar, ok: !isFinding(q, a) }] : [];
+    }),
   ];
 }
 
