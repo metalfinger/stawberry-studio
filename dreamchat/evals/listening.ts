@@ -1039,11 +1039,16 @@ export type Sums = {
   /** Move compliance by kind of move. */
   byMove: Record<string, Frac>;
   questions: { replies: number; total: number; multi: number; rawMulti: number; askedWhenTold: number };
-  /** Listening replies: how many, their questions, those asking one; either/or among those; leading among all. */
+  /**
+   * Listening replies: how many, their questions, those asking at all and those asking more than one;
+   * either/or among those asking; leading among all.
+   */
   listening: {
     replies: number;
     questions: number;
     asking: number;
+    /** Asking two questions or more at once: S8's fault, its own target (absent from runs scored before it was). */
+    multi: number;
     eitherOr: number;
     leading: number;
     /** Of the leading: by its question, and by what it states. */
@@ -1386,6 +1391,7 @@ export function emptySums(): Sums {
       replies: 0,
       questions: 0,
       asking: 0,
+      multi: 0,
       eitherOr: 0,
       leading: 0,
       leadingAsked: 0,
@@ -1478,6 +1484,7 @@ export function sumsOf(
       if (r.leading !== null && r.leading !== undefined && r.eitherOr !== null) {
         t.listening.replies += 1;
         t.listening.questions += r.questions;
+        if (r.questions > 1) t.listening.multi += 1;
         if (yes(r.leading)) t.listening.leading += 1;
         if (yes(r.leadingAsked)) t.listening.leadingAsked += 1;
         if (yes(r.invents)) t.listening.invents += 1;
@@ -1644,7 +1651,10 @@ const rate = (a: number, b: number) => (b ? a / b : null);
 /** The floors: numbers S8 must not push down (or, for "never asked nor told", up) to meet its targets. */
 export function floors(t: Sums) {
   return {
-    questionsPerListeningReply: rate(t.listening.questions, t.listening.replies),
+    // The listening replies that ask at all. Counted as questions per reply, the floor was met only by
+    // asking two at once, which S8 counts as a fault: on the Claude writer every listening reply asked, in
+    // both arms, and the before's 1.13 was its second questions (its own target, below).
+    askingListeningReplies: rate(t.listening.asking, t.listening.replies),
     toldOrAsked: rate(t.coverage.told + t.coverage.askedNotTold, t.coverage.facts),
     neverAskedNorTold: rate(t.coverage.never, t.coverage.facts),
     toldCarriedAsSaid: rate(t.coverage.carried, t.coverage.told),
@@ -1682,6 +1692,16 @@ export function headline(t: Sums, before?: Sums | null): Headline[] {
       value: `${t.listening.eitherOr}/${t.listening.asking} (${pct(t.listening.eitherOr, t.listening.asking)})`,
       target: '< 5%',
       met: eo === null ? null : eo < 0.05,
+    },
+    {
+      name: 'listening replies asking more than one question',
+      // A run scored before this was counted has no number for it.
+      value:
+        t.listening.multi === undefined
+          ? '—'
+          : `${t.listening.multi}/${t.listening.asking} (${pct(t.listening.multi, t.listening.asking)})`,
+      target: '0',
+      met: t.listening.multi === undefined || !t.listening.replies ? null : t.listening.multi === 0,
     },
     {
       name: 'listening replies bringing in a detail not given (leading)',
@@ -1736,7 +1756,7 @@ export function headline(t: Sums, before?: Sums | null): Headline[] {
       met: a === null || b === null ? null : up ? a >= b - 1e-9 : a <= b + 1e-9,
     });
   };
-  floor('questions per listening reply', 'questionsPerListeningReply', true);
+  floor('listening replies that ask', 'askingListeningReplies', true);
   floor('dream-file facts told or asked', 'toldOrAsked', true);
   floor('dream-file facts never asked nor told', 'neverAskedNorTold', false);
   floor('told dream-file facts kept as said', 'toldCarriedAsSaid', true);
@@ -1757,7 +1777,7 @@ export function detailLines(t: Sums): string[] {
     `replies scored ${t.replies}; by part: ${GROUPS.map((g) => `${g} ${frac(t.compliance[g])}`).join(', ')}`,
     `by move: ${byMap(t.byMove)}`,
     `goal questions by goal: ${byMap(t.probeByGoal)}`,
-    `questions per reply ${t.questions.replies ? (t.questions.total / t.questions.replies).toFixed(2) : '—'}; replies with more than one ${t.questions.multi} (the host wrote ${t.questions.rawMulti} before the repair); asked where told to ask nothing ${t.questions.askedWhenTold}`,
+    `questions per reply ${t.questions.replies ? (t.questions.total / t.questions.replies).toFixed(2) : '—'}; replies with more than one ${t.questions.multi} (the host wrote ${t.questions.rawMulti} before the repair); asked where told to ask nothing ${t.questions.askedWhenTold}; per listening reply ${t.listening.replies ? (t.listening.questions / t.listening.replies).toFixed(2) : '—'}`,
     `said facts in their words, by where they are: ${byMap(t.facts.bySource)}; told but not in the dream file ${t.facts.toldNotInDream}`,
     `dream-file facts the person told: ${t.coverage.told}/${t.coverage.facts}, kept as said ${t.coverage.carried}; asked but not told ${t.coverage.askedNotTold}; never asked nor told ${t.coverage.never}; by kind: ${byMap(t.coverage.byKind)}`,
     `goals read as told when the dream was first told back, that their message tells: ${t.goals.backed}/${t.goals.covered}; by goal: ${byMap(t.goals.byGoal)}`,
