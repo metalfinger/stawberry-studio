@@ -2306,3 +2306,9 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   1 of 144 frozen and 1 of 489 live, library-1 m5's view line without "outside it outside the window", better;
   0 worse. For the check: delete library-1-m5 and library-3-m6 from `runs/checkpoint/s4/briefs.json` (cut
   there), brief them and lighthouse-fresh-m9 with `--brief`, and dry run again.
+
+- 27 Sep, S4 picture check drawn: 20 moments (7 faults, 13 guards) by today's harness with record, cut sheet, camera
+  and routed checks on (checks logging), one take each on fal, $3.00 (cap $3.00). Judged blind by the owner on the
+  local page (`evals/checkpoint.ts --judge`), answers in `runs/checkpoint/s4/answers.json`, scored with `--score s4`.
+  Known confound: library-3 m6's brief says the whale is under the boat while the camera rule says beside it (the
+  brief writer is not told what the sheet places in view; S6 owns the fix). Money left: $18.
