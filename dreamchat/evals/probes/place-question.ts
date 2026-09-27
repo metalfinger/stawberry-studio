@@ -10,7 +10,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { IMPLIED_THINKING, impliedAsk, impliedQuestions, parseImplied } from '../../implied';
 import { type Question, jevWithModel } from '../../jev';
-import { HOST_MODEL } from '../../llm';
+import { WRITER_MODEL } from '../../llm';
 import { type Breakdown, completeViews, moments } from '../../producer';
 import { recordInputsOf, storyRecord } from '../../record';
 import type { Session } from '../../session';
@@ -80,7 +80,7 @@ const cache = JSON.parse(readFileSync(join(W, 'runs', 'implied-cache.json'), 'ut
   string,
   { content?: string }
 >;
-const writer = `${HOST_MODEL} thinking ${IMPLIED_THINKING}`;
+const writer = `${WRITER_MODEL} thinking ${IMPLIED_THINKING}`;
 const only = (process.env.ONLY ?? '').split(',').filter(Boolean);
 const dreams: { id: string; session: Session }[] = process.env.LIVE
   ? liveDreams(dataDir()).map(readLive)

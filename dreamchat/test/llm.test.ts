@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { parseTurnResponse, RECOVERY } from '../llm';
+import { claudePrompt, jsonOnly, parseTurnResponse, RECOVERY } from '../llm';
 
 describe('the turn contract, enforced in code', () => {
   test('a well-formed turn passes untouched', () => {
@@ -60,5 +60,33 @@ describe('the ask goes last', () => {
       'just a feeling, even if it made no sense.',
       'was he a stranger?',
     ]);
+  });
+});
+
+describe('the Claude writer', () => {
+  test('a single turn goes as the prompt, system messages as the system prompt', () => {
+    const { system, prompt } = claudePrompt([
+      { role: 'system', content: 'Be brief.' },
+      { role: 'user', content: 'Tell me the dream.' },
+    ]);
+    expect(system).toBe('Be brief.');
+    expect(prompt).toBe('Tell me the dream.');
+  });
+
+  test('earlier turns are written out, and the last user turn is the one answered', () => {
+    const { prompt } = claudePrompt([
+      { role: 'user', content: 'I was on a train.' },
+      { role: 'assistant', content: 'Where was it going?' },
+      { role: 'user', content: 'Into the snow.' },
+    ]);
+    expect(prompt).toContain('[user]\nI was on a train.');
+    expect(prompt).toContain('[assistant]\nWhere was it going?');
+    expect(prompt.indexOf('Into the snow.')).toBeGreaterThan(prompt.indexOf('Where was it going?'));
+  });
+
+  test('a fenced or introduced JSON reply is cut down to the object', () => {
+    expect(jsonOnly('```json\n{"response": ["hi"]}\n```')).toBe('{"response": ["hi"]}');
+    expect(jsonOnly('Here it is: {"a": {"b": 1}} ')).toBe('{"a": {"b": 1}}');
+    expect(jsonOnly('no json')).toBe('no json');
   });
 });

@@ -7,7 +7,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { IMPLIED_THINKING, type ImpliedCost, readImplied, type WriteFn, writeImplied } from '../implied';
 import type { JevCall, JevFn } from '../jev';
-import { type CallResult, HOST_MODEL } from '../llm';
+import { type CallResult, WRITER_MODEL } from '../llm';
 import { completeViews } from '../producer';
 import { recordInputsOf, storyRecord } from '../record';
 import type { Session } from '../session';
@@ -32,7 +32,7 @@ export async function withImplied(
   if (!b || !s.style) return { session: s, cost: zero(), asked: 0, cached: 0, close: [] };
   const file = opts.cacheFile ?? IMPLIED_CACHE;
   const cache: Cache = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : {};
-  const writer = opts.writer ?? `${HOST_MODEL} thinking ${IMPLIED_THINKING}`;
+  const writer = opts.writer ?? `${WRITER_MODEL} thinking ${IMPLIED_THINKING}`;
   const write = opts.write ?? writeImplied;
   let asked = 0;
   let cached = 0;

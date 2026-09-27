@@ -5,6 +5,8 @@
 // lab's bookkeeper (Call A), its one-call and baseline arms, and its mocks are left out;
 // tests inject their own fakes.
 
+import { tmpdir } from 'node:os';
+
 const DEEPSEEK_URL = 'https://api.deepseek.com/chat/completions';
 export const HOST_MODEL = process.env.DREAMCHAT_HOST_MODEL ?? 'deepseek-v4-pro';
 
@@ -38,10 +40,103 @@ export type Thinking = 'disabled' | 'low' | 'high' | 'max';
 export const HOST_THINKING = (process.env.DREAMCHAT_HOST_THINKING as Thinking | undefined) ?? 'disabled';
 export const HOST_THINKING_DEEP = (process.env.DREAMCHAT_HOST_THINKING_DEEP as Thinking | undefined) ?? 'low';
 
+/**
+ * The writer model. `deepseek` (default) calls DeepSeek's API; `claude` runs the Claude Code CLI
+ * (`claude -p`) on the owner's subscription, with no tools, settings, MCP servers or session kept,
+ * from a temporary folder so no project instructions are read. Every caller of `callDeepseek`
+ * (host, producer, implied states, the simulated dreamer) follows this switch.
+ */
+export const WRITER = (process.env.DREAMCHAT_WRITER ?? 'deepseek') as 'deepseek' | 'claude';
+export const CLAUDE_MODEL = process.env.DREAMCHAT_CLAUDE_MODEL ?? 'claude-opus-5-5';
+/** The writer model's name as recorded in caches and transcripts. */
+export const WRITER_MODEL = WRITER === 'claude' ? CLAUDE_MODEL : HOST_MODEL;
+const CLAUDE_EFFORT: Record<Thinking, string> = { disabled: 'low', low: 'medium', high: 'high', max: 'max' };
+
+/** The conversation as one prompt: `claude -p` takes a system prompt and one user turn. */
+export function claudePrompt(messages: ChatMessage[]): { system: string; prompt: string } {
+  const system = messages
+    .filter((m) => m.role === 'system')
+    .map((m) => m.content)
+    .join('\n\n');
+  const turns = messages.filter((m) => m.role !== 'system');
+  const last = turns.at(-1);
+  if (turns.length <= 1) return { system, prompt: last?.content ?? '' };
+  const earlier = turns
+    .slice(0, -1)
+    .map((m) => `[${m.role}]\n${m.content}`)
+    .join('\n\n');
+  return {
+    system,
+    prompt: `The conversation so far (you are "assistant"):\n\n${earlier}\n\n[user]\n${last?.content ?? ''}\n\nWrite the assistant's next message only.`,
+  };
+}
+
+/** The JSON object in a reply that may be wrapped in a code fence or a sentence. */
+export function jsonOnly(text: string): string {
+  const t = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+  const start = t.indexOf('{');
+  const end = t.lastIndexOf('}');
+  return start !== -1 && end > start ? t.slice(start, end + 1) : t;
+}
+
+export async function callClaude(
+  messages: ChatMessage[],
+  opts: { model?: string; json?: boolean; thinking?: Thinking } = {},
+): Promise<CallResult> {
+  const model = opts.model && !opts.model.startsWith('deepseek') ? opts.model : CLAUDE_MODEL;
+  const { system, prompt } = claudePrompt(messages);
+  const started = Date.now();
+  const args = [
+    'claude',
+    '-p',
+    '--model',
+    model,
+    '--output-format',
+    'json',
+    '--tools',
+    '',
+    '--strict-mcp-config',
+    '--setting-sources',
+    '',
+    '--no-session-persistence',
+    '--effort',
+    CLAUDE_EFFORT[opts.thinking ?? HOST_THINKING],
+    ...(system ? ['--system-prompt', system] : []),
+  ];
+  const proc = Bun.spawn(args, {
+    cwd: tmpdir(),
+    stdin: new Blob([opts.json ? `${prompt}\n\nReply with the JSON object only.` : prompt]),
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
+  const [out, err, code] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+    proc.exited,
+  ]);
+  let body: { result?: string; is_error?: boolean; usage?: { input_tokens?: number; output_tokens?: number } };
+  try {
+    body = JSON.parse(out);
+  } catch {
+    throw new Error(`claude ${code}: ${(err || out).slice(0, 400)}`);
+  }
+  if (code !== 0 || body.is_error) throw new Error(`claude ${code}: ${(body.result ?? err).slice(0, 400)}`);
+  const text = body.result ?? '';
+  const usage = body.usage
+    ? {
+        prompt_tokens: body.usage.input_tokens,
+        completion_tokens: body.usage.output_tokens,
+        total_tokens: (body.usage.input_tokens ?? 0) + (body.usage.output_tokens ?? 0),
+      }
+    : undefined;
+  return { content: opts.json ? jsonOnly(text) : text, model, ms: Date.now() - started, usage };
+}
+
 export async function callDeepseek(
   messages: ChatMessage[],
   opts: { model?: string; json?: boolean; thinking?: Thinking } = {},
 ): Promise<CallResult> {
+  if (WRITER === 'claude') return callClaude(messages, opts);
   const key = process.env.DEEPSEEK_API_KEY;
   if (!key) throw new Error('no DEEPSEEK_API_KEY');
   const model = opts.model ?? HOST_MODEL;

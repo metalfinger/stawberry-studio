@@ -9,7 +9,7 @@ import { dreamConfig } from './dream';
 import { callJev, jevAvailable } from './jev';
 import { checksMode } from './gate';
 import { jevTotals, readJevLog } from './jevlog';
-import { callHost, HOST_MODEL } from './llm';
+import { callHost, WRITER, WRITER_MODEL } from './llm';
 import { blockScenes, fixFrom, shotFor, superviseChanges, proposeLook, reviseItem, rewordLook, rewordMoment } from './producer';
 import { writeImplied } from './implied';
 import { IMAGE_CAP, liveProducer, ownStyle, SessionStore, treeInputOf } from './session';
@@ -82,7 +82,7 @@ const server = Bun.serve({
           persona: cfg.persona,
           goals: cfg.goals,
           threshold: cfg.confidence_threshold,
-          model: HOST_MODEL,
+          model: WRITER_MODEL,
           jev: jevAvailable(),
           strawberry: strawberryAvailable() ? STRAWBERRY_HOME : null,
           provider: PROVIDER,
@@ -196,7 +196,7 @@ const server = Bun.serve({
 console.log(`dream chat on http://${server.hostname}:${server.port}`);
 console.log(`keys from env file: ${loaded.length ? loaded.join(', ') : 'none (using the shell environment)'}`);
 if (!jevAvailable()) console.warn('JEV_API_KEY is missing: every turn will run without the judge');
-if (!process.env.DEEPSEEK_API_KEY) console.warn('DEEPSEEK_API_KEY is missing: the host cannot reply');
+if (WRITER === 'deepseek' && !process.env.DEEPSEEK_API_KEY) console.warn('DEEPSEEK_API_KEY is missing: the host cannot reply');
 console.log(
   strawberryAvailable()
     ? `productions are written to the Strawberry store at ${STRAWBERRY_HOME}; sketches drawn with ${PROVIDER === 'fal' ? `fal (at most ${IMAGE_CAP} a dream)` : 'the offline fixture (set FAL_KEY for real pictures)'}`
