@@ -188,8 +188,16 @@ export const byCheck = (why: string | undefined) => !!why && /pre-draw check/.te
 
 if (import.meta.main) {
   const folders = process.argv.slice(2);
-  // The rebuild's sheets are compared too: built in shadow when the switch is off.
-  if ((process.env.DREAMCHAT_CUT_SHEET ?? 'off') === 'off') process.env.DREAMCHAT_CUT_SHEET = 'shadow';
+  // The rebuild's sheets are compared too: built in shadow when the switch is off. The camera rules need
+  // the sheet on: asked for, it is turned on where unset, and a sheet set otherwise is refused, never
+  // quietly run with the rules off.
+  const camera = (process.env.DREAMCHAT_CAMERA ?? '').trim().toLowerCase() === 'on';
+  const sheet = (process.env.DREAMCHAT_CUT_SHEET ?? '').trim().toLowerCase();
+  if (camera && sheet && sheet !== 'on') {
+    console.error(`DREAMCHAT_CAMERA=on needs DREAMCHAT_CUT_SHEET=on (it is ${sheet})`);
+    process.exit(1);
+  }
+  if (!sheet || sheet === 'off') process.env.DREAMCHAT_CUT_SHEET = camera ? 'on' : 'shadow';
   if (!folders.length || recordMode() !== 'on') {
     console.error('usage: DREAMCHAT_RECORD=on bun run evals/live-flow.ts <replay folder> [more folders]');
     process.exit(1);

@@ -8,6 +8,7 @@ import {
   openingsIn,
   outThroughWindows,
   sameCameraAs,
+  sameView,
   selfIn,
   WATER,
   waterLevel,
@@ -16,6 +17,7 @@ import {
   camerasOf,
   placePlan,
   planContinuity,
+  type RecordPlan,
   relationIn,
   sameByCamera,
   shotPlan,
@@ -162,33 +164,39 @@ describe('what is seen out past a window', () => {
     spots: [
       { id: 'x1', x: 2.5, y: 0.1, fixture: true, name: 'the big bay window', size: [2.4, 0.2, 1.6] },
       { id: 't1', x: 2.0, y: 0.45, kind: 'thing', name: 'the telescope', size: [0.4, 0.4, 1.4] },
-      { id: 't2', x: 3.3, y: 0.3, kind: 'thing', name: 'the potted plant' },
-      { id: 'p1', x: 2.5, y: 1, kind: 'person' },
+      { id: 't2', x: 3.3, y: 0.05, kind: 'thing', name: 'the kite' },
+      { id: 't3', x: 0.05, y: 2, kind: 'thing', name: 'the umbrella stand' },
+      { id: 'p1', x: 2.5, y: 1, kind: 'person', pose: 'standing' },
     ],
   };
 
-  test('is off the floor plan only where the story sees it out there; what stands at a window stays in the room', () => {
-    expect(outThroughWindows(plan, new Set())).toEqual({});
-    expect(outThroughWindows(plan, new Set(['t2']))).toEqual({ t2: 'front' });
-    expect(outThroughWindows({ ...plan, indoors: false }, new Set(['t2']))).toEqual({});
+  test('is what stands in the wall where a window is, or past it; what stands in the room at a window stays', () => {
+    // The kite is in the wall's line at the window; the telescope a step into the room; the umbrella
+    // stand against a wall with no window.
+    expect(outThroughWindows(plan)).toEqual({ t2: 'front' });
+    expect(outThroughWindows({ ...plan, spots: plan.spots.map((s) => (s.id === 't2' ? { ...s, y: -1 } : s)) })).toEqual(
+      { t2: 'front' },
+    );
+    expect(outThroughWindows({ ...plan, indoors: false })).toEqual({});
   });
 
-  test('a moment looking out of the window puts what it shows out past it, and says so', () => {
+  test('a moment looking out of the window through the telescope leaves the telescope in the room, then and after', () => {
     const b = dream({
       things: [
         { id: 't1', name: 'the telescope' },
-        { id: 't2', name: 'the hot air balloon' },
+        { id: 't2', name: 'the kite' },
       ],
-      blocking: { ...plan, spots: plan.spots.map((s) => (s.id === 'p1' ? { ...s, pose: 'standing' } : s)) },
+      blocking: plan,
       moments: [
-        { id: 'm1', visible: ['p1'], things: ['t1'], action: 'she stands by the telescope' },
-        { id: 'm2', visible: ['p1'], things: ['t2'], action: 'she looks out of the window at a hot air balloon' },
-        { id: 'm3', visible: ['p1'], things: ['t1'], distance: 'close', action: 'she turns back to the telescope' },
+        { id: 'm1', visible: ['p1'], things: ['t1'], action: 'she looks out of the window through the telescope' },
+        { id: 'm2', visible: ['p1'], things: ['t1', 't2'], distance: 'close', action: 'she turns the telescope' },
       ],
     });
-    const m3 = withEnv(CAMERA, () => shotPlan(b, 'm3'));
-    expect(m3?.outside).toEqual({ t2: 'front' });
-    expect(m3?.spots.some((s) => s.id === 't1')).toBe(true);
+    for (const id of ['m1', 'm2']) {
+      const at = withEnv(CAMERA, () => shotPlan(b, id));
+      expect(at?.spots.some((s) => s.id === 't1')).toBe(true);
+      expect(at?.outside).toEqual({ t2: 'front' });
+    }
     const r = rebuilt('dream-0926-022102-aeea', ON);
     expect(withEnv(ON, () => shotPlan(r.b, 'm10', r.rec))?.spots.some((s) => s.id === 't3')).toBe(false);
     expect(picture(r, 'm10').prompt).toMatch(
@@ -208,19 +216,36 @@ describe('the water, as high as the record says it stands', () => {
       { id: 'x2', x: 0.5, y: 6, fixture: true, name: 'the side door', size: [0.1, 1.5, 2.2] },
       { id: 'x3', x: 8, y: 6, fixture: true, name: 'counter with a till', size: [1.2, 0.8, 1] },
       { id: 'x4', x: 3, y: 3, fixture: true, name: 'the bookcases', size: [1, 3, 2.5] },
+      { id: 'x5', x: 12, y: 3, fixture: true, name: 'the gangway', shape: 'ground' },
       { id: 'b1', x: 5, y: 5, shape: 'vehicle', name: 'the dinghy', size: [2, 1, 0.6] },
     ],
   };
   const open: Blocking = { ...room, indoors: false, ceiling: undefined };
 
-  test('by the first thing its words measure it by, never where it comes in from', () => {
+  test('by the first thing its words measure it by, never where it comes in from or where it lies', () => {
     expect(waterLevel('seeping in under the doors, rising over the counters', room)).toBe(1.2);
     expect(waterLevel('almost up to the tall arched window', room)).toBe(1.8);
     expect(waterLevel('almost to the ceiling', room)).toBe(3.8);
     expect(waterLevel('lapping over the floor', room)).toBe(0.1);
     expect(waterLevel('up to their knees', room)).toBe(0.5);
     expect(waterLevel('knee-deep', room)).toBe(0.5);
-    expect(waterLevel('deep enough to swim in', room)).toBeNull();
+    // Covering a thing is over it; between things, or in a gangway, is where it lies, not how high.
+    expect(waterLevel('covering the counters', room)).toBe(1.2);
+    expect(waterLevel('pooling between the bookcases, just over the counters', room)).toBe(1.2);
+    expect(waterLevel('filling the gangway, up to their knees', room)).toBe(0.5);
+  });
+
+  test('deep or filling the place without a measure is unmeasured, never a thin layer', () => {
+    for (const w of [
+      'deep enough to swim in',
+      'the whole hall is flooded',
+      'filling the hall, deep enough to paddle the dinghy',
+      'the floor is flooded',
+      'the cellar is submerged',
+    ])
+      expect([w, waterLevel(w, room)]).toEqual([w, null]);
+    // The floor or the ground, where nothing else measures it and nothing says it is deep: a thin layer.
+    expect(waterLevel('a film of water on the floor', room)).toBe(0.1);
   });
 
   test('a body or a thing it reaches measures it before a floor does; spread across the floor to a thing, it is still low', () => {
@@ -229,13 +254,60 @@ describe('the water, as high as the record says it stands', () => {
     expect(waterLevel('over the tops of the bookcases', room)).toBe(2.7);
   });
 
-  test('outdoors there is no ceiling: a roof filled with water is water on the roof, and what floats on it is no measure', () => {
-    expect(waterLevel('the roof fills with water around the dinghy', open)).toBe(0.1);
-    expect(waterLevel('water fills the roof', open)).toBe(0.1);
+  test('outdoors there is no ceiling, and what floats on it is no measure', () => {
+    expect(waterLevel('the roof fills with water around the dinghy', open)).toBeNull();
+    expect(waterLevel('water fills the roof', open)).toBeNull();
     expect(waterLevel('the sea laps at the dinghy', open)).toBeNull();
     expect(waterLevel('up to their chests', open)).toBe(1.3);
     // In a room, the roof is its top.
     expect(waterLevel('almost up to the roof', room)).toBe(3.8);
+  });
+
+  test('where the record says water stands without measuring it, as high as it last did in this place', () => {
+    const b = dream({
+      people: ['p1'],
+      things: [{ id: 'b1', name: 'the dinghy' }],
+      blocking: { ...room, spots: [...room.spots, { id: 'p1', x: 5, y: 5, kind: 'person', pose: 'sitting' }] },
+      moments: [
+        { id: 'm1', visible: ['p1'], things: ['b1'] },
+        { id: 'm2', visible: ['p1'], things: ['b1'] },
+        { id: 'm3', visible: ['p1'], things: ['b1'] },
+        { id: 'm4', visible: ['p1'], things: ['b1'] },
+      ],
+    });
+    const water = (now: string) => [
+      {
+        of: 'l1',
+        called: 'the place',
+        name: 'the place',
+        kind: 'place',
+        facts: [{ kind: 'part', part: 'water', what: 'water', now }],
+      },
+    ];
+    const at = (facts: unknown[]) => ({
+      own: [],
+      carried: [],
+      visible: ['p1'],
+      things: ['b1'],
+      present: [],
+      gone: [],
+      held: {},
+      now: [],
+      facts,
+    });
+    const rec = {
+      moments: {
+        m1: at(water('up to their knees')),
+        m2: at(water('flooded, deep enough to paddle the dinghy')),
+        m3: at(water('over the counters')),
+        m4: at([]),
+      },
+      before: {},
+      ends: {},
+      unsaid: {},
+    } as unknown as RecordPlan;
+    const level = (id: string) => withEnv(CAMERA, () => shotPlan(b, id, rec))?.water;
+    expect([level('m1'), level('m2'), level('m3'), level('m4')]).toEqual([0.5, 0.5, 1.2, undefined]);
   });
 
   test('every water level read on the frozen dreams, as labelled, and every reading of what their moments imply', () => {
@@ -246,7 +318,7 @@ describe('the water, as high as the record says it stands', () => {
       '6081 m3': 1, // rises over the desks
       '6e80 m1': 0.1, // beginning to cover the floor
       '6e80 m3': 1, // up over the tops of the desks
-      '538d m6': 0.1, // fills the roof (outdoors)
+      '538d m6': null, // fills the roof (outdoors): unmeasured
     };
     // By the words it is read from: a water carried into later moments is the same reading.
     const got: Record<string, number | null> = {};
@@ -269,20 +341,30 @@ describe('the water, as high as the record says it stands', () => {
     // Every one labelled, and no reading left unlabelled.
     expect(got).toEqual(want);
     // What the moments imply is read by a model and kept outside the repository: its water readings on
-    // these dreams, labelled against the same floor plans.
+    // these dreams (by Claude, 27 Sep, and by DeepSeek before), labelled against the same floor plans. The
+    // plan caps a level a boat rides at so its riders sit under the ceiling (continuity.ts).
     const implied: [string, string, number | null][] = [
       [
         'fdd7 m4',
-        'deep enough for a whale to swim, filling the aisle, over the desks and up between the shelves',
+        'very deep, over the desks and far up the shelves, the aisles flooded deep enough for a whale beneath a boat',
         0.95,
       ],
-      ['fdd7 m5', 'almost up to the high round window, over the desks and shelves', 1.8], // the plan's window is 2 m tall
-      ['6081 m8', 'almost up to the ceiling, over the desks and shelves', 3.8],
+      ['fdd7 m5', 'almost up to the ceiling, over the desks and shelves, up to the high round window', 5.8],
+      ['fdd7 m5', 'almost up to the high round window, over the desks and shelves', 1.8],
+      ['6081 m5', 'deep enough to float a rowing boat, well over the desks', 1],
+      [
+        '6081 m8',
+        'very deep, far over the desks, filling the aisles between the shelves deep enough to hide a whale below the surface',
+        1,
+      ],
+      ['6081 m9', 'almost up to the ceiling, over the desks and shelves', 3.8],
       ['6e80 m2', 'covering the floor and up to the shelves', 0.1],
-      ['6e80 m7', 'almost up to the high round window, over the tops of the desks and shelves', 1.3],
+      ['6e80 m6', 'deep enough to fill the aisles between the shelves, far over the tops of the desks', 1],
+      ['6e80 m7', 'almost up to the ceiling, over the desks and shelves, up to the high round window', 5.8],
+      ['8ceb m1', 'filling the corridor from floor to ceiling', 2.9],
       ['8ceb m1', 'deep enough to swim, the school is flooded', null],
     ];
-    for (const [k, words, v] of implied) expect([k, waterLevel(words, plans[k])]).toEqual([k, v]);
+    for (const [k, words, v] of implied) expect([k, words, waterLevel(words, plans[k])]).toEqual([k, words, v]);
   });
 
   test('a boat afloat rides on it, whoever is in it rises with it, and what is under it is said to be', () => {
@@ -305,6 +387,12 @@ describe("through the dreamer's own eyes", () => {
       'you unlock the gate',
       'The dreamer can just reach the shelf',
       'the key in their hand, the dreamer waits',
+      // Written for these tests, none from the dreams or their reviews:
+      'the dreamer and her cousin paddle the canoe to the jetty',
+      'you grip the rail as the ferry lurches',
+      'the dreamer is at the wheel of the old bus',
+      'the dreamer hands over the ticket',
+      'the dreamer takes the lantern from the hook',
     ])
       expect([s, handsIn([s], false)]).toEqual([s, true]);
     for (const s of [
@@ -314,6 +402,12 @@ describe("through the dreamer's own eyes", () => {
       'Mara folds their arms and looks away',
       'The children open the gate; they run in',
       'The dreamer turns around and sees the dog',
+      'the dreamer holds their breath under the water',
+      'the dreamer takes a step back from the ledge',
+      'the dreamer watches the hands of the station clock',
+      'you turn the corner into the covered market',
+      'the dreamer sees their own reflection in the shop window',
+      'the dreamer holds still while the owl lands',
     ])
       expect([s, handsIn([s], false)]).toEqual([s, false]);
     expect(handsIn(['A field under a grey sky'], true)).toBe(true);
@@ -322,6 +416,8 @@ describe("through the dreamer's own eyes", () => {
   test('looking down at themselves, their own body is what the picture shows', () => {
     expect(selfIn(['The dreamer looks down', 'their own tiny feet and the red shoes'])).toBe(true);
     expect(selfIn(['The dreamer looks for the cat and finds it gone.'])).toBe(false);
+    // A reflection is a picture of them, not their body seen from their eyes.
+    expect(selfIn(['the dreamer sees their own reflection in the shop window'])).toBe(false);
   });
 
   test("every moment of the frozen dreams seen through the dreamer's eyes, as labelled", () => {
@@ -440,11 +536,44 @@ describe('how cuts stand to each other, one reading', () => {
         if (i > 0) expect([id, p.id, p.sheet!.relations.toPrev]).toEqual([id, p.id, rel(ms[i], ms[i - 1])]);
         const c = r.plan.cuts.find((x) => x.id === p.id)!;
         expect([id, p.id, p.sheet!.tags.crossed]).toEqual([id, p.id, !!c.crossed]);
-        expect(p.sheet!.flags.some((f) => f.startsWith('crossed_line'))).toBe(!!c.crossed);
+        // The flag names the cut crossed from, as the plan does: not always the cut before.
+        expect([id, p.id, p.sheet!.flags.filter((f) => f.startsWith('crossed_line'))]).toEqual([
+          id,
+          p.id,
+          c.crossed ? [`crossed_line:${c.crossed}`] : [],
+        ]);
+        expect([id, p.id, p.sheet!.flags.filter((f) => f.startsWith('same_camera'))]).toEqual([
+          id,
+          p.id,
+          c.sameCamera ? [`same_camera:${c.sameCamera}`] : [],
+        ]);
       }
-      const issues = r.plan.issues.filter((x) => /crosses the scene's line/.test(x)).length;
-      expect(issues).toBe(r.plan.cuts.filter((c) => c.crossed).length);
+      // A deliberate crossing is never an issue the checks before drawing would act on.
+      expect([id, r.plan.issues.filter((x) => /cross|same camera/.test(x))]).toEqual([id, []]);
     }
+  });
+
+  test('a same setup is the same camera: words calling it one, with its own camera elsewhere, are not an edit', () => {
+    // The two talk facing each other; the second moment looks at the clock on the wall behind the first
+    // camera, and the words call it the same view.
+    const b = dream({
+      blocking: {
+        indoors: true,
+        room: [8, 8],
+        spots: [
+          { id: 'p1', x: 3, y: 4, kind: 'person', faces: 'p2', pose: 'standing' },
+          { id: 'p2', x: 5, y: 4, kind: 'person', faces: 'p1', pose: 'standing' },
+          { id: 'x1', x: 4, y: 0.2, fixture: true, name: 'the station clock', size: [1, 0.3, 1] },
+        ],
+      },
+      moments: [{ id: 'm1' }, { id: 'm2', looks_at: 'the station clock', sameSide: ['m1'] }],
+    });
+    const off = withEnv({ DREAMCHAT_CAMERA: undefined }, () => planContinuity(b));
+    expect(cut(off, 'm2').refs.find((r) => r.id === 'm1')?.role).toBe('base');
+    const on = planned(b);
+    expect(cut(on, 'm2').refs.some((r) => r.role === 'base')).toBe(false);
+    expect(sameCameraAs(cut(on, 'm2').eye!, cut(on, 'm1').eye!)).toBe(false);
+    expect(unsettled(b, on)).toEqual([]);
   });
 
   test('an edit stands to other cuts as the picture it edits does', () => {
@@ -499,33 +628,28 @@ describe("the scene's line", () => {
   });
 
   test('crosses where the moment looks past them at what only the other side shows, says so there, and keeps the new side', () => {
+    // The clock hangs on the wall behind the first camera: only from their other side is it in the picture.
     const b = dream({
       blocking: {
         indoors: true,
         room: [8, 8],
-        spots: [...people, { id: 'x1', x: 4, y: 7.8, fixture: true, name: 'the old clock', size: [1, 0.3, 2] }],
+        spots: [...people, { id: 'x1', x: 4, y: 0.2, fixture: true, name: 'the station clock', size: [1, 0.3, 1] }],
       },
       moments: [
         { id: 'm1', looks_at: '' },
-        { id: 'm2', looks_at: 'the old clock', distance: 'wide' },
+        { id: 'm2', looks_at: 'the station clock', distance: 'wide' },
         { id: 'm3', looks_at: '', distance: 'close' },
       ],
     });
     const plan = planned(b);
-    const s1 = sideOf(plan, 'm1', 4);
-    const s2 = sideOf(plan, 'm2', 4);
-    if (s1 === s2) {
-      // The clock is on the first camera's side of them: nothing to cross for.
-      expect(plan.issues.filter((x) => /crosses/.test(x))).toEqual([]);
-      return;
-    }
+    expect(sideOf(plan, 'm2', 4)).not.toBe(sideOf(plan, 'm1', 4));
     expect(cut(plan, 'm2').crossed).toBe('m1');
-    expect(plan.issues).toContain(
-      "picture 2 crosses the scene's line from picture 1: it looks past them, at what only that side shows",
-    );
+    expect(cut(plan, 'm2').crossedWhy).toBe('looks');
     expect(cut(plan, 'm2').rules?.some((l) => /crossed to the other side of them/.test(l))).toBe(true);
+    // Deliberate: said in the picture's words, never an issue for the checks before drawing.
+    expect(plan.issues.filter((x) => /cross/.test(x))).toEqual([]);
     // The picture after keeps the new side, and says nothing of a crossing.
-    expect(sideOf(plan, 'm3', 4)).toBe(s2);
+    expect(sideOf(plan, 'm3', 4)).toBe(sideOf(plan, 'm2', 4));
     expect(cut(plan, 'm3').crossed).toBeUndefined();
     expect(cut(plan, 'm3').rules?.some((l) => /crossed/.test(l)) ?? false).toBe(false);
   });
@@ -562,6 +686,14 @@ describe('a vehicle on the move', () => {
     expect(goingIn('The engine rumbles', 'the van')).toBe(false);
     // A word of going in its own name is no going.
     expect(goingIn('the sister sits in a little rowing boat, calm', 'the rowing boat')).toBe(false);
+    // Written for these tests: going itself, or driven, and only the vehicle the words move.
+    expect(goingIn('the tram rumbles down the hill', 'the tram')).toBe(true);
+    expect(goingIn('a taxi rushes past the stall', 'the taxi')).toBe(true);
+    expect(goingIn('they paddle the kayak across the bay', 'the kayak')).toBe(true);
+    expect(goingIn('he rides his scooter past the old van', 'the scooter')).toBe(true);
+    expect(goingIn('he rides his scooter past the old van', 'the old van')).toBe(false);
+    expect(goingIn('she rides her bike to school', 'the old van', ['the bike'])).toBe(false);
+    expect(goingIn('the ferry sits still at the pier', 'the ferry')).toBe(false);
   });
 
   const b = (spot: Record<string, unknown>, action: string) =>
@@ -616,6 +748,19 @@ describe('a cut to the same people at the same size', () => {
     expect(sameCameraAs(a, { ...a, at: { x: 0.5, y: 0 } })).toBe(true);
     expect(sameCameraAs(a, { ...a, height: 2.6 })).toBe(false);
     expect(sameCameraAs(a, { ...a, d: { x: 1, y: 1 } })).toBe(false);
+  });
+});
+
+describe('a brief written for a view', () => {
+  test('still serves it where the rules only took out a claim that was untrue', () => {
+    const was =
+      'Seen from behind them. From left to right: a; then b. Nobody else is in the picture. They keep these places in every picture of this scene. Also: c.';
+    const now = 'Seen from behind them. From left to right: a; then b. Also: c.';
+    withEnv(CAMERA, () => {
+      expect(sameView(was, now)).toBe(true);
+      expect(sameView(was, now.replace('a; then b', 'b; then a'))).toBe(false);
+    });
+    withEnv({ DREAMCHAT_CAMERA: undefined }, () => expect(sameView(was, now)).toBe(false));
   });
 });
 

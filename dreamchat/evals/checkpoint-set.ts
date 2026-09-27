@@ -5,6 +5,7 @@
 // engine's store; a file is only looked for.
 import { existsSync, readFileSync } from 'node:fs';
 import { isAbsolute, join, relative } from 'node:path';
+import { sameView } from '../camera';
 import type { GhostPlan } from '../continuity';
 import { ghostName } from '../cutsheet';
 import { type FrameReference, turnedInto } from '../frames';
@@ -417,9 +418,10 @@ export function todayOf(
       `its words call the dreamer "you" (${you.join(', ')}): the harness has a model put them in the third person before drawing it, which is not done here`,
     );
   // The shot's brief is the one written for the view today's plan has (--brief writes one as the harness
-  // does); without one, a rebuild says what the camera sees in the view's own words.
+  // does); without one, a rebuild says what the camera sees in the view's own words. With the camera
+  // rules, as the harness does, a brief also serves a view that differs only in a claim they took out.
   const view = p.item.frame?.plan?.view;
-  const brief = view && p.item.shot?.view === view ? { view, text: p.item.shot.text } : null;
+  const brief = view && p.item.shot && sameView(p.item.shot.view, view) ? { view, text: p.item.shot.text } : null;
   const briefless = !!view && !brief;
   const hash = sha256(
     JSON.stringify({
@@ -456,7 +458,7 @@ export type BriefAsk = { action: string; view: string; medium: string; mustName:
 export function briefAskOf(d: DreamBuild, moment: string): BriefAsk | null {
   const p = d.r.pictures.find((x) => x.id === moment && x.kind === 'cut');
   const view = p?.item.frame?.plan?.view;
-  if (!p || !view || p.item.shot?.view === view || !d.saved.style) return null;
+  if (!p || !view || sameView(p.item.shot?.view, view) || !d.saved.style) return null;
   const called = calledFor({ build: d.saved.build, draft: d.saved.draft && { ...d.saved.draft, breakdown: d.r.b } }, p.item);
   const scene = d.r.b.scenes.find((sc) => sc.moments.some((m) => m.id === moment));
   const before = (scene?.moments ?? []).slice(0, scene?.moments.findIndex((m) => m.id === moment)).map((m) => m.action);

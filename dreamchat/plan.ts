@@ -12,6 +12,7 @@
 // it has now. Both are known from the saved dream; nothing is asked of a model.
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { sameView } from './camera';
 import {
   type ContinuityPlan,
   type GhostPlan,
@@ -196,7 +197,7 @@ export function rebuild(
     // moment, else the one planned in the background (session.ts startFrame takes the same).
     const view = cut?.view;
     const briefs = [saved.get(pid)?.shot, s.prep?.shots?.[pid]];
-    const shot = view ? briefs.find((x) => x?.view === view) : undefined;
+    const shot = view ? briefs.find((x) => !!x && sameView(x.view, view)) : undefined;
     if (shot) it.shot = shot;
     // The mock-up, where the moment has a worked-out camera on a floor plan (session.ts layoutFor).
     const layout = cut?.eye && shotPlan(b, pid, rec) ? standIn.previs(pid) : undefined;

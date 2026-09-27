@@ -373,6 +373,7 @@ async function buildSet(
 ): Promise<{ built: Built[]; readings: Record<string, string> }> {
   const core = await import('./checkpoint-set');
   const { recordMode } = await import('../record');
+  const { sameView } = await import('../camera');
   const pairedFile = join(f.data, 'runs', 'paired', 'results.json');
   const paired = existsSync(pairedFile) ? readJson<PairedResults>(pairedFile) : null;
   const briefs = loadBriefs(f);
@@ -395,7 +396,7 @@ async function buildSet(
           const b = briefs[m.id];
           const p = d.r.pictures.find((x) => x.id === m.moment && x.kind === 'cut');
           const view = p?.item.frame?.plan?.view;
-          if (b && view && b.view === view && p?.item.shot?.view !== view) given[m.moment] = b;
+          if (b && view && b.view === view && !sameView(p?.item.shot?.view, view)) given[m.moment] = b;
         }
         if (Object.keys(given).length) d = core.buildDream(core.withBriefs(read.session, given));
       } catch (e) {
