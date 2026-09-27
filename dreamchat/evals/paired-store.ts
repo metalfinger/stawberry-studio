@@ -56,11 +56,17 @@ export async function setUpDream(
   s: Session,
   d: DreamParts,
   drawn: ToDraw[],
-  opts: { media: string; previsDir: string; reason: string },
+  opts: {
+    media: string;
+    previsDir: string;
+    reason: string;
+    /** An earlier moment's picture drawn new (a checkpoint's), by its key, put in in place of the run's. */
+    files?: Record<string, string>;
+  },
 ): Promise<Setup> {
   const { projectId, ids } = await writeProduction(d.b, d.style, renderTranscript(s.transcript), d.rec);
   const media = new Map<string, string>();
-  const file = (key: string) => fileOf(s, key, opts.media);
+  const file = (key: string) => opts.files?.[key] ?? fileOf(s, key, opts.media);
   const oldToKey = Object.fromEntries(Object.entries(s.production?.result?.ids ?? {}).map(([k, v]) => [v, k]));
   const dreamer = d.b.people.find((x) => x.is_dreamer)?.id;
   const sketched = new Set(d.sheets.filter((i) => i.mediaId).map((i) => i.id));
@@ -125,15 +131,18 @@ export async function setUpDream(
     } else if (kind === 'picture') {
       const f = s.build?.frames?.find((x) => x.id === pid);
       const node = ids[pid];
-      if (!f || !node) continue;
-      const id = await put(key, node, `Picture from ${s.id}: ${pid}`);
+      const drawnNew = !!opts.files?.[key];
+      if ((!f && !drawnNew) || !node) continue;
+      const id = await put(key, node, drawnNew ? `Picture of ${pid} drawn again` : `Picture from ${s.id}: ${pid}`);
       await liveSheets.review({
         mediaId: id,
         nodeId: node,
         approved: true,
         author: 'assistant',
-        decision: `The picture the dream chat drew of ${pid} in ${s.id}, ${verdict(f)}.`,
-        depicted: (f.depicted ?? []).map((old) => ids[oldToKey[old] ?? '']).filter((x): x is string => !!x),
+        decision: drawnNew
+          ? `The picture of ${pid} drawn again before the moments after it, which draw from it as the dream chat would.`
+          : `The picture the dream chat drew of ${pid} in ${s.id}, ${verdict(f)}.`,
+        depicted: (f?.depicted ?? []).map((old) => ids[oldToKey[old] ?? '']).filter((x): x is string => !!x),
         select: false,
       });
       media.set(key, id);

@@ -55,7 +55,17 @@
 // one, or another worktree of the repository), never changed. Results go under its runs/checkpoint/<name>
 // (or CHECKPOINT_DIR/<name>).
 import { spawnSync } from 'node:child_process';
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync, writeSync } from 'node:fs';
+import {
+  closeSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+  writeSync,
+} from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 // Types only, and saved.ts: no module that reads the engine's store is loaded before the store is set.
 import type { WriteFn } from '../implied';
@@ -69,6 +79,8 @@ import type {
   Change,
   CheckpointSet,
   DreamBuild,
+  DrawnHere,
+  Judged,
   Measured,
   PairedResults,
   Results,
@@ -87,6 +99,9 @@ export const DEFAULT_CAP = 3;
 /** Why a moment without a brief for its view is refused. */
 export const BRIEFLESS =
   "no shot brief for the view today's plan has: the harness has a model write one before it draws (--brief writes it as the harness does; --allow-briefless draws from the view's own words instead)";
+
+/** How a moment refused for the earlier moment whose new picture it draws from is said. */
+export const DEPENDS = 'it draws from the new picture of ';
 
 export const USAGE = `usage:
   bun run evals/checkpoint.ts --set-from-cases <step> [--base NAME=VALUE … | --base old] [--cap <usd>] [--name <name>] [--out <file>]
@@ -347,6 +362,27 @@ const briefsFile = (f: Folders) => join(f.out, 'briefs.json');
 const loadBriefs = (f: Folders): Record<string, Brief> =>
   existsSync(briefsFile(f)) ? readJson<Record<string, Brief>>(briefsFile(f)) : {};
 
+// ── the owner's verdicts on pictures ─────────────────────────────────────────────────────────────
+
+/**
+ * Every picture the owner has judged: his story verdicts, and his answers in every checkpoint kept beside
+ * this one (each with its key, what each page picture was made from, and its results).
+ */
+async function loadJudged(f: Folders): Promise<Judged[]> {
+  const core = await import('./checkpoint-set');
+  const out = core.judgedInStory(core.loadVerdicts(), f.data);
+  const all = dirname(f.out);
+  if (!existsSync(all)) return out;
+  for (const name of readdirSync(all).sort()) {
+    const dir = join(all, name);
+    const files = ['key.json', 'answers.json', join('judge', 'made.json'), 'results.json'].map((x) => join(dir, x));
+    if (!files.every((x) => existsSync(x))) continue;
+    const [key, answers, made, results] = files.map((x) => readJson<never>(x));
+    out.push(...core.judgedInCheckpoint(name, { key, answers, made, results }));
+  }
+  return out;
+}
+
 // ── building a set ───────────────────────────────────────────────────────────────────────────────
 
 type Built = {
@@ -358,18 +394,29 @@ type Built = {
   /** What the old picture was drawn with, where it is known. */
   sent: Sent | null;
   oldFile: string;
-  /** The picture before, as the run drew it. */
+  /** The picture before, in words: the run's file, or an earlier moment's new picture. */
   before?: string;
 };
 
+/** What a set is built against: all its moments, what the checkpoint has drawn, and the owner's verdicts. */
+type BuildCtx = { all: SetMoment[]; results?: Pick<Results, 'entries'> | null; judged: Judged[] };
+
+/** The results a checkpoint keeps, if it has drawn anything. */
+const resultsIn = (f: Folders): Results | null =>
+  existsSync(join(f.out, 'results.json')) ? readJson<Results>(join(f.out, 'results.json')) : null;
+
 /**
  * Every moment of a set built as today's harness would send it, dream by dream, with the briefs written
- * for it where its view is the one they were written from.
+ * for it where its view is the one they were written from. A moment drawn from an earlier moment of the
+ * set is drawn from that one's new picture (known once it is drawn); it is refused when that one cannot
+ * be drawn, or is neither drawn nor built with it. An earlier picture of the run the owner called wrong
+ * is never sent.
  */
 async function buildSet(
   moments: SetMoment[],
   args: Args,
   f: Folders,
+  ctx: BuildCtx,
 ): Promise<{ built: Built[]; readings: Record<string, string> }> {
   const core = await import('./checkpoint-set');
   const { recordMode } = await import('../record');
@@ -379,9 +426,18 @@ async function buildSet(
   const briefs = loadBriefs(f);
   const built: Built[] = [];
   const readings: Record<string, string> = {};
+  const drawnNew = (id: string) => {
+    const r = ctx.results?.entries[id];
+    return r?.state === 'ready' && r.output ? r.output : undefined;
+  };
   for (const session of [...new Set(moments.map((m) => m.session))]) {
     const saved = readSession(f.data, session);
     const mine = moments.filter((x) => x.session === session);
+    const here: DrawnHere = Object.fromEntries(
+      ctx.all
+        .filter((x) => x.session === session)
+        .map((x) => [x.moment, { id: x.id, ...(drawnNew(x.id) ? { file: drawnNew(x.id) } : {}) }]),
+    );
     const frozen = existsSync(frozenPath(session)) ? (loadDream(session, false).session as Session) : null;
     const read = await withReadings(saved, args, recordMode() === 'on');
     readings[session] = read.missing ? `NOT READ: ${read.missing}` : read.note;
@@ -406,19 +462,24 @@ async function buildSet(
       const oldFile = core.pictureFile(f.data, m.old.picture);
       const before = core.pictureBefore(saved, m.moment);
       const frame = before ? saved.build?.frames?.find((x) => x.id === before && x.kind === 'cut') : undefined;
+      const anew = before ? here[before] : undefined;
       const row: Built = {
         m,
         saved,
         sent: core.oldSentOf(m.old, m.moment, saved, frozen, paired),
         oldFile,
-        ...(frame?.mediaPath ? { before: join(f.media, frame.mediaPath) } : {}),
+        ...(anew
+          ? { before: `${before}'s new picture (${anew.id}): ${anew.file ?? 'drawn first in this checkpoint'}` }
+          : frame?.mediaPath
+            ? { before: join(f.media, frame.mediaPath) }
+            : {}),
       };
       if (failed || !d) {
         built.push({ ...row, error: failed ?? 'not built' });
         continue;
       }
       try {
-        const today = core.todayOf(d, m.moment, { media: f.media });
+        const today = core.todayOf(d, m.moment, { media: f.media, here, judged: ctx.judged });
         if (today.briefless && !args.allowBriefless) today.refused.push(BRIEFLESS);
         if (!existsSync(oldFile))
           today.refused.push(
@@ -427,6 +488,28 @@ async function buildSet(
         built.push({ ...row, d, today });
       } catch (e) {
         built.push({ ...row, d, error: String(e instanceof Error ? e.message : e).slice(0, 300) });
+      }
+    }
+  }
+  // A moment drawn from an earlier one's new picture, not drawn yet, is drawn only after it and with it:
+  // refused when that one cannot be drawn (and so on down a chain), or is not built with it.
+  for (let more = true; more; ) {
+    more = false;
+    for (const b of built) {
+      const t = b.today;
+      if (!t) continue;
+      for (const dep of core.dependsOf(t)) {
+        if (t.images.some((im) => im.dependsOn === dep && im.file)) continue;
+        const other = built.find((x) => x.m.id === dep);
+        const why = !other
+          ? `${DEPENDS}${dep}, which is not drawn yet: draw them together (name both with --only)`
+          : !other.today || other.error || other.today.refused.length
+            ? `${DEPENDS}${dep}, which cannot be drawn`
+            : null;
+        if (why && !t.refused.includes(why)) {
+          t.refused.push(why);
+          more = true;
+        }
       }
     }
   }
@@ -486,7 +569,8 @@ async function writeBriefs(
   const failed: string[] = [];
   for (const b of built) {
     const t = b.today;
-    if (!t?.briefless || !b.d || t.refused.some((r) => r !== BRIEFLESS)) continue;
+    // Briefed whatever else refuses it but its brief and the earlier moment it waits for.
+    if (!t?.briefless || !b.d || t.refused.some((r) => r !== BRIEFLESS && !r.startsWith(DEPENDS))) continue;
     const ask = core.briefAskOf(b.d, b.m.moment);
     if (!ask) continue;
     const text = await shotFor(ask.action, ask.view, ask.medium, ask.mustName, ask.before, ask.people);
@@ -511,7 +595,10 @@ export type DryFile = {
   switches: Record<string, string>;
   checks: string;
   allow_briefless: boolean;
-  moments: Record<string, { hash?: string; refused?: string[]; error?: string; brief?: Brief | null }>;
+  moments: Record<
+    string,
+    { hash?: string; refused?: string[]; error?: string; brief?: Brief | null; depends?: string[] }
+  >;
 };
 
 export async function dry(
@@ -528,9 +615,10 @@ export async function dry(
   const moments = chosen(set, args.only);
   const pin = pinned(set, f);
   if (pin && set.results) throw new Error(pin);
-  let { built, readings } = await buildSet(moments, args, f);
+  const ctx: BuildCtx = { all: set.moments, results: resultsIn(f), judged: await loadJudged(f) };
+  let { built, readings } = await buildSet(moments, args, f, ctx);
   const briefed = args.brief ? await writeBriefs(built, f, opts.shot) : null;
-  if (briefed?.written.length) ({ built, readings } = await buildSet(moments, args, f));
+  if (briefed?.written.length) ({ built, readings } = await buildSet(moments, args, f, ctx));
   const reviewed = set.cap_usd ?? DEFAULT_CAP;
   const cap = capOf(set, args.cap);
   const spent = await spentSoFar(f);
@@ -587,7 +675,14 @@ export async function dry(
     }
     out.push('', `images (${t.images.length}):`);
     for (const im of t.images)
-      out.push(`  ${im.n}. ${im.role.padEnd(11)} ${im.what}: ${im.file ?? `MISSING: ${im.missing}`}`);
+      out.push(
+        `  ${im.n}. ${im.role.padEnd(11)} ${im.what}: ${im.missing ? `MISSING: ${im.missing}` : (im.file ?? `depends on ${im.dependsOn}'s new picture: known once it is drawn`)}`,
+      );
+    const depends = core.dependsOf(t);
+    if (depends.length)
+      out.push(
+        `drawn after ${depends.join(', ')}, from ${depends.length > 1 ? 'their' : 'its'} new picture${depends.length > 1 ? 's' : ''}, as the harness would; the hash holds the dependency, and --draw builds it again with the new picture and refuses it if anything else changed`,
+      );
     out.push(
       t.brief
         ? `the shot's brief: ${t.brief.text === loadBriefs(f)[m.id]?.text ? 'written for this checkpoint' : "the run's own"}, for the view today's plan has`
@@ -612,17 +707,19 @@ export async function dry(
       hash: t.hash,
       refused: t.refused,
       brief: t.brief,
+      ...(core.dependsOf(t).length ? { depends: core.dependsOf(t) } : {}),
       ...({
         notes: t.notes,
         prompt: t.prompt,
-        images: t.images.map(({ n, role, key, name, what, instruction, file, missing }) => ({
+        images: t.images.map(({ n, role, key, name, what, instruction, file, missing, dependsOn }) => ({
           n,
           role,
           key,
           name,
           what,
           instruction,
-          file: file ?? null,
+          file: dependsOn ? null : (file ?? null),
+          ...(dependsOn ? { depends_on: dependsOn } : {}),
           ...(missing ? { missing } : {}),
         })),
         previs: t.previs?.key ?? null,
@@ -792,7 +889,8 @@ export async function draw(
   try {
     if (results.home !== f.home) throw new Error(`this checkpoint was drawn into ${results.home}, not ${f.home}`);
     const moments = chosen(set, args.only);
-    const { built } = await buildSet(moments, args, f);
+    const ctx: BuildCtx = { all: set.moments, results, judged: await loadJudged(f) };
+    const { built } = await buildSet(moments, args, f, ctx);
     const ready: Built[] = [];
     for (const b of built) {
       const was = dryRun.moments[b.m.id];
@@ -846,139 +944,219 @@ export async function draw(
     const over = core.overCap(before, todo.length, cap);
     if (over) throw new Error(`refused: ${over}`);
 
-    // Each dream written into the checkpoint's store, with every sketch and picture its moments attach.
-    const setups = new Map<string, Awaited<ReturnType<DrawEngine['setUp']>>>();
-    for (const session of new Set(todo.map((b) => b.m.session))) {
-      const mine = todo.filter((b) => b.m.session === session);
-      const d = mine[0].d as DreamBuild;
-      console.log(`putting ${session} into ${f.home}…`);
-      setups.set(
-        session,
-        await engine.setUp(
-          mine[0].saved,
-          core.partsOf(d),
-          mine.map((b) => core.toDrawOf(d, b.m.id, b.today as Today)),
-          {
-            media: f.media,
-            previsDir: join(f.out, 'previs'),
-            reason: `Drawn once more for checkpoint ${set.name}, to be judged blind against the picture drawn before; what it is drawn from is in its references`,
-          },
-        ),
-      );
-    }
-
+    // In story order, dream by dream, in waves: a moment drawn from an earlier moment's new picture waits
+    // until that is drawn, is built again with it, and is drawn only if nothing but that picture changed.
     const waiting = plan.waiting.map((id) => results.entries[id]).filter((r): r is Attempt => !!r);
-    worker = todo.length || waiting.length ? engine.worker() : null;
+    let pending = [...todo].sort(
+      (a, b) =>
+        a.m.session.localeCompare(b.m.session) ||
+        core.storyIndex(a.saved, a.m.moment) - core.storyIndex(b.saved, b.m.moment),
+    );
+    worker = pending.length || waiting.length ? engine.worker() : null;
     const known = () => new Set(core.attemptsOf(results).flatMap((r) => (r.jobId ? [r.jobId] : [])));
+    const until = Date.now() + Number(process.env.CHECKPOINT_WAIT_MS ?? 60 * 60_000);
     let spent = before;
-    for (const b of todo) {
+
+    /** Every job in the worker's hands waited for, until done or the wait is over; one that fails is reported, never drawn again. */
+    const waitFor = async () => {
+      while (waiting.some((r) => !core.DONE.has(r.state)) && Date.now() < until) {
+        await Bun.sleep(engine.pollMs ?? 5000);
+        for (const r of waiting) {
+          if (core.DONE.has(r.state) || !r.jobId || !r.nodeId) continue;
+          const st: { state: string; error?: string; mediaPath?: string } = await engine
+            .status(r.jobId, r.nodeId)
+            .catch((err) => ({ state: r.state, error: String(err) }));
+          if (st.state === r.state) continue;
+          const job = (await engine.call('job', { id: r.jobId })) as {
+            provider_id?: string | null;
+            receipt?: unknown;
+            error?: string | null;
+            events?: unknown;
+          };
+          Object.assign(r, {
+            state: st.state,
+            providerId: job.provider_id ?? null,
+            receipt: job.receipt,
+            events: job.events,
+            ...(job.error || st.error ? { error: job.error ?? st.error } : {}),
+          });
+          if (st.state === 'ready' && st.mediaPath) r.output = join(f.home, 'media', st.mediaPath);
+          console.log(`${r.id}: ${r.state}${r.error ? ` (${r.error.slice(0, 300)})` : ''}`);
+          save();
+        }
+      }
+    };
+    const inHand = (id: string) => waiting.some((r) => r.id === id && !core.DONE.has(r.state));
+    type Setup = Awaited<ReturnType<DrawEngine['setUp']>>;
+    /** A moment's attempt as the results keep it, before anything is sent. */
+    const attemptOf = (b: Built, setup?: Setup): Attempt => {
       const t = b.today as Today;
-      const setup = setups.get(b.m.session);
-      const images = t.images.map((im) => ({
-        n: im.n,
-        role: im.role,
-        key: im.key,
-        what: im.what,
-        file: im.key.startsWith('previs:') ? join(f.out, 'previs', `${b.m.id}.png`) : (im.file ?? ''),
-        mediaId: setup?.media.get(im.key),
-        instruction: im.instruction,
-      }));
       const earlier = core.earlierOf(results.entries[b.m.id]);
-      const r: Attempt = {
+      return {
         id: b.m.id,
         session: b.m.session,
         moment: b.m.moment,
         hash: t.hash,
         prompt: t.prompt,
-        images,
+        images: t.images.map((im) => ({
+          n: im.n,
+          role: im.role,
+          key: im.key,
+          what: im.what,
+          file: im.key.startsWith('previs:') ? join(f.out, 'previs', `${b.m.id}.png`) : (im.file ?? ''),
+          mediaId: setup?.media.get(im.key),
+          instruction: im.instruction,
+        })),
         switches: knobs(),
         state: 'refused',
         ...(setup ? { nodeId: setup.ids[b.m.moment] } : {}),
         at: new Date().toISOString(),
         ...(earlier.length ? { earlier } : {}),
       };
-      results.entries[b.m.id] = r;
-      const lost = images.filter((im) => !im.mediaId).map((im) => im.key);
-      const room = cap - spent;
-      const p = b.d?.r.pictures.find((x) => x.id === b.m.moment && x.kind === 'cut');
-      if (!setup || lost.length || !p)
-        r.error = `not drawn: ${lost.join(', ') || 'its dream'} could not be put into the checkpoint's store`;
-      else if (room + 1e-9 < USD_PER_PICTURE)
-        Object.assign(r, { state: 'capped', error: `not drawn: the ${money(cap)} cap is reached` });
-      else {
-        // Kept before the engine is asked: a run that stops now leaves an attempt the next one settles.
-        r.state = 'starting';
-        save();
-        try {
-          const started = await engine.startFrame({
-            item: { ...p.item, nodeId: setup.ids[b.m.moment], version: 1 },
-            prompt: t.prompt,
-            references: images.map((im) => ({
-              media_id: im.mediaId as string,
-              role: im.role,
-              instruction: im.instruction,
-            })),
-            reason: `Drawn once more for checkpoint ${set.name}, to be judged blind against the picture drawn before; approved within a ${money(cap)} cap for the checkpoint, ${money(room)} of it left.`,
-            // Never approved for more than is left under the cap.
-            maxUsd: Math.min(engine.maxPerImage, room),
-            intent: `Checkpoint ${set.name}: ${p.item.name}`,
-            shape: '16:9',
-          });
-          Object.assign(r, { state: 'queued', recipeId: started.recipeId, jobId: started.jobId, usd: started.usd });
-          spent += typeof started.usd === 'number' ? started.usd : engine.maxPerImage;
-          waiting.push(r);
-        } catch (err) {
-          // A job may still have been made before the error: looked for, and kept, before anything is called refused.
-          const error = String(err).slice(0, 1000);
-          const jobs = await storeJobs(engine.call).catch(() => null);
-          const made = jobs?.find((j) => j.node === r.nodeId && !known().has(j.id));
-          if (made) {
-            Object.assign(r, { state: 'adopted', jobId: made.id, error });
-            spent += engine.maxPerImage;
+    };
+    /** A moment not drawn, nothing sent: kept as refused, so a later --draw draws it. */
+    const refuse = (b: Built, error: string) => {
+      results.entries[b.m.id] = { ...attemptOf(b), error };
+      console.log(`${b.m.id}: refused (${error.slice(0, 300)})`);
+      save();
+    };
+
+    while (pending.length) {
+      const wave = pending.filter((b) =>
+        core.dependsOf(b.today).every((id) => !pending.some((p) => p.m.id === id) && !inHand(id)),
+      );
+      if (!wave.length) {
+        // All that is left draws from a picture still in the worker's hands.
+        await waitFor();
+        if (waiting.some((r) => !core.DONE.has(r.state))) break;
+        continue;
+      }
+      pending = pending.filter((b) => !wave.includes(b));
+      // Built again with the new pictures it draws from: the hash holds each as a dependency, so any other
+      // change since the dry run refuses it.
+      const again = wave.filter((b) => core.dependsOf(b.today).length);
+      const rebuilt = again.length ? (await buildSet(again.map((b) => b.m), args, f, { ...ctx, results })).built : [];
+      const go: Built[] = [];
+      for (const b of wave) {
+        const deps = core.dependsOf(b.today);
+        if (!deps.length) {
+          go.push(b);
+          continue;
+        }
+        const notDrawn = deps.filter((id) => results.entries[id]?.state !== 'ready' || !results.entries[id]?.output);
+        const nb = rebuilt.find((x) => x.m.id === b.m.id);
+        if (notDrawn.length)
+          refuse(
+            b,
+            `not drawn: it draws from the new picture of ${notDrawn.map((id) => `${id} (${results.entries[id]?.state ?? 'not drawn'})`).join(', ')}, which was not drawn`,
+          );
+        else if (!nb?.today || nb.error || nb.today.refused.length)
+          refuse(
+            b,
+            `not drawn: built again with the new picture of ${deps.join(', ')}: ${nb?.error ?? nb?.today?.refused.join('; ') ?? 'not built'}`,
+          );
+        else if (nb.today.hash !== (b.today as Today).hash)
+          refuse(
+            b,
+            `not drawn: built again with the new picture of ${deps.join(', ')}, its prompt or images changed beyond that picture since the dry run: run --dry again and read it`,
+          );
+        else go.push(nb);
+      }
+
+      // Each dream written into the checkpoint's store, with every sketch and picture its moments attach
+      // (an earlier moment's new picture in place of the run's).
+      const setups = new Map<string, Setup>();
+      for (const session of new Set(go.map((b) => b.m.session))) {
+        const mine = go.filter((b) => b.m.session === session);
+        const d = mine[0].d as DreamBuild;
+        const files = Object.fromEntries(
+          mine.flatMap((b) =>
+            (b.today as Today).images.flatMap((im) => (im.dependsOn && im.file ? [[im.key, im.file]] : [])),
+          ),
+        );
+        console.log(`putting ${session} into ${f.home}…`);
+        setups.set(
+          session,
+          await engine.setUp(
+            mine[0].saved,
+            core.partsOf(d),
+            mine.map((b) => core.toDrawOf(d, b.m.id, b.today as Today)),
+            {
+              media: f.media,
+              previsDir: join(f.out, 'previs'),
+              reason: `Drawn once more for checkpoint ${set.name}, to be judged blind against the picture drawn before; what it is drawn from is in its references`,
+              ...(Object.keys(files).length ? { files } : {}),
+            },
+          ),
+        );
+      }
+
+      for (const b of go) {
+        const t = b.today as Today;
+        const setup = setups.get(b.m.session);
+        const r = attemptOf(b, setup);
+        const images = r.images;
+        results.entries[b.m.id] = r;
+        const lost = images.filter((im) => !im.mediaId).map((im) => im.key);
+        const room = cap - spent;
+        const p = b.d?.r.pictures.find((x) => x.id === b.m.moment && x.kind === 'cut');
+        if (!setup || lost.length || !p)
+          r.error = `not drawn: ${lost.join(', ') || 'its dream'} could not be put into the checkpoint's store`;
+        else if (room + 1e-9 < USD_PER_PICTURE)
+          Object.assign(r, { state: 'capped', error: `not drawn: the ${money(cap)} cap is reached` });
+        else {
+          // Kept before the engine is asked: a run that stops now leaves an attempt the next one settles.
+          r.state = 'starting';
+          save();
+          try {
+            const started = await engine.startFrame({
+              item: { ...p.item, nodeId: setup.ids[b.m.moment], version: 1 },
+              prompt: t.prompt,
+              references: images.map((im) => ({
+                media_id: im.mediaId as string,
+                role: im.role,
+                instruction: im.instruction,
+              })),
+              reason: `Drawn once more for checkpoint ${set.name}, to be judged blind against the picture drawn before; approved within a ${money(cap)} cap for the checkpoint, ${money(room)} of it left.`,
+              // Never approved for more than is left under the cap.
+              maxUsd: Math.min(engine.maxPerImage, room),
+              intent: `Checkpoint ${set.name}: ${p.item.name}`,
+              shape: '16:9',
+            });
+            Object.assign(r, { state: 'queued', recipeId: started.recipeId, jobId: started.jobId, usd: started.usd });
+            spent += typeof started.usd === 'number' ? started.usd : engine.maxPerImage;
             waiting.push(r);
-          } else if (jobs) Object.assign(r, { state: 'refused', error });
-          // Not knowing whether a job was made, it stays `starting` (the next run looks again) and counts as
-          // spent in this one.
-          else {
-            Object.assign(r, { error: `${error}; the store could not be read to see whether a job was made` });
-            spent += engine.maxPerImage;
+          } catch (err) {
+            // A job may still have been made before the error: looked for, and kept, before anything is called refused.
+            const error = String(err).slice(0, 1000);
+            const jobs = await storeJobs(engine.call).catch(() => null);
+            const made = jobs?.find((j) => j.node === r.nodeId && !known().has(j.id));
+            if (made) {
+              Object.assign(r, { state: 'adopted', jobId: made.id, error });
+              spent += engine.maxPerImage;
+              waiting.push(r);
+            } else if (jobs) Object.assign(r, { state: 'refused', error });
+            // Not knowing whether a job was made, it stays `starting` (the next run looks again) and counts as
+            // spent in this one.
+            else {
+              Object.assign(r, { error: `${error}; the store could not be read to see whether a job was made` });
+              spent += engine.maxPerImage;
+            }
           }
         }
-      }
-      console.log(
-        `${b.m.id}: ${r.state}${r.jobId ? ` as job ${r.jobId}` : ''}${r.error ? ` (${r.error.slice(0, 300)})` : ''}`,
-      );
-      save();
-    }
-
-    // Every job waited for; one that fails is reported, never drawn again.
-    const until = Date.now() + Number(process.env.CHECKPOINT_WAIT_MS ?? 60 * 60_000);
-    while (waiting.some((r) => !core.DONE.has(r.state)) && Date.now() < until) {
-      await Bun.sleep(engine.pollMs ?? 5000);
-      for (const r of waiting) {
-        if (core.DONE.has(r.state) || !r.jobId || !r.nodeId) continue;
-        const st: { state: string; error?: string; mediaPath?: string } = await engine
-          .status(r.jobId, r.nodeId)
-          .catch((err) => ({ state: r.state, error: String(err) }));
-        if (st.state === r.state) continue;
-        const job = (await engine.call('job', { id: r.jobId })) as {
-          provider_id?: string | null;
-          receipt?: unknown;
-          error?: string | null;
-          events?: unknown;
-        };
-        Object.assign(r, {
-          state: st.state,
-          providerId: job.provider_id ?? null,
-          receipt: job.receipt,
-          events: job.events,
-          ...(job.error || st.error ? { error: job.error ?? st.error } : {}),
-        });
-        if (st.state === 'ready' && st.mediaPath) r.output = join(f.home, 'media', st.mediaPath);
-        console.log(`${r.id}: ${r.state}${r.error ? ` (${r.error.slice(0, 300)})` : ''}`);
+        console.log(
+          `${b.m.id}: ${r.state}${r.jobId ? ` as job ${r.jobId}` : ''}${r.error ? ` (${r.error.slice(0, 300)})` : ''}`,
+        );
         save();
       }
     }
+    for (const b of pending)
+      console.log(
+        `${b.m.id}: waits for the new picture of ${core.dependsOf(b.today).join(', ')}, still being drawn; --draw again draws it after`,
+      );
+
+    // Every job waited for; one that fails is reported, never drawn again.
+    await waitFor();
     for (const r of waiting.filter((x) => !core.DONE.has(x.state)))
       console.log(`${r.id}: still ${r.state} as job ${r.jobId}; --draw again waits for it`);
     const all = Object.values(results.entries);
@@ -1026,15 +1204,23 @@ async function writeJudge(set: CheckpointSet, f: Folders): Promise<JudgeData> {
     const s = sessionOf(m.session);
     const old = core.pictureFile(f.data, m.old.picture);
     if (!existsSync(old)) throw new Error(`${m.id}: the old picture's file is not on this machine (${old})`);
-    const prev = core.pictureBefore(s, m.moment);
-    // The picture before as the owner saw it beside the old one: the story's, where it was judged.
-    const judged = prev ? v.story.find((x) => x.session === m.session && x.moment === prev) : undefined;
-    const frame = prev ? s.build?.frames?.find((x) => x.id === prev && x.kind === 'cut') : undefined;
-    const before = judged
-      ? join(f.data, 'strawberry-home', 'media', judged.picture)
-      : frame?.mediaPath
-        ? join(f.media, frame.mediaPath)
-        : null;
+    // The picture before: the one the new picture was drawn from, as sent (an earlier moment's new
+    // picture where the checkpoint drew it first); else the moment before, new where drawn again here.
+    const drawnNew = Object.fromEntries(
+      set.moments
+        .filter((x) => x.session === m.session && results.entries[x.id]?.state === 'ready')
+        .flatMap((x) => (results.entries[x.id]?.output ? [[x.moment, results.entries[x.id].output as string]] : [])),
+    );
+    const runFile = (prev: string) => {
+      const judged = v.story.find((x) => x.session === m.session && x.moment === prev);
+      const frame = s.build?.frames?.find((x) => x.id === prev && x.kind === 'cut');
+      return judged
+        ? join(f.data, 'strawberry-home', 'media', judged.picture)
+        : frame?.mediaPath
+          ? join(f.media, frame.mediaPath)
+          : null;
+    };
+    const before = core.beforeOnPage(s, m.moment, r.images, drawnNew, runFile);
     ms.push({
       id: m.id,
       title: `${s.draft?.breakdown?.title ?? m.run}, ${m.moment}`,
@@ -1112,7 +1298,8 @@ async function fromCases(args: Args): Promise<void> {
   const cap = args.cap ?? DEFAULT_CAP;
   const pairedFile = join(f.data, 'runs', 'paired', 'results.json');
   const paired = existsSync(pairedFile) ? readJson<PairedResults>(pairedFile) : null;
-  const { candidates, unknown } = core.candidatesOf(cases, step, core.loadVerdicts(), f.data, paired);
+  const judged = await loadJudged(f);
+  const { candidates, unknown } = core.candidatesOf(cases, step, core.loadVerdicts(), f.data, paired, judged);
   // What the changes are measured against: the step's own switch unset, the switches named, or the
   // prompt each old picture was drawn with.
   const old = args.base.includes('old');
@@ -1166,12 +1353,19 @@ async function fromCases(args: Args): Promise<void> {
     }
     for (const c of mine) {
       try {
-        const today = core.todayOf(d, c.moment, { media: f.media });
+        // Drawn from the new pictures of the other candidates of its dream, and, where it draws from one,
+        // from the run's too, as it is drawn when that one is not in the set.
+        const here: DrawnHere = Object.fromEntries(
+          candidates.filter((x) => x.session === session && x.id !== c.id).map((x) => [x.moment, { id: x.id }]),
+        );
+        const today = core.todayOf(d, c.moment, { media: f.media, here, judged });
+        const alone = core.dependsOf(today).length ? core.todayOf(d, c.moment, { media: f.media, judged }) : undefined;
         const oldFile = core.pictureFile(f.data, c.old.picture);
         if (!existsSync(oldFile))
-          today.refused.push(
-            `the old picture's file is not on this machine (${oldFile}): nothing to judge the new one against`,
-          );
+          for (const t of [today, alone])
+            t?.refused.push(
+              `the old picture's file is not on this machine (${oldFile}): nothing to judge the new one against`,
+            );
         let before: { prompt: string; images: string[]; previs?: string | null } | null;
         if (old) before = core.oldSentOf(c.old, c.moment, saved, frozen, paired);
         else {
@@ -1184,7 +1378,7 @@ async function fromCases(args: Args): Promise<void> {
           continue;
         }
         const after = { prompt: today.prompt, images: core.namesOf(today), previs: today.previs?.key ?? null };
-        measured.push({ ...c, today, change: core.changeOf(before, after) });
+        measured.push({ ...c, today, ...(alone ? { alone } : {}), change: core.changeOf(before, after) });
       } catch (e) {
         measured.push({ ...c, error: String(e instanceof Error ? e.message : e).slice(0, 300) });
       }
@@ -1201,7 +1395,7 @@ async function fromCases(args: Args): Promise<void> {
     results: f.out,
   });
   const line = (m: Measured) =>
-    `${m.id.padEnd(22)} ${m.why.padEnd(5)} ${m.cases.map((c) => c.id).join(', ')}; old ${m.old.draw} ${m.old.verdict}${m.change ? `; changed ${core.changeWords(m.change)}` : ''}${m.today?.briefless ? '; needs a brief (--dry --brief)' : ''}`;
+    `${m.id.padEnd(22)} ${m.why.padEnd(5)} ${m.cases.map((c) => c.id).join(', ')}; old ${m.old.draw} ${m.old.verdict}${m.relabelled ? ` (${m.relabelled})` : ''}${m.change ? `; changed ${core.changeWords(m.change)}` : ''}${m.today?.briefless ? '; needs a brief (--dry --brief)' : ''}`;
   const listed2 = (title: string, xs: Measured[], why?: (m: Measured) => string) =>
     xs.length ? ['', `${title} (${xs.length}):`, ...xs.map((m) => `  ${line(m)}${why ? `: ${why(m)}` : ''}`)] : [];
   const kept = proposal.set.moments.map((m) => measured.find((x) => x.id === m.id) as Measured);
