@@ -629,6 +629,74 @@ One **cut sheet** per cut is the spine everything is assembled from:
   asked, the same findings, the same acting). Routing never touches a prompt, so the prompt cases and the corpus are
   unchanged by it. Jev calls per dream on the ten saved dreams S2 redrew (`evals/redraw.ts`, fake pictures, Jev
   only): acting, logging and routed.
+  **The results (27 Sep, `runs/jev-checks/s7.json`; 801 Jev calls, every answer kept).** No check earns the right to
+  act: 0 of 36. Of the 122 pictures, 56 are not right (0.46), so a check guessing at random flags pictures 0.46 not
+  right; the bar is 0.7. AUC is how well a reading orders the pictures whatever the bar (0.5 is a coin).
+
+  | check | reads, routed by | bar | pictures (tune/held out) | all: not right / flagged | recall | held out: not right / flagged (base) | AUC | verdict |
+  | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+  | gate: contradicts | prompt, every moment | > 0.45 | 122 (69/53) | 22/52 = 0.42 | 0.39 | 11/29 = 0.38 (0.47) | 0.48 | log only |
+  | gate: contradicts, as it acts (> 0.55, or a line carries 0.08) | the same | | 122 | 22/52 = 0.42 | 0.39 | 11/29 = 0.38 | 0.48 | log only |
+  | gate: someone drawn twice | prompt, every moment | > 0.4 | 122 | 2/2 | 0.04 | 2/2 | 0.55 | log only: 2 flagged |
+  | gate: not clear | prompt, every moment | < 0.7 | 122 | 0/0 | 0 | 0/0 | 0.39 | log only: none flagged |
+  | gate: what to take from each image | prompt, images attached | < 0.6 | 122 | 3/10 = 0.30 | 0.05 | 1/2 | 0.48 | log only |
+  | the gate as it acts (any of the four) | prompt | | 122 | 24/58 = 0.41 | 0.43 | 12/30 = 0.40 (0.47) | | log only |
+  | storyboard: everyone in it, as logged | shot, planned | < 0.6 | 81 (43/38) | 2/8 = 0.25 | 0.05 | 2/6 (0.42) | 0.45 | log only |
+  | storyboard: contradicts the moment, as logged | shot, planned | >= 0.5 | 81 | 7/15 = 0.47 | 0.17 | 1/3 | 0.47 | log only |
+  | storyboard: camera where the moment needs it, as logged | shot, planned | < 0.6 | 81 | 3/9 = 0.33 | 0.07 | 0/1 | 0.47 | log only |
+  | storyboard: anything extra, as logged | shot, planned | >= 0.65 | 81 | 0/0 | 0 | 0/0 | 0.52 | log only: none flagged |
+  | "storyboard complete?" as it acts (any fact) | shot, planned | | 81 | 9/23 = 0.39 | 0.23 | 2/8 = 0.25 (0.42) | | log only |
+  | planFacts: the camera faces what the plan lacks (plans the scene again) | plan, looks_at | missing | 122 | 2/3 | 0.04 | 2/3 | | log only: 3 flagged |
+  | the continuity plan's warnings (code) | today's plan, every moment | any | 122 | 0/0 | 0 | 0/0 | | log only: none on today's plans |
+  | `r_state_said` (B1) | prompt, change:carried or both | < 0.5 | 25 (8/17) | 9/15 = 0.60 | 0.75 | 7/9 = 0.78 (0.59) | 0.55 | log only: 25 pictures |
+  | `r_held_said` (B6) | prompt, held | < 0.5 | 55 (32/23) | 3/5 = 0.60 | 0.10 | 1/2 | 0.46 | log only: 55 pictures |
+  | `r_gone_drawn` (C4) | prompt, every cut | > 0.7 | 122 | 3/5 = 0.60 | 0.05 | 0/0 | 0.50 | log only: none flagged held out |
+  | `r_pov_body` (A4) | prompt, pov | > 0.5 | 29 (22/7) | 0/0 | 0 | 0/0 | 0.68* | log only: 29 pictures |
+  | `r_background` (A2) | prompt, move:reverse, crossed | < 0.8 | 40 (26/14) | 9/15 = 0.60 | 0.43 | 3/3 (0.64) | 0.54 | log only: 40 pictures |
+  | `r_keep_earlier` (A2, C7) | prompt, reverse, other_side, crossed | > 0.5 | 73 (39/34) | 32/67 = 0.48 | 0.89 | 16/31 = 0.52 (0.53) | 0.49 | log only |
+  | `r_line_order` (A1) | prompt, line | < 0.8 | 62 (28/34) | 8/10 = 0.80 | 0.23 | 3/4 = 0.75 (0.59) | 0.61 | log only: 4 flagged held out |
+  | `r_size` (C2) | prompt, held, animal, vehicle, insert, close_up | < 0.3 | 86 (49/37) | 5/22 = 0.23 | 0.12 | 2/8 (0.54) | 0.33 | log only |
+  | `r_turned_both` (B4) | prompt, turned | > 0.5 | 0 | | | | | log only: no judged picture is tagged turned |
+  | `r_action_seen` (E2) | prompt, someone in view | < 0.9 | 63 (38/25) | 12/27 = 0.44 | 0.39 | 7/14 = 0.50 (0.52) | 0.45 | log only |
+  | `r_story_words` (E4) | prompt, every cut | > 0.2 | 122 | 21/47 = 0.45 | 0.38 | 8/15 = 0.53 (0.47) | 0.46 | log only |
+  | `r_quoted` (C3) | prompt, not writing | > 0.4 | 122 | 1/8 | 0.02 | 0/1 | 0.43 | log only |
+  | `r_beyond_inside` (A6) | prompt, every cut | > 0.4 | 122 | 15/22 = 0.68 | 0.27 | 4/6 = 0.67 (0.47) | 0.63 | log only: precision 0.67 |
+  | `r_look_twice` (E1) | prompt, every cut | > 0.6 | 122 | 3/4 | 0.05 | 0/0 | 0.54 | log only: none flagged held out |
+  | `sb_held_hands` (B6, A4) | shot, pov and held | < 0.5 | 9 (6/3) | 5/6 = 0.83 | 1.00 | 1/1 | 0.95 | log only: 9 pictures |
+  | `sb_beyond` (A6) | shot, planned | > 0.4 | 81 | 9/22 = 0.41 | 0.23 | 3/8 (0.42) | 0.48 | log only |
+  | for comparison: the picture judge (reads the picture; Claude, not Jev) | the picture | not right | 122 | 38/55 = 0.69 | 0.68 | 19/28 = 0.68 (0.47) | | log only: 0.68-0.69 |
+
+  (A library question's bar is the one chosen on the tune pictures; "untuned" where none flagged three of them. *
+  `r_pov_body` reads 0.05-0.11 on every picture: its order is noise, under G4's 0.11.) **What it says.** The checks
+  that act today read the prompt or the shot the way a coin would read the pictures: the gate's contradiction reads
+  0.445 on the pictures called right, 0.44 partly, 0.454 wrong; every storyboard fact's AUC is 0.40-0.52, and as it
+  acts it flags pictures less often not right (0.39) than chance (0.49). They are stable, not predictive: asked again
+  the storyboard's facts pass or fail as logged in 315 of 324 readings (a mean move of 0.02-0.04). The gate's line
+  search excused nothing (all 23 readings between 0.45 and 0.55 had a line carrying 0.08 or more) at 26 calls a
+  prompt. A prompt check cannot see what most separates a right picture from a wrong one: in 15 of the 20 paired
+  moments the owner judged the three pictures apart from prompts differing only in image 1 (G5: takes and image 1
+  vary more than words). Nearest the bar, all too thin: `r_beyond_inside` (the tractor brought inside the room among
+  its flags; 9 of the 15 pictures with its faults flagged), `r_line_order` (its ten flags are four moments),
+  `r_state_said` (every flag a library dream whose prompts never said the water; S1 says it now), `sb_held_hands`
+  (S4's debt: through the dreamer's eyes a held thing is placed at its floor-plan spot, not the hands; code's to
+  fix). Even the picture judge, which sees the picture, stays just under the bar (0.68 held out). planFacts's
+  re-plan found three moments on the plans drawn from (asked again: the same three), too few to say anything; it is
+  a fact the plan is built from more than a check, so it logs when routed and its re-plan is S4's to settle.
+  **What owner labelling would settle it** (no new money: every picture the paid checkpoints draw, S4 ~20, S5 ~20,
+  S10 ~66, is judged by the owner anyway; drawn with the checks routed or logging, each keeps its readings by its
+  prompt's hash, and joins the set once `evals/build-checks-set.ts` reads those verdicts; at about half a minute a
+  verdict, a hypothesis):
+  - `r_beyond_inside`: about 110 more judged pictures (any moment) for some 20 more flags, enough to tell 0.7 from
+    its 0.47 base; about an hour.
+  - `r_line_order`: about 60 more judged pictures of moments with a line, for five or more flagged moments rather
+    than four; about half an hour.
+  - `r_background`: about 20 more pictures after a reverse or a crossing (40 now); ten minutes. `r_state_said`:
+    35 more pictures of moments carrying a change (25 now), only worth it with the record off; with S1's record on
+    the prompts say the state, and it would confirm S1. `r_held_said`: 5 more held-thing pictures reach 60, but it
+    flags five.
+  - The gate's four questions and "storyboard complete?": none; on 122 and 81 pictures they order the pictures as a
+    coin does, so no count of labels makes them act at these bars. They keep logging so later pictures can say
+    otherwise.
 
 ## Where steps overlap (read before starting any step)
 

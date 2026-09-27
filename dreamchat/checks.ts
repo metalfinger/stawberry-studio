@@ -24,8 +24,11 @@ export function routedMode(): boolean {
 }
 
 /**
- * The checks that met their bar on the owner's verdicts (HARNESS_PLAN.md, S7), by id: only these may act
- * when the checks are routed. A check joins this set only with its row in the plan's results table.
+ * The checks that met their bar on the owner's verdicts (HARNESS_PLAN.md, S7 results), by id: only these
+ * may act when the checks are routed. Measured 27 Sep on the 122 pictures the owner judged: none does (the
+ * gate's questions and "storyboard complete?" order the pictures as a coin would; the library's nearest,
+ * `r_beyond_inside`, flags them 0.67 not right on the pictures it was not tuned on). A check joins this set
+ * only with its row in the plan's results table.
  */
 export const EARNED = new Set<string>();
 

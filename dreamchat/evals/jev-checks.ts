@@ -152,6 +152,17 @@ export function wilsonLow(hits: number, n: number, z = 1.645): number | null {
   return (c - m) / d;
 }
 
+/** The area under the curve of a reading against not right: 0.5 is chance, 1 orders every picture right. */
+export function aucOf(values: { p: SetPicture; v: number | undefined }[], problem: 'yes' | 'no'): number | null {
+  const worse = (v: number) => (problem === 'yes' ? v : -v);
+  const bad = values.filter((x) => x.v !== undefined && notRight(x.p)).map((x) => worse(x.v as number));
+  const good = values.filter((x) => x.v !== undefined && !notRight(x.p)).map((x) => worse(x.v as number));
+  if (!bad.length || !good.length) return null;
+  let wins = 0;
+  for (const b of bad) for (const g of good) wins += b > g ? 1 : b === g ? 0.5 : 0;
+  return wins / (bad.length * good.length);
+}
+
 export function score(items: { p: SetPicture; flag: boolean }[]): Score {
   const flagged = items.filter((x) => x.flag);
   const hits = flagged.filter((x) => notRight(x.p)).length;
@@ -243,6 +254,11 @@ export type Row = {
   /** Of the routed pictures with one of its own faults, how many it flags. */
   own: { faults: number; flagged: number };
   note?: string;
+  /**
+   * How well its reading orders the pictures, whatever the bar: the chance that a picture the owner did not
+   * call right reads worse than one called right (0.5 is a coin; ties count half). None for a yes-or-no check.
+   */
+  auc?: number | null;
   /** Each routed picture's flag, by id (null: not answered). */
   flags: Record<string, boolean | null>;
 };
@@ -430,27 +446,27 @@ if (import.meta.main) {
     bar: string,
     flagOf: (a: number, p: SetPicture) => boolean | undefined,
     extra: Partial<Row> = {},
-  ) =>
-    rowOf(
+  ) => {
+    const q = id.split('.')[1].replace(/:acting$/, '');
+    const routedPics = pics.filter((p) => q !== 'refs_clear' || /\bImage 1(?::| is\b)/.test(prompts.get(p.id)!));
+    const values = routedPics.map((p) => ({ p, v: gateRead(p, q) }));
+    return rowOf(
       {
         id,
         label,
         rule: 'G1',
         reads: 'prompt',
-        routedBy: id === 'moment.refs_clear' ? 'images attached (code)' : 'every moment',
+        routedBy: q === 'refs_clear' ? 'images attached (code)' : 'every moment',
         existing: true,
         calls: "1 a picture drawn, shared by the gate's questions",
         bar,
         classes: [],
+        auc: aucOf(values, q === 'clear' || q === 'refs_clear' ? 'no' : 'yes'),
         ...extra,
       },
-      pics
-        .filter((p) => id !== 'moment.refs_clear' || /\bImage 1(?::| is\b)/.test(prompts.get(p.id)!))
-        .map((p) => {
-          const a = gateRead(p, id.split('.')[1].replace(/:acting$/, ''));
-          return { p, flag: a === undefined ? undefined : flagOf(a, p) };
-        }),
+      values.map(({ p, v }) => ({ p, flag: v === undefined ? undefined : flagOf(v, p) })),
     );
+  };
   rows.push(
     gateRow(
       'moment.contradicts',
@@ -579,6 +595,10 @@ if (import.meta.main) {
           id: `moment.${f.id}`,
           calls: '1 a planned moment (2 when an answer is near its bar), shared by its four facts',
           note: 'as logged before the picture was drawn',
+          auc: aucOf(
+            shotPics.map((p) => ({ p, v: logged(p, f.id) })),
+            f.pass === 'yes' ? 'no' : 'yes',
+          ),
         },
         shotPics.map((p) => {
           const a = logged(p, f.id);
@@ -591,6 +611,10 @@ if (import.meta.main) {
           id: `moment.${f.id}:again`,
           calls: 'as above',
           note: `asked again (${EVAL_MODEL()}) of the same shot`,
+          auc: aucOf(
+            shotPics.map((p) => ({ p, v: again(p, f.id) })),
+            f.pass === 'yes' ? 'no' : 'yes',
+          ),
         },
         shotPics.map((p) => {
           const a = again(p, f.id);
@@ -722,6 +746,10 @@ if (import.meta.main) {
           bar: `${q.problem === 'yes' ? '>' : '<'} ${chosen.bar.toFixed(1)}${chosen.chosen ? ' (chosen on tune)' : ' (too few flags on tune to choose)'}`,
           classes: q.classes,
           note: `at ${q.bar}, untuned: ${untuned.hits}/${untuned.flagged} of all`,
+          auc: aucOf(
+            readings.map((x) => ({ p: x.p, v: x.reading })),
+            q.problem,
+          ),
         },
         readings.map((x) => ({
           p: x.p,
@@ -807,11 +835,11 @@ if (import.meta.main) {
   const pct = (x: number | null) => (x === null ? '-' : x.toFixed(2));
   const cell = (s: Score) => `${s.hits}/${s.flagged} = ${pct(s.precision)}`;
   const lines = [
-    '| check | reads | routed by | bar | pictures (tune/held out) | flagged: not right / flagged = precision, all | recall, all | held out | wrong: precision / recall | own faults flagged | verdict |',
-    '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
+    '| check | reads | routed by | bar | pictures (tune/held out) | flagged: not right / flagged = precision, all | recall, all | held out | wrong: precision / recall | own faults flagged | AUC | verdict |',
+    '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
     ...rows.map(
       (r) =>
-        `| ${r.id}${r.note ? ` (${r.note})` : ''} | ${r.reads} | ${r.routedBy} | ${r.bar} | ${r.answered} (${r.tune.n}/${r.held_out.n})${r.answered < r.routed ? `, ${r.routed - r.answered} unanswered` : ''} | ${cell(r.all)}, base ${pct(r.all.base)} | ${pct(r.all.recall)} | ${cell(r.held_out)}, base ${pct(r.held_out.base)} | ${pct(r.all.wrong.precision)} / ${pct(r.all.wrong.recall)} | ${r.own.flagged}/${r.own.faults} | ${r.verdict.acts ? '**may act**' : r.verdict.why} |`,
+        `| ${r.id}${r.note ? ` (${r.note})` : ''} | ${r.reads} | ${r.routedBy} | ${r.bar} | ${r.answered} (${r.tune.n}/${r.held_out.n})${r.answered < r.routed ? `, ${r.routed - r.answered} unanswered` : ''} | ${cell(r.all)}, base ${pct(r.all.base)} | ${pct(r.all.recall)} | ${cell(r.held_out)}, base ${pct(r.held_out.base)} | ${pct(r.all.wrong.precision)} / ${pct(r.all.wrong.recall)} | ${r.own.flagged}/${r.own.faults} | ${r.auc === undefined || r.auc === null ? '-' : r.auc.toFixed(2)} | ${r.verdict.acts ? '**may act**' : r.verdict.why} |`,
     ),
   ];
   // Every picture's readings, as asked: the gate's, the shot's (logged then, and again), the library's worst.
