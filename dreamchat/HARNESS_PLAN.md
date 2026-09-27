@@ -26,6 +26,55 @@ context mirrors it.
 Money: $21 left of $30; the S4 picture check (about $3) is approved and runs when S4 merges. Writer model: Claude
 (`DREAMCHAT_WRITER=claude`).
 
+## Where we stopped (27 Sep, about 21:40): read this to resume
+
+The owner paused the loop for the usage limit. Nothing is lost: everything below is on `lab/dream-chat` or on the
+named branches, and this file is the record (the owner's claude.ai plan doc is retired; Engram mirrors this).
+
+**On lab and working.** S0 test set, S1 story record, S2 checks only log (default), S3 cut sheet, S4 camera rules,
+S5 references, S7 checks routed by tags, S8 listening (default), S9 record of what was drawn; the picture-check tool;
+the typed readings of the 526 saved moments; the Claude writer (`DREAMCHAT_WRITER=claude`, waits out a usage limit).
+Defaults on: checks log (S2), listening (S8). Behind switches, off by default: `DREAMCHAT_RECORD`,
+`DREAMCHAT_CUT_SHEET`, `DREAMCHAT_CAMERA` (needs the sheet), `DREAMCHAT_REFS` (needs the sheet),
+`DREAMCHAT_JEV_ROUTED`, `DREAMCHAT_AS_DRAWN`, `DREAMCHAT_FRESH_SEND`. The whole suite passes with them off and on.
+
+**Picture evidence.** The S4 check ($3, 20 moments, blind, old against new): new right 15 of 20, old 10 of 20; faults
+put right 5 of 7; guards 10 of 13 against 9 of 13. Its five misses are traced (log, 27 Sep): none is image-model noise.
+
+**In flight when paused (branches, not merged; each was asked to stop at a clean, tested commit and to write its
+state into this file on its branch):**
+- `s5-fix2`: S5 after its second review: earlier pictures' lines that leaked people and layout; the gate on when an
+  earlier picture may carry layout (same camera and place state, never stale, never one the owner judged wrong);
+  side pictures' manifest words; a never-drawn side is no change even without a floor plan; the crowd rule for people
+  only. Then the S5 picture check set (changes listed in the S5 rows).
+- `s6-build`: S6, the one prompt builder, ledger row by row (`DREAMCHAT_ONE_BUILDER`); also owns: the brief writer
+  gets the sheet's facts, a handover drawn mid-act, after-the-fact briefs refused.
+- `postcheck-fixes`: carried things out of view through the dreamer's eyes unless named (owner's rule); fixtures at
+  the height the dream gives them and wall labels without fixture names; a moment entering a place set outside it;
+  floor plans that follow the described layout (windows, aisle, rows, sitters on seats); room sides said on every cut.
+- `checkpoint-order`: the picture-check tool draws moments of one dream in story order, shows the frame before on the
+  judging page, and never sends an earlier picture the owner judged wrong.
+Worktrees: `~/Documents/code/stawberry-studio/.claude/worktrees/agent-*` (one per branch). To resume: for each branch,
+read its HARNESS_PLAN.md, run `bunx tsc --noEmit` and `bun test --timeout 60000`, get an independent review, fix,
+cherry-pick onto lab (resolve this file by keeping both sides, then one row a step in the two tables), push.
+
+**Next, in order.** 1) Merge the four branches above, each after review. 2) The S5 picture check (about $3; draw with
+`evals/checkpoint.ts`, judged on the local page). 3) Finish S6 (the rest of the ledger), review, merge. 4) The owner
+chooses the writer the harness ships with (DeepSeek or another API; the Claude CLI is for testing only). 5) S10,
+the paid benchmark on the five dreams (about $10), judged by the owner. Money: $18 left of $30.
+
+**Caches (paid readings; gitignored under `dreamchat/runs/`, local to this machine).** Implied readings
+`runs/implied-cache.json`, typed readings `runs/typed-cache.json`, prompt-case Jev answers
+`runs/prompt-cases/jev-cache.json` (the fullest copy, 544 entries, is in the `s5-refs` worktree), listening Jev
+answers `runs/listening/jev-cache.json`. On another PC they are missing and a rerun would ask again (cost): copy them
+over, or commit them to an eval folder if the owner agrees.
+
+**The owner's decisions (27 Sep).** Checks only log by default; listening on by default; "several changes" means 2
+or more; a never-drawn side of a place is no change where the floor plan lays out the picture; through the dreamer's
+eyes a carried thing stays out of view unless the moment names it; the snow-train-2 suitcase is shut at m5 and m6;
+the S6 typed readings approved and done; picture checks about $3 each, S10 about $10; records live in local files and
+Engram, not account-bound pages; when the usage limit hits, wait for the reset and carry on.
+
 ## The aim
 
 Every picture of a dream right on the first take, because the preparation is right. The harness is the
