@@ -68,7 +68,7 @@ import {
   oneRecord,
   type Unstaged,
 } from './record';
-import { oneBuilder } from './cleanups';
+import { builds, oneBuilder } from './cleanups';
 import { chooseRefs, type RefsLayer, refsMode } from './refs';
 import { groupMembers, isAnimal, isGroup, type Item, LOOK, type Shape, shapeOf, toldColours } from './sheets';
 import {
@@ -1108,6 +1108,12 @@ export type Framed = {
   sheet?: CutSheet;
   /** Where the sheet's assembly differs from framePrompt's (shadow and on). */
   differs?: string[];
+  /**
+   * With the sheet on and the one prompt builder's paragraph ids (S6 ledger 4): each paragraph as sent, by
+   * name, and each image with its source and whom it is attached for, as the assembler put them in. What the
+   * gate and the evals read, where they worked it out again from the words.
+   */
+  assembled?: Pick<Assembled, 'lines' | 'references'>;
 };
 
 /**
@@ -1142,6 +1148,7 @@ export function framed(x: CutSheetInput, mode = cutSheetMode(), site = 'frames',
       depicted: made.depicted,
       sheet,
       differs,
+      ...(builds('paragraph_ids') ? { assembled: { lines: made.lines, references: made.references } } : {}),
     };
   return { ...today, sheet, differs };
 }

@@ -23,6 +23,8 @@ export type AssembledRef = {
   source: 'edit' | 'mockup' | 'sketch' | 'ghost' | 'earlier';
   /** Whose sketch, or which picture. */
   of: string;
+  /** Whom it is attached to say how they look: a sketch's own subject, an in-between picture's, or who someone is. */
+  subjects: string[];
 };
 
 /** One paragraph of the prompt, named, with the sheet fields it says. */
@@ -85,6 +87,7 @@ export function assembleCut(s: CutSheet): Assembled {
         instruction: 'the same view a moment earlier: edit it into this moment',
         source: 'edit',
         of: base.id,
+        subjects: [],
       },
       leaving.length || joining.length
         ? `EDIT THIS PICTURE. It is ${pictureNo(base)}, the same view a moment earlier. Keep its camera, framing, room and light exactly; who is in it changes: ${[
@@ -110,6 +113,7 @@ export function assembleCut(s: CutSheet): Assembled {
           'the previs of this exact picture, from its camera: make it real, keeping where everyone and everything is and how big',
         source: 'mockup',
         of: s.id,
+        subjects: [],
       },
       "EDIT THIS PICTURE. It is a rough grey mock-up of this exact picture, rendered from the floor plan of the place through this very camera: make it real. Every labelled grey shape becomes the person or thing its label names, exactly where it is and exactly as big, looking as their own images below show; the unlabelled shapes under people become what they sit on, and the plain grey surfaces the walls, floor and ceiling of the place. Keep the camera, the framing and where everything is exactly; keep nothing of the mock-up's look: no grey clay, no outlines, no labels or letters.",
     );
@@ -162,7 +166,9 @@ export function assembleCut(s: CutSheet): Assembled {
     // never its old sketch.
     if (!image || e.turned !== null) continue;
     // Where the one image is an in-between picture, it is said as that: how it is now, as it shows it.
-    const from = stage ? { source: 'ghost' as const, of: stage.id } : { source: 'sketch' as const, of: e.id };
+    const from = stage
+      ? { source: 'ghost' as const, of: stage.id, subjects: [stage.ghost?.of ?? e.id] }
+      : { source: 'sketch' as const, of: e.id, subjects: [e.id] };
     if (e.kind === 'character') {
       const animal = e.said === 'animal';
       // A change that replaces part of them overrides their sketch for that part.
@@ -290,6 +296,7 @@ export function assembleCut(s: CutSheet): Assembled {
           instruction: x.carries,
           source: 'ghost',
           of: x.id,
+          subjects: [g.of],
         },
         g.kind === 'view'
           ? `${name(g.of)} seen facing ${g.looksAt || 'the other way'}: the side this frame faces. Keep everything in it where it puts it.`
@@ -318,6 +325,7 @@ export function assembleCut(s: CutSheet): Assembled {
             instruction: `${own.map(name).join(' and ')}: as last drawn`,
             source: 'earlier',
             of: x.id,
+            subjects: own,
           },
           lastSeen(x, own),
         );
@@ -332,6 +340,13 @@ export function assembleCut(s: CutSheet): Assembled {
         instruction: x.carries,
         source: 'earlier',
         of: x.id,
+        // For who has no sketch of their own here, or else how everyone in both pictures looks now.
+        subjects:
+          x.role === 'composition'
+            ? []
+            : x.who?.length
+              ? unsketched
+              : (x.frame?.visible ?? []).filter((id) => s.visible.includes(id)),
       },
       (r === 'shift'
         ? s.camera.eyes === 'dreamer' && x.frame?.eyes !== 'dreamer'

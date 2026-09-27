@@ -681,6 +681,29 @@ export async function restage(
   return scenes;
 }
 
+/** The paragraph of a prompt a line the gate read around is in, by the assembler's ids (S6 ledger 4); null without them. */
+function paragraphOf(built: Framed, line: string | undefined): string | null {
+  if (!built.assembled || !line) return null;
+  const at = line.slice(0, 160);
+  return built.assembled.lines.find((l) => l.text.split('\n').some((x) => x.startsWith(at)))?.id ?? null;
+}
+
+/** Whether the gate read a prompt at odds around its shot's brief: the one line a model wrote from the view. */
+function onBrief(built: Framed, line: string | undefined): boolean {
+  if (!built.assembled) return !!line?.startsWith('The shot');
+  return paragraphOf(built, line) === 'shot' && built.sheet?.camera.brief != null;
+}
+
+/**
+ * Whether a gate finding is around the line that says what the camera (or the dreamer's own eyes) sees, the
+ * floor plan's view: the plan's to put right, never the words'. By the words, "What the dreamer sees" was missed.
+ */
+function onView(built: Framed, finding: string): boolean {
+  if (!built.assembled) return finding.includes('around: "What the camera sees');
+  const around = finding.match(/, around: "([\s\S]*)"$/)?.[1];
+  return paragraphOf(built, around) === 'shot' && built.sheet?.camera.brief == null;
+}
+
 /**
  * Each moment's typed reading (typed.ts): what its picture shows at one instant, proposed by the writer and
  * checked by Jev, one moment at a time, each logged. None without the writer or Jev; a moment whose reading
@@ -2789,7 +2812,7 @@ export class SessionStore {
     );
     // The brief is the one line a model wrote from the view: where the gate finds the prompt at odds
     // with itself there, the view read off the render says the same without it.
-    if (!logOnly && frame.shot && findings.length && frame.gate?.around?.line.startsWith('The shot')) {
+    if (!logOnly && frame.shot && findings.length && onBrief(built, frame.gate?.around?.line)) {
       acted(frame, 'brief set aside', findings);
       frame.shot = undefined;
       built = this.framed(s, frame, layout, 'frames', once);
@@ -2810,7 +2833,7 @@ export class SessionStore {
     const rewordedBefore = told ? told.reworded : frame.reworded;
     for (let pass = 0; pass < 2; pass++) {
       if (!findings.length || !this.deps.reword || !findings.every((f) => WORDING.test(f))) break;
-      if (findings.every((f) => f.includes('around: "What the camera sees'))) break;
+      if (findings.every((f) => onView(built, f))) break;
       const people = s.draft?.breakdown?.people ?? [];
       const named = (p: (typeof people)[number]) => (p.is_dreamer ? 'the dreamer' : pictureName(p.name));
       const cast = {
@@ -2838,7 +2861,7 @@ export class SessionStore {
     // At odds on the line that says what the camera sees, the plan is what is at odds: the balloons
     // planned as a block hiding the couple, the room's front named for a sofa standing in its middle
     // (Meads m9, 25 Sep). Planned once more as for "storyboard complete?", told what was found.
-    const onCamera = findings.filter((f) => f.includes('around: "What the camera sees'));
+    const onCamera = findings.filter((f) => onView(built, f));
     if (drawHeld && findings.length) {
       acted(frame, 'drawn although held', findings);
       frame.overrode = [...(frame.overrode ?? []), ...findings];

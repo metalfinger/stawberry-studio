@@ -282,6 +282,17 @@ export type Ctx = {
 
 /** The images of a moment, each known by what it is. */
 export function refsOf(r: Rebuilt, p: RebuiltPicture): RefInfo[] {
+  // With the one prompt builder's paragraph ids (S6 ledger 4): as the assembler attached each image, and for
+  // whom, never worked out again (it agreed with the reading below on all 526 saved moments, 27 Sep).
+  if (p.assembled)
+    return p.assembled.references.map((ref, index) => ({
+      index: index + 1,
+      role: ref.role,
+      media: ref.image,
+      source: ref.source === 'edit' || ref.source === 'earlier' ? 'picture' : ref.source,
+      ...(ref.source === 'mockup' ? {} : { of: ref.of }),
+      subjects: [...ref.subjects],
+    }));
   const cut = p.item.frame?.plan;
   const here = p.item.frame?.visible ?? [];
   const sketched = new Set(

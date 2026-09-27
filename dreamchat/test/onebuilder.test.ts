@@ -5,6 +5,7 @@ import { afterAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
 import type { Blocking } from '../blocking';
 import { goingIn, handsIn, openingsIn, selfIn, waterLevel } from '../camera';
 import { BUILDER_STEPS, builderSteps, builds, oneBuilder, withRetired } from '../cleanups';
+import { refsOf } from '../evals/prompt-cases';
 import { loadDream } from '../evals/saved';
 import { rebuild } from '../plan';
 import { recordsMade } from '../record';
@@ -94,6 +95,29 @@ describe('ledger 1: one story record per state of the dream', () => {
     expect(before.n).toBe(2);
     expect(after.n).toBe(1);
     expect(after.prompts).toEqual(before.prompts);
+  });
+});
+
+describe("ledger 4: the assembler's paragraph ids and each image's subjects, read by the evals", () => {
+  test('each image is known by its source and whom it is for, as the words would have it worked out again', () => {
+    for (const id of ['dream-0926-043003-b0cb', 'dream-0926-050424-fdd7', 'dream-0925-231131-affd']) {
+      const s = loadDream(id, false).session as Session;
+      withSwitches(
+        { ...SHEET, DREAMCHAT_CAMERA: 'on', DREAMCHAT_REFS: 'on', DREAMCHAT_ONE_BUILDER: 'one_record' },
+        () => expect(rebuild(s).pictures.some((p) => p.assembled)).toBe(false),
+      );
+      withSwitches(
+        { ...SHEET, DREAMCHAT_CAMERA: 'on', DREAMCHAT_REFS: 'on', DREAMCHAT_ONE_BUILDER: 'paragraph_ids' },
+        () => {
+          const r = rebuild(s);
+          for (const p of r.pictures.filter((x) => x.kind === 'cut')) {
+            expect(p.assembled?.lines.map((l) => l.text).join('\n\n')).toBe(p.prompt);
+            const { assembled: _, ...fromWords } = p;
+            expect(refsOf(r, p)).toEqual(refsOf(r, fromWords));
+          }
+        },
+      );
+    }
   });
 });
 

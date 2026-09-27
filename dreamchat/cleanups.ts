@@ -76,6 +76,10 @@ export const retired = (name: Cleanup): boolean => retiredSet().has(name) || bui
 export const BUILDER_STEPS: readonly string[] = [
   // 1. One story record per state of the dream, read by the plan, the sheet, the panel's tree and the log.
   'one_record',
+  // 2. One tree: not built (the panel's is a plan made again, the sheet's the plan drawn from; one after 17).
+  // 3. One image cap: frames.ts MAX_IMAGES, the same number everywhere, so no switch.
+  // 4. The assembler's paragraph ids and each image's subjects, read by the gate and the evals.
+  'paragraph_ids',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;
