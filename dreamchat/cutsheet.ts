@@ -65,7 +65,7 @@ import {
   recordMode,
   type Seen,
   type StoryRecord,
-  storyRecord,
+  oneRecord,
   type Unstaged,
 } from './record';
 import { oneBuilder } from './cleanups';
@@ -347,7 +347,7 @@ export function sheetDream(x: {
 }): SheetDream {
   let record: StoryRecord | null = null;
   try {
-    record = storyRecord(x.breakdown, x.items, x.readings, { words: x.words, style: x.style }).record;
+    record = oneRecord(x.breakdown, x.items, x.readings, { words: x.words, style: x.style }).record;
   } catch {
     record = null;
   }

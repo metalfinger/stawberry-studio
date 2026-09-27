@@ -73,7 +73,10 @@ export const retired = (name: Cleanup): boolean => retiredSet().has(name) || bui
  * place. A clean-up's step has its name: once built, `retired` reads it as off. One step is added at a time,
  * and measured against the one before.
  */
-export const BUILDER_STEPS: readonly string[] = [];
+export const BUILDER_STEPS: readonly string[] = [
+  // 1. One story record per state of the dream, read by the plan, the sheet, the panel's tree and the log.
+  'one_record',
+];
 
 let built: { raw: string; steps: Set<string> } | null = null;
 

@@ -166,7 +166,7 @@ import {
   recordInputsOf,
   recordMode,
   type StoryRecord,
-  storyRecord,
+  oneRecord,
   structureOf,
 } from './record';
 import { cutRecord, type WriteResult } from './strawberry';
@@ -733,7 +733,7 @@ async function impliedReadings(
   try {
     // The writer is told what the record holds without an earlier reading of what the moments imply:
     // told the water has risen, it would propose nothing, and planning again would drop the rise.
-    const record = storyRecord(
+    const record = oneRecord(
       b,
       inputs.items,
       { ...inputs.readings, implied: undefined },
@@ -805,7 +805,7 @@ export function shadowRecord(
     });
   try {
     const planned = typeof plan === 'function' ? plan() : plan;
-    const { record, violations } = storyRecord(b, items, readings, opts);
+    const { record, violations } = oneRecord(b, items, readings, opts);
     const rules = [...new Set(violations.map((v) => v.rule))];
     const count = (r: string) => violations.filter((v) => v.rule === r).length;
     log(
@@ -1093,7 +1093,7 @@ export function treeInputOf(s: Session, threshold: number): TreeInput | null {
 function recordOfTree(s: Session, b: Breakdown): { record?: StoryRecord } {
   try {
     const { items, words } = recordInputsOf(s);
-    return { record: storyRecord(b, items, s.draft?.readings, { words, style: s.style }).record };
+    return { record: oneRecord(b, items, s.draft?.readings, { words, style: s.style }).record };
   } catch {
     return {};
   }
