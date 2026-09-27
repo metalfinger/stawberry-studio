@@ -18,7 +18,7 @@ context mirrors it.
 | S4 Camera rules | Fixing what review found | faults met 18/33 to 27/33, guards 36/36 (branch `s4-camera`) |
 | S5 References and in-between pictures | Test written | built after S4 merges |
 | S6 One prompt builder, clean-ups retired | Not started | after S5 |
-| S7 Jev checks routed by tags | Building, test first | branch `s7-jev-routed` |
+| S7 Jev checks routed by tags | Built behind a switch (off); to review | on 122 pictures the owner judged, 0 of 36 checks predict the verdict well enough to act: the gate and "storyboard complete?" read as a coin (AUC 0.40-0.55), the nearest new question 0.67 of its flags not right (bar 0.7); routed, every reading logs, Jev 23.3 calls a dream (acting 115.8, logging 23.1) (branch `s7-jev-routed`) |
 | S8 Listening | Built; proven on Claude, one floor fails | 20 dreams, both arms on Claude: either/or 23% to 0, leading 17% to 0, said-not-in-their-words 31% to 3%, retellings ending with every moment 0/20 to 21/21; but retellings begun because they ran out of memory doubled (6 to 12 of 20), from the come-back-to-earlier rule: fix it before switching on |
 | S9 Record of what was drawn, staleness | Building, test first | branch `s9-as-drawn` |
 | S10 Paid benchmark judged by the owner | Not started | about $10 |
@@ -79,7 +79,7 @@ One **cut sheet** per cut is the spine everything is assembled from:
 | S4 | Camera rules and shot roles: the scene's line, a reverse angle turns the room (what is now left, right, behind), point-of-view shots show at most hands, vehicle screen direction, same setup means the same camera | not started | The S4 cases pass (`--step S4`: snow-train m2 reverse and m3 seat, snow-train-2 m2 same setup, lighthouse-fresh m12 heading, lighthouse-first m3, night-market m2, library-1 m4/m5, orchard m4 hands and m7 legs; lighthouse-fresh m10 needs a new floor plan) |
 | S5 | References and variants: one image per subject; in-between pictures only when an edit carries several changes; variants kept and reusable; the grey mock-up as a reference chosen by tag | not started; eval written on branch `s5-eval` (27 Sep, below) | The reference check (`evals/references.ts`) at its bars on the frozen and live dreams: 0 subjects shown twice or not by their stage in force, 0 pictures from another side drawn from, 0 pictures waited for and never sent, every in-between picture meeting the owner's rule with no picture left carrying several changes; the S5 cases stay met or pass (`--step S5`: never editing a picture from another side; library-1 m5 wall); guards 36/36; its hypotheses (image 1 by tag, one image per subject on pictures the owner called right) are for the paid check, not proven here |
 | S6 | `assembleCut`: prompt and references from the sheet, each fact once, action as visible facts; retire the regex clean-ups one by one | not started | All S0 cases pass; word-level diff reviewed on every saved dream |
-| S7 | Jev layer 2: checks routed by tags, a question library from the film rules, a labelled set per question; a check may hold a picture only if it predicts pictures | not started | Each question meets its bar on its labelled set |
+| S7 | Jev layer 2: checks routed by tags, a question library from the film rules, a labelled set per question; a check may hold a picture only if it predicts pictures | built behind DREAMCHAT_JEV_ROUTED=on (off by default) on branch `s7-jev-routed` (27 Sep): eval written first and run, routing built; to review | Each question meets its bar on its labelled set. Run on the 122 pictures the owner judged: no check meets the bar to act (0 of 36: the gate's four questions, "storyboard complete?"'s four facts, planFacts's re-plan, the continuity plan's warnings, 16 new questions), so routed every Jev reading only logs; each moment is asked its tags' questions in the gate's one call; off unchanged; Jev calls a dream on the ten redrawn dreams: acting 115.8, logging 23.1, routed 23.3 (below) |
 | S8 | Listening: every reply checked against its move; major picture gaps asked openly, minor ones imagined and marked; the retelling ends with the moments | built and merged behind DREAMCHAT_LISTEN (off); review fixes on `s8-listening` (27 Sep): the come-back rule restricted, choice readings that keep changes, the retelling's breakdown started early, and the test's move-selection floors; proven offline (replayed moves, re-read answers, a hand-labelled set), and a fresh simulation on the Claude writer, both arms (27 Sep): every target met or met by hand but two (said but not in their words, about 9 real of 518; answers misread, 2 real of 99), and one floor fails beyond noise (retellings begun as told all they remember, 6 to 12 of 20: 10 of the 12 right after a come-back to an earlier thread); not to be switched on until that rule is fixed (below) | `evals/listening.ts` against the frozen before (`evals/listening-before`, 40 fresh simulated conversations): listening-turn compliance at least 90%, either/or under 5%, leading 0, said but not in their words 0, every way of drawing it kept, every retelling ends with a list of the breakdown's moments, no answer misread; floors not below the before (below) |
 | S9 | Record of what was drawn, and staleness; sequences and look keys | not started | Stale pictures found on saved dreams |
 | S10 | Only after S0-S9 pass: a paid benchmark on the five replay dreams, judged by the owner | waiting | Owner's first-take rate against today's |
@@ -114,6 +114,11 @@ One **cut sheet** per cut is the spine everything is assembled from:
   runs its checks, asks Jev (jev-1.13.0 by name; answers cached by the model, the question as sent and the prompt)
   and writes `runs/prompt-cases/<label>.json` with the hash of the case file and of every dream it read;
   `--against` warns when two runs read different ones and lists every check and answer that moved.
+- S7's checks: `checks.ts` (the question library, routing by tags, `EARNED`: the checks that may act),
+  `evals/checks-set.json` (the 122 pictures the owner judged, each with what every check read before it was drawn;
+  built by `evals/build-checks-set.ts`), `bun --env-file=… run evals/jev-checks.ts --label <name> [--no-ask] [--logs
+  <dir> …]` (every check measured on it; Jev's answers kept in `evals/checks-answers.json`, so a run again is free;
+  each picture's readings in `runs/jev-checks/<label>.json`).
 - S5's reference check: `bun run evals/references.ts --label <name> [--live] [--against <name>] [--show]` reads
   every moment's images for one image per subject, its stage in force, pictures from another side, what the plan
   waits for and never sends, images for light alone, image 1 by tag, and each in-between picture against the
@@ -574,11 +579,13 @@ One **cut sheet** per cut is the spine everything is assembled from:
   **S2's logged readings.** Every judged picture was drawn on 25-26 Sep, before S2 pinned readings to their prompt
   and take (`ref`, `checkedTakes`), and none was drawn with the checks logging, so no logged reading is of a prompt
   the owner judged: `--logs` joins S2's redraws (`runs/s2`, every arm) to 0 judged prompts, and 57 of their
-  readings to snow-train-2's 7 moments by moment only (rebuilt prompts, not the ones drawn), which are listed, not counted. Instead each check is
-  asked again of exactly what it read before the picture was drawn (the prompt as sent, the shot as checked): the
-  reading it would have logged. The storyboard's readings logged then are used as logged, and asked again for how
-  much they move. From now on a picture drawn with the checks logging or routed keeps each reading by its prompt's
-  hash, and once the owner judges it, `--logs` joins it to the set.
+  readings to snow-train-2's 7 moments by moment only (rebuilt prompts, not the ones drawn), which are listed, not
+  counted; S2's whole replays (`runs/s2c`, 40 conversations, 670 gate readings with `ref`) are simulated dreams with
+  fake pictures, never judged: 0 by prompt, 0 by moment. Instead each check is asked again of exactly what it read
+  before the picture was drawn (the prompt as sent, the shot as checked): the reading it would have logged. The
+  storyboard's readings logged then are used as logged, and asked again for how much they move. From now on a
+  picture drawn with the checks logging or routed keeps each reading by its prompt's hash, and once the owner judges
+  it, `--logs` joins it to the set.
   **The bar to act** (docs/rules.md G1). At least 60 labelled pictures routed to it; on the pictures it was not
   tuned on (every picture, for a check already in the harness, its bar set before these verdicts existed; the held-out
   ones, for a library question) at least 5 flagged, precision at least 0.7 (of the pictures it flags, the share the
@@ -668,6 +675,35 @@ One **cut sheet** per cut is the spine everything is assembled from:
   - The gate's four questions and "storyboard complete?": none; on 122 and 81 pictures they order the pictures as a
     coin does, so no count of labels makes them act at these bars. They keep logging so later pictures can say
     otherwise.
+  **The build (27 Sep).** `DREAMCHAT_JEV_ROUTED=on`: the gate asks each moment, in its one call, the library
+  questions its cut sheet's tags route to (from the sheet it is sent with, or one built for the tags alone when the
+  sheet is off), and logs every answer with its bar beside the gate's (`gate` transitions, `overrode` on the picture);
+  a finding acts only when its check is in `checks.ts EARNED` (by id: `moment.contradicts`, `moment.sb_camera`,
+  `plan.looks_missing`, `moment.r_line_order` …), which the eval leaves empty. So routed, the gate's questions,
+  "storyboard complete?" (before drawing and while drawing), the sketch and in-between gates, the continuity
+  plan's warnings and planFacts's re-plan (which still acts when only logging) all log; only faults code knows for
+  certain (`actsWhenLogging`) hold a picture. `DREAMCHAT_CHECKS=log` still wins over an earned check. The shot's
+  own library questions (`sb_held_hands`, `sb_beyond`) are measured, not asked while drawing: a shot is checked
+  before the cut has a sheet. Off, nothing changes: the tests ask the same questions, find the same and act the
+  same with the switch unset or off, and every existing test passes with it on and off; a routed check never
+  touches a prompt, so the prompt cases and the corpus cannot move.
+  **Jev calls a dream** (the ten dreams S2 redrew, `evals/redraw.ts`, fake pictures, Jev only, record on, sheet in
+  shadow, 27 Sep):
+
+  | 10 dreams, picture path redrawn | acting (`DREAMCHAT_CHECKS=act`) | logging (the default) | routed (`DREAMCHAT_JEV_ROUTED=on`) |
+  | --- | --- | --- | --- |
+  | moments drawn | 58/61 | 61/61 | 61/61 |
+  | left undrawn or held by a check | 3 | 0 | 0 |
+  | actions by a check (rewordings, briefs set aside, sketches reworded); drawn although held | 21; 49 | 0; 0 | 0; 0 |
+  | gate readings logged / storyboard readings logged | 61/61, 53/53 | 61/61, 53/53 | 61/61, 53/53 |
+  | gate calls carrying the library's questions | 0 | 0 | 61 (every moment) |
+  | Jev calls a dream (gate, storyboard, plan; what changes 0.8 in each) | 115.8 (105.5, 7.3, 2.2) | 23.1 (13.0, 7.1, 2.2) | 23.3 (13.0, 7.3, 2.2) |
+  | Jev input tokens, all ten dreams | 1.84 million | 0.33 million | 0.39 million |
+
+  Routed costs what logging costs in calls (the library rides in the gate's call) and 17% more tokens (the gate's
+  calls 27% more), a fifth of acting's calls and tokens. The first routed arm ended with snow train m4-m7 never
+  started: the redraw returned while m3's verdict was still coming (not routing's doing; fixed in `evals/redraw.ts`,
+  run again: 61/61).
 
 ## Where steps overlap (read before starting any step)
 
@@ -718,6 +754,13 @@ between sessions.
 | S5 | S3, S9 | The stage in force is "the approved in-between picture, else the sketch", but the sheet's tree has no drawn or approved state in its ledger (S3 debt) and a rebuild takes every picture as approved: the fall-back to the sketch on the drawing path is only seen in a live-flow check. |
 | S5 | S6 | The evals re-derive who each attached image is for (`prompt-cases.ts refsOf`): it missed a crowd the record puts in view, which framePrompt attaches a picture for (four live moments read as images for their light alone; fixed in the S5 eval). `assembleCut` knows each image's subject; S6 could return it with `references`, so the evals read it instead of working it out again. |
 | S5 | S5 | Contradictions S5 must not settle by code alone (owner or paid check): D1 (one image per subject) against 14 guards drawn with a sketch beside its in-between pictures; D3's bar (2 or 3 changes); D5 (a place's state has one carrier, the mock-up beat the in-between picture) against a place's in-between picture as its one image; the mock-up through the dreamer's eyes (paired 1 of 6 right, story 7 of 11). |
+| S7 | S4 | `sb_held_hands` (the shot puts what the dreamer holds away from their hands) flags 6 of the 9 pictures seen through the dreamer's eyes with a thing held, 5 of them not right: S4's debt that a held thing through the dreamer's eyes is placed at its floor-plan spot, not the hands. Code's to put right, not a check's to hold. |
+| S7 | S3, S9 | No tag says what is seen beyond the place (A6), so `r_beyond_inside` is asked of every cut; no judged picture is tagged `turned`, so `r_turned_both` has no labels. The labelled set's tags are today's rebuild of each moment, not the night's plan: a moment drawn keeps its sheet only as hashes (`sentSheet`), not the tags it was drawn with (S9's record of what was drawn). |
+| S7 | S5 | `r_keep_earlier` flags 67 of 73 pictures after a reverse or a crossing (the prompt keeps an earlier picture's layout, or the mock-up's camera), precision 0.48: which picture's layout a moment may keep is S5's choice of images (`none_from_other_side`), not a question. |
+| S7 | S8 | The reply checks (`jev.ts replyCheck`) and `choiceByAction`'s bars act on replies, not pictures, and only with DREAMCHAT_LISTEN=on; routing does not touch them. Their labelled sets are S8's hand audits (20 and 38 replies), two short of G1's 60; not measured again here. |
+| S7 | S9, S10 | A picture drawn with the checks logging (the default) or routed keeps each reading by its prompt's hash (`ref`, `checkedTakes`), but `evals/build-checks-set.ts` reads only the two verdict files of 25-26 Sep: the owner's verdicts on later pictures (S4's and S5's checkpoints, S10's benchmark) must be added to it, joined to their readings by `ref.prompt` (`evals/jev-checks.ts --logs` does the join). |
+| S7 | S2 | Logging is the default since 27 Sep, so routing changes acting only once a check is in `EARNED`, and for planFacts's re-plan, which logs when routed (it still acts when only logging, as S2 left it). `DREAMCHAT_CHECKS=log` wins over an earned check. |
+| S7 | every step | `SessionStore.settle` counts a drawn take not yet judged as idle: a redraw returned before a verdict came and ended with a dream half drawn (the first routed arm, snow train m3). Fixed in `evals/redraw.ts` (settled again until every drawn take is judged); simulations and tests that settle may still stop early the same way. |
 ## Known debt, by the step that clears it
 
 Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays one change.
@@ -753,6 +796,11 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
 - **S4 (camera rules).** A thing held in a view through the dreamer's eyes is placed at its floor-plan spot, not
   in the hands that hold it; and the "Nobody else is in the picture" line can stand beside a list of people who
   are in it.
+- **S7 (Jev checks).** The labelled set is thin: 122 pictures from ten dreams (20 moments three times), routed
+  sets of 9-122; no library question meets the bar, and those nearest need 20-110 more owner verdicts (S7 eval). The
+  picture judge, which reads the picture, flags pictures 0.68-0.69 not right: under the bar too, so it only informs.
+  `evals/` is outside `tsconfig.json` (it includes `*.ts` and `test/`): the S7 eval files were typechecked with a
+  config of their own; include `evals/` once S1's probe that does not typecheck is fixed.
 - **S6 (`assembleCut`).** The record's new word lists (`FILLS`, `OPENS`, `STATE_VERB`, `NOT_THERE`, `SELF`,
   `TAKEN`, `HOLDS_NAME`, which has 'bowl' twice) overlap what the implied reading now reads with a model and Jev;
   each should be retired once the reading covers it. `withoutWords` in `frames.ts` is one more text clean-up to
@@ -1112,3 +1160,17 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   boat is still put low by the mock-up (S4). Guards 36/36. In-between pictures: frozen 29 (24 without the readings,
   25 off), live 79 (67, 66): the readings bring pictures that turn a place to face something (S1 -> S5). A reading
   of 115 moments took about 2.5 minutes, 411 about 12.
+- 27 Sep: S7 built on branch `s7-jev-routed` (DREAMCHAT_JEV_ROUTED=on, off by default), its eval written and run first.
+  A library of 16 narrow questions, one for each film rule Jev can test on the text a picture is drawn from (Jev
+  takes no image), each routed by the cut's tags; a labelled set of the 122 pictures the owner judged, each with what
+  every check read before it was drawn (the prompt as sent, the shot as checked, the plan's facts; the paired test's
+  prompts frozen from the checkout that drew them); and a runner that measures every check (801 Jev calls, every
+  answer kept, a run again free). No check predicts the owner's verdict well enough to act: 0 of 36 meet the bar
+  (precision 0.7 on 60 labels, on pictures they were not tuned on). The gate and "storyboard complete?" order the
+  pictures as a coin does (AUC 0.40-0.55; the gate's contradiction reads 0.445, 0.44 and 0.454 on pictures right,
+  partly and wrong); in 15 of 20 paired moments the owner judged apart pictures drawn from prompts differing only in
+  image 1. Nearest: `r_beyond_inside` 0.67, `r_line_order` 0.75 on four flags, `r_state_said` 0.78 on 25 pictures,
+  `sb_held_hands` 5 of 6 on 9. Routing built: every Jev reading logs, only code faults hold; Jev 23.3 calls a dream
+  routed, 23.1 logging, 115.8 acting (ten redrawn dreams), tokens 17% over logging. Off changes nothing; tests added
+  for routing, for a check not earned never holding, and for off. Found on the way: the redraw returned before a
+  take's verdict came (fixed in the redraw). No pictures drawn, no money spent.
