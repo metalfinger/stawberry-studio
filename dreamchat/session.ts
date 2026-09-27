@@ -6,6 +6,7 @@
 // run strictly one at a time.
 import { existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { sameView } from './camera';
 import { cleanStyles, type GroundingNote, ground, judgeChanges, judgeLeaves, linkContinuity } from './ground';
 import {
   bookkeeperQuestions,
@@ -2575,8 +2576,9 @@ export class SessionStore {
       }
     }
     const ready = s.prep?.shots[frame.id];
-    if (view && frame.shot?.view !== view && ready?.view === view) frame.shot = ready;
-    if (view && this.deps.shot && frame.shot?.view !== view) {
+    // With the camera rules, a brief also serves a view that differs only in a claim they took out.
+    if (view && !sameView(frame.shot?.view, view) && sameView(ready?.view, view)) frame.shot = ready;
+    if (view && this.deps.shot && !sameView(frame.shot?.view, view)) {
       // How everyone is placed comes from what has happened in this place so far.
       const scene = s.draft?.breakdown?.scenes.find((sc) => sc.moments.some((m) => m.id === frame.id));
       const before = (scene?.moments ?? [])

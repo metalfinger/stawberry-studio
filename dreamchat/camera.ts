@@ -33,6 +33,22 @@ export function cameraMode(): 'off' | 'on' {
   return 'off';
 }
 
+// ── a view, and the brief written for it ─────────────────────────────────────────────────────────
+
+/** The two claims the camera rules take out of a view where they are untrue: nothing else in it changes. */
+const CLAIMS = / ?(?:Nobody else is in the picture\.|They keep these places in every picture of this scene\.)/g;
+
+/**
+ * Whether a shot's brief, written for one view, still serves another: the same view, or, with the camera
+ * rules, a view that differs only in the claims they take out ("Nobody else is in the picture" beside a
+ * crowd, "They keep these places" across a crossing). Without it, the brief was lost for those alone.
+ */
+export function sameView(a: string | undefined, b: string | undefined): boolean {
+  if (a === b) return true;
+  if (!a || !b || cameraMode() !== 'on') return false;
+  return a.replace(CLAIMS, '') === b.replace(CLAIMS, '');
+}
+
 // ── how far a camera turned, and whether two are the same ────────────────────────────────────────
 
 /** Degrees between two cameras' ways of looking. */
@@ -128,32 +144,37 @@ export const isOpening = (s: Spot) =>
 export const isWindow = (s: Spot) => !!s.fixture && !!s.name && /\bwindows?\b/i.test(s.name);
 
 /**
- * What stands where only a window is, out past the place: a thing (never a person, a fixture or what
- * someone holds) put on the footprint of a window in a wall, that the story itself sees out there
- * (`seenOut`: shown by a moment of the place that looks out of it). The red tractor seen through the
- * round room's window was put on its plan at the window, and drawn standing in the room (lighthouse,
- * 26 Sep). A telescope or a plant standing at a window stays in the room. A plan made since keeps such
- * things off it (`outside`); one made before is read so.
+ * What stands in a wall where a window is, or past it: out past the place, seen through the window. A
+ * thing (never a person, a fixture or what someone holds) whose spot is on the line of a wall with a
+ * window, within the window's width, or beyond the room: it cannot be standing in the room. The red
+ * tractor seen through the round room's window was put on its plan in the window, and drawn standing in
+ * the room (lighthouse, 26 Sep). A telescope or a plant standing in the room at a window stays in the
+ * room, whatever a moment looking out of it says. A plan made since keeps such things off it
+ * (`outside`); one made before is read so.
  */
-export function outThroughWindows(plan: Blocking, seenOut: Set<string>): Record<string, Side> {
+export function outThroughWindows(plan: Blocking): Record<string, Side> {
   const out: Record<string, Side> = {};
   if (!plan.indoors) return out;
+  const [w, d] = roomOf(plan);
   const windows = plan.spots.filter((s) => isWindow(s) && wallOf(s, plan));
+  // How far in from a wall, or out past it (negative), a point is.
+  const inFrom = (side: Side, p: Pick<Spot, 'x' | 'y'>) =>
+    side === 'front' ? p.y : side === 'back' ? d - p.y : side === 'left' ? p.x : w - p.x;
+  // Along the wall: how far a point is from the window's middle.
+  const along = (side: Side, p: Pick<Spot, 'x' | 'y'>, win: Spot) =>
+    side === 'front' || side === 'back' ? Math.abs(p.x - win.x) : Math.abs(p.y - win.y);
   for (const s of plan.spots) {
-    if (s.fixture || s.heldBy || s.kind === 'person' || s.many || !seenOut.has(s.id)) continue;
-    const w = windows.find((x) => Math.hypot(x.x - s.x, x.y - s.y) <= Math.max(0.3, sizeOf(x)[0] / 2));
-    const side = w ? wallOf(w, plan) : null;
-    if (side) out[s.id] = side;
+    if (s.fixture || s.heldBy || s.kind === 'person' || s.many) continue;
+    for (const win of windows) {
+      const side = wallOf(win, plan)!;
+      if (inFrom(side, s) <= 0.1 && along(side, s, win) <= Math.max(0.3, sizeOf(win)[0] / 2)) {
+        out[s.id] = side;
+        break;
+      }
+    }
   }
   return out;
 }
-
-/**
- * A moment that looks out of the place, through a window or past its edge: what it shows is seen out
- * there. As the moment's words say it, or as Jev read where its camera looks ("beyond").
- */
-export const LOOKS_OUT =
-  /\b(?:looks? out|looking out|out (?:of|through) the windows?|out the windows?|through the windows?|outside the windows?|beyond the windows?|out past)\b/i;
 
 // ── water, and what floats on it ─────────────────────────────────────────────────────────────────
 
@@ -169,12 +190,20 @@ const BODY: [RegExp, number][] = [
   [/\b(?:shoulders?|necks?|chins?)\b/i, 1.45],
 ];
 
+/** Words that say the water is deep, or fills the whole place, without saying how deep: never a thin layer. */
+const DEEP =
+  /\b(?:deep enough|fills?|filled|filling|floods?|flooded|flooding|drowned|drowning|underwater|under water|submerged|submerging)\b/i;
+
 /**
- * How high water stands, in metres, from what the record says of it and the floor plan: by the first
- * thing its words measure it by, a fixture or thing of the plan ("up to the high round window",
- * "over the tops of the desks"), the ceiling ("almost to the ceiling") or a body ("knee-deep"). "Over"
- * or "above" a thing is a little above its top, "almost" or "nearly" a little below; unmeasured
- * ("rising", "deep enough for a whale") it is none.
+ * How high water stands, in metres, from what the story record says of it (its water, a typed part of
+ * the place, in the record's words) and the floor plan: by the first thing those words measure it by, a
+ * fixture or thing of the plan ("up to the high round window", "over the tops of the desks", "covering
+ * the shelves"), the ceiling of a room ("almost to the ceiling") or a body ("knee-deep"). "Over", "above"
+ * or "covering" a thing is a little above its top, "almost" or "nearly" a little below. Only where
+ * nothing else measures it, a floor or the ground it covers: a few centimetres. Water that fills a
+ * place, floods it or is deep enough to swim in, without a measure, is unmeasured: none, and nothing is
+ * said of its height (a boat afloat on ten centimetres, or an underwater classroom said to have water
+ * over its floor, is worse than nothing).
  */
 export function waterLevel(words: string, plan: Blocking): number | null {
   const text = words.toLowerCase();
@@ -188,8 +217,10 @@ export function waterLevel(words: string, plan: Blocking): number | null {
     if (i >= 0) marks.push({ at: i, top: h });
   }
   for (const s of plan.spots) {
-    // Nor is what floats on it a measure of it: "the sea laps at the boat".
-    if (s.kind === 'person' || s.many || s.heldBy || s.shape === 'vehicle') continue;
+    // Nor is what floats on it a measure of it ("the sea laps at the boat"), nor ground it fills ("filling
+    // the aisles"): that is where it is, not how high.
+    if (s.kind === 'person' || s.many || s.heldBy || s.shape === 'vehicle' || s.shape === 'ground') continue;
+    if (sizeOf(s)[2] < 0.2) continue;
     const name = (s.name ?? '').toLowerCase().replace(/^(the|a|an)\s+/, '');
     // What a fixture is called by: its first word that says what it is ("desk with green lamp": desk).
     const head = name
@@ -204,19 +235,26 @@ export function waterLevel(words: string, plan: Blocking): number | null {
   // A thing the water comes in under, through or from is where it comes from, not how high it is: "coming
   // in under the doors, rising over the desks" stands over the desks.
   const from = (m: { at: number }) =>
-    /\b(?:under|beneath|below|through|from|out of|into|in at)\s+(?:the\s+|a\s+|an\s+)?$/.test(
+    /\b(?:under|beneath|below|through|from|out of|into|in at|between|among|along|around)\s+(?:the\s+|a\s+|an\s+)?$/.test(
       text.slice(Math.max(0, m.at - 16), m.at),
     );
-  // Only where nothing measures it: water covering the floor or the ground, or filling the place, stands
-  // a few centimetres over it. "The floor is flooded, water up to their waists" is waist deep.
-  const floor = text.search(
-    /\b(?:floor|floors|ground)\b|\b(?:fills?|filled|filling|floods?|flooded|flooding|covers?|covered|covering)\s+(?:the\s+)?\w+/,
-  );
+  // Only where nothing else measures it: water over the floor or the ground stands a few centimetres
+  // deep, unless the words say it is deep ("the floor is flooded, deep enough to swim": unmeasured).
+  // "The floor of the hall is flooded, water up to their waists" is waist deep.
+  const floor = text.search(/\b(?:floor|floors|ground)\b/);
   const first = marks.sort((a, b) => a.at - b.at).find((m) => !from(m));
-  if (!first) return floor >= 0 ? 0.1 : null;
-  const before = text.slice(Math.max(0, first.at - 32), first.at);
+  if (!first) return floor >= 0 && !DEEP.test(text) ? 0.1 : null;
+  // The words just before what measures it, back to the clause or the "and" before it: in "covering the
+  // floor and up to the shelves" the shelves are reached ("up to"), and "covering" is the floor's.
+  const before =
+    text
+      .slice(Math.max(0, first.at - 32), first.at)
+      .split(/,|;|\band\b/)
+      .at(-1) ?? '';
   const almost = /\b(?:almost|nearly|just below|not quite|close to)\b/.test(before);
-  const over = /\b(?:over|above|past|higher than|beyond|tops? of)\b/.test(before);
+  const over = /\b(?:over|above|past|higher than|beyond|tops? of|covering|covers|covered|submerging|submerged)\b/.test(
+    before,
+  );
   // Water covering the floor "and up to the shelves" has spread to them, across the floor: a thing it
   // reaches is a height only where the words say how high (over it, the top of it, almost up to it).
   const across = !!first.thing && !almost && !over && floor >= 0;
@@ -228,80 +266,106 @@ export function waterLevel(words: string, plan: Blocking): number | null {
 
 /** Words of going: a vehicle driven, ridden, rowed or sailed, or going on its own. */
 const GOING =
-  /\b(?:drives?|driving|drove|rides?|riding|rode|rows?|rowing|rowed|sails?|sailing|sailed|pedal(?:s|led|ling|ed|ing)?|steers?|steering|rolls?|rolling|speeds?|speeding|races?|racing|travels?|travell?ing|heads?|heading|goes|going|went|moves?|moving|floats? (?:off|away|out|along|down|through)|drifts?|drifting|glides?|gliding|flies|flying|chugs?|chugging)\b/i;
-/** Someone driving, riding, rowing or pedalling: the vehicle they are on goes. */
+  /^(?:drives?|driving|drove|rides?|riding|rode|rows?|rowing|rowed|sails?|sailing|sailed|pedal(?:s|led|ling|ed|ing)?|steers?|steering|rolls?|rolling|speeds?|speeding|races?|racing|travels?|travell?ing|heads?|heading|goes|going|went|moves?|moving|floats?|floating|drifts?|drifting|glides?|gliding|flies|flying|chugs?|chugging|rumbles?|rumbling|rushes|rushing|rushed|zooms?|zooming|hurtles?|hurtling|trundles?|trundling|clatters?|clattering|cruises?|cruising|crawls?|crawling|swerves?|swerving|bounces?|bouncing|pulls? (?:away|out|off)|sets? off|carries|carrying|takes|taking)$/i;
+/** Someone driving, riding, rowing or pedalling it: what they drive or ride goes. */
 const PROPELLED =
-  /\b(?:drives?|driving|drove|rides?|riding|rode|rows?|rowing|rowed|pedal(?:s|led|ling|ed|ing)?|sails?|sailing|steers?|steering)\b/i;
+  /^(?:drives?|driving|drove|rides?|riding|rode|rows?|rowing|rowed|pedal(?:s|led|ling|ed|ing)?|sails?|sailing|sailed|steers?|steering|paddles?|paddling)$/i;
 /** Words of stopping: then it goes nowhere. */
 const STOPPING =
-  /\b(?:stops?|stopped|stopping|halts?|halted|parks?|parked|pulls? up|comes? to (?:a stop|rest)|stands? still|waits?|waiting|moored|docked|arrives?|arrived)\b/i;
+  /\b(?:stops?|stopped|stopping|halts?|halted|parks?|parked|pulls? up|comes? to (?:a stop|rest)|stands? still|sits? still|waits?|waiting|moored|docked|arrives?|arrived)\b/i;
 
 /**
- * Whether a moment's own words have a vehicle going: a clause that names it with a word of going, or
- * someone driving, riding, rowing or pedalling ("the sister pedalling", "they ride over the bridge"),
- * and no clause stopping it. Its heading is said only then: a boat held at a window while the sister
- * opens it, or a tractor that "slows and stops", goes nowhere.
+ * Whether a moment's own words have a vehicle going: it goes itself, named just before a word of going
+ * ("the train rumbles over the bridge"), or someone drives, rides or rows it, named just after ("rows the
+ * boat"); or, where a clause names no vehicle at all, someone drives, rides, rows or pedals ("the sister
+ * pedalling", "they ride over the bridge"). And no clause stops it. Its heading is said only then: a
+ * boat held at a window while the sister opens it, a tractor that "slows and stops", or a car ridden
+ * past ("rides the bicycle past the old car") goes nowhere.
  */
-export function goingIn(words: string, name: string): boolean {
-  const head = name
-    .toLowerCase()
-    .replace(/\s*\(.*?\)\s*/g, ' ')
-    .replace(/^\s*(the|a|an)\s+/, '')
-    .trim()
-    .split(/\s+/)
-    .at(-1)
-    ?.replace(/[^a-z0-9]/g, '');
+export function goingIn(words: string, name: string, others: string[] = []): boolean {
+  const headOf = (n: string) =>
+    n
+      .toLowerCase()
+      .replace(/\s*\(.*?\)\s*/g, ' ')
+      .replace(/^\s*(the|a|an)\s+/, '')
+      .trim()
+      .split(/\s+/)
+      .at(-1)
+      ?.replace(/[^a-z0-9]/g, '');
+  const head = headOf(name);
+  if (!head) return false;
+  const isHead = (w: string) => w === head || w === `${head}s` || w === `${head}es`;
+  const otherHeads = others.map(headOf).filter((h): h is string => !!h && h !== head);
   let going = false;
-  for (const said of words.split(/[;.]|,\s+(?=and\b|but\b|then\b)/)) {
+  for (const said of words.toLowerCase().split(/[;.]|,\s+(?=and\b|but\b|then\b)/)) {
     // A word of going that is part of its name ("a rowing boat", "a racing car") is no going.
-    const clause = head ? said.replace(new RegExp(`\\b\\w+ing\\s+(${head}s?)\\b`, 'gi'), '$1') : said;
-    const names = !!head && new RegExp(`\\b${head}s?\\b`, 'i').test(clause);
-    if (STOPPING.test(clause) && (names || PROPELLED.test(clause))) return false;
-    if ((names && GOING.test(clause)) || PROPELLED.test(clause)) going = true;
+    const clause = said.replace(new RegExp(`\\b\\w+ing\\s+(${head}(?:e?s)?)\\b`, 'g'), '$1');
+    const w = clause.split(/[^a-z0-9']+/).filter(Boolean);
+    const at = w.map((x, i) => (isHead(x) ? i : -1)).filter((i) => i >= 0);
+    const two = (i: number) => (i + 1 < w.length ? `${w[i]} ${w[i + 1]}` : w[i]);
+    const verb = (i: number) => GOING.test(w[i]) || GOING.test(two(i));
+    if (at.length) {
+      if (STOPPING.test(clause)) return false;
+      // Itself going: a word of going within the few words after its name.
+      if (at.some((h) => w.slice(h + 1, h + 7).some((_, k) => verb(h + 1 + k)))) going = true;
+      // Driven or ridden: a word of driving within the three words before its name.
+      if (at.some((h) => w.slice(Math.max(0, h - 3), h).some((x) => PROPELLED.test(x)))) going = true;
+    } else if (w.some((x) => PROPELLED.test(x)) && !w.some((x) => otherHeads.some((o) => x === o || x === `${o}s`))) {
+      // Named nowhere in the clause, nor any other vehicle: whoever drives, rides or rows here is on it.
+      if (STOPPING.test(clause)) return false;
+      going = true;
+    }
   }
   return going;
 }
 
 // ── through the dreamer's eyes ───────────────────────────────────────────────────────────────────
 
-/** Doing something with their hands: what the dreamer's hands do, as a moment's words say it. */
-const HAND_VERB =
-  '(?:touch|touches|touching|hold|holds|holding|held|reach|reaches|reaching|reached|grab|grabs|grabbing|grip|grips|gripping|push|pushes|pushing|pull|pulls|pulling|open|opens|opening|opened|closes|closing|shuts|carry|carries|carrying|pick|picks|picking|take|takes|taking|took|give|gives|giving|hand|hands|handing|stroke|strokes|stroking|pat|pats|patting|lift|lifts|lifting|put|puts|putting|press|presses|pressing|knock|knocks|knocking|wave|waves|waving|point|points|pointing|write|writes|writing|fold|folds|folding|cradle|cradles|cradling|row|rows|rowing|climb|climbs|climbing|drive|drives|driving|steer|steers|steering|throw|throws|throwing|threw|catch|catches|catching|caught|eat|eats|eating|ate|drink|drinks|drinking|pour|pours|pouring|pedal|pedals|pedalling|pedaling|paddle|paddles|paddling|swim|swims|swimming|unlock|unlocks|unlocking|turns? the|lets? go|hug|hugs|hugging|shake|shakes|shaking|brush|brushes|brushing|wipe|wipes|wiping|type|types|typing|draw|draws|drawing|tie|ties|tying|dig|digs|digging|pull out|holds? out)';
+/**
+ * Doing something with their hands: what the dreamer's hands do, as a moment's words say it. A few words
+ * that are hands only with some objects: holding their breath or holding still is not holding
+ * anything, taking a step or a seat takes nothing in the hands, and "hands" as a verb is handing
+ * something over.
+ */
+const NOT_HANDS_AFTER =
+  '(?!\\s+(?:their|your|his|her|my|its|a|one|the)?\\s*(?:breath|breaths|still|step|steps|seat|look|glance|moment|turn|walk|place|part|time|shape|flight|off)\\b)';
+const HAND_VERB = `(?:(?:hold|holds|holding|held|take|takes|taking|took)${NOT_HANDS_AFTER}|(?:hand|hands|handing|handed)\\s+(?:over|it|them|him|her|back)|touch|touches|touching|reach|reaches|reaching|reached|grab|grabs|grabbing|grip|grips|gripping|push|pushes|pushing|pull|pulls|pulling|open|opens|opening|opened|closes|closing|shuts|carry|carries|carrying|pick|picks|picking|give|gives|giving|stroke|strokes|stroking|pat|pats|patting|lift|lifts|lifting|put|puts|putting|press|presses|pressing|knock|knocks|knocking|wave|waves|waving|point|points|pointing|write|writes|writing|fold|folds|folding|cradle|cradles|cradling|row|rows|rowing|climb|climbs|climbing|drive|drives|driving|steer|steers|steering|throw|throws|throwing|threw|catch|catches|catching|caught|eat|eats|eating|ate|drink|drinks|drinking|pour|pours|pouring|pedal|pedals|pedalling|pedaling|paddle|paddles|paddling|swim|swims|swimming|unlock|unlocks|unlocking|lets? go|hug|hugs|hugging|shake|shakes|shaking|brush|brushes|brushing|wipe|wipes|wiping|type|types|typing|draw|draws|drawing|tie|ties|tying|dig|digs|digging)`;
 
 /**
  * Whether a moment seen through the dreamer's eyes is of their own body: they look down at themselves
  * ("their own small body and the gray cardigan", the kitchen that shrank, 26 Sep). Then it shows, as
- * they see it; never their face.
+ * they see it; never their face. A reflection is not it: seen in a mirror, it is a picture of them.
  */
 export function selfIn(words: string[]): boolean {
   const text = words.join(' ');
   return (
-    /\b(?:their|your|my|the dreamer's)\s+own\s+(?:\w+\s+)?(?:body|bodies|legs|feet|hands|arms|clothes|reflection)\b/i.test(
-      text,
-    ) || /\blooks? down at (?:themselves|yourself|myself)\b/i.test(text)
+    /\b(?:their|your|my|the dreamer's)\s+own\s+(?:\w+\s+)?(?:body|bodies|legs|feet|hands|arms|clothes)\b/i.test(text) ||
+    /\blooks? down at (?:themselves|yourself|myself)\b/i.test(text)
   );
 }
 
 /**
  * Whether the dreamer's own hands are in a moment seen through their eyes: the dreamer does something
- * with them (the dreamer "opens the door", "can touch its nose"), their hand or arm is named ("the
- * boat in their hand"), or they hold something. A gate opening on its own has no hands in it, and a
- * dreamer looking for someone shows nothing of themselves (the lift, 26 Sep: "legs and all should not
- * be visible").
+ * with them, alone or with someone ("the dreamer opens the door", "the dreamer and the sister row"),
+ * their hand or arm is named in a clause about them ("the boat in their hand"), they are at the controls
+ * of what they ride ("at the wheel"), or they hold something. A gate opening on its own has no hands in
+ * it, and a dreamer looking for someone shows nothing of themselves (the lift, 26 Sep: "legs and all
+ * should not be visible").
  */
 export function handsIn(words: string[], holds: boolean): boolean {
   if (holds) return true;
-  const who = '(?:the dreamer|you|they|i)';
   // The dreamer doing it: "they are close to the edge" is where they are, not a hand closing.
+  const who = "(?:the dreamer|you|they|i)(?:\\s+and\\s+(?:the\\s+|their\\s+|your\\s+|my\\s+)?[\\w']+)?";
   const does = new RegExp(`(?:^|[^\\w'])${who}\\s+(?:(?!(?:are|is|was|were|am)\\b)\\w+\\s+){0,2}?${HAND_VERB}\\b`, 'i');
-  // "Their hand" is the dreamer's only in a clause about the dreamer: "Tomas folds their arms" is his.
+  // "Their hand" is the dreamer's only in a clause about the dreamer: "Mara folds their arms" is hers.
   const own = /\b(?:the dreamer's|your|my)\s+(?:own\s+)?(?:\w+\s+)?(?:hands?|arms?|fingers?|palms?)\b/i;
   const their = /\btheir\s+(?:own\s+)?(?:\w+\s+)?(?:hands?|arms?|fingers?|palms?)\b/i;
+  const controls = /\b(?:at|on|behind)\s+the\s+(?:steering\s+)?(?:wheel|helm|oars|tiller|controls|handlebars|reins)\b/i;
   const aboutThem = /^\s*(?:the dreamer|you|they|i)\b|\bthe dreamer\b/i;
   return words
     .join('. ')
     .split(/[;.]|,\s+(?=and\b|but\b|then\b|while\b|as\b)/)
-    .some((c) => does.test(c) || own.test(c) || (their.test(c) && aboutThem.test(c)));
+    .some((c) => does.test(c) || own.test(c) || ((their.test(c) || controls.test(c)) && aboutThem.test(c)));
 }
 
 // ── a reverse angle: the room turned ─────────────────────────────────────────────────────────────

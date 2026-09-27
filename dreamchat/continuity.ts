@@ -24,7 +24,6 @@ import {
 import {
   cameraMode,
   goingIn,
-  LOOKS_OUT,
   ON_THE_LINE,
   outThroughWindows,
   SAME_SIDE_DEGREES,
@@ -125,8 +124,17 @@ export type CutPlan = {
   facts?: NowOf[];
   /** Made from the story record: by who or what, words of its look from after a change, left out of it. */
   unsaid?: Record<string, string[]>;
-  /** With the camera rules: the cut before whose side of the scene's line this one crossed from. */
+  /** With the camera rules: the cut whose side of the scene's line this one crossed from. */
   crossed?: string;
+  /** Why: it looks past them at what only that side shows, or only from there are they all in it. */
+  crossedWhy?: 'looks' | 'framing';
+  /** With the camera rules: an earlier cut of the same people at the same size whose camera it could not leave. */
+  sameCamera?: string;
+  /**
+   * With the camera rules, for a cut edited from the picture before: where its own camera would stand.
+   * A same setup is the same camera, so it is an edit only where this is the picture's camera.
+   */
+  wouldBe?: Eye;
   /**
    * With the camera rules: what they add to the view, said after it (and after a brief written for it):
    * the water, what is out past a window, which way what is ridden goes, a crossing of the line.
@@ -381,24 +389,21 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
   // kept her standing where she started (24 Sep).
   const moved = new Map<string, Move>();
   for (const x of upTo) for (const mv of plan.moves?.[x.id] ?? []) moved.set(mv.id, mv);
-  // With the camera rules: what stands where only a window is is out past the place, never on its
-  // floor (camera.ts outThroughWindows); and the water stands as high as the record says it does here.
+  // With the camera rules: what stands in a wall where a window is, or past it, is out past the place,
+  // never on its floor (camera.ts outThroughWindows); and the water stands as high as the record says it
+  // does here, or, where the record's words do not measure it, as high as they last did in this place.
   const camera = cameraMode() === 'on';
-  // Seen out there: what a moment of this place shows while it looks out of it.
-  const seenOut = new Set(
-    camera
-      ? scene.moments
-          .filter(own)
-          .filter(
-            (x) =>
-              LOOKS_OUT.test(`${x.action} ${x.looks_at ?? ''} ${x.visual_point ?? ''}`) ||
-              plan.looks?.[x.id] === 'beyond',
-          )
-          .flatMap((x) => x.things)
-      : [],
-  );
-  const beyond = camera ? outThroughWindows(plan, seenOut) : {};
-  const water = camera && r ? waterAt(r.facts, plan) : null;
+  const beyond = camera ? outThroughWindows(plan) : {};
+  let water: number | null = null;
+  if (camera && rec)
+    for (const x of upTo) {
+      const w = waterAt(rec.moments[x.id]?.facts ?? [], plan);
+      water = w.has ? (w.level ?? water) : null;
+    }
+  // Whoever rides a boat on it keeps their head under the ceiling: "almost up to the ceiling" with a boat
+  // afloat is as high as they can sit in it.
+  if (water !== null && plan.indoors && plan.spots.some((x) => x.shape === 'vehicle'))
+    water = Math.min(water, Math.max(0.1, (plan.ceiling ?? 3.2) - 1.6));
   return {
     ...plan,
     ...(Object.keys(beyond).length ? { outside: { ...beyond, ...(plan.outside ?? {}) } } : {}),
@@ -433,18 +438,20 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
 }
 
 /**
- * How high the water stands at a moment, from the story record's facts about its place (camera.ts
- * waterLevel): none where the record measures no water there.
+ * Whether the story record has water in a moment's place, and how high its words say it stands
+ * (camera.ts waterLevel): none measured where they do not say.
  */
-function waterAt(facts: NowOf[], plan: Blocking): number | null {
+function waterAt(facts: NowOf[], plan: Blocking): { has: boolean; level: number | null } {
+  let has = false;
   for (const f of facts)
     if (f.kind === 'place')
       for (const x of f.facts)
         if (x.kind === 'part' && (WATER.test(x.part) || WATER.test(x.what))) {
+          has = true;
           const level = waterLevel(x.now, plan);
-          if (level !== null) return level;
+          if (level !== null) return { has, level };
         }
-  return null;
+  return { has, level: null };
 }
 
 /**
@@ -597,6 +604,9 @@ export function planContinuity(b: Breakdown, rec?: RecordPlan): ContinuityPlan {
     if (!unsettled(b, plan, cams).length) return plan;
     plan = planWith(b, rec, { camera: true, cams });
   }
+  const left = unsettled(b, plan);
+  if (left.length)
+    plan.issues.push(`the plan's relations still disagree with its cameras after four plans: ${left.join('; ')}`);
   return plan;
 }
 
@@ -609,7 +619,7 @@ export function camerasOf(plan: ContinuityPlan): Map<string, Eye> {
   const cams = new Map<string, Eye>();
   for (const c of plan.cuts) {
     const base = c.refs.find((r) => r.kind === 'cut' && r.role === 'base');
-    const eye = c.eye ?? (base ? cams.get(base.id) : undefined);
+    const eye = c.eye ?? c.wouldBe ?? (base ? cams.get(base.id) : undefined);
     if (eye) cams.set(c.id, eye);
   }
   return cams;
@@ -1041,8 +1051,9 @@ function planWith(
   // side. A cut to the same people at the same size from an earlier cut's own camera is the same picture
   // again: the camera moves. And a vehicle the moment has going goes the way the plan says.
   const cast = new Set(b.people.filter((p) => !p.extras).map((p) => p.id));
-  const lines = new Map<string, { ids: [string, string]; sign: number; from: string }>();
-  const sceneKey = (m: Moment) => sceneOf.get(m.id) ?? 's1';
+  const lines = new Map<unknown, { ids: [string, string]; sign: number; from: string }>();
+  // One line per floor plan: two places of one scene each have their own.
+  const lineKey = (m: Moment): unknown => placePlan(b, m.id) ?? sceneOf.get(m.id) ?? 's1';
   const together = (where: Blocking, a: Spot, z: Spot) => {
     const oa = onOf(a, where);
     const oz = onOf(z, where);
@@ -1066,7 +1077,9 @@ function planWith(
     const out: Record<string, { x: number; y: number }> = {};
     const [rw, rd] = roomOf(where);
     for (const v of where.spots) {
-      if (v.shape !== 'vehicle' || v.heldBy || !goingIn(`${m.action} ${m.visual_point ?? ''}`, name(v.id))) continue;
+      const others = where.spots.filter((o) => o.shape === 'vehicle' && o.id !== v.id).map((o) => o.name ?? name(o.id));
+      if (v.shape !== 'vehicle' || v.heldBy || !goingIn(`${m.action} ${m.visual_point ?? ''}`, name(v.id), others))
+        continue;
       const mv = plan?.moves?.[m.id]?.find((y) => y.id === v.id);
       const was = mv && plan ? before(m, v.id, plan) : undefined;
       const [w, d] = sizeOf(v);
@@ -1084,7 +1097,7 @@ function planWith(
     return out;
   };
   const shotRules = (c: CutPlan, m: Moment, where: Blocking) => {
-    const line = lines.get(sceneKey(m));
+    const line = lines.get(lineKey(m));
     const a = line && where.spots.find((s) => s.id === line.ids[0]);
     const z = line && where.spots.find((s) => s.id === line.ids[1]);
     const people = seen(m);
@@ -1107,13 +1120,14 @@ function planWith(
           seen(em).every((p) => people.includes(p))
         );
       })
-      .map((e) => e.eye!);
+      .map((e) => ({ id: e.id, eye: e.eye! }));
     // Riding one vehicle together, the people it shows, whether or not the scene has a line yet.
     const shown = people.map((id) => where.spots.find((s) => s.id === id)).filter((s): s is Spot => !!s);
     const riding = shown.length >= 2 && shown.every((s, i) => i === 0 || together(where, shown[0], s));
     const going = goingOf(m, where);
     return {
-      avoid,
+      avoid: avoid.map((e) => e.eye),
+      same: avoid,
       ...(line && a && z && !riding ? { line: { a, b: z, sign: line.sign } } : {}),
       ...(riding ? { together: true } : {}),
       ...(Object.keys(going).length ? { going } : {}),
@@ -1126,7 +1140,7 @@ function planWith(
     v: { eye: Eye; inPicture: string[]; crossed?: 'looks' | 'framing' },
     rules: ReturnType<typeof shotRules> | undefined,
   ) => {
-    const key = sceneKey(m);
+    const key = lineKey(m);
     const line = lines.get(key);
     if (!line) {
       const two = v.inPicture
@@ -1142,25 +1156,15 @@ function planWith(
     } else if (rules?.line) {
       const side = signedFromLine(rules.line.a, rules.line.b, v.eye.at);
       if (Math.abs(side) >= ON_THE_LINE) {
-        if (Math.sign(side) !== line.sign) {
-          c.crossed = line.from;
-          crossings.push(
-            `picture ${c.order} crosses the scene's line from picture ${no(line.from)}: ${
-              v.crossed === 'looks'
-                ? 'it looks past them, at what only that side shows'
-                : 'only from that side are they all in the picture'
-            }`,
-          );
-        }
+        // A deliberate crossing (only that side shows what the moment is about) is the cut's to say, never
+        // a fault for the checks before drawing to act on.
+        if (Math.sign(side) !== line.sign) Object.assign(c, { crossed: line.from, crossedWhy: v.crossed ?? 'framing' });
         Object.assign(line, { sign: Math.sign(side), from: c.id });
       }
     }
-    if (rules?.avoid.some((e) => sameCameraAs(v.eye, e)))
-      crossings.push(
-        `picture ${c.order} is shot from the same camera as an earlier picture of the same people at the same size`,
-      );
+    const same = rules?.same.find((e) => sameCameraAs(v.eye, e.eye));
+    if (same) c.sameCamera = same.id;
   };
-  const crossings: string[] = [];
   const bearingAngle = (eye: Eye, s: { x: number; y: number }) => bearing(eye.at, eye.d, s).angle;
 
   const bare = (x: string) =>
@@ -1270,6 +1274,10 @@ function planWith(
       ]).filter((id) => !ids.includes(id) && id !== dreamerId);
       const rules = opts.camera && !edits ? shotRules(c, m, where) : undefined;
       const v = edits ? null : outsideShot(where, ids, m.distance, now, lookAt(m, where), also, rules);
+      if (opts.camera && edits) {
+        const own = outsideShot(where, ids, m.distance, now, lookAt(m, where), also);
+        if (own) c.wouldBe = own.eye;
+      }
       if (v) {
         c.view = v.text;
         c.eye = v.eye;
@@ -1411,7 +1419,7 @@ function planWith(
     return out;
   }
 
-  const issues: string[] = [...crossings];
+  const issues: string[] = [];
   for (const c of cuts) {
     const m = byId.get(c.id)!;
     if (!m.action.trim() || m.action.startsWith('(no action')) issues.push(`picture ${c.order} has no visible action`);

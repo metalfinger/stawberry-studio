@@ -17,7 +17,7 @@
 // framePrompt; on sends what the sheet assembles.
 import { assembleCut, type Assembled } from './assemble';
 import { DIRECTIONS, type Eye, type Side } from './blocking';
-import { cameraMode, handsIn, type RoomTurn, roomTurn, sameCameraAs, selfIn, turnedBetween } from './camera';
+import { cameraMode, handsIn, type RoomTurn, roomTurn, sameView, selfIn, turnedBetween } from './camera';
 import {
   camerasOf,
   type ContinuityPlan,
@@ -536,8 +536,6 @@ export function cutSheet(x: CutSheetInput): CutSheet {
           names,
           prev: prevMoment ? { id: prevMoment.id, order: at, eye: cams.get(prevMoment.id) ?? null } : null,
           eye: cams.get(frame.id) ?? null,
-          prevVisible: prevMoment?.visible ?? [],
-          prevDistance: prevMoment?.distance ?? null,
           dreamerId: dreamer?.id ?? b.people.find((p) => p.is_dreamer)?.id,
         })
       : null;
@@ -567,7 +565,7 @@ export function cutSheet(x: CutSheetInput): CutSheet {
       shape: shapeOf(frame),
       looksAt: f.looksAt ?? null,
       view: plan?.view ?? null,
-      brief: frame.shot && plan?.view && frame.shot.view === plan.view ? frame.shot.text : null,
+      brief: frame.shot && plan?.view && sameView(frame.shot.view, plan.view) ? frame.shot.text : null,
       sheetLayout: plan?.sheetLayout !== false,
       words: plan?.camera ?? null,
       across: [...(plan?.across ?? [])],
@@ -881,8 +879,6 @@ function cameraLayer(x: {
   prev: { id: string; order: number; eye: Eye | null } | null;
   /** This cut's camera as the plan has it: its own, or the picture's it is edited from. */
   eye: Eye | null;
-  prevVisible: string[];
-  prevDistance: string | null;
   dreamerId: string | undefined;
 }): { layer: CameraLayer; flags: string[] } {
   const f = x.frame.frame!;
@@ -925,19 +921,11 @@ function cameraLayer(x: {
   const outside: Record<string, Side> = {};
   for (const e of x.elements) if (floor?.outside?.[e.id]) outside[e.id] = floor.outside[e.id];
 
-  if (x.tags.crossed && x.prev) flags.push(`crossed_line:${x.prev.id}`);
-  // The same people at the same size, from the same camera as the cut before, and not edited from it
-  // as one continuing action: the same picture again.
-  const edited = x.earlier.some((e) => e.role === 'base' && e.id === x.prev?.id);
-  const same =
-    !!eye &&
-    !!x.prev?.eye &&
-    !edited &&
-    x.prevDistance === f.distance &&
-    x.prevVisible.length === f.visible.length &&
-    x.prevVisible.every((v) => f.visible.includes(v)) &&
-    sameCameraAs(eye, x.prev.eye);
-  if (same && x.prev) flags.push(`same_camera:${x.prev.id}`);
+  // As the plan placed the cameras: the cut whose side of the scene's line this one crossed from (not
+  // always the cut before), and the earlier cut of the same people at the same size whose camera it
+  // could not leave.
+  if (x.plan?.crossed) flags.push(`crossed_line:${x.plan.crossed}`);
+  if (x.plan?.sameCamera) flags.push(`same_camera:${x.plan.sameCamera}`);
   return { layer: { turn, body, dropped, outside, lines: [...(x.plan?.rules ?? [])] }, flags };
 }
 

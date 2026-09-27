@@ -1169,7 +1169,7 @@ export function dreamerShot(
     // What someone holds is with them: never "outside the picture" while they are in it.
     ...spots
       .filter((s) => !shown.some((x) => x.s.id === s.id) && !(s.heldBy && shown.some((x) => x.s.id === s.heldBy)))
-      .filter((s) => !(camera && underWater(s, plan)))
+      .filter((s) => !(camera && underWater(s, plan, eye)))
       .map((s) =>
         // What they hold themselves is in their hands, only below the picture (the camera rules).
         camera && s.heldBy === dreamer
@@ -1181,7 +1181,7 @@ export function dreamerShot(
     // ended at its windscreen, and the field it drove through was read as missing (lighthouse, 25 Sep).
     ...(beyond && !toward ? [`Beyond it all, ahead where they look: ${beyond.replace(/[.\s]+$/, '')}.`] : []),
   ];
-  const rules = camera ? waterWords(plan, spots, r, called) : [];
+  const rules = camera ? waterWords(plan, spots, r, called, eye) : [];
   return {
     eye,
     text: sentences.join(' '),
@@ -1724,7 +1724,7 @@ export function outsideShot(
           !riding(s) &&
           (subjects.includes(s.id) || !isPerson(s)) &&
           !(s.heldBy && shown.some((x) => x.s.id === s.heldBy)) &&
-          !(camera && underWater(s, plan)),
+          !(camera && underWater(s, plan, eye)),
       )
       .map((s) => `Outside the picture, ${offTo(eye, s)}: ${name(s.id)}.`),
     frontLine(plan, eye, rr, min),
@@ -1742,7 +1742,7 @@ export function outsideShot(
             ]
           : []),
         ...headings(shown, rules?.going ?? {}, eye, name),
-        ...waterWords(plan, spots, rr, name),
+        ...waterWords(plan, spots, rr, name, eye),
         ...throughWindows(plan, rr, min, called),
       ]
     : [];
@@ -1934,8 +1934,10 @@ function frontLine(plan: Blocking, eye: Eye, r: Render, min: number): string {
  * Whether water covers someone or something where the record says how high it stands: all of them
  * under its surface, and not afloat on it (the camera rules).
  */
-function underWater(s: Spot, plan: Blocking): boolean {
+function underWater(s: Spot, plan: Blocking, eye?: Eye): boolean {
   if (!plan.water) return false;
+  // The camera under the water too: everyone is in it, seen as they are.
+  if (eye && eye.height < plan.water) return false;
   if (isPerson(s) && !s.many && onOf(s, plan)?.t && shapeOf(onOf(s, plan)!.t, plan) === 'vehicle') return false;
   if (!isPerson(s) && (shapeOf(s, plan) === 'vehicle' || s.heldBy)) return false;
   const top = groundAt(s, plan) + (isPerson(s) ? eyeHeight(s.pose) + 0.15 : sizeOf(s)[2]);
@@ -1947,8 +1949,11 @@ function underWater(s: Spot, plan: Blocking): boolean {
  * or what is under it, where in the picture (the camera rules). A whale swimming under the boat was
  * lined up with the two in it, facing the camera (library, 26 Sep).
  */
-function waterWords(plan: Blocking, spots: Spot[], r: Render, called: (id: string) => string): string[] {
+function waterWords(plan: Blocking, spots: Spot[], r: Render, called: (id: string) => string, eye: Eye): string[] {
   if (!plan.water) return [];
+  // Filled to above the camera: the picture is taken in the water, its surface above it all.
+  if (eye.height < plan.water)
+    return ['All of this is under water, the camera with it: the surface is above the picture.'];
   const metres = Math.max(1, Math.round(plan.water));
   const deep =
     plan.water < 0.3
@@ -1958,7 +1963,7 @@ function waterWords(plan: Blocking, spots: Spot[], r: Render, called: (id: strin
         : `The water stands about ${metres} metre${metres > 1 ? 's' : ''} deep here`;
   const afloatOn = spots.filter((s) => !isPerson(s) && shapeOf(s, plan) === 'vehicle' && !s.heldBy);
   // Who and what of the story is under it; the place's own fixtures under it (a floor, a low aisle) go unsaid.
-  const under = spots.filter((s) => !s.fixture && underWater(s, plan));
+  const under = spots.filter((s) => !s.fixture && underWater(s, plan, eye));
   const where = (s: Spot) => {
     const p = r.project(v3(s.x, s.y, plan.water ?? 0));
     if (!p || p.x < 0 || p.x > r.width) return 'out of the picture';
