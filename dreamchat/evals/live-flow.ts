@@ -13,6 +13,10 @@
 //   it (the print kept on the moment, session.ts; images named by what they are, and only the earlier
 //   pictures drawn by then). A sheet that differs only in the brief the pre-draw check set aside is
 //   explained with the prompt; a moment drawn before its sheet was kept is counted apart.
+// The rebuild is made as the dream stands (the check: its exit code), and, where pictures kept a record of
+// what they were drawn from (S9, DREAMCHAT_AS_DRAWN=on), again reading the records, reported beside it: a
+// rebuild reading them gives what was sent by construction wherever nothing changed since, so only the
+// first says whether drawing and a fresh rebuild agree.
 // Nothing is drawn and no model is called.
 //
 //   DREAMCHAT_RECORD=on bun run evals/live-flow.ts <replay folder> [more folders]
@@ -52,9 +56,11 @@ export function checkFlow(
   dream: string,
   s: Session,
   store?: string | Record<string, { prompt: string; images: string[] }>,
+  /** S9: rebuild the pictures drawn with a record from it. Off: the dream as it stands. */
+  opts: { asDrawn?: boolean } = {},
 ): FlowCheck | null {
   if (!s.prep?.record || !s.draft?.breakdown || !s.style) return null;
-  const r = rebuild(s);
+  const r = rebuild(s, { asDrawn: opts.asDrawn ?? false });
   const drawing = planRecord(s);
   const sent = typeof store === 'object' ? store : store && existsSync(store) ? sentFromStore(s, store) : {};
   const out: FlowCheck = {
@@ -188,43 +194,56 @@ if (import.meta.main) {
     console.error('usage: DREAMCHAT_RECORD=on bun run evals/live-flow.ts <replay folder> [more folders]');
     process.exit(1);
   }
-  let pinned = 0;
+  const dreams = folders.flatMap(replayed);
+  // S9: pictures kept a record of what they were drawn from: the rebuild is read both ways.
+  const recorded = dreams.some((x) => x.session.build?.frames?.some((f) => f.asDrawn?.length));
+  const arms: { label: string; asDrawn: boolean }[] = [
+    { label: 'as the dream stands', asDrawn: false },
+    ...(recorded ? [{ label: 'reading the records of what was drawn (S9)', asDrawn: true }] : []),
+  ];
   let failed = 0;
-  let drawn = 0;
-  let same = 0;
-  let checked = 0;
-  for (const x of folders.flatMap(replayed)) {
-    const c = checkFlow(x.dream, x.session, x.store);
-    if (!c) {
-      console.log(`${x.dream}: no pin (planned with the record off, or never planned)`);
-      continue;
+  for (const arm of arms) {
+    let pinned = 0;
+    let failing = 0;
+    let drawn = 0;
+    let same = 0;
+    let checked = 0;
+    if (recorded) console.log(`\n== a rebuild ${arm.label}`);
+    for (const x of dreams) {
+      const c = checkFlow(x.dream, x.session, x.store, { asDrawn: arm.asDrawn });
+      if (!c) {
+        console.log(`${x.dream}: no pin (planned with the record off, or never planned)`);
+        continue;
+      }
+      pinned++;
+      const ok =
+        c.sameRecord &&
+        !c.pinDiffers.length &&
+        Object.keys(c.differs).every((id) => c.explained[id]) &&
+        Object.keys(c.sheetDiffers).every((id) => c.sheetExplained[id]);
+      if (!ok) failing++;
+      drawn += c.drawn;
+      same += c.samePrompt.length;
+      checked += Object.values(c.explained).filter(byCheck).length;
+      console.log(
+        `${ok ? 'ok  ' : 'FAIL'} ${c.dream}: rebuild reads drawing's record ${c.sameRecord ? 'yes' : 'NO'}; pin as drawing read it ${c.pinDiffers.length ? `NO (${c.pinDiffers.join('; ')})` : 'yes'}; ${c.drawn} moments drawn, ${c.samePrompt.length} rebuilt word for word, ${c.sameImages.length} with the same images; sheets: ${c.sameSheet.length} as sent${c.sheetUnlogged.length ? `, ${c.sheetUnlogged.length} drawn before the sheet was kept` : ''}`,
+      );
+      for (const [id, d] of Object.entries(c.sheetDiffers))
+        console.log(
+          `       ${id} sheet differs in ${d.join(', ')}${c.sheetExplained[id] ? `: ${c.sheetExplained[id]}` : ''}`,
+        );
+      for (const [id, d] of Object.entries(c.differs))
+        console.log(
+          c.explained[id]
+            ? `       ${id}: ${c.explained[id]}`
+            : `       ${id} sent:    ${d.sent.slice(0, 240)}\n       ${id} rebuilt: ${d.rebuilt.slice(0, 240)}`,
+        );
     }
-    pinned++;
-    const ok =
-      c.sameRecord &&
-      !c.pinDiffers.length &&
-      Object.keys(c.differs).every((id) => c.explained[id]) &&
-      Object.keys(c.sheetDiffers).every((id) => c.sheetExplained[id]);
-    if (!ok) failed++;
-    drawn += c.drawn;
-    same += c.samePrompt.length;
-    checked += Object.values(c.explained).filter(byCheck).length;
     console.log(
-      `${ok ? 'ok  ' : 'FAIL'} ${c.dream}: rebuild reads drawing's record ${c.sameRecord ? 'yes' : 'NO'}; pin as drawing read it ${c.pinDiffers.length ? `NO (${c.pinDiffers.join('; ')})` : 'yes'}; ${c.drawn} moments drawn, ${c.samePrompt.length} rebuilt word for word, ${c.sameImages.length} with the same images; sheets: ${c.sameSheet.length} as sent${c.sheetUnlogged.length ? `, ${c.sheetUnlogged.length} drawn before the sheet was kept` : ''}`,
+      `${recorded ? `${arm.label}: ` : ''}${pinned} dreams with a pin, ${failing} failing; ${drawn} moments drawn, ${same} rebuilt word for word, ${checked} differing only because a check acted`,
     );
-    for (const [id, d] of Object.entries(c.sheetDiffers))
-      console.log(
-        `       ${id} sheet differs in ${d.join(', ')}${c.sheetExplained[id] ? `: ${c.sheetExplained[id]}` : ''}`,
-      );
-    for (const [id, d] of Object.entries(c.differs))
-      console.log(
-        c.explained[id]
-          ? `       ${id}: ${c.explained[id]}`
-          : `       ${id} sent:    ${d.sent.slice(0, 240)}\n       ${id} rebuilt: ${d.rebuilt.slice(0, 240)}`,
-      );
+    // The check is the rebuild as the dream stands; reading the records is reported beside it.
+    if (!arm.asDrawn) failed = failing;
   }
-  console.log(
-    `${pinned} dreams with a pin, ${failed} failing; ${drawn} moments drawn, ${same} rebuilt word for word, ${checked} differing only because a check acted`,
-  );
   process.exit(failed ? 1 : 0);
 }

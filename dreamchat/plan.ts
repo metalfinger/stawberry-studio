@@ -14,6 +14,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   type ContinuityPlan,
+  type GhostPlan,
   type Criterion,
   drawOrder,
   planContinuity,
@@ -30,7 +31,7 @@ import {
   type PlannedInput,
   turnedInto,
 } from './frames';
-import { type AsDrawn, asDrawnMode, type Copies, currentRecord } from './asdrawn';
+import { type AsDrawn, type Copies, currentRecord, matchGhost } from './asdrawn';
 import { type CutSheet, cutSheetMode, framed, ghostName, sheetDream } from './cutsheet';
 import { actsWhenLogging, checkReferences, checksMode, preflight, readPrompt } from './gate';
 import { callJev } from './jev';
@@ -90,7 +91,8 @@ export function rebuild(
   /**
    * S9: a picture drawn with its record kept (DREAMCHAT_AS_DRAWN=on) is rebuilt from it, as the dream
    * stood when it was drawn: its own copy of itself, the sketches' words and the look then, and the
-   * earlier pictures drawn by then. By default as the switch says.
+   * earlier pictures drawn by then. Off unless asked for: an eval measuring a change to the harness reads
+   * the dream as it stands, so a record never hides a fix; live-flow asks for both.
    */
   opts: { asDrawn?: boolean } = {},
 ): Rebuilt {
@@ -113,7 +115,7 @@ export function rebuild(
   const plan = planContinuity(b, rec);
   // S9: each picture drawn with a record, by its id among the saved ones, and each saved in-between
   // picture by what it shows (a plan made again may number them otherwise).
-  const asDrawn = opts.asDrawn ?? asDrawnMode() === 'on';
+  const asDrawn = opts.asDrawn ?? false;
   const savedAll = s.build?.frames ?? [];
   const recorded = new Map<string, AsDrawn>();
   if (asDrawn)
@@ -121,8 +123,12 @@ export function rebuild(
       const r = currentRecord(f);
       if (r) recorded.set(f.id, r);
     }
-  const savedGhost = (g: { of: string; kind: string; state?: { what: string } }) =>
-    savedAll.find((f) => f.kind === 'ghost' && f.ghost && ghostName(f.ghost) === ghostName(g) && recorded.has(f.id));
+  const savedGhost = (g: GhostPlan) =>
+    matchGhost(
+      g,
+      savedAll.filter((f) => f.kind === 'ghost' && recorded.has(f.id)),
+      (f) => f.ghost,
+    );
   // With DREAMCHAT_CUT_SHEET=shadow or on, every moment's cut sheet, read from the dream as drawing reads
   // it (session.ts sheetDreamOf): the story record, and the tree resolved from this plan. Where pictures
   // were drawn with a record, as drawing read it: the plan kept since the moments began, each moment's
@@ -265,7 +271,7 @@ function fromRecord(
   const standInOf = (f: Item): string => {
     const g = f.ghost;
     if (f.kind !== 'ghost' || !g) return standIn.picture(f.id);
-    const same = x.plan.ghosts.find((y) => ghostName(y) === ghostName(g));
+    const same = matchGhost(g, x.plan.ghosts, (y) => y);
     if (same) return standIn.picture(same.id);
     const media = `${standIn.picture('')}drawn-${f.id}`;
     x.named[media] = ghostName(g);
@@ -356,9 +362,11 @@ if (import.meta.main) {
   const args = process.argv.slice(2);
   // --gate: also put every picture through the confidence gate (Jev reads each prompt; no images).
   const gating = args.includes('--gate');
-  const [id, ...only] = args.filter((a) => a !== '--gate');
+  // --as-drawn: a picture drawn with its record kept (S9) as it was drawn, from its record.
+  const asDrawn = args.includes('--as-drawn');
+  const [id, ...only] = args.filter((a) => a !== '--gate' && a !== '--as-drawn');
   if (!id) {
-    console.error('usage: bun run plan.ts <session id> [m5 g2 …] [--gate]');
+    console.error('usage: bun run plan.ts <session id> [m5 g2 …] [--gate] [--as-drawn]');
     process.exit(1);
   }
   // From this checkout's state/, or DREAMCHAT_DATA's, or another worktree's (a worktree has none).
@@ -368,7 +376,7 @@ if (import.meta.main) {
     console.error(`${id} has no breakdown and chosen style yet`);
     process.exit(1);
   }
-  const r = rebuild(s);
+  const r = rebuild(s, { asDrawn });
   const { plan, sheets } = r;
 
   console.log(`${r.title}: ${plan.cuts.length} moments, ${plan.ghosts.length} in-between references`);

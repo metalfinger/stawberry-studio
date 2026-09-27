@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, spyOn, test } from 'bun:test';
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -9,6 +9,8 @@ import { printDiff, sheetPrint } from '../cutsheet';
 import { imageName, rebuild } from '../plan';
 import { readJevLog } from '../jevlog';
 import { sha } from '../gate';
+import * as asdrawn from '../asdrawn';
+import { staleRoute } from '../routes';
 import { SessionStore, type StoreDeps } from '../session';
 import { fakeHost, fakeJev, noul, pick, told, withChecks } from './fakes';
 
@@ -999,10 +1001,16 @@ describe('a whole conversation', () => {
       // The sketches and the look, kept once for the dream.
       expect(Object.keys(s.build!.copies!.sketches)).toHaveLength(2);
       expect(Object.keys(s.build!.copies!.looks)).toHaveLength(1);
-      // Nothing has changed since: nothing is stale.
-      expect(store.stale(id)).toEqual({ checked: ['m1', 'm2'], unrecorded: [], stale: [] });
+      // Nothing has changed since: nothing is stale, nothing was drawn behind the dream.
+      const report = { checked: ['m1', 'm2'], unrecorded: [], unknown: [], stale: [], behind: [] };
+      expect(store.stale(id)).toEqual(report);
+      // Served at /api/stale.
+      const served = staleRoute(store, new URL(`http://localhost/api/stale?id=${id}`))!;
+      expect([served.status, await served.json()]).toEqual([200, report]);
+      expect(staleRoute(store, new URL('http://localhost/api/stale?id=nobody'))!.status).toBe(404);
+      expect(staleRoute(store, new URL(`http://localhost/api/tree?id=${id}`))).toBeNull();
       // A rebuild reading the records gives each as sent, word for word and image for image.
-      const r = rebuild(s);
+      const r = rebuild(s, { asDrawn: true });
       for (const [i, sent] of framesStarted.entries()) {
         const p = r.pictures.find((x) => x.id === sent.id)!;
         expect(p.asDrawn).toBe(true);
@@ -1096,8 +1104,86 @@ describe('a whole conversation', () => {
       const s = store.get(id)!;
       expect(s.build!.frames!.map((f) => f.asDrawn)).toEqual([undefined, undefined]);
       expect(s.build!.copies).toBeUndefined();
-      expect(store.stale(id)).toEqual({ checked: [], unrecorded: ['m1'], stale: [] });
+      expect(store.stale(id)).toEqual({ checked: [], unrecorded: ['m1'], unknown: [], stale: [], behind: [] });
     }));
+
+  test('S9: a record that cannot be made is logged, and the picture drawn without it', () =>
+    withAsDrawn('on', async () => {
+      const dir = mkdtempSync(join(tmpdir(), 'dreamchat-s9-'));
+      const spy = spyOn(asdrawn, 'recordMoment').mockImplementation(() => {
+        throw new Error('no record here');
+      });
+      try {
+        const { store, id, statuses, framesStarted } = await toTheMoments(
+          async () => ({ questions: 3, passed: 3, failed: [], unseen: [] }),
+          { dir },
+        );
+        statuses.set('job-m1', 'ready');
+        await store.settle(id, 100);
+        expect(framesStarted.map((f) => f.id)).toEqual(['m1', 'm2']);
+        expect(store.get(id)!.build!.frames!.map((f) => f.asDrawn)).toEqual([undefined, undefined]);
+        const failed = readJevLog(dir, id).filter(
+          (e) => e.kind === 'transition' && e.stage === 'as_drawn' && e.decision === 'failed',
+        );
+        expect(failed.map((e) => (e.kind === 'transition' ? [e.moment, e.reason] : []))).toEqual([
+          ['m1', 'no record kept: Error: no record here'],
+          ['m2', 'no record kept: Error: no record here'],
+        ]);
+      } finally {
+        spy.mockRestore();
+      }
+    }));
+
+  test('settle waits for a verdict being asked for: what is drawn from its take is started', async () => {
+    // A judge that takes a while: before, settle returned with the wide landed and unjudged, and the
+    // close-up drawn from it never started (a redraw under load, 27 Sep).
+    const { store, id, statuses, framesStarted } = await toTheMoments(async () => {
+      await Bun.sleep(300);
+      return { questions: 3, passed: 3, failed: [], unseen: [] };
+    });
+    statuses.set('job-m1', 'ready');
+    await store.settle(id, 5000);
+    expect(framesStarted.map((f) => f.id)).toEqual(['m1', 'm2']);
+  });
+
+  test("S9's fresh send: words reworded into the third person stay the dreamer's where the breakdown says so", async () => {
+    const was = process.env.DREAMCHAT_FRESH_SEND;
+    const draw = async (fresh: boolean) => {
+      if (fresh) process.env.DREAMCHAT_FRESH_SEND = 'on';
+      else delete process.env.DREAMCHAT_FRESH_SEND;
+      // The kitchen told as "you", and put in the third person before it is drawn.
+      const told = structuredClone(breakdown);
+      told.scenes[0].moments[0].action = 'You stand in the kitchen, with a red board on the wall';
+      const { store, id, framesStarted } = await toTheMoments(undefined, {
+        producer: async () => ({ breakdown: told, downgraded: [], notes: [], ms: 1 }),
+        reword: async (_prompt, _findings, fields) => ({
+          ...fields,
+          action: { value: 'The dreamer stands in the kitchen, with a red board on the wall', said: false },
+        }),
+      });
+      const m1 = store.get(id)!.build!.frames!.find((f) => f.id === 'm1')!;
+      const prompt = framesStarted.find((f) => f.id === 'm1')!.prompt;
+      return {
+        said: m1.fields.action?.said,
+        prompt,
+        colours: prompt.split('\n').find((l) => l.startsWith('Colours:')),
+      };
+    };
+    try {
+      const off = await draw(false);
+      const on = await draw(true);
+      // Off, as before: reworded, the action is no longer said, and its colour is no longer the dream's own.
+      expect(off.prompt).toContain('The dreamer stands in the kitchen, with a red board on the wall');
+      expect(off.said).toBe(false);
+      expect(off.colours).not.toContain('red board');
+      // On: still the dreamer's words, their colour kept exactly.
+      expect(on.said).toBe(true);
+      expect(on.colours).toContain('red board');
+    } finally {
+      if (was === undefined) delete process.env.DREAMCHAT_FRESH_SEND;
+      else process.env.DREAMCHAT_FRESH_SEND = was;
+    }
+  });
 
   test('a reaction naming no picture is about what the last reply put to them, never an earlier one', async () => {
     // The judge vouches for every take, so the close-up is drawn from the wide before their word.

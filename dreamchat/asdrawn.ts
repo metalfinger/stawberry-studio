@@ -2,7 +2,7 @@
 //
 // A picture is drawn from a dream that goes on changing: the dreamer corrects a moment or a sketch, a
 // scene is planned again, the story record reads something new, an earlier picture is drawn again, the
-// look is changed. Until now nothing kept what a picture was drawn from, so nothing could say which
+// look is changed. Until S9 nothing kept what a picture was drawn from, so nothing could say which
 // pictures no longer match the dream, and a rebuild made every picture afresh from the dream as it is
 // now, which is not how any of them was drawn: each picture holds its own copy of itself (a moment's
 // words, who is in it, its plan; an in-between picture's plan), made on the day it was first put in,
@@ -11,29 +11,120 @@
 // So, when a picture is drawn, it keeps, for that take: what was sent (the prompt, and each image by
 // what it is, with its role and instruction); the picture as it held itself; each sketch and earlier
 // picture it was drawn from, with the take it was then; the story record's facts in force on everyone
-// in it; the look it was drawn in; and each input by name, hashed, which is what staleness compares.
-// A rebuild reads it back (plan.ts), so it gives the dream as it stood when each picture was drawn.
+// in it; the look it was drawn in; each input by name, hashed, as it was sent and as the dream then gave
+// it; and the switches and the version of these keys it was kept under. A rebuild reads it back when
+// asked (plan.ts), so it gives the dream as it stood when each picture was drawn.
 //
-// Staleness compares each drawn picture's record, input by input, with what drawing it again now would
-// read: its words and cast as it holds them now, the plan as a re-plan makes it now, the sketches,
-// earlier pictures, record and look as they are now. It is reported and never acted on: nothing is
-// drawn again, held or planned again for it. A picture drawn from a stale one is stale in turn
-// (sequences); a picture whose look, or whose subjects' looks, changed is stale for that (look keys).
+// Staleness compares each drawn picture, input by input, as the dream gave it when it was drawn with
+// what the dream gives it now: its words as it holds them (the dreamer's own, where the breakdown still
+// tells them, said as the breakdown says), who is in it and its plan as a re-plan makes them now, the
+// floor plan its mock-up is rendered from, the sketches, earlier pictures, record and look as they are
+// now. A picture drawn from a stale one is stale in turn (sequences); a picture whose look, or whose
+// subjects' looks, changed is stale for that (look keys). A record kept under other switches or another
+// version of the keys is not compared: the picture is listed as unknown, never stale. Where what was
+// sent differs from what the dream gave it then, the picture was drawn from a copy already behind the
+// dream: listed apart, as behind. Everything here is reported and never acted on: nothing is drawn
+// again, held or planned again for it.
+//
+// DREAMCHAT_FRESH_SEND=on (its own switch, off by default) refreshes a picture's copy of itself from the
+// plan in force when it is sent (refreshMoment, ghostInForce): what `behind` counts, fixed at the send.
 //
 // Pure: no model, no files, no clock. Behind DREAMCHAT_AS_DRAWN: off (the default) keeps nothing, and
 // every prompt is written as before.
 import { assembleCut } from './assemble';
 import type { CutPlan, GhostPlan } from './continuity';
-import { cutSheet, type CutSheet, imageNamesOf, type SheetPrint } from './cutsheet';
-import { approved, type FrameReference, type PlannedInput } from './frames';
+import { cutSheet, type CutSheet, ghostName, imageNamesOf, type SheetPrint } from './cutsheet';
+import { approved, type FrameReference, momentFields, type PlannedInput } from './frames';
 import { hashOf } from './lib';
-import type { StyleOption } from './producer';
-import { type NowOf, sayNow } from './record';
+import type { Moment, StyleOption } from './producer';
+import { type NowOf, recordMode, sayNow } from './record';
 import type { Item } from './sheets';
 
 /** Whether pictures keep a record of what they were drawn from: off (the default), or on. */
 export function asDrawnMode(): 'off' | 'on' {
   return (process.env.DREAMCHAT_AS_DRAWN ?? '').trim().toLowerCase() === 'on' ? 'on' : 'off';
+}
+
+/** Whether a picture's copy of itself is refreshed from the plan in force when it is sent: off by default. */
+export function freshSendMode(): boolean {
+  return (process.env.DREAMCHAT_FRESH_SEND ?? '').trim().toLowerCase() === 'on';
+}
+
+// ── the switches and the code a record was kept under ─────────────────────────
+
+/**
+ * The version of the keys: raised whenever what a picture's inputs are keyed by, or what they are worked
+ * out from (the continuity plan, the cut sheet, the story record), changes. A record kept under another
+ * version is not compared. test/asdrawn.test.ts holds the keys of two frozen dreams and fails when they
+ * move, so a change that moves them raises this.
+ */
+export const KEYS_VERSION = 2;
+
+/**
+ * Switches that never change what a picture is told nor how staleness reads it, so a record does not
+ * keep them. Any other DREAMCHAT_ switch is kept and compared: one added later counts, unless listed here.
+ */
+const NOT_KEYED = new Set([
+  'DREAMCHAT_AS_DRAWN',
+  'DREAMCHAT_FRESH_SEND',
+  'DREAMCHAT_CHECKS',
+  'DREAMCHAT_CUT_SHEET',
+  'DREAMCHAT_LISTEN',
+  'DREAMCHAT_PREP_REPLACES',
+  'DREAMCHAT_DATA',
+  'DREAMCHAT_STRAWBERRY_HOME',
+  'DREAMCHAT_PROVIDER',
+  'DREAMCHAT_JUDGE',
+  'DREAMCHAT_JUDGE_QUEUE',
+  'DREAMCHAT_JUDGE_WAIT_MS',
+  'DREAMCHAT_JUDGE_ENV',
+  'DREAMCHAT_IMAGE_CAP',
+  'DREAMCHAT_URL',
+  'DREAMCHAT_ENV',
+  'DREAMCHAT_WRITER',
+  'DREAMCHAT_MODEL',
+  'DREAMCHAT_HOST_MODEL',
+  'DREAMCHAT_CLAUDE_MODEL',
+  'DREAMCHAT_HOST_THINKING',
+  'DREAMCHAT_HOST_THINKING_DEEP',
+  'DREAMCHAT_PRODUCER_THINKING',
+  'DREAMCHAT_IMPLIED_THINKING',
+  'DREAMCHAT_SIM_LOOK_MS',
+  'DREAMCHAT_RESUME_MS',
+  'DREAMCHAT_GATE',
+  'DREAMCHAT_HELD',
+  'DREAMCHAT_SKETCH_HELD',
+  'DREAMCHAT_DRAW_HELD',
+  'DREAMCHAT_TAKES',
+]);
+
+/** The switches and the keys' version a record is kept under. */
+export type DrawnEnv = { version: number; switches: Record<string, string> };
+
+/** The switches in force that change what a picture is told or how it is keyed, and the keys' version. */
+export function drawnEnv(): DrawnEnv {
+  const switches: Record<string, string> = { DREAMCHAT_RECORD: recordMode() };
+  for (const [k, v] of Object.entries(process.env))
+    if (
+      k.startsWith('DREAMCHAT_') &&
+      k !== 'DREAMCHAT_RECORD' &&
+      !NOT_KEYED.has(k) &&
+      !/KEY|TOKEN|SECRET/i.test(k) &&
+      (v ?? '').trim()
+    )
+      switches[k] = (v ?? '').trim().toLowerCase();
+  return { version: KEYS_VERSION, switches: Object.fromEntries(Object.entries(switches).sort()) };
+}
+
+/** Why a record cannot be compared with the dream now: kept under other switches or another version of the keys. */
+export function driftOf(kept: DrawnEnv | undefined, now: DrawnEnv): string | null {
+  if (!kept) return 'kept before records kept their switches';
+  if (kept.version !== now.version) return `kept with version ${kept.version} of the keys, now ${now.version}`;
+  const names = [...new Set([...Object.keys(kept.switches), ...Object.keys(now.switches)])].sort();
+  const moved = names.filter((k) => kept.switches[k] !== now.switches[k]);
+  return moved.length
+    ? `kept with ${moved.map((k) => `${k}=${kept.switches[k] ?? 'unset'}`).join(', ')}, now ${moved.map((k) => `${now.switches[k] ?? 'unset'}`).join(', ')}`
+    : null;
 }
 
 // ── the record ───────────────────────────────────────────────────────────────
@@ -93,11 +184,13 @@ export type AsDrawn = {
   /** Each input in a few words, for the reasons. */
   says: Record<string, string>;
   /**
-   * The same inputs as the dream gave them when it was drawn (keysNow then: the plan as a re-plan made
-   * it then). What staleness compares with the dream now; where it differs from `keys`, the picture was
-   * drawn from a copy of itself already behind the dream, which is not staleness.
+   * The same inputs as the dream gave them when it was drawn (keysNow then). What staleness compares with
+   * the dream now; where it differs from `keys`, the picture was drawn from a copy of itself already behind
+   * the dream.
    */
   dream: Keyed | null;
+  /** The switches and the keys' version it was kept under; a record without them is never compared. */
+  env?: DrawnEnv;
 };
 
 /** A sketch's copy, as a picture is drawn from it now. */
@@ -126,12 +219,19 @@ const short = (t: string, n = 120) => (t.length > n ? `${t.slice(0, n - 1)}…` 
 
 /**
  * A moment's inputs by name, from its cut sheet and the images the sheet attaches: its words (and
- * which were said), who and what is in it, its camera and brief, the record's facts in force, the
- * look, each one in view as the prompt tells it (its image where attached), each earlier picture
- * attached (its image, what it gives and what the judge found in it), and the rest of the sheet.
- * Only what reaches the prompt: the sheet's tags, tree and record layers are left out.
+ * which were said), who and what is in it, its camera and brief (and, where it has a mock-up, the floor
+ * plan it is rendered from), the record's facts in force, the look, each one in view as the prompt tells
+ * it (its image where attached), each earlier picture attached (its image, what it gives and what the
+ * judge found in it), and the rest of the sheet. Only what reaches the prompt: the sheet's tags, tree and
+ * record layers are left out.
  */
-export function momentKeys(sheet: CutSheet, fields: Item['fields'], name: (media: string) => string): Keyed {
+export function momentKeys(
+  sheet: CutSheet,
+  fields: Item['fields'],
+  name: (media: string) => string,
+  /** The hash of the floor plan its mock-up is rendered from, where it has one. */
+  floor?: string,
+): Keyed {
   const refs = assembleCut(sheet).references;
   const attached = new Set(refs.map((r) => r.image));
   const keys: Record<string, string> = {};
@@ -149,7 +249,7 @@ export function momentKeys(sheet: CutSheet, fields: Item['fields'], name: (media
   );
   put(
     'camera',
-    { ...sheet.camera, previs: !!sheet.camera.previs },
+    { ...sheet.camera, previs: sheet.camera.previs ? (floor ?? true) : false },
     `${sheet.camera.eyes}, ${sheet.camera.size}${sheet.camera.view ? `: ${short(sheet.camera.view, 80)}` : ''}`,
   );
   put(
@@ -266,12 +366,96 @@ export function inputsOf(frames: Item[], plan: CutPlan | undefined): PlannedInpu
     .filter((x): x is PlannedInput => !!x.item && x.item.status === 'ready' && !!x.item.mediaId);
 }
 
+// ── the copy in force ────────────────────────────────────────────────────────
+
+/**
+ * A moment's words as the dream holds them now: each as the moment holds it (a correction patches the
+ * moment, not the breakdown), said as the breakdown says wherever the breakdown still tells the same words
+ * (a rewording written back by keepWords keeps the dreamer's words theirs; one made before lost `said`).
+ */
+export function fieldsInForce(fields: Item['fields'], m: Moment | undefined): Item['fields'] {
+  if (!m) return fields;
+  const told = momentFields(m);
+  const out = { ...fields };
+  for (const k of WORDS) {
+    const held = fields[k];
+    const t = told[k];
+    if (held && t && (held.value ?? null) === (t.value ?? null) && held.said !== t.said)
+      out[k] = { ...held, said: t.said };
+  }
+  return out;
+}
+
+/**
+ * A moment's copy of itself refreshed from the plan in force, as it is sent (DREAMCHAT_FRESH_SEND=on):
+ * who and what is in it from its plan, as buildFrames puts a moment in (a moment kept the cast it was
+ * first put in with, and a re-plan updates only its plan), and its words' `said` as the breakdown holds
+ * them where the words are the same. Changes the moment in place.
+ */
+export function refreshMoment(frame: Item, m: Moment | undefined): void {
+  const f = frame.frame;
+  if (!f) return;
+  const visible = f.plan?.visible ?? m?.visible;
+  const things = f.plan?.things ?? m?.things;
+  if (visible) f.visible = [...visible];
+  if (things) f.things = [...things];
+  frame.fields = fieldsInForce(frame.fields, m);
+}
+
+/**
+ * Whether two in-between pictures show the same change: by the record's key where both have one, else by
+ * who it shows, what of them changes and to what (as session.ts reconcileGhosts matches them).
+ */
+export function sameChange(a: GhostPlan, b: GhostPlan): boolean {
+  return a.key && b.key
+    ? a.key === b.key
+    : a.kind === b.kind &&
+        a.of === b.of &&
+        (a.kind === 'view'
+          ? a.looksAt === b.looksAt
+          : a.state?.what === b.state?.what && a.state?.now === b.state?.now);
+}
+
+/**
+ * Among some pictures, the one showing the same change as an in-between picture: the same change (above),
+ * else the only one of its name (`ghost:t1:lid`); none where its name is shared (two changes of one part).
+ */
+export function matchGhost<T>(g: GhostPlan, among: T[], ghostOf: (t: T) => GhostPlan | undefined): T | undefined {
+  const exact = among.find((t) => {
+    const h = ghostOf(t);
+    return !!h && sameChange(h, g);
+  });
+  if (exact) return exact;
+  const named = among.filter((t) => {
+    const h = ghostOf(t);
+    return !!h && ghostName(h) === ghostName(g);
+  });
+  return named.length === 1 ? named[0] : undefined;
+}
+
+/**
+ * The plan's in-between picture for the same change as one held, made now: by its id, else by who it
+ * shows and what of them changes (one planned before the record gave changes their keys is known only by
+ * what it says, so a change told otherwise is planned under another id).
+ */
+export function ghostInForce(held: GhostPlan, id: string, plan: { ghosts: GhostPlan[] } | null): GhostPlan | undefined {
+  if (!plan) return held;
+  const same = (x: GhostPlan) =>
+    x.kind === held.kind &&
+    x.of === held.of &&
+    (x.kind === 'view' ? x.looksAt === held.looksAt : x.state?.what === held.state?.what);
+  return plan.ghosts.find((x) => x.id === id) ?? plan.ghosts.find(same);
+}
+
+// ── keeping a record ─────────────────────────────────────────────────────────
+
 /** What a picture keeps when it is sent, and the copies it adds to the dream's. */
 export type Recorded = { record: Omit<AsDrawn, 'take'>; copies: Copies };
 
 /**
  * A moment's record as it is sent: its prompt and images as they went, and what they were made from
- * (the moment as held, the sketches, the earlier pictures drawn, its mock-up, the look).
+ * (the moment as held, the sketches, the earlier pictures drawn, its mock-up and the floor plan it is
+ * rendered from, the look).
  */
 export function recordMoment(x: {
   frame: Item;
@@ -289,7 +473,8 @@ export function recordMoment(x: {
   if (!f) throw new Error(`${x.frame.name} is not a moment`);
   const inputs = inputsOf(x.frames, f.plan);
   const sheet = cutSheet({ frame: x.frame, sheets: x.sheets, style: x.style, inputs, layout: x.layout, dream: null });
-  const { keys, says } = momentKeys(sheet, x.frame.fields, x.name);
+  // The mock-up sent is rendered from the floor plan in force as it is sent.
+  const { keys, says } = momentKeys(sheet, x.frame.fields, x.name, x.then.floor?.[x.frame.id]);
   const copies: Copies = { sketches: {}, looks: {} };
   const sketches: Record<string, string> = {};
   for (const e of sheet.inView) {
@@ -329,6 +514,7 @@ export function recordMoment(x: {
       keys,
       says,
       dream: keysNow(x.then, x.frame, x.name),
+      env: drawnEnv(),
     },
     copies,
   };
@@ -376,6 +562,7 @@ export function recordGhost(x: {
       keys,
       says,
       dream: keysNow(x.then, x.ghost, x.name),
+      env: drawnEnv(),
     },
     copies: { sketches: { [h]: c }, looks: { [look]: structuredClone(x.style) } },
   };
@@ -425,11 +612,11 @@ export function withCopies(into: Copies | undefined, more: Copies): Copies {
 
 /**
  * Why a picture is stale: which input changed. `words` its words; `cast` who or what is in it; `camera`
- * its camera or brief; `record` the story record's facts on those in it; `look` the look it was drawn in;
- * `sketch` how someone in it is drawn (their sketch's words or take); `earlier` an earlier picture it was
- * drawn from (drawn again, no longer drawn, or another now); `change` what an in-between picture shows;
- * `plan` it is no longer in the plan; `sequence` drawn from a stale picture; `other` something else the
- * prompt is written from.
+ * its camera, brief or the floor plan its mock-up is rendered from; `record` the story record's facts on
+ * those in it; `look` the look it was drawn in; `sketch` how someone in it is drawn (their sketch's words
+ * or take); `earlier` an earlier picture it was drawn from (drawn again, no longer drawn, or another now);
+ * `change` what an in-between picture shows; `plan` it is no longer in the plan; `sequence` drawn from a
+ * stale picture; `other` something else the prompt is written from.
  */
 export type ReasonKind =
   'words' | 'cast' | 'camera' | 'record' | 'look' | 'sketch' | 'earlier' | 'change' | 'plan' | 'sequence' | 'other';
@@ -439,11 +626,18 @@ export type StaleReason = { kind: ReasonKind; input: string; then?: string; now?
 export type Stale = { id: string; kind: 'cut' | 'ghost'; take: number; reasons: StaleReason[] };
 
 export type StaleReport = {
-  /** Drawn pictures whose take has a record: the ones staleness can read. */
+  /** Drawn pictures whose take has a record kept under the switches and keys in force: the ones compared. */
   checked: string[];
   /** Drawn pictures whose take has no record (drawn with the switch off, or before S9). */
   unrecorded: string[];
+  /** Drawn pictures whose record was kept under other switches or another version of the keys: not compared. */
+  unknown: { id: string; why: string }[];
   stale: Stale[];
+  /**
+   * Drawn pictures sent a copy of themselves already behind the dream when they were drawn (what was sent
+   * against what the dream gave them then). Not stale, since nothing changed after; wrong all the same.
+   */
+  behind: Stale[];
 };
 
 const KIND_OF: Record<string, ReasonKind> = {
@@ -470,13 +664,17 @@ export type DreamNow = {
    * re-plan does not update; without this, the moment's own is read.
    */
   cast?: Record<string, { visible: string[]; things: string[] }>;
+  /** The breakdown's moments, completed: the words the dream holds, and which the dreamer said. */
+  moments?: Record<string, Moment>;
+  /** By moment with a camera worked out on a floor plan: the hash of the floor plan its mock-up is rendered from. */
+  floor?: Record<string, string>;
 };
 
 /**
- * The dream as it stands, keyed as a picture's record is: a moment's words as it holds them (a correction
- * patches the moment, not the breakdown), who and what is in it and its plan as a re-plan makes them now,
- * the sketches, earlier pictures and look as they are now; an in-between picture's change as the plan now
- * has it. Null where it is no longer planned at all.
+ * The dream as it stands, keyed as a picture's record is: a moment's words as it holds them, said as
+ * the breakdown says where it tells the same words; who and what is in it and its plan as a re-plan makes
+ * them now; the floor plan its mock-up is rendered from; the sketches, earlier pictures and look as they
+ * are now; an in-between picture's change as the plan now has it. Null where it is no longer planned.
  */
 export function keysNow(d: DreamNow, it: Item, name: (media: string) => string): Keyed | null {
   if (!d.style) return null;
@@ -486,8 +684,10 @@ export function keysNow(d: DreamNow, it: Item, name: (media: string) => string):
     const plan = d.plan ? d.plan.cuts.find((c) => c.id === it.id) : f.plan;
     if (!plan) return null;
     const cast = d.cast?.[it.id];
+    const fields = fieldsInForce(it.fields, d.moments?.[it.id]);
     const frame: Item = {
       ...it,
+      fields,
       frame: { ...f, plan, ...(cast ? { visible: [...cast.visible], things: [...cast.things] } : {}) },
     };
     const inputs = inputsOf(d.frames, plan);
@@ -499,18 +699,11 @@ export function keysNow(d: DreamNow, it: Item, name: (media: string) => string):
       layout: it.layout?.mediaId,
       dream: null,
     });
-    return momentKeys(sheet, it.fields, name);
+    return momentKeys(sheet, fields, name, d.floor?.[it.id]);
   }
   const held = it.ghost;
   if (!held) return null;
-  // The plan's in-between picture for the same change: by its id, else by who it shows and what of them
-  // changes (one planned before the record gave changes their keys is known only by what it says, so a
-  // change told otherwise is planned under another id).
-  const same = (x: GhostPlan) =>
-    x.kind === held.kind &&
-    x.of === held.of &&
-    (x.kind === 'view' ? x.looksAt === held.looksAt : x.state?.what === held.state?.what);
-  const g = d.plan ? (d.plan.ghosts.find((x) => x.id === it.id) ?? d.plan.ghosts.find(same)) : held;
+  const g = ghostInForce(held, it.id, d.plan);
   if (!g) return null;
   const sheet = d.items.find((i) => i.id === g.of);
   if (!sheet) return null;
@@ -525,12 +718,14 @@ export function keysNow(d: DreamNow, it: Item, name: (media: string) => string):
 }
 
 /**
- * Which drawn pictures no longer match the dream, and why: each picture's record, input by input,
- * against what drawing it again now would read (keysNow); then down the chains pictures were drawn
- * along, a picture drawn from a stale one is stale in turn. Reported only: nothing here acts.
+ * Which drawn pictures no longer match the dream, and why: each picture as the dream gave it when it was
+ * drawn, input by input, against what the dream gives it now (keysNow); then down the chains pictures were
+ * drawn along, a picture drawn from a stale one is stale in turn. A record kept under other switches or
+ * another version of the keys is listed as unknown and not compared; a picture sent a copy of itself behind
+ * the dream is listed as behind. Reported only: nothing here acts.
  */
-export function staleness(d: DreamNow, name: (media: string) => string): StaleReport {
-  const report: StaleReport = { checked: [], unrecorded: [], stale: [] };
+export function staleness(d: DreamNow, name: (media: string) => string, env = drawnEnv()): StaleReport {
+  const report: StaleReport = { checked: [], unrecorded: [], unknown: [], stale: [], behind: [] };
   const byId = new Map<string, Stale>();
   const drawn = d.frames.filter((f) => (f.kind === 'cut' || f.kind === 'ghost') && f.status === 'ready' && f.mediaId);
   const records = new Map<string, AsDrawn>();
@@ -540,18 +735,23 @@ export function staleness(d: DreamNow, name: (media: string) => string): StaleRe
       report.unrecorded.push(f.id);
       continue;
     }
+    const drift = driftOf(rec.env, env);
+    if (drift) {
+      report.unknown.push({ id: f.id, why: drift });
+      continue;
+    }
     records.set(f.id, rec);
     report.checked.push(f.id);
+    const kind = f.kind as 'cut' | 'ghost';
+    const late = behind(rec);
+    if (late.length) report.behind.push({ id: f.id, kind, take: rec.take, reasons: late });
     const now = keysNow(d, f, name);
     // What the dream gave it when it was drawn; for a record kept without it, what was sent.
     const then: Keyed = rec.dream ?? { keys: rec.keys, says: rec.says };
     const reasons: StaleReason[] = [];
     if (!now) reasons.push({ kind: 'plan', input: 'plan', then: 'planned', now: 'no longer in the plan' });
     else reasons.push(...differ(then, now));
-    if (reasons.length) {
-      const st: Stale = { id: f.id, kind: f.kind as 'cut' | 'ghost', take: rec.take, reasons };
-      byId.set(f.id, st);
-    }
+    if (reasons.length) byId.set(f.id, { id: f.id, kind, take: rec.take, reasons });
   }
   // Sequences: drawn from a stale picture, stale in turn, down every chain.
   for (let changed = true; changed;) {
@@ -560,9 +760,7 @@ export function staleness(d: DreamNow, name: (media: string) => string): StaleRe
       const rec = records.get(f.id);
       if (!rec) continue;
       for (const src of rec.from) {
-        if (src.kind === 'sketch' || src.id === f.id) continue;
-        const up = byId.get(src.id);
-        if (!up) continue;
+        if (src.kind === 'sketch' || src.id === f.id || !byId.has(src.id)) continue;
         const own = byId.get(f.id);
         if (own?.reasons.some((r) => r.kind === 'sequence' && r.input === src.id)) continue;
         const reason: StaleReason = { kind: 'sequence', input: src.id, then: src.name, now: `${src.id} is stale` };
@@ -573,7 +771,9 @@ export function staleness(d: DreamNow, name: (media: string) => string): StaleRe
     }
   }
   const order = new Map(d.frames.map((f, i) => [f.id, i]));
-  report.stale = [...byId.values()].sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+  const inOrder = (a: Stale, b: Stale) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0);
+  report.stale = [...byId.values()].sort(inOrder);
+  report.behind.sort(inOrder);
   return report;
 }
 
