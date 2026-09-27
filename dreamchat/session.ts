@@ -87,7 +87,7 @@ import type { Blocking } from './blocking';
 import { checkedReply, gapMatters, gapsOf, majorGaps, type ReplyCheckRecord } from './listen';
 import type { TreeInput } from './tree';
 import { atSite, inSession, recordJev } from './jevlog';
-import { askFacts, decide, type Reading, STORYBOARD } from './stages';
+import { askFacts, decide, type Reading, STORYBOARD, storyboardActs } from './stages';
 import { planFacts } from './planfacts';
 import { previsImage } from './previs';
 import {
@@ -100,7 +100,18 @@ import {
   turnedInto,
   isWhole,
 } from './frames';
-import { actsWhenLogging, checkReferences, checksMode, gateFacts, preflight, readPrompt, sha } from './gate';
+import {
+  actingOf,
+  actsOn,
+  actsWhenLogging,
+  checkReferences,
+  checksMode,
+  gateFacts,
+  preflight,
+  readPrompt,
+  sha,
+} from './gate';
+import { type CutFacts, cutFactsOf, routedMode } from './checks';
 import {
   type CutSheet,
   cutSheet,
@@ -431,9 +442,13 @@ export async function planShots(
   };
   const held = blocked.scenes.filter((sc) => sc.moments.some((m) => heldMoment(m.id)));
   // With the checks only logging (DREAMCHAT_CHECKS=log), nothing is planned again for what the check
-  // found: its readings stay on the prep and in the log, and the first plan is kept.
-  if (checksMode() === 'log')
-    for (const sc of held)
+  // found: its readings stay on the prep and in the log, and the first plan is kept. Routed
+  // (DREAMCHAT_JEV_ROUTED=on), only a scene with a moment whose failed facts have earned acting is.
+  const replanned = held.filter((sc) =>
+    sc.moments.some((m) => heldMoment(m.id) && storyboardActs(prep.storyboard![m.id])),
+  );
+  if (replanned.length < held.length)
+    for (const sc of held.filter((x) => !replanned.includes(x)))
       recordJev({
         kind: 'transition',
         stage: 'plan',
@@ -446,11 +461,11 @@ export async function planShots(
           .map((m) => m.id)
           .join(', ')} at odds with the dream; only logged, so the first plan is kept`,
       });
-  else if (deps.jev && deps.block && held.length) {
+  if (deps.jev && deps.block && replanned.length) {
     const jev = deps.jev;
     const block = deps.block;
     const fix = Object.fromEntries(
-      held.map((sc) => [
+      replanned.map((sc) => [
         sc.id,
         sc.moments
           .filter((m) => heldMoment(m.id))
@@ -460,7 +475,7 @@ export async function planShots(
           ),
       ]),
     );
-    const only = held.map((sc) => sc.id);
+    const only = replanned.map((sc) => sc.id);
     const tries: { fix?: Record<string, string[]> }[] = [{ fix }, {}, {}];
     const candidates = (
       await Promise.all(
@@ -483,7 +498,7 @@ export async function planShots(
           a + (p.storyboard?.[m.id]?.ok ? 100 : 0) + (p.storyboard?.[m.id]?.readings.filter((r) => r.ok).length ?? 0),
         0,
       );
-    for (const sc of held) {
+    for (const sc of replanned) {
       const before = score(prep, sc);
       let best: { score: number; c: (typeof candidates)[number] } | null = null;
       for (const c of candidates) {
@@ -961,8 +976,8 @@ export async function storyboardCheck(
       to: STORYBOARD.from,
       moment: m.id,
       facts: [],
-      // With the checks only logging (DREAMCHAT_CHECKS=log), what it found holds nothing.
-      decision: checksMode() === 'log' ? 'logged' : 'held',
+      // With the checks only logging (DREAMCHAT_CHECKS=log), or routed and not earned, it holds nothing.
+      decision: actsOn('moment.sb_framing') ? 'held' : 'logged',
       reason: reasons.join('; '),
       view,
     });
@@ -976,7 +991,7 @@ export async function storyboardCheck(
     to: ok ? STORYBOARD.to : STORYBOARD.from,
     moment: m.id,
     facts: readings,
-    decision: ok ? 'cleared' : checksMode() === 'log' ? 'logged' : 'held',
+    decision: ok ? 'cleared' : storyboardActs({ ok, readings }) ? 'held' : 'logged',
     reason: ok ? 'every fact passed its bar' : reasons.join('; '),
     // The shot as Jev was given it, so the reading can be told from one of another shot.
     view,
@@ -2366,6 +2381,37 @@ export class SessionStore {
   }
 
   /**
+   * Routed (DREAMCHAT_JEV_ROUTED=on): the tags and facts a moment's library questions are asked from, read
+   * off its cut sheet: the one it is sent with (DREAMCHAT_CUT_SHEET shadow or on), else one built here for
+   * them alone, never sent and never logged. None when not routed, or when no sheet can be built.
+   */
+  private routingOf(
+    s: Session,
+    frame: Item,
+    layout: string | undefined,
+    built: Framed,
+    once: { dream?: SheetDream | null },
+  ): CutFacts | undefined {
+    if (!routedMode()) return undefined;
+    if (built.sheet) return cutFactsOf(built.sheet);
+    try {
+      if (once.dream === undefined) once.dream = sheetDreamOf(s);
+      return cutFactsOf(
+        cutSheet({
+          frame,
+          sheets: s.build?.items ?? [],
+          style: s.style as StyleOption,
+          inputs: this.plannedInputs(s, frame),
+          layout,
+          dream: once.dream,
+        }),
+      );
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
    * Start (or redraw) one frame. When the person corrected the moment, its revised fields are
    * patched onto the cut first, sourced to their words.
    */
@@ -2457,7 +2503,9 @@ export class SessionStore {
     // With the checks only logging (DREAMCHAT_CHECKS=log), what it found is kept on the picture, which
     // is drawn from the plan it has: nothing is planned again, held or left undrawn for it.
     const logOnly = checksMode() === 'log';
-    if (logOnly)
+    // Routed (DREAMCHAT_JEV_ROUTED=on), a shot found at odds is held or planned again only where a fact it
+    // failed has earned acting; otherwise it is kept on the picture, as when only logging.
+    if (logOnly || (routedMode() && !(checked && storyboardActs(checked))))
       frame.overrode =
         view && checked && checked.view === view && !checked.ok
           ? checked.reasons.map((r) => `storyboard: ${r}`)
@@ -2513,14 +2561,28 @@ export class SessionStore {
     }
     let built = this.framed(s, frame, layout, 'frames', once);
     const inView = inViewOf(frame, s.build.items);
-    let findings = await this.gateFindings(s, frame, built.prompt, built.references, inView);
+    let findings = await this.gateFindings(
+      s,
+      frame,
+      built.prompt,
+      built.references,
+      inView,
+      this.routingOf(s, frame, layout, built, once),
+    );
     // The brief is the one line a model wrote from the view: where the gate finds the prompt at odds
     // with itself there, the view read off the render says the same without it.
     if (!logOnly && frame.shot && findings.length && frame.gate?.around?.line.startsWith('The shot')) {
       acted(frame, 'brief set aside', findings);
       frame.shot = undefined;
       built = this.framed(s, frame, layout, 'frames', once);
-      findings = await this.gateFindings(s, frame, built.prompt, built.references, inView);
+      findings = await this.gateFindings(
+        s,
+        frame,
+        built.prompt,
+        built.references,
+        inView,
+        this.routingOf(s, frame, layout, built, once),
+      );
     }
     // What only its words got wrong is put right in words first, and read again: twice at most.
     // Never what is at odds only on the line that says what the camera sees: that is the plan's,
@@ -2546,7 +2608,14 @@ export class SessionStore {
       await this.keepWords(s, frame);
       delete once.dream;
       built = this.framed(s, frame, layout, 'frames', once);
-      findings = await this.gateFindings(s, frame, built.prompt, built.references, inView);
+      findings = await this.gateFindings(
+        s,
+        frame,
+        built.prompt,
+        built.references,
+        inView,
+        this.routingOf(s, frame, layout, built, once),
+      );
     }
     // At odds on the line that says what the camera sees, the plan is what is at odds: the balloons
     // planned as a block hiding the couple, the room's front named for a sofa standing in its middle
@@ -2718,6 +2787,8 @@ export class SessionStore {
     prompt: string,
     references: { media_id: string; role: string }[],
     inView: Item[],
+    /** Routed (DREAMCHAT_JEV_ROUTED=on): a moment's tags and facts, whose library questions are asked too. */
+    routing?: CutFacts,
   ): Promise<string[]> {
     if (!this.deps.gate) return [];
     const order = item.frame?.order;
@@ -2749,15 +2820,26 @@ export class SessionStore {
       sheet,
       kind: sheet ? (isAnimal(item) ? 'animal' : (item.kind as 'character' | 'location' | 'prop')) : undefined,
       edit: item.kind === 'ghost',
+      ...(routing ? { routed: routing } : {}),
     });
     if (read.reading) item.gate = read.reading;
     const all = [...fixed, ...read.findings];
     // With the checks only logging (DREAMCHAT_CHECKS=log), only a fault code knows for certain acts;
     // everything else found is kept on the picture as what the checks would have held it for.
     const log = checksMode() === 'log';
-    const acting = log ? all.filter(actsWhenLogging) : all;
+    // Routed (DREAMCHAT_JEV_ROUTED=on): that, and what the checks that have earned acting find.
+    const routed = routedMode();
+    const acting = log
+      ? all.filter(actsWhenLogging)
+      : routed
+        ? actingOf(fixed, read, sheet ? 'sketch' : item.kind === 'ghost' ? 'ghost' : 'moment')
+        : all;
     if (log) {
       const logged = all.filter((f) => !actsWhenLogging(f));
+      const shot = (item.overrode ?? []).filter((f) => f.startsWith('storyboard: '));
+      item.overrode = shot.length || logged.length ? [...shot, ...logged] : undefined;
+    } else if (routed) {
+      const logged = all.filter((f) => !acting.includes(f));
       const shot = (item.overrode ?? []).filter((f) => f.startsWith('storyboard: '));
       item.overrode = shot.length || logged.length ? [...shot, ...logged] : undefined;
     }
@@ -2768,7 +2850,15 @@ export class SessionStore {
       to: acting.length ? 'held' : 'draw',
       moment: item.id,
       facts: read.reading ? gateFacts(read.reading, { sheet, edit: item.kind === 'ghost' }) : [],
-      decision: !all.length ? 'cleared' : !log ? 'found' : acting.length ? 'held' : 'logged',
+      decision: !all.length
+        ? 'cleared'
+        : log
+          ? acting.length
+            ? 'held'
+            : 'logged'
+          : routed && !acting.length
+            ? 'logged'
+            : 'found',
       reason: all.join('; ') || 'every reading passed its bar',
       // Which prompt, which take (a sketch counts its take before the gate, a moment when it is sent)
       // and which wording of the questions this reading was of.
@@ -3326,7 +3416,7 @@ export class SessionStore {
               it.repairFor = snapshot.repairFor;
               it.gate = snapshot.gate;
               it.held = undefined;
-              if (snapshot.overrode || checksMode() === 'log') it.overrode = snapshot.overrode;
+              if (snapshot.overrode || checksMode() === 'log' || routedMode()) it.overrode = snapshot.overrode;
               it.checkedTakes = [
                 ...(it.checkedTakes ?? []),
                 {

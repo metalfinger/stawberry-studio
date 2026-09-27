@@ -28,11 +28,14 @@ import { recordInputsOf, recordMode } from '../record';
 import { applyPrep, planShots, type Session, SessionStore, type StoreDeps } from '../session';
 import type { Item, SheetEngine } from '../sheets';
 import { checksMode } from '../gate';
+import { routedMode } from '../checks';
 
 export type Redrawn = {
   name: string;
   source: string;
   checks: 'act' | 'log';
+  /** DREAMCHAT_JEV_ROUTED=on: the checks routed by tags, only those that earned it acting. */
+  routed?: boolean;
   record: string;
   cutSheet: string;
   /** The model steps asked for, by name, and why: none can be reached here. */
@@ -196,6 +199,7 @@ export async function redraw(source: string, out: string): Promise<Redrawn> {
     name,
     source,
     checks: checksMode(),
+    ...(routedMode() ? { routed: true } : {}),
     record: recordMode(),
     cutSheet: process.env.DREAMCHAT_CUT_SHEET ?? 'off',
     asked,

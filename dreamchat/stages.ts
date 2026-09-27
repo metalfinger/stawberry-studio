@@ -5,7 +5,7 @@
 //
 // A new check is a new fact here, worded for Jev, with its bar: not a new code path. The bars are
 // provisional until each question has a labelled set of real cases to set it from.
-import { checksMode } from './gate';
+import { actsOn } from './gate';
 import type { Question } from './jev';
 
 /**
@@ -252,18 +252,31 @@ export function decide(
   return { ok: readings.every((r) => r.ok), readings, reasons };
 }
 
+/**
+ * Whether what "storyboard complete?" found holds the moment (and plans its scene again): as before, when
+ * the checks act, and never when they only log (DREAMCHAT_CHECKS=log); routed (DREAMCHAT_JEV_ROUTED=on),
+ * only where a fact it failed has earned acting, or its framing (measured off the render by code) has.
+ */
+export function storyboardActs(c: { ok: boolean; readings?: Reading[] }): boolean {
+  if (c.ok) return false;
+  const failed = (c.readings ?? []).filter((r) => !r.ok);
+  return failed.length ? failed.some((r) => actsOn(`moment.${r.question}`)) : actsOn('moment.sb_framing');
+}
+
 /** Where one moment is: from its frame once it has one, otherwise from its planning. */
 export function momentStage(
   id: string,
-  prep: { previs?: Record<string, string>; storyboard?: Record<string, { ok: boolean }> } | undefined,
+  prep:
+    { previs?: Record<string, string>; storyboard?: Record<string, { ok: boolean; readings?: Reading[] }> } | undefined,
   frame: { status: string; held?: string[] } | undefined,
 ): StageId {
   if (frame?.status === 'drawing') return 'image';
   if (frame?.status === 'ready') return 'review';
   if (frame?.held?.length) return frame.held.every((h) => h.startsWith('storyboard:')) ? 'previs' : 'prompt';
   const checked = prep?.storyboard?.[id];
-  // With the checks only logging, a shot the check found at odds is not held there: it goes on.
-  if (checked) return checked.ok || checksMode() === 'log' ? 'prompt' : 'previs';
+  // With the checks only logging, or routed where it has not earned acting, a shot the check found at odds
+  // is not held there: it goes on.
+  if (checked) return storyboardActs(checked) ? 'previs' : 'prompt';
   return prep?.previs?.[id] ? 'previs' : 'plan';
 }
 
@@ -274,7 +287,7 @@ export function momentStage(
 export function stageOf(s: {
   phase: string;
   build?: { frames?: { id: string; kind: string; status: string; held?: string[] }[] } | null;
-  prep?: { previs?: Record<string, string>; storyboard?: Record<string, { ok: boolean }> };
+  prep?: { previs?: Record<string, string>; storyboard?: Record<string, { ok: boolean; readings?: Reading[] }> };
 }): StageId | null {
   const at: Record<string, StageId> = {
     listen: 'listen',

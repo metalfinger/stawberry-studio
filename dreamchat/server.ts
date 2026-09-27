@@ -7,7 +7,8 @@ import { loadedKeys } from './boot';
 import { join } from 'node:path';
 import { dreamConfig } from './dream';
 import { callJev, jevAvailable } from './jev';
-import { checksMode } from './gate';
+import { routedMode } from './checks';
+import { actsOn } from './gate';
 import { jevTotals, readJevLog } from './jevlog';
 import { callHost, WRITER, WRITER_MODEL } from './llm';
 import { blockScenes, fixFrom, shotFor, superviseChanges, proposeLook, reviseItem, rewordLook, rewordMoment } from './producer';
@@ -130,8 +131,10 @@ const server = Bun.serve({
         return json({
           stages: STAGES,
           transitions: [STORYBOARD],
-          // Whether the checks act or only log (DREAMCHAT_CHECKS): the panel says "would hold" when they log.
-          checks: checksMode(),
+          // Whether the checks act or only log (DREAMCHAT_CHECKS): the panel says "would hold" when they log,
+          // and when they are routed (DREAMCHAT_JEV_ROUTED=on) and no storyboard fact has earned acting.
+          checks: STORYBOARD.facts.some((f) => actsOn(`moment.${f.id}`)) ? 'act' : 'log',
+          routed: routedMode(),
           stage: stageOf(s),
           moments: Object.fromEntries(moments.map((m) => [m.id, momentStage(m.id, s.prep, frames.find((f) => f.id === m.id))])),
           totals: jevTotals(log),

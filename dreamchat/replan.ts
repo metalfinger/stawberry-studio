@@ -13,7 +13,7 @@
 import { loadedKeys } from './boot';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { checksMode } from './gate';
+import { storyboardActs } from './stages';
 import { callJev } from './jev';
 import { inSession } from './jevlog';
 import { blockScenes, shotFor, superviseChanges } from './producer';
@@ -84,6 +84,6 @@ for (const m of b.scenes.flatMap((sc) => sc.moments)) {
   const c = checks[m.id];
   const facts = c ? c.readings.map((r) => `${r.question} ${r.answer.toFixed(2)}${r.ok ? '' : '!'}`).join(' ') : '';
   console.log(
-    `${m.id} ${c ? (c.ok ? 'cleared' : checksMode() === 'log' ? 'logged ' : 'held   ') : 'no check'} ${facts}${c && !c.ok ? `\n     ${c.reasons.join('; ')}` : ''}`,
+    `${m.id} ${c ? (c.ok ? 'cleared' : storyboardActs(c) ? 'held   ' : 'logged ') : 'no check'} ${facts}${c && !c.ok ? `\n     ${c.reasons.join('; ')}` : ''}`,
   );
 }
