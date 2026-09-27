@@ -12,7 +12,7 @@ context mirrors it.
 | Step | Status | Latest result |
 | --- | --- | --- |
 | S0 The test set from the owner's verdicts | Done | 85 prompt cases from 122 verdicts |
-| S1 The story record carries state | Done | faults met 6/33 to 18/33, guards 36/36 |
+| S1 The story record carries state | Done | faults met 6/33 to 18/33, guards 36/36; with Claude reading what the moments imply, 19/33 and S1's cases 12/13 |
 | S2 Checks only log | Done | whole-dream replays on Claude: logging drew 127/127 moments, 0 held or reworded, Jev ~41 calls a dream (acting: 14 undrawn, 54 reworded, 306-324 calls); logging is the default since 27 Sep (`DREAMCHAT_CHECKS=act` brings acting back) |
 | S3 One cut sheet per picture | Done | the sheet's prompt equals the old builder's on 1052 rebuilds and 48 of 48 live builds |
 | S4 Camera rules | Fixing what review found | faults met 18/33 to 27/33, guards 36/36 (branch `s4-camera`) |
@@ -529,6 +529,7 @@ between sessions.
 | S1 | S3 | `record.ts` renders English sentences (`nowAt`); the cut sheet should carry typed facts (who, part, now, held by, basis) rendered once at assembly. New word lists in S1 (FILLS, OPENS, STATE_VERB, NOT_THERE, SELF, TAKEN, HOLDS_NAME) overlap the implied-state reading and should give way to it. |
 | S1 | S4 | Water level and boat height come from floor-plan heights (library-1 m5, library-3 m7 still fail on the mock-up's layout); a held thing in a through-the-eyes view is placed at its floor-plan spot instead of the hands; the "Nobody else is in the picture" line can list people who are. |
 | S1 | S5 | Implied changes make no in-between picture of their own until S5 settles the owner's rule (one only when an edit carries several changes); the per-change in-between pictures from before remain for S5. `shutAway` closes anything opened when carried to another place (right for a suitcase, wrong for an umbrella or book). |
+| S1 | S5 | With Claude reading what the moments imply, the readings bring in-between pictures that turn a place to face something ("the old city library, facing the yellow boat"): frozen 29 against 24 without the readings, live 79 against 67. S1 stops only a state read as implied from getting one; which of these the owner's rule (2 or more changes) keeps is S5's. |
 | S1 | S6 | `withoutWords` is another regex clean-up in frames.ts; S6 retires these. Text rendering bugs of the record land in the prompt until S6 builds it from the sheet. |
 | S1 | S2 | The live-flow check (`evals/live-flow.ts`) passes a moment the checks acted on: drawn again from a list of what went wrong, or drawn without its brief because the pre-draw check set it aside (5 of 26 moments on the fake replays, 27 Sep). A rebuild cannot know these; once S2 makes the checks log only, those moments should rebuild word for word. Done on the picture path (27 Sep): with DREAMCHAT_CHECKS=log the redraws of those dreams have 0 moments differing because a check acted (jellyfish-city m5, sea-school m2 and m7 rebuild word for word); to confirm on whole replays once DeepSeek is back. |
 | S2 | S7 | The checks' readings, logged per picture with DREAMCHAT_CHECKS=log: `gate` transitions in each dream's Jev log (every answer with its bar, what it found, and whether it acted), `previs` transitions for "storyboard complete?", and `overrode` on the picture as drawn. S7's labelled sets are these against the pictures. A reading is not put on a line when logging (the line search was 4 in 5 of the gate's calls): if S7 needs the line a reading rests on, it asks for it on the logged prompt. Each reading carries `ref` (prompt hash, take, question-wording hash) and each picture keeps `checkedTakes`, so a label joins the take it was read for. |
@@ -549,6 +550,7 @@ between sessions.
 | S8 | S3 | The producer can write "not applicable" into a field, which the Strawberry engine rejects (one conversation's production failed): the breakdown's empty values should be null. |
 | S8 | S8 | Said-but-not-told residue (12/912) comes from breakdown fields `ground.ts` passes whole ("perhaps lockers or doors"): a field holds one said flag, so per-clause basis must come from the record/sheet. |
 | S8 | S8 | The come-back rule (6b, circle_back) is answered "I don't remember" 17 of 21 times on the Claude writer and begins 10 of the 12 retellings made because they ran out of memory (6 in the before): drop it, or come back only to a thread a picture needs, and measure against `evals/listening-before-claude-scores.json`. |
+| S1 | S6 | A floor plan's view words can carry a place's id: "facing the high round window; outside it l2" (the key-and-boat library, m5, from the saved plan) reaches 1 prompt without the implied readings and 4 with them (the in-between pictures named after it). |
 | S3 | S6 | `docs/cut-sheet-map.md` lists every prompt input and where it is computed today; S6's `assembleCut` reads only the sheet S3 builds. |
 | S3 | S6 | The sheet still does framePrompt's text clean-ups while it is built (`withoutGone`, `lookIn`'s `withoutWords`/`VAGUE`/`withoutPose`/`inShades`, `writingIn`), so the port stays word for word; S6 retires them for typed facts. `assembleCut` returns each paragraph with an id (`framing`, `shot`, `manifest`, `now` …) and the sheet fields it says: the gate's line-text matching in session.ts (`startsWith('The shot')`, `'around: "What the camera sees'`) can use the ids. |
 | S3 | S2 | On the drawing path the gate drops a moment's brief when it finds the prompt at odds on "The shot" line; a rebuild cannot know it did. A moment now keeps a print of the sheet it was sent with (`sentSheet`), and the live-flow check counts a sheet that differs only in the brief as explained where the prompt is (jellyfish-city m5, sea-school m2 and m7 of the record-fake flow replays, drawn before the print was kept). It goes once S2 makes the checks only log. With DREAMCHAT_CHECKS=log the brief is never set aside (0 in 20 redraws, against 3-6 acting) and those sheets match; the explanation in live-flow can go when log is the default. |
@@ -948,3 +950,14 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   because they ran out of memory, 6 to 12 of 20, 10 of them straight after the come-back rule (17 of its 21 answers
   "I don't remember"). Three floors fail within noise (kept as said by one fact, "I don't remember" 0.24 to 0.28,
   asked again 0.06 to 0.09). No second round: it would not change the verdict. S8 stays off until rule 6b is fixed.
+- 27 Sep: what the moments imply, read again with Claude (the cache is keyed by the writer, so every reading is
+  new; `DREAMCHAT_WRITER=claude DREAMCHAT_RECORD=on evals/corpus.ts`, frozen and `--live`). Frozen, 15 dreams: 41
+  readings proposed, 26 taken; live, 59 dreams: 127 proposed, 78 taken (DeepSeek's: 85 and 50). The rising water
+  is taken in 279d, de6c and 6081, up to the high window where the boat is; the review's rejects (tiles warm, door
+  unlocked, a crowd, a train leaning, an old-film look) are not even proposed now; one true state is lost just
+  under the bar (de6c m3, "covering the whole floor, partway up the desk legs"). Prompt cases, record on: counted
+  faults 19/33 (18/33 without the readings; DeepSeek's readings gave 18/33), S1's cases 12/13 with model step 5/6
+  (DeepSeek's 11/13): library-3 m7's water now reaches the window and the boat is no longer put low; library-1 m5's
+  boat is still put low by the mock-up (S4). Guards 36/36. In-between pictures: frozen 29 (24 without the readings,
+  25 off), live 79 (67, 66): the readings bring pictures that turn a place to face something (S1 -> S5). A reading
+  of 115 moments took about 2.5 minutes, 411 about 12.
