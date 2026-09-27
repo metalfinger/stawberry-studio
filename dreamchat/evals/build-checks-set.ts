@@ -75,7 +75,12 @@ export type SetPicture = {
   prompt_sha: string;
   /** Its images, in order, as "role name". */
   images: string[];
-  /** The shot as the moment's storyboard check read it is this picture's too (its view is in the prompt). */
+  /**
+   * The shot "storyboard complete?" read is the one this picture was drawn from: its view is in the prompt
+   * word for word. Where it is not (a camera placed again after the check; a prompt that says the shot as
+   * its brief, or through the dreamer's eyes in other words), the reading is of another shot, or cannot be
+   * told to be this one, and it is left out of the storyboard's measure.
+   */
   same_shot: boolean;
   /** The picture judge's verdict (evals/picture-judge.md), for comparison. */
   judge: Verdict | null;
@@ -119,9 +124,17 @@ type PairedEntry = { prompt: string; images: { n: number; role: string; key: str
 const EVALS = import.meta.dir;
 const json = <T>(name: string) => JSON.parse(readFileSync(join(EVALS, name), 'utf8')) as T;
 
-/** The view a prompt says the camera sees, to tell whether a picture was drawn from the shot checked. */
-export const viewIn = (prompt: string) =>
-  prompt.match(/(?:What the camera sees|What the dreamer sees)[^:]*?:\s([\s\S]*?)(?:\n\n|$)/)?.[1]?.trim() ?? null;
+/** Whether a prompt carries, word for word, the shot a storyboard reading was of. */
+export function drawnFromShot(prompt: string, state: string): boolean {
+  let shot: unknown;
+  try {
+    shot = (JSON.parse(state) as { shot?: unknown }).shot;
+  } catch {
+    return false;
+  }
+  const flat = (x: string) => x.replace(/\s+/g, ' ').trim();
+  return typeof shot === 'string' && !!shot.trim() && flat(prompt).includes(flat(shot));
+}
 
 if (import.meta.main) {
   const story = json<{ rows: StoryRow[] }>('story-pictures.json').rows;
@@ -209,7 +222,7 @@ if (import.meta.main) {
       prompt: null,
       prompt_sha: sha(s.prompt),
       images: s.images,
-      same_shot: true,
+      same_shot: !!row.state && drawnFromShot(s.prompt, row.state),
       judge: row.judge ?? null,
     });
   }
@@ -223,7 +236,6 @@ if (import.meta.main) {
       const id = `${row.id}-${v.way}`;
       const e = results.entries[id];
       if (!e) throw new Error(`${id}: not in the paired results`);
-      const view = viewIn(e.prompt);
       pictures.push({
         id,
         kind: 'paired',
@@ -238,7 +250,7 @@ if (import.meta.main) {
         prompt: e.prompt,
         prompt_sha: sha(e.prompt),
         images: e.images.map((i) => `${i.role} ${i.key}`),
-        same_shot: !!shot && !!view && shot.state.includes(JSON.stringify(view).slice(1, -1)),
+        same_shot: !!shot && drawnFromShot(e.prompt, shot.state),
         judge: v.judge ?? null,
       });
     }
@@ -255,6 +267,6 @@ if (import.meta.main) {
   const count = (xs: SetPicture[]) =>
     `${xs.length} (${xs.filter((p) => p.verdict !== 'right').length} not right, ${xs.filter((p) => p.verdict === 'wrong').length} wrong)`;
   console.log(
-    `checks-set.json: ${Object.keys(moments).length} moments (${Object.values(moments).filter((m) => m.facts).length} with a cut sheet); pictures ${count(pictures)}; tune ${count(pictures.filter((p) => p.split === 'tune'))}, held out ${count(pictures.filter((p) => p.split === 'held_out'))}; paired pictures drawn from the checked shot ${pictures.filter((p) => p.kind === 'paired' && p.same_shot).length}/60`,
+    `checks-set.json: ${Object.keys(moments).length} moments (${Object.values(moments).filter((m) => m.facts).length} with a cut sheet); pictures ${count(pictures)}; tune ${count(pictures.filter((p) => p.split === 'tune'))}, held out ${count(pictures.filter((p) => p.split === 'held_out'))}; drawn from the shot checked: story ${pictures.filter((p) => p.kind === 'story' && p.same_shot).length}/${pictures.filter((p) => p.kind === 'story' && set.moments[`${p.session}/${p.moment}`]?.shot).length} with a reading, paired ${pictures.filter((p) => p.kind === 'paired' && p.same_shot).length}/60`,
   );
 }

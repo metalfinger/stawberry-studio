@@ -1111,8 +1111,13 @@ describe('a whole conversation', () => {
       // Its reading is logged with its bars; nothing a check did is.
       const log = readJevLog(dir, run.id);
       const read = log.find((e) => e.kind === 'transition' && e.stage === 'gate' && e.moment === 'm1');
+      // The gate's own readings (routed, DREAMCHAT_JEV_ROUTED=on, its library questions are logged beside them).
+      const gateOwn = (f: { question: string }) => !f.question.startsWith('r_');
       expect(
-        read?.kind === 'transition' && [read.decision, read.facts.map((f) => [f.question, f.answer, f.ok])],
+        read?.kind === 'transition' && [
+          read.decision,
+          read.facts.filter(gateOwn).map((f) => [f.question, f.answer, f.ok]),
+        ],
       ).toEqual([
         'logged',
         [

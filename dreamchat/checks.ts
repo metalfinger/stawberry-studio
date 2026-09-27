@@ -11,8 +11,9 @@
 //
 // Behind DREAMCHAT_JEV_ROUTED=on. Off (the default), nothing here is asked and every check acts or logs as
 // DREAMCHAT_CHECKS says, as before. On: the gate also asks each moment the library questions its tags
-// route to, in the same call (one call a picture, as before); only the checks in EARNED act, the rest are
-// logged with their readings and bars. DREAMCHAT_CHECKS=log still wins: nothing but code acts.
+// route to, in the same call (one call a picture, as before); only the checks in EARNED act, at the bar
+// they earned it at, whether the checks log or act by default, and the rest are logged with their readings
+// and bars. DREAMCHAT_CHECKS=log set on purpose stops even an earned check: then nothing but code acts.
 //
 // Pure: no model, no files. The eval that measures every check is evals/jev-checks.ts (HARNESS_PLAN.md S7).
 import type { CutSheet, CutTags } from './cutsheet';
@@ -24,13 +25,17 @@ export function routedMode(): boolean {
 }
 
 /**
- * The checks that met their bar on the owner's verdicts (HARNESS_PLAN.md, S7 results), by id: only these
- * may act when the checks are routed. Measured 27 Sep on the 122 pictures the owner judged: none does (the
- * gate's questions and "storyboard complete?" order the pictures as a coin would; the library's nearest,
- * `r_beyond_inside`, flags them 0.67 not right on the pictures it was not tuned on). A check joins this set
- * only with its row in the plan's results table.
+ * The checks that met their bar on the owner's verdicts (HARNESS_PLAN.md, S7 results), by id, each with the
+ * bar it met it at (a library question's is its `bar`, chosen on the tune pictures; null for a check that
+ * keeps its own, the gate's or the storyboard's): only these act when the checks are routed. Measured 27 Sep
+ * on the 122 pictures the owner judged: none does (the gate's questions and "storyboard complete?" order the
+ * pictures as a coin would; no library question has enough labels yet). A check joins this map only with its
+ * row in the plan's results table, and test/checks.test.ts holds the two together.
  */
-export const EARNED = new Set<string>();
+export const EARNED = new Map<string, number | null>();
+
+/** The bar every library question was first written with, before any was chosen on the tune pictures. */
+export const FIRST_BAR = 0.5;
 
 /**
  * Everything a cut's routed questions are asked from: its tags, and the facts some questions are asked
@@ -93,12 +98,20 @@ export type LibraryQuestion = {
   ask: (f: CutFacts) => Record<string, Question>;
   /** Which answer is a problem: "yes" (it finds a fault) or "no" (it misses what should be there). */
   problem: 'yes' | 'no';
-  /** Where an answer becomes a finding: above it for a "yes" problem, below it for a "no". */
+  /**
+   * Where an answer becomes a finding: above it for a "yes" problem, below it for a "no". The bar chosen on
+   * the tune pictures (evals/jev-checks.ts, its row in the plan's results), else FIRST_BAR.
+   */
   bar: number;
   /** What a finding says, before its reading. */
   says: string;
   /** The owner's fault classes it is meant to catch (evals/prompt-cases.ts CLASSES). */
   classes: string[];
+  /**
+   * The judged pictures its rule was written from (docs/rules.md, the rule's evidence): where one is held out,
+   * its held-out precision is not a clean test of it.
+   */
+  from: string[];
 };
 
 /** Every prompt question starts by saying what the text is: Jev answers the question written, from the state given. */
@@ -147,9 +160,10 @@ export const LIBRARY: LibraryQuestion[] = [
         ]),
       ),
     problem: 'no',
-    bar: 0.5,
+    bar: FIRST_BAR,
     says: 'the prompt may not say a change carried from earlier',
     classes: ['state_carried'],
+    from: ['library-1-m3', 'library-1-m5'],
   },
   {
     id: 'r_held_said',
@@ -172,6 +186,7 @@ export const LIBRARY: LibraryQuestion[] = [
     bar: 0.5,
     says: 'the prompt may not say who holds something',
     classes: ['holding'],
+    from: ['snow-train-2-m1', 'snow-train-2-m5', 'snow-train-2-m7', 'snow-train-m4'],
   },
   {
     id: 'r_gone_drawn',
@@ -189,9 +204,10 @@ export const LIBRARY: LibraryQuestion[] = [
         ),
       ),
     problem: 'yes',
-    bar: 0.5,
+    bar: 0.6,
     says: 'the prompt may draw something it says is gone',
     classes: ['presence', 'invented_moment'],
+    from: ['orchard-m7'],
   },
   {
     id: 'r_pov_body',
@@ -209,9 +225,10 @@ export const LIBRARY: LibraryQuestion[] = [
         ),
       ),
     problem: 'yes',
-    bar: 0.5,
+    bar: FIRST_BAR,
     says: "the prompt may draw the dreamer's own body through their eyes",
     classes: ['pov', 'identity'],
+    from: ['orchard-m7', 'orchard-m2', 'lighthouse-fresh-m10', 'lighthouse-fresh-m13'],
   },
   {
     id: 'r_background',
@@ -229,9 +246,10 @@ export const LIBRARY: LibraryQuestion[] = [
         ),
       ),
     problem: 'no',
-    bar: 0.5,
+    bar: 0.8,
     says: 'the prompt may not say what the turned camera now sees behind them',
     classes: ['camera_turn_layout'],
+    from: ['snow-train-m2', 'lighthouse-fresh-m2'],
   },
   {
     id: 'r_keep_earlier',
@@ -249,9 +267,10 @@ export const LIBRARY: LibraryQuestion[] = [
         ),
       ),
     problem: 'yes',
-    bar: 0.5,
+    bar: FIRST_BAR,
     says: "the prompt may keep an earlier picture's view across a turned camera",
     classes: ['camera_turn_layout', 'reference_conflict'],
+    from: ['snow-train-m2', 'lighthouse-fresh-m2', 'snow-train-2-m5'],
   },
   {
     id: 'r_line_order',
@@ -269,9 +288,10 @@ export const LIBRARY: LibraryQuestion[] = [
         ),
       ),
     problem: 'no',
-    bar: 0.5,
+    bar: 0.8,
     says: 'the prompt may not give who stands where, left to right',
     classes: ['camera_turn_layout'],
+    from: ['snow-train-2-m7'],
   },
   {
     id: 'r_size',
@@ -289,9 +309,17 @@ export const LIBRARY: LibraryQuestion[] = [
         ),
       ),
     problem: 'no',
-    bar: 0.5,
+    bar: 0.3,
     says: 'the prompt may not say how big the main thing is against something beside it',
     classes: ['proportion_or_paste'],
+    from: [
+      'lighthouse-fresh-m2-edit',
+      'library-1-m5-mockup',
+      'library-3-m3-free',
+      'snow-train-2-m6-edit',
+      'library-1-m4',
+      'library-2-m9',
+    ],
   },
   {
     id: 'r_turned_both',
@@ -309,9 +337,10 @@ export const LIBRARY: LibraryQuestion[] = [
         ),
       ),
     problem: 'yes',
-    bar: 0.5,
+    bar: FIRST_BAR,
     says: 'the prompt may draw what someone turned into beside their old self',
     classes: ['identity', 'reference_conflict'],
+    from: [],
   },
   {
     id: 'r_action_seen',
@@ -329,9 +358,17 @@ export const LIBRARY: LibraryQuestion[] = [
         ),
       ),
     problem: 'no',
-    bar: 0.5,
+    bar: 0.9,
     says: 'the prompt may not say what they do as something seen',
     classes: ['action'],
+    from: [
+      'library-1-m2',
+      'night-market-m2',
+      'night-market-m2-edit',
+      'night-market-m2-free',
+      'lighthouse-first-m8-edit',
+      'lighthouse-first-m8-mockup',
+    ],
   },
   {
     id: 'r_story_words',
@@ -349,9 +386,10 @@ export const LIBRARY: LibraryQuestion[] = [
         ),
       ),
     problem: 'yes',
-    bar: 0.5,
+    bar: 0.2,
     says: 'the prompt may use story words in place of what is seen',
     classes: ['action', 'invented_moment'],
+    from: [],
   },
   {
     id: 'r_quoted',
@@ -369,9 +407,10 @@ export const LIBRARY: LibraryQuestion[] = [
         ),
       ),
     problem: 'yes',
-    bar: 0.5,
+    bar: 0.4,
     says: 'the prompt may quote words the picture could letter',
     classes: ['style_leak'],
+    from: [],
   },
   {
     id: 'r_beyond_inside',
@@ -389,9 +428,10 @@ export const LIBRARY: LibraryQuestion[] = [
         ),
       ),
     problem: 'yes',
-    bar: 0.5,
+    bar: 0.4,
     says: 'the prompt may bring inside something seen only beyond the place',
     classes: ['invented_moment', 'camera_turn_layout'],
+    from: ['lighthouse-fresh-m10'],
   },
   {
     id: 'r_look_twice',
@@ -409,9 +449,10 @@ export const LIBRARY: LibraryQuestion[] = [
         ),
       ),
     problem: 'yes',
-    bar: 0.5,
+    bar: 0.6,
     says: 'the prompt may describe one look twice, differently',
     classes: ['identity', 'reference_conflict'],
+    from: ['library-3-m5'],
   },
   {
     id: 'sb_held_hands',
@@ -429,9 +470,19 @@ export const LIBRARY: LibraryQuestion[] = [
         ),
       ),
     problem: 'no',
-    bar: 0.5,
+    bar: FIRST_BAR,
     says: 'the shot may put what the dreamer holds away from their hands',
     classes: ['holding', 'pov'],
+    from: [
+      'snow-train-2-m1',
+      'snow-train-2-m5',
+      'snow-train-2-m7',
+      'snow-train-m4',
+      'orchard-m7',
+      'orchard-m2',
+      'lighthouse-fresh-m10',
+      'lighthouse-fresh-m13',
+    ],
   },
   {
     id: 'sb_beyond',
@@ -449,9 +500,10 @@ export const LIBRARY: LibraryQuestion[] = [
         ),
       ),
     problem: 'yes',
-    bar: 0.5,
+    bar: 0.4,
     says: 'the shot may bring inside something seen only beyond the place',
     classes: ['invented_moment', 'camera_turn_layout'],
+    from: ['lighthouse-fresh-m10'],
   },
 ];
 
@@ -465,6 +517,9 @@ export function worstOf(q: Pick<LibraryQuestion, 'problem'>, answers: number[]):
   if (!answers.length) return null;
   return q.problem === 'yes' ? Math.max(...answers) : Math.min(...answers);
 }
+
+/** The bar a library question is held to: the one it earned acting at, where it has, else its own. */
+export const barOf = (q: Pick<LibraryQuestion, 'id' | 'bar'>) => EARNED.get(q.id) ?? q.bar;
 
 /** Whether a reading is a finding: over the bar for a "yes" problem, under it for a "no". */
 export const isFinding = (q: Pick<LibraryQuestion, 'problem' | 'bar'>, p: number) =>
@@ -502,7 +557,8 @@ export function routedReadings(
     const p = worstOf(q, got);
     if (p === null) continue;
     readings[q.id] = p;
-    if (isFinding(q, p)) findings.push({ id: q.id, text: `${q.says} (${p.toFixed(2)})` });
+    if (isFinding({ problem: q.problem, bar: barOf(q) }, p))
+      findings.push({ id: q.id, text: `${q.says} (${p.toFixed(2)})` });
   }
   return { readings, findings };
 }

@@ -2537,9 +2537,11 @@ export class SessionStore {
     const drawHeld = process.env.DREAMCHAT_DRAW_HELD === '1';
     // With the checks only logging (DREAMCHAT_CHECKS=log), what it found is kept on the picture, which
     // is drawn from the plan it has: nothing is planned again, held or left undrawn for it.
-    const logOnly = checksMode() === 'log';
-    // Routed (DREAMCHAT_JEV_ROUTED=on), a shot found at odds is held or planned again only where a fact it
-    // failed has earned acting; otherwise it is kept on the picture, as when only logging.
+    // Routed (DREAMCHAT_JEV_ROUTED=on), what the checks find acts only where they have earned it, whether
+    // the checks act or log by default: what reaches the steps below is only that, so they act on it.
+    const logOnly = checksMode() === 'log' && !routedMode();
+    // Routed, a shot found at odds is held or planned again only where a fact it failed has earned acting;
+    // otherwise it is kept on the picture, as when only logging.
     if (logOnly || (routedMode() && !(checked && storyboardActs(checked))))
       frame.overrode =
         view && checked && checked.view === view && !checked.ok
@@ -2663,7 +2665,10 @@ export class SessionStore {
     }
     if (onCamera.length && view && findings.length && (await this.replanForHold(s, frame, { view, reasons: onCamera })))
       return this.startFrame(s, frame, turn, before, { fields: wordsBefore, reworded: rewordedBefore });
-    if (logOnly && findings.length) {
+    // Routed, a fault code knows for certain does what it does unrouted: with the checks logging (the
+    // default) it leaves the moment undrawn; only an earned check's finding takes the acting path below.
+    const codeOnly = routedMode() && checksMode() === 'log' && findings.every(actsWhenLogging);
+    if ((logOnly || codeOnly) && findings.length) {
       // Only a fault code knows for certain is left: the images and the words disagree, which no
       // picture can put right.
       acted(frame, 'left undrawn', findings);
@@ -2853,18 +2858,15 @@ export class SessionStore {
     // With the checks only logging (DREAMCHAT_CHECKS=log), only a fault code knows for certain acts;
     // everything else found is kept on the picture as what the checks would have held it for.
     const log = checksMode() === 'log';
-    // Routed (DREAMCHAT_JEV_ROUTED=on): that, and what the checks that have earned acting find.
+    // Routed (DREAMCHAT_JEV_ROUTED=on): that, and what the checks that have earned acting find, whatever the
+    // default.
     const routed = routedMode();
-    const acting = log
-      ? all.filter(actsWhenLogging)
-      : routed
-        ? actingOf(fixed, read, sheet ? 'sketch' : item.kind === 'ghost' ? 'ghost' : 'moment')
+    const acting = routed
+      ? actingOf(fixed, read, sheet ? 'sketch' : item.kind === 'ghost' ? 'ghost' : 'moment')
+      : log
+        ? all.filter(actsWhenLogging)
         : all;
-    if (log) {
-      const logged = all.filter((f) => !actsWhenLogging(f));
-      const shot = (item.overrode ?? []).filter((f) => f.startsWith('storyboard: '));
-      item.overrode = shot.length || logged.length ? [...shot, ...logged] : undefined;
-    } else if (routed) {
+    if (routed || log) {
       const logged = all.filter((f) => !acting.includes(f));
       const shot = (item.overrode ?? []).filter((f) => f.startsWith('storyboard: '));
       item.overrode = shot.length || logged.length ? [...shot, ...logged] : undefined;
@@ -2878,12 +2880,14 @@ export class SessionStore {
       facts: read.reading ? gateFacts(read.reading, { sheet, edit: item.kind === 'ghost' }) : [],
       decision: !all.length
         ? 'cleared'
-        : log
+        : routed
           ? acting.length
-            ? 'held'
+            ? 'found'
             : 'logged'
-          : routed && !acting.length
-            ? 'logged'
+          : log
+            ? acting.length
+              ? 'held'
+              : 'logged'
             : 'found',
       reason: all.join('; ') || 'every reading passed its bar',
       // Which prompt, which take (a sketch counts its take before the gate, a moment when it is sent)

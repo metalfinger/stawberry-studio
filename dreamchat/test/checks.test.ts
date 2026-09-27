@@ -2,17 +2,33 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
+  barOf,
   type CutFacts,
   cutFactsOf,
   EARNED,
+  FIRST_BAR,
   LIBRARY,
   routedFor,
   routedMode,
   routedQuestions,
   routedReadings,
 } from '../checks';
+import type { SetPicture } from '../evals/build-checks-set';
+import {
+  aucOf,
+  BAR,
+  chooseBar,
+  type Flagged,
+  measure,
+  momentLow,
+  NOISE,
+  needed,
+  score,
+  verdictOf,
+  wilsonLow,
+} from '../evals/jev-checks';
 import type { CutTags } from '../cutsheet';
-import { actingOf, actsOn, actsWhenLogging, gateFacts, gateQuestions, readPrompt } from '../gate';
+import { actingOf, actsOn, actsWhenLogging, checksMode, gateFacts, gateQuestions, readPrompt } from '../gate';
 import type { JevFn, Question } from '../jev';
 import { applyPlanFacts, lackActs } from '../planfacts';
 import { storyboardActs } from '../stages';
@@ -247,10 +263,12 @@ describe('routed (DREAMCHAT_JEV_ROUTED=on): only a check that has earned it acts
       expect(actsWhenLogging(warning)).toBe(false);
     }));
 
-  test('a check that has earned it acts as it does today, and only it', () =>
+  test('under the default logging, a check that has earned it acts as it does today, and only it', () =>
     withRouted(
       true,
       async () => {
+        // DREAMCHAT_CHECKS left to its default, logging: routed, an earned check acts all the same.
+        expect([process.env.DREAMCHAT_CHECKS, checksMode()]).toEqual([undefined, 'log']);
         allWrong.calls = 0;
         const read = await readPrompt(allWrong, prompt, { routed: pov });
         // Acting, a moment's twice is put on a line first, as before: more calls than one.
@@ -264,6 +282,10 @@ describe('routed (DREAMCHAT_JEV_ROUTED=on): only a check that has earned it acts
         // A sketch's reading is its own check: the moment's having earned it does not make a sketch's act.
         const sketch = await readPrompt(allWrong, 'A single clear picture of the conductor.', { sheet: true });
         expect(sketch.acting).toEqual([]);
+        // What acts, with a fault code knows for certain; the continuity plan's warnings, not earned, log.
+        const code = 'image 3 is attached with no word on what to take from it';
+        const warning = 'picture 1 has no visible action';
+        expect(actingOf([code, warning], read, 'moment')).toEqual([code, ...read.acting!]);
       },
       { earned: ['moment.twice', 'moment.r_gone_drawn'] },
     ));
@@ -276,7 +298,7 @@ describe('routed (DREAMCHAT_JEV_ROUTED=on): only a check that has earned it acts
         expect(read.acting).toEqual([]);
         expect(actsOn('moment.twice')).toBe(false);
       },
-      { log: true, earned: ['moment.twice'] },
+      { checks: 'log', earned: ['moment.twice'] },
     ).then(() =>
       withRouted(true, async () => {
         let calls = 0;
@@ -368,6 +390,163 @@ describe('the switch off (DREAMCHAT_JEV_ROUTED unset) changes nothing', () => {
           expect(storyboardActs({ ok: true })).toBe(false);
           expect(lackActs()).toBe(true);
         },
-        { log },
+        { checks: log ? 'log' : 'act' },
       ));
+});
+
+/** A judged picture for the scoring tests: its moment, its verdict and its split. */
+const pic = (
+  id: string,
+  moment: string,
+  verdict: SetPicture['verdict'],
+  split: SetPicture['split'] = 'tune',
+): SetPicture => ({
+  id,
+  kind: 'story',
+  draw: 'story',
+  run: 'dream',
+  session: 's',
+  moment,
+  split,
+  verdict,
+  note: null,
+  faults: [],
+  prompt: null,
+  prompt_sha: '',
+  images: [],
+  same_shot: true,
+  judge: null,
+});
+/** `n` moments of one picture each, `bad` of them not right, each flagged as `flag` says. */
+const moments = (n: number, bad: number, flag: (i: number) => boolean, close = false): Flagged[] =>
+  Array.from({ length: n }, (_, i) => ({
+    p: pic(`p${i}`, `m${i}`, i < bad ? 'wrong' : 'right'),
+    flag: flag(i),
+    close,
+  }));
+
+describe('how a check is scored against the owner (evals/jev-checks.ts)', () => {
+  test("Wilson's lower bound: none of nothing, and surer with more", () => {
+    expect(wilsonLow(0, 0)).toBeNull();
+    expect(wilsonLow(5, 5)).toBeCloseTo(0.649, 3);
+    expect(wilsonLow(50, 50)!).toBeGreaterThan(wilsonLow(5, 5)!);
+    expect(wilsonLow(35, 50)!).toBeLessThan(0.7);
+  });
+
+  test('AUC: 1 when every picture not right reads worse, 0 when better, a half for ties, by the problem side', () => {
+    const a = pic('a', 'm1', 'wrong');
+    const b = pic('b', 'm2', 'right');
+    expect(
+      aucOf(
+        [
+          { p: a, v: 0.9 },
+          { p: b, v: 0.1 },
+        ],
+        'yes',
+      ),
+    ).toBe(1);
+    expect(
+      aucOf(
+        [
+          { p: a, v: 0.9 },
+          { p: b, v: 0.1 },
+        ],
+        'no',
+      ),
+    ).toBe(0);
+    expect(
+      aucOf(
+        [
+          { p: a, v: 0.5 },
+          { p: b, v: 0.5 },
+        ],
+        'yes',
+      ),
+    ).toBe(0.5);
+    expect(aucOf([{ p: a, v: 0.9 }], 'yes')).toBeNull();
+  });
+
+  test("a moment's pictures are one moment: counted once, and resampled together", () => {
+    // One moment of four pictures (a story picture and three paired), all flagged and right; one wrong moment.
+    const same = ['story', 'mockup', 'edit', 'free'].map((d) => ({ p: pic(`x-${d}`, 'mx', 'right'), flag: true }));
+    const items: Flagged[] = [...same, { p: pic('y', 'my', 'wrong'), flag: true }];
+    const s = score(items);
+    expect([s.n, s.moments, s.flagged, s.flaggedMoments, s.hits]).toEqual([5, 2, 5, 2, 1]);
+    // Resampling moments, the four right pictures come and go together: the bound falls to 0.
+    expect(momentLow(items)).toBe(0);
+    expect(momentLow(items)).toBe(momentLow(items));
+    expect(momentLow(moments(10, 10, () => true))).toBe(1);
+    expect(momentLow(moments(10, 5, () => false))).toBeNull();
+    // A flag within NOISE of its bar is not counted as past it.
+    expect(score(moments(6, 6, () => true, true)).robustMoments).toBe(0);
+    expect(NOISE).toBe(0.1);
+  });
+
+  test('the bar to act, each reason in turn', () => {
+    const at = (n: number, bad: number, flagged: number, close = false) =>
+      verdictOf(score(moments(n, bad, (i) => i < flagged, close)));
+    expect(at(40, 20, 10).why).toContain('fewer than 60');
+    expect(at(80, 40, 4).why).toContain('flags 4 moments, fewer than 5');
+    expect(at(80, 40, 10, true).why).toContain('G4');
+    // Flagging the not-right first: 10 of 10 flagged not right passes; 20 flagged, half right, does not.
+    expect(at(80, 40, 10)).toEqual({ acts: true, why: 'may act' });
+    expect(at(80, 10, 20).why).toContain('precision 0.50');
+    expect(BAR).toEqual({ labels: 60, moments: 5, precision: 0.7 });
+  });
+
+  test('a bar chosen on the tune pictures: the best precision over three moments and at most half flagged', () => {
+    const tune = Array.from({ length: 20 }, (_, i) => ({
+      p: pic(`t${i}`, `t${i}`, i < 4 ? 'wrong' : 'right'),
+      reading: i < 4 ? 0.85 : i < 8 ? 0.65 : 0.2,
+    }));
+    expect(chooseBar({ problem: 'yes' }, tune)).toEqual({ bar: 0.7, chosen: true });
+    const few = tune.map((x, i) => ({ ...x, reading: i < 2 ? 0.9 : 0.1 }));
+    expect(chooseBar({ problem: 'yes' }, few)).toEqual({ bar: FIRST_BAR, chosen: false, why: 'too few' });
+    const many = tune.map((x) => ({ ...x, reading: 0.95 }));
+    expect(chooseBar({ problem: 'yes' }, many)).toEqual({ bar: FIRST_BAR, chosen: false, why: 'too many' });
+  });
+
+  test('what more owner verdicts would do: only where the precision holds and its flags are past the noise', () => {
+    expect(needed(score(moments(60, 30, (i) => i < 5 || (i >= 40 && i < 50))), 1)).toEqual({
+      none: 'precision under the bar',
+    });
+    expect('none' in needed(score(moments(20, 2, (i) => i < 2)), 1)).toBe(true);
+    expect(needed(score(moments(20, 6, (i) => i < 6, true)), 1)).toEqual({
+      none: 'its flags sit within 0.1 of its bar (G4): more labels would not move them',
+    });
+    const more = needed(score(moments(20, 6, (i) => i < 6)), 0.5);
+    expect(more && 'routed' in more && more.routed).toBe(40);
+    expect(more && 'any' in more && more.any).toBe(80);
+  });
+});
+
+describe('what may act is what the eval measured', () => {
+  test('each library question is held to the bar chosen on the tune pictures, and EARNED to its results row', async () => {
+    const out = await measure({ ask: false });
+    for (const q of LIBRARY) expect([q.id, q.bar]).toEqual([q.id, out.bars[q.id].bar]);
+    // What may act is exactly what EARNED lets act, each at the bar it met the bar at.
+    const acting = out.rows.filter((r) => r.verdict.acts);
+    const keyOf = (id: string) => (id.includes('.') ? id : `moment.${id}`);
+    expect(acting.map((r) => keyOf(r.id)).sort()).toEqual([...EARNED.keys()].sort());
+    for (const r of acting) expect(EARNED.get(keyOf(r.id))).toBe(r.earnedBar ?? null);
+    expect(out.distinct.checks).toBe(28);
+  });
+
+  test("a library question's finding is at its measured bar, or the bar it earned acting at", () =>
+    withRouted(true, async () => {
+      const line = LIBRARY.find((q) => q.id === 'r_line_order')!;
+      expect([line.bar, barOf(line)]).toEqual([0.8, 0.8]);
+      const f = facts({ line: true });
+      // 0.75 is under its 0.8: a finding (at the first bar, 0.5, it would not have been).
+      expect(routedReadings(f, { r_line_order: { type: 'noul', noul: 0.75 } }).findings.map((x) => x.id)).toEqual([
+        'r_line_order',
+      ]);
+      EARNED.set('r_line_order', 0.7);
+      try {
+        expect(barOf(line)).toBe(0.7);
+        expect(routedReadings(f, { r_line_order: { type: 'noul', noul: 0.75 } }).findings).toEqual([]);
+      } finally {
+        EARNED.delete('r_line_order');
+      }
+    }));
 });

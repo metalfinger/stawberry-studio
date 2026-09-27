@@ -3968,7 +3968,7 @@
     "identity sketch:p2",
     "location sketch:l1"
    ],
-   "same_shot": true,
+   "same_shot": false,
    "judge": "right"
   },
   {
@@ -3989,7 +3989,7 @@
     "prop sketch:t2",
     "location sketch:l2"
    ],
-   "same_shot": true,
+   "same_shot": false,
    "judge": "partly"
   },
   {
@@ -4010,7 +4010,7 @@
     "prop sketch:t2",
     "location sketch:l2"
    ],
-   "same_shot": true,
+   "same_shot": false,
    "judge": "partly"
   },
   {
@@ -4034,7 +4034,7 @@
     "location sketch:l3",
     "composition picture:m7"
    ],
-   "same_shot": true,
+   "same_shot": false,
    "judge": "partly"
   },
   {
@@ -4196,7 +4196,7 @@
     "location sketch:l1",
     "composition picture:m1"
    ],
-   "same_shot": true,
+   "same_shot": false,
    "judge": "partly"
   },
   {
@@ -4218,7 +4218,7 @@
     "prop sketch:t1",
     "location sketch:l2"
    ],
-   "same_shot": true,
+   "same_shot": false,
    "judge": "partly"
   },
   {
@@ -4241,7 +4241,7 @@
     "prop sketch:t1",
     "location sketch:l2"
    ],
-   "same_shot": true,
+   "same_shot": false,
    "judge": "right"
   },
   {
@@ -4297,7 +4297,7 @@
     "prop sketch:t3",
     "location sketch:l3"
    ],
-   "same_shot": true,
+   "same_shot": false,
    "judge": "wrong"
   },
   {
@@ -4351,7 +4351,7 @@
     "prop sketch:t3",
     "location sketch:l5"
    ],
-   "same_shot": true,
+   "same_shot": false,
    "judge": "right"
   },
   {
@@ -4409,7 +4409,7 @@
     "prop sketch:t3",
     "location sketch:l4"
    ],
-   "same_shot": true,
+   "same_shot": false,
    "judge": "right"
   },
   {
@@ -4438,7 +4438,7 @@
     "prop sketch:t3",
     "location sketch:l4"
    ],
-   "same_shot": true,
+   "same_shot": false,
    "judge": "right"
   },
   {
@@ -4603,7 +4603,7 @@
     "location sketch:l2",
     "composition picture:m4"
    ],
-   "same_shot": true,
+   "same_shot": false,
    "judge": "partly"
   },
   {
@@ -4651,7 +4651,7 @@
     "identity sketch:p1",
     "location sketch:l1"
    ],
-   "same_shot": true,
+   "same_shot": false,
    "judge": "right"
   },
   {
@@ -4749,7 +4749,7 @@
     "prop sketch:t1",
     "location sketch:l1"
    ],
-   "same_shot": true,
+   "same_shot": false,
    "judge": "wrong"
   },
   {
@@ -4790,7 +4790,7 @@
     "location sketch:l1",
     "location ghost:l1:water"
    ],
-   "same_shot": true,
+   "same_shot": false,
    "judge": "right"
   },
   {
@@ -4811,7 +4811,7 @@
     "composition picture:m1",
     "location ghost:l1:water"
    ],
-   "same_shot": true,
+   "same_shot": false,
    "judge": "right"
   },
   {
@@ -4831,7 +4831,7 @@
     "location sketch:l1",
     "location ghost:l1:books"
    ],
-   "same_shot": true,
+   "same_shot": false,
    "judge": "right"
   },
   {
@@ -4864,7 +4864,7 @@
     "identity sketch:p2",
     "location sketch:l1"
    ],
-   "same_shot": true,
+   "same_shot": false,
    "judge": "wrong"
   },
   {
@@ -4886,7 +4886,7 @@
     "identity sketch:p2",
     "location sketch:l1"
    ],
-   "same_shot": true,
+   "same_shot": false,
    "judge": "wrong"
   },
   {
@@ -4909,7 +4909,7 @@
     "location sketch:l1",
     "composition picture:m4"
    ],
-   "same_shot": true,
+   "same_shot": false,
    "judge": "right"
   },
   {
@@ -4966,7 +4966,7 @@
     "identity sketch:p2",
     "location sketch:l1"
    ],
-   "same_shot": true,
+   "same_shot": false,
    "judge": "wrong"
   },
   {
@@ -5094,7 +5094,7 @@
     "location ghost:l1:water",
     "location ghost:l1:books"
    ],
-   "same_shot": true,
+   "same_shot": false,
    "judge": "partly"
   },
   {
@@ -5173,7 +5173,7 @@
     "prop sketch:t1",
     "location sketch:l2"
    ],
-   "same_shot": true,
+   "same_shot": false,
    "judge": "right"
   },
   {
@@ -5231,7 +5231,7 @@
     "prop sketch:t1",
     "location sketch:l1"
    ],
-   "same_shot": true,
+   "same_shot": false,
    "judge": "partly"
   },
   {
@@ -5256,7 +5256,7 @@
     "location sketch:l1",
     "prop ghost:t1:lid"
    ],
-   "same_shot": true,
+   "same_shot": false,
    "judge": "right"
   },
   {
@@ -5385,7 +5385,7 @@
     "identity sketch:p2",
     "location sketch:l1"
    ],
-   "same_shot": true,
+   "same_shot": false,
    "judge": "partly"
   },
   {
@@ -5408,7 +5408,7 @@
     "identity ghost:p2:age",
     "identity ghost:p2:wardrobe"
    ],
-   "same_shot": true,
+   "same_shot": false,
    "judge": "partly"
   },
   {
@@ -5432,7 +5432,7 @@
     "identity ghost:p2:age",
     "identity ghost:p2:wardrobe"
    ],
-   "same_shot": true,
+   "same_shot": false,
    "judge": "right"
   },
   {
@@ -5503,7 +5503,7 @@
     "identity sketch:p3",
     "location sketch:l2"
    ],
-   "same_shot": true,
+   "same_shot": false,
    "judge": "right"
   },
   {

@@ -134,7 +134,7 @@ const server = Bun.serve({
           // Whether the checks act or only log (DREAMCHAT_CHECKS): the panel says "would hold" when they log,
           // and when they are routed (DREAMCHAT_JEV_ROUTED=on) and no storyboard fact has earned acting.
           checks: STORYBOARD.facts.some((f) => actsOn(`moment.${f.id}`)) ? 'act' : 'log',
-          routed: routedMode(),
+          ...(routedMode() ? { routed: true } : {}),
           stage: stageOf(s),
           moments: Object.fromEntries(moments.map((m) => [m.id, momentStage(m.id, s.prep, frames.find((f) => f.id === m.id))])),
           totals: jevTotals(log),
