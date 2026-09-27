@@ -447,7 +447,15 @@ export function todayOf(
 }
 
 /** What the harness asks a model for when it briefs a moment's shot (session.ts startFrame, producer.ts shotFor). */
-export type BriefAsk = { action: string; view: string; medium: string; mustName: string[]; before: string[] };
+export type BriefAsk = {
+  action: string;
+  view: string;
+  medium: string;
+  mustName: string[];
+  before: string[];
+  /** Those of `mustName` who are people or creatures. */
+  people: string[];
+};
 
 /**
  * What a moment's shot brief is written from, exactly as the harness asks for it: the moment's action,
@@ -467,6 +475,7 @@ export function briefAskOf(d: DreamBuild, moment: string): BriefAsk | null {
     view,
     medium: mediumOf(d.saved.style),
     mustName: (p.item.frame?.plan?.sees ?? []).map(called),
+    people: (p.item.frame?.plan?.sees ?? []).filter((id) => d.r.b.people.some((x) => x.id === id)).map(called),
     before,
   };
 }
