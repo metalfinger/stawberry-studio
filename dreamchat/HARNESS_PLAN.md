@@ -2327,3 +2327,13 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   answers.before-correction.json). snow-train-2 m6: the new picture shows the frame after the handover, not the
   grandfather holding the suitcase out — the action drawn at the wrong instant (S6's typed "action at one instant").
   Score now: new 15 of 20, old 10 of 20; faults 5 of 7; guards new 10 of 13, old 9 of 13.
+
+- 27 Sep, the S4 check's five misses traced (none is image-model noise; each picture followed what it was sent):
+  library-1 m5 (the "high" window is a floor block the water hides, and the wall label names it, so the wall
+  opened), snow-train m3 (the floor plan lacks the described windows, aisle and rows; the old m2 judged wrong was sent
+  as a reference), lighthouse-fresh m4 (the unlocking moment set inside the building; old wrong too), lighthouse-fresh
+  m9 (every carried thing is put bottom-centre through the dreamer's eyes), snow-train-2 m6 (the plan had already
+  handed the case over; the brief said "arms just drawn back"). Across all 20, an earlier picture sent for its look
+  takes over the layout: good when it matches the plan, bad when it doesn't.
+- 27 Sep, owner's decisions: through the dreamer's eyes, a carried thing stays out of view unless the moment names
+  it; the snow-train-2 suitcase stays shut at m5 and m6.
