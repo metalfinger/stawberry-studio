@@ -29,6 +29,7 @@ import {
   invitesMore,
   FINISHED_BAR,
   followStreakOf,
+  hashOf,
   LISTENING,
   listenOn,
   type Move,
@@ -157,6 +158,19 @@ import {
   structureOf,
 } from './record';
 import { cutRecord, type WriteResult } from './strawberry';
+import {
+  asDrawnMode,
+  type Copies,
+  type DreamNow,
+  labelsOf,
+  reasonLine,
+  type Recorded,
+  recordGhost,
+  recordMoment,
+  staleness,
+  type StaleReport,
+  withCopies,
+} from './asdrawn';
 
 export type Entry = { role: 'user' | 'assistant'; content: string; messages?: string[] };
 
@@ -246,6 +260,11 @@ export type Build = {
   plan?: ContinuityPlan;
   /** S8: the sketches whose look is a major gap, asked about openly (listen.ts majorGaps). */
   gaps?: string[];
+  /**
+   * S9 (DREAMCHAT_AS_DRAWN=on): the sketches and looks pictures were drawn from, each kept once by its
+   * hash; each picture's record of what it was drawn from (`Item.asDrawn`) names them.
+   */
+  copies?: Copies;
 };
 
 /** A moment or a ghost that needs nothing more from anyone: drawn and looked at, or failed. */
@@ -751,6 +770,36 @@ export function plannedInputsOf(s: Pick<Session, 'build'>, frame: Item): Planned
   return (frame.frame?.plan?.refs ?? [])
     .map((use) => ({ use, item: frames.find((x) => x.id === use.id) }))
     .filter((x): x is PlannedInput => !!x.item && x.item.status === 'ready' && !!x.item.mediaId);
+}
+
+/**
+ * The dream as staleness reads it now (asdrawn.ts): its pictures, sketches and look; the continuity plan
+ * as a re-plan would make it now (replan), its in-between pictures known by the ids the drawn ones have;
+ * and who and what each moment has in it by that plan, as buildFrames puts a moment in.
+ */
+export function dreamNowOf(s: Pick<Session, 'draft' | 'build' | 'transcript' | 'style'>): DreamNow {
+  const frames = s.build?.frames ?? [];
+  const out: DreamNow = { frames, items: s.build?.items ?? [], style: s.style ?? null, plan: null };
+  if (!s.draft?.breakdown) return out;
+  const b = structuredClone(s.draft.breakdown);
+  completeViews(b);
+  try {
+    out.plan = reconcileGhosts(planContinuity(b, planRecord(s, b)), frames);
+  } catch {
+    return out;
+  }
+  out.cast = Object.fromEntries(
+    moments(b).map((m) => {
+      const c = out.plan?.cuts.find((x) => x.id === m.id);
+      return [m.id, { visible: [...(c?.visible ?? m.visible)], things: [...(c?.things ?? m.things)] }];
+    }),
+  );
+  return out;
+}
+
+/** Which drawn pictures no longer match the dream, and why (S9). Reported only; nothing acts on it. */
+export function stalenessOf(s: Pick<Session, 'draft' | 'build' | 'transcript' | 'style'>): StaleReport {
+  return staleness(dreamNowOf(s), labelsOf(s.build?.items ?? [], s.build?.frames ?? []));
 }
 
 /**
@@ -2730,13 +2779,49 @@ export class SessionStore {
         reason: `sheet ${frame.sentSheet.hash} (framePrompt's and the sheet's ${built.differs?.length ? 'differ' : 'are the same'})`,
       });
     }
+    // S9: what it is sent and drawn from, kept on the picture for this take.
+    const asDrawn =
+      asDrawnMode() === 'on'
+        ? this.kept(frame, () =>
+            recordMoment({
+              frame,
+              sheets: s.build?.items ?? [],
+              frames: s.build?.frames ?? [],
+              style: s.style as StyleOption,
+              layout,
+              sent: { prompt, references },
+              ...(frame.sentSheet ? { sheetPrint: frame.sentSheet } : {}),
+              name: labelsOf(s.build?.items ?? [], s.build?.frames ?? []),
+              then: dreamNowOf(s),
+            }),
+          )
+        : undefined;
     await this.launch(s, frame, {
       prompt,
       references,
       changes,
       record: this.recordOf(s, frame),
       reason: `The person asked to see their dream drawn and settled everything in it; approved within the ${IMAGE_CAP}-picture limit.`,
+      ...(asDrawn ? { asDrawn } : {}),
     });
+  }
+
+  /** A picture's record of what it is drawn from; one that cannot be made is logged, and the picture drawn without it. */
+  private kept(item: Item, make: () => Recorded): Recorded | undefined {
+    try {
+      return make();
+    } catch (e) {
+      recordJev({
+        kind: 'transition',
+        stage: 'as_drawn',
+        to: 'record',
+        moment: item.id,
+        facts: [],
+        decision: 'failed',
+        reason: `no record kept: ${String(e).slice(0, 300)}`,
+      });
+      return undefined;
+    }
   }
 
   /**
@@ -3137,12 +3222,30 @@ export class SessionStore {
       return;
     }
     ghost.depicted = depicted;
+    const asDrawn =
+      asDrawnMode() === 'on'
+        ? this.kept(ghost, () =>
+            recordGhost({
+              ghost,
+              sheet,
+              from,
+              previous,
+              frames: s.build?.frames ?? [],
+              sheets: s.build?.items ?? [],
+              style: s.style as StyleOption,
+              sent: { prompt, references },
+              name: labelsOf(s.build?.items ?? [], s.build?.frames ?? []),
+              then: dreamNowOf(s),
+            }),
+          )
+        : undefined;
     await this.launch(s, ghost, {
       prompt,
       references,
       shape: shapeOf(sheet),
       intent: `Ghost reference: ${ghost.name}`,
       reason: `An in-between reference the storyboard needs for continuity (${g.why}); approved within the ${IMAGE_CAP}-picture limit.`,
+      ...(asDrawn ? { asDrawn } : {}),
     });
   }
 
@@ -3158,10 +3261,17 @@ export class SessionStore {
       intent?: string;
       record?: CutRecord;
       shape?: Shape;
+      /** S9: what it is sent and drawn from, kept on it for this take. */
+      asDrawn?: Recorded;
     },
   ): Promise<void> {
     item.status = 'drawing';
     item.version += 1;
+    if (job.asDrawn && s.build) {
+      const take = item.version;
+      item.asDrawn = [...(item.asDrawn ?? []).filter((t) => t.take !== take), { ...job.asDrawn.record, take }];
+      s.build.copies = withCopies(s.build.copies, job.asDrawn.copies);
+    }
     // A new version starts clean: an error belonged to the one before.
     item.error = undefined;
     // The last job is finished: the watch must not read it back as this version's result before
@@ -3582,7 +3692,7 @@ export class SessionStore {
           }
           // Each finished take is checked by the judge in the background; the verdict is shown, and
           // decides nothing on its own.
-          for (const it of running) void this.judgeWhenReady(id, it.id);
+          for (const it of running) this.judgeSoon(id, it.id);
           // A frame that finished makes room for the next one in the queue.
           if (this.sessions.get(id)?.build?.frames?.some((f) => f.status === 'waiting'))
             await this.serial(id, async () => {
@@ -3600,6 +3710,18 @@ export class SessionStore {
   }
 
   private judged = new Set<string>();
+  /** Verdicts being asked for, by conversation: settle waits for them. */
+  private judging = new Map<string, number>();
+
+  /**
+   * The judge asked about a take in the background, counted so that settle waits for its verdict: a
+   * take that had landed but was not yet judged looked settled, and a redraw under load ended with the
+   * moments drawn from it never started (S9's redraws, 27 Sep).
+   */
+  private judgeSoon(id: string, itemId: string): void {
+    this.judging.set(id, (this.judging.get(id) ?? 0) + 1);
+    void this.judgeWhenReady(id, itemId).finally(() => this.judging.set(id, (this.judging.get(id) ?? 1) - 1));
+  }
 
   private async judgeWhenReady(id: string, itemId: string): Promise<void> {
     const judge = this.deps.judge;
@@ -3858,7 +3980,7 @@ export class SessionStore {
     const s = this.require(id);
     for (const it of [...(s.build?.items ?? []), ...(s.build?.frames ?? [])])
       if (it.kind !== 'ghost' && it.status === 'ready' && it.mediaId && !it.check && !it.review)
-        void this.judgeWhenReady(id, it.id);
+        this.judgeSoon(id, it.id);
     return again;
   }
 
@@ -3883,9 +4005,12 @@ export class SessionStore {
       const drawing = [...(s?.build?.items ?? []), ...frames].some(
         (i) => i.status === 'drawing' || (i.status === 'waiting' && s?.phase === 'frames' && startable(i)),
       );
-      if (s?.draft?.status !== 'drafting' && s?.production?.status !== 'writing' && !drawing) return;
+      const judging = (this.judging.get(id) ?? 0) > 0;
+      if (s?.draft?.status !== 'drafting' && s?.production?.status !== 'writing' && !drawing && !judging) break;
       await Bun.sleep(100);
     }
+    // S9: what is stale is worked out for the dream as it has settled, or as it stands at the timeout.
+    this.flushStale(id);
   }
 
   // Assistant history is replayed in the SAME JSON shape the model must emit: fed back as
@@ -3917,9 +4042,98 @@ export class SessionStore {
     await this.save(s);
   }
 
+  /** Which drawn pictures no longer match the dream, and why (S9; /api/stale). Reported only. */
+  stale(id: string): StaleReport | null {
+    const s = this.sessions.get(id);
+    return s ? stalenessOf(s) : null;
+  }
+
+  /** S9: by conversation, what the last staleness was worked out from, and what it found. */
+  private staleSeen = new Map<string, { input: string; found: string }>();
+  /** S9: staleness worked out a little after the last save, off the save itself. */
+  private staleTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+  /** S9: staleness worked out soon, once the saves of one change have landed. */
+  private staleSoon(id: string): void {
+    if (asDrawnMode() !== 'on' || this.staleTimers.has(id)) return;
+    const timer = setTimeout(() => this.flushStale(id), 250);
+    timer.unref?.();
+    this.staleTimers.set(id, timer);
+  }
+
+  /** S9: staleness worked out now, if it is waiting to be. */
+  private flushStale(id: string): void {
+    const timer = this.staleTimers.get(id);
+    if (!timer) return;
+    clearTimeout(timer);
+    this.staleTimers.delete(id);
+    const s = this.sessions.get(id);
+    if (s) void inSession(this.deps.dir, id, async () => this.noteStale(s));
+  }
+
+  /**
+   * S9, with DREAMCHAT_AS_DRAWN=on: after any change to what the pictures are drawn from, which drawn
+   * pictures are now stale and why, logged when that changes (`as_drawn` transitions in the Jev log).
+   * Reported only: nothing is drawn again, held or planned again for it.
+   */
+  private noteStale(s: Session): void {
+    if (asDrawnMode() !== 'on' || !s.build?.frames?.some((f) => f.asDrawn?.length)) return;
+    const log = (decision: string, reason: string, moment?: string) =>
+      recordJev({
+        kind: 'transition',
+        stage: 'as_drawn',
+        to: decision === 'stale' ? 'stale' : 'checked',
+        ...(moment ? { moment } : {}),
+        facts: [],
+        decision,
+        reason: reason.slice(0, 4000),
+      });
+    try {
+      const b = s.build;
+      const input = hashOf({
+        breakdown: s.draft?.breakdown ?? null,
+        readings: s.draft?.readings ?? null,
+        style: s.style,
+        words: s.transcript.filter((e) => e.role === 'user').length,
+        items: b.items.map((i) => [i.id, i.status, i.version, i.mediaId, i.review, i.continuityApproved, i.fields]),
+        frames: (b.frames ?? []).map((f) => [
+          f.id,
+          f.status,
+          f.version,
+          f.mediaId,
+          f.review,
+          f.continuityApproved,
+          f.fields,
+          f.frame?.visible,
+          f.frame?.things,
+          f.frame?.plan,
+          f.ghost,
+          f.layout?.mediaId,
+          f.check?.failedIds,
+          f.check?.notes,
+        ]),
+      });
+      const seen = this.staleSeen.get(s.id);
+      if (seen?.input === input) return;
+      const report = stalenessOf(s);
+      const lines = report.stale.map(reasonLine);
+      const found = hashOf({ lines, checked: report.checked, unrecorded: report.unrecorded });
+      this.staleSeen.set(s.id, { input, found });
+      if (seen?.found === found) return;
+      for (const st of report.stale) log('stale', reasonLine(st), st.id);
+      log(
+        'checked',
+        `${report.checked.length} pictures with a record checked, ${report.stale.length} stale${report.stale.length ? ` (${report.stale.map((x) => x.id).join(', ')})` : ''}${report.unrecorded.length ? `; ${report.unrecorded.length} drawn without one (${report.unrecorded.join(', ')})` : ''}`,
+      );
+    } catch (e) {
+      log('failed', `staleness could not be worked out: ${String(e).slice(0, 300)}`);
+    }
+  }
+
   private async save(s: Session): Promise<void> {
     s.updatedAt = this.now();
     this.sessions.set(s.id, s);
+    this.staleSoon(s.id);
     if (this.deps.dir) await Bun.write(join(this.deps.dir, `${s.id}.json`), JSON.stringify(s, null, 2));
   }
 }

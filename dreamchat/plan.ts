@@ -30,6 +30,7 @@ import {
   type PlannedInput,
   turnedInto,
 } from './frames';
+import { type AsDrawn, asDrawnMode, type Copies, currentRecord } from './asdrawn';
 import { type CutSheet, cutSheetMode, framed, ghostName, sheetDream } from './cutsheet';
 import { type CutFacts, cutFactsOf, routedMode } from './checks';
 import { actingOf, checkReferences, preflight, readPrompt } from './gate';
@@ -54,6 +55,8 @@ export type RebuiltPicture = {
   /** With DREAMCHAT_CUT_SHEET=shadow or on: the moment's cut sheet, and where its assembly differs from framePrompt's. */
   sheet?: CutSheet;
   differs?: string[];
+  /** S9: rebuilt from its record of what it was drawn from (the dream as it stood when it was drawn). */
+  asDrawn?: true;
 };
 
 /** A saved dream's plan and every picture of it, in the order they would be drawn. */
@@ -66,6 +69,8 @@ export type Rebuilt = {
   pictures: RebuiltPicture[];
   /** What the plan read of the story record (DREAMCHAT_RECORD=on): its floor plans are shot from it. */
   rec?: RecordPlan;
+  /** S9: images of pictures rebuilt from their records, by stand-in, where the plan made now has none of that name. */
+  named?: Record<string, string>;
 };
 
 /** The stand-in image of a sketch, of an earlier picture, and of a moment's mock-up. */
@@ -83,6 +88,12 @@ export const standIn = {
  */
 export function rebuild(
   s: Pick<Session, 'draft' | 'style' | 'build' | 'prep'> & { id?: string; transcript?: Session['transcript'] },
+  /**
+   * S9: a picture drawn with its record kept (DREAMCHAT_AS_DRAWN=on) is rebuilt from it, as the dream
+   * stood when it was drawn: its own copy of itself, the sketches' words and the look then, and the
+   * earlier pictures drawn by then. By default as the switch says.
+   */
+  opts: { asDrawn?: boolean } = {},
 ): Rebuilt {
   const b = structuredClone(s.draft?.breakdown);
   const style = s.style;
@@ -101,15 +112,34 @@ export function rebuild(
   const inputs = recordInputsOf(s);
   const rec = recordForPlan(b, inputs.items, s.draft?.readings, { words: inputs.words, style });
   const plan = planContinuity(b, rec);
+  // S9: each picture drawn with a record, by its id among the saved ones, and each saved in-between
+  // picture by what it shows (a plan made again may number them otherwise).
+  const asDrawn = opts.asDrawn ?? asDrawnMode() === 'on';
+  const savedAll = s.build?.frames ?? [];
+  const recorded = new Map<string, AsDrawn>();
+  if (asDrawn)
+    for (const f of savedAll) {
+      const r = currentRecord(f);
+      if (r) recorded.set(f.id, r);
+    }
+  const savedGhost = (g: { of: string; kind: string; state?: { what: string } }) =>
+    savedAll.find((f) => f.kind === 'ghost' && f.ghost && ghostName(f.ghost) === ghostName(g) && recorded.has(f.id));
   // With DREAMCHAT_CUT_SHEET=shadow or on, every moment's cut sheet, read from the dream as drawing reads
-  // it (session.ts sheetDreamOf): the story record, and the tree resolved from this plan.
+  // it (session.ts sheetDreamOf): the story record, and the tree resolved from this plan. Where pictures
+  // were drawn with a record, as drawing read it: the plan kept since the moments began, each moment's
+  // own plan, and a moment drawn with a record the plan it was drawn from.
   const mode = cutSheetMode();
+  const kept = s.build?.plan ?? plan;
+  const heldPlan = (id: string) => savedAll.find((f) => f.id === id && f.kind === 'cut')?.frame?.plan;
+  const drawnPlan = recorded.size
+    ? { ...kept, cuts: kept.cuts.map((c) => recorded.get(c.id)?.moment?.frame.plan ?? heldPlan(c.id) ?? c) }
+    : plan;
   const dream =
     mode === 'off'
       ? null
       : sheetDream({
           breakdown: b,
-          plan,
+          plan: drawnPlan,
           prep: s.prep,
           items: inputs.items,
           style,
@@ -124,11 +154,23 @@ export function rebuild(
   }));
   const byId = new Map(pictures.map((p) => [p.id, p]));
   const saved = new Map((s.build?.frames ?? []).filter((f) => f.kind === 'cut').map((f) => [f.id, f]));
+  const named: Record<string, string> = {};
+  const was = { copies: s.build?.copies, sheets, style, saved: savedAll, plan, named };
 
   const out: RebuiltPicture[] = [];
   for (const pid of drawOrder(plan)) {
     const it = byId.get(pid);
     if (!it) continue;
+    // S9: drawn with a record, rebuilt from it.
+    const kept = it.kind === 'ghost' ? (it.ghost ? savedGhost(it.ghost) : undefined) : saved.get(pid);
+    const record = kept ? recorded.get(kept.id) : undefined;
+    if (record) {
+      const again = fromRecord(was, it, record, dream, mode);
+      if (again) {
+        out.push(again);
+        continue;
+      }
+    }
     if (it.kind === 'ghost') {
       const g = it.ghost;
       const sheet = sheets.find((x) => x.id === g?.of);
@@ -167,7 +209,121 @@ export function rebuild(
       ...(built.sheet ? { sheet: built.sheet, differs: built.differs ?? [] } : {}),
     });
   }
-  return { title: b.title, b, plan, sheets, pictures: out, ...(rec ? { rec } : {}) };
+  return {
+    title: b.title,
+    b,
+    plan,
+    sheets,
+    pictures: out,
+    ...(rec ? { rec } : {}),
+    ...(Object.keys(named).length ? { named } : {}),
+  };
+}
+
+/**
+ * One picture rebuilt from its record (S9): the moment or in-between picture as it held itself when drawn,
+ * each sketch in it with its words and approval then, the look then, and the earlier pictures drawn by then
+ * (each by its stand-in, with what the judge had found in it then). Null where the record cannot be read
+ * back (a sketch it names is not kept): the picture is rebuilt as the dream stands.
+ */
+function fromRecord(
+  x: {
+    copies: Copies | undefined;
+    sheets: Item[];
+    style: NonNullable<Session['style']>;
+    saved: Item[];
+    plan: ContinuityPlan;
+    named: Record<string, string>;
+  },
+  it: Item,
+  record: AsDrawn,
+  dream: ReturnType<typeof sheetDream> | null,
+  mode: ReturnType<typeof cutSheetMode>,
+): RebuiltPicture | null {
+  const style = x.copies?.looks[record.look] ?? x.style;
+  // Each sketch as the picture was drawn from it: its words and whether it was approved then; its image
+  // the rebuild's, named by what it is.
+  let missing = false;
+  const sheets = x.sheets.map((sk): Item => {
+    const h = record.sketches[sk.id];
+    if (!h) return sk;
+    const c = x.copies?.sketches[h];
+    if (!c) {
+      missing = true;
+      return sk;
+    }
+    const { take: _take, media, ...words } = c;
+    return {
+      ...sk,
+      ...words,
+      fields: structuredClone(words.fields),
+      ...(media ? {} : { mediaId: undefined, status: 'waiting' as const, review: undefined }),
+    };
+  });
+  if (missing) return null;
+  // An earlier picture by its stand-in: a moment by its id, an in-between picture by the id the plan made
+  // now gives the same change, else a stand-in of its own, named by what it shows.
+  const standInOf = (f: Item): string => {
+    const g = f.ghost;
+    if (f.kind !== 'ghost' || !g) return standIn.picture(f.id);
+    const same = x.plan.ghosts.find((y) => ghostName(y) === ghostName(g));
+    if (same) return standIn.picture(same.id);
+    const media = `${standIn.picture('')}drawn-${f.id}`;
+    x.named[media] = ghostName(g);
+    return media;
+  };
+  const asInput = (id: string): Item | undefined => {
+    const f = x.saved.find((y) => y.id === id);
+    if (!f) return undefined;
+    const strays = record.strays?.[id] ?? [];
+    return {
+      ...f,
+      status: 'ready',
+      mediaId: standInOf(f),
+      continuityApproved: true,
+      check: strays.length
+        ? { questions: 0, passed: 0, failed: [], failedIds: strays.map(() => 'undeclared'), notes: [...strays] }
+        : undefined,
+    };
+  };
+  if (it.kind === 'ghost') {
+    const g = record.ghost;
+    const sheet = sheets.find((sk) => sk.id === g?.of);
+    if (!g || !sheet?.mediaId) return null;
+    const ghost: Item = { ...it, ghost: structuredClone(g) };
+    const used = new Set(record.from.map((f) => f.id));
+    const from = g.from && used.has(g.from) ? asInput(g.from) : undefined;
+    const previous = g.after && used.has(g.after) ? asInput(g.after) : undefined;
+    const built = ghostPrompt(ghost, sheet, from, style, previous);
+    return { id: it.id, kind: 'ghost', item: ghost, ...built, criteria: [], inView: [], asDrawn: true };
+  }
+  const m = record.moment;
+  if (!m) return null;
+  const frame: Item = {
+    ...it,
+    fields: structuredClone(m.fields),
+    frame: structuredClone(m.frame),
+    shot: m.shot ? { ...m.shot } : undefined,
+    repairFor: m.repairFor ? [...m.repairFor] : undefined,
+  };
+  const drawnThen = new Set(record.earlier ?? record.from.map((f) => f.id));
+  const inputs: PlannedInput[] = (m.frame.plan?.refs ?? [])
+    .filter((use) => drawnThen.has(use.id))
+    .map((use) => ({ use, item: asInput(use.id) }))
+    .filter((y): y is PlannedInput => !!y.item);
+  const layout = m.previs ? standIn.previs(it.id) : undefined;
+  const built = framed({ frame, sheets, style, inputs, layout, dream }, mode, 'rebuild');
+  return {
+    id: it.id,
+    kind: 'cut',
+    item: frame,
+    prompt: built.prompt,
+    references: built.references,
+    criteria: m.frame.plan?.criteria ?? [],
+    inView: inViewOf(frame, sheets),
+    ...(built.sheet ? { sheet: built.sheet, differs: built.differs ?? [] } : {}),
+    asDrawn: true,
+  };
 }
 
 // Kept here too for older imports.
@@ -179,6 +335,7 @@ export { ghostName };
  * the same on any machine, whatever was drawn.
  */
 export function imageName(r: Rebuilt, media: string): string {
+  if (r.named?.[media]) return r.named[media];
   const sheet = r.sheets.find((s) => s.mediaId === media);
   if (sheet) return `sketch:${sheet.id}`;
   if (media.startsWith(standIn.previs(''))) return `previs:${media.slice(standIn.previs('').length)}`;
