@@ -1782,17 +1782,46 @@ export const CROWD =
 /** The words of a moment a picture is told. */
 const MOMENT_WORDS = ['action', 'visual_point', 'looks_at', 'dream', 'shift', 'feeling', 'purpose'] as const;
 
+/** A name that says where its place is rather than what it is: "outside the window", "beyond the gate". */
+const WHERE_NAME =
+  /^(?:the\s+)?(?:outside|inside|beyond|through|past|behind|below|beneath|under|above|over|across|out of|in front of|out)\b/i;
+/** Words ending in what already says where the next words are: "outside it", "through the high window". */
+const SAYS_WHERE =
+  /\b(?:outside|beyond|through|past|behind|below|beneath|under|above|across|out of)\s+(?:it|them|there|(?:the|a|an|this|that|its|their)(?:\s+[\w'’-]+){1,4})\s+$/i;
+/** A last word that leads into the next words, not the end of a phrase: "at", "and". */
+const LEADS_ON = /\b(?:at|to|of|in|on|into|onto|toward|towards|and|or|with|for|from|by|the|a|an)\s+$/i;
+
+/**
+ * What a place is, for its id in a moment's words: its name, or, where the name says only where it is
+ * ("outside the window", "inside the lighthouse"), what the place is: the first part of its geography
+ * ("the whole city underwater, only rooftops and tops of trees above water"), else of its landmarks.
+ */
+function placeWords(l: Breakdown['places'][number]): string {
+  if (!WHERE_NAME.test(l.name ?? '')) return l.name;
+  const what = [l.fields?.geography?.value, l.fields?.landmarks?.value]
+    .map((v) => (typeof v === 'string' ? (v.split(/[;.]/)[0] ?? '').trim() : ''))
+    .find((v) => !!v);
+  return what ? what.replace(/^(?:A|An|The)\b/, (w) => w.toLowerCase()) : l.name;
+}
+
 /**
  * A person's, place's or thing's id standing as a word in a moment's words, resolved to its name, once,
  * when the dream is read (the camera rules): the floor-plan step wrote "the high round window; outside it
- * l2", and the id reached the picture's words (library, 27 Sep). The dreamer is "the dreamer".
+ * l2", and the id reached the picture's words (library, 27 Sep). The dreamer is "the dreamer". A place
+ * named by where it is ("outside the window") is said by what kind of place it is, set off by a comma after
+ * words that already say where; in what the camera faces (`looks_at`), those words and the place are left
+ * out: the camera faces the window, and the moment's own words say what is out past it. Named, library-1
+ * m5's view line read "facing the high round window; outside it outside the window"; said by its kind
+ * ("outside it, the whole city underwater"), a line the rest of the prompt already says twice, Jev read its
+ * boat as low in the room at the bar (library-1-m5-level 0.38-0.43 to 0.44-0.55, 27 Sep).
  */
 export function namesForIds(b: Breakdown): string[] {
   const names = new Map<string, string>([
     ...(b.people ?? []).map((p) => [p.id, p.is_dreamer ? 'the dreamer' : p.name] as [string, string]),
-    ...(b.places ?? []).map((l) => [l.id, l.name] as [string, string]),
+    ...(b.places ?? []).map((l) => [l.id, placeWords(l)] as [string, string]),
     ...(b.things ?? []).map((t) => [t.id, t.name] as [string, string]),
   ]);
+  const whereNamed = new Set((b.places ?? []).filter((l) => WHERE_NAME.test(l.name ?? '')).map((l) => l.id));
   const ids = [...names.keys()].filter((id) => /^[a-z]+\d+$/i.test(id));
   if (!ids.length) return [];
   const re = new RegExp(`(?<![\\w-])(${ids.join('|')})(?![\\w-])`, 'g');
@@ -1802,7 +1831,23 @@ export function namesForIds(b: Breakdown): string[] {
       const was = m[k];
       if (typeof was !== 'string' || !re.test(was)) continue;
       re.lastIndex = 0;
-      (m as Record<string, unknown>)[k] = was.replace(re, (id) => names.get(id) ?? id);
+      let out = '';
+      let from = 0;
+      for (const hit of was.matchAll(re)) {
+        const at = hit.index ?? 0;
+        let gap = was.slice(from, at);
+        from = at + hit[0].length;
+        const said = SAYS_WHERE.exec(out + gap);
+        if (whereNamed.has(hit[0]) && said && !LEADS_ON.test(out + gap)) {
+          if (k === 'looks_at') {
+            out = (out + gap).slice(0, said.index).replace(/[\s;,:]+$/, '');
+            continue;
+          }
+          gap = gap.replace(/\s+$/, ', ');
+        }
+        out += gap + (names.get(hit[0]) ?? hit[0]);
+      }
+      (m as Record<string, unknown>)[k] = out + was.slice(from);
       notes.push(`${m.id} ${k}: ids named`);
     }
   return notes;
