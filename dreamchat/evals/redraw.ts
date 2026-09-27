@@ -183,7 +183,27 @@ export async function redraw(source: string, out: string): Promise<Redrawn> {
   now.build!.frames = moments;
   now.phase = 'frames';
   await store.resume(s.id);
-  await store.settle(s.id, 1_200_000);
+  // Settled is nothing drawing and nothing waiting that could start. A take drawn and not yet judged is
+  // still in flight, though, and what is drawn from it waits on its verdict: settling saw nothing to do
+  // and returned before the verdict came, and the run ended with the dream half drawn (snow train m3,
+  // routed, 27 Sep: its verdict saved, the moments after it never started). Settled again until none is.
+  const unjudged = () => {
+    const frames = store.get(s.id)?.build?.frames ?? [];
+    return frames.some(
+      (f) =>
+        f.kind === 'cut' &&
+        f.status === 'ready' &&
+        !f.check &&
+        !f.review &&
+        !f.continuityApproved &&
+        frames.some((g) => g.status === 'waiting' && g.needs?.includes(f.id)),
+    );
+  };
+  for (let i = 0; i < 2400; i++) {
+    await store.settle(s.id, 1_200_000);
+    if (!unjudged()) break;
+    await Bun.sleep(250);
+  }
   // No resuming here: a take whose verdict was lost used to leave what is drawn from it waiting
   // (session.ts judgeWhenReady, fixed 27 Sep), and a redraw must show it if it comes back.
   const done = store.get(s.id)!;
