@@ -834,6 +834,7 @@ between sessions.
 | S4 | S3 | `continuity.relation()` (and `evals/paired-arms.ts relationTo`) still read words only; with the camera rules the plan and the sheet read how two moments stand from their cameras on the floor plan (`sidesByCamera`, `sameByCamera`) and the jump fix. The tree's shots follow the plan's. |
 | S4 | every step | Cost: with the camera rules the continuity plan is made again until the relations it draws from are the ones its cameras give (an edit counting as the camera of the picture it edits): two or three plans for most dreams, settled on every frozen and live dream (0 unsettled). Tests that plan several frozen dreams come near bun's 5 s limit on a loaded machine. |
 | S4 | S1 | lighthouse-fresh m12 (the tractor's heading) is no longer met: a heading is said only where the moment's own words have the vehicle going and the plan gives its way, and m12's words ("the cab vibrates", "the grass bends away from the wheels") never say it moves; the tractor drives at m9 and stops at m14. Motion is a lasting state (going until it stops): the record should carry it, typed, with its end. |
+| S4 | S5 | Measured on S4 (camera rules on, record and sheet on): of the frozen moments that take an earlier picture's layout (base or composition) from a camera turned 135° or more, 5 with the rules off, 2 with them on: aeea m10 from m8 (the same room on two scenes' floor plans, whose cameras cannot be compared, so the words decide) and orchard m4 (the jump's own match cut). affd m3 and 09ea m7 no longer do. S5's eval tests hold today's choices, with the camera off; with the rules on `--step S5` meets 6/7 counted and 6/14 hypotheses (5/14 off; snow-train m6 door now met), guards 2/2. |
 | S4 | live flow | The live-flow check (`evals/live-flow.ts`) was not run with the camera rules: the fake replays were drawn with them off, and new replays need DeepSeek (out of balance). Rerun on fresh replays once it is topped up. |
 ## Known debt, by the step that clears it
 
@@ -1371,3 +1372,7 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   a crowd 8 / 15; out past a window or the place 3 / 6; across from the dreamer 1 / 2; the camera moved 15 / 47; a
   saved brief no longer for its view 15 / 32. `bun test` 533 pass with the switches off and with the camera, record
   and sheet on (and in all seven switch combinations one change before the last), typecheck clean.
+- 27 Sep: S4 rebased on lab/dream-chat (S2 fixes, the Claude writer, S5's eval). Unchanged: `--step S4` 1/11 -> 9/11,
+  all 85 cases 18/33 -> 26/33 counted, guards 36/36, hypotheses 6/18 -> 8/18 (the case file gained S5's). S5's
+  eval tests pin the camera off, as the other tests of today's choices do. `bun test` 568 pass with the switches off,
+  with the record and sheet on, and with the camera, record and sheet on.
