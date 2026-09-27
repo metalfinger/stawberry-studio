@@ -192,7 +192,8 @@ describe('the dream goes on past the retelling', () => {
 });
 
 describe('a whole conversation', () => {
-  pinnedFor({ DREAMCHAT_LISTEN: 'off' });
+  // Today's plans too: S5's choice of references (DREAMCHAT_REFS) draws some of these in-between pictures straight.
+  pinnedFor({ DREAMCHAT_LISTEN: 'off', DREAMCHAT_REFS: undefined });
   const breakdown = JSON.parse(readFileSync(join(import.meta.dir, 'fixtures', 'breakdown.json'), 'utf8')) as Breakdown;
   breakdown.style_options = [
     { ...breakdown.style_options[0], id: 'a', name: 'sumi ink and wash' },

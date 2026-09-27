@@ -129,6 +129,7 @@ export const STEP_SWITCHES = [
   'DREAMCHAT_LISTEN',
   'DREAMCHAT_AS_DRAWN',
   'DREAMCHAT_FRESH_SEND',
+  'DREAMCHAT_REFS',
 ] as const;
 
 /** Every step's switch unset: today's defaults. */
