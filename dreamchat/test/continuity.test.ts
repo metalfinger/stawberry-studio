@@ -452,7 +452,7 @@ describe('ghosts', () => {
       moment({ id: 'm2', distance: 'close', looks_at: 'the door', from: 'm1', sameSide: [] }),
       moment({ id: 'm3', distance: 'wide', looks_at: 'the door', from: 'm2', sameSide: ['m2'] }),
     ]);
-    const plan = planContinuity(b);
+    const plan = cameraOff(() => planContinuity(b));
     expect(plan.ghosts).toHaveLength(1);
     expect(plan.ghosts[0]).toMatchObject({
       kind: 'view',
