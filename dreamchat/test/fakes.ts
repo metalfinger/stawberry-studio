@@ -65,16 +65,49 @@ export function fakeHost(delayMs = 0): HostFn & { calls: ChatMessage[][] } {
 }
 
 /**
- * Runs `fn` with the pre-draw checks acting (DREAMCHAT_CHECKS=act) or only logging (the default),
- * whatever the environment the tests run in, and puts the switch back after.
+ * Runs `fn` with the pre-draw checks acting (DREAMCHAT_CHECKS=act) or only logging (the default), and not
+ * routed (DREAMCHAT_JEV_ROUTED unset), whatever the environment the tests run in, and puts the switches back
+ * after.
  */
 export async function withChecks<T>(mode: 'act' | 'log', fn: () => Promise<T>): Promise<T> {
   const was = process.env.DREAMCHAT_CHECKS;
+  const routed = process.env.DREAMCHAT_JEV_ROUTED;
   process.env.DREAMCHAT_CHECKS = mode;
+  delete process.env.DREAMCHAT_JEV_ROUTED;
   try {
     return await fn();
   } finally {
     if (was === undefined) delete process.env.DREAMCHAT_CHECKS;
     else process.env.DREAMCHAT_CHECKS = was;
+    if (routed === undefined) delete process.env.DREAMCHAT_JEV_ROUTED;
+    else process.env.DREAMCHAT_JEV_ROUTED = routed;
+  }
+}
+
+/**
+ * Runs `fn` with the checks routed by tags (DREAMCHAT_JEV_ROUTED=on) or not, the checks acting unless told
+ * to log, and with `earned` in checks.ts EARNED for its length; everything is put back after.
+ */
+export async function withRouted<T>(
+  on: boolean,
+  fn: () => Promise<T>,
+  opts: { log?: boolean; earned?: string[] } = {},
+): Promise<T> {
+  const { EARNED } = await import('../checks');
+  const was = process.env.DREAMCHAT_JEV_ROUTED;
+  const checks = process.env.DREAMCHAT_CHECKS;
+  const added = (opts.earned ?? []).filter((id) => !EARNED.has(id));
+  if (on) process.env.DREAMCHAT_JEV_ROUTED = 'on';
+  else delete process.env.DREAMCHAT_JEV_ROUTED;
+  process.env.DREAMCHAT_CHECKS = opts.log ? 'log' : 'act';
+  for (const id of added) EARNED.add(id);
+  try {
+    return await fn();
+  } finally {
+    for (const id of added) EARNED.delete(id);
+    if (was === undefined) delete process.env.DREAMCHAT_JEV_ROUTED;
+    else process.env.DREAMCHAT_JEV_ROUTED = was;
+    if (checks === undefined) delete process.env.DREAMCHAT_CHECKS;
+    else process.env.DREAMCHAT_CHECKS = checks;
   }
 }
