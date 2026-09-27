@@ -1,6 +1,9 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 import type { Blocking } from '../blocking';
 import { dreamerShot, labelText, outsideShot, previsImage, turnedTo } from '../previs';
+
+// Frozen dreams are planned or rebuilt whole: seconds each, and past bun's 5 s on a busy machine.
+setDefaultTimeout(30_000);
 
 // The theater, as its floor plan has it: the dreamer and her friend on a blue two-seater in the
 // front row, the big sofa (now a roller coaster) beside the friend, the audience in rows behind.

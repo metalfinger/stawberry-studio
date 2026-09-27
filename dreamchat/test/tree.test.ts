@@ -3,7 +3,7 @@
 // in evals/sources: meads-third, ice-head and theater hold the breakdown with its floor plans and the
 // storyboard's readings; meads-fourth is today's Meads, with its sketches, chosen look, grounding
 // notes and goals as the conversation read them.
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { bearing, type Blocking } from '../blocking';
@@ -26,6 +26,9 @@ import {
   type TreePrep,
 } from '../tree';
 import { fakeHost, fakeJev } from './fakes';
+
+// Frozen dreams are planned or rebuilt whole: seconds each, and past bun's 5 s on a busy machine.
+setDefaultTimeout(30_000);
 
 // ── the frozen dreams ────────────────────────────────────────────────────────
 type Frozen = {

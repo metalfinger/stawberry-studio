@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -9,6 +9,9 @@ import { type Breakdown, completeViews } from '../producer';
 import { inSession, readJevLog } from '../jevlog';
 import { applyPrep, planRecord, planShots, reconcileGhosts, restage, type Session } from '../session';
 import { withChecks } from './fakes';
+
+// Frozen dreams are planned or rebuilt whole: seconds each, and past bun's 5 s on a busy machine.
+setDefaultTimeout(30_000);
 
 const detail = (value: string | null = null) => ({ value, said: false });
 

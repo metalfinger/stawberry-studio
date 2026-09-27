@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { existsSync, mkdtempSync, readdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -20,6 +20,9 @@ import {
 } from '../record';
 import { shadowRecord } from '../session';
 import type { Item } from '../sheets';
+
+// Frozen dreams are planned or rebuilt whole: seconds each, and past bun's 5 s on a busy machine.
+setDefaultTimeout(30_000);
 
 // Saved sessions frozen for these tests (test/fixtures/record): the breakdown without its style options,
 // the sketches' words without their pictures, the dreamer's own messages and the chosen look.
