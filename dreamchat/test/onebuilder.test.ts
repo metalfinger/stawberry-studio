@@ -96,6 +96,16 @@ describe('ledger 1: one story record per state of the dream', () => {
     expect(after.n).toBe(1);
     expect(after.prompts).toEqual(before.prompts);
   });
+
+  test('a clean-up turned off is another state: its record is made again, never the one before', () => {
+    const s = loadDream('dream-0926-050424-fdd7', false).session as Session;
+    withSwitches({ ...SHEET, DREAMCHAT_ONE_BUILDER: 'one_record' }, () => {
+      const today = rebuild(s).pictures.map((p) => p.prompt);
+      const off = withRetired(['fills'], () => rebuild(s).pictures.map((p) => p.prompt));
+      expect(off).not.toEqual(today);
+      expect(rebuild(s).pictures.map((p) => p.prompt)).toEqual(today);
+    });
+  });
 });
 
 describe("ledger 4: the assembler's paragraph ids and each image's subjects, read by the evals", () => {

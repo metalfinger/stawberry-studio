@@ -2468,6 +2468,16 @@ let made = 0;
 /** How many story records have been made so far in this process (a test counts them). */
 export const recordsMade = () => made;
 
+/** The switches a record may be made otherwise under: none of them may give another state the same record. */
+const SWITCHES = [
+  'DREAMCHAT_RETIRE',
+  'DREAMCHAT_ONE_BUILDER',
+  'DREAMCHAT_RECORD',
+  'DREAMCHAT_CUT_SHEET',
+  'DREAMCHAT_CAMERA',
+  'DREAMCHAT_REFS',
+];
+
 /** The last few records made, each by exactly what it was made from. */
 const records: { key: string; out: ReturnType<typeof storyRecord> }[] = [];
 
@@ -2489,6 +2499,8 @@ export function oneRecord(
     readings: oneBuilder() ? (readings ?? {}) : { ...(readings ?? {}), typed: undefined },
     words: opts.words ?? null,
     style: opts.style ?? null,
+    // What the record's rules read of the switches: a clean-up turned off makes another record.
+    switches: SWITCHES.map((k) => process.env[k] ?? null),
   });
   const hit = records.find((x) => x.key === key);
   if (hit) return hit.out;
