@@ -5,7 +5,16 @@
 // on a guess; what depends on it waits. Pictures were redrawn for things a reading of their
 // prompt would have caught: a state the moment itself replaced, a baby drawn once inside a
 // family and again on her own, "you" in an instruction to a picture (23-24 Sep).
-import { type CutFacts, EARNED, isFinding, LIBRARY, routedMode, routedQuestions, routedReadings } from './checks';
+import {
+  barOf,
+  type CutFacts,
+  EARNED,
+  isFinding,
+  LIBRARY,
+  routedMode,
+  routedQuestions,
+  routedReadings,
+} from './checks';
 import type { JevFn, Question } from './jev';
 import type { Item } from './sheets';
 
@@ -69,15 +78,22 @@ export function checksMode(): 'act' | 'log' {
 /** What a gate reading is of: a moment, a sketch, or an in-between picture (an edit of a sketch). */
 export type Subject = 'moment' | 'sketch' | 'ghost';
 
+/** DREAMCHAT_CHECKS as set, where it is set: "act" or "log"; null where it is left to the default. */
+export function checksSet(): 'act' | 'log' | null {
+  const v = (process.env.DREAMCHAT_CHECKS ?? '').trim().toLowerCase();
+  return v === 'act' || v === 'log' ? v : null;
+}
+
 /**
  * Whether a check acts on what it finds, by its id ("moment.contradicts", "moment.sb_camera",
- * "plan.looks_missing"). With the checks only logging (DREAMCHAT_CHECKS=log), none does; routed
- * (DREAMCHAT_JEV_ROUTED=on), only a check that met its bar on the owner's verdicts (checks.ts EARNED);
- * otherwise, as before, every one does.
+ * "plan.looks_missing"). Routed (DREAMCHAT_JEV_ROUTED=on): a check that met its bar on the owner's
+ * verdicts (checks.ts EARNED) acts, whether the checks act or log by default; every other one only logs;
+ * and DREAMCHAT_CHECKS=log, set on purpose, stops even an earned one. Not routed, as before: every check
+ * acts when they act (DREAMCHAT_CHECKS=act) and none when they log (the default).
  */
 export function actsOn(check: string): boolean {
-  if (checksMode() === 'log') return false;
-  return routedMode() ? EARNED.has(check) : true;
+  if (routedMode()) return EARNED.has(check) && checksSet() !== 'log';
+  return checksMode() !== 'log';
 }
 
 /**
@@ -341,7 +357,7 @@ export async function readPrompt(
   // a check of this kind of picture has earned acting; otherwise it is drawn without a reading, as logging.
   if (contradicts === null || twice === null || clear === null || (withImages && refsClear === null)) {
     const unread = `the prompt could not be checked (${call.error ?? 'no answer'})`;
-    const holds = checksMode() !== 'log' && [...EARNED].some((id) => id.startsWith(`${subject}.`));
+    const holds = [...EARNED.keys()].some((id) => id.startsWith(`${subject}.`) && actsOn(id));
     return { findings: [unread], reading: null, asked, ...(routed ? { acting: holds ? [unread] : [] } : {}) };
   }
   // Each finding with the question it is of, so a routed reading can say which act.
@@ -432,15 +448,16 @@ export async function readPrompt(
 }
 
 /**
- * Of what code checks (`fixed`) and Jev's reading found for a picture, what acts: all of it when the checks
- * act; only a fault code knows for certain when they log; routed, that and the findings of the checks that
- * have earned acting, the continuity plan's warnings among them only if they have.
+ * Of what code checks (`fixed`) and Jev's reading found for a picture, what acts. Routed: a fault code knows
+ * for certain, and the findings of the checks that have earned acting (the continuity plan's warnings
+ * among them only if they have), whatever the default. Not routed: all of it when the checks act, only a
+ * fault code knows for certain when they log.
  */
 export function actingOf(fixed: string[], read: Pick<GateResult, 'findings' | 'acting'>, subject: Subject): string[] {
   const all = [...fixed, ...read.findings];
-  if (checksMode() === 'log') return all.filter(actsWhenLogging);
-  if (!routedMode()) return all;
-  return [...fixed.filter((f) => actsWhenLogging(f) || actsOn(`${subject}.plan_issue`)), ...(read.acting ?? [])];
+  if (routedMode())
+    return [...fixed.filter((f) => actsWhenLogging(f) || actsOn(`${subject}.plan_issue`)), ...(read.acting ?? [])];
+  return checksMode() === 'log' ? all.filter(actsWhenLogging) : all;
 }
 
 /**
@@ -464,7 +481,8 @@ export function gateFacts(
     // Routed: each library question, with the bar past which it is a finding.
     ...Object.entries(reading.routed ?? {}).flatMap(([id, a]) => {
       const q = LIBRARY.find((x) => x.id === id);
-      return q ? [{ question: id, answer: a, bar: q.bar, ok: !isFinding(q, a) }] : [];
+      const bar = q ? barOf(q) : 0;
+      return q ? [{ question: id, answer: a, bar, ok: !isFinding({ problem: q.problem, bar }, a) }] : [];
     }),
   ];
 }

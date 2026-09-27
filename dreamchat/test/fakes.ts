@@ -65,15 +65,16 @@ export function fakeHost(delayMs = 0): HostFn & { calls: ChatMessage[][] } {
 }
 
 /**
- * Runs `fn` with the pre-draw checks acting (DREAMCHAT_CHECKS=act) or only logging (the default), and not
- * routed (DREAMCHAT_JEV_ROUTED unset), whatever the environment the tests run in, and puts the switches back
- * after.
+ * Runs `fn` with the pre-draw checks acting (DREAMCHAT_CHECKS=act) or only logging (the default), whatever the
+ * environment the tests run in, and puts the switches back after. Acting is acting as before, not routed
+ * (DREAMCHAT_JEV_ROUTED unset): routed, only what has earned it acts. Logging keeps the environment's routing,
+ * so a run with DREAMCHAT_JEV_ROUTED=on routes it.
  */
 export async function withChecks<T>(mode: 'act' | 'log', fn: () => Promise<T>): Promise<T> {
   const was = process.env.DREAMCHAT_CHECKS;
   const routed = process.env.DREAMCHAT_JEV_ROUTED;
   process.env.DREAMCHAT_CHECKS = mode;
-  delete process.env.DREAMCHAT_JEV_ROUTED;
+  if (mode === 'act') delete process.env.DREAMCHAT_JEV_ROUTED;
   try {
     return await fn();
   } finally {
@@ -85,13 +86,14 @@ export async function withChecks<T>(mode: 'act' | 'log', fn: () => Promise<T>): 
 }
 
 /**
- * Runs `fn` with the checks routed by tags (DREAMCHAT_JEV_ROUTED=on) or not, the checks acting unless told
- * to log, and with `earned` in checks.ts EARNED for its length; everything is put back after.
+ * Runs `fn` with the checks routed by tags (DREAMCHAT_JEV_ROUTED=on) or not, DREAMCHAT_CHECKS as `checks`
+ * says (unset, the default, when not given), and with `earned` in checks.ts EARNED for its length;
+ * everything is put back after.
  */
 export async function withRouted<T>(
   on: boolean,
   fn: () => Promise<T>,
-  opts: { log?: boolean; earned?: string[] } = {},
+  opts: { checks?: 'act' | 'log'; earned?: string[] } = {},
 ): Promise<T> {
   const { EARNED } = await import('../checks');
   const was = process.env.DREAMCHAT_JEV_ROUTED;
@@ -99,8 +101,9 @@ export async function withRouted<T>(
   const added = (opts.earned ?? []).filter((id) => !EARNED.has(id));
   if (on) process.env.DREAMCHAT_JEV_ROUTED = 'on';
   else delete process.env.DREAMCHAT_JEV_ROUTED;
-  process.env.DREAMCHAT_CHECKS = opts.log ? 'log' : 'act';
-  for (const id of added) EARNED.add(id);
+  if (opts.checks === undefined) delete process.env.DREAMCHAT_CHECKS;
+  else process.env.DREAMCHAT_CHECKS = opts.checks;
+  for (const id of added) EARNED.set(id, null);
   try {
     return await fn();
   } finally {

@@ -4,22 +4,29 @@
 // only if it predicts the owner's verdict (docs/rules.md G1); this says which do.
 //
 //   bun --env-file=$HOME/.config/strawberry/dreamchat.env run evals/jev-checks.ts --label <name> [--no-ask] [--logs <dir> …]
+//   bun run evals/jev-checks.ts --help
 //
 // What each check reads is what it read, or would have read, before the picture was drawn: the gate's
 // questions and the library's prompt questions the prompt exactly as sent; "storyboard complete?" the shot
-// as it was checked (its readings as logged then, and asked again); planFacts the camera's facts on the
-// floor plan the picture was drawn from (as kept then, and asked again of that plan); the continuity
-// plan's warnings from today's plan. A picture is "not right" when the owner called it partly right or
-// wrong. For each check: how many pictures its tags route it to, how many it flags at its bar, and of
-// those how many the owner did not call right (precision) and of the pictures not right how many it flags
-// (recall), for wrong alone too, and on its own faults (the owner's notes S0 classified to its rule).
+// as it was checked (its readings as logged then, and asked again), only for the pictures drawn from that
+// shot (its view is in the prompt word for word); planFacts the camera's facts on the floor plan the picture
+// was drawn from (as kept then, and asked again of that plan); the continuity plan's warnings from today's
+// plan. A picture is "not right" when the owner called it partly right or wrong. For each check: how many
+// pictures, and moments, its tags route it to; how many it flags at its bar; of those how many the owner did
+// not call right (precision); of the pictures not right how many it flags (recall), for wrong alone too, and
+// on its own faults (the owner's notes S0 classified to its rule); and how well its reading orders the
+// pictures whatever the bar (AUC).
 //
-// Bars: a check already in the harness keeps its bar, set before these verdicts existed, so every
-// picture is new to it. A library question's bar is chosen on the tune pictures only (the five dreams the
-// picture judge was written from) and measured on the five held out, never tuned on. The bar to act
-// (HARNESS_PLAN.md S7): at least 60 labelled pictures routed to it; on the pictures it was not tuned on,
-// at least 5 flagged, precision at least 0.7, and the 90% lower bound of that precision above the share of
-// its routed pictures not right (a flag must say more than its tags do). Otherwise it only logs.
+// The bar to act (G1, "at least 0.7 on at least 60 labels", as applied here; BAR, verdictOf): on the labelled
+// pictures it was not tuned on, at least 60 of them, flagging pictures of at least 5 distinct moments, each by
+// a reading more than NOISE past its bar (G4), with a precision of at least 0.7 whose 90% lower bound,
+// resampling moments (a moment's story picture and its paired pictures together), is above the share of
+// those pictures not right. A check already in the harness keeps its bar, set before these verdicts existed:
+// every picture counts. A library question is judged two ways, leaving out the moments its rule was written
+// from (docs/rules.md): at its first bar, never tuned, on every picture it is asked of; at a bar chosen on the
+// tune pictures (the five dreams the picture judge was written from), on the five held out (53 pictures, so
+// under G1's 60 until more are judged). And it may not act on these pictures at all: it was written after
+// reading the owner's notes on them; pictures judged later test it. Otherwise a check only logs.
 //
 // Jev is asked by one model by name (JEV_EVAL_MODEL, jev-1.13.0), each state once with all its questions
 // (as the harness asks them); every answer is kept in evals/checks-answers.json by the hash of the model,
@@ -29,7 +36,7 @@
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
-import { type CutFacts, isFinding, LIBRARY, type LibraryQuestion, worstOf } from '../checks';
+import { type CutFacts, FIRST_BAR, isFinding, LIBRARY, type LibraryQuestion, worstOf } from '../checks';
 import {
   DIFFUSE_UP_TO,
   gateQuestions,
@@ -129,20 +136,32 @@ const withoutEach = (prompt: string) => {
 
 const notRight = (p: SetPicture) => p.verdict !== 'right';
 
+/**
+ * A picture's moment. A moment's story picture and its three paired pictures were drawn from near-identical
+ * prompts and read alike by every check: they are one moment, not four labels.
+ */
+export const momentKey = (p: Pick<SetPicture, 'session' | 'moment'>) => `${p.session}/${p.moment}`;
+
 export type Score = {
+  /** Pictures, and the distinct moments they are of. */
   n: number;
+  moments: number;
   pos: number;
   flagged: number;
+  /** The distinct moments it flags a picture of. */
+  flaggedMoments: number;
+  /** Of those, the moments it flags with a reading past the noise of its bar (NOISE; G4). */
+  robustMoments: number;
   hits: number;
   precision: number | null;
   recall: number | null;
   base: number | null;
-  /** The 90% Wilson lower bound of the precision. */
+  /** The 90% lower bound of the precision, resampling moments (momentLow). */
   low: number | null;
   wrong: { pos: number; hits: number; precision: number | null; recall: number | null };
 };
 
-/** Wilson's lower bound on a share, at 90% (z = 1.645). */
+/** Wilson's lower bound on a share, at 90% (z = 1.645): for independent labels, such as new moments. */
 export function wilsonLow(hits: number, n: number, z = 1.645): number | null {
   if (!n) return null;
   const p = hits / n;
@@ -150,6 +169,50 @@ export function wilsonLow(hits: number, n: number, z = 1.645): number | null {
   const c = p + (z * z) / (2 * n);
   const m = z * Math.sqrt((p * (1 - p)) / n + (z * z) / (4 * n * n));
   return (c - m) / d;
+}
+
+/** A small seeded random number generator (mulberry32): a bootstrap gives the same bound every run. */
+function seeded(seed: number): () => number {
+  let a = seed;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * The 90% lower bound of a precision, bootstrapping moments: the pictures of a moment are drawn together,
+ * never as independent labels. The 5th percentile, over 2000 resamples of the moments, of the flagged
+ * pictures the owner did not call right; resamples that flag nothing are left out. Null: nothing flagged.
+ */
+export function momentLow(items: { p: SetPicture; flag: boolean }[], draws = 2000, seed = 7): number | null {
+  const byMoment = new Map<string, { flagged: number; hits: number }>();
+  for (const x of items) {
+    const m = byMoment.get(momentKey(x.p)) ?? { flagged: 0, hits: 0 };
+    if (x.flag) {
+      m.flagged++;
+      if (notRight(x.p)) m.hits++;
+    }
+    byMoment.set(momentKey(x.p), m);
+  }
+  const ms = [...byMoment.values()];
+  if (!ms.some((m) => m.flagged)) return null;
+  const rand = seeded(seed);
+  const ps: number[] = [];
+  for (let d = 0; d < draws; d++) {
+    let f = 0;
+    let h = 0;
+    for (let i = 0; i < ms.length; i++) {
+      const m = ms[Math.floor(rand() * ms.length)];
+      f += m.flagged;
+      h += m.hits;
+    }
+    if (f) ps.push(h / f);
+  }
+  ps.sort((a, b) => a - b);
+  return ps[Math.floor(0.05 * (ps.length - 1))];
 }
 
 /** The area under the curve of a reading against not right: 0.5 is chance, 1 orders every picture right. */
@@ -163,7 +226,17 @@ export function aucOf(values: { p: SetPicture; v: number | undefined }[], proble
   return wins / (bad.length * good.length);
 }
 
-export function score(items: { p: SetPicture; flag: boolean }[]): Score {
+/**
+ * How far from its bar a reading must be to be more than noise: the same question asked again moves 0.06, up
+ * to 0.3, and differences under about 0.11 are noise (docs/rules.md G4); the prompt cases mark answers within
+ * 0.1 of their bar.
+ */
+export const NOISE = 0.1;
+
+/** A picture and whether a check flags it; `close`: its reading is within NOISE of the bar. */
+export type Flagged = { p: SetPicture; flag: boolean; close?: boolean };
+
+export function score(items: Flagged[]): Score {
   const flagged = items.filter((x) => x.flag);
   const hits = flagged.filter((x) => notRight(x.p)).length;
   const pos = items.filter((x) => notRight(x.p)).length;
@@ -171,13 +244,16 @@ export function score(items: { p: SetPicture; flag: boolean }[]): Score {
   const whits = flagged.filter((x) => x.p.verdict === 'wrong').length;
   return {
     n: items.length,
+    moments: new Set(items.map((x) => momentKey(x.p))).size,
     pos,
     flagged: flagged.length,
+    flaggedMoments: new Set(flagged.map((x) => momentKey(x.p))).size,
+    robustMoments: new Set(flagged.filter((x) => !x.close).map((x) => momentKey(x.p))).size,
     hits,
     precision: flagged.length ? hits / flagged.length : null,
     recall: pos ? hits / pos : null,
     base: items.length ? pos / items.length : null,
-    low: wilsonLow(hits, flagged.length),
+    low: momentLow(items),
     wrong: {
       pos: wpos,
       hits: whits,
@@ -187,47 +263,90 @@ export function score(items: { p: SetPicture; flag: boolean }[]): Score {
   };
 }
 
-/** The bar to act (HARNESS_PLAN.md S7): what a check must show on the pictures it was not tuned on. */
-export const BAR = { labels: 60, flagged: 5, precision: 0.7 } as const;
+/**
+ * The bar to act (docs/rules.md G1, "at least 0.7 on at least 60 labels", as applied here): on the labelled
+ * pictures it was not tuned on, at least 60 of them, flagging pictures of at least 5 distinct moments, each by
+ * a reading more than NOISE past its bar (G4), with a precision of at least 0.7 whose 90% lower bound,
+ * resampling moments, is above the share of those pictures not right (a flag must say more than being asked
+ * does).
+ */
+export const BAR = { labels: 60, moments: 5, precision: 0.7 } as const;
 
-export function verdictOf(routed: number, s: Score): { acts: boolean; why: string } {
-  if (routed < BAR.labels)
-    return { acts: false, why: `log only: ${routed} labelled pictures, fewer than ${BAR.labels}` };
-  if (s.flagged < BAR.flagged)
-    return { acts: false, why: `log only: flags ${s.flagged} pictures, fewer than ${BAR.flagged}` };
+export function verdictOf(s: Score): { acts: boolean; why: string } {
+  if (s.n < BAR.labels)
+    return { acts: false, why: `log only: ${s.n} labelled pictures it was not tuned on, fewer than ${BAR.labels}` };
+  if (s.flaggedMoments < BAR.moments)
+    return { acts: false, why: `log only: flags ${s.flaggedMoments} moments, fewer than ${BAR.moments}` };
+  if (s.robustMoments < BAR.moments)
+    return {
+      acts: false,
+      why: `log only: flags ${s.robustMoments} moments with a reading more than ${NOISE} past its bar, fewer than ${BAR.moments} (G4: nearer is noise)`,
+    };
   if ((s.precision ?? 0) < BAR.precision)
     return { acts: false, why: `log only: precision ${(s.precision ?? 0).toFixed(2)}, under ${BAR.precision}` };
   if ((s.low ?? 0) <= (s.base ?? 0))
     return {
       acts: false,
-      why: `log only: its lower bound ${(s.low ?? 0).toFixed(2)} is not above the ${(s.base ?? 0).toFixed(2)} its tags alone give`,
+      why: `log only: its lower bound ${(s.low ?? 0).toFixed(2)} is not above the ${(s.base ?? 0).toFixed(2)} being asked alone gives`,
     };
   return { acts: true, why: 'may act' };
 }
 
 /**
  * A library question's bar, chosen on the tune pictures only: the reading that flags with the best
- * precision, at least three and at most half of them flagged; ties to more flagged, then nearer 0.5. None
- * does: 0.5.
+ * precision, pictures of at least three moments and at most half of the pictures; ties to more flagged, then
+ * nearer the first bar. None does: the first bar, and why (it flags too few moments at every bar, or too
+ * many pictures at every bar that flags enough).
  */
 export function chooseBar(
   q: Pick<LibraryQuestion, 'problem'>,
   tune: { p: SetPicture; reading: number }[],
-): { bar: number; chosen: boolean } {
+): { bar: number; chosen: boolean; why?: 'too few' | 'too many' } {
   let best: { bar: number; precision: number; flagged: number } | null = null;
+  let enough = false;
   for (let t = 1; t <= 9; t++) {
     const bar = t / 10;
     const s = score(tune.map((x) => ({ p: x.p, flag: isFinding({ problem: q.problem, bar }, x.reading) })));
+    if (s.flaggedMoments < 3 || s.precision === null) continue;
+    enough = true;
     // A check that would hold most pictures says nothing a hold could use: at most half of them.
-    if (s.flagged < 3 || s.flagged > tune.length / 2 || s.precision === null) continue;
+    if (s.flagged > tune.length / 2) continue;
     const better =
       !best ||
       s.precision > best.precision + 1e-9 ||
       (Math.abs(s.precision - best.precision) < 1e-9 &&
-        (s.flagged > best.flagged || (s.flagged === best.flagged && Math.abs(bar - 0.5) < Math.abs(best.bar - 0.5))));
+        (s.flagged > best.flagged ||
+          (s.flagged === best.flagged && Math.abs(bar - FIRST_BAR) < Math.abs(best.bar - FIRST_BAR))));
     if (better) best = { bar, precision: s.precision, flagged: s.flagged };
   }
-  return best ? { bar: best.bar, chosen: true } : { bar: 0.5, chosen: false };
+  return best
+    ? { bar: best.bar, chosen: true }
+    : { bar: FIRST_BAR, chosen: false, why: enough ? 'too many' : 'too few' };
+}
+
+/**
+ * How many more judged pictures a check would need to meet the bar, were its precision, and how often it
+ * flags, to hold on new moments of one picture each: pictures of moments it is asked of, and of any moment
+ * (`share`: of all judged pictures, the share it is asked of). Where it cannot say, why: its precision is
+ * under the bar (no count of labels makes it act), or it flags too few moments for its precision to mean
+ * anything yet.
+ */
+export function needed(s: Score, share: number): { routed: number; any: number } | { none: string } {
+  if (s.precision === null || !s.flagged) return { none: 'flags nothing' };
+  if (s.precision < BAR.precision) return { none: 'precision under the bar' };
+  if (s.flaggedMoments < 3) return { none: `${s.flaggedMoments} moments flagged: too few to say` };
+  if (s.robustMoments < 3)
+    return { none: `its flags sit within ${NOISE} of its bar (G4): more labels would not move them` };
+  const rate = s.flagged / s.n;
+  const base = s.base ?? 0;
+  for (let n = s.n; n <= s.n + 5000; n++) {
+    const f = Math.round(rate * n);
+    const moments = s.robustMoments + Math.max(0, f - s.flagged);
+    const low = wilsonLow(Math.round(s.precision * f), f) ?? 0;
+    if (n >= BAR.labels && moments >= BAR.moments && low > base)
+      return { routed: n - s.n, any: Math.ceil((n - s.n) / (share || 1)) };
+  }
+  return { none: 'more than 5000 pictures' };
 }
 
 /** One measured check: where it runs, what it reads, how it is routed, and each picture's flag. */
@@ -248,9 +367,12 @@ export type Row = {
   all: Score;
   tune: Score;
   held_out: Score;
-  /** What the verdict is read on: every picture for a bar set before, the held-out ones for a chosen one. */
-  on: 'all' | 'held_out';
+  /** What it is judged on: the pictures it was not tuned on (every picture for a bar set before these verdicts). */
+  scoredOn: string;
+  scored: Score;
   verdict: { acts: boolean; why: string };
+  /** More judged pictures it would need to meet the bar, if its precision held, or why it cannot say. */
+  needs: { routed: number; any: number } | { none: string };
   /** Of the routed pictures with one of its own faults, how many it flags. */
   own: { faults: number; flagged: number };
   note?: string;
@@ -259,55 +381,58 @@ export type Row = {
    * call right reads worse than one called right (0.5 is a coin; ties count half). None for a yes-or-no check.
    */
   auc?: number | null;
+  /** A library question at its first bar, never tuned, on every picture it is asked of but its rule's sources. */
+  untuned?: { bar: number; scored: Score; verdict: { acts: boolean; why: string } };
+  /** The bar it may act at, where it may (a library question's is the path that met the bar). */
+  earnedBar?: number | null;
+  /** Where it would meet the bar on this set but may not act for another reason: the path, and why not. */
+  wouldAct?: string;
   /** Each routed picture's flag, by id (null: not answered). */
   flags: Record<string, boolean | null>;
 };
 
-function rowOf(
-  x: Omit<Row, 'all' | 'tune' | 'held_out' | 'verdict' | 'own' | 'routed' | 'answered' | 'on' | 'flags'>,
-  items: { p: SetPicture; flag: boolean | undefined }[],
+function rowWith(
+  x: Omit<
+    Row,
+    'all' | 'tune' | 'held_out' | 'verdict' | 'own' | 'routed' | 'answered' | 'scored' | 'needs' | 'flags' | 'scoredOn'
+  > & { scoredOn?: string },
+  items: { p: SetPicture; flag: boolean | undefined; close?: boolean }[],
+  scoredOn: (p: SetPicture) => boolean = () => true,
+  share = 1,
 ): Row {
-  const answered = items.filter((i): i is { p: SetPicture; flag: boolean } => i.flag !== undefined);
+  const answered = items.filter((i): i is Flagged => i.flag !== undefined);
   const all = score(answered);
   const tune = score(answered.filter((i) => i.p.split === 'tune'));
   const held_out = score(answered.filter((i) => i.p.split === 'held_out'));
-  const on = x.existing ? 'all' : 'held_out';
+  const scored = score(answered.filter((i) => scoredOn(i.p)));
   const own = answered.filter((i) => i.p.faults.some((f) => x.classes.includes(f.class)));
   return {
     ...x,
+    scoredOn: x.scoredOn ?? 'every picture it is asked of (its bar was set before these verdicts)',
     routed: items.length,
     answered: answered.length,
     all,
     tune,
     held_out,
-    on,
-    verdict: verdictOf(answered.length, on === 'all' ? all : held_out),
+    scored,
+    verdict: verdictOf(scored),
+    needs: needed(scored, share),
     own: { faults: own.length, flagged: own.filter((i) => i.flag).length },
     flags: Object.fromEntries(items.map((i) => [i.p.id, i.flag ?? null])),
   };
 }
 
-// ── the command ─────────────────────────────────────────────────────────────────────────────────
+// ── measuring ───────────────────────────────────────────────────────────────────────────────────
 
-if (import.meta.main) {
+/**
+ * Every check measured on the labelled set, from the kept answers; with `ask`, Jev is asked first what is not
+ * kept, and its answers are kept. `logs`: folders whose logged readings are joined to the verdicts. Writes
+ * nothing but the kept answers.
+ */
+export async function measure(opts: { ask?: boolean; logs?: string[]; say?: (line: string) => void } = {}) {
   const { jevAvailable, jevWithModel } = await import('../jev');
-  const args = process.argv.slice(2);
-  const valueOf = (name: string) => {
-    const i = args.indexOf(name);
-    return i >= 0 ? args[i + 1] : undefined;
-  };
-  const listOf = (name: string) => {
-    const i = args.indexOf(name);
-    if (i < 0) return [];
-    const out: string[] = [];
-    for (const a of args.slice(i + 1)) {
-      if (a.startsWith('--')) break;
-      out.push(a);
-    }
-    return out;
-  };
-  const label = valueOf('--label') ?? 'latest';
-  const noAsk = args.includes('--no-ask');
+  const say = opts.say ?? (() => {});
+  const noAsk = !opts.ask;
 
   const set = JSON.parse(readFileSync(SET, 'utf8')) as ChecksSet;
   const kept: AnswerFile = existsSync(ANSWERS)
@@ -398,9 +523,9 @@ if (import.meta.main) {
     const r = await askAll(asks, jev, kept);
     calls += r.calls;
     save();
-    console.log(`Jev (${EVAL_MODEL()}): ${r.calls} calls, the rest from evals/checks-answers.json`);
-    for (const e of r.errors.slice(0, 10)) console.log(`Jev: ${e}`);
-  } else console.log(noAsk ? '--no-ask: nothing new asked' : 'no JEV_API_KEY: nothing new asked (run with --env-file)');
+    say(`Jev (${EVAL_MODEL()}): ${r.calls} calls, the rest from evals/checks-answers.json`);
+    for (const e of r.errors.slice(0, 10)) say(`Jev: ${e}`);
+  } else say(noAsk ? '--no-ask: nothing new asked' : 'no JEV_API_KEY: nothing new asked (run with --env-file)');
 
   // The carrier search, where the gate acting would do it: a contradiction reading over its bar but up to
   // DIFFUSE_UP_TO, or a twice reading over its bar but up to it, held only when one line carries it.
@@ -421,8 +546,8 @@ if (import.meta.main) {
     const r = await askAll(carrierAsks, jev, kept, 8);
     calls += r.calls;
     save();
-    console.log(`Jev: ${r.calls} calls for the lines the gate's readings may rest on`);
-    for (const e of r.errors.slice(0, 10)) console.log(`Jev: ${e}`);
+    say(`Jev: ${r.calls} calls for the lines the gate's readings may rest on`);
+    for (const e of r.errors.slice(0, 10)) say(`Jev: ${e}`);
   }
   const carried = (prompt: string, id: 'contradicts' | 'twice'): boolean | undefined => {
     const whole = band(prompt, id);
@@ -435,10 +560,22 @@ if (import.meta.main) {
   // ── every check, every picture ──
   const rows: Row[] = [];
   const pics = set.pictures;
+  const rowOf = (
+    x: Parameters<typeof rowWith>[0],
+    items: Parameters<typeof rowWith>[1],
+    scoredOn?: (p: SetPicture) => boolean,
+  ) => rowWith(x, items, scoredOn, items.length / pics.length);
   const gateRead = (p: SetPicture, id: string) => {
     const prompt = prompts.get(p.id)!;
     const q = gateOf(prompt)[id];
     return q ? noulOf(kept, q, prompt) : undefined;
+  };
+  /** Each gate question's own bar: a reading within NOISE of it is noise. */
+  const GATE_BAR: Record<string, number> = {
+    contradicts: MAX_CONTRADICTS_MOMENT,
+    twice: MAX_TWICE,
+    clear: MIN_CLEAR,
+    refs_clear: MIN_REFS_CLEAR,
   };
   const gateRow = (
     id: string,
@@ -464,7 +601,11 @@ if (import.meta.main) {
         auc: aucOf(values, q === 'clear' || q === 'refs_clear' ? 'no' : 'yes'),
         ...extra,
       },
-      values.map(({ p, v }) => ({ p, flag: v === undefined ? undefined : flagOf(v, p) })),
+      values.map(({ p, v }) => ({
+        p,
+        flag: v === undefined ? undefined : flagOf(v, p),
+        close: v !== undefined && Math.abs(v - GATE_BAR[q]) < NOISE,
+      })),
     );
   };
   rows.push(
@@ -546,7 +687,7 @@ if (import.meta.main) {
   rows.push(
     rowOf(
       {
-        id: 'moment.gate:acting',
+        id: 'moment.gate',
         label: 'the gate as it acts: any of its four questions past its acting bar',
         rule: 'G1',
         reads: 'prompt',
@@ -565,6 +706,7 @@ if (import.meta.main) {
     STORYBOARD.facts.map((f) => [f.id, { pass: f.pass, bar: f.bar }]),
   );
   const sbFails = (id: string, a: number) => (sbBars[id].pass === 'yes' ? a < sbBars[id].bar : a >= sbBars[id].bar);
+  const near = (a: number | undefined, bar: number) => a !== undefined && Math.abs(a - bar) < NOISE;
   const shotPics = pics.filter((p) => shotOf(p));
   const logged = (p: SetPicture, id: string) => shotOf(p)?.readings.find((r) => r.q === id)?.p;
   const again = (p: SetPicture, id: string) => {
@@ -602,7 +744,7 @@ if (import.meta.main) {
         },
         shotPics.map((p) => {
           const a = logged(p, f.id);
-          return { p, flag: a === undefined ? undefined : sbFails(f.id, a) };
+          return { p, flag: a === undefined ? undefined : sbFails(f.id, a), close: near(a, f.bar) };
         }),
       ),
       rowOf(
@@ -618,7 +760,7 @@ if (import.meta.main) {
         },
         shotPics.map((p) => {
           const a = again(p, f.id);
-          return { p, flag: a === undefined ? undefined : sbFails(f.id, a) };
+          return { p, flag: a === undefined ? undefined : sbFails(f.id, a), close: near(a, f.bar) };
         }),
       ),
     );
@@ -710,9 +852,12 @@ if (import.meta.main) {
     ),
   );
 
-  // The library: each question routed by the moment's tags, its bar chosen on the tune pictures.
+  // The library: each question routed by the moment's tags, judged on the pictures it was neither tuned on
+  // nor written from: at its first bar, never tuned, every picture it is asked of; at the bar chosen on the
+  // tune pictures, the held-out ones. Either way the moments its rule's evidence names (docs/rules.md) are
+  // left out: the question was written knowing what went wrong there.
   const libRows: Row[] = [];
-  const bars: Record<string, { bar: number; chosen: boolean }> = {};
+  const bars: Record<string, { bar: number; chosen: boolean; why?: string }> = {};
   for (const q of LIBRARY) {
     const onPics = q.reads === 'prompt' ? pics : shotPics;
     const readings = onPics.flatMap((p) => {
@@ -726,37 +871,72 @@ if (import.meta.main) {
       ];
     });
     const answered = readings.filter((x): x is { p: SetPicture; reading: number } => x.reading !== undefined);
+    const sources = new Set(
+      q.from.flatMap((id) => {
+        const m = pics.find((p) => p.id === id);
+        return m ? [momentKey(m)] : [];
+      }),
+    );
+    const clean = (p: SetPicture) => !sources.has(momentKey(p));
     const chosen = chooseBar(
       q,
       answered.filter((x) => x.p.split === 'tune'),
     );
     bars[q.id] = chosen;
-    // The same question at its first bar, 0.5, never tuned: every picture is new to it.
-    const untuned = score(answered.map((x) => ({ p: x.p, flag: isFinding(q, x.reading) })));
-    libRows.push(
-      rowOf(
-        {
-          id: q.id,
-          label: q.says,
-          rule: q.rule,
-          reads: q.reads,
-          routedBy: q.routedBy,
-          existing: false,
-          calls: q.reads === 'prompt' ? "0 more: asked in the gate's call" : "0 more: asked in the storyboard's call",
-          bar: `${q.problem === 'yes' ? '>' : '<'} ${chosen.bar.toFixed(1)}${chosen.chosen ? ' (chosen on tune)' : ' (too few flags on tune to choose)'}`,
-          classes: q.classes,
-          note: `at ${q.bar}, untuned: ${untuned.hits}/${untuned.flagged} of all`,
-          auc: aucOf(
-            readings.map((x) => ({ p: x.p, v: x.reading })),
-            q.problem,
-          ),
-        },
-        readings.map((x) => ({
+    const share = readings.length / pics.length;
+    const first = score(
+      answered
+        .filter((x) => clean(x.p))
+        .map((x) => ({
           p: x.p,
-          flag: x.reading === undefined ? undefined : isFinding({ problem: q.problem, bar: chosen.bar }, x.reading),
+          flag: isFinding({ problem: q.problem, bar: FIRST_BAR }, x.reading),
+          close: near(x.reading, FIRST_BAR),
         })),
-      ),
     );
+    const untuned = { bar: FIRST_BAR, scored: first, verdict: verdictOf(first) };
+    const row = rowOf(
+      {
+        id: q.id,
+        label: q.says,
+        rule: q.rule,
+        reads: q.reads,
+        routedBy: q.routedBy,
+        existing: false,
+        calls: q.reads === 'prompt' ? "0 more: asked in the gate's call" : "0 more: asked in the storyboard's call",
+        bar: `${q.problem === 'yes' ? '>' : '<'} ${chosen.bar.toFixed(1)}${chosen.chosen ? ' (chosen on tune)' : chosen.why === 'too many' ? ' (every bar that flags three moments flags over half the tune pictures: its first bar)' : ' (no bar flags three moments of the tune pictures: its first bar)'}`,
+        classes: q.classes,
+        scoredOn: `the held-out pictures it is asked of${sources.size ? `, but the ${sources.size} moments its rule was written from` : ''}`,
+        note: sources.size ? `${sources.size} source moments left out` : undefined,
+        auc: aucOf(
+          readings.map((x) => ({ p: x.p, v: x.reading })),
+          q.problem,
+        ),
+        untuned,
+      },
+      readings.map((x) => ({
+        p: x.p,
+        flag: x.reading === undefined ? undefined : isFinding({ problem: q.problem, bar: chosen.bar }, x.reading),
+        close: near(x.reading, chosen.bar),
+      })),
+      (p) => p.split === 'held_out' && clean(p),
+    );
+    // Either path would earn it acting, at that path's bar; what more it needs is the nearer path's. But the
+    // library was written after its author read the owner's notes on these very pictures: no picture here is
+    // new to it, so none of it may act on them. Pictures judged after 27 Sep test it.
+    const byFirst = needed(first, share);
+    const held = verdictOf(row.scored);
+    const path = held.acts ? `at ${chosen.bar}, held out` : untuned.verdict.acts ? `at ${FIRST_BAR}, untuned` : null;
+    if (path) row.wouldAct = path;
+    const bare = (why: string) => why.replace(/^log only: /, '');
+    row.verdict = {
+      acts: false,
+      why: path
+        ? `log only: it would meet the bar here (${path}), but it was written after reading the owner's notes on these pictures; pictures judged later test it`
+        : `log only: at its tuned bar, held out, ${bare(held.why)}; at ${FIRST_BAR}, untuned, ${bare(untuned.verdict.why)}`,
+    };
+    row.earnedBar = null;
+    if ('none' in row.needs || ('routed' in byFirst && byFirst.any < row.needs.any)) row.needs = byFirst;
+    libRows.push(row);
   }
   rows.push(...libRows);
 
@@ -797,7 +977,7 @@ if (import.meta.main) {
   };
 
   // ── the readings logged per picture (S2), joined to the verdicts ──
-  const logDirs = listOf('--logs');
+  const logDirs = opts.logs ?? [];
   const joins: { by: 'prompt' | 'moment'; picture: string; verdict: string; facts: unknown; decision: string }[] = [];
   const walk = (d: string): string[] =>
     readdirSync(d).flatMap((f) => {
@@ -833,13 +1013,29 @@ if (import.meta.main) {
 
   // ── out ──
   const pct = (x: number | null) => (x === null ? '-' : x.toFixed(2));
-  const cell = (s: Score) => `${s.hits}/${s.flagged} = ${pct(s.precision)}`;
+  const cell = (x: Score) =>
+    `${x.hits}/${x.flagged}${x.precision === null ? '' : ` = ${pct(x.precision)}`} (${x.flaggedMoments} moments)`;
+  const needs = (r: Row) =>
+    r.verdict.acts
+      ? '-'
+      : 'none' in r.needs
+        ? r.needs.none
+        : `${r.needs.routed} of its moments (${r.needs.any} judged in all)`;
+  const library = rows.filter((r) => r.untuned);
+  const others = rows.filter((r) => !r.untuned);
   const lines = [
-    '| check | reads | routed by | bar | pictures (tune/held out) | flagged: not right / flagged = precision, all | recall, all | held out | wrong: precision / recall | own faults flagged | AUC | verdict |',
+    '| check | reads | routed by | bar | pictures (moments) | all: not right / flagged = precision | recall | judged on: not right / flagged | its lower bound / base | AUC | verdict | more owner verdicts it would need |',
     '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
-    ...rows.map(
+    ...others.map(
       (r) =>
-        `| ${r.id}${r.note ? ` (${r.note})` : ''} | ${r.reads} | ${r.routedBy} | ${r.bar} | ${r.answered} (${r.tune.n}/${r.held_out.n})${r.answered < r.routed ? `, ${r.routed - r.answered} unanswered` : ''} | ${cell(r.all)}, base ${pct(r.all.base)} | ${pct(r.all.recall)} | ${cell(r.held_out)}, base ${pct(r.held_out.base)} | ${pct(r.all.wrong.precision)} / ${pct(r.all.wrong.recall)} | ${r.own.flagged}/${r.own.faults} | ${r.auc === undefined || r.auc === null ? '-' : r.auc.toFixed(2)} | ${r.verdict.acts ? '**may act**' : r.verdict.why} |`,
+        `| ${r.id}${r.note ? ` (${r.note})` : ''} | ${r.reads} | ${r.routedBy} | ${r.bar} | ${r.answered} (${r.all.moments})${r.answered < r.routed ? `, ${r.routed - r.answered} unanswered` : ''} | ${cell(r.all)} | ${pct(r.all.recall)} | ${cell(r.scored)} | ${pct(r.scored.low)} / ${pct(r.scored.base)} | ${r.auc === undefined || r.auc === null ? '-' : r.auc.toFixed(2)} | ${r.verdict.acts ? '**may act**' : r.verdict.why} | ${needs(r)} |`,
+    ),
+    '',
+    '| question | rule | routed by | pictures (moments) | at its first bar, every picture but its sources | its lower bound / base | tuned bar | at it, held out but its sources | its lower bound / base | AUC | verdict | more owner verdicts it would need |',
+    '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
+    ...library.map(
+      (r) =>
+        `| ${r.id} | ${r.rule} | ${r.routedBy} | ${r.answered} (${r.all.moments}) | ${cell(r.untuned!.scored)} of ${r.untuned!.scored.n} | ${pct(r.untuned!.scored.low)} / ${pct(r.untuned!.scored.base)} | ${r.bar} | ${cell(r.scored)} of ${r.scored.n} | ${pct(r.scored.low)} / ${pct(r.scored.base)} | ${r.auc === undefined || r.auc === null ? '-' : r.auc.toFixed(2)} | ${r.verdict.acts ? `**may act** at ${r.earnedBar}` : r.verdict.why} | ${needs(r)} |`,
     ),
   ];
   // Every picture's readings, as asked: the gate's, the shot's (logged then, and again), the library's worst.
@@ -872,17 +1068,22 @@ if (import.meta.main) {
       looks: momentOf(p).looks,
     };
   };
-  mkdirSync(RUNS, { recursive: true });
-  const out = {
-    label,
+  /** The distinct checks (a variant, asked again or as it acts, and the picture judge are not more checks). */
+  const distinct = rows.filter((r) => !r.id.includes(':') && r.id !== 'picture.judge');
+  return {
     at: new Date().toISOString(),
     model: EVAL_MODEL(),
     set: createHash('sha256').update(readFileSync(SET)).digest('hex').slice(0, 16),
     calls,
     bar: BAR,
     rows,
+    distinct: { checks: distinct.length, act: distinct.filter((r) => r.verdict.acts).map((r) => r.id) },
     bars,
     takes,
+    shots: {
+      story: pics.filter((p) => p.kind === 'story' && shotOf(p)).length,
+      paired: pics.filter((p) => p.kind === 'paired' && shotOf(p)).length,
+    },
     pictures: Object.fromEntries(pics.map((p) => [p.id, readingsOf(p)])),
     joins: {
       dirs: logDirs,
@@ -890,16 +1091,60 @@ if (import.meta.main) {
       by_moment: joins.filter((j) => j.by === 'moment').length,
       rows: joins,
     },
+    lines,
   };
-  writeFileSync(join(RUNS, `${label}.json`), `${JSON.stringify(out, null, 1)}\n`);
+}
+
+export type Measured = Awaited<ReturnType<typeof measure>>;
+
+// ── the command ─────────────────────────────────────────────────────────────────────────────────
+
+const USAGE = `usage: bun --env-file=<keys> run evals/jev-checks.ts [--label <name>] [--no-ask] [--logs <dir> …]
+
+  --label <name>   write runs/jev-checks/<name>.json (default: latest)
+  --no-ask         ask Jev nothing new: only the answers kept in evals/checks-answers.json
+  --logs <dir> …   join the readings logged in these folders (jev.jsonl) to the owner's verdicts
+  --help           this`;
+
+if (import.meta.main) {
+  const args = process.argv.slice(2);
+  if (args.includes('--help')) {
+    console.log(USAGE);
+    process.exit(0);
+  }
+  let label = 'latest';
+  let ask = true;
+  const logs: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (a === '--label' && args[i + 1] && !args[i + 1].startsWith('--')) label = args[++i];
+    else if (a === '--no-ask') ask = false;
+    else if (a === '--logs') {
+      while (args[i + 1] && !args[i + 1].startsWith('--')) logs.push(args[++i]);
+      if (!logs.length) {
+        console.error(`--logs names no folder\n\n${USAGE}`);
+        process.exit(1);
+      }
+    } else {
+      console.error(`not understood: ${a}\n\n${USAGE}`);
+      process.exit(1);
+    }
+  }
+  const out = await measure({ ask, logs, say: (line) => console.log(line) });
+  mkdirSync(RUNS, { recursive: true });
+  const { lines, ...kept } = out;
+  writeFileSync(join(RUNS, `${label}.json`), `${JSON.stringify({ label, ...kept }, null, 1)}\n`);
   console.log(lines.join('\n'));
   console.log(
-    `\n${rows.filter((r) => r.verdict.acts).length} of ${rows.length} checks may act; written to runs/jev-checks/${label}.json`,
+    `\n${out.distinct.act.length} of ${out.distinct.checks} distinct checks may act (${out.rows.length} rows, with their variants and the picture judge); written to runs/jev-checks/${label}.json`,
   );
   console.log(
-    `paired moments: ${takes.judged_apart} of ${takes.moments} judged some right and some not from prompts differing only in image 1 (the gate's contradiction reading moves ${takes.contradicts_spread_mean.toFixed(2)} between them, on average)`,
+    `"storyboard complete?" measured on the pictures drawn from the shot it read: ${out.shots.story} story and ${out.shots.paired} paired`,
   );
-  if (logDirs.length)
+  console.log(
+    `paired moments: ${out.takes.judged_apart} of ${out.takes.moments} judged some right and some not from prompts differing only in image 1 (the gate's contradiction reading moves ${out.takes.contradicts_spread_mean.toFixed(2)} between them, on average)`,
+  );
+  if (logs.length)
     console.log(
       `logged readings joined to the owner's verdicts: ${out.joins.by_prompt} by the prompt judged, ${out.joins.by_moment} by moment only (another prompt of the same moment)`,
     );
