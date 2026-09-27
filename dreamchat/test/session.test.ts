@@ -1,4 +1,4 @@
-import { describe, expect, spyOn, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, spyOn, test } from 'bun:test';
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -12,7 +12,18 @@ import { sha } from '../gate';
 import * as asdrawn from '../asdrawn';
 import { staleRoute } from '../routes';
 import { SessionStore, type StoreDeps } from '../session';
-import { DEFAULTS, fakeHost, fakeJev, noul, pick, told, withChecks, withRouted, withSwitches } from './fakes';
+import {
+  DEFAULTS,
+  fakeHost,
+  fakeJev,
+  noul,
+  pick,
+  pinSwitches,
+  told,
+  withChecks,
+  withRouted,
+  withSwitches,
+} from './fakes';
 
 const cfg = dreamConfig();
 const required = cfg.goals.filter((g) => !g.optional).map((g) => g.id);
@@ -61,7 +72,21 @@ describe('one turn at a time', () => {
   });
 });
 
+/**
+ * Pins switches for the tests of the describe block it is called in, and puts them back after. The
+ * conversations below are the ones before listening (S8, test/listen.test.ts): DREAMCHAT_LISTEN=on checks
+ * each reply and retells otherwise, which these hosts and readings do not script.
+ */
+function pinnedFor(over: Record<string, string | undefined>): void {
+  let putBack = () => {};
+  beforeAll(() => {
+    putBack = pinSwitches(over);
+  });
+  afterAll(() => putBack());
+}
+
 describe('the retelling', () => {
+  pinnedFor({ DREAMCHAT_LISTEN: undefined });
   const allTold = (q: Record<string, Question>): Record<string, Answer> => {
     const out: Record<string, Answer> = { finished_telling: noul(0.9) };
     for (const id of required) Object.assign(out, told(id, 1));
@@ -163,6 +188,7 @@ describe('the dream goes on past the retelling', () => {
 });
 
 describe('a whole conversation', () => {
+  pinnedFor({ DREAMCHAT_LISTEN: undefined });
   const breakdown = JSON.parse(readFileSync(join(import.meta.dir, 'fixtures', 'breakdown.json'), 'utf8')) as Breakdown;
   breakdown.style_options = [
     { ...breakdown.style_options[0], id: 'a', name: 'sumi ink and wash' },
@@ -1144,9 +1170,11 @@ describe('a whole conversation', () => {
       return { questions: 3, passed: 3, failed: [], unseen: [] };
     });
     statuses.set('job-m1', 'ready');
-    await store.settle(id, 5000);
+    // The close-up is still drawing when settle gives up (nothing here lands it), so it waits its whole
+    // time: well past the judge's, well within the test's.
+    await store.settle(id, 2000);
     expect(framesStarted.map((f) => f.id)).toEqual(['m1', 'm2']);
-  });
+  }, 30_000);
 
   test("S9's fresh send: words reworded into the third person stay the dreamer's where the breakdown says so", async () => {
     const was = process.env.DREAMCHAT_FRESH_SEND;
