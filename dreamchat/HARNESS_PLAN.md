@@ -297,8 +297,11 @@ One **cut sheet** per cut is the spine everything is assembled from:
   acting: jellyfish-city m3 drawn without its brief (the pre-draw check set it aside; explained), crayon-cat m3
   (an earlier picture it takes was never drawn; explained), and jellyfish-city m7, which takes m6, a moment a
   check left undrawn: sent without it, rebuilt with it, so only the no-layering line and the sheet's names
-  differ, no image, and live-flow does not explain it (it looks for a missing image) and marks the dream FAIL.
-  With the checks logging none of the three can happen (S2's log arms). 8 of 32 moments were left undrawn by the
+  differ, no image. live-flow first marked it FAIL (it looked only for a missing image); it now explains a moment
+  taking an earlier picture a check left undrawn and counts it as a check acting (43aa749, with a test): re-run on
+  both replays, 10 dreams, 0 failing, 42 moments drawn, 37 word for word, the other 5 each a check acting (three
+  briefs set aside, jellyfish-city m7 and crayon-cat m3 taking a picture left undrawn). With the checks logging
+  none of these can happen (S2's log arms). 8 of 32 moments were left undrawn by the
   checks acting ("still unsure of its instructions after rewording", jellyfish-city 4, sea-school 3, crayon-cat
   1). The first run: 18 moments drawn, 16 word for word, 18 as sent in images, 2 differing only in the brief the
   check set aside (explained); two of its dreams drew no moment (the simulated dreamer left once the sketches were
@@ -821,3 +824,8 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   found: live-flow could not explain a moment taking a picture a check left undrawn (marked FAIL); being fixed.
   The owner's plan doc could not be updated from this session's account (access refused); this file stays the
   record of status.
+- 27 Sep: live-flow's gap closed (43aa749): a moment sent without an earlier picture the pre-draw check left
+  undrawn is explained and counted as a check acting; on S3's two fresh replays 0 of 10 dreams fail, 37 of 42
+  moments word for word, 5 each a check acting. Also: Claude's input now goes on the command line (62e0d70), since
+  on a loaded machine the CLI went on without its stdin dozens of times a replay; a CLI failure that passes (no
+  input in time, logged out for a moment, a limit) is waited out and run again (987d911).
