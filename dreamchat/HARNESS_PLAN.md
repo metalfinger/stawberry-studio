@@ -518,6 +518,89 @@ One **cut sheet** per cut is the spine everything is assembled from:
   a re-plan or a correction reuses a drawn in-between picture by its key, and nothing waits on a picture it is
   not sent.
 
+- **S7 eval (checks routed by tags).** Written 27 Sep on branch `s7-jev-routed`, before the routing is built.
+  Switch `DREAMCHAT_JEV_ROUTED=on`, off by default and off byte for byte.
+  **The question library** (`checks.ts`, `LIBRARY`). One narrow question for each film rule of `docs/rules.md` that
+  Jev can test on text, each asked only of the cuts whose tags (S3) route to it. Where a rule is about a named fact
+  (a held thing, a change carried from earlier) it is asked once for each fact and the cut's reading is the worst.
+  Jev reads text only (it takes no image: docs.typesafe.ai/models), so no Jev question reads a picture: a question
+  reads the prompt sent to the image model, or the shot as "storyboard complete?" is given it. What only a drawn
+  picture shows is the picture judge's (Claude, `evals/picture-judge.md`), measured beside them for comparison.
+
+  | question | rule | reads | routed by | a finding when |
+  | --- | --- | --- | --- | --- |
+  | `r_state_said` | B1 | prompt | change:carried or change:both | it does not say a change carried from earlier onto someone or something in the picture (one question a change) |
+  | `r_held_said` | B6 | prompt | held | it does not say who holds a thing in the picture (one question a held thing) |
+  | `r_gone_drawn` | C4 | prompt | every cut | it asks to draw someone or something it also says is gone |
+  | `r_pov_body` | A4 | prompt | pov | through the dreamer's eyes, it asks for more of the dreamer than hands, arms or feet |
+  | `r_background` | A2 | prompt | move:reverse, crossed | it does not say what fills the background once the camera has turned |
+  | `r_keep_earlier` | A2, C7 | prompt | move:reverse, other_side, crossed | it keeps an earlier picture's camera, framing, layout or background |
+  | `r_line_order` | A1 | prompt | line | it does not say who stands where, left to right |
+  | `r_size` | C2 | prompt | held, animal, vehicle, role:insert or close_up | it does not say how big the main thing is against something beside it |
+  | `r_turned_both` | B4 | prompt | turned | it describes someone both as they were and as what they turned into |
+  | `r_action_seen` | E2 | prompt | role:single, two_shot, group, ots, close_up | it does not say what they do as something seen (a pose, a movement, the hands, the gaze) |
+  | `r_story_words` | E4 | prompt | every cut | story words ("the turn", "suddenly") stand in for what is seen |
+  | `r_quoted` | C3 | prompt | every cut not tagged writing | it quotes words not meant as writing in the picture |
+  | `r_beyond_inside` | A6 | prompt | every cut (no tag says "seen beyond the place" yet) | it brings inside something only seen far off or through a window |
+  | `r_look_twice` | E1 | prompt | every cut | it describes one look twice, in words that do not match |
+  | `sb_held_hands` | B6, A4 | shot | pov and held | the shot puts what the dreamer holds away from their hands |
+  | `sb_beyond` | A6 | shot | planned | the shot brings inside something the moment sees only far off |
+
+  Rules not asked of Jev, and why. Known to code, and a step's: A3 and C7 (an edit of the picture before, where
+  the camera moves), C1, C5, D1, D2, D3, D5, D6 (which images are attached, image 1, in-between pictures: S5),
+  B2-B4's typed changes and presence (the record, S1), E3 and E5 (the "you" rewording, the style's colours), C6 (a
+  style is its medium). Already asked: A5, B5, B8 and the line's sides by "storyboard complete?" (four facts), B7 by
+  the gate's "twice", D2 by its "what to take from each image". Not a picture rule: F1-F6 (listening, S8's reply
+  checks), G1-G6 (how checks are measured). What only a drawn picture shows (a pose copied from an image,
+  proportions, a see-through person, a face that is someone else): the picture judge's.
+  **The labelled set** (`evals/checks-set.json`, built by `evals/build-checks-set.ts`). Every picture the owner has
+  judged: the 62 drawn on the nights of 25-26 Sep (`evals/story-pictures.json`) and the 60 of the paired test
+  (`evals/paired-verdicts.json`, three a moment differing only in image 1), 122 in all: 66 right, 35 partly, 21
+  wrong. For each, what each check read, or would have read, before it was drawn: the prompt exactly as sent (the
+  frozen dreams keep it; the paired test kept its prompts only in `runs/paired/results.json` of the checkout that
+  drew them, now frozen into the set), the shot and readings "storyboard complete?" logged then, and what planFacts
+  read the camera to face on the floor plan it was drawn from. **How labels are assigned:** a picture's label is the
+  owner's own verdict on it and nothing else; "not right" is partly or wrong (the owner would keep a partly picture
+  but ask for a fix); no label is invented, and no judge's verdict is a label. **Hypotheses**, used but not as
+  labels: the fault classes of the owner's notes (S0's reading of them, `evals/prompt-cases.json`), only for each
+  question's "own faults flagged"; each moment's tags and routed facts, from today's cut sheet (the frozen dream
+  rebuilt with the record on and the sheet in shadow, without implied readings), which describe today's plan of the
+  moment and not always the night's.
+  **The split.** Tune: the five dreams the picture judge was written from (lighthouse-fresh, library-2, snow-train,
+  orchard, night-market: 69 pictures, 31 not right). Held out: the five it was run on blind (lighthouse-first,
+  heron, library-1, library-3, snow-train-2: 53 pictures, 25 not right). A library question's bar is chosen on the
+  tune pictures only (the best precision with at least three and at most half of them flagged; else 0.5); no bar is
+  ever chosen on a held-out picture.
+  **S2's logged readings.** Every judged picture was drawn on 25-26 Sep, before S2 pinned readings to their prompt
+  and take (`ref`, `checkedTakes`), and none was drawn with the checks logging, so no logged reading is of a prompt
+  the owner judged: `--logs` joins S2's redraws (`runs/s2`, every arm) to 0 judged prompts, and 57 of their
+  readings to snow-train-2's 7 moments by moment only (rebuilt prompts, not the ones drawn), which are listed, not counted. Instead each check is
+  asked again of exactly what it read before the picture was drawn (the prompt as sent, the shot as checked): the
+  reading it would have logged. The storyboard's readings logged then are used as logged, and asked again for how
+  much they move. From now on a picture drawn with the checks logging or routed keeps each reading by its prompt's
+  hash, and once the owner judges it, `--logs` joins it to the set.
+  **The bar to act** (docs/rules.md G1). At least 60 labelled pictures routed to it; on the pictures it was not
+  tuned on (every picture, for a check already in the harness, its bar set before these verdicts existed; the held-out
+  ones, for a library question) at least 5 flagged, precision at least 0.7 (of the pictures it flags, the share the
+  owner did not call right), and the 90% lower bound of that precision above the share of its routed pictures not
+  right (a flag must say more than its tags alone). Otherwise it only logs. A check that meets the bar joins
+  `checks.ts EARNED` with its row in the results table; nothing else acts when the checks are routed.
+  **What is measured** (`bun --env-file=… run evals/jev-checks.ts --label <name> [--no-ask] [--logs <dir> …]`, Jev
+  asked by name, jev-1.13.0, each state once with all its questions, as the harness asks them; every answer kept in
+  `evals/checks-answers.json` by the hash of the model, the question as sent and the state, so a run again asks
+  nothing and costs nothing; `runs/jev-checks/<label>.json` keeps every picture's readings): every check in the
+  harness (the gate's four questions as logged and as acting, with the line search it makes between 0.45 and 0.55;
+  the gate as a whole; "storyboard complete?"'s four facts as logged then and asked again, and as a whole;
+  planFacts's "the camera faces something the plan lacks", which plans a scene again even with the checks logging,
+  as kept on the plan and asked again of it; the continuity plan's warnings), every library question, and the
+  picture judge for comparison. For each: pictures routed, flagged, precision and recall of not right and of wrong,
+  its own faults flagged, and its cost in Jev calls.
+  **The build's eval.** Tests: routing picks each cut's questions from its tags; a question not in `EARNED` never
+  holds, rewords, plans again or leaves a picture undrawn; with the switch off nothing changes (the same questions
+  asked, the same findings, the same acting). Routing never touches a prompt, so the prompt cases and the corpus are
+  unchanged by it. Jev calls per dream on the ten saved dreams S2 redrew (`evals/redraw.ts`, fake pictures, Jev
+  only): acting, logging and routed.
+
 ## Where steps overlap (read before starting any step)
 
 Work found in one step that belongs to, or touches, another. Keep this list current; nothing here may be dropped
