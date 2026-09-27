@@ -17,6 +17,8 @@ context mirrors it.
 | S3 One cut sheet per picture | Done | the sheet's prompt equals the old builder's on 1052 rebuilds and 48 of 48 live builds |
 | S4 Camera rules | Merged behind DREAMCHAT_CAMERA (off; needs the cut sheet on); the picture check's dry run found 6 faults, 5 fixed on `precheck-fixes` (the suitcase one is not a fault: see the log); dry run again, then draw | faults met 19/33 to 28/33 (its own 1/11 to 9/11), guards 36/36, with Claude reading what the moments imply; unchanged by the fixes (28/33, 36/36) |
 | S5 References and in-between pictures | Built on `s5-refs` behind DREAMCHAT_REFS (off; needs the cut sheet on); reviewed, review fixes in; picture check proposed (20 pictures, $3.00), not drawn | the reference check, record and sheet on, frozen / live: a subject by two images 40 / 91 moments to 0 / 0; waited for and never sent 67 / 216 to 0 / 0; from another side 2 / 8 to 0 / 0; in-between pictures not needed under the owner's rule 17 of 29 / 32 of 67 to 0 of 14 / 1 of 74. Off: 0 of 1,864 pictures moved. Prompt cases: guards 36/36, counted 19/33 and 27/33 (camera) as before, hypotheses 5 to 10 and 7 to 12 of 18 |
+| S4 Camera rules | Merged behind DREAMCHAT_CAMERA (off; needs the cut sheet on); the picture check's dry run found 6 faults, 5 fixed on `precheck-fixes` (the suitcase one is not a fault: see the log); the second dry run's 3 brief faults fixed on `brief-fixes`; brief library-1 m5, library-3 m6 and lighthouse-fresh m9 again, dry run again, then draw | faults met 19/33 to 28/33 (its own 1/11 to 9/11), guards 36/36, with Claude reading what the moments imply; unchanged by either set of fixes (28/33, 36/36) |
+| S5 References and in-between pictures | Built on `s5-refs` behind DREAMCHAT_REFS (off); in review | subject shown by 2+ images 40 to 1 frozen, pictures waited for but never sent 67 to 0, layout from the other side 2 to 0; a never-drawn side is no change (owner, 27 Sep) |
 | S6 One prompt builder, clean-ups retired | Test written; typed readings of the 526 moments done (branch `s6-readings`) | a ledger of 16 clean-ups, S4's 4 word lists and 14 duplicates, in order; every moment says a fact twice (frozen 2350 facts, live 6595), 21 of 115 frozen moments say an action no picture shows (live 134 of 411); built after S5 |
 | S7 Jev checks routed by tags | Done (routing switch off; every Jev reading logs) | measured on the 122 pictures the owner judged (as sent): the gate and "storyboard complete?" are at chance (AUC 0.36-0.56); 16 library questions not measurable yet; 0 of 28 checks earn acting; a check earns acting only at its measured bar, counted by moments. Run the picture checkpoints with `DREAMCHAT_JEV_ROUTED=on` so the library questions' readings join the owner's new verdicts |
 | S8 Listening | Done: on by default since 27 Sep (`DREAMCHAT_LISTEN=off` brings the old listening back) | 20 dreams on Claude: either/or 23% to 0, leading 17% to 0, "I don't remember" 0.24 to 0.14, listening ended early 6/20 to 3/20; told facts kept as said 0.942 vs 0.949 (within noise) |
@@ -1550,7 +1552,13 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   every crossing cut has (a crossing cut without a mock-up would be told to keep the old layout). From the picture
   check's dry run (27 Sep, `precheck-fixes`): riders turned by `settle` against the way the plan moves their vehicle
   (no heading said there now); creatures and high wall fixtures without heights in the mock-up; a place seen only
-  through a window unsaid; the brief check reads names, not placement (the overlaps table).
+  through a window unsaid; the brief check reads names, not placement (the overlaps table). From the second dry run
+  (27 Sep, `brief-fixes`): a place named by where it is ("outside the window") is left out of the view line, not
+  said by what it is there: said ("outside it, the whole city underwater"), library-1-m5-level's Jev reading went
+  from 0.38-0.43 to 0.44-0.55, at the bar, so whether it helps the picture is for a picture test; the creature the
+  camera rules put beside the boat (library-3 m6's whale) is said after the brief, not in the view's list, so no
+  brief is asked to name it; a brief kept in a checkpoint's `briefs.json` is not checked again against today's
+  rules (a cut one is deleted by hand and briefed again).
 - **S1 (`shutAway`), from the picture check's dry run.** The dry run's premise that the owner called snow-train-2 m5
   and m6 right with the suitcase open does not hold for m5: the picture he called right there has it shut, carried by
   its handle, and on the other two drawings of m5 he wrote "the suitcase should be shut" (the counted case
@@ -2263,3 +2271,40 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   and 7 to 12 of 18. `bun test`: 777 pass with the switches unset; with every switch on, two tests of today's plans
   failed and are now pinned (their files pass both ways); typecheck clean. The paid check re-proposed: 20 pictures,
   $3.00, not drawn. No pictures drawn, no money spent.
+
+- 27 Sep: the S4 picture check's second dry run found three faults in the shot briefs; fixed on branch
+  `brief-fixes` from lab 3392d83, no pictures, no money.
+  1. `shotFor` cut a brief at 1,400 characters mid-word, after its name check had passed (library-1 m5 ended "glow
+     fain", library-3 m6 stopped mid-sentence). The writer is now asked for at most 1,200 characters
+     (`BRIEF_ASK`, said in the request); one still over 1,400 (`BRIEF_MAX`) is cut after its last whole sentence
+     that fits, none fitting is not kept, and the name check reads the brief as kept (`briefKept`), so one that
+     loses anyone in the view by the cut is refused. Briefed again by the Claude writer (the only writer calls,
+     into a scratch copy of the checkpoint): library-1 m5 1,176 and library-3 m6 1,227 characters, each ending a
+     sentence and naming everyone in its view. library-3 m6's whale is not in its view's list: the camera rules
+     say it after the brief ("In the water, in the middle of the picture, beside the yellow rowing boat: the whale,
+     too big for the water to cover, part of it above the surface").
+  2. The id fix (`namesForIds`) doubled a phrase: "facing the high round window; outside it outside the window"
+     (library-1 m5; its place l2 is named "outside the window"). A place whose name says only where it is is now
+     said by what it is (the first part of its geography, else its landmarks) in a moment's words, set off by a
+     comma after words that already say where; in what the camera faces (`looks_at`) those words and the place are
+     left out ("facing the high round window"), since the camera faces the window and the moment's own words and
+     what it must show already say what is out past it. Said there by what it is, library-1-m5-level dropped: with
+     any of four wordings Jev read the boat as low in the room at 0.44-0.55 (14 asks, 13 at 0.47 or more), against
+     0.38-0.43 without it (7 asks) (debt, S4).
+  3. `fixtureName` took the first fixture with an id across every scene's plan, but ids are each plan's own:
+     lighthouse-fresh m9's window (x1 of the round room) was "the lighthouse" (the beach's x1), so no brief of it
+     could pass. It now reads the moment's own plan (`placePlan`: its scene's, or the plan of the place the scene
+     moves through), in `calledIn` and `calledFor` alike. The mock-up already labelled fixtures from the moment's
+     plan; what changes is what a brief must name: frozen 16 fixtures in 14 cuts of 5 dreams, live 61 in 49 cuts
+     of 14, each now the fixture on the moment's own floor plan (lighthouse-fresh m4 "the lighthouse door", m6-m8
+     "the table", m9-m10 "the window"; snow-train-2 m4 "the stopped train", not "the front seat"; and so on).
+  Tests: `test/brief-names.test.ts` (the length asked, a whole sentence kept, a brief that loses a name by the cut
+  refused), `test/camera.test.ts` (a place named by where it is), `test/continuity.test.ts` (two plans with an x1
+  each, and a place the scene moves through); each fails on lab. `tsc` clean; `bun test` 756 pass, 2 skipped, 0
+  fail, with the switches unset and with record, sheet and camera on. Prompt cases, all 85, Claude's readings from
+  the cache (0 writer calls), against lab: off 6/33 counted, 0/8 model step, 36/36 guards, 4/18 hypotheses; on
+  (record, sheet, camera) 28/33, 7/8, 36/36, 7/18; no case moved either way (5 new Jev questions for library-1
+  m5's new prompt). Corpus against lab: switches off, 0 of 140 frozen and 0 of 477 live pictures changed; on,
+  1 of 144 frozen and 1 of 489 live, library-1 m5's view line without "outside it outside the window", better;
+  0 worse. For the check: delete library-1-m5 and library-3-m6 from `runs/checkpoint/s4/briefs.json` (cut
+  there), brief them and lighthouse-fresh-m9 with `--brief`, and dry run again.
