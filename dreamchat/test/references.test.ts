@@ -11,6 +11,7 @@ import {
   ghostNeeds,
   runCheck,
   stageImageOf,
+  storyChanges,
   waitedNotSent,
 } from '../evals/prompt-cases';
 import { mockupRoute, referencesOf, totalsOf } from '../evals/references';
@@ -101,54 +102,37 @@ describe('the references chosen', () => {
     expect(run(contextOf(snow, 'm1'), 'waits_only_on_sent').pass).toBe(true);
   });
 
-  test("each in-between picture, against the owner's rule: kept where a moment it serves would carry several changes without it", () => {
-    const needs = cameraOff(() => ghostNeeds(library3));
-    // The books and the water are each drawn for a moment that would change three things at once.
-    expect(needs.filter((g) => g.kept).map((g) => g.id)).toEqual(['g1', 'g2']);
-    const window = needs.find((g) => g.id === 'g3')!;
-    expect([window.most, window.by, window.kept]).toEqual([2, 'm7', false]);
-    expect(cameraOff(() => ghostNeeds(library3, 2)).every((g) => g.kept)).toBe(true);
+  test("each in-between picture, against the owner's rule: kept where it takes a change off a moment that would otherwise carry two", () => {
+    const needs = cameraOff(() => ghostNeeds(library3, 2));
+    // The books are the water's start (the water is edited from them); the water is carried into m4 and
+    // shown by nothing else there; the window opens in m7 itself, drawn in one edit of the mock-up.
+    expect(needs.map((g) => [g.id, g.most, g.by, g.kept])).toEqual([
+      ['g1', 2, 'g2', true],
+      ['g2', 2, 'm4', true],
+      ['g3', 0, null, false],
+    ]);
+  });
+
+  test('changes are counted from the dream and the images sent, apart from the plan: the story, and a side only where nothing lays it out', () => {
+    // With the mock-up sent, a side never drawn is no change; each change in force is shown by its in-between picture.
+    const m7 = cameraOff(() => contextOf(library3, 'm7'));
+    expect(m7.refs[0].source).toBe('mockup');
+    expect(storyChanges(m7)).toEqual(['the action']);
+    // The window's picture is edited from the water's, so it shows the water too; at m4, take the water's
+    // picture away (the books' is its start and does not show it) and the water is carried in words.
+    expect(storyChanges(m7, 'g2')).toEqual(['the action']);
+    const m4 = cameraOff(() => contextOf(library3, 'm4'));
+    expect(storyChanges(m4)).toEqual(['the action']);
+    expect(storyChanges(m4, 'g2')).toEqual(['the action', "l1's water now up over the tops of the desks"]);
+    // Without the mock-up and a view worked out on a floor plan, the side the moment faces is a change.
+    const bare = { ...m7, cut: { ...m7.cut, view: undefined }, refs: m7.refs.filter((x) => x.source !== 'mockup') };
+    expect(storyChanges(bare).some((x) => x.endsWith('never shown'))).toBe(true);
   });
 
   test('an in-between picture another is edited from serves that edit: without it, the next carries two changes', () => {
-    // g1 is its moment's own change, drawn in one edit; g2 is edited from g1, so g1 is not for nothing.
-    const cutOf = (id: string, own: string) => ({
-      id,
-      changes: ['the action'],
-      own: [{ who: 'p1', what: own, now: 'x', since: id }],
-      states: [],
-      refs: [],
-    });
-    const r = {
-      b: { scenes: [{ moments: [{ id: 'm1' }, { id: 'm2' }] }] },
-      plan: {
-        cuts: [cutOf('m1', 'head'), cutOf('m2', 'coat')],
-        ghosts: [
-          {
-            id: 'g1',
-            kind: 'state',
-            of: 'p1',
-            label: 'g1',
-            usedBy: ['m1'],
-            state: { who: 'p1', what: 'head', now: 'x', since: 'm1' },
-          },
-          {
-            id: 'g2',
-            kind: 'state',
-            of: 'p1',
-            label: 'g2',
-            after: 'g1',
-            usedBy: ['m2'],
-            state: { who: 'p1', what: 'coat', now: 'x', since: 'm2' },
-          },
-        ],
-      },
-    } as never;
-    const needs = ghostNeeds(r, 2);
-    expect(needs.map((g) => [g.id, g.most, g.by, g.kept])).toEqual([
-      ['g1', 2, 'g2', true],
-      ['g2', 1, 'm2', false],
-    ]);
+    // Tomas's age is drawn first and his school uniform edited from it: the age's picture is for that edit.
+    const needs = cameraOff(() => ghostNeeds(orchard, 2));
+    expect(needs.find((g) => g.id === 'g1')).toMatchObject({ most: 2, by: 'g2', kept: true });
   });
 
   test('over a whole dream: counted moment by moment, and totalled', () => {
@@ -162,13 +146,17 @@ describe('the references chosen', () => {
     expect(t.first['no sheet'] ?? t.first.two_shot).toBeDefined();
   });
 
-  test('the routing the paired test suggests for the mock-up (a hypothesis)', () => {
+  test('the routing the verdicts suggest for the mock-up (a hypothesis)', () => {
     expect(mockupRoute({ role: 'two_shot', move: 'other_side' })).toBe(true);
     expect(mockupRoute({ role: 'wide', move: 'reverse' })).toBe(true);
     expect(mockupRoute({ role: 'pov', move: 'seat' })).toBe(false);
+    expect(mockupRoute({ role: 'pov', move: 'other_side', placeOnly: true })).toBe(true);
     expect(mockupRoute({ role: 'close_up', move: 'same_side' })).toBe(false);
     expect(mockupRoute({ role: 'single', move: 'jump' })).toBe(false);
-    expect(mockupRoute({ role: 'wide', move: 'other_place' })).toBe(false);
+    expect(mockupRoute({ role: 'single', move: 'other_place' })).toBe(false);
+    expect(mockupRoute({ role: 'wide', move: 'other_place' })).toBe(true);
+    expect(mockupRoute({ role: 'group', move: 'same_side', faceless: true })).toBe(false);
+    expect(mockupRoute({ role: 'wide', move: 'first', faceless: true, establishing: true })).toBe(true);
     expect(mockupRoute({})).toBe(false);
   });
 });

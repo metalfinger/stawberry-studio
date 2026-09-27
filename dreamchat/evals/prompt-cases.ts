@@ -455,40 +455,75 @@ export const isStage = (x: Pick<RefInfo, 'source' | 'of'>, want: ReturnType<type
 export const SEVERAL = 3;
 
 /**
- * How many changes a moment's picture would carry at once without one in-between picture: the plan's
- * count (the action, a reframing, a side never drawn, each change in force shown in no reference),
- * with the change the in-between picture carries put back when nothing else attached shows it. A
- * change the moment makes itself is its action, as the plan counts it; a view's in-between picture
- * puts back the side never drawn.
+ * The changes one moment's picture carries at once, counted from the dream and the images the moment is
+ * sent, apart from the continuity plan's own count (the owner's rule, 27 Sep: only story changes count
+ * where the layout is given):
+ * - the action (a change the moment makes itself is part of it);
+ * - each change still in force on who or what is in view that no image sent shows: an in-between
+ *   picture of it, or of a later change edited from it, or an earlier picture drawn at or after it that
+ *   shows its subject (not one kept for its light, nor the picture before a dream's jump);
+ * - only where nothing lays the picture out (no mock-up sent, no view worked out on a floor plan, no
+ *   picture edited): a side of its place never shown by an image sent (the place's sketch shows the side
+ *   its first moment there faces), and a new framing of an earlier picture it takes the room from.
+ * `leaving` takes one image out (an in-between picture or an earlier picture, by id).
  */
-export function changesWithout(r: Rebuilt, cut: CutPlan, g: GhostPlan): number {
-  if (g.kind === 'view') return cut.changes.length + 1;
-  const st = g.state;
-  if (!st || !cut.states.some((x) => x.who === st.who && x.what === st.what && x.now === st.now))
-    return cut.changes.length;
-  const ms = moments(r.b);
-  const index = new Map(ms.map((m, i) => [m.id, i]));
-  const other = cut.refs.some((u) => {
-    if (u.id === g.id) return false;
-    if (u.kind === 'ghost') {
-      const o = r.plan.ghosts.find((x) => x.id === u.id);
-      return !!o?.state && o.state.who === st.who && o.state.what === st.what && o.state.now === st.now;
-    }
-    const m = ms.find((x) => x.id === u.id);
-    return (
-      !!m &&
-      u.relation !== 'shift' &&
-      u.role !== 'lighting' &&
-      (index.get(u.id) ?? -1) >= (index.get(st.since) ?? 0) &&
-      inViewAt(m).has(st.who)
+export function storyChanges(c: Pick<Ctx, 'r' | 'm' | 'cut' | 'refs'>, leaving?: string): string[] {
+  const refs = c.refs.filter((x) => !leaving || x.of !== leaving);
+  const ms = moments(c.r.b);
+  const at = new Map(ms.map((m, i) => [m.id, i]));
+  const here = at.get(c.m.id) ?? 0;
+  const byId = new Map(ms.map((m) => [m.id, m]));
+  const use = (id?: string) => c.cut.refs.find((u) => u.kind === 'cut' && u.id === id);
+  const chain = (id?: string) => {
+    const out: GhostPlan[] = [];
+    for (let g = c.r.plan.ghosts.find((x) => x.id === id); g && !out.includes(g);)
+      (out.push(g), (g = g.after ? c.r.plan.ghosts.find((x) => x.id === g!.after) : undefined));
+    return out;
+  };
+  const pictures = refs.filter(
+    (x) => x.source === 'picture' && use(x.of)?.role !== 'lighting' && use(x.of)?.relation !== 'shift',
+  );
+  const out = ['the action'];
+  for (const st of c.cut.states) {
+    const same = (o?: { who: string; what: string; now: string }) =>
+      !!o && o.who === st.who && o.what === st.what && o.now === st.now;
+    const byGhost = refs.some((x) => x.source === 'ghost' && chain(x.of).some((g) => same(g.state)));
+    const byPicture = pictures.some((x) => {
+      const e = byId.get(x.of ?? '');
+      return !!e && (at.get(e.id) ?? -1) >= (at.get(st.since) ?? 0) && inViewAt(e).has(st.who);
+    });
+    // What a moment implies is said in words, never drawn on its own (S1): named so.
+    if (!byGhost && !byPicture) out.push(`${st.who}'s ${st.what} now ${st.now}${st.implied ? ' (implied)' : ''}`);
+  }
+  const edited = refs[0]?.role === 'base' && (refs[0].source === 'picture' || refs[0].source === 'ghost');
+  const laidOut = edited || refs.some((x) => x.source === 'mockup') || !!c.cut.view;
+  if (laidOut) return out;
+  const m = c.m;
+  const before = ms.slice(0, here).filter((e) => e.place === m.place);
+  const faces = (e: Moment) => (m.sameSide ?? []).includes(e.id);
+  if (m.place && before.length) {
+    const bySketch = faces(before[0]);
+    const byView = refs.some(
+      (x) =>
+        x.source === 'ghost' && c.r.plan.ghosts.find((g) => g.id === x.of && g.kind === 'view' && g.of === m.place),
     );
+    const byPicture = pictures.some((x) => {
+      const e = byId.get(x.of ?? '');
+      return !!e && e.place === m.place && faces(e);
+    });
+    if (!bySketch && !byView && !byPicture) out.push(`${m.place} facing ${m.looks_at || 'another way'}, never shown`);
+  }
+  const room = pictures.find((x) => {
+    const e = byId.get(x.of ?? '');
+    return !!e && x.role === 'composition' && e.place === m.place && faces(e);
   });
-  return cut.changes.length + (other ? 0 : 1);
+  if (room && byId.get(room.of ?? '')?.distance !== m.distance) out.push(`reframed ${m.distance}`);
+  return out;
 }
 
 /**
- * Each in-between picture of a dream's plan, with the most changes any moment it is drawn for would
- * carry without it, and so whether it meets the owner's rule at `bar`. An in-between picture another is
+ * Each in-between picture of a dream's plan, with the most changes any moment sent it would carry without
+ * it where it takes one of them off (`storyChanges`), and so whether it meets the owner's rule at `bar`. An in-between picture another is
  * edited from serves that edit too: without it, the next one is edited from the sketch carrying both
  * changes, its own and this one (the ice block before it melts, before the horse).
  */
@@ -504,16 +539,21 @@ export function ghostNeeds(
   by: string | null;
   kept: boolean;
 }[] {
+  const sent = r.pictures
+    .filter((p) => p.kind === 'cut')
+    .map((p) => contextOf(r, p.id))
+    .map((c) => ({ c, ghosts: new Set(c.refs.flatMap((x) => (x.source === 'ghost' && x.of ? [x.of] : []))) }));
   return r.plan.ghosts.map((g) => {
     let most = 0;
     let by: string | null = null;
-    for (const id of g.usedBy) {
-      const cut = r.plan.cuts.find((c) => c.id === id);
-      if (!cut) continue;
-      const n = changesWithout(r, cut, g);
+    for (const { c, ghosts } of sent) {
+      if (!ghosts.has(g.id)) continue;
+      // Only where it takes a change off the moment: a picture that carries none of its changes serves none.
+      const n = storyChanges(c, g.id).length;
+      if (n <= storyChanges(c).length) continue;
       if (n > most) {
         most = n;
-        by = id;
+        by = c.m.id;
       }
     }
     const next = r.plan.ghosts.find((o) => o.after === g.id);

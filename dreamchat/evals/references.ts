@@ -38,9 +38,10 @@ import {
   type RefInfo,
   SEVERAL,
   stageImageOf,
+  storyChanges,
   waitedNotSent,
 } from './prompt-cases';
-import { facelessIn, SEVERAL as OWNERS_BAR } from '../refs';
+import { SEVERAL as OWNERS_BAR } from '../refs';
 import { commitOf, DIR, type Inputs, inputsDiffer } from './saved';
 
 /** What the references of one moment show. */
@@ -52,9 +53,13 @@ export type MomentRefs = {
   role?: string;
   move?: string;
   unstaged?: string | null;
-  /** The moment is about someone with no image of their own (a crowd it lists as its own). */
+  /** The moment is about a crowd with no image of its own: a group it lists as its own, with no sketch. */
   faceless?: boolean;
-  /** How many changes its picture carries at once, as the plan counts them (the action included). */
+  /** It establishes the place (the sheet's tag). */
+  establishing?: boolean;
+  /** Nothing but the place is in view. */
+  placeOnly?: boolean;
+  /** How many changes its picture carries at once, counted apart from the plan (the action included). */
   changes: number;
   /** What each change besides the action is: a reframing, a side never drawn, a change shown in no image. */
   changeKinds: string[];
@@ -115,22 +120,31 @@ export function referencesOf(r: Rebuilt): Omit<DreamRefs, 'hash'> {
       })
       .map(said);
     const tags = p.sheet?.tags;
+    // Counted apart from the plan's own count (prompt-cases.ts storyChanges).
+    const changes = storyChanges(c);
     out.push({
       id: p.id,
       images: c.refs.length,
       first: firstImageOf(c.refs),
-      changes: c.cut.changes.length,
-      changeKinds: c.cut.changes
+      changes: changes.length,
+      changeKinds: changes
         .slice(1)
         .map((x) =>
           x.startsWith('reframed')
             ? 'reframed'
-            : x.endsWith('never drawn')
+            : x.endsWith('never shown')
               ? 'a side never drawn'
-              : 'shown in no image',
+              : x.endsWith('(implied)')
+                ? 'implied, said in words'
+                : 'shown in no image',
         ),
-      ...(tags ? { role: tags.role, move: tags.move, unstaged: tags.unstaged } : {}),
-      ...(p.sheet && facelessIn(p.sheet) ? { faceless: true } : {}),
+      ...(tags ? { role: tags.role, move: tags.move, unstaged: tags.unstaged, establishing: tags.establishing } : {}),
+      ...(p.sheet?.inView.some(
+        (e) => e.kind === 'character' && e.group && !e.image && e.turned === null && p.sheet!.visible.includes(e.id),
+      )
+        ? { faceless: true }
+        : {}),
+      ...(p.sheet && p.sheet.inView.every((e) => e.kind === 'location') ? { placeOnly: true } : {}),
       twice,
       notStage,
       otherSide: fromOtherSide(c).map(({ of, role, relation, turned }) => ({
@@ -148,16 +162,20 @@ export function referencesOf(r: Rebuilt): Omit<DreamRefs, 'hash'> {
 }
 
 /**
- * The routing the paired test suggests for the mock-up as image 1 (a hypothesis, n=20): from outside,
- * not across a jump or to another place, not a close-up or an insert, and not for a moment about a crowd
- * with no image of its own (heron m4, the bare figures: the case heron-m4-route; a crowd only in the
- * background kept it, night-market-m2-route).
+ * Where the verdicts put the mock-up as image 1 (a hypothesis: the paired test, n=20, beside the story
+ * pictures): not across a jump (lighthouse-first m8); through the dreamer's eyes only with nothing but the
+ * place in view (orchard m7; with someone or something in view the sketches alone were right: orchard m2,
+ * snow-train m6); not a close-up or an insert, nor the seat; to another place only for a wide shot (the
+ * story pictures' wide shots, 8 of 11); not for a moment about a crowd with no image of its own (heron m4,
+ * the bare figures) unless it is a wide shot establishing the place (night-market m1).
  */
-export const mockupRoute = (m: Pick<MomentRefs, 'role' | 'move' | 'faceless'>) =>
-  !!m.role &&
-  !['pov', 'close_up', 'insert'].includes(m.role) &&
-  !['jump', 'other_place', 'seat'].includes(m.move ?? '') &&
-  !m.faceless;
+export function mockupRoute(m: Pick<MomentRefs, 'role' | 'move' | 'faceless' | 'establishing' | 'placeOnly'>): boolean {
+  if (!m.role || m.move === 'jump') return false;
+  if (m.role === 'pov') return !!m.placeOnly;
+  if (m.role === 'close_up' || m.role === 'insert' || m.move === 'seat') return false;
+  if (m.move === 'other_place' && m.role !== 'wide') return false;
+  return !m.faceless || (m.role === 'wide' && !!m.establishing);
+}
 
 export type Totals = {
   dreams: number;
