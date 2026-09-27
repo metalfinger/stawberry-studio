@@ -1,7 +1,30 @@
 # Dream chat harness: the root-fix plan
 
 The single source of truth for rebuilding the dream chat harness from its root. Read this first in any new
-session; update the status table and the log at the end of every step.
+session; update the at-a-glance table, the status table and the log at the end of every step.
+
+## At a glance (27 Sep)
+
+The owner's view of where every step stands, kept current at the end of every step (the detail is in the status
+table below). This file, on `lab/dream-chat`, is the record any account or session can read; Engram's fever-dream
+context mirrors it.
+
+| Step | Status | Latest result |
+| --- | --- | --- |
+| S0 The test set from the owner's verdicts | Done | 85 prompt cases from 122 verdicts |
+| S1 The story record carries state | Done | faults met 6/33 to 18/33, guards 36/36 |
+| S2 Checks only log | Merged; proving | whole-dream replays on the Claude writer running |
+| S3 One cut sheet per picture | Done | the sheet's prompt equals the old builder's on 1052 rebuilds and 48 of 48 live builds |
+| S4 Camera rules | Fixing what review found | faults met 18/33 to 27/33, guards 36/36 (branch `s4-camera`) |
+| S5 References and in-between pictures | Test written | built after S4 merges |
+| S6 One prompt builder, clean-ups retired | Not started | after S5 |
+| S7 Jev checks routed by tags | Building, test first | branch `s7-jev-routed` |
+| S8 Listening | Built; proving | fresh simulation on the Claude writer running |
+| S9 Record of what was drawn, staleness | Building, test first | branch `s9-as-drawn` |
+| S10 Paid benchmark judged by the owner | Not started | about $10 |
+
+Money: $21 left of $30; the S4 picture check (about $3) is approved and runs when S4 merges. Writer model: Claude
+(`DREAMCHAT_WRITER=claude`).
 
 ## The aim
 
