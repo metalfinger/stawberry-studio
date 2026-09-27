@@ -8,6 +8,7 @@
 // take from it and nothing else. An edit base goes first (image 1 is the picture to change), or the
 // mock-up where there is none, then the sketches of who and what is in view, then in-between pictures,
 // then earlier moments while there is room.
+import { sayTurn } from './camera';
 import type { CutSheet, SheetEarlier, SheetElement } from './cutsheet';
 import { aNoun, FRAMING, SHAPE_WORDS, sentence, writingLine } from './frames';
 import { sayNow } from './record';
@@ -127,14 +128,17 @@ export function assembleCut(s: CutSheet): Assembled {
   // Where each sketch went, so a group and someone in it who has their own sketch are one and the same.
   const imageOf = new Map<string, number>();
   const inBase = (e: SheetElement) => !!base && baseWho.includes(e.id);
+  // With the camera rules: who and what is only out past the place is far off, never inside it.
+  const outside = (e: SheetElement) =>
+    s.rules?.outside[e.id] ? ` It is out past ${name(s.place)}, seen far off, never inside it.` : '';
   for (const e of s.inView) {
     if (e.nodeId) depicted.push(e.nodeId);
     const look = e.look;
     // Everything in view is listed with its look, its image or not.
     facts.push(
-      e.turned !== null
+      (e.turned !== null
         ? `${e.name} (${e.said}): it has turned into ${aNoun(e.turned)}.`
-        : `${e.name} (${e.said})${look ? `: ${look}` : ''}.`,
+        : `${e.name} (${e.said})${look ? `: ${look}` : ''}.`) + outside(e),
     );
     // Someone or something turned into something else entirely is drawn from its in-between picture,
     // never its old sketch.
@@ -156,8 +160,8 @@ export function assembleCut(s: CutSheet): Assembled {
           of: e.id,
         },
         animal
-          ? `what ${e.name} is${look ? ` (${look})` : ''}: its kind, its size, its build, its coat and its markings, exactly${inBase(e) ? ', as Image 1 already shows it' : ''}${shadesOf(e)}. Nothing else from it: not its pose, background or framing.${except}`
-          : `who ${e.name} ${e.group ? 'are' : 'is'}${look ? ` (${look})` : ''}: their ${e.changes.some((st) => /head|face/i.test(st.what)) ? 'build and clothes' : 'face, hair, build and clothes'}, exactly${inBase(e) ? ', as Image 1 already shows them' : ''}${shadesOf(e)}. Nothing else from it: not its pose, background or framing.${except}`,
+          ? `what ${e.name} is${look ? ` (${look})` : ''}: its kind, its size, its build, its coat and its markings, exactly${inBase(e) ? ', as Image 1 already shows it' : ''}${shadesOf(e)}. Nothing else from it: not its pose, background or framing.${except}${outside(e)}`
+          : `who ${e.name} ${e.group ? 'are' : 'is'}${look ? ` (${look})` : ''}: their ${e.changes.some((st) => /head|face/i.test(st.what)) ? 'build and clothes' : 'face, hair, build and clothes'}, exactly${inBase(e) ? ', as Image 1 already shows them' : ''}${shadesOf(e)}. Nothing else from it: not its pose, background or framing.${except}${outside(e)}`,
       );
       imageOf.set(e.id, references.length);
     } else if (e.kind === 'location') {
@@ -198,7 +202,7 @@ export function assembleCut(s: CutSheet): Assembled {
           source: 'sketch',
           of: e.id,
         },
-        `${e.name}${look ? ` (${look})` : ''}: its exact shape, materials and colours, the same in every picture${shadesOf(e)}. Nothing else from it.${except}`,
+        `${e.name}${look ? ` (${look})` : ''}: its exact shape, materials and colours, the same in every picture${shadesOf(e)}. Nothing else from it.${except}${outside(e)}`,
       );
     }
   }
@@ -321,13 +325,32 @@ export function assembleCut(s: CutSheet): Assembled {
       : s.inView.some((e) => e.isDreamer)
         ? 'at eye level, the dreamer seen from outside'
         : 'at eye level';
-  // Their own hands or feet may show, in their own clothes.
+  // Their own hands or feet may show, in their own clothes. With the camera rules, only their hands
+  // and arms, and only where they do something with them: nothing of them otherwise.
   const wear = s.dreamer.wear;
-  const own = `at most their own hands, arms or feet show${wear ? `, in ${wear.charAt(0).toLowerCase()}${wear.slice(1)}` : ''}`;
+  const inWear = wear ? `, in ${wear.charAt(0).toLowerCase()}${wear.slice(1)}` : '';
+  const body = s.rules?.body ?? null;
+  const own =
+    body === 'self'
+      ? `their own body shows as they look down at it${inWear}, never their face`
+      : body === 'hands'
+        ? `at most their own hands and arms show${inWear}, and nothing else of them`
+        : body === 'none'
+          ? "nothing of the dreamer's own body shows, not even their hands: they touch nothing in it"
+          : `at most their own hands, arms or feet show${inWear}`;
   const pov =
     cam.eyes === 'dreamer' && !cam.view
-      ? `The camera is the dreamer's own eyes: the dreamer is not in the picture, except perhaps their own hands, arms or feet${wear ? `, in ${wear.charAt(0).toLowerCase()}${wear.slice(1)}` : ''}.`
+      ? body === 'self'
+        ? `The camera is the dreamer's own eyes: their own body shows as they look down at it${inWear}, never their face.`
+        : body === 'hands'
+          ? `The camera is the dreamer's own eyes: the dreamer is not in the picture, except their own hands and arms${inWear}, and nothing else of them.`
+          : body === 'none'
+            ? "The camera is the dreamer's own eyes: nothing of the dreamer is in the picture, not even their hands: they touch nothing in it."
+            : `The camera is the dreamer's own eyes: the dreamer is not in the picture, except perhaps their own hands, arms or feet${inWear}.`
       : '';
+  // A reverse angle: the room turned with the camera, said after the shot.
+  const turned = s.rules?.turn ? sayTurn(s.rules.turn) : '';
+  const after = [...(s.rules?.lines ?? []), ...(turned ? [turned] : [])].map((x) => ` ${x}`).join('');
   const feeling = s.story.feeling;
   const point = s.story.point;
   // Someone drawn with their group stands with it, not beside it.
@@ -354,10 +377,10 @@ export function assembleCut(s: CutSheet): Assembled {
       // The shot comes first, before the images: its brief where there is one, else the view.
       text: cam.view
         ? cam.brief !== null
-          ? `The shot${mockUp ? ', as the mock-up in Image 1 shows it' : ''}${cam.eyes === 'dreamer' ? ` (${own})` : ''}: ${cam.brief}`
+          ? `The shot${mockUp ? ', as the mock-up in Image 1 shows it' : ''}${cam.eyes === 'dreamer' ? ` (${own})` : ''}: ${cam.brief}${after}`
           : cam.eyes === 'dreamer'
-            ? `What the dreamer sees, the camera being their own eyes${mockUp ? ', as the mock-up in Image 1 shows it' : ''} (${own}): ${cam.view}`
-            : `What the camera sees${mockUp ? ', as the mock-up in Image 1 shows it' : ''}: ${cam.view}`
+            ? `What the dreamer sees, the camera being their own eyes${mockUp ? ', as the mock-up in Image 1 shows it' : ''} (${own}): ${cam.view}${after}`
+            : `What the camera sees${mockUp ? ', as the mock-up in Image 1 shows it' : ''}: ${cam.view}${after}`
         : '',
     },
     {

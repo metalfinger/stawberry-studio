@@ -7,7 +7,7 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { bearing, type Blocking } from '../blocking';
-import { calledIn, planBy, planContinuity } from '../continuity';
+import { calledIn, planBy, planContinuity as planWithSwitches } from '../continuity';
 import { dreamConfig } from '../dream';
 import type { GroundingNote } from '../ground';
 import type { Breakdown, Moment, StyleOption } from '../producer';
@@ -35,6 +35,21 @@ type Frozen = {
   build?: { items?: Item[]; frames?: Item[] };
   goals?: Goals;
 };
+/**
+ * With the camera rules off (DREAMCHAT_CAMERA): these tests hold today's plans and prompts, which the
+ * rules change on purpose (test/camera.test.ts holds them on).
+ */
+function cameraOff<T>(fn: () => T): T {
+  const was = process.env.DREAMCHAT_CAMERA;
+  delete process.env.DREAMCHAT_CAMERA;
+  try {
+    return fn();
+  } finally {
+    if (was !== undefined) process.env.DREAMCHAT_CAMERA = was;
+  }
+}
+const planContinuity = (...a: Parameters<typeof planWithSwitches>) => cameraOff(() => planWithSwitches(...a));
+
 const FIXTURES = ['meads-third', 'ice-head', 'theater', 'meads-fourth'] as const;
 type Fixture = (typeof FIXTURES)[number];
 const frozen = (name: Fixture): Frozen =>
@@ -983,8 +998,9 @@ describe('H. what a conversation gives the tree', () => {
   test('the plan is made again from the dream, its drawn ghosts known by what they show, never the kept plan', () => {
     const s = sessionWith('ice-head');
     const b = s.draft!.breakdown!;
-    // As the dream would be planned now: from the story record when DREAMCHAT_RECORD=on.
-    const fresh = planContinuity(b, planRecord(s));
+    // As the dream would be planned now: from the story record when DREAMCHAT_RECORD=on, and with the
+    // camera rules when DREAMCHAT_CAMERA=on, as the session plans it.
+    const fresh = planWithSwitches(b, planRecord(s));
     const ice = fresh.ghosts.find((g) => g.of === 'p1' && g.state?.now === 'an irregular block of glittering ice')!;
     const frames = [
       { id: 'm1', kind: 'cut', name: 'm1', fields: {}, status: 'ready', version: 2, review: 'approved' },

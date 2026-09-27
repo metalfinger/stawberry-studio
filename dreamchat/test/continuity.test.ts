@@ -4,6 +4,20 @@ import type { Breakdown, Moment } from '../producer';
 
 const detail = (value: string | null = null) => ({ value, said: false });
 
+/**
+ * With the camera rules off (DREAMCHAT_CAMERA): these tests hold today's plans and prompts, which the
+ * rules change on purpose (test/camera.test.ts holds them on).
+ */
+function cameraOff<T>(fn: () => T): T {
+  const was = process.env.DREAMCHAT_CAMERA;
+  delete process.env.DREAMCHAT_CAMERA;
+  try {
+    return fn();
+  } finally {
+    if (was !== undefined) process.env.DREAMCHAT_CAMERA = was;
+  }
+}
+
 function moment(m: Partial<Moment> & { id: string }): Moment {
   return {
     action: `moment ${m.id}`,
@@ -258,7 +272,9 @@ describe('ghosts', () => {
       // A jump starts the staging again.
       ['p1', 'p2'],
     ]);
-    expect(plan.cuts[2].criteria.map((k) => k.text)).toContain('From left to right in the frame, is it the dreamer, then ana?');
+    expect(plan.cuts[2].criteria.map((k) => k.text)).toContain(
+      'From left to right in the frame, is it the dreamer, then ana?',
+    );
     expect(plan.cuts[1].criteria.some((k) => k.text.startsWith('From left to right'))).toBe(false);
   });
 
@@ -351,7 +367,11 @@ describe('ghosts', () => {
   test('only a look lasts: a change of where someone is makes no ghost', () => {
     const b = breakdown([
       moment({ id: 'm1', visible: ['p1'] }),
-      moment({ id: 'm2', visible: ['p1'], leaves: [{ who: 'p1', what: 'location', now: 'at the far end of the room' }] }),
+      moment({
+        id: 'm2',
+        visible: ['p1'],
+        leaves: [{ who: 'p1', what: 'location', now: 'at the far end of the room' }],
+      }),
     ]);
     const plan = planContinuity(b);
     expect(plan.ghosts).toEqual([]);
@@ -361,7 +381,11 @@ describe('ghosts', () => {
   test('turning into something else is a change even where they are first shown', () => {
     // Mrs Okafor, first seen as she turned round a heron, was drawn a woman ever after (26 Sep).
     const b = breakdown([
-      moment({ id: 'm1', visible: ['p1'], leaves: [{ who: 'p1', what: 'body', now: 'a tall grey heron', whole: true }] }),
+      moment({
+        id: 'm1',
+        visible: ['p1'],
+        leaves: [{ who: 'p1', what: 'body', now: 'a tall grey heron', whole: true }],
+      }),
       // Carried into the moment after, as the pipeline writes it (addChanges).
       moment({
         id: 'm2',
@@ -406,7 +430,8 @@ describe('ghosts', () => {
       }),
       moment({ id: 'm3', visible: ['p1'], looks_at: 'the window', from: 'm2', sameSide: ['m1', 'm2'] }),
     ]);
-    const plan = planContinuity(b);
+    // Today's reading; with the camera rules the moment after the jump is its place again (camera.test.ts).
+    const plan = cameraOff(() => planContinuity(b));
     expect(plan.cuts[1].refs.map((r) => `${r.id}:${r.relation}`)).toEqual(['m1:shift']);
     // After the jump, the picture before it is only where she was last seen, never the room; her
     // sketch still says who she is.
@@ -492,7 +517,7 @@ describe('ghosts', () => {
     expect(planBy(b, 'm1')!.spots.some((s) => s.id === 'x1')).toBe(true);
   });
 
-  test('a moment in another place of its scene gets that place\'s plan, with who was there', () => {
+  test("a moment in another place of its scene gets that place's plan, with who was there", () => {
     const b = breakdown([
       moment({ id: 'm1', visible: ['p1'], place: 'l1' }),
       moment({ id: 'm2', visible: ['p1'], things: ['t1'], place: 'l2' }),

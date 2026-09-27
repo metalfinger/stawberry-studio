@@ -25,6 +25,7 @@ import {
   unit,
   wall,
 } from './blocking';
+import { cameraMode, isWindow, ON_THE_LINE, sameCameraAs, signedFromLine, type WallSeen, wallOf } from './camera';
 
 type V2 = { x: number; y: number };
 type V3 = { x: number; y: number; z: number };
@@ -37,6 +38,12 @@ type Face = { p: V3[]; n: V3; solid: number };
 
 /** Something in the previs: a person, a thing, a crowd, a wall; and what it is called, if anything. */
 type Solid = { id: string; label?: string; tone: number; faces: Face[] };
+
+/** What someone holds, where the plan gives it no size (the camera rules): a thing held in the hands. */
+const HELD_SIZE: [number, number, number] = [0.3, 0.2, 0.2];
+
+/** Where something afloat sits: its bottom a little under the water's surface; on the ground where none. */
+const afloat = (plan: Blocking) => (plan.water ? Math.max(0, plan.water - 0.15) : 0);
 
 /** How high someone's eyes are, by how they are. */
 export const eyeHeight = (pose?: Spot['pose']) => (pose === 'sitting' ? 1.2 : pose === 'lying' ? 0.35 : 1.62);
@@ -224,7 +231,14 @@ function laneOf(eye: Eye, people: Spot[]): ((p: V2) => boolean) | undefined {
  * then everyone and everything on the plan but `leaveOut` (the dreamer, whose eyes it is). With the
  * camera, a crowd leaves a lane from it to the nearest person before it.
  */
-function solidsOf(plan: Blocking, leaveOut: string[], called: (id: string) => string, eye?: Eye): Solid[] {
+function solidsOf(
+  plan: Blocking,
+  leaveOut: string[],
+  called: (id: string) => string,
+  eye?: Eye,
+  /** The camera that is the eyes of whoever is left out: what they hold is in their hands before it. */
+  pov?: Eye,
+): Solid[] {
   const solids: Solid[] = [];
   // A fixture of the place is labelled with its own name; everyone and everything else as the story calls them.
   const name = (id: string) => plan.spots.find((s) => s.id === id)?.name ?? called(id);
@@ -286,7 +300,21 @@ function solidsOf(plan: Blocking, leaveOut: string[], called: (id: string) => st
         );
     } else if (isPerson(s))
       add(s.id, 0.97, mannequin(s.x, s.y, f, s.pose ?? 'standing', groundAt(s, plan)), name(s.id));
-    else add(s.id, shapeOf(s, plan) === 'ground' ? 0.5 : 0.62, thingBlocks(s, plan, name(s.id)), name(s.id));
+    else
+      add(
+        s.id,
+        shapeOf(s, plan) === 'ground' ? 0.5 : 0.62,
+        thingBlocks(s, plan, name(s.id), s.heldBy && leaveOut.includes(s.heldBy) ? pov : undefined),
+        name(s.id),
+      );
+  }
+  // The water, where the record says how high it stands (the camera rules): a surface over the whole
+  // place, what is under it hidden, what floats on it riding on it.
+  if (plan.water) {
+    const [w, dp] = roomOf(plan);
+    const z = plan.water;
+    const [x0, y0, x1, y1] = plan.indoors ? [0, 0, w, dp] : [-80, -80, w + 80, dp + 80];
+    add('water', 0.52, [quad([v3(x0, y0, z), v3(x1, y0, z), v3(x1, y1, z), v3(x0, y1, z)], v3(0, 0, 1))], 'the water');
   }
   return solids;
 }
@@ -317,6 +345,11 @@ function groundAt(p: V2, plan: Blocking): number {
   for (const t of plan.spots) {
     if (isPerson(t) || t.heldBy) continue;
     const shape = shapeOf(t, plan);
+    // Whoever is in or on something afloat rides as high as the water stands.
+    if (shape === 'vehicle' && plan.water && onFootprint(p, t, plan, 0)) {
+      z = Math.max(z, afloat(plan));
+      continue;
+    }
     if ((shape !== 'ground' && shape !== 'steps') || !onFootprint(p, t, plan, 0)) continue;
     const [, d, h] = sizeOf(t);
     if (shape === 'ground') z = Math.max(z, h);
@@ -337,10 +370,49 @@ function groundAt(p: V2, plan: Blocking): number {
  * as a slab as high as it rises; what someone holds, before them at the height of their hands; a
  * small thing on something, where `restOf` puts it. `called` is what it is called.
  */
-function thingBlocks(s: Spot, plan: Blocking, called: string): Block[] {
-  const [w, d, h] = sizeOf(s);
+function thingBlocks(s: Spot, plan: Blocking, called: string, pov?: Eye): Block[] {
+  const camera = cameraMode() === 'on';
+  // With the camera rules, something held that the plan gives no size is the size of something held.
+  const [w, d, h] = camera && s.heldBy && !s.size ? HELD_SIZE : sizeOf(s);
   const f = facing(s, plan);
   const holder = s.heldBy ? plan.spots.find((o) => o.id === s.heldBy) : undefined;
+  if (holder && camera) {
+    const hf = facing(holder, plan);
+    const hr = rightOf(hf);
+    // Held by the one whose eyes the camera is: in their hands, before them and below their eyes,
+    // where they would look down at it, never beside them at their floor-plan spot (camera.ts, A4).
+    if (pov) {
+      const ahead = unit(pov.d);
+      return [
+        {
+          x: pov.at.x + ahead.x * 0.45,
+          y: pov.at.y + ahead.y * 0.45,
+          z: pov.height - 0.5 - Math.min(h, 0.6) / 2,
+          w: Math.min(w, 0.8),
+          d: Math.min(d, 0.8),
+          h: Math.min(h, 0.6),
+          f: ahead,
+        },
+      ];
+    }
+    // Sitting, what someone holds is on their lap, before them: the suitcase on the grandfather's
+    // knees was drawn off to his side, the other third of the picture from him (snow train, m3).
+    const hands = groundAt(holder, plan) + (holder.pose === 'sitting' ? 0.6 : holder.pose === 'lying' ? 0.3 : 0.9);
+    const lap = holder.pose === 'sitting';
+    const side = lap ? 0 : 0.3 + Math.min(w, 0.8) / 2;
+    const ahead = lap ? 0.3 : 0.15;
+    return [
+      {
+        x: holder.x + hf.x * ahead + hr.x * side,
+        y: holder.y + hf.y * ahead + hr.y * side,
+        z: hands,
+        w: Math.min(w, 0.8),
+        d: Math.min(d, 0.8),
+        h: Math.min(h, 1.5),
+        f: hf,
+      },
+    ];
+  }
   if (holder) {
     // In one hand, at their side: held square before them, a string of balloons hid the dreamer's
     // face and chest (25 Sep).
@@ -368,7 +440,8 @@ function thingBlocks(s: Spot, plan: Blocking, called: string): Block[] {
       { x: s.x - f.x * (d / 2 - back / 2), y: s.y - f.y * (d / 2 - back / 2), z: 0.45, w, d: back, h: h - 0.45, f },
     ];
   }
-  if (shape === 'vehicle') return [{ x: s.x, y: s.y, z: 0, w, d, h: Math.min(h, 1.6) * 0.6, f }];
+  // Afloat where the water stands (the camera rules): a boat rowed up to a high window sits high.
+  if (shape === 'vehicle') return [{ x: s.x, y: s.y, z: afloat(plan), w, d, h: Math.min(h, 1.6) * 0.6, f }];
   const rest = restOf(s, plan, called);
   if (rest) return [{ x: rest.x, y: rest.y, z: rest.z, w, d, h, f: rest.f ?? f }];
   if (shape === 'steps') {
@@ -836,8 +909,41 @@ export function previsImage(
 ): Uint8Array {
   // Seen from outside, the crowd leaves a lane to whoever the moment is about, as the view's own words
   // were measured; through the dreamer's eyes, it stands where it stands.
-  const r = render(solidsOf(plan, leaveOut, name, leaveOut.length ? undefined : eye), eye, width, height);
+  const r = render(
+    solidsOf(plan, leaveOut, name, leaveOut.length ? undefined : eye, leaveOut.length ? eye : undefined),
+    eye,
+    width,
+    height,
+  );
   return png(width, height, paint(r, true));
+}
+
+/**
+ * Which of a room's walls a camera has ahead, on the picture's left or right, behind it, or out of the
+ * picture to one side, read off its render (the camera rules' reverse angle, camera.ts). Indoors, the
+ * four walls; outdoors, only the place's front and far side, as ways of looking.
+ */
+export function wallsSeen(plan: Blocking, eye: Eye, leaveOut: string[], name: (id: string) => string): WallSeen[] {
+  const d = unit(eye.d);
+  const ways = { front: DIRECTIONS.front, back: DIRECTIONS.back, left: DIRECTIONS.left, right: DIRECTIONS.right };
+  const angleTo = (v: V2) => (Math.acos(Math.max(-1, Math.min(1, v.x * d.x + v.y * d.y))) * 180) / Math.PI;
+  if (!plan.indoors)
+    return (['front', 'back'] as const).flatMap((w): WallSeen[] => {
+      const a = angleTo(ways[w]);
+      return a < 45 ? [{ wall: w, where: 'ahead' }] : a > 135 ? [{ wall: w, where: 'behind' }] : [];
+    });
+  const r = render(solidsOf(plan, leaveOut, name), eye, 192, 108);
+  const ids = { front: 'front', back: 'back wall', left: 'left wall', right: 'right wall' } as const;
+  return (['front', 'back', 'left', 'right'] as const).map((w): WallSeen => {
+    const a = angleTo(ways[w]);
+    const seen = r.seen.get(ids[w]);
+    const shows = !!seen && seen.share >= 0.02;
+    if (a < 45 && shows) return { wall: w, where: 'ahead' as const };
+    if (a > 135 && !shows && (w === 'front' || w === 'back')) return { wall: w, where: 'behind' as const };
+    if (shows) return { wall: w, where: seen!.cx < 0.5 ? ('left' as const) : ('right' as const) };
+    // A side wall out of the picture is only out of it; the front or back, behind the camera.
+    return { wall: w, where: a > 90 && (w === 'front' || w === 'back') ? ('behind' as const) : ('out' as const) };
+  });
 }
 
 /** Where across the picture a span is, in words. */
@@ -905,13 +1011,18 @@ export function dreamerShot(
   beyond?: string,
   /** Who the moment shows, to be in the picture: the driver beside them in the cab (25 Sep). */
   want: string[] = [],
-): { eye: Eye; text: string; inPicture: string[] } | null {
+): { eye: Eye; text: string; rules?: string[]; inPicture: string[] } | null {
   const me = plan.spots.find((s) => s.id === dreamer);
   if (!me) return null;
   const own = facing(me, plan);
   const side = rightOf(own);
   const target = toward ? plan.spots.find((s) => s.id === toward && s.id !== dreamer) : undefined;
+  const camera = cameraMode() === 'on';
+  // With the camera rules, what the dreamer holds is in their hands before their eyes, wherever those
+  // eyes turn: the picture is rendered again for each way of looking.
+  const holding = camera && plan.spots.some((s) => s.heldBy === dreamer);
   const solids = solidsOf(plan, [dreamer], name);
+  const solidsAt = (eye: Eye) => (holding ? solidsOf(plan, [dreamer], name, undefined, eye) : solids);
   // Their eyes, on whatever they stand on: a bridge's deck, a step of the stairs.
   const height = eyeHeight(me.pose) + groundAt(me, plan);
   // How far someone can lean from where they sit or stand, each way, to see past someone close.
@@ -932,14 +1043,18 @@ export function dreamerShot(
   // on something is where it rests: looking at the clock on its pole, the camera looked down at the
   // pole's foot (desert station m3, 26 Sep).
   const rest = target ? restOf(target, plan, target.name ?? name(target.id)) : undefined;
+  // What they hold, looked at, is in their hands: below their eyes, a little before them.
+  const inHands = camera && !!target && target.heldBy === dreamer;
   const heart = target
-    ? rest
-      ? v3(rest.x, rest.y, rest.z + sizeOf(target)[2] / 2)
-      : v3(
-          target.x,
-          target.y,
-          groundAt(target, plan) + (isPerson(target) ? eyeHeight(target.pose) - 0.1 : sizeOf(target)[2] / 2),
-        )
+    ? inHands
+      ? v3(me.x + own.x * 0.45, me.y + own.y * 0.45, height - 0.6)
+      : rest
+        ? v3(rest.x, rest.y, rest.z + sizeOf(target)[2] / 2)
+        : v3(
+            target.x,
+            target.y,
+            groundAt(target, plan) + (isPerson(target) ? eyeHeight(target.pose) - 0.1 : sizeOf(target)[2] / 2),
+          )
     : null;
   const near = plan.spots.filter((s) => s.id !== dreamer && s.id !== target?.id && isPerson(s) && !s.many);
   let best: { eye: Eye; score: number } | undefined;
@@ -967,11 +1082,11 @@ export function dreamerShot(
       if (!target || !heart) {
         // Nothing it looks at on the plan: straight ahead, turned only as far as it takes to show who
         // the moment shows.
-        const score = wanted.length ? 2 * shows(render(solids, eye, 192, 108)) - Math.abs(aim) * 0.01 : 0;
+        const score = wanted.length ? 2 * shows(render(solidsAt(eye), eye, 192, 108)) - Math.abs(aim) * 0.01 : 0;
         if (!best || score > best.score + 1e-9) best = { eye, score };
         continue;
       }
-      const r = render(solids, eye, 192, 108);
+      const r = render(solidsAt(eye), eye, 192, 108);
       const t = r.seen.get(target.id);
       if (!t) continue;
       // As a camera operator frames past someone close: the heart of what the picture is about
@@ -1002,7 +1117,7 @@ export function dreamerShot(
     }
   if (!best) return null;
   const eye = best!.eye;
-  const r = render(solids, eye, 384, 216);
+  const r = render(solidsAt(eye), eye, 384, 216);
   const min = 384 * 216 * 0.002;
 
   // What they are on or in (the seat under them, the car they ride in) is where they are, not
@@ -1054,13 +1169,25 @@ export function dreamerShot(
     // What someone holds is with them: never "outside the picture" while they are in it.
     ...spots
       .filter((s) => !shown.some((x) => x.s.id === s.id) && !(s.heldBy && shown.some((x) => x.s.id === s.heldBy)))
-      .map((s) => `Outside the picture, ${offTo(eye, s)}: ${called(s.id)}.`),
+      .filter((s) => !(camera && underWater(s, plan)))
+      .map((s) =>
+        // What they hold themselves is in their hands, only below the picture (the camera rules).
+        camera && s.heldBy === dreamer
+          ? `In the dreamer's hands, below the picture: ${called(s.id)}.`
+          : `Outside the picture, ${offTo(eye, s)}: ${called(s.id)}.`,
+      ),
     frontLine(plan, eye, r, min),
     // Beyond everything the plan holds, what the moment looks at: the view from the tractor's cab
     // ended at its windscreen, and the field it drove through was read as missing (lighthouse, 25 Sep).
     ...(beyond && !toward ? [`Beyond it all, ahead where they look: ${beyond.replace(/[.\s]+$/, '')}.`] : []),
   ];
-  return { eye, text: sentences.join(' '), inPicture: [...at, ...shown.map((x) => x.s.id)] };
+  const rules = camera ? waterWords(plan, spots, r, called) : [];
+  return {
+    eye,
+    text: sentences.join(' '),
+    ...(rules.length ? { rules } : {}),
+    inPicture: [...at, ...shown.map((x) => x.s.id)],
+  };
 }
 
 /**
@@ -1081,11 +1208,24 @@ function thingWords(
   // coaster out on the floor (24 Sep).
   const on = isPerson(s) && !s.many ? onOf(s, plan) : undefined;
   const pose = s.pose === 'lying' ? 'lying' : s.pose === 'sitting' ? 'sitting' : 'standing';
+  // Two on one long seat who face each other sit across from each other, not side by side: the
+  // grandfather facing the dreamer on the seats facing each other was said to sit beside them (snow
+  // train m3, 26 Sep). With the camera rules.
+  const facesMe =
+    cameraMode() === 'on' &&
+    !!ctx.anchor &&
+    (() => {
+      const f = facing(s, plan);
+      const to = unit({ x: ctx.anchor!.x - s.x, y: ctx.anchor!.y - s.y });
+      return f.x * to.x + f.y * to.y > 0.7;
+    })();
   const sitting = on
     ? ctx.on.includes(on.t.id)
-      ? on.how === 'in'
-        ? `, beside the dreamer in the same ${bareName(called(on.t.id))}`
-        : `, ${pose} beside the dreamer on the same ${bareName(called(on.t.id))}`
+      ? facesMe
+        ? `, ${pose} across from the dreamer on ${called(on.t.id)}`
+        : on.how === 'in'
+          ? `, beside the dreamer in the same ${bareName(called(on.t.id))}`
+          : `, ${pose} beside the dreamer on the same ${bareName(called(on.t.id))}`
       : on.how === 'in'
         ? `, in ${called(on.t.id)}`
         : `, ${pose} on ${called(on.t.id)}`
@@ -1124,6 +1264,34 @@ function thingWords(
   return s.many
     ? `, ${counted ? `the ${counted} of them` : 'many of them'}${ctx.anchor ? rows(s, ctx.anchor, plan, called) : ''}, ${turnedTo({ ...s, ...nearestOf(s, seen, eye, plan) }, plan, eye)}${behind}`
     : `${how}${size}${behind}`;
+}
+
+/**
+ * Ridden, a vehicle goes the way it faces, said across the picture (the camera rules' screen
+ * direction): the tractor seen from behind the two in its cab was drawn driving at the camera.
+ */
+function headings(shown: { s: Spot }[], plan: Blocking, eye: Eye, called: (id: string) => string): string[] {
+  return shown
+    .filter(
+      ({ s }) =>
+        !isPerson(s) &&
+        shapeOf(s, plan) === 'vehicle' &&
+        plan.spots.some((o) => isPerson(o) && !o.many && onOf(o, plan)?.t.id === s.id),
+    )
+    .map(({ s }) => `${cap(called(s.id))}, ridden, is ${headingOf(s, plan, eye)}.`);
+}
+
+/** Which way a vehicle goes across the picture: the way it faces, from this camera. */
+function headingOf(s: Spot, plan: Blocking, eye: Eye): string {
+  const f = facing(s, plan);
+  const d = unit(eye.d);
+  const ahead = f.x * d.x + f.y * d.y;
+  if (ahead > 0.7) return 'heading away from the camera, into the picture';
+  if (ahead < -0.7) return 'heading toward the camera';
+  const r = rightOf(d);
+  return f.x * r.x + f.y * r.y > 0
+    ? 'heading toward the right of the picture'
+    : 'heading toward the left of the picture';
 }
 
 /** How tall a person must be in the picture, as a share of its height, for a shot of each size. */
@@ -1193,7 +1361,13 @@ export function outsideShot(
   lookAt?: { at?: V2; way?: V2; id?: string; theirs?: boolean },
   /** What else the moment's words name on the plan: in the picture too, where it can be. */
   also: string[] = [],
-): { eye: Eye; text: string; inPicture: string[]; framing: string[] } | null {
+  /**
+   * The camera rules (camera.ts): earlier cameras on the same people at the same size, to move away
+   * from; and the scene's line, the side of it the camera stays on unless only the other side shows
+   * what the moment is about.
+   */
+  rules?: { avoid?: Eye[]; line?: { a: V2; b: V2; sign: number } },
+): { eye: Eye; text: string; rules?: string[]; inPicture: string[]; framing: string[] } | null {
   const name = (id: string) => plan.spots.find((s) => s.id === id)?.name ?? called(id);
   const inIt = subjects.map((id) => plan.spots.find((s) => s.id === id)).filter((s): s is Spot => !!s && !s.many);
   const people = inIt.filter((s) => isPerson(s));
@@ -1395,7 +1569,21 @@ export function outsideShot(
     .filter((s): s is Spot => !!s && !holdAll.includes(s));
   // The place's front, when the words name it: faced, so it is behind whoever is in the picture.
   const front = also.includes('front');
-  const degs = extra.length || front ? [0, -20, 20, -40, 40, -70, 70, -110, 110, 180] : [0, -20, 20, -40, 40, -70, 70];
+  const degs =
+    extra.length || front || (rules?.line && !looks)
+      ? [0, -20, 20, -40, 40, -70, 70, -110, 110, 180]
+      : [0, -20, 20, -40, 40, -70, 70];
+  // Across the scene's line, or the same camera again on the same people at the same size: each worth
+  // less than losing most of what the picture must show, so a camera crosses only when it must.
+  // A moment that looks somewhere past them (what they look at, the way they face) crosses the line
+  // deliberately where it must: only from there is what it is about in the picture. The two in the cab,
+  // looking out at the field ahead, are seen from behind them.
+  const ruled = (eye: Eye) => {
+    const line = looks ? undefined : rules?.line;
+    const side = line ? signedFromLine(line.a, line.b, eye.at) : 0;
+    const crosses = !!line && Math.abs(side) >= ON_THE_LINE && Math.sign(side) !== line.sign;
+    return (crosses ? 1.5 : 0) + ((rules?.avoid ?? []).some((e) => sameCameraAs(eye, e)) ? 1.5 : 0);
+  };
   for (const deg of degs)
     for (const back of [1, 1.35, 1.8]) {
       const cand = place(turnBy(d0, deg), back);
@@ -1420,6 +1608,7 @@ export function outsideShot(
         // dreamer going to the window was framed out for the window (lighthouse, 26 Sep).
         (lookedSpot && !lookedSpot.many ? 0.7 * keyShown : 0) +
         facesFront -
+        ruled(cand.eye) -
         Math.abs(deg) * 0.006 -
         (back - 1) * 0.2 -
         cand.cramped * 0.5;
@@ -1480,7 +1669,21 @@ export function outsideShot(
   const behind = shown.filter((x) => !subjects.includes(x.s.id));
   // "Nobody else" only where nobody else is: someone there out of the moment's focus (the dreamer beside
   // the driver in the cab) is also in the picture.
-  const nobodyElse = behind.some((x) => isPerson(x.s)) ? '' : 'Nobody else is in the picture.';
+  const camera = cameraMode() === 'on';
+  // Across the scene's line, where only that side shows what the moment is about: they have changed
+  // sides, and are never said to keep them (the camera rules).
+  const crossedLine =
+    camera &&
+    !!rules?.line &&
+    (() => {
+      const side = signedFromLine(rules.line!.a, rules.line!.b, eye.at);
+      return Math.abs(side) >= ON_THE_LINE && Math.sign(side) !== rules.line!.sign;
+    })();
+  // Nor where a crowd is among them: "Nobody else" beside the many of a crowd (the camera rules).
+  const nobodyElse =
+    behind.some((x) => isPerson(x.s)) || (camera && whoShown.some((x) => x.s.many))
+      ? ''
+      : 'Nobody else is in the picture.';
   const sentences = [
     `Seen ${from}, ${where}, at the height of ${people.length === 1 ? `${them}'s eyes` : 'their eyes'}: the camera looks ${lookedAt ? `at ${lookedAt}, ` : ''}toward ${wall(d, plan.front, !!plan.indoors)}. A ${lens}mm lens.`,
     whoShown.length
@@ -1489,7 +1692,7 @@ export function outsideShot(
             ? nobodyElse
               ? ` ${nobodyElse}`
               : ''
-            : ` ${nobodyElse ? `${nobodyElse} ` : ''}They keep these places in every picture of this scene.`
+            : ` ${nobodyElse ? `${nobodyElse} ` : ''}${crossedLine ? '' : 'They keep these places in every picture of this scene.'}`.trimEnd()
         }`
       : '',
     ...whatShown.map(({ s, seen }) => `${cap(words(s, seen))}.`),
@@ -1505,7 +1708,8 @@ export function outsideShot(
           !shown.some((x) => x.s.id === s.id) &&
           !riding(s) &&
           (subjects.includes(s.id) || !isPerson(s)) &&
-          !(s.heldBy && shown.some((x) => x.s.id === s.heldBy)),
+          !(s.heldBy && shown.some((x) => x.s.id === s.heldBy)) &&
+          !(camera && underWater(s, plan)),
       )
       .map((s) => `Outside the picture, ${offTo(eye, s)}: ${name(s.id)}.`),
     frontLine(plan, eye, rr, min),
@@ -1513,9 +1717,24 @@ export function outsideShot(
     // Said nowhere once the tractor was off the plan, the moments in its cab read as missing it.
     plan.inside ? `All of this is inside ${name(plan.inside)}: its walls, seats and windows around them.` : '',
   ].filter(Boolean);
+  // What the camera rules add, said after the view and its brief so a brief written for the view still
+  // stands: the water, what is out past a window, which way what is ridden goes, and a crossing.
+  const said = camera
+    ? [
+        ...(crossedLine && whoShown.length > 1
+          ? [
+              'The camera is on the other side of them from the first picture of them in this scene, so they have changed sides of the picture.',
+            ]
+          : []),
+        ...headings(shown, plan, eye, name),
+        ...waterWords(plan, spots, rr, name),
+        ...throughWindows(plan, rr, min, called),
+      ]
+    : [];
   return {
     eye,
     text: sentences.join(' '),
+    ...(said.length ? { rules: said } : {}),
     inPicture: [
       ...(plan.inside ? [plan.inside] : []),
       ...shown.map((x) => x.s.id),
@@ -1693,6 +1912,69 @@ function frontLine(plan: Blocking, eye: Eye, r: Render, min: number): string {
   return Math.abs(angle) <= 50
     ? `At the back of the picture: ${plan.front}.`
     : `Outside the picture, ${Math.abs(angle) > 135 ? 'behind the camera' : angle < 0 ? 'off to the left' : 'off to the right'}: ${plan.front}.`;
+}
+
+/**
+ * Whether water covers someone or something where the record says how high it stands: all of them
+ * under its surface, and not afloat on it (the camera rules).
+ */
+function underWater(s: Spot, plan: Blocking): boolean {
+  if (!plan.water) return false;
+  if (isPerson(s) && !s.many && onOf(s, plan)?.t && shapeOf(onOf(s, plan)!.t, plan) === 'vehicle') return false;
+  if (!isPerson(s) && (shapeOf(s, plan) === 'vehicle' || s.heldBy)) return false;
+  const top = groundAt(s, plan) + (isPerson(s) ? eyeHeight(s.pose) + 0.15 : sizeOf(s)[2]);
+  return top < plan.water;
+}
+
+/**
+ * The water in words, where the record says how high it stands: how deep, what floats on it, and who
+ * or what is under it, where in the picture (the camera rules). A whale swimming under the boat was
+ * lined up with the two in it, facing the camera (library, 26 Sep).
+ */
+function waterWords(plan: Blocking, spots: Spot[], r: Render, called: (id: string) => string): string[] {
+  if (!plan.water) return [];
+  const metres = Math.max(1, Math.round(plan.water));
+  const deep =
+    plan.water < 0.3
+      ? 'The water covers the floor here, ankle deep'
+      : plan.water < 0.75
+        ? 'The water stands knee deep here'
+        : `The water stands about ${metres} metre${metres > 1 ? 's' : ''} deep here`;
+  const afloatOn = spots.filter((s) => !isPerson(s) && shapeOf(s, plan) === 'vehicle' && !s.heldBy);
+  // Who and what of the story is under it; the place's own fixtures under it (a floor, a low aisle) go unsaid.
+  const under = spots.filter((s) => !s.fixture && underWater(s, plan));
+  const where = (s: Spot) => {
+    const p = r.project(v3(s.x, s.y, plan.water ?? 0));
+    if (!p || p.x < 0 || p.x > r.width) return 'out of the picture';
+    const x = p.x / r.width;
+    return x < 0.33
+      ? 'in the left third of the picture'
+      : x > 0.67
+        ? 'in the right third of the picture'
+        : 'in the middle of the picture';
+  };
+  const below = (s: Spot) => afloatOn.find((v) => Math.hypot(v.x - s.x, v.y - s.y) < 2.5);
+  return [
+    `${deep}${afloatOn.length ? `, and ${afloatOn.map((s) => called(s.id)).join(' and ')} ${afloatOn.length > 1 ? 'float' : 'floats'} on it` : ''}.`,
+    ...under.map((s) => {
+      const v = below(s);
+      return `Under the water, ${where(s)}${v ? `, beneath ${called(v.id)}` : ''}: ${called(s.id)}, all of it below the surface.`;
+    }),
+  ];
+}
+
+/**
+ * What is seen only out past the place (its plan's `outside`), where a window on that side is in the
+ * picture: far off through it, never inside the place (the camera rules, A6).
+ */
+function throughWindows(plan: Blocking, r: Render, min: number, called: (id: string) => string): string[] {
+  const out = Object.entries(plan.outside ?? {});
+  if (!out.length) return [];
+  const windows = plan.spots.filter((s) => isWindow(s) && (r.seen.get(s.id)?.visible ?? 0) >= min);
+  return out.flatMap(([id, side]) => {
+    const w = windows.find((x) => wallOf(x, plan) === side) ?? (windows.length === 1 ? windows[0] : undefined);
+    return w ? [`Out past ${w.name ?? called(w.id)}, far off outside and never inside the place: ${called(id)}.`] : [];
+  });
 }
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);

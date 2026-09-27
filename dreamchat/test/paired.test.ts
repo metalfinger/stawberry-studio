@@ -30,10 +30,25 @@ async function frozen(name: string): Promise<SavedDream> {
     build: { items: s.build!.items.map(drawn), frames: (s.build!.frames ?? []).map(drawn) },
   } as SavedDream;
 }
-const lighthouse = prepare(await frozen('lighthouse-fresh'));
+
+/**
+ * With the camera rules off (DREAMCHAT_CAMERA): these tests hold today's plans and prompts, which the
+ * rules change on purpose (test/camera.test.ts holds them on).
+ */
+function cameraOff<T>(fn: () => T): T {
+  const was = process.env.DREAMCHAT_CAMERA;
+  delete process.env.DREAMCHAT_CAMERA;
+  try {
+    return fn();
+  } finally {
+    if (was !== undefined) process.env.DREAMCHAT_CAMERA = was;
+  }
+}
+const prepareOff = (d: SavedDream) => cameraOff(() => prepare(d));
+const lighthouse = prepareOff(await frozen('lighthouse-fresh'));
 // The heron dream drew an in-between picture (g2) that its m5 attaches, beside an earlier moment (m4).
-const heron = prepare(await frozen('heron'));
-const nightMarket = prepare(await frozen('night-market'));
+const heron = prepareOff(await frozen('heron'));
+const nightMarket = prepareOff(await frozen('night-market'));
 
 const keys = (r: Paired, arm: Arm) => r.arms[arm].images.map((im) => im.key);
 const others = (r: Paired, arm: Arm) => afterImage1(r, arm).map((im) => [im.key, im.role]);

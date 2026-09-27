@@ -45,7 +45,7 @@ function withEnv<T>(vars: Record<string, string | undefined>, fn: () => T): T {
 
 /** A frozen dream rebuilt, with the record off or on, and every moment's input as a rebuild gives it. */
 function dreamOf(id: string, record: 'off' | 'on') {
-  return withEnv({ DREAMCHAT_RECORD: record, DREAMCHAT_CUT_SHEET: 'shadow' }, () => {
+  return withEnv({ DREAMCHAT_RECORD: record, DREAMCHAT_CUT_SHEET: 'shadow', DREAMCHAT_CAMERA: undefined }, () => {
     const s = loadDream(id, false).session as Session;
     const r = Object.assign(rebuild(s), { style: s.style });
     const inputs = recordInputsOf(s);
@@ -200,7 +200,7 @@ describe('assembleCut is framePrompt, word for word', () => {
   for (const record of ['off', 'on'] as const)
     test(`on every moment of every frozen dream and ten variants of each, with the record ${record}`, () => {
       let n = 0;
-      withEnv({ DREAMCHAT_RECORD: record }, () => {
+      withEnv({ DREAMCHAT_RECORD: record, DREAMCHAT_CAMERA: undefined }, () => {
         for (const id of frozenDreams()) {
           const { r, dream } = dreamOf(id, record);
           for (const p of r.pictures.filter((x) => x.kind === 'cut'))
@@ -325,8 +325,9 @@ describe('assembleCut reads the sheet and nothing else', () => {
       expect(assembleCut(copy)).toEqual(assembleCut(s));
     }
     // It reads the prompt's fields, and never the tree, the record or the tags: those are for the checks.
+    // `rules` is on a sheet only with the camera rules on (DREAMCHAT_CAMERA), and read where it is.
     const top = new Set([...read].map((k) => k.split('.')[0]));
-    for (const k of top) expect(Object.keys(sheets[0])).toContain(k);
+    for (const k of top) expect([...Object.keys(sheets[0]), 'rules']).toContain(k);
     for (const k of ['tree', 'record', 'tags', 'relations', 'sources', 'hash', 'flags']) expect(top.has(k)).toBe(false);
   });
 
@@ -384,6 +385,7 @@ describe('assembleCut reads the sheet and nothing else', () => {
       from: m[3],
     }));
     const allowed: Record<string, string[]> = {
+      './camera': ['sayTurn'],
       './cutsheet': ['CutSheet', 'SheetEarlier', 'SheetElement'],
       './frames': ['aNoun', 'FRAMING', 'SHAPE_WORDS', 'sentence', 'writingLine'],
       './record': ['sayNow'],
@@ -411,7 +413,7 @@ describe('assembleCut reads the sheet and nothing else', () => {
 describe('the sheet of a cut', () => {
   const tags = (id: string, record: 'off' | 'on' = 'on') => {
     const { r, dream } = dreamOf(id, record);
-    return withEnv({ DREAMCHAT_RECORD: record }, () =>
+    return withEnv({ DREAMCHAT_RECORD: record, DREAMCHAT_CAMERA: undefined }, () =>
       Object.fromEntries(
         r.pictures.filter((p) => p.kind === 'cut').map((p) => [p.id, cutSheet(inputOf(r, p.id, dream))] as const),
       ),

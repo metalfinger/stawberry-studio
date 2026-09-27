@@ -76,7 +76,7 @@ One **cut sheet** per cut is the spine everything is assembled from:
 | S1 | Story record carries state (water, suitcase, who holds what, presence) into continuity, in-between pictures and prompts | done (27 Sep): reviewed twice, merged behind DREAMCHAT_RECORD=on | The S1 cases pass (`--step S1`: library-2 m5/m9 water, snow-train m4/m5, snow-train-2 m1, lighthouse-fresh m13, orchard m7; library-1 m3/m5, library-3 m7, snow-train-2 m5/m7 need a model step); no regressions on the corpus |
 | S2 | Stop stand-in checks deciding: the pre-draw prompt check and storyboard check only log | merged behind DREAMCHAT_CHECKS=log (acting by default), review fixes merged (50dbd8c, 27 Sep); eval met on the picture path of 10 dreams (redrawn with fake pictures, Jev only) and on the whole-conversation replays of the same 10 dreams, writer Claude (27 Sep, below) | No moment held or reworded; corpus unchanged otherwise. Met on the picture path: 0 of 61 moments held, reworded, planned again or left undrawn by the gate or "storyboard complete?" (planning again a scene on Jev's plan facts, `planFacts`, still acts: overlaps S2 → S7) (acting: 18-19 rewordings, 10-11 re-plans and 11-13 sketch rewordings asked for, 1-3 moments left undrawn; the saved runs: 4 undrawn, 3 reworded, 17 scenes and 13 moments planned again); every moment drawn; every moment's gate reading and every camera's storyboard reading logged; Jev 23.6 calls a dream against 106-111 acting and 245 in the saved runs; prompt cases and corpus unchanged (below) |
 | S3 | The cut sheet: tree (vertical) + record (horizontal) + relations + tags, one per cut | done (27 Sep): built, reviewed, fixed, merged behind DREAMCHAT_CUT_SHEET; sheet-as-sent proven on fresh replays written by Claude (27 Sep): met wherever no check acted | Every input the prompt needs comes from the sheet; no fact computed in two places. Met: `assembleCut` reads only the sheet and writes what framePrompt writes on every moment (0 differences in 1052 rebuilds: frozen 115 and live 411, record off and on), prompt cases unchanged on against off; what the sheet still computes twice is listed under S3 below. Sheet as sent (fresh replays, writer Claude): while drawing, `assembleCut` wrote what framePrompt writes on 48 of 48 builds (24 moments sent); against a rebuild 22 of 24 sheets as sent, the other 2 a check acting (below) |
-| S4 | Camera rules and shot roles: the scene's line, a reverse angle turns the room (what is now left, right, behind), point-of-view shots show at most hands, vehicle screen direction, same setup means the same camera | not started | The S4 cases pass (`--step S4`: snow-train m2 reverse and m3 seat, snow-train-2 m2 same setup, lighthouse-fresh m12 heading, lighthouse-first m3, night-market m2, library-1 m4/m5, orchard m4 hands and m7 legs; lighthouse-fresh m10 needs a new floor plan) |
+| S4 | Camera rules and shot roles: the scene's line, a reverse angle turns the room (what is now left, right, behind), point-of-view shots show at most hands, vehicle screen direction, same setup means the same camera | built on branch `s4-camera` behind DREAMCHAT_CAMERA=on (off by default; off is today byte for byte: 0 of 140 frozen and 0 of 478 live pictures moved, record and sheet off and on), 27 Sep; not yet reviewed. `--step S4` 10/11 counted (1/11 off), guards 8/8; all cases 27/33 (18/33 off), guards 36/36; open: night-market m2 (the floor plan's facing), the two S1 water-level asks (window heights) | The S4 cases pass (`--step S4`: snow-train m2 reverse and m3 seat, snow-train-2 m2 same setup, lighthouse-fresh m12 heading, lighthouse-first m3, night-market m2, library-1 m4/m5, orchard m4 hands and m7 legs; lighthouse-fresh m10 needs a new floor plan) |
 | S5 | References and variants: one image per subject; in-between pictures only when an edit carries several changes; variants kept and reusable; the grey mock-up as a reference chosen by tag | not started; eval written on branch `s5-eval` (27 Sep, below) | The reference check (`evals/references.ts`) at its bars on the frozen and live dreams: 0 subjects shown twice or not by their stage in force, 0 pictures from another side drawn from, 0 pictures waited for and never sent, every in-between picture meeting the owner's rule with no picture left carrying several changes; the S5 cases stay met or pass (`--step S5`: never editing a picture from another side; library-1 m5 wall); guards 36/36; its hypotheses (image 1 by tag, one image per subject on pictures the owner called right) are for the paid check, not proven here |
 | S6 | `assembleCut`: prompt and references from the sheet, each fact once, action as visible facts; retire the regex clean-ups one by one | not started | All S0 cases pass; word-level diff reviewed on every saved dream |
 | S7 | Jev layer 2: checks routed by tags, a question library from the film rules, a labelled set per question; a check may hold a picture only if it predicts pictures | built behind DREAMCHAT_JEV_ROUTED=on (off by default) on branch `s7-jev-routed` (27 Sep): eval written first and run, routing built, independently reviewed, review fixes in (an earned check acts under the default logging; each library question held to its measured bar; the bar counts moments and noise; the storyboard measured on the pictures drawn from its shot) | Each question meets its bar on its labelled set. Run on the 122 pictures the owner judged (62 moments): no check meets the bar to act (0 of 28 distinct checks). The gate's four questions and "storyboard complete?" are measured and at chance; the 16 new questions, planFacts's re-plan and the continuity plan's warnings are not measurable yet (too few flags, and the questions were written after reading these verdicts, so only later pictures can test them). Routed, every Jev reading only logs until a check is earned; off unchanged; Jev calls a dream on the ten redrawn dreams: acting 115.8, logging 23.1, routed 23.3 (below) |
@@ -825,6 +825,15 @@ between sessions.
 | S7 | S2 | Logging is the default since 27 Sep. Routed, an earned check (in `EARNED`) acts under that default too; `DREAMCHAT_CHECKS=log` set on purpose stops it. A fault code knows for certain does what it does unrouted (left undrawn when logging). planFacts's re-plan logs when routed (it still acts when only logging, unrouted, as S2 left it). |
 | S7 | S9 | `SessionStore.settle` counts a drawn take whose judge is still running as idle, though what is drawn from it waits on its verdict, so settling returns early: a redraw ended with a dream half drawn (the first routed arm, snow train m3), and `simulate.ts` and `resume.ts` can stop the same way (not the live server). S7 fixed only its own measuring tool (`evals/redraw.ts` settles again until every drawn take is judged) and left `settle` alone: S9's branch (`s9-as-drawn`) already changes it to wait for the judge's verdicts. After S9 merges, check that one fix covers both (and the redraw's own loop can go). |
 | S7 | S4, S1 | Routed, planFacts's re-plan (a camera facing something the plan lacks: the scene planned again) only logs until it is earned; unrouted it still acts, even logging. Not measured: the redraw has no planner, so no redraw arm exercises it, and on the judged pictures it flags three moments. S4's floor-plan work is where a camera facing a missing thing is put right in code. |
+| S4 | S6 | A saved shot brief is used only for the view it was written for. Every camera rule that corrects the view's own words (a held thing's size and place, a lap, "Nobody else" beside a crowd, a camera moved by the water or the line) drops the moment's saved brief in a rebuild: 14 of 140 frozen and 27 of 478 live pictures fall back to the view's words. What the rules add (the room turned, the water, a heading, what is out past a window, a crossing) is said after the view and its brief (`CutPlan.rules`, `CameraLayer.lines`) so briefs stand. The live path writes briefs again for new views (a model call): measure it once simulations are back. |
+| S4 | S5 | Across a reverse the picture before is dropped from the sheet's images (`rules.dropped`), not from the plan: the plan still lists it in `needs`, so the moment still waits for it. S5's `chooseRefs` should own the drop. |
+| S4 | S1 | The water's height is read from the record's words by a word list (`camera.ts waterLevel`: the first thing the words measure it by, a fixture, the ceiling, the floor or a body word; tested over every saved dream). The record should carry a level as a typed part. The floor plans give windows no height (a "high round window" stands on the floor), and the ceiling defaults to 3.2 m under 6 m shelves, so "almost up to the high round window" is 1.8 m: library-1 m5 and library-3 m7 still fail "risen almost to the ceiling". Heights of windows on walls belong to the blocking step (a model step). |
+| S4 | S7 | Flags on the sheet for the checks to route by: `crossed_line:<cut>`, `same_camera:<cut>`, `reverse_not_drawn_from:<cut>`; and `CameraLayer.body` (self, hands, none) for the point-of-view questions. The plan's `issues` say where a camera crossed the line because only the other side shows what the moment is about. |
+| S4 | S6 | Word lists in `camera.ts` (tested over every saved dream, `test/camera.test.ts`): `HAND_VERB`/`handsIn` (what the dreamer's hands do), `selfIn` (they look down at themselves), `openingsIn` (windows and doors on a place's walls, from its look), `WATER`/`waterLevel`. Each should give way to a typed field (the breakdown's action as visible facts, the blocking's fixtures). |
+| S4 | blocking (model step) | night-market m2: the floor plan has the sisters facing the old man, not the stall; the camera shows that faithfully (an eyeline rule that kept them from facing the lens also moved snow-train m1, which the owner called right, and was dropped). Only the blocking can meet it. |
+| S4 | S3 | `continuity.relation()` (and `evals/paired-arms.ts relationTo`) still read words only; with the camera rules the plan and the sheet read how two moments stand from their cameras on the floor plan (`sidesByCamera`, `sameByCamera`) and the jump fix. The tree's shots follow the plan's. |
+| S4 | every step | Cost: with the camera rules the continuity plan is made twice where the cameras disagree with the words about any two moments (most dreams); record tests that plan three frozen dreams came near bun's 5 s limit. |
+| S4 | live flow | The live-flow check (`evals/live-flow.ts`) was not run with the camera rules: the fake replays were drawn with them off, and new replays need DeepSeek (out of balance). Rerun on fresh replays once it is topped up. |
 ## Known debt, by the step that clears it
 
 Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays one change.
@@ -857,9 +866,10 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   - Tags read from several sources where one is missing: a crowd, a group or an animal is the record's kind, else
     the sketch's words, else the tree's category; `line` is the tree's line, or the plan's left-to-right order, or
     its staging.
-- **S4 (camera rules).** A thing held in a view through the dreamer's eyes is placed at its floor-plan spot, not
-  in the hands that hold it; and the "Nobody else is in the picture" line can stand beside a list of people who
-  are in it.
+- **S4 (camera rules).** Cleared behind DREAMCHAT_CAMERA=on: a thing the dreamer holds is in their hands before
+  their eyes (and said below the picture when out of it), a held thing with no size is hand-sized, a seated holder
+  holds it on their lap; "Nobody else is in the picture" is no longer said beside a crowd. Left: see the S4 rows of
+  the overlaps table.
 - **S7 (Jev checks).** The labelled set is thin: 122 pictures, 62 moments from ten dreams (20 moments drawn four
   times); the library questions were written after reading the owner's notes on these pictures, so only pictures
   judged after 27 Sep can earn them acting, and `evals/build-checks-set.ts` must be taught to read those verdicts
@@ -1277,3 +1287,53 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   checkpoints, about 106 pictures) measure the library questions. The builder's added noise rule (a flag within 0.1
   of its bar does not count toward the five flagged moments) is kept: it is conservative and only matters once a
   check could be promoted. 600 tests pass with routing off and on.
+- 27 Sep: S4 built on branch `s4-camera`, behind DREAMCHAT_CAMERA=on (off by default; with it off every plan, sheet
+  and prompt is today's: 0 of 140 frozen and 0 of 478 live pictures moved, with the record and the sheet off and on).
+  The rules live in `camera.ts` and read the floor plan, the camera placed on it and the story record; they feed
+  the plan (continuity.ts, previs.ts), the sheet (`CutSheet.rules`, cutsheet.ts) and the assembler, which reads
+  only the sheet. Each a general rule:
+  (1) a reverse angle (the `reverse` tag) says what is now ahead, on the picture's left and right and behind the
+  camera, from the room's walls as the camera's render shows them (`previs.wallsSeen`) and the windows and doors
+  the place's words or fixtures put on them, the side walls never named left or right; across it the picture
+  before is never a base or composition image (`reverse_not_drawn_from`);
+  (2) the scene's line: its first picture from outside with two of the cast sets the side; a later camera of the
+  scene that would cross it is scored down, and crosses only where the moment looks somewhere only the other side
+  shows, then saying they changed sides, never that they keep them (`crossed_line`; the plan's issues);
+  (3) same setup means the same camera: with both cameras placed on one plan, two moments face the same side
+  within 60 degrees and are the same setup only from the same camera (0.6 m, 10 degrees); an earlier camera on the
+  same people at the same size is moved off (`same_camera`); the plan is made twice where cameras and words
+  disagree;
+  (4) through the dreamer's eyes: their own body where they look down at it, their hands and arms only where they
+  do something with them or hold something, else nothing of them, never feet or legs; what they hold is in their
+  hands before their eyes (hand-sized where the plan gives no size), on the lap for a seated holder; someone
+  facing them on one long seat sits across from them;
+  (5) what stands where only a window is, is out past it (the plan's `outside`), said far off through the window;
+  (6) the water's height, read from the record, is a surface in the mock-up: what is ridden floats on it with
+  whoever is in it, the camera at their eyes rises, and what is under it is said to be;
+  (7) `relationIn`: the jump's own moment is on its far side (affd m7 and m9, 0f40 m5 read as their place again).
+  And a ridden vehicle's heading across the picture is said. What the rules add to a view is said after it and after
+  its saved brief, so a brief stands while the camera does not move.
+  Prompt cases, record and sheet on, off against on: `--step S4` 1/11 -> 10/11 counted, guards 8/8; all 85: 18/33 ->
+  27/33 counted, guards 36/36, no guard moved; with the record off 6/33 -> 12/33, 36/36. Met now: snow-train m2
+  (windows on the right, 0.09 -> 0.94) and m3 (across from him, 0.39 -> 0.98), snow-train-2 m2 (the same side as
+  picture 1, which is attached), lighthouse-fresh m10 (the tractor off the floor plan, 0.81 -> 0.04 for "inside")
+  and m12 (heading away), library-1 m4 (the whale under the water, not lined up with them, 0.97 -> 0.04) and m5
+  (the camera raised 1.4 m with the boat), orchard m4 (no hands, 0.88 -> 0.05) and m7 (no legs or feet, 0.78 ->
+  0.07); also library-2 m5 standing and snow-train m6 door (hypotheses). Not met: night-market m2 (the floor plan
+  has them facing the old man; an eyeline rule was tried and dropped: it moved the approved snow-train m1), and the
+  S1 level asks (see the overlaps).
+  Corpus, on against off (record and sheet on), reviewed moment by moment: frozen 79 of 140 pictures changed (a view
+  ghost fewer in 6081, one more in 538d), live 218 of 478 (3 new ghosts). By cause, frozen / live: how a moment
+  follows another, read from the cameras and the jump fix 33 / 98 (other side -> same side 12 / 26, other place
+  after a jump -> its place 3 / 18, same setup -> same side where the cameras differ 2 / 5), the room turned 18 / 35,
+  the dreamer's body 17 / 67 (nothing of them 11 / 57), a ridden vehicle's heading 22 / 36, the water 13 / 16 (under
+  it 3 / 3), a deliberate crossing said 9 / 19, "Nobody else" beside a crowd 8 / 15, out past a window or the place
+  3 / 6, across from the dreamer 1 / 2; the camera moved 16 / 48 (the water, the line, a same camera); a saved brief
+  no longer for its view 14 / 27. Fixed while reviewing: a same setup across a camera merely on the same side
+  (red door m5 was made an edit of m4 with staging from the wrong side), water read from what it comes in under
+  ("under the doors" as 2.2 m), fixtures under the water said to be outside the picture, "turns" read as hands,
+  a wall named twice ("the wall with the doors, with the doors"), 0.3 m said as "about 1 metre".
+  `bun test` 519 pass in seven switch combinations (camera off and on, with the record and the sheet off, on and
+  shadow); tests that hold today's plans pin the camera off, `test/camera.test.ts` holds the rules on; typecheck
+  clean. Not run: the live-flow check (needs fresh fake replays, and DeepSeek is out of balance). No pictures
+  drawn, no money spent.

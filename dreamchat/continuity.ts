@@ -7,7 +7,18 @@
 // change too much at once, or several cuts need the same changed look, a ghost is made first:
 // an in-between picture that is never a cut. Everything here is pure: the breakdown in, the plan
 // out, and the same breakdown always gives the same plan.
-import { type Blocking, DIRECTIONS, type Eye, type Move, outsideOrder, settle } from './blocking';
+import { type Blocking, bearing, DIRECTIONS, type Eye, type Move, outsideOrder, settle } from './blocking';
+import {
+  cameraMode,
+  ON_THE_LINE,
+  outThroughWindows,
+  SAME_SIDE_DEGREES,
+  sameCameraAs,
+  signedFromLine,
+  turnedBetween,
+  WATER,
+  waterLevel,
+} from './camera';
 import { dreamerShot, outsideShot } from './previs';
 import { type Breakdown, hasBefore, isWhole, type Moment, moments, POSITION, type State } from './producer';
 import type { NowOf } from './record';
@@ -99,6 +110,11 @@ export type CutPlan = {
   facts?: NowOf[];
   /** Made from the story record: by who or what, words of its look from after a change, left out of it. */
   unsaid?: Record<string, string[]>;
+  /**
+   * With the camera rules: what they add to the view, said after it (and after a brief written for it):
+   * the water, what is out past a window, which way what is ridden goes, a crossing of the line.
+   */
+  rules?: string[];
   why: string;
 };
 
@@ -348,9 +364,17 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
   // kept her standing where she started (24 Sep).
   const moved = new Map<string, Move>();
   for (const x of upTo) for (const mv of plan.moves?.[x.id] ?? []) moved.set(mv.id, mv);
+  // With the camera rules: what stands where only a window is is out past the place, never on its
+  // floor (camera.ts outThroughWindows); and the water stands as high as the record says it does here.
+  const camera = cameraMode() === 'on';
+  const beyond = camera ? outThroughWindows(plan) : {};
+  const water = camera && r ? waterAt(r.facts, plan) : null;
   return {
     ...plan,
+    ...(Object.keys(beyond).length ? { outside: { ...beyond, ...(plan.outside ?? {}) } } : {}),
+    ...(water !== null ? { water } : {}),
     spots: plan.spots
+      .filter((s) => !(s.id in beyond))
       .filter((s) => (there.has(s.id) || s.id === dreamerId || s.fixture) && !r?.gone.includes(s.id))
       .map((s) => {
         const mv = moved.get(s.id);
@@ -376,6 +400,21 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
         return at;
       }),
   };
+}
+
+/**
+ * How high the water stands at a moment, from the story record's facts about its place (camera.ts
+ * waterLevel): none where the record measures no water there.
+ */
+function waterAt(facts: NowOf[], plan: Blocking): number | null {
+  for (const f of facts)
+    if (f.kind === 'place')
+      for (const x of f.facts)
+        if (x.kind === 'part' && (WATER.test(x.part) || WATER.test(x.what))) {
+          const level = waterLevel(x.now, plan);
+          if (level !== null) return level;
+        }
+  return null;
 }
 
 /**
@@ -433,20 +472,72 @@ const sameSide = (m: Moment, e: Moment) =>
  * world was drawn again after the jump, 23 Sep). Only the jump's own picture is matched to the one
  * just before it.
  */
-export function relationIn(ms: Moment[]): (m: Moment, e: Moment) => Relation {
+export function relationIn(
+  ms: Moment[],
+  /**
+   * With the camera rules (camera.ts): the jump's own moment is on the far side of the jump, with what
+   * follows it, never a boundary behind itself (the moment after a jump in the same place was read as
+   * "another place", the key-and-boat dream m7 and m9, the lift m5); and where both cameras are placed
+   * on one floor plan, `sides` says from them whether two moments face the same side of the place.
+   */
+  opts: {
+    camera?: boolean;
+    sides?: (m: Moment, e: Moment) => boolean | undefined;
+    /** Where both cameras are placed on one plan: whether they are the same camera, as a same setup's is. */
+    same?: (m: Moment, e: Moment) => boolean | undefined;
+  } = {},
+): (m: Moment, e: Moment) => Relation {
   const index = new Map(ms.map((m, i) => [m.id, i]));
   const acrossJump = (e: Moment, m: Moment) =>
     ms.some((k, at) => {
       const ei = index.get(e.id)!;
       const mi = index.get(m.id)!;
-      return !!k.shift && ((ei < at && at <= mi) || (ei === at && at < mi));
+      return !!k.shift && ((ei < at && at <= mi) || (!opts.camera && ei === at && at < mi));
     });
   return (m, e) => {
     if (m.shift && index.get(e.id) === (index.get(m.id) ?? 0) - 1) return 'shift';
     if (acrossJump(e, m)) return 'other_place';
     if (!m.place || e.place !== m.place) return 'other_place';
-    if (!sameSide(m, e)) return 'other_side';
-    return e.distance === m.distance && e.eyes === m.eyes ? 'same_setup' : 'same_side';
+    if (!(opts.sides?.(m, e) ?? sameSide(m, e))) return 'other_side';
+    // A same setup is the same camera: with both placed, a camera merely on the same side is not one.
+    const same = opts.same?.(m, e);
+    return e.distance === m.distance && e.eyes === m.eyes && same !== false ? 'same_setup' : 'same_side';
+  };
+}
+
+/** Whether two moments' cameras, both placed on one floor plan, are the same camera (camera rules). */
+export function sameByCamera(
+  b: Breakdown,
+  cams: Map<string, Eye>,
+): (m: Pick<Moment, 'id'>, e: Pick<Moment, 'id'>) => boolean | undefined {
+  return (m, e) => {
+    const a = cams.get(m.id);
+    const z = cams.get(e.id);
+    if (!a || !z) return undefined;
+    const pa = placePlan(b, m.id);
+    if (!pa || pa !== placePlan(b, e.id)) return undefined;
+    return sameCameraAs(a, z);
+  };
+}
+
+/**
+ * Whether two moments face the same side of their place, from their cameras on its floor plan (camera
+ * rules): within SAME_SIDE_DEGREES of each other on one plan. Undefined where either has no camera or
+ * they are on different plans: then the words decide. "The same view" two cameras a few centimetres
+ * apart had was read from their words as the other side, and the carriage was drawn anew (the red door
+ * in the snow, m2).
+ */
+export function sidesByCamera(
+  b: Breakdown,
+  cams: Map<string, Eye>,
+): (m: Pick<Moment, 'id'>, e: Pick<Moment, 'id'>) => boolean | undefined {
+  return (m, e) => {
+    const a = cams.get(m.id);
+    const z = cams.get(e.id);
+    if (!a || !z) return undefined;
+    const pa = placePlan(b, m.id);
+    if (!pa || pa !== placePlan(b, e.id)) return undefined;
+    return turnedBetween(a, z) < SAME_SIDE_DEGREES;
   };
 }
 
@@ -465,6 +556,33 @@ export function relation(b: Breakdown, later: string, earlier: string): Relation
  * until it is undone or replaced; the floor plans have whoever is there and hold what the record holds.
  */
 export function planContinuity(b: Breakdown, rec?: RecordPlan): ContinuityPlan {
+  if (cameraMode() !== 'on') return planWith(b, rec);
+  // With the camera rules, planned twice: once to place every camera on its floor plan, then again with
+  // how each moment stands to the others read from those cameras, where both have one on one plan.
+  const first = planWith(b, rec, { camera: true });
+  const cams = new Map(first.cuts.flatMap((c) => (c.eye ? [[c.id, c.eye] as const] : [])));
+  // Planned again only where the cameras say otherwise than the words about some two moments' sides.
+  const ms = moments(b).map((m) => ({ ...m, looks_at: m.looks_at ?? '' }));
+  const byCamera = sidesByCamera(b, cams);
+  const same = sameByCamera(b, cams);
+  const differs = ms.some((m, i) =>
+    ms
+      .slice(0, i)
+      .some(
+        (e) =>
+          e.place === m.place &&
+          ((byCamera(m, e) ?? sameSide(m, e)) !== sameSide(m, e) ||
+            (e.distance === m.distance && e.eyes === m.eyes && same(m, e) === false)),
+      ),
+  );
+  return differs ? planWith(b, rec, { camera: true, cams }) : first;
+}
+
+function planWith(
+  b: Breakdown,
+  rec: RecordPlan | undefined,
+  opts: { camera?: boolean; cams?: Map<string, Eye> } = {},
+): ContinuityPlan {
   const crowd = (id: string) => !!b.people.find((p) => p.id === id)?.extras;
   // A breakdown drafted before these fields existed plans as if nothing lasting changes.
   const ms = moments(b).map((m) => {
@@ -512,8 +630,14 @@ export function planContinuity(b: Breakdown, rec?: RecordPlan): ContinuityPlan {
   const kindOf = (id: string): 'person' | 'place' | 'thing' =>
     b.places.some((p) => p.id === id) ? 'place' : b.things.some((t) => t.id === id) ? 'thing' : 'person';
 
-  const sides = sameSide;
-  const relation = relationIn(ms);
+  const byCamera = opts.cams ? sidesByCamera(b, opts.cams) : undefined;
+  const sides = (m: Moment, e: Moment) => byCamera?.(m, e) ?? sameSide(m, e);
+  const relation = relationIn(
+    ms,
+    opts.camera
+      ? { camera: true, ...(byCamera && opts.cams ? { sides: byCamera, same: sameByCamera(b, opts.cams) } : {}) }
+      : {},
+  );
 
   const sceneOf = new Map<string, string>();
   for (const sc of b.scenes) for (const mo of sc.moments) sceneOf.set(mo.id, sc.id);
@@ -849,6 +973,78 @@ export function planContinuity(b: Breakdown, rec?: RecordPlan): ContinuityPlan {
   // With a floor plan, every camera is placed on it: what each picture sees is worked out, and who
   // stands where across it follows from where they are, not from the order they were first named.
 
+  // With the camera rules (camera.ts), two more for every camera seen from outside. The scene's line:
+  // its first picture from outside with two of the cast sets which side of them the camera is on, and
+  // every later camera of the scene, until the dream jumps, stays on that side unless only the other
+  // side shows what the moment is about. And a cut to the same people at the same size from an earlier
+  // cut's own camera is the same picture again: the camera moves.
+  const cast = new Set(b.people.filter((p) => !p.extras).map((p) => p.id));
+  const lines = new Map<string, { ids: [string, string]; sign: number; from: string }>();
+  const segmentOf = (m: Moment) => {
+    const i = index.get(m.id) ?? 0;
+    return `${sceneOf.get(m.id) ?? 's1'}/${ms.slice(0, i + 1).filter((k) => !!k.shift).length}`;
+  };
+  const shotRules = (c: CutPlan, m: Moment, where: Blocking) => {
+    const line = lines.get(segmentOf(m));
+    const a = line && where.spots.find((s) => s.id === line.ids[0]);
+    const z = line && where.spots.find((s) => s.id === line.ids[1]);
+    const people = seen(m);
+    const avoid = cuts
+      .slice(0, c.order - 1)
+      .filter((e) => {
+        const em = byId.get(e.id)!;
+        const rel = relation(m, em);
+        return (
+          !!e.eye &&
+          em.eyes === 'outside' &&
+          em.distance === m.distance &&
+          rel !== 'other_place' &&
+          rel !== 'shift' &&
+          placePlan(b, e.id) === placePlan(b, m.id) &&
+          people.length > 0 &&
+          seen(em).length === people.length &&
+          seen(em).every((p) => people.includes(p))
+        );
+      })
+      .map((e) => e.eye!);
+    return { avoid, ...(line && a && z ? { line: { a, b: z, sign: line.sign } } : {}) };
+  };
+  const keepLine = (
+    c: CutPlan,
+    m: Moment,
+    where: Blocking,
+    eye: Eye,
+    inPicture: string[],
+    rules: ReturnType<typeof shotRules> | undefined,
+  ) => {
+    const key = segmentOf(m);
+    if (!lines.has(key)) {
+      const two = inPicture
+        .filter((id) => cast.has(id))
+        .map((id) => where.spots.find((s) => s.id === id))
+        .filter((s): s is NonNullable<typeof s> => !!s)
+        .map((s) => ({ s, angle: bearingAngle(eye, s) }))
+        .sort((p, q) => p.angle - q.angle)
+        .slice(0, 2);
+      const side = two.length === 2 ? signedFromLine(two[0].s, two[1].s, eye.at) : 0;
+      if (two.length === 2 && Math.abs(side) >= ON_THE_LINE)
+        lines.set(key, { ids: [two[0].s.id, two[1].s.id], sign: Math.sign(side), from: c.id });
+      return;
+    }
+    const line = rules?.line;
+    const side = line ? signedFromLine(line.a, line.b, eye.at) : 0;
+    if (line && Math.abs(side) >= ON_THE_LINE && Math.sign(side) !== line.sign)
+      crossings.push(
+        `picture ${c.order} crosses the scene's line from picture ${no(lines.get(key)!.from)}: only the other side shows what it is about`,
+      );
+    if (rules?.avoid.some((e) => sameCameraAs(eye, e)))
+      crossings.push(
+        `picture ${c.order} is shot from the same camera as an earlier picture of the same people at the same size`,
+      );
+  };
+  const crossings: string[] = [];
+  const bearingAngle = (eye: Eye, s: { x: number; y: number }) => bearing(eye.at, eye.d, s).angle;
+
   const bare = (x: string) =>
     x
       .toLowerCase()
@@ -921,6 +1117,7 @@ export function planContinuity(b: Breakdown, rec?: RecordPlan): ContinuityPlan {
         c.view = v.text;
         c.eye = v.eye;
         c.sees = v.inPicture;
+        if (v.rules) c.rules = v.rules;
         // Made from its previs, the view needs nothing from the picture the dreamer was seen in:
         // it is neither drawn from nor waited for, so it can be drawn alongside it.
         c.refs = c.refs.filter((r) => r.relation !== 'seat');
@@ -953,13 +1150,16 @@ export function planContinuity(b: Breakdown, rec?: RecordPlan): ContinuityPlan {
         ...where.spots.map((x) => ({ id: x.id, name: nameOf(x) })),
         ...(where.front ? [{ id: 'front', name: where.front }] : []),
       ]).filter((id) => !ids.includes(id) && id !== dreamerId);
-      const v = edits ? null : outsideShot(where, ids, m.distance, now, lookAt(m, where), also);
+      const rules = opts.camera && !edits ? shotRules(c, m, where) : undefined;
+      const v = edits ? null : outsideShot(where, ids, m.distance, now, lookAt(m, where), also, rules);
       if (v) {
         c.view = v.text;
         c.eye = v.eye;
         c.sees = v.inPicture;
         c.framing = v.framing;
         c.staging = [];
+        if (v.rules) c.rules = v.rules;
+        if (opts.camera) keepLine(c, m, where, v.eye, v.inPicture, rules);
       } else {
         c.across = outsideOrder(plan, ids, fromBehind);
         c.camera = fromBehind
@@ -1093,7 +1293,7 @@ export function planContinuity(b: Breakdown, rec?: RecordPlan): ContinuityPlan {
     return out;
   }
 
-  const issues: string[] = [];
+  const issues: string[] = [...crossings];
   for (const c of cuts) {
     const m = byId.get(c.id)!;
     if (!m.action.trim() || m.action.startsWith('(no action')) issues.push(`picture ${c.order} has no visible action`);
