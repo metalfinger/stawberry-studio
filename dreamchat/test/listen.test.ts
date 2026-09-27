@@ -1,5 +1,5 @@
 // Step S8 (listening), behind DREAMCHAT_LISTEN=on: each rule, and that off is today.
-import { afterEach, describe, expect, test } from 'bun:test';
+import { afterAll, afterEach, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { dreamConfig } from '../dream';
@@ -34,14 +34,18 @@ import type { ChatMessage, HostFn } from '../llm';
 import { parseTurnResponse } from '../llm';
 import { type Breakdown, inTheirWords, personLines } from '../producer';
 import { buildItems, SessionStore } from '../session';
-import { fakeHost, fakeJev, noul, told } from './fakes';
+import { fakeHost, fakeJev, noul, pinSwitches, told } from './fakes';
 
 const cfg = dreamConfig();
 const required = cfg.goals.filter((g) => !g.optional).map((g) => g.id);
 
+// Each test starts with listening off, whatever the environment sets, and turns it on where it says so;
+// after the file, the switch is as the environment had it.
+const putBack = pinSwitches({ DREAMCHAT_LISTEN: undefined });
 afterEach(() => {
   delete process.env.DREAMCHAT_LISTEN;
 });
+afterAll(putBack);
 
 const thread = (id: string, opened: number, strength: Thread['strength'] = 'medium'): Thread => ({
   id,

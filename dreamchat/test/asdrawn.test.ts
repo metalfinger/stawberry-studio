@@ -2,7 +2,7 @@
 // pictures the way the drawing path draws them (each picture recorded as it is sent, in plan order), then
 // changed after drawing, one change at a time. The pictures each change must make stale are worked out
 // here from what each picture was sent (its images, by name), never from the record's own `from`.
-import { afterEach, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { join } from 'node:path';
 import {
   type AsDrawn,
@@ -23,23 +23,37 @@ import {
   withCopies,
 } from '../asdrawn';
 import { drawOrder, type GhostPlan, planContinuity } from '../continuity';
-import { framed, ghostName } from '../cutsheet';
+import { cutSheetMode, framed, ghostName } from '../cutsheet';
 import { buildFrames, buildGhosts, ghostPrompt } from '../frames';
 import { hashOf } from '../lib';
 import { rebuild } from '../plan';
 import { completeViews, type Moment, moments } from '../producer';
-import { dreamNowOf, planRecord, plannedInputsOf, reconcileGhosts, type Session, stalenessOf } from '../session';
+import {
+  dreamNowOf,
+  planRecord,
+  plannedInputsOf,
+  reconcileGhosts,
+  type Session,
+  sheetDreamOf,
+  stalenessOf,
+} from '../session';
 import type { Item } from '../sheets';
-import { DEFAULTS, withSwitches } from './fakes';
+import { DEFAULTS, pinSwitches, withSwitches } from './fakes';
 
 const SOURCES = join(import.meta.dir, '..', 'evals', 'sources');
 const DREAMS = ['dream-0926-062232-a44a', 'dream-0926-083656-8ceb'];
 
-const wasRecord = process.env.DREAMCHAT_RECORD;
-afterEach(() => {
-  if (wasRecord === undefined) delete process.env.DREAMCHAT_RECORD;
-  else process.env.DREAMCHAT_RECORD = wasRecord;
-});
+/**
+ * The switches the dreams are drawn and read under, each set in full whatever the environment sets: today's
+ * defaults, and the story record, the cut sheet and the camera rules on (as the picture checkpoints draw).
+ */
+const SETTINGS: { name: string; env: Record<string, string | undefined> }[] = [
+  { name: 'as today', env: DEFAULTS },
+  {
+    name: 'record, cut sheet and camera on',
+    env: { ...DEFAULTS, DREAMCHAT_RECORD: 'on', DREAMCHAT_CUT_SHEET: 'on', DREAMCHAT_CAMERA: 'on' },
+  },
+];
 
 /**
  * A frozen dream with every sketch approved and every moment and in-between picture drawn and recorded.
@@ -92,7 +106,14 @@ async function drawn(
       // Its mock-up as image 1 where its camera is worked out on a floor plan, put on it as layoutFor does.
       const layout = f.frame?.plan?.eye ? `previs-${f.id}` : undefined;
       if (layout) f.layout = { mediaId: layout, key: `key-${f.id}`, path: '' };
-      const built = framed({ frame: f, sheets: items, style: s.style!, inputs: plannedInputsOf(s, f), layout }, 'off');
+      const mode = cutSheetMode();
+      const dream = mode === 'off' ? undefined : sheetDreamOf(s);
+      const built = framed(
+        { frame: f, sheets: items, style: s.style!, inputs: plannedInputsOf(s, f), layout, dream },
+        mode,
+        'frames',
+        false,
+      );
       prompt = built.prompt;
       rec = recordMoment({
         frame: f,
@@ -168,8 +189,15 @@ const reasonsOf = (s: Session, id: string) =>
 const lastMoment = (s: Session) =>
   [...s.build!.frames!].reverse().find((f) => f.kind === 'cut' && !sentImage(s, imageOf(f)).length)!;
 
-for (const DREAM of DREAMS)
-  describe(`S9 on ${DREAM}`, () => {
+for (const [setting, DREAM] of SETTINGS.flatMap((x) => DREAMS.map((d) => [x, d] as const)))
+  describe(`S9 on ${DREAM}, ${setting.name}`, () => {
+    let putBack = () => {};
+    beforeAll(() => {
+      putBack = pinSwitches(setting.env);
+    });
+    afterAll(() => putBack());
+    const recordOn = setting.env.DREAMCHAT_RECORD === 'on';
+
     test('every picture keeps a record of its take, holding what was sent, and nothing is stale or behind', async () => {
       const { s, sent } = await drawn(DREAM);
       const frames = s.build!.frames!;
@@ -187,7 +215,7 @@ for (const DREAM of DREAMS)
         stale: [],
         behind: [],
       });
-    });
+    }, 60_000);
 
     test('a rebuild reading the records gives each picture as sent, even after the dream has changed', async () => {
       const { s, sent } = await drawn(DREAM);
@@ -201,7 +229,7 @@ for (const DREAM of DREAMS)
       }
       // Without them, the look as it stands is told.
       expect(rebuild(x, { asDrawn: false }).pictures.some((p) => p.prompt.includes('brighter'))).toBe(true);
-    });
+    }, 60_000);
 
     test('a record whose sketch copy is not kept is rebuilt as the dream stands, never from half a record', async () => {
       const { s } = await drawn(DREAM);
@@ -213,7 +241,7 @@ for (const DREAM of DREAMS)
       const users = x.build!.frames!.filter((y) => Object.values(currentRecord(y)?.sketches ?? {}).includes(hash));
       expect(users.length).toBeGreaterThan(0);
       for (const u of users) expect(rebuiltOf(r, u)!.asDrawn).toBeUndefined();
-    });
+    }, 60_000);
 
     test('a sketch drawn again makes exactly the pictures sent it, and those drawn from them, stale', async () => {
       const { s } = await drawn(DREAM);
@@ -226,7 +254,7 @@ for (const DREAM of DREAMS)
       const direct = sentImage(s, `sketch:${sketch.id}`);
       expect(staleIds(x)).toEqual(andDownstream(s, direct));
       for (const id of staleIds(x)) expect(reasonsOf(x, id)).toContain(direct.includes(id) ? 'sketch' : 'sequence');
-    });
+    }, 60_000);
 
     test("a moment's words corrected make it and what was drawn from it stale", async () => {
       const { s } = await drawn(DREAM);
@@ -236,7 +264,7 @@ for (const DREAM of DREAMS)
       f.fields = { ...f.fields, action: { value: `${f.fields.action!.value}, at night`, said: true } };
       expect(staleIds(x)).toEqual(andDownstream(s, [source.id]));
       expect(reasonsOf(x, source.id)).toEqual(['words']);
-    });
+    }, 60_000);
 
     test('an earlier picture drawn again makes stale what was drawn from its earlier take, not itself', async () => {
       const { s } = await drawn(DREAM);
@@ -254,7 +282,7 @@ for (const DREAM of DREAMS)
           then: `picture:${source.id} take 1`,
           now: `picture:${source.id} take 2`,
         });
-    });
+    }, 60_000);
 
     test('the look changed makes every picture stale, for its look', async () => {
       const { s } = await drawn(DREAM);
@@ -263,7 +291,7 @@ for (const DREAM of DREAMS)
       const report = stalenessOf(x);
       expect(report.stale.map((y) => y.id).sort()).toEqual(s.build!.frames!.map((f) => f.id).sort());
       for (const st of report.stale) expect(st.reasons.map((r) => r.kind)).toContain('look');
-    });
+    }, 60_000);
 
     test('someone put into a moment makes it stale for its cast, and nothing else', async () => {
       const { s } = await drawn(DREAM);
@@ -276,7 +304,7 @@ for (const DREAM of DREAMS)
       else m.things.push(thing!.id);
       expect(staleIds(x)).toEqual([last.id]);
       expect(reasonsOf(x, last.id)).toContain('cast');
-    });
+    }, 60_000);
 
     test("a scene's floor plan planned again makes its moments with a mock-up stale for their camera", async () => {
       const { s } = await drawn(DREAM);
@@ -293,7 +321,7 @@ for (const DREAM of DREAMS)
       // Stale only in that scene, or drawn from a picture that is.
       for (const st of found)
         expect(inScene.has(st.id) || st.reasons.some((r) => r.kind === 'sequence' || r.kind === 'earlier')).toBe(true);
-    });
+    }, 60_000);
 
     test('a moment no longer in the dream is stale because it is no longer planned', async () => {
       const { s } = await drawn(DREAM);
@@ -303,11 +331,18 @@ for (const DREAM of DREAMS)
       const report = stalenessOf(x);
       const st = report.stale.find((y) => y.id === last.id)!;
       expect(st.reasons[0]).toEqual({ kind: 'plan', input: 'plan', then: 'planned', now: 'no longer in the plan' });
-      // Beside it only the in-between pictures planned for it alone, gone with it, and nothing else.
+      // Beside it the in-between pictures planned for it alone, gone with it. With the story record off,
+      // nothing else. With it on, the record reads a moment's facts and floor plan from the whole dream (the
+      // red door shut before the moment it is opened), so the moments before it may be stale for those,
+      // and what was drawn from them in turn; never for anything else.
       const gone = new Set(report.stale.filter((y) => y.reasons[0]?.kind === 'plan').map((y) => y.id));
-      for (const r of st.reasons.slice(1)) expect([r.kind, gone.has(r.input)]).toEqual(['sequence', true]);
-      expect(report.stale.every((y) => gone.has(y.id))).toBe(true);
-    });
+      const stale = new Set(report.stale.map((y) => y.id));
+      for (const r of st.reasons.slice(1))
+        expect([r.kind, recordOn ? stale.has(r.input) : gone.has(r.input)]).toEqual(['sequence', true]);
+      const others = report.stale.filter((y) => !gone.has(y.id));
+      if (!recordOn) expect(others).toEqual([]);
+      for (const y of others) for (const r of y.reasons) expect(['record', 'camera', 'sequence']).toContain(r.kind);
+    }, 60_000);
 
     test('a record kept under other switches or keys is not comparable: unknown, never stale', async () => {
       const { s } = await drawn(DREAM);
@@ -333,7 +368,7 @@ for (const DREAM of DREAMS)
       ]);
       expect(mixed.stale.map((y) => y.id)).not.toContain(f.id);
       expect(driftOf(env, env)).toBeNull();
-    });
+    }, 60_000);
 
     test('a moment sent a copy of itself behind the dream is listed behind, not stale; the fresh send brings it up', async () => {
       // Sent without someone the plan has in it, as a moment kept the cast it was first put in with.
@@ -360,7 +395,7 @@ for (const DREAM of DREAMS)
         );
       });
       expect(stalenessOf(fresh).behind).toEqual([]);
-    });
+    }, 60_000);
 
     test("words reworded keep the dreamer's said where the breakdown holds the same words", async () => {
       const { s } = await drawn(DREAM);
@@ -371,7 +406,7 @@ for (const DREAM of DREAMS)
       // A correction the breakdown never took keeps its own words and said.
       const corrected = { ...f.fields, action: { value: 'something else', said: false } };
       expect(fieldsInForce(corrected, m).action).toEqual({ value: 'something else', said: false });
-    });
+    }, 60_000);
   });
 
 describe("S9's fresh send never undoes the dreamer", () => {
@@ -485,26 +520,43 @@ describe('S9 under the switches in force', () => {
 describe('S9 keys', () => {
   test('the keys of two frozen dreams stay as they are, or KEYS_VERSION is raised', async () => {
     const hashes: Record<string, string> = {};
-    for (const record of ['off', 'on']) {
-      process.env.DREAMCHAT_RECORD = record;
-      for (const name of DREAMS) {
-        const { s } = await drawn(name);
-        hashes[`${name} record ${record}`] = hashOf(
-          s.build!.frames!.map((f) => [f.id, currentRecord(f)!.keys, currentRecord(f)!.dream?.keys ?? null]),
-        );
-      }
-    }
+    // Each under its switches in full, whatever the environment sets: the camera rules change what a
+    // moment's camera is keyed by, and a record keeps the switches it was drawn under.
+    const under: Record<string, Record<string, string | undefined>> = {
+      'record off': DEFAULTS,
+      'record on': { ...DEFAULTS, DREAMCHAT_RECORD: 'on' },
+      'record, cut sheet and camera on': {
+        ...DEFAULTS,
+        DREAMCHAT_RECORD: 'on',
+        DREAMCHAT_CUT_SHEET: 'on',
+        DREAMCHAT_CAMERA: 'on',
+      },
+    };
+    for (const [label, env] of Object.entries(under))
+      await withSwitches(env, async () => {
+        for (const name of DREAMS) {
+          const { s } = await drawn(name);
+          hashes[`${name} ${label}`] = hashOf(
+            s.build!.frames!.map((f) => [f.id, currentRecord(f)!.keys, currentRecord(f)!.dream?.keys ?? null]),
+          );
+        }
+      });
     // Moved? A change to what the keys read or how they are worked out (the plan, the sheet, the record)
     // makes records kept before it incomparable: raise KEYS_VERSION in asdrawn.ts, then set these anew.
     if (process.env.S9_GOLDEN) console.log(JSON.stringify(hashes, null, 2));
     expect({ version: KEYS_VERSION, hashes }).toEqual({ version: 2, hashes: GOLDEN });
-  });
+  }, 60_000);
 });
 
-/** The keys of the two dreams drawn as above, record off and on, at KEYS_VERSION 2. */
+/**
+ * The keys of the two dreams drawn as above, record off and on, and with the cut sheet and the camera rules
+ * on as well, at KEYS_VERSION 2.
+ */
 const GOLDEN: Record<string, string> = {
   'dream-0926-062232-a44a record off': 'c387830c865b5',
   'dream-0926-062232-a44a record on': '14a5553f255047',
+  'dream-0926-062232-a44a record, cut sheet and camera on': '8d3e88658a65b',
   'dream-0926-083656-8ceb record off': '18a048e0bf8d6f',
   'dream-0926-083656-8ceb record on': '6566cbd06b203',
+  'dream-0926-083656-8ceb record, cut sheet and camera on': '1b9952facf36f6',
 };
