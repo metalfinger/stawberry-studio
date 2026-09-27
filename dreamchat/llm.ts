@@ -73,15 +73,52 @@ export function claudePrompt(messages: ChatMessage[]): { system: string; prompt:
 
 /** The JSON object in a reply that may be wrapped in a code fence or a sentence. */
 export function jsonOnly(text: string): string {
-  const t = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+  const t = text
+    .trim()
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/, '');
   const start = t.indexOf('{');
   const end = t.lastIndexOf('}');
   return start !== -1 && end > start ? t.slice(start, end + 1) : t;
 }
 
+/** Runs `claude` with these arguments and this input: its output, errors and exit code. */
+export type ClaudeRun = (args: string[], input: string) => Promise<{ out: string; err: string; code: number }>;
+
+const spawnClaude: ClaudeRun = async (args, input) => {
+  const proc = Bun.spawn(args, { cwd: tmpdir(), stdin: new Blob([input]), stdout: 'pipe', stderr: 'pipe' });
+  const [out, err, code] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+    proc.exited,
+  ]);
+  return { out, err, code };
+};
+
+/**
+ * How many times a reply is asked for in all when it breaks the contract: a JSON reply that does not
+ * parse (DeepSeek's response_format guarantees it; `claude -p` has none: an unescaped quote inside a
+ * string failed one breakdown in 13, and a failed breakdown ends the conversation's pictures, 27 Sep),
+ * or an empty reply.
+ */
+export const CLAUDE_TRIES = 3;
+
+/** Why a reply breaks the contract, or null when it keeps it. */
+export function claudeBreach(content: string, json: boolean): string | null {
+  if (!content.trim()) return 'the reply was empty';
+  if (!json) return null;
+  try {
+    JSON.parse(content);
+    return null;
+  } catch (e) {
+    return `the reply was not valid JSON (${String(e instanceof Error ? e.message : e).slice(0, 120)})`;
+  }
+}
+
 export async function callClaude(
   messages: ChatMessage[],
   opts: { model?: string; json?: boolean; thinking?: Thinking } = {},
+  run: ClaudeRun = spawnClaude,
 ): Promise<CallResult> {
   const model = opts.model && !opts.model.startsWith('deepseek') ? opts.model : CLAUDE_MODEL;
   const { system, prompt } = claudePrompt(messages);
@@ -103,33 +140,39 @@ export async function callClaude(
     CLAUDE_EFFORT[opts.thinking ?? HOST_THINKING],
     ...(system ? ['--system-prompt', system] : []),
   ];
-  const proc = Bun.spawn(args, {
-    cwd: tmpdir(),
-    stdin: new Blob([opts.json ? `${prompt}\n\nReply with the JSON object only.` : prompt]),
-    stdout: 'pipe',
-    stderr: 'pipe',
-  });
-  const [out, err, code] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-    proc.exited,
-  ]);
-  let body: { result?: string; is_error?: boolean; usage?: { input_tokens?: number; output_tokens?: number } };
-  try {
-    body = JSON.parse(out);
-  } catch {
-    throw new Error(`claude ${code}: ${(err || out).slice(0, 400)}`);
+  const input = opts.json ? `${prompt}\n\nReply with the JSON object only.` : prompt;
+  let content = '';
+  let usage: CallResult['usage'];
+  let breach: string | null = null;
+  for (let t = 0; t < CLAUDE_TRIES; t++) {
+    // Asked again, the reply is told what was wrong with the one before; the conversation is the same.
+    const { out, err, code } = await run(
+      args,
+      breach
+        ? `${input}\n\n(Your previous reply could not be used: ${breach}. ${opts.json ? 'Reply with one valid JSON object, every quote inside a string escaped.' : 'Reply with the message.'})`
+        : input,
+    );
+    let body: { result?: string; is_error?: boolean; usage?: { input_tokens?: number; output_tokens?: number } };
+    try {
+      body = JSON.parse(out);
+    } catch {
+      throw new Error(`claude ${code}: ${(err || out).slice(0, 400)}`);
+    }
+    if (code !== 0 || body.is_error) throw new Error(`claude ${code}: ${(body.result ?? err).slice(0, 400)}`);
+    const text = body.result ?? '';
+    usage = body.usage
+      ? {
+          prompt_tokens: (usage?.prompt_tokens ?? 0) + (body.usage.input_tokens ?? 0),
+          completion_tokens: (usage?.completion_tokens ?? 0) + (body.usage.output_tokens ?? 0),
+          total_tokens: (usage?.total_tokens ?? 0) + (body.usage.input_tokens ?? 0) + (body.usage.output_tokens ?? 0),
+        }
+      : usage;
+    content = opts.json ? jsonOnly(text) : text;
+    breach = claudeBreach(content, !!opts.json);
+    if (!breach) break;
+    console.warn(`claude: ${breach}${t + 1 < CLAUDE_TRIES ? ', asked again' : ', given up'}`);
   }
-  if (code !== 0 || body.is_error) throw new Error(`claude ${code}: ${(body.result ?? err).slice(0, 400)}`);
-  const text = body.result ?? '';
-  const usage = body.usage
-    ? {
-        prompt_tokens: body.usage.input_tokens,
-        completion_tokens: body.usage.output_tokens,
-        total_tokens: (body.usage.input_tokens ?? 0) + (body.usage.output_tokens ?? 0),
-      }
-    : undefined;
-  return { content: opts.json ? jsonOnly(text) : text, model, ms: Date.now() - started, usage };
+  return { content, model, ms: Date.now() - started, usage };
 }
 
 export async function callDeepseek(

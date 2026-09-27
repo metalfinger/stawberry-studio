@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { claudePrompt, jsonOnly, parseTurnResponse, RECOVERY } from '../llm';
+import { CLAUDE_TRIES, type ClaudeRun, callClaude, claudePrompt, jsonOnly, parseTurnResponse, RECOVERY } from '../llm';
 
 describe('the turn contract, enforced in code', () => {
   test('a well-formed turn passes untouched', () => {
@@ -88,5 +88,40 @@ describe('the Claude writer', () => {
     expect(jsonOnly('```json\n{"response": ["hi"]}\n```')).toBe('{"response": ["hi"]}');
     expect(jsonOnly('Here it is: {"a": {"b": 1}} ')).toBe('{"a": {"b": 1}}');
     expect(jsonOnly('no json')).toBe('no json');
+  });
+
+  const replies = (...results: string[]) => {
+    const inputs: string[] = [];
+    const run: ClaudeRun = async (_args, input) => {
+      inputs.push(input);
+      const result = results[Math.min(inputs.length - 1, results.length - 1)];
+      return { out: JSON.stringify({ result, usage: { input_tokens: 10, output_tokens: 5 } }), err: '', code: 0 };
+    };
+    return { run, inputs };
+  };
+
+  test('a JSON reply that does not parse is asked for again, told why', async () => {
+    const { run, inputs } = replies('{"action": "she says "get on""}', '{"action": "she says \\"get on\\""}');
+    const r = await callClaude([{ role: 'user', content: 'the dream' }], { json: true }, run);
+    expect(JSON.parse(r.content)).toEqual({ action: 'she says "get on"' });
+    expect(inputs).toHaveLength(2);
+    expect(inputs[1]).toContain('not valid JSON');
+    expect(r.usage?.total_tokens).toBe(30);
+  });
+
+  test('an empty reply is asked for again; a good one is asked once', async () => {
+    const empty = replies('', 'where did it go?');
+    expect((await callClaude([{ role: 'user', content: 'hi' }], {}, empty.run)).content).toBe('where did it go?');
+    expect(empty.inputs).toHaveLength(2);
+    const good = replies('{"ok": true}');
+    await callClaude([{ role: 'user', content: 'hi' }], { json: true }, good.run);
+    expect(good.inputs).toHaveLength(1);
+  });
+
+  test('a reply broken every time is returned after the last try, for the caller to refuse', async () => {
+    const { run, inputs } = replies('{"broken": ');
+    const r = await callClaude([{ role: 'user', content: 'hi' }], { json: true }, run);
+    expect(inputs).toHaveLength(CLAUDE_TRIES);
+    expect(() => JSON.parse(r.content)).toThrow();
   });
 });
