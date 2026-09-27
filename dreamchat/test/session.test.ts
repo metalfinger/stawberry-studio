@@ -952,6 +952,153 @@ describe('a whole conversation', () => {
     }
   });
 
+  /** Runs `fn` with DREAMCHAT_AS_DRAWN as given, and puts the switch back after. */
+  async function withAsDrawn<T>(mode: 'on' | 'off', fn: () => Promise<T>): Promise<T> {
+    const was = process.env.DREAMCHAT_AS_DRAWN;
+    if (mode === 'on') process.env.DREAMCHAT_AS_DRAWN = 'on';
+    else delete process.env.DREAMCHAT_AS_DRAWN;
+    try {
+      return await fn();
+    } finally {
+      if (was === undefined) delete process.env.DREAMCHAT_AS_DRAWN;
+      else process.env.DREAMCHAT_AS_DRAWN = was;
+    }
+  }
+
+  test('S9: each picture keeps what it was sent and drawn from, and a rebuild reading it gives it as sent', () =>
+    withAsDrawn('on', async () => {
+      const { store, id, statuses, framesStarted } = await toTheMoments(async () => ({
+        questions: 3,
+        passed: 3,
+        failed: [],
+        unseen: [],
+      }));
+      statuses.set('job-m1', 'ready');
+      await store.settle(id, 100);
+      statuses.set('job-m2', 'ready');
+      await store.settle(id, 100);
+      const s = store.get(id)!;
+      const [m1, m2] = s.build!.frames!;
+      for (const [f, sent] of [
+        [m1, framesStarted[0]],
+        [m2, framesStarted[1]],
+      ] as const) {
+        const rec = f.asDrawn!.find((t) => t.take === f.version)!;
+        expect(rec.prompt).toBe(sent.prompt);
+        expect(rec.references.map((r) => `${r.role}:${r.media}`)).toEqual(sent.refs);
+        expect(rec.moment?.fields).toEqual(f.fields);
+        expect(rec.dream?.keys).toEqual(rec.keys);
+      }
+      // The close-up names the wide it was drawn from, and the take it was.
+      expect(m2.asDrawn![0].from.find((x) => x.kind === 'cut')).toMatchObject({ id: 'm1', take: 1 });
+      expect(m2.asDrawn![0].references.map((r) => r.name)).toEqual([
+        'sketch:t1 take 1',
+        'sketch:l1 take 1',
+        'picture:m1 take 1',
+      ]);
+      // The sketches and the look, kept once for the dream.
+      expect(Object.keys(s.build!.copies!.sketches)).toHaveLength(2);
+      expect(Object.keys(s.build!.copies!.looks)).toHaveLength(1);
+      // Nothing has changed since: nothing is stale.
+      expect(store.stale(id)).toEqual({ checked: ['m1', 'm2'], unrecorded: [], stale: [] });
+      // A rebuild reading the records gives each as sent, word for word and image for image.
+      const r = rebuild(s);
+      for (const [i, sent] of framesStarted.entries()) {
+        const p = r.pictures.find((x) => x.id === sent.id)!;
+        expect(p.asDrawn).toBe(true);
+        expect(p.prompt).toBe(sent.prompt);
+        expect(p.references.map((x) => imageName(r, x.media_id))).toEqual(
+          s.build!.frames![i].asDrawn![0].references.map((x) => x.name.replace(/ take \d+$/, '')),
+        );
+      }
+    }));
+
+  test('S9: a correction to a moment makes stale exactly what was drawn from it and kept, never acting on it', () =>
+    withAsDrawn('on', async () => {
+      const dir = mkdtempSync(join(tmpdir(), 'dreamchat-s9-'));
+      const told = 'The kitchen, with the board on the wall';
+      const corrected = 'The kitchen at night, with the board on the wall';
+      const { store, id, statuses, reaction, framesStarted } = await toTheMoments(
+        async () => ({ questions: 3, passed: 3, failed: [], unseen: [] }),
+        {
+          dir,
+          // Their correction rewords the wide's action, as the harness revises a moment they corrected.
+          reviseItem: async (_name, fields) =>
+            fields.action?.value === told ? { ...fields, action: { value: corrected, said: true } } : fields,
+        },
+      );
+      statuses.set('job-m1', 'ready');
+      await store.settle(id, 100);
+      statuses.set('job-m2', 'ready');
+      await store.settle(id, 100);
+      reaction.now = {};
+      await store.message(id, 'can I see them?');
+      // The wide is wrong; the correction is read as not touching what the close-up took from it,
+      // so the close-up is kept, as before S9: nothing here acts on staleness.
+      reaction.now = { sketch_reaction: pick('not_right'), bad_m1: noul(0.9), ok_m2: noul(0.9) };
+      statuses.set('job-m1', 'running');
+      await store.message(id, 'the kitchen in the wide is too dark');
+      const frames = () => store.get(id)!.build!.frames!;
+      expect(frames().map((f) => [f.id, f.status, f.version])).toEqual([
+        ['m1', 'drawing', 2],
+        ['m2', 'ready', 1],
+      ]);
+      // While the wide is drawn again, the close-up is stale: the take it was drawn from is not the wide's now.
+      const during = store.stale(id)!;
+      expect(during.stale.map((x) => x.id)).toEqual(['m2']);
+      expect(during.stale[0].reasons.map((x) => [x.kind, x.input])).toEqual([['earlier', 'earlier:m1']]);
+      statuses.set('job-m1', 'ready');
+      await store.settle(id, 100);
+      // The new wide keeps its own record; the close-up, drawn from the wide's first take, is still stale.
+      const after = store.stale(id)!;
+      expect(after.checked).toEqual(['m1', 'm2']);
+      expect(after.stale).toEqual([
+        {
+          id: 'm2',
+          kind: 'cut',
+          take: 1,
+          reasons: [{ kind: 'earlier', input: 'earlier:m1', then: 'picture:m1 take 1', now: 'picture:m1 take 2' }],
+        },
+      ]);
+      expect(frames()[0].asDrawn!.map((t) => t.take)).toEqual([1, 2]);
+      // The wide's new take keeps the words it was drawn from: their correction. The breakdown keeps the
+      // words as first told (a correction patches the moment it redraws, not the breakdown: car-park m4 of
+      // S2's replays), so a rebuild of the dream as it stands reads the old words; one reading the record
+      // gives the wide as it was sent.
+      const s = store.get(id)!;
+      expect(frames()[0].asDrawn![1].moment?.fields.action?.value).toBe(corrected);
+      expect(s.draft!.breakdown!.scenes.flatMap((sc) => sc.moments).find((m) => m.id === 'm1')!.action).toBe(told);
+      const sent = framesStarted.at(-1)!;
+      expect(sent.prompt).toContain(corrected);
+      expect(rebuild(s, { asDrawn: true }).pictures.find((p) => p.id === 'm1')!.prompt).toBe(sent.prompt);
+      const asItStands = rebuild(s, { asDrawn: false }).pictures.find((p) => p.id === 'm1')!.prompt;
+      expect(asItStands).not.toBe(sent.prompt);
+      expect(asItStands).toContain(told);
+      // Reported, never acted on: the close-up is not drawn again.
+      expect(framesStarted.map((f) => f.id)).toEqual(['m1', 'm2', 'm1']);
+      expect(frames()[1]).toMatchObject({ status: 'ready', version: 1 });
+      // And logged: the picture, and why.
+      const logged = readJevLog(dir, id).filter((e) => e.kind === 'transition' && e.stage === 'as_drawn');
+      expect(logged.some((e) => e.kind === 'transition' && e.moment === 'm2' && e.decision === 'stale')).toBe(true);
+      expect(logged.at(-1)).toMatchObject({ decision: 'checked', reason: expect.stringContaining('1 stale (m2)') });
+    }));
+
+  test('S9: with the switch off nothing is kept and nothing is reported stale', () =>
+    withAsDrawn('off', async () => {
+      const { store, id, statuses } = await toTheMoments(async () => ({
+        questions: 3,
+        passed: 3,
+        failed: [],
+        unseen: [],
+      }));
+      statuses.set('job-m1', 'ready');
+      await store.settle(id, 100);
+      const s = store.get(id)!;
+      expect(s.build!.frames!.map((f) => f.asDrawn)).toEqual([undefined, undefined]);
+      expect(s.build!.copies).toBeUndefined();
+      expect(store.stale(id)).toEqual({ checked: [], unrecorded: ['m1'], stale: [] });
+    }));
+
   test('a reaction naming no picture is about what the last reply put to them, never an earlier one', async () => {
     // The judge vouches for every take, so the close-up is drawn from the wide before their word.
     const { store, id, statuses, reaction, host } = await toTheMoments(async () => ({

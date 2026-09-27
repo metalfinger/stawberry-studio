@@ -2,6 +2,7 @@
 // draw one. Everything goes through Strawberry's own path: the item's fields are patched with
 // their source, a recipe is prepared, approved within the conversation's image cap, queued, and
 // the engine's worker draws it.
+import type { AsDrawn } from './asdrawn';
 import type { CutPlan, GhostPlan } from './continuity';
 import { pictureName } from './continuity';
 import { type Detail, mediumOf, oneColour, paletteHue, type StyleOption, VAGUE } from './producer';
@@ -128,6 +129,11 @@ export type Item = {
   depicted?: string[];
   /** For a moment drawn with the cut sheet in shadow or on: its sheet as sent (cutsheet.ts sheetPrint). */
   sentSheet?: { hash: string; parts: Record<string, string>; earlier: string[] };
+  /**
+   * S9 (DREAMCHAT_AS_DRAWN=on), for a moment or an in-between picture: each take as it was sent and what
+   * it was drawn from (asdrawn.ts), oldest first.
+   */
+  asDrawn?: AsDrawn[];
   /** For a moment: what is in view, where, and how it is seen. */
   frame?: {
     visible: string[];

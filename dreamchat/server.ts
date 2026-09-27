@@ -154,6 +154,13 @@ const server = Bun.serve({
         return ctx ? json(ctx) : fail(404, 'no such cut');
       }
 
+      // S9: which drawn pictures no longer match the dream, and why (pictures drawn with
+      // DREAMCHAT_AS_DRAWN=on keep what they were drawn from). Reported only: nothing acts on it.
+      if (url.pathname === '/api/stale') {
+        const report = store.stale(id ?? '');
+        return report ? json(report) : fail(404, 'no such conversation');
+      }
+
       if (url.pathname === '/api/turn') {
         const d = store.detail(id, Number(url.searchParams.get('n')));
         return d ? json(d) : fail(404, 'no such turn');
