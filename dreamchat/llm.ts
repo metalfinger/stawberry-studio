@@ -140,6 +140,32 @@ export const CLAUDE_PASSING =
   /no stdin data received|Not logged in|rate.?limit|usage limit|hit your limit|overloaded|\b5\d\d\b|ECONNRESET|timed? ?out/i;
 export const CLAUDE_WAITS_MS = [15_000, 60_000, 180_000];
 
+/**
+ * The owner's plan limit (the five-hour window) is waited out until it resets, then the call runs
+ * again (the owner's rule, 27 Sep): a replay or simulation stopped by the limit carries on after the
+ * reset instead of ending. Only a limit message waits this long; nothing waits while none comes.
+ */
+export const CLAUDE_LIMIT = /usage limit|hit your limit|limit reached|\blimit\b[^\n]*\bresets?\b/i;
+/** How often to try again when the message does not say when the limit resets. */
+export const CLAUDE_LIMIT_POLL_MS = 10 * 60_000;
+/** The longest a call waits for a limit in all; past it the limit is a failure like any other. */
+export const CLAUDE_LIMIT_MAX_MS = 6 * 3_600_000;
+
+/** In how many ms the limit a message names resets, or null when it does not say. */
+export function limitResetIn(failure: string, now = new Date()): number | null {
+  const epoch = failure.match(/\|(\d{10})\b/);
+  if (epoch) return Math.max(0, Number(epoch[1]) * 1000 - now.getTime());
+  const at = failure.match(/\bresets?\s+(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
+  if (!at) return null;
+  const meridiem = at[3]?.toLowerCase();
+  const hour = meridiem ? (Number(at[1]) % 12) + (meridiem === 'pm' ? 12 : 0) : Number(at[1]);
+  if (hour > 23) return null;
+  const reset = new Date(now);
+  reset.setHours(hour, Number(at[2] ?? 0), 0, 0);
+  if (reset.getTime() <= now.getTime()) reset.setDate(reset.getDate() + 1);
+  return reset.getTime() - now.getTime();
+}
+
 export async function callClaude(
   messages: ChatMessage[],
   opts: { model?: string; json?: boolean; thinking?: Thinking } = {},
@@ -176,7 +202,9 @@ export async function callClaude(
       ? `${input}\n\n(Your previous reply could not be used: ${breach}. ${opts.json ? 'Reply with one valid JSON object, every quote inside a string escaped.' : 'Reply with the message.'})`
       : input;
     let body: ClaudeBody | undefined;
-    for (let a = 0; !body; a++) {
+    let passing = 0;
+    let limitWaited = 0;
+    while (!body) {
       const { out, err, code } = await run(args, asked);
       let failure: string | null = null;
       try {
@@ -187,10 +215,20 @@ export async function callClaude(
         failure = `claude ${code}: ${(err || out).slice(0, 400)}`;
       }
       if (!failure) break;
+      // The plan's limit is waited out until it resets (a minute past, to be sure), then run again.
+      if (CLAUDE_LIMIT.test(failure) && limitWaited < CLAUDE_LIMIT_MAX_MS) {
+        const reset = limitResetIn(failure);
+        const ms = Math.min(reset === null ? CLAUDE_LIMIT_POLL_MS : reset + 60_000, CLAUDE_LIMIT_MAX_MS - limitWaited);
+        console.warn(`${failure.slice(0, 160)}: the usage limit; waiting ${Math.round(ms / 60_000)} min for it to reset`);
+        await wait(ms);
+        limitWaited += ms;
+        continue;
+      }
       // A failure of the CLI rather than of the reply passes: waited out, then run again.
-      if (!CLAUDE_PASSING.test(failure) || a >= CLAUDE_WAITS_MS.length) throw new Error(failure);
-      console.warn(`${failure.slice(0, 160)}: waiting ${CLAUDE_WAITS_MS[a] / 1000} s, then again`);
-      await wait(CLAUDE_WAITS_MS[a]);
+      if (!CLAUDE_PASSING.test(failure) || passing >= CLAUDE_WAITS_MS.length) throw new Error(failure);
+      console.warn(`${failure.slice(0, 160)}: waiting ${CLAUDE_WAITS_MS[passing] / 1000} s, then again`);
+      await wait(CLAUDE_WAITS_MS[passing]);
+      passing++;
     }
     if (!body) throw new Error('claude: no reply');
     const text = body.result ?? '';

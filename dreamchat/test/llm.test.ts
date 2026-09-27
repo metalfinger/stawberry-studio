@@ -1,11 +1,14 @@
 import { describe, expect, test } from 'bun:test';
 import {
+  CLAUDE_LIMIT_MAX_MS,
+  CLAUDE_LIMIT_POLL_MS,
   CLAUDE_TRIES,
   CLAUDE_WAITS_MS,
   type ClaudeRun,
   callClaude,
   claudePrompt,
   jsonOnly,
+  limitResetIn,
   parseTurnResponse,
   RECOVERY,
 } from '../llm';
@@ -158,11 +161,47 @@ describe('the Claude writer', () => {
       'unknown option',
     );
     expect(other.waited).toEqual([]);
+    const overloaded = { out: '', err: 'API Error: 529 overloaded', code: 1 };
+    const always = failing(Array(10).fill(overloaded));
+    await expect(callClaude([{ role: 'user', content: 'hi' }], {}, always.run, always.wait)).rejects.toThrow(
+      'overloaded',
+    );
+    expect(always.runs()).toBe(CLAUDE_WAITS_MS.length + 1);
+  });
+
+  test('the usage limit is waited out until it resets, then the call carries on', async () => {
+    const reset = Math.floor(Date.now() / 1000) + 2 * 3600;
+    const f = failing([{ out: JSON.stringify({ is_error: true, result: `Claude AI usage limit reached|${reset}` }), err: '', code: 1 }]);
+    const r = await callClaude([{ role: 'user', content: 'hi' }], {}, f.run, f.wait);
+    expect(r.content).toBe('fine');
+    expect(f.waited).toHaveLength(1);
+    // Two hours and a minute, give or take the test's own running time.
+    expect(Math.abs(f.waited[0] - (2 * 3600_000 + 60_000))).toBeLessThan(5_000);
+  });
+
+  test('a limit that does not say when it resets is tried every ten minutes, and never consumes the short waits', async () => {
+    const limit = { out: '', err: "You've hit your limit", code: 1 };
+    const f = failing([limit, limit, { out: '', err: 'no stdin data received in 3s', code: 1 }, limit]);
+    expect((await callClaude([{ role: 'user', content: 'hi' }], {}, f.run, f.wait)).content).toBe('fine');
+    expect(f.waited).toEqual([CLAUDE_LIMIT_POLL_MS, CLAUDE_LIMIT_POLL_MS, CLAUDE_WAITS_MS[0], CLAUDE_LIMIT_POLL_MS]);
+  });
+
+  test('a limit that outlasts the longest wait fails like any other failure', async () => {
     const limit = { out: '', err: 'Claude AI usage limit reached', code: 1 };
-    const always = failing(Array(10).fill(limit));
+    const always = failing(Array(100).fill(limit));
     await expect(callClaude([{ role: 'user', content: 'hi' }], {}, always.run, always.wait)).rejects.toThrow(
       'usage limit',
     );
-    expect(always.runs()).toBe(CLAUDE_WAITS_MS.length + 1);
+    const total = always.waited.reduce((a, b) => a + b, 0);
+    expect(total).toBe(CLAUDE_LIMIT_MAX_MS + CLAUDE_WAITS_MS.reduce((a, b) => a + b, 0));
+  });
+
+  test('when a limit resets is read from its message', () => {
+    const now = new Date(2026, 8, 27, 14, 30);
+    expect(limitResetIn('5-hour limit reached ∙ resets 3pm', now)).toBe(30 * 60_000);
+    expect(limitResetIn('limit reached, resets at 9:15 am', now)).toBe((18 * 60 + 45) * 60_000);
+    expect(limitResetIn('resets 14:00', now)).toBe((23 * 60 + 30) * 60_000);
+    expect(limitResetIn(`usage limit reached|${Math.floor(now.getTime() / 1000) + 600}`, now)).toBe(600_000);
+    expect(limitResetIn('usage limit reached', now)).toBeNull();
   });
 });
