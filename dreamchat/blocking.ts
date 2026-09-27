@@ -86,6 +86,12 @@ export type Blocking = {
   outside?: Record<string, Side>;
   /** The thing this place is the inside of: the red tractor, for "the tractor cab". Never on the plan. */
   inside?: string;
+  /**
+   * How high water stands in the place at a moment, in metres, as the story record measures it (the
+   * camera rules, camera.ts): what floats rides on it, and whoever is in it, and the camera at their
+   * eyes rises with them. None where no water is measured.
+   */
+  water?: number;
 };
 
 /** A side of a place, for someone facing its front. */
@@ -223,7 +229,8 @@ export function settle(plan: Blocking): Blocking {
     if (riding) return { ...s, faces: riding.faces ?? 'front' };
     const t =
       solids.find((b) => onFootprint(s, b, plan, -0.05)) ??
-      (s.pose === 'standing' ? vehicles.find((v) => onFootprint(s, v, plan, -0.05)) : undefined);
+      // Afloat (the camera rules' water), whoever stands in a boat stays in it: there is only water beside it.
+      (s.pose === 'standing' && !plan.water ? vehicles.find((v) => onFootprint(s, v, plan, -0.05)) : undefined);
     if (!t) return s;
     // Round its edge, a little way out, every quarter metre: the nearest free spot.
     const [w, d] = sizeOf(t);

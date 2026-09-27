@@ -33,7 +33,22 @@ import { fakeJev, noul } from './fakes';
 const EVALS = join(import.meta.dir, '..', 'evals');
 const read = <T>(name: string) => JSON.parse(readFileSync(join(EVALS, name), 'utf8')) as T;
 // The dreams as frozen in the repository (evals/sources/<session id>.json): the saved conversations are not.
-const frozen = (id: string) => rebuild(loadDream(id, false).session as Session);
+
+/**
+ * With the camera rules off (DREAMCHAT_CAMERA): these tests hold today's plans and prompts, which the
+ * rules change on purpose (test/camera.test.ts holds them on).
+ */
+function cameraOff<T>(fn: () => T): T {
+  const was = process.env.DREAMCHAT_CAMERA;
+  delete process.env.DREAMCHAT_CAMERA;
+  try {
+    return fn();
+  } finally {
+    if (was !== undefined) process.env.DREAMCHAT_CAMERA = was;
+  }
+}
+const frozen = (id: string) => cameraOff(() => rebuild(loadDream(id, false).session as Session));
+const ctxOff = (...a: Parameters<typeof contextOf>) => cameraOff(() => contextOf(...a));
 const lighthouse = frozen('dream-0926-022102-aeea');
 const heron = frozen('dream-0926-012307-4c79');
 const market = frozen('dream-0926-000545-09ea');
@@ -273,7 +288,7 @@ const withPrompt = (c: Ctx, prompt: string): Ctx => ({ ...c, p: { ...c.p, prompt
 
 describe('the checks, on a frozen dream', () => {
   // The lighthouse dream's m10: the tractor seen out of the window was put inside the round room.
-  const m10 = contextOf(lighthouse, 'm10');
+  const m10 = ctxOff(lighthouse, 'm10');
   const check = (name: keyof typeof CHECKS, args: Record<string, unknown> = {}) => run(m10, name, args).pass;
 
   test('who is in view, and whose images are attached', () => {
@@ -296,13 +311,13 @@ describe('the checks, on a frozen dream', () => {
     expect(check('held_by', { who: 't2', by: 'p1' })).toBe(true);
     expect(check('held_by', { who: 't2', by: 'p3' })).toBe(false);
     // In the train, the dreamer and the grandfather face each other; the suitcase is his at m2.
-    const m1 = contextOf(snow, 'm1');
+    const m1 = ctxOff(snow, 'm1');
     expect(run(m1, 'faces_each_other', { a: 'p1', b: 'p2' }).pass).toBe(true);
     expect(run(m1, 'faces', { who: 'p1', toward: ['p2'] }).pass).toBe(true);
     expect(run(m1, 'faces', { who: 'p1', toward: ['x1'] }).pass).toBe(false);
-    expect(run(contextOf(snow, 'm2'), 'held_by', { who: 't1', by: 'p2' }).pass).toBe(true);
+    expect(run(ctxOff(snow, 'm2'), 'held_by', { who: 't1', by: 'p2' }).pass).toBe(true);
     // At m4 the suitcase is on no plan at all; made from the story record, it is still in his hands.
-    expect(run(contextOf(snow, 'm4'), 'held_by', { who: 't1', by: 'p2' }).detail).toContain(
+    expect(run(ctxOff(snow, 'm4'), 'held_by', { who: 't1', by: 'p2' }).detail).toContain(
       snow.rec ? 'held by the grandfather' : 'not on the plan',
     );
   });
@@ -329,7 +344,7 @@ describe('the checks, on a frozen dream', () => {
   });
 
   test('which way something moving goes, and never the other way', () => {
-    const m12 = contextOf(lighthouse, 'm12');
+    const m12 = ctxOff(lighthouse, 'm12');
     expect(run(m12, 'heading_said', { expect: 'away' }).pass).toBe(false);
     const away = withPrompt(m12, `${m12.p.prompt}\n\nThe tractor drives away from the camera, into the picture.`);
     expect(run(away, 'heading_said', { expect: 'away' }).pass).toBe(true);
@@ -342,7 +357,7 @@ describe('the checks, on a frozen dream', () => {
   });
 
   test('a state is carried by the plan, or said as still so: a word elsewhere is not a state', () => {
-    const m5 = contextOf(market, 'm5');
+    const m5 = ctxOff(market, 'm5');
     expect(run(m5, 'state_carried', { who: 't1', now: 'newspaper' }).pass).toBe(true);
     expect(run(m5, 'state_carried', { who: 't1', now: 'on ice' }).pass).toBe(false);
     expect(run(m5, 'state_not_carried', { who: 't1', now: 'newspaper' }).pass).toBe(false);
@@ -358,14 +373,14 @@ describe('the checks, on a frozen dream', () => {
   });
 
   test("what a sketch says of someone's look", () => {
-    const m4 = contextOf(heron, 'm4');
+    const m4 = ctxOff(heron, 'm4');
     expect(run(m4, 'look_has', { who: 'p2', field: 'wardrobe' }).detail).toBe('no wardrobe said');
     expect(run(m4, 'look_has', { who: 'p1', field: 'wardrobe', pattern: 'jeans' }).pass).toBe(true);
   });
 
   test('a picture kept for someone who has no sketch counts for them alone', () => {
     // The classroom's m4 takes picture 3 for the faceless students, who have no sketch; the dreamer has theirs.
-    const m4 = contextOf(heron, 'm4');
+    const m4 = ctxOff(heron, 'm4');
     expect(m4.refs.find((x) => x.of === 'm3')?.subjects).toEqual(['p2']);
     expect(run(m4, 'images_per_subject_at_most', { n: 1 }).pass).toBe(true);
   });
@@ -390,7 +405,7 @@ describe('the questions for Jev', () => {
       { kind: 'ask', question: 'Does this prompt say the tractor is in the room?', expect: 'no' },
     ],
   };
-  const ctx = contextOf(lighthouse, 'm10');
+  const ctx = ctxOff(lighthouse, 'm10');
   const items = c.expectations.map((e) => ({ prompt: ctx.p.prompt, question: (e as { question: string }).question }));
 
   test('asked once each, answered from the cache after', async () => {
@@ -526,7 +541,7 @@ describe('the frozen dreams and the corpus dump', () => {
 
   test('a frozen dream keeps what rebuild reads: it rebuilds as itself, and who the dreamer is', () => {
     const d = loadDream('dream-0926-022102-aeea', false);
-    expect(verifyFrozen(d.session, d.session)).toEqual([]);
+    expect(cameraOff(() => verifyFrozen(d.session, d.session))).toEqual([]);
     expect(lighthouse.sheets.find((s) => s.id === 'p1')?.isDreamer).toBe(true);
     expect(lighthouse.pictures.find((p) => p.id === 'm12')?.prompt).toContain('The shot, as the mock-up');
   });
