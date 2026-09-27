@@ -171,12 +171,14 @@ import {
   asDrawnMode,
   type Copies,
   type DreamNow,
+  drawnEnv,
   fieldsInForce,
   freshSendMode,
   ghostInForce,
   KEYS_VERSION,
   labelsOf,
   reasonLine,
+  recastWith,
   type Recorded,
   recordGhost,
   recordMoment,
@@ -800,9 +802,11 @@ export function dreamNowOf(s: Pick<Session, 'draft' | 'build' | 'transcript' | '
   if (!s.draft?.breakdown) return out;
   // Planning the dream again is the costly part, and every send and every look at staleness asks for it:
   // made once for what it is made from.
+  // Keyed by the switches the plan is made under as well (the story record, the camera rules): planned
+  // under one setting, it was read back under another in the same process.
   const key = hashOf({
     version: KEYS_VERSION,
-    record: recordMode(),
+    env: drawnEnv(),
     breakdown: s.draft.breakdown,
     readings: s.draft.readings ?? null,
     items: s.build?.items ?? [],
@@ -1828,6 +1832,10 @@ export class SessionStore {
         if ((cast.out.length || cast.in.length) && it.frame && s.draft?.breakdown) {
           const visible = [...it.frame.visible.filter((p) => !cast.out.includes(p)), ...cast.in];
           it.frame.visible = visible;
+          // Their word on who is in it, kept over any plan made later: with the story record on, the plan
+          // puts back whoever the breakdown's words still name, and a moment refreshed from its plan as it is
+          // sent (DREAMCHAT_FRESH_SEND) would draw them again. Read only there and by staleness.
+          it.recast = recastWith(it.recast, cast);
           for (const sc of s.draft.breakdown.scenes)
             for (const m of sc.moments) if (m.id === it.id) m.visible = visible;
           await this.replan(s);

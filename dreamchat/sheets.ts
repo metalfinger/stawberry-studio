@@ -2,7 +2,7 @@
 // draw one. Everything goes through Strawberry's own path: the item's fields are patched with
 // their source, a recipe is prepared, approved within the conversation's image cap, queued, and
 // the engine's worker draws it.
-import type { AsDrawn } from './asdrawn';
+import type { AsDrawn, Recast } from './asdrawn';
 import type { CutPlan, GhostPlan } from './continuity';
 import { pictureName } from './continuity';
 import { type Detail, mediumOf, oneColour, paletteHue, type StyleOption, VAGUE } from './producer';
@@ -134,6 +134,12 @@ export type Item = {
    * it was drawn from (asdrawn.ts), oldest first.
    */
   asDrawn?: AsDrawn[];
+  /**
+   * For a moment: who the dreamer took out of it or put into it by correcting it (session.ts castChanges),
+   * the latest word on each. Kept over the plan's cast wherever the moment's copy of itself is refreshed
+   * from the plan (asdrawn.ts refreshMoment): the plan puts back whoever the breakdown's words still name.
+   */
+  recast?: Recast;
   /** For a moment: what is in view, where, and how it is seen. */
   frame?: {
     visible: string[];

@@ -12,7 +12,7 @@ import { sha } from '../gate';
 import * as asdrawn from '../asdrawn';
 import { staleRoute } from '../routes';
 import { SessionStore, type StoreDeps } from '../session';
-import { fakeHost, fakeJev, noul, pick, told, withChecks, withRouted } from './fakes';
+import { DEFAULTS, fakeHost, fakeJev, noul, pick, told, withChecks, withRouted, withSwitches } from './fakes';
 
 const cfg = dreamConfig();
 const required = cfg.goals.filter((g) => !g.optional).map((g) => g.id);
@@ -494,7 +494,8 @@ describe('a whole conversation', () => {
       record?: { fields: Record<string, unknown> };
     }[] = [];
     const verdicts: [string, boolean, string][] = [];
-    const reaction: { now: Record<string, Answer> } = { now: {} };
+    // `cast`: the reading of who a correction takes out of a moment or puts in (`out_p1`, `in_p1`).
+    const reaction: { now: Record<string, Answer>; cast?: Record<string, Answer> } = { now: {} };
     const statuses = new Map<string, string>();
     const versions = new Map<string, number>();
     const host = fakeHost();
@@ -503,6 +504,7 @@ describe('a whole conversation', () => {
         const out = script(q);
         if (q.profile_reply) out.profile_reply = pick('confirmed');
         if (q.sketch_reaction) Object.assign(out, reaction.now);
+        if (Object.keys(q).some((k) => /^(out|in)_/.test(k))) Object.assign(out, reaction.cast ?? {});
         // A correction in these conversations names what is wrong.
         if (q.named) out.named = noul(0.9);
         return out;
@@ -1184,6 +1186,73 @@ describe('a whole conversation', () => {
       else process.env.DREAMCHAT_FRESH_SEND = was;
     }
   });
+
+  test("S9's fresh send: someone the dreamer takes out of a moment stays out when it is sent, though its words still name them", async () => {
+    // Commuters in the kitchen, named in the wide's words. The dreamer says there was nobody there.
+    const told = structuredClone(breakdown);
+    told.people = [
+      {
+        id: 'p1',
+        name: 'the commuters',
+        is_dreamer: false,
+        protagonist: false,
+        several: true,
+        extras: true,
+        fields: {},
+      } as unknown as Breakdown['people'][number],
+    ];
+    const m1 = told.scenes[0].moments[0];
+    m1.action = 'The commuters wait in the kitchen, under the board on the wall';
+    m1.visible = ['p1'];
+    const corrected = 'The empty kitchen, with the board on the wall';
+    const draw = (fresh: 'on' | undefined) =>
+      withSwitches(
+        { ...DEFAULTS, DREAMCHAT_RECORD: 'on', DREAMCHAT_AS_DRAWN: 'on', DREAMCHAT_FRESH_SEND: fresh },
+        async () => {
+          const { store, id, statuses, reaction, framesStarted } = await toTheMoments(
+            async () => ({ questions: 3, passed: 3, failed: [], unseen: [] }),
+            {
+              producer: async () => ({ breakdown: told, downgraded: [], notes: [], ms: 1 }),
+              reviseItem: async (_name, fields) =>
+                fields.action?.value === m1.action ? { ...fields, action: { value: corrected, said: true } } : fields,
+            },
+          );
+          statuses.set('job-m1', 'ready');
+          await store.settle(id, 100);
+          statuses.set('job-m2', 'ready');
+          await store.settle(id, 100);
+          const first = framesStarted.find((f) => f.id === 'm1')!.prompt;
+          reaction.now = {};
+          await store.message(id, 'can I see them?');
+          reaction.now = { sketch_reaction: pick('not_right'), bad_m1: noul(0.9), ok_m2: noul(0.9) };
+          reaction.cast = { out_p1: noul(0.9) };
+          statuses.set('job-m1', 'running');
+          await store.message(id, 'there was nobody in the kitchen, it was empty');
+          const s = store.get(id)!;
+          const wide = s.build!.frames!.find((f) => f.id === 'm1')!;
+          const redrawn = framesStarted.filter((f) => f.id === 'm1').at(-1)!.prompt;
+          statuses.set('job-m1', 'ready');
+          await store.settle(id, 100);
+          return { first, redrawn, wide, report: store.stale(id)!, s: store.get(id)! };
+        },
+      );
+    const off = await draw(undefined);
+    const on = await draw('on');
+    // The story record reads the breakdown's words, which still name them, so the plan puts them back.
+    expect(on.wide.frame!.plan!.visible).toContain('p1');
+    expect(off.first).toContain('commuters');
+    for (const x of [off, on]) {
+      // Taken out, and drawn without them, the switch off as before and on as well.
+      expect(x.wide.recast).toEqual({ out: ['p1'], in: [] });
+      expect(x.wide.frame!.visible).not.toContain('p1');
+      expect(x.redrawn).toContain(corrected);
+      expect(x.redrawn).not.toContain('commuters');
+      // What they asked for is not drawn behind the dream, nor stale.
+      expect(x.report.behind.map((b) => b.id)).not.toContain('m1');
+      expect(x.report.stale.map((b) => b.id)).not.toContain('m1');
+    }
+    expect(on.redrawn).toBe(off.redrawn);
+  }, 60_000);
 
   test('a reaction naming no picture is about what the last reply put to them, never an earlier one', async () => {
     // The judge vouches for every take, so the close-up is drawn from the wide before their word.

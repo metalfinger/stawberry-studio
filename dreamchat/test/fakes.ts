@@ -114,3 +114,53 @@ export async function withRouted<T>(
     else process.env.DREAMCHAT_CHECKS = checks;
   }
 }
+
+/**
+ * The switches the harness's steps are built behind. A test whose expectations hold under one setting of
+ * them pins it (`pinSwitches`, `withSwitches`), so the suite gives the same results whatever the
+ * environment it runs in sets.
+ */
+export const STEP_SWITCHES = [
+  'DREAMCHAT_RECORD',
+  'DREAMCHAT_CHECKS',
+  'DREAMCHAT_CUT_SHEET',
+  'DREAMCHAT_CAMERA',
+  'DREAMCHAT_JEV_ROUTED',
+  'DREAMCHAT_LISTEN',
+  'DREAMCHAT_AS_DRAWN',
+  'DREAMCHAT_FRESH_SEND',
+] as const;
+
+/** Every step's switch unset: today's defaults. */
+export const DEFAULTS: Record<string, undefined> = Object.fromEntries(STEP_SWITCHES.map((k) => [k, undefined]));
+
+/**
+ * Sets switches (undefined or '' unsets one) and returns what puts them back as they were. For a file or a
+ * describe block: call it where the block is collected, or in beforeAll, and the put-back in afterAll.
+ */
+export function pinSwitches(over: Record<string, string | undefined>): () => void {
+  const was = Object.fromEntries(Object.keys(over).map((k) => [k, process.env[k]]));
+  const put = (k: string, v: string | undefined) => {
+    if (v === undefined || v === '') delete process.env[k];
+    else process.env[k] = v;
+  };
+  for (const [k, v] of Object.entries(over)) put(k, v);
+  return () => {
+    for (const [k, v] of Object.entries(was)) put(k, v);
+  };
+}
+
+/** Runs `fn` with switches set (undefined unsets one), then puts them back, whether `fn` returns or throws. */
+export function withSwitches<T>(over: Record<string, string | undefined>, fn: () => T): T {
+  const restore = pinSwitches(over);
+  let out: T;
+  try {
+    out = fn();
+  } catch (e) {
+    restore();
+    throw e;
+  }
+  if (out instanceof Promise) return out.finally(restore) as T;
+  restore();
+  return out;
+}
