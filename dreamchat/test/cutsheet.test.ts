@@ -391,7 +391,7 @@ describe('assembleCut reads the sheet and nothing else', () => {
     const allowed: Record<string, string[]> = {
       './camera': ['sayTurn'],
       './cutsheet': ['CutSheet', 'SheetEarlier', 'SheetElement'],
-      './frames': ['aNoun', 'FRAMING', 'SHAPE_WORDS', 'sentence', 'writingLine'],
+      './frames': ['aNoun', 'FRAMING', 'MAX_IMAGES', 'SHAPE_WORDS', 'sentence', 'writingLine'],
       './record': ['sayNow'],
       './sheets': ['styleBlock'],
     };

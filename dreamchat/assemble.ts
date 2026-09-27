@@ -10,7 +10,7 @@
 // then earlier moments while there is room.
 import { sayTurn } from './camera';
 import type { CutSheet, SheetEarlier, SheetElement } from './cutsheet';
-import { aNoun, FRAMING, SHAPE_WORDS, sentence, writingLine } from './frames';
+import { aNoun, FRAMING, MAX_IMAGES, SHAPE_WORDS, sentence, writingLine } from './frames';
 import { sayNow } from './record';
 import { styleBlock } from './sheets';
 
@@ -35,9 +35,6 @@ export type Assembled = {
   /** The production nodes of what it shows, for the picture's record. */
   depicted: string[];
 };
-
-/** The most images one picture takes: the model takes 14, and a dozen leaves each one legible. */
-export const MAX_IMAGES = 12;
 
 /** Where the line that says who "you" is goes, when anything told to the picture says "you". */
 const YOU = 'you';

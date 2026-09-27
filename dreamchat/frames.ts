@@ -32,8 +32,14 @@ export { withoutPose };
 /** Where the line that says who "you" is goes, when anything told to the picture says "you". */
 const YOU = '\u0000you';
 
+/**
+ * The most images one picture takes, wherever one is put together (here, assemble.ts) or checked (gate.ts):
+ * the model takes 14, and a dozen leaves each one legible.
+ */
+export const MAX_IMAGES = 12;
+
 /** A phrase ended as one sentence, however the model ended it. */
-export const sentence = (text: string) => `${text.trim().replace(/[.!?;,:\s]+$/, '')}.`;
+export const sentence =(text: string) => `${text.trim().replace(/[.!?;,:\s]+$/, '')}.`;
 
 export const FRAMING: Record<Moment['distance'], string> = {
   close: 'The subject fills nearly the whole frame edge to edge; the background is a thin strip and little more.',
@@ -510,9 +516,8 @@ export function framePrompt(
     return `${pictureNo(x)}${whoWhere(x)}: who ${names.join(' and ')} ${names.length > 1 ? 'are' : 'is'}, as last drawn: their face, hair, build and clothes, exactly. Nothing else from it: not its pose, background or framing.`;
   };
 
-  // Ghosts, then earlier moments, while there is room: the model takes 14 images, and a dozen
-  // leaves each one legible. A person's latest picture, the last kind added, is the first to go.
-  const MAX_IMAGES = 12;
+  // Ghosts, then earlier moments, while there is room (MAX_IMAGES). A person's latest picture, the
+  // last kind added, is the first to go.
   for (const x of usable) {
     if (x === base || !x.item.mediaId || references.length >= MAX_IMAGES) continue;
     const g = x.item.ghost;
