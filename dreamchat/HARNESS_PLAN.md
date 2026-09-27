@@ -16,7 +16,7 @@ context mirrors it.
 | S2 Checks only log | Done | whole-dream replays on Claude: logging drew 127/127 moments, 0 held or reworded, Jev ~41 calls a dream (acting: 14 undrawn, 54 reworded, 306-324 calls); logging is the default since 27 Sep (`DREAMCHAT_CHECKS=act` brings acting back) |
 | S3 One cut sheet per picture | Done | the sheet's prompt equals the old builder's on 1052 rebuilds and 48 of 48 live builds |
 | S4 Camera rules | Merged behind DREAMCHAT_CAMERA (off; needs the cut sheet on); picture check judged | owner's blind A/B on 20 moments ($3): new right 14/20 against old 10/20; faults put right 5/7 (snow-train m2, orchard m4, m7, lighthouse-first m3, snow-train-2 m2); guards 9/13 new, 9/13 old (4 lost, 4 gained); the 6 misses being traced to root causes |
-| S5 References and in-between pictures | Built on `s5-refs` behind DREAMCHAT_REFS (off; needs the cut sheet on); reviewed, review fixes in; picture check proposed (20 pictures, $3.00), not drawn | the reference check, record and sheet on, frozen / live: a subject by two images 40 / 91 moments to 0 / 0; waited for and never sent 67 / 216 to 0 / 0; from another side 2 / 8 to 0 / 0; in-between pictures not needed under the owner's rule 17 of 29 / 32 of 67 to 0 of 14 / 1 of 74. Off: 0 of 1,864 pictures moved. Prompt cases: guards 36/36, counted 19/33 and 27/33 (camera) as before, hypotheses 5 to 10 and 7 to 12 of 18 |
+| S5 References and in-between pictures | Merged behind DREAMCHAT_REFS (off; needs the cut sheet on); second review's fixes on `s5-fix2` (earlier pictures, their gate, sides): committed, not merged; the S5 picture check not yet re-proposed (see "S5 fix round two") | the reference check, record and sheet on, frozen / live (with implied readings): a subject by two images 40 / 103 moments to 0 / 0; waited for and never sent 67 / 215 to 1 / 1 (a picture judged wrong, drawn); from another side 2 / 8 to 0 / 0; earlier pictures sent against the cut's camera or state, for layout 2 / 37 to 0 / 0 (16 live edits with no floor plan to compare), for look 22 / 51 to 0 / 0; in-between pictures not needed 17 of 29 / 44 of 79 to 0 of 12 / 0 of 37. Prompt cases: guards 36/36, counted 19/33 and 27/33 (camera) with S5 off and on, hypotheses 5 to 10 and 7 to 12 of 18 |
 | S6 One prompt builder, clean-ups retired | Test written; typed readings of the 526 moments done (branch `s6-readings`) | a ledger of 16 clean-ups, S4's 4 word lists and 14 duplicates, in order; every moment says a fact twice (frozen 2350 facts, live 6595), 21 of 115 frozen moments say an action no picture shows (live 134 of 411); built after S5 |
 | S7 Jev checks routed by tags | Done (routing switch off; every Jev reading logs) | measured on the 122 pictures the owner judged (as sent): the gate and "storyboard complete?" are at chance (AUC 0.36-0.56); 16 library questions not measurable yet; 0 of 28 checks earn acting; a check earns acting only at its measured bar, counted by moments. Run the picture checkpoints with `DREAMCHAT_JEV_ROUTED=on` so the library questions' readings join the owner's new verdicts |
 | S8 Listening | Done: on by default since 27 Sep (`DREAMCHAT_LISTEN=off` brings the old listening back) | 20 dreams on Claude: either/or 23% to 0, leading 17% to 0, "I don't remember" 0.24 to 0.14, listening ended early 6/20 to 3/20; told facts kept as said 0.942 vs 0.949 (within noise) |
@@ -803,6 +803,70 @@ One **cut sheet** per cut is the spine everything is assembled from:
   boat's sketch), lighthouse-first m6, library-2 m6 and m8. The set is kept for the owner to confirm, not committed.
   If one image per subject loses, `DREAMCHAT_REFS=sketch` is the rest of S5 without it; each rule of image 1 is
   one line of `mockupHelps`.
+  **S5 fix round two (27 Sep, branch `s5-fix2` from lab ca71e3e; committed, not merged).** The second review's
+  findings, and the gate the S4 picture check's root causes asked for. Done:
+  - *An earlier picture brings nobody and nothing of its own* (A), in today's prompts too (both builders, word for
+    word: `frames.ts samePlaceLine`, `NOTHING_ELSE`): a room picture says what to take (how the place looks, its
+    light; where things stand only from the mock-up, from the shot worked out on the floor plan, or, for the same
+    view drawn afresh, from the picture itself; from the same side, the walls, doors and furniture), that the
+    dreamer in it is the camera through their eyes, and "Nobody and nothing from it comes into this picture but who
+    and what this picture has in it, as listed below"; someone's look from another place says the same. Where a
+    view is worked out and no mock-up is image 1, the place's sketch points to the shot (S5 only). With S5 off this
+    moves today's prompts, by cause: frozen 25 of 140 (23 room pictures beside the mock-up, 1 room picture that
+    took where everyone is, 1 look from another place), camera on 41 of 144, live 80 of 477 (51, 18, 11); images
+    unchanged. Prompt cases with S5 off unchanged (6/33, 19/33, 27/33, guards 36/36).
+  - *The gate on every earlier picture* (the S4 check's root causes): with S5, never one the owner judged wrong
+    (`verdicts.ts`: evals/story-pictures.json, and each checkpoint's answers under runs/checkpoint in this folder
+    and DREAMCHAT_DATA's; unknown is allowed) nor one S9 finds stale (on the drawing path, where the records are
+    kept; a rebuild reads no staleness) (`session.ts plannedInputsOf`, `plan.ts rebuild`); and one is drawn from
+    (edited, or taken for the room) only where its camera is near this cut's on one floor plan (1.5 m, 30
+    degrees, 1 m of height) and what both show stands alike (every change in force in one is in force in the
+    other, an edit's own changes aside); with no cameras to compare, only an edit or the same view by the words.
+    Otherwise the sketches carry the look and it is not sent (`continuity.ts chooseInPlan`, kept as `unsent`).
+    The check counts it itself (`evals/prompt-cases.ts sentAgainst`): sent against the cut's camera or state, for
+    layout frozen 2 to 0, live 37 to 0 but 16-17 edits with no floor plan (camera unknown); for look 22 to 0, live
+    51 to 0.
+  - *A side of a place is no change, with or without a floor plan* (C, the owner's decision applied everywhere):
+    with S5 no side's in-between picture is made (the 43 live ones gone: 17 of them faced a person or thing yet
+    said "with nobody in it"), and a new framing is no change either. The view picture edited from the place's
+    state is gone with them; its words (B) are right anyway if one is ever made (`ghostPrompt`: image 1 the place
+    as it is now, image 2 its sketch).
+  - *Image 1:* the crowd rule reads crowds of people only (8ceb m7's fish keep the mock-up); heron m4 still loses
+    it.
+  - *Wording* (E): a thing's state said once ("water starts coming under the doors", not "water: water starts …");
+    "as this picture shows them" dropped where Image 1 already shows them; refs.ts's comment on the bar corrected.
+  - *The count* (`storyChanges`): only story changes, no side or framing.
+  Measured after (S5 on against off, record and sheet on, frozen / live): 97 of 144 changed and 17 not drawn /
+  321 of 490 and 42; by cause frozen: a sketch replaced by its in-between picture 31, a room picture not sent (its
+  camera or state not this cut's) 23, the plan only 21, in-between pictures not drawn 17 (and 15 moments no longer
+  drawn from them), the mock-up no longer image 1 34 (through the dreamer's eyes 15, a jump, another place or the
+  seat 12, a close-up or insert 6, a crowd 1), the later in-between picture carrying the earlier 11; live alike
+  (room pictures not sent 68). Moments carrying three changes rise, frozen 1 to 3 and live 2 to 8: every one of
+  their changes is implied, said in words (S1), and was carried before by a room picture from another camera,
+  which the gate no longer sends. Prompt cases (111 Jev calls asked, the rest cached): S5 off 6/33, 19/33, 27/33,
+  guards 36/36; S5 on (it needs the sheet on) 19/33 and 27/33, guards 36/36, hypotheses 10 and 12 of 18 (5 and 7
+  with S5 off). D: with the camera,
+  library-3-m7-level is not met on lab with S5 off either ("the boat low in the room", Jev 0.51, over the bar; the
+  S4 report's 28/33 had it at 0.49): the lab's later camera fixes moved it, and S5's prompt moves it to 0.58. Tests:
+  `test/refs.test.ts` 28, each failing without its rule (mutations: sides counted, the picture-takes-a-change rule,
+  the nothing-else clause, the dreamer clause, the place's layout from the earlier picture, a shoal as a crowd, no
+  camera gate, no state gate, no verdicts); `tsc` clean; `bun test` run once: 785 of 787 with the switches
+  unset, 784 of 787 with record, sheet, camera and references on; the three were tests of the old wording and of
+  today's plan (a room picture's line, a side counted, the plan's link with S5 on), updated, and their files pass
+  both ways (68 of 68).
+  **Left, to resume from here:**
+  - Merge `s5-fix2` to lab once reviewed (it changes today's prompts, by A, with S5 off).
+  - Re-propose the S5 picture check with the reviewer's changes, and do not draw: `bun run evals/checkpoint.ts
+    --set-from-cases S5 --name s5 --cap 3` under record, sheet, camera and references on, then against today's S4
+    pictures (camera on, references off) for the 9 moments both share (library-3 m3, m4, m6; lighthouse-first m7,
+    m8; lighthouse-fresh m4, m9; orchard m5, m6: the owner's S4 verdicts are in runs/checkpoint/s4/answers.json and
+    key.json); orchard-m2's old picture is orchard-m2-c, library-1-m4's library-1-m4-b; swap out lighthouse-fresh
+    m2, snow-train-2 m4 and library-3 m6; add 8ceb m7, night-market m6 and heron m4; snow-train m6, orchard m6 and
+    lighthouse-first m7 may go back in now A is fixed; at most $3.
+  - The gate's staleness is read on the drawing path only; a picture judged wrong is still in the plan's needs
+    (drawn already, so nothing waits: lighthouse-first m8 on m7, the one "waited for and never sent").
+  - Moments carrying three changes (all implied changes said in words) rose with the gate; whether an implied state
+    should be drawn when no picture carries it is S1's question (overlaps).
 
 - **S7 eval (checks routed by tags).** Written 27 Sep on branch `s7-jev-routed`, before the routing is built.
   Switch `DREAMCHAT_JEV_ROUTED=on`, off by default and off byte for byte.
@@ -1625,10 +1689,8 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
 
 - **Settled 27 Sep: "several" is two** (the in-between picture rule): built so in S5.
 - **Settled 27 Sep: a side the floor plan lays out is no change** (only story changes count): built so in S5.
-- **For S5: a side's in-between picture where nothing lays the picture out.** At the owner's bar of two, a cut first
-  facing a side never drawn, with no floor plan for its camera, carries two changes with the action, so S5 draws a
-  side's in-between picture for it: 2 frozen (library-2's inserts), 43 live (older dreams without floor plans). If
-  these are not wanted, the side is no change there either and `crowded` in `continuity.ts` goes back to three.
+- **Settled 27 Sep (applied on `s5-fix2`): a side never drawn is no change, with or without a floor plan**; no side's
+  in-between picture is made with S5.
 
 - In `evals/paired-verdicts.json`, the sketches-only version of lighthouse-first m7 carries the same note as orchard
   m7 (about Tomas), on a picture rated right: probably typed on the wrong picture. Left as is until confirmed.
@@ -2321,3 +2383,11 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   (grandpa moved from m2: seat continuity across the reverse), lighthouse-fresh m4 (dreamer inside, should be outside;
   old wrong too), lighthouse-fresh m9 (a boat not in the prompt), snow-train-2 m6 and orchard m6 (no note). Each is
   being traced to its root cause before the S5 check. These verdicts also join S7's labelled sets.
+- 27 Sep: S5 fix round two on `s5-fix2` (from lab ca71e3e; committed, not merged): an earlier picture brings nobody
+  and nothing of its own, in today's prompts too (with S5 off 25 of 140 frozen and 80 of 477 live prompts move,
+  images unchanged, prompt cases unchanged); with S5, a gate on every earlier picture (never one judged wrong or
+  stale; drawn from only where its camera and what it shows match the cut: sent against them for layout 2 / 37 to 0
+  / 0 bar 16 live edits with no floor plan, for look 22 / 51 to 0 / 0); a side is no change anywhere (the 43 live
+  side pictures gone); crowds of people only; the count of changes the check's own. Guards 36/36 with S5 off and
+  on, record and sheet on and with the camera (111 Jev calls). The S5 picture check is not yet re-proposed (above:
+  how to resume). No pictures drawn, no money spent.
