@@ -18,7 +18,20 @@ import { loadDream } from '../evals/saved';
 import { rebuild } from '../plan';
 import type { Session } from '../session';
 
-const frozen = (id: string) => rebuild(loadDream(id, false).session as Session);
+/**
+ * With the camera rules off (DREAMCHAT_CAMERA): these tests hold today's choices, which the rules change
+ * on purpose (test/camera.test.ts holds them on).
+ */
+function cameraOff<T>(fn: () => T): T {
+  const was = process.env.DREAMCHAT_CAMERA;
+  delete process.env.DREAMCHAT_CAMERA;
+  try {
+    return fn();
+  } finally {
+    if (was !== undefined) process.env.DREAMCHAT_CAMERA = was;
+  }
+}
+const frozen = (id: string) => cameraOff(() => rebuild(loadDream(id, false).session as Session));
 const run = (c: Ctx, name: keyof typeof CHECKS, args: Record<string, unknown> = {}) =>
   runCheck(c, { kind: 'code', check: name, args, says: '' });
 
@@ -56,11 +69,16 @@ describe('the references chosen', () => {
   test('no picture from another side is edited or taken for its layout: by the words, or turned round by the cameras', () => {
     // The spiral stairs through the dreamer's eyes take picture 1's layout, called the same side by the
     // words, with the camera turned right round.
-    const m3 = contextOf(first, 'm3');
+    const m3 = cameraOff(() => contextOf(first, 'm3'));
     expect(run(m3, 'none_from_other_side').detail).toMatch(/picture m1 as composition \(same_side, turned 180°\)/);
     expect(run(m3, 'none_from_other_side', { roles: ['base'] }).pass).toBe(true);
     expect(run(m3, 'none_from_other_side', { degrees: 181 }).pass).toBe(true);
-    expect(run(contextOf(snow, 'm2'), 'none_from_other_side').pass).toBe(true);
+    expect(
+      run(
+        cameraOff(() => contextOf(snow, 'm2')),
+        'none_from_other_side',
+      ).pass,
+    ).toBe(true);
   });
 
   test('the plan waits only for what it sends', () => {
@@ -73,12 +91,12 @@ describe('the references chosen', () => {
   });
 
   test("each in-between picture, against the owner's rule: kept where a moment it serves would carry several changes without it", () => {
-    const needs = ghostNeeds(library3);
+    const needs = cameraOff(() => ghostNeeds(library3));
     // The books and the water are each drawn for a moment that would change three things at once.
     expect(needs.filter((g) => g.kept).map((g) => g.id)).toEqual(['g1', 'g2']);
     const window = needs.find((g) => g.id === 'g3')!;
     expect([window.most, window.by, window.kept]).toEqual([2, 'm7', false]);
-    expect(ghostNeeds(library3, 2).every((g) => g.kept)).toBe(true);
+    expect(cameraOff(() => ghostNeeds(library3, 2)).every((g) => g.kept)).toBe(true);
   });
 
   test('over a whole dream: counted moment by moment, and totalled', () => {
