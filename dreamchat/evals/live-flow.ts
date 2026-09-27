@@ -22,6 +22,7 @@ import { printDiff, sheetPrint } from '../cutsheet';
 import { imageName, imagesOf, rebuild } from '../plan';
 import { diffStructure, recordMode, structureOf } from '../record';
 import { planRecord, type Session } from '../session';
+import type { Item } from '../sheets';
 import { sentFromStore } from './freeze-session';
 
 export type FlowCheck = {
@@ -82,15 +83,18 @@ export function checkFlow(
       const i = a.findIndex((x, k) => x !== z[k]);
       out.differs[p.id] = { sent: a[i] ?? '', rebuilt: z[i] ?? '' };
       const sameImages = JSON.stringify(was.images) === JSON.stringify(imagesOf(r, p));
+      const undrawn = takesUndrawn(frames, p.id);
       const why = /^The last attempt at this frame/m.test(was.prompt)
         ? 'drawn again from what went wrong'
         : !frames.get(p.id)?.shot &&
             /^What the (?:dreamer|camera) sees/m.test(was.prompt) &&
             /^The shot/m.test(p.prompt)
           ? 'drawn without its brief, set aside by the pre-draw check'
-          : !sameImages
-            ? 'an earlier picture it takes was not drawn as a rebuild takes it'
-            : '';
+          : undrawn.length
+            ? `an earlier picture it takes (${undrawn.join(', ')}) was left undrawn by the pre-draw check`
+            : !sameImages
+              ? 'an earlier picture it takes was not drawn as a rebuild takes it'
+              : '';
       if (why) out.explained[p.id] = why;
     }
     if (JSON.stringify(was.images) === JSON.stringify(imagesOf(r, p))) out.sameImages.push(p.id);
@@ -114,8 +118,31 @@ export function checkFlow(
     out.sheetDiffers[p.id] = d;
     if (d.every((x) => x === 'camera.brief' || x === 'sources') && /brief/.test(out.explained[p.id] ?? ''))
       out.sheetExplained[p.id] = out.explained[p.id];
+    // Sent without an earlier picture a check left undrawn, which a rebuild takes as drawn: the pictures
+    // it names and what it takes from them differ, nothing else.
+    else if (
+      d.every((x) => ['names', 'earlier', 'sources'].includes(x)) &&
+      /left undrawn by the pre-draw check/.test(out.explained[p.id] ?? '')
+    )
+      out.sheetExplained[p.id] = out.explained[p.id];
   }
   return out;
+}
+
+/**
+ * The earlier pictures a moment's plan takes that a check left undrawn ("not drawn: …" when the checks
+ * act): the moment was sent without them, and a rebuild, which takes every picture as drawn, has them.
+ */
+export function takesUndrawn(
+  frames: Map<string, Pick<Item, 'status' | 'error'> & { frame?: { plan?: { refs?: { id: string }[] } } }>,
+  id: string,
+): string[] {
+  return (frames.get(id)?.frame?.plan?.refs ?? [])
+    .map((r) => r.id)
+    .filter((ref) => {
+      const f = frames.get(ref);
+      return f?.status === 'failed' && /^not drawn: /.test(f.error ?? '') && !/limit/.test(f.error ?? '');
+    });
 }
 
 /**
