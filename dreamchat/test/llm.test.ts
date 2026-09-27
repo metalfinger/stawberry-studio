@@ -1,5 +1,14 @@
 import { describe, expect, test } from 'bun:test';
-import { CLAUDE_TRIES, type ClaudeRun, callClaude, claudePrompt, jsonOnly, parseTurnResponse, RECOVERY } from '../llm';
+import {
+  CLAUDE_TRIES,
+  CLAUDE_WAITS_MS,
+  type ClaudeRun,
+  callClaude,
+  claudePrompt,
+  jsonOnly,
+  parseTurnResponse,
+  RECOVERY,
+} from '../llm';
 
 describe('the turn contract, enforced in code', () => {
   test('a well-formed turn passes untouched', () => {
@@ -123,5 +132,37 @@ describe('the Claude writer', () => {
     const r = await callClaude([{ role: 'user', content: 'hi' }], { json: true }, run);
     expect(inputs).toHaveLength(CLAUDE_TRIES);
     expect(() => JSON.parse(r.content)).toThrow();
+  });
+
+  const failing = (failures: { out: string; err: string; code: number }[], result = 'fine') => {
+    let n = 0;
+    const waited: number[] = [];
+    const run: ClaudeRun = async () =>
+      n < failures.length ? failures[n++] : (n++, { out: JSON.stringify({ result }), err: '', code: 0 });
+    return { run, waited, wait: async (ms: number) => void waited.push(ms), runs: () => n };
+  };
+
+  test('a CLI that passes (no input in time, logged out for a moment) is waited out and run again', async () => {
+    const f = failing([
+      { out: '', err: 'Warning: no stdin data received in 3s, proceeding without it.', code: 1 },
+      { out: JSON.stringify({ is_error: true, result: 'Not logged in · Please run /login' }), err: '', code: 1 },
+    ]);
+    const r = await callClaude([{ role: 'user', content: 'hi' }], {}, f.run, f.wait);
+    expect(r.content).toBe('fine');
+    expect(f.waited).toEqual(CLAUDE_WAITS_MS.slice(0, 2));
+  });
+
+  test('a failure that does not pass, or one that never does, is thrown', async () => {
+    const other = failing([{ out: '', err: 'unknown option --x', code: 1 }]);
+    await expect(callClaude([{ role: 'user', content: 'hi' }], {}, other.run, other.wait)).rejects.toThrow(
+      'unknown option',
+    );
+    expect(other.waited).toEqual([]);
+    const limit = { out: '', err: 'Claude AI usage limit reached', code: 1 };
+    const always = failing(Array(10).fill(limit));
+    await expect(callClaude([{ role: 'user', content: 'hi' }], {}, always.run, always.wait)).rejects.toThrow(
+      'usage limit',
+    );
+    expect(always.runs()).toBe(CLAUDE_WAITS_MS.length + 1);
   });
 });

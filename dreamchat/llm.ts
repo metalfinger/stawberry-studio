@@ -115,10 +115,22 @@ export function claudeBreach(content: string, json: boolean): string | null {
   }
 }
 
+type ClaudeBody = { result?: string; is_error?: boolean; usage?: { input_tokens?: number; output_tokens?: number } };
+
+/**
+ * Failures of the CLI that pass, and how long to wait before each run again. Under load the CLI gave up
+ * waiting for its input ("no stdin data received in 3s"), and for a minute on 27 Sep it was logged out;
+ * either crashed a replayed dream. A limit or an overloaded service is waited out the same way.
+ */
+export const CLAUDE_PASSING =
+  /no stdin data received|Not logged in|rate.?limit|usage limit|hit your limit|overloaded|\b5\d\d\b|ECONNRESET|timed? ?out/i;
+export const CLAUDE_WAITS_MS = [15_000, 60_000, 180_000];
+
 export async function callClaude(
   messages: ChatMessage[],
   opts: { model?: string; json?: boolean; thinking?: Thinking } = {},
   run: ClaudeRun = spawnClaude,
+  wait: (ms: number) => Promise<void> = Bun.sleep,
 ): Promise<CallResult> {
   const model = opts.model && !opts.model.startsWith('deepseek') ? opts.model : CLAUDE_MODEL;
   const { system, prompt } = claudePrompt(messages);
@@ -146,19 +158,27 @@ export async function callClaude(
   let breach: string | null = null;
   for (let t = 0; t < CLAUDE_TRIES; t++) {
     // Asked again, the reply is told what was wrong with the one before; the conversation is the same.
-    const { out, err, code } = await run(
-      args,
-      breach
-        ? `${input}\n\n(Your previous reply could not be used: ${breach}. ${opts.json ? 'Reply with one valid JSON object, every quote inside a string escaped.' : 'Reply with the message.'})`
-        : input,
-    );
-    let body: { result?: string; is_error?: boolean; usage?: { input_tokens?: number; output_tokens?: number } };
-    try {
-      body = JSON.parse(out);
-    } catch {
-      throw new Error(`claude ${code}: ${(err || out).slice(0, 400)}`);
+    const asked = breach
+      ? `${input}\n\n(Your previous reply could not be used: ${breach}. ${opts.json ? 'Reply with one valid JSON object, every quote inside a string escaped.' : 'Reply with the message.'})`
+      : input;
+    let body: ClaudeBody | undefined;
+    for (let a = 0; !body; a++) {
+      const { out, err, code } = await run(args, asked);
+      let failure: string | null = null;
+      try {
+        const b = JSON.parse(out) as ClaudeBody;
+        if (code !== 0 || b.is_error) failure = `claude ${code}: ${(b.result ?? err).slice(0, 400)}`;
+        else body = b;
+      } catch {
+        failure = `claude ${code}: ${(err || out).slice(0, 400)}`;
+      }
+      if (!failure) break;
+      // A failure of the CLI rather than of the reply passes: waited out, then run again.
+      if (!CLAUDE_PASSING.test(failure) || a >= CLAUDE_WAITS_MS.length) throw new Error(failure);
+      console.warn(`${failure.slice(0, 160)}: waiting ${CLAUDE_WAITS_MS[a] / 1000} s, then again`);
+      await wait(CLAUDE_WAITS_MS[a]);
     }
-    if (code !== 0 || body.is_error) throw new Error(`claude ${code}: ${(body.result ?? err).slice(0, 400)}`);
+    if (!body) throw new Error('claude: no reply');
     const text = body.result ?? '';
     usage = body.usage
       ? {
