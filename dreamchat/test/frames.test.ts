@@ -1280,7 +1280,7 @@ describe("a moment's previs", () => {
     expect(prompt).not.toContain('The subject occupies about half the frame height');
     expect(prompt).toContain(`What the camera sees, as the mock-up in Image 1 shows it: ${view}`);
     expect(prompt).toContain(
-      'the same place. Take only how it looks there (its surfaces, colours and light) and how anyone in it who is also in this picture looks; no one else from it comes into this one. Where everyone and everything is, and which way this picture looks, come from Image 1, the mock-up.',
+      'the same place. Take only how it looks there (its surfaces, colours and light) and how anyone in it who is also in this picture looks. Where everyone and everything is, and which way this picture looks, come from Image 1, the mock-up. Nobody and nothing from it comes into this picture but who and what this picture has in it, as listed below.',
     );
     // The place's sketch gives what it is made of: where things stand comes from the mock-up alone.
     expect(prompt).not.toContain('where things stand comes from the earlier picture');

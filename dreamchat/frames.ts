@@ -195,6 +195,39 @@ export function buildGhosts(plan: ContinuityPlan): Item[] {
   }));
 }
 
+/**
+ * Said of every earlier picture attached for how things look: it brings nobody and nothing of its own. Told only
+ * to take where everything and everyone in it are, pictures drew who was there then: a stray figure in orchard m6,
+ * a boat nobody named in lighthouse-fresh m9 (the camera rules' picture check, 27 Sep).
+ */
+export const NOTHING_ELSE =
+  'Nobody and nothing from it comes into this picture but who and what this picture has in it, as listed below.';
+
+/**
+ * An earlier picture of the same place, attached for how it looks there: what to take from it, and nothing else.
+ * Where everyone and everything stands comes from the mock-up (`mockup`), or from the shot worked out on the floor
+ * plan (`shot`); from the picture itself only for the same view drawn afresh (`setup`); from the same side, only
+ * how the place looks from there and where its walls and furniture stand (`side`). Through the dreamer's eyes, the
+ * dreamer seen in it is the camera.
+ */
+export function samePlaceLine(
+  said: string,
+  layout: 'mockup' | 'shot' | 'setup' | 'side',
+  size: string,
+  dreamerIn: boolean,
+): string {
+  const look =
+    'Take only how it looks there (its surfaces, colours and light) and how anyone in it who is also in this picture looks';
+  const body =
+    layout === 'setup'
+      ? `${said}: the same view, drawn afresh. Take where the place and what is in it stand, and its light; this frame is framed ${size}.`
+      : layout === 'side'
+        ? `${said}: the same place from the same side. ${look}, and where its walls, doors and furniture stand; this frame is framed ${size}.`
+        : `${said}: the same place. ${look}. Where everyone and everything is, and which way this picture looks, come from ${layout === 'mockup' ? 'Image 1, the mock-up' : 'the shot above'}.`;
+  const dreamer = dreamerIn ? ' The dreamer in it is the camera here, so they are not in this picture.' : '';
+  return `${body}${dreamer} ${NOTHING_ELSE}`;
+}
+
 /** A short name for a moment, as the chat and the panel show it. */
 const label = momentLabel;
 
@@ -574,15 +607,19 @@ export function framePrompt(
         : r === 'seat'
           ? `${pictureNo(x)}${shows}: the camera is where the dreamer is in it, at their eye height, turned toward ${f.looksAt || 'what this moment shows'}; what is beside them there is beside the camera here, seen from their place. Nothing else from it: not its camera, framing or angle.`
           : x.use.role === 'composition'
-            ? mockUp
-              ? // Where everyone is comes from the previs; the earlier picture gives how it all looks,
-                // from whichever side it was taken: "from the same side" of a picture facing another
-                // wall read to the gate as the prompt contradicting itself (0.51, 24 Sep).
-                `${pictureNo(x)}${shows}: the same place. Take only how it looks there (its surfaces, colours and light) and how anyone in it who is also in this picture looks; no one else from it comes into this one. Where everyone and everything is, and which way this picture looks, come from Image 1, the mock-up.`
-              : `${pictureNo(x)}${shows}: the same place from the same side. Take where everything and everyone in it are, and its light; this frame is framed ${f.distance}.`
+            ? // Where everyone is comes from the previs; the earlier picture gives how it all looks,
+              // from whichever side it was taken: "from the same side" of a picture facing another
+              // wall read to the gate as the prompt contradicting itself (0.51, 24 Sep).
+              samePlaceLine(
+                `${pictureNo(x)}${shows}`,
+                mockUp ? 'mockup' : plan?.view ? 'shot' : r === 'same_setup' ? 'setup' : 'side',
+                f.distance,
+                f.eyes === 'dreamer' &&
+                  (x.item.frame?.visible ?? []).some((id) => sheets.find((s) => s.id === id)?.isDreamer),
+              )
             : unsketched.length
               ? lastSeen(x, unsketched)
-              : `${pictureNo(x)}${shows}: take only ${x.use.carries.replace(/;.*$/, '')}. Nothing of its place, framing or background.`) +
+              : `${pictureNo(x)}${shows}: take only ${x.use.carries.replace(/;.*$/, '')}. Nothing of its place, framing or background. ${NOTHING_ELSE}`) +
         strays(x),
     );
   }
@@ -879,7 +916,12 @@ export function ghostPrompt(
     g.kind === 'view'
       ? [
           `A reference picture of ${sheet.name}, with nobody in it: not a scene from the story.`,
-          `Image 1 is ${sheet.name}'s reference sheet. Show the same place with the camera turned to face ${g.looksAt || 'the other way'}: what was behind the camera is now in view. Everything stays true to image 1: the same materials, colours, light and style, and objects consistent with it.`,
+          // Edited from the place's in-between picture of its state, that picture is image 1 and its sketch
+          // image 2, and the state stays: "image 1 is its reference sheet" of the flooded library's picture
+          // lost the water (library-2, 27 Sep).
+          before
+            ? `Image 1 is ${sheet.name} as it is now${earlier ? ` (${earlier.what}: ${earlier.now})` : ''}: edit it. Show the same place with the camera turned to face ${g.looksAt || 'the other way'}: what was behind the camera is now in view. Everything stays true to image 1: the same materials, colours, light and style${earlier ? `, the same ${earlier.what}` : ''}, and objects consistent with it. Image 2 is its reference sheet: what it is.`
+            : `Image 1 is ${sheet.name}'s reference sheet. Show the same place with the camera turned to face ${g.looksAt || 'the other way'}: what was behind the camera is now in view. Everything stays true to image 1: the same materials, colours, light and style, and objects consistent with it.`,
         ]
       : [
           `A reference picture of ${name}, on their own: not a scene from the story.`,
