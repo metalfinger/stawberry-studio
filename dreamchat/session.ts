@@ -153,6 +153,8 @@ import {
 } from './sheets';
 import type { JudgedCheck, JudgeOptions } from './judge';
 import { IMPLIED_BAR, impliedFacts, readImplied, type WriteFn } from './implied';
+import { oneBuilder } from './cleanups';
+import { NO_BAR, readTypedMoment, strip, TYPED_BAR } from './typed';
 import {
   diffPlan,
   type Readings,
@@ -461,6 +463,15 @@ export async function planShots(
       prep.readings = { implied };
     }
   }
+  // With S6's one prompt builder on (DREAMCHAT_ONE_BUILDER), what each moment's picture shows at one instant
+  // is read once here as typed facts, and kept in the dream's readings with the others.
+  if (oneBuilder()) {
+    const typed = await typedReadings(blocked, deps);
+    if (typed) {
+      readings = { ...readings, typed };
+      prep.readings = { ...prep.readings, typed };
+    }
+  }
   const recOf = (plans: Breakdown) => recordForPlan(plans, inputs.items, readings, { words: inputs.words, style });
   // Every camera of a set of plans placed, rendered and briefed, and each shot checked against its moment.
   const shoot = (plans: Breakdown, into: Prep, scenes?: string[], suffix = '') =>
@@ -668,6 +679,43 @@ export async function restage(
   if (scenes.length) await shootScenes(b, s.style, deps, rec, s.prep, scenes, '-drawn');
   s.prep.record = now;
   return scenes;
+}
+
+/**
+ * Each moment's typed reading (typed.ts): what its picture shows at one instant, proposed by the writer and
+ * checked by Jev, one moment at a time, each logged. None without the writer or Jev; a moment whose reading
+ * fails has no facts.
+ */
+async function typedReadings(
+  b: Breakdown,
+  deps: { imply?: WriteFn; jev?: JevFn },
+): Promise<Readings['typed'] | undefined> {
+  if (!deps.imply || !deps.jev) return undefined;
+  const out: NonNullable<Readings['typed']> = {};
+  for (const m of moments(b)) {
+    const read = await readTypedMoment(b, m, deps.imply, deps.jev).catch((e) => ({
+      reading: { moment: m.id, facts: [] },
+      error: String(e).slice(0, 200),
+    }));
+    out[m.id] = read.reading;
+    recordJev({
+      kind: 'transition',
+      stage: 'record',
+      to: 'typed',
+      moment: m.id,
+      facts: read.reading.facts.flatMap((f) =>
+        f.checks.map((c) => ({
+          question: `${c.key} (${c.want}): ${JSON.stringify(strip(f))}`,
+          answer: c.answer ?? 0,
+          bar: c.want === 'yes' ? TYPED_BAR : NO_BAR,
+          ok: f.ok,
+        })),
+      ),
+      decision: `${read.reading.facts.filter((f) => f.ok).length} of ${read.reading.facts.length} typed facts taken`,
+      reason: 'error' in read && read.error ? read.error : 'the writer proposed, Jev read each fact',
+    });
+  }
+  return out;
 }
 
 /**

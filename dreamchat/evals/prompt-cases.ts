@@ -1273,6 +1273,9 @@ if (import.meta.main) {
   const { costLine, withImplied } = await import('./implied-cache');
   const imply = recordMode() === 'on' && !args.includes('--no-imply');
   const costs: Awaited<ReturnType<typeof withImplied>>[] = [];
+  const { oneBuilder } = await import('../cleanups');
+  const { withTyped } = await import('./typed-cache');
+  const typedMissing: string[] = [];
   // Every dream rebuilt once, as plan.ts rebuilds it.
   const dreams = new Map<string, { r: Rebuilt | Error; hash: string; sent: ReturnType<typeof sentOf> }>();
   for (const id of new Set(cases.map((c) => c.session))) {
@@ -1284,6 +1287,12 @@ if (import.meta.main) {
         const read = await withImplied(session, { jev: jevWithModel(JEV_MODEL()), jevModel: JEV_MODEL() });
         costs.push(read);
         session = read.session;
+      }
+      // With S6's one prompt builder on, each moment's typed reading, from its cache only.
+      if (oneBuilder()) {
+        const typed = await withTyped(session);
+        typedMissing.push(...typed.missing.map((m) => `${id} ${m}`));
+        session = typed.session;
       }
       r = rebuild(session, { asDrawn: false });
     } catch (e) {
@@ -1394,6 +1403,10 @@ if (import.meta.main) {
   const close = results.filter((r) => r.expectations.some((e) => e.close)).map((r) => r.id);
   if (close.length) console.log(`answers close to the bar, in: ${close.join(', ')}`);
   if (costs.length) console.log(costLine(costs));
+  if (oneBuilder())
+    console.log(
+      `typed readings from the cache (the one prompt builder): ${typedMissing.length ? `not cached, read as no facts: ${typedMissing.join(', ')}` : 'every moment'}`,
+    );
   const other = results.filter((r) => r.sent_images).map((r) => r.id);
   if (other.length)
     console.log(

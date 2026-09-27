@@ -492,6 +492,9 @@ if (import.meta.main) {
   const { JEV_MODEL } = await import('./prompt-cases');
   const imply = recordMode() === 'on' && !args.includes('--no-imply');
   const costs: Awaited<ReturnType<typeof withImplied>>[] = [];
+  const { oneBuilder } = await import('../cleanups');
+  const { withTyped } = await import('./typed-cache');
+  const typedMissing: string[] = [];
   for (const d of dreams) {
     // Only a dream whose breakdown and look are settled has pictures to tell.
     if (!d.session.draft?.breakdown || !d.session.style) {
@@ -504,6 +507,12 @@ if (import.meta.main) {
         const read = await withImplied(session, { jev: jevWithModel(JEV_MODEL()), jevModel: JEV_MODEL() });
         costs.push(read);
         session = read.session;
+      }
+      // With S6's one prompt builder on, each moment's typed reading, from its cache only.
+      if (oneBuilder()) {
+        const typed = await withTyped(session);
+        typedMissing.push(...typed.missing.map((m) => `${d.id} ${m}`));
+        session = typed.session;
       }
       dump.dreams[d.id] = { ...dumpOf(rebuild(session, { asDrawn: false }), sentOf(d.session)), hash: d.hash };
     } catch (e) {
@@ -524,6 +533,10 @@ if (import.meta.main) {
   );
   for (const [id, d] of Object.entries(dump.dreams))
     if (d.error) console.log(`  ${id} could not be rebuilt: ${d.error}`);
+  if (oneBuilder())
+    console.log(
+      `typed readings from the cache (the one prompt builder): ${typedMissing.length ? `not cached, read as no facts: ${typedMissing.join(', ')}` : 'every moment'}`,
+    );
   const sent = Object.entries(dump.dreams).flatMap(([id, d]) =>
     d.pictures.filter((p) => p.sent).map((p) => ({ id, p })),
   );

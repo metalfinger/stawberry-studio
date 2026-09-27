@@ -301,6 +301,26 @@ async function withReadings(
   args: Args,
   needed: boolean,
 ): Promise<{ session: Session; note: string; missing?: string }> {
+  const read = await withImpliedReadings(saved, args, needed);
+  const { oneBuilder } = await import('../cleanups');
+  if (read.missing || !oneBuilder()) return read;
+  // With S6's one prompt builder on, each moment's typed reading, from its cache only: never a model.
+  const { withTyped, TYPED_CACHE } = await import('./typed-cache');
+  const typed = await withTyped(read.session);
+  if (typed.missing.length)
+    return {
+      session: saved,
+      note: '',
+      missing: `the typed readings of ${typed.missing.join(', ')} are not in ${TYPED_CACHE}: read them with evals/typed.ts`,
+    };
+  return { session: typed.session, note: `${read.note}; typed readings of ${typed.read} moments from ${TYPED_CACHE}` };
+}
+
+async function withImpliedReadings(
+  saved: Session,
+  args: Args,
+  needed: boolean,
+): Promise<{ session: Session; note: string; missing?: string }> {
   if (!needed) return { session: saved, note: 'the story record is off: nothing implied is read' };
   if (args.noImply)
     return {

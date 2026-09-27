@@ -15,6 +15,7 @@
 // Pure: no model, no files. Behind DREAMCHAT_CAMERA=on, which needs DREAMCHAT_CUT_SHEET=on: what the
 // rules say reaches the prompt through the cut sheet alone. Off, every plan, sheet and prompt is today's.
 import { type Blocking, type Eye, roomOf, type Side, sizeOf, type Spot } from './blocking';
+import { retired } from './cleanups';
 
 let warned = false;
 
@@ -118,6 +119,7 @@ const WALL_WORDS: [RegExp, Side[]][] = [
 ];
 
 export function openingsIn(words: string): Opening[] {
+  if (retired('openings')) return [];
   const out: Opening[] = [];
   for (const clause of words.split(/[;.]|,\s+(?=and\b|with\b|a\b|an\b|the\b)/i)) {
     const m = clause.match(OPENING);
@@ -222,6 +224,7 @@ export function waterLevel(
   plan: Blocking,
   beings: { name: string; height: number }[] = [],
 ): number | null {
+  if (retired('water_level')) return null;
   const text = words.toLowerCase();
   // Only a room has a ceiling: out in the open, a roof is somewhere to stand, and the water has no cap.
   const ceiling = plan.indoors ? (plan.ceiling ?? 3.2) : Number.POSITIVE_INFINITY;
@@ -372,6 +375,7 @@ const STOPPING =
  * past ("rides the bicycle past the old car") goes nowhere.
  */
 export function goingIn(words: string, name: string, others: string[] = []): boolean {
+  if (retired('going')) return false;
   const headOf = (n: string) =>
     n
       .toLowerCase()
@@ -426,6 +430,7 @@ const HAND_VERB = `(?:(?:hold|holds|holding|held|take|takes|taking|took)${NOT_HA
  * they see it; never their face. A reflection is not it: seen in a mirror, it is a picture of them.
  */
 export function selfIn(words: string[]): boolean {
+  if (retired('own_body')) return false;
   const text = words.join(' ');
   return (
     /\b(?:their|your|my|the dreamer's)\s+own\s+(?:\w+\s+)?(?:body|bodies|legs|feet|hands|arms|clothes)\b/i.test(text) ||
@@ -443,6 +448,7 @@ export function selfIn(words: string[]): boolean {
  */
 export function handsIn(words: string[], holds: boolean): boolean {
   if (holds) return true;
+  if (retired('hands')) return false;
   // The dreamer doing it: "they are close to the edge" is where they are, not a hand closing.
   const who = "(?:the dreamer|you|they|i)(?:\\s+and\\s+(?:the\\s+|their\\s+|your\\s+|my\\s+)?[\\w']+)?";
   const does = new RegExp(`(?:^|[^\\w'])${who}\\s+(?:(?!(?:are|is|was|were|am)\\b)\\w+\\s+){0,2}?${HAND_VERB}\\b`, 'i');

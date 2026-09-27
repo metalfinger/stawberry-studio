@@ -10,7 +10,7 @@
 // they found. It runs beside the plan and is logged (DREAMCHAT_RECORD=shadow), or the continuity plan
 // and the prompts read it too (DREAMCHAT_RECORD=on): what changes is carried from picture to picture,
 // who is there, and who holds what.
-import { retired } from './cleanups';
+import { oneBuilder, retired } from './cleanups';
 import { pictureName, placePlan, type RecordPlan, rawPlanBy } from './continuity';
 import {
   BECOMING,
@@ -26,6 +26,7 @@ import {
 } from './producer';
 import { isAnimal, isGroup, type Item, withoutPose } from './sheets';
 import { hashOf, slug } from './lib';
+import type { TypedReading } from './typed';
 
 // ── the record ──────────────────────────────────────────────────────────────
 
@@ -184,6 +185,11 @@ export type Readings = {
    * writer proposed it and Jev read it (implied.ts); only those Jev reads as meant (ok) are changes.
    */
   implied?: Record<string, ImpliedReading[]>;
+  /**
+   * By moment: what its picture shows at one instant, as typed facts the writer proposed and Jev checked
+   * (typed.ts): read with S6's one prompt builder on (DREAMCHAT_ONE_BUILDER), which says the moment from them.
+   */
+  typed?: Record<string, TypedReading>;
 };
 
 /** One implied state of a moment: proposed by the writer, and Jev's reading of it on the moment's words. */
@@ -2448,7 +2454,8 @@ export function storyRecord(
     hashOf({
       b: { ...(b ?? {}), style_options: undefined },
       items: (items ?? []).map((i) => ({ id: i?.id, fields: i?.fields, status: i?.status, media: i?.mediaId })),
-      readings: r,
+      // The typed readings are the one prompt builder's (S6): the record reads them only with it on.
+      readings: oneBuilder() ? r : { ...r, typed: undefined },
       words: opts.words ?? null,
       style: opts.style?.name ?? null,
     }),

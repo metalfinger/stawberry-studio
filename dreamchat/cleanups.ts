@@ -6,7 +6,11 @@
 // DREAMCHAT_RETIRE=<name>[,<name>…] turns them off; unset, the default, every one runs as it always has. An eval
 // switch: never set it when drawing. A name that is not one of these is an error, so a misspelt switch can never
 // measure nothing. Only what the cut sheet and the record run while they are built reads it: `assembleCut`, which
-// writes from the sheet alone, never does (test/cutsheet.test.ts).
+// writes from the sheet alone, never does (test/cutsheet.test.ts). S4's word lists (camera.ts) have theirs too.
+//
+// S6 builds its one prompt builder behind DREAMCHAT_ONE_BUILDER (below): each step of its ledger, once built,
+// retires one clean-up (read here as off) or makes one duplicated computation one, and puts the typed fact in
+// its place.
 export const CLEANUPS = {
   gone: 'frames.ts withoutGone: a moment\'s words without what is gone from it ("where the sea used to be")',
   after_words:
@@ -28,6 +32,14 @@ export const CLEANUPS = {
   holds_name:
     'record.ts namedInWords: a name before "stall", "tank", "bowl" names what it is of, not itself (HOLDS_NAME)',
   shut_away: 'record.ts shutAway: a thing opened is shut once it is carried into another place',
+  hands:
+    "camera.ts handsIn: through the dreamer's eyes, their hands show where the moment's words have them do something with them (HAND_VERB)",
+  own_body:
+    "camera.ts selfIn: through the dreamer's eyes, their body shows where the words have them look at themselves",
+  going:
+    'camera.ts goingIn: a vehicle named just before a word of going, or driven just after one, is going (GOING, PROPELLED, STOPPING)',
+  water_level: "camera.ts waterLevel: how high water stands, from the record's words for it (WATER, BODY, DEEP)",
+  openings: "camera.ts openingsIn: the windows and doors on a place's walls, from its look (WALL_WORDS)",
 } as const;
 
 export type Cleanup = keyof typeof CLEANUPS;
@@ -50,8 +62,50 @@ export function retiredSet(raw = process.env.DREAMCHAT_RETIRE ?? ''): Set<Cleanu
   return seen.off;
 }
 
-/** Whether a clean-up is turned off (DREAMCHAT_RETIRE names it). */
-export const retired = (name: Cleanup): boolean => retiredSet().has(name);
+/** Whether a clean-up is turned off: DREAMCHAT_RETIRE names it, or the one prompt builder has retired it. */
+export const retired = (name: Cleanup): boolean => retiredSet().has(name) || builds(name);
+
+// ── the one prompt builder (S6) ─────────────────────────────────────────────────────────────────
+
+/**
+ * S6's steps, in the order of the ledger (HARNESS_PLAN.md, S6 eval), each built behind DREAMCHAT_ONE_BUILDER:
+ * a duplicated computation made one, or a clean-up or word list retired for the typed fact that takes its
+ * place. A clean-up's step has its name: once built, `retired` reads it as off. One step is added at a time,
+ * and measured against the one before.
+ */
+export const BUILDER_STEPS: readonly string[] = [];
+
+let built: { raw: string; steps: Set<string> } | null = null;
+
+/**
+ * The steps DREAMCHAT_ONE_BUILDER turns on: unset or off, none (every prompt as before, byte for byte); none,
+ * the builder on with no step (its typed readings read, nothing retired); on, every step built; a step's name,
+ * the steps up to and including it, so a step is measured against the one before. Anything else is an error.
+ */
+export function builderSteps(raw = process.env.DREAMCHAT_ONE_BUILDER ?? ''): Set<string> {
+  if (built?.raw === raw) return built.steps;
+  const v = raw.trim().toLowerCase();
+  let steps: string[];
+  if (!v || v === 'off' || v === 'none') steps = [];
+  else if (v === 'on') steps = [...BUILDER_STEPS];
+  else if (BUILDER_STEPS.includes(v)) steps = BUILDER_STEPS.slice(0, BUILDER_STEPS.indexOf(v) + 1);
+  else
+    throw new Error(
+      `DREAMCHAT_ONE_BUILDER: on, off, none or a step (${BUILDER_STEPS.join(', ') || 'none built yet'}), not ${raw}`,
+    );
+  built = { raw, steps: new Set(steps) };
+  return built.steps;
+}
+
+/** Whether the one prompt builder is on at all: DREAMCHAT_ONE_BUILDER set, and not to off. */
+export function oneBuilder(): boolean {
+  const v = (process.env.DREAMCHAT_ONE_BUILDER ?? '').trim().toLowerCase();
+  builderSteps();
+  return !!v && v !== 'off';
+}
+
+/** Whether a step of the one prompt builder is built and switched on. */
+export const builds = (step: string): boolean => builderSteps().has(step);
 
 /** Runs `fn` with exactly these clean-ups turned off, and puts the switch back as it was, whatever happens. */
 export function withRetired<T>(names: Cleanup[], fn: () => T): T {

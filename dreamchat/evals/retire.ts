@@ -26,7 +26,7 @@
 // (DREAMCHAT_CUT_SHEET=shadow or on) for the readings 2-4. Writes runs/retire/<label>.json and <label>.txt.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { CLEANUP_NAMES, CLEANUPS, type Cleanup, withRetired } from '../cleanups';
+import { CLEANUP_NAMES, CLEANUPS, type Cleanup, oneBuilder, withRetired } from '../cleanups';
 import { pictureName } from '../continuity';
 import type { CutSheet } from '../cutsheet';
 import { type Rebuilt, type RebuiltPicture, rebuild } from '../plan';
@@ -36,6 +36,7 @@ import type { Session } from '../session';
 import { inShades, LOOK } from '../sheets';
 import { atomicChanges, diffDumps, type DumpDream, dumpOf, wordDiff, wordRuns } from './corpus';
 import { withImplied } from './implied-cache';
+import { withTyped } from './typed-cache';
 import { JEV_MODEL, sectionsOf } from './prompt-cases';
 import { commitOf, DIR, type Dream, dataDir, frozenDreams, liveDreams, loadDream, readLive, switches } from './saved';
 
@@ -644,6 +645,7 @@ if (import.meta.main) {
   const readings: MomentReading[] = [];
   const ghostIds: GhostIds[] = [];
   const missing: string[] = [];
+  const typedMissing: string[] = [];
   const failed: string[] = [];
   let pictures = 0;
   let momentsN = 0;
@@ -655,6 +657,12 @@ if (import.meta.main) {
       const read = await withCachedImplied(session);
       if (read.missing) missing.push(d.id);
       session = read.session;
+    }
+    // With S6's one prompt builder on, each moment's typed reading, from its cache only.
+    if (oneBuilder()) {
+      const typed = await withTyped(session);
+      typedMissing.push(...typed.missing.map((m) => `${d.id} ${m}`));
+      session = typed.session;
     }
     let r: Rebuilt;
     try {
@@ -690,6 +698,7 @@ if (import.meta.main) {
     moments: momentsN,
     pictures,
     missing,
+    ...(oneBuilder() ? { typedMissing } : {}),
     failed,
     totals,
     footprints,
@@ -701,6 +710,11 @@ if (import.meta.main) {
   const lines = [
     `${label}: ${dreamsN} dreams (${run.from}), ${momentsN} moments, ${pictures - momentsN} in-between pictures; switches ${JSON.stringify(run.switches)}; implied readings ${run.implied}${missing.length ? ` (not cached, measured without: ${missing.join(', ')})` : ''}`,
     ...failed.map((f) => `  could not be rebuilt: ${f}`),
+    ...(oneBuilder()
+      ? [
+          `typed readings from the cache (the one prompt builder): ${typedMissing.length ? `not cached, read as no facts: ${typedMissing.join(', ')}` : 'every moment'}`,
+        ]
+      : []),
     '',
     'Footprints: pictures that change with each clean-up off (moments, in-between pictures, dreams; by part)',
     ...Object.values(footprints).map(
