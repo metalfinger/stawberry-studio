@@ -15,7 +15,7 @@ context mirrors it.
 | S1 The story record carries state | Done | faults met 6/33 to 18/33, guards 36/36; with Claude reading what the moments imply, 19/33 and S1's cases 12/13 |
 | S2 Checks only log | Done | whole-dream replays on Claude: logging drew 127/127 moments, 0 held or reworded, Jev ~41 calls a dream (acting: 14 undrawn, 54 reworded, 306-324 calls); logging is the default since 27 Sep (`DREAMCHAT_CHECKS=act` brings acting back) |
 | S3 One cut sheet per picture | Done | the sheet's prompt equals the old builder's on 1052 rebuilds and 48 of 48 live builds |
-| S4 Camera rules | Merged behind DREAMCHAT_CAMERA (off; needs the cut sheet on); picture check next | faults met 19/33 to 28/33 (its own 1/11 to 9/11), guards 36/36, with Claude reading what the moments imply (branch `s4-camera`) |
+| S4 Camera rules | Merged behind DREAMCHAT_CAMERA (off; needs the cut sheet on); the picture check's dry run found 6 faults, 5 fixed on `precheck-fixes` (the suitcase one is not a fault: see the log); dry run again, then draw | faults met 19/33 to 28/33 (its own 1/11 to 9/11), guards 36/36, with Claude reading what the moments imply; unchanged by the fixes (28/33, 36/36) |
 | S5 References and in-between pictures | Test written; building | branch `s5-refs` |
 | S7 Jev checks routed by tags | Done (routing switch off; every Jev reading logs) | measured on the 122 pictures the owner judged (as sent): the gate and "storyboard complete?" are at chance (AUC 0.36-0.56); 16 library questions not measurable yet; 0 of 28 checks earn acting; a check earns acting only at its measured bar, counted by moments. Run the picture checkpoints with `DREAMCHAT_JEV_ROUTED=on` so the library questions' readings join the owner's new verdicts |
 | S6 One prompt builder, clean-ups retired | Test written | a ledger of 16 clean-ups, S4's 4 word lists and 14 duplicates, in order; every moment says a fact twice (frozen 2350 facts, live 6595), 21 of 115 frozen moments say an action no picture shows (live 134 of 411); built after S5 |
@@ -1188,6 +1188,12 @@ between sessions.
 | S4 | S1 | The water's height is read from the words of the record's typed water part (`camera.ts waterLevel`): a body or a thing of the plan it is measured by ("up to their waists", "over the desks", "covering the shelves": over a thing is a little above its top), the ceiling only indoors; the floor or the ground (a few centimetres) only where nothing else measures it and no word says it is deep. Water that fills or floods a place, or is deep enough to float or swim in, with no measure is unmeasured, never a thin layer. Where the record has water there without a measure, the level last measured in the same place carries forward; with none, nothing is said of its height. A boat afloat indoors rides low enough for its riders to sit under the ceiling ("almost up to the ceiling" of a 4 m room is 2.4 m with a boat on it). Every water reading of the frozen dreams, and of what their moments imply (Claude's and DeepSeek's), is labelled in `test/camera.test.ts`; every water moment of the frozen and live dreams was read by hand with the rules on. The record should carry a level as a typed number. The floor plans give windows no height (a "high round window" stands on the floor), so "almost up to the high round window" is 1.8 m; library-1 m5's level is met with the rules on, library-3 m7's with them off and on (on, 0.45 against a 0.5 bar: close). Heights of windows on walls belong to the blocking step (a model step). |
 | S4 | S7 | Flags on the sheet for the checks to route by, each the plan's: `crossed_line:<cut>` (`CutPlan.crossed`: the cut whose side of the line it crossed from, not always the one before; `crossedWhy`: it looks past them at what only that side shows, or only from there are they all in it; with the rules on it also sets the sheet's `crossed` tag; 6 frozen, 12 live), `same_camera:<cut>` (`CutPlan.sameCamera`; 0 on the corpus: the plan moves such a camera, so it is a guard), `reverse_not_drawn_from:<cut>` (0 on the corpus: with relations read from the cameras a reverse is never the same side; a guard); and `CameraLayer.body` (self, hands, none) for the point-of-view questions. A deliberate crossing is not one of the plan's `issues`: the pre-draw check takes a picture's issues ("picture N ...") as findings to act on. |
 | S4 | S6 | Word lists in `camera.ts`: `HAND_VERB`/`handsIn` (what the dreamer's hands do, by clause, only where the dreamer does it, alone or with someone; at the controls of what they ride; not holding their breath, taking a step, turning a corner or the hands of a clock), `selfIn` (they look down at themselves; a reflection is not it), `openingsIn` (windows and doors on a place's walls, from its look), `WATER`/`DEEP`/`waterLevel`, `GOING`/`PROPELLED`/`STOPPING`/`goingIn` (a vehicle going: named just before a word of going, or driven just after one; parked or sitting still, not). What is out past a window is no word list: a thing on or past the line of a wall where a window is (`outThroughWindows`), for every view of the place; a thing a moment looks at through a window while it stands in the room stays in the room (the same 3 frozen and 6 live pictures as the word list gave). `test/camera.test.ts` labels every point-of-view moment and every water reading of the frozen dreams, and phrases written for it; over the live dreams they were listed and read by hand (not in the repository, so not a committed test). Each should give way to a typed field (the breakdown's action as visible facts, the blocking's fixtures and moves). |
+| S4 checkpoint fixes | S6 | New word lists, each to give way to a typed field: `camera.ts` `HEIGHT_WORD` (a later thing the water's words measure it by), `MEASURE`/`HUGE` (`bodyHeight`: how high a creature's body stands, from its look), `continuity.ts bodiesOf`; `producer.ts` `NAME_CLAUSE`/`NAME_OPENER`/`NAME_PLACE` (`namesEvery`, what a brief may call each one). `namesForIds` (S6 ledger 5, ids in words) resolves an id in a moment's words to its name when the dream is read, with the camera rules only: S6 moves it to the default (the floor-plan step writing names). |
+| S4 checkpoint fixes | S5 | Deeper water where the words say it is deep enough for a creature (library-2 m8: 1 to 2 metres) moves m8's camera across the line, so m9 takes picture 1 as its composition and picture 8 only for light (frozen and live, 1 picture each). S5's `chooseRefs` owns which earlier picture a cut is drawn from; measure it there with the camera on. |
+| S4 checkpoint fixes | test isolation | `test/session.test.ts` "settle waits for a verdict being asked for" times out at 5 s on lab (3ae81f0) as on `precheck-fixes`, in the default suite; with the record, sheet and camera on, the same 11 tests fail on lab and here (tests written for the switches off: checkpoint `--draw`, S9 on a44a and 8ceb, S9 keys). |
+| S4 checkpoint fixes | blocking, S1 | `blocking.ts settle` turns whoever rides a vehicle to face its facing, or the place's front where it has none, and ignores the way the plan moves it: a boat rowed up the room had its two facing back down it. Now no heading is said where they face against its move (frozen 2, live 4 pictures); the root is the riders' facing (turned to the way it moves, the cameras placed on them would move: measure before). Motion as a lasting, typed state is S1's (lighthouse-fresh m12). |
+| S4 checkpoint fixes | S4, previs | A creature too big for the water is said to be in it beside the boat, part of it above the surface, but the mock-up still draws it as a figure lying on the floor, hidden under the water plane; a fixture high on a wall (library-1's "high round window") is a block standing on the floor, so deep water hides it and it drops out of the view (library-1 m4 and m5, library-2 m8); and a place seen only through a window (library-1's "outside the window", which no moment is set in) has no line in the view. The plan needs heights for wall fixtures and creatures. |
+| S4 checkpoint fixes | S4 briefs | The brief check reads names, not where they are: a brief that names an element in the picture only as "just outside the frame" passes, before and now (checked by sentence it refused 18 of 193 saved briefs, some for a crop, "head out of frame": not taken). Of the 212 briefs the saved dreams keep, 193 pass the word-for-word rule and 198 the new one; none passing before fails now. |
 | S4 | blocking (model step) | night-market m2: the floor plan has the sisters facing the old man, not the stall; the camera shows that faithfully (an eyeline rule that kept them from facing the lens also moved snow-train m1, which the owner called right, and was dropped). Only the blocking can meet it. |
 | S4 | S3 | `continuity.relation()` (and `evals/paired-arms.ts relationTo`) still read words only; with the camera rules the plan and the sheet read how two moments stand from their cameras on the floor plan (`sidesByCamera`, `sameByCamera`) and the jump fix. An edit counts as the camera it would have drawn fresh (`CutPlan.wouldBe`): a same setup is an edit only from the same camera. The scene's line is kept per floor plan (two places of one scene each have their own). The tree's shots follow the plan's. |
 | S4 | every step | Cost: with the camera rules the continuity plan is made again until the relations it draws from are the ones its cameras give: two or three plans for most dreams, settled on every frozen and live dream (0 unsettled); one still unsettled after four plans is said in the plan's issues (never "picture N ...", so no pre-draw check acts on it). Tests that plan several frozen dreams come near bun's 5 s limit on a loaded machine. |
@@ -1239,7 +1245,16 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   holds it on their lap; "Nobody else is in the picture" is no longer said beside a crowd. Left: see the S4 rows of
   the overlaps table; across a reverse the plan still waits for the picture it no longer draws from (S5); a
   composition image from before a deliberate crossing is told only for its look where the mock-up is image 1, which
-  every crossing cut has (a crossing cut without a mock-up would be told to keep the old layout).
+  every crossing cut has (a crossing cut without a mock-up would be told to keep the old layout). From the picture
+  check's dry run (27 Sep, `precheck-fixes`): riders turned by `settle` against the way the plan moves their vehicle
+  (no heading said there now); creatures and high wall fixtures without heights in the mock-up; a place seen only
+  through a window unsaid; the brief check reads names, not placement (the overlaps table).
+- **S1 (`shutAway`), from the picture check's dry run.** The dry run's premise that the owner called snow-train-2 m5
+  and m6 right with the suitcase open does not hold for m5: the picture he called right there has it shut, carried by
+  its handle, and on the other two drawings of m5 he wrote "the suitcase should be shut" (the counted case
+  snow-train-2-m5-shut, met by `shutAway`). His m6 picture has it open, letters showing, handed over; his notes on m6
+  say nothing of the lid. So carrying it into another place closing it stays until a verdict says otherwise; what
+  stays open (an umbrella, a book) is still the debt above.
 - **S7 (Jev checks).** The labelled set is thin: 122 pictures, 62 moments from ten dreams (20 moments drawn four
   times); the library questions were written after reading the owner's notes on these pictures, so only pictures
   judged after 27 Sep can earn them acting, and `evals/build-checks-set.ts` must be taught to read those verdicts
@@ -1841,3 +1856,42 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   mock-up gives the layout. Only story changes count (water rising, a door opening, someone leaving); a new side
   comes from the mock-up for layout and the sketch for looks. S5 built on `s5-refs` (bars: subject by 2+ images
   40→1 frozen, waited-never-sent 67→0, other side 2→0); under independent review.
+- 27 Sep: the S4 picture check's dry run, its faults fixed before anything is drawn (branch `precheck-fixes` from lab
+  3ae81f0, no pictures, no money). Each fault by cause:
+  1. library-3 m6 (called right): the whale, placed as a figure lying on the floor, was said to be all of it under a
+     metre of water, beneath the boat; the plan knows no creature's size. Now a creature whose look says how big it is
+     (`camera.ts bodyHeight`: a measure, or a clause opening "huge", "very big") is in the water beside the boat, part
+     of it above the surface, where the water cannot cover it; the water's level is the highest thing its words
+     measure it by, and over a creature it is said to be deep enough for ("deep enough for a whale beneath a boat":
+     library-1 m4 and library-2 m8, 1 to 2 metres, the whale under it as in the owner's right library-1 m4 picture).
+     Its heading: the boat moved up the room while `settle` turned the two in it to face the room's front, so it was
+     said to head at the camera behind them; where those riding a vehicle face against the way it moved, no heading
+     is said now (taking their way instead reversed library-3 m7's boat rowing up to the window).
+  2. snow-train-2 m5/m6: not a fault. The picture the owner called right at m5 has the suitcase shut, and he wrote
+     "should be shut" on the other two; `shutAway` stays (known debt, S1).
+  3. Shot briefs refused: the check wanted every name word for word. `producer.ts namesEvery` takes a brief that
+     names each one by its whole name or by what it is (the last word before a word of where or what it does, and what
+     it is "of"), article- and possessive-blind, singular or plural, a thing in one word with another ("bookshelf" /
+     "shelves"), never a person ("grandfather" is not "the father"); two of a kind each need the words that tell them
+     apart beside them. Default path: live, more views get their written brief. The saved dreams' 212 briefs: 193 by
+     the old rule, 198 now, 0 lost.
+  4. "outside it l2": a place's id in the breakdown's `looks_at`; resolved to its name when the dream is read, with the
+     camera rules (`namesForIds`; only saved case).
+  5. "from a third of the way down to a third of the way down": a span within one band is "around" it now ("a thin
+     band" read to Jev as the boat low in the room and cost library-1-m5-level); a saved brief still serves such a view
+     (`sameView`).
+  6. library-1 m5: the sister stood in the boat to open the window, and `onOf` counted no one standing as in a
+     vehicle; afloat, someone standing where a boat is stands in it (as `settle` already had it). Nothing says what is
+     seen out of the window: the window is a floor block under 4 metres of water and the place outside it has no spot
+     (debt, not fixed here).
+  Tests: `test/camera.test.ts` and `test/brief-names.test.ts`, written for them, fail on lab; `tsc` clean;
+  `bun test` 694 pass with the switches off (1 fail, a 5 s timeout that fails on lab too) and with record, sheet and
+  camera on 684 pass (the same 11 failures as lab). Prompt cases, all 85, Claude's readings from the cache (0 calls):
+  on 28/33 counted, 7/8 model step, 36/36 guards, 7/18 hypotheses, no case moved; off 6/33, 36/36, no case moved.
+  Corpus on against lab, frozen 12 of 144 pictures changed, live 27 of 489, each classified: a span said around one
+  place 9 / 23 better; a contradicting heading no longer said 2 / 4 better; the whale beside the boat, part above
+  the water 1 / 1 better; water deeper by "deep enough for a whale" 2 / 2 better (with it library-1 m4's lens and
+  the high window's line, and library-2 m8's camera across the line, neutral: the plan's rules on the new level);
+  the sister in the boat 1 / 1 better; the id named 1 / 1 better; library-2 m9 drawn from picture 1's layout, picture
+  8 for light 1 / 1 neutral (S5); 0 worse. Switches off: 0 of 140 frozen and 0 of 477 live pictures changed.
+
