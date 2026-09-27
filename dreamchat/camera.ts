@@ -67,6 +67,9 @@ export function turnedBetween(a: Pick<Eye, 'd'>, b: Pick<Eye, 'd'>): number {
 /** Under this many degrees apart, two cameras on one floor plan face the same side of the place. */
 export const SAME_SIDE_DEGREES = 60;
 
+/** Degrees the camera turns from the cut before for a cut to be a reverse angle. */
+export const REVERSE_DEGREES = 135;
+
 /**
  * The same camera, as the tree reads it (tree.ts SAME_CAMERA): within 0.6 metres and ten degrees of the
  * other, at the same height give or take half a metre. A cut to the same subject from it, at the same

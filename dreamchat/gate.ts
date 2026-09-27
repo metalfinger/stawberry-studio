@@ -292,7 +292,11 @@ export type Reference = { media_id: string; role: string };
 export function checkReferences(
   prompt: string,
   references: Reference[],
-  opts: { approved?: Set<string>; mustInclude?: { name: string; mediaId: string }[] } = {},
+  opts: {
+    approved?: Set<string>;
+    /** Everyone in view, by their sketch; `or`: in-between pictures that stand for it as their one image (S5). */
+    mustInclude?: { name: string; mediaId: string; or?: string[] }[];
+  } = {},
 ): string[] {
   const out: string[] = [];
   // Moments list "Image 2: …"; an in-between reference says "Image 1 is …".
@@ -311,7 +315,8 @@ export function checkReferences(
     for (const [i, id] of ids.entries())
       if (!opts.approved.has(id)) out.push(`image ${i + 1} is not an approved picture`);
   for (const m of opts.mustInclude ?? [])
-    if (!ids.includes(m.mediaId)) out.push(`${m.name} is in view but their sketch is not attached`);
+    if (!ids.includes(m.mediaId) && !(m.or ?? []).some((x) => ids.includes(x)))
+      out.push(`${m.name} is in view but their sketch is not attached`);
   return out;
 }
 

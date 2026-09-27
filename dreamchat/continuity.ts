@@ -27,6 +27,7 @@ import {
   goingIn,
   ON_THE_LINE,
   outThroughWindows,
+  REVERSE_DEGREES,
   SAME_SIDE_DEGREES,
   sameCameraAs,
   signedFromLine,
@@ -37,6 +38,7 @@ import {
 import { dreamerShot, onOf, outsideShot } from './previs';
 import { type Breakdown, hasBefore, isWhole, type Moment, moments, POSITION, type State } from './producer';
 import type { NowOf } from './record';
+import { refsMode, SEVERAL } from './refs';
 
 export type Relation = 'same_setup' | 'same_side' | 'other_side' | 'other_place' | 'shift' | 'seat';
 export type RefRole = 'base' | 'composition' | 'lighting' | 'identity' | 'prop' | 'location';
@@ -132,6 +134,12 @@ export type CutPlan = {
   /** With the camera rules: an earlier cut of the same people at the same size whose camera it could not leave. */
   sameCamera?: string;
   /**
+   * With S5's references (DREAMCHAT_REFS): earlier pictures the cut stands in a relation to but is not drawn
+   * from (for its light alone, for someone with a sketch, from another side), so never waited for. The judge
+   * still compares against them, and the camera rules settle their relations as for any other.
+   */
+  unsent?: PlanRef[];
+  /**
    * With the camera rules, for a cut edited from the picture before: where its own camera would stand.
    * A same setup is the same camera, so it is an edit only where this is the picture's camera.
    */
@@ -165,6 +173,11 @@ export type GhostPlan = {
   /** Made from the story record: its change's key, and how its subject looked just before it. */
   key?: string;
   before?: { text: string; said: boolean }[];
+  /**
+   * With S5's references (DREAMCHAT_REFS): every change it shows, the ones before it that it was edited
+   * from and its own, so a cut drawn from it alone knows what it carries.
+   */
+  shows?: { what: string; now: string }[];
 };
 
 export type ContinuityPlan = { cuts: CutPlan[]; ghosts: GhostPlan[]; issues: string[] };
@@ -665,7 +678,7 @@ export function unsettled(b: Breakdown, plan: ContinuityPlan, cams = camerasOf(p
   const rel = relationIn(ms, { camera: true, sides: sidesByCamera(b, cams), same: sameByCamera(b, cams) });
   const out: string[] = [];
   for (const c of plan.cuts)
-    for (const r of c.refs) {
+    for (const r of [...c.refs, ...(c.unsent ?? [])]) {
       if (r.kind !== 'cut' || !r.relation || r.relation === 'seat') continue;
       const m = byId.get(c.id);
       const e = byId.get(r.id);
@@ -886,12 +899,21 @@ function planWith(
   const cutOf = new Map(cuts.map((c) => [c.id, c]));
 
   const ghosts: GhostPlan[] = [];
+  // With S5's references, an in-between picture edited from another carries that one's change too: a cut
+  // drawn from the latest alone still shows the ones before it.
+  const refs = refsMode() !== 'off';
+  const chainOf = (g: GhostPlan | undefined): GhostPlan[] => {
+    const out: GhostPlan[] = [];
+    for (let x = g; x && !out.includes(x); x = x.after ? ghosts.find((y) => y.id === x!.after) : undefined) out.push(x);
+    return out;
+  };
   // A state is carried by its ghost, or by a referenced cut drawn at or after the change that
   // shows who changed. The picture before a dream's jump carries nothing of what the jump changes.
   const carriedBy = (c: CutPlan, st: State) =>
     c.refs.find((r) => {
       if (r.kind === 'ghost') {
         const g = ghosts.find((x) => x.id === r.id);
+        if (refs) return chainOf(g).some((x) => !!x.state && changeKey(x.state) === changeKey(st));
         return !!g?.state && changeKey(g.state) === changeKey(st);
       }
       // A picture kept only for its light is not drawn from, so it carries no change.
@@ -1339,6 +1361,11 @@ function planWith(
     }
   }
 
+  // S5 (DREAMCHAT_REFS): a cut's references are what it is drawn from, and so all the plan waits for.
+  // The judge still compares each picture with every earlier one it was planned from.
+  const planned = new Map(cuts.map((c) => [c.id, [...c.refs]]));
+  if (refs) chooseInPlan();
+
   // Needs, depth, checks, transitions and a line of why, now the references are final.
   const depth = new Map<string, number>();
   for (const g of ghosts) if (!g.from) depth.set(g.id, 1);
@@ -1350,16 +1377,17 @@ function planWith(
     c.depth = 1 + Math.max(0, ...c.refs.map((r) => depth.get(r.id) ?? 0));
     depth.set(c.id, c.depth);
     const m = byId.get(c.id)!;
+    const judged = refs ? { ...c, refs: planned.get(c.id) ?? c.refs } : c;
     c.transition = (
       m.shift
         ? `dream shift: ${m.shift}`
-        : c.refs.some((r) => r.role === 'base')
+        : judged.refs.some((r) => r.role === 'base')
           ? 'continuous'
-          : c.refs.some((r) => r.kind === 'cut')
+          : judged.refs.some((r) => r.kind === 'cut')
             ? 'cut, carrying on'
             : 'cut'
     ).slice(0, 120);
-    c.criteria = criteria(c, m);
+    c.criteria = criteria(judged, m);
     c.why = c.refs.length
       ? c.refs.map((r) => `${r.kind === 'ghost' ? `ghost ${r.id}` : `picture ${no(r.id)}`} as ${r.role}`).join('; ')
       : 'the sheets alone';
@@ -1367,6 +1395,96 @@ function planWith(
   for (const g of ghosts) {
     g.depth = depth.get(g.id) ?? (g.from ? (depth.get(g.from) ?? 1) + 1 : 1);
     g.usedBy = [...new Set(g.usedBy)];
+    if (refs && g.kind === 'state')
+      g.shows = chainOf(g)
+        .reverse()
+        .flatMap((x) => (x.state ? [{ what: x.state.what, now: x.state.now }] : []));
+  }
+
+  /**
+   * S5's references, over the plan with its cameras placed: each cut keeps only what it is drawn from.
+   * - No picture from another side: an earlier picture whose camera is turned round from this one's (a
+   *   reverse) is neither edited nor where things stand; the jump's own picture and the seat are made
+   *   across a move by what they are.
+   * - One image per subject: an earlier picture comes in for who someone is only where they have no
+   *   sketch (a crowd), never for its light alone; a person with a sketch is shown by it.
+   * - An in-between picture only where an edit would carry several changes (the owner's bar, two): one
+   *   that no cut it is drawn for would carry that many without is not drawn, the latest first, so no
+   *   cut is left over the bar by two going.
+   * - Of a subject's in-between pictures in force, only the latest, which was edited from the others.
+   */
+  function chooseInPlan() {
+    const cams = camerasOf({ cuts, ghosts, issues: [] });
+    for (const c of cuts) {
+      const m = byId.get(c.id)!;
+      const here = seen(m);
+      const all = c.refs;
+      c.refs = c.refs.flatMap((r): PlanRef[] => {
+        if (r.kind !== 'cut' || r.relation === 'shift') return [r];
+        const e = byId.get(r.id)!;
+        if (r.role === 'lighting' || r.role === 'identity') {
+          const shows = inViewAt(e);
+          const who = (r.who ?? here).filter((p) => crowd(p) && here.includes(p) && shows.has(p));
+          if (!who.length) return [];
+          return [r.role === 'identity' ? { ...r, who } : r];
+        }
+        if (r.relation === 'seat') return [r];
+        // Cameras are compared on one floor plan only: two plans of one room do not share their bearings.
+        const a = cams.get(c.id);
+        const z = cams.get(r.id);
+        const onePlan = !!placePlan(b, c.id) && placePlan(b, c.id) === placePlan(b, r.id);
+        return a && z && onePlan && turnedBetween(a, z) >= REVERSE_DEGREES ? [] : [r];
+      });
+      const unsent = all.filter((r) => r.kind === 'cut' && !c.refs.some((x) => x.id === r.id));
+      if (unsent.length) c.unsent = unsent;
+    }
+    for (const c of cuts) c.changes = countChanges(c);
+    // How many changes a cut would carry at once without one in-between picture (evals/prompt-cases.ts
+    // changesWithout counts it alike): a side never drawn puts back one; a change the cut makes itself is
+    // its action; a change carried from earlier puts back one unless another picture drawn from shows it.
+    const sameState = (a: State, z: State) => a.who === z.who && a.what === z.what && a.now === z.now;
+    const without = (c: CutPlan, g: GhostPlan) => {
+      if (g.kind === 'view') return c.changes.length + 1;
+      const st = g.state;
+      if (!st || !c.states.some((x) => sameState(x, st))) return c.changes.length;
+      const other = c.refs.some((u) => {
+        if (u.id === g.id) return false;
+        if (u.kind === 'ghost') {
+          const o = ghosts.find((x) => x.id === u.id);
+          return !!o?.state && sameState(o.state, st);
+        }
+        return (
+          u.relation !== 'shift' &&
+          u.role !== 'lighting' &&
+          (index.get(u.id) ?? -1) >= (index.get(st.since) ?? 0) &&
+          inViewAt(byId.get(u.id)!).has(st.who)
+        );
+      });
+      return c.changes.length + (other ? 0 : 1);
+    };
+    for (let dropped = true; dropped;) {
+      dropped = false;
+      for (const g of [...ghosts].reverse()) {
+        // Another in-between picture is edited from it: it stays, as that one's start.
+        if (ghosts.some((o) => o.after === g.id)) continue;
+        const users = cuts.filter((c) => c.refs.some((r) => r.kind === 'ghost' && r.id === g.id));
+        if (Math.max(0, ...users.map((c) => without(c, g))) >= SEVERAL) continue;
+        ghosts.splice(ghosts.indexOf(g), 1);
+        for (const c of users) {
+          c.refs = c.refs.filter((r) => r.id !== g.id);
+          c.changes = countChanges(c);
+        }
+        dropped = true;
+        break;
+      }
+    }
+    // The latest of a subject's in-between pictures carries the ones it was edited from.
+    for (const c of cuts) {
+      const drawn = c.refs.filter((r) => r.kind === 'ghost').map((r) => ghosts.find((g) => g.id === r.id));
+      c.refs = c.refs.filter(
+        (r) => r.kind !== 'ghost' || !drawn.some((g) => g && g.id !== r.id && chainOf(g).some((x) => x.id === r.id)),
+      );
+    }
   }
 
   function criteria(c: CutPlan, m: Moment): Criterion[] {

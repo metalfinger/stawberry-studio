@@ -36,6 +36,7 @@ import { type AsDrawn, type Copies, currentRecord, matchGhost } from './asdrawn'
 import { type CutSheet, cutSheetMode, framed, ghostName, sheetDream } from './cutsheet';
 import { type CutFacts, cutFactsOf, routedMode } from './checks';
 import { actingOf, checkReferences, preflight, readPrompt } from './gate';
+import { standsFor } from './refs';
 import { callJev } from './jev';
 import { recordForPlan, recordInputsOf } from './record';
 import type { Breakdown } from './producer';
@@ -410,7 +411,14 @@ if (import.meta.main) {
         approved,
         mustInclude: inView
           .filter((x) => x.mediaId && !(item && turnedInto(item).has(x.id)))
-          .map((x) => ({ name: x.name, mediaId: x.mediaId as string })),
+          .map((x) => ({
+            name: x.name,
+            mediaId: x.mediaId as string,
+            ...standsFor(
+              r.pictures.map((p) => p.item),
+              x.id,
+            ),
+          })),
       }),
     ];
     const read = await readPrompt(callJev, prompt, { sheet, edit, ...(routing ? { routed: routing } : {}) });
