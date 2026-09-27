@@ -4,7 +4,21 @@
 // guess, and the person is asked to confirm it before anything is drawn from it.
 import type { Answer, Exchange, JevFn, Question } from './jev';
 import { renderTranscript } from './jev';
-import { type Breakdown, type Detail, type Moment, type State, details, hasBefore, isWhole, moments } from './producer';
+import { listenOn } from './lib';
+import {
+  type Breakdown,
+  clausePieces,
+  type Detail,
+  details,
+  hasBefore,
+  isWhole,
+  joinPieces,
+  type Moment,
+  moments,
+  type State,
+  stemFor,
+  VAGUE,
+} from './producer';
 
 export { hasBefore };
 
@@ -160,26 +174,81 @@ function evidenceOptions(transcript: Exchange[]): Record<string, string> {
   return options;
 }
 
-export function groundingQuestions(b: Breakdown, transcript: Exchange[]): Record<string, Question> {
+/** Whether they said it, asked of one claim. */
+const saidQuestion = (claim: string): Question => ({
+  type: 'noul',
+  instructions: `The person told a dream. Did they themselves say this, or plainly mean it: ${claim}`,
+  criteria: {
+    true: 'their own words say it, or plainly mean it',
+    false: 'it is an inference, an addition, or goes beyond what they said',
+  },
+});
+
+/**
+ * Whether they said one claim of a value, asked as a part of the whole note: asked on its own after the
+ * field's stem, a part is often no claim at all ("the lantern is made of 'a candle'", "the corridor is 'a
+ * wooden door at the end'"), and 4 told parts in 256 read under the bar where 2 did as a part (the fresh
+ * simulation's breakdowns, 27 Sep).
+ */
+const claimQuestion = (whole: string, part: string): Question => ({
+  type: 'noul',
+  instructions: `The person told a dream. A note on it says: ${whole} Did they themselves say this part of it, or plainly mean it: "${part}"?`,
+  criteria: {
+    true: 'their own words say that part, or plainly mean it',
+    false: 'that part is an inference, an addition, or goes beyond what they said',
+  },
+});
+
+/**
+ * A claim of a note is theirs at or above this. Under it, on the fresh simulation's 256 claims of said
+ * values: 8 of the 9 the listening test reads as never said (the ninth said after all), and 2 it reads as
+ * said (at 0.6: 24, 8 of them said).
+ */
+export const CLAIM_BAR = 0.5;
+
+/**
+ * The claims of a said value asked one by one (S8, docs/rules.md F1): the pieces that claim something,
+ * with where each is in the value; none when it makes one claim or less, and it is asked whole. Asked whole,
+ * a value with their words and one guess passed on their words ("a pied piper sort of man on the village
+ * street, a stranger, the kind of guy who could do stuff like juggle": said whole, "a stranger" never
+ * said), 6 of the 9 said-but-never-said the listening test found by hand (fresh simulation, 27 Sep).
+ */
+export function claimsOf(value: string): { i: number; text: string }[] {
+  const asked = clausePieces(value)
+    .map((p, i) => ({ i, text: p.text }))
+    .filter((p) => !VAGUE.test(p.text));
+  return asked.length > 1 ? asked : [];
+}
+
+export function groundingQuestions(
+  b: Breakdown,
+  transcript: Exchange[],
+  /** S8: a said value of several claims is asked claim by claim (see `claimsOf`). */
+  byClaim = listenOn(),
+): Record<string, Question> {
   const options = evidenceOptions(transcript);
   const q: Record<string, Question> = {};
-  const add = (key: string, claim: string) => {
-    q[`said_${key}`] = {
-      type: 'noul',
-      instructions: `The person told a dream. Did they themselves say this, or plainly mean it: ${claim}`,
-      criteria: {
-        true: 'their own words say it, or plainly mean it',
-        false: 'it is an inference, an addition, or goes beyond what they said',
-      },
-    };
+  const where = (key: string, claim: string) => {
     q[`where_${key}`] = {
       type: 'choice',
       instructions: `Which of the person's messages says: ${claim}`,
       criteria: options,
     };
   };
-  for (const { path, label, detail } of details(b))
-    if (detail.said && detail.value) add(path, `${label} "${detail.value}"?`);
+  const add = (key: string, claim: string) => {
+    q[`said_${key}`] = saidQuestion(claim);
+    where(key, claim);
+  };
+  for (const { path, label, detail } of details(b)) {
+    if (!detail.said || !detail.value) continue;
+    const claims = byClaim ? claimsOf(detail.value) : [];
+    // Which message says it is asked of the whole; whether they said it, of each claim.
+    if (!claims.length) add(path, `${label} "${detail.value}"?`);
+    else {
+      where(path, `${label} "${detail.value}"?`);
+      for (const c of claims) q[`said_${path}#${c.i}`] = claimQuestion(`${label} "${detail.value}".`, c.text);
+    }
+  }
   // A profile is drawn on every picture of its subject, so a thing that happens to them in the
   // dream must not be in it (a woman whose head turns to ice was sketched with the ice, 23 Sep).
   for (const p of [...b.people, ...b.places])
@@ -202,6 +271,61 @@ export function groundingQuestions(b: Breakdown, transcript: Exchange[]): Record
   // A dream's jump is kept only if they told it: continuity is broken on purpose there.
   for (const m of moments(b)) if (m.shift) add(`shift_${m.id}`, `the dream jumped here, abruptly: ${m.shift}?`);
   return q;
+}
+
+/**
+ * A profile revised or reworded from what they answered (S8, docs/rules.md F1): each value the rewrite
+ * changed and marked said keeps only the claims they said, asked of Jev as the breakdown's are, and a value
+ * with none of theirs is a guess; what it left alone stays as it was. Marked said by the overlap of their
+ * words, a rewrite passed its own detail as theirs whenever its words had been said about something else:
+ * Tomas's "everyday adult clothes" ("every apple", "an adult"), the autoclave "at one end" ("the far end"),
+ * the back stairs "a narrow flight going up", 3 of the 9 said-but-never-said the listening test found by
+ * hand (fresh simulation, 27 Sep). The judge being down confirms nothing, as with the breakdown.
+ */
+export async function groundRevised(
+  name: string,
+  kind: 'character' | 'location' | 'prop',
+  before: Record<string, Detail>,
+  after: Record<string, Detail>,
+  transcript: Exchange[],
+  jev: JevFn,
+): Promise<{ fields: Record<string, Detail>; dropped: string[] }> {
+  const of = kind === 'character' ? 'person' : kind === 'location' ? 'place' : 'thing';
+  const changed = Object.entries(after).filter(([k, d]) => d.said && d.value && d.value !== before[k]?.value);
+  if (!changed.length) return { fields: after, dropped: [] };
+  const q: Record<string, Question> = {};
+  const asked = new Map<string, { i: number; text: string }[]>();
+  for (const [k, d] of changed) {
+    const value = d.value as string;
+    const claims = claimsOf(value);
+    const whole = `${stemFor(of, name, k)} "${value}"`;
+    asked.set(k, claims.length ? claims : [{ i: -1, text: value }]);
+    if (!claims.length) q[`said_${k}#-1`] = saidQuestion(`${whole}?`);
+    for (const c of claims) q[`said_${k}#${c.i}`] = claimQuestion(`${whole}.`, c.text);
+  }
+  const call = await jev(renderTranscript(transcript), q).catch(() => null);
+  const p = (key: string) => {
+    const a = call?.answers?.[key];
+    return a?.type === 'noul' ? a.noul : 0;
+  };
+  const fields = structuredClone(after);
+  const dropped: string[] = [];
+  for (const [k, list] of asked) {
+    const d = fields[k];
+    // A value asked whole is held to the breakdown's bar; a part of one, to the part's.
+    const theirs = list.filter((c) => p(`said_${k}#${c.i}`) >= (c.i < 0 ? SAID_BAR : CLAIM_BAR));
+    if (!theirs.length) {
+      d.said = false;
+      dropped.push(`${k}: "${d.value}" (a guess)`);
+      continue;
+    }
+    const gone = list.filter((c) => !theirs.includes(c));
+    if (!gone.length) continue;
+    const pieces = clausePieces(d.value as string);
+    d.value = joinPieces(pieces.filter((_, i) => !gone.some((c) => c.i === i)));
+    for (const c of gone) dropped.push(`${k}: "${c.text}" (not in their words)`);
+  }
+  return { fields, dropped };
 }
 
 const HOLDS_BAR = 0.4;
@@ -531,16 +655,21 @@ export async function ground(
   b: Breakdown,
   transcript: Exchange[],
   jev: JevFn,
+  /** S8: a said value of several claims keeps only the claims they said (see `claimsOf`). */
+  byClaim = listenOn(),
 ): Promise<{ breakdown: Breakdown; downgraded: GroundingNote[]; ms: number; error: string | null }> {
   const out: Breakdown = structuredClone(b);
-  const questions = groundingQuestions(out, transcript);
+  const questions = groundingQuestions(out, transcript, byClaim);
   if (!Object.keys(questions).length) return { breakdown: out, downgraded: [], ms: 0, error: null };
   const call = await jev(renderTranscript(transcript), questions);
   const downgraded: GroundingNote[] = [];
-  const judge = (key: string): { ok: boolean; p: number; evidence: number | null } => {
+  const saidP = (key: string) => {
     const said = call.answers?.[`said_${key}`];
+    return said?.type === 'noul' ? said.noul : 0;
+  };
+  const judge = (key: string): { ok: boolean; p: number; evidence: number | null } => {
     const where = call.answers?.[`where_${key}`];
-    const p = said?.type === 'noul' ? said.noul : 0;
+    const p = saidP(key);
     const pick = where?.type === 'choice' ? where.choice : 'none';
     const evidence = pick.startsWith('m') ? Number(pick.slice(1)) : null;
     return { ok: p >= SAID_BAR && evidence !== null, p, evidence };
@@ -548,6 +677,34 @@ export async function ground(
 
   for (const { path, label, detail } of details(out)) {
     if (!detail.said || !detail.value) continue;
+    const claims = byClaim ? claimsOf(detail.value) : [];
+    if (claims.length) {
+      // Claim by claim: the claims they said are kept, as said; the rest is ours and goes. Said whole, it
+      // was drawn as theirs; marked a guess whole, what they told was lost with it.
+      const { evidence } = judge(path);
+      const theirs = claims.filter((c) => saidP(`${path}#${c.i}`) >= CLAIM_BAR);
+      const best = Math.max(...claims.map((c) => saidP(`${path}#${c.i}`)));
+      if (!theirs.length || evidence === null) {
+        detail.said = false;
+        detail.evidence = null;
+        downgraded.push({ path, label, value: detail.value, p: Number(best.toFixed(2)), evidence });
+        continue;
+      }
+      detail.evidence = evidence;
+      const dropped = claims.filter((c) => !theirs.includes(c));
+      if (!dropped.length) continue;
+      const pieces = clausePieces(detail.value);
+      detail.value = joinPieces(pieces.filter((_, i) => !dropped.some((c) => c.i === i)));
+      for (const c of dropped)
+        downgraded.push({
+          path: `${path}#${c.i}`,
+          label: `${label} (not in their words, dropped)`,
+          value: c.text,
+          p: Number(saidP(`${path}#${c.i}`).toFixed(2)),
+          evidence: null,
+        });
+      continue;
+    }
     const { ok, p, evidence } = judge(path);
     if (ok) detail.evidence = evidence;
     else {

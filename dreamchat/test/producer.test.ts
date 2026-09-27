@@ -417,6 +417,41 @@ describe('a change the script supervisor finds', () => {
     expect(b.scenes[0].moments[1].states).toEqual([]);
   });
 
+  test('with S8 on, a look folded in while planning makes nothing said: a guess stays a guess', () => {
+    // The car park's roof: a guessed "the stairwell door, the edge wall" marked said whole beside the rain
+    // folded in after grounding (fresh simulation, 27 Sep).
+    const roof = (landmarks: { value: string | null; said: boolean }) =>
+      ({
+        people: [],
+        things: [],
+        places: [{ id: 'l3', name: 'the roof', fields: { landmarks } }],
+        scenes: [{ id: 's1', moments: [{ ...moment('m4', 'The rain falls upwards.'), place: 'l3', leaves: [] }] }],
+      }) as unknown as Breakdown;
+    const rain = [{ moment: 'm4', who: 'l3', what: 'rain', now: 'falling upwards' }];
+    const folded = (landmarks: { value: string | null; said: boolean }, listen: boolean) => {
+      const b = roof(landmarks);
+      if (listen) process.env.DREAMCHAT_LISTEN = 'on';
+      try {
+        addChanges(b, rain);
+      } finally {
+        delete process.env.DREAMCHAT_LISTEN;
+      }
+      return b.places[0].fields.landmarks;
+    };
+    const guess = { value: 'the stairwell door, the edge wall', said: false };
+    expect(folded(guess, true)).toEqual({
+      value: 'the stairwell door, the edge wall; rain falling upwards',
+      said: false,
+    });
+    expect(folded({ value: null, said: false }, true)).toEqual({ value: 'rain falling upwards', said: false });
+    expect(folded({ value: 'parking lines', said: true }, true)).toEqual({
+      value: 'parking lines; rain falling upwards',
+      said: true,
+    });
+    // Off, as today: said whole.
+    expect(folded(guess, false).said).toBe(true);
+  });
+
   test('a change to how it already looks in its profile is no change, and is not carried', () => {
     // The classroom's desks "covered in seaweed", already so in its landmarks (sea school, 26 Sep).
     const landmarks = { value: 'desks covered in seaweed, a board at the front, windows, a doorway', said: true };

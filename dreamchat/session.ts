@@ -7,7 +7,15 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { sameView } from './camera';
-import { cleanStyles, type GroundingNote, ground, judgeChanges, judgeLeaves, linkContinuity } from './ground';
+import {
+  cleanStyles,
+  type GroundingNote,
+  ground,
+  groundRevised,
+  judgeChanges,
+  judgeLeaves,
+  linkContinuity,
+} from './ground';
 import {
   bookkeeperQuestions,
   type Exchange,
@@ -1760,8 +1768,11 @@ export class SessionStore {
         // and the old man was put through the gate forty turns running while no moment was ever drawn
         // (night market, 26 Sep). Asked twice and held again: left undrawn, so the sketches settle.
         if (it.heldAskedAt === turnNow - 1) {
-          if (this.deps.reviseItem)
-            it.fields = await this.deps.reviseItem(it.name, it.fields, renderTranscript(s.transcript), theirSay(s));
+          if (this.deps.reviseItem) {
+            const before = it.fields;
+            const revised = await this.deps.reviseItem(it.name, it.fields, renderTranscript(s.transcript), theirSay(s));
+            it.fields = await this.theirWordsOnly(s, it, before, revised, notes);
+          }
           it.held = undefined;
           await this.startSketch(s, it, turnNow);
         } else if ((it.heldAsks ?? 0) >= 2) await this.guessOrLeave(s, it, turnNow);
@@ -1801,7 +1812,13 @@ export class SessionStore {
       for (const it of [...wrong]) {
         const before = structuredClone(it.fields);
         const revised = this.deps.reviseItem
-          ? await this.deps.reviseItem(it.name, it.fields, renderTranscript(s.transcript), theirSay(s))
+          ? await this.theirWordsOnly(
+              s,
+              it,
+              before,
+              await this.deps.reviseItem(it.name, it.fields, renderTranscript(s.transcript), theirSay(s)),
+              notes,
+            )
           : it.fields;
         // Nothing is drawn again without something to draw differently: "it looks a little off,
         // I can't say what, go with it" redrew the family unchanged (24 Sep). What they point at
@@ -1999,11 +2016,12 @@ export class SessionStore {
       const settling = s.build.items.find((i) => i.id === s.build?.current);
       if (settling) {
         if (overlaid.signals.profile_reply === 'changes' && this.deps.reviseItem)
-          settling.fields = await this.deps.reviseItem(
-            settling.name,
+          settling.fields = await this.theirWordsOnly(
+            s,
+            settling,
             settling.fields,
-            renderTranscript(s.transcript),
-            theirSay(s),
+            await this.deps.reviseItem(settling.name, settling.fields, renderTranscript(s.transcript), theirSay(s)),
+            notes,
           );
         await this.startSketch(s, settling, turnNow);
         // What isn't asked about goes with the first profile settled: drawn from what was said.
@@ -3459,6 +3477,28 @@ export class SessionStore {
   }
 
   /**
+   * A profile revised or reworded from their answer, with what it marked said checked claim by claim
+   * against their words (S8, ground.ts groundRevised): only their claims stay said. Off, or for a moment,
+   * it is left as written. What was taken out is noted with the turn, where there is one.
+   */
+  private async theirWordsOnly(
+    s: Session,
+    it: Item,
+    before: Record<string, Detail>,
+    after: Record<string, Detail>,
+    notes?: JevReadNote[],
+  ): Promise<Record<string, Detail>> {
+    if (!listenOn() || (it.kind !== 'character' && it.kind !== 'location' && it.kind !== 'prop')) return after;
+    const kind = it.kind;
+    const g = await atSite('their words', () =>
+      groundRevised(it.isDreamer ? 'the dreamer' : it.name, kind, before, after, s.transcript, this.deps.jev),
+    );
+    if (g.dropped.length)
+      notes?.push({ goalId: 'their_words', reason: `${it.name}: ${g.dropped.join('; ')}`, attempted: 0 });
+    return g.fields;
+  }
+
+  /**
    * Start one sketch. The engine calls run in the background; their result, and every later
    * change of the sketch's state, comes back through the turn queue.
    */
@@ -3597,7 +3637,7 @@ export class SessionStore {
             .catch(() => null);
           if (!fields) break;
           acted(item, 'reworded', findings);
-          snapshot.fields = fields;
+          snapshot.fields = await this.theirWordsOnly(s, snapshot, snapshot.fields, fields);
           findings = await this.gateFindings(s, snapshot, sheetPrompt(snapshot, style), [], []);
         }
         if (findings.length && ((opts.guess && findings.every(unclearOnly)) || sketchGivesWay(findings))) {
