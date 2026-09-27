@@ -77,21 +77,51 @@ describe('move selection follows the newest thing they raised', () => {
 
   const told = (s: State): State => ({ ...s, signals: { ...s.signals, finished_telling: 0.9 } });
 
-  test('once the story is told, what they raised earlier is come back to, as earlier, before the gaps', () => {
-    const s = told(at(6, [thread('msg_7', 4)]));
-    expect(selectMove(s, cfg, listening({ listen: true })).move).toEqual({ kind: 'circle_back', threadId: 'msg_7' });
-    // Off, the gaps come first, and it waits for rule 8, after every one of them.
-    expect(selectMove(s, cfg, listening()).move).toEqual({ kind: 'probe_goal', goalId: 'telling' });
+  test('once the story is told, the gaps are asked: nothing raised earlier is come back to ahead of them', () => {
+    // Rule 6b came back here, and was answered "I don't remember" 17 times in 21 (fresh simulation, 27 Sep).
+    for (const threads of [
+      [thread('msg_7', 4)],
+      [thread('msg_3', 2, 'high'), thread('msg_7', 4)],
+      [thread('msg_9', 5)],
+    ])
+      expect(selectMove(told(at(6, threads)), cfg, listening({ listen: true })).move).toEqual({
+        kind: 'probe_goal',
+        goalId: 'telling',
+      });
+    // Off, as today: the gaps first too (an old thread raised with energy is still followed, rule 6).
+    expect(selectMove(told(at(6, [thread('msg_7', 4)])), cfg, listening()).move).toEqual({
+      kind: 'probe_goal',
+      goalId: 'telling',
+    });
+    // Nor after a come-back or a goal question.
+    for (const last_move of ['circle_back:msg_5', 'probe_goal:telling'])
+      expect(
+        selectMove(
+          { ...told(at(7, [thread('msg_5', 3), thread('msg_7', 4)])), last_move },
+          cfg,
+          listening({ listen: true }),
+        ).move.kind,
+      ).toBe('probe_goal');
   });
 
-  test('never on the message just before the latest: that one is not "earlier"', () => {
-    const s = told(at(6, [thread('msg_9', 5)]));
-    expect(selectMove(s, cfg, listening({ listen: true })).move.kind).toBe('probe_goal');
+  // Every goal asked twice, the dream not told to its end, and the follow cap reached: only rule 8 is left.
+  const asked = Object.fromEntries(required.map((g) => [g, 2]));
+  const capped = (over: Partial<MoveContext> = {}) =>
+    listening({ askCounts: asked, followStreak: MAX_FOLLOW_STREAK, listenTurns: 9, ...over });
+
+  test('an aged thread is come back to after every gap, never twice in a row with the switch on', () => {
+    const s = at(9, [thread('msg_3', 3)]);
+    expect(selectMove(s, cfg, capped({ listen: true })).move).toEqual({ kind: 'circle_back', threadId: 'msg_3' });
+    const again = { ...s, last_move: 'circle_back:msg_3' };
+    expect(selectMove(again, cfg, capped({ listen: true })).move).toEqual({ kind: 'open_ended' });
+    // Off, as today: the same thread again.
+    expect(selectMove(again, cfg, capped()).move).toEqual({ kind: 'circle_back', threadId: 'msg_3' });
   });
 
-  test('never twice in a row', () => {
-    const s = { ...told(at(7, [thread('msg_5', 3), thread('msg_7', 4)])), last_move: 'circle_back:msg_5' };
-    expect(selectMove(s, cfg, listening({ listen: true })).move.kind).toBe('probe_goal');
+  test('an aged thread already taken up is not come back to with the switch on', () => {
+    const s = at(9, [{ ...thread('msg_3', 3), explored: true }]);
+    expect(selectMove(s, cfg, capped({ listen: true })).move).toEqual({ kind: 'open_ended' });
+    expect(selectMove(s, cfg, capped()).move).toEqual({ kind: 'circle_back', threadId: 'msg_3' });
   });
 
   test('the follow cap hit while the dream is still being told does not bring an earlier thread back', () => {

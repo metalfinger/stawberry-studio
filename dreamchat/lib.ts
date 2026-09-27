@@ -467,29 +467,26 @@ export function selectMove(state: State, cfg: GoalsFile, ctx: MoveContext): { mo
   const hot = mayFollow && newest((t) => t.strength === 'high' && fresh(t));
   if (hot) return { move: { kind: 'explore_thread', threadId: hot.id }, rule: '6: hot fresh thread' };
 
-  // 6b. With S8 on: something they raised earlier and nobody took up is come back to, as earlier, before
-  // the checklist. Followed as if just said, those older threads were 121 of the before's 201 explore
-  // moves; left for rule 8, which comes after every gap, they were never asked.
-  // Only once the dream is told, never twice in a row, only on a thread older than the turn before, and
-  // counted with following (session.ts followStreak): firing whenever the follow cap stopped rule 4, it
-  // came back to "earlier" threads mid-telling (38 of 117) and to the message just before the latest (72 of
-  // 117), and made the chat an interrogation: "I don't remember" rose from 15% to 19% of answers (36% after a
-  // circle_back), and "told all they remember" ended the listening in 11 of 40 conversations against 2
-  // (review of the third after-run, 27 Sep).
-  const earlier =
-    ctx.listen &&
-    finished &&
-    mayFollow &&
-    !state.last_move.startsWith('circle_back:') &&
-    state.threads.find((t) => t.opened_turn < state.turn - 1 && t.strength !== 'low' && fresh(t));
-  if (earlier)
-    return { move: { kind: 'circle_back', threadId: earlier.id }, rule: '6b: raised earlier, never taken up' };
+  // With S8 on, nothing they raised earlier is come back to ahead of the gaps (the rule that did, 6b, is
+  // gone). Once the dream was told, it asked how something looked, where it was or what else was there,
+  // and they had already told all they remembered of it: on the Claude writer 17 of its 21 questions were
+  // answered "I don't remember", and 10 of the 12 retellings begun as "told all they remember" came
+  // straight after one (6 of 20 conversations before S8, 12 with it). What a picture needs of a look is
+  // asked openly at its profile, where the gaps a guess cannot fill are (docs/rules.md F2): 10 of the 21 were
+  // asked there again, and the other 11 were looks left to be imagined (fresh simulation, 27 Sep). What
+  // they raised earlier waits for rule 8, after every gap.
 
   // 7. A real gap in the story remains.
   if (askable.length) return { move: { kind: 'probe_goal', goalId: askable[0].id }, rule: '7: next gap in the story' };
 
-  // 8. Something aged and unresolved — come back to it naturally.
-  const aged = state.threads.find((t) => state.turn - t.opened_turn >= 4 && !t.resolved);
+  // 8. Something aged and unresolved — come back to it naturally. With S8 on, never one already taken up
+  // and never twice in a row: nothing else stops it asking after the same thread turn after turn.
+  const aged = state.threads.find(
+    (t) =>
+      state.turn - t.opened_turn >= 4 &&
+      !t.resolved &&
+      (!ctx.listen || (fresh(t) && !state.last_move.startsWith('circle_back:'))),
+  );
   if (aged) return { move: { kind: 'circle_back', threadId: aged.id }, rule: '8: aged thread' };
 
   // 9. Nothing to chase and they haven't finished: let them run.
@@ -943,8 +940,8 @@ export function isFollowing(move: Move): boolean {
 
 /**
  * How many turns in a row, up to the last one, followed the telling rather than asking (the follow cap's
- * count). With S8 on, coming back to an earlier thread counts too: left out, rule 6b fired whenever the
- * cap stopped following, and so dodged it (review, 27 Sep).
+ * count). With S8 on, coming back to an earlier thread counts too: left out, a come-back fired whenever
+ * the cap stopped following, and so dodged it (review, 27 Sep).
  */
 export function followStreakOf(moves: Move[], listen = false): number {
   let n = 0;
