@@ -955,6 +955,37 @@
       ]
     },
     {
+      "id": "library-1-m5-window-height",
+      "kind": "failing",
+      "class": "camera_turn_layout",
+      "step": "S4",
+      "session": "dream-0926-050424-fdd7",
+      "moment": "m5",
+      "source": {
+        "file": "story-pictures.json",
+        "row": "library-1-m5"
+      },
+      "note": "I don't know where they are supposed to go out from the above thing, and the perspective stays the same in all the frames, which is wrong. The camera is moving, and it should have shifted. The water is gone, and this was a very bad generation.",
+      "verdicts": {
+        "story": "wrong",
+        "mockup": "wrong",
+        "free": "wrong",
+        "edit": "right"
+      },
+      "seen_in": ["story"],
+      "fault": "They row up to the high round window, but it is a block standing on the floor, hidden by four metres of water, and the front wall is labelled with the window's name (\"high round window side\"): on the S4 picture check (27 Sep) the owner wrote that the way out should be through that top window, not the entire wall opening as it did.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "up_its_wall",
+          "args": {
+            "who": "x1"
+          },
+          "says": "the high round window is up its wall, above the water, and the front wall is not labelled with its name"
+        }
+      ]
+    },
+    {
       "id": "library-2-m5-water",
       "kind": "failing",
       "class": "state_carried",

@@ -25,6 +25,7 @@ import {
   bodyHeight,
   cameraMode,
   goingIn,
+  mounted,
   ON_THE_LINE,
   outThroughWindows,
   REVERSE_DEGREES,
@@ -394,11 +395,14 @@ export function planBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blocki
  */
 export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blocking | undefined {
   const scene = b.scenes.find((sc) => sc.moments.some((x) => x.id === momentId));
-  const plan = placePlan(b, momentId);
-  if (!scene || !plan) return undefined;
+  const given = placePlan(b, momentId);
+  if (!scene || !given) return undefined;
+  // With the camera rules, each fixture the place's words put up a wall or on the ceiling is there, off the
+  // floor (camera.ts mounted): the high round window stood on the floor, under the water.
+  const plan = cameraMode() === 'on' ? mounted(given, placeWordsOf(b, momentId)) : given;
   // Only the moments in the same place count: who was in the tiny room, not who was on the stairs.
   const own = (x: Moment) =>
-    plan === scene.blocking ? !scene.blocking?.places?.[x.place] : scene.blocking?.places?.[x.place] === plan;
+    given === scene.blocking ? !scene.blocking?.places?.[x.place] : scene.blocking?.places?.[x.place] === given;
   const upTo = scene.moments.slice(0, scene.moments.findIndex((x) => x.id === momentId) + 1).filter(own);
   const r = rec?.moments[momentId];
   const there = new Set(
@@ -469,6 +473,14 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
         return at;
       }),
   };
+}
+
+/** The words of the place a moment happens in: its layout and what stands in it, as the breakdown says them. */
+export function placeWordsOf(b: Breakdown, momentId: string): string {
+  const m = b.scenes.flatMap((sc) => sc.moments).find((x) => x.id === momentId);
+  const l = m ? b.places.find((x) => x.id === m.place) : undefined;
+  const f = (l?.fields ?? {}) as Record<string, { value?: string | null } | undefined>;
+  return [f.geography?.value, f.landmarks?.value].filter(Boolean).join('; ');
 }
 
 /**

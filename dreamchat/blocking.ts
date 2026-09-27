@@ -50,6 +50,12 @@ export type Spot = {
    * whale is placed as a figure lying on the floor, and was said to be all of it under a metre of water.
    */
   height?: number;
+  /**
+   * How far a fixture's bottom is off the floor, in metres, where the place's words put it up a wall or on
+   * the ceiling (camera.ts mountOf: "the high round window", "a clock on the wall"): set by the camera
+   * rules. Without it every fixture stood on the floor, and deep water hid a window high in the wall.
+   */
+  above?: number;
 };
 
 /** Where someone or something (a car, a boat) has moved to at a moment: its new spot, which way it faces, how they are. */
