@@ -85,8 +85,22 @@ export function jsonOnly(text: string): string {
 /** Runs `claude` with these arguments and this input: its output, errors and exit code. */
 export type ClaudeRun = (args: string[], input: string) => Promise<{ out: string; err: string; code: number }>;
 
+/**
+ * The input goes on the command line, right after `-p`, when it can: given on stdin, the CLI waits 3 s for
+ * it and goes on without it when the machine is loaded ("no stdin data received in 3s", 27 Sep, dozens
+ * of times a replay). An input too long for the command line, or read as an option (a leading dash),
+ * goes on stdin.
+ */
+export const CLAUDE_ARG_MAX = 100_000;
+
 const spawnClaude: ClaudeRun = async (args, input) => {
-  const proc = Bun.spawn(args, { cwd: tmpdir(), stdin: new Blob([input]), stdout: 'pipe', stderr: 'pipe' });
+  const inline = input.length <= CLAUDE_ARG_MAX && !input.startsWith('-');
+  const proc = Bun.spawn(inline ? [args[0], args[1], input, ...args.slice(2)] : args, {
+    cwd: tmpdir(),
+    stdin: inline ? 'ignore' : new Blob([input]),
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
   const [out, err, code] = await Promise.all([
     new Response(proc.stdout).text(),
     new Response(proc.stderr).text(),
