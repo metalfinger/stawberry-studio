@@ -17,11 +17,13 @@
 // framePrompt; on sends what the sheet assembles.
 import { assembleCut, type Assembled } from './assemble';
 import { DIRECTIONS, type Eye, type Side } from './blocking';
-import { cameraMode, handsIn, type RoomTurn, roomTurn, sameCameraAs, selfIn } from './camera';
+import { cameraMode, handsIn, type RoomTurn, roomTurn, sameCameraAs, selfIn, turnedBetween } from './camera';
 import {
+  camerasOf,
   type ContinuityPlan,
   type CutPlan,
   pictureName,
+  placePlan,
   planBy,
   type RefRole,
   type Relation,
@@ -293,7 +295,16 @@ export type CutSheet = {
 // ── the dream it is read from ────────────────────────────────────────────────
 
 /** The dream as a cut sheet reads it: its breakdown, the tree resolved from it, and the story record. */
-export type SheetDream = { breakdown: Breakdown; tree: DreamTree | null; record: StoryRecord | null };
+export type SheetDream = {
+  breakdown: Breakdown;
+  tree: DreamTree | null;
+  record: StoryRecord | null;
+  /**
+   * With the camera rules: each cut's camera as the plan has it (its own, or an edit's picture's), so the
+   * sheet reads how cuts stand to each other from the very cameras the plan does.
+   */
+  cameras?: Record<string, Eye>;
+};
 
 /**
  * The dream as every cut sheet of it reads it, made once for all its cuts: the story record from the
@@ -330,7 +341,12 @@ export function sheetDream(x: {
   } catch {
     tree = null;
   }
-  return { breakdown: x.breakdown, tree, record };
+  return {
+    breakdown: x.breakdown,
+    tree,
+    record,
+    ...(cameraMode() === 'on' ? { cameras: Object.fromEntries(camerasOf(x.plan)) } : {}),
+  };
 }
 
 export type CutSheetInput = {
@@ -459,12 +475,8 @@ export function cutSheet(x: CutSheetInput): CutSheet {
   const camera = cameraMode() === 'on';
   // With the camera rules, how one moment stands to another is the plan's: the jump's own moment is on
   // its far side, and cameras placed on one floor plan say whether two face the same side.
-  const cams = new Map<string, Eye>();
-  if (camera && dream?.tree)
-    for (const m of all) {
-      const eye = cameraOf(treeNode(dream.tree, m.id)?.node);
-      if (eye) cams.set(m.id, eye);
-    }
+  // The plan's cameras (camerasOf): the same the plan read its relations from.
+  const cams = new Map<string, Eye>(camera ? Object.entries(dream?.cameras ?? {}) : []);
   const relate =
     camera && b
       ? relationIn(all, { camera: true, sides: sidesByCamera(b, cams), same: sameByCamera(b, cams) })
@@ -498,6 +510,18 @@ export function cutSheet(x: CutSheetInput): CutSheet {
     dreamerId: b?.people.find((p) => p.is_dreamer)?.id,
     prevCamera: prevNode ? cameraOf(prevNode) : null,
     prevSide: (prevNode?.sheet.side.value as string | null | undefined) ?? null,
+    ...(camera && b && prevMoment
+      ? {
+          rules: {
+            eye: cams.get(frame.id) ?? null,
+            prevEye: cams.get(prevMoment.id) ?? null,
+            samePlan: !!placePlan(b, frame.id) && placePlan(b, frame.id) === placePlan(b, prevMoment.id),
+            crossed: !!plan?.crossed,
+          },
+        }
+      : camera
+        ? { rules: { eye: null, prevEye: null, samePlan: false, crossed: false } }
+        : {}),
   });
   const rules =
     camera && b
@@ -510,7 +534,8 @@ export function cutSheet(x: CutSheetInput): CutSheet {
           earlier,
           record,
           names,
-          prev: prevMoment ? { id: prevMoment.id, order: at, eye: prevNode ? cameraOf(prevNode) : null } : null,
+          prev: prevMoment ? { id: prevMoment.id, order: at, eye: cams.get(prevMoment.id) ?? null } : null,
+          eye: cams.get(frame.id) ?? null,
           prevVisible: prevMoment?.visible ?? [],
           prevDistance: prevMoment?.distance ?? null,
           dreamerId: dreamer?.id ?? b.people.find((p) => p.is_dreamer)?.id,
@@ -674,6 +699,9 @@ export const REVERSE_DEGREES = 135;
 /** A cut's camera on the floor plan, its own or its shot's, as the tree has it. */
 const cameraOf = (node: CutNode | undefined): Eye | null => (node?.sheet.camera.value as Eye | null) ?? null;
 
+/** How far one camera faces from another, in degrees; 0 where either is missing. */
+const turnedBetweenEyes = (a: Eye | null, z: Eye | null) => (a && z ? turnedBetween(a, z) : 0);
+
 /** How far a cut's camera faces from another's, in degrees; 0 where either has none. */
 function turnedFrom(tree: TreeLayer | null, prev: Eye | null): number {
   const eye = tree?.sheet.camera?.value as Eye | null | undefined;
@@ -699,6 +727,12 @@ function tagsOf(x: {
   dreamerId: string | undefined;
   prevCamera: Eye | null;
   prevSide: string | null;
+  /**
+   * With the camera rules: this cut's and the cut before's cameras as the plan has them, whether both are
+   * on one floor plan (a reverse is the room turned, never two places), and whether the plan has it cross
+   * the scene's line (one definition: the plan's, which placed the camera).
+   */
+  rules?: { eye: Eye | null; prevEye: Eye | null; samePlan: boolean; crossed: boolean };
 }): CutTags {
   const cast = x.inView.filter((e) => e.kind === 'character');
   const pov = x.eyes === 'dreamer';
@@ -737,20 +771,24 @@ function tagsOf(x: {
       : seat
         ? 'seat'
         : // In the same place with the camera turned round from the cut before: a reverse angle, the room turned.
-          x.toPrev !== 'other_place' && turnedFrom(x.tree, x.prevCamera) >= REVERSE_DEGREES
+          x.toPrev !== 'other_place' &&
+            (x.rules
+              ? x.rules.samePlan && turnedBetweenEyes(x.rules.eye, x.rules.prevEye) >= REVERSE_DEGREES
+              : turnedFrom(x.tree, x.prevCamera) >= REVERSE_DEGREES)
           ? 'reverse'
           : x.toPrev;
   // Crossing the line: on the other side of the scene's line from the cut before, each side known.
   const sides = ['established', 'reverse'];
-  const crossed =
-    x.toPrev !== null &&
-    x.toPrev !== 'other_place' &&
-    x.toPrev !== 'shift' &&
-    !!side &&
-    !!x.prevSide &&
-    sides.includes(side) &&
-    sides.includes(x.prevSide) &&
-    side !== x.prevSide;
+  const crossed = x.rules
+    ? x.rules.crossed
+    : x.toPrev !== null &&
+      x.toPrev !== 'other_place' &&
+      x.toPrev !== 'shift' &&
+      !!side &&
+      !!x.prevSide &&
+      sides.includes(side) &&
+      sides.includes(x.prevSide) &&
+      side !== x.prevSide;
   // What the picture shows: the record's moment lists and its place, and whoever the camera takes in.
   // Whoever is only there, out of the picture, is not counted.
   const inPicture = new Set([
@@ -802,6 +840,22 @@ function tagsOf(x: {
   };
 }
 
+/**
+ * Across a reverse angle, the picture before is neither the picture edited nor where things stand: it
+ * shows the room from the other side (camera rules). The earlier pictures a cut is therefore not drawn
+ * from, by id.
+ */
+export function notDrawnFrom(
+  move: CutTags['move'],
+  prev: string,
+  earlier: Pick<SheetEarlier, 'id' | 'kind' | 'role'>[],
+): string[] {
+  if (move !== 'reverse') return [];
+  return earlier
+    .filter((e) => e.kind === 'cut' && e.id === prev && (e.role === 'base' || e.role === 'composition'))
+    .map((e) => e.id);
+}
+
 /** Which side of a place a camera faces most: its front, back or a side. */
 function sideFaced(eye: Eye): Side {
   return (Object.entries(DIRECTIONS) as [Side, { x: number; y: number }][]).reduce((a, b) =>
@@ -825,12 +879,14 @@ function cameraLayer(x: {
   record: RecordLayer | null;
   names: Record<string, string>;
   prev: { id: string; order: number; eye: Eye | null } | null;
+  /** This cut's camera as the plan has it: its own, or the picture's it is edited from. */
+  eye: Eye | null;
   prevVisible: string[];
   prevDistance: string | null;
   dreamerId: string | undefined;
 }): { layer: CameraLayer; flags: string[] } {
   const f = x.frame.frame!;
-  const eye = x.plan?.eye ?? null;
+  const eye = x.eye;
   const flags: string[] = [];
   const floor = planBy(x.b, x.frame.id);
   const named = (id: string) => x.names[id] ?? floor?.spots.find((s) => s.id === id)?.name ?? id;
@@ -851,11 +907,10 @@ function cameraLayer(x: {
         prevFaced: sideFaced(x.prev.eye),
       });
     }
-    for (const e of x.earlier)
-      if (e.kind === 'cut' && e.id === x.prev.id && (e.role === 'base' || e.role === 'composition')) {
-        dropped.push(e.id);
-        flags.push(`reverse_not_drawn_from:${e.id}`);
-      }
+    for (const id of notDrawnFrom(x.tags.move, x.prev.id, x.earlier)) {
+      dropped.push(id);
+      flags.push(`reverse_not_drawn_from:${id}`);
+    }
   }
 
   // Through the dreamer's own eyes: their hands and arms only where they do something with them.

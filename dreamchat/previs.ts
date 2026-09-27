@@ -939,7 +939,7 @@ export function wallsSeen(plan: Blocking, eye: Eye, leaveOut: string[], name: (i
     const seen = r.seen.get(ids[w]);
     const shows = !!seen && seen.share >= 0.02;
     if (a < 45 && shows) return { wall: w, where: 'ahead' as const };
-    if (a > 135 && !shows && (w === 'front' || w === 'back')) return { wall: w, where: 'behind' as const };
+    if (a > 135 && !shows) return { wall: w, where: 'behind' as const };
     if (shows) return { wall: w, where: seen!.cx < 0.5 ? ('left' as const) : ('right' as const) };
     // A side wall out of the picture is only out of it; the front or back, behind the camera.
     return { wall: w, where: a > 90 && (w === 'front' || w === 'back') ? ('behind' as const) : ('out' as const) };
@@ -1267,23 +1267,20 @@ function thingWords(
 }
 
 /**
- * Ridden, a vehicle goes the way it faces, said across the picture (the camera rules' screen
- * direction): the tractor seen from behind the two in its cab was drawn driving at the camera.
+ * A vehicle the moment has going, the way it goes (camera.ts, continuity.ts): said across the picture,
+ * the camera rules' screen direction. The tractor seen from behind the two in its cab was drawn driving
+ * at the camera. Only where it goes, and only the way the plan says: never read off a way it was never
+ * given.
  */
-function headings(shown: { s: Spot }[], plan: Blocking, eye: Eye, called: (id: string) => string): string[] {
+function headings(shown: { s: Spot }[], going: Record<string, V2>, eye: Eye, called: (id: string) => string): string[] {
   return shown
-    .filter(
-      ({ s }) =>
-        !isPerson(s) &&
-        shapeOf(s, plan) === 'vehicle' &&
-        plan.spots.some((o) => isPerson(o) && !o.many && onOf(o, plan)?.t.id === s.id),
-    )
-    .map(({ s }) => `${cap(called(s.id))}, ridden, is ${headingOf(s, plan, eye)}.`);
+    .filter(({ s }) => !!going[s.id])
+    .map(({ s }) => `${cap(called(s.id))} is ${headingOf(going[s.id], eye)}.`);
 }
 
-/** Which way a vehicle goes across the picture: the way it faces, from this camera. */
-function headingOf(s: Spot, plan: Blocking, eye: Eye): string {
-  const f = facing(s, plan);
+/** Which way something going goes across the picture, from this camera. */
+function headingOf(way: V2, eye: Eye): string {
+  const f = unit(way);
   const d = unit(eye.d);
   const ahead = f.x * d.x + f.y * d.y;
   if (ahead > 0.7) return 'heading away from the camera, into the picture';
@@ -1366,8 +1363,24 @@ export function outsideShot(
    * from; and the scene's line, the side of it the camera stays on unless only the other side shows
    * what the moment is about.
    */
-  rules?: { avoid?: Eye[]; line?: { a: V2; b: V2; sign: number } },
-): { eye: Eye; text: string; rules?: string[]; inPicture: string[]; framing: string[] } | null {
+  rules?: {
+    avoid?: Eye[];
+    /** The scene's line and the side of it the cut before stood on. */
+    line?: { a: V2; b: V2; sign: number };
+    /** The two of the line ride one vehicle: seen from any side, they sit where its seats are. */
+    together?: boolean;
+    /** Vehicles going, by id, the way each goes on the plan. */
+    going?: Record<string, V2>;
+  },
+): {
+  eye: Eye;
+  text: string;
+  rules?: string[];
+  inPicture: string[];
+  framing: string[];
+  /** Across the line from the cut before: because the moment looks past them, or only there are they all in it. */
+  crossed?: 'looks' | 'framing';
+} | null {
   const name = (id: string) => plan.spots.find((s) => s.id === id)?.name ?? called(id);
   const inIt = subjects.map((id) => plan.spots.find((s) => s.id === id)).filter((s): s is Spot => !!s && !s.many);
   const people = inIt.filter((s) => isPerson(s));
@@ -1679,6 +1692,8 @@ export function outsideShot(
       const side = signedFromLine(rules.line!.a, rules.line!.b, eye.at);
       return Math.abs(side) >= ON_THE_LINE && Math.sign(side) !== rules.line!.sign;
     })();
+  // Riding one vehicle, the two keep its seats, not the scene's sides: nothing is claimed of their places.
+  const keepsClaim = !crossedLine && !(camera && rules?.together);
   // Nor where a crowd is among them: "Nobody else" beside the many of a crowd (the camera rules).
   const nobodyElse =
     behind.some((x) => isPerson(x.s)) || (camera && whoShown.some((x) => x.s.many))
@@ -1692,7 +1707,7 @@ export function outsideShot(
             ? nobodyElse
               ? ` ${nobodyElse}`
               : ''
-            : ` ${nobodyElse ? `${nobodyElse} ` : ''}${crossedLine ? '' : 'They keep these places in every picture of this scene.'}`.trimEnd()
+            : ` ${nobodyElse ? `${nobodyElse} ` : ''}${keepsClaim ? 'They keep these places in every picture of this scene.' : ''}`.trimEnd()
         }`
       : '',
     ...whatShown.map(({ s, seen }) => `${cap(words(s, seen))}.`),
@@ -1723,10 +1738,10 @@ export function outsideShot(
     ? [
         ...(crossedLine && whoShown.length > 1
           ? [
-              'The camera is on the other side of them from the first picture of them in this scene, so they have changed sides of the picture.',
+              'The camera has crossed to the other side of them from the picture of them before, so from here they have changed sides of the picture.',
             ]
           : []),
-        ...headings(shown, plan, eye, name),
+        ...headings(shown, rules?.going ?? {}, eye, name),
         ...waterWords(plan, spots, rr, name),
         ...throughWindows(plan, rr, min, called),
       ]
@@ -1735,6 +1750,7 @@ export function outsideShot(
     eye,
     text: sentences.join(' '),
     ...(said.length ? { rules: said } : {}),
+    ...(crossedLine ? { crossed: looks ? ('looks' as const) : ('framing' as const) } : {}),
     inPicture: [
       ...(plan.inside ? [plan.inside] : []),
       ...shown.map((x) => x.s.id),
@@ -1936,7 +1952,7 @@ function waterWords(plan: Blocking, spots: Spot[], r: Render, called: (id: strin
   const metres = Math.max(1, Math.round(plan.water));
   const deep =
     plan.water < 0.3
-      ? 'The water covers the floor here, ankle deep'
+      ? `The water covers the ${plan.indoors ? 'floor' : 'ground'} here`
       : plan.water < 0.75
         ? 'The water stands knee deep here'
         : `The water stands about ${metres} metre${metres > 1 ? 's' : ''} deep here`;
