@@ -41,22 +41,35 @@ Defaults on: checks log (S2), listening (S8). Behind switches, off by default: `
 **Picture evidence.** The S4 check ($3, 20 moments, blind, old against new): new right 15 of 20, old 10 of 20; faults
 put right 5 of 7; guards 10 of 13 against 9 of 13. Its five misses are traced (log, 27 Sep): none is image-model noise.
 
-**In flight when paused (branches, not merged; each was asked to stop at a clean, tested commit and to write its
-state into this file on its branch):**
-- `s5-fix2`: S5 after its second review: earlier pictures' lines that leaked people and layout; the gate on when an
-  earlier picture may carry layout (same camera and place state, never stale, never one the owner judged wrong);
-  side pictures' manifest words; a never-drawn side is no change even without a floor plan; the crowd rule for people
-  only. Then the S5 picture check set (changes listed in the S5 rows).
-- `s6-build`: S6, the one prompt builder, ledger row by row (`DREAMCHAT_ONE_BUILDER`); also owns: the brief writer
-  gets the sheet's facts, a handover drawn mid-act, after-the-fact briefs refused.
-- `postcheck-fixes`: carried things out of view through the dreamer's eyes unless named (owner's rule); fixtures at
-  the height the dream gives them and wall labels without fixture names; a moment entering a place set outside it;
-  floor plans that follow the described layout (windows, aisle, rows, sitters on seats); room sides said on every cut.
-- `checkpoint-order`: the picture-check tool draws moments of one dream in story order, shows the frame before on the
-  judging page, and never sends an earlier picture the owner judged wrong.
-Worktrees: `~/Documents/code/stawberry-studio/.claude/worktrees/agent-*` (one per branch). To resume: for each branch,
-read its HARNESS_PLAN.md, run `bunx tsc --noEmit` and `bun test --timeout 60000`, get an independent review, fix,
-cherry-pick onto lab (resolve this file by keeping both sides, then one row a step in the two tables), push.
+**In flight when paused: four branches, each at a clean, tested commit, not merged, not reviewed. They exist only on
+this Mac (local branches in `~/Documents/code/stawberry-studio/.claude/worktrees/agent-*`; only `lab/dream-chat` is
+pushed). Each branch's own HARNESS_PLAN.md says what it did and how to resume.**
+- `s5-fix2` (4 commits on ca71e3e, head 9372c28): S5's second-review fixes. Earlier pictures sent for their look
+  now say exactly what to take and "nobody and nothing from it comes into this picture but who and what this picture
+  has in it" — in S5 and in today's default prompts (default prompts change: frozen 25 of 140, live 80 of 477;
+  images unchanged). The gate: never send a picture the owner judged wrong or one S9 finds stale; an earlier picture
+  carries the room only when its camera is close on the same floor plan and the place is in the same state (sent
+  with a different camera or state, for layout: frozen 2→0, live 37→0). A never-drawn side is no change anywhere
+  (43 live side pictures gone); the crowd rule is for people only. Guards 36/36 with S5 off and on. Left: the S5
+  picture-check set (steps in its "S5 fix round two" section), review, merge.
+- `s6-build` (6 commits on 4746967, head 0d733de): S6 started behind `DREAMCHAT_ONE_BUILDER`. Ledger rows 1 (one
+  record per state of the dream), 3 (one image cap) and 4 (each image and paragraph carries who it is for) done;
+  row 2 (one tree) stopped until row 17; rows 5-34 not started (row 5 next: names and ids in words). Row 34 added:
+  the brief built from the sheet's facts, a handover drawn mid-act, after-the-fact briefs refused. No prompt changes
+  yet (0 pictures moved); suite passes with every switch on.
+- `postcheck-fixes` (2 commits on d3b8cb2, head 45d82e4): fixture heights done (behind the camera switch): fixtures
+  said high, at the top or on the ceiling are drawn on the wall at that height, above the water; no wall is labelled
+  with a fixture's name (library-1 m5's window now 4.4-5.9 m up, above 4.4 m of water; counted cases 28/33 → 29/34
+  with the new window-height case; 0 worse in the corpus). Traced but not built: carried things through the
+  dreamer's eyes (out of view unless named; the steep camera tilt that showed legs), entering a place set outside
+  it (needs a small cached reading), floor plans following the described layout (the planner gets thin place
+  words, not the sketch's), room sides said on every cut.
+- `checkpoint-order` (2 commits on d3b8cb2, head 5a053ed): the picture-check tool draws a dream's moments in story
+  order, each from the earlier one's new picture; the judging page shows the frame each was drawn from; a guard the
+  owner has since called wrong becomes a fault; a picture the owner judged wrong is never sent. Not yet run on real
+  data.
+Merge order suggested: checkpoint-order, postcheck-fixes, s5-fix2 (then the S5 check), s6-build. `s5-fix2`,
+`s6-build` and `postcheck-fixes` all change `continuity.ts` and `evals/prompt-cases.ts`: reconcile when merging.
 
 **Next, in order.** 1) Merge the four branches above, each after review. 2) The S5 picture check (about $3; draw with
 `evals/checkpoint.ts`, judged on the local page). 3) Finish S6 (the rest of the ledger), review, merge. 4) The owner
