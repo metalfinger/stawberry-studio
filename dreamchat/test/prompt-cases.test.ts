@@ -142,6 +142,10 @@ describe('the case set', () => {
       'relation_to',
       'camera_turned_from',
       'camera_differs_from',
+      'first_image',
+      'none_from_other_side',
+      'waits_only_on_sent',
+      'stage_image',
     ]);
     for (const c of cases.filter((x) => x.kind === 'failing' && !x.model_only && !x.set_aside && !x.hypothesis))
       expect(
@@ -215,6 +219,13 @@ describe('the loader refuses a malformed case', () => {
     expect(
       bad({ expectations: [{ kind: 'code', check: 'heading_said', args: { expect: 'up' }, says: 'x' }] })[0],
     ).toContain('not a heading');
+    expect(bad({ expectations: [{ kind: 'code', check: 'first_image', says: 'x' }] })[0]).toContain('is or not');
+    expect(
+      bad({ expectations: [{ kind: 'code', check: 'first_image', args: { is: ['sketch'] }, says: 'x' }] })[0],
+    ).toContain('not a kind of image 1');
+    expect(
+      bad({ expectations: [{ kind: 'code', check: 'first_image', args: { not: ['mockup'] }, says: 'x' }] }),
+    ).toEqual([]);
   });
   test('an ask that is not a question, an unknown class or step, a passing case set aside, an id twice', () => {
     expect(bad({ expectations: [{ kind: 'ask', question: 'the dreamer is there' }] })[0]).toContain(
