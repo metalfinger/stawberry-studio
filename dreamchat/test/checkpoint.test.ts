@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from 'bun:test';
+import { afterAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -45,13 +45,15 @@ import { previsImage } from '../previs';
 import type { Session } from '../session';
 import { DEFAULTS, pinSwitches } from './fakes';
 
+// Frozen dreams are built again and their mock-ups rendered, dry runs and draws made: seconds each, and past
+// bun's 5 s on a busy machine.
+setDefaultTimeout(60_000);
+
 // The checkpoint's own workings, tested under today's defaults whatever the environment sets: the story
 // record on would read what each moment implies from a cache only some checkouts have, and the dry run and
 // the draw each record the switches they ran under. Set here, before any block builds a dream.
 const putBack = pinSwitches(DEFAULTS);
 afterAll(putBack);
-/** Building a frozen dream again and rendering its mock-ups: seconds on a busy machine. */
-const SLOW = 60_000;
 
 const MEDIA = '/media';
 /** A frozen dream (evals/sources), each sketch and picture it drew given a stand-in file under MEDIA. */
@@ -91,7 +93,7 @@ describe('a moment as today would send it, from the run own pictures', () => {
     );
     expect(partsOf(snow).ghosts.map((g) => g.id)).toContain('g1');
     expect(namesOf(t).every((n) => /^(base|identity|location|prop|composition) /.test(n))).toBe(true);
-  }, SLOW);
+  });
 
   test('an in-between picture today plan wants that the run never drew refuses the moment; nothing stands in', () => {
     const without = buildDream(frozen('dream-0926-043003-b0cb', ['g1']));
@@ -99,7 +101,7 @@ describe('a moment as today would send it, from the run own pictures', () => {
     const ghost = t.images.find((im) => im.key.startsWith('ghost:'));
     expect(ghost?.file).toBeUndefined();
     expect(t.refused.some((r) => r.includes('the run never drew the in-between picture'))).toBe(true);
-  }, SLOW);
+  });
 
   test('an earlier picture the run never drew, or a file not on this machine, refuses it too', async () => {
     // The lighthouse, first telling: m1 failed, and m3 takes it for its composition (today's choice, with
@@ -112,7 +114,7 @@ describe('a moment as today would send it, from the run own pictures', () => {
     expect(gone.refused).toEqual([expect.stringContaining('its file is not on this machine (/media/p2.png)')]);
     const all = todayOf(snow, 'm3', { media: MEDIA, exists: () => false });
     expect(all.refused.length).toBe(all.images.filter((im) => !im.key.startsWith('previs:')).length);
-  }, SLOW);
+  });
 });
 
 describe('proposing a set from the prompt cases', () => {
@@ -156,7 +158,7 @@ describe('proposing a set from the prompt cases', () => {
     expect(reverse?.old.picture).toMatch(/^strawberry-home\/media\/[0-9a-f]{64}\.png$/);
     expect(reverse?.description).toBeTruthy();
     expect(candidates.filter((c) => c.why === 'guard').every((c) => c.old.verdict === 'right')).toBe(true);
-  }, SLOW);
+  });
 
   const change = (share: number, words = 1): Change => ({ words, of: 100, images: 0, imagesOf: 4, previs: false, share });
   const today = (refused: string[] = []): Today => ({
@@ -207,7 +209,7 @@ describe('proposing a set from the prompt cases', () => {
     expect(proposeSet(measured, { ...opts, spent: 0.3 }).set.moments.map((x) => x.id)).toEqual(['c-m3', 'b-m2']);
     // It pins where its results will be kept.
     expect(proposeSet(measured, { ...opts, results: '/data/runs/checkpoint/s4' }).set.results).toBe('/data/runs/checkpoint/s4');
-  }, SLOW);
+  });
 
   test('how much changed: words and images taken out and put in, and a mock-up rendered otherwise', () => {
     const same = changeOf({ prompt: 'a b c', images: ['base previs:m1'] }, { prompt: 'a b c', images: ['base previs:m1'] });
@@ -221,7 +223,7 @@ describe('proposing a set from the prompt cases', () => {
     expect(c.images).toBe(2);
     expect(c.previs).toBe(true);
     expect(c.share).toBeCloseTo(8 / 6 + 3 / 2, 3);
-  }, SLOW);
+  });
 
   test("a set's shape is checked: an unknown kind, verdict or drawing is an error", () => {
     const set: CheckpointSet = {
@@ -238,7 +240,7 @@ describe('proposing a set from the prompt cases', () => {
     };
     const problems = validateSet(set).join('\n');
     for (const p of ['name S4 bad', 'why must be fault or guard', 'names its version', 'draw must be', 'verdict must be', 'no file']) expect(problems).toContain(p);
-  }, SLOW);
+  });
 });
 
 describe('old against new, blind', () => {
@@ -263,7 +265,7 @@ describe('old against new, blind', () => {
       expect(Math.abs(inGuards * 2 - g)).toBeLessThanOrEqual(1);
       expect(Math.abs((inFaults + inGuards) * 2 - (f + g))).toBeLessThanOrEqual(1);
     }
-  }, SLOW);
+  });
 
   test('the same set is always shown the same way, whatever its order; nothing in the order says which is which', () => {
     const set = [...ms(6, 'fault'), ...ms(6, 'guard')];
@@ -275,7 +277,7 @@ describe('old against new, blind', () => {
     const names = ['s4', 's5', 's10', 'a', 'b', 'c'];
     expect(names.some((n) => JSON.stringify(abOrder(n, set)) !== JSON.stringify(o))).toBe(true);
     expect(alternating && names.every((n) => JSON.stringify(abOrder(n, set)) === JSON.stringify(o))).toBe(false);
-  }, SLOW);
+  });
 
   test('the page gets A and B by name only; the key says which is old', () => {
     const order = { 'x-m1': 'old' as const, 'y-m2': 'new' as const };
@@ -294,7 +296,7 @@ describe('old against new, blind', () => {
     expect(made.copies).toContainEqual({ from: '/o/2.png', to: 'img/y-m2-b.jpg' });
     // Nothing on the page says old or new.
     expect(JSON.stringify(made.data)).not.toMatch(/"(old|new)"|\/o\/|\/n\//);
-  }, SLOW);
+  });
 });
 
 describe('the cap', () => {
@@ -317,7 +319,7 @@ describe('the cap', () => {
     // Drawn again, the attempt before is kept with the ones before it.
     expect(earlierOf(rs.entries.b).map((x) => x.jobId)).toEqual(['j2', 'j3']);
     expect(earlierOf(rs.entries.c)).toEqual([]);
-  }, SLOW);
+  });
 
   test('refuses to start over the cap, and knows the room left', () => {
     expect(DEFAULT_CAP).toBe(3);
@@ -329,7 +331,7 @@ describe('the cap', () => {
     expect(roomUnder(3, 0)).toBe(20);
     expect(roomUnder(3, 0.45)).toBe(17);
     expect(roomUnder(3, 3.1)).toBe(0);
-  }, SLOW);
+  });
 
   test('nothing is drawn again on its own', () => {
     const rs = {
@@ -351,7 +353,7 @@ describe('the cap', () => {
     expect(whatToDraw(ids, rs, { only: ['unknown'], redrawPaid: true }).todo).toEqual(['unknown', 'capped', 'new']);
     // A picture drawn is never drawn again, even when named.
     expect(whatToDraw(['drawn'], rs, { only: ['drawn'], redrawPaid: true }).todo).toEqual([]);
-  }, SLOW);
+  });
 });
 
 describe('the answers and the score', () => {
@@ -377,7 +379,7 @@ describe('the answers and the score', () => {
     expect(put({ id: 'y-m2', answer: 'maybe' })).toContain('one of a, b, both, neither');
     expect(put({ id: 'y-m2', note: 5 })).toContain('a note is text');
     expect(put(null)).toContain('send');
-  }, SLOW);
+  });
 
   test('scored against the key: a fault put right, a guard kept, and the old picture as judged this time', () => {
     const set = {
@@ -401,7 +403,7 @@ describe('the answers and the score', () => {
     const lost = scoreOf(set, key, { ...answers, answers: { 'y-m2': { answer: 'b', note: '', at: 't' } } });
     expect(lost.guards.stillRight).toBe(0);
     expect(lost.moments.find((x) => x.id === 'y-m2')).toMatchObject({ newRight: false, oldRight: true });
-  }, SLOW);
+  });
 
   test('the local page: its data without the key, pictures by name only, every answer written as it comes', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'checkpoint-judge-'));
@@ -450,7 +452,7 @@ describe('the answers and the score', () => {
     } finally {
       stop();
     }
-  }, SLOW);
+  });
 });
 
 describe('the command line', () => {
@@ -476,7 +478,7 @@ describe('the command line', () => {
       ['--dry', 'x.json', '--no-imply', '--read-implied'],
     ])
       expect('error' in parseArgs(bad)).toBe(true);
-  }, SLOW);
+  });
 
   test('switches set for a while, then as they were; and where two records of them differ', async () => {
     const was = process.env.DREAMCHAT_CAMERA;
@@ -491,7 +493,7 @@ describe('the command line', () => {
     expect(switchesDiffer({ DREAMCHAT_RECORD: 'on' }, { DREAMCHAT_RECORD: 'on', DREAMCHAT_CAMERA: 'on' })).toEqual([
       'DREAMCHAT_CAMERA unset then, =on now',
     ]);
-  }, SLOW);
+  });
 });
 
 describe('as the harness would send it: approval, "you", the brief', () => {
@@ -504,7 +506,7 @@ describe('as the harness would send it: approval, "you", the brief', () => {
     delete ghost.build!.frames!.find((f) => f.id === 'g1')!.review;
     const g = todayOf(buildDream(ghost), 'm3', { media: MEDIA, exists: everywhere });
     expect(g.refused.some((r) => r.includes('ghost:') && r.includes('nobody approved it'))).toBe(true);
-  }, SLOW);
+  });
 
   test('words that call the dreamer "you" refuse the moment: the harness rewords them with a model first', () => {
     const s = frozen('dream-0926-043003-b0cb');
@@ -512,7 +514,7 @@ describe('as the harness would send it: approval, "you", the brief', () => {
     m.action = `${m.action} You hold your breath.`;
     const t = todayOf(buildDream(s), 'm3', { media: MEDIA, exists: everywhere });
     expect(t.refused.some((r) => r.includes('call the dreamer "you" (action)'))).toBe(true);
-  }, SLOW);
+  });
 
   test('a moment without a brief for its view is known; a brief for that view, given as the harness keeps one, is drawn with', () => {
     // The night market's m2: today's plan has a view no brief was written for.
@@ -536,7 +538,7 @@ describe('as the harness would send it: approval, "you", the brief', () => {
     // A brief for another view is not taken.
     const other = buildDream(withBriefs(s, { m2: { view: 'another view', text } }));
     expect(todayOf(other, 'm2', { media: MEDIA, exists: everywhere }).briefless).toBe(true);
-  }, SLOW);
+  });
 });
 
 describe('the set, the key and the ledger, held fast', () => {
@@ -573,7 +575,7 @@ describe('the set, the key and the ledger, held fast', () => {
     expect(capOf({ cap_usd: 3 }, 10)).toBe(3);
     expect(capOf({ cap_usd: 3 }, 1.5)).toBe(1.5);
     expect(capOf({}, undefined)).toBe(DEFAULT_CAP);
-  }, SLOW);
+  });
 
   test('the key is written once: a moment keeps its A and B, one drawn later is placed to keep the drawn ones balanced', () => {
     const ms = Array.from({ length: 6 }, (_, i) => ({ id: `f-${i}`, why: 'fault' as const }));
@@ -590,7 +592,7 @@ describe('the set, the key and the ledger, held fast', () => {
       'f-1': { a: 'new', b: 'old' },
     });
     expect(() => mergeKey(key, { 'f-0': { a: 'new', b: 'old' } })).toThrow('never changed');
-  }, SLOW);
+  });
 
   test('an answer given on pictures that have changed since is not counted', () => {
     const set = { name: 's4', moments: [{ id: 'x-m1', why: 'fault', old: { verdict: 'wrong' } }] } as unknown as CheckpointSet;
@@ -604,7 +606,7 @@ describe('the set, the key and the ledger, held fast', () => {
     const since = scoreOf(set, key, given, { 'x-m1': { a: 'aaa', b: 'ccc' } });
     expect(since.faults.judged).toBe(0);
     expect(since.stale).toEqual(['x-m1']);
-  }, SLOW);
+  });
 
   test("every job in the store the results do not know, in any state, is stray; a run stopped while starting takes its node's own job", () => {
     const at = 't';
@@ -627,7 +629,7 @@ describe('the set, the key and the ledger, held fast', () => {
     expect(got.unsent).toEqual(['c']);
     // An estimate the engine never gave counts as the most one picture may cost.
     expect(spentIn({ entries: { x: { id: 'x', state: 'ready', jobId: 'j', at } as Attempt } })).toBeCloseTo(0.2, 6);
-  }, SLOW);
+  });
 });
 
 describe('--draw, against a stand-in engine: only what the dry run printed, under the cap, one at a time', async () => {
@@ -776,7 +778,7 @@ describe('--draw, against a stand-in engine: only what the dry run printed, unde
     });
     await draw(drawArgs(), w.set, w.setFile, w.f, again.e, { allowFake: true });
     expect(again.started).toEqual([]);
-  }, SLOW);
+  });
 
   test('--brief has the writer brief each moment without one as the harness asks it; the brief is kept, and drawn with', async () => {
     const w = world();
@@ -806,7 +808,7 @@ describe('--draw, against a stand-in engine: only what the dry run printed, unde
     const v = world();
     const none = await dry({ ...strict, brief: true }, v.set, v.setFile, v.f, { shot: async () => null });
     for (const id of lacking) expect(none.moments[id].refused).toContain(BRIEFLESS);
-  }, SLOW);
+  });
 
   test('refuses on fal only, with the checks acting, without a pinned ledger, or when the set or switches moved', async () => {
     const w = world();
@@ -828,7 +830,7 @@ describe('--draw, against a stand-in engine: only what the dry run printed, unde
     );
     expect(started).toEqual([]);
     expect(existsSync(join(w.f.out, 'results.json'))).toBe(false);
-  }, SLOW);
+  });
 
   test('a moment refused in the dry run, or changed since, is not drawn', async () => {
     const w = world();
@@ -846,7 +848,7 @@ describe('--draw, against a stand-in engine: only what the dry run printed, unde
     const { e, started } = engine(w.f.home);
     await draw(drawArgs(), w.set, w.setFile, w.f, e, { allowFake: true });
     expect(started).toEqual([]);
-  }, SLOW);
+  });
 
   test("a job in the store the results do not know, whatever its state, stops the draw; one of a run stopped while starting is kept and counted", async () => {
     const w = world();
@@ -879,7 +881,7 @@ describe('--draw, against a stand-in engine: only what the dry run printed, unde
     const rs = resultsOf(w.f.out);
     expect(rs.entries['snow-train-m2']).toMatchObject({ jobId: 'lost-job', state: 'ready' });
     expect(spentIn(rs)).toBeCloseTo(0.2 + 0.15, 6);
-  }, SLOW);
+  });
 
   test('an error after the engine made the job keeps the job; a picture is never approved for more than is left under the cap', async () => {
     const w = world();
@@ -908,7 +910,7 @@ describe('--draw, against a stand-in engine: only what the dry run printed, unde
       'over the $0.20 cap',
     );
     expect(none.started).toEqual([]);
-  }, SLOW);
+  });
 
   // Slow (the engine is a Python process a call), so only when asked: CHECKPOINT_ENGINE_TEST=1, with
   // STRAWBERRY_PYTHON the engine's Python. Its own offline provider draws a marked test card; nothing is paid.
@@ -941,5 +943,5 @@ describe('--draw, against a stand-in engine: only what the dry run printed, unde
     await expect(draw(drawArgs(), w.set, w.setFile, w.f, e, { allowFake: true })).rejects.toThrow('another --draw');
     expect(started).toEqual([]);
     expect(existsSync(join(w.f.out, 'draw.lock'))).toBe(true);
-  }, SLOW);
+  });
 });

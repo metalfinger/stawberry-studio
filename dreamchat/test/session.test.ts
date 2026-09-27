@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, spyOn, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, setDefaultTimeout, spyOn, test } from 'bun:test';
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -24,6 +24,10 @@ import {
   withRouted,
   withSwitches,
 } from './fakes';
+
+// Whole conversations are driven to their pictures, each planned as the harness plans it: seconds each, and
+// past bun's 5 s on a busy machine.
+setDefaultTimeout(30_000);
 
 const cfg = dreamConfig();
 const required = cfg.goals.filter((g) => !g.optional).map((g) => g.id);
@@ -1280,7 +1284,7 @@ describe('a whole conversation', () => {
       expect(x.report.stale.map((b) => b.id)).not.toContain('m1');
     }
     expect(on.redrawn).toBe(off.redrawn);
-  }, 60_000);
+  });
 
   test('a reaction naming no picture is about what the last reply put to them, never an earlier one', async () => {
     // The judge vouches for every take, so the close-up is drawn from the wide before their word.

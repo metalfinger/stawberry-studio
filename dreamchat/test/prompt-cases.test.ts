@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { diffDumps, diffLines, type Dump, dumpOf, sentOf, verifyFrozen, wordDiff } from '../evals/corpus';
@@ -29,6 +29,9 @@ import type { Answer } from '../jev';
 import { imageName, rebuild } from '../plan';
 import type { Session } from '../session';
 import { fakeJev, noul } from './fakes';
+
+// Frozen dreams are planned or rebuilt whole: seconds each, and past bun's 5 s on a busy machine.
+setDefaultTimeout(30_000);
 
 const EVALS = join(import.meta.dir, '..', 'evals');
 const read = <T>(name: string) => JSON.parse(readFileSync(join(EVALS, name), 'utf8')) as T;

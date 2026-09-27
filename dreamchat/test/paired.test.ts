@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { join } from 'node:path';
 import {
   afterImage1,
@@ -19,6 +19,9 @@ import {
   wordsOf,
 } from '../evals/paired-arms';
 import { inViewOf } from '../frames';
+
+// Frozen dreams are planned or rebuilt whole: seconds each, and past bun's 5 s on a busy machine.
+setDefaultTimeout(30_000);
 
 // A dream as frozen (evals/sources), each sketch and picture it drew given a stand-in file.
 async function frozen(name: string): Promise<SavedDream> {

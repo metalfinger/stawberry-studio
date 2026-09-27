@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { type CutPlan, planContinuity } from '../continuity';
@@ -30,6 +30,9 @@ import {
   styleBlock,
   toldColours,
 } from '../sheets';
+
+// Frozen dreams are planned or rebuilt whole: seconds each, and past bun's 5 s on a busy machine.
+setDefaultTimeout(30_000);
 
 const style = {
   id: 'd',

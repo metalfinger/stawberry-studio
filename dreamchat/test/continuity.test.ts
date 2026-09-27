@@ -1,6 +1,9 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { drawOrder, meant, placePlan, planBy, planContinuity } from '../continuity';
 import type { Breakdown, Moment } from '../producer';
+
+// Frozen dreams are planned or rebuilt whole: seconds each, and past bun's 5 s on a busy machine.
+setDefaultTimeout(30_000);
 
 const detail = (value: string | null = null) => ({ value, said: false });
 

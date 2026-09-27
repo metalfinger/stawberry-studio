@@ -2,7 +2,7 @@
 // pictures the way the drawing path draws them (each picture recorded as it is sent, in plan order), then
 // changed after drawing, one change at a time. The pictures each change must make stale are worked out
 // here from what each picture was sent (its images, by name), never from the record's own `from`.
-import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { join } from 'node:path';
 import {
   type AsDrawn,
@@ -39,6 +39,10 @@ import {
 } from '../session';
 import type { Item } from '../sheets';
 import { DEFAULTS, pinSwitches, withSwitches } from './fakes';
+
+// Frozen dreams are drawn through and planned again, under two settings of the switches: seconds each, and
+// past bun's 5 s on a busy machine.
+setDefaultTimeout(60_000);
 
 const SOURCES = join(import.meta.dir, '..', 'evals', 'sources');
 const DREAMS = ['dream-0926-062232-a44a', 'dream-0926-083656-8ceb'];
@@ -215,7 +219,7 @@ for (const [setting, DREAM] of SETTINGS.flatMap((x) => DREAMS.map((d) => [x, d] 
         stale: [],
         behind: [],
       });
-    }, 60_000);
+    });
 
     test('a rebuild reading the records gives each picture as sent, even after the dream has changed', async () => {
       const { s, sent } = await drawn(DREAM);
@@ -229,7 +233,7 @@ for (const [setting, DREAM] of SETTINGS.flatMap((x) => DREAMS.map((d) => [x, d] 
       }
       // Without them, the look as it stands is told.
       expect(rebuild(x, { asDrawn: false }).pictures.some((p) => p.prompt.includes('brighter'))).toBe(true);
-    }, 60_000);
+    });
 
     test('a record whose sketch copy is not kept is rebuilt as the dream stands, never from half a record', async () => {
       const { s } = await drawn(DREAM);
@@ -241,7 +245,7 @@ for (const [setting, DREAM] of SETTINGS.flatMap((x) => DREAMS.map((d) => [x, d] 
       const users = x.build!.frames!.filter((y) => Object.values(currentRecord(y)?.sketches ?? {}).includes(hash));
       expect(users.length).toBeGreaterThan(0);
       for (const u of users) expect(rebuiltOf(r, u)!.asDrawn).toBeUndefined();
-    }, 60_000);
+    });
 
     test('a sketch drawn again makes exactly the pictures sent it, and those drawn from them, stale', async () => {
       const { s } = await drawn(DREAM);
@@ -254,7 +258,7 @@ for (const [setting, DREAM] of SETTINGS.flatMap((x) => DREAMS.map((d) => [x, d] 
       const direct = sentImage(s, `sketch:${sketch.id}`);
       expect(staleIds(x)).toEqual(andDownstream(s, direct));
       for (const id of staleIds(x)) expect(reasonsOf(x, id)).toContain(direct.includes(id) ? 'sketch' : 'sequence');
-    }, 60_000);
+    });
 
     test("a moment's words corrected make it and what was drawn from it stale", async () => {
       const { s } = await drawn(DREAM);
@@ -264,7 +268,7 @@ for (const [setting, DREAM] of SETTINGS.flatMap((x) => DREAMS.map((d) => [x, d] 
       f.fields = { ...f.fields, action: { value: `${f.fields.action!.value}, at night`, said: true } };
       expect(staleIds(x)).toEqual(andDownstream(s, [source.id]));
       expect(reasonsOf(x, source.id)).toEqual(['words']);
-    }, 60_000);
+    });
 
     test('an earlier picture drawn again makes stale what was drawn from its earlier take, not itself', async () => {
       const { s } = await drawn(DREAM);
@@ -282,7 +286,7 @@ for (const [setting, DREAM] of SETTINGS.flatMap((x) => DREAMS.map((d) => [x, d] 
           then: `picture:${source.id} take 1`,
           now: `picture:${source.id} take 2`,
         });
-    }, 60_000);
+    });
 
     test('the look changed makes every picture stale, for its look', async () => {
       const { s } = await drawn(DREAM);
@@ -291,7 +295,7 @@ for (const [setting, DREAM] of SETTINGS.flatMap((x) => DREAMS.map((d) => [x, d] 
       const report = stalenessOf(x);
       expect(report.stale.map((y) => y.id).sort()).toEqual(s.build!.frames!.map((f) => f.id).sort());
       for (const st of report.stale) expect(st.reasons.map((r) => r.kind)).toContain('look');
-    }, 60_000);
+    });
 
     test('someone put into a moment makes it stale for its cast, and nothing else', async () => {
       const { s } = await drawn(DREAM);
@@ -304,7 +308,7 @@ for (const [setting, DREAM] of SETTINGS.flatMap((x) => DREAMS.map((d) => [x, d] 
       else m.things.push(thing!.id);
       expect(staleIds(x)).toEqual([last.id]);
       expect(reasonsOf(x, last.id)).toContain('cast');
-    }, 60_000);
+    });
 
     test("a scene's floor plan planned again makes its moments with a mock-up stale for their camera", async () => {
       const { s } = await drawn(DREAM);
@@ -321,7 +325,7 @@ for (const [setting, DREAM] of SETTINGS.flatMap((x) => DREAMS.map((d) => [x, d] 
       // Stale only in that scene, or drawn from a picture that is.
       for (const st of found)
         expect(inScene.has(st.id) || st.reasons.some((r) => r.kind === 'sequence' || r.kind === 'earlier')).toBe(true);
-    }, 60_000);
+    });
 
     test('a moment no longer in the dream is stale because it is no longer planned', async () => {
       const { s } = await drawn(DREAM);
@@ -342,7 +346,7 @@ for (const [setting, DREAM] of SETTINGS.flatMap((x) => DREAMS.map((d) => [x, d] 
       const others = report.stale.filter((y) => !gone.has(y.id));
       if (!recordOn) expect(others).toEqual([]);
       for (const y of others) for (const r of y.reasons) expect(['record', 'camera', 'sequence']).toContain(r.kind);
-    }, 60_000);
+    });
 
     test('a record kept under other switches or keys is not comparable: unknown, never stale', async () => {
       const { s } = await drawn(DREAM);
@@ -368,7 +372,7 @@ for (const [setting, DREAM] of SETTINGS.flatMap((x) => DREAMS.map((d) => [x, d] 
       ]);
       expect(mixed.stale.map((y) => y.id)).not.toContain(f.id);
       expect(driftOf(env, env)).toBeNull();
-    }, 60_000);
+    });
 
     test('a moment sent a copy of itself behind the dream is listed behind, not stale; the fresh send brings it up', async () => {
       // Sent without someone the plan has in it, as a moment kept the cast it was first put in with.
@@ -395,7 +399,7 @@ for (const [setting, DREAM] of SETTINGS.flatMap((x) => DREAMS.map((d) => [x, d] 
         );
       });
       expect(stalenessOf(fresh).behind).toEqual([]);
-    }, 60_000);
+    });
 
     test("words reworded keep the dreamer's said where the breakdown holds the same words", async () => {
       const { s } = await drawn(DREAM);
@@ -406,7 +410,7 @@ for (const [setting, DREAM] of SETTINGS.flatMap((x) => DREAMS.map((d) => [x, d] 
       // A correction the breakdown never took keeps its own words and said.
       const corrected = { ...f.fields, action: { value: 'something else', said: false } };
       expect(fieldsInForce(corrected, m).action).toEqual({ value: 'something else', said: false });
-    }, 60_000);
+    });
   });
 
 describe("S9's fresh send never undoes the dreamer", () => {
@@ -514,7 +518,7 @@ describe('S9 under the switches in force', () => {
     expect(plain[0]).toEqual(plain[1]);
     expect(turned[0]).toEqual(turned[1]);
     expect(withSwitches(record, () => dreamNowOf(s).plan)).toEqual(plain[1]);
-  }, 60_000);
+  });
 });
 
 describe('S9 keys', () => {
@@ -545,7 +549,7 @@ describe('S9 keys', () => {
     // makes records kept before it incomparable: raise KEYS_VERSION in asdrawn.ts, then set these anew.
     if (process.env.S9_GOLDEN) console.log(JSON.stringify(hashes, null, 2));
     expect({ version: KEYS_VERSION, hashes }).toEqual({ version: 2, hashes: GOLDEN });
-  }, 60_000);
+  });
 });
 
 /**
