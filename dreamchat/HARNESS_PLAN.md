@@ -19,7 +19,7 @@ context mirrors it.
 | S5 References and in-between pictures | Built on `s5-refs` behind DREAMCHAT_REFS (off); in review | subject shown by 2+ images 40 to 1 frozen, pictures waited for but never sent 67 to 0, layout from the other side 2 to 0; a never-drawn side is no change (owner, 27 Sep) |
 | S6 One prompt builder, clean-ups retired | Test written; typed readings of the 526 moments done (branch `s6-readings`) | a ledger of 16 clean-ups, S4's 4 word lists and 14 duplicates, in order; every moment says a fact twice (frozen 2350 facts, live 6595), 21 of 115 frozen moments say an action no picture shows (live 134 of 411); built after S5 |
 | S7 Jev checks routed by tags | Done (routing switch off; every Jev reading logs) | measured on the 122 pictures the owner judged (as sent): the gate and "storyboard complete?" are at chance (AUC 0.36-0.56); 16 library questions not measurable yet; 0 of 28 checks earn acting; a check earns acting only at its measured bar, counted by moments. Run the picture checkpoints with `DREAMCHAT_JEV_ROUTED=on` so the library questions' readings join the owner's new verdicts |
-| S8 Listening | Merged behind DREAMCHAT_LISTEN (off); reviewed fit to turn on (owner's call) | 20 dreams on Claude: either/or 23% to 0, leading 17% to 0, "I don't remember" 0.24 to 0.14, listening ended early 6/20 to 3/20; told facts kept as said 0.942 vs 0.949 (within noise) |
+| S8 Listening | Done: on by default since 27 Sep (`DREAMCHAT_LISTEN=off` brings the old listening back) | 20 dreams on Claude: either/or 23% to 0, leading 17% to 0, "I don't remember" 0.24 to 0.14, listening ended early 6/20 to 3/20; told facts kept as said 0.942 vs 0.949 (within noise) |
 | S9 Record of what was drawn, staleness | Merged behind DREAMCHAT_AS_DRAWN (off); fresh send (DREAMCHAT_FRESH_SEND, off) in review | every picture keeps what it was sent; rebuild as sent 57/61 to 61/61 moments, 6/16 to 16/16 in-between pictures; 258/258 stale pictures found after 56 changes, 0 false; switch or code drift reads unknown, never stale; fresh send: pictures drawn behind the dream 14 to 0 on ten redrawn dreams |
 | S10 Paid benchmark judged by the owner | Not started | about $10 |
 
@@ -2085,3 +2085,8 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   Writer 697 calls in all, Jev about 585 (the go-ahead was for 2,000-3,000). Each word list set against the facts
   (above): where they differ, the facts were right in every case read by hand, but for a still boat or water at the
   floor, which Jev will not confirm. No pictures, no money. `bun test` 693 pass, 1 fail (a five-second time limit in `test/session.test.ts`, "settle waits for a verdict", which loads nothing of this change); the typed tests pass; typecheck clean.
+
+- 27 Sep, S8 done and on by default (the owner's decision after the fresh simulation and its review): `listenOn()`
+  reads on unless `DREAMCHAT_LISTEN=off`. The live server picks it up on its next restart. Tests that describe the
+  listening before S8 now pin it off. Test-isolation fixes and the fresh send's four fixes merged (41e0103,
+  c24d284, 20e912b): the suite passes in 8 switch combinations, twice each.

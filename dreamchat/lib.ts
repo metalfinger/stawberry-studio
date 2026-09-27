@@ -278,9 +278,10 @@ export const RESUMED_LISTEN_LIMIT = 8;
  * Step S8 (listening), behind its switch until measured: the newest thing they raised is followed,
  * every reply is checked against its move, questions are open and on their own words, readings that
  * lead to the same action are summed, the retelling ends with the moments, and only their words are
- * said. Off: today's behaviour.
+ * said. On by default since 27 Sep (the owner's decision after the fresh simulation and its review);
+ * DREAMCHAT_LISTEN=off brings the listening before S8 back.
  */
-export const listenOn = () => process.env.DREAMCHAT_LISTEN === 'on';
+export const listenOn = () => (process.env.DREAMCHAT_LISTEN ?? '').trim().toLowerCase() !== 'off';
 
 export type MoveContext = {
   /** S8's listening rules (DREAMCHAT_LISTEN=on). */

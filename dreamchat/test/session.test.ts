@@ -90,7 +90,7 @@ function pinnedFor(over: Record<string, string | undefined>): void {
 }
 
 describe('the retelling', () => {
-  pinnedFor({ DREAMCHAT_LISTEN: undefined });
+  pinnedFor({ DREAMCHAT_LISTEN: 'off' });
   const allTold = (q: Record<string, Question>): Record<string, Answer> => {
     const out: Record<string, Answer> = { finished_telling: noul(0.9) };
     for (const id of required) Object.assign(out, told(id, 1));
@@ -192,7 +192,7 @@ describe('the dream goes on past the retelling', () => {
 });
 
 describe('a whole conversation', () => {
-  pinnedFor({ DREAMCHAT_LISTEN: undefined });
+  pinnedFor({ DREAMCHAT_LISTEN: 'off' });
   const breakdown = JSON.parse(readFileSync(join(import.meta.dir, 'fixtures', 'breakdown.json'), 'utf8')) as Breakdown;
   breakdown.style_options = [
     { ...breakdown.style_options[0], id: 'a', name: 'sumi ink and wash' },

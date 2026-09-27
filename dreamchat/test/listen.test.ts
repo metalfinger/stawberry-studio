@@ -41,9 +41,9 @@ const required = cfg.goals.filter((g) => !g.optional).map((g) => g.id);
 
 // Each test starts with listening off, whatever the environment sets, and turns it on where it says so;
 // after the file, the switch is as the environment had it.
-const putBack = pinSwitches({ DREAMCHAT_LISTEN: undefined });
+const putBack = pinSwitches({ DREAMCHAT_LISTEN: 'off' });
 afterEach(() => {
-  delete process.env.DREAMCHAT_LISTEN;
+  process.env.DREAMCHAT_LISTEN = 'off';
 });
 afterAll(putBack);
 
@@ -520,7 +520,7 @@ describe('a turn with the switch on', () => {
       return { ...out, finished_telling: noul(0.9) };
     };
     for (const on of [false, true]) {
-      if (on) process.env.DREAMCHAT_LISTEN = 'on';
+      process.env.DREAMCHAT_LISTEN = on ? 'on' : 'off';
       const jev = fakeJev((q) => (q.move ? { move: noul(0.9) } : allTold()));
       const store = new SessionStore(cfg, { jev, host: fakeHost() });
       const { id } = store.create();

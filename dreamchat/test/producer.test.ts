@@ -430,11 +430,13 @@ describe('a change the script supervisor finds', () => {
     const rain = [{ moment: 'm4', who: 'l3', what: 'rain', now: 'falling upwards' }];
     const folded = (landmarks: { value: string | null; said: boolean }, listen: boolean) => {
       const b = roof(landmarks);
-      if (listen) process.env.DREAMCHAT_LISTEN = 'on';
+      const was = process.env.DREAMCHAT_LISTEN;
+      process.env.DREAMCHAT_LISTEN = listen ? 'on' : 'off';
       try {
         addChanges(b, rain);
       } finally {
-        delete process.env.DREAMCHAT_LISTEN;
+        if (was === undefined) delete process.env.DREAMCHAT_LISTEN;
+        else process.env.DREAMCHAT_LISTEN = was;
       }
       return b.places[0].fields.landmarks;
     };
