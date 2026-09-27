@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { Blocking } from '../blocking';
 import { applyPlanFacts, planQuestions } from '../planfacts';
+import { withChecks } from './fakes';
 import type { Breakdown, Moment } from '../producer';
 
 // Outside the house: the dreamer waits, the aunt arrives in her car, a street and a bridge.
@@ -70,35 +71,37 @@ describe('the floor plan, as Jev reads it', () => {
     });
   });
 
-  test('applies what Jev is sure of, and names what the planner must fix', () => {
-    const {
-      plan: out,
-      fix,
-      changed,
-    } = applyPlanFacts(plan, moments, {
-      outdoors: { type: 'noul', noul: 0.93 },
-      shape_t2: choice('vehicle'),
-      shape_x1: choice('ground'),
-      // Not sure enough to replace the planner's.
-      shape_t3: choice('seat', 0.3),
-      holder_t2: choice('nobody'),
-      holder_t3: choice('p1'),
-      looks_m6: choice('t2'),
-      looks_m8: choice('missing'),
-    });
-    expect(out.indoors).toBeUndefined();
-    expect(out.ceiling).toBeUndefined();
-    expect(out.spots.find((s) => s.id === 't2')?.shape).toBe('vehicle');
-    expect(out.spots.find((s) => s.id === 'x1')?.shape).toBe('ground');
-    expect(out.spots.find((s) => s.id === 't3')?.shape).toBeUndefined();
-    expect(out.spots.find((s) => s.id === 't3')?.heldBy).toBe('p1');
-    expect(out.looks).toEqual({ m6: 't2', m8: 'missing' });
-    expect(fix).toHaveLength(1);
-    expect(fix[0]).toContain('Moment m8');
-    expect(fix[0]).toContain('the house');
-    expect(changed).toContain('outdoors (0.93)');
-    // The plan given is as it was; no answers change nothing.
-    expect(plan.indoors).toBe(true);
-    expect(applyPlanFacts(plan, moments, null).plan).toEqual(plan);
-  });
+  // Not routed (DREAMCHAT_JEV_ROUTED), whatever the environment: routed, the fix is only logged (checks.test.ts).
+  test('applies what Jev is sure of, and names what the planner must fix', () =>
+    withChecks('act', async () => {
+      const {
+        plan: out,
+        fix,
+        changed,
+      } = applyPlanFacts(plan, moments, {
+        outdoors: { type: 'noul', noul: 0.93 },
+        shape_t2: choice('vehicle'),
+        shape_x1: choice('ground'),
+        // Not sure enough to replace the planner's.
+        shape_t3: choice('seat', 0.3),
+        holder_t2: choice('nobody'),
+        holder_t3: choice('p1'),
+        looks_m6: choice('t2'),
+        looks_m8: choice('missing'),
+      });
+      expect(out.indoors).toBeUndefined();
+      expect(out.ceiling).toBeUndefined();
+      expect(out.spots.find((s) => s.id === 't2')?.shape).toBe('vehicle');
+      expect(out.spots.find((s) => s.id === 'x1')?.shape).toBe('ground');
+      expect(out.spots.find((s) => s.id === 't3')?.shape).toBeUndefined();
+      expect(out.spots.find((s) => s.id === 't3')?.heldBy).toBe('p1');
+      expect(out.looks).toEqual({ m6: 't2', m8: 'missing' });
+      expect(fix).toHaveLength(1);
+      expect(fix[0]).toContain('Moment m8');
+      expect(fix[0]).toContain('the house');
+      expect(changed).toContain('outdoors (0.93)');
+      // The plan given is as it was; no answers change nothing.
+      expect(plan.indoors).toBe(true);
+      expect(applyPlanFacts(plan, moments, null).plan).toEqual(plan);
+    }));
 });

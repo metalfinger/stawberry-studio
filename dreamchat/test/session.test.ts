@@ -10,7 +10,7 @@ import { imageName, rebuild } from '../plan';
 import { readJevLog } from '../jevlog';
 import { sha } from '../gate';
 import { SessionStore, type StoreDeps } from '../session';
-import { fakeHost, fakeJev, noul, pick, told, withChecks } from './fakes';
+import { fakeHost, fakeJev, noul, pick, told, withChecks, withRouted } from './fakes';
 
 const cfg = dreamConfig();
 const required = cfg.goals.filter((g) => !g.optional).map((g) => g.id);
@@ -1136,6 +1136,75 @@ describe('a whole conversation', () => {
       ]);
     }));
 
+  test('routed, a moment the gate is unsure of is drawn as told, its tags asked about in the same call; an earned check acts', async () => {
+    // The gate reads every moment as contradicting itself; every library question it is asked is a problem.
+    let calls = 0;
+    const gate: StoreDeps['gate'] = async (state, questions) => {
+      if (state.startsWith('One picture from the dream')) calls++;
+      return {
+        questions,
+        state,
+        answers: Object.fromEntries(
+          Object.keys(questions).map((k) => [
+            k,
+            {
+              type: 'noul' as const,
+              noul:
+                state.startsWith('One picture from the dream') && k === 'contradicts'
+                  ? 0.9
+                  : k === 'contradicts' || k === 'twice'
+                    ? 0.05
+                    : 0.9,
+            },
+          ]),
+        ),
+        error: null,
+        ms: 1,
+        usage: null,
+      };
+    };
+    let reworded = 0;
+    let planned = 0;
+    const deps = (dir?: string) => ({
+      gate,
+      ...(dir ? { dir } : {}),
+      block: async (b: Parameters<NonNullable<StoreDeps['block']>>[0]) => {
+        planned++;
+        return { breakdown: b, notes: [] };
+      },
+      reword: async (_p: string, _f: string[], fields: Record<string, { value: string | null; said: boolean }>) => {
+        reworded++;
+        return { ...fields, action: { value: 'REWORDED', said: false } };
+      },
+    });
+    const dir = mkdtempSync(join(tmpdir(), 'checks-routed-'));
+    const run = await withRouted(true, () => toTheMoments(undefined, deps(dir) as Partial<StoreDeps>));
+    expect(run.framesStarted.map((f) => f.id)).toEqual(['m1']);
+    expect(run.framesStarted[0].prompt).not.toContain('REWORDED');
+    expect([reworded, calls]).toEqual([0, 1]);
+    const m1 = run.store.get(run.id)!.build!.frames!.find((f) => f.id === 'm1')!;
+    expect([m1.held, m1.reworded]).toEqual([undefined, undefined]);
+    expect(m1.overrode?.[0]).toStartWith('its instructions may contradict each other (0.90)');
+    // Its tags' questions were asked with the gate's and logged with their bars; nothing a check did is.
+    const log = readJevLog(dir, run.id);
+    const read = log.find((e) => e.kind === 'transition' && e.stage === 'gate' && e.moment === 'm1');
+    expect(read?.kind === 'transition' && read.decision).toBe('logged');
+    const routed = read?.kind === 'transition' ? read.facts.filter((f) => f.question.startsWith('r_')) : [];
+    expect(routed.map((f) => f.question)).toContain('r_gone_drawn');
+    expect(m1.overrode?.some((f) => f.startsWith('the prompt may draw something it says is gone'))).toBe(true);
+    expect(log.filter((e) => e.kind === 'transition' && e.stage === 'check')).toEqual([]);
+    // With the gate's contradiction reading earned, it acts as it does today: the moment is reworded, and
+    // still held, drawn as told with what held it kept.
+    reworded = 0;
+    const dir2 = mkdtempSync(join(tmpdir(), 'checks-routed-'));
+    const earned = await withRouted(true, () => toTheMoments(undefined, deps(dir2) as Partial<StoreDeps>), {
+      earned: ['moment.contradicts'],
+    });
+    expect(reworded).toBeGreaterThan(0);
+    const acted = readJevLog(dir2, earned.id).filter((e) => e.kind === 'transition' && e.stage === 'check');
+    expect(acted.map((e) => e.kind === 'transition' && e.decision)).toContain('reworded');
+  });
+
   /** The kitchen's floor plan, so each moment has a camera worked out and "storyboard complete?" reads it. */
   const kitchenPlan: StoreDeps['block'] = async (b) => {
     const out = structuredClone(b);
@@ -1188,6 +1257,27 @@ describe('a whole conversation', () => {
         }),
       );
       expect(again).toBeGreaterThan(0);
+    }));
+
+  test('routed, a moment "storyboard complete?" fails is drawn from its plan with the reasons kept, its scene not planned again', () =>
+    withRouted(true, async () => {
+      let again = 0;
+      const run = await toTheMoments(undefined, {
+        block: async (b, opts) => {
+          if (
+            Object.values(opts?.fix ?? {})
+              .flat()
+              .some((f) => /was planned so that its camera sees/.test(f))
+          )
+            again++;
+          return kitchenPlan(b);
+        },
+      });
+      const m1 = run.store.get(run.id)!.build!.frames!.find((f) => f.id === 'm1')!;
+      expect(run.store.get(run.id)!.prep?.storyboard?.m1?.ok).toBe(false);
+      expect(run.framesStarted.map((f) => f.id)).toEqual(['m1']);
+      expect([m1.status, m1.held, again]).toEqual(['drawing', undefined, 0]);
+      expect(m1.overrode?.some((r) => r.startsWith('storyboard: '))).toBe(true);
     }));
 
   test('with the checks only logging, a fault code finds in the images still leaves a moment undrawn', () =>
