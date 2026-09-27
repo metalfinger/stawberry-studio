@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { namesEvery } from '../producer';
+import { BRIEF_ASK, BRIEF_MAX, briefKept, namesEvery, shotAsk } from '../producer';
 
 // Written for these tests: none of these names or briefs are from a saved dream. shotFor keeps a brief
 // only where namesEvery holds (producer.ts).
@@ -43,5 +43,51 @@ describe('a shot brief names everyone and everything its view puts in the pictur
     expect(namesEvery('The older brother stands by the other brother.', brothers, brothers)).toBe(false);
     // Two alike in every word (four desks of one name) need only be named once.
     expect(namesEvery('Desks with lamps fill the room.', ['desk with a lamp', 'desk with a lamp'])).toBe(true);
+  });
+});
+
+// Written for these tests, like the ones above; the lengths are the harness's own (producer.ts BRIEF_MAX).
+describe('a shot brief is kept within its length, at a whole sentence', () => {
+  const must = ['the old woman', 'the rowing boat', 'the whale'];
+  const people = ['the old woman', 'the whale'];
+  const opening = 'A wide shot from behind, at eye height, a 24mm lens. The old woman sits in the rowing boat, soft.';
+  const filler = ' The shelves run away on both sides, dark wood, their rows of spines catching a little light.';
+  /** A brief of `n` filler sentences between its opening and its closing words. */
+  const long = (n: number, closing: string) => `${opening}${filler.repeat(n)} ${closing}`;
+
+  test('the writer is asked for a brief within a length it can meet, under the length a brief is kept to', () => {
+    const ask = shotAsk('They row on.', 'the facts', 'a photograph')
+      .map((m) => m.content)
+      .join('\n');
+    expect(ask).toContain(`at most ${BRIEF_ASK.toLocaleString('en-GB')} characters`);
+    expect(BRIEF_ASK).toBeLessThan(BRIEF_MAX);
+  });
+
+  test('one within the length is kept whole; one over it is cut after its last whole sentence, never mid-word', () => {
+    const short = long(2, 'The whale rises beside the boat.');
+    expect(briefKept(`  ${short} `, must, people)).toBe(short);
+    const over = long(12, 'The whale rises beside the boat, grey and slow.');
+    // Everyone is named before the cut: the filler runs on past the length.
+    const named = `${opening} The whale rises beside the boat.${filler.repeat(20)}`;
+    expect(named.length).toBeGreaterThan(BRIEF_MAX);
+    const kept = briefKept(named, must, people)!;
+    expect(kept.length).toBeLessThanOrEqual(BRIEF_MAX);
+    expect(kept.endsWith('light.')).toBe(true);
+    expect(named.startsWith(kept)).toBe(true);
+    // Nothing is ever cut mid-word or mid-sentence: every kept brief ends a sentence.
+    for (const text of [over, named, `${named} And on.`]) {
+      const k = briefKept(text, ['the old woman', 'the rowing boat'], ['the old woman']);
+      if (k) expect(k).toMatch(/[.!?]["'”’)]*$/);
+    }
+  });
+
+  test('a brief that loses one in the picture by the cut fails the name check', () => {
+    // The whale is named only after the length: cut there, the brief no longer names it.
+    const over = long(16, 'The whale rises beside the boat.');
+    expect(over.length).toBeGreaterThan(BRIEF_MAX);
+    expect(namesEvery(over, must, people)).toBe(true);
+    expect(briefKept(over, must, people)).toBeNull();
+    // With no whole sentence within the length, nothing is kept.
+    expect(briefKept(`${'word '.repeat(400)}whale.`, ['the whale'], ['the whale'])).toBeNull();
   });
 });
