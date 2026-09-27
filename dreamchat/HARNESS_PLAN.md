@@ -783,3 +783,11 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   pictures disagree through the dreamer's eyes) nor one image per subject (14 guards were right with two or three),
   so both are for the paid checkpoint; the rule against editing from another side stays the owner's rule, held as a
   guard. No pictures drawn, no money spent.
+
+- 27 Sep, owner's decision: "several changes" in the in-between picture rule means **2 or more**. An edit that
+  carries 2+ changes gets in-between pictures; one change goes straight. S5 builds to this bar (its eval's "at 2"
+  column: 21 of 25 frozen, 45 of 67 live meet it today; snow-train-2 m3 is the one guard that loses its
+  in-between picture and goes to the paid check).
+- 27 Sep: the writer model is now Claude (`DREAMCHAT_WRITER=claude`, 55afcd1), DeepSeek's balance being empty.
+  The waiting proofs (S8's fresh simulation, S3's sheet-as-sent replay, S2's replays, new implied readings) are
+  running with it, both arms on Claude, since the DeepSeek-made befores are not comparable.
