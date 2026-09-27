@@ -16,7 +16,7 @@ context mirrors it.
 | S2 Checks only log | Done | whole-dream replays on Claude: logging drew 127/127 moments, 0 held or reworded, Jev ~41 calls a dream (acting: 14 undrawn, 54 reworded, 306-324 calls); logging is the default since 27 Sep (`DREAMCHAT_CHECKS=act` brings acting back) |
 | S3 One cut sheet per picture | Done | the sheet's prompt equals the old builder's on 1052 rebuilds and 48 of 48 live builds |
 | S4 Camera rules | Merged behind DREAMCHAT_CAMERA (off; needs the cut sheet on); the picture check's dry run found 6 faults, 5 fixed on `precheck-fixes` (the suitcase one is not a fault: see the log); dry run again, then draw | faults met 19/33 to 28/33 (its own 1/11 to 9/11), guards 36/36, with Claude reading what the moments imply; unchanged by the fixes (28/33, 36/36) |
-| S5 References and in-between pictures | Built on `s5-refs` behind DREAMCHAT_REFS (off); in review | subject shown by 2+ images 40 to 1 frozen, pictures waited for but never sent 67 to 0, layout from the other side 2 to 0; a never-drawn side is no change (owner, 27 Sep) |
+| S5 References and in-between pictures | Built on `s5-refs` behind DREAMCHAT_REFS (off; needs the cut sheet on); reviewed, review fixes in; picture check proposed (20 pictures, $3.00), not drawn | the reference check, record and sheet on, frozen / live: a subject by two images 40 / 91 moments to 0 / 0; waited for and never sent 67 / 216 to 0 / 0; from another side 2 / 8 to 0 / 0; in-between pictures not needed under the owner's rule 17 of 29 / 32 of 67 to 0 of 14 / 1 of 74. Off: 0 of 1,864 pictures moved. Prompt cases: guards 36/36, counted 19/33 and 27/33 (camera) as before, hypotheses 5 to 10 and 7 to 12 of 18 |
 | S6 One prompt builder, clean-ups retired | Test written; typed readings of the 526 moments done (branch `s6-readings`) | a ledger of 16 clean-ups, S4's 4 word lists and 14 duplicates, in order; every moment says a fact twice (frozen 2350 facts, live 6595), 21 of 115 frozen moments say an action no picture shows (live 134 of 411); built after S5 |
 | S7 Jev checks routed by tags | Done (routing switch off; every Jev reading logs) | measured on the 122 pictures the owner judged (as sent): the gate and "storyboard complete?" are at chance (AUC 0.36-0.56); 16 library questions not measurable yet; 0 of 28 checks earn acting; a check earns acting only at its measured bar, counted by moments. Run the picture checkpoints with `DREAMCHAT_JEV_ROUTED=on` so the library questions' readings join the owner's new verdicts |
 | S8 Listening | Done: on by default since 27 Sep (`DREAMCHAT_LISTEN=off` brings the old listening back) | 20 dreams on Claude: either/or 23% to 0, leading 17% to 0, "I don't remember" 0.24 to 0.14, listening ended early 6/20 to 3/20; told facts kept as said 0.942 vs 0.949 (within noise) |
@@ -77,7 +77,7 @@ One **cut sheet** per cut is the spine everything is assembled from:
 | S2 | Stop stand-in checks deciding: the pre-draw prompt check and storyboard check only log | merged behind DREAMCHAT_CHECKS=log (acting by default), review fixes merged (50dbd8c, 27 Sep); eval met on the picture path of 10 dreams (redrawn with fake pictures, Jev only) and on the whole-conversation replays of the same 10 dreams, writer Claude (27 Sep, below) | No moment held or reworded; corpus unchanged otherwise. Met on the picture path: 0 of 61 moments held, reworded, planned again or left undrawn by the gate or "storyboard complete?" (planning again a scene on Jev's plan facts, `planFacts`, still acts: overlaps S2 → S7) (acting: 18-19 rewordings, 10-11 re-plans and 11-13 sketch rewordings asked for, 1-3 moments left undrawn; the saved runs: 4 undrawn, 3 reworded, 17 scenes and 13 moments planned again); every moment drawn; every moment's gate reading and every camera's storyboard reading logged; Jev 23.6 calls a dream against 106-111 acting and 245 in the saved runs; prompt cases and corpus unchanged (below) |
 | S3 | The cut sheet: tree (vertical) + record (horizontal) + relations + tags, one per cut | done (27 Sep): built, reviewed, fixed, merged behind DREAMCHAT_CUT_SHEET; sheet-as-sent proven on fresh replays written by Claude (27 Sep): met wherever no check acted | Every input the prompt needs comes from the sheet; no fact computed in two places. Met: `assembleCut` reads only the sheet and writes what framePrompt writes on every moment (0 differences in 1052 rebuilds: frozen 115 and live 411, record off and on), prompt cases unchanged on against off; what the sheet still computes twice is listed under S3 below. Sheet as sent (fresh replays, writer Claude): while drawing, `assembleCut` wrote what framePrompt writes on 48 of 48 builds (24 moments sent); against a rebuild 22 of 24 sheets as sent, the other 2 a check acting (below) |
 | S4 | Camera rules and shot roles: the scene's line, a reverse angle turns the room (what is now left, right, behind), point-of-view shots show at most hands, vehicle screen direction, same setup means the same camera | built on branch `s4-camera` behind DREAMCHAT_CAMERA=on, which needs DREAMCHAT_CUT_SHEET=on (off by default; off is today byte for byte: 0 of 144 frozen and 0 of 490 live pictures moved, record and sheet on; 0 of 140 and 0 of 477 with them off), 27 Sep; its faults found and fixed. With Claude's readings, record and sheet on: `--step S4` 9/11 counted (1/11 off), guards 8/8; all cases 28/33 (19/33 off), guards 36/36; open: night-market m2 (the floor plan's facing), lighthouse-fresh m12 (its words never say the tractor moves), snow-train m6 hand (a hypothesis) | The S4 cases pass (`--step S4`: snow-train m2 reverse and m3 seat, snow-train-2 m2 same setup, lighthouse-fresh m12 heading, lighthouse-first m3, night-market m2, library-1 m4/m5, orchard m4 hands and m7 legs; lighthouse-fresh m10 needs a new floor plan) |
-| S5 | References and variants: one image per subject; in-between pictures only when an edit carries several changes; variants kept and reusable; the grey mock-up as a reference chosen by tag | built on branch `s5-refs` behind DREAMCHAT_REFS=on (`refs.ts`; needs DREAMCHAT_CUT_SHEET=on; off by default and off byte for byte: 0 of 428 frozen and 0 of 1,436 live pictures moved, record, sheet and camera off and on), 27 Sep; `DREAMCHAT_REFS=sketch` is all of it but one image per subject, for the paid check. Every bar of the reference check met with the record and sheet on, frozen and live, but one moment whose place has two in-between pictures in force, neither drawn from the other (library-1 m3); prompt cases: no code check fails that passed, 6 hypotheses more met, the Jev questions on changed prompts unanswered (cache only); the three measurement faults found in the eval fixed (below) | The reference check (`evals/references.ts`) at its bars on the frozen and live dreams: 0 subjects shown twice or not by their stage in force, 0 pictures from another side drawn from, 0 pictures waited for and never sent, every in-between picture meeting the owner's rule with no picture left carrying several changes; the S5 cases stay met or pass (`--step S5`: never editing a picture from another side; library-1 m5 wall); guards 36/36; its hypotheses (image 1 by tag, one image per subject on pictures the owner called right) are for the paid check, not proven here |
+| S5 | References and variants: one image per subject; in-between pictures only when an edit carries several changes; variants kept and reusable; the grey mock-up as a reference chosen by tag | built on branch `s5-refs` behind DREAMCHAT_REFS=on (`refs.ts`; needs DREAMCHAT_CUT_SHEET=on; off by default and off byte for byte: 0 of 428 frozen and 0 of 1,436 live pictures moved against lab 3392d83, record, sheet and camera off and on), 27 Sep; reviewed, and the review's seven fixes in (the owner's rule that a side the floor plan lays out is no change, each thing once in what an in-between picture shows, a place's state said beside the mock-up, image 1 routed only as far as the verdicts go, a crowd by its flag, view pictures edited from the place's state not another side, tests that fail without each rule). `DREAMCHAT_REFS=sketch` is all of it but one image per subject. Every bar of the reference check met, frozen and live, record and sheet on and off, camera on, but one live in-between picture a moment does not need (927a g6); prompt cases: guards 36/36, no case lost, 5 hypotheses more met |
 | S7 | Jev layer 2: checks routed by tags, a question library from the film rules, a labelled set per question; a check may hold a picture only if it predicts pictures | built behind DREAMCHAT_JEV_ROUTED=on (off by default) on branch `s7-jev-routed` (27 Sep): eval written first and run, routing built, independently reviewed, review fixes in (an earned check acts under the default logging; each library question held to its measured bar; the bar counts moments and noise; the storyboard measured on the pictures drawn from its shot) | Each question meets its bar on its labelled set. Run on the 122 pictures the owner judged (62 moments): no check meets the bar to act (0 of 28 distinct checks). The gate's four questions and "storyboard complete?" are measured and at chance; the 16 new questions, planFacts's re-plan and the continuity plan's warnings are not measurable yet (too few flags, and the questions were written after reading these verdicts, so only later pictures can test them). Routed, every Jev reading only logs until a check is earned; off unchanged; Jev calls a dream on the ten redrawn dreams: acting 115.8, logging 23.1, routed 23.3 (below) |
 | S6 | `assembleCut`: prompt and references from the sheet, each fact once, action as visible facts; retire the regex clean-ups one by one | not started; eval written and merged (27 Sep, below); its model step, the typed reading of the 526 saved moments, done and cached on branch `s6-readings` (27 Sep, below) | Every clean-up and duplicate of the ledger retired in its order, each step its own measured change (`evals/retire.ts`, `evals/corpus.ts --verdicts`): every change on every saved dream classified, 0 unclassified, 0 regressions; each fact once (0 facts said twice outside the shot's words, of the look, colour and state kinds, and of the story kind with the typed action; 0 facts on two kinds of field); the action as visible facts (0 moments breaking its rules); 0 ids in words; counted cases: every one met on its base stays met, library-1-m2-books met, lighthouse-fresh-m12-heading once motion is typed; guards 36/36 |
 | S8 | Listening: every reply checked against its move; major picture gaps asked openly, minor ones imagined and marked; the retelling ends with the moments | built and merged behind DREAMCHAT_LISTEN (off); review fixes on `s8-listening` (27 Sep): the come-back rule restricted, choice readings that keep changes, the retelling's breakdown started early, and the test's move-selection floors; proven offline (replayed moves, re-read answers, a hand-labelled set), and a fresh simulation on the Claude writer, both arms (27 Sep): every target met or met by hand but two (said but not in their words, about 9 real of 518; answers misread, 2 real of 99), and one floor fails beyond noise (retellings begun as told all they remember, 6 to 12 of 20: 10 of the 12 right after a come-back to an earlier thread); not to be switched on until that rule is fixed (below) | `evals/listening.ts` against the frozen before (`evals/listening-before`, 40 fresh simulated conversations): listening-turn compliance at least 90%, either/or under 5%, leading 0, said but not in their words 0, every way of drawing it kept, every retelling ends with a list of the breakdown's moments, no answer misread; floors not below the before (below) |
@@ -122,10 +122,13 @@ One **cut sheet** per cut is the spine everything is assembled from:
 - S5's choice of references (`refs.ts`, DREAMCHAT_REFS=on with DREAMCHAT_CUT_SHEET=on): `chooseRefs` over the cut
   sheet (image 1 by the tags, each one in view by the image of its stage in force), kept on the sheet as `refs` and
   written by `assembleCut`; the plan's side is in `continuity.ts` (`chooseInPlan`: what a cut is not drawn from is
-  not among its references, kept as `unsent` for the judge and the camera plan; in-between pictures under the
-  owner's bar of two not drawn; of a subject's in-between pictures only the latest, which shows the ones it was
-  edited from, `GhostPlan.shows`); the pre-draw check takes a subject's in-between picture for its sketch
-  (`standsFor`). `DREAMCHAT_REFS=sketch` keeps each sketch beside its in-between pictures.
+  not among its references, kept as `unsent` for the judge and the camera plan; a new framing or a side never drawn
+  is no change where the cut's camera is worked out on a floor plan; an in-between picture drawn only where it takes
+  a change off a cut that would otherwise carry two; of a subject's in-between pictures only the latest, which shows
+  each thing its chain changed, once, `GhostPlan.shows`); the pre-draw check takes a subject's in-between picture
+  for its sketch (`standsFor`). `DREAMCHAT_REFS=sketch` keeps each sketch beside its in-between pictures. The
+  reference check counts each moment's changes itself (`evals/prompt-cases.ts storyChanges`), from the dream and
+  the images sent, never from the plan's count.
 - S5's reference check: `bun run evals/references.ts --label <name> [--live] [--against <name>] [--show]` reads
   every moment's images for one image per subject, its stage in force, pictures from another side, what the plan
   waits for and never sends, images for light alone, image 1 by tag, and each in-between picture against the
@@ -681,108 +684,125 @@ One **cut sheet** per cut is the spine everything is assembled from:
   rebuild's (the sheet's print), the stage image falls back to the sketch until its in-between picture is approved,
   a re-plan or a correction reuses a drawn in-between picture by its key, and nothing waits on a picture it is
   not sent.
-  **What DREAMCHAT_REFS=on does** (27 Sep, branch `s5-refs`; needs DREAMCHAT_CUT_SHEET=on, and unset, or with the
-  sheet off or in shadow, everything is as before). On the plan (`continuity.ts chooseInPlan`, once the cameras are
-  placed): an earlier picture is among a cut's references only if the cut is drawn from it, so the plan waits for
-  nothing it does not send: never for its light alone, for who someone is only where they have no sketch (a crowd),
-  never one whose camera is turned 135 degrees or more from this one on the same floor plan (the jump's own picture
-  and the seat excepted; cameras on two floor plans are not compared). What it leaves out is kept as the cut's
-  `unsent`: the judge still compares the light and the people against it, and the camera plan still settles its
-  relation. An in-between picture is drawn only where some cut it serves would otherwise carry two changes or more
-  (the owner's bar), the latest first, never one another is edited from; of a subject's in-between pictures in force
-  a cut takes only the latest, which shows every change it was edited from (`GhostPlan.shows`), and counts those
-  changes carried. On the sheet (`refs.ts chooseRefs`, kept as `sheet.refs`): image 1 is the picture edited where
-  the plan edits one, else the mock-up only on the paired routing (from outside; not a close-up or an insert; not
-  across a jump, to another place or to the seat; not where the moment is about a crowd with no image of its own),
-  else nothing before the sketches; each one in view is shown by one image, its in-between picture where one is
-  drawn and approved, else its sketch, and said as that ("who Tomas is, as they are now (age: about ten; wardrobe:
-  old school uniform): their face, hair, build and clothes, exactly, as this picture shows them"), the changes the
-  picture does not show still said as exceptions. Where a view is worked out on the floor plan and no mock-up is
-  image 1, the place's sketch gives only its materials (the view says where things stand). The pre-draw check
-  takes a subject's in-between picture for its sketch (`gate.ts`, `standsFor`), on the drawing path, in `plan.ts
-  --gate` and in the checkpoint tool.
-  **The eval as run (27 Sep, writer Claude, implied readings from the cache: 0 calls).** Three faults of the
-  measure were found and fixed first, each with a test (`test/references.test.ts`): cameras were compared across
-  two floor plans (lighthouse-fresh m10 from m8, 180 degrees by the numbers alone, the words calling it the same
-  side: S4's finding), now only on one; an in-between picture another is edited from was counted as serving no one
-  (the ice head before it melts, live e564 and 96bd), now as serving that edit, which without it carries two
-  changes; the owner's bar is two (its column at three kept for reference). The routing reported beside image 1
-  names a moment about a crowd with no image of its own, as the case heron-m4-route does. Before is this base with
-  the switch unset (so the numbers differ from the eval's first reading, taken with other implied readings):
+  **What DREAMCHAT_REFS=on does** (27 Sep, branch `s5-refs`, review fixes in; needs DREAMCHAT_CUT_SHEET=on, and
+  unset, or with the sheet off or in shadow, everything is as before).
+  - *The plan* (`continuity.ts chooseInPlan`, once the cameras are placed). An earlier picture is among a cut's
+    references only if the cut is drawn from it, so the plan waits for nothing it does not send: never for its
+    light alone, for who someone is only where they have no sketch (a crowd), never one whose camera is turned 135
+    degrees or more from this one on the same floor plan (the jump's own picture and the seat excepted; cameras on
+    two floor plans are not compared). What it leaves out is kept as the cut's `unsent`: the judge still compares
+    the light and the people against it, and the camera plan still settles its relation.
+  - *What counts as a change* (the owner, 27 Sep): the action, and each change in force shown in no image sent;
+    a new framing or a side of the place never drawn only where no floor plan lays the picture out (the cut's
+    camera is worked out on one: its mock-up, or its view said from it). An in-between picture is drawn where it
+    takes a change off a cut that would otherwise carry two or more (the owner's bar), the latest first, and never
+    one another is edited from; one that takes none of a cut's changes off it is not drawn, however many that cut
+    carries. A side never drawn where nothing lays it out gets its in-between picture at two (the plan's own bar
+    was three), drawn by editing the place's in-between picture of its state in force where there is one (so the
+    cut takes one picture of the place), else its sketch, and waits for no earlier picture (which faces another
+    side and was never sent to it).
+  - *One image per subject.* Of a subject's in-between pictures in force a cut takes only the latest, which shows
+    each thing its chain changed, once, as its latest change left it (`GhostPlan.shows`).
+  - *On the sheet* (`refs.ts chooseRefs`, kept as `sheet.refs`). Image 1 is the picture edited where the plan
+    edits one, else the mock-up where the verdicts have it help (not across a jump; through the dreamer's eyes only
+    with nothing but the place in view, orchard m7; not a close-up, an insert or the seat; to another place only
+    for a wide shot; not where the moment is about a crowd with no sketch of its own, by the group flag, unless it
+    is a wide shot establishing the place), else nothing before the sketches. Each one in view is shown by one
+    image, its in-between picture where one is drawn and approved, else its sketch, said as that ("who Tomas is,
+    as they are now (age: about ten; wardrobe: old school uniform): … as this picture shows them"); what the moment
+    has newer than the picture is said as an exception, never both as now. A place shown by its state's in-between
+    picture beside the mock-up keeps its state said outright ("only what it is made of and its colours …, and its
+    water exactly as in this picture (water: …)"; rules.md D5). Where a view is worked out on the floor plan and no
+    mock-up is image 1, the place's sketch gives only its materials. The pre-draw check takes a subject's
+    in-between picture for its sketch (`gate.ts`, `standsFor`), on the drawing path, in `plan.ts --gate` and in the
+    checkpoint tool.
+  **The eval as run (27 Sep, after the review; lab 3392d83; writer Claude; implied readings from the cache: 0
+  calls).** The review found the check measured the code against itself (it copied the plan's count of changes):
+  `evals/prompt-cases.ts storyChanges` now counts each moment's changes from the dream and the images the moment is
+  sent (the action; each change in force no image sent shows, an in-between picture showing it or one edited from
+  it, or an earlier picture drawn at or after it showing its subject; a side never shown and a new framing only
+  where nothing lays the picture out), and an in-between picture is needed where it takes one of them off a moment
+  that would otherwise carry two (or another is edited from it). Earlier fixes kept: cameras compared on one floor
+  plan only. So the befores below differ from the first reading: under the owner's rule many of today's in-between
+  pictures are not needed.
 
   | the reference check | bar | frozen, record and sheet on | record off | camera too | live, record and sheet on | record off | camera too |
   | --- | --- | --- | --- | --- | --- | --- | --- |
-  | moments showing a subject by two images or more (D1) | 0 | 40 to 1 | 37 to 0 | 38 to 1 | 91 to 0 | 95 to 0 | 95 to 1 |
-  | subjects not shown by their stage in force | 0 | 46 to 1 | 45 to 0 | 46 to 1 | 113 to 0 | 124 to 0 | 111 to 1 |
+  | moments showing a subject by two images or more (D1) | 0 | 40 to 0 | 37 to 0 | 38 to 0 | 91 to 0 | 95 to 0 | 95 to 0 |
+  | subjects not shown by their stage in force | 0 | 46 to 0 | 45 to 0 | 46 to 0 | 113 to 0 | 124 to 0 | 111 to 0 |
   | earlier pictures from another side, edited or for layout | 0 | 2 to 0 | 2 to 0 | 0 to 0 | 8 to 0 | 8 to 0 | 0 to 0 |
-  | pictures waited for and never sent | 0 | 67 in 65 to 0 | 68 in 66 to 0 | 57 in 53 to 0 | 216 in 208 to 0 | 218 in 210 to 0 | 204 in 193 to 0 |
+  | pictures waited for and never sent | 0 | 67 in 65 to 0 | 68 in 66 to 0 | 58 in 54 to 0 | 216 in 208 to 0 | 218 in 210 to 0 | 204 in 193 to 0 |
   | images for their light alone | 0 | 0 to 0 | 0 to 0 | 0 to 0 | 0 to 0 | 0 to 0 | 0 to 0 |
-  | in-between pictures under the owner's bar (two) | 0 | 4 of 29 to 0 of 25 | 4 of 25 to 0 of 21 | 5 of 29 to 0 of 24 | 18 of 67 to 0 of 46 | 15 of 66 to 0 of 48 | 19 of 70 to 0 of 50 |
-  | moments carrying 3 changes or more (must not rise) | 0 | 2 to 2 | 0 to 0 | 3 to 3 | 0 to 0 | 0 to 1 | 0 to 0 |
-  | images a moment, most (mean) | 12 | 10 to 8 (5 to 4.1) | 10 to 8 | 10 to 8 (5.2 to 4.3) | 10 to 8 (4.3 to 3.6) | 10 to 8 | 10 to 8 (4.4 to 3.8) |
-  | the mock-up off the paired routing (reported) | - | 46 to 0 | 46 to 0 | 45 to 0 | 121 to 0 | 123 to 0 | 116 to 0 |
-  | on the routing, from the sketches alone (no floor plan to render) | - | 1 to 1 | 1 to 1 | 1 to 1 | 61 to 61 | 61 to 61 | 67 to 67 |
-  | moments carrying 2 changes or more (reported) | - | 62 to 61 | 62 to 60 | 60 to 60 | 195 to 191 | 196 to 193 | 191 to 191 |
+  | in-between pictures not needed (owner's rule) / all | 0 | 17 / 29 to 0 / 14 | 12 / 25 to 0 / 15 | 17 / 29 to 0 / 13 | 32 / 67 to 1 / 74 | 28 / 66 to 1 / 77 | 34 / 70 to 1 / 72 |
+  | of them, a side's (view) | - | 5 to 2 | 0 to 2 | 5 to 2 | 0 to 43 | 0 to 43 | 3 to 43 |
+  | moments carrying 3 changes or more | 0 | 1 to 1 | 0 to 0 | 2 to 2 | 0 to 0 | 0 to 0 | 0 to 0 |
+  | moments carrying 2 or more (reported) | - | 9 to 7 | 2 to 0 | 6 to 4 | 57 to 15 | 58 to 17 | 60 to 18 |
+  | images a moment, most (mean) | 12 | 10 to 8 (5 to 4.2) | 10 to 8 (5 to 4.1) | 10 to 8 (5.2 to 4.4) | 10 to 8 (4.3 to 3.7) | 10 to 8 (4.3 to 3.6) | 10 to 8 (4.4 to 3.8) |
+  | the mock-up off the routing (reported) | - | 35 to 0 | 36 to 0 | 35 to 0 | 92 to 0 | 95 to 0 | 90 to 0 |
 
-  Left: the one subject not shown by one image (frozen with the record on, library-1 m3; live with the camera,
-  car-park m6) is a place with an in-between picture of its state (the water) and one of a side never drawn, neither
-  drawn from the other: both go in beside its sketch, as today (overlaps S5 -> S5). The moments carrying three
-  changes were there before (night-market m7 and library-2 m7: a change in force shown in no image beside a
-  reframing); the one live moment new with the record off (0886 m4) is the count made true: Tomas's "age and
-  clothing", which the breakdown says beside the "body" his in-between picture shows, was counted as carried by an
-  earlier picture never sent. The moments carrying two changes are a side never drawn (39 frozen) or a reframing
-  (16): no in-between picture carries a reframing, and a side never drawn gets one only at three (open questions).
-  Image 1 by role, frozen with the record and sheet on (mock-up / edit / free): through the dreamer's eyes 16/1/0 to
-  0/1/16, close-ups 6/0/0 to 0/0/6, two-shots 35/6/0 to 28/6/7, wide 26/3/1 to 15/3/12.
-  **Prompt cases** (cache only, `--no-ask`: no Jev question asked). Switch unset: unchanged (all 94: 6/33, 19/33
-  with the record and sheet on, 28/33 with the camera too; guards 36/36). With S5 on (record and sheet on / camera
-  too): no code check that passed fails; hypotheses 5/18 to 11/18 (7/18 to 11/18): orchard-m2-mockup,
-  snow-train-m6-route, orchard-m7-route, lighthouse-first-m7-route, lighthouse-first-m8-route and heron-m4-route now
-  met, none lost (night-market-m2-route kept: a crowd only in the background keeps the mock-up). The prompts S5
-  changes carry questions Jev has not read: 53 (45) in 35 (32) cases are unanswered, so the Jev-read cases cannot be
-  counted: guards 31/36 met and 5 unanswered (32 and 4), 0 failing; counted 6/33 met and 15 unanswered (11/33 and
-  17). `--step S5`: counted 4/7 met and 3 unanswered (6/7 before), hypotheses 5/14 to 11/14, guards 2/2, model only
-  4/4. Must not move: the six "no edit across a move" cases 4 met, 2 unanswered (orchard-m2-edit,
-  lighthouse-fresh-m2-reverse), their code checks all pass; the model-only identity cases 5/5; images for light
-  alone 0; at most 12 images. Reading the unanswered questions takes about 50 Jev calls (the owner's go-ahead).
+  Left, and why. Frozen, every moment still carrying two changes carries changes the moments imply, said in words
+  and never drawn on their own (S1): 09ea m7 (the rain and the wet iron: three with the action), fdd7 m3-m5 (the
+  shelves emptied), 6081 m7 (the water deep enough for a boat), a44a m6 (the deep snow). Live, besides those, 13-16
+  moments carry a new framing where nothing lays the picture out (no in-between picture carries a framing), two a
+  side never drawn with no in-between picture (279d m2, m5), and one in-between picture is not needed (927a g6, a
+  side). The 43 live in-between pictures of a side are the owner's bar applied where no floor plan lays the picture
+  out (older saved dreams without floor plans): each is a picture to pay for if those dreams are drawn again.
+  Image 1, frozen with the record and sheet on (mock-up / edit / free): through the dreamer's eyes 16/1/0 to 1/1/15
+  (orchard m7 keeps it), close-ups 6/0/0 to 0/0/6, wide 26/3/1 to 25/3/2 (another place keeps it).
+  **Prompt cases** (the Jev answers cached by the review, and 65 asked now: the before with the camera 12, S5 on 31,
+  with the camera 22). Switch unset, against lab: unchanged (6/33, 36/36; record and sheet on 19/33, 36/36; camera
+  too 27/33, 36/36). S5 on, record and sheet on / camera too: counted 19/33 / 27/33 (as before), model step 5/8 /
+  6/8 (as before), guards 36/36 / 36/36, hypotheses 5/18 to 10/18 / 7/18 to 12/18: orchard-m2-mockup,
+  snow-train-m6-route, lighthouse-first-m7-route, heron-m4-route and lighthouse-first-m8-route met, none lost;
+  orchard-m7-route stays not met (the mock-up is kept there, as its verdicts say: the sketches alone wrong, the
+  mock-up partly right) and night-market-m2-route met. `--step S5`: counted 6/7, hypotheses 5/14 to 10/14 (6 to 11
+  with the camera), guards 2/2, model only 4/4. Must not move: the six "no edit across a move" cases 6/6, the
+  model-only identity cases 5/5, images for light alone 0, at most 12 images.
   **Corpus, S5 on against off, by cause** (a picture can have more than one). Frozen, record and sheet on, 144
-  pictures: 93 changed and 4 not drawn. A sketch replaced by its in-between picture 41; the mock-up no longer image 1
-  46 (a jump, another place or the seat 18, through the dreamer's eyes 16, a close-up or insert 6, a moment about a
-  crowd 6); the plan only, nothing sent differing (a picture no longer waited for) 17; an in-between picture carried
-  by the later one drawn from it 10; in-between pictures not drawn under the bar of two 4 (heron: Mrs Okafor into a
-  heron, drawn in its own moment; snow-train-2: the lid open; the city lights; the manager into a snowman) and 4
-  moments no longer drawn from them; earlier pictures not sent 4 (two compositions from the other side by the
-  cameras, lighthouse-first m3 and night-market m7; one picture for someone with a sketch; one showing Mr Hale as he
-  was before he turned into an octopus, kept for its light). With the camera on: 89 changed, 5 not drawn, the
-  same causes, no composition from the other side (the cameras already turn those). Live, record and sheet on, 478 pictures: 301 changed, 21 not drawn: the plan only 116,
-  a sketch replaced 79, the mock-up no longer image 1 121 (50 / 47 / 11 / 13), carried by the later one 28,
-  moments no longer drawn from an in-between picture not drawn 25, earlier pictures not sent 22 (9 identity, 8
-  compositions from the other side, 5 light). The camera plan and S5: a cut's relation to a picture it is not drawn
-  from was hidden from the camera plan at first, so the plan settled one pass early and lighthouse-first m2 lost the
-  room it shares with m1 (words: the other side, cameras: the same); fixed (`unsent` is settled like any relation),
-  with a test.
-  **The drawing path** (offline, `test/refs.test.ts`): on snow-train-2, every picture drawn and approved, each
-  moment's sheet on the drawing path equals the rebuild's, and every picture a moment waits for is sent; with an
-  in-between picture not yet approved, its subject is shown by the sketch. The fresh fake replays (a re-plan or a
-  correction reusing a drawn in-between picture by its key) are still owed: they need Jev.
-  **The paid check (about $3, 18 pictures at $0.15, old against new, one take, judged blind; with
-  DREAMCHAT_RECORD, DREAMCHAT_CUT_SHEET, DREAMCHAT_CAMERA and DREAMCHAT_REFS on).** `checkpoint.ts --set-from-cases
-  S5` proposes 20 (3 faults, 17 guards; 6 more changed but cannot be drawn: an image the run never drew). Proposed,
-  by what each settles:
-  - One image per subject (D1, the 14 guards drawn right with a sketch beside): orchard m2 (Tomas from three images to
-    his latest in-between picture, through the dreamer's eyes without the mock-up; fault orchard-m2-edit), orchard m3,
-    orchard m5, library-3 m4 (the room from its sketch and two in-between pictures to the water's, which shows the
-    books), library-2 m3.
-  - An in-between picture not drawn under the bar of two: snow-train-2 m3 (the lid; the one guard that loses one).
-  - A place's one image (D5): library-3 m3, library-2 m2.
-  - Image 1 by tag, the mock-up off: lighthouse-first m7 (through the eyes), lighthouse-first m8 (across a jump;
-    fault), and by hand, as they are hypothesis cases the tool does not propose: orchard m7 (through the eyes),
-    heron m4 (about a crowd with no image). Snow-train m6 cannot be drawn (the run never drew its door's in-between
-    picture); night-market m2 and snow-train-2 m6 are unchanged (the mock-up stays).
-  - Guards whose images change, to catch what breaks: lighthouse-fresh m2 (fault), library-2 m4, orchard m6,
-    lighthouse-fresh m4, library-3 m6, library-3 m8.
-  If one image per subject loses to the sketch beside its in-between picture, `DREAMCHAT_REFS=sketch` is the rest of
-  S5 without it; if the mock-up off through the dreamer's eyes loses, `mockupHelps` is one line.
+  pictures: 91 changed, 17 not drawn, 2 new. A sketch replaced by its in-between picture 31; the mock-up no longer
+  image 1 35 (through the dreamer's eyes 15, a jump, another place or the seat 12, a close-up or insert 6, a moment
+  about a crowd 2); the plan only, nothing sent differing 24; in-between pictures not drawn 17 (heron: Mrs Okafor
+  into a heron; snow-train: the suitcase, the door; library-1: its three sides laid out by the mock-up; library-2:
+  the city under water outside, the window open; library-3: the window open; snow-train-2: the lid, the door, the
+  light, a side; the classroom's window side, which m6 edits from m5; the city lights; the manager into a snowman;
+  the car park's water) and 15 moments no longer drawn from them; an in-between picture carried by the later one
+  edited from it 14; the place's picture now one of its side 3 (library-2's two inserts with no floor plan get a
+  side's picture each, edited from the flood); earlier pictures not sent 4. Camera on: 87 changed, 18 not drawn, 2
+  new, the same causes. Live, record and sheet on, 478 pictures: 296 changed, 36 not drawn, 43 new (the side's
+  pictures above): a sketch replaced 112, the plan only 96, the mock-up no longer image 1 92, in-between pictures
+  not drawn 36 and the moments drawn from them 37, carried by the later one 31, earlier pictures not sent 22.
+  Checked by name: lighthouse-first m9, lighthouse-fresh m14, snow-train m4, snow-train-2 m4, acfd m4 and 538d m4
+  (wide, another place), night-market m1, b91f m1, 8ceb m3 and m5 (wide, establishing) keep the mock-up; 8ceb m7 (a
+  two-shot about the fish, not establishing) loses it by the rule as given; heron m4 loses it.
+  **Tests.** `test/refs.test.ts` (24): each rule on a dream made up for it, and each fails without its rule:
+  mutating the code (the chain carrying earlier changes, camera changes counted where a floor plan lays the
+  picture out, a side's picture counted +1, no chain start kept, no latest-only filter, what a picture shows not
+  kept once, a picture kept that takes no change off) fails 1-5 tests each. `test/references.test.ts`: the
+  independent count and the needs on frozen dreams. `bun test`: 777 pass with the switches unset; with the record,
+  sheet, camera and references on 775 of 777 (two tests of today's plans not pinned; pinned, their files pass both
+  ways); typecheck clean.
+  **The drawing path** (offline, `test/refs.test.ts`): on orchard, every picture drawn and approved, each moment's
+  sheet on the drawing path equals the rebuild's, and every picture a moment waits for is sent; with an in-between
+  picture not yet approved, its subject is shown by the sketch. The fresh fake replays (a re-plan or a correction
+  reusing a drawn in-between picture by its key) are still owed.
+  **The paid check (proposed, not drawn: 20 pictures, $3.00; record, sheet, camera and references on).**
+  `checkpoint.ts --set-from-cases S5` proposes 19 (4 faults, 15 guards), and night-market m1 is added by hand:
+  - faults: orchard m2 (image 1 off through the dreamer's eyes and Tomas from three images to one: two changes at
+    once), lighthouse-fresh m2, lighthouse-first m8 (the mock-up off across a jump), library-1 m4 (its side's
+    in-between picture gone: the mock-up lays it out);
+  - one image per subject, clean: orchard m3 (an edit, Tomas's one image), library-3 m4 (the room's sketch and two
+    in-between pictures to the water's); orchard m5 (Tomas's one image carries two of his changes, his age and his
+    uniform), library-2 m3, library-3 m3 and m6 (a place's one image, D5);
+  - an in-between picture not drawn: snow-train-2 m3 (the lid), snow-train m6 (the door; and image 1 off through
+    the dreamer's eyes);
+  - image 1 off: lighthouse-first m7 (through the eyes);
+  - guards whose prompts change: orchard m6, lighthouse-fresh m4, m9 and m11, library-3 m8, snow-train-2 m4;
+  - night-market m1 (by hand): unchanged by S5 (a wide shot establishing the market keeps the mock-up), so its
+    redraw measures the drawing's own noise.
+  Not drawable: library-2 m2, m4 and m7 (their side's in-between pictures were never drawn by the run; m7 also the
+  boat's sketch), lighthouse-first m6, library-2 m6 and m8. The set is kept for the owner to confirm, not committed.
+  If one image per subject loses, `DREAMCHAT_REFS=sketch` is the rest of S5 without it; each rule of image 1 is
+  one line of `mockupHelps`.
 
 - **S7 eval (checks routed by tags).** Written 27 Sep on branch `s7-jev-routed`, before the routing is built.
   Switch `DREAMCHAT_JEV_ROUTED=on`, off by default and off byte for byte.
@@ -1405,8 +1425,8 @@ between sessions.
 | S0 | every step | Frozen dreams have no pins, re-plans or corrections: each step also needs a live-flow check (S1's review found two faults only the live path shows). |
 | S1 | S3 | `record.ts` renders English sentences (`nowAt`); the cut sheet should carry typed facts (who, part, now, held by, basis) rendered once at assembly. New word lists in S1 (FILLS, OPENS, STATE_VERB, NOT_THERE, SELF, TAKEN, HOLDS_NAME) overlap the implied-state reading and should give way to it. |
 | S1 | S4 | Water level and boat height come from floor-plan heights (library-1 m5, library-3 m7 still fail on the mock-up's layout); a held thing in a through-the-eyes view is placed at its floor-plan spot instead of the hands; the "Nobody else is in the picture" line can list people who are. |
-| S1 | S5 | Implied changes make no in-between picture of their own until S5 settles the owner's rule (one only when an edit carries several changes); the per-change in-between pictures from before remain for S5. `shutAway` closes anything opened when carried to another place (right for a suitcase, wrong for an umbrella or book). **S5 (27 Sep, DREAMCHAT_REFS):** at the owner's bar of two, an in-between picture of a change is drawn only where a cut would otherwise carry two changes; 4 frozen (21 live) are not drawn. |
-| S1 | S5 | With Claude reading what the moments imply, the readings bring in-between pictures that turn a place to face something ("the old city library, facing the yellow boat"): frozen 29 against 24 without the readings, live 79 against 67. S1 stops only a state read as implied from getting one; which of these the owner's rule (2 or more changes) keeps is S5's. **S5 (27 Sep):** at two, all of them are kept: a side never drawn is a change as the plan counts it, so any cut first facing one carries two with the action. Whether it is a change where the mock-up is image 1 is the owner's (open questions): if not, they go. |
+| S1 | S5 | Implied changes make no in-between picture of their own until S5 settles the owner's rule (one only when an edit carries several changes); the per-change in-between pictures from before remain for S5. `shutAway` closes anything opened when carried to another place (right for a suitcase, wrong for an umbrella or book). **S5 (27 Sep, DREAMCHAT_REFS):** at the owner's bar of two, an in-between picture of a change is drawn only where it takes a change off a cut that would otherwise carry two; a change a moment makes itself is drawn in its own edit. |
+| S1 | S5 | With Claude reading what the moments imply, the readings bring in-between pictures that turn a place to face something ("the old city library, facing the yellow boat"): frozen 29 against 24 without the readings, live 79 against 67. S1 stops only a state read as implied from getting one; which of these the owner's rule (2 or more changes) keeps is S5's. **Settled (the owner, 27 Sep) and built in S5:** a side the floor plan lays out is no change, so these go (frozen 5 to 0 with the record on); a side is a change only where nothing lays the picture out. |
 | S1 | S6 | `withoutWords` is another regex clean-up in frames.ts; S6 retires these. Text rendering bugs of the record land in the prompt until S6 builds it from the sheet. |
 | S1 | S2 | The live-flow check (`evals/live-flow.ts`) passes a moment the checks acted on: drawn again from a list of what went wrong, or drawn without its brief because the pre-draw check set it aside (5 of 26 moments on the fake replays, 27 Sep). A rebuild cannot know these; once S2 makes the checks log only, those moments should rebuild word for word. Done on the picture path (27 Sep): with DREAMCHAT_CHECKS=log the redraws of those dreams have 0 moments differing because a check acted (jellyfish-city m5, sea-school m2 and m7 rebuild word for word); to confirm on whole replays once DeepSeek is back. |
 | S2 | S7 | The checks' readings, logged per picture with DREAMCHAT_CHECKS=log: `gate` transitions in each dream's Jev log (every answer with its bar, what it found, and whether it acted), `previs` transitions for "storyboard complete?", and `overrode` on the picture as drawn. S7's labelled sets are these against the pictures. A reading is not put on a line when logging (the line search was 4 in 5 of the gate's calls): if S7 needs the line a reading rests on, it asks for it on the logged prompt. Each reading carries `ref` (prompt hash, take, question-wording hash) and each picture keeps `checkedTakes`, so a label joins the take it was read for. |
@@ -1451,7 +1471,7 @@ between sessions.
 | S5 | S1 | Whether an in-between picture meets the owner's rule depends on what the record carries: with the record off the suitcase's open lid is carried to snow-train-2 m5 and its in-between picture meets the bar (3 changes); with it on the lid is shut again and it serves only m3 (1 change). S5's measure is taken with the record on. **S5 (27 Sep):** so it was (and with the record off as a second reading). |
 | S5 | S3, S9 | The stage in force is "the approved in-between picture, else the sketch", but the sheet's tree has no drawn or approved state in its ledger (S3 debt) and a rebuild takes every picture as approved: the fall-back to the sketch on the drawing path is only seen in a live-flow check. **S5 (27 Sep):** shown offline on the drawing path (`test/refs.test.ts`); the fresh replays are still owed. |
 | S5 | S6 | The evals re-derive who each attached image is for (`prompt-cases.ts refsOf`): it missed a crowd the record puts in view, which framePrompt attaches a picture for (four live moments read as images for their light alone; fixed in the S5 eval). `assembleCut` knows each image's subject; S6 could return it with `references`, so the evals read it instead of working it out again. With S5 `assembleCut` names each image's source and subject (`source`, `of`); the evals still work it out. |
-| S5 | S5 | Contradictions S5 must not settle by code alone (owner or paid check): D1 (one image per subject) against 14 guards drawn with a sketch beside its in-between pictures; D3's bar (2 or 3 changes); D5 (a place's state has one carrier, the mock-up beat the in-between picture) against a place's in-between picture as its one image; the mock-up through the dreamer's eyes (paired 1 of 6 right, story 7 of 11). **Built to the paid check (27 Sep):** D1 on (and `DREAMCHAT_REFS=sketch` without it), D3 at two (the owner), a place's in-between picture as its one image, the mock-up off through the dreamer's eyes; each has moments in the check. New: a place's state picture and its side's picture in force, neither drawn from the other (library-1 m3), have no one image: drawing the side's picture from the state's would give one. |
+| S5 | S5 | (Settled since: the bar is two; a side the floor plan lays out is no change; a place's state picture and its side's picture are one, the side's edited from the state's.) Contradictions S5 must not settle by code alone (owner or paid check): D1 (one image per subject) against 14 guards drawn with a sketch beside its in-between pictures; D3's bar (2 or 3 changes); D5 (a place's state has one carrier, the mock-up beat the in-between picture) against a place's in-between picture as its one image; the mock-up through the dreamer's eyes (paired 1 of 6 right, story 7 of 11). **Built to the paid check (27 Sep):** D1 on (and `DREAMCHAT_REFS=sketch` without it), D3 at two (the owner), a place's in-between picture as its one image, the mock-up off through the dreamer's eyes; each has moments in the check. New: a place's state picture and its side's picture in force, neither drawn from the other (library-1 m3), have no one image: drawing the side's picture from the state's would give one. |
 | Checkpoint tool | S2, S9, every step | `session.ts`: what a moment calls each one (`calledFor`) and its previs render (`previsFor`) moved out of `startFrame`/`layoutFor` unchanged, so the checkpoint renders the mock-up as the harness does (46 of 54 drawn mock-ups render byte for byte as the run's own; the other 8 are code changed since). `evals/paired-store.ts` sets up any moments (`setUpDream`, the paired test's `setUp` on it); `evals/corpus.ts` word diff shared (`changeLines`); `evals/implied-cache.ts` writes its cache back only when a reading was added (it rewrote an unchanged cache on every run). A step that changes how a moment's images are chosen or named (S5 `chooseRefs`, S6) must keep `evals/checkpoint-set.ts todayOf` mapping every image to the run's file, and add its switch to `STEP_SWITCHES` (S5's is DREAMCHAT_REFS, added 27 Sep; the checkpoint's pre-draw check takes a subject's in-between picture for its sketch). A rebuild models neither the harness's "you" rewording nor a brief for a new view: the checkpoint refuses the first and writes the second with `--brief` (`shotFor`). |
 | S7 | S4 | `sb_held_hands` (the shot puts what the dreamer holds away from their hands) flags 6 of the 9 pictures seen through the dreamer's eyes with a thing held, 5 of them not right: S4's debt that a held thing through the dreamer's eyes is placed at its floor-plan spot, not the hands. Code's to put right, not a check's to hold. |
 | S7 | S3, S9 | No tag says what is seen beyond the place (A6), so `r_beyond_inside` is asked of every cut; no judged picture is tagged `turned`, so `r_turned_both` has no labels. The labelled set's tags are today's rebuild of each moment, not the night's plan: a moment drawn keeps its sheet only as hashes (`sentSheet`), not the tags it was drawn with (S9's record of what was drawn). |
@@ -1537,13 +1557,13 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   snow-train-2-m5-shut, met by `shutAway`). His m6 picture has it open, letters showing, handed over; his notes on m6
   say nothing of the lid. So carrying it into another place closing it stays until a verdict says otherwise; what
   stays open (an umbrella, a book) is still the debt above.
-- **S5 (references).** Left behind DREAMCHAT_REFS: a place with an in-between picture of its state and one of a side
-  never drawn, neither drawn from the other, keeps both beside its sketch; an in-between picture that starts a chain
-  is drawn even where no moment needs it alone (the next one is edited from it); the plan assumes every person but a
-  crowd has an approved sketch, so a moment is not held for an earlier picture of someone whose sketch failed (they
-  go without an image); a moment reads what its in-between picture shows from the picture's own copy (older copies
-  have none: the fresh send refreshes them); the pre-draw check takes any in-between picture of a subject for its
-  sketch. The prompts S5 changes have Jev questions not yet read (about 50).
+- **S5 (references).** Left behind DREAMCHAT_REFS: changes the moments imply are said in words and never drawn on
+  their own (S1), so 7 frozen moments still carry two (one three) with the action; a new framing where nothing lays
+  the picture out is a change no in-between picture carries (13-16 live); the plan assumes every person but a crowd
+  has an approved sketch, so a moment is not held for an earlier picture of someone whose sketch failed (they go
+  without an image); a moment reads what its in-between picture shows from the picture's own copy (older copies
+  have none: the fresh send refreshes them); a side's in-between picture drawn for several cuts is edited from the
+  state in force at the first of them; the pre-draw check takes any in-between picture of a subject for its sketch.
 - **S7 (Jev checks).** The labelled set is thin: 122 pictures, 62 moments from ten dreams (20 moments drawn four
   times); the library questions were written after reading the owner's notes on these pictures, so only pictures
   judged after 27 Sep can earn them acting, and `evals/build-checks-set.ts` must be taught to read those verdicts
@@ -1598,14 +1618,11 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   scores, simulations) is stalled until it is topped up. Work that needs no Jev continues meanwhile.
 
 - **Settled 27 Sep: "several" is two** (the in-between picture rule): built so in S5.
-- **For S5: is a side never drawn a change where the mock-up is image 1?** The plan counts it (a view in-between
-  picture is made only at three changes). At the owner's bar of two, 39 frozen moments (149 live) carry the action
-  and a side never drawn; every view in-between picture the implied readings bring (5 frozen) is kept by the rule.
-  If the mock-up, which renders that very side, makes it no change, those 5 go and no more are made; if it is a
-  change, the owner's rule asks for a view in-between picture on every one of them. The check's library moments
-  (a place's one image) inform it.
-- **For S5: the Jev questions on the prompts S5 changes** (about 50 calls, cheap) are needed to count the guards
-  36/36 with S5 on; not asked (cache only).
+- **Settled 27 Sep: a side the floor plan lays out is no change** (only story changes count): built so in S5.
+- **For S5: a side's in-between picture where nothing lays the picture out.** At the owner's bar of two, a cut first
+  facing a side never drawn, with no floor plan for its camera, carries two changes with the action, so S5 draws a
+  side's in-between picture for it: 2 frozen (library-2's inserts), 43 live (older dreams without floor plans). If
+  these are not wanted, the side is no change there either and `crowded` in `continuity.ts` goes back to three.
 
 - In `evals/paired-verdicts.json`, the sketches-only version of lighthouse-first m7 carries the same note as orchard
   m7 (about Tomas), on a picture rated right: probably typed on the wrong picture. Left as is until confirmed.
@@ -2230,3 +2247,19 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   31-32 met, 0 failing. `bun test`: 686 pass with the switches off; with the record, sheet and camera on, and with
   S5 on too, 684 pass and 2 fail, both S9 tests that fail on lab with the record on (overlaps S5 -> S9); typecheck
   clean. The paid check proposed (18 pictures, about $2.70). No pictures drawn, no money spent.
+- 27 Sep: S5 review fixes, rebased on lab 3392d83 (new commits on `s5-refs`). The owner's rule applied: a side or a
+  new framing the floor plan lays out is no change, so an in-between picture of a side where the mock-up lays it out
+  is neither made nor kept, nor one that takes none of a cut's changes off it; a side's in-between picture where
+  nothing lays it out is made at two, edited from the place's state in force. What an in-between picture shows is
+  each thing once, its latest ("water: rises over the desks", not every level on the way), and what the moment has
+  newer is said as an exception; a place's state picture beside the mock-up keeps its state said outright. Image 1
+  as far as the verdicts go: another place keeps the mock-up for a wide shot, the crowd rule leaves wide
+  establishing shots alone and reads the group flag (a failed sketch is no crowd), through the dreamer's eyes the
+  mock-up stays with nothing but the place in view (orchard m7). The check counts changes itself
+  (`storyChanges`). Reference check, record and sheet on, frozen / live: a subject by two images 40 / 91 to 0 / 0,
+  waited for and never sent 67 / 216 to 0 / 0, from another side 2 / 8 to 0 / 0, in-between pictures not needed 17
+  of 29 / 32 of 67 to 0 of 14 / 1 of 74; off: 0 of 1,864 pictures moved against lab. Prompt cases (65 Jev calls):
+  guards 36/36 with the record and sheet on and with the camera, counted as before (19/33, 27/33), hypotheses 5 to 10
+  and 7 to 12 of 18. `bun test`: 777 pass with the switches unset; with every switch on, two tests of today's plans
+  failed and are now pinned (their files pass both ways); typecheck clean. The paid check re-proposed: 20 pictures,
+  $3.00, not drawn. No pictures drawn, no money spent.
