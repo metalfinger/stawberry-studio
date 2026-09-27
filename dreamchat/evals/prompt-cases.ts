@@ -1231,7 +1231,7 @@ if (import.meta.main) {
         costs.push(read);
         session = read.session;
       }
-      r = rebuild(session);
+      r = rebuild(session, { asDrawn: false });
     } catch (e) {
       r = e instanceof Error ? e : new Error(String(e));
     }

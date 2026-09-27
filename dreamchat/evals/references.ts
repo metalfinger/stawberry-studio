@@ -319,7 +319,7 @@ if (import.meta.main) {
         costs.push(read);
         session = read.session;
       }
-      run.dreams[d.id] = { ...referencesOf(rebuild(session)), hash: d.hash };
+      run.dreams[d.id] = { ...referencesOf(rebuild(session, { asDrawn: false })), hash: d.hash };
     } catch (e) {
       run.dreams[d.id] = {
         error: String(e instanceof Error ? e.message : e).slice(0, 300),

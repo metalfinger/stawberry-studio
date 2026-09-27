@@ -162,11 +162,16 @@ import {
   asDrawnMode,
   type Copies,
   type DreamNow,
+  fieldsInForce,
+  freshSendMode,
+  ghostInForce,
+  KEYS_VERSION,
   labelsOf,
   reasonLine,
   type Recorded,
   recordGhost,
   recordMoment,
+  refreshMoment,
   staleness,
   type StaleReport,
   withCopies,
@@ -781,20 +786,65 @@ export function dreamNowOf(s: Pick<Session, 'draft' | 'build' | 'transcript' | '
   const frames = s.build?.frames ?? [];
   const out: DreamNow = { frames, items: s.build?.items ?? [], style: s.style ?? null, plan: null };
   if (!s.draft?.breakdown) return out;
-  const b = structuredClone(s.draft.breakdown);
-  completeViews(b);
-  try {
-    out.plan = reconcileGhosts(planContinuity(b, planRecord(s, b)), frames);
-  } catch {
-    return out;
+  // Planning the dream again is the costly part, and every send and every look at staleness asks for it:
+  // made once for what it is made from.
+  const key = hashOf({
+    version: KEYS_VERSION,
+    record: recordMode(),
+    breakdown: s.draft.breakdown,
+    readings: s.draft.readings ?? null,
+    items: s.build?.items ?? [],
+    words: recordInputsOf(s).words,
+    style: s.style ?? null,
+    ghosts: frames.filter((f) => f.kind === 'ghost').map((f) => [f.id, f.ghost]),
+  });
+  let made = dreamsNow.get(key);
+  if (!made) {
+    made = planDreamNow(s, frames);
+    dreamsNow.set(key, made);
+    if (dreamsNow.size > 32) dreamsNow.delete(dreamsNow.keys().next().value as string);
   }
-  out.cast = Object.fromEntries(
-    moments(b).map((m) => {
-      const c = out.plan?.cuts.find((x) => x.id === m.id);
-      return [m.id, { visible: [...(c?.visible ?? m.visible)], things: [...(c?.things ?? m.things)] }];
-    }),
-  );
-  return out;
+  return { ...out, ...made };
+}
+
+/** A moment of the dream as the breakdown holds it now. */
+const momentOf = (s: Pick<Session, 'draft'>, id: string): Moment | undefined =>
+  s.draft?.breakdown ? moments(s.draft.breakdown).find((m) => m.id === id) : undefined;
+
+/** The dream planned now, by what it was made from: kept for the last few. */
+const dreamsNow = new Map<string, Omit<DreamNow, 'frames' | 'items' | 'style'>>();
+
+function planDreamNow(
+  s: Pick<Session, 'draft' | 'build' | 'transcript' | 'style'>,
+  frames: Item[],
+): Omit<DreamNow, 'frames' | 'items' | 'style'> {
+  const b = structuredClone(s.draft!.breakdown!);
+  completeViews(b);
+  const rec = planRecord(s, b);
+  let plan: ContinuityPlan;
+  try {
+    plan = reconcileGhosts(planContinuity(b, rec), frames);
+  } catch {
+    return { plan: null };
+  }
+  const all = moments(b);
+  return {
+    plan,
+    cast: Object.fromEntries(
+      all.map((m) => {
+        const c = plan.cuts.find((x) => x.id === m.id);
+        return [m.id, { visible: [...(c?.visible ?? m.visible)], things: [...(c?.things ?? m.things)] }];
+      }),
+    ),
+    moments: Object.fromEntries(all.map((m) => [m.id, m])),
+    // The floor plan each mock-up is rendered from, through its camera (session.ts layoutFor).
+    floor: Object.fromEntries(
+      plan.cuts.flatMap((c) => {
+        const where = c.eye ? shotPlan(b, c.id, rec) : undefined;
+        return where ? [[c.id, hashOf({ where, eye: c.eye })]] : [];
+      }),
+    ),
+  };
 }
 
 /** Which drawn pictures no longer match the dream, and why (S9). Reported only; nothing acts on it. */
@@ -2514,6 +2564,10 @@ export class SessionStore {
     told?: { fields: Item['fields']; reworded?: string[] },
   ): Promise<void> {
     frame.startedAtTurn = turn;
+    // DREAMCHAT_FRESH_SEND=on: the moment's copy of itself (who and what is in it, whether its words are
+    // the dreamer's) refreshed from the plan in force as it is sent. A moment kept the cast it was first
+    // put in with, which a re-plan does not update (paper-city m5 drawn without the red paper bird).
+    if (freshSendMode()) refreshMoment(frame, momentOf(s, frame.id));
     // The dream the moment's cut sheet reads, made once for this drawing and again after its words change.
     const once: { dream?: SheetDream | null } = {};
     if (!this.deps.sheets || !s.style || !s.build) {
@@ -3000,6 +3054,10 @@ export class SessionStore {
             const v = frame.fields[k]?.value;
             if (typeof v === 'string' && v.trim()) m[k] = v;
           }
+    // DREAMCHAT_FRESH_SEND=on: words reworded (the third person, a contradiction put right) stay the
+    // dreamer's where the breakdown holds them as said: the colours they gave keep their colour line
+    // (sea-school m4's "orange octopus" was dropped once its action was reworded).
+    if (freshSendMode()) frame.fields = fieldsInForce(frame.fields, momentOf(s, frame.id));
     await this.replan(s);
   }
 
@@ -3074,6 +3132,10 @@ export class SessionStore {
   private async replan(s: Session, opts: { syncRecords?: boolean } = {}): Promise<void> {
     if (!s.build?.frames || !s.draft?.breakdown) return;
     const plan = reconcileGhosts(planContinuity(s.draft.breakdown, planRecord(s)), s.build.frames);
+    // DREAMCHAT_FRESH_SEND=on: the dream's own copy of its plan follows the re-plan too. Kept as it was made
+    // when the moments began, the cut sheet's tree read in-between pictures without their keys
+    // (desert-station m3-m6, S9).
+    if (freshSendMode()) s.build.plan = plan;
     // In-between references the plan now needs and none was drawn for are added, to be drawn.
     const ids = s.production?.result?.ids ?? {};
     for (const g of buildGhosts(plan))
@@ -3202,6 +3264,14 @@ export class SessionStore {
   /** Start one ghost: an edit of its asset's approved sheet, never shown as part of the dream. */
   private async startGhost(s: Session, ghost: Item, turn: number): Promise<void> {
     ghost.startedAtTurn = turn;
+    // DREAMCHAT_FRESH_SEND=on: its plan refreshed from the plan in force as it is sent. A re-plan never
+    // updates an in-between picture already put in: 10 of 16 in S2's redraws were drawn from plans made
+    // before the record gave the look before their change.
+    if (freshSendMode() && ghost.ghost) {
+      const now = ghostInForce(ghost.ghost, ghost.id, dreamNowOf(s).plan);
+      // A copy: the plan made now is kept for other callers.
+      if (now) ghost.ghost = { ...structuredClone(now), id: ghost.id };
+    }
     const g = ghost.ghost;
     const sheet = s.build?.items.find((i) => i.id === g?.of);
     const fail = (error: string) => Object.assign(ghost, { status: 'failed', error });
@@ -3644,6 +3714,7 @@ export class SessionStore {
             (i) => i.status === 'drawing',
           );
           if (!running.length) return;
+          let landed = false;
           for (const it of running) {
             if (!it.jobId || !it.nodeId) continue;
             let st: Awaited<ReturnType<SheetEngine['status']>>;
@@ -3670,6 +3741,7 @@ export class SessionStore {
             }
             const failed = ['failed', 'submission_unknown', 'collection_failed', 'cancelled'].includes(st.state);
             if (st.state !== 'ready' && !failed) continue;
+            if (st.state === 'ready') landed = true;
             await this.serial(id, () =>
               this.update(id, (x) => {
                 const cur = [...(x.build?.items ?? []), ...(x.build?.frames ?? [])].find((i) => i.id === it.id);
@@ -3690,6 +3762,8 @@ export class SessionStore {
               }),
             );
           }
+          // S9: a picture landed, so what is stale may have moved: worked out once, and logged if it did.
+          if (landed) await this.serial(id, async () => this.noteStale(this.require(id)));
           // Each finished take is checked by the judge in the background; the verdict is shown, and
           // decides nothing on its own.
           for (const it of running) this.judgeSoon(id, it.id);
@@ -4006,11 +4080,9 @@ export class SessionStore {
         (i) => i.status === 'drawing' || (i.status === 'waiting' && s?.phase === 'frames' && startable(i)),
       );
       const judging = (this.judging.get(id) ?? 0) > 0;
-      if (s?.draft?.status !== 'drafting' && s?.production?.status !== 'writing' && !drawing && !judging) break;
+      if (s?.draft?.status !== 'drafting' && s?.production?.status !== 'writing' && !drawing && !judging) return;
       await Bun.sleep(100);
     }
-    // S9: what is stale is worked out for the dream as it has settled, or as it stands at the timeout.
-    this.flushStale(id);
   }
 
   // Assistant history is replayed in the SAME JSON shape the model must emit: fed back as
@@ -4048,33 +4120,15 @@ export class SessionStore {
     return s ? stalenessOf(s) : null;
   }
 
-  /** S9: by conversation, what the last staleness was worked out from, and what it found. */
-  private staleSeen = new Map<string, { input: string; found: string }>();
-  /** S9: staleness worked out a little after the last save, off the save itself. */
-  private staleTimers = new Map<string, ReturnType<typeof setTimeout>>();
-
-  /** S9: staleness worked out soon, once the saves of one change have landed. */
-  private staleSoon(id: string): void {
-    if (asDrawnMode() !== 'on' || this.staleTimers.has(id)) return;
-    const timer = setTimeout(() => this.flushStale(id), 250);
-    timer.unref?.();
-    this.staleTimers.set(id, timer);
-  }
-
-  /** S9: staleness worked out now, if it is waiting to be. */
-  private flushStale(id: string): void {
-    const timer = this.staleTimers.get(id);
-    if (!timer) return;
-    clearTimeout(timer);
-    this.staleTimers.delete(id);
-    const s = this.sessions.get(id);
-    if (s) void inSession(this.deps.dir, id, async () => this.noteStale(s));
-  }
+  /** S9: by conversation, what the staleness last logged found. */
+  private staleSeen = new Map<string, string>();
 
   /**
-   * S9, with DREAMCHAT_AS_DRAWN=on: after any change to what the pictures are drawn from, which drawn
-   * pictures are now stale and why, logged when that changes (`as_drawn` transitions in the Jev log).
-   * Reported only: nothing is drawn again, held or planned again for it.
+   * S9, with DREAMCHAT_AS_DRAWN=on: which drawn pictures are stale, behind the dream or not comparable,
+   * and why, logged when that changes (`as_drawn` transitions in the Jev log). Worked out when a picture
+   * lands, never on every save: planning the dream again takes a tenth of a second or more, and the saves
+   * of one change come in bursts. Between landings `/api/stale` works it out when asked. Reported only:
+   * nothing is drawn again, held or planned again for it.
    */
   private noteStale(s: Session): void {
     if (asDrawnMode() !== 'on' || !s.build?.frames?.some((f) => f.asDrawn?.length)) return;
@@ -4082,48 +4136,23 @@ export class SessionStore {
       recordJev({
         kind: 'transition',
         stage: 'as_drawn',
-        to: decision === 'stale' ? 'stale' : 'checked',
+        to: decision === 'stale' || decision === 'behind' ? decision : 'checked',
         ...(moment ? { moment } : {}),
         facts: [],
         decision,
         reason: reason.slice(0, 4000),
       });
     try {
-      const b = s.build;
-      const input = hashOf({
-        breakdown: s.draft?.breakdown ?? null,
-        readings: s.draft?.readings ?? null,
-        style: s.style,
-        words: s.transcript.filter((e) => e.role === 'user').length,
-        items: b.items.map((i) => [i.id, i.status, i.version, i.mediaId, i.review, i.continuityApproved, i.fields]),
-        frames: (b.frames ?? []).map((f) => [
-          f.id,
-          f.status,
-          f.version,
-          f.mediaId,
-          f.review,
-          f.continuityApproved,
-          f.fields,
-          f.frame?.visible,
-          f.frame?.things,
-          f.frame?.plan,
-          f.ghost,
-          f.layout?.mediaId,
-          f.check?.failedIds,
-          f.check?.notes,
-        ]),
-      });
-      const seen = this.staleSeen.get(s.id);
-      if (seen?.input === input) return;
       const report = stalenessOf(s);
-      const lines = report.stale.map(reasonLine);
-      const found = hashOf({ lines, checked: report.checked, unrecorded: report.unrecorded });
-      this.staleSeen.set(s.id, { input, found });
-      if (seen?.found === found) return;
+      const found = hashOf(report);
+      if (this.staleSeen.get(s.id) === found) return;
+      this.staleSeen.set(s.id, found);
       for (const st of report.stale) log('stale', reasonLine(st), st.id);
+      for (const st of report.behind) log('behind', reasonLine(st), st.id);
+      const list = (xs: string[]) => (xs.length ? ` (${xs.join(', ')})` : '');
       log(
         'checked',
-        `${report.checked.length} pictures with a record checked, ${report.stale.length} stale${report.stale.length ? ` (${report.stale.map((x) => x.id).join(', ')})` : ''}${report.unrecorded.length ? `; ${report.unrecorded.length} drawn without one (${report.unrecorded.join(', ')})` : ''}`,
+        `${report.checked.length} pictures with a record checked, ${report.stale.length} stale${list(report.stale.map((x) => x.id))}, ${report.behind.length} drawn behind the dream${list(report.behind.map((x) => x.id))}${report.unknown.length ? `; ${report.unknown.length} not comparable${list(report.unknown.map((x) => `${x.id}: ${x.why}`))}` : ''}${report.unrecorded.length ? `; ${report.unrecorded.length} drawn without a record${list(report.unrecorded)}` : ''}`,
       );
     } catch (e) {
       log('failed', `staleness could not be worked out: ${String(e).slice(0, 300)}`);
@@ -4133,7 +4162,6 @@ export class SessionStore {
   private async save(s: Session): Promise<void> {
     s.updatedAt = this.now();
     this.sessions.set(s.id, s);
-    this.staleSoon(s.id);
     if (this.deps.dir) await Bun.write(join(this.deps.dir, `${s.id}.json`), JSON.stringify(s, null, 2));
   }
 }

@@ -243,8 +243,8 @@ export function diffLines(diff: CorpusDiff): string[] {
 
 /** Each frozen dream against its saved conversation: every picture's prompt and images, rebuilt from both. */
 export function verifyFrozen(frozen: Session, live: Session): string[] {
-  const a = rebuild(frozen);
-  const b = rebuild(live);
+  const a = rebuild(frozen, { asDrawn: false });
+  const b = rebuild(live, { asDrawn: false });
   const out: string[] = [];
   const pb = new Map(b.pictures.map((p) => [p.id, p]));
   for (const p of a.pictures) {
@@ -340,7 +340,7 @@ if (import.meta.main) {
         costs.push(read);
         session = read.session;
       }
-      dump.dreams[d.id] = { ...dumpOf(rebuild(session), sentOf(d.session)), hash: d.hash };
+      dump.dreams[d.id] = { ...dumpOf(rebuild(session, { asDrawn: false }), sentOf(d.session)), hash: d.hash };
     } catch (e) {
       dump.dreams[d.id] = {
         error: String(e instanceof Error ? e.message : e).slice(0, 500),

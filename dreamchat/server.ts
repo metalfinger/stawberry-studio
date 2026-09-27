@@ -19,6 +19,7 @@ import { contextOf, type DreamTree, resolveTree } from './tree';
 import { assistantJudge, judgeKind } from './judge';
 import { judgeAvailable, judgeContinuity, judgeTake, liveSheets, PROVIDER, spawnWorker } from './sheets';
 import { REPO, STRAWBERRY_HOME, STRAWBERRY_PYTHON, strawberryAvailable, writeProduction } from './strawberry';
+import { staleRoute } from './routes';
 
 const loaded = loadedKeys;
 const cfg = dreamConfig();
@@ -157,12 +158,9 @@ const server = Bun.serve({
         return ctx ? json(ctx) : fail(404, 'no such cut');
       }
 
-      // S9: which drawn pictures no longer match the dream, and why (pictures drawn with
-      // DREAMCHAT_AS_DRAWN=on keep what they were drawn from). Reported only: nothing acts on it.
-      if (url.pathname === '/api/stale') {
-        const report = store.stale(id ?? '');
-        return report ? json(report) : fail(404, 'no such conversation');
-      }
+      // S9: which drawn pictures no longer match the dream, and why (routes.ts). Reported only.
+      const stale = staleRoute(store, url);
+      if (stale) return stale;
 
       if (url.pathname === '/api/turn') {
         const d = store.detail(id, Number(url.searchParams.get('n')));

@@ -22,11 +22,20 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { type AsDrawn, behind, currentRecord, reasonLine, type StaleReport } from '../asdrawn';
+import {
+  type AsDrawn,
+  currentRecord,
+  drawnEnv,
+  labelsOf,
+  matchGhost,
+  reasonLine,
+  staleness,
+  type StaleReport,
+} from '../asdrawn';
 import { ghostName } from '../cutsheet';
 import { imagesOf, type Rebuilt, rebuild } from '../plan';
 import { moments } from '../producer';
-import { type Session, stalenessOf } from '../session';
+import { dreamNowOf, type Session, stalenessOf } from '../session';
 import type { Item } from '../sheets';
 
 type Sent = Record<string, { prompt: string; images: string[] }>;
@@ -52,11 +61,13 @@ export function redrawn(folder: string): { dream: string; session: Session; sent
 const drawnOf = (s: Session) =>
   (s.build?.frames ?? []).filter((f) => (f.kind === 'cut' || f.kind === 'ghost') && f.status === 'ready' && f.mediaId);
 
-/** A rebuilt picture for a saved one: a moment by its id, an in-between picture by what it shows. */
+/** A rebuilt picture for a saved one: a moment by its id, an in-between picture by the change it shows. */
 function rebuiltOf(r: Rebuilt, f: Item) {
-  return f.kind === 'ghost'
-    ? r.pictures.find(
-        (p) => p.kind === 'ghost' && p.item.ghost && f.ghost && ghostName(p.item.ghost) === ghostName(f.ghost),
+  return f.kind === 'ghost' && f.ghost
+    ? matchGhost(
+        f.ghost,
+        r.pictures.filter((p) => p.kind === 'ghost'),
+        (p) => p.item.ghost,
       )
     : r.pictures.find((p) => p.id === f.id && p.kind === 'cut');
 }
@@ -455,6 +466,9 @@ if (import.meta.main) {
     after: { sameM: 0, sameG: 0 },
     stale: 0,
     behind: 0,
+    unknown: 0,
+    drift: 0,
+    driftStale: 0,
     changes: 0,
     exact: 0,
     rightReason: 0,
@@ -469,10 +483,14 @@ if (import.meta.main) {
     const before = asSent(s, x.sent, false);
     const after = asSent(s, x.sent, true);
     const report: StaleReport = stalenessOf(s);
-    const behindOf = recorded.flatMap(([f, r]) => {
-      const b = behind(r!);
-      return b.length ? [`${f.id}: ${b.map((y) => y.input).join(', ')}`] : [];
-    });
+    const behindOf = report.behind.map((b) => `${b.id}: ${b.reasons.map((y) => y.input).join(', ')}`);
+    // Read under other switches (the record on or off the other way, as on another machine): none compared.
+    const env = drawnEnv();
+    const other = {
+      ...env,
+      switches: { ...env.switches, DREAMCHAT_RECORD: env.switches.DREAMCHAT_RECORD === 'on' ? 'off' : 'on' },
+    };
+    const drift = staleness(dreamNowOf(s), labelsOf(s.build?.items ?? [], s.build?.frames ?? []), other);
     const isGhost = (id: string) => drawn.find((f) => f.id === id)?.kind === 'ghost';
     totals.drawn += drawn.length;
     totals.recorded += recorded.length;
@@ -485,8 +503,11 @@ if (import.meta.main) {
     totals.after.sameG += after.same.filter(isGhost).length;
     totals.stale += report.stale.length;
     totals.behind += behindOf.length;
+    totals.unknown += report.unknown.length;
+    totals.drift += drift.unknown.length;
+    totals.driftStale += drift.stale.length;
     console.log(
-      `${x.dream}: ${drawn.length} drawn, ${recorded.length} with a record (${holds.length} holding what was sent); as sent by a rebuild ${before.same.length} without the records, ${after.same.length} with; ${report.stale.length} stale; drawn behind the dream ${behindOf.length}`,
+      `${x.dream}: ${drawn.length} drawn, ${recorded.length} with a record (${holds.length} holding what was sent); as sent by a rebuild ${before.same.length} without the records, ${after.same.length} with; ${report.stale.length} stale; drawn behind the dream ${behindOf.length}; not comparable ${report.unknown.length} (under other switches ${drift.unknown.length}, stale ${drift.stale.length})`,
     );
     if (show) {
       for (const [id, d] of Object.entries(before.differ)) console.log(`   without records ${id}: ${d}`);
@@ -508,6 +529,6 @@ if (import.meta.main) {
     }
   }
   console.log(
-    `\n${totals.drawn} pictures drawn, ${totals.recorded} with a record, ${totals.heldSent} holding what was sent; a rebuild gives as sent: moments ${totals.before.sameM}/${totals.before.moments} without the records, ${totals.after.sameM}/${totals.before.moments} with; in-between pictures ${totals.before.sameG}/${totals.before.ghosts} without, ${totals.after.sameG}/${totals.before.ghosts} with; stale with nothing changed ${totals.stale}; drawn behind the dream ${totals.behind}; made changes ${totals.changes}: exactly the pictures they must make stale ${totals.exact}, with the right reason ${totals.rightReason}, every picture still rebuilt as sent ${totals.asSent}`,
+    `\n${totals.drawn} pictures drawn, ${totals.recorded} with a record, ${totals.heldSent} holding what was sent; a rebuild gives as sent: moments ${totals.before.sameM}/${totals.before.moments} without the records, ${totals.after.sameM}/${totals.before.moments} with; in-between pictures ${totals.before.sameG}/${totals.before.ghosts} without, ${totals.after.sameG}/${totals.before.ghosts} with; stale with nothing changed ${totals.stale}; drawn behind the dream ${totals.behind}; not comparable ${totals.unknown} (read under other switches: ${totals.drift} not comparable, ${totals.driftStale} stale); made changes ${totals.changes}: exactly the pictures they must make stale ${totals.exact}, with the right reason ${totals.rightReason}, every picture still rebuilt as sent ${totals.asSent}`,
   );
 }

@@ -137,6 +137,16 @@ export function writingLine(words: string[]): string {
 }
 
 /** The moments to draw, one per cut, each with its entry in the continuity plan. */
+/** A moment's words as a picture is told them, and which the dreamer said, from the breakdown. */
+export const momentFields = (m: Moment): Item['fields'] => ({
+  action: { value: m.action, said: m.said },
+  feeling: { value: m.feeling || null, said: false },
+  visual_point: { value: m.visual_point || null, said: false },
+  purpose: { value: m.purpose || null, said: false },
+  shift: { value: m.shift || null, said: !!m.shift },
+  dream: { value: m.dream || null, said: !!m.dream },
+});
+
 export function buildFrames(b: Breakdown, plan: ContinuityPlan): Item[] {
   const all = b.scenes.flatMap((s) => s.moments);
   return all.map((m, i) => {
@@ -145,14 +155,7 @@ export function buildFrames(b: Breakdown, plan: ContinuityPlan): Item[] {
       id: m.id,
       kind: 'cut',
       name: label(m.action),
-      fields: {
-        action: { value: m.action, said: m.said },
-        feeling: { value: m.feeling || null, said: false },
-        visual_point: { value: m.visual_point || null, said: false },
-        purpose: { value: m.purpose || null, said: false },
-        shift: { value: m.shift || null, said: !!m.shift },
-        dream: { value: m.dream || null, said: !!m.dream },
-      },
+      fields: momentFields(m),
       status: 'waiting',
       version: 0,
       needs: p?.needs ?? [],
