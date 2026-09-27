@@ -20,7 +20,7 @@ context mirrors it.
 | S6 One prompt builder, clean-ups retired | Not started | after S5 |
 | S7 Jev checks routed by tags | Building, test first | branch `s7-jev-routed` |
 | S8 Listening | Built; proving | fresh simulation on the Claude writer running |
-| S9 Record of what was drawn, staleness | Building, test first | branch `s9-as-drawn` |
+| S9 Record of what was drawn, staleness | Built behind a switch (off); eval met; review next | every picture keeps what it was sent: a rebuild gives 61/61 moments and 16/16 in-between pictures as sent (57/61, 6/16 before); 0 stale where nothing changed; 56 made changes each found exactly; 2 stale on saved dreams, both right (branch `s9-as-drawn`) |
 | S10 Paid benchmark judged by the owner | Not started | about $10 |
 
 Money: $21 left of $30; the S4 picture check (about $3) is approved and runs when S4 merges. Writer model: Claude
@@ -81,7 +81,7 @@ One **cut sheet** per cut is the spine everything is assembled from:
 | S6 | `assembleCut`: prompt and references from the sheet, each fact once, action as visible facts; retire the regex clean-ups one by one | not started | All S0 cases pass; word-level diff reviewed on every saved dream |
 | S7 | Jev layer 2: checks routed by tags, a question library from the film rules, a labelled set per question; a check may hold a picture only if it predicts pictures | not started | Each question meets its bar on its labelled set |
 | S8 | Listening: every reply checked against its move; major picture gaps asked openly, minor ones imagined and marked; the retelling ends with the moments | built and merged behind DREAMCHAT_LISTEN (off); review fixes on `s8-listening` (27 Sep): the come-back rule restricted, choice readings that keep changes, the retelling's breakdown started early, and the test's move-selection floors; proven offline (replayed moves, re-read answers, a hand-labelled set), and a fresh simulation still owed (the writer model's balance is spent) | `evals/listening.ts` against the frozen before (`evals/listening-before`, 40 fresh simulated conversations): listening-turn compliance at least 90%, either/or under 5%, leading 0, said but not in their words 0, every way of drawing it kept, every retelling ends with a list of the breakdown's moments, no answer misread; floors not below the before (below) |
-| S9 | Record of what was drawn, and staleness; sequences and look keys | eval written (27 Sep, below), being built on branch `s9-as-drawn` behind DREAMCHAT_AS_DRAWN | Every picture drawn keeps what it was sent and drawn from; a rebuild reading it gives each as sent (live-flow's four moments and the in-between pictures' look lines included); 0 stale where nothing changed; each made change makes exactly its dependent pictures stale, with the reason; stale pictures found on saved dreams, a sample hand-checked; corpora unchanged (below) |
+| S9 | Record of what was drawn, and staleness; sequences and look keys | built on branch `s9-as-drawn` behind DREAMCHAT_AS_DRAWN (off by default); eval met (27 Sep, below); independent review next | Every picture drawn keeps what it was sent and drawn from; a rebuild reading it gives each as sent (live-flow's four moments and the in-between pictures' look lines included); 0 stale where nothing changed; each made change makes exactly its dependent pictures stale, with the reason; stale pictures found on saved dreams, a sample hand-checked; corpora unchanged (below) |
 | S10 | Only after S0-S9 pass: a paid benchmark on the five replay dreams, judged by the owner | waiting | Owner's first-take rate against today's |
 
 ## Where things are
@@ -118,6 +118,11 @@ One **cut sheet** per cut is the spine everything is assembled from:
   every moment's images for one image per subject, its stage in force, pictures from another side, what the plan
   waits for and never sends, images for light alone, image 1 by tag, and each in-between picture against the
   owner's rule; writes `runs/references/<label>.json` (S5 eval below).
+- S9's record of what was drawn and staleness (`asdrawn.ts`, DREAMCHAT_AS_DRAWN=on): each picture's record is
+  `Item.asDrawn`, a dream's stale pictures `GET /api/stale?id=<session>` and the `as_drawn` lines of its Jev log;
+  `bun run evals/as-drawn.ts <redraw folder> [--show]` reads dreams drawn with the switch on (records, rebuilds as
+  sent, staleness where nothing changed, changes made after drawing), `--saved <state folder> --store <sqlite>` or
+  `--replays <folder>` dreams drawn before it, from their stores (S9 eval below).
 - The frozen dreams: the ten real dreams and the five benchmark dreams, frozen by `evals/freeze-session.ts` with
   every field `rebuild` reads (`bun run evals/corpus.ts --verify`: each rebuilds as its saved conversation does,
   every picture). For the 62 drawn moments they also keep what was really sent: 15 of 62 prompts rebuild word for
@@ -534,6 +539,69 @@ One **cut sheet** per cut is the spine everything is assembled from:
   images, which name a take, and the look's name are read; words, cast and record are not.
   **Must not move:** the corpora (0 pictures, switch off and on); `bun test` and the typecheck with the switch off
   and on; the prompt cases (no case moves: they read `rebuild`, and the frozen dreams have no records).
+  **The eval as run (27 Sep).** Built as `asdrawn.ts` (the record, its keys, staleness), each picture's record kept
+  when it is sent (session.ts, `Item.asDrawn`, the sketches and looks once in `Build.copies`), `rebuild` reading
+  the records (plan.ts), staleness logged (`as_drawn` transitions) and served (`/api/stale`). The ten dreams drawn
+  again with the switch on (`evals/redraw.ts`, the checks logging, record on, sheet in shadow, fake pictures, Jev
+  only, one dream at a time), read by `bun run evals/as-drawn.ts <folder> [--show]` and `evals/live-flow.ts`;
+  saved dreams by `bun run evals/as-drawn.ts --saved <state folder> --store <production.sqlite>` or
+  `--replays <folder>`:
+
+  | measure | bar | before (a rebuild without the records) | S9 |
+  | --- | --- | --- | --- |
+  | pictures drawn with a record for their take, holding what was sent | all | none kept | 77 of 77 (61 moments, 16 in-between pictures) |
+  | what each picture was sent, against S2's logging redraws of the same dreams (switch off) | the same | | 77 of 77, prompt and images |
+  | a rebuild gives each picture as sent: moments; in-between pictures | all | 57 of 61; 6 of 16 | 61 of 61; 16 of 16 |
+  | live-flow: dreams failing; moments word for word; sheets as sent | 0; all; all | 4 of 10; 57 of 61; 54 of 61 | 0; 61 of 61; 61 of 61 |
+  | pictures stale where nothing changed after drawing | 0 | | 0 of 77 |
+  | made changes: pictures found stale against those they must make stale | the same set, right reason | | 56 of 56 changes: 258 expected, 258 found, 0 extra, 0 missed, every reason right |
+  | made changes: a rebuild reading the records still gives every picture as sent | all | | 56 of 56 |
+  | saved dreams: stale pictures found, hand-checked | reported; none wrong | | 2 of 173 read (47 dreams), both right; S2's whole replays 0 of 279 |
+  | corpora against the base, switch off and on | 0 moved | | frozen 140, and 139 with record and sheet; live 477, and 478 with the record: 0 moved either way |
+
+  The made changes, one per dream each (four dreams sent no lasting change in words): a moment's words corrected
+  (10 changes; 31 pictures expected stale, 31 found), a sketch drawn again (56, 56), a sketch's look reworded, words
+  only (49, 49), an earlier picture drawn again (21, 21), the look changed (77, 77), a lasting change told otherwise
+  (6 changes; 24, 24). The reasons read: "m3: earlier:m2 (picture:m2 take 1 → picture:m2 take 2)"; "m7: sketch:p1
+  (the dreamer (sketch:p1 take 1) → the dreamer (sketch:p1 take 2)); drawn from m5, which is stale".
+  **Drawn behind the dream** (reported apart; not staleness, since nothing changed after drawing): 12 pictures. The
+  10 in-between pictures whose look lines differed (grandma-kitchen g1-g3, paper-city g1-g4, snow-train g1-g3) were
+  drawn from the plan they were first put in with, made before the record gave the look before their change;
+  paper-city m5 was drawn without the red paper bird the plan now puts in the dreamer's hands, and desert-station m6
+  with its people in another order, each from the cast it was first put in with (a re-plan updates only a moment's
+  plan). Found on the way: live-flow's "an earlier picture it takes was not drawn as a rebuild takes it" for those
+  two was the cast, not an earlier picture; sea-school m4 and snow-train m7 lost `said` on their action when they
+  were reworded in the saved runs ("you" into the third person) while the breakdown kept it, so a rebuild's colour
+  line took the colours of the moment's own words; desert-station m3-m6's sheets differed in `tree` because drawing's
+  tree reads the plan kept since the moments began, which a rebuild reading the records now reads too.
+  **Saved dreams** (drawn before S9, so only their stores are read): 47 with pictures, 283 pictures, 173 whose
+  recipes the live store keeps (the rest were simulated into stores not kept). 2 stale, both right by hand:
+  glass-window (a446) m3 took its composition from m2's second take, and m2 was drawn a third time three minutes
+  later; meads-house (502a) m5 took its light from m4's first take, which the dreamer then rejected and whose redraw
+  failed at the picture limit (whether their correction touches its light is the follow-up's to judge). Checked by
+  hand for misses: the six dreams with the most pictures drawn again (bbba, 9ddd, f085, 502a, a446, e11a; 41
+  pictures), each picture's images against the takes of their sources and when each was made: none missed. A
+  first reading of the look took the prompt's whole style line for its name (older code went on after the name on
+  the same line) and flagged 31 wrongly; fixed before counting. S2's whole replays (four arms, 39 dreams, 279
+  pictures): 0 stale; in car-park's logging replay the dreamer corrected m4 before anything was drawn from it (m5
+  and m7 took its second take).
+  **The correction the breakdown does not keep** (car-park m4 of S2's whole replays, overlap S2 → S9): covered. A
+  session test corrects a moment's words while it is drawn: the new take's record keeps the corrected words, the
+  breakdown the old ones; a rebuild reading the records gives the moment as sent, one without them the old words;
+  the close-up drawn from its first take is stale ("earlier:m1 (picture:m1 take 1 → picture:m1 take 2)"), logged,
+  and not drawn again.
+  **Found and fixed on the way:** `settle` (the test and simulation helper) returned while a take's verdict was
+  still being asked for, so a redraw under load ended with the moments drawn from that take never started (4 of 10
+  dreams in the first run); it now waits for verdicts. Staleness is worked out off the save (a quarter second after
+  it, and when `settle` ends), never inside it.
+  **Tests:** `test/asdrawn.test.ts` (a frozen dream drawn with stand-in pictures: every take recorded and nothing
+  stale; a sketch drawn again, a moment's words corrected, an earlier picture drawn again and the look changed each
+  make exactly their pictures stale, with the reason; a picture without a record is counted apart; a rebuild
+  reading the records gives every picture as sent after the dream has changed) and three session tests (the records
+  and `/api/stale` on a drawn dream; a correction while drawing; the switch off keeps nothing). `bun test`: 554
+  pass, 1 skipped, 0 fail with the switch off and on; typecheck clean.
+  **Cost:** a record is about 20 KB a picture (the prompt 7 KB, the picture's own copy with its plan 8 KB): a
+  dream of eight pictures grows from about 240 KB to 400 KB.
 
 ## Where steps overlap (read before starting any step)
 
@@ -550,8 +618,8 @@ between sessions.
 | S1 | S2 | The live-flow check (`evals/live-flow.ts`) passes a moment the checks acted on: drawn again from a list of what went wrong, or drawn without its brief because the pre-draw check set it aside (5 of 26 moments on the fake replays, 27 Sep). A rebuild cannot know these; once S2 makes the checks log only, those moments should rebuild word for word. Done on the picture path (27 Sep): with DREAMCHAT_CHECKS=log the redraws of those dreams have 0 moments differing because a check acted (jellyfish-city m5, sea-school m2 and m7 rebuild word for word); to confirm on whole replays once DeepSeek is back. |
 | S2 | S7 | The checks' readings, logged per picture with DREAMCHAT_CHECKS=log: `gate` transitions in each dream's Jev log (every answer with its bar, what it found, and whether it acted), `previs` transitions for "storyboard complete?", and `overrode` on the picture as drawn. S7's labelled sets are these against the pictures. A reading is not put on a line when logging (the line search was 4 in 5 of the gate's calls): if S7 needs the line a reading rests on, it asks for it on the logged prompt. Each reading carries `ref` (prompt hash, take, question-wording hash) and each picture keeps `checkedTakes`, so a label joins the take it was read for. |
 | S2 | S7 | Still acting with the checks only logging, and not a check of a picture: `planFacts` plans a scene once more where Jev reads that its camera faces something the plan lacks (a Jev reading acting on the plan: S7 decides whether it earns it, like any check); `planUnplanned` where a scene has no plan. Only code faults hold a picture (`actsWhenLogging`); the continuity plan's warnings (carried in words only, many changes at once, no visible action) are logged, and S7 decides whether any earns acting. |
-| S2 | S9, S3 | A redraw (`evals/redraw.ts`) found moments a rebuild does not give as sent, no check's doing: the style's colour line takes a colour the dream gives something drawn later (sea-school m4 "orange octopus", snow-train m7 "red door"); an earlier picture taken as a rebuild takes it (desert-station m6, paper-city m5); desert-station m3-m6's sheets differ in `tree`; the in-between pictures' look lines are sent with commas and rebuilt with semicolons (desert-station, grandma-kitchen, paper-city, snow-train). What a rebuild reads should be the dream as it stood when the picture was drawn (S9's record of what was drawn). |
-| S1 | S9 | The Strawberry production is written at `start`, before planning and the implied reading, so implied changes have no production coverage. |
+| S2 | S9, S3 | A redraw (`evals/redraw.ts`) found moments a rebuild does not give as sent, no check's doing: the style's colour line takes a colour the dream gives something drawn later (sea-school m4 "orange octopus", snow-train m7 "red door"); an earlier picture taken as a rebuild takes it (desert-station m6, paper-city m5); desert-station m3-m6's sheets differ in `tree`; the in-between pictures' look lines are sent with commas and rebuilt with semicolons (desert-station, grandma-kitchen, paper-city, snow-train). What a rebuild reads should be the dream as it stood when the picture was drawn (S9's record of what was drawn). **Cleared by S9 (27 Sep):** one fault, each picture's own copy of itself (an action reworded without `said`; the cast a moment was first put in with; an in-between picture's plan made before the record's look before the change; drawing's tree reading the plan kept since the moments began); a rebuild reading the records gives all 61 moments and 16 in-between pictures of the redraws as sent. That drawing reads those copies is S9 → S3, S5 below. |
+| S1 | S9 | The Strawberry production is written at `start`, before planning and the implied reading, so implied changes have no production coverage. **Partly S9's (27 Sep):** each picture's record keeps the typed facts it was drawn with, an implied one marked, so what a picture was told of an implied change is on record. The production's own coverage is still open (S9 → S6). |
 | S2 | S7 | S2 makes the checks log only; their logged readings become S7's labelled sets. |
 | S7 | S8 | Done in S8 for now (behind DREAMCHAT_LISTEN=on), and S7's to own: `jev.ts choiceByAction` sums the labels that lead to one action before the bar; the action that loses nothing (revise a profile, take a correction) is taken from 0.25, "you choose" beside a change is the change, and otherwise a rival at 0.25 is asked again; the profile's answer is worded so a detail beside "leave the rest to you" is a change (`PROFILE_REPLY_S8`). Read again over the three after-runs' stored answers: changes read as settled 31/26/17 to 9/7/3, clear answers read as unclear 0, and answers changing nothing now read as changes 12/18/12 (27 of 37 a profile answer that only restates it, which the revision keeps; 10 a plain "yes, that's right" to a retelling, which costs a turn telling back). These bars, and the reply check's questions (`jev.ts replyCheck`), are hand-set: each needs the labelled set S7 builds for its questions. The check lets through follows that guess what happened next ("did you go through it?", 3 of 4 on `evals/listening-audit-s8.json`, where the listening test catches all 4). |
 | S8 | S1 | `producer.ts inTheirWords` is provisional: whether a reworded or revised profile field is still the dreamer's words is a word-overlap rule over their messages (read from the conversation as kept, not the rendered text), standing in for the per-clause said basis S1 owns; it goes once the record carries the basis per clause. 22% of "said" facts were never said (the before: 273 of 1227, 258 from sketch profiles). S8 fixed the sketch side (a reworded or revised profile keeps their words apart from ours: 1% left, 12 of 912), but the breakdown's own fields are still graded whole by `ground.ts` ("the corridor: perhaps lockers or doors" passes because the corridor was said): every one of the 12 left. A `Detail` holds one said flag, so a field with their words and a guess is either said whole or not at all; the basis belongs per clause in the breakdown, the record and the sheet (S1, S3). |
@@ -572,8 +640,13 @@ between sessions.
 | S3 | S4 | `relationIn` (continuity.ts) calls the moment after a jump "another place" from the jump's own picture in the same place (the key-and-boat dream m7 and m9, the lift m5): a jump moment counts as a boundary behind itself. The move tag and the plan's references both read it; fixing it changes plans and prompts, so it is S4's, measured. |
 | S3 | S5 | The sheet's `inView[].image` is the sketch only; `earlier` is the plan's choice. S5's `chooseRefs` needs each element's image of the stage in force (its in-between picture, drawn and approved, or its sketch) from the tree's ledger, and chooses image 1 by the tags. |
 | S3 | S7 | Every cut has its tags (logged in shadow, listed per moment by `evals/corpus.ts`); S7 routes questions by them. |
-| S2 | S9 | A dreamer's correction while drawing patches the moment it redraws but not the breakdown, so a rebuild reads the old words (car-park m4 of the logging whole replays: sent "it is already raining upward", rebuilt "rain falls upward"). What a rebuild reads should be the moment as drawn. |
-| S3 | S9 | A re-plan updates the moments' plans but not `build.plan`; the drawing path's sheet reads each moment's own plan. A sheet is flagged `record_moved` where the record now differs from the typed facts its plan was made from: stale, for S9. Frames saved before S3 carry the plan's words without typed facts (`nowWords` on the sheet). |
+| S2 | S9 | A dreamer's correction while drawing patches the moment it redraws but not the breakdown, so a rebuild reads the old words (car-park m4 of the logging whole replays: sent "it is already raining upward", rebuilt "rain falls upward"). What a rebuild reads should be the moment as drawn. **Covered by S9 (27 Sep):** the record keeps the words a picture was drawn with (the correction), so a rebuild reading it gives the moment as sent (a session test), and a picture drawn from its earlier take is stale. That the breakdown keeps the words as first told is S9 → S1 below. |
+| S3 | S9 | A re-plan updates the moments' plans but not `build.plan`; the drawing path's sheet reads each moment's own plan. A sheet is flagged `record_moved` where the record now differs from the typed facts its plan was made from: stale, for S9. Frames saved before S3 carry the plan's words without typed facts (`nowWords` on the sheet). **Cleared by S9 for drawn pictures (27 Sep):** staleness compares each drawn picture with the plan a re-plan makes now (its facts from the record, its camera, its cast, what it is drawn from), so a picture drawn from a plan made from an older record is stale with the facts that moved. The sheet's flag stays, for pictures not yet drawn. |
+| S9 | S3, S6 | A moment keeps the cast (visible, things) it was first put in with: a re-plan updates only its plan, so drawing reads an older cast than the plan (paper-city m5 drawn without the red paper bird the plan puts in the dreamer's hands; desert-station m6 with its people in another order). S9 reports it as drawn behind the dream; drawing should read the plan's cast (S3's "who is in view, three sources"). |
+| S9 | S5 | An in-between picture keeps the plan it was first put in with: a re-plan adds and drops them but never updates one waiting to be drawn, so 10 of the 16 in the redraws were drawn from plans made before the record gave the look before their change. S9 reports them as drawn behind the dream; S5's in-between pictures should be drawn from the plan in force. |
+| S9 | S1 | A dreamer's correction of a moment's words is kept on the moment only (a rewording is written back to the breakdown by `keepWords`; a correction is not), so the story record and later moments' plans read the words as first told (car-park m4). |
+| S9 | S7 | Staleness is reported only (`as_drawn` transitions in the Jev log, `/api/stale`); `followCorrections` (Jev deciding what follows a corrected moment) still acts as before and does not read it. Whether a stale picture is drawn again, shown to the dreamer or left is the owner's to decide; S7 may route by it. |
+| S9 | S6 | The production written at `start` still has no coverage for implied changes (S1 → S9 above); the records keep what each picture was told, so a production written again from the sheets could take it from them. |
 | S3 | S1 | The story record is made three times from the same inputs: for the plan (`recordForPlan`), for the sheet (`sheetDream`, once per drawing of a moment) and for the panel's tree. One record per dream, passed to all three, is the next step once the sheet is on. |
 | S4 | S5 | Found by S4 (branch `s4-camera`, not merged): across a reverse the picture before is dropped from the sheet's images (`rules.dropped`), not from the plan, which still lists it in `needs`, so the moment still waits for it. On `lab/dream-chat` the same holds far wider (S5 eval): every picture kept for its light alone and every earlier picture kept for people who all have sketches is waited for and never sent, 67 pictures in 65 of 115 frozen moments and 216 in 208 of 411 live. S5's `chooseRefs` owns it: what it does not attach, the plan does not wait for (`waits_only_on_sent`, bar 0). |
 | S5 | S4, S3 | Three frozen moments (10 live) take an earlier picture's layout (composition) that the words call the same side while the cameras on the floor plan face 140-180° apart (affd m3, 09ea m7, aeea m10): `relationIn` reads words only. S4's `sidesByCamera` may reclassify them; S5's `none_from_other_side` reads the cameras either way. Measure on S4's merge. |
@@ -620,6 +693,13 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   `TAKEN`, `HOLDS_NAME`, which has 'bowl' twice) overlap what the implied reading now reads with a model and Jev;
   each should be retired once the reading covers it. `withoutWords` in `frames.ts` is one more text clean-up to
   retire with the others.
+- **S9 (the record of what was drawn).** A rebuild walks the plan made now, so a drawn picture no longer in it (an
+  in-between picture a re-plan dropped) is not rebuilt. Rebuilding a picture from its record, an earlier picture it
+  took is read as it is held now (its number, who is in it); only what the judge found in it is kept per take.
+  Saved dreams drawn before S9 are read from their stores only (images by their take, the look's name), never their
+  words, cast or record. A take resumed after failing before it was sent keeps its number (`resume` puts the version
+  back), and its record is replaced when it is sent again. The records add about 20 KB a picture. Staleness reads
+  what reaches the prompt only; the sheet's tree and record layers are not compared.
 
 ## Open questions for the owner
 
@@ -952,3 +1032,16 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   41 calls a dream; acting: 108 of 122 drawn, 14 left undrawn, 54 moments reworded, 27 scenes and 25 moments
   planned again, Jev 306-324 a dream. Live flow, logging: 62 of 63 word for word, the one a dreamer's correction the
   breakdown did not keep (S9). S2's eval is met; the switch stays off until the owner turns it on.
+- 27 Sep: S9 built on branch `s9-as-drawn` behind DREAMCHAT_AS_DRAWN (off by default; off, nothing is kept and 0
+  pictures move on the frozen and live corpora; on, the same, as no saved dream has a record). Every take of a
+  picture keeps what it was sent and drawn from; a rebuild reads it back; staleness compares each drawn picture,
+  input by input, with the dream as it stands, and down the chains pictures were drawn along; it is logged and
+  served at `/api/stale`, never acted on. On the ten dreams drawn again with the switch on: 77 of 77 pictures keep
+  their record, sent exactly what S2's redraws sent; a rebuild gives 61 of 61 moments and 16 of 16 in-between
+  pictures as sent (57 and 6 without the records; live-flow 0 of 10 dreams failing, from 4); 0 stale where nothing
+  changed; 56 changes made after drawing each made exactly the pictures they must stale (258 of 258), with the
+  right reason, and a rebuild reading the records still gave every picture as sent. Root cause of live-flow's four
+  moments and the look lines: each picture's own copy of itself, made from an earlier plan, which drawing reads and
+  a fresh rebuild did not (12 pictures were drawn behind the dream that way: S9 → S3, S5). Saved dreams: 2 stale of
+  173 read, both right by hand, none missed in a sample of 41. `settle` now waits for verdicts (a redraw under load
+  ended early). `bun test` 554 pass with the switch off and on; typecheck clean. No pictures drawn, no money spent.
