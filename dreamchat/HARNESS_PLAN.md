@@ -18,7 +18,7 @@ context mirrors it.
 | S4 Camera rules | Fixing what review found | faults met 18/33 to 27/33, guards 36/36 (branch `s4-camera`) |
 | S5 References and in-between pictures | Test written | built after S4 merges |
 | S6 One prompt builder, clean-ups retired | Not started | after S5 |
-| S7 Jev checks routed by tags | Built behind a switch (off); review fixes in | on the 122 pictures the owner judged (62 moments), 0 of 28 checks predict the verdict well enough to act: the gate and "storyboard complete?" are measured and at chance (AUC 0.36-0.56), the new questions and the plan-fact re-plan are not measurable yet (too few flags; written after reading these verdicts); routed, only an earned check acts (none yet), Jev 23.3 calls a dream (acting 115.8, logging 23.1) (branch `s7-jev-routed`) |
+| S7 Jev checks routed by tags | Done (routing switch off; every Jev reading logs) | measured on the 122 pictures the owner judged (as sent): the gate and "storyboard complete?" are at chance (AUC 0.36-0.56); 16 library questions not measurable yet; 0 of 28 checks earn acting; a check earns acting only at its measured bar, counted by moments. Run the picture checkpoints with `DREAMCHAT_JEV_ROUTED=on` so the library questions' readings join the owner's new verdicts |
 | S8 Listening | Built; proven on Claude, one floor fails | 20 dreams, both arms on Claude: either/or 23% to 0, leading 17% to 0, said-not-in-their-words 31% to 3%, retellings ending with every moment 0/20 to 21/21; but retellings begun because they ran out of memory doubled (6 to 12 of 20), from the come-back-to-earlier rule: fix it before switching on |
 | S9 Record of what was drawn, staleness | Building, test first | branch `s9-as-drawn` |
 | S10 Paid benchmark judged by the owner | Not started | about $10 |
@@ -1271,3 +1271,9 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   these pictures at all: it was written after reading their notes. Result unchanged: 0 of 28 distinct checks may
   act; the gate and the storyboard are at chance; the rest cannot be measured yet. The settle race is left to S9's
   branch (overlaps). The eval takes `--help` and refuses flags it does not know; its scoring has tests.
+
+- 27 Sep, S7 done and merged (ef6f9fc). No check earns the right to act; the routing and the rule that only an
+  earned check acts, at its measured bar, are in place for when the owner's new verdicts (S4, S5 and S10
+  checkpoints, about 106 pictures) measure the library questions. The builder's added noise rule (a flag within 0.1
+  of its bar does not count toward the five flagged moments) is kept: it is conservative and only matters once a
+  check could be promoted. 600 tests pass with routing off and on.
