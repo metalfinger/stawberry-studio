@@ -31,7 +31,8 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Blocking } from '../blocking';
-import { type CutPlan, shotPlan } from '../continuity';
+import { type CutPlan, type GhostPlan, inViewAt, shotPlan } from '../continuity';
+import { REVERSE_DEGREES } from '../cutsheet';
 import type { JevFn, Question } from '../jev';
 import { imagesOf, type Rebuilt, type RebuiltPicture, rebuild, standIn } from '../plan';
 import { type Moment, moments } from '../producer';
@@ -178,7 +179,14 @@ export function validateCases(cases: PromptCase[]): string[] {
             }
         if (args.section !== undefined && !SECTIONS.includes(args.section as Section))
           out.push(`${at} #${i}: unknown section ${String(args.section)}`);
-        for (const k of ['expect', 'not'])
+        if (e.check === 'first_image') {
+          if (args.is === undefined && args.not === undefined) out.push(`${at} #${i}: first_image needs is or not`);
+          for (const k of ['is', 'not'])
+            for (const w of args[k] === undefined ? [] : list(args[k]))
+              if (!FIRSTS.includes(w as FirstImage))
+                out.push(`${at} #${i}: ${w} is not a kind of image 1 (${FIRSTS.join(', ')})`);
+        }
+        for (const k of e.check === 'heading_said' ? ['expect', 'not'] : [])
           for (const h of args[k] === undefined ? [] : Array.isArray(args[k]) ? args[k] : [args[k]])
             if (!(h in HEADINGS)) out.push(`${at} #${i}: ${String(h)} is not a heading (${Object.keys(HEADINGS)})`);
         if (!e.says) out.push(`${at} #${i}: says what it checks in words`);
@@ -293,11 +301,14 @@ export function refsOf(r: Rebuilt, p: RebuiltPicture): RefInfo[] {
       // one they were last seen in), else for how everyone in both pictures looks now.
       const use = cut?.refs.find((x) => x.kind === 'cut' && x.id === id);
       const shared = (earlier.item.frame?.visible ?? []).filter((w) => here.includes(w));
+      // Kept for its light, it goes in only for whoever the picture shows with no sketch of their own
+      // (a crowd the record puts in view, too): framePrompt's own test.
+      const inPicture = new Set([...here, ...p.inView.map((x) => x.id)]);
       const who =
         ref.role !== 'identity'
           ? []
           : use?.role === 'lighting'
-            ? shared.filter((w) => !sketched.has(w))
+            ? (earlier.item.frame?.visible ?? []).filter((w) => inPicture.has(w) && !sketched.has(w))
             : use?.who?.length
               ? use.who.filter((w) => !sketched.has(w))
               : shared;
@@ -327,6 +338,179 @@ export function contextOf(r: Rebuilt, moment: string): Ctx {
   };
 }
 
+// ── the references chosen (S5) ───────────────────────────────────────────────────────────────────
+
+/**
+ * What image 1 is, by the three ways of the paired test (evals/paired-verdicts.json): the mock-up
+ * made real, an edit of an earlier picture or in-between picture, or free: drawn from the sketches
+ * alone, image 1 being a sketch (or nothing at all).
+ */
+export const FIRSTS = ['mockup', 'edit', 'free'] as const;
+export type FirstImage = (typeof FIRSTS)[number];
+
+export function firstImageOf(refs: RefInfo[]): FirstImage {
+  const f = refs[0];
+  if (f?.source === 'mockup') return 'mockup';
+  if (f?.role === 'base' && (f.source === 'picture' || f.source === 'ghost')) return 'edit';
+  return 'free';
+}
+
+/** How far apart two cameras face, in degrees. */
+const angle = (a: { x: number; y: number }, b: { x: number; y: number }) => {
+  const d = Math.abs(Math.atan2(a.x, a.y) - Math.atan2(b.x, b.y)) * (180 / Math.PI);
+  return Math.round(d > 180 ? 360 - d : d);
+};
+
+/** How far this moment's camera is turned from an earlier moment's; null where either has none worked out. */
+export function turnFrom(r: Rebuilt, cut: CutPlan, moment: string): number | null {
+  const e = r.plan.cuts.find((x) => x.id === moment)?.eye;
+  return cut.eye && e ? angle(cut.eye.d, e.d) : null;
+}
+
+/**
+ * Earlier pictures attached in one of `roles` that face another side of the place: on the other
+ * side by the plan's words, or turned at least `degrees` away by the cameras on the floor plan (a
+ * reverse). The jump's own picture (its composition) and the seat through the dreamer's eyes are
+ * made from another side by what they are, and are not counted.
+ */
+export function fromOtherSide(
+  c: Pick<Ctx, 'r' | 'cut' | 'refs'>,
+  roles: string[] = ['base', 'composition'],
+  degrees = REVERSE_DEGREES,
+): { index: number; of: string; role: string; relation?: string; turned: number | null }[] {
+  return c.refs.flatMap((x) => {
+    if (x.source !== 'picture' || !x.of || !roles.includes(x.role)) return [];
+    const use = c.cut.refs.find((u) => u.kind === 'cut' && u.id === x.of);
+    if (use?.relation === 'shift' || use?.relation === 'seat') return [];
+    const turned = turnFrom(c.r, c.cut, x.of);
+    return use?.relation === 'other_side' || (turned !== null && turned >= degrees)
+      ? [{ index: x.index, of: x.of, role: x.role, relation: use?.relation, turned }]
+      : [];
+  });
+}
+
+/**
+ * What the plan waits for before this moment is drawn (`CutPlan.needs`) and never sends to it, each
+ * with why it is not sent: the scheduler holds the moment for a picture it will not use.
+ */
+export function waitedNotSent(c: Pick<Ctx, 'cut' | 'refs'>): { id: string; why: string }[] {
+  const sent = new Set(c.refs.flatMap((x) => (x.of && (x.source === 'picture' || x.source === 'ghost') ? [x.of] : [])));
+  return c.cut.needs
+    .filter((id) => !sent.has(id))
+    .map((id) => {
+      const use = c.cut.refs.find((u) => u.id === id);
+      return {
+        id,
+        why: !use
+          ? 'not among its references'
+          : use.role === 'lighting'
+            ? `kept for its light alone (${use.relation ?? 'no relation'})`
+            : use.relation === 'seat'
+              ? 'the seat, with the view worked out'
+              : use.who?.length
+                ? 'kept for who someone is, and each has a sketch here'
+                : `left out (${use.role}${use.relation ? `, ${use.relation}` : ''})`,
+      };
+    });
+}
+
+/**
+ * The one image that should say how `who` looks at this moment: the in-between picture of its stage
+ * in force (the latest of its changes this moment's plan draws from one, never one another of them
+ * was edited from), else its sketch, else, for someone with no sketch (a crowd, the faceless
+ * students), a picture they were last drawn in (any: `of` is left open). `several` where more than
+ * one in-between picture of it is in force and none was edited from the others: no single image
+ * holds its stage.
+ */
+export function stageImageOf(
+  c: Pick<Ctx, 'r' | 'cut'>,
+  who: string,
+): { source: 'ghost' | 'sketch' | 'picture'; of?: string; several?: string[] } {
+  const ghosts = c.cut.refs
+    .filter((u) => u.kind === 'ghost')
+    .map((u) => c.r.plan.ghosts.find((g) => g.id === u.id))
+    .filter((g): g is GhostPlan => !!g && g.of === who);
+  const latest = ghosts.filter((g) => !ghosts.some((o) => o.after === g.id));
+  if (latest.length === 1) return { source: 'ghost', of: latest[0].id };
+  if (latest.length > 1) return { source: 'ghost', several: latest.map((g) => g.id) };
+  return c.r.sheets.some((s) => s.id === who && s.mediaId) ? { source: 'sketch', of: who } : { source: 'picture' };
+}
+
+/** Whether one image is the stage image asked for (a picture left open matches any earlier picture). */
+export const isStage = (x: Pick<RefInfo, 'source' | 'of'>, want: ReturnType<typeof stageImageOf>) =>
+  !want.several && x.source === want.source && (want.of === undefined || x.of === want.of);
+
+/**
+ * The continuity plan's own bar for one edit carrying too much (continuity.ts TOO_MANY): the action
+ * and two more changes. The owner's rule (an in-between picture only when an edit carries several
+ * changes) is measured against it; whether "several" is two or three is the owner's to settle.
+ */
+export const SEVERAL = 3;
+
+/**
+ * How many changes a moment's picture would carry at once without one in-between picture: the plan's
+ * count (the action, a reframing, a side never drawn, each change in force shown in no reference),
+ * with the change the in-between picture carries put back when nothing else attached shows it. A
+ * change the moment makes itself is its action, as the plan counts it; a view's in-between picture
+ * puts back the side never drawn.
+ */
+export function changesWithout(r: Rebuilt, cut: CutPlan, g: GhostPlan): number {
+  if (g.kind === 'view') return cut.changes.length + 1;
+  const st = g.state;
+  if (!st || !cut.states.some((x) => x.who === st.who && x.what === st.what && x.now === st.now))
+    return cut.changes.length;
+  const ms = moments(r.b);
+  const index = new Map(ms.map((m, i) => [m.id, i]));
+  const other = cut.refs.some((u) => {
+    if (u.id === g.id) return false;
+    if (u.kind === 'ghost') {
+      const o = r.plan.ghosts.find((x) => x.id === u.id);
+      return !!o?.state && o.state.who === st.who && o.state.what === st.what && o.state.now === st.now;
+    }
+    const m = ms.find((x) => x.id === u.id);
+    return (
+      !!m &&
+      u.relation !== 'shift' &&
+      u.role !== 'lighting' &&
+      (index.get(u.id) ?? -1) >= (index.get(st.since) ?? 0) &&
+      inViewAt(m).has(st.who)
+    );
+  });
+  return cut.changes.length + (other ? 0 : 1);
+}
+
+/**
+ * Each in-between picture of a dream's plan, with the most changes any moment it is drawn for would
+ * carry without it, and so whether it meets the owner's rule at `bar`.
+ */
+export function ghostNeeds(
+  r: Rebuilt,
+  bar = SEVERAL,
+): {
+  id: string;
+  kind: GhostPlan['kind'];
+  of: string;
+  label: string;
+  most: number;
+  by: string | null;
+  kept: boolean;
+}[] {
+  return r.plan.ghosts.map((g) => {
+    let most = 0;
+    let by: string | null = null;
+    for (const id of g.usedBy) {
+      const cut = r.plan.cuts.find((c) => c.id === id);
+      if (!cut) continue;
+      const n = changesWithout(r, cut, g);
+      if (n > most) {
+        most = n;
+        by = id;
+      }
+    }
+    return { id: g.id, kind: g.kind, of: g.of, label: g.label, most, by, kept: most >= bar };
+  });
+}
+
 // ── the code checks ──────────────────────────────────────────────────────────────────────────────
 
 export type CheckResult = { pass: boolean; detail: string };
@@ -345,10 +529,6 @@ const textOf = (c: Ctx, section: unknown) =>
 const statesOf = (cut: CutPlan) => [...cut.own, ...cut.states];
 const imagesFor = (c: Ctx, who: string) =>
   c.refs.filter((x) => x.subjects.includes(who) && x.source !== 'mockup' && x.role !== 'base');
-const angle = (a: { x: number; y: number }, b: { x: number; y: number }) => {
-  const d = Math.abs(Math.atan2(a.x, a.y) - Math.atan2(b.x, b.y)) * (180 / Math.PI);
-  return Math.round(d > 180 ? 360 - d : d);
-};
 const cameraOf = (c: Ctx, id: unknown) => c.r.plan.cuts.find((x) => x.id === String(id))?.eye;
 const spotOf = (c: Ctx, id: string) => c.floor?.spots.find((s) => s.id === id);
 
@@ -606,6 +786,62 @@ export const CHECKS = {
   },
   /** The moment's action is the dreamer's own telling, not the producer's. */
   moment_said: (c: Ctx): CheckResult => ({ pass: c.m.said, detail: c.m.said ? 'said' : 'marked not said' }),
+  /** Image 1 is (or is not) one of the paired test's ways: the mock-up, an edit of an earlier picture, or free (sketches alone). */
+  first_image: (c: Ctx, a: { is?: FirstImage[]; not?: FirstImage[] }): CheckResult => {
+    const got = firstImageOf(c.refs);
+    const ok = (!a.is || list(a.is).includes(got)) && (!a.not || !list(a.not).includes(got));
+    return {
+      pass: ok,
+      detail: `image 1: ${got}${c.refs[0] ? ` (${c.refs[0].source}${c.refs[0].of ? ` ${c.refs[0].of}` : ''})` : ''}`,
+    };
+  },
+  /**
+   * No earlier picture facing another side of the place is the picture edited or the one its layout
+   * is taken from (the roles named, base and composition when none): on the other side by the plan's
+   * words, or turned at least `degrees` (a reverse, 135 when none) by the cameras.
+   */
+  none_from_other_side: (c: Ctx, a: { roles?: string[]; degrees?: number }): CheckResult => {
+    const found = fromOtherSide(c, a.roles ? list(a.roles) : undefined, a.degrees);
+    return {
+      pass: !found.length,
+      detail: found.length
+        ? found
+            .map(
+              (x) =>
+                `image ${x.index} is picture ${x.of} as ${x.role} (${x.relation ?? 'no relation'}${x.turned !== null ? `, turned ${x.turned}°` : ''})`,
+            )
+            .join('; ')
+        : 'no earlier picture from another side drawn from',
+    };
+  },
+  /** The plan waits only for pictures it sends: nothing in its needs goes unattached (or not `moment`, when named). */
+  waits_only_on_sent: (c: Ctx, a: { moment?: string }): CheckResult => {
+    const found = waitedNotSent(c).filter((x) => !a.moment || x.id === a.moment);
+    return {
+      pass: !found.length,
+      detail: found.length
+        ? `waits on ${found.map((x) => `${x.id} (${x.why})`).join('; ')}, never sent`
+        : `waits on ${c.cut.needs.join(', ') || 'nothing'}, each sent`,
+    };
+  },
+  /**
+   * One image says how this person, place or thing looks, and it is its stage in force: the
+   * in-between picture of its latest change drawn from one, else its sketch.
+   */
+  stage_image: (c: Ctx, a: { who: string }): CheckResult => {
+    const want = stageImageOf(c, a.who);
+    const got = imagesFor(c, a.who);
+    const said = got.map((x) => `${x.index} (${x.source}${x.of ? ` ${x.of}` : ''})`).join(', ');
+    if (want.several)
+      return {
+        pass: false,
+        detail: `no single stage: in-between pictures ${want.several.join(', ')}; images ${said || 'none'}`,
+      };
+    return {
+      pass: got.length === 1 && isStage(got[0], want),
+      detail: `${nameOf(c, a.who)}: images ${said || 'none'}; its stage in force is ${want.of ? `${want.source} ${want.of}` : 'a picture they were last drawn in'}`,
+    };
+  },
 };
 export type CheckName = keyof typeof CHECKS;
 
@@ -636,6 +872,10 @@ export const CHECK_ARGS: Record<CheckName, { required: string[]; optional: strin
   prompt_has: { required: ['pattern'], optional: ['section'] },
   prompt_lacks: { required: ['pattern'], optional: ['section'] },
   moment_said: { required: [], optional: [] },
+  first_image: { required: [], optional: ['is', 'not'] },
+  none_from_other_side: { required: [], optional: ['roles', 'degrees'] },
+  waits_only_on_sent: { required: [], optional: ['moment'] },
+  stage_image: { required: ['who'], optional: [] },
 };
 
 export function runCheck(c: Ctx, e: CodeExpectation): CheckResult {

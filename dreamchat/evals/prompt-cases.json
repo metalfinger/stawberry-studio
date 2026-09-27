@@ -1987,6 +1987,327 @@
       ]
     },
     {
+      "id": "snow-train-m6-route",
+      "kind": "failing",
+      "class": "reference_conflict",
+      "step": "S5",
+      "hypothesis": "Through the dreamer's eyes the paired test had the mock-up right in 1 of 6 moments, but the story pictures, drawn with the mock-up as image 1, were right in 7 of 11 such moments; this moment's own story picture, with the mock-up, was right.",
+      "session": "dream-0926-043003-b0cb",
+      "moment": "m6",
+      "source": {
+        "file": "paired-verdicts.json",
+        "row": "snow-train-m6",
+        "version": "snow-train-m6-b"
+      },
+      "note": "There is a door inside the door, and the bag is visible. The hand and other thing are not visible.",
+      "verdicts": {
+        "story": "right",
+        "free": "right",
+        "mockup": "wrong",
+        "edit": "right"
+      },
+      "seen_in": ["mockup"],
+      "fault": "Made real from the mock-up, a moment through the dreamer's eyes has a door inside the door; drawn from an edit of the picture before, or from the sketches alone, it was right.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "first_image",
+          "args": {
+            "not": ["mockup"]
+          },
+          "says": "image 1 is not the mock-up: through the dreamer's eyes (the paired routing)"
+        }
+      ]
+    },
+    {
+      "id": "orchard-m7-route",
+      "kind": "failing",
+      "class": "reference_conflict",
+      "step": "S5",
+      "hypothesis": "Through the dreamer's eyes the paired test had the mock-up right in 1 of 6 moments, but the story pictures, drawn with the mock-up as image 1, were right in 7 of 11 such moments; the legs are also a fault of the words (orchard-m7-legs, S4), which S4 meets with the mock-up still image 1.",
+      "session": "dream-0926-070314-0f40",
+      "moment": "m7",
+      "source": {
+        "file": "paired-verdicts.json",
+        "row": "orchard-m7",
+        "version": "orchard-m7-c"
+      },
+      "note": "Why does it feel like a perspective of a person is standing or sleeping? Legs and all should not be visible, right?",
+      "verdicts": {
+        "story": "wrong",
+        "edit": "right",
+        "free": "wrong",
+        "mockup": "partly"
+      },
+      "seen_in": ["mockup"],
+      "fault": "Made real from the mock-up, the view through the dreamer's eyes shows their legs, as if lying or standing; the edit of the picture before was right.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "first_image",
+          "args": {
+            "not": ["mockup"]
+          },
+          "says": "image 1 is not the mock-up: through the dreamer's eyes (the paired routing)"
+        }
+      ]
+    },
+    {
+      "id": "lighthouse-first-m7-route",
+      "kind": "failing",
+      "class": "reference_conflict",
+      "step": "S5",
+      "hypothesis": "Through the dreamer's eyes the paired test had the mock-up right in 1 of 6 moments, but the story pictures, drawn with the mock-up as image 1, were right in 7 of 11 such moments; the story picture, with the mock-up, was right.",
+      "session": "dream-0925-231131-affd",
+      "moment": "m7",
+      "source": {
+        "file": "paired-verdicts.json",
+        "row": "lighthouse-first-m7",
+        "version": "lighthouse-first-m7-a"
+      },
+      "note": "This is not wrong, but partial because it doesn't look continuous with the last. Otherwise, nothing wrong with the shot.",
+      "verdicts": {
+        "story": "right",
+        "mockup": "partly",
+        "free": "right",
+        "edit": "right"
+      },
+      "seen_in": ["mockup"],
+      "fault": "Made real from the mock-up, the round room does not carry on from the picture before; the edit and the free version were right.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "first_image",
+          "args": {
+            "not": ["mockup"]
+          },
+          "says": "image 1 is not the mock-up: through the dreamer's eyes, in another place (the paired routing)"
+        }
+      ]
+    },
+    {
+      "id": "heron-m4-route",
+      "kind": "failing",
+      "class": "reference_conflict",
+      "step": "S5",
+      "hypothesis": "The image model copies a believable mock-up exactly (rules.md C5), but what the students wear is written nowhere (heron-m4-clothes, S6): with it said, the mock-up may be right; the story picture, with the mock-up, was partly right.",
+      "session": "dream-0926-012307-4c79",
+      "moment": "m4",
+      "source": {
+        "file": "paired-verdicts.json",
+        "row": "heron-m4",
+        "version": "heron-m4-c"
+      },
+      "note": "This also works. Just a little extreme in terms of all the people being completely naked",
+      "verdicts": {
+        "story": "partly",
+        "edit": "right",
+        "free": "right",
+        "mockup": "partly"
+      },
+      "seen_in": ["mockup"],
+      "fault": "Made real from the mock-up, the students came out as bare mannequins (completely naked); the edit and the free version were right.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "first_image",
+          "args": {
+            "not": ["mockup"]
+          },
+          "says": "image 1 is not the mock-up: a crowd with no image of its own (the paired routing)"
+        }
+      ]
+    },
+    {
+      "id": "lighthouse-first-m8-route",
+      "kind": "failing",
+      "class": "reference_conflict",
+      "step": "S5",
+      "hypothesis": "One jump in the paired test; the story picture, with the mock-up, was right.",
+      "session": "dream-0925-231131-affd",
+      "moment": "m8",
+      "source": {
+        "file": "paired-verdicts.json",
+        "row": "lighthouse-first-m8",
+        "version": "lighthouse-first-m8-c"
+      },
+      "note": "Composition is wrong. The driver is sitting, and the trimmer is sitting. Both of them look wrong.",
+      "verdicts": {
+        "story": "right",
+        "free": "right",
+        "edit": "partly",
+        "mockup": "wrong"
+      },
+      "seen_in": ["mockup"],
+      "fault": "Made real from the mock-up across the dream's jump, the driver and the dreamer just sit facing the camera; drawn from the sketches alone it was right.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "first_image",
+          "args": {
+            "is": ["free"]
+          },
+          "says": "image 1 is a sketch: across a jump the moment is drawn from the sketches alone (the paired routing)"
+        }
+      ]
+    },
+    {
+      "id": "snow-train-2-m6-route",
+      "kind": "failing",
+      "class": "reference_conflict",
+      "step": "S5",
+      "hypothesis": "From outside, on this side of the place, the paired test had the mock-up right in 8 of 10 moments; the story pictures, drawn with it, were right in 5 of 17 two-shots and 8 of 11 wide shots. Two suitcases may be the in-between picture beside the sketch (snow-train-2-m6-two-suitcases), which every version had.",
+      "session": "dream-0926-062232-a44a",
+      "moment": "m6",
+      "source": {
+        "file": "paired-verdicts.json",
+        "row": "snow-train-2-m6",
+        "version": "snow-train-2-m6-b"
+      },
+      "note": "There are suddenly two suitcases in the frame.",
+      "also": [
+        {
+          "file": "paired-verdicts.json",
+          "row": "snow-train-2-m6",
+          "version": "snow-train-2-m6-a",
+          "note": "proportion ab suit kaise super wrong"
+        }
+      ],
+      "verdicts": {
+        "story": "right",
+        "edit": "wrong",
+        "free": "wrong",
+        "mockup": "right"
+      },
+      "seen_in": ["edit", "free"],
+      "fault": "Without the mock-up, the grandfather with the dreamer came out with two suitcases (free) or a suitcase badly out of proportion (edit); made real from the mock-up it was right.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "first_image",
+          "args": {
+            "is": ["mockup"]
+          },
+          "says": "image 1 is the mock-up: a two-shot from outside (the paired routing)"
+        }
+      ]
+    },
+    {
+      "id": "snow-train-2-m5-route",
+      "kind": "failing",
+      "class": "reference_conflict",
+      "step": "S5",
+      "hypothesis": "From outside, on this side of the place, the paired test had the mock-up right in 8 of 10 moments; the story pictures, drawn with it, were right in 5 of 17 two-shots and 8 of 11 wide shots. The open suitcase is a state carried on (snow-train-2-m5-shut, S1), which the mock-up version may have escaped by chance.",
+      "session": "dream-0926-062232-a44a",
+      "moment": "m5",
+      "source": {
+        "file": "paired-verdicts.json",
+        "row": "snow-train-2-m5",
+        "version": "snow-train-2-m5-b"
+      },
+      "note": "The suitcase should be shut and should not be open.",
+      "also": [
+        {
+          "file": "paired-verdicts.json",
+          "row": "snow-train-2-m5",
+          "version": "snow-train-2-m5-a",
+          "note": "Partially right. I don't know why the bag is open in Grandpa's, and maybe it is because, in the previous picture also, it was open. Should be shut"
+        }
+      ],
+      "verdicts": {
+        "story": "right",
+        "edit": "partly",
+        "free": "partly",
+        "mockup": "right"
+      },
+      "seen_in": ["edit", "free"],
+      "fault": "Without the mock-up, the suitcase came out open; made real from the mock-up it was right.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "first_image",
+          "args": {
+            "is": ["mockup"]
+          },
+          "says": "image 1 is the mock-up: a wide shot from outside (the paired routing)"
+        }
+      ]
+    },
+    {
+      "id": "night-market-m2-route",
+      "kind": "failing",
+      "class": "reference_conflict",
+      "step": "S5",
+      "hypothesis": "From outside, on this side of the place, the paired test had the mock-up right in 8 of 10 moments; the story pictures, drawn with it, were right in 5 of 17 two-shots and 8 of 11 wide shots; the story picture, with the mock-up, was partly right (the dreamer not looking at the fish).",
+      "session": "dream-0926-000545-09ea",
+      "moment": "m2",
+      "source": {
+        "file": "paired-verdicts.json",
+        "row": "night-market-m2",
+        "version": "night-market-m2-c"
+      },
+      "note": "One of the girls looks different, I think, or I'm not sure. Again, both of them are looking at the camera for, I don't know, what reason?",
+      "also": [
+        {
+          "file": "paired-verdicts.json",
+          "row": "night-market-m2",
+          "version": "night-market-m2-b",
+          "note": "I don't know why both sisters are looking at the camera."
+        }
+      ],
+      "verdicts": {
+        "story": "partly",
+        "mockup": "right",
+        "edit": "partly",
+        "free": "partly"
+      },
+      "seen_in": ["edit", "free"],
+      "fault": "Without the mock-up, both sisters look at the camera (and one looks different); made real from the mock-up it was almost right.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "first_image",
+          "args": {
+            "is": ["mockup"]
+          },
+          "says": "image 1 is the mock-up: a group from outside (the paired routing)"
+        }
+      ]
+    },
+    {
+      "id": "library-1-m4-route",
+      "kind": "failing",
+      "class": "reference_conflict",
+      "step": "S5",
+      "hypothesis": "From outside, on this side of the place, the paired test had the mock-up right in 8 of 10 moments; the story pictures, drawn with it, were right in 5 of 17 two-shots and 8 of 11 wide shots; the story picture, with the mock-up, was wrong (the whale pasted in), so the mock-up was right once of twice here.",
+      "session": "dream-0926-050424-fdd7",
+      "moment": "m4",
+      "source": {
+        "file": "paired-verdicts.json",
+        "row": "library-1-m4",
+        "version": "library-1-m4-a"
+      },
+      "note": "Not bad. Just the composition looks a little off. Otherwise, not bad.",
+      "verdicts": {
+        "story": "wrong",
+        "free": "partly",
+        "mockup": "right",
+        "edit": "wrong"
+      },
+      "seen_in": ["free"],
+      "fault": "Drawn from the sketches alone, the composition is a little off; made real from the mock-up it was right.",
+      "expectations": [
+        {
+          "kind": "code",
+          "check": "first_image",
+          "args": {
+            "is": ["mockup"]
+          },
+          "says": "image 1 is the mock-up: a wide shot from outside (the paired routing)"
+        }
+      ]
+    },
+    {
       "id": "snow-train-m6-hand",
       "kind": "failing",
       "class": "pov",
