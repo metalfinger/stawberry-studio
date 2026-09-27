@@ -788,7 +788,7 @@ describe('with the camera rules on, assembleCut still reads the sheet alone', ()
 // ── the S4 picture check's dry run (27 Sep): its faults, each in a small dream of its own ─────────────
 
 /** A pool hall, a dinghy afloat on waist-deep water with two in it, and a creature in the water beside it. */
-function poolDream(creatureLook: string, opts: { standing?: boolean; moved?: boolean } = {}) {
+function poolDream(creatureLook: string, opts: { standing?: boolean; moved?: 'back' | 'front' } = {}) {
   const b = dream({
     people: ['p1', 'p2', 'p3'],
     things: [{ id: 'b1', name: 'the dinghy' }],
@@ -802,14 +802,14 @@ function poolDream(creatureLook: string, opts: { standing?: boolean; moved?: boo
         { id: 'p2', x: 6.4, y: 6, kind: 'person', pose: opts.standing ? 'standing' : 'sitting', faces: 'front' },
         { id: 'p3', x: 7, y: 4.5, kind: 'person', pose: 'lying', faces: 'left' },
       ],
-      // The dinghy moves back up the hall while the two in it face the front.
+      // The dinghy moves back up the hall, or on toward its front, while the two in it face the front.
       ...(opts.moved
         ? {
             moves: {
               m2: [
-                { id: 'b1', x: 6, y: 8 },
-                { id: 'p1', x: 5.6, y: 8, faces: 'front', pose: 'sitting' as const },
-                { id: 'p2', x: 6.4, y: 8, faces: 'front', pose: 'sitting' as const },
+                { id: 'b1', x: 6, y: opts.moved === 'back' ? 8 : 4 },
+                { id: 'p1', x: 5.6, y: opts.moved === 'back' ? 8 : 4, faces: 'front', pose: 'sitting' as const },
+                { id: 'p2', x: 6.4, y: opts.moved === 'back' ? 8 : 4, faces: 'front', pose: 'sitting' as const },
               ],
             },
           }
@@ -931,26 +931,53 @@ describe('the water covers only what it is deep enough to cover', () => {
   });
 });
 
-describe('a vehicle heads the way those in it face', () => {
-  test('moved back up the place while the two in it face its front, it heads where they look', () => {
-    const { b, rec } = poolDream('sleek and grey', { moved: true });
-    const c = withEnv(CAMERA, () => planContinuity(b, rec)).cuts.find((x) => x.id === 'm2')!;
-    const heading = (c.rules ?? []).find((l) => /\bis heading\b/.test(l)) ?? '';
-    // They face the front (0, -1): heading away from a camera looking that way, toward one looking back.
-    const ahead = -c.eye!.d.y / Math.hypot(c.eye!.d.x, c.eye!.d.y);
-    // The camera stands in front of them or behind them, so the way it heads tells the two ways apart.
-    expect(Math.abs(ahead)).toBeGreaterThan(0.7);
-    expect(heading).toMatch(ahead > 0 ? /heading away from the camera/ : /heading toward the camera/);
-    // Seen from behind them, it never heads at the camera.
-    if (/their back to the camera/.test(c.view ?? '')) expect(heading).not.toMatch(/toward the camera/);
+describe('a vehicle heads no way that those in it face against', () => {
+  test('moved back up the place while the two in it face its front, no heading is said; moved the way they face, it is', () => {
+    const heading = (moved: 'back' | 'front') => {
+      const { b, rec } = poolDream('sleek and grey', { moved });
+      const c = withEnv(CAMERA, () => planContinuity(b, rec)).cuts.find((x) => x.id === 'm2')!;
+      return { c, heading: (c.rules ?? []).filter((l) => /\bis heading\b/.test(l)) };
+    };
+    // They face the front, the dinghy moved to the back: two ways, and neither is said.
+    expect(heading('back').heading).toEqual([]);
+    // Moved toward the front, the way they face: said, from where the camera stands.
+    const { c, heading: said } = heading('front');
+    expect(said).toHaveLength(1);
+    // The front of the hall, (0, -1), as the camera sees it.
+    const n = Math.hypot(c.eye!.d.x, c.eye!.d.y);
+    const ahead = -c.eye!.d.y / n;
+    const right = -c.eye!.d.x / n;
+    expect(said[0]).toMatch(
+      ahead > 0.7
+        ? /heading away from the camera/
+        : ahead < -0.7
+          ? /heading toward the camera/
+          : right > 0
+            ? /heading toward the right of the picture/
+            : /heading toward the left of the picture/,
+    );
+  });
+});
+
+describe('a brief written for a view whose span is now said as around one place', () => {
+  test('still serves it', () => {
+    const was =
+      'Seen from behind them. The red door, the middle of the picture, filling the picture from a third of the way down to a third of the way down.';
+    const now =
+      'Seen from behind them. The red door, the middle of the picture, filling the picture around a third of the way down.';
+    withEnv(CAMERA, () => {
+      expect(sameView(was, now)).toBe(true);
+      expect(sameView(was.replace('red door', 'blue door'), now)).toBe(false);
+    });
+    withEnv({ DREAMCHAT_CAMERA: undefined }, () => expect(sameView(was, now)).toBe(false));
   });
 });
 
 describe('what a view says of how much of the picture something fills', () => {
-  test('where its top and bottom fall in one band, a thin band there, never "from X to X"', () => {
+  test('where its top and bottom fall in one band, around there, never "from X to X"', () => {
     withEnv(CAMERA, () => {
-      expect(filling({ y0: 0.3, y1: 0.38 })).toBe('filling only a thin band of the picture, a third of the way down');
-      expect(filling({ y0: 0.45, y1: 0.55 })).toBe('filling only a thin band of the picture, across its middle');
+      expect(filling({ y0: 0.3, y1: 0.38 })).toBe('filling the picture around a third of the way down');
+      expect(filling({ y0: 0.45, y1: 0.55 })).toBe('filling the picture around its middle');
       expect(filling({ y0: 0.1, y1: 0.7 })).toBe('filling the picture from near its top to two thirds of the way down');
     });
     // Without the camera rules, as today.

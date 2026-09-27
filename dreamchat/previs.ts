@@ -1824,13 +1824,12 @@ function cropOf(s: Spot, eye: Eye, seen?: Seen): string {
 /** Where down the picture something reaches, from its top to its bottom, in words. */
 /**
  * How much of the picture's height something fills, from where to where. With the camera rules, where
- * its top and its bottom fall in the same band it fills only a thin band there: "from a third of the way
- * down to a third of the way down" said nothing of how big it is (library, 27 Sep).
+ * its top and its bottom fall in the same band it fills the picture around there: "from a third of the
+ * way down to a third of the way down" said a span of nothing (library, 27 Sep).
  */
 export function filling(s: Pick<Seen, 'y0' | 'y1'>): string {
   const [top, bottom] = upDown(s);
-  if (top === bottom && cameraMode() === 'on')
-    return `filling only a thin band of the picture, ${top === 'its middle' ? 'across its middle' : top}`;
+  if (top === bottom && cameraMode() === 'on') return `filling the picture around ${top}`;
   return `filling the picture from ${top} to ${bottom}`;
 }
 
