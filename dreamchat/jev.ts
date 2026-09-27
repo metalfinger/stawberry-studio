@@ -185,8 +185,8 @@ export function verdictQuestions(shown: { id: string; name: string }[], latest: 
 export const PROFILE_REPLY_S8: Record<string, string> = {
   confirmed: "it's right as described, and they add or change nothing",
   changes:
-    'they give any detail of how it looks that was different or missing, even one, even while saying the rest is right or leaving the rest to the listener',
-  you_choose: "they don't mind or don't remember, and give no detail of how it looks",
+    'they give any detail of it that was different or missing (who or what it is, how it looks, what it wears or is made of), even one, even while saying the rest is right or leaving the rest to the listener',
+  you_choose: "they don't mind or don't remember, and give no detail of it that was different or missing",
   unclear: "they didn't answer that",
 };
 
@@ -353,6 +353,20 @@ export function bookkeeperQuestions(
         false: 'they confirm it, correct it, or add a detail to a part already told, and nothing comes after it',
       },
     };
+    // S8: beside it too, whether they put anything right or add to it. An answer that says it is right and
+    // then corrects it is both, and one choice holds one: "yep that's it, you got it all right. only small
+    // thing is the tractor stops at the edge of the field before i put the boat down" read 0.76 right and
+    // 0.16-0.25 a change, on either side of the bar each time it was asked (the fresh simulation's
+    // answers, 27 Sep), and a change read as right is never drafted.
+    if (listen)
+      q.retell_adds = {
+        type: 'noul',
+        instructions: `The listener has just told the person's dream back to them. In this message: "${latest.slice(0, 240)}", besides saying whether it was right, does the person put any part of it right, or add a detail it did not have?`,
+        criteria: {
+          true: 'they correct something or add something, even one small detail, even while saying the rest is right',
+          false: 'they only say it is right or near enough, with nothing put right and nothing added',
+        },
+      };
   }
 
   if (phase === 'offer') {
@@ -777,6 +791,19 @@ export const READ_BY = {
   wants_to_see: {},
 } as const;
 
+/** Jev's P(they put something right or add to it) at or above this makes a retelling's answer a change (S8). */
+export const ADDS_BAR = 0.5;
+
+/**
+ * A retelling's answer with what it puts right or adds, read on its own (`retell_adds`, S8): read as right,
+ * or as no answer, and yet correcting or adding something, it is a change, and the changed part is told
+ * back and checked. Nothing read, the choice stands.
+ */
+export function retellWithAdds(reply: RetellReply, adds: number | null | undefined): RetellReply {
+  if ((reply === 'confirmed' || reply === 'unclear') && (adds ?? 0) >= ADDS_BAR) return 'added_more';
+  return reply;
+}
+
 export type JevReadNote = { goalId: string; reason: string; attempted: number };
 
 const NA_BAR = 0.85;
@@ -916,6 +943,16 @@ export function readState(
     if (r.lowConfidence)
       notes.push({ goalId: 'retell_reply', reason: 'unsure how they answered, read as unclear', attempted: -1 });
     retellReply = r.value;
+    if (listen) {
+      const withAdds = retellWithAdds(retellReply, noul(a.retell_adds));
+      if (withAdds !== retellReply)
+        notes.push({
+          goalId: 'retell_reply',
+          reason: `read ${retellReply}, but it puts something right or adds to it (${noul(a.retell_adds)?.toFixed(2)}): a change`,
+          attempted: noul(a.retell_adds) ?? -1,
+        });
+      retellReply = withAdds;
+    }
   }
 
   const found: Thread[] = [];

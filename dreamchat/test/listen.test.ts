@@ -4,14 +4,18 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { dreamConfig } from '../dream';
 import {
+  ADDS_BAR,
   type Answer,
+  bookkeeperQuestions,
   choiceByAction,
   closingListLength,
   type JevCall,
+  PROFILE_REPLY_S8,
   readState,
   replyCheck,
   type ReplyCheckInput,
   replyFailures,
+  retellWithAdds,
 } from '../jev';
 import {
   ASK_OPENLY,
@@ -260,6 +264,68 @@ describe('choices read by the action they lead to', () => {
     const on = readState(initialState('t', cfg), cfg, transcript, call, 1, 'build', 0.5, true).next;
     expect(off.signals.profile_reply).toBe('unclear');
     expect(on.signals.profile_reply).toBe('confirmed');
+  });
+
+  test('a profile answer telling who someone is is a change, not only one telling how they look', () => {
+    // "just that he's my younger brother ... you can go with your guess" read as leaving it to us at 0.91,
+    // and the sketch guessed a man in his early twenties (night bus, fresh simulation, 27 Sep).
+    expect(PROFILE_REPLY_S8.changes).toContain('who or what it is');
+    expect(PROFILE_REPLY_S8.you_choose).toContain('no detail of it that was different or missing');
+    const q = bookkeeperQuestions(
+      cfg,
+      [{ role: 'user', content: 'x' }],
+      undefined,
+      'build',
+      [],
+      'my brother',
+      [],
+      true,
+    );
+    expect(q.profile_reply.type === 'choice' && q.profile_reply.criteria).toEqual(PROFILE_REPLY_S8);
+  });
+
+  test('a retelling\'s answer that puts something right beside "that\'s it" is a change, asked on its own', () => {
+    const transcript = [
+      { role: 'assistant' as const, content: 'so the tractor drove you to the field, and you put the boat down' },
+      {
+        role: 'user' as const,
+        content: "yep that's it, you got it all right. only small thing is the tractor stops at the edge of the field",
+      },
+    ];
+    const on = bookkeeperQuestions(cfg, transcript, undefined, 'retell', [], undefined, [], true);
+    expect(on.retell_adds?.type).toBe('noul');
+    expect(bookkeeperQuestions(cfg, transcript, undefined, 'retell').retell_adds).toBeUndefined();
+    // Read 0.76 right and 0.16-0.25 a change: under the bar, and never drafted.
+    const read = (adds: number, listen: boolean) =>
+      readState(
+        initialState('t', cfg),
+        cfg,
+        transcript,
+        {
+          questions: {},
+          state: '',
+          answers: {
+            retell_reply: ans('confirmed', { confirmed: 0.76, added_more: 0.16, corrected: 0.08, unclear: 0 }),
+            retell_adds: noul(adds),
+          },
+          error: null,
+          ms: 1,
+          usage: null,
+        },
+        1,
+        'retell',
+        0.5,
+        listen,
+      ).next.signals.retell_reply;
+    expect(read(0.94, true)).toBe('added_more');
+    // A plain "yep that's exactly it" reads 0.07-0.38 (the stored answers of both arms): it stays right.
+    expect(read(0.2, true)).toBe('confirmed');
+    // Off, as today.
+    expect(read(0.94, false)).toBe('confirmed');
+    // A change already read stays what it was; nothing read, the choice stands.
+    expect(retellWithAdds('corrected', 0.9)).toBe('corrected');
+    expect(retellWithAdds('unclear', ADDS_BAR)).toBe('added_more');
+    expect(retellWithAdds('confirmed', null)).toBe('confirmed');
   });
 });
 
