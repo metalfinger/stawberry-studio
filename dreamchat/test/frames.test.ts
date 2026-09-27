@@ -1338,7 +1338,15 @@ describe('a moment drawn from the story record (DREAMCHAT_RECORD=on)', () => {
     const rec = withRecord
       ? forPlan(storyRecord(b, f.items, null, { words: f.words, style: f.style }).record)
       : undefined;
-    const plan = planContinuity(b, rec);
+    // S1's in-between pictures as planned today: S5's references (test/refs.test.ts) choose among them.
+    const refs = process.env.DREAMCHAT_REFS;
+    delete process.env.DREAMCHAT_REFS;
+    let plan: ReturnType<typeof planContinuity>;
+    try {
+      plan = planContinuity(b, rec);
+    } finally {
+      if (refs !== undefined) process.env.DREAMCHAT_REFS = refs;
+    }
     const all = [...buildFrames(b, plan), ...buildGhosts(plan)].map((p): Item => ({
       ...p,
       status: 'ready',

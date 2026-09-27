@@ -628,7 +628,14 @@ describe('the continuity plan made from the record (DREAMCHAT_RECORD=on)', () =>
     const f = load(name);
     const b = structuredClone(f.breakdown);
     const rec = forPlan(storyRecord(b, f.items, null, { words: f.words, style: f.style }).record);
-    return { b, rec, plan: planContinuity(b, rec) };
+    // S1's in-between pictures as planned today: S5's references (test/refs.test.ts) choose among them.
+    const refs = process.env.DREAMCHAT_REFS;
+    delete process.env.DREAMCHAT_REFS;
+    try {
+      return { b, rec, plan: planContinuity(b, rec) };
+    } finally {
+      if (refs !== undefined) process.env.DREAMCHAT_REFS = refs;
+    }
   };
   const cut = (plan: ReturnType<typeof planContinuity>, id: string) => plan.cuts.find((c) => c.id === id)!;
 

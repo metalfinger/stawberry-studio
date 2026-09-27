@@ -39,16 +39,19 @@ type Frozen = {
   goals?: Goals;
 };
 /**
- * With the camera rules off (DREAMCHAT_CAMERA): these tests hold today's plans and prompts, which the
- * rules change on purpose (test/camera.test.ts holds them on).
+ * With the camera rules (DREAMCHAT_CAMERA) and S5's references (DREAMCHAT_REFS) off: these tests hold
+ * today's plans and prompts, which those steps change on purpose (test/camera.test.ts and
+ * test/refs.test.ts hold them on).
  */
 function cameraOff<T>(fn: () => T): T {
-  const was = process.env.DREAMCHAT_CAMERA;
+  const was = { camera: process.env.DREAMCHAT_CAMERA, refs: process.env.DREAMCHAT_REFS };
   delete process.env.DREAMCHAT_CAMERA;
+  delete process.env.DREAMCHAT_REFS;
   try {
     return fn();
   } finally {
-    if (was !== undefined) process.env.DREAMCHAT_CAMERA = was;
+    if (was.camera !== undefined) process.env.DREAMCHAT_CAMERA = was.camera;
+    if (was.refs !== undefined) process.env.DREAMCHAT_REFS = was.refs;
   }
 }
 const planContinuity = (...a: Parameters<typeof planWithSwitches>) => cameraOff(() => planWithSwitches(...a));

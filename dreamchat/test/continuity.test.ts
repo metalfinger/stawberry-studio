@@ -8,16 +8,19 @@ setDefaultTimeout(30_000);
 const detail = (value: string | null = null) => ({ value, said: false });
 
 /**
- * With the camera rules off (DREAMCHAT_CAMERA): these tests hold today's plans and prompts, which the
- * rules change on purpose (test/camera.test.ts holds them on).
+ * With the camera rules (DREAMCHAT_CAMERA) and S5's references (DREAMCHAT_REFS) off: these tests hold
+ * today's plans and prompts, which those steps change on purpose (test/camera.test.ts and
+ * test/refs.test.ts hold them on).
  */
 function cameraOff<T>(fn: () => T): T {
-  const was = process.env.DREAMCHAT_CAMERA;
+  const was = { camera: process.env.DREAMCHAT_CAMERA, refs: process.env.DREAMCHAT_REFS };
   delete process.env.DREAMCHAT_CAMERA;
+  delete process.env.DREAMCHAT_REFS;
   try {
     return fn();
   } finally {
-    if (was !== undefined) process.env.DREAMCHAT_CAMERA = was;
+    if (was.camera !== undefined) process.env.DREAMCHAT_CAMERA = was.camera;
+    if (was.refs !== undefined) process.env.DREAMCHAT_REFS = was.refs;
   }
 }
 
@@ -115,7 +118,7 @@ const kitchen = breakdown([
 ]);
 
 describe('the continuity plan', () => {
-  const plan = planContinuity(kitchen);
+  const plan = cameraOff(() => planContinuity(kitchen));
   const cut = (id: string) => plan.cuts.find((c) => c.id === id)!;
   const refs = (id: string) => cut(id).refs.map((r) => `${r.id}:${r.role}`);
 
@@ -220,7 +223,7 @@ describe('ghosts', () => {
         leaves: [{ who: 'p1', what: 'head', now: "a horse's head of ice" }],
       }),
     ]);
-    const plan = planContinuity(b);
+    const plan = cameraOff(() => planContinuity(b));
     expect(plan.ghosts.map((g) => [g.id, g.state?.now, g.after ?? null, g.needs])).toEqual([
       ['g1', 'a block of ice', null, []],
       ['g2', 'melting ice', 'g1', ['g1']],
@@ -363,7 +366,7 @@ describe('ghosts', () => {
       moment({ id: 'm2', visible: ['p1'], place: 'l2', looks_at: 'the road' }),
       moment({ id: 'm3', visible: ['p1'], place: 'l1', looks_at: 'the window' }),
     ]);
-    const m3 = planContinuity(b).cuts[2];
+    const m3 = cameraOff(() => planContinuity(b)).cuts[2];
     expect(m3.refs.find((r) => r.id === 'm1')).toMatchObject({ role: 'lighting', relation: 'other_side' });
   });
 

@@ -72,7 +72,17 @@ const everywhere = () => true;
 
 describe('a moment as today would send it, from the run own pictures', () => {
   // The snow train: every sketch and picture drawn, and one in-between picture (the suitcase opened, g1).
-  const snow = buildDream(frozen('dream-0926-043003-b0cb'));
+  // Built with today's choice of references (S5's switch off): the mock-up is image 1 of m3.
+  const today = () => {
+    const refs = process.env.DREAMCHAT_REFS;
+    delete process.env.DREAMCHAT_REFS;
+    try {
+      return buildDream(frozen('dream-0926-043003-b0cb'));
+    } finally {
+      if (refs !== undefined) process.env.DREAMCHAT_REFS = refs;
+    }
+  };
+  const snow = today();
 
   test('every image is the run own file, known by what it is; the mock-up is rendered now', () => {
     const t = todayOf(snow, 'm3', { media: MEDIA, exists: everywhere });
@@ -88,7 +98,7 @@ describe('a moment as today would send it, from the run own pictures', () => {
     expect(t.previs?.key).toMatch(/^[0-9a-f]{64}$/);
     expect(t.images[0]).toMatchObject({ n: 1, role: 'base', key: 'previs:m3' });
     // The same dream built again gives the same hash; the store is told the run's ids.
-    expect(todayOf(buildDream(frozen('dream-0926-043003-b0cb')), 'm3', { media: MEDIA, exists: everywhere }).hash).toBe(
+    expect(todayOf(today(), 'm3', { media: MEDIA, exists: everywhere }).hash).toBe(
       t.hash,
     );
     expect(partsOf(snow).ghosts.map((g) => g.id)).toContain('g1');
@@ -106,7 +116,7 @@ describe('a moment as today would send it, from the run own pictures', () => {
   test('an earlier picture the run never drew, or a file not on this machine, refuses it too', async () => {
     // The lighthouse, first telling: m1 failed, and m3 takes it for its composition (today's choice, with
     // the camera rules off: with them on, m3's camera is turned round from m1's and takes nothing of it).
-    const off = { DREAMCHAT_CAMERA: '' };
+    const off = { DREAMCHAT_CAMERA: '', DREAMCHAT_REFS: '' };
     const light = await withEnv(off, () => buildDream(frozen('dream-0925-231131-affd')));
     const t = await withEnv(off, () => todayOf(light, 'm3', { media: MEDIA, exists: everywhere }));
     expect(t.refused.some((r) => /picture:m1\): the run never drew picture m1/.test(r))).toBe(true);
