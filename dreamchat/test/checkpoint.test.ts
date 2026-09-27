@@ -92,10 +92,12 @@ describe('a moment as today would send it, from the run own pictures', () => {
     expect(t.refused.some((r) => r.includes('the run never drew the in-between picture'))).toBe(true);
   });
 
-  test('an earlier picture the run never drew, or a file not on this machine, refuses it too', () => {
-    // The lighthouse, first telling: m1 failed, and m3 takes it for its composition.
-    const light = buildDream(frozen('dream-0925-231131-affd'));
-    const t = todayOf(light, 'm3', { media: MEDIA, exists: everywhere });
+  test('an earlier picture the run never drew, or a file not on this machine, refuses it too', async () => {
+    // The lighthouse, first telling: m1 failed, and m3 takes it for its composition (today's choice, with
+    // the camera rules off: with them on, m3's camera is turned round from m1's and takes nothing of it).
+    const off = { DREAMCHAT_CAMERA: '' };
+    const light = await withEnv(off, () => buildDream(frozen('dream-0925-231131-affd')));
+    const t = await withEnv(off, () => todayOf(light, 'm3', { media: MEDIA, exists: everywhere }));
     expect(t.refused.some((r) => /picture:m1\): the run never drew picture m1/.test(r))).toBe(true);
     const gone = todayOf(snow, 'm3', { media: MEDIA, exists: (p) => !p.endsWith('/p2.png') });
     expect(gone.refused).toEqual([expect.stringContaining('its file is not on this machine (/media/p2.png)')]);
