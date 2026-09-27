@@ -6,6 +6,7 @@
 // "said" against the person's own messages (ground.ts). Strawberry's own rule is that missing
 // facts are unknown, not invented defaults presented as the user's decisions.
 import { SHAPES, type Blocking, type Move, type Shape, type Side, type Spot } from './blocking';
+import { cameraMode } from './camera';
 import { listenOn } from './lib';
 import { type ChatMessage, callDeepseek, type Thinking } from './llm';
 
@@ -1591,6 +1592,35 @@ export function hasBefore(b: Breakdown, momentId: string, who: string): boolean 
 export const CROWD =
   /\b(crowds?|audiences?|onlookers|passers-?by|spectators|bystanders|strangers|(?:other|many|lots of|a lot of|some|several) people|people (?:everywhere|around))\b/i;
 
+/** The words of a moment a picture is told. */
+const MOMENT_WORDS = ['action', 'visual_point', 'looks_at', 'dream', 'shift', 'feeling', 'purpose'] as const;
+
+/**
+ * A person's, place's or thing's id standing as a word in a moment's words, resolved to its name, once,
+ * when the dream is read (the camera rules): the floor-plan step wrote "the high round window; outside it
+ * l2", and the id reached the picture's words (library, 27 Sep). The dreamer is "the dreamer".
+ */
+export function namesForIds(b: Breakdown): string[] {
+  const names = new Map<string, string>([
+    ...(b.people ?? []).map((p) => [p.id, p.is_dreamer ? 'the dreamer' : p.name] as [string, string]),
+    ...(b.places ?? []).map((l) => [l.id, l.name] as [string, string]),
+    ...(b.things ?? []).map((t) => [t.id, t.name] as [string, string]),
+  ]);
+  const ids = [...names.keys()].filter((id) => /^[a-z]+\d+$/i.test(id));
+  if (!ids.length) return [];
+  const re = new RegExp(`(?<![\\w-])(${ids.join('|')})(?![\\w-])`, 'g');
+  const notes: string[] = [];
+  for (const m of moments(b))
+    for (const k of MOMENT_WORDS) {
+      const was = m[k];
+      if (typeof was !== 'string' || !re.test(was)) continue;
+      re.lastIndex = 0;
+      (m as Record<string, unknown>)[k] = was.replace(re, (id) => names.get(id) ?? id);
+      notes.push(`${m.id} ${k}: ids named`);
+    }
+  return notes;
+}
+
 /**
  * The things each moment shows, completed from its own words: a thing is in view where its change
  * happens, where the moment names what it has become, or where it is named and no other thing
@@ -1599,6 +1629,7 @@ export const CROWD =
  */
 export function completeViews(b: Breakdown): string[] {
   const notes: string[] = [];
+  if (cameraMode() === 'on') notes.push(...namesForIds(b));
   const bare = (x: string) =>
     x
       .toLowerCase()

@@ -22,6 +22,7 @@ import {
   unit as unitOf,
 } from './blocking';
 import {
+  bodyHeight,
   cameraMode,
   goingIn,
   ON_THE_LINE,
@@ -394,10 +395,16 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
   // does here, or, where the record's words do not measure it, as high as they last did in this place.
   const camera = cameraMode() === 'on';
   const beyond = camera ? outThroughWindows(plan) : {};
+  // How high each creature of the dream stands, where its look says how big it is: what water covers of it.
+  const heights = camera ? bodiesOf(b) : {};
+  const beings = Object.entries(heights).map(([id, height]) => ({
+    name: b.people.find((p) => p.id === id)?.name ?? id,
+    height,
+  }));
   let water: number | null = null;
   if (camera && rec)
     for (const x of upTo) {
-      const w = waterAt(rec.moments[x.id]?.facts ?? [], plan);
+      const w = waterAt(rec.moments[x.id]?.facts ?? [], plan, beings);
       water = w.has ? (w.level ?? water) : null;
     }
   // Whoever rides a boat on it keeps their head under the ceiling: "almost up to the ceiling" with a boat
@@ -413,7 +420,7 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
       .filter((s) => (there.has(s.id) || s.id === dreamerId || s.fixture) && !r?.gone.includes(s.id))
       .map((s) => {
         const mv = moved.get(s.id);
-        const at = mv
+        const placed = mv
           ? {
               ...s,
               x: mv.x,
@@ -422,6 +429,8 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
               ...(mv.pose ? { pose: mv.pose } : {}),
             }
           : s;
+        // In the water, how high a creature's body stands (the camera rules).
+        const at = water !== null && heights[s.id] !== undefined ? { ...placed, height: heights[s.id] } : placed;
         // Handed over or put down: whoever holds it from this moment, or nobody.
         if (mv?.heldBy !== undefined) {
           if (mv.heldBy) at.heldBy = mv.heldBy;
@@ -441,17 +450,37 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
  * Whether the story record has water in a moment's place, and how high its words say it stands
  * (camera.ts waterLevel): none measured where they do not say.
  */
-function waterAt(facts: NowOf[], plan: Blocking): { has: boolean; level: number | null } {
+function waterAt(
+  facts: NowOf[],
+  plan: Blocking,
+  beings: { name: string; height: number }[] = [],
+): { has: boolean; level: number | null } {
   let has = false;
   for (const f of facts)
     if (f.kind === 'place')
       for (const x of f.facts)
         if (x.kind === 'part' && (WATER.test(x.part) || WATER.test(x.what))) {
           has = true;
-          const level = waterLevel(x.now, plan);
+          const level = waterLevel(x.now, plan, beings);
           if (level !== null) return { has, level };
         }
   return { has, level: null };
+}
+
+/**
+ * How high the body of each of the dream's people and creatures stands where their look says how big
+ * they are (camera.ts bodyHeight), by id; never the dreamer. Read from who they are and how they look.
+ */
+function bodiesOf(b: Breakdown): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const p of b.people ?? []) {
+    if (p.is_dreamer) continue;
+    const f = p.fields ?? ({} as Breakdown['people'][number]['fields']);
+    const look = [f.identity?.value, f.appearance?.value, f.distinctive_features?.value].filter(Boolean).join('; ');
+    const h = bodyHeight(look);
+    if (h !== null) out[p.id] = h;
+  }
+  return out;
 }
 
 /**
@@ -1083,12 +1112,21 @@ function planWith(
       const mv = plan?.moves?.[m.id]?.find((y) => y.id === v.id);
       const was = mv && plan ? before(m, v.id, plan) : undefined;
       const [w, d] = sizeOf(v);
-      // The way it faces where the plan gives one; the way it moved here; or, where the place is its
-      // inside (the tractor's cab), the place's front.
+      // Whoever rides in it faces the way it goes (blocking.ts settle turns them so), and the picture shows
+      // them so: where they all face one way, it goes that way. Moved up the room while the two in it faced
+      // back down it, the boat was said to head at the camera behind them (library, 27 Sep).
+      const riders = where.spots
+        .filter((p) => p.kind === 'person' && !p.many && !!p.faces && onOf(p, where)?.t.id === v.id)
+        .map((p) => facing(p, where));
+      const sum = riders.reduce((a, f) => ({ x: a.x + f.x, y: a.y + f.y }), { x: 0, y: 0 });
+      const ridersWay = riders.length && Math.hypot(sum.x, sum.y) / riders.length > 0.9 ? unitOf(sum) : undefined;
+      const moved = was && Math.hypot(v.x - was.x, v.y - was.y) > 0.2;
+      // The way it faces where the plan gives one; where it moved here, the way its riders face, or else
+      // the way it moved; or, where the place is its inside (the tractor's cab), the place's front.
       const way = v.faces
         ? facing(v, where)
-        : was && Math.hypot(v.x - was.x, v.y - was.y) > 0.2
-          ? unitOf({ x: v.x - was.x, y: v.y - was.y })
+        : moved
+          ? (ridersWay ?? unitOf({ x: v.x - was.x, y: v.y - was.y }))
           : w >= rw - 0.1 && d >= rd - 0.1
             ? DIRECTIONS.front
             : undefined;

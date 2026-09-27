@@ -44,6 +44,12 @@ export type Spot = {
    */
   fixture?: boolean;
   name?: string;
+  /**
+   * How high a creature's body stands, in metres, where its look says how big it is (camera.ts
+   * bodyHeight): set by the camera rules where water stands, and read only for what the water covers. A
+   * whale is placed as a figure lying on the floor, and was said to be all of it under a metre of water.
+   */
+  height?: number;
 };
 
 /** Where someone or something (a car, a boat) has moved to at a moment: its new spot, which way it faces, how they are. */

@@ -1256,9 +1256,7 @@ function thingWords(
   // How big it is in the frame, read off the render: the image model keeps where each thing is
   // across the picture from the words, and makes up how big it is. The friend beside the
   // dreamer, seen from the waist up in the previs, came back whole and two metres off (24 Sep).
-  const size = !s.many
-    ? `, ${isPerson(s) ? `${cropOf(s, eye, seen)} and ` : ''}filling the picture ${upDown(seen)}`
-    : '';
+  const size = !s.many ? `, ${isPerson(s) ? `${cropOf(s, eye, seen)} and ` : ''}${filling(seen)}` : '';
   // A crowd the dream counts is said by its count: "a couple of people" are the two of them.
   const counted = ['', 'one', 'two', 'three', 'four', 'five', 'six'][s.count ?? 0];
   return s.many
@@ -1824,7 +1822,19 @@ function cropOf(s: Spot, eye: Eye, seen?: Seen): string {
 }
 
 /** Where down the picture something reaches, from its top to its bottom, in words. */
-function upDown(s: Seen): string {
+/**
+ * How much of the picture's height something fills, from where to where. With the camera rules, where
+ * its top and its bottom fall in the same band it fills only a thin band there: "from a third of the way
+ * down to a third of the way down" said nothing of how big it is (library, 27 Sep).
+ */
+export function filling(s: Pick<Seen, 'y0' | 'y1'>): string {
+  const [top, bottom] = upDown(s);
+  if (top === bottom && cameraMode() === 'on')
+    return `filling only a thin band of the picture, ${top === 'its middle' ? 'across its middle' : top}`;
+  return `filling the picture from ${top} to ${bottom}`;
+}
+
+function upDown(s: Pick<Seen, 'y0' | 'y1'>): [string, string] {
   const top =
     s.y0 < 0.05
       ? 'its top edge'
@@ -1845,7 +1855,7 @@ function upDown(s: Seen): string {
           : s.y1 > 0.4
             ? 'its middle'
             : 'a third of the way down';
-  return `from ${top} to ${bottom}`;
+  return [top, bottom];
 }
 
 /**
@@ -1884,8 +1894,12 @@ export function onOf(p: Spot, plan: Blocking): { t: Spot; how: 'on' | 'in' } | u
   const by = (shape: Shape) => under.find((t) => shapeOf(t, plan) === shape);
   const v = by('vehicle');
   // Ridden on, not in, when it is narrower than a metre (a bicycle, a motorbike, a horse): the
-  // sisters were said to be "in the bicycle" (night market, 26 Sep).
-  if (v && p.pose !== 'standing') return { t: v, how: sizeOf(v)[0] < 1 ? 'on' : 'in' };
+  // sisters were said to be "in the bicycle" (night market, 26 Sep). Someone standing where a boat is,
+  // afloat on the water the record measures (the camera rules), stands in it: there is no floor beside
+  // it to stand on. The sister standing to open the high window was left out of the boat she stood in
+  // (library, 27 Sep).
+  if (v && (p.pose !== 'standing' || (plan.water && cameraMode() === 'on')))
+    return { t: v, how: sizeOf(v)[0] < 1 ? 'on' : 'in' };
   const seat = by('seat');
   if (seat && p.pose !== 'standing') return { t: seat, how: 'on' };
   const ground = by('steps') ?? by('ground');
@@ -1975,11 +1989,16 @@ function waterWords(plan: Blocking, spots: Spot[], r: Render, called: (id: strin
         : 'in the middle of the picture';
   };
   const below = (s: Spot) => afloatOn.find((v) => Math.hypot(v.x - s.x, v.y - s.y) < 2.5);
+  // A creature whose look says it is too big for the water to cover is in it, not under it: its back
+  // breaks the surface, and nothing afloat is over it (a whale beside the boat, in a metre of water).
+  const tooBig = (s: Spot) => s.height !== undefined && groundAt(s, plan) + s.height > (plan.water ?? 0);
   return [
     `${deep}${afloatOn.length ? `, and ${afloatOn.map((s) => called(s.id)).join(' and ')} ${afloatOn.length > 1 ? 'float' : 'floats'} on it` : ''}.`,
     ...under.map((s) => {
       const v = below(s);
-      return `Under the water, ${where(s)}${v ? `, beneath ${called(v.id)}` : ''}: ${called(s.id)}, all of it below the surface.`;
+      return tooBig(s)
+        ? `In the water, ${where(s)}${v ? `, beside ${called(v.id)}` : ''}: ${called(s.id)}, too big for the water to cover, part of it above the surface.`
+        : `Under the water, ${where(s)}${v ? `, beneath ${called(v.id)}` : ''}: ${called(s.id)}, all of it below the surface.`;
     }),
   ];
 }

@@ -2,6 +2,7 @@ import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { assembleCut } from '../assemble';
 import type { Blocking } from '../blocking';
 import {
+  bodyHeight,
   cameraMode,
   goingIn,
   handsIn,
@@ -27,7 +28,8 @@ import {
 import { type CutSheet, notDrawnFrom } from '../cutsheet';
 import { frozenDreams, loadDream } from '../evals/saved';
 import { rebuild } from '../plan';
-import { type Breakdown, type Moment, moments } from '../producer';
+import { filling, onOf } from '../previs';
+import { type Breakdown, completeViews, type Moment, moments } from '../producer';
 import type { Session } from '../session';
 
 // Frozen dreams are rebuilt with the switches in several ways.
@@ -367,11 +369,16 @@ describe('the water, as high as the record says it stands', () => {
     for (const [k, words, v] of implied) expect([k, words, waterLevel(words, plans[k])]).toEqual([k, words, v]);
   });
 
-  test('a boat afloat rides on it, whoever is in it rises with it, and what is under it is said to be', () => {
+  test('a boat afloat rides on it, whoever is in it rises with it, and what is in the water is said to be', () => {
     const r = rebuilt('dream-0926-050424-fdd7', ON);
     const m4 = picture(r, 'm4');
     expect(withEnv(ON, () => shotPlan(r.b, 'm4', r.rec))?.water).toBeGreaterThan(0.5);
-    expect(m4.prompt).toMatch(/Under the water[^.]*: the whale, all of it below the surface/);
+    // Without what the moments imply, the record measures the water over the desks, about a metre: the
+    // whale, so big it fills the aisle, is in it beside the boat, never all of it under it. With Claude's
+    // readings ("deep enough for a whale beneath a boat") it is under the boat (the prompt cases).
+    expect(m4.prompt).toMatch(
+      /In the water[^.]*: the whale, too big for the water to cover, part of it above the surface/,
+    );
     expect(shot(m4.prompt)).not.toMatch(/From left to right across the picture:[^.]*\bwhale\b/);
   });
 });
@@ -775,5 +782,208 @@ describe('with the camera rules on, assembleCut still reads the sheet alone', ()
         expect(assembleCut(s).prompt).toBe(p.prompt);
         for (const l of r.plan.cuts.find((c) => c.id === p.id)?.rules ?? []) expect(p.prompt).toContain(l);
       }
+  });
+});
+
+// ── the S4 picture check's dry run (27 Sep): its faults, each in a small dream of its own ─────────────
+
+/** A pool hall, a dinghy afloat on waist-deep water with two in it, and a creature in the water beside it. */
+function poolDream(creatureLook: string, opts: { standing?: boolean; moved?: boolean } = {}) {
+  const b = dream({
+    people: ['p1', 'p2', 'p3'],
+    things: [{ id: 'b1', name: 'the dinghy' }],
+    blocking: {
+      indoors: true,
+      ceiling: 5,
+      room: [12, 10],
+      spots: [
+        { id: 'b1', x: 6, y: 6, kind: 'thing', shape: 'vehicle', size: [3, 1.4, 0.6] },
+        { id: 'p1', x: 5.6, y: 6, kind: 'person', pose: 'sitting', faces: 'front' },
+        { id: 'p2', x: 6.4, y: 6, kind: 'person', pose: opts.standing ? 'standing' : 'sitting', faces: 'front' },
+        { id: 'p3', x: 7, y: 4.5, kind: 'person', pose: 'lying', faces: 'left' },
+      ],
+      // The dinghy moves back up the hall while the two in it face the front.
+      ...(opts.moved
+        ? {
+            moves: {
+              m2: [
+                { id: 'b1', x: 6, y: 8 },
+                { id: 'p1', x: 5.6, y: 8, faces: 'front', pose: 'sitting' as const },
+                { id: 'p2', x: 6.4, y: 8, faces: 'front', pose: 'sitting' as const },
+              ],
+            },
+          }
+        : {}),
+    },
+    moments: [
+      {
+        id: 'm1',
+        visible: ['p1', 'p2', 'p3'],
+        things: ['b1'],
+        distance: 'wide',
+        action: 'a seal glides by in the water',
+      },
+      {
+        id: 'm2',
+        visible: ['p1', 'p2', 'p3'],
+        things: ['b1'],
+        distance: 'wide',
+        action: 'they paddle the dinghy across the hall',
+      },
+    ],
+  });
+  const seal = b.people.find((p) => p.id === 'p3')!;
+  seal.name = 'the seal';
+  seal.fields = {
+    identity: { value: 'a seal', said: true },
+    appearance: { value: creatureLook, said: true },
+    wardrobe: { value: null, said: false },
+    distinctive_features: { value: null, said: false },
+  };
+  const at = () => ({
+    own: [],
+    carried: [],
+    visible: ['p1', 'p2', 'p3'],
+    things: ['b1'],
+    present: [],
+    gone: [],
+    held: {},
+    now: [],
+    facts: [
+      {
+        of: 'l1',
+        called: 'the place',
+        name: 'the place',
+        kind: 'place',
+        facts: [{ kind: 'part', part: 'water', what: 'water', now: 'waist-deep' }],
+      },
+    ],
+  });
+  const rec = { moments: { m1: at(), m2: at() }, before: {}, ends: {}, unsaid: {} } as unknown as RecordPlan;
+  return { b, rec };
+}
+
+describe('the water covers only what it is deep enough to cover', () => {
+  test('a creature whose look says it is far bigger than a person is in the water beside the boat, not under it', () => {
+    const big = poolDream('enormous, longer than the dinghy');
+    const rules = (x: ReturnType<typeof poolDream>) =>
+      (withEnv(CAMERA, () => planContinuity(x.b, x.rec)).cuts.find((c) => c.id === 'm1')?.rules ?? []).join(' ');
+    expect(rules(big)).toMatch(
+      /In the water[^.]*: the seal, too big for the water to cover, part of it above the surface\./,
+    );
+    expect(rules(big)).not.toMatch(/the seal, all of it below the surface/);
+    expect(rules(big)).not.toMatch(/beneath the dinghy: the seal/);
+    // Its look says nothing of its size: a figure lying in waist-deep water is under it, as before.
+    const small = poolDream('sleek and grey, with dark spots');
+    expect(rules(small)).toMatch(/Under the water[^.]*: the seal, all of it below the surface\./);
+  });
+
+  test('how high a body stands, read from its look', () => {
+    expect(bodyHeight('huge, about 60 feet long')).toBeCloseTo(3.66, 2);
+    expect(bodyHeight('very big, fills the whole hall')).toBe(2);
+    expect(bodyHeight('a giant tortoise, mossy shell')).toBe(2);
+    expect(bodyHeight('about 3 metres tall, thin')).toBe(3);
+    // Big eyes are not a big body; a tall bird is no measure; nothing said is nothing.
+    expect(bodyHeight('a tabby cat with huge green eyes')).toBeNull();
+    expect(bodyHeight('tall grey heron')).toBeNull();
+    expect(bodyHeight('small brown terrier')).toBeNull();
+  });
+
+  test('its level is the highest the words measure it by, and a creature it is deep enough for is under it', () => {
+    const room: Blocking = {
+      front: 'the doors',
+      indoors: true,
+      ceiling: 4,
+      room: [20, 12],
+      spots: [
+        { id: 'x3', x: 8, y: 6, fixture: true, name: 'counter with a till', size: [1.2, 0.8, 1] },
+        { id: 'x4', x: 3, y: 3, fixture: true, name: 'the bookcases', size: [1, 3, 2.5] },
+      ],
+    };
+    // Over the counters and on up the bookcases stands as high as the bookcases.
+    expect(waterLevel('over the counters and far up the bookcases', room)).toBe(2.5);
+    // Named for what stands in it, a later thing is no measure.
+    expect(waterLevel('over the counters, and the bookcases stand in it', room)).toBe(1.2);
+    // Said deep enough for a creature of the dream: over its back.
+    const walrus = [{ name: 'the walrus', height: 1.6 }];
+    expect(waterLevel('far over the counters, deep enough to hide a walrus below the surface', room, walrus)).toBe(1.8);
+    expect(waterLevel('far over the counters, deep enough to hide a walrus below the surface', room)).toBe(1.2);
+    // A creature named but not as what it is deep enough for measures nothing.
+    expect(waterLevel('over the counters, where the walrus lies', room, walrus)).toBe(1.2);
+  });
+
+  test('someone standing where a boat is afloat stands in it; on a dry floor, beside it', () => {
+    const { b, rec } = poolDream('sleek and grey', { standing: true });
+    const wet = withEnv(CAMERA, () => shotPlan(b, 'm1', rec))!;
+    const standing = wet.spots.find((s) => s.id === 'p2')!;
+    expect(withEnv(CAMERA, () => onOf(standing, wet))).toEqual({ t: wet.spots.find((s) => s.id === 'b1')!, how: 'in' });
+    const dry = withEnv(CAMERA, () => shotPlan(b, 'm1'))!;
+    expect(
+      withEnv(CAMERA, () =>
+        onOf(
+          dry.spots.find((s) => s.id === 'p2')!,
+          dry,
+        ),
+      ),
+    ).toBeUndefined();
+    const view = withEnv(CAMERA, () => planContinuity(b, rec)).cuts.find((c) => c.id === 'm1')?.view ?? '';
+    expect(view).toMatch(/The dinghy[^.]*with person p1 and person p2 in it/);
+  });
+});
+
+describe('a vehicle heads the way those in it face', () => {
+  test('moved back up the place while the two in it face its front, it heads where they look', () => {
+    const { b, rec } = poolDream('sleek and grey', { moved: true });
+    const c = withEnv(CAMERA, () => planContinuity(b, rec)).cuts.find((x) => x.id === 'm2')!;
+    const heading = (c.rules ?? []).find((l) => /\bis heading\b/.test(l)) ?? '';
+    // They face the front (0, -1): heading away from a camera looking that way, toward one looking back.
+    const ahead = -c.eye!.d.y / Math.hypot(c.eye!.d.x, c.eye!.d.y);
+    // The camera stands in front of them or behind them, so the way it heads tells the two ways apart.
+    expect(Math.abs(ahead)).toBeGreaterThan(0.7);
+    expect(heading).toMatch(ahead > 0 ? /heading away from the camera/ : /heading toward the camera/);
+    // Seen from behind them, it never heads at the camera.
+    if (/their back to the camera/.test(c.view ?? '')) expect(heading).not.toMatch(/toward the camera/);
+  });
+});
+
+describe('what a view says of how much of the picture something fills', () => {
+  test('where its top and bottom fall in one band, a thin band there, never "from X to X"', () => {
+    withEnv(CAMERA, () => {
+      expect(filling({ y0: 0.3, y1: 0.38 })).toBe('filling only a thin band of the picture, a third of the way down');
+      expect(filling({ y0: 0.45, y1: 0.55 })).toBe('filling only a thin band of the picture, across its middle');
+      expect(filling({ y0: 0.1, y1: 0.7 })).toBe('filling the picture from near its top to two thirds of the way down');
+    });
+    // Without the camera rules, as today.
+    withEnv({ DREAMCHAT_CAMERA: undefined }, () =>
+      expect(filling({ y0: 0.3, y1: 0.38 })).toBe(
+        'filling the picture from a third of the way down to a third of the way down',
+      ),
+    );
+  });
+});
+
+describe("a person's, place's or thing's id in a moment's words", () => {
+  test('is its name once the dream is read, with the camera rules; otherwise as written', () => {
+    const b = () => {
+      const x = dream({
+        people: ['p1'],
+        blocking: { indoors: true, spots: [{ id: 'p1', x: 5, y: 5, kind: 'person' }] },
+        moments: [{ id: 'm1', visible: ['p1'], looks_at: 'the tall window; outside it l2', action: 'p1 waves to l2' }],
+      });
+      x.places.push({ id: 'l2', name: 'the harbour' } as Breakdown['places'][number]);
+      return x;
+    };
+    const on = b();
+    withEnv(CAMERA, () => completeViews(on));
+    expect(moments(on)[0].looks_at).toBe('the tall window; outside it the harbour');
+    expect(moments(on)[0].action).toBe('person p1 waves to the harbour');
+    const off = b();
+    withEnv({ DREAMCHAT_CAMERA: undefined }, () => completeViews(off));
+    expect(moments(off)[0].looks_at).toBe('the tall window; outside it l2');
+    // Part of a word is no id: "l2-shaped", "pl2" stay.
+    const part = b();
+    moments(part)[0].looks_at = 'the l2-shaped pool and the pl2 sign';
+    withEnv(CAMERA, () => completeViews(part));
+    expect(moments(part)[0].looks_at).toBe('the l2-shaped pool and the pl2 sign');
   });
 });
