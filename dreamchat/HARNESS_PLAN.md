@@ -257,8 +257,8 @@ One **cut sheet** per cut is the spine everything is assembled from:
   failing on sheets a check changed that live-flow does not explain (snow-train m3, planned again while drawing,
   differs in view, names and tree; grandma-kitchen m5, drawn again from the dreamer's correction, differs in the
   take). As S3 found, logging removes every difference a check makes.
-  The switch stays off by default until the owner turns it on (it only changes what the checks do, and the
-  picture path and whole conversations both show nothing a check found is lost).
+  On the owner's decision logging is now the default (1ab262d; `DREAMCHAT_CHECKS=act` brings acting back): it only
+  changes what the checks do, and the picture path and whole conversations both show nothing a check found is lost.
   The earlier plan ("once DeepSeek is topped up") is superseded by the table above; DeepSeek never ran it.
 - **S8 (listening).** Measured on fresh simulated conversations, never on the saved ones: those span four days of
   changing listener code (listening compliance 72% down to 58% by day) and replays from other branches. **The before**
