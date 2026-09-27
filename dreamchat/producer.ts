@@ -771,8 +771,9 @@ export function addChanges(b: Breakdown, changes: Change[]): void {
       ];
     }
   }
-  // Found while planning, a look where it is first shown is its look, not a change.
-  foldFirstLooks(b);
+  // Found while planning, a look where it is first shown is its look, not a change. The breakdown was
+  // grounded when it was drafted, and nothing grounds it again: with S8 on, nothing folded becomes said.
+  foldFirstLooks(b, { grounded: listenOn() });
   // A change carried from a moment that no longer has it is gone: read again while planning, Tomas's
   // "age and clothing" became his "body", and the old one, still carried, matched no picture of him,
   // so the moment after was held (hotel orchard, 26 Sep).
@@ -1372,7 +1373,11 @@ function looksSoAlready(fields: object, keys: string[], l: { what: string; now: 
  * reached its sketch, and every picture after it drew plain trees (hotel orchard, 26 Sep). Folded
  * into its profile, as told. Turning into something else stays a change.
  */
-export function foldFirstLooks(b: Breakdown): string[] {
+export function foldFirstLooks(
+  b: Breakdown,
+  /** Folded into a breakdown whose said details were already checked (S8): nothing becomes said. */
+  opts: { grounded?: boolean } = {},
+): string[] {
   const notes: string[] = [];
   const all = moments(b);
   const uncarry = (m: Moment, l: { who: string; what: string }) => {
@@ -1413,11 +1418,15 @@ export function foldFirstLooks(b: Breakdown): string[] {
       const field = place ? 'landmarks' : thing ? 'appearance' : 'distinctive_features';
       const d = (item.fields as Record<string, Detail>)[field] ?? { value: null, said: false };
       const add = bareWords(l.what) && !l.now.toLowerCase().includes(bareWords(l.what)) ? `${l.what} ${l.now}` : l.now;
+      // Once the breakdown's said details have been checked against their words (S8), folding a look into a
+      // field never makes it said: marked said whole, a guess ("the stairwell door, the edge wall") became
+      // theirs beside the rain they told (car park, fresh simulation, 27 Sep). A guess stays a guess, and a
+      // look nobody checked is one.
       if (!(d.value ?? '').toLowerCase().includes(l.now.toLowerCase()))
         (item.fields as Record<string, Detail>)[field] = {
           ...d,
           value: d.value ? `${d.value}; ${add}` : add,
-          said: true,
+          said: opts.grounded ? !!d.value && d.said : true,
         };
       notes.push(`${item.name}: "${add}" is how it looks where it is first shown, not a change`);
       uncarry(m, l);
@@ -1519,29 +1528,69 @@ export function details(b: Breakdown): { path: string; label: string; detail: De
     texture: 'the dream looked',
   };
   for (const [k, d] of Object.entries(b.look)) out.push({ path: `look.${k}`, label: LOOK[k] ?? k, detail: d });
-  for (const p of b.people) {
-    const stem: Record<string, string> = {
-      identity: `${p.name} is`,
-      appearance: `${p.name} looks`,
-      wardrobe: `${p.name} wears`,
-      distinctive_features: `${p.name} has`,
-    };
-    for (const [k, d] of Object.entries(p.fields)) out.push({ path: `${p.id}.${k}`, label: stem[k] ?? k, detail: d });
-  }
-  for (const l of b.places) {
-    const stem: Record<string, string> = {
-      geography: `the place "${l.name}" is`,
-      landmarks: `in "${l.name}" there is`,
-      light: `the light in "${l.name}" is`,
-    };
-    for (const [k, d] of Object.entries(l.fields)) out.push({ path: `${l.id}.${k}`, label: stem[k] ?? k, detail: d });
-  }
-  for (const t of b.things) {
-    const stem: Record<string, string> = { appearance: `"${t.name}" looks like`, materials: `"${t.name}" is made of` };
-    for (const [k, d] of Object.entries(t.fields)) out.push({ path: `${t.id}.${k}`, label: stem[k] ?? k, detail: d });
-  }
+  for (const p of b.people)
+    for (const [k, d] of Object.entries(p.fields))
+      out.push({ path: `${p.id}.${k}`, label: stemFor('person', p.name, k), detail: d });
+  for (const l of b.places)
+    for (const [k, d] of Object.entries(l.fields))
+      out.push({ path: `${l.id}.${k}`, label: stemFor('place', l.name, k), detail: d });
+  for (const t of b.things)
+    for (const [k, d] of Object.entries(t.fields))
+      out.push({ path: `${t.id}.${k}`, label: stemFor('thing', t.name, k), detail: d });
   return out;
 }
+
+/** A field of a person, place or thing as a plain sentence stem: what a value in it claims ("the lift looks"). */
+export function stemFor(kind: 'person' | 'place' | 'thing', name: string, field: string): string {
+  const stems: Record<string, Record<string, string>> = {
+    person: {
+      identity: `${name} is`,
+      appearance: `${name} looks`,
+      wardrobe: `${name} wears`,
+      distinctive_features: `${name} has`,
+    },
+    place: {
+      geography: `the place "${name}" is`,
+      landmarks: `in "${name}" there is`,
+      light: `the light in "${name}" is`,
+    },
+    thing: { appearance: `"${name}" looks like`, materials: `"${name}" is made of` },
+  };
+  return stems[kind][field] ?? field;
+}
+
+/** A word that ends a piece of a look joined to the next: "short, dark hair" is one claim. */
+const JOINS_NEXT =
+  /(?:^|\s)(?:large|small|little|big|tiny|huge|vast|short|long|tall|thin|round|smooth|rough|soft|dark|pale|bright|slender|wide|narrow|flat|low|high|heavy|square|old|young|warm|cold|deep|plain|simple|curly|straight|shiny|broad)$/i;
+
+/**
+ * A value cut into the claims it makes, each with the separator before it, so the pieces kept read as
+ * written (S8, docs/rules.md F1: every clause is said or not on its own). Cut at ";", ", ", ". " and ": ",
+ * with a run of words describing what follows kept whole ("short, dark hair").
+ */
+export function clausePieces(value: string): { sep: string; text: string }[] {
+  const out: { sep: string; text: string }[] = [];
+  let sep = '';
+  let open = '';
+  for (const piece of value.split(/(\s*;\s*|,\s+|\.\s+|:\s+)/)) {
+    if (/^(?:\s*;\s*|,\s+|\.\s+|:\s+)$/.test(piece)) {
+      if (open && JOINS_NEXT.test(open.trim()) && piece.trim() === ',') open += piece;
+      else if (open.trim()) {
+        out.push({ sep, text: open.trim() });
+        open = '';
+        sep = piece;
+      } else sep = piece;
+      continue;
+    }
+    open += piece;
+  }
+  if (open.trim()) out.push({ sep, text: open.trim().replace(/\.$/, '') });
+  return out;
+}
+
+/** The pieces kept, joined back as they were written (the first without its separator). */
+export const joinPieces = (pieces: { sep: string; text: string }[]) =>
+  pieces.map((p, i) => (i ? `${/;/.test(p.sep) ? '; ' : p.sep}${p.text}` : p.text)).join('');
 
 /** Camera words at the start of an action belong to the framing, not to what happens. */
 const CAMERA_LEAD =
