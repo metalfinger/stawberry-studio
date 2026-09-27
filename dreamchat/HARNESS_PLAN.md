@@ -52,7 +52,7 @@ One **cut sheet** per cut is the spine everything is assembled from:
 | S0 | Eval foundation: a prompt-case set from the person's 122 verdicts and notes, a runner that rebuilds prompts from saved dreams and scores them, the free simulation corpus as regression | done: reviewed, fixed, merged (26 Sep) | Every noted fault has a case; the runner reproduces today's failures. Baseline: 6 of 33 counted fault cases met (all six guards against editing the picture before), 36 of 36 passing cases met (below) |
 | S1 | Story record carries state (water, suitcase, who holds what, presence) into continuity, in-between pictures and prompts | done (27 Sep): reviewed twice, merged behind DREAMCHAT_RECORD=on | The S1 cases pass (`--step S1`: library-2 m5/m9 water, snow-train m4/m5, snow-train-2 m1, lighthouse-fresh m13, orchard m7; library-1 m3/m5, library-3 m7, snow-train-2 m5/m7 need a model step); no regressions on the corpus |
 | S2 | Stop stand-in checks deciding: the pre-draw prompt check and storyboard check only log | merged behind DREAMCHAT_CHECKS=log (acting by default), review fixes merged (50dbd8c, 27 Sep); eval met on the picture path of 10 dreams (redrawn with fake pictures, Jev only); the whole-conversation replays wait for DeepSeek to be topped up | No moment held or reworded; corpus unchanged otherwise. Met on the picture path: 0 of 61 moments held, reworded, planned again or left undrawn by the gate or "storyboard complete?" (planning again a scene on Jev's plan facts, `planFacts`, still acts: overlaps S2 → S7) (acting: 18-19 rewordings, 10-11 re-plans and 11-13 sketch rewordings asked for, 1-3 moments left undrawn; the saved runs: 4 undrawn, 3 reworded, 17 scenes and 13 moments planned again); every moment drawn; every moment's gate reading and every camera's storyboard reading logged; Jev 23.6 calls a dream against 106-111 acting and 245 in the saved runs; prompt cases and corpus unchanged (below) |
-| S3 | The cut sheet: tree (vertical) + record (horizontal) + relations + tags, one per cut | built, reviewed, fixed, merged behind DREAMCHAT_CUT_SHEET (27 Sep); sheet-as-sent proof on fresh replays running | Every input the prompt needs comes from the sheet; no fact computed in two places. Met: `assembleCut` reads only the sheet and writes what framePrompt writes on every moment (0 differences in 1052 rebuilds: frozen 115 and live 411, record off and on), prompt cases unchanged on against off; what the sheet still computes twice is listed under S3 below |
+| S3 | The cut sheet: tree (vertical) + record (horizontal) + relations + tags, one per cut | built, reviewed, fixed, merged behind DREAMCHAT_CUT_SHEET (27 Sep); sheet-as-sent proven on fresh replays written by Claude (27 Sep): met wherever no check acted | Every input the prompt needs comes from the sheet; no fact computed in two places. Met: `assembleCut` reads only the sheet and writes what framePrompt writes on every moment (0 differences in 1052 rebuilds: frozen 115 and live 411, record off and on), prompt cases unchanged on against off; what the sheet still computes twice is listed under S3 below. Sheet as sent (fresh replays, writer Claude): while drawing, `assembleCut` wrote what framePrompt writes on 48 of 48 builds (24 moments sent); against a rebuild 22 of 24 sheets as sent, the other 2 a check acting (below) |
 | S4 | Camera rules and shot roles: the scene's line, a reverse angle turns the room (what is now left, right, behind), point-of-view shots show at most hands, vehicle screen direction, same setup means the same camera | not started | The S4 cases pass (`--step S4`: snow-train m2 reverse and m3 seat, snow-train-2 m2 same setup, lighthouse-fresh m12 heading, lighthouse-first m3, night-market m2, library-1 m4/m5, orchard m4 hands and m7 legs; lighthouse-fresh m10 needs a new floor plan) |
 | S5 | References and variants: one image per subject; in-between pictures only when an edit carries several changes; variants kept and reusable; the grey mock-up as a reference chosen by tag | not started; eval written on branch `s5-eval` (27 Sep, below) | The reference check (`evals/references.ts`) at its bars on the frozen and live dreams: 0 subjects shown twice or not by their stage in force, 0 pictures from another side drawn from, 0 pictures waited for and never sent, every in-between picture meeting the owner's rule with no picture left carrying several changes; the S5 cases stay met or pass (`--step S5`: never editing a picture from another side; library-1 m5 wall); guards 36/36; its hypotheses (image 1 by tag, one image per subject on pictures the owner called right) are for the paid check, not proven here |
 | S6 | `assembleCut`: prompt and references from the sheet, each fact once, action as visible facts; retire the regex clean-ups one by one | not started | All S0 cases pass; word-level diff reviewed on every saved dream |
@@ -286,6 +286,23 @@ One **cut sheet** per cut is the spine everything is assembled from:
   (one source); the tags exist per cut and are listed per moment in the corpus dump. Live-flow check: a saved
   dream's drawing path and rebuild give the same sheet. Review: what the sheet still computes twice, and what S4-S6
   will need.
+  **The sheet as sent, on fresh replays (27 Sep, writer Claude).** The five benchmark dreams replayed from the
+  style choice with fake pictures (`DREAMCHAT_WRITER=claude DREAMCHAT_RECORD=on DREAMCHAT_CUT_SHEET=shadow
+  DREAMCHAT_PROVIDER=fake bun --env-file=… run evals/replay.ts --out runs/s3-flow-claude2`, the checks acting as
+  by default), then `DREAMCHAT_RECORD=on DREAMCHAT_CUT_SHEET=shadow bun run evals/live-flow.ts
+  runs/s3-flow-claude2`. While drawing, every time a moment's prompt was built the sheet's was the same as
+  framePrompt's: 48 of 48 builds, 24 moments sent (a first run, `runs/s3-flow-claude`: 34 of 34, 18 sent).
+  Against a rebuild: every dream reads the record drawing read and places its cameras as drawn; 24 moments drawn,
+  22 sheets as sent, 21 prompts word for word, 23 with the same images. The ones that differ are each a check
+  acting: jellyfish-city m3 drawn without its brief (the pre-draw check set it aside; explained), crayon-cat m3
+  (an earlier picture it takes was never drawn; explained), and jellyfish-city m7, which takes m6, a moment a
+  check left undrawn: sent without it, rebuilt with it, so only the no-layering line and the sheet's names
+  differ, no image, and live-flow does not explain it (it looks for a missing image) and marks the dream FAIL.
+  With the checks logging none of the three can happen (S2's log arms). 8 of 32 moments were left undrawn by the
+  checks acting ("still unsure of its instructions after rewording", jellyfish-city 4, sea-school 3, crayon-cat
+  1). The first run: 18 moments drawn, 16 word for word, 18 as sent in images, 2 differing only in the brief the
+  check set aside (explained); two of its dreams drew no moment (the simulated dreamer left once the sketches were
+  up: fixed, 7c5df33).
 
 - **S4 eval (camera rules).** Switch `DREAMCHAT_CAMERA=on`. Film grammar from `docs/rules.md` group A as rules over
   consecutive cut sheets: a reverse angle (the `reverse` tag) says what is now left, right and behind the camera,
@@ -485,20 +502,18 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
 
 ## Open questions for the owner
 
-- **Blocking (27 Sep, ~03:30): DeepSeek balance is empty** (402 Insufficient Balance). Simulations, replays, the
-  implied-state reading and the listening re-proof are stalled until it is topped up; code, unit tests and rescoring
-  stored conversations continue. Waiting for the top-up, in order: (1) S8's fresh simulation, 20 dreams x 1, low
-  concurrency (targets, floors, especially repeated questions and "told all they remember" retellings); (2) S3's
-  sheet-as-sent replay (`runs/s3-flow` died on it); (3) S2's replay measurements; (4) new implied readings on
-  live dreams.
-- **DeepSeek balance (27 Sep, ~03:00):** simulations hit DeepSeek's concurrency limit tied to the remaining
-  balance (it fell from 121 to 84 during S8's rounds). Simulations and the implied-state reading use it; it may need
-  a top-up before S10. Until then, prefer rescoring stored conversations over new simulations.
-
-- **DeepSeek is out of balance (27 Sep):** every call returns 402 Insufficient Balance. The producer, the host
-  (Berry's replies), the simulated dreamer, the floor plans, the briefs and the rewordings all call it, so no
-  conversation can be simulated or replayed: S2's whole-conversation replays and S8's after-set wait for a
-  top-up. Jev works.
+- **The writer is now Claude (27 Sep).** DeepSeek's balance is empty (402), so every writer call (Berry's replies,
+  the producer, the floor plans and briefs, the rewordings, the implied-state reading, the simulated dreamer) runs
+  through the Claude Code CLI with `DREAMCHAT_WRITER=claude` (55afcd1; Claude Opus 5.5, about 5 s a call, on the
+  owner's subscription). What it changes: a measure taken with DeepSeek and one taken with Claude are not the same
+  measure, so every before/after is made again with both arms on Claude (S8's before is simulated again at 4c0e52c
+  with the switch cherry-picked; S2's arms are all on Claude); the DeepSeek numbers stay in this plan for reference
+  only. Caches (implied readings) are keyed by the writer's model, so Claude's readings are fresh. Two faults of
+  Claude's replies were found and fixed: a JSON reply with an unescaped quote (one breakdown in 13) ended that
+  dream's pictures (e49ce98: asked again, told why, three tries), and the simulated dreamer thanked Berry and left
+  once the sketches were up (7c5df33: it stays until the dream is drawn; S8's arms keep the dreamer they started
+  with, the same in both). DeepSeek is still the default; whether to top it up, or keep Claude as the writer, is
+  the owner's call.
 - **Resolved (27 Sep):** Jev credits restored by the owner. Was: the Jev (TypeSafe) account ran out of credits; every Jev call returns 402
   billing_error. Every test that asks Jev (prompt-case questions, the implied-state reading's checks, listening
   scores, simulations) is stalled until it is topped up. Work that needs no Jev continues meanwhile.
@@ -791,3 +806,9 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
 - 27 Sep: the writer model is now Claude (`DREAMCHAT_WRITER=claude`, 55afcd1), DeepSeek's balance being empty.
   The waiting proofs (S8's fresh simulation, S3's sheet-as-sent replay, S2's replays, new implied readings) are
   running with it, both arms on Claude, since the DeepSeek-made befores are not comparable.
+- 27 Sep: S3's sheet-as-sent proof, on five fresh replays written by Claude (record on, sheet in shadow, checks
+  acting): `assembleCut` wrote what framePrompt writes on 48 of 48 builds while drawing; against a rebuild 22 of 24
+  sheets as sent, 21 prompts word for word; the 3 that differ are each a check acting (a brief set aside, an
+  earlier picture left undrawn twice), one of them not explained by live-flow (a missing earlier picture that
+  changes a line but no image). Two faults of Claude's replies fixed on the way (e49ce98 JSON asked again, 7c5df33
+  the simulated dreamer stays until the dream is drawn). S2's whole replays and S8's fresh simulation running.
