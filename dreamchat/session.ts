@@ -930,12 +930,16 @@ export function planRecord(
  * into where a change in force makes it something else, "the dreamer", its sketch's name, or the name
  * of a fixture of its place.
  */
-export function calledFor(s: Pick<Session, 'build' | 'draft'>, frame: Pick<Item, 'frame'>): (id: string) => string {
+export function calledFor(
+  s: Pick<Session, 'build' | 'draft'>,
+  frame: Pick<Item, 'id' | 'frame'>,
+): (id: string) => string {
   const changed = [...(frame.frame?.plan?.own ?? []), ...(frame.frame?.plan?.states ?? [])];
+  const moment = frame.frame?.plan?.id ?? frame.id;
   return (id: string) => {
     const st = changed.find((x) => x.who === id && isWhole(x));
     const it = s.build?.items.find((i) => i.id === id);
-    const fixture = s.draft?.breakdown ? fixtureName(s.draft.breakdown, id) : undefined;
+    const fixture = s.draft?.breakdown ? fixtureName(s.draft.breakdown, id, moment) : undefined;
     return st ? st.now : it?.isDreamer ? 'the dreamer' : (it?.name ?? fixture ?? id);
   };
 }
