@@ -11,6 +11,8 @@
 //   bun run evals/corpus.ts --label one --only dream-0926-043003-b0cb
 //   bun run evals/corpus.ts --label all --live                  (every saved conversation, and the fake replays')
 //   bun run evals/corpus.ts --verify                            (each frozen dream rebuilds as its saved conversation does)
+//   … --against base --verdicts evals/s6-verdicts.json [--came-back <retire label>:<clean-up>]
+//                   every change classified: a reviewer's verdict, the same words, or a retired clean-up's words back
 //
 // By default the frozen dreams (evals/sources/<session id>.json); with --live every saved
 // conversation whose breakdown and look are settled, the fake-picture replays' included
@@ -20,13 +22,13 @@
 // moved, and each changed paragraph as the words that changed in it, whole. Images are named by what
 // they are (sketch:p1, picture:m3, ghost:t1:lid, previs:m5), never by a store's id. Where a frozen
 // dream keeps what was really sent for a moment, the dump says whether its rebuilt images are those.
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tagWords } from '../cutsheet';
 import { imagesOf, type Rebuilt, rebuild } from '../plan';
 import type { Session } from '../session';
 import { sectionsOf } from './prompt-cases';
-import { commitOf, DIR, type Inputs, inputsDiffer } from './saved';
+import { commitOf, DIR, type Inputs, inputsDiffer, sha256 } from './saved';
 
 /** What was really sent for a moment, when a frozen dream keeps it. */
 type Sent = { prompt: string; images: string[] };
@@ -229,6 +231,169 @@ export function changeLines(gone: string[], added: string[]): string[] {
   return lines;
 }
 
+/**
+ * The runs of words gone from a text and added to it, each run whole (a longest common subsequence of words):
+ * "the old sea, where the sea used to be" against "the old sea" is one run gone, ", where the sea used to be".
+ */
+export function wordRuns(before: string, now: string): { gone: string[]; added: string[] } {
+  const a = before.split(/\s+/).filter(Boolean);
+  const b = now.split(/\s+/).filter(Boolean);
+  const n = a.length;
+  const m = b.length;
+  // Common suffix lengths, then walk: a run of words only in one is a run gone or added.
+  const lcs: number[][] = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(0));
+  for (let i = n - 1; i >= 0; i--)
+    for (let j = m - 1; j >= 0; j--)
+      lcs[i][j] = a[i] === b[j] ? lcs[i + 1][j + 1] + 1 : Math.max(lcs[i + 1][j], lcs[i][j + 1]);
+  const gone: string[] = [];
+  const added: string[] = [];
+  let g: string[] = [];
+  let d: string[] = [];
+  const flush = () => {
+    if (g.length) gone.push(g.join(' '));
+    if (d.length) added.push(d.join(' '));
+    g = [];
+    d = [];
+  };
+  let i = 0;
+  let j = 0;
+  while (i < n || j < m) {
+    if (i < n && j < m && a[i] === b[j]) {
+      flush();
+      i++;
+      j++;
+    } else if (j < m && (i === n || lcs[i][j + 1] >= lcs[i + 1][j])) d.push(b[j++]);
+    else g.push(a[i++]);
+  }
+  flush();
+  return { gone, added };
+}
+
+/**
+ * One change between two dumps, the unit a reviewer gives a verdict on: a paragraph changed in place (paired
+ * by its part of the prompt), gone or added whole; a picture's images; a field of its plan; a picture gone or new.
+ * Its key is the same for the same change of the same picture, on any machine and in any run.
+ */
+export type AtomicChange = {
+  key: string;
+  dream: string;
+  picture: string;
+  kind: 'paragraph' | 'images' | 'plan' | 'picture';
+  /** The part of the prompt (prompt-cases.ts SECTIONS), the plan field, 'images', or 'gone'/'new'. */
+  what: string;
+  before: string;
+  after: string;
+};
+
+export const changeKey = (c: Omit<AtomicChange, 'key'>) =>
+  sha256(`${c.dream}\n${c.picture}\n${c.kind}\n${c.what}\n${c.before}\n${c.after}`).slice(0, 16);
+
+/** Every change of a diff, one by one. */
+export function atomicChanges(diff: CorpusDiff): AtomicChange[] {
+  const out: AtomicChange[] = [];
+  const add = (c: Omit<AtomicChange, 'key'>) => out.push({ ...c, key: changeKey(c) });
+  const sectionOf = (para: string) => Object.keys(sectionsOf(para))[0];
+  for (const c of diff.changes) {
+    const at = { dream: c.dream, picture: c.id };
+    for (const p of c.plan ?? []) add({ ...at, kind: 'plan', what: p.field, before: p.before, after: p.now });
+    if (c.images)
+      add({
+        ...at,
+        kind: 'images',
+        what: 'images',
+        before: c.images.before.join(', '),
+        after: c.images.now.join(', '),
+      });
+    const left = [...c.added];
+    for (const g of c.gone) {
+      const i = left.findIndex((x) => sectionOf(x) === sectionOf(g) && sectionOf(g) !== 'other');
+      add({ ...at, kind: 'paragraph', what: sectionOf(g), before: g, after: i >= 0 ? left[i] : '' });
+      if (i >= 0) left.splice(i, 1);
+    }
+    for (const x of left) add({ ...at, kind: 'paragraph', what: sectionOf(x), before: '', after: x });
+  }
+  for (const [list, what] of [
+    [diff.pictures.only_before, 'gone'],
+    [diff.pictures.only_now, 'new'],
+  ] as const)
+    for (const x of list) {
+      const [dream, picture] = x.split(' ');
+      add({
+        dream,
+        picture,
+        kind: 'picture',
+        what,
+        before: what === 'gone' ? picture : '',
+        after: what === 'new' ? picture : '',
+      });
+    }
+  return out;
+}
+
+/** What a reviewer says of a change: meant by the step, a fault it brings, or nothing that matters to a picture. */
+export type Verdict = 'intended' | 'regression' | 'neutral';
+/** Verdicts by change key, each with why (a file per step, committed: evals/<step>-verdicts.json). */
+export type Verdicts = Record<string, { verdict: Verdict; why: string }>;
+
+const wordBag = (t: string) => (t.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []).sort().join(' ');
+
+/** A paragraph changed only in the order, case or punctuation of its words: neutral with no one to read it. */
+export const sameWords = (c: Pick<AtomicChange, 'kind' | 'before' | 'after'>) =>
+  c.kind === 'paragraph' && !!c.before && !!c.after && wordBag(c.before) === wordBag(c.after);
+
+/** A change classified: by a reviewer's verdict, or by rule (the same words; words a retired clean-up removed, back). */
+export type Classified = AtomicChange & {
+  verdict: Verdict | null;
+  by: 'reviewer' | 'same_words' | 'came_back' | null;
+  why: string;
+};
+
+/**
+ * Every change with its verdict. A reviewer's verdict stands; with none, a change whose words are the same in
+ * another order is neutral, and one that brings back words a retired clean-up used to remove (`cameBack`, from its
+ * footprint) is a regression; the rest are unclassified (verdict null).
+ */
+export function classify(
+  changes: AtomicChange[],
+  verdicts: Verdicts,
+  cameBack: (c: AtomicChange) => string | null = () => null,
+): { rows: Classified[]; counts: Record<Verdict | 'unclassified', number> } {
+  const rows = changes.map((c): Classified => {
+    const v = verdicts[c.key];
+    if (v) return { ...c, verdict: v.verdict, by: 'reviewer', why: v.why };
+    const back = cameBack(c);
+    if (back) return { ...c, verdict: 'regression', by: 'came_back', why: `brings back "${back}"` };
+    if (sameWords(c)) return { ...c, verdict: 'neutral', by: 'same_words', why: 'the same words' };
+    return { ...c, verdict: null, by: null, why: '' };
+  });
+  const counts = { intended: 0, regression: 0, neutral: 0, unclassified: 0 };
+  for (const r of rows) counts[r.verdict ?? 'unclassified']++;
+  return { rows, counts };
+}
+
+const spaced = (t: string) => ` ${t.toLowerCase().replace(/\s+/g, ' ').trim()} `;
+
+/**
+ * From a retired clean-up's footprint (evals/retire.ts: by picture, the runs of words it removes today), a rule
+ * for a step's diff: a change that brings one of those runs back into its picture's prompt, where it was not
+ * before, brings back what the clean-up kept out. Runs of one short word are too common to tell.
+ */
+export function cameBackFrom(
+  footprint: { dream: string; picture: string; removes: string[] }[],
+): (c: AtomicChange) => string | null {
+  const by = new Map<string, string[]>();
+  for (const x of footprint)
+    by.set(`${x.dream} ${x.picture}`, [...(by.get(`${x.dream} ${x.picture}`) ?? []), ...x.removes]);
+  return (c) => {
+    for (const w of by.get(`${c.dream} ${c.picture}`) ?? []) {
+      const run = w.trim();
+      if (run.split(/\s+/).length < 2 && run.length < 5) continue;
+      if (spaced(c.after).includes(spaced(run)) && !spaced(c.before).includes(spaced(run))) return run;
+    }
+    return null;
+  };
+}
+
 /** What changed, as lines to read: a paragraph changed in place as its changed words, a new or gone one whole. */
 export function diffLines(diff: CorpusDiff): string[] {
   const lines: string[] = [];
@@ -412,5 +577,40 @@ if (import.meta.main) {
       `against ${against}: dreams ${diff.dreams.same} the same, ${diff.dreams.changed} changed; pictures ${diff.pictures.same} the same, ${diff.pictures.changed} changed${diff.pictures.only_before.length ? `, ${diff.pictures.only_before.length} gone` : ''}${diff.pictures.only_now.length ? `, ${diff.pictures.only_now.length} new` : ''}${diff.dreams.only_before.length || diff.dreams.only_now.length ? `; dreams only in one: ${[...diff.dreams.only_before, ...diff.dreams.only_now].join(', ')}` : ''}`,
     );
     console.log(`written ${out}`);
+    // Each change classified (HARNESS_PLAN.md, S6 eval): --verdicts names the step's file of reviewer verdicts,
+    // --came-back <retire label>:<clean-up> the clean-up the step retires, whose removed words must not come back.
+    const verdictsFile = valueOf('--verdicts');
+    const back = valueOf('--came-back');
+    if (verdictsFile || back) {
+      const verdicts: Verdicts =
+        verdictsFile && existsSync(verdictsFile) ? JSON.parse(readFileSync(verdictsFile, 'utf8')) : {};
+      let cameBack: (c: AtomicChange) => string | null = () => null;
+      if (back) {
+        const [run, name] = back.split(':');
+        const footprints = (
+          JSON.parse(readFileSync(join(DIR, 'runs', 'retire', `${run}.json`), 'utf8')) as {
+            footprints: Record<string, { changes: { dream: string; picture: string; removes: string[] }[] }>;
+          }
+        ).footprints;
+        if (!footprints[name]) throw new Error(`${run} has no footprint of ${name}`);
+        cameBack = cameBackFrom(footprints[name].changes);
+      }
+      const { rows, counts } = classify(atomicChanges(diff), verdicts, cameBack);
+      const file = join(RUNS, `${label}-vs-${against}-verdicts.json`);
+      writeFileSync(
+        file,
+        `${JSON.stringify(
+          rows.map((r) => ({
+            ...r,
+            diff: r.kind === 'paragraph' ? wordDiff(r.before, r.after) : `${r.before} -> ${r.after}`,
+          })),
+          null,
+          1,
+        )}\n`,
+      );
+      console.log(
+        `classified: ${counts.intended} intended, ${counts.regression} regressions (${rows.filter((r) => r.by === 'came_back').length} bring back a retired clean-up's words), ${counts.neutral} neutral, ${counts.unclassified} unclassified; written ${file}`,
+      );
+    }
   }
 }

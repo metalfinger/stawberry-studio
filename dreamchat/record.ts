@@ -10,6 +10,7 @@
 // they found. It runs beside the plan and is logged (DREAMCHAT_RECORD=shadow), or the continuity plan
 // and the prompts read it too (DREAMCHAT_RECORD=on): what changes is carried from picture to picture,
 // who is there, and who holds what.
+import { retired } from './cleanups';
 import { pictureName, placePlan, type RecordPlan, rawPlanBy } from './continuity';
 import {
   BECOMING,
@@ -638,7 +639,8 @@ function momentsOf(
       // a change of their own there, or words that say they look at their own body.
       const self =
         eyes === 'dreamer' &&
-        ((m.leaves ?? []).some((l) => l?.who === dreamer) || SELF.test(`${m.action ?? ''} ${m.visual_point ?? ''}`));
+        ((m.leaves ?? []).some((l) => l?.who === dreamer) ||
+          (!retired('self') && SELF.test(`${m.action ?? ''} ${m.visual_point ?? ''}`)));
       const shows = uniq([...(m.visible ?? []), ...(m.things ?? [])]).filter(
         (id) => typeof id === 'string' && !(eyes === 'dreamer' && id === dreamer && !self),
       );
@@ -940,7 +942,10 @@ function passing(ctx: Ctx): Violation[] {
     const passing = (f: Fact) => PASSING.test(f.text) && !TURNING.test(f.text);
     if (![...factsIn(e)].some(({ fact }) => passing(fact))) continue;
     const re = nameRe(e.name, true);
-    const m = re ? moments.find((x) => sentences(x).some((s) => re.test(s) && STATE_VERB.test(s))) : undefined;
+    const m =
+      re && !retired('state_verb')
+        ? moments.find((x) => sentences(x).some((s) => re.test(s) && STATE_VERB.test(s)))
+        : undefined;
     if (!m) continue;
     const cut: { field: string; text: string }[] = [];
     for (const which of ['base', 'stored'] as const) {
@@ -979,7 +984,7 @@ function passing(ctx: Ctx): Violation[] {
     const p = elements[m.place];
     if (!p || p.kind !== 'place') continue;
     const said = m.words.action.replace(SIMILE, ' ');
-    const x = said.match(FILLS);
+    const x = retired('fills') ? null : said.match(FILLS);
     if (!x || /\bno\s*$/i.test(said.slice(0, x.index ?? 0))) continue;
     const matter = sing(x[1].toLowerCase());
     const told = (text: string) => wordsOf(text).includes(matter);
@@ -1072,6 +1077,7 @@ const OPEN_LOOK = /\b(?:open|opened|ajar|spill\w*|pour\w*|stream\w*|glow\w*|ligh
  * after: taken out of both copies of the look, and told with the opening.
  */
 function openings(ctx: Ctx): Violation[] {
+  if (retired('opens')) return [];
   const out: Violation[] = [];
   const { elements, moments, changes } = ctx.record;
   for (const m of moments)
@@ -1183,7 +1189,7 @@ function namedInWords(ctx: Ctx): Violation[] {
   };
   // A place's own landmarks are what a name before them is of: "the fish stall" at the market.
   const nouns = new Set([
-    ...HOLDS_NAME,
+    ...(retired('holds_name') ? [] : HOLDS_NAME),
     ...Object.values(elements)
       .filter((e) => e.kind === 'place')
       .flatMap((e) =>
@@ -1208,7 +1214,7 @@ function namedInWords(ctx: Ctx): Violation[] {
         // Named as gone, or as looked for, heard or waited for, in the words around their own name,
         // they are not there: never drawn. Fading, they still are.
         const own = named.flatMap((p) => p.split(/,\s*/)).filter((c) => res.some((re) => namesIn(re, c, nouns)));
-        if (own.some((c) => NOT_THERE.test(c)) && !m.gone.includes(e.id)) m.gone.push(e.id);
+        if (!retired('not_there') && own.some((c) => NOT_THERE.test(c)) && !m.gone.includes(e.id)) m.gone.push(e.id);
         continue;
       }
       if (!named.length) continue;
@@ -2110,6 +2116,7 @@ const saysOpen = (now: string) => OPEN_WORD.test(now.split(/[,;]|\s(?:with|while
  * shut again. A suitcase opened on the train to show its letters is not carried open through the snow.
  */
 function shutAway(ctx: Ctx, c: Change): string | undefined {
+  if (retired('shut_away')) return undefined;
   const e = ctx.record.elements[c.who];
   if (e?.kind !== 'thing' || c.kind !== 'part' || !saysOpen(c.now)) return undefined;
   const ms = ctx.record.moments;
@@ -2241,7 +2248,7 @@ function staysWithHolder(ctx: Ctx): Violation[] {
       }
     });
     const first = shown.find(({ m }) => !!end(m, t));
-    if (first && !TAKEN.test(first.m.words.action)) {
+    if (first && (retired('taken') || !TAKEN.test(first.m.words.action))) {
       const h = end(first.m, t)!;
       for (const { m, i } of shown)
         if (i < first.i && !m.held[t] && !jump(i, first.i) && holderThere(ctx, m, h)) {

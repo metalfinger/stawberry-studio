@@ -17,7 +17,7 @@ context mirrors it.
 | S3 One cut sheet per picture | Done | the sheet's prompt equals the old builder's on 1052 rebuilds and 48 of 48 live builds |
 | S4 Camera rules | Fixing what review found | faults met 18/33 to 27/33, guards 36/36 (branch `s4-camera`) |
 | S5 References and in-between pictures | Test written | built after S4 merges |
-| S6 One prompt builder, clean-ups retired | Not started | after S5 |
+| S6 One prompt builder, clean-ups retired | Test written | a ledger of 16 clean-ups, S4's 4 word lists and 14 duplicates, in order; every moment says a fact twice (frozen 2350 facts, live 6595), 21 of 115 frozen moments say an action no picture shows (live 134 of 411); built after S5 |
 | S7 Jev checks routed by tags | Building, test first | branch `s7-jev-routed` |
 | S8 Listening | Built; proven on Claude, one floor fails | 20 dreams, both arms on Claude: either/or 23% to 0, leading 17% to 0, said-not-in-their-words 31% to 3%, retellings ending with every moment 0/20 to 21/21; but retellings begun because they ran out of memory doubled (6 to 12 of 20), from the come-back-to-earlier rule: fix it before switching on |
 | S9 Record of what was drawn, staleness | Building, test first | branch `s9-as-drawn` |
@@ -78,7 +78,7 @@ One **cut sheet** per cut is the spine everything is assembled from:
 | S3 | The cut sheet: tree (vertical) + record (horizontal) + relations + tags, one per cut | done (27 Sep): built, reviewed, fixed, merged behind DREAMCHAT_CUT_SHEET; sheet-as-sent proven on fresh replays written by Claude (27 Sep): met wherever no check acted | Every input the prompt needs comes from the sheet; no fact computed in two places. Met: `assembleCut` reads only the sheet and writes what framePrompt writes on every moment (0 differences in 1052 rebuilds: frozen 115 and live 411, record off and on), prompt cases unchanged on against off; what the sheet still computes twice is listed under S3 below. Sheet as sent (fresh replays, writer Claude): while drawing, `assembleCut` wrote what framePrompt writes on 48 of 48 builds (24 moments sent); against a rebuild 22 of 24 sheets as sent, the other 2 a check acting (below) |
 | S4 | Camera rules and shot roles: the scene's line, a reverse angle turns the room (what is now left, right, behind), point-of-view shots show at most hands, vehicle screen direction, same setup means the same camera | not started | The S4 cases pass (`--step S4`: snow-train m2 reverse and m3 seat, snow-train-2 m2 same setup, lighthouse-fresh m12 heading, lighthouse-first m3, night-market m2, library-1 m4/m5, orchard m4 hands and m7 legs; lighthouse-fresh m10 needs a new floor plan) |
 | S5 | References and variants: one image per subject; in-between pictures only when an edit carries several changes; variants kept and reusable; the grey mock-up as a reference chosen by tag | not started; eval written on branch `s5-eval` (27 Sep, below) | The reference check (`evals/references.ts`) at its bars on the frozen and live dreams: 0 subjects shown twice or not by their stage in force, 0 pictures from another side drawn from, 0 pictures waited for and never sent, every in-between picture meeting the owner's rule with no picture left carrying several changes; the S5 cases stay met or pass (`--step S5`: never editing a picture from another side; library-1 m5 wall); guards 36/36; its hypotheses (image 1 by tag, one image per subject on pictures the owner called right) are for the paid check, not proven here |
-| S6 | `assembleCut`: prompt and references from the sheet, each fact once, action as visible facts; retire the regex clean-ups one by one | not started | All S0 cases pass; word-level diff reviewed on every saved dream |
+| S6 | `assembleCut`: prompt and references from the sheet, each fact once, action as visible facts; retire the regex clean-ups one by one | not started; eval written on branch `s6-eval` (27 Sep, below) | Every clean-up and duplicate of the ledger retired in its order, each step its own measured change (`evals/retire.ts`, `evals/corpus.ts --verdicts`): every change on every saved dream classified, 0 unclassified, 0 regressions; each fact once (0 facts said twice outside the shot's words, of the look, colour and state kinds, and of the story kind with the typed action; 0 facts on two kinds of field); the action as visible facts (0 moments breaking its rules); 0 ids in words; counted cases: every one met on its base stays met, library-1-m2-books met, lighthouse-fresh-m12-heading once motion is typed; guards 36/36 |
 | S7 | Jev layer 2: checks routed by tags, a question library from the film rules, a labelled set per question; a check may hold a picture only if it predicts pictures | not started | Each question meets its bar on its labelled set |
 | S8 | Listening: every reply checked against its move; major picture gaps asked openly, minor ones imagined and marked; the retelling ends with the moments | built and merged behind DREAMCHAT_LISTEN (off); review fixes on `s8-listening` (27 Sep): the come-back rule restricted, choice readings that keep changes, the retelling's breakdown started early, and the test's move-selection floors; proven offline (replayed moves, re-read answers, a hand-labelled set), and a fresh simulation on the Claude writer, both arms (27 Sep): every target met or met by hand but two (said but not in their words, about 9 real of 518; answers misread, 2 real of 99), and one floor fails beyond noise (retellings begun as told all they remember, 6 to 12 of 20: 10 of the 12 right after a come-back to an earlier thread); not to be switched on until that rule is fixed (below) | `evals/listening.ts` against the frozen before (`evals/listening-before`, 40 fresh simulated conversations): listening-turn compliance at least 90%, either/or under 5%, leading 0, said but not in their words 0, every way of drawing it kept, every retelling ends with a list of the breakdown's moments, no answer misread; floors not below the before (below) |
 | S9 | Record of what was drawn, and staleness; sequences and look keys | not started | Stale pictures found on saved dreams |
@@ -118,6 +118,11 @@ One **cut sheet** per cut is the spine everything is assembled from:
   every moment's images for one image per subject, its stage in force, pictures from another side, what the plan
   waits for and never sends, images for light alone, image 1 by tag, and each in-between picture against the
   owner's rule; writes `runs/references/<label>.json` (S5 eval below).
+- S6's retirement check: `bun run evals/retire.ts --label <name> [--live] [--no-imply] [--only <clean-up> …]
+  [--checks]` turns each clean-up and word list of `cleanups.ts` off on its own (`DREAMCHAT_RETIRE`) and writes its
+  footprint, reads each fact once, the action as visible facts, and where two sources disagree, to
+  `runs/retire/<label>.json` and `.txt`; `evals/corpus.ts --against <before> --verdicts <file> [--came-back <retire
+  label>:<clean-up>]` classifies every change of a step (S6 eval below).
 - **Checkpoint tool** (`evals/checkpoint.ts`), for the paid picture checkpoints (S4, S5, S10): a few moments drawn
   once more by today's full harness under the switches as set, each old against new, judged blind by the owner.
   A set (`evals/checkpoint-<name>.json`) names each moment by dream and moment, why it is there (a counted fault
@@ -547,6 +552,163 @@ One **cut sheet** per cut is the spine everything is assembled from:
   a re-plan or a correction reuses a drawn in-between picture by its key, and nothing waits on a picture it is
   not sent.
 
+- **S6 eval (one prompt builder, the clean-ups retired).** Written 27 Sep on branch `s6-eval`, before S6, from
+  `lab/dream-chat` (6667b0f). S6 is built on S4 (`s4-camera`, not merged) and S5 (eval only), so its first commit
+  takes every before below again on that base, with the same commands, and its bars are against that base. S6 goes
+  behind its own switch (for instance `DREAMCHAT_TYPED=on`), off byte for byte (0 pictures moved, frozen and live,
+  record and sheet off and on), and is measured with `DREAMCHAT_WRITER=claude DREAMCHAT_RECORD=on
+  DREAMCHAT_CUT_SHEET=on` (and S4's and S5's switches once merged), frozen and live, what the moments imply read
+  from the cache (Claude's readings: all 15 frozen and all 59 live dreams are cached), with the record off as a
+  second reading of the prompt's own clean-ups. Nothing in this eval calls a model.
+  **Instruments (new, committed).**
+  1. `cleanups.ts`: each text clean-up and word list S6 retires, by name, with a switch that turns it off where it
+     runs (`DREAMCHAT_RETIRE=<name>,…`: the text passes through as it came, a word list matches nothing; unset,
+     everything runs as ever; a name not in the list throws). `assembleCut`, which writes from the sheet alone,
+     reads none. S6 retires them through it: with S6's switch on, each step adds one name to those it turns off
+     and puts the typed fact in its place, in the order of the ledger, one measured change at a time.
+  2. `evals/retire.ts --label <name> [--live] [--no-imply] [--only <clean-up> …] [--checks] [--dreams <id> …]`
+     rebuilds every dream as `plan.ts` does and writes `runs/retire/<label>.json` and `.txt`: (a) each clean-up's
+     footprint: turned off on its own, every picture whose prompt, images or plan change, with the runs of words
+     it removes today and the runs it puts in; (b) each fact once; (c) the action as visible facts; (d) where two
+     sources of one fact disagree, and ids standing in words. Readings of what the moments imply come from the
+     cache only: a dream whose readings are not all cached is measured without them and listed.
+  3. `evals/corpus.ts --label <after> --against <before> --verdicts evals/s6-verdicts.json [--came-back <retire
+     label>:<clean-up>]`: every change of a step one by one (a paragraph changed in place, paired by its part of
+     the prompt, gone or added; a picture's images; a field of its plan; a picture gone or new), each with a key
+     that is the same for the same change in any run, classified: the verdict in the step's committed verdicts
+     file (intended, regression or neutral, with why), else neutral by rule where only the order, case or
+     punctuation of its words changed, else a regression by rule where it brings back into a picture a run of
+     words the retired clean-up removes there today (its footprint), else unclassified. It writes
+     `runs/corpus/<after>-vs-<before>-verdicts.json`, the unclassified with their word diffs to fill in.
+  4. `test/retire.test.ts`: each switch turns off only its piece (the moment's words, each of a look's five
+     clean-ups, the writing and its speech rule, each record word list on a frozen dream where it acts, the others
+     not moving it); the assembler reads none; word runs, change keys, the classification and the came-back rule;
+     the readings on a frozen dream (a look said twice, a sequence in what happens, "outside it l2").
+  **Each fact once, defined** (`evals/retire.ts factsOf`, `saidTwice`). A fact is one clause of the dream that the
+  cut sheet gives the prompt: of the look of each one in view, what one has turned into, how each one is now (or a
+  state carried), what an in-between picture shows, the moment's own words (what happens, what it must show, the
+  dream in it, the feeling, the jump), and the colours the dream gives. It counts with at least two words that say
+  something (lower case, no little words, a plural as its singular), and never when it is only a name. A prompt
+  says it where its words stand, in order and together, in a line: a paragraph, or one row of the images, of "In
+  it" or of the repairs. Said twice: in two lines or more, or twice in one. Two readings of it: *no fact's words
+  twice in one prompt*, by kind of repetition (first that fits: *shot*, said once by the prompt's own lines and
+  again only in the view's or brief's words, which the floor plan or a model wrote; *state*, how one is now, a state
+  carried or what an in-between picture shows; *story*, the moment's own words repeating each other or a look;
+  *colour*, a colour the dream gives said again in the style; *look*, a look in its image's line and again in "In
+  it"); and *one source per fact on the sheet*: no clause carried by two kinds of field (a state and an in-between
+  picture, a look and the colours told, the action and the dream).
+  **The action as visible facts, defined.** Typed: the sheet carries the moment's acts (who, from those in view;
+  what they do, one act a picture shows at one instant; to or toward what, in view or a part of the place; with
+  which hand, where they hold or touch something; where they look, where the moment names it), and "What happens
+  in this frame" is written from the acts alone, a test holding it to them as S3's holds `assembleCut` to the
+  sheet. Read on the paragraph as sent (`evals/retire.ts NOT_SEEN`, the eval's own reading of the words sent, never
+  a harness word list): no sequence or time ("then", "starts coming", "keeps rising", "suddenly"), nothing heard,
+  felt, thought or known as the act ("listens", "knows", "feels"), no "you", no story word ("the turn", "at that
+  moment"), no one or nothing the record has gone, nobody called by the name of what they were before they turned
+  into something else, and every person or animal in view the subject of an act (read today as named in the
+  paragraph; "they" is not read, so the before is an upper bound). The acts of the saved dreams need a model step:
+  a writer reading of each moment, checked by Jev and cached as the implied reading is (115 frozen and 411 live
+  moments; the writer is Claude, on the subscription).
+  **The ledger: every clean-up and duplicated computation S6 retires, in its order.** A footprint is what changes
+  with the clean-up turned off and nothing in its place (moments + in-between pictures, frozen / live, record on;
+  record off in brackets where it differs): every such change is a regression if the clean-up were only deleted,
+  so it names the pictures whose change is intended when the typed fact takes its place, and the words that must
+  never come back (`--came-back`). A duplicate's footprint is the moments where its sources disagree today: those
+  prompts change when one source wins, and each change is classified. Every step also classifies any change
+  outside its footprint.
+
+  | # | What, and where it runs | Replaced by | Footprint today, frozen / live | Retired right when |
+  | --- | --- | --- | --- | --- |
+  | 1 | The story record made three times from the same inputs: for the plan (`recordForPlan`), the sheet (`sheetDream`) and the panel's tree (`treeInputOf`), and again for the shadow log (the implied reading's own record is made without the readings, on purpose, and stays) | One record per state of the dream, passed to the plan, the sheet, the tree and the log | 0 (the same inputs) | a test holds a rebuild to one record object read by all three; corpus 0 changed |
+  | 2 | Two trees: the panel's (pictures drawn, the conversation's goals) and the sheet's | One tree whose ledger holds what is drawn and approved (S5's stage image reads it) | 0 | corpus 0 changed; the panel's tree unchanged |
+  | 3 | The image cap three times (`assemble.ts MAX_IMAGES`, `gate.ts MAX_REFERENCES`, `frames.ts`) | One constant | 0 | corpus 0 changed |
+  | 4 | Who each image is for, worked out again (`prompt-cases.ts refsOf`, `gate.checkReferences` reading "Image N" back out of the prompt), and the gate's line-text matching (`startsWith('The shot')`, `'around: "What the camera sees'`) | `assembleCut` returns each image's subject and each paragraph's id; the gate and the evals read them | 0 | corpus 0 changed; the 94 prompt cases unchanged |
+  | 5 | Names three ways (`pictureName` of the sketch, the record's `called`, the tree's `calledIn`), and ids in words: a saved floor plan's view words carry a place's id ("facing the high round window; outside it l2") | The record's `called`; an id in saved words resolved to its name once, when read; the floor-plan step writes names | names differ in 4 / 15 moments; ids in words 1 moment + 1 in-between picture / the same (library-1 m5) | ids in words 0; each name change classified |
+  | 6 | Kinds: the sheet's person, animal or people by the `isAnimal` and `isGroup` word lists, the record's kind, the tree's category; the tags read from whichever has one | The record's kind | 5 / 13 moments | classified; the tags from one source |
+  | 7 | Who is in view: `inViewOf` three times (the sheet, framePrompt, the gate), three sources (the plan's lists and view, the record's `shows`/`present`, the tree's `at`) | The record's `shows` and the camera's view (`sees`), on the sheet; the gate reads the sheet | sheet and record differ in 7 / 29 moments; sheet and tree in 2 / 7 | classified |
+  | 8 | How each looks, two ways: the sketch's words through `lookIn`, and the record's repaired `base` facts | The record's base facts, each clause with its basis, said at assembly | 50 / 178 moments (60 / 222 looks) | classified (the record's rules, the way of drawing, what is said twice, first looks, after a change, show as intended; a look's words lost is a regression) |
+  | 9 | `after_words`: `lookIn`'s `withoutWords` (the record's `unsaid`) | The record's base, which lacks them (step 8) | 7 / 20 (b0cb's glow from the doorway, 0f40's Tomas at ten in school uniform; live 5 dreams) [0 / 0] | 0 changed after step 8; its words never back |
+  | 10 | `vague`: `lookIn`'s filter of a field that says nothing (`VAGUE`) | The record's clause filter, once (step 8) | 0 / 42 (7 dreams: "hair: undefined", "not remembered") | 0 changed after step 8; never back |
+  | 11 | `pose`: `lookIn`'s `withoutPose` | The record reading the sketch's words once (it strips the pose of people and animals, not yet of places and things); the producer writes a sketch's framing apart from its look for new dreams | 37 / 68 (8 and 17 dreams) [38 / 63] | 0 changed after step 8 for people and animals; a place's or thing's pose words back are regressions until the record reads them too |
+  | 12 | `members`: `lookIn`'s filter of a group's words about someone with a sketch of their own | The producer's links (`partOf`) and the group's look without its members' clauses, once in the record | 0 / 3 (the family's baby, e16f and 0199) | never back |
+  | 13 | `shades`: `lookIn`'s `inShades` | Moved to assembly: a guessed colour said as a shade of the one colour, from each clause's basis and the style | 15 / 57 (2 and 11 dreams) [15 / 61] | 0 changed; no colour said two ways, shaded in a look and whole in the style (7 / 9 moments today: library-3's "mid-toned … green glass lamps") |
+  | 14 | A look said twice: in its image's line and in "In it" | Said once | 115 / 409 of 411 moments (2013 / 5698 facts) | 0 facts of the look kind twice |
+  | 15 | The colours the dream gives, twice: `style.told` beside `inView[].colours` (an image's line and the style) | One field | a colour said again in the style in 71 / 193 moments (165 / 474 facts); in a style of one colour in an image's line and the style 20 / 42 | 0 facts of the colour kind twice; 0 facts on a look and the colours told |
+  | 16 | How each one is now, four ways (the plan's words `now`, its typed `facts`, the record's facts at the sheet, the tree's stages), the changes in force two ways (the plan's `states` and `inView[].changes`, the record's `own`/`carried`), and one state said in an image's "Except", an in-between picture's line and "How each one is at this moment" | The record's facts at the moment, said once | plan and record states differ in 2 / 8 moments [20 / 33]; a state said twice in 41 / 118 moments (107 / 265 facts); `record_moved` 0 on rebuilds | 0 facts of the state kind twice; 0 facts on a state and an in-between picture (27 / 38 today) |
+  | 17 | Each picture's own copy of itself, made when it was first put in (`Item.frame` cast, `Item.fields` words, an in-between picture's plan), which drawing reads while a rebuild reads the dream as it stands: 2 of 61 moments sent with an out-of-date cast, 10 of 16 in-between pictures without the look before the change (S9); S9's `DREAMCHAT_FRESH_SEND` refreshes the copy at send meanwhile | The sheet built from the breakdown, the plan and the record as they stand when a picture is sent | 0 on rebuilds (both read the dream); the live-flow check | live flow: every sheet as sent equals a rebuild's where nothing changed after drawing |
+  | 18 | The relation to the cut before, three ways (the plan's refs, `relationIn` for the move tag, the tree's side and camera), and the camera two ways (the plan's view and words, the tree's camera, side and screen) | The plan's cameras (S4's `sidesByCamera`, `sameByCamera`), one relation and one camera on the sheet | plan and sheet differ in 3 / 11 moments (lab; S4 moves both) | measured on S4's base: 0 differing |
+  | 19 | `gone`: `withoutGone` | The acts never name what the record has gone or turned into something else | 2 / 3 (affd m9, aeea m14; cbba) | never back; `gone_named` 0 |
+  | 20 | `writing` and `spoken`: `writingIn` and its `SPOKEN`/`WRITTEN_ON` lists | The writing the picture shows, a field of the moment and of each thing (what, on what, spelled), speech never writing | writing 3 / 5 (1 and 3 dreams); speech kept from being lettered 2 / 2 (aeea's "come on", acfd's "get on") | the spelled words stay in every footprint picture; pass-lighthouse-fresh-m3 met |
+  | 21 | The moment's own words said twice (what happens, what it must show, the dream in it), and the point adding a guess to the action (library-1 m2's books "in the water") | The acts; the point as which act or thing is the focus; the dream as which fact is dreamlike: each said once | 26 / 84 moments (36 / 109 facts) | 0 facts of the story kind twice; library-1-m2-books met |
+  | 22 | `self`: `SELF` | The acts (the dreamer looks at themselves); today the dreamer's own change at the moment already puts them in view | 0 / 0 | 0 changed |
+  | 23 | `holds_name`: `HOLDS_NAME` ("the fish stall" brings no fish) | Presence from a reading of who is there, or the producer's ids, never a name's next word | 0 / 0 | 0 changed |
+  | 24 | `state_verb`: `STATE_VERB` | The producer's change of the thing at its moment, or the implied reading | 0 / 5 + 2 (e130, the desert clock melting) | the same changes from the reading, else not retired |
+  | 25 | `fills`: `FILLS` | The implied reading (water, snow, sand in a place) | 4 + 4 / 4 + 4 (library-1 fdd7) | the same states and in-between pictures from the reading, else not retired |
+  | 26 | `opens`: `OPENS`, `OPEN_LOOK` | The implied reading, or the producer's change (open from there) | 4 + 2 / 8 + 4 (b0cb, 6081; 5a66, eef3) | covered by the reading, else not retired |
+  | 27 | `not_there`: `NOT_THERE` | A reading of who is there, or the producer's presence change ("Tomas is gone") | 2 / 2 (affd m3 the dog, 0f40 m7 Tomas) | covered, else not retired |
+  | 28 | `taken`: `TAKEN` | The floor plan's holders from the scene's start (the blocking's moves), never the words | 3 / 3 (09ea) | covered, else not retired |
+  | 29 | `shut_away`: `shutAway` | The `undoes` reading (does it stay open once carried away?), a typed fact of containers | 7 / 10 (b0cb, a44a; eef3) | covered, else not retired |
+  | 30 | S4's word lists (`camera.ts`, on `s4-camera`): hands (`HAND_VERB`, `handsIn`) and the dreamer's own body (`selfIn`, a second `SELF`) | The acts (what the dreamer's hands do; looking at themselves) | switches added to `cleanups.ts` when S4 merges | as the others |
+  | 31 | S4's: a vehicle going (`GOING`, `PROPELLED`, `STOPPING`, `goingIn`) | A lasting state of motion in the record, going until it stops (the producer, or a reading) | when S4 merges | lighthouse-fresh-m12-heading met |
+  | 32 | S4's: the water's height (`WATER`, `BODY`, `waterLevel`) | A typed level of a place's water (what it reaches: a fixture, a part of the body, or metres), from the implied reading | when S4 merges | as the others |
+  | 33 | S4's: windows and doors on walls (`openingsIn`, `WALL_WORDS`), looking out (`LOOKS_OUT`) | The blocking's fixtures with their wall and height (a model step, not S6's), the plan's camera | when S4 merges | listed so they are not lost |
+
+  In all: 16 clean-ups and word lists on lab with a switch each (9, 10, 11, 12, 13, 19, 20 counting two, 22 to 29),
+  S4's four groups when it merges (30-33), and 14 duplicated computations or repetitions (1-8, 14-18, 21). Not
+  retired, and why: `sentence` (a full stop), `aNoun`'s article, the plan's `carries` cut at its first ";" (the
+  harness's own words, not the dream's), and the line that says "you" is the dreamer (rule E3's safety net: 79 of
+  411 live moments still say "you" in a rebuild, which the drawing path rewords with a model first; the typed acts
+  end it). The order: what changes no prompt first (1-4), then one source for names, kinds and who is in view
+  (5-7), the record's looks and then each of the look's own clean-ups (8-13: where the record already does a
+  clean-up's work, retiring it changes nothing, which is the proof), each fact said once (14-18), the typed action
+  (19-21, after its model step), the record's word lists as the readings cover them (22-29), S4's (30-33).
+  **Before** (lab 6667b0f, record and sheet on, Claude's readings; frozen 15 dreams, 115 moments, 29 in-between
+  pictures; live 59 dreams, 411 moments, 79 in-between pictures; `runs/retire/frozen-on`, `live-on`, and the same
+  with `-checks` for the colours said two ways):
+
+  | reading | frozen | live |
+  | --- | --- | --- |
+  | moments saying a fact twice or more | 115 of 115 | 411 of 411 |
+  | facts said twice (of all facts) | 2350 of 3003 | 6595 of 8771 |
+  | leaving out the shot's words | 2321 | 6546 |
+  | by kind, moments / facts: look | 115 / 2013 | 409 / 5698 |
+  | colour | 71 / 165 | 193 / 474 |
+  | state | 41 / 107 | 118 / 265 |
+  | story | 26 / 36 | 84 / 109 |
+  | shot only | 24 / 29 | 41 / 49 |
+  | facts on two kinds of field of the sheet, moments / facts | 51 / 69 | 117 / 163 |
+  | moments whose "What happens" a picture cannot show at one instant | 21 | 134 |
+  | sequence or time; heard, felt or known; "you"; story word | 12; 6; 0; 0 | 39; 20; 79; 1 |
+  | gone named; turned named by the old name | 2; 2 | 8; 6 |
+  | someone in view never named in it (upper bound) | 31 | 161 |
+  | ids in words (moments; in-between pictures) | 1; 1 | 1; 1 |
+  | a colour the dream gives said two ways (a shade in a look, whole in the style) | 7 | 9 |
+
+  With the record off (`frozen-off`, `live-off`): facts said twice 2265 / 6398 (look 1986 / 5653, colour 160 / 462,
+  state 66 / 144, story 34 / 105), on two kinds of field 84 / 199 facts, the action's rules broken in the same 21 /
+  134 moments, the look's two sources differing in 48 / 146 moments and the states in 20 / 33.
+
+  **Bars** (S6 on, on its own base, frozen and live; the before is that base with S6 off):
+
+  | measure | bar |
+  | --- | --- |
+  | counted fault cases | every one met on the base stays met; library-1-m2-books met (the typed action, the point as its focus); lighthouse-fresh-m12-heading met once S4's `goingIn` gives way to the record's motion; left for a model step not S6's: night-market-m2-gaze and library-1-m5-level (the blocking), heron-m4-clothes (a look for the students, said nowhere); S5's: library-1-m5-window. On lab today 19/33 with Claude's readings (18/33 with DeepSeek's); 26/33 on `s4-camera` with DeepSeek's |
+  | guards | 36/36, record on and off (S6's own: pass-lighthouse-fresh-m3, speech is never writing; -m4 the key in the lighthouse door; pass-library-2-m4 open like birds, the books' change carried; pass-library-2-m7 she rows) |
+  | every change of every step on every saved dream, frozen and live | classified: 0 unclassified, 0 regressions (a retired clean-up's words back count as one unless a verdict says why not) |
+  | facts said twice, leaving out the shot's words, of the look, colour and state kinds | 0 |
+  | of the story kind | 0 with the typed action (its model step); counted until then |
+  | facts on two kinds of field of the sheet | 0 |
+  | moments whose "What happens" breaks a rule of the action as visible facts | 0; every person or animal in view the subject of an act |
+  | ids in words; a colour said two ways | 0; 0 |
+  | each duplicate (1-8, 16-18) | one source in the code; its footprint's moments classified |
+  | live flow, fresh replays | every sheet as sent equals a rebuild's where nothing changed after drawing |
+  | S6's switch off | 0 pictures moved, frozen and live, record and sheet off and on; `bun test`, typecheck |
+
+  **Also for S6.** The checkpoint tool needs S6's switch in `STEP_SWITCHES` and every image still mapped by
+  `evals/checkpoint-set.ts todayOf`. Jev's library questions that read the same faults in words (S7: `r_look_twice`,
+  `r_action_seen`, `r_story_words`, `r_gone_drawn`, `r_quoted`) earn nothing yet: the bars here are code, and S7's
+  labelled sets say later whether the pictures agree.
+
 ## Where steps overlap (read before starting any step)
 
 Work found in one step that belongs to, or touches, another. Keep this list current; nothing here may be dropped
@@ -597,6 +759,14 @@ between sessions.
 | S5 | S6 | The evals re-derive who each attached image is for (`prompt-cases.ts refsOf`): it missed a crowd the record puts in view, which framePrompt attaches a picture for (four live moments read as images for their light alone; fixed in the S5 eval). `assembleCut` knows each image's subject; S6 could return it with `references`, so the evals read it instead of working it out again. |
 | S5 | S5 | Contradictions S5 must not settle by code alone (owner or paid check): D1 (one image per subject) against 14 guards drawn with a sketch beside its in-between pictures; D3's bar (2 or 3 changes); D5 (a place's state has one carrier, the mock-up beat the in-between picture) against a place's in-between picture as its one image; the mock-up through the dreamer's eyes (paired 1 of 6 right, story 7 of 11). |
 | Checkpoint tool | S2, S9, every step | `session.ts`: what a moment calls each one (`calledFor`) and its previs render (`previsFor`) moved out of `startFrame`/`layoutFor` unchanged, so the checkpoint renders the mock-up as the harness does (46 of 54 drawn mock-ups render byte for byte as the run's own; the other 8 are code changed since). `evals/paired-store.ts` sets up any moments (`setUpDream`, the paired test's `setUp` on it); `evals/corpus.ts` word diff shared (`changeLines`); `evals/implied-cache.ts` writes its cache back only when a reading was added (it rewrote an unchanged cache on every run). A step that changes how a moment's images are chosen or named (S5 `chooseRefs`, S6) must keep `evals/checkpoint-set.ts todayOf` mapping every image to the run's file, and add its switch to `STEP_SWITCHES` (S5's is not named yet). A rebuild models neither the harness's "you" rewording nor a brief for a new view: the checkpoint refuses the first and writes the second with `--brief` (`shotFor`). |
+| S6 | S9 | Each picture draws from its own copy of itself, made when it was first put in (`Item.frame` cast and place, `Item.fields` words, an in-between picture's plan), while a rebuild reads the dream as it stands: S9 found 2 of 61 moments sent with an out-of-date cast and 10 of 16 in-between pictures without the look before the change. S9's `DREAMCHAT_FRESH_SEND` refreshes the copy at send; S6 builds the sheet from the breakdown, the plan and the record as they stand when a picture is sent (S6 ledger 17), after which the refresh has nothing left to do. Until then the two must agree (live-flow check). |
+| S6 | S4 | S4's word lists (`camera.ts`: hands `HAND_VERB`/`handsIn`, the dreamer's own body `selfIn`, a vehicle going `GOING`/`PROPELLED`/`STOPPING`/`goingIn`, the water `WATER`/`BODY`/`waterLevel`, walls `openingsIn`/`WALL_WORDS`, `LOOKS_OUT`) get switches in `cleanups.ts` when S4 merges and are measured as the others (S6 ledger 30-33): hands and own body become the typed acts, going a lasting motion in the record (lighthouse-fresh m12's heading), the water a typed level; `selfIn` and the record's `SELF` read one fact twice. |
+| S6 | model step | The typed action (S6 ledger 19-21) needs a writer reading of every saved moment (115 frozen, 411 live), checked by Jev and cached as the implied reading is; so do a lasting motion (31) and a water level (32). The writer is Claude on the subscription; Jev's calls are credits: the owner's go-ahead before it runs. |
+| S6 | S1 | Of the record's word lists, `SELF` and `HOLDS_NAME` act on no saved dream (the dreamer's own change at a moment already puts them in view), and `STATE_VERB` only on desert-station (e130, the clock melting); the others act on a few dreams each (S6 ledger 24-29), and the implied reading covers none of them yet: with Claude's readings in, turning `fills` off still moves library-1's water and its in-between pictures. |
+| S6 | S5 | S5's `chooseRefs` rewrites the images' lines, where each look is said the first of its two times (S6 ledger 14), and decides which in-between pictures stay, one of the three places one state is said (an image's "Except", the in-between picture's line, "How each one is at this moment"; ledger 16). S6 takes its befores on S5's base, and chooses where a look is said once after S5. |
+| S6 | S7 | S7's questions that read the same faults in words (`r_look_twice`, `r_action_seen`, `r_story_words`, `r_gone_drawn`, `r_quoted`) only log; S6's bars are code. The paragraph ids `assembleCut` returns (S6 ledger 4) are what the gate and S7's routed questions should point at. |
+| S6 | S8, producer | New dreams should not need the clean-ups: the producer writes a sketch's framing apart from its look (a pose in 68 live moments' looks), leaves out a look nobody gave rather than writing "undefined" (42 live moments, 7 dreams), writes the moment in the third person (79 of 411 live moments still say "you" in a rebuild) and as visible acts. |
+| S6 | checkpoint tool | S6's switch goes into `evals/checkpoint-set.ts STEP_SWITCHES`, and every image stays mapped by `todayOf`. |
 ## Known debt, by the step that clears it
 
 Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays one change.
@@ -632,10 +802,16 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
 - **S4 (camera rules).** A thing held in a view through the dreamer's eyes is placed at its floor-plan spot, not
   in the hands that hold it; and the "Nobody else is in the picture" line can stand beside a list of people who
   are in it.
-- **S6 (`assembleCut`).** The record's new word lists (`FILLS`, `OPENS`, `STATE_VERB`, `NOT_THERE`, `SELF`,
-  `TAKEN`, `HOLDS_NAME`, which has 'bowl' twice) overlap what the implied reading now reads with a model and Jev;
-  each should be retired once the reading covers it. `withoutWords` in `frames.ts` is one more text clean-up to
-  retire with the others.
+- **S6 (`assembleCut`).** Everything S6 retires is in the ledger of the S6 eval, in its order: 16 clean-ups and
+  word lists, each with a switch in `cleanups.ts` (the look's `withoutWords`, `VAGUE`, `withoutPose`, member words
+  and `inShades`; `withoutGone`; `writingIn` and its speech rule; the record's `STATE_VERB`, `FILLS`, `OPENS`,
+  `NOT_THERE`, `SELF`, `TAKEN`, `HOLDS_NAME`, which has 'bowl' twice, and `shutAway`), S4's 4 word lists, and 14
+  duplicated computations or repetitions (the list above among them). Found while writing it: the record's
+  `factsOf` runs `withoutPose` too, for people and animals (for a place or a thing only the look's own clean-up
+  takes a pose out); `SELF` and `HOLDS_NAME` act on no saved dream; values that say nothing ("hair: undefined")
+  would reach 42 live moments' looks without `VAGUE`; a look is said twice in 409 of 411 live moments; the
+  in-between picture's "the newspaper's newspaper" (S1 -> S6) is one of the renderings a typed part (`partOf`)
+  ends.
 
 ## Open questions for the owner
 
@@ -1009,3 +1185,14 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   jobs and receipts kept, $0). On lab with the record and sheet on (the S4 base, readings from the lab's Claude
   cache, left unchanged): library-1 m4 and m5 are refused, since today's plan wants an in-between picture of the
   library facing another way that the run never drew; night-market m1, m2 and library-1 m4 need a brief.
+- 27 Sep: S6's eval written on branch `s6-eval`, before S6 (above), from lab at 6667b0f. New: `cleanups.ts` (a switch
+  for each clean-up and word list S6 retires, `DREAMCHAT_RETIRE`; unset, everything as before), `evals/retire.ts`
+  (each one's footprint, each fact once, the action as visible facts, two sources disagreeing, ids in words) and
+  `evals/corpus.ts --verdicts`/`--came-back` (every change of a step classified by key), with
+  `test/retire.test.ts`. The ledger: 16 clean-ups and word lists, S4's 4 word lists and 14 duplicates, in their
+  order. Before, record and sheet on, Claude's readings, frozen / live: every moment says a fact twice (2350 / 6595
+  facts; a look in its image's line and in "In it" 2013 / 5698, a state 107 / 265, the moment's own words 36 /
+  109); 21 / 134 moments say an action no picture shows at one instant; `pose` acts on 37 / 68 moments, `shades` 15 /
+  57, `vague` 0 / 42, `after_words` 7 / 20, the record's lists on 0-10 each, `SELF` and `HOLDS_NAME` on none; looks
+  from the record would change 50 / 178 moments; a place's id in words 1 / 1. Prompt cases unchanged (19/33 counted
+  with Claude's readings, 36/36 guards). No model called, no pictures, no money.
