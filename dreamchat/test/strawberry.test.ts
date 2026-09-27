@@ -6,6 +6,8 @@ import type { Breakdown } from '../producer';
 
 // The engine's CLI reads its store from this, so it must be set before the module loads.
 process.env.DREAMCHAT_STRAWBERRY_HOME = mkdtempSync(join(tmpdir(), 'dreamchat-strawberry-'));
+// Today's continuity plan: S5's references (DREAMCHAT_REFS, test/refs.test.ts) leave out pictures it links.
+delete process.env.DREAMCHAT_REFS;
 const { cutRecord, planWrites, strawberryAvailable, writeProduction } = await import('../strawberry');
 
 const breakdown = (await Bun.file(join(import.meta.dir, 'fixtures', 'breakdown.json')).json()) as Breakdown;
@@ -37,8 +39,8 @@ describe('the plan', () => {
   });
 });
 
-describe('through the dreamer\'s own eyes', () => {
-  test('the dreamer is the camera, not in the cut\'s cast', () => {
+describe("through the dreamer's own eyes", () => {
+  test("the dreamer is the camera, not in the cut's cast", () => {
     const withDreamer: Breakdown = {
       ...breakdown,
       people: [

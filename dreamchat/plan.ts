@@ -36,7 +36,8 @@ import { type AsDrawn, type Copies, currentRecord, matchGhost } from './asdrawn'
 import { type CutSheet, cutSheetMode, framed, ghostName, sheetDream } from './cutsheet';
 import { type CutFacts, cutFactsOf, routedMode } from './checks';
 import { actingOf, checkReferences, preflight, readPrompt } from './gate';
-import { standsFor } from './refs';
+import { refsMode, standsFor } from './refs';
+import { withheldOf } from './verdicts';
 import { callJev } from './jev';
 import { recordForPlan, recordInputsOf } from './record';
 import type { Breakdown } from './producer';
@@ -165,6 +166,7 @@ export function rebuild(
   const named: Record<string, string> = {};
   const was = { copies: s.build?.copies, sheets, style, saved: savedAll, plan, named };
 
+  const withheld = refsMode() === 'off' ? {} : withheldOf(s.id ?? (s as { from?: string }).from, savedAll);
   const out: RebuiltPicture[] = [];
   for (const pid of drawOrder(plan)) {
     const it = byId.get(pid);
@@ -202,9 +204,11 @@ export function rebuild(
     if (shot) it.shot = shot;
     // The mock-up, where the moment has a worked-out camera on a floor plan (session.ts layoutFor).
     const layout = cut?.eye && shotPlan(b, pid, rec) ? standIn.previs(pid) : undefined;
+    // With S5's references, never a picture the owner judged wrong (session.ts plannedInputsOf; a rebuild
+    // reads no staleness: S9's records are compared on the drawing path).
     const planned: PlannedInput[] = (cut?.refs ?? [])
       .map((use) => ({ use, item: byId.get(use.id) }))
-      .filter((x): x is PlannedInput => !!x.item);
+      .filter((x): x is PlannedInput => !!x.item && !withheld[x.use.id]);
     const built = framed({ frame: it, sheets, style, inputs: planned, layout, dream }, mode, 'rebuild');
     out.push({
       id: pid,
