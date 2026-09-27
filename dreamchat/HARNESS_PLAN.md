@@ -1,7 +1,30 @@
 # Dream chat harness: the root-fix plan
 
 The single source of truth for rebuilding the dream chat harness from its root. Read this first in any new
-session; update the status table and the log at the end of every step.
+session; update the at-a-glance table, the status table and the log at the end of every step.
+
+## At a glance (27 Sep)
+
+The owner's view of where every step stands, kept current at the end of every step (the detail is in the status
+table below). This file, on `lab/dream-chat`, is the record any account or session can read; Engram's fever-dream
+context mirrors it.
+
+| Step | Status | Latest result |
+| --- | --- | --- |
+| S0 The test set from the owner's verdicts | Done | 85 prompt cases from 122 verdicts |
+| S1 The story record carries state | Done | faults met 6/33 to 18/33, guards 36/36 |
+| S2 Checks only log | Eval met; switch not yet default | whole-dream replays on Claude: logging, 127/127 moments drawn, 0 held/reworded/re-planned/undrawn by a check (acting: 14 undrawn, 54 reworded, 27 scenes and 25 moments re-planned); Jev 41 calls a dream against 306-324 |
+| S3 One cut sheet per picture | Done | the sheet's prompt equals the old builder's on 1052 rebuilds and 48 of 48 live builds |
+| S4 Camera rules | Fixing what review found | faults met 18/33 to 27/33, guards 36/36 (branch `s4-camera`) |
+| S5 References and in-between pictures | Test written | built after S4 merges |
+| S6 One prompt builder, clean-ups retired | Not started | after S5 |
+| S7 Jev checks routed by tags | Building, test first | branch `s7-jev-routed` |
+| S8 Listening | Built; proving | fresh simulation on the Claude writer running |
+| S9 Record of what was drawn, staleness | Building, test first | branch `s9-as-drawn` |
+| S10 Paid benchmark judged by the owner | Not started | about $10 |
+
+Money: $21 left of $30; the S4 picture check (about $3) is approved and runs when S4 merges. Writer model: Claude
+(`DREAMCHAT_WRITER=claude`).
 
 ## The aim
 
@@ -51,8 +74,8 @@ One **cut sheet** per cut is the spine everything is assembled from:
 | --- | --- | --- | --- |
 | S0 | Eval foundation: a prompt-case set from the person's 122 verdicts and notes, a runner that rebuilds prompts from saved dreams and scores them, the free simulation corpus as regression | done: reviewed, fixed, merged (26 Sep) | Every noted fault has a case; the runner reproduces today's failures. Baseline: 6 of 33 counted fault cases met (all six guards against editing the picture before), 36 of 36 passing cases met (below) |
 | S1 | Story record carries state (water, suitcase, who holds what, presence) into continuity, in-between pictures and prompts | done (27 Sep): reviewed twice, merged behind DREAMCHAT_RECORD=on | The S1 cases pass (`--step S1`: library-2 m5/m9 water, snow-train m4/m5, snow-train-2 m1, lighthouse-fresh m13, orchard m7; library-1 m3/m5, library-3 m7, snow-train-2 m5/m7 need a model step); no regressions on the corpus |
-| S2 | Stop stand-in checks deciding: the pre-draw prompt check and storyboard check only log | merged behind DREAMCHAT_CHECKS=log (acting by default), review fixes merged (50dbd8c, 27 Sep); eval met on the picture path of 10 dreams (redrawn with fake pictures, Jev only); the whole-conversation replays wait for DeepSeek to be topped up | No moment held or reworded; corpus unchanged otherwise. Met on the picture path: 0 of 61 moments held, reworded, planned again or left undrawn by the gate or "storyboard complete?" (planning again a scene on Jev's plan facts, `planFacts`, still acts: overlaps S2 → S7) (acting: 18-19 rewordings, 10-11 re-plans and 11-13 sketch rewordings asked for, 1-3 moments left undrawn; the saved runs: 4 undrawn, 3 reworded, 17 scenes and 13 moments planned again); every moment drawn; every moment's gate reading and every camera's storyboard reading logged; Jev 23.6 calls a dream against 106-111 acting and 245 in the saved runs; prompt cases and corpus unchanged (below) |
-| S3 | The cut sheet: tree (vertical) + record (horizontal) + relations + tags, one per cut | built, reviewed, fixed, merged behind DREAMCHAT_CUT_SHEET (27 Sep); sheet-as-sent proven on fresh replays written by Claude (27 Sep): met wherever no check acted | Every input the prompt needs comes from the sheet; no fact computed in two places. Met: `assembleCut` reads only the sheet and writes what framePrompt writes on every moment (0 differences in 1052 rebuilds: frozen 115 and live 411, record off and on), prompt cases unchanged on against off; what the sheet still computes twice is listed under S3 below. Sheet as sent (fresh replays, writer Claude): while drawing, `assembleCut` wrote what framePrompt writes on 48 of 48 builds (24 moments sent); against a rebuild 22 of 24 sheets as sent, the other 2 a check acting (below) |
+| S2 | Stop stand-in checks deciding: the pre-draw prompt check and storyboard check only log | merged behind DREAMCHAT_CHECKS=log (acting by default), review fixes merged (50dbd8c, 27 Sep); eval met on the picture path of 10 dreams (redrawn with fake pictures, Jev only) and on the whole-conversation replays of the same 10 dreams, writer Claude (27 Sep, below) | No moment held or reworded; corpus unchanged otherwise. Met on the picture path: 0 of 61 moments held, reworded, planned again or left undrawn by the gate or "storyboard complete?" (planning again a scene on Jev's plan facts, `planFacts`, still acts: overlaps S2 → S7) (acting: 18-19 rewordings, 10-11 re-plans and 11-13 sketch rewordings asked for, 1-3 moments left undrawn; the saved runs: 4 undrawn, 3 reworded, 17 scenes and 13 moments planned again); every moment drawn; every moment's gate reading and every camera's storyboard reading logged; Jev 23.6 calls a dream against 106-111 acting and 245 in the saved runs; prompt cases and corpus unchanged (below) |
+| S3 | The cut sheet: tree (vertical) + record (horizontal) + relations + tags, one per cut | done (27 Sep): built, reviewed, fixed, merged behind DREAMCHAT_CUT_SHEET; sheet-as-sent proven on fresh replays written by Claude (27 Sep): met wherever no check acted | Every input the prompt needs comes from the sheet; no fact computed in two places. Met: `assembleCut` reads only the sheet and writes what framePrompt writes on every moment (0 differences in 1052 rebuilds: frozen 115 and live 411, record off and on), prompt cases unchanged on against off; what the sheet still computes twice is listed under S3 below. Sheet as sent (fresh replays, writer Claude): while drawing, `assembleCut` wrote what framePrompt writes on 48 of 48 builds (24 moments sent); against a rebuild 22 of 24 sheets as sent, the other 2 a check acting (below) |
 | S4 | Camera rules and shot roles: the scene's line, a reverse angle turns the room (what is now left, right, behind), point-of-view shots show at most hands, vehicle screen direction, same setup means the same camera | not started | The S4 cases pass (`--step S4`: snow-train m2 reverse and m3 seat, snow-train-2 m2 same setup, lighthouse-fresh m12 heading, lighthouse-first m3, night-market m2, library-1 m4/m5, orchard m4 hands and m7 legs; lighthouse-fresh m10 needs a new floor plan) |
 | S5 | References and variants: one image per subject; in-between pictures only when an edit carries several changes; variants kept and reusable; the grey mock-up as a reference chosen by tag | not started; eval written on branch `s5-eval` (27 Sep, below) | The reference check (`evals/references.ts`) at its bars on the frozen and live dreams: 0 subjects shown twice or not by their stage in force, 0 pictures from another side drawn from, 0 pictures waited for and never sent, every in-between picture meeting the owner's rule with no picture left carrying several changes; the S5 cases stay met or pass (`--step S5`: never editing a picture from another side; library-1 m5 wall); guards 36/36; its hypotheses (image 1 by tag, one image per subject on pictures the owner called right) are for the paid check, not proven here |
 | S6 | `assembleCut`: prompt and references from the sheet, each fact once, action as visible facts; retire the regex clean-ups one by one | not started | All S0 cases pass; word-level diff reviewed on every saved dream |
@@ -204,13 +227,39 @@ One **cut sheet** per cut is the spine everything is assembled from:
   do. The 4 that do not are no check's: a colour the dream gives something drawn later is in the rebuild's colour
   line and not in what was sent (sea-school m4 "orange octopus", snow-train m7 "red door"), and an earlier
   picture taken as a rebuild takes it (desert-station m6, paper-city m5); overlaps below.
-  **Still to run once DeepSeek is topped up** (`runs/s2/run-arm.sh <label> act|log off|on`, the ten dreams
-  replayed whole with fake pictures, off against on, record off and on): moments held, reworded, planned again
-  and undrawn with the conversation driving them (the plan-time re-plans and rewordings above are counted as
-  asked for, not done); Jev calls per whole dream, the turns' included; the live-flow check on those replays.
-  They are the real measure: a redraw's logging arm starts from dreams planned and worded while the checks
-  acted, so it inherits their plans and rewordings (moon-market m7, sea-school m4 and snow-train m7 were
-  reworded then, and every scene the saved runs planned again stays planned again).
+  **The whole-conversation replays (27 Sep, writer Claude, both arms).** The ten dreams replayed whole from the
+  style choice with fake pictures (`runs/s2c/run-arm.sh <label> act|log off|on`: `runs/s2/run-arm.sh` with
+  `DREAMCHAT_WRITER=claude`, five dreams at a time), the checks acting against logging, record off and on (sheet in
+  shadow); counted by `evals/checks-log.ts`, the turns' Jev calls included:
+
+  | 10 dreams, whole replays | acting, record off | logging, record off | acting, record on | logging, record on |
+  | --- | --- | --- | --- | --- |
+  | moments drawn | 60/64 | 64/64 | 48/58 | 63/63 |
+  | left undrawn by a check | 4 | 0 | 10 | 0 |
+  | moments reworded | 26 | 0 | 28 | 0 |
+  | brief set aside | 14 | 0 | 17 | 0 |
+  | planned again: scenes before drawing / moments while drawing | 14 / 14 | 0 / 0 | 13 / 11 | 0 / 0 |
+  | drawn although a check held it | 55 | 0 (115 readings only logged) | 49 | 0 (128 only logged) |
+  | sketches reworded or held; in-between pictures | 42; 1 | 0; 0 | 47; 0 | 0; 0 |
+  | gate reading logged / storyboard reading logged | 64/64, 53 of 52 | 64/64, 49/49 | 58/58, 52/52 | 63/63, 49/49 |
+  | Jev calls a dream, all (gate, storyboard and plan sites) | 306 (288) | 40.2 (21.0) | 324 (305) | 40.9 (20.9) |
+
+  The eval is met on the whole conversations: with the checks logging no moment is held, reworded, planned again
+  or left undrawn, every moment is drawn and every reading is logged, and Jev's calls fall from 306-324 a dream to
+  about 41. Every moment left undrawn when acting was the gate's "still unsure of its instructions after rewording"
+  (mostly "its instructions may contradict each other" at 0.6-0.8, and state "carried in words only"). The acting
+  arm's "53 of 52" is paper-city, where a moment re-planned while drawing lost its camera after its storyboard
+  reading. **Live flow** on these replays (record on): logging, 10 dreams, 62 of 63 moments rebuild word for word
+  and 63 of 63 with the same images, 0 differing because a check acted; the one left is no check's (car-park m4:
+  the dreamer corrected the moment's words while drawing, the moment was drawn again from the corrected words, and
+  the breakdown kept the old ones, so a rebuild reads "rain falls upward" where "it is already raining upward" was
+  sent: overlap S2 → S9). Acting: 31 of 48 word for word, 16 differing only because a check acted, and 2 dreams
+  failing on sheets a check changed that live-flow does not explain (snow-train m3, planned again while drawing,
+  differs in view, names and tree; grandma-kitchen m5, drawn again from the dreamer's correction, differs in the
+  take). As S3 found, logging removes every difference a check makes.
+  The switch stays off by default until the owner turns it on (it only changes what the checks do, and the
+  picture path and whole conversations both show nothing a check found is lost).
+  The earlier plan ("once DeepSeek is topped up") is superseded by the table above; DeepSeek never ran it.
 - **S8 (listening).** Measured on fresh simulated conversations, never on the saved ones: those span four days of
   changing listener code (listening compliance 72% down to 58% by day) and replays from other branches. **The before**
   (`evals/listening-before/`, 40 conversations frozen with what the test reads, 1.4 MB): the 20 dreams with a
@@ -297,8 +346,11 @@ One **cut sheet** per cut is the spine everything is assembled from:
   acting: jellyfish-city m3 drawn without its brief (the pre-draw check set it aside; explained), crayon-cat m3
   (an earlier picture it takes was never drawn; explained), and jellyfish-city m7, which takes m6, a moment a
   check left undrawn: sent without it, rebuilt with it, so only the no-layering line and the sheet's names
-  differ, no image, and live-flow does not explain it (it looks for a missing image) and marks the dream FAIL.
-  With the checks logging none of the three can happen (S2's log arms). 8 of 32 moments were left undrawn by the
+  differ, no image. live-flow first marked it FAIL (it looked only for a missing image); it now explains a moment
+  taking an earlier picture a check left undrawn and counts it as a check acting (43aa749, with a test): re-run on
+  both replays, 10 dreams, 0 failing, 42 moments drawn, 37 word for word, the other 5 each a check acting (three
+  briefs set aside, jellyfish-city m7 and crayon-cat m3 taking a picture left undrawn). With the checks logging
+  none of these can happen (S2's log arms). 8 of 32 moments were left undrawn by the
   checks acting ("still unsure of its instructions after rewording", jellyfish-city 4, sea-school 3, crayon-cat
   1). The first run: 18 moments drawn, 16 word for word, 18 as sent in images, 2 differing only in the brief the
   check set aside (explained); two of its dreams drew no moment (the simulated dreamer left once the sketches were
@@ -520,6 +572,7 @@ between sessions.
 | S3 | S4 | `relationIn` (continuity.ts) calls the moment after a jump "another place" from the jump's own picture in the same place (the key-and-boat dream m7 and m9, the lift m5): a jump moment counts as a boundary behind itself. The move tag and the plan's references both read it; fixing it changes plans and prompts, so it is S4's, measured. |
 | S3 | S5 | The sheet's `inView[].image` is the sketch only; `earlier` is the plan's choice. S5's `chooseRefs` needs each element's image of the stage in force (its in-between picture, drawn and approved, or its sketch) from the tree's ledger, and chooses image 1 by the tags. |
 | S3 | S7 | Every cut has its tags (logged in shadow, listed per moment by `evals/corpus.ts`); S7 routes questions by them. |
+| S2 | S9 | A dreamer's correction while drawing patches the moment it redraws but not the breakdown, so a rebuild reads the old words (car-park m4 of the logging whole replays: sent "it is already raining upward", rebuilt "rain falls upward"). What a rebuild reads should be the moment as drawn. |
 | S3 | S9 | A re-plan updates the moments' plans but not `build.plan`; the drawing path's sheet reads each moment's own plan. A sheet is flagged `record_moved` where the record now differs from the typed facts its plan was made from: stale, for S9. Frames saved before S3 carry the plan's words without typed facts (`nowWords` on the sheet). |
 | S3 | S1 | The story record is made three times from the same inputs: for the plan (`recordForPlan`), for the sheet (`sheetDream`, once per drawing of a moment) and for the panel's tree. One record per dream, passed to all three, is the next step once the sheet is on. |
 | S4 | S5 | Found by S4 (branch `s4-camera`, not merged): across a reverse the picture before is dropped from the sheet's images (`rules.dropped`), not from the plan, which still lists it in `needs`, so the moment still waits for it. On `lab/dream-chat` the same holds far wider (S5 eval): every picture kept for its light alone and every earlier picture kept for people who all have sketches is waited for and never sent, 67 pictures in 65 of 115 frozen moments and 216 in 208 of 411 live. S5's `chooseRefs` owns it: what it does not attach, the plan does not wait for (`waits_only_on_sent`, bar 0). |
@@ -880,3 +933,22 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   earlier picture left undrawn twice), one of them not explained by live-flow (a missing earlier picture that
   changes a line but no image). Two faults of Claude's replies fixed on the way (e49ce98 JSON asked again, 7c5df33
   the simulated dreamer stays until the dream is drawn). S2's whole replays and S8's fresh simulation running.
+
+- 27 Sep, S3 done. Its eval is met: `assembleCut`, reading only the cut sheet, writes what framePrompt writes on
+  every rebuild (1052: frozen 115 and live 411, record off and on) and on every build while drawing fresh dreams
+  written by Claude (48 of 48, 24 moments sent). The only differences against a rebuild are a check acting (a brief
+  set aside, a moment taking a picture a check left undrawn), which S2's logging removes. What S3 changes is where
+  things are computed, not the pictures: S4-S7 now change one sheet instead of framePrompt's many places. One gap
+  found: live-flow could not explain a moment taking a picture a check left undrawn (marked FAIL); being fixed.
+  The owner's plan doc could not be updated from this session's account (access refused); this file stays the
+  record of status.
+- 27 Sep: live-flow's gap closed (43aa749): a moment sent without an earlier picture the pre-draw check left
+  undrawn is explained and counted as a check acting; on S3's two fresh replays 0 of 10 dreams fail, 37 of 42
+  moments word for word, 5 each a check acting. Also: Claude's input now goes on the command line (62e0d70), since
+  on a loaded machine the CLI went on without its stdin dozens of times a replay; a CLI failure that passes (no
+  input in time, logged out for a moment, a limit) is waited out and run again (987d911).
+- 27 Sep: S2's whole-conversation replays, ten dreams, writer Claude in every arm (DeepSeek is out). Logging: 127
+  of 127 moments drawn, 0 held, reworded, planned again or left undrawn by a check, every reading logged, Jev about
+  41 calls a dream; acting: 108 of 122 drawn, 14 left undrawn, 54 moments reworded, 27 scenes and 25 moments
+  planned again, Jev 306-324 a dream. Live flow, logging: 62 of 63 word for word, the one a dreamer's correction the
+  breakdown did not keep (S9). S2's eval is met; the switch stays off until the owner turns it on.

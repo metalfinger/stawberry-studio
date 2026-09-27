@@ -85,8 +85,22 @@ export function jsonOnly(text: string): string {
 /** Runs `claude` with these arguments and this input: its output, errors and exit code. */
 export type ClaudeRun = (args: string[], input: string) => Promise<{ out: string; err: string; code: number }>;
 
+/**
+ * The input goes on the command line, right after `-p`, when it can: given on stdin, the CLI waits 3 s for
+ * it and goes on without it when the machine is loaded ("no stdin data received in 3s", 27 Sep, dozens
+ * of times a replay). An input too long for the command line, or read as an option (a leading dash),
+ * goes on stdin.
+ */
+export const CLAUDE_ARG_MAX = 100_000;
+
 const spawnClaude: ClaudeRun = async (args, input) => {
-  const proc = Bun.spawn(args, { cwd: tmpdir(), stdin: new Blob([input]), stdout: 'pipe', stderr: 'pipe' });
+  const inline = input.length <= CLAUDE_ARG_MAX && !input.startsWith('-');
+  const proc = Bun.spawn(inline ? [args[0], args[1], input, ...args.slice(2)] : args, {
+    cwd: tmpdir(),
+    stdin: inline ? 'ignore' : new Blob([input]),
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
   const [out, err, code] = await Promise.all([
     new Response(proc.stdout).text(),
     new Response(proc.stderr).text(),
@@ -115,10 +129,48 @@ export function claudeBreach(content: string, json: boolean): string | null {
   }
 }
 
+type ClaudeBody = { result?: string; is_error?: boolean; usage?: { input_tokens?: number; output_tokens?: number } };
+
+/**
+ * Failures of the CLI that pass, and how long to wait before each run again. Under load the CLI gave up
+ * waiting for its input ("no stdin data received in 3s"), and for a minute on 27 Sep it was logged out;
+ * either crashed a replayed dream. A limit or an overloaded service is waited out the same way.
+ */
+export const CLAUDE_PASSING =
+  /no stdin data received|Not logged in|rate.?limit|usage limit|hit your limit|overloaded|\b5\d\d\b|ECONNRESET|timed? ?out/i;
+export const CLAUDE_WAITS_MS = [15_000, 60_000, 180_000];
+
+/**
+ * The owner's plan limit (the five-hour window) is waited out until it resets, then the call runs
+ * again (the owner's rule, 27 Sep): a replay or simulation stopped by the limit carries on after the
+ * reset instead of ending. Only a limit message waits this long; nothing waits while none comes.
+ */
+export const CLAUDE_LIMIT = /usage limit|hit your limit|limit reached|\blimit\b[^\n]*\bresets?\b/i;
+/** How often to try again when the message does not say when the limit resets. */
+export const CLAUDE_LIMIT_POLL_MS = 10 * 60_000;
+/** The longest a call waits for a limit in all; past it the limit is a failure like any other. */
+export const CLAUDE_LIMIT_MAX_MS = 6 * 3_600_000;
+
+/** In how many ms the limit a message names resets, or null when it does not say. */
+export function limitResetIn(failure: string, now = new Date()): number | null {
+  const epoch = failure.match(/\|(\d{10})\b/);
+  if (epoch) return Math.max(0, Number(epoch[1]) * 1000 - now.getTime());
+  const at = failure.match(/\bresets?\s+(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
+  if (!at) return null;
+  const meridiem = at[3]?.toLowerCase();
+  const hour = meridiem ? (Number(at[1]) % 12) + (meridiem === 'pm' ? 12 : 0) : Number(at[1]);
+  if (hour > 23) return null;
+  const reset = new Date(now);
+  reset.setHours(hour, Number(at[2] ?? 0), 0, 0);
+  if (reset.getTime() <= now.getTime()) reset.setDate(reset.getDate() + 1);
+  return reset.getTime() - now.getTime();
+}
+
 export async function callClaude(
   messages: ChatMessage[],
   opts: { model?: string; json?: boolean; thinking?: Thinking } = {},
   run: ClaudeRun = spawnClaude,
+  wait: (ms: number) => Promise<void> = Bun.sleep,
 ): Promise<CallResult> {
   const model = opts.model && !opts.model.startsWith('deepseek') ? opts.model : CLAUDE_MODEL;
   const { system, prompt } = claudePrompt(messages);
@@ -146,19 +198,39 @@ export async function callClaude(
   let breach: string | null = null;
   for (let t = 0; t < CLAUDE_TRIES; t++) {
     // Asked again, the reply is told what was wrong with the one before; the conversation is the same.
-    const { out, err, code } = await run(
-      args,
-      breach
-        ? `${input}\n\n(Your previous reply could not be used: ${breach}. ${opts.json ? 'Reply with one valid JSON object, every quote inside a string escaped.' : 'Reply with the message.'})`
-        : input,
-    );
-    let body: { result?: string; is_error?: boolean; usage?: { input_tokens?: number; output_tokens?: number } };
-    try {
-      body = JSON.parse(out);
-    } catch {
-      throw new Error(`claude ${code}: ${(err || out).slice(0, 400)}`);
+    const asked = breach
+      ? `${input}\n\n(Your previous reply could not be used: ${breach}. ${opts.json ? 'Reply with one valid JSON object, every quote inside a string escaped.' : 'Reply with the message.'})`
+      : input;
+    let body: ClaudeBody | undefined;
+    let passing = 0;
+    let limitWaited = 0;
+    while (!body) {
+      const { out, err, code } = await run(args, asked);
+      let failure: string | null = null;
+      try {
+        const b = JSON.parse(out) as ClaudeBody;
+        if (code !== 0 || b.is_error) failure = `claude ${code}: ${(b.result ?? err).slice(0, 400)}`;
+        else body = b;
+      } catch {
+        failure = `claude ${code}: ${(err || out).slice(0, 400)}`;
+      }
+      if (!failure) break;
+      // The plan's limit is waited out until it resets (a minute past, to be sure), then run again.
+      if (CLAUDE_LIMIT.test(failure) && limitWaited < CLAUDE_LIMIT_MAX_MS) {
+        const reset = limitResetIn(failure);
+        const ms = Math.min(reset === null ? CLAUDE_LIMIT_POLL_MS : reset + 60_000, CLAUDE_LIMIT_MAX_MS - limitWaited);
+        console.warn(`${failure.slice(0, 160)}: the usage limit; waiting ${Math.round(ms / 60_000)} min for it to reset`);
+        await wait(ms);
+        limitWaited += ms;
+        continue;
+      }
+      // A failure of the CLI rather than of the reply passes: waited out, then run again.
+      if (!CLAUDE_PASSING.test(failure) || passing >= CLAUDE_WAITS_MS.length) throw new Error(failure);
+      console.warn(`${failure.slice(0, 160)}: waiting ${CLAUDE_WAITS_MS[passing] / 1000} s, then again`);
+      await wait(CLAUDE_WAITS_MS[passing]);
+      passing++;
     }
-    if (code !== 0 || body.is_error) throw new Error(`claude ${code}: ${(body.result ?? err).slice(0, 400)}`);
+    if (!body) throw new Error('claude: no reply');
     const text = body.result ?? '';
     usage = body.usage
       ? {
