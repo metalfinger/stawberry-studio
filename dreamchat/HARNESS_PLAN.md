@@ -71,6 +71,22 @@ pushed). Each branch's own HARNESS_PLAN.md says what it did and how to resume.**
 Merge order suggested: checkpoint-order, postcheck-fixes, s5-fix2 (then the S5 check), s6-build. `s5-fix2`,
 `s6-build` and `postcheck-fixes` all change `continuity.ts` and `evals/prompt-cases.ts`: reconcile when merging.
 
+**New direction from the 28 Sep call (Charu, Shreyas, Abhishek; Engram
+`projects/fever-dream/2026-09-28-charu-call-cards-and-cocreation.md`). Fold into the plan; do not build the sidebar
+before the owner says at which step each artifact appears.**
+- The conversation is too long (Charu dropped off halfway). Make it snappier while it still feels co-created: find
+  which listen, retell and confirm turns can be cut or merged. Measure it the S8 way (fresh simulations, before and
+  after): turns and minutes to the first picture, with S8's targets and floors as guards. Overlaps S8.
+- Show intermediate artifacts live in a sidebar while the person talks: sketch, storyboard, character, clips, the
+  full video. The stage machine's transitions (sheets, floor plan, previs, frames) decide when each appears; the
+  free grey previs could come first. **Open question for the owner (Charu and Saurabh are also deciding): at which
+  step does each artifact surface?**
+- Elicitation stays agent-driven and co-created with an artist persona, never a plain prompt box.
+- Conversational colour: "320 people told me dreams like this"; common dream tropes (teeth falling out, snakes);
+  naming the film technique as the person describes it (a "dolly zoom" moment).
+- Milestone bar: sharing your dream is fun, and watching the video is fun. For video: organic "dirtiness" and a human
+  presence (real voice, room sound, real photo or video fragments).
+
 **Next, in order.** 1) Merge the four branches above, each after review. 2) The S5 picture check (about $3; draw with
 `evals/checkpoint.ts`, judged on the local page). 3) Finish S6 (the rest of the ledger), review, merge. 4) The owner
 chooses the writer the harness ships with (DeepSeek or another API; the Claude CLI is for testing only). 5) S10,
