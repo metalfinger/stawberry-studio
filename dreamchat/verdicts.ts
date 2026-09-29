@@ -48,7 +48,9 @@ export function verdictsIn(roots: string[]): Verdicts {
       const made = read<Record<string, { from?: string; sha?: string }>>(join(dir, name, 'judge', 'made.json'));
       const answers = read<{ answers: Record<string, { answer: string }> }>(join(dir, name, 'answers.json'));
       if (!made || !answers) continue;
-      for (const [id, x] of Object.entries(answers.answers ?? {}))
+      for (const [id, x] of Object.entries(answers.answers ?? {})) {
+        // A note sent without an answer judges neither picture.
+        if (!x.answer) continue;
         for (const side of ['a', 'b']) {
           const shown = made[`img/${id}-${side}.jpg`];
           const file = shown?.sha ?? (shown?.from ? fileKey(shown.from) : undefined);
@@ -58,6 +60,7 @@ export function verdictsIn(roots: string[]): Verdicts {
           const moment = story.get(file);
           if (moment) byMoment.set(moment, v);
         }
+      }
     }
   }
   return { byFile, byMoment };

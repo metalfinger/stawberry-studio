@@ -10,7 +10,7 @@ import { join } from 'node:path';
 import { assembleCut } from '../assemble';
 import { type ContinuityPlan, planContinuity, shotPlan } from '../continuity';
 import { cutSheet, type CutTags } from '../cutsheet';
-import { loadDream } from '../evals/saved';
+import { frozenDreams, loadDream } from '../evals/saved';
 import { buildFrames, buildGhosts, ghostPrompt, NOTHING_ELSE, type PlannedInput } from '../frames';
 import { checkReferences } from '../gate';
 import { rebuild, standIn } from '../plan';
@@ -546,6 +546,44 @@ describe('an earlier picture attached for how things look brings nobody and noth
     expect(withheldOf('d1', frames, ['m4'], table)).toEqual({ m1: 'judged wrong', m2: 'judged wrong', m4: 'stale' });
     expect(table.byFile.get('ccc')).toBe('right');
   });
+
+  test('a note sent without an answer judges neither picture', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'verdicts-'));
+    const cp = join(dir, 'runs', 'checkpoint', 's5');
+    mkdirSync(join(cp, 'judge'), { recursive: true });
+    writeFileSync(
+      join(cp, 'judge', 'made.json'),
+      JSON.stringify({ 'img/x-m2-a.jpg': { sha: 'bbb' }, 'img/x-m2-b.jpg': { sha: 'ccc' } }),
+    );
+    writeFileSync(join(cp, 'answers.json'), JSON.stringify({ answers: { 'x-m2': { answer: null, note: 'later' } } }));
+    const table = verdictsIn([dir]);
+    expect(table.byFile.size).toBe(0);
+  });
+
+  test('without a mock-up, an earlier picture of the place and the place itself say the same of where things stand', () => {
+    // Where the render of a mock-up fails, the place's line says the layout comes from the earlier picture of
+    // this place: that picture's own line must not say it comes from the shot above.
+    const was = standIn.previs;
+    (standIn as { previs: (id: string) => string | undefined }).previs = () => undefined;
+    try {
+      for (const vars of <Record<string, string>[]>[{}, { DREAMCHAT_CUT_SHEET: 'on', DREAMCHAT_CAMERA: 'on' }, { ...ON, DREAMCHAT_RECORD: 'on' }])
+        withSwitches(vars, () => {
+          for (const id of frozenDreams()) {
+            const s = loadDream(id, false).session as Session;
+            if (!s.draft?.breakdown || !s.style) continue;
+            for (const p of rebuild(s, { asDrawn: false }).pictures) {
+              const t = p.prompt ?? '';
+              const both =
+                t.includes('where things stand comes from the earlier picture of this place') &&
+                t.includes('come from the shot above');
+              expect(both ? `${id} ${p.id}` : '').toBe('');
+            }
+          }
+        });
+    } finally {
+      standIn.previs = was;
+    }
+  }, 120_000);
 
   test("a side's in-between picture edited from the place's state names both images and keeps the state", () => {
     const hall = sketch('l1', 'location', 'the hall');

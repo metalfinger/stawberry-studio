@@ -612,7 +612,9 @@ export function framePrompt(
               // wall read to the gate as the prompt contradicting itself (0.51, 24 Sep).
               samePlaceLine(
                 `${pictureNo(x)}${shows}`,
-                mockUp ? 'mockup' : plan?.view ? 'shot' : r === 'same_setup' ? 'setup' : 'side',
+                // "From the shot above" only where the place's own line says so too: where it says the
+                // layout comes from the earlier picture of this place, so does this one.
+                mockUp ? 'mockup' : plan?.view && !base && !roomFromCut ? 'shot' : r === 'same_setup' ? 'setup' : 'side',
                 f.distance,
                 f.eyes === 'dreamer' &&
                   (x.item.frame?.visible ?? []).some((id) => sheets.find((s) => s.id === id)?.isDreamer),

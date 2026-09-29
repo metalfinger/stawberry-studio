@@ -346,7 +346,14 @@ export function assembleCut(s: CutSheet): Assembled {
           : x.role === 'composition'
             ? samePlaceLine(
                 `${pictureNo(x)}${shows}`,
-                mockUp ? 'mockup' : cam.view ? 'shot' : r === 'same_setup' ? 'setup' : 'side',
+                // "From the shot above" only where the place's own line says so too (as frames.ts).
+                mockUp
+                  ? 'mockup'
+                  : cam.view && !base && !(roomFromCut && !s.refs)
+                    ? 'shot'
+                    : r === 'same_setup'
+                      ? 'setup'
+                      : 'side',
                 cam.size,
                 cam.eyes === 'dreamer' && !!s.dreamer.id && (x.frame?.visible ?? []).includes(s.dreamer.id),
               )
