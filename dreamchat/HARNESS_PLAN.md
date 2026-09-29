@@ -28,17 +28,43 @@ current figure and what's next). Writer model: Claude (`DREAMCHAT_WRITER=claude`
 
 ## Where we stopped (27-29 Sep): read this to resume
 
-**Latest landmark (29 Sep, late, cloud session): S6 rows 5-16.** Read this block first; the rest of this section
-is the history before it. Hand-off and status: GitHub issue metalfinger/stawberry-studio#1 (the Mac session reads
-and answers there). The owner asked for work in chunks: after each, commit, push, post on issue #1, update this
-block, and ask whether to go on.
+**Latest landmark (29 Sep, end of the cloud session): S6 rows 5-16, and the S5 picture check's verdict.** Read
+this block first; the rest of this section is the history before it. Hand-off: GitHub issue
+metalfinger/stawberry-studio#1. The cloud session stopped here at the owner's word; a session on the Mac (a new
+pane beside the Mac session) picks this up. Work in chunks: after each, commit, push, post on issue #1, update this
+block, and ask the owner whether to go on.
 
-- **On lab (this branch):** S6 rows 1, 3-7 merged (733bbe7): one record, one image cap, paragraph ids, names, kinds,
-  who is in view; plus the typed-readings cost fix and the camera-needs-record decision.
-- **Stacked S6 branches, pushed, each built on the one before, none merged yet.** Merge them into lab in this order,
-  each once its live check is clean (all but 16 are reviewed "merge"); each branch's HARNESS_PLAN.md S6 table has
-  its full row. `s6-states` holds all of them.
-  1. `s6-looks` (edb4087), row 8, looks from the story record: **merge**; waiting on the Mac's live re-run.
+**1. The S5 picture check (owner, 29 Sep; verdicts in `evals/checkpoint/s5/`, 43577c8): S5 made pictures worse.**
+New 7/17 against old 12/17 (S4's check: new 15/20 against old 10/20). On the 8 moments both checks drew (camera
+rules on in both), S5's new pictures were worse than S4's on 4 (lighthouse-first m7, m8; orchard m5, m6), better on
+1 (snow-train-2 m6), the same on 3. Cause, from the dry run's image lists: in 6 of the 7 regressions S5 took away
+image 1, what carries the layout, and sent sketches only:
+- the mock-up dropped: orchard-m6 (came out in the third person), lighthouse-first-m7 (the room changed),
+  library-3-m8 (the boat outside the window);
+- an earlier picture dropped by the gate: orchard-m3 (layout mirrored: the gate behind them, the adult still on
+  the left), lighthouse-first-m8 (the tractor became a car);
+- orchard-m5: Tomas's sketch and two in-between pictures cut to one.
+
+**The owner's direction (do in this order):**
+1. **Layout anchor, at the rule (S5 fix round three), measured on prompts first, nothing drawn:** every cut keeps a
+   layout anchor as image 1: the mock-up, or an earlier picture whose camera and state match; when the gate drops
+   an earlier picture it falls back to the mock-up, never to nothing; and S5's "mock-up off" routing (through the
+   dreamer's eyes, a jump / another place / a seat, close-up / insert) is revisited: it rested on the paired test's
+   thin evidence, which this check contradicts. Code: `refs.ts` (S5's choice of images, `chooseRefs`), `gate.ts`
+   (what the gate drops), `assemble.ts` image 1. Measure with `evals/corpus.ts` and `evals/refs` checks: every cut
+   with an image 1 that carries layout; the 7 regressions' image lists before and after.
+2. **S10 brought forward: an end-to-end picture test, designed, not drawn until the owner approves.** A one-moment
+   check redraws one moment on the OLD run's chain (old sketches, old in-between pictures, old earlier cuts); S5
+   decides that chain, so it cannot be tested that way (the gate compared cameras the old harness planned; S4
+   looked good because camera rules mostly change the prompt). Design: which dream(s); the cost per dream ($15.45
+   left, about $3-4.50 a dream); whole dreams made by the full new harness from the sheets (sketches, in-between
+   pictures, then cuts); how the whole storyboard is judged against the old one by the owner; what must land first
+   (at least the layout-anchor fix).
+3. **S6 rows carry on in parallel:** they change wording, not the chain.
+
+**2. S6: stacked branches, pushed, each built on the one before, none merged yet.** Merge into lab in this order,
+each once its live check is clean; each branch's HARNESS_PLAN.md S6 table has its full row. `s6-states` holds all.
+  1. `s6-looks` (edb4087), row 8, looks from the story record: reviewed **merge**; waiting on the Mac's live re-run.
   2. `s6-pose` (2d7926d), rows 9-11 (9 and 10 need no step): **merge**.
   3. `s6-members` (796c2a8), row 12, a group's words about a member with their own sketch: **merge**.
   4. `s6-shades` (d5a5179), row 13, a colour the dream gives kept whole: **merge**.
@@ -46,15 +72,14 @@ block, and ask whether to go on.
      (lighthouse-fresh-m10-tractor) moves under it (fresh Jev asks 0.63 to 0.56 on average, all yes; the cached
      0.46 was a low draw): **for the owner to accept**.
   6. `s6-colouronce` (7c6f30f), row 15, the colours the dream gives said once: **merge**.
-  7. `s6-states` (7993585), row 16's first part, how each one is now said once: measured, **in review**. Row 16's
-     second part (one source for a state: the plan's states and the record's facts) is still to build.
-- **Live checks owed (the Mac, issue #1, reading calls only):** row 8's re-run, then rows 11-15 (and 16) in one
-  sitting, on the top branch.
-- **The S5 picture check:** dry run reviewed (issue #1): 17-18 pictures, $2.55-2.70; draws when the owner can
-  judge. Nothing drawn yet; $18 of $30 left.
-- **Next:** row 16's review and its second part; then S6 rows 17-34 in the ledger's order (17: each picture's own
-  copy of itself, which drawing reads while a rebuild reads the dream as it stands); then S7's routed checks, S9's
-  live flow check, S10's final picture check.
+  7. `s6-states` (2870e58), row 16's first part, how each one is now said once: reviewed **fix first**; the four
+     fixes are listed in its S6 table row (the Except rewrite and the state-dropping must be tied to the element
+     and part, not text; tests; the closing line). Row 16's second part (one source for a state) is still to build.
+- **Live checks owed (reading calls only):** row 8's re-run, then rows 11-16 in one sitting on `s6-states` (the
+  commands are on issue #1).
+- **Then:** S6 rows 17-34 in the ledger's order (17: each picture's own copy of itself, which drawing reads while a
+  rebuild reads the dream as it stands); S7's routed checks; S9's live flow check.
+
 - **How to resume the cloud work:** `git fetch origin`; `git worktree add <path> <branch>` for the top branch in
   flight (`s6-states`); symlink `dreamchat/node_modules`; copy the committed caches (`evals/cache/README.md`) into
   `runs/`. Measure a step with `evals/corpus.ts --label s6rN-<rs|all> --against s6r<N-1>-<rs|all> --verdicts
