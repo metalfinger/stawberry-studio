@@ -8,7 +8,7 @@ import { rebuild } from '../plan';
 import { type Breakdown, completeViews } from '../producer';
 import { inSession, readJevLog } from '../jevlog';
 import { applyPrep, planRecord, planShots, reconcileGhosts, restage, type Session } from '../session';
-import { withChecks } from './fakes';
+import { withChecks, withSwitches } from './fakes';
 
 // Frozen dreams are planned or rebuilt whole: seconds each, and past bun's 5 s on a busy machine.
 setDefaultTimeout(30_000);
@@ -459,9 +459,32 @@ describe('one story record for planning and drawing (DREAMCHAT_RECORD=on)', () =
       expect(s.draft?.readings?.implied).toEqual(first);
     }));
 
+  test('with the one prompt builder on, planning reads each moment once as typed facts and keeps them', async () =>
+    withSwitches({ DREAMCHAT_RECORD: undefined, DREAMCHAT_ONE_BUILDER: 'none' }, async () => {
+      const s = saved();
+      let asked = 0;
+      const prep = await planShots(
+        s.draft!.breakdown!,
+        s.style!,
+        {
+          jev,
+          imply: async () => {
+            asked++;
+            return { content: JSON.stringify({ acts: [], motion: [], fill: [] }), model: 'fake', ms: 0 };
+          },
+        },
+        { items: s.build!.items, words: [] },
+      );
+      const ids = s.draft!.breakdown!.scenes.flatMap((sc) => sc.moments.map((m) => m.id));
+      expect(asked).toBe(ids.length);
+      expect(Object.keys(prep.readings?.typed ?? {}).sort()).toEqual([...ids].sort());
+    }));
+
   test('off, planning keeps nothing of the record and asks the writer nothing', async () => {
     const was = process.env.DREAMCHAT_RECORD;
+    const builder = process.env.DREAMCHAT_ONE_BUILDER;
     delete process.env.DREAMCHAT_RECORD;
+    delete process.env.DREAMCHAT_ONE_BUILDER;
     try {
       const s = saved();
       let asked = 0;
@@ -482,6 +505,7 @@ describe('one story record for planning and drawing (DREAMCHAT_RECORD=on)', () =
       expect(prep.readings).toBeUndefined();
     } finally {
       if (was !== undefined) process.env.DREAMCHAT_RECORD = was;
+      if (builder !== undefined) process.env.DREAMCHAT_ONE_BUILDER = builder;
     }
   });
 });

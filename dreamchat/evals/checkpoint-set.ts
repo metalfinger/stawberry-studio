@@ -747,6 +747,7 @@ export const STEP_SWITCHES: Record<string, string> = {
   S3: 'DREAMCHAT_CUT_SHEET',
   S4: 'DREAMCHAT_CAMERA',
   S5: 'DREAMCHAT_REFS',
+  S6: 'DREAMCHAT_ONE_BUILDER',
   S8: 'DREAMCHAT_LISTEN',
 };
 

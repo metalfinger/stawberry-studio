@@ -16,6 +16,7 @@ import {
   routedReadings,
 } from './checks';
 import type { JevFn, Question } from './jev';
+import { MAX_IMAGES } from './frames';
 import type { Item } from './sheets';
 
 // Set on the streetcar dream's own prompts (24 Sep): a prompt made to contradict itself read
@@ -57,8 +58,6 @@ export const MIN_EDIT_CLEAR = 0.5;
 // Real problems with what an image is for read 0.31-0.46 (a baby drawn twice, a seat on a train
 // roof); clean prompts 0.6 and up (24 Sep).
 export const MIN_REFS_CLEAR = 0.6;
-/** The model takes 14 images; a dozen leaves each one legible. */
-export const MAX_REFERENCES = 12;
 
 /**
  * Whether the checks before a picture is drawn act on what they find or only log it. Logging is the
@@ -310,7 +309,7 @@ export function checkReferences(
   if (bases.length === 1 && bases[0] !== 0) out.push('the picture to edit is not the first image');
   const ids = references.map((r) => r.media_id);
   if (new Set(ids).size !== ids.length) out.push('an image is attached twice');
-  if (references.length > MAX_REFERENCES) out.push(`${references.length} images, more than ${MAX_REFERENCES}`);
+  if (references.length > MAX_IMAGES) out.push(`${references.length} images, more than ${MAX_IMAGES}`);
   if (opts.approved)
     for (const [i, id] of ids.entries())
       if (!opts.approved.has(id)) out.push(`image ${i + 1} is not an approved picture`);

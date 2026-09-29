@@ -10,7 +10,7 @@
 // they found. It runs beside the plan and is logged (DREAMCHAT_RECORD=shadow), or the continuity plan
 // and the prompts read it too (DREAMCHAT_RECORD=on): what changes is carried from picture to picture,
 // who is there, and who holds what.
-import { retired } from './cleanups';
+import { builds, oneBuilder, retired } from './cleanups';
 import { pictureName, placePlan, type RecordPlan, rawPlanBy } from './continuity';
 import {
   BECOMING,
@@ -26,6 +26,7 @@ import {
 } from './producer';
 import { isAnimal, isGroup, type Item, withoutPose } from './sheets';
 import { hashOf, slug } from './lib';
+import type { TypedReading } from './typed';
 
 // ── the record ──────────────────────────────────────────────────────────────
 
@@ -184,6 +185,11 @@ export type Readings = {
    * writer proposed it and Jev read it (implied.ts); only those Jev reads as meant (ok) are changes.
    */
   implied?: Record<string, ImpliedReading[]>;
+  /**
+   * By moment: what its picture shows at one instant, as typed facts the writer proposed and Jev checked
+   * (typed.ts): read with S6's one prompt builder on (DREAMCHAT_ONE_BUILDER), which says the moment from them.
+   */
+  typed?: Record<string, TypedReading>;
 };
 
 /** One implied state of a moment: proposed by the writer, and Jev's reading of it on the moment's words. */
@@ -2440,6 +2446,7 @@ export function storyRecord(
   readings?: Readings | null,
   opts: RecordOptions = {},
 ): { record: StoryRecord; violations: Violation[]; notes: string[] } {
+  made++;
   const r = readings ?? {};
   const ctx = derive(b, items, r, opts);
   const violations = runRules(ctx);
@@ -2448,12 +2455,59 @@ export function storyRecord(
     hashOf({
       b: { ...(b ?? {}), style_options: undefined },
       items: (items ?? []).map((i) => ({ id: i?.id, fields: i?.fields, status: i?.status, media: i?.mediaId })),
-      readings: r,
+      // The typed readings are the one prompt builder's (S6): the record reads them only with it on.
+      readings: oneBuilder() ? r : { ...r, typed: undefined },
       words: opts.words ?? null,
       style: opts.style?.name ?? null,
     }),
   );
   return { record: ctx.record, violations, notes: ctx.notes };
+}
+
+let made = 0;
+/** How many story records have been made so far in this process (a test counts them). */
+export const recordsMade = () => made;
+
+/** The switches a record may be made otherwise under: none of them may give another state the same record. */
+const SWITCHES = [
+  'DREAMCHAT_RETIRE',
+  'DREAMCHAT_ONE_BUILDER',
+  'DREAMCHAT_RECORD',
+  'DREAMCHAT_CUT_SHEET',
+  'DREAMCHAT_CAMERA',
+  'DREAMCHAT_REFS',
+];
+
+/** The last few records made, each by exactly what it was made from. */
+const records: { key: string; out: ReturnType<typeof storyRecord> }[] = [];
+
+/**
+ * The story record of one state of the dream: with the one prompt builder's first step on (S6 ledger 1), made
+ * once from the same inputs, however many read it (the plan, the cut sheet, the panel's tree, the shadow log);
+ * otherwise made for each, as before. Every reader takes it as it is and never changes it.
+ */
+export function oneRecord(
+  b: Breakdown,
+  items: Item[] = [],
+  readings?: Readings | null,
+  opts: RecordOptions = {},
+): ReturnType<typeof storyRecord> {
+  if (!builds('one_record')) return storyRecord(b, items, readings, opts);
+  const key = hashOf({
+    b,
+    items,
+    readings: oneBuilder() ? (readings ?? {}) : { ...(readings ?? {}), typed: undefined },
+    words: opts.words ?? null,
+    style: opts.style ?? null,
+    // What the record's rules read of the switches: a clean-up turned off makes another record.
+    switches: SWITCHES.map((k) => process.env[k] ?? null),
+  });
+  const hit = records.find((x) => x.key === key);
+  if (hit) return hit.out;
+  const out = storyRecord(b, items, readings, opts);
+  records.unshift({ key, out });
+  records.length = Math.min(records.length, 8);
+  return out;
 }
 
 /**
@@ -2896,7 +2950,7 @@ export function recordForPlan(
 ): RecordPlan | undefined {
   if (recordMode() !== 'on') return undefined;
   try {
-    return forPlan(storyRecord(b, items, readings, opts).record);
+    return forPlan(oneRecord(b, items, readings, opts).record);
   } catch {
     return undefined;
   }

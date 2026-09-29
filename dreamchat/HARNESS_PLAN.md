@@ -17,7 +17,7 @@ context mirrors it.
 | S3 One cut sheet per picture | Done | the sheet's prompt equals the old builder's on 1052 rebuilds and 48 of 48 live builds |
 | S4 Camera rules | Merged behind DREAMCHAT_CAMERA (off; needs the cut sheet and, since 29 Sep, the story record on); picture check judged and its misses traced | owner's blind A/B on 20 moments ($3, spent): new right 15/20 against old 10/20; faults put right 5/7; guards 10/13 new, 9/13 old; 5 misses traced to root causes; 1 of 5 fixed on lab (fixtures up their walls, the front wall never labelled with a fixture's name), 4 left, each with where it starts (log) |
 | S5 References and in-between pictures | Merged behind DREAMCHAT_REFS (off; needs the cut sheet on); second review's fixes (earlier pictures, their gate, sides) merged 29 Sep with the review's own two fixes; the S5 picture check not yet re-proposed (see "S5 fix round two") | the reference check, record and sheet on, frozen / live (with implied readings): a subject by two images 40 / 103 moments to 0 / 0; waited for and never sent 67 / 215 to 1 / 1 (a picture judged wrong, drawn); from another side 2 / 8 to 0 / 0; earlier pictures sent against the cut's camera or state, for layout 2 / 37 to 0 / 0 (16 live edits with no floor plan to compare), for look 22 / 51 to 0 / 0; in-between pictures not needed 17 of 29 / 44 of 79 to 0 of 12 / 0 of 37. Prompt cases: guards 36/36, counted 19/33 and 27/33 (camera) with S5 off and on, hypotheses 5 to 10 and 7 to 12 of 18 |
-| S6 One prompt builder, clean-ups retired | Test written; typed readings of the 526 moments done (branch `s6-readings`) | a ledger of 16 clean-ups, S4's 4 word lists and 14 duplicates, in order; every moment says a fact twice (frozen 2350 facts, live 6595), 21 of 115 frozen moments say an action no picture shows (live 134 of 411); built after S5 |
+| S6 One prompt builder, clean-ups retired | Merged 29 Sep behind DREAMCHAT_ONE_BUILDER (off; off is today byte for byte); stopped at a clean point (27 Sep): ledger rows 1, 3, 4 done, row 2 stopped (needs row 17), rows 5-34 open in order | rows 1-4 move no prompt (0 of 128 / 482 pictures, all switches; 0 of 144 / 490, record and sheet only), prompt cases as before (27/33 counted and 36/36 guards, all switches; 19/33 and 36/36, record and sheet); the fact-twice and action measures are still the base's (frozen 2324 facts twice, 21 moments an action no picture shows; live 6505, 134): no row that moves them is built yet |
 | S7 Jev checks routed by tags | Done (routing switch off; every Jev reading logs) | measured on the 122 pictures the owner judged (as sent): the gate and "storyboard complete?" are at chance (AUC 0.36-0.56); 16 library questions not measurable yet; 0 of 28 checks earn acting; a check earns acting only at its measured bar, counted by moments. Run the picture checkpoints with `DREAMCHAT_JEV_ROUTED=on` so the library questions' readings join the owner's new verdicts |
 | S8 Listening | Done: on by default since 27 Sep (`DREAMCHAT_LISTEN=off` brings the old listening back) | 20 dreams on Claude: either/or 23% to 0, leading 17% to 0, "I don't remember" 0.24 to 0.14, listening ended early 6/20 to 3/20; told facts kept as said 0.942 vs 0.949 (within noise) |
 | S9 Record of what was drawn, staleness | Merged behind DREAMCHAT_AS_DRAWN (off); fresh send (DREAMCHAT_FRESH_SEND, off) in review | every picture keeps what it was sent; rebuild as sent 57/61 to 61/61 moments, 6/16 to 16/16 in-between pictures; 258/258 stale pictures found after 56 changes, 0 false; switch or code drift reads unknown, never stale; fresh send: pictures drawn behind the dream 14 to 0 on ten redrawn dreams |
@@ -169,7 +169,7 @@ One **cut sheet** per cut is the spine everything is assembled from:
 | S4 | Camera rules and shot roles: the scene's line, a reverse angle turns the room (what is now left, right, behind), point-of-view shots show at most hands, vehicle screen direction, same setup means the same camera | built on branch `s4-camera` behind DREAMCHAT_CAMERA=on, which needs DREAMCHAT_CUT_SHEET=on (off by default; off is today byte for byte: 0 of 144 frozen and 0 of 490 live pictures moved, record and sheet on; 0 of 140 and 0 of 477 with them off), 27 Sep; its faults found and fixed. With Claude's readings, record and sheet on: `--step S4` 9/11 counted (1/11 off), guards 8/8; all cases 28/33 (19/33 off), guards 36/36; open: night-market m2 (the floor plan's facing), lighthouse-fresh m12 (its words never say the tractor moves), snow-train m6 hand (a hypothesis) | The S4 cases pass (`--step S4`: snow-train m2 reverse and m3 seat, snow-train-2 m2 same setup, lighthouse-fresh m12 heading, lighthouse-first m3, night-market m2, library-1 m4/m5, orchard m4 hands and m7 legs; lighthouse-fresh m10 needs a new floor plan) |
 | S5 | References and variants: one image per subject; in-between pictures only when an edit carries several changes; variants kept and reusable; the grey mock-up as a reference chosen by tag | built on branch `s5-refs` behind DREAMCHAT_REFS=on (`refs.ts`; needs DREAMCHAT_CUT_SHEET=on; off by default and off byte for byte: 0 of 428 frozen and 0 of 1,436 live pictures moved against lab 3392d83, record, sheet and camera off and on), 27 Sep; reviewed, and the review's seven fixes in (the owner's rule that a side the floor plan lays out is no change, each thing once in what an in-between picture shows, a place's state said beside the mock-up, image 1 routed only as far as the verdicts go, a crowd by its flag, view pictures edited from the place's state not another side, tests that fail without each rule). `DREAMCHAT_REFS=sketch` is all of it but one image per subject. Every bar of the reference check met, frozen and live, record and sheet on and off, camera on, but one live in-between picture a moment does not need (927a g6); prompt cases: guards 36/36, no case lost, 5 hypotheses more met |
 | S7 | Jev layer 2: checks routed by tags, a question library from the film rules, a labelled set per question; a check may hold a picture only if it predicts pictures | built behind DREAMCHAT_JEV_ROUTED=on (off by default) on branch `s7-jev-routed` (27 Sep): eval written first and run, routing built, independently reviewed, review fixes in (an earned check acts under the default logging; each library question held to its measured bar; the bar counts moments and noise; the storyboard measured on the pictures drawn from its shot) | Each question meets its bar on its labelled set. Run on the 122 pictures the owner judged (62 moments): no check meets the bar to act (0 of 28 distinct checks). The gate's four questions and "storyboard complete?" are measured and at chance; the 16 new questions, planFacts's re-plan and the continuity plan's warnings are not measurable yet (too few flags, and the questions were written after reading these verdicts, so only later pictures can test them). Routed, every Jev reading only logs until a check is earned; off unchanged; Jev calls a dream on the ten redrawn dreams: acting 115.8, logging 23.1, routed 23.3 (below) |
-| S6 | `assembleCut`: prompt and references from the sheet, each fact once, action as visible facts; retire the regex clean-ups one by one | not started; eval written and merged (27 Sep, below); its model step, the typed reading of the 526 saved moments, done and cached on branch `s6-readings` (27 Sep, below) | Every clean-up and duplicate of the ledger retired in its order, each step its own measured change (`evals/retire.ts`, `evals/corpus.ts --verdicts`): every change on every saved dream classified, 0 unclassified, 0 regressions; each fact once (0 facts said twice outside the shot's words, of the look, colour and state kinds, and of the story kind with the typed action; 0 facts on two kinds of field); the action as visible facts (0 moments breaking its rules); 0 ids in words; counted cases: every one met on its base stays met, library-1-m2-books met, lighthouse-fresh-m12-heading once motion is typed; guards 36/36 |
+| S6 | `assembleCut`: prompt and references from the sheet, each fact once, action as visible facts; retire the regex clean-ups one by one | building on branch `s6-build` (from lab 4746967) behind DREAMCHAT_ONE_BUILDER (off by default; `on` every step built, a step's name the steps up to it, `none` the builder on with no step); stopped at a clean point on 27 Sep: the switch and each moment's typed facts on its sheet, ledger rows 1, 3 and 4 done and measured (0 prompts moved), row 2 stopped, rows 5-34 open; see "S6 built so far" under the S6 eval | Every clean-up and duplicate of the ledger retired in its order, each step its own measured change (`evals/retire.ts`, `evals/corpus.ts --verdicts`): every change on every saved dream classified, 0 unclassified, 0 regressions; each fact once (0 facts said twice outside the shot's words, of the look, colour and state kinds, and of the story kind with the typed action; 0 facts on two kinds of field); the action as visible facts (0 moments breaking its rules); 0 ids in words; counted cases: every one met on its base stays met, library-1-m2-books met, lighthouse-fresh-m12-heading once motion is typed; guards 36/36 |
 | S8 | Listening: every reply checked against its move; major picture gaps asked openly, minor ones imagined and marked; the retelling ends with the moments | built and merged behind DREAMCHAT_LISTEN (off); review fixes on `s8-listening` (27 Sep): the come-back rule restricted, choice readings that keep changes, the retelling's breakdown started early, and the test's move-selection floors; proven offline (replayed moves, re-read answers, a hand-labelled set), and a fresh simulation on the Claude writer, both arms (27 Sep): every target met or met by hand but two (said but not in their words, about 9 real of 518; answers misread, 2 real of 99), and one floor fails beyond noise (retellings begun as told all they remember, 6 to 12 of 20: 10 of the 12 right after a come-back to an earlier thread); not to be switched on until that rule is fixed (below) | `evals/listening.ts` against the frozen before (`evals/listening-before`, 40 fresh simulated conversations): listening-turn compliance at least 90%, either/or under 5%, leading 0, said but not in their words 0, every way of drawing it kept, every retelling ends with a list of the breakdown's moments, no answer misread; floors not below the before (below) |
 | S9 | Record of what was drawn, and staleness; sequences and look keys | built on branch `s9-as-drawn` behind DREAMCHAT_AS_DRAWN (off by default); eval met (27 Sep, below); review fixes done (27 Sep): records keep their switches and keys' version (drift: unknown, never stale), the pictures drawn behind the dream reported, staleness worked out when a picture lands, and the fresh send behind DREAMCHAT_FRESH_SEND (off) | Every picture drawn keeps what it was sent and drawn from; a rebuild reading it gives each as sent (live-flow's four moments and the in-between pictures' look lines included); 0 stale where nothing changed; each made change makes exactly its dependent pictures stale, with the reason; stale pictures found on saved dreams, a sample hand-checked; corpora unchanged (below) |
 | S10 | Only after S0-S9 pass: a paid benchmark on the five replay dreams, judged by the owner | waiting | Owner's first-take rate against today's |
@@ -1473,6 +1473,58 @@ One **cut sheet** per cut is the spine everything is assembled from:
   | 31 | S4's: a vehicle going (`GOING`, `PROPELLED`, `STOPPING`, `goingIn`) | A lasting state of motion in the record, going until it stops (the producer, or a reading) | when S4 merges | lighthouse-fresh-m12-heading met |
   | 32 | S4's: the water's height (`WATER`, `BODY`, `waterLevel`) | A typed level of a place's water (what it reaches: a fixture, a part of the body, or metres), from the implied reading | when S4 merges | as the others |
   | 33 | S4's: windows and doors on walls (`openingsIn`, `WALL_WORDS`), looking out (`LOOKS_OUT`) | The blocking's fixtures with their wall and height (a model step, not S6's), the plan's camera | when S4 merges | listed so they are not lost |
+  | 34 | The shot's brief (`producer.ts shotFor`/`SHOT`, asked in `session.ts shootScenes` and `startFrame`) written from the floor plan's view, the moment's words and the moments before, never the sheet's facts: briefs add facts the sheet says otherwise (added 27 Sep from the S4 picture check's root causes) | The brief asked from the same sheet facts the prompt says (the typed act at one instant, the water's level, open or shut, who holds what, who is in view and where, what the camera rules add); a transfer drawn mid-act (the giver holds it out, or both hold it), the floor plan's holder at that instant agreeing; a brief refused (as `namesEvery` refuses one) that says after-the-fact ("just after", "already", "having", "drawn back from"), places someone not in view, or contradicts a sheet fact; a saved brief that does so falls back to the view's words | library-3 m6 ("a whale passes under the water, out of sight below the boat" beside the rules' "beside the boat, part of it above the surface"), library-1 m5 (a lamp "just above the water" under 4 m of water), snow-train-2 m6 ("his arms just drawn back from handing over the case": the owner judged it wrong, the frame after the handover; its plan has the receiver holding already), orchard m6 (Tomas "just outside the left edge" when he is gone), snow-train m3 ("head cut off") | give or hand-over moments whose plan has the receiver holding already: 0; of the 212 saved briefs and the checkpoint's, after-the-fact phrasing and contradictions with sheet facts: 0; a new prompt case snow-train-2-m6-instant met; a check that flags a brief contradicting a sheet fact |
+
+  **S6 built so far (27 Sep, branch `s6-build` from lab 4746967; stopped at a clean point).** The switch:
+  `DREAMCHAT_ONE_BUILDER` (`cleanups.ts oneBuilder`, `builderSteps`, `BUILDER_STEPS`: the steps built, in the
+  ledger's order; unset or `off`, every prompt as before; `none`, the builder on with no step; `on`, every step; a
+  step's name, the steps up to it, so each step is measured against the one before). A clean-up's step has its
+  name, and `retired` reads it as off once built. With the builder on, each moment's typed reading is read while
+  the shots are planned (`session.ts typedReadings`, the writer and Jev), kept in `draft.readings.typed`, and put on
+  its cut sheet (`CutSheet.typed`, `takenOf`: only the facts Jev took); the evals read it from the typed cache only
+  (`evals/typed-cache.ts withTyped`, wired into `corpus.ts`, `retire.ts`, `prompt-cases.ts`, `references.ts` and the
+  checkpoint tool), and list a moment not cached. S4's word lists got their switches (`hands`, `own_body`, `going`,
+  `water_level`, `openings` in `cleanups.ts`); their footprints on the new base are below. The switch is in
+  `test/fakes.ts STEP_SWITCHES` and `evals/checkpoint-set.ts STEP_SWITCHES`. Tests: `test/onebuilder.test.ts`.
+  One typed reading was missing with the camera rules on (library-1 m5: `namesForIds` puts "the old city library"
+  where the saved words say "l2", so the writer's question differs): read anew, 1 writer call and 1 Jev call, cached.
+
+  | row | status | measured (frozen / live; all: record, sheet, camera and references on; rs: record and sheet only) |
+  | --- | --- | --- |
+  | 1 one record | done (`one_record`: `record.ts oneRecord`, one record per state of the dream, read by `recordForPlan`, `sheetDream`, the panel's tree and the shadow log; a rebuild makes it once, not twice) | 0 pictures moved, all 128 / 482, rs 144 / 490; prompt cases unchanged |
+  | 2 one tree | stopped: not built | the panel's tree is resolved from a plan made again now, with the pictures drawn and the conversation's goals; the sheet's from the plan the moments are drawn from, so that drawing and a rebuild read the same. One tree needs one plan: row 17 (the sheet built from the plan in force when a picture is sent, and S9's fresh send as the default) comes first; then the sheet reads the panel's tree and its ledger's drawn state |
+  | 3 one image cap | done (`frames.ts MAX_IMAGES`, read by the assembler, framePrompt and the pre-draw check; the same number, so no switch) | 0 moved |
+  | 4 paragraph ids and image subjects | done (`paragraph_ids`: `AssembledRef.subjects`; `Framed.assembled` and `RebuiltPicture.assembled`; `evals/prompt-cases.ts refsOf` reads them, and agreed with its own reading on all 526 moments; `session.ts onBrief`/`onView` tell the brief and the view by paragraph id, which also catches "What the dreamer sees", missed by the words; `gate.checkReferences` still reads "Image N" back from the prompt as sent, on purpose: a check of the assembly by its output) | 0 moved; prompt cases unchanged, case by case |
+  | 5-34 | open, in the ledger's order | not started |
+
+  The base these are measured against (lab 4746967, S4 and S5 merged; builder off; Claude's readings from the
+  cache; `runs/retire/s6base-*`, `fp-*`):
+
+  | reading | all, frozen | all, live | rs, frozen | rs, live |
+  | --- | --- | --- | --- | --- |
+  | facts said twice (of all) | 2324 of 2981 | 6505 of 8724 | 2350 of 3003 | 6595 of 8771 |
+  | by kind, facts: look; colour; state; story; shot | 2005; 165; 86; 37; 31 | 5694; 474; 175; 113; 49 | 2013; 165; 107; 36; 29 | 5698; 474; 265; 109; 49 |
+  | on two kinds of field, moments / facts | 45 / 58 | 107 / 145 | 51 / 69 | 117 / 163 |
+  | "What happens" a picture cannot show (moments) | 21 | 134 | 21 | 134 |
+  | ids in words (moments; in-between) | 0; 0 | 0; 0 | 1; 1 | 1; 1 |
+  | prompt cases: counted (incl. model step); guards; hypotheses | 27/33; 36/36; 12/18 | | 19/33; 36/36; 5/18 | |
+
+  Footprints on the new base, all switches, frozen / live (moments + in-between pictures): gone 2 / 3, after_words 7
+  / 19, vague 0 / 42, shades 15 / 54, pose 37 / 68, members 0 / 3, writing 3 / 5, spoken 2 / 2, state_verb 0 / 5+1,
+  fills 2 / 2, opens 8+2 / 12+2, not_there 2 / 2, taken 4 / 4, shut_away 11 / 17, self and holds_name 0 / 0; S4's:
+  hands 1 / 1, own_body 0 / 1, going 5 / 6, water_level 17 / 26, openings 1 / 1 (none with the camera off).
+
+  **How to resume.** `git checkout s6-build`; symlink `dreamchat/node_modules`; copy `runs/typed-cache.json`,
+  `runs/implied-cache.json` and `runs/prompt-cases/jev-cache.json` (merge caches, never lose entries). Each step:
+  add its name to `BUILDER_STEPS` in the ledger's order and gate its change on `builds('<name>')` (a clean-up's step
+  has the clean-up's name and puts the typed fact in its place; the assembler reads only the sheet, so a step that
+  changes what is said puts it on the sheet); a committed test that fails without the typed fact; then measure
+  with `DREAMCHAT_WRITER=claude DREAMCHAT_DATA=<the dreamchat folder with state/>` and the switch set both ways (all;
+  record and sheet only), frozen and live: `evals/corpus.ts --label <step>-… --against <previous step>-…
+  --verdicts evals/s6-verdicts.json --came-back fp-<set>-<frozen|live>:<clean-up>` (every change classified in the
+  verdicts file, 0 unclassified, 0 regressions), `evals/retire.ts --checks`, `evals/prompt-cases.ts --no-ask`
+  (no counted or guard case lost). `fp-*` are the base's footprints (`evals/retire.ts` with the builder off). Next is
+  row 5 (names three ways and ids in words: `namesForIds` to the default with the builder, the record's `called`).
 
   In all: 16 clean-ups and word lists on lab with a switch each (9, 10, 11, 12, 13, 19, 20 counting two, 22 to 29),
   S4's four groups when it merges (30-33), and 14 duplicated computations or repetitions (1-8, 14-18, 21). Not
@@ -1683,6 +1735,9 @@ between sessions.
 | S6 | checkpoint tool | S6's switch goes into `evals/checkpoint-set.ts STEP_SWITCHES`, and every image stays mapped by `todayOf`. |
 | S5 | S9 | Two tests of S9 fail on lab with the record and sheet on, S5 or not ("a moment no longer in the dream is stale because it is no longer planned", a44a and 8ceb: a reason of kind sequence names a picture not gone with the moment). Three more failed with the camera on because the fixture draws with framePrompt and a rebuild sends the camera rules: the fixture now holds the camera rules and S5 off (27 Sep). |
 | S5 | S6 | With S5 a subject shown by its in-between picture is said "as they are now (what: now)" and the changes that picture does not show as exceptions; the wording is S5's first and S6's to settle with the rest. |
+| S4 checkpoint | S6 | The shot's brief is written from the view and the moments before, never the sheet's facts, so it can contradict them (the whale under the boat, a lamp above 4 m of water, arms drawn back after a handover, someone gone placed at the edge, a head cut off): S6 ledger 34, with its measures and a new prompt case, snow-train-2-m6-instant. |
+| S6 | S4, S1 | The typed readings are keyed by exactly what the writer was asked, and with the camera rules `namesForIds` puts a name where the saved words have an id: library-1 m5 was read again with the camera on (1 writer and 1 Jev call). When row 5 moves `namesForIds` to the builder's default, both keys are cached. |
+| S6 | S2, S7 | With the builder's paragraph ids, the pre-draw check's acting path (DREAMCHAT_CHECKS=act) tells the view's line by its paragraph, so a finding around "What the dreamer sees" now counts as the plan's, as "What the camera sees" did; logging, the default, is unchanged. |
 
 ## Known debt, by the step that clears it
 
@@ -1786,6 +1841,29 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   would reach 42 live moments' looks without `VAGUE`; a look is said twice in 409 of 411 live moments; the
   in-between picture's "the newspaper's newspaper" (S1 -> S6) is one of the renderings a typed part (`partOf`)
   ends.
+- **S6, where it stopped (27 Sep, `s6-build`).** Built: the switch, each moment's typed facts on its sheet, ledger
+  rows 1, 3 and 4 (no prompt moved). Stopped at row 2 (one tree), which needs row 17 first (see "S6 built so far").
+  Left, in order: 5 names and ids in words, 6 kinds, 7 who is in view, 8 looks from the record, 9-13 the look's
+  clean-ups, 14 a look said once, 15 colours once, 16 a state once, 17 the sheet at send (then 2), 18 the relation
+  to the cut before, 19 gone, 20 writing, 21 the moment's own words from the typed acts (library-1-m2-books), 22-29
+  the record's word lists for the typed readings (container facts keep snow-train-2's suitcase shut at m5 and m6:
+  the owner's decision below; `snow-train-2-m5-shut` stays met), 30-33 S4's word lists (hands and own body from the
+  typed pov, going from the typed motion: lighthouse-fresh-m12-heading; the water from the typed level), 34 the shot's
+  brief from the sheet's facts. Row 34, from the S4 picture check's root causes (27 Sep): the brief writer
+  (`producer.ts shotFor`, asked with the view and the moments before) is never told the sheet's facts, so a brief
+  can add what the sheet says otherwise: library-3 m6 (the whale "out of sight below the boat" beside the camera
+  rules' "part of it above the surface"), library-1 m5 (a lamp "just above the water" under 4 m of water),
+  snow-train-2 m6 ("his arms just drawn back from handing over the case", judged wrong by the owner: the frame after
+  the handover), orchard m6 (Tomas "just outside the left edge" when he is gone), snow-train m3 ("head cut off").
+  Under the one builder: (1) the brief is asked from the same sheet facts the prompt says (the typed act at one
+  instant, the water's level, open or shut, who holds what, who is in view and where, what the rules add); (2) a
+  transfer ("gives", "hands", "passes") is drawn mid-act, the giver holding it out or both holding it, and the floor
+  plan's holder at that instant agrees (snow-train-2 m6's plan already had the receiver holding it); (3) a brief is
+  refused that says after-the-fact ("just after", "already", "having", "drawn back from") or places someone not in
+  view, and a check flags a brief that contradicts a sheet fact (a saved one falls back to the view's words). Its
+  measures: give or hand-over moments whose plan has the receiver holding already, to 0; the 212 saved briefs and the
+  checkpoint's scanned for after-the-fact phrasing and contradictions with sheet facts, to 0; a new prompt case
+  snow-train-2-m6-instant.
 
 ## Open questions for the owner
 
@@ -1805,6 +1883,8 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   billing_error. Every test that asks Jev (prompt-case questions, the implied-state reading's checks, listening
   scores, simulations) is stalled until it is topped up. Work that needs no Jev continues meanwhile.
 
+- **Settled 27 Sep: snow-train-2's suitcase stays shut at m5 and at m6** (the owner, after the S4 picture check):
+  S6's container facts must keep it so where they retire `shutAway` (ledger 29), and `snow-train-2-m5-shut` stays met.
 - **Settled 27 Sep: "several" is two** (the in-between picture rule): built so in S5.
 - **Settled 27 Sep: a side the floor plan lays out is no change** (only story changes count): built so in S5.
 - **Settled 27 Sep (applied on `s5-fix2`): a side never drawn is no change, with or without a floor plan**; no side's
@@ -2594,6 +2674,23 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   side pictures gone); crowds of people only; the count of changes the check's own. Guards 36/36 with S5 off and
   on, record and sheet on and with the camera (111 Jev calls). The S5 picture check is not yet re-proposed (above:
   how to resume). No pictures drawn, no money spent.
+
+- 27 Sep: S6 begun on branch `s6-build` from lab 4746967 (S0-S5, S7-S9 merged), stopped at a clean point at the
+  owner's request. Built behind DREAMCHAT_ONE_BUILDER (off by default; off, and on with no step, 0 pictures moved on
+  every measured set): the switch and its steps (`cleanups.ts`), each moment's typed reading read while planning and
+  put on its cut sheet (the evals read the typed cache only), switches for S4's word lists, and ledger rows 1 (one
+  story record per state of the dream), 3 (one image cap) and 4 (the assembler's paragraph ids and image subjects,
+  read by the prompt cases and the pre-draw check). Row 2 (one tree) stopped: it needs row 17 first. Rows 1-4 move
+  no prompt: 0 of 128 frozen and 0 of 482 live pictures with record, sheet, camera and references on, 0 of 144 and
+  0 of 490 with record and sheet only; prompt cases case by case as before (27/33 counted, 36/36 guards, 12/18
+  hypotheses; 19/33, 36/36, 5/18). The measures the later rows move are still the base's ("S6 built so far"
+  above). Found and fixed: the one record was reused under another clean-up switch (a footprint read as nothing;
+  it is now kept by the switches too). Added from the S4 picture check's root causes: ledger row 34, the shot's
+  brief from the sheet's facts (transfers drawn mid-act, after-the-fact phrasing refused, a check for a brief
+  contradicting a sheet fact, a new case snow-train-2-m6-instant); and the owner's decision that snow-train-2's
+  suitcase stays shut at m5 and m6. Model calls: 1 writer and 1 Jev (library-1 m5's typed reading with the camera
+  on). `bun test`: 784 pass, 2 skipped, 0 fail, with every step switch unset and with every one on (the builder
+  too); typecheck clean. No pictures, no money.
 
 ## Owner's direction (29 Sep): reviews and merges move to the cloud session
 

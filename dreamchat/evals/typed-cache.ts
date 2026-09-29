@@ -96,6 +96,34 @@ export function cachedFns(
   return { write, jev };
 }
 
+const loaded = new Map<string, TypedCache>();
+
+/**
+ * A dream with each moment's typed reading in its readings (`draft.readings.typed`), from the cache only, as
+ * S6's one prompt builder reads them (DREAMCHAT_ONE_BUILDER): nothing is asked. `missing` names the moments
+ * whose reading is not in it (read as having no facts). The writer's key is DREAMCHAT_WRITER's model: the
+ * readings were made with Claude's (DREAMCHAT_WRITER=claude).
+ */
+export async function withTyped(
+  s: Session,
+  opts: { cacheFile?: string; jevModel?: string } = {},
+): Promise<{ session: Session; missing: string[]; read: number }> {
+  if (!s.draft?.breakdown) return { session: s, missing: [], read: 0 };
+  const file = opts.cacheFile ?? TYPED_CACHE;
+  let cache = loaded.get(file);
+  if (!cache) loaded.set(file, (cache = new TypedCache(file)));
+  const zero = (): Counts => ({ asked: 0, cached: 0, missing: 0 });
+  const fns = cachedFns(
+    cache,
+    { jevModel: opts.jevModel ?? process.env.JEV_EVAL_MODEL ?? 'jev-1.13.0', ask: false },
+    { writer: zero(), jev: zero() },
+  );
+  const { readings, errors } = await readTypedDream(s, fns);
+  const session = structuredClone(s);
+  session.draft = { ...session.draft!, readings: { ...(session.draft?.readings ?? {}), typed: readings } };
+  return { session, missing: Object.keys(errors).sort(), read: Object.keys(readings).length };
+}
+
 /** At most `n` at once. */
 export function limiter(n: number): <T>(fn: () => Promise<T>) => Promise<T> {
   let running = 0;

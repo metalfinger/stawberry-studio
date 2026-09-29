@@ -33,7 +33,7 @@ import {
   turnedInto,
 } from './frames';
 import { type AsDrawn, type Copies, currentRecord, matchGhost } from './asdrawn';
-import { type CutSheet, cutSheetMode, framed, ghostName, sheetDream } from './cutsheet';
+import { type CutSheet, cutSheetMode, type Framed, framed, ghostName, sheetDream } from './cutsheet';
 import { type CutFacts, cutFactsOf, routedMode } from './checks';
 import { actingOf, checkReferences, preflight, readPrompt } from './gate';
 import { refsMode, standsFor } from './refs';
@@ -59,6 +59,8 @@ export type RebuiltPicture = {
   /** With DREAMCHAT_CUT_SHEET=shadow or on: the moment's cut sheet, and where its assembly differs from framePrompt's. */
   sheet?: CutSheet;
   differs?: string[];
+  /** With the one prompt builder's paragraph ids: the paragraphs and images as the assembler put them in. */
+  assembled?: Framed['assembled'];
   /** S9: rebuilt from its record of what it was drawn from (the dream as it stood when it was drawn). */
   asDrawn?: true;
 };
@@ -219,6 +221,7 @@ export function rebuild(
       criteria: cut?.criteria ?? [],
       inView: inViewOf(it, sheets),
       ...(built.sheet ? { sheet: built.sheet, differs: built.differs ?? [] } : {}),
+      ...(built.assembled ? { assembled: built.assembled } : {}),
     });
   }
   return {
@@ -334,6 +337,7 @@ function fromRecord(
     criteria: m.frame.plan?.criteria ?? [],
     inView: inViewOf(frame, sheets),
     ...(built.sheet ? { sheet: built.sheet, differs: built.differs ?? [] } : {}),
+    ...(built.assembled ? { assembled: built.assembled } : {}),
     asDrawn: true,
   };
 }

@@ -65,9 +65,10 @@ import {
   recordMode,
   type Seen,
   type StoryRecord,
-  storyRecord,
+  oneRecord,
   type Unstaged,
 } from './record';
+import { builds, oneBuilder } from './cleanups';
 import { chooseRefs, type RefsLayer, refsMode } from './refs';
 import { groupMembers, isAnimal, isGroup, type Item, LOOK, type Shape, shapeOf, toldColours } from './sheets';
 import {
@@ -79,6 +80,7 @@ import {
   type TreePrep,
   type TreeRef,
 } from './tree';
+import { takenOf, type TypedMoment, type TypedReading } from './typed';
 
 /** Whether the cut sheet runs: off (the default), in shadow beside framePrompt, or on, writing the prompts. */
 export function cutSheetMode(): 'off' | 'shadow' | 'on' {
@@ -301,6 +303,11 @@ export type CutSheet = {
   rules?: CameraLayer;
   /** With S5's references on (DREAMCHAT_REFS): image 1 by the tags, and each one's image of its stage in force. */
   refs?: RefsLayer;
+  /**
+   * With S6's one prompt builder on (DREAMCHAT_ONE_BUILDER): what the picture shows at one instant, as the
+   * moment's typed reading has it (typed.ts), each fact Jev took; empty where the moment was not read.
+   */
+  typed?: TypedMoment;
   flags: string[];
   /** Where each part of the sheet came from. */
   sources: Record<string, string>;
@@ -318,6 +325,8 @@ export type SheetDream = {
    * sheet reads how cuts stand to each other from the very cameras the plan does.
    */
   cameras?: Record<string, Eye>;
+  /** With the one prompt builder on: each moment's typed reading, from the dream's readings. */
+  typed?: Record<string, TypedReading>;
 };
 
 /**
@@ -338,7 +347,7 @@ export function sheetDream(x: {
 }): SheetDream {
   let record: StoryRecord | null = null;
   try {
-    record = storyRecord(x.breakdown, x.items, x.readings, { words: x.words, style: x.style }).record;
+    record = oneRecord(x.breakdown, x.items, x.readings, { words: x.words, style: x.style }).record;
   } catch {
     record = null;
   }
@@ -360,6 +369,7 @@ export function sheetDream(x: {
     tree,
     record,
     ...(cameraMode() === 'on' ? { cameras: Object.fromEntries(camerasOf(x.plan)) } : {}),
+    ...(oneBuilder() && x.readings?.typed ? { typed: x.readings.typed } : {}),
   };
 }
 
@@ -612,6 +622,7 @@ export function cutSheet(x: CutSheetInput): CutSheet {
     tags,
     ...(rules ? { rules: rules.layer } : {}),
     ...(refs ? { refs } : {}),
+    ...(oneBuilder() ? { typed: takenOf(dream?.typed?.[frame.id], f.eyes) } : {}),
     flags: [
       ...(rules?.flags ?? []),
       ...(tree?.flags ?? []),
@@ -1097,6 +1108,12 @@ export type Framed = {
   sheet?: CutSheet;
   /** Where the sheet's assembly differs from framePrompt's (shadow and on). */
   differs?: string[];
+  /**
+   * With the sheet on and the one prompt builder's paragraph ids (S6 ledger 4): each paragraph as sent, by
+   * name, and each image with its source and whom it is attached for, as the assembler put them in. What the
+   * gate and the evals read, where they worked it out again from the words.
+   */
+  assembled?: Pick<Assembled, 'lines' | 'references'>;
 };
 
 /**
@@ -1131,6 +1148,7 @@ export function framed(x: CutSheetInput, mode = cutSheetMode(), site = 'frames',
       depicted: made.depicted,
       sheet,
       differs,
+      ...(builds('paragraph_ids') ? { assembled: { lines: made.lines, references: made.references } } : {}),
     };
   return { ...today, sheet, differs };
 }
