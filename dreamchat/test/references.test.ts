@@ -14,7 +14,7 @@ import {
   storyChanges,
   waitedNotSent,
 } from '../evals/prompt-cases';
-import { mockupRoute, referencesOf, totalsOf } from '../evals/references';
+import { type MomentRefs, referencesOf, totalsOf } from '../evals/references';
 import { loadDream } from '../evals/saved';
 import { rebuild } from '../plan';
 import type { Session } from '../session';
@@ -147,17 +147,23 @@ describe('the references chosen', () => {
     expect(t.first['no sheet'] ?? t.first.two_shot).toBeDefined();
   });
 
-  test('the routing the verdicts suggest for the mock-up (a hypothesis)', () => {
-    expect(mockupRoute({ role: 'two_shot', move: 'other_side' })).toBe(true);
-    expect(mockupRoute({ role: 'wide', move: 'reverse' })).toBe(true);
-    expect(mockupRoute({ role: 'pov', move: 'seat' })).toBe(false);
-    expect(mockupRoute({ role: 'pov', move: 'other_side', placeOnly: true })).toBe(true);
-    expect(mockupRoute({ role: 'close_up', move: 'same_side' })).toBe(false);
-    expect(mockupRoute({ role: 'single', move: 'jump' })).toBe(false);
-    expect(mockupRoute({ role: 'single', move: 'other_place' })).toBe(false);
-    expect(mockupRoute({ role: 'wide', move: 'other_place' })).toBe(true);
-    expect(mockupRoute({ role: 'group', move: 'same_side', faceless: true })).toBe(false);
-    expect(mockupRoute({ role: 'wide', move: 'first', faceless: true, establishing: true })).toBe(true);
-    expect(mockupRoute({})).toBe(false);
+  test('a camera on a floor plan with no layout anchor as image 1 is counted (every cut keeps one: none should be)', () => {
+    const m = (id: string, first: MomentRefs['first'], shot: boolean): MomentRefs => ({
+      id,
+      images: 2,
+      first,
+      ...(shot ? { shot: true } : {}),
+      changes: 1,
+      changeKinds: [],
+      twice: [],
+      notStage: [],
+      otherSide: [],
+      against: [],
+      waited: [],
+      lightOnly: [],
+    });
+    const moments = [m('m1', 'mockup', true), m('m2', 'edit', false), m('m3', 'free', true), m('m4', 'free', false)];
+    // m3 has a camera on its floor plan and goes out with the sketches alone; m4 has no floor plan to make one from.
+    expect(totalsOf({ d: { moments, ghosts: [] } }).noAnchor).toBe(1);
   });
 });

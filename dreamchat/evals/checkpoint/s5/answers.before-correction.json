@@ -1,0 +1,159 @@
+{
+ "checkpoint": "s5",
+ "updated": "2026-09-29T12:36:54.882Z",
+ "answers": {
+  "lighthouse-first-m7": {
+   "answer": "neither",
+   "note": "I feel both of them look a little wrong because it feels like the environment is changing. Otherwise, other things are fine, like how they are holding boards and the perspective. It feels like they are not in the same room, maybe. ",
+   "at": "2026-09-29T12:28:19.617Z",
+   "shown": {
+    "a": "0b76d50c628766bf3e24e964d858b50d14417d65adb2b25bfe90c910e8e0dca6",
+    "b": "cab6390f2a1984cb12ae821b71e6b30fa9aeea28b61661aa02309246481117ec"
+   }
+  },
+  "lighthouse-first-m8": {
+   "answer": "a",
+   "note": "Both of them look right. The A looks more right because you can tell the vehicle is a tractor, and the second one looks more like a car. ",
+   "at": "2026-09-29T12:28:45.969Z",
+   "shown": {
+    "a": "fe198cdc23745ae45cb3b35e6bf92f41056bfe31d252576d6a9f38db7f1adace",
+    "b": "52598d73ca11ad56055c0a0db10ebae55d08ff33e111b934d5df39c37c5ed4ba"
+   }
+  },
+  "lighthouse-fresh-m4": {
+   "answer": "neither",
+   "note": "Both images look like the person is already inside the lighthouse. As for the script, the person is outside the lighthouse and now trying to open the door. ",
+   "at": "2026-09-29T12:29:18.954Z",
+   "shown": {
+    "a": "e63e8af923487ffabf58a467a11972e245e9bbee6282c42023d5f3706b491d33",
+    "b": "fe5fb751f296d3a91d4768514e3a10c02a47b4c1000c23de975d8e81e9251ccb"
+   }
+  },
+  "lighthouse-fresh-m9": {
+   "answer": "b",
+   "note": "B looks right because it looks like a person would have looked left on the window and might have seen the tractor. ",
+   "at": "2026-09-29T12:29:44.773Z",
+   "shown": {
+    "a": "e229947d1aac2324d5cc2634f4efe4486d66dc1b9a1a62a844478a2cf12b41dc",
+    "b": "0d58b539fd044de1e34590b83665a6b3065d07d5d8838665ad04a45642e3f7b5"
+   }
+  },
+  "snow-train-m6": {
+   "answer": "b",
+   "note": "B looks more correct, but still not quite right. I'll tell you the reason. Composition-wise, A is correct, but the movement is off. In A, the dreamer is very far from the door, so the action doesn't match. In B, the dreamer is close to the door, but it feels like the dreamer has sat down rather than maybe holding the door, looking at it, or something like that. ",
+   "at": "2026-09-29T12:30:30.142Z",
+   "shown": {
+    "a": "038b649cff9c8e2078d9266523a5d97db632e9f06bc00f3f4c6f95f159794d00",
+    "b": "ce83db66e274793fe67888338340aa56e47231d6f27033e817f93403a5800187"
+   }
+  },
+  "library-1-m4": {
+   "answer": "a",
+   "note": "A looks more correct than B. B looks like the whale is not in the water. It feels like it's a little above the water and a little below it, but in A, it's very clear that it is under the water. ",
+   "at": "2026-09-29T12:30:57.743Z",
+   "shown": {
+    "a": "83f57dc67019bbe98bdfef3a3e8c93294b5afd0126c315658fb2fd125a7d4dd2",
+    "b": "a889b2143f4d0901a75067cfe352c7a6162bdbb771a911fbb54ca45392607010"
+   }
+  },
+  "library-1-m5": {
+   "answer": "neither",
+   "note": "B looks right because it feels more realistic, but it is not 100% correct. If you compare it in terms of continuity with the picture before, it feels like the library has changed. I would have imagined the water has risen, and they are reaching for the window above, but what we see in B is that the window has come down and become bigger. I don't think that follows the scene. A is completely wrong because the wall of the library has suddenly disappeared and become something else, and the water level is lower than in the previous image. ",
+   "at": "2026-09-29T12:32:00.563Z",
+   "shown": {
+    "a": "a7aef4fcae99283e0e07251244b813b5b00593697de77d51e867180594d35e28",
+    "b": "3fb176db678148b24798043658c779102fe0211c29f12124a1099a2c60657ec7"
+   }
+  },
+  "library-2-m2": {
+   "answer": "both",
+   "note": "Yeah, both feel right. In both of them, it feels like the water is coming inside. The B looks more correct, but A is also correct. ",
+   "at": "2026-09-29T12:32:21.332Z",
+   "shown": {
+    "a": "1b308212549ff3c59ce6e3b559b91a11222ed339c5eb78a26c8dd63a4f3a9968",
+    "b": "66cb7ead0a6a00c0adc301de6fd0600e4c606c685be8802d948585c8163a1fd9"
+   }
+  },
+  "library-2-m3": {
+   "answer": "both",
+   "note": "Again, both of them are partially correct because the script says the water rises over the desk. In A and B, it feels like the water is rising compared to the picture before, but not over the desk. ",
+   "at": "2026-09-29T12:32:41.515Z",
+   "shown": {
+    "a": "b26fd2489df31c1bbdaea00847c40f6de90895349bc3801793b73c5ef1550175",
+    "b": "943ca6f8e8bd01917f02047dab535c6835d1c9485f9fc8e1373c852ca919ae33"
+   }
+  },
+  "library-2-m4": {
+   "answer": "both",
+   "note": "Both images are identical, and both look correct, though. ",
+   "at": "2026-09-29T12:33:02.700Z",
+   "shown": {
+    "a": "cea338a63f2a1c7cca0b4d5b0c7a4680adebcf3722b2fb33924490992a7a6a3a",
+    "b": "f3337710184a7140b1f66bb978827852d7552fc7ef8bcb0e018605a88fc9a699"
+   }
+  },
+  "library-3-m4": {
+   "answer": "both",
+   "note": "Composition-wise, both are correct. The only thing is that, compared to the picture before, it feels like the dreamer's position has changed in A and B. If the dreamer was standing in the same place or in some frame where we see the dreamer moving, which justifies the new position, that would have been much better. ",
+   "at": "2026-09-29T12:33:32.901Z",
+   "shown": {
+    "a": "973c7ad2ace643cd6b57ce5b4224afccc73c3aad2759483217f3a20c5e527a78",
+    "b": "f86db5f3748d02c3718cb1492dfed11059aaa4264bda8c4f48b268411c707751"
+   }
+  },
+  "library-3-m8": {
+   "answer": "a",
+   "note": "A looks more correct, and B is completely wrong because the boat is outside the window. It's not like it looks wrong. A looks more correct because it feels like they're trying to get out of the library from that window above with the boat. ",
+   "at": "2026-09-29T12:34:16.741Z",
+   "shown": {
+    "a": "fb293857c0525efb67613cbeac8f7c14b8793882cd2af82dc452718cc552b1b5",
+    "b": "6cf90bb256f736d6a602bd901e4aea1822e6a1da13701caec6e2c61674361a9a"
+   }
+  },
+  "snow-train-2-m6": {
+   "answer": "a",
+   "note": "100% A is correct. The thing which is wrong with B is that the proportion of the briefcase is wrong. The briefcase is open. ",
+   "at": "2026-09-29T12:34:37.406Z",
+   "shown": {
+    "a": "ff7ae575aed77a35a66a71ef86434fcbed23239aaae1c8e25a3dc10cef20f376",
+    "b": "de36de59b8f3f21093f35bcc15372afd94745ce233160921e466f6d5b7ee8f8b"
+   }
+  },
+  "orchard-m2": {
+   "answer": "both",
+   "note": "Nice. This feels like the dreamer would have looked on the right side. It looks nice because I can see the metal net door in the next frame, which feels like a continuation of the previous frame. ",
+   "at": "2026-09-29T12:35:05.077Z",
+   "shown": {
+    "a": "7ad481e460328a1b3b262e68e95f1ce66baffd64c03ff4cd2a52b2a35307199f",
+    "b": "826bc67160728a773c216c7ebd77eb00de36a7498707170fed6defa93989a1f0"
+   }
+  },
+  "orchard-m3": {
+   "answer": "neither",
+   "note": "B looks more correct than A because, in B, it looks like they are still inside the lift in the close-up shot. In A, the shot is from behind, which is a nice shot, but it feels like the door is open behind them. How is it justified that they are inside the lift?\n\nThe issue with B is that, in the previous frame, we established that the lift door is on the front side of the people, with the back side against the wall. In image B, the door is on the back side, and the people's positions have also switched. If you turn the camera 180°, the person on the left becomes right, and the right person becomes left, like a mirror perspective. ",
+   "at": "2026-09-29T12:36:07.260Z",
+   "shown": {
+    "a": "b15865803d2d0034b882b4b09dbb376f5f87720ab8035ad1ce05654b87e9b71c",
+    "b": "e81f0b5922a6a4133793bc749bc805cc22072eb527bdf279eb72fbbe18fc42d9"
+   }
+  },
+  "orchard-m5": {
+   "answer": "b",
+   "note": "B is more correct because the person is running away from the dreamer, so the person should be running outside. The environment is also more consistent with the previous frame. ",
+   "at": "2026-09-29T12:36:35.117Z",
+   "shown": {
+    "a": "4bd6cecadef10dc09ea6d7aec87bd193dd598ad5ca70c127bd3773470ce7415a",
+    "b": "54784e07ad31443b37f9be5f50d0e44ff8b3c876dd63014c513232e1e5667726"
+   }
+  },
+  "orchard-m6": {
+   "answer": "a",
+   "note": "A feels more correct, as if it's from the dreamer's perspective, though it's not 100% correct. B is like a third-person perspective. ",
+   "at": "2026-09-29T12:36:54.882Z",
+   "shown": {
+    "a": "9138eccf307f52a432683ab42faacf5a1458ce5f8d977c0fc2859171b97beac6",
+    "b": "50d51ae839c3b0f3cc5e97d348cedc0e7375d6ef57fe55110a126033e9382b64"
+   }
+  }
+ }
+}

@@ -18,3 +18,6 @@ Once a checkpoint is finished and judged, copy its `answers.json`, `key.json` an
 `evals/checkpoint/<name>/`, so the next checkout keeps them.
 
 - `s4`: the camera-rules checkpoint (27 Sep), 20 moments, judged blind. Score: new right 15/20, old 10/20.
+- `s5`: the references checkpoint (29 Sep), 17 moments, judged blind. Score: new right 7/17, old right 12/17;
+  faults put right 2/8, guards kept 5/9. `answers.before-correction.json` keeps the page's answers before the owner's
+  one correction (orchard-m3: 'neither' to 'A').

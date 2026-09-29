@@ -1,0 +1,34 @@
+Checkpoint s5: 17 of 19 moments judged.
+Faults (the old picture called partly right or wrong before): the new picture right in 2 of 8 judged (9 in the set); the old one called right this time in 4.
+Guards (the old picture called right before): the new picture still right in 5 of 9 judged (10 in the set); the old one called right again in 8.
+
+Faults put right:
+  orchard-m2: the old picture right, the new right (before, the owner called it right): "Nice. This feels like the dreamer would have looked on the right side. It looks nice because I can see the metal net door in the next frame, which feels like a continuation of the previous frame. "
+  snow-train-2-m6: the old picture not right, the new right (before, the owner called it wrong): "100% A is correct. The thing which is wrong with B is that the proportion of the briefcase is wrong. The briefcase is open. "
+
+Faults not put right:
+  lighthouse-first-m8: the old picture right, the new not right (before, the owner called it partly): "Both of them look right. The A looks more right because you can tell the vehicle is a tractor, and the second one looks more like a car. "
+  library-1-m5: the old picture not right, the new not right (before, the owner called it wrong): "B looks right because it feels more realistic, but it is not 100% correct. If you compare it in terms of continuity with the picture before, it feels like the library has changed. I would have imagined the water has risen, and they are reaching for the window above, but what we see in B is that the window has come down and become bigger. I don't think that follows the scene. A is completely wrong because the wall of the library has suddenly disappeared and become something else, and the water level is lower than in the previous image. "
+  library-1-m4: the old picture right, the new not right (before, the owner called it right): "A looks more correct than B. B looks like the whale is not in the water. It feels like it's a little above the water and a little below it, but in A, it's very clear that it is under the water. "
+  orchard-m5: the old picture right, the new not right (before, the owner called it wrong): "B is more correct because the person is running away from the dreamer, so the person should be running outside. The environment is also more consistent with the previous frame. "
+  lighthouse-first-m7: the old picture not right, the new not right (before, the owner called it wrong): "I feel both of them look a little wrong because it feels like the environment is changing. Otherwise, other things are fine, like how they are holding boards and the perspective. It feels like they are not in the same room, maybe. "
+  lighthouse-fresh-m4: the old picture not right, the new not right (before, the owner called it wrong): "Both images look like the person is already inside the lighthouse. As for the script, the person is outside the lighthouse and now trying to open the door. "
+
+Guards that stayed right:
+  library-2-m3: the old picture right, the new right (before, the owner called it right): "Again, both of them are partially correct because the script says the water rises over the desk. In A and B, it feels like the water is rising compared to the picture before, but not over the desk. "
+  snow-train-m6: the old picture not right, the new right (before, the owner called it right): "B looks more correct, but still not quite right. I'll tell you the reason. Composition-wise, A is correct, but the movement is off. In A, the dreamer is very far from the door, so the action doesn't match. In B, the dreamer is close to the door, but it feels like the dreamer has sat down rather than maybe holding the door, looking at it, or something like that. "
+  library-2-m4: the old picture right, the new right (before, the owner called it right): "Both images are identical, and both look correct, though. "
+  library-2-m2: the old picture right, the new right (before, the owner called it right): "Yeah, both feel right. In both of them, it feels like the water is coming inside. The B looks more correct, but A is also correct. "
+  library-3-m4: the old picture right, the new right (before, the owner called it right): "Composition-wise, both are correct. The only thing is that, compared to the picture before, it feels like the dreamer's position has changed in A and B. If the dreamer was standing in the same place or in some frame where we see the dreamer moving, which justifies the new position, that would have been much better. "
+
+Guards lost:
+  orchard-m3: the old picture right, the new not right (before, the owner called it right): "B looks more correct than A because, in B, it looks like they are still inside the lift in the close-up shot. In A, the shot is from behind, which is a nice shot, but it feels like the door is open behind them. How is it justified that they are inside the lift?
+
+The issue with B is that, in the previous frame, we established that the lift door is on the front side of the people, with the back side against the wall. In image B, the door is on the back side, and the people's positions have also switched. If you turn the camera 180°, the person on the left becomes right, and the right person becomes left, like a mirror perspective.
+
+[Corrected by the owner after the check, 29 Sep: A is right. The camera is on the back side, behind them, and they face the gate, which matches the picture before (the gate in front of them, the back wall behind them). B is wrong: the gate is behind them though they face the camera, and left and right are mirrored rather than turned. The page answer was 'neither'.]"
+  orchard-m6: the old picture right, the new not right (before, the owner called it right): "A feels more correct, as if it's from the dreamer's perspective, though it's not 100% correct. B is like a third-person perspective. "
+  library-3-m8: the old picture right, the new not right (before, the owner called it right): "A looks more correct, and B is completely wrong because the boat is outside the window. It's not like it looks wrong. A looks more correct because it feels like they're trying to get out of the library from that window above with the boat. "
+  lighthouse-fresh-m9: the old picture right, the new not right (before, the owner called it right): "B looks right because it looks like a person would have looked left on the window and might have seen the tractor. "
+
+Not judged yet (not drawn, or not answered): library-3-m3, heron-m4

@@ -9,10 +9,10 @@ import { refsOf } from '../evals/prompt-cases';
 import { readDream } from '../evals/retire';
 import { loadDream } from '../evals/saved';
 import { assembleCut } from '../assemble';
-import { type CutSheet, cutSheet, sheetDream } from '../cutsheet';
+import { type CutSheet, cutSheet, inViewIn, sheetDream } from '../cutsheet';
 import { inViewOf } from '../frames';
 import { moments, producerSystem } from '../producer';
-import { inViewIn, rebuild } from '../plan';
+import { rebuild } from '../plan';
 import { recordInputsOf, recordsMade, storyRecord } from '../record';
 import { drawingSheet, type Session, typedReadings } from '../session';
 import { NO_BAR, TYPED_BAR, type TypedReading, typedAsk, typedAskKey, typedWriterName } from '../typed';
@@ -336,6 +336,20 @@ describe('ledger 7: who is in view, once', () => {
     const pov = (f: NonNullable<Item['frame']>) => ({ ...f, eyes: 'dreamer' as const });
     expect(sheetOf('kinds', pov)).not.toContain('p1');
     expect(sheetOf('in_view', pov)).toContain('p1');
+  });
+
+  test("with the record off the sheet's list is the plan's: no record to read who is in view from", () => {
+    // Where the record's rules add someone the plan's lists lack (aeea m14, b0cb m4, 8ceb m5 and m6), the step
+    // changes nothing with the record off.
+    const ids = (step: string) =>
+      withSwitches({ ...SHEET, DREAMCHAT_RECORD: 'off', DREAMCHAT_ONE_BUILDER: step }, () =>
+        ['dream-0926-022102-aeea', 'dream-0926-043003-b0cb', 'dream-0926-083656-8ceb'].map((id) =>
+          rebuild(structuredClone(loadDream(id, false).session as Session))
+            .pictures.filter((p) => p.kind === 'cut')
+            .map((p) => [p.id, p.sheet?.inView.map((e) => e.id)]),
+        ),
+      );
+    expect(ids('in_view')).toEqual(ids('kinds'));
   });
 
   test('the gate reads the sheet only where the prompt is assembled from it: on, not in shadow', () => {

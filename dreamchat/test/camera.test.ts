@@ -589,8 +589,16 @@ describe('how cuts stand to each other, one reading', () => {
       },
       moments: [{ id: 'm1' }, { id: 'm2', looks_at: 'the station clock', sameSide: ['m1'] }],
     });
-    const off = withEnv({ DREAMCHAT_CAMERA: undefined }, () => planContinuity(b));
+    // Today, by the words alone.
+    const off = withEnv({ DREAMCHAT_CAMERA: undefined, DREAMCHAT_REFS: undefined }, () => planContinuity(b));
     expect(cut(off, 'm2').refs.find((r) => r.id === 'm1')?.role).toBe('base');
+    // With S5's references, even without the camera rules: m2's own camera (facing the clock, behind m1's) is not
+    // m1's, so the gate does not edit m1, and m2 is placed with a camera of its own (so a mock-up of its own).
+    const refs = withEnv({ DREAMCHAT_CAMERA: undefined, DREAMCHAT_REFS: 'on', DREAMCHAT_CUT_SHEET: 'on' }, () =>
+      planContinuity(b),
+    );
+    expect(cut(refs, 'm2').refs.some((r) => r.role === 'base')).toBe(false);
+    expect(cut(refs, 'm2').eye).toBeTruthy();
     const on = planned(b);
     expect(cut(on, 'm2').refs.some((r) => r.role === 'base')).toBe(false);
     expect(sameCameraAs(cut(on, 'm2').eye!, cut(on, 'm1').eye!)).toBe(false);
