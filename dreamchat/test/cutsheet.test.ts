@@ -51,7 +51,7 @@ function dreamOf(id: string, record: 'off' | 'on') {
       DREAMCHAT_CUT_SHEET: 'shadow',
       DREAMCHAT_CAMERA: undefined,
       DREAMCHAT_REFS: undefined,
-      DREAMCHAT_ONE_BUILDER: undefined,
+      DREAMCHAT_ONE_BUILDER: 'kinds',
     },
     () => {
       const s = loadDream(id, false).session as Session;
@@ -209,12 +209,13 @@ describe('assembleCut is framePrompt, word for word', () => {
   for (const record of ['off', 'on'] as const)
     test(`on every moment of every frozen dream and ten variants of each, with the record ${record}`, () => {
       let n = 0;
-      // The old builder's words: the one builder (S6) departs from framePrompt on purpose, so it is off here.
+      // The old builder's words: the one builder departs from framePrompt on purpose from S6 row 7 (who is in
+      // view, read from the record), so it is pinned at the step before.
       const off = {
         DREAMCHAT_RECORD: record,
         DREAMCHAT_CAMERA: undefined,
         DREAMCHAT_REFS: undefined,
-        DREAMCHAT_ONE_BUILDER: undefined,
+        DREAMCHAT_ONE_BUILDER: 'kinds',
       };
       withEnv(off, () => {
         for (const id of frozenDreams()) {
