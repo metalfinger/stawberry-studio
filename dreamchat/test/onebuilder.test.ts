@@ -7,8 +7,9 @@ import { goingIn, handsIn, openingsIn, selfIn, waterLevel } from '../camera';
 import { BUILDER_STEPS, builderSteps, builds, oneBuilder, withRetired } from '../cleanups';
 import { refsOf } from '../evals/prompt-cases';
 import { loadDream } from '../evals/saved';
+import { producerSystem } from '../producer';
 import { rebuild } from '../plan';
-import { recordsMade } from '../record';
+import { recordsMade, storyRecord } from '../record';
 import type { Session } from '../session';
 import type { TypedReading } from '../typed';
 import { DEFAULTS, pinSwitches, withSwitches } from './fakes';
@@ -128,6 +129,52 @@ describe("ledger 4: the assembler's paragraph ids and each image's subjects, rea
         },
       );
     }
+  });
+});
+
+describe('ledger 5: names from the story record, and no id in words', () => {
+  // library-1 (fdd7) m5: the producer wrote "the high round window; outside it l2", and the id reached the prompt.
+  const id = 'dream-0926-050424-fdd7';
+  const m5 = (step: string) =>
+    withSwitches(
+      { ...SHEET, DREAMCHAT_ONE_BUILDER: step },
+      () => rebuild(structuredClone(loadDream(id, false).session as Session)).pictures,
+    );
+
+  test("an id the producer wrote into a moment's words is its name once the dream is read", () => {
+    const before = m5('paragraph_ids');
+    const after = m5('names');
+    const has = (ps: typeof before) => ps.filter((p) => /(?<![\w-])l2(?![\w-])/.test(p.prompt ?? '')).map((p) => p.id);
+    expect(has(before)).toContain('m5');
+    expect(has(after)).toEqual([]);
+    expect(after.find((p) => p.id === 'm5')?.prompt).toContain('facing the high round window.');
+  });
+
+  test("a sketch's name is the record's, and the sheet's, where the breakdown's has moved on", () => {
+    // The breakdown renames p2 after its sketch was drawn as "Mr Hale": the picture was drawn as Mr Hale.
+    const s = structuredClone(loadDream('dream-0926-083656-8ceb', false).session as Session);
+    const b = s.draft!.breakdown!;
+    b.people.find((p) => p.id === 'p2')!.name = 'the teacher';
+    const items = s.build!.items.map((i) => (i.id === 'p2' ? { ...i, status: 'ready' as const } : i));
+    const called = (step: string) =>
+      withSwitches({ ...SHEET, DREAMCHAT_ONE_BUILDER: step }, () => storyRecord(b, items).record.elements.p2.called);
+    expect(called('paragraph_ids')).toBe('the teacher');
+    expect(called('names')).toBe('Mr Hale');
+    // The sheet reads the record's: the name the sketch was drawn as.
+    s.build = { ...s.build!, items };
+    const m = withSwitches({ ...SHEET, DREAMCHAT_ONE_BUILDER: 'names' }, () =>
+      rebuild(s).pictures.find((p) => p.sheet?.inView.some((e) => e.id === 'p2')),
+    );
+    expect(m?.sheet?.inView.find((e) => e.id === 'p2')?.name).toBe('Mr Hale');
+  });
+
+  test('the producer is told to write names, never ids', () => {
+    withSwitches({ DREAMCHAT_ONE_BUILDER: 'paragraph_ids' }, () =>
+      expect(producerSystem()).not.toContain('never by an id'),
+    );
+    withSwitches({ DREAMCHAT_ONE_BUILDER: 'names' }, () =>
+      expect(producerSystem()).toContain('never by an id ("l2", "p1")'),
+    );
   });
 });
 

@@ -400,6 +400,9 @@ export function cutSheet(x: CutSheetInput): CutSheet {
   const inView = inViewOf(frame, sheets);
   const members = groupMembers(inView);
   const lookOf = (s: Item, keys: string[]) => lookIn(s, keys, { members, unsaid: plan?.unsaid, style });
+  // One name for each (S6 row 5): the story record's, where the builder's names are on and it holds one.
+  const oneName = builds('names') ? (x.dream?.record ?? null) : null;
+  const called = (id: string) => oneName?.elements[id]?.called ?? nameOf(sheets, id);
   const changed = [...(plan?.own ?? []), ...(plan?.states ?? [])];
   const usable = (x.inputs ?? []).filter((i) => approved(i.item) && i.item.mediaId);
   const dreamer = sheets.find((s) => s.isDreamer);
@@ -416,7 +419,7 @@ export function cutSheet(x: CutSheetInput): CutSheet {
     return {
       id: s.id,
       ...(s.nodeId ? { nodeId: s.nodeId } : {}),
-      name: nameOf(sheets, s.id) ?? s.id,
+      name: called(s.id) ?? s.id,
       kind,
       said:
         s.kind === 'character'
@@ -478,7 +481,7 @@ export function cutSheet(x: CutSheetInput): CutSheet {
   ]);
   const names: Record<string, string> = {};
   for (const id of [...named].filter(Boolean).sort()) {
-    const n = nameOf(sheets, id);
+    const n = called(id);
     if (n !== undefined) names[id] = n;
   }
 

@@ -1019,7 +1019,7 @@ describe("a person's, place's or thing's id in a moment's words", () => {
     expect(moments(on)[0].looks_at).toBe('the tall window; outside it the harbour');
     expect(moments(on)[0].action).toBe('person p1 waves to the harbour');
     const off = b();
-    withEnv({ DREAMCHAT_CAMERA: undefined }, () => completeViews(off));
+    withEnv({ DREAMCHAT_CAMERA: undefined, DREAMCHAT_ONE_BUILDER: undefined }, () => completeViews(off));
     expect(moments(off)[0].looks_at).toBe('the tall window; outside it l2');
     // Part of a word is no id: "l2-shaped", "pl2" stay.
     const part = b();

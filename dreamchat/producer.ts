@@ -7,6 +7,7 @@
 // facts are unknown, not invented defaults presented as the user's decisions.
 import { SHAPES, type Blocking, type Move, type Shape, type Side, type Spot } from './blocking';
 import { cameraMode } from './camera';
+import { builds } from './cleanups';
 import { listenOn } from './lib';
 import { type ChatMessage, callDeepseek, type Thinking } from './llm';
 
@@ -195,6 +196,16 @@ export type Breakdown = {
 
 export type ProducerFn = (transcript: string, previous?: Breakdown) => Promise<{ raw: string; ms: number }>;
 
+/**
+ * With the one builder's names (S6 row 5), the producer is told to write every name as a name: library-1's
+ * m5 faced "the high round window; outside it l2", and the id reached the picture. Off, the prompt as it was.
+ */
+const NAMES_NOT_IDS =
+  '\n- Every word a moment says (action, looks_at, feeling, visual_point, shift, dream, purpose) calls people, places and things by their names ("the train station", "the dreamer"), never by an id ("l2", "p1"). So does the "now" of each "leaves" entry.';
+const LOOKS_AT_RULE = "Through the dreamer's eyes it is what they face.";
+export const producerSystem = () =>
+  builds('names') ? SYSTEM.replace(LOOKS_AT_RULE, LOOKS_AT_RULE + NAMES_NOT_IDS) : SYSTEM;
+
 const SYSTEM = `You are the producer for Strawberry Studio, a tool that turns a person's dream into a short sequence of pictures. You read a conversation in which a person told their dream to a listener, and you write the production breakdown as JSON. You never talk to the person.
 
 ## The one rule that matters most
@@ -272,7 +283,7 @@ export const PRODUCER_THINKING = (process.env.DREAMCHAT_PRODUCER_THINKING as Thi
  */
 export const callProducer: ProducerFn = async (transcript, previous) => {
   const story: ChatMessage[] = [
-    { role: 'system', content: SYSTEM },
+    { role: 'system', content: producerSystem() },
     { role: 'user', content: `The conversation:\n\n${transcript}` },
   ];
   if (previous) {
@@ -1861,7 +1872,8 @@ export function namesForIds(b: Breakdown): string[] {
  */
 export function completeViews(b: Breakdown): string[] {
   const notes: string[] = [];
-  if (cameraMode() === 'on') notes.push(...namesForIds(b));
+  // Ids in words named once, here: with the camera rules, which found them, and with the one builder (S6 row 5).
+  if (cameraMode() === 'on' || builds('names')) notes.push(...namesForIds(b));
   const bare = (x: string) =>
     x
       .toLowerCase()
