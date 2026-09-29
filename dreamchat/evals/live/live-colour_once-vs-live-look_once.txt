@@ -1,7 +1,7 @@
-live-colour_once (0c0a839, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_ONE_BUILDER":"colour_once","DREAMCHAT_RECORD":"on","DREAMCHAT_WRITER":"claude"}) against live-look_once (0c0a839, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_ONE_BUILDER":"look_once","DREAMCHAT_RECORD":"on","DREAMCHAT_WRITER":"claude"})
+live-colour_once (2870e58, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_DATA":"/Users/hirenk/Documents/code/stawberry-studio-dream-chat/dreamchat","DREAMCHAT_ONE_BUILDER":"colour_once","DREAMCHAT_RECORD":"on","DREAMCHAT_WRITER":"claude"}) against live-look_once (2870e58, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_DATA":"/Users/hirenk/Documents/code/stawberry-studio-dream-chat/dreamchat","DREAMCHAT_ONE_BUILDER":"look_once","DREAMCHAT_RECORD":"on","DREAMCHAT_WRITER":"claude"})
 
 ── dream-0923-183614-279d m1
-  ~ …the dream itself gives a colour keeps it [-exactly: green water between; green jumper; grey beard; yellow raincoat.-][+exactly, as said above.+] Skin keeps its natural tone.
+  ~ …the dream itself gives a colour keeps it [-exactly: green water between; green jumper; grey beard; yellow raincoat.-][+exactly, as said above: green water between.+] Skin keeps its natural tone.
     Light: The moonlight…
 
 ── dream-0923-183614-279d m2
@@ -9,7 +9,7 @@ live-colour_once (0c0a839, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_ONE_BUILDER":"
     Light: The moonlight…
 
 ── dream-0923-183614-279d m3
-  ~ …the dream itself gives a colour keeps it [-exactly: yellow raincoat rows; green jumper; grey beard; yellow raincoat.-][+exactly, as said above.+] Skin keeps its natural tone.
+  ~ …the dream itself gives a colour keeps it [-exactly: yellow raincoat rows; green jumper; grey beard; yellow raincoat.-][+exactly, as said above: yellow raincoat rows.+] Skin keeps its natural tone.
     Light: The moonlight…
 
 ── dream-0923-183614-279d m4
@@ -17,7 +17,7 @@ live-colour_once (0c0a839, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_ONE_BUILDER":"
     Light: The moonlight…
 
 ── dream-0923-183614-279d m5
-  ~ …the dream itself gives a colour keeps it [-exactly: green water; green jumper; grey beard; yellow raincoat.-][+exactly, as said above.+] Skin keeps its natural tone.
+  ~ …the dream itself gives a colour keeps it [-exactly: green water; green jumper; grey beard; yellow raincoat.-][+exactly, as said above: green water.+] Skin keeps its natural tone.
     Light: The moonlight…
 
 ── dream-0923-214527-502a m12
@@ -99,7 +99,7 @@ live-colour_once (0c0a839, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_ONE_BUILDER":"
   ~ …colour except what the dream itself gives a [-colour, which keeps it exactly: white hair.-][+colour (listed under Colours), which keeps it exactly.+] Nothing else from it: not its pose, background…
 
 ── dream-0925-190828-1177 m1
-  ~ …the dream itself gives a colour keeps it [-exactly: orange ribbons outside; orange ribbons out; orange; white rice paper.-][+exactly, as said above.+] Skin keeps its natural tone.
+  ~ …the dream itself gives a colour keeps it [-exactly: orange ribbons outside; orange ribbons out; orange; white rice paper.-][+exactly, as said above: orange ribbons outside; orange ribbons out.+] Skin keeps its natural tone.
     Light: Highlights are…
 
 ── dream-0925-190828-1177 m2
@@ -115,16 +115,12 @@ live-colour_once (0c0a839, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_ONE_BUILDER":"
     Light: Highlights are…
 
 ── dream-0925-190828-1177 m5
-  ~ …the dream itself gives a colour keeps it [-exactly: blue lantern; blue-lit lantern; blue light; orange; white rice paper.-][+exactly, as said above.+] Skin keeps its natural tone.
+  ~ …the dream itself gives a colour keeps it [-exactly: blue lantern; blue-lit lantern; blue light; orange; white rice paper.-][+exactly, as said above: blue lantern; blue-lit lantern; blue light.+] Skin keeps its natural tone.
     Light: Highlights are…
 
 ── dream-0925-190828-1177 m6
-  ~ …the dream itself gives a colour keeps it [-exactly: blue-lit lantern; blue light; orange; white rice paper.-][+exactly, as said above.+] Skin keeps its natural tone.
+  ~ …the dream itself gives a colour keeps it [-exactly: blue-lit lantern; blue light; orange; white rice paper.-][+exactly, as said above: blue-lit lantern; blue light.+] Skin keeps its natural tone.
     Light: Highlights are…
-
-── dream-0925-192741-36f6 m1
-  ~ …the dream itself gives a colour keeps it [-exactly: orange ribbons.-][+exactly, as said above.+]
-    Light: Shadows are soft and layering is translucent;…
 
 ── dream-0925-192741-36f6 m2
   ~ …the dream itself gives a colour keeps it [-exactly: orange; blue tint.-][+exactly, as said above.+]
@@ -155,7 +151,7 @@ live-colour_once (0c0a839, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_ONE_BUILDER":"
     Light: Shadows are soft and layering is translucent;…
 
 ── dream-0925-192741-36f6 m9
-  ~ …the dream itself gives a colour keeps it [-exactly: blue lantern; orange; blue tint; brown wood.-][+exactly, as said above.+]
+  ~ …the dream itself gives a colour keeps it [-exactly: blue lantern; orange; blue tint; brown wood.-][+exactly, as said above: blue lantern.+]
     Light: Shadows are soft and layering is translucent;…
 
 ── dream-0925-212124-cbba m1
@@ -187,7 +183,7 @@ live-colour_once (0c0a839, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_ONE_BUILDER":"
     Light: Light is…
 
 ── dream-0925-212124-cbba m9
-  ~ …the dream itself gives a colour keeps it [-exactly: red tractor moving; yellow grass.-][+exactly, as said above.+] Skin keeps its natural tone.
+  ~ …the dream itself gives a colour keeps it [-exactly: red tractor moving; yellow grass.-][+exactly, as said above: red tractor moving.+] Skin keeps its natural tone.
     Light: Light is…
 
 ── dream-0925-212124-cbba m10
@@ -227,7 +223,7 @@ live-colour_once (0c0a839, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_ONE_BUILDER":"
     Light: Light is gentle and directionless, creating soft…
 
 ── dream-0925-231131-affd m6
-  ~ …the dream itself gives a colour keeps it [-exactly: yellow grass; red tractor driving; grey light.-][+exactly, as said above.+]
+  ~ …the dream itself gives a colour keeps it [-exactly: yellow grass; red tractor driving; grey light.-][+exactly, as said above: red tractor driving.+]
     Light: Light is gentle and directionless, creating soft…
 
 ── dream-0925-231131-affd m7
@@ -235,11 +231,11 @@ live-colour_once (0c0a839, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_ONE_BUILDER":"
     Light: Light is gentle and directionless, creating soft…
 
 ── dream-0925-231131-affd m9
-  ~ …the dream itself gives a colour keeps it [-exactly: red tractor drives; yellow grass.-][+exactly, as said above.+]
+  ~ …the dream itself gives a colour keeps it [-exactly: red tractor drives; yellow grass.-][+exactly, as said above: red tractor drives.+]
     Light: Light is gentle and directionless, creating soft…
 
 ── dream-0926-000545-09ea m1
-  ~ …the dream itself gives a colour keeps it [-exactly: yellow lights; silver; yellow bulbs overhead; yellow glow.-][+exactly, as said above.+]
+  ~ …the dream itself gives a colour keeps it [-exactly: yellow lights; silver; yellow bulbs overhead; yellow glow.-][+exactly, as said above: yellow lights.+]
     Light: Light is diffused and soft, with no…
 
 ── dream-0926-000545-09ea m2
@@ -247,7 +243,7 @@ live-colour_once (0c0a839, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_ONE_BUILDER":"
     Light: Light is diffused and soft, with no…
 
 ── dream-0926-000545-09ea m3
-  ~ …the dream itself gives a colour keeps it [-exactly: silver fish about; grey hair; silver; yellow bulbs overhead; yellow glow.-][+exactly, as said above.+]
+  ~ …the dream itself gives a colour keeps it [-exactly: silver fish about; grey hair; silver; yellow bulbs overhead; yellow glow.-][+exactly, as said above: silver fish about.+]
     Light: Light is diffused and soft, with no…
 
 ── dream-0926-000545-09ea m4
@@ -271,7 +267,7 @@ live-colour_once (0c0a839, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_ONE_BUILDER":"
     Light: Light is diffused and soft, with no…
 
 ── dream-0926-003230-b5b5 m1
-  ~ …the dream itself gives a colour keeps it [-exactly: green corridor lined; green.-][+exactly, as said above.+]
+  ~ …the dream itself gives a colour keeps it [-exactly: green corridor lined; green.-][+exactly, as said above: green corridor lined.+]
     Light: Light seems to come from all directions…
 
 ── dream-0926-003230-b5b5 m3
@@ -282,29 +278,18 @@ live-colour_once (0c0a839, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_ONE_BUILDER":"
   ~ …the dream itself gives a colour keeps it [-exactly: grey heron; red cardigan.-][+exactly, as said above.+]
     Light: Light seems to come from all directions…
 
-── dream-0926-012307-4c79 m1
-  ~ …the dream itself gives a colour keeps it [-exactly: green corridor.-][+exactly, as said above.+] Skin keeps its natural tone.
-    Light: Light seems…
-
 ── dream-0926-012307-4c79 m3
   ~ …the dream itself gives a colour keeps it [-exactly: red cardigan; beige blouse.-][+exactly, as said above.+] Skin keeps its natural tone.
     Light: Light seems…
 
 ── dream-0926-012307-4c79 m5
-  ~ …the dream itself gives a colour keeps it [-exactly: grey heron stands; grey heron; red cardigan;-][+exactly, as said above:+] grey heron standing. Skin keeps its natural tone.…
-
-── dream-0926-022102-aeea m9
-  ~ …the dream itself gives a colour keeps it [-exactly: yellow grass.-][+exactly, as said above.+]
-    Light: Light is even and weak, as if…
-
-── dream-0926-022137-72e5 m1
-  ~ …the dream itself gives a colour keeps it [-exactly: green corridor toward.-][+exactly, as said above.+] Skin keeps its natural tone.
+  ~ …the dream itself gives a colour keeps it [-exactly: grey heron stands; grey heron; red cardigan;-][+exactly, as said above: grey heron stands;+] grey heron standing. Skin keeps its natural tone.…
 
 ── dream-0926-022137-72e5 m2
   ~ …the dream itself gives a colour keeps it [-exactly: grey heron wearing; red cardigan; grey heron.-][+exactly, as said above.+] Skin keeps its natural tone.
 
 ── dream-0926-022137-72e5 m3
-  ~ …the dream itself gives a colour keeps it [-exactly: red cardigan walks; red cardigan.-][+exactly, as said above.+] Skin keeps its natural tone.
+  ~ …the dream itself gives a colour keeps it [-exactly: red cardigan walks; red cardigan.-][+exactly, as said above: red cardigan walks.+] Skin keeps its natural tone.
 
 ── dream-0926-022137-72e5 m4
   ~ …the dream itself gives a colour keeps it [-exactly: red cardigan.-][+exactly, as said above.+] Skin keeps its natural tone.
@@ -316,7 +301,7 @@ live-colour_once (0c0a839, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_ONE_BUILDER":"
   ~ …the dream itself gives a colour keeps it [-exactly: white and blue; blue snowy landscape.-][+exactly, as said above.+] Skin keeps its natural tone.
 
 ── dream-0926-034336-5a66 m2
-  ~ …the dream itself gives a colour keeps it [-exactly: brown leather suitcase; brown leather; brown; blue or black; white and blue; blue snowy landscape.-][+exactly, as said above.+] Skin keeps its natural tone.
+  ~ …the dream itself gives a colour keeps it [-exactly: brown leather suitcase; brown leather; brown; blue or black; white and blue; blue snowy landscape.-][+exactly, as said above: brown leather suitcase.+] Skin keeps its natural tone.
 
 ── dream-0926-034336-5a66 m3
   ~ …the dream itself gives a colour keeps it [-exactly: brown leather; red door standing.-][+exactly, as said above.+] Skin keeps its natural tone.
@@ -325,10 +310,10 @@ live-colour_once (0c0a839, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_ONE_BUILDER":"
   ~ …the dream itself gives a colour keeps it [-exactly: brown leather; red door standing.-][+exactly, as said above.+] Skin keeps its natural tone.
 
 ── dream-0926-034336-5a66 m5
-  ~ …the dream itself gives a colour keeps it [-exactly: red door; yellow light pours; brown leather; red door standing.-][+exactly, as said above.+] Skin keeps its natural tone.
+  ~ …the dream itself gives a colour keeps it [-exactly: red door; yellow light pours; brown leather; red door standing.-][+exactly, as said above: yellow light pours.+] Skin keeps its natural tone.
 
 ── dream-0926-043003-b0cb m2
-  ~ …the dream itself gives a colour keeps it [-exactly: brown leather suitcase; brown; brown leather.-][+exactly, as said above.+]
+  ~ …the dream itself gives a colour keeps it [-exactly: brown leather suitcase; brown; brown leather.-][+exactly, as said above: brown leather suitcase.+]
     Light: Shadows are diluted and cool, suggesting depth…
 
 ── dream-0926-043003-b0cb m3
@@ -336,7 +321,7 @@ live-colour_once (0c0a839, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_ONE_BUILDER":"
     Light: Shadows are diluted and cool, suggesting depth…
 
 ── dream-0926-043003-b0cb m4
-  ~ …the dream itself gives a colour keeps it [-exactly: red door standing; red door stands; brown; brown leather.-][+exactly, as said above.+]
+  ~ …the dream itself gives a colour keeps it [-exactly: red door standing; red door stands; brown; brown leather.-][+exactly, as said above: red door stands.+]
     Light: Shadows are diluted and cool, suggesting depth…
 
 ── dream-0926-043003-b0cb m5
@@ -344,7 +329,7 @@ live-colour_once (0c0a839, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_ONE_BUILDER":"
     Light: Shadows are diluted and cool, suggesting depth…
 
 ── dream-0926-043003-b0cb m6
-  ~ …the dream itself gives a colour keeps it [-exactly: yellow light; brown; brown leather; red door standing.-][+exactly, as said above.+]
+  ~ …the dream itself gives a colour keeps it [-exactly: yellow light; brown; brown leather; red door standing.-][+exactly, as said above: yellow light.+]
     Light: Shadows are diluted and cool, suggesting depth…
 
 ── dream-0926-043054-de6c m1
@@ -386,10 +371,6 @@ live-colour_once (0c0a839, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_ONE_BUILDER":"
 ── dream-0926-050424-fdd7 m5
   ~ …the dream itself gives a colour keeps it [-exactly: yellow rowing boat.-][+exactly, as said above.+] Skin keeps its natural tone.
     Light: The overall…
-
-── dream-0926-052843-6081 m1
-  ~ …the dream itself gives a colour keeps it [-exactly: green lamps.-][+exactly, as said above.+]
-    Light: Edges are softened, as if seen through…
 
 ── dream-0926-052843-6081 m5
   ~ …the dream itself gives a colour keeps it [-exactly: yellow rowing boat; yellow.-][+exactly, as said above.+]
@@ -478,7 +459,7 @@ live-colour_once (0c0a839, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_ONE_BUILDER":"
     Light: The light is low and warm, as…
 
 ── dream-0926-070314-0f40 m6
-  ~ …the dream itself gives a colour keeps it [-exactly: white horse stands; white horse.-][+exactly, as said above.+] Skin keeps its natural tone.
+  ~ …the dream itself gives a colour keeps it [-exactly: white horse stands; white horse.-][+exactly, as said above: white horse stands.+] Skin keeps its natural tone.
     Light: Light is…
 
 ── dream-0926-075114-f085 m1
@@ -494,7 +475,7 @@ live-colour_once (0c0a839, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_ONE_BUILDER":"
     Light: The light is diffuse and fading, as…
 
 ── dream-0926-075114-f085 m6
-  ~ …the dream itself gives a colour keeps it [-exactly: white horse stands; white horse standing; white coat.-][+exactly, as said above.+]
+  ~ …the dream itself gives a colour keeps it [-exactly: white horse stands; white horse standing; white coat.-][+exactly, as said above: white horse stands.+]
     Light: The light is diffuse and fading, as…
 
 ── dream-0926-075114-f085 m7
@@ -502,7 +483,7 @@ live-colour_once (0c0a839, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_ONE_BUILDER":"
     Light: The light is diffuse and fading, as…
 
 ── dream-0926-083656-2c51 m1
-  ~ …the dream itself gives a colour keeps it [-exactly: grey dusty ground; blue earth; black sky above; blue above; grey t-shirt; blue jeans; white sneakers; black sky; blue earth above; grey and black.-][+exactly, as said above.+]
+  ~ …the dream itself gives a colour keeps it [-exactly: grey dusty ground; blue earth; black sky above; blue above; grey t-shirt; blue jeans; white sneakers; black sky; blue earth above; grey and black.-][+exactly, as said above: black sky above; blue above.+]
     Light: However, the strongest light sources have a…
 
 ── dream-0926-083656-2c51 m2
@@ -534,7 +515,7 @@ live-colour_once (0c0a839, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_ONE_BUILDER":"
     Light: Light comes from above, wavering and distorted…
 
 ── dream-0926-083656-8ceb m3
-  ~ …the dream itself gives a colour keeps it [-exactly: silver fish sitting; brown jacket.-][+exactly, as said above.+]
+  ~ …the dream itself gives a colour keeps it [-exactly: silver fish sitting; brown jacket.-][+exactly, as said above: silver fish sitting.+]
     Light: Light comes from above, wavering and distorted…
 
 ── dream-0926-083656-8ceb m4
@@ -542,11 +523,11 @@ live-colour_once (0c0a839, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_ONE_BUILDER":"
     Light: Light comes from above, wavering and distorted…
 
 ── dream-0926-083656-8ceb m5
-  ~ …the dream itself gives a colour keeps it [-exactly: silver fish turn; brown jacket.-][+exactly, as said above.+]
+  ~ …the dream itself gives a colour keeps it [-exactly: silver fish turn; brown jacket.-][+exactly, as said above: silver fish turn.+]
     Light: Light comes from above, wavering and distorted…
 
 ── dream-0926-083656-8ceb m6
-  ~ …the dream itself gives a colour keeps it [-exactly: silver rush; brown jacket.-][+exactly, as said above.+]
+  ~ …the dream itself gives a colour keeps it [-exactly: silver rush; brown jacket.-][+exactly, as said above: silver rush.+]
     Light: Light comes from above, wavering and distorted…
 
 ── dream-0926-083656-d359 m3
@@ -596,7 +577,7 @@ live-colour_once (0c0a839, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_ONE_BUILDER":"
     Image 5: grandma's kitchen…
 
 ── dream-0926-083656-e130 m1
-  ~ …the dream itself gives a colour keeps it [-exactly: white suit sitting; white suit; grey hair.-][+exactly, as said above.+]
+  ~ …the dream itself gives a colour keeps it [-exactly: white suit sitting; white suit; grey hair.-][+exactly, as said above: white suit sitting.+]
     Light: Light is even and shadowless across every…
 
 ── dream-0926-083656-e130 m2
@@ -637,24 +618,20 @@ live-colour_once (0c0a839, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_ONE_BUILDER":"
     Light: The light is flat and uniform, casting…
 
 ── dream-0926-095122-acfd m4
-  ~ …the dream itself gives a colour keeps it [-exactly: pink jellyfish floating; blue hair; yellow raincoat; red bicycle; orange sunset sky; yellow and pink; pink lights.-][+exactly, as said above.+]
+  ~ …the dream itself gives a colour keeps it [-exactly: pink jellyfish floating; blue hair; yellow raincoat; red bicycle; orange sunset sky; yellow and pink; pink lights.-][+exactly, as said above: pink jellyfish floating.+]
     Light: The light is flat and uniform, casting…
 
 ── dream-0926-095122-acfd m5
-  ~ …the dream itself gives a colour keeps it [-exactly: pink jellyfish; blue hair; yellow raincoat; red bicycle; orange sunset sky; yellow and pink; pink lights.-][+exactly, as said above.+]
+  ~ …the dream itself gives a colour keeps it [-exactly: pink jellyfish; blue hair; yellow raincoat; red bicycle; orange sunset sky; yellow and pink; pink lights.-][+exactly, as said above: pink jellyfish.+]
     Light: The light is flat and uniform, casting…
 
 ── dream-0926-095122-acfd m6
-  ~ …the dream itself gives a colour keeps it [-exactly: pink light; blue hair; yellow raincoat; red bicycle; pink interior; pink tentacles hanging; pink glow.-][+exactly, as said above.+]
+  ~ …the dream itself gives a colour keeps it [-exactly: pink light; blue hair; yellow raincoat; red bicycle; pink interior; pink tentacles hanging; pink glow.-][+exactly, as said above: pink light.+]
     Light: The light is flat and uniform, casting…
 
 ── dream-0926-095122-acfd m7
-  ~ …the dream itself gives a colour keeps it [-exactly: yellow raincoat against; pink light; blue hair; yellow raincoat; red bicycle; pink interior; pink tentacles hanging; pink glow.-][+exactly, as said above.+]
+  ~ …the dream itself gives a colour keeps it [-exactly: yellow raincoat against; pink light; blue hair; yellow raincoat; red bicycle; pink interior; pink tentacles hanging; pink glow.-][+exactly, as said above: yellow raincoat against; pink light.+]
     Light: The light is flat and uniform, casting…
-
-── dream-0926-095122-b91f m2
-  ~ …the dream itself gives a colour keeps it [-exactly: white.-][+exactly, as said above.+]
-    Light: Light is soft and diffuse, as though…
 
 ── dream-0926-095122-b91f m4
   ~ …the dream itself gives a colour keeps it [-exactly: blue suit.-][+exactly, as said above.+]
@@ -762,7 +739,7 @@ live-colour_once (0c0a839, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_ONE_BUILDER":"
     Light: No shadows; light is implied by the…
 
 ── replay-fake/jellyfish-city/dream-0926-150359-9a40 m1
-  ~ …the dream itself gives a colour keeps it [-exactly: red bicycle; orange light; blue hair; yellow raincoat; red paint; white; black grips; black saddle; orange and yellow; yellow shades; orange sky.-][+exactly, as said above.+]
+  ~ …the dream itself gives a colour keeps it [-exactly: red bicycle; orange light; blue hair; yellow raincoat; red paint; white; black grips; black saddle; orange and yellow; yellow shades; orange sky.-][+exactly, as said above: orange light.+]
     Light: The light is flat and uniform, casting…
 
 ── replay-fake/jellyfish-city/dream-0926-150359-9a40 m2
@@ -777,10 +754,6 @@ live-colour_once (0c0a839, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_ONE_BUILDER":"
   ~ …the dream itself gives a colour keeps it [-exactly: pink glow; yellow raincoat; blue hair; red bicycle; red paint; white; black grips; black saddle; pink jellyfish; pink haze.-][+exactly, as said above.+]
     Light: The light is flat and uniform, casting…
 
-── replay-fake/office-snow/dream-0926-150401-3471 m2
-  ~ …the dream itself gives a colour keeps it [-exactly: white.-][+exactly, as said above.+]
-    Light: Light is soft and diffuse, as though…
-
 ── replay-fake/office-snow/dream-0926-150401-3471 m4
   ~ …the dream itself gives a colour keeps it [-exactly: blue suit.-][+exactly, as said above.+]
     Light: Light is soft and diffuse, as though…
@@ -790,11 +763,11 @@ live-colour_once (0c0a839, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_ONE_BUILDER":"
     Light: Light is soft and diffuse, as though…
 
 ── replay-fake/sea-school/dream-0926-150403-579a m3
-  ~ …the dream itself gives a colour keeps it [-exactly: silver fish sit; silver fish.-][+exactly, as said above.+]
+  ~ …the dream itself gives a colour keeps it [-exactly: silver fish sit; silver fish.-][+exactly, as said above: silver fish sit.+]
     Light: Light comes from above, wavering and distorted…
 
 ── replay-fake/sea-school/dream-0926-150403-579a m4
-  ~ …the dream itself gives a colour keeps it [-exactly: brown jacket writes; brown jacket; silver fish.-][+exactly, as said above.+]
+  ~ …the dream itself gives a colour keeps it [-exactly: brown jacket writes; brown jacket; silver fish.-][+exactly, as said above: brown jacket writes.+]
     Light: Light comes from above, wavering and distorted…
 
 ── replay-fake/sea-school/dream-0926-150403-579a m5
@@ -802,9 +775,9 @@ live-colour_once (0c0a839, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_ONE_BUILDER":"
     Light: Light comes from above, wavering and distorted…
 
 ── replay-fake/sea-school/dream-0926-150403-579a m6
-  ~ …the dream itself gives a colour keeps it [-exactly: silver fish turn; silver fish.-][+exactly, as said above.+]
+  ~ …the dream itself gives a colour keeps it [-exactly: silver fish turn; silver fish.-][+exactly, as said above: silver fish turn.+]
     Light: Light comes from above, wavering and distorted…
 
 ── replay-fake/sea-school/dream-0926-150403-579a m7
-  ~ …the dream itself gives a colour keeps it [-exactly: silver fish zoom; silver fish.-][+exactly, as said above.+]
+  ~ …the dream itself gives a colour keeps it [-exactly: silver fish zoom; silver fish.-][+exactly, as said above: silver fish zoom.+]
     Light: Light comes from above, wavering and distorted…

@@ -1,4 +1,4 @@
-live-look_once (0c0a839, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_ONE_BUILDER":"look_once","DREAMCHAT_RECORD":"on","DREAMCHAT_WRITER":"claude"}) against live-shades (0c0a839, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_ONE_BUILDER":"shades","DREAMCHAT_RECORD":"on","DREAMCHAT_WRITER":"claude"})
+live-look_once (2870e58, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_DATA":"/Users/hirenk/Documents/code/stawberry-studio-dream-chat/dreamchat","DREAMCHAT_ONE_BUILDER":"look_once","DREAMCHAT_RECORD":"on","DREAMCHAT_WRITER":"claude"}) against live-shades (2870e58, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_DATA":"/Users/hirenk/Documents/code/stawberry-studio-dream-chat/dreamchat","DREAMCHAT_ONE_BUILDER":"shades","DREAMCHAT_RECORD":"on","DREAMCHAT_WRITER":"claude"})
 
 ── dream-0923-183614-279d m1
   ~ In it:
