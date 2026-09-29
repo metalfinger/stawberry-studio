@@ -610,23 +610,19 @@ function factsOf(
     // sitting read as at odds with itself (lighthouse, 26 Sep): the record strips it once.
     const value = person && k !== 'identity' ? withoutPose(d.value, false) : d.value;
     // A group's look piece by piece (S6 row 12): each clause knows whom its piece names of those with a sketch of
-    // their own, as a ";" parts it ("father: …; baby: tiny, with light hair"). Clauses never cross a ";".
+    // their own, as a ";" parts it ("father: …; baby: tiny, with light hair"). Clauses never cross a ";". Whom a
+    // piece names is read without its pose, as lookIn reads it: "standing beside the old man, a red scarf" is a scarf.
     const pieces = members.length ? value.split(/\s*;\s*/) : [value];
     const facts = pieces.flatMap((piece) => {
-      const about = members.filter((m) => m.re.test(piece)).map((m) => m.id);
-      return (
-        clausesOf(piece)
-          // A place's or a thing's too (S6 row 11), clause by clause as the sheet's look stripped it: "standing
-          // upright on its own with no house or wall around it" framed the red door's sketch, and is no part of it.
-          .map((c) => (!person && builds('pose') ? withoutPose(c, false) : c))
-          .filter((c) => c && !VAGUE.test(c))
-          .map((text): Fact => ({
-            text,
-            basis: d.said ? 'said' : 'guessed',
-            from: `${from}.${k}`,
-            ...(about.length ? { about } : {}),
-          }))
-      );
+      const about = members.filter((m) => m.re.test(person ? withoutPose(piece, false) : piece)).map((m) => m.id);
+      return clausesOf(piece)
+        .filter((c) => !VAGUE.test(c))
+        .map((text): Fact => ({
+          text,
+          basis: d.said ? 'said' : 'guessed',
+          from: `${from}.${k}`,
+          ...(about.length ? { about } : {}),
+        }));
     });
     if (facts.length) out[k] = facts;
   }
@@ -650,11 +646,13 @@ function elementsOf(b: Breakdown, items: Item[], dreamer: string | null, notes: 
     const person = kind !== 'place' && kind !== 'thing';
     // A group's words about someone with a sketch of their own are theirs where they are in view (S6 row 12):
     // anyone the producer linked to it, and anyone named in it, as the sheet finds a group's members
-    // (sheets.ts groupMembers). Found here for all; the sheet leaves a clause out for those in view.
+    // (sheets.ts groupMembers). Found here for everyone who may be a group on the sheet, which reads a group
+    // from its own words (the dreamer "in a pair of round glasses" is one); the sheet leaves out a clause for
+    // those in view.
     const members =
-      builds('members') && (kind === 'group' || [...byItem.values()].some((x) => x.partOf === id))
+      builds('members') && (person || [...byItem.values()].some((x) => x.partOf === id))
         ? [...byItem.values()]
-            .filter((x) => x.id !== id && (x.kind === 'character' || x.partOf === id))
+            .filter((x) => x.id !== id && !!x.name && (x.kind === 'character' || x.partOf === id))
             .map((x) => ({ id: x.id, re: new RegExp(`\\b${esc(headWord(x.name) ?? x.name)}s?\\b`, 'i') }))
         : [];
     const own = factsOf(fields, `b:${id}`, person, members);
@@ -2529,6 +2527,7 @@ export function storyRecord(
   const r = readings ?? {};
   const ctx = derive(b, items, r, opts);
   const violations = runRules(ctx);
+  if (builds('pose')) withoutThingPose(ctx.record);
   finish(
     ctx,
     hashOf({
@@ -2541,6 +2540,29 @@ export function storyRecord(
     }),
   );
   return { record: ctx.record, violations, notes: ctx.notes };
+}
+
+/**
+ * 11. A place's or a thing's pose and framing, stripped once, clause by clause as the sheet's look stripped it
+ * (S6 row 11): "standing upright on its own with no house or wall around it" framed the red door's sketch. After
+ * the rules, which read the whole look first: one that moves a clause to after a change ("and standing wide
+ * open", the door opened at m7) still finds it, and one that rewrites a clause leaves no pose at its start. A
+ * first look is a change, never a pose.
+ */
+function withoutThingPose(record: StoryRecord): void {
+  for (const e of Object.values(record.elements)) {
+    if (e.kind !== 'place' && e.kind !== 'thing') continue;
+    for (const which of ['base', 'stored'] as const) {
+      const look = e[which];
+      if (!look) continue;
+      for (const [k, facts] of Object.entries(look))
+        look[k] = facts.flatMap((f) => {
+          if (f.first) return [f];
+          const text = withoutPose(f.text, false).trim();
+          return text ? [{ ...f, text }] : [];
+        });
+    }
+  }
 }
 
 let made = 0;

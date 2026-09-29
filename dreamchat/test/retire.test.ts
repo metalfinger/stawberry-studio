@@ -113,9 +113,10 @@ describe('the clean-ups S6 retires, each with a switch', () => {
   test('every switch is read where its clean-up runs, and the assembler, which writes from the sheet alone, reads none', () => {
     for (const n of CLEANUP_NAMES) {
       const file = CLEANUPS[n].split(' ')[0];
-      // lookIn's own read theirs through offInLookIn: the builder's steps leave them on there (cleanups.ts).
-      expect(readFileSync(join(import.meta.dir, '..', file), 'utf8')).toMatch(
-        new RegExp(`(?:retired|offInLookIn)\\('${n}'\\)`),
+      // lookIn's own five read theirs through offInLookIn: the builder's steps leave them on there (cleanups.ts).
+      const own = ['after_words', 'vague', 'shades', 'pose', 'members'].includes(n);
+      expect(readFileSync(join(import.meta.dir, '..', file), 'utf8')).toContain(
+        `${own ? 'offInLookIn' : 'retired'}('${n}')`,
       );
     }
     expect(readFileSync(join(import.meta.dir, '..', 'assemble.ts'), 'utf8')).not.toContain('retired(');

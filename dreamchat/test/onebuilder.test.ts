@@ -630,6 +630,39 @@ describe("ledger 11: a place's or a thing's pose, stripped once, by the record",
     expect(after.look).toBe(before.look);
   });
 
+  // a44a with the red door's words given otherwise, and its look at m5, before the door is opened at m7.
+  const door = (step: string, value: string, drawn: boolean) => {
+    const s = structuredClone(loadDream('dream-0926-062232-a44a', false).session as Session);
+    const it = s.build!.items.find((i) => i.id === 't2')!;
+    it.fields = { ...it.fields, appearance: { value, said: false } };
+    if (!drawn) Object.assign(it, { status: 'waiting', mediaId: undefined });
+    const b = s.draft!.breakdown!.things.find((t) => t.id === 't2')!;
+    (b.fields as Record<string, unknown>) = { ...b.fields, appearance: { value, said: false } };
+    return withSwitches(
+      { ...SHEET, DREAMCHAT_ONE_BUILDER: step },
+      () =>
+        rebuild(s)
+          .pictures.find((x) => x.id === 'm5')
+          ?.sheet?.inView.find((e) => e.id === 't2')?.look,
+    );
+  };
+
+  test('a pose left at the start of a clause a rule has rewritten is stripped too', () => {
+    // The way of drawing leaves "rendered in faded watercolour and": "standing upright on its own" then opens it.
+    const value =
+      'a standard-sized rectangular door, rendered in faded watercolour and standing upright on its own, painted bright red';
+    expect(door('looks', value, true)).not.toContain('standing upright');
+    expect(door('pose', value, true)).not.toContain('standing upright');
+    expect(door('pose', value, true)).toContain('rectangular door, painted');
+  });
+
+  test('a sketch never drawn: what the record moves to after a change stays out of its look before it', () => {
+    // The door is opened at m7: "standing wide open" is its look from then, never at m5.
+    const value = 'a bright red door in a simple frame, and standing wide open';
+    expect(door('looks', value, false)).not.toContain('wide open');
+    expect(door('pose', value, false)).not.toContain('wide open');
+  });
+
   test('where lookIn still says the look (a sketch never drawn), it still strips the pose', () => {
     const s = structuredClone(loadDream('dream-0926-052843-6081', false).session as Session);
     const it = s.build!.items.find(
@@ -696,6 +729,49 @@ describe("ledger 12: a group's words about someone with their own sketch, once, 
       expect(x.look).toContain('sister in a yellow dress');
     }
     for (const x of all.filter((y) => !y.withHim)) expect(x.look).toContain('white beard');
+  });
+
+  test('the dreamer the sheet reads as a group: their piece about someone with a sketch of their own leaves too', () => {
+    // "A pair of" makes the dreamer a group on the sheet (isGroup reads their words); the record calls them a person.
+    const s = structuredClone(loadDream('dream-0926-000545-09ea', false).session as Session);
+    const look = 'a young woman in a pair of round glasses; a grey scarf borrowed from the old man';
+    for (const x of [
+      s.build!.items.find((i) => i.id === 'p1')!,
+      s.draft!.breakdown!.people.find((p) => p.id === 'p1')!,
+    ])
+      (x as { fields: unknown }).fields = { appearance: { value: look, said: true } };
+    const at = (step: string) =>
+      withSwitches({ ...SHEET, DREAMCHAT_ONE_BUILDER: step }, () =>
+        rebuild(structuredClone(s)).pictures.flatMap((x) => {
+          const v = x.sheet?.inView ?? [];
+          return v.some((e) => e.id === 'p3') ? v.filter((e) => e.id === 'p1').map((e) => e.look) : [];
+        }),
+      );
+    expect(at('pose').length).toBeGreaterThan(0);
+    for (const l of at('pose')) expect(l).not.toContain('grey scarf');
+    for (const l of at('members')) {
+      expect(l).not.toContain('grey scarf');
+      expect(l).toContain('round glasses');
+    }
+  });
+
+  test('whom a piece names is read without its pose, as lookIn reads it', () => {
+    const fields = 'a family of three; standing beside the old man, a red scarf; a sister in a yellow dress';
+    const s = dream();
+    for (const x of [
+      s.build!.items.find((i) => i.id === 'p2')!,
+      s.draft!.breakdown!.people.find((p) => p.id === 'p2')!,
+    ])
+      (x as { fields: unknown }).fields = { appearance: { value: fields, said: true } };
+    const at = (step: string) =>
+      withSwitches({ ...SHEET, DREAMCHAT_ONE_BUILDER: step }, () =>
+        rebuild(structuredClone(s)).pictures.flatMap((x) => {
+          const v = x.sheet?.inView ?? [];
+          return v.some((e) => e.id === 'p3') ? v.filter((e) => e.id === 'p2').map((e) => e.look) : [];
+        }),
+      );
+    expect(at('pose').some((l) => l?.includes('a red scarf'))).toBe(true);
+    for (const l of at('members')) expect(l).toContain('a red scarf');
   });
 
   test("the look is the record's, not lookIn's, once the record says whom each clause is about", () => {
