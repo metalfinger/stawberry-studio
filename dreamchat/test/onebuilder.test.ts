@@ -202,6 +202,42 @@ describe('ledger 6: kinds from the story record', () => {
     // The prompt is the same: the sheet already said it as an animal.
     expect(after.m3.prompt).toBe(before.m3.prompt);
   });
+
+  test("where the record and the sketch's words would differ, the sheet says what the record says", () => {
+    // The producer marks Mr Hale's entry as several; his sketch says nothing of a group.
+    const s = structuredClone(loadDream(id, false).session as Session);
+    s.draft!.breakdown!.people.find((p) => p.id === 'p2')!.several = true;
+    const said = (step: string) =>
+      withSwitches({ ...SHEET, DREAMCHAT_ONE_BUILDER: step }, () =>
+        rebuild(structuredClone(s))
+          .pictures.flatMap((p) => p.sheet?.inView ?? [])
+          .find((e) => e.id === 'p2' && e.turned === null),
+      );
+    expect(said('names')).toMatchObject({ said: 'person', group: false });
+    expect(said('kinds')).toMatchObject({ said: 'people', group: true });
+  });
+
+  test("a sketch's words say what it is, as they say its look and name", () => {
+    // The breakdown still says "Mr Hale"; his sketch has become a dog.
+    const s = structuredClone(loadDream(id, false).session as Session);
+    const items = s.build!.items.map((i) =>
+      i.id === 'p2'
+        ? {
+            ...i,
+            name: 'the grey dog',
+            status: 'ready' as const,
+            fields: { appearance: { value: 'a grey dog', said: true } },
+          }
+        : i,
+    );
+    const kind = (step: string) =>
+      withSwitches(
+        { ...SHEET, DREAMCHAT_ONE_BUILDER: step },
+        () => storyRecord(s.draft!.breakdown!, items).record.elements.p2,
+      );
+    expect(kind('names').kind).toBe('person');
+    expect(kind('kinds')).toMatchObject({ kind: 'animal', animal: true });
+  });
 });
 
 describe("S4's word lists, each with a switch that turns off only its piece", () => {

@@ -627,10 +627,14 @@ function elementsOf(b: Breakdown, items: Item[], dreamer: string | null, notes: 
       status: 'waiting',
       version: 0,
     };
+    // What it is read from: with the one builder's kinds (S6 row 6), its sketch's words where it has one, as
+    // its look and name are, so a sketch that has become a dog is an animal; else the breakdown's.
+    const drawnAs = byItem.get(p.id);
+    const what = builds('kinds') && sketched(drawnAs) ? { ...drawnAs, isDreamer: p.is_dreamer } : as;
     // A group as the sketches take it: marked so, or named as one ("the family").
-    const several = p.several ?? (!p.is_dreamer && isGroup(as));
-    add(p.id, p.extras ? 'crowd' : several ? 'group' : isAnimal(as) ? 'animal' : 'person', p.name, fields(p));
-    if (builds('kinds') && elements[p.id]) elements[p.id].animal = isAnimal(as);
+    const several = p.several ?? (!p.is_dreamer && isGroup(what));
+    add(p.id, p.extras ? 'crowd' : several ? 'group' : isAnimal(what) ? 'animal' : 'person', p.name, fields(p));
+    if (builds('kinds') && elements[p.id] && isAnimal(what)) elements[p.id].animal = true;
   }
   for (const l of Array.isArray(b?.places) ? b.places : []) add(l.id, 'place', l.name, fields(l));
   for (const t of Array.isArray(b?.things) ? b.things : []) add(t.id, 'thing', t.name, fields(t));
