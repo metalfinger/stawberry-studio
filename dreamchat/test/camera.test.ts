@@ -5,7 +5,10 @@ import {
   bodyHeight,
   cameraMode,
   goingIn,
+  frontNamesFixture,
   handsIn,
+  mountOf,
+  mounted,
   openingsIn,
   outThroughWindows,
   sameCameraAs,
@@ -28,7 +31,7 @@ import {
 import { type CutSheet, notDrawnFrom } from '../cutsheet';
 import { frozenDreams, loadDream } from '../evals/saved';
 import { rebuild } from '../plan';
-import { filling, onOf } from '../previs';
+import { filling, frontLabel, onOf, outsideShot } from '../previs';
 import { type Breakdown, completeViews, type Moment, moments } from '../producer';
 import type { Session } from '../session';
 
@@ -50,9 +53,9 @@ function withEnv<T>(vars: Record<string, string | undefined>, fn: () => T): T {
   }
 }
 
-/** The camera rules on: they need the cut sheet on. S5's references stay as today (test/refs.test.ts). */
-const CAMERA = { DREAMCHAT_CAMERA: 'on', DREAMCHAT_CUT_SHEET: 'on', DREAMCHAT_REFS: undefined };
-const ON = { ...CAMERA, DREAMCHAT_RECORD: 'on' };
+/** The camera rules on: they need the cut sheet and the story record on. S5's references stay as today (test/refs.test.ts). */
+const CAMERA = { DREAMCHAT_CAMERA: 'on', DREAMCHAT_CUT_SHEET: 'on', DREAMCHAT_RECORD: 'on', DREAMCHAT_REFS: undefined };
+const ON = CAMERA;
 const rebuilt = (id: string, env: Record<string, string | undefined>) =>
   withEnv(env, () => rebuild(loadDream(id, false).session as Session));
 const picture = (r: ReturnType<typeof rebuild>, id: string) => r.pictures.find((p) => p.id === id && p.kind === 'cut')!;
@@ -116,11 +119,22 @@ function dream(x: {
 
 describe('the camera rules switch', () => {
   test('is off unless asked for, and off without the cut sheet, which carries what it says to the prompt', () => {
-    withEnv({ DREAMCHAT_CAMERA: undefined, DREAMCHAT_CUT_SHEET: 'on' }, () => expect(cameraMode()).toBe('off'));
-    withEnv({ DREAMCHAT_CAMERA: 'ON ', DREAMCHAT_CUT_SHEET: 'on' }, () => expect(cameraMode()).toBe('on'));
-    withEnv({ DREAMCHAT_CAMERA: 'yes', DREAMCHAT_CUT_SHEET: 'on' }, () => expect(cameraMode()).toBe('off'));
+    const rec = { DREAMCHAT_RECORD: 'on' };
+    withEnv({ ...rec, DREAMCHAT_CAMERA: undefined, DREAMCHAT_CUT_SHEET: 'on' }, () => expect(cameraMode()).toBe('off'));
+    withEnv({ ...rec, DREAMCHAT_CAMERA: 'ON ', DREAMCHAT_CUT_SHEET: 'on' }, () => expect(cameraMode()).toBe('on'));
+    withEnv({ ...rec, DREAMCHAT_CAMERA: 'yes', DREAMCHAT_CUT_SHEET: 'on' }, () => expect(cameraMode()).toBe('off'));
     for (const sheet of [undefined, 'off', 'shadow'])
-      withEnv({ DREAMCHAT_CAMERA: 'on', DREAMCHAT_CUT_SHEET: sheet }, () => expect(cameraMode()).toBe('off'));
+      withEnv({ ...rec, DREAMCHAT_CAMERA: 'on', DREAMCHAT_CUT_SHEET: sheet }, () => expect(cameraMode()).toBe('off'));
+  });
+
+  test('is off without the story record, which it reads the dream from', () => {
+    withEnv({ DREAMCHAT_CAMERA: 'on', DREAMCHAT_CUT_SHEET: 'on', DREAMCHAT_RECORD: 'on' }, () =>
+      expect(cameraMode()).toBe('on'),
+    );
+    for (const record of [undefined, 'off', 'shadow'])
+      withEnv({ DREAMCHAT_CAMERA: 'on', DREAMCHAT_CUT_SHEET: 'on', DREAMCHAT_RECORD: record }, () =>
+        expect(cameraMode()).toBe('off'),
+      );
   });
 
   test("asked for without the sheet, every prompt is today's", () => {
@@ -1061,5 +1075,164 @@ describe("a person's, place's or thing's id in a moment's words", () => {
     const named = b('the harbour', 'a small stone harbour');
     expect(named.looks_at).toBe('the tall window; outside it the harbour');
     expect(named.shift).toBe('the sea rises beyond the tall window the harbour');
+  });
+});
+
+describe('a fixture up its wall, where the words put it', () => {
+  const room = { indoors: true, ceiling: 6 } as const;
+  const window = (name: string, size: [number, number, number] = [2, 0.3, 2]) => ({
+    name,
+    size,
+    shape: 'block' as const,
+    fixture: true,
+    kind: 'thing' as const,
+  });
+
+  test('high, at the top, on the ceiling or on a wall: its height off the floor', () => {
+    // Its own name says it is high: the top quarter of the wall, its top a little under the ceiling.
+    expect(mountOf(window('the high round window'), room)).toEqual({ above: 4.4, high: 1.5 });
+    // The place's words say it, of what it is: "a round window high up", "a high round window at the top".
+    expect(mountOf(window('the round window'), room, 'a big hall; a round window high up')).toEqual({
+      above: 4.4,
+      high: 1.5,
+    });
+    expect(
+      mountOf(window('the window'), room, 'big reading room, shelves up to the ceiling, high round window at the top'),
+    ).toEqual({ above: 4.4, high: 1.5 });
+    // Hung from the ceiling: its top at the ceiling.
+    expect(mountOf(window('the lamp', [0.5, 0.5, 0.6]), room, 'a lamp hanging from the ceiling')).toEqual({
+      above: 5.4,
+      high: 0.6,
+    });
+    // On a wall: its middle at eye height.
+    expect(mountOf(window('the clock', [0.4, 0.1, 0.4]), room, 'a round clock on the wall')).toEqual({
+      above: 1.3,
+      high: 0.4,
+    });
+  });
+
+  test('what the words do not put up a wall stands on the floor', () => {
+    // An ordinary window, and words about something else.
+    expect(mountOf(window('the window'), room, 'windows all round; a table in the middle')).toBeNull();
+    // Where the room is, not where its windows are: the lighthouse's round room kept its windows as they were.
+    expect(
+      mountOf(
+        window('the window', [1.2, 0.1, 1.5]),
+        room,
+        'A round room at the top of the lighthouse with windows all the way round.',
+      ),
+    ).toBeNull();
+    expect(
+      mountOf(
+        window('the big reading room', [1, 1, 1]),
+        room,
+        'the big reading room with shelves and a high round window at the top',
+      ),
+    ).toBeNull();
+    // "Up to the ceiling" is how tall shelves are, never where they hang.
+    expect(mountOf(window('the shelves', [2, 1, 1.5]), room, 'shelves up to the ceiling')).toBeNull();
+    // Too tall to be up a wall: a high wall, a bookcase to the ceiling.
+    expect(mountOf(window('the high wall', [8, 0.3, 6]), room)).toBeNull();
+    // Out of doors there is no wall or ceiling to be on; and never someone's, or someone.
+    expect(mountOf(window('the high round window'), { indoors: false })).toBeNull();
+    expect(mountOf({ ...window('the high round window'), heldBy: 'p1' }, room)).toBeNull();
+    expect(mountOf({ ...window('the high round window'), fixture: false }, room)).toBeNull();
+  });
+
+  test('words about something else near it, or about how tall it is, leave it on the floor', () => {
+    // Said by a high thing: the desk is under the window, not up the wall with it.
+    expect(mountOf(window('the desk', [1.4, 0.7, 0.75]), room, 'a desk under the high window')).toBeNull();
+    expect(mountOf(window('the bench', [1.5, 0.4, 0.45]), room, 'a bench below the high round window')).toBeNull();
+    // The window over it is still high.
+    expect(mountOf(window('the window'), room, 'a desk under the high window')).toEqual({ above: 4.4, high: 1.5 });
+    // At the top of something else: where it is, not how high on its wall.
+    expect(mountOf(window('the door', [1, 0.1, 2.1]), room, 'the door at the top of the stairs')).toBeNull();
+    expect(mountOf(window('the window'), room, 'a window at the top of the wall')).toEqual({ above: 4.4, high: 1.5 });
+    // How tall, not how high: waist-high, high-backed, a high stool.
+    expect(mountOf(window('the counter', [2, 0.3, 1]), room, 'a waist-high counter')).toBeNull();
+    expect(mountOf(window('the armchair', [0.9, 0.9, 1.2]), room, 'a high-backed armchair')).toBeNull();
+    expect(mountOf(window('the stool', [0.4, 0.4, 0.8]), room, 'a high stool')).toBeNull();
+    // Near the ceiling says it of the lamp itself.
+    expect(mountOf(window('the lamp', [0.5, 0.5, 0.6]), room, 'a lamp near the ceiling')).toEqual({
+      above: 5.3,
+      high: 0.6,
+    });
+  });
+
+  test('lifted onto the wall it is by, and the water measured by it', () => {
+    const plan: Blocking = {
+      front: 'the high round window side',
+      indoors: true,
+      ceiling: 6,
+      room: [20, 12],
+      spots: [
+        {
+          id: 'x1',
+          x: 10,
+          y: 0.5,
+          kind: 'thing',
+          size: [2, 0.3, 2],
+          shape: 'block',
+          fixture: true,
+          name: 'the high round window',
+        },
+        {
+          id: 'x2',
+          x: 8,
+          y: 6,
+          kind: 'thing',
+          size: [1.2, 0.8, 0.75],
+          shape: 'block',
+          fixture: true,
+          name: 'the desk',
+        },
+      ],
+    };
+    const up = mounted(plan, 'big reading room, high round window at the top');
+    const x1 = up.spots.find((s) => s.id === 'x1')!;
+    expect(x1.above).toBe(4.4);
+    expect(x1.size).toEqual([2, 0.3, 1.5]);
+    // Flat against the front wall it stood by.
+    expect(x1.y).toBeCloseTo(0.17, 2);
+    expect(up.spots.find((s) => s.id === 'x2')!.above).toBeUndefined();
+    // Up to it is up to its bottom; over it, over its top.
+    expect(waterLevel('up to the high round window', up)).toBe(4.4);
+    expect(waterLevel('over the high round window', up)).toBe(5.9);
+    // Standing on the floor, as before: up to its top.
+    expect(waterLevel('up to the high round window', plan)).toBe(2);
+  });
+
+  test("a wall is never labelled with a fixture's name, with the camera rules", () => {
+    const plan = {
+      front: 'the high round window side',
+      spots: [{ id: 'x1', x: 10, y: 0.2, kind: 'thing' as const, fixture: true, name: 'the high round window' }],
+    };
+    expect(frontNamesFixture(plan)).toBe(true);
+    expect(frontNamesFixture({ ...plan, front: 'the screen' })).toBe(false);
+    expect(withEnv(CAMERA, () => frontLabel(plan))).toBe('the wall');
+    expect(withEnv(CAMERA, () => frontLabel({ ...plan, front: 'the screen' }))).toBe('the screen');
+    // Off, as before.
+    expect(withEnv({ DREAMCHAT_CAMERA: undefined }, () => frontLabel(plan))).toBe('the high round window side');
+  });
+
+  test("the library's high round window is up its wall, above the water, and in the picture of rowing up to it", () => {
+    // Its floor plan made it a 2 m block on the floor, under 4 metres of water: gone from the view.
+    const r = rebuilt('dream-0926-050424-fdd7', ON);
+    const plan = withEnv(ON, () => shotPlan(r.b, 'm5', r.rec))!;
+    const x1 = plan.spots.find((s) => s.id === 'x1')!;
+    expect(x1.above).toBeGreaterThanOrEqual(4);
+    expect((x1.above ?? 0) + x1.size![2]).toBeLessThanOrEqual(plan.ceiling!);
+    // With the water the camera rules measure there (4.4 m, as the implied readings give it), all of it above.
+    const wet = { ...plan, water: 4.4 };
+    const shot = withEnv(ON, () =>
+      outsideShot(wet, ['p1', 'p2'], 'wide', (id) => id, { id: 'x1', at: { x: x1.x, y: x1.y } }),
+    )!;
+    expect(shot.inPicture).toContain('x1');
+    expect(shot.text).not.toContain('Outside the picture, behind the camera: x1');
+    // Out over the top of the frame, it is above the picture, never "off to the right" of it.
+    expect(picture(r, 'm2').prompt).toContain('Outside the picture, above it: the high round window.');
+    // Off, as before: on the floor.
+    const off = withEnv({ DREAMCHAT_CAMERA: undefined }, () => shotPlan(r.b, 'm5', r.rec))!;
+    expect(off.spots.find((s) => s.id === 'x1')!.above).toBeUndefined();
   });
 });

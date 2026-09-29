@@ -31,10 +31,12 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Blocking } from '../blocking';
+import { frontNamesFixture } from '../camera';
 import { type CutPlan, type GhostPlan, inViewAt, placePlan, shotPlan } from '../continuity';
 import { REVERSE_DEGREES } from '../cutsheet';
 import type { JevFn, Question } from '../jev';
 import { imagesOf, type Rebuilt, type RebuiltPicture, rebuild, standIn } from '../plan';
+import { frontLabel } from '../previs';
 import { type Moment, moments } from '../producer';
 import type { Session } from '../session';
 import { commitOf, DIR, type Inputs, inputsDiffer, sha256 } from './saved';
@@ -676,6 +678,22 @@ export const CHECKS = {
           : 'off the plan',
     };
   },
+  /**
+   * On the floor plan, a fixture up its wall (the camera rules' mounting): off the floor, all of it above the
+   * water where water stands, and the mock-up's front wall not labelled with its name.
+   */
+  up_its_wall: (c: Ctx, a: { who: string }): CheckResult => {
+    const s = spotOf(c, a.who);
+    if (!s || !c.floor) return { pass: false, detail: `${nameOf(c, a.who)} is not on the plan` };
+    const water = c.floor.water ?? 0;
+    const label = frontLabel(c.floor);
+    const named = frontNamesFixture({ front: label, spots: [s] });
+    const up = s.above !== undefined && s.above > 0 && s.above >= water;
+    return {
+      pass: up && !named,
+      detail: `${s.above === undefined ? 'on the floor' : `${s.above} m off the floor`}, water ${water} m; the front wall labelled "${label}"`,
+    };
+  },
   /** On the floor plan, the thing is held or carried by this person. */
   held_by: (c: Ctx, a: { who: string; by: string }): CheckResult => {
     const s = spotOf(c, a.who);
@@ -909,6 +927,7 @@ export const CHECK_ARGS: Record<CheckName, { required: string[]; optional: strin
   in_view: { required: ['who'], optional: [] },
   not_in_view: { required: ['who'], optional: [] },
   not_on_floor_plan: { required: ['who'], optional: [] },
+  up_its_wall: { required: ['who'], optional: [] },
   held_by: { required: ['who', 'by'], optional: [] },
   faces: { required: ['who', 'toward'], optional: [] },
   faces_each_other: { required: ['a', 'b'], optional: [] },

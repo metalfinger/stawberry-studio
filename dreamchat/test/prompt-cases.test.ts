@@ -153,6 +153,7 @@ describe('the case set', () => {
       'held_by',
       'faces',
       'faces_each_other',
+      'up_its_wall',
       'look_has',
       'dreamer_seen_or_pov',
       'no_dreamer_image',

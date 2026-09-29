@@ -25,7 +25,16 @@ import {
   unit,
   wall,
 } from './blocking';
-import { cameraMode, isWindow, ON_THE_LINE, sameCameraAs, signedFromLine, type WallSeen, wallOf } from './camera';
+import {
+  cameraMode,
+  frontNamesFixture,
+  isWindow,
+  ON_THE_LINE,
+  sameCameraAs,
+  signedFromLine,
+  type WallSeen,
+  wallOf,
+} from './camera';
 
 type V2 = { x: number; y: number };
 type V3 = { x: number; y: number; z: number };
@@ -259,7 +268,7 @@ function solidsOf(
     add('left wall', 0.46, [quad([v3(0, 0, 0), v3(0, dp, 0), v3(0, dp, h), v3(0, 0, h)], v3(1, 0, 0))]);
     add('right wall', 0.44, [quad([v3(w, 0, 0), v3(w, 0, h), v3(w, dp, h), v3(w, dp, 0)], v3(-1, 0, 0))]);
     add('back wall', 0.4, [quad([v3(0, dp, 0), v3(w, dp, 0), v3(w, dp, h), v3(0, dp, h)], v3(0, -1, 0))]);
-    add('front', 0.62, [quad([v3(0, 0, 0), v3(0, 0, h), v3(w, 0, h), v3(w, 0, 0)], v3(0, 1, 0))], plan.front);
+    add('front', 0.62, [quad([v3(0, 0, 0), v3(0, 0, h), v3(w, 0, h), v3(w, 0, 0)], v3(0, 1, 0))], frontLabel(plan));
   } else {
     // Outdoors the ground runs on well past the plan, however far the place goes.
     const [w, dp] = roomOf(plan);
@@ -317,6 +326,15 @@ function solidsOf(
     add('water', 0.52, [quad([v3(x0, y0, z), v3(x1, y0, z), v3(x1, y1, z), v3(x0, y1, z)], v3(0, 0, 1))], 'the water');
   }
   return solids;
+}
+
+/**
+ * What a room's front wall is labelled on the mock-up: the place's front, but never a fixture's name. Labelled
+ * "high round window side", the whole wall was drawn open onto the city (library, 27 Sep): with the camera
+ * rules it is then "the wall", and the fixture keeps its own label where it is on it.
+ */
+export function frontLabel(plan: Pick<Blocking, 'front' | 'spots'>): string {
+  return cameraMode() === 'on' && frontNamesFixture(plan) ? 'the wall' : plan.front;
 }
 
 /** Someone or a crowd, rather than a thing. */
@@ -442,6 +460,9 @@ function thingBlocks(s: Spot, plan: Blocking, called: string, pov?: Eye): Block[
   }
   // Afloat where the water stands (the camera rules): a boat rowed up to a high window sits high.
   if (shape === 'vehicle') return [{ x: s.x, y: s.y, z: afloat(plan), w, d, h: Math.min(h, 1.6) * 0.6, f }];
+  // Up its wall or on the ceiling, where the place's words put it (the camera rules, camera.ts mounted): the
+  // high round window, a block on the floor, was hidden by the water and the whole wall was drawn open.
+  if (s.above !== undefined) return [{ x: s.x, y: s.y, z: s.above, w, d, h, f }];
   const rest = restOf(s, plan, called);
   if (rest) return [{ x: rest.x, y: rest.y, z: rest.z, w, d, h, f: rest.f ?? f }];
   if (shape === 'steps') {
@@ -1053,7 +1074,8 @@ export function dreamerShot(
         : v3(
             target.x,
             target.y,
-            groundAt(target, plan) + (isPerson(target) ? eyeHeight(target.pose) - 0.1 : sizeOf(target)[2] / 2),
+            (target.above ?? groundAt(target, plan)) +
+              (isPerson(target) ? eyeHeight(target.pose) - 0.1 : sizeOf(target)[2] / 2),
           )
     : null;
   const near = plan.spots.filter((s) => s.id !== dreamer && s.id !== target?.id && isPerson(s) && !s.many);
@@ -1500,7 +1522,7 @@ export function outsideShot(
       : Math.max(
           ...group.map(
             (s) =>
-              (restOf(s, plan, name(s.id))?.z ?? groundAt(s, plan)) +
+              (s.above ?? restOf(s, plan, name(s.id))?.z ?? groundAt(s, plan)) +
               (isPerson(s) ? eyeHeight(s.pose) + 0.15 : sizeOf(s)[2]),
           ),
         );
@@ -1919,11 +1941,19 @@ function besideOf(s: Spot, plan: Blocking, ids: string[]): Spot | undefined {
 }
 
 /** Which way off the picture something is: to the left, the right, or behind the camera. */
-function offTo(eye: Eye, s: V2): string {
+function offTo(eye: Eye, s: V2 & { above?: number }): string {
   const d = unit(eye.d);
   const v = { x: s.x - eye.at.x, y: s.y - eye.at.y };
   const r = rightOf(d);
   const angle = (Math.atan2(v.x * r.x + v.y * r.y, v.x * d.x + v.y * d.y) * 180) / Math.PI;
+  // Up a wall (the camera rules' mounting), ahead but over the top of the frame: above the picture, never to
+  // one side of it ("Outside the picture, above it"). The library's high round window, out over the top of the
+  // frame, was "off to the right".
+  if (s.above !== undefined && Math.abs(angle) <= halfViewOf(eye)) {
+    const along = v.x * d.x + v.y * d.y;
+    const top = eye.height + along * Math.tan((eye.pitch ?? 0) + (halfTall(eye) * Math.PI) / 180);
+    if (along > 0 && s.above >= top) return 'above it';
+  }
   return Math.abs(angle) > 135 ? 'behind the camera' : angle < 0 ? 'off to the left' : 'off to the right';
 }
 
@@ -1953,7 +1983,7 @@ function underWater(s: Spot, plan: Blocking, eye?: Eye): boolean {
   if (eye && eye.height < plan.water) return false;
   if (isPerson(s) && !s.many && onOf(s, plan)?.t && shapeOf(onOf(s, plan)!.t, plan) === 'vehicle') return false;
   if (!isPerson(s) && (shapeOf(s, plan) === 'vehicle' || s.heldBy)) return false;
-  const top = groundAt(s, plan) + (isPerson(s) ? eyeHeight(s.pose) + 0.15 : sizeOf(s)[2]);
+  const top = (s.above ?? groundAt(s, plan)) + (isPerson(s) ? eyeHeight(s.pose) + 0.15 : sizeOf(s)[2]);
   return top < plan.water;
 }
 

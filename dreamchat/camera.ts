@@ -12,24 +12,31 @@
 // - the mock-up's heights follow the record: the water's level, a boat afloat on it (B1);
 // - the moment after a jump in the same place is that place, not another (continuity.ts relationIn).
 //
-// Pure: no model, no files. Behind DREAMCHAT_CAMERA=on, which needs DREAMCHAT_CUT_SHEET=on: what the
-// rules say reaches the prompt through the cut sheet alone. Off, every plan, sheet and prompt is today's.
+// Pure: no model, no files. Behind DREAMCHAT_CAMERA=on, which needs DREAMCHAT_CUT_SHEET=on and
+// DREAMCHAT_RECORD=on: what the rules say reaches the prompt through the cut sheet alone, and what they read
+// of the dream (the water's level, what is held or open) comes from the story record. Off, every plan, sheet
+// and prompt is today's.
 import { type Blocking, type Eye, roomOf, type Side, sizeOf, type Spot } from './blocking';
 
-let warned = false;
+const warned = new Set<string>();
 
 /**
  * Whether the camera rules run: off (the default) or on. They need the cut sheet on
- * (DREAMCHAT_CUT_SHEET=on), the one place what they say reaches the prompt from: asked for without it,
- * they stay off, and say so once. Half on, the floor plans moved while the prompts said nothing of it.
+ * (DREAMCHAT_CUT_SHEET=on), the one place what they say reaches the prompt from, and the story record on
+ * (DREAMCHAT_RECORD=on), which they read the dream from: asked for without either, they stay off, and say so
+ * once. Half on, the floor plans moved while the prompts said nothing of it; without the record, a window
+ * lifted up its wall was said to be outside the picture, the water it rose above never measured (owner, 29 Sep).
  */
 export function cameraMode(): 'off' | 'on' {
   if ((process.env.DREAMCHAT_CAMERA ?? '').trim().toLowerCase() !== 'on') return 'off';
-  if ((process.env.DREAMCHAT_CUT_SHEET ?? '').trim().toLowerCase() === 'on') return 'on';
-  if (!warned) {
-    warned = true;
-    console.warn('DREAMCHAT_CAMERA=on needs DREAMCHAT_CUT_SHEET=on: the camera rules stay off');
-  }
+  const on = (name: string) => (process.env[name] ?? '').trim().toLowerCase() === 'on';
+  const missing = ['DREAMCHAT_CUT_SHEET', 'DREAMCHAT_RECORD'].filter((name) => !on(name));
+  if (!missing.length) return 'on';
+  for (const name of missing)
+    if (!warned.has(name)) {
+      warned.add(name);
+      console.warn(`DREAMCHAT_CAMERA=on needs ${name}=on: the camera rules stay off`);
+    }
   return 'off';
 }
 
@@ -185,6 +192,158 @@ export function outThroughWindows(plan: Blocking): Record<string, Side> {
   return out;
 }
 
+// ── how high a fixture is on its wall ────────────────────────────────────────────────────────────
+
+/** Hung from or set in the ceiling: its top at the ceiling. "Up to the ceiling" is how tall, never where it hangs. */
+const ON_CEILING =
+  /\b(?:on|in|from|into|across)\s+the\s+ceiling\b|\bceiling[- ](?:lamp|light|fan|window)s?\b|\bskylights?\b/;
+/**
+ * High on a wall, at the top of the room: its top just under the ceiling. "At the top" of something else (the
+ * stairs, the tower) is where it is, not how high on its wall.
+ */
+const HIGH =
+  /\bup high\b|\bat the top\b(?! of)|\bnear the (?:ceiling|top)\b|\bunder the ceiling\b|\btop of the (?:wall|room)\b/;
+/**
+ * "High" said of it as a word of its own: "waist-high" and "high-backed" say how tall, not how high. Said
+ * of it alone (not "up high", "at the top"), only of something flat enough to be set in or on a wall: a
+ * high window, a high shelf; a high stool or a high table stands on the floor.
+ */
+const HIGH_WORD = /(?<![\w-])high(?![\w-])/;
+/** Flat enough to be set in or on a wall, in metres from front to back. */
+const FLAT = 0.35;
+/** On a wall, at about the height of someone's eyes. */
+const ON_WALL =
+  /\bon (?:the|a|every|each|one|its) (?:\w+ )?wall\b|\bwall[- ]mounted\b|\bmounted\b|\bhangs? on\b|\bhanging on\b|\bhung on\b/;
+
+/** The middle of something on a wall, about the height of someone's eyes (previs.ts MOUNTED). */
+export const WALL_HEIGHT = 1.5;
+
+/** Words that end what is said of a thing, before or after its name: "a room with windows", "shelves and a window". */
+const PHRASE_END = /^(?:with|and|or|but|of|where|which|that|while)$/;
+/**
+ * Words that go on to say where it is by something else: "a desk under the high window" says nothing of how
+ * high the desk is. Not "near the ceiling" or "under the top", which say it of the thing itself.
+ */
+const BY_ANOTHER = /^(?:under|underneath|below|beneath|beside|by|near|next|behind|above|over|against)$/;
+
+/**
+ * What some words say right about a thing, by what it is (its head word, `headWord`): in each clause that
+ * names it, up to three words before it and the few after it, each side up to a word that ends what is said
+ * of it ("with", "and", "of"). "A round room at the top of the lighthouse with windows all the way round"
+ * says nothing of how high the windows are; "a high round window at the top" and "a lamp hanging from the
+ * ceiling" do.
+ */
+export function wordsAbout(head: string, text: string): string[] {
+  const out: string[] = [];
+  const is = new RegExp(`^${head}(?:e?s)?$`);
+  for (const clause of text.toLowerCase().split(/[;.,]/)) {
+    const w = clause.split(/[^a-z0-9'-]+/).filter(Boolean);
+    w.forEach((x, i) => {
+      if (!is.test(x)) return;
+      const before: string[] = [];
+      for (let k = i - 1; k >= Math.max(0, i - 3) && !PHRASE_END.test(w[k]) && !BY_ANOTHER.test(w[k]); k--)
+        before.unshift(w[k]);
+      const after: string[] = [];
+      for (let k = i + 1; k < Math.min(w.length, i + 7); k++) {
+        // "At the top of the stairs": the "of" goes with the top, so it is kept to tell the top of what.
+        if (PHRASE_END.test(w[k]) && !(w[k] === 'of' && w[k - 1] === 'top')) break;
+        if (BY_ANOTHER.test(w[k]) && !(w[k + 1] === 'the' && /^(?:ceiling|top)$/.test(w[k + 2] ?? ''))) break;
+        after.push(w[k]);
+      }
+      out.push([...before, x, ...after].join(' '));
+    });
+  }
+  return out;
+}
+
+/**
+ * How high a fixture of a room stands off its floor, from what its own name and the place's words say right
+ * about it (`wordsAbout`): its bottom and its height, in metres. High on a wall or at the top of the room ("the
+ * high round window", "a round window high up", "a high round window at the top"), it fills the top quarter of
+ * the wall, its top a little under the ceiling; set in or hung from the ceiling, its top is at the ceiling; on
+ * a wall ("a clock on the wall"), its middle is at eye height. Only something that fits there, less than three
+ * quarters of the room's height: shelves "up to the ceiling" or a "high" wall stand on the floor as they are.
+ * Null where the words say none of these, or out of doors, where there is no wall or ceiling to be on. The high
+ * round window of the library was a block standing on the floor, under four metres of water, and the model
+ * opened the whole wall instead (library, 27 Sep).
+ */
+export function mountOf(
+  s: Pick<Spot, 'name' | 'size' | 'shape' | 'fixture' | 'kind' | 'heldBy'>,
+  plan: Pick<Blocking, 'indoors' | 'ceiling'>,
+  placeWords = '',
+): { above: number; high: number } | null {
+  if (!plan.indoors || !s.fixture || !s.name || s.kind === 'person' || s.heldBy) return null;
+  const shape = s.shape ?? 'block';
+  if (shape !== 'block') return null;
+  const head = headWord(s.name);
+  if (!head) return null;
+  const said = [...wordsAbout(head, s.name), ...wordsAbout(head, placeWords)];
+  const ceiling = plan.ceiling ?? 3.2;
+  const h = sizeOf(s as Spot)[2];
+  const top = ceiling - 0.1;
+  const band = Math.max(0.5, ceiling / 4);
+  const up = (x: string) => x.replace(/\bup to the ceiling\b|\bto the ceiling\b|\bceiling-high\b/g, '');
+  if (said.some((x) => ON_CEILING.test(up(x)))) {
+    const high = Math.min(h, band);
+    return h < ceiling * 0.75 ? { above: Math.round((ceiling - high) * 100) / 100, high } : null;
+  }
+  const flat = Math.min(sizeOf(s as Spot)[0], sizeOf(s as Spot)[1]) <= FLAT;
+  if (said.some((x) => HIGH.test(up(x)) || (flat && HIGH_WORD.test(up(x))))) {
+    const high = Math.min(h, band);
+    return h < ceiling * 0.75 ? { above: Math.round((top - high) * 100) / 100, high } : null;
+  }
+  if (said.some((x) => ON_WALL.test(x)) && h <= 1.5)
+    return { above: Math.max(0, Math.round((WALL_HEIGHT - h / 2) * 100) / 100), high: h };
+  return null;
+}
+
+/**
+ * A room's plan with each fixture its words put up a wall or on the ceiling (`mountOf`) lifted there: its
+ * bottom off the floor (`above`) and against the wall it stands by, within half a metre of it. `words`
+ * is the place's own words, for the clauses about each fixture.
+ */
+export function mounted(plan: Blocking, words: string): Blocking {
+  if (!plan.indoors) return plan;
+  const [w, d] = roomOf(plan);
+  let moved = false;
+  const spots = plan.spots.map((s) => {
+    const m = mountOf(s, plan, words);
+    if (!m) return s;
+    moved = true;
+    const [sw, sd] = sizeOf(s);
+    const size: [number, number, number] = [sw, sd, m.high];
+    // Flat against the wall it is by: its back on the wall, not standing out into the room.
+    const side = wallOf(s, plan);
+    const half = side === 'front' || side === 'back' ? sd / 2 : sw / 2;
+    const at =
+      side === 'front'
+        ? { y: half + 0.02 }
+        : side === 'back'
+          ? { y: d - half - 0.02 }
+          : side === 'left'
+            ? { x: half + 0.02 }
+            : side === 'right'
+              ? { x: w - half - 0.02 }
+              : {};
+    return { ...s, ...at, size, above: m.above };
+  });
+  return moved ? { ...plan, spots } : plan;
+}
+
+/**
+ * Whether a place's front, as a wall is labelled, is named by one of its fixtures ("the high round window
+ * side", "the doors"): then the wall is labelled as a wall, and the fixture keeps its own label where it
+ * is. Labelled "high round window side", the whole wall was drawn open onto the city (library, 27 Sep).
+ */
+export function frontNamesFixture(plan: Pick<Blocking, 'front' | 'spots'>): boolean {
+  const front = plan.front.toLowerCase();
+  return plan.spots.some((s) => {
+    if (!s.fixture || !s.name) return false;
+    const head = headWord(s.name);
+    return !!head && head.length > 2 && new RegExp(`\\b${head}(?:e?s)?\\b`).test(front);
+  });
+}
+
 // ── water, and what floats on it ─────────────────────────────────────────────────────────────────
 
 /** A part of a place that is water: its level is the water's. */
@@ -225,7 +384,8 @@ export function waterLevel(
   const text = words.toLowerCase();
   // Only a room has a ceiling: out in the open, a roof is somewhere to stand, and the water has no cap.
   const ceiling = plan.indoors ? (plan.ceiling ?? 3.2) : Number.POSITIVE_INFINITY;
-  const marks: { at: number; top: number; thing?: boolean; being?: boolean }[] = [];
+  // A thing up a wall (`above`, camera.ts mounted) is reached at its bottom and covered over its top.
+  const marks: { at: number; top: number; bottom?: number; thing?: boolean; being?: boolean }[] = [];
   const ceil = plan.indoors ? text.search(/\b(?:ceiling|top of the room|roof)\b/) : -1;
   if (ceil >= 0) marks.push({ at: ceil, top: ceiling });
   for (const [re, h] of BODY) {
@@ -246,7 +406,13 @@ export function waterLevel(
     const key = head.at(-1)?.replace(/s$/, '');
     if (!key) continue;
     const i = text.search(new RegExp(`\\b${key.replace(/[^a-z0-9]/g, '')}(?:e?s)?\\b`));
-    if (i >= 0) marks.push({ at: i, top: sizeOf(s)[2], thing: true });
+    if (i >= 0)
+      marks.push({
+        at: i,
+        top: (s.above ?? 0) + sizeOf(s)[2],
+        ...(s.above !== undefined ? { bottom: s.above } : {}),
+        thing: true,
+      });
   }
   // The words just before a mark, back to the clause or the "and" before it: in "covering the floor and
   // up to the shelves" the shelves are reached ("up to"), and "covering" is the floor's.
@@ -293,7 +459,8 @@ export function waterLevel(
     // Water covering the floor "and up to the shelves" has spread to them, across the floor: a thing it
     // reaches is a height only where the words say how high (over it, the top of it, almost up to it).
     const across = !!m.thing && !almost && !over && floor >= 0;
-    return across ? 0.1 : almost ? m.top - 0.2 : over ? m.top + 0.2 : m.top;
+    const reached = m.bottom ?? m.top;
+    return across ? 0.1 : almost ? reached - 0.2 : over ? m.top + 0.2 : reached;
   };
   // A later thing named measures it too only where the words measure by it ("and far up the shelves");
   // named for what stands in it ("and the shelves stand in it"), it does not.
