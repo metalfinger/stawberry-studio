@@ -468,9 +468,17 @@ export function todayOf(
         const what = `${id}'s new picture, drawn first in this checkpoint (${here.id})`;
         const dep = { ...base, key: `picture:${id}`, what, dependsOn: here.id };
         if (!here.file) return dep;
-        return exists(here.file)
-          ? { ...dep, file: here.file }
-          : { ...dep, missing: `its file is not on this machine (${here.file})` };
+        if (!exists(here.file)) return { ...dep, missing: `its file is not on this machine (${here.file})` };
+        // The owner's verdicts on this checkpoint's own new pictures count too: a new picture he called
+        // wrong is never drawn from, as a picture of the run he called wrong is not.
+        const wrong = judgedWrong(opts.judged ?? [], id, here.file);
+        return wrong
+          ? {
+              ...dep,
+              file: here.file,
+              missing: `the owner judged ${id}'s new picture wrong (${wrong.where}${wrong.note ? `: "${wrong.note.slice(0, 160)}"` : ''}): a picture he called wrong is never drawn from; redraw ${id} first`,
+            }
+          : { ...dep, file: here.file };
       }
       const f = frames.find((x) => x.id === id && x.kind === 'cut');
       const what = `picture ${id} from the run${f?.name ? ` (${f.name})` : ''}`;

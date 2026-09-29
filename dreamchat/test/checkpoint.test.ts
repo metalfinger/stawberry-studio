@@ -682,6 +682,15 @@ describe('earlier pictures: drawn new first, never one the owner called wrong', 
     expect(drawn.images.find((im) => im.key === 'picture:m2')?.file).toBe('/checkpoint/new-m2.png');
     expect(drawn.hash).toBe(waits.hash);
     expect(drawn.hash).not.toBe(todayOf(snow, 'm3', { media: MEDIA, exists: everywhere }).hash);
+    // m2's new picture called wrong by the owner: m3 is not drawn from it either.
+    const newWrong = [{ ...wrong[0], file: '/checkpoint/new-m2.png' }];
+    const refusedNew = todayOf(snow, 'm3', {
+      media: MEDIA,
+      exists: everywhere,
+      judged: newWrong,
+      here: { m2: { id: 'snow-train-m2', file: '/checkpoint/new-m2.png' } },
+    });
+    expect(refusedNew.refused.some((r) => r.includes('picture:m2') && r.includes("m2's new picture wrong"))).toBe(true);
   });
 
   test('the judging page shows the picture the new one was drawn from, the new earlier one where it was drawn first', () => {
