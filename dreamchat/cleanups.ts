@@ -117,6 +117,10 @@ export const BUILDER_STEPS: readonly string[] = [
   // 14. A look said once: in its image's line, where the image is; "In it" names who and what has an image and
   //    says the look only of what has none (the sheet's `once.look`, read by the assembler).
   'look_once',
+  // 15. The colours the dream gives, said once: the style lists only those no line above says, and says the rest
+  //    keep exactly "as said above"; in one colour, said above is an image's line listing it (the sheet's
+  //    `once.colour`, read by the assembler).
+  'colour_once',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;

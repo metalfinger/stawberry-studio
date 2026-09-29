@@ -420,7 +420,7 @@ export const DREAM_QUALITY =
 export function styleBlock(
   style: StyleOption,
   told: string[] = [],
-  opts: { fromImages?: boolean; ownColours?: boolean; noSkin?: boolean } = {},
+  opts: { fromImages?: boolean; ownColours?: boolean; noSkin?: boolean; saidAbove?: boolean } = {},
 ): string {
   const colours = [...new Set(style.palette_hex.map(colourName))];
   const mono = oneColour(style);
@@ -428,10 +428,14 @@ export function styleBlock(
   // nor someone turned into a heron.
   const skin =
     !mono && !opts.noSkin && /photo|camera|film still/i.test(mediumOf(style)) ? 'Skin keeps its natural tone.' : '';
-  const keep = told.length ? ` What the dream itself gives a colour keeps it exactly: ${told.join('; ')}.` : '';
+  // With each colour said once (S6 row 15), those the words above already name are not listed again.
+  const above = opts.saidAbove ? ', as said above' : '';
+  const list = told.length ? `: ${told.join('; ')}` : '';
+  const keeps = told.length || opts.saidAbove;
+  const keep = keeps ? ` What the dream itself gives a colour keeps it exactly${above}${list}.` : '';
   // Made in one colour, a colour a look names is a shade of it: a blue ink wash told "medium brown
   // hair" drew it auburn, beside the same woman's blue-black hair in the picture before (24 Sep).
-  const shades = `Colours: ${colours.join(', ')}. The whole picture is shades of this one colour: wherever anyone or anything is given a colour above (hair, skin, clothes), it is drawn as a lighter or darker shade of it, never in its own colour.${told.length ? ` Only what the dream itself gives a colour keeps it exactly: ${told.join('; ')}.` : ''}`;
+  const shades = `Colours: ${colours.join(', ')}. The whole picture is shades of this one colour: wherever anyone or anything is given a colour above (hair, skin, clothes), it is drawn as a lighter or darker shade of it, never in its own colour.${keeps ? ` Only what the dream itself gives a colour keeps it exactly${above}${list}.` : ''}`;
   return [
     // The line describing a style is written for the person, and it can carry the dream itself
     // ("…precise details on the horse head" put ice horses in every sketch, 23 Sep): only the
@@ -451,8 +455,8 @@ export function styleBlock(
               // blue", a colour the dreamer said, read as the sketch contradicting itself (0.35;
               // 0.08 without that line, 24 Sep).
               `Colours: ${colours.join(', ')}, for the light and everything its look above gives no colour to; what the look gives a colour keeps it.${keep}${skin ? ` ${skin}` : ''}`
-            : told.length
-              ? `Colours: ${colours.join(', ')}, except what the dream itself gives a colour, which keeps it exactly: ${told.join('; ')}.${skin ? ` ${skin}` : ''}`
+            : keeps
+              ? `Colours: ${colours.join(', ')}, except what the dream itself gives a colour, which keeps it exactly${above}${list}.${skin ? ` ${skin}` : ''}`
               : `Colours, and no others: ${colours.join(', ')}.${skin ? ` ${skin}` : ''}`
       : '',
     style.lighting_rules ? `Light: ${style.lighting_rules}` : '',
