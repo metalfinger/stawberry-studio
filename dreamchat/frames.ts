@@ -924,14 +924,15 @@ export function ghostPrompt(
     ),
   };
   // Made from the story record, it is how they looked just before this change, the part it replaces
-  // left out. A colour the dream itself gives it stays whole in a guessed clause too (S6 row 13).
+  // left out. A colour the dream itself gives it stays whole in a guessed clause too (S6 row 13), in the look from
+  // the record only: the fields' look below is the fallback where there is none, and stays as lookIn has it.
   const keepWhole = builds('shades') ? toldColours(unchanged) : [];
   const look = g.before
     ? g.before.map((f) => (f.said ? f.text : inShades(f.text, style, keepWhole))).join('; ')
     : LOOK[sheet.kind]
         .map((k) => unchanged.fields[k])
         .filter((d) => !!d?.value && !VAGUE.test(d.value))
-        .map((d) => (d?.said ? (d.value as string) : inShades(d?.value as string, style, keepWhole)))
+        .map((d) => (d?.said ? (d.value as string) : inShades(d?.value as string, style)))
         .join('; ');
   const kind = sheet.kind === 'character' ? 'person' : sheet.kind === 'location' ? 'place' : 'thing';
   const lines =
