@@ -178,6 +178,32 @@ describe('ledger 5: names from the story record, and no id in words', () => {
   });
 });
 
+describe('ledger 6: kinds from the story record', () => {
+  // 8ceb: "the little silver fish", a shoal kept as a crowd; the record called it a crowd, the sheet an animal.
+  const id = 'dream-0926-083656-8ceb';
+  const at = (step: string) =>
+    withSwitches({ ...SHEET, DREAMCHAT_ONE_BUILDER: step }, () => {
+      const s = structuredClone(loadDream(id, false).session as Session);
+      return {
+        rec: storyRecord(s.draft!.breakdown!, s.build!.items).record.elements.p3,
+        m3: rebuild(s).pictures.find((p) => p.id === 'm3')!,
+      };
+    });
+
+  test('a crowd of animals is a crowd and an animal in the record, and the sheet and the tags read it', () => {
+    const before = at('names');
+    expect(before.rec.kind).toBe('crowd');
+    expect(before.rec.animal).toBeUndefined();
+    expect(before.m3.sheet?.tags.animal).toBe(false);
+    const after = at('kinds');
+    expect(after.rec).toMatchObject({ kind: 'crowd', animal: true });
+    expect(after.m3.sheet?.inView.find((e) => e.id === 'p3')).toMatchObject({ said: 'animal', group: true });
+    expect(after.m3.sheet?.tags).toMatchObject({ animal: true, crowd: true });
+    // The prompt is the same: the sheet already said it as an animal.
+    expect(after.m3.prompt).toBe(before.m3.prompt);
+  });
+});
+
 describe("S4's word lists, each with a switch that turns off only its piece", () => {
   test('hands, own body, a vehicle going, the water and the openings on walls', () => {
     const room: Blocking = {
