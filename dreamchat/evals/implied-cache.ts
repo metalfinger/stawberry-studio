@@ -74,7 +74,8 @@ export async function withImplied(
     }
     return call;
   };
-  // The record the reading is given, made as a rebuild makes it (plan.ts rebuild).
+  // The record the reading is given, from the saved sketches as the planning path reads them (session.ts). A rebuild
+  // now reads the record from its own approved sheets; this stays on the saved ones, the key of every cached reading.
   completeViews(b);
   const inputs = recordInputsOf(s);
   // Without an earlier reading of what the moments imply, as the harness reads it (session.ts).

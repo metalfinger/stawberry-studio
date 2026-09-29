@@ -48,6 +48,11 @@ export type ViewSheet = {
    * and approved: its look as the story record says it, which is what drawing sends once it is drawn.
    */
   drawn: boolean;
+  /**
+   * Whether today's prompt for it is the one its sketch was drawn from: the dream keeps each take's prompt as a hash
+   * only (`checkedTakes`), so the night's text cannot be shown. Null where no take was checked.
+   */
+  drawnFrom: { same: boolean; take: number } | null;
   /** Cuts and in-between pictures it is attached to. */
   usedBy: string[];
   hashes: ViewHashes;
@@ -70,7 +75,10 @@ export type ViewRef = {
   /** Who and what it is attached for. */
   subjects: string[];
   file: ViewFile;
-  /** A sketch not drawn yet in the saved dream: its line reads as it will once the sketch is drawn. */
+  /**
+   * What it names (a sketch, an earlier cut, an in-between picture) is not drawn yet in the saved dream: the page
+   * shows a placeholder, and the line reads as it will once it is drawn. Never on a mock-up (rendered, not drawn).
+   */
   notDrawnYet?: true;
 };
 
@@ -100,8 +108,13 @@ export type ViewCut = {
   sequence: string;
   scene: string;
   shot: string;
-  /** Where the tree (tree.ts) puts this cut differently from the plan, in words; null where they agree. */
+  /**
+   * Where the panel's tree (tree.ts from session.ts treeInputOf: the plan as a re-plan makes it now) groups this cut
+   * otherwise than the plan the prompts are made from (ledger row 2), in words; null where they agree.
+   */
   treeDiffers: string | null;
+  /** The cut before it in the same scene, whose camera the top view shows beside its own; none across a scene. */
+  prevCut: string | null;
   moment: {
     action: string;
     looksAt: string;
@@ -113,13 +126,35 @@ export type ViewCut = {
   /** role:…, move:…, change:…, flags, as tagWords gives them. */
   tags: string[];
   camera: { size: string | null; eyes: string; looksAt: string | null; words: string | null; eye: ViewEye | null };
-  /** The floor plan from above, for the top view: everyone and everything on it; null without one. */
+  /**
+   * The floor plan from above, for the top view, in the plan's own frame: metres, x to the right as one faces the
+   * front, y growing away from the front (the front is -y, as SVG's y grows down the page). Null without one.
+   */
   floor: {
-    room: { w: number; d: number };
-    spots: { id: string; name: string; x: number; y: number; w?: number; d?: number; facing?: number }[];
+    /** Across (x) and deep (y), where the plan says; null where it does not (the page fits the spots). */
+    room: { w: number; d: number } | null;
+    /** The plan's front: its words ("the lift doors") and its direction, always { x: 0, y: -1 }. */
+    front: { words: string; dir: { x: number; y: number } };
+    indoors: boolean | null;
+    spots: {
+      id: string;
+      name: string;
+      x: number;
+      y: number;
+      /** Across and deep in metres, for a thing with a size. */
+      w?: number;
+      d?: number;
+      kind?: 'person' | 'thing';
+      many?: boolean;
+      /** Which way it faces, as a unit direction on the plan (blocking.ts facing). */
+      facing: { x: number; y: number };
+    }[];
   } | null;
-  /** The drawing path's own mock-up (Image 1 where it is sent), by its sha256; null without a floor plan. */
-  mockUp: ViewFile;
+  /**
+   * The drawing path's own mock-up for this cut, by its sha256 (session.ts previsFor), whether or not its picture was
+   * written; `sent` says whether the prompt sends it (as Image 1). Null without a worked-out camera on a floor plan.
+   */
+  mockUp: { name: string; sha256: string; sent: boolean } | null;
   /** The earlier cuts and in-between pictures it is drawn from, with the plan's relation and role as they are. */
   links: { from: string; kind: 'cut' | 'ghost'; relation: string | null; role: string }[];
   refs: ViewRef[];
@@ -136,7 +171,7 @@ export type ViewCut = {
   /** Its paragraphs by id, so the page can fold them. */
   paragraphs: { id: string; text: string }[];
   /** A live dream's night: the picture drawn, the images really sent, and whether the prompt sent was this one. */
-  drawn: { file: ViewFile; sentImages: string[]; samePrompt: boolean } | null;
+  drawn: { file: ViewFile; sentImages: string[] | null; samePrompt: boolean | null } | null;
   hashes: ViewHashes;
 };
 
@@ -145,8 +180,11 @@ export type ViewGhost = {
   kind: 'state' | 'view';
   of: string;
   change: string;
-  /** What it is edited from: a sketch, an earlier cut or the in-between picture before it. */
-  from: string[];
+  /**
+   * What it is made from: whom it shows, the image it edits (its reference with the role "base", by key), and the
+   * in-between picture of the same one's change before it, which it follows.
+   */
+  from: { subject: string; editedFrom: string | null; after: string | null };
   usedBy: string[];
   /** Edits from a sketch or a drawn cut. */
   depth: number;
@@ -182,4 +220,6 @@ export type ViewAnswers = {
   source: 'frozen' | 'live';
   /** By node (a cut, an in-between picture, or sketch:<id>), the latest verdict. */
   verdicts: Record<string, ViewVerdict>;
+  /** By node, the verdicts it replaced, oldest first (the page appends; the report reads only the latest). */
+  history?: Record<string, ViewVerdict[]>;
 };

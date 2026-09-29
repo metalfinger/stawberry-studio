@@ -5,8 +5,13 @@ import { afterAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { assembleCut } from '../assemble';
 import { shotPlan } from '../continuity';
 import { frozenDreams, loadDream } from '../evals/saved';
-import { imagesOf, rebuild, standIn } from '../plan';
+import { imageName, imagesOf, rebuild, standIn } from '../plan';
 import { calledFor, drawingSheet, planRecord, previsFor, type Session } from '../session';
+import { planContinuity } from '../continuity';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { withReadings } from '../viewer/data';
 import { sheetPrompt } from '../sheets';
 import { nodeStates, unreadRight } from '../evals/viewer-report';
 import { PROFILE, viewDream } from '../viewer/data';
@@ -85,7 +90,11 @@ describe('the drawing path sends what the viewer shows, once everything before a
           expect([id, c.id, !!sheet]).toEqual([id, c.id, true]);
           const a = assembleCut(sheet!);
           expect([id, c.id, a.prompt]).toEqual([id, c.id, c.prompt]);
-          expect([id, c.id, a.references.map((x) => x.role)]).toEqual([id, c.id, c.refs.map((x) => x.role)]);
+          expect([id, c.id, a.references.map((x) => `${x.role} ${imageName(r, x.image)}`)]).toEqual([
+            id,
+            c.id,
+            c.refs.map((x) => `${x.role} ${x.key}`),
+          ]);
         }
       });
   });
@@ -212,5 +221,109 @@ describe("the owner's verdicts against what the viewer shows now", () => {
     const answers = rightOn(was);
     answers.verdicts.m99 = { ...answers.verdicts.m1, node: 'm99' };
     expect(nodeStates(was, answers).find((x) => x.node === 'm99')?.state).toBe('gone');
+  });
+});
+
+describe('what the viewer shows beside the prompt', () => {
+  test("each cut's issues are the ones the drawing gate reads for it, by its picture number", () => {
+    let seen = 0;
+    for (const id of dreams)
+      withSwitches(PROFILE, () => {
+        const s = loadDream(id, false).session as Session;
+        const all = planContinuity(s.draft!.breakdown!, planRecord(s)).issues;
+        const { view: v } = viewDream(s, { id, source: 'frozen', commit: 'test' });
+        for (const c of v.cuts) {
+          const gate = all.filter((x) => x.startsWith(`picture ${c.order} `) || x.startsWith(`picture ${c.order}:`));
+          expect([id, c.id, c.issues]).toEqual([id, c.id, gate]);
+          seen += gate.length;
+        }
+      });
+    expect(seen).toBeGreaterThan(0);
+  });
+
+  test("a verdict's hashes do not depend on whether the mock-up pictures are written", () => {
+    for (const id of dreams)
+      withSwitches(PROFILE, () => {
+        const s = loadDream(id, false).session as Session;
+        const on = viewDream(s, { id, source: 'frozen', commit: 'test', mockUps: true });
+        const off = viewDream(s, { id, source: 'frozen', commit: 'test', mockUps: false });
+        expect(off.files).toEqual({});
+        expect([id, off.view.cuts.map((c) => [c.hashes, c.mockUp])]).toEqual([
+          id,
+          on.view.cuts.map((c) => [c.hashes, c.mockUp]),
+        ]);
+      });
+  });
+
+  test('a mock-up says whether the prompt sends it', () => {
+    let sent = 0;
+    for (const id of dreams)
+      withSwitches(PROFILE, () => {
+        const { view: v } = viewDream(loadDream(id, false).session as Session, { id, source: 'frozen', commit: 't' });
+        for (const c of v.cuts)
+          if (c.mockUp) {
+            expect([id, c.id, c.mockUp.sent]).toEqual([id, c.id, c.refs.some((x) => x.key === `previs:${c.id}`)]);
+            if (c.mockUp.sent) sent++;
+          }
+      });
+    expect(sent).toBeGreaterThan(0);
+  });
+
+  test('every image of an in-between picture has its line, and says what it is edited from', () => {
+    for (const id of dreams)
+      withSwitches(PROFILE, () => {
+        const { view: v } = viewDream(loadDream(id, false).session as Session, { id, source: 'frozen', commit: 't' });
+        for (const g of v.ghosts) {
+          for (const x of g.refs)
+            expect([id, g.id, x.n, x.line.startsWith(`Image ${x.n}`)]).toEqual([id, g.id, x.n, true]);
+          expect(g.from.editedFrom).toBe(g.refs.find((x) => x.role === 'base')?.key ?? null);
+        }
+      });
+  });
+
+  test("the top view's floor plan is the plan's own: no room where it gives none, each spot's facing", () => {
+    let rooms = 0;
+    for (const id of dreams)
+      withSwitches(PROFILE, () => {
+        const s = loadDream(id, false).session as Session;
+        const r = rebuild(s);
+        const { view: v } = viewDream(s, { id, source: 'frozen', commit: 't' });
+        for (const c of v.cuts) {
+          const plan = c.floor ? shotPlan(r.b, c.id, r.rec)! : undefined;
+          if (!plan) continue;
+          expect(c.floor!.room).toEqual(plan.room ? { w: plan.room[0], d: plan.room[1] } : null);
+          if (plan.room) rooms++;
+          expect(c.floor!.front).toEqual({ words: plan.front, dir: { x: 0, y: -1 } });
+          for (const x of c.floor!.spots) expect(Math.hypot(x.facing.x, x.facing.y)).toBeCloseTo(1, 5);
+        }
+      });
+    expect(rooms).toBeGreaterThan(0);
+  });
+
+  test('the cut before is the one before it in the same scene, none at its first', () => {
+    const id = 'dream-0926-070314-0f40';
+    const { view: v } = view(id);
+    for (const c of v.cuts) {
+      const same = v.cuts.filter((x) => x.scene === c.scene && x.order < c.order).sort((a, b) => b.order - a.order);
+      expect([c.id, c.prevCut]).toEqual([c.id, same[0]?.id ?? null]);
+    }
+    expect(v.cuts.some((c) => c.prevCut === null && c.order > 1)).toBe(true);
+  });
+});
+
+describe('the viewer asks no model', () => {
+  test('a reading of what a moment implies that is not cached is an error, never a quiet gap', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'viewer-'));
+    const empty = join(dir, 'implied.json');
+    writeFileSync(empty, '{}');
+    const s = loadDream('dream-0926-070314-0f40', false).session as Session;
+    const was = process.env.DREAMCHAT_RECORD;
+    process.env.DREAMCHAT_RECORD = 'on';
+    try {
+      await expect(withReadings(s, { impliedCache: empty })).rejects.toThrow(/not cached/);
+    } finally {
+      if (was === undefined) delete process.env.DREAMCHAT_RECORD;
+      else process.env.DREAMCHAT_RECORD = was;
+    }
   });
 });

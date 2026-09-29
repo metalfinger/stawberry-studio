@@ -169,6 +169,20 @@ export function rebuild(
           readings: s.draft?.readings,
           words: inputs.words,
         });
+  // A picture rebuilt from its record (S9) reads the story record as the sketches were kept, not as a rebuild takes
+  // them (every one drawn): a sketch not drawn when it was sent was sent with its own words.
+  const dreamKept =
+    mode === 'off' || !recorded.size
+      ? dream
+      : sheetDream({
+          breakdown: b,
+          plan: drawnPlan,
+          prep: s.prep,
+          items: s.build?.items ?? [],
+          style,
+          readings: s.draft?.readings,
+          words: inputs.words,
+        });
   const pictures = [...buildFrames(b, plan), ...buildGhosts(plan)].map((p): Item => ({
     ...p,
     status: 'ready',
@@ -189,7 +203,7 @@ export function rebuild(
     const kept = it.kind === 'ghost' ? (it.ghost ? savedGhost(it.ghost) : undefined) : saved.get(pid);
     const record = kept ? recorded.get(kept.id) : undefined;
     if (record) {
-      const again = fromRecord(was, it, record, dream, mode);
+      const again = fromRecord(was, it, record, dreamKept, mode);
       if (again) {
         out.push(again);
         continue;

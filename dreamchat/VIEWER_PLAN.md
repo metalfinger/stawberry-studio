@@ -101,6 +101,16 @@ disagrees on three clicks per cut: most cuts will be right, and the owner's time
 - The sheets and in-between pictures get the same verdict, with their own hashes (the prompt they were drawn from,
   their references).
 
+What the hashes do and do not follow (29 Sep, from the data side's review and the Mac pane's critique):
+
+- A cut's chain names its images by key, their roles and order, its mock-up's sha256 and its camera (rounded to a
+  centimetre and a tenth of a degree, so the same dream hashes the same on every machine). A label renamed on the
+  mock-up moves its sha256, and so the chain: a rename lands as "read again", on purpose, since the owner should see it.
+- A change inside an in-between picture or an earlier cut moves that node's own hashes, not those of the cuts that use
+  it: each node carries its own verdict.
+- On the 15 frozen dreams the panel's tree and the plan the prompts use group every cut alike (0 badges); ledger row
+  2's disagreement shows on live dreams, whose plan was kept since the moments began.
+
 Saved to `evals/viewer/<dream>.json`, committed like the picture checks' answers, written whole with a temp file
 and a rename.
 
