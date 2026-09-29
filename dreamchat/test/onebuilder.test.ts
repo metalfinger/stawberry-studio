@@ -630,6 +630,39 @@ describe("ledger 11: a place's or a thing's pose, stripped once, by the record",
     expect(after.look).toBe(before.look);
   });
 
+  // a44a with the red door's words given otherwise, and its look at m5, before the door is opened at m7.
+  const door = (step: string, value: string, drawn: boolean) => {
+    const s = structuredClone(loadDream('dream-0926-062232-a44a', false).session as Session);
+    const it = s.build!.items.find((i) => i.id === 't2')!;
+    it.fields = { ...it.fields, appearance: { value, said: false } };
+    if (!drawn) Object.assign(it, { status: 'waiting', mediaId: undefined });
+    const b = s.draft!.breakdown!.things.find((t) => t.id === 't2')!;
+    (b.fields as Record<string, unknown>) = { ...b.fields, appearance: { value, said: false } };
+    return withSwitches(
+      { ...SHEET, DREAMCHAT_ONE_BUILDER: step },
+      () =>
+        rebuild(s)
+          .pictures.find((x) => x.id === 'm5')
+          ?.sheet?.inView.find((e) => e.id === 't2')?.look,
+    );
+  };
+
+  test('a pose left at the start of a clause a rule has rewritten is stripped too', () => {
+    // The way of drawing leaves "rendered in faded watercolour and": "standing upright on its own" then opens it.
+    const value =
+      'a standard-sized rectangular door, rendered in faded watercolour and standing upright on its own, painted bright red';
+    expect(door('looks', value, true)).not.toContain('standing upright');
+    expect(door('pose', value, true)).not.toContain('standing upright');
+    expect(door('pose', value, true)).toContain('rectangular door, painted');
+  });
+
+  test('a sketch never drawn: what the record moves to after a change stays out of its look before it', () => {
+    // The door is opened at m7: "standing wide open" is its look from then, never at m5.
+    const value = 'a bright red door in a simple frame, and standing wide open';
+    expect(door('looks', value, false)).not.toContain('wide open');
+    expect(door('pose', value, false)).not.toContain('wide open');
+  });
+
   test('where lookIn still says the look (a sketch never drawn), it still strips the pose', () => {
     const s = structuredClone(loadDream('dream-0926-052843-6081', false).session as Session);
     const it = s.build!.items.find(
