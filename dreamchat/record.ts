@@ -96,6 +96,11 @@ export type RecElement = {
   changes: string[];
   /** Words its look had that are from after a change: told only once the change happens. */
   after?: string[];
+  /**
+   * With the one builder's kinds (S6 row 6): whether it is an animal, a group's or a crowd's too ("the little
+   * silver fish", a shoal kept as a crowd), so its kind says all the sheet and the tags need.
+   */
+  animal?: boolean;
 };
 
 /**
@@ -603,10 +608,7 @@ function elementsOf(b: Breakdown, items: Item[], dreamer: string | null, notes: 
       kind,
       // One name (S6 row 5): with the builder's names, a sketch's name wins as its words do, the name its
       // picture was drawn as; the cut sheet reads this one.
-      called:
-        id === dreamer
-          ? 'the dreamer'
-          : pictureName((builds('names') && sketched(it) && it?.name) || name || id),
+      called: id === dreamer ? 'the dreamer' : pictureName((builds('names') && sketched(it) && it?.name) || name || id),
       name: name ?? id,
       base: drawn ?? own,
       ...(differs ? { stored: own } : {}),
@@ -625,9 +627,14 @@ function elementsOf(b: Breakdown, items: Item[], dreamer: string | null, notes: 
       status: 'waiting',
       version: 0,
     };
+    // What it is read from: with the one builder's kinds (S6 row 6), its sketch's words where it has one, as
+    // its look and name are, so a sketch that has become a dog is an animal; else the breakdown's.
+    const drawnAs = byItem.get(p.id);
+    const what = builds('kinds') && sketched(drawnAs) ? { ...drawnAs, isDreamer: p.is_dreamer } : as;
     // A group as the sketches take it: marked so, or named as one ("the family").
-    const several = p.several ?? (!p.is_dreamer && isGroup(as));
-    add(p.id, p.extras ? 'crowd' : several ? 'group' : isAnimal(as) ? 'animal' : 'person', p.name, fields(p));
+    const several = p.several ?? (!p.is_dreamer && isGroup(what));
+    add(p.id, p.extras ? 'crowd' : several ? 'group' : isAnimal(what) ? 'animal' : 'person', p.name, fields(p));
+    if (builds('kinds') && elements[p.id] && isAnimal(what)) elements[p.id].animal = true;
   }
   for (const l of Array.isArray(b?.places) ? b.places : []) add(l.id, 'place', l.name, fields(l));
   for (const t of Array.isArray(b?.things) ? b.things : []) add(t.id, 'thing', t.name, fields(t));

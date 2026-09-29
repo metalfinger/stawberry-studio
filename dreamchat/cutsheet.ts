@@ -165,6 +165,8 @@ export type RecordLayer = {
   looks: Record<string, Seen>;
   /** Of each one there or in the picture: a person, animal, group, crowd, place or thing. */
   kinds: Record<string, ElementKind>;
+  /** With the one builder's kinds (S6 row 6): which of them are animals, a group or crowd of them too. */
+  animals?: string[];
   own: SheetChange[];
   carried: SheetChange[];
   /** How each one is right now, as typed facts. */
@@ -412,7 +414,20 @@ export function cutSheet(x: CutSheetInput): CutSheet {
   const point = frame.fields.visual_point?.value ?? null;
   const writing = writingIn(action, point, ...inView.flatMap((s) => Object.values(s.fields).map((d) => d.value)));
 
+  // One kind for each (S6 row 6): the story record's, where the builder's kinds are on and it holds one.
+  const recKind = (id: string) => (builds('kinds') ? x.dream?.record?.elements[id] : undefined);
+  const saidOf = (r: NonNullable<ReturnType<typeof recKind>>): Said =>
+    r.kind === 'place'
+      ? 'place'
+      : r.kind === 'thing'
+        ? 'thing'
+        : r.kind === 'animal' || r.animal
+          ? 'animal'
+          : r.kind === 'group' || r.kind === 'crowd'
+            ? 'people'
+            : 'person';
   const elements: SheetElement[] = inView.map((s) => {
+    const r = recKind(s.id);
     const animal = isAnimal(s);
     const kind = s.kind === 'character' ? 'character' : s.kind === 'location' ? 'location' : 'prop';
     const whole = changed.find((st) => st.who === s.id && isWhole(st));
@@ -421,8 +436,9 @@ export function cutSheet(x: CutSheetInput): CutSheet {
       ...(s.nodeId ? { nodeId: s.nodeId } : {}),
       name: called(s.id) ?? s.id,
       kind,
-      said:
-        s.kind === 'character'
+      said: r
+        ? saidOf(r)
+        : s.kind === 'character'
           ? animal
             ? 'animal'
             : isGroup(s)
@@ -432,7 +448,7 @@ export function cutSheet(x: CutSheetInput): CutSheet {
             ? 'place'
             : 'thing',
       isDreamer: !!s.isDreamer,
-      group: isGroup(s),
+      group: r ? r.kind === 'group' || r.kind === 'crowd' : isGroup(s),
       look: lookOf(s, LOOK[s.kind]),
       turned: whole ? whole.now : null,
       image: approved(s) && s.mediaId ? s.mediaId : null,
@@ -721,6 +737,7 @@ function recordLayer(record: StoryRecord, id: string, inPicture: string[]): Reco
     handed: { ...m.handed },
     looks: structuredClone(m.looks),
     kinds: Object.fromEntries(there.flatMap((e) => (record.elements[e] ? [[e, record.elements[e].kind]] : []))),
+    ...(builds('kinds') ? { animals: there.filter((e) => !!record.elements[e]?.animal) } : {}),
     own: m.own.flatMap(typed),
     carried: m.carried.flatMap(typed),
     facts: factsAt(record, id),
@@ -866,7 +883,7 @@ function tagsOf(x: {
     held,
     crowd: kinds.has('crowd'),
     group: kinds.has('group'),
-    animal: kinds.has('animal'),
+    animal: kinds.has('animal') || [...inPicture].some((id) => !!x.record?.animals?.includes(id)),
     vehicle: categories.has('vehicle'),
     unstaged: x.record?.unstaged ?? null,
     dreamlike: x.dreamlike,

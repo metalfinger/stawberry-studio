@@ -350,7 +350,9 @@ export function disagreementsOf(p: RebuiltPicture, rec: StoryRecord | null, styl
     )
       names.push(`${e.id}: "${e.name}" / tree "${inTree}"`);
     const kind = s.record?.kinds[e.id];
-    if (kind && !KIND_OF_SAID[e.said]?.includes(kind)) kinds.push(`${e.id}: ${e.said} / record ${kind}`);
+    // A group or crowd of animals the record marks so (S6 row 6) is said as an animal: one kind, not two.
+    const animals = rec?.elements[e.id]?.animal && e.said === 'animal' && (kind === 'group' || kind === 'crowd');
+    if (kind && !animals && !KIND_OF_SAID[e.said]?.includes(kind)) kinds.push(`${e.id}: ${e.said} / record ${kind}`);
     if (rec && e.turned === null) {
       const a = new Set(contentWords(e.look));
       const z = new Set(recordLook(rec, e.id, e.kind, s.style.option));

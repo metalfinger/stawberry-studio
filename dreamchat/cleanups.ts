@@ -84,6 +84,9 @@ export const BUILDER_STEPS: readonly string[] = [
   //    moment's words is its name once, when the dream is read (producer.ts namesForIds, before only with the
   //    camera rules), and the producer is told to write names.
   'names',
+  // 6. Kinds from one source, the story record's: person, animal, group or crowd (a crowd of animals, an
+  //    animal still), place or thing; the sheet and the tags read it, not isAnimal and isGroup again.
+  'kinds',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;
