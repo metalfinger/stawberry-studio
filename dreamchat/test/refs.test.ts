@@ -316,6 +316,80 @@ describe('an edit whose picture is not sent after all is made from its own shot,
   });
 });
 
+describe('why each earlier picture is left out (for the viewer): one reason, in words, per picture not sent', () => {
+  const why = (b: Breakdown, id: string, from: string, vars: Record<string, string> = ON) => cut(plan(b, vars), id).unsentWhy?.[from];
+  const stage = (m2: Partial<Moment>) =>
+    breakdown([moment({ id: 'm1', visible: ['p1', 'p2'], distance: 'wide', looks_at: 'the stage' }), moment({ id: 'm2', ...m2 })]);
+
+  test('its camera turned round from this one, or not near it', () => {
+    const turned = withPlan(stage({ visible: ['p1', 'p2'], looks_at: 'the back wall', from: 'm1', sameSide: ['m1'] }));
+    expect(why(turned, 'm2', 'm1')).toMatchObject({ code: 'reverse' });
+    expect(why(turned, 'm2', 'm1')?.detail).toMatch(/^its camera is turned \d+° from this one$/);
+    const far = withPlan(stage({ visible: ['p1'], distance: 'close', looks_at: 'the stage', from: 'm1', sameSide: ['m1'] }));
+    expect(why(far, 'm2', 'm1')?.code).toBe('camera_far');
+    expect(why(far, 'm2', 'm1')?.detail).toMatch(/^its camera is .*(m away|turned|higher or lower)/);
+  });
+
+  test('what both show not standing alike; and an edit made its own cut instead', () => {
+    const coat = () =>
+      breakdown([
+        moment({ id: 'm1', visible: ['p1'], looks_at: 'the stage' }),
+        moment({ id: 'm2', visible: ['p1'], looks_at: 'the stage', sameSide: ['m1'], leaves: [{ who: 'p1', what: 'coat', now: 'bright red' }] }),
+        moment({ id: 'm3', visible: ['p1'], looks_at: 'the stage', from: 'm1', sameSide: ['m1', 'm2'], states: [red] }),
+      ]);
+    // No floor plan: kept an edit until the gate, which leaves it out for the coat.
+    expect(why(coat(), 'm3', 'm1')).toEqual({ code: 'state_differs', detail: "here ana's coat is bright red, not so in it" });
+    // With a floor plan it is made its own cut when its camera is placed, and says why.
+    const own = why(withPlan(coat()), 'm3', 'm1');
+    expect(own?.code).toBe('edit_to_own_camera');
+    expect(own?.detail).toContain("here ana's coat is bright red, not so in it");
+  });
+
+  test('no cameras to compare and the words not the same view; its light alone; who someone is, with a sketch', () => {
+    const noPlan = breakdown([
+      moment({ id: 'm1', visible: ['p1', 'p2'], distance: 'wide', looks_at: 'the stage' }),
+      moment({ id: 'm2', visible: ['p1'], looks_at: 'the stage', from: 'm1', sameSide: ['m1'] }),
+    ]);
+    expect(why(noPlan, 'm2', 'm1')?.code).toBe('no_cameras_words_differ');
+    const light = breakdown([
+      moment({ id: 'm1', visible: ['p1'], looks_at: 'the door' }),
+      moment({ id: 'm2', visible: ['p1'], place: 'l2', looks_at: 'the road' }),
+      moment({ id: 'm3', visible: ['p1'], looks_at: 'the window' }),
+    ]);
+    expect(why(light, 'm3', 'm1')).toEqual({ code: 'light_only', detail: 'planned for its light alone' });
+    const known = breakdown([
+      moment({ id: 'm1', visible: ['p1'], place: 'l2', looks_at: 'the gate' }),
+      moment({ id: 'm2', visible: ['p2'], looks_at: 'the stage' }),
+      moment({ id: 'm3', visible: ['p1'], looks_at: 'the window' }),
+    ]);
+    expect(why(known, 'm3', 'm1')?.code).toBe('has_sketch');
+  });
+
+  test("the dreamer's seat, where their view is worked out on the floor plan", () => {
+    const dreamer = [person('p1', 'you', { is_dreamer: true, protagonist: true }), person('p2', 'bo')];
+    const b = withPlan(
+      breakdown(
+        [
+          moment({ id: 'm1', visible: ['p1', 'p2'], distance: 'wide', looks_at: 'the stage' }),
+          moment({ id: 'm2', visible: ['p1', 'p2'], eyes: 'dreamer', looks_at: 'bo', from: 'm1' }),
+        ],
+        { people: dreamer },
+      ),
+    );
+    const off = cut(plan(b, OFF), 'm2');
+    const on = cut(plan(b, ON), 'm2');
+    // Today the seat is dropped with nothing kept; with S5 it is kept as left out, and why.
+    expect(off.unsentWhy).toBeUndefined();
+    expect(on.refs.some((r) => r.id === 'm1')).toBe(false);
+    expect(on.unsentWhy?.m1?.code).toBe('seat_replaced_by_view');
+  });
+
+  test('none of this with the references off: the plan is as today', () => {
+    const turned = withPlan(stage({ visible: ['p1', 'p2'], looks_at: 'the back wall', from: 'm1', sameSide: ['m1'] }));
+    expect(cut(plan(turned, OFF), 'm2').unsentWhy).toBeUndefined();
+  });
+});
+
 // A made-up dream: ana in the hall; her coat turns red at m2 and she keeps it; bo comes in at m3 from the
 // other side of the hall; the crowd (no sketch of its own) stands in the yard.
 const style: StyleOption = {
