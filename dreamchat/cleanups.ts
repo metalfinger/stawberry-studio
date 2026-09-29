@@ -111,6 +111,9 @@ export const BUILDER_STEPS: readonly string[] = [
   // 12. A group's words about someone with a sketch of their own: the record says whom each clause of a group's
   //    look is about, and the sheet leaves those whose member is in view, as lookIn left their pieces.
   'members',
+  // 13. A guessed colour said as a shade at assembly since step 8; with this step a colour the dream itself gives
+  //    stays whole in a guessed clause too, so it is said one way in a prompt (the library's green glass lamps).
+  'shades',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;

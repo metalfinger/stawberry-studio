@@ -15,7 +15,7 @@ import { recordInputsOf, recordsMade, storyRecord } from '../record';
 import { type Session, typedReadings } from '../session';
 import { NO_BAR, TYPED_BAR, type TypedReading, typedAsk, typedAskKey, typedWriterName } from '../typed';
 import { hashOf } from '../lib';
-import type { Item } from '../sheets';
+import { inShades, type Item } from '../sheets';
 import { DEFAULTS, pinSwitches, withSwitches } from './fakes';
 
 setDefaultTimeout(120_000);
@@ -779,6 +779,39 @@ describe("ledger 12: a group's words about someone with their own sketch, once, 
     const at = (step: string) => looks(step).find((x) => x.withHim)?.look;
     expect(at('pose')).toBe('a family; a sister in a yellow dress');
     expect(at('members')).toBe('a family, a sister in a yellow dress');
+  });
+});
+
+describe('ledger 13: a colour the dream gives, said one way', () => {
+  const library = (step: string) =>
+    withSwitches(
+      { ...SHEET, DREAMCHAT_ONE_BUILDER: step },
+      () =>
+        rebuild(structuredClone(loadDream('dream-0926-055141-6e80', false).session as Session))
+          .pictures.find((x) => x.id === 'm5')
+          ?.sheet?.inView.find((e) => e.id === 'l1')?.look,
+    );
+
+  test("library-3's lamps, said green, are green in the look's guessed landmarks too", () => {
+    // Its light (said): "green glass lamps on the desks"; its landmarks (filled in) had them "mid-toned".
+    expect(library('members')).toContain('mid-toned glass lamps');
+    expect(library('shades')).not.toContain('mid-toned glass lamps');
+    expect(library('shades')).toContain('desks, green glass lamps on the desks');
+  });
+
+  test('a guessed colour the dream does not give is still a shade', () => {
+    const style = {
+      id: 's',
+      name: 'ink',
+      line: 'blue ink',
+      tokens: [],
+      palette_hex: ['#1e3a8a', '#93c5fd'],
+      one_colour: true,
+    } as never;
+    expect(inShades('a red scarf and green glass lamps', style, ['green glass lamps'])).toBe(
+      'a mid-toned scarf and green glass lamps',
+    );
+    expect(inShades('a red scarf and green glass lamps', style)).toBe('a mid-toned scarf and mid-toned glass lamps');
   });
 });
 

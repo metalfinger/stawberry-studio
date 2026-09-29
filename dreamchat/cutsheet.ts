@@ -434,6 +434,8 @@ export function cutSheet(x: CutSheetInput): CutSheet {
   // How each one looks, once (S6 row 8): the story record's base facts, where the builder's looks are on and
   // it holds the element: each field's clauses as the record kept them, a clause guessed or implied (not said,
   // confirmed or read from the story) in the style's shades, as the sketch's words were; fields apart by ";".
+  // What the dream itself gives a colour, from what was said of the moment and of each one in view.
+  const told = toldColours(frame, ...inView);
   const recLook = (s: Item): string | undefined => {
     // Only with the record on (off or in shadow, no prompt is planned from it), and where the record's base is
     // the sketch's own words: a sketch waiting or failed carries its look in the item's fields, which lookIn reads.
@@ -457,7 +459,13 @@ export function cutSheet(x: CutSheetInput): CutSheet {
           // The record strips the pose of people and animals, and with step 11 of places and things; before it, the
           // sketch's clean-up strips theirs here.
           .map((f) => (s.kind === 'character' || retired('pose') ? f : { ...f, text: withoutPose(f.text, false) }))
-          .map((f) => (f.basis === 'guessed' || f.basis === 'implied' ? inShades(f.text, style) : f.text).trim())
+          // A colour the dream itself gives stays whole in a guessed clause too (S6 row 13): said one way.
+          .map((f) =>
+            (f.basis === 'guessed' || f.basis === 'implied'
+              ? inShades(f.text, style, builds('shades') ? told : [])
+              : f.text
+            ).trim(),
+          )
           .filter(Boolean)
           .join(', '),
       )
@@ -680,7 +688,7 @@ export function cutSheet(x: CutSheetInput): CutSheet {
     now,
     nowWords,
     earlier: drawnFrom,
-    style: { option: style, oneColour: oneColour(style), told: toldColours(frame, ...inView) },
+    style: { option: style, oneColour: oneColour(style), told },
     take: { repairs: [...(frame.repairFor ?? [])], strays },
     record,
     tree,

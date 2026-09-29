@@ -311,6 +311,7 @@ function recordLook(
   kind: 'character' | 'location' | 'prop',
   style: StyleOption,
   away: Set<string> = new Set(),
+  keep: string[] = [],
 ): string[] {
   const e = rec.elements[id];
   if (!e) return [];
@@ -321,7 +322,7 @@ function recordLook(
       .filter((f) => !f.first && !f.about?.some((m) => away.has(m)))
       .flatMap((f) =>
         // A clause guessed or implied is said in the style's shades; one said, confirmed or read from the story as told.
-        contentWords(f.basis === 'guessed' || f.basis === 'implied' ? inShades(f.text, style) : f.text),
+        contentWords(f.basis === 'guessed' || f.basis === 'implied' ? inShades(f.text, style, keep) : f.text),
       ),
   );
 }
@@ -370,7 +371,7 @@ export function disagreementsOf(p: RebuiltPicture, rec: StoryRecord | null, styl
     if (rec && e.turned === null && (!builds('looks') || rec.elements[e.id]?.fromSketch)) {
       const a = new Set(contentWords(e.look));
       const away = new Set(s.members.filter((m) => m.group === e.id).map((m) => m.member));
-      const z = new Set(recordLook(rec, e.id, e.kind, s.style.option, away));
+      const z = new Set(recordLook(rec, e.id, e.kind, s.style.option, away, builds('shades') ? s.style.told : []));
       const sheetOnly = setDiff(a, z);
       const recordOnly = setDiff(z, a);
       if (sheetOnly.length || recordOnly.length) looks.push({ id: e.id, sheetOnly, recordOnly });

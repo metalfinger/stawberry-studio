@@ -338,12 +338,19 @@ const TONE = ['dark', 'mid-toned', 'pale'];
  * wash drew it auburn in two moments of six (24 Sep). Black, white, grey and the palette's own hue
  * say nothing against it and stay.
  */
-export function inShades(text: string, style: StyleOption): string {
+export function inShades(text: string, style: StyleOption, keep: string[] = []): string {
   if (!oneColour(style)) return text;
   const hue = paletteHue(style);
   const words = Object.keys(HUED).join('|');
+  // What the dream itself gives a colour keeps it (S6 row 13): the library's "green glass lamps" were said so,
+  // and the same words filled in on its landmarks were "mid-toned glass lamps" beside them. Each is set aside
+  // while the rest is shaded.
+  const kept: string[] = [];
+  const esc = (x: string) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  for (const k of keep.filter(Boolean))
+    text = text.replace(new RegExp(`\\b${esc(k)}\\b`, 'gi'), (m) => `\u0000${kept.push(m) - 1}\u0000`);
   // A colour of two ("red-brown", "blue-green") is its last.
-  return text
+  const shaded = text
     .replace(new RegExp(`\\b(?:${words})-(${words})\\b`, 'gi'), '$1')
     .replace(
       new RegExp(`\\b(?:(light|pale|dark|deep|medium|bright)[ -])?(${words})\\b`, 'gi'),
@@ -354,6 +361,7 @@ export function inShades(text: string, style: StyleOption): string {
         return TONE[Math.max(0, Math.min(2, tone + shift))];
       },
     );
+  return shaded.replace(/\u0000(\d+)\u0000/g, (_, i: string) => kept[Number(i)]);
 }
 
 /**
