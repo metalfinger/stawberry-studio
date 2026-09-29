@@ -1111,8 +1111,35 @@ One **cut sheet** per cut is the spine everything is assembled from:
   version right, as in the S5 check; orchard m6's white horse is a person-shaped figure labelled so; lighthouse-first
   m8 has no tractor, two people seated on a bare floor. The rule stays the owner's (a layout anchor on every cut);
   what each mock-up shows is for the owner to read, cut by cut, before anything is drawn.
-  *Left, in order:* an independent review; merge into lab ahead of S6 rows 8-16 (the owner's order, 29 Sep); retire
-  the five routing hypotheses. The crowd (heron m4: the mock-up's bare
+  *Independent review (fix first), and the fixes (a4aedd6):*
+  - *A kept edit whose picture is withheld when drawing went out with nothing* (the reviewer's probe: m1 and m2 one
+    view, m1 judged wrong: m2 sent `sketch:p1, sketch:l1`). The drawing path withholds what the owner judged wrong
+    or S9 finds stale, and a kept edit has no camera of its own. Fixed: with S5's references, an edit seen from
+    outside keeps its own shot (`CutPlan.alone`: view, eye, what it sees, framing, the camera rules' words), placed
+    on its floor plan as any cut's is; where its picture is not sent, the cut is made from that shot and its mock-up
+    (`continuity.ts unedited`, `uneditedFrame`), in a rebuild (plan.ts) and on the drawing path alike
+    (`session.ts drawnFrameOf`: the sheet, the mock-up, the shot's brief and the storyboard check). Readiness is not
+    withholding: before its picture is drawn, a preview still shows the edit.
+  - *Without the camera rules the gate compared the picture's camera with itself*, so the camera placement demoted
+    edits the gate would have kept (frozen: the flooded library m6, water rising m5; live: paper birds m3 too).
+    Fixed: where the camera is placed and where the gate chooses, the cut's own camera (`wouldBe`) is compared with
+    the picture's whenever the references are on.
+  - *Untested half of the placement check*: the camera test's clock case now asserts, references on and camera
+    rules off, no edit and a camera of its own (it fails with the camera comparison removed); refs.test adds a chain
+    of edits of one view staying edits, and a withheld picture giving the mock-up as image 1.
+  - *The references eval still measured the routing*: `evals/references.ts` now counts cuts with a camera on a
+    floor plan and no layout anchor as image 1 (frozen 0, live 0).
+  - *Stale words*: assemble.ts, refs.ts's header (image 1 is nothing only where no camera can be placed: no floor
+    plan, none of the moment's people or things on it, the dreamer's view not placeable: frozen 3, live 7 with the
+    camera rules), `docs/rules.md` D6, a test's name.
+  - *Left as they are*: the chain limit of edits (`MAX_BASE_RUN`) is decided before the cameras are placed, so an
+    edit later made its own cut still counts toward the next cut's run, which is then drawn afresh from its own
+    mock-up (one edit fewer, never nothing); a cut through the dreamer's eyes whose edit is dropped keeps
+    "continuous" while one from outside becomes "cut, carrying on" (labels only); the crowd (above).
+  Measured after the fixes: `bun test` 826 pass, 1 skipped, with every switch unset and every switch on; the corpus,
+  every switch of the harness on, 0 of 127 frozen and 0 of 447 live pictures changed against the measure above.
+  *Left, in order:* the re-review; merge into lab ahead of S6 rows 8-16 (the owner's order, 29 Sep); retire the
+  five routing hypotheses. The crowd (heron m4: the mock-up's bare
   figures made real as naked people, "partly", n=1) is a known risk to watch in the owner's reading, not a reason
   to drop the anchor. None of this is proven in pictures: pictures judged by the owner (the viewer's reading, then
   a whole dream drawn) are the bar for any change to references, in-between pictures or edits, not text measures,
