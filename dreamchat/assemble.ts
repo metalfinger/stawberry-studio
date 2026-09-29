@@ -163,7 +163,7 @@ export function assembleCut(s: CutSheet): Assembled {
     const image = stage?.image ?? e.image;
     // Everything in view is listed, with its look where no image's line says it: with the look said once (S6
     // row 14), one with an image of its own is named here and its look said in that image's line alone.
-    const sayLook = !(s.once?.look && image && e.turned === null);
+    const sayLook = !(s.once?.look && image);
     facts.push(
       (e.turned !== null
         ? `${e.name} (${e.said}): it has turned into ${aNoun(e.turned)}.`
@@ -478,7 +478,7 @@ export function assembleCut(s: CutSheet): Assembled {
             : '',
     },
     { id: 'you', fields: ['camera.eyes'], text: YOU },
-    { id: 'in_it', fields: ['inView'], text: facts.length ? `In it:\n${facts.join('\n')}` : '' },
+    { id: 'in_it', fields: ['inView', 'once'], text: facts.length ? `In it:\n${facts.join('\n')}` : '' },
     {
       id: 'now',
       fields: ['now', 'nowWords', 'states'],
