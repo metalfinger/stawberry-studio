@@ -280,7 +280,7 @@ function renderTree() {
     for (const sc of q.scenes) {
       g.append(el('div', { class: 'label', title: `${sc.place} · ${sc.mood}` }, el('span', { class: 't', text: sc.title }), sc.mood ? ` · ${sc.mood}` : ''));
       for (const sh of sc.shots) {
-        const box = el('div', { class: 'shot' }, el('div', { class: 'label mono', title: sh.tags.join(', '), text: sh.tags.length ? `${sh.id} · ${sh.tags.join(', ')}` : sh.id }));
+        const box = el('div', { class: 'shot' }, el('div', { class: 'label mono', title: sh.tags.length ? `this shot: ${sh.tags.join(', ')}` : '', text: sh.id }));
         for (const id of sh.cuts) {
           const c = cutsById.get(id); if (!c) continue;
           const role = (c.tags.find((t) => t.startsWith('role:')) ?? '').slice(5);
@@ -352,7 +352,8 @@ function cutPanel(c) {
   out.push(el('div', { class: 'node-head' }, el('h2', { text: `Picture ${c.order}` }), el('span', { class: 'id', text: c.id }),
     el('span', { class: 'muted', text: `${c.scene} · ${c.shot}` }),
     c.treeDiffers ? el('span', { class: 'pill warn', title: c.treeDiffers, text: `the tree groups it otherwise: ${c.treeDiffers}` }) : null));
-  if (scene) out.push(el('p', { class: 'scene-line', text: `${scene.title}${scene.mood ? ` — ${scene.mood}` : ''}` }));
+  const shot = scene?.shots.find((sh) => sh.id === c.shot);
+  if (scene) out.push(el('p', { class: 'scene-line', text: `${scene.title}${scene.mood ? ` — ${scene.mood}` : ''}${shot?.tags.length ? ` · this shot: ${shot.tags.join(', ')}` : ''}` }));
   out.push(el('p', { class: 'action', text: c.moment.action }));
   out.push(el('dl', { class: 'kv' },
     el('dt', { text: 'Looks at' }), el('dd', { text: c.moment.looksAt || '—' }),
