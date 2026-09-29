@@ -101,7 +101,14 @@ mock-up; a note alone judges nothing); `s6-build` merges as it is. `S9 keys` now
 floor plan keyed rounded, KEYS_VERSION 3). Verdicts, follow-ups and the checklist for the Mac:
 https://github.com/metalfinger/stawberry-studio/issues/1. Sessions hand work to each other through GitHub issues.
 
-**Next, in order.** 1) Merge the four branches above (reviewed; waiting on the owner's go). 2) The S5 picture check (about $3; draw with
+**Merged (29 Sep, cloud session).** At the owner's go, the four branches are merged into lab in order (fd7d978):
+`checkpoint-order`, `postcheck-fixes` (with the owner's decision: `DREAMCHAT_CAMERA=on` needs `DREAMCHAT_RECORD=on`
+as it needs the cut sheet, d671003), `s5-fix2`, `s6-build`. `bun test` after each merge and at the end: 810 pass,
+2 skip, 0 fail with every switch unset and with every one on; typecheck clean; the one builder on moves 0 of 127
+frozen pictures (record, sheet, camera, references) and 0 of 139 (record, sheet). The reviews' non-blocking
+follow-ups are in issue #1.
+
+**Next, in order.** 1) Done: the four branches merged. 2) The S5 picture check (about $3; draw with
 `evals/checkpoint.ts`, judged on the local page). 3) Finish S6 (the rest of the ledger), review, merge. 4) The owner
 chooses the writer the harness ships with (DeepSeek or another API; the Claude CLI is for testing only). 5) S10,
 the paid benchmark on the five dreams (about $10), judged by the owner. Money: $18 left of $30.
