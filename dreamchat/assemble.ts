@@ -126,7 +126,8 @@ export function assembleCut(s: CutSheet): Assembled {
   const shadesOf = (e: SheetElement) => {
     if (!s.style.oneColour) return '';
     if (!e.colours.length) return ", drawn in this picture's shades of one colour";
-    return s.once?.colour
+    // The pointer only where the style has a Colours line to point to.
+    return s.once?.colour && s.style.option.palette_hex.length
       ? ", drawn in this picture's shades of one colour except what the dream itself gives a colour (listed under Colours), which keeps it exactly"
       : `, drawn in this picture's shades of one colour except what the dream itself gives a colour, which keeps it exactly: ${e.colours.join('; ')}`;
   };
@@ -559,13 +560,15 @@ export function assembleCut(s: CutSheet): Assembled {
   ];
   // Each colour the dream gives said once (S6 row 15): in many colours every colour said above keeps it, and the
   // style lists only those no line above says. In one colour the style's list is the one list (above).
+  // Said above is where a look is said: an image's line or "In it", as a whole phrase ("red" is not in "rendered");
+  // a colour said only in the moment's own words or the shot is of something with no look, and stays listed.
   if (s.once?.colour && !s.style.oneColour) {
-    const said = lines
-      .filter((l) => l.id !== 'style')
+    const esc = (x: string) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const looks = lines
+      .filter((l) => l.id === 'manifest' || l.id === 'in_it')
       .map((l) => l.text)
-      .join('\n')
-      .toLowerCase();
-    const rest = s.style.told.filter((c) => !said.includes(c.toLowerCase()));
+      .join('\n');
+    const rest = s.style.told.filter((c) => !new RegExp(`\\b${esc(c)}\\b`, 'i').test(looks));
     const style = lines.find((l) => l.id === 'style');
     if (style)
       style.text = styleBlock(s.style.option, rest, {

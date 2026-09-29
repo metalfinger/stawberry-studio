@@ -864,6 +864,17 @@ describe('ledger 13: a colour the dream gives, said one way', () => {
     expect(ways('shades')).toEqual([]);
   });
 
+  test("the measure reads a look's own kept colours: library-3's look and its record agree", () => {
+    const looks = (step: string) =>
+      withSwitches({ ...SHEET, DREAMCHAT_ONE_BUILDER: step }, () => {
+        const s = loadDream('dream-0926-055141-6e80', false).session as Session;
+        return readDream('dream-0926-055141-6e80', s, rebuild(structuredClone(s))).moments.find(
+          (m) => m.moment === 'm1',
+        )?.disagree?.looks;
+      });
+    expect(looks('shades')).toEqual([]);
+  });
+
   test('a guessed colour the dream does not give is still a shade', () => {
     const style = {
       id: 's',
@@ -928,6 +939,25 @@ describe('ledger 15: the colours the dream gives, said once', () => {
     expect(after).toContain(
       'except what the dream itself gives a colour (listed under Colours), which keeps it exactly.',
     );
+  });
+
+  test("in many colours, one said only in the moment's own words stays listed: it has no look above", () => {
+    // affd m6: the red tractor, said in what happens, has no image and no look.
+    const colours = style(prompt('dream-0925-231131-affd', 'm6', 'colour_once'));
+    expect(colours).toContain('red tractor');
+  });
+
+  test('in many colours, said above is a whole phrase in a look: "red" is not in "rendered"', () => {
+    const p = withSwitches({ ...SHEET, DREAMCHAT_ONE_BUILDER: 'colour_once' }, () => {
+      const sheet = structuredClone(
+        rebuild(structuredClone(loadDream('dream-0926-095122-b91f', false).session as Session)).pictures.find(
+          (x) => x.id === 'm4',
+        )!.sheet!,
+      );
+      sheet.style.told = [...sheet.style.told, 'red'];
+      return assembleCut(sheet).prompt;
+    });
+    expect(style(p)).toMatch(/keeps it exactly, as said above: [^.]*\bred\b/);
   });
 
   test('in a style of many colours, one said above is not listed again', () => {
