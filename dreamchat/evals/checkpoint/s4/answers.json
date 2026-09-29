@@ -1,0 +1,186 @@
+{
+  "checkpoint": "s4",
+  "updated": "2026-09-27T15:14:34.835Z",
+  "answers": {
+    "lighthouse-first-m3": {
+      "answer": "b",
+      "note": "",
+      "at": "2026-09-27T15:09:52.337Z",
+      "shown": {
+        "a": "a7f4a6074e5ab5ebdb811f84c50a2baf535da3776eb003736136453a01384661",
+        "b": "8151b6c37fe1ff846dbe1718e391f1d46bc11585422ff975fbbfcc438709d569"
+      }
+    },
+    "lighthouse-first-m7": {
+      "answer": "b",
+      "note": "B is close enough, but ",
+      "at": "2026-09-27T15:10:27.935Z",
+      "shown": {
+        "a": "cab6390f2a1984cb12ae821b71e6b30fa9aeea28b61661aa02309246481117ec",
+        "b": "b9a64b66dd9ad0cd3f25d1ca6c67253a0c8fe60e98ab76ac1338d75ecd7158d9"
+      }
+    },
+    "lighthouse-first-m8": {
+      "answer": "both",
+      "note": "",
+      "at": "2026-09-27T15:10:45.157Z",
+      "shown": {
+        "a": "83ab8fc968a73c80fcb7e490ba5f84d00f6dc26fe3bfa318d5c8029b85f3dbd7",
+        "b": "331bdda6a4d47b607d11aa96c8b14de3095d2c7f28c146e99296295d7aa5e9ad"
+      }
+    },
+    "lighthouse-fresh-m4": {
+      "answer": "neither",
+      "note": "Dreamer is supposed to be outside of the lighthouse in both images. Dreamer is inside. ",
+      "at": "2026-09-27T15:11:27.708Z",
+      "shown": {
+        "a": "0be1c48b5e3fdf35ed87e1bd05f71fc3a1d62f0ce331d0addcd876b1b23ff269",
+        "b": "fe5fb751f296d3a91d4768514e3a10c02a47b4c1000c23de975d8e81e9251ccb"
+      }
+    },
+    "lighthouse-fresh-m5": {
+      "answer": "both",
+      "note": "",
+      "at": "2026-09-27T15:11:27.809Z",
+      "shown": {
+        "a": "c03ae632f236ca9d7934af3679463dced6d4e3e194d26e59c8668b211c5a37bc",
+        "b": "f766aed36b23fd80e310980f85a1238d1a4423d34a7777be285461bd251d6d30"
+      }
+    },
+    "lighthouse-fresh-m9": {
+      "answer": "a",
+      "note": "Not sure why the boat is there in B, because there is no mention of a boat in the prompt. ",
+      "at": "2026-09-27T15:11:59.277Z",
+      "shown": {
+        "a": "0d58b539fd044de1e34590b83665a6b3065d07d5d8838665ad04a45642e3f7b5",
+        "b": "455008fadc173a3e83a7f94738a0fe3621be319a3e1cc09365f51be59a239d19"
+      }
+    },
+    "snow-train-m2": {
+      "answer": "a",
+      "note": "",
+      "at": "2026-09-27T15:11:59.365Z",
+      "shown": {
+        "a": "25edaff0534e1bef0282ff3b97e96e0cafd4c16c0ef5491e463ff247dbf12598",
+        "b": "038f431b97e8d8696e96d76a6e12fa13cb0e0b8c2546e2290d89f3f24f103e94"
+      }
+    },
+    "snow-train-m3": {
+      "answer": "neither",
+      "note": "Both are wrong because, from the previous frame, the grandpa has moved. He should be sitting there only, right? ",
+      "at": "2026-09-27T15:12:29.647Z",
+      "shown": {
+        "a": "456a5294a0765394696c4f2064901b4bb40285c67f9b015201afeb3aa219f7ca",
+        "b": "1f5c6bce3aee60fdcb690b8ee295c3868a9c2e679c2a0f86a9b4ce776b1bc983"
+      }
+    },
+    "library-1-m5": {
+      "answer": "neither",
+      "note": "A is wrong because there is no water. B is wrong because the outside door should be from that top window, not like the entire garage opens like it has. ",
+      "at": "2026-09-27T15:12:56.931Z",
+      "shown": {
+        "a": "5b4be30d1a17671efcbb64d3d879964cd883cbe9b33a96a4524db814ae196bb0",
+        "b": "bbcda4651949910927f5a6106396605ba784a04117161c3a1829226c99f157fe"
+      }
+    },
+    "library-3-m1": {
+      "answer": "both",
+      "note": "",
+      "at": "2026-09-27T15:12:57.049Z",
+      "shown": {
+        "a": "49a08083b757f581b6b91ea220d8707b5b92bb53013280750bf3db2195c3983d",
+        "b": "c2a0eced91984c2ecfc4aec1a76f9993799b9bfb29cde2c3729248659db91460"
+      }
+    },
+    "library-3-m3": {
+      "answer": "both",
+      "note": "",
+      "at": "2026-09-27T15:13:00.234Z",
+      "shown": {
+        "a": "b1f696aa54cc596bb9b597b8762dbcd478ad78b7aec7eea3df30535a15d14bf9",
+        "b": "2d5eb8678012727131ce696c96150eab7509c938c32085ba006e29377fb1df20"
+      }
+    },
+    "library-3-m4": {
+      "answer": "both",
+      "note": "",
+      "at": "2026-09-27T15:13:05.382Z",
+      "shown": {
+        "a": "f86db5f3748d02c3718cb1492dfed11059aaa4264bda8c4f48b268411c707751",
+        "b": "465d934501251fd68f2ff86ba9c728514804acd51f2f929a0c9d81931a99404e"
+      }
+    },
+    "library-3-m6": {
+      "answer": "a",
+      "note": "",
+      "at": "2026-09-27T15:13:19.783Z",
+      "shown": {
+        "a": "fc3cf5e034eca8a5a6723195ed14f1929f6680a22baa4893f23baaf9dec2143c",
+        "b": "d8f20b3972aef7e375ba70f72a6be5fbb4d7710eada8babe1b662957afc163f8"
+      }
+    },
+    "snow-train-2-m2": {
+      "answer": "both",
+      "note": "Both are right individually, but in terms of the continuation of the previous frame, it's wrong because the previous frame shows the dreamer, not grandpa. The picture before is wrong, I guess. ",
+      "at": "2026-09-27T15:14:00.335Z",
+      "shown": {
+        "a": "10281c1bb23f5ab0cdbc804e2fc7ecf709c6700bfe0540d74f23c3cf19043fd9",
+        "b": "7c14d89b42e104d18cb981779b39c7f3766783044e33e508231552523d757857"
+      }
+    },
+    "snow-train-2-m5": {
+      "answer": "both",
+      "note": "",
+      "at": "2026-09-27T15:14:00.451Z",
+      "shown": {
+        "a": "bd12d20ce1b82e9b71e238ce2d4496a33ab970f56692daa3de5820aa5d7d67c8",
+        "b": "fad974b7b5182cffa6c138dc4e2a7a9791c2a4c3787de6090c91969bd7b05159"
+      }
+    },
+    "snow-train-2-m6": {
+      "answer": "a",
+      "note": "The old one is right (suitcase open). In the new one the grandfather has already given the suitcase: the frame after the moment, not the handover itself. [Note added by the owner after seeing both pictures, 27 Sep.]",
+      "at": "2026-09-27T15:14:09.955Z",
+      "shown": {
+        "a": "45882f5a283ef433e9a799e21b04e8e8be867f9c4ccf15826faf4dbd7822bde1",
+        "b": "df448fb3a779441c8d69b095b1c2ad6f808bb5c5554cea0fe2af68921a539b84"
+      }
+    },
+    "orchard-m4": {
+      "answer": "b",
+      "note": "",
+      "at": "2026-09-27T15:14:13.541Z",
+      "shown": {
+        "a": "fc39044808706d6ec0b8dc6f8b1220b9786c08b46c30de321ee9f8278e23195b",
+        "b": "f971346f25c7354dafd959c9c9e0ff752823759b21688269da4f926f9ad10ba3"
+      }
+    },
+    "orchard-m5": {
+      "answer": "a",
+      "note": "",
+      "at": "2026-09-27T15:14:26.717Z",
+      "shown": {
+        "a": "e3c477d01ace26869b6bd0b6148bcf9579c911a5c297f6530dea71e843ff797a",
+        "b": "54784e07ad31443b37f9be5f50d0e44ff8b3c876dd63014c513232e1e5667726"
+      }
+    },
+    "orchard-m6": {
+      "answer": "both",
+      "note": "Both are right; the new one preferred because the background trees match the previous frame (environment consistent). [Corrected by the owner after seeing both pictures, 27 Sep; the page answer was b.]",
+      "at": "2026-09-27T15:14:22.182Z",
+      "shown": {
+        "a": "48371743eb94e221ca0dafe3be04f3347e7171a5c1bc2d0f262a30f6b7b58742",
+        "b": "9138eccf307f52a432683ab42faacf5a1458ce5f8d977c0fc2859171b97beac6"
+      }
+    },
+    "orchard-m7": {
+      "answer": "a",
+      "note": "",
+      "at": "2026-09-27T15:14:34.835Z",
+      "shown": {
+        "a": "3e5c900222e9e9cb2f73b56f2a78d31abe1d49bfab3f9cc6d92eb8414351d04a",
+        "b": "ec2708f129e3e5fc4ac3420acc6cc3ed56c8c0cfde6db67482292af1a2155309"
+      }
+    }
+  }
+}
