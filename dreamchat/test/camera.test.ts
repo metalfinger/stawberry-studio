@@ -1128,6 +1128,26 @@ describe('a fixture up its wall, where the words put it', () => {
     expect(mountOf({ ...window('the high round window'), fixture: false }, room)).toBeNull();
   });
 
+  test('words about something else near it, or about how tall it is, leave it on the floor', () => {
+    // Said by a high thing: the desk is under the window, not up the wall with it.
+    expect(mountOf(window('the desk', [1.4, 0.7, 0.75]), room, 'a desk under the high window')).toBeNull();
+    expect(mountOf(window('the bench', [1.5, 0.4, 0.45]), room, 'a bench below the high round window')).toBeNull();
+    // The window over it is still high.
+    expect(mountOf(window('the window'), room, 'a desk under the high window')).toEqual({ above: 4.4, high: 1.5 });
+    // At the top of something else: where it is, not how high on its wall.
+    expect(mountOf(window('the door', [1, 0.1, 2.1]), room, 'the door at the top of the stairs')).toBeNull();
+    expect(mountOf(window('the window'), room, 'a window at the top of the wall')).toEqual({ above: 4.4, high: 1.5 });
+    // How tall, not how high: waist-high, high-backed, a high stool.
+    expect(mountOf(window('the counter', [2, 0.3, 1]), room, 'a waist-high counter')).toBeNull();
+    expect(mountOf(window('the armchair', [0.9, 0.9, 1.2]), room, 'a high-backed armchair')).toBeNull();
+    expect(mountOf(window('the stool', [0.4, 0.4, 0.8]), room, 'a high stool')).toBeNull();
+    // Near the ceiling says it of the lamp itself.
+    expect(mountOf(window('the lamp', [0.5, 0.5, 0.6]), room, 'a lamp near the ceiling')).toEqual({
+      above: 5.3,
+      high: 0.6,
+    });
+  });
+
   test('lifted onto the wall it is by, and the water measured by it', () => {
     const plan: Blocking = {
       front: 'the high round window side',

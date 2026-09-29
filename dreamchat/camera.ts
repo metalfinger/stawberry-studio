@@ -190,9 +190,20 @@ export function outThroughWindows(plan: Blocking): Record<string, Side> {
 /** Hung from or set in the ceiling: its top at the ceiling. "Up to the ceiling" is how tall, never where it hangs. */
 const ON_CEILING =
   /\b(?:on|in|from|into|across)\s+the\s+ceiling\b|\bceiling[- ](?:lamp|light|fan|window)s?\b|\bskylights?\b/;
-/** High on a wall, at the top of the room: its top just under the ceiling. */
+/**
+ * High on a wall, at the top of the room: its top just under the ceiling. "At the top" of something else (the
+ * stairs, the tower) is where it is, not how high on its wall.
+ */
 const HIGH =
-  /\bhigh\b|\bup high\b|\bat the top\b|\bnear the (?:ceiling|top)\b|\bunder the ceiling\b|\btop of the (?:wall|room)\b/;
+  /\bup high\b|\bat the top\b(?! of)|\bnear the (?:ceiling|top)\b|\bunder the ceiling\b|\btop of the (?:wall|room)\b/;
+/**
+ * "High" said of it as a word of its own: "waist-high" and "high-backed" say how tall, not how high. Said
+ * of it alone (not "up high", "at the top"), only of something flat enough to be set in or on a wall: a
+ * high window, a high shelf; a high stool or a high table stands on the floor.
+ */
+const HIGH_WORD = /(?<![\w-])high(?![\w-])/;
+/** Flat enough to be set in or on a wall, in metres from front to back. */
+const FLAT = 0.35;
 /** On a wall, at about the height of someone's eyes. */
 const ON_WALL =
   /\bon (?:the|a|every|each|one|its) (?:\w+ )?wall\b|\bwall[- ]mounted\b|\bmounted\b|\bhangs? on\b|\bhanging on\b|\bhung on\b/;
@@ -202,6 +213,11 @@ export const WALL_HEIGHT = 1.5;
 
 /** Words that end what is said of a thing, before or after its name: "a room with windows", "shelves and a window". */
 const PHRASE_END = /^(?:with|and|or|but|of|where|which|that|while)$/;
+/**
+ * Words that go on to say where it is by something else: "a desk under the high window" says nothing of how
+ * high the desk is. Not "near the ceiling" or "under the top", which say it of the thing itself.
+ */
+const BY_ANOTHER = /^(?:under|underneath|below|beneath|beside|by|near|next|behind|above|over|against)$/;
 
 /**
  * What some words say right about a thing, by what it is (its head word, `headWord`): in each clause that
@@ -218,9 +234,15 @@ export function wordsAbout(head: string, text: string): string[] {
     w.forEach((x, i) => {
       if (!is.test(x)) return;
       const before: string[] = [];
-      for (let k = i - 1; k >= Math.max(0, i - 3) && !PHRASE_END.test(w[k]); k--) before.unshift(w[k]);
+      for (let k = i - 1; k >= Math.max(0, i - 3) && !PHRASE_END.test(w[k]) && !BY_ANOTHER.test(w[k]); k--)
+        before.unshift(w[k]);
       const after: string[] = [];
-      for (let k = i + 1; k < Math.min(w.length, i + 7) && !PHRASE_END.test(w[k]); k++) after.push(w[k]);
+      for (let k = i + 1; k < Math.min(w.length, i + 7); k++) {
+        // "At the top of the stairs": the "of" goes with the top, so it is kept to tell the top of what.
+        if (PHRASE_END.test(w[k]) && !(w[k] === 'of' && w[k - 1] === 'top')) break;
+        if (BY_ANOTHER.test(w[k]) && !(w[k + 1] === 'the' && /^(?:ceiling|top)$/.test(w[k + 2] ?? ''))) break;
+        after.push(w[k]);
+      }
       out.push([...before, x, ...after].join(' '));
     });
   }
@@ -258,7 +280,8 @@ export function mountOf(
     const high = Math.min(h, band);
     return h < ceiling * 0.75 ? { above: Math.round((ceiling - high) * 100) / 100, high } : null;
   }
-  if (said.some((x) => HIGH.test(up(x)))) {
+  const flat = Math.min(sizeOf(s as Spot)[0], sizeOf(s as Spot)[1]) <= FLAT;
+  if (said.some((x) => HIGH.test(up(x)) || (flat && HIGH_WORD.test(up(x))))) {
     const high = Math.min(h, band);
     return h < ceiling * 0.75 ? { above: Math.round((top - high) * 100) / 100, high } : null;
   }
