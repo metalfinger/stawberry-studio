@@ -2,7 +2,7 @@
 // It shows what viewer/build.ts made (runs/viewer/<dream>/view.json), else a committed fixture, and saves the owner's
 // verdicts to evals/viewer/<dream>.json, each with what it was given on. Nothing is drawn and no model is asked.
 //
-//   bun run viewer/serve.ts [--port 4570]
+//   bun run viewer/serve.ts [--port 4570]        (VIEWER_ANSWERS=<folder> keeps the verdicts elsewhere)
 //
 // Only on this machine (127.0.0.1). Pictures are served by their name alone, from the dream's own folder (its
 // mock-ups) or the dream chat's media folder: nothing else on this machine is.
@@ -33,7 +33,9 @@ const viewOf = (dream: string) => {
   const dir = folderOf(dream);
   return dir ? readJson<ViewDream>(join(dir, 'view.json')) : null;
 };
-const answersFile = (dream: string) => join(ANSWERS, `${dream}.json`);
+/** Where the verdicts are kept: evals/viewer, or VIEWER_ANSWERS where the page runs from another checkout. */
+const answersDir = () => process.env.VIEWER_ANSWERS ?? ANSWERS;
+const answersFile = (dream: string) => join(answersDir(), `${dream}.json`);
 const answersOf = (dream: string) => readJson<ViewAnswers>(answersFile(dream));
 
 /** Written whole: a temporary file, then renamed over the old, so a verdict is never half saved. */
@@ -165,5 +167,5 @@ if (import.meta.main) {
   const i = process.argv.indexOf('--port');
   const port = i > 0 ? Number(process.argv[i + 1]) : 4570;
   const { url } = serveViewer(port);
-  console.log(`the harness viewer: ${url} (${dreams().length} dreams; verdicts to ${ANSWERS})`);
+  console.log(`the harness viewer: ${url} (${dreams().length} dreams; verdicts to ${answersDir()})`);
 }

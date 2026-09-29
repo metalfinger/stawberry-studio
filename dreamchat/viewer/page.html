@@ -367,7 +367,9 @@ const nameOf = (id) => D.sheets.find((s) => s.id === id)?.name ?? id;
 
 function refCard(r) {
   const label = r.notDrawnYet ? 'Not drawn yet: shown as it will be once drawn' : r.source === 'mockup' ? 'The mock-up' : 'Not on this machine';
-  const pic = r.file ? el('img', { src: `/img/${encodeURIComponent(D.header.dream)}/${encodeURIComponent(r.file.name)}`, alt: r.key, loading: 'lazy' }) : el('div', { class: 'none', text: label });
+  // The mock-up is rendered, not drawn: its picture is the cut's own.
+  const file = r.file ?? (r.source === 'mockup' ? D.cuts.find((c) => c.id === cur)?.mockUp : null);
+  const pic = file ? el('img', { src: `/img/${encodeURIComponent(D.header.dream)}/${encodeURIComponent(file.name)}`, alt: r.key, loading: 'lazy' }) : el('div', { class: 'none', text: label });
   const target = r.key.startsWith('picture:') ? r.key.slice(8) : r.key.startsWith('sketch:') ? r.key : null;
   return el('div', { class: 'ref' },
     el('div', { class: 'thumb' }, pic),
@@ -422,8 +424,12 @@ function topView(c, prev) {
   };
   if (prev?.camera.eye) svg.append(wedge(prev.camera.eye, 'var(--prev)', true, prev.id));
   if (c.camera.eye) svg.append(wedge(c.camera.eye, 'var(--accent)', false, c.id));
+  const placed = [];
   for (const p of f.spots) {
     const inView = c.facts.inView.some((e) => e.id === p.id);
+    // Its name above it, or below where another name already sits close by.
+    const near = placed.some((q) => Math.abs(q.x - p.x) < 1.6 && Math.abs(q.y - p.y) < .8);
+    placed.push(p);
     const col = inView ? 'var(--ink)' : 'var(--faint)';
     if (p.kind === 'thing' || p.w) {
       const w = p.w ?? .5, d = p.d ?? .5;
@@ -432,7 +438,7 @@ function topView(c, prev) {
       svg.append(s('circle', { cx: p.x, cy: p.y, r: .28, fill: 'var(--panel)', stroke: col, 'stroke-width': u * .6 }));
       if (p.facing) svg.append(s('line', { x1: p.x, y1: p.y, x2: p.x + p.facing.x * .55, y2: p.y + p.facing.y * .55, stroke: col, 'stroke-width': u * .6 }));
     }
-    svg.append(s('text', { x: p.x, y: p.y - .45, 'text-anchor': 'middle', 'font-size': u * 2, fill: col }, `${p.name}${p.many ? ' (many)' : ''}`));
+    svg.append(s('text', { x: p.x, y: near ? p.y + .45 + u * 2 : p.y - .45, 'text-anchor': 'middle', 'font-size': u * 2, fill: col }, `${p.name}${p.many ? ' (many)' : ''}`));
   }
   return el('figure', {}, svg, el('figcaption', {}, 'From above: ', el('span', { style: 'color: var(--accent)', text: `${c.id}'s camera` }), prev ? el('span', { style: 'color: var(--prev)', text: ` · ${prev.id}'s, dashed` }) : null));
 }
@@ -485,12 +491,12 @@ function verdictBar() {
   note.value = draft.note;
   note.addEventListener('input', () => { draft.note = note.value; });
   note.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); save(draft.verdict ?? v?.verdict); } if (e.key === 'Escape') note.blur(); });
-  bar.append(el('div', { class: 'state' }, el('span', { class: dotClass(cur) }), ' ', stateWords(cur)),
+  bar.append(...[el('div', { class: 'state' }, el('span', { class: dotClass(cur) }), ' ', stateWords(cur)),
     vb('right', 'Right', 'r'), vb('wrong', 'Wrong', 'w'), vb('unsure', 'Unsure', 'u'),
     showAsp ? asp('layout', 'Layout', '1') : null, showAsp ? asp('references', 'References', '2') : null, showAsp ? asp('words', 'Words', '3') : null,
     note,
     el('button', { class: 'vbtn save', type: 'button', onclick: () => save(draft.verdict ?? v?.verdict) }, 'Save', el('kbd', { text: '⌘↵' })),
-    el('span', { class: 'msg', id: 'msg' }));
+    el('span', { class: 'msg', id: 'msg' })].filter(Boolean));
   if (st?.state === 'confirm' && v?.shown) bar.append(el('details', { style: 'flex-basis: 100%' }, el('summary', { text: 'What changed in the words since your verdict' }), diffView(v.shown.prompt, currentPrompt())));
   return bar;
 }

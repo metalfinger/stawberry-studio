@@ -3,13 +3,13 @@
 // so its images are read from the live copy of the same dream (the saved conversation in state/), and one the live
 // copy has drawn again since the dream was frozen is marked so. Nothing is drawn and no model is asked.
 //
-//   bun run viewer/build.ts                        every frozen dream (evals/sources)
+//   bun run viewer/build.ts                        every frozen dream (evals/saved.ts frozenDreams)
 //   bun run viewer/build.ts <dream id> …           these, frozen
 //   bun run viewer/build.ts --live <dream id> …    these, live (the saved conversation itself)
 //
 // Writes runs/viewer/<dream>/view.json and its mock-ups; the page (viewer/serve.ts) reads them.
 
-import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import type { Session } from '../session';
 import type { Item } from '../sheets';
@@ -46,18 +46,15 @@ export function filesOf(live: Session | null): (item: Item) => ViewFile {
   };
 }
 
-/** The frozen dreams (evals/sources). */
-export const frozenIds = () =>
-  readdirSync(join(HERE, 'evals', 'sources'))
-    .filter((f) => f.endsWith('.json'))
-    .map((f) => f.replace(/\.json$/, ''))
-    .sort();
 
 if (import.meta.main) {
+  // The writer the readings were made with, set before anything reads it (the typed readings are keyed by it).
+  process.env.DREAMCHAT_WRITER ??= 'claude';
   const { PROFILE, viewDream, withReadings } = await import('./data');
   // The harness as it is meant to run: every switch of the profile, whatever the shell has.
-  Object.assign(process.env, PROFILE, { DREAMCHAT_WRITER: process.env.DREAMCHAT_WRITER ?? 'claude' });
-  const { loadDream } = await import('../evals/saved');
+  Object.assign(process.env, PROFILE);
+  const { frozenDreams, loadDream } = await import('../evals/saved');
+  const frozenIds = frozenDreams;
   const args = process.argv.slice(2);
   const live = args.includes('--live');
   const named = args.filter((a) => !a.startsWith('--'));
