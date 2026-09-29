@@ -75,6 +75,11 @@ export const verdicts = (): Verdicts =>
     ),
   ));
 
+/** The verdicts are read again at their next use: for a test that points DREAMCHAT_DATA elsewhere. */
+export function forgetVerdicts(): void {
+  known = null;
+}
+
 /**
  * The earlier pictures of a dream never to be drawn from, by id, and why: the owner judged the picture wrong
  * (by its file, else by its dream and moment where the saved dream keeps no file), or S9 found it stale.

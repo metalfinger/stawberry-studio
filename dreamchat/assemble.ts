@@ -101,8 +101,8 @@ export function assembleCut(s: CutSheet): Assembled {
         : `EDIT THIS PICTURE. It is ${pictureNo(base)}, the same view a moment earlier. Keep its camera, framing, room, light and everyone in it exactly as they are, faces and clothes included; change only what this moment changes.${strays(base)}`,
     );
 
-  // The mock-up is the picture made real, where there is no other picture to edit; with S5's references,
-  // only where the cut's tags say it helps.
+  // The mock-up is the picture made real, where there is no other picture to edit, on every cut that has one
+  // (with S5's references the sheet's choice, refs.ts chooseRefs, which is the same).
   const mockUp = !base && cam.previs && (!s.refs || s.refs.first === 'mockup') ? cam.previs : undefined;
   if (mockUp)
     attach(
