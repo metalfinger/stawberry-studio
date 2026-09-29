@@ -26,10 +26,15 @@ context mirrors it.
 Money: $21 left of $30; the S4 picture check (about $3) is approved and runs when S4 merges. Writer model: Claude
 (`DREAMCHAT_WRITER=claude`).
 
-## Where we stopped (27 Sep, about 21:40): read this to resume
+## Where we stopped (27-29 Sep): read this to resume
 
-The owner paused the loop for the usage limit. Nothing is lost: everything below is on `lab/dream-chat` or on the
-named branches, and this file is the record (the owner's claude.ai plan doc is retired; Engram mirrors this).
+**To resume in a new session:** open this file (`dreamchat/HARNESS_PLAN.md` on `lab/dream-chat`,
+`metalfinger/stawberry-studio`) and start from this section. Everything named below is pushed to GitHub — nothing
+depends on this machine or this session. The owner's claude.ai plan doc is retired; Engram's fever-dream project
+(`kb_load('fever-dream')`) mirrors the same state and carries any messages left since.
+
+The owner paused the loop for the usage limit on 27 Sep, and on 29 Sep confirmed everything is pushed and asked for
+this section to be kept current so any session can pick the work back up from here.
 
 **On lab and working.** S0 test set, S1 story record, S2 checks only log (default), S3 cut sheet, S4 camera rules,
 S5 references, S7 checks routed by tags, S8 listening (default), S9 record of what was drawn; the picture-check tool;
@@ -41,10 +46,11 @@ Defaults on: checks log (S2), listening (S8). Behind switches, off by default: `
 **Picture evidence.** The S4 check ($3, 20 moments, blind, old against new): new right 15 of 20, old 10 of 20; faults
 put right 5 of 7; guards 10 of 13 against 9 of 13. Its five misses are traced (log, 27 Sep): none is image-model noise.
 
-**In flight when paused: four branches, each at a clean, tested commit, not merged, not reviewed. They exist only on
-this Mac (local branches in `~/Documents/code/stawberry-studio/.claude/worktrees/agent-*`; only `lab/dream-chat` is
-pushed). All four, and every other branch of this work, are pushed to GitHub (29 Sep): `git fetch origin` then
-`git worktree add <path> <branch>` resumes one anywhere. Each branch's own HARNESS_PLAN.md says what it did.**
+**In flight when paused: four branches, each at a clean, tested commit, not merged, not reviewed.** All four, and
+every other branch of this work (worktree branches included), are pushed to GitHub (29 Sep) to
+`metalfinger/stawberry-studio` — currently a **public** repo; ask to make it private, or move this work to a private
+one, before it carries anything sensitive. `git fetch origin` then `git worktree add <path> <branch>` resumes any of
+them, on this Mac or any other. Each branch's own HARNESS_PLAN.md says what it did.
 - `s5-fix2` (4 commits on ca71e3e, head 9372c28): S5's second-review fixes. Earlier pictures sent for their look
   now say exactly what to take and "nobody and nothing from it comes into this picture but who and what this picture
   has in it" — in S5 and in today's default prompts (default prompts change: frozen 25 of 140, live 80 of 477;
