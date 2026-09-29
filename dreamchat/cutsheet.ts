@@ -443,14 +443,16 @@ export function cutSheet(x: CutSheetInput): CutSheet {
     // now says it (the plan's facts, from the record), so the look leaves it out: said once, and never an earlier
     // stage beside a later one (the library's water had risen over the desks by m3, and its look still had it
     // beginning to cover the floor).
-    // A group's words about someone who has a sketch of their own leave it (as lookIn's do): the baby's
-    // yellow onesie is the baby's, not the family's.
-    const own = members.filter((m) => m.group === s).map((m) => new RegExp(`\\b${m.word}s?\\b`, 'i'));
+    // A group's words about someone who has a sketch of their own leave it: the baby's yellow onesie is the
+    // baby's, not the family's. lookIn leaves them by the sketch's own pieces ("baby: tiny, with light hair",
+    // up to its ";"); the record's clauses cut them finer, and "tiny, with light hair" came back without its
+    // "baby:" (0199, live, 29 Sep). Until the record says who in a group each clause is about, such a group's
+    // look is lookIn's.
+    if (!retired('members') && members.some((m) => m.group === s)) return undefined;
     return LOOK[s.kind]
       .map((k) =>
         (e.base[k] ?? [])
           .filter((f) => !f.first)
-          .filter((f) => retired('members') || !own.some((re) => re.test(f.text)))
           // The record strips the pose of people and animals; of a place or thing, the sketch's clean-up still does
           // (S6 row 11 retires it once the record reads those too).
           .map((f) => (s.kind === 'character' || retired('pose') ? f : { ...f, text: withoutPose(f.text, false) }))

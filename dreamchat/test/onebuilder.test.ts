@@ -551,6 +551,61 @@ describe('ledger 8: how each one looks, once, from the story record', () => {
       look('dream-0926-022102-aeea', 'in_view', 't1', 'm1'),
     );
   });
+
+  // 09ea with someone's sketch and breakdown given other words, and their look where they are in view.
+  const lookWith = (
+    step: string,
+    id: string,
+    fields: Record<string, { value: string; said: boolean }>,
+    also?: string,
+  ) => {
+    const s = structuredClone(loadDream('dream-0926-000545-09ea', false).session as Session);
+    const it = s.build!.items.find((i) => i.id === id)!;
+    it.fields = fields;
+    const b = s.draft!.breakdown!.people.find((p) => p.id === id)!;
+    (b.fields as Record<string, unknown>) = structuredClone(fields);
+    // Someone else in view with them: the group they are in.
+    if (also) for (const x of [it, b]) Object.assign(x, { name: 'the family', several: true });
+    return withSwitches(
+      { ...SHEET, DREAMCHAT_ONE_BUILDER: step },
+      () =>
+        rebuild(structuredClone(s))
+          .pictures.map((x) => x.sheet?.inView ?? [])
+          .find((v) => v.some((e) => e.id === id) && (!also || v.some((e) => e.id === also)))
+          ?.find((e) => e.id === id)?.look,
+    );
+  };
+
+  test('a look field that says it does not know says nothing, all of it, as the sketch did (live 6a4d)', () => {
+    const fields = {
+      appearance: { value: 'an elderly man with a lined face', said: true },
+      distinctive_features: { value: 'features indistinct, with soft edges and muted colors', said: false },
+    };
+    expect(lookWith('in_view', 'p3', fields)).not.toContain('soft edges');
+    expect(lookWith('looks', 'p3', fields)).not.toContain('soft edges');
+    expect(lookWith('looks', 'p3', fields)).toContain('lined face');
+  });
+
+  test('a clause said again in part keeps the word that is new: Dele is tall (live 3471)', () => {
+    const fields = {
+      appearance: { value: 'an elderly man with a lined face and a tired everyday look', said: true },
+      distinctive_features: { value: 'tall, tired everyday look', said: true },
+    };
+    expect(lookWith('in_view', 'p3', fields)).toContain('tall');
+    expect(lookWith('looks', 'p3', fields)).toContain('tall');
+  });
+
+  test("a group's piece about someone with their own sketch leaves the look whole, clauses after the name too (live 0199)", () => {
+    const fields = {
+      appearance: {
+        value: 'a family; an old man in a grey coat, a long white beard; a sister in a yellow dress',
+        said: true,
+      },
+    };
+    expect(lookWith('in_view', 'p2', fields, 'p3')).not.toContain('white beard');
+    expect(lookWith('looks', 'p2', fields, 'p3')).not.toContain('white beard');
+    expect(lookWith('looks', 'p2', fields, 'p3')).toContain('sister');
+  });
 });
 
 describe("S4's word lists, each with a switch that turns off only its piece", () => {

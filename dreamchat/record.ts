@@ -590,6 +590,11 @@ function factsOf(
   const out: Record<string, Fact[]> = {};
   for (const [k, d] of Object.entries(fields ?? {})) {
     if (!d || typeof d.value !== 'string' || !d.value.trim()) continue;
+    // A look field that says it does not know says nothing, all of it, once the sheet says the look from here
+    // (S6 row 8), as the sketch's clean-up has it: "indistinct, with soft edges and muted colors" is not a
+    // dreamer's look, nor "unspecified indoor room" a room's (live, 29 Sep). Clause by clause, what is left
+    // reads as a look.
+    if (builds('looks') && k !== 'identity' && VAGUE.test(d.value)) continue;
     // "Standing in a relaxed three-quarter view" came into a father's look, and a moment of him
     // sitting read as at odds with itself (lighthouse, 26 Sep): the record strips it once.
     const value = person && k !== 'identity' ? withoutPose(d.value, false) : d.value;
@@ -1771,7 +1776,10 @@ function duplicates(ctx: Ctx): Violation[] {
           const earlier = seen.filter(
             (s) => s.field === field || (across && s.field !== 'identity' && field !== 'identity'),
           );
-          const pieces = f.text.split(/\s+and\s+/).map(pieceWords);
+          // A comma inside a clause joins words that each say something ("tall, tired everyday look"): each is
+          // said already, or the clause stays. Whole, a "tired everyday look" before it covered all but "tall",
+          // and Dele lost it once the sheet said the look from here (S6 row 8; live, 29 Sep).
+          const pieces = f.text.split(builds('looks') ? /\s+and\s+|,\s+/ : /\s+and\s+/).map(pieceWords);
           const dup = pieces.every((p) => earlier.some((s) => covers(s.words, p)));
           if (dup) cut.push(`${field} ${quote(f.text)}`);
           else seen.push({ field, words: wordsOf(f.text) });
