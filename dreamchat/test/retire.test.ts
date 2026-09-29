@@ -1,7 +1,7 @@
 import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { CLEANUP_NAMES, CLEANUPS, type Cleanup, retired, retiredSet, withRetired } from '../cleanups';
+import { BUILDER_STEPS, CLEANUP_NAMES, CLEANUPS, type Cleanup, retired, retiredSet, withRetired } from '../cleanups';
 import type { CutSheet } from '../cutsheet';
 import {
   type AtomicChange,
@@ -83,8 +83,12 @@ describe('the clean-ups S6 retires, each with a switch', () => {
     expect(retiredSet('').size).toBe(0);
     expect([...retiredSet('gone, pose')]).toEqual(['gone', 'pose']);
     expect(() => retiredSet('gone,poses')).toThrow('no clean-up called poses');
-    withEnv({ DREAMCHAT_RETIRE: undefined }, () => {
+    withEnv({ DREAMCHAT_RETIRE: undefined, DREAMCHAT_ONE_BUILDER: undefined }, () => {
       for (const n of CLEANUP_NAMES) expect(retired(n)).toBe(false);
+    });
+    // The one builder's steps named for a clean-up retire it (S6), and only those.
+    withEnv({ DREAMCHAT_RETIRE: undefined, DREAMCHAT_ONE_BUILDER: 'on' }, () => {
+      for (const n of CLEANUP_NAMES) expect(retired(n)).toBe(BUILDER_STEPS.includes(n));
     });
   });
 
