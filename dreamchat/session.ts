@@ -2641,7 +2641,7 @@ export class SessionStore {
    * non-human approval of a moment only where its facts record shows each asset). Otherwise, or
    * without a judge, what follows waits for the person's own verdict.
    */
-  private async vouch(s: Session, n: Item): Promise<void> {
+  private async vouch(s: Session, n: Item, withheld: Withheld = this.withheldFrom(s, n)): Promise<void> {
     if (n.review || n.continuityApproved || n.kind !== 'cut' || !n.mediaId || !n.nodeId) return;
     const users = (s.build?.frames ?? []).filter((x) => x.needs?.includes(n.id));
     if (!users.length) return;
@@ -2656,7 +2656,7 @@ export class SessionStore {
     }
     // A take the judge still finds wrong after its one repair is theirs to see, never a source: what
     // is drawn from it keeps what is wrong with it.
-    const { serious } = this.seriousFailures(n, s.style, this.withheldFrom(s, n));
+    const { serious } = this.seriousFailures(n, s.style, withheld);
     if (serious.length) {
       n.waitsForPerson = `the judge found: ${serious.join('; ').slice(0, 300)}`;
       return;
@@ -4073,7 +4073,7 @@ export class SessionStore {
         saved = true;
         try {
           if (cur.kind === 'cut') {
-            if (!(await this.repair(x, cur))) await this.vouch(x, cur);
+            if (!(await this.repair(x, cur, withheld))) await this.vouch(x, cur, withheld);
             await this.fillFrames(x, x.turns.at(-1)?.turn ?? 0);
           } else if (cur.kind !== 'ghost') await this.repairSheet(x, cur);
         } catch (e) {
@@ -4159,7 +4159,8 @@ export class SessionStore {
    * whose checks name another picture: it costs a re-plan, and a sketch or an in-between picture has none.
    */
   private withheldFrom(s: Session, it: Item): Withheld {
-    if (refsMode() === 'off' || it.kind !== 'cut' || !(it.frame?.plan?.criteria ?? []).some((k) => !!k.with)) return {};
+    const named = (it.frame?.plan?.criteria ?? []).some((k) => !!k.with && !k.with.startsWith('sheet:'));
+    if (refsMode() === 'off' || it.kind !== 'cut' || !named) return {};
     return withheldIn(s);
   }
 
@@ -4205,11 +4206,11 @@ export class SessionStore {
     return { factAt, fixes, serious: [...factAt.map((i) => c.failed[i]), ...fixes.map((k) => k.text)] };
   }
 
-  private async repair(s: Session, it: Item): Promise<boolean> {
+  private async repair(s: Session, it: Item, withheld: Withheld = this.withheldFrom(s, it)): Promise<boolean> {
     if (it.review || (it.repairs ?? 0) >= MAX_REPAIRS || !it.mediaId || !it.nodeId) return false;
     const c = it.check;
     if (!c || c.error) return false;
-    const { factAt, fixes, serious } = this.seriousFailures(it, s.style, this.withheldFrom(s, it));
+    const { factAt, fixes, serious } = this.seriousFailures(it, s.style, withheld);
     if (!serious.length) return false;
     it.repairs = (it.repairs ?? 0) + 1;
     // Said to the image model as instructions: a judge's question means nothing to it.

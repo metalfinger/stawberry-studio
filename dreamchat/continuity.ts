@@ -1470,7 +1470,9 @@ function planWith(
         // not drawn from, and the same view is still this moment's (the camera rules' "move the camera" is for a
         // repeat of a picture that is sent).
         const placed = opts.camera ? shotRules(c, m, where) : undefined;
-        const kept = placed?.same.filter((e) => e.id !== base?.id);
+        // Its picture's camera is the one its chain of edits started from (an edit keeps its camera).
+        const drawnAt = base ? eyeOf(base.id) : undefined;
+        const kept = placed?.same.filter((e) => e.id !== base?.id && !(drawnAt && sameCameraAs(e.eye, drawnAt)));
         const alone = refs
           ? outsideShot(
               where,

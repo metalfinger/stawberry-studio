@@ -281,7 +281,12 @@ describe('an edit whose picture is not sent after all is made from its own shot,
     const m2 = cut(p, 'm2');
     expect(m2.refs.find((r) => r.id === 'm1')?.role).toBe('base');
     const m1 = cut(p, 'm1').eye!;
-    expect(Math.hypot(m2.alone!.eye.at.x - m1.at.x, m2.alone!.eye.at.y - m1.at.y)).toBeLessThan(0.01);
+    const off = (e: { at: { x: number; y: number } }) => Math.hypot(e.at.x - m1.at.x, e.at.y - m1.at.y);
+    expect(off(m2.alone!.eye)).toBeLessThan(0.01);
+    // m3 edits m2, an edit of m1: its picture is drawn from m1's camera too, and its own shot stays there.
+    const m3 = cut(p, 'm3');
+    expect(m3.refs.find((r) => r.id === 'm2')?.role).toBe('base');
+    expect(off(m3.alone!.eye)).toBeLessThan(0.01);
   });
 
   test('with the picture it edits withheld (judged wrong, or stale), it is placed and made from its own mock-up', () => {

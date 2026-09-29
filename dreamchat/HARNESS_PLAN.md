@@ -1160,8 +1160,29 @@ One **cut sheet** per cut is the spine everything is assembled from:
     this change keeps the gap until it is planned again.
   Measured after: `bun test` 827 pass, 1 skipped, both ways; the corpus 0 of 127 frozen and 0 of 447 live pictures
   changed; cuts with a camera on a floor plan and no layout anchor, frozen 0, live 0.
-  *Left, in order:* the third review; merge into lab ahead of S6 rows 8-16 (the owner's order, 29 Sep); retire the
-  five routing hypotheses. The crowd (heron m4: the mock-up's bare
+  *Third review: merge.* Merged into lab (d97583a, 29 Sep night), `bun test` 827 pass both ways on the merged tree.
+  *Follow-ups before any whole dream is drawn (branch `s5-anchor-2`, aa576ce and the fixes after its review):*
+  - *Tests pin what the third review found unpinned*: the camera an edit's picture is drawn from (the reviewer's random
+    dream 562: an edit of an edit whose own camera stands 1.8 m off, compared at the wrong one it lost its edit); the
+    judge's withheld filter through the store's own judging (`test/withheld.test.ts`); each fails without its change.
+  - *Repairs never aim at a withheld picture*: a repair's fixes are matched to the failed checks by their words, and a
+    check against a withheld picture sharing its words with one asked ("the same person in both pictures") was taken
+    with it, telling the image model to match a picture not attached. Left out now.
+  - *What is withheld is read once per judged cut, and only for a cut whose checks name an earlier picture* (not its
+    sketch sheets, not a sketch or an in-between picture): with S9's records each reading is a re-plan (1.7-2.4 s on
+    large live dreams), and the judge, the repair and the vouching each read it.
+  - *An edit's own shot keeps the camera its picture is drawn from*: with the camera rules, the rule against repeating a
+    camera moved it off the story's same view (280 of 600 random dreams placed it otherwise; the owner's same view is
+    the picture's camera, which for an edit of an edit is where its chain started).
+  - *Deferred, both views for the owner*: S9's record of a moment still describes its plan, not the swap to its own
+    shot. Made from the drawn frame, `behind` (what was sent against what the dream gave it then) would list every
+    swapped picture as drawn behind the dream; doing it right needs the record to carry what was withheld and
+    `behind` to discount it. Meanwhile an S9 rebuild from a record reproduces such a picture as an edit of the
+    withheld one: evals that rebuild from records are not ground truth for those pictures.
+  Measured: `bun test` 832 pass both ways; the corpus 0 of 127 frozen and 0 of 447 live pictures changed; 600 random
+  dreams against 644c55a unchanged but the one intended (camera rules on). Its merge had no read from the S6 pane (paused
+  by the owner that night); the independent reviewer's fourth pass said merge.
+  *Left:* retire the five routing hypotheses. The crowd (heron m4: the mock-up's bare
   figures made real as naked people, "partly", n=1) is a known risk to watch in the owner's reading, not a reason
   to drop the anchor. None of this is proven in pictures: pictures judged by the owner (the viewer's reading, then
   a whole dream drawn) are the bar for any change to references, in-between pictures or edits, not text measures,

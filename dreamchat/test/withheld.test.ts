@@ -132,11 +132,30 @@ describe('a withheld picture is not what a moment is repaired toward', () => {
         s,
         [...s.build!.items, ...s.build!.frames!].find((x) => x.id === id),
       );
-    await withSwitches({ ...S5, DREAMCHAT_DATA: judgedWrong('m1') }, async () => {
+    // Drawn as planned (m2 an edit of m1), then the owner judges m1 wrong.
+    await withSwitches(S5, async () => {
       const { drawn, store } = drawnStore([]);
+      process.env.DREAMCHAT_DATA = judgedWrong('m1');
+      forgetVerdicts();
       expect(withheldFrom(store, drawn, 'm2')).toEqual({ m1: 'judged wrong' });
       // A sketch has no checks against another picture: nothing is read.
       expect(withheldFrom(store, drawn, drawn.build!.items[0].id)).toEqual({});
+      // Nor a cut whose only checks are against the sketches it is drawn from (sheet:…).
+      const m2 = drawn.build!.frames!.find((f) => f.id === 'm2')!;
+      const onSheets = {
+        ...m2,
+        frame: {
+          ...m2.frame!,
+          plan: { ...m2.frame!.plan!, criteria: m2.frame!.plan!.criteria.filter((k) => k.with?.startsWith('sheet:')) },
+        },
+      };
+      expect(onSheets.frame.plan.criteria.length).toBeGreaterThan(0);
+      expect(
+        (store as unknown as { withheldFrom: (s: Session, it: unknown) => Record<string, string> }).withheldFrom(
+          drawn,
+          onSheets,
+        ),
+      ).toEqual({});
     });
     await withSwitches({ DREAMCHAT_CUT_SHEET: 'on', DREAMCHAT_DATA: judgedWrong('m1') }, async () => {
       const { drawn, store } = drawnStore([]);
