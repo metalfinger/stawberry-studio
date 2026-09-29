@@ -101,6 +101,12 @@ export type RecElement = {
    * silver fish", a shoal kept as a crowd), so its kind says all the sheet and the tags need.
    */
   animal?: boolean;
+  /**
+   * With the one builder's looks (S6 row 8): its base is its sketch's words (the sketch is drawn or being drawn),
+   * not the breakdown's shorter ones, and the hash of those words: the cut sheet says the look from the record
+   * only where the sheet's sketch has the same words (a picture rebuilt as drawn has those it was drawn from).
+   */
+  fromSketch?: string;
 };
 
 /**
@@ -500,9 +506,17 @@ const STYLE_SAYS: RegExp[] = [
 
 /** The first words in a text that say how it is drawn, of any style or of the chosen one. */
 function styleIn(text: string, style?: StyleOption | null): string | null {
-  for (const re of STYLE_SAYS) {
+  // With the one builder's looks (S6 row 8), the bare word list (the last) names a way of drawing only where the
+  // chosen style names it too: "a box of crayons" is the story's in a watercolour dream.
+  const named = builds('looks')
+    ? [style?.name, style?.medium, style?.line, ...(style?.tokens ?? [])].join(' ').toLowerCase()
+    : '';
+  for (const [i, re] of STYLE_SAYS.entries()) {
     const m = text.match(re);
-    if (m?.[0].trim()) return m[0].trim();
+    if (!m?.[0].trim()) continue;
+    if (builds('looks') && i === STYLE_SAYS.length - 1 && !named.includes(m[0].trim().toLowerCase().replace(/s$/, '')))
+      continue;
+    return m[0].trim();
   }
   const name = style?.name ? bare(style.name) : '';
   if (name.split(/\s+/).length >= 2 && text.toLowerCase().includes(name)) return name;
@@ -611,6 +625,7 @@ function elementsOf(b: Breakdown, items: Item[], dreamer: string | null, notes: 
       called: id === dreamer ? 'the dreamer' : pictureName((builds('names') && sketched(it) && it?.name) || name || id),
       name: name ?? id,
       base: drawn ?? own,
+      ...(builds('looks') && drawn && it ? { fromSketch: hashOf(it.fields) } : {}),
       ...(differs ? { stored: own } : {}),
       firstShown: null,
       changes: [],

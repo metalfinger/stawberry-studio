@@ -126,10 +126,7 @@ export function rebuild(
   completeViews(b);
   // With DREAMCHAT_RECORD=on, planned from the story record as drawing reads it (session.ts planRecord):
   // the sketches' words, the dreamer's messages where the dream keeps them, its readings and look.
-  // With the one builder's looks (S6 row 8): the record reads the sketches as drawing reads them, approved and
-  // drawn; else as saved (a frozen dream's sketches carry no picture, so the record read the producer's words).
-  const asSaved = recordInputsOf(s);
-  const inputs = builds('looks') ? { ...asSaved, items: sheets } : asSaved;
+  const inputs = recordInputsOf(s);
   const rec = recordForPlan(b, inputs.items, s.draft?.readings, { words: inputs.words, style });
   const plan = planContinuity(b, rec);
   // S9: each picture drawn with a record, by its id among the saved ones, and each saved in-between

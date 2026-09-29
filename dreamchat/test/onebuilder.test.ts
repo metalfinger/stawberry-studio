@@ -374,11 +374,109 @@ describe('ledger 8: how each one looks, once, from the story record', () => {
     expect(look(id, 'looks', 't1', 'm1')).not.toContain('watercolour');
   });
 
-  test('a first look no other line says is in the look, and one how it is now says stays there alone', () => {
-    // 09ea m4: the newspaper wrapped around the fish is the newspaper's first look.
-    expect(look('dream-0926-000545-09ea', 'looks', 't2', 'm4')).toContain('newspaper wrapped around the fish');
-    // 6e80: the library's water is how it is now at m1, not also in its look; at m8 the city outside is its own.
+  test('a first look is said as how it is now, not also in the look; a look no other line has stays', () => {
+    // 6e80: the library's water begins to cover the floor at m1; how it is now says so, the look does not.
+    expect(look('dream-0926-055141-6e80', 'in_view', 'l1', 'm1')).not.toContain('water beginning to cover the floor');
     expect(look('dream-0926-055141-6e80', 'looks', 'l1', 'm1')).not.toContain('water beginning to cover the floor');
+    // The look otherwise as the sketch said it.
+    expect(look('dream-0926-055141-6e80', 'looks', 'l1', 'm1')).toContain('shelves of books');
+  });
+
+  test('a story word that is only a medium word stays where the chosen style does not name it', () => {
+    // 09ea is not a crayon dream: a box of crayons in it is a box of crayons.
+    const s = structuredClone(loadDream('dream-0926-000545-09ea', false).session as Session);
+    const item = s.build!.items.find((i) => i.id === 't2')!;
+    item.fields = { appearance: { value: 'a box of crayons, red and blue', said: true } };
+    const d = s.draft!.breakdown!.things.find((t) => t.id === 't2')!;
+    d.fields = { appearance: { value: 'a box of crayons, red and blue', said: true } } as never;
+    const at = (step: string) =>
+      withSwitches(
+        { ...SHEET, DREAMCHAT_ONE_BUILDER: step },
+        () =>
+          rebuild(structuredClone(s))
+            .pictures.find((x) => x.id === 'm4')
+            ?.sheet?.inView.find((e) => e.id === 't2')?.look,
+      );
+    expect(at('looks')).toContain('a box of crayons');
+  });
+
+  test("a sketch that never got drawn keeps its words: the record's base is the breakdown's shorter ones", () => {
+    // 6081's boat has a failed sketch; the record's words for it are the breakdown's short ones.
+    const id = 'dream-0926-052843-6081';
+    const s = loadDream(id, false).session as Session;
+    const items = s.build!.items.filter((i) => !i.frame && (i.status === 'failed' || i.status === 'waiting'));
+    expect(items.length).toBeGreaterThan(0);
+    const of = (step: string, el: string) =>
+      withSwitches({ ...SHEET, DREAMCHAT_ONE_BUILDER: step }, () => {
+        const p = rebuild(structuredClone(s)).pictures.flatMap((x) =>
+          (x.sheet?.inView ?? []).filter((e) => e.id === el),
+        );
+        return p.map((e) => e.look);
+      });
+    for (const it of items.filter((x) => x.kind !== 'cut' && x.kind !== 'ghost'))
+      expect(of('looks', it.id)).toEqual(of('in_view', it.id));
+  });
+
+  test("a group's words about someone with a sketch of their own leave the group's look", () => {
+    const s = structuredClone(loadDream('dream-0926-000545-09ea', false).session as Session);
+    const family = 'a family; an old man in a grey coat; a sister in a yellow dress';
+    const g = s.build!.items.find((i) => i.id === 'p2')!;
+    g.name = 'the family';
+    g.several = true;
+    g.fields = { appearance: { value: family, said: true } };
+    const b = s.draft!.breakdown!.people.find((p) => p.id === 'p2')!;
+    b.name = 'the family';
+    b.several = true;
+    b.fields = { appearance: { value: family, said: true } } as never;
+    // Where the family and the old man are both in view.
+    const at = (step: string) =>
+      withSwitches(
+        { ...SHEET, DREAMCHAT_ONE_BUILDER: step },
+        () =>
+          rebuild(structuredClone(s))
+            .pictures.map((x) => x.sheet?.inView ?? [])
+            .find((v) => v.some((e) => e.id === 'p2') && v.some((e) => e.id === 'p3'))
+            ?.find((e) => e.id === 'p2')?.look,
+      );
+    expect(at('in_view')).not.toContain('old man');
+    expect(at('looks')).not.toContain('old man');
+    expect(at('looks')).toContain('sister');
+  });
+
+  test("a picture rebuilt as drawn says the sketch's words it was drawn from, not the record of today's", () => {
+    // The record's base is made from today's sketch words; a sheet whose sketch has other words (an as-drawn
+    // copy) says those, as the sketch's clean-up did.
+    const id = 'dream-0926-043003-b0cb';
+    const lookOf = (step: string) =>
+      withSwitches({ ...SHEET, DREAMCHAT_ONE_BUILDER: step }, () => {
+        const s = loadDream(id, false).session as Session;
+        const r = rebuild(s);
+        const inputs = recordInputsOf(s);
+        const dream = sheetDream({
+          breakdown: r.b,
+          plan: r.plan,
+          prep: s.prep,
+          items: inputs.items,
+          style: s.style ?? null,
+          readings: s.draft?.readings,
+          words: inputs.words,
+        });
+        const p = r.pictures.find((x) => x.id === 'm2')!;
+        const sheets = r.sheets.map((i) =>
+          i.id === 't1'
+            ? { ...i, fields: { ...i.fields, appearance: { value: 'a small red tin trunk', said: true } } }
+            : i,
+        );
+        return cutSheet({ frame: p.item, sheets, style: s.style!, dream }).inView.find((e) => e.id === 't1')?.look;
+      });
+    expect(lookOf('looks')).toContain('small red tin trunk');
+    expect(lookOf('in_view')).toContain('small red tin trunk');
+  });
+
+  test("the pose of a place or a thing is still stripped, as the sketch's clean-up did", () => {
+    // a44a's red door: "standing upright on its own with no house or wall around it" is pose.
+    expect(look('dream-0926-062232-a44a', 'in_view', 't2', 'm5')).not.toContain('standing upright');
+    expect(look('dream-0926-062232-a44a', 'looks', 't2', 'm5')).not.toContain('standing upright');
   });
 
   test("the sketch's words as before with the step off", () => {

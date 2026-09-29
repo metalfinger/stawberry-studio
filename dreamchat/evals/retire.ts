@@ -315,10 +315,12 @@ function recordLook(
   if (!e) return [];
   // A first look (a change made where it is first shown) is said as how it is now, not in the look.
   return LOOK[kind].flatMap((k) =>
-    (e.base[k] ?? []).filter((f) => !f.first).flatMap((f) =>
-      // A clause guessed or implied is said in the style's shades; one said, confirmed or read from the story as told.
-      contentWords(f.basis === 'guessed' || f.basis === 'implied' ? inShades(f.text, style) : f.text),
-    ),
+    (e.base[k] ?? [])
+      .filter((f) => !f.first)
+      .flatMap((f) =>
+        // A clause guessed or implied is said in the style's shades; one said, confirmed or read from the story as told.
+        contentWords(f.basis === 'guessed' || f.basis === 'implied' ? inShades(f.text, style) : f.text),
+      ),
   );
 }
 
@@ -361,7 +363,9 @@ export function disagreementsOf(p: RebuiltPicture, rec: StoryRecord | null, styl
     // A group or crowd of animals the record marks so (S6 row 6) is said as an animal: one kind, not two.
     const animals = rec?.elements[e.id]?.animal && e.said === 'animal' && (kind === 'group' || kind === 'crowd');
     if (kind && !animals && !KIND_OF_SAID[e.said]?.includes(kind)) kinds.push(`${e.id}: ${e.said} / record ${kind}`);
-    if (rec && e.turned === null) {
+    // With the one builder's looks, only where the record's base is the drawn sketch's words: a sketch waiting or
+    // failed carries its look in the item, which the sheet reads (cutsheet.ts recLook).
+    if (rec && e.turned === null && (!builds('looks') || rec.elements[e.id]?.fromSketch)) {
       const a = new Set(contentWords(e.look));
       const z = new Set(recordLook(rec, e.id, e.kind, s.style.option));
       const sheetOnly = setDiff(a, z);
@@ -505,10 +509,7 @@ export type MomentReading = {
 export type GhostIds = { dream: string; picture: string; ids: string[] };
 
 export function readDream(id: string, session: Session, r: Rebuilt): { moments: MomentReading[]; ghosts: GhostIds[] } {
-  // The record as the rebuild's sheets read it: with the one builder's looks (S6 row 8), from the sketches as
-  // drawn (the rebuild's own), else as saved.
-  const saved = recordInputsOf(session);
-  const inputs = builds('looks') ? { ...saved, items: r.sheets } : saved;
+  const inputs = recordInputsOf(session);
   let rec: StoryRecord | null = null;
   try {
     rec = storyRecord(r.b, inputs.items, session.draft?.readings, { words: inputs.words, style: session.style }).record;
