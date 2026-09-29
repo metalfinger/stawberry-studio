@@ -247,7 +247,7 @@ export type FrameReference = {
 export type PlannedInput = { use: PlanRef; item: Item };
 
 /** The people, things and place a moment shows, by their sketches. */
-export function inViewOf(frame: Item, sheets: Item[], shows?: string[]): Item[] {
+export function inViewOf(frame: Item, sheets: Item[], shows?: string[], showsEyes?: 'dreamer' | 'outside'): Item[] {
   const f = frame.frame;
   if (!f) return [];
   const byId = new Map(sheets.map((s) => [s.id, s]));
@@ -259,7 +259,9 @@ export function inViewOf(frame: Item, sheets: Item[], shows?: string[]): Item[] 
   const people = shows ? listed.filter((id) => byId.get(id)?.kind === 'character') : f.visible;
   return [
     // Through the dreamer's own eyes the dreamer is the camera, never a face in the picture.
-    ...people.filter((id) => !(f.eyes === 'dreamer' && byId.get(id)?.isDreamer)).map((id) => byId.get(id)),
+    ...people
+      .filter((id) => !((shows ? (showsEyes ?? f.eyes) : f.eyes) === 'dreamer' && byId.get(id)?.isDreamer))
+      .map((id) => byId.get(id)),
     ...(shows ? listed.filter((id) => byId.get(id)?.kind !== 'character') : f.things).map((id) => byId.get(id)),
     ...sees.map((id) => byId.get(id)),
     ...(shows && listed.includes(f.place) ? [] : [byId.get(f.place)]),

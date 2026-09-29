@@ -412,8 +412,11 @@ export function cutSheet(x: CutSheetInput): CutSheet {
   const plan = f.plan;
   // Who is in view, once (S6 row 7): the story record's shows and the camera's view, where the builder's
   // in_view is on and the record holds the moment.
-  const recShows = builds('in_view') ? x.dream?.record?.moments.find((m) => m.id === frame.id)?.shows : undefined;
-  const inView = inViewOf(frame, sheets, recShows);
+  // Only with the record on: off, a record is still read for the sheet's log, but no prompt is planned from it.
+  const recMoment =
+    builds('in_view') && recordMode() === 'on' ? x.dream?.record?.moments.find((m) => m.id === frame.id) : undefined;
+  // Through whose eyes as the record read it, which left the dreamer out of what it shows (or not).
+  const inView = inViewOf(frame, sheets, recMoment?.shows, recMoment?.eyes);
   const members = groupMembers(inView);
   const lookOf = (s: Item, keys: string[]) => lookIn(s, keys, { members, unsaid: plan?.unsaid, style });
   // One name for each (S6 row 5): the story record's, where the builder's names are on and it holds one.

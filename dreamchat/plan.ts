@@ -81,6 +81,15 @@ export type Rebuilt = {
 };
 
 /** The stand-in image of a sketch, of an earlier picture, and of a moment's mock-up. */
+/**
+ * Who is in view of a rebuilt picture, as the gate reads it on the drawing path: the sheet's, where the one
+ * builder's in_view has it made once (S6 row 7) and the prompt is assembled from the sheet; else the plan's.
+ */
+export const inViewIn = (built: Framed, frame: Item, sheets: Item[]): Item[] =>
+  builds('in_view') && cutSheetMode() === 'on' && built.sheet
+    ? built.sheet.inView.flatMap((e) => sheets.filter((i) => i.id === e.id))
+    : inViewOf(frame, sheets);
+
 export const standIn = {
   sketch: (id: string) => `sketch-${id}`,
   picture: (id: string) => `picture-${id}`,
@@ -223,7 +232,7 @@ export function rebuild(
       prompt: built.prompt,
       references: built.references,
       criteria: cut?.criteria ?? [],
-      inView: inViewOf(it, sheets),
+      inView: inViewIn(built, it, sheets),
       ...(built.sheet ? { sheet: built.sheet, differs: built.differs ?? [] } : {}),
       ...(built.assembled ? { assembled: built.assembled } : {}),
     });
@@ -339,7 +348,7 @@ function fromRecord(
     prompt: built.prompt,
     references: built.references,
     criteria: m.frame.plan?.criteria ?? [],
-    inView: inViewOf(frame, sheets),
+    inView: inViewIn(built, frame, sheets),
     ...(built.sheet ? { sheet: built.sheet, differs: built.differs ?? [] } : {}),
     ...(built.assembled ? { assembled: built.assembled } : {}),
     asDrawn: true,

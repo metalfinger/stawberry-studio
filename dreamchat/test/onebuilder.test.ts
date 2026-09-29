@@ -10,11 +10,12 @@ import { loadDream } from '../evals/saved';
 import { cutSheet, sheetDream } from '../cutsheet';
 import { inViewOf } from '../frames';
 import { moments, producerSystem } from '../producer';
-import { rebuild } from '../plan';
+import { inViewIn, rebuild } from '../plan';
 import { recordInputsOf, recordsMade, storyRecord } from '../record';
 import { type Session, typedReadings } from '../session';
 import { NO_BAR, TYPED_BAR, type TypedReading, typedAsk, typedAskKey, typedWriterName } from '../typed';
 import { hashOf } from '../lib';
+import type { Item } from '../sheets';
 import { DEFAULTS, pinSwitches, withSwitches } from './fakes';
 
 setDefaultTimeout(120_000);
@@ -299,6 +300,61 @@ describe('ledger 7: who is in view, once', () => {
     expect(before.ids).toContain(before.extra);
     const after = sheetAt('in_view');
     expect(after.ids).not.toContain(after.extra);
+  });
+
+  test("a copy missing someone the record shows, or through other eyes than the record's: the record's", () => {
+    const id = 'dream-0926-000545-09ea';
+    const sheetOf = (step: string, change: (f: NonNullable<Item['frame']>) => NonNullable<Item['frame']>) =>
+      withSwitches({ ...SHEET, DREAMCHAT_ONE_BUILDER: step }, () => {
+        const s = loadDream(id, false).session as Session;
+        const r = rebuild(s);
+        const inputs = recordInputsOf(s);
+        const dream = sheetDream({
+          breakdown: r.b,
+          plan: r.plan,
+          prep: s.prep,
+          items: inputs.items,
+          style: s.style ?? null,
+          readings: s.draft?.readings,
+          words: inputs.words,
+        });
+        const p = r.pictures.find((x) => x.id === 'm2')!;
+        const stale = { ...p.item, frame: change(p.item.frame!) };
+        return cutSheet({ frame: stale, sheets: r.sheets, style: s.style!, dream }).inView.map((e) => e.id);
+      });
+    // The copy lost the dreamer's sister (p2), whom the record shows.
+    const lost = (f: NonNullable<Item['frame']>) => ({
+      ...f,
+      visible: f.visible.filter((x) => x !== 'p2'),
+      plan: f.plan && { ...f.plan, sees: (f.plan.sees ?? []).filter((x) => x !== 'p2') },
+    });
+    expect(sheetOf('kinds', lost)).not.toContain('p2');
+    expect(sheetOf('in_view', lost)).toContain('p2');
+    // The copy says through the dreamer's eyes; the record, seen from outside: the dreamer is in the picture.
+    const pov = (f: NonNullable<Item['frame']>) => ({ ...f, eyes: 'dreamer' as const });
+    expect(sheetOf('kinds', pov)).not.toContain('p1');
+    expect(sheetOf('in_view', pov)).toContain('p1');
+  });
+
+  test('the gate reads the sheet only where the prompt is assembled from it: on, not in shadow', () => {
+    // A sheet that has someone the moment's own copy does not: the sheet's list only with the sheet on.
+    const s = loadDream('dream-0926-000545-09ea', false).session as Session;
+    const r = withSwitches({ ...SHEET, DREAMCHAT_ONE_BUILDER: 'in_view' }, () => rebuild(structuredClone(s)));
+    const p = r.pictures.find((x) => x.id === 'm2')!;
+    const extra = r.sheets.find((x) => !p.sheet!.inView.some((e) => e.id === x.id))!;
+    const built = {
+      prompt: p.prompt,
+      references: p.references,
+      depicted: [],
+      sheet: { ...p.sheet!, inView: [...p.sheet!.inView, { ...p.sheet!.inView[0], id: extra.id }] },
+    };
+    const ids = (sheet: string, step: string) =>
+      withSwitches({ ...SHEET, DREAMCHAT_CUT_SHEET: sheet, DREAMCHAT_ONE_BUILDER: step }, () =>
+        inViewIn(built, p.item, r.sheets).map((x) => x.id),
+      );
+    expect(ids('on', 'in_view')).toContain(extra.id);
+    expect(ids('shadow', 'in_view')).not.toContain(extra.id);
+    expect(ids('on', 'kinds')).not.toContain(extra.id);
   });
 });
 

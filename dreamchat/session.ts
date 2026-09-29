@@ -2861,18 +2861,19 @@ export class SessionStore {
       frame.shot = text ? { text, view } : undefined;
     }
     let built = this.framed(s, frame, layout, 'frames', once);
-    // Who is in view: the sheet's, where the builder's in_view has it made once (S6 row 7).
+    // Who is in view: the sheet's, where the builder's in_view has it made once (S6 row 7) and the prompt sent
+    // was assembled from that sheet (on, not in shadow); read again from each build, after a reword too.
     const items = s.build.items;
-    const inView =
-      builds('in_view') && built.sheet
-        ? built.sheet.inView.flatMap((e) => items.filter((i) => i.id === e.id))
+    const inViewOfBuilt = (b: Framed) =>
+      builds('in_view') && cutSheetMode() === 'on' && b.sheet
+        ? b.sheet.inView.flatMap((e) => items.filter((i) => i.id === e.id))
         : inViewOf(frame, items);
     let findings = await this.gateFindings(
       s,
       frame,
       built.prompt,
       built.references,
-      inView,
+      inViewOfBuilt(built),
       this.routingOf(s, frame, layout, built, once),
     );
     // The brief is the one line a model wrote from the view: where the gate finds the prompt at odds
@@ -2886,7 +2887,7 @@ export class SessionStore {
         frame,
         built.prompt,
         built.references,
-        inView,
+        inViewOfBuilt(built),
         this.routingOf(s, frame, layout, built, once),
       );
     }
@@ -2919,7 +2920,7 @@ export class SessionStore {
         frame,
         built.prompt,
         built.references,
-        inView,
+        inViewOfBuilt(built),
         this.routingOf(s, frame, layout, built, once),
       );
     }
