@@ -1143,6 +1143,16 @@ export type Framed = {
 };
 
 /**
+ * Who is in view of a built picture, as the gate reads it on the drawing path: the sheet's, where the one
+ * builder's in_view has it made once (S6 row 7) and the prompt is assembled from the sheet (on, not in
+ * shadow); else the plan's lists (frames.ts inViewOf). One rule for the gate and for a rebuild.
+ */
+export const inViewIn = (built: Framed, frame: Item, sheets: Item[]): Item[] =>
+  builds('in_view') && cutSheetMode() === 'on' && built.sheet
+    ? built.sheet.inView.flatMap((e) => sheets.filter((i) => i.id === e.id))
+    : inViewOf(frame, sheets);
+
+/**
  * A moment's prompt and images by DREAMCHAT_CUT_SHEET: off writes them with framePrompt, as ever; shadow
  * also builds the sheet and assembles it, logs where the two differ, and sends framePrompt's; on sends
  * the sheet's. A sheet that cannot be built is logged and framePrompt's is sent. With `log` false (a prompt

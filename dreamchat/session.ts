@@ -133,6 +133,7 @@ import {
   type Framed,
   framed,
   imageNamesOf,
+  inViewIn,
   type SheetDream,
   sheetDream,
   sheetPrint,
@@ -2864,10 +2865,7 @@ export class SessionStore {
     // Who is in view: the sheet's, where the builder's in_view has it made once (S6 row 7) and the prompt sent
     // was assembled from that sheet (on, not in shadow); read again from each build, after a reword too.
     const items = s.build.items;
-    const inViewOfBuilt = (b: Framed) =>
-      builds('in_view') && cutSheetMode() === 'on' && b.sheet
-        ? b.sheet.inView.flatMap((e) => items.filter((i) => i.id === e.id))
-        : inViewOf(frame, items);
+    const inViewOfBuilt = (b: Framed) => inViewIn(b, frame, items);
     let findings = await this.gateFindings(
       s,
       frame,

@@ -34,7 +34,7 @@ import {
   turnedInto,
 } from './frames';
 import { type AsDrawn, type Copies, currentRecord, matchGhost } from './asdrawn';
-import { type CutSheet, cutSheetMode, type Framed, framed, ghostName, sheetDream } from './cutsheet';
+import { type CutSheet, cutSheetMode, type Framed, framed, ghostName, inViewIn, sheetDream } from './cutsheet';
 import { type CutFacts, cutFactsOf, routedMode } from './checks';
 import { actingOf, checkReferences, preflight, readPrompt } from './gate';
 import { refsMode, standsFor } from './refs';
@@ -81,15 +81,6 @@ export type Rebuilt = {
 };
 
 /** The stand-in image of a sketch, of an earlier picture, and of a moment's mock-up. */
-/**
- * Who is in view of a rebuilt picture, as the gate reads it on the drawing path: the sheet's, where the one
- * builder's in_view has it made once (S6 row 7) and the prompt is assembled from the sheet; else the plan's.
- */
-export const inViewIn = (built: Framed, frame: Item, sheets: Item[]): Item[] =>
-  builds('in_view') && cutSheetMode() === 'on' && built.sheet
-    ? built.sheet.inView.flatMap((e) => sheets.filter((i) => i.id === e.id))
-    : inViewOf(frame, sheets);
-
 export const standIn = {
   sketch: (id: string) => `sketch-${id}`,
   picture: (id: string) => `picture-${id}`,
