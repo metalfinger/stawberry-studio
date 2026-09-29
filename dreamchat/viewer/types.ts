@@ -43,6 +43,11 @@ export type ViewSheet = {
   /** The prompt its sketch was drawn from, as the sheet prompt builder makes it. */
   prompt: string | null;
   file: ViewFile;
+  /**
+   * Whether its sketch was drawn in the saved dream. A sketch not drawn yet is shown as a rebuild takes it, drawn
+   * and approved: its look as the story record says it, which is what drawing sends once it is drawn.
+   */
+  drawn: boolean;
   /** Cuts and in-between pictures it is attached to. */
   usedBy: string[];
   hashes: ViewHashes;
@@ -65,6 +70,8 @@ export type ViewRef = {
   /** Who and what it is attached for. */
   subjects: string[];
   file: ViewFile;
+  /** A sketch not drawn yet in the saved dream: its line reads as it will once the sketch is drawn. */
+  notDrawnYet?: true;
 };
 
 export type ViewUnsent = {

@@ -31,7 +31,10 @@ drawn and approved. The drawing path sends only what is drawn, ready and not wit
 stale). So the viewer shows **each cut as it will be sent once everything before it is drawn and approved, in
 story order**, and its header says so (`header.assumes`). For a live dream it also shows, beside it, what was
 really sent on the night (the as-drawn record; `corpus.ts` reads it for 62 frozen moments), marked wherever the
-two differ.
+two differ. A sketch never drawn is shown as it will be once drawn (its look as the story record says it,
+which is what the drawing path sends once it is drawn and approved), and marked "not drawn yet: its look will read
+as the record says once it is", since until then the drawing path would send its own words (Mac pane, on the
+drawing-path test's finding, 29 Sep).
 
 **The profile** (critique 10): one named set of switches is "the harness": record, cut sheet, camera rules and
 references on, `DREAMCHAT_ONE_BUILDER` at the latest merged step. The header names the profile and the commit,
