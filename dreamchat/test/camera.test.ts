@@ -53,9 +53,9 @@ function withEnv<T>(vars: Record<string, string | undefined>, fn: () => T): T {
   }
 }
 
-/** The camera rules on: they need the cut sheet on. S5's references stay as today (test/refs.test.ts). */
-const CAMERA = { DREAMCHAT_CAMERA: 'on', DREAMCHAT_CUT_SHEET: 'on', DREAMCHAT_REFS: undefined };
-const ON = { ...CAMERA, DREAMCHAT_RECORD: 'on' };
+/** The camera rules on: they need the cut sheet and the story record on. S5's references stay as today (test/refs.test.ts). */
+const CAMERA = { DREAMCHAT_CAMERA: 'on', DREAMCHAT_CUT_SHEET: 'on', DREAMCHAT_RECORD: 'on', DREAMCHAT_REFS: undefined };
+const ON = CAMERA;
 const rebuilt = (id: string, env: Record<string, string | undefined>) =>
   withEnv(env, () => rebuild(loadDream(id, false).session as Session));
 const picture = (r: ReturnType<typeof rebuild>, id: string) => r.pictures.find((p) => p.id === id && p.kind === 'cut')!;
@@ -119,11 +119,22 @@ function dream(x: {
 
 describe('the camera rules switch', () => {
   test('is off unless asked for, and off without the cut sheet, which carries what it says to the prompt', () => {
-    withEnv({ DREAMCHAT_CAMERA: undefined, DREAMCHAT_CUT_SHEET: 'on' }, () => expect(cameraMode()).toBe('off'));
-    withEnv({ DREAMCHAT_CAMERA: 'ON ', DREAMCHAT_CUT_SHEET: 'on' }, () => expect(cameraMode()).toBe('on'));
-    withEnv({ DREAMCHAT_CAMERA: 'yes', DREAMCHAT_CUT_SHEET: 'on' }, () => expect(cameraMode()).toBe('off'));
+    const rec = { DREAMCHAT_RECORD: 'on' };
+    withEnv({ ...rec, DREAMCHAT_CAMERA: undefined, DREAMCHAT_CUT_SHEET: 'on' }, () => expect(cameraMode()).toBe('off'));
+    withEnv({ ...rec, DREAMCHAT_CAMERA: 'ON ', DREAMCHAT_CUT_SHEET: 'on' }, () => expect(cameraMode()).toBe('on'));
+    withEnv({ ...rec, DREAMCHAT_CAMERA: 'yes', DREAMCHAT_CUT_SHEET: 'on' }, () => expect(cameraMode()).toBe('off'));
     for (const sheet of [undefined, 'off', 'shadow'])
-      withEnv({ DREAMCHAT_CAMERA: 'on', DREAMCHAT_CUT_SHEET: sheet }, () => expect(cameraMode()).toBe('off'));
+      withEnv({ ...rec, DREAMCHAT_CAMERA: 'on', DREAMCHAT_CUT_SHEET: sheet }, () => expect(cameraMode()).toBe('off'));
+  });
+
+  test('is off without the story record, which it reads the dream from', () => {
+    withEnv({ DREAMCHAT_CAMERA: 'on', DREAMCHAT_CUT_SHEET: 'on', DREAMCHAT_RECORD: 'on' }, () =>
+      expect(cameraMode()).toBe('on'),
+    );
+    for (const record of [undefined, 'off', 'shadow'])
+      withEnv({ DREAMCHAT_CAMERA: 'on', DREAMCHAT_CUT_SHEET: 'on', DREAMCHAT_RECORD: record }, () =>
+        expect(cameraMode()).toBe('off'),
+      );
   });
 
   test("asked for without the sheet, every prompt is today's", () => {

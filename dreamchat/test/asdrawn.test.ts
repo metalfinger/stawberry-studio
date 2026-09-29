@@ -492,13 +492,19 @@ describe("S9's fresh send never undoes the dreamer", () => {
 });
 
 describe('S9 under the switches in force', () => {
-  test('the camera rules are kept as they act: on only with the cut sheet on', () => {
-    const on = withSwitches({ DREAMCHAT_CAMERA: 'on', DREAMCHAT_CUT_SHEET: 'on' }, () => drawnEnv());
+  test('the camera rules are kept as they act: on only with the cut sheet and the story record on', () => {
+    const rec = { DREAMCHAT_RECORD: 'on' };
+    const on = withSwitches({ ...rec, DREAMCHAT_CAMERA: 'on', DREAMCHAT_CUT_SHEET: 'on' }, () => drawnEnv());
     expect(on.switches.DREAMCHAT_CAMERA).toBe('on');
-    const half = withSwitches({ DREAMCHAT_CAMERA: 'on', DREAMCHAT_CUT_SHEET: undefined }, () => drawnEnv());
-    const off = withSwitches({ DREAMCHAT_CAMERA: undefined, DREAMCHAT_CUT_SHEET: undefined }, () => drawnEnv());
+    const half = withSwitches({ ...rec, DREAMCHAT_CAMERA: 'on', DREAMCHAT_CUT_SHEET: undefined }, () => drawnEnv());
+    const off = withSwitches({ ...rec, DREAMCHAT_CAMERA: undefined, DREAMCHAT_CUT_SHEET: undefined }, () => drawnEnv());
     expect(half).toEqual(off);
     expect(driftOf(on, off)).toContain('DREAMCHAT_CAMERA=on');
+    // Without the record, as without the sheet: kept as off.
+    const sheet = { DREAMCHAT_CUT_SHEET: 'on', DREAMCHAT_RECORD: undefined };
+    expect(withSwitches({ ...sheet, DREAMCHAT_CAMERA: 'on' }, () => drawnEnv())).toEqual(
+      withSwitches({ ...sheet, DREAMCHAT_CAMERA: undefined }, () => drawnEnv()),
+    );
   });
 
   test('the dream planned now is planned under the switches in force, never read back from another setting', async () => {

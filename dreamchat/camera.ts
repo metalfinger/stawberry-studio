@@ -12,24 +12,31 @@
 // - the mock-up's heights follow the record: the water's level, a boat afloat on it (B1);
 // - the moment after a jump in the same place is that place, not another (continuity.ts relationIn).
 //
-// Pure: no model, no files. Behind DREAMCHAT_CAMERA=on, which needs DREAMCHAT_CUT_SHEET=on: what the
-// rules say reaches the prompt through the cut sheet alone. Off, every plan, sheet and prompt is today's.
+// Pure: no model, no files. Behind DREAMCHAT_CAMERA=on, which needs DREAMCHAT_CUT_SHEET=on and
+// DREAMCHAT_RECORD=on: what the rules say reaches the prompt through the cut sheet alone, and what they read
+// of the dream (the water's level, what is held or open) comes from the story record. Off, every plan, sheet
+// and prompt is today's.
 import { type Blocking, type Eye, roomOf, type Side, sizeOf, type Spot } from './blocking';
 
-let warned = false;
+const warned = new Set<string>();
 
 /**
  * Whether the camera rules run: off (the default) or on. They need the cut sheet on
- * (DREAMCHAT_CUT_SHEET=on), the one place what they say reaches the prompt from: asked for without it,
- * they stay off, and say so once. Half on, the floor plans moved while the prompts said nothing of it.
+ * (DREAMCHAT_CUT_SHEET=on), the one place what they say reaches the prompt from, and the story record on
+ * (DREAMCHAT_RECORD=on), which they read the dream from: asked for without either, they stay off, and say so
+ * once. Half on, the floor plans moved while the prompts said nothing of it; without the record, a window
+ * lifted up its wall was said to be outside the picture, the water it rose above never measured (owner, 29 Sep).
  */
 export function cameraMode(): 'off' | 'on' {
   if ((process.env.DREAMCHAT_CAMERA ?? '').trim().toLowerCase() !== 'on') return 'off';
-  if ((process.env.DREAMCHAT_CUT_SHEET ?? '').trim().toLowerCase() === 'on') return 'on';
-  if (!warned) {
-    warned = true;
-    console.warn('DREAMCHAT_CAMERA=on needs DREAMCHAT_CUT_SHEET=on: the camera rules stay off');
-  }
+  const on = (name: string) => (process.env[name] ?? '').trim().toLowerCase() === 'on';
+  const missing = ['DREAMCHAT_CUT_SHEET', 'DREAMCHAT_RECORD'].filter((name) => !on(name));
+  if (!missing.length) return 'on';
+  for (const name of missing)
+    if (!warned.has(name)) {
+      warned.add(name);
+      console.warn(`DREAMCHAT_CAMERA=on needs ${name}=on: the camera rules stay off`);
+    }
   return 'off';
 }
 

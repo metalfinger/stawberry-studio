@@ -3,7 +3,7 @@
 // moment is shot from (continuity.ts rawPlanBy, camera.ts mounted); and every room whose mock-up labels its
 // front wall with a fixture's name (previs.ts frontLabel). Nothing is drawn and no model is asked.
 //
-//   DREAMCHAT_CAMERA=on DREAMCHAT_CUT_SHEET=on bun run evals/mounts.ts [--live] [--show]
+//   DREAMCHAT_CAMERA=on DREAMCHAT_CUT_SHEET=on DREAMCHAT_RECORD=on bun run evals/mounts.ts [--live] [--show]
 import type { Blocking, Spot } from '../blocking';
 import { frontNamesFixture, wordsAbout } from '../camera';
 import { placeWordsOf, rawPlanBy } from '../continuity';

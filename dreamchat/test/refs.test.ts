@@ -341,7 +341,7 @@ describe('the plan waits only for what it sends', () => {
         { id: 'p2', x: 6, y: 5, kind: 'person', pose: 'standing' },
       ],
     };
-    const camera = { DREAMCHAT_CAMERA: 'on' };
+    const camera = { DREAMCHAT_CAMERA: 'on', DREAMCHAT_RECORD: 'on' };
     expect(cut(plan(b, OFF), 'm2').refs.find((r) => r.id === 'm1')?.relation).toBe('other_side');
     for (const vars of [
       { ...OFF, ...camera },

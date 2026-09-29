@@ -105,8 +105,8 @@ export type DrawnEnv = { version: number; switches: Record<string, string> };
 /** The switches in force that change what a picture is told or how it is keyed, and the keys' version. */
 export function drawnEnv(): DrawnEnv {
   const switches: Record<string, string> = { DREAMCHAT_RECORD: recordMode() };
-  // The camera rules as they act: only with the cut sheet on (camera.ts). DREAMCHAT_CAMERA=on with the cut
-  // sheet off draws as the camera off does, and is kept so.
+  // The camera rules as they act: only with the cut sheet and the story record on (camera.ts).
+  // DREAMCHAT_CAMERA=on with either off draws as the camera off does, and is kept so.
   if (cameraMode() === 'on') switches.DREAMCHAT_CAMERA = 'on';
   for (const [k, v] of Object.entries(process.env))
     if (
