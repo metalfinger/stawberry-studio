@@ -141,10 +141,16 @@ export type CutPlan = {
    */
   unsent?: PlanRef[];
   /**
-   * With the camera rules, for a cut edited from the picture before: where its own camera would stand.
-   * A same setup is the same camera, so it is an edit only where this is the picture's camera.
+   * With the camera rules or S5's references, for a cut edited from the picture before: where its own camera
+   * would stand. A same setup is the same camera, so it is an edit only where this is the picture's camera.
    */
   wouldBe?: Eye;
+  /**
+   * With S5's references, for a cut seen from outside that edits the picture before: its own shot, placed on its
+   * floor plan as any other cut's is, for when that picture is not sent after all (judged wrong, or stale on the
+   * drawing path): then the cut is made from its own mock-up, never from nothing (`unedited`).
+   */
+  alone?: { view: string; eye: Eye; sees: string[]; framing?: string[]; rules?: string[] };
   /**
    * With the camera rules: what they add to the view, said after it (and after a brief written for it):
    * the water, what is out past a window, which way what is ridden goes, a crossing of the line.
@@ -695,6 +701,34 @@ export function camerasOf(plan: ContinuityPlan): Map<string, Eye> {
     if (eye) cams.set(c.id, eye);
   }
   return cams;
+}
+
+/**
+ * A cut as it is drawn when the picture it edits is not sent after all (S5's references: judged wrong, or stale on
+ * the drawing path, `sent` false): made from its own shot and mock-up (`alone`) as any other cut, the picture kept
+ * only as where it stands to it, never left with nothing that carries the layout (the owner, 29 Sep). Unchanged
+ * where the picture is sent, where there is no edit, or where no shot of its own could be placed (no floor plan).
+ */
+export function unedited(cut: CutPlan, sent: (id: string) => boolean): CutPlan {
+  const base = cut.refs.find((r) => r.kind === 'cut' && r.role === 'base');
+  if (!base || !cut.alone || sent(base.id)) return cut;
+  const { across: _across, camera: _camera, alone, ...rest } = cut;
+  return {
+    ...rest,
+    ...alone,
+    staging: [],
+    refs: cut.refs.map((r) =>
+      r === base ? { ...r, role: 'composition', relation: 'same_side', carries: CARRIES.same_side } : r,
+    ),
+    transition: cut.transition === 'continuous' ? 'cut, carrying on' : cut.transition,
+  };
+}
+
+/** A moment's picture, its plan `unedited` where the picture it edits is not sent (plan.ts rebuild, session.ts). */
+export function uneditedFrame<T extends { frame?: { plan?: CutPlan } }>(it: T, sent: (id: string) => boolean): T {
+  const cut = it.frame?.plan;
+  const plan = cut ? unedited(cut, sent) : cut;
+  return plan === cut ? it : { ...it, frame: { ...it.frame, plan } };
 }
 
 /**
@@ -1423,9 +1457,22 @@ function planWith(
       const edits = c.refs.some((r) => r.role === 'base');
       const rules = opts.camera && !edits ? shotRules(c, m, where) : undefined;
       const v = edits ? null : outsideShot(where, ids, m.distance, now, lookAt(m, where), also, rules);
-      if (opts.camera && edits) {
+      // With S5's references the gate compares this camera with the picture's whatever the camera rules, and
+      // the cut keeps its own shot for when the picture is not sent after all.
+      if ((opts.camera || refs) && edits) {
         const own = outsideShot(where, ids, m.distance, now, lookAt(m, where), also);
         if (own) c.wouldBe = own.eye;
+        const alone = refs
+          ? outsideShot(where, ids, m.distance, now, lookAt(m, where), also, opts.camera ? shotRules(c, m, where) : undefined)
+          : null;
+        if (alone)
+          c.alone = {
+            view: alone.text,
+            eye: alone.eye,
+            sees: alone.inPicture,
+            ...(alone.framing ? { framing: alone.framing } : {}),
+            ...(alone.rules ? { rules: alone.rules } : {}),
+          };
       }
       if (v) {
         c.view = v.text;

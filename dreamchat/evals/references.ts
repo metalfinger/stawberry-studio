@@ -11,10 +11,9 @@
 //   holds the moment back for nothing (found by S4 across a reverse; today also every picture kept
 //   for its light alone);
 // - no image for its light alone (rules.md D2);
-// - image 1 by the moment's tags: how often the mock-up, an edit or the sketches alone is image 1, by
-//   the cut sheet's role and move, and the mock-ups outside the routing the paired test suggests (a
-//   hypothesis, n=20: the mock-up right 8 of 10 from outside, 2 of 10 through the dreamer's eyes, a
-//   close-up, a jump or another place);
+// - image 1, what carries the layout: how often the mock-up, an edit or the sketches alone is image 1, by
+//   the cut sheet's role and move, and the moments with a camera placed on a floor plan whose image 1 is
+//   neither (S5 fix round three: every cut keeps a layout anchor; none should be);
 // - an in-between picture only where an edit would carry several changes (the owner's rule, rules.md
 //   D3): each in-between picture of the plan, with the most changes any moment it serves would carry
 //   without it, against the plan's own bar (the action and two more).
@@ -61,6 +60,8 @@ export type MomentRefs = {
   establishing?: boolean;
   /** Nothing but the place is in view. */
   placeOnly?: boolean;
+  /** Its camera is placed on a floor plan (the plan's eye), so a mock-up can be made of it. */
+  shot?: boolean;
   /** How many changes its picture carries at once, counted apart from the plan (the action included). */
   changes: number;
   /** What each change besides the action is: implied (said in words, S1), or shown in no image. */
@@ -147,6 +148,7 @@ export function referencesOf(r: Rebuilt): Omit<DreamRefs, 'hash'> {
         ? { faceless: true }
         : {}),
       ...(p.sheet && p.sheet.inView.every((e) => e.kind === 'location') ? { placeOnly: true } : {}),
+      ...(c.cut.eye ? { shot: true } : {}),
       twice,
       notStage,
       otherSide: fromOtherSide(c).map(({ of, role, relation, turned }) => ({
@@ -164,22 +166,6 @@ export function referencesOf(r: Rebuilt): Omit<DreamRefs, 'hash'> {
   return { title: r.title, moments: out, ghosts };
 }
 
-/**
- * Where the verdicts put the mock-up as image 1 (a hypothesis: the paired test, n=20, beside the story
- * pictures): not across a jump (lighthouse-first m8); through the dreamer's eyes only with nothing but the
- * place in view (orchard m7; with someone or something in view the sketches alone were right: orchard m2,
- * snow-train m6); not a close-up or an insert, nor the seat; to another place only for a wide shot (the
- * story pictures' wide shots, 8 of 11); not for a moment about a crowd with no image of its own (heron m4,
- * the bare figures) unless it is a wide shot establishing the place (night-market m1).
- */
-export function mockupRoute(m: Pick<MomentRefs, 'role' | 'move' | 'faceless' | 'establishing' | 'placeOnly'>): boolean {
-  if (!m.role || m.move === 'jump') return false;
-  if (m.role === 'pov') return !!m.placeOnly;
-  if (m.role === 'close_up' || m.role === 'insert' || m.move === 'seat') return false;
-  if (m.move === 'other_place' && m.role !== 'wide') return false;
-  return !m.faceless || (m.role === 'wide' && !!m.establishing);
-}
-
 export type Totals = {
   dreams: number;
   moments: number;
@@ -195,12 +181,8 @@ export type Totals = {
   lightOnly: number;
   /** Image 1 by the sheet's role: mock-up, edit, free. */
   first: Record<string, Record<'mockup' | 'edit' | 'free', number>>;
-  /**
-   * Mock-ups as image 1 where the paired routing says not, and moments drawn from the sketches alone
-   * where it says one (an edit of the same setup is neither).
-   */
-  mockupOffRoute: number;
-  freeOnRoute: number;
+  /** Moments with a camera placed on a floor plan whose image 1 is neither an edit nor the mock-up: none should be. */
+  noAnchor: number;
   ghosts: { all: number; state: number; view: number; kept: number; keptAtThree: number; notKept: string[] };
   /** Moments whose picture still carries several changes at once (the plan's bar): fewer in-between pictures must not raise it. */
   crowded: number;
@@ -291,8 +273,7 @@ export function totalsOf(dreams: Record<string, DreamRefs>): Totals {
     },
     lightOnly: ms.reduce((a, { m }) => a + m.lightOnly.length, 0),
     first,
-    mockupOffRoute: ms.filter(({ m }) => m.role && m.first === 'mockup' && !mockupRoute(m)).length,
-    freeOnRoute: ms.filter(({ m }) => m.role && m.first === 'free' && mockupRoute(m)).length,
+    noAnchor: ms.filter(({ m }) => m.shot && m.first === 'free').length,
     ghosts: {
       all: gs.length,
       state: gs.filter(({ g }) => g.kind === 'state').length,
@@ -330,7 +311,7 @@ export function totalsLines(t: Totals): string[] {
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([k, v]) => `${k} ${v.mockup}/${v.edit}/${v.free}`)
       .join(', ')}`,
-    `the mock-up off the paired routing (hypothesis): ${t.mockupOffRoute} moments; on it, drawn from the sketches alone: ${t.freeOnRoute}`,
+    `a camera on a floor plan and no layout anchor as image 1 (neither an edit nor the mock-up): ${t.noAnchor ?? '-'} moments`,
     `in-between pictures: ${t.ghosts.all} (${t.ghosts.state} of a change, ${t.ghosts.view} of a side); kept by the owner's rule at ${OWNERS_BAR} changes (the owner's bar): ${t.ghosts.kept}, at ${SEVERAL}: ${t.ghosts.keptAtThree}`,
     `moments whose picture still carries ${SEVERAL} changes or more at once: ${t.crowded}`,
     `moments carrying ${OWNERS_BAR} changes or more at once (the action and ${kv(t.atBar.byKind)}): ${t.atBar.moments}`,
@@ -418,9 +399,7 @@ if (import.meta.main) {
           ),
           ...m.waited.map((x) => `waits for ${x.id}: ${x.why}`),
           ...m.lightOnly.map((x) => `${x} for its light alone`),
-          ...(m.role && m.first === 'mockup' && !mockupRoute(m)
-            ? [`mock-up as image 1 off the routing (${m.role}/${m.move})`]
-            : []),
+          ...(m.shot && m.first === 'free' ? ['a camera on a floor plan and no layout anchor as image 1'] : []),
         ];
         if (lines.length)
           console.log(`  ${id} ${m.id} [${m.role ?? '-'}/${m.move ?? '-'}, image 1 ${m.first}]: ${lines.join('; ')}`);

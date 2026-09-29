@@ -8,7 +8,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { assembleCut } from '../assemble';
-import { type ContinuityPlan, planContinuity, shotPlan } from '../continuity';
+import { type ContinuityPlan, planContinuity, shotPlan, unedited, uneditedFrame } from '../continuity';
 import { cutSheet, type CutTags } from '../cutsheet';
 import { frozenDreams, loadDream } from '../evals/saved';
 import { buildFrames, buildGhosts, ghostPrompt, NOTHING_ELSE, type PlannedInput } from '../frames';
@@ -119,7 +119,7 @@ describe('image 1: what carries the layout, on every cut', () => {
     expect(chooseRefs(sheet([ana], [], null)).first).toBe('free');
   });
 
-  test("the mock-up whatever the cut: through the dreamer's eyes with someone in view, a close-up, a jump, a crowd", () => {
+  test('the mock-up whatever the cut, a crowd with no image of its own included: image 1 reads no tags', () => {
     // The owner's verdicts with the camera rules (evals/checkpoint/s4 and s5): with the mock-up 15 of 20 right,
     // without it 5 of 12; orchard m6 and lighthouse-first m7, drawn without it through the dreamer's eyes, lost
     // the dreamer's view and the room. Image 1 no longer looks at the cut's tags at all.
@@ -159,6 +159,60 @@ describe('image 1: what carries the layout, on every cut', () => {
   });
 });
 
+describe('an edit whose picture is not sent after all is made from its own shot, never from nothing', () => {
+  // m1, m2 and m3 are one view, nothing changing: m2 edits m1, m3 edits m2.
+  const same = () =>
+    withPlan(
+      breakdown([
+        moment({ id: 'm1', visible: ['p1', 'p2'], distance: 'wide', looks_at: 'the stage' }),
+        moment({ id: 'm2', visible: ['p1', 'p2'], distance: 'wide', looks_at: 'the stage', from: 'm1', sameSide: ['m1'] }),
+        moment({
+          id: 'm3',
+          visible: ['p1', 'p2'],
+          distance: 'wide',
+          looks_at: 'the stage',
+          from: 'm2',
+          sameSide: ['m1', 'm2'],
+        }),
+      ]),
+    );
+  const CAMERA = { ...ON, DREAMCHAT_RECORD: 'on', DREAMCHAT_CAMERA: 'on' };
+
+  test('a chain of edits of one view stays a chain of edits: the gate and the camera placement agree', () => {
+    for (const vars of [ON, CAMERA]) {
+      const p = plan(same(), vars);
+      expect(cut(p, 'm2').refs.find((r) => r.id === 'm1')?.role).toBe('base');
+      expect(cut(p, 'm3').refs.find((r) => r.id === 'm2')?.role).toBe('base');
+    }
+  });
+
+  test('with the picture it edits withheld (judged wrong, or stale), it is placed and made from its own mock-up', () => {
+    // The drawing path withholds what the owner judged wrong or S9 finds stale (session.ts plannedInputsOf). Left
+    // an edit, m2 had no camera of its own and went out with the sketches alone.
+    for (const vars of [ON, CAMERA]) {
+      const m2 = cut(plan(same(), vars), 'm2');
+      expect(m2.eye).toBeUndefined();
+      expect(m2.alone?.eye).toBeTruthy();
+      expect(unedited(m2, () => true)).toBe(m2);
+      const alone = unedited(m2, (id) => id !== 'm1');
+      expect([alone.eye, alone.view, alone.sees]).toEqual([m2.alone!.eye, m2.alone!.view, m2.alone!.sees]);
+      expect(alone.refs.find((r) => r.id === 'm1')).toMatchObject({ role: 'composition', relation: 'same_side' });
+      expect([alone.across, alone.camera, alone.staging, alone.transition]).toEqual([
+        undefined,
+        undefined,
+        [],
+        'cut, carrying on',
+      ]);
+      expect(assembled(same(), 'm2', vars).made.references[0]).toMatchObject({ source: 'edit', of: 'm1' });
+      const made = assembled(same(), 'm2', vars, sketches, ['m1']).made;
+      expect(made.references[0]).toMatchObject({ role: 'base', source: 'mockup', of: 'm2' });
+      expect(made.references.some((r) => r.of === 'm1')).toBe(false);
+    }
+    // Today's choice, the references off: nothing kept, nothing changed.
+    expect(cut(plan(same(), OFF), 'm2').alone).toBeUndefined();
+  });
+});
+
 // A made-up dream: ana in the hall; her coat turns red at m2 and she keeps it; bo comes in at m3 from the
 // other side of the hall; the crowd (no sketch of its own) stands in the yard.
 const style: StyleOption = {
@@ -187,8 +241,11 @@ const sketches = [
 ];
 const red = { who: 'p1', what: 'coat', now: 'bright red', since: 'm2' };
 
-/** A moment's prompt and images as a rebuild makes them: every picture drawn and approved. */
-function assembled(b: Breakdown, id: string, vars: Record<string, string>, sheets = sketches) {
+/**
+ * A moment's prompt and images as a rebuild makes them: every picture drawn and approved, but for those `withheld`
+ * (judged wrong, or stale), which are not sent (plan.ts rebuild, session.ts drawnFrameOf).
+ */
+function assembled(b: Breakdown, id: string, vars: Record<string, string>, sheets = sketches, withheld: string[] = []) {
   return withSwitches(vars, () => {
     const p = planContinuity(b);
     const pictures = [...buildFrames(b, p), ...buildGhosts(p)].map((x): Item => ({
@@ -197,10 +254,10 @@ function assembled(b: Breakdown, id: string, vars: Record<string, string>, sheet
       mediaId: `picture-${x.id}`,
       continuityApproved: true,
     }));
-    const frame = pictures.find((x) => x.id === id)!;
+    const frame = uneditedFrame(pictures.find((x) => x.id === id)!, (x) => !withheld.includes(x));
     const inputs = (frame.frame?.plan?.refs ?? [])
       .map((use) => ({ use, item: pictures.find((x) => x.id === use.id) }))
-      .filter((x): x is PlannedInput => !!x.item);
+      .filter((x): x is PlannedInput => !!x.item && !withheld.includes(x.use.id));
     // Its mock-up, where its camera is worked out on a floor plan (session.ts layoutFor).
     const layout = frame.frame?.plan?.eye ? standIn.previs(id) : undefined;
     return { plan: p, pictures, made: assembleCut(cutSheet({ frame, sheets, style, inputs, layout })) };

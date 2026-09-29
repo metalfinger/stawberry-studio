@@ -22,6 +22,7 @@ import {
   planContinuity,
   type RecordPlan,
   shotPlan,
+  uneditedFrame,
 } from './continuity';
 import { completeViews } from './producer';
 import {
@@ -198,25 +199,27 @@ export function rebuild(
       out.push({ id: pid, kind: 'ghost', item: it, ...built, criteria: [], inView: [] });
       continue;
     }
-    const cut = it.frame?.plan;
+    // With S5's references, never a picture the owner judged wrong (session.ts plannedInputsOf; a rebuild
+    // reads no staleness: S9's records are compared on the drawing path).
+    const planned: PlannedInput[] = (it.frame?.plan?.refs ?? [])
+      .map((use) => ({ use, item: byId.get(use.id) }))
+      .filter((x): x is PlannedInput => !!x.item && !withheld[x.use.id]);
+    // An edit whose picture is withheld is made from its own shot and mock-up (continuity.ts unedited).
+    const frame = uneditedFrame(it, (id) => !withheld[id]);
+    const cut = frame.frame?.plan;
     // The shot's brief, where one was written for the view the moment has now: the one kept on the
     // moment, else the one planned in the background (session.ts startFrame takes the same).
     const view = cut?.view;
     const briefs = [saved.get(pid)?.shot, s.prep?.shots?.[pid]];
     const shot = view ? briefs.find((x) => !!x && sameView(x.view, view)) : undefined;
-    if (shot) it.shot = shot;
+    if (shot) frame.shot = shot;
     // The mock-up, where the moment has a worked-out camera on a floor plan (session.ts layoutFor).
     const layout = cut?.eye && shotPlan(b, pid, rec) ? standIn.previs(pid) : undefined;
-    // With S5's references, never a picture the owner judged wrong (session.ts plannedInputsOf; a rebuild
-    // reads no staleness: S9's records are compared on the drawing path).
-    const planned: PlannedInput[] = (cut?.refs ?? [])
-      .map((use) => ({ use, item: byId.get(use.id) }))
-      .filter((x): x is PlannedInput => !!x.item && !withheld[x.use.id]);
-    const built = framed({ frame: it, sheets, style, inputs: planned, layout, dream }, mode, 'rebuild');
+    const built = framed({ frame, sheets, style, inputs: planned, layout, dream }, mode, 'rebuild');
     out.push({
       id: pid,
       kind: 'cut',
-      item: it,
+      item: frame,
       prompt: built.prompt,
       references: built.references,
       criteria: cut?.criteria ?? [],

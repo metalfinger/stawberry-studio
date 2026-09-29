@@ -4,9 +4,10 @@
 //
 // - Image 1, what carries the layout: the picture edited where the plan edits one and the gate sends it (the
 //   same setup, a moment later, its camera and the place as it stands the same); else the grey mock-up made real,
-//   on every route; else, with no floor plan to make one from, nothing before the sketches. A cut whose edit the
-//   gate drops is placed on its floor plan and made from its own mock-up (continuity.ts), never left with
-//   nothing. The mock-up once went only where the paired test (n=20, 26 Sep) found it helped, and not through
+//   on every route; else nothing before the sketches, only where no camera can be placed for the cut (no floor
+//   plan; none of its people or things on the plan; the dreamer's view not placeable). A cut whose edit the gate
+//   drops is placed on its floor plan and made from its own mock-up, and so is one whose edited picture is
+//   withheld on the drawing path (judged wrong, or stale: continuity.ts unedited), never left with nothing. The mock-up once went only where the paired test (n=20, 26 Sep) found it helped, and not through
 //   the dreamer's eyes with someone in view, across a jump, for a close-up, an insert or the seat, or about a
 //   crowd; that test was drawn before the camera rules moved the mock-ups, and found the mock-up, an edit and
 //   neither alike (10, 11 and 9 of 20 right). With the camera rules, the owner's verdicts say otherwise
