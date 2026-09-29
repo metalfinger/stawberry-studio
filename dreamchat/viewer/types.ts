@@ -29,8 +29,11 @@ export type ViewDream = {
   issues: string[];
 };
 
-/** A file this machine has, or null: "not on this machine". */
-export type ViewFile = { name: string; sha256: string } | null;
+/**
+ * A file this machine has, or null: "not on this machine". `changed`: a frozen dream's image read from its live copy,
+ * where the live copy has drawn it again since the dream was frozen (not the take the frozen dream names).
+ */
+export type ViewFile = { name: string; sha256: string; changed?: true } | null;
 
 export type ViewSheet = {
   id: string;
@@ -210,6 +213,8 @@ export type ViewVerdict = {
   wrong?: ('layout' | 'references' | 'words')[];
   note: string;
   hashes: ViewHashes;
+  /** The prompt it was given on, so a later change to the words alone can be shown as a diff and confirmed. */
+  shown?: { prompt: string };
   commit: string;
   at: string;
 };
