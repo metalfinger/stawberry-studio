@@ -94,7 +94,14 @@ before the owner says at which step each artifact appears.**
 - Milestone bar: sharing your dream is fun, and watching the video is fun. For video: organic "dirtiness" and a human
   presence (real voice, room sound, real photo or video fragments).
 
-**Next, in order.** 1) Merge the four branches above, each after review. 2) The S5 picture check (about $3; draw with
+**Reviewed and fixed (29 Sep, cloud session).** All four branches reviewed; the one blocking fix each needed is pushed:
+`checkpoint-order` fbfe07a (a new picture judged wrong is never drawn from), `postcheck-fixes` a187b5c ("high" no
+longer lifts what stands by a high thing or is tall), `s5-fix2` 0e0cbf6 (no prompt contradicting itself without a
+mock-up; a note alone judges nothing); `s6-build` merges as it is. `S9 keys` now passes on any machine (6d7e23a: the
+floor plan keyed rounded, KEYS_VERSION 3). Verdicts, follow-ups and the checklist for the Mac:
+https://github.com/metalfinger/stawberry-studio/issues/1. Sessions hand work to each other through GitHub issues.
+
+**Next, in order.** 1) Merge the four branches above (reviewed; waiting on the owner's go). 2) The S5 picture check (about $3; draw with
 `evals/checkpoint.ts`, judged on the local page). 3) Finish S6 (the rest of the ledger), review, merge. 4) The owner
 chooses the writer the harness ships with (DeepSeek or another API; the Claude CLI is for testing only). 5) S10,
 the paid benchmark on the five dreams (about $10), judged by the owner. Money: $18 left of $30.
