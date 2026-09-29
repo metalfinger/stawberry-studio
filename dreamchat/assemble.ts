@@ -121,14 +121,14 @@ export function assembleCut(s: CutSheet): Assembled {
   const facts: string[] = [];
   // In one colour, a sketch drawn with a colour of its own passes it on; what the dream itself gives a
   // colour keeps it, in its image's words too.
-  // The colours an image's line lists as kept exactly: in one colour, the list is what tells them from a shade.
-  const listed = new Set<string>();
+  // With each colour said once (S6 row 15), in one colour the style's list is the one list, and an image's line
+  // points to it: the style keeping the boat yellow is what kept it from coming out white (library-3 m5).
   const shadesOf = (e: SheetElement) => {
     if (!s.style.oneColour) return '';
-    for (const c of e.colours) listed.add(c.toLowerCase());
-    return e.colours.length
-      ? `, drawn in this picture's shades of one colour except what the dream itself gives a colour, which keeps it exactly: ${e.colours.join('; ')}`
-      : ", drawn in this picture's shades of one colour";
+    if (!e.colours.length) return ", drawn in this picture's shades of one colour";
+    return s.once?.colour
+      ? ", drawn in this picture's shades of one colour except what the dream itself gives a colour (listed under Colours), which keeps it exactly"
+      : `, drawn in this picture's shades of one colour except what the dream itself gives a colour, which keeps it exactly: ${e.colours.join('; ')}`;
   };
   // Where each sketch went, so a group and someone in it who has their own sketch are one and the same.
   const imageOf = new Map<string, number>();
@@ -531,17 +531,15 @@ export function assembleCut(s: CutSheet): Assembled {
       text: `One single picture filling the whole frame. ${writingLine(s.story.writing)}`,
     },
   ];
-  // Each colour the dream gives said once (S6 row 15): the style lists only those not said above. In one colour,
-  // said above is an image's line listing it as kept exactly: named in a look alone, it could be read as a shade.
-  if (s.once?.colour) {
+  // Each colour the dream gives said once (S6 row 15): in many colours every colour said above keeps it, and the
+  // style lists only those no line above says. In one colour the style's list is the one list (above).
+  if (s.once?.colour && !s.style.oneColour) {
     const said = lines
       .filter((l) => l.id !== 'style')
       .map((l) => l.text)
       .join('\n')
       .toLowerCase();
-    const rest = s.style.told.filter((c) =>
-      s.style.oneColour ? !listed.has(c.toLowerCase()) : !said.includes(c.toLowerCase()),
-    );
+    const rest = s.style.told.filter((c) => !said.includes(c.toLowerCase()));
     const style = lines.find((l) => l.id === 'style');
     if (style)
       style.text = styleBlock(s.style.option, rest, {

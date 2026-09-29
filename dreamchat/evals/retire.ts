@@ -385,10 +385,20 @@ export function disagreementsOf(p: RebuiltPicture, rec: StoryRecord | null, styl
       .map(key),
   );
   const prevUse = s.prev ? p.item.frame?.plan?.refs.find((x) => x.kind === 'cut' && x.id === s.prev) : undefined;
+  // In one colour, a colour an image's line lists as kept exactly that the style lists again, read off the prompt
+  // as sent: with the colours said once (S6 row 15) an image's line points to the style's list instead.
+  const lines = p.prompt.toLowerCase().split('\n');
+  const styleLine = lines.find((l) => l.startsWith('colours:')) ?? '';
+  const listedIn = (c: string) =>
+    lines.some((l) => /^image \d+:/.test(l) && (l.split('which keeps it exactly: ')[1] ?? '').includes(c));
   const coloursTwice = s.style.oneColour
     ? s.inView
         .filter((e) => e.image && e.turned === null && e.colours.length)
-        .flatMap((e) => e.colours.filter((c) => s.style.told.includes(c)).map((c) => `${e.id}: ${c}`))
+        .flatMap((e) =>
+          e.colours
+            .filter((c) => styleLine.includes(c.toLowerCase()) && listedIn(c.toLowerCase()))
+            .map((c) => `${e.id}: ${c}`),
+        )
     : [];
   return {
     inView: {

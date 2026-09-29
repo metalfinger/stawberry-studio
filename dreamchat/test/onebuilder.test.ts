@@ -857,13 +857,16 @@ describe('ledger 15: the colours the dream gives, said once', () => {
     );
   const style = (p: string) => p.split('\n').find((l) => l.startsWith('Colours:')) ?? '';
 
-  test("in one colour, one an image's line lists is not listed again in the style; one only a look names still is", () => {
-    // library-3 (one colour): the boat's line lists "yellow rowing boat"; the lamps are named in the place's look alone.
+  test("in one colour the style's list is the one list: an image's line points to it", () => {
+    // library-3 (one colour): the style keeping the boat yellow is what kept it from coming out white (its case).
     const before = prompt('dream-0926-055141-6e80', 'm5', 'look_once');
     const after = prompt('dream-0926-055141-6e80', 'm5', 'colour_once');
-    expect(style(before)).toContain('keeps it exactly: yellow rowing boat; green glass lamps.');
-    expect(style(after)).toContain('keeps it exactly, as said above: green glass lamps.');
-    expect(after).toContain('which keeps it exactly: yellow rowing boat.');
+    expect(before).toContain('which keeps it exactly: yellow rowing boat.');
+    expect(style(after)).toContain('keeps it exactly: yellow rowing boat; green glass lamps.');
+    expect(after).not.toContain('which keeps it exactly: yellow rowing boat.');
+    expect(after).toContain(
+      'except what the dream itself gives a colour (listed under Colours), which keeps it exactly.',
+    );
   });
 
   test('in a style of many colours, one said above is not listed again', () => {
