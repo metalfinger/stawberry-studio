@@ -2656,7 +2656,7 @@ export class SessionStore {
     }
     // A take the judge still finds wrong after its one repair is theirs to see, never a source: what
     // is drawn from it keeps what is wrong with it.
-    const { serious } = this.seriousFailures(n, s.style);
+    const { serious } = this.seriousFailures(n, s.style, this.withheldFrom(s, n));
     if (serious.length) {
       n.waitsForPerson = `the judge found: ${serious.join('; ').slice(0, 300)}`;
       return;
@@ -4033,7 +4033,7 @@ export class SessionStore {
     // With S5's references, never against a picture withheld from it (judged wrong, or stale): a picture drawn
     // from its own shot because the one it edits was withheld is not judged, nor repaired, as a copy of that one.
     const session = this.sessions.get(id);
-    const withheld = session && refsMode() !== 'off' ? withheldIn(session) : {};
+    const withheld = session ? this.withheldFrom(session, it) : {};
     const checks = (it.frame?.plan?.criteria ?? [])
       .filter((c) => !c.with || !withheld[c.with])
       .map((c) => ({ with: c.with ? (media(c.with) ?? '') : null, text: c.text }))
@@ -4155,6 +4155,15 @@ export class SessionStore {
   }
 
   /**
+   * The pictures withheld from a moment's checks (S5's references: judged wrong, or stale), read only for a moment
+   * whose checks name another picture: it costs a re-plan, and a sketch or an in-between picture has none.
+   */
+  private withheldFrom(s: Session, it: Item): Withheld {
+    if (refsMode() === 'off' || it.kind !== 'cut' || !(it.frame?.plan?.criteria ?? []).some((k) => !!k.with)) return {};
+    return withheldIn(s);
+  }
+
+  /**
    * What the judge found in a moment that later pictures must not inherit: who or what is missing,
    * a changed look not carried, the wrong clothes or features, a broken body, something invented
    * (a viewer's hands kept in one picture are kept by every edit of it, 23 Sep); and a person or
@@ -4163,6 +4172,8 @@ export class SessionStore {
   private seriousFailures(
     it: Item,
     style?: StyleOption | null,
+    /** Pictures withheld from it: their checks are never a fix to make (withheldFrom). */
+    withheld: Withheld = {},
   ): { factAt: number[]; fixes: Criterion[]; serious: string[] } {
     const c = it.check;
     if (!c || c.error) return { factAt: [], fixes: [], serious: [] };
@@ -4183,8 +4194,11 @@ export class SessionStore {
       ...(style && oneColour(style) ? ['palette'] : []),
     ];
     const factAt = c.failed.map((_, i) => i).filter((i) => SERIOUS.includes((c.failedIds?.[i] ?? '').split(':')[0]));
+    // Matched by their words, so a check against a withheld picture that shares its words with one asked (the same
+    // person in both pictures) is never taken for it.
     const fixes = (it.frame?.plan?.criteria ?? []).filter(
       (k) =>
+        !(k.with && withheld[k.with]) &&
         (it.continuity?.failed ?? []).includes(k.text) &&
         /same person|same side|same view|reference sheet|framing|made the same way|left to right/.test(k.text),
     );
@@ -4195,7 +4209,7 @@ export class SessionStore {
     if (it.review || (it.repairs ?? 0) >= MAX_REPAIRS || !it.mediaId || !it.nodeId) return false;
     const c = it.check;
     if (!c || c.error) return false;
-    const { factAt, fixes, serious } = this.seriousFailures(it, s.style);
+    const { factAt, fixes, serious } = this.seriousFailures(it, s.style, this.withheldFrom(s, it));
     if (!serious.length) return false;
     it.repairs = (it.repairs ?? 0) + 1;
     // Said to the image model as instructions: a judge's question means nothing to it.
