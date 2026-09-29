@@ -358,6 +358,36 @@ describe('ledger 7: who is in view, once', () => {
   });
 });
 
+describe('ledger 8: how each one looks, once, from the story record', () => {
+  const look = (id: string, step: string, el: string, moment: string) =>
+    withSwitches({ ...SHEET, DREAMCHAT_ONE_BUILDER: step }, () => {
+      const p = rebuild(structuredClone(loadDream(id, false).session as Session)).pictures.find(
+        (x) => x.id === moment,
+      )!;
+      return p.sheet?.inView.find((e) => e.id === el)?.look;
+    });
+
+  test("the way of drawing leaves a look: the style says it, the record's rule, not the sketch's words", () => {
+    // aeea's brass key was described as "rendered in faded watercolour"; the style is faded watercolour.
+    const id = 'dream-0926-022102-aeea';
+    expect(look(id, 'in_view', 't1', 'm1')).toContain('rendered in faded watercolour');
+    expect(look(id, 'looks', 't1', 'm1')).not.toContain('watercolour');
+  });
+
+  test('a first look no other line says is in the look, and one how it is now says stays there alone', () => {
+    // 09ea m4: the newspaper wrapped around the fish is the newspaper's first look.
+    expect(look('dream-0926-000545-09ea', 'looks', 't2', 'm4')).toContain('newspaper wrapped around the fish');
+    // 6e80: the library's water is how it is now at m1, not also in its look; at m8 the city outside is its own.
+    expect(look('dream-0926-055141-6e80', 'looks', 'l1', 'm1')).not.toContain('water beginning to cover the floor');
+  });
+
+  test("the sketch's words as before with the step off", () => {
+    expect(look('dream-0926-022102-aeea', 'kinds', 't1', 'm1')).toBe(
+      look('dream-0926-022102-aeea', 'in_view', 't1', 'm1'),
+    );
+  });
+});
+
 describe("S4's word lists, each with a switch that turns off only its piece", () => {
   test('hands, own body, a vehicle going, the water and the openings on walls', () => {
     const room: Blocking = {

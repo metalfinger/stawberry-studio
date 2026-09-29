@@ -190,18 +190,21 @@ describe('the cut sheet switch', () => {
   });
 
   test('shadow sends framePrompt and logs that the sheet assembles the same; on sends the sheet', async () => {
-    const { r, dream } = dreamOf('dream-0925-231131-affd', 'off');
-    const x = inputOf(r, 'm5', dream);
-    const shadow = framed(x, 'shadow');
-    const on = framed(x, 'on');
-    expect(shadow.differs).toEqual([]);
-    expect(on.prompt).toBe(shadow.prompt);
-    expect(on.references).toEqual(shadow.references);
-    expect(on.sheet?.id).toBe('m5');
-    const dir = mkdtempSync(join(tmpdir(), 'cut-sheet-'));
-    await inSession(dir, 'boat', async () => framed(x, 'shadow', 'frames'));
-    const log = readJevLog(dir, 'boat').filter((e) => e.kind === 'transition' && e.stage === 'cut_sheet');
-    expect(log.map((e) => (e.kind === 'transition' ? e.decision : ''))).toEqual(['same']);
+    // The one builder departs from framePrompt on purpose from S6 row 7: pinned at the step before.
+    await withEnv({ DREAMCHAT_ONE_BUILDER: 'kinds' }, async () => {
+      const { r, dream } = dreamOf('dream-0925-231131-affd', 'off');
+      const x = inputOf(r, 'm5', dream);
+      const shadow = framed(x, 'shadow');
+      const on = framed(x, 'on');
+      expect(shadow.differs).toEqual([]);
+      expect(on.prompt).toBe(shadow.prompt);
+      expect(on.references).toEqual(shadow.references);
+      expect(on.sheet?.id).toBe('m5');
+      const dir = mkdtempSync(join(tmpdir(), 'cut-sheet-'));
+      await inSession(dir, 'boat', async () => framed(x, 'shadow', 'frames'));
+      const log = readJevLog(dir, 'boat').filter((e) => e.kind === 'transition' && e.stage === 'cut_sheet');
+      expect(log.map((e) => (e.kind === 'transition' ? e.decision : ''))).toEqual(['same']);
+    });
   });
 });
 
