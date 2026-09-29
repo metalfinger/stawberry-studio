@@ -148,7 +148,8 @@ export function referencesOf(r: Rebuilt): Omit<DreamRefs, 'hash'> {
         ? { faceless: true }
         : {}),
       ...(p.sheet && p.sheet.inView.every((e) => e.kind === 'location') ? { placeOnly: true } : {}),
-      ...(c.cut.eye ? { shot: true } : {}),
+      // The camera as drawn: an edit whose picture is withheld is made from its own (continuity.ts unedited).
+      ...((p.item.frame?.plan ?? c.cut).eye ? { shot: true } : {}),
       twice,
       notStage,
       otherSide: fromOtherSide(c).map(({ of, role, relation, turned }) => ({

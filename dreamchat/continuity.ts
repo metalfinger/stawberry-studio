@@ -721,6 +721,9 @@ export function unedited(cut: CutPlan, sent: (id: string) => boolean): CutPlan {
       r === base ? { ...r, role: 'composition', relation: 'same_side', carries: CARRIES.same_side } : r,
     ),
     transition: cut.transition === 'continuous' ? 'cut, carrying on' : cut.transition,
+    // Never judged or repaired against a picture it is not drawn from, and not drawn from for good reason.
+    criteria: cut.criteria.filter((k) => k.with !== base.id),
+    why: `${cut.why}; the picture it edits not sent, so made from its own shot and mock-up`,
   };
 }
 
@@ -1337,13 +1340,14 @@ function planWith(
           edit || r.relation === 'same_setup';
     return camera && sameState(c, cutOf.get(r.id)!, edit);
   };
-  // Where an earlier cut's camera stands as the plan is placed so far: its own, else where it would stand, else
-  // the camera of the picture it edits (camerasOf, over the cuts placed before this one).
+  // The camera an earlier cut's picture is drawn from, as the plan is placed so far: its own where it has one; for
+  // an edit, the camera of the picture it edits, which an edit keeps (where its own would stand is not where its
+  // picture is); else, with no camera placed for that one, where its own would stand.
   const eyeOf = (id: string, seen: string[] = []): Eye | undefined => {
     const e = cutOf.get(id);
     if (!e || seen.includes(id)) return undefined;
     const base = e.refs.find((r) => r.kind === 'cut' && r.role === 'base');
-    return e.eye ?? e.wouldBe ?? (base ? eyeOf(base.id, [...seen, id]) : undefined);
+    return e.eye ?? (base ? (eyeOf(base.id, [...seen, id]) ?? e.wouldBe) : e.wouldBe);
   };
   for (const c of cuts) {
     const plan = placePlan(b, c.id);
@@ -1555,6 +1559,8 @@ function planWith(
    */
   function chooseInPlan() {
     const cams = camerasOf({ cuts, ghosts, issues: [] });
+    // The camera each picture is drawn from, read before any cut's references change here.
+    const pics = new Map(cuts.map((c) => [c.id, eyeOf(c.id)]));
     for (const c of cuts) {
       const m = byId.get(c.id)!;
       const here = seen(m);
@@ -1569,7 +1575,8 @@ function planWith(
           return [r.role === 'identity' ? { ...r, who } : r];
         }
         if (r.relation === 'seat') return [r];
-        return drawnFrom(c, r, cams.get(c.id), cams.get(r.id)) ? [r] : [];
+        // This cut's own camera (where it would stand, for an edit) against the camera the earlier picture is drawn from.
+        return drawnFrom(c, r, cams.get(c.id), pics.get(r.id)) ? [r] : [];
       });
       const unsent = all.filter((r) => r.kind === 'cut' && !c.refs.some((x) => x.id === r.id));
       if (unsent.length) c.unsent = unsent;

@@ -16,9 +16,9 @@ import { checkReferences } from '../gate';
 import { rebuild, standIn } from '../plan';
 import type { Breakdown, Moment, StyleOption } from '../producer';
 import { chooseRefs, refsMode, SEVERAL, standsFor } from '../refs';
-import { drawingSheet, type Session } from '../session';
+import { drawingSheet, drawnFrameOf, previsFor, type Session } from '../session';
 import type { Item } from '../sheets';
-import { verdictsIn, withheldOf } from '../verdicts';
+import { forgetVerdicts, verdictsIn, withheldOf } from '../verdicts';
 
 const detail = (value: string | null = null) => ({ value, said: false });
 
@@ -183,6 +183,8 @@ describe('an edit whose picture is not sent after all is made from its own shot,
       const p = plan(same(), vars);
       expect(cut(p, 'm2').refs.find((r) => r.id === 'm1')?.role).toBe('base');
       expect(cut(p, 'm3').refs.find((r) => r.id === 'm2')?.role).toBe('base');
+      // With or without the camera rules, the gate knows where the edit's own camera would stand.
+      expect(cut(p, 'm3').wouldBe).toBeTruthy();
     }
   });
 
@@ -784,9 +786,9 @@ describe('the drawing path', () => {
   const S5 = { ...ON, DREAMCHAT_RECORD: 'on' };
   // A saved dream as drawing holds it once every picture is drawn and approved, each moment with a camera
   // worked out on a floor plan given its mock-up (session.ts layoutFor).
-  const drawnAll = () =>
+  const drawnAll = (dream = 'dream-0926-070314-0f40') =>
     withSwitches(S5, () => {
-      const s = loadDream('dream-0926-070314-0f40', false).session as Session;
+      const s = loadDream(dream, false).session as Session;
       const r = rebuild(s);
       const drawn: Session = {
         ...s,
@@ -818,6 +820,57 @@ describe('the drawing path', () => {
           expect([p.id, id, sent.has(standIn.picture(id))]).toEqual([p.id, id, true]);
       }
     });
+  });
+
+  test('a picture judged wrong: the edit of it is made from its own shot and mock-up, drawing and rebuilding alike', () => {
+    // b91f: m2 edits m1. The owner judges m1 wrong: it is withheld (verdicts.ts), and m2, left an edit, would go
+    // out with no camera, no mock-up and nothing carrying the layout.
+    const dream = 'dream-0926-095122-b91f';
+    const { r, drawn } = drawnAll(dream);
+    const m2 = drawn.build!.frames!.find((f) => f.id === 'm2')!;
+    const dir = mkdtempSync(join(tmpdir(), 'verdicts-'));
+    mkdirSync(join(dir, 'evals'));
+    writeFileSync(
+      join(dir, 'evals', 'story-pictures.json'),
+      JSON.stringify({ rows: [{ session: dream, moment: 'm1', picture: 'm1-judged.png', story: 'wrong' }] }),
+    );
+    const was = process.env.DREAMCHAT_DATA;
+    try {
+      withSwitches(S5, () => {
+        expect(m2.frame?.plan?.refs.find((x) => x.id === 'm1')?.role).toBe('base');
+        expect(assembleCut(drawingSheet(drawn, 'm2')!).references[0]).toMatchObject({ source: 'edit', of: 'm1' });
+        process.env.DREAMCHAT_DATA = dir;
+        forgetVerdicts();
+        // Its mock-up, as layoutFor renders it: through its own camera (none as an edit).
+        const own = drawnFrameOf(drawn, m2);
+        expect(own.frame?.plan?.eye).toBeTruthy();
+        expect(previsFor(r.b, m2, (id) => id, r.rec)).toBeUndefined();
+        expect(previsFor(r.b, own, (id) => id, r.rec)).toBeTruthy();
+        // Its sheet and prompt as drawing makes them, the mock-up put in as layoutFor puts it.
+        const rendered: Session = {
+          ...drawn,
+          build: {
+            ...drawn.build!,
+            frames: drawn.build!.frames!.map((f) =>
+              f.id === 'm2' ? { ...f, layout: { mediaId: standIn.previs('m2'), key: 'k', path: 'p' } } : f,
+            ),
+          },
+        };
+        const made = assembleCut(drawingSheet(rendered, 'm2')!);
+        expect(made.references[0]).toMatchObject({ role: 'base', source: 'mockup', of: 'm2' });
+        expect(made.references.some((x) => x.of === 'm1')).toBe(false);
+        // Never judged against the picture it is not drawn from.
+        expect(own.frame?.plan?.criteria.some((k) => k.with === 'm1')).toBe(false);
+        // A rebuild makes it the same way.
+        const again = rebuild(loadDream(dream, false).session as Session).pictures.find((x) => x.id === 'm2')!;
+        expect(again.references[0]?.media_id).toBe(standIn.previs('m2'));
+        expect(again.criteria.some((k) => k.with === 'm1')).toBe(false);
+      });
+    } finally {
+      if (was === undefined) delete process.env.DREAMCHAT_DATA;
+      else process.env.DREAMCHAT_DATA = was;
+      forgetVerdicts();
+    }
   });
 
   test('shows someone by their sketch until their in-between picture is drawn and approved', () => {
