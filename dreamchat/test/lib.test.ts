@@ -448,3 +448,27 @@ describe('the brief', () => {
     expect(b).toContain('Move: retell.');
   });
 });
+
+describe('rounded', () => {
+  test('a number one bit off, as Math.atan may give on another machine, keys the same', async () => {
+    const { hashOf, rounded } = await import('../lib');
+    // The camera pitch of a frozen dream's m1 on Linux x86 and, one bit lower, on macOS arm64 (29 Sep).
+    const linux = -0.1634359190269794;
+    const buf = new Float64Array([linux]);
+    new BigInt64Array(buf.buffer)[0] -= 1n;
+    const mac = buf[0];
+    expect(mac).not.toBe(linux);
+    const floor = (pitch: number) => ({
+      where: { spots: [{ x: 1.5, y: 2 }] },
+      eye: { at: { x: 0.1583333333333341 }, pitch },
+    });
+    expect(hashOf(floor(mac))).not.toBe(hashOf(floor(linux)));
+    expect(hashOf(rounded(floor(mac)))).toBe(hashOf(rounded(floor(linux))));
+    // What is not a number is kept as it is.
+    expect(rounded({ a: 'x', b: [true, null, 1.23456789], c: Infinity })).toEqual({
+      a: 'x',
+      b: [true, null, 1.234568],
+      c: Infinity,
+    });
+  });
+});

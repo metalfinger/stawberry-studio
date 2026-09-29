@@ -553,19 +553,20 @@ describe('S9 keys', () => {
     // neither a code change nor KEYS_VERSION explains it (hashOf itself is architecture-free: a pure integer
     // hash over `stable`'s text, no crypto, no floats).
     if (process.env.S9_RAW) console.log(JSON.stringify(raw, null, 2));
-    expect({ version: KEYS_VERSION, hashes }).toEqual({ version: 2, hashes: GOLDEN });
+    expect({ version: KEYS_VERSION, hashes }).toEqual({ version: 3, hashes: GOLDEN });
   });
 });
 
 /**
  * The keys of the two dreams drawn as above, record off and on, and with the cut sheet and the camera rules
- * on as well, at KEYS_VERSION 2.
+ * on as well, at KEYS_VERSION 3 (the floor plan a mock-up is rendered from keyed rounded, the same on any
+ * machine).
  */
 const GOLDEN: Record<string, string> = {
-  'dream-0926-062232-a44a record off': 'c387830c865b5',
-  'dream-0926-062232-a44a record on': '14a5553f255047',
-  'dream-0926-062232-a44a record, cut sheet and camera on': '8d3e88658a65b',
-  'dream-0926-083656-8ceb record off': '18a048e0bf8d6f',
-  'dream-0926-083656-8ceb record on': '6566cbd06b203',
-  'dream-0926-083656-8ceb record, cut sheet and camera on': '1b9952facf36f6',
+  'dream-0926-062232-a44a record off': '52eb1a3197406',
+  'dream-0926-062232-a44a record on': '18f5a4fff235fc',
+  'dream-0926-062232-a44a record, cut sheet and camera on': '177279f221425c',
+  'dream-0926-083656-8ceb record off': '655188d6ebd5',
+  'dream-0926-083656-8ceb record on': 'f1db2c3d18ff',
+  'dream-0926-083656-8ceb record, cut sheet and camera on': 'c3183c76ba3f3',
 };

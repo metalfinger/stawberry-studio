@@ -39,6 +39,7 @@ import {
   FINISHED_BAR,
   followStreakOf,
   hashOf,
+  rounded,
   LISTENING,
   listenOn,
   type Move,
@@ -858,7 +859,8 @@ function planDreamNow(
     floor: Object.fromEntries(
       plan.cuts.flatMap((c) => {
         const where = c.eye ? shotPlan(b, c.id, rec) : undefined;
-        return where ? [[c.id, hashOf({ where, eye: c.eye })]] : [];
+        // Rounded: the camera's pitch is worked out with Math.atan, whose last bit differs between machines.
+        return where ? [[c.id, hashOf(rounded({ where, eye: c.eye }))]] : [];
       }),
     ),
   };

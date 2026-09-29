@@ -1057,6 +1057,19 @@ export const slug = (name: string) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '') || 'thing';
 
+/**
+ * A value with every number in it rounded to six places, for hashing what is worked out with floating point:
+ * Math.atan and its like may differ in the last bit from one machine to another (a camera's pitch on Linux
+ * x86 and macOS arm64, 29 Sep), and a key must not.
+ */
+export function rounded<T>(value: T): T {
+  if (typeof value === 'number') return (Number.isFinite(value) ? Math.round(value * 1e6) / 1e6 : value) as T;
+  if (Array.isArray(value)) return value.map(rounded) as T;
+  if (value && typeof value === 'object')
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, rounded(v)])) as T;
+  return value;
+}
+
 /** A pure 53-bit hash of a value, its keys sorted: the same inputs give the same hex. */
 export function hashOf(value: unknown): string {
   const text = stable(value);
