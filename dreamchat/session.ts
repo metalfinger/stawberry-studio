@@ -122,7 +122,8 @@ import {
   readPrompt,
   sha,
 } from './gate';
-import { standsFor } from './refs';
+import { refsMode, standsFor } from './refs';
+import { withheldOf } from './verdicts';
 import { type CutFacts, cutFactsOf, routedMode } from './checks';
 import {
   type CutSheet,
@@ -179,6 +180,7 @@ import {
   ghostInForce,
   KEYS_VERSION,
   labelsOf,
+  currentRecord,
   reasonLine,
   recastWith,
   type Recorded,
@@ -785,12 +787,34 @@ export function shadowRecord(
   }
 }
 
-/** The earlier pictures the plan draws a moment from, that are drawn and usable. */
-export function plannedInputsOf(s: Pick<Session, 'build'>, frame: Item): PlannedInput[] {
+/**
+ * The earlier pictures the plan draws a moment from, that are drawn and usable. With S5's references
+ * (DREAMCHAT_REFS), never one the owner judged wrong nor one S9 finds stale (`withheldIn`).
+ */
+export function plannedInputsOf(
+  s: Pick<Session, 'build'> & Partial<Pick<Session, 'id' | 'draft' | 'transcript' | 'style'>>,
+  frame: Item,
+): PlannedInput[] {
   const frames = s.build?.frames ?? [];
+  const withheld = refsMode() === 'off' ? {} : withheldIn(s);
   return (frame.frame?.plan?.refs ?? [])
     .map((use) => ({ use, item: frames.find((x) => x.id === use.id) }))
-    .filter((x): x is PlannedInput => !!x.item && x.item.status === 'ready' && !!x.item.mediaId);
+    .filter((x): x is PlannedInput => !!x.item && x.item.status === 'ready' && !!x.item.mediaId && !withheld[x.use.id]);
+}
+
+/**
+ * The drawn pictures of a dream never to be drawn from again (S5): judged wrong by the owner (verdicts.ts), or
+ * stale by S9's records, where the dream keeps them.
+ */
+export function withheldIn(
+  s: Pick<Session, 'build'> & Partial<Pick<Session, 'id' | 'draft' | 'transcript' | 'style'>>,
+): Record<string, 'judged wrong' | 'stale'> {
+  const frames = s.build?.frames ?? [];
+  const recorded = !!s.draft && frames.some((f) => !!currentRecord(f));
+  const stale = recorded
+    ? stalenessOf(s as Pick<Session, 'draft' | 'build' | 'transcript' | 'style'>).stale.map((x) => x.id)
+    : [];
+  return withheldOf(s.id ?? (s as { from?: string }).from, frames, stale);
 }
 
 /**

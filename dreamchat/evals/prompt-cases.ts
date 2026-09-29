@@ -458,22 +458,18 @@ export const SEVERAL = 3;
 
 /**
  * The changes one moment's picture carries at once, counted from the dream and the images the moment is
- * sent, apart from the continuity plan's own count (the owner's rule, 27 Sep: only story changes count
- * where the layout is given):
+ * sent, apart from the continuity plan's own count. Only story changes count (the owner, 27 Sep): a side of
+ * the place never drawn, or a new framing, is the camera's, with or without a floor plan.
  * - the action (a change the moment makes itself is part of it);
  * - each change still in force on who or what is in view that no image sent shows: an in-between
  *   picture of it, or of a later change edited from it, or an earlier picture drawn at or after it that
- *   shows its subject (not one kept for its light, nor the picture before a dream's jump);
- * - only where nothing lays the picture out (no mock-up sent, no view worked out on a floor plan, no
- *   picture edited): a side of its place never shown by an image sent (the place's sketch shows the side
- *   its first moment there faces), and a new framing of an earlier picture it takes the room from.
+ *   shows its subject (not one kept for its light, nor the picture before a dream's jump).
  * `leaving` takes one image out (an in-between picture or an earlier picture, by id).
  */
-export function storyChanges(c: Pick<Ctx, 'r' | 'm' | 'cut' | 'refs'>, leaving?: string): string[] {
+export function storyChanges(c: Pick<Ctx, 'r' | 'cut' | 'refs'>, leaving?: string): string[] {
   const refs = c.refs.filter((x) => !leaving || x.of !== leaving);
   const ms = moments(c.r.b);
   const at = new Map(ms.map((m, i) => [m.id, i]));
-  const here = at.get(c.m.id) ?? 0;
   const byId = new Map(ms.map((m) => [m.id, m]));
   const use = (id?: string) => c.cut.refs.find((u) => u.kind === 'cut' && u.id === id);
   const chain = (id?: string) => {
@@ -497,37 +493,69 @@ export function storyChanges(c: Pick<Ctx, 'r' | 'm' | 'cut' | 'refs'>, leaving?:
     // What a moment implies is said in words, never drawn on its own (S1): named so.
     if (!byGhost && !byPicture) out.push(`${st.who}'s ${st.what} now ${st.now}${st.implied ? ' (implied)' : ''}`);
   }
-  const edited = refs[0]?.role === 'base' && (refs[0].source === 'picture' || refs[0].source === 'ghost');
-  const laidOut = edited || refs.some((x) => x.source === 'mockup') || !!c.cut.view;
-  if (laidOut) return out;
-  const m = c.m;
-  const before = ms.slice(0, here).filter((e) => e.place === m.place);
-  const faces = (e: Moment) => (m.sameSide ?? []).includes(e.id);
-  if (m.place && before.length) {
-    const bySketch = faces(before[0]);
-    const byView = refs.some(
-      (x) =>
-        x.source === 'ghost' && c.r.plan.ghosts.find((g) => g.id === x.of && g.kind === 'view' && g.of === m.place),
-    );
-    const byPicture = pictures.some((x) => {
-      const e = byId.get(x.of ?? '');
-      return !!e && e.place === m.place && faces(e);
-    });
-    if (!bySketch && !byView && !byPicture) out.push(`${m.place} facing ${m.looks_at || 'another way'}, never shown`);
-  }
-  const room = pictures.find((x) => {
-    const e = byId.get(x.of ?? '');
-    return !!e && x.role === 'composition' && e.place === m.place && faces(e);
-  });
-  if (room && byId.get(room.of ?? '')?.distance !== m.distance) out.push(`reframed ${m.distance}`);
   return out;
 }
 
 /**
- * Each in-between picture of a dream's plan, with the most changes any moment sent it would carry without
- * it where it takes one of them off (`storyChanges`), and so whether it meets the owner's rule at `bar`. An in-between picture another is
- * edited from serves that edit too: without it, the next one is edited from the sketch carrying both
- * changes, its own and this one (the ice block before it melts, before the horse).
+ * Each earlier picture a moment is sent (edited, or taken for the room; not the picture before a dream's jump,
+ * nor the dreamer's seat, nor one sent for who someone is), read against the moment: whether it is sent for
+ * layout (the picture edited, or the room with no mock-up and no view worked out on a floor plan) or for look;
+ * whether its camera differs (more than 1.5 m, 30 degrees or 1 m of height apart on one floor plan) or cannot be
+ * compared; and whether what both pictures show stands otherwise (a change in force in one and not the other,
+ * an edit's own changes aside).
+ */
+export function sentAgainst(
+  c: Pick<Ctx, 'r' | 'cut' | 'refs'>,
+): { of: string; as: 'layout' | 'look'; camera: 'same' | 'differs' | 'unknown'; state: boolean }[] {
+  const ms = moments(c.r.b);
+  const byId = new Map(ms.map((m) => [m.id, m]));
+  const cutOf = (id: string) => c.r.plan.cuts.find((x) => x.id === id);
+  const eyeOf = (id: string): CutPlan['eye'] => {
+    const x = cutOf(id);
+    const base = x?.refs.find((u) => u.kind === 'cut' && u.role === 'base');
+    return x?.eye ?? x?.wouldBe ?? (base ? eyeOf(base.id) : undefined);
+  };
+  const laid = c.refs.some((x) => x.source === 'mockup') || !!c.cut.view;
+  return c.refs.flatMap((x) => {
+    if (x.source !== 'picture' || !x.of || (x.role !== 'base' && x.role !== 'composition')) return [];
+    const use = c.cut.refs.find((u) => u.kind === 'cut' && u.id === x.of);
+    if (use?.relation === 'shift' || use?.relation === 'seat') return [];
+    const a = eyeOf(c.cut.id);
+    const z = eyeOf(x.of);
+    const plan = placePlan(c.r.b, c.cut.id);
+    const camera =
+      a && z && plan && plan === placePlan(c.r.b, x.of)
+        ? Math.hypot(a.at.x - z.at.x, a.at.y - z.at.y) > 1.5 ||
+          angle(a.d, z.d) > 30 ||
+          Math.abs((a.height ?? 0) - (z.height ?? 0)) > 1
+          ? 'differs'
+          : 'same'
+        : 'unknown';
+    const e = cutOf(x.of);
+    const m = byId.get(c.cut.id);
+    const then = byId.get(x.of);
+    const inBoth = (id: string) => !!m && !!then && inViewAt(m).has(id) && inViewAt(then).has(id);
+    const key = (st: { who: string; what: string; now: string }) => `${st.who}|${st.what}|${st.now}`.toLowerCase();
+    const edit = x.role === 'base';
+    const was = new Set([...(e?.own ?? []), ...(e?.states ?? [])].filter((st) => inBoth(st.who)).map(key));
+    const own = (st: { who: string; what: string }) =>
+      edit && c.cut.own.some((o) => o.who === st.who && o.what === st.what);
+    const is = [...c.cut.own, ...c.cut.states].filter((st) => inBoth(st.who));
+    const state =
+      is.some((st) => !was.has(key(st)) && !own(st)) ||
+      [...(e?.own ?? []), ...(e?.states ?? [])]
+        .filter((st) => inBoth(st.who))
+        .some((st) => !is.some((y) => key(y) === key(st)) && !own(st));
+    return [{ of: x.of, as: edit || !laid ? ('layout' as const) : ('look' as const), camera, state }];
+  });
+}
+
+/**
+ * Each in-between picture of a dream's plan, with the most changes any moment sent it would carry without it
+ * where it takes one of them off (`storyChanges`), and so whether it meets the owner's rule at `bar`. An
+ * in-between picture another is edited from serves that edit too: without it, the next one is edited from the
+ * sketch carrying both changes, its own and this one (the ice block before it melts, before the horse). A
+ * picture of a side of a place takes no story change off anything, so it is never needed.
  */
 export function ghostNeeds(
   r: Rebuilt,

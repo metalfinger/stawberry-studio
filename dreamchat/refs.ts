@@ -51,8 +51,9 @@ export function refsMode(): 'off' | 'on' | 'sketch' {
 }
 
 /**
- * How many changes one edit may carry before its in-between pictures are drawn first: "several" is two
- * or more (the owner, 27 Sep). An edit carrying the action and one more change is drawn straight.
+ * How many changes one edit may carry before its in-between pictures are drawn first: "several" is two or
+ * more (the owner, 27 Sep). An edit carrying only its action (a change the moment makes itself is part of it)
+ * is drawn straight; the action and one more change get the in-between picture of that change first.
  */
 export const SEVERAL = 2;
 
@@ -73,11 +74,20 @@ export function mockupHelps(t: Route): boolean {
 }
 
 /**
- * Whether the moment is about a crowd with no image of its own: a group the moment lists as its own people,
- * with no approved sketch (a person whose sketch failed is not a crowd).
+ * Whether the moment is about a crowd of people with no image of its own: a group of people the moment lists as
+ * its own, with no approved sketch. A person whose sketch failed is not a crowd, nor is a shoal of fish: the rule
+ * is heron m4's faceless students made real as the mock-up's bare figures.
  */
 export const facelessIn = (s: Pick<CutSheet, 'inView' | 'visible'>) =>
-  s.inView.some((e) => e.kind === 'character' && e.group && !e.image && e.turned === null && s.visible.includes(e.id));
+  s.inView.some(
+    (e) =>
+      e.kind === 'character' &&
+      e.group &&
+      e.said === 'people' &&
+      !e.image &&
+      e.turned === null &&
+      s.visible.includes(e.id),
+  );
 
 /** Whether nothing but the place is in view. */
 export const placeOnlyIn = (s: Pick<CutSheet, 'inView'>) => s.inView.every((e) => e.kind === 'location');

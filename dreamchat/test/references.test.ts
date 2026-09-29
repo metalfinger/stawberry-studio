@@ -113,7 +113,7 @@ describe('the references chosen', () => {
     ]);
   });
 
-  test('changes are counted from the dream and the images sent, apart from the plan: the story, and a side only where nothing lays it out', () => {
+  test('changes are counted from the dream and the images sent, apart from the plan: story changes only', () => {
     // With the mock-up sent, a side never drawn is no change; each change in force is shown by its in-between picture.
     const m7 = cameraOff(() => contextOf(library3, 'm7'));
     expect(m7.refs[0].source).toBe('mockup');
@@ -124,9 +124,10 @@ describe('the references chosen', () => {
     const m4 = cameraOff(() => contextOf(library3, 'm4'));
     expect(storyChanges(m4)).toEqual(['the action']);
     expect(storyChanges(m4, 'g2')).toEqual(['the action', "l1's water now up over the tops of the desks"]);
-    // Without the mock-up and a view worked out on a floor plan, the side the moment faces is a change.
+    // Without the mock-up and a view worked out on a floor plan, the side the moment faces is still no change: only
+    // story changes count (the owner, 27 Sep).
     const bare = { ...m7, cut: { ...m7.cut, view: undefined }, refs: m7.refs.filter((x) => x.source !== 'mockup') };
-    expect(storyChanges(bare).some((x) => x.endsWith('never shown'))).toBe(true);
+    expect(storyChanges(bare)).toEqual(['the action']);
   });
 
   test('an in-between picture another is edited from serves that edit: without it, the next carries two changes', () => {

@@ -10,7 +10,7 @@
 // then earlier moments while there is room.
 import { sayTurn } from './camera';
 import type { CutSheet, SheetEarlier, SheetElement } from './cutsheet';
-import { aNoun, FRAMING, SHAPE_WORDS, sentence, writingLine } from './frames';
+import { aNoun, FRAMING, NOTHING_ELSE, SHAPE_WORDS, samePlaceLine, sentence, writingLine } from './frames';
 import { sayNow } from './record';
 import { styleBlock } from './sheets';
 
@@ -153,7 +153,9 @@ export function assembleCut(s: CutSheet): Assembled {
       (x) => !e.changes.some((st) => thing(st.what) === thing(x.what) && st.now !== x.now),
     );
     const changes = e.changes.filter((st) => !shown.some((x) => thing(x.what) === thing(st.what)));
-    const nowIs = shown.length ? shown.map((x) => `${x.what}: ${x.now}`).join('; ') : '';
+    const said = (x: { what: string; now: string }) =>
+      thing(x.now).startsWith(thing(x.what)) ? x.now : `${x.what}: ${x.now}`;
+    const nowIs = shown.length ? shown.map(said).join('; ') : '';
     const image = stage?.image ?? e.image;
     // Everything in view is listed with its look, its image or not.
     facts.push(
@@ -173,7 +175,7 @@ export function assembleCut(s: CutSheet): Assembled {
         ? ` Except ${changes.map((st) => `their ${st.what}, which is no longer theirs: it is now ${st.now}, with nothing of the old ${st.what} inside or behind it`).join('; ')}.`
         : '';
       const now = nowIs ? `, as ${animal ? 'it is' : 'they are'} now (${nowIs})` : '';
-      const shows = stage ? `, as this picture shows ${animal ? 'it' : 'them'}` : '';
+      const shows = stage && !inBase(e) ? `, as this picture shows ${animal ? 'it' : 'them'}` : '';
       attach(
         {
           image,
@@ -191,14 +193,9 @@ export function assembleCut(s: CutSheet): Assembled {
     } else if (e.kind === 'location') {
       // An edit base or an earlier picture of this side sets where things stand; a view ghost shows the
       // side this frame faces; with a mock-up, where everything stands comes from it alone. With S5's
-      // references, a view worked out on the floor plan says where things stand where no mock-up does, and
-      // the place's in-between picture of the side this frame faces is its one image.
-      const faces = stage?.ghost?.kind === 'view' ? stage.ghost.looksAt || 'the other way' : null;
-      const layout =
-        faces !== null
-          ? !roomFromCut && !base && !mockUp
-          : cam.sheetLayout && !roomFromCut && !base && !viewGhost && !mockUp && !(s.refs && cam.view);
-      const plain = `${e.name}${look ? ` (${look})` : ''}${faces !== null ? `, seen facing ${faces}` : ''}`;
+      // references, a view worked out on the floor plan says where things stand where no mock-up does.
+      const layout = cam.sheetLayout && !roomFromCut && !base && !viewGhost && !mockUp && !(s.refs && cam.view);
+      const plain = `${e.name}${look ? ` (${look})` : ''}`;
       const called = `${plain}${nowIs ? `, as it is now (${nowIs})` : ''}`;
       // Its one image an in-between picture of its state, where only its materials are taken from it: its state
       // is taken too, said outright (a mock-up without the water beat the in-between picture that had it:
@@ -221,7 +218,7 @@ export function assembleCut(s: CutSheet): Assembled {
         },
         (layout
           ? `${called}: the camera stands in this place. Keep everything in it where it puts it (walls, doors, paths, furniture, whatever it has), and its light; do not mirror or rearrange it.`
-          : (base || roomFromCut) && !mockUp
+          : (base || (roomFromCut && !(s.refs && cam.view))) && !mockUp
             ? `${state ? plain : called}: only its materials, colours and objects${state}; where things stand comes from ${base ? 'Image 1' : 'the earlier picture of this place'}.`
             : cam.view || mockUp
               ? `${state ? plain : called}: only what it is made of and its colours (its ground or floor, its walls or buildings, what stands in it)${state}. Where everything stands, and which way the picture looks, come from ${mockUp ? 'Image 1, the mock-up' : 'the shot above'}, not from this image; any of its objects the shot has outside the picture stay out of it.`
@@ -347,12 +344,22 @@ export function assembleCut(s: CutSheet): Assembled {
         : r === 'seat'
           ? `${pictureNo(x)}${shows}: the camera is where the dreamer is in it, at their eye height, turned toward ${cam.looksAt || 'what this moment shows'}; what is beside them there is beside the camera here, seen from their place. Nothing else from it: not its camera, framing or angle.`
           : x.role === 'composition'
-            ? mockUp
-              ? `${pictureNo(x)}${shows}: the same place. Take only how it looks there (its surfaces, colours and light) and how anyone in it who is also in this picture looks; no one else from it comes into this one. Where everyone and everything is, and which way this picture looks, come from Image 1, the mock-up.`
-              : `${pictureNo(x)}${shows}: the same place from the same side. Take where everything and everyone in it are, and its light; this frame is framed ${cam.size}.`
+            ? samePlaceLine(
+                `${pictureNo(x)}${shows}`,
+                // "From the shot above" only where the place's own line says so too (as frames.ts).
+                mockUp
+                  ? 'mockup'
+                  : cam.view && !base && !(roomFromCut && !s.refs)
+                    ? 'shot'
+                    : r === 'same_setup'
+                      ? 'setup'
+                      : 'side',
+                cam.size,
+                cam.eyes === 'dreamer' && !!s.dreamer.id && (x.frame?.visible ?? []).includes(s.dreamer.id),
+              )
             : unsketched.length
               ? lastSeen(x, unsketched)
-              : `${pictureNo(x)}${shows}: take only ${x.carries.replace(/;.*$/, '')}. Nothing of its place, framing or background.`) +
+              : `${pictureNo(x)}${shows}: take only ${x.carries.replace(/;.*$/, '')}. Nothing of its place, framing or background. ${NOTHING_ELSE}`) +
         strays(x),
     );
   }
