@@ -60,6 +60,14 @@ export function assembleCut(s: CutSheet): Assembled {
     references.push(ref);
     manifest.push(`Image ${references.length}: ${line}`);
   };
+  // Each clause of an image's "Except", by the one it is about and the part it names, so that with each state said
+  // once (S6 row 16) the whole clause, and only it, can point to that part's in-between picture.
+  type Change = { what: string; now: string; part?: string };
+  const excepts: { line: number; of: string; what: string; now: string; head: string }[] = [];
+  const noteExcepts = (of: string, changes: Change[], head: (st: Change) => string) => {
+    for (const st of changes)
+      excepts.push({ line: manifest.length - 1, of, what: st.what, now: st.now, head: head(st) });
+  };
   const pictureNo = (x: SheetEarlier) => (x.frame ? `picture ${x.frame.order}` : 'an in-between reference');
   // Across a jump, only who is in both pictures keeps their place.
   const keepAcross = (x: SheetEarlier) => {
@@ -180,8 +188,9 @@ export function assembleCut(s: CutSheet): Assembled {
     if (e.kind === 'character') {
       const animal = e.said === 'animal';
       // A change that replaces part of them overrides their sketch for that part.
+      const head = (st: Change) => `their ${st.what}, which is no longer theirs: it is now `;
       const except = changes.length
-        ? ` Except ${changes.map((st) => `their ${st.what}, which is no longer theirs: it is now ${st.now}, with nothing of the old ${st.what} inside or behind it`).join('; ')}.`
+        ? ` Except ${changes.map((st) => `${head(st)}${st.now}, with nothing of the old ${st.what} inside or behind it`).join('; ')}.`
         : '';
       const now = nowIs ? `, as ${animal ? 'it is' : 'they are'} now (${nowIs})` : '';
       const shows = stage && !inBase(e) ? `, as this picture shows ${animal ? 'it' : 'them'}` : '';
@@ -198,6 +207,7 @@ export function assembleCut(s: CutSheet): Assembled {
           ? `what ${e.name} is${look ? ` (${look})` : ''}${now}: its kind, its size, its build, its coat and its markings, exactly${shows}${inBase(e) ? ', as Image 1 already shows it' : ''}${shadesOf(e)}. Nothing else from it: not its pose, background or framing.${except}${outside(e)}`
           : `who ${e.name} ${e.group ? 'are' : 'is'}${look ? ` (${look})` : ''}${now}: their ${changes.some((st) => /head|face/i.test(st.what)) ? 'build and clothes' : 'face, hair, build and clothes'}, exactly${shows}${inBase(e) ? ', as Image 1 already shows them' : ''}${shadesOf(e)}. Nothing else from it: not its pose, background or framing.${except}${outside(e)}`,
       );
+      noteExcepts(e.id, changes, head);
       imageOf.set(e.id, references.length);
     } else if (e.kind === 'location') {
       // An edit base or an earlier picture of this side sets where things stand; a view ghost shows the
@@ -212,10 +222,9 @@ export function assembleCut(s: CutSheet): Assembled {
       const state = shown.length
         ? `, and its ${shown.map((x) => x.what).join(' and ')} exactly as in this picture (${nowIs})`
         : '';
+      const head = (st: Change) => `${st.what}, which is no longer as it shows: it is now `;
       const since =
-        stage && changes.length
-          ? ` Except its ${changes.map((st) => `${st.what}, which is no longer as it shows: it is now ${st.now}`).join('; ')}.`
-          : '';
+        stage && changes.length ? ` Except its ${changes.map((st) => `${head(st)}${st.now}`).join('; ')}.` : '';
       attach(
         {
           image,
@@ -234,14 +243,16 @@ export function assembleCut(s: CutSheet): Assembled {
               : `${state ? plain : called}: only its materials, colours, objects and light${state}. It shows the place from another side: this frame faces ${cam.looksAt || 'the other way'}.`) +
           since,
       );
+      if (since) noteExcepts(e.id, changes, head);
     } else {
       // A part of it that has changed is no longer as its sketch shows, as for a person: each by the part
       // it names, or the whole of it.
+      const byPart = changes.some((st) => st.part !== undefined);
+      const head = (st: Change) =>
+        `${byPart ? (st.part === '' ? 'the whole of it' : `its ${st.part ?? st.what}`) : st.what}, which is no longer as it shows: it is now `;
       const except = !changes.length
         ? ''
-        : changes.some((st) => st.part !== undefined)
-          ? ` Except ${changes.map((st) => `${st.part === '' ? 'the whole of it' : `its ${st.part ?? st.what}`}, which is no longer as it shows: it is now ${st.now}`).join('; ')}.`
-          : ` Except its ${changes.map((st) => `${st.what}, which is no longer as it shows: it is now ${st.now}`).join('; ')}.`;
+        : ` Except ${byPart ? '' : 'its '}${changes.map((st) => `${head(st)}${st.now}`).join('; ')}.`;
       attach(
         {
           image,
@@ -253,6 +264,7 @@ export function assembleCut(s: CutSheet): Assembled {
           ? `${e.name}${look ? ` (${look})` : ''}, as it is now (${nowIs}): its exact shape, materials and colours, as this picture shows it${shadesOf(e)}. Nothing else from it.${except}${outside(e)}`
           : `${e.name}${look ? ` (${look})` : ''}: its exact shape, materials and colours, the same in every picture${shadesOf(e)}. Nothing else from it.${except}${outside(e)}`,
       );
+      noteExcepts(e.id, changes, head);
     }
   }
 
@@ -290,7 +302,7 @@ export function assembleCut(s: CutSheet): Assembled {
   const shift = s.story.shift;
   // Each part's in-between picture, by its image: with each state said once (S6 row 16) its sketch's "Except"
   // points to it instead of saying the state again.
-  const partPictures: { of: string; now: string; at: number }[] = [];
+  const partPictures: { of: string; what: string; now: string; at: number }[] = [];
   for (const x of usable) {
     if (x === base || asStage.has(x.id) || references.length >= MAX_IMAGES) continue;
     const g = x.ghost;
@@ -313,7 +325,7 @@ export function assembleCut(s: CutSheet): Assembled {
               : `${name(g.of)}'s ${g.state.what} as it is now (${g.state.now}): draw their ${g.state.what} exactly so, and take nothing else from it.`,
       );
       if (g.state && !g.state.whole && g.of !== s.place)
-        partPictures.push({ of: g.of, now: g.state.now, at: references.length });
+        partPictures.push({ of: g.of, what: g.state.what, now: g.state.now, at: references.length });
       continue;
     }
     const unsketched = x.who?.filter((id) => !imageOf.has(id)) ?? [];
@@ -389,22 +401,35 @@ export function assembleCut(s: CutSheet): Assembled {
 
   // Each state said once (S6 row 16): a part an in-between picture shows is said there, and its sketch's "Except"
   // says it is now as that picture shows; what the images' lines say of how one is now is not said again below.
+  // Only the clause of that one's Except about that part, whole: up to its state and then its end.
+  const esc = (x: string) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const same = (a: string, b: string) => a.toLowerCase().trim() === b.toLowerCase().trim();
   if (s.once?.state)
     for (const g of partPictures)
-      for (let i = 0; i < manifest.length; i++)
-        if (i !== g.at - 1 && manifest[i].startsWith('Image ') && manifest[i].includes(`: it is now ${g.now}`))
-          manifest[i] = manifest[i].replace(`: it is now ${g.now}`, `: it is now as Image ${g.at} shows`);
-  // Said above: in an image's line about that one, as whole words ("wet" of the fish's look is not the newspaper).
-  const esc = (x: string) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const saidAbove = (x: { called: string; name: string }, now: string) =>
-    manifest.some(
-      (l) =>
-        [x.called, x.name].some((n) => !!n && l.toLowerCase().includes(n.toLowerCase())) &&
-        new RegExp(`\\b${esc(now)}\\b`, 'i').test(l),
+      for (const x of excepts)
+        if (x.of === g.of && same(x.what, g.what) && x.now === g.now)
+          manifest[x.line] = manifest[x.line].replace(
+            new RegExp(`${esc(x.head + x.now)}(?=[.;,])`),
+            () => `${x.head}as Image ${g.at} shows`,
+          );
+  // Said above: in that one's own image's line or its in-between picture's, as whole words ("wet" of the fish's
+  // look is not the newspaper's; the dreamer's hair is not said by the fish's line naming the dreamer's arm).
+  const linesOf = (id: string) =>
+    manifest.filter((_, i) =>
+      references[i].source === 'ghost'
+        ? references[i].subjects?.[0] === id
+        : references[i].source === 'sketch' && references[i].of === id,
     );
+  const saidAbove = (x: { of: string }, now: string) =>
+    linesOf(x.of).some((l) => new RegExp(`\\b${esc(now)}\\b`, 'i').test(l));
+  let dropped = 0;
   const nowOf = s.once?.state
     ? s.now
-        ?.map((x) => ({ ...x, facts: x.facts.filter((f) => !(f.kind === 'part' && saidAbove(x, f.now))) }))
+        ?.map((x) => {
+          const facts = x.facts.filter((f) => !(f.kind === 'part' && saidAbove(x, f.now)));
+          dropped += x.facts.length - facts.length;
+          return { ...x, facts };
+        })
         .filter((x) => x.facts.length)
     : s.now;
 
@@ -541,7 +566,7 @@ export function assembleCut(s: CutSheet): Assembled {
       fields: ['now', 'nowWords'],
       // What this moment changes, and nothing else, differs from the references.
       text: references.length
-        ? `Everyone and everything looks exactly as in their images above, except for what this moment itself changes and ${now?.length || (s.once?.state && s.now?.length) ? 'how each one is at this moment, as said' : 'what is still so from earlier'}.`
+        ? `Everyone and everything looks exactly as in their images above, except for what this moment itself changes and ${now?.length || dropped ? 'how each one is at this moment, as said' : 'what is still so from earlier'}.`
         : '',
     },
     {

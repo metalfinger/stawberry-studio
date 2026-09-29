@@ -9,7 +9,7 @@ import { refsOf } from '../evals/prompt-cases';
 import { readDream } from '../evals/retire';
 import { loadDream } from '../evals/saved';
 import { assembleCut } from '../assemble';
-import { cutSheet, sheetDream } from '../cutsheet';
+import { type CutSheet, cutSheet, sheetDream } from '../cutsheet';
 import { inViewOf } from '../frames';
 import { moments, producerSystem } from '../producer';
 import { inViewIn, rebuild } from '../plan';
@@ -1010,6 +1010,105 @@ describe('ledger 16: how each one is now, said once', () => {
     const now = (p: string) => p.split('\n').find((l) => l.startsWith('How each one is at this moment')) ?? '';
     expect(now(prompt('state_once'))).toContain("the fish is in the dreamer's hands");
     expect(now(prompt('state_once'))).not.toContain('wrapped in newspaper');
+  });
+
+  // 09ea m5's sheet at the step, changed by each test to hold the case.
+  const sheetAt = (dream = 'dream-0926-000545-09ea', m = 'm5') =>
+    withSwitches({ ...SHEET, DREAMCHAT_ONE_BUILDER: 'state_once' }, () =>
+      structuredClone(
+        rebuild(structuredClone(loadDream(dream, false).session as Session)).pictures.find((x) => x.id === m)!.sheet!,
+      ),
+    );
+  const assembled = (sheet: CutSheet) =>
+    withSwitches({ ...SHEET, DREAMCHAT_ONE_BUILDER: 'state_once' }, () => assembleCut(sheet).prompt);
+  const lineOf = (p: string, n: number) => p.split('\n').find((l) => l.startsWith(`Image ${n}: `)) ?? '';
+  const nowLine = (p: string) => p.split('\n').find((l) => l.startsWith('How each one is at this moment')) ?? '';
+  const closing = (p: string) => p.split('\n').find((l) => l.startsWith('Everyone and everything looks')) ?? '';
+  // An in-between picture of one part of something, as the plan gives it.
+  const partPicture = (sheet: CutSheet, of: string, what: string, now: string) => {
+    const g = structuredClone(sheet.earlier.find((x) => x.ghost?.kind === 'state')!);
+    sheet.earlier.push({
+      ...g,
+      id: `g-${of}`,
+      image: `${g.image}-${of}`,
+      ghost: { kind: 'state', of, state: { what, now, whole: false } },
+    });
+  };
+
+  test('an Except points to an in-between picture only for that one and that part, the whole clause', () => {
+    const sheet = sheetAt();
+    const fish = sheet.inView.find((e) => e.id === 't1')!;
+    const paper = sheet.inView.find((e) => e.id === 't2')!;
+    // The fish's scales, said first, begin with the newspaper words of its body's picture; the fish is also wet
+    // with rain, and the newspaper, with a picture of its own, only wet.
+    fish.changes = [
+      { what: 'scales', now: 'wrapped in newspaper scraps', part: 'scales' },
+      ...fish.changes,
+      { what: 'skin', now: 'wet with rain', part: 'skin' },
+    ];
+    paper.changes = [{ what: 'paper', now: 'wet', part: 'paper' }];
+    partPicture(sheet, 't2', 'paper', 'wet');
+    const p = assembled(sheet);
+    const body = p.match(/Image (\d+): the fish's body as it is now/)![1];
+    const wet = p.match(/Image (\d+): the newspaper's paper as it is now/)![1];
+    const fishLine = p.split('\n').find((l) => l.startsWith('Image ') && l.includes(': the fish ('))!;
+    expect(fishLine).toContain('its scales, which is no longer as it shows: it is now wrapped in newspaper scraps;');
+    expect(fishLine).toContain(`its body, which is no longer as it shows: it is now as Image ${body} shows;`);
+    expect(fishLine).toContain('its skin, which is no longer as it shows: it is now wet with rain.');
+    expect(fishLine).not.toContain(`as Image ${wet} shows`);
+    const paperLine = p.split('\n').find((l) => l.startsWith('Image ') && l.includes(': the newspaper ('))!;
+    expect(paperLine).toContain(`Except its paper, which is no longer as it shows: it is now as Image ${wet} shows.`);
+  });
+
+  test("a state counts as said only in that one's own image line or its in-between picture's", () => {
+    // The fish's line says "the dreamer's arm" and "wet looking": neither says the dreamer's hair is wet.
+    const sheet = sheetAt();
+    sheet.now = [
+      ...(sheet.now ?? []),
+      {
+        of: 'p1',
+        called: 'the dreamer',
+        name: 'the dreamer',
+        kind: 'person',
+        facts: [{ kind: 'part', part: 'hair', what: 'hair', now: 'wet' }],
+      },
+    ];
+    const p = assembled(sheet);
+    expect(p).toMatch(/Image \d+: the fish \([^)]*the dreamer's arm[^)]*wet looking/);
+    expect(nowLine(p)).toMatch(/the dreamer's hair is wet/);
+    // Said in their own line, it is left out below.
+    const said = sheetAt();
+    said.now = sheet.now;
+    said.inView.find((e) => e.id === 'p1')!.look += '; hair wet';
+    expect(nowLine(assembled(said))).not.toContain('hair');
+  });
+
+  test('a state is said only as whole words: the fish\'s "wet looking" keeps the newspaper\'s "wet" (a678160)', () => {
+    const sheet = sheetAt();
+    sheet.now = sheet.now!.map((x) =>
+      x.of === 't2' ? { ...x, facts: [...x.facts, { kind: 'part', part: 'paper', what: 'paper', now: 'wet' }] } : x,
+    );
+    const p = assembled(sheet);
+    expect(nowLine(p)).toMatch(/the newspaper[^;.]*\bwet\b/);
+    // Everything said in the images' lines: the closing line still says so (6081 m2).
+    expect(closing(assembled(sheetAt('dream-0926-052843-6081', 'm2')))).toContain(
+      'how each one is at this moment, as said',
+    );
+  });
+
+  test('the closing line says "as said" only where something is said below or was left out as said above', () => {
+    const sheet = sheetAt();
+    // Nothing to say of anyone, and nothing left out: what is still so from earlier.
+    sheet.now = [{ of: 't3', called: 'the bicycle', name: 'the bicycle', kind: 'thing', facts: [] }];
+    expect(closing(assembled(sheet))).toContain('what is still so from earlier');
+    // Only the fish's body, said in its in-between picture's line: left out below, and so "as said".
+    const body = sheetAt();
+    body.now = body
+      .now!.map((x) => ({ ...x, facts: x.facts.filter((f) => f.kind === 'part') }))
+      .filter((x) => x.facts.length);
+    const p = assembled(body);
+    expect(nowLine(p)).toBe('');
+    expect(closing(p)).toContain('how each one is at this moment, as said');
   });
 });
 
