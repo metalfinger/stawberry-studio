@@ -1,7 +1,8 @@
 # The harness viewer: plan (draft 2)
 
 Status: draft 1 by the S6 pane (81a3c5e); critiqued by the Mac pane; draft 2 folds the critique in, with the S6
-pane's answers, 29 Sep. Nothing is built until both panes and the owner sign the "Agreed" section at the end.
+pane's answers, and the Mac pane's two amendments to draft 2, 29 Sep. Signed by both panes; nothing is built until
+the owner signs the "Agreed" section at the end.
 
 ## Why
 
@@ -73,7 +74,9 @@ For one dream (frozen, on any machine; live, from `DREAMCHAT_DATA`):
 6. **Images** (critique 4): every sketch, in-between picture and drawn picture is shown wherever its file is on
    this machine. Frozen copies strip their media ids, so they are read from the live copy of the same dream (on the
    Mac, the files the S4 and S5 checks drew from); "not on this machine" only where it is not. The server serves
-   only from the media folder and `runs/viewer/`, by basename, as `serveJudge` does.
+   only from the media folder and `runs/viewer/`, by basename, as `serveJudge` does. The live copy may have moved on since the dream was frozen (a sketch redrawn, a picture
+   made again): each image is matched by item id and version, and where they differ it is shown with the mark "the
+   live copy has changed since this dream was frozen", never silently (amendment a).
 
 Not in the first version: pasting a new transcript (phase two); editing anything from the page; drawing; Jev.
 
@@ -149,6 +152,9 @@ Where each part comes from:
 - **The drawing path** (critique 1b): for every frozen cut, the drawing path's inputs (`plannedInputsOf`, then
   `cutSheet` and `assembleCut`), with everything before the cut drawn and approved, give the same prompt and images
   as the viewer. `refs.test.ts` "the drawing path" does this for one dream; extended to all 15.
+- **In-between pictures and sheets too** (amendment b): each in-between picture's prompt and references are
+  `buildGhosts`/`ghostPrompt`'s own, and each sheet's prompt is the sheet prompt builder's own, byte for byte, in
+  both tests.
 - **Mock-up**: the file the viewer shows is byte for byte the one the drawing path attaches (its sha256).
 - **Verdict hashes**: a words-only change moves only the words hash; a reference change moves the chain hash.
 - The page: its own tests (Mac pane), and a check that no path outside the two folders is served.
@@ -199,7 +205,8 @@ Each side also gets an independent reviewer agent before merge, as every row doe
 
 - The tree splits sequences where the story starts again or jumps (tree.ts). Is that the sequence he means?
 - Which dreams first (proposed: the S4 and S5 check dreams)?
-- One verdict per cut with what is wrong named (draft 2), or three verdicts per cut (the Mac pane's proposal)?
+- One verdict per cut with what is wrong named, or three verdicts per cut? Both panes recommend one (draft 2): the
+  same "read again by what moved", with a third of the decisions.
 
 ## Critique (Mac pane, on draft 1, 29 Sep) and answers
 
@@ -214,17 +221,21 @@ Each side also gets an independent reviewer agent before merge, as every row doe
    copy of the same dream (the frozen copies strip media ids).
 5. Sheets and in-between pictures as full nodes with their prompts, references and verdicts. _Accepted._
 6. Verdicts hashed per aspect, three verdicts per cut. _Accepted in part_: three hashes, and "to read again" by
-   what moved; but one verdict per cut, with the wrong aspect named only when wrong. Open for the owner.
-7. The viewer is necessary, not sufficient; pass 2 on drawn pictures confirms; the report lists the cuts whose
-   chain moved. _Accepted._
-8. Gap 1 with coded reasons; the Mac pane builds it after s5-anchor. _Accepted._
-9. The dreamer's own words beside each cut. _Accepted_: the conversation, searchable, the moment's words
-   highlighted; the exact passage per moment is phase two (moments do not record their turn).
-10. One named profile as "the harness"; the default-prompt diff on request only. _Accepted._
-11. The types: the plan's roles as they are, hashes on verdicts, issues per cut, eye coordinates, what was sent,
-    sheets as nodes. _Accepted._
-12. The page against the fixture while the merges happen; its work starts after the S5 anchor merges. _Accepted._
+   what moved; but one verdict per cut, with the wrong aspect named only when wrong. The Mac pane withdrew three
+   verdicts per cut on draft 2: one key for "right" gives the same with a third of the decisions.
+
+## Amendments (Mac pane, on draft 2, 29 Sep)
+
+a. Images from the live copy of a frozen dream are matched by item id and version, and marked where the live copy
+has changed since the dream was frozen. _Folded in_ (What it shows, 6).
+b. The projection and drawing-path tests cover the in-between pictures and the sheets, byte for byte. _Folded in_
+(Tests). 7. The viewer is necessary, not sufficient; pass 2 on drawn pictures confirms; the report lists the cuts whose
+chain moved. _Accepted._ 8. Gap 1 with coded reasons; the Mac pane builds it after s5-anchor. _Accepted._ 9. The dreamer's own words beside each cut. _Accepted_: the conversation, searchable, the moment's words
+highlighted; the exact passage per moment is phase two (moments do not record their turn). 10. One named profile as "the harness"; the default-prompt diff on request only. _Accepted._ 11. The types: the plan's roles as they are, hashes on verdicts, issues per cut, eye coordinates, what was sent,
+sheets as nodes. _Accepted._ 12. The page against the fixture while the merges happen; its work starts after the S5 anchor merges. _Accepted._
 
 ## Agreed
 
-_Not yet: the S6 pane has signed draft 2; waiting for the Mac pane, then the owner._
+- S6 pane: signed draft 2 (89e1e87), with amendments a and b.
+- Mac pane: signed draft 2 (89e1e87), 29 Sep.
+- Owner: _not yet_.
