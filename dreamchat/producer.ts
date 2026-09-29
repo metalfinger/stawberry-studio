@@ -201,7 +201,7 @@ export type ProducerFn = (transcript: string, previous?: Breakdown) => Promise<{
  * m5 faced "the high round window; outside it l2", and the id reached the picture. Off, the prompt as it was.
  */
 const NAMES_NOT_IDS =
-  '\n- Every word a moment says (action, looks_at, feeling, visual_point, shift, dream, purpose) calls people, places and things by their names ("the old city library", "the dreamer"), never by an id ("l2", "p1").';
+  '\n- Every word a moment says (action, looks_at, feeling, visual_point, shift, dream, purpose) calls people, places and things by their names ("the train station", "the dreamer"), never by an id ("l2", "p1"). So does the "now" of each "leaves" entry.';
 const LOOKS_AT_RULE = "Through the dreamer's eyes it is what they face.";
 export const producerSystem = () =>
   builds('names') ? SYSTEM.replace(LOOKS_AT_RULE, LOOKS_AT_RULE + NAMES_NOT_IDS) : SYSTEM;

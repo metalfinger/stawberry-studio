@@ -9,7 +9,7 @@ import { refsOf } from '../evals/prompt-cases';
 import { loadDream } from '../evals/saved';
 import { producerSystem } from '../producer';
 import { rebuild } from '../plan';
-import { recordsMade } from '../record';
+import { recordsMade, storyRecord } from '../record';
 import type { Session } from '../session';
 import type { TypedReading } from '../typed';
 import { DEFAULTS, pinSwitches, withSwitches } from './fakes';
@@ -148,6 +148,24 @@ describe('ledger 5: names from the story record, and no id in words', () => {
     expect(has(before)).toContain('m5');
     expect(has(after)).toEqual([]);
     expect(after.find((p) => p.id === 'm5')?.prompt).toContain('facing the high round window.');
+  });
+
+  test("a sketch's name is the record's, and the sheet's, where the breakdown's has moved on", () => {
+    // The breakdown renames p2 after its sketch was drawn as "Mr Hale": the picture was drawn as Mr Hale.
+    const s = structuredClone(loadDream('dream-0926-083656-8ceb', false).session as Session);
+    const b = s.draft!.breakdown!;
+    b.people.find((p) => p.id === 'p2')!.name = 'the teacher';
+    const items = s.build!.items.map((i) => (i.id === 'p2' ? { ...i, status: 'ready' as const } : i));
+    const called = (step: string) =>
+      withSwitches({ ...SHEET, DREAMCHAT_ONE_BUILDER: step }, () => storyRecord(b, items).record.elements.p2.called);
+    expect(called('paragraph_ids')).toBe('the teacher');
+    expect(called('names')).toBe('Mr Hale');
+    // The sheet reads the record's: the name the sketch was drawn as.
+    s.build = { ...s.build!, items };
+    const m = withSwitches({ ...SHEET, DREAMCHAT_ONE_BUILDER: 'names' }, () =>
+      rebuild(s).pictures.find((p) => p.sheet?.inView.some((e) => e.id === 'p2')),
+    );
+    expect(m?.sheet?.inView.find((e) => e.id === 'p2')?.name).toBe('Mr Hale');
   });
 
   test('the producer is told to write names, never ids', () => {

@@ -601,7 +601,12 @@ function elementsOf(b: Breakdown, items: Item[], dreamer: string | null, notes: 
     elements[id] = {
       id,
       kind,
-      called: id === dreamer ? 'the dreamer' : pictureName(name ?? id),
+      // One name (S6 row 5): with the builder's names, a sketch's name wins as its words do, the name its
+      // picture was drawn as; the cut sheet reads this one.
+      called:
+        id === dreamer
+          ? 'the dreamer'
+          : pictureName((builds('names') && sketched(it) && it?.name) || name || id),
       name: name ?? id,
       base: drawn ?? own,
       ...(differs ? { stored: own } : {}),

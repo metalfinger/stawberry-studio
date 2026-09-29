@@ -18,6 +18,7 @@ import {
   actionFindings,
   colourTwoWays,
   contentWords,
+  disagreementsOf,
   footprintOf,
   idsInWords,
   kindOfTwice,
@@ -62,6 +63,20 @@ const ON = {
   // The readings are of today's prompts: with the builder's names (S6 row 5), the id below is named.
   DREAMCHAT_ONE_BUILDER: undefined,
 };
+
+describe('the names two sources give', () => {
+  test('one turned into something else, called by what it is now in the tree, is not two names', () => {
+    // 8ceb: Mr Hale is a huge orange octopus from m4 on; the tree calls him so, the sheet says it beside his name.
+    const s = loadDream('dream-0926-083656-8ceb', false).session as Session;
+    const pics = withEnv(ON, () => rebuild(s).pictures);
+    const rec = withEnv(ON, () => storyRecord(s.draft!.breakdown!, s.build!.items).record);
+    const m4 = pics.find((p) => p.id === 'm4')!;
+    const e = m4.sheet!.inView.find((x) => x.id === 'p2')!;
+    expect(e.turned).toContain('octopus');
+    expect(m4.sheet!.tree?.at.find((x) => x.id === 'p2')?.called).toContain('octopus');
+    expect(withEnv(ON, () => disagreementsOf(m4, rec, s.style!))?.names).toEqual([]);
+  });
+});
 
 describe('the clean-ups S6 retires, each with a switch', () => {
   test('unset, none is off; a name not among them is an error, so a misspelt switch never measures nothing', () => {
