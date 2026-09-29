@@ -1138,7 +1138,29 @@ One **cut sheet** per cut is the spine everything is assembled from:
     "continuous" while one from outside becomes "cut, carrying on" (labels only); the crowd (above).
   Measured after the fixes: `bun test` 826 pass, 1 skipped, with every switch unset and every switch on; the corpus,
   every switch of the harness on, 0 of 127 frozen and 0 of 447 live pictures changed against the measure above.
-  *Left, in order:* the re-review; merge into lab ahead of S6 rows 8-16 (the owner's order, 29 Sep); retire the
+  *Re-review (fix first), and the fixes (12fe446):*
+  - *The drawing path's wiring was untested* (drawnFrameOf returning the frame, the rebuild skipping `unedited`, or
+    `wouldBe` only with the camera rules each passed every test). Now: a test on a saved dream (b91f: m2 edits m1,
+    m1 judged wrong through a verdicts file) that the drawing path's mock-up, sheet and prompt, and a rebuild, make m2
+    from its own mock-up with nothing of m1 and no check against m1; `verdicts.ts forgetVerdicts` lets a test point
+    the verdicts elsewhere. Each of the three mutations fails a test.
+  - *An earlier edit was compared at where its own camera would stand*, not the camera its picture is drawn from (the
+    one it edits). The gate now compares the camera each picture is drawn from, read before any cut's references
+    change. Random dreams against 644c55a (the reviewer's generator, 600): without the camera rules the same on all;
+    with them one differs, a room picture now kept that is drawn 1.2 m from the cut's camera.
+  - *Checks against the withheld picture*: a cut made from its own shot drops its checks against the picture it
+    edits, and the judge never checks a picture against one withheld from it (so no repair tells it to keep that
+    picture's view).
+  - *What is withheld was read up to six times in one drawing* (a re-plan each, 1.7-2.4 s on large live dreams, and
+    the mock-up and the sheet could disagree if it changed between): read once when the drawing starts and passed to
+    the mock-up, the sheet, the prompt and the inputs.
+  - *The references eval read the plan's camera, not the drawn one*: it reads the drawn frame's.
+  - *Left*: S9's record of a moment still describes its plan, not the swap (made from the drawn frame, the record
+    would differ from what staleness recomputes and the picture would read stale at once); a dream planned before
+    this change keeps the gap until it is planned again.
+  Measured after: `bun test` 827 pass, 1 skipped, both ways; the corpus 0 of 127 frozen and 0 of 447 live pictures
+  changed; cuts with a camera on a floor plan and no layout anchor, frozen 0, live 0.
+  *Left, in order:* the third review; merge into lab ahead of S6 rows 8-16 (the owner's order, 29 Sep); retire the
   five routing hypotheses. The crowd (heron m4: the mock-up's bare
   figures made real as naked people, "partly", n=1) is a known risk to watch in the owner's reading, not a reason
   to drop the anchor. None of this is proven in pictures: pictures judged by the owner (the viewer's reading, then
