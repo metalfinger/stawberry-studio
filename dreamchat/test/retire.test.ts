@@ -59,6 +59,8 @@ const ON = {
   DREAMCHAT_CUT_SHEET: 'on',
   DREAMCHAT_CAMERA: undefined,
   DREAMCHAT_RETIRE: undefined,
+  // The readings are of today's prompts: with the builder's names (S6 row 5), the id below is named.
+  DREAMCHAT_ONE_BUILDER: undefined,
 };
 
 describe('the clean-ups S6 retires, each with a switch', () => {

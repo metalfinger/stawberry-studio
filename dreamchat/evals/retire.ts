@@ -339,7 +339,15 @@ export function disagreementsOf(p: RebuiltPicture, rec: StoryRecord | null, styl
     const inTree = s.tree?.at.find((x) => x.id === e.id)?.called;
     if (called !== undefined && bareName(called) !== bareName(e.name))
       names.push(`${e.id}: "${e.name}" / record "${called}"`);
-    if (inTree !== undefined && bareName(pictureName(inTree)) !== bareName(e.name) && e.id !== s.dreamer.id)
+    // The tree calls one who has turned into something else by what they are now, as the sheet says it beside
+    // their name ("it has turned into …"): one fact, said one way by each, not two names.
+    const treeSays = (x: string) => bareName(pictureName(x));
+    if (
+      inTree !== undefined &&
+      treeSays(inTree) !== bareName(e.name) &&
+      (e.turned === null || treeSays(inTree) !== treeSays(e.turned)) &&
+      e.id !== s.dreamer.id
+    )
       names.push(`${e.id}: "${e.name}" / tree "${inTree}"`);
     const kind = s.record?.kinds[e.id];
     if (kind && !KIND_OF_SAID[e.said]?.includes(kind)) kinds.push(`${e.id}: ${e.said} / record ${kind}`);

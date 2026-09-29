@@ -7,6 +7,7 @@ import { goingIn, handsIn, openingsIn, selfIn, waterLevel } from '../camera';
 import { BUILDER_STEPS, builderSteps, builds, oneBuilder, withRetired } from '../cleanups';
 import { refsOf } from '../evals/prompt-cases';
 import { loadDream } from '../evals/saved';
+import { producerSystem } from '../producer';
 import { rebuild } from '../plan';
 import { recordsMade } from '../record';
 import type { Session } from '../session';
@@ -128,6 +129,34 @@ describe("ledger 4: the assembler's paragraph ids and each image's subjects, rea
         },
       );
     }
+  });
+});
+
+describe('ledger 5: names from the story record, and no id in words', () => {
+  // library-1 (fdd7) m5: the producer wrote "the high round window; outside it l2", and the id reached the prompt.
+  const id = 'dream-0926-050424-fdd7';
+  const m5 = (step: string) =>
+    withSwitches(
+      { ...SHEET, DREAMCHAT_ONE_BUILDER: step },
+      () => rebuild(structuredClone(loadDream(id, false).session as Session)).pictures,
+    );
+
+  test("an id the producer wrote into a moment's words is its name once the dream is read", () => {
+    const before = m5('paragraph_ids');
+    const after = m5('names');
+    const has = (ps: typeof before) => ps.filter((p) => /(?<![\w-])l2(?![\w-])/.test(p.prompt ?? '')).map((p) => p.id);
+    expect(has(before)).toContain('m5');
+    expect(has(after)).toEqual([]);
+    expect(after.find((p) => p.id === 'm5')?.prompt).toContain('facing the high round window.');
+  });
+
+  test('the producer is told to write names, never ids', () => {
+    withSwitches({ DREAMCHAT_ONE_BUILDER: 'paragraph_ids' }, () =>
+      expect(producerSystem()).not.toContain('never by an id'),
+    );
+    withSwitches({ DREAMCHAT_ONE_BUILDER: 'names' }, () =>
+      expect(producerSystem()).toContain('never by an id ("l2", "p1")'),
+    );
   });
 });
 

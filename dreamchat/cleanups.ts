@@ -80,6 +80,10 @@ export const BUILDER_STEPS: readonly string[] = [
   // 3. One image cap: frames.ts MAX_IMAGES, the same number everywhere, so no switch.
   // 4. The assembler's paragraph ids and each image's subjects, read by the gate and the evals.
   'paragraph_ids',
+  // 5. Names from one source, the story record's `called`, and no id in words: an id the producer wrote into a
+  //    moment's words is its name once, when the dream is read (producer.ts namesForIds, before only with the
+  //    camera rules), and the producer is told to write names.
+  'names',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;
