@@ -15,7 +15,7 @@ context mirrors it.
 | S1 The story record carries state | Done | faults met 6/33 to 18/33, guards 36/36; with Claude reading what the moments imply, 19/33 and S1's cases 12/13 |
 | S2 Checks only log | Done | whole-dream replays on Claude: logging drew 127/127 moments, 0 held or reworded, Jev ~41 calls a dream (acting: 14 undrawn, 54 reworded, 306-324 calls); logging is the default since 27 Sep (`DREAMCHAT_CHECKS=act` brings acting back) |
 | S3 One cut sheet per picture | Done | the sheet's prompt equals the old builder's on 1052 rebuilds and 48 of 48 live builds |
-| S4 Camera rules | Merged behind DREAMCHAT_CAMERA (off; needs the cut sheet on); picture check judged | owner's blind A/B on 20 moments ($3): new right 15/20 against old 10/20; faults put right 5/7; guards 10/13 new, 9/13 old; 5 misses being traced to root causes |
+| S4 Camera rules | Merged behind DREAMCHAT_CAMERA (off; needs the cut sheet on); picture check judged and its misses traced | owner's blind A/B on 20 moments ($3, spent): new right 15/20 against old 10/20; faults put right 5/7; guards 10/13 new, 9/13 old; 5 misses traced to root causes (see "Where we stopped") |
 | S5 References and in-between pictures | Built on `s5-refs` behind DREAMCHAT_REFS (off; needs the cut sheet on); reviewed, review fixes in; picture check proposed (20 pictures, $3.00), not drawn | the reference check, record and sheet on, frozen / live: a subject by two images 40 / 91 moments to 0 / 0; waited for and never sent 67 / 216 to 0 / 0; from another side 2 / 8 to 0 / 0; in-between pictures not needed under the owner's rule 17 of 29 / 32 of 67 to 0 of 14 / 1 of 74. Off: 0 of 1,864 pictures moved. Prompt cases: guards 36/36, counted 19/33 and 27/33 (camera) as before, hypotheses 5 to 10 and 7 to 12 of 18 |
 | S6 One prompt builder, clean-ups retired | Test written; typed readings of the 526 moments done (branch `s6-readings`) | a ledger of 16 clean-ups, S4's 4 word lists and 14 duplicates, in order; every moment says a fact twice (frozen 2350 facts, live 6595), 21 of 115 frozen moments say an action no picture shows (live 134 of 411); built after S5 |
 | S7 Jev checks routed by tags | Done (routing switch off; every Jev reading logs) | measured on the 122 pictures the owner judged (as sent): the gate and "storyboard complete?" are at chance (AUC 0.36-0.56); 16 library questions not measurable yet; 0 of 28 checks earn acting; a check earns acting only at its measured bar, counted by moments. Run the picture checkpoints with `DREAMCHAT_JEV_ROUTED=on` so the library questions' readings join the owner's new verdicts |
@@ -23,8 +23,8 @@ context mirrors it.
 | S9 Record of what was drawn, staleness | Merged behind DREAMCHAT_AS_DRAWN (off); fresh send (DREAMCHAT_FRESH_SEND, off) in review | every picture keeps what it was sent; rebuild as sent 57/61 to 61/61 moments, 6/16 to 16/16 in-between pictures; 258/258 stale pictures found after 56 changes, 0 false; switch or code drift reads unknown, never stale; fresh send: pictures drawn behind the dream 14 to 0 on ten redrawn dreams |
 | S10 Paid benchmark judged by the owner | Not started | about $10 |
 
-Money: $21 left of $30; the S4 picture check (about $3) is approved and runs when S4 merges. Writer model: Claude
-(`DREAMCHAT_WRITER=claude`).
+Money: $18 left of $30 — the S4 picture check ($3) has been drawn and judged (see "Where we stopped" below for the
+current figure and what's next). Writer model: Claude (`DREAMCHAT_WRITER=claude`).
 
 ## Where we stopped (27-29 Sep): read this to resume
 
@@ -133,9 +133,9 @@ General film-making rules apply to every dream; nothing is patched for one dream
    notification. Otherwise keep going step by step until the whole harness is ready.
 7. **Improve from every test.** When a step's tests or review find a gap or a better way, fix it (as a general
    rule) before moving on, and log what was found and what changed.
-8. **Money:** $21 is left and there is no more after it. Spend only where a picture is the only way to prove a
-   step (planned: about $3 after S4, about $3 after S5, about $10 for S10), redrawing only the moments that failed
-   for that reason, old against new, judged by the owner. Record every cost in the log.
+8. **Money:** $18 is left (of $30) and there is no more after it — the S4 check ($3) is spent. Spend only where a
+   picture is the only way to prove a step (planned: about $3 for S5, about $10 for S10), redrawing only the
+   moments that failed for that reason, old against new, judged by the owner. Record every cost in the log.
 
 ## The system being built
 
