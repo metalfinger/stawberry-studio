@@ -213,8 +213,8 @@ export type ViewVerdict = {
   wrong?: ('layout' | 'references' | 'words')[];
   note: string;
   hashes: ViewHashes;
-  /** The prompt it was given on, so a later change to the words alone can be shown as a diff and confirmed. */
-  shown?: { prompt: string };
+  /** The prompt and facts it was given on, so a later change to the words or facts alone can be shown and confirmed. */
+  shown?: { prompt: string; facts?: unknown };
   commit: string;
   at: string;
 };

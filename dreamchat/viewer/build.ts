@@ -1,51 +1,95 @@
 // The harness viewer's dreams, made for the page (VIEWER_PLAN.md): each saved dream as viewer/data.ts gives it under
-// the harness's profile, with every sketch and picture it names found on this machine. A frozen copy keeps no files,
-// so its images are read from the live copy of the same dream (the saved conversation in state/), and one the live
-// copy has drawn again since the dream was frozen is marked so. Nothing is drawn and no model is asked.
+// the harness's profile, with every sketch and picture it names found on this machine. A frozen copy keeps no files
+// and no conversation, so both are read from the live copy of the same dream (its saved conversation), and an image
+// the live copy has drawn again since the dream was frozen, or a moment it tells otherwise, is marked so. Nothing is
+// drawn and no model is asked.
 //
 //   bun run viewer/build.ts                        every frozen dream (evals/saved.ts frozenDreams)
 //   bun run viewer/build.ts <dream id> …           these, frozen
 //   bun run viewer/build.ts --live <dream id> …    these, live (the saved conversation itself)
 //
-// Writes runs/viewer/<dream>/view.json and its mock-ups; the page (viewer/serve.ts) reads them.
+// Writes runs/viewer/<dream>/ (frozen) or runs/viewer/<dream>.live/ (live): view.json, its mock-ups, and a link to
+// each picture it shows. The page (viewer/serve.ts) serves a dream's folder and nothing else.
 
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
-import { basename, join } from 'node:path';
+import { existsSync, lstatSync, mkdirSync, readdirSync, renameSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
+import { basename, dirname, join } from 'node:path';
 import type { Session } from '../session';
 import type { Item } from '../sheets';
-import type { ViewFile } from './types';
+import type { ViewDream, ViewFile } from './types';
 
 const HERE = join(import.meta.dir, '..');
 export const VIEWS = join(HERE, 'runs', 'viewer');
 
-/** Where this machine keeps the dream chat's saved conversations and their pictures: DREAMCHAT_DATA's, else here. */
-export const dataDir = () => process.env.DREAMCHAT_DATA ?? HERE;
-export const mediaDir = () => join(dataDir(), 'strawberry-home', 'media');
+/** The folder a dream's view is kept in, and its answers are named by: live views apart from frozen ones. */
+export const viewKey = (id: string, live: boolean) => (live ? `${id}.live` : id);
 
-/** A picture's file, by its name in the media folder (the store names each by its content hash). */
-const fileNamed = (name: string | undefined): ViewFile =>
-  name && existsSync(join(mediaDir(), basename(name)))
-    ? { name: basename(name), sha256: basename(name).replace(/\.[a-z0-9]+$/i, '') }
-    : null;
+/** A saved conversation's pictures: the media folder beside its state folder (`<data>/strawberry-home/media`). */
+export const mediaOf = (conversation: string) => join(dirname(dirname(conversation)), 'strawberry-home', 'media');
 
 /**
- * The file of each sketch and picture a dream names, as this machine has it. `live`, where there is one, is the saved
- * conversation of the same dream: for a frozen copy (which keeps no media) the image is its item there, found by its
- * id (an in-between picture by the change it shows), and marked `changed` where the live copy's take is another.
+ * The file of each sketch and picture a dream names, as this machine has it, in `media`. `live`, where there is one,
+ * is the saved conversation of the same dream: for a frozen copy (which keeps no media) the image is its item there,
+ * found by its id (an in-between picture by the change it shows), and marked `changed` where the live copy's take is
+ * another, or where it tells that moment otherwise.
  */
-export function filesOf(live: Session | null): (item: Item) => ViewFile {
+export function filesOf(live: Session | null, media: string): (item: Item) => ViewFile {
   const all = [...(live?.build?.items ?? []), ...(live?.build?.frames ?? [])];
+  const found = (name: string | undefined): ViewFile =>
+    name && existsSync(join(media, basename(name)))
+      ? { name: basename(name), sha256: basename(name).replace(/\.[a-z0-9]+$/i, '') }
+      : null;
   const sameGhost = (a: Item, b: Item) =>
-    a.kind === 'ghost' && b.kind === 'ghost' && !!a.ghost && !!b.ghost && a.ghost.of === b.ghost.of && a.ghost.change === b.ghost.change;
+    a.kind === 'ghost' &&
+    b.kind === 'ghost' &&
+    !!a.ghost &&
+    !!b.ghost &&
+    a.ghost.of === b.ghost.of &&
+    a.ghost.change === b.ghost.change;
+  const told = (x: Item) => x.fields?.action?.value ?? null;
   return (item) => {
-    if (item.mediaPath) return fileNamed(item.mediaPath);
-    const there = all.find((x) => x.id === item.id && x.kind === item.kind && (x.kind !== 'ghost' || sameGhost(x, item)))
-      ?? all.find((x) => sameGhost(x, item));
-    const file = fileNamed(there?.mediaPath);
-    return file && there && there.version !== item.version ? { ...file, changed: true } : file;
+    if (item.mediaPath) return found(item.mediaPath);
+    const there =
+      all.find((x) => x.id === item.id && x.kind === item.kind && (x.kind !== 'ghost' || sameGhost(x, item))) ??
+      all.find((x) => sameGhost(x, item));
+    const file = found(there?.mediaPath);
+    if (!file || !there) return file;
+    const other = there.version !== item.version || (item.kind === 'cut' && told(there) !== told(item));
+    return other ? { ...file, changed: true } : file;
   };
 }
 
+/** Every file a view names (its sheets, cuts, references, in-between pictures, the night's pictures). */
+export function filesIn(view: ViewDream): string[] {
+  const out = new Set<string>();
+  const add = (f: ViewFile | undefined) => {
+    if (f) out.add(f.name);
+  };
+  for (const s of view.sheets) add(s.file);
+  for (const g of view.ghosts) {
+    add(g.file);
+    for (const r of g.refs) add(r.file);
+  }
+  for (const c of view.cuts) {
+    for (const r of c.refs) add(r.file);
+    add(c.drawn?.file);
+  }
+  return [...out];
+}
+
+/** Written whole: a temporary file, then renamed over the old. */
+function writeWhole(path: string, text: string) {
+  const tmp = `${path}.${process.pid}.tmp`;
+  writeFileSync(tmp, text);
+  renameSync(tmp, path);
+}
+
+const isLink = (path: string) => {
+  try {
+    return lstatSync(path).isSymbolicLink();
+  } catch {
+    return false;
+  }
+};
 
 if (import.meta.main) {
   // The writer the readings were made with, set before anything reads it (the typed readings are keyed by it).
@@ -54,39 +98,66 @@ if (import.meta.main) {
   // The harness as it is meant to run: every switch of the profile, whatever the shell has.
   Object.assign(process.env, PROFILE);
   const { frozenDreams, loadDream } = await import('../evals/saved');
-  const frozenIds = frozenDreams;
   const args = process.argv.slice(2);
   const live = args.includes('--live');
   const named = args.filter((a) => !a.startsWith('--'));
-  const ids = named.length ? named : frozenIds();
-  const commit = Bun.spawnSync(['git', 'rev-parse', '--short', 'HEAD'], { cwd: HERE }).stdout.toString().trim();
+  const ids = named.length ? named : frozenDreams();
+  const git = (...a: string[]) => Bun.spawnSync(['git', ...a], { cwd: HERE }).stdout.toString().trim();
+  // The commit, marked where the tree has changes of its own: the view is not quite what that commit makes.
+  const commit = `${git('rev-parse', '--short', 'HEAD')}${git('status', '--porcelain', '--untracked-files=no') ? '-dirty' : ''}`;
   let failed = 0;
   for (const id of ids) {
     try {
-      const s = loadDream(id, live).session as Session;
-      let copy: Session | null = null;
-      if (live) copy = s;
-      else
+      const dream = loadDream(id, live);
+      let copy: { session: Session; path: string } | null = live
+        ? { session: dream.session as Session, path: dream.path }
+        : null;
+      if (!copy)
         try {
-          copy = loadDream(id, true).session as Session;
+          const d = loadDream(id, true);
+          copy = { session: d.session as Session, path: d.path };
         } catch {
           copy = null;
         }
-      const { view, files } = viewDream(await withReadings(s), {
+      const media = copy ? mediaOf(copy.path) : '';
+      const { view, files } = viewDream(await withReadings(dream.session as Session), {
         id,
         source: live ? 'live' : 'frozen',
         commit,
         mockUps: true,
-        fileOf: filesOf(copy),
+        fileOf: filesOf(copy?.session ?? null, media),
       });
-      const dir = join(VIEWS, id);
+      // The dreamer's own words: a frozen copy keeps none, its live copy does. Never given to the rebuild: the story
+      // record reads the dreamer's messages, and the frozen dream is measured without them.
+      const turns = (copy?.session as { transcript?: { role: string; content: string }[] } | undefined)?.transcript;
+      if (!view.words && turns?.length)
+        view.words = turns.map((t, i) => ({
+          turn: i,
+          who: t.role === 'user' ? ('dreamer' as const) : ('listener' as const),
+          text: t.content,
+        }));
+      const dir = join(VIEWS, viewKey(id, live));
       mkdirSync(dir, { recursive: true });
-      writeFileSync(join(dir, 'view.json'), `${JSON.stringify(view, null, 1)}\n`);
+      // Its mock-ups, and a link to each picture it shows: the page serves this folder and nothing else.
       for (const [name, png] of Object.entries(files)) writeFileSync(join(dir, name), png);
-      const images = [...view.cuts.flatMap((c) => c.refs), ...view.ghosts.flatMap((g) => g.refs)];
+      const linked = filesIn(view);
+      for (const name of linked) {
+        const at = join(dir, name);
+        if (existsSync(at) || isLink(at)) unlinkSync(at);
+        symlinkSync(join(media, name), at);
+      }
+      // Links left from an earlier build of this dream that its view no longer names.
+      for (const f of readdirSync(dir)) if (!linked.includes(f) && isLink(join(dir, f))) unlinkSync(join(dir, f));
+      writeWhole(join(dir, 'view.json'), `${JSON.stringify(view, null, 1)}\n`);
+      const images = [...view.cuts.flatMap((c) => c.refs), ...view.ghosts.flatMap((g) => g.refs)].filter(
+        (x) => x.source !== 'mockup',
+      );
+      const on = images.filter((x) => x.file).length;
       console.log(
-        `${id}: ${view.cuts.length} cuts, ${view.ghosts.length} in-between pictures, ${view.sheets.length} sheets; ` +
-          `${images.filter((x) => x.file).length} of ${images.length} images on this machine${copy ? '' : ' (no live copy)'}; ` +
+        `${viewKey(id, live)}: ${view.cuts.length} cuts, ${view.ghosts.length} in-between pictures, ${view.sheets.length} sheets; ` +
+          `${on} of ${images.length} images on this machine${copy ? '' : ' (no live copy)'}` +
+          `${copy && images.length && !on ? ` (none in ${media})` : ''}; ` +
+          `${view.words ? `${view.words.length} turns of the conversation` : 'no conversation'}; ` +
           `profile ${view.header.profile.full ? 'full' : 'NOT full'}`,
       );
     } catch (e) {

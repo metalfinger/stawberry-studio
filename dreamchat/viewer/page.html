@@ -151,6 +151,9 @@ aside.words .turns { overflow: auto; padding: 0 14px 20px; }
 .turn.dreamer .text { border-left: 3px solid var(--accent); padding-left: 8px; }
 mark { background: color-mix(in srgb, var(--unsure) 30%, transparent); color: inherit; border-radius: 2px; }
 .empty { padding: 60px 20px; color: var(--muted); max-width: 60ch; }
+.scene-line { font-size: 12.5px; color: var(--muted); margin: 0 0 6px; }
+.overview .kv { max-width: 1000px; }
+.gone li { color: var(--muted); }
 @media (prefers-reduced-motion: reduce) { aside.words { transition: none; } }
 @media (max-width: 760px) { main.split { grid-template-columns: 1fr; } nav.tree { max-height: 40vh; border-right: 0; border-bottom: 1px solid var(--rule); } }
 </style>
@@ -175,8 +178,10 @@ mark { background: color-mix(in srgb, var(--unsure) 30%, transparent); color: in
 </aside>
 <script>
 'use strict';
-// State: the dream shown, its verdicts and their states, and the node selected.
-let D = null, A = null, S = new Map(), order = [], cur = null, draft = { verdict: null, wrong: new Set(), note: '' };
+// State: the dream shown (its folder key, view, verdicts and their states) and the node selected.
+let K = null, D = null, A = null, S = new Map(), order = [], cur = null;
+let draft = { verdict: null, wrong: new Set(), note: '', noteEdited: false };
+const OVERVIEW = '#dream';
 const $ = (id) => document.getElementById(id);
 const el = (tag, attrs = {}, ...kids) => {
   const e = document.createElement(tag);
@@ -187,7 +192,14 @@ const el = (tag, attrs = {}, ...kids) => {
   for (const k of kids.flat()) if (k !== null && k !== undefined && k !== false) e.append(k instanceof Node ? k : document.createTextNode(String(k)));
   return e;
 };
-const img = (file, alt) => file ? el('img', { src: `/img/${encodeURIComponent(D.header.dream)}/${encodeURIComponent(file.name)}`, alt, loading: 'lazy', class: 'shot-img' }) : null;
+const src = (file) => `/img/${encodeURIComponent(K)}/${encodeURIComponent(file.name)}`;
+// A picture, or where it cannot be loaded, a plain word that says so (never a broken image).
+const picture = (file, alt, cls = 'shot-img') => {
+  const i = el('img', { src: src(file), alt, loading: 'lazy', class: cls });
+  i.addEventListener('error', () => i.replaceWith(el('div', { class: 'none', text: 'The picture could not be loaded here' })), { once: true });
+  return i;
+};
+const changedFlag = (file) => file?.changed ? el('span', { class: 'flag changed', title: 'The live copy drew this again, or tells this moment otherwise, since the dream was frozen', text: 'redrawn since frozen' }) : null;
 
 // Theme: the viewer's own choice over the system's, remembered on this machine only.
 try { const t = localStorage.getItem('viewer-theme'); if (t) document.documentElement.dataset.theme = t; } catch {}
@@ -199,23 +211,26 @@ $('themeBtn').onclick = () => {
   try { localStorage.setItem('viewer-theme', next); } catch {}
 };
 
-async function loadDreams() {
-  const list = await (await fetch('/api/dreams')).json();
+async function start() {
+  const hash = new URLSearchParams(location.hash.slice(1));
+  const want = hash.get('d');
+  // The dream the address names is asked for at once, beside the list: neither waits for the other.
+  const [list] = await Promise.all([fetch('/api/dreams').then((r) => r.json()), want ? open(want, hash.get('n')) : null]);
   const sel = $('dream');
-  sel.replaceChildren(...list.map((d) => el('option', { value: d.id, text: `${d.title} · ${d.id.slice(-4)} · ${d.cuts} cuts${d.fixture ? ' · fixture' : ''}` })));
-  if (!list.length) { $('panel').replaceChildren(el('div', { class: 'empty', text: 'No dream has a view yet. Make them with: bun run viewer/build.ts' })); return; }
-  const want = new URLSearchParams(location.hash.slice(1)).get('d');
-  sel.value = list.some((d) => d.id === want) ? want : list[0].id;
+  sel.replaceChildren(...list.map((d) => el('option', { value: d.key, text: `${d.title} · ${d.id.slice(-4)}${d.source === 'live' ? ' · live' : ''} · ${d.cuts} cuts${d.fixture ? ' · fixture' : ''}` })));
   sel.onchange = () => open(sel.value);
-  await open(sel.value, new URLSearchParams(location.hash.slice(1)).get('n'));
+  if (!list.length) { $('panel').replaceChildren(el('div', { class: 'empty', text: 'No dream has a view yet. Make them with: bun run viewer/build.ts' })); return; }
+  if (want && list.some((d) => d.key === want)) sel.value = want;
+  else { sel.value = list[0].key; await open(list[0].key); }
 }
 
-async function open(id, node) {
+async function open(key, node) {
   $('panel').replaceChildren(el('div', { class: 'empty', text: 'Reading the dream…' }));
-  const r = await fetch(`/api/dream?id=${encodeURIComponent(id)}`);
+  const r = await fetch(`/api/dream?key=${encodeURIComponent(key)}`);
   const body = await r.json();
   if (!r.ok) { $('panel').replaceChildren(el('div', { class: 'empty', text: body.error })); return; }
-  D = body.view; A = body.answers; setStates(body.states);
+  K = body.key; D = body.view; A = body.answers; setStates(body.states);
+  if ($('dream').value !== K) $('dream').value = K;
   renderFacts(); renderTree(); renderWords();
   select(node && order.includes(node) ? node : order.find((n) => D.cuts.some((c) => c.id === n)) ?? order[0]);
 }
@@ -234,43 +249,42 @@ const stateWords = (node) => {
   const v = { right: 'Right', wrong: 'Wrong', unsure: 'Unsure' }[s.verdict];
   if (s.state === 'current') return `${v}, as read`;
   if (s.state === 'read again') return `${v} before; read again: its images, mock-up or camera changed`;
-  if (s.state === 'confirm') return `${v} before; confirm: only its ${s.moved.join(' and ')} changed`;
+  if (s.state === 'confirm') return `${v} before; confirm: only its ${s.moved.join(' and ')} changed (d shows how)`;
   return v;
 };
 
 function renderFacts() {
   const h = D.header;
-  const bits = [
-    el('span', {}, el('b', { text: D.header.title })),
+  $('facts').replaceChildren(
+    el('span', {}, el('b', { text: h.title })),
     el('span', { class: 'pill', text: h.source }),
     el('span', { class: 'mono', text: `commit ${h.commit}` }),
     el('span', { class: `pill${h.profile.full ? '' : ' warn'}`, text: h.profile.full ? 'the full harness' : 'NOT the full harness' }),
-    el('span', { text: 'Each cut as it will be sent once everything before it is drawn and approved' }),
-  ];
-  $('facts').replaceChildren(...bits);
+    el('span', { text: 'Each cut as it will be sent once everything before it is drawn and approved' }));
 }
 
-function row(node, id, what) {
-  return el('button', { class: 'row', type: 'button', 'data-node': node, onclick: () => select(node) },
+function row(node, id, what, title) {
+  return el('button', { class: 'row', type: 'button', 'data-node': node, title, onclick: () => select(node) },
     el('span', { class: dotClass(node) }), el('span', { class: 'id', text: id }), el('span', { class: 'what', text: what }));
 }
 
 function renderTree() {
   const cutsById = new Map(D.cuts.map((c) => [c.id, c]));
-  const parts = [el('h2', { text: 'Sheets' })];
-  order = [];
+  const parts = [row(OVERVIEW, '', 'The dream as a whole', 'Its style, what the plan flags for the whole dream, and the switches')];
+  order = [OVERVIEW];
+  parts.push(el('h2', { text: 'Sheets' }));
   for (const s of D.sheets) { parts.push(row(s.key, s.id, `${s.name}${s.drawn ? '' : ' · not drawn yet'}`)); order.push(s.key); }
   parts.push(el('h2', { text: 'The dream' }));
   for (const q of D.tree) {
     const g = el('div', { class: 'group' }, el('div', { class: 'label', text: `Sequence from ${q.startsAt}${q.splitBy === 'jump' ? ' (a jump)' : ''}` }));
     for (const sc of q.scenes) {
-      g.append(el('div', { class: 'label' }, el('span', { class: 't', text: sc.title }), sc.tags.length ? ` · ${sc.tags.join(', ')}` : ''));
+      g.append(el('div', { class: 'label', title: `${sc.place} · ${sc.mood}` }, el('span', { class: 't', text: sc.title }), sc.mood ? ` · ${sc.mood}` : ''));
       for (const sh of sc.shots) {
-        const box = el('div', { class: 'shot' }, el('div', { class: 'label mono', text: sh.id }));
+        const box = el('div', { class: 'shot' }, el('div', { class: 'label mono', title: sh.tags.join(', '), text: sh.tags.length ? `${sh.id} · ${sh.tags.join(', ')}` : sh.id }));
         for (const id of sh.cuts) {
           const c = cutsById.get(id); if (!c) continue;
           const role = (c.tags.find((t) => t.startsWith('role:')) ?? '').slice(5);
-          box.append(row(id, id, `${role ? role.replace('_', ' ') + ' · ' : ''}${c.moment.action}`));
+          box.append(row(id, id, `${role ? role.replace('_', ' ') + ' · ' : ''}${c.moment.action}`, c.moment.action));
           order.push(id);
         }
         g.append(box);
@@ -289,30 +303,56 @@ function markCurrent() {
   for (const b of document.querySelectorAll('nav.tree .row')) b.setAttribute('aria-current', b.dataset.node === cur ? 'true' : 'false');
   const b = document.querySelector(`nav.tree .row[data-node="${CSS.escape(cur)}"]`);
   if (b) b.scrollIntoView({ block: 'nearest' });
-  const p = new URLSearchParams({ d: D.header.dream, n: cur });
-  history.replaceState(null, '', `#${p}`);
+  history.replaceState(null, '', `#${new URLSearchParams({ d: K, n: cur })}`);
 }
 
 function select(node) {
   cur = node;
   const v = A?.verdicts?.[node];
-  draft = { verdict: null, wrong: new Set(v?.wrong ?? []), note: v?.note ?? '' };
+  draft = { verdict: null, wrong: new Set(v?.wrong ?? []), note: v?.note ?? '', noteEdited: false };
   markCurrent();
   const cut = D.cuts.find((c) => c.id === node);
   const ghost = D.ghosts.find((g) => g.id === node);
   const sheet = D.sheets.find((s) => s.key === node);
-  const body = cut ? cutPanel(cut) : ghost ? ghostPanel(ghost) : sheet ? sheetPanel(sheet) : [el('div', { class: 'empty', text: 'Nothing here.' })];
-  $('panel').replaceChildren(...body, verdictBar());
+  const body = node === OVERVIEW ? overviewPanel() : cut ? cutPanel(cut) : ghost ? ghostPanel(ghost) : sheet ? sheetPanel(sheet) : [el('div', { class: 'empty', text: 'Nothing here.' })];
+  $('panel').replaceChildren(...body, node === OVERVIEW ? null : verdictBar());
   $('panel').scrollTop = 0;
   highlightWords();
+}
+
+const nameOf = (id) => D.sheets.find((s) => s.id === id)?.name ?? id;
+const nodeOf = (id) => D.cuts.find((c) => c.id === id) ?? D.ghosts.find((g) => g.id === id) ?? D.sheets.find((s) => s.key === id);
+const jump = (id) => nodeOf(id) ? el('button', { class: 'jump', type: 'button', onclick: () => select(id), text: id }) : el('span', { class: 'mono', text: id });
+
+// ── the dream as a whole ──────────────────────────────────────────────────────
+function overviewPanel() {
+  const gone = [...S.values()].filter((s) => s.state === 'gone');
+  const counts = {};
+  for (const s of S.values()) { const k = s.state === 'current' ? s.verdict : s.state; counts[k] = (counts[k] ?? 0) + 1; }
+  return [
+    el('div', { class: 'node-head' }, el('h2', { text: D.header.title }), el('span', { class: 'id', text: D.header.dream })),
+    el('div', { class: 'block overview' }, el('h3', { text: 'What this view is' }),
+      el('dl', { class: 'kv' },
+        el('dt', { text: 'Made' }), el('dd', { text: `${new Date(D.header.made).toLocaleString()} at commit ${D.header.commit}` }),
+        el('dt', { text: 'Taken as given' }), el('dd', { text: D.header.assumes === 'all drawn and approved' ? 'Each cut as it will be sent once every picture before it is drawn and approved, in story order. On the night, a cut was sent only what was drawn by then.' : D.header.assumes }),
+        el('dt', { text: 'The harness' }), el('dd', { text: D.header.profile.full ? `the full harness (${D.header.profile.name})` : `NOT the full harness (${D.header.profile.name}): read the switches below` }),
+        el('dt', { text: 'Switches' }), el('dd', { class: 'mono', text: Object.entries(D.header.switches).map(([k, v]) => `${k}=${v}`).join('  ') || 'none set' }),
+        el('dt', { text: 'Style' }), el('dd', { text: D.style.name }),
+        el('dt', { text: 'Style, as told' }), el('dd', { text: D.style.told.join(' ') || '—' }),
+        el('dt', { text: 'Read so far' }), el('dd', { text: Object.entries(counts).map(([k, n]) => `${n} ${k}`).join(', ') }))),
+    D.issues.length ? el('div', { class: 'block issues' }, el('h3', {}, 'What the plan flags for the dream', el('span', { class: 'count', text: `${D.issues.length}` })), el('ul', {}, D.issues.map((i) => el('li', { text: i })))) : null,
+    gone.length ? el('div', { class: 'block gone' }, el('h3', { text: 'Verdicts on what this view no longer has' }), el('ul', {}, gone.map((g) => el('li', { text: `${g.node}: ${g.verdict}` })))) : null,
+  ].filter(Boolean);
 }
 
 // ── a cut ─────────────────────────────────────────────────────────────────────
 function cutPanel(c) {
   const out = [];
+  const scene = D.tree.flatMap((q) => q.scenes).find((sc) => sc.id === c.scene);
   out.push(el('div', { class: 'node-head' }, el('h2', { text: `Picture ${c.order}` }), el('span', { class: 'id', text: c.id }),
     el('span', { class: 'muted', text: `${c.scene} · ${c.shot}` }),
     c.treeDiffers ? el('span', { class: 'pill warn', title: c.treeDiffers, text: `the tree groups it otherwise: ${c.treeDiffers}` }) : null));
+  if (scene) out.push(el('p', { class: 'scene-line', text: `${scene.title}${scene.mood ? ` — ${scene.mood}` : ''}` }));
   out.push(el('p', { class: 'action', text: c.moment.action }));
   out.push(el('dl', { class: 'kv' },
     el('dt', { text: 'Looks at' }), el('dd', { text: c.moment.looksAt || '—' }),
@@ -326,12 +366,12 @@ function cutPanel(c) {
   // The camera.
   const prev = c.prevCut ? D.cuts.find((x) => x.id === c.prevCut) : null;
   const mock = c.mockUp
-    ? el('figure', {}, img(c.mockUp, `The grey mock-up of ${c.id}`),
-        el('figcaption', {}, 'The grey mock-up, rendered from the floor plan', el('span', { class: `flag ${c.mockUp.sent ? 'sent' : 'not'}`, text: c.mockUp.sent ? 'sent as Image 1' : 'not sent' })))
-    : el('figure', {}, el('div', { class: 'none', text: c.floor ? 'No mock-up: no camera could be placed for it' : 'No mock-up: no floor plan for this scene' }), el('figcaption', { text: 'The grey mock-up' }));
+    ? el('figure', {}, picture(c.mockUp, `The grey mock-up of ${c.id}`),
+        el('figcaption', {}, 'The grey mock-up, rendered from the floor plan', el('span', { class: `flag ${c.mockUp.sent ? 'sent' : 'not'}`, text: c.mockUp.sent ? 'sent as Image 1' : 'not sent' }), el('span', { class: 'mono faint', title: c.mockUp.sha256, text: c.mockUp.sha256.slice(0, 10) })))
+    : el('figure', {}, el('div', { class: 'none', text: 'No mock-up: no camera worked out for this cut' }), el('figcaption', { text: 'The grey mock-up' }));
   const before = prev
-    ? el('figure', {}, prev.mockUp ? img(prev.mockUp, `The mock-up of ${prev.id}`) : el('div', { class: 'none', text: `${prev.id} has no mock-up` }),
-        el('figcaption', {}, 'The cut before: ', el('button', { class: 'jump', type: 'button', onclick: () => select(prev.id), text: prev.id }), el('span', { class: 'faint', text: prev.moment.action.slice(0, 70) })))
+    ? el('figure', {}, prev.mockUp ? picture(prev.mockUp, `The mock-up of ${prev.id}`) : el('div', { class: 'none', text: `${prev.id} has no mock-up` }),
+        el('figcaption', {}, 'The cut before: ', jump(prev.id), el('span', { class: 'faint', text: prev.moment.action.slice(0, 70) })))
     : null;
   out.push(el('div', { class: 'block' }, el('h3', { text: 'The camera' }),
     el('div', { class: 'camera-row' }, topView(c, prev), mock, before),
@@ -340,15 +380,12 @@ function cutPanel(c) {
 
   // The images sent.
   out.push(el('div', { class: 'block' }, el('h3', {}, 'Images sent, in order', el('span', { class: 'count', text: `${c.refs.length}` })),
-    c.refs.length ? el('div', { class: 'refs' }, c.refs.map(refCard)) : el('p', { class: 'muted', text: 'No images: drawn from words alone.' })));
-  out.push(el('div', { class: 'block' }, el('h3', {}, 'Chosen by the plan and not sent', el('span', { class: 'count', text: `${c.unsent.length}` })),
-    c.unsent.length ? el('table', { class: 'list' }, el('tr', {}, el('th', { text: 'Image' }), el('th', { text: 'Why not' }), el('th', { text: 'Detail' })),
-      c.unsent.map((u) => el('tr', {}, el('td', { class: 'mono', text: u.key }), el('td', { text: u.code.replaceAll('_', ' ') }), el('td', { text: u.detail }))))
-      : el('p', { class: 'muted', text: 'Nothing the plan chose was left out.' })));
+    c.refs.length ? el('div', { class: 'refs' }, c.refs.map((r) => refCard(r, c))) : el('p', { class: 'muted', text: 'No images: drawn from words alone.' })));
+  out.push(unsentBlock(c));
   if (c.links.length)
     out.push(el('div', { class: 'block' }, el('h3', { text: 'Drawn from, across the cuts' }),
       el('table', { class: 'list' }, el('tr', {}, el('th', { text: 'From' }), el('th', { text: 'As' }), el('th', { text: 'How it stands to it' })),
-        c.links.map((l) => el('tr', {}, el('td', {}, el('button', { class: 'jump', type: 'button', onclick: () => select(l.from), text: l.from })), el('td', { text: l.role }), el('td', { text: (l.relation ?? '—').replaceAll('_', ' ') }))))));
+        c.links.map((l) => el('tr', {}, el('td', {}, jump(l.from)), el('td', { text: l.role }), el('td', { text: (l.relation ?? '—').replaceAll('_', ' ') }))))));
 
   // The facts.
   const change = (x) => `${nameOf(x.who)}: ${x.what} now ${x.now}`;
@@ -363,21 +400,34 @@ function cutPanel(c) {
   return out;
 }
 
-const nameOf = (id) => D.sheets.find((s) => s.id === id)?.name ?? id;
+// What the plan chose and did not send. Why each was left out is not recorded yet (gap 1): until it is, the page
+// says so, and lists the earlier cuts the plan drew from that are not among the images sent.
+function unsentBlock(c) {
+  const sentKeys = new Set(c.refs.map((r) => r.key));
+  const missing = c.links.filter((l) => l.kind === 'cut' && !sentKeys.has(`picture:${l.from}`));
+  const rows = c.unsent.length
+    ? el('table', { class: 'list' }, el('tr', {}, el('th', { text: 'Image' }), el('th', { text: 'Why not' }), el('th', { text: 'Detail' })),
+        c.unsent.map((u) => el('tr', {}, el('td', { class: 'mono', text: u.key }), el('td', { text: u.code.replaceAll('_', ' ') }), el('td', { text: u.detail }))))
+    : missing.length
+      ? el('div', {}, el('p', { text: 'Earlier pictures the plan drew from that are not among the images sent:' }),
+          el('ul', {}, missing.map((l) => el('li', {}, jump(l.from), ` as ${l.role}${l.relation ? `, ${l.relation.replaceAll('_', ' ')}` : ''}`))),
+          el('p', { class: 'muted', text: 'Why each was left out is not recorded yet.' }))
+      : el('p', { class: 'muted', text: 'Every earlier picture the plan drew from is among the images sent. (In-between pictures are not checked here, and why anything is left out is not recorded yet.)' });
+  return el('div', { class: 'block' }, el('h3', {}, 'Chosen by the plan and not sent', el('span', { class: 'count', text: `${c.unsent.length || missing.length}` })), rows);
+}
 
-function refCard(r) {
+function refCard(r, owner) {
   const label = r.notDrawnYet ? 'Not drawn yet: shown as it will be once drawn' : r.source === 'mockup' ? 'The mock-up' : 'Not on this machine';
   // The mock-up is rendered, not drawn: its picture is the cut's own.
-  const file = r.file ?? (r.source === 'mockup' ? D.cuts.find((c) => c.id === cur)?.mockUp : null);
-  const pic = file ? el('img', { src: `/img/${encodeURIComponent(D.header.dream)}/${encodeURIComponent(file.name)}`, alt: r.key, loading: 'lazy' }) : el('div', { class: 'none', text: label });
+  const file = r.file ?? (r.source === 'mockup' ? owner?.mockUp : null);
   const target = r.key.startsWith('picture:') ? r.key.slice(8) : r.key.startsWith('sketch:') ? r.key : null;
   return el('div', { class: 'ref' },
-    el('div', { class: 'thumb' }, pic),
+    el('div', { class: 'thumb' }, file ? picture(file, r.key, '') : el('div', { class: 'none', text: label })),
     el('div', { class: 'body' },
       el('div', {}, el('span', { class: 'n', text: `Image ${r.n}` }), ' ', el('span', { class: 'muted', text: `${r.role} · ${r.source}` })),
-      el('div', { class: 'key' }, target && order.includes(target) ? el('button', { class: 'jump', type: 'button', onclick: () => select(target), text: r.key }) : r.key,
-        r.notDrawnYet ? el('span', { class: 'flag later', text: ' not drawn yet' }) : null,
-        r.file?.changed ? el('span', { class: 'flag changed', title: 'The live copy drew this again after the dream was frozen', text: ' redrawn since' }) : null),
+      el('div', { class: 'key' }, target && nodeOf(target) ? jump(target) : r.key,
+        r.notDrawnYet ? el('span', { class: 'flag later', text: ' not drawn yet' }) : null, ' ', changedFlag(r.file)),
+      r.subjects.length ? el('div', { class: 'muted', text: `For ${r.subjects.map(nameOf).join(', ')}` }) : null,
       el('div', { class: 'instr', text: r.instruction }),
       el('details', {}, el('summary', { text: 'Its line in the prompt' }), el('p', { text: r.line || '—' }))));
 }
@@ -393,73 +443,86 @@ function promptBlock(prompt, paragraphs) {
 function nightBlock(c) {
   return el('div', { class: 'block' }, el('h3', { text: 'On the night' }),
     el('div', { class: 'camera-row' },
-      el('figure', {}, c.drawn.file ? img(c.drawn.file, `The picture drawn for ${c.id}`) : el('div', { class: 'none', text: 'The picture is not on this machine' }), el('figcaption', { text: 'The picture drawn' })),
+      el('figure', {}, c.drawn.file ? picture(c.drawn.file, `The picture drawn for ${c.id}`) : el('div', { class: 'none', text: 'The picture is not on this machine' }), el('figcaption', {}, 'The picture drawn', changedFlag(c.drawn.file))),
       el('div', {}, el('p', { class: 'muted', text: c.drawn.samePrompt === null ? 'Whether the prompt sent was this one is not known.' : c.drawn.samePrompt ? 'The prompt sent was this one.' : 'The prompt sent was another.' }),
         c.drawn.sentImages ? el('p', {}, el('span', { class: 'muted', text: 'Images sent: ' }), el('span', { class: 'mono', text: c.drawn.sentImages.join(', ') })) : null)));
 }
 
-// The floor plan from above: the plan's own frame (metres; x to the right facing the front, y away from it).
+// The floor plan from above: the plan's own frame (metres; x to the right facing the front, y away from it, the front
+// at the top). The cut before's camera only where it stands on the same floor plan.
 function topView(c, prev) {
   const NS = 'http://www.w3.org/2000/svg';
   const s = (tag, attrs = {}, text) => { const e = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); if (text) e.textContent = text; return e; };
-  if (!c.floor) return el('figure', {}, el('div', { class: 'none', text: 'No floor plan for this scene' }), el('figcaption', { text: 'From above' }));
-  const f = c.floor, eyes = [c.camera.eye, prev?.camera.eye].filter(Boolean);
+  if (!c.floor) return el('figure', {}, el('div', { class: 'none', text: 'No camera worked out for this cut, so no floor plan to show it on' }), el('figcaption', { text: 'From above' }));
+  const f = c.floor;
+  const samePlace = (a, b) => !!a && !!b && a.front.words === b.front.words && JSON.stringify(a.room) === JSON.stringify(b.room);
+  const prevEye = prev?.camera.eye && samePlace(f, prev.floor) ? prev.camera.eye : null;
+  const eyes = [c.camera.eye, prevEye].filter(Boolean);
   const xs = [...f.spots.map((p) => p.x), ...eyes.map((e) => e.x)], ys = [...f.spots.map((p) => p.y), ...eyes.map((e) => e.y)];
   let [x0, y0, x1, y1] = f.room ? [0, 0, f.room.w, f.room.d] : [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
-  x0 = Math.min(x0, ...xs) - 1; y0 = Math.min(y0, ...ys) - 1.2; x1 = Math.max(x1, ...xs) + 1; y1 = Math.max(y1, ...ys) + 1;
+  x0 = Math.min(x0, ...xs); y0 = Math.min(y0, ...ys); x1 = Math.max(x1, ...xs); y1 = Math.max(y1, ...ys);
+  const span = Math.max(x1 - x0, y1 - y0, 2);
+  const u = span / 60; // one stroke unit, and the text's size from it
+  const pad = u * 6;
+  x0 -= pad; x1 += pad; y1 += pad; y0 -= pad + u * 5; // a band at the top for the front's words
   const W = x1 - x0, H = y1 - y0;
-  const svg = s('svg', { class: 'top', viewBox: `${x0} ${y0} ${W} ${H}`, role: 'img', 'aria-label': `The floor plan from above, with the camera of ${c.id}${prev ? ` and of ${prev.id}` : ''}` });
-  const u = Math.max(W, H) / 60; // one stroke unit
+  const svg = s('svg', { class: 'top', viewBox: `${x0} ${y0} ${W} ${H}`, role: 'img', 'aria-label': `The floor plan from above, with the camera of ${c.id}${prevEye ? ` and of ${prev.id}` : ''}` });
   if (f.room) svg.append(s('rect', { x: 0, y: 0, width: f.room.w, height: f.room.d, fill: 'none', stroke: 'var(--faint)', 'stroke-width': u * .6 }));
-  // The front, at the top (-y).
-  svg.append(s('text', { x: (x0 + x1) / 2, y: y0 + u * 3.2, 'text-anchor': 'middle', 'font-size': u * 2.2, fill: 'var(--muted)' }, `▲ front: ${f.front.words}`));
+  svg.append(s('text', { x: (x0 + x1) / 2, y: y0 + u * 3.4, 'text-anchor': 'middle', 'font-size': u * 2.4, fill: 'var(--muted)' }, `▲ front: ${f.front.words}`));
   const wedge = (e, color, dash, label) => {
-    const r = Math.max(W, H) * .55, a = (e.dir * Math.PI) / 180, h = (e.fov * Math.PI) / 360;
+    const r = span * .6, a = (e.dir * Math.PI) / 180, h = (e.fov * Math.PI) / 360;
     const p1 = [e.x + r * Math.cos(a - h), e.y + r * Math.sin(a - h)], p2 = [e.x + r * Math.cos(a + h), e.y + r * Math.sin(a + h)];
     const g = s('g');
     g.append(s('path', { d: `M${e.x},${e.y} L${p1} L${p2} Z`, fill: color, 'fill-opacity': .1, stroke: color, 'stroke-width': u * .5, 'stroke-dasharray': dash ? `${u * 1.5} ${u}` : 'none' }));
-    g.append(s('circle', { cx: e.x, cy: e.y, r: u * 1.1, fill: color }));
-    g.append(s('text', { x: e.x + u * 1.6, y: e.y + u * 2.8, 'font-size': u * 2.1, fill: color, 'font-family': 'ui-monospace, monospace' }, label));
+    g.append(s('circle', { cx: e.x, cy: e.y, r: u * 1.2, fill: color }));
+    g.append(s('text', { x: e.x + u * 1.8, y: e.y + u * 3, 'font-size': u * 2.2, fill: color, 'font-family': 'ui-monospace, monospace' }, label));
     return g;
   };
-  if (prev?.camera.eye) svg.append(wedge(prev.camera.eye, 'var(--prev)', true, prev.id));
+  if (prevEye) svg.append(wedge(prevEye, 'var(--prev)', true, prev.id));
   if (c.camera.eye) svg.append(wedge(c.camera.eye, 'var(--accent)', false, c.id));
-  const placed = [];
+  // Markers sized in stroke units (a 30 m square hides a 0.3 m circle); names kept apart as they are drawn.
+  const mark = u * 1.6, tick = u * 3.2, fs = u * 2.1;
+  const labels = [];
+  const clear = (x, y, w) => !labels.some((b) => Math.abs(b.x - x) < (b.w + w) / 2 && Math.abs(b.y - y) < fs * 1.1);
   for (const p of f.spots) {
     const inView = c.facts.inView.some((e) => e.id === p.id);
-    // Its name above it, or below where another name already sits close by.
-    const near = placed.some((q) => Math.abs(q.x - p.x) < 1.6 && Math.abs(q.y - p.y) < .8);
-    placed.push(p);
     const col = inView ? 'var(--ink)' : 'var(--faint)';
     if (p.kind === 'thing' || p.w) {
-      const w = p.w ?? .5, d = p.d ?? .5;
+      const w = Math.max(p.w ?? .5, mark), d = Math.max(p.d ?? .5, mark);
       svg.append(s('rect', { x: p.x - w / 2, y: p.y - d / 2, width: w, height: d, fill: 'none', stroke: col, 'stroke-width': u * .5 }));
     } else {
-      svg.append(s('circle', { cx: p.x, cy: p.y, r: .28, fill: 'var(--panel)', stroke: col, 'stroke-width': u * .6 }));
-      if (p.facing) svg.append(s('line', { x1: p.x, y1: p.y, x2: p.x + p.facing.x * .55, y2: p.y + p.facing.y * .55, stroke: col, 'stroke-width': u * .6 }));
+      svg.append(s('circle', { cx: p.x, cy: p.y, r: mark, fill: 'var(--panel)', stroke: col, 'stroke-width': u * .6 }));
+      if (p.facing) svg.append(s('line', { x1: p.x, y1: p.y, x2: p.x + p.facing.x * tick, y2: p.y + p.facing.y * tick, stroke: col, 'stroke-width': u * .6 }));
     }
-    svg.append(s('text', { x: p.x, y: near ? p.y + .45 + u * 2 : p.y - .45, 'text-anchor': 'middle', 'font-size': u * 2, fill: col }, `${p.name}${p.many ? ' (many)' : ''}`));
+    const text = `${p.name}${p.many ? ' (many)' : ''}`, w = text.length * fs * .55;
+    const at = [p.y - mark - fs * .5, p.y + mark + fs * 1.1, p.y - mark - fs * 1.7, p.y + mark + fs * 2.3].find((y) => clear(p.x, y, w)) ?? p.y - mark - fs * .5;
+    labels.push({ x: p.x, y: at, w });
+    svg.append(s('text', { x: p.x, y: at, 'text-anchor': 'middle', 'font-size': fs, fill: col }, text));
   }
-  return el('figure', {}, svg, el('figcaption', {}, 'From above: ', el('span', { style: 'color: var(--accent)', text: `${c.id}'s camera` }), prev ? el('span', { style: 'color: var(--prev)', text: ` · ${prev.id}'s, dashed` }) : null));
+  const caption = prev && !prevEye ? (prev.camera.eye ? ` · the cut before (${prev.id}) is on another floor plan` : ` · the cut before (${prev.id}) has no camera`) : '';
+  return el('figure', {}, svg, el('figcaption', {}, 'From above: ', el('span', { style: 'color: var(--accent)', text: `${c.id}'s camera` }), prevEye ? el('span', { style: 'color: var(--prev)', text: ` · ${prev.id}'s, dashed` }) : null, caption));
 }
 
 // ── an in-between picture ─────────────────────────────────────────────────────
 function ghostPanel(g) {
   const from = g.from ?? {};
+  const drawnFig = g.file
+    ? el('figure', { style: 'max-width: 420px' }, picture(g.file, g.id), el('figcaption', {}, changedFlag(g.file)))
+    : el('figure', { style: 'max-width: 420px' }, el('div', { class: 'none', text: 'Not drawn yet, or not on this machine' }));
   return [
     el('div', { class: 'node-head' }, el('h2', { text: 'In-between picture' }), el('span', { class: 'id', text: g.id }), el('span', { class: 'muted', text: g.kind })),
     el('p', { class: 'action', text: g.change }),
     el('dl', { class: 'kv' },
       el('dt', { text: 'Of' }), el('dd', { text: nameOf(from.subject ?? g.of) }),
       el('dt', { text: 'Edits' }), el('dd', { class: 'mono', text: from.editedFrom ?? '—' }),
-      el('dt', { text: 'Follows' }), el('dd', {}, from.after ? el('button', { class: 'jump', type: 'button', onclick: () => select(from.after), text: from.after }) : '—'),
-      el('dt', { text: 'Used by' }), el('dd', {}, el('div', { class: 'chips' }, g.usedBy.map((id) => el('button', { class: 'jump', type: 'button', onclick: () => select(id), text: id })))),
+      el('dt', { text: 'Follows' }), el('dd', {}, from.after ? jump(from.after) : '—'),
+      el('dt', { text: 'Used by' }), el('dd', {}, el('div', { class: 'chips' }, g.usedBy.map(jump))),
       el('dt', { text: 'Edits deep' }), el('dd', { text: String(g.depth) }),
       el('dt', { text: 'Why' }), el('dd', { text: g.why })),
-    g.file ? el('div', { class: 'block' }, el('h3', { text: 'As drawn' }), el('figure', { style: 'max-width: 420px' }, img(g.file, g.id))) : null,
-    el('div', { class: 'block' }, el('h3', {}, 'Images sent, in order', el('span', { class: 'count', text: `${g.refs.length}` })), el('div', { class: 'refs' }, g.refs.map(refCard))),
+    el('div', { class: 'block' }, el('h3', { text: 'As drawn' }), drawnFig),
+    el('div', { class: 'block' }, el('h3', {}, 'Images sent, in order', el('span', { class: 'count', text: `${g.refs.length}` })), el('div', { class: 'refs' }, g.refs.map((r) => refCard(r, null)))),
     promptBlock(g.prompt, null),
-  ].filter(Boolean);
+  ];
 }
 
 // ── a sheet ───────────────────────────────────────────────────────────────────
@@ -470,16 +533,17 @@ function sheetPanel(s) {
       s.drawn ? null : el('span', { class: 'pill', text: 'not drawn yet' })),
     el('div', { class: 'block' }, el('h3', { text: 'The sketch' }),
       el('div', { class: 'camera-row' },
-        el('figure', {}, s.file ? img(s.file, s.name) : el('div', { class: 'none', text: s.drawn ? 'Not on this machine' : 'Not drawn yet' }), el('figcaption', {}, s.file?.changed ? el('span', { class: 'flag changed', text: 'redrawn since the dream was frozen' }) : null)),
+        el('figure', {}, s.file ? picture(s.file, s.name) : el('div', { class: 'none', text: s.drawn ? 'Not on this machine' : 'Not drawn yet: its look reads as the story record says it, which is what drawing sends once it is drawn' }), el('figcaption', {}, changedFlag(s.file))),
         el('dl', { class: 'kv' },
           el('dt', { text: 'Its look' }), el('dd', { text: s.look || '—' }),
           el('dt', { text: 'Drawn from' }), el('dd', { text: from }),
-          el('dt', { text: 'Used by' }), el('dd', {}, el('div', { class: 'chips' }, s.usedBy.map((id) => el('button', { class: 'jump', type: 'button', onclick: () => select(id), text: id }))))))),
+          el('dt', { text: 'Used by' }), el('dd', {}, el('div', { class: 'chips' }, s.usedBy.map(jump)))))),
     s.prompt ? promptBlock(s.prompt, null) : null,
   ].filter(Boolean);
 }
 
 // ── the verdict ───────────────────────────────────────────────────────────────
+const shownHashes = () => (D.cuts.find((c) => c.id === cur) ?? D.ghosts.find((g) => g.id === cur) ?? D.sheets.find((s) => s.key === cur))?.hashes;
 function verdictBar() {
   const v = A?.verdicts?.[cur];
   const st = S.get(cur);
@@ -489,42 +553,54 @@ function verdictBar() {
   const showAsp = (draft.verdict ?? v?.verdict) === 'wrong';
   const note = el('textarea', { id: 'note', placeholder: 'A note: what is wrong or why (n)', rows: 1 });
   note.value = draft.note;
-  note.addEventListener('input', () => { draft.note = note.value; });
-  note.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); save(draft.verdict ?? v?.verdict); } if (e.key === 'Escape') note.blur(); });
+  note.addEventListener('input', () => { draft.note = note.value; draft.noteEdited = true; });
+  note.addEventListener('keydown', (e) => { if (e.key === 'Escape') note.blur(); });
   bar.append(...[el('div', { class: 'state' }, el('span', { class: dotClass(cur) }), ' ', stateWords(cur)),
     vb('right', 'Right', 'r'), vb('wrong', 'Wrong', 'w'), vb('unsure', 'Unsure', 'u'),
     showAsp ? asp('layout', 'Layout', '1') : null, showAsp ? asp('references', 'References', '2') : null, showAsp ? asp('words', 'Words', '3') : null,
     note,
     el('button', { class: 'vbtn save', type: 'button', onclick: () => save(draft.verdict ?? v?.verdict) }, 'Save', el('kbd', { text: '⌘↵' })),
     el('span', { class: 'msg', id: 'msg' })].filter(Boolean));
-  if (st?.state === 'confirm' && v?.shown) bar.append(el('details', { style: 'flex-basis: 100%' }, el('summary', { text: 'What changed in the words since your verdict' }), diffView(v.shown.prompt, currentPrompt())));
+  if (st?.state === 'confirm' && v?.shown) {
+    const now = D.cuts.find((c) => c.id === cur) ?? D.ghosts.find((g) => g.id === cur) ?? D.sheets.find((s) => s.key === cur);
+    const factsNow = now?.facts ?? (now?.change !== undefined ? { change: now.change } : { look: now?.look });
+    bar.append(el('details', { id: 'diff', open: true, style: 'flex-basis: 100%' }, el('summary', { text: 'What changed since your verdict (d)' }),
+      st.moved.includes('words') ? diffView(v.shown.prompt, now?.prompt ?? '') : null,
+      st.moved.includes('facts') && v.shown.facts !== undefined ? diffView(JSON.stringify(v.shown.facts, null, 1), JSON.stringify(factsNow, null, 1)) : null));
+  }
   return bar;
 }
-const currentPrompt = () => D.cuts.find((c) => c.id === cur)?.prompt ?? D.ghosts.find((g) => g.id === cur)?.prompt ?? D.sheets.find((s) => s.key === cur)?.prompt ?? '';
 function refreshBar() { const old = document.querySelector('.verdict'); if (old) old.replaceWith(verdictBar()); }
 function choose(key) {
-  // Right and unsure are one key: saved at once. Wrong waits for what is wrong.
+  // Right and unsure are one key: saved at once, with the note only if it was written now. Wrong waits for what.
   draft.verdict = key;
   if (key === 'wrong') { refreshBar(); return; }
   save(key);
 }
 async function save(verdict) {
-  const msg = () => $('msg');
-  if (!verdict) { msg().textContent = 'Choose right, wrong or unsure first.'; msg().className = 'msg err'; return; }
-  if (verdict === 'wrong' && !draft.wrong.size) { msg().textContent = 'Say what is wrong: 1 layout, 2 references, 3 words.'; msg().className = 'msg err'; return; }
+  const say = (text, err) => { const m = $('msg'); if (m) { m.textContent = text; m.className = err ? 'msg err' : 'msg'; } };
+  if (!verdict) return say('Choose right, wrong or unsure first.', true);
+  if (verdict === 'wrong' && !draft.wrong.size) return say('Say what is wrong: 1 layout, 2 references, 3 words.', true);
+  const note = verdict === 'wrong' || draft.noteEdited ? draft.note : '';
   const r = await fetch('/api/verdict', { method: 'POST', headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ dream: D.header.dream, node: cur, verdict, wrong: [...draft.wrong], note: draft.note }) });
+    body: JSON.stringify({ key: K, node: cur, verdict, wrong: [...draft.wrong], note, shown: shownHashes() }) });
   const body = await r.json();
-  if (!r.ok) { msg().textContent = body.error; msg().className = 'msg err'; return; }
+  if (r.status === 409) {
+    // The view was made again while this page was open: show it as it is now, and judge that.
+    const at = cur;
+    await open(K, at);
+    return say('This changed since the page showed it. Here it is as it is now: read it, then judge it again.', true);
+  }
+  if (!r.ok) return say(body.error, true);
   A = body.answers; setStates(body.states);
-  const btn = document.querySelector(`nav.tree .row[data-node="${CSS.escape(cur)}"] .dot`);
-  if (btn) btn.className = dotClass(cur);
-  draft.verdict = null;
+  const dot = document.querySelector(`nav.tree .row[data-node="${CSS.escape(cur)}"] .dot`);
+  if (dot) dot.className = dotClass(cur);
+  draft.verdict = null; draft.noteEdited = false;
   refreshBar();
-  msg().textContent = 'Saved.'; msg().className = 'msg';
+  say('Saved.');
 }
 
-// A line diff of two texts (the words at the verdict, and now).
+// A line diff of two texts (as judged, and now).
 function diffView(a, b) {
   const x = a.split('\n'), y = b.split('\n');
   const n = x.length, m = y.length, L = Array.from({ length: n + 1 }, () => new Int32Array(m + 1));
@@ -542,7 +618,7 @@ function diffView(a, b) {
 // ── the dreamer's words ───────────────────────────────────────────────────────
 function renderWords() {
   const box = $('turns');
-  if (!D.words) { box.replaceChildren(el('p', { class: 'muted', text: 'This copy keeps no conversation, and this machine has no live copy of it.' })); return; }
+  if (!D.words) { box.replaceChildren(el('p', { class: 'muted', text: 'No conversation here: a frozen copy keeps none, and no live copy of this dream was found on this machine when the view was made.' })); return; }
   box.replaceChildren(...D.words.map((t) => el('div', { class: `turn ${t.who}`, 'data-turn': t.turn }, el('div', { class: 'who', text: t.who === 'dreamer' ? 'the dreamer' : 'the listener' }), el('div', { class: 'text', text: t.text }))));
   highlightWords();
 }
@@ -554,10 +630,9 @@ function highlightWords() {
   const want = find ? [find] : (cut?.moment.action.toLowerCase().match(/[a-z']{5,}/g) ?? []).filter((w) => !['their', 'there', 'about', 'which', 'while', 'dreamer'].includes(w));
   for (const t of document.querySelectorAll('#turns .turn .text')) {
     const turn = D.words.find((w) => String(w.turn) === t.parentElement.dataset.turn);
-    const text = turn.text;
-    if (!want.length) { t.textContent = text; continue; }
+    if (!want.length) { t.textContent = turn.text; continue; }
     const re = new RegExp(`(${want.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi');
-    t.replaceChildren(...text.split(re).map((part, k) => (k % 2 ? el('mark', { text: part }) : document.createTextNode(part))));
+    t.replaceChildren(...turn.text.split(re).map((part, k) => (k % 2 ? el('mark', { text: part }) : document.createTextNode(part))));
   }
 }
 $('wordsFind').addEventListener('input', highlightWords);
@@ -566,11 +641,15 @@ $('wordsClose').onclick = () => $('words').setAttribute('aria-hidden', 'true');
 
 // ── keys ──────────────────────────────────────────────────────────────────────
 document.addEventListener('keydown', (e) => {
+  if (!D) return;
+  // ⌘↵ saves wherever the focus is.
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && cur !== OVERVIEW) { e.preventDefault(); save(draft.verdict ?? A?.verdicts?.[cur]?.verdict); return; }
   const typing = ['TEXTAREA', 'INPUT', 'SELECT'].includes(document.activeElement?.tagName);
-  if (typing || e.metaKey || e.ctrlKey || e.altKey || !D) return;
+  if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
   const i = order.indexOf(cur);
   if (e.key === 'j' || e.key === 'ArrowDown') { e.preventDefault(); if (i < order.length - 1) select(order[i + 1]); }
   else if (e.key === 'k' || e.key === 'ArrowUp') { e.preventDefault(); if (i > 0) select(order[i - 1]); }
+  else if (cur === OVERVIEW) return;
   else if (e.key === 'r') choose('right');
   else if (e.key === 'u') choose('unsure');
   else if (e.key === 'w') choose('wrong');
@@ -578,10 +657,12 @@ document.addEventListener('keydown', (e) => {
     const k = ['layout', 'references', 'words'][Number(e.key) - 1];
     draft.wrong.has(k) ? draft.wrong.delete(k) : draft.wrong.add(k); refreshBar();
   } else if (e.key === 'n') { e.preventDefault(); $('note')?.focus(); }
+  else if (e.key === 'd') { const d = $('diff'); if (d) d.open = !d.open; }
   else if (e.key === 'Escape') $('words').setAttribute('aria-hidden', 'true');
 });
 
-loadDreams().catch((e) => $('panel').replaceChildren(el('div', { class: 'empty', text: `Could not read the dreams: ${e}` })));
+start().catch((e) => $('panel').replaceChildren(el('div', { class: 'empty', text: `Could not read the dreams: ${e}` })));
 </script>
+
 </body>
 </html>
