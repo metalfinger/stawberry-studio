@@ -930,6 +930,25 @@ describe('ledger 15: the colours the dream gives, said once', () => {
     );
   });
 
+  test("in many colours, one said only in the moment's own words stays listed: it has no look above", () => {
+    // affd m6: the red tractor, said in what happens, has no image and no look.
+    const colours = style(prompt('dream-0925-231131-affd', 'm6', 'colour_once'));
+    expect(colours).toContain('red tractor');
+  });
+
+  test('in many colours, said above is a whole phrase in a look: "red" is not in "rendered"', () => {
+    const p = withSwitches({ ...SHEET, DREAMCHAT_ONE_BUILDER: 'colour_once' }, () => {
+      const sheet = structuredClone(
+        rebuild(structuredClone(loadDream('dream-0926-095122-b91f', false).session as Session)).pictures.find(
+          (x) => x.id === 'm4',
+        )!.sheet!,
+      );
+      sheet.style.told = [...sheet.style.told, 'red'];
+      return assembleCut(sheet).prompt;
+    });
+    expect(style(p)).toMatch(/keeps it exactly, as said above: [^.]*\bred\b/);
+  });
+
   test('in a style of many colours, one said above is not listed again', () => {
     // b91f: Dele's blue suit, said in his words above.
     const before = prompt('dream-0926-095122-b91f', 'm4', 'look_once');
