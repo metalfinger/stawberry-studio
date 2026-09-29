@@ -28,6 +28,47 @@ current figure and what's next). Writer model: Claude (`DREAMCHAT_WRITER=claude`
 
 ## Where we stopped (27-29 Sep): read this to resume
 
+**Latest landmark (29 Sep, evening, cloud session): S6 rows 5-15.** Read this block first; the rest of this section
+is the history before it. Hand-off and status: GitHub issue metalfinger/stawberry-studio#1 (the Mac session reads
+and answers there). The owner asked for work in chunks: after each, commit, push, post on issue #1, update this
+block, and ask whether to go on.
+
+- **On lab (this branch):** S6 rows 1, 3-7 merged (733bbe7): one record, one image cap, paragraph ids, names, kinds,
+  who is in view; plus the typed-readings cost fix and the camera-needs-record decision.
+- **Stacked S6 branches, pushed, each built on the one before, none merged yet** (merge them into lab in this
+  order, each once its review is "merge" and its live check is clean; each branch's own HARNESS_PLAN.md S6 table
+  has its full row):
+  1. `s6-looks` (edb4087), row 8, looks from the story record: reviewed, **merge**; waiting on the Mac's live
+     re-run (issue #1: three live losses found and fixed, the re-run confirms them gone).
+  2. `s6-pose` (2d7926d), rows 9-11: 9 and 10 need no step (lookIn keeps them for its fallbacks, read through
+     `offInLookIn`); 11, a place's or thing's pose stripped by the record after its rules: reviewed, **merge**.
+  3. `s6-members` (796c2a8), row 12, a group's words about a member with their own sketch, tagged in the record
+     (`Fact.about`): reviewed, **merge**.
+  4. `s6-shades` (32cf7f3), row 13, a colour the dream gives kept whole in a guessed clause (its own colours;
+     in-between pictures too): review fixes done, **re-review to ask**.
+  5. `s6-lookonce` (1bef341), row 14, a look said once, in its image's line: review fixes done, **re-review to
+     ask**; one counted prompt case (lighthouse-fresh-m10-tractor) moves under it: fresh Jev asks read 0.63 → 0.56
+     on average, all four still yes; the cached 0.46 was a low draw; **for the owner to accept**.
+  6. `s6-colouronce` (0c0a839 + its confirmation), row 15, the colours the dream gives said once (in one colour the
+     style's list is the one list, an image's line points to it): measured, **review to ask**.
+- **Live checks owed (the Mac, issue #1, reading calls only):** row 8's re-run, then rows 11-14 in one sitting.
+  Row 15 is not yet in that request.
+- **The S5 picture check:** dry run reviewed (issue #1): 17-18 pictures, $2.55-2.70; draws when the owner can
+  judge. Nothing drawn yet; $18 of $30 left.
+- **Next after these merge:** S6 rows 16-34 in the ledger's order (16, states said once, is next); then S7's routed
+  checks, S9's live flow check, S10's final picture check.
+- **How to resume the cloud work:** `git fetch origin`; `git worktree add <path> <branch>` for the top branch in
+  flight (`s6-colouronce` holds all of rows 8-15); symlink `dreamchat/node_modules`; copy the committed caches
+  (`evals/cache/README.md`) into `runs/`. Measure a step with `evals/corpus.ts --label s6rN-<rs|all> --against
+  s6r<N-1>-<rs|all> --verdicts evals/s6-verdicts.json` (rs: `DREAMCHAT_WRITER=claude DREAMCHAT_RECORD=on
+  DREAMCHAT_CUT_SHEET=on`; all: plus `DREAMCHAT_CAMERA=on DREAMCHAT_REFS=on`, each with `DREAMCHAT_ONE_BUILDER=<step>`),
+  `evals/retire.ts --checks`, `evals/prompt-cases.ts` with Jev (`--env-file` of the dreamchat env), and `bun test`
+  with every switch off and on. Each row: a test that fails without its change, every change classified, an
+  independent review, fixes, re-review, then merge.
+- **Working rule learnt today:** commit before an independent reviewer works in a worktree (a reviewer restores
+  its tree to clean and wipes anything uncommitted); run the whole suite both ways before pushing a row.
+
+
 **To resume in a new session:** open this file (`dreamchat/HARNESS_PLAN.md` on `lab/dream-chat`,
 `metalfinger/stawberry-studio`) and start from this section. Everything named below is pushed to GitHub — nothing
 depends on this machine or this session. The owner's claude.ai plan doc is retired; Engram's fever-dream project
