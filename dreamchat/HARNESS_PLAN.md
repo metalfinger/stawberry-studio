@@ -2427,3 +2427,29 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   takes over the layout: good when it matches the plan, bad when it doesn't.
 - 27 Sep, owner's decisions: through the dreamer's eyes, a carried thing stays out of view unless the moment names
   it; the snow-train-2 suitcase stays shut at m5 and m6.
+
+## Owner's direction (29 Sep): reviews and merges move to the cloud session
+
+Hiren's own usage on this Mac session is spent for now. He is not personally reviewing branches; that has always
+been an independent agent's job, and from here that job runs in the cloud session, not spawned from this Mac.
+Coordination between sessions goes through GitHub issues on `metalfinger/stawberry-studio` from now on (issue #1),
+not Engram rooms. This Mac session stays available to push things the cloud session can't (it hit a 403 once; may
+be fixed by now) and to answer things only Hiren can decide.
+
+**Go-ahead to merge:** given. Merge the four reviewed branches in the stated order (`checkpoint-order`,
+`postcheck-fixes`, `s5-fix2`, `s6-build`), each already marked "merge" by review, then keep going, step by step,
+until the harness is complete. That is the priority now, ahead of the sidebar work.
+
+**Decision: the camera switch requires the story record, the same way it already requires the cut sheet.**
+`DREAMCHAT_CAMERA=on` should refuse and fall back to camera-off (with the same kind of warning `DREAMCHAT_CUT_SHEET`
+already gets) unless `DREAMCHAT_RECORD=on` too. Reasoning: every eval of S4 that mattered was already run with
+record on (the S4 picture check, the corpus numbers quoted in the at-a-glance table); record-off-camera-on exists
+only as a regression-suite combination, not a mode anyone will ship. Camera rules that need water level, what's
+held, or what's open all read that cleanest from the record's typed facts; keeping a word-list fallback alive for a
+combination nobody uses is exactly the kind of thing S6 exists to retire, and it's already produced one odd-wording
+bug (`postcheck-fixes`'s review note: a lifted window says "outside the picture, above it" with record off). Land
+this in `postcheck-fixes` (or wherever S4's switch guard lives after merging) with a test mirroring the existing
+sheet-requirement test, and drop the record-off+camera-on rows from S4's eval matrix once it does.
+
+**Parked, not blocking:** which conversation step shows each sidebar artifact (28 Sep call). Don't spend time on it
+until the harness itself is complete.
