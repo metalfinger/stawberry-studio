@@ -43,7 +43,8 @@ put right 5 of 7; guards 10 of 13 against 9 of 13. Its five misses are traced (l
 
 **In flight when paused: four branches, each at a clean, tested commit, not merged, not reviewed. They exist only on
 this Mac (local branches in `~/Documents/code/stawberry-studio/.claude/worktrees/agent-*`; only `lab/dream-chat` is
-pushed). Each branch's own HARNESS_PLAN.md says what it did and how to resume.**
+pushed). All four, and every other branch of this work, are pushed to GitHub (29 Sep): `git fetch origin` then
+`git worktree add <path> <branch>` resumes one anywhere. Each branch's own HARNESS_PLAN.md says what it did.**
 - `s5-fix2` (4 commits on ca71e3e, head 9372c28): S5's second-review fixes. Earlier pictures sent for their look
   now say exactly what to take and "nobody and nothing from it comes into this picture but who and what this picture
   has in it" — in S5 and in today's default prompts (default prompts change: frozen 25 of 140, live 80 of 477;
@@ -92,11 +93,9 @@ before the owner says at which step each artifact appears.**
 chooses the writer the harness ships with (DeepSeek or another API; the Claude CLI is for testing only). 5) S10,
 the paid benchmark on the five dreams (about $10), judged by the owner. Money: $18 left of $30.
 
-**Caches (paid readings; gitignored under `dreamchat/runs/`, local to this machine).** Implied readings
-`runs/implied-cache.json`, typed readings `runs/typed-cache.json`, prompt-case Jev answers
-`runs/prompt-cases/jev-cache.json` (the fullest copy, 544 entries, is in the `s5-refs` worktree), listening Jev
-answers `runs/listening/jev-cache.json`. On another PC they are missing and a rerun would ask again (cost): copy them
-over, or commit them to an eval folder if the owner agrees.
+**Caches (paid readings).** The evals read them from `dreamchat/runs/` (gitignored). Copies of all of them, merged
+from every worktree on 29 Sep, are committed in `dreamchat/evals/cache/`; its README gives the four `cp` lines to
+restore them on a new machine or checkout, so no reading is paid for twice.
 
 **The owner's decisions (27 Sep).** Checks only log by default; listening on by default; "several changes" means 2
 or more; a never-drawn side of a place is no change where the floor plan lays out the picture; through the dreamer's
