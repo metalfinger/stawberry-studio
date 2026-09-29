@@ -446,13 +446,14 @@ export function cutSheet(x: CutSheetInput): CutSheet {
     // A group's words about someone who has a sketch of their own leave it: the baby's yellow onesie is the
     // baby's, not the family's. lookIn leaves them by the sketch's own pieces ("baby: tiny, with light hair",
     // up to its ";"); the record's clauses cut them finer, and "tiny, with light hair" came back without its
-    // "baby:" (0199, live, 29 Sep). Until the record says who in a group each clause is about, such a group's
-    // look is lookIn's.
+    // "baby:" (0199, live, 29 Sep). With step 12 the record says whom each clause of a group is about, and the
+    // look leaves those whose member is in view; before it, such a group's look is lookIn's.
     if (!retired('members') && members.some((m) => m.group === s)) return undefined;
+    const away = new Set(members.filter((m) => m.group === s).map((m) => m.member.id));
     return LOOK[s.kind]
       .map((k) =>
         (e.base[k] ?? [])
-          .filter((f) => !f.first)
+          .filter((f) => !f.first && !f.about?.some((id) => away.has(id)))
           // The record strips the pose of people and animals, and with step 11 of places and things; before it, the
           // sketch's clean-up strips theirs here.
           .map((f) => (s.kind === 'character' || retired('pose') ? f : { ...f, text: withoutPose(f.text, false) }))

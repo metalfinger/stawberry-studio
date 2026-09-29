@@ -652,6 +652,60 @@ describe("ledger 11: a place's or a thing's pose, stripped once, by the record",
   });
 });
 
+describe("ledger 12: a group's words about someone with their own sketch, once, in the record", () => {
+  // 09ea's sister made a family whose look names the old man (p3), who has his own sketch.
+  const family = 'a family; an old man in a grey coat, a long white beard; a sister in a yellow dress';
+  const dream = () => {
+    const s = structuredClone(loadDream('dream-0926-000545-09ea', false).session as Session);
+    const it = s.build!.items.find((i) => i.id === 'p2')!;
+    const b = s.draft!.breakdown!.people.find((p) => p.id === 'p2')!;
+    for (const x of [it, b])
+      Object.assign(x, { name: 'the family', several: true, fields: { appearance: { value: family, said: true } } });
+    return s;
+  };
+  const looks = (step: string) =>
+    withSwitches({ ...SHEET, DREAMCHAT_ONE_BUILDER: step }, () =>
+      rebuild(dream()).pictures.flatMap((x) => {
+        const v = x.sheet?.inView ?? [];
+        const look = v.find((e) => e.id === 'p2')?.look;
+        return look === undefined ? [] : [{ moment: x.id, withHim: v.some((e) => e.id === 'p3'), look }];
+      }),
+    );
+
+  test("the record says whom each piece of a group's look is about", () => {
+    const s = dream();
+    const about = (step: string) =>
+      withSwitches({ ...SHEET, DREAMCHAT_ONE_BUILDER: step }, () =>
+        Object.fromEntries(
+          storyRecord(s.draft!.breakdown!, s.build!.items, s.draft?.readings, {
+            style: s.style,
+          }).record.elements.p2.base.appearance.map((f) => [f.text, f.about ?? []]),
+        ),
+      );
+    expect(about('members')['a long white beard']).toEqual(['p3']);
+    expect(about('members')['an old man in a grey coat']).toEqual(['p3']);
+    expect(about('members')['a sister in a yellow dress']).toEqual([]);
+    expect(about('pose')['a long white beard']).toEqual([]);
+  });
+
+  test('with him in view the look leaves his piece, clauses after his name too; without him it keeps it', () => {
+    const all = looks('members');
+    expect(all.some((x) => x.withHim) && all.some((x) => !x.withHim)).toBe(true);
+    for (const x of all.filter((y) => y.withHim)) {
+      expect(x.look).not.toContain('white beard');
+      expect(x.look).toContain('sister in a yellow dress');
+    }
+    for (const x of all.filter((y) => !y.withHim)) expect(x.look).toContain('white beard');
+  });
+
+  test("the look is the record's, not lookIn's, once the record says whom each clause is about", () => {
+    // lookIn keeps the sketch's ";" between pieces; the record says a field's clauses apart by ",".
+    const at = (step: string) => looks(step).find((x) => x.withHim)?.look;
+    expect(at('pose')).toBe('a family; a sister in a yellow dress');
+    expect(at('members')).toBe('a family, a sister in a yellow dress');
+  });
+});
+
 describe("S4's word lists, each with a switch that turns off only its piece", () => {
   test('hands, own body, a vehicle going, the water and the openings on walls', () => {
     const room: Blocking = {

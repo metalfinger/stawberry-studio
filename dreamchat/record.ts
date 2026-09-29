@@ -24,7 +24,7 @@ import {
   VAGUE,
   WHOLE,
 } from './producer';
-import { isAnimal, isGroup, type Item, withoutPose } from './sheets';
+import { headWord, isAnimal, isGroup, type Item, withoutPose } from './sheets';
 import { hashOf, slug } from './lib';
 import type { TypedReading } from './typed';
 
@@ -40,7 +40,17 @@ export type Basis = 'said' | 'confirmed' | 'guessed' | 'read' | 'implied';
  * One clause of a look, how sure it is, and where it came from ('item:p1.wardrobe', 'b:m3.leaves.0').
  * A look folded in from where it is first shown keeps the change it was: no sketch shows it yet.
  */
-export type Fact = { text: string; basis: Basis; from: string; first?: { part: string; what: string; now: string } };
+export type Fact = {
+  text: string;
+  basis: Basis;
+  from: string;
+  first?: { part: string; what: string; now: string };
+  /**
+   * A group's clause about someone who has a sketch of their own: whom its piece of the look (up to its ";")
+   * names ("baby: tiny, with light hair"). The sheet leaves it out where one of them is in view (S6 row 12).
+   */
+  about?: string[];
+};
 
 /**
  * What a change is: turning into something else, a part of someone or something, how a place looks,
@@ -586,6 +596,7 @@ function factsOf(
   fields: Record<string, Detail | undefined> | undefined,
   from: string,
   person: boolean,
+  members: { id: string; re: RegExp }[] = [],
 ): Record<string, Fact[]> {
   const out: Record<string, Fact[]> = {};
   for (const [k, d] of Object.entries(fields ?? {})) {
@@ -598,12 +609,25 @@ function factsOf(
     // "Standing in a relaxed three-quarter view" came into a father's look, and a moment of him
     // sitting read as at odds with itself (lighthouse, 26 Sep): the record strips it once.
     const value = person && k !== 'identity' ? withoutPose(d.value, false) : d.value;
-    const facts = clausesOf(value)
-      // A place's or a thing's too (S6 row 11), clause by clause as the sheet's look stripped it: "standing upright
-      // on its own with no house or wall around it" framed the red door's sketch, and is no part of the door.
-      .map((c) => (!person && builds('pose') ? withoutPose(c, false) : c))
-      .filter((c) => c && !VAGUE.test(c))
-      .map((text): Fact => ({ text, basis: d.said ? 'said' : 'guessed', from: `${from}.${k}` }));
+    // A group's look piece by piece (S6 row 12): each clause knows whom its piece names of those with a sketch of
+    // their own, as a ";" parts it ("father: …; baby: tiny, with light hair"). Clauses never cross a ";".
+    const pieces = members.length ? value.split(/\s*;\s*/) : [value];
+    const facts = pieces.flatMap((piece) => {
+      const about = members.filter((m) => m.re.test(piece)).map((m) => m.id);
+      return (
+        clausesOf(piece)
+          // A place's or a thing's too (S6 row 11), clause by clause as the sheet's look stripped it: "standing
+          // upright on its own with no house or wall around it" framed the red door's sketch, and is no part of it.
+          .map((c) => (!person && builds('pose') ? withoutPose(c, false) : c))
+          .filter((c) => c && !VAGUE.test(c))
+          .map((text): Fact => ({
+            text,
+            basis: d.said ? 'said' : 'guessed',
+            from: `${from}.${k}`,
+            ...(about.length ? { about } : {}),
+          }))
+      );
+    });
     if (facts.length) out[k] = facts;
   }
   return out;
@@ -624,10 +648,19 @@ function elementsOf(b: Breakdown, items: Item[], dreamer: string | null, notes: 
   const add = (id: string, kind: ElementKind, name: string, fields: Record<string, Detail> | undefined) => {
     if (typeof id !== 'string' || !id || elements[id]) return;
     const person = kind !== 'place' && kind !== 'thing';
-    const own = factsOf(fields, `b:${id}`, person);
+    // A group's words about someone with a sketch of their own are theirs where they are in view (S6 row 12):
+    // anyone the producer linked to it, and anyone named in it, as the sheet finds a group's members
+    // (sheets.ts groupMembers). Found here for all; the sheet leaves a clause out for those in view.
+    const members =
+      builds('members') && (kind === 'group' || [...byItem.values()].some((x) => x.partOf === id))
+        ? [...byItem.values()]
+            .filter((x) => x.id !== id && (x.kind === 'character' || x.partOf === id))
+            .map((x) => ({ id: x.id, re: new RegExp(`\\b${esc(headWord(x.name) ?? x.name)}s?\\b`, 'i') }))
+        : [];
+    const own = factsOf(fields, `b:${id}`, person, members);
     const it = byItem.get(id);
     // A sketch's words win: its picture was drawn from them. The breakdown's copy is kept beside it.
-    const drawn = sketched(it) ? factsOf(it.fields, `item:${id}`, person) : null;
+    const drawn = sketched(it) ? factsOf(it.fields, `item:${id}`, person, members) : null;
     const differs = !!drawn && !sameLook(drawn, own);
     if (differs) notes.push(`${id}: the sketch's words stand, not the breakdown's, where the two differ`);
     elements[id] = {

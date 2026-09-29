@@ -108,6 +108,9 @@ export const BUILDER_STEPS: readonly string[] = [
   // 11. A place's or a thing's pose, stripped once, by the record, as it already strips a person's: the sheet's
   //    look no longer strips it again.
   'pose',
+  // 12. A group's words about someone with a sketch of their own: the record says whom each clause of a group's
+  //    look is about, and the sheet leaves those whose member is in view, as lookIn left their pieces.
+  'members',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;
