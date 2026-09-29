@@ -499,6 +499,15 @@ describe('one story record for planning and drawing (DREAMCHAT_RECORD=on)', () =
         // In shadow the sheet is built beside the old prompt and reads them: read.
         await withSwitches({ DREAMCHAT_CUT_SHEET: 'shadow' }, () => plan());
         expect(asked).toBe(2 * ids.length);
+        // The sheet off, a reading whose question has since changed is dropped all the same; the rest kept.
+        const typed = prep.readings!.typed!;
+        const last = ids.at(-1)!;
+        const stale = { ...typed, [last]: { ...typed[last], ask: 'a question since changed' } };
+        const off = await withSwitches({ DREAMCHAT_CUT_SHEET: undefined }, () =>
+          plan({ ...prep.readings, typed: stale }),
+        );
+        expect(asked).toBe(2 * ids.length);
+        expect(Object.keys(off.readings?.typed ?? {}).sort()).toEqual(ids.filter((m) => m !== last).sort());
       },
     ));
 

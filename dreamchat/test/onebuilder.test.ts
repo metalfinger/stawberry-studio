@@ -11,7 +11,8 @@ import { rebuild } from '../plan';
 import { moments } from '../producer';
 import { recordsMade } from '../record';
 import { type Session, typedReadings } from '../session';
-import type { TypedReading } from '../typed';
+import { NO_BAR, TYPED_BAR, type TypedReading, typedAsk, typedAskKey, typedWriterName } from '../typed';
+import { hashOf } from '../lib';
 import { DEFAULTS, pinSwitches, withSwitches } from './fakes';
 
 setDefaultTimeout(120_000);
@@ -213,6 +214,22 @@ describe('typed readings while planning', () => {
     const again = (await typedReadings(dream, { typed: flaky, jev }, read))!;
     expect(asked).toHaveLength(1);
     expect(again[last].ask).toBeDefined();
+  });
+
+  test('its key is the question, the writer and the bars: another writer reads it anew', () => {
+    const dream = b();
+    const m = moments(dream).at(-1)!;
+    const key = typedAskKey(dream, m);
+    expect(typedAskKey(dream, m)).toBe(key);
+    // The writer is fixed when the module loads, so its name is changed where the key reads it.
+    const was = process.env.DREAMCHAT_TYPED_THINKING;
+    expect(typedWriterName()).toContain('thinking');
+    expect(hashOf({ ask: typedAsk(dream, m), writer: typedWriterName(), bars: [TYPED_BAR, NO_BAR] })).toBe(key);
+    expect(
+      hashOf({ ask: typedAsk(dream, m), writer: `${typedWriterName()} other`, bars: [TYPED_BAR, NO_BAR] }),
+    ).not.toBe(key);
+    expect(hashOf(typedAsk(dream, m))).not.toBe(key);
+    if (was === undefined) delete process.env.DREAMCHAT_TYPED_THINKING;
   });
 
   test('without the writer, a reading of words since changed is dropped, never carried on', async () => {
