@@ -393,13 +393,17 @@ export function assembleCut(s: CutSheet): Assembled {
       for (let i = 0; i < manifest.length; i++)
         if (i !== g.at - 1 && manifest[i].startsWith('Image ') && manifest[i].includes(`: it is now ${g.now}`))
           manifest[i] = manifest[i].replace(`: it is now ${g.now}`, `: it is now as Image ${g.at} shows`);
-  const saidAbove = manifest.join('\n').toLowerCase();
+  // Said above: in an image's line about that one, as whole words ("wet" of the fish's look is not the newspaper).
+  const esc = (x: string) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const saidAbove = (x: { called: string; name: string }, now: string) =>
+    manifest.some(
+      (l) =>
+        [x.called, x.name].some((n) => !!n && l.toLowerCase().includes(n.toLowerCase())) &&
+        new RegExp(`\\b${esc(now)}\\b`, 'i').test(l),
+    );
   const nowOf = s.once?.state
     ? s.now
-        ?.map((x) => ({
-          ...x,
-          facts: x.facts.filter((f) => !(f.kind === 'part' && saidAbove.includes(f.now.toLowerCase()))),
-        }))
+        ?.map((x) => ({ ...x, facts: x.facts.filter((f) => !(f.kind === 'part' && saidAbove(x, f.now))) }))
         .filter((x) => x.facts.length)
     : s.now;
 
@@ -536,7 +540,7 @@ export function assembleCut(s: CutSheet): Assembled {
       fields: ['now', 'nowWords'],
       // What this moment changes, and nothing else, differs from the references.
       text: references.length
-        ? `Everyone and everything looks exactly as in their images above, except for what this moment itself changes and ${now?.length ? 'how each one is at this moment, as said' : 'what is still so from earlier'}.`
+        ? `Everyone and everything looks exactly as in their images above, except for what this moment itself changes and ${now?.length || (s.once?.state && s.now?.length) ? 'how each one is at this moment, as said' : 'what is still so from earlier'}.`
         : '',
     },
     {
