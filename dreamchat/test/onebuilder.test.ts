@@ -940,6 +940,35 @@ describe('ledger 15: the colours the dream gives, said once', () => {
   });
 });
 
+describe('ledger 16: how each one is now, said once', () => {
+  const prompt = (step: string) =>
+    withSwitches(
+      { ...SHEET, DREAMCHAT_ONE_BUILDER: step },
+      () =>
+        rebuild(structuredClone(loadDream('dream-0926-000545-09ea', false).session as Session)).pictures.find(
+          (x) => x.id === 'm5',
+        )!.prompt,
+    );
+  const times = (p: string, w: string) => p.split(w).length - 1;
+
+  test("a part an in-between picture shows is said there alone: the sketch's Except points to it", () => {
+    // 09ea m5: the fish's body wrapped in newspaper, said in its Except, its in-between picture and "How each one is".
+    const before = prompt('colour_once');
+    const after = prompt('state_once');
+    expect(times(before, 'wrapped in newspaper')).toBe(3);
+    expect(times(after, 'wrapped in newspaper')).toBe(1);
+    const at = after.match(/Image (\d+): the fish's body as it is now \(wrapped in newspaper\)/)?.[1];
+    expect(at).toBeTruthy();
+    expect(after).toContain(`Except its body, which is no longer as it shows: it is now as Image ${at} shows.`);
+  });
+
+  test('what no image\'s line says stays in "How each one is at this moment": who holds what', () => {
+    const now = (p: string) => p.split('\n').find((l) => l.startsWith('How each one is at this moment')) ?? '';
+    expect(now(prompt('state_once'))).toContain("the fish is in the dreamer's hands");
+    expect(now(prompt('state_once'))).not.toContain('wrapped in newspaper');
+  });
+});
+
 describe("S4's word lists, each with a switch that turns off only its piece", () => {
   test('hands, own body, a vehicle going, the water and the openings on walls', () => {
     const room: Blocking = {

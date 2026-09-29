@@ -287,6 +287,9 @@ export function assembleCut(s: CutSheet): Assembled {
   // In-between pictures, then earlier moments, while there is room. A person's latest picture, the
   // last kind added, is the first to go.
   const shift = s.story.shift;
+  // Each part's in-between picture, by its image: with each state said once (S6 row 16) its sketch's "Except"
+  // points to it instead of saying the state again.
+  const partPictures: { of: string; now: string; at: number }[] = [];
   for (const x of usable) {
     if (x === base || asStage.has(x.id) || references.length >= MAX_IMAGES) continue;
     const g = x.ghost;
@@ -308,6 +311,8 @@ export function assembleCut(s: CutSheet): Assembled {
               ? `how ${name(g.of)} looks now (${g.state?.what}: ${g.state?.now}): draw it exactly so. Nothing else from it.`
               : `${name(g.of)}'s ${g.state.what} as it is now (${g.state.now}): draw their ${g.state.what} exactly so, and take nothing else from it.`,
       );
+      if (g.state && !g.state.whole && g.of !== s.place)
+        partPictures.push({ of: g.of, now: g.state.now, at: references.length });
       continue;
     }
     const unsketched = x.who?.filter((id) => !imageOf.has(id)) ?? [];
@@ -381,9 +386,26 @@ export function assembleCut(s: CutSheet): Assembled {
     );
   }
 
+  // Each state said once (S6 row 16): a part an in-between picture shows is said there, and its sketch's "Except"
+  // says it is now as that picture shows; what the images' lines say of how one is now is not said again below.
+  if (s.once?.state)
+    for (const g of partPictures)
+      for (let i = 0; i < manifest.length; i++)
+        if (i !== g.at - 1 && manifest[i].startsWith('Image ') && manifest[i].includes(`: it is now ${g.now}`))
+          manifest[i] = manifest[i].replace(`: it is now ${g.now}`, `: it is now as Image ${g.at} shows`);
+  const saidAbove = manifest.join('\n').toLowerCase();
+  const nowOf = s.once?.state
+    ? s.now
+        ?.map((x) => ({
+          ...x,
+          facts: x.facts.filter((f) => !(f.kind === 'part' && saidAbove.includes(f.now.toLowerCase()))),
+        }))
+        .filter((x) => x.facts.length)
+    : s.now;
+
   const states = s.states.map((st) => `${name(st.who)}'s ${st.what}: ${st.now}`);
   // How each one in the picture is right now, each fact once, in place of what is still so from earlier.
-  const now = s.now ? sayNow(s.now).map((x) => x.text) : (s.nowWords ?? undefined);
+  const now = nowOf ? sayNow(nowOf).map((x) => x.text) : (s.nowWords ?? undefined);
   const action = s.story.action;
   // Seen from outside, the dreamer is a person in the picture only when the moment has them in it.
   const angle =

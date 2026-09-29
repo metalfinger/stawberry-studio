@@ -121,6 +121,11 @@ export const BUILDER_STEPS: readonly string[] = [
   //    and says the rest keep exactly "as said above"; in one colour the style's list is the one list, and an
   //    image's line points to it (the sheet's `once.colour`, read by the assembler).
   'colour_once',
+  // 16. How each one is now, said once: a part an in-between picture shows is said there, its sketch's "Except"
+  //    points to that picture, and "How each one is at this moment" leaves out what the images' lines say (the
+  //    sheet's `once.state`, read by the assembler). The sources of a state (the plan's and the record's) are
+  //    still two: the rest of the row.
+  'state_once',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;

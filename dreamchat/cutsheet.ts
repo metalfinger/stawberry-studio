@@ -310,9 +310,9 @@ export type CutSheet = {
    * Each fact said once (S6): what the builder's steps have made one, for the assembler, which reads only the
    * sheet. `look`: a look said in its image's line is not said again in "In it" (row 14). `colour`: a colour the
    * dream gives is listed once: in many colours by the style only where no line above says it, in one colour by
-   * the style alone (row 15).
+   * the style alone (row 15). `state`: how one is now is said once, where an image's line says it (row 16).
    */
-  once?: { look: boolean; colour?: boolean };
+  once?: { look: boolean; colour?: boolean; state?: boolean };
   /** What belongs to a take rather than the cut: the judge's findings on the last attempt and on earlier pictures. */
   take: { repairs: string[]; strays: Record<string, string[]> };
   record: RecordLayer | null;
@@ -697,7 +697,15 @@ export function cutSheet(x: CutSheetInput): CutSheet {
     nowWords,
     earlier: drawnFrom,
     style: { option: style, oneColour: oneColour(style), told },
-    ...(builds('look_once') ? { once: { look: true, ...(builds('colour_once') ? { colour: true } : {}) } } : {}),
+    ...(builds('look_once')
+      ? {
+          once: {
+            look: true,
+            ...(builds('colour_once') ? { colour: true } : {}),
+            ...(builds('state_once') ? { state: true } : {}),
+          },
+        }
+      : {}),
     take: { repairs: [...(frame.repairFor ?? [])], strays },
     record,
     tree,
