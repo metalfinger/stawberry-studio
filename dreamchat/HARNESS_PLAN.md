@@ -1083,10 +1083,36 @@ One **cut sheet** per cut is the spine everything is assembled from:
     camera); the dreamer's-eyes test now expects the mock-up with S5 on. `test/camera.test.ts`'s words-only
     assertion pins S5 off (with S5 on, the moment facing the clock behind the first camera is not an edit).
     `bun test`: 824 pass with every switch unset; with every switch on, the one failure was that assertion, fixed.
-  *Left, in order:* measure it on the frozen and live corpus, S5 on against round two's S5 on (the image lists of
-  the 7 that broke, before and after; cuts with a floor plan and no layout anchor, which should be 0; the mock-up
-  back on the 34 frozen cuts round two took it from); prompt cases (guards stay 36/36); an independent review;
-  merge into lab ahead of S6 rows 8-16 (the owner's order, 29 Sep). The crowd (heron m4: the mock-up's bare
+  *Measured (29 Sep; record, sheet, camera and references on; round two's S5 at lab 20b8f63 as `s5r2`, this as
+  `s5r3`, in runs/corpus; reading calls from the cache, 0 asked anew):*
+
+  | image 1 of every cut | frozen, 115 cuts | live, 411 cuts |
+  | --- | --- | --- |
+  | none, before → after | 38 → 3 | 212 → 124 |
+  | none, though a shot is worked out on a floor plan | 10 → 0 | 21 → 0 |
+  | the mock-up | 73 → 108 | 172 → 260 |
+  | an edit | 4 → 4 | 27 → 27 |
+
+  Every picture that changed (frozen 35, live 88) only gained its mock-up as image 1 and the words that go with
+  it; the one plan change is orchard m3 (0f40 m3), no longer an edit of m1 but placed with its own camera (cut,
+  carrying on; its left-to-right order now said by the shot). The 124 live cuts left without an image 1 have no
+  floor plan to make a mock-up from. Of the S5 check's regressions, image 1 is back for orchard m3 and m6,
+  lighthouse-first m7 and m8, library-3 m8, and lighthouse-fresh m9; orchard m5 (one image per subject) and
+  library-1 m4 (the shot's brief) are untouched by this. Prompt cases (13 Jev questions asked anew), before →
+  after: counted 29/34 → 29/34, the model step 7/8 → 7/8, guards 36/36 → 36/36, hypotheses 12/18 → 7/18: the five
+  that moved are the hypotheses written for the routing (heron-m4-route, lighthouse-first-m7-route,
+  lighthouse-first-m8-route, snow-train-m6-route, orchard-m2-mockup), to be retired as the verdicts contradict them.
+  *What the mock-ups show* (the S5 set dry under this, `runs/checkpoint/s5r3look`, rendered locally, nothing
+  drawn): orchard m3's is from behind the two, facing the gate, the dreamer left and Tomas right, as the picture
+  the owner called right (not the mirrored one), but tight (14mm, their backs filling the frame, the gate barely
+  in it). Three show how the mock-up can mislead where the renderer draws what the shot is not: orchard m2 (Tomas
+  close through the dreamer's eyes) is a large egg-shaped head on a small box, with no profile, and in the paired
+  test this moment's mock-up version was wrong ("feels like the dreamer is holding something"), its sketches-only
+  version right, as in the S5 check; orchard m6's white horse is a person-shaped figure labelled so; lighthouse-first
+  m8 has no tractor, two people seated on a bare floor. The rule stays the owner's (a layout anchor on every cut);
+  what each mock-up shows is for the owner to read, cut by cut, before anything is drawn.
+  *Left, in order:* an independent review; merge into lab ahead of S6 rows 8-16 (the owner's order, 29 Sep); retire
+  the five routing hypotheses. The crowd (heron m4: the mock-up's bare
   figures made real as naked people, "partly", n=1) is a known risk to watch in the owner's reading, not a reason
   to drop the anchor. None of this is proven in pictures: pictures judged by the owner (the viewer's reading, then
   a whole dream drawn) are the bar for any change to references, in-between pictures or edits, not text measures,
