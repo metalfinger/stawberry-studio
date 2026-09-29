@@ -68,9 +68,20 @@ import {
   oneRecord,
   type Unstaged,
 } from './record';
-import { builds, oneBuilder } from './cleanups';
+import { builds, oneBuilder, retired } from './cleanups';
 import { chooseRefs, type RefsLayer, refsMode } from './refs';
-import { groupMembers, isAnimal, isGroup, type Item, LOOK, type Shape, shapeOf, toldColours } from './sheets';
+import {
+  groupMembers,
+  inShades,
+  isAnimal,
+  isGroup,
+  type Item,
+  LOOK,
+  type Shape,
+  shapeOf,
+  toldColours,
+  withoutPose,
+} from './sheets';
 import {
   type Category,
   type CutNode,
@@ -417,6 +428,34 @@ export function cutSheet(x: CutSheetInput): CutSheet {
   const point = frame.fields.visual_point?.value ?? null;
   const writing = writingIn(action, point, ...inView.flatMap((s) => Object.values(s.fields).map((d) => d.value)));
 
+  // How each one looks, once (S6 row 8): the story record's base facts, where the builder's looks are on and
+  // it holds the element: each field's clauses as the record kept them, a clause guessed or implied (not said,
+  // confirmed or read from the story) in the style's shades, as the sketch's words were; fields apart by ";".
+  const recLook = (s: Item): string | undefined => {
+    const e = builds('looks') ? x.dream?.record?.elements[s.id] : undefined;
+    if (!e) return undefined;
+    // A change made where it is first shown is its first look ("water beginning to cover the floor"). Where how
+    // it is now says that part (a first look no sketch shows, or a change of it in force here), the look leaves
+    // it out: said once, and never an earlier stage beside a later one (the library's water had risen over the
+    // desks by m3, and its look still had it beginning to cover the floor).
+    const inForce = new Set([
+      ...changed.filter((st) => st.who === s.id).map((st) => st.what),
+      ...(plan?.facts?.find((n) => n.of === s.id)?.facts ?? []).flatMap((n) => (n.kind === 'part' ? [n.what] : [])),
+    ]);
+    return LOOK[s.kind]
+      .map((k) =>
+        (e.base[k] ?? [])
+          .filter((f) => !f.first || !inForce.has(f.first.what))
+          // The record strips the pose of people and animals; of a place or thing, the sketch's clean-up still does
+          // (S6 row 11 retires it once the record reads those too).
+          .map((f) => (s.kind === 'character' || retired('pose') ? f : { ...f, text: withoutPose(f.text, false) }))
+          .map((f) => (f.basis === 'guessed' || f.basis === 'implied' ? inShades(f.text, style) : f.text).trim())
+          .filter(Boolean)
+          .join(', '),
+      )
+      .filter(Boolean)
+      .join('; ');
+  };
   // One kind for each (S6 row 6): the story record's, where the builder's kinds are on and it holds one.
   const recKind = (id: string) => (builds('kinds') ? x.dream?.record?.elements[id] : undefined);
   const saidOf = (r: NonNullable<ReturnType<typeof recKind>>): Said =>
@@ -452,7 +491,7 @@ export function cutSheet(x: CutSheetInput): CutSheet {
             : 'thing',
       isDreamer: !!s.isDreamer,
       group: r ? r.kind === 'group' || r.kind === 'crowd' : isGroup(s),
-      look: lookOf(s, LOOK[s.kind]),
+      look: recLook(s) ?? lookOf(s, LOOK[s.kind]),
       turned: whole ? whole.now : null,
       image: approved(s) && s.mediaId ? s.mediaId : null,
       changes: changed

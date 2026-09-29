@@ -90,6 +90,9 @@ export const BUILDER_STEPS: readonly string[] = [
   // 7. Who is in view, once: the story record's shows and the camera's view (what the floor plan sees), on the
   //    cut sheet; the gate reads the sheet's, not inViewOf again.
   'in_view',
+  // 8. How each one looks, once: the story record's base facts, each clause with its basis, said at assembly
+  //    (a guessed colour in the style's shades); a rebuild gives the record the sketches as drawing does.
+  'looks',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;

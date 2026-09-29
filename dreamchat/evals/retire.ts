@@ -26,7 +26,7 @@
 // (DREAMCHAT_CUT_SHEET=shadow or on) for the readings 2-4. Writes runs/retire/<label>.json and <label>.txt.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { CLEANUP_NAMES, CLEANUPS, type Cleanup, oneBuilder, withRetired } from '../cleanups';
+import { builds, CLEANUP_NAMES, CLEANUPS, type Cleanup, oneBuilder, withRetired } from '../cleanups';
 import { pictureName } from '../continuity';
 import type { CutSheet } from '../cutsheet';
 import { type Rebuilt, type RebuiltPicture, rebuild } from '../plan';
@@ -313,9 +313,11 @@ function recordLook(
 ): string[] {
   const e = rec.elements[id];
   if (!e) return [];
+  // A first look (a change made where it is first shown) is said as how it is now, not in the look.
   return LOOK[kind].flatMap((k) =>
-    (e.base[k] ?? []).flatMap((f) =>
-      contentWords(f.basis === 'said' || f.basis === 'confirmed' ? f.text : inShades(f.text, style)),
+    (e.base[k] ?? []).filter((f) => !f.first).flatMap((f) =>
+      // A clause guessed or implied is said in the style's shades; one said, confirmed or read from the story as told.
+      contentWords(f.basis === 'guessed' || f.basis === 'implied' ? inShades(f.text, style) : f.text),
     ),
   );
 }
@@ -503,7 +505,10 @@ export type MomentReading = {
 export type GhostIds = { dream: string; picture: string; ids: string[] };
 
 export function readDream(id: string, session: Session, r: Rebuilt): { moments: MomentReading[]; ghosts: GhostIds[] } {
-  const inputs = recordInputsOf(session);
+  // The record as the rebuild's sheets read it: with the one builder's looks (S6 row 8), from the sketches as
+  // drawn (the rebuild's own), else as saved.
+  const saved = recordInputsOf(session);
+  const inputs = builds('looks') ? { ...saved, items: r.sheets } : saved;
   let rec: StoryRecord | null = null;
   try {
     rec = storyRecord(r.b, inputs.items, session.draft?.readings, { words: inputs.words, style: session.style }).record;
