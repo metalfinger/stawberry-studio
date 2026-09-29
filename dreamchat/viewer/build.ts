@@ -11,7 +11,18 @@
 // Writes runs/viewer/<dream>/ (frozen) or runs/viewer/<dream>.live/ (live): view.json, its mock-ups, and a link to
 // each picture it shows. The page (viewer/serve.ts) serves a dream's folder and nothing else.
 
-import { existsSync, lstatSync, mkdirSync, readdirSync, renameSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
+import {
+  copyFileSync,
+  existsSync,
+  linkSync,
+  lstatSync,
+  mkdirSync,
+  readdirSync,
+  renameSync,
+  symlinkSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import type { Session } from '../session';
 import type { Item } from '../sheets';
@@ -83,6 +94,22 @@ function writeWhole(path: string, text: string) {
   renameSync(tmp, path);
 }
 
+/**
+ * A picture put in a dream's folder: a link to it where the system allows one, else a hard link (Windows without
+ * Developer Mode refuses a symbolic link), else a copy. A later build clears what its view no longer names.
+ */
+function place(from: string, at: string) {
+  try {
+    symlinkSync(from, at);
+  } catch {
+    try {
+      linkSync(from, at);
+    } catch {
+      copyFileSync(from, at);
+    }
+  }
+}
+
 const isLink = (path: string) => {
   try {
     return lstatSync(path).isSymbolicLink();
@@ -104,7 +131,7 @@ if (import.meta.main) {
   const ids = named.length ? named : frozenDreams();
   const git = (...a: string[]) => Bun.spawnSync(['git', ...a], { cwd: HERE }).stdout.toString().trim();
   // The commit, marked where the tree has changes of its own: the view is not quite what that commit makes.
-  const commit = `${git('rev-parse', '--short', 'HEAD')}${git('status', '--porcelain', '--untracked-files=no') ? '-dirty' : ''}`;
+  const commit = `${git('rev-parse', '--short', 'HEAD')}${git('status', '--porcelain', '--untracked-files=no', '--', '.', ':!evals/viewer') ? '-dirty' : ''}`;
   let failed = 0;
   for (const id of ids) {
     try {
@@ -138,16 +165,17 @@ if (import.meta.main) {
         }));
       const dir = join(VIEWS, viewKey(id, live));
       mkdirSync(dir, { recursive: true });
-      // Its mock-ups, and a link to each picture it shows: the page serves this folder and nothing else.
-      for (const [name, png] of Object.entries(files)) writeFileSync(join(dir, name), png);
+      // Its mock-ups, and each picture it shows: the page serves this folder and nothing else. Whatever an earlier
+      // build of this dream put here and this view no longer names is cleared (a view.json and its temp aside).
       const linked = filesIn(view);
+      const keep = new Set([...linked, ...Object.keys(files), 'view.json']);
+      for (const f of readdirSync(dir)) if (!keep.has(f) && /\.(png|jpe?g|webp)$/i.test(f)) unlinkSync(join(dir, f));
+      for (const [name, png] of Object.entries(files)) writeFileSync(join(dir, name), png);
       for (const name of linked) {
         const at = join(dir, name);
         if (existsSync(at) || isLink(at)) unlinkSync(at);
-        symlinkSync(join(media, name), at);
+        place(join(media, name), at);
       }
-      // Links left from an earlier build of this dream that its view no longer names.
-      for (const f of readdirSync(dir)) if (!linked.includes(f) && isLink(join(dir, f))) unlinkSync(join(dir, f));
       writeWhole(join(dir, 'view.json'), `${JSON.stringify(view, null, 1)}\n`);
       const images = [...view.cuts.flatMap((c) => c.refs), ...view.ghosts.flatMap((g) => g.refs)].filter(
         (x) => x.source !== 'mockup',

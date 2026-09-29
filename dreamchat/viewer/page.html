@@ -567,7 +567,11 @@ function verdictBar() {
     const factsNow = now?.facts ?? (now?.change !== undefined ? { change: now.change } : { look: now?.look });
     bar.append(el('details', { id: 'diff', open: true, style: 'flex-basis: 100%' }, el('summary', { text: 'What changed since your verdict (d)' }),
       st.moved.includes('words') ? diffView(v.shown.prompt, now?.prompt ?? '') : null,
-      st.moved.includes('facts') && v.shown.facts !== undefined ? diffView(JSON.stringify(v.shown.facts, null, 1), JSON.stringify(factsNow, null, 1)) : null));
+      st.moved.includes('facts') && v.shown.facts !== undefined
+        ? (JSON.stringify(v.shown.facts) === JSON.stringify(factsNow)
+          ? el('p', { class: 'muted', text: 'Its facts changed in a way this view does not show (for an in-between picture, the state it is drawn with).' })
+          : diffView(JSON.stringify(v.shown.facts, null, 1), JSON.stringify(factsNow, null, 1)))
+        : null));
   }
   return bar;
 }
@@ -583,19 +587,22 @@ async function save(verdict) {
   if (!verdict) return say('Choose right, wrong or unsure first.', true);
   if (verdict === 'wrong' && !draft.wrong.size) return say('Say what is wrong: 1 layout, 2 references, 3 words.', true);
   const note = verdict === 'wrong' || draft.noteEdited ? draft.note : '';
+  // What is being saved, kept apart from whatever is selected by the time the answer comes.
+  const node = cur, kept = { verdict, wrong: new Set(draft.wrong), note: draft.note, noteEdited: draft.noteEdited };
   const r = await fetch('/api/verdict', { method: 'POST', headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ key: K, node: cur, verdict, wrong: [...draft.wrong], note, shown: shownHashes() }) });
-  const body = await r.json();
+    body: JSON.stringify({ key: K, node, verdict, wrong: [...kept.wrong], note, shown: shownHashes() }) });
+  const body = await r.json().catch(() => ({ error: `the page could not save it (${r.status})` }));
   if (r.status === 409) {
-    // The view was made again while this page was open: show it as it is now, and judge that.
-    const at = cur;
-    await open(K, at);
-    return say('This changed since the page showed it. Here it is as it is now: read it, then judge it again.', true);
+    // The view was made again while this page was open: show it as it is now, keeping what was typed, to judge again.
+    await open(K, node);
+    if (cur === node) { draft = { ...kept, verdict: kept.verdict === 'wrong' ? 'wrong' : null }; refreshBar(); }
+    return say('This changed since the page showed it. Here it is as it is now, with what you wrote: read it, then judge it again.', true);
   }
   if (!r.ok) return say(body.error, true);
   A = body.answers; setStates(body.states);
-  const dot = document.querySelector(`nav.tree .row[data-node="${CSS.escape(cur)}"] .dot`);
-  if (dot) dot.className = dotClass(cur);
+  const dot = document.querySelector(`nav.tree .row[data-node="${CSS.escape(node)}"] .dot`);
+  if (dot) dot.className = dotClass(node);
+  if (cur !== node) return;
   draft.verdict = null; draft.noteEdited = false;
   refreshBar();
   say('Saved.');

@@ -119,6 +119,13 @@ describe('the page', () => {
       const escape = encodeURIComponent(relative(from, join(outside, 'secret.png')));
       expect((await fetch(`${url}img/${DREAM}/${escape}`)).status).toBe(404);
       expect((await fetch(`${url}api/dream?key=..%2F..`)).status).toBe(404);
+      // A verdict filed by a key out of the dream folders (it would be written out of the answers folder): refused.
+      const out = await fetch(`${url}api/verdict`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ key: `../../viewer/fixtures/${DREAM}`, node: 'm1', verdict: 'right', shown: {} }),
+      });
+      expect(out.status).toBe(404);
       // Asked by another name (a page elsewhere pointed here): refused.
       expect((await fetch(`${url}api/dreams`, { headers: { host: 'evil.example:80' } })).status).toBe(403);
       const post = (body: unknown, type = 'application/json') =>
