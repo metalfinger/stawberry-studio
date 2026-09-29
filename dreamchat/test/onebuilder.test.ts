@@ -8,8 +8,10 @@ import { BUILDER_STEPS, builderSteps, builds, oneBuilder, withRetired } from '..
 import { refsOf } from '../evals/prompt-cases';
 import { loadDream } from '../evals/saved';
 import { producerSystem } from '../producer';
+import { cutSheet, sheetDream } from '../cutsheet';
+import { inViewOf } from '../frames';
 import { rebuild } from '../plan';
-import { recordsMade, storyRecord } from '../record';
+import { recordInputsOf, recordsMade, storyRecord } from '../record';
 import type { Session } from '../session';
 import type { TypedReading } from '../typed';
 import { DEFAULTS, pinSwitches, withSwitches } from './fakes';
@@ -201,6 +203,65 @@ describe('ledger 6: kinds from the story record', () => {
     expect(after.m3.sheet?.tags).toMatchObject({ animal: true, crowd: true });
     // The prompt is the same: the sheet already said it as an animal.
     expect(after.m3.prompt).toBe(before.m3.prompt);
+  });
+});
+
+describe('ledger 7: who is in view, once', () => {
+  test("the record's shows where given, the camera's view beside them, the place once, the dreamer never through their eyes", () => {
+    const sheets = ['p1', 'p2', 'p3', 't1', 'l1'].map((id) => ({
+      id,
+      kind: id.startsWith('p') ? 'character' : id.startsWith('t') ? 'prop' : 'location',
+      name: id,
+      fields: {},
+      isDreamer: id === 'p1',
+      status: 'ready',
+      version: 1,
+    })) as unknown as Parameters<typeof inViewOf>[1];
+    const frame = {
+      id: 'm1',
+      frame: { visible: ['p1', 'p2'], things: ['t1'], place: 'l1', eyes: 'outside', plan: { sees: ['p3'] } },
+    } as unknown as Parameters<typeof inViewOf>[0];
+    const ids = (xs: { id: string }[]) => xs.map((x) => x.id);
+    expect(ids(inViewOf(frame, sheets))).toEqual(['p1', 'p2', 't1', 'p3', 'l1']);
+    expect(ids(inViewOf(frame, sheets, ['p1', 't1']))).toEqual(['p1', 't1', 'p3', 'l1']);
+    const pov = { ...frame, frame: { ...frame.frame!, eyes: 'dreamer' } } as typeof frame;
+    expect(ids(inViewOf(pov, sheets, ['p1', 't1']))).toEqual(['t1', 'p3', 'l1']);
+  });
+
+  test("a moment's own copy of its cast gone out of date: the sheet shows whom the record shows", () => {
+    // 09ea m8, the dreamer waking with the fish; the copy also lists someone from an earlier plan of the market.
+    const id = 'dream-0926-000545-09ea';
+    const sheetAt = (step: string) =>
+      withSwitches({ ...SHEET, DREAMCHAT_ONE_BUILDER: step }, () => {
+        const s = loadDream(id, false).session as Session;
+        const r = rebuild(s);
+        const inputs = recordInputsOf(s);
+        const dream = sheetDream({
+          breakdown: r.b,
+          plan: r.plan,
+          prep: s.prep,
+          items: inputs.items,
+          style: s.style ?? null,
+          readings: s.draft?.readings,
+          words: inputs.words,
+        });
+        const p = r.pictures.find((x) => x.id === 'm8')!;
+        const extra = r.sheets.find(
+          (x) =>
+            x.kind === 'character' &&
+            !p.item.frame!.visible.includes(x.id) &&
+            !(p.item.frame!.plan?.sees ?? []).includes(x.id),
+        )!;
+        const stale = { ...p.item, frame: { ...p.item.frame!, visible: [...p.item.frame!.visible, extra.id] } };
+        return {
+          extra: extra.id,
+          ids: cutSheet({ frame: stale, sheets: r.sheets, style: s.style!, dream }).inView.map((e) => e.id),
+        };
+      });
+    const before = sheetAt('kinds');
+    expect(before.ids).toContain(before.extra);
+    const after = sheetAt('in_view');
+    expect(after.ids).not.toContain(after.extra);
   });
 });
 

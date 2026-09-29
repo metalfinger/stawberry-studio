@@ -399,7 +399,10 @@ export function cutSheet(x: CutSheetInput): CutSheet {
   const f = frame.frame;
   if (!f) throw new Error(`${frame.name} is not a moment`);
   const plan = f.plan;
-  const inView = inViewOf(frame, sheets);
+  // Who is in view, once (S6 row 7): the story record's shows and the camera's view, where the builder's
+  // in_view is on and the record holds the moment.
+  const recShows = builds('in_view') ? x.dream?.record?.moments.find((m) => m.id === frame.id)?.shows : undefined;
+  const inView = inViewOf(frame, sheets, recShows);
   const members = groupMembers(inView);
   const lookOf = (s: Item, keys: string[]) => lookIn(s, keys, { members, unsaid: plan?.unsaid, style });
   // One name for each (S6 row 5): the story record's, where the builder's names are on and it holds one.

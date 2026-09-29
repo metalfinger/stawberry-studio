@@ -155,7 +155,7 @@ import {
 } from './sheets';
 import type { JudgedCheck, JudgeOptions } from './judge';
 import { IMPLIED_BAR, impliedFacts, readImplied, type WriteFn } from './implied';
-import { oneBuilder } from './cleanups';
+import { builds, oneBuilder } from './cleanups';
 import { NO_BAR, readTypedMoment, strip, TYPED_BAR } from './typed';
 import {
   diffPlan,
@@ -2831,7 +2831,12 @@ export class SessionStore {
       frame.shot = text ? { text, view } : undefined;
     }
     let built = this.framed(s, frame, layout, 'frames', once);
-    const inView = inViewOf(frame, s.build.items);
+    // Who is in view: the sheet's, where the builder's in_view has it made once (S6 row 7).
+    const items = s.build.items;
+    const inView =
+      builds('in_view') && built.sheet
+        ? built.sheet.inView.flatMap((e) => items.filter((i) => i.id === e.id))
+        : inViewOf(frame, items);
     let findings = await this.gateFindings(
       s,
       frame,

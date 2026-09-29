@@ -46,7 +46,13 @@ function withEnv<T>(vars: Record<string, string | undefined>, fn: () => T): T {
 /** A frozen dream rebuilt, with the record off or on, and every moment's input as a rebuild gives it. */
 function dreamOf(id: string, record: 'off' | 'on') {
   return withEnv(
-    { DREAMCHAT_RECORD: record, DREAMCHAT_CUT_SHEET: 'shadow', DREAMCHAT_CAMERA: undefined, DREAMCHAT_REFS: undefined },
+    {
+      DREAMCHAT_RECORD: record,
+      DREAMCHAT_CUT_SHEET: 'shadow',
+      DREAMCHAT_CAMERA: undefined,
+      DREAMCHAT_REFS: undefined,
+      DREAMCHAT_ONE_BUILDER: undefined,
+    },
     () => {
       const s = loadDream(id, false).session as Session;
       const r = Object.assign(rebuild(s), { style: s.style });
@@ -203,7 +209,14 @@ describe('assembleCut is framePrompt, word for word', () => {
   for (const record of ['off', 'on'] as const)
     test(`on every moment of every frozen dream and ten variants of each, with the record ${record}`, () => {
       let n = 0;
-      withEnv({ DREAMCHAT_RECORD: record, DREAMCHAT_CAMERA: undefined, DREAMCHAT_REFS: undefined }, () => {
+      // The old builder's words: the one builder (S6) departs from framePrompt on purpose, so it is off here.
+      const off = {
+        DREAMCHAT_RECORD: record,
+        DREAMCHAT_CAMERA: undefined,
+        DREAMCHAT_REFS: undefined,
+        DREAMCHAT_ONE_BUILDER: undefined,
+      };
+      withEnv(off, () => {
         for (const id of frozenDreams()) {
           const { r, dream } = dreamOf(id, record);
           for (const p of r.pictures.filter((x) => x.kind === 'cut'))
@@ -391,7 +404,16 @@ describe('assembleCut reads the sheet and nothing else', () => {
     const allowed: Record<string, string[]> = {
       './camera': ['sayTurn'],
       './cutsheet': ['CutSheet', 'SheetEarlier', 'SheetElement'],
-      './frames': ['aNoun', 'FRAMING', 'MAX_IMAGES', 'NOTHING_ELSE', 'SHAPE_WORDS', 'samePlaceLine', 'sentence', 'writingLine'],
+      './frames': [
+        'aNoun',
+        'FRAMING',
+        'MAX_IMAGES',
+        'NOTHING_ELSE',
+        'SHAPE_WORDS',
+        'samePlaceLine',
+        'sentence',
+        'writingLine',
+      ],
       './record': ['sayNow'],
       './sheets': ['styleBlock'],
     };
