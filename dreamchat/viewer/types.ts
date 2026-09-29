@@ -175,3 +175,11 @@ export type ViewVerdict = {
   commit: string;
   at: string;
 };
+
+/** The owner's verdicts on one dream, as the page saves them: evals/viewer/<dream>.json, written whole. */
+export type ViewAnswers = {
+  dream: string;
+  source: 'frozen' | 'live';
+  /** By node (a cut, an in-between picture, or sketch:<id>), the latest verdict. */
+  verdicts: Record<string, ViewVerdict>;
+};

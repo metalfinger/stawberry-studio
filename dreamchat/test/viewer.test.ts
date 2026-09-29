@@ -8,7 +8,9 @@ import { frozenDreams, loadDream } from '../evals/saved';
 import { imagesOf, rebuild, standIn } from '../plan';
 import { calledFor, drawingSheet, planRecord, previsFor, type Session } from '../session';
 import { sheetPrompt } from '../sheets';
+import { nodeStates, unreadRight } from '../evals/viewer-report';
 import { PROFILE, viewDream } from '../viewer/data';
+import type { ViewAnswers, ViewDream } from '../viewer/types';
 import { DEFAULTS, pinSwitches, withSwitches } from './fakes';
 
 setDefaultTimeout(120_000);
@@ -158,5 +160,57 @@ describe('what a verdict was given on', () => {
       viewDream(loadDream(id, false).session as Session, { id, source: 'frozen', commit: 'test' }),
     ).view.header;
     expect(part.profile.full).toBe(false);
+  });
+});
+
+describe("the owner's verdicts against what the viewer shows now", () => {
+  const id = 'dream-0926-070314-0f40';
+  const at = (step: string) =>
+    withSwitches({ ...PROFILE, DREAMCHAT_ONE_BUILDER: step }, () =>
+      viewDream(loadDream(id, false).session as Session, { id, source: 'frozen', commit: 'test' }),
+    ).view;
+  const rightOn = (v: ViewDream): ViewAnswers => ({
+    dream: id,
+    source: 'frozen',
+    verdicts: Object.fromEntries(
+      v.cuts.map((c) => [
+        c.id,
+        { node: c.id, verdict: 'right' as const, note: '', hashes: c.hashes, commit: 't', at: 't' },
+      ]),
+    ),
+  });
+
+  test('a verdict stands while what it judged stands; a change of words asks for its diff to be confirmed', () => {
+    const was = at('look_once');
+    const now = at('state_once');
+    expect(
+      nodeStates(was, rightOn(was))
+        .filter((x) => x.node.startsWith('m'))
+        .every((x) => x.state === 'current'),
+    ).toBe(true);
+    const xs = nodeStates(now, rightOn(was));
+    const confirm = xs.filter((x) => x.state === 'confirm');
+    expect(confirm.length).toBeGreaterThan(0);
+    expect(xs.filter((x) => x.state === 'read again')).toEqual([]);
+    expect(unreadRight(xs)).toEqual([]);
+    // Sheets and in-between pictures carry no verdict here: not read.
+    expect(xs.filter((x) => x.state === 'not read').length).toBe(now.sheets.length + now.ghosts.length);
+  });
+
+  test('a change of images asks for the node to be read again, and a node called right left so fails the bar', () => {
+    const was = at('state_once');
+    const now = withSwitches({ ...PROFILE, DREAMCHAT_REFS: undefined }, () =>
+      viewDream(loadDream(id, false).session as Session, { id, source: 'frozen', commit: 'test' }),
+    ).view;
+    const xs = nodeStates(now, rightOn(was));
+    expect(xs.some((x) => x.state === 'read again')).toBe(true);
+    expect(unreadRight(xs).length).toBeGreaterThan(0);
+  });
+
+  test('a verdict on a node no longer shown is gone, never counted as current', () => {
+    const was = at('state_once');
+    const answers = rightOn(was);
+    answers.verdicts.m99 = { ...answers.verdicts.m1, node: 'm99' };
+    expect(nodeStates(was, answers).find((x) => x.node === 'm99')?.state).toBe('gone');
   });
 });
