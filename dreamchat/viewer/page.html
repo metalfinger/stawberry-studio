@@ -401,20 +401,21 @@ function cutPanel(c) {
   return out;
 }
 
-// What the plan chose and did not send. Why each was left out is not recorded yet (gap 1): until it is, the page
-// says so, and lists the earlier cuts the plan drew from that are not among the images sent.
+// What the plan chose and did not send: each with the plan's reason (continuity.ts unsentWhy), and any other earlier
+// picture the plan draws from that is not among the images sent (left out when the prompt is put together), marked so.
 function unsentBlock(c) {
   const sentKeys = new Set(c.refs.map((r) => r.key));
-  const missing = c.links.filter((l) => l.kind === 'cut' && !sentKeys.has(`picture:${l.from}`));
-  const rows = c.unsent.length
-    ? el('table', { class: 'list' }, el('tr', {}, el('th', { text: 'Image' }), el('th', { text: 'Why not' }), el('th', { text: 'Detail' })),
-        c.unsent.map((u) => el('tr', {}, el('td', { class: 'mono', text: u.key }), el('td', { text: u.code.replaceAll('_', ' ') }), el('td', { text: u.detail }))))
-    : missing.length
-      ? el('div', {}, el('p', { text: 'Earlier pictures the plan drew from that are not among the images sent:' }),
-          el('ul', {}, missing.map((l) => el('li', {}, jump(l.from), ` as ${l.role}${l.relation ? `, ${l.relation.replaceAll('_', ' ')}` : ''}`))),
-          el('p', { class: 'muted', text: 'Why each was left out is not recorded yet.' }))
-      : el('p', { class: 'muted', text: 'Every earlier picture the plan drew from is among the images sent. (In-between pictures are not checked here, and why anything is left out is not recorded yet.)' });
-  return el('div', { class: 'block' }, el('h3', {}, 'Chosen by the plan and not sent', el('span', { class: 'count', text: `${c.unsent.length || missing.length}` })), rows);
+  const reasoned = new Set(c.unsent.map((u) => u.key));
+  const other = c.links.filter((l) => l.kind === 'cut' && !sentKeys.has(`picture:${l.from}`) && !reasoned.has(`picture:${l.from}`));
+  const idOf = (key) => key.replace(/^picture:/, '');
+  const rows = [
+    ...c.unsent.map((u) => el('tr', {}, el('td', {}, jump(idOf(u.key))), el('td', { text: u.code.replaceAll('_', ' ') }), el('td', { text: u.detail }))),
+    ...other.map((l) => el('tr', {}, el('td', {}, jump(l.from)), el('td', { text: 'not among the images sent' }), el('td', { class: 'muted', text: `planned as ${l.role}${l.relation ? `, ${l.relation.replaceAll('_', ' ')}` : ''}; no reason recorded (left out as the prompt is put together)` }))),
+  ];
+  return el('div', { class: 'block' }, el('h3', {}, 'Chosen by the plan and not sent', el('span', { class: 'count', text: `${rows.length}` })),
+    rows.length
+      ? el('table', { class: 'list' }, el('tr', {}, el('th', { text: 'Picture' }), el('th', { text: 'Why not' }), el('th', { text: 'Detail' })), rows)
+      : el('p', { class: 'muted', text: 'Every earlier picture the plan drew from is among the images sent. (In-between pictures are not checked here.)' }));
 }
 
 function refCard(r, owner) {

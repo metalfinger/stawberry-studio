@@ -283,8 +283,12 @@ export function viewDream(s: Session, o: ViewOpts): { view: ViewDream; files: Re
       mockUp,
       links: (plan?.refs ?? []).map((x) => ({ from: x.id, kind: x.kind, relation: x.relation ?? null, role: x.role })),
       refs,
-      // Why each reference the plan chose was not sent: gap 1 (VIEWER_PLAN.md), the Mac pane's.
-      unsent: [],
+      // Why each earlier picture the plan chose is not sent (continuity.ts unsentWhy): the plan's own reasons.
+      unsent: (plan?.unsent ?? []).map((x) => ({
+        key: x.kind === 'cut' ? `picture:${x.id}` : `ghost:${x.id}`,
+        code: plan?.unsentWhy?.[x.id]?.code ?? 'no_cameras_words_differ',
+        detail: plan?.unsentWhy?.[x.id]?.detail ?? 'not recorded',
+      })),
       facts,
       issues: gateIssues.filter((x) => x.startsWith(`picture ${order} `) || x.startsWith(`picture ${order}:`)),
       prompt: p.prompt,
