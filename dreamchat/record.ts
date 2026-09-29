@@ -614,15 +614,15 @@ function factsOf(
     // piece names is read without its pose, as lookIn reads it: "standing beside the old man, a red scarf" is a scarf.
     const pieces = members.length ? value.split(/\s*;\s*/) : [value];
     const facts = pieces.flatMap((piece) => {
-      const about = members.filter((m) => m.re.test(person ? withoutPose(piece, false) : piece)).map((m) => m.id);
+      const named = (x: string) => members.filter((m) => m.re.test(x)).map((m) => m.id);
+      const ofPiece = named(person ? withoutPose(piece, false) : piece);
       return clausesOf(piece)
         .filter((c) => !VAGUE.test(c))
-        .map((text): Fact => ({
-          text,
-          basis: d.said ? 'said' : 'guessed',
-          from: `${from}.${k}`,
-          ...(about.length ? { about } : {}),
-        }));
+        .map((text): Fact => {
+          // And anyone a clause names itself: a pose left in the piece ("standing beside the old man") is his.
+          const about = uniq([...ofPiece, ...named(text)]);
+          return { text, basis: d.said ? 'said' : 'guessed', from: `${from}.${k}`, ...(about.length ? { about } : {}) };
+        });
     });
     if (facts.length) out[k] = facts;
   }
