@@ -1270,6 +1270,47 @@ function planWith(
       .toLowerCase()
       .replace(/^(the|a|an)\s+/, '')
       .trim();
+  // Whether what an earlier picture shows of who and what is in both pictures is as it stands at this cut:
+  // every change in force there still in force here, and none here that it lacks (an edit makes this cut's
+  // own changes itself).
+  const sameState = (c: CutPlan, e: CutPlan, edit: boolean) => {
+    const inBoth = (id: string) => inViewAt(byId.get(c.id)!).has(id) && inViewAt(byId.get(e.id)!).has(id);
+    const key = (st: State) => `${st.who}|${st.what}|${st.now}`.toLowerCase();
+    const then = [...e.own, ...e.states].filter((st) => inBoth(st.who));
+    const now = [...c.own, ...c.states].filter((st) => inBoth(st.who));
+    const made = (st: State) => edit && c.own.some((o) => o.who === st.who && o.what === st.what);
+    return (
+      now.every((st) => then.some((x) => key(x) === key(st)) || made(st)) &&
+      then.every((st) => now.some((x) => key(x) === key(st)) || made(st))
+    );
+  };
+  // S5's gate: whether cut `c`, its camera `a`, is drawn from the earlier picture `r`, its camera `z`. Never one
+  // turned round from it (a reverse). A picture drawn from takes over the layout of the new one, whatever it is
+  // told (the camera rules' picture check, 27 Sep: library-1 m5 drawn from a camera 4 m higher and other water,
+  // snow-train-2 m6 from 10 m off where the plan stood 1 m from the door). So it is drawn from only where its
+  // camera and the place as it stands match this cut's; else the sketches carry the look, and it is not sent.
+  const drawnFrom = (c: CutPlan, r: PlanRef, a: Eye | undefined, z: Eye | undefined) => {
+    // Cameras are compared on one floor plan only: two plans of one room do not share their bearings.
+    const onePlan = !!placePlan(b, c.id) && placePlan(b, c.id) === placePlan(b, r.id);
+    if (a && z && onePlan && turnedBetween(a, z) >= REVERSE_DEGREES) return false;
+    const edit = r.role === 'base';
+    const camera =
+      a && z && onePlan
+        ? Math.hypot(a.at.x - z.at.x, a.at.y - z.at.y) <= NEAR.metres &&
+          turnedBetween(a, z) <= NEAR.degrees &&
+          Math.abs((a.height ?? 0) - (z.height ?? 0)) <= NEAR.height
+        : // No cameras to compare: an edit keeps its picture's camera, and the words call it the same setup.
+          edit || r.relation === 'same_setup';
+    return camera && sameState(c, cutOf.get(r.id)!, edit);
+  };
+  // Where an earlier cut's camera stands as the plan is placed so far: its own, else where it would stand, else
+  // the camera of the picture it edits (camerasOf, over the cuts placed before this one).
+  const eyeOf = (id: string, seen: string[] = []): Eye | undefined => {
+    const e = cutOf.get(id);
+    if (!e || seen.includes(id)) return undefined;
+    const base = e.refs.find((r) => r.kind === 'cut' && r.role === 'base');
+    return e.eye ?? e.wouldBe ?? (base ? eyeOf(base.id, [...seen, id]) : undefined);
+  };
   for (const c of cuts) {
     const plan = placePlan(b, c.id);
     if (!plan) continue;
@@ -1359,7 +1400,6 @@ function planWith(
       const sameCast = baseCast.length === seen(m).length && baseCast.every((id) => seen(m).includes(id));
       if (base && !sameCast)
         Object.assign(base, { role: 'composition', relation: 'same_side', carries: CARRIES.same_side });
-      const edits = c.refs.some((r) => r.role === 'base');
       const where = shotPlan(b, m.id, rec) ?? plan;
       // What its words name on the plan besides who and what is in it, to be in the picture too where
       // the camera can hold it: holding up the key "for the lighthouse" with the lighthouse behind
@@ -1370,6 +1410,17 @@ function planWith(
         ...where.spots.map((x) => ({ id: x.id, name: nameOf(x) })),
         ...(where.front ? [{ id: 'front', name: where.front }] : []),
       ]).filter((id) => !ids.includes(id) && id !== dreamerId);
+      // With S5's references, an edit the gate would not send (its picture's camera far from where this
+      // moment's own would stand, or the place not as it stands here) is placed and made from its own mock-up
+      // like any other cut. Left an edit, the gate took its picture away later and the cut had no camera, no
+      // mock-up and nothing that carried the layout (the S5 picture check, 29 Sep: orchard m3 came out
+      // mirrored; lighthouse-first m8's tractor became a car).
+      if (refs && base?.role === 'base') {
+        const own = outsideShot(where, ids, m.distance, now, lookAt(m, where), also);
+        if (own && !drawnFrom(c, base, own.eye, eyeOf(base.id)))
+          Object.assign(base, { role: 'composition', relation: 'same_side', carries: CARRIES.same_side });
+      }
+      const edits = c.refs.some((r) => r.role === 'base');
       const rules = opts.camera && !edits ? shotRules(c, m, where) : undefined;
       const v = edits ? null : outsideShot(where, ids, m.distance, now, lookAt(m, where), also, rules);
       if (opts.camera && edits) {
@@ -1457,20 +1508,6 @@ function planWith(
    */
   function chooseInPlan() {
     const cams = camerasOf({ cuts, ghosts, issues: [] });
-    // Whether what an earlier picture shows of who and what is in both pictures is as it stands at this cut:
-    // every change in force there still in force here, and none here that it lacks (an edit makes this cut's
-    // own changes itself).
-    const sameState = (c: CutPlan, e: CutPlan, edit: boolean) => {
-      const inBoth = (id: string) => inViewAt(byId.get(c.id)!).has(id) && inViewAt(byId.get(e.id)!).has(id);
-      const key = (st: State) => `${st.who}|${st.what}|${st.now}`.toLowerCase();
-      const then = [...e.own, ...e.states].filter((st) => inBoth(st.who));
-      const now = [...c.own, ...c.states].filter((st) => inBoth(st.who));
-      const made = (st: State) => edit && c.own.some((o) => o.who === st.who && o.what === st.what);
-      return (
-        now.every((st) => then.some((x) => key(x) === key(st)) || made(st)) &&
-        then.every((st) => now.some((x) => key(x) === key(st)) || made(st))
-      );
-    };
     for (const c of cuts) {
       const m = byId.get(c.id)!;
       const here = seen(m);
@@ -1485,24 +1522,7 @@ function planWith(
           return [r.role === 'identity' ? { ...r, who } : r];
         }
         if (r.relation === 'seat') return [r];
-        // Cameras are compared on one floor plan only: two plans of one room do not share their bearings.
-        const a = cams.get(c.id);
-        const z = cams.get(r.id);
-        const onePlan = !!placePlan(b, c.id) && placePlan(b, c.id) === placePlan(b, r.id);
-        if (a && z && onePlan && turnedBetween(a, z) >= REVERSE_DEGREES) return [];
-        // A picture drawn from takes over the layout of the new one, whatever it is told (the camera rules'
-        // picture check, 27 Sep: library-1 m5 drawn from a camera 4 m higher and other water, snow-train-2 m6
-        // from 10 m off where the plan stood 1 m from the door). So it is drawn from only where its camera and
-        // the place as it stands match this cut's; else the sketches carry the look, and it is not sent.
-        const edit = r.role === 'base';
-        const camera =
-          a && z && onePlan
-            ? Math.hypot(a.at.x - z.at.x, a.at.y - z.at.y) <= NEAR.metres &&
-              turnedBetween(a, z) <= NEAR.degrees &&
-              Math.abs((a.height ?? 0) - (z.height ?? 0)) <= NEAR.height
-            : // No cameras to compare: an edit keeps its picture's camera, and the words call it the same setup.
-              edit || r.relation === 'same_setup';
-        return camera && sameState(c, cutOf.get(r.id)!, edit) ? [r] : [];
+        return drawnFrom(c, r, cams.get(c.id), cams.get(r.id)) ? [r] : [];
       });
       const unsent = all.filter((r) => r.kind === 'cut' && !c.refs.some((x) => x.id === r.id));
       if (unsent.length) c.unsent = unsent;

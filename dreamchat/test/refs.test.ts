@@ -1,4 +1,4 @@
-// Step S5, the references a cut is drawn from (refs.ts, DREAMCHAT_REFS): image 1 by the cut's tags, one
+// Step S5, the references a cut is drawn from (refs.ts, DREAMCHAT_REFS): image 1 what carries the layout, one
 // image for each subject in view (its stage in force), no picture from another side, the plan waiting only
 // for what it sends, and an in-between picture only where an edit carries two changes or more. Every
 // dream here is made up for the rule it tests, each test failing with the switch off; the drawing path is
@@ -15,7 +15,7 @@ import { buildFrames, buildGhosts, ghostPrompt, NOTHING_ELSE, type PlannedInput 
 import { checkReferences } from '../gate';
 import { rebuild, standIn } from '../plan';
 import type { Breakdown, Moment, StyleOption } from '../producer';
-import { chooseRefs, facelessIn, mockupHelps, type Route, refsMode, SEVERAL, standsFor } from '../refs';
+import { chooseRefs, refsMode, SEVERAL, standsFor } from '../refs';
 import { drawingSheet, type Session } from '../session';
 import type { Item } from '../sheets';
 import { verdictsIn, withheldOf } from '../verdicts';
@@ -104,76 +104,58 @@ describe('the switch', () => {
   });
 });
 
-describe('image 1, by the tags', () => {
-  const route = (role: CutTags['role'], move: CutTags['move'], more: Partial<Route> = {}): Route => ({
-    role,
-    move,
-    establishing: false,
-    ...more,
+describe('image 1: what carries the layout, on every cut', () => {
+  const sheet = (inView: unknown[], earlier: { role: string }[] = [], previs: string | null = 'previs-m2') => ({
+    earlier: earlier.map((e, i) => ({ id: `m${i + 1}`, kind: 'cut', role: e.role })) as never,
+    inView: inView as never,
+    camera: { previs },
   });
-  test('the mock-up from outside, never across a jump, nor for a close-up, an insert or the seat', () => {
-    expect(mockupHelps(route('two_shot', 'other_side'))).toBe(true);
-    expect(mockupHelps(route('wide', 'reverse'))).toBe(true);
-    expect(mockupHelps(route('single', 'first'))).toBe(true);
-    for (const role of ['close_up', 'insert'] as const) expect(mockupHelps(route(role, 'same_side'))).toBe(false);
-    expect(mockupHelps(route('wide', 'jump'))).toBe(false);
-    expect(mockupHelps(route('pov', 'jump', { placeOnly: true }))).toBe(false);
-    expect(mockupHelps(route('two_shot', 'seat'))).toBe(false);
+  const ana = { id: 'p1', kind: 'character', said: 'person', group: false, image: 'sketch-p1', turned: null };
+  const crowd = { id: 'p9', kind: 'character', said: 'people', group: true, image: null, turned: null };
+
+  test('the picture edited where the plan edits one; else the mock-up; the sketches first only with no mock-up', () => {
+    expect(chooseRefs(sheet([ana], [{ role: 'base' }])).first).toBe('edit');
+    expect(chooseRefs(sheet([ana])).first).toBe('mockup');
+    expect(chooseRefs(sheet([ana], [], null)).first).toBe('free');
   });
 
-  test('to another place only for a wide shot: the verdicts against it were close shots, the wide ones right with it', () => {
-    expect(mockupHelps(route('wide', 'other_place'))).toBe(true);
-    for (const role of ['single', 'two_shot', 'group'] as const)
-      expect(mockupHelps(route(role, 'other_place'))).toBe(false);
+  test("the mock-up whatever the cut: through the dreamer's eyes with someone in view, a close-up, a jump, a crowd", () => {
+    // The owner's verdicts with the camera rules (evals/checkpoint/s4 and s5): with the mock-up 15 of 20 right,
+    // without it 5 of 12; orchard m6 and lighthouse-first m7, drawn without it through the dreamer's eyes, lost
+    // the dreamer's view and the room. Image 1 no longer looks at the cut's tags at all.
+    expect(chooseRefs(sheet([ana, crowd])).first).toBe('mockup');
+    expect(chooseRefs(sheet([crowd])).first).toBe('mockup');
   });
 
-  test("through the dreamer's eyes only with nothing but the place in view", () => {
-    // Orchard m7: the empty rows of trees, the mock-up partly right and the sketches alone wrong; with
-    // someone or something in view the sketches alone were right (orchard m2, snow-train m6).
-    expect(mockupHelps(route('pov', 'other_side', { placeOnly: true }))).toBe(true);
-    expect(mockupHelps(route('pov', 'other_side'))).toBe(false);
-  });
-
-  test('about a crowd with no image of its own: no mock-up, but for a wide shot establishing the place', () => {
-    expect(mockupHelps(route('two_shot', 'other_side', { faceless: true }))).toBe(false);
-    expect(mockupHelps(route('wide', 'same_side', { faceless: true }))).toBe(false);
-    expect(mockupHelps(route('wide', 'first', { faceless: true, establishing: true }))).toBe(true);
-  });
-
-  test('a crowd is a group of people the moment lists with no sketch; a failed sketch or a shoal of fish is not one', () => {
-    const crowd = { id: 'p9', kind: 'character', said: 'people', group: true, image: null, turned: null };
-    const failed = { id: 'p8', kind: 'character', said: 'person', group: false, image: null, turned: null };
-    const shoal = { id: 'p7', kind: 'character', said: 'animal', group: true, image: null, turned: null };
-    const ana = { id: 'p1', kind: 'character', said: 'person', group: false, image: 'sketch-p1', turned: null };
-    const sheet = (inView: unknown[], visible: string[]) => ({
-      earlier: [],
-      inView: inView as never,
-      visible,
-      camera: { previs: 'previs-m1' },
-      tags: { role: 'two_shot', move: 'same_side', establishing: false } as CutTags,
-    });
-    // Only in the background (the record or the floor plan put it there): the mock-up stays.
-    expect(chooseRefs(sheet([ana, crowd], ['p1'])).first).toBe('mockup');
-    // What the moment is about: made real shape by shape, it would come out as bare figures.
-    expect(chooseRefs(sheet([ana, crowd], ['p1', 'p9'])).first).toBe('free');
-    expect(facelessIn({ inView: [ana, failed] as never, visible: ['p1', 'p8'] })).toBe(false);
-    expect(chooseRefs(sheet([ana, failed], ['p1', 'p8'])).first).toBe('mockup');
-    // The fish the moment is about (the classroom's shoal, 8ceb m7) keep the mock-up.
-    expect(chooseRefs(sheet([ana, shoal], ['p1', 'p7'])).first).toBe('mockup');
-  });
-
-  test('an edit where the plan edits the picture before; else the mock-up where it helps; else the sketches', () => {
-    const sheet = (role: CutTags['role'], earlier: { role: string }[] = [], previs: string | null = 'previs-m2') => ({
-      earlier: earlier.map((e, i) => ({ id: `m${i + 1}`, kind: 'cut', role: e.role })) as never,
-      inView: [{ id: 'p1', kind: 'character', group: false, image: 'sketch-p1', turned: null }] as never,
-      visible: ['p1'],
-      camera: { previs },
-      tags: { role, move: 'same_side', establishing: false } as CutTags,
-    });
-    expect(chooseRefs(sheet('two_shot', [{ role: 'base' }])).first).toBe('edit');
-    expect(chooseRefs(sheet('two_shot')).first).toBe('mockup');
-    expect(chooseRefs(sheet('pov')).first).toBe('free');
-    expect(chooseRefs(sheet('two_shot', [], null)).first).toBe('free');
+  test('an edit the gate drops is placed on its floor plan and made from its own mock-up, never from nothing', () => {
+    // m3 is the story's continuation of m1, the same view, but ana's coat went red at m2, which m1 does not
+    // show: the gate does not edit m1. Left an edit until then, m3 had no camera and no mock-up of its own, and
+    // went out with the sketches alone (the S5 picture check: orchard m3 mirrored, lighthouse-first m8).
+    const coat = () =>
+      withPlan(
+        breakdown([
+          moment({ id: 'm1', visible: ['p1'], looks_at: 'the stage' }),
+          moment({
+            id: 'm2',
+            visible: ['p1'],
+            looks_at: 'the stage',
+            sameSide: ['m1'],
+            leaves: [{ who: 'p1', what: 'coat', now: 'bright red' }],
+          }),
+          moment({ id: 'm3', visible: ['p1'], looks_at: 'the stage', from: 'm1', sameSide: ['m1', 'm2'], states: [red] }),
+        ]),
+      );
+    const off = cut(plan(coat(), OFF), 'm3');
+    expect(off.refs.find((r) => r.id === 'm1')?.role).toBe('base');
+    for (const vars of [ON, { ...ON, DREAMCHAT_RECORD: 'on', DREAMCHAT_CAMERA: 'on' }]) {
+      const on = cut(plan(coat(), vars), 'm3');
+      expect(on.refs.some((r) => r.id === 'm1')).toBe(false);
+      expect(on.eye).toBeTruthy();
+      expect(on.view).toBeTruthy();
+      const made = assembled(coat(), 'm3', vars).made;
+      expect(made.references[0]).toMatchObject({ role: 'base', source: 'mockup', of: 'm3' });
+      expect(made.prompt).toContain('It is a rough grey mock-up of this exact picture');
+    }
   });
 });
 
@@ -479,12 +461,13 @@ describe('an earlier picture attached for how things look brings nobody and noth
     expect(line).toContain('come from Image 1, the mock-up');
     expect(line).toContain('The dreamer in it is the camera here, so they are not in this picture.');
     expect(line).toContain(NOTHING_ELSE);
-    // With S5: no mock-up through the dreamer's eyes with bo in view, and m1's camera, far behind them, is not
-    // this one: the picture is not drawn from, and where things stand comes from the shot above.
+    // With S5: m1's camera, far behind them, is not this one: the picture is not drawn from, and where things
+    // stand comes from the mock-up, image 1 through the dreamer's eyes as on every cut.
     const on = assembled(b, 'm3', ON, sheets).made;
-    expect(on.references.some((r) => r.source === 'mockup' || r.source === 'earlier')).toBe(false);
+    expect(on.references.some((r) => r.source === 'earlier')).toBe(false);
+    expect(on.references[0]).toMatchObject({ source: 'mockup', of: 'm3' });
     const hall = on.prompt.split('\n').find((l) => l.startsWith('Image') && l.includes('the hall'))!;
-    expect(hall).toContain('come from the shot above');
+    expect(hall).toContain('come from Image 1, the mock-up');
   });
 
   test('an earlier picture is drawn from only where its camera is near this one and what both show stands alike', () => {

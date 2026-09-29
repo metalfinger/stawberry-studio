@@ -2,22 +2,17 @@
 // each subject in view, no picture from another side of the place, the plan waiting only for what it
 // sends, and an in-between picture only where an edit would carry several changes.
 //
-// - Image 1 by the cut's tags: the picture edited where the plan edits one (the same setup, a moment
-//   later); else the grey mock-up made real, except where the verdicts found it hurt; else nothing before
-//   the sketches. Where the mock-up goes (evals/paired-verdicts.json, n=20, beside the story pictures, all
-//   drawn with it):
-//   - not across a jump (lighthouse-first m8: the mock-up wrong, the sketches alone right);
-//   - not a close-up or an insert (a held thing: the mock-up wrong or partly in 3 of 4);
-//   - through the dreamer's eyes only where nothing but the place is in view (orchard m7: the mock-up
-//     partly, the sketches alone wrong); with someone or something in view the sketches alone were right
-//     and the mock-up wrong (orchard m2, snow-train m6, lighthouse-first m7);
-//   - to another place only for a wide shot: the two paired moments against it were not wide (heron m4, a
-//     crowd; lighthouse-first m7, a close-up), and the story pictures had wide shots right with it 8 of 11;
-//   - not where the moment is about a crowd with no image of its own, but for a wide shot establishing the
-//     place: made real shape by shape, the crowd came out as the mock-up's bare figures (heron m4, rules.md
-//     C5); a crowd only in the background (night-market m2) or a wide establishing shot (night-market m1)
-//     was right with it.
-//   The routing is the paid check's to confirm.
+// - Image 1, what carries the layout: the picture edited where the plan edits one and the gate sends it (the
+//   same setup, a moment later, its camera and the place as it stands the same); else the grey mock-up made real,
+//   on every route; else, with no floor plan to make one from, nothing before the sketches. A cut whose edit the
+//   gate drops is placed on its floor plan and made from its own mock-up (continuity.ts), never left with
+//   nothing. The mock-up once went only where the paired test (n=20, 26 Sep) found it helped, and not through
+//   the dreamer's eyes with someone in view, across a jump, for a close-up, an insert or the seat, or about a
+//   crowd; that test was drawn before the camera rules moved the mock-ups, and found the mock-up, an edit and
+//   neither alike (10, 11 and 9 of 20 right). With the camera rules, the owner's verdicts say otherwise
+//   (evals/checkpoint/s4 and s5): with the mock-up 15 of 20 right, 5 of 7 through the dreamer's eyes; without
+//   it 5 of 12, 2 of 6 through the dreamer's eyes; and of three moments drawn both ways (lighthouse-first m7
+//   and m8, orchard m6), right with it all three times and without it none.
 // - One image per subject (rules.md D1): each one in view is shown by the image of its stage in force,
 //   the in-between picture of its latest change where one is drawn and approved, else its sketch. An
 //   earlier picture comes in only for someone with no sketch (a crowd), as the jump's composition, or for
@@ -33,7 +28,7 @@
 // default) is today's choice byte for byte. `on` is all of the above; `sketch` is all of it but one image
 // per subject: a sketch stays beside its in-between pictures, as the 14 pictures the owner called right
 // were drawn, so the paid check can draw both (one image per subject is a hypothesis until it does).
-import type { CutSheet, CutTags, SheetEarlier } from './cutsheet';
+import type { CutSheet, SheetEarlier } from './cutsheet';
 import type { Item } from './sheets';
 
 let warned = false;
@@ -57,53 +52,9 @@ export function refsMode(): 'off' | 'on' | 'sketch' {
  */
 export const SEVERAL = 2;
 
-/**
- * What image 1 is chosen by: the cut's role, move and whether it establishes the place, and `faceless` (the
- * moment is about a crowd with no image of its own) and `placeOnly` (nothing but the place is in view).
- */
-export type Route = Pick<CutTags, 'role' | 'move' | 'establishing'> & { faceless?: boolean; placeOnly?: boolean };
-
-/** Whether the grey mock-up goes in as image 1, where no picture is edited (a hypothesis, n=20): see above. */
-export function mockupHelps(t: Route): boolean {
-  if (t.move === 'jump') return false;
-  if (t.role === 'pov') return !!t.placeOnly;
-  if (t.role === 'close_up' || t.role === 'insert' || t.move === 'seat') return false;
-  if (t.move === 'other_place' && t.role !== 'wide') return false;
-  if (t.faceless && !(t.role === 'wide' && t.establishing)) return false;
-  return true;
-}
-
-/**
- * Whether the moment is about a crowd of people with no image of its own: a group of people the moment lists as
- * its own, with no approved sketch. A person whose sketch failed is not a crowd, nor is a shoal of fish: the rule
- * is heron m4's faceless students made real as the mock-up's bare figures.
- */
-export const facelessIn = (s: Pick<CutSheet, 'inView' | 'visible'>) =>
-  s.inView.some(
-    (e) =>
-      e.kind === 'character' &&
-      e.group &&
-      e.said === 'people' &&
-      !e.image &&
-      e.turned === null &&
-      s.visible.includes(e.id),
-  );
-
-/** Whether nothing but the place is in view. */
-export const placeOnlyIn = (s: Pick<CutSheet, 'inView'>) => s.inView.every((e) => e.kind === 'location');
-
-/** The route of a cut's sheet. */
-export const routeOf = (s: Pick<CutSheet, 'inView' | 'visible' | 'tags'>): Route => ({
-  role: s.tags.role,
-  move: s.tags.move,
-  establishing: s.tags.establishing,
-  faceless: facelessIn(s),
-  placeOnly: placeOnlyIn(s),
-});
-
 /** What a cut is drawn from, chosen from its sheet: kept on the sheet with DREAMCHAT_REFS on. */
 export type RefsLayer = {
-  /** Image 1: the picture edited, the mock-up made real, or neither (the sketches come first). */
+  /** Image 1: the picture edited, the mock-up made real, or, with no mock-up, neither (the sketches come first). */
   first: 'edit' | 'mockup' | 'free';
   /**
    * By who or what is in view, the in-between picture that is its one image (its stage in force), where
@@ -119,16 +70,16 @@ const ghostsOf = (earlier: SheetEarlier[], id: string) =>
   earlier.filter((x) => x.kind === 'ghost' && x.ghost?.of === id);
 
 /**
- * The references of one cut, from its sheet alone: image 1 by its tags, and each one in view by the image
- * of its stage in force. The earlier pictures are the plan's (continuity.ts leaves out what a cut is not
+ * The references of one cut, from its sheet alone: image 1, what carries the layout, and each one in view by
+ * the image of its stage in force. The earlier pictures are the plan's (continuity.ts leaves out what a cut is not
  * drawn from); a picture of someone who has an image of their own here is still left out when attached.
  */
 export function chooseRefs(
-  s: Pick<CutSheet, 'earlier' | 'inView' | 'tags' | 'visible'> & { camera: Pick<CutSheet['camera'], 'previs'> },
+  s: Pick<CutSheet, 'earlier' | 'inView'> & { camera: Pick<CutSheet['camera'], 'previs'> },
   mode: 'on' | 'sketch' = 'on',
 ): RefsLayer {
   const base = s.earlier.some((x) => x.role === 'base');
-  const first = base ? 'edit' : s.camera.previs && mockupHelps(routeOf(s)) ? 'mockup' : 'free';
+  const first = base ? 'edit' : s.camera.previs ? 'mockup' : 'free';
   const stage: Record<string, string> = {};
   const several: string[] = [];
   for (const e of s.inView) {

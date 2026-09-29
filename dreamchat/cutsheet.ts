@@ -595,7 +595,7 @@ export function cutSheet(x: CutSheetInput): CutSheet {
     refsOn === 'off'
       ? null
       : chooseRefs(
-          { earlier: drawnFrom, inView: elements, visible: f.visible, camera: { previs: x.layout ?? null }, tags },
+          { earlier: drawnFrom, inView: elements, camera: { previs: x.layout ?? null } },
           refsOn,
         );
 

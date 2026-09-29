@@ -589,7 +589,9 @@ describe('how cuts stand to each other, one reading', () => {
       },
       moments: [{ id: 'm1' }, { id: 'm2', looks_at: 'the station clock', sameSide: ['m1'] }],
     });
-    const off = withEnv({ DREAMCHAT_CAMERA: undefined }, () => planContinuity(b));
+    // Today, by the words alone. With S5's references on, even without the camera rules, m2's own camera (facing
+    // the clock, behind m1's) is not m1's, and the gate does not edit m1 (refs.test.ts).
+    const off = withEnv({ DREAMCHAT_CAMERA: undefined, DREAMCHAT_REFS: undefined }, () => planContinuity(b));
     expect(cut(off, 'm2').refs.find((r) => r.id === 'm1')?.role).toBe('base');
     const on = planned(b);
     expect(cut(on, 'm2').refs.some((r) => r.role === 'base')).toBe(false);
