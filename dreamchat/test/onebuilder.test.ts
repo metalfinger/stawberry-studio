@@ -7,11 +7,12 @@ import { goingIn, handsIn, openingsIn, selfIn, waterLevel } from '../camera';
 import { BUILDER_STEPS, builderSteps, builds, oneBuilder, withRetired } from '../cleanups';
 import { refsOf } from '../evals/prompt-cases';
 import { loadDream } from '../evals/saved';
-import { producerSystem } from '../producer';
+import { moments, producerSystem } from '../producer';
 import { rebuild } from '../plan';
 import { recordsMade, storyRecord } from '../record';
-import type { Session } from '../session';
-import type { TypedReading } from '../typed';
+import { type Session, typedReadings } from '../session';
+import { NO_BAR, TYPED_BAR, type TypedReading, typedAsk, typedAskKey, typedWriterName } from '../typed';
+import { hashOf } from '../lib';
 import { DEFAULTS, pinSwitches, withSwitches } from './fakes';
 
 setDefaultTimeout(120_000);
@@ -198,5 +199,92 @@ describe("S4's word lists, each with a switch that turns off only its piece", ()
     withRetired(['water_level'], () => expect(waterLevel('water up to their waists', room)).toBeNull());
     expect(openingsIn('tall windows along both side walls')).toEqual([{ what: 'windows', walls: ['left', 'right'] }]);
     withRetired(['openings'], () => expect(openingsIn('tall windows along both side walls')).toEqual([]));
+  });
+});
+
+describe('typed readings while planning', () => {
+  const id = 'dream-0926-043003-b0cb';
+  const b = () => structuredClone((loadDream(id, false).session as Session).draft!.breakdown!);
+  const counting = () => {
+    const asked: string[] = [];
+    let live = 0;
+    let most = 0;
+    const write = async (messages: { content: string }[]) => {
+      live++;
+      most = Math.max(most, live);
+      await new Promise((r) => setTimeout(r, 5));
+      live--;
+      asked.push(messages.at(-1)!.content);
+      return { content: '{"acts": []}', model: 'fake', ms: 0 };
+    };
+    return { asked, most: () => most, write: write as never };
+  };
+  const jev = (async () => ({ answers: {} })) as never;
+
+  test('a moment whose question is unchanged keeps its reading; the rest are read anew, a few at once', async () => {
+    const dream = b();
+    const n = moments(dream).length;
+    const first = counting();
+    const read = (await typedReadings(dream, { typed: first.write, jev }))!;
+    expect(first.asked).toHaveLength(n);
+    expect(first.most()).toBeGreaterThan(1);
+    expect(first.most()).toBeLessThanOrEqual(4);
+    expect(Object.keys(read)).toEqual(moments(dream).map((m) => m.id));
+    // Planned again, nothing changed: nothing read.
+    const again = counting();
+    expect(await typedReadings(dream, { typed: again.write, jev }, read)).toEqual(read);
+    expect(again.asked).toHaveLength(0);
+    // The last moment's words changed (the question holds the story before, so a later one changes alone):
+    // that moment alone.
+    const m = moments(dream).at(-1)!;
+    m.action = `${m.action} (changed)`;
+    const one = counting();
+    await typedReadings(dream, { typed: one.write, jev }, read);
+    expect(one.asked).toHaveLength(1);
+  });
+
+  test('a reading that failed is read again on the next plan', async () => {
+    const dream = b();
+    const last = moments(dream).at(-1)!.id;
+    let fail = true;
+    const asked: string[] = [];
+    const flaky = (async (messages: { content: string }[]) => {
+      asked.push(messages.at(-1)!.content);
+      if (fail && messages.at(-1)!.content.includes(last)) throw new Error('429');
+      return { content: '{"acts": []}', model: 'fake', ms: 0 };
+    }) as never;
+    const read = (await typedReadings(dream, { typed: flaky, jev }))!;
+    expect(read[last].ask).toBeUndefined();
+    fail = false;
+    asked.length = 0;
+    const again = (await typedReadings(dream, { typed: flaky, jev }, read))!;
+    expect(asked).toHaveLength(1);
+    expect(again[last].ask).toBeDefined();
+  });
+
+  test('its key is the question, the writer and the bars: another writer reads it anew', () => {
+    const dream = b();
+    const m = moments(dream).at(-1)!;
+    const key = typedAskKey(dream, m);
+    expect(typedAskKey(dream, m)).toBe(key);
+    // The writer is fixed when the module loads, so its name is changed where the key reads it.
+    const was = process.env.DREAMCHAT_TYPED_THINKING;
+    expect(typedWriterName()).toContain('thinking');
+    expect(hashOf({ ask: typedAsk(dream, m), writer: typedWriterName(), bars: [TYPED_BAR, NO_BAR] })).toBe(key);
+    expect(
+      hashOf({ ask: typedAsk(dream, m), writer: `${typedWriterName()} other`, bars: [TYPED_BAR, NO_BAR] }),
+    ).not.toBe(key);
+    expect(hashOf(typedAsk(dream, m))).not.toBe(key);
+    if (was === undefined) delete process.env.DREAMCHAT_TYPED_THINKING;
+  });
+
+  test('without the writer, a reading of words since changed is dropped, never carried on', async () => {
+    const dream = b();
+    const read = (await typedReadings(dream, { typed: counting().write, jev }))!;
+    const m = moments(dream).at(-1)!;
+    m.action = `${m.action} (changed)`;
+    const kept = (await typedReadings(dream, {}, read))!;
+    expect(kept[m.id]).toBeUndefined();
+    expect(Object.keys(kept).length).toBeGreaterThan(0);
   });
 });

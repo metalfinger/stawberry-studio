@@ -1094,3 +1094,19 @@ export const stable = (v: unknown): string => {
     .map((k) => `${JSON.stringify(k)}:${stable((v as Record<string, unknown>)[k])}`)
     .join(',')}}`;
 };
+
+/** At most `n` at once. */
+export function limiter(n: number): <T>(fn: () => Promise<T>) => Promise<T> {
+  let running = 0;
+  const queue: (() => void)[] = [];
+  return async (fn) => {
+    if (running >= n) await new Promise<void>((r) => queue.push(r));
+    running++;
+    try {
+      return await fn();
+    } finally {
+      running--;
+      queue.shift()?.();
+    }
+  };
+}

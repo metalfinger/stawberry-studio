@@ -39,7 +39,7 @@ const YOU = '\u0000you';
 export const MAX_IMAGES = 12;
 
 /** A phrase ended as one sentence, however the model ended it. */
-export const sentence =(text: string) => `${text.trim().replace(/[.!?;,:\s]+$/, '')}.`;
+export const sentence = (text: string) => `${text.trim().replace(/[.!?;,:\s]+$/, '')}.`;
 
 export const FRAMING: Record<Moment['distance'], string> = {
   close: 'The subject fills nearly the whole frame edge to edge; the background is a thin strip and little more.',
