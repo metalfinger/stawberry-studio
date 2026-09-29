@@ -1076,10 +1076,10 @@ describe('ledger 16: how each one is now, said once', () => {
     const p = assembled(sheet);
     expect(p).toMatch(/Image \d+: the fish \([^)]*the dreamer's arm[^)]*wet looking/);
     expect(nowLine(p)).toMatch(/the dreamer's hair is wet/);
-    // Said in their own line, it is left out below.
+    // Said in their own line (their Except), it is left out below.
     const said = sheetAt();
     said.now = sheet.now;
-    said.inView.find((e) => e.id === 'p1')!.look += '; hair wet';
+    said.inView.find((e) => e.id === 'p1')!.changes = [{ what: 'hair', now: 'wet', part: 'hair' }];
     expect(nowLine(assembled(said))).not.toContain('hair');
   });
 
@@ -1094,6 +1094,32 @@ describe('ledger 16: how each one is now, said once', () => {
     expect(closing(assembled(sheetAt('dream-0926-052843-6081', 'm2')))).toContain(
       'how each one is at this moment, as said',
     );
+  });
+
+  test("a state is left out below only where an image's line says that part in that state, never by a word in a line", () => {
+    // The dreamer's hair is wet (their Except says so); the record also has their shirt wet, which no line says.
+    const sheet = sheetAt();
+    const dreamer = sheet.inView.find((e) => e.id === 'p1')!;
+    dreamer.changes = [{ what: 'hair', now: 'wet', part: 'hair' }];
+    dreamer.look += '; a wetsuit under the t-shirt';
+    sheet.now = [
+      ...(sheet.now ?? []),
+      {
+        of: 'p1',
+        called: 'the dreamer',
+        name: 'the dreamer',
+        kind: 'person',
+        facts: [
+          { kind: 'part', part: 'hair', what: 'hair', now: 'wet' },
+          { kind: 'part', part: 'shirt', what: 'shirt', now: 'wet' },
+        ],
+      },
+    ];
+    const p = assembled(sheet);
+    expect(p).toContain('their hair, which is no longer theirs: it is now wet,');
+    expect(nowLine(p)).toMatch(/the dreamer's shirt is wet/);
+    expect(nowLine(p)).not.toMatch(/hair/);
+    expect(closing(p)).toContain('how each one is at this moment, as said');
   });
 
   test('the closing line says "as said" only where something is said below or was left out as said above', () => {

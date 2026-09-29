@@ -64,9 +64,14 @@ export function assembleCut(s: CutSheet): Assembled {
   // once (S6 row 16) the whole clause, and only it, can point to that part's in-between picture.
   type Change = { what: string; now: string; part?: string };
   const excepts: { line: number; of: string; what: string; now: string; head: string }[] = [];
+  // Every state an image's line says outright or points to, by the one and the part it is about: with each state
+  // said once, "How each one is at this moment" leaves out these and only these.
+  const written: { of: string; what: string; part?: string; now: string }[] = [];
   const noteExcepts = (of: string, changes: Change[], head: (st: Change) => string) => {
-    for (const st of changes)
+    for (const st of changes) {
       excepts.push({ line: manifest.length - 1, of, what: st.what, now: st.now, head: head(st) });
+      written.push({ of, what: st.what, part: st.part, now: st.now });
+    }
   };
   const pictureNo = (x: SheetEarlier) => (x.frame ? `picture ${x.frame.order}` : 'an in-between reference');
   // Across a jump, only who is in both pictures keeps their place.
@@ -181,6 +186,7 @@ export function assembleCut(s: CutSheet): Assembled {
     // Someone or something turned into something else entirely is drawn from its in-between picture,
     // never its old sketch.
     if (!image || e.turned !== null) continue;
+    for (const x of shown) written.push({ of: e.id, what: x.what, now: x.now });
     // Where the one image is an in-between picture, it is said as that: how it is now, as it shows it.
     const from = stage
       ? { source: 'ghost' as const, of: stage.id, subjects: [stage.ghost?.of ?? e.id] }
@@ -324,6 +330,8 @@ export function assembleCut(s: CutSheet): Assembled {
               ? `how ${name(g.of)} looks now (${g.state?.what}: ${g.state?.now}): draw it exactly so. Nothing else from it.`
               : `${name(g.of)}'s ${g.state.what} as it is now (${g.state.now}): draw their ${g.state.what} exactly so, and take nothing else from it.`,
       );
+      if (g.kind === 'state' && g.state && !g.state.whole)
+        written.push({ of: g.of, what: g.state.what, now: g.state.now });
       if (g.state && !g.state.whole && g.of !== s.place)
         partPictures.push({ of: g.of, what: g.state.what, now: g.state.now, at: references.length });
       continue;
@@ -412,21 +420,20 @@ export function assembleCut(s: CutSheet): Assembled {
             new RegExp(`${esc(x.head + x.now)}(?=[.;,])`),
             () => `${x.head}as Image ${g.at} shows`,
           );
-  // Said above: in that one's own image's line or its in-between picture's, as whole words ("wet" of the fish's
-  // look is not the newspaper's; the dreamer's hair is not said by the fish's line naming the dreamer's arm).
-  const linesOf = (id: string) =>
-    manifest.filter((_, i) =>
-      references[i].source === 'ghost'
-        ? references[i].subjects?.[0] === id
-        : references[i].source === 'sketch' && references[i].of === id,
+  // Said above: that one's part, in that state, is what an image's line says or points to; never a word that happens
+  // to be in a line ("wet" of the fish's look is not the newspaper's; a wet shirt is not the wet hair said above).
+  const saidAbove = (x: { of: string }, f: { part: string; what: string; now: string }) =>
+    written.some(
+      (w) =>
+        w.of === x.of &&
+        same(w.now, f.now) &&
+        [w.what, w.part].some((n) => n !== undefined && (same(n, f.what) || same(n, f.part))),
     );
-  const saidAbove = (x: { of: string }, now: string) =>
-    linesOf(x.of).some((l) => new RegExp(`\\b${esc(now)}\\b`, 'i').test(l));
   let dropped = 0;
   const nowOf = s.once?.state
     ? s.now
         ?.map((x) => {
-          const facts = x.facts.filter((f) => !(f.kind === 'part' && saidAbove(x, f.now)));
+          const facts = x.facts.filter((f) => !(f.kind === 'part' && saidAbove(x, f)));
           dropped += x.facts.length - facts.length;
           return { ...x, facts };
         })
