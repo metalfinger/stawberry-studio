@@ -158,11 +158,13 @@ export function assembleCut(s: CutSheet): Assembled {
       thing(x.now).startsWith(thing(x.what)) ? x.now : `${x.what}: ${x.now}`;
     const nowIs = shown.length ? shown.map(said).join('; ') : '';
     const image = stage?.image ?? e.image;
-    // Everything in view is listed with its look, its image or not.
+    // Everything in view is listed, with its look where no image's line says it: with the look said once (S6
+    // row 14), one with an image of its own is named here and its look said in that image's line alone.
+    const sayLook = !(s.once?.look && image && e.turned === null);
     facts.push(
       (e.turned !== null
         ? `${e.name} (${e.said}): it has turned into ${aNoun(e.turned)}.`
-        : `${e.name} (${e.said})${look ? `: ${look}` : ''}.`) + outside(e),
+        : `${e.name} (${e.said})${look && sayLook ? `: ${look}` : ''}.`) + outside(e),
     );
     // Someone or something turned into something else entirely is drawn from its in-between picture,
     // never its old sketch.

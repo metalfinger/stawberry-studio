@@ -114,6 +114,9 @@ export const BUILDER_STEPS: readonly string[] = [
   // 13. A guessed colour said as a shade at assembly since step 8; with this step a colour the dream itself gives
   //    stays whole in a guessed clause too, so it is said one way in a prompt (the library's green glass lamps).
   'shades',
+  // 14. A look said once: in its image's line, where the image is; "In it" names who and what has an image and
+  //    says the look only of what has none (the sheet's `once.look`, read by the assembler).
+  'look_once',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;

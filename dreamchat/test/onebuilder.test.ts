@@ -7,6 +7,7 @@ import { goingIn, handsIn, openingsIn, selfIn, waterLevel } from '../camera';
 import { BUILDER_STEPS, builderSteps, builds, oneBuilder, withRetired } from '../cleanups';
 import { refsOf } from '../evals/prompt-cases';
 import { loadDream } from '../evals/saved';
+import { assembleCut } from '../assemble';
 import { cutSheet, sheetDream } from '../cutsheet';
 import { inViewOf } from '../frames';
 import { moments, producerSystem } from '../producer';
@@ -812,6 +813,35 @@ describe('ledger 13: a colour the dream gives, said one way', () => {
       'a mid-toned scarf and green glass lamps',
     );
     expect(inShades('a red scarf and green glass lamps', style)).toBe('a mid-toned scarf and mid-toned glass lamps');
+  });
+});
+
+describe("ledger 14: a look said once, in its image's line", () => {
+  const at = (step: string) =>
+    withSwitches({ ...SHEET, DREAMCHAT_ONE_BUILDER: step }, () =>
+      rebuild(structuredClone(loadDream('dream-0926-022102-aeea', false).session as Session)).pictures.find(
+        (x) => x.id === 'm1',
+      )!,
+    );
+  const inIt = (prompt: string) => prompt.slice(prompt.indexOf('In it:\n')).split('\n\n')[0];
+
+  test('"In it" names one with an image of its own, and its look is said in that image\'s line alone', () => {
+    const before = at('shades');
+    const after = at('look_once');
+    const key = after.sheet!.inView.find((e) => e.id === 't1')!;
+    expect(key.image).toBeTruthy();
+    expect(inIt(before.prompt)).toContain(`${key.name} (thing): ${key.look}`);
+    expect(inIt(after.prompt)).toContain(`${key.name} (thing).`);
+    expect(inIt(after.prompt)).not.toContain(key.look);
+    expect(after.prompt.slice(0, after.prompt.indexOf('In it:'))).toContain(`${key.name} (${key.look})`);
+  });
+
+  test('one with no image keeps its look in "In it"', () => {
+    const p = at('look_once');
+    const sheet = structuredClone(p.sheet!);
+    const key = sheet.inView.find((e) => e.id === 't1')!;
+    key.image = null as never;
+    expect(inIt(assembleCut(sheet).prompt)).toContain(`${key.name} (thing): ${key.look}`);
   });
 });
 
