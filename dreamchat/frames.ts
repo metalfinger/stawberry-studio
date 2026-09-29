@@ -247,19 +247,24 @@ export type FrameReference = {
 export type PlannedInput = { use: PlanRef; item: Item };
 
 /** The people, things and place a moment shows, by their sketches. */
-export function inViewOf(frame: Item, sheets: Item[]): Item[] {
+export function inViewOf(frame: Item, sheets: Item[], shows?: string[], showsEyes?: 'dreamer' | 'outside'): Item[] {
   const f = frame.frame;
   if (!f) return [];
   const byId = new Map(sheets.map((s) => [s.id, s]));
+  // Who the moment shows: the story record's, where it is given (S6 row 7), else the plan's lists.
+  const listed = shows ?? [...f.visible, ...f.things];
   // Whoever the dreamer's worked-out view has in the picture is in it, listed or not: the friend
   // beside them is between them and what they turn to (24 Sep).
-  const sees = (f.plan?.sees ?? []).filter((id) => !f.visible.includes(id) && !f.things.includes(id));
+  const sees = (f.plan?.sees ?? []).filter((id) => !listed.includes(id));
+  const people = shows ? listed.filter((id) => byId.get(id)?.kind === 'character') : f.visible;
   return [
     // Through the dreamer's own eyes the dreamer is the camera, never a face in the picture.
-    ...f.visible.filter((id) => !(f.eyes === 'dreamer' && byId.get(id)?.isDreamer)).map((id) => byId.get(id)),
-    ...f.things.map((id) => byId.get(id)),
+    ...people
+      .filter((id) => !((shows ? (showsEyes ?? f.eyes) : f.eyes) === 'dreamer' && byId.get(id)?.isDreamer))
+      .map((id) => byId.get(id)),
+    ...(shows ? listed.filter((id) => byId.get(id)?.kind !== 'character') : f.things).map((id) => byId.get(id)),
     ...sees.map((id) => byId.get(id)),
-    byId.get(f.place),
+    ...(shows && listed.includes(f.place) ? [] : [byId.get(f.place)]),
   ].filter((s): s is Item => !!s);
 }
 
@@ -619,7 +624,13 @@ export function framePrompt(
                 `${pictureNo(x)}${shows}`,
                 // "From the shot above" only where the place's own line says so too: where it says the
                 // layout comes from the earlier picture of this place, so does this one.
-                mockUp ? 'mockup' : plan?.view && !base && !roomFromCut ? 'shot' : r === 'same_setup' ? 'setup' : 'side',
+                mockUp
+                  ? 'mockup'
+                  : plan?.view && !base && !roomFromCut
+                    ? 'shot'
+                    : r === 'same_setup'
+                      ? 'setup'
+                      : 'side',
                 f.distance,
                 f.eyes === 'dreamer' &&
                   (x.item.frame?.visible ?? []).some((id) => sheets.find((s) => s.id === id)?.isDreamer),

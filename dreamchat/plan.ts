@@ -10,6 +10,7 @@
 // when it draws (session.ts startFrame): the mock-up of its floor plan as image 1 where it has a
 // worked-out camera and no picture to edit, and the shot's brief where one was written for the view
 // it has now. Both are known from the saved dream; nothing is asked of a model.
+import { builds } from './cleanups';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { sameView } from './camera';
@@ -33,7 +34,7 @@ import {
   turnedInto,
 } from './frames';
 import { type AsDrawn, type Copies, currentRecord, matchGhost } from './asdrawn';
-import { type CutSheet, cutSheetMode, type Framed, framed, ghostName, sheetDream } from './cutsheet';
+import { type CutSheet, cutSheetMode, type Framed, framed, ghostName, inViewIn, sheetDream } from './cutsheet';
 import { type CutFacts, cutFactsOf, routedMode } from './checks';
 import { actingOf, checkReferences, preflight, readPrompt } from './gate';
 import { refsMode, standsFor } from './refs';
@@ -219,7 +220,7 @@ export function rebuild(
       prompt: built.prompt,
       references: built.references,
       criteria: cut?.criteria ?? [],
-      inView: inViewOf(it, sheets),
+      inView: inViewIn(built, it, sheets),
       ...(built.sheet ? { sheet: built.sheet, differs: built.differs ?? [] } : {}),
       ...(built.assembled ? { assembled: built.assembled } : {}),
     });
@@ -335,7 +336,7 @@ function fromRecord(
     prompt: built.prompt,
     references: built.references,
     criteria: m.frame.plan?.criteria ?? [],
-    inView: inViewOf(frame, sheets),
+    inView: inViewIn(built, frame, sheets),
     ...(built.sheet ? { sheet: built.sheet, differs: built.differs ?? [] } : {}),
     ...(built.assembled ? { assembled: built.assembled } : {}),
     asDrawn: true,

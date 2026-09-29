@@ -324,7 +324,13 @@ export function disagreementsOf(p: RebuiltPicture, rec: StoryRecord | null, styl
   const s = p.sheet;
   if (!s) return null;
   const sheetIds = new Set(s.inView.map((e) => e.id));
-  const recIds = new Set([...(s.record?.shows ?? []), ...(s.record?.place ? [s.record.place] : [])]);
+  // Who is in view by one definition (S6 row 7): the record's shows and whom the camera's view sees on the
+  // floor plan (the market's crowd behind the stall, the sister beside it: seen, not listed).
+  const recIds = new Set([
+    ...(s.record?.shows ?? []),
+    ...(s.record?.place ? [s.record.place] : []),
+    ...(p.item.frame?.plan?.sees ?? []).filter((id) => sheetIds.has(id)),
+  ]);
   // The tree's own elements for the floor plan's spots ("l2/table") and its camera and light are not the dream's.
   const treeIds = new Set(
     (s.tree?.at ?? [])

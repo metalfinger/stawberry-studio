@@ -133,6 +133,7 @@ import {
   type Framed,
   framed,
   imageNamesOf,
+  inViewIn,
   type SheetDream,
   sheetDream,
   sheetPrint,
@@ -156,7 +157,7 @@ import {
 } from './sheets';
 import type { JudgedCheck, JudgeOptions } from './judge';
 import { IMPLIED_BAR, impliedFacts, readImplied, type WriteFn } from './implied';
-import { oneBuilder } from './cleanups';
+import { builds, oneBuilder } from './cleanups';
 import { NO_BAR, readTypedMoment, strip, TYPED_BAR, type TypedReading, typedAskKey } from './typed';
 import {
   diffPlan,
@@ -2861,13 +2862,16 @@ export class SessionStore {
       frame.shot = text ? { text, view } : undefined;
     }
     let built = this.framed(s, frame, layout, 'frames', once);
-    const inView = inViewOf(frame, s.build.items);
+    // Who is in view: the sheet's, where the builder's in_view has it made once (S6 row 7) and the prompt sent
+    // was assembled from that sheet (on, not in shadow); read again from each build, after a reword too.
+    const items = s.build.items;
+    const inViewOfBuilt = (b: Framed) => inViewIn(b, frame, items);
     let findings = await this.gateFindings(
       s,
       frame,
       built.prompt,
       built.references,
-      inView,
+      inViewOfBuilt(built),
       this.routingOf(s, frame, layout, built, once),
     );
     // The brief is the one line a model wrote from the view: where the gate finds the prompt at odds
@@ -2881,7 +2885,7 @@ export class SessionStore {
         frame,
         built.prompt,
         built.references,
-        inView,
+        inViewOfBuilt(built),
         this.routingOf(s, frame, layout, built, once),
       );
     }
@@ -2914,7 +2918,7 @@ export class SessionStore {
         frame,
         built.prompt,
         built.references,
-        inView,
+        inViewOfBuilt(built),
         this.routingOf(s, frame, layout, built, once),
       );
     }

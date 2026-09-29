@@ -399,7 +399,13 @@ export function cutSheet(x: CutSheetInput): CutSheet {
   const f = frame.frame;
   if (!f) throw new Error(`${frame.name} is not a moment`);
   const plan = f.plan;
-  const inView = inViewOf(frame, sheets);
+  // Who is in view, once (S6 row 7): the story record's shows and the camera's view, where the builder's
+  // in_view is on and the record holds the moment.
+  // Only with the record on: off, a record is still read for the sheet's log, but no prompt is planned from it.
+  const recMoment =
+    builds('in_view') && recordMode() === 'on' ? x.dream?.record?.moments.find((m) => m.id === frame.id) : undefined;
+  // Through whose eyes as the record read it, which left the dreamer out of what it shows (or not).
+  const inView = inViewOf(frame, sheets, recMoment?.shows, recMoment?.eyes);
   const members = groupMembers(inView);
   const lookOf = (s: Item, keys: string[]) => lookIn(s, keys, { members, unsaid: plan?.unsaid, style });
   // One name for each (S6 row 5): the story record's, where the builder's names are on and it holds one.
@@ -1135,6 +1141,16 @@ export type Framed = {
    */
   assembled?: Pick<Assembled, 'lines' | 'references'>;
 };
+
+/**
+ * Who is in view of a built picture, as the gate reads it on the drawing path: the sheet's, where the one
+ * builder's in_view has it made once (S6 row 7) and the prompt is assembled from the sheet (on, not in
+ * shadow); else the plan's lists (frames.ts inViewOf). One rule for the gate and for a rebuild.
+ */
+export const inViewIn = (built: Framed, frame: Item, sheets: Item[]): Item[] =>
+  builds('in_view') && cutSheetMode() === 'on' && built.sheet
+    ? built.sheet.inView.flatMap((e) => sheets.filter((i) => i.id === e.id))
+    : inViewOf(frame, sheets);
 
 /**
  * A moment's prompt and images by DREAMCHAT_CUT_SHEET: off writes them with framePrompt, as ever; shadow

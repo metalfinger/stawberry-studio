@@ -87,6 +87,9 @@ export const BUILDER_STEPS: readonly string[] = [
   // 6. Kinds from one source, the story record's: person, animal, group or crowd (a crowd of animals, an
   //    animal still), place or thing; the sheet and the tags read it, not isAnimal and isGroup again.
   'kinds',
+  // 7. Who is in view, once: the story record's shows and the camera's view (what the floor plan sees), on the
+  //    cut sheet; the gate reads the sheet's, not inViewOf again.
+  'in_view',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;

@@ -7,12 +7,15 @@ import { goingIn, handsIn, openingsIn, selfIn, waterLevel } from '../camera';
 import { BUILDER_STEPS, builderSteps, builds, oneBuilder, withRetired } from '../cleanups';
 import { refsOf } from '../evals/prompt-cases';
 import { loadDream } from '../evals/saved';
+import { cutSheet, inViewIn, sheetDream } from '../cutsheet';
+import { inViewOf } from '../frames';
 import { moments, producerSystem } from '../producer';
 import { rebuild } from '../plan';
-import { recordsMade, storyRecord } from '../record';
+import { recordInputsOf, recordsMade, storyRecord } from '../record';
 import { type Session, typedReadings } from '../session';
 import { NO_BAR, TYPED_BAR, type TypedReading, typedAsk, typedAskKey, typedWriterName } from '../typed';
 import { hashOf } from '../lib';
+import type { Item } from '../sheets';
 import { DEFAULTS, pinSwitches, withSwitches } from './fakes';
 
 setDefaultTimeout(120_000);
@@ -238,6 +241,134 @@ describe('ledger 6: kinds from the story record', () => {
       );
     expect(kind('names').kind).toBe('person');
     expect(kind('kinds')).toMatchObject({ kind: 'animal', animal: true });
+  });
+});
+
+describe('ledger 7: who is in view, once', () => {
+  test("the record's shows where given, the camera's view beside them, the place once, the dreamer never through their eyes", () => {
+    const sheets = ['p1', 'p2', 'p3', 't1', 'l1'].map((id) => ({
+      id,
+      kind: id.startsWith('p') ? 'character' : id.startsWith('t') ? 'prop' : 'location',
+      name: id,
+      fields: {},
+      isDreamer: id === 'p1',
+      status: 'ready',
+      version: 1,
+    })) as unknown as Parameters<typeof inViewOf>[1];
+    const frame = {
+      id: 'm1',
+      frame: { visible: ['p1', 'p2'], things: ['t1'], place: 'l1', eyes: 'outside', plan: { sees: ['p3'] } },
+    } as unknown as Parameters<typeof inViewOf>[0];
+    const ids = (xs: { id: string }[]) => xs.map((x) => x.id);
+    expect(ids(inViewOf(frame, sheets))).toEqual(['p1', 'p2', 't1', 'p3', 'l1']);
+    expect(ids(inViewOf(frame, sheets, ['p1', 't1']))).toEqual(['p1', 't1', 'p3', 'l1']);
+    const pov = { ...frame, frame: { ...frame.frame!, eyes: 'dreamer' } } as typeof frame;
+    expect(ids(inViewOf(pov, sheets, ['p1', 't1']))).toEqual(['t1', 'p3', 'l1']);
+  });
+
+  test("a moment's own copy of its cast gone out of date: the sheet shows whom the record shows", () => {
+    // 09ea m8, the dreamer waking with the fish; the copy also lists someone from an earlier plan of the market.
+    const id = 'dream-0926-000545-09ea';
+    const sheetAt = (step: string) =>
+      withSwitches({ ...SHEET, DREAMCHAT_ONE_BUILDER: step }, () => {
+        const s = loadDream(id, false).session as Session;
+        const r = rebuild(s);
+        const inputs = recordInputsOf(s);
+        const dream = sheetDream({
+          breakdown: r.b,
+          plan: r.plan,
+          prep: s.prep,
+          items: inputs.items,
+          style: s.style ?? null,
+          readings: s.draft?.readings,
+          words: inputs.words,
+        });
+        const p = r.pictures.find((x) => x.id === 'm8')!;
+        const extra = r.sheets.find(
+          (x) =>
+            x.kind === 'character' &&
+            !p.item.frame!.visible.includes(x.id) &&
+            !(p.item.frame!.plan?.sees ?? []).includes(x.id),
+        )!;
+        const stale = { ...p.item, frame: { ...p.item.frame!, visible: [...p.item.frame!.visible, extra.id] } };
+        return {
+          extra: extra.id,
+          ids: cutSheet({ frame: stale, sheets: r.sheets, style: s.style!, dream }).inView.map((e) => e.id),
+        };
+      });
+    const before = sheetAt('kinds');
+    expect(before.ids).toContain(before.extra);
+    const after = sheetAt('in_view');
+    expect(after.ids).not.toContain(after.extra);
+  });
+
+  test("a copy missing someone the record shows, or through other eyes than the record's: the record's", () => {
+    const id = 'dream-0926-000545-09ea';
+    const sheetOf = (step: string, change: (f: NonNullable<Item['frame']>) => NonNullable<Item['frame']>) =>
+      withSwitches({ ...SHEET, DREAMCHAT_ONE_BUILDER: step }, () => {
+        const s = loadDream(id, false).session as Session;
+        const r = rebuild(s);
+        const inputs = recordInputsOf(s);
+        const dream = sheetDream({
+          breakdown: r.b,
+          plan: r.plan,
+          prep: s.prep,
+          items: inputs.items,
+          style: s.style ?? null,
+          readings: s.draft?.readings,
+          words: inputs.words,
+        });
+        const p = r.pictures.find((x) => x.id === 'm2')!;
+        const stale = { ...p.item, frame: change(p.item.frame!) };
+        return cutSheet({ frame: stale, sheets: r.sheets, style: s.style!, dream }).inView.map((e) => e.id);
+      });
+    // The copy lost the dreamer's sister (p2), whom the record shows.
+    const lost = (f: NonNullable<Item['frame']>) => ({
+      ...f,
+      visible: f.visible.filter((x) => x !== 'p2'),
+      plan: f.plan && { ...f.plan, sees: (f.plan.sees ?? []).filter((x) => x !== 'p2') },
+    });
+    expect(sheetOf('kinds', lost)).not.toContain('p2');
+    expect(sheetOf('in_view', lost)).toContain('p2');
+    // The copy says through the dreamer's eyes; the record, seen from outside: the dreamer is in the picture.
+    const pov = (f: NonNullable<Item['frame']>) => ({ ...f, eyes: 'dreamer' as const });
+    expect(sheetOf('kinds', pov)).not.toContain('p1');
+    expect(sheetOf('in_view', pov)).toContain('p1');
+  });
+
+  test("with the record off the sheet's list is the plan's: no record to read who is in view from", () => {
+    // Where the record's rules add someone the plan's lists lack (aeea m14, b0cb m4, 8ceb m5 and m6), the step
+    // changes nothing with the record off.
+    const ids = (step: string) =>
+      withSwitches({ ...SHEET, DREAMCHAT_RECORD: 'off', DREAMCHAT_ONE_BUILDER: step }, () =>
+        ['dream-0926-022102-aeea', 'dream-0926-043003-b0cb', 'dream-0926-083656-8ceb'].map((id) =>
+          rebuild(structuredClone(loadDream(id, false).session as Session))
+            .pictures.filter((p) => p.kind === 'cut')
+            .map((p) => [p.id, p.sheet?.inView.map((e) => e.id)]),
+        ),
+      );
+    expect(ids('in_view')).toEqual(ids('kinds'));
+  });
+
+  test('the gate reads the sheet only where the prompt is assembled from it: on, not in shadow', () => {
+    // A sheet that has someone the moment's own copy does not: the sheet's list only with the sheet on.
+    const s = loadDream('dream-0926-000545-09ea', false).session as Session;
+    const r = withSwitches({ ...SHEET, DREAMCHAT_ONE_BUILDER: 'in_view' }, () => rebuild(structuredClone(s)));
+    const p = r.pictures.find((x) => x.id === 'm2')!;
+    const extra = r.sheets.find((x) => !p.sheet!.inView.some((e) => e.id === x.id))!;
+    const built = {
+      prompt: p.prompt,
+      references: p.references,
+      depicted: [],
+      sheet: { ...p.sheet!, inView: [...p.sheet!.inView, { ...p.sheet!.inView[0], id: extra.id }] },
+    };
+    const ids = (sheet: string, step: string) =>
+      withSwitches({ ...SHEET, DREAMCHAT_CUT_SHEET: sheet, DREAMCHAT_ONE_BUILDER: step }, () =>
+        inViewIn(built, p.item, r.sheets).map((x) => x.id),
+      );
+    expect(ids('on', 'in_view')).toContain(extra.id);
+    expect(ids('shadow', 'in_view')).not.toContain(extra.id);
+    expect(ids('on', 'kinds')).not.toContain(extra.id);
   });
 });
 
