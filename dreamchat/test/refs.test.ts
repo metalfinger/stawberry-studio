@@ -188,6 +188,107 @@ describe('an edit whose picture is not sent after all is made from its own shot,
     }
   });
 
+  test("an edit's picture is where the picture it edits was drawn from, not where its own camera would stand", () => {
+    // m2 edits m1 (its own camera, framing the lamp too, would stand 1.2 m behind m1's, near enough); m3 edits m2.
+    // m2's picture is drawn from m1's camera, 0.7 m from where m3's would stand: m3 is an edit of it. Compared at
+    // m2's own camera, 1.8 m off, m3 was not (random dream 562, found in review).
+    const chain = () => {
+      const b = breakdown(
+        [
+          moment({ id: 'm1', visible: ['p1', 'p2'], looks_at: 'the stage' }),
+          moment({ id: 'm2', visible: ['p1', 'p2'], things: ['t1'], looks_at: 'the stage', sameSide: ['m1'] }),
+          moment({
+            id: 'm3',
+            visible: ['p1', 'p2'],
+            looks_at: 'the stage',
+            sameSide: ['m2'],
+            leaves: [{ who: 'p1', what: 'coat', now: 'soaked' }],
+          }),
+        ],
+        {
+          people: [person('p0', 'you', { is_dreamer: true }), person('p1', 'ana'), person('p2', 'bo')],
+          things: [{ id: 't1', name: 'the lamp', fields: {} }] as never,
+        },
+      );
+      b.scenes[0].blocking = {
+        front: 'the stage',
+        indoors: true,
+        spots: [
+          { id: 'p0', x: 3.2679216861724854, y: 6.157477796077728, kind: 'person', pose: 'standing' },
+          { id: 'p1', x: 4.720808506011963, y: 3.1099095344543457, kind: 'person', pose: 'standing' },
+          { id: 'p2', x: 7.841257750988007, y: 4.189713954925537, kind: 'person', pose: 'standing' },
+          { id: 't1', x: 3.4496073722839355, y: 2.5797478556632996, kind: 'thing' },
+        ],
+        moves: {
+          m1: [{ id: 'p1', x: 4.748605489730835, y: 4.408701658248901 }],
+          m2: [{ id: 'p1', x: 5.323129653930664, y: 4.224096298217773 }],
+        },
+      } as never;
+      return b;
+    };
+    const p = plan(chain(), ON);
+    const [m1, m2, m3] = ['m1', 'm2', 'm3'].map((id) => cut(p, id));
+    expect(m2.refs.find((r) => r.id === 'm1')?.role).toBe('base');
+    const off = (a: { at: { x: number; y: number } }, z: { at: { x: number; y: number } }) =>
+      Math.hypot(a.at.x - z.at.x, a.at.y - z.at.y);
+    expect(off(m3.wouldBe!, m1.eye!)).toBeLessThan(1.5);
+    expect(off(m3.wouldBe!, m2.wouldBe!)).toBeGreaterThan(1.5);
+    expect(m3.refs.find((r) => r.id === 'm2')?.role).toBe('base');
+  });
+
+  test("with the camera rules, its own shot stays at the camera of the picture it edits: the same view, a moment later", () => {
+    // The camera rules move a camera off an earlier one of the same people at the same size (placed a second time,
+    // once the relations are read from the cameras). An edit's picture is that one, so its own shot, made where the
+    // edit's picture is withheld, was moved off the view the story keeps (random dream 2, found in review).
+    const coat = { who: 'p1', what: 'coat', now: 'bright red', since: 'm1' };
+    const b = breakdown(
+      [
+        moment({
+          id: 'm1',
+          visible: ['p1', 'p2'],
+          looks_at: 'the stage',
+          leaves: [{ who: 'p1', what: 'coat', now: 'bright red' }],
+        }),
+        moment({ id: 'm2', visible: ['p1', 'p2'], looks_at: 'the door', states: [coat] }),
+        moment({ id: 'm3', visible: ['p1', 'p2'], looks_at: 'the door', from: 'm2', states: [coat] }),
+        moment({ id: 'm4', visible: ['p1', 'p2'], eyes: 'dreamer', looks_at: 'the stage', states: [coat] }),
+        moment({
+          id: 'm5',
+          visible: ['p1', 'p2'],
+          looks_at: 'the door',
+          from: 'm4',
+          sameSide: ['m2', 'm3'],
+          states: [coat],
+        }),
+      ],
+      {
+        people: [person('p0', 'you', { is_dreamer: true }), person('p1', 'ana'), person('p2', 'bo')],
+        things: [{ id: 't1', name: 'the lamp', fields: {} }] as never,
+      },
+    );
+    b.scenes[0].blocking = {
+      front: 'the stage',
+      indoors: true,
+      spots: [
+        { id: 'p0', x: 6.3589959144592285, y: 2.498508930206299, kind: 'person', pose: 'standing' },
+        { id: 'p1', x: 4.251326262950897, y: 2.635227918624878, kind: 'person', pose: 'standing' },
+        { id: 'p2', x: 4.252206742763519, y: 3.5313711166381836, kind: 'person', pose: 'standing' },
+        { id: 't1', x: 2.9629430770874023, y: 5.63319319486618, kind: 'thing' },
+      ],
+      moves: { m1: [{ id: 'p1', x: 4.047235369682312, y: 6.54767644405365 }] },
+    } as never;
+    const p = plan(b, CAMERA);
+    const m2 = cut(p, 'm2');
+    expect(m2.refs.find((r) => r.id === 'm1')?.role).toBe('base');
+    const m1 = cut(p, 'm1').eye!;
+    const off = (e: { at: { x: number; y: number } }) => Math.hypot(e.at.x - m1.at.x, e.at.y - m1.at.y);
+    expect(off(m2.alone!.eye)).toBeLessThan(0.01);
+    // m3 edits m2, an edit of m1: its picture is drawn from m1's camera too, and its own shot stays there.
+    const m3 = cut(p, 'm3');
+    expect(m3.refs.find((r) => r.id === 'm2')?.role).toBe('base');
+    expect(off(m3.alone!.eye)).toBeLessThan(0.01);
+  });
+
   test('with the picture it edits withheld (judged wrong, or stale), it is placed and made from its own mock-up', () => {
     // The drawing path withholds what the owner judged wrong or S9 finds stale (session.ts plannedInputsOf). Left
     // an edit, m2 had no camera of its own and went out with the sketches alone.
