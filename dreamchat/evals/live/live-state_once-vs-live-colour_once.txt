@@ -1,0 +1,336 @@
+live-state_once (7be68d5, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_DATA":"/Users/hirenk/Documents/code/stawberry-studio-dream-chat/dreamchat","DREAMCHAT_ONE_BUILDER":"state_once","DREAMCHAT_RECORD":"on","DREAMCHAT_WRITER":"claude"}) against live-colour_once (7be68d5, {"DREAMCHAT_CUT_SHEET":"on","DREAMCHAT_DATA":"/Users/hirenk/Documents/code/stawberry-studio-dream-chat/dreamchat","DREAMCHAT_ONE_BUILDER":"colour_once","DREAMCHAT_RECORD":"on","DREAMCHAT_WRITER":"claude"})
+
+── dream-0923-210937-e564 m3
+  ~ …which is no longer theirs: it is now [-a block of clear, irregular ice with sharp edges that glitters,-][+as Image 5 shows,+] with nothing of the old head inside or…
+  - How each one is at this moment: the young woman's head is a block of clear, irregular ice with sharp edges that glitters.
+
+── dream-0923-210937-e564 m4
+  ~ …which is no longer theirs: it is now [-melting ice with rounded edges and channels,-][+as Image 4 shows,+] with nothing of the old head inside or…
+  - How each one is at this moment: the young woman's head is melting ice with rounded edges and channels.
+
+── dream-0923-210937-e564 m5
+  ~ …which is no longer theirs: it is now [-a clear ice horse's head with detailed features,-][+as Image 5 shows,+] with nothing of the old head inside or…
+  - How each one is at this moment: the young woman's head is a clear ice horse's head with detailed features.
+
+── dream-0923-210937-e564 m6
+  ~ …which is no longer theirs: it is now [-a clear ice horse's head with detailed features,-][+as Image 5 shows,+] with nothing of the old head inside or…
+  - How each one is at this moment: the young woman's head is a clear ice horse's head with detailed features.
+
+── dream-0923-214527-927a m3
+  ~ …which is no longer theirs: it is now [-a block of irregular, glittering ice,-][+as Image 5 shows,+] with nothing of the old head inside or…
+  - How each one is at this moment: the young woman's head is a block of irregular, glittering ice.
+
+── dream-0923-214527-927a m4
+  ~ …which is no longer theirs: it is now [-melting ice with softened edges and channels,-][+as Image 5 shows,+] with nothing of the old head inside or…
+  - How each one is at this moment: the young woman's head is melting ice with softened edges and channels; the block of ice's surface is wet and melting, with little channels cut into it and its sharp edges rounded.
+
+── dream-0923-214527-927a m5
+  ~ …which is no longer theirs: it is now [-a horse's head carved of clearest ice,-][+as Image 6 shows,+] with nothing of the old head inside or…
+  - How each one is at this moment: the young woman's head is a horse's head carved of clearest ice; the block of ice is melted into a horse's head of clearest ice with distinct eyes, ears and nostrils, no longer an irregular block; the block of ice's surface is wet and melting, with little channels cut into it and its sharp edges rounded.
+
+── dream-0923-222108-96bd m3
+  ~ …which is no longer theirs: it is now [-a block of glittering irregular ice,-][+as Image 5 shows,+] with nothing of the old head inside or…
+  - How each one is at this moment: the young woman's head is a block of glittering irregular ice.
+
+── dream-0923-222108-96bd m4
+  ~ …which is no longer theirs: it is now [-partially melted, sculpted,-][+as Image 4 shows,+] with nothing of the old head inside or…
+  - How each one is at this moment: the young woman's head is partially melted, sculpted.
+
+── dream-0923-222108-96bd m5
+  ~ …which is no longer theirs: it is now [-a perfectly sculpted horse head of clear ice,-][+as Image 5 shows,+] with nothing of the old head inside or…
+  - How each one is at this moment: the young woman's head is a perfectly sculpted horse head of clear ice.
+
+── dream-0923-224406-bbba m3
+  ~ …which is no longer theirs: it is now [-an irregular block of ice,-][+as Image 4 shows,+] with nothing of the old head inside or…
+  - How each one is at this moment: the young woman's head is an irregular block of ice.
+
+── dream-0923-224406-bbba m4
+  ~ …which is no longer theirs: it is now [-a melting ice block with channels and rounded edges,-][+as Image 4 shows,+] with nothing of the old head inside or…
+  - How each one is at this moment: the young woman's head is a melting ice block with channels and rounded edges.
+
+── dream-0923-224406-bbba m5
+  ~ …which is no longer theirs: it is now [-a clear ice horse's head,-][+as Image 4 shows,+] with nothing of the old head inside or…
+  - How each one is at this moment: the young woman's head is a clear ice horse's head.
+
+── dream-0923-224406-bbba m6
+  ~ …which is no longer theirs: it is now [-a clear ice horse's head,-][+as Image 6 shows,+] with nothing of the old head inside or…
+  - How each one is at this moment: the young woman's head is a clear ice horse's head.
+
+── dream-0924-203532-5454 m3
+  ~ …which is no longer theirs: it is now [-an irregular block of glittering ice,-][+as Image 5 shows,+] with nothing of the old head inside or…
+  - How each one is at this moment: the young woman's head is an irregular block of glittering ice.
+
+── dream-0924-203532-5454 m4
+  ~ …which is no longer theirs: it is now [-an irregular block of glittering ice,-][+as Image 4 shows,+] with nothing of the old head inside or…
+  - How each one is at this moment: the young woman's head is an irregular block of glittering ice.
+
+── dream-0924-203532-5454 m5
+  ~ …which is no longer theirs: it is now [-a clear ice horse head,-][+as Image 4 shows,+] with nothing of the old head inside or…
+  - How each one is at this moment: the young woman's head is a clear ice horse head.
+
+── dream-0925-190828-1177 m2
+  ~ …paper lantern is in the dreamer's younger brother's [-hands; the paper lantern's candle is lit, a small steady flame.-][+hands.+]
+
+── dream-0925-190828-1177 m3
+  ~ …paper lantern is in the dreamer's younger brother's [-hands; the paper lantern's candle is lit, a small steady flame.-][+hands.+]
+
+── dream-0925-190828-1177 m4
+  ~ …no longer as it shows: it is now [-glowing steady blue;-][+as Image 8 shows;+] its candle, which is no longer as it…
+  ~ …paper lantern is in the dreamer's younger brother's [-hands; the paper lantern's candle is lit, a small steady flame; the paper lantern's light is glowing steady blue.-][+hands.+]
+
+── dream-0925-190828-1177 m5
+  ~ …no longer as it shows: it is now [-glowing steady blue.-][+as Image 8 shows.+]
+    Image 6: the dreamer's grandmother's kitchen (A modest…
+  ~ …is in the dreamer's younger brother's hands; the [-paper lantern's candle is lit, a small steady flame; the paper lantern's light is glowing steady blue; the -]table is set for tea.
+
+── dream-0925-190828-1177 m6
+  ~ …no longer as it shows: it is now [-glowing steady blue.-][+as Image 6 shows.+]
+    Image 4: the dreamer's grandmother's kitchen (A modest…
+  ~ …is in the dreamer's younger brother's hands; the [-paper lantern's candle is lit, a small steady flame; the paper lantern's light is glowing steady blue; the -]table is set for tea.
+
+── dream-0925-192741-36f6 m3
+  ~ …lantern is in the younger brother's hands; the [-paper lantern's candle is lit; the -]outside the windows are raining and dark, lit …
+
+── dream-0925-192741-36f6 m4
+  ~ …no longer as it shows: it is now [-glowing blue;-][+as Image 8 shows;+] its candle, which is no longer as it…
+  ~ …the paper lantern is in the younger brother's [-hands; the paper lantern's candle is lit; the paper lantern's light is glowing blue.-][+hands.+]
+
+── dream-0925-192741-36f6 m6
+  ~ …no longer as it shows: it is now [-glowing blue.-][+as Image 8 shows.+]
+    Image 4: who the younger brother is (teens,…
+  ~ …lantern is in the younger brother's hands; the [-paper lantern's candle is lit; the paper lantern's light is glowing blue; the -]door is open, the doorway crowded.
+
+── dream-0925-192741-36f6 m9
+  ~ …no longer as it shows: it is now [-glowing blue.-][+as Image 7 shows.+]
+    Image 4: the small wooden boat (small wooden…
+  ~ …the paper lantern is in the younger brother's [-hands; the paper lantern's candle is lit; the paper lantern's light is glowing blue.-][+hands.+]
+
+── dream-0926-000545-09ea m4
+  ~ …no longer as it shows: it is now [-wrapped in newspaper.-][+as Image 9 shows.+]
+    Image 5: the newspaper (a folded rectangle of…
+  ~ …the fish is in the dreamer's hands; the [-fish's body is wrapped in newspaper; the -]newspaper is in the old man's hands; the …
+
+── dream-0926-000545-09ea m5
+  ~ …no longer as it shows: it is now [-wrapped in newspaper.-][+as Image 9 shows.+]
+    Image 5: the newspaper (a folded rectangle of…
+  ~ …the fish is in the dreamer's hands; the [-fish's body is wrapped in newspaper; the -]newspaper is in the dreamer's hands.
+
+── dream-0926-000545-09ea m6
+  ~ …no longer as it shows: it is now [-wrapped in newspaper.
+    Image 5: the newspaper (a folded rectangle of torn newspaper, about the size of a large fish, wrapped loosely around an unseen cylindrical package, creased and crumpled, with faint print visible; thin newsprint paper, soaked through with water): its exact shape, materials and colours, the same in every picture. Nothing else from it. Except the whole of it, which is no longer as it shows: it is now wet.-][+as Image 8 shows.
+    Image 5: the newspaper (a folded rectangle of torn newspaper, about the size of a large fish, wrapped loosely around an unseen cylindrical package, creased and crumpled, with faint print visible; thin newsprint paper, soaked through with water): its exact shape, materials and colours, the same in every picture. Nothing else from it. Except the whole of it, which is no longer as it shows: it is now as Image 7 shows.+]
+    Image 6: the narrow iron bridge (a narrow…
+  ~ …the fish is in the dreamer's hands; the [-fish's body is wrapped in newspaper; the newspaper is in the dreamer's hands; the newspaper is wet;-][+newspaper is in the dreamer's hands;+] the weather is raining big warm drops; the…
+
+── dream-0926-000545-09ea m7
+  ~ …no longer as it shows: it is now [-wrapped in newspaper.
+    Image 5: the newspaper (a folded rectangle of torn newspaper, about the size of a large fish, wrapped loosely around an unseen cylindrical package, creased and crumpled, with faint print visible; thin newsprint paper, soaked through with water): its exact shape, materials and colours, the same in every picture. Nothing else from it. Except the whole of it, which is no longer as it shows: it is now wet.-][+as Image 9 shows.
+    Image 5: the newspaper (a folded rectangle of torn newspaper, about the size of a large fish, wrapped loosely around an unseen cylindrical package, creased and crumpled, with faint print visible; thin newsprint paper, soaked through with water): its exact shape, materials and colours, the same in every picture. Nothing else from it. Except the whole of it, which is no longer as it shows: it is now as Image 10 shows.+]
+    Image 6: the bicycle (an old black single-speed…
+  ~ …the fish is in the dreamer's hands; the [-fish's body is wrapped in newspaper; the newspaper is in the dreamer's hands; the newspaper is wet;-][+newspaper is in the dreamer's hands;+] the weather is raining big warm drops; the…
+
+── dream-0926-000545-09ea m8
+  ~ …no longer as it shows: it is now [-wrapped in newspaper.
+    Image 5: the newspaper (a folded rectangle of torn newspaper, about the size of a large fish, wrapped loosely around an unseen cylindrical package, creased and crumpled, with faint print visible; thin newsprint paper, soaked through with water): its exact shape, materials and colours, the same in every picture. Nothing else from it. Except the whole of it, which is no longer as it shows: it is now wet.-][+as Image 9 shows.
+    Image 5: the newspaper (a folded rectangle of torn newspaper, about the size of a large fish, wrapped loosely around an unseen cylindrical package, creased and crumpled, with faint print visible; thin newsprint paper, soaked through with water): its exact shape, materials and colours, the same in every picture. Nothing else from it. Except the whole of it, which is no longer as it shows: it is now as Image 10 shows.+]
+    Image 6: the bicycle (an old black single-speed…
+  ~ …the fish is in the dreamer's hands; the [-fish's body is wrapped in newspaper; the newspaper is in the dreamer's hands; the newspaper is wet;-][+newspaper is in the dreamer's hands;+] the weather is raining big warm drops; the…
+
+── dream-0926-034336-5a66 m5
+  ~ …in the dreamer's hands; the suitcase's lid is [-open; the red door is -]open.
+
+── dream-0926-040556-eef3 m2
+  ~ …no longer as it shows: it is now [-open.-][+as Image 6 shows.+]
+    Image 4: the letters (a stack of hundreds…
+  ~ …the brown leather suitcase is in the grandfather's [-hands; the brown leather suitcase's lid is open.-][+hands.+]
+
+── dream-0926-040556-eef3 m3
+  ~ …no longer as it shows: it is now [-open.-][+as Image 6 shows.+]
+    Image 4: the letters (a stack of hundreds…
+  ~ …the brown leather suitcase is in the grandfather's [-hands; the brown leather suitcase's lid is open.-][+hands.+]
+
+── dream-0926-040556-eef3 m7
+  ~ …brown leather suitcase is shut, in the dreamer's [-hands; the red door is open.-][+hands.+]
+
+── dream-0926-043003-b0cb m3
+  ~ …no longer as it shows: it is now [-an open suitcase full of letters.-][+as Image 6 shows.+]
+    Image 4: the old train (a long rectangular…
+  ~ …one is at this moment: the suitcase is [-an open suitcase full of letters, -]in the grandfather's hands.
+
+── dream-0926-043003-b0cb m6
+  ~ …suitcase is shut, in the dreamer's hands; the [-door is open, faint yellow glow spilling from the doorway; the -]doorway is open, with warm yellow light glowing …
+
+── dream-0926-050424-fdd7 m2
+  ~ How each one is at this moment: the [-water is coming in under the doors, rising over the desks and up between the shelves; the -]shelves are partly emptied, with gaps where books …
+
+── dream-0926-050424-fdd7 m3
+  ~ How each one is at this moment: the [-water is coming in under the doors, rising over the desks and up between the shelves; the -]shelves are partly emptied, with gaps where books …
+
+── dream-0926-052843-6081 m2
+  - How each one is at this moment: the water starts coming under the doors.
+
+── dream-0926-052843-6081 m3
+  - How each one is at this moment: the water rises over the desks.
+
+── dream-0926-052843-6081 m4
+  - How each one is at this moment: the water rises over the desks; the books are floating off the shelves, open like birds.
+
+── dream-0926-052843-6081 m5
+  ~ How each one is at this moment: the [-books are floating off the shelves, open like birds; the -]water is deep enough to float a rowing …
+
+── dream-0926-052843-6081 m6
+  ~ How each one is at this moment: the [-books are floating off the shelves, open like birds; the -]water is deep enough to float a rowing …
+
+── dream-0926-052843-6081 m7
+  ~ How each one is at this moment: the [-books are floating off the shelves, open like birds; the -]water is deep enough to float a rowing …
+
+── dream-0926-052843-6081 m8
+  ~ How each one is at this moment: the [-books are floating off the shelves, open like birds; the -]water is very deep, far over the desks, …
+
+── dream-0926-052843-6081 m9
+  ~ How each one is at this moment: the [-books are floating off the shelves, open like birds; outside the whole city is underwater, just rooftops and tops of trees; the high round window is open; the -]water is almost up to the ceiling, over …
+
+── dream-0926-055141-6e80 m2
+  ~ …moment: the water is beginning to cover the [-floor; the books are floating off shelves, open like birds.-][+floor.+]
+
+── dream-0926-055141-6e80 m3
+  - How each one is at this moment: the books are floating off shelves, open like birds; the water is up over the tops of the desks.
+
+── dream-0926-055141-6e80 m4
+  - How each one is at this moment: the books are floating off shelves, open like birds; the water is up over the tops of the desks.
+
+── dream-0926-055141-6e80 m5
+  - How each one is at this moment: the books are floating off shelves, open like birds; the water is up over the tops of the desks.
+
+── dream-0926-055141-6e80 m6
+  ~ How each one is at this moment: the [-books are floating off shelves, open like birds; the -]water is deep enough to fill the aisles …
+
+── dream-0926-055141-6e80 m7
+  ~ How each one is at this moment: the [-books are floating off shelves, open like birds; the window is open; the -]water is almost up to the ceiling, over …
+
+── dream-0926-062232-a44a m3
+  ~ …no longer as it shows: it is now [-open revealing many letters.-][+as Image 7 shows.+]
+    Image 5: the letters (a stack of letters,…
+  ~ …the brown leather suitcase is in my grandfather's [-hands; the brown leather suitcase's lid is open revealing many letters.-][+hands.+]
+
+── dream-0926-062232-a44a m7
+  ~ …no longer as it shows: it is now [-open.-][+as Image 8 shows.+]
+    Image 6: the snowy nowhere (a flat, open…
+  ~ …suitcase is shut, in the dreamer's hands; the [-red door is open; the snow is deep, with a trail of footprints through it toward the red door; the lighting is warm yellow light spilling from the open-][+snow is deep, with a trail of footprints through it toward the red+] door.
+
+── dream-0926-070314-0f40 m2
+  ~ …which is no longer theirs: it is now [-about ten, with nothing of the old age inside or behind it; their wardrobe, which is no longer theirs: it is now old school uniform, grey shorts and shirt,-][+as Image 4 shows, with nothing of the old age inside or behind it; their wardrobe, which is no longer theirs: it is now as Image 5 shows,+] with nothing of the old wardrobe inside or…
+  - How each one is at this moment: Tomas is about ten and wears old school uniform, grey shorts and shirt.
+
+── dream-0926-070314-0f40 m3
+  ~ …which is no longer theirs: it is now [-about ten, with nothing of the old age inside or behind it; their wardrobe, which is no longer theirs: it is now old school uniform, grey shorts and shirt,-][+as Image 5 shows, with nothing of the old age inside or behind it; their wardrobe, which is no longer theirs: it is now as Image 6 shows,+] with nothing of the old wardrobe inside or…
+  - How each one is at this moment: Tomas is about ten and wears old school uniform, grey shorts and shirt.
+
+── dream-0926-070314-0f40 m5
+  ~ …which is no longer theirs: it is now [-about ten, with nothing of the old age inside or behind it; their wardrobe, which is no longer theirs: it is now old school uniform, grey shorts and shirt,-][+as Image 4 shows, with nothing of the old age inside or behind it; their wardrobe, which is no longer theirs: it is now as Image 5 shows,+] with nothing of the old wardrobe inside or…
+  ~ How each one is at this moment: [-Tomas is about ten and wears old school uniform, grey shorts and shirt; -]the apples are glowing soft like little lamps.
+
+── dream-0926-075114-f085 m2
+  ~ …which is no longer theirs: it is now [-about ten, with nothing of the old age inside or behind it; their wardrobe, which is no longer theirs: it is now old school uniform,-][+as Image 6 shows, with nothing of the old age inside or behind it; their wardrobe, which is no longer theirs: it is now as Image 7 shows,+] with nothing of the old wardrobe inside or…
+  - How each one is at this moment: Tomas is about ten and wears old school uniform.
+
+── dream-0926-075114-f085 m3
+  ~ …which is no longer theirs: it is now [-about ten, with nothing of the old age inside or behind it; their wardrobe, which is no longer theirs: it is now old school uniform,-][+as Image 7 shows, with nothing of the old age inside or behind it; their wardrobe, which is no longer theirs: it is now as Image 8 shows,+] with nothing of the old wardrobe inside or…
+  - How each one is at this moment: Tomas is about ten and wears old school uniform; the gate is open.
+
+── dream-0926-075114-f085 m4
+  ~ …which is no longer theirs: it is now [-about ten, with nothing of the old age inside or behind it; their wardrobe, which is no longer theirs: it is now old school uniform,-][+as Image 6 shows, with nothing of the old age inside or behind it; their wardrobe, which is no longer theirs: it is now as Image 7 shows,+] with nothing of the old wardrobe inside or…
+  ~ How each one is at this moment: [-Tomas is about ten and wears old school uniform; -]the light is dim dusk light, softly lit …
+
+── dream-0926-075114-f085 m5
+  ~ …which is no longer theirs: it is now [-about ten, with nothing of the old age inside or behind it; their wardrobe, which is no longer theirs: it is now old school uniform,-][+as Image 6 shows, with nothing of the old age inside or behind it; their wardrobe, which is no longer theirs: it is now as Image 7 shows,+] with nothing of the old wardrobe inside or…
+  ~ How each one is at this moment: [-Tomas is about ten and wears old school uniform; -]the light is dim dusk light, softly lit …
+
+── dream-0926-083656-d359 m4
+  ~ …which is no longer theirs: it is now [-covered with tiny paper birds of different colours, with nothing of the old shoulders inside or behind it.
+    Image 3: who the mother is (a middle-aged woman with short brown hair worn in a simple style, of average build; a plain red blouse and dark blue trousers, with plain black shoes): their face, hair, build and clothes, exactly. Nothing else from it: not its pose, background or framing. Except their shoulders, which is no longer theirs: it is now covered with tiny paper birds of different colours,-][+as Image 9 shows, with nothing of the old shoulders inside or behind it.
+    Image 3: who the mother is (a middle-aged woman with short brown hair worn in a simple style, of average build; a plain red blouse and dark blue trousers, with plain black shoes): their face, hair, build and clothes, exactly. Nothing else from it: not its pose, background or framing. Except their shoulders, which is no longer theirs: it is now as Image 10 shows,+] with nothing of the old shoulders inside or…
+  ~ How each one is at this moment: the [-dreamer's shoulders are covered with tiny paper birds of different colours; the mother's shoulders are covered with tiny paper birds of different colours; the crowd's shoulders are covered with tiny paper birds of different colours; the red paper bird is in the dreamer's hands; the surface is covered with tiny paper birds of different colours.-][+crowd's shoulders are covered with tiny paper birds of different colours; the red paper bird is in the dreamer's hands.+]
+
+── dream-0926-083656-d359 m5
+  ~ …which is no longer theirs: it is now [-covered with tiny paper birds of different colours, with nothing of the old shoulders inside or behind it.
+    Image 3: who the mother is (a middle-aged woman with short brown hair worn in a simple style, of average build; a plain red blouse and dark blue trousers, with plain black shoes): their face, hair, build and clothes, exactly. Nothing else from it: not its pose, background or framing. Except their shoulders, which is no longer theirs: it is now covered with tiny paper birds of different colours,-][+as Image 9 shows, with nothing of the old shoulders inside or behind it.
+    Image 3: who the mother is (a middle-aged woman with short brown hair worn in a simple style, of average build; a plain red blouse and dark blue trousers, with plain black shoes): their face, hair, build and clothes, exactly. Nothing else from it: not its pose, background or framing. Except their shoulders, which is no longer theirs: it is now as Image 10 shows,+] with nothing of the old shoulders inside or…
+  ~ How each one is at this moment: the [-dreamer's shoulders are covered with tiny paper birds of different colours; the mother's shoulders are covered with tiny paper birds of different colours; the red paper bird is in the dreamer's hands; the surface is covered with tiny paper birds of different colours; the houses are folded down flat.-][+red paper bird is in the dreamer's hands.+]
+
+── dream-0926-083656-e127 m4
+  - How each one is at this moment: grandma's kitchen is smaller, closing in.
+
+── dream-0926-083656-e127 m5
+  - How each one is at this moment: the dreamer is little again, child and wears gray cardigan; grandma's kitchen is smaller, closing in.
+
+── dream-0926-083656-e127 m6
+  ~ …which is no longer theirs: it is now [-little again, child, with nothing of the old age/size inside or behind it; their clothing, which is no longer theirs: it is now gray cardigan,-][+as Image 7 shows, with nothing of the old age/size inside or behind it; their clothing, which is no longer theirs: it is now as Image 8 shows,+] with nothing of the old clothing inside or…
+  - How each one is at this moment: the dreamer is little again, child and wears gray cardigan; grandma's kitchen is smaller, closing in.
+
+── dream-0926-083656-e130 m3
+  ~ …no longer as it shows: it is now [-melting like wax;-][+as Image 4 shows;+] its face, which is no longer as it…
+  ~ How each one is at this moment: the [-clock is melting like wax; the clock's face is distorted and warped out of shape; the -]tracks are empty, with no train at the …
+
+── dream-0926-083656-e130 m4
+  ~ …no longer as it shows: it is now [-melting like wax;-][+as Image 6 shows;+] its face, which is no longer as it…
+  ~ How each one is at this moment: the [-clock is melting like wax; the clock's face is distorted and warped out of shape; the -]tracks are empty, with no train at the …
+
+── dream-0926-095122-533b m6
+  ~ …one is at this moment: the weather is [-raining; the water: roof filled with water.-][+raining.+]
+
+── dream-0926-095122-acfd m5
+  - How each one is at this moment: the lights are starting to come on.
+
+── dream-0926-095122-b91f m2
+  - How each one is at this moment: the snow coverage is deep snow covering desks and keyboards, only monitor tops visible.
+
+── dream-0926-095122-b91f m3
+  - How each one is at this moment: the snow coverage is deep snow covering desks and keyboards, only monitor tops visible.
+
+── dream-0926-095122-b91f m4
+  ~ …the coffee mug is in the manager, dele's [-hands; the snow coverage is deep snow covering desks and keyboards, only monitor tops visible.-][+hands.+]
+
+── dream-0926-095122-b91f m5
+  ~ …the dreamer's hands; the snowball's glow is glowing [-faintly; the snow coverage is deep snow covering desks and keyboards, only monitor tops visible.-][+faintly.+]
+
+── dream-0926-100518-538d m6
+  - How each one is at this moment: the water: fills the roof.
+
+── replay-fake/car-park/dream-0926-150402-f202 m8
+  - How each one is at this moment: the water is filling the roof, surrounding the boat.
+
+── replay-fake/jellyfish-city/dream-0926-150359-9a40 m4
+  ~ …which is no longer theirs: it is now [-wearing a yellow raincoat,-][+as Image 6 shows,+] with nothing of the old clothing inside or…
+  - How each one is at this moment: the girl wears a yellow raincoat.
+
+── replay-fake/office-snow/dream-0926-150401-3471 m2
+  - How each one is at this moment: the floor and furniture are covered in thick snow; the monitors are partially buried in snow, only tops visible.
+
+── replay-fake/office-snow/dream-0926-150401-3471 m3
+  - How each one is at this moment: the floor and furniture are covered in thick snow; the monitors are partially buried in snow, only tops visible.
+
+── replay-fake/office-snow/dream-0926-150401-3471 m4
+  ~ …this moment: the coffee mug is in Dele's [-hands; the floor and furniture are covered in thick snow; the monitors are partially buried in snow, only tops visible.-][+hands.+]
+
+── replay-fake/office-snow/dream-0926-150401-3471 m5
+  ~ …which is no longer theirs: it is now [-made of snow, snowman-like,-][+as Image 5 shows,+] with nothing of the old body inside or…
+  ~ How each one is at this moment: [-Dele's body: made of snow, snowman-like; the coffee mug is in Dele's hands; the floor and furniture are covered in thick snow; the monitors are partially buried in snow, only tops visible.-][+the coffee mug is in Dele's hands.+]
+
+── replay-fake/office-snow/dream-0926-150401-3471 m6
+  ~ …the dreamer's hands; the snowball's light is glowing [-softly; the floor and furniture are covered in thick snow; the monitors are partially buried in snow, only tops visible.-][+softly.+]
+
+── replay-fake/sea-school/dream-0926-150403-579a m3
+  ~ …corridor and classroom, above the top of the [-doorway; the classroom desks are covered in seaweed.-][+doorway.+]
+
+── replay-fake/sea-school/dream-0926-150403-579a m4
+  ~ …corridor and classroom, above the top of the [-doorway; the classroom desks are covered in seaweed.-][+doorway.+]
+
+── replay-fake/sea-school/dream-0926-150403-579a m5
+  ~ …corridor and classroom, above the top of the [-doorway; the classroom desks are covered in seaweed.-][+doorway.+]
+
+── replay-fake/sea-school/dream-0926-150403-579a m6
+  ~ …classroom, above the top of the doorway; the [-classroom desks are covered in seaweed; the -]window is shut.
+
+── replay-fake/sea-school/dream-0926-150403-579a m7
+  ~ …classroom, above the top of the doorway; the [-classroom desks are covered in seaweed; the -]window is open.
