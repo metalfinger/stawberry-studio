@@ -6,6 +6,7 @@ import type { Blocking } from '../blocking';
 import { goingIn, handsIn, openingsIn, selfIn, waterLevel } from '../camera';
 import { BUILDER_STEPS, builderSteps, builds, oneBuilder, withRetired } from '../cleanups';
 import { refsOf } from '../evals/prompt-cases';
+import { readDream } from '../evals/retire';
 import { loadDream } from '../evals/saved';
 import { cutSheet, sheetDream } from '../cutsheet';
 import { inViewOf } from '../frames';
@@ -800,6 +801,66 @@ describe('ledger 13: a colour the dream gives, said one way', () => {
     expect(library('members')).toContain('mid-toned glass lamps');
     expect(library('shades')).not.toContain('mid-toned glass lamps');
     expect(library('shades')).toContain('desks, green glass lamps on the desks');
+  });
+
+  test("an in-between picture says the dream's colour whole too: the red door's", () => {
+    // a44a g2 is made from the story record: the door's guessed materials said "painted mid-toned" beside its
+    // said "painted bright red".
+    const g2 = (step: string) =>
+      withSwitches(
+        { ...SHEET, DREAMCHAT_ONE_BUILDER: step },
+        () =>
+          rebuild(structuredClone(loadDream('dream-0926-062232-a44a', false).session as Session)).pictures.find(
+            (x) => x.id === 'g2',
+          )!.prompt,
+      );
+    expect(g2('members')).toContain('painted mid-toned');
+    expect(g2('shades')).not.toContain('painted mid-toned');
+  });
+
+  test("a colour said of one thing keeps no guessed colour on another: the dreamer's red scarf is a shade", () => {
+    // a44a's door is said red; a scarf the dreamer was guessed to wear is not the door.
+    const s = structuredClone(loadDream('dream-0926-062232-a44a', false).session as Session);
+    const dreamer = s.build!.items.find((i) => i.isDreamer)!;
+    dreamer.fields = { ...dreamer.fields, wardrobe: { value: 'a red scarf', said: false } };
+    const b = s.draft!.breakdown!.people.find((p) => p.id === dreamer.id)!;
+    (b.fields as Record<string, unknown>) = { ...b.fields, wardrobe: { value: 'a red scarf', said: false } };
+    const look = withSwitches(
+      { ...SHEET, DREAMCHAT_ONE_BUILDER: 'shades' },
+      () =>
+        rebuild(s)
+          .pictures.find((x) => x.id === 'm5')
+          ?.sheet?.inView.find((e) => e.id === dreamer.id)?.look,
+    );
+    expect(look).toContain('a mid-toned scarf');
+    expect(look).not.toContain('red scarf');
+  });
+
+  test('a colour kept whole is never one half of two joined by a hyphen', () => {
+    const style = {
+      id: 's',
+      name: 'ink',
+      line: 'blue ink',
+      tokens: [],
+      palette_hex: ['#1e3a8a', '#93c5fd'],
+      one_colour: true,
+    } as never;
+    expect(inShades('a red-brown coat', style, ['red'])).toBe(inShades('a red-brown coat', style));
+    expect(inShades('blue-green glass lamps', style, ['green glass lamps'])).toBe(
+      inShades('blue-green glass lamps', style),
+    );
+  });
+
+  test('the measure reads the in-between pictures: a colour said two ways in them goes with the step', () => {
+    const ways = (step: string) =>
+      withSwitches({ ...SHEET, DREAMCHAT_ONE_BUILDER: step }, () => {
+        const s = loadDream('dream-0926-055141-6e80', false).session as Session;
+        return readDream('dream-0926-055141-6e80', s, rebuild(structuredClone(s))).ghosts.flatMap(
+          (g) => g.colourTwoWays ?? [],
+        );
+      });
+    expect(ways('members').length).toBeGreaterThan(0);
+    expect(ways('shades')).toEqual([]);
   });
 
   test('a guessed colour the dream does not give is still a shade', () => {
