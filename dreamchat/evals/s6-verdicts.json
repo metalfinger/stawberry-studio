@@ -4494,5 +4494,365 @@
   "aef16e7f4c506d0c": {
     "verdict": "intended",
     "why": "S6 row 8 (looks), live: the dreamer's age ('small child, around six years old') leaves the look: the story record's style rule strips it, since the dreamer said only that it was drawn 'like when I was six' (d3a1); and Biscuit's 'One white ear, large size', said again after 'A large ginger cat, as big as a bus, \u2026 white ear', is said once. Checked on the live dream, read only."
+  },
+  "a047fc28859b715d": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "f2f6aba3e060a344": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "7a61dc5e94538bfc": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "e49e7cdc3a72df7b": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "c05d0c796954e288": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "53ca7243e4f7119f": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "26511d206655ab9c": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "5949861c2ac09763": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "9000b131eeb8cef8": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "852ef57ee3f0b414": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "e6b0b2fd894598c6": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "1097c344724db7c3": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "92e42a98676d19c2": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "8c235c8b1e876264": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "1dd1a7f9114b99f2": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "0d5ba83c90785a40": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "a41dfc74d6c63163": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "895a5b03b40320c1": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "4ee40d17014a2495": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "449c3471f3043955": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "d38f011d856b3e09": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "24d7791a06e97f77": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "136633a5cdf70b5c": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "1bc54e3f836f4180": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "b9bda28835918434": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "969c1af7d0e2ba34": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "de767c83ffa9dcd8": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "d73dd13ba35b98ca": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "4207b3e82e8422e0": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "5b95d2dd740ce43f": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "02c0108f21296d4f": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "83a77bfb4b40d60c": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "efeddafaeb05c2c8": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "66f5ba5832cce30c": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "8f4bb9f697b8efa0": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "f49140bd11b3af2e": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "6292481ceccbbab1": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "b019060431d40f37": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "08d4413e3e08ff2c": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "e03d07d41c177aea": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "9b2562523de39ce1": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "ca551e34e64f3416": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "109edccd92866a22": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "cf6b15b7d022cc3c": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "60704b8e4642cd8b": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "29ee87da8b6b0242": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "9a13aec2b6d22d75": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "efc056dca766cee7": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "e07ebd787b49d042": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "9dc80547f9f115d0": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "18dd4857b68e83fb": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "4fbdc00535fbb4a7": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "8d1f110786a8cdc7": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "4ba83adaae039484": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "afde5fa88e920486": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "79842d225c7b9b8d": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "5e6f769e001c32d7": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "18edd61e29c25e56": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "3639c18a7ed8f6cd": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "5afea74d1f0d4af3": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "532a75af227dc1f0": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "977ab1ca9c2aa9d0": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "8c2228089633afe0": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "42c38890a3b2b012": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "d5d9f7c7b714ceb7": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "acded6dda2b9a162": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "235c7d4ec5f0682e": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "36f1dae974076cd0": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "f55b9a4bff5e67cc": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "1410597df57fea51": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "73f8c5b4a578cb59": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "e898560ea2eed2b9": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "389587c031bc788b": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "78dd3cde36b5a5ef": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "2ff487ec1baa318a": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "6c4f10c9effcdeb1": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "3ff1a3470ee7a889": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: an Except points to the in-between picture that shows that part in that state (\"it is now as Image N shows\"), where the state is said once; nothing else in the images' lines changed (checked by script on the full prompts: each pointed image's line says the same state)."
+  },
+  "595a74e949ab15d0": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "4498e8e9e317312c": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "9bedd539d0950366": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "fe0b54dae1c625d2": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "55eaca577d5da9b9": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "305283f0d08d2e37": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "9404d9513e7a3a8f": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state an image's line says (an Except, an in-between picture's state, the one image's state), said once; nothing added (checked by script on the full prompts: each state left out is in an image's line)."
+  },
+  "921ab3df773d4572": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state its in-between pictures' lines say (f085 Tomas's age and wardrobe, Images 6 and 7; e127 the dreamer's age/size and clothing), said once; nothing added (checked on the full prompts)."
+  },
+  "b4a94ff723cb370d": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state its in-between pictures' lines say (f085 Tomas's age and wardrobe, Images 6 and 7; e127 the dreamer's age/size and clothing), said once; nothing added (checked on the full prompts)."
+  },
+  "b09d8ad1493f8fc5": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state its in-between pictures' lines say (f085 Tomas's age and wardrobe, Images 6 and 7; e127 the dreamer's age/size and clothing), said once; nothing added (checked on the full prompts)."
+  },
+  "6295889f178d5ae1": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state its in-between pictures' lines say (f085 Tomas's age and wardrobe, Images 6 and 7; e127 the dreamer's age/size and clothing), said once; nothing added (checked on the full prompts)."
+  },
+  "f32253df6671f077": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state its in-between pictures' lines say (f085 Tomas's age and wardrobe, Images 6 and 7; e127 the dreamer's age/size and clothing), said once; nothing added (checked on the full prompts)."
+  },
+  "dece29cc059e1717": {
+    "verdict": "intended",
+    "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state its in-between pictures' lines say (f085 Tomas's age and wardrobe, Images 6 and 7; e127 the dreamer's age/size and clothing), said once; nothing added (checked on the full prompts)."
   }
 }
