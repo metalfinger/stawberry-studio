@@ -65,6 +65,15 @@ export function retiredSet(raw = process.env.DREAMCHAT_RETIRE ?? ''): Set<Cleanu
 /** Whether a clean-up is turned off: DREAMCHAT_RETIRE names it, or the one prompt builder has retired it. */
 export const retired = (name: Cleanup): boolean => retiredSet().has(name) || builds(name);
 
+/**
+ * Whether one of `lookIn`'s clean-ups (frames.ts) is turned off: only where DREAMCHAT_RETIRE names it. Since
+ * step 8 the sheet says a look from the story record, and a step moves each of lookIn's clean-ups into the
+ * record for that path; lookIn says a look only where the record does not (a sketch never drawn, a group whose
+ * members have sketches of their own, a picture rebuilt as drawn, the record off), and keeps each clean-up there
+ * until it has none of those left: turned off with the step, its words would come back on them.
+ */
+export const offInLookIn = (name: Cleanup): boolean => retiredSet().has(name);
+
 // ── the one prompt builder (S6) ─────────────────────────────────────────────────────────────────
 
 /**
@@ -93,6 +102,12 @@ export const BUILDER_STEPS: readonly string[] = [
   // 8. How each one looks, once: the story record's base facts, each clause with its basis, said at assembly
   //    (a guessed colour in the style's shades); a rebuild gives the record the sketches as drawing does.
   'looks',
+  // 9-10. after_words and vague: nothing to build. Since step 8 the record's look has neither (its base lacks the
+  //    words from after a change; a look field that says nothing is left out whole), and lookIn keeps both for
+  //    where it still says the look (offInLookIn): they go with it.
+  // 11. A place's or a thing's pose, stripped once, by the record, as it already strips a person's: the sheet's
+  //    look no longer strips it again.
+  'pose',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;

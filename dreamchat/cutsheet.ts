@@ -453,8 +453,8 @@ export function cutSheet(x: CutSheetInput): CutSheet {
       .map((k) =>
         (e.base[k] ?? [])
           .filter((f) => !f.first)
-          // The record strips the pose of people and animals; of a place or thing, the sketch's clean-up still does
-          // (S6 row 11 retires it once the record reads those too).
+          // The record strips the pose of people and animals, and with step 11 of places and things; before it, the
+          // sketch's clean-up strips theirs here.
           .map((f) => (s.kind === 'character' || retired('pose') ? f : { ...f, text: withoutPose(f.text, false) }))
           .map((f) => (f.basis === 'guessed' || f.basis === 'implied' ? inShades(f.text, style) : f.text).trim())
           .filter(Boolean)

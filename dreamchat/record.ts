@@ -599,7 +599,10 @@ function factsOf(
     // sitting read as at odds with itself (lighthouse, 26 Sep): the record strips it once.
     const value = person && k !== 'identity' ? withoutPose(d.value, false) : d.value;
     const facts = clausesOf(value)
-      .filter((c) => !VAGUE.test(c))
+      // A place's or a thing's too (S6 row 11), clause by clause as the sheet's look stripped it: "standing upright
+      // on its own with no house or wall around it" framed the red door's sketch, and is no part of the door.
+      .map((c) => (!person && builds('pose') ? withoutPose(c, false) : c))
+      .filter((c) => c && !VAGUE.test(c))
       .map((text): Fact => ({ text, basis: d.said ? 'said' : 'guessed', from: `${from}.${k}` }));
     if (facts.length) out[k] = facts;
   }

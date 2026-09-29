@@ -5,7 +5,7 @@
 // nothing to a generator, so say how much of the frame the subject fills; a room referenced from
 // a sheet comes back mirrored unless told which side its walls are on; every detail of what is
 // in view is said out loud, and the style tokens are quoted word for word.
-import { retired } from './cleanups';
+import { offInLookIn, retired } from './cleanups';
 import { type ContinuityPlan, type PlanRef, pictureName } from './continuity';
 import type { Breakdown, Moment, State, StyleOption } from './producer';
 import { BECOMING, isWhole, momentLabel, oneColour, VAGUE, WHOLE } from './producer';
@@ -290,15 +290,18 @@ export function lookIn(
 ): string {
   const own = ctx.members.filter((m) => m.group === s).map((m) => new RegExp(`\\b${m.word}s?\\b`, 'i'));
   const unsaid = ctx.unsaid?.[s.id];
-  // Each clean-up can be turned off on its own (cleanups.ts), for the eval of the step that retires them (S6).
+  // Each clean-up can be turned off on its own (cleanups.ts), for the eval of the step that retires them (S6); the
+  // one builder's steps leave them on here, where the story record does not say the look (offInLookIn).
   return keys
     .map((k) => s.fields[k])
-    .map((d) => (d?.value && unsaid && !retired('after_words') ? { ...d, value: withoutWords(d.value, unsaid) } : d))
-    .filter((d) => !!d?.value && (retired('vague') || !VAGUE.test(d.value)))
-    .map((d) => (d?.said || retired('shades') ? (d?.value as string) : inShades(d?.value as string, ctx.style)))
+    .map((d) =>
+      d?.value && unsaid && !offInLookIn('after_words') ? { ...d, value: withoutWords(d.value, unsaid) } : d,
+    )
+    .filter((d) => !!d?.value && (offInLookIn('vague') || !VAGUE.test(d.value)))
+    .map((d) => (d?.said || offInLookIn('shades') ? (d?.value as string) : inShades(d?.value as string, ctx.style)))
     .flatMap((v) => v.split(/;\s*/))
-    .map((part) => (retired('pose') ? part : withoutPose(part, false)).trim().replace(/[.\s]+$/, ''))
-    .filter((part) => part && (retired('members') || !own.some((re) => re.test(part))))
+    .map((part) => (offInLookIn('pose') ? part : withoutPose(part, false)).trim().replace(/[.\s]+$/, ''))
+    .filter((part) => part && (offInLookIn('members') || !own.some((re) => re.test(part))))
     .join('; ');
 }
 

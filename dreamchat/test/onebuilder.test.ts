@@ -608,6 +608,50 @@ describe('ledger 8: how each one looks, once, from the story record', () => {
   });
 });
 
+describe("ledger 11: a place's or a thing's pose, stripped once, by the record", () => {
+  const base = (step: string) =>
+    withSwitches({ ...SHEET, DREAMCHAT_ONE_BUILDER: step }, () => {
+      const s = loadDream('dream-0926-062232-a44a', false).session as Session;
+      const r = rebuild(structuredClone(s));
+      // The record as a rebuild makes it: from the sketches, approved and drawn.
+      const rec = storyRecord(r.b, r.sheets, s.draft?.readings, { style: s.style }).record;
+      return {
+        record: JSON.stringify(rec.elements.t2?.base),
+        look: r.pictures.find((x) => x.id === 'm5')?.sheet?.inView.find((e) => e.id === 't2')?.look,
+      };
+    });
+
+  test("the red door's framing leaves the record, and the sheet's look is as it was", () => {
+    // a44a's red door: "standing upright on its own with no house or wall around it" framed its sketch.
+    const before = base('looks');
+    const after = base('pose');
+    expect(before.record).toContain('standing upright');
+    expect(after.record).not.toContain('standing upright');
+    expect(after.look).toBe(before.look);
+  });
+
+  test('where lookIn still says the look (a sketch never drawn), it still strips the pose', () => {
+    const s = structuredClone(loadDream('dream-0926-052843-6081', false).session as Session);
+    const it = s.build!.items.find(
+      (i) => !i.frame && i.kind === 'prop' && (i.status === 'failed' || i.status === 'waiting'),
+    )!;
+    it.fields = {
+      ...it.fields,
+      appearance: { value: 'a small wooden boat, standing upright on its stern', said: true },
+    };
+    const look = (step: string) =>
+      withSwitches(
+        { ...SHEET, DREAMCHAT_ONE_BUILDER: step },
+        () =>
+          rebuild(structuredClone(s))
+            .pictures.flatMap((x) => x.sheet?.inView ?? [])
+            .find((e) => e.id === it.id)?.look,
+      );
+    expect(look('pose')).toContain('small wooden boat');
+    expect(look('pose')).not.toContain('standing upright');
+  });
+});
+
 describe("S4's word lists, each with a switch that turns off only its piece", () => {
   test('hands, own body, a vehicle going, the water and the openings on walls', () => {
     const room: Blocking = {
