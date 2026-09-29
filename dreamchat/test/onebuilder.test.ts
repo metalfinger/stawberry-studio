@@ -771,7 +771,10 @@ describe("ledger 12: a group's words about someone with their own sketch, once, 
         }),
       );
     expect(at('pose').some((l) => l?.includes('a red scarf'))).toBe(true);
-    for (const l of at('members')) expect(l).toContain('a red scarf');
+    for (const l of at('members')) {
+      expect(l).toContain('a red scarf');
+      expect(l).not.toContain('old man');
+    }
   });
 
   test("the look is the record's, not lookIn's, once the record says whom each clause is about", () => {
