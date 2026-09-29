@@ -536,18 +536,23 @@ describe('S9 keys', () => {
         DREAMCHAT_CAMERA: 'on',
       },
     };
+    const raw: Record<string, unknown> = {};
     for (const [label, env] of Object.entries(under))
       await withSwitches(env, async () => {
         for (const name of DREAMS) {
           const { s } = await drawn(name);
-          hashes[`${name} ${label}`] = hashOf(
-            s.build!.frames!.map((f) => [f.id, currentRecord(f)!.keys, currentRecord(f)!.dream?.keys ?? null]),
-          );
+          const value = s.build!.frames!.map((f) => [f.id, currentRecord(f)!.keys, currentRecord(f)!.dream?.keys ?? null]);
+          hashes[`${name} ${label}`] = hashOf(value);
+          raw[`${name} ${label}`] = value;
         }
       });
     // Moved? A change to what the keys read or how they are worked out (the plan, the sheet, the record)
     // makes records kept before it incomparable: raise KEYS_VERSION in asdrawn.ts, then set these anew.
     if (process.env.S9_GOLDEN) console.log(JSON.stringify(hashes, null, 2));
+    // The keys before hashing, for comparing two machines line by line when the hashes above disagree and
+    // neither a code change nor KEYS_VERSION explains it (hashOf itself is architecture-free: a pure integer
+    // hash over `stable`'s text, no crypto, no floats).
+    if (process.env.S9_RAW) console.log(JSON.stringify(raw, null, 2));
     expect({ version: KEYS_VERSION, hashes }).toEqual({ version: 2, hashes: GOLDEN });
   });
 });

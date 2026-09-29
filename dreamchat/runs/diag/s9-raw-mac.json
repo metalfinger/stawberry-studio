@@ -1,0 +1,1500 @@
+{
+  "dream-0926-062232-a44a record off": [
+    [
+      "g1",
+      {
+        "change": "1c4a73c9f152e3",
+        "look": "1ee2f34d256bc1",
+        "sketch:t1": "17b5c77cbf7309"
+      },
+      {
+        "change": "1c4a73c9f152e3",
+        "look": "1ee2f34d256bc1",
+        "sketch:t1": "17b5c77cbf7309"
+      }
+    ],
+    [
+      "g2",
+      {
+        "change": "14f9e3bbebc330",
+        "look": "1ee2f34d256bc1",
+        "sketch:t2": "10acad760784ac"
+      },
+      {
+        "change": "14f9e3bbebc330",
+        "look": "1ee2f34d256bc1",
+        "sketch:t2": "10acad760784ac"
+      }
+    ],
+    [
+      "g3",
+      {
+        "change": "1afd15e2457e1a",
+        "look": "1ee2f34d256bc1",
+        "sketch:l2": "11161a49fc5550"
+      },
+      {
+        "change": "1afd15e2457e1a",
+        "look": "1ee2f34d256bc1",
+        "sketch:l2": "11161a49fc5550"
+      }
+    ],
+    [
+      "m1",
+      {
+        "camera": "6a18479678e86",
+        "cast": "15507a4a7f28",
+        "dreamer": "10677cfa33718d",
+        "facts": "edcbbdfe5fc13",
+        "look": "1ee2f34d256bc1",
+        "other": "1bb4267e5e71e8",
+        "sketch:l1": "b4666c40f6e7f",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "words": "1cfe321e0cb856"
+      },
+      {
+        "camera": "6a18479678e86",
+        "cast": "15507a4a7f28",
+        "dreamer": "10677cfa33718d",
+        "facts": "edcbbdfe5fc13",
+        "look": "1ee2f34d256bc1",
+        "other": "1bb4267e5e71e8",
+        "sketch:l1": "b4666c40f6e7f",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "words": "1cfe321e0cb856"
+      }
+    ],
+    [
+      "m2",
+      {
+        "camera": "c8c822ffb0b4c",
+        "cast": "15507a4a7f28",
+        "dreamer": "10677cfa33718d",
+        "facts": "edcbbdfe5fc13",
+        "look": "1ee2f34d256bc1",
+        "other": "11668b82e29aa7",
+        "sketch:l1": "b4666c40f6e7f",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "words": "18cd0ae2617ef1"
+      },
+      {
+        "camera": "c8c822ffb0b4c",
+        "cast": "15507a4a7f28",
+        "dreamer": "10677cfa33718d",
+        "facts": "edcbbdfe5fc13",
+        "look": "1ee2f34d256bc1",
+        "other": "11668b82e29aa7",
+        "sketch:l1": "b4666c40f6e7f",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "words": "18cd0ae2617ef1"
+      }
+    ],
+    [
+      "m3",
+      {
+        "camera": "c95563135c47d",
+        "cast": "c486030eee235",
+        "dreamer": "10677cfa33718d",
+        "earlier:g1": "9d4a3a6c09ea7",
+        "earlier:m2": "f637082860620",
+        "facts": "8211324ecb3a0",
+        "look": "1ee2f34d256bc1",
+        "other": "b38b09ad2b379",
+        "sketch:l1": "b4666c40f6e7f",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "sketch:t3": "f3342ca30f193",
+        "words": "1229e7c361146e"
+      },
+      {
+        "camera": "c95563135c47d",
+        "cast": "c486030eee235",
+        "dreamer": "10677cfa33718d",
+        "earlier:g1": "9d4a3a6c09ea7",
+        "earlier:m2": "f637082860620",
+        "facts": "8211324ecb3a0",
+        "look": "1ee2f34d256bc1",
+        "other": "b38b09ad2b379",
+        "sketch:l1": "b4666c40f6e7f",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "sketch:t3": "f3342ca30f193",
+        "words": "1229e7c361146e"
+      }
+    ],
+    [
+      "m4",
+      {
+        "camera": "76ca73eadae9a",
+        "cast": "156120cc36880c",
+        "dreamer": "10677cfa33718d",
+        "earlier:g1": "9d4a3a6c09ea7",
+        "facts": "1f2ec76fb2ed2f",
+        "look": "1ee2f34d256bc1",
+        "other": "75973dee50aa3",
+        "sketch:l2": "ac58b912b55d2",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "words": "6c89a7f81d13a"
+      },
+      {
+        "camera": "76ca73eadae9a",
+        "cast": "156120cc36880c",
+        "dreamer": "10677cfa33718d",
+        "earlier:g1": "9d4a3a6c09ea7",
+        "facts": "1f2ec76fb2ed2f",
+        "look": "1ee2f34d256bc1",
+        "other": "75973dee50aa3",
+        "sketch:l2": "ac58b912b55d2",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "words": "6c89a7f81d13a"
+      }
+    ],
+    [
+      "m5",
+      {
+        "camera": "165ba4243dcc69",
+        "cast": "da5d777076036",
+        "dreamer": "10677cfa33718d",
+        "earlier:g1": "9d4a3a6c09ea7",
+        "facts": "1267f4f5522459",
+        "look": "1ee2f34d256bc1",
+        "other": "95216213f7c5b",
+        "sketch:l2": "ac58b912b55d2",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "sketch:t2": "182e0e29223562",
+        "words": "37362ef930249"
+      },
+      {
+        "camera": "165ba4243dcc69",
+        "cast": "da5d777076036",
+        "dreamer": "10677cfa33718d",
+        "earlier:g1": "9d4a3a6c09ea7",
+        "facts": "1267f4f5522459",
+        "look": "1ee2f34d256bc1",
+        "other": "95216213f7c5b",
+        "sketch:l2": "ac58b912b55d2",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "sketch:t2": "182e0e29223562",
+        "words": "37362ef930249"
+      }
+    ],
+    [
+      "m6",
+      {
+        "camera": "1c82f97eb1b71c",
+        "cast": "da5d777076036",
+        "dreamer": "10677cfa33718d",
+        "earlier:g1": "9d4a3a6c09ea7",
+        "facts": "1267f4f5522459",
+        "look": "1ee2f34d256bc1",
+        "other": "ae79d800255f8",
+        "sketch:l2": "ac58b912b55d2",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "sketch:t2": "182e0e29223562",
+        "words": "4eb5763a939e6"
+      },
+      {
+        "camera": "1c82f97eb1b71c",
+        "cast": "da5d777076036",
+        "dreamer": "10677cfa33718d",
+        "earlier:g1": "9d4a3a6c09ea7",
+        "facts": "1267f4f5522459",
+        "look": "1ee2f34d256bc1",
+        "other": "ae79d800255f8",
+        "sketch:l2": "ac58b912b55d2",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "sketch:t2": "182e0e29223562",
+        "words": "4eb5763a939e6"
+      }
+    ],
+    [
+      "m7",
+      {
+        "camera": "16c3b55ebc8b42",
+        "cast": "da5d777076036",
+        "dreamer": "10677cfa33718d",
+        "earlier:g1": "9d4a3a6c09ea7",
+        "earlier:g2": "10e2bd46996b81",
+        "earlier:g3": "1afaded8406cff",
+        "earlier:m5": "16c75bc88ba4d4",
+        "facts": "1fbf829cf090ce",
+        "look": "1ee2f34d256bc1",
+        "other": "4d3633f0224dd",
+        "sketch:l2": "ac58b912b55d2",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "sketch:t2": "182e0e29223562",
+        "words": "141bee35bd58e6"
+      },
+      {
+        "camera": "16c3b55ebc8b42",
+        "cast": "da5d777076036",
+        "dreamer": "10677cfa33718d",
+        "earlier:g1": "9d4a3a6c09ea7",
+        "earlier:g2": "10e2bd46996b81",
+        "earlier:g3": "1afaded8406cff",
+        "earlier:m5": "16c75bc88ba4d4",
+        "facts": "1fbf829cf090ce",
+        "look": "1ee2f34d256bc1",
+        "other": "4d3633f0224dd",
+        "sketch:l2": "ac58b912b55d2",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "sketch:t2": "182e0e29223562",
+        "words": "141bee35bd58e6"
+      }
+    ]
+  ],
+  "dream-0926-062232-a44a record on": [
+    [
+      "g1",
+      {
+        "change": "26f8c6aa75641",
+        "look": "1ee2f34d256bc1",
+        "sketch:t1": "17b5c77cbf7309"
+      },
+      {
+        "change": "26f8c6aa75641",
+        "look": "1ee2f34d256bc1",
+        "sketch:t1": "17b5c77cbf7309"
+      }
+    ],
+    [
+      "g2",
+      {
+        "change": "451cef01bca74",
+        "look": "1ee2f34d256bc1",
+        "sketch:t2": "10acad760784ac"
+      },
+      {
+        "change": "451cef01bca74",
+        "look": "1ee2f34d256bc1",
+        "sketch:t2": "10acad760784ac"
+      }
+    ],
+    [
+      "g3",
+      {
+        "change": "16b5e80626d2",
+        "look": "1ee2f34d256bc1",
+        "sketch:l2": "11161a49fc5550"
+      },
+      {
+        "change": "16b5e80626d2",
+        "look": "1ee2f34d256bc1",
+        "sketch:l2": "11161a49fc5550"
+      }
+    ],
+    [
+      "m1",
+      {
+        "camera": "1ccb97ef2e2519",
+        "cast": "15507a4a7f28",
+        "dreamer": "10677cfa33718d",
+        "facts": "41e37d2c37341",
+        "look": "1ee2f34d256bc1",
+        "other": "1bb4267e5e71e8",
+        "sketch:l1": "b4666c40f6e7f",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "words": "1cfe321e0cb856"
+      },
+      {
+        "camera": "1ccb97ef2e2519",
+        "cast": "15507a4a7f28",
+        "dreamer": "10677cfa33718d",
+        "facts": "41e37d2c37341",
+        "look": "1ee2f34d256bc1",
+        "other": "1bb4267e5e71e8",
+        "sketch:l1": "b4666c40f6e7f",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "words": "1cfe321e0cb856"
+      }
+    ],
+    [
+      "m2",
+      {
+        "camera": "c8c822ffb0b4c",
+        "cast": "15507a4a7f28",
+        "dreamer": "10677cfa33718d",
+        "facts": "164cc8f02e64bc",
+        "look": "1ee2f34d256bc1",
+        "other": "11668b82e29aa7",
+        "sketch:l1": "b4666c40f6e7f",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "words": "18cd0ae2617ef1"
+      },
+      {
+        "camera": "c8c822ffb0b4c",
+        "cast": "15507a4a7f28",
+        "dreamer": "10677cfa33718d",
+        "facts": "164cc8f02e64bc",
+        "look": "1ee2f34d256bc1",
+        "other": "11668b82e29aa7",
+        "sketch:l1": "b4666c40f6e7f",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "words": "18cd0ae2617ef1"
+      }
+    ],
+    [
+      "m3",
+      {
+        "camera": "c95563135c47d",
+        "cast": "c486030eee235",
+        "dreamer": "10677cfa33718d",
+        "earlier:g1": "9d4a3a6c09ea7",
+        "earlier:m2": "f637082860620",
+        "facts": "c5b527ef68c17",
+        "look": "1ee2f34d256bc1",
+        "other": "b38b09ad2b379",
+        "sketch:l1": "b4666c40f6e7f",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "sketch:t3": "f3342ca30f193",
+        "words": "1229e7c361146e"
+      },
+      {
+        "camera": "c95563135c47d",
+        "cast": "c486030eee235",
+        "dreamer": "10677cfa33718d",
+        "earlier:g1": "9d4a3a6c09ea7",
+        "earlier:m2": "f637082860620",
+        "facts": "c5b527ef68c17",
+        "look": "1ee2f34d256bc1",
+        "other": "b38b09ad2b379",
+        "sketch:l1": "b4666c40f6e7f",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "sketch:t3": "f3342ca30f193",
+        "words": "1229e7c361146e"
+      }
+    ],
+    [
+      "m4",
+      {
+        "camera": "76ca73eadae9a",
+        "cast": "156120cc36880c",
+        "dreamer": "10677cfa33718d",
+        "facts": "1079f3d4fe5981",
+        "look": "1ee2f34d256bc1",
+        "other": "75973dee50aa3",
+        "sketch:l2": "ac58b912b55d2",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "words": "6c89a7f81d13a"
+      },
+      {
+        "camera": "76ca73eadae9a",
+        "cast": "156120cc36880c",
+        "dreamer": "10677cfa33718d",
+        "facts": "1079f3d4fe5981",
+        "look": "1ee2f34d256bc1",
+        "other": "75973dee50aa3",
+        "sketch:l2": "ac58b912b55d2",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "words": "6c89a7f81d13a"
+      }
+    ],
+    [
+      "m5",
+      {
+        "camera": "165ba4243dcc69",
+        "cast": "da5d777076036",
+        "dreamer": "10677cfa33718d",
+        "facts": "c7cd2b3f74aa8",
+        "look": "1ee2f34d256bc1",
+        "other": "95216213f7c5b",
+        "sketch:l2": "ac58b912b55d2",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "sketch:t2": "182e0e29223562",
+        "words": "37362ef930249"
+      },
+      {
+        "camera": "165ba4243dcc69",
+        "cast": "da5d777076036",
+        "dreamer": "10677cfa33718d",
+        "facts": "c7cd2b3f74aa8",
+        "look": "1ee2f34d256bc1",
+        "other": "95216213f7c5b",
+        "sketch:l2": "ac58b912b55d2",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "sketch:t2": "182e0e29223562",
+        "words": "37362ef930249"
+      }
+    ],
+    [
+      "m6",
+      {
+        "camera": "1c82f97eb1b71c",
+        "cast": "da5d777076036",
+        "dreamer": "10677cfa33718d",
+        "facts": "88bcc13f31384",
+        "look": "1ee2f34d256bc1",
+        "other": "ae79d800255f8",
+        "sketch:l2": "ac58b912b55d2",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "sketch:t2": "182e0e29223562",
+        "words": "4eb5763a939e6"
+      },
+      {
+        "camera": "1c82f97eb1b71c",
+        "cast": "da5d777076036",
+        "dreamer": "10677cfa33718d",
+        "facts": "88bcc13f31384",
+        "look": "1ee2f34d256bc1",
+        "other": "ae79d800255f8",
+        "sketch:l2": "ac58b912b55d2",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "sketch:t2": "182e0e29223562",
+        "words": "4eb5763a939e6"
+      }
+    ],
+    [
+      "m7",
+      {
+        "camera": "16c3b55ebc8b42",
+        "cast": "da5d777076036",
+        "dreamer": "10677cfa33718d",
+        "earlier:g2": "10e2bd46996b81",
+        "earlier:g3": "1afaded8406cff",
+        "earlier:m5": "16c75bc88ba4d4",
+        "facts": "13295111f9ade4",
+        "look": "1ee2f34d256bc1",
+        "other": "4d3633f0224dd",
+        "sketch:l2": "ac58b912b55d2",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "sketch:t2": "182e0e29223562",
+        "words": "141bee35bd58e6"
+      },
+      {
+        "camera": "16c3b55ebc8b42",
+        "cast": "da5d777076036",
+        "dreamer": "10677cfa33718d",
+        "earlier:g2": "10e2bd46996b81",
+        "earlier:g3": "1afaded8406cff",
+        "earlier:m5": "16c75bc88ba4d4",
+        "facts": "13295111f9ade4",
+        "look": "1ee2f34d256bc1",
+        "other": "4d3633f0224dd",
+        "sketch:l2": "ac58b912b55d2",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "sketch:t2": "182e0e29223562",
+        "words": "141bee35bd58e6"
+      }
+    ]
+  ],
+  "dream-0926-062232-a44a record, cut sheet and camera on": [
+    [
+      "g1",
+      {
+        "change": "26f8c6aa75641",
+        "look": "1ee2f34d256bc1",
+        "sketch:t1": "17b5c77cbf7309"
+      },
+      {
+        "change": "26f8c6aa75641",
+        "look": "1ee2f34d256bc1",
+        "sketch:t1": "17b5c77cbf7309"
+      }
+    ],
+    [
+      "g2",
+      {
+        "change": "451cef01bca74",
+        "look": "1ee2f34d256bc1",
+        "sketch:t2": "10acad760784ac"
+      },
+      {
+        "change": "451cef01bca74",
+        "look": "1ee2f34d256bc1",
+        "sketch:t2": "10acad760784ac"
+      }
+    ],
+    [
+      "g3",
+      {
+        "change": "16b5e80626d2",
+        "look": "1ee2f34d256bc1",
+        "sketch:l2": "11161a49fc5550"
+      },
+      {
+        "change": "16b5e80626d2",
+        "look": "1ee2f34d256bc1",
+        "sketch:l2": "11161a49fc5550"
+      }
+    ],
+    [
+      "m1",
+      {
+        "camera": "86583b6aa74d6",
+        "cast": "15507a4a7f28",
+        "dreamer": "10677cfa33718d",
+        "facts": "41e37d2c37341",
+        "look": "1ee2f34d256bc1",
+        "other": "1bb4267e5e71e8",
+        "sketch:l1": "b4666c40f6e7f",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "words": "1cfe321e0cb856"
+      },
+      {
+        "camera": "86583b6aa74d6",
+        "cast": "15507a4a7f28",
+        "dreamer": "10677cfa33718d",
+        "facts": "41e37d2c37341",
+        "look": "1ee2f34d256bc1",
+        "other": "1bb4267e5e71e8",
+        "sketch:l1": "b4666c40f6e7f",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "words": "1cfe321e0cb856"
+      }
+    ],
+    [
+      "m2",
+      {
+        "camera": "74154fb5af9de",
+        "cast": "15507a4a7f28",
+        "dreamer": "10677cfa33718d",
+        "earlier:m1": "1243538eefdb8a",
+        "facts": "164cc8f02e64bc",
+        "look": "1ee2f34d256bc1",
+        "other": "6734bd3e56e84",
+        "sketch:l1": "b4666c40f6e7f",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "words": "18cd0ae2617ef1"
+      },
+      {
+        "camera": "74154fb5af9de",
+        "cast": "15507a4a7f28",
+        "dreamer": "10677cfa33718d",
+        "earlier:m1": "1243538eefdb8a",
+        "facts": "164cc8f02e64bc",
+        "look": "1ee2f34d256bc1",
+        "other": "6734bd3e56e84",
+        "sketch:l1": "b4666c40f6e7f",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "words": "18cd0ae2617ef1"
+      }
+    ],
+    [
+      "m3",
+      {
+        "camera": "1b48a71006767c",
+        "cast": "c486030eee235",
+        "dreamer": "10677cfa33718d",
+        "earlier:g1": "9d4a3a6c09ea7",
+        "earlier:m2": "f637082860620",
+        "facts": "c5b527ef68c17",
+        "look": "1ee2f34d256bc1",
+        "other": "b38b09ad2b379",
+        "sketch:l1": "b4666c40f6e7f",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "sketch:t3": "f3342ca30f193",
+        "words": "1229e7c361146e"
+      },
+      {
+        "camera": "1b48a71006767c",
+        "cast": "c486030eee235",
+        "dreamer": "10677cfa33718d",
+        "earlier:g1": "9d4a3a6c09ea7",
+        "earlier:m2": "f637082860620",
+        "facts": "c5b527ef68c17",
+        "look": "1ee2f34d256bc1",
+        "other": "b38b09ad2b379",
+        "sketch:l1": "b4666c40f6e7f",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "sketch:t3": "f3342ca30f193",
+        "words": "1229e7c361146e"
+      }
+    ],
+    [
+      "m4",
+      {
+        "camera": "76ca73eadae9a",
+        "cast": "156120cc36880c",
+        "dreamer": "10677cfa33718d",
+        "facts": "1079f3d4fe5981",
+        "look": "1ee2f34d256bc1",
+        "other": "75973dee50aa3",
+        "sketch:l2": "ac58b912b55d2",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "words": "6c89a7f81d13a"
+      },
+      {
+        "camera": "76ca73eadae9a",
+        "cast": "156120cc36880c",
+        "dreamer": "10677cfa33718d",
+        "facts": "1079f3d4fe5981",
+        "look": "1ee2f34d256bc1",
+        "other": "75973dee50aa3",
+        "sketch:l2": "ac58b912b55d2",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "words": "6c89a7f81d13a"
+      }
+    ],
+    [
+      "m5",
+      {
+        "camera": "e51b0d19b8636",
+        "cast": "da5d777076036",
+        "dreamer": "10677cfa33718d",
+        "earlier:m4": "180d3eb81ab09f",
+        "facts": "c7cd2b3f74aa8",
+        "look": "1ee2f34d256bc1",
+        "other": "8b9029e134d52",
+        "sketch:l2": "ac58b912b55d2",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "sketch:t2": "182e0e29223562",
+        "words": "37362ef930249"
+      },
+      {
+        "camera": "e51b0d19b8636",
+        "cast": "da5d777076036",
+        "dreamer": "10677cfa33718d",
+        "earlier:m4": "180d3eb81ab09f",
+        "facts": "c7cd2b3f74aa8",
+        "look": "1ee2f34d256bc1",
+        "other": "8b9029e134d52",
+        "sketch:l2": "ac58b912b55d2",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "sketch:t2": "182e0e29223562",
+        "words": "37362ef930249"
+      }
+    ],
+    [
+      "m6",
+      {
+        "camera": "1ffebd16c60dc",
+        "cast": "da5d777076036",
+        "dreamer": "10677cfa33718d",
+        "earlier:m5": "16c75bc88ba4d4",
+        "facts": "88bcc13f31384",
+        "look": "1ee2f34d256bc1",
+        "other": "1a8fd583e79319",
+        "sketch:l2": "ac58b912b55d2",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "sketch:t2": "182e0e29223562",
+        "words": "4eb5763a939e6"
+      },
+      {
+        "camera": "1ffebd16c60dc",
+        "cast": "da5d777076036",
+        "dreamer": "10677cfa33718d",
+        "earlier:m5": "16c75bc88ba4d4",
+        "facts": "88bcc13f31384",
+        "look": "1ee2f34d256bc1",
+        "other": "1a8fd583e79319",
+        "sketch:l2": "ac58b912b55d2",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "sketch:t2": "182e0e29223562",
+        "words": "4eb5763a939e6"
+      }
+    ],
+    [
+      "m7",
+      {
+        "camera": "184194c7daa07c",
+        "cast": "da5d777076036",
+        "dreamer": "10677cfa33718d",
+        "earlier:g2": "10e2bd46996b81",
+        "earlier:g3": "1afaded8406cff",
+        "earlier:m6": "672e2fbf8fdef",
+        "facts": "13295111f9ade4",
+        "look": "1ee2f34d256bc1",
+        "other": "11d52c537a66e5",
+        "sketch:l2": "ac58b912b55d2",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "sketch:t2": "182e0e29223562",
+        "words": "141bee35bd58e6"
+      },
+      {
+        "camera": "184194c7daa07c",
+        "cast": "da5d777076036",
+        "dreamer": "10677cfa33718d",
+        "earlier:g2": "10e2bd46996b81",
+        "earlier:g3": "1afaded8406cff",
+        "earlier:m6": "672e2fbf8fdef",
+        "facts": "13295111f9ade4",
+        "look": "1ee2f34d256bc1",
+        "other": "11d52c537a66e5",
+        "sketch:l2": "ac58b912b55d2",
+        "sketch:p1": "49a4ac092609c",
+        "sketch:p2": "1d2f956b37666",
+        "sketch:t1": "1f3db426949cc4",
+        "sketch:t2": "182e0e29223562",
+        "words": "141bee35bd58e6"
+      }
+    ]
+  ],
+  "dream-0926-083656-8ceb record off": [
+    [
+      "g1",
+      {
+        "change": "4fcb43fa87068",
+        "look": "b2294e80a30da",
+        "sketch:l2": "96d3d1c50a559"
+      },
+      {
+        "change": "4fcb43fa87068",
+        "look": "b2294e80a30da",
+        "sketch:l2": "96d3d1c50a559"
+      }
+    ],
+    [
+      "g2",
+      {
+        "change": "a96b53c760b0c",
+        "look": "b2294e80a30da",
+        "sketch:p2": "1c7bc0fea7ce1e"
+      },
+      {
+        "change": "a96b53c760b0c",
+        "look": "b2294e80a30da",
+        "sketch:p2": "1c7bc0fea7ce1e"
+      }
+    ],
+    [
+      "m1",
+      {
+        "camera": "13cb00d52aa2d4",
+        "cast": "82f5e9e4aaad3",
+        "dreamer": "798a36fc48eb8",
+        "facts": "bf1c8c621c03d",
+        "look": "b2294e80a30da",
+        "other": "14f010d699a3dc",
+        "sketch:l1": "1e37988d17f562",
+        "sketch:p1": "30e10705af5a8",
+        "words": "1ef0e2ce82f35c"
+      },
+      {
+        "camera": "13cb00d52aa2d4",
+        "cast": "82f5e9e4aaad3",
+        "dreamer": "798a36fc48eb8",
+        "facts": "bf1c8c621c03d",
+        "look": "b2294e80a30da",
+        "other": "14f010d699a3dc",
+        "sketch:l1": "1e37988d17f562",
+        "sketch:p1": "30e10705af5a8",
+        "words": "1ef0e2ce82f35c"
+      }
+    ],
+    [
+      "g3",
+      {
+        "change": "fcd9c6a65b24a",
+        "earlier:g1": "2cc1ce96182c4",
+        "look": "b2294e80a30da",
+        "sketch:l2": "96d3d1c50a559"
+      },
+      {
+        "change": "fcd9c6a65b24a",
+        "earlier:g1": "2cc1ce96182c4",
+        "look": "b2294e80a30da",
+        "sketch:l2": "96d3d1c50a559"
+      }
+    ],
+    [
+      "m2",
+      {
+        "camera": "b3ed0e092e533",
+        "cast": "1b1f11cdea9e8a",
+        "dreamer": "798a36fc48eb8",
+        "facts": "c1cc30c6fdcf2",
+        "look": "b2294e80a30da",
+        "other": "68c069597537a",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p1": "30e10705af5a8",
+        "words": "59ffd5ac3b47f"
+      },
+      {
+        "camera": "b3ed0e092e533",
+        "cast": "1b1f11cdea9e8a",
+        "dreamer": "798a36fc48eb8",
+        "facts": "c1cc30c6fdcf2",
+        "look": "b2294e80a30da",
+        "other": "68c069597537a",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p1": "30e10705af5a8",
+        "words": "59ffd5ac3b47f"
+      }
+    ],
+    [
+      "m3",
+      {
+        "camera": "e73f8e9005957",
+        "cast": "e1692ef58f803",
+        "dreamer": "798a36fc48eb8",
+        "earlier:g1": "16088240bb34f3",
+        "facts": "1dd2eae9bd5c5f",
+        "look": "b2294e80a30da",
+        "other": "16784d419339b2",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p2": "cedf7a204ad45",
+        "sketch:p3": "dab0b21da9c0f",
+        "sketch:t1": "10619994ea3fd2",
+        "words": "181cc0d0b636ea"
+      },
+      {
+        "camera": "e73f8e9005957",
+        "cast": "e1692ef58f803",
+        "dreamer": "798a36fc48eb8",
+        "earlier:g1": "16088240bb34f3",
+        "facts": "1dd2eae9bd5c5f",
+        "look": "b2294e80a30da",
+        "other": "16784d419339b2",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p2": "cedf7a204ad45",
+        "sketch:p3": "dab0b21da9c0f",
+        "sketch:t1": "10619994ea3fd2",
+        "words": "181cc0d0b636ea"
+      }
+    ],
+    [
+      "m4",
+      {
+        "camera": "5ea95fb255fe5",
+        "cast": "7c72fb866b3bb",
+        "dreamer": "798a36fc48eb8",
+        "earlier:g1": "16088240bb34f3",
+        "earlier:g2": "7cddc38f9a8da",
+        "earlier:m3": "170d74adb9a0d7",
+        "facts": "94d99b8b372c2",
+        "look": "b2294e80a30da",
+        "other": "d771d3f65576c",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p2": "10b3d6c0a9d59",
+        "sketch:t1": "10619994ea3fd2",
+        "words": "13594aa44b2df2"
+      },
+      {
+        "camera": "5ea95fb255fe5",
+        "cast": "7c72fb866b3bb",
+        "dreamer": "798a36fc48eb8",
+        "earlier:g1": "16088240bb34f3",
+        "earlier:g2": "7cddc38f9a8da",
+        "earlier:m3": "170d74adb9a0d7",
+        "facts": "94d99b8b372c2",
+        "look": "b2294e80a30da",
+        "other": "d771d3f65576c",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p2": "10b3d6c0a9d59",
+        "sketch:t1": "10619994ea3fd2",
+        "words": "13594aa44b2df2"
+      }
+    ],
+    [
+      "m5",
+      {
+        "camera": "a179e3846b095",
+        "cast": "9304a7e538675",
+        "dreamer": "798a36fc48eb8",
+        "earlier:g1": "16088240bb34f3",
+        "earlier:g2": "7cddc38f9a8da",
+        "earlier:m3": "225e4bf477326",
+        "facts": "18bbf3c30390d5",
+        "look": "b2294e80a30da",
+        "other": "18906c856f271b",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p2": "cedf7a204ad45",
+        "sketch:p3": "dab0b21da9c0f",
+        "words": "4934b01f55d7c"
+      },
+      {
+        "camera": "a179e3846b095",
+        "cast": "9304a7e538675",
+        "dreamer": "798a36fc48eb8",
+        "earlier:g1": "16088240bb34f3",
+        "earlier:g2": "7cddc38f9a8da",
+        "earlier:m3": "225e4bf477326",
+        "facts": "18bbf3c30390d5",
+        "look": "b2294e80a30da",
+        "other": "18906c856f271b",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p2": "cedf7a204ad45",
+        "sketch:p3": "dab0b21da9c0f",
+        "words": "4934b01f55d7c"
+      }
+    ],
+    [
+      "m6",
+      {
+        "camera": "15814a2afb0100",
+        "cast": "9304a7e538675",
+        "dreamer": "798a36fc48eb8",
+        "earlier:g2": "7cddc38f9a8da",
+        "earlier:g3": "7d0495dfca554",
+        "earlier:m5": "c019f4b99d62f",
+        "facts": "fa00bb7e3792b",
+        "look": "b2294e80a30da",
+        "other": "4e56a984673",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p2": "cedf7a204ad45",
+        "sketch:p3": "dab0b21da9c0f",
+        "words": "a857598222014"
+      },
+      {
+        "camera": "15814a2afb0100",
+        "cast": "9304a7e538675",
+        "dreamer": "798a36fc48eb8",
+        "earlier:g2": "7cddc38f9a8da",
+        "earlier:g3": "7d0495dfca554",
+        "earlier:m5": "c019f4b99d62f",
+        "facts": "fa00bb7e3792b",
+        "look": "b2294e80a30da",
+        "other": "4e56a984673",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p2": "cedf7a204ad45",
+        "sketch:p3": "dab0b21da9c0f",
+        "words": "a857598222014"
+      }
+    ],
+    [
+      "m7",
+      {
+        "camera": "1cc9525d527337",
+        "cast": "1b1f11cdea9e8a",
+        "dreamer": "798a36fc48eb8",
+        "earlier:g3": "7d0495dfca554",
+        "earlier:m6": "17edc0b08bfd9b",
+        "facts": "2a091b01c228",
+        "look": "b2294e80a30da",
+        "other": "6d923f5ca84cd",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p1": "30e10705af5a8",
+        "words": "14922850c62655"
+      },
+      {
+        "camera": "1cc9525d527337",
+        "cast": "1b1f11cdea9e8a",
+        "dreamer": "798a36fc48eb8",
+        "earlier:g3": "7d0495dfca554",
+        "earlier:m6": "17edc0b08bfd9b",
+        "facts": "2a091b01c228",
+        "look": "b2294e80a30da",
+        "other": "6d923f5ca84cd",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p1": "30e10705af5a8",
+        "words": "14922850c62655"
+      }
+    ]
+  ],
+  "dream-0926-083656-8ceb record on": [
+    [
+      "g1",
+      {
+        "change": "12271a70cdef67",
+        "look": "b2294e80a30da",
+        "sketch:p2": "1c7bc0fea7ce1e"
+      },
+      {
+        "change": "12271a70cdef67",
+        "look": "b2294e80a30da",
+        "sketch:p2": "1c7bc0fea7ce1e"
+      }
+    ],
+    [
+      "m1",
+      {
+        "camera": "13cb00d52aa2d4",
+        "cast": "82f5e9e4aaad3",
+        "dreamer": "798a36fc48eb8",
+        "facts": "1bf6b792a20b3d",
+        "look": "b2294e80a30da",
+        "other": "14f010d699a3dc",
+        "sketch:l1": "1e37988d17f562",
+        "sketch:p1": "30e10705af5a8",
+        "words": "1ef0e2ce82f35c"
+      },
+      {
+        "camera": "13cb00d52aa2d4",
+        "cast": "82f5e9e4aaad3",
+        "dreamer": "798a36fc48eb8",
+        "facts": "1bf6b792a20b3d",
+        "look": "b2294e80a30da",
+        "other": "14f010d699a3dc",
+        "sketch:l1": "1e37988d17f562",
+        "sketch:p1": "30e10705af5a8",
+        "words": "1ef0e2ce82f35c"
+      }
+    ],
+    [
+      "m2",
+      {
+        "camera": "b3ed0e092e533",
+        "cast": "1b1f11cdea9e8a",
+        "dreamer": "798a36fc48eb8",
+        "facts": "1dcc9c1af37736",
+        "look": "b2294e80a30da",
+        "other": "68c069597537a",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p1": "30e10705af5a8",
+        "words": "59ffd5ac3b47f"
+      },
+      {
+        "camera": "b3ed0e092e533",
+        "cast": "1b1f11cdea9e8a",
+        "dreamer": "798a36fc48eb8",
+        "facts": "1dcc9c1af37736",
+        "look": "b2294e80a30da",
+        "other": "68c069597537a",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p1": "30e10705af5a8",
+        "words": "59ffd5ac3b47f"
+      }
+    ],
+    [
+      "m3",
+      {
+        "camera": "17dea1be2d7916",
+        "cast": "e1692ef58f803",
+        "dreamer": "798a36fc48eb8",
+        "facts": "1908e29eb69593",
+        "look": "b2294e80a30da",
+        "other": "16784d419339b2",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p2": "cedf7a204ad45",
+        "sketch:p3": "dab0b21da9c0f",
+        "sketch:t1": "10619994ea3fd2",
+        "words": "181cc0d0b636ea"
+      },
+      {
+        "camera": "17dea1be2d7916",
+        "cast": "e1692ef58f803",
+        "dreamer": "798a36fc48eb8",
+        "facts": "1908e29eb69593",
+        "look": "b2294e80a30da",
+        "other": "16784d419339b2",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p2": "cedf7a204ad45",
+        "sketch:p3": "dab0b21da9c0f",
+        "sketch:t1": "10619994ea3fd2",
+        "words": "181cc0d0b636ea"
+      }
+    ],
+    [
+      "m4",
+      {
+        "camera": "c75e774dc116e",
+        "cast": "7c72fb866b3bb",
+        "dreamer": "798a36fc48eb8",
+        "earlier:g1": "f56d2d8117471",
+        "earlier:m3": "170d74adb9a0d7",
+        "facts": "54468a3b68116",
+        "look": "b2294e80a30da",
+        "other": "d771d3f65576c",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p2": "10b3d6c0a9d59",
+        "sketch:t1": "10619994ea3fd2",
+        "words": "13594aa44b2df2"
+      },
+      {
+        "camera": "c75e774dc116e",
+        "cast": "7c72fb866b3bb",
+        "dreamer": "798a36fc48eb8",
+        "earlier:g1": "f56d2d8117471",
+        "earlier:m3": "170d74adb9a0d7",
+        "facts": "54468a3b68116",
+        "look": "b2294e80a30da",
+        "other": "d771d3f65576c",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p2": "10b3d6c0a9d59",
+        "sketch:t1": "10619994ea3fd2",
+        "words": "13594aa44b2df2"
+      }
+    ],
+    [
+      "m5",
+      {
+        "camera": "9621cdf147323",
+        "cast": "e1692ef58f803",
+        "dreamer": "798a36fc48eb8",
+        "earlier:g1": "f56d2d8117471",
+        "earlier:m3": "225e4bf477326",
+        "earlier:m4": "18a39e2d78fbe6",
+        "facts": "548841e3b53b9",
+        "look": "b2294e80a30da",
+        "other": "138c5b95964526",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p2": "10b3d6c0a9d59",
+        "sketch:p3": "dab0b21da9c0f",
+        "sketch:t1": "10619994ea3fd2",
+        "words": "4934b01f55d7c"
+      },
+      {
+        "camera": "9621cdf147323",
+        "cast": "e1692ef58f803",
+        "dreamer": "798a36fc48eb8",
+        "earlier:g1": "f56d2d8117471",
+        "earlier:m3": "225e4bf477326",
+        "earlier:m4": "18a39e2d78fbe6",
+        "facts": "548841e3b53b9",
+        "look": "b2294e80a30da",
+        "other": "138c5b95964526",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p2": "10b3d6c0a9d59",
+        "sketch:p3": "dab0b21da9c0f",
+        "sketch:t1": "10619994ea3fd2",
+        "words": "4934b01f55d7c"
+      }
+    ],
+    [
+      "m6",
+      {
+        "camera": "1bbe0fa72900ce",
+        "cast": "e1692ef58f803",
+        "dreamer": "798a36fc48eb8",
+        "earlier:g1": "f56d2d8117471",
+        "earlier:m5": "c019f4b99d62f",
+        "facts": "548841e3b53b9",
+        "look": "b2294e80a30da",
+        "other": "584e4e756b232",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p2": "10b3d6c0a9d59",
+        "sketch:p3": "dab0b21da9c0f",
+        "sketch:t1": "10619994ea3fd2",
+        "words": "a857598222014"
+      },
+      {
+        "camera": "1bbe0fa72900ce",
+        "cast": "e1692ef58f803",
+        "dreamer": "798a36fc48eb8",
+        "earlier:g1": "f56d2d8117471",
+        "earlier:m5": "c019f4b99d62f",
+        "facts": "548841e3b53b9",
+        "look": "b2294e80a30da",
+        "other": "584e4e756b232",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p2": "10b3d6c0a9d59",
+        "sketch:p3": "dab0b21da9c0f",
+        "sketch:t1": "10619994ea3fd2",
+        "words": "a857598222014"
+      }
+    ],
+    [
+      "m7",
+      {
+        "camera": "11dab336a1f4ac",
+        "cast": "f53cca36b12d4",
+        "dreamer": "798a36fc48eb8",
+        "earlier:m6": "17edc0b08bfd9b",
+        "facts": "187ed17de0a269",
+        "look": "b2294e80a30da",
+        "other": "a6e7dc3c3a2f8",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p1": "30e10705af5a8",
+        "sketch:p3": "dab0b21da9c0f",
+        "words": "14922850c62655"
+      },
+      {
+        "camera": "11dab336a1f4ac",
+        "cast": "f53cca36b12d4",
+        "dreamer": "798a36fc48eb8",
+        "earlier:m6": "17edc0b08bfd9b",
+        "facts": "187ed17de0a269",
+        "look": "b2294e80a30da",
+        "other": "a6e7dc3c3a2f8",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p1": "30e10705af5a8",
+        "sketch:p3": "dab0b21da9c0f",
+        "words": "14922850c62655"
+      }
+    ]
+  ],
+  "dream-0926-083656-8ceb record, cut sheet and camera on": [
+    [
+      "g1",
+      {
+        "change": "12271a70cdef67",
+        "look": "b2294e80a30da",
+        "sketch:p2": "1c7bc0fea7ce1e"
+      },
+      {
+        "change": "12271a70cdef67",
+        "look": "b2294e80a30da",
+        "sketch:p2": "1c7bc0fea7ce1e"
+      }
+    ],
+    [
+      "m1",
+      {
+        "camera": "13cb00d52aa2d4",
+        "cast": "82f5e9e4aaad3",
+        "dreamer": "798a36fc48eb8",
+        "facts": "1bf6b792a20b3d",
+        "look": "b2294e80a30da",
+        "other": "14f010d699a3dc",
+        "sketch:l1": "1e37988d17f562",
+        "sketch:p1": "30e10705af5a8",
+        "words": "1ef0e2ce82f35c"
+      },
+      {
+        "camera": "13cb00d52aa2d4",
+        "cast": "82f5e9e4aaad3",
+        "dreamer": "798a36fc48eb8",
+        "facts": "1bf6b792a20b3d",
+        "look": "b2294e80a30da",
+        "other": "14f010d699a3dc",
+        "sketch:l1": "1e37988d17f562",
+        "sketch:p1": "30e10705af5a8",
+        "words": "1ef0e2ce82f35c"
+      }
+    ],
+    [
+      "m2",
+      {
+        "camera": "b3ed0e092e533",
+        "cast": "1b1f11cdea9e8a",
+        "dreamer": "798a36fc48eb8",
+        "facts": "1dcc9c1af37736",
+        "look": "b2294e80a30da",
+        "other": "68c069597537a",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p1": "30e10705af5a8",
+        "words": "59ffd5ac3b47f"
+      },
+      {
+        "camera": "b3ed0e092e533",
+        "cast": "1b1f11cdea9e8a",
+        "dreamer": "798a36fc48eb8",
+        "facts": "1dcc9c1af37736",
+        "look": "b2294e80a30da",
+        "other": "68c069597537a",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p1": "30e10705af5a8",
+        "words": "59ffd5ac3b47f"
+      }
+    ],
+    [
+      "m3",
+      {
+        "camera": "1d9514f5c29e57",
+        "cast": "e1692ef58f803",
+        "dreamer": "798a36fc48eb8",
+        "facts": "1908e29eb69593",
+        "look": "b2294e80a30da",
+        "other": "16784d419339b2",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p2": "cedf7a204ad45",
+        "sketch:p3": "dab0b21da9c0f",
+        "sketch:t1": "10619994ea3fd2",
+        "words": "181cc0d0b636ea"
+      },
+      {
+        "camera": "1d9514f5c29e57",
+        "cast": "e1692ef58f803",
+        "dreamer": "798a36fc48eb8",
+        "facts": "1908e29eb69593",
+        "look": "b2294e80a30da",
+        "other": "16784d419339b2",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p2": "cedf7a204ad45",
+        "sketch:p3": "dab0b21da9c0f",
+        "sketch:t1": "10619994ea3fd2",
+        "words": "181cc0d0b636ea"
+      }
+    ],
+    [
+      "m4",
+      {
+        "camera": "c75e774dc116e",
+        "cast": "7c72fb866b3bb",
+        "dreamer": "798a36fc48eb8",
+        "earlier:g1": "f56d2d8117471",
+        "earlier:m3": "170d74adb9a0d7",
+        "facts": "54468a3b68116",
+        "look": "b2294e80a30da",
+        "other": "d771d3f65576c",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p2": "10b3d6c0a9d59",
+        "sketch:t1": "10619994ea3fd2",
+        "words": "13594aa44b2df2"
+      },
+      {
+        "camera": "c75e774dc116e",
+        "cast": "7c72fb866b3bb",
+        "dreamer": "798a36fc48eb8",
+        "earlier:g1": "f56d2d8117471",
+        "earlier:m3": "170d74adb9a0d7",
+        "facts": "54468a3b68116",
+        "look": "b2294e80a30da",
+        "other": "d771d3f65576c",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p2": "10b3d6c0a9d59",
+        "sketch:t1": "10619994ea3fd2",
+        "words": "13594aa44b2df2"
+      }
+    ],
+    [
+      "m5",
+      {
+        "camera": "18e3e77414e500",
+        "cast": "e1692ef58f803",
+        "dreamer": "798a36fc48eb8",
+        "earlier:g1": "f56d2d8117471",
+        "earlier:m3": "225e4bf477326",
+        "earlier:m4": "18a39e2d78fbe6",
+        "facts": "548841e3b53b9",
+        "look": "b2294e80a30da",
+        "other": "138c5b95964526",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p2": "10b3d6c0a9d59",
+        "sketch:p3": "dab0b21da9c0f",
+        "sketch:t1": "10619994ea3fd2",
+        "words": "4934b01f55d7c"
+      },
+      {
+        "camera": "18e3e77414e500",
+        "cast": "e1692ef58f803",
+        "dreamer": "798a36fc48eb8",
+        "earlier:g1": "f56d2d8117471",
+        "earlier:m3": "225e4bf477326",
+        "earlier:m4": "18a39e2d78fbe6",
+        "facts": "548841e3b53b9",
+        "look": "b2294e80a30da",
+        "other": "138c5b95964526",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p2": "10b3d6c0a9d59",
+        "sketch:p3": "dab0b21da9c0f",
+        "sketch:t1": "10619994ea3fd2",
+        "words": "4934b01f55d7c"
+      }
+    ],
+    [
+      "m6",
+      {
+        "camera": "1bbe0fa72900ce",
+        "cast": "e1692ef58f803",
+        "dreamer": "798a36fc48eb8",
+        "earlier:g1": "f56d2d8117471",
+        "earlier:m5": "c019f4b99d62f",
+        "facts": "548841e3b53b9",
+        "look": "b2294e80a30da",
+        "other": "584e4e756b232",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p2": "10b3d6c0a9d59",
+        "sketch:p3": "dab0b21da9c0f",
+        "sketch:t1": "10619994ea3fd2",
+        "words": "a857598222014"
+      },
+      {
+        "camera": "1bbe0fa72900ce",
+        "cast": "e1692ef58f803",
+        "dreamer": "798a36fc48eb8",
+        "earlier:g1": "f56d2d8117471",
+        "earlier:m5": "c019f4b99d62f",
+        "facts": "548841e3b53b9",
+        "look": "b2294e80a30da",
+        "other": "584e4e756b232",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p2": "10b3d6c0a9d59",
+        "sketch:p3": "dab0b21da9c0f",
+        "sketch:t1": "10619994ea3fd2",
+        "words": "a857598222014"
+      }
+    ],
+    [
+      "m7",
+      {
+        "camera": "1df0aeca9969a8",
+        "cast": "f53cca36b12d4",
+        "dreamer": "798a36fc48eb8",
+        "earlier:m3": "170d74adb9a0d7",
+        "earlier:m6": "1c5e17a818f8fb",
+        "facts": "187ed17de0a269",
+        "look": "b2294e80a30da",
+        "other": "a6e7dc3c3a2f8",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p1": "30e10705af5a8",
+        "sketch:p3": "dab0b21da9c0f",
+        "words": "14922850c62655"
+      },
+      {
+        "camera": "1df0aeca9969a8",
+        "cast": "f53cca36b12d4",
+        "dreamer": "798a36fc48eb8",
+        "earlier:m3": "170d74adb9a0d7",
+        "earlier:m6": "1c5e17a818f8fb",
+        "facts": "187ed17de0a269",
+        "look": "b2294e80a30da",
+        "other": "a6e7dc3c3a2f8",
+        "sketch:l2": "3ff73598cda9c",
+        "sketch:p1": "30e10705af5a8",
+        "sketch:p3": "dab0b21da9c0f",
+        "words": "14922850c62655"
+      }
+    ]
+  ]
+}
