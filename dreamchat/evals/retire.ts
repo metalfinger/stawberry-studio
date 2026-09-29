@@ -371,7 +371,7 @@ export function disagreementsOf(p: RebuiltPicture, rec: StoryRecord | null, styl
     if (rec && e.turned === null && (!builds('looks') || rec.elements[e.id]?.fromSketch)) {
       const a = new Set(contentWords(e.look));
       const away = new Set(s.members.filter((m) => m.group === e.id).map((m) => m.member));
-      const z = new Set(recordLook(rec, e.id, e.kind, s.style.option, away, builds('shades') ? s.style.told : []));
+      const z = new Set(recordLook(rec, e.id, e.kind, s.style.option, away, builds('shades') ? e.colours : []));
       const sheetOnly = setDiff(a, z);
       const recordOnly = setDiff(z, a);
       if (sheetOnly.length || recordOnly.length) looks.push({ id: e.id, sheetOnly, recordOnly });
@@ -510,7 +510,18 @@ export type MomentReading = {
 };
 
 /** Ids standing as words in an in-between picture's prompt (their instruction is named after the moment's words). */
-export type GhostIds = { dream: string; picture: string; ids: string[] };
+export type GhostIds = { dream: string; picture: string; ids: string[]; colourTwoWays?: string[] };
+
+/** The colours an in-between picture's style keeps exactly, read off its "Colours:" line as sent. */
+const keptIn = (prompt: string): string[] =>
+  (
+    (prompt.split('\n').find((l) => l.startsWith('Colours:')) ?? '').match(
+      /keeps it exactly(?:, as said above)?: (.*?)\.(?:\s|$)/,
+    )?.[1] ?? ''
+  )
+    .split(';')
+    .map((x) => x.trim())
+    .filter(Boolean);
 
 export function readDream(id: string, session: Session, r: Rebuilt): { moments: MomentReading[]; ghosts: GhostIds[] } {
   const inputs = recordInputsOf(session);
@@ -548,10 +559,16 @@ export function readDream(id: string, session: Session, r: Rebuilt): { moments: 
       },
     ];
   });
+  // In-between pictures: ids in words, and a colour the dream gives said two ways (S6 row 13).
   const ghosts = r.pictures
     .filter((p) => p.kind === 'ghost')
-    .map((p) => ({ dream: id, picture: p.id, ids: idsInWords(p.prompt, ids) }))
-    .filter((g) => g.ids.length);
+    .map((p) => ({
+      dream: id,
+      picture: p.id,
+      ids: idsInWords(p.prompt, ids),
+      colourTwoWays: colourTwoWays(p.prompt, keptIn(p.prompt)),
+    }))
+    .filter((g) => g.ids.length || g.colourTwoWays.length);
   return { moments, ghosts };
 }
 
@@ -608,7 +625,7 @@ export function totalsOf(readings: MomentReading[], ghosts: GhostIds[] = []) {
     },
     ids: {
       moments: readings.filter((m) => m.ids.length).length,
-      ghosts: ghosts.length,
+      ghosts: ghosts.filter((g) => g.ids.length).length,
       ids: count(
         [...readings, ...ghosts].flatMap((m) => m.ids),
         (x) => x,
@@ -627,6 +644,7 @@ export function totalsOf(readings: MomentReading[], ghosts: GhostIds[] = []) {
       toPrev: d.filter((x) => x.toPrev).length,
       coloursTwice: d.filter((x) => x.coloursTwice.length).length,
       colourTwoWays: d.filter((x) => x.colourTwoWays.length).length,
+      colourTwoWaysInBetween: ghosts.filter((g) => g.colourTwoWays?.length).length,
     },
   };
 }

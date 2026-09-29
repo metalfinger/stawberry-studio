@@ -347,8 +347,13 @@ export function inShades(text: string, style: StyleOption, keep: string[] = []):
   // while the rest is shaded.
   const kept: string[] = [];
   const esc = (x: string) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  for (const k of keep.filter(Boolean))
-    text = text.replace(new RegExp(`\\b${esc(k)}\\b`, 'gi'), (m) => `\u0000${kept.push(m) - 1}\u0000`);
+  // Longest first, so one inside another is kept whole; never where a hyphen joins it to another colour word
+  // ("red-brown" is brown, as before).
+  for (const k of [...keep].filter(Boolean).sort((a, b) => b.length - a.length))
+    text = text.replace(
+      new RegExp(`(?<!\\b(?:${words})-)\\b${esc(k)}\\b(?!-(?:${words})\\b)`, 'gi'),
+      (m) => `\u0000${kept.push(m) - 1}\u0000`,
+    );
   // A colour of two ("red-brown", "blue-green") is its last.
   const shaded = text
     .replace(new RegExp(`\\b(?:${words})-(${words})\\b`, 'gi'), '$1')

@@ -5,7 +5,7 @@
 // nothing to a generator, so say how much of the frame the subject fills; a room referenced from
 // a sheet comes back mirrored unless told which side its walls are on; every detail of what is
 // in view is said out loud, and the style tokens are quoted word for word.
-import { offInLookIn, retired } from './cleanups';
+import { builds, offInLookIn, retired } from './cleanups';
 import { type ContinuityPlan, type PlanRef, pictureName } from './continuity';
 import type { Breakdown, Moment, State, StyleOption } from './producer';
 import { BECOMING, isWhole, momentLabel, oneColour, VAGUE, WHOLE } from './producer';
@@ -924,13 +924,14 @@ export function ghostPrompt(
     ),
   };
   // Made from the story record, it is how they looked just before this change, the part it replaces
-  // left out.
+  // left out. A colour the dream itself gives it stays whole in a guessed clause too (S6 row 13).
+  const keepWhole = builds('shades') ? toldColours(unchanged) : [];
   const look = g.before
-    ? g.before.map((f) => (f.said ? f.text : inShades(f.text, style))).join('; ')
+    ? g.before.map((f) => (f.said ? f.text : inShades(f.text, style, keepWhole))).join('; ')
     : LOOK[sheet.kind]
         .map((k) => unchanged.fields[k])
         .filter((d) => !!d?.value && !VAGUE.test(d.value))
-        .map((d) => (d?.said ? (d.value as string) : inShades(d?.value as string, style)))
+        .map((d) => (d?.said ? (d.value as string) : inShades(d?.value as string, style, keepWhole)))
         .join('; ');
   const kind = sheet.kind === 'character' ? 'person' : sheet.kind === 'location' ? 'place' : 'thing';
   const lines =
