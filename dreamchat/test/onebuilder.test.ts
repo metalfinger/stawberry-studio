@@ -1081,6 +1081,40 @@ describe('ledger 16: how each one is now, said once', () => {
     said.now = sheet.now;
     said.inView.find((e) => e.id === 'p1')!.changes = [{ what: 'hair', now: 'wet', part: 'hair' }];
     expect(nowLine(assembled(said))).not.toContain('hair');
+    // Another one's Except saying the same part in the same state says nothing of the dreamer.
+    const other = sheetAt();
+    other.now = sheet.now;
+    other.inView.find((e) => e.id === 't1')!.changes.push({ what: 'hair', now: 'wet', part: 'hair' });
+    expect(nowLine(assembled(other))).toMatch(/the dreamer's hair is wet/);
+    // Their Except says the same part in another state: not said.
+    const dry = sheetAt();
+    dry.now = sheet.now;
+    dry.inView.find((e) => e.id === 'p1')!.changes = [{ what: 'hair', now: 'dry', part: 'hair' }];
+    expect(nowLine(assembled(dry))).toMatch(/the dreamer's hair is wet/);
+  });
+
+  test('a part shown only by an in-between picture, or by the in-between picture that is its one image, is left out below', () => {
+    const body = (sheet: CutSheet) => {
+      sheet.now = sheet.now!.map((x) =>
+        x.of === 't1' ? { ...x, facts: x.facts.filter((f) => f.kind === 'part') } : x,
+      );
+      return sheet;
+    };
+    // No Except: only the fish's body picture (Image N: the fish's body as it is now) says it.
+    const ghostOnly = body(sheetAt());
+    ghostOnly.inView.find((e) => e.id === 't1')!.changes = [];
+    const p = assembled(ghostOnly);
+    expect(p).toMatch(/Image \d+: the fish's body as it is now \(wrapped in newspaper\)/);
+    expect(p).not.toContain('Except its body');
+    expect(nowLine(p)).not.toContain('wrapped in newspaper');
+    // The in-between picture is the fish's one image: its line says the body as it is now, and nothing below.
+    const stage = body(sheetAt());
+    const g = stage.earlier.find((x) => x.ghost?.of === 't1')!;
+    stage.refs = { first: 'mockup', stage: { t1: g.id }, several: [] };
+    const q = assembled(stage);
+    expect(q).toMatch(/Image \d+: the fish \([^\n]*, as it is now \(body: wrapped in newspaper\)/);
+    expect(q).not.toMatch(/Image \d+: the fish's body as it is now/);
+    expect(nowLine(q)).not.toContain('wrapped in newspaper');
   });
 
   test('a state is said only as whole words: the fish\'s "wet looking" keeps the newspaper\'s "wet" (a678160)', () => {
