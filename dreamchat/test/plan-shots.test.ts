@@ -496,6 +496,9 @@ describe('one story record for planning and drawing (DREAMCHAT_RECORD=on)', () =
         // The sheet off, nothing reads them, so none are read.
         await withSwitches({ DREAMCHAT_CUT_SHEET: undefined }, () => plan());
         expect(asked).toBe(ids.length);
+        // In shadow the sheet is built beside the old prompt and reads them: read.
+        await withSwitches({ DREAMCHAT_CUT_SHEET: 'shadow' }, () => plan());
+        expect(asked).toBe(2 * ids.length);
       },
     ));
 

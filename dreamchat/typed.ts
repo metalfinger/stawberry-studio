@@ -12,9 +12,10 @@
 // them today (camera.ts HAND_VERB, selfIn, goingIn, waterLevel's words; record.ts FILLS, OPENS, SELF,
 // NOT_THERE, shutAway …). This module only reads; it changes no prompt.
 import type { JevFn, Question } from './jev';
-import { type CallResult, type ChatMessage, callDeepseek, type Thinking } from './llm';
+import { type CallResult, type ChatMessage, callDeepseek, type Thinking, WRITER_MODEL } from './llm';
 import type { Breakdown, Moment } from './producer';
 import { moments as momentsOf } from './producer';
+import { hashOf } from './lib';
 
 // ── the facts ────────────────────────────────────────────────────────────────────────────────────
 
@@ -61,10 +62,10 @@ export type Check = { key: string; want: 'yes' | 'no'; answer?: number };
 /** A proposed fact, Jev's reading of each of its questions, and whether it is taken. */
 export type Checked = TypedFact & { checks: Check[]; ok: boolean; close?: boolean };
 
-/** A moment's reading: every proposed fact, checked. */
 /**
- * One moment's typed reading. `ask`: the hash of the question it answered (`typedAsk`), where the harness read
- * it while planning, so a plan made again reads anew only the moments whose question changed.
+ * A moment's reading: every proposed fact, checked. `ask`: where the harness read it while planning, the hash
+ * of what it answered (`typedAskKey`: the question, the writer, the bars), so a plan made again reads anew
+ * only the moments whose question changed; a reading that failed has none, and is read again.
  */
 export type TypedReading = { moment: string; facts: Checked[]; ask?: string };
 
@@ -113,6 +114,9 @@ export function strip(f: Checked): TypedFact {
 export type WriteFn = (messages: ChatMessage[]) => Promise<CallResult>;
 
 export const TYPED_THINKING = (process.env.DREAMCHAT_TYPED_THINKING as Thinking | undefined) ?? 'low';
+
+/** The writer's name, as the typed cache keys it: its model and how much it thinks. */
+export const typedWriterName = () => `${WRITER_MODEL} thinking ${TYPED_THINKING}`;
 
 /** The harness's writer, one JSON answer; a blank answer is asked once more. */
 export const writeTyped: WriteFn = async (messages) => {
@@ -516,3 +520,10 @@ export async function readTypedMoment(
     ...(call.error ? { error: `jev: ${call.error.slice(0, 200)}` } : {}),
   };
 }
+
+/**
+ * What a moment's typed reading answered, as a key: its question (`typedAsk`), the writer and the bars Jev's
+ * answers are judged by. A reading keeps it; changed, the reading is read again.
+ */
+export const typedAskKey = (b: Breakdown, m: Moment) =>
+  hashOf({ ask: typedAsk(b, m), writer: typedWriterName(), bars: [TYPED_BAR, NO_BAR] });

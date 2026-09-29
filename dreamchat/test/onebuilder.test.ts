@@ -196,6 +196,25 @@ describe('typed readings while planning', () => {
     expect(one.asked).toHaveLength(1);
   });
 
+  test('a reading that failed is read again on the next plan', async () => {
+    const dream = b();
+    const last = moments(dream).at(-1)!.id;
+    let fail = true;
+    const asked: string[] = [];
+    const flaky = (async (messages: { content: string }[]) => {
+      asked.push(messages.at(-1)!.content);
+      if (fail && messages.at(-1)!.content.includes(last)) throw new Error('429');
+      return { content: '{"acts": []}', model: 'fake', ms: 0 };
+    }) as never;
+    const read = (await typedReadings(dream, { typed: flaky, jev }))!;
+    expect(read[last].ask).toBeUndefined();
+    fail = false;
+    asked.length = 0;
+    const again = (await typedReadings(dream, { typed: flaky, jev }, read))!;
+    expect(asked).toHaveLength(1);
+    expect(again[last].ask).toBeDefined();
+  });
+
   test('without the writer, a reading of words since changed is dropped, never carried on', async () => {
     const dream = b();
     const read = (await typedReadings(dream, { typed: counting().write, jev }))!;

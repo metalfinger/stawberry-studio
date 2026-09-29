@@ -6,10 +6,17 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import type { JevCall, JevFn } from '../jev';
-import { type CallResult, WRITER_MODEL } from '../llm';
+import type { CallResult } from '../llm';
 import { completeViews, moments as momentsOf } from '../producer';
 import type { Session } from '../session';
-import { readTypedMoment, TYPED_THINKING, type TypedCost, type TypedReading, type WriteFn, writeTyped } from '../typed';
+import {
+  readTypedMoment,
+  type TypedCost,
+  type TypedReading,
+  typedWriterName,
+  type WriteFn,
+  writeTyped,
+} from '../typed';
 import { DIR, sha256 } from './saved';
 
 export const TYPED_CACHE = process.env.DREAMCHAT_TYPED_CACHE ?? join(DIR, 'runs', 'typed-cache.json');
@@ -38,7 +45,7 @@ export class TypedCache {
 }
 
 /** The writer's name in the cache: its model and how much it thinks. */
-export const typedWriter = () => `${WRITER_MODEL} thinking ${TYPED_THINKING}`;
+export const typedWriter = typedWriterName;
 
 export type Counts = { asked: number; cached: number; missing: number };
 
@@ -124,21 +131,8 @@ export async function withTyped(
   return { session, missing: Object.keys(errors).sort(), read: Object.keys(readings).length };
 }
 
-/** At most `n` at once. */
-export function limiter(n: number): <T>(fn: () => Promise<T>) => Promise<T> {
-  let running = 0;
-  const queue: (() => void)[] = [];
-  return async (fn) => {
-    if (running >= n) await new Promise<void>((r) => queue.push(r));
-    running++;
-    try {
-      return await fn();
-    } finally {
-      running--;
-      queue.shift()?.();
-    }
-  };
-}
+/** At most `n` at once (lib.ts; the planning path reads typed facts with it too). */
+export { limiter } from '../lib';
 
 /**
  * Every moment of a saved dream read (or only `only`), each through `limit`: its readings by moment, what

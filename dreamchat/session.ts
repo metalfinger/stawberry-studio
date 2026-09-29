@@ -39,6 +39,7 @@ import {
   FINISHED_BAR,
   followStreakOf,
   hashOf,
+  limiter,
   rounded,
   LISTENING,
   listenOn,
@@ -156,7 +157,7 @@ import {
 import type { JudgedCheck, JudgeOptions } from './judge';
 import { IMPLIED_BAR, impliedFacts, readImplied, type WriteFn } from './implied';
 import { oneBuilder } from './cleanups';
-import { NO_BAR, readTypedMoment, strip, TYPED_BAR, type TypedReading, typedAsk } from './typed';
+import { NO_BAR, readTypedMoment, strip, TYPED_BAR, type TypedReading, typedAskKey } from './typed';
 import {
   diffPlan,
   type Readings,
@@ -470,9 +471,10 @@ export async function planShots(
   }
   // With S6's one prompt builder on (DREAMCHAT_ONE_BUILDER), what each moment's picture shows at one instant
   // is read once here as typed facts, and kept in the dream's readings with the others.
-  // Only the cut sheet reads them, so they are read only with it on.
-  if (oneBuilder() && cutSheetMode() === 'on') {
-    const typed = await typedReadings(blocked, deps, readings?.typed);
+  // Only the cut sheet reads them (on, or in shadow beside the old prompt), so they are read only with it; with
+  // it off, those whose question has changed are still dropped, so a sheet turned on later never reads them.
+  if (oneBuilder()) {
+    const typed = await typedReadings(blocked, cutSheetMode() === 'off' ? {} : deps, readings?.typed);
     if (typed) {
       readings = { ...readings, typed };
       prep.readings = { ...prep.readings, typed };
@@ -728,7 +730,7 @@ export async function typedReadings(
   const out: NonNullable<Readings['typed']> = {};
   const toRead: { m: Moment; ask: string }[] = [];
   for (const m of moments(b)) {
-    const ask = hashOf(typedAsk(b, m));
+    const ask = typedAskKey(b, m);
     const was = previous?.[m.id];
     if (was?.ask === ask) out[m.id] = was;
     else toRead.push({ m, ask });
@@ -741,7 +743,8 @@ export async function typedReadings(
       reading: { moment: m.id, facts: [] as TypedReading['facts'] },
       error: String(e).slice(0, 200),
     }));
-    out[m.id] = { ...read.reading, ask };
+    // A reading that failed (the writer or Jev) is kept without its key, so the next plan reads it again.
+    out[m.id] = 'error' in read && read.error ? read.reading : { ...read.reading, ask };
     recordJev({
       kind: 'transition',
       stage: 'record',
@@ -759,8 +762,8 @@ export async function typedReadings(
       reason: 'error' in read && read.error ? read.error : 'the writer proposed, Jev read each fact',
     });
   };
-  for (let i = 0; i < toRead.length; i += TYPED_AT_ONCE)
-    await Promise.all(toRead.slice(i, i + TYPED_AT_ONCE).map(readOne));
+  const limit = limiter(TYPED_AT_ONCE);
+  await Promise.all(toRead.map((x) => limit(() => readOne(x))));
   // In the moments' order, whichever finished first.
   return Object.fromEntries(moments(b).flatMap((m) => (out[m.id] ? [[m.id, out[m.id]]] : [])));
 }
