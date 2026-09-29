@@ -807,7 +807,7 @@ if (import.meta.main) {
     ...readings.flatMap((m) => m.action.map((a) => `  ${m.dream} ${m.moment}: ${a.rule} "${a.said}"`)),
     '\n══ ids in words',
     ...readings.filter((m) => m.ids.length).map((m) => `  ${m.dream} ${m.moment}: ${m.ids.join(', ')}`),
-    ...ghostIds.map((g) => `  ${g.dream} ${g.picture} (in-between): ${g.ids.join(', ')}`),
+    ...ghostIds.filter((g) => g.ids.length).map((g) => `  ${g.dream} ${g.picture} (in-between): ${g.ids.join(', ')}`),
     '\n══ two sources disagree',
     ...readings.flatMap((m) => (m.disagree ? [`  ${m.dream} ${m.moment}: ${JSON.stringify(m.disagree)}`] : [])),
   ];

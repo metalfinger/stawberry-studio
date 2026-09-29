@@ -864,6 +864,17 @@ describe('ledger 13: a colour the dream gives, said one way', () => {
     expect(ways('shades')).toEqual([]);
   });
 
+  test("the measure reads a look's own kept colours: library-3's look and its record agree", () => {
+    const looks = (step: string) =>
+      withSwitches({ ...SHEET, DREAMCHAT_ONE_BUILDER: step }, () => {
+        const s = loadDream('dream-0926-055141-6e80', false).session as Session;
+        return readDream('dream-0926-055141-6e80', s, rebuild(structuredClone(s))).moments.find(
+          (m) => m.moment === 'm1',
+        )?.disagree?.looks;
+      });
+    expect(looks('shades')).toEqual([]);
+  });
+
   test('a guessed colour the dream does not give is still a shade', () => {
     const style = {
       id: 's',
