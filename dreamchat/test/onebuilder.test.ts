@@ -14,7 +14,7 @@ import { inViewOf } from '../frames';
 import { moments, producerSystem } from '../producer';
 import { inViewIn, rebuild } from '../plan';
 import { recordInputsOf, recordsMade, storyRecord } from '../record';
-import { type Session, typedReadings } from '../session';
+import { drawingSheet, type Session, typedReadings } from '../session';
 import { NO_BAR, TYPED_BAR, type TypedReading, typedAsk, typedAskKey, typedWriterName } from '../typed';
 import { hashOf } from '../lib';
 import { inShades, type Item } from '../sheets';
@@ -402,21 +402,48 @@ describe('ledger 8: how each one looks, once, from the story record', () => {
     expect(at('looks')).toContain('a box of crayons');
   });
 
-  test("a sketch that never got drawn keeps its words: the record's base is the breakdown's shorter ones", () => {
+  test("a sketch that never got drawn keeps its words on the drawing path, never the breakdown's shorter ones", () => {
     // 6081's boat has a failed sketch; the record's words for it are the breakdown's short ones.
     const id = 'dream-0926-052843-6081';
     const s = loadDream(id, false).session as Session;
     const items = s.build!.items.filter((i) => !i.frame && (i.status === 'failed' || i.status === 'waiting'));
     expect(items.length).toBeGreaterThan(0);
-    const of = (step: string, el: string) =>
+    const words = (t: string): string[] => [...(t.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [])].sort();
+    // On the drawing path, with every picture drawn but that sketch (session.ts drawingSheet): as it was.
+    const drawing = (step: string, el: string) =>
       withSwitches({ ...SHEET, DREAMCHAT_ONE_BUILDER: step }, () => {
-        const p = rebuild(structuredClone(s)).pictures.flatMap((x) =>
-          (x.sheet?.inView ?? []).filter((e) => e.id === el),
-        );
-        return p.map((e) => e.look);
+        const r = rebuild(structuredClone(s));
+        const drawn: Session = {
+          ...s,
+          build: {
+            ...s.build!,
+            plan: r.plan,
+            frames: r.pictures.map((p) => p.item),
+            items: r.sheets.map((x) => (x.id === el ? s.build!.items.find((i) => i.id === el)! : x)),
+          },
+        };
+        return r.pictures
+          .filter((p) => p.kind === 'cut')
+          .flatMap((p) => (drawingSheet(drawn, p.id)?.inView ?? []).filter((e) => e.id === el))
+          .map((e) => e.look);
       });
-    for (const it of items.filter((x) => x.kind !== 'cut' && x.kind !== 'ghost'))
-      expect(of('looks', it.id)).toEqual(of('in_view', it.id));
+    // A rebuild takes every sketch as drawn and approved: its look is the record's, read from its own words (with
+    // the way of drawing and a joining "and" left to the style and the record), never the breakdown's shorter ones.
+    const rebuilt = (step: string, el: string) =>
+      withSwitches({ ...SHEET, DREAMCHAT_ONE_BUILDER: step }, () =>
+        rebuild(structuredClone(s))
+          .pictures.flatMap((x) => (x.sheet?.inView ?? []).filter((e) => e.id === el))
+          .map((e) => e.look),
+      );
+    for (const it of items.filter((x) => x.kind !== 'cut' && x.kind !== 'ghost')) {
+      const before = drawing('in_view', it.id);
+      expect(before.length).toBeGreaterThan(0);
+      expect(drawing('looks', it.id)).toEqual(before);
+      const after = rebuilt('looks', it.id);
+      expect(after.length).toBe(before.length);
+      for (const [i, look] of after.entries())
+        expect(words(look)).toEqual(words(before[i]).filter((w) => w !== 'and' || words(look).includes('and')));
+    }
   });
 
   test("a group's words about someone with a sketch of their own leave the group's look", () => {

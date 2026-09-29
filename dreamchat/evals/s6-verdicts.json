@@ -4854,5 +4854,105 @@
   "dece29cc059e1717": {
     "verdict": "intended",
     "why": "S6 row 16 (state_once), live: \"How each one is at this moment\" leaves out a state its in-between pictures' lines say (f085 Tomas's age and wardrobe, Images 6 and 7; e127 the dreamer's age/size and clothing), said once; nothing added (checked on the full prompts)."
+  },
+  "32a45327f05d91a7": {
+    "verdict": "neutral",
+    "why": "A rebuild reads the story record as drawing does once every sketch is drawn and approved (viewer/data.ts's drawing-path test): a sketch never drawn (4c79's sky, 6081's boat, 3cd7's roof) takes the record's look, which joins its clauses with a comma where the sketch's words had 'and'; the same words otherwise."
+  },
+  "f179fceeb87f59a3": {
+    "verdict": "intended",
+    "why": "A rebuild reads the story record as drawing does once every sketch is drawn and approved (viewer/data.ts's drawing-path test): aeea's father, whose sketch was never drawn, takes the record's look, which leaves the way of drawing ('faded watercolour style') to the style, as row 8 does for every drawn sketch."
+  },
+  "f28eb9ac4123c8c7": {
+    "verdict": "intended",
+    "why": "A rebuild reads the story record as drawing does once every sketch is drawn and approved (viewer/data.ts's drawing-path test): aeea's father, whose sketch was never drawn, takes the record's look, which leaves the way of drawing ('faded watercolour style') to the style, as row 8 does for every drawn sketch."
+  },
+  "45a55ef8af945c31": {
+    "verdict": "intended",
+    "why": "A rebuild reads the story record as drawing does once every sketch is drawn and approved (viewer/data.ts's drawing-path test): aeea's father, whose sketch was never drawn, takes the record's look, which leaves the way of drawing ('faded watercolour style') to the style, as row 8 does for every drawn sketch."
+  },
+  "489794be49e1544b": {
+    "verdict": "neutral",
+    "why": "A rebuild reads the story record as drawing does once every sketch is drawn and approved (viewer/data.ts's drawing-path test): a sketch never drawn (4c79's sky, 6081's boat, 3cd7's roof) takes the record's look, which joins its clauses with a comma where the sketch's words had 'and'; the same words otherwise."
+  },
+  "5547382cf2f907f9": {
+    "verdict": "neutral",
+    "why": "A rebuild reads the story record as drawing does once every sketch is drawn and approved (viewer/data.ts's drawing-path test): a sketch never drawn (4c79's sky, 6081's boat, 3cd7's roof) takes the record's look, which joins its clauses with a comma where the sketch's words had 'and'; the same words otherwise."
+  },
+  "f12d491539a1b174": {
+    "verdict": "neutral",
+    "why": "A rebuild reads the story record as drawing does once every sketch is drawn and approved (viewer/data.ts's drawing-path test): a sketch never drawn (4c79's sky, 6081's boat, 3cd7's roof) takes the record's look, which joins its clauses with a comma where the sketch's words had 'and'; the same words otherwise."
+  },
+  "b38557e1607836cb": {
+    "verdict": "neutral",
+    "why": "A rebuild reads the story record as drawing does once every sketch is drawn and approved (viewer/data.ts's drawing-path test): a sketch never drawn (4c79's sky, 6081's boat, 3cd7's roof) takes the record's look, which joins its clauses with a comma where the sketch's words had 'and'; the same words otherwise."
+  },
+  "a5913889220510a5": {
+    "verdict": "neutral",
+    "why": "A rebuild reads the story record as drawing does once every sketch is drawn and approved (viewer/data.ts's drawing-path test): a sketch never drawn (4c79's sky, 6081's boat, 3cd7's roof) takes the record's look, which joins its clauses with a comma where the sketch's words had 'and'; the same words otherwise."
+  },
+  "f871ac8e430857c6": {
+    "verdict": "neutral",
+    "why": "A rebuild reads the story record as drawing does once every sketch is drawn and approved (viewer/data.ts's drawing-path test): a sketch never drawn (4c79's sky, 6081's boat, 3cd7's roof) takes the record's look, which joins its clauses with a comma where the sketch's words had 'and'; the same words otherwise."
+  },
+  "76274c8fbda1d15e": {
+    "verdict": "neutral",
+    "why": "A rebuild reads the story record as drawing does once every sketch is drawn and approved (viewer/data.ts's drawing-path test): a sketch never drawn (4c79's sky, 6081's boat, 3cd7's roof) takes the record's look, which joins its clauses with a comma where the sketch's words had 'and'; the same words otherwise."
+  },
+  "5c1a469b09e3f754": {
+    "verdict": "neutral",
+    "why": "A rebuild reads the story record as drawing does once every sketch is drawn and approved (viewer/data.ts's drawing-path test): a sketch never drawn (4c79's sky, 6081's boat, 3cd7's roof) takes the record's look, which joins its clauses with a comma where the sketch's words had 'and'; the same words otherwise."
+  },
+  "8d0094389146820e": {
+    "verdict": "neutral",
+    "why": "A rebuild reads the story record as drawing does once every sketch is drawn and approved (viewer/data.ts's drawing-path test): a sketch never drawn (4c79's sky, 6081's boat, 3cd7's roof) takes the record's look, which joins its clauses with a comma where the sketch's words had 'and'; the same words otherwise."
+  },
+  "58ed0d7602387958": {
+    "verdict": "neutral",
+    "why": "A rebuild reads the story record as drawing does once every sketch is drawn and approved (viewer/data.ts's drawing-path test): a sketch never drawn (4c79's sky, 6081's boat, 3cd7's roof) takes the record's look, which joins its clauses with a comma where the sketch's words had 'and'; the same words otherwise."
+  },
+  "85155ea8d7d651ca": {
+    "verdict": "intended",
+    "why": "A rebuild reads the story record as drawing does once every sketch is drawn and approved (viewer/data.ts's drawing-path test): aeea's father, whose sketch was never drawn, takes the record's look, which leaves the way of drawing ('faded watercolour style') to the style, as row 8 does for every drawn sketch."
+  },
+  "909d19138054923f": {
+    "verdict": "intended",
+    "why": "A rebuild reads the story record as drawing does once every sketch is drawn and approved (viewer/data.ts's drawing-path test): aeea's father, whose sketch was never drawn, takes the record's look, which leaves the way of drawing ('faded watercolour style') to the style, as row 8 does for every drawn sketch."
+  },
+  "a463d60498e1409d": {
+    "verdict": "intended",
+    "why": "A rebuild reads the story record as drawing does once every sketch is drawn and approved (viewer/data.ts's drawing-path test): aeea's father, whose sketch was never drawn, takes the record's look, which leaves the way of drawing ('faded watercolour style') to the style, as row 8 does for every drawn sketch."
+  },
+  "8f2d9285b4d1ce0c": {
+    "verdict": "neutral",
+    "why": "A rebuild reads the story record as drawing does once every sketch is drawn and approved (viewer/data.ts's drawing-path test): a sketch never drawn (4c79's sky, 6081's boat, 3cd7's roof) takes the record's look, which joins its clauses with a comma where the sketch's words had 'and'; the same words otherwise."
+  },
+  "028300d59552b095": {
+    "verdict": "neutral",
+    "why": "A rebuild reads the story record as drawing does once every sketch is drawn and approved (viewer/data.ts's drawing-path test): a sketch never drawn (4c79's sky, 6081's boat, 3cd7's roof) takes the record's look, which joins its clauses with a comma where the sketch's words had 'and'; the same words otherwise."
+  },
+  "02b7cb33fbe64583": {
+    "verdict": "neutral",
+    "why": "A rebuild reads the story record as drawing does once every sketch is drawn and approved (viewer/data.ts's drawing-path test): a sketch never drawn (4c79's sky, 6081's boat, 3cd7's roof) takes the record's look, which joins its clauses with a comma where the sketch's words had 'and'; the same words otherwise."
+  },
+  "769ea956133e8d24": {
+    "verdict": "neutral",
+    "why": "A rebuild reads the story record as drawing does once every sketch is drawn and approved (viewer/data.ts's drawing-path test): a sketch never drawn (4c79's sky, 6081's boat, 3cd7's roof) takes the record's look, which joins its clauses with a comma where the sketch's words had 'and'; the same words otherwise."
+  },
+  "6cfb71c046543bcd": {
+    "verdict": "neutral",
+    "why": "A rebuild reads the story record as drawing does once every sketch is drawn and approved (viewer/data.ts's drawing-path test): a sketch never drawn (4c79's sky, 6081's boat, 3cd7's roof) takes the record's look, which joins its clauses with a comma where the sketch's words had 'and'; the same words otherwise."
+  },
+  "88038b98bfbdf9e4": {
+    "verdict": "neutral",
+    "why": "A rebuild reads the story record as drawing does once every sketch is drawn and approved (viewer/data.ts's drawing-path test): a sketch never drawn (4c79's sky, 6081's boat, 3cd7's roof) takes the record's look, which joins its clauses with a comma where the sketch's words had 'and'; the same words otherwise."
+  },
+  "bff67accd981f350": {
+    "verdict": "neutral",
+    "why": "A rebuild reads the story record as drawing does once every sketch is drawn and approved (viewer/data.ts's drawing-path test): a sketch never drawn (4c79's sky, 6081's boat, 3cd7's roof) takes the record's look, which joins its clauses with a comma where the sketch's words had 'and'; the same words otherwise."
+  },
+  "c1db5a47396f5e0a": {
+    "verdict": "neutral",
+    "why": "A rebuild reads the story record as drawing does once every sketch is drawn and approved (viewer/data.ts's drawing-path test): a sketch never drawn (4c79's sky, 6081's boat, 3cd7's roof) takes the record's look, which joins its clauses with a comma where the sketch's words had 'and'; the same words otherwise."
   }
 }
