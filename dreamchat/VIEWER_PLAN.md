@@ -238,4 +238,6 @@ sheets as nodes. _Accepted._ 12. The page against the fixture while the merges h
 
 - S6 pane: signed draft 2 (89e1e87), with amendments a and b.
 - Mac pane: signed draft 2 (89e1e87), 29 Sep.
-- Owner: _not yet_.
+- Owner, 29 Sep, on the open questions: a sequence is tree.ts's (a new one where the story starts again or
+  jumps); the S4 and S5 picture checks' dreams are read first; one verdict per cut (right is one key; wrong names
+  layout, references or words).
