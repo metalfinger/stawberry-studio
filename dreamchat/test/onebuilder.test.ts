@@ -960,6 +960,20 @@ describe('ledger 15: the colours the dream gives, said once', () => {
     expect(style(p)).toMatch(/keeps it exactly, as said above: [^.]*\bred\b/);
   });
 
+  test("in one colour with no palette, an image's line lists its colours: there is no Colours line to point to", () => {
+    const p = withSwitches({ ...SHEET, DREAMCHAT_ONE_BUILDER: 'colour_once' }, () => {
+      const sheet = structuredClone(
+        rebuild(structuredClone(loadDream('dream-0926-055141-6e80', false).session as Session)).pictures.find(
+          (x) => x.id === 'm5',
+        )!.sheet!,
+      );
+      sheet.style.option = { ...sheet.style.option, palette_hex: [] };
+      return assembleCut(sheet).prompt;
+    });
+    expect(p).toContain('which keeps it exactly: yellow rowing boat.');
+    expect(p).not.toContain('(listed under Colours)');
+  });
+
   test('in a style of many colours, one said above is not listed again', () => {
     // b91f: Dele's blue suit, said in his words above.
     const before = prompt('dream-0926-095122-b91f', 'm4', 'look_once');
