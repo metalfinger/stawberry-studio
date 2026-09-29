@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { capOf, DEFAULT_CAP, parseArgs, switchesDiffer, withEnv } from '../evals/checkpoint';
 import {
   emptyAnswers,
@@ -15,13 +15,16 @@ import {
 import {
   abOrder,
   type Attempt,
+  beforeOnPage,
   briefAskOf,
   buildDream,
   candidatesOf,
   type Change,
+  dependsOf,
   changeOf,
   type CheckpointSet,
   earlierOf,
+  judgedInCheckpoint,
   loadVerdicts,
   type Measured,
   namesOf,
@@ -642,6 +645,149 @@ describe('the set, the key and the ledger, held fast', () => {
   });
 });
 
+describe('earlier pictures: drawn new first, never one the owner called wrong', () => {
+  const s = frozen('dream-0926-043003-b0cb');
+  const snow = buildDream(s);
+  const wrong = [
+    {
+      moment: 'm2',
+      file: `${MEDIA}/m2.png`,
+      verdict: 'wrong' as const,
+      where: 'story-pictures.json snow-train-m2',
+      note: 'the seat is wrong',
+    },
+  ];
+
+  test('an earlier picture of the run the owner judged wrong is never sent; an earlier moment drawn new is, once drawn', () => {
+    const refused = todayOf(snow, 'm3', { media: MEDIA, exists: everywhere, judged: wrong });
+    expect(refused.refused.some((r) => r.includes('picture:m2') && r.includes('the owner judged it wrong'))).toBe(true);
+    // Called right, or another picture of the moment: sent as before.
+    const right = [{ ...wrong[0], verdict: 'right' as const }];
+    expect(todayOf(snow, 'm3', { media: MEDIA, exists: everywhere, judged: right }).refused).toEqual([]);
+    const other = [{ ...wrong[0], file: '/elsewhere.png' }];
+    expect(todayOf(snow, 'm3', { media: MEDIA, exists: everywhere, judged: other }).refused).toEqual([]);
+    // m2 drawn new in the checkpoint: m3 waits for it, and its hash is the same before it is drawn and after.
+    const here = { m2: { id: 'snow-train-m2' } };
+    const waits = todayOf(snow, 'm3', { media: MEDIA, exists: everywhere, judged: wrong, here });
+    expect(waits.refused).toEqual([]);
+    expect(dependsOf(waits)).toEqual(['snow-train-m2']);
+    expect(waits.images.find((im) => im.key === 'picture:m2')).toMatchObject({ dependsOn: 'snow-train-m2' });
+    expect(waits.images.find((im) => im.key === 'picture:m2')?.file).toBeUndefined();
+    const drawn = todayOf(snow, 'm3', {
+      media: MEDIA,
+      exists: everywhere,
+      judged: wrong,
+      here: { m2: { id: 'snow-train-m2', file: '/checkpoint/new-m2.png' } },
+    });
+    expect(drawn.images.find((im) => im.key === 'picture:m2')?.file).toBe('/checkpoint/new-m2.png');
+    expect(drawn.hash).toBe(waits.hash);
+    expect(drawn.hash).not.toBe(todayOf(snow, 'm3', { media: MEDIA, exists: everywhere }).hash);
+    // m2's new picture called wrong by the owner: m3 is not drawn from it either.
+    const newWrong = [{ ...wrong[0], file: '/checkpoint/new-m2.png' }];
+    const refusedNew = todayOf(snow, 'm3', {
+      media: MEDIA,
+      exists: everywhere,
+      judged: newWrong,
+      here: { m2: { id: 'snow-train-m2', file: '/checkpoint/new-m2.png' } },
+    });
+    expect(refusedNew.refused.some((r) => r.includes('picture:m2') && r.includes("m2's new picture wrong"))).toBe(true);
+  });
+
+  test('the judging page shows the picture the new one was drawn from, the new earlier one where it was drawn first', () => {
+    const run = (m: string) => `/run/${m}.png`;
+    const sent = [
+      { key: 'picture:m2', file: '/new/m2.png' },
+      { key: 'sketch:p2', file: '/p2.png' },
+    ];
+    expect(beforeOnPage(s, 'm3', sent, {}, run)).toBe('/new/m2.png');
+    expect(beforeOnPage(s, 'm3', [], { m2: '/new/m2.png' }, run)).toBe('/new/m2.png');
+    expect(beforeOnPage(s, 'm3', [], {}, run)).toBe('/run/m2.png');
+  });
+
+  test('a guard whose old picture the owner has since called not right in a checkpoint is a guard no more', () => {
+    const v = loadVerdicts();
+    const plain = candidatesOf(loadCases(), 'S4', v, '/data', null);
+    const guard = plain.candidates.find((c) => c.id === 'lighthouse-fresh-m4');
+    expect(guard?.why).toBe('guard');
+    const oldFile = resolve('/data', guard?.old.picture as string);
+    const results = { entries: { 'lighthouse-fresh-m4': { moment: 'm4' } as Attempt } };
+    const key = { 'lighthouse-fresh-m4': { a: 'new' as const, b: 'old' as const } };
+    const judged = judgedInCheckpoint('s4', {
+      key,
+      answers: { answers: { 'lighthouse-fresh-m4': { answer: 'neither', note: 'the dreamer should be outside', at: 't' } } },
+      made: {
+        'img/lighthouse-fresh-m4-a.jpg': { from: '/data/runs/checkpoint/s4/home/media/new.png' },
+        'img/lighthouse-fresh-m4-b.jpg': { from: oldFile },
+      },
+      results,
+    });
+    expect(judged.map((j) => j.verdict)).toEqual(['wrong', 'wrong']);
+    const after = candidatesOf(loadCases(), 'S4', v, '/data', null, judged).candidates.find(
+      (c) => c.id === 'lighthouse-fresh-m4',
+    );
+    expect(after?.why).toBe('fault');
+    expect(after?.relabelled).toContain('checkpoint s4');
+    expect(after?.old).toMatchObject({ verdict: 'wrong', note: 'the dreamer should be outside' });
+    // A guard he called right again stays one.
+    const again = judgedInCheckpoint('s4', {
+      key,
+      answers: { answers: { 'lighthouse-fresh-m4': { answer: 'both', note: '', at: 't' } } },
+      made: { 'img/lighthouse-fresh-m4-b.jpg': { from: oldFile } },
+      results,
+    });
+    const kept = candidatesOf(loadCases(), 'S4', v, '/data', null, again).candidates.find(
+      (c) => c.id === 'lighthouse-fresh-m4',
+    );
+    expect(kept?.why).toBe('guard');
+  });
+
+  test('a proposed moment comes with the earlier moment whose new picture it draws from, or is drawn from the run alone', () => {
+    const t = (deps: string[] = [], refused: string[] = []): Today => ({
+      moment: 'm1',
+      name: '',
+      action: '',
+      prompt: '',
+      brief: null,
+      briefless: false,
+      notes: [],
+      hash: 'h',
+      refused,
+      images: deps.map((d, i) => ({
+        n: i + 1,
+        role: 'composition',
+        key: `picture:${d}`,
+        name: d,
+        what: d,
+        instruction: '',
+        dependsOn: d,
+      })),
+    });
+    const c = (share: number): Change => ({ words: 1, of: 10, images: 0, imagesOf: 1, previs: false, share });
+    const mm = (id: string, why: 'fault' | 'guard', x: Partial<Measured>): Measured => ({
+      id,
+      run: 'r',
+      session: 'dream-0926-043003-b0cb',
+      moment: id.slice(-2),
+      why,
+      cases: [],
+      description: 'd',
+      old: { source: { file: 'story-pictures.json', row: id }, draw: 'story', verdict: 'right', note: null, picture: 'x.png' },
+      ...x,
+    });
+    const opts = { name: 's5', step: 'S5', cap: 0.3, switches: {}, base: 'b' };
+    const later = mm('r-m3', 'fault', { today: t(['r-m2']), alone: t([], ['the owner judged it wrong']), change: c(0.9) });
+    const earlier = mm('r-m2', 'guard', { today: t(), change: c(0.1) });
+    const other = mm('r-m9', 'fault', { today: t(), change: c(0.5) });
+    expect(proposeSet([later, other, earlier], opts).set.moments.map((x) => x.id)).toEqual(['r-m2', 'r-m3']);
+    // No room for both, and it cannot be drawn from the run's: left out.
+    expect(proposeSet([later, other, earlier], { ...opts, cap: 0.15 }).set.moments.map((x) => x.id)).toEqual(['r-m9']);
+    // Its earlier moment not in the set, but the run's picture may be sent: drawn from that.
+    const fine = mm('r-m3', 'fault', { today: t(['r-m2']), alone: t(), change: c(0.9) });
+    expect(proposeSet([fine], opts).set.moments.map((x) => x.id)).toEqual(['r-m3']);
+    expect(proposeSet([later], opts).refused.map((x) => x.id)).toEqual(['r-m3']);
+  });
+});
+
 describe('--draw, against a stand-in engine: only what the dry run printed, under the cap, one at a time', async () => {
   const { BRIEFLESS, draw, dry, liveEngine } = await import('../evals/checkpoint');
   type ShotFn = NonNullable<Parameters<typeof dry>[4]>['shot'];
@@ -701,12 +847,15 @@ describe('--draw, against a stand-in engine: only what the dry run printed, unde
     opts: {
       usd?: number;
       failAfterJob?: boolean;
+      /** Called as each picture is started, before its job is made. */
+      onStart?: (moment: string) => void;
       jobs?: { id: string; state: string; node: string | null }[];
       resultsFile?: string;
     } = {},
   ) {
     const jobs = (opts.jobs ?? []).map((j) => ({ ...j, recipe: `r-${j.id}` }));
-    const started: { moment: string; maxUsd: number; stateBefore?: string }[] = [];
+    const started: { moment: string; maxUsd: number; stateBefore?: string; drawn?: string[] }[] = [];
+    const setUps: { moments: string[]; files: Record<string, string> }[] = [];
     let n = 0;
     const e: Engine = {
       provider: 'fake',
@@ -729,7 +878,13 @@ describe('--draw, against a stand-in engine: only what the dry run printed, unde
           opts.resultsFile && existsSync(opts.resultsFile)
             ? (JSON.parse(readFileSync(opts.resultsFile, 'utf8')) as { entries: Record<string, Attempt> })
             : null;
-        started.push({ moment: item.id, maxUsd, stateBefore: saved?.entries[`snow-train-${item.id}`]?.state });
+        started.push({
+          moment: item.id,
+          maxUsd,
+          stateBefore: saved?.entries[`snow-train-${item.id}`]?.state,
+          drawn: jobs.filter((j) => j.state === 'ready').map((j) => j.id),
+        });
+        opts.onStart?.(item.id);
         const usd = opts.usd ?? 0.15;
         if (usd > maxUsd + 1e-9) throw new Error(`the estimate $${usd} is over what it may be approved for ($${maxUsd})`);
         const id = `job-${++n}`;
@@ -740,16 +895,21 @@ describe('--draw, against a stand-in engine: only what the dry run printed, unde
       status: async (jobId) => {
         const j = jobs.find((x) => x.id === jobId);
         if (j) j.state = 'ready';
+        mkdirSync(join(home, 'media'), { recursive: true });
+        writeFileSync(join(home, 'media', `${jobId}.png`), `picture of ${jobId}`);
         return { state: 'ready', mediaId: `media-${jobId}`, mediaPath: `${jobId}.png` };
       },
-      setUp: async (_s, _parts, drawn) => ({
+      setUp: async (_s, _parts, drawn, o) => {
+        setUps.push({ moments: drawn.map((x) => x.moment), files: o.files ?? {} });
+        return {
         projectId: 'p',
         ids: Object.fromEntries(drawn.map((x) => [x.moment, `node-${x.moment}`])),
         media: new Map(drawn.flatMap((x) => x.keys.map((k) => [k, `media-${k}`] as [string, string]))),
-      }),
+        };
+      },
       worker: () => null,
     };
-    return { e, jobs, started };
+    return { e, jobs, started, setUps };
   }
 
   const args = (x: Partial<Args> = {}): Args => {
@@ -788,6 +948,59 @@ describe('--draw, against a stand-in engine: only what the dry run printed, unde
     });
     await draw(drawArgs(), w.set, w.setFile, w.f, again.e, { allowFake: true });
     expect(again.started).toEqual([]);
+  });
+
+  test('a later moment of the dream is drawn after the earlier one, from its new picture, whatever the set order', async () => {
+    const w = world();
+    const reversed = { ...w.set, moments: [...w.set.moments].reverse() };
+    w.writeSet(reversed);
+    const dryRun = await dry(args(), reversed, w.setFile, w.f);
+    const m3 = dryRun.moments['snow-train-m3'] as (typeof dryRun.moments)[string] & {
+      images: { key: string; file: string | null; depends_on?: string }[];
+    };
+    expect(m3.depends).toEqual(['snow-train-m2']);
+    expect(m3.images.find((im) => im.key === 'picture:m2')).toMatchObject({ file: null, depends_on: 'snow-train-m2' });
+    const { e, started, setUps } = engine(w.f.home);
+    await draw(drawArgs(), reversed, w.setFile, w.f, e, { allowFake: true });
+    expect(started.map((x) => x.moment)).toEqual(['m2', 'm3']);
+    // m2's picture was drawn before m3 was started, and m3 was sent it, not the run's.
+    expect(started[1].drawn).toContain('job-1');
+    const rs = resultsOf(w.f.out);
+    const newM2 = rs.entries['snow-train-m2'].output as string;
+    expect(rs.entries['snow-train-m3']).toMatchObject({ state: 'ready', hash: m3.hash });
+    expect(rs.entries['snow-train-m3'].images.find((im) => im.key === 'picture:m2')?.file).toBe(newM2);
+    expect(setUps.at(-1)).toEqual({ moments: ['m3'], files: { 'picture:m2': newM2 } });
+  });
+
+  test('a later moment that changes beyond the new picture it draws from, or whose earlier one is not drawn, is not drawn', async () => {
+    const w = world();
+    await dry(args(), w.set, w.setFile, w.f);
+    const stateFile = join(w.data, 'state', `${SESSION}.json`);
+    const { e, started } = engine(w.f.home, {
+      onStart: (mo) => {
+        if (mo !== 'm2') return;
+        const s = JSON.parse(readFileSync(stateFile, 'utf8')) as Session;
+        const m3 = s.draft!.breakdown!.scenes.flatMap((sc) => sc.moments).find((x) => x.id === 'm3')!;
+        m3.action = `${m3.action} The lamp flickers.`;
+        writeFileSync(stateFile, JSON.stringify(s));
+      },
+    });
+    await draw(drawArgs(), w.set, w.setFile, w.f, e, { allowFake: true });
+    expect(started.map((x) => x.moment)).toEqual(['m2']);
+    expect(resultsOf(w.f.out).entries['snow-train-m3']).toMatchObject({
+      state: 'refused',
+      error: expect.stringContaining('changed beyond that picture'),
+    });
+    // The earlier one refused by the engine: the later one is not drawn, and nothing is sent for it.
+    const v = world();
+    await dry(args(), v.set, v.setFile, v.f);
+    const dear = engine(v.f.home, { usd: 0.5 });
+    await draw(drawArgs(), v.set, v.setFile, v.f, dear.e, { allowFake: true });
+    expect(dear.started.map((x) => x.moment)).toEqual(['m2']);
+    expect(resultsOf(v.f.out).entries['snow-train-m3']).toMatchObject({
+      state: 'refused',
+      error: expect.stringContaining('which was not drawn'),
+    });
   });
 
   test('--brief has the writer brief each moment without one as the harness asks it; the brief is kept, and drawn with', async () => {

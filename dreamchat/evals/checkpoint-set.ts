@@ -4,7 +4,7 @@
 // and what is left to draw under the checkpoint's cap. Nothing here draws, calls a model or opens the
 // engine's store; a file is only looked for.
 import { existsSync, readFileSync } from 'node:fs';
-import { isAbsolute, join, relative } from 'node:path';
+import { isAbsolute, join, relative, resolve } from 'node:path';
 import { sameView } from '../camera';
 import type { GhostPlan } from '../continuity';
 import { ghostName } from '../cutsheet';
@@ -15,6 +15,7 @@ import { imageName, type Rebuilt, rebuild, standIn } from '../plan';
 import { mediumOf, moments } from '../producer';
 import { calledFor, previsFor, reconcileGhosts, type Session } from '../session';
 import { type Item, MAX_PER_IMAGE } from '../sheets';
+import type { AnswerKey, Answers } from './checkpoint-judge';
 import { USD_PER_PICTURE } from './paired-arms';
 import type { DreamParts, ToDraw } from './paired-store';
 import { counted, type Draw, DRAWS, type PromptCase, type Source } from './prompt-cases';
@@ -37,6 +38,11 @@ export type OldPicture = {
   note: string | null;
   /** Its file, relative to the dreamchat folder that keeps the saved conversations (or absolute). */
   picture: string;
+  /**
+   * Where its verdict and note are from when the owner has judged it since the row named: an earlier
+   * checkpoint's answer, which then stands in place of the row's.
+   */
+  since?: string;
 };
 
 /** How much a moment's prompt and images changed: words and images taken out plus put in, and whether its mock-up renders otherwise. */
@@ -152,6 +158,63 @@ export function loadVerdicts(dir = import.meta.dir): Verdicts {
     pairedSet: read<PairedSetRow>('paired-set.json'),
   };
 }
+
+/**
+ * One picture the owner has judged: the moment it is of, its file, his verdict and where he gave it (a
+ * story verdict row, or an earlier checkpoint's answer, where not right is `wrong`).
+ */
+export type Judged = { moment: string; file: string; verdict: Verdict; where: string; note: string | null; checkpoint?: string };
+
+/** The owner's verdicts on the pictures the runs drew (story-pictures.json), by their files under `data`. */
+export const judgedInStory = (v: Pick<Verdicts, 'story'>, data: string): Judged[] =>
+  v.story.map((r) => ({
+    moment: r.moment,
+    file: join(data, 'strawberry-home', 'media', r.picture),
+    verdict: r.human,
+    where: `story-pictures.json ${r.id}`,
+    note: r.human_note ?? null,
+  }));
+
+/**
+ * The owner's answers in an earlier checkpoint, as verdicts on the pictures he was shown: each moment's
+ * old and new picture by the file its page copy was made from (judge/made.json), right when he called it
+ * right (its letter, or both), else wrong. An unanswered moment says nothing.
+ */
+export function judgedInCheckpoint(
+  name: string,
+  x: {
+    key: AnswerKey;
+    answers: Pick<Answers, 'answers'>;
+    made: Record<string, { from: string }>;
+    results: Pick<Results, 'entries'>;
+  },
+): Judged[] {
+  const out: Judged[] = [];
+  for (const [id, k] of Object.entries(x.key)) {
+    const given = x.answers.answers[id];
+    const r = x.results.entries[id];
+    if (!given?.answer || !r) continue;
+    for (const which of ['old', 'new'] as AB[]) {
+      const letter = k.a === which ? 'a' : 'b';
+      const made = Object.entries(x.made).find(([to]) => to.startsWith(`img/${id}-${letter}.`))?.[1];
+      if (!made) continue;
+      const right = given.answer === 'both' || given.answer === letter;
+      out.push({
+        moment: r.moment,
+        file: made.from,
+        verdict: right ? 'right' : 'wrong',
+        where: `checkpoint ${name}, ${id} (its ${which} picture; answered ${given.answer})`,
+        note: given.note || null,
+        checkpoint: name,
+      });
+    }
+  }
+  return out;
+}
+
+/** The owner's first verdict of wrong on a moment's picture, by its file; none where he never called it wrong. */
+export const judgedWrong = (judged: Judged[], moment: string, file: string, only?: (j: Judged) => boolean) =>
+  judged.find((j) => j.verdict === 'wrong' && j.moment === moment && resolve(j.file) === resolve(file) && (!only || only(j)));
 
 /** What the paired test drew (evals/paired.ts results), by `<row>-<way>`. */
 export type PairedResults = {
@@ -283,11 +346,30 @@ export type TodayImage = {
   /** In words. */
   what: string;
   instruction: string;
-  /** The run's file for it; a mock-up has none until it is written. */
+  /**
+   * The run's file for it; a mock-up has none until it is written, nor an earlier moment's new picture
+   * (`dependsOn`) until it is drawn.
+   */
   file?: string;
-  /** Why it cannot be found: then the moment is not drawn. */
+  /**
+   * The set's id of the earlier moment whose picture drawn new in this checkpoint it is, as the harness
+   * would draw from it: that moment is drawn first, and this image is known only then.
+   */
+  dependsOn?: string;
+  /** Why it cannot be found or sent: then the moment is not drawn. */
   missing?: string;
 };
+
+/**
+ * The moments of one dream the checkpoint draws new, by moment: the set's id for each, and its new
+ * picture's file once drawn. A later moment of the dream draws from these, never from the run's.
+ */
+export type DrawnHere = Record<string, { id: string; file?: string }>;
+
+/** The earlier moments whose new pictures a moment is drawn from, by the set's ids. */
+export const dependsOf = (t?: Pick<Today, 'images'>): string[] => [
+  ...new Set((t?.images ?? []).flatMap((x) => (x.dependsOn ? [x.dependsOn] : []))),
+];
 
 export type Today = {
   moment: string;
@@ -330,11 +412,15 @@ const YOU = /\byou(r|rs|rself)?\b/i;
  * to today's, the mock-up rendered from its floor plan now). An image that cannot be found (a sketch or an
  * in-between picture the run never drew, a file not on this machine) refuses the moment; so does a fault
  * the pre-draw check acts on even when it only logs. Nothing is ever drawn in a missing image's place.
+ *
+ * An earlier moment the checkpoint draws new (`here`) is drawn from as its new picture, as the harness
+ * would: known once that picture is drawn, and in the hash as a dependency, not a file. An earlier picture
+ * of the run the owner judged wrong (`judged`) is never sent: the moment is refused.
  */
 export function todayOf(
   d: DreamBuild,
   moment: string,
-  opts: { media: string; exists?: (path: string) => boolean },
+  opts: { media: string; exists?: (path: string) => boolean; here?: DrawnHere; judged?: Judged[] },
 ): Today {
   const exists = opts.exists ?? existsSync;
   const { r, saved } = d;
@@ -377,9 +463,33 @@ export function todayOf(
           `the run never drew the in-between picture today's plan wants (${g.label}; ${ghostName(g)})`,
         );
       }
+      const here = opts.here?.[id];
+      if (here) {
+        const what = `${id}'s new picture, drawn first in this checkpoint (${here.id})`;
+        const dep = { ...base, key: `picture:${id}`, what, dependsOn: here.id };
+        if (!here.file) return dep;
+        if (!exists(here.file)) return { ...dep, missing: `its file is not on this machine (${here.file})` };
+        // The owner's verdicts on this checkpoint's own new pictures count too: a new picture he called
+        // wrong is never drawn from, as a picture of the run he called wrong is not.
+        const wrong = judgedWrong(opts.judged ?? [], id, here.file);
+        return wrong
+          ? {
+              ...dep,
+              file: here.file,
+              missing: `the owner judged ${id}'s new picture wrong (${wrong.where}${wrong.note ? `: "${wrong.note.slice(0, 160)}"` : ''}): a picture he called wrong is never drawn from; redraw ${id} first`,
+            }
+          : { ...dep, file: here.file };
+      }
       const f = frames.find((x) => x.id === id && x.kind === 'cut');
       const what = `picture ${id} from the run${f?.name ? ` (${f.name})` : ''}`;
-      return found({ ...base, key: `picture:${id}`, what }, f, `the run never drew ${what}`);
+      const got = found({ ...base, key: `picture:${id}`, what }, f, `the run never drew ${what}`);
+      const wrong = got.file ? judgedWrong(opts.judged ?? [], id, got.file) : undefined;
+      return wrong
+        ? {
+            ...got,
+            missing: `the owner judged it wrong (${wrong.where}${wrong.note ? `: "${wrong.note.slice(0, 160)}"` : ''}): a picture he called wrong is never drawn from; put ${id} in the set to draw it new first`,
+          }
+        : got;
     }
     return {
       ...base,
@@ -434,7 +544,13 @@ export function todayOf(
   const hash = sha256(
     JSON.stringify({
       prompt: p.prompt,
-      images: images.map((x) => [x.key, x.role, x.instruction, x.file ?? null]),
+      // An earlier moment's new picture by what it is: the same before it is drawn and after.
+      images: images.map((x) => [
+        x.key,
+        x.role,
+        x.instruction,
+        x.dependsOn ? `the new picture of ${x.dependsOn}` : (x.file ?? null),
+      ]),
       previs: previs?.key ?? null,
       brief: brief?.text ?? null,
     }),
@@ -552,6 +668,35 @@ export function pictureBefore(saved: Pick<Session, 'build' | 'draft'>, moment: s
     .find((x) => drawnItem(frames.find((f) => f.id === x.id && f.kind === 'cut')))?.id;
 }
 
+/** A moment's place in its dream's story (its breakdown's order); after every moment where it is none of them. */
+export function storyIndex(saved: Pick<Session, 'draft'>, moment: string): number {
+  const at = saved.draft?.breakdown ? moments(saved.draft.breakdown).findIndex((x) => x.id === moment) : -1;
+  return at < 0 ? Number.MAX_SAFE_INTEGER : at;
+}
+
+/**
+ * The picture shown before a moment's two on the judging page: the latest earlier picture its new one was
+ * drawn from, as it was sent (an earlier moment's new picture where the checkpoint drew that first); where
+ * it was drawn from none, the latest earlier moment the run drew, as the checkpoint drew it again where it
+ * did (`drawnNew`, by moment), else as the run drew it (`runFile`). The owner judges continuity against
+ * the frame the new picture follows.
+ */
+export function beforeOnPage(
+  saved: Pick<Session, 'build' | 'draft'>,
+  moment: string,
+  sent: { key: string; file: string }[],
+  drawnNew: Record<string, string>,
+  runFile: (moment: string) => string | null,
+): string | null {
+  const at = (key: string) => storyIndex(saved, key.slice('picture:'.length));
+  const latest = sent
+    .filter((im) => im.key.startsWith('picture:') && im.file && at(im.key) < storyIndex(saved, moment))
+    .sort((a, b) => at(b.key) - at(a.key))[0];
+  if (latest) return latest.file;
+  const prev = pictureBefore(saved, moment);
+  return prev ? (drawnNew[prev] ?? runFile(prev)) : null;
+}
+
 // ── how much changed ─────────────────────────────────────────────────────────────────────────────
 
 /** The length of the longest common subsequence of two lists. */
@@ -615,13 +760,17 @@ export type Candidate = {
   cases: PromptCase[];
   old: OldPicture;
   description?: string;
+  /** A guard no more, in words: the owner has since called its old picture not right in a checkpoint. */
+  relabelled?: string;
 };
 
 /**
  * The moments a step's checkpoint may draw again: every counted fault case of the step (not the image
  * model's alone, not set aside, not a hypothesis), and every guard (a moment the owner called right),
  * one entry per moment. A moment with a fault case is a fault; its old picture is the one its first fault
- * case was seen in. Cases whose verdict row cannot be found are returned apart.
+ * case was seen in. A guard whose old picture the owner has since called not right in a checkpoint
+ * (`judged`) is a guard no more: it is proposed as a fault, his later verdict and note on its old picture
+ * standing in place of the row's. Cases whose verdict row cannot be found are returned apart.
  */
 export function candidatesOf(
   cases: PromptCase[],
@@ -629,6 +778,7 @@ export function candidatesOf(
   v: Verdicts,
   data: string,
   paired?: PairedResults | null,
+  judged: Judged[] = [],
 ): { candidates: Candidate[]; unknown: { case: string; why: string }[] } {
   const faults = cases.filter(
     (c) =>
@@ -659,30 +809,46 @@ export function candidatesOf(
       continue;
     }
     const { run, session, moment, description, ...picture } = old;
+    const since =
+      why === 'guard'
+        ? judgedWrong(judged, moment, pictureFile(data, picture.picture), (j) => !!j.checkpoint)
+        : undefined;
     candidates.push({
       id: `${run}-${moment}`,
       run,
       session,
       moment,
-      why,
+      why: since ? 'fault' : why,
       cases: list,
-      old: picture,
+      old: since ? { ...picture, verdict: 'wrong', note: since.note, since: since.where } : picture,
       ...(description ? { description } : {}),
+      ...(since
+        ? {
+            relabelled: `a guard no more: the owner has since called its old picture not right (${since.where}${since.note ? `: "${since.note}"` : ''})`,
+          }
+        : {}),
     });
   }
   return { candidates, unknown };
 }
 
 /** Why a candidate is in the set, in words: its cases and what each is about. */
-export const reasonOf = (c: Pick<Candidate, 'why' | 'cases'>) =>
-  c.cases
-    .map((x) =>
-      c.why === 'fault' ? `${x.id} (${x.class}): ${x.fault}` : `${x.id}: the owner called it right: ${x.fault}`,
-    )
-    .join(' | ');
+export const reasonOf = (c: Pick<Candidate, 'why' | 'cases' | 'relabelled'>) =>
+  [
+    ...(c.relabelled ? [c.relabelled] : []),
+    ...c.cases.map((x) =>
+      c.why === 'fault' && !c.relabelled
+        ? `${x.id} (${x.class}): ${x.fault}`
+        : `${x.id}: the owner called it right${c.relabelled ? ' before' : ''}: ${x.fault}`,
+    ),
+  ].join(' | ');
 
-/** A candidate measured: today's build, and how much it changed against the base (or why it could not be). */
-export type Measured = Candidate & { description: string; today?: Today; change?: Change; error?: string };
+/**
+ * A candidate measured: today's build, and how much it changed against the base (or why it could not be).
+ * `today` is built drawing from the new pictures of the other candidates of its dream; where it draws
+ * from one, `alone` is it built from the run's pictures, as it is drawn when that one is not in the set.
+ */
+export type Measured = Candidate & { description: string; today?: Today; alone?: Today; change?: Change; error?: string };
 
 /** How many pictures a cap leaves room for, after what is spent. */
 export const roomUnder = (cap: number, spent: number) =>
@@ -717,16 +883,64 @@ export function proposeSet(
   const unchanged = ok.filter((m) => !changed(m.change as Change));
   const refused = ok.filter((m) => changed(m.change as Change) && (m.today as Today).refused.length);
   const drawable = ok.filter((m) => changed(m.change as Change) && !(m.today as Today).refused.length);
-  const rank = (why: Why) =>
+  const rank = (group: (m: Measured) => boolean) =>
     drawable
-      .filter((m) => m.why === why)
+      .filter(group)
       .sort((a, b) => (b.change as Change).share - (a.change as Change).share || a.id.localeCompare(b.id));
-  const ranked = [...rank('fault'), ...rank('guard')];
+  // The step's own faults, then the guards the owner has since called not right, then the guards.
+  const ranked = [
+    ...rank((m) => m.why === 'fault' && !m.relabelled),
+    ...rank((m) => m.why === 'fault' && !!m.relabelled),
+    ...rank((m) => m.why === 'guard'),
+  ];
   const room = roomUnder(opts.cap, opts.spent ?? 0);
-  const kept = ranked.slice(0, room);
-  const over = ranked.slice(room);
+  // A moment that draws from an earlier one's new picture comes with it (the earlier first); where that
+  // cannot be drawn, or there is no room for both, it is drawn from the run's picture if that may be sent.
+  const byId = new Map(drawable.map((m) => [m.id, m]));
+  const keptIds = new Set<string>();
+  const kept: Measured[] = [];
+  const over: Measured[] = [];
+  const cannot: Measured[] = [];
+  const needs = (m: Measured, seen: Set<string>): string[] | null => {
+    const out: string[] = [];
+    for (const dep of dependsOf(m.today)) {
+      if (keptIds.has(dep) || seen.has(dep)) continue;
+      const d = byId.get(dep);
+      if (!d) return null;
+      seen.add(dep);
+      const more = needs(d, seen);
+      if (!more) return null;
+      out.push(...more, dep);
+    }
+    return out;
+  };
+  for (const m of ranked) {
+    if (keptIds.has(m.id)) continue;
+    const alone = m.alone && !m.alone.refused.length ? { ...m, today: m.alone } : null;
+    let need = needs(m, new Set([m.id]));
+    let use = m;
+    if (!need || (need.length && kept.length + need.length + 1 > room && alone)) {
+      if (!alone) {
+        const why = `it draws from the new picture of ${dependsOf(m.today).join(', ')}, which is not drawn in this set${m.alone ? `, and cannot be drawn from the run's: ${m.alone.refused.join('; ')}` : ''}`;
+        cannot.push({ ...m, today: { ...(m.today as Today), refused: [why] } });
+        continue;
+      }
+      use = alone;
+      need = [];
+    }
+    if (kept.length + need.length + 1 > room) {
+      over.push(m);
+      continue;
+    }
+    for (const id of need) {
+      kept.push(byId.get(id) as Measured);
+      keptIds.add(id);
+    }
+    kept.push(use);
+    keptIds.add(m.id);
+  }
   const set: CheckpointSet = {
-    about: `Proposed from the prompt cases for ${opts.step}: every counted fault case of the step, and every guard (a moment the owner called right), whose prompt or images change against ${opts.base}, that can be drawn from the run's own pictures; the faults first, then the guards, each most changed first, trimmed to $${opts.cap.toFixed(2)} at $${USD_PER_PICTURE.toFixed(2)} a picture. For a person to confirm before anything is drawn.`,
+    about: `Proposed from the prompt cases for ${opts.step}: every counted fault case of the step, and every guard (a moment the owner called right), whose prompt or images change against ${opts.base}, that can be drawn from the run's own pictures (never one the owner called wrong) or from an earlier moment's new picture drawn first; a guard whose old picture the owner has since called not right in a checkpoint is a guard no more; the faults first, then the guards no more, then the guards, each most changed first (a moment with the earlier one it draws from), trimmed to $${opts.cap.toFixed(2)} at $${USD_PER_PICTURE.toFixed(2)} a picture. For a person to confirm before anything is drawn.`,
     name: opts.name,
     step: opts.step,
     cap_usd: opts.cap,
@@ -746,7 +960,7 @@ export function proposeSet(
       change: m.change,
     })),
   };
-  return { set, unchanged, refused, failed, over };
+  return { set, unchanged, refused: [...refused, ...cannot], failed, over };
 }
 
 // ── old and new, blind ───────────────────────────────────────────────────────────────────────────

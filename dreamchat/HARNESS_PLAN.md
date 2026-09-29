@@ -263,6 +263,25 @@ One **cut sheet** per cut is the spine everything is assembled from:
   once per moment and never served. `--score <set>` reads the answers against it, leaving out any given on pictures
   changed since. The S4 set is proposed after `s4-camera` merges (on lab the camera switch changes nothing):
   `DREAMCHAT_RECORD=on DREAMCHAT_CUT_SHEET=on DREAMCHAT_CAMERA=on DREAMCHAT_WRITER=claude`, then `--dry --brief`.
+  Earlier pictures (27 Sep, after the S4 check drew snow-train m3 against the old m2 the owner had called wrong
+  while a new m2 was in the same set): two moments of one dream in a set are drawn in story order, and a later
+  one that attaches the earlier one's picture is drawn from its new picture, as the harness would. `--dry`
+  prints that image as "depends on <moment>'s new picture" (`depends` in `dry.json`, the dependency in the hash
+  in place of a file) and refuses the later one when the earlier cannot be drawn or is left out by `--only`;
+  `--draw` draws in waves, the earlier first, waits for it, builds the later again with the new picture (put
+  into the store in place of the run's), and refuses it (nothing sent, drawn by a later `--draw`) when the
+  earlier was not drawn or anything but that picture changed since the dry run. An earlier picture of the run
+  the owner judged wrong (a story verdict, or not right in any checkpoint's answers: `key.json`,
+  `answers.json`, `judge/made.json`, `results.json` beside this one) is never sent: the moment is refused unless
+  that moment is in the set. The judging page's picture before is the one the new picture was drawn from, as
+  sent (the new earlier picture where one was drawn first), else the moment before, new where drawn again.
+  `--set-from-cases` proposes a guard whose old picture the owner has since called not right in a checkpoint as
+  a fault ("a guard no more", his later verdict and note on the old picture, ranked after the step's own
+  faults; lighthouse-fresh m4 now), and a moment that draws from another candidate's new picture comes with it,
+  else is drawn from the run's picture where that may be sent, else is left out. Left: none of this has been
+  run on the real S4 or S5 data yet (`--set-from-cases S5` and `--dry` against the saved conversations, no
+  drawing); the page's picture before still skips an earlier moment the run never drew even when the checkpoint
+  drew it.
 - S9's record of what was drawn and staleness (`asdrawn.ts`, DREAMCHAT_AS_DRAWN=on): each picture's record is
   `Item.asDrawn`; a dream's stale pictures, those drawn behind the dream and those not comparable are
   `GET /api/stale?id=<session>` (`routes.ts`) and the `as_drawn` lines of its Jev log, written when a picture lands;
