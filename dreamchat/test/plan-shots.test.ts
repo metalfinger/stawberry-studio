@@ -8,6 +8,7 @@ import { rebuild } from '../plan';
 import { type Breakdown, completeViews } from '../producer';
 import { inSession, readJevLog } from '../jevlog';
 import { applyPrep, planRecord, planShots, reconcileGhosts, restage, type Session } from '../session';
+import type { Readings } from '../record';
 import { withChecks, withSwitches } from './fakes';
 
 // Frozen dreams are planned or rebuilt whole: seconds each, and past bun's 5 s on a busy machine.
@@ -460,25 +461,43 @@ describe('one story record for planning and drawing (DREAMCHAT_RECORD=on)', () =
     }));
 
   test('with the one prompt builder on, planning reads each moment once as typed facts and keeps them', async () =>
-    withSwitches({ DREAMCHAT_RECORD: undefined, DREAMCHAT_ONE_BUILDER: 'none' }, async () => {
-      const s = saved();
-      let asked = 0;
-      const prep = await planShots(
-        s.draft!.breakdown!,
-        s.style!,
-        {
-          jev,
-          imply: async () => {
-            asked++;
-            return { content: JSON.stringify({ acts: [], motion: [], fill: [] }), model: 'fake', ms: 0 };
-          },
-        },
-        { items: s.build!.items, words: [] },
-      );
-      const ids = s.draft!.breakdown!.scenes.flatMap((sc) => sc.moments.map((m) => m.id));
-      expect(asked).toBe(ids.length);
-      expect(Object.keys(prep.readings?.typed ?? {}).sort()).toEqual([...ids].sort());
-    }));
+    withSwitches(
+      { DREAMCHAT_RECORD: undefined, DREAMCHAT_CUT_SHEET: 'on', DREAMCHAT_ONE_BUILDER: 'none' },
+      async () => {
+        const s = saved();
+        let asked = 0;
+        let implied = 0;
+        const plan = (readings?: Readings) =>
+          planShots(
+            s.draft!.breakdown!,
+            s.style!,
+            {
+              jev,
+              imply: async () => {
+                implied++;
+                return { content: '{}', model: 'fake', ms: 0 };
+              },
+              typed: async () => {
+                asked++;
+                return { content: JSON.stringify({ acts: [], motion: [], fill: [] }), model: 'fake', ms: 0 };
+              },
+            },
+            { items: s.build!.items, words: [], readings },
+          );
+        const prep = await plan();
+        const ids = s.draft!.breakdown!.scenes.flatMap((sc) => sc.moments.map((m) => m.id));
+        // Read by the typed writer, never the implied one.
+        expect(asked).toBe(ids.length);
+        expect(implied).toBe(0);
+        expect(Object.keys(prep.readings?.typed ?? {}).sort()).toEqual([...ids].sort());
+        // Planned again with them kept: none read again.
+        await plan(prep.readings);
+        expect(asked).toBe(ids.length);
+        // The sheet off, nothing reads them, so none are read.
+        await withSwitches({ DREAMCHAT_CUT_SHEET: undefined }, () => plan());
+        expect(asked).toBe(ids.length);
+      },
+    ));
 
   test('off, planning keeps nothing of the record and asks the writer nothing', async () => {
     const was = process.env.DREAMCHAT_RECORD;

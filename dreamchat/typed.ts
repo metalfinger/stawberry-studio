@@ -62,7 +62,11 @@ export type Check = { key: string; want: 'yes' | 'no'; answer?: number };
 export type Checked = TypedFact & { checks: Check[]; ok: boolean; close?: boolean };
 
 /** A moment's reading: every proposed fact, checked. */
-export type TypedReading = { moment: string; facts: Checked[] };
+/**
+ * One moment's typed reading. `ask`: the hash of the question it answered (`typedAsk`), where the harness read
+ * it while planning, so a plan made again reads anew only the moments whose question changed.
+ */
+export type TypedReading = { moment: string; facts: Checked[]; ask?: string };
 
 /** The facts taken at a moment, typed, each list empty when none is. */
 export type TypedMoment = {

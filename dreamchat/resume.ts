@@ -12,6 +12,7 @@ import { assistantJudge, judgeKind } from './judge';
 import { callHost } from './llm';
 import { blockScenes, fixFrom, shotFor, superviseChanges, proposeLook, reviseItem, rewordLook, rewordMoment } from './producer';
 import { writeImplied } from './implied';
+import { writeTyped } from './typed';
 import { liveProducer, ownStyle, SessionStore } from './session';
 import { judgeAvailable, judgeContinuity, judgeTake, liveSheets, PROVIDER, spawnWorker } from './sheets';
 import { REPO, STRAWBERRY_HOME, STRAWBERRY_PYTHON, strawberryAvailable, writeProduction } from './strawberry';
@@ -40,6 +41,7 @@ const store = new SessionStore(dreamConfig(), {
   shot: shotFor,
   supervise: superviseChanges,
   imply: writeImplied,
+  typed: writeTyped,
   reword: rewordMoment,
   rewordLook,
   judge: judgeKind === 'assistant' ? assistantJudge : judgeKind === 'pc' && judgeAvailable() ? judgeTake : undefined,

@@ -156,7 +156,7 @@ import {
 import type { JudgedCheck, JudgeOptions } from './judge';
 import { IMPLIED_BAR, impliedFacts, readImplied, type WriteFn } from './implied';
 import { oneBuilder } from './cleanups';
-import { NO_BAR, readTypedMoment, strip, TYPED_BAR } from './typed';
+import { NO_BAR, readTypedMoment, strip, TYPED_BAR, type TypedReading, typedAsk } from './typed';
 import {
   diffPlan,
   type Readings,
@@ -411,6 +411,8 @@ export async function planShots(
     jev?: JevFn;
     /** The writer, for what each moment's words imply (implied.ts): with DREAMCHAT_RECORD=on. */
     imply?: WriteFn;
+    /** The writer, for each moment's typed facts (typed.ts): with the one prompt builder and the cut sheet on. */
+    typed?: WriteFn;
     dir?: string;
   },
   /** What the story record is made from besides the breakdown, as the dream stands now, and its readings. */
@@ -468,8 +470,9 @@ export async function planShots(
   }
   // With S6's one prompt builder on (DREAMCHAT_ONE_BUILDER), what each moment's picture shows at one instant
   // is read once here as typed facts, and kept in the dream's readings with the others.
-  if (oneBuilder()) {
-    const typed = await typedReadings(blocked, deps);
+  // Only the cut sheet reads them, so they are read only with it on.
+  if (oneBuilder() && cutSheetMode() === 'on') {
+    const typed = await typedReadings(blocked, deps, readings?.typed);
     if (typed) {
       readings = { ...readings, typed };
       prep.readings = { ...prep.readings, typed };
@@ -707,23 +710,38 @@ function onView(built: Framed, finding: string): boolean {
   return paragraphOf(built, around) === 'shot' && built.sheet?.camera.brief == null;
 }
 
+/** How many moments' typed readings are asked at once. */
+const TYPED_AT_ONCE = 4;
+
 /**
- * Each moment's typed reading (typed.ts): what its picture shows at one instant, proposed by the writer and
- * checked by Jev, one moment at a time, each logged. None without the writer or Jev; a moment whose reading
- * fails has no facts.
+ * Each moment's typed reading (typed.ts): what its picture shows at one instant, proposed by the typed writer
+ * and checked by Jev, each logged. A moment whose question (`typedAsk`) is the one its reading answered keeps
+ * it; the rest are read anew, a few at once, and without the writer or Jev they have none, so a reading of
+ * words since changed is never carried on (a replan of a 12-moment dream read all 12 again, one by one).
+ * A moment whose reading fails has no facts.
  */
-async function typedReadings(
+export async function typedReadings(
   b: Breakdown,
-  deps: { imply?: WriteFn; jev?: JevFn },
-): Promise<Readings['typed'] | undefined> {
-  if (!deps.imply || !deps.jev) return undefined;
+  deps: { typed?: WriteFn; jev?: JevFn },
+  previous?: Readings['typed'],
+): Promise<Readings['typed']> {
   const out: NonNullable<Readings['typed']> = {};
+  const toRead: { m: Moment; ask: string }[] = [];
   for (const m of moments(b)) {
-    const read = await readTypedMoment(b, m, deps.imply, deps.jev).catch((e) => ({
-      reading: { moment: m.id, facts: [] },
+    const ask = hashOf(typedAsk(b, m));
+    const was = previous?.[m.id];
+    if (was?.ask === ask) out[m.id] = was;
+    else toRead.push({ m, ask });
+  }
+  const write = deps.typed;
+  const jev = deps.jev;
+  if (!write || !jev) return out;
+  const readOne = async ({ m, ask }: { m: Moment; ask: string }) => {
+    const read = await readTypedMoment(b, m, write, jev).catch((e) => ({
+      reading: { moment: m.id, facts: [] as TypedReading['facts'] },
       error: String(e).slice(0, 200),
     }));
-    out[m.id] = read.reading;
+    out[m.id] = { ...read.reading, ask };
     recordJev({
       kind: 'transition',
       stage: 'record',
@@ -740,8 +758,11 @@ async function typedReadings(
       decision: `${read.reading.facts.filter((f) => f.ok).length} of ${read.reading.facts.length} typed facts taken`,
       reason: 'error' in read && read.error ? read.error : 'the writer proposed, Jev read each fact',
     });
-  }
-  return out;
+  };
+  for (let i = 0; i < toRead.length; i += TYPED_AT_ONCE)
+    await Promise.all(toRead.slice(i, i + TYPED_AT_ONCE).map(readOne));
+  // In the moments' order, whichever finished first.
+  return Object.fromEntries(moments(b).flatMap((m) => (out[m.id] ? [[m.id, out[m.id]]] : [])));
 }
 
 /**
@@ -1317,6 +1338,11 @@ export type StoreDeps = {
    * the shots are planned, with DREAMCHAT_RECORD=on. Absent: nothing is read.
    */
   imply?: WriteFn;
+  /**
+   * The writer that reads each moment's typed facts (typed.ts writeTyped), while the shots are planned, with
+   * S6's one prompt builder and the cut sheet on. Absent: nothing is read.
+   */
+  typed?: WriteFn;
   /** Draws reference sheets through the engine. Absent: nothing is sketched. */
   sheets?: SheetEngine;
   /** Applies the person's answer to a profile. */
@@ -2428,6 +2454,7 @@ export class SessionStore {
         supervise: this.deps.supervise,
         jev: this.deps.jev,
         imply: this.deps.imply,
+        typed: this.deps.typed,
         dir: this.deps.dir ? join(this.deps.dir, id) : undefined,
       },
       { ...recordInputsOf({ build: s.build, transcript: s.transcript }), readings: s.draft?.readings },

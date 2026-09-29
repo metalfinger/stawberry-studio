@@ -8,8 +8,9 @@ import { BUILDER_STEPS, builderSteps, builds, oneBuilder, withRetired } from '..
 import { refsOf } from '../evals/prompt-cases';
 import { loadDream } from '../evals/saved';
 import { rebuild } from '../plan';
+import { moments } from '../producer';
 import { recordsMade } from '../record';
-import type { Session } from '../session';
+import { type Session, typedReadings } from '../session';
 import type { TypedReading } from '../typed';
 import { DEFAULTS, pinSwitches, withSwitches } from './fakes';
 
@@ -151,5 +152,57 @@ describe("S4's word lists, each with a switch that turns off only its piece", ()
     withRetired(['water_level'], () => expect(waterLevel('water up to their waists', room)).toBeNull());
     expect(openingsIn('tall windows along both side walls')).toEqual([{ what: 'windows', walls: ['left', 'right'] }]);
     withRetired(['openings'], () => expect(openingsIn('tall windows along both side walls')).toEqual([]));
+  });
+});
+
+describe('typed readings while planning', () => {
+  const id = 'dream-0926-043003-b0cb';
+  const b = () => structuredClone((loadDream(id, false).session as Session).draft!.breakdown!);
+  const counting = () => {
+    const asked: string[] = [];
+    let live = 0;
+    let most = 0;
+    const write = async (messages: { content: string }[]) => {
+      live++;
+      most = Math.max(most, live);
+      await new Promise((r) => setTimeout(r, 5));
+      live--;
+      asked.push(messages.at(-1)!.content);
+      return { content: '{"acts": []}', model: 'fake', ms: 0 };
+    };
+    return { asked, most: () => most, write: write as never };
+  };
+  const jev = (async () => ({ answers: {} })) as never;
+
+  test('a moment whose question is unchanged keeps its reading; the rest are read anew, a few at once', async () => {
+    const dream = b();
+    const n = moments(dream).length;
+    const first = counting();
+    const read = (await typedReadings(dream, { typed: first.write, jev }))!;
+    expect(first.asked).toHaveLength(n);
+    expect(first.most()).toBeGreaterThan(1);
+    expect(first.most()).toBeLessThanOrEqual(4);
+    expect(Object.keys(read)).toEqual(moments(dream).map((m) => m.id));
+    // Planned again, nothing changed: nothing read.
+    const again = counting();
+    expect(await typedReadings(dream, { typed: again.write, jev }, read)).toEqual(read);
+    expect(again.asked).toHaveLength(0);
+    // The last moment's words changed (the question holds the story before, so a later one changes alone):
+    // that moment alone.
+    const m = moments(dream).at(-1)!;
+    m.action = `${m.action} (changed)`;
+    const one = counting();
+    await typedReadings(dream, { typed: one.write, jev }, read);
+    expect(one.asked).toHaveLength(1);
+  });
+
+  test('without the writer, a reading of words since changed is dropped, never carried on', async () => {
+    const dream = b();
+    const read = (await typedReadings(dream, { typed: counting().write, jev }))!;
+    const m = moments(dream).at(-1)!;
+    m.action = `${m.action} (changed)`;
+    const kept = (await typedReadings(dream, {}, read))!;
+    expect(kept[m.id]).toBeUndefined();
+    expect(Object.keys(kept).length).toBeGreaterThan(0);
   });
 });

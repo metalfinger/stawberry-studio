@@ -28,6 +28,7 @@
 // implied readings come from evals/implied-cache.ts, as the other evals read them; --no-imply reads none).
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { MAX_IMAGES } from '../frames';
 import type { Rebuilt } from '../plan';
 import {
   contextOf,
@@ -227,7 +228,7 @@ export function totalsOf(dreams: Record<string, DreamRefs>): Totals {
     images: {
       mean: ms.length ? Math.round((10 * ms.reduce((a, { m }) => a + m.images, 0)) / ms.length) / 10 : 0,
       max: Math.max(0, ...ms.map(({ m }) => m.images)),
-      overTwelve: ms.filter(({ m }) => m.images > 12).length,
+      overTwelve: ms.filter(({ m }) => m.images > MAX_IMAGES).length,
     },
     twice: {
       moments: ms.filter(({ m }) => m.twice.length).length,
@@ -318,7 +319,7 @@ export function totalsLines(t: Totals): string[] {
       .map(([k, v]) => `${k} ${v}`)
       .join(', ') || 'none';
   return [
-    `${t.dreams} dreams, ${t.moments} moments; images a moment: mean ${t.images.mean}, most ${t.images.max}, over 12: ${t.images.overTwelve}`,
+    `${t.dreams} dreams, ${t.moments} moments; images a moment: mean ${t.images.mean}, most ${t.images.max}, over ${MAX_IMAGES}: ${t.images.overTwelve}`,
     `one image per subject: ${t.twice.moments} moments show ${t.twice.subjects} subjects by two images or more (${kv(t.twice.bySources)})`,
     `the stage in force: ${t.notStage.moments} moments, ${t.notStage.subjects} subjects not shown by the image of their stage (${kv(t.notStage.byGot)})`,
     `from another side, edited or for layout: ${t.otherSide.moments} moments (${kv(t.otherSide.byRole)})`,
