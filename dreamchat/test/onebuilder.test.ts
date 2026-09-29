@@ -473,6 +473,73 @@ describe('ledger 8: how each one looks, once, from the story record', () => {
     expect(lookOf('in_view')).toContain('small red tin trunk');
   });
 
+  test("the dreamer's own words that the dream is drawn as they drew then still say their age is not ours", () => {
+    // 3cd7 is drawn as a child's crayon drawing; told so in the dreamer's words, the guessed age goes.
+    const s = loadDream('dream-0926-101435-3cd7', false).session as Session;
+    const words = ['It was all in crayon, the way I drew when I was six.'];
+    const base = (step: string) =>
+      withSwitches({ ...SHEET, DREAMCHAT_ONE_BUILDER: step }, () =>
+        JSON.stringify(
+          storyRecord(s.draft!.breakdown!, s.build!.items, s.draft?.readings, { words, style: s.style }).record.elements
+            .p1.base,
+        ),
+      );
+    expect(base('in_view')).not.toContain('about six years old');
+    expect(base('looks')).not.toContain('about six years old');
+  });
+
+  test('what a look is like is a way of drawing only where the chosen style says it: hair black and white stays', () => {
+    // 09ea is soft watercolour: an old man's hair black and white is his hair.
+    const s = structuredClone(loadDream('dream-0926-000545-09ea', false).session as Session);
+    const hair = 'an elderly man, hair black and white, with a lined face';
+    s.build!.items.find((i) => i.id === 'p3')!.fields = { appearance: { value: hair, said: true } };
+    (s.draft!.breakdown!.people.find((p) => p.id === 'p3')!.fields as Record<string, unknown>) = {
+      appearance: { value: hair, said: true },
+    };
+    const at = (step: string) =>
+      withSwitches(
+        { ...SHEET, DREAMCHAT_ONE_BUILDER: step },
+        () =>
+          rebuild(structuredClone(s)).pictures.flatMap((x) =>
+            (x.sheet?.inView ?? []).filter((e) => e.id === 'p3').map((e) => e.look),
+          )[0],
+      );
+    expect(at('looks')).toContain('black and white');
+  });
+
+  test("with the record off or in shadow, the look is the sketch's words as before", () => {
+    const id = 'dream-0926-022102-aeea';
+    for (const rec of ['off', 'shadow'])
+      expect(
+        withSwitches(
+          { ...SHEET, DREAMCHAT_RECORD: rec, DREAMCHAT_ONE_BUILDER: 'looks' },
+          () =>
+            rebuild(structuredClone(loadDream(id, false).session as Session))
+              .pictures.find((x) => x.id === 'm1')
+              ?.sheet?.inView.find((e) => e.id === 't1')?.look,
+        ),
+      ).toContain('rendered in faded watercolour');
+  });
+
+  test('a clause the dreamer said keeps its colour in a style of one colour; a guessed one is said as a shade', () => {
+    // A one-colour style: a said colour stays, a guessed one is a shade.
+    const s = structuredClone(loadDream('dream-0926-022102-aeea', false).session as Session);
+    s.style = { ...s.style!, one_colour: true };
+    const it = s.build!.items.find((i) => i.id === 't1')!;
+    it.fields = { appearance: { value: 'a red key', said: true }, materials: { value: 'green brass', said: false } };
+    const d = s.draft!.breakdown!.things.find((t) => t.id === 't1')!;
+    (d.fields as Record<string, unknown>) = it.fields;
+    const l = withSwitches(
+      { ...SHEET, DREAMCHAT_ONE_BUILDER: 'looks' },
+      () =>
+        rebuild(structuredClone(s))
+          .pictures.find((x) => x.id === 'm1')
+          ?.sheet?.inView.find((e) => e.id === 't1')?.look,
+    );
+    expect(l).toContain('a red key');
+    expect(l).not.toContain('green brass');
+  });
+
   test("the pose of a place or a thing is still stripped, as the sketch's clean-up did", () => {
     // a44a's red door: "standing upright on its own with no house or wall around it" is pose.
     expect(look('dream-0926-062232-a44a', 'in_view', 't2', 'm5')).not.toContain('standing upright');

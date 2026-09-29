@@ -506,16 +506,21 @@ const STYLE_SAYS: RegExp[] = [
 
 /** The first words in a text that say how it is drawn, of any style or of the chosen one. */
 function styleIn(text: string, style?: StyleOption | null): string | null {
-  // With the one builder's looks (S6 row 8), the bare word list (the last) names a way of drawing only where the
-  // chosen style names it too: "a box of crayons" is the story's in a watercolour dream.
+  // With the one builder's looks (S6 row 8), a way of drawing said only by what it is like (like a film, black and
+  // white, film grain, a bare medium word) is one only where the chosen style names it too: "a box of crayons" and
+  // "hair black and white" are the story's in a watercolour dream. Said as how it is drawn ("drawn in crayon",
+  // "style: …") it is one whatever the style.
   const named = builds('looks')
     ? [style?.name, style?.medium, style?.line, ...(style?.tokens ?? [])].join(' ').toLowerCase()
     : '';
+  const stems = (x: string) =>
+    (x.toLowerCase().match(/[a-z]+/g) ?? [])
+      .filter((w) => w.length >= 4 && !/^(?:like|with|that|this|those|them|some|very|from|into)$/.test(w))
+      .map((w) => w.replace(/s$/, ''));
   for (const [i, re] of STYLE_SAYS.entries()) {
     const m = text.match(re);
     if (!m?.[0].trim()) continue;
-    if (builds('looks') && i === STYLE_SAYS.length - 1 && !named.includes(m[0].trim().toLowerCase().replace(/s$/, '')))
-      continue;
+    if (builds('looks') && i >= 2 && !stems(m[0]).some((w) => named.includes(w))) continue;
     return m[0].trim();
   }
   const name = style?.name ? bare(style.name) : '';
@@ -1641,7 +1646,7 @@ function ageFromStyle(ctx: Ctx): Violation[] {
   if (!words?.length) {
     const drawn = [ctx.opts.style?.name, ctx.opts.style?.medium, ...(ctx.opts.style?.tokens ?? [])]
       .filter((x): x is string => !!x)
-      .some((x) => !!styleIn(x) || /\b(?:drawing|drawn|painting|film|comic|illustration)\b/i.test(x));
+      .some((x) => !!styleIn(x, ctx.opts.style) || /\b(?:drawing|drawn|painting|film|comic|illustration)\b/i.test(x));
     if (!drawn) return [];
     return [
       {
@@ -1654,7 +1659,10 @@ function ageFromStyle(ctx: Ctx): Violation[] {
   }
   const sentences = words.flatMap((w) => w.split(/(?<=[.!?])\s+/));
   const aged = sentences.filter((s) => OWN_AGE.test(s));
-  if (!aged.length || !aged.every((s) => !!styleIn(s) || /\b(?:drawn|drawing|drawings|painted|painting)\b/i.test(s)))
+  if (
+    !aged.length ||
+    !aged.every((s) => !!styleIn(s, ctx.opts.style) || /\b(?:drawn|drawing|drawings|painted|painting)\b/i.test(s))
+  )
     return [];
   for (const { f } of found)
     for (const look of [d.base, d.stored])
