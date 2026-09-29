@@ -18,6 +18,7 @@ import { callJev } from './jev';
 import { inSession } from './jevlog';
 import { blockScenes, shotFor, superviseChanges } from './producer';
 import { writeImplied } from './implied';
+import { writeTyped } from './typed';
 import { recordInputsOf } from './record';
 import { applyPrep, planShots, type Session } from './session';
 
@@ -67,6 +68,7 @@ const prep = await inSession(dir, id, () =>
       supervise: superviseChanges,
       jev: callJev,
       imply: writeImplied,
+      typed: writeTyped,
       dir: join(dir, id),
     },
     { ...recordInputsOf({ build: s.build, transcript: s.transcript }), readings: s.draft?.readings },

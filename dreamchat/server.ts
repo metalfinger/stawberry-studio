@@ -13,6 +13,7 @@ import { jevTotals, readJevLog } from './jevlog';
 import { callHost, WRITER, WRITER_MODEL } from './llm';
 import { blockScenes, fixFrom, shotFor, superviseChanges, proposeLook, reviseItem, rewordLook, rewordMoment } from './producer';
 import { writeImplied } from './implied';
+import { writeTyped } from './typed';
 import { IMAGE_CAP, liveProducer, ownStyle, SessionStore, treeInputOf } from './session';
 import { momentStage, STAGES, stageOf, STORYBOARD } from './stages';
 import { contextOf, type DreamTree, resolveTree } from './tree';
@@ -39,6 +40,7 @@ const store = new SessionStore(cfg, {
   shot: shotFor,
   supervise: superviseChanges,
   imply: writeImplied,
+  typed: writeTyped,
   reword: rewordMoment,
   rewordLook,
   // The assistant is the judge unless the PC's judge is asked for (DREAMCHAT_JUDGE=pc).
