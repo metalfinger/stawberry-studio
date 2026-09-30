@@ -18,6 +18,9 @@ const CODES = [
   'has_sketch',
   'seat_replaced_by_view',
   'edit_to_own_camera',
+  // Held back by the owner's verdicts on drawn pictures, where the checkout has them (verdicts.ts).
+  'judged_wrong',
+  'stale',
 ];
 
 test("every picture the plan leaves out has the plan's reason in the view, and none is made up", () => {
@@ -53,10 +56,11 @@ test('a picture the plan chose but the owner judged wrong says so in the view, a
   const was = Object.fromEntries(keys.map((k) => [k, process.env[k]]));
   const data = mkdtempSync(join(tmpdir(), 'unsent-withheld-'));
   mkdirSync(join(data, 'evals'));
-  // affd m8 draws on m7 for its composition; a44a m3 edits m2. Neither saved frame keeps a file, so by moment.
+  // affd m8 draws on m7 for its composition; 09ea m6 edits m5. Neither saved frame keeps a file, so by moment. A
+  // picture check's answer is read over these rows, so the edit is one no check has judged (a44a m2 was: right).
   const rows = [
     { session: 'dream-0925-231131-affd', moment: 'm7' },
-    { session: 'dream-0926-062232-a44a', moment: 'm2' },
+    { session: 'dream-0926-000545-09ea', moment: 'm5' },
   ].map((x) => ({ ...x, picture: `fixture-${x.session}-${x.moment}.png`, story: 'wrong' }));
   writeFileSync(join(data, 'evals', 'story-pictures.json'), JSON.stringify({ rows }));
   Object.assign(process.env, PROFILE, { DREAMCHAT_DATA: data });
@@ -72,17 +76,22 @@ test('a picture the plan chose but the owner judged wrong says so in the view, a
     expect(m7?.detail).toBe('its picture was judged wrong');
     expect(m8.refs.some((r) => r.key === 'picture:m7')).toBe(false);
 
-    const m3 = cut('dream-0926-062232-a44a', 'm3');
-    const m2 = m3.unsent.find((u) => u.key === 'picture:m2');
-    expect(m2?.code).toBe('judged_wrong');
-    expect(m2?.detail).toContain('it was the picture to edit');
-    expect(m2?.base).toBe(true);
+    const m6 = cut('dream-0926-000545-09ea', 'm6');
+    const m5 = m6.unsent.find((u) => u.key === 'picture:m5');
+    expect(m5?.code).toBe('judged_wrong');
+    expect(m5?.detail).toContain('it was the picture to edit');
+    expect(m5?.base).toBe(true);
     expect(m7?.base).toBeUndefined();
-    expect(m3.refs.some((r) => r.key === 'picture:m2')).toBe(false);
-    // Every picture it links and does not send has a reason.
-    for (const c of [m8, m3]) {
+    expect(m6.refs.some((r) => r.key === 'picture:m5')).toBe(false);
+    // Every earlier cut it links and does not send has a reason (in-between pictures are sent by their own names).
+    for (const c of [m8, m6]) {
       const said = new Set([...c.refs.map((r) => r.key), ...c.unsent.map((u) => u.key)]);
-      expect(c.links.map((l) => `picture:${l.from}`).filter((k) => !said.has(k))).toEqual([]);
+      expect(
+        c.links
+          .filter((l) => l.kind === 'cut')
+          .map((l) => `picture:${l.from}`)
+          .filter((k) => !said.has(k)),
+      ).toEqual([]);
     }
   } finally {
     for (const [k, v] of Object.entries(was)) {
