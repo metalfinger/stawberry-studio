@@ -30,6 +30,17 @@ const folderOf = (key: string): string | null =>
         ? join(FIXTURES, key)
         : null;
 
+/**
+ * A dream's key from what a link names: the key itself, else the one key it ends (`0f40` for dream-…-0f40,
+ * `0f40.live` for its live view); null where none or more than one does.
+ */
+export function keyFor(named: string): string | null {
+  if (!SAFE.test(named)) return null;
+  if (folderOf(named)) return named;
+  const keys = dreams().map((d) => d.key).filter((k) => k.endsWith(named) && k.charAt(k.length - named.length - 1) === '-');
+  return keys.length === 1 ? keys[0] : null;
+}
+
 /** A JSON file, or null where there is none or it cannot be read (half written, or not JSON). */
 const readJson = <T>(path: string): T | null => {
   try {
@@ -159,16 +170,24 @@ export function serveViewer(port = 0): { url: string; stop: () => void } {
     async fetch(req) {
       const url = new URL(req.url);
       // Asked by this machine's own name only: a page elsewhere renamed to point here is refused.
+      // Any name under .localhost is this machine too (browsers never ask anywhere else for it).
       const host = (req.headers.get('host') ?? '').toLowerCase();
-      if (host !== `127.0.0.1:${server.port}` && host !== `localhost:${server.port}`)
-        return new Response('not here', { status: 403 });
-      if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/index.html'))
+      const [name, at] = [host.slice(0, host.lastIndexOf(':')), host.slice(host.lastIndexOf(':') + 1)];
+      const local = name === '127.0.0.1' || name === 'localhost' || /^[a-z0-9-]+(\.[a-z0-9-]+)*\.localhost$/.test(name);
+      if (!local || at !== String(server.port)) return new Response('not here', { status: 403 });
+      // The page, and any address of a dream or a node in it (/0f40, /0f40/m5, /0f40.live/sketch:p1): the page reads it.
+      if (
+        req.method === 'GET' &&
+        (url.pathname === '/' || url.pathname === '/index.html' || /^\/[A-Za-z0-9][A-Za-z0-9._-]*(\/[A-Za-z0-9:._-]+)?\/?$/.test(url.pathname)) &&
+        !/^\/(api|img)(\/|$)/.test(url.pathname)
+      )
         return new Response(Bun.file(PAGE), { headers: { 'content-type': 'text/html; charset=utf-8' } });
       if (req.method === 'GET' && url.pathname === '/api/dreams') return json(dreams());
       if (req.method === 'GET' && url.pathname === '/api/dream') {
-        const key = url.searchParams.get('key') ?? '';
+        const named = url.searchParams.get('key') ?? '';
+        const key = keyFor(named) ?? named;
         const view = viewOf(key);
-        if (!view) return json({ error: `no view of ${key}: make it with bun run viewer/build.ts` }, 404);
+        if (!view) return json({ error: `no view of ${named}: make it with bun run viewer/build.ts` }, 404);
         const answers = answersOf(key);
         return json({ key, view, answers, states: nodeStates(view, answers) });
       }
