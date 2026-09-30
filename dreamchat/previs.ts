@@ -1251,11 +1251,15 @@ export function dreamerShot(
       // Big in the frame, up to a third of it; whoever is close takes an edge, not a third of it.
       const big = Math.min(1, t.share / 0.3);
       const close = near.reduce((a, s) => Math.max(a, r.seen.get(s.id)?.share ?? 0), 0);
+      // Never all of the frame (the camera rules): a step back, when the dreamer stands right at it, keeps where it is.
+      // At the red door, the mock-up was one grey wall with its label and nothing else (snow-train m6, judged blind).
+      const swamps = camera ? Math.max(0, t.share - 0.6) : 0;
       const score =
         (2 * clear) / 49 +
         t.visible / Math.max(1, t.drawn) +
         centred +
         1.5 * big -
+        3 * swamps -
         3 * Math.max(0, close - 0.12) -
         how -
         Math.abs(aim) * 0.01 +
