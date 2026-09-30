@@ -51,7 +51,9 @@ camera words moved what records are keyed by).
     horse, a heron, a six-year-old).
 - *On lab, the one prompt builder's steps (the S6 pane):* a colour ends at what it colours (8, `told_colours`); a crowd
   of animals is more than one (`earlier_words`); writing the story needs is drawn as unreadable marks (9,
-  `story_marks`, the owner's choice); the viewer's labels from the tree.
+  `story_marks`, the owner's choice); the viewer's labels from the tree; the picture before a jump, where image 1
+  carries the layout, gives only its light and colours and how anyone also here looks, never its framing, and a turn
+  in the same place is "the dream changes it", not a jump (12, `jump_words`: 5 pictures a set).
 - *Parked for the picture test on the owner's local image machine:* `room-walls` (`DREAMCHAT_WALLS`: which side the
   windows are, one sentence on a third of the prompts); `key-clear` (pattern 1's camera part: what the moment looks at
   held clear and a held thing never from its holder's back; live 24 → 17 hidden, but one cut loses its office workers
@@ -71,8 +73,16 @@ camera words moved what records are keyed by).
   size the little silver fish at their desks and the terrier fell out of the words, and a cat as big as a bus hid the
   six-year-old beside it (8ceb m3, m5, m7; aeea m1; 3cd7 m2, m3). The words now keep every being with any of it in
   view, but a being hidden whole still goes; and fish sitting as pupils should read as pupils. For the picture test.
-- *In progress (the S6 pane):* the jump's words with a mock-up as image 1 (12); who holds what and the moment's
-  instant from the typed acts (4: a handover mid-act, "gets in" never already seated).
+- *In review (the S6 pane, `s6-held`):* `held_acts` (4, the holding half): who holds what at a moment is what its typed
+  act does at the instant, not what the floor plan left from the scene. The father still folds the boat he hands over
+  only in the next moment (affd m4); a handover is said and planned mid-act, still in the giver's hand reaching out
+  (affd m5, a44a m6, b0cb m5; 09ea m4 with the fish's newspaper); the one holding a thing already handed over is not
+  handed it again (aeea m8); a thing set down is out of their hands, lying by them (affd m10, whose waist-up frame
+  crops it at their feet: the Mac pane takes the frame). Only a typed giving act puts a thing in the giver's hands on
+  the floor plan, never the plan's own guess. 21 pictures, all intended; prompt cases unchanged.
+- *Next (the S6 pane with the Mac pane):* the moment's acts reach planning for poses and riders: "gets in" drawn
+  already seated (4: fdd7 m3, 6081 m6, 6e80 m5, 538d m5); fish still at their desks after leaving (8ceb m7); "buried
+  in snow" before it falls (b91f m1); who pedals or drives. Then the picture test on the owner's local image machine.
 - *Known, not fixed:* tall grass and the orchard's rows planned as ground people stand on top of (d3a1, orchard m5);
   a spot named as the whole room ("the office interior with desks…", b91f); who rides in front on a bicycle, and who
   rides in a vehicle the moment's own words name no rider for (the tractor that "drives slowly" at lighthouse-first
