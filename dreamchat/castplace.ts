@@ -44,6 +44,56 @@ const LIKE: [RegExp, [number, number, number]][] = [
   [/\bmice\b|\bmouse\b/, [0.05, 0.1, 0.05]],
 ];
 
+/** Things of a hand's size or so, by what they are, across, deep and tall, in metres. */
+const SMALL: [RegExp, [number, number, number]][] = [
+  [/\bkeys?\b/, [0.08, 0.03, 0.01]],
+  [/\b(?:coins?|rings?|buttons?)\b/, [0.03, 0.03, 0.005]],
+  [/\b(?:letters?|envelopes?)\b/, [0.22, 0.11, 0.01]],
+  [/\b(?:tickets?|cards?|photos?|photographs?|postcards?|notes?)\b/, [0.12, 0.08, 0.005]],
+  [/\b(?:books?|notebooks?|diar(?:y|ies))\b/, [0.2, 0.15, 0.04]],
+  [/\b(?:pens?|pencils?|chalk|brushes?)\b/, [0.15, 0.01, 0.01]],
+  [/\b(?:phones?|remote)\b/, [0.15, 0.07, 0.01]],
+  [/\b(?:cups?|mugs?|glass(?:es)?|teacups?)\b/, [0.08, 0.08, 0.1]],
+  [/\b(?:bottles?|jars?|vases?)\b/, [0.08, 0.08, 0.28]],
+  [/\b(?:bowls?|plates?)\b/, [0.2, 0.2, 0.06]],
+  [/\b(?:apples?|oranges?|eggs?|snowballs?|balls?|stones?|pebbles?|shells?)\b/, [0.08, 0.08, 0.08]],
+  [/\b(?:candles?)\b/, [0.03, 0.03, 0.2]],
+  [/\b(?:flowers?|feathers?)\b/, [0.05, 0.05, 0.3]],
+  [/\b(?:lanterns?|lamps?)\b/, [0.2, 0.2, 0.35]],
+  [
+    /\bpaper boats?\b|\b(?:toy|origami|folded) boats?\b|\bboats? (?:folded|made) (?:from|of|out of) (?:news)?paper\b/,
+    [0.15, 0.08, 0.1],
+  ],
+  [/\bumbrellas?\b/, [0.1, 0.1, 0.9]],
+  [/\b(?:bags?|handbags?|purses?)\b/, [0.35, 0.15, 0.3]],
+  [/\bsuitcases?\b/, [0.6, 0.2, 0.45]],
+  [/\bbaskets?\b/, [0.4, 0.3, 0.3]],
+  [/\b(?:boxe?s?|parcels?|packages?)\b/, [0.3, 0.3, 0.3]],
+  [/\b(?:toys?|teddy|dolls?)\b/, [0.2, 0.15, 0.3]],
+];
+
+/**
+ * A story thing's size from what it is and its own words, where the plan gives it none (the camera rules): a measure
+ * ("about 4 inches long", "15 cm"), else a thing of a hand's size or so by what it is. Unsized, the brass key held
+ * before the dreamer's eyes was a box as big as a suitcase, and the paper boat set down in the grass a metre block
+ * (lighthouse-fresh m2, m15, judged blind). None where the words give neither.
+ */
+export function smallSizeOf(words: string): [number, number, number] | undefined {
+  const w = words.toLowerCase();
+  const m =
+    /\b(?:about |around |some |nearly |almost )?(\d+(?:\.\d+)?|one|two|three|four|five|six|eight|ten|twelve)\s*(inch(?:es)?|in\b|cm|centimet(?:re|er)s?|mm|millimet(?:re|er)s?)\b/.exec(
+      w,
+    );
+  if (m) {
+    const n =
+      Number(m[1]) || { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, eight: 8, ten: 10, twelve: 12 }[m[1]] || 0;
+    const unit = /^in/.test(m[2]) ? 0.0254 : /^mm|^milli/.test(m[2]) ? 0.001 : 0.01;
+    const l = Math.round(n * unit * 1000) / 1000;
+    if (l > 0 && l < 2) return [l, Math.round(l * 500) / 1000, Math.round(l * 400) / 1000];
+  }
+  return SMALL.find(([re]) => re.test(w))?.[1];
+}
+
 /** A kind's size where the words give none. */
 const KIND_SIZE: Record<CastThing['kind'], [number, number, number]> = {
   vehicle: [1.8, 3.5, 2.2],

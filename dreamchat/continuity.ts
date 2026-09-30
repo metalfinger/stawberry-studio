@@ -8,7 +8,7 @@
 // an in-between picture that is never a cut. Everything here is pure: the breakdown in, the plan
 // out, and the same breakdown always gives the same plan.
 import type { CastReading } from './cast-types';
-import { withCastFixtures, withCastSpots } from './castplace';
+import { smallSizeOf, withCastFixtures, withCastSpots } from './castplace';
 import {
   type Blocking,
   bearing,
@@ -584,11 +584,29 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
   };
   // Getting in or out of something at the instant, as the moment's typed acts say (the one builder's `plan_acts`); who
   // rides in front and who behind, as the scene's acts in this place last said; and what they ride goes with them.
+  // A story thing the plan gives no size is the size its own words give (castplace.ts smallSizeOf): the brass key held
+  // before the dreamer's eyes was a box as big as a suitcase, the paper boat set down in the grass a metre block
+  // (lighthouse-fresh m2, m15, judged blind).
+  const sized: Blocking = camera
+    ? {
+        ...placed,
+        spots: placed.spots.map((s) => {
+          if (s.kind !== 'thing' || s.fixture || s.size) return s;
+          const t = (b.things ?? []).find((x) => x.id === s.id) as
+            { name?: string; fields?: Record<string, { value?: string | null } | undefined> } | undefined;
+          const words = [t?.name ?? s.name, t?.fields?.appearance?.value, t?.fields?.size?.value]
+            .filter(Boolean)
+            .join('. ');
+          const size = words ? smallSizeOf(words) : undefined;
+          return size ? { ...s, size } : s;
+        }),
+      }
+    : placed;
   return camera
     ? withRiders(
         withClimbers(
           carriedBy(
-            placed,
+            sized,
             plan,
             upTo.map((x) => plan.moves?.[x.id] ?? []),
           ),
