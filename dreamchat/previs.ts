@@ -544,6 +544,19 @@ const MOUNTED = 1.5;
 /** What a small thing is called when it hangs on a wall: a wall phone, a clock, a mounted sign. */
 const ON_A_WALL = /\b(wall|hanging|hung|hangs|mounted|clocks?|(tele)?phones?)\b/i;
 
+/** Whoever sits facing them within a few steps, facing them back: across from them. */
+function facingAcross(s: Spot, plan: Blocking): Spot | undefined {
+  const f = facing(s, plan);
+  return plan.spots.find((o) => {
+    if (o.id === s.id || !isPerson(o) || o.many || o.pose !== 'sitting') return false;
+    const d = Math.hypot(o.x - s.x, o.y - s.y);
+    if (d < 0.3 || d > 3) return false;
+    const to = { x: (o.x - s.x) / d, y: (o.y - s.y) / d };
+    const g = facing(o, plan);
+    return f.x * to.x + f.y * to.y > 0.7 && -(g.x * to.x + g.y * to.y) > 0.7;
+  });
+}
+
 /**
  * How someone is where plants grow, by its name: among trees in rows or a wood, in grass, crops or undergrowth. None
  * for ground that is only ground.
@@ -1365,6 +1378,13 @@ function thingWords(
   // it (the mouse-sized dreamer "standing on the tall grass", d3a1 m1-m3; Tomas "standing on the empty rows of apple
   // trees", orchard m5: the read of every frozen prompt, 30 Sep). With the camera rules.
   const grown = on && on.how === 'on' && cameraMode() === 'on' ? growsAs(called(on.t.id)) : undefined;
+  // Seated facing someone seated facing them (the seats facing each other): across from them, never beside them. The
+  // dreamer and the grandfather on the train's seats facing each other were drawn side by side (snow-train m2, judged
+  // blind, 30 Sep). With the camera rules, seen from outside.
+  const across =
+    on && on.how === 'on' && cameraMode() === 'on' && s.pose === 'sitting' && !ctx.on.includes(on.t.id)
+      ? facingAcross(s, plan)
+      : undefined;
   const sitting = climbing
     ? climbing
     : on
@@ -1384,7 +1404,9 @@ function thingWords(
               ? `, ${pose} on the back of ${called(on.t.id)}`
               : grown
                 ? `, ${pose} ${grown} ${called(on.t.id)}`
-                : `, ${pose} on ${called(on.t.id)}`
+                : across
+                  ? `, ${pose} on ${called(on.t.id)}, across from ${called(across.id)}`
+                  : `, ${pose} on ${called(on.t.id)}`
       : '';
   const holder = !isPerson(s) && s.heldBy ? s.heldBy : undefined;
   const holds = isPerson(s) && !s.many ? plan.spots.filter((o) => o.heldBy === s.id).map((o) => called(o.id)) : [];

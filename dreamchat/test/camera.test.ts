@@ -1830,3 +1830,43 @@ describe('a fixture that is the place itself', () => {
     expect(isThePlace('the window', '')).toBe(false);
   });
 });
+
+describe('seated facing each other', () => {
+  test('they sit across from each other, never beside', () => {
+    // The dreamer and the grandfather on the train's seats facing each other were drawn side by side (snow-train m2).
+    const carriage = {
+      front: 'the front of the train',
+      indoors: true,
+      room: [3, 10] as [number, number],
+      spots: [
+        { id: 'p1', x: 1.2, y: 5.6, kind: 'person' as const, pose: 'sitting' as const, faces: 'p2' },
+        { id: 'p2', x: 1.2, y: 4.4, kind: 'person' as const, pose: 'sitting' as const, faces: 'p1' },
+        {
+          id: 's1',
+          x: 1.2,
+          y: 5,
+          kind: 'thing' as const,
+          shape: 'seat' as const,
+          name: 'the seats facing each other',
+          size: [1, 1.6, 0.5] as [number, number, number],
+        },
+      ],
+    };
+    const name = (id: string) => ({ p1: 'the dreamer', p2: 'the grandfather' })[id] ?? id;
+    const shot = withEnv(CAMERA, () => outsideShot(carriage, ['p1', 'p2'], 'medium', name))!;
+    expect(shot.text).toContain('sitting on the seats facing each other, across from the grandfather');
+    expect(shot.text).toContain('sitting on the seats facing each other, across from the dreamer');
+    // Side by side, facing the same way: nothing is said of it.
+    const bench = {
+      ...carriage,
+      spots: carriage.spots.map((x) =>
+        x.kind === 'person' ? { ...x, faces: 'front', y: 5 + (x.id === 'p1' ? 0 : 0) } : x,
+      ),
+    };
+    expect(withEnv(CAMERA, () => outsideShot(bench, ['p1', 'p2'], 'medium', name))!.text).not.toContain('across from');
+    // Off, as before.
+    expect(
+      withEnv({ DREAMCHAT_CAMERA: undefined }, () => outsideShot(carriage, ['p1', 'p2'], 'medium', name))!.text,
+    ).not.toContain('across from');
+  });
+});
