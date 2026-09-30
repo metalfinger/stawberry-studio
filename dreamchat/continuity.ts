@@ -749,8 +749,9 @@ export function withPathDeck(plan: Blocking, place: string): Blocking {
   // A way on water (the river street, a canal) has none: whoever is there is afloat on it.
   if (plan.indoors || !PATH.test(place) || /\b(?:river|canal|stream|sea|lake|water|flooded)\b/i.test(place))
     return plan;
-  const head = (x: string) => x.toLowerCase().match(PATH)?.[0];
-  if (plan.spots.some((s) => s.shape === 'ground' && head(s.name ?? '') === head(place))) return plan;
+  // Ground the plan lays already (the corner where the mother stands, on the paper street) is where they are: a deck
+  // under it read as one flat piece hiding the other.
+  if (plan.spots.some((s) => s.shape === 'ground')) return plan;
   const on = plan.spots.filter((s) => s.kind === 'person' || s.shape === 'vehicle');
   if (!on.length) return plan;
   const vehicle = plan.spots.find((s) => s.shape === 'vehicle' && !s.heldBy);
