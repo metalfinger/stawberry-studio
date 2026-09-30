@@ -4958,5 +4958,33 @@
   "9ce6c6674350fc47": {
     "verdict": "neutral",
     "why": "A rebuild reads the story record as drawing does once every sketch is drawn and approved (viewer/data.ts's drawing-path test): 3cd7's roof, never drawn, takes the record's look, which joins its clauses with a comma where the sketch's words had 'and' (the same change as before the S5 layout anchor, in m8's prompt as the anchor now makes it)."
+  },
+  "a7e04e390d0ddc54": {
+    "verdict": "neutral",
+    "why": "A rebuild reads the story record as drawing does once every sketch is drawn and approved (viewer/data.ts's drawing-path test), live: a sketch never drawn (1177's bus, 72e5, de6c, 3cd7's roof) takes the record's look, which joins its clauses with a comma where the sketch's words had 'and'; every other word still said (checked by script)."
+  },
+  "7d4d324d69ad346b": {
+    "verdict": "neutral",
+    "why": "A rebuild reads the story record as drawing does once every sketch is drawn and approved (viewer/data.ts's drawing-path test), live: a sketch never drawn (1177's bus, 72e5, de6c, 3cd7's roof) takes the record's look, which joins its clauses with a comma where the sketch's words had 'and'; every other word still said (checked by script)."
+  },
+  "876ce103b41fb13a": {
+    "verdict": "neutral",
+    "why": "A rebuild reads the story record as drawing does once every sketch is drawn and approved (viewer/data.ts's drawing-path test), live: a sketch never drawn (1177's bus, 72e5, de6c, 3cd7's roof) takes the record's look, which joins its clauses with a comma where the sketch's words had 'and'; every other word still said (checked by script)."
+  },
+  "1b726db8e7c515d8": {
+    "verdict": "neutral",
+    "why": "A rebuild reads the story record as drawing does once every sketch is drawn and approved (viewer/data.ts's drawing-path test), live: a sketch never drawn (1177's bus, 72e5, de6c, 3cd7's roof) takes the record's look, which joins its clauses with a comma where the sketch's words had 'and'; every other word still said (checked by script)."
+  },
+  "1cd8c9a8b5eba743": {
+    "verdict": "neutral",
+    "why": "A rebuild reads the story record as drawing does once every sketch is drawn and approved (viewer/data.ts's drawing-path test), live: a sketch never drawn (1177's bus, 72e5, de6c, 3cd7's roof) takes the record's look, which joins its clauses with a comma where the sketch's words had 'and'; every other word still said (checked by script)."
+  },
+  "63894a4414303760": {
+    "verdict": "neutral",
+    "why": "A rebuild reads the story record as drawing does once every sketch is drawn and approved (viewer/data.ts's drawing-path test), live: a sketch never drawn (1177's bus, 72e5, de6c, 3cd7's roof) takes the record's look, which joins its clauses with a comma where the sketch's words had 'and'; every other word still said (checked by script)."
+  },
+  "139cce7c54a6582f": {
+    "verdict": "neutral",
+    "why": "A rebuild reads the story record as drawing does once every sketch is drawn and approved (viewer/data.ts's drawing-path test), live: a sketch never drawn (1177's bus, 72e5, de6c, 3cd7's roof) takes the record's look, which joins its clauses with a comma where the sketch's words had 'and'; every other word still said (checked by script)."
   }
 }
