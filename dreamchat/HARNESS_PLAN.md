@@ -52,13 +52,16 @@ stack, the harness viewer and why each picture is left out are all on lab.** Not
     cases unchanged. The owner's S5 verdict on library-1 m4 backs it: the whale plainly under the water was right.
   - The five prompt-case hypotheses written for S5's routing are set aside (hypotheses 7/18 → 7/13; counted and
     guards unchanged): the S5 verdicts contradict the routing, and it is gone.
+  - `s6-states2` (the S6 pane): the tree's own numbers in the view; `assemble.ts` never sends a turned element as "as
+    last drawn", says an animal by kind and coat, a group with "are" (behind the one builder's `earlier_words`).
   - Post-check fix 1, held things through the dreamer's eyes (the owner's 27 Sep decision; see "Left, and where each
     starts"): what the dreamer carries and the moment does not name is out of the picture.
 - *On branches, not merged:*
   - `viewer-ux`: the page reads as the dream is built (sequence, scene, shot, cut, with the tree's own numbers), with
     groups that fold, a legend, a breadcrumb that says where a cut sits in its shot, and addresses like `/0f40/m3`.
-  - `s6-states2` (the S6 pane): the tree's own numbers in the view; `assemble.ts` never sends a turned element as "as
-    last drawn", says an animal by kind and coat, a group with "are" (behind the one builder's `earlier_words`).
+  - `room-walls`: `DREAMCHAT_WALLS=on` (off by default) says which side a room's windows are on every cut that does
+    not turn round, on a floor plan its scene has drawn before (post-check fix 4; snow-train m3). On, 47 of 127 frozen
+    and 106 of 447 live pictures gain that one sentence and nothing else; off, 0 change. Waits on a picture test.
 - *The viewer is running* at http://127.0.0.1:4570/, verdicts to the main checkout's `dreamchat/evals/viewer/`. To
   make it again: `DREAMCHAT_DATA=<folder with state/> bun run viewer/build.ts`, then `bun run viewer/serve.ts`
   (VIEWER_ANSWERS to keep the verdicts elsewhere).
