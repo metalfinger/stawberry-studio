@@ -1356,6 +1356,9 @@ function framing(
 
 /** The lens for a shot seen from outside, by how close it is: a portrait lens close, a wide one for the whole place. */
 const LENS: Record<'close' | 'medium' | 'wide', number> = { close: 50, medium: 35, wide: 24 };
+/** How much a camera that holds what the moment looks at clear, and not from its holder's back, is worth. */
+const KEY_CLEAR = 0.6;
+const KEY_BEHIND = 0.7;
 
 /**
  * A moment seen from outside, as a camera operator places the camera on the floor plan: in front of
@@ -1468,6 +1471,9 @@ export function outsideShot(
   // the stairs was shot from in front, looking down them (lighthouse, 26 Sep). Not what they hold:
   // the key held up is seen from in front.
   const lookedSpot = lookAt?.id ? plan.spots.find((s) => s.id === lookAt.id) : undefined;
+  // Who holds what the moment looks at, and the way they face.
+  const keyHolder = lookedSpot?.heldBy ? plan.spots.find((s) => s.id === lookedSpot.heldBy) : undefined;
+  const keyFacing = keyHolder ? facing(keyHolder, plan) : undefined;
   const underfoot =
     !!lookedSpot && !lookedSpot.heldBy && ['steps', 'ground', 'vehicle'].includes(shapeOf(lookedSpot, plan) ?? '');
   const looks = lookAt?.way
@@ -1633,6 +1639,14 @@ export function outsideShot(
       // What the moment is about is in the picture above all: two people facing each other were shot
       // from the side with the talking fish, the moment's whole point, off to the left (night market).
       const keyShown = lookedSpot && !lookedSpot.many && (rs.seen.get(lookedSpot.id)?.visible ?? 0) >= tiny ? 1 : 0;
+      // And how much of it: the fish stall, the window and the snowball the moment looks at were each drawn partly hidden
+      // behind someone or something (the read of every frozen prompt, 30 Sep).
+      const keyClear = keyShown ? 1 - (rs.seen.get(lookedSpot!.id)?.occluded ?? 1) : 0;
+      // Something in someone's hands is before them: seen from their back, it is behind them, whatever the render
+      // shows beside them ("their back to the camera, holding the paper boat", lighthouse-fresh m10).
+      const keyBehind = keyHolder
+        ? Math.max(0, (cand.eye.d.x * keyFacing!.x + cand.eye.d.y * keyFacing!.y - 0.3) / 0.7)
+        : 0;
       const facesFront = front ? Math.max(0, -cand.eye.d.y) : 0;
       const score =
         2 * inFrame +
@@ -1641,7 +1655,7 @@ export function outsideShot(
         named +
         // Worth more than framing, never more than losing a person from a picture of two: at 2, the
         // dreamer going to the window was framed out for the window (lighthouse, 26 Sep).
-        (lookedSpot && !lookedSpot.many ? 0.7 * keyShown : 0) +
+        (lookedSpot && !lookedSpot.many ? 0.7 * keyShown + KEY_CLEAR * keyClear - KEY_BEHIND * keyBehind : 0) +
         facesFront -
         ruled(cand.eye) -
         Math.abs(deg) * 0.006 -
