@@ -1,0 +1,143 @@
+{
+  "about": "The seven moments whose new picture the owner judged not right in the first fal check (30 Sep), drawn again with the fixes made for them, each judged blind against the picture he failed.",
+  "name": "fal-redo",
+  "step": "S10",
+  "cap_usd": 1.05,
+  "results": "/Users/hirenk/Documents/code/stawberry-studio-dream-chat/dreamchat/runs/checkpoint/fal-redo",
+  "switches": {
+    "DREAMCHAT_RECORD": "on",
+    "DREAMCHAT_CUT_SHEET": "on",
+    "DREAMCHAT_CAMERA": "on",
+    "DREAMCHAT_REFS": "on",
+    "DREAMCHAT_ONE_BUILDER": "on"
+  },
+  "base": "the first fal check's pictures of the same moments",
+  "moments": [
+    {
+      "id": "heron-m2",
+      "run": "heron",
+      "session": "dream-0926-012307-4c79",
+      "moment": "m2",
+      "why": "pair",
+      "reason": "judged not right in the first fal check (fal-pairs): drawn again with its fixes, against that picture",
+      "cases": [],
+      "old": {
+        "source": null,
+        "draw": "base",
+        "from": "fal-pairs",
+        "verdict": null,
+        "note": null,
+        "picture": ""
+      },
+      "description": "The dreamer looks through the small round window in the door and sees students sitting in rows at desks, all facing forward."
+    },
+    {
+      "id": "lighthouse-fresh-m10",
+      "run": "lighthouse-fresh",
+      "session": "dream-0926-022102-aeea",
+      "moment": "m10",
+      "why": "pair",
+      "reason": "judged not right in the first fal check (fal-judged): drawn again with its fixes, against that picture",
+      "cases": [],
+      "old": {
+        "source": null,
+        "draw": "base",
+        "from": "fal-judged",
+        "verdict": null,
+        "note": null,
+        "picture": ""
+      },
+      "description": "The dreamer is still holding the paper boat in both hands, just in front of them, looking past it at the windows."
+    },
+    {
+      "id": "lighthouse-fresh-m13",
+      "run": "lighthouse-fresh",
+      "session": "dream-0926-022102-aeea",
+      "moment": "m13",
+      "why": "pair",
+      "reason": "judged not right in the first fal check (fal-judged): drawn again with its fixes, against that picture",
+      "cases": [],
+      "old": {
+        "source": null,
+        "draw": "base",
+        "from": "fal-judged",
+        "verdict": null,
+        "note": null,
+        "picture": ""
+      },
+      "description": "The driver keeps looking straight ahead, both hands on the wheel; their profile is there but the face will not stay in memory."
+    },
+    {
+      "id": "snow-train-m2",
+      "run": "snow-train",
+      "session": "dream-0926-043003-b0cb",
+      "moment": "m2",
+      "why": "pair",
+      "reason": "judged not right in the first fal check (fal-judged): drawn again with its fixes, against that picture",
+      "cases": [],
+      "old": {
+        "source": null,
+        "draw": "base",
+        "from": "fal-judged",
+        "verdict": null,
+        "note": null,
+        "picture": ""
+      },
+      "description": "the grandfather holds a brown leather suitcase on his knees, waiting"
+    },
+    {
+      "id": "night-market-m2",
+      "run": "night-market",
+      "session": "dream-0926-000545-09ea",
+      "moment": "m2",
+      "why": "pair",
+      "reason": "judged not right in the first fal check (fal-judged): drawn again with its fixes, against that picture",
+      "cases": [],
+      "old": {
+        "source": null,
+        "draw": "base",
+        "from": "fal-judged",
+        "verdict": null,
+        "note": null,
+        "picture": ""
+      },
+      "description": "They stop at a stall where an old man has fish laid out on ice. The dreamer's older sister wants to buy fish."
+    },
+    {
+      "id": "night-market-m5",
+      "run": "night-market",
+      "session": "dream-0926-000545-09ea",
+      "moment": "m5",
+      "why": "pair",
+      "reason": "judged not right in the first fal check (fal-pairs): drawn again with its fixes, against that picture",
+      "cases": [],
+      "old": {
+        "source": null,
+        "draw": "base",
+        "from": "fal-pairs",
+        "verdict": null,
+        "note": null,
+        "picture": ""
+      },
+      "description": "They are on one bicycle, the sister pedalling, the dreamer on the back holding the paper-wrapped fish against their chest."
+    },
+    {
+      "id": "orchard-m2",
+      "run": "orchard",
+      "session": "dream-0926-070314-0f40",
+      "moment": "m2",
+      "why": "pair",
+      "reason": "judged not right in the first fal check (fal-judged): drawn again with its fixes, against that picture",
+      "cases": [],
+      "old": {
+        "source": null,
+        "draw": "base",
+        "from": "fal-judged",
+        "verdict": null,
+        "note": null,
+        "picture": ""
+      },
+      "description": "The dreamer turns and sees Tomas as a boy of about ten in their old school uniform, staring at the gate."
+    }
+  ]
+}
