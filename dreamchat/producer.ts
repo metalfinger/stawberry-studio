@@ -806,7 +806,7 @@ const SHOT = `You are the director of photography for one picture from someone's
 Write the shot as a cinematographer briefs a camera crew, in four to six plain sentences:
 1. The shot: a first-person view or seen from outside; a lens (a focal length); the camera's height and angle.
 2. Foreground, middle distance and background: exactly what is in each, and where across the picture (left third, middle, right third), with how each person is placed (sitting, standing) as the moments so far have them and turned as the facts say. The background is the side of the place the camera looks toward. Keep every fact given, as given: the facts are read off a rendered layout of this exact shot, so never move anything to another side of the picture, never make it bigger or smaller, never bring in what is outside it, never leave out what is in it. Someone close to the camera is softer than what the picture is about, which is in sharp focus.
-3. The light, from a real source in the place (a screen, a window, a lamp) on the side the facts put it.
+3. The light, from a real source in the place (a screen, a window, a lamp) on the side the facts put it; never a time of day, daylight, night or weather the facts do not give, which the picture's own words say elsewhere ("flat white daylight" was written for a night in the snow).
 4. What is just outside the picture, briefly, only where it tells the eye where it is.
 
 Plain, concrete words an illustrator can draw from; nothing from the story that is not in the facts, no mood words, no camera jargon that could be drawn (no frame lines, no labels). The whole shot is at most ${BRIEF_ASK.toLocaleString('en-GB')} characters (about ${Math.round(BRIEF_ASK / 6)} words). Return JSON only: {"shot": ""}.`;

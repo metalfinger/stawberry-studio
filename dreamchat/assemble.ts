@@ -526,6 +526,8 @@ export function assembleCut(s: CutSheet): Assembled {
   // A reverse angle: the room turned with the camera, said after the shot.
   const turned = s.rules?.turn ? sayTurn(s.rules.turn) : '';
   const after = [...(s.rules?.lines ?? []), ...(turned ? [turned] : [])].map((x) => ` ${x}`).join('');
+  // A view that ends in a space takes what is added after it without a second one ("the table.  Out past the window").
+  const lead = (view: string) => (after && s.seenThrough ? view.trimEnd() : view);
   const feeling = s.story.feeling;
   const point = s.story.point;
   // Someone drawn with their group stands with it, not beside it.
@@ -552,10 +554,10 @@ export function assembleCut(s: CutSheet): Assembled {
       // The shot comes first, before the images: its brief where there is one, else the view.
       text: cam.view
         ? cam.brief !== null
-          ? `The shot${mockUp ? ', as the mock-up in Image 1 shows it' : ''}${cam.eyes === 'dreamer' ? ` (${own})` : ''}: ${cam.brief}${after}`
+          ? `The shot${mockUp ? ', as the mock-up in Image 1 shows it' : ''}${cam.eyes === 'dreamer' ? ` (${own})` : ''}: ${lead(cam.brief)}${after}`
           : cam.eyes === 'dreamer'
-            ? `What the dreamer sees, the camera being their own eyes${mockUp ? ', as the mock-up in Image 1 shows it' : ''} (${own}): ${cam.view}${after}`
-            : `What the camera sees${mockUp ? ', as the mock-up in Image 1 shows it' : ''}: ${cam.view}${after}`
+            ? `What the dreamer sees, the camera being their own eyes${mockUp ? ', as the mock-up in Image 1 shows it' : ''} (${own}): ${lead(cam.view)}${after}`
+            : `What the camera sees${mockUp ? ', as the mock-up in Image 1 shows it' : ''}: ${lead(cam.view)}${after}`
         : '',
     },
     {
