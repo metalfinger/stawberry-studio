@@ -28,6 +28,100 @@ current figure and what's next). Writer model: Claude (`DREAMCHAT_WRITER=claude`
 
 ## Where we stopped (27-29 Sep): read this to resume
 
+**Newest landmark (30 Sep, early morning, the Mac pane; the S6 pane paused by the owner that night): S5's layout
+anchor on lab; the harness viewer built, reviewed, and showing all 15 frozen dreams with why each picture is left
+out.** Nothing drawn, nothing paid.
+- *On lab* (6c6d2ab): S5 fix round three and its follow-ups (the S5 section's "fix round three" block has every
+  measure and all four review rounds): image 1 is the edit the gate keeps, else the mock-up, on every cut; an edit the
+  gate drops, or whose picture is withheld when drawing (judged wrong, stale), is made from its own shot and mock-up;
+  the gate compares the camera each picture is drawn from. Frozen cuts with no image 1: 38 → 3, live 212 → 124 (the
+  rest have no floor plan); every changed picture only gained its mock-up; `bun test` passes both ways.
+- *On branches, not merged:*
+  - `gap1-unsent` (from lab): each earlier picture left out carries why (`CutPlan.unsentWhy`: reverse, camera far,
+    state differs, no cameras, light only, has a sketch, the dreamer's seat, an edit made its own cut); 0 prompts or
+    images move; one test per reason.
+  - `viewer-page` (on the S6 pane's `viewer-data`): the page (`viewer/serve.ts`, `viewer/page.html`) and the build that
+    finds each picture (`viewer/build.ts`); reviewed twice, merge. `gap1-view`: lab + the S6 stack + `viewer-data` +
+    `viewer-page` + `gap1-unsent` + the mapping of the reasons into the view (`viewer/data.ts`, the S6 pane's file, for
+    it to review); `bun test` 909 pass both ways.
+  - The S6 stack (rows 8, 11-16, `s6-states`): reviewed, classified with 0 regressions, checked live; waits on the
+    S6 pane, which waits on the owner.
+- *The viewer is running* at http://127.0.0.1:4570/, served from a worktree of `gap1-view`, verdicts to the main
+  checkout's `dreamchat/evals/viewer/`. To make it again anywhere: on `gap1-view`, `DREAMCHAT_DATA=<folder with state/>
+  bun run viewer/build.ts`, then `bun run viewer/serve.ts` (VIEWER_ANSWERS to keep the verdicts elsewhere).
+- *What the viewer shows before anything is drawn* (for the owner's reading, S4/S5 check dreams first): mock-ups that
+  draw something other than the shot (orchard m2 an egg-shaped head, orchard m6 the horse as a person,
+  lighthouse-first m8 no tractor, library-3 m8 a blank window view); in view but not on the floor plan (3cd7 m6's cats,
+  aeea m9's tractor out of the window); five frozen dreams whose pictures are not on this Mac (8ceb, acfd, b91f, 538d,
+  3cd7). No two people on one spot and no cut with a camera but no layout anchor in all 115 cuts.
+- *For the owner:* unpause the S6 pane (merge the S6 stack, rebase `viewer-data`, review the reasons' mapping, then
+  the viewer merges to lab); the S9 record of a swapped edit (both options in the S5 section); the crowd with no
+  sketch; keeping each sketch's prompt text when drawn.
+
+**Latest landmark (29 Sep, end of the cloud session): S6 rows 5-16, and the S5 picture check's verdict.** Read
+this block first; the rest of this section is the history before it. Hand-off: GitHub issue
+metalfinger/stawberry-studio#1. The cloud session stopped here at the owner's word; a session on the Mac (a new
+pane beside the Mac session) picks this up. Work in chunks: after each, commit, push, post on issue #1, update this
+block, and ask the owner whether to go on.
+
+**1. The S5 picture check (owner, 29 Sep; verdicts in `evals/checkpoint/s5/`, 43577c8): S5 made pictures worse.**
+New 7/17 against old 12/17 (S4's check: new 15/20 against old 10/20). On the 8 moments both checks drew (camera
+rules on in both), S5's new pictures were worse than S4's on 4 (lighthouse-first m7, m8; orchard m5, m6), better on
+1 (snow-train-2 m6), the same on 3. Cause, from the dry run's image lists: in 6 of the 7 regressions S5 took away
+image 1, what carries the layout, and sent sketches only:
+- the mock-up dropped: orchard-m6 (came out in the third person), lighthouse-first-m7 (the room changed),
+  library-3-m8 (the boat outside the window);
+- an earlier picture dropped by the gate: orchard-m3 (layout mirrored: the gate behind them, the adult still on
+  the left), lighthouse-first-m8 (the tractor became a car);
+- orchard-m5: Tomas's sketch and two in-between pictures cut to one.
+
+**The owner's direction (do in this order):**
+1. **Layout anchor, at the rule (S5 fix round three), measured on prompts first, nothing drawn:** every cut keeps a
+   layout anchor as image 1: the mock-up, or an earlier picture whose camera and state match; when the gate drops
+   an earlier picture it falls back to the mock-up, never to nothing; and S5's "mock-up off" routing (through the
+   dreamer's eyes, a jump / another place / a seat, close-up / insert) is revisited: it rested on the paired test's
+   thin evidence, which this check contradicts. Code: `refs.ts` (S5's choice of images, `chooseRefs`), `gate.ts`
+   (what the gate drops), `assemble.ts` image 1. Measure with `evals/corpus.ts` and `evals/refs` checks: every cut
+   with an image 1 that carries layout; the 7 regressions' image lists before and after.
+2. **S10 brought forward: an end-to-end picture test, designed, not drawn until the owner approves.** A one-moment
+   check redraws one moment on the OLD run's chain (old sketches, old in-between pictures, old earlier cuts); S5
+   decides that chain, so it cannot be tested that way (the gate compared cameras the old harness planned; S4
+   looked good because camera rules mostly change the prompt). Design: which dream(s); the cost per dream ($15.45
+   left, about $3-4.50 a dream); whole dreams made by the full new harness from the sheets (sketches, in-between
+   pictures, then cuts); how the whole storyboard is judged against the old one by the owner; what must land first
+   (at least the layout-anchor fix).
+3. **S6 rows carry on in parallel:** they change wording, not the chain.
+
+**2. S6: stacked branches, pushed, each built on the one before, none merged yet.** Merge into lab in this order,
+each once its live check is clean; each branch's HARNESS_PLAN.md S6 table has its full row. `s6-states` holds all.
+  1. `s6-looks` (edb4087), row 8, looks from the story record: reviewed **merge**; waiting on the Mac's live re-run.
+  2. `s6-pose` (2d7926d), rows 9-11 (9 and 10 need no step): **merge**.
+  3. `s6-members` (796c2a8), row 12, a group's words about a member with their own sketch: **merge**.
+  4. `s6-shades` (d5a5179), row 13, a colour the dream gives kept whole: **merge**.
+  5. `s6-lookonce` (f0a700f), row 14, a look said once: **merge**; one counted prompt case
+     (lighthouse-fresh-m10-tractor) moves under it (fresh Jev asks 0.63 to 0.56 on average, all yes; the cached
+     0.46 was a low draw): **for the owner to accept**.
+  6. `s6-colouronce` (7c6f30f), row 15, the colours the dream gives said once: **merge**.
+  7. `s6-states` (2870e58), row 16's first part, how each one is now said once: reviewed **fix first**; the four
+     fixes are listed in its S6 table row (the Except rewrite and the state-dropping must be tied to the element
+     and part, not text; tests; the closing line). Row 16's second part (one source for a state) is still to build.
+- **Live checks owed (reading calls only):** row 8's re-run, then rows 11-16 in one sitting on `s6-states` (the
+  commands are on issue #1).
+- **Then:** S6 rows 17-34 in the ledger's order (17: each picture's own copy of itself, which drawing reads while a
+  rebuild reads the dream as it stands); S7's routed checks; S9's live flow check.
+
+- **How to resume the cloud work:** `git fetch origin`; `git worktree add <path> <branch>` for the top branch in
+  flight (`s6-states`); symlink `dreamchat/node_modules`; copy the committed caches (`evals/cache/README.md`) into
+  `runs/`. Measure a step with `evals/corpus.ts --label s6rN-<rs|all> --against s6r<N-1>-<rs|all> --verdicts
+  evals/s6-verdicts.json` (rs: `DREAMCHAT_WRITER=claude DREAMCHAT_RECORD=on DREAMCHAT_CUT_SHEET=on`; all: plus
+  `DREAMCHAT_CAMERA=on DREAMCHAT_REFS=on`, each with `DREAMCHAT_ONE_BUILDER=<step>`), `evals/retire.ts --checks`,
+  `evals/prompt-cases.ts` with Jev (`--env-file` of the dreamchat env), and `bun test` with every switch off and
+  on. Each row: a test that fails without its change, every change classified, an independent review, fixes,
+  re-review, then merge.
+- **Working rule learnt today:** commit before an independent reviewer works in a worktree (a reviewer restores
+  its tree to clean and wipes anything uncommitted); run the whole suite both ways before pushing a row.
+
+
 **To resume in a new session:** open this file (`dreamchat/HARNESS_PLAN.md` on `lab/dream-chat`,
 `metalfinger/stawberry-studio`) and start from this section. Everything named below is pushed to GitHub — nothing
 depends on this machine or this session. The owner's claude.ai plan doc is retired; Engram's fever-dream project
@@ -983,6 +1077,146 @@ One **cut sheet** per cut is the spine everything is assembled from:
     (drawn already, so nothing waits: lighthouse-first m8 on m7, the one "waited for and never sent").
   - Moments carrying three changes (all implied changes said in words) rose with the gate; whether an implied state
     should be drawn when no picture carries it is S1's question (overlaps).
+
+  **S5 fix round three: every cut keeps a layout anchor as image 1 (29 Sep, branch `s5-anchor` from lab 20b8f63,
+  head 6afaf98; committed and pushed, not measured, reviewed or merged).** After the S5 picture check (new 7/17
+  against old 12/17; S4's check 15/20 against 10/20), the owner's direction: every cut keeps what carries the
+  layout as image 1, the mock-up or an earlier picture whose camera and state match, never nothing.
+  *Why S5 broke pictures* (the check's dry run, `runs/checkpoint/s5/dry.txt`, old images → new): in 6 of the 7
+  that broke, image 1 went and only sketches were sent. The mock-up was dropped by the routing for orchard-m6
+  (third person), lighthouse-first-m7 (the room changed) and library-3-m8 (the boat outside the window). An
+  earlier picture was dropped by the gate, with nothing in its place, for orchard-m3 (mirrored) and
+  lighthouse-first-m8 (the tractor a car). orchard-m5's person images went from three to one.
+  *Evidence on image 1*, the owner's verdicts by what image 1 was:
+
+  | | right |
+  | --- | --- |
+  | The mock-up, with the camera rules (S4 check, all 20) | 15 of 20; through the dreamer's eyes 5 of 7 |
+  | No image 1, by S5's routing or its gate (S5 check) | 5 of 12; through the dreamer's eyes 2 of 6 |
+  | The same moment both ways (lighthouse-first m7, m8; orchard m6) | with the mock-up 3 of 3, without 0 of 3 |
+  | The paired test of 26 Sep that the routing rested on (drawn before the camera rules moved the mock-ups) | mock-up 10, edit 11, neither 9 of 20: no difference |
+
+  *Changed:*
+  - Image 1 is the picture edited where the gate sends it, else the mock-up, on every route (`refs.ts chooseRefs`);
+    the routing (`mockupHelps`: not through the dreamer's eyes with someone in view, across a jump, for a close-up,
+    insert or the seat, to another place unless wide, about a crowd) is gone. Only a cut with no floor plan has no
+    mock-up, and goes out with the sketches first, as today.
+  - An edit the gate would not send (its picture's camera far from where this moment's own camera would stand, or
+    the place not as it stands here) is placed on its floor plan and made from its own mock-up like any other cut
+    (`continuity.ts`, in the camera placement, both with and without the camera rules). Before, the cut stayed an
+    edit through the camera placement, so it got no camera; the gate then dropped its picture, leaving no mock-up
+    and nothing carrying the layout. The gate's test is one function, `drawnFrom`, used both there and in
+    `chooseInPlan`.
+  - Tests: `test/refs.test.ts`'s image-1 block rewritten (the edit, else the mock-up, the sketches first only with
+    no mock-up; the mock-up for a crowd and through the dreamer's eyes); a new test that an edit the gate drops gets
+    its own camera and mock-up as image 1, with and without the camera rules, failing without the change (no
+    camera); the dreamer's-eyes test now expects the mock-up with S5 on. `test/camera.test.ts`'s words-only
+    assertion pins S5 off (with S5 on, the moment facing the clock behind the first camera is not an edit).
+    `bun test`: 824 pass with every switch unset; with every switch on, the one failure was that assertion, fixed.
+  *Measured (29 Sep; record, sheet, camera and references on; round two's S5 at lab 20b8f63 as `s5r2`, this as
+  `s5r3`, in runs/corpus; reading calls from the cache, 0 asked anew):*
+
+  | image 1 of every cut | frozen, 115 cuts | live, 411 cuts |
+  | --- | --- | --- |
+  | none, before → after | 38 → 3 | 212 → 124 |
+  | none, though a shot is worked out on a floor plan | 10 → 0 | 21 → 0 |
+  | the mock-up | 73 → 108 | 172 → 260 |
+  | an edit | 4 → 4 | 27 → 27 |
+
+  Every picture that changed (frozen 35, live 88) only gained its mock-up as image 1 and the words that go with
+  it; the one plan change is orchard m3 (0f40 m3), no longer an edit of m1 but placed with its own camera (cut,
+  carrying on; its left-to-right order now said by the shot). The 124 live cuts left without an image 1 have no
+  floor plan to make a mock-up from. Of the S5 check's regressions, image 1 is back for orchard m3 and m6,
+  lighthouse-first m7 and m8, library-3 m8, and lighthouse-fresh m9; orchard m5 (one image per subject) and
+  library-1 m4 (the shot's brief) are untouched by this. Prompt cases (13 Jev questions asked anew), before →
+  after: counted 29/34 → 29/34, the model step 7/8 → 7/8, guards 36/36 → 36/36, hypotheses 12/18 → 7/18: the five
+  that moved are the hypotheses written for the routing (heron-m4-route, lighthouse-first-m7-route,
+  lighthouse-first-m8-route, snow-train-m6-route, orchard-m2-mockup), to be retired as the verdicts contradict them.
+  *What the mock-ups show* (the S5 set dry under this, `runs/checkpoint/s5r3look`, rendered locally, nothing
+  drawn): orchard m3's is from behind the two, facing the gate, the dreamer left and Tomas right, as the picture
+  the owner called right (not the mirrored one), but tight (14mm, their backs filling the frame, the gate barely
+  in it). Three show how the mock-up can mislead where the renderer draws what the shot is not: orchard m2 (Tomas
+  close through the dreamer's eyes) is a large egg-shaped head on a small box, with no profile, and in the paired
+  test this moment's mock-up version was wrong ("feels like the dreamer is holding something"), its sketches-only
+  version right, as in the S5 check; orchard m6's white horse is a person-shaped figure labelled so; lighthouse-first
+  m8 has no tractor, two people seated on a bare floor. The rule stays the owner's (a layout anchor on every cut);
+  what each mock-up shows is for the owner to read, cut by cut, before anything is drawn.
+  *Independent review (fix first), and the fixes (a4aedd6):*
+  - *A kept edit whose picture is withheld when drawing went out with nothing* (the reviewer's probe: m1 and m2 one
+    view, m1 judged wrong: m2 sent `sketch:p1, sketch:l1`). The drawing path withholds what the owner judged wrong
+    or S9 finds stale, and a kept edit has no camera of its own. Fixed: with S5's references, an edit seen from
+    outside keeps its own shot (`CutPlan.alone`: view, eye, what it sees, framing, the camera rules' words), placed
+    on its floor plan as any cut's is; where its picture is not sent, the cut is made from that shot and its mock-up
+    (`continuity.ts unedited`, `uneditedFrame`), in a rebuild (plan.ts) and on the drawing path alike
+    (`session.ts drawnFrameOf`: the sheet, the mock-up, the shot's brief and the storyboard check). Readiness is not
+    withholding: before its picture is drawn, a preview still shows the edit.
+  - *Without the camera rules the gate compared the picture's camera with itself*, so the camera placement demoted
+    edits the gate would have kept (frozen: the flooded library m6, water rising m5; live: paper birds m3 too).
+    Fixed: where the camera is placed and where the gate chooses, the cut's own camera (`wouldBe`) is compared with
+    the picture's whenever the references are on.
+  - *Untested half of the placement check*: the camera test's clock case now asserts, references on and camera
+    rules off, no edit and a camera of its own (it fails with the camera comparison removed); refs.test adds a chain
+    of edits of one view staying edits, and a withheld picture giving the mock-up as image 1.
+  - *The references eval still measured the routing*: `evals/references.ts` now counts cuts with a camera on a
+    floor plan and no layout anchor as image 1 (frozen 0, live 0).
+  - *Stale words*: assemble.ts, refs.ts's header (image 1 is nothing only where no camera can be placed: no floor
+    plan, none of the moment's people or things on it, the dreamer's view not placeable: frozen 3, live 7 with the
+    camera rules), `docs/rules.md` D6, a test's name.
+  - *Left as they are*: the chain limit of edits (`MAX_BASE_RUN`) is decided before the cameras are placed, so an
+    edit later made its own cut still counts toward the next cut's run, which is then drawn afresh from its own
+    mock-up (one edit fewer, never nothing); a cut through the dreamer's eyes whose edit is dropped keeps
+    "continuous" while one from outside becomes "cut, carrying on" (labels only); the crowd (above).
+  Measured after the fixes: `bun test` 826 pass, 1 skipped, with every switch unset and every switch on; the corpus,
+  every switch of the harness on, 0 of 127 frozen and 0 of 447 live pictures changed against the measure above.
+  *Re-review (fix first), and the fixes (12fe446):*
+  - *The drawing path's wiring was untested* (drawnFrameOf returning the frame, the rebuild skipping `unedited`, or
+    `wouldBe` only with the camera rules each passed every test). Now: a test on a saved dream (b91f: m2 edits m1,
+    m1 judged wrong through a verdicts file) that the drawing path's mock-up, sheet and prompt, and a rebuild, make m2
+    from its own mock-up with nothing of m1 and no check against m1; `verdicts.ts forgetVerdicts` lets a test point
+    the verdicts elsewhere. Each of the three mutations fails a test.
+  - *An earlier edit was compared at where its own camera would stand*, not the camera its picture is drawn from (the
+    one it edits). The gate now compares the camera each picture is drawn from, read before any cut's references
+    change. Random dreams against 644c55a (the reviewer's generator, 600): without the camera rules the same on all;
+    with them one differs, a room picture now kept that is drawn 1.2 m from the cut's camera.
+  - *Checks against the withheld picture*: a cut made from its own shot drops its checks against the picture it
+    edits, and the judge never checks a picture against one withheld from it (so no repair tells it to keep that
+    picture's view).
+  - *What is withheld was read up to six times in one drawing* (a re-plan each, 1.7-2.4 s on large live dreams, and
+    the mock-up and the sheet could disagree if it changed between): read once when the drawing starts and passed to
+    the mock-up, the sheet, the prompt and the inputs.
+  - *The references eval read the plan's camera, not the drawn one*: it reads the drawn frame's.
+  - *Left*: S9's record of a moment still describes its plan, not the swap (made from the drawn frame, the record
+    would differ from what staleness recomputes and the picture would read stale at once); a dream planned before
+    this change keeps the gap until it is planned again.
+  Measured after: `bun test` 827 pass, 1 skipped, both ways; the corpus 0 of 127 frozen and 0 of 447 live pictures
+  changed; cuts with a camera on a floor plan and no layout anchor, frozen 0, live 0.
+  *Third review: merge.* Merged into lab (d97583a, 29 Sep night), `bun test` 827 pass both ways on the merged tree.
+  *Follow-ups before any whole dream is drawn (branch `s5-anchor-2`, aa576ce and the fixes after its review):*
+  - *Tests pin what the third review found unpinned*: the camera an edit's picture is drawn from (the reviewer's random
+    dream 562: an edit of an edit whose own camera stands 1.8 m off, compared at the wrong one it lost its edit); the
+    judge's withheld filter through the store's own judging (`test/withheld.test.ts`); each fails without its change.
+  - *Repairs never aim at a withheld picture*: a repair's fixes are matched to the failed checks by their words, and a
+    check against a withheld picture sharing its words with one asked ("the same person in both pictures") was taken
+    with it, telling the image model to match a picture not attached. Left out now.
+  - *What is withheld is read once per judged cut, and only for a cut whose checks name an earlier picture* (not its
+    sketch sheets, not a sketch or an in-between picture): with S9's records each reading is a re-plan (1.7-2.4 s on
+    large live dreams), and the judge, the repair and the vouching each read it.
+  - *An edit's own shot keeps the camera its picture is drawn from*: with the camera rules, the rule against repeating a
+    camera moved it off the story's same view (280 of 600 random dreams placed it otherwise; the owner's same view is
+    the picture's camera, which for an edit of an edit is where its chain started).
+  - *Deferred, both views for the owner*: S9's record of a moment still describes its plan, not the swap to its own
+    shot. Made from the drawn frame, `behind` (what was sent against what the dream gave it then) would list every
+    swapped picture as drawn behind the dream; doing it right needs the record to carry what was withheld and
+    `behind` to discount it. Meanwhile an S9 rebuild from a record reproduces such a picture as an edit of the
+    withheld one: evals that rebuild from records are not ground truth for those pictures.
+  Measured: `bun test` 832 pass both ways; the corpus 0 of 127 frozen and 0 of 447 live pictures changed; 600 random
+  dreams against 644c55a unchanged but the one intended (camera rules on). Its merge had no read from the S6 pane (paused
+  by the owner that night); the independent reviewer's fourth pass said merge.
+  *Left:* retire the five routing hypotheses. The crowd (heron m4: the mock-up's bare
+  figures made real as naked people, "partly", n=1) is a known risk to watch in the owner's reading, not a reason
+  to drop the anchor. None of this is proven in pictures: pictures judged by the owner (the viewer's reading, then
+  a whole dream drawn) are the bar for any change to references, in-between pictures or edits, not text measures,
+  which all passed while S5's pictures got worse.
 
 - **S7 eval (checks routed by tags).** Written 27 Sep on branch `s7-jev-routed`, before the routing is built.
   Switch `DREAMCHAT_JEV_ROUTED=on`, off by default and off byte for byte.

@@ -655,7 +655,7 @@ export function cutSheet(x: CutSheetInput): CutSheet {
     refsOn === 'off'
       ? null
       : chooseRefs(
-          { earlier: drawnFrom, inView: elements, visible: f.visible, camera: { previs: x.layout ?? null }, tags },
+          { earlier: drawnFrom, inView: elements, camera: { previs: x.layout ?? null } },
           refsOn,
         );
 
@@ -1210,6 +1210,16 @@ export type Framed = {
    */
   assembled?: Pick<Assembled, 'lines' | 'references'>;
 };
+
+/**
+ * Who is in view of a built picture, as the gate reads it on the drawing path: the sheet's, where the one
+ * builder's in_view has it made once (S6 row 7) and the prompt is assembled from the sheet (on, not in
+ * shadow); else the plan's lists (frames.ts inViewOf). One rule for the gate and for a rebuild.
+ */
+export const inViewIn = (built: Framed, frame: Item, sheets: Item[]): Item[] =>
+  builds('in_view') && cutSheetMode() === 'on' && built.sheet
+    ? built.sheet.inView.flatMap((e) => sheets.filter((i) => i.id === e.id))
+    : inViewOf(frame, sheets);
 
 /**
  * A moment's prompt and images by DREAMCHAT_CUT_SHEET: off writes them with framePrompt, as ever; shadow

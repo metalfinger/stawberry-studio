@@ -1,4 +1,4 @@
-// Step S5, the references a cut is drawn from (refs.ts, DREAMCHAT_REFS): image 1 by the cut's tags, one
+// Step S5, the references a cut is drawn from (refs.ts, DREAMCHAT_REFS): image 1 what carries the layout, one
 // image for each subject in view (its stage in force), no picture from another side, the plan waiting only
 // for what it sends, and an in-between picture only where an edit carries two changes or more. Every
 // dream here is made up for the rule it tests, each test failing with the switch off; the drawing path is
@@ -8,17 +8,17 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { assembleCut } from '../assemble';
-import { type ContinuityPlan, planContinuity, shotPlan } from '../continuity';
+import { type ContinuityPlan, planContinuity, shotPlan, unedited, uneditedFrame } from '../continuity';
 import { cutSheet, type CutTags } from '../cutsheet';
 import { frozenDreams, loadDream } from '../evals/saved';
 import { buildFrames, buildGhosts, ghostPrompt, NOTHING_ELSE, type PlannedInput } from '../frames';
 import { checkReferences } from '../gate';
 import { rebuild, standIn } from '../plan';
 import type { Breakdown, Moment, StyleOption } from '../producer';
-import { chooseRefs, facelessIn, mockupHelps, type Route, refsMode, SEVERAL, standsFor } from '../refs';
-import { drawingSheet, type Session } from '../session';
+import { chooseRefs, refsMode, SEVERAL, standsFor } from '../refs';
+import { drawingSheet, drawnFrameOf, previsFor, type Session } from '../session';
 import type { Item } from '../sheets';
-import { verdictsIn, withheldOf } from '../verdicts';
+import { forgetVerdicts, verdictsIn, withheldOf } from '../verdicts';
 
 const detail = (value: string | null = null) => ({ value, said: false });
 
@@ -104,76 +104,215 @@ describe('the switch', () => {
   });
 });
 
-describe('image 1, by the tags', () => {
-  const route = (role: CutTags['role'], move: CutTags['move'], more: Partial<Route> = {}): Route => ({
-    role,
-    move,
-    establishing: false,
-    ...more,
+describe('image 1: what carries the layout, on every cut', () => {
+  const sheet = (inView: unknown[], earlier: { role: string }[] = [], previs: string | null = 'previs-m2') => ({
+    earlier: earlier.map((e, i) => ({ id: `m${i + 1}`, kind: 'cut', role: e.role })) as never,
+    inView: inView as never,
+    camera: { previs },
   });
-  test('the mock-up from outside, never across a jump, nor for a close-up, an insert or the seat', () => {
-    expect(mockupHelps(route('two_shot', 'other_side'))).toBe(true);
-    expect(mockupHelps(route('wide', 'reverse'))).toBe(true);
-    expect(mockupHelps(route('single', 'first'))).toBe(true);
-    for (const role of ['close_up', 'insert'] as const) expect(mockupHelps(route(role, 'same_side'))).toBe(false);
-    expect(mockupHelps(route('wide', 'jump'))).toBe(false);
-    expect(mockupHelps(route('pov', 'jump', { placeOnly: true }))).toBe(false);
-    expect(mockupHelps(route('two_shot', 'seat'))).toBe(false);
+  const ana = { id: 'p1', kind: 'character', said: 'person', group: false, image: 'sketch-p1', turned: null };
+  const crowd = { id: 'p9', kind: 'character', said: 'people', group: true, image: null, turned: null };
+
+  test('the picture edited where the plan edits one; else the mock-up; the sketches first only with no mock-up', () => {
+    expect(chooseRefs(sheet([ana], [{ role: 'base' }])).first).toBe('edit');
+    expect(chooseRefs(sheet([ana])).first).toBe('mockup');
+    expect(chooseRefs(sheet([ana], [], null)).first).toBe('free');
   });
 
-  test('to another place only for a wide shot: the verdicts against it were close shots, the wide ones right with it', () => {
-    expect(mockupHelps(route('wide', 'other_place'))).toBe(true);
-    for (const role of ['single', 'two_shot', 'group'] as const)
-      expect(mockupHelps(route(role, 'other_place'))).toBe(false);
+  test('the mock-up whatever the cut, a crowd with no image of its own included: image 1 reads no tags', () => {
+    // The owner's verdicts with the camera rules (evals/checkpoint/s4 and s5): with the mock-up 15 of 20 right,
+    // without it 5 of 12; orchard m6 and lighthouse-first m7, drawn without it through the dreamer's eyes, lost
+    // the dreamer's view and the room. Image 1 no longer looks at the cut's tags at all.
+    expect(chooseRefs(sheet([ana, crowd])).first).toBe('mockup');
+    expect(chooseRefs(sheet([crowd])).first).toBe('mockup');
   });
 
-  test("through the dreamer's eyes only with nothing but the place in view", () => {
-    // Orchard m7: the empty rows of trees, the mock-up partly right and the sketches alone wrong; with
-    // someone or something in view the sketches alone were right (orchard m2, snow-train m6).
-    expect(mockupHelps(route('pov', 'other_side', { placeOnly: true }))).toBe(true);
-    expect(mockupHelps(route('pov', 'other_side'))).toBe(false);
+  test('an edit the gate drops is placed on its floor plan and made from its own mock-up, never from nothing', () => {
+    // m3 is the story's continuation of m1, the same view, but ana's coat went red at m2, which m1 does not
+    // show: the gate does not edit m1. Left an edit until then, m3 had no camera and no mock-up of its own, and
+    // went out with the sketches alone (the S5 picture check: orchard m3 mirrored, lighthouse-first m8).
+    const coat = () =>
+      withPlan(
+        breakdown([
+          moment({ id: 'm1', visible: ['p1'], looks_at: 'the stage' }),
+          moment({
+            id: 'm2',
+            visible: ['p1'],
+            looks_at: 'the stage',
+            sameSide: ['m1'],
+            leaves: [{ who: 'p1', what: 'coat', now: 'bright red' }],
+          }),
+          moment({ id: 'm3', visible: ['p1'], looks_at: 'the stage', from: 'm1', sameSide: ['m1', 'm2'], states: [red] }),
+        ]),
+      );
+    const off = cut(plan(coat(), OFF), 'm3');
+    expect(off.refs.find((r) => r.id === 'm1')?.role).toBe('base');
+    for (const vars of [ON, { ...ON, DREAMCHAT_RECORD: 'on', DREAMCHAT_CAMERA: 'on' }]) {
+      const on = cut(plan(coat(), vars), 'm3');
+      expect(on.refs.some((r) => r.id === 'm1')).toBe(false);
+      expect(on.eye).toBeTruthy();
+      expect(on.view).toBeTruthy();
+      const made = assembled(coat(), 'm3', vars).made;
+      expect(made.references[0]).toMatchObject({ role: 'base', source: 'mockup', of: 'm3' });
+      expect(made.prompt).toContain('It is a rough grey mock-up of this exact picture');
+    }
+  });
+});
+
+describe('an edit whose picture is not sent after all is made from its own shot, never from nothing', () => {
+  // m1, m2 and m3 are one view, nothing changing: m2 edits m1, m3 edits m2.
+  const same = () =>
+    withPlan(
+      breakdown([
+        moment({ id: 'm1', visible: ['p1', 'p2'], distance: 'wide', looks_at: 'the stage' }),
+        moment({ id: 'm2', visible: ['p1', 'p2'], distance: 'wide', looks_at: 'the stage', from: 'm1', sameSide: ['m1'] }),
+        moment({
+          id: 'm3',
+          visible: ['p1', 'p2'],
+          distance: 'wide',
+          looks_at: 'the stage',
+          from: 'm2',
+          sameSide: ['m1', 'm2'],
+        }),
+      ]),
+    );
+  const CAMERA = { ...ON, DREAMCHAT_RECORD: 'on', DREAMCHAT_CAMERA: 'on' };
+
+  test('a chain of edits of one view stays a chain of edits: the gate and the camera placement agree', () => {
+    for (const vars of [ON, CAMERA]) {
+      const p = plan(same(), vars);
+      expect(cut(p, 'm2').refs.find((r) => r.id === 'm1')?.role).toBe('base');
+      expect(cut(p, 'm3').refs.find((r) => r.id === 'm2')?.role).toBe('base');
+      // With or without the camera rules, the gate knows where the edit's own camera would stand.
+      expect(cut(p, 'm3').wouldBe).toBeTruthy();
+    }
   });
 
-  test('about a crowd with no image of its own: no mock-up, but for a wide shot establishing the place', () => {
-    expect(mockupHelps(route('two_shot', 'other_side', { faceless: true }))).toBe(false);
-    expect(mockupHelps(route('wide', 'same_side', { faceless: true }))).toBe(false);
-    expect(mockupHelps(route('wide', 'first', { faceless: true, establishing: true }))).toBe(true);
+  test("an edit's picture is where the picture it edits was drawn from, not where its own camera would stand", () => {
+    // m2 edits m1 (its own camera, framing the lamp too, would stand 1.2 m behind m1's, near enough); m3 edits m2.
+    // m2's picture is drawn from m1's camera, 0.7 m from where m3's would stand: m3 is an edit of it. Compared at
+    // m2's own camera, 1.8 m off, m3 was not (random dream 562, found in review).
+    const chain = () => {
+      const b = breakdown(
+        [
+          moment({ id: 'm1', visible: ['p1', 'p2'], looks_at: 'the stage' }),
+          moment({ id: 'm2', visible: ['p1', 'p2'], things: ['t1'], looks_at: 'the stage', sameSide: ['m1'] }),
+          moment({
+            id: 'm3',
+            visible: ['p1', 'p2'],
+            looks_at: 'the stage',
+            sameSide: ['m2'],
+            leaves: [{ who: 'p1', what: 'coat', now: 'soaked' }],
+          }),
+        ],
+        {
+          people: [person('p0', 'you', { is_dreamer: true }), person('p1', 'ana'), person('p2', 'bo')],
+          things: [{ id: 't1', name: 'the lamp', fields: {} }] as never,
+        },
+      );
+      b.scenes[0].blocking = {
+        front: 'the stage',
+        indoors: true,
+        spots: [
+          { id: 'p0', x: 3.2679216861724854, y: 6.157477796077728, kind: 'person', pose: 'standing' },
+          { id: 'p1', x: 4.720808506011963, y: 3.1099095344543457, kind: 'person', pose: 'standing' },
+          { id: 'p2', x: 7.841257750988007, y: 4.189713954925537, kind: 'person', pose: 'standing' },
+          { id: 't1', x: 3.4496073722839355, y: 2.5797478556632996, kind: 'thing' },
+        ],
+        moves: {
+          m1: [{ id: 'p1', x: 4.748605489730835, y: 4.408701658248901 }],
+          m2: [{ id: 'p1', x: 5.323129653930664, y: 4.224096298217773 }],
+        },
+      } as never;
+      return b;
+    };
+    const p = plan(chain(), ON);
+    const [m1, m2, m3] = ['m1', 'm2', 'm3'].map((id) => cut(p, id));
+    expect(m2.refs.find((r) => r.id === 'm1')?.role).toBe('base');
+    const off = (a: { at: { x: number; y: number } }, z: { at: { x: number; y: number } }) =>
+      Math.hypot(a.at.x - z.at.x, a.at.y - z.at.y);
+    expect(off(m3.wouldBe!, m1.eye!)).toBeLessThan(1.5);
+    expect(off(m3.wouldBe!, m2.wouldBe!)).toBeGreaterThan(1.5);
+    expect(m3.refs.find((r) => r.id === 'm2')?.role).toBe('base');
   });
 
-  test('a crowd is a group of people the moment lists with no sketch; a failed sketch or a shoal of fish is not one', () => {
-    const crowd = { id: 'p9', kind: 'character', said: 'people', group: true, image: null, turned: null };
-    const failed = { id: 'p8', kind: 'character', said: 'person', group: false, image: null, turned: null };
-    const shoal = { id: 'p7', kind: 'character', said: 'animal', group: true, image: null, turned: null };
-    const ana = { id: 'p1', kind: 'character', said: 'person', group: false, image: 'sketch-p1', turned: null };
-    const sheet = (inView: unknown[], visible: string[]) => ({
-      earlier: [],
-      inView: inView as never,
-      visible,
-      camera: { previs: 'previs-m1' },
-      tags: { role: 'two_shot', move: 'same_side', establishing: false } as CutTags,
-    });
-    // Only in the background (the record or the floor plan put it there): the mock-up stays.
-    expect(chooseRefs(sheet([ana, crowd], ['p1'])).first).toBe('mockup');
-    // What the moment is about: made real shape by shape, it would come out as bare figures.
-    expect(chooseRefs(sheet([ana, crowd], ['p1', 'p9'])).first).toBe('free');
-    expect(facelessIn({ inView: [ana, failed] as never, visible: ['p1', 'p8'] })).toBe(false);
-    expect(chooseRefs(sheet([ana, failed], ['p1', 'p8'])).first).toBe('mockup');
-    // The fish the moment is about (the classroom's shoal, 8ceb m7) keep the mock-up.
-    expect(chooseRefs(sheet([ana, shoal], ['p1', 'p7'])).first).toBe('mockup');
+  test("with the camera rules, its own shot stays at the camera of the picture it edits: the same view, a moment later", () => {
+    // The camera rules move a camera off an earlier one of the same people at the same size (placed a second time,
+    // once the relations are read from the cameras). An edit's picture is that one, so its own shot, made where the
+    // edit's picture is withheld, was moved off the view the story keeps (random dream 2, found in review).
+    const coat = { who: 'p1', what: 'coat', now: 'bright red', since: 'm1' };
+    const b = breakdown(
+      [
+        moment({
+          id: 'm1',
+          visible: ['p1', 'p2'],
+          looks_at: 'the stage',
+          leaves: [{ who: 'p1', what: 'coat', now: 'bright red' }],
+        }),
+        moment({ id: 'm2', visible: ['p1', 'p2'], looks_at: 'the door', states: [coat] }),
+        moment({ id: 'm3', visible: ['p1', 'p2'], looks_at: 'the door', from: 'm2', states: [coat] }),
+        moment({ id: 'm4', visible: ['p1', 'p2'], eyes: 'dreamer', looks_at: 'the stage', states: [coat] }),
+        moment({
+          id: 'm5',
+          visible: ['p1', 'p2'],
+          looks_at: 'the door',
+          from: 'm4',
+          sameSide: ['m2', 'm3'],
+          states: [coat],
+        }),
+      ],
+      {
+        people: [person('p0', 'you', { is_dreamer: true }), person('p1', 'ana'), person('p2', 'bo')],
+        things: [{ id: 't1', name: 'the lamp', fields: {} }] as never,
+      },
+    );
+    b.scenes[0].blocking = {
+      front: 'the stage',
+      indoors: true,
+      spots: [
+        { id: 'p0', x: 6.3589959144592285, y: 2.498508930206299, kind: 'person', pose: 'standing' },
+        { id: 'p1', x: 4.251326262950897, y: 2.635227918624878, kind: 'person', pose: 'standing' },
+        { id: 'p2', x: 4.252206742763519, y: 3.5313711166381836, kind: 'person', pose: 'standing' },
+        { id: 't1', x: 2.9629430770874023, y: 5.63319319486618, kind: 'thing' },
+      ],
+      moves: { m1: [{ id: 'p1', x: 4.047235369682312, y: 6.54767644405365 }] },
+    } as never;
+    const p = plan(b, CAMERA);
+    const m2 = cut(p, 'm2');
+    expect(m2.refs.find((r) => r.id === 'm1')?.role).toBe('base');
+    const m1 = cut(p, 'm1').eye!;
+    const off = (e: { at: { x: number; y: number } }) => Math.hypot(e.at.x - m1.at.x, e.at.y - m1.at.y);
+    expect(off(m2.alone!.eye)).toBeLessThan(0.01);
+    // m3 edits m2, an edit of m1: its picture is drawn from m1's camera too, and its own shot stays there.
+    const m3 = cut(p, 'm3');
+    expect(m3.refs.find((r) => r.id === 'm2')?.role).toBe('base');
+    expect(off(m3.alone!.eye)).toBeLessThan(0.01);
   });
 
-  test('an edit where the plan edits the picture before; else the mock-up where it helps; else the sketches', () => {
-    const sheet = (role: CutTags['role'], earlier: { role: string }[] = [], previs: string | null = 'previs-m2') => ({
-      earlier: earlier.map((e, i) => ({ id: `m${i + 1}`, kind: 'cut', role: e.role })) as never,
-      inView: [{ id: 'p1', kind: 'character', group: false, image: 'sketch-p1', turned: null }] as never,
-      visible: ['p1'],
-      camera: { previs },
-      tags: { role, move: 'same_side', establishing: false } as CutTags,
-    });
-    expect(chooseRefs(sheet('two_shot', [{ role: 'base' }])).first).toBe('edit');
-    expect(chooseRefs(sheet('two_shot')).first).toBe('mockup');
-    expect(chooseRefs(sheet('pov')).first).toBe('free');
-    expect(chooseRefs(sheet('two_shot', [], null)).first).toBe('free');
+  test('with the picture it edits withheld (judged wrong, or stale), it is placed and made from its own mock-up', () => {
+    // The drawing path withholds what the owner judged wrong or S9 finds stale (session.ts plannedInputsOf). Left
+    // an edit, m2 had no camera of its own and went out with the sketches alone.
+    for (const vars of [ON, CAMERA]) {
+      const m2 = cut(plan(same(), vars), 'm2');
+      expect(m2.eye).toBeUndefined();
+      expect(m2.alone?.eye).toBeTruthy();
+      expect(unedited(m2, () => true)).toBe(m2);
+      const alone = unedited(m2, (id) => id !== 'm1');
+      expect([alone.eye, alone.view, alone.sees]).toEqual([m2.alone!.eye, m2.alone!.view, m2.alone!.sees]);
+      expect(alone.refs.find((r) => r.id === 'm1')).toMatchObject({ role: 'composition', relation: 'same_side' });
+      expect([alone.across, alone.camera, alone.staging, alone.transition]).toEqual([
+        undefined,
+        undefined,
+        [],
+        'cut, carrying on',
+      ]);
+      expect(assembled(same(), 'm2', vars).made.references[0]).toMatchObject({ source: 'edit', of: 'm1' });
+      const made = assembled(same(), 'm2', vars, sketches, ['m1']).made;
+      expect(made.references[0]).toMatchObject({ role: 'base', source: 'mockup', of: 'm2' });
+      expect(made.references.some((r) => r.of === 'm1')).toBe(false);
+    }
+    // Today's choice, the references off: nothing kept, nothing changed.
+    expect(cut(plan(same(), OFF), 'm2').alone).toBeUndefined();
   });
 });
 
@@ -205,8 +344,11 @@ const sketches = [
 ];
 const red = { who: 'p1', what: 'coat', now: 'bright red', since: 'm2' };
 
-/** A moment's prompt and images as a rebuild makes them: every picture drawn and approved. */
-function assembled(b: Breakdown, id: string, vars: Record<string, string>, sheets = sketches) {
+/**
+ * A moment's prompt and images as a rebuild makes them: every picture drawn and approved, but for those `withheld`
+ * (judged wrong, or stale), which are not sent (plan.ts rebuild, session.ts drawnFrameOf).
+ */
+function assembled(b: Breakdown, id: string, vars: Record<string, string>, sheets = sketches, withheld: string[] = []) {
   return withSwitches(vars, () => {
     const p = planContinuity(b);
     const pictures = [...buildFrames(b, p), ...buildGhosts(p)].map((x): Item => ({
@@ -215,10 +357,10 @@ function assembled(b: Breakdown, id: string, vars: Record<string, string>, sheet
       mediaId: `picture-${x.id}`,
       continuityApproved: true,
     }));
-    const frame = pictures.find((x) => x.id === id)!;
+    const frame = uneditedFrame(pictures.find((x) => x.id === id)!, (x) => !withheld.includes(x));
     const inputs = (frame.frame?.plan?.refs ?? [])
       .map((use) => ({ use, item: pictures.find((x) => x.id === use.id) }))
-      .filter((x): x is PlannedInput => !!x.item);
+      .filter((x): x is PlannedInput => !!x.item && !withheld.includes(x.use.id));
     // Its mock-up, where its camera is worked out on a floor plan (session.ts layoutFor).
     const layout = frame.frame?.plan?.eye ? standIn.previs(id) : undefined;
     return { plan: p, pictures, made: assembleCut(cutSheet({ frame, sheets, style, inputs, layout })) };
@@ -479,12 +621,13 @@ describe('an earlier picture attached for how things look brings nobody and noth
     expect(line).toContain('come from Image 1, the mock-up');
     expect(line).toContain('The dreamer in it is the camera here, so they are not in this picture.');
     expect(line).toContain(NOTHING_ELSE);
-    // With S5: no mock-up through the dreamer's eyes with bo in view, and m1's camera, far behind them, is not
-    // this one: the picture is not drawn from, and where things stand comes from the shot above.
+    // With S5: m1's camera, far behind them, is not this one: the picture is not drawn from, and where things
+    // stand comes from the mock-up, image 1 through the dreamer's eyes as on every cut.
     const on = assembled(b, 'm3', ON, sheets).made;
-    expect(on.references.some((r) => r.source === 'mockup' || r.source === 'earlier')).toBe(false);
+    expect(on.references.some((r) => r.source === 'earlier')).toBe(false);
+    expect(on.references[0]).toMatchObject({ source: 'mockup', of: 'm3' });
     const hall = on.prompt.split('\n').find((l) => l.startsWith('Image') && l.includes('the hall'))!;
-    expect(hall).toContain('come from the shot above');
+    expect(hall).toContain('come from Image 1, the mock-up');
   });
 
   test('an earlier picture is drawn from only where its camera is near this one and what both show stands alike', () => {
@@ -744,9 +887,9 @@ describe('the drawing path', () => {
   const S5 = { ...ON, DREAMCHAT_RECORD: 'on' };
   // A saved dream as drawing holds it once every picture is drawn and approved, each moment with a camera
   // worked out on a floor plan given its mock-up (session.ts layoutFor).
-  const drawnAll = () =>
+  const drawnAll = (dream = 'dream-0926-070314-0f40') =>
     withSwitches(S5, () => {
-      const s = loadDream('dream-0926-070314-0f40', false).session as Session;
+      const s = loadDream(dream, false).session as Session;
       const r = rebuild(s);
       const drawn: Session = {
         ...s,
@@ -778,6 +921,57 @@ describe('the drawing path', () => {
           expect([p.id, id, sent.has(standIn.picture(id))]).toEqual([p.id, id, true]);
       }
     });
+  });
+
+  test('a picture judged wrong: the edit of it is made from its own shot and mock-up, drawing and rebuilding alike', () => {
+    // b91f: m2 edits m1. The owner judges m1 wrong: it is withheld (verdicts.ts), and m2, left an edit, would go
+    // out with no camera, no mock-up and nothing carrying the layout.
+    const dream = 'dream-0926-095122-b91f';
+    const { r, drawn } = drawnAll(dream);
+    const m2 = drawn.build!.frames!.find((f) => f.id === 'm2')!;
+    const dir = mkdtempSync(join(tmpdir(), 'verdicts-'));
+    mkdirSync(join(dir, 'evals'));
+    writeFileSync(
+      join(dir, 'evals', 'story-pictures.json'),
+      JSON.stringify({ rows: [{ session: dream, moment: 'm1', picture: 'm1-judged.png', story: 'wrong' }] }),
+    );
+    const was = process.env.DREAMCHAT_DATA;
+    try {
+      withSwitches(S5, () => {
+        expect(m2.frame?.plan?.refs.find((x) => x.id === 'm1')?.role).toBe('base');
+        expect(assembleCut(drawingSheet(drawn, 'm2')!).references[0]).toMatchObject({ source: 'edit', of: 'm1' });
+        process.env.DREAMCHAT_DATA = dir;
+        forgetVerdicts();
+        // Its mock-up, as layoutFor renders it: through its own camera (none as an edit).
+        const own = drawnFrameOf(drawn, m2);
+        expect(own.frame?.plan?.eye).toBeTruthy();
+        expect(previsFor(r.b, m2, (id) => id, r.rec)).toBeUndefined();
+        expect(previsFor(r.b, own, (id) => id, r.rec)).toBeTruthy();
+        // Its sheet and prompt as drawing makes them, the mock-up put in as layoutFor puts it.
+        const rendered: Session = {
+          ...drawn,
+          build: {
+            ...drawn.build!,
+            frames: drawn.build!.frames!.map((f) =>
+              f.id === 'm2' ? { ...f, layout: { mediaId: standIn.previs('m2'), key: 'k', path: 'p' } } : f,
+            ),
+          },
+        };
+        const made = assembleCut(drawingSheet(rendered, 'm2')!);
+        expect(made.references[0]).toMatchObject({ role: 'base', source: 'mockup', of: 'm2' });
+        expect(made.references.some((x) => x.of === 'm1')).toBe(false);
+        // Never judged against the picture it is not drawn from.
+        expect(own.frame?.plan?.criteria.some((k) => k.with === 'm1')).toBe(false);
+        // A rebuild makes it the same way.
+        const again = rebuild(loadDream(dream, false).session as Session).pictures.find((x) => x.id === 'm2')!;
+        expect(again.references[0]?.media_id).toBe(standIn.previs('m2'));
+        expect(again.criteria.some((k) => k.with === 'm1')).toBe(false);
+      });
+    } finally {
+      if (was === undefined) delete process.env.DREAMCHAT_DATA;
+      else process.env.DREAMCHAT_DATA = was;
+      forgetVerdicts();
+    }
   });
 
   test('shows someone by their sketch until their in-between picture is drawn and approved', () => {

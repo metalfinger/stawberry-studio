@@ -91,6 +91,7 @@ import {
   type RecordPlan,
   seenIn,
   shotPlan,
+  uneditedFrame,
 } from './continuity';
 
 // Moved to continuity.ts; kept here for older imports.
@@ -133,6 +134,7 @@ import {
   type Framed,
   framed,
   imageNamesOf,
+  inViewIn,
   type SheetDream,
   sheetDream,
   sheetPrint,
@@ -889,9 +891,11 @@ export function shadowRecord(
 export function plannedInputsOf(
   s: Pick<Session, 'build'> & Partial<Pick<Session, 'id' | 'draft' | 'transcript' | 'style'>>,
   frame: Item,
+  /** What is withheld, where the caller read it already for this drawing (it costs a re-plan). */
+  given?: Withheld,
 ): PlannedInput[] {
   const frames = s.build?.frames ?? [];
-  const withheld = refsMode() === 'off' ? {} : withheldIn(s);
+  const withheld = refsMode() === 'off' ? {} : (given ?? withheldIn(s));
   return (frame.frame?.plan?.refs ?? [])
     .map((use) => ({ use, item: frames.find((x) => x.id === use.id) }))
     .filter((x): x is PlannedInput => !!x.item && x.item.status === 'ready' && !!x.item.mediaId && !withheld[x.use.id]);
@@ -901,15 +905,36 @@ export function plannedInputsOf(
  * The drawn pictures of a dream never to be drawn from again (S5): judged wrong by the owner (verdicts.ts), or
  * stale by S9's records, where the dream keeps them.
  */
+/** The earlier pictures never to be drawn from, by id, and why (verdicts.ts withheldOf). */
+export type Withheld = Record<string, 'judged wrong' | 'stale'>;
+
+/** One drawing of a moment: the dream its sheet reads, and what is withheld from it, each read once. */
+type Drawing = { dream?: SheetDream | null; withheld?: Withheld };
+
 export function withheldIn(
   s: Pick<Session, 'build'> & Partial<Pick<Session, 'id' | 'draft' | 'transcript' | 'style'>>,
-): Record<string, 'judged wrong' | 'stale'> {
+): Withheld {
   const frames = s.build?.frames ?? [];
   const recorded = !!s.draft && frames.some((f) => !!currentRecord(f));
   const stale = recorded
     ? stalenessOf(s as Pick<Session, 'draft' | 'build' | 'transcript' | 'style'>).stale.map((x) => x.id)
     : [];
   return withheldOf(s.id ?? (s as { from?: string }).from, frames, stale);
+}
+
+/**
+ * A moment as it is drawn: with S5's references, an edit whose picture is withheld (judged wrong, or stale) is
+ * made from its own shot and mock-up (continuity.ts unedited), as a rebuild makes it (plan.ts).
+ */
+export function drawnFrameOf(
+  s: Pick<Session, 'build'> & Partial<Pick<Session, 'id' | 'draft' | 'transcript' | 'style'>>,
+  frame: Item,
+  /** What is withheld, where the caller read it already for this drawing (it costs a re-plan). */
+  given?: Withheld,
+): Item {
+  if (!frame.frame?.plan?.alone || refsMode() === 'off') return frame;
+  const withheld = given ?? withheldIn(s);
+  return uneditedFrame(frame, (id) => !withheld[id]);
 }
 
 /**
@@ -999,7 +1024,7 @@ export function drawingSheet(s: Session, momentId: string): CutSheet | null {
   const frame = s.build?.frames?.find((f) => f.id === momentId && f.kind === 'cut');
   if (!frame || !s.build || !s.style) return null;
   return cutSheet({
-    frame,
+    frame: drawnFrameOf(s, frame),
     sheets: s.build.items,
     style: s.style,
     inputs: plannedInputsOf(s, frame),
@@ -2616,7 +2641,7 @@ export class SessionStore {
    * non-human approval of a moment only where its facts record shows each asset). Otherwise, or
    * without a judge, what follows waits for the person's own verdict.
    */
-  private async vouch(s: Session, n: Item): Promise<void> {
+  private async vouch(s: Session, n: Item, withheld: Withheld = this.withheldFrom(s, n)): Promise<void> {
     if (n.review || n.continuityApproved || n.kind !== 'cut' || !n.mediaId || !n.nodeId) return;
     const users = (s.build?.frames ?? []).filter((x) => x.needs?.includes(n.id));
     if (!users.length) return;
@@ -2631,7 +2656,7 @@ export class SessionStore {
     }
     // A take the judge still finds wrong after its one repair is theirs to see, never a source: what
     // is drawn from it keeps what is wrong with it.
-    const { serious } = this.seriousFailures(n, s.style);
+    const { serious } = this.seriousFailures(n, s.style, withheld);
     if (serious.length) {
       n.waitsForPerson = `the judge found: ${serious.join('; ').slice(0, 300)}`;
       return;
@@ -2663,13 +2688,13 @@ export class SessionStore {
     layout: string | undefined,
     site: string,
     /** The dream as the sheet reads it, made once for one drawing of a moment until its words change. */
-    once: { dream?: SheetDream | null } = {},
+    once: Drawing = {},
   ): Framed {
     const input = {
-      frame,
+      frame: drawnFrameOf(s, frame, once.withheld),
       sheets: s.build?.items ?? [],
       style: s.style as StyleOption,
-      inputs: this.plannedInputs(s, frame),
+      inputs: this.plannedInputs(s, frame, once.withheld),
       layout,
     };
     const mode = cutSheetMode();
@@ -2680,8 +2705,8 @@ export class SessionStore {
   }
 
   /** The earlier pictures the plan draws this moment from, that are drawn and usable. */
-  private plannedInputs(s: Session, frame: Item): PlannedInput[] {
-    return plannedInputsOf(s, frame);
+  private plannedInputs(s: Session, frame: Item, withheld?: Withheld): PlannedInput[] {
+    return plannedInputsOf(s, frame, withheld);
   }
 
   /**
@@ -2694,7 +2719,7 @@ export class SessionStore {
     frame: Item,
     layout: string | undefined,
     built: Framed,
-    once: { dream?: SheetDream | null },
+    once: Drawing,
   ): CutFacts | undefined {
     if (!routedMode()) return undefined;
     if (built.sheet) return cutFactsOf(built.sheet);
@@ -2702,10 +2727,10 @@ export class SessionStore {
       if (once.dream === undefined) once.dream = sheetDreamOf(s);
       return cutFactsOf(
         cutSheet({
-          frame,
+          frame: drawnFrameOf(s, frame, once.withheld),
           sheets: s.build?.items ?? [],
           style: s.style as StyleOption,
-          inputs: this.plannedInputs(s, frame),
+          inputs: this.plannedInputs(s, frame, once.withheld),
           layout,
           dream: once.dream,
         }),
@@ -2733,7 +2758,9 @@ export class SessionStore {
     // put in with, which a re-plan does not update (paper-city m5 drawn without the red paper bird).
     if (freshSendMode()) refreshMoment(frame, momentOf(s, frame.id));
     // The dream the moment's cut sheet reads, made once for this drawing and again after its words change.
-    const once: { dream?: SheetDream | null } = {};
+    // What is withheld from it (S5's references: judged wrong, or stale) is read once for this drawing, so its
+    // mock-up, its sheet and its prompt all see the same (session.ts drawnFrameOf).
+    const once: Drawing = { withheld: refsMode() === 'off' ? {} : withheldIn(s) };
     if (!this.deps.sheets || !s.style || !s.build) {
       Object.assign(frame, {
         status: 'failed',
@@ -2771,10 +2798,11 @@ export class SessionStore {
     }
     // The shot, briefed by a director of photography from the view worked out on the floor plan,
     // and briefed again whenever that view changes.
-    const view = frame.frame?.plan?.view;
+    const drawn = drawnFrameOf(s, frame, once.withheld);
+    const view = drawn.frame?.plan?.view;
     const called = calledFor(s, frame);
     // Without its previs the frame is drawn from words alone, as before there was one.
-    const layout = await this.layoutFor(s, frame, called).catch((e) => {
+    const layout = await this.layoutFor(s, frame, called, once.withheld).catch((e) => {
       console.error(`previs for ${frame.id}: ${String(e).slice(0, 300)}`);
       return undefined;
     });
@@ -2783,7 +2811,7 @@ export class SessionStore {
     let checked = s.prep?.storyboard?.[frame.id];
     // Checked again when its shot is worded otherwise than when it was checked: its reading is of
     // another shot, and it was drawn unchecked (Meads, after its distances were said in metres, 25 Sep).
-    const plan = frame.frame?.plan;
+    const plan = drawn.frame?.plan;
     const b = s.draft?.breakdown;
     const m = b ? moments(b).find((x) => x.id === frame.id) : undefined;
     if (view && s.prep && b && m && plan && (!checked || checked.view !== view)) {
@@ -2853,7 +2881,7 @@ export class SessionStore {
           scene?.moments.findIndex((m) => m.id === frame.id),
         )
         .map((m) => m.action);
-      const sees = frame.frame?.plan?.sees ?? [];
+      const sees = drawn.frame?.plan?.sees ?? [];
       const people = sees.filter((id) => s.draft?.breakdown?.people.some((p) => p.id === id)).map(called);
       const text = await this.deps
         .shot(frame.fields.action?.value ?? frame.name, view, mediumOf(s.style), sees.map(called), before, people)
@@ -2864,10 +2892,7 @@ export class SessionStore {
     // Who is in view: the sheet's, where the builder's in_view has it made once (S6 row 7) and the prompt sent
     // was assembled from that sheet (on, not in shadow); read again from each build, after a reword too.
     const items = s.build.items;
-    const inViewOfBuilt = (b: Framed) =>
-      builds('in_view') && cutSheetMode() === 'on' && b.sheet
-        ? b.sheet.inView.flatMap((e) => items.filter((i) => i.id === e.id))
-        : inViewOf(frame, items);
+    const inViewOfBuilt = (b: Framed) => inViewIn(b, frame, items);
     let findings = await this.gateFindings(
       s,
       frame,
@@ -3051,13 +3076,19 @@ export class SessionStore {
    * again only when the picture differs. Only a moment with a worked-out camera has one: the
    * dreamer's own view, where words alone failed (24 Sep).
    */
-  private async layoutFor(s: Session, frame: Item, called: (id: string) => string): Promise<string | undefined> {
+  private async layoutFor(
+    s: Session,
+    frame: Item,
+    called: (id: string) => string,
+    withheld?: Withheld,
+  ): Promise<string | undefined> {
     const cut = frame.frame?.plan;
     const b = s.draft?.breakdown;
     if (!cut || !b || !this.deps.sheets?.layout || !this.deps.dir) return undefined;
     // Rendered every time, and known by what it is: the picture itself. Known by what it was made
     // from, a previs drawn before the audience had seats was used again after they had them (24 Sep).
-    const rendered = previsFor(b, frame, called, planRecord(s));
+    // An edit whose picture is withheld is rendered through its own camera (drawnFrameOf).
+    const rendered = previsFor(b, drawnFrameOf(s, frame, withheld), called, planRecord(s));
     if (!rendered) return undefined;
     const { png, key } = rendered;
     if (frame.layout?.key === key) return frame.layout.mediaId;
@@ -3999,7 +4030,12 @@ export class SessionStore {
       ref.startsWith('sheet:')
         ? b?.items.find((i) => i.id === ref.slice(6) && i.status === 'ready')?.mediaId
         : b?.frames?.find((f) => f.id === ref)?.mediaId;
+    // With S5's references, never against a picture withheld from it (judged wrong, or stale): a picture drawn
+    // from its own shot because the one it edits was withheld is not judged, nor repaired, as a copy of that one.
+    const session = this.sessions.get(id);
+    const withheld = session ? this.withheldFrom(session, it) : {};
     const checks = (it.frame?.plan?.criteria ?? [])
+      .filter((c) => !c.with || !withheld[c.with])
       .map((c) => ({ with: c.with ? (media(c.with) ?? '') : null, text: c.text }))
       .filter((c) => c.with !== '');
     let check: JudgedCheck | null;
@@ -4037,7 +4073,7 @@ export class SessionStore {
         saved = true;
         try {
           if (cur.kind === 'cut') {
-            if (!(await this.repair(x, cur))) await this.vouch(x, cur);
+            if (!(await this.repair(x, cur, withheld))) await this.vouch(x, cur, withheld);
             await this.fillFrames(x, x.turns.at(-1)?.turn ?? 0);
           } else if (cur.kind !== 'ghost') await this.repairSheet(x, cur);
         } catch (e) {
@@ -4119,6 +4155,16 @@ export class SessionStore {
   }
 
   /**
+   * The pictures withheld from a moment's checks (S5's references: judged wrong, or stale), read only for a moment
+   * whose checks name another picture: it costs a re-plan, and a sketch or an in-between picture has none.
+   */
+  private withheldFrom(s: Session, it: Item): Withheld {
+    const named = (it.frame?.plan?.criteria ?? []).some((k) => !!k.with && !k.with.startsWith('sheet:'));
+    if (refsMode() === 'off' || it.kind !== 'cut' || !named) return {};
+    return withheldIn(s);
+  }
+
+  /**
    * What the judge found in a moment that later pictures must not inherit: who or what is missing,
    * a changed look not carried, the wrong clothes or features, a broken body, something invented
    * (a viewer's hands kept in one picture are kept by every edit of it, 23 Sep); and a person or
@@ -4127,6 +4173,8 @@ export class SessionStore {
   private seriousFailures(
     it: Item,
     style?: StyleOption | null,
+    /** Pictures withheld from it: their checks are never a fix to make (withheldFrom). */
+    withheld: Withheld = {},
   ): { factAt: number[]; fixes: Criterion[]; serious: string[] } {
     const c = it.check;
     if (!c || c.error) return { factAt: [], fixes: [], serious: [] };
@@ -4147,19 +4195,22 @@ export class SessionStore {
       ...(style && oneColour(style) ? ['palette'] : []),
     ];
     const factAt = c.failed.map((_, i) => i).filter((i) => SERIOUS.includes((c.failedIds?.[i] ?? '').split(':')[0]));
+    // Matched by their words, so a check against a withheld picture that shares its words with one asked (the same
+    // person in both pictures) is never taken for it.
     const fixes = (it.frame?.plan?.criteria ?? []).filter(
       (k) =>
+        !(k.with && withheld[k.with]) &&
         (it.continuity?.failed ?? []).includes(k.text) &&
         /same person|same side|same view|reference sheet|framing|made the same way|left to right/.test(k.text),
     );
     return { factAt, fixes, serious: [...factAt.map((i) => c.failed[i]), ...fixes.map((k) => k.text)] };
   }
 
-  private async repair(s: Session, it: Item): Promise<boolean> {
+  private async repair(s: Session, it: Item, withheld: Withheld = this.withheldFrom(s, it)): Promise<boolean> {
     if (it.review || (it.repairs ?? 0) >= MAX_REPAIRS || !it.mediaId || !it.nodeId) return false;
     const c = it.check;
     if (!c || c.error) return false;
-    const { factAt, fixes, serious } = this.seriousFailures(it, s.style);
+    const { factAt, fixes, serious } = this.seriousFailures(it, s.style, withheld);
     if (!serious.length) return false;
     it.repairs = (it.repairs ?? 0) + 1;
     // Said to the image model as instructions: a judge's question means nothing to it.

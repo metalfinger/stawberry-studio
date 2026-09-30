@@ -1,0 +1,586 @@
+{
+  "about": "Proposed from the prompt cases for S5: every counted fault case of the step, and every guard (a moment the owner called right), whose prompt or images change against DREAMCHAT_REFS unset, that can be drawn from the run's own pictures (never one the owner called wrong) or from an earlier moment's new picture drawn first; a guard whose old picture the owner has since called not right in a checkpoint is a guard no more; the faults first, then the guards no more, then the guards, each most changed first (a moment with the earlier one it draws from), trimmed to $3.00 at $0.15 a picture. For a person to confirm before anything is drawn.",
+  "name": "s5",
+  "step": "S5",
+  "cap_usd": 3,
+  "results": "/Users/hirenk/Documents/code/stawberry-studio-dream-chat/dreamchat/runs/checkpoint/s5",
+  "switches": {
+    "DREAMCHAT_CAMERA": "on",
+    "DREAMCHAT_CUT_SHEET": "on",
+    "DREAMCHAT_RECORD": "on",
+    "DREAMCHAT_REFS": "on"
+  },
+  "base": "DREAMCHAT_REFS unset",
+  "moments": [
+    {
+      "id": "orchard-m2",
+      "run": "orchard",
+      "session": "dream-0926-070314-0f40",
+      "moment": "m2",
+      "why": "fault",
+      "reason": "orchard-m2-edit (reference_conflict): Edited from the picture before, which shows the two from outside, a moment through the dreamer's eyes came out in the third person. (old picture: orchard-m2-c, the paired test's free version, right, per the S5 fix round two note)",
+      "cases": [
+        "orchard-m2-edit"
+      ],
+      "old": {
+        "source": {
+          "file": "paired-verdicts.json",
+          "row": "orchard-m2",
+          "version": "orchard-m2-c"
+        },
+        "draw": "free",
+        "verdict": "right",
+        "note": null,
+        "picture": "runs/paired-home/media/5ec881f7e876339d769b907e0dc6da4681f8b7b947ddb0faace66c0e8545c323.png"
+      },
+      "description": "The dreamer turns and sees Tomas as a boy of about ten in their old school uniform, staring at the gate.",
+      "change": {
+        "words": 243,
+        "of": 846,
+        "images": 5,
+        "imagesOf": 5,
+        "previs": false,
+        "share": 1.287
+      }
+    },
+    {
+      "id": "lighthouse-first-m8",
+      "run": "lighthouse-first",
+      "session": "dream-0925-231131-affd",
+      "moment": "m8",
+      "why": "fault",
+      "reason": "lighthouse-first-m8-edit (reference_conflict): Edited from the picture before, the stranger does not look like a driver (the free version was right).",
+      "cases": [
+        "lighthouse-first-m8-edit"
+      ],
+      "old": {
+        "source": {
+          "file": "paired-verdicts.json",
+          "row": "lighthouse-first-m8",
+          "version": "lighthouse-first-m8-b"
+        },
+        "draw": "edit",
+        "verdict": "partly",
+        "note": "The other person doesn't look like a driver. Otherwise, also not bad, though.",
+        "picture": "runs/paired-home/media/a4007bf10b029e703ebfee9048e97fcf6c6460d22319d3fb5023381be4e80149.png"
+      },
+      "description": "Suddenly the dreamer is in the tractor, sitting next to the driver, a stranger, still holding the boat.",
+      "change": {
+        "words": 216,
+        "of": 1061,
+        "images": 2,
+        "imagesOf": 6,
+        "previs": false,
+        "share": 0.537
+      }
+    },
+    {
+      "id": "library-1-m5",
+      "run": "library-1",
+      "session": "dream-0926-050424-fdd7",
+      "moment": "m5",
+      "why": "fault",
+      "reason": "library-1-m5-window (reference_conflict): Made real from the mock-up, the proportions are off and the whole wall in front has become the city, instead of the city showing through the round window. (The edit version was right; the free one lost the water.)",
+      "cases": [
+        "library-1-m5-window"
+      ],
+      "old": {
+        "source": {
+          "file": "paired-verdicts.json",
+          "row": "library-1-m5",
+          "version": "library-1-m5-a"
+        },
+        "draw": "mockup",
+        "verdict": "wrong",
+        "note": "The proportion of things looks very off, and I don't know. The wall which is in front has become a city or something.",
+        "picture": "runs/paired-home/media/dce7ab5c8c8ef8fa39c5e1b7e96c66148010e147eb0178e1b773b990137b1d57.png"
+      },
+      "description": "They row up to the high round window at the top of the room, and the sister opens it. Outside it is morning, the whole city underwater, just rooftops and tops of trees.",
+      "change": {
+        "words": 99,
+        "of": 1225,
+        "images": 1,
+        "imagesOf": 6,
+        "previs": false,
+        "share": 0.247
+      }
+    },
+    {
+      "id": "snow-train-2-m6",
+      "run": "snow-train-2",
+      "session": "dream-0926-062232-a44a",
+      "moment": "m6",
+      "why": "fault",
+      "reason": "snow-train-2-m6-size (reference_conflict): The suitcase's proportions are badly wrong in the edit of the picture before (seen only in the edit version).",
+      "cases": [
+        "snow-train-2-m6-size"
+      ],
+      "old": {
+        "source": {
+          "file": "paired-verdicts.json",
+          "row": "snow-train-2-m6",
+          "version": "snow-train-2-m6-a"
+        },
+        "draw": "edit",
+        "verdict": "wrong",
+        "note": "proportion ab suit kaise super wrong",
+        "picture": "runs/paired-home/media/6c0e6c082c6a309db8b02e9758904b6ff52dd366937bca72120155b8523ba5f5.png"
+      },
+      "description": "The grandfather gives the suitcase to the dreamer, holding it out without words, then nods at the door.",
+      "change": {
+        "words": 101,
+        "of": 1232,
+        "images": 1,
+        "imagesOf": 7,
+        "previs": false,
+        "share": 0.225
+      }
+    },
+    {
+      "id": "library-1-m4",
+      "run": "library-1",
+      "session": "dream-0926-050424-fdd7",
+      "moment": "m4",
+      "why": "fault",
+      "reason": "library-1-m4-edit (reference_conflict): Drawn as an edit of the picture before, taken from the other side: things overlap, and the whale is pasted onto the old scene. (old picture: library-1-m4-b, the paired test's mockup version, right, per the S5 fix round two note)",
+      "cases": [
+        "library-1-m4-edit"
+      ],
+      "old": {
+        "source": {
+          "file": "paired-verdicts.json",
+          "row": "library-1-m4",
+          "version": "library-1-m4-b"
+        },
+        "draw": "mockup",
+        "verdict": "right",
+        "note": null,
+        "picture": "runs/paired-home/media/5128bd2855add714189c149520b1819fe94706907f4ae00dba1c2be0b331ab13.png"
+      },
+      "description": "She rows the boat between the shelves, and a whale swims past under the water, so big it fills the whole aisle.",
+      "change": {
+        "words": 24,
+        "of": 1258,
+        "images": 0,
+        "imagesOf": 6,
+        "previs": false,
+        "share": 0.019
+      }
+    },
+    {
+      "id": "orchard-m5",
+      "run": "orchard",
+      "session": "dream-0926-070314-0f40",
+      "moment": "m5",
+      "why": "fault",
+      "reason": "a guard no more: the owner has since called its old picture not right (checkpoint s4, orchard-m5 (its old picture; answered a)) | pass-orchard-m5: the owner called it right before: Tomas running ahead between the trees, in his school uniform.",
+      "cases": [
+        "pass-orchard-m5"
+      ],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "orchard-m5"
+        },
+        "draw": "story",
+        "verdict": "wrong",
+        "note": null,
+        "picture": "strawberry-home/media/da9604370c2041f3b957ba1a4e5081ecf3802610f168d1b7ce59414c4536e739.png",
+        "since": "checkpoint s4, orchard-m5 (its old picture; answered a)"
+      },
+      "description": "Tomas runs out ahead between the trees.",
+      "change": {
+        "words": 145,
+        "of": 918,
+        "images": 4,
+        "imagesOf": 5,
+        "previs": false,
+        "share": 0.958
+      }
+    },
+    {
+      "id": "lighthouse-first-m7",
+      "run": "lighthouse-first",
+      "session": "dream-0925-231131-affd",
+      "moment": "m7",
+      "why": "fault",
+      "reason": "a guard no more: the owner has since called its old picture not right (checkpoint s4, lighthouse-first-m7 (its old picture; answered b): \"B is close enough, but \") | pass-lighthouse-first-m7: the owner called it right before: A close look, through the dreamer's eyes, at the folded newspaper boat in their hands.",
+      "cases": [
+        "pass-lighthouse-first-m7"
+      ],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "lighthouse-first-m7"
+        },
+        "draw": "story",
+        "verdict": "wrong",
+        "note": "B is close enough, but ",
+        "picture": "strawberry-home/media/e51ea6366c9d8c38dfe8d08aedc90720bc4fe08b9159a8cf7e2eb8e11f5af744.png",
+        "since": "checkpoint s4, lighthouse-first-m7 (its old picture; answered b)"
+      },
+      "description": "The dreamer looks back down at the boat in their hand; the paper is dry and rough, with the marks of the father's folds.",
+      "change": {
+        "words": 239,
+        "of": 1005,
+        "images": 2,
+        "imagesOf": 4,
+        "previs": false,
+        "share": 0.738
+      }
+    },
+    {
+      "id": "lighthouse-fresh-m4",
+      "run": "lighthouse-fresh",
+      "session": "dream-0926-022102-aeea",
+      "moment": "m4",
+      "why": "fault",
+      "reason": "a guard no more: the owner has since called its old picture not right (checkpoint s4, lighthouse-fresh-m4 (its old picture; answered neither): \"Dreamer is supposed to be outside of the lighthouse in both images. Dreamer is inside. \") | pass-lighthouse-fresh-m4: the owner called it right before: The dreamer turning the key in the lighthouse door.",
+      "cases": [
+        "pass-lighthouse-fresh-m4"
+      ],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "lighthouse-fresh-m4"
+        },
+        "draw": "story",
+        "verdict": "wrong",
+        "note": "Dreamer is supposed to be outside of the lighthouse in both images. Dreamer is inside. ",
+        "picture": "strawberry-home/media/d08642b6ba2439b2f76649d7b712ff45736572741a5811a3343701d84a0a2b92.png",
+        "since": "checkpoint s4, lighthouse-fresh-m4 (its old picture; answered neither)"
+      },
+      "description": "The dreamer turns the brass key in the lighthouse door; it turns easily with no stiffness.",
+      "change": {
+        "words": 148,
+        "of": 904,
+        "images": 1,
+        "imagesOf": 4,
+        "previs": false,
+        "share": 0.414
+      }
+    },
+    {
+      "id": "orchard-m3",
+      "run": "orchard",
+      "session": "dream-0926-070314-0f40",
+      "moment": "m3",
+      "why": "guard",
+      "reason": "pass-orchard-m3: the owner called it right: Both waiting in the lift, Tomas still the boy.",
+      "cases": [
+        "pass-orchard-m3"
+      ],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "orchard-m3"
+        },
+        "draw": "story",
+        "verdict": "right",
+        "note": null,
+        "picture": "strawberry-home/media/54c93ed60c44f6155ea0eea2dff0223e1c96f27a0a1cd8edf05d3ecfbcae4ef0.png"
+      },
+      "description": "They both wait silently, neither saying anything.",
+      "change": {
+        "words": 242,
+        "of": 716,
+        "images": 5,
+        "imagesOf": 6,
+        "previs": false,
+        "share": 1.171
+      }
+    },
+    {
+      "id": "library-2-m3",
+      "run": "library-2",
+      "session": "dream-0926-052843-6081",
+      "moment": "m3",
+      "why": "guard",
+      "reason": "pass-library-2-m3: the owner called it right: The water risen over the desks.",
+      "cases": [
+        "pass-library-2-m3"
+      ],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "library-2-m3"
+        },
+        "draw": "story",
+        "verdict": "right",
+        "note": null,
+        "picture": "strawberry-home/media/558092ffcfefcf0a50d87ced042ea1a5d35f9e12b3d30c8169349793dda74254.png"
+      },
+      "description": "The water rises over the desks.",
+      "change": {
+        "words": 162,
+        "of": 575,
+        "images": 2,
+        "imagesOf": 3,
+        "previs": false,
+        "share": 0.948
+      }
+    },
+    {
+      "id": "snow-train-m6",
+      "run": "snow-train",
+      "session": "dream-0926-043003-b0cb",
+      "moment": "m6",
+      "why": "guard",
+      "reason": "pass-snow-train-m6: the owner called it right: The red door open on warm yellow light, the suitcase in the dreamer's hand.",
+      "cases": [
+        "pass-snow-train-m6"
+      ],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "snow-train-m6"
+        },
+        "draw": "story",
+        "verdict": "right",
+        "note": null,
+        "picture": "strawberry-home/media/2c40d584d00306e2f35efa1f882e4bd097f4cad0b2614d38ecff7df6a707d3f9.png"
+      },
+      "description": "the dreamer opens the door; on the other side there is warm yellow light",
+      "change": {
+        "words": 263,
+        "of": 937,
+        "images": 3,
+        "imagesOf": 5,
+        "previs": false,
+        "share": 0.881
+      }
+    },
+    {
+      "id": "library-2-m4",
+      "run": "library-2",
+      "session": "dream-0926-052843-6081",
+      "moment": "m4",
+      "why": "guard",
+      "reason": "pass-library-2-m4: the owner called it right: The books lifting off the shelves, open, like birds.",
+      "cases": [
+        "pass-library-2-m4"
+      ],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "library-2-m4"
+        },
+        "draw": "story",
+        "verdict": "right",
+        "note": null,
+        "picture": "strawberry-home/media/0bf168c150c59a45505b273977d13152e2da94b6c7aaa8f4334a07bf435f5428.png"
+      },
+      "description": "Books start floating off the shelves, open like birds, hundreds of them.",
+      "change": {
+        "words": 98,
+        "of": 552,
+        "images": 2,
+        "imagesOf": 3,
+        "previs": false,
+        "share": 0.844
+      }
+    },
+    {
+      "id": "orchard-m6",
+      "run": "orchard",
+      "session": "dream-0926-070314-0f40",
+      "moment": "m6",
+      "why": "guard",
+      "reason": "pass-orchard-m6: the owner called it right: The horse lowering its nose to the dreamer's hand.",
+      "cases": [
+        "pass-orchard-m6"
+      ],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "orchard-m6"
+        },
+        "draw": "story",
+        "verdict": "right",
+        "note": null,
+        "picture": "strawberry-home/media/8a3214b274b65649ae14cb27e85b6599a735ba73b2765f82127e58b9c1305d21.png"
+      },
+      "description": "The white horse stands very still in the middle of the orchard, lowering its head so the dreamer can touch its nose.",
+      "change": {
+        "words": 221,
+        "of": 883,
+        "images": 2,
+        "imagesOf": 4,
+        "previs": false,
+        "share": 0.75
+      }
+    },
+    {
+      "id": "library-2-m2",
+      "run": "library-2",
+      "session": "dream-0926-052843-6081",
+      "moment": "m2",
+      "why": "guard",
+      "reason": "pass-library-2-m2: the owner called it right: Water sliding in under the double doors.",
+      "cases": [
+        "pass-library-2-m2"
+      ],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "library-2-m2"
+        },
+        "draw": "story",
+        "verdict": "right",
+        "note": null,
+        "picture": "strawberry-home/media/3800a4e87743ba5d6238f1ef805fb613563507f141096672ee3a1c51e952eac2.png"
+      },
+      "description": "Water starts coming under the doors.",
+      "change": {
+        "words": 64,
+        "of": 478,
+        "images": 1,
+        "imagesOf": 2,
+        "previs": false,
+        "share": 0.634
+      }
+    },
+    {
+      "id": "library-3-m3",
+      "run": "library-3",
+      "session": "dream-0926-055141-6e80",
+      "moment": "m3",
+      "why": "guard",
+      "reason": "pass-library-3-m3: the owner called it right: The water risen over the desks, the dreamer standing in it.",
+      "cases": [
+        "pass-library-3-m3"
+      ],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "library-3-m3"
+        },
+        "draw": "story",
+        "verdict": "right",
+        "note": null,
+        "picture": "strawberry-home/media/5d600073a9d2e2d6c876f5d1f274911e14715272d70aaea7ad50924b598454ee.png"
+      },
+      "description": "the water keeps rising, over the desks and everything",
+      "change": {
+        "words": 96,
+        "of": 865,
+        "images": 2,
+        "imagesOf": 5,
+        "previs": false,
+        "share": 0.511
+      }
+    },
+    {
+      "id": "library-3-m4",
+      "run": "library-3",
+      "session": "dream-0926-055141-6e80",
+      "moment": "m4",
+      "why": "guard",
+      "reason": "pass-library-3-m4: the owner called it right: The sister in the little yellow boat on the flood, the dreamer waist-deep beside it.",
+      "cases": [
+        "pass-library-3-m4"
+      ],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "library-3-m4"
+        },
+        "draw": "story",
+        "verdict": "right",
+        "note": null,
+        "picture": "strawberry-home/media/e38722e04b7e1fbcf687acd9a0c934ae6d25b02c0dedd4344887829bcf4bfd99.png"
+      },
+      "description": "the sister appears in a little yellow rowing boat",
+      "change": {
+        "words": 169,
+        "of": 1271,
+        "images": 3,
+        "imagesOf": 8,
+        "previs": false,
+        "share": 0.508
+      }
+    },
+    {
+      "id": "library-3-m8",
+      "run": "library-3",
+      "session": "dream-0926-055141-6e80",
+      "moment": "m8",
+      "why": "guard",
+      "reason": "pass-library-3-m8: the owner called it right: From the boat, through the round window: morning, the whole city underwater, rooftops and treetops.",
+      "cases": [
+        "pass-library-3-m8"
+      ],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "library-3-m8"
+        },
+        "draw": "story",
+        "verdict": "right",
+        "note": null,
+        "picture": "strawberry-home/media/43243b7b426232fdd8b905aca1831ead025aabe0a2dc4153ab6322364d632c75.png"
+      },
+      "description": "outside the window it is morning, and the whole city is underwater, just rooftops and tops of trees",
+      "change": {
+        "words": 148,
+        "of": 1017,
+        "images": 1,
+        "imagesOf": 4,
+        "previs": false,
+        "share": 0.396
+      }
+    },
+    {
+      "id": "lighthouse-fresh-m9",
+      "run": "lighthouse-fresh",
+      "session": "dream-0926-022102-aeea",
+      "moment": "m9",
+      "why": "guard",
+      "reason": "pass-lighthouse-fresh-m9: the owner called it right: Through the dreamer's eyes, out of the window: the red tractor in the field of yellow grass.",
+      "cases": [
+        "pass-lighthouse-fresh-m9"
+      ],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "lighthouse-fresh-m9"
+        },
+        "draw": "story",
+        "verdict": "right",
+        "note": null,
+        "picture": "strawberry-home/media/38386940261de9c78d48103fb98bca7435fc0f28cb4b69bfdd0616625ae7c7c9.png"
+      },
+      "description": "The dreamer goes to the window and looks out; the sea is gone, replaced by a field of tall yellow grass, and a red tractor drives slowly through it.",
+      "change": {
+        "words": 124,
+        "of": 945,
+        "images": 1,
+        "imagesOf": 4,
+        "previs": false,
+        "share": 0.381
+      }
+    },
+    {
+      "id": "heron-m4",
+      "run": "heron",
+      "session": "dream-0926-012307-4c79",
+      "moment": "m4",
+      "why": "fault",
+      "reason": "heron-m4-route (S5, the crowd rule on the mock-up): the owner called the story picture partly right; the room did not match its sketch. Added per the S5 fix round two note to test the crowd-rule fix (fish are no longer a crowd; people still are).",
+      "cases": [
+        "heron-m4-route"
+      ],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "heron-m4"
+        },
+        "draw": "story",
+        "verdict": "partly",
+        "note": "The faceless students are striking and right. But the room is not the classroom of its sketch (no wall of windows, one short row instead of a full class).",
+        "picture": "strawberry-home/media/c0ddb5eafacad94a1661101807090d4ed48c27bbc60e99a6e4d76a6833be88ac.png"
+      },
+      "description": "The dreamer stands inside the classroom, looking at the students. Their faces are smooth skin with no features, and they are completely still."
+    }
+  ]
+}
