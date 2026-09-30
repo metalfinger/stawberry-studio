@@ -298,14 +298,45 @@ export function assembleCut(s: CutSheet): Assembled {
     const said = parts.filter(Boolean).join(', ');
     return said ? ` (${said})` : '';
   };
+  // An earlier picture for who someone is, as last drawn: a person by their face, hair, build and clothes; an animal or
+  // a thing by what makes it that one (a shoal of fish has no face or clothes); someone turned into something else by
+  // what they have turned into.
   const lastSeen = (x: SheetEarlier, ids: string[]) => {
     const names = ids.map(name);
-    return `${pictureNo(x)}${whoWhere(x)}: who ${names.join(' and ')} ${names.length > 1 ? 'are' : 'is'}, as last drawn: their face, hair, build and clothes, exactly. Nothing else from it: not its pose, background or framing.`;
+    const el = (id: string) => s.inView.find((e) => e.id === id);
+    // Before the step, every earlier picture said as a person's, as framePrompt says it.
+    if (
+      !s.earlierWords ||
+      (ids.every((id) => (el(id)?.said ?? 'person') === 'person' || el(id)?.said === 'people') &&
+        !ids.some((id) => el(id)?.turned))
+    )
+      return `${pictureNo(x)}${whoWhere(x)}: who ${names.join(' and ')} ${names.length > 1 || (s.earlierWords && ids.some((id) => el(id)?.group)) ? 'are' : 'is'}, as last drawn: their face, hair, build and clothes, exactly. Nothing else from it: not its pose, background or framing.`;
+    const each = ids.map((id) => {
+      const e = el(id);
+      return e?.turned
+        ? `what ${name(id)} has turned into`
+        : e?.said === 'animal'
+          ? `what ${name(id)} is: its kind, size, build, coat and markings`
+          : e?.said === 'thing' || e?.said === 'place'
+            ? `${name(id)}: its shape, materials and colours`
+            : `who ${name(id)} ${e?.group ? 'are' : 'is'}: their face, hair, build and clothes`;
+    });
+    return `${pictureNo(x)}${whoWhere(x)}: ${each.join('; ')}, as last drawn, exactly. Nothing else from it: not its pose, background or framing.`;
   };
+  // Someone turned into something else is drawn from the in-between picture of what they have turned into: an earlier
+  // picture is never sent for who they are beside it.
+  const turnedBy = new Set(
+    s.earlierWords
+      ? usable
+          .filter((x) => x.ghost?.state?.whole && s.inView.find((e) => e.id === x.ghost!.of)?.turned)
+          .map((x) => x.ghost!.of)
+      : [],
+  );
 
   // In-between pictures, then earlier moments, while there is room. A person's latest picture, the
   // last kind added, is the first to go.
-  const shift = s.story.shift;
+  // The dream's jump, said with one full stop: its words may end with their own.
+  const shift = s.earlierWords ? s.story.shift.replace(/[.!?…\s]+$/, '') : s.story.shift;
   // Each part's in-between picture, by its image: with each state said once (S6 row 16) its sketch's "Except"
   // points to it instead of saying the state again.
   const partPictures: { of: string; what: string; now: string; at: number }[] = [];
@@ -336,7 +367,7 @@ export function assembleCut(s: CutSheet): Assembled {
         partPictures.push({ of: g.of, what: g.state.what, now: g.state.now, at: references.length });
       continue;
     }
-    const unsketched = x.who?.filter((id) => !imageOf.has(id)) ?? [];
+    const unsketched = x.who?.filter((id) => !imageOf.has(id) && !turnedBy.has(id)) ?? [];
     if (x.who?.length && !unsketched.length) continue;
     // With the view worked out from the floor plan, the picture showing the dreamer from outside would
     // only pull its own layout back into their view.
@@ -344,7 +375,9 @@ export function assembleCut(s: CutSheet): Assembled {
     // No image goes in for its light alone: a picture from the other side goes in only for someone in
     // it who has no sketch of their own, as who they are.
     if (x.role === 'lighting') {
-      const own = seenHere.filter((id) => !imageOf.has(id) && (x.frame?.visible ?? []).includes(id));
+      const own = seenHere.filter(
+        (id) => !imageOf.has(id) && !turnedBy.has(id) && (x.frame?.visible ?? []).includes(id),
+      );
       if (own.length)
         attach(
           {

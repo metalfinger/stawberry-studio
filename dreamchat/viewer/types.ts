@@ -6,6 +6,8 @@
 export type ViewDream = {
   header: {
     dream: string;
+    /** A short key for links: the id's last four characters ("0f40"); the page resolves a link by suffix. */
+    slug: string;
     title: string;
     source: 'frozen' | 'live';
     commit: string;
@@ -61,9 +63,27 @@ export type ViewSheet = {
   hashes: ViewHashes;
 };
 
-export type ViewSequence = { id: string; startsAt: string; splitBy: 'start' | 'jump'; scenes: ViewScene[] };
-export type ViewScene = { id: string; title: string; place: string; mood: string; tags: string[]; shots: ViewShot[] };
-export type ViewShot = { id: string; tags: string[]; cuts: string[] };
+/** `number`: 1, 2… in story order; `title`: the words of the jump that opens it, else its first scene's title. */
+export type ViewSequence = {
+  id: string;
+  number: number;
+  title: string | null;
+  startsAt: string;
+  splitBy: 'start' | 'jump';
+  scenes: ViewScene[];
+};
+/** `number`: the tree's own ("1", "2A", "2B" where a scene is cut into another), null where the tree has none. */
+export type ViewScene = {
+  id: string;
+  number: string | null;
+  title: string;
+  place: string;
+  mood: string;
+  tags: string[];
+  shots: ViewShot[];
+};
+/** `number`: the tree's own ("2A-1"), null where the tree has none. */
+export type ViewShot = { id: string; number: string | null; tags: string[]; cuts: string[] };
 
 export type ViewRef = {
   /** Its image number in the prompt, "Image n". */
@@ -114,6 +134,8 @@ export type ViewCut = {
   sequence: string;
   scene: string;
   shot: string;
+  /** Its place in its shot: 1, 2… in story order. */
+  shotIndex: number;
   /**
    * Where the panel's tree (tree.ts from session.ts treeInputOf: the plan as a re-plan makes it now) groups this cut
    * otherwise than the plan the prompts are made from (ledger row 2), in words; null where they agree.

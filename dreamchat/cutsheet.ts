@@ -313,6 +313,11 @@ export type CutSheet = {
    * the style alone (row 15). `state`: how one is now is said once, where an image's line says it (row 16).
    */
   once?: { look: boolean; colour?: boolean; state?: boolean };
+  /**
+   * An earlier picture's own words (S6, found reading the viewer): sent for who someone is, as last drawn, it says
+   * them by what they are, and never for someone turned into something else; the dream's jump ends with one full stop.
+   */
+  earlierWords?: true;
   /** What belongs to a take rather than the cut: the judge's findings on the last attempt and on earlier pictures. */
   take: { repairs: string[]; strays: Record<string, string[]> };
   record: RecordLayer | null;
@@ -705,6 +710,7 @@ export function cutSheet(x: CutSheetInput): CutSheet {
           },
         }
       : {}),
+    ...(builds('earlier_words') ? { earlierWords: true as const } : {}),
     take: { repairs: [...(frame.repairFor ?? [])], strays },
     record,
     tree,

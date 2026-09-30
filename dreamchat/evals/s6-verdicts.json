@@ -4986,5 +4986,29 @@
   "139cce7c54a6582f": {
     "verdict": "neutral",
     "why": "A rebuild reads the story record as drawing does once every sketch is drawn and approved (viewer/data.ts's drawing-path test), live: a sketch never drawn (1177's bus, 72e5, de6c, 3cd7's roof) takes the record's look, which joins its clauses with a comma where the sketch's words had 'and'; every other word still said (checked by script)."
+  },
+  "4417ab4f58d66675": {
+    "verdict": "intended",
+    "why": "An earlier picture for who someone is, as last drawn: a group is said as more than one ('who the faceless students are')."
+  },
+  "6ce49c65d5223a0b": {
+    "verdict": "intended",
+    "why": "An earlier picture for who someone is, as last drawn: a group is said as more than one ('who the faceless students are')."
+  },
+  "3ca2831c9a815e4e": {
+    "verdict": "intended",
+    "why": "An earlier picture for who someone is, as last drawn: an animal is said by what makes it that one ('what the little silver fish is: its kind, size, build, coat and markings'), never a face, hair or clothes (8ceb's shoal)."
+  },
+  "9bfd83611269970e": {
+    "verdict": "intended",
+    "why": "An earlier picture for who someone is, as last drawn: an animal is said by what makes it that one ('what the little silver fish is: its kind, size, build, coat and markings'), never a face, hair or clothes (8ceb's shoal)."
+  },
+  "03637a261b4d31b9": {
+    "verdict": "intended",
+    "why": "An earlier picture is never sent for who someone is when they have turned into something else: 8ceb m5 sent picture 4 for 'who Mr Hale is, as last drawn: their face, hair, build and clothes' beside Image 5, 'what Mr Hale has turned into, a huge orange octopus'; the in-between picture of what he is now is his one image (the images after it renumbered)."
+  },
+  "e0e679d60103c56c": {
+    "verdict": "intended",
+    "why": "An earlier picture is never sent for who someone is when they have turned into something else: 8ceb m5 sent picture 4 for 'who Mr Hale is, as last drawn: their face, hair, build and clothes' beside Image 5, 'what Mr Hale has turned into, a huge orange octopus'; the in-between picture of what he is now is his one image (the images after it renumbered)."
   }
 }
