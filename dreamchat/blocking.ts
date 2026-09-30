@@ -73,6 +73,11 @@ export type Spot = {
    * other. Two on one bicycle sit one behind the other, and which one was left to the order of the plan.
    */
   rides?: 'front' | 'back';
+  /**
+   * A door or gate the record has open at the moment (the camera rules, continuity.ts withOpen): drawn on the mock-up
+   * as its frame with the door swung back, the view going through it.
+   */
+  open?: boolean;
 };
 
 /** Where someone or something (a car, a boat) has moved to at a moment: its new spot, which way it faces, how they are. */
