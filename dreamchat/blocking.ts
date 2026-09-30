@@ -51,6 +51,11 @@ export type Spot = {
    */
   height?: number;
   /**
+   * What shape of body a person or creature has, where a reading of the dream says (with `height`, its height
+   * standing): drawn at that size and so on the mock-up. None, a person's shape at a person's size.
+   */
+  body?: 'human' | 'four-legged' | 'bird' | 'fish' | 'other';
+  /**
    * How far a fixture's bottom is off the floor, in metres, where the place's words put it up a wall or on
    * the ceiling (camera.ts mountOf: "the high round window", "a clock on the wall"): set by the camera
    * rules. Without it every fixture stood on the floor, and deep water hid a window high in the wall.
@@ -104,6 +109,8 @@ export type Blocking = {
    * eyes rises with them. None where no water is measured.
    */
   water?: number;
+  /** The water held under the level its words give, so a boat's riders fit under the ceiling: said high, never in metres. */
+  waterCapped?: true;
 };
 
 /** A side of a place, for someone facing its front. */
@@ -216,7 +223,11 @@ const solidOf = (t: Spot) =>
  * just outside it instead, at the nearest spot free of anything solid or ridden in, as close as can
  * be to where the plan had them; the render hid them inside it (25 Sep).
  */
-export function settle(plan: Blocking): Blocking {
+export function settle(
+  plan: Blocking,
+  /** With the camera rules: two riding something narrower than a metre (a bicycle) sit one behind the other. */
+  opts: { tandem?: boolean } = {},
+): Blocking {
   // A thing the plan gives no shape that someone sits on is their seat, as the previs draws it: a
   // sofa taken for a solid moved the dreamer off it, half a metre from where she sat (25 Sep).
   const sat = (t: Spot) =>
@@ -269,11 +280,19 @@ export function settle(plan: Blocking): Blocking {
     const together = people.filter((b) => !done.has(b.id) && Math.hypot(b.x - a.x, b.y - a.y) < 0.3);
     together.forEach((b) => done.add(b.id));
     if (together.length < 2) continue;
-    const r = rightOf(facing(a, { ...plan, spots }));
+    const f = facing(a, { ...plan, spots });
+    const r = rightOf(f);
     const mid = { x: a.x, y: a.y };
+    // On something too narrow for two abreast they ride one behind the other, the way it goes: two on one
+    // bicycle were sat side by side, as on a bench (the read of every frozen prompt, 30 Sep).
+    const narrow = opts.tandem
+      ? vehicles.find((v) => sizeOf(v)[0] < 1 && together.every((b) => onFootprint(b, v, plan)))
+      : undefined;
+    // Along the way it faces, whichever way they turn on it.
+    const along = narrow ? facing(narrow, plan) : r;
     together.forEach((b, k) => {
-      const off = (k - (together.length - 1) / 2) * 0.6;
-      Object.assign(b, { x: mid.x + r.x * off, y: mid.y + r.y * off });
+      const off = narrow ? ((together.length - 1) / 2 - k) * 0.6 : (k - (together.length - 1) / 2) * 0.6;
+      Object.assign(b, { x: mid.x + along.x * off, y: mid.y + along.y * off });
     });
   }
   // What someone holds is where they are.

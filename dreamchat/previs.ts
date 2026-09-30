@@ -66,18 +66,23 @@ const PITCH = (-4 * Math.PI) / 180;
  * A person as a previs artist's mannequin, facing `f`: a round head on a neck, shoulders, arms,
  * and legs as they sit or stand. Two stacked blocks read as boxes, not as someone (24 Sep).
  */
-function mannequin(x: number, y: number, f: V2, pose: Spot['pose'], z0 = 0): (Block | Face[])[] {
+/** A person standing, head to foot, as the mannequin is drawn. */
+const STANDING = 1.74;
+
+function mannequin(x: number, y: number, f: V2, pose: Spot['pose'], z0 = 0, k = 1): (Block | Face[])[] {
   const r = rightOf(f);
+  // `k`: their size to a grown person's (a six-year-old, a giant), everything drawn in proportion.
   const at = (ahead: number, side: number, z: number, w: number, d: number, h: number): Block => ({
-    x: x + f.x * ahead + r.x * side,
-    y: y + f.y * ahead + r.y * side,
-    z: z + z0,
-    w,
-    d,
-    h,
+    x: x + f.x * ahead * k + r.x * side * k,
+    y: y + f.y * ahead * k + r.y * side * k,
+    z: z * k + z0,
+    w: w * k,
+    d: d * k,
+    h: h * k,
     f,
   });
-  const head = (ahead: number, z: number) => sphere(v3(x + f.x * ahead, y + f.y * ahead, z + z0), 0.1, 0.12);
+  const head = (ahead: number, z: number) =>
+    sphere(v3(x + f.x * ahead * k, y + f.y * ahead * k, z * k + z0), 0.1 * k, 0.12 * k);
   if (pose === 'lying') return [at(0, 0, 0, 0.45, 1.5, 0.25), head(0.85, 0.15)];
   if (pose === 'sitting')
     return [
@@ -104,6 +109,64 @@ function mannequin(x: number, y: number, f: V2, pose: Spot['pose'], z0 = 0): (Bl
     at(0, -0.25, 0.86, 0.09, 0.1, 0.58),
     head(0, 1.62),
   ];
+}
+
+/**
+ * A creature at its height (`h`, head or back at the top): four legs, a body and a head; a bird on two long legs
+ * with a neck; a fish long and low; anything else a block. The white horse was drawn as a standing person, the
+ * terrier as tall as the dreamer (the read of every frozen prompt, 30 Sep).
+ */
+function creature(
+  x: number,
+  y: number,
+  f: V2,
+  body: Spot['body'],
+  pose: Spot['pose'],
+  z0: number,
+  h: number,
+): (Block | Face[])[] {
+  const r = rightOf(f);
+  const at = (ahead: number, side: number, z: number, w: number, d: number, tall: number): Block => ({
+    x: x + f.x * ahead + r.x * side,
+    y: y + f.y * ahead + r.y * side,
+    z: z + z0,
+    w,
+    d,
+    h: tall,
+    f,
+  });
+  const ball = (ahead: number, z: number, radius: number) =>
+    sphere(v3(x + f.x * ahead, y + f.y * ahead, z + z0), radius, radius * 1.1);
+  const lying = pose === 'lying';
+  if (body === 'four-legged') {
+    const legs = lying ? 0 : h * 0.5;
+    const [long, wide, deep] = [h * 1.4, h * 0.34, h * 0.32];
+    return [
+      at(0, 0, legs, wide, long, deep), // the body
+      ...(lying
+        ? []
+        : [-1, 1].flatMap((a) => [-1, 1].map((s) => at(a * long * 0.38, s * wide * 0.3, 0, h * 0.09, h * 0.09, legs)))),
+      at(long * 0.5, 0, legs + deep * 0.5, h * 0.14, h * 0.2, h * 0.3), // the neck
+      ball(long * 0.6, legs + deep * 0.5 + h * 0.3, h * 0.12), // the head
+    ];
+  }
+  if (body === 'bird') {
+    const legs = lying ? 0 : h * 0.45;
+    return [
+      ...(lying ? [] : [-1, 1].map((s) => at(0, s * h * 0.05, 0, h * 0.03, h * 0.03, legs))),
+      at(0, 0, legs, h * 0.18, h * 0.36, h * 0.22), // the body
+      at(h * 0.12, 0, legs + h * 0.18, h * 0.05, h * 0.05, h * 0.26), // the neck
+      ball(h * 0.14, legs + h * 0.44 + h * 0.06, h * 0.06), // the head
+    ];
+  }
+  if (body === 'fish') return [at(0, 0, 0, h * 0.5, h * 4, h)];
+  return [at(0, 0, 0, h * 0.6, h * 0.6, h)];
+}
+
+/** Someone or something alive as the mock-up draws them: a creature at its height, a person at theirs. */
+function figure(s: Spot, x: number, y: number, f: V2, z0: number): (Block | Face[])[] {
+  if (s.body && s.body !== 'human' && s.height) return creature(x, y, f, s.body, s.pose, z0, s.height);
+  return mannequin(x, y, f, s.pose ?? 'standing', z0, s.body === 'human' && s.height ? s.height / STANDING : 1);
 }
 
 /** A round solid: a head. Faces of a ball, each facing out from its middle. */
@@ -286,7 +349,7 @@ function solidsOf(
       add(
         s.id,
         0.8,
-        where.flatMap((p) => mannequin(p.x, p.y, f, s.pose ?? 'standing', groundAt(p, plan))),
+        where.flatMap((p) => figure(s, p.x, p.y, f, groundAt(p, plan))),
         name(s.id),
       );
       // A crowd sitting sits on something: rows of seats under them, or the model makes up its own
@@ -307,8 +370,7 @@ function solidsOf(
             { x: p.x - f.x * 0.27, y: p.y - f.y * 0.27, z: 0.42, w: 0.62, d: 0.12, h: 0.5, f },
           ]),
         );
-    } else if (isPerson(s))
-      add(s.id, 0.97, mannequin(s.x, s.y, f, s.pose ?? 'standing', groundAt(s, plan)), name(s.id));
+    } else if (isPerson(s)) add(s.id, 0.97, figure(s, s.x, s.y, f, groundAt(s, plan)), name(s.id));
     else
       add(
         s.id,
@@ -714,6 +776,17 @@ function render(solids: Solid[], eye: Eye, width: number, height: number): Rende
       ...(worst && hiddenPart >= 0.2 && worst[1] / drawn[s] >= 0.1 ? { hiddenBy: solids[worst[0]].id } : {}),
     });
   });
+  // Two that hide parts of each other are said once: the one the other hides more of is behind it. The father and the
+  // table were each "partly hidden behind" the other (the read of every frozen prompt, 30 Sep).
+  const index = new Map(solids.map((x, i) => [x.id, i]));
+  for (const a of seen.values()) {
+    const b = a.hiddenBy ? seen.get(a.hiddenBy) : undefined;
+    if (!b || b.hiddenBy !== a.id) continue;
+    const [ia, ib] = [index.get(a.id)!, index.get(b.id)!];
+    const byB = (hidden[ia].get(ib) ?? 0) / (drawn[ia] || 1);
+    const byA = (hidden[ib].get(ia) ?? 0) / (drawn[ib] || 1);
+    delete (byB >= byA ? b : a).hiddenBy;
+  }
   const project = (q: V3) => {
     const v = v3(q.x - C.x, q.y - C.y, q.z - C.z);
     const z = dot(v, F);
@@ -1149,7 +1222,12 @@ export function dreamerShot(
       (s) => s.id !== dreamer && !isPerson(s) && !s.heldBy && shapeOf(s, plan) !== 'block' && onFootprint(me, s, plan),
     )
     .map((s) => s.id);
-  const inIt = at.some((id) => plan.spots.find((s) => s.id === id)?.shape === 'vehicle');
+  // In it only where it is wide enough to be in (onOf): on a bicycle, never "the inside of" it and "its window"
+  // (the read of every frozen prompt, 30 Sep).
+  const inIt = at.some((id) => {
+    const v = plan.spots.find((s) => s.id === id);
+    return v?.shape === 'vehicle' && (cameraMode() !== 'on' || sizeOf(v)[0] >= 1);
+  });
   const turnAngle = (() => {
     const d = unit(eye.d);
     const a = (Math.atan2(d.x * rightOf(own).x + d.y * rightOf(own).y, d.x * own.x + d.y * own.y) * 180) / Math.PI;
@@ -1278,7 +1356,9 @@ function thingWords(
   // How big it is in the frame, read off the render: the image model keeps where each thing is
   // across the picture from the words, and makes up how big it is. The friend beside the
   // dreamer, seen from the waist up in the previs, came back whole and two metres off (24 Sep).
-  const size = !s.many ? `, ${isPerson(s) ? `${cropOf(s, eye, seen)} and ` : ''}${filling(seen)}` : '';
+  const size = !s.many
+    ? `, ${isPerson(s) ? `${cropOf(s, eye, seen, cameraMode() === 'on' ? groundAt(s, plan) : 0)} and ` : ''}${filling(seen)}`
+    : '';
   // A crowd the dream counts is said by its count: "a couple of people" are the two of them.
   const counted = ['', 'one', 'two', 'three', 'four', 'five', 'six'][s.count ?? 0];
   return s.many
@@ -1852,16 +1932,36 @@ const halfTall = (eye: Eye) => (Math.atan(Math.tan((halfViewOf(eye) * Math.PI) /
  * How much of someone the frame holds, where the bottom of the picture cuts them: from the waist
  * up, head and shoulders, or all of them.
  */
-function cropOf(s: Spot, eye: Eye, seen?: Seen): string {
+function cropOf(
+  s: Spot,
+  eye: Eye,
+  seen?: Seen,
+  /** What they stand or sit on, with the camera rules: a boat afloat, a stage, a step. */
+  z0 = 0,
+): string {
+  // A creature is not seen "from the knees up": only where the picture cuts it (the terrier and the horse, 30 Sep).
+  if (s.body && s.body !== 'human' && s.height) {
+    const top = !!seen && seen.y0 < 0.02;
+    const bottom = !!seen && seen.y1 > 0.98;
+    return top && bottom
+      ? 'filling the picture top to bottom'
+      : top
+        ? 'its top out of the picture above'
+        : bottom
+          ? 'its lower part out of the picture below'
+          : 'seen whole';
+  }
+  // A person of another size (a six-year-old, a giant) is cut where their own body is.
+  const k = s.body === 'human' && s.height ? s.height / STANDING : 1;
   const d = unit(eye.d);
   const along = (s.x - eye.at.x) * d.x + (s.y - eye.at.y) * d.y;
   const low = eye.height + along * Math.tan((eye.pitch ?? 0) + (-halfTall(eye) * Math.PI) / 180);
   const sitting = s.pose === 'sitting';
-  const [head, shoulders, waist, knees] = sitting
-    ? [1.1, 0.85, 0.5, 0.2]
-    : s.pose === 'lying'
-      ? [0.3, 0.25, 0.15, 0.05]
-      : [1.5, 1.25, 0.85, 0.45];
+  // From what they are on: sitting in a boat on a metre of water, two in it were "seen from the knees up" with only
+  // the water line in the picture (the read of every frozen prompt, 30 Sep).
+  const [head, shoulders, waist, knees] = (
+    sitting ? [1.1, 0.85, 0.5, 0.2] : s.pose === 'lying' ? [0.3, 0.25, 0.15, 0.05] : [1.5, 1.25, 0.85, 0.45]
+  ).map((h) => h * k + z0);
   // Cut at the top too: a close look at their hands has their head out of the picture above. Only
   // where the render has them reach the top edge: by the numbers alone, the dreamer a third of the
   // way down a 14mm picture was said to have their head cut off.
@@ -2036,8 +2136,9 @@ function waterWords(plan: Blocking, spots: Spot[], r: Render, called: (id: strin
   if (eye.height < plan.water)
     return ['All of this is under water, the camera with it: the surface is above the picture.'];
   const metres = Math.max(1, Math.round(plan.water));
-  const deep =
-    plan.water < 0.3
+  const deep = plan.waterCapped
+    ? 'The water stands high here'
+    : plan.water < 0.3
       ? `The water covers the ${plan.indoors ? 'floor' : 'ground'} here`
       : plan.water < 0.75
         ? 'The water stands knee deep here'

@@ -1,6 +1,6 @@
 import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { assembleCut } from '../assemble';
-import type { Blocking } from '../blocking';
+import { type Blocking, facing, settle, type Spot } from '../blocking';
 import {
   bodyHeight,
   cameraMode,
@@ -14,6 +14,8 @@ import {
   sameCameraAs,
   sameView,
   selfIn,
+  sideless,
+  sidelessNames,
   WATER,
   waterLevel,
 } from '../camera';
@@ -525,6 +527,177 @@ describe('where the camera stands, in words', () => {
     const m5 = shot(picture(library, 'm5').prompt);
     expect(m5).toMatch(/Seen from beside them,/);
     expect(m5).not.toMatch(/Seen from behind them/);
+  });
+});
+
+describe('what hides what', () => {
+  test('two that hide parts of each other are said once: the one behind is hidden behind the other', () => {
+    // The father and the table were each "partly hidden behind" the other (the read of every frozen prompt, 30 Sep).
+    const mutual: string[] = [];
+    for (const { id, r } of sweep())
+      for (const p of r.pictures) {
+        if (p.kind !== 'cut') continue;
+        const pairs = new Set<string>();
+        for (const sentence of shot(p.prompt).split(/(?<=[.;:])\s+/)) {
+          const m = sentence.match(/^(?:then )?(.+?), .*partly hidden behind (.+?)[.;]?$/);
+          if (m) pairs.add(`${m[1]}|${m[2]}`);
+        }
+        for (const x of pairs) {
+          const [a, b] = x.split('|');
+          if (a < b && pairs.has(`${b}|${a}`)) mutual.push(`${id.slice(-4)} ${p.id}: ${a} and ${b}`);
+        }
+      }
+    expect(mutual).toEqual([]);
+    const m7 = shot(picture(rebuilt('dream-0926-022102-aeea', ON), 'm7').prompt);
+    expect(m7).toMatch(/partly hidden behind the table/);
+    expect(m7).not.toMatch(/the table[^.;]*partly hidden behind the father/);
+  });
+});
+
+describe('an edit', () => {
+  test('keeps the places of the picture it edits: it is given no order of its own', () => {
+    // a44a m3 edits picture 2 (the grandfather on the left, the dreamer on the right); said "from in front of them"
+    // from the floor plan, its own order was the mirror of it (the read of every frozen prompt, 30 Sep).
+    const r = rebuilt('dream-0926-062232-a44a', ON);
+    const m3 = picture(r, 'm3');
+    expect(m3.references[0].media_id).toBe('picture-m2');
+    expect(m3.prompt).not.toMatch(/left to right/);
+    // Without the camera rules, as before.
+    const off = rebuilt('dream-0926-062232-a44a', { ...ON, DREAMCHAT_CAMERA: undefined });
+    expect(picture(off, 'm3').prompt).toMatch(/left to right/);
+  });
+
+  test('shows the same people as the picture it edits, so nobody in it needs a place of its own', () => {
+    // An earlier picture stays the one edited only where the same people are in view (continuity.ts sameCast): with
+    // anyone coming in or going, the moment gets its own camera. So an edit, given no order, leaves nobody unplaced.
+    const edits: string[] = [];
+    for (const { id, r } of sweep())
+      for (const p of r.pictures) {
+        const base =
+          p.kind === 'cut' ? p.item.frame?.plan?.refs.find((x) => x.role === 'base' && x.kind === 'cut') : undefined;
+        if (!base) continue;
+        const moments = r.b.scenes.flatMap((sc) => sc.moments);
+        const who = (mid: string) => [...(moments.find((m) => m.id === mid)?.visible ?? [])].sort();
+        edits.push(`${id.slice(-4)} ${p.id}`);
+        expect([p.id, who(p.id)]).toEqual([p.id, who(base.id)]);
+      }
+    expect(edits.length).toBeGreaterThan(0);
+  });
+});
+
+describe('two on a bicycle', () => {
+  test('ride one behind the other, on it, never in it', () => {
+    // Two on one bicycle were sat side by side, as on a bench, and through the dreamer's eyes they were "in" it,
+    // framed by "the inside of the old red bicycle … its window" (the read of every frozen prompt, 30 Sep).
+    const r = rebuilt('dream-0926-095122-acfd', ON);
+    const plan = withEnv(ON, () => shotPlan(r.b, 'm3', r.rec))!;
+    const bike = plan.spots.find((s) => s.shape === 'vehicle')!;
+    const [a, b] = plan.spots.filter((s) => s.kind === 'person' && !s.many);
+    const f = facing(bike, plan);
+    const gap = { x: b.x - a.x, y: b.y - a.y };
+    expect(bike.size![0]).toBeLessThan(1);
+    expect(Math.hypot(gap.x, gap.y)).toBeGreaterThan(0.5);
+    // Along its length: the gap between them is the way it faces, not across it.
+    expect(Math.abs(gap.x * f.y - gap.y * f.x)).toBeLessThan(0.05);
+    const m7 = picture(r, 'm7').prompt;
+    expect(m7).toMatch(/The camera is the dreamer's eyes, on the old red bicycle/);
+    expect(m7).not.toMatch(/inside of the old red bicycle|its window/);
+    // Without the camera rules, as before.
+    const off = rebuilt('dream-0926-095122-acfd', { ...ON, DREAMCHAT_CAMERA: undefined });
+    expect(picture(off, 'm7').prompt).toMatch(/in the old red bicycle/);
+  });
+
+  test('sit along the way it faces, whichever way that is', () => {
+    const plan: Blocking = {
+      front: 'the road',
+      spots: [
+        {
+          id: 'b1',
+          x: 5,
+          y: 5,
+          kind: 'thing',
+          shape: 'vehicle',
+          size: [0.6, 1.8, 1.1],
+          faces: 'left',
+          name: 'the bicycle',
+        },
+        { id: 'p1', x: 5, y: 5, kind: 'person', pose: 'sitting' },
+        { id: 'p2', x: 5, y: 5, kind: 'person', pose: 'sitting' },
+      ],
+    };
+    const settled = settle(plan, { tandem: true });
+    const [a, b] = settled.spots.filter((s) => s.kind === 'person');
+    const f = facing(settled.spots[0], settled);
+    expect(Math.abs((b.x - a.x) * f.y - (b.y - a.y) * f.x)).toBeLessThan(1e-6);
+    expect(Math.hypot(b.x - a.x, b.y - a.y)).toBeCloseTo(0.6, 5);
+    // Without it, side by side across it, as before.
+    const [c, d] = settle(plan).spots.filter((s) => s.kind === 'person');
+    expect(Math.abs((d.x - c.x) * f.x + (d.y - c.y) * f.y)).toBeLessThan(1e-6);
+  });
+});
+
+describe('a name gives no side of the room', () => {
+  test('said from a camera facing the other way, "shelves on the right" was at the picture\'s left edge', () => {
+    expect(sideless('bookshelf right')).toBe('bookshelf');
+    expect(sideless('the left door')).toBe('the door');
+    expect(sideless('shelves on the left')).toBe('shelves');
+    expect(sideless('the left-hand window')).toBe('the window');
+    // A side of something else, or a name that is only a side, is kept.
+    expect(sideless('the wall to the left of the door')).toBe('the wall to the left of the door');
+    expect(sideless('the right side')).toBe('the right side');
+    expect(sideless('the lift gate')).toBe('the lift gate');
+    // Two that would share a name are told apart: that name and "the other" one; three or more keep their names.
+    const names = (ns: string[]) => sidelessNames(ns.map((name) => ({ name }))).map((x) => x.name);
+    expect(names(['the left seat', 'the right seat'])).toEqual(['the seat', 'the other seat']);
+    expect(names(['the left window', 'the window'])).toEqual(['the other window', 'the window']);
+    expect(names(['the left lamp', 'the middle lamp', 'the right lamp', 'the lamp'])).toEqual([
+      'the left lamp',
+      'the middle lamp',
+      'the right lamp',
+      'the lamp',
+    ]);
+    const m2 = shot(picture(rebuilt('dream-0926-055141-6e80', ON), 'm2').prompt);
+    expect(m2).not.toMatch(/shelves on the (?:left|right)/);
+    const off = shot(picture(rebuilt('dream-0926-055141-6e80', { ...ON, DREAMCHAT_CAMERA: undefined }), 'm2').prompt);
+    expect(off).toMatch(/shelves on the (?:left|right)/);
+  });
+});
+
+describe('a creature or a child at their own size', () => {
+  test('a terrier is drawn low beside a grown-up, and seen whole, never from the knees up', () => {
+    // The mock-up drew every one of the dream's people and creatures as a grown-up: the terrier as tall as the
+    // dreamer, the white horse as a standing person (the read of every frozen prompt, 30 Sep). Where a reading of the
+    // dream gives a body and a height, it is drawn so.
+    const plan = (dog: Partial<Spot>): Blocking => ({
+      front: 'the sea',
+      spots: [
+        { id: 'p1', x: 5, y: 5, kind: 'person', faces: 'front' },
+        { id: 'p2', x: 6, y: 5, kind: 'person', faces: 'front', ...dog },
+      ],
+    });
+    const words = (dog: Partial<Spot>) =>
+      withEnv(ON, () =>
+        outsideShot(plan(dog), ['p1', 'p2'], 'wide', (id) => ({ p1: 'the dreamer', p2: 'the dog' })[id] ?? id),
+      )!.text;
+    const small = words({ body: 'four-legged', height: 0.4 });
+    const dog = small.match(/the dog, [^;.]*/)![0];
+    expect(dog).toMatch(/seen whole/);
+    expect(dog).not.toMatch(/knees|waist|shoulders/);
+    // Lower in the picture than the grown-up beside it.
+    const top = (text: string, who: string) => {
+      const m = text.match(new RegExp(`${who}, [^;.]*filling the picture (?:from|around) ([a-z ]+?)(?: to |[;.]|$)`));
+      return m?.[1] ?? '';
+    };
+    expect(top(small, 'the dog')).not.toBe(top(small, 'the dreamer'));
+    // A six-year-old is cut where their own body is: a head lower than a grown-up's.
+    expect(words({ body: 'human', height: 1.15 })).toMatch(/the dog, [^;.]*seen whole/);
+    // Without a reading of it, as before: a person's shape at a person's size.
+    expect(words({})).toBe(
+      withEnv(ON, () =>
+        outsideShot(plan({}), ['p1', 'p2'], 'wide', (id) => ({ p1: 'the dreamer', p2: 'the dog' })[id] ?? id),
+      )!.text,
+    );
+    expect(words({ height: 2 })).toBe(words({}));
   });
 });
 

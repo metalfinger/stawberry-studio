@@ -27,6 +27,7 @@ import {
   cameraMode,
   goingIn,
   headWord,
+  sidelessNames,
   mounted,
   ON_THE_LINE,
   outThroughWindows,
@@ -435,7 +436,7 @@ export function placePlan(b: Breakdown, momentId: string): Blocking | undefined 
 
 export function planBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blocking | undefined {
   const raw = rawPlanBy(b, momentId, rec);
-  return raw ? settle(raw) : undefined;
+  return raw ? settle(raw, { tandem: cameraMode() === 'on' }) : undefined;
 }
 
 /**
@@ -449,7 +450,15 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
   if (!scene || !given) return undefined;
   // With the camera rules, each fixture the place's words put up a wall or on the ceiling is there, off the
   // floor (camera.ts mounted): the high round window stood on the floor, under the water.
-  const plan = cameraMode() === 'on' ? mounted(given, placeWordsOf(b, momentId)) : given;
+  // With the camera rules, each fixture the place's words put up a wall or on the ceiling is there, off the floor
+  // (camera.ts mounted), and no name gives the side of the room it is on (camera.ts sideless).
+  const plan =
+    cameraMode() === 'on'
+      ? (() => {
+          const up = mounted(given, placeWordsOf(b, momentId));
+          return { ...up, spots: sidelessNames(up.spots) };
+        })()
+      : given;
   // Only the moments in the same place count: who was in the tiny room, not who was on the stairs.
   const own = (x: Moment) =>
     given === scene.blocking ? !scene.blocking?.places?.[x.place] : scene.blocking?.places?.[x.place] === given;
@@ -488,12 +497,18 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
     }
   // Whoever rides a boat on it keeps their head under the ceiling: "almost up to the ceiling" with a boat
   // afloat is as high as they can sit in it.
-  if (water !== null && plan.indoors && plan.spots.some((x) => x.shape === 'vehicle'))
-    water = Math.min(water, Math.max(0.1, (plan.ceiling ?? 3.2) - 1.6));
+  // Held lower than the words have it, it is not said in metres (previs.ts waterWords): "about 2 metres deep" beside
+  // the record's "almost up to the ceiling" (the read of every frozen prompt, 30 Sep).
+  let capped = false;
+  if (water !== null && plan.indoors && plan.spots.some((x) => x.shape === 'vehicle')) {
+    const cap = Math.max(0.1, (plan.ceiling ?? 3.2) - 1.6);
+    capped = water > cap;
+    water = Math.min(water, cap);
+  }
   return {
     ...plan,
     ...(Object.keys(beyond).length ? { outside: { ...beyond, ...(plan.outside ?? {}) } } : {}),
-    ...(water !== null ? { water } : {}),
+    ...(water !== null ? { water, ...(capped ? { waterCapped: true as const } : {}) } : {}),
     spots: plan.spots
       .filter((s) => !(s.id in beyond))
       .filter((s) => (there.has(s.id) || s.id === dreamerId || s.fixture) && !r?.gone.includes(s.id))
@@ -1603,6 +1618,11 @@ function planWith(
         c.staging = [];
         if (v.rules) c.rules = v.rules;
         if (opts.camera) keepLine(c, m, where, v, rules);
+      } else if (edits && opts.camera) {
+        // An edit keeps the camera, framing and places of the picture it edits (its image 1 says so): with the camera
+        // rules, it is given no order of its own. Said "from in front of them" from the floor plan, a44a m3's order
+        // was the mirror of picture 2's, the picture it edits (the read of every frozen prompt, 30 Sep).
+        c.staging = [];
       } else {
         c.across = outsideOrder(plan, ids, fromBehind);
         c.camera = fromBehind
