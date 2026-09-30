@@ -1891,7 +1891,7 @@ describe('a place that is a way along', () => {
 
   test('has its deck under whoever is there, the way what they ride faces', () => {
     // With no bridge on the mock-up, the bicycle ridden along it was drawn crossing it side on (night-market m5).
-    const deck = withPathDeck(bridge, 'the narrow iron bridge').spots.find((s) => s.id === 'deck')!;
+    const deck = withPathDeck(bridge, 'the narrow iron bridge').spots.find((s) => s.id === 'x-deck')!;
     expect(deck).toMatchObject({ shape: 'ground', name: 'the narrow iron bridge', faces: 'front', x: 0.75, y: 10 });
     expect(deck.size).toEqual([2.5, 40, 0.05]);
     // Indoors, not a way along, or one the plan already lays: as it is.
@@ -1909,5 +1909,40 @@ describe('a place that is a way along', () => {
     const shot = withEnv(CAMERA, () => outsideShot(plan, ['p1', 'p2', 't3'], 'wide', name))!;
     expect(shot.text).toContain('with the dreamer and my older sister on it, on the narrow iron bridge');
     expect(shot.text).not.toContain('right beside the bicycle');
+  });
+});
+
+describe('those who look at what the moment looks at', () => {
+  const shot0 = shot;
+  test('are seen looking at it, never staring out of the picture past it', () => {
+    // The dreamer at the fish stall faced the camera stood past it: "what I would have liked is the dreamer looking
+    // towards the fish" (night-market m2, judged blind).
+    const market = {
+      front: 'the market stalls',
+      spots: [
+        { id: 'p1', x: 9.5, y: 7.5, kind: 'person' as const, pose: 'standing' as const, faces: 'p3' },
+        { id: 'p2', x: 10.5, y: 7.5, kind: 'person' as const, pose: 'standing' as const, faces: 'p3' },
+        { id: 'p3', x: 10, y: 8.5, kind: 'person' as const, pose: 'standing' as const, faces: 'front' },
+        {
+          id: 'x1',
+          x: 10,
+          y: 8,
+          kind: 'thing' as const,
+          fixture: true,
+          name: 'the fish stall',
+          size: [2, 0.8, 1] as [number, number, number],
+        },
+      ],
+    };
+    const name = (id: string) => ({ p1: 'the dreamer', p2: 'my older sister', p3: 'the old man' })[id] ?? id;
+    const shot = withEnv(CAMERA, () =>
+      outsideShot(market, ['p1', 'p2', 'p3'], 'medium', name, { id: 'x1', at: { x: 10, y: 8 } }),
+    )!;
+    expect(shot.text).toContain('the camera looks at the fish stall');
+    expect(shot.text).not.toMatch(/the dreamer, [^;]*facing the camera/);
+    // The saved dream, the scene's line from the picture before and all.
+    const m2 = shot0(picture(rebuilt('dream-0926-000545-09ea', ON), 'm2').prompt);
+    expect(m2).toContain('the camera looks at the fish stall');
+    expect(m2).not.toMatch(/the dreamer, [^;]*facing the camera/);
   });
 });

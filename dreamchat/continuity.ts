@@ -816,7 +816,7 @@ export function withPathDeck(plan: Blocking, place: string): Blocking {
     spots: [
       ...plan.spots,
       {
-        id: 'deck',
+        id: 'x-deck',
         kind: 'thing',
         fixture: true,
         name: place,

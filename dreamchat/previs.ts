@@ -577,7 +577,7 @@ function restsOn(s: Spot, plan: Blocking): Spot | undefined {
   // A vehicle on the deck of the way the place is (continuity.ts withPathDeck): on it, the bicycle on the narrow iron
   // bridge. Only that deck: a boat afloat over an aisle, a drainpipe in the grass, are not "on" them.
   if (shapeOf(s, plan) === 'vehicle') {
-    const deck = plan.spots.find((t) => t.id === 'deck' && t.id !== s.id && onFootprint(s, t, plan, 0));
+    const deck = plan.spots.find((t) => t.id === 'x-deck' && t.id !== s.id && onFootprint(s, t, plan, 0));
     if (deck) return deck;
   }
   if (shapeOf(s, plan) !== 'block') return undefined;
@@ -1539,6 +1539,9 @@ function framing(
   return { score: people.length ? (sum - 0.5 * cut) / people.length : 1, issues };
 }
 
+/** How much less a camera is worth that those looking at what the moment looks at stare into. */
+const STARING = 1;
+
 /** The lens for a shot seen from outside, by how close it is: a portrait lens close, a wide one for the whole place. */
 const LENS: Record<'close' | 'medium' | 'wide', number> = { close: 50, medium: 35, wide: 24 };
 
@@ -1662,6 +1665,38 @@ export function outsideShot(
       : (lookAt?.theirs || underfoot) && together > 0.5
         ? unit(sum)
         : undefined;
+  // With the camera rules, who in the picture faces what the moment looks at, where it is on the plan and not theirs.
+  const lookers =
+    cameraMode() === 'on' &&
+    lookedSpot &&
+    !lookedSpot.heldBy &&
+    !isPerson(lookedSpot) &&
+    // Never what anyone sits or stands on: the seats facing each other the two sit on (snow-train m1).
+    !plan.spots.some((q) => isPerson(q) && onOf(q, plan)?.t.id === lookedSpot.id)
+      ? people.filter((s) => {
+          // Toward its middle: standing at the stall, its near edge is at their feet.
+          const v = { x: lookedSpot.x - s.x, y: lookedSpot.y - s.y };
+          const n = Math.hypot(v.x, v.y);
+          const f = facing(s, plan);
+          return n > 0.3 && (f.x * v.x + f.y * v.y) / n > 0.5;
+        })
+      : [];
+  const lookSum = lookers.reduce(
+    (a, s) => {
+      const g = facing(s, plan);
+      return { x: a.x + g.x, y: a.y + g.y };
+    },
+    { x: 0, y: 0 },
+  );
+  // Those looking at it from the side most of them are on: the old man facing his own stall back at the two at it is
+  // not one of them.
+  const onLookSide =
+    Math.hypot(lookSum.x, lookSum.y) > 0.3
+      ? lookers.filter((q) => {
+          const f = facing(q, plan);
+          return f.x * lookSum.x + f.y * lookSum.y > 0;
+        })
+      : [];
   let d0: V2;
   const [near, far_] = apart
     ? lookAt?.at
@@ -1800,10 +1835,11 @@ export function outsideShot(
     .filter((s): s is Spot => !!s && !holdAll.includes(s));
   // The place's front, when the words name it: faced, so it is behind whoever is in the picture.
   const front = also.includes('front');
-  const degs =
-    extra.length || front || (rules?.line && !looks)
+  const degs = [
+    ...(extra.length || front || (rules?.line && !looks)
       ? [0, -20, 20, -40, 40, -70, 70, -110, 110, 180]
-      : [0, -20, 20, -40, 40, -70, 70];
+      : [0, -20, 20, -40, 40, -70, 70]),
+  ];
   // Across the scene's line, or the same camera again on the same people at the same size: each worth
   // less than losing most of what the picture must show, so a camera crosses only when it must.
   // A moment that looks somewhere past them (what they look at, the way they face) crosses the line
@@ -1829,6 +1865,16 @@ export function outsideShot(
       // What the moment is about is in the picture above all: two people facing each other were shot
       // from the side with the talking fish, the moment's whole point, off to the left (night market).
       const keyShown = lookedSpot && !lookedSpot.many && (rs.seen.get(lookedSpot.id)?.visible ?? 0) >= tiny ? 1 : 0;
+      // Those facing what the moment looks at are seen looking at it, never staring into the camera across it. Taken as
+      // the dreamer and the old man facing each other across the stall, the camera stood past it and the dreamer looking
+      // at the fish stared out of the picture ("what I would have liked is the dreamer looking towards the fish",
+      // night-market m2, judged blind, 30 Sep).
+      const staring = onLookSide.length
+        ? onLookSide.filter((q) => {
+            const f = facing(q, plan);
+            return f.x * cand.eye.d.x + f.y * cand.eye.d.y < -0.5;
+          }).length / onLookSide.length
+        : 0;
       const facesFront = front ? Math.max(0, -cand.eye.d.y) : 0;
       const score =
         2 * inFrame +
@@ -1837,7 +1883,7 @@ export function outsideShot(
         named +
         // Worth more than framing, never more than losing a person from a picture of two: at 2, the
         // dreamer going to the window was framed out for the window (lighthouse, 26 Sep).
-        (lookedSpot && !lookedSpot.many ? 0.7 * keyShown : 0) +
+        (lookedSpot && !lookedSpot.many ? 0.7 * keyShown - STARING * staring : 0) +
         facesFront -
         ruled(cand.eye) -
         Math.abs(deg) * 0.006 -
