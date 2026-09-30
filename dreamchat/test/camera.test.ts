@@ -32,6 +32,7 @@ import {
   withClimbers,
   withRiders,
   carriedBy,
+  isThePlace,
 } from '../continuity';
 import { type CutSheet, notDrawnFrom } from '../cutsheet';
 import { frozenDreams, loadDream } from '../evals/saved';
@@ -1778,5 +1779,54 @@ describe('what rests on something', () => {
       outsideShot(study, ['p3'], 'wide', name, { id: 'c2', at: { x: 2.5, y: 2.8 } }),
     )!;
     expect(off.text).not.toMatch(/the little boats, [^;.]*on the table/);
+  });
+});
+
+describe('where plants grow', () => {
+  const garden = (name: string) => ({
+    front: 'the house',
+    spots: [
+      { id: 'p1', x: 10, y: 10, kind: 'person' as const, pose: 'standing' as const },
+      {
+        id: 'x1',
+        x: 10,
+        y: 10,
+        kind: 'thing' as const,
+        fixture: true,
+        shape: 'ground' as const,
+        name,
+        size: [8, 6, 0.05] as [number, number, number],
+      },
+    ],
+  });
+  const shot = (name: string, camera = CAMERA as Record<string, string | undefined>) =>
+    withEnv(camera, () => outsideShot(garden(name), ['p1'], 'wide', (id) => (id === 'p1' ? 'the dreamer' : id)))!.text;
+
+  test('they stand in the grass and among the trees, never on top of them', () => {
+    // "The dreamer, mouse-sized, standing on the tall grass" (d3a1 m1); "standing on the empty rows of apple trees" (orchard m5).
+    expect(shot('the tall grass')).toContain('standing in the tall grass');
+    expect(shot('the tall grass')).toContain('with the dreamer in it');
+    expect(shot('the rows of apple trees')).toContain('standing among the rows of apple trees');
+    expect(shot('the rows of apple trees')).toContain('with the dreamer among them');
+    // Ground that is only ground, or the edge of a field, as before.
+    expect(shot('the lawn')).toContain('standing on the lawn');
+    expect(shot('the edge of the field')).toContain('standing on the edge of the field');
+    // Off, as before.
+    expect(shot('the tall grass', { DREAMCHAT_CAMERA: undefined })).toContain('standing on the tall grass');
+  });
+});
+
+describe('a fixture that is the place itself', () => {
+  test('is the place, described, never a part of it', () => {
+    // As blocks on the floor plan, the camera "looked at the office interior" beside "the office buried in snow" (b91f).
+    expect(isThePlace('the office interior with desks, monitors, and people working', 'the office')).toBe(true);
+    expect(isThePlace('the office buried in snow, only monitor tops visible', 'the office')).toBe(true);
+    // Named exactly as the place, it is what the place is named after: the red door, in "the red door" (eef3 m7).
+    expect(isThePlace('the red door', 'the red door')).toBe(false);
+    expect(isThePlace('the office door', 'the office')).toBe(false);
+    expect(isThePlace('the office window', 'the office')).toBe(false);
+    expect(isThePlace('the officer', 'the office')).toBe(false);
+    expect(isThePlace(undefined, 'the office')).toBe(false);
+    expect(isThePlace('the window', '')).toBe(false);
   });
 });
