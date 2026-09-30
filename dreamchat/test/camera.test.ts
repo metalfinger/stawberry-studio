@@ -15,6 +15,7 @@ import {
   sameView,
   selfIn,
   sideless,
+  sidelessNames,
   WATER,
   waterLevel,
 } from '../camera';
@@ -521,6 +522,16 @@ describe('a name gives no side of the room', () => {
     expect(sideless('the wall to the left of the door')).toBe('the wall to the left of the door');
     expect(sideless('the right side')).toBe('the right side');
     expect(sideless('the lift gate')).toBe('the lift gate');
+    // Two that would share a name are told apart: that name and "the other" one; three or more keep their names.
+    const names = (ns: string[]) => sidelessNames(ns.map((name) => ({ name }))).map((x) => x.name);
+    expect(names(['the left seat', 'the right seat'])).toEqual(['the seat', 'the other seat']);
+    expect(names(['the left window', 'the window'])).toEqual(['the other window', 'the window']);
+    expect(names(['the left lamp', 'the middle lamp', 'the right lamp', 'the lamp'])).toEqual([
+      'the left lamp',
+      'the middle lamp',
+      'the right lamp',
+      'the lamp',
+    ]);
     const m2 = shot(picture(rebuilt('dream-0926-055141-6e80', ON), 'm2').prompt);
     expect(m2).not.toMatch(/shelves on the (?:left|right)/);
     const off = shot(picture(rebuilt('dream-0926-055141-6e80', { ...ON, DREAMCHAT_CAMERA: undefined }), 'm2').prompt);

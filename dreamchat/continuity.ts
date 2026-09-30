@@ -26,7 +26,7 @@ import {
   cameraMode,
   goingIn,
   headWord,
-  sideless,
+  sidelessNames,
   mounted,
   ON_THE_LINE,
   outThroughWindows,
@@ -453,7 +453,7 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
     cameraMode() === 'on'
       ? (() => {
           const up = mounted(given, placeWordsOf(b, momentId));
-          return { ...up, spots: up.spots.map((s) => (s.name ? { ...s, name: sideless(s.name) } : s)) };
+          return { ...up, spots: sidelessNames(up.spots) };
         })()
       : given;
   // Only the moments in the same place count: who was in the tiny room, not who was on the stairs.
