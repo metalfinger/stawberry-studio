@@ -384,6 +384,22 @@ describe('why each earlier picture is left out (for the viewer): one reason, in 
     expect(on.unsentWhy?.m1?.code).toBe('seat_replaced_by_view');
   });
 
+  test('every picture left out on the saved dreams has its reason: none falls back to "not recorded"', () => {
+    const codes = new Map<string, number>();
+    withSwitches({ ...ON, DREAMCHAT_RECORD: 'on', DREAMCHAT_CAMERA: 'on' }, () => {
+      for (const id of frozenDreams()) {
+        const p = rebuild(loadDream(id, false).session as Session).plan;
+        for (const c of p.cuts)
+          for (const r of c.unsent ?? []) {
+            const w = c.unsentWhy?.[r.id];
+            expect([id, c.id, r.id, !!w && w.code !== 'not_recorded']).toEqual([id, c.id, r.id, true]);
+            codes.set(w!.code, (codes.get(w!.code) ?? 0) + 1);
+          }
+      }
+    });
+    expect(codes.size).toBeGreaterThan(3);
+  }, 120_000);
+
   test('none of this with the references off: the plan is as today', () => {
     const turned = withPlan(stage({ visible: ['p1', 'p2'], looks_at: 'the back wall', from: 'm1', sameSide: ['m1'] }));
     expect(cut(plan(turned, OFF), 'm2').unsentWhy).toBeUndefined();
