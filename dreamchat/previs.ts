@@ -1326,6 +1326,10 @@ function thingWords(
   // Getting in or out of something at the instant: never already sitting in it (the camera rules, plan_acts).
   const climbing =
     cameraMode() === 'on' && isPerson(s) && s.climbing ? `, climbing ${s.climbing.how} ${called(s.climbing.of)}` : '';
+  // On what is too narrow for two abreast (a bicycle), one rides in front of the other: which, as the plan has them along
+  // the way it faces. The girl pedalling in front of the dreamer was "sitting beside the dreamer on the same old red
+  // bicycle" (acfd m5-m7; the read of every frozen prompt, 30 Sep). With the camera rules.
+  const tandem = on && on.how === 'on' && cameraMode() === 'on' ? tandemPlace(s, on.t, plan) : undefined;
   const sitting = climbing
     ? climbing
     : on
@@ -1334,10 +1338,16 @@ function thingWords(
           ? `, ${pose} across from the dreamer on ${called(on.t.id)}`
           : on.how === 'in'
             ? `, beside the dreamer in the same ${bareName(called(on.t.id))}`
-            : `, ${pose} beside the dreamer on the same ${bareName(called(on.t.id))}`
+            : tandem
+              ? `, ${pose} ${tandem === 'front' ? 'in front of' : 'behind'} the dreamer on the same ${bareName(called(on.t.id))}`
+              : `, ${pose} beside the dreamer on the same ${bareName(called(on.t.id))}`
         : on.how === 'in'
           ? `, in ${called(on.t.id)}`
-          : `, ${pose} on ${called(on.t.id)}`
+          : tandem === 'front'
+            ? `, ${pose} in front on ${called(on.t.id)}`
+            : tandem === 'back'
+              ? `, ${pose} on the back of ${called(on.t.id)}`
+              : `, ${pose} on ${called(on.t.id)}`
       : '';
   const holder = !isPerson(s) && s.heldBy ? s.heldBy : undefined;
   const holds = isPerson(s) && !s.many ? plan.spots.filter((o) => o.heldBy === s.id).map((o) => called(o.id)) : [];
@@ -2117,6 +2127,21 @@ export function onOf(p: Spot, plan: Blocking): { t: Spot; how: 'on' | 'in' } | u
   if (seat && p.pose !== 'standing') return { t: seat, how: 'on' };
   const ground = by('steps') ?? by('ground');
   return ground ? { t: ground, how: 'on' } : undefined;
+}
+
+/**
+ * Where someone rides on what is too narrow for two abreast, with others on it: in front along the way it faces, or at
+ * its back. None where they ride it alone, or it is wide enough to sit side by side.
+ */
+function tandemPlace(s: Spot, v: Spot, plan: Blocking): 'front' | 'back' | undefined {
+  if (sizeOf(v)[0] >= 1) return undefined;
+  const riders = plan.spots.filter((o) => isPerson(o) && !o.many && onOf(o, plan)?.t.id === v.id);
+  if (riders.length < 2 || !riders.some((o) => o.id === s.id)) return undefined;
+  const f = facing(v, plan);
+  const ahead = (o: Spot) => (o.x - v.x) * f.x + (o.y - v.y) * f.y;
+  const mine = ahead(s);
+  const others = riders.filter((o) => o.id !== s.id).map(ahead);
+  return others.every((o) => mine > o + 0.1) ? 'front' : others.some((o) => mine < o - 0.1) ? 'back' : undefined;
 }
 
 /** The thing among `ids` that a thing stands right beside, its edge within a hand's width of it. */

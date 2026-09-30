@@ -30,6 +30,7 @@ import {
   sidesByCamera,
   unsettled,
   withClimbers,
+  withRiders,
 } from '../continuity';
 import { type CutSheet, notDrawnFrom } from '../cutsheet';
 import { frozenDreams, loadDream } from '../evals/saved';
@@ -1616,5 +1617,58 @@ describe('getting in or out of something at the instant', () => {
     const shot = withEnv(CAMERA, () => dreamerShot(plan, 'p1', 't1', name))!;
     expect(shot.text).toContain("The camera is the dreamer's eyes, climbing into the boat");
     expect(shot.text).not.toContain("The camera is the dreamer's eyes, in the boat");
+  });
+});
+
+describe('who rides in front', () => {
+  const lane = {
+    front: 'the city',
+    spots: [
+      { id: 'p1', x: 10, y: 10, kind: 'person' as const, pose: 'sitting' as const },
+      { id: 'p2', x: 10, y: 10, kind: 'person' as const, pose: 'sitting' as const },
+      {
+        id: 't1',
+        x: 10,
+        y: 10,
+        kind: 'thing' as const,
+        shape: 'vehicle' as const,
+        faces: 'front',
+        size: [0.6, 1.8, 1.1] as [number, number, number],
+      },
+    ],
+  };
+  const name = (id: string) => ({ p1: 'the dreamer', p2: 'the girl', t1: 'the old red bicycle' })[id] ?? id;
+
+  test('whoever pedals is in front, whoever sits on its back behind, as the scene last said', () => {
+    // The girl pedalling with the dreamer on the back were one behind the other in the plan's order (acfd m3, m7).
+    const said = [
+      [
+        { who: 'p2', does: 'rides', to: 't1' },
+        { who: 'p1', does: 'sits on the back of', to: 't1' },
+      ],
+      [],
+    ];
+    const plan = withRiders(lane, said);
+    expect(plan.spots.find((s) => s.id === 'p1')!.rides).toBe('back');
+    expect(plan.spots.find((s) => s.id === 'p2')!.rides).toBeUndefined();
+    const sat = settle(plan, { tandem: true });
+    const [d, g] = ['p1', 'p2'].map((id) => sat.spots.find((s) => s.id === id)!);
+    // Facing the front (toward y = 0): the girl nearer it.
+    expect(g.y).toBeLessThan(d.y);
+    // A later "pedals" by the dreamer puts them in front.
+    const swapped = settle(withRiders(lane, [...said, [{ who: 'p1', does: 'pedals', to: 't1' }]]), { tandem: true });
+    expect(swapped.spots.find((s) => s.id === 'p1')!.y).toBeLessThan(swapped.spots.find((s) => s.id === 'p2')!.y);
+    // No act of it, the plan's order, as before.
+    expect(withRiders(lane, [[{ who: 'p1', does: 'looks at', to: 'p2' }]])).toBe(lane);
+  });
+
+  test('said in front and on the back, and through the dreamer’s eyes in front of them, never beside them', () => {
+    const sat = settle(withRiders(lane, [[{ who: 'p1', does: 'sits behind', to: 'p2' }]]), { tandem: true });
+    const shot = withEnv(CAMERA, () => outsideShot(sat, ['p1', 'p2', 't1'], 'wide', name))!;
+    expect(shot.text).toContain('sitting on the back of the old red bicycle');
+    expect(shot.text).toContain('sitting in front on the old red bicycle');
+    const eyes = withEnv(CAMERA, () => dreamerShot(sat, 'p1', 'p2', name))!;
+    expect(eyes.text).toContain('the girl, sitting in front of the dreamer on the same old red bicycle');
+    expect(eyes.text).not.toContain('beside the dreamer');
   });
 });

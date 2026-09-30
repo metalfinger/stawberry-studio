@@ -67,6 +67,12 @@ export type Spot = {
    * in it, the dreamer was never climbing in (6081 m6, 30 Sep).
    */
   climbing?: { of: string; how: 'into' | 'out of' };
+  /**
+   * Where on what they ride they sit, as the scene's typed acts last said (continuity.ts withRiders, the camera rules):
+   * in front for whoever pedals, steers or drives it, at the back for whoever "sits on the back of" it or behind the
+   * other. Two on one bicycle sit one behind the other, and which one was left to the order of the plan.
+   */
+  rides?: 'front' | 'back';
 };
 
 /** Where someone or something (a car, a boat) has moved to at a moment: its new spot, which way it faces, how they are. */
@@ -296,6 +302,9 @@ export function settle(
       : undefined;
     // Along the way it faces, whichever way they turn on it.
     const along = narrow ? facing(narrow, plan) : r;
+    // Whoever pedals or steers it in front, whoever sits on its back behind; the rest as the plan lists them.
+    const rank = (b: Spot) => (b.rides === 'front' ? 0 : b.rides === 'back' ? 2 : 1);
+    if (narrow) together.sort((a, b) => rank(a) - rank(b));
     together.forEach((b, k) => {
       const off = narrow ? ((together.length - 1) / 2 - k) * 0.6 : (k - (together.length - 1) / 2) * 0.6;
       Object.assign(b, { x: mid.x + along.x * off, y: mid.y + along.y * off });

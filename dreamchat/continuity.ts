@@ -569,8 +569,43 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
         return at;
       }),
   };
-  // Getting in or out of something at the instant, as the moment's typed acts say (the one builder's `plan_acts`).
-  return camera ? withClimbers(placed, r?.acts) : placed;
+  // Getting in or out of something at the instant, as the moment's typed acts say (the one builder's `plan_acts`); who
+  // rides in front and who behind, as the scene's acts in this place last said.
+  return camera
+    ? withRiders(
+        withClimbers(placed, r?.acts),
+        upTo.map((x) => rec?.moments[x.id]?.acts ?? []),
+      )
+    : placed;
+}
+
+/** Riding in front: pedalling, steering, driving what they ride. */
+const FRONT = /^(?:pedals?|steers?|drives?)$/i;
+/** Riding behind: on its back, or behind whoever rides it. */
+const BACK = /^sits?\s+(?:on the back of|at the back of|behind)$/i;
+
+/**
+ * Where each rider sits on what they ride (Spot.rides), as the scene's typed acts up to this moment last said, in
+ * order: in front for whoever pedals, steers or drives it, at the back for whoever sits on its back or behind the other.
+ * The girl who pedals the old red bicycle and the dreamer on its back were one behind the other, in whichever order the
+ * plan listed them (acfd m3, m7; the read of every frozen prompt, 30 Sep). A moment whose acts say nothing of it keeps
+ * the order the scene last had.
+ */
+export function withRiders(plan: Blocking, acts: { who: string; does: string; to?: string }[][]): Blocking {
+  const where = new Map<string, 'front' | 'back'>();
+  for (const at of acts)
+    for (const a of at) {
+      const how = FRONT.test(a.does.trim()) ? 'front' : BACK.test(a.does.trim()) ? 'back' : undefined;
+      if (how) where.set(a.who, how);
+    }
+  if (!where.size) return plan;
+  return {
+    ...plan,
+    spots: plan.spots.map((s) => {
+      const how = s.kind === 'person' && !s.many ? where.get(s.id) : undefined;
+      return how ? { ...s, rides: how } : s;
+    }),
+  };
 }
 
 /** Getting into or out of something, as a typed act says it: "climbs into", "gets out of", "steps aboard". */
