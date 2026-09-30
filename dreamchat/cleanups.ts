@@ -135,6 +135,10 @@ export const BUILDER_STEPS: readonly string[] = [
   // Not a ledger row: found reading every prompt (30 Sep). A colour the dream gives is the colour and what it colours,
   //    ending at the noun: never what the moment says it does ("grey heron stands", "silver fish about").
   'told_colours',
+  // Not a ledger row: the owner's choice (30 Sep). Writing the story needs but does not quote (a board covered with
+  //    numbers, letters addressed to the dreamer) shows as marks no one could read, where the prompt said every
+  //    surface is blank; a quoted word with a number in it is counted in characters, not letters.
+  'story_marks',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;

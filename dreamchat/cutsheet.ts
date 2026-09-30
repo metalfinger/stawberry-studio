@@ -318,6 +318,8 @@ export type CutSheet = {
    * them by what they are, and never for someone turned into something else; the dream's jump ends with one full stop.
    */
   earlierWords?: true;
+  /** Writing the story needs but does not quote shows as marks no one could read (the `story_marks` step). */
+  storyMarks?: true;
   /** What belongs to a take rather than the cut: the judge's findings on the last attempt and on earlier pictures. */
   take: { repairs: string[]; strays: Record<string, string[]> };
   record: RecordLayer | null;
@@ -711,6 +713,7 @@ export function cutSheet(x: CutSheetInput): CutSheet {
         }
       : {}),
     ...(builds('earlier_words') ? { earlierWords: true as const } : {}),
+    ...(builds('story_marks') ? { storyMarks: true as const } : {}),
     take: { repairs: [...(frame.repairFor ?? [])], strays },
     record,
     tree,

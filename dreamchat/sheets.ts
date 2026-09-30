@@ -390,8 +390,9 @@ const COLOUR_STOP =
 /**
  * With the one builder's `told_colours` step: what a colour colours ends at the noun, never running on into what the
  * moment says it does ("grey heron stands", "silver fish about", "red tractor driving" came out as colours, 30 Sep).
- * A word after the noun that is a preposition or a verb ends it; a word in -ing is kept only straight after the
- * colour, where it says what kind ("yellow rowing boat", "white parking space").
+ * A preposition ends it; a verb or a word in -ing ends it only after the word straight after the colour, which is
+ * what it colours or what kind ("silver rush", "yellow rowing boat", "white parking space"). A word list inside a
+ * clean-up: it goes when the typed readings carry colours.
  */
 const COLOUR_AFTER =
   /^(?:about|against|across|along|around|through|into|onto|toward|towards|past|up|down|off|out|like|than|between|among|above|below|inside|outside|away|back|again|here|there|now|still)$/i;
@@ -418,7 +419,7 @@ export function coloursIn(text: string): string[] {
       } else if (COLOUR_STOP.test(words[i])) break;
       else if (
         builds('told_colours') &&
-        (COLOUR_AFTER.test(words[i]) || COLOUR_VERB.test(words[i]) || (i > 1 && /ing$/i.test(words[i])))
+        (COLOUR_AFTER.test(words[i]) || (i > 1 && (COLOUR_VERB.test(words[i]) || /ing$/i.test(words[i]))))
       )
         break;
       else kept.push(words[i]);

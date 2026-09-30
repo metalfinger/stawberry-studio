@@ -622,7 +622,7 @@ export function assembleCut(s: CutSheet): Assembled {
     {
       id: 'single',
       fields: ['story.writing'],
-      text: `One single picture filling the whole frame. ${writingLine(s.story.writing)}`,
+      text: `One single picture filling the whole frame. ${writingLine(s.story.writing, !!s.storyMarks)}`,
     },
   ];
   // Each colour the dream gives said once (S6 row 15): in many colours every colour said above keeps it, and the

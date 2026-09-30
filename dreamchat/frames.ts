@@ -135,12 +135,23 @@ export function writingIn(...texts: (string | null | undefined)[]): string[] {
   return [...found].filter((w) => /[a-z]/i.test(w));
 }
 
-export function writingLine(words: string[]): string {
-  if (!words.length) return NO_WORDS;
+/**
+ * With the one builder's `story_marks` step (the owner's choice, 30 Sep): writing the story needs but does not quote
+ * word for word (the board covered with numbers, letters addressed to the dreamer) shows as marks no one could read,
+ * never as real words, as a written-on thing's sketch already does; everything else stays free of writing.
+ */
+const NO_WORDS_MARKS =
+  'Nothing in it has legible writing, logos or brand badges: whatever the story says is written or printed on (a board, a page, a letter, a sign) shows it as marks no one could read, and every other surface stays blank.';
+
+/** `marks`: the `story_marks` step, passed in (the assembler reads the sheet, never the switches). */
+export function writingLine(words: string[], marks = false): string {
+  if (!words.length) return marks ? NO_WORDS_MARKS : NO_WORDS;
   // "Spelled Z-I-K-E-R-Y" still came back "ZIIKERY" (23 Sep); the letter count pins it.
   const spelled = words.map((w) => {
     const letters = w.toUpperCase().replace(/[^A-Z0-9]/g, '');
-    return `"${w.toUpperCase()}" (${letters.length} letters: ${letters.split('').join(' ')})`;
+    // Numbers are not letters ("LEVEL 4" is six characters): with the step, said as characters where it has any.
+    const unit = marks && /\d/.test(letters) ? 'characters' : 'letters';
+    return `"${w.toUpperCase()}" (${letters.length} ${unit}: ${letters.split('').join(' ')})`;
   });
   return `The only writing anywhere in the picture is ${spelled.join(' and ')}, exactly as spelled; every other surface is free of writing, logos and brand badges.`;
 }
@@ -738,7 +749,10 @@ export function framePrompt(
       : '',
     // The dream's writing can live in what is in view as well as in the action: a frame of the
     // board without the word quoted in its action came back reading "NONSENSICAL" (23 Sep).
-    `One single picture filling the whole frame. ${writingLine(writingIn(action, point, ...inView.flatMap((x) => Object.values(x.fields).map((d) => d.value))))}`,
+    `One single picture filling the whole frame. ${writingLine(
+      writingIn(action, point, ...inView.flatMap((x) => Object.values(x.fields).map((d) => d.value))),
+      builds('story_marks'),
+    )}`,
   ];
   // The moments are told to the dreamer ("she stands before you"), and to a picture "you" is the
   // viewer: a moment seen from outside came back with a viewer's hands reaching in (23 Sep). "You"
