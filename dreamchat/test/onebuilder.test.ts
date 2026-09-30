@@ -1448,4 +1448,10 @@ describe('the picture before a jump, where image 1 carries the layout', () => {
       'take only its light and colours, and how anyone also in this picture looks. Where everything is comes from Image 1.',
     );
   });
+  test('a turn in the same place is said as a change, not a jump', () => {
+    // 4c79 m5: the teacher becomes a heron in the classroom; nothing cut away.
+    const p = at('jump_words', 'dream-0926-012307-4c79', 'm5');
+    expect(p).toContain('just before the dream changes it: take only its light and colours');
+    expect(p).not.toContain('this picture faces');
+  });
 });

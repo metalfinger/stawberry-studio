@@ -415,7 +415,8 @@ export function assembleCut(s: CutSheet): Assembled {
         ? // With image 1 carrying the layout (the mock-up, or the picture edited), the picture before the jump gives no
           // framing of its own: two layouts disagreed, and a third-person framing went into the dreamer's own view
           // (affd m6, 0f40 m4, 4c79 m6; the read of every frozen prompt, 30 Sep).
-          `${pictureNo(x)}${shows}, just before the dream jumps${x.frame?.place && x.frame.place !== s.place ? ' to another place' : ''}: take only ${
+          // A turn in the same place is a change, not a jump: nothing cut away (4c79 m5).
+          `${pictureNo(x)}${shows}, just before the dream ${x.frame?.place && x.frame.place !== s.place ? 'jumps to another place' : x.turned ? 'changes it' : 'jumps'}: take only ${
             x.frame?.place && x.frame.place !== s.place
               ? 'how anyone also in this picture looks, and nothing of its place'
               : 'its light and colours, and how anyone also in this picture looks'
