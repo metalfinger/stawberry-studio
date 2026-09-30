@@ -28,7 +28,24 @@ current figure and what's next). Writer model: Claude (`DREAMCHAT_WRITER=claude`
 
 ## Where we stopped (27-29 Sep): read this to resume
 
-**Newest landmark (30 Sep, afternoon and evening): every frozen prompt read, 126 faults in 13 patterns, fixed at their
+**Newest landmark (30 Sep, night): the owner's blind picture check on fal, and its misses fixed at their roots.**
+50 pictures, $7.50, 0 failures, all on bc1a049; judged blind: the harness now right in 36 of 43, the old in 25 (faults
+put right 8/12, guards kept 23/24; pairs 5/7 each). The check, each miss at its root, what his notes teach:
+`docs/picture-check-2026-09-30.md`. `KEYS_VERSION` is 7. On lab since, with the camera rules:
+- *Sides kept (the axis):* two riding one vehicle hold the scene's line like anyone, and set it; a crossing the moment
+  makes on purpose is said. The tractor's cab turned round between behind the two and in front of them, "the driver is
+  sitting on the opposite side" (lighthouse-fresh m13): m13 now stays on m12's side. Of consecutive pictures sharing
+  two or more people, those swapping left and right fell from 13 to 12 frozen and 25 to 22 live, and every one left is
+  now a crossing said.
+- *Across from each other:* two seated facing each other are each "sitting on the seats facing each other, across
+  from" the other; the dreamer and the grandfather were drawn side by side (snow-train m2).
+- *A way along has its deck:* out of doors, a bridge, road or lane with nothing on its plan to be it gets its deck
+  under whoever is there, the way what they ride faces; with none, the bicycle was drawn crossing the narrow iron
+  bridge side on (night-market m5). A vehicle on it is "on the narrow iron bridge", and those on a bicycle are on it,
+  never in it. Not on water, not where the plan lays ground of its own, not in a plan a few metres across.
+- Frozen 18, live 26 pictures together; nobody lost, no opener at odds with its figures, prompt cases the same.
+
+**Earlier landmark (30 Sep, afternoon and evening): every frozen prompt read, 126 faults in 13 patterns, fixed at their
 roots.**
 Nothing drawn, nothing paid. The read, cut by cut, is `docs/prompt-read-2026-09-30.md`; each pattern was verified
 before it was fixed, and each fix measured on every saved dream (every step on, the same readings on both sides),
