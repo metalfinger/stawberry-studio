@@ -1662,6 +1662,8 @@ function spend(s: Session, estimate: number | null): void {
  * sketched), a sketch that could not be drawn, and, with the camera rules and the picture's images known, whoever and
  * whatever it sends no sketch of (the key in the dreamer's hands, below the frame): those in its words only. Kept in the
  * cast, the engine refuses the picture for want of their sketch (the father, lighthouse, 26 Sep; the key, 30 Sep).
+ * Someone shown only through an earlier picture or the edit base, with no sketch of their own sent, is left out of the
+ * cast too: the engine checks less, and the words still name them.
  */
 export function castOf(
   f: NonNullable<Item['frame']>,
