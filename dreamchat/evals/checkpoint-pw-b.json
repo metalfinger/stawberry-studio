@@ -1,0 +1,107 @@
+{
+  "about": "Blind picture test of the one builder's picture_words step (a wording change on 43 of 127 frozen pictures): pw-a draws without it, pw-b with it, on the same code otherwise.",
+  "name": "pw-b",
+  "step": "S6",
+  "cap_usd": 0.75,
+  "results": "/Users/hirenk/Documents/code/stawberry-studio-dream-chat/dreamchat/runs/checkpoint/pw-b",
+  "switches": {
+    "DREAMCHAT_RECORD": "on",
+    "DREAMCHAT_CUT_SHEET": "on",
+    "DREAMCHAT_CAMERA": "on",
+    "DREAMCHAT_REFS": "on",
+    "DREAMCHAT_ONE_BUILDER": "on"
+  },
+  "base": "checkpoint pw-a: the same code without the picture_words step",
+  "moments": [
+    {
+      "id": "orchard-m2",
+      "run": "orchard",
+      "session": "dream-0926-070314-0f40",
+      "moment": "m2",
+      "why": "pair",
+      "reason": "a picture test of the picture_words step: the mock-up's seats line only where someone sits, and an edited picture keeps faces and clothes, not poses",
+      "cases": [],
+      "old": {
+        "source": null,
+        "draw": "base",
+        "from": "pw-a",
+        "verdict": null,
+        "note": null,
+        "picture": ""
+      },
+      "description": "The dreamer turns and sees Tomas as a boy of about ten in their old school uniform, staring at the gate."
+    },
+    {
+      "id": "snow-train-2-m3",
+      "run": "snow-train-2",
+      "session": "dream-0926-062232-a44a",
+      "moment": "m3",
+      "why": "pair",
+      "reason": "a picture test of the picture_words step: the mock-up's seats line only where someone sits, and an edited picture keeps faces and clothes, not poses",
+      "cases": [],
+      "old": {
+        "source": null,
+        "draw": "base",
+        "from": "pw-a",
+        "verdict": null,
+        "note": null,
+        "picture": ""
+      },
+      "description": "The grandfather opens the suitcase and turns it so the dreamer can see inside: many letters, all addressed to the dreamer."
+    },
+    {
+      "id": "lighthouse-fresh-m1",
+      "run": "lighthouse-fresh",
+      "session": "dream-0926-022102-aeea",
+      "moment": "m1",
+      "why": "pair",
+      "reason": "a picture test of the picture_words step: the mock-up's seats line only where someone sits, and an edited picture keeps faces and clothes, not poses",
+      "cases": [],
+      "old": {
+        "source": null,
+        "draw": "base",
+        "from": "pw-a",
+        "verdict": null,
+        "note": null,
+        "picture": ""
+      },
+      "description": "The dreamer stands on the grey beach, holding the brass key, while the dog runs ahead toward the distant white lighthouse, looking back over its shoulder."
+    },
+    {
+      "id": "heron-m1",
+      "run": "heron",
+      "session": "dream-0926-012307-4c79",
+      "moment": "m1",
+      "why": "pair",
+      "reason": "a picture test of the picture_words step: the mock-up's seats line only where someone sits, and an edited picture keeps faces and clothes, not poses",
+      "cases": [],
+      "old": {
+        "source": null,
+        "draw": "base",
+        "from": "pw-a",
+        "verdict": null,
+        "note": null,
+        "picture": ""
+      },
+      "description": "The dreamer walks quickly down a long green corridor with lockers on both sides, heading for a wooden door with a small round window at the end."
+    },
+    {
+      "id": "lighthouse-first-m1",
+      "run": "lighthouse-first",
+      "session": "dream-0925-231131-affd",
+      "moment": "m1",
+      "why": "pair",
+      "reason": "a picture test of the picture_words step: the mock-up's seats line only where someone sits, and an edited picture keeps faces and clothes, not poses",
+      "cases": [],
+      "old": {
+        "source": null,
+        "draw": "base",
+        "from": "pw-a",
+        "verdict": null,
+        "note": null,
+        "picture": ""
+      },
+      "description": "The dog runs up the stone stairs ahead of the dreamer, fast, as if he already knows the way."
+    }
+  ]
+}
