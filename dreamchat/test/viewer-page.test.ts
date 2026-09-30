@@ -6,6 +6,7 @@ import { describe, expect, test } from 'bun:test';
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
+import { matchGhost } from '../asdrawn';
 import type { Session } from '../session';
 import type { Item } from '../sheets';
 import { filesIn, filesOf, mediaOf, viewKey } from '../viewer/build';
@@ -172,7 +173,7 @@ describe("a dream's views and images", () => {
         ],
       },
     } as unknown as Session;
-    const fileOf = filesOf(live, media);
+    const fileOf = filesOf(live, media, matchGhost);
     // The frozen copy's sketch is take 1; the live copy has drawn take 2 since.
     expect(fileOf(item({ id: 'p1', version: 1 }))).toEqual({ name: 'aaa.png', sha256: 'aaa', changed: true });
     expect(fileOf(item({ id: 'm1', kind: 'cut', fields: said('she opens the door') }))).toEqual({
@@ -187,9 +188,9 @@ describe("a dream's views and images", () => {
       sha256: 'ccc',
     });
     expect(fileOf(item({ id: 'm9', kind: 'cut' }))).toBeNull();
-    expect(filesOf(null, media)(item({ id: 'p1' }))).toBeNull();
+    expect(filesOf(null, media, matchGhost)(item({ id: 'p1' }))).toBeNull();
     // A file the conversation names but this machine does not have: not on this machine.
-    expect(filesOf(live, join(media, 'elsewhere'))(item({ id: 'm1', kind: 'cut', fields: said('she opens the door') }))).toBeNull();
+    expect(filesOf(live, join(media, 'elsewhere'), matchGhost)(item({ id: 'm1', kind: 'cut', fields: said('she opens the door') }))).toBeNull();
   });
 
   test('every picture a view shows is listed for linking into its folder', () => {

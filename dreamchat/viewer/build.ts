@@ -24,7 +24,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-import { matchGhost } from '../asdrawn';
+import type { matchGhost } from '../asdrawn';
 import type { Session } from '../session';
 import type { Item } from '../sheets';
 import type { ViewDream, ViewFile } from './types';
@@ -45,7 +45,12 @@ export const mediaOf = (conversation: string) => join(dirname(dirname(conversati
  * else by what it shows), and marked `changed` where the live copy's take is another, or where it tells that moment
  * otherwise.
  */
-export function filesOf(live: Session | null, media: string): (item: Item) => ViewFile {
+export function filesOf(
+  live: Session | null,
+  media: string,
+  /** asdrawn.ts matchGhost, passed in: importing it here would read the writer's setting before the build sets it. */
+  match: typeof matchGhost,
+): (item: Item) => ViewFile {
   const all = [...(live?.build?.items ?? []), ...(live?.build?.frames ?? [])];
   const found = (name: string | undefined): ViewFile =>
     name && existsSync(join(media, basename(name)))
@@ -58,7 +63,7 @@ export function filesOf(live: Session | null, media: string): (item: Item) => Vi
     const there =
       item.kind === 'ghost'
         ? item.ghost
-          ? matchGhost(item.ghost, ghosts, (x) => x.ghost)
+          ? match(item.ghost, ghosts, (x) => x.ghost)
           : undefined
         : all.find((x) => x.id === item.id && x.kind === item.kind);
     const file = found(there?.mediaPath);
@@ -124,6 +129,7 @@ if (import.meta.main) {
   // The harness as it is meant to run: every switch of the profile, whatever the shell has.
   Object.assign(process.env, PROFILE);
   const { frozenDreams, loadDream } = await import('../evals/saved');
+  const { matchGhost } = await import('../asdrawn');
   const args = process.argv.slice(2);
   const live = args.includes('--live');
   const named = args.filter((a) => !a.startsWith('--'));
@@ -151,7 +157,7 @@ if (import.meta.main) {
         source: live ? 'live' : 'frozen',
         commit,
         mockUps: true,
-        fileOf: filesOf(copy?.session ?? null, media),
+        fileOf: filesOf(copy?.session ?? null, media, matchGhost),
       });
       // The dreamer's own words: a frozen copy keeps none, its live copy does. Never given to the rebuild: the story
       // record reads the dreamer's messages, and the frozen dream is measured without them.
