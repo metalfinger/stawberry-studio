@@ -5,7 +5,7 @@
 
 import { matchGhost } from '../asdrawn';
 import { type Blocking, DIRECTIONS, facing, halfViewOf } from '../blocking';
-import { planContinuity, shotPlan } from '../continuity';
+import { shotPlan } from '../continuity';
 import { tagWords } from '../cutsheet';
 import { sha as promptSha } from '../gate';
 import { hashOf } from '../lib';
@@ -13,7 +13,7 @@ import { imageName, type Rebuilt, type RebuiltPicture, rebuild, standIn } from '
 import { moments } from '../producer';
 import { resolveTree } from '../tree';
 import { sayNow } from '../record';
-import { calledFor, planRecord, previsFor, type Session, treeInputOf } from '../session';
+import { calledFor, previsFor, type Session, treeInputOf } from '../session';
 import { type Item, sheetPrompt } from '../sheets';
 import type { ViewCut, ViewDream, ViewFile, ViewGhost, ViewHashes, ViewRef, ViewSequence, ViewSheet } from './types';
 
@@ -154,9 +154,13 @@ export function viewDream(s: Session, o: ViewOpts): { view: ViewDream; files: Re
         ref(i + 1, x.image, x, lines.find((l) => l.startsWith(`Image ${i + 1}: `)) ?? ''),
       );
     }
-    // An in-between picture's prompt names its images in its sentences: "Image 2 is their reference sheet: …".
+    // A moment's prompt (the old builder) gives each image a line of its own; an in-between picture's names its images
+    // in its sentences ("Image 2 is their reference sheet: …"), each running until the next one's.
+    const lines = p.prompt.split('\n');
     const sentence = (n: number) =>
-      p.prompt.match(new RegExp(`Image ${n}\\b[^\\n]*?(?=\\s+Image \\d+\\b|\\n|$)`))?.[0] ?? '';
+      lines.find((l) => l.startsWith(`Image ${n}: `)) ??
+      p.prompt.match(new RegExp(`Image ${n} is\\b[^\\n]*?(?=\\s+Image \\d+ is\\b|\\n|$)`))?.[0] ??
+      '';
     return p.references.map((x, i) =>
       ref(i + 1, x.media_id, { role: x.role as ViewRef['role'], instruction: x.instruction }, sentence(i + 1)),
     );
@@ -168,14 +172,15 @@ export function viewDream(s: Session, o: ViewOpts): { view: ViewDream; files: Re
     facts: hashOf(facts),
   });
 
-  // The plan's issues, as the drawing gate reads them before a picture is drawn (session.ts gateFindings).
-  const gateIssues = planContinuity(b, planRecord(s)).issues;
-  // The panel's tree: the plan as a re-plan makes it now (session.ts treeInputOf), beside the plan the prompts use.
+  // The panel's tree (session.ts treeInputOf; its goals only name where the eyes come from), beside the plan the
+  // prompts use; a tree that cannot be made says why on every cut, never hidden.
+  let panelError = '';
   const panel = (() => {
     try {
       const input = treeInputOf({ ...s, state: { goals: {} }, askCounts: {} } as unknown as Session, 0.5);
       return input ? resolveTree(input) : null;
-    } catch {
+    } catch (e) {
+      panelError = String(e instanceof Error ? e.message : e).slice(0, 200);
       return null;
     }
   })();
@@ -197,7 +202,7 @@ export function viewDream(s: Session, o: ViewOpts): { view: ViewDream; files: Re
     const panelShot = shotOf(panel, p.id);
     const panelMates = sorted(panelShot?.cuts.map((c) => c.id) ?? []);
     const treeDiffers = !panel
-      ? 'the panel has no tree for this dream'
+      ? `the panel's tree could not be made${panelError ? `: ${panelError}` : ''}`
       : !panelShot
         ? "the panel's tree has no place for it"
         : panelMates === planMates
@@ -291,7 +296,9 @@ export function viewDream(s: Session, o: ViewOpts): { view: ViewDream; files: Re
         detail: plan?.unsentWhy?.[x.id]?.detail ?? 'left out with no reason recorded',
       })),
       facts,
-      issues: gateIssues.filter((x) => x.startsWith(`picture ${order} `) || x.startsWith(`picture ${order}:`)),
+      // As the drawing gate reads the plan's issues before a picture is drawn (session.ts gateFindings), from the plan
+      // this rebuild made.
+      issues: r.plan.issues.filter((x) => x.startsWith(`picture ${order} `) || x.startsWith(`picture ${order}:`)),
       prompt: p.prompt,
       paragraphs: (p.assembled?.lines ?? []).filter((l) => l.text).map((l) => ({ id: l.id, text: l.text })),
       drawn: isDrawn(night)
@@ -362,7 +369,10 @@ export function viewDream(s: Session, o: ViewOpts): { view: ViewDream; files: Re
             ? 'place'
             : 'thing';
       // The take its sketch was drawn from, as the checks kept it before drawing: its prompt as a hash.
-      const take = [...(own?.checkedTakes ?? [])].reverse().find((t) => t.version <= (own?.version ?? 0));
+      // Only a sketch with a picture: a take started and failed has no picture behind it.
+      const take = isDrawn(own)
+        ? [...(own?.checkedTakes ?? [])].reverse().find((t) => t.version <= (own?.version ?? 0))
+        : undefined;
       return {
         id: sk.id,
         name: sk.isDreamer ? 'the dreamer' : sk.name,

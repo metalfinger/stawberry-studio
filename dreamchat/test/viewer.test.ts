@@ -13,6 +13,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { withReadings } from '../viewer/data';
 import { sheetPrompt } from '../sheets';
+import { sha as promptSha } from '../gate';
 import { nodeStates, unreadRight } from '../evals/viewer-report';
 import { PROFILE, viewDream } from '../viewer/data';
 import type { ViewAnswers, ViewDream } from '../viewer/types';
@@ -275,7 +276,13 @@ describe('what the viewer shows beside the prompt', () => {
         const { view: v } = viewDream(loadDream(id, false).session as Session, { id, source: 'frozen', commit: 't' });
         for (const g of v.ghosts) {
           for (const x of g.refs)
-            expect([id, g.id, x.n, x.line.startsWith(`Image ${x.n}`)]).toEqual([id, g.id, x.n, true]);
+            expect([id, g.id, x.n, x.line.startsWith(`Image ${x.n}`), /[.)]$/.test(x.line)]).toEqual([
+              id,
+              g.id,
+              x.n,
+              true,
+              true,
+            ]);
           expect(g.from.editedFrom).toBe(g.refs.find((x) => x.role === 'base')?.key ?? null);
         }
       });
@@ -320,10 +327,46 @@ describe('the viewer asks no model', () => {
     const was = process.env.DREAMCHAT_RECORD;
     process.env.DREAMCHAT_RECORD = 'on';
     try {
-      await expect(withReadings(s, { impliedCache: empty })).rejects.toThrow(/not cached/);
+      await expect(withReadings(s, { impliedCache: empty })).rejects.toThrow(/what the moments imply is not cached/);
     } finally {
       if (was === undefined) delete process.env.DREAMCHAT_RECORD;
       else process.env.DREAMCHAT_RECORD = was;
     }
+  });
+});
+
+describe('image lines with the one builder off (the old builder and in-between pictures)', () => {
+  test("each image's line is whole: it starts at its image and ends where its sentence or line does", () => {
+    let seen = 0;
+    for (const id of dreams)
+      withSwitches({ DREAMCHAT_RECORD: 'on', DREAMCHAT_CAMERA: 'on', DREAMCHAT_REFS: 'on' }, () => {
+        const { view: v } = viewDream(loadDream(id, false).session as Session, { id, source: 'frozen', commit: 't' });
+        for (const x of [...v.cuts.flatMap((c) => c.refs), ...v.ghosts.flatMap((g) => g.refs)]) {
+          expect([id, x.n, x.line.startsWith(`Image ${x.n}`)]).toEqual([id, x.n, true]);
+          // A line cut off at a mention of another image ("… come from Image 1, the mock-up") ends mid-sentence.
+          expect([id, x.line.slice(-40), /[.)]$/.test(x.line.trim())]).toEqual([id, x.line.slice(-40), true]);
+          seen++;
+        }
+      });
+    expect(seen).toBeGreaterThan(400);
+  });
+});
+
+describe("a sketch says whether today's prompt is the one it was drawn from", () => {
+  const id = 'dream-0926-070314-0f40';
+  const withTake = (status: 'ready' | 'failed', same: boolean) =>
+    withSwitches(PROFILE, () => {
+      const s = structuredClone(loadDream(id, false).session as Session);
+      const it = s.build!.items.find((x) => x.id === 'p1')!;
+      it.status = status;
+      const prompt = sheetPrompt({ ...it, status: 'ready', review: 'approved' }, s.style!);
+      it.checkedTakes = [{ version: it.version, prompt: same ? promptSha(prompt) : 'another' }];
+      return viewDream(s, { id, source: 'frozen', commit: 't' }).view.sheets.find((x) => x.id === 'p1')!.drawnFrom;
+    });
+
+  test('the same prompt, another prompt, and no picture behind the take', () => {
+    expect(withTake('ready', true)).toEqual({ same: true, take: expect.any(Number) });
+    expect(withTake('ready', false)?.same).toBe(false);
+    expect(withTake('failed', true)).toBeNull();
   });
 });

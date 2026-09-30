@@ -35,7 +35,16 @@ import {
   turnedInto,
 } from './frames';
 import { type AsDrawn, type Copies, currentRecord, matchGhost } from './asdrawn';
-import { type CutSheet, cutSheetMode, type Framed, framed, ghostName, inViewIn, type SheetDream, sheetDream } from './cutsheet';
+import {
+  type CutSheet,
+  cutSheetMode,
+  type Framed,
+  framed,
+  ghostName,
+  inViewIn,
+  type SheetDream,
+  sheetDream,
+} from './cutsheet';
 import { type CutFacts, cutFactsOf, routedMode } from './checks';
 import { actingOf, checkReferences, preflight, readPrompt } from './gate';
 import { refsMode, standsFor } from './refs';
