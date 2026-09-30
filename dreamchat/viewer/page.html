@@ -407,12 +407,15 @@ function unsentBlock(c) {
   const sentKeys = new Set(c.refs.map((r) => r.key));
   const reasoned = new Set(c.unsent.map((u) => u.key));
   const other = c.links.filter((l) => l.kind === 'cut' && !sentKeys.has(`picture:${l.from}`) && !reasoned.has(`picture:${l.from}`));
+  // An earlier cut by its id; anything else (an in-between picture's key) is shown as its key, since jump() links
+  // only what the view has as a node.
   const idOf = (key) => key.replace(/^picture:/, '');
   const rows = [
     ...c.unsent.map((u) => el('tr', {}, el('td', {}, jump(idOf(u.key))), el('td', { text: u.code.replaceAll('_', ' ') }), el('td', { text: u.detail }))),
     ...other.map((l) => el('tr', {}, el('td', {}, jump(l.from)), el('td', { text: 'not among the images sent' }), el('td', { class: 'muted', text: `planned as ${l.role}${l.relation ? `, ${l.relation.replaceAll('_', ' ')}` : ''}; no reason recorded (left out as the prompt is put together)` }))),
   ];
-  return el('div', { class: 'block' }, el('h3', {}, 'Chosen by the plan and not sent', el('span', { class: 'count', text: `${rows.length}` })),
+  const unreasoned = other.length + c.unsent.filter((u) => u.code === 'not_recorded').length;
+  return el('div', { class: 'block' }, el('h3', {}, 'Chosen by the plan and not sent', el('span', { class: 'count', text: `${rows.length}${unreasoned ? ` (${unreasoned} with no reason)` : ''}` })),
     rows.length
       ? el('table', { class: 'list' }, el('tr', {}, el('th', { text: 'Picture' }), el('th', { text: 'Why not' }), el('th', { text: 'Detail' })), rows)
       : el('p', { class: 'muted', text: 'Every earlier picture the plan drew from is among the images sent. (In-between pictures are not checked here.)' }));
