@@ -1592,6 +1592,30 @@ describe('getting in or out of something at the instant', () => {
     expect(withClimbers(dock, [{ who: 'p1', does: 'looks into', to: 't1' }])).toEqual(dock);
     expect(withClimbers(dock, [{ who: 'p1', does: 'climbs into', to: 'x1' }])).toEqual(dock);
     expect(withClimbers(dock, undefined)).toBe(dock);
+    // Only a vehicle or a seat is got into: stepping onto a stage or a table is no climbing in.
+    const stage = {
+      ...dock,
+      spots: [
+        ...dock.spots,
+        {
+          id: 't2',
+          x: 8,
+          y: 8,
+          kind: 'thing' as const,
+          shape: 'ground' as const,
+          size: [3, 2, 0.5] as [number, number, number],
+        },
+      ],
+    };
+    expect(withClimbers(stage, [{ who: 'p1', does: 'steps onto', to: 't2' }])).toEqual(stage);
+    // Placed inside it already, they climb in from the side with room, never from against a wall.
+    const walled = {
+      ...dock,
+      spots: dock.spots.map((s) => (s.id === 't1' ? { ...s, x: 0.7 } : s.id === 'p1' ? { ...s, x: 0.6 } : s)),
+    };
+    expect(
+      withClimbers(walled, [{ who: 'p1', does: 'climbs into', to: 't1' }]).spots.find((s) => s.id === 'p1')!.x,
+    ).toBeCloseTo(1.2, 5);
   });
 
   test('said climbing into it, never in it, and not among who is in it', () => {
