@@ -1600,6 +1600,11 @@ function planWith(
         c.staging = [];
         if (v.rules) c.rules = v.rules;
         if (opts.camera) keepLine(c, m, where, v, rules);
+      } else if (edits && opts.camera) {
+        // An edit keeps the camera, framing and places of the picture it edits (its image 1 says so): with the camera
+        // rules, it is given no order of its own. Said "from in front of them" from the floor plan, a44a m3's order
+        // was the mirror of picture 2's, the picture it edits (the read of every frozen prompt, 30 Sep).
+        c.staging = [];
       } else {
         c.across = outsideOrder(plan, ids, fromBehind);
         c.camera = fromBehind

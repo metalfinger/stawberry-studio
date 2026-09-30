@@ -546,6 +546,34 @@ describe('what hides what', () => {
     const m7 = shot(picture(rebuilt('dream-0926-022102-aeea', ON), 'm7').prompt);
     expect(m7).toMatch(/partly hidden behind the table/);
     expect(m7).not.toMatch(/the table[^.;]*partly hidden behind the father/);
+describe('an edit', () => {
+  test('keeps the places of the picture it edits: it is given no order of its own', () => {
+    // a44a m3 edits picture 2 (the grandfather on the left, the dreamer on the right); said "from in front of them"
+    // from the floor plan, its own order was the mirror of it (the read of every frozen prompt, 30 Sep).
+    const r = rebuilt('dream-0926-062232-a44a', ON);
+    const m3 = picture(r, 'm3');
+    expect(m3.references[0].media_id).toBe('picture-m2');
+    expect(m3.prompt).not.toMatch(/left to right/);
+    // Without the camera rules, as before.
+    const off = rebuilt('dream-0926-062232-a44a', { ...ON, DREAMCHAT_CAMERA: undefined });
+    expect(picture(off, 'm3').prompt).toMatch(/left to right/);
+  });
+
+  test('shows the same people as the picture it edits, so nobody in it needs a place of its own', () => {
+    // An earlier picture stays the one edited only where the same people are in view (continuity.ts sameCast): with
+    // anyone coming in or going, the moment gets its own camera. So an edit, given no order, leaves nobody unplaced.
+    const edits: string[] = [];
+    for (const { id, r } of sweep())
+      for (const p of r.pictures) {
+        const base =
+          p.kind === 'cut' ? p.item.frame?.plan?.refs.find((x) => x.role === 'base' && x.kind === 'cut') : undefined;
+        if (!base) continue;
+        const moments = r.b.scenes.flatMap((sc) => sc.moments);
+        const who = (mid: string) => [...(moments.find((m) => m.id === mid)?.visible ?? [])].sort();
+        edits.push(`${id.slice(-4)} ${p.id}`);
+        expect([p.id, who(p.id)]).toEqual([p.id, who(base.id)]);
+      }
+    expect(edits.length).toBeGreaterThan(0);
   });
 });
 
