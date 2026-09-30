@@ -1486,3 +1486,69 @@ describe('a fixture up its wall, where the words put it', () => {
     expect(off.spots.find((s) => s.id === 'x1')!.above).toBeUndefined();
   });
 });
+
+describe('what the moment looks at, put down at their feet', () => {
+  const field = {
+    front: 'the sea',
+    spots: [
+      { id: 'p1', x: 10, y: 10, kind: 'person' as const, faces: 'front', pose: 'standing' as const },
+      { id: 't1', x: 10, y: 9.5, kind: 'thing' as const, size: [0.15, 0.1, 0.08] as [number, number, number] },
+      { id: 't2', x: 10.3, y: 9.4, kind: 'thing' as const, size: [0.2, 0.2, 0.1] as [number, number, number] },
+    ],
+  };
+  const name = (id: string) => ({ p1: 'the dreamer', t1: 'the boat', t2: 'the stone' })[id] ?? id;
+  const at = { id: 't1', at: { x: 10, y: 9.5 } };
+
+  test('is in the picture, however close the shot or small the thing', () => {
+    // The boat set down in the grass was under the bottom of a close shot of the dreamer (affd m10).
+    for (const size of ['close', 'medium'] as const) {
+      const shot = withEnv(CAMERA, () => outsideShot(field, ['p1'], size, name, at))!;
+      expect(shot.inPicture).toContain('t1');
+      expect(shot.text).toContain('the camera looks at the boat');
+      expect(shot.text).not.toContain(': the boat.');
+    }
+    // Held, it is where their hands are, as before: the frame is not taken down to the ground.
+    const held = { ...field, spots: field.spots.map((s) => (s.id === 't1' ? { ...s, heldBy: 'p1' } : s)) };
+    const inHands = withEnv(CAMERA, () => outsideShot(held, ['p1'], 'close', name, at))!;
+    expect(inHands.text).not.toContain('seen from the chest down to their feet');
+    // On their very spot, it is with them, never put down: the letters in the suitcase on the grandfather's lap took
+    // the frame down to the floor (a44a m3). Nor what anyone stands, sits or rides on.
+    const onSpot = { ...field, spots: field.spots.map((s) => (s.id === 't1' ? { ...s, x: 10, y: 10 } : s)) };
+    const withThem = withEnv(CAMERA, () =>
+      outsideShot(onSpot, ['p1'], 'close', name, { id: 't1', at: { x: 10, y: 10 } }),
+    )!;
+    expect(withThem.text).not.toContain('down to their feet');
+    // Off, as before.
+    const off = withEnv({ DREAMCHAT_CAMERA: undefined }, () => outsideShot(field, ['p1'], 'close', name, at))!;
+    expect(off.text).toContain('Outside the picture, off to the right: the boat.');
+  });
+
+  test('below the knees of whoever it is by, their own knees', () => {
+    // A 40 cm box half a metre in front: at a grown-up's feet, at a six-year-old's hip.
+    const box = (height?: number) => ({
+      front: 'the sea',
+      spots: [
+        {
+          id: 'p1',
+          x: 10,
+          y: 10,
+          kind: 'person' as const,
+          faces: 'front',
+          pose: 'standing' as const,
+          ...(height ? { height, body: 'human' as const } : {}),
+        },
+        { id: 't1', x: 10, y: 9.5, kind: 'thing' as const, size: [0.4, 0.3, 0.4] as [number, number, number] },
+      ],
+    });
+    const pitch = (height?: number) =>
+      withEnv(CAMERA, () => outsideShot(box(height), ['p1'], 'close', name, at))!.eye.pitch ?? 0;
+    expect(pitch()).toBeLessThan(pitch(1.15) - 0.2);
+  });
+
+  test('under the bottom of the frame, it is below the picture, never off to one side', () => {
+    const shot = withEnv(CAMERA, () => outsideShot(field, ['p1'], 'close', name))!;
+    expect(shot.text).toContain('Outside the picture, below it: the boat.');
+    expect(shot.text).toContain('Outside the picture, below it: the stone.');
+    expect(shot.text).toContain('Outside the picture, behind the camera: the sea.');
+  });
+});
