@@ -151,6 +151,12 @@ export const BUILDER_STEPS: readonly string[] = [
   // Not a ledger row: from the read of every prompt (30 Sep). Who holds what at a moment is what its typed act does
   //    at the instant (a handover mid-act, a thing set down), not what the floor plan left from the scene.
   'held_acts',
+  // Not a ledger row: from the read of every prompt (30 Sep). Whoever an act took out of the place through a way out
+  //    of it is not drawn back in where a later moment there only names them (the fish that swam out of the window).
+  'gone_out',
+  // Not a ledger row: each moment's typed acts reach planning (continuity's RecordPlan), to pose and place from: who
+  //    climbs into the boat is not yet sitting in it.
+  'plan_acts',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;

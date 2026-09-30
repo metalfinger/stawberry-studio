@@ -251,6 +251,8 @@ export type RecordPlan = {
       handed?: Record<string, string>;
       /** With the one builder's `held_acts` step, by thing: who puts it down here (it lies by them, out of their hands). */
       leaving?: Record<string, string>;
+      /** With the one builder's `plan_acts` step: the moment's typed acts (typed.ts), who does what to what, where. */
+      acts?: { who: string; does: string; to?: string; where?: string }[];
       now: { of: string; text: string }[];
       /** The same, as typed facts: what `now` says, before it is put in words. */
       facts: NowOf[];
