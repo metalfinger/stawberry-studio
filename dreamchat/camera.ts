@@ -360,6 +360,10 @@ const BODY: [RegExp, number][] = [
   [/\b(?:shoulders?|necks?|chins?)\b/i, 1.45],
 ];
 
+/** Words that put someone under the water, in the clause that names them ("a whale swims past under the water"). */
+const UNDER =
+  /\b(?:under ?water|under the (?:water|surface|waves|sea)|beneath the (?:water|surface|waves)|below the (?:water|surface|waves)|submerged)\b/;
+
 /** Words that say the water is deep, or fills the whole place, without saying how deep: never a thin layer. */
 const DEEP =
   /\b(?:deep enough|fills?|filled|filling|floods?|flooded|flooding|drowned|drowning|underwater|under water|submerged|submerging)\b/i;
@@ -382,6 +386,8 @@ export function waterLevel(
   words: string,
   plan: Blocking,
   beings: { name: string; height: number }[] = [],
+  /** The moment's own words: a creature they put under the water is under it, whatever `words` measure. */
+  told = '',
 ): number | null {
   if (retired('water_level')) return null;
   const text = words.toLowerCase();
@@ -452,7 +458,25 @@ export function waterLevel(
   const floor = text.search(/\b(?:floor|floors|ground)\b/);
   const measures = marks.sort((a, b) => a.at - b.at).filter((m) => !from(m));
   const first = measures[0];
-  if (!first) return floor >= 0 && !DEEP.test(text) ? 0.1 : null;
+  // A creature the moment itself puts under the water is under it, a little over its back, however high the
+  // record's words have it: "a whale swims past under the water" in water "far over the tops of the desks"
+  // was a metre deep, the whale's back out of it (library, 30 Sep). Never one coming up from under it.
+  const said = told.toLowerCase().split(/[,;.]/);
+  const under = beings
+    .filter((x) => {
+      const key = headWord(x.name);
+      return (
+        !!key &&
+        said.some((c) => {
+          const i = c.search(new RegExp(`\\b${key}(?:e?s)?\\b`));
+          const after = i < 0 ? '' : c.slice(i);
+          return UNDER.test(after) && !/\b(?:from|out from|up from)\s+(?:under|beneath|below)\b/.test(after);
+        })
+      );
+    })
+    .map((x) => x.height + 0.2);
+  const cap = (h: number) => Math.max(0.05, Math.min(ceiling - 0.1, Math.round(h * 100) / 100));
+  if (!first) return under.length ? cap(Math.max(...under)) : floor >= 0 && !DEEP.test(text) ? 0.1 : null;
   const levelOf = (m: (typeof marks)[number]) => {
     const before = beforeOf(m);
     const almost = /\b(?:almost|nearly|just below|not quite|close to)\b/.test(before);
@@ -469,8 +493,9 @@ export function waterLevel(
   // named for what stands in it ("and the shelves stand in it"), it does not.
   const level = Math.max(
     ...measures.filter((m) => m === first || m.being || HEIGHT_WORD.test(beforeOf(m))).map(levelOf),
+    ...under,
   );
-  return Math.max(0.05, Math.min(ceiling - 0.1, Math.round(level * 100) / 100));
+  return cap(level);
 }
 
 /** Words that measure water by what follows them: over it, up it, almost to it, reaching it. */

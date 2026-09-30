@@ -1528,9 +1528,11 @@ export function outsideShot(
         );
   const lowest =
     hands !== undefined ? hands - 0.2 : size === 'close' ? tallest - 0.7 : size === 'medium' ? tallest * 0.45 : 0;
-  const height = people.length
-    ? people.reduce((a, s) => a + eyeHeight(s.pose) + groundAt(s, plan), 0) / people.length
-    : 1.5;
+  // At the eyes of those above the water: a whale under the boat set the camera a metre below the two in it,
+  // yet "at the height of their eyes" (library, 30 Sep). Everyone under it, the camera is in it with them.
+  const dry = people.filter((s) => !underWater(s, plan));
+  const eyes = dry.length ? dry : people;
+  const height = eyes.length ? eyes.reduce((a, s) => a + eyeHeight(s.pose) + groundAt(s, plan), 0) / eyes.length : 1.5;
   const aim = (tallest + lowest) / 2;
   const tallAt = (l: number) => Math.atan(Math.tan(Math.atan(18 / l)) * (9 / 16));
   // The camera for a way of looking: as far off as the shot needs, `back` times that if it must
