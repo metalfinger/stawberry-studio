@@ -212,15 +212,14 @@ describe('what the fitting never gives up', () => {
     expect(f.prompt.endsWith('Nothing in it has legible writing.')).toBe(true);
   });
 
-  test('with three people, one sheet of them left to right frees a slot for the thing the moment is about', () => {
+  test('with three people, two on one sheet and the third apart free a slot for the thing the moment is about', () => {
     const f = fitMoment(lines, imgs, 0, MAX_CHARS, new Set(['sketch-fish']), true);
-    expect(f.images.map((x) => x.name)).toEqual(['x1', 'people:x2+x3+x4', 'sketch-fish', 'x6']);
-    expect(f.images[1].group?.map((x) => x.name)).toEqual(['x2', 'x3', 'x4']);
-    expect(f.prompt).toContain(
-      'Image 2: who the dreamer, my older sister and the old man are, left to right in this one image',
-    );
-    expect(f.prompt).toContain('Image 3: the fish');
-    expect(f.prompt).toContain('Image 4: the night market');
+    // At most two on the sheet: the third keeps their own image, and the place is what goes.
+    expect(f.images.map((x) => x.name)).toEqual(['x1', 'people:x2+x3', 'x4', 'sketch-fish']);
+    expect(f.images[1].group?.map((x) => x.name)).toEqual(['x2', 'x3']);
+    expect(f.prompt).toContain('Image 2: who the dreamer and my older sister are, left to right in this one image');
+    expect(f.prompt).toContain('Image 3: who the old man is');
+    expect(f.prompt).toContain('Image 4: the fish');
   });
 });
 

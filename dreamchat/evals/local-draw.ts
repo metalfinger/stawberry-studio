@@ -120,7 +120,9 @@ export function fitMoment(
   // night-market m3, heron m3: the night run, 1 Oct). A creature's image is "what the dog is", a person's "who".
   const manifestLines = (lines.find((l) => l.id === 'manifest')?.text ?? '').split('\n');
   const isPerson = (x: Img) => manifestLines.some((l) => l.startsWith(`Image ${x.n}: who `));
-  const ids = images.filter((x) => x.role === 'identity' && x.file && isPerson(x));
+  // At most two on it, the first two the images list: a third on the sheet was drawn twice, or not at all (night-market
+  // m2, m3 after the sheet was narrowed: the night run, 1 Oct). Anyone else keeps their own image.
+  const ids = images.filter((x) => x.role === 'identity' && x.file && isPerson(x)).slice(0, 2);
   const sheet: Img | null =
     people && ids.length > 1 && images.length > MAX_IMAGES
       ? { n: ids[0].n, role: 'identity', name: `people:${ids.map((x) => x.name).join('+')}`, group: ids }
