@@ -144,6 +144,10 @@ export const BUILDER_STEPS: readonly string[] = [
   //    big as a bus, a child of six), from one writer reading per dream, grounded in the dream's words (cast.ts): the
   //    things cast in the breakdown before anything reads it; weather and matter said as the picture's condition.
   'cast_named',
+  // Not a ledger row: from the read of every prompt (30 Sep). Where image 1 carries the layout (the mock-up, or the
+  //    picture edited), the picture before a jump gives only its light and colours and how anyone also here looks,
+  //    never its framing: two layouts disagreed, and a third-person framing went into the dreamer's own view.
+  'jump_words',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;

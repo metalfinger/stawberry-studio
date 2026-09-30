@@ -1362,7 +1362,8 @@ describe('an earlier picture for who someone is, as last drawn', () => {
     // 4c79 m6: "the dream changes this: The dreamer is suddenly flying.." before the step.
     const sw = { ...RS_ON, DREAMCHAT_CAMERA: 'on', DREAMCHAT_REFS: 'on' };
     const p = at('dream-0926-012307-4c79', 'm6', sw);
-    expect(p).toContain('the dream changes this: The dreamer is suddenly flying.');
+    // "The dream changes this" starts its own sentence with jump_words.
+    expect(p).toMatch(/the dream changes this: The dreamer is suddenly flying\./i);
     expect(p).not.toContain('flying..');
     expect(at('dream-0926-012307-4c79', 'm6', { ...sw, DREAMCHAT_ONE_BUILDER: 'state_once' })).toContain('flying..');
   });
@@ -1422,5 +1423,36 @@ describe("writing the story needs but does not quote (the owner's choice, 30 Sep
     );
     expect(p).toContain('shows it as marks no one could read');
     expect(p).not.toContain('signs, pages and screens stay blank');
+  });
+});
+
+describe('the picture before a jump, where image 1 carries the layout', () => {
+  const at = (step: string, id: string, m: string) =>
+    withSwitches(
+      { ...SHEET, DREAMCHAT_CAMERA: 'on', DREAMCHAT_REFS: 'on', DREAMCHAT_ONE_BUILDER: step },
+      () => rebuild(structuredClone(loadDream(id, false).session as Session)).pictures.find((x) => x.id === m)!.prompt,
+    );
+  test('gives no framing of its own: its light and colours, and who is in both', () => {
+    // 0f40 m4: the lift, then the orchard through the dreamer's eyes, with the mock-up as image 1.
+    const before = at('cast_named', 'dream-0926-070314-0f40', 'm4');
+    const after = at('jump_words', 'dream-0926-070314-0f40', 'm4');
+    expect(before).toContain('Keep its framing and the shapes in it where they are');
+    expect(after).not.toContain('Keep its framing');
+    expect(after).toContain(
+      'just before the dream jumps to another place: take only how anyone also in this picture looks, and nothing of its place; the dreamer in it is now the camera, so they are not in this picture. Where everything is comes from Image 1.',
+    );
+    expect(after.split('\n')[0]).toBe(before.split('\n')[0]);
+  });
+  test('within the same place: its light and colours too', () => {
+    const p = at('jump_words', 'dream-0926-012307-4c79', 'm6');
+    expect(p).toContain(
+      'take only its light and colours, and how anyone also in this picture looks. Where everything is comes from Image 1.',
+    );
+  });
+  test('a turn in the same place is said as a change, not a jump', () => {
+    // 4c79 m5: the teacher becomes a heron in the classroom; nothing cut away.
+    const p = at('jump_words', 'dream-0926-012307-4c79', 'm5');
+    expect(p).toContain('just before the dream changes it: take only its light and colours');
+    expect(p).not.toContain('this picture faces');
   });
 });
