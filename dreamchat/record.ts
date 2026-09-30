@@ -1508,8 +1508,12 @@ function uncast(ctx: Ctx): Violation[] {
   }));
 }
 
-/** An act that takes someone out of the place: out of it, or out through a way out of it. */
-const GOES_OUT = /^(?:\S+\s+)?(?:out(?:\s+of|\s+through)?|away\s+through)$|^(?:leaves?|exits?|escapes?)$/i;
+/**
+ * An act that takes someone out of the place: a going, out of it or out through a way out of it. Only verbs of going:
+ * "looks out of the window" takes no one anywhere.
+ */
+const GOES_OUT =
+  /^(?:(?:goes|go|walks?|runs?|swims?|flies|fly|climbs?|crawls?|jumps?|leaps?|dives?|steps?|slips?|floats?|drifts?|sails?|rushes|rush|hurries|hurry|wanders?|flees|flee|rides?|drives?|zooms?|darts?|races?)\s+(?:out(?:\s+of|\s+through)?|away\s+through)|leaves?|exits?|escapes?)$/i;
 /** A way out of a place, as an act's "to" says it. */
 const WAY_OUT = /\b(?:window|door|doorway|gate|hatch|opening|exit|porthole|skylight)s?\b/i;
 
@@ -3180,7 +3184,15 @@ export function recordForPlan(
 ): RecordPlan | undefined {
   if (recordMode() !== 'on') return undefined;
   try {
-    const plan = forPlan(oneRecord(b, items, readings, opts).record);
+    const record = oneRecord(b, items, readings, opts).record;
+    const plan = forPlan(record);
+    // With the plan_acts step, each moment's typed acts, for planning to pose and place from (someone climbing into the
+    // boat is not yet sitting in it).
+    if (plan && builds('plan_acts') && readings?.typed)
+      for (const m of record.moments) {
+        const acts = takenOf(readings.typed[m.id], m.eyes).acts.map(({ kind: _, ...a }) => a);
+        if (acts.length && plan.moments[m.id]) plan.moments[m.id].acts = acts;
+      }
     // With the cast_named step, the cast reading as read and checked, for the floor plan to place (continuity rawPlanBy).
     return plan && builds('cast_named') && readings?.cast ? { ...plan, cast: readings.cast } : plan;
   } catch {

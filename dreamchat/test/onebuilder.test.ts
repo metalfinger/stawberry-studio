@@ -1569,8 +1569,29 @@ describe('whoever went out through a way out is not drawn back in by a name', ()
     expect(back.rec?.moments.m7.gone).not.toContain('p3');
   });
 
+  test('looking out of the window takes no one out', () => {
+    const r = at('gone_out', { m6: { moment: 'm6', facts: [act('p3', 'looks out of', 'the window')] } });
+    expect(r.rec?.moments.m7.gone).not.toContain('p3');
+  });
+
   test('going out of something that is no way out of the place (the seaweed) takes no one out of it', () => {
     const r = at('gone_out', { m6: { moment: 'm6', facts: [act('p3', 'swims out of', 'the seaweed')] } });
     expect(r.rec?.moments.m7.gone).not.toContain('p3');
+  });
+});
+
+describe("with plan_acts, the moment's acts reach planning", () => {
+  const act = (who: string, does: string, to?: string) =>
+    taken({ kind: 'act' as const, who, does, ...(to ? { to } : {}) });
+  const typed = { m6: { moment: 'm6', facts: [act('p1', 'climbs into', 't1')] } };
+  const at = (step: string) =>
+    withSwitches({ ...SHEET, DREAMCHAT_CAMERA: 'on', DREAMCHAT_REFS: 'on', DREAMCHAT_ONE_BUILDER: step }, () =>
+      rebuild(withReadings('dream-0926-052843-6081', typed)),
+    );
+  test('before its step none; with it, the acts as taken, only where a moment has any', () => {
+    expect(at('gone_out').rec?.moments.m6.acts).toBeUndefined();
+    const r = at('plan_acts');
+    expect(r.rec?.moments.m6.acts).toEqual([{ who: 'p1', does: 'climbs into', to: 't1' }]);
+    expect(r.rec?.moments.m1.acts).toBeUndefined();
   });
 });
