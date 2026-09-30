@@ -1322,3 +1322,33 @@ describe('typed readings while planning', () => {
     expect(Object.keys(kept).length).toBeGreaterThan(0);
   });
 });
+
+describe('an earlier picture for who someone is, as last drawn', () => {
+  const at = (id: string, m: string, sw: Record<string, string>) =>
+    withSwitches(
+      sw,
+      () => rebuild(structuredClone(loadDream(id, false).session as Session)).pictures.find((x) => x.id === m)!.prompt,
+    );
+  const RS_ON = { ...SHEET, DREAMCHAT_ONE_BUILDER: 'on' };
+
+  test('is never sent for someone turned into something else: their in-between picture shows what they are now', () => {
+    // 8ceb m5: Mr Hale has turned into an octopus; picture 4 was sent beside it for "his face, hair, build and clothes".
+    const p = at('dream-0926-083656-8ceb', 'm5', RS_ON);
+    expect(p).toContain('what Mr Hale has turned into, a huge orange octopus');
+    expect(p).not.toContain('who Mr Hale is, as last drawn');
+  });
+
+  test('says an animal by what makes it that one, never a face or clothes', () => {
+    for (const sw of [SHEET, RS_ON, { ...RS_ON, DREAMCHAT_CAMERA: 'on', DREAMCHAT_REFS: 'on' }]) {
+      const p = at('dream-0926-083656-8ceb', 'm5', sw);
+      expect(p).toContain('what the little silver fish is: its kind, size, build, coat and markings, as last drawn');
+      expect(p).not.toContain('who the little silver fish is');
+    }
+  });
+
+  test('says a group as more than one, and a person as before', () => {
+    // 4c79 m3: the faceless students, a group.
+    const p = at('dream-0926-012307-4c79', 'm3', RS_ON);
+    expect(p).toContain('who the faceless students are, as last drawn: their face, hair, build and clothes');
+  });
+});
