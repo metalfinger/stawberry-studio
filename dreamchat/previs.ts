@@ -1783,7 +1783,13 @@ export function outsideShot(
     cameraMode() !== 'on'
       ? fromGroup
       : apart
-        ? fromGroup
+        ? // Over the shoulder of the one away from what it looks at, only where their back is to it: the dreamer turned
+          // toward the camera was "seen from behind the dreamer, over their shoulder" (classroom m3, 30 Sep).
+          binOf(near) === 'back'
+          ? fromGroup
+          : all('front')
+            ? `from in front of ${them}`
+            : `from beside ${them}`
         : pair && !atIt && turned.length === 2 && backOne && frontOne
           ? `from behind ${name(backOne.id)}, as ${name(backOne.id)} faces ${name(frontOne.id)}`
           : pair && all('side')
