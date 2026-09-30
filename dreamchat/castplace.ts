@@ -159,6 +159,23 @@ export function withCastSpots(
         ? 'same'
         : wayOf(t.side, by, plan)
       : 'same';
+    // On or at something the place has ("at a table", "on the shelf"): on it, at its edge nearest whoever it is by, where
+    // the mock-up rests it on top. The little boats the father folds "at a table" stood a metre past the table, out of
+    // the picture of him folding them (affd m4, 30 Sep).
+    const onWhat = /\b(?:on|at|upon|atop)\s+(?:the |a |an |his |her |their |its )?([a-z][a-z -]*)/.exec(
+      (t.side ?? '').toLowerCase(),
+    );
+    const surface =
+      t.kind !== 'vehicle' && onWhat
+        ? spots.find(
+            (s) =>
+              s.kind !== 'person' &&
+              !s.heldBy &&
+              !s.many &&
+              !!headOf(s.name ?? '') &&
+              headOf(onWhat[1]) === headOf(s.name ?? ''),
+          )
+        : undefined;
     const from = by ?? { x: plan.indoors ? rw / 2 : 0, y: plan.indoors ? rd / 2 : 0 };
     // Ridden, under everyone sitting on nothing beside whoever it is by, so the driver is in it too.
     const aboard =
@@ -171,7 +188,16 @@ export function withCastSpots(
           y: aboard.reduce((a, q) => a + q.y, 0) / aboard.length,
         }
       : { x: from.x, y: from.y };
-    if (way !== 'same') {
+    if (surface) {
+      const f = facing(surface, plan);
+      const r = rightOf(f);
+      const [sw, sd] = sizeOf(surface);
+      const v = { x: from.x - surface.x, y: from.y - surface.y };
+      const clamp = (n: number, half: number) => Math.max(-half, Math.min(half, n));
+      const a = clamp(v.x * r.x + v.y * r.y, Math.max(0, sw / 2 - size[0] / 2 - 0.05));
+      const b = clamp(v.x * f.x + v.y * f.y, Math.max(0, sd / 2 - size[1] / 2 - 0.05));
+      at = { x: surface.x + r.x * a + f.x * b, y: surface.y + r.y * a + f.y * b };
+    } else if (way !== 'same') {
       const d = unit(way);
       const step = Math.max(1.2, (sizeOf(by as Spot)[1] + size[1]) / 2 + 0.5);
       at = { x: from.x + d.x * step, y: from.y + d.y * step };

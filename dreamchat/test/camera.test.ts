@@ -1747,3 +1747,36 @@ describe('what they ride goes with them', () => {
     expect(carriedBy(field, field, [[{ id: 'c1', x: 0, y: 0 }]])).toBe(field);
   });
 });
+
+describe('what rests on something', () => {
+  test('is said on it, and it is never said beside what rests on it', () => {
+    const study = {
+      front: 'the door',
+      indoors: true,
+      room: [5, 6] as [number, number],
+      spots: [
+        { id: 'p3', x: 2.5, y: 1.8, kind: 'person' as const, faces: 'x1' },
+        {
+          id: 'x1',
+          x: 2.5,
+          y: 3,
+          kind: 'thing' as const,
+          fixture: true,
+          name: 'the table',
+          size: [1.5, 0.8, 0.8] as [number, number, number],
+        },
+        { id: 'c2', x: 2.5, y: 2.8, kind: 'thing' as const, size: [0.24, 0.24, 0.24] as [number, number, number] },
+      ],
+    };
+    const name = (id: string) => ({ p3: 'my father', c2: 'the little boats' })[id] ?? id;
+    const shot = withEnv(CAMERA, () => outsideShot(study, ['p3'], 'wide', name, { id: 'c2', at: { x: 2.5, y: 2.8 } }))!;
+    expect(shot.text).toMatch(/the little boats, [^;.]*on the table/);
+    expect(shot.text).not.toContain('right beside the little boats');
+    expect(shot.text).not.toMatch(/the little boats, [^;.]*right beside the table/);
+    // Off, as before.
+    const off = withEnv({ DREAMCHAT_CAMERA: undefined }, () =>
+      outsideShot(study, ['p3'], 'wide', name, { id: 'c2', at: { x: 2.5, y: 2.8 } }),
+    )!;
+    expect(off.text).not.toMatch(/the little boats, [^;.]*on the table/);
+  });
+});

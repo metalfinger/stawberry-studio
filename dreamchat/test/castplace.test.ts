@@ -104,6 +104,37 @@ describe('a cast thing', () => {
     expect(withCastSpots(room, reading([thing({})]), { id: 'm2', action: '' }, 'p1').spots).toEqual(room.spots);
   });
 
+  test('on or at something the place has, it is on it, at the edge nearest whoever it is by', () => {
+    // The little boats the father folds "at a table" stood a metre past the table (affd m4).
+    const study: Blocking = {
+      front: 'the door',
+      indoors: true,
+      room: [5, 6],
+      spots: [
+        { id: 'p3', x: 2.5, y: 2.5, kind: 'person', faces: 'x1' },
+        { id: 'x1', x: 2.5, y: 3, kind: 'thing', fixture: true, name: 'the table', size: [1.5, 0.8, 0.8] },
+      ],
+    };
+    const boats = withCastSpots(
+      study,
+      reading([thing({ name: 'the little boats', near: 'p3', side: 'at a table', size: 'little' })]),
+      { id: 'm1', action: 'The father folds little boats at the table' },
+      'p1',
+    ).spots.find((s) => s.id === 'c1')!;
+    expect(boats.x).toBeCloseTo(2.5, 5);
+    // On the table's near edge, toward the father: within its footprint.
+    expect(boats.y).toBeGreaterThan(2.6);
+    expect(boats.y).toBeLessThan(3);
+    // Nothing of that name here: placed as before, by the way the words say.
+    const none = withCastSpots(
+      study,
+      reading([thing({ name: 'the little boats', near: 'p3', side: 'at the shelf' })]),
+      { id: 'm1', action: '' },
+      'p1',
+    ).spots.find((s) => s.id === 'c1')!;
+    expect(none.y).toBeGreaterThan(3.4);
+  });
+
   test('seen out past the place, it is outside, on the wall of the window it is seen through', () => {
     const out = withCastSpots(
       room,

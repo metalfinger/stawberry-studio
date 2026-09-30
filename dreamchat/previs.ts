@@ -555,6 +555,23 @@ const ON_A_WALL = /\b(wall|hanging|hung|hangs|mounted|clocks?|(tele)?phones?)\b/
  * with the clock said to be outside the picture (desert station m3, 26 Sep); the phone and the
  * clock on the kitchen wall were drawn near its floor (grandma's kitchen, 26 Sep).
  */
+/** The low thing a small one rests on top of, as `restOf` sets it there: a table, a counter, a bench. */
+function restsOn(s: Spot, plan: Blocking): Spot | undefined {
+  if (isPerson(s) || s.heldBy || s.many || shapeOf(s, plan) !== 'block') return undefined;
+  const h = sizeOf(s)[2];
+  if (h >= 0.6) return undefined;
+  return plan.spots.find(
+    (t) =>
+      t.id !== s.id &&
+      !isPerson(t) &&
+      !t.heldBy &&
+      shapeOf(t, plan) === 'block' &&
+      sizeOf(t)[2] > h &&
+      sizeOf(t)[2] < 1.6 &&
+      onFootprint(s, t, plan, 0),
+  );
+}
+
 function restOf(s: Spot, plan: Blocking, called: string): (V3 & { f?: V2 }) | undefined {
   if (isPerson(s) || s.heldBy || shapeOf(s, plan) !== 'block') return undefined;
   const [w, d, h] = sizeOf(s);
@@ -1351,6 +1368,9 @@ function thingWords(
       : '';
   const holder = !isPerson(s) && s.heldBy ? s.heldBy : undefined;
   const holds = isPerson(s) && !s.many ? plan.spots.filter((o) => o.heldBy === s.id).map((o) => called(o.id)) : [];
+  // What it rests on, where the mock-up puts it on top of something low (the little boats on the table the father folds
+  // them at, affd m4): "on the table", never "right beside" it (the camera rules).
+  const onTop = cameraMode() === 'on' && !isPerson(s) && !holder ? restsOn(s, plan) : undefined;
   const next =
     !isPerson(s) && !holder
       ? besideOf(
@@ -1361,7 +1381,10 @@ function thingWords(
             // the reverse angle does not show, and read as windows on the picture's left (the cast fixtures, 30 Sep).
             // What they are on is where they are, known without being in the picture: the blue sofa of the dreamer's
             // own seat.
-            (id) => !ctx.inPicture || cameraMode() !== 'on' || ctx.inPicture.has(id) || ctx.on.includes(id),
+            (id) =>
+              (!ctx.inPicture || cameraMode() !== 'on' || ctx.inPicture.has(id) || ctx.on.includes(id)) &&
+              // What rests on it is on it, never beside it: "the table, right beside the little boats" on it.
+              !(cameraMode() === 'on' && restsOn(plan.spots.find((o) => o.id === id) ?? s, plan)?.id === s.id),
           ),
         )
       : undefined;
@@ -1379,7 +1402,7 @@ function thingWords(
     (riders.length
       ? `, with ${riders.join(' and ')} ${shape === 'vehicle' ? 'in it' : shape === 'seat' ? 'sitting on it' : 'on it'}`
       : '') +
-    (next ? `, right beside ${called(next.id)}` : '');
+    (onTop ? `, on ${called(onTop.id)}` : next ? `, right beside ${called(next.id)}` : '');
   const behind =
     seen.hiddenBy && seen.hiddenBy !== s.id && ctx.spots.some((o) => o.id === seen.hiddenBy)
       ? `, partly hidden behind ${called(seen.hiddenBy)}`
