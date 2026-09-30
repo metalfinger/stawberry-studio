@@ -9,7 +9,7 @@ import { type Blocking, facing, onFootprint, rightOf, roomOf, type Side, sizeOf,
 type V2 = { x: number; y: number };
 
 /** One of the pieces a place's words give (a window along a side, a row of seats): `cf1`, `cf2` … */
-export const isCastPiece = (s: { id: string }) => /^cf\d+$/.test(s.id);
+export const isCastPiece = (s: { id: string }) => /^cf\d+$|^x-rail-\d$/.test(s.id);
 
 /** The things the reading casts, with the ids it gives them (c1, c2 …; a reading kept before ids, in its order). */
 export function castThings(reading: CastReading): { id: string; t: CastThing }[] {

@@ -1899,6 +1899,13 @@ describe('a place that is a way along', () => {
     expect(withPathDeck(bridge, 'the night market')).toBe(bridge);
     // A way on water: afloat, no deck.
     expect(withPathDeck(bridge, 'the river street')).toBe(bridge);
+    // Bounded, the way is the plan's floor, with its railings along both edges: a bridge 1.5 m by 20 m (night-market
+    // m5), where the room guard for a kitchen-sized plan had left it bare.
+    const bounded = withPathDeck({ ...bridge, room: [1.5, 20] }, 'the narrow iron bridge');
+    expect(bounded.spots.find((s) => s.id === 'x-deck')).toMatchObject({ x: 0.75, y: 10, size: [1.5, 40, 0.05] });
+    expect(bounded.spots.filter((s) => /^x-rail-/.test(s.id)).map((s) => s.x)).toEqual([0, 1.5]);
+    // A plan a few metres across every way is a room.
+    expect(withPathDeck({ ...bridge, room: [2.4, 2.2] }, 'the street')).toEqual({ ...bridge, room: [2.4, 2.2] });
     const laid = { ...bridge, spots: [...bridge.spots, { ...deck, id: 'x9' }] };
     expect(withPathDeck(laid, 'the narrow iron bridge')).toBe(laid);
   });
