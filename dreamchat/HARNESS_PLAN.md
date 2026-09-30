@@ -28,14 +28,28 @@ current figure and what's next). Writer model: Claude (`DREAMCHAT_WRITER=claude`
 
 ## Where we stopped (27-29 Sep): read this to resume
 
-**Newest landmark (30 Sep, afternoon): every frozen prompt read, 126 faults in 13 patterns, fixed at their roots.**
+**Newest landmark (30 Sep, afternoon and evening): every frozen prompt read, 126 faults in 13 patterns, fixed at their
+roots.**
 Nothing drawn, nothing paid. The read, cut by cut, is `docs/prompt-read-2026-09-30.md`; each pattern was verified
 before it was fixed, and each fix measured on every saved dream (every step on, the same readings on both sides),
-read by the other pane, and landed with the suite passing with every switch off and on. `KEYS_VERSION` is 5 (the
-camera words moved what records are keyed by).
+read by the other pane, and landed with the suite passing with every switch off and on. `KEYS_VERSION` is 6 (the
+camera words and the cast placement moved what records are keyed by).
 - *On lab, the camera rules (behind DREAMCHAT_CAMERA):*
   - Where the camera stands is said as each one in the picture is turned to it (11): openers contradicting their own
     figures, frozen 7 → 0, live 13 → 0.
+  - Over someone's shoulder only where their back is to the camera (11, the rest of it): classroom m3's dreamer,
+    turned toward the camera, was "seen from behind the dreamer, over their shoulder"; now "from beside" or "from in
+    front of" as the figures are. Openers contradicting their own figures: frozen 1 → 0, live 1 → 0 (4c79 m3 only).
+  - What the moment looks at, put down at someone's feet, is in the picture (1, its framing part, and the boat
+    held_acts sets down in the grass, affd m10): a thing nobody holds, below the knees of someone within a step of
+    it, and not what anyone is on or on anyone's very spot, is framed where it lies by a close shot and reached down
+    to by a medium one; what the moment looks at is in the picture wherever any of it shows, however small, so long as most of it is
+    not hidden; and
+    whatever is ahead but under the bottom of the frame is "below it", never "off to the left". Against lab with
+    held_acts, frozen 4 and live 15 pictures: the boat in the grass, framed where it lies (affd m10, both); 3 and 11
+    only "below it" (affd m4's key, 6081 m6's green lamp, 0f40 m4's apples; the dreamer's own desk under their view,
+    3471 m4-m5); and d3a1 m5-m7's written briefs give way (row 34). Nobody lost, prompt cases the same, the keys
+    unchanged. A thing the plan gives no size stays out of it until a reading gives one.
   - Two that hide parts of each other are said once (10): frozen 4 → 0, live 4 → 0.
   - An edit keeps its picture's places and is given no order of its own (5): the floor-plan order was the mirror of
     the picture edited (snow-train-2 m3); the 4 edits, frozen and live. An edit never brings anyone new (continuity's
@@ -73,12 +87,12 @@ camera words moved what records are keyed by).
   size the little silver fish at their desks and the terrier fell out of the words, and a cat as big as a bus hid the
   six-year-old beside it (8ceb m3, m5, m7; aeea m1; 3cd7 m2, m3). The words now keep every being with any of it in
   view, but a being hidden whole still goes; and fish sitting as pupils should read as pupils. For the picture test.
-- *In review (the S6 pane, `s6-held`):* `held_acts` (4, the holding half): who holds what at a moment is what its typed
+- *On lab:* `held_acts` (4, the holding half): who holds what at a moment is what its typed
   act does at the instant, not what the floor plan left from the scene. The father still folds the boat he hands over
   only in the next moment (affd m4); a handover is said and planned mid-act, still in the giver's hand reaching out
   (affd m5, a44a m6, b0cb m5; 09ea m4 with the fish's newspaper); the one holding a thing already handed over is not
-  handed it again (aeea m8); a thing set down is out of their hands, lying by them (affd m10, whose waist-up frame
-  crops it at their feet: the Mac pane takes the frame). Only a typed giving act puts a thing in the giver's hands on
+  handed it again (aeea m8); a thing set down is out of their hands, lying by them (affd m10, framed where it lies
+  in the grass: see the camera rules above). Only a typed giving act puts a thing in the giver's hands on
   the floor plan, never the plan's own guess. 21 pictures, all intended; prompt cases unchanged.
 - *Next (the S6 pane with the Mac pane):* the moment's acts reach planning for poses and riders: "gets in" drawn
   already seated (4: fdd7 m3, 6081 m6, 6e80 m5, 538d m5); fish still at their desks after leaving (8ceb m7); "buried
@@ -86,8 +100,7 @@ camera words moved what records are keyed by).
 - *Known, not fixed:* tall grass and the orchard's rows planned as ground people stand on top of (d3a1, orchard m5);
   a spot named as the whole room ("the office interior with desks…", b91f); who rides in front on a bicycle, and who
   rides in a vehicle the moment's own words name no rider for (the tractor that "drives slowly" at lighthouse-first
-  m9), wait for the typed acts ("pedals", "drives") to reach planning; the opener over one's shoulder when they are
-  turned toward the camera (classroom m3). A written shot brief gives way whenever a
+  m9), wait for the typed acts ("pedals", "drives") to reach planning. A written shot brief gives way whenever a
   fix changes the view's words (ledger row 34, the brief built from the sheet's facts, ends that).
 
 **Earlier landmark (30 Sep, morning, the Mac pane and the S6 pane working together): S5's layout anchor, the S6
