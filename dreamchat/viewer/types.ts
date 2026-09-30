@@ -101,6 +101,8 @@ export type ViewUnsent = {
     | 'edit_to_own_camera'
     | 'not_recorded';
   detail: string;
+  /** It was the picture to edit: held back, so the moment is made from its own shot and mock-up instead. */
+  base?: true;
 };
 
 /** A camera on the floor plan, for the top view: metres and degrees in the plan's own frame. */
