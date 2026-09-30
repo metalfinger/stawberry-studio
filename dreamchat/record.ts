@@ -27,7 +27,7 @@ import {
 } from './producer';
 import { headWord, isAnimal, isGroup, type Item, withoutPose } from './sheets';
 import { hashOf, slug } from './lib';
-import type { TypedReading } from './typed';
+import { type TypedReading, takenOf } from './typed';
 
 // ── the record ──────────────────────────────────────────────────────────────
 
@@ -160,6 +160,10 @@ export type AtMoment = {
   held: Record<string, string>;
   /** By thing: who hands it over here, to whoever holds it after. */
   handed: Record<string, string>;
+  /** With the held_acts step, by thing: who lets go of it here, where it lies by them, out of their hands. */
+  leaving?: Record<string, string>;
+  /** With the held_acts step, by thing: who is handing it over here, as a giving act says (not the plan's guess). */
+  giving?: Record<string, string>;
   /** Each one it shows, and its place. */
   looks: Record<string, Seen>;
   /** The changes that happen here, by key. */
@@ -2358,6 +2362,85 @@ function staysWithHolder(ctx: Ctx): Violation[] {
   return out;
 }
 
+/** A giving act: at the instant, the thing is on its way from the giver's hands to the one given it. */
+const GIVING = /^(?:hands?|gives?|pass(?:es)?|holds? out|offers?)\b/i;
+/** Letting go: from the instant on, it is out of their hands. */
+const LETTING_GO = /^(?:(?:sets?|puts?|lays?)\s+(?:\S+\s+)?down|places?|drops?|lets? go|releases?|throws?|leaves?)\b/i;
+/** Done to a thing with the hands: whoever does it has it in them. */
+const HANDLING = /^(?:holds?|folds?|carr(?:y|ies)|clutch(?:es)?|grips?|lifts?|picks? up|takes?|raises?|hugs?|cradles?|wraps?)\b/i;
+
+/**
+ * With the one builder's `held_acts` step, who holds what at a moment is what its typed act does at the instant
+ * (typed.ts), not what the floor plan left from the scene: the father still folding the boat he hands over only
+ * in the next moment (affd m4); the boat passing from his hand to the dreamer's as he hands it (affd m5); the
+ * dreamer holding the boat already handed over (aeea m8); the boat set down in the grass out of their hands
+ * (affd m10). Only a thing someone holds somewhere in the dream is held by an act, never a door someone opens.
+ */
+function heldByActs(ctx: Ctx): Violation[] {
+  const typed = ctx.readings.typed;
+  if (!builds('held_acts') || !typed) return [];
+  const { moments, elements } = ctx.record;
+  const out: Violation[] = [];
+  const handheld = new Set([
+    ...moments.flatMap((m) => Object.keys(m.held)),
+    ...[...ctx.holders.values()].flatMap((h) => [...Object.keys(h.start), ...Object.keys(h.end)]),
+  ]);
+  const living = (id: string | undefined) => !!id && !!elements[id] && elements[id].kind !== 'thing' && elements[id].kind !== 'place';
+  const actsAt = (m: AtMoment, t: string) => {
+    const head = wordsOf(headOf(elements[t]?.name ?? '')).at(-1);
+    return takenOf(typed[m.id], m.eyes).acts.filter(
+      (a) =>
+        a.who !== t &&
+        (a.to === t || (!!head && wordsOf(`${a.does} ${a.to && !elements[a.to] ? a.to : ''}`).includes(head))),
+    );
+  };
+  for (const t of Object.keys(elements).filter((id) => elements[id].kind === 'thing' && handheld.has(id)))
+    moments.forEach((m, i) => {
+      if (!there(m, t)) return;
+      const acts = actsAt(m, t);
+      const was = m.held[t];
+      const give = acts.find((a) => GIVING.test(a.does) && holderThere(ctx, m, a.who));
+      const letGo = acts.find((a) => LETTING_GO.test(a.does));
+      const hand = acts.find((a) => HANDLING.test(a.does) && holderThere(ctx, m, a.who));
+      if (give) {
+        const to = living(give.to) && give.to !== give.who ? give.to : was && was !== give.who ? was : undefined;
+        if (to && holderThere(ctx, m, to)) {
+          m.held[t] = to;
+          m.handed[t] = give.who;
+          m.giving = { ...(m.giving ?? {}), [t]: give.who };
+        } else {
+          m.held[t] = give.who;
+          delete m.handed[t];
+        }
+      } else if (letGo) {
+        // The picture shows it put down, by whoever let go of it (the floor plan puts it there): "the boat set down in
+        // the grass" was in the dreamer's hands (affd m10), and out of them it stood where the scene began, outside
+        // the picture the moment is about.
+        delete m.held[t];
+        delete m.handed[t];
+        m.leaving = { ...(m.leaving ?? {}), [t]: letGo.who };
+        // And out of their hands after, until an act has it again.
+        for (const k of moments.slice(i + 1)) {
+          if (k.shift || k.held[t] !== letGo.who || actsAt(k, t).length) break;
+          delete k.held[t];
+          delete k.handed[t];
+        }
+      } else if (hand) {
+        m.held[t] = hand.who;
+        delete m.handed[t];
+      } else return;
+      if (m.held[t] !== was)
+        out.push({
+          rule: 'carried',
+          who: t,
+          at: m.id,
+          detail: `${called(ctx, t)} is ${m.held[t] ? `in ${poss(called(ctx, m.held[t]))} hands` : `put down by ${called(ctx, letGo?.who ?? '')}`} at ${m.id}, as its act there has it`,
+          fix: 'add',
+        });
+    });
+  return out;
+}
+
 /**
  * A thing is held at a moment only where it is there; the dreamer holds as the camera too. A thing in
  * a moment whose holder is not in view is still in their hands: they are there, out of its focus.
@@ -2405,7 +2488,7 @@ function heldBoth(ctx: Ctx): Violation[] {
  * states carry and the record does not, and the other way round, is said.
  */
 function carriedWhileHolds(ctx: Ctx): Violation[] {
-  const held = [...staysWithHolder(ctx), ...heldBoth(ctx)];
+  const held = [...staysWithHolder(ctx), ...heldByActs(ctx), ...heldBoth(ctx)];
   ends(ctx);
   return [...carriedDiff(ctx), ...held];
 }
@@ -3028,6 +3111,9 @@ export function forPlan(record: StoryRecord): RecordPlan {
           present: [...m.present],
           gone: [...m.gone],
           held: { ...m.held },
+          // With the held_acts step, what passes from someone's hands at the instant, by thing: from whom.
+          ...(builds('held_acts') && Object.keys(m.giving ?? {}).length ? { handed: { ...m.giving } } : {}),
+          ...(builds('held_acts') && Object.keys(m.leaving ?? {}).length ? { leaving: { ...m.leaving } } : {}),
           ...withWords(factsAt(record, m.id)),
         },
       ]),

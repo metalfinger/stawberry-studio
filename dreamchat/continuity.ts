@@ -246,6 +246,10 @@ export type RecordPlan = {
       present: string[];
       gone: string[];
       held: Record<string, string>;
+      /** With the one builder's `held_acts` step, by thing: who is handing it over at the instant, as a giving act says. */
+      handed?: Record<string, string>;
+      /** With the one builder's `held_acts` step, by thing: who puts it down here (it lies by them, out of their hands). */
+      leaving?: Record<string, string>;
       now: { of: string; text: string }[];
       /** The same, as typed facts: what `now` says, before it is put in words. */
       facts: NowOf[];
@@ -439,6 +443,23 @@ export function planBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blocki
   return raw ? settle(raw, { tandem: cameraMode() === 'on' }) : undefined;
 }
 
+/** Half a metre in front of someone as they face (toward what they face, where it is an id): where they put a thing down. */
+function inFrontOf(p: { x: number; y: number; faces?: string } | undefined, plan: Blocking): { x: number; y: number } | undefined {
+  if (!p) return undefined;
+  const to = plan.spots.find((x) => x.id === p.faces);
+  const [dx, dy] = to
+    ? [to.x - p.x, to.y - p.y]
+    : p.faces === 'back'
+      ? [0, 1]
+      : p.faces === 'left'
+        ? [-1, 0]
+        : p.faces === 'right'
+          ? [1, 0]
+          : [0, -1];
+  const n = Math.hypot(dx, dy) || 1;
+  return { x: p.x + (0.5 * dx) / n, y: p.y + (0.5 * dy) / n };
+}
+
 /**
  * The plan by a moment as the planner made it: its spots where their latest moves put them, before
  * settling. With the story record, who and what is there by now is whoever the record has there in the
@@ -523,17 +544,24 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
               ...(mv.pose ? { pose: mv.pose } : {}),
             }
           : s;
+        // Put down here (held_acts), with no move of its own: it lies just in front of whoever put it down.
+        const by = r?.leaving?.[s.id];
+        const own = (plan.moves?.[momentId] ?? []).some((x) => x.id === s.id);
+        const down = by && !own ? inFrontOf(moved.get(by) ?? plan.spots.find((x) => x.id === by), plan) : undefined;
+        const put = down ? { ...placed, ...down } : placed;
         // In the water, how high a creature's body stands (the camera rules).
-        const at = water !== null && heights[s.id] !== undefined ? { ...placed, height: heights[s.id] } : placed;
+        const at = water !== null && heights[s.id] !== undefined ? { ...put, height: heights[s.id] } : put;
         // Handed over or put down: whoever holds it from this moment, or nobody.
         if (mv?.heldBy !== undefined) {
           if (mv.heldBy) at.heldBy = mv.heldBy;
           else delete at.heldBy;
         }
-        // With the record, a thing is in someone's hands only where the record has it there.
-        if (r && things.has(s.id) && (r.held[s.id] ?? null) !== (at.heldBy ?? null)) {
+        // With the record, a thing is in someone's hands only where the record has it there; as it is handed over, still
+        // in the hands of whoever hands it (held_acts: "the boat in the father's hand reaching to the dreamer", affd m5).
+        const holder = r?.handed?.[s.id] ?? r?.held[s.id];
+        if (r && things.has(s.id) && (holder ?? null) !== (at.heldBy ?? null)) {
           const { heldBy: _, ...loose } = at;
-          return r.held[s.id] ? { ...loose, heldBy: r.held[s.id] } : loose;
+          return holder ? { ...loose, heldBy: holder } : loose;
         }
         return at;
       }),

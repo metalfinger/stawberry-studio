@@ -1456,3 +1456,57 @@ describe('the picture before a jump, where image 1 carries the layout', () => {
     expect(p).not.toContain('this picture faces');
   });
 });
+
+describe('who holds what is what the act at the instant does', () => {
+  const act = (who: string, does: string, to?: string) =>
+    taken({ kind: 'act' as const, who, does, ...(to ? { to } : {}) });
+  const affd = () =>
+    withReadings('dream-0925-231131-affd', {
+      m4: { moment: 'm4', facts: [act('p3', 'folds', 't2')] },
+      m5: { moment: 'm5', facts: [act('p3', 'hands', 't2')] },
+      m10: { moment: 'm10', facts: [act('p1', 'sets down', 't2')] },
+    });
+  const sw = { ...SHEET, DREAMCHAT_CAMERA: 'on', DREAMCHAT_REFS: 'on' };
+  const run = (step: string) => withSwitches({ ...sw, DREAMCHAT_ONE_BUILDER: step }, () => rebuild(affd()));
+  const prompt = (r: ReturnType<typeof rebuild>, m: string) => r.pictures.find((p) => p.id === m)!.prompt;
+
+  test('before its step, the floor plan as the scene left it', () => {
+    const r = run('jump_words');
+    expect(prompt(r, 'm4')).toContain('the boat is in the dreamer\'s hands.');
+    expect(prompt(r, 'm10')).toContain('the boat is in the dreamer\'s hands.');
+    expect(r.rec?.moments.m5.handed).toBeUndefined();
+  });
+
+  test('in the hands of whoever works it; passing from the giver, still in their hands; put down, in no one\'s', () => {
+    const r = run('held_acts');
+    // m4: the father still folds it.
+    expect(prompt(r, 'm4')).toContain("the boat is in my father's hands.");
+    // m5: handed over, and in the floor plan still in the father's hand reaching out.
+    expect(prompt(r, 'm5')).toContain("the boat passes from my father's hands to the dreamer's.");
+    expect(prompt(r, 'm5')).toMatch(/my father, [^;]*holding the boat/);
+    expect(r.rec?.moments.m5.handed).toEqual({ t2: 'p3' });
+    // m10: set down, out of the dreamer's hands, by them.
+    expect(prompt(r, 'm10')).not.toContain("the boat is in the dreamer's hands");
+    expect(r.rec?.moments.m10.held).toEqual({});
+    expect(r.rec?.moments.m10.leaving).toEqual({ t2: 'p1' });
+  });
+
+  test('the one who holds it with no giving act is not handed it: the handover is done', () => {
+    // aeea m8: "the father, just after handing it over"; the dreamer holds the boat with both hands.
+    const s = withReadings('dream-0926-022102-aeea', {
+      m8: { moment: 'm8', facts: [act('p1', 'holds with both hands', 't2'), act('p3', 'sits still')] },
+    });
+    const at = (step: string) =>
+      withSwitches({ ...sw, DREAMCHAT_ONE_BUILDER: step }, () => prompt(rebuild(structuredClone(s)), 'm8'));
+    expect(at('jump_words')).toContain("the paper boat passes from the father's hands to the dreamer's");
+    expect(at('held_acts')).toContain("the paper boat is in the dreamer's hands.");
+  });
+
+  test('never held for an act on what no one holds in the dream', () => {
+    // a44a m7: the red door (a thing) is opened, pushed, held open, never anyone's to hold in the dream.
+    const s = withReadings('dream-0926-062232-a44a', { m7: { moment: 'm7', facts: [act('p1', 'holds', 't2')] } });
+    const r = withSwitches({ ...sw, DREAMCHAT_ONE_BUILDER: 'held_acts' }, () => rebuild(s));
+    expect(r.b.things.find((t) => t.id === 't2')?.name).toMatch(/door/);
+    expect(r.rec?.moments.m7.held.t2).toBeUndefined();
+  });
+});

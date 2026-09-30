@@ -148,6 +148,9 @@ export const BUILDER_STEPS: readonly string[] = [
   //    picture edited), the picture before a jump gives only its light and colours and how anyone also here looks,
   //    never its framing: two layouts disagreed, and a third-person framing went into the dreamer's own view.
   'jump_words',
+  // Not a ledger row: from the read of every prompt (30 Sep). Who holds what at a moment is what its typed act does
+  //    at the instant (a handover mid-act, a thing set down), not what the floor plan left from the scene.
+  'held_acts',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;
