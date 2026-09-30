@@ -91,7 +91,7 @@ function withoutFirstParen(entry: string): string {
  * picture" sentences, last first. Never what happens, the camera's view, the one thing to show, who is in it, how
  * each one is now, the colours, or the writing line.
  */
-export function fitMoment(lines: Line[], images: Img[], atLeast = 0): Fitted {
+export function fitMoment(lines: Line[], images: Img[], atLeast = 0, max = MAX_CHARS): Fitted {
   const kept = keptImages(images);
   const renumber = new Map(kept.map((x, i) => [x.n, i + 1]));
   const droppedImages = images.filter((x) => !renumber.has(x.n)).map((x) => x.name);
@@ -117,7 +117,7 @@ export function fitMoment(lines: Line[], images: Img[], atLeast = 0): Fitted {
   const size = () => [...paras.values()].filter((x): x is string => x !== null).join('\n\n').length;
   // Cut while over, or until as many cuts are made as the pair's other arm needed.
   let ops = 0;
-  const need = () => size() > MAX_CHARS || ops < atLeast;
+  const need = () => size() > max || ops < atLeast;
   const before = lines.map((l) => l.text).join('\n\n').length;
   const dropPara = (id: string) => {
     if (paras.get(id) == null || !need()) return;
@@ -166,7 +166,7 @@ export function fitMoment(lines: Line[], images: Img[], atLeast = 0): Fitted {
     images: renumbered,
     dropped,
     kept: Object.fromEntries(paras),
-    fits: prompt.length <= MAX_CHARS,
+    fits: prompt.length <= max,
     ops,
   };
 }

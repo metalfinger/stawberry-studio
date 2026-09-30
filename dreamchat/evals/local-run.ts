@@ -44,6 +44,8 @@ export type RunPicture = {
   endpoint?: 'generate' | 'edit';
   job?: string;
   seed?: number;
+  /** The machine's quality tier it was drawn at. */
+  quality?: string;
   file?: string;
   size?: [number, number];
   secs?: number;
@@ -139,6 +141,10 @@ function asFrame(file: string, out: string): string {
   return r.status === 0 && existsSync(out) ? out : file;
 }
 
+/** Said first to the machine where a picture has images to take looks from (the machine's guide: name each image's part). */
+export const LEAD =
+  'Image 1 is the picture to edit: everyone in it stays exactly where it puts them, once. The other images are references only, for how each one looks: never add a second copy of anyone or anything from them to the picture.\n\n';
+
 // ── a dream ──────────────────────────────────────────────────────────────────────────────────────
 
 /** The dream with its readings, as the corpus reads them (from the caches only), and every sketch not drawn yet. */
@@ -171,7 +177,7 @@ async function drawDream(
   run: string,
   dreamId: string,
   saved: Session,
-  opts: { quality: string; out: string; commit: string },
+  opts: { quality: { sketch: string; picture: string }; out: string; commit: string },
 ): Promise<RunManifest> {
   const { rebuild, standIn } = await import('../plan');
   const { sheetPrompt, shapeOf } = await import('../sheets');
@@ -188,7 +194,7 @@ async function drawDream(
     dream: dreamId,
     title: r.title,
     commit: opts.commit,
-    quality: opts.quality,
+    quality: `sketches ${opts.quality.sketch}, pictures ${opts.quality.picture}`,
     switches: PROFILE,
     started: was?.started ?? new Date().toISOString(),
     updated: new Date().toISOString(),
@@ -221,8 +227,21 @@ async function drawDream(
     const t0 = Date.now();
     p.endpoint = endpoint;
     p.seed = seedOf(`${dreamId}:${p.kind}:${p.id}`);
+    p.quality = p.kind === 'sketch' ? opts.quality.sketch : opts.quality.picture;
+    // Once more on a failure, then on to the next: one error never stops the night.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      p.state = 'waiting';
+      p.error = undefined;
+      await once(p, endpoint, body);
+      if (p.state === 'done') break;
+    }
+    p.secs = Math.round((Date.now() - t0) / 1000);
+    save();
+    console.log(`${dreamId} ${p.kind} ${p.id}: ${p.state}${p.error ? ` (${p.error.slice(0, 120)})` : ''} ${p.secs}s`);
+  };
+  const once = async (p: RunPicture, endpoint: 'generate' | 'edit', body: Record<string, unknown>) => {
     try {
-      const job = await call(`/v1/${endpoint}`, { ...body, quality: opts.quality, seed: p.seed });
+      const job = await call(`/v1/${endpoint}`, { ...body, quality: p.quality, seed: p.seed });
       p.job = job.id;
       save();
       const done = await finish(job);
@@ -238,9 +257,6 @@ async function drawDream(
       p.state = 'failed';
       p.error = String(e instanceof Error ? e.message : e).slice(0, 500);
     }
-    p.secs = Math.round((Date.now() - t0) / 1000);
-    save();
-    console.log(`${dreamId} ${p.kind} ${p.id}: ${p.state}${p.error ? ` (${p.error.slice(0, 120)})` : ''} ${p.secs}s`);
   };
 
   // 1. Every sketch, from the harness's own sketch prompt, at its own shape.
@@ -304,8 +320,13 @@ async function drawDream(
     }
     // What this run could not make is left out, as the fitting leaves out what does not fit.
     const have = images.filter((x) => x.file);
-    const fitted = fitMoment(lines, have);
-    e.sent = fitted.prompt.length > MAX_CHARS ? fitted.prompt.slice(0, MAX_CHARS) : fitted.prompt;
+    // With images to take looks from, each image's part is said first, as the machine's own guide advises: from a
+    // person's sketch it drew the dreamer twice, once where the mock-up put them and once as the sketch stands
+    // (lighthouse-first m2, 30 Sep); with this line, once (2 of 2).
+    const lead = have.length > 1 ? LEAD : '';
+    const fitted = fitMoment(lines, have, 0, MAX_CHARS - lead.length);
+    const text = lead + fitted.prompt;
+    e.sent = text.length > MAX_CHARS ? text.slice(0, MAX_CHARS) : text;
     e.imagesSent = fitted.images;
     e.dropped = {
       ...fitted.dropped,
@@ -337,7 +358,10 @@ if (import.meta.main) {
   };
   const run = val('--run');
   if (!run) throw new Error('--run <name> is needed');
-  const quality = val('--quality') ?? 'fast';
+  const quality = {
+    sketch: val('--sketch-quality') ?? val('--quality') ?? 'fast',
+    picture: val('--quality') ?? 'fast',
+  };
   // The full profile, as every other eval of the harness reads it.
   for (const [k, v] of Object.entries(PROFILE)) process.env[k] ??= v;
   const data = dataDir();
@@ -361,7 +385,9 @@ if (import.meta.main) {
         // A conversation that cannot be read is left out.
       }
     }
-  console.log(`run ${run}: ${dreams.length} dreams, commit ${commit}, ${quality}, into ${join(out, run)}`);
+  console.log(
+    `run ${run}: ${dreams.length} dreams, commit ${commit}, sketches ${quality.sketch}, pictures ${quality.picture}, into ${join(out, run)}`,
+  );
   for (const d of dreams) {
     if (!d.session.draft?.breakdown || !d.session.style) {
       console.log(`${d.id}: no breakdown and style: left out`);
