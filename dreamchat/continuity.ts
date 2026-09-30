@@ -785,7 +785,13 @@ const PATH =
  */
 export function withPathDeck(plan: Blocking, place: string): Blocking {
   // A way on water (the river street, a canal) has none: whoever is there is afloat on it.
-  if (plan.indoors || !PATH.test(place) || /\b(?:river|canal|stream|sea|lake|water|flooded)\b/i.test(place))
+  // Bounds a few metres across are a room, whatever it is called (the street whose plan is the kitchen by the stove).
+  if (
+    plan.indoors ||
+    (plan.room && Math.min(...plan.room) < 4) ||
+    !PATH.test(place) ||
+    /\b(?:river|canal|stream|sea|lake|water|flooded)\b/i.test(place)
+  )
     return plan;
   // Ground the plan lays already (the corner where the mother stands, on the paper street) is where they are: a deck
   // under it read as one flat piece hiding the other.

@@ -563,7 +563,7 @@ describe('S9 keys', () => {
     // neither a code change nor KEYS_VERSION explains it (hashOf itself is architecture-free: a pure integer
     // hash over `stable`'s text, no crypto, no floats).
     if (process.env.S9_RAW) console.log(JSON.stringify(raw, null, 2));
-    expect({ version: KEYS_VERSION, hashes }).toEqual({ version: 6, hashes: GOLDEN });
+    expect({ version: KEYS_VERSION, hashes }).toEqual({ version: 7, hashes: GOLDEN });
   });
 });
 
@@ -577,7 +577,7 @@ describe('S9 keys', () => {
 const GOLDEN: Record<string, string> = {
   'dream-0926-062232-a44a record off': '52eb1a3197406',
   'dream-0926-062232-a44a record on': '18f5a4fff235fc',
-  'dream-0926-062232-a44a record, cut sheet and camera on': 'ebd1553a47ba7',
+  'dream-0926-062232-a44a record, cut sheet and camera on': '1a89963df552cd',
   'dream-0926-083656-8ceb record off': '655188d6ebd5',
   'dream-0926-083656-8ceb record on': 'f1db2c3d18ff',
   'dream-0926-083656-8ceb record, cut sheet and camera on': '16e1d8073b4ee2',

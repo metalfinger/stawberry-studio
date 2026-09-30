@@ -59,7 +59,7 @@ export function freshSendMode(): boolean {
  * version is not compared. test/asdrawn.test.ts holds the keys of two frozen dreams and fails when they
  * move, so a change that moves them raises this.
  */
-export const KEYS_VERSION = 6;
+export const KEYS_VERSION = 7;
 
 /**
  * Switches that never change what a picture is told nor how staleness reads it, so a record does not
