@@ -510,7 +510,7 @@ const HEIGHT_WORD =
   /\b(?:over|above|past|beyond|higher than|tops? of|cover\w*|submerg\w*|up|almost|nearly|reach\w*|halfway)\b/;
 
 /** What a name is called by: its last word before any "with", "of" or the like ("desk with green lamp": desk). */
-function headWord(name: string): string | undefined {
+export function headWord(name: string): string | undefined {
   return name
     .toLowerCase()
     .replace(/\s*\(.*?\)\s*/g, ' ')

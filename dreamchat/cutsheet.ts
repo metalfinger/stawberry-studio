@@ -428,7 +428,9 @@ export function cutSheet(x: CutSheetInput): CutSheet {
   const recMoment =
     builds('in_view') && recordMode() === 'on' ? x.dream?.record?.moments.find((m) => m.id === frame.id) : undefined;
   // Through whose eyes as the record read it, which left the dreamer out of what it shows (or not).
-  const inView = inViewOf(frame, sheets, recMoment?.shows, recMoment?.eyes);
+  // Through the dreamer's eyes, what they carry and the moment does not name is out of it (continuity.ts unsaidHeld).
+  const unseen = new Set(plan?.carriedUnseen ?? []);
+  const inView = inViewOf(frame, sheets, recMoment?.shows, recMoment?.eyes).filter((s) => !unseen.has(s.id));
   const members = groupMembers(inView);
   const lookOf = (s: Item, keys: string[]) => lookIn(s, keys, { members, unsaid: plan?.unsaid, style });
   // One name for each (S6 row 5): the story record's, where the builder's names are on and it holds one.
@@ -659,10 +661,7 @@ export function cutSheet(x: CutSheetInput): CutSheet {
   const refs =
     refsOn === 'off'
       ? null
-      : chooseRefs(
-          { earlier: drawnFrom, inView: elements, camera: { previs: x.layout ?? null } },
-          refsOn,
-        );
+      : chooseRefs({ earlier: drawnFrom, inView: elements, camera: { previs: x.layout ?? null } }, refsOn);
 
   const sheet: Omit<CutSheet, 'hash'> = {
     id: frame.id,
@@ -1045,10 +1044,14 @@ function cameraLayer(x: {
   }
 
   // Through the dreamer's own eyes: their hands and arms only where they do something with them.
+  // What they carry out of the picture puts no hands in it (continuity.ts unsaidHeld).
+  const carriedUnseen = new Set(x.plan?.carriedUnseen ?? []);
   const holds =
     !!x.dreamerId &&
-    (Object.values(x.record?.held ?? {}).includes(x.dreamerId) ||
-      (x.plan?.facts ?? []).some((n) => n.facts.some((k) => k.kind === 'held' && k.by === x.dreamerId)));
+    (Object.entries(x.record?.held ?? {}).some(([id, by]) => by === x.dreamerId && !carriedUnseen.has(id)) ||
+      (x.plan?.facts ?? []).some(
+        (n) => !carriedUnseen.has(n.of) && n.facts.some((k) => k.kind === 'held' && k.by === x.dreamerId),
+      ));
   const words = [x.frame.fields.action?.value ?? '', x.frame.fields.visual_point?.value ?? '', f.looksAt ?? ''];
   const body = f.eyes === 'dreamer' ? (selfIn(words) ? 'self' : handsIn(words, holds) ? 'hands' : 'none') : null;
 

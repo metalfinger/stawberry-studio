@@ -152,6 +152,18 @@ aside.words .turns { overflow: auto; padding: 0 14px 20px; }
 mark { background: color-mix(in srgb, var(--unsure) 30%, transparent); color: inherit; border-radius: 2px; }
 .empty { padding: 60px 20px; color: var(--muted); max-width: 60ch; }
 .scene-line { font-size: 12.5px; color: var(--muted); margin: 0 0 6px; }
+nav.tree details.grp > summary { list-style: none; cursor: pointer; padding: 4px 14px; display: flex; gap: 6px; align-items: baseline; font-size: 12.5px; color: var(--ink); }
+nav.tree details.grp > summary::-webkit-details-marker { display: none; }
+nav.tree details.grp > summary::before { content: '▸'; color: var(--faint); font-size: 10px; width: 10px; flex: none; }
+nav.tree details.grp[open] > summary::before { content: '▾'; }
+nav.tree details.grp > summary:hover { background: var(--paper); }
+nav.tree details.grp > summary .n { color: var(--faint); font-size: 11.5px; margin-left: auto; white-space: nowrap; font-variant-numeric: tabular-nums; }
+nav.tree details.grp.lvl-seq > summary { font-weight: 650; }
+nav.tree details.grp .kids { margin-left: 12px; border-left: 1px solid var(--rule); }
+nav.tree .legend { margin: 2px 14px 8px; font-size: 11.5px; color: var(--faint); line-height: 1.5; }
+nav.tree .legend b { color: var(--muted); font-weight: 600; }
+.crumbs { font-size: 12px; color: var(--muted); margin-bottom: 6px; display: flex; gap: 6px; flex-wrap: wrap; }
+.crumbs span + span::before { content: '›'; margin-right: 6px; color: var(--faint); }
 .overview .kv { max-width: 1000px; }
 .gone li { color: var(--muted); }
 @media (prefers-reduced-motion: reduce) { aside.words { transition: none; } }
@@ -211,16 +223,28 @@ $('themeBtn').onclick = () => {
   try { localStorage.setItem('viewer-theme', next); } catch {}
 };
 
+// A readable address: /<dream>/<node>, the dream by the shortest ending of its key that names it alone.
+let LIST = [];
+const slugOf = (key) => {
+  const m = key.match(/-([A-Za-z0-9]{4}(?:\.live)?)$/);
+  return m && LIST.filter((d) => d.key.endsWith(`-${m[1]}`)).length === 1 ? m[1] : key;
+};
+const addressOf = (key, node) => `/${slugOf(key)}/${node === OVERVIEW ? 'dream' : node}`;
+
 async function start() {
+  // /0f40/m5, or the older #d=…&n=… addresses.
+  const [p1, p2] = decodeURIComponent(location.pathname).split('/').filter(Boolean);
   const hash = new URLSearchParams(location.hash.slice(1));
-  const want = hash.get('d');
+  const want = p1 ?? hash.get('d');
+  const node = p2 === 'dream' ? OVERVIEW : (p2 ?? hash.get('n'));
   // The dream the address names is asked for at once, beside the list: neither waits for the other.
-  const [list] = await Promise.all([fetch('/api/dreams').then((r) => r.json()), want ? open(want, hash.get('n')) : null]);
+  const [list] = await Promise.all([fetch('/api/dreams').then((r) => r.json()), want ? open(want, node) : null]);
+  LIST = list;
   const sel = $('dream');
   sel.replaceChildren(...list.map((d) => el('option', { value: d.key, text: `${d.title} · ${d.id.slice(-4)}${d.source === 'live' ? ' · live' : ''} · ${d.cuts} cuts${d.fixture ? ' · fixture' : ''}` })));
   sel.onchange = () => open(sel.value);
   if (!list.length) { $('panel').replaceChildren(el('div', { class: 'empty', text: 'No dream has a view yet. Make them with: bun run viewer/build.ts' })); return; }
-  if (want && list.some((d) => d.key === want)) sel.value = want;
+  if (K && list.some((d) => d.key === K)) { sel.value = K; if (cur) history.replaceState(null, '', addressOf(K, cur)); }
   else { sel.value = list[0].key; await open(list[0].key); }
 }
 
@@ -268,42 +292,74 @@ function row(node, id, what, title) {
     el('span', { class: dotClass(node) }), el('span', { class: 'id', text: id }), el('span', { class: 'what', text: what }));
 }
 
+// The dream's levels, top down, with the words for each: the page composes them from the view's numbers and titles.
+const seqLabel = (q, i) => `Sequence ${q.number ?? i + 1}${q.splitBy === 'jump' ? ' · after a jump' : ''}${q.title ? `: ${q.title}` : ''}`;
+const sceneLabel = (sc) => `Scene${sc.number ? ` ${sc.number}` : ''}: ${sc.title}`;
+const shotLabel = (sh) => `Shot ${sh.number ?? sh.id}`;
+const cutLabel = (c) => `Cut ${c.order}`;
+const read = (nodes) => nodes.filter((n) => S.get(n) && S.get(n).state !== 'not read').length;
+// Which groups are closed, by dream, remembered on this machine only.
+const closedKey = () => `viewer-closed:${K}`;
+const closed = () => { try { return new Set(JSON.parse(localStorage.getItem(closedKey()) ?? '[]')); } catch { return new Set(); } };
+function group(id, cls, label, nodes, kids, extra = '') {
+  const shut = closed().has(id);
+  const d = el('details', { class: `grp ${cls}`, 'data-grp': id, open: !shut },
+    el('summary', {}, el('span', { text: label }), el('span', { class: 'n', text: `${extra}${read(nodes)}/${nodes.length} read` })),
+    el('div', { class: 'kids' }, kids));
+  d.addEventListener('toggle', () => {
+    const c = closed();
+    d.open ? c.delete(id) : c.add(id);
+    try { localStorage.setItem(closedKey(), JSON.stringify([...c])); } catch {}
+  });
+  return d;
+}
+
 function renderTree() {
   const cutsById = new Map(D.cuts.map((c) => [c.id, c]));
-  const parts = [row(OVERVIEW, '', 'The dream as a whole', 'Its style, what the plan flags for the whole dream, and the switches')];
   order = [OVERVIEW];
-  parts.push(el('h2', { text: 'Sheets' }));
-  for (const s of D.sheets) { parts.push(row(s.key, s.id, `${s.name}${s.drawn ? '' : ' · not drawn yet'}`)); order.push(s.key); }
-  parts.push(el('h2', { text: 'The dream' }));
-  for (const q of D.tree) {
-    const g = el('div', { class: 'group' }, el('div', { class: 'label', text: `Sequence from ${q.startsAt}${q.splitBy === 'jump' ? ' (a jump)' : ''}` }));
-    for (const sc of q.scenes) {
-      g.append(el('div', { class: 'label', title: `${sc.place} · ${sc.mood}` }, el('span', { class: 't', text: sc.title }), sc.mood ? ` · ${sc.mood}` : ''));
-      for (const sh of sc.shots) {
-        const box = el('div', { class: 'shot' }, el('div', { class: 'label mono', title: sh.tags.length ? `this shot: ${sh.tags.join(', ')}` : '', text: sh.id }));
-        for (const id of sh.cuts) {
-          const c = cutsById.get(id); if (!c) continue;
-          const role = (c.tags.find((t) => t.startsWith('role:')) ?? '').slice(5);
-          box.append(row(id, id, `${role ? role.replace('_', ' ') + ' · ' : ''}${c.moment.action}`, c.moment.action));
+  const parts = [row(OVERVIEW, '', 'The dream as a whole', 'Its style, what the plan flags for the whole dream, and the switches'),
+    el('p', { class: 'legend' }, el('b', { text: 'Sequence' }), ' runs until the dream jumps · ', el('b', { text: 'scene' }), ': one place · ',
+      el('b', { text: 'shot' }), ': one camera setup · ', el('b', { text: 'cut' }), ': one picture · ', el('b', { text: 'in-between' }), ': a change drawn on its own first')];
+  const sheetRows = D.sheets.map((s) => { order.push(s.key); return row(s.key, s.id, `${s.name}${s.drawn ? '' : ' · not drawn yet'}`); });
+  parts.push(group('sheets', 'lvl-seq', 'Sheets: who and what the dream has', D.sheets.map((s) => s.key), sheetRows));
+  D.tree.forEach((q, i) => {
+    const qCuts = q.scenes.flatMap((sc) => sc.shots.flatMap((sh) => sh.cuts));
+    const scenes = q.scenes.map((sc) => {
+      const scCuts = sc.shots.flatMap((sh) => sh.cuts);
+      const shots = sc.shots.map((sh) => {
+        const rows = sh.cuts.map((id) => {
+          const c = cutsById.get(id); if (!c) return null;
           order.push(id);
-        }
-        g.append(box);
-      }
-    }
-    parts.push(g);
-  }
+          const role = (c.tags.find((t) => t.startsWith('role:')) ?? '').slice(5).replace('_', ' ');
+          return row(id, id, `${cutLabel(c)}${role ? ` · ${role}` : ''} · ${c.moment.action}`, c.moment.action);
+        });
+        return group(`shot:${sh.id}`, 'lvl-shot', shotLabel(sh), sh.cuts, rows, sh.cuts.length === 1 ? '' : `${sh.cuts.length} cuts · `);
+      });
+      return group(`scene:${sc.id}`, 'lvl-scene', sceneLabel(sc), scCuts, shots, `${sc.shots.length} shot${sc.shots.length === 1 ? '' : 's'} · `);
+    });
+    parts.push(group(`seq:${q.id}`, 'lvl-seq', seqLabel(q, i), qCuts, scenes, `${q.scenes.length} scene${q.scenes.length === 1 ? '' : 's'} · `));
+  });
   if (D.ghosts.length) {
-    parts.push(el('h2', { text: 'In-between pictures' }));
-    for (const g of D.ghosts) { parts.push(row(g.id, g.id, g.change)); order.push(g.id); }
+    const rows = D.ghosts.map((g, i) => { order.push(g.id); return row(g.id, g.id, `In-between ${i + 1}: ${g.change}`); });
+    parts.push(group('ghosts', 'lvl-seq', 'In-between pictures', D.ghosts.map((g) => g.id), rows));
   }
   $('tree').replaceChildren(...parts);
+}
+
+// Where a cut sits: its sequence, scene and shot, for breadcrumbs.
+function placeOf(id) {
+  for (const [i, q] of D.tree.entries())
+    for (const sc of q.scenes) for (const sh of sc.shots) if (sh.cuts.includes(id)) return { q, i, sc, sh };
+  return null;
 }
 
 function markCurrent() {
   for (const b of document.querySelectorAll('nav.tree .row')) b.setAttribute('aria-current', b.dataset.node === cur ? 'true' : 'false');
   const b = document.querySelector(`nav.tree .row[data-node="${CSS.escape(cur)}"]`);
+  // The groups it is in are opened, however they were left.
+  for (let p = b?.parentElement; p; p = p.parentElement) if (p.tagName === 'DETAILS' && !p.open) p.open = true;
   if (b) b.scrollIntoView({ block: 'nearest' });
-  history.replaceState(null, '', `#${new URLSearchParams({ d: K, n: cur })}`);
+  history.replaceState(null, '', addressOf(K, cur));
 }
 
 function select(node) {
@@ -348,8 +404,10 @@ function overviewPanel() {
 // ── a cut ─────────────────────────────────────────────────────────────────────
 function cutPanel(c) {
   const out = [];
+  const at = placeOf(c.id);
+  if (at) out.push(el('div', { class: 'crumbs' }, el('span', { text: seqLabel(at.q, at.i) }), el('span', { text: sceneLabel(at.sc) }), el('span', { text: shotLabel(at.sh) }), el('span', { text: `${cutLabel(c)}${at.sh.cuts.length > 1 && c.shotIndex ? ` · ${c.shotIndex} of ${at.sh.cuts.length} in the shot` : ''} (${c.id})` })));
   const scene = D.tree.flatMap((q) => q.scenes).find((sc) => sc.id === c.scene);
-  out.push(el('div', { class: 'node-head' }, el('h2', { text: `Picture ${c.order}` }), el('span', { class: 'id', text: c.id }),
+  out.push(el('div', { class: 'node-head' }, el('h2', { text: cutLabel(c) }), el('span', { class: 'id', text: c.id }),
     el('span', { class: 'muted', text: `${c.scene} · ${c.shot}` }),
     c.treeDiffers ? el('span', { class: 'pill warn', title: c.treeDiffers, text: `the tree groups it otherwise: ${c.treeDiffers}` }) : null));
   const shot = scene?.shots.find((sh) => sh.id === c.shot);
@@ -363,6 +421,9 @@ function cutPanel(c) {
     el('dt', { text: 'Size' }), el('dd', { text: c.camera.size || c.moment.distance || '—' })));
   out.push(el('div', { class: 'tags' }, c.tags.map((t) => el('span', { class: 'tag', text: t }))));
   if (c.issues.length) out.push(el('div', { class: 'block issues' }, el('h3', { text: 'The plan flags' }), el('ul', {}, c.issues.map((i) => el('li', { text: i })))));
+  // An edit whose picture is held back is made from its own shot instead: said here, not only in the table below.
+  const held = c.unsent.find((u) => u.base);
+  if (held) out.push(el('p', { class: 'block issues held' }, 'Meant to edit ', jump(held.key.replace(/^picture:/, '')), `, whose picture ${held.code === 'stale' ? 'changed since it was drawn' : 'was judged wrong'}: made from its own shot and mock-up instead.`));
 
   // The camera.
   const prev = c.prevCut ? D.cuts.find((x) => x.id === c.prevCut) : null;
