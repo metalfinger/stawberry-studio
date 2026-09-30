@@ -398,6 +398,28 @@ describe('the water, as high as the record says it stands', () => {
 });
 
 describe("through the dreamer's own eyes", () => {
+  test('what they carry is out of the picture unless the moment names it', () => {
+    // Looking out of the window at the tractor, the paper boat they carry was put in their hands before their
+    // eyes, a boat the moment never names (the owner, S4 picture check, 27 Sep): off the plan and the mock-up,
+    // out of "In it" and the images, and no hands for it.
+    const fresh = rebuilt('dream-0926-022102-aeea', ON);
+    const m9 = picture(fresh, 'm9');
+    expect(m9.item.frame?.plan?.carriedUnseen).toEqual(['t2']);
+    expect(withEnv(ON, () => shotPlan(fresh.b, 'm9', fresh.rec))!.spots.some((s) => s.id === 't2')).toBe(false);
+    expect(m9.prompt).not.toMatch(/\bpaper boat\b/);
+    expect(m9.references.some((r) => r.media_id === 'sketch-t2')).toBe(false);
+    expect(m9.prompt).toMatch(/nothing of the dreamer's own body shows, not even their hands/);
+    // Named ("the boat in their hand"), it stays in their hands.
+    const first = rebuilt('dream-0925-231131-affd', ON);
+    const m7 = picture(first, 'm7');
+    expect(m7.item.frame?.plan?.carriedUnseen).toBeUndefined();
+    expect(m7.prompt).toMatch(/Nearest, close, in the middle of the picture: the boat, in the dreamer's hands/);
+    expect(m7.references.some((r) => r.media_id === 'sketch-t2')).toBe(true);
+    // Without the camera rules, as before.
+    const off = rebuilt('dream-0926-022102-aeea', { ...ON, DREAMCHAT_CAMERA: undefined });
+    expect(picture(off, 'm9').item.frame?.plan?.carriedUnseen).toBeUndefined();
+  });
+
   test('their hands are in it only where they do something with them, or hold something', () => {
     for (const s of [
       'The dreamer rows the dinghy toward the pier',

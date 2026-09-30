@@ -25,6 +25,7 @@ import {
   bodyHeight,
   cameraMode,
   goingIn,
+  headWord,
   mounted,
   ON_THE_LINE,
   outThroughWindows,
@@ -35,6 +36,7 @@ import {
   turnedBetween,
   WATER,
   waterLevel,
+  wordsAbout,
 } from './camera';
 import { dreamerShot, onOf, outsideShot } from './previs';
 import { type Breakdown, hasBefore, isWhole, type Moment, moments, POSITION, type State } from './producer';
@@ -111,6 +113,11 @@ export type CutPlan = {
   eye?: Eye;
   /** Who and what that view has in the picture: drawn from their sketches like anyone in view. */
   sees?: string[];
+  /**
+   * With the camera rules, through the dreamer's own eyes: what they carry that the moment does not name,
+   * out of the picture (`unsaidHeld`): off the mock-up, out of "In it" and its images, no hands for it.
+   */
+  carriedUnseen?: string[];
   /** What is wrong with how that view frames the people it shows, read off its render; none when it is framed well. */
   framing?: string[];
   /** Seen from outside, on a scene with a floor plan: who and what is where, left to right. */
@@ -568,12 +575,39 @@ function bodiesOf(b: Breakdown): Record<string, number> {
 export function shotPlan(b: Breakdown, momentId: string, rec?: RecordPlan): Blocking | undefined {
   const where = planBy(b, momentId, rec);
   const m = b.scenes.flatMap((sc) => sc.moments).find((x) => x.id === momentId);
-  if (!where || !m || m.eyes === 'dreamer') return where;
+  if (!where || !m) return where;
+  if (m.eyes === 'dreamer') {
+    const unsaid = cameraMode() === 'on' ? unsaidHeld(b, m, where) : [];
+    return unsaid.length ? { ...where, spots: where.spots.filter((s) => !unsaid.includes(s.id)) } : where;
+  }
   const people = new Set(b.people.map((p) => p.id));
   // With the record, also whoever it has there out of the moment's focus: drawn where the camera takes them in.
   const r = rec?.moments[momentId];
   const shown = new Set([...m.visible, ...(r ? [...r.visible, ...r.present] : [])]);
   return { ...where, spots: where.spots.filter((s) => !people.has(s.id) || shown.has(s.id)) };
+}
+
+/**
+ * Through the dreamer's own eyes, what they carry is out of the picture unless the moment's words (what
+ * happens, what it must show, what it looks at) name it (the owner, 27 Sep): the paper boat was put in the
+ * dreamer's hands before their eyes as they looked out of the window at the tractor, a boat the moment never
+ * said (lighthouse-fresh m9). By id; a thing whose name says nothing of what it is stays.
+ */
+export function unsaidHeld(
+  b: Breakdown,
+  m: Pick<Moment, 'eyes' | 'action' | 'visual_point' | 'looks_at'>,
+  plan: Blocking,
+): string[] {
+  const me = b.people.find((p) => p.is_dreamer)?.id;
+  if (!me || m.eyes !== 'dreamer') return [];
+  const words = [m.action, m.visual_point, m.looks_at].join('. ');
+  return plan.spots
+    .filter((s) => s.heldBy === me)
+    .filter((s) => {
+      const head = headWord(b.things?.find((t) => t.id === s.id)?.name ?? s.name ?? '');
+      return !!head && !wordsAbout(head, words).length;
+    })
+    .map((s) => s.id);
 }
 
 export const seenIn = (m: Pick<Moment, 'visible' | 'eyes'>, dreamerId?: string) =>
@@ -1455,6 +1489,10 @@ function planWith(
     };
     if (m.eyes === 'dreamer' && dreamerId) {
       const pov = shotPlan(b, m.id, rec) ?? plan;
+      if (cameraMode() === 'on') {
+        const unseen = unsaidHeld(b, m, planBy(b, m.id, rec) ?? plan);
+        if (unseen.length) c.carriedUnseen = unseen;
+      }
       const said = pov.looks?.[m.id];
       const toward = said && pov.spots.some((s) => s.id === said) ? said : target(m.looks_at);
       // Who and what they see out past the place's edges is named where they look: the tractor in
@@ -1473,7 +1511,8 @@ function planWith(
           for (const r of c.refs.filter((x) => x.relation === 'seat'))
             unsentBy(c, r, {
               code: 'seat_replaced_by_view',
-              detail: "the dreamer's view is worked out on the floor plan from where they are, so the picture they were seen in is not needed",
+              detail:
+                "the dreamer's view is worked out on the floor plan from where they are, so the picture they were seen in is not needed",
             });
         c.refs = c.refs.filter((r) => r.relation !== 'seat');
       }
@@ -1662,7 +1701,10 @@ function planWith(
         const not = whyNot(c, r, cams.get(c.id), pics.get(r.id));
         if (!not) return [r];
         why[r.id] = madeOwn.has(`${c.id}/${r.id}`)
-          ? { code: 'edit_to_own_camera', detail: `planned as the picture edited, and made its own cut instead: ${not.detail}` }
+          ? {
+              code: 'edit_to_own_camera',
+              detail: `planned as the picture edited, and made its own cut instead: ${not.detail}`,
+            }
           : not;
         return [];
       });
