@@ -1,6 +1,6 @@
 import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { assembleCut } from '../assemble';
-import type { Blocking } from '../blocking';
+import { type Blocking, facing, settle } from '../blocking';
 import {
   bodyHeight,
   cameraMode,
@@ -574,6 +574,54 @@ describe('an edit', () => {
         expect([p.id, who(p.id)]).toEqual([p.id, who(base.id)]);
       }
     expect(edits.length).toBeGreaterThan(0);
+describe('two on a bicycle', () => {
+  test('ride one behind the other, on it, never in it', () => {
+    // Two on one bicycle were sat side by side, as on a bench, and through the dreamer's eyes they were "in" it,
+    // framed by "the inside of the old red bicycle … its window" (the read of every frozen prompt, 30 Sep).
+    const r = rebuilt('dream-0926-095122-acfd', ON);
+    const plan = withEnv(ON, () => shotPlan(r.b, 'm3', r.rec))!;
+    const bike = plan.spots.find((s) => s.shape === 'vehicle')!;
+    const [a, b] = plan.spots.filter((s) => s.kind === 'person' && !s.many);
+    const f = facing(bike, plan);
+    const gap = { x: b.x - a.x, y: b.y - a.y };
+    expect(bike.size![0]).toBeLessThan(1);
+    expect(Math.hypot(gap.x, gap.y)).toBeGreaterThan(0.5);
+    // Along its length: the gap between them is the way it faces, not across it.
+    expect(Math.abs(gap.x * f.y - gap.y * f.x)).toBeLessThan(0.05);
+    const m7 = picture(r, 'm7').prompt;
+    expect(m7).toMatch(/The camera is the dreamer's eyes, on the old red bicycle/);
+    expect(m7).not.toMatch(/inside of the old red bicycle|its window/);
+    // Without the camera rules, as before.
+    const off = rebuilt('dream-0926-095122-acfd', { ...ON, DREAMCHAT_CAMERA: undefined });
+    expect(picture(off, 'm7').prompt).toMatch(/in the old red bicycle/);
+  });
+
+  test('sit along the way it faces, whichever way that is', () => {
+    const plan: Blocking = {
+      front: 'the road',
+      spots: [
+        {
+          id: 'b1',
+          x: 5,
+          y: 5,
+          kind: 'thing',
+          shape: 'vehicle',
+          size: [0.6, 1.8, 1.1],
+          faces: 'left',
+          name: 'the bicycle',
+        },
+        { id: 'p1', x: 5, y: 5, kind: 'person', pose: 'sitting' },
+        { id: 'p2', x: 5, y: 5, kind: 'person', pose: 'sitting' },
+      ],
+    };
+    const settled = settle(plan, { tandem: true });
+    const [a, b] = settled.spots.filter((s) => s.kind === 'person');
+    const f = facing(settled.spots[0], settled);
+    expect(Math.abs((b.x - a.x) * f.y - (b.y - a.y) * f.x)).toBeLessThan(1e-6);
+    expect(Math.hypot(b.x - a.x, b.y - a.y)).toBeCloseTo(0.6, 5);
+    // Without it, side by side across it, as before.
+    const [c, d] = settle(plan).spots.filter((s) => s.kind === 'person');
+    expect(Math.abs((d.x - c.x) * f.x + (d.y - c.y) * f.y)).toBeLessThan(1e-6);
   });
 });
 
