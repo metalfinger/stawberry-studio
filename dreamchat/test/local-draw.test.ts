@@ -125,6 +125,19 @@ describe('a pair tests its change only while the change is still sent', () => {
     expect(pairTested({ ...a, fitted: fa }, { ...b, fitted: fb })).toMatchObject({ tested: true, differs: ['single'] });
   });
 
+  test('a thing the moment names is kept before the place: the mock-up already carries the place', () => {
+    const imgs = [
+      img(1, 'base'),
+      img(2, 'identity'),
+      img(3, 'identity'),
+      img(4, 'prop', 'sketch-boat'),
+      img(5, 'location'),
+      img(6, 'prop', 'sketch-key'),
+    ];
+    expect(keptImages(imgs).map((x) => x.n)).toEqual([1, 2, 3, 5]);
+    expect(keptImages(imgs, new Set(['sketch-boat'])).map((x) => x.n)).toEqual([1, 2, 3, 4]);
+  });
+
   test('a role the order does not name is kept after every named one', () => {
     const kept = keptImages([img(1, 'base'), img(2, 'sheet'), img(3, 'identity'), img(4, 'location'), img(5, 'prop')]);
     expect(kept.map((x) => x.n)).toEqual([1, 3, 4, 5]);
