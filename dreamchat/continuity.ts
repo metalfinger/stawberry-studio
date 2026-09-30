@@ -594,10 +594,9 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
           if (s.kind !== 'thing' || s.fixture || s.size) return s;
           const t = (b.things ?? []).find((x) => x.id === s.id) as
             { name?: string; fields?: Record<string, { value?: string | null } | undefined> } | undefined;
-          const words = [t?.name ?? s.name, t?.fields?.appearance?.value, t?.fields?.size?.value]
-            .filter(Boolean)
-            .join('. ');
-          const size = words ? smallSizeOf(words) : undefined;
+          const name = t?.name ?? s.name ?? '';
+          const words = [t?.fields?.appearance?.value, t?.fields?.size?.value].filter(Boolean).join('. ');
+          const size = name ? smallSizeOf(name, words) : undefined;
           return size ? { ...s, size } : s;
         }),
       }

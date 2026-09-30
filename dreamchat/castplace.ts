@@ -73,25 +73,35 @@ const SMALL: [RegExp, [number, number, number]][] = [
 ];
 
 /**
- * A story thing's size from what it is and its own words, where the plan gives it none (the camera rules): a measure
- * ("about 4 inches long", "15 cm"), else a thing of a hand's size or so by what it is. Unsized, the brass key held
+ * A story thing's size from what it is and its own words, where the plan gives it none (the camera rules): a measure in
+ * any of its words ("about 4 inches long", "15 cm"), else a thing of a hand's size or so by its own name. Unsized, the brass key held
  * before the dreamer's eyes was a box as big as a suitcase, and the paper boat set down in the grass a metre block
  * (lighthouse-fresh m2, m15, judged blind). None where the words give neither.
  */
-export function smallSizeOf(words: string): [number, number, number] | undefined {
-  const w = words.toLowerCase();
+export function smallSizeOf(name: string, words = ''): [number, number, number] | undefined {
+  const w = `${name}. ${words}`.toLowerCase();
+  // Units spelled out, or digits with an inch's sign: "one in each hand" is no inch.
   const m =
-    /\b(?:about |around |some |nearly |almost )?(\d+(?:\.\d+)?|one|two|three|four|five|six|eight|ten|twelve)\s*(inch(?:es)?|in\b|cm|centimet(?:re|er)s?|mm|millimet(?:re|er)s?)\b/.exec(
+    /\b(?:about |around |some |nearly |almost )?(\d+(?:\.\d+)?|one|two|three|four|five|six|eight|ten|twelve)\s*(inch(?:es)?|cm|centimet(?:re|er)s?|mm|millimet(?:re|er)s?)\b/.exec(
       w,
-    );
+    ) ?? /\b(\d+(?:\.\d+)?)\s*(")/.exec(w);
   if (m) {
     const n =
       Number(m[1]) || { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, eight: 8, ten: 10, twelve: 12 }[m[1]] || 0;
-    const unit = /^in/.test(m[2]) ? 0.0254 : /^mm|^milli/.test(m[2]) ? 0.001 : 0.01;
+    const unit = /^in|^"/.test(m[2]) ? 0.0254 : /^mm|^milli/.test(m[2]) ? 0.001 : 0.01;
     const l = Math.round(n * unit * 1000) / 1000;
     if (l > 0 && l < 2) return [l, Math.round(l * 500) / 1000, Math.round(l * 400) / 1000];
   }
-  return SMALL.find(([re]) => re.test(w))?.[1];
+  // What it is by its own name, its head word: a door whose look names its key hole is no key, a lamp post no lamp.
+  const phrase = name
+    .toLowerCase()
+    .split(/\s+(?:of|with|in|on|from|for|that|which)\s+|,/)[0]
+    .trim();
+  const head = phrase.split(/\s+/).at(-1) ?? '';
+  return SMALL.find(([re]) => {
+    const hit = re.exec(phrase);
+    return !!hit && hit.index + hit[0].length >= phrase.length - head.length;
+  })?.[1];
 }
 
 /** A kind's size where the words give none. */
