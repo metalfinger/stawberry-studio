@@ -1835,11 +1835,10 @@ export function outsideShot(
     .filter((s): s is Spot => !!s && !holdAll.includes(s));
   // The place's front, when the words name it: faced, so it is behind whoever is in the picture.
   const front = also.includes('front');
-  const degs = [
-    ...(extra.length || front || (rules?.line && !looks)
+  const degs =
+    extra.length || front || (rules?.line && !looks)
       ? [0, -20, 20, -40, 40, -70, 70, -110, 110, 180]
-      : [0, -20, 20, -40, 40, -70, 70]),
-  ];
+      : [0, -20, 20, -40, 40, -70, 70];
   // Across the scene's line, or the same camera again on the same people at the same size: each worth
   // less than losing most of what the picture must show, so a camera crosses only when it must.
   // A moment that looks somewhere past them (what they look at, the way they face) crosses the line
