@@ -24,6 +24,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
+import { matchGhost } from '../asdrawn';
 import type { Session } from '../session';
 import type { Item } from '../sheets';
 import type { ViewDream, ViewFile } from './types';
@@ -40,8 +41,9 @@ export const mediaOf = (conversation: string) => join(dirname(dirname(conversati
 /**
  * The file of each sketch and picture a dream names, as this machine has it, in `media`. `live`, where there is one,
  * is the saved conversation of the same dream: for a frozen copy (which keeps no media) the image is its item there,
- * found by its id (an in-between picture by the change it shows), and marked `changed` where the live copy's take is
- * another, or where it tells that moment otherwise.
+ * found by its id, an in-between picture as the drawing path finds one (asdrawn.ts matchGhost: by the change it shows,
+ * else by what it shows), and marked `changed` where the live copy's take is another, or where it tells that moment
+ * otherwise.
  */
 export function filesOf(live: Session | null, media: string): (item: Item) => ViewFile {
   const all = [...(live?.build?.items ?? []), ...(live?.build?.frames ?? [])];
@@ -49,19 +51,16 @@ export function filesOf(live: Session | null, media: string): (item: Item) => Vi
     name && existsSync(join(media, basename(name)))
       ? { name: basename(name), sha256: basename(name).replace(/\.[a-z0-9]+$/i, '') }
       : null;
-  const sameGhost = (a: Item, b: Item) =>
-    a.kind === 'ghost' &&
-    b.kind === 'ghost' &&
-    !!a.ghost &&
-    !!b.ghost &&
-    a.ghost.of === b.ghost.of &&
-    a.ghost.change === b.ghost.change;
+  const ghosts = all.filter((x) => x.kind === 'ghost' && !!x.ghost);
   const told = (x: Item) => x.fields?.action?.value ?? null;
   return (item) => {
     if (item.mediaPath) return found(item.mediaPath);
     const there =
-      all.find((x) => x.id === item.id && x.kind === item.kind && (x.kind !== 'ghost' || sameGhost(x, item))) ??
-      all.find((x) => sameGhost(x, item));
+      item.kind === 'ghost'
+        ? item.ghost
+          ? matchGhost(item.ghost, ghosts, (x) => x.ghost)
+          : undefined
+        : all.find((x) => x.id === item.id && x.kind === item.kind);
     const file = found(there?.mediaPath);
     if (!file || !there) return file;
     const other = there.version !== item.version || (item.kind === 'cut' && told(there) !== told(item));
