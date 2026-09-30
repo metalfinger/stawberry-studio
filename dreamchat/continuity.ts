@@ -473,7 +473,7 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
   let water: number | null = null;
   if (camera && rec)
     for (const x of upTo) {
-      const w = waterAt(rec.moments[x.id]?.facts ?? [], plan, beings);
+      const w = waterAt(rec.moments[x.id]?.facts ?? [], plan, beings, [x.action, x.visual_point].join('. '));
       water = w.has ? (w.level ?? water) : null;
     }
   // Whoever rides a boat on it keeps their head under the ceiling: "almost up to the ceiling" with a boat
@@ -525,12 +525,14 @@ export function placeWordsOf(b: Breakdown, momentId: string): string {
 
 /**
  * Whether the story record has water in a moment's place, and how high its words say it stands
- * (camera.ts waterLevel): none measured where they do not say.
+ * (camera.ts waterLevel), or the moment's own words (`told`) by a creature they put under it: none
+ * measured where they do not say.
  */
 function waterAt(
   facts: NowOf[],
   plan: Blocking,
   beings: { name: string; height: number }[] = [],
+  told = '',
 ): { has: boolean; level: number | null } {
   let has = false;
   for (const f of facts)
@@ -538,7 +540,7 @@ function waterAt(
       for (const x of f.facts)
         if (x.kind === 'part' && (WATER.test(x.part) || WATER.test(x.what))) {
           has = true;
-          const level = waterLevel(x.now, plan, beings);
+          const level = waterLevel(x.now, plan, beings, told);
           if (level !== null) return { has, level };
         }
   return { has, level: null };
@@ -1473,7 +1475,8 @@ function planWith(
           for (const r of c.refs.filter((x) => x.relation === 'seat'))
             unsentBy(c, r, {
               code: 'seat_replaced_by_view',
-              detail: "the dreamer's view is worked out on the floor plan from where they are, so the picture they were seen in is not needed",
+              detail:
+                "the dreamer's view is worked out on the floor plan from where they are, so the picture they were seen in is not needed",
             });
         c.refs = c.refs.filter((r) => r.relation !== 'seat');
       }
@@ -1662,7 +1665,10 @@ function planWith(
         const not = whyNot(c, r, cams.get(c.id), pics.get(r.id));
         if (!not) return [r];
         why[r.id] = madeOwn.has(`${c.id}/${r.id}`)
-          ? { code: 'edit_to_own_camera', detail: `planned as the picture edited, and made its own cut instead: ${not.detail}` }
+          ? {
+              code: 'edit_to_own_camera',
+              detail: `planned as the picture edited, and made its own cut instead: ${not.detail}`,
+            }
           : not;
         return [];
       });
