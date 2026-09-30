@@ -156,3 +156,62 @@ describe('with the cast_named step, what the reading casts reaches the prompt', 
     expect(m1).not.toContain('Across the whole picture');
   });
 });
+
+describe('what the floor plan reads of the reading', () => {
+  test('each thing cast has its id, in the reading, once; weather and matter have none', () => {
+    const b = affd().draft!.breakdown!;
+    const { reading } = parseCast(
+      JSON.stringify({
+        things: [
+          // m6: "the sea is gone" names it.
+          { name: 'the sea', look: '', kind: 'matter', moments: [{ id: 'm6' }] },
+          { name: 'the red tractor', look: 'red', kind: 'vehicle', moments: [{ id: 'm8' }] },
+          { name: 'the little boats', look: '', kind: 'thing', moments: [{ id: 'm4' }] },
+        ],
+      }),
+      b,
+    );
+    expect(reading.things.map((t) => [t.name, t.id])).toEqual([
+      ['the sea', undefined],
+      ['the red tractor', 'c1'],
+      ['the little boats', 'c2'],
+    ]);
+    withSwitches(ON, () =>
+      expect(
+        withCastThings(b, reading)
+          .things.filter((t) => t.id.startsWith('c'))
+          .map((t) => [t.id, t.name]),
+      ).toEqual([
+        ['c1', 'the red tractor'],
+        ['c2', 'the little boats'],
+      ]),
+    );
+  });
+
+  test('water the camera already measures is said there, never again as a condition', () => {
+    // fdd7 m4 with the camera rules: its words say how deep the water stands.
+    const s = structuredClone(loadDream('dream-0926-050424-fdd7', false).session as Session);
+    const reading: CastReading = {
+      things: ['the rising water', 'the fog'].map((name) => ({
+        name,
+        look: '',
+        kind: 'matter' as const,
+        moments: [{ id: 'm4', where: 'in' as const }],
+        near: null,
+        side: null,
+        size: null,
+        many: null,
+      })),
+      bodies: [],
+      fixtures: [],
+    };
+    s.draft = { ...s.draft!, readings: { ...(s.draft?.readings ?? {}), cast: reading } };
+    const p = withSwitches(
+      { ...ON, DREAMCHAT_CAMERA: 'on' },
+      () => rebuild(s).pictures.find((x) => x.id === 'm4')!.prompt,
+    );
+    expect(p).toMatch(/water stands/i);
+    expect(p).toContain('Across the whole picture: the fog.');
+    expect(p).not.toContain('the rising water.');
+  });
+});
