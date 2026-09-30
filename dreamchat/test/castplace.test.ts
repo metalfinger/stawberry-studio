@@ -5,6 +5,8 @@ import { describe, expect, test } from 'bun:test';
 import type { Blocking } from '../blocking';
 import type { CastReading } from '../cast-types';
 import { castThings, sizeFromWords, withCastBodies, withCastFixtures, withCastSpots } from '../castplace';
+import { rawPlanBy, type RecordPlan } from '../continuity';
+import { loadDream } from '../evals/saved';
 
 const room: Blocking = {
   front: 'the board',
@@ -153,5 +155,57 @@ describe('bodies', () => {
     const plan = withCastBodies(room, [{ id: 'p1', height_m: 1.15, shape: 'human', words: 'about six years old' }]);
     expect(plan.spots[0]).toMatchObject({ height: 1.15, body: 'human' });
     expect(withCastBodies(room, [])).toBe(room);
+  });
+});
+
+describe('on a saved dream', () => {
+  test('with the reading on the record, its fixtures and things are on the moment’s floor plan; without it, as before', () => {
+    const b = structuredClone(loadDream('dream-0926-043003-b0cb', false).session.draft!.breakdown!);
+    // As the rebuild casts it before planning (cast.ts withCastThings): in view at the moment that shows it.
+    b.scenes
+      .flatMap((sc) => sc.moments)
+      .find((m) => m.id === 'm3')!
+      .things.push('c1');
+    const cast: CastReading = {
+      things: [
+        {
+          id: 'c1',
+          name: 'the paper tickets',
+          look: 'yellowed paper',
+          kind: 'thing',
+          moments: [{ id: 'm3', where: 'in' }],
+          near: 'p2',
+          side: 'beside the grandfather',
+          size: null,
+          many: 3,
+        },
+      ],
+      bodies: [],
+      fixtures: [
+        {
+          place: 'l1',
+          name: 'the windows',
+          kind: 'opening',
+          where: 'along each side',
+          count: 3,
+          words: 'a row of windows along each side',
+        },
+      ],
+    };
+    const none = { moments: {}, before: {}, ends: {}, unsaid: {} } as unknown as RecordPlan;
+    const env = { DREAMCHAT_CAMERA: 'on', DREAMCHAT_CUT_SHEET: 'on', DREAMCHAT_RECORD: 'on' };
+    const was = Object.fromEntries(Object.keys(env).map((k) => [k, process.env[k]]));
+    Object.assign(process.env, env);
+    try {
+      const plan = rawPlanBy(b, 'm3', { ...none, cast })!;
+      expect(plan.spots.filter((s) => s.name === 'the windows').length).toBe(6);
+      const c1 = plan.spots.find((s) => s.id === 'c1')!;
+      expect(c1).toMatchObject({ many: true, count: 3 });
+      expect(rawPlanBy(b, 'm3', none)!.spots.some((s) => s.id === 'c1' || s.name === 'the windows')).toBe(false);
+    } finally {
+      for (const [k, v] of Object.entries(was))
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+    }
   });
 });

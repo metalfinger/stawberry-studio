@@ -8,11 +8,11 @@ import { type Blocking, facing, rightOf, roomOf, type Side, sizeOf, type Spot, u
 
 type V2 = { x: number; y: number };
 
-/** The things the reading casts, in its order, with their ids (cast.ts `castable`, `castId`: c1, c2 …). */
+/** The things the reading casts, with the ids it gives them (c1, c2 …; a reading kept before ids, in its order). */
 export function castThings(reading: CastReading): { id: string; t: CastThing }[] {
   return reading.things
     .filter((t) => t.kind !== 'weather' && t.kind !== 'matter')
-    .map((t, i) => ({ id: `c${i + 1}`, t }));
+    .map((t, i) => ({ id: t.id ?? `c${i + 1}`, t }));
 }
 
 /** The last word of a name, the thing itself ("tractor" of "the red tractor"). */
