@@ -1997,3 +1997,49 @@ describe('through their eyes, what they look at never swamps the frame', () => {
     expect(on.text).not.toContain('leaning back');
   });
 });
+
+describe('what has one seat', () => {
+  const field = {
+    front: 'the beach',
+    spots: [
+      { id: 'p1', x: 50.5, y: 5, kind: 'person' as const, pose: 'sitting' as const, faces: 'front' },
+      {
+        id: 'p4',
+        x: 49.5,
+        y: 5,
+        kind: 'person' as const,
+        pose: 'sitting' as const,
+        faces: 'front',
+        rides: 'front' as const,
+      },
+      {
+        id: 'c1',
+        x: 50,
+        y: 5,
+        kind: 'thing' as const,
+        shape: 'vehicle' as const,
+        faces: 'front',
+        size: [1.8, 3.5, 2.2] as [number, number, number],
+      },
+    ],
+  };
+  const name = (id: string) => ({ p1: 'the dreamer', p4: 'the driver', c1: 'the red tractor' })[id] ?? id;
+
+  test('its driver has its seat, and anyone else rides on its mudguard beside them', () => {
+    // Two sat side by side in the red tractor were drawn in two tractors, one each (lighthouse-first m9, 1 Oct).
+    const shot = withEnv(CAMERA, () => outsideShot(field, ['p1', 'p4', 'c1'], 'wide', name))!;
+    expect(shot.text).toContain("the driver, right of the middle of the picture, in the red tractor's one seat");
+    expect(shot.text).toContain("sitting on the red tractor's mudguard beside the driver");
+    expect(shot.text).toContain('with the driver in its seat and the dreamer on its mudguard');
+    // No one drives it, or it is not a thing of one seat: in it, as before.
+    const nobody = { ...field, spots: field.spots.map((s) => (s.id === 'p4' ? { ...s, rides: undefined } : s)) };
+    expect(withEnv(CAMERA, () => outsideShot(nobody, ['p1', 'p4', 'c1'], 'wide', name))!.text).toContain(
+      'with the dreamer and the driver in it',
+    );
+    const car = (id: string) => (id === 'c1' ? 'the red car' : name(id));
+    expect(withEnv(CAMERA, () => outsideShot(field, ['p1', 'p4', 'c1'], 'wide', car))!.text).not.toContain('mudguard');
+    // Off, as before.
+    const off = withEnv({ DREAMCHAT_CAMERA: undefined }, () => outsideShot(field, ['p1', 'p4', 'c1'], 'wide', name))!;
+    expect(off.text).not.toContain('mudguard');
+  });
+});
