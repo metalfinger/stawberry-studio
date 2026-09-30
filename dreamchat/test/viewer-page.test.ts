@@ -127,8 +127,22 @@ describe('the page', () => {
         body: JSON.stringify({ key: `../../viewer/fixtures/${DREAM}`, node: 'm1', verdict: 'right', shown: {} }),
       });
       expect(out.status).toBe(404);
-      // Asked by another name (a page elsewhere pointed here): refused.
+      // Asked by another name (a page elsewhere pointed here): refused; any name under .localhost is this machine.
       expect((await fetch(`${url}api/dreams`, { headers: { host: 'evil.example:80' } })).status).toBe(403);
+      const port = new URL(url).port;
+      for (const [host, status] of [
+        [`dreams.localhost:${port}`, 200],
+        [`localhost.evil.example:${port}`, 403],
+        [`evil.localhost.example:${port}`, 403],
+        [`dreams.localhost:1`, 403],
+      ] as const)
+        expect([host, (await fetch(`${url}api/dreams`, { headers: { host } })).status]).toEqual([host, status]);
+      // A readable address opens the page; a short key names the dream by its ending.
+      for (const path of [DREAM, `${DREAM}/m3`, '0f40/m3', '0f40/sketch:p1', '0f40/dream'])
+        expect([path, (await fetch(`${url}${path}`)).headers.get('content-type')]).toEqual([path, 'text/html; charset=utf-8']);
+      const short = (await (await fetch(`${url}api/dream?key=0f40`)).json()) as { key: string };
+      expect(short.key).toBe(DREAM);
+      expect((await fetch(`${url}api/dream?key=f40`)).status).toBe(404);
       const post = (body: unknown, type = 'application/json') =>
         fetch(`${url}api/verdict`, { method: 'POST', headers: { 'content-type': type }, body: JSON.stringify(body) });
       const base = { key: DREAM, node: cut.id, shown: cut.hashes };
