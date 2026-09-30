@@ -522,6 +522,23 @@ describe('an edit', () => {
     const off = rebuilt('dream-0926-062232-a44a', { ...ON, DREAMCHAT_CAMERA: undefined });
     expect(picture(off, 'm3').prompt).toMatch(/left to right/);
   });
+
+  test('shows the same people as the picture it edits, so nobody in it needs a place of its own', () => {
+    // An earlier picture stays the one edited only where the same people are in view (continuity.ts sameCast): with
+    // anyone coming in or going, the moment gets its own camera. So an edit, given no order, leaves nobody unplaced.
+    const edits: string[] = [];
+    for (const { id, r } of sweep())
+      for (const p of r.pictures) {
+        const base =
+          p.kind === 'cut' ? p.item.frame?.plan?.refs.find((x) => x.role === 'base' && x.kind === 'cut') : undefined;
+        if (!base) continue;
+        const moments = r.b.scenes.flatMap((sc) => sc.moments);
+        const who = (mid: string) => [...(moments.find((m) => m.id === mid)?.visible ?? [])].sort();
+        edits.push(`${id.slice(-4)} ${p.id}`);
+        expect([p.id, who(p.id)]).toEqual([p.id, who(base.id)]);
+      }
+    expect(edits.length).toBeGreaterThan(0);
+  });
 });
 
 describe('a reverse angle turns the room', () => {
