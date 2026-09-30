@@ -6,7 +6,7 @@
 // run strictly one at a time.
 import { existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { sameView } from './camera';
+import { cameraMode, sameView } from './camera';
 import {
   cleanStyles,
   type GroundingNote,
@@ -1657,6 +1657,51 @@ function spend(s: Session, estimate: number | null): void {
   else s.spentUsd = Math.round((s.spentUsd + (estimate ?? 0)) * 100) / 100;
 }
 
+/**
+ * Who and what a cut's record casts, by the engine's ids: whoever is seen and whatever is there, but a crowd (never
+ * sketched), a sketch that could not be drawn, and, with the camera rules and the picture's images known, whoever and
+ * whatever it sends no sketch of (the key in the dreamer's hands, below the frame): those in its words only. Kept in the
+ * cast, the engine refuses the picture for want of their sketch (the father, lighthouse, 26 Sep; the key, 30 Sep).
+ * Someone shown only through an earlier picture or the edit base, with no sketch of their own sent, is left out of the
+ * cast too: the engine checks less, and the words still name them.
+ */
+export function castOf(
+  f: NonNullable<Item['frame']>,
+  dreamerId: string | undefined,
+  ids: Record<string, string>,
+  opts: { items: Item[]; extras: Set<string>; unsketched: Set<string>; references?: FrameReference[] },
+): { visible_cast?: string[]; required_props?: string[]; location_id?: null } {
+  const { items, extras, unsketched, references } = opts;
+  const attached =
+    cameraMode() === 'on' && references
+      ? new Set(
+          items
+            .filter(
+              (i) =>
+                !!i.mediaId &&
+                references.some((r) => r.media_id === i.mediaId && r.role !== 'base' && r.role !== 'composition'),
+            )
+            .map((i) => i.id),
+        )
+      : undefined;
+  const wordsOnly = (id: string) => unsketched.has(id) || (!!attached && !attached.has(id));
+  return {
+    visible_cast: seenIn(f, dreamerId)
+      .filter((p) => !extras.has(p) && !wordsOnly(p))
+      .map((p) => ids[p])
+      .filter((x): x is string => !!x),
+    ...(f.things.some(wordsOnly)
+      ? {
+          required_props: f.things
+            .filter((t) => !wordsOnly(t))
+            .map((t) => ids[t])
+            .filter((x): x is string => !!x),
+        }
+      : {}),
+    ...(wordsOnly(f.place) ? { location_id: null } : {}),
+  };
+}
+
 export class SessionStore {
   private sessions = new Map<string, Session>();
   private chains = new Map<string, Promise<unknown>>();
@@ -3046,7 +3091,7 @@ export class SessionStore {
       prompt,
       references,
       changes,
-      record: this.recordOf(s, frame),
+      record: this.recordOf(s, frame, references),
       reason: `The person asked to see their dream drawn and settled everything in it; approved within the ${IMAGE_CAP}-picture limit.`,
       ...(asDrawn ? { asDrawn } : {}),
     });
@@ -3393,7 +3438,7 @@ export class SessionStore {
    * The cut's record as its plan says; a source that failed is left out of it as well as its
    * references.
    */
-  private recordOf(s: Session, frame: Item): CutRecord | undefined {
+  private recordOf(s: Session, frame: Item, references?: FrameReference[]): CutRecord | undefined {
     const ids = s.production?.result?.ids ?? {};
     const plan = frame.frame?.plan;
     if (!plan || !ids.proposal) return undefined;
@@ -3423,23 +3468,7 @@ export class SessionStore {
     // cast, the engine refused every moment the father was in, for want of his sketch (lighthouse, 26 Sep).
     const unsketched = new Set((s.build?.items ?? []).filter((i) => i.status === 'failed').map((i) => i.id));
     const f = frame.frame;
-    const cast = f
-      ? {
-          visible_cast: seenIn(f, dreamerId)
-            .filter((p) => !extras.has(p) && !unsketched.has(p))
-            .map((p) => ids[p])
-            .filter((x): x is string => !!x),
-          ...(f.things.some((t) => unsketched.has(t))
-            ? {
-                required_props: f.things
-                  .filter((t) => !unsketched.has(t))
-                  .map((t) => ids[t])
-                  .filter((x): x is string => !!x),
-              }
-            : {}),
-          ...(unsketched.has(f.place) ? { location_id: null } : {}),
-        }
-      : {};
+    const cast = f ? castOf(f, dreamerId, ids, { items: s.build?.items ?? [], extras, unsketched, references }) : {};
     const without = (s.build?.items ?? []).filter(
       (i) =>
         unsketched.has(i.id) &&

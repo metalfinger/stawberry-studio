@@ -1148,7 +1148,9 @@ export async function draw(
         const images = r.images;
         results.entries[b.m.id] = r;
         const lost = images.filter((im) => !im.mediaId).map((im) => im.key);
-        const room = cap - spent;
+        // In cents: 35 pictures at $0.15 add up to 5.250000000000002, and the last picture under a $5.40 cap was
+        // approved for 0.14999999999999858 and refused by the engine (fal-judged, 30 Sep).
+        const room = Math.round((cap - spent) * 100) / 100;
         const p = b.d?.r.pictures.find((x) => x.id === b.m.moment && x.kind === 'cut');
         if (!setup || lost.length || !p)
           r.error = `not drawn: ${lost.join(', ') || 'its dream'} could not be put into the checkpoint's store`;

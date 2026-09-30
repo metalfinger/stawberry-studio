@@ -5,6 +5,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { type GhostPlan, ghostKey, type RecordPlan, seenIn } from '../continuity';
+import { cameraMode } from '../camera';
 import { renderTranscript } from '../jev';
 import type { Breakdown, StyleOption } from '../producer';
 import type { Session } from '../session';
@@ -74,14 +75,18 @@ export async function setUpDream(
   for (const x of drawn) {
     const f = x.frame;
     if (!f) continue;
+    // With the camera rules, whoever and whatever the moment sends no sketch of is in its words only, as the harness
+    // records it (session.ts recordOf): the key below the frame of lighthouse m3.
+    const sent = (id: string) => cameraMode() !== 'on' || x.keys.includes(`sketch:${id}`);
+    const cast = (id: string) => kept(id) && sent(id);
     await liveSheets.record?.(ids[x.moment], {
       fields: {
         continuity_from: [],
         visible_cast: seenIn(f, dreamer)
-          .filter(kept)
+          .filter(cast)
           .map((id) => ids[id]),
-        required_props: f.things.filter(kept).map((id) => ids[id]),
-        ...(kept(f.place) ? {} : { location_id: null }),
+        required_props: f.things.filter(cast).map((id) => ids[id]),
+        ...(cast(f.place) ? {} : { location_id: null }),
       },
       source: ids.proposal,
       reason: opts.reason,
