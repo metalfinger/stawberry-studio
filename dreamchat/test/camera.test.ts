@@ -29,11 +29,12 @@ import {
   shotPlan,
   sidesByCamera,
   unsettled,
+  withClimbers,
 } from '../continuity';
 import { type CutSheet, notDrawnFrom } from '../cutsheet';
 import { frozenDreams, loadDream } from '../evals/saved';
 import { rebuild } from '../plan';
-import { filling, frontLabel, onOf, outsideShot } from '../previs';
+import { dreamerShot, filling, frontLabel, onOf, outsideShot } from '../previs';
 import { type Breakdown, completeViews, type Moment, moments } from '../producer';
 import type { Session } from '../session';
 
@@ -1550,5 +1551,94 @@ describe('what the moment looks at, put down at their feet', () => {
     expect(shot.text).toContain('Outside the picture, below it: the boat.');
     expect(shot.text).toContain('Outside the picture, below it: the stone.');
     expect(shot.text).toContain('Outside the picture, behind the camera: the sea.');
+  });
+});
+
+describe('getting in or out of something at the instant', () => {
+  const dock = {
+    front: 'the doors',
+    indoors: true,
+    room: [10, 10] as [number, number],
+    spots: [
+      { id: 'p1', x: 5.2, y: 5, kind: 'person' as const, pose: 'sitting' as const },
+      { id: 'p2', x: 4.8, y: 5.5, kind: 'person' as const, pose: 'sitting' as const },
+      {
+        id: 't1',
+        x: 5,
+        y: 5,
+        kind: 'thing' as const,
+        shape: 'vehicle' as const,
+        size: [1.2, 3, 0.8] as [number, number, number],
+      },
+      { id: 'x1', x: 0.1, y: 5, kind: 'thing' as const, fixture: true, name: 'the window' },
+    ],
+  };
+  const name = (id: string) => ({ p1: 'the dreamer', p2: 'the sister', t1: 'the boat' })[id] ?? id;
+
+  test('climbing in, they stand at its side, half in, facing into it', () => {
+    // The dreamer climbing into the yellow rowing boat was drawn already sitting in it (6081 m6).
+    const plan = withClimbers(dock, [{ who: 'p1', does: 'climbs into', to: 't1' }]);
+    const p1 = plan.spots.find((s) => s.id === 'p1')!;
+    expect(p1).toMatchObject({ pose: 'standing', faces: 't1', climbing: { of: 't1', how: 'into' } });
+    // At the rim of its long side nearest them: across it, not along it.
+    expect(p1.x).toBeCloseTo(5.5, 5);
+    expect(p1.y).toBeCloseTo(5, 5);
+    // Getting out is the same place, the other way.
+    const out = withClimbers(dock, [{ who: 'p2', does: 'gets out of', to: 't1' }]).spots.find((s) => s.id === 'p2')!;
+    expect(out).toMatchObject({ climbing: { of: 't1', how: 'out of' } });
+    expect(out.x).toBeCloseTo(4.5, 5);
+    // Nothing else moves, and nothing moves for an act that is no getting in, a fixture, or no act at all.
+    expect(plan.spots.filter((s) => s.id !== 'p1')).toEqual(dock.spots.filter((s) => s.id !== 'p1'));
+    expect(withClimbers(dock, [{ who: 'p1', does: 'looks into', to: 't1' }])).toEqual(dock);
+    expect(withClimbers(dock, [{ who: 'p1', does: 'climbs into', to: 'x1' }])).toEqual(dock);
+    expect(withClimbers(dock, undefined)).toBe(dock);
+    // Only a vehicle or a seat is got into: stepping onto a stage or a table is no climbing in.
+    const stage = {
+      ...dock,
+      spots: [
+        ...dock.spots,
+        {
+          id: 't2',
+          x: 8,
+          y: 8,
+          kind: 'thing' as const,
+          shape: 'ground' as const,
+          size: [3, 2, 0.5] as [number, number, number],
+        },
+      ],
+    };
+    expect(withClimbers(stage, [{ who: 'p1', does: 'steps onto', to: 't2' }])).toEqual(stage);
+    // Placed inside it already, they climb in from the side with room, never from against a wall.
+    const walled = {
+      ...dock,
+      spots: dock.spots.map((s) => (s.id === 't1' ? { ...s, x: 0.7 } : s.id === 'p1' ? { ...s, x: 0.6 } : s)),
+    };
+    expect(
+      withClimbers(walled, [{ who: 'p1', does: 'climbs into', to: 't1' }]).spots.find((s) => s.id === 'p1')!.x,
+    ).toBeCloseTo(1.2, 5);
+  });
+
+  test('said climbing into it, never in it, and not among who is in it', () => {
+    const plan = withClimbers(dock, [{ who: 'p1', does: 'climbs into', to: 't1' }]);
+    const shot = withEnv(CAMERA, () =>
+      outsideShot(plan, ['p1', 'p2', 't1'], 'wide', name, { id: 't1', at: { x: 5, y: 5 } }),
+    )!;
+    expect(shot.text).toContain('the dreamer, ');
+    expect(shot.text).toMatch(/the dreamer, [^;]*climbing into the boat/);
+    expect(shot.text).toContain('with the sister in it');
+    expect(shot.text).not.toContain('with the dreamer and the sister in it');
+    // Off, as before: the field is said nowhere.
+    const off = withEnv({ DREAMCHAT_CAMERA: undefined }, () =>
+      outsideShot(plan, ['p1', 'p2', 't1'], 'wide', name, { id: 't1', at: { x: 5, y: 5 } }),
+    )!;
+    expect(off.text).not.toContain('climbing');
+  });
+
+  test('through their own eyes, the camera is climbing into it', () => {
+    // "The camera is the dreamer's eyes, in the wooden rowing boat", as they got into it (f202 m7).
+    const plan = withClimbers(dock, [{ who: 'p1', does: 'climbs into', to: 't1' }]);
+    const shot = withEnv(CAMERA, () => dreamerShot(plan, 'p1', 't1', name))!;
+    expect(shot.text).toContain("The camera is the dreamer's eyes, climbing into the boat");
+    expect(shot.text).not.toContain("The camera is the dreamer's eyes, in the boat");
   });
 });

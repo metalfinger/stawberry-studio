@@ -1225,6 +1225,8 @@ export function dreamerShot(
     .map((s) => s.id);
   // In it only where it is wide enough to be in (onOf): on a bicycle, never "the inside of" it and "its window"
   // (the read of every frozen prompt, 30 Sep).
+  // Getting in or out of something at the instant (the camera rules, plan_acts): climbing into the boat, not in it.
+  const climbingIn = camera && me?.climbing ? me.climbing : undefined;
   const inIt = at.some((id) => {
     const v = plan.spots.find((s) => s.id === id);
     return v?.shape === 'vehicle' && (cameraMode() !== 'on' || sizeOf(v)[0] >= 1);
@@ -1250,7 +1252,7 @@ export function dreamerShot(
     .sort((a, b) => distance(a.s) - distance(b.s));
   const called = (id: string) => plan.spots.find((s) => s.id === id)?.name ?? name(id);
   const sentences = [
-    `The camera is the dreamer's eyes${at.length ? `, ${inIt ? 'in' : 'on'} ${at.map(called).join(' and ')}` : ''}${pose}${eye.lean ? `, ${LEAN_WORDS[eye.lean]}` : ''}, ${turned}${toward ? `, toward ${called(toward)}` : ''}: it looks toward ${wall(eye.d, plan.front, !!plan.indoors)}. A wide lens, about 24mm.`,
+    `The camera is the dreamer's eyes${climbingIn ? `, climbing ${climbingIn.how} ${called(climbingIn.of)}` : at.length ? `, ${inIt ? 'in' : 'on'} ${at.map(called).join(' and ')}` : ''}${pose}${eye.lean ? `, ${LEAN_WORDS[eye.lean]}` : ''}, ${turned}${toward ? `, toward ${called(toward)}` : ''}: it looks toward ${wall(eye.d, plan.front, !!plan.indoors)}. A wide lens, about 24mm.`,
     // Riding in something, what they are in is in the picture: through the dreamer's eyes in the
     // tractor's cab, the tractor was read as missing from its own moment (lighthouse, 25 Sep).
     ...(inIt && at.length
@@ -1321,17 +1323,22 @@ function thingWords(
       const to = unit({ x: ctx.anchor!.x - s.x, y: ctx.anchor!.y - s.y });
       return f.x * to.x + f.y * to.y > 0.7;
     })();
-  const sitting = on
-    ? ctx.on.includes(on.t.id)
-      ? facesMe
-        ? `, ${pose} across from the dreamer on ${called(on.t.id)}`
+  // Getting in or out of something at the instant: never already sitting in it (the camera rules, plan_acts).
+  const climbing =
+    cameraMode() === 'on' && isPerson(s) && s.climbing ? `, climbing ${s.climbing.how} ${called(s.climbing.of)}` : '';
+  const sitting = climbing
+    ? climbing
+    : on
+      ? ctx.on.includes(on.t.id)
+        ? facesMe
+          ? `, ${pose} across from the dreamer on ${called(on.t.id)}`
+          : on.how === 'in'
+            ? `, beside the dreamer in the same ${bareName(called(on.t.id))}`
+            : `, ${pose} beside the dreamer on the same ${bareName(called(on.t.id))}`
         : on.how === 'in'
-          ? `, beside the dreamer in the same ${bareName(called(on.t.id))}`
-          : `, ${pose} beside the dreamer on the same ${bareName(called(on.t.id))}`
-      : on.how === 'in'
-        ? `, in ${called(on.t.id)}`
-        : `, ${pose} on ${called(on.t.id)}`
-    : '';
+          ? `, in ${called(on.t.id)}`
+          : `, ${pose} on ${called(on.t.id)}`
+      : '';
   const holder = !isPerson(s) && s.heldBy ? s.heldBy : undefined;
   const holds = isPerson(s) && !s.many ? plan.spots.filter((o) => o.heldBy === s.id).map((o) => called(o.id)) : [];
   const next =
@@ -1349,7 +1356,9 @@ function thingWords(
         )
       : undefined;
   const riders = !isPerson(s)
-    ? ctx.spots.filter((o) => isPerson(o) && !o.many && onOf(o, plan)?.t.id === s.id).map((o) => called(o.id))
+    ? ctx.spots
+        .filter((o) => isPerson(o) && !o.many && onOf(o, plan)?.t.id === s.id && !(cameraMode() === 'on' && o.climbing))
+        .map((o) => called(o.id))
     : [];
   const shape = !isPerson(s) ? shapeOf(s, plan) : undefined;
   const how =
