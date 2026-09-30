@@ -190,18 +190,21 @@ describe('the cut sheet switch', () => {
   });
 
   test('shadow sends framePrompt and logs that the sheet assembles the same; on sends the sheet', async () => {
-    const { r, dream } = dreamOf('dream-0925-231131-affd', 'off');
-    const x = inputOf(r, 'm5', dream);
-    const shadow = framed(x, 'shadow');
-    const on = framed(x, 'on');
-    expect(shadow.differs).toEqual([]);
-    expect(on.prompt).toBe(shadow.prompt);
-    expect(on.references).toEqual(shadow.references);
-    expect(on.sheet?.id).toBe('m5');
-    const dir = mkdtempSync(join(tmpdir(), 'cut-sheet-'));
-    await inSession(dir, 'boat', async () => framed(x, 'shadow', 'frames'));
-    const log = readJevLog(dir, 'boat').filter((e) => e.kind === 'transition' && e.stage === 'cut_sheet');
-    expect(log.map((e) => (e.kind === 'transition' ? e.decision : ''))).toEqual(['same']);
+    // The one builder departs from framePrompt on purpose from S6 row 7: pinned at the step before.
+    await withEnv({ DREAMCHAT_ONE_BUILDER: 'kinds' }, async () => {
+      const { r, dream } = dreamOf('dream-0925-231131-affd', 'off');
+      const x = inputOf(r, 'm5', dream);
+      const shadow = framed(x, 'shadow');
+      const on = framed(x, 'on');
+      expect(shadow.differs).toEqual([]);
+      expect(on.prompt).toBe(shadow.prompt);
+      expect(on.references).toEqual(shadow.references);
+      expect(on.sheet?.id).toBe('m5');
+      const dir = mkdtempSync(join(tmpdir(), 'cut-sheet-'));
+      await inSession(dir, 'boat', async () => framed(x, 'shadow', 'frames'));
+      const log = readJevLog(dir, 'boat').filter((e) => e.kind === 'transition' && e.stage === 'cut_sheet');
+      expect(log.map((e) => (e.kind === 'transition' ? e.decision : ''))).toEqual(['same']);
+    });
   });
 });
 
@@ -230,79 +233,81 @@ describe('assembleCut is framePrompt, word for word', () => {
       expect(n).toBe(115 * Object.keys(VARIANTS).length);
     });
 
-  test('a group and the member with their own sketch are told one and the same, and an animal is an animal', () => {
-    const style: StyleOption = {
-      id: 'd',
-      name: 'ink',
-      line: 'quiet',
-      tokens: ['one loaded brush'],
-      palette_hex: ['#111111', '#C8553D'],
-      lighting_rules: 'soft morning light',
-    } as StyleOption;
-    const sketch = (id: string, name: string, fields: Record<string, string>, extra: Partial<Item> = {}): Item => ({
-      id,
-      kind: 'character',
-      name,
-      fields: Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, { value: v, said: true }])),
-      status: 'ready',
-      version: 1,
-      mediaId: `media-${id}`,
-      review: 'approved',
-      nodeId: `node-${id}`,
-      ...extra,
-    });
-    const family = sketch(
-      'p2',
-      'the family',
-      { appearance: 'a father, a mother and a baby in a yellow onesie' },
-      { several: true },
-    );
-    const baby = sketch('p3', 'the baby', { appearance: 'a baby in a white onesie' });
-    const dog = sketch('p4', 'the dog', { appearance: 'a small brown terrier', identity: 'their dog' });
-    const dreamer = sketch('p1', 'you', { wardrobe: 'a red coat; standing in a relaxed pose' }, { isDreamer: true });
-    const frame: Item = {
-      id: 'm1',
-      kind: 'cut',
-      name: 'the family',
-      fields: { action: { value: 'The family waves at you and the dog barks.', said: true } },
-      status: 'waiting',
-      version: 0,
-      frame: {
-        visible: ['p1', 'p2', 'p3', 'p4'],
-        things: [],
-        place: 'l1',
-        distance: 'medium',
-        eyes: 'outside',
-        key: true,
-        order: 1,
-        looksAt: 'the gate',
-        plan: {
-          id: 'm1',
+  test('a group and the member with their own sketch are told one and the same, and an animal is an animal', () =>
+    // The old builder's words, as above: pinned at the step before the one builder departs from framePrompt.
+    withEnv({ DREAMCHAT_ONE_BUILDER: 'kinds' }, () => {
+      const style: StyleOption = {
+        id: 'd',
+        name: 'ink',
+        line: 'quiet',
+        tokens: ['one loaded brush'],
+        palette_hex: ['#111111', '#C8553D'],
+        lighting_rules: 'soft morning light',
+      } as StyleOption;
+      const sketch = (id: string, name: string, fields: Record<string, string>, extra: Partial<Item> = {}): Item => ({
+        id,
+        kind: 'character',
+        name,
+        fields: Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, { value: v, said: true }])),
+        status: 'ready',
+        version: 1,
+        mediaId: `media-${id}`,
+        review: 'approved',
+        nodeId: `node-${id}`,
+        ...extra,
+      });
+      const family = sketch(
+        'p2',
+        'the family',
+        { appearance: 'a father, a mother and a baby in a yellow onesie' },
+        { several: true },
+      );
+      const baby = sketch('p3', 'the baby', { appearance: 'a baby in a white onesie' });
+      const dog = sketch('p4', 'the dog', { appearance: 'a small brown terrier', identity: 'their dog' });
+      const dreamer = sketch('p1', 'you', { wardrobe: 'a red coat; standing in a relaxed pose' }, { isDreamer: true });
+      const frame: Item = {
+        id: 'm1',
+        kind: 'cut',
+        name: 'the family',
+        fields: { action: { value: 'The family waves at you and the dog barks.', said: true } },
+        status: 'waiting',
+        version: 0,
+        frame: {
+          visible: ['p1', 'p2', 'p3', 'p4'],
+          things: [],
+          place: 'l1',
+          distance: 'medium',
+          eyes: 'outside',
+          key: true,
           order: 1,
-          scene: 's1',
-          shot: 's1.sh1',
-          refs: [],
-          own: [],
-          states: [],
-          staging: ['p1', 'p2', 'p3', 'p4'],
-          sheetLayout: true,
-          changes: [],
-          needs: [],
-          criteria: [],
-          depth: 1,
-          transition: 'cut',
-          why: '',
+          looksAt: 'the gate',
+          plan: {
+            id: 'm1',
+            order: 1,
+            scene: 's1',
+            shot: 's1.sh1',
+            refs: [],
+            own: [],
+            states: [],
+            staging: ['p1', 'p2', 'p3', 'p4'],
+            sheetLayout: true,
+            changes: [],
+            needs: [],
+            criteria: [],
+            depth: 1,
+            transition: 'cut',
+            why: '',
+          },
         },
-      },
-    };
-    const x: CutSheetInput = { frame, sheets: [dreamer, family, baby, dog], style };
-    sameBothWays(x, 'family');
-    const made = assembleCut(cutSheet(x));
-    expect(made.prompt).toContain('one baby, never two');
-    expect(made.prompt).toContain('the dog (animal)');
-    expect(made.prompt).toContain('"You" in these words is the dreamer');
-    expect(made.lines.map((l) => l.id)).toContain('you');
-  });
+      };
+      const x: CutSheetInput = { frame, sheets: [dreamer, family, baby, dog], style };
+      sameBothWays(x, 'family');
+      const made = assembleCut(cutSheet(x));
+      expect(made.prompt).toContain('one baby, never two');
+      expect(made.prompt).toContain('the dog (animal)');
+      expect(made.prompt).toContain('"You" in these words is the dreamer');
+      expect(made.lines.map((l) => l.id)).toContain('you');
+    }));
 });
 
 describe('assembleCut reads the sheet and nothing else', () => {
@@ -342,10 +347,11 @@ describe('assembleCut reads the sheet and nothing else', () => {
       expect(assembleCut(copy)).toEqual(assembleCut(s));
     }
     // It reads the prompt's fields, and never the tree, the record or the tags: those are for the checks.
-    // `rules` is on a sheet only with the camera rules on (DREAMCHAT_CAMERA), and `refs` only with S5's
-    // references on (DREAMCHAT_REFS), and each is read where it is.
+    // `rules` is on a sheet only with the camera rules on (DREAMCHAT_CAMERA), `refs` only with S5's
+    // references on (DREAMCHAT_REFS), and `once` only with the one builder's steps that say a fact once (S6
+    // rows 14 and on), and each is read where it is.
     const top = new Set([...read].map((k) => k.split('.')[0]));
-    for (const k of top) expect([...Object.keys(sheets[0]), 'rules', 'refs']).toContain(k);
+    for (const k of top) expect([...Object.keys(sheets[0]), 'rules', 'refs', 'once']).toContain(k);
     for (const k of ['tree', 'record', 'tags', 'relations', 'sources', 'hash', 'flags']) expect(top.has(k)).toBe(false);
   });
 

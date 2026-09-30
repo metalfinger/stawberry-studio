@@ -68,9 +68,20 @@ import {
   oneRecord,
   type Unstaged,
 } from './record';
-import { builds, oneBuilder } from './cleanups';
+import { builds, oneBuilder, retired } from './cleanups';
 import { chooseRefs, type RefsLayer, refsMode } from './refs';
-import { groupMembers, isAnimal, isGroup, type Item, LOOK, type Shape, shapeOf, toldColours } from './sheets';
+import {
+  groupMembers,
+  inShades,
+  isAnimal,
+  isGroup,
+  type Item,
+  LOOK,
+  type Shape,
+  shapeOf,
+  toldColours,
+  withoutPose,
+} from './sheets';
 import {
   type Category,
   type CutNode,
@@ -295,6 +306,13 @@ export type CutSheet = {
   nowWords: string[] | null;
   earlier: SheetEarlier[];
   style: { option: StyleOption; oneColour: boolean; told: string[] };
+  /**
+   * Each fact said once (S6): what the builder's steps have made one, for the assembler, which reads only the
+   * sheet. `look`: a look said in its image's line is not said again in "In it" (row 14). `colour`: a colour the
+   * dream gives is listed once: in many colours by the style only where no line above says it, in one colour by
+   * the style alone (row 15). `state`: how one is now is said once, where an image's line says it (row 16).
+   */
+  once?: { look: boolean; colour?: boolean; state?: boolean };
   /** What belongs to a take rather than the cut: the judge's findings on the last attempt and on earlier pictures. */
   take: { repairs: string[]; strays: Record<string, string[]> };
   record: RecordLayer | null;
@@ -420,6 +438,48 @@ export function cutSheet(x: CutSheetInput): CutSheet {
   const point = frame.fields.visual_point?.value ?? null;
   const writing = writingIn(action, point, ...inView.flatMap((s) => Object.values(s.fields).map((d) => d.value)));
 
+  // What the dream itself gives a colour, from what was said of the moment and of each one in view.
+  const told = toldColours(frame, ...inView);
+  // How each one looks, once (S6 row 8): the story record's base facts, where the builder's looks are on and
+  // it holds the element: each field's clauses as the record kept them, a clause guessed or implied (not said,
+  // confirmed or read from the story) in the style's shades, as the sketch's words were; fields apart by ";".
+  const recLook = (s: Item): string | undefined => {
+    // Only with the record on (off or in shadow, no prompt is planned from it), and where the record's base is
+    // the sketch's own words: a sketch waiting or failed carries its look in the item's fields, which lookIn reads.
+    const e = builds('looks') && recordMode() === 'on' ? x.dream?.record?.elements[s.id] : undefined;
+    if (!e?.fromSketch || e.fromSketch !== hashOf(s.fields)) return undefined;
+    // A change made where it is first shown is its first look ("water beginning to cover the floor"): how it is
+    // now says it (the plan's facts, from the record), so the look leaves it out: said once, and never an earlier
+    // stage beside a later one (the library's water had risen over the desks by m3, and its look still had it
+    // beginning to cover the floor).
+    // A group's words about someone who has a sketch of their own leave it: the baby's yellow onesie is the
+    // baby's, not the family's. lookIn leaves them by the sketch's own pieces ("baby: tiny, with light hair",
+    // up to its ";"); the record's clauses cut them finer, and "tiny, with light hair" came back without its
+    // "baby:" (0199, live, 29 Sep). With step 12 the record says whom each clause of a group is about, and the
+    // look leaves those whose member is in view; before it, such a group's look is lookIn's.
+    if (!retired('members') && members.some((m) => m.group === s)) return undefined;
+    const away = new Set(members.filter((m) => m.group === s).map((m) => m.member.id));
+    return LOOK[s.kind]
+      .map((k) =>
+        (e.base[k] ?? [])
+          .filter((f) => !f.first && !f.about?.some((id) => away.has(id)))
+          // The record strips the pose of people and animals, and with step 11 of places and things; before it, the
+          // sketch's clean-up strips theirs here.
+          .map((f) => (s.kind === 'character' || retired('pose') ? f : { ...f, text: withoutPose(f.text, false) }))
+          // A colour the dream itself gives it stays whole in a guessed clause too (S6 row 13): said one way. Its own
+          // colours only: "red" said of the door keeps no guessed red scarf on the dreamer.
+          .map((f) =>
+            (f.basis === 'guessed' || f.basis === 'implied'
+              ? inShades(f.text, style, builds('shades') ? toldColours(s) : [])
+              : f.text
+            ).trim(),
+          )
+          .filter(Boolean)
+          .join(', '),
+      )
+      .filter(Boolean)
+      .join('; ');
+  };
   // One kind for each (S6 row 6): the story record's, where the builder's kinds are on and it holds one.
   const recKind = (id: string) => (builds('kinds') ? x.dream?.record?.elements[id] : undefined);
   const saidOf = (r: NonNullable<ReturnType<typeof recKind>>): Said =>
@@ -455,7 +515,7 @@ export function cutSheet(x: CutSheetInput): CutSheet {
             : 'thing',
       isDreamer: !!s.isDreamer,
       group: r ? r.kind === 'group' || r.kind === 'crowd' : isGroup(s),
-      look: lookOf(s, LOOK[s.kind]),
+      look: recLook(s) ?? lookOf(s, LOOK[s.kind]),
       turned: whole ? whole.now : null,
       image: approved(s) && s.mediaId ? s.mediaId : null,
       changes: changed
@@ -636,7 +696,16 @@ export function cutSheet(x: CutSheetInput): CutSheet {
     now,
     nowWords,
     earlier: drawnFrom,
-    style: { option: style, oneColour: oneColour(style), told: toldColours(frame, ...inView) },
+    style: { option: style, oneColour: oneColour(style), told },
+    ...(builds('look_once')
+      ? {
+          once: {
+            look: true,
+            ...(builds('colour_once') ? { colour: true } : {}),
+            ...(builds('state_once') ? { state: true } : {}),
+          },
+        }
+      : {}),
     take: { repairs: [...(frame.repairFor ?? [])], strays },
     record,
     tree,

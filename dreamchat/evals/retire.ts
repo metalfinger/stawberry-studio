@@ -26,7 +26,7 @@
 // (DREAMCHAT_CUT_SHEET=shadow or on) for the readings 2-4. Writes runs/retire/<label>.json and <label>.txt.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { CLEANUP_NAMES, CLEANUPS, type Cleanup, oneBuilder, withRetired } from '../cleanups';
+import { builds, CLEANUP_NAMES, CLEANUPS, type Cleanup, oneBuilder, withRetired } from '../cleanups';
 import { pictureName } from '../continuity';
 import type { CutSheet } from '../cutsheet';
 import { type Rebuilt, type RebuiltPicture, rebuild } from '../plan';
@@ -310,13 +310,20 @@ function recordLook(
   id: string,
   kind: 'character' | 'location' | 'prop',
   style: StyleOption,
+  away: Set<string> = new Set(),
+  keep: string[] = [],
 ): string[] {
   const e = rec.elements[id];
   if (!e) return [];
+  // A first look (a change made where it is first shown) is said as how it is now, not in the look; a group's
+  // clause about someone with a sketch of their own who is in view is theirs (S6 row 12).
   return LOOK[kind].flatMap((k) =>
-    (e.base[k] ?? []).flatMap((f) =>
-      contentWords(f.basis === 'said' || f.basis === 'confirmed' ? f.text : inShades(f.text, style)),
-    ),
+    (e.base[k] ?? [])
+      .filter((f) => !f.first && !f.about?.some((m) => away.has(m)))
+      .flatMap((f) =>
+        // A clause guessed or implied is said in the style's shades; one said, confirmed or read from the story as told.
+        contentWords(f.basis === 'guessed' || f.basis === 'implied' ? inShades(f.text, style, keep) : f.text),
+      ),
   );
 }
 
@@ -359,9 +366,12 @@ export function disagreementsOf(p: RebuiltPicture, rec: StoryRecord | null, styl
     // A group or crowd of animals the record marks so (S6 row 6) is said as an animal: one kind, not two.
     const animals = rec?.elements[e.id]?.animal && e.said === 'animal' && (kind === 'group' || kind === 'crowd');
     if (kind && !animals && !KIND_OF_SAID[e.said]?.includes(kind)) kinds.push(`${e.id}: ${e.said} / record ${kind}`);
-    if (rec && e.turned === null) {
+    // With the one builder's looks, only where the record's base is the drawn sketch's words: a sketch waiting or
+    // failed carries its look in the item, which the sheet reads (cutsheet.ts recLook).
+    if (rec && e.turned === null && (!builds('looks') || rec.elements[e.id]?.fromSketch)) {
       const a = new Set(contentWords(e.look));
-      const z = new Set(recordLook(rec, e.id, e.kind, s.style.option));
+      const away = new Set(s.members.filter((m) => m.group === e.id).map((m) => m.member));
+      const z = new Set(recordLook(rec, e.id, e.kind, s.style.option, away, builds('shades') ? e.colours : []));
       const sheetOnly = setDiff(a, z);
       const recordOnly = setDiff(z, a);
       if (sheetOnly.length || recordOnly.length) looks.push({ id: e.id, sheetOnly, recordOnly });
@@ -375,10 +385,20 @@ export function disagreementsOf(p: RebuiltPicture, rec: StoryRecord | null, styl
       .map(key),
   );
   const prevUse = s.prev ? p.item.frame?.plan?.refs.find((x) => x.kind === 'cut' && x.id === s.prev) : undefined;
+  // In one colour, a colour an image's line lists as kept exactly that the style lists again, read off the prompt
+  // as sent: with the colours said once (S6 row 15) an image's line points to the style's list instead.
+  const lines = p.prompt.toLowerCase().split('\n');
+  const styleLine = lines.find((l) => l.startsWith('colours:')) ?? '';
+  const listedIn = (c: string) =>
+    lines.some((l) => /^image \d+:/.test(l) && (l.split('which keeps it exactly: ')[1] ?? '').includes(c));
   const coloursTwice = s.style.oneColour
     ? s.inView
         .filter((e) => e.image && e.turned === null && e.colours.length)
-        .flatMap((e) => e.colours.filter((c) => s.style.told.includes(c)).map((c) => `${e.id}: ${c}`))
+        .flatMap((e) =>
+          e.colours
+            .filter((c) => styleLine.includes(c.toLowerCase()) && listedIn(c.toLowerCase()))
+            .map((c) => `${e.id}: ${c}`),
+        )
     : [];
   return {
     inView: {
@@ -500,7 +520,18 @@ export type MomentReading = {
 };
 
 /** Ids standing as words in an in-between picture's prompt (their instruction is named after the moment's words). */
-export type GhostIds = { dream: string; picture: string; ids: string[] };
+export type GhostIds = { dream: string; picture: string; ids: string[]; colourTwoWays?: string[] };
+
+/** The colours an in-between picture's style keeps exactly, read off its "Colours:" line as sent. */
+const keptIn = (prompt: string): string[] =>
+  (
+    (prompt.split('\n').find((l) => l.startsWith('Colours:')) ?? '').match(
+      /keeps it exactly(?:, as said above)?: (.*?)\.(?:\s|$)/,
+    )?.[1] ?? ''
+  )
+    .split(';')
+    .map((x) => x.trim())
+    .filter(Boolean);
 
 export function readDream(id: string, session: Session, r: Rebuilt): { moments: MomentReading[]; ghosts: GhostIds[] } {
   const inputs = recordInputsOf(session);
@@ -538,10 +569,16 @@ export function readDream(id: string, session: Session, r: Rebuilt): { moments: 
       },
     ];
   });
+  // In-between pictures: ids in words, and a colour the dream gives said two ways (S6 row 13).
   const ghosts = r.pictures
     .filter((p) => p.kind === 'ghost')
-    .map((p) => ({ dream: id, picture: p.id, ids: idsInWords(p.prompt, ids) }))
-    .filter((g) => g.ids.length);
+    .map((p) => ({
+      dream: id,
+      picture: p.id,
+      ids: idsInWords(p.prompt, ids),
+      colourTwoWays: colourTwoWays(p.prompt, keptIn(p.prompt)),
+    }))
+    .filter((g) => g.ids.length || g.colourTwoWays.length);
   return { moments, ghosts };
 }
 
@@ -598,7 +635,7 @@ export function totalsOf(readings: MomentReading[], ghosts: GhostIds[] = []) {
     },
     ids: {
       moments: readings.filter((m) => m.ids.length).length,
-      ghosts: ghosts.length,
+      ghosts: ghosts.filter((g) => g.ids.length).length,
       ids: count(
         [...readings, ...ghosts].flatMap((m) => m.ids),
         (x) => x,
@@ -617,6 +654,7 @@ export function totalsOf(readings: MomentReading[], ghosts: GhostIds[] = []) {
       toPrev: d.filter((x) => x.toPrev).length,
       coloursTwice: d.filter((x) => x.coloursTwice.length).length,
       colourTwoWays: d.filter((x) => x.colourTwoWays.length).length,
+      colourTwoWaysInBetween: ghosts.filter((g) => g.colourTwoWays?.length).length,
     },
   };
 }
@@ -769,7 +807,7 @@ if (import.meta.main) {
     ...readings.flatMap((m) => m.action.map((a) => `  ${m.dream} ${m.moment}: ${a.rule} "${a.said}"`)),
     '\n══ ids in words',
     ...readings.filter((m) => m.ids.length).map((m) => `  ${m.dream} ${m.moment}: ${m.ids.join(', ')}`),
-    ...ghostIds.map((g) => `  ${g.dream} ${g.picture} (in-between): ${g.ids.join(', ')}`),
+    ...ghostIds.filter((g) => g.ids.length).map((g) => `  ${g.dream} ${g.picture} (in-between): ${g.ids.join(', ')}`),
     '\n══ two sources disagree',
     ...readings.flatMap((m) => (m.disagree ? [`  ${m.dream} ${m.moment}: ${JSON.stringify(m.disagree)}`] : [])),
   ];

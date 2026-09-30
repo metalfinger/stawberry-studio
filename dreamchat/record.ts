@@ -24,7 +24,7 @@ import {
   VAGUE,
   WHOLE,
 } from './producer';
-import { isAnimal, isGroup, type Item, withoutPose } from './sheets';
+import { headWord, isAnimal, isGroup, type Item, withoutPose } from './sheets';
 import { hashOf, slug } from './lib';
 import type { TypedReading } from './typed';
 
@@ -40,7 +40,17 @@ export type Basis = 'said' | 'confirmed' | 'guessed' | 'read' | 'implied';
  * One clause of a look, how sure it is, and where it came from ('item:p1.wardrobe', 'b:m3.leaves.0').
  * A look folded in from where it is first shown keeps the change it was: no sketch shows it yet.
  */
-export type Fact = { text: string; basis: Basis; from: string; first?: { part: string; what: string; now: string } };
+export type Fact = {
+  text: string;
+  basis: Basis;
+  from: string;
+  first?: { part: string; what: string; now: string };
+  /**
+   * A group's clause about someone who has a sketch of their own: whom its piece of the look (up to its ";")
+   * names ("baby: tiny, with light hair"). The sheet leaves it out where one of them is in view (S6 row 12).
+   */
+  about?: string[];
+};
 
 /**
  * What a change is: turning into something else, a part of someone or something, how a place looks,
@@ -101,6 +111,12 @@ export type RecElement = {
    * silver fish", a shoal kept as a crowd), so its kind says all the sheet and the tags need.
    */
   animal?: boolean;
+  /**
+   * With the one builder's looks (S6 row 8): its base is its sketch's words (the sketch is drawn or being drawn),
+   * not the breakdown's shorter ones, and the hash of those words: the cut sheet says the look from the record
+   * only where the sheet's sketch has the same words (a picture rebuilt as drawn has those it was drawn from).
+   */
+  fromSketch?: string;
 };
 
 /**
@@ -500,9 +516,22 @@ const STYLE_SAYS: RegExp[] = [
 
 /** The first words in a text that say how it is drawn, of any style or of the chosen one. */
 function styleIn(text: string, style?: StyleOption | null): string | null {
-  for (const re of STYLE_SAYS) {
+  // With the one builder's looks (S6 row 8), a way of drawing said only by what it is like (like a film, black and
+  // white, film grain, a bare medium word) is one only where the chosen style names it too: "a box of crayons" and
+  // "hair black and white" are the story's in a watercolour dream. Said as how it is drawn ("drawn in crayon",
+  // "style: …") it is one whatever the style.
+  const named = builds('looks')
+    ? [style?.name, style?.medium, style?.line, ...(style?.tokens ?? [])].join(' ').toLowerCase()
+    : '';
+  const stems = (x: string) =>
+    (x.toLowerCase().match(/[a-z]+/g) ?? [])
+      .filter((w) => w.length >= 4 && !/^(?:like|with|that|this|those|them|some|very|from|into)$/.test(w))
+      .map((w) => w.replace(/s$/, ''));
+  for (const [i, re] of STYLE_SAYS.entries()) {
     const m = text.match(re);
-    if (m?.[0].trim()) return m[0].trim();
+    if (!m?.[0].trim()) continue;
+    if (builds('looks') && i >= 2 && !stems(m[0]).some((w) => named.includes(w))) continue;
+    return m[0].trim();
   }
   const name = style?.name ? bare(style.name) : '';
   if (name.split(/\s+/).length >= 2 && text.toLowerCase().includes(name)) return name;
@@ -567,16 +596,34 @@ function factsOf(
   fields: Record<string, Detail | undefined> | undefined,
   from: string,
   person: boolean,
+  members: { id: string; re: RegExp }[] = [],
 ): Record<string, Fact[]> {
   const out: Record<string, Fact[]> = {};
   for (const [k, d] of Object.entries(fields ?? {})) {
     if (!d || typeof d.value !== 'string' || !d.value.trim()) continue;
+    // A look field that says it does not know says nothing, all of it, once the sheet says the look from here
+    // (S6 row 8), as the sketch's clean-up has it: "indistinct, with soft edges and muted colors" is not a
+    // dreamer's look, nor "unspecified indoor room" a room's (live, 29 Sep). Clause by clause, what is left
+    // reads as a look.
+    if (builds('looks') && k !== 'identity' && VAGUE.test(d.value)) continue;
     // "Standing in a relaxed three-quarter view" came into a father's look, and a moment of him
     // sitting read as at odds with itself (lighthouse, 26 Sep): the record strips it once.
     const value = person && k !== 'identity' ? withoutPose(d.value, false) : d.value;
-    const facts = clausesOf(value)
-      .filter((c) => !VAGUE.test(c))
-      .map((text): Fact => ({ text, basis: d.said ? 'said' : 'guessed', from: `${from}.${k}` }));
+    // A group's look piece by piece (S6 row 12): each clause knows whom its piece names of those with a sketch of
+    // their own, as a ";" parts it ("father: …; baby: tiny, with light hair"). Clauses never cross a ";". Whom a
+    // piece names is read without its pose, as lookIn reads it: "standing beside the old man, a red scarf" is a scarf.
+    const pieces = members.length ? value.split(/\s*;\s*/) : [value];
+    const facts = pieces.flatMap((piece) => {
+      const named = (x: string) => members.filter((m) => m.re.test(x)).map((m) => m.id);
+      const ofPiece = named(person ? withoutPose(piece, false) : piece);
+      return clausesOf(piece)
+        .filter((c) => !VAGUE.test(c))
+        .map((text): Fact => {
+          // And anyone a clause names itself: a pose left in the piece ("standing beside the old man") is his.
+          const about = uniq([...ofPiece, ...named(text)]);
+          return { text, basis: d.said ? 'said' : 'guessed', from: `${from}.${k}`, ...(about.length ? { about } : {}) };
+        });
+    });
     if (facts.length) out[k] = facts;
   }
   return out;
@@ -597,10 +644,21 @@ function elementsOf(b: Breakdown, items: Item[], dreamer: string | null, notes: 
   const add = (id: string, kind: ElementKind, name: string, fields: Record<string, Detail> | undefined) => {
     if (typeof id !== 'string' || !id || elements[id]) return;
     const person = kind !== 'place' && kind !== 'thing';
-    const own = factsOf(fields, `b:${id}`, person);
+    // A group's words about someone with a sketch of their own are theirs where they are in view (S6 row 12):
+    // anyone the producer linked to it, and anyone named in it, as the sheet finds a group's members
+    // (sheets.ts groupMembers). Found here for everyone who may be a group on the sheet, which reads a group
+    // from its own words (the dreamer "in a pair of round glasses" is one); the sheet leaves out a clause for
+    // those in view.
+    const members =
+      builds('members') && (person || [...byItem.values()].some((x) => x.partOf === id))
+        ? [...byItem.values()]
+            .filter((x) => x.id !== id && !!x.name && (x.kind === 'character' || x.partOf === id))
+            .map((x) => ({ id: x.id, re: new RegExp(`\\b${esc(headWord(x.name) ?? x.name)}s?\\b`, 'i') }))
+        : [];
+    const own = factsOf(fields, `b:${id}`, person, members);
     const it = byItem.get(id);
     // A sketch's words win: its picture was drawn from them. The breakdown's copy is kept beside it.
-    const drawn = sketched(it) ? factsOf(it.fields, `item:${id}`, person) : null;
+    const drawn = sketched(it) ? factsOf(it.fields, `item:${id}`, person, members) : null;
     const differs = !!drawn && !sameLook(drawn, own);
     if (differs) notes.push(`${id}: the sketch's words stand, not the breakdown's, where the two differ`);
     elements[id] = {
@@ -611,6 +669,7 @@ function elementsOf(b: Breakdown, items: Item[], dreamer: string | null, notes: 
       called: id === dreamer ? 'the dreamer' : pictureName((builds('names') && sketched(it) && it?.name) || name || id),
       name: name ?? id,
       base: drawn ?? own,
+      ...(builds('looks') && drawn && it ? { fromSketch: hashOf(it.fields) } : {}),
       ...(differs ? { stored: own } : {}),
       firstShown: null,
       changes: [],
@@ -1626,7 +1685,7 @@ function ageFromStyle(ctx: Ctx): Violation[] {
   if (!words?.length) {
     const drawn = [ctx.opts.style?.name, ctx.opts.style?.medium, ...(ctx.opts.style?.tokens ?? [])]
       .filter((x): x is string => !!x)
-      .some((x) => !!styleIn(x) || /\b(?:drawing|drawn|painting|film|comic|illustration)\b/i.test(x));
+      .some((x) => !!styleIn(x, ctx.opts.style) || /\b(?:drawing|drawn|painting|film|comic|illustration)\b/i.test(x));
     if (!drawn) return [];
     return [
       {
@@ -1639,7 +1698,10 @@ function ageFromStyle(ctx: Ctx): Violation[] {
   }
   const sentences = words.flatMap((w) => w.split(/(?<=[.!?])\s+/));
   const aged = sentences.filter((s) => OWN_AGE.test(s));
-  if (!aged.length || !aged.every((s) => !!styleIn(s) || /\b(?:drawn|drawing|drawings|painted|painting)\b/i.test(s)))
+  if (
+    !aged.length ||
+    !aged.every((s) => !!styleIn(s, ctx.opts.style) || /\b(?:drawn|drawing|drawings|painted|painting)\b/i.test(s))
+  )
     return [];
   for (const { f } of found)
     for (const look of [d.base, d.stored])
@@ -1748,7 +1810,10 @@ function duplicates(ctx: Ctx): Violation[] {
           const earlier = seen.filter(
             (s) => s.field === field || (across && s.field !== 'identity' && field !== 'identity'),
           );
-          const pieces = f.text.split(/\s+and\s+/).map(pieceWords);
+          // A comma inside a clause joins words that each say something ("tall, tired everyday look"): each is
+          // said already, or the clause stays. Whole, a "tired everyday look" before it covered all but "tall",
+          // and Dele lost it once the sheet said the look from here (S6 row 8; live, 29 Sep).
+          const pieces = f.text.split(builds('looks') ? /\s+and\s+|,\s+/ : /\s+and\s+/).map(pieceWords);
           const dup = pieces.every((p) => earlier.some((s) => covers(s.words, p)));
           if (dup) cut.push(`${field} ${quote(f.text)}`);
           else seen.push({ field, words: wordsOf(f.text) });
@@ -2462,6 +2527,7 @@ export function storyRecord(
   const r = readings ?? {};
   const ctx = derive(b, items, r, opts);
   const violations = runRules(ctx);
+  if (builds('pose')) withoutThingPose(ctx.record);
   finish(
     ctx,
     hashOf({
@@ -2474,6 +2540,29 @@ export function storyRecord(
     }),
   );
   return { record: ctx.record, violations, notes: ctx.notes };
+}
+
+/**
+ * 11. A place's or a thing's pose and framing, stripped once, clause by clause as the sheet's look stripped it
+ * (S6 row 11): "standing upright on its own with no house or wall around it" framed the red door's sketch. After
+ * the rules, which read the whole look first: one that moves a clause to after a change ("and standing wide
+ * open", the door opened at m7) still finds it, and one that rewrites a clause leaves no pose at its start. A
+ * first look is a change, never a pose.
+ */
+function withoutThingPose(record: StoryRecord): void {
+  for (const e of Object.values(record.elements)) {
+    if (e.kind !== 'place' && e.kind !== 'thing') continue;
+    for (const which of ['base', 'stored'] as const) {
+      const look = e[which];
+      if (!look) continue;
+      for (const [k, facts] of Object.entries(look))
+        look[k] = facts.flatMap((f) => {
+          if (f.first) return [f];
+          const text = withoutPose(f.text, false).trim();
+          return text ? [{ ...f, text }] : [];
+        });
+    }
+  }
 }
 
 let made = 0;
