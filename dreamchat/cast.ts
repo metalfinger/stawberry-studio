@@ -267,6 +267,31 @@ export function parseCast(
 /** The things of a reading that are cast as elements: all but weather and matter, which fill the picture. */
 const castable = (reading: CastReading) => reading.things.filter((t) => t.kind !== 'weather' && t.kind !== 'matter');
 
+/** Travelling, which a thing does and never looks: "driving slowly" is no look of the red tractor. The clause it starts goes. */
+const DOING =
+  /(?:^|,)\s*\b(?:driving|running|flying|swimming|walking|speeding|racing|sailing|zooming|darting|rushing|going|coming|moving|rolling)\b[^,;]*/gi;
+const lastWord = (x: string) => {
+  const w = (x.toLowerCase().match(/[a-z]+/g) ?? []).at(-1) ?? '';
+  return w.length > 3 && w.endsWith('s') && !w.endsWith('ss') ? w.slice(0, -1) : w;
+};
+
+/**
+ * With the one builder's `cast_looks` step, a cast thing's look as its sketch is told it (its sketch names what it
+ * is): no travelling ("red", not "red, driving slowly"), and where the dream already has one of its kind (the boat),
+ * that one's look too. Told "little, folded from newspaper" alone, the little boats came out a heap of wooden rowing
+ * boats beside the father's paper one (lighthouse-first m4, m5: the night run, 1 Oct).
+ */
+export function castLook(
+  t: Pick<CastThing, 'name' | 'look'>,
+  kin: { name: string; look?: string | null }[],
+): string | null {
+  const look = (t.look ?? '').replace(DOING, '').replace(/^[\s,;]+|[\s,;]+$/g, '');
+  const like = kin.find((k) => k.look && lastWord(k.name) === lastWord(t.name) && k.name !== t.name);
+  const kinLook = like?.look ? like.look.charAt(0).toLowerCase() + like.look.slice(1) : '';
+  const parts = [look, like ? `the same kind as ${like.name}, ${kinLook}` : ''].filter(Boolean);
+  return parts.length ? parts.join('; ') : null;
+}
+
 /**
  * With the `cast_named` step, the dream's items with each cast thing's sketch to be made, as for any prop the producer
  * casts: waiting (never drawn yet), its look its words. The drawing path draws it like any other sheet, so the red
@@ -278,11 +303,17 @@ export function withCastItems(items: Item[], reading: CastReading | null | undef
   castable(reading).forEach((t, i) => {
     const id = t.id ?? castId(i);
     if (out.some((x) => x.id === id)) return;
+    const look = builds('cast_looks')
+      ? castLook(
+          t,
+          items.filter((x) => x.kind === 'prop').map((x) => ({ name: x.name, look: x.fields?.appearance?.value })),
+        )
+      : t.look || null;
     out.push({
       id,
       kind: 'prop',
       name: t.name,
-      fields: { appearance: { value: t.look || null, said: !!t.look }, materials: { value: null, said: false } },
+      fields: { appearance: { value: look, said: !!look }, materials: { value: null, said: false } },
       status: 'waiting',
       version: 0,
     });
@@ -306,10 +337,19 @@ export function withCastThings(b: Breakdown, reading: CastReading | null | undef
   castable(reading).forEach((t, i) => {
     const id = t.id ?? castId(i);
     if (out.things.some((x) => x.id === id)) return;
+    const look = builds('cast_looks')
+      ? castLook(
+          t,
+          (b.things ?? []).map((x) => ({
+            name: x.name,
+            look: (x.fields?.appearance as { value?: string | null })?.value,
+          })),
+        )
+      : t.look || null;
     const thing: Thing = {
       id,
       name: t.name,
-      fields: { appearance: { value: t.look || null, said: !!t.look }, materials: { value: null, said: false } },
+      fields: { appearance: { value: look, said: !!look }, materials: { value: null, said: false } },
     };
     out.things.push(thing);
     for (const { id: m } of t.moments) {
