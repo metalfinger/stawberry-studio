@@ -2083,6 +2083,51 @@ describe('a door standing open', () => {
     const window = [{ ...opened[0], facts: [{ ...opened[0].facts[0], part: 'window', what: 'window' }] }];
     expect(withOpen(field, window)).toBe(field);
   });
+  test('opens exactly the door that is open, and never guesses between two', () => {
+    const carriage = {
+      id: 'x3',
+      x: 4,
+      y: 6,
+      kind: 'thing' as const,
+      fixture: true,
+      name: 'the carriage door',
+      size: [0.9, 0.1, 2] as [number, number, number],
+    };
+    const two = { ...field, spots: [...field.spots, carriage] };
+    // Its own state: that door and no other.
+    const own = [
+      {
+        of: 'x3',
+        called: 'the carriage door',
+        name: 'the carriage door',
+        kind: 'thing' as const,
+        facts: [{ kind: 'part' as const, part: 'door', what: 'door', now: 'open, snow blowing in' }],
+      },
+    ];
+    const byOwn = withOpen(two, own);
+    expect(byOwn.spots.find((s) => s.id === 'x3')!.open).toBe(true);
+    expect(byOwn.spots.find((s) => s.id === 'x2')!.open).toBeUndefined();
+    // A place's own door, with two doors on the plan: which one is not said, so neither.
+    expect(withOpen(two, opened)).toBe(two);
+    // A thing on the plan that is not a door (the car with its door open) is not drawn as a doorway.
+    const car = [{ ...own[0], of: 'x1', called: 'the old train' }];
+    const withCar = {
+      ...two,
+      spots: [
+        ...two.spots,
+        {
+          id: 'x1',
+          x: 10,
+          y: 20,
+          kind: 'thing' as const,
+          fixture: true,
+          name: 'the old train',
+          size: [3, 6, 3] as [number, number, number],
+        },
+      ],
+    };
+    expect(withOpen(withCar, car)).toBe(withCar);
+  });
 
   test("through the dreamer's eyes, a step back from it, never at its edge looking down at its foot", () => {
     const open = withOpen(field, opened);

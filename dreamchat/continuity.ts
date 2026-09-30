@@ -623,30 +623,35 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
 const DOORLIKE = /\b(door|gate)s?\b/i;
 
 /**
- * A door or gate the record has open at the moment, its own state or its place's part of that name ("door: open,
- * faint yellow glow spilling from the doorway"), open on the plan: the mock-up draws it as its frame with the door swung
- * back, the view going through it (previs.ts). As a closed slab, the dreamer opening the red door on warm light saw one
- * grey wall and its label (snow-train m6, judged blind).
+ * A door or gate the record has open at the moment, open on the plan: the mock-up draws it as its frame with the door
+ * swung back, the view going through it (previs.ts). Where the one open is a door on the plan, exactly that one; where
+ * it is a place's own part ("door: open, faint yellow glow spilling from the doorway"), the one door or gate of the
+ * plan by that name, and none where there are two. As a closed slab, the dreamer opening the red door on warm light saw
+ * one grey wall and its label (snow-train m6, judged blind).
  */
 export function withOpen(plan: Blocking, facts: NowOf[]): Blocking {
-  const heads = new Set<string>();
-  for (const f of facts)
-    for (const x of f.facts)
-      if (x.kind === 'part' && /^\s*(?:(?:wide|half|partly|slightly)\s+)?open\b|^\s*ajar\b/i.test(x.now))
-        for (const w of [x.part, x.what, f.kind === 'thing' ? f.called : '']) {
-          const m = w.match(DOORLIKE);
-          if (m) heads.add(m[1].toLowerCase());
-        }
-  if (!heads.size) return plan;
-  let opened = false;
-  const spots = plan.spots.map((s) => {
-    const person = s.kind === 'person' || (!s.kind && (!!s.pose || !!s.many));
-    const m = !person && !s.heldBy ? s.name?.match(DOORLIKE) : null;
-    if (!m || !heads.has(m[1].toLowerCase())) return s;
-    opened = true;
-    return { ...s, open: true };
-  });
-  return opened ? { ...plan, spots } : plan;
+  const OPEN = /^\s*(?:(?:wide|half|partly|slightly)\s+)?open\b|^\s*ajar\b/i;
+  const doorlike = (s: Spot) =>
+    !(s.kind === 'person' || (!s.kind && (!!s.pose || !!s.many))) && !s.heldBy ? s.name?.match(DOORLIKE) : null;
+  const ids = new Set<string>();
+  for (const f of facts) {
+    const open = f.facts.filter((x): x is Extract<typeof x, { kind: 'part' }> => x.kind === 'part' && OPEN.test(x.now));
+    if (!open.length) continue;
+    const own = plan.spots.find((s) => s.id === f.of);
+    if (own) {
+      if (doorlike(own)) ids.add(own.id);
+      continue;
+    }
+    if (f.kind !== 'place') continue;
+    for (const x of open)
+      for (const w of [x.part, x.what]) {
+        const head = w.match(DOORLIKE)?.[1].toLowerCase();
+        const named = head ? plan.spots.filter((s) => doorlike(s)?.[1].toLowerCase() === head) : [];
+        if (named.length === 1) ids.add(named[0].id);
+      }
+  }
+  if (!ids.size) return plan;
+  return { ...plan, spots: plan.spots.map((s) => (ids.has(s.id) ? { ...s, open: true } : s)) };
 }
 
 /**
