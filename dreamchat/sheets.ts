@@ -2,6 +2,7 @@
 // draw one. Everything goes through Strawberry's own path: the item's fields are patched with
 // their source, a recipe is prepared, approved within the conversation's image cap, queued, and
 // the engine's worker draws it.
+import { builds } from './cleanups';
 import type { AsDrawn, Recast } from './asdrawn';
 import type { CutPlan, GhostPlan } from './continuity';
 import { pictureName } from './continuity';
@@ -386,6 +387,17 @@ export function toldColours(...items: Item[]): string[] {
 const COLOUR_STOP =
   /^(?:on|in|at|of|with|over|under|beneath|behind|beside|near|the|a|an|its|their|his|her|to|from|by|for|is|are|was|were|as|that|which|who|while|but)$/i;
 
+/**
+ * With the one builder's `told_colours` step: what a colour colours ends at the noun, never running on into what the
+ * moment says it does ("grey heron stands", "silver fish about", "red tractor driving" came out as colours, 30 Sep).
+ * A word after the noun that is a preposition or a verb ends it; a word in -ing is kept only straight after the
+ * colour, where it says what kind ("yellow rowing boat", "white parking space").
+ */
+const COLOUR_AFTER =
+  /^(?:about|against|across|along|around|through|into|onto|toward|towards|past|up|down|off|out|like|than|between|among|above|below|inside|outside|away|back|again|here|there|now|still)$/i;
+const COLOUR_VERB =
+  /^(?:stands?|sits?|lies|lie|drives?|turns?|spills?|floats?|runs?|walks?|flies|fly|swims?|hangs?|moves?|glows?|shines?|rushes|rush|falls?|rises?|comes?|goes|go|waits?|looks?|watches|watch|holds?|carries|carry|opens?|closes?|appears?|becomes?|seems?)$/i;
+
 export function coloursIn(text: string): string[] {
   const out = new Set<string>();
   const colour = new RegExp(`^(?:${COLOUR_WORDS.source})$`, 'i');
@@ -404,6 +416,11 @@ export function coloursIn(text: string): string[] {
         kept.push(words[i], words[i + 1]);
         i++;
       } else if (COLOUR_STOP.test(words[i])) break;
+      else if (
+        builds('told_colours') &&
+        (COLOUR_AFTER.test(words[i]) || COLOUR_VERB.test(words[i]) || (i > 1 && /ing$/i.test(words[i])))
+      )
+        break;
       else kept.push(words[i]);
     }
     const phrase = kept.slice(0, 3).join(' ').toLowerCase();

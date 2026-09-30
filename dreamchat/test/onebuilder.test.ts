@@ -17,7 +17,7 @@ import { recordInputsOf, recordsMade, storyRecord } from '../record';
 import { drawingSheet, type Session, typedReadings } from '../session';
 import { NO_BAR, TYPED_BAR, type TypedReading, typedAsk, typedAskKey, typedWriterName } from '../typed';
 import { hashOf } from '../lib';
-import { inShades, type Item } from '../sheets';
+import { coloursIn, inShades, type Item } from '../sheets';
 import { DEFAULTS, pinSwitches, withSwitches } from './fakes';
 
 setDefaultTimeout(120_000);
@@ -1347,7 +1347,8 @@ describe('an earlier picture for who someone is, as last drawn', () => {
   test('says an animal by what makes it that one, never a face or clothes', () => {
     for (const sw of [RS_ON, { ...RS_ON, DREAMCHAT_CAMERA: 'on', DREAMCHAT_REFS: 'on' }]) {
       const p = at('dream-0926-083656-8ceb', 'm5', sw);
-      expect(p).toContain('what the little silver fish is: its kind, size, build, coat and markings, as last drawn');
+      // A shoal, a crowd of animals: more than one.
+      expect(p).toContain('what the little silver fish are: their kind, size, build, coat and markings, as last drawn');
       expect(p).not.toContain('who the little silver fish is');
     }
   });
@@ -1370,5 +1371,25 @@ describe('an earlier picture for who someone is, as last drawn', () => {
     // 4c79 m3: the faceless students, a group.
     const p = at('dream-0926-012307-4c79', 'm3', RS_ON);
     expect(p).toContain('who the faceless students are, as last drawn: their face, hair, build and clothes');
+  });
+});
+
+describe('a colour the dream gives ends at what it colours', () => {
+  const at = (step: string, text: string) => withSwitches({ DREAMCHAT_ONE_BUILDER: step }, () => coloursIn(text));
+  test('never runs on into what the moment says it does', () => {
+    expect(at('told_colours', 'a grey heron stands by the window')).toEqual(['grey heron']);
+    expect(at('told_colours', 'the little silver fish about the room')).toEqual(['silver fish']);
+    expect(at('told_colours', 'a red tractor driving over the grass')).toEqual(['red tractor']);
+    expect(at('told_colours', 'a yellow raincoat against the rain')).toEqual(['yellow raincoat']);
+    expect(at('told_colours', 'the red door standing open')).toEqual(['red door']);
+  });
+  test('keeps what kind it is, and a colour or another', () => {
+    expect(at('told_colours', 'a yellow rowing boat')).toEqual(['yellow rowing boat']);
+    expect(at('told_colours', 'green glass lamps')).toEqual(['green glass lamps']);
+    expect(at('told_colours', 'a white parking space')).toEqual(['white parking space']);
+    expect(at('told_colours', 'dark ink in blue or black on its front')).toEqual(['blue or black']);
+  });
+  test('before its step, as it was', () => {
+    expect(at('earlier_words', 'a grey heron stands by the window')).toEqual(['grey heron stands']);
   });
 });
