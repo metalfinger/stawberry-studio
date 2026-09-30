@@ -511,6 +511,20 @@ describe("through the dreamer's own eyes", () => {
 });
 
 describe('a reverse angle turns the room', () => {
+  test('with DREAMCHAT_WALLS, a cut that does not turn round keeps which side the windows are', () => {
+    // Snow-train m3 faced as m2 did and lost which side the train's windows are (the S4 picture check, 27 Sep).
+    const on = rebuilt('dream-0926-043003-b0cb', { ...ON, DREAMCHAT_WALLS: 'on' });
+    expect(on.pictures.find((p) => p.id === 'm3')!.prompt).toContain(
+      'The room as in picture 2: ahead is the back of the room; on either side of the picture, a side wall of the old train, with its windows; behind the camera, the front of the train.',
+    );
+    // The reverse says its turn as before, and a cut on another floor plan (the snowy field) says nothing of walls.
+    const off = rebuilt('dream-0926-043003-b0cb', ON);
+    expect(picture(on, 'm2').prompt).toBe(picture(off, 'm2').prompt);
+    expect(picture(on, 'm4').prompt).not.toMatch(/as in picture \d/);
+    // Off (the default), nothing of it.
+    expect(picture(off, 'm3').prompt).not.toMatch(/The room as in picture/);
+  });
+
   test('what is now ahead, on the right and behind the camera, from the floor plan and the place', () => {
     const r = rebuilt('dream-0926-043003-b0cb', ON);
     const m2 = picture(r, 'm2');

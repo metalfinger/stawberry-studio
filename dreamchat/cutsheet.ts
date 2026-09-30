@@ -26,6 +26,7 @@ import {
   sameView,
   selfIn,
   turnedBetween,
+  wallsMode,
 } from './camera';
 import {
   camerasOf,
@@ -1035,6 +1036,28 @@ function cameraLayer(x: {
       dropped.push(id);
       flags.push(`reverse_not_drawn_from:${id}`);
     }
+  } else if (
+    wallsMode() === 'on' &&
+    x.prev?.eye &&
+    eye &&
+    floor &&
+    !!placePlan(x.b, x.frame.id) &&
+    placePlan(x.b, x.frame.id) === placePlan(x.b, x.prev.id)
+  ) {
+    // Not turned round, on a floor plan its scene has drawn before: the room's walls as the picture before had them,
+    // so which side its windows are stays said (camera.ts wallsMode).
+    const place = x.elements.find((e) => e.id === f.place);
+    turn = {
+      ...roomTurn({
+        plan: floor,
+        walls: wallsSeen(floor, eye, f.eyes === 'dreamer' && x.dreamerId ? [x.dreamerId] : [], named),
+        from: x.prev.order,
+        look: place?.look ?? '',
+        place: named(f.place),
+        prevFaced: null,
+      }),
+      same: true,
+    };
   }
 
   // Through the dreamer's own eyes: their hands and arms only where they do something with them.

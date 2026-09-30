@@ -41,6 +41,16 @@ export function cameraMode(): 'off' | 'on' {
   return 'off';
 }
 
+/**
+ * Whether a cut that does not turn round says the room's walls as the picture before had them (DREAMCHAT_WALLS=on,
+ * with the camera rules; off by default): which side the windows and doors are, on every cut of a floor plan its
+ * scene has drawn before. Snow-train m3 faced as m2 did and lost which side the train's windows are (the S4 picture
+ * check, 27 Sep). New words on many prompts, so off until a picture test shows they help.
+ */
+export function wallsMode(): 'off' | 'on' {
+  return cameraMode() === 'on' && (process.env.DREAMCHAT_WALLS ?? '').trim().toLowerCase() === 'on' ? 'on' : 'off';
+}
+
 // ── a view, and the brief written for it ─────────────────────────────────────────────────────────
 
 /** The two claims the camera rules take out of a view where they are untrue: nothing else in it changes. */
@@ -685,6 +695,8 @@ export type RoomTurn = {
   faced: string | null;
   /** A room, or a place in the open. */
   indoors: boolean;
+  /** Not turned round: the room as the picture before had it, said for which side its windows are (`wallsMode`). */
+  same?: true;
 };
 
 /**
@@ -764,19 +776,27 @@ export function roomTurn(x: {
 
 /** A reverse angle's room, in one sentence for the shot. */
 export function sayTurn(t: RoomTurn): string {
+  // Not turned round, the same wall on both sides is said once: "a row of windows along each side".
+  const both = t.same && t.left.length === 1 && t.right.length === 1 && t.left[0] === t.right[0] ? t.left[0] : null;
   const parts = [
     ...(t.ahead ? [`ahead is ${t.ahead}`] : []),
-    ...t.left.map((w) => `on the left of the picture, ${w}`),
-    ...t.right.map((w) => `on the right of the picture, ${w}`),
+    ...(both
+      ? [`on either side of the picture, ${both}`]
+      : [
+          ...t.left.map((w) => `on the left of the picture, ${w}`),
+          ...t.right.map((w) => `on the right of the picture, ${w}`),
+        ]),
     ...(t.faced ? [`behind the camera, ${t.faced}, which picture ${t.from} faced`] : []),
     ...(t.behind.length ? [`behind the camera, ${t.behind.join(' and ')}`] : []),
   ];
   const out = t.out.length
     ? ` ${cap(t.out.join(' and '))} ${t.out.length > 1 || /walls$/.test(t.out[0]) ? 'are' : 'is'} out of the picture.`
     : '';
-  return parts.length
-    ? `The camera has turned round from picture ${t.from}, and the ${t.indoors ? 'room' : 'place'} with it: ${parts.join('; ')}.${out}`
-    : '';
+  const place = t.indoors ? 'room' : 'place';
+  if (!parts.length) return '';
+  return t.same
+    ? `The ${place} as in picture ${t.from}: ${parts.join('; ')}.${out}`
+    : `The camera has turned round from picture ${t.from}, and the ${place} with it: ${parts.join('; ')}.${out}`;
 }
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
