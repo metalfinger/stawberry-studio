@@ -193,6 +193,58 @@ function sphere(c: V3, radius: number, tall: number): Face[] {
   return faces;
 }
 
+/** Ridden astride on two wheels: a bicycle, a scooter, a motorbike. */
+const ASTRIDE = /\b(?:(?:bi|tri|motor)?cycles?|(?:motor)?bikes?|scooters?|mopeds?)\b/i;
+
+/** A wheel on end, rolling the way `f` points: a flat round solid, its faces out. */
+function wheel(c: V3, f: V2, radius: number, thick: number): Face[] {
+  const r = rightOf(f);
+  const n = 16;
+  const at = (i: number, side: number): V3 =>
+    v3(
+      c.x + f.x * radius * Math.cos((2 * Math.PI * i) / n) + r.x * (thick / 2) * side,
+      c.y + f.y * radius * Math.cos((2 * Math.PI * i) / n) + r.y * (thick / 2) * side,
+      c.z + radius * Math.sin((2 * Math.PI * i) / n),
+    );
+  const ring = (side: number) => Array.from({ length: n }, (_, i) => at(i, side));
+  const faces: Face[] = [
+    { p: ring(1), n: v3(r.x, r.y, 0), solid: 0 },
+    { p: ring(-1).reverse(), n: v3(-r.x, -r.y, 0), solid: 0 },
+  ];
+  for (let i = 0; i < n; i++) {
+    const a = (2 * Math.PI * (i + 0.5)) / n;
+    faces.push({
+      p: [at(i, -1), at(i + 1, -1), at(i + 1, 1), at(i, 1)],
+      n: v3(f.x * Math.cos(a), f.y * Math.cos(a), Math.sin(a)),
+      solid: 0,
+    });
+  }
+  return faces;
+}
+
+/**
+ * What is ridden astride, as the mock-up draws it: two wheels on end, the bar between them, the saddle and its rack
+ * where the riders sit, and the handlebars. As a grey block its length it hid both riders from the waist down, and the
+ * model drew a bicycle under each (night-market m5, drawn on the local machine, 1 Oct).
+ */
+function astride(s: Spot, plan: Blocking, f: V2): (Block | Face[])[] {
+  const [, d, h] = sizeOf(s);
+  const z0 = afloat(plan);
+  // Where the riders sit: as high as the block was, so no one moves.
+  const seat = Math.min(h, 1.6) * 0.6;
+  const radius = Math.min(0.36, seat * 0.55, d / 4);
+  const half = d / 2 - radius;
+  const along = (a: number) => ({ x: s.x + f.x * a, y: s.y + f.y * a });
+  return [
+    wheel(v3(along(half).x, along(half).y, z0 + radius), f, radius, 0.08),
+    wheel(v3(along(-half).x, along(-half).y, z0 + radius), f, radius, 0.08),
+    { ...along(0), z: z0 + seat - 0.16, w: 0.06, d: 2 * half, h: 0.07, f },
+    { ...along(-half * 0.35), z: z0 + seat - 0.07, w: 0.22, d: half * 1.25, h: 0.07, f },
+    { ...along(half), z: z0 + radius, w: 0.06, d: 0.06, h: seat + 0.3 - radius, f },
+    { ...along(half - 0.04), z: z0 + seat + 0.3, w: 0.56, d: 0.06, h: 0.06, f },
+  ];
+}
+
 /** A block's six faces, each facing out. */
 function blockFaces(b: Block, solid: number): Face[] {
   const r = rightOf(b.f);
@@ -372,6 +424,8 @@ function solidsOf(
           ]),
         );
     } else if (isPerson(s)) add(s.id, 0.97, figure(s, s.x, s.y, f, groundAt(s, plan)), name(s.id));
+    else if (cameraMode() === 'on' && !s.heldBy && shapeOf(s, plan) === 'vehicle' && ASTRIDE.test(name(s.id)))
+      add(s.id, 0.62, astride(s, plan, f), name(s.id));
     else
       add(
         s.id,
