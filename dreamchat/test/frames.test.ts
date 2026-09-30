@@ -15,6 +15,7 @@ import {
 } from '../frames';
 import { type Breakdown, completeViews, oneColour, type StyleOption, VAGUE } from '../producer';
 import { forPlan, storyRecord } from '../record';
+import { withSwitches } from './fakes';
 import { asInstruction } from '../session';
 import {
   colourName,
@@ -111,9 +112,14 @@ describe('writing in the dream', () => {
     expect(prompt).toContain('The only writing anywhere in the picture is "ZIKERY" (6 letters: Z I K E R Y)');
   });
 
-  test('a moment without quoted writing forbids all writing', () => {
-    const { prompt } = framePrompt(frame('The boat reaches the round window.'), [], style);
-    expect(prompt).toContain('Every surface in it is free of writing, logos and brand badges');
+  test('a moment without quoted writing forbids all writing; with story_marks, what the story writes on shows marks', () => {
+    const at = (step: string | undefined) =>
+      withSwitches(
+        { DREAMCHAT_ONE_BUILDER: step },
+        () => framePrompt(frame('The boat reaches the round window.'), [], style).prompt,
+      );
+    expect(at(undefined)).toContain('Every surface in it is free of writing, logos and brand badges');
+    expect(at('story_marks')).toContain('shows it as marks no one could read');
   });
 
   test('an apostrophe in a word is not a quotation', () => {

@@ -10,7 +10,7 @@ import { readDream } from '../evals/retire';
 import { loadDream } from '../evals/saved';
 import { assembleCut } from '../assemble';
 import { type CutSheet, cutSheet, inViewIn, sheetDream } from '../cutsheet';
-import { inViewOf } from '../frames';
+import { inViewOf, writingLine } from '../frames';
 import { moments, producerSystem } from '../producer';
 import { rebuild } from '../plan';
 import { recordInputsOf, recordsMade, storyRecord } from '../record';
@@ -1388,8 +1388,39 @@ describe('a colour the dream gives ends at what it colours', () => {
     expect(at('told_colours', 'green glass lamps')).toEqual(['green glass lamps']);
     expect(at('told_colours', 'a white parking space')).toEqual(['white parking space']);
     expect(at('told_colours', 'dark ink in blue or black on its front')).toEqual(['blue or black']);
+    // The word straight after the colour is what it colours, even one that could be a verb.
+    expect(at('told_colours', 'a silver rush of fish')).toEqual(['silver rush']);
+    expect(at('told_colours', 'the sky is red above the city')).toEqual(['red']);
   });
   test('before its step, as it was', () => {
     expect(at('earlier_words', 'a grey heron stands by the window')).toEqual(['grey heron stands']);
+  });
+});
+
+describe("writing the story needs but does not quote (the owner's choice, 30 Sep)", () => {
+  // The line itself takes the step as the sheet passes it (the assembler never reads the switches).
+  const line = (step: string, words: string[]) => writingLine(words, step === 'story_marks');
+  test('shows as marks no one could read, where the prompt said every surface stays blank', () => {
+    expect(line('story_marks', [])).toContain('shows it as marks no one could read');
+    expect(line('story_marks', [])).toContain('Nothing in it has legible writing');
+    expect(line('told_colours', [])).toBe(
+      'Every surface in it is free of writing, logos and brand badges: signs, pages and screens stay blank.',
+    );
+  });
+  test('a quoted word with a number is counted in characters', () => {
+    expect(line('story_marks', ['Level 4'])).toContain('"LEVEL 4" (6 characters: L E V E L 4)');
+    expect(line('story_marks', ['Zikery'])).toContain('"ZIKERY" (6 letters: Z I K E R Y)');
+    expect(line('told_colours', ['Level 4'])).toContain('(6 letters: L E V E L 4)');
+  });
+  test('reaches the prompt: 8ceb m3, the board written on in chalk', () => {
+    const p = withSwitches(
+      { ...SHEET, DREAMCHAT_ONE_BUILDER: 'on' },
+      () =>
+        rebuild(structuredClone(loadDream('dream-0926-083656-8ceb', false).session as Session)).pictures.find(
+          (x) => x.id === 'm3',
+        )!.prompt,
+    );
+    expect(p).toContain('shows it as marks no one could read');
+    expect(p).not.toContain('signs, pages and screens stay blank');
   });
 });
