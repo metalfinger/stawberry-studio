@@ -574,12 +574,11 @@ function growsAs(name: string): 'in' | 'among' | undefined {
 /** The low thing a small one rests on top of, as `restOf` sets it there: a table, a counter, a bench. */
 function restsOn(s: Spot, plan: Blocking): Spot | undefined {
   if (isPerson(s) || s.heldBy || s.many) return undefined;
-  // A vehicle, or anything, standing on ground laid on the plan (the bicycle on the narrow iron bridge): on it.
-  if (shapeOf(s, plan) !== 'ground') {
-    const ground = plan.spots.find(
-      (t) => t.id !== s.id && !isPerson(t) && shapeOf(t, plan) === 'ground' && onFootprint(s, t, plan, 0),
-    );
-    if (ground) return ground;
+  // A vehicle on the deck of the way the place is (continuity.ts withPathDeck): on it, the bicycle on the narrow iron
+  // bridge. Only that deck: a boat afloat over an aisle, a drainpipe in the grass, are not "on" them.
+  if (shapeOf(s, plan) === 'vehicle') {
+    const deck = plan.spots.find((t) => t.id === 'deck' && t.id !== s.id && onFootprint(s, t, plan, 0));
+    if (deck) return deck;
   }
   if (shapeOf(s, plan) !== 'block') return undefined;
   const h = sizeOf(s)[2];

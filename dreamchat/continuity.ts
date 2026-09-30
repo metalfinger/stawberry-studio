@@ -746,7 +746,9 @@ const PATH =
  * mock-up, the bicycle ridden along it was drawn crossing it side on (night-market m5, judged blind, 30 Sep).
  */
 export function withPathDeck(plan: Blocking, place: string): Blocking {
-  if (plan.indoors || !PATH.test(place)) return plan;
+  // A way on water (the river street, a canal) has none: whoever is there is afloat on it.
+  if (plan.indoors || !PATH.test(place) || /\b(?:river|canal|stream|sea|lake|water|flooded)\b/i.test(place))
+    return plan;
   const head = (x: string) => x.toLowerCase().match(PATH)?.[0];
   if (plan.spots.some((s) => s.shape === 'ground' && head(s.name ?? '') === head(place))) return plan;
   const on = plan.spots.filter((s) => s.kind === 'person' || s.shape === 'vehicle');

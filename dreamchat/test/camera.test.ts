@@ -1897,6 +1897,8 @@ describe('a place that is a way along', () => {
     // Indoors, not a way along, or one the plan already lays: as it is.
     expect(withPathDeck({ ...bridge, indoors: true }, 'the narrow iron bridge').spots).toEqual(bridge.spots);
     expect(withPathDeck(bridge, 'the night market')).toBe(bridge);
+    // A way on water: afloat, no deck.
+    expect(withPathDeck(bridge, 'the river street')).toBe(bridge);
     const laid = { ...bridge, spots: [...bridge.spots, { ...deck, id: 'x9' }] };
     expect(withPathDeck(laid, 'the narrow iron bridge')).toBe(laid);
   });
