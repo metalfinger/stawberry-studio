@@ -387,12 +387,18 @@ describe('the water, as high as the record says it stands', () => {
     const r = rebuilt('dream-0926-050424-fdd7', ON);
     const m4 = picture(r, 'm4');
     expect(withEnv(ON, () => shotPlan(r.b, 'm4', r.rec))?.water).toBeGreaterThan(0.5);
-    // Without what the moments imply, the record measures the water over the desks, about a metre: the
-    // whale, so big it fills the aisle, is in it beside the boat, never all of it under it. With Claude's
-    // readings ("deep enough for a whale beneath a boat") it is under the boat (the prompt cases).
+    // Without what the moments imply, the record measures the water over the desks, about a metre, and the
+    // whale, so big it fills the aisle, was in it beside the boat, its back out of it. The moment's own words
+    // put it under the water ("a whale swims past under the water"), so the water covers it, under the boat,
+    // whether or not a reading of the moments remembers the whale (6e80 m6's did not, 30 Sep).
     expect(m4.prompt).toMatch(
-      /In the water[^.]*: the whale, too big for the water to cover, part of it above the surface/,
+      /Under the water[^.]*beneath the yellow rowing boat: the whale, all of it below the surface/,
     );
+    expect(m4.prompt).not.toMatch(/too big for the water to cover/);
+    // The camera is at the eyes of the two in the boat, the whale under it no part of that: averaged with the
+    // whale lying on the floor, it stood a metre below them, "at the height of their eyes".
+    const water = withEnv(ON, () => shotPlan(r.b, 'm4', r.rec))!.water!;
+    expect(m4.item.frame?.plan?.eye?.height).toBeCloseTo(water - 0.15 + 1.2, 2);
     expect(shot(m4.prompt)).not.toMatch(/From left to right across the picture:[^.]*\bwhale\b/);
   });
 });
@@ -954,6 +960,24 @@ describe('the water covers only what it is deep enough to cover', () => {
     expect(waterLevel('far over the counters, deep enough to hide a walrus below the surface', room)).toBe(1.2);
     // A creature named but not as what it is deep enough for measures nothing.
     expect(waterLevel('over the counters, where the walrus lies', room, walrus)).toBe(1.2);
+    // Put under the water by the moment's own words, where the record measures it by the things in the place:
+    // over its back.
+    const told = (t: string) => waterLevel('far over the counters', room, walrus, t);
+    expect(told('she rows past, and a walrus swims under the water')).toBe(1.8);
+    expect(told('the walrus glides past underwater')).toBe(1.8);
+    // Only the clause that names it, and only it: someone else under the water is not it.
+    expect(told('the walrus turns, and she swims under the water')).toBe(1.2);
+    expect(told('the walrus watches the diver swim under the water')).toBe(1.2);
+    expect(told('the walrus watches as she swims under the water')).toBe(1.2);
+    expect(told('she dives under the water beside the walrus')).toBe(1.2);
+    // Not coming up from under it, nor a creature of no known size.
+    expect(told('the walrus rises from under the water')).toBe(1.2);
+    expect(waterLevel('far over the counters', room, [], 'a walrus swims under the water')).toBe(1.2);
+    // Never above a measure on a body, never where nothing measures it, never higher than the room lets it.
+    expect(waterLevel('ankle-deep over the floor', room, walrus, 'a walrus swims under the water')).toBe(0.12);
+    expect(waterLevel('the aisles are flooded', room, walrus, 'a walrus swims under the water')).toBeNull();
+    const whale = [{ name: 'the whale', height: 5 }];
+    expect(waterLevel('far over the counters', room, whale, 'the whale is underwater')).toBe(3.9);
   });
 
   test('someone standing where a boat is afloat stands in it; on a dry floor, beside it', () => {
