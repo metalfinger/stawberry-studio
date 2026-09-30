@@ -31,7 +31,10 @@ drawn and approved. The drawing path sends only what is drawn, ready and not wit
 stale). So the viewer shows **each cut as it will be sent once everything before it is drawn and approved, in
 story order**, and its header says so (`header.assumes`). For a live dream it also shows, beside it, what was
 really sent on the night (the as-drawn record; `corpus.ts` reads it for 62 frozen moments), marked wherever the
-two differ.
+two differ. A sketch never drawn is shown as it will be once drawn (its look as the story record says it,
+which is what the drawing path sends once it is drawn and approved), and marked "not drawn yet: its look will read
+as the record says once it is", since until then the drawing path would send its own words (Mac pane, on the
+drawing-path test's finding, 29 Sep).
 
 **The profile** (critique 10): one named set of switches is "the harness": record, cut sheet, camera rules and
 references on, `DREAMCHAT_ONE_BUILDER` at the latest merged step. The header names the profile and the commit,
@@ -97,6 +100,25 @@ disagrees on three clicks per cut: most cuts will be right, and the owner's time
   So an S6 wording row costs the owner a skim of diffs, not a re-reading.
 - The sheets and in-between pictures get the same verdict, with their own hashes (the prompt they were drawn from,
   their references).
+
+What the hashes do and do not follow (29 Sep, from the data side's review and the Mac pane's critique):
+
+- A cut's chain names its images by key, their roles and order, its mock-up's sha256 and its camera (rounded to a
+  centimetre and a tenth of a degree, so the same dream hashes the same on every machine). A label renamed on the
+  mock-up moves its sha256, and so the chain: a rename lands as "read again", on purpose, since the owner should see it.
+- A change inside an in-between picture or an earlier cut moves that node's own hashes, not those of the cuts that use
+  it: each node carries its own verdict.
+- On the 15 frozen dreams the panel's tree and the plan the prompts use group every cut alike (0 badges). Both are
+  made from a plan made now (the panel's re-plans, and so does a rebuild), so ledger row 2's disagreement (the plan kept
+  since the moments began) cannot show in the badge either: it catches only a breakdown completed otherwise or a
+  sketch's status read otherwise. Row 2 is shown when the viewer reads a live dream's kept plan (phase two).
+
+Open, from the data side's re-review (29 Sep), none blocking the viewer:
+
+- A picture rebuilt from its record (S9, `DREAMCHAT_AS_DRAWN`) reads the story record from the saved sketches as they
+  are now, as it did before the viewer's rebuild fix, not as they were when it was drawn; its record's own copies
+  would be exact. Untested; the viewer never takes that path.
+- Frozen copies drop `checkedTakes`, so a sheet's "drawn from" is null on every frozen dream; it shows on live ones.
 
 Saved to `evals/viewer/<dream>.json`, committed like the picture checks' answers, written whole with a temp file
 and a rename.

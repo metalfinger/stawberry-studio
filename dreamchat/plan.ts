@@ -35,7 +35,16 @@ import {
   turnedInto,
 } from './frames';
 import { type AsDrawn, type Copies, currentRecord, matchGhost } from './asdrawn';
-import { type CutSheet, cutSheetMode, type Framed, framed, ghostName, inViewIn, sheetDream } from './cutsheet';
+import {
+  type CutSheet,
+  cutSheetMode,
+  type Framed,
+  framed,
+  ghostName,
+  inViewIn,
+  type SheetDream,
+  sheetDream,
+} from './cutsheet';
 import { type CutFacts, cutFactsOf, routedMode } from './checks';
 import { actingOf, checkReferences, preflight, readPrompt } from './gate';
 import { refsMode, standsFor } from './refs';
@@ -79,6 +88,8 @@ export type Rebuilt = {
   rec?: RecordPlan;
   /** S9: images of pictures rebuilt from their records, by stand-in, where the plan made now has none of that name. */
   named?: Record<string, string>;
+  /** With the cut sheet on: the dream as the sheets read it (its story record and the tree resolved from the plan). */
+  dream?: SheetDream;
 };
 
 /** The stand-in image of a sketch, of an earlier picture, and of a moment's mock-up. */
@@ -118,7 +129,7 @@ export function rebuild(
   completeViews(b);
   // With DREAMCHAT_RECORD=on, planned from the story record as drawing reads it (session.ts planRecord):
   // the sketches' words, the dreamer's messages where the dream keeps them, its readings and look.
-  const inputs = recordInputsOf(s);
+  const inputs = { ...recordInputsOf(s), items: sheets };
   const rec = recordForPlan(b, inputs.items, s.draft?.readings, { words: inputs.words, style });
   const plan = planContinuity(b, rec);
   // S9: each picture drawn with a record, by its id among the saved ones, and each saved in-between
@@ -159,6 +170,20 @@ export function rebuild(
           readings: s.draft?.readings,
           words: inputs.words,
         });
+  // A picture rebuilt from its record (S9) reads the story record as the sketches were kept, not as a rebuild takes
+  // them (every one drawn): a sketch not drawn when it was sent was sent with its own words.
+  const dreamKept =
+    mode === 'off' || !recorded.size
+      ? dream
+      : sheetDream({
+          breakdown: b,
+          plan: drawnPlan,
+          prep: s.prep,
+          items: s.build?.items ?? [],
+          style,
+          readings: s.draft?.readings,
+          words: inputs.words,
+        });
   const pictures = [...buildFrames(b, plan), ...buildGhosts(plan)].map((p): Item => ({
     ...p,
     status: 'ready',
@@ -179,7 +204,7 @@ export function rebuild(
     const kept = it.kind === 'ghost' ? (it.ghost ? savedGhost(it.ghost) : undefined) : saved.get(pid);
     const record = kept ? recorded.get(kept.id) : undefined;
     if (record) {
-      const again = fromRecord(was, it, record, dream, mode);
+      const again = fromRecord(was, it, record, dreamKept, mode);
       if (again) {
         out.push(again);
         continue;
@@ -236,6 +261,7 @@ export function rebuild(
     pictures: out,
     ...(rec ? { rec } : {}),
     ...(Object.keys(named).length ? { named } : {}),
+    ...(dream ? { dream } : {}),
   };
 }
 
