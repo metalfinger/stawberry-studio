@@ -223,3 +223,32 @@ describe('what the fitting never gives up', () => {
     expect(f.prompt).toContain('Image 4: the night market');
   });
 });
+
+describe('the people sheet, only where it is needed', () => {
+  const man = (who: string[]) =>
+    [
+      'The attached images:',
+      'Image 1: EDIT THIS PICTURE.',
+      ...who.map((w, i) => `Image ${i + 2}: ${w}: its look.`),
+    ].join('\n');
+  test('never a creature on it, and never where everyone fits apart', () => {
+    const imgs = [img(1, 'base'), img(2, 'identity'), img(3, 'identity'), img(4, 'location')];
+    const lines = (m: string): Line[] => [{ id: 'manifest', text: m }];
+    // Three images and the mock-up fit: no sheet.
+    expect(
+      fitMoment(
+        lines(man(['who the dreamer is', 'who the father is', 'the room'])),
+        imgs,
+        0,
+        MAX_CHARS,
+        new Set(),
+        true,
+      ).images.some((x) => x.group),
+    ).toBe(false);
+    // Five: the two people go on a sheet, the dog keeps its own image.
+    const five = [...imgs.slice(0, 3), img(4, 'identity'), img(5, 'location')];
+    const m5 = man(['who the dreamer is', 'who the father is', 'what the dog is', 'the room']);
+    const f = fitMoment(lines(m5), five, 0, MAX_CHARS, new Set(), true);
+    expect(f.images.map((x) => x.name)).toEqual(['x1', 'people:x2+x3', 'x4', 'x5']);
+  });
+});
