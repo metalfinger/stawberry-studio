@@ -41,9 +41,10 @@ stack, the harness viewer and why each picture is left out are all on lab.** Not
 - *On branches, not merged:*
   - `viewer-ux` (fb80e86): the page reads as the dream is built (sequence, scene, shot, cut), with groups that fold,
     a legend, and addresses like `/0f40/m3`.
-  - `unsent-withheld`: a picture the plan chose but the owner judged wrong now says so in the view (it said "no
+  - `unsent-withheld` (on lab since): a picture the plan chose but the owner judged wrong now says so in the view (it said "no
     reason recorded": affd m8's m7, aeea m5's m4); where it was the picture to edit, the cut says it is made from its
-    own shot instead.
+    own shot instead. "Judged wrong" there is the picture checks' verdicts on drawn pictures (`verdicts.ts`), never
+    the viewer's own: a cut marked wrong in the viewer judges its preparation and holds back nothing.
   - `s6-states2` (the S6 pane): the tree's own numbers for sequences, scenes and shots in the view; `assemble.ts`
     never sends a turned element as "as last drawn", says an animal by kind and coat, a group with "are".
 - *The viewer is running* at http://127.0.0.1:4570/, verdicts to the main checkout's `dreamchat/evals/viewer/`. To
