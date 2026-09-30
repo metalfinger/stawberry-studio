@@ -1953,3 +1953,47 @@ describe('those who look at what the moment looks at', () => {
     expect(m2).not.toMatch(/the dreamer, [^;]*facing the camera/);
   });
 });
+
+describe('through their eyes, what they look at never swamps the frame', () => {
+  const name = (id: string) => ({ p1: 'the dreamer', t1: 'the red door', t2: 'the river', t3: 'the boat' })[id] ?? id;
+
+  test('standing right at the door, a step back keeps some of the place round it', () => {
+    // The mock-up was one grey wall with its label and nothing else (snow-train m6, judged blind).
+    const door = {
+      front: 'the snowy field',
+      room: [10, 10] as [number, number],
+      spots: [
+        { id: 'p1', x: 5, y: 5, kind: 'person' as const, pose: 'standing' as const },
+        { id: 't1', x: 5, y: 4.5, kind: 'thing' as const, size: [1, 0.1, 2.1] as [number, number, number] },
+      ],
+    };
+    const on = withEnv(CAMERA, () => dreamerShot(door, 'p1', 't1', name))!;
+    expect(on.text).toContain('leaning back a little');
+    expect(on.text).toContain('across the picture from the left third to the right third: the red door');
+    // Off, as before.
+    const off = withEnv({ DREAMCHAT_CAMERA: undefined }, () => dreamerShot(door, 'p1', 't1', name))!;
+    expect(off.text).toContain('across the picture from the left edge to the right edge: the red door');
+  });
+
+  test('what they are in or on fills the view as it should: the river under the boat', () => {
+    const river = {
+      front: 'downstream',
+      spots: [
+        { id: 'p1', x: 5, y: 5, kind: 'person' as const, pose: 'sitting' as const },
+        {
+          id: 't3',
+          x: 5,
+          y: 5,
+          kind: 'thing' as const,
+          shape: 'vehicle' as const,
+          faces: 'left',
+          size: [1.2, 3, 0.6] as [number, number, number],
+        },
+        { id: 't2', x: 5, y: 3, kind: 'thing' as const, size: [3, 8, 0.3] as [number, number, number] },
+      ],
+    };
+    const on = withEnv(CAMERA, () => dreamerShot(river, 'p1', 't2', name))!;
+    expect(on.text).toContain("The camera is the dreamer's eyes, in the boat and the river");
+    expect(on.text).not.toContain('leaning back');
+  });
+});

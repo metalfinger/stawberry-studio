@@ -381,9 +381,13 @@ export function framePrompt(
 
   // Who leaves the picture being edited, and who joins it: "keep everyone in it" of a conductor
   // the dreamer said was not there (24 Sep).
-  const baseWho = base?.item.frame?.visible ?? [];
-  const leaving = baseWho.filter((id) => !f.visible.includes(id)).map((id) => nameOf(sheets, id));
-  const joining = base ? f.visible.filter((id) => !baseWho.includes(id)).map((id) => nameOf(sheets, id)) : [];
+  // Through the dreamer's eyes they are the camera, in neither picture (the brother on the bank, blue lantern m9).
+  const drawn = (ids: string[], eyes?: string) =>
+    ids.filter((id) => !(eyes === 'dreamer' && sheets.find((s) => s.id === id)?.isDreamer));
+  const baseWho = drawn(base?.item.frame?.visible ?? [], base?.item.frame?.eyes);
+  const nowWho = drawn(f.visible, f.eyes);
+  const leaving = baseWho.filter((id) => !nowWho.includes(id)).map((id) => nameOf(sheets, id));
+  const joining = base ? nowWho.filter((id) => !baseWho.includes(id)).map((id) => nameOf(sheets, id)) : [];
   if (base?.item.mediaId)
     attach(
       base.item.mediaId,

@@ -380,6 +380,30 @@ describe('a moment drawn from earlier moments', () => {
     expect(prompt).not.toContain('everyone in it exactly');
   });
 
+  test("through the dreamer's eyes, the dreamer is the camera: never someone who leaves the picture or joins it", () => {
+    const bo = { ...sheet('p2', 'character', 'you'), isDreamer: true };
+    const use = {
+      id: 'm1',
+      kind: 'cut' as const,
+      role: 'base' as const,
+      relation: 'same_setup' as const,
+      carries: 'x',
+    };
+    const before: Item = { ...drawn('m1', 1) };
+    before.frame = { ...before.frame!, visible: ['p1', 'p2'], eyes: 'dreamer' };
+    const now = moment('m2', 2, [use]);
+    now.frame = { ...now.frame!, visible: ['p1'], eyes: 'dreamer' };
+    const { prompt } = framePrompt(now, [ana, bo, kitchen], style, [{ use, item: before }]);
+    expect(prompt).not.toContain('no longer there');
+    expect(prompt).toContain('everyone in it exactly');
+    // Seen from outside, the dreamer leaving is said as before.
+    before.frame = { ...before.frame!, eyes: 'outside' };
+    now.frame = { ...now.frame!, eyes: 'outside' };
+    expect(framePrompt(now, [ana, bo, kitchen], style, [{ use, item: before }]).prompt).toContain(
+      'who is in it changes: the dreamer is no longer there.',
+    );
+  });
+
   test('what the judge found invented in the picture being edited is left out of the edit', () => {
     const use = {
       id: 'm1',

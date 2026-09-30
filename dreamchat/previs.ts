@@ -1258,6 +1258,7 @@ export function dreamerShot(
           )
     : null;
   const near = plan.spots.filter((s) => s.id !== dreamer && s.id !== target?.id && isPerson(s) && !s.many);
+  const onIt = !!target && onFootprint(me, target, plan);
   let best: { eye: Eye; score: number } | undefined;
   // Who the moment shows besides what it looks at: in the picture, where the view can hold them. Looking
   // straight ahead from the tractor's seat left out the driver it was about (lighthouse, 25 Sep).
@@ -1305,11 +1306,16 @@ export function dreamerShot(
       // Big in the frame, up to a third of it; whoever is close takes an edge, not a third of it.
       const big = Math.min(1, t.share / 0.3);
       const close = near.reduce((a, s) => Math.max(a, r.seen.get(s.id)?.share ?? 0), 0);
+      // Never all of the frame (the camera rules): a step back, when the dreamer stands right at it, keeps where it is.
+      // At the red door, the mock-up was one grey wall with its label and nothing else (snow-train m6, judged blind).
+      // What they are in or on fills the view as it should: the river the boat floats on.
+      const swamps = camera && !onIt ? Math.max(0, t.share - 0.6) : 0;
       const score =
         (2 * clear) / 49 +
         t.visible / Math.max(1, t.drawn) +
         centred +
         1.5 * big -
+        3 * swamps -
         3 * Math.max(0, close - 0.12) -
         how -
         Math.abs(aim) * 0.01 +
