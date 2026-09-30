@@ -51,6 +51,8 @@ export type Fitted = {
   /** Each paragraph as sent, by id, or null where it was left out: what a pair checks survived. */
   kept: Record<string, string | null>;
   fits: boolean;
+  /** How many cuts were made: a pair is fitted with as many cuts in both arms (`fitPair`). */
+  ops: number;
 };
 
 /** Images kept first to last: image 1 (the edit or the mock-up), who is in it, the place, things, earlier pictures. */
@@ -58,10 +60,13 @@ const ROLE_ORDER = ['base', 'identity', 'location', 'prop', 'composition'];
 
 /** Which images a moment keeps: at most MAX_IMAGES, image 1 always, then by role, each role in its own order. */
 export function keptImages(images: Img[]): Img[] {
-  const ranked = [...images].sort(
-    (a, b) =>
-      (a.n === 1 ? -1 : ROLE_ORDER.indexOf(a.role)) - (b.n === 1 ? -1 : ROLE_ORDER.indexOf(b.role)) || a.n - b.n,
-  );
+  // A role the order does not name comes after every role it does, never with image 1.
+  const rank = (x: Img) => {
+    if (x.n === 1) return -1;
+    const i = ROLE_ORDER.indexOf(x.role);
+    return i < 0 ? ROLE_ORDER.length : i;
+  };
+  const ranked = [...images].sort((a, b) => rank(a) - rank(b) || a.n - b.n);
   const keep = new Set(ranked.slice(0, MAX_IMAGES).map((x) => x.n));
   return images.filter((x) => keep.has(x.n));
 }
@@ -86,7 +91,7 @@ function withoutFirstParen(entry: string): string {
  * picture" sentences, last first. Never what happens, the camera's view, the one thing to show, who is in it, how
  * each one is now, the colours, or the writing line.
  */
-export function fitMoment(lines: Line[], images: Img[]): Fitted {
+export function fitMoment(lines: Line[], images: Img[], atLeast = 0): Fitted {
   const kept = keptImages(images);
   const renumber = new Map(kept.map((x, i) => [x.n, i + 1]));
   const droppedImages = images.filter((x) => !renumber.has(x.n)).map((x) => x.name);
@@ -110,9 +115,13 @@ export function fitMoment(lines: Line[], images: Img[]): Fitted {
     paras.set(id, out.join('\n'));
   }
   const size = () => [...paras.values()].filter((x): x is string => x !== null).join('\n\n').length;
+  // Cut while over, or until as many cuts are made as the pair's other arm needed.
+  let ops = 0;
+  const need = () => size() > MAX_CHARS || ops < atLeast;
   const before = lines.map((l) => l.text).join('\n\n').length;
   const dropPara = (id: string) => {
-    if (paras.get(id) == null || size() <= MAX_CHARS) return;
+    if (paras.get(id) == null || !need()) return;
+    ops++;
     paras.set(id, null);
     dropped.paragraphs.push(id);
   };
@@ -120,9 +129,10 @@ export function fitMoment(lines: Line[], images: Img[]): Fitted {
     const t = paras.get(id);
     if (t == null) return;
     const ls = t.split('\n');
-    for (let i = 0; i < ls.length && size() > MAX_CHARS; i++) {
+    for (let i = 0; i < ls.length && need(); i++) {
       const x = fn(ls[i]);
       if (x === ls[i]) continue;
+      ops++;
       dropped.lines.push(`${id}: ${why}`);
       if (x === null) ls.splice(i--, 1);
       else ls[i] = x;
@@ -139,23 +149,41 @@ export function fitMoment(lines: Line[], images: Img[]): Fitted {
   editLines('style', (l) => (l.startsWith('Light:') ? l.replace(/^(Light:[^.]*\.).*$/, '$1') : l), 'light cut');
   dropPara('feeling');
   // The shot's "Outside the picture" sentences, last first.
-  for (let guard = 0; guard < 20 && size() > MAX_CHARS; guard++) {
+  for (let guard = 0; guard < 20 && need(); guard++) {
     const t = paras.get('shot');
     if (t == null) break;
     const cut = t.replace(/\s*Outside the picture,[^.]*\.(?![\s\S]*Outside the picture,)/, '');
     if (cut === t) break;
+    ops++;
     paras.set('shot', cut);
     dropped.lines.push('shot: an outside-the-picture sentence');
   }
   const prompt = [...paras.values()].filter((x): x is string => x !== null).join('\n\n');
   dropped.chars = before - prompt.length;
   const renumbered = kept.map((x) => ({ ...x, n: renumber.get(x.n) as number }));
-  return { prompt, images: renumbered, dropped, kept: Object.fromEntries(paras), fits: prompt.length <= MAX_CHARS };
+  return {
+    prompt,
+    images: renumbered,
+    dropped,
+    kept: Object.fromEntries(paras),
+    fits: prompt.length <= MAX_CHARS,
+    ops,
+  };
+}
+
+/**
+ * A pair fitted alike: both arms cut as far as the one that needs more cuts, so the fitting takes the same lines from
+ * both wherever the change does not touch them (a line the change adds must not cost the other arm nothing).
+ */
+export function fitPair(a: { lines: Line[]; images: Img[] }, b: { lines: Line[]; images: Img[] }): [Fitted, Fitted] {
+  const n = Math.max(fitMoment(a.lines, a.images).ops, fitMoment(b.lines, b.images).ops);
+  return [fitMoment(a.lines, a.images, n), fitMoment(b.lines, b.images, n)];
 }
 
 /**
  * Whether a pair still tests its change once fitted: every paragraph that differs between the arms before fitting
- * still differs after (neither side left out), and every image one arm has and the other has not is still sent.
+ * still differs after (neither side left out), every image one arm has and the other has not is still sent, and
+ * everything else is sent alike in both (the same paragraphs, the same shared images).
  */
 export function pairTested(
   a: { lines: Line[]; images: Img[]; fitted: Fitted },
@@ -176,6 +204,17 @@ export function pairTested(
   for (const n of na) if (!nb.has(n) && !ka.has(n)) lost.push(`image ${n}`);
   for (const n of nb) if (!na.has(n) && !kb.has(n)) lost.push(`image ${n}`);
   const imagesDiffer = [...na].some((n) => !nb.has(n)) || [...nb].some((n) => !na.has(n));
+  // What the change does not touch is sent alike in both: else the pair also measures the fitting.
+  const unequal = [...new Set([...ta.keys(), ...tb.keys()])].filter(
+    (id) => !differs.includes(id) && (a.fitted.kept[id] ?? null) !== (b.fitted.kept[id] ?? null),
+  );
+  const shared = (ks: Set<string>) =>
+    [...ks]
+      .filter((n) => na.has(n) && nb.has(n))
+      .sort()
+      .join('|');
+  if (shared(ka) !== shared(kb)) unequal.push('images');
+  lost.push(...unequal.map((id) => `fitted unequally: ${id}`));
   return {
     tested: (differs.length > 0 || imagesDiffer) && lost.length === 0,
     differs: [...differs, ...(imagesDiffer ? ['images'] : [])],
@@ -286,6 +325,15 @@ async function planRun(name: string, ids: string[], arms: Plan['arms']): Promise
     const built: Record<string, ArmMoment> = {};
     for (const arm of arms) built[arm.name] = await buildArm(session, moment, { ...PROFILE, ...arm.env }, out);
     const [a, b] = arms.map((x) => built[x.name]);
+    if (arms.length === 2) {
+      // Fitted alike, and refused again on what the joint fitting keeps.
+      [a.fitted, b.fitted] = fitPair(a, b);
+      for (const m of [a, b]) {
+        m.refused = m.refused.filter((r) => !/^image \d+ \(|characters after fitting$/.test(r));
+        for (const x of m.fitted.images) if (!x.file) m.refused.push(`image ${x.n} (${x.name}): ${x.missing}`);
+        if (!m.fitted.fits) m.refused.push(`${m.fitted.prompt.length} characters after fitting`);
+      }
+    }
     const pair = arms.length === 2 ? pairTested(a, b) : undefined;
     plan.moments.push({
       id,

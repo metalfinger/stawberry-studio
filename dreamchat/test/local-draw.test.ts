@@ -2,7 +2,16 @@
 // and a pair that no longer tests its change once fitted is never counted. Nothing is sent here.
 
 import { describe, expect, test } from 'bun:test';
-import { type Img, type Line, MAX_CHARS, fitMoment, keptImages, pairTested, seedOf } from '../evals/local-draw';
+import {
+  type Img,
+  type Line,
+  MAX_CHARS,
+  fitMoment,
+  fitPair,
+  keptImages,
+  pairTested,
+  seedOf,
+} from '../evals/local-draw';
 
 const img = (n: number, role: string, name = `x${n}`): Img => ({ n, role, name, file: `/f/${n}.png` });
 const manifest = (imgs: Img[], pad = 0) =>
@@ -94,6 +103,31 @@ describe('a pair tests its change only while the change is still sent', () => {
 
   test('no difference at all: not tested', () => {
     expect(pairTested(arm('x', 10), arm('x', 10)).tested).toBe(false);
+  });
+
+  test('a line the change adds costs both arms the same cuts; cut unequally, the pair is void', () => {
+    const base = (extra: string): Line[] => [
+      { id: 'happens', text: `What happens: ${'h'.repeat(3500)}` },
+      {
+        id: 'shot',
+        text: `The camera sees. Outside the picture, left: ${'a'.repeat(150)}. Outside the picture, right: ${'b'.repeat(150)}.`,
+      },
+      { id: 'single', text: `One picture.${extra}` },
+    ];
+    // B's extra line needs one outside sentence cut that A alone would keep.
+    const a = { lines: base(''), images: imgs };
+    const b = { lines: base(` ${'m'.repeat(200)}`), images: imgs };
+    const alone = pairTested({ ...a, fitted: fitMoment(a.lines, imgs) }, { ...b, fitted: fitMoment(b.lines, imgs) });
+    expect(alone.tested).toBe(false);
+    expect(alone.lost).toContain('fitted unequally: shot');
+    const [fa, fb] = fitPair(a, b);
+    expect(fa.kept.shot).toBe(fb.kept.shot);
+    expect(pairTested({ ...a, fitted: fa }, { ...b, fitted: fb })).toMatchObject({ tested: true, differs: ['single'] });
+  });
+
+  test('a role the order does not name is kept after every named one', () => {
+    const kept = keptImages([img(1, 'base'), img(2, 'sheet'), img(3, 'identity'), img(4, 'location'), img(5, 'prop')]);
+    expect(kept.map((x) => x.n)).toEqual([1, 3, 4, 5]);
   });
 
   test('the same seed in every arm, one per moment', () => {
