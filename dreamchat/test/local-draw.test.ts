@@ -138,6 +138,25 @@ describe('a pair tests its change only while the change is still sent', () => {
     expect(keptImages(imgs, new Set(['sketch-boat'])).map((x) => x.n)).toEqual([1, 2, 3, 4]);
   });
 
+  test('never a person for a thing: two people and a named thing keep both people, the place goes', () => {
+    const imgs = [
+      img(1, 'base'),
+      img(2, 'identity'),
+      img(3, 'identity'),
+      img(4, 'prop', 'sketch-boat'),
+      img(5, 'location'),
+    ];
+    expect(keptImages(imgs, new Set(['sketch-boat'])).map((x) => x.n)).toEqual([1, 2, 3, 4]);
+    const three = [
+      img(1, 'base'),
+      img(2, 'prop', 'sketch-boat'),
+      img(3, 'identity'),
+      img(4, 'identity'),
+      img(5, 'identity'),
+    ];
+    expect(keptImages(three, new Set(['sketch-boat'])).map((x) => x.n)).toEqual([1, 3, 4, 5]);
+  });
+
   test('a role the order does not name is kept after every named one', () => {
     const kept = keptImages([img(1, 'base'), img(2, 'sheet'), img(3, 'identity'), img(4, 'location'), img(5, 'prop')]);
     expect(kept.map((x) => x.n)).toEqual([1, 3, 4, 5]);

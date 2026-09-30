@@ -65,7 +65,9 @@ export function keptImages(images: Img[], named: Set<string> = new Set()): Img[]
   // father folding newspaper boats drew a painted wooden one without its sketch (lighthouse-first m4, 30 Sep).
   const rank = (x: Img) => {
     if (x.n === 1) return -1;
-    if (x.role === 'prop' && named.has(x.name)) return 0.5;
+    // After everyone in the picture, whose sketch is never given up for a thing: without the father's, the father
+    // came out a second copy of the dreamer (lighthouse-first m4, m5, 1 Oct).
+    if (x.role === 'prop' && named.has(x.name)) return ROLE_ORDER.indexOf('identity') + 0.5;
     const i = ROLE_ORDER.indexOf(x.role);
     return i < 0 ? ROLE_ORDER.length : i;
   };
