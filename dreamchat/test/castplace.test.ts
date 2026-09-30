@@ -4,7 +4,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { Blocking } from '../blocking';
 import type { CastReading } from '../cast-types';
-import { castThings, sizeFromWords, withCastBodies, withCastFixtures, withCastSpots } from '../castplace';
+import { castThings, sizeFromWords, smallSizeOf, withCastBodies, withCastFixtures, withCastSpots } from '../castplace';
 import { rawPlanBy, type RecordPlan } from '../continuity';
 import { loadDream } from '../evals/saved';
 
@@ -313,6 +313,40 @@ describe('on a saved dream', () => {
       const c1 = plan.spots.find((s) => s.id === 'c1')!;
       expect(c1).toMatchObject({ many: true, count: 3 });
       expect(rawPlanBy(b, 'm3', none)!.spots.some((s) => s.id === 'c1' || s.name === 'a window')).toBe(false);
+    } finally {
+      for (const [k, v] of Object.entries(was))
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+    }
+  });
+});
+
+describe('a story thing the plan gives no size', () => {
+  test('is the size its words give: a measure, else what it is', () => {
+    // Unsized, the brass key before the dreamer's eyes was a suitcase-sized box, the paper boat a metre block
+    // (lighthouse-fresh m2, m15, judged blind).
+    expect(smallSizeOf('the brass key', 'Old brass key, smooth on the bow')).toEqual([0.08, 0.03, 0.01]);
+    expect(smallSizeOf('the paper boat', 'Folded out of newspaper')).toEqual([0.15, 0.08, 0.1]);
+    expect(smallSizeOf('the boat', 'A small paper boat about 4 inches long')![0]).toBeCloseTo(0.102, 3);
+    expect(smallSizeOf('the thing', 'about 15 cm long')![0]).toBeCloseTo(0.15, 3);
+    // By its own name only: a door whose look names its key hole is no key; "one in each hand" is no inch.
+    expect(smallSizeOf('the lighthouse door', 'heavy, with a brass key hole')).toBeUndefined();
+    expect(smallSizeOf('the lamp post')).toBeUndefined();
+    expect(smallSizeOf('the red tractor', 'one in each hand')).toBeUndefined();
+    // Nothing of a hand's size, nothing said: as before.
+    expect(smallSizeOf('the red tractor')).toBeUndefined();
+    expect(smallSizeOf('the yellow rowing boat')).toBeUndefined();
+  });
+
+  test('on the saved dream, with the camera rules', () => {
+    const b = structuredClone(loadDream('dream-0926-022102-aeea', false).session.draft!.breakdown!);
+    const none = { moments: {}, before: {}, ends: {}, unsaid: {} } as unknown as RecordPlan;
+    const env = { DREAMCHAT_CAMERA: 'on', DREAMCHAT_CUT_SHEET: 'on', DREAMCHAT_RECORD: 'on' };
+    const was = Object.fromEntries(Object.keys(env).map((k) => [k, process.env[k]]));
+    Object.assign(process.env, env);
+    try {
+      const boat = rawPlanBy(b, 'm15', none)!.spots.find((s) => s.id === 't2');
+      expect(boat?.size).toEqual([0.15, 0.08, 0.1]);
     } finally {
       for (const [k, v] of Object.entries(was))
         if (v === undefined) delete process.env[k];
