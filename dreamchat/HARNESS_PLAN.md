@@ -94,9 +94,16 @@ camera words and the cast placement moved what records are keyed by).
   handed it again (aeea m8); a thing set down is out of their hands, lying by them (affd m10, framed where it lies
   in the grass: see the camera rules above). Only a typed giving act puts a thing in the giver's hands on
   the floor plan, never the plan's own guess. 21 pictures, all intended; prompt cases unchanged.
-- *Next (the S6 pane with the Mac pane):* the moment's acts reach planning for poses and riders: "gets in" drawn
-  already seated (4: fdd7 m3, 6081 m6, 6e80 m5, 538d m5); fish still at their desks after leaving (8ceb m7); "buried
-  in snow" before it falls (b91f m1); who pedals or drives. Then the picture test on the owner's local image machine.
+- *On lab:* `gone_out` (4, where someone is): whoever a typed act took out through a way out of the place (a verb of
+  going: "swims out of the window", never "looks out of" it) is not drawn back in where a later moment there only
+  names them. The fish that swam out at 8ceb m6 sat in their rows again at m7 ("tries to follow the fish out the
+  window"): the record's presence rule added whoever the words name. 8ceb m7 only; prompt cases unchanged.
+- *On lab:* `plan_acts`: each moment's typed acts reach planning (`RecordPlan.moments[m].acts`), for poses and riders.
+  It moves nothing by itself.
+- *Next (the Mac pane, on plan_acts):* "gets in" drawn mid-climb at the side of what they climb into, not already
+  seated (4: fdd7 m3, 6081 m6, 6e80 m5, 538d m5); then who pedals or drives. b91f m1's "buried in snow" before it falls
+  is gone (the snow is said across the picture, falling; its look still says it settles on the desks, which is m2's).
+  Then the picture test on the owner's local image machine.
 - *Known, not fixed:* tall grass and the orchard's rows planned as ground people stand on top of (d3a1, orchard m5);
   a spot named as the whole room ("the office interior with desks…", b91f); who rides in front on a bicycle, and who
   rides in a vehicle the moment's own words name no rider for (the tractor that "drives slowly" at lighthouse-first
