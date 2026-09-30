@@ -34,7 +34,7 @@ import {
 import { type CutSheet, notDrawnFrom } from '../cutsheet';
 import { frozenDreams, loadDream } from '../evals/saved';
 import { rebuild } from '../plan';
-import { filling, frontLabel, onOf, outsideShot } from '../previs';
+import { dreamerShot, filling, frontLabel, onOf, outsideShot } from '../previs';
 import { type Breakdown, completeViews, type Moment, moments } from '../producer';
 import type { Session } from '../session';
 
@@ -1608,5 +1608,13 @@ describe('getting in or out of something at the instant', () => {
       outsideShot(plan, ['p1', 'p2', 't1'], 'wide', name, { id: 't1', at: { x: 5, y: 5 } }),
     )!;
     expect(off.text).not.toContain('climbing');
+  });
+
+  test('through their own eyes, the camera is climbing into it', () => {
+    // "The camera is the dreamer's eyes, in the wooden rowing boat", as they got into it (f202 m7).
+    const plan = withClimbers(dock, [{ who: 'p1', does: 'climbs into', to: 't1' }]);
+    const shot = withEnv(CAMERA, () => dreamerShot(plan, 'p1', 't1', name))!;
+    expect(shot.text).toContain("The camera is the dreamer's eyes, climbing into the boat");
+    expect(shot.text).not.toContain("The camera is the dreamer's eyes, in the boat");
   });
 });
