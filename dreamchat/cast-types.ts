@@ -2,6 +2,8 @@
 // with nothing to import from the reader, so no module imports its way back round.
 
 export type CastThing = {
+  /** Its id once cast (c1, c2… in the reading's order); none for weather and matter, which are never cast. */
+  id?: string;
   name: string;
   look: string;
   kind: 'thing' | 'creature' | 'vehicle' | 'weather' | 'matter';

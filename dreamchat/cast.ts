@@ -254,6 +254,13 @@ export function parseCast(
       words,
     });
   }
+  // Each thing cast as an element gets its id here, once, so everything that reads the reading (the breakdown, the
+  // items, the floor plan) names it alike.
+  things
+    .filter((t) => t.kind !== 'weather' && t.kind !== 'matter')
+    .forEach((t, i) => {
+      t.id = castId(i);
+    });
   return { reading: { things, bodies, fixtures }, dropped };
 }
 
@@ -269,7 +276,7 @@ export function withCastItems(items: Item[], reading: CastReading | null | undef
   if (!builds('cast_named') || !reading?.things.length) return items;
   const out = [...items];
   castable(reading).forEach((t, i) => {
-    const id = castId(i);
+    const id = t.id ?? castId(i);
     if (out.some((x) => x.id === id)) return;
     out.push({
       id,
@@ -297,7 +304,7 @@ export function withCastThings(b: Breakdown, reading: CastReading | null | undef
   const out = structuredClone(b);
   const byId = new Map(momentsOf(out).map((m) => [m.id, m]));
   castable(reading).forEach((t, i) => {
-    const id = castId(i);
+    const id = t.id ?? castId(i);
     if (out.things.some((x) => x.id === id)) return;
     const thing: Thing = {
       id,

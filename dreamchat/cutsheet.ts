@@ -26,6 +26,7 @@ import {
   sameView,
   selfIn,
   turnedBetween,
+  WATER,
 } from './camera';
 import {
   camerasOf,
@@ -725,8 +726,11 @@ export function cutSheet(x: CutSheetInput): CutSheet {
     ...(builds('earlier_words') ? { earlierWords: true as const } : {}),
     ...(builds('story_marks') ? { storyMarks: true as const } : {}),
     ...(() => {
+      // Water the camera's own words already measure ("The water stands about 2 metres deep") is said there once,
+      // never again as a condition.
+      const measured = WATER.test([plan?.view, plan?.camera, ...(rules?.layer.lines ?? [])].filter(Boolean).join(' '));
       const c = (x.dream?.cast?.things ?? []).flatMap((t) =>
-        t.kind === 'weather' || t.kind === 'matter'
+        (t.kind === 'weather' || t.kind === 'matter') && !(measured && WATER.test(t.name))
           ? t.moments
               .filter((m) => m.id === frame.id)
               .map((m) => ({ name: t.name, look: t.look, beyond: m.where === 'beyond' }))
