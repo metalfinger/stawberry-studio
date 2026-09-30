@@ -663,6 +663,34 @@ describe('a name gives no side of the room', () => {
   });
 });
 
+describe('water held low for a boat', () => {
+  test('is said high, not in metres, and those in the boat are framed from where they sit', () => {
+    // The record had it almost up to the ceiling; held lower so the two in the boat sit under the ceiling, it was
+    // said "about 2 metres deep" beside those words, and the two afloat on it "only the head in the picture"
+    // (library-2 m9, the read of every frozen prompt, 30 Sep).
+    const room: Blocking = {
+      front: 'the doors',
+      indoors: true,
+      ceiling: 3.6,
+      room: [10, 8],
+      water: 2,
+      waterCapped: true,
+      spots: [
+        { id: 'b1', x: 5, y: 4, kind: 'thing', shape: 'vehicle', size: [1.4, 3, 0.8], name: 'the boat' },
+        { id: 'p1', x: 5, y: 3.4, kind: 'person', pose: 'sitting' },
+        { id: 'p2', x: 5, y: 4.6, kind: 'person', pose: 'sitting' },
+      ],
+    };
+    const high = withEnv(ON, () => outsideShot(room, ['p1', 'p2'], 'medium', (id) => id))!;
+    expect((high.rules ?? []).join(' ')).toMatch(/The water stands high here, and the boat floats on it\./);
+    expect(high.text).not.toMatch(/only the head in the picture/);
+    const said = withEnv(ON, () =>
+      outsideShot({ ...room, waterCapped: undefined }, ['p1', 'p2'], 'medium', (id) => id),
+    )!;
+    expect((said.rules ?? []).join(' ')).toMatch(/The water stands about 2 metres deep here/);
+  });
+});
+
 describe('a reverse angle turns the room', () => {
   test('what is now ahead, on the right and behind the camera, from the floor plan and the place', () => {
     const r = rebuilt('dream-0926-043003-b0cb', ON);
