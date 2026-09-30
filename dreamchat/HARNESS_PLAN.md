@@ -28,35 +28,37 @@ current figure and what's next). Writer model: Claude (`DREAMCHAT_WRITER=claude`
 
 ## Where we stopped (27-29 Sep): read this to resume
 
-**Newest landmark (30 Sep, early morning, the Mac pane; the S6 pane paused by the owner that night): S5's layout
-anchor on lab; the harness viewer built, reviewed, and showing all 15 frozen dreams with why each picture is left
-out.** Nothing drawn, nothing paid.
-- *On lab* (6c6d2ab): S5 fix round three and its follow-ups (the S5 section's "fix round three" block has every
-  measure and all four review rounds): image 1 is the edit the gate keeps, else the mock-up, on every cut; an edit the
-  gate drops, or whose picture is withheld when drawing (judged wrong, stale), is made from its own shot and mock-up;
-  the gate compares the camera each picture is drawn from. Frozen cuts with no image 1: 38 → 3, live 212 → 124 (the
-  rest have no floor plan); every changed picture only gained its mock-up; `bun test` passes both ways.
+**Newest landmark (30 Sep, morning, the Mac pane and the S6 pane working together): S5's layout anchor, the S6
+stack, the harness viewer and why each picture is left out are all on lab.** Nothing drawn, nothing paid.
+- *On lab* (506e1ca):
+  - S5 fix round three (the S5 section's "fix round three" block has every measure and all four review rounds): image
+    1 is the edit the gate keeps, else the mock-up, on every cut; an edit the gate drops, or whose picture is withheld
+    (judged wrong, stale), is made from its own shot and mock-up. Frozen cuts with no image 1: 38 → 3, live 212 → 124.
+  - The S6 stack (rows 8, 11-16): 0 regressions, checked live.
+  - Gap 1: each earlier picture the plan leaves out carries why (`CutPlan.unsentWhy`); 0 prompts or images move.
+  - The harness viewer (`viewer/`): every cut, sheet and in-between picture of a saved dream as the full harness
+    would send it, the owner's verdicts saved with what they were given on.
 - *On branches, not merged:*
-  - `gap1-unsent` (from lab): each earlier picture left out carries why (`CutPlan.unsentWhy`: reverse, camera far,
-    state differs, no cameras, light only, has a sketch, the dreamer's seat, an edit made its own cut); 0 prompts or
-    images move; one test per reason.
-  - `viewer-page` (on the S6 pane's `viewer-data`): the page (`viewer/serve.ts`, `viewer/page.html`) and the build that
-    finds each picture (`viewer/build.ts`); reviewed twice, merge. `gap1-view`: lab + the S6 stack + `viewer-data` +
-    `viewer-page` + `gap1-unsent` + the mapping of the reasons into the view (`viewer/data.ts`, the S6 pane's file, for
-    it to review); `bun test` 909 pass both ways.
-  - The S6 stack (rows 8, 11-16, `s6-states`): reviewed, classified with 0 regressions, checked live; waits on the
-    S6 pane, which waits on the owner.
-- *The viewer is running* at http://127.0.0.1:4570/, served from a worktree of `gap1-view`, verdicts to the main
-  checkout's `dreamchat/evals/viewer/`. To make it again anywhere: on `gap1-view`, `DREAMCHAT_DATA=<folder with state/>
-  bun run viewer/build.ts`, then `bun run viewer/serve.ts` (VIEWER_ANSWERS to keep the verdicts elsewhere).
+  - `viewer-ux` (fb80e86): the page reads as the dream is built (sequence, scene, shot, cut), with groups that fold,
+    a legend, and addresses like `/0f40/m3`.
+  - `unsent-withheld`: a picture the plan chose but the owner judged wrong now says so in the view (it said "no
+    reason recorded": affd m8's m7, aeea m5's m4); where it was the picture to edit, the cut says it is made from its
+    own shot instead.
+  - `s6-states2` (the S6 pane): the tree's own numbers for sequences, scenes and shots in the view; `assemble.ts`
+    never sends a turned element as "as last drawn", says an animal by kind and coat, a group with "are".
+- *The viewer is running* at http://127.0.0.1:4570/, verdicts to the main checkout's `dreamchat/evals/viewer/`. To
+  make it again: `DREAMCHAT_DATA=<folder with state/> bun run viewer/build.ts`, then `bun run viewer/serve.ts`
+  (VIEWER_ANSWERS to keep the verdicts elsewhere).
 - *What the viewer shows before anything is drawn* (for the owner's reading, S4/S5 check dreams first): mock-ups that
   draw something other than the shot (orchard m2 an egg-shaped head, orchard m6 the horse as a person,
   lighthouse-first m8 no tractor, library-3 m8 a blank window view); in view but not on the floor plan (3cd7 m6's cats,
   aeea m9's tractor out of the window); five frozen dreams whose pictures are not on this Mac (8ceb, acfd, b91f, 538d,
   3cd7). No two people on one spot and no cut with a camera but no layout anchor in all 115 cuts.
-- *For the owner:* unpause the S6 pane (merge the S6 stack, rebase `viewer-data`, review the reasons' mapping, then
-  the viewer merges to lab); the S9 record of a swapped edit (both options in the S5 section); the crowd with no
-  sketch; keeping each sketch's prompt text when drawn.
+- *Next:* S6 rows 17-34 (the S6 pane); retire the five routing hypotheses; S7's routed checks; S9's live-flow check;
+  then, with the build done, the owner's local image machine (no cost per picture) draws the pictures the viewer
+  shows, judged there.
+- *For the owner:* the S9 record of a swapped edit (both options in the S5 section); the crowd with no sketch;
+  keeping each sketch's prompt text when drawn.
 
 **Latest landmark (29 Sep, end of the cloud session): S6 rows 5-16, and the S5 picture check's verdict.** Read
 this block first; the rest of this section is the history before it. Hand-off: GitHub issue
