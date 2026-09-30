@@ -1821,7 +1821,8 @@ describe('a fixture that is the place itself', () => {
     // As blocks on the floor plan, the camera "looked at the office interior" beside "the office buried in snow" (b91f).
     expect(isThePlace('the office interior with desks, monitors, and people working', 'the office')).toBe(true);
     expect(isThePlace('the office buried in snow, only monitor tops visible', 'the office')).toBe(true);
-    expect(isThePlace('The office', 'the office')).toBe(true);
+    // Named exactly as the place, it is what the place is named after: the red door, in "the red door" (eef3 m7).
+    expect(isThePlace('the red door', 'the red door')).toBe(false);
     expect(isThePlace('the office door', 'the office')).toBe(false);
     expect(isThePlace('the office window', 'the office')).toBe(false);
     expect(isThePlace('the officer', 'the office')).toBe(false);

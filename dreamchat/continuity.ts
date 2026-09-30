@@ -737,7 +737,7 @@ export function withClimbers(plan: Blocking, acts: { who: string; does: string; 
  * Whether a fixture's name is the place itself, described: "the office interior with desks, monitors, and people
  * working", "the office buried in snow, only monitor tops visible" in the office. As blocks on the floor plan the
  * camera "looked at the office interior", beside "the office buried in snow" (b91f; the read of every frozen prompt,
- * 30 Sep). The place's own sketch carries it. Never a part of it: "the office door" stays.
+ * 30 Sep). The place's own sketch carries it. Never a part of it ("the office door"), nor what the place is named after.
  */
 export function isThePlace(name: string | undefined, place: string): boolean {
   const bare = (x: string) =>
@@ -749,8 +749,9 @@ export function isThePlace(name: string | undefined, place: string): boolean {
   const p = bare(place);
   if (!p || !n.startsWith(p)) return false;
   const rest = n.slice(p.length);
+  // Named exactly as the place, it is what the place is named after: the red door the dreamer opens, in the place
+  // called "the red door" (eef3 m6-m7).
   return (
-    rest === '' ||
     /^,/.test(rest) ||
     /^\s+(?:interior|itself|with|buried|covered|filled|full|flooded|under|in|at|during|as|seen|lit|empty|now)\b/.test(
       rest,
