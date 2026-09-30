@@ -510,6 +510,20 @@ describe("through the dreamer's own eyes", () => {
   });
 });
 
+describe('an edit', () => {
+  test('keeps the places of the picture it edits: it is given no order of its own', () => {
+    // a44a m3 edits picture 2 (the grandfather on the left, the dreamer on the right); said "from in front of them"
+    // from the floor plan, its own order was the mirror of it (the read of every frozen prompt, 30 Sep).
+    const r = rebuilt('dream-0926-062232-a44a', ON);
+    const m3 = picture(r, 'm3');
+    expect(m3.references[0].media_id).toBe('picture-m2');
+    expect(m3.prompt).not.toMatch(/left to right/);
+    // Without the camera rules, as before.
+    const off = rebuilt('dream-0926-062232-a44a', { ...ON, DREAMCHAT_CAMERA: undefined });
+    expect(picture(off, 'm3').prompt).toMatch(/left to right/);
+  });
+});
+
 describe('a reverse angle turns the room', () => {
   test('what is now ahead, on the right and behind the camera, from the floor plan and the place', () => {
     const r = rebuilt('dream-0926-043003-b0cb', ON);
