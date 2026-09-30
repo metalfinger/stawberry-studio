@@ -525,6 +525,27 @@ describe('where the camera stands, in words', () => {
     const m5 = shot(picture(library, 'm5').prompt);
     expect(m5).toMatch(/Seen from beside them,/);
     expect(m5).not.toMatch(/Seen from behind them/);
+describe('what hides what', () => {
+  test('two that hide parts of each other are said once: the one behind is hidden behind the other', () => {
+    // The father and the table were each "partly hidden behind" the other (the read of every frozen prompt, 30 Sep).
+    const mutual: string[] = [];
+    for (const { id, r } of sweep())
+      for (const p of r.pictures) {
+        if (p.kind !== 'cut') continue;
+        const pairs = new Set<string>();
+        for (const sentence of shot(p.prompt).split(/(?<=[.;:])\s+/)) {
+          const m = sentence.match(/^(?:then )?(.+?), .*partly hidden behind (.+?)[.;]?$/);
+          if (m) pairs.add(`${m[1]}|${m[2]}`);
+        }
+        for (const x of pairs) {
+          const [a, b] = x.split('|');
+          if (a < b && pairs.has(`${b}|${a}`)) mutual.push(`${id.slice(-4)} ${p.id}: ${a} and ${b}`);
+        }
+      }
+    expect(mutual).toEqual([]);
+    const m7 = shot(picture(rebuilt('dream-0926-022102-aeea', ON), 'm7').prompt);
+    expect(m7).toMatch(/partly hidden behind the table/);
+    expect(m7).not.toMatch(/the table[^.;]*partly hidden behind the father/);
   });
 });
 
