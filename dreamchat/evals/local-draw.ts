@@ -115,9 +115,14 @@ export function fitMoment(
   // With `people`, everyone's sketch is one image, tiled left to right in the order the images list them: with three
   // people the mock-up and their three sketches took every slot, and the fish the moment is about was left out
   // (night-market m3: the night run, 1 Oct).
-  const ids = images.filter((x) => x.role === 'identity' && x.file);
+  // Only people, and only where their sketches apart would leave something out: a dog tiled beside the dreamer was
+  // drawn twice, and two people tiled where there was room for both apart were too (lighthouse-fresh m1, m5, m14,
+  // night-market m3, heron m3: the night run, 1 Oct). A creature's image is "what the dog is", a person's "who".
+  const manifestLines = (lines.find((l) => l.id === 'manifest')?.text ?? '').split('\n');
+  const isPerson = (x: Img) => manifestLines.some((l) => l.startsWith(`Image ${x.n}: who `));
+  const ids = images.filter((x) => x.role === 'identity' && x.file && isPerson(x));
   const sheet: Img | null =
-    people && ids.length > 1
+    people && ids.length > 1 && images.length > MAX_IMAGES
       ? { n: ids[0].n, role: 'identity', name: `people:${ids.map((x) => x.name).join('+')}`, group: ids }
       : null;
   const pool = sheet ? [...images.filter((x) => !ids.includes(x)), sheet].sort((a, b) => a.n - b.n) : images;
