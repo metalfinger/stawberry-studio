@@ -42,7 +42,15 @@ export const PROFILE: Record<string, string> = {
 // ── fitting ──────────────────────────────────────────────────────────────────────────────────────
 
 export type Line = { id: string; text: string };
-export type Img = { n: number; role: string; name: string; file?: string; missing?: string };
+export type Img = {
+  n: number;
+  role: string;
+  name: string;
+  file?: string;
+  missing?: string;
+  /** A sheet of everyone's sketch, left to right: the images tiled into this one (local-run makes its file). */
+  group?: Img[];
+};
 export type Fitted = {
   prompt: string;
   images: Img[];
@@ -102,12 +110,48 @@ export function fitMoment(
   atLeast = 0,
   max = MAX_CHARS,
   named: Set<string> = new Set(),
+  people = false,
 ): Fitted {
-  const kept = keptImages(images, named);
+  // With `people`, everyone's sketch is one image, tiled left to right in the order the images list them: with three
+  // people the mock-up and their three sketches took every slot, and the fish the moment is about was left out
+  // (night-market m3: the night run, 1 Oct).
+  const ids = images.filter((x) => x.role === 'identity' && x.file);
+  const sheet: Img | null =
+    people && ids.length > 1
+      ? { n: ids[0].n, role: 'identity', name: `people:${ids.map((x) => x.name).join('+')}`, group: ids }
+      : null;
+  const pool = sheet ? [...images.filter((x) => !ids.includes(x)), sheet].sort((a, b) => a.n - b.n) : images;
+  const kept = keptImages(pool, named);
   const renumber = new Map(kept.map((x, i) => [x.n, i + 1]));
-  const droppedImages = images.filter((x) => !renumber.has(x.n)).map((x) => x.name);
+  const droppedImages = pool.filter((x) => !renumber.has(x.n)).map((x) => x.name);
   const dropped: Fitted['dropped'] = { images: droppedImages, paragraphs: [], lines: [], chars: 0 };
   const paras = new Map<string, string | null>(lines.map((l) => [l.id, l.text]));
+  // The sheet's one line in the manifest, in the first person's place; the others' lines go.
+  const whoOf = (l: string) => /^Image \d+: who (.+?) (?:is|are)\b/.exec(l)?.[1];
+  if (sheet && paras.get('manifest')) {
+    const ls = (paras.get('manifest') as string).split('\n');
+    const theirs = new Set(ids.map((x) => x.n));
+    const names = ls
+      .filter((l) => theirs.has(Number(/^Image (\d+): /.exec(l)?.[1])))
+      .map(whoOf)
+      .filter((x): x is string => !!x);
+    const said =
+      names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : (names[0] ?? 'everyone in it');
+    paras.set(
+      'manifest',
+      ls
+        .flatMap((l) => {
+          const n = Number(/^Image (\d+): /.exec(l)?.[1]);
+          if (!theirs.has(n)) return [l];
+          return n === sheet.n
+            ? [
+                `Image ${n}: who ${said} are, left to right in this one image: each one's face, hair, build and clothes, exactly. Nothing else from it: not their poses, the background or the framing.`,
+              ]
+            : [];
+        })
+        .join('\n'),
+    );
+  }
   const renum = (t: string) =>
     t.replace(/\bImage (\d+)\b/g, (all, d: string) => (renumber.has(+d) ? `Image ${renumber.get(+d)}` : all));
   for (const [id, text] of paras) {
@@ -157,8 +201,15 @@ export function fitMoment(
   editLines('style', startsWith('It feels like a dream'), 'dream feel');
   editLines('style', startsWith('Made as:'), 'made as');
   dropPara('as_images');
-  editLines('style', (l) => (l.startsWith('Light:') ? l.replace(/^(Light:[^.]*\.).*$/, '$1') : l), 'light cut');
   dropPara('feeling');
+  // Each image's line to its first sentence: what to take from it, without the rest of what not to.
+  editLines(
+    'manifest',
+    (l) => (/^Image ([2-9]): /.test(l) ? l.replace(/^(Image \d+: [^.]*\.).*$/, '$1') : l),
+    'an image line cut to its first sentence',
+  );
+  dropPara('in_it');
+  dropPara('dream');
   // The shot's "Outside the picture" sentences, last first.
   for (let guard = 0; guard < 20 && need(); guard++) {
     const t = paras.get('shot');
@@ -169,6 +220,20 @@ export function fitMoment(
     paras.set('shot', cut);
     dropped.lines.push('shot: an outside-the-picture sentence');
   }
+  // Then the camera's own last sentences, keeping its first two (where it stands, and what it looks at).
+  for (let guard = 0; guard < 30 && need(); guard++) {
+    const t = paras.get('shot');
+    if (t == null) break;
+    const sentences = t.split(/(?<=\.)\s+(?=[A-Z])/);
+    if (sentences.length <= 2) break;
+    ops++;
+    paras.set('shot', sentences.slice(0, -1).join(' '));
+    dropped.lines.push('shot: its last sentence');
+  }
+  // Never the light, the colours, what happens, the one thing to show, how each one is, or the writing line. Last,
+  // the style's own name, then the opening line's framing words.
+  editLines('style', startsWith('Style:'), 'style name');
+  dropPara('framing');
   const prompt = [...paras.values()].filter((x): x is string => x !== null).join('\n\n');
   dropped.chars = before - prompt.length;
   const renumbered = kept.map((x) => ({ ...x, n: renumber.get(x.n) as number }));

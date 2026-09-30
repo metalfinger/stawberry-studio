@@ -167,3 +167,59 @@ describe('a pair tests its change only while the change is still sent', () => {
     expect(seedOf('d:m1')).not.toBe(seedOf('d:m2'));
   });
 });
+
+describe('what the fitting never gives up', () => {
+  const imgs = [
+    img(1, 'base'),
+    img(2, 'identity'),
+    img(3, 'identity'),
+    img(4, 'identity'),
+    img(5, 'prop', 'sketch-fish'),
+    img(6, 'location'),
+  ];
+  const manifest = [
+    'The attached images, in order, and the one thing to take from each:',
+    'Image 1: EDIT THIS PICTURE.',
+    'Image 2: who the dreamer is (d): their face, hair, build and clothes, exactly. Nothing else from it.',
+    'Image 3: who my older sister is (d): their face, hair, build and clothes, exactly. Nothing else from it.',
+    'Image 4: who the old man is (d): their face, hair, build and clothes, exactly. Nothing else from it.',
+    'Image 5: the fish (d): its exact shape. Nothing else from it.',
+    'Image 6: the night market (d): only what it is made of. Where everything stands comes from Image 1.',
+  ].join('\n');
+  const lines: Line[] = [
+    { id: 'shot', text: `What the camera sees. It looks at the stall. ${'The crowd stands behind. '.repeat(60)}` },
+    { id: 'manifest', text: manifest },
+    { id: 'happens', text: 'What happens in this frame: the fish speaks.' },
+    { id: 'in_it', text: `In it:\n${'x (thing).\n'.repeat(40)}` },
+    { id: 'point', text: 'The one thing this frame must show: the fish speaking.' },
+    {
+      id: 'style',
+      text: `Style: s.\nTechnique, followed exactly: ${'t'.repeat(600)}\nColours: cream, dark grey.\nLight: Night. Strings of little yellow lights.`,
+    },
+    { id: 'single', text: 'One single picture. Nothing in it has legible writing.' },
+  ];
+
+  test('over the limit, never the light, the colours, the must-show or the writing line; never a cut mid-way', () => {
+    const f = fitMoment(lines, imgs, 0, MAX_CHARS, new Set(['sketch-fish']), true);
+    expect(f.fits).toBe(true);
+    for (const k of [
+      'Colours: cream, dark grey.',
+      'Light: Night. Strings of little yellow lights.',
+      'the fish speaking.',
+      'legible writing.',
+    ])
+      expect(f.prompt).toContain(k);
+    expect(f.prompt.endsWith('Nothing in it has legible writing.')).toBe(true);
+  });
+
+  test('with three people, one sheet of them left to right frees a slot for the thing the moment is about', () => {
+    const f = fitMoment(lines, imgs, 0, MAX_CHARS, new Set(['sketch-fish']), true);
+    expect(f.images.map((x) => x.name)).toEqual(['x1', 'people:x2+x3+x4', 'sketch-fish', 'x6']);
+    expect(f.images[1].group?.map((x) => x.name)).toEqual(['x2', 'x3', 'x4']);
+    expect(f.prompt).toContain(
+      'Image 2: who the dreamer, my older sister and the old man are, left to right in this one image',
+    );
+    expect(f.prompt).toContain('Image 3: the fish');
+    expect(f.prompt).toContain('Image 4: the night market');
+  });
+});

@@ -145,6 +145,22 @@ function asFrame(file: string, out: string): string {
 export const LEAD =
   'Image 1 is the picture to edit: everyone in it stays exactly where it puts them, once. The other images are references only, for how each one looks: never add a second copy of anyone or anything from them to the picture.\n\n';
 
+/** Sketches side by side, at one height, on white: one image of everyone, left to right. */
+function sheetOf(files: string[], out: string): string {
+  const r = spawnSync('magick', [
+    ...files,
+    '-resize',
+    'x1024',
+    '-background',
+    'white',
+    '-gravity',
+    'center',
+    '+append',
+    out,
+  ]);
+  return r.status === 0 && existsSync(out) ? out : files[0];
+}
+
 // ── a dream ──────────────────────────────────────────────────────────────────────────────────────
 
 /** The dream with its readings, as the corpus reads them (from the caches only), and every sketch not drawn yet. */
@@ -335,7 +351,14 @@ async function drawDream(
         })
         .map((s) => standIn.sketch(s.id)),
     );
-    const fitted = fitMoment(lines, have, 0, MAX_CHARS - lead.length, named);
+    const fitted = fitMoment(lines, have, 0, MAX_CHARS - lead.length, named, true);
+    // Everyone's sketch in one image, left to right, where the fitting made them one.
+    for (const x of fitted.images)
+      if (x.group?.length)
+        x.file = sheetOf(
+          x.group.map((g) => g.file as string),
+          join(dir, 'img', `people-${p.id}.png`),
+        );
     const text = lead + fitted.prompt;
     e.sent = text.length > MAX_CHARS ? text.slice(0, MAX_CHARS) : text;
     e.imagesSent = fitted.images;
@@ -343,7 +366,7 @@ async function drawDream(
       ...fitted.dropped,
       images: [...images.filter((x) => !x.file).map((x) => x.name), ...fitted.dropped.images],
     };
-    if (!fitted.fits) notes.push(`${fitted.prompt.length} characters after fitting: cut at ${MAX_CHARS}`);
+    if (text.length > MAX_CHARS) notes.push(`${text.length} characters after fitting: cut at ${MAX_CHARS}`);
     if (!fitted.images.length) await draw(e, 'generate', { prompt: e.sent, width: 1024, height: 576 });
     else {
       const first = fitted.images[0].file as string;
