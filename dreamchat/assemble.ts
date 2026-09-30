@@ -88,10 +88,13 @@ export function assembleCut(s: CutSheet): Assembled {
     return found.length ? ` Leave out what it shows that is not in the dream: ${found.join('; ')}.` : '';
   };
 
-  // Who leaves the picture being edited, and who joins it.
-  const baseWho = base?.frame?.visible ?? [];
-  const leaving = baseWho.filter((id) => !s.visible.includes(id)).map(name);
-  const joining = base ? s.visible.filter((id) => !baseWho.includes(id)).map(name) : [];
+  // Who leaves the picture being edited, and who joins it. Through the dreamer's eyes they are the camera, in
+  // neither picture: never "the dreamer is no longer there" (the brother on the bank, blue lantern m9).
+  const drawn = (ids: string[], eyes?: string) => ids.filter((id) => !(eyes === 'dreamer' && id === s.dreamer.id));
+  const baseWho = drawn(base?.frame?.visible ?? [], base?.frame?.eyes);
+  const nowWho = drawn(s.visible, cam.eyes);
+  const leaving = baseWho.filter((id) => !nowWho.includes(id)).map(name);
+  const joining = base ? nowWho.filter((id) => !baseWho.includes(id)).map(name) : [];
   if (base)
     attach(
       {
