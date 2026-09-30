@@ -1245,7 +1245,9 @@ export function dreamerShot(
   const distance = (s: Spot) => Math.hypot(s.x - eye.at.x, s.y - eye.at.y);
   const shown = spots
     .map((s) => ({ s, seen: r.seen.get(s.id) }))
-    .filter((x): x is { s: Spot; seen: Seen } => !!x.seen && x.seen.visible >= min)
+    .filter(
+      (x): x is { s: Spot; seen: Seen } => !!x.seen && (x.seen.visible >= min || (x.seen.visible > 0 && !!x.s.body)),
+    )
     .sort((a, b) => distance(a.s) - distance(b.s));
   const called = (id: string) => plan.spots.find((s) => s.id === id)?.name ?? name(id);
   const sentences = [
@@ -1704,7 +1706,11 @@ export function outsideShot(
       const cand = place(turnBy(d0, deg), back);
       const rs = render(crowded ? solidsOf(plan, [], name, cand.eye) : solidsSmall, cand.eye, 192, 108);
       const seen = holdAll.map((s) => rs.seen.get(s.id));
-      const inFrame = seen.filter((x) => x && x.visible >= tiny).length / holdAll.length;
+      // A person or creature at its own size (a reading's body) is in the picture with any of it showing: a terrier
+      // and a school of little fish fell under the bar made for grown-ups, and a child behind a cat as big as a bus
+      // counted as in frame no less than one in plain view (30 Sep).
+      const inFrame =
+        seen.filter((x, i) => x && (x.visible >= tiny || (x.visible > 0 && !!holdAll[i].body))).length / holdAll.length;
       const clear = seen.reduce((a, x) => a + (x ? 1 - x.occluded : 0), 0) / holdAll.length;
       const framed = framing(rs, framedPeople, size, name, plan).score;
       const named = extra.length
@@ -1760,7 +1766,8 @@ export function outsideShot(
   const shown = spots
     .map((s) => ({ s, seen: rr.seen.get(s.id) }))
     .filter(
-      (x): x is { s: Spot; seen: Seen } => !!x.seen && (x.seen.visible >= min || (x.seen.visible > 0 && riding(x.s))),
+      (x): x is { s: Spot; seen: Seen } =>
+        !!x.seen && (x.seen.visible >= min || (x.seen.visible > 0 && (riding(x.s) || !!x.s.body))),
     )
     .sort((a, b) => a.seen.cx - b.seen.cx);
   // Where the camera stands, said as each one in the picture is turned to it (`turnedTo`'s bins): "from the side, as
@@ -1944,7 +1951,7 @@ function cropOf(
     const top = !!seen && seen.y0 < 0.02;
     const bottom = !!seen && seen.y1 > 0.98;
     return top && bottom
-      ? 'filling the picture top to bottom'
+      ? 'its top and its lower part out of the picture'
       : top
         ? 'its top out of the picture above'
         : bottom
