@@ -184,8 +184,28 @@ describe('what things are to whoever is at them', () => {
     expect(shot.text).not.toContain('of the room');
     // Eight metres apart, one waiting and the other arriving: over the shoulder of the one waiting,
     // toward the car, both framed well enough to read.
-    expect(shot.text).toStartWith('Seen from behind the dreamer, over their shoulder');
     expect(shot.framing).toEqual([]);
+    const opener = (camera?: string) => {
+      const was = process.env.DREAMCHAT_CAMERA;
+      const vars = ['DREAMCHAT_CUT_SHEET', 'DREAMCHAT_RECORD'].map((k) => [k, process.env[k]] as const);
+      if (camera)
+        Object.assign(process.env, { DREAMCHAT_CAMERA: camera, DREAMCHAT_CUT_SHEET: 'on', DREAMCHAT_RECORD: 'on' });
+      else delete process.env.DREAMCHAT_CAMERA;
+      try {
+        return outsideShot(outside, ['p1', 'p4', 't2'], 'wide', called, { at: { x: 2, y: 5 }, id: 't2' })!.text;
+      } finally {
+        if (was === undefined) delete process.env.DREAMCHAT_CAMERA;
+        else process.env.DREAMCHAT_CAMERA = was;
+        for (const [k, v] of vars)
+          if (v === undefined) delete process.env[k];
+          else process.env[k] = v;
+      }
+    };
+    expect(opener()).toStartWith('Seen from behind the dreamer, over their shoulder');
+    // With the camera rules, only where their back is to the camera: facing away down the road, the dreamer is
+    // side on to a camera looking along it at the car, so it stands beside them (opener-shoulder, 30 Sep).
+    expect(opener('on')).toStartWith('Seen from beside them');
+    expect(opener('on')).toContain('the dreamer, the middle of the picture, standing on the road, in profile');
   });
 
   test('a shot that frames someone as a speck, or cut by its edge, says so', () => {
