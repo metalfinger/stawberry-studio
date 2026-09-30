@@ -1564,7 +1564,9 @@ function planWith(
     return {
       avoid: avoid.map((e) => e.eye),
       same: avoid,
-      ...(line && a && z && !riding ? { line: { a, b: z, sign: line.sign } } : {}),
+      // Riding one vehicle too: turned round between behind them and in front, the two in the tractor's cab swapped
+      // sides of the picture, "the driver is sitting on the opposite side" (aeea m13, the owner's picture test, 30 Sep).
+      ...(line && a && z ? { line: { a, b: z, sign: line.sign } } : {}),
       ...(riding ? { together: true } : {}),
       ...(Object.keys(going).length ? { going } : {}),
     };
@@ -1587,7 +1589,7 @@ function planWith(
         .sort((p, q) => p.angle - q.angle)
         .slice(0, 2);
       const side = two.length === 2 ? signedFromLine(two[0].s, two[1].s, v.eye.at) : 0;
-      if (two.length === 2 && !together(where, two[0].s, two[1].s) && Math.abs(side) >= ON_THE_LINE)
+      if (two.length === 2 && Math.abs(side) >= ON_THE_LINE)
         lines.set(key, { ids: [two[0].s.id, two[1].s.id], sign: Math.sign(side), from: c.id });
     } else if (rules?.line) {
       const side = signedFromLine(rules.line.a, rules.line.b, v.eye.at);
