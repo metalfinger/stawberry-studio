@@ -2365,7 +2365,9 @@ function staysWithHolder(ctx: Ctx): Violation[] {
 /** A giving act: at the instant, the thing is on its way from the giver's hands to the one given it. */
 const GIVING = /^(?:hands?|gives?|pass(?:es)?|holds? out|offers?)\b/i;
 /** Letting go: from the instant on, it is out of their hands. */
-const LETTING_GO = /^(?:(?:sets?|puts?|lays?)\s+(?:\S+\s+)?down|places?|drops?|lets? go|releases?|throws?|leaves?)\b/i;
+const LETTING_GO = /^(?:(?:sets?|puts?|lays?)\s+(?:\S+\s+){0,3}down|places?|drops?|lets? go|releases?|throws?|leaves?)\b/i;
+/** Where the thing an act is done to ends in its words: what comes after is where or to whom. */
+const OBJECT_ENDS = /\b(?:to|toward|towards|into|onto|by|beside|at|on|in|from|with|past|under|through)\b/i;
 /** Done to a thing with the hands: whoever does it has it in them. */
 const HANDLING = /^(?:holds?|folds?|carr(?:y|ies)|clutch(?:es)?|grips?|lifts?|picks? up|takes?|raises?|hugs?|cradles?|wraps?)\b/i;
 
@@ -2386,13 +2388,17 @@ function heldByActs(ctx: Ctx): Violation[] {
     ...[...ctx.holders.values()].flatMap((h) => [...Object.keys(h.start), ...Object.keys(h.end)]),
   ]);
   const living = (id: string | undefined) => !!id && !!elements[id] && elements[id].kind !== 'thing' && elements[id].kind !== 'place';
+  // The act is done to the thing: it is the act's "to", or what "does" names before any word of where or to whom
+  // ("hands the newspaper-wrapped fish to", "puts the boat down"), never further on ("takes a step toward the boat").
   const actsAt = (m: AtMoment, t: string) => {
     const head = wordsOf(headOf(elements[t]?.name ?? '')).at(-1);
-    return takenOf(typed[m.id], m.eyes).acts.filter(
-      (a) =>
-        a.who !== t &&
-        (a.to === t || (!!head && wordsOf(`${a.does} ${a.to && !elements[a.to] ? a.to : ''}`).includes(head))),
-    );
+    return takenOf(typed[m.id], m.eyes).acts.filter((a) => {
+      if (a.who === t) return false;
+      if (a.to === t) return true;
+      if (!head) return false;
+      const named = (x: string) => wordsOf(x.split(OBJECT_ENDS)[0]).slice(0, 5).includes(head);
+      return named(a.does) || (!!a.to && !elements[a.to] && named(a.to));
+    });
   };
   for (const t of Object.keys(elements).filter((id) => elements[id].kind === 'thing' && handheld.has(id)))
     moments.forEach((m, i) => {

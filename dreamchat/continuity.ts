@@ -444,21 +444,11 @@ export function planBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blocki
   return raw ? settle(raw, { tandem: cameraMode() === 'on' }) : undefined;
 }
 
-/** Half a metre in front of someone as they face (toward what they face, where it is an id): where they put a thing down. */
-function inFrontOf(p: { x: number; y: number; faces?: string } | undefined, plan: Blocking): { x: number; y: number } | undefined {
+/** Half a metre in front of someone as they face (blocking.ts facing): where they put a thing down. */
+function inFrontOf(p: Spot | undefined, plan: Blocking): { x: number; y: number } | undefined {
   if (!p) return undefined;
-  const to = plan.spots.find((x) => x.id === p.faces);
-  const [dx, dy] = to
-    ? [to.x - p.x, to.y - p.y]
-    : p.faces === 'back'
-      ? [0, 1]
-      : p.faces === 'left'
-        ? [-1, 0]
-        : p.faces === 'right'
-          ? [1, 0]
-          : [0, -1];
-  const n = Math.hypot(dx, dy) || 1;
-  return { x: p.x + (0.5 * dx) / n, y: p.y + (0.5 * dy) / n };
+  const f = facing(p, plan);
+  return { x: p.x + 0.5 * f.x, y: p.y + 0.5 * f.y };
 }
 
 /**
@@ -557,7 +547,8 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
         // Put down here (held_acts), with no move of its own: it lies just in front of whoever put it down.
         const by = r?.leaving?.[s.id];
         const own = (plan.moves?.[momentId] ?? []).some((x) => x.id === s.id);
-        const down = by && !own ? inFrontOf(moved.get(by) ?? plan.spots.find((x) => x.id === by), plan) : undefined;
+        const whoBy = by ? plan.spots.find((x) => x.id === by) : undefined;
+        const down = whoBy && !own ? inFrontOf({ ...whoBy, ...(moved.get(by!) ?? {}) }, plan) : undefined;
         const put = down ? { ...placed, ...down } : placed;
         // In the water, how high a creature's body stands (the camera rules).
         const at = water !== null && heights[s.id] !== undefined ? { ...put, height: heights[s.id] } : put;

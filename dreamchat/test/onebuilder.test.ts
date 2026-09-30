@@ -5,6 +5,7 @@ import { afterAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
 import type { Blocking } from '../blocking';
 import { goingIn, handsIn, openingsIn, selfIn, waterLevel } from '../camera';
 import { BUILDER_STEPS, builderSteps, builds, oneBuilder, withRetired } from '../cleanups';
+import { rawPlanBy } from '../continuity';
 import { refsOf } from '../evals/prompt-cases';
 import { readDream } from '../evals/retire';
 import { loadDream } from '../evals/saved';
@@ -1500,6 +1501,41 @@ describe('who holds what is what the act at the instant does', () => {
       withSwitches({ ...sw, DREAMCHAT_ONE_BUILDER: step }, () => prompt(rebuild(structuredClone(s)), 'm8'));
     expect(at('jump_words')).toContain("the paper boat passes from the father's hands to the dreamer's");
     expect(at('held_acts')).toContain("the paper boat is in the dreamer's hands.");
+  });
+
+  test('only the thing the act is done to: a step toward the boat takes nothing', () => {
+    const s = withReadings('dream-0925-231131-affd', {
+      m4: { moment: 'm4', facts: [act('p3', 'takes a step toward the boat'), act('p3', 'puts the boat down', 'on the table')] },
+    });
+    const r = withSwitches({ ...sw, DREAMCHAT_ONE_BUILDER: 'held_acts' }, () => rebuild(s));
+    // "puts the boat down" is done to the boat; the step toward it is not.
+    expect(r.rec?.moments.m4.leaving).toEqual({ t2: 'p3' });
+    const t = withReadings('dream-0925-231131-affd', {
+      m4: { moment: 'm4', facts: [act('p3', 'takes a step toward the boat')] },
+    });
+    const u = withSwitches({ ...sw, DREAMCHAT_ONE_BUILDER: 'held_acts' }, () => rebuild(t));
+    expect(u.rec?.moments.m4.held).toEqual({ t2: 'p1' });
+  });
+
+  test('put down by someone facing it, it lies in front of them, never inside them', () => {
+    const r = run('held_acts');
+    const plan = withSwitches({ ...sw, DREAMCHAT_ONE_BUILDER: 'held_acts' }, () => {
+      // As if the dreamer faced the boat on their own spot (what they held), and the plan had no move for it.
+      const b = structuredClone(r.b);
+      const sc = b.scenes.find((x) => x.moments.some((m) => m.id === 'm10'))!;
+      const plan = sc.blocking!.places?.[sc.moments.find((m) => m.id === 'm10')!.place] ?? sc.blocking!;
+      const me = plan.moves?.m10?.find((x) => x.id === 'p1') ?? plan.spots.find((x) => x.id === 'p1')!;
+      plan.moves = {
+        ...plan.moves,
+        m10: (plan.moves?.m10 ?? []).filter((x) => x.id !== 't2').map((x) => (x.id === 'p1' ? { ...x, faces: 't2' } : x)),
+      };
+      plan.spots = plan.spots.map((x) => (x.id === 't2' ? { ...x, x: me.x, y: me.y } : x.id === 'p1' ? { ...x, faces: 't2' } : x));
+      return rawPlanBy(b, 'm10', r.rec);
+    })!;
+    const me = plan.spots.find((x) => x.id === 'p1')!;
+    const boat = plan.spots.find((x) => x.id === 't2')!;
+    expect(boat.heldBy).toBeUndefined();
+    expect(Math.hypot(boat.x - me.x, boat.y - me.y)).toBeCloseTo(0.5, 2);
   });
 
   test('never held for an act on what no one holds in the dream', () => {
