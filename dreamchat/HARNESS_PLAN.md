@@ -56,12 +56,28 @@ camera words moved what records are keyed by).
   windows are, one sentence on a third of the prompts); `key-clear` (pattern 1's camera part: what the moment looks at
   held clear and a held thing never from its holder's back; live 24 → 17 hidden, but one cut loses its office workers
   and 15 cameras move); `story_marks` itself, on every picture.
-- *In progress (the S6 pane):* the cast reading, one writer call a dream, grounded by code (2: the tractor, the
-  jellyfish, the city, rain and snow never reached "In it" or the plan), which also gives each person and creature
-  its body and height (3); the jump's words with a mock-up as image 1 (12: "keep its framing" beside the mock-up).
+- *On lab, the cast reading and its placement:* one writer call a dream, grounded by code, lists what the moments need
+  drawn and the breakdown never cast, each person's and creature's size, and the fixtures a place's own words name
+  (the S6 pane: `cast.ts`, behind the builder's `cast_named`); the things join "In it" and their images, weather and
+  matter are said across the picture. On the floor plan (`castplace.ts`, with the camera rules): what is in a place is
+  placed by what the words put it by, at the size they give (a vehicle someone is in, under them; a crowd as many),
+  what is seen out past it goes outside (through its window), and a place's windows along each side, rows of seats
+  split by its aisle, and lockers along its walls are there, never on anyone. With it, "right beside" names only what
+  the picture shows. Measured against the reading alone: frozen 40, live 103 pictures (13 and 38 of them only the
+  "beside" words); cast things now in the shot's words 9 / 20, fixtures 10 / 25; nobody lost from a picture, no new
+  crossing, prompt cases the same (29/34 counted, 36/36 guards). Sizes come from the reading's own words ("as big as
+  a bus", "30 feet long") until the reading gives creature heights.
+- *Parked with the placement:* each person and creature at its own size and shape (`cast-bodies`): at their literal
+  size the little silver fish at their desks and the terrier fell out of the words, and a cat as big as a bus hid the
+  six-year-old beside it (8ceb m3, m5, m7; aeea m1; 3cd7 m2, m3). The words now keep every being with any of it in
+  view, but a being hidden whole still goes; and fish sitting as pupils should read as pupils. For the picture test.
+- *In progress (the S6 pane):* the jump's words with a mock-up as image 1 (12); who holds what and the moment's
+  instant from the typed acts (4: a handover mid-act, "gets in" never already seated).
 - *Known, not fixed:* tall grass and the orchard's rows planned as ground people stand on top of (d3a1, orchard m5);
-  a spot named as the whole room ("the office interior with desks…", b91f); who rides in front on a bicycle is the
-  plan's order until the typed acts ("pedals", "steers") reach planning. A written shot brief gives way whenever a
+  a spot named as the whole room ("the office interior with desks…", b91f); who rides in front on a bicycle, and who
+  rides in a vehicle the moment's own words name no rider for (the tractor that "drives slowly" at lighthouse-first
+  m9), wait for the typed acts ("pedals", "drives") to reach planning; the opener over one's shoulder when they are
+  turned toward the camera (classroom m3). A written shot brief gives way whenever a
   fix changes the view's words (ledger row 34, the brief built from the sheet's facts, ends that).
 
 **Earlier landmark (30 Sep, morning, the Mac pane and the S6 pane working together): S5's layout anchor, the S6
