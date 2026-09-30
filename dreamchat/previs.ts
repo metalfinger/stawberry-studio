@@ -1342,7 +1342,9 @@ function thingWords(
           [...ctx.on, ...ctx.spots.filter((o) => !isPerson(o)).map((o) => o.id)].filter(
             // Never beside what is out of the picture: seats "right beside window" named a window on the far wall
             // the reverse angle does not show, and read as windows on the picture's left (the cast fixtures, 30 Sep).
-            (id) => !ctx.inPicture || cameraMode() !== 'on' || ctx.inPicture.has(id),
+            // What they are on is where they are, known without being in the picture: the blue sofa of the dreamer's
+            // own seat.
+            (id) => !ctx.inPicture || cameraMode() !== 'on' || ctx.inPicture.has(id) || ctx.on.includes(id),
           ),
         )
       : undefined;
