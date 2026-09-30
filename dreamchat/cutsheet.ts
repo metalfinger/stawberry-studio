@@ -739,7 +739,17 @@ export function cutSheet(x: CutSheetInput): CutSheet {
     ...(builds('picture_words')
       ? {
           pictureWords: {
-            seated: /\b(?:sit|sits|sitting|seated)\b/i.test(`${plan?.view ?? ''} ${frame.shot?.text ?? ''}`),
+            // Kept wherever anyone may be sat: a person sitting on the floor plan, a seat or a vehicle on it (the riders
+            // in the tractor's cab, the rowing boat), or the words saying so.
+            seated:
+              /\b(?:sit|sits|sitting|seated)\b/i.test(`${plan?.view ?? ''} ${frame.shot?.text ?? ''}`) ||
+              (() => {
+                const floor = x.dream?.breakdown ? planBy(x.dream.breakdown, frame.id) : undefined;
+                return (floor?.spots ?? []).some(
+                  (sp) =>
+                    (sp.kind === 'person' && sp.pose === 'sitting') || sp.shape === 'seat' || sp.shape === 'vehicle',
+                );
+              })(),
           },
         }
       : {}),
