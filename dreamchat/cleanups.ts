@@ -65,6 +65,15 @@ export function retiredSet(raw = process.env.DREAMCHAT_RETIRE ?? ''): Set<Cleanu
 /** Whether a clean-up is turned off: DREAMCHAT_RETIRE names it, or the one prompt builder has retired it. */
 export const retired = (name: Cleanup): boolean => retiredSet().has(name) || builds(name);
 
+/**
+ * Whether one of `lookIn`'s clean-ups (frames.ts) is turned off: only where DREAMCHAT_RETIRE names it. Since
+ * step 8 the sheet says a look from the story record, and a step moves each of lookIn's clean-ups into the
+ * record for that path; lookIn says a look only where the record does not (a sketch never drawn, a group whose
+ * members have sketches of their own, a picture rebuilt as drawn, the record off), and keeps each clean-up there
+ * until it has none of those left: turned off with the step, its words would come back on them.
+ */
+export const offInLookIn = (name: Cleanup): boolean => retiredSet().has(name);
+
 // ── the one prompt builder (S6) ─────────────────────────────────────────────────────────────────
 
 /**
@@ -90,6 +99,33 @@ export const BUILDER_STEPS: readonly string[] = [
   // 7. Who is in view, once: the story record's shows and the camera's view (what the floor plan sees), on the
   //    cut sheet; the gate reads the sheet's, not inViewOf again.
   'in_view',
+  // 8. How each one looks, once: the story record's base facts, each clause with its basis, said at assembly
+  //    (a guessed colour in the style's shades); a rebuild gives the record the sketches as drawing does.
+  'looks',
+  // 9-10. after_words and vague: nothing to build. Since step 8 the record's look has neither (its base lacks the
+  //    words from after a change; a look field that says nothing is left out whole), and lookIn keeps both for
+  //    where it still says the look (offInLookIn): they go with it.
+  // 11. A place's or a thing's pose, stripped once, by the record, as it already strips a person's: the sheet's
+  //    look no longer strips it again.
+  'pose',
+  // 12. A group's words about someone with a sketch of their own: the record says whom each clause of a group's
+  //    look is about, and the sheet leaves those whose member is in view, as lookIn left their pieces.
+  'members',
+  // 13. A guessed colour said as a shade at assembly since step 8; with this step a colour the dream itself gives
+  //    stays whole in a guessed clause too, so it is said one way in a prompt (the library's green glass lamps).
+  'shades',
+  // 14. A look said once: in its image's line, where the image is; "In it" names who and what has an image and
+  //    says the look only of what has none (the sheet's `once.look`, read by the assembler).
+  'look_once',
+  // 15. The colours the dream gives, said once: in many colours the style lists only those no line above says,
+  //    and says the rest keep exactly "as said above"; in one colour the style's list is the one list, and an
+  //    image's line points to it (the sheet's `once.colour`, read by the assembler).
+  'colour_once',
+  // 16. How each one is now, said once: a part an in-between picture shows is said there, its sketch's "Except"
+  //    points to that picture, and "How each one is at this moment" leaves out what the images' lines say (the
+  //    sheet's `once.state`, read by the assembler). The sources of a state (the plan's and the record's) are
+  //    still two: the rest of the row.
+  'state_once',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;
