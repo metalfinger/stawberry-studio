@@ -1781,9 +1781,10 @@ export function outsideShot(
     return on?.how === 'in' && (rr.seen.get(on.t.id)?.visible ?? 0) >= min;
   };
   // What the moment looks at is in the picture wherever any of it shows, however small: the boat set down in the
-  // grass, in the frame of a medium shot but a few pixels on the mock-up, was "outside the picture" (affd m10).
+  // grass, in the frame of a medium shot but a few pixels on the mock-up, was "outside the picture" (affd m10). What
+  // someone holds is said in their hands, as before.
   const lookedIn = (x: { s: Spot; seen: Seen }) =>
-    cameraMode() === 'on' && x.s.id === lookedSpot?.id && !x.s.many && x.seen.visible > 0;
+    cameraMode() === 'on' && x.s.id === lookedSpot?.id && !x.s.many && !x.s.heldBy && x.seen.visible > 0;
   const shown = spots
     .map((s) => ({ s, seen: rr.seen.get(s.id) }))
     .filter(
@@ -2122,7 +2123,11 @@ function topOf(s: Spot, plan: Blocking, name: (id: string) => string): number {
   return base + (isPerson(s) ? eyeHeight(s.pose) + 0.15 : sizeOf(s)[2]);
 }
 
-/** A thing at someone's feet, within a step of them: how high it lies and how high its top is. */
+/**
+ * A thing at someone's feet: within a step of them, all of it below their knees, and nothing anyone stands, sits or
+ * rides on (the seats they sit on, the ramp, the boat they are in: the frame already holds those as it holds them).
+ * How high it lies and how high its top is.
+ */
 function lowDown(
   t: Spot,
   people: Spot[],
@@ -2130,14 +2135,16 @@ function lowDown(
   name: (id: string) => string,
   nearestPart: (t: Spot, to: V2) => V2,
 ): { base: number; top: number } | undefined {
-  if (isPerson(t) || t.many) return undefined;
-  const near = people.some((q) => {
-    const p = nearestPart(t, q);
-    return Math.hypot(p.x - q.x, p.y - q.y) <= 1;
-  });
-  if (!near) return undefined;
+  if (isPerson(t) || t.many || t.heldBy || ['steps', 'ground', 'vehicle'].includes(shapeOf(t, plan) ?? ''))
+    return undefined;
+  if (plan.spots.some((q) => isPerson(q) && onOf(q, plan)?.t.id === t.id)) return undefined;
   const base = t.above ?? restOf(t, plan, name(t.id))?.z ?? groundAt(t, plan);
-  return { base, top: base + sizeOf(t)[2] };
+  const top = base + sizeOf(t)[2];
+  const atFeet = people.some((q) => {
+    const p = nearestPart(t, q);
+    return Math.hypot(p.x - q.x, p.y - q.y) <= 1 && top <= groundAt(q, plan) + 0.45;
+  });
+  return atFeet ? { base, top } : undefined;
 }
 
 function offTo(
