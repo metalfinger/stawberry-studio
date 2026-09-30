@@ -1264,7 +1264,7 @@ export function dreamerShot(
         : []),
     ...shown.map(({ s, seen }, i) => {
       const lead = i === 0 ? 'Nearest' : i === shown.length - 1 && shown.length > 1 ? 'Farthest' : 'Then';
-      return `${lead}, ${reach(distance(s))}, ${across(seen)}: ${called(s.id)}${thingWords(s, seen, plan, eye, called, { spots, on: at, anchor: me })}.`;
+      return `${lead}, ${reach(distance(s))}, ${across(seen)}: ${called(s.id)}${thingWords(s, seen, plan, eye, called, { spots, on: at, anchor: me, inPicture: new Set(shown.map((x) => x.s.id)) })}.`;
     }),
     // What someone holds is with them: never "outside the picture" while they are in it.
     ...spots
@@ -1301,7 +1301,8 @@ function thingWords(
   plan: Blocking,
   eye: Eye,
   called: (id: string) => string,
-  ctx: { spots: Spot[]; on: string[]; anchor?: Spot },
+  /** `inPicture`: who and what the picture shows; with the camera rules, "right beside" names only them. */
+  ctx: { spots: Spot[]; on: string[]; anchor?: Spot; inPicture?: Set<string> },
 ): string {
   // Who sits on what, who rides in what, what stands right beside what, and who holds what: said
   // as the plan has it, or the model gives the friend an armchair of her own and puts the roller
@@ -1334,7 +1335,15 @@ function thingWords(
   const holds = isPerson(s) && !s.many ? plan.spots.filter((o) => o.heldBy === s.id).map((o) => called(o.id)) : [];
   const next =
     !isPerson(s) && !holder
-      ? besideOf(s, plan, [...ctx.on, ...ctx.spots.filter((o) => !isPerson(o)).map((o) => o.id)])
+      ? besideOf(
+          s,
+          plan,
+          [...ctx.on, ...ctx.spots.filter((o) => !isPerson(o)).map((o) => o.id)].filter(
+            // Never beside what is out of the picture: seats "right beside window" named a window on the far wall
+            // the reverse angle does not show, and read as windows on the picture's left (the cast fixtures, 30 Sep).
+            (id) => !ctx.inPicture || cameraMode() !== 'on' || ctx.inPicture.has(id),
+          ),
+        )
       : undefined;
   const riders = !isPerson(s)
     ? ctx.spots.filter((o) => isPerson(o) && !o.many && onOf(o, plan)?.t.id === s.id).map((o) => called(o.id))
@@ -1813,7 +1822,7 @@ export function outsideShot(
       ? `${name(lookAt.id)}${heldBy && !shown.some((x) => x.s.id === lookAt.id) ? ` in ${name(heldBy)}'s hands` : ''}`
       : undefined;
   const words = (s: Spot, seen: Seen) =>
-    `${name(s.id)}, ${across(seen).replace(/^(in|at) /, '')}${thingWords(s, seen, plan, eye, name, { spots, on: [], anchor })}`;
+    `${name(s.id)}, ${across(seen).replace(/^(in|at) /, '')}${thingWords(s, seen, plan, eye, name, { spots, on: [], anchor, inPicture: new Set(shown.map((x) => x.s.id)) })}`;
   // The people it shows, left to right, then the things it shows; then what is behind them.
   const whoShown = shown.filter((x) => subjects.includes(x.s.id) && isPerson(x.s));
   const whatShown = shown.filter((x) => subjects.includes(x.s.id) && !isPerson(x.s));
