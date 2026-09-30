@@ -30,23 +30,35 @@ current figure and what's next). Writer model: Claude (`DREAMCHAT_WRITER=claude`
 
 **Newest landmark (30 Sep, morning, the Mac pane and the S6 pane working together): S5's layout anchor, the S6
 stack, the harness viewer and why each picture is left out are all on lab.** Nothing drawn, nothing paid.
-- *On lab* (506e1ca):
+- *On lab*:
   - S5 fix round three (the S5 section's "fix round three" block has every measure and all four review rounds): image
     1 is the edit the gate keeps, else the mock-up, on every cut; an edit the gate drops, or whose picture is withheld
     (judged wrong, stale), is made from its own shot and mock-up. Frozen cuts with no image 1: 38 → 3, live 212 → 124.
   - The S6 stack (rows 8, 11-16): 0 regressions, checked live.
   - Gap 1: each earlier picture the plan leaves out carries why (`CutPlan.unsentWhy`); 0 prompts or images move.
   - The harness viewer (`viewer/`): every cut, sheet and in-between picture of a saved dream as the full harness
-    would send it, the owner's verdicts saved with what they were given on.
+    would send it, the owner's verdicts saved with what they were given on. A picture the plan chose but the owner
+    judged wrong says so (it said "no reason recorded": affd m8's m7, aeea m5's m4), and where it was the picture to
+    edit, the cut says it is made from its own shot instead; all 101 pictures left out of the 115 frozen cuts now carry
+    a reason. "Judged wrong" there is the picture checks' verdicts on drawn pictures (`verdicts.ts`), never the
+    viewer's own: a cut marked wrong in the viewer judges its preparation and holds back nothing.
+  - Water and a creature under it (camera rules; found reading the viewer, 30 Sep): library-3 m6 said "a whale swims
+    past under the water" while its prompt had a metre of water and the whale "too big for the water to cover, part
+    of it above the surface" (the known S4 confound: its brief had the whale under the boat). A creature the moment's
+    own words put under the water now raises a level the record measures by the place's things (never above a body
+    measure, never where nothing measures it); and the camera is at the eyes of those above the water (a whale lying
+    under the boat was averaged in, a metre below the two in it, "at the height of their eyes"). 3 pictures change,
+    frozen and live (library-3 m6 and library-2 m8 intended; library-3 m7 drops a turn m6 no longer makes); prompt
+    cases unchanged. The owner's S5 verdict on library-1 m4 backs it: the whale plainly under the water was right.
+  - The five prompt-case hypotheses written for S5's routing are set aside (hypotheses 7/18 → 7/13; counted and
+    guards unchanged): the S5 verdicts contradict the routing, and it is gone.
+  - Post-check fix 1, held things through the dreamer's eyes (the owner's 27 Sep decision; see "Left, and where each
+    starts"): what the dreamer carries and the moment does not name is out of the picture.
 - *On branches, not merged:*
-  - `viewer-ux` (fb80e86): the page reads as the dream is built (sequence, scene, shot, cut), with groups that fold,
-    a legend, and addresses like `/0f40/m3`.
-  - `unsent-withheld` (on lab since): a picture the plan chose but the owner judged wrong now says so in the view (it said "no
-    reason recorded": affd m8's m7, aeea m5's m4); where it was the picture to edit, the cut says it is made from its
-    own shot instead. "Judged wrong" there is the picture checks' verdicts on drawn pictures (`verdicts.ts`), never
-    the viewer's own: a cut marked wrong in the viewer judges its preparation and holds back nothing.
-  - `s6-states2` (the S6 pane): the tree's own numbers for sequences, scenes and shots in the view; `assemble.ts`
-    never sends a turned element as "as last drawn", says an animal by kind and coat, a group with "are".
+  - `viewer-ux`: the page reads as the dream is built (sequence, scene, shot, cut, with the tree's own numbers), with
+    groups that fold, a legend, a breadcrumb that says where a cut sits in its shot, and addresses like `/0f40/m3`.
+  - `s6-states2` (the S6 pane): the tree's own numbers in the view; `assemble.ts` never sends a turned element as "as
+    last drawn", says an animal by kind and coat, a group with "are" (behind the one builder's `earlier_words`).
 - *The viewer is running* at http://127.0.0.1:4570/, verdicts to the main checkout's `dreamchat/evals/viewer/`. To
   make it again: `DREAMCHAT_DATA=<folder with state/> bun run viewer/build.ts`, then `bun run viewer/serve.ts`
   (VIEWER_ANSWERS to keep the verdicts elsewhere).
@@ -55,7 +67,9 @@ stack, the harness viewer and why each picture is left out are all on lab.** Not
   lighthouse-first m8 no tractor, library-3 m8 a blank window view); in view but not on the floor plan (3cd7 m6's cats,
   aeea m9's tractor out of the window); five frozen dreams whose pictures are not on this Mac (8ceb, acfd, b91f, 538d,
   3cd7). No two people on one spot and no cut with a camera but no layout anchor in all 115 cuts.
-- *Next:* S6 rows 17-34 (the S6 pane); retire the five routing hypotheses; S7's routed checks; S9's live-flow check;
+- *Next:* S6 rows 17-34 (the S6 pane, on hold for the owner's viewer reading); post-check fixes 2-4 ("Left, and
+  where each starts": a moment entering a place, floor plans that follow the place's described layout, which side the
+  windows are on every cut, the last behind a switch until a picture test); S7's routed checks; S9's live-flow check;
   then, with the build done, the owner's local image machine (no cost per picture) draws the pictures the viewer
   shows, judged there.
 - *For the owner:* the S9 record of a swapped edit (both options in the S5 section); the crowd with no sketch;
@@ -2889,7 +2903,7 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   library-3 m6's window, at the picture's right edge low before, now out past its top right, neutral; 0 worse. Off:
   0 of 140 frozen and 0 of 477 live pictures moved. `tsc` clean; `bun test` 788 pass, 2 skipped, 0 fail, with the
   switches unset and with every step's switch on.
-  **Left, and where each starts** (none built; the owner's decisions above hold):
+  **Left, and where each starts** (the owner's decisions above hold; 1 done on 30 Sep, below it):
   1. Held things through the dreamer's eyes. `previs.ts thingBlocks` (its `pov` branch: 0.45 m ahead, 0.5 m under
      the eyes, bottom-centre) and `dreamerShot` (`inHands`: aimed at a point 0.6 m under the eyes, which tilts the
      camera down to -0.6 rad, the legs and knees in all three held-thing pictures) put anything carried in view;
@@ -2899,6 +2913,20 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
      what it looks at names the thing (`wordsAbout` on its head word); not named, leave it off the render and out of
      the images and "In it", say it below the picture, out of view, with nothing of the dreamer's body; named, held
      low and to one side, the camera aimed at what the moment looks at, near level. New case lighthouse-fresh-m9-boat.
+     *Done 30 Sep (branch `held-unseen`, behind DREAMCHAT_CAMERA):* through the dreamer's eyes, a thing the dreamer
+     holds that the moment's words (what happens, what it must show, what it looks at: `wordsAbout` on its head word)
+     do not name is off the moment's floor plan (`continuity.ts unsaidHeld`, `shotPlan`), so neither the camera nor the
+     mock-up has it; the cut's plan lists it (`carriedUnseen`), and the cut sheet leaves it out of "In it", its images
+     and the facts line, and gives the dreamer no hands for it. Named, it stays in their hands as before. Nothing is
+     said of it below the picture: naming it would invite it, and wording changes wait for a picture test. Measured
+     against lab, every step on, the same readings: frozen 5 of 127 pictures changed, live 7 of 447; intended 6
+     (lighthouse-fresh m9's paper boat, lighthouse-first m3's key and m6's boat, cbba m2's key and m11's paper boat,
+     snow-train m6's suitcase, whose hands stay for the door they open), neutral 1 (lighthouse-fresh m10 no longer
+     draws on m9 for the room's look: m9's camera no longer leans back to fit the boat, and stands 1.8 m from m10's,
+     past the gate's 1.5 m); prompt cases unchanged. The moments' typed readings agree on all five that have one (no
+     act of the dreamer's is done to the thing; lighthouse-first m7, "looks down at" the boat, keeps it). Limit: a
+     thing named only by a pronoun ("holds it up") reads as not named. The S4 note is not a prompt-case source (the
+     story picture of that moment was right), so `test/camera.test.ts` checks the rule on it instead.
   2. A moment entering a place. lighthouse-fresh m4 ("turns the brass key in the lighthouse door") is set in l2,
      "inside the lighthouse", by the breakdown, and s2's floor plan has the dreamer inside at the door; the typed
      readings (`typed.ts`) hold no fact of which side of a way in the dreamer is. Start: a cached typed reading, "Is
