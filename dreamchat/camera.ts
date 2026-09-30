@@ -394,12 +394,12 @@ export function waterLevel(
   // Only a room has a ceiling: out in the open, a roof is somewhere to stand, and the water has no cap.
   const ceiling = plan.indoors ? (plan.ceiling ?? 3.2) : Number.POSITIVE_INFINITY;
   // A thing up a wall (`above`, camera.ts mounted) is reached at its bottom and covered over its top.
-  const marks: { at: number; top: number; bottom?: number; thing?: boolean; being?: boolean }[] = [];
+  const marks: { at: number; top: number; bottom?: number; thing?: boolean; being?: boolean; body?: boolean }[] = [];
   const ceil = plan.indoors ? text.search(/\b(?:ceiling|top of the room|roof)\b/) : -1;
   if (ceil >= 0) marks.push({ at: ceil, top: ceiling });
   for (const [re, h] of BODY) {
     const i = text.search(re);
-    if (i >= 0) marks.push({ at: i, top: h });
+    if (i >= 0) marks.push({ at: i, top: h, body: true });
   }
   for (const s of plan.spots) {
     // Nor is what floats on it a measure of it ("the sea laps at the boat"), nor ground it fills ("filling
@@ -458,9 +458,13 @@ export function waterLevel(
   const floor = text.search(/\b(?:floor|floors|ground)\b/);
   const measures = marks.sort((a, b) => a.at - b.at).filter((m) => !from(m));
   const first = measures[0];
-  // A creature the moment itself puts under the water is under it, a little over its back, however high the
-  // record's words have it: "a whale swims past under the water" in water "far over the tops of the desks"
-  // was a metre deep, the whale's back out of it (library, 30 Sep). Never one coming up from under it.
+  if (!first) return floor >= 0 && !DEEP.test(text) ? 0.1 : null;
+  // A creature the moment itself puts under the water is under it, a little over its back, where the record's
+  // words measure the water by the things in the place: "a whale swims past under the water" in water "far over
+  // the tops of the desks" was a metre deep, the whale's back out of it (library, 30 Sep). Never above a
+  // measure on a body ("ankle-deep" stays so), never where nothing measures it (unmeasured stays unsaid), never
+  // one coming up from under it, and only in the clause that names it, before anyone or anything else is named
+  // ("the whale watches the diver swim under the water", or "as she swims under it", is not the whale).
   const said = told.toLowerCase().split(/[,;.]/);
   const under = beings
     .filter((x) => {
@@ -470,13 +474,18 @@ export function waterLevel(
         said.some((c) => {
           const i = c.search(new RegExp(`\\b${key}(?:e?s)?\\b`));
           const after = i < 0 ? '' : c.slice(i);
-          return UNDER.test(after) && !/\b(?:from|out from|up from)\s+(?:under|beneath|below)\b/.test(after);
+          const u = after.search(UNDER);
+          return (
+            u > 0 &&
+            !/\b(?:the|a|an|his|her|their|its|he|she|they|we|you|i|someone)\s/.test(
+              after.slice(key.length, u).replace(/^\w*/, ''),
+            ) &&
+            !/\b(?:from|out from|up from)\s+$/.test(after.slice(0, u))
+          );
         })
       );
     })
     .map((x) => x.height + 0.2);
-  const cap = (h: number) => Math.max(0.05, Math.min(ceiling - 0.1, Math.round(h * 100) / 100));
-  if (!first) return under.length ? cap(Math.max(...under)) : floor >= 0 && !DEEP.test(text) ? 0.1 : null;
   const levelOf = (m: (typeof marks)[number]) => {
     const before = beforeOf(m);
     const almost = /\b(?:almost|nearly|just below|not quite|close to)\b/.test(before);
@@ -491,11 +500,9 @@ export function waterLevel(
   };
   // A later thing named measures it too only where the words measure by it ("and far up the shelves");
   // named for what stands in it ("and the shelves stand in it"), it does not.
-  const level = Math.max(
-    ...measures.filter((m) => m === first || m.being || HEIGHT_WORD.test(beforeOf(m))).map(levelOf),
-    ...under,
-  );
-  return cap(level);
+  const measured = measures.filter((m) => m === first || m.being || HEIGHT_WORD.test(beforeOf(m)));
+  const level = Math.max(...measured.map(levelOf), ...(measured.some((m) => m.body) ? [] : under));
+  return Math.max(0.05, Math.min(ceiling - 0.1, Math.round(level * 100) / 100));
 }
 
 /** Words that measure water by what follows them: over it, up it, almost to it, reaching it. */
