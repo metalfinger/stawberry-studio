@@ -2766,9 +2766,9 @@
           "check": "prompt_has",
           "args": {
             "section": "last",
-            "pattern": "free of writing"
+            "pattern": "free of writing|no legible writing|has legible writing"
           },
-          "says": "every surface stays free of writing"
+          "says": "no surface has legible writing (free of writing, or with story_marks, what the story writes on only as marks no one could read)"
         },
         {
           "kind": "code",
