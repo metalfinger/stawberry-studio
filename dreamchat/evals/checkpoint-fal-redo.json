@@ -1,8 +1,8 @@
 {
-  "about": "The seven moments whose new picture the owner judged not right in the first fal check (30 Sep), drawn again with the fixes made for them, each judged blind against the picture he failed.",
+  "about": "Six of the seven moments whose new picture the owner judged not right in the first fal check (30 Sep), drawn again with the fixes made for them, each judged blind against the picture he failed. lighthouse-fresh m10 is left out: its root is the breakdown seeing it from outside, which the frozen dream keeps.",
   "name": "fal-redo",
   "step": "S10",
-  "cap_usd": 1.05,
+  "cap_usd": 0.9,
   "results": "/Users/hirenk/Documents/code/stawberry-studio-dream-chat/dreamchat/runs/checkpoint/fal-redo",
   "switches": {
     "DREAMCHAT_RECORD": "on",
@@ -30,24 +30,6 @@
         "picture": ""
       },
       "description": "The dreamer looks through the small round window in the door and sees students sitting in rows at desks, all facing forward."
-    },
-    {
-      "id": "lighthouse-fresh-m10",
-      "run": "lighthouse-fresh",
-      "session": "dream-0926-022102-aeea",
-      "moment": "m10",
-      "why": "pair",
-      "reason": "judged not right in the first fal check (fal-judged): drawn again with its fixes, against that picture",
-      "cases": [],
-      "old": {
-        "source": null,
-        "draw": "base",
-        "from": "fal-judged",
-        "verdict": null,
-        "note": null,
-        "picture": ""
-      },
-      "description": "The dreamer is still holding the paper boat in both hands, just in front of them, looking past it at the windows."
     },
     {
       "id": "lighthouse-fresh-m13",
