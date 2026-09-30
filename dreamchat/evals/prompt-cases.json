@@ -2950,47 +2950,6 @@
       ]
     },
     {
-      "id": "lighthouse-fresh-m9-boat",
-      "kind": "failing",
-      "class": "holding",
-      "step": "S4",
-      "session": "dream-0926-022102-aeea",
-      "moment": "m9",
-      "source": {
-        "file": "story-pictures.json",
-        "row": "lighthouse-fresh-m9"
-      },
-      "note": "Not sure why the boat is there in B, because there is no mention of a boat in the prompt.",
-      "verdicts": {
-        "story": "right"
-      },
-      "seen_in": [],
-      "fault": "Through the dreamer's eyes, looking out of the window at the tractor, the paper boat they carry was put in their hands before their eyes, a boat the moment never names: on the S4 picture check (27 Sep) the owner asked why the boat was there (the note), and decided that through the dreamer's eyes a carried thing stays out of view unless the moment names it.",
-      "expectations": [
-        {
-          "kind": "code",
-          "check": "prompt_lacks",
-          "args": {
-            "pattern": "\\\\bpaper boat\\\\b"
-          },
-          "says": "the paper boat the moment never names is not in the prompt"
-        },
-        {
-          "kind": "code",
-          "check": "no_image_of",
-          "args": {
-            "who": "t2"
-          },
-          "says": "no image of the paper boat is attached"
-        },
-        {
-          "kind": "ask",
-          "question": "Does this prompt put anything in the dreamer's hands?",
-          "expect": "no"
-        }
-      ]
-    },
-    {
       "id": "pass-snow-train-m1",
       "kind": "passing",
       "class": "camera_turn_layout",

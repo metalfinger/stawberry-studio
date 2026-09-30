@@ -470,12 +470,13 @@ describe("through the dreamer's own eyes", () => {
   });
 
   test("every moment of the frozen dreams seen through the dreamer's eyes, as labelled", () => {
-    // Labelled by hand from each moment's words (and what the record has the dreamer hold).
+    // Labelled by hand from each moment's words (and what the record has the dreamer hold, where the words name it).
     const want: Record<string, 'self' | 'hands' | 'none'> = {
-      'affd m3': 'hands', // holds the key
-      'affd m6': 'hands', // holds the boat
+      // What they carry and the moment does not name is out of the picture, no hands for it (the owner, 27 Sep).
+      'affd m3': 'none', // carries the key; the stairs wind up
+      'affd m6': 'none', // carries the boat; looks out of the window
       'affd m7': 'hands', // the boat in their hand
-      'aeea m9': 'hands', // holds the boat
+      'aeea m9': 'none', // carries the boat; looks out of the window
       'b0cb m3': 'none', // the grandfather opens the suitcase
       'b0cb m6': 'hands', // the dreamer opens the door
       '0f40 m2': 'none', // turns and sees Tomas
