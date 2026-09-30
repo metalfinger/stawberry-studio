@@ -3,7 +3,7 @@
   "dream": "dream-0926-070314-0f40",
   "title": "the lift that wouldn't stop",
   "source": "frozen",
-  "commit": "5bd5906",
+  "commit": "3d148fa",
   "profile": {
    "name": "harness",
    "full": true
@@ -17,7 +17,7 @@
    "DREAMCHAT_WRITER": "claude"
   },
   "assumes": "all drawn and approved",
-  "made": "2026-09-29T15:09:38.107Z"
+  "made": "2026-09-30T01:24:51.790Z"
  },
  "style": {
   "id": "b",
@@ -35,6 +35,7 @@
    "prompt": "A single full-length picture of Tomas, the dreamer's old school friend, one person only, as they ordinarily look: standing in a relaxed three-quarter view, the whole figure from head to feet, the face clearly visible.\n\nlooks: age about 10, short dark hair, neat side part, slim build, pale skin\nwears: grey shorts and shirt school uniform\ndistinctive: calm, still expression; looking ahead\n\nNothing between them and the viewer: no glass, pane, screen, door, veil, mist or reflection over them; the face and clothes clearly seen. Whatever the style, it is how the picture is drawn, not something in front of them.\n\nStyle: an old photograph faded with age.\nMade as: a photograph. Every part of the picture is made this way, the same as every other picture of this dream.\nIt feels like a dream, in every picture: everything holds still, as if time has been stopped and the colour is draining away.\nTechnique, followed exactly: sepia-toned photograph with chemical staining; soft focus and shallow depth of field; vignette around edges, darker at the corners; overexposed highlights, losing detail in brightness; fine film grain over every surface.\nColours: tan, brown, beige, dark brown, for the light and everything its look above gives no colour to; what the look gives a colour keeps it. Skin keeps its natural tone.\nLight: Light is soft and enveloping, as if from an overcast sky, even indoors. Edges are slightly blurred, making forms merge gently into one another. The whole scene seems bathed in the same dusty, faded light.\n\nPlain, uncluttered background. Do not write any words, letters, numbers, labels or colour codes anywhere in the image, and no logos or brand badges. Do not draw colour swatches, rulers or captions.",
    "file": null,
    "drawn": true,
+   "drawnFrom": null,
    "usedBy": [
     "m1",
     "g1",
@@ -55,6 +56,7 @@
    "prompt": "A single picture of the white horse, the one animal only, as it ordinarily looks: standing in a relaxed three-quarter view, the whole of it from nose to tail, its head clearly visible.\n\nlooks: medium-sized adult horse\ndistinctive: all white coat\n\nNothing between it and the viewer: no glass, pane, screen, door, veil, mist or reflection over it; its head and coat clearly seen.\n\nStyle: an old photograph faded with age.\nMade as: a photograph. Every part of the picture is made this way, the same as every other picture of this dream.\nIt feels like a dream, in every picture: everything holds still, as if time has been stopped and the colour is draining away.\nTechnique, followed exactly: sepia-toned photograph with chemical staining; soft focus and shallow depth of field; vignette around edges, darker at the corners; overexposed highlights, losing detail in brightness; fine film grain over every surface.\nColours: tan, brown, beige, dark brown, for the light and everything its look above gives no colour to; what the look gives a colour keeps it. What the dream itself gives a colour keeps it exactly: white horse. Skin keeps its natural tone.\nLight: Light is soft and enveloping, as if from an overcast sky, even indoors. Edges are slightly blurred, making forms merge gently into one another. The whole scene seems bathed in the same dusty, faded light.\n\nPlain, uncluttered background. Do not write any words, letters, numbers, labels or colour codes anywhere in the image, and no logos or brand badges. Do not draw colour swatches, rulers or captions.",
    "file": null,
    "drawn": true,
+   "drawnFrom": null,
    "usedBy": [
     "m6"
    ],
@@ -73,6 +75,7 @@
    "prompt": "A single wide picture of the tiny lift, as it ordinarily looks, with no people in it, showing the whole place and how it is laid out.\n\nwhat kind of place: a tiny lift in an old hotel\nwhat's in it: brass walls, a folding metal gate, room for just two people\nlight: warm, yellowy, stuffy\n\nStyle: an old photograph faded with age.\nMade as: a photograph. Every part of the picture is made this way, the same as every other picture of this dream.\nIt feels like a dream, in every picture: everything holds still, as if time has been stopped and the colour is draining away.\nTechnique, followed exactly: sepia-toned photograph with chemical staining; soft focus and shallow depth of field; vignette around edges, darker at the corners; overexposed highlights, losing detail in brightness; fine film grain over every surface.\nColours, and no others: tan, brown, beige, dark brown. Skin keeps its natural tone.\nLight: Light is soft and enveloping, as if from an overcast sky, even indoors. Edges are slightly blurred, making forms merge gently into one another. The whole scene seems bathed in the same dusty, faded light.\n\nDo not write any words, letters, numbers, labels or colour codes anywhere in the image, and no logos or brand badges. Do not draw colour swatches, rulers or captions.",
    "file": null,
    "drawn": true,
+   "drawnFrom": null,
    "usedBy": [
     "m1",
     "m2",
@@ -93,6 +96,7 @@
    "prompt": "A single wide picture of the orchard, as it ordinarily looks, with no people in it, showing the whole place and how it is laid out.\n\nwhat kind of place: a wide orchard with evenly spaced rows of apple trees extending into the distance under a darkening sky\nwhat's in it: a narrow dirt path running straight through the middle of the orchard\nlight: dusk, soft and dim with a faint sepia glow\n\nStyle: an old photograph faded with age.\nMade as: a photograph. Every part of the picture is made this way, the same as every other picture of this dream.\nIt feels like a dream, in every picture: everything holds still, as if time has been stopped and the colour is draining away.\nTechnique, followed exactly: sepia-toned photograph with chemical staining; soft focus and shallow depth of field; vignette around edges, darker at the corners; overexposed highlights, losing detail in brightness; fine film grain over every surface.\nColours, and no others: tan, brown, beige, dark brown. Skin keeps its natural tone.\nLight: Light is soft and enveloping, as if from an overcast sky, even indoors. Edges are slightly blurred, making forms merge gently into one another. The whole scene seems bathed in the same dusty, faded light.\n\nDo not write any words, letters, numbers, labels or colour codes anywhere in the image, and no logos or brand badges. Do not draw colour swatches, rulers or captions.",
    "file": null,
    "drawn": true,
+   "drawnFrom": null,
    "usedBy": [
     "m4",
     "m5",
@@ -114,6 +118,7 @@
    "prompt": "A single full-length picture of the dreamer, one person only, as they ordinarily look: standing in a relaxed three-quarter view, the whole figure from head to feet, the face clearly visible.\n\nlooks: a young adult in their late twenties, average height, slim build, with short dark hair and warm brown eyes\nwears: wearing a plain light beige button-up shirt and dark brown trousers\ndistinctive: no other prominent features\n\nNothing between them and the viewer: no glass, pane, screen, door, veil, mist or reflection over them; the face and clothes clearly seen. Whatever the style, it is how the picture is drawn, not something in front of them.\n\nStyle: an old photograph faded with age.\nMade as: a photograph. Every part of the picture is made this way, the same as every other picture of this dream.\nIt feels like a dream, in every picture: everything holds still, as if time has been stopped and the colour is draining away.\nTechnique, followed exactly: sepia-toned photograph with chemical staining; soft focus and shallow depth of field; vignette around edges, darker at the corners; overexposed highlights, losing detail in brightness; fine film grain over every surface.\nColours: tan, brown, beige, dark brown, for the light and everything its look above gives no colour to; what the look gives a colour keeps it. Skin keeps its natural tone.\nLight: Light is soft and enveloping, as if from an overcast sky, even indoors. Edges are slightly blurred, making forms merge gently into one another. The whole scene seems bathed in the same dusty, faded light.\n\nPlain, uncluttered background. Do not write any words, letters, numbers, labels or colour codes anywhere in the image, and no logos or brand badges. Do not draw colour swatches, rulers or captions.",
    "file": null,
    "drawn": true,
+   "drawnFrom": null,
    "usedBy": [
     "m1",
     "m3"
@@ -259,6 +264,7 @@
    "scene": "s1",
    "shot": "s1.sh1",
    "treeDiffers": null,
+   "prevCut": null,
    "moment": {
     "action": "The dreamer and Tomas wait in the tiny brass lift as it keeps climbing far too long.",
     "looksAt": "the brass walls and folding metal gate",
@@ -282,10 +288,10 @@
     "words": "Seen from behind them, close, at the height of their eyes: the camera looks toward the folding metal gate. A 14mm lens. From left to right across the picture: the dreamer, left of the middle of the picture, their back to the camera, their head out of the picture above, seen from the shoulders down to their feet and filling the picture from its top edge to its bottom edge; then Tomas, right of the middle of the picture, their back to the camera, their head out of the picture above, seen from the shoulders down to their feet and filling the picture from its top edge to its bottom edge. Nobody else is in the picture. They keep these places in every picture of this scene. Across the picture from the left third to the right third: the folding metal gate, the front of the place.",
     "eye": {
      "x": 0.75,
-     "y": 1.3032407407407398,
+     "y": 1.3,
      "height": 1.62,
      "dir": -90,
-     "fov": 104.25003269780359,
+     "fov": 104.30000000000001,
      "lens": 14
     }
    },
@@ -294,24 +300,43 @@
      "w": 1.5,
      "d": 1.5
     },
+    "front": {
+     "words": "the folding metal gate",
+     "dir": {
+      "x": 0,
+      "y": -1
+     }
+    },
+    "indoors": true,
     "spots": [
      {
       "id": "p1",
       "name": "the dreamer",
       "x": 0.5,
-      "y": 0.7
+      "y": 0.7,
+      "kind": "person",
+      "facing": {
+       "x": 0,
+       "y": -1
+      }
      },
      {
       "id": "p2",
       "name": "Tomas",
       "x": 1,
-      "y": 0.7
+      "y": 0.7,
+      "kind": "person",
+      "facing": {
+       "x": 0,
+       "y": -1
+      }
      }
     ]
    },
    "mockUp": {
     "name": "previs-318a29935fea232132cbc3df9bb7d37bb630fed97d0592c64c14f1a927c1631d.png",
-    "sha256": "318a29935fea232132cbc3df9bb7d37bb630fed97d0592c64c14f1a927c1631d"
+    "sha256": "318a29935fea232132cbc3df9bb7d37bb630fed97d0592c64c14f1a927c1631d",
+    "sent": true
    },
    "links": [],
    "refs": [
@@ -433,9 +458,18 @@
      "text": "One single picture filling the whole frame. Every surface in it is free of writing, logos and brand badges: signs, pages and screens stay blank."
     }
    ],
-   "drawn": null,
+   "drawn": {
+    "file": null,
+    "sentImages": [
+     "base previs:m1",
+     "identity sketch:p1",
+     "identity sketch:p2",
+     "location sketch:l1"
+    ],
+    "samePrompt": false
+   },
    "hashes": {
-    "chain": "595d3f6418bbe",
+    "chain": "15731145bf1378",
     "words": "1932f6ee81eaf5",
     "facts": "12190b8728412"
    }
@@ -447,6 +481,7 @@
    "scene": "s1",
    "shot": "s1.sh2",
    "treeDiffers": null,
+   "prevCut": "m1",
    "moment": {
     "action": "The dreamer turns and sees Tomas as a boy of about ten in their old school uniform, staring at the gate.",
     "looksAt": "Tomas, now a child in grey shorts and shirt, staring at the gate",
@@ -471,7 +506,7 @@
     "words": "The camera is the dreamer's eyes, looking straight ahead, toward Tomas: it looks toward the right side of the room. A wide lens, about 24mm. Nearest, close, across the picture from the left third to the right third: Tomas, in profile, looking toward the left of the picture, seen from the shoulders up and filling the picture from near its top to its bottom edge. At the left edge of the picture: the folding metal gate, the front of the place.",
     "eye": {
      "x": 0.5,
-     "y": 0.7,
+     "y": 0.7000000000000001,
      "height": 1.62,
      "dir": 0,
      "fov": 76,
@@ -483,24 +518,43 @@
      "w": 1.5,
      "d": 1.5
     },
+    "front": {
+     "words": "the folding metal gate",
+     "dir": {
+      "x": 0,
+      "y": -1
+     }
+    },
+    "indoors": true,
     "spots": [
      {
       "id": "p1",
       "name": "the dreamer",
       "x": 0.5,
-      "y": 0.7
+      "y": 0.7,
+      "kind": "person",
+      "facing": {
+       "x": 1,
+       "y": 0
+      }
      },
      {
       "id": "p2",
       "name": "Tomas",
       "x": 1,
-      "y": 0.7
+      "y": 0.7,
+      "kind": "person",
+      "facing": {
+       "x": 0,
+       "y": -1
+      }
      }
     ]
    },
    "mockUp": {
     "name": "previs-050a0d02b90a59fd24eaedebd548317ed9cdd174a66b19b76dd04c1a4e678e0e.png",
-    "sha256": "050a0d02b90a59fd24eaedebd548317ed9cdd174a66b19b76dd04c1a4e678e0e"
+    "sha256": "050a0d02b90a59fd24eaedebd548317ed9cdd174a66b19b76dd04c1a4e678e0e",
+    "sent": true
    },
    "links": [
     {
@@ -513,23 +567,33 @@
    "refs": [
     {
      "n": 1,
+     "role": "base",
+     "source": "mockup",
+     "key": "previs:m2",
+     "instruction": "the previs of this exact picture, from its camera: make it real, keeping where everyone and everything is and how big",
+     "line": "Image 1: EDIT THIS PICTURE. It is a rough grey mock-up of this exact picture, rendered from the floor plan of the place through this very camera: make it real. Every labelled grey shape becomes the person or thing its label names, exactly where it is and exactly as big, looking as their own images below show; the unlabelled shapes under people become what they sit on, and the plain grey surfaces the walls, floor and ceiling of the place. Keep the camera, the framing and where everything is exactly; keep nothing of the mock-up's look: no grey clay, no outlines, no labels or letters.",
+     "subjects": [],
+     "file": null
+    },
+    {
+     "n": 2,
      "role": "identity",
      "source": "ghost",
      "key": "ghost:p2:wardrobe",
      "instruction": "Tomas: this exact person, with the same face, build and clothes, as they are now (age: about ten; wardrobe: old school uniform, grey shorts and shirt)",
-     "line": "Image 1: who Tomas is (short dark hair, neat side part, slim build, pale skin; calm, still expression, looking ahead), as they are now (age: about ten; wardrobe: old school uniform, grey shorts and shirt): their face, hair, build and clothes, exactly, as this picture shows them. Nothing else from it: not its pose, background or framing.",
+     "line": "Image 2: who Tomas is (short dark hair, neat side part, slim build, pale skin; calm, still expression, looking ahead), as they are now (age: about ten; wardrobe: old school uniform, grey shorts and shirt): their face, hair, build and clothes, exactly, as this picture shows them. Nothing else from it: not its pose, background or framing.",
      "subjects": [
       "p2"
      ],
      "file": null
     },
     {
-     "n": 2,
+     "n": 3,
      "role": "location",
      "source": "sketch",
      "key": "sketch:l1",
-     "instruction": "the tiny lift: its materials, colours and objects only; the layout comes from the earlier picture",
-     "line": "Image 2: the tiny lift (a tiny lift in an old hotel; brass walls, a folding metal gate, room for just two people; warm, yellowy, stuffy): only what it is made of and its colours (its ground or floor, its walls or buildings, what stands in it). Where everything stands, and which way the picture looks, come from the shot above, not from this image; any of its objects the shot has outside the picture stay out of it.",
+     "instruction": "the tiny lift: its materials, colours and objects only; the layout comes from the previs",
+     "line": "Image 3: the tiny lift (a tiny lift in an old hotel; brass walls, a folding metal gate, room for just two people; warm, yellowy, stuffy): only what it is made of and its colours (its ground or floor, its walls or buildings, what stands in it). Where everything stands, and which way the picture looks, come from Image 1, the mock-up, not from this image; any of its objects the shot has outside the picture stay out of it.",
      "subjects": [
       "l1"
      ],
@@ -568,7 +632,7 @@
     ]
    },
    "issues": [],
-   "prompt": "One picture from the dream, in a landscape 16:9 frame, through the dreamer's own eyes.\n\nThe shot (nothing of the dreamer's own body shows, not even their hands: they touch nothing in it): The camera is at the dreamer's eye height, looking straight ahead through a 24mm lens. In the foreground, Tomas as a boy of about ten in old school uniform is in profile facing left, seen from shoulders up, his head and shoulders filling the frame from near top to bottom and spanning from the left third to the right third, in sharp focus. At the left edge of the frame, the folding metal gate of the lift is visible, slightly soft. The background behind Tomas is the lift's brass interior wall. A small bulb in the lift's ceiling lights the scene from above. Just outside the left edge, beyond the gate, is the dark lift shaft.\n\nThe attached images, in order, and the one thing to take from each:\nImage 1: who Tomas is (short dark hair, neat side part, slim build, pale skin; calm, still expression, looking ahead), as they are now (age: about ten; wardrobe: old school uniform, grey shorts and shirt): their face, hair, build and clothes, exactly, as this picture shows them. Nothing else from it: not its pose, background or framing.\nImage 2: the tiny lift (a tiny lift in an old hotel; brass walls, a folding metal gate, room for just two people; warm, yellowy, stuffy): only what it is made of and its colours (its ground or floor, its walls or buildings, what stands in it). Where everything stands, and which way the picture looks, come from the shot above, not from this image; any of its objects the shot has outside the picture stay out of it.\n\nWhat happens in this frame: The dreamer turns and sees Tomas as a boy of about ten in their old school uniform, staring at the gate.\n\nThe dream in it, drawn as plain fact, as solid and ordinary as everything around it: Tomas is a child again and doesn't notice.\n\nIn it:\nTomas (person).\nthe tiny lift (place).\n\nIt should feel: lonely, like the dreamer was the only one who remembered they were adults.\n\nThe one thing this frame must show: Tomas as a child in the old school uniform, not noticing anything wrong.\n\nStyle: an old photograph faded with age.\nMade as: a photograph. Every part of the picture is made this way, the same as every other picture of this dream.\nIt feels like a dream, in every picture: everything holds still, as if time has been stopped and the colour is draining away.\nTechnique, followed exactly: sepia-toned photograph with chemical staining; soft focus and shallow depth of field; vignette around edges, darker at the corners; overexposed highlights, losing detail in brightness; fine film grain over every surface.\nColours: tan, brown, beige, dark brown, for the light and everything no image above gives a colour to; each person and thing keeps the colours of its image. Skin keeps its natural tone.\nLight: Light is soft and enveloping, as if from an overcast sky, even indoors. Edges are slightly blurred, making forms merge gently into one another. The whole scene seems bathed in the same dusty, faded light.\n\nEveryone and everything looks exactly as in their images above, except for what this moment itself changes and how each one is at this moment, as said.\n\nOne single picture filling the whole frame. Every surface in it is free of writing, logos and brand badges: signs, pages and screens stay blank.",
+   "prompt": "One picture from the dream, in a landscape 16:9 frame, through the dreamer's own eyes.\n\nThe shot, as the mock-up in Image 1 shows it (nothing of the dreamer's own body shows, not even their hands: they touch nothing in it): The camera is at the dreamer's eye height, looking straight ahead through a 24mm lens. In the foreground, Tomas as a boy of about ten in old school uniform is in profile facing left, seen from shoulders up, his head and shoulders filling the frame from near top to bottom and spanning from the left third to the right third, in sharp focus. At the left edge of the frame, the folding metal gate of the lift is visible, slightly soft. The background behind Tomas is the lift's brass interior wall. A small bulb in the lift's ceiling lights the scene from above. Just outside the left edge, beyond the gate, is the dark lift shaft.\n\nThe attached images, in order, and the one thing to take from each:\nImage 1: EDIT THIS PICTURE. It is a rough grey mock-up of this exact picture, rendered from the floor plan of the place through this very camera: make it real. Every labelled grey shape becomes the person or thing its label names, exactly where it is and exactly as big, looking as their own images below show; the unlabelled shapes under people become what they sit on, and the plain grey surfaces the walls, floor and ceiling of the place. Keep the camera, the framing and where everything is exactly; keep nothing of the mock-up's look: no grey clay, no outlines, no labels or letters.\nImage 2: who Tomas is (short dark hair, neat side part, slim build, pale skin; calm, still expression, looking ahead), as they are now (age: about ten; wardrobe: old school uniform, grey shorts and shirt): their face, hair, build and clothes, exactly, as this picture shows them. Nothing else from it: not its pose, background or framing.\nImage 3: the tiny lift (a tiny lift in an old hotel; brass walls, a folding metal gate, room for just two people; warm, yellowy, stuffy): only what it is made of and its colours (its ground or floor, its walls or buildings, what stands in it). Where everything stands, and which way the picture looks, come from Image 1, the mock-up, not from this image; any of its objects the shot has outside the picture stay out of it.\n\nWhat happens in this frame: The dreamer turns and sees Tomas as a boy of about ten in their old school uniform, staring at the gate.\n\nThe dream in it, drawn as plain fact, as solid and ordinary as everything around it: Tomas is a child again and doesn't notice.\n\nIn it:\nTomas (person).\nthe tiny lift (place).\n\nIt should feel: lonely, like the dreamer was the only one who remembered they were adults.\n\nThe one thing this frame must show: Tomas as a child in the old school uniform, not noticing anything wrong.\n\nStyle: an old photograph faded with age.\nMade as: a photograph. Every part of the picture is made this way, the same as every other picture of this dream.\nIt feels like a dream, in every picture: everything holds still, as if time has been stopped and the colour is draining away.\nTechnique, followed exactly: sepia-toned photograph with chemical staining; soft focus and shallow depth of field; vignette around edges, darker at the corners; overexposed highlights, losing detail in brightness; fine film grain over every surface.\nColours: tan, brown, beige, dark brown, for the light and everything no image above gives a colour to; each person and thing keeps the colours of its image. Skin keeps its natural tone.\nLight: Light is soft and enveloping, as if from an overcast sky, even indoors. Edges are slightly blurred, making forms merge gently into one another. The whole scene seems bathed in the same dusty, faded light.\n\nEveryone and everything looks exactly as in their images above, except for what this moment itself changes and how each one is at this moment, as said.\n\nOne single picture filling the whole frame. Every surface in it is free of writing, logos and brand badges: signs, pages and screens stay blank.",
    "paragraphs": [
     {
      "id": "framing",
@@ -576,11 +640,11 @@
     },
     {
      "id": "shot",
-     "text": "The shot (nothing of the dreamer's own body shows, not even their hands: they touch nothing in it): The camera is at the dreamer's eye height, looking straight ahead through a 24mm lens. In the foreground, Tomas as a boy of about ten in old school uniform is in profile facing left, seen from shoulders up, his head and shoulders filling the frame from near top to bottom and spanning from the left third to the right third, in sharp focus. At the left edge of the frame, the folding metal gate of the lift is visible, slightly soft. The background behind Tomas is the lift's brass interior wall. A small bulb in the lift's ceiling lights the scene from above. Just outside the left edge, beyond the gate, is the dark lift shaft."
+     "text": "The shot, as the mock-up in Image 1 shows it (nothing of the dreamer's own body shows, not even their hands: they touch nothing in it): The camera is at the dreamer's eye height, looking straight ahead through a 24mm lens. In the foreground, Tomas as a boy of about ten in old school uniform is in profile facing left, seen from shoulders up, his head and shoulders filling the frame from near top to bottom and spanning from the left third to the right third, in sharp focus. At the left edge of the frame, the folding metal gate of the lift is visible, slightly soft. The background behind Tomas is the lift's brass interior wall. A small bulb in the lift's ceiling lights the scene from above. Just outside the left edge, beyond the gate, is the dark lift shaft."
     },
     {
      "id": "manifest",
-     "text": "The attached images, in order, and the one thing to take from each:\nImage 1: who Tomas is (short dark hair, neat side part, slim build, pale skin; calm, still expression, looking ahead), as they are now (age: about ten; wardrobe: old school uniform, grey shorts and shirt): their face, hair, build and clothes, exactly, as this picture shows them. Nothing else from it: not its pose, background or framing.\nImage 2: the tiny lift (a tiny lift in an old hotel; brass walls, a folding metal gate, room for just two people; warm, yellowy, stuffy): only what it is made of and its colours (its ground or floor, its walls or buildings, what stands in it). Where everything stands, and which way the picture looks, come from the shot above, not from this image; any of its objects the shot has outside the picture stay out of it."
+     "text": "The attached images, in order, and the one thing to take from each:\nImage 1: EDIT THIS PICTURE. It is a rough grey mock-up of this exact picture, rendered from the floor plan of the place through this very camera: make it real. Every labelled grey shape becomes the person or thing its label names, exactly where it is and exactly as big, looking as their own images below show; the unlabelled shapes under people become what they sit on, and the plain grey surfaces the walls, floor and ceiling of the place. Keep the camera, the framing and where everything is exactly; keep nothing of the mock-up's look: no grey clay, no outlines, no labels or letters.\nImage 2: who Tomas is (short dark hair, neat side part, slim build, pale skin; calm, still expression, looking ahead), as they are now (age: about ten; wardrobe: old school uniform, grey shorts and shirt): their face, hair, build and clothes, exactly, as this picture shows them. Nothing else from it: not its pose, background or framing.\nImage 3: the tiny lift (a tiny lift in an old hotel; brass walls, a folding metal gate, room for just two people; warm, yellowy, stuffy): only what it is made of and its colours (its ground or floor, its walls or buildings, what stands in it). Where everything stands, and which way the picture looks, come from Image 1, the mock-up, not from this image; any of its objects the shot has outside the picture stay out of it."
     },
     {
      "id": "happens",
@@ -615,10 +679,20 @@
      "text": "One single picture filling the whole frame. Every surface in it is free of writing, logos and brand badges: signs, pages and screens stay blank."
     }
    ],
-   "drawn": null,
+   "drawn": {
+    "file": null,
+    "sentImages": [
+     "base previs:m2",
+     "identity sketch:p2",
+     "location sketch:l1",
+     "identity ghost:p2:age",
+     "identity ghost:p2:wardrobe"
+    ],
+    "samePrompt": false
+   },
    "hashes": {
-    "chain": "e30a7ae9f730c",
-    "words": "130c2fc195ca81",
+    "chain": "9e697b66f52bb",
+    "words": "cf82506291c13",
     "facts": "6edc9c1076123"
    }
   },
@@ -629,6 +703,7 @@
    "scene": "s1",
    "shot": "s1.sh1",
    "treeDiffers": null,
+   "prevCut": "m2",
    "moment": {
     "action": "They both wait silently, neither saying anything.",
     "looksAt": "the folding metal gate",
@@ -641,17 +716,66 @@
     "role:two_shot",
     "move:other_side",
     "change:carried",
-    "line"
+    "line",
+    "planned"
    ],
    "camera": {
     "size": "medium",
     "eyes": "outside",
     "looksAt": "the folding metal gate",
-    "words": "from behind them, facing the folding metal gate",
-    "eye": null
+    "words": "Seen from behind them, close, at the height of their eyes: the camera looks toward the folding metal gate. A 14mm lens. From left to right across the picture: the dreamer, left of the middle of the picture, seen three-quarters from behind, looking toward the right of the picture, seen whole and filling the picture from its top edge to its bottom edge; then Tomas, across the picture from the middle to the right edge, their back to the camera, their head out of the picture above, seen from the shoulders down to the knees and filling the picture from its top edge to its bottom edge. Nobody else is in the picture. They keep these places in every picture of this scene. Across the picture from left of the middle to the right edge: the folding metal gate, the front of the place.",
+    "eye": {
+     "x": 0.96,
+     "y": 1.27,
+     "height": 1.62,
+     "dir": -110,
+     "fov": 104.30000000000001,
+     "lens": 14
+    }
    },
-   "floor": null,
-   "mockUp": null,
+   "floor": {
+    "room": {
+     "w": 1.5,
+     "d": 1.5
+    },
+    "front": {
+     "words": "the folding metal gate",
+     "dir": {
+      "x": 0,
+      "y": -1
+     }
+    },
+    "indoors": true,
+    "spots": [
+     {
+      "id": "p1",
+      "name": "the dreamer",
+      "x": 0.5,
+      "y": 0.7,
+      "kind": "person",
+      "facing": {
+       "x": 0,
+       "y": -1
+      }
+     },
+     {
+      "id": "p2",
+      "name": "Tomas",
+      "x": 1,
+      "y": 0.7,
+      "kind": "person",
+      "facing": {
+       "x": 0,
+       "y": -1
+      }
+     }
+    ]
+   },
+   "mockUp": {
+    "name": "previs-6dfd9593d1900f575811095fcc54e72ce59a2c634cba354fa166a7839a1094a8.png",
+    "sha256": "6dfd9593d1900f575811095fcc54e72ce59a2c634cba354fa166a7839a1094a8",
+    "sent": true
+   },
    "links": [
     {
      "from": "g2",
@@ -663,35 +787,45 @@
    "refs": [
     {
      "n": 1,
+     "role": "base",
+     "source": "mockup",
+     "key": "previs:m3",
+     "instruction": "the previs of this exact picture, from its camera: make it real, keeping where everyone and everything is and how big",
+     "line": "Image 1: EDIT THIS PICTURE. It is a rough grey mock-up of this exact picture, rendered from the floor plan of the place through this very camera: make it real. Every labelled grey shape becomes the person or thing its label names, exactly where it is and exactly as big, looking as their own images below show; the unlabelled shapes under people become what they sit on, and the plain grey surfaces the walls, floor and ceiling of the place. Keep the camera, the framing and where everything is exactly; keep nothing of the mock-up's look: no grey clay, no outlines, no labels or letters.",
+     "subjects": [],
+     "file": null
+    },
+    {
+     "n": 2,
      "role": "identity",
      "source": "sketch",
      "key": "sketch:p1",
      "instruction": "the dreamer: this exact person, with the same face, build and clothes",
-     "line": "Image 1: who the dreamer is (a young adult in their late twenties, average height, slim build, with short dark hair and warm brown eyes; wearing a plain light beige button-up shirt and dark brown trousers; no other prominent features): their face, hair, build and clothes, exactly. Nothing else from it: not its pose, background or framing.",
+     "line": "Image 2: who the dreamer is (a young adult in their late twenties, average height, slim build, with short dark hair and warm brown eyes; wearing a plain light beige button-up shirt and dark brown trousers; no other prominent features): their face, hair, build and clothes, exactly. Nothing else from it: not its pose, background or framing.",
      "subjects": [
       "p1"
      ],
      "file": null
     },
     {
-     "n": 2,
+     "n": 3,
      "role": "identity",
      "source": "ghost",
      "key": "ghost:p2:wardrobe",
      "instruction": "Tomas: this exact person, with the same face, build and clothes, as they are now (age: about ten; wardrobe: old school uniform, grey shorts and shirt)",
-     "line": "Image 2: who Tomas is (short dark hair, neat side part, slim build, pale skin; calm, still expression, looking ahead), as they are now (age: about ten; wardrobe: old school uniform, grey shorts and shirt): their face, hair, build and clothes, exactly, as this picture shows them. Nothing else from it: not its pose, background or framing.",
+     "line": "Image 3: who Tomas is (short dark hair, neat side part, slim build, pale skin; calm, still expression, looking ahead), as they are now (age: about ten; wardrobe: old school uniform, grey shorts and shirt): their face, hair, build and clothes, exactly, as this picture shows them. Nothing else from it: not its pose, background or framing.",
      "subjects": [
       "p2"
      ],
      "file": null
     },
     {
-     "n": 3,
+     "n": 4,
      "role": "location",
      "source": "sketch",
      "key": "sketch:l1",
-     "instruction": "the tiny lift: this exact place. Keep everything in it on the sides the reference puts it; do not mirror or rearrange it",
-     "line": "Image 3: the tiny lift (a tiny lift in an old hotel; brass walls, a folding metal gate, room for just two people; warm, yellowy, stuffy): the camera stands in this place. Keep everything in it where it puts it (walls, doors, paths, furniture, whatever it has), and its light; do not mirror or rearrange it.",
+     "instruction": "the tiny lift: its materials, colours and objects only; the layout comes from the previs",
+     "line": "Image 4: the tiny lift (a tiny lift in an old hotel; brass walls, a folding metal gate, room for just two people; warm, yellowy, stuffy): only what it is made of and its colours (its ground or floor, its walls or buildings, what stands in it). Where everything stands, and which way the picture looks, come from Image 1, the mock-up, not from this image; any of its objects the shot has outside the picture stay out of it.",
      "subjects": [
       "l1"
      ],
@@ -735,23 +869,23 @@
     ]
    },
    "issues": [],
-   "prompt": "One picture from the dream, in a landscape 16:9 frame: a medium shot, at eye level, the dreamer seen from outside, facing the folding metal gate. The subject occupies about half the frame height, with the space around them clearly visible.\n\nThe attached images, in order, and the one thing to take from each:\nImage 1: who the dreamer is (a young adult in their late twenties, average height, slim build, with short dark hair and warm brown eyes; wearing a plain light beige button-up shirt and dark brown trousers; no other prominent features): their face, hair, build and clothes, exactly. Nothing else from it: not its pose, background or framing.\nImage 2: who Tomas is (short dark hair, neat side part, slim build, pale skin; calm, still expression, looking ahead), as they are now (age: about ten; wardrobe: old school uniform, grey shorts and shirt): their face, hair, build and clothes, exactly, as this picture shows them. Nothing else from it: not its pose, background or framing.\nImage 3: the tiny lift (a tiny lift in an old hotel; brass walls, a folding metal gate, room for just two people; warm, yellowy, stuffy): the camera stands in this place. Keep everything in it where it puts it (walls, doors, paths, furniture, whatever it has), and its light; do not mirror or rearrange it.\n\nWhat happens in this frame: They both wait silently, neither saying anything.\n\nSeen from behind them, facing the folding metal gate. From left to right across the picture: the dreamer, then Tomas. They keep these places in every picture of this scene.\n\nIn it:\nthe dreamer (person).\nTomas (person).\nthe tiny lift (place).\n\nIt should feel: quiet, close, waiting.\n\nThe one thing this frame must show: the two of them in the small lift, waiting.\n\nStyle: an old photograph faded with age.\nMade as: a photograph. Every part of the picture is made this way, the same as every other picture of this dream.\nIt feels like a dream, in every picture: everything holds still, as if time has been stopped and the colour is draining away.\nTechnique, followed exactly: sepia-toned photograph with chemical staining; soft focus and shallow depth of field; vignette around edges, darker at the corners; overexposed highlights, losing detail in brightness; fine film grain over every surface.\nColours: tan, brown, beige, dark brown, for the light and everything no image above gives a colour to; each person and thing keeps the colours of its image. Skin keeps its natural tone.\nLight: Light is soft and enveloping, as if from an overcast sky, even indoors. Edges are slightly blurred, making forms merge gently into one another. The whole scene seems bathed in the same dusty, faded light.\n\nEveryone and everything looks exactly as in their images above, except for what this moment itself changes and how each one is at this moment, as said.\n\nOne single picture filling the whole frame. Every surface in it is free of writing, logos and brand badges: signs, pages and screens stay blank.",
+   "prompt": "One picture from the dream, in a landscape 16:9 frame: a medium shot, at eye level, the dreamer seen from outside, facing the folding metal gate.\n\nWhat the camera sees, as the mock-up in Image 1 shows it: Seen from behind them, close, at the height of their eyes: the camera looks toward the folding metal gate. A 14mm lens. From left to right across the picture: the dreamer, left of the middle of the picture, seen three-quarters from behind, looking toward the right of the picture, seen whole and filling the picture from its top edge to its bottom edge; then Tomas, across the picture from the middle to the right edge, their back to the camera, their head out of the picture above, seen from the shoulders down to the knees and filling the picture from its top edge to its bottom edge. Nobody else is in the picture. They keep these places in every picture of this scene. Across the picture from left of the middle to the right edge: the folding metal gate, the front of the place.\n\nThe attached images, in order, and the one thing to take from each:\nImage 1: EDIT THIS PICTURE. It is a rough grey mock-up of this exact picture, rendered from the floor plan of the place through this very camera: make it real. Every labelled grey shape becomes the person or thing its label names, exactly where it is and exactly as big, looking as their own images below show; the unlabelled shapes under people become what they sit on, and the plain grey surfaces the walls, floor and ceiling of the place. Keep the camera, the framing and where everything is exactly; keep nothing of the mock-up's look: no grey clay, no outlines, no labels or letters.\nImage 2: who the dreamer is (a young adult in their late twenties, average height, slim build, with short dark hair and warm brown eyes; wearing a plain light beige button-up shirt and dark brown trousers; no other prominent features): their face, hair, build and clothes, exactly. Nothing else from it: not its pose, background or framing.\nImage 3: who Tomas is (short dark hair, neat side part, slim build, pale skin; calm, still expression, looking ahead), as they are now (age: about ten; wardrobe: old school uniform, grey shorts and shirt): their face, hair, build and clothes, exactly, as this picture shows them. Nothing else from it: not its pose, background or framing.\nImage 4: the tiny lift (a tiny lift in an old hotel; brass walls, a folding metal gate, room for just two people; warm, yellowy, stuffy): only what it is made of and its colours (its ground or floor, its walls or buildings, what stands in it). Where everything stands, and which way the picture looks, come from Image 1, the mock-up, not from this image; any of its objects the shot has outside the picture stay out of it.\n\nWhat happens in this frame: They both wait silently, neither saying anything.\n\nIn it:\nthe dreamer (person).\nTomas (person).\nthe tiny lift (place).\n\nIt should feel: quiet, close, waiting.\n\nThe one thing this frame must show: the two of them in the small lift, waiting.\n\nStyle: an old photograph faded with age.\nMade as: a photograph. Every part of the picture is made this way, the same as every other picture of this dream.\nIt feels like a dream, in every picture: everything holds still, as if time has been stopped and the colour is draining away.\nTechnique, followed exactly: sepia-toned photograph with chemical staining; soft focus and shallow depth of field; vignette around edges, darker at the corners; overexposed highlights, losing detail in brightness; fine film grain over every surface.\nColours: tan, brown, beige, dark brown, for the light and everything no image above gives a colour to; each person and thing keeps the colours of its image. Skin keeps its natural tone.\nLight: Light is soft and enveloping, as if from an overcast sky, even indoors. Edges are slightly blurred, making forms merge gently into one another. The whole scene seems bathed in the same dusty, faded light.\n\nEveryone and everything looks exactly as in their images above, except for what this moment itself changes and how each one is at this moment, as said.\n\nOne single picture filling the whole frame. Every surface in it is free of writing, logos and brand badges: signs, pages and screens stay blank.",
    "paragraphs": [
     {
      "id": "framing",
-     "text": "One picture from the dream, in a landscape 16:9 frame: a medium shot, at eye level, the dreamer seen from outside, facing the folding metal gate. The subject occupies about half the frame height, with the space around them clearly visible."
+     "text": "One picture from the dream, in a landscape 16:9 frame: a medium shot, at eye level, the dreamer seen from outside, facing the folding metal gate."
+    },
+    {
+     "id": "shot",
+     "text": "What the camera sees, as the mock-up in Image 1 shows it: Seen from behind them, close, at the height of their eyes: the camera looks toward the folding metal gate. A 14mm lens. From left to right across the picture: the dreamer, left of the middle of the picture, seen three-quarters from behind, looking toward the right of the picture, seen whole and filling the picture from its top edge to its bottom edge; then Tomas, across the picture from the middle to the right edge, their back to the camera, their head out of the picture above, seen from the shoulders down to the knees and filling the picture from its top edge to its bottom edge. Nobody else is in the picture. They keep these places in every picture of this scene. Across the picture from left of the middle to the right edge: the folding metal gate, the front of the place."
     },
     {
      "id": "manifest",
-     "text": "The attached images, in order, and the one thing to take from each:\nImage 1: who the dreamer is (a young adult in their late twenties, average height, slim build, with short dark hair and warm brown eyes; wearing a plain light beige button-up shirt and dark brown trousers; no other prominent features): their face, hair, build and clothes, exactly. Nothing else from it: not its pose, background or framing.\nImage 2: who Tomas is (short dark hair, neat side part, slim build, pale skin; calm, still expression, looking ahead), as they are now (age: about ten; wardrobe: old school uniform, grey shorts and shirt): their face, hair, build and clothes, exactly, as this picture shows them. Nothing else from it: not its pose, background or framing.\nImage 3: the tiny lift (a tiny lift in an old hotel; brass walls, a folding metal gate, room for just two people; warm, yellowy, stuffy): the camera stands in this place. Keep everything in it where it puts it (walls, doors, paths, furniture, whatever it has), and its light; do not mirror or rearrange it."
+     "text": "The attached images, in order, and the one thing to take from each:\nImage 1: EDIT THIS PICTURE. It is a rough grey mock-up of this exact picture, rendered from the floor plan of the place through this very camera: make it real. Every labelled grey shape becomes the person or thing its label names, exactly where it is and exactly as big, looking as their own images below show; the unlabelled shapes under people become what they sit on, and the plain grey surfaces the walls, floor and ceiling of the place. Keep the camera, the framing and where everything is exactly; keep nothing of the mock-up's look: no grey clay, no outlines, no labels or letters.\nImage 2: who the dreamer is (a young adult in their late twenties, average height, slim build, with short dark hair and warm brown eyes; wearing a plain light beige button-up shirt and dark brown trousers; no other prominent features): their face, hair, build and clothes, exactly. Nothing else from it: not its pose, background or framing.\nImage 3: who Tomas is (short dark hair, neat side part, slim build, pale skin; calm, still expression, looking ahead), as they are now (age: about ten; wardrobe: old school uniform, grey shorts and shirt): their face, hair, build and clothes, exactly, as this picture shows them. Nothing else from it: not its pose, background or framing.\nImage 4: the tiny lift (a tiny lift in an old hotel; brass walls, a folding metal gate, room for just two people; warm, yellowy, stuffy): only what it is made of and its colours (its ground or floor, its walls or buildings, what stands in it). Where everything stands, and which way the picture looks, come from Image 1, the mock-up, not from this image; any of its objects the shot has outside the picture stay out of it."
     },
     {
      "id": "happens",
      "text": "What happens in this frame: They both wait silently, neither saying anything."
-    },
-    {
-     "id": "staging",
-     "text": "Seen from behind them, facing the folding metal gate. From left to right across the picture: the dreamer, then Tomas. They keep these places in every picture of this scene."
     },
     {
      "id": "in_it",
@@ -778,10 +912,21 @@
      "text": "One single picture filling the whole frame. Every surface in it is free of writing, logos and brand badges: signs, pages and screens stay blank."
     }
    ],
-   "drawn": null,
+   "drawn": {
+    "file": null,
+    "sentImages": [
+     "base picture:m1",
+     "identity sketch:p1",
+     "identity sketch:p2",
+     "location sketch:l1",
+     "identity ghost:p2:age",
+     "identity ghost:p2:wardrobe"
+    ],
+    "samePrompt": false
+   },
    "hashes": {
-    "chain": "12b88d5486e2cb",
-    "words": "4a63e41865d0",
+    "chain": "1b16e3904b1588",
+    "words": "10671f931c77cc",
     "facts": "9ca3e8322ec11"
    }
   },
@@ -792,6 +937,7 @@
    "scene": "s2",
    "shot": "s2.sh1",
    "treeDiffers": null,
+   "prevCut": null,
    "moment": {
     "action": "The lift gate opens on its own onto an orchard at dusk with rows of apple trees, all the apples glowing soft like little lamps.",
     "looksAt": "the orchard rows with glowing apples through the open gate",
@@ -818,7 +964,7 @@
      "x": 7.5,
      "y": 0.5,
      "height": 1.62,
-     "dir": 101.30993247402021,
+     "dir": 101.30000000000001,
      "fov": 76,
      "lens": null
     }
@@ -828,12 +974,25 @@
      "w": 15,
      "d": 20
     },
+    "front": {
+     "words": "the side where the lift gate opens",
+     "dir": {
+      "x": 0,
+      "y": -1
+     }
+    },
+    "indoors": null,
     "spots": [
      {
       "id": "p1",
       "name": "the dreamer",
       "x": 7.5,
-      "y": 0.5
+      "y": 0.5,
+      "kind": "person",
+      "facing": {
+       "x": 0,
+       "y": 1
+      }
      },
      {
       "id": "x1",
@@ -841,13 +1000,19 @@
       "x": 7,
       "y": 3,
       "w": 2,
-      "d": 2
+      "d": 2,
+      "kind": "thing",
+      "facing": {
+       "x": 0,
+       "y": -1
+      }
      }
     ]
    },
    "mockUp": {
     "name": "previs-25bb8167da0b939a57adef632a693bd8e8ed0dc3ea43a43852f7321ff65b7a2e.png",
-    "sha256": "25bb8167da0b939a57adef632a693bd8e8ed0dc3ea43a43852f7321ff65b7a2e"
+    "sha256": "25bb8167da0b939a57adef632a693bd8e8ed0dc3ea43a43852f7321ff65b7a2e",
+    "sent": true
    },
    "links": [
     {
@@ -860,23 +1025,33 @@
    "refs": [
     {
      "n": 1,
+     "role": "base",
+     "source": "mockup",
+     "key": "previs:m4",
+     "instruction": "the previs of this exact picture, from its camera: make it real, keeping where everyone and everything is and how big",
+     "line": "Image 1: EDIT THIS PICTURE. It is a rough grey mock-up of this exact picture, rendered from the floor plan of the place through this very camera: make it real. Every labelled grey shape becomes the person or thing its label names, exactly where it is and exactly as big, looking as their own images below show; the unlabelled shapes under people become what they sit on, and the plain grey surfaces the walls, floor and ceiling of the place. Keep the camera, the framing and where everything is exactly; keep nothing of the mock-up's look: no grey clay, no outlines, no labels or letters.",
+     "subjects": [],
+     "file": null
+    },
+    {
+     "n": 2,
      "role": "location",
      "source": "sketch",
      "key": "sketch:l2",
-     "instruction": "the orchard: its materials, colours and objects only; the layout comes from the earlier picture",
-     "line": "Image 1: the orchard (a wide orchard with evenly spaced rows of apple trees extending into the distance under a darkening sky; a narrow dirt path running straight through the middle of the orchard; dusk, soft and dim with a faint glow): only what it is made of and its colours (its ground or floor, its walls or buildings, what stands in it). Where everything stands, and which way the picture looks, come from the shot above, not from this image; any of its objects the shot has outside the picture stay out of it.",
+     "instruction": "the orchard: its materials, colours and objects only; the layout comes from the previs",
+     "line": "Image 2: the orchard (a wide orchard with evenly spaced rows of apple trees extending into the distance under a darkening sky; a narrow dirt path running straight through the middle of the orchard; dusk, soft and dim with a faint glow): only what it is made of and its colours (its ground or floor, its walls or buildings, what stands in it). Where everything stands, and which way the picture looks, come from Image 1, the mock-up, not from this image; any of its objects the shot has outside the picture stay out of it.",
      "subjects": [
       "l2"
      ],
      "file": null
     },
     {
-     "n": 2,
+     "n": 3,
      "role": "composition",
      "source": "earlier",
      "key": "picture:m3",
      "instruction": "the picture just before the dream jumps: its framing and where everyone is; the dream changes: instead of a hotel corridor, there is an orchard",
-     "line": "Image 2: picture 3 (the dreamer and Tomas, at the tiny lift), just before the dream jumps. Keep its framing and the shapes in it where they are; the dreamer in it is now the camera, so they are not in this picture. The dream changes this: instead of a hotel corridor, there is an orchard.",
+     "line": "Image 3: picture 3 (the dreamer and Tomas, at the tiny lift), just before the dream jumps. Keep its framing and the shapes in it where they are; the dreamer in it is now the camera, so they are not in this picture. The dream changes this: instead of a hotel corridor, there is an orchard.",
      "subjects": [],
      "file": null
     }
@@ -897,7 +1072,7 @@
     ]
    },
    "issues": [],
-   "prompt": "One picture from the dream, in a landscape 16:9 frame, through the dreamer's own eyes.\n\nWhat the dreamer sees, the camera being their own eyes (nothing of the dreamer's own body shows, not even their hands: they touch nothing in it): The camera is the dreamer's eyes, looking straight ahead, toward the empty rows of apple trees where Tomas was: it looks toward the far side of the place, away from the side where the lift gate opens. A wide lens, about 24mm. Nearest, a little way off, across the picture from the left edge to the right edge: the empty rows of apple trees where Tomas was, filling the picture from low down to its bottom edge. Outside the picture, behind the camera: the side where the lift gate opens.\n\nThe attached images, in order, and the one thing to take from each:\nImage 1: the orchard (a wide orchard with evenly spaced rows of apple trees extending into the distance under a darkening sky; a narrow dirt path running straight through the middle of the orchard; dusk, soft and dim with a faint glow): only what it is made of and its colours (its ground or floor, its walls or buildings, what stands in it). Where everything stands, and which way the picture looks, come from the shot above, not from this image; any of its objects the shot has outside the picture stay out of it.\nImage 2: picture 3 (the dreamer and Tomas, at the tiny lift), just before the dream jumps. Keep its framing and the shapes in it where they are; the dreamer in it is now the camera, so they are not in this picture. The dream changes this: instead of a hotel corridor, there is an orchard.\n\nWhat happens in this frame: The lift gate opens on its own onto an orchard at dusk with rows of apple trees, all the apples glowing soft like little lamps.\n\nThe dream in it, drawn as plain fact, as solid and ordinary as everything around it: the lift opens onto an orchard, not a corridor.\n\nIn it:\nthe orchard (place).\n\nHow each one is at this moment: the apples are glowing soft like little lamps.\n\nIt should feel: sudden openness, wonder.\n\nThe one thing this frame must show: the orchard glowing at dusk where a hotel corridor should be.\n\nStyle: an old photograph faded with age.\nMade as: a photograph. Every part of the picture is made this way, the same as every other picture of this dream.\nIt feels like a dream, in every picture: everything holds still, as if time has been stopped and the colour is draining away.\nTechnique, followed exactly: sepia-toned photograph with chemical staining; soft focus and shallow depth of field; vignette around edges, darker at the corners; overexposed highlights, losing detail in brightness; fine film grain over every surface.\nColours: tan, brown, beige, dark brown, for the light and everything no image above gives a colour to; each person and thing keeps the colours of its image. Skin keeps its natural tone.\nLight: Light is soft and enveloping, as if from an overcast sky, even indoors. Edges are slightly blurred, making forms merge gently into one another. The whole scene seems bathed in the same dusty, faded light.\n\nEveryone and everything looks exactly as in their images above, except for what this moment itself changes and how each one is at this moment, as said.\n\nNothing from another picture shows through this one: no other place, sky, wall or person is layered or double-exposed into it, whatever the style.\n\nOne single picture filling the whole frame. Every surface in it is free of writing, logos and brand badges: signs, pages and screens stay blank.",
+   "prompt": "One picture from the dream, in a landscape 16:9 frame, through the dreamer's own eyes.\n\nWhat the dreamer sees, the camera being their own eyes, as the mock-up in Image 1 shows it (nothing of the dreamer's own body shows, not even their hands: they touch nothing in it): The camera is the dreamer's eyes, looking straight ahead, toward the empty rows of apple trees where Tomas was: it looks toward the far side of the place, away from the side where the lift gate opens. A wide lens, about 24mm. Nearest, a little way off, across the picture from the left edge to the right edge: the empty rows of apple trees where Tomas was, filling the picture from low down to its bottom edge. Outside the picture, behind the camera: the side where the lift gate opens.\n\nThe attached images, in order, and the one thing to take from each:\nImage 1: EDIT THIS PICTURE. It is a rough grey mock-up of this exact picture, rendered from the floor plan of the place through this very camera: make it real. Every labelled grey shape becomes the person or thing its label names, exactly where it is and exactly as big, looking as their own images below show; the unlabelled shapes under people become what they sit on, and the plain grey surfaces the walls, floor and ceiling of the place. Keep the camera, the framing and where everything is exactly; keep nothing of the mock-up's look: no grey clay, no outlines, no labels or letters.\nImage 2: the orchard (a wide orchard with evenly spaced rows of apple trees extending into the distance under a darkening sky; a narrow dirt path running straight through the middle of the orchard; dusk, soft and dim with a faint glow): only what it is made of and its colours (its ground or floor, its walls or buildings, what stands in it). Where everything stands, and which way the picture looks, come from Image 1, the mock-up, not from this image; any of its objects the shot has outside the picture stay out of it.\nImage 3: picture 3 (the dreamer and Tomas, at the tiny lift), just before the dream jumps. Keep its framing and the shapes in it where they are; the dreamer in it is now the camera, so they are not in this picture. The dream changes this: instead of a hotel corridor, there is an orchard.\n\nWhat happens in this frame: The lift gate opens on its own onto an orchard at dusk with rows of apple trees, all the apples glowing soft like little lamps.\n\nThe dream in it, drawn as plain fact, as solid and ordinary as everything around it: the lift opens onto an orchard, not a corridor.\n\nIn it:\nthe orchard (place).\n\nHow each one is at this moment: the apples are glowing soft like little lamps.\n\nIt should feel: sudden openness, wonder.\n\nThe one thing this frame must show: the orchard glowing at dusk where a hotel corridor should be.\n\nStyle: an old photograph faded with age.\nMade as: a photograph. Every part of the picture is made this way, the same as every other picture of this dream.\nIt feels like a dream, in every picture: everything holds still, as if time has been stopped and the colour is draining away.\nTechnique, followed exactly: sepia-toned photograph with chemical staining; soft focus and shallow depth of field; vignette around edges, darker at the corners; overexposed highlights, losing detail in brightness; fine film grain over every surface.\nColours: tan, brown, beige, dark brown, for the light and everything no image above gives a colour to; each person and thing keeps the colours of its image. Skin keeps its natural tone.\nLight: Light is soft and enveloping, as if from an overcast sky, even indoors. Edges are slightly blurred, making forms merge gently into one another. The whole scene seems bathed in the same dusty, faded light.\n\nEveryone and everything looks exactly as in their images above, except for what this moment itself changes and how each one is at this moment, as said.\n\nNothing from another picture shows through this one: no other place, sky, wall or person is layered or double-exposed into it, whatever the style.\n\nOne single picture filling the whole frame. Every surface in it is free of writing, logos and brand badges: signs, pages and screens stay blank.",
    "paragraphs": [
     {
      "id": "framing",
@@ -905,11 +1080,11 @@
     },
     {
      "id": "shot",
-     "text": "What the dreamer sees, the camera being their own eyes (nothing of the dreamer's own body shows, not even their hands: they touch nothing in it): The camera is the dreamer's eyes, looking straight ahead, toward the empty rows of apple trees where Tomas was: it looks toward the far side of the place, away from the side where the lift gate opens. A wide lens, about 24mm. Nearest, a little way off, across the picture from the left edge to the right edge: the empty rows of apple trees where Tomas was, filling the picture from low down to its bottom edge. Outside the picture, behind the camera: the side where the lift gate opens."
+     "text": "What the dreamer sees, the camera being their own eyes, as the mock-up in Image 1 shows it (nothing of the dreamer's own body shows, not even their hands: they touch nothing in it): The camera is the dreamer's eyes, looking straight ahead, toward the empty rows of apple trees where Tomas was: it looks toward the far side of the place, away from the side where the lift gate opens. A wide lens, about 24mm. Nearest, a little way off, across the picture from the left edge to the right edge: the empty rows of apple trees where Tomas was, filling the picture from low down to its bottom edge. Outside the picture, behind the camera: the side where the lift gate opens."
     },
     {
      "id": "manifest",
-     "text": "The attached images, in order, and the one thing to take from each:\nImage 1: the orchard (a wide orchard with evenly spaced rows of apple trees extending into the distance under a darkening sky; a narrow dirt path running straight through the middle of the orchard; dusk, soft and dim with a faint glow): only what it is made of and its colours (its ground or floor, its walls or buildings, what stands in it). Where everything stands, and which way the picture looks, come from the shot above, not from this image; any of its objects the shot has outside the picture stay out of it.\nImage 2: picture 3 (the dreamer and Tomas, at the tiny lift), just before the dream jumps. Keep its framing and the shapes in it where they are; the dreamer in it is now the camera, so they are not in this picture. The dream changes this: instead of a hotel corridor, there is an orchard."
+     "text": "The attached images, in order, and the one thing to take from each:\nImage 1: EDIT THIS PICTURE. It is a rough grey mock-up of this exact picture, rendered from the floor plan of the place through this very camera: make it real. Every labelled grey shape becomes the person or thing its label names, exactly where it is and exactly as big, looking as their own images below show; the unlabelled shapes under people become what they sit on, and the plain grey surfaces the walls, floor and ceiling of the place. Keep the camera, the framing and where everything is exactly; keep nothing of the mock-up's look: no grey clay, no outlines, no labels or letters.\nImage 2: the orchard (a wide orchard with evenly spaced rows of apple trees extending into the distance under a darkening sky; a narrow dirt path running straight through the middle of the orchard; dusk, soft and dim with a faint glow): only what it is made of and its colours (its ground or floor, its walls or buildings, what stands in it). Where everything stands, and which way the picture looks, come from Image 1, the mock-up, not from this image; any of its objects the shot has outside the picture stay out of it.\nImage 3: picture 3 (the dreamer and Tomas, at the tiny lift), just before the dream jumps. Keep its framing and the shapes in it where they are; the dreamer in it is now the camera, so they are not in this picture. The dream changes this: instead of a hotel corridor, there is an orchard."
     },
     {
      "id": "happens",
@@ -952,10 +1127,18 @@
      "text": "One single picture filling the whole frame. Every surface in it is free of writing, logos and brand badges: signs, pages and screens stay blank."
     }
    ],
-   "drawn": null,
+   "drawn": {
+    "file": null,
+    "sentImages": [
+     "base previs:m4",
+     "location sketch:l2",
+     "composition picture:m3"
+    ],
+    "samePrompt": false
+   },
    "hashes": {
-    "chain": "1fceb327396a16",
-    "words": "2a09aace2db09",
+    "chain": "1d1db9b47f9b1",
+    "words": "100503cdb6ea6f",
     "facts": "12e7c23f7b1401"
    }
   },
@@ -966,6 +1149,7 @@
    "scene": "s2",
    "shot": "s2.sh2",
    "treeDiffers": null,
+   "prevCut": "m4",
    "moment": {
     "action": "Tomas runs out ahead between the trees.",
     "looksAt": "Tomas running between the trees",
@@ -988,10 +1172,10 @@
     "words": "Seen from in front of Tomas, from across the place, at the height of Tomas's eyes: the camera looks at Tomas, toward the side where the lift gate opens. A 35mm lens. From left to right across the picture: Tomas, the middle of the picture, standing on the empty rows of apple trees where Tomas was, facing the camera, seen from the shoulders up and filling the picture from near its top to two thirds of the way down. Nobody else is in the picture. Also in the picture: the empty rows of apple trees where Tomas was, across the picture from the left third to the right third, with Tomas on it, filling the picture from low down to its bottom edge. At the back of the picture: the side where the lift gate opens.",
     "eye": {
      "x": 7,
-     "y": 7.479783950617284,
+     "y": 7.48,
      "height": 3.62,
      "dir": -90,
-     "fov": 54.43222311461495,
+     "fov": 54.400000000000006,
      "lens": 35
     }
    },
@@ -1000,18 +1184,36 @@
      "w": 15,
      "d": 20
     },
+    "front": {
+     "words": "the side where the lift gate opens",
+     "dir": {
+      "x": 0,
+      "y": -1
+     }
+    },
+    "indoors": null,
     "spots": [
      {
       "id": "p1",
       "name": "the dreamer",
       "x": 7.5,
-      "y": 0.5
+      "y": 0.5,
+      "kind": "person",
+      "facing": {
+       "x": 0,
+       "y": 1
+      }
      },
      {
       "id": "p2",
       "name": "Tomas",
       "x": 7,
-      "y": 3
+      "y": 3,
+      "kind": "person",
+      "facing": {
+       "x": 0,
+       "y": 1
+      }
      },
      {
       "id": "x1",
@@ -1019,13 +1221,19 @@
       "x": 7,
       "y": 3,
       "w": 2,
-      "d": 2
+      "d": 2,
+      "kind": "thing",
+      "facing": {
+       "x": 0,
+       "y": -1
+      }
      }
     ]
    },
    "mockUp": {
     "name": "previs-5073aee3ff5aabc2d4d36d2aa09554a4cc3ee7695739474875f9bbb575210ae3.png",
-    "sha256": "5073aee3ff5aabc2d4d36d2aa09554a4cc3ee7695739474875f9bbb575210ae3"
+    "sha256": "5073aee3ff5aabc2d4d36d2aa09554a4cc3ee7695739474875f9bbb575210ae3",
+    "sent": true
    },
    "links": [
     {
@@ -1151,9 +1359,19 @@
      "text": "One single picture filling the whole frame. Every surface in it is free of writing, logos and brand badges: signs, pages and screens stay blank."
     }
    ],
-   "drawn": null,
+   "drawn": {
+    "file": null,
+    "sentImages": [
+     "base previs:m5",
+     "identity sketch:p2",
+     "location sketch:l2",
+     "identity ghost:p2:age",
+     "identity ghost:p2:wardrobe"
+    ],
+    "samePrompt": false
+   },
    "hashes": {
-    "chain": "d4c8eeafa59e8",
+    "chain": "17f435409b334",
     "words": "3041667888e71",
     "facts": "1318070e5ae6b"
    }
@@ -1165,6 +1383,7 @@
    "scene": "s2",
    "shot": "s2.sh3",
    "treeDiffers": null,
+   "prevCut": "m5",
    "moment": {
     "action": "The white horse stands very still in the middle of the orchard, lowering its head so the dreamer can touch its nose.",
     "looksAt": "the horse's lowered head and the dreamer's hand on its warm nose",
@@ -1199,24 +1418,47 @@
      "w": 15,
      "d": 20
     },
+    "front": {
+     "words": "the side where the lift gate opens",
+     "dir": {
+      "x": 0,
+      "y": -1
+     }
+    },
+    "indoors": null,
     "spots": [
      {
       "id": "p1",
       "name": "the dreamer",
       "x": 7,
-      "y": 14.5
+      "y": 14.5,
+      "kind": "person",
+      "facing": {
+       "x": 0.7071067811865475,
+       "y": 0.7071067811865475
+      }
      },
      {
       "id": "p2",
       "name": "Tomas",
       "x": 7,
-      "y": 3
+      "y": 3,
+      "kind": "person",
+      "facing": {
+       "x": 0,
+       "y": 1
+      }
      },
      {
       "id": "p3",
       "name": "the white horse",
       "x": 7.5,
-      "y": 15
+      "y": 15,
+      "kind": "person",
+      "facing": {
+       "x": -0.7071067811865475,
+       "y": -0.7071067811865475
+      }
      },
      {
       "id": "x1",
@@ -1224,35 +1466,51 @@
       "x": 7,
       "y": 3,
       "w": 2,
-      "d": 2
+      "d": 2,
+      "kind": "thing",
+      "facing": {
+       "x": 0,
+       "y": -1
+      }
      }
     ]
    },
    "mockUp": {
     "name": "previs-ff11cd0b535552bbf9f779168069553380eee94b33374411652e8dcf735e0384.png",
-    "sha256": "ff11cd0b535552bbf9f779168069553380eee94b33374411652e8dcf735e0384"
+    "sha256": "ff11cd0b535552bbf9f779168069553380eee94b33374411652e8dcf735e0384",
+    "sent": true
    },
    "links": [],
    "refs": [
     {
      "n": 1,
+     "role": "base",
+     "source": "mockup",
+     "key": "previs:m6",
+     "instruction": "the previs of this exact picture, from its camera: make it real, keeping where everyone and everything is and how big",
+     "line": "Image 1: EDIT THIS PICTURE. It is a rough grey mock-up of this exact picture, rendered from the floor plan of the place through this very camera: make it real. Every labelled grey shape becomes the person or thing its label names, exactly where it is and exactly as big, looking as their own images below show; the unlabelled shapes under people become what they sit on, and the plain grey surfaces the walls, floor and ceiling of the place. Keep the camera, the framing and where everything is exactly; keep nothing of the mock-up's look: no grey clay, no outlines, no labels or letters.",
+     "subjects": [],
+     "file": null
+    },
+    {
+     "n": 2,
      "role": "identity",
      "source": "sketch",
      "key": "sketch:p3",
      "instruction": "the white horse: this exact animal, the same kind, size, build, coat and markings",
-     "line": "Image 1: what the white horse is (medium-sized adult horse; all white coat): its kind, its size, its build, its coat and its markings, exactly. Nothing else from it: not its pose, background or framing.",
+     "line": "Image 2: what the white horse is (medium-sized adult horse; all white coat): its kind, its size, its build, its coat and its markings, exactly. Nothing else from it: not its pose, background or framing.",
      "subjects": [
       "p3"
      ],
      "file": null
     },
     {
-     "n": 2,
+     "n": 3,
      "role": "location",
      "source": "sketch",
      "key": "sketch:l2",
-     "instruction": "the orchard: its materials, colours and objects only; the layout comes from the earlier picture",
-     "line": "Image 2: the orchard (a wide orchard with evenly spaced rows of apple trees extending into the distance under a darkening sky; a narrow dirt path running straight through the middle of the orchard; dusk, soft and dim with a faint glow): only what it is made of and its colours (its ground or floor, its walls or buildings, what stands in it). Where everything stands, and which way the picture looks, come from the shot above, not from this image; any of its objects the shot has outside the picture stay out of it.",
+     "instruction": "the orchard: its materials, colours and objects only; the layout comes from the previs",
+     "line": "Image 3: the orchard (a wide orchard with evenly spaced rows of apple trees extending into the distance under a darkening sky; a narrow dirt path running straight through the middle of the orchard; dusk, soft and dim with a faint glow): only what it is made of and its colours (its ground or floor, its walls or buildings, what stands in it). Where everything stands, and which way the picture looks, come from Image 1, the mock-up, not from this image; any of its objects the shot has outside the picture stay out of it.",
      "subjects": [
       "l2"
      ],
@@ -1280,7 +1538,7 @@
     ]
    },
    "issues": [],
-   "prompt": "One picture from the dream, in a landscape 16:9 frame, through the dreamer's own eyes.\n\nThe shot (at most their own hands and arms show, in wearing a plain light beige button-up shirt and dark brown trousers, and nothing else of them): The shot is a first-person view through the dreamer's eyes, using a 24mm wide lens, camera at eye level, looking straight ahead. In the foreground, the white horse stands close, facing the camera, seen from the waist up, filling the picture from the left third to the right third and from a third of the way down to the bottom edge. The middle distance shows the orchard floor just behind the horse, stretching back toward the tree line. In the background, the far side of the orchard at dusk, with rows of apple trees and their softly glowing apples. The light comes from the glow of the apples and the dim twilight, casting a soft illumination. Just outside the left edge of the picture, Tomas stands among the empty rows of apple trees, near the side where the lift gate opened.\n\nThe attached images, in order, and the one thing to take from each:\nImage 1: what the white horse is (medium-sized adult horse; all white coat): its kind, its size, its build, its coat and its markings, exactly. Nothing else from it: not its pose, background or framing.\nImage 2: the orchard (a wide orchard with evenly spaced rows of apple trees extending into the distance under a darkening sky; a narrow dirt path running straight through the middle of the orchard; dusk, soft and dim with a faint glow): only what it is made of and its colours (its ground or floor, its walls or buildings, what stands in it). Where everything stands, and which way the picture looks, come from the shot above, not from this image; any of its objects the shot has outside the picture stay out of it.\n\nWhat happens in this frame: The white horse stands very still in the middle of the orchard, lowering its head so the dreamer can touch its nose.\n\nIn it:\nthe white horse (animal).\nthe orchard (place).\n\nHow each one is at this moment: the apples are glowing soft like little lamps.\n\nIt should feel: calm, solid, like the whole dream went quiet.\n\nThe one thing this frame must show: the warm touch of the horse's nose.\n\nStyle: an old photograph faded with age.\nMade as: a photograph. Every part of the picture is made this way, the same as every other picture of this dream.\nIt feels like a dream, in every picture: everything holds still, as if time has been stopped and the colour is draining away.\nTechnique, followed exactly: sepia-toned photograph with chemical staining; soft focus and shallow depth of field; vignette around edges, darker at the corners; overexposed highlights, losing detail in brightness; fine film grain over every surface.\nColours: tan, brown, beige, dark brown, for the light and everything no image above gives a colour to; each person and thing keeps the colours of its image. What the dream itself gives a colour keeps it exactly, as said above: white horse stands. Skin keeps its natural tone.\nLight: Light is soft and enveloping, as if from an overcast sky, even indoors. Edges are slightly blurred, making forms merge gently into one another. The whole scene seems bathed in the same dusty, faded light.\n\nEveryone and everything looks exactly as in their images above, except for what this moment itself changes and how each one is at this moment, as said.\n\nOne single picture filling the whole frame. Every surface in it is free of writing, logos and brand badges: signs, pages and screens stay blank.",
+   "prompt": "One picture from the dream, in a landscape 16:9 frame, through the dreamer's own eyes.\n\nThe shot, as the mock-up in Image 1 shows it (at most their own hands and arms show, in wearing a plain light beige button-up shirt and dark brown trousers, and nothing else of them): The shot is a first-person view through the dreamer's eyes, using a 24mm wide lens, camera at eye level, looking straight ahead. In the foreground, the white horse stands close, facing the camera, seen from the waist up, filling the picture from the left third to the right third and from a third of the way down to the bottom edge. The middle distance shows the orchard floor just behind the horse, stretching back toward the tree line. In the background, the far side of the orchard at dusk, with rows of apple trees and their softly glowing apples. The light comes from the glow of the apples and the dim twilight, casting a soft illumination. Just outside the left edge of the picture, Tomas stands among the empty rows of apple trees, near the side where the lift gate opened.\n\nThe attached images, in order, and the one thing to take from each:\nImage 1: EDIT THIS PICTURE. It is a rough grey mock-up of this exact picture, rendered from the floor plan of the place through this very camera: make it real. Every labelled grey shape becomes the person or thing its label names, exactly where it is and exactly as big, looking as their own images below show; the unlabelled shapes under people become what they sit on, and the plain grey surfaces the walls, floor and ceiling of the place. Keep the camera, the framing and where everything is exactly; keep nothing of the mock-up's look: no grey clay, no outlines, no labels or letters.\nImage 2: what the white horse is (medium-sized adult horse; all white coat): its kind, its size, its build, its coat and its markings, exactly. Nothing else from it: not its pose, background or framing.\nImage 3: the orchard (a wide orchard with evenly spaced rows of apple trees extending into the distance under a darkening sky; a narrow dirt path running straight through the middle of the orchard; dusk, soft and dim with a faint glow): only what it is made of and its colours (its ground or floor, its walls or buildings, what stands in it). Where everything stands, and which way the picture looks, come from Image 1, the mock-up, not from this image; any of its objects the shot has outside the picture stay out of it.\n\nWhat happens in this frame: The white horse stands very still in the middle of the orchard, lowering its head so the dreamer can touch its nose.\n\nIn it:\nthe white horse (animal).\nthe orchard (place).\n\nHow each one is at this moment: the apples are glowing soft like little lamps.\n\nIt should feel: calm, solid, like the whole dream went quiet.\n\nThe one thing this frame must show: the warm touch of the horse's nose.\n\nStyle: an old photograph faded with age.\nMade as: a photograph. Every part of the picture is made this way, the same as every other picture of this dream.\nIt feels like a dream, in every picture: everything holds still, as if time has been stopped and the colour is draining away.\nTechnique, followed exactly: sepia-toned photograph with chemical staining; soft focus and shallow depth of field; vignette around edges, darker at the corners; overexposed highlights, losing detail in brightness; fine film grain over every surface.\nColours: tan, brown, beige, dark brown, for the light and everything no image above gives a colour to; each person and thing keeps the colours of its image. What the dream itself gives a colour keeps it exactly, as said above: white horse stands. Skin keeps its natural tone.\nLight: Light is soft and enveloping, as if from an overcast sky, even indoors. Edges are slightly blurred, making forms merge gently into one another. The whole scene seems bathed in the same dusty, faded light.\n\nEveryone and everything looks exactly as in their images above, except for what this moment itself changes and how each one is at this moment, as said.\n\nOne single picture filling the whole frame. Every surface in it is free of writing, logos and brand badges: signs, pages and screens stay blank.",
    "paragraphs": [
     {
      "id": "framing",
@@ -1288,11 +1546,11 @@
     },
     {
      "id": "shot",
-     "text": "The shot (at most their own hands and arms show, in wearing a plain light beige button-up shirt and dark brown trousers, and nothing else of them): The shot is a first-person view through the dreamer's eyes, using a 24mm wide lens, camera at eye level, looking straight ahead. In the foreground, the white horse stands close, facing the camera, seen from the waist up, filling the picture from the left third to the right third and from a third of the way down to the bottom edge. The middle distance shows the orchard floor just behind the horse, stretching back toward the tree line. In the background, the far side of the orchard at dusk, with rows of apple trees and their softly glowing apples. The light comes from the glow of the apples and the dim twilight, casting a soft illumination. Just outside the left edge of the picture, Tomas stands among the empty rows of apple trees, near the side where the lift gate opened."
+     "text": "The shot, as the mock-up in Image 1 shows it (at most their own hands and arms show, in wearing a plain light beige button-up shirt and dark brown trousers, and nothing else of them): The shot is a first-person view through the dreamer's eyes, using a 24mm wide lens, camera at eye level, looking straight ahead. In the foreground, the white horse stands close, facing the camera, seen from the waist up, filling the picture from the left third to the right third and from a third of the way down to the bottom edge. The middle distance shows the orchard floor just behind the horse, stretching back toward the tree line. In the background, the far side of the orchard at dusk, with rows of apple trees and their softly glowing apples. The light comes from the glow of the apples and the dim twilight, casting a soft illumination. Just outside the left edge of the picture, Tomas stands among the empty rows of apple trees, near the side where the lift gate opened."
     },
     {
      "id": "manifest",
-     "text": "The attached images, in order, and the one thing to take from each:\nImage 1: what the white horse is (medium-sized adult horse; all white coat): its kind, its size, its build, its coat and its markings, exactly. Nothing else from it: not its pose, background or framing.\nImage 2: the orchard (a wide orchard with evenly spaced rows of apple trees extending into the distance under a darkening sky; a narrow dirt path running straight through the middle of the orchard; dusk, soft and dim with a faint glow): only what it is made of and its colours (its ground or floor, its walls or buildings, what stands in it). Where everything stands, and which way the picture looks, come from the shot above, not from this image; any of its objects the shot has outside the picture stay out of it."
+     "text": "The attached images, in order, and the one thing to take from each:\nImage 1: EDIT THIS PICTURE. It is a rough grey mock-up of this exact picture, rendered from the floor plan of the place through this very camera: make it real. Every labelled grey shape becomes the person or thing its label names, exactly where it is and exactly as big, looking as their own images below show; the unlabelled shapes under people become what they sit on, and the plain grey surfaces the walls, floor and ceiling of the place. Keep the camera, the framing and where everything is exactly; keep nothing of the mock-up's look: no grey clay, no outlines, no labels or letters.\nImage 2: what the white horse is (medium-sized adult horse; all white coat): its kind, its size, its build, its coat and its markings, exactly. Nothing else from it: not its pose, background or framing.\nImage 3: the orchard (a wide orchard with evenly spaced rows of apple trees extending into the distance under a darkening sky; a narrow dirt path running straight through the middle of the orchard; dusk, soft and dim with a faint glow): only what it is made of and its colours (its ground or floor, its walls or buildings, what stands in it). Where everything stands, and which way the picture looks, come from Image 1, the mock-up, not from this image; any of its objects the shot has outside the picture stay out of it."
     },
     {
      "id": "happens",
@@ -1327,10 +1585,18 @@
      "text": "One single picture filling the whole frame. Every surface in it is free of writing, logos and brand badges: signs, pages and screens stay blank."
     }
    ],
-   "drawn": null,
+   "drawn": {
+    "file": null,
+    "sentImages": [
+     "base previs:m6",
+     "identity sketch:p3",
+     "location sketch:l2"
+    ],
+    "samePrompt": false
+   },
    "hashes": {
-    "chain": "1528689242d8c5",
-    "words": "23766c86e0aba",
+    "chain": "14ec8281652ff7",
+    "words": "1cfa219e14396c",
     "facts": "75a7f943b8bcb"
    }
   },
@@ -1341,6 +1607,7 @@
    "scene": "s2",
    "shot": "s2.sh4",
    "treeDiffers": null,
+   "prevCut": "m6",
    "moment": {
     "action": "The dreamer looks for Tomas and finds him gone.",
     "looksAt": "the empty rows of apple trees where Tomas was",
@@ -1374,18 +1641,36 @@
      "w": 15,
      "d": 20
     },
+    "front": {
+     "words": "the side where the lift gate opens",
+     "dir": {
+      "x": 0,
+      "y": -1
+     }
+    },
+    "indoors": null,
     "spots": [
      {
       "id": "p1",
       "name": "the dreamer",
       "x": 7,
-      "y": 14.5
+      "y": 14.5,
+      "kind": "person",
+      "facing": {
+       "x": 0,
+       "y": -1
+      }
      },
      {
       "id": "p3",
       "name": "the white horse",
       "x": 7.5,
-      "y": 15
+      "y": 15,
+      "kind": "person",
+      "facing": {
+       "x": -0.7071067811865475,
+       "y": -0.7071067811865475
+      }
      },
      {
       "id": "x1",
@@ -1393,13 +1678,19 @@
       "x": 7,
       "y": 3,
       "w": 2,
-      "d": 2
+      "d": 2,
+      "kind": "thing",
+      "facing": {
+       "x": 0,
+       "y": -1
+      }
      }
     ]
    },
    "mockUp": {
     "name": "previs-770ba95969ccbfe48de58e3d9edd7c1297f6e8885b805375e4e0cfcc96cc23fd.png",
-    "sha256": "770ba95969ccbfe48de58e3d9edd7c1297f6e8885b805375e4e0cfcc96cc23fd"
+    "sha256": "770ba95969ccbfe48de58e3d9edd7c1297f6e8885b805375e4e0cfcc96cc23fd",
+    "sent": true
    },
    "links": [],
    "refs": [
@@ -1489,7 +1780,15 @@
      "text": "One single picture filling the whole frame. Every surface in it is free of writing, logos and brand badges: signs, pages and screens stay blank."
     }
    ],
-   "drawn": null,
+   "drawn": {
+    "file": null,
+    "sentImages": [
+     "base previs:m7",
+     "identity sketch:p2",
+     "location sketch:l2"
+    ],
+    "samePrompt": false
+   },
    "hashes": {
     "chain": "c98a293e9fe98",
     "words": "6bccfc4ec74eb",
@@ -1503,9 +1802,11 @@
    "kind": "state",
    "of": "p2",
    "change": "Tomas's age is now about ten",
-   "from": [
-    "p2"
-   ],
+   "from": {
+    "subject": "p2",
+    "editedFrom": "sketch:p2",
+    "after": null
+   },
    "usedBy": [
     "m2",
     "m3",
@@ -1538,10 +1839,11 @@
    "kind": "state",
    "of": "p2",
    "change": "Tomas's wardrobe is now old school uniform, grey shorts and shirt",
-   "from": [
-    "p2",
-    "g1"
-   ],
+   "from": {
+    "subject": "p2",
+    "editedFrom": "ghost:p2:age",
+    "after": "g1"
+   },
    "usedBy": [
     "m2",
     "m3",
@@ -1556,7 +1858,7 @@
      "source": "ghost",
      "key": "ghost:p2:age",
      "instruction": "Tomas as they looked a moment before: edit it with one change",
-     "line": "Image 1 is Tomas as they looked a moment before, after the change before this one: edit it. Make exactly one change: their wardrobe is now old school uniform, grey shorts and shirt. Image 2 is their reference sheet: their hair.",
+     "line": "Image 1 is Tomas as they looked a moment before, after the change before this one: edit it. Make exactly one change: their wardrobe is now old school uniform, grey shorts and shirt.",
      "subjects": [],
      "file": null
     },
@@ -1566,7 +1868,7 @@
      "source": "sketch",
      "key": "sketch:p2",
      "instruction": "Tomas's reference sheet: who or what it is",
-     "line": "",
+     "line": "Image 2 is their reference sheet: their hair.",
      "subjects": [],
      "file": null
     }
