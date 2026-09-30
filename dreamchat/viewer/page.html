@@ -489,8 +489,12 @@ function topView(c, prev) {
     const inView = c.facts.inView.some((e) => e.id === p.id);
     const col = inView ? 'var(--ink)' : 'var(--faint)';
     if (p.kind === 'thing' || p.w) {
+      // Its size is across as it faces and deep (blocking.ts): drawn turned the way it faces, facing the front unturned.
       const w = Math.max(p.w ?? .5, mark), d = Math.max(p.d ?? .5, mark);
-      svg.append(s('rect', { x: p.x - w / 2, y: p.y - d / 2, width: w, height: d, fill: 'none', stroke: col, 'stroke-width': u * .5 }));
+      const f = p.facing ?? { x: 0, y: -1 };
+      const turn = (Math.atan2(f.y, f.x) * 180) / Math.PI + 90;
+      svg.append(s('rect', { x: p.x - w / 2, y: p.y - d / 2, width: w, height: d, fill: 'none', stroke: col, 'stroke-width': u * .5, transform: `rotate(${turn} ${p.x} ${p.y})` }));
+      if (p.facing) svg.append(s('line', { x1: p.x, y1: p.y, x2: p.x + f.x * (d / 2 + tick * .6), y2: p.y + f.y * (d / 2 + tick * .6), stroke: col, 'stroke-width': u * .5 }));
     } else {
       svg.append(s('circle', { cx: p.x, cy: p.y, r: mark, fill: 'var(--panel)', stroke: col, 'stroke-width': u * .6 }));
       if (p.facing) svg.append(s('line', { x1: p.x, y1: p.y, x2: p.x + p.facing.x * tick, y2: p.y + p.facing.y * tick, stroke: col, 'stroke-width': u * .6 }));
@@ -627,7 +631,10 @@ function diffView(a, b) {
 function renderWords() {
   const box = $('turns');
   if (!D.words) { box.replaceChildren(el('p', { class: 'muted', text: 'No conversation here: a frozen copy keeps none, and no live copy of this dream was found on this machine when the view was made.' })); return; }
-  box.replaceChildren(...D.words.map((t) => el('div', { class: `turn ${t.who}`, 'data-turn': t.turn }, el('div', { class: 'who', text: t.who === 'dreamer' ? 'the dreamer' : 'the listener' }), el('div', { class: 'text', text: t.text }))));
+  const note = D.header.source === 'frozen'
+    ? el('p', { class: 'muted', text: 'From the live copy of this dream: the conversation may go on past the point where this dream was frozen, and its later turns were not read by it.' })
+    : null;
+  box.replaceChildren(...[note, ...D.words.map((t) => el('div', { class: `turn ${t.who}`, 'data-turn': t.turn }, el('div', { class: 'who', text: t.who === 'dreamer' ? 'the dreamer' : 'the listener' }), el('div', { class: 'text', text: t.text })))].filter(Boolean));
   highlightWords();
 }
 function highlightWords() {
