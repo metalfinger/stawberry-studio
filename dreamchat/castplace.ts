@@ -8,6 +8,9 @@ import { type Blocking, facing, rightOf, roomOf, type Side, sizeOf, type Spot, u
 
 type V2 = { x: number; y: number };
 
+/** One of the pieces a place's words give (a window along a side, a row of seats): `cf1`, `cf2` … */
+export const isCastPiece = (s: { id: string }) => /^cf\d+$/.test(s.id);
+
 /** The things the reading casts, with the ids it gives them (c1, c2 …; a reading kept before ids, in its order). */
 export function castThings(reading: CastReading): { id: string; t: CastThing }[] {
   return reading.things
@@ -254,7 +257,8 @@ export function withCastFixtures(plan: Blocking, fixtures: CastFixture[], placeI
             id: id(),
             kind: 'thing',
             fixture: true,
-            name: f.name,
+            // Each one of them: "a window", never the row's name bare ("Outside the picture, off to the left: window").
+            name: `a ${head.replace(/s$/, '')}`,
             x: Math.round(at.x * 100) / 100,
             y: Math.round(at.y * 100) / 100,
             size:
