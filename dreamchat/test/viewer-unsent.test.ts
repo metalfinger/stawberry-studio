@@ -28,7 +28,8 @@ test("every picture the plan leaves out has the plan's reason in the view, and n
         seen += c.unsent.length;
         for (const u of c.unsent) {
           expect([id, c.id, u.key, CODES.includes(u.code)]).toEqual([id, c.id, u.key, true]);
-          expect(u.detail).not.toBe('not recorded');
+          // Never the fallback: every picture left out has the plan's own reason.
+          expect([id, c.id, u.key, u.code]).not.toEqual([id, c.id, u.key, 'not_recorded']);
           // Left out, so not among the images sent.
           expect(c.refs.some((r) => r.key === u.key)).toBe(false);
         }

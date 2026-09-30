@@ -98,7 +98,8 @@ export type ViewUnsent = {
     | 'has_sketch'
     | 'seat_replaced_by_view'
     | 'cap'
-    | 'edit_to_own_camera';
+    | 'edit_to_own_camera'
+    | 'not_recorded';
   detail: string;
 };
 

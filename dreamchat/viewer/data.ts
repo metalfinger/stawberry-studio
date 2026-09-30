@@ -285,9 +285,10 @@ export function viewDream(s: Session, o: ViewOpts): { view: ViewDream; files: Re
       refs,
       // Why each earlier picture the plan chose is not sent (continuity.ts unsentWhy): the plan's own reasons.
       unsent: (plan?.unsent ?? []).map((x) => ({
-        key: x.kind === 'cut' ? `picture:${x.id}` : `ghost:${x.id}`,
-        code: plan?.unsentWhy?.[x.id]?.code ?? 'no_cameras_words_differ',
-        detail: plan?.unsentWhy?.[x.id]?.detail ?? 'not recorded',
+        // Named as the images sent are named (picture:m3, ghost:t1:lid), so the page matches them by one name.
+        key: imageName(r, standIn.picture(x.id)),
+        code: plan?.unsentWhy?.[x.id]?.code ?? 'not_recorded',
+        detail: plan?.unsentWhy?.[x.id]?.detail ?? 'left out with no reason recorded',
       })),
       facts,
       issues: gateIssues.filter((x) => x.startsWith(`picture ${order} `) || x.startsWith(`picture ${order}:`)),
