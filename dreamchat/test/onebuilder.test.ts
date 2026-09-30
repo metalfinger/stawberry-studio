@@ -1362,7 +1362,8 @@ describe('an earlier picture for who someone is, as last drawn', () => {
     // 4c79 m6: "the dream changes this: The dreamer is suddenly flying.." before the step.
     const sw = { ...RS_ON, DREAMCHAT_CAMERA: 'on', DREAMCHAT_REFS: 'on' };
     const p = at('dream-0926-012307-4c79', 'm6', sw);
-    expect(p).toContain('the dream changes this: The dreamer is suddenly flying.');
+    // "The dream changes this" starts its own sentence with jump_words.
+    expect(p).toMatch(/the dream changes this: The dreamer is suddenly flying\./i);
     expect(p).not.toContain('flying..');
     expect(at('dream-0926-012307-4c79', 'm6', { ...sw, DREAMCHAT_ONE_BUILDER: 'state_once' })).toContain('flying..');
   });
