@@ -7,6 +7,7 @@
 // better than a description of one. So the layout is rendered here, from the floor plan that
 // decides every camera, and what the words say the camera sees is read off the same render: the
 // picture and the words cannot disagree.
+import { isCastPiece } from './castplace';
 import { deflateSync } from 'node:zlib';
 import {
   type Blocking,
@@ -1269,7 +1270,7 @@ export function dreamerShot(
     // What someone holds is with them: never "outside the picture" while they are in it.
     ...spots
       .filter((s) => !shown.some((x) => x.s.id === s.id) && !(s.heldBy && shown.some((x) => x.s.id === s.heldBy)))
-      .filter((s) => !(camera && underWater(s, plan, eye)))
+      .filter((s) => !(camera && underWater(s, plan, eye)) && !isCastPiece(s))
       .map((s) =>
         // What they hold themselves is in their hands, only below the picture (the camera rules).
         camera && s.heldBy === dreamer
@@ -1871,7 +1872,10 @@ export function outsideShot(
           !riding(s) &&
           (subjects.includes(s.id) || !isPerson(s)) &&
           !(s.heldBy && shown.some((x) => x.s.id === s.heldBy)) &&
-          !(camera && underWater(s, plan, eye)),
+          !(camera && underWater(s, plan, eye)) &&
+          // The pieces a place's words give (its windows along each side) are said by its walls, never one by one:
+          // "Outside the picture, off to the left: a window" read as windows on the picture's left (30 Sep).
+          !isCastPiece(s),
       )
       .map((s) => `Outside the picture, ${offTo(eye, s)}: ${name(s.id)}.`),
     frontLine(plan, eye, rr, min),

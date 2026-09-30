@@ -124,7 +124,7 @@ describe('the place’s own fixtures', () => {
       ],
       'l1',
     );
-    const windows = placed.spots.filter((s) => s.name === 'the windows');
+    const windows = placed.spots.filter((s) => s.name === 'a window');
     expect(new Set(windows.map((w) => (w.x < 1 ? 'left' : 'right')))).toEqual(new Set(['left', 'right']));
     expect(windows.every((w) => w.above === 1)).toBe(true);
     const seats = placed.spots.filter((s) => s.name === 'bench seats');
@@ -198,10 +198,10 @@ describe('on a saved dream', () => {
     Object.assign(process.env, env);
     try {
       const plan = rawPlanBy(b, 'm3', { ...none, cast })!;
-      expect(plan.spots.filter((s) => s.name === 'the windows').length).toBe(6);
+      expect(plan.spots.filter((s) => s.name === 'a window').length).toBe(6);
       const c1 = plan.spots.find((s) => s.id === 'c1')!;
       expect(c1).toMatchObject({ many: true, count: 3 });
-      expect(rawPlanBy(b, 'm3', none)!.spots.some((s) => s.id === 'c1' || s.name === 'the windows')).toBe(false);
+      expect(rawPlanBy(b, 'm3', none)!.spots.some((s) => s.id === 'c1' || s.name === 'a window')).toBe(false);
     } finally {
       for (const [k, v] of Object.entries(was))
         if (v === undefined) delete process.env[k];
