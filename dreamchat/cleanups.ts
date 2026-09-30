@@ -139,6 +139,11 @@ export const BUILDER_STEPS: readonly string[] = [
   //    numbers, letters addressed to the dreamer) shows as marks no one could read, where the prompt said every
   //    surface is blank; a quoted word with a number in it is counted in characters, not letters.
   'story_marks',
+  // Not a ledger row: from the read of every prompt (30 Sep). What the moments need drawn and the producer never
+  //    cast (the red tractor ridden in, the jellyfish ahead, the floating books), and how big each body is (a cat as
+  //    big as a bus, a child of six), from one writer reading per dream, grounded in the dream's words (cast.ts): the
+  //    things cast in the breakdown before anything reads it; weather and matter said as the picture's condition.
+  'cast_named',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;

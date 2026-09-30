@@ -36,6 +36,7 @@ import type { Session } from '../session';
 import { inShades, LOOK } from '../sheets';
 import { atomicChanges, diffDumps, type DumpDream, dumpOf, wordDiff, wordRuns } from './corpus';
 import { withImplied } from './implied-cache';
+import { withCast } from './cast-cache';
 import { withTyped } from './typed-cache';
 import { JEV_MODEL, sectionsOf } from './prompt-cases';
 import { commitOf, DIR, type Dream, dataDir, frozenDreams, liveDreams, loadDream, readLive, switches } from './saved';
@@ -717,6 +718,10 @@ if (import.meta.main) {
       const typed = await withTyped(session);
       typedMissing.push(...typed.missing.map((m) => `${d.id} ${m}`));
       session = typed.session;
+      // With the cast reading (cast.ts, the cast_named step), after the typed readings: they were asked of the breakdown as saved.
+      const cast = await withCast(session);
+      if (cast.missing) typedMissing.push(`${d.id} (cast reading)`);
+      session = cast.session;
     }
     let r: Rebuilt;
     try {

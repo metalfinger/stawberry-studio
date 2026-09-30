@@ -363,6 +363,7 @@ if (import.meta.main) {
   const costs: Awaited<ReturnType<typeof withImplied>>[] = [];
   const { oneBuilder } = await import('../cleanups');
   const { withTyped } = await import('./typed-cache');
+  const { withCast } = await import('./cast-cache');
   for (const d of dreams) {
     if (!d.session.draft?.breakdown || !d.session.style) continue;
     try {
@@ -373,7 +374,7 @@ if (import.meta.main) {
         session = read.session;
       }
       // With S6's one prompt builder on, each moment's typed reading, from its cache only.
-      if (oneBuilder()) session = (await withTyped(session)).session;
+      if (oneBuilder()) session = (await withCast((await withTyped(session)).session)).session;
       run.dreams[d.id] = { ...referencesOf(rebuild(session, { asDrawn: false })), hash: d.hash };
     } catch (e) {
       run.dreams[d.id] = {

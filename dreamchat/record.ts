@@ -10,6 +10,7 @@
 // they found. It runs beside the plan and is logged (DREAMCHAT_RECORD=shadow), or the continuity plan
 // and the prompts read it too (DREAMCHAT_RECORD=on): what changes is carried from picture to picture,
 // who is there, and who holds what.
+import type { CastReading } from './cast-types';
 import { builds, oneBuilder, retired } from './cleanups';
 import { pictureName, placePlan, type RecordPlan, rawPlanBy } from './continuity';
 import {
@@ -211,6 +212,8 @@ export type Readings = {
    * (typed.ts): read with S6's one prompt builder on (DREAMCHAT_ONE_BUILDER), which says the moment from them.
    */
   typed?: Record<string, TypedReading>;
+  /** The cast reading (cast.ts): what the moments need drawn and was never cast, and how big each body is. */
+  cast?: CastReading;
 };
 
 /** One implied state of a moment: proposed by the writer, and Jev's reading of it on the moment's words. */
@@ -3051,7 +3054,9 @@ export function recordForPlan(
 ): RecordPlan | undefined {
   if (recordMode() !== 'on') return undefined;
   try {
-    return forPlan(oneRecord(b, items, readings, opts).record);
+    const plan = forPlan(oneRecord(b, items, readings, opts).record);
+    // With the cast_named step, the cast reading as read and checked, for the floor plan to place (continuity rawPlanBy).
+    return plan && builds('cast_named') && readings?.cast ? { ...plan, cast: readings.cast } : plan;
   } catch {
     return undefined;
   }

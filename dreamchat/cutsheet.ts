@@ -92,6 +92,7 @@ import {
   type TreeRef,
 } from './tree';
 import { takenOf, type TypedMoment, type TypedReading } from './typed';
+import type { CastReading } from './cast-types';
 
 /** Whether the cut sheet runs: off (the default), in shadow beside framePrompt, or on, writing the prompts. */
 export function cutSheetMode(): 'off' | 'shadow' | 'on' {
@@ -320,6 +321,12 @@ export type CutSheet = {
   earlierWords?: true;
   /** Writing the story needs but does not quote shows as marks no one could read (the `story_marks` step). */
   storyMarks?: true;
+  /**
+   * With the `cast_named` step: weather and matter the cast reading gives this moment (the snow, the rising water, a
+   * stream of bubbles), said as the picture's condition, never as a thing on the floor plan; `beyond` where it is
+   * seen out past the place.
+   */
+  conditions?: { name: string; look: string; beyond: boolean }[];
   /** What belongs to a take rather than the cut: the judge's findings on the last attempt and on earlier pictures. */
   take: { repairs: string[]; strays: Record<string, string[]> };
   record: RecordLayer | null;
@@ -354,6 +361,8 @@ export type SheetDream = {
   cameras?: Record<string, Eye>;
   /** With the one prompt builder on: each moment's typed reading, from the dream's readings. */
   typed?: Record<string, TypedReading>;
+  /** With the one builder's `cast_named` step: the cast reading (cast.ts), from the dream's readings. */
+  cast?: CastReading;
 };
 
 /**
@@ -397,6 +406,7 @@ export function sheetDream(x: {
     record,
     ...(cameraMode() === 'on' ? { cameras: Object.fromEntries(camerasOf(x.plan)) } : {}),
     ...(oneBuilder() && x.readings?.typed ? { typed: x.readings.typed } : {}),
+    ...(builds('cast_named') && x.readings?.cast ? { cast: x.readings.cast } : {}),
   };
 }
 
@@ -714,6 +724,16 @@ export function cutSheet(x: CutSheetInput): CutSheet {
       : {}),
     ...(builds('earlier_words') ? { earlierWords: true as const } : {}),
     ...(builds('story_marks') ? { storyMarks: true as const } : {}),
+    ...(() => {
+      const c = (x.dream?.cast?.things ?? []).flatMap((t) =>
+        t.kind === 'weather' || t.kind === 'matter'
+          ? t.moments
+              .filter((m) => m.id === frame.id)
+              .map((m) => ({ name: t.name, look: t.look, beyond: m.where === 'beyond' }))
+          : [],
+      );
+      return c.length ? { conditions: c } : {};
+    })(),
     take: { repairs: [...(frame.repairFor ?? [])], strays },
     record,
     tree,

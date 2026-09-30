@@ -12,3 +12,4 @@ Restore before running evals:
     cp evals/cache/typed-cache.json runs/typed-cache.json
     cp evals/cache/prompt-cases-jev-cache.json runs/prompt-cases/jev-cache.json
     cp evals/cache/listening-jev-cache.json runs/listening/jev-cache.json
+    cp evals/cache/cast-cache.json runs/cast-cache.json

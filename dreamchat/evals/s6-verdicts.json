@@ -5550,5 +5550,441 @@
   "adb4a4e95d1cd798": {
     "verdict": "intended",
     "why": "told_colours: the word straight after a colour is what it colours, even one that could be a verb ('a silver rush of fish' keeps 'silver rush', listed again since no look above says it)."
+  },
+  "e747ee421c2d96ab": {
+    "verdict": "intended",
+    "why": "cast_named: a thing the moment needs drawn and the producer never cast (cast.ts, grounded in the moment's words) is sent as its own sheet, to be drawn like any prop; the images before it unchanged (checked by script)."
+  },
+  "79007c82e57544a0": {
+    "verdict": "intended",
+    "why": "cast_named: the cast thing's image line is added (its look as the dream gives it); every other line the same bar its image number (checked by script)."
+  },
+  "6b11d813af6488c0": {
+    "verdict": "intended",
+    "why": "cast_named: \"In it\" names the thing the moment needs drawn and the producer never cast; every other line the same (checked by script)."
+  },
+  "1e91073acd6c5fd4": {
+    "verdict": "intended",
+    "why": "cast_named: a thing the moment needs drawn and the producer never cast (cast.ts, grounded in the moment's words) is sent as its own sheet, to be drawn like any prop; the images before it unchanged (checked by script)."
+  },
+  "6d080a949d802ae1": {
+    "verdict": "intended",
+    "why": "cast_named: the cast thing's image line is added (its look as the dream gives it); every other line the same bar its image number (checked by script)."
+  },
+  "3d1ed379eb6b5aa2": {
+    "verdict": "intended",
+    "why": "cast_named: \"In it\" names the thing the moment needs drawn and the producer never cast; every other line the same (checked by script)."
+  },
+  "3900191062ddd6c5": {
+    "verdict": "intended",
+    "why": "cast_named: a thing the moment needs drawn and the producer never cast (cast.ts, grounded in the moment's words) is sent as its own sheet, to be drawn like any prop; the images before it unchanged (checked by script)."
+  },
+  "1b7a6e43c9599216": {
+    "verdict": "intended",
+    "why": "cast_named: the cast thing's image line is added (its look as the dream gives it); every other line the same bar its image number (checked by script)."
+  },
+  "73eea9f3982c6313": {
+    "verdict": "intended",
+    "why": "cast_named: \"In it\" names the thing the moment needs drawn and the producer never cast; every other line the same (checked by script)."
+  },
+  "15e9d000b251db7b": {
+    "verdict": "intended",
+    "why": "cast_named: with the cast thing's own image line saying its colour, colour_once lists it as said above (checked by script: only phrases leave the list)."
+  },
+  "6f189e6eb89c8e38": {
+    "verdict": "intended",
+    "why": "cast_named: a thing the moment needs drawn and the producer never cast (cast.ts, grounded in the moment's words) is sent as its own sheet, to be drawn like any prop; the images before it unchanged (checked by script)."
+  },
+  "5d22f734965f058c": {
+    "verdict": "intended",
+    "why": "cast_named: the cast thing's image line is added (its look as the dream gives it); every other line the same bar its image number (checked by script)."
+  },
+  "452a8080627a9c0b": {
+    "verdict": "intended",
+    "why": "cast_named: \"In it\" names the thing the moment needs drawn and the producer never cast; every other line the same (checked by script)."
+  },
+  "084ea65dca80c9bc": {
+    "verdict": "intended",
+    "why": "cast_named: a thing the moment needs drawn and the producer never cast (cast.ts, grounded in the moment's words) is sent as its own sheet, to be drawn like any prop; the images before it unchanged (checked by script)."
+  },
+  "f57cbd9ed2ff3eeb": {
+    "verdict": "intended",
+    "why": "cast_named: the cast thing's image line is added (its look as the dream gives it); every other line the same bar its image number (checked by script)."
+  },
+  "2ee6a09031ff98ff": {
+    "verdict": "intended",
+    "why": "cast_named: \"In it\" names the thing the moment needs drawn and the producer never cast; every other line the same (checked by script)."
+  },
+  "ec0674da06617caf": {
+    "verdict": "intended",
+    "why": "cast_named: weather or matter the moment's words give (snow, rain, rising water, bubbles) is said once as the picture's condition, \"Across the whole picture\" or \"Seen out past the place\" (checked by script: a paragraph added, nothing else)."
+  },
+  "af18ab4dc18948f6": {
+    "verdict": "intended",
+    "why": "cast_named: weather or matter the moment's words give (snow, rain, rising water, bubbles) is said once as the picture's condition, \"Across the whole picture\" or \"Seen out past the place\" (checked by script: a paragraph added, nothing else)."
+  },
+  "cb5aec8e69d9fb34": {
+    "verdict": "intended",
+    "why": "cast_named: a thing the moment needs drawn and the producer never cast (cast.ts, grounded in the moment's words) is sent as its own sheet, to be drawn like any prop; the images before it unchanged (checked by script)."
+  },
+  "4e43c664ec26daeb": {
+    "verdict": "intended",
+    "why": "cast_named: the cast thing's image line is added (its look as the dream gives it); every other line the same bar its image number (checked by script)."
+  },
+  "b03f061223049292": {
+    "verdict": "intended",
+    "why": "cast_named: \"In it\" names the thing the moment needs drawn and the producer never cast; every other line the same (checked by script)."
+  },
+  "89c535773537fe33": {
+    "verdict": "intended",
+    "why": "cast_named: a thing the moment needs drawn and the producer never cast (cast.ts, grounded in the moment's words) is sent as its own sheet, to be drawn like any prop; the images before it unchanged (checked by script)."
+  },
+  "ab1c143cec73001c": {
+    "verdict": "intended",
+    "why": "cast_named: the cast thing's image line is added (its look as the dream gives it); every other line the same bar its image number (checked by script)."
+  },
+  "0b835fddfc471430": {
+    "verdict": "intended",
+    "why": "cast_named: \"In it\" names the thing the moment needs drawn and the producer never cast; every other line the same (checked by script)."
+  },
+  "7ea76ac8a9cf1941": {
+    "verdict": "intended",
+    "why": "cast_named: weather or matter the moment's words give (snow, rain, rising water, bubbles) is said once as the picture's condition, \"Across the whole picture\" or \"Seen out past the place\" (checked by script: a paragraph added, nothing else)."
+  },
+  "0fafe8e6a1d959a5": {
+    "verdict": "intended",
+    "why": "cast_named: a thing the moment needs drawn and the producer never cast (cast.ts, grounded in the moment's words) is sent as its own sheet, to be drawn like any prop; the images before it unchanged (checked by script)."
+  },
+  "d94fce529019bfc9": {
+    "verdict": "intended",
+    "why": "cast_named: the cast thing's image line is added (its look as the dream gives it); every other line the same bar its image number (checked by script)."
+  },
+  "a68e831240ac8b00": {
+    "verdict": "intended",
+    "why": "cast_named: \"In it\" names the thing the moment needs drawn and the producer never cast; every other line the same (checked by script)."
+  },
+  "af1faf26c6262824": {
+    "verdict": "intended",
+    "why": "cast_named: weather or matter the moment's words give (snow, rain, rising water, bubbles) is said once as the picture's condition, \"Across the whole picture\" or \"Seen out past the place\" (checked by script: a paragraph added, nothing else)."
+  },
+  "cfc894d420a98fa7": {
+    "verdict": "intended",
+    "why": "cast_named: weather or matter the moment's words give (snow, rain, rising water, bubbles) is said once as the picture's condition, \"Across the whole picture\" or \"Seen out past the place\" (checked by script: a paragraph added, nothing else)."
+  },
+  "fedf2c56be741666": {
+    "verdict": "intended",
+    "why": "cast_named: a thing the moment needs drawn and the producer never cast (cast.ts, grounded in the moment's words) is sent as its own sheet, to be drawn like any prop; the images before it unchanged (checked by script)."
+  },
+  "0e983d7644a6b8bc": {
+    "verdict": "intended",
+    "why": "cast_named: the cast thing's image line is added (its look as the dream gives it); every other line the same bar its image number (checked by script)."
+  },
+  "bfb9b2058309cf08": {
+    "verdict": "intended",
+    "why": "cast_named: \"In it\" names the thing the moment needs drawn and the producer never cast; every other line the same (checked by script)."
+  },
+  "a9fe841fafeb3e96": {
+    "verdict": "intended",
+    "why": "cast_named: weather or matter the moment's words give (snow, rain, rising water, bubbles) is said once as the picture's condition, \"Across the whole picture\" or \"Seen out past the place\" (checked by script: a paragraph added, nothing else)."
+  },
+  "ebd3b83750d3cf49": {
+    "verdict": "intended",
+    "why": "cast_named: weather or matter the moment's words give (snow, rain, rising water, bubbles) is said once as the picture's condition, \"Across the whole picture\" or \"Seen out past the place\" (checked by script: a paragraph added, nothing else)."
+  },
+  "424bac3dc80f274c": {
+    "verdict": "intended",
+    "why": "cast_named: a thing the moment needs drawn and the producer never cast (cast.ts, grounded in the moment's words) is sent as its own sheet, to be drawn like any prop; the images before it unchanged (checked by script)."
+  },
+  "6597e7157340e037": {
+    "verdict": "intended",
+    "why": "cast_named: the cast thing's image line is added (its look as the dream gives it); every other line the same bar its image number (checked by script)."
+  },
+  "388f54ad145a6726": {
+    "verdict": "intended",
+    "why": "cast_named: \"In it\" names the thing the moment needs drawn and the producer never cast; every other line the same (checked by script)."
+  },
+  "6037549cb7d627e8": {
+    "verdict": "intended",
+    "why": "cast_named: weather or matter the moment's words give (snow, rain, rising water, bubbles) is said once as the picture's condition, \"Across the whole picture\" or \"Seen out past the place\" (checked by script: a paragraph added, nothing else)."
+  },
+  "9b9cdd77848c08a5": {
+    "verdict": "intended",
+    "why": "cast_named: weather or matter the moment's words give (snow, rain, rising water, bubbles) is said once as the picture's condition, \"Across the whole picture\" or \"Seen out past the place\" (checked by script: a paragraph added, nothing else)."
+  },
+  "d73af4464e5b6d52": {
+    "verdict": "intended",
+    "why": "cast_named: a thing the moment needs drawn and the producer never cast (cast.ts, grounded in the moment's words) is sent as its own sheet, to be drawn like any prop; the images before it unchanged (checked by script)."
+  },
+  "aca0b83f9a49c41b": {
+    "verdict": "intended",
+    "why": "cast_named: the cast thing's image line is added (its look as the dream gives it); every other line the same bar its image number (checked by script)."
+  },
+  "7682896155b2c11e": {
+    "verdict": "intended",
+    "why": "cast_named: \"In it\" names the thing the moment needs drawn and the producer never cast; every other line the same (checked by script)."
+  },
+  "4d2b4db537ab3fcd": {
+    "verdict": "intended",
+    "why": "cast_named: weather or matter the moment's words give (snow, rain, rising water, bubbles) is said once as the picture's condition, \"Across the whole picture\" or \"Seen out past the place\" (checked by script: a paragraph added, nothing else)."
+  },
+  "718d2efbbaebd4d4": {
+    "verdict": "intended",
+    "why": "cast_named: a thing the moment needs drawn and the producer never cast (cast.ts, grounded in the moment's words) is sent as its own sheet, to be drawn like any prop; the images before it unchanged (checked by script)."
+  },
+  "7fcc51133c092acd": {
+    "verdict": "intended",
+    "why": "cast_named: the cast thing's image line is added (its look as the dream gives it); every other line the same bar its image number (checked by script)."
+  },
+  "e0846de763429864": {
+    "verdict": "intended",
+    "why": "cast_named: \"In it\" names the thing the moment needs drawn and the producer never cast; every other line the same (checked by script)."
+  },
+  "981b65ec6cd12922": {
+    "verdict": "intended",
+    "why": "cast_named: weather or matter the moment's words give (snow, rain, rising water, bubbles) is said once as the picture's condition, \"Across the whole picture\" or \"Seen out past the place\" (checked by script: a paragraph added, nothing else)."
+  },
+  "b4867fcb5f54c5ac": {
+    "verdict": "intended",
+    "why": "cast_named: a thing the moment needs drawn and the producer never cast (cast.ts, grounded in the moment's words) is sent as its own sheet, to be drawn like any prop; the images before it unchanged (checked by script)."
+  },
+  "bed526d547cb289a": {
+    "verdict": "intended",
+    "why": "cast_named: the cast thing's image line is added (its look as the dream gives it); every other line the same bar its image number (checked by script)."
+  },
+  "61b1cbd968bded75": {
+    "verdict": "intended",
+    "why": "cast_named: \"In it\" names the thing the moment needs drawn and the producer never cast; every other line the same (checked by script)."
+  },
+  "f1b0cd3b126fe369": {
+    "verdict": "intended",
+    "why": "cast_named: weather or matter the moment's words give (snow, rain, rising water, bubbles) is said once as the picture's condition, \"Across the whole picture\" or \"Seen out past the place\" (checked by script: a paragraph added, nothing else)."
+  },
+  "d410d5bc43bf8765": {
+    "verdict": "intended",
+    "why": "cast_named: weather or matter the moment's words give (snow, rain, rising water, bubbles) is said once as the picture's condition, \"Across the whole picture\" or \"Seen out past the place\" (checked by script: a paragraph added, nothing else)."
+  },
+  "be7579e553ac5bbd": {
+    "verdict": "intended",
+    "why": "cast_named: a thing the moment needs drawn and the producer never cast (cast.ts, grounded in the moment's words) is sent as its own sheet, to be drawn like any prop; the images before it unchanged (checked by script)."
+  },
+  "eb2920b06690ef40": {
+    "verdict": "intended",
+    "why": "cast_named: the cast thing's image line is added (its look as the dream gives it); every other line the same bar its image number (checked by script)."
+  },
+  "72f0612e151b38e2": {
+    "verdict": "intended",
+    "why": "cast_named: \"In it\" names the thing the moment needs drawn and the producer never cast; every other line the same (checked by script)."
+  },
+  "97b90b83612d72f8": {
+    "verdict": "intended",
+    "why": "cast_named: a thing the moment needs drawn and the producer never cast (cast.ts, grounded in the moment's words) is sent as its own sheet, to be drawn like any prop; the images before it unchanged (checked by script)."
+  },
+  "e624ca1b5f8fb952": {
+    "verdict": "intended",
+    "why": "cast_named: the cast thing's image line is added (its look as the dream gives it); every other line the same bar its image number (checked by script)."
+  },
+  "968ac28f0c78aea2": {
+    "verdict": "intended",
+    "why": "cast_named: \"In it\" names the thing the moment needs drawn and the producer never cast; every other line the same (checked by script)."
+  },
+  "f75293ee24871ed8": {
+    "verdict": "intended",
+    "why": "cast_named: weather or matter the moment's words give (snow, rain, rising water, bubbles) is said once as the picture's condition, \"Across the whole picture\" or \"Seen out past the place\" (checked by script: a paragraph added, nothing else)."
+  },
+  "59ce4a5daff6060d": {
+    "verdict": "intended",
+    "why": "cast_named: weather or matter the moment's words give (snow, rain, rising water, bubbles) is said once as the picture's condition, \"Across the whole picture\" or \"Seen out past the place\" (checked by script: a paragraph added, nothing else)."
+  },
+  "7fc6fdb3eb1d58fe": {
+    "verdict": "intended",
+    "why": "cast_named: weather or matter the moment's words give (snow, rain, rising water, bubbles) is said once as the picture's condition, \"Across the whole picture\" or \"Seen out past the place\" (checked by script: a paragraph added, nothing else)."
+  },
+  "a0f337ab9dd1e0d8": {
+    "verdict": "intended",
+    "why": "cast_named: a thing the moment needs drawn and the producer never cast (cast.ts, grounded in the moment's words) is sent as its own sheet, to be drawn like any prop; the images before it unchanged (checked by script)."
+  },
+  "632fd31eb6cbef6e": {
+    "verdict": "intended",
+    "why": "cast_named: the cast thing's image line is added (its look as the dream gives it); every other line the same bar its image number (checked by script)."
+  },
+  "00394510110dfee1": {
+    "verdict": "intended",
+    "why": "cast_named: \"In it\" names the thing the moment needs drawn and the producer never cast; every other line the same (checked by script)."
+  },
+  "ee8ad89dd197b7c6": {
+    "verdict": "intended",
+    "why": "cast_named: weather or matter the moment's words give (snow, rain, rising water, bubbles) is said once as the picture's condition, \"Across the whole picture\" or \"Seen out past the place\" (checked by script: a paragraph added, nothing else)."
+  },
+  "c5a0fea8b4ef0600": {
+    "verdict": "intended",
+    "why": "cast_named: weather or matter the moment's words give (snow, rain, rising water, bubbles) is said once as the picture's condition, \"Across the whole picture\" or \"Seen out past the place\" (checked by script: a paragraph added, nothing else)."
+  },
+  "cbe31c43cc444108": {
+    "verdict": "intended",
+    "why": "cast_named: weather or matter the moment's words give (snow, rain, rising water, bubbles) is said once as the picture's condition, \"Across the whole picture\" or \"Seen out past the place\" (checked by script: a paragraph added, nothing else)."
+  },
+  "be41d0dd10488d28": {
+    "verdict": "intended",
+    "why": "cast_named: a thing the moment needs drawn and the producer never cast (cast.ts, grounded in the moment's words) is sent as its own sheet, to be drawn like any prop; the images before it unchanged (checked by script)."
+  },
+  "5ca5bae38f808523": {
+    "verdict": "intended",
+    "why": "cast_named: the cast thing's image line is added (its look as the dream gives it); every other line the same bar its image number (checked by script)."
+  },
+  "72763d39bd2253b7": {
+    "verdict": "intended",
+    "why": "cast_named: \"In it\" names the thing the moment needs drawn and the producer never cast; every other line the same (checked by script)."
+  },
+  "af2f4b16c9dfdbed": {
+    "verdict": "intended",
+    "why": "cast_named: with the cast thing's own image line saying its colour, colour_once lists it as said above (checked by script: only phrases leave the list)."
+  },
+  "1f36dd7883dd4427": {
+    "verdict": "intended",
+    "why": "cast_named: a thing the moment needs drawn and the producer never cast (cast.ts, grounded in the moment's words) is sent as its own sheet, to be drawn like any prop; the images before it unchanged (checked by script)."
+  },
+  "a35aac39e1f13b85": {
+    "verdict": "intended",
+    "why": "cast_named: the cast thing's image line is added (its look as the dream gives it); every other line the same bar its image number (checked by script)."
+  },
+  "d75b5635f695508f": {
+    "verdict": "intended",
+    "why": "cast_named: \"In it\" names the thing the moment needs drawn and the producer never cast; every other line the same (checked by script)."
+  },
+  "0c97a65abaa610eb": {
+    "verdict": "intended",
+    "why": "cast_named: with the cast thing's own image line saying its colour, colour_once lists it as said above (checked by script: only phrases leave the list)."
+  },
+  "b94ef4735830ed8b": {
+    "verdict": "intended",
+    "why": "cast_named: a thing the moment needs drawn and the producer never cast (cast.ts, grounded in the moment's words) is sent as its own sheet, to be drawn like any prop; the images before it unchanged (checked by script)."
+  },
+  "1ade104acfff97ec": {
+    "verdict": "intended",
+    "why": "cast_named: the cast thing's image line is added (its look as the dream gives it); every other line the same bar its image number (checked by script)."
+  },
+  "cf277239b25a9dde": {
+    "verdict": "intended",
+    "why": "cast_named: \"In it\" names the thing the moment needs drawn and the producer never cast; every other line the same (checked by script)."
+  },
+  "266b7b84418338b3": {
+    "verdict": "intended",
+    "why": "cast_named: a thing the moment needs drawn and the producer never cast (cast.ts, grounded in the moment's words) is sent as its own sheet, to be drawn like any prop; the images before it unchanged (checked by script)."
+  },
+  "e2776f4cf2bb6159": {
+    "verdict": "intended",
+    "why": "cast_named: the cast thing's image line is added (its look as the dream gives it); every other line the same bar its image number (checked by script)."
+  },
+  "c27f8f543af54b5d": {
+    "verdict": "intended",
+    "why": "cast_named: \"In it\" names the thing the moment needs drawn and the producer never cast; every other line the same (checked by script)."
+  },
+  "1ab9bb968cc02080": {
+    "verdict": "intended",
+    "why": "cast_named: weather or matter the moment's words give (snow, rain, rising water, bubbles) is said once as the picture's condition, \"Across the whole picture\" or \"Seen out past the place\" (checked by script: a paragraph added, nothing else)."
+  },
+  "08628fb11cb8afce": {
+    "verdict": "intended",
+    "why": "cast_named: weather or matter the moment's words give (snow, rain, rising water, bubbles) is said once as the picture's condition, \"Across the whole picture\" or \"Seen out past the place\" (checked by script: a paragraph added, nothing else)."
+  },
+  "89efe0ce74d4cc03": {
+    "verdict": "intended",
+    "why": "cast_named: weather or matter the moment's words give (snow, rain, rising water, bubbles) is said once as the picture's condition, \"Across the whole picture\" or \"Seen out past the place\" (checked by script: a paragraph added, nothing else)."
+  },
+  "08190f11361a064f": {
+    "verdict": "intended",
+    "why": "cast_named: weather or matter the moment's words give (snow, rain, rising water, bubbles) is said once as the picture's condition, \"Across the whole picture\" or \"Seen out past the place\" (checked by script: a paragraph added, nothing else)."
+  },
+  "f50695ae9a3f64e2": {
+    "verdict": "intended",
+    "why": "cast_named: weather or matter the moment's words give (snow, rain, rising water, bubbles) is said once as the picture's condition, \"Across the whole picture\" or \"Seen out past the place\" (checked by script: a paragraph added, nothing else)."
+  },
+  "0434801bddd383c1": {
+    "verdict": "intended",
+    "why": "cast_named: a thing the moment needs drawn and the producer never cast (cast.ts, grounded in the moment's words) is sent as its own sheet, to be drawn like any prop; the images before it unchanged (checked by script)."
+  },
+  "c59c830b070e7907": {
+    "verdict": "intended",
+    "why": "cast_named: the cast thing's image line is added (its look as the dream gives it); every other line the same bar its image number (checked by script)."
+  },
+  "a5f0960163d78aa9": {
+    "verdict": "intended",
+    "why": "cast_named: \"In it\" names the thing the moment needs drawn and the producer never cast; every other line the same (checked by script)."
+  },
+  "39b81090a6e5958a": {
+    "verdict": "intended",
+    "why": "cast_named: a thing the moment needs drawn and the producer never cast (cast.ts, grounded in the moment's words) is sent as its own sheet, to be drawn like any prop; the images before it unchanged (checked by script)."
+  },
+  "877ad54e5d2209de": {
+    "verdict": "intended",
+    "why": "cast_named: the cast thing's image line is added (its look as the dream gives it); every other line the same bar its image number (checked by script)."
+  },
+  "0de0dcafc51c9a06": {
+    "verdict": "intended",
+    "why": "cast_named: a thing the moment needs drawn and the producer never cast (cast.ts, grounded in the moment's words) is sent as its own sheet, to be drawn like any prop; the images before it unchanged (checked by script)."
+  },
+  "31ff5ce6b56047a9": {
+    "verdict": "intended",
+    "why": "cast_named: the cast thing's image line is added (its look as the dream gives it); every other line the same bar its image number (checked by script)."
+  },
+  "79c726e4a2690ecc": {
+    "verdict": "intended",
+    "why": "cast_named: a thing the moment needs drawn and the producer never cast (cast.ts, grounded in the moment's words) is sent as its own sheet, to be drawn like any prop; the images before it unchanged (checked by script)."
+  },
+  "3ad753fb2ceb31ee": {
+    "verdict": "intended",
+    "why": "cast_named: the cast thing's image line is added (its look as the dream gives it); every other line the same bar its image number (checked by script)."
+  },
+  "538ffd48098e0330": {
+    "verdict": "intended",
+    "why": "cast_named: a thing the moment needs drawn and the producer never cast (cast.ts, grounded in the moment's words) is sent as its own sheet, to be drawn like any prop; the images before it unchanged (checked by script)."
+  },
+  "cdd7532a60c311b1": {
+    "verdict": "intended",
+    "why": "cast_named: the cast thing's image line is added (its look as the dream gives it); every other line the same bar its image number (checked by script)."
+  },
+  "a746f2d9ed642f4d": {
+    "verdict": "intended",
+    "why": "cast_named: a thing the moment needs drawn and the producer never cast (cast.ts, grounded in the moment's words) is sent as its own sheet, to be drawn like any prop; the images before it unchanged (checked by script)."
+  },
+  "a3e22f7d5a4613d0": {
+    "verdict": "intended",
+    "why": "cast_named: the cast thing's image line is added (its look as the dream gives it); every other line the same bar its image number (checked by script)."
+  },
+  "f0c1e3b7437102d8": {
+    "verdict": "intended",
+    "why": "cast_named: a thing the moment needs drawn and the producer never cast (cast.ts, grounded in the moment's words) is sent as its own sheet, to be drawn like any prop; the images before it unchanged (checked by script)."
+  },
+  "cfb192f5bfdb57b5": {
+    "verdict": "intended",
+    "why": "cast_named: the cast thing's image line is added (its look as the dream gives it); every other line the same bar its image number (checked by script)."
+  },
+  "aed53f9dcc37605f": {
+    "verdict": "intended",
+    "why": "cast_named: a thing the moment needs drawn and the producer never cast (cast.ts, grounded in the moment's words) is sent as its own sheet, to be drawn like any prop; the images before it unchanged (checked by script)."
+  },
+  "46ea0bd895eefdd0": {
+    "verdict": "intended",
+    "why": "cast_named: the cast thing's image line is added (its look as the dream gives it); every other line the same bar its image number (checked by script)."
+  },
+  "12bc84ab6c5c0207": {
+    "verdict": "intended",
+    "why": "cast_named: a thing the moment needs drawn and the producer never cast (cast.ts, grounded in the moment's words) is sent as its own sheet, to be drawn like any prop; the images before it unchanged (checked by script)."
+  },
+  "8994f5f0c3be46a7": {
+    "verdict": "intended",
+    "why": "cast_named: the cast thing's image line is added (its look as the dream gives it); every other line the same bar its image number (checked by script)."
+  },
+  "1134a9dae681b89a": {
+    "verdict": "intended",
+    "why": "cast_named: a thing the moment needs drawn and the producer never cast (cast.ts, grounded in the moment's words) is sent as its own sheet, to be drawn like any prop; the images before it unchanged (checked by script)."
+  },
+  "3caa57e7fd95f60a": {
+    "verdict": "intended",
+    "why": "cast_named: the cast thing's image line is added (its look as the dream gives it); every other line the same bar its image number (checked by script)."
+  },
+  "e957ac3ca71e264b": {
+    "verdict": "intended",
+    "why": "cast_named: the red tractor, cast with the dream's own colour, is said above in its image line, so the style promises what the dream gives a colour keeps it exactly (affd m8, where no colour was given before)."
   }
 }

@@ -1333,6 +1333,7 @@ if (import.meta.main) {
   const costs: Awaited<ReturnType<typeof withImplied>>[] = [];
   const { oneBuilder } = await import('../cleanups');
   const { withTyped } = await import('./typed-cache');
+  const { withCast } = await import('./cast-cache');
   const typedMissing: string[] = [];
   // Every dream rebuilt once, as plan.ts rebuilds it.
   const dreams = new Map<string, { r: Rebuilt | Error; hash: string; sent: ReturnType<typeof sentOf> }>();
@@ -1351,6 +1352,10 @@ if (import.meta.main) {
         const typed = await withTyped(session);
         typedMissing.push(...typed.missing.map((m) => `${id} ${m}`));
         session = typed.session;
+        // With the cast reading (cast.ts, the cast_named step), after the typed readings: they were asked of the breakdown as saved.
+        const cast = await withCast(session);
+        if (cast.missing) typedMissing.push(`${id} (cast reading)`);
+        session = cast.session;
       }
       r = rebuild(session, { asDrawn: false });
     } catch (e) {

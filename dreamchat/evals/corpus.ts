@@ -494,6 +494,7 @@ if (import.meta.main) {
   const costs: Awaited<ReturnType<typeof withImplied>>[] = [];
   const { oneBuilder } = await import('../cleanups');
   const { withTyped } = await import('./typed-cache');
+  const { withCast } = await import('./cast-cache');
   const typedMissing: string[] = [];
   for (const d of dreams) {
     // Only a dream whose breakdown and look are settled has pictures to tell.
@@ -513,6 +514,10 @@ if (import.meta.main) {
         const typed = await withTyped(session);
         typedMissing.push(...typed.missing.map((m) => `${d.id} ${m}`));
         session = typed.session;
+        // With the cast reading (cast.ts, the cast_named step), after the typed readings: they were asked of the breakdown as saved.
+        const cast = await withCast(session);
+        if (cast.missing) typedMissing.push(`${d.id} (cast reading)`);
+        session = cast.session;
       }
       dump.dreams[d.id] = { ...dumpOf(rebuild(session, { asDrawn: false }), sentOf(d.session)), hash: d.hash };
     } catch (e) {

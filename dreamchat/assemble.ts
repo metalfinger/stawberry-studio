@@ -574,6 +574,23 @@ export function assembleCut(s: CutSheet): Assembled {
     { id: 'you', fields: ['camera.eyes'], text: YOU },
     { id: 'in_it', fields: ['inView', 'once'], text: facts.length ? `In it:\n${facts.join('\n')}` : '' },
     {
+      // Weather and matter the cast reading gives the moment (cast_named): the picture's condition, said once.
+      id: 'conditions',
+      fields: ['conditions'],
+      text: (() => {
+        const said = (c: { name: string; look: string }) =>
+          `${c.name}${c.look && !c.name.toLowerCase().includes(c.look.toLowerCase()) ? ` (${c.look})` : ''}`;
+        const here = (s.conditions ?? []).filter((c) => !c.beyond).map(said);
+        const out = (s.conditions ?? []).filter((c) => c.beyond).map(said);
+        return [
+          here.length ? `Across the whole picture: ${here.join('; ')}.` : '',
+          out.length ? `Seen out past the place: ${out.join('; ')}.` : '',
+        ]
+          .filter(Boolean)
+          .join(' ');
+      })(),
+    },
+    {
       id: 'now',
       fields: ['now', 'nowWords', 'states'],
       text: now

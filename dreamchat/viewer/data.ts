@@ -89,6 +89,11 @@ export async function withReadings(
     const typed = await withTyped(session, opts.typedCache ? { cacheFile: opts.typedCache } : {});
     if (typed.missing.length) throw new Error(`typed readings not cached: ${typed.missing.join(', ')}`);
     session = typed.session;
+    // The cast reading, after the typed readings (asked of the breakdown as saved), from its cache only.
+    const { withCast } = await import('../evals/cast-cache');
+    const cast = await withCast(session);
+    if (cast.missing) throw new Error('the cast reading is not cached: read it with evals/cast-cache.ts --ask');
+    session = cast.session;
   }
   return session;
 }

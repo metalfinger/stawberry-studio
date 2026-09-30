@@ -328,7 +328,16 @@ async function withReadings(
       note: '',
       missing: `the typed readings of ${typed.missing.join(', ')} are not in ${TYPED_CACHE}: read them with evals/typed.ts`,
     };
-  return { session: typed.session, note: `${read.note}; typed readings of ${typed.read} moments from ${TYPED_CACHE}` };
+  // The cast reading (cast.ts, the cast_named step), after the typed readings, from its cache only.
+  const { withCast, CAST_CACHE } = await import('./cast-cache');
+  const cast = await withCast(typed.session);
+  if (cast.missing)
+    return {
+      session: saved,
+      note: '',
+      missing: `the cast reading is not in ${CAST_CACHE}: read it with evals/cast-cache.ts --ask`,
+    };
+  return { session: cast.session, note: `${read.note}; typed readings of ${typed.read} moments from ${TYPED_CACHE}` };
 }
 
 async function withImpliedReadings(

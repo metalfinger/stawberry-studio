@@ -7,6 +7,7 @@
 // change too much at once, or several cuts need the same changed look, a ghost is made first:
 // an in-between picture that is never a cut. Everything here is pure: the breakdown in, the plan
 // out, and the same breakdown always gives the same plan.
+import type { CastReading } from './cast-types';
 import {
   type Blocking,
   bearing,
@@ -232,6 +233,8 @@ export type ContinuityPlan = { cuts: CutPlan[]; ghosts: GhostPlan[]; issues: str
  * change: how its subject looked just before it, for its in-between picture, and where it ends.
  */
 export type RecordPlan = {
+  /** With the one builder's `cast_named` step: the cast reading (cast.ts), for the floor plan to place from. */
+  cast?: CastReading;
   moments: Record<
     string,
     {
