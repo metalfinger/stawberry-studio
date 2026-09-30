@@ -44,6 +44,13 @@ put right 8/12, guards kept 23/24; pairs 5/7 each). The check, each miss at its 
   bridge side on (night-market m5). A vehicle on it is "on the narrow iron bridge", and those on a bicycle are on it,
   never in it. Not on water, not where the plan lays ground of its own, not in a plan a few metres across.
 - Frozen 18, live 26 pictures together; nobody lost, no opener at odds with its figures, prompt cases the same.
+- *Seen looking at it:* a camera that those facing what the moment looks at would stare into, across it, costs; only
+  those on the side most of them are on count (the old man facing his own stall back at them does not). The dreamer
+  at the fish stall stared out of the picture: "what I would have liked is the dreamer looking towards the fish"
+  (night-market m2). Now seen from beside, looking at it; Mrs Okafor at the blackboard is seen three-quarters from
+  behind as the moment says (4c79 m3). Frozen 4, live 6; prompt cases the same. Lighthouse-fresh m10 ("the paper
+  boat cradled in both hands, the field beyond"; "there should be no person in the frame") is the breakdown's eyes,
+  not the camera: seen from outside no camera holds both, and holding the key clear of its holder's back stays parked.
 
 **Earlier landmark (30 Sep, afternoon and evening): every frozen prompt read, 126 faults in 13 patterns, fixed at their
 roots.**
