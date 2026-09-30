@@ -122,9 +122,12 @@ export function fitMoment(
   const isPerson = (x: Img) => manifestLines.some((l) => l.startsWith(`Image ${x.n}: who `));
   // At most two on it, the first two the images list: a third on the sheet was drawn twice, or not at all (night-market
   // m2, m3 after the sheet was narrowed: the night run, 1 Oct). Anyone else keeps their own image.
-  const ids = images.filter((x) => x.role === 'identity' && x.file && isPerson(x)).slice(0, 2);
+  // And only for three or more: two riders on one sheet drew two bicycles (1 of 2), their own sketches one (2 of 2:
+  // night-market m5, paired, 1 Oct). Two people keep their own sketches, and the place goes first.
+  const all = images.filter((x) => x.role === 'identity' && x.file && isPerson(x));
+  const ids = all.slice(0, 2);
   const sheet: Img | null =
-    people && ids.length > 1 && images.length > MAX_IMAGES
+    people && all.length > 2 && images.length > MAX_IMAGES
       ? { n: ids[0].n, role: 'identity', name: `people:${ids.map((x) => x.name).join('+')}`, group: ids }
       : null;
   const pool = sheet ? [...images.filter((x) => !ids.includes(x)), sheet].sort((a, b) => a.n - b.n) : images;

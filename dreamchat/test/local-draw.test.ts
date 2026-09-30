@@ -246,10 +246,10 @@ describe('the people sheet, only where it is needed', () => {
         true,
       ).images.some((x) => x.group),
     ).toBe(false);
-    // Five: the two people go on a sheet, the dog keeps its own image.
+    // Two people and a dog: no sheet (two keep their own sketches), and the room goes.
     const five = [...imgs.slice(0, 3), img(4, 'identity'), img(5, 'location')];
     const m5 = man(['who the dreamer is', 'who the father is', 'what the dog is', 'the room']);
     const f = fitMoment(lines(m5), five, 0, MAX_CHARS, new Set(), true);
-    expect(f.images.map((x) => x.name)).toEqual(['x1', 'people:x2+x3', 'x4', 'x5']);
+    expect(f.images.map((x) => x.name)).toEqual(['x1', 'x2', 'x3', 'x4']);
   });
 });
