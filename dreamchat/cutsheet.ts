@@ -332,6 +332,11 @@ export type CutSheet = {
   jumpWords?: true;
   /** With the one builder's `plan_beyond` step: what the camera rules add after the view is said with one space. */
   seenThrough?: true;
+  /**
+   * With the one builder's `picture_words` step: whether anyone in the picture sits (the mock-up's unlabelled shapes
+   * under people are seats only then), and that an earlier picture edited keeps faces and clothes, not poses.
+   */
+  pictureWords?: { seated: boolean };
   /** What belongs to a take rather than the cut: the judge's findings on the last attempt and on earlier pictures. */
   take: { repairs: string[]; strays: Record<string, string[]> };
   record: RecordLayer | null;
@@ -731,6 +736,13 @@ export function cutSheet(x: CutSheetInput): CutSheet {
     ...(builds('story_marks') ? { storyMarks: true as const } : {}),
     ...(builds('jump_words') ? { jumpWords: true as const } : {}),
     ...(builds('plan_beyond') ? { seenThrough: true as const } : {}),
+    ...(builds('picture_words')
+      ? {
+          pictureWords: {
+            seated: /\b(?:sit|sits|sitting|seated)\b/i.test(`${plan?.view ?? ''} ${frame.shot?.text ?? ''}`),
+          },
+        }
+      : {}),
     ...(() => {
       // Water the camera's own words already measure ("The water stands about 2 metres deep") is said there once,
       // never again as a condition.

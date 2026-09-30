@@ -111,7 +111,12 @@ export function assembleCut(s: CutSheet): Assembled {
               ? [`${joining.join(' and ')} ${joining.length > 1 ? 'are' : 'is'} there now, drawn from their sketch`]
               : []),
           ].join('; ')}. Change only that and what this moment changes.${strays(base)}`
-        : `EDIT THIS PICTURE. It is ${pictureNo(base)}, the same view a moment earlier. Keep its camera, framing, room, light and everyone in it exactly as they are, faces and clothes included; change only what this moment changes.${strays(base)}`,
+        : s.pictureWords
+          ? // How each one stands, looks and acts is the moment's: kept "exactly as they are", the dreamer went on looking
+            // out of the window while the letters meant for them were opened to the camera (snow-train-2 m3: the owner's
+            // picture check, 30 Sep).
+            `EDIT THIS PICTURE. It is ${pictureNo(base)}, the same view a moment earlier. Keep its camera, framing, room and light exactly, and everyone's face, hair and clothes; how each one stands, where they look and what they do is this moment's, as said below. Change only what this moment changes.${strays(base)}`
+          : `EDIT THIS PICTURE. It is ${pictureNo(base)}, the same view a moment earlier. Keep its camera, framing, room, light and everyone in it exactly as they are, faces and clothes included; change only what this moment changes.${strays(base)}`,
     );
 
   // The mock-up is the picture made real, where there is no other picture to edit, on every cut that has one
@@ -128,7 +133,11 @@ export function assembleCut(s: CutSheet): Assembled {
         of: s.id,
         subjects: [],
       },
-      "EDIT THIS PICTURE. It is a rough grey mock-up of this exact picture, rendered from the floor plan of the place through this very camera: make it real. Every labelled grey shape becomes the person or thing its label names, exactly where it is and exactly as big, looking as their own images below show; the unlabelled shapes under people become what they sit on, and the plain grey surfaces the walls, floor and ceiling of the place. Keep the camera, the framing and where everything is exactly; keep nothing of the mock-up's look: no grey clay, no outlines, no labels or letters.",
+      // Seats only where someone sits: said of every mock-up, the block of Tomas's shoulders became a box he stood on
+      // (orchard m2: the owner's picture check, 30 Sep).
+      s.pictureWords && !s.pictureWords.seated
+        ? "EDIT THIS PICTURE. It is a rough grey mock-up of this exact picture, rendered from the floor plan of the place through this very camera: make it real. Every labelled grey shape becomes the person or thing its label names, exactly where it is and exactly as big, looking as their own images below show, and the plain grey surfaces the walls, floor and ceiling of the place. Keep the camera, the framing and where everything is exactly; keep nothing of the mock-up's look: no grey clay, no outlines, no labels or letters."
+        : "EDIT THIS PICTURE. It is a rough grey mock-up of this exact picture, rendered from the floor plan of the place through this very camera: make it real. Every labelled grey shape becomes the person or thing its label names, exactly where it is and exactly as big, looking as their own images below show; the unlabelled shapes under people become what they sit on, and the plain grey surfaces the walls, floor and ceiling of the place. Keep the camera, the framing and where everything is exactly; keep nothing of the mock-up's look: no grey clay, no outlines, no labels or letters.",
     );
 
   const facts: string[] = [];
