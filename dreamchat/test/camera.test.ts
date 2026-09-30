@@ -529,8 +529,8 @@ describe('where the camera stands, in words', () => {
     expect(m5).not.toMatch(/Seen from behind them/);
     // Over someone's shoulder only where their back is to the camera (classroom m3: the dreamer turned toward it).
     const classroom = shot(picture(rebuilt('dream-0926-012307-4c79', ON), 'm3').prompt);
-    if (/the dreamer, [^;.]*(?:turned three-quarters toward the camera|facing the camera)/.test(classroom))
-      expect(classroom).not.toMatch(/Seen from behind the dreamer, over their shoulder/);
+    expect(classroom).toMatch(/^[^:]*: Seen from beside them,/);
+    expect(classroom).not.toMatch(/over their shoulder/);
   });
 });
 
