@@ -34,6 +34,7 @@ import {
   carriedBy,
   isThePlace,
   withPathDeck,
+  withOpen,
 } from '../continuity';
 import { type CutSheet, notDrawnFrom } from '../cutsheet';
 import { frozenDreams, loadDream } from '../evals/saved';
@@ -2041,5 +2042,88 @@ describe('what has one seat', () => {
     // Off, as before.
     const off = withEnv({ DREAMCHAT_CAMERA: undefined }, () => outsideShot(field, ['p1', 'p4', 'c1'], 'wide', name))!;
     expect(off.text).not.toContain('mudguard');
+  });
+});
+
+describe('a door standing open', () => {
+  const field = {
+    front: 'the snowy field',
+    spots: [
+      { id: 'p1', x: 10, y: 1.5, kind: 'person' as const, pose: 'standing' as const, faces: 'front' },
+      {
+        id: 'x2',
+        x: 10,
+        y: 1,
+        kind: 'thing' as const,
+        fixture: true,
+        name: 'the red door',
+        size: [1.2, 0.3, 2.2] as [number, number, number],
+      },
+    ],
+  };
+  const name = (id: string) => ({ p1: 'the dreamer', x2: 'the red door' })[id] ?? id;
+  const opened = [
+    {
+      of: 'l2',
+      called: 'the snowy field',
+      name: 'the snowy field',
+      kind: 'place' as const,
+      facts: [
+        { kind: 'part' as const, part: 'door', what: 'door', now: 'open, faint yellow glow spilling from the doorway' },
+      ],
+    },
+  ];
+
+  test('is open on the plan where the record has it open, and only then', () => {
+    // The red door the dreamer opens on warm light (snow-train m6, judged blind).
+    expect(withOpen(field, opened).spots.find((s) => s.id === 'x2')!.open).toBe(true);
+    const shut = [{ ...opened[0], facts: [{ ...opened[0].facts[0], now: 'shut, snow against it' }] }];
+    expect(withOpen(field, shut)).toBe(field);
+    // Only a door or a gate: an open window is not a doorway.
+    const window = [{ ...opened[0], facts: [{ ...opened[0].facts[0], part: 'window', what: 'window' }] }];
+    expect(withOpen(field, window)).toBe(field);
+  });
+
+  test("through the dreamer's eyes, a step back from it, never at its edge looking down at its foot", () => {
+    const open = withOpen(field, opened);
+    const shot = withEnv(CAMERA, () => dreamerShot(open, 'p1', 'x2', name))!;
+    expect(shot.text).toContain("The camera is the dreamer's eyes, a step back from the red door");
+    expect(Math.hypot(shot.eye.at.x - 10, shot.eye.at.y - 1)).toBeCloseTo(1.3, 5);
+    // Shut, at it as before, but looking at it straight ahead: taller than their eyes, it is not looked down at.
+    const shut = withEnv(CAMERA, () => dreamerShot(field, 'p1', 'x2', name))!;
+    expect(shut.text).not.toContain('a step back');
+    expect(Math.abs(shut.eye.pitch ?? 0)).toBeLessThan(0.35);
+    // Off, as before.
+    const off = withEnv({ DREAMCHAT_CAMERA: undefined }, () => dreamerShot(open, 'p1', 'x2', name))!;
+    expect(off.text).not.toContain('a step back');
+  });
+  test('the stairs they stand on are looked up the way they climb, as before', () => {
+    // Taken as taller than their eyes, the spiral stairs left the dreamer on them no view at all (cbba m4).
+    const stairs = {
+      front: 'up the spiral',
+      indoors: true,
+      room: [4, 5] as [number, number],
+      spots: [
+        { id: 'p1', x: 2, y: 2.5, kind: 'person' as const, pose: 'standing' as const, faces: 'front' },
+        {
+          id: 'x1',
+          x: 2,
+          y: 2,
+          kind: 'thing' as const,
+          fixture: true,
+          name: 'the spiral stone stairs',
+          shape: 'steps' as const,
+          size: [2, 4, 3] as [number, number, number],
+        },
+      ],
+    };
+    const on = withEnv(CAMERA, () =>
+      dreamerShot(stairs, 'p1', 'x1', (id) => (id === 'x1' ? 'the spiral stone stairs' : 'the dreamer')),
+    );
+    const off = withEnv({ DREAMCHAT_CAMERA: undefined }, () =>
+      dreamerShot(stairs, 'p1', 'x1', (id) => (id === 'x1' ? 'the spiral stone stairs' : 'the dreamer')),
+    );
+    expect(on).not.toBeNull();
+    expect(off).not.toBeNull();
   });
 });

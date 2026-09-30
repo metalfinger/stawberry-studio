@@ -291,6 +291,17 @@ function heartHeight(target: Spot, plan: Blocking, eyes?: number): number {
   return eyes !== undefined && base + h >= eyes ? Math.max(base + h / 2, eyes - 0.1) : base + h / 2;
 }
 
+/**
+ * Whether the dreamer looks at what they look at level, not at its middle: something upright taller than their eyes and
+ * within two steps of them, never the stairs or the ground they are on (their spiral stairs, looked at level from on
+ * them, left no view at all: cbba m4).
+ */
+function lookedLevel(target: Spot, me: Spot, plan: Blocking): boolean {
+  if (isPerson(target) || ['steps', 'ground'].includes(shapeOf(target, plan)) || onFootprint(me, target, plan))
+    return false;
+  return Math.hypot(me.x - target.x, me.y - target.y) <= 2;
+}
+
 /** A block's six faces, each facing out. */
 function blockFaces(b: Block, solid: number): Face[] {
   const r = rightOf(b.f);
@@ -1314,7 +1325,11 @@ export function dreamerShot(
       ? v3(me.x + own.x * 0.45, me.y + own.y * 0.45, height - 0.6)
       : rest
         ? v3(rest.x, rest.y, rest.z + sizeOf(target)[2] / 2)
-        : v3(target.x, target.y, heartHeight(target, plan, camera ? height : undefined))
+        : v3(
+            target.x,
+            target.y,
+            heartHeight(target, plan, camera && lookedLevel(target, me, plan) ? height : undefined),
+          )
     : null;
   const near = plan.spots.filter((s) => s.id !== dreamer && s.id !== target?.id && isPerson(s) && !s.many);
   const onIt = !!target && onFootprint(me, target, plan);
