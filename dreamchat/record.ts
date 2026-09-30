@@ -1302,6 +1302,10 @@ function namedInWords(ctx: Ctx): Violation[] {
         continue;
       }
       if (!named.length) continue;
+      if (wentOut(ctx, e.id, m)) {
+        if (!m.gone.includes(e.id)) m.gone.push(e.id);
+        continue;
+      }
       m.shows.push(e.id);
       added.set(e.id, [...(added.get(e.id) ?? []), m.id]);
     }
@@ -1502,6 +1506,36 @@ function uncast(ctx: Ctx): Violation[] {
     detail: `${quote(f.said)} is named in ${listOf(f.ms)} but is none of the dream's people or things, so nothing keeps how it looks`,
     fix: 'flag' as const,
   }));
+}
+
+/** An act that takes someone out of the place: out of it, or out through a way out of it. */
+const GOES_OUT = /^(?:\S+\s+)?(?:out(?:\s+of|\s+through)?|away\s+through)$|^(?:leaves?|exits?|escapes?)$/i;
+/** A way out of a place, as an act's "to" says it. */
+const WAY_OUT = /\b(?:window|door|doorway|gate|hatch|opening|exit|porthole|skylight)s?\b/i;
+
+/**
+ * With the one builder's `gone_out` step, whoever an act took out of the place through a way out of it, at an earlier
+ * moment there with no jump since, and no act of theirs there since: the fish that swam out of the window at m6 were
+ * back in their rows at m7, where the dreamer "tries to follow the fish out the window" (8ceb, the read of every
+ * frozen prompt, 30 Sep). Named after, they are not drawn back in.
+ */
+function wentOut(ctx: Ctx, who: string, m: AtMoment): boolean {
+  const typed = ctx.readings.typed;
+  if (!builds("gone_out") || !typed) return false;
+  const { moments } = ctx.record;
+  // An act of theirs here has them here, whatever went before.
+  if (takenOf(typed[m.id], m.eyes).acts.some((a) => a.who === who)) return false;
+  const i = moments.indexOf(m);
+  for (let k = i - 1; k >= 0; k--) {
+    const x = moments[k];
+    if (moments[k + 1].shift || x.place !== m.place) return false;
+    const acts = takenOf(typed[x.id], x.eyes).acts.filter((a) => a.who === who);
+    if (!acts.length) continue;
+    return acts.some(
+      (a) => GOES_OUT.test(a.does.trim()) && (a.to === m.place || WAY_OUT.test(`${a.to ?? ''} ${a.where ?? ''}`)),
+    );
+  }
+  return false;
 }
 
 function presence(ctx: Ctx): Violation[] {

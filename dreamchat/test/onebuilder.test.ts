@@ -1546,3 +1546,31 @@ describe('who holds what is what the act at the instant does', () => {
     expect(r.rec?.moments.m7.held.t2).toBeUndefined();
   });
 });
+
+describe('whoever went out through a way out is not drawn back in by a name', () => {
+  const act = (who: string, does: string, to?: string) =>
+    taken({ kind: 'act' as const, who, does, ...(to ? { to } : {}) });
+  const sw = { ...SHEET, DREAMCHAT_CAMERA: 'on', DREAMCHAT_REFS: 'on' };
+  const at = (step: string, typed: Record<string, TypedReading>) =>
+    withSwitches({ ...sw, DREAMCHAT_ONE_BUILDER: step }, () => rebuild(withReadings('dream-0926-083656-8ceb', typed)));
+  // 8ceb: the fish swim out of the window at m6; at m7 the dreamer "tries to follow the fish out the window".
+  const out = { m6: { moment: 'm6', facts: [act('p3', 'swims out of', 'the window')] } };
+
+  test('before its step, named at m7, the fish are back in it', () => {
+    const r = at('held_acts', out);
+    expect(r.pictures.find((p) => p.id === 'm7')!.prompt).toContain('the little silver fish (animal)');
+  });
+
+  test('with it, they are gone from m7; an act of theirs there has them back', () => {
+    const r = at('gone_out', out);
+    expect(r.rec?.moments.m7.gone).toContain('p3');
+    expect(r.pictures.find((p) => p.id === 'm7')!.prompt).not.toContain('the little silver fish (animal)');
+    const back = at('gone_out', { ...out, m7: { moment: 'm7', facts: [act('p3', 'swims back in through', 'the window')] } });
+    expect(back.rec?.moments.m7.gone).not.toContain('p3');
+  });
+
+  test('going out of something that is no way out of the place (the seaweed) takes no one out of it', () => {
+    const r = at('gone_out', { m6: { moment: 'm6', facts: [act('p3', 'swims out of', 'the seaweed')] } });
+    expect(r.rec?.moments.m7.gone).not.toContain('p3');
+  });
+});
