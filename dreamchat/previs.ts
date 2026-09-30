@@ -573,7 +573,15 @@ function growsAs(name: string): 'in' | 'among' | undefined {
 
 /** The low thing a small one rests on top of, as `restOf` sets it there: a table, a counter, a bench. */
 function restsOn(s: Spot, plan: Blocking): Spot | undefined {
-  if (isPerson(s) || s.heldBy || s.many || shapeOf(s, plan) !== 'block') return undefined;
+  if (isPerson(s) || s.heldBy || s.many) return undefined;
+  // A vehicle, or anything, standing on ground laid on the plan (the bicycle on the narrow iron bridge): on it.
+  if (shapeOf(s, plan) !== 'ground') {
+    const ground = plan.spots.find(
+      (t) => t.id !== s.id && !isPerson(t) && shapeOf(t, plan) === 'ground' && onFootprint(s, t, plan, 0),
+    );
+    if (ground) return ground;
+  }
+  if (shapeOf(s, plan) !== 'block') return undefined;
   const h = sizeOf(s)[2];
   if (h >= 0.6) return undefined;
   return plan.spots.find(
@@ -1442,7 +1450,7 @@ function thingWords(
     (holds.length ? `, holding ${holds.join(' and ')}` : '') +
     (holder ? `, in ${called(holder)}'s hands` : '') +
     (riders.length
-      ? `, with ${riders.join(' and ')} ${shape === 'vehicle' ? 'in it' : shape === 'seat' ? 'sitting on it' : cameraMode() === 'on' && growsAs(called(s.id)) === 'among' ? 'among them' : cameraMode() === 'on' && growsAs(called(s.id)) ? 'in it' : 'on it'}`
+      ? `, with ${riders.join(' and ')} ${shape === 'vehicle' ? (cameraMode() === 'on' && sizeOf(s)[0] < 1 ? 'on it' : 'in it') : shape === 'seat' ? 'sitting on it' : cameraMode() === 'on' && growsAs(called(s.id)) === 'among' ? 'among them' : cameraMode() === 'on' && growsAs(called(s.id)) ? 'in it' : 'on it'}`
       : '') +
     (onTop ? `, on ${called(onTop.id)}` : next ? `, right beside ${called(next.id)}` : '');
   const behind =

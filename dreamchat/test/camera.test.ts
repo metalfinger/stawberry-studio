@@ -33,6 +33,7 @@ import {
   withRiders,
   carriedBy,
   isThePlace,
+  withPathDeck,
 } from '../continuity';
 import { type CutSheet, notDrawnFrom } from '../cutsheet';
 import { frozenDreams, loadDream } from '../evals/saved';
@@ -1868,5 +1869,43 @@ describe('seated facing each other', () => {
     expect(
       withEnv({ DREAMCHAT_CAMERA: undefined }, () => outsideShot(carriage, ['p1', 'p2'], 'medium', name))!.text,
     ).not.toContain('across from');
+  });
+});
+
+describe('a place that is a way along', () => {
+  const bridge = {
+    front: 'the far end of the bridge',
+    spots: [
+      { id: 'p1', x: 0.75, y: 10.5, kind: 'person' as const, pose: 'sitting' as const, faces: 'front' },
+      { id: 'p2', x: 0.75, y: 9.5, kind: 'person' as const, pose: 'sitting' as const, faces: 'front' },
+      {
+        id: 't3',
+        x: 0.75,
+        y: 10,
+        kind: 'thing' as const,
+        shape: 'vehicle' as const,
+        size: [0.6, 1.8, 1.1] as [number, number, number],
+      },
+    ],
+  };
+
+  test('has its deck under whoever is there, the way what they ride faces', () => {
+    // With no bridge on the mock-up, the bicycle ridden along it was drawn crossing it side on (night-market m5).
+    const deck = withPathDeck(bridge, 'the narrow iron bridge').spots.find((s) => s.id === 'deck')!;
+    expect(deck).toMatchObject({ shape: 'ground', name: 'the narrow iron bridge', faces: 'front', x: 0.75, y: 10 });
+    expect(deck.size).toEqual([2.5, 40, 0.05]);
+    // Indoors, not a way along, or one the plan already lays: as it is.
+    expect(withPathDeck({ ...bridge, indoors: true }, 'the narrow iron bridge').spots).toEqual(bridge.spots);
+    expect(withPathDeck(bridge, 'the night market')).toBe(bridge);
+    const laid = { ...bridge, spots: [...bridge.spots, { ...deck, id: 'x9' }] };
+    expect(withPathDeck(laid, 'the narrow iron bridge')).toBe(laid);
+  });
+
+  test('what rides on it is on it, and those on a bicycle are on it, never in it', () => {
+    const plan = withPathDeck(bridge, 'the narrow iron bridge');
+    const name = (id: string) => ({ p1: 'the dreamer', p2: 'my older sister', t3: 'the bicycle' })[id] ?? id;
+    const shot = withEnv(CAMERA, () => outsideShot(plan, ['p1', 'p2', 't3'], 'wide', name))!;
+    expect(shot.text).toContain('with the dreamer and my older sister on it, on the narrow iron bridge');
+    expect(shot.text).not.toContain('right beside the bicycle');
   });
 });

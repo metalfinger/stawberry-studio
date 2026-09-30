@@ -474,10 +474,13 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
       ? (() => {
           const up = mounted(given, placeWordsOf(b, momentId));
           const where = b.places.find((x) => x.id === moment.place)?.name ?? '';
-          const named = {
-            ...up,
-            spots: sidelessNames(up.spots).filter((s) => !(s.fixture && isThePlace(s.name, where))),
-          };
+          const named = withPathDeck(
+            {
+              ...up,
+              spots: sidelessNames(up.spots).filter((s) => !(s.fixture && isThePlace(s.name, where))),
+            },
+            where,
+          );
           const cast = rec?.cast;
           if (!cast) return named;
           const dreamer = b.people.find((p) => p.is_dreamer)?.id;
@@ -731,6 +734,53 @@ export function withClimbers(plan: Blocking, acts: { who: string; does: string; 
     );
   }
   return { ...plan, spots };
+}
+
+/** A place that is a way along: a bridge, a road, a lane, a pier. */
+const PATH =
+  /\b(?:bridge|road|street|lane|path|track|trail|pier|jetty|walkway|boardwalk|causeway|avenue|highway|alley)\b/i;
+
+/**
+ * Out of doors, a place that is a way along (the narrow iron bridge) with nothing on its floor plan to be it: its deck,
+ * under whoever is there, running the way what they ride faces, else toward the place's front. With no bridge on the
+ * mock-up, the bicycle ridden along it was drawn crossing it side on (night-market m5, judged blind, 30 Sep).
+ */
+export function withPathDeck(plan: Blocking, place: string): Blocking {
+  if (plan.indoors || !PATH.test(place)) return plan;
+  const head = (x: string) => x.toLowerCase().match(PATH)?.[0];
+  if (plan.spots.some((s) => s.shape === 'ground' && head(s.name ?? '') === head(place))) return plan;
+  const on = plan.spots.filter((s) => s.kind === 'person' || s.shape === 'vehicle');
+  if (!on.length) return plan;
+  const vehicle = plan.spots.find((s) => s.shape === 'vehicle' && !s.heldBy);
+  const f = vehicle ? facing(vehicle, plan) : DIRECTIONS.front;
+  const along = Math.abs(f.y) >= Math.abs(f.x) ? 'front' : 'left';
+  const n = place.toLowerCase();
+  const width = /\bnarrow\b/.test(n)
+    ? 2.5
+    : /\b(?:wide|road|street|avenue|highway)\b/.test(n)
+      ? 7
+      : /\b(?:path|track|trail|alley|lane)\b/.test(n)
+        ? 2
+        : 3.5;
+  const x = on.reduce((a, s) => a + s.x, 0) / on.length;
+  const y = on.reduce((a, s) => a + s.y, 0) / on.length;
+  return {
+    ...plan,
+    spots: [
+      ...plan.spots,
+      {
+        id: 'deck',
+        kind: 'thing',
+        fixture: true,
+        name: place,
+        shape: 'ground',
+        faces: along,
+        size: [width, 40, 0.05],
+        x: Math.round(x * 100) / 100,
+        y: Math.round(y * 100) / 100,
+      },
+    ],
+  };
 }
 
 /**
