@@ -545,17 +545,6 @@ const MOUNTED = 1.5;
 const ON_A_WALL = /\b(wall|hanging|hung|hangs|mounted|clocks?|(tele)?phones?)\b/i;
 
 /**
- * Where a small thing on something is, as its middle on the plan, its bottom, and on the side of
- * something the way it faces out, rather than on the floor: on the top of a table, a stall or a
- * counter under it; on the top of a pole or a post; on the side of a tall cabinet or wall block
- * toward the middle of the place, about eye high; and indoors, against the room's wall with nothing
- * under it, on the wall about eye high when what it is called (`called`) says it hangs there. The
- * talking fish lay inside its stall, and no camera could see it (night market, 26 Sep); the clock
- * on its pole lay inside the platform at the pole's foot, and "the clock melting" showed a bare pole
- * with the clock said to be outside the picture (desert station m3, 26 Sep); the phone and the
- * clock on the kitchen wall were drawn near its floor (grandma's kitchen, 26 Sep).
- */
-/**
  * How someone is where plants grow, by its name: among trees in rows or a wood, in grass, crops or undergrowth. None
  * for ground that is only ground.
  */
@@ -586,6 +575,17 @@ function restsOn(s: Spot, plan: Blocking): Spot | undefined {
   );
 }
 
+/**
+ * Where a small thing on something is, as its middle on the plan, its bottom, and on the side of
+ * something the way it faces out, rather than on the floor: on the top of a table, a stall or a
+ * counter under it; on the top of a pole or a post; on the side of a tall cabinet or wall block
+ * toward the middle of the place, about eye high; and indoors, against the room's wall with nothing
+ * under it, on the wall about eye high when what it is called (`called`) says it hangs there. The
+ * talking fish lay inside its stall, and no camera could see it (night market, 26 Sep); the clock
+ * on its pole lay inside the platform at the pole's foot, and "the clock melting" showed a bare pole
+ * with the clock said to be outside the picture (desert station m3, 26 Sep); the phone and the
+ * clock on the kitchen wall were drawn near its floor (grandma's kitchen, 26 Sep).
+ */
 function restOf(s: Spot, plan: Blocking, called: string): (V3 & { f?: V2 }) | undefined {
   if (isPerson(s) || s.heldBy || shapeOf(s, plan) !== 'block') return undefined;
   const [w, d, h] = sizeOf(s);
