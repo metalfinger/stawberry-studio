@@ -28,7 +28,43 @@ current figure and what's next). Writer model: Claude (`DREAMCHAT_WRITER=claude`
 
 ## Where we stopped (27-29 Sep): read this to resume
 
-**Newest landmark (30 Sep, morning, the Mac pane and the S6 pane working together): S5's layout anchor, the S6
+**Newest landmark (30 Sep, afternoon): every frozen prompt read, 126 faults in 13 patterns, fixed at their roots.**
+Nothing drawn, nothing paid. The read, cut by cut, is `docs/prompt-read-2026-09-30.md`; each pattern was verified
+before it was fixed, and each fix measured on every saved dream (every step on, the same readings on both sides),
+read by the other pane, and landed with the suite passing with every switch off and on. `KEYS_VERSION` is 5 (the
+camera words moved what records are keyed by).
+- *On lab, the camera rules (behind DREAMCHAT_CAMERA):*
+  - Where the camera stands is said as each one in the picture is turned to it (11): openers contradicting their own
+    figures, frozen 7 → 0, live 13 → 0.
+  - Two that hide parts of each other are said once (10): frozen 4 → 0, live 4 → 0.
+  - An edit keeps its picture's places and is given no order of its own (5): the floor-plan order was the mirror of
+    the picture edited (snow-train-2 m3); the 4 edits, frozen and live. An edit never brings anyone new (continuity's
+    same-cast rule, now pinned by a test).
+  - Two on a bicycle ride one behind the other, and on it, never "in" it with "its window" (7): acfd m3, m5-m7.
+  - No floor-plan name gives the side of the room ("shelves on the right, the left edge"; 13): library-1, library-3;
+    two that would share a name are "the seat" and "the other seat".
+  - Water held low so a boat's riders fit under the ceiling is said high, never in metres beside the record's
+    "almost up to the ceiling" (6), and framing counts from what someone stands or sits on (a boat afloat, a stage):
+    frozen 13, live 22 pictures, framing words only but for 3 water sentences.
+  - People and creatures at their own size and shape on the mock-up (3): drawn from a reading's body and height, so
+    nothing changes until the S6 pane's cast reading gives them (a terrier on four legs at the dreamer's feet, a
+    horse, a heron, a six-year-old).
+- *On lab, the one prompt builder's steps (the S6 pane):* a colour ends at what it colours (8, `told_colours`); a crowd
+  of animals is more than one (`earlier_words`); writing the story needs is drawn as unreadable marks (9,
+  `story_marks`, the owner's choice); the viewer's labels from the tree.
+- *Parked for the picture test on the owner's local image machine:* `room-walls` (`DREAMCHAT_WALLS`: which side the
+  windows are, one sentence on a third of the prompts); `key-clear` (pattern 1's camera part: what the moment looks at
+  held clear and a held thing never from its holder's back; live 24 → 17 hidden, but one cut loses its office workers
+  and 15 cameras move); `story_marks` itself, on every picture.
+- *In progress (the S6 pane):* the cast reading, one writer call a dream, grounded by code (2: the tractor, the
+  jellyfish, the city, rain and snow never reached "In it" or the plan), which also gives each person and creature
+  its body and height (3); the jump's words with a mock-up as image 1 (12: "keep its framing" beside the mock-up).
+- *Known, not fixed:* tall grass and the orchard's rows planned as ground people stand on top of (d3a1, orchard m5);
+  a spot named as the whole room ("the office interior with desks…", b91f); who rides in front on a bicycle is the
+  plan's order until the typed acts ("pedals", "steers") reach planning. A written shot brief gives way whenever a
+  fix changes the view's words (ledger row 34, the brief built from the sheet's facts, ends that).
+
+**Earlier landmark (30 Sep, morning, the Mac pane and the S6 pane working together): S5's layout anchor, the S6
 stack, the harness viewer and why each picture is left out are all on lab.** Nothing drawn, nothing paid.
 - *On lab*:
   - S5 fix round three (the S5 section's "fix round three" block has every measure and all four review rounds): image
@@ -56,9 +92,7 @@ stack, the harness viewer and why each picture is left out are all on lab.** Not
     last drawn", says an animal by kind and coat, a group with "are" (behind the one builder's `earlier_words`).
   - Post-check fix 1, held things through the dreamer's eyes (the owner's 27 Sep decision; see "Left, and where each
     starts"): what the dreamer carries and the moment does not name is out of the picture.
-- *On branches, not merged:*
-  - `viewer-ux`: the page reads as the dream is built (sequence, scene, shot, cut, with the tree's own numbers), with
-    groups that fold, a legend, a breadcrumb that says where a cut sits in its shot, and addresses like `/0f40/m3`.
+- *On branches, not merged (the viewer's page by sequence, scene, shot and cut is on lab since):*
   - `room-walls`: `DREAMCHAT_WALLS=on` (off by default) says which side a room's windows are on every cut that does
     not turn round, on a floor plan its scene has drawn before (post-check fix 4; snow-train m3). On, 47 of 127 frozen
     and 106 of 447 live pictures gain that one sentence and nothing else; off, 0 change. Waits on a picture test.
