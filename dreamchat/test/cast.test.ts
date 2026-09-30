@@ -3,7 +3,7 @@
 // the things cast in the breakdown and said in the prompt. A reading is written here by hand: no writer is asked.
 
 import { afterAll, describe, expect, setDefaultTimeout, test } from 'bun:test';
-import { castId, parseCast, withCastItems, withCastThings } from '../cast';
+import { castId, castLook, parseCast, withCastItems, withCastThings } from '../cast';
 import type { CastReading } from '../cast-types';
 import { loadDream } from '../evals/saved';
 import { rebuild } from '../plan';
@@ -213,5 +213,20 @@ describe('what the floor plan reads of the reading', () => {
     expect(p).toMatch(/water stands/i);
     expect(p).toContain('Across the whole picture: the fog.');
     expect(p).not.toContain('the rising water.');
+  });
+});
+
+describe("with cast_looks, a cast thing's look says what it is, never what it does", () => {
+  test('its name with its look; no doing; the look of one of its kind the dream has', () => {
+    const boat = { name: 'the boat', look: 'a small paper boat folded from newspaper, with a triangular sail' };
+    expect(castLook({ name: 'the little boats', look: 'little, folded from newspaper' }, [boat])).toBe(
+      'little, folded from newspaper; the same kind as the boat, a small paper boat folded from newspaper, with a triangular sail',
+    );
+    expect(castLook({ name: 'the red tractor', look: 'red, driving slowly' }, [boat])).toBe('red');
+    // Floating is how the books look: kept.
+    expect(castLook({ name: 'the floating books', look: 'open like birds, floating off the shelves' }, [])).toBe(
+      'open like birds, floating off the shelves',
+    );
+    expect(castLook({ name: 'the jellyfish', look: '' }, [boat])).toBeNull();
   });
 });
