@@ -41,6 +41,27 @@ export function cameraMode(): 'off' | 'on' {
   return 'off';
 }
 
+/** A side of the room in a name: "on the left", "left-hand", "right". */
+const SIDE_WORDS = /\b(?:(?:on|to|at) the )?(?:left|right)(?:[- ]hand)?(?: side)?\b/i;
+
+/**
+ * A name without the side of the room it gives ("bookshelf right", "the left door", "shelves on the left"): said
+ * from a camera that faces the other way, "shelves on the right, the left edge of the picture" (the read of every
+ * frozen prompt, 30 Sep). Where each one is in the picture says the side.
+ */
+export function sideless(name: string): string {
+  // "To the left of the door" places it by something else, not by the room: kept.
+  if (!SIDE_WORDS.test(name) || /\b(?:left|right)(?:[- ]hand)?(?: side)? of\b/i.test(name)) return name;
+  const out = name
+    .replace(/\s*\b(?:on|to|at) the (?:left|right)(?:[- ]hand)?(?: side)?\b/gi, '')
+    .replace(/\b(?:left|right)(?:[- ]hand)?\s+/gi, '')
+    .replace(/\s+\b(?:left|right)\b\s*$/i, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+  // Nothing left but a side, or nothing at all: the name is the side, kept.
+  return /[a-z]/i.test(out.replace(/^(?:the|a|an)\b/i, '').replace(/\bside\b/i, '')) ? out : name;
+}
+
 // ── a view, and the brief written for it ─────────────────────────────────────────────────────────
 
 /** The two claims the camera rules take out of a view where they are untrue: nothing else in it changes. */

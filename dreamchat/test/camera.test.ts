@@ -14,6 +14,7 @@ import {
   sameCameraAs,
   sameView,
   selfIn,
+  sideless,
   WATER,
   waterLevel,
 } from '../camera';
@@ -507,6 +508,23 @@ describe("through the dreamer's own eyes", () => {
   test('someone facing them on the same long seat sits across from them, not beside them', () => {
     const r = rebuilt('dream-0926-043003-b0cb', ON);
     expect(shot(picture(r, 'm3').prompt)).toMatch(/the grandfather, sitting across from the dreamer/);
+  });
+});
+
+describe('a name gives no side of the room', () => {
+  test('said from a camera facing the other way, "shelves on the right" was at the picture\'s left edge', () => {
+    expect(sideless('bookshelf right')).toBe('bookshelf');
+    expect(sideless('the left door')).toBe('the door');
+    expect(sideless('shelves on the left')).toBe('shelves');
+    expect(sideless('the left-hand window')).toBe('the window');
+    // A side of something else, or a name that is only a side, is kept.
+    expect(sideless('the wall to the left of the door')).toBe('the wall to the left of the door');
+    expect(sideless('the right side')).toBe('the right side');
+    expect(sideless('the lift gate')).toBe('the lift gate');
+    const m2 = shot(picture(rebuilt('dream-0926-055141-6e80', ON), 'm2').prompt);
+    expect(m2).not.toMatch(/shelves on the (?:left|right)/);
+    const off = shot(picture(rebuilt('dream-0926-055141-6e80', { ...ON, DREAMCHAT_CAMERA: undefined }), 'm2').prompt);
+    expect(off).toMatch(/shelves on the (?:left|right)/);
   });
 });
 

@@ -26,6 +26,7 @@ import {
   cameraMode,
   goingIn,
   headWord,
+  sideless,
   mounted,
   ON_THE_LINE,
   outThroughWindows,
@@ -446,7 +447,15 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
   if (!scene || !given) return undefined;
   // With the camera rules, each fixture the place's words put up a wall or on the ceiling is there, off the
   // floor (camera.ts mounted): the high round window stood on the floor, under the water.
-  const plan = cameraMode() === 'on' ? mounted(given, placeWordsOf(b, momentId)) : given;
+  // With the camera rules, each fixture the place's words put up a wall or on the ceiling is there, off the floor
+  // (camera.ts mounted), and no name gives the side of the room it is on (camera.ts sideless).
+  const plan =
+    cameraMode() === 'on'
+      ? (() => {
+          const up = mounted(given, placeWordsOf(b, momentId));
+          return { ...up, spots: up.spots.map((s) => (s.name ? { ...s, name: sideless(s.name) } : s)) };
+        })()
+      : given;
   // Only the moments in the same place count: who was in the tiny room, not who was on the stairs.
   const own = (x: Moment) =>
     given === scene.blocking ? !scene.blocking?.places?.[x.place] : scene.blocking?.places?.[x.place] === given;
