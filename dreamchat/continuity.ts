@@ -594,10 +594,9 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
           if (s.kind !== 'thing' || s.fixture || s.size) return s;
           const t = (b.things ?? []).find((x) => x.id === s.id) as
             { name?: string; fields?: Record<string, { value?: string | null } | undefined> } | undefined;
-          const words = [t?.name ?? s.name, t?.fields?.appearance?.value, t?.fields?.size?.value]
-            .filter(Boolean)
-            .join('. ');
-          const size = words ? smallSizeOf(words) : undefined;
+          const name = t?.name ?? s.name ?? '';
+          const words = [t?.fields?.appearance?.value, t?.fields?.size?.value].filter(Boolean).join('. ');
+          const size = name ? smallSizeOf(name, words) : undefined;
           return size ? { ...s, size } : s;
         }),
       }
@@ -803,10 +802,11 @@ const PATH =
  */
 export function withPathDeck(plan: Blocking, place: string): Blocking {
   // A way on water (the river street, a canal) has none: whoever is there is afloat on it.
-  // Bounds a few metres across are a room, whatever it is called (the street whose plan is the kitchen by the stove).
+  // Bounds a few metres across every way are a room, whatever it is called (the street whose plan is the kitchen by the
+  // stove); a bridge 1.5 m by 20 m is a bridge (night-market m5).
   if (
     plan.indoors ||
-    (plan.room && Math.min(...plan.room) < 4) ||
+    (plan.room && Math.max(...plan.room) < 6) ||
     !PATH.test(place) ||
     /\b(?:river|canal|stream|sea|lake|water|flooded)\b/i.test(place)
   )
@@ -818,7 +818,15 @@ export function withPathDeck(plan: Blocking, place: string): Blocking {
   if (!on.length) return plan;
   const vehicle = plan.spots.find((s) => s.shape === 'vehicle' && !s.heldBy);
   const f = vehicle ? facing(vehicle, plan) : DIRECTIONS.front;
-  const along = Math.abs(f.y) >= Math.abs(f.x) ? 'front' : 'left';
+  // Where the plan has bounds, the way is its floor: along its long side, as wide as its short one.
+  const bounds = plan.room;
+  const along = bounds
+    ? bounds[1] >= bounds[0]
+      ? 'front'
+      : 'left'
+    : Math.abs(f.y) >= Math.abs(f.x)
+      ? 'front'
+      : 'left';
   const n = place.toLowerCase();
   const width = /\bnarrow\b/.test(n)
     ? 2.5
@@ -827,12 +835,42 @@ export function withPathDeck(plan: Blocking, place: string): Blocking {
       : /\b(?:path|track|trail|alley|lane)\b/.test(n)
         ? 2
         : 3.5;
-  const x = on.reduce((a, s) => a + s.x, 0) / on.length;
-  const y = on.reduce((a, s) => a + s.y, 0) / on.length;
+  const x = bounds
+    ? along === 'front'
+      ? bounds[0] / 2
+      : on.reduce((a, s) => a + s.x, 0) / on.length
+    : on.reduce((a, s) => a + s.x, 0) / on.length;
+  const y = bounds
+    ? along === 'left'
+      ? bounds[1] / 2
+      : on.reduce((a, s) => a + s.y, 0) / on.length
+    : on.reduce((a, s) => a + s.y, 0) / on.length;
+  const wide = bounds ? Math.min(...bounds) : width;
+  const long = bounds ? Math.max(40, Math.max(...bounds)) : 40;
+  // A bridge, a pier: its railings along both edges, their top rails at hand height, so which way it runs shows on the
+  // mock-up. A deck
+  // alone, a few centimetres of grey on a grey floor, could not be told from the floor, and the bicycle was drawn across
+  // the bridge again (night-market m5, redrawn).
+  const rails = /\b(?:bridge|pier|jetty|boardwalk|walkway|causeway)\b/i.test(place);
+  const r = along === 'front' ? { x: 1, y: 0 } : { x: 0, y: 1 };
+  const rail = (k: 1 | 2, side: number): Spot => ({
+    id: `x-rail-${k}`,
+    kind: 'thing',
+    fixture: true,
+    name: k === 1 ? 'the railing' : 'the other railing',
+    faces: along,
+    // Its top rail only, at hand height: which way the bridge runs shows, and nobody on it is hidden behind a solid
+    // metre-high wall (the sister behind the dreamer, night-market m7, when the railings were solid).
+    size: [0.06, long, 0.08],
+    above: 0.92,
+    x: Math.round((x + r.x * side * (wide / 2)) * 100) / 100,
+    y: Math.round((y + r.y * side * (wide / 2)) * 100) / 100,
+  });
   return {
     ...plan,
     spots: [
       ...plan.spots,
+      ...(rails ? [rail(1, -1), rail(2, 1)] : []),
       {
         id: 'x-deck',
         kind: 'thing',
@@ -840,7 +878,7 @@ export function withPathDeck(plan: Blocking, place: string): Blocking {
         name: place,
         shape: 'ground',
         faces: along,
-        size: [width, 40, 0.05],
+        size: [wide, long, 0.05],
         x: Math.round(x * 100) / 100,
         y: Math.round(y * 100) / 100,
       },

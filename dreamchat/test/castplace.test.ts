@@ -325,10 +325,14 @@ describe('a story thing the plan gives no size', () => {
   test('is the size its words give: a measure, else what it is', () => {
     // Unsized, the brass key before the dreamer's eyes was a suitcase-sized box, the paper boat a metre block
     // (lighthouse-fresh m2, m15, judged blind).
-    expect(smallSizeOf('the brass key. Old brass key, smooth on the bow')).toEqual([0.08, 0.03, 0.01]);
-    expect(smallSizeOf('the paper boat. Folded out of newspaper')).toEqual([0.15, 0.08, 0.1]);
-    expect(smallSizeOf('A small paper boat about 4 inches long')![0]).toBeCloseTo(0.102, 3);
-    expect(smallSizeOf('about 15 cm long')![0]).toBeCloseTo(0.15, 3);
+    expect(smallSizeOf('the brass key', 'Old brass key, smooth on the bow')).toEqual([0.08, 0.03, 0.01]);
+    expect(smallSizeOf('the paper boat', 'Folded out of newspaper')).toEqual([0.15, 0.08, 0.1]);
+    expect(smallSizeOf('the boat', 'A small paper boat about 4 inches long')![0]).toBeCloseTo(0.102, 3);
+    expect(smallSizeOf('the thing', 'about 15 cm long')![0]).toBeCloseTo(0.15, 3);
+    // By its own name only: a door whose look names its key hole is no key; "one in each hand" is no inch.
+    expect(smallSizeOf('the lighthouse door', 'heavy, with a brass key hole')).toBeUndefined();
+    expect(smallSizeOf('the lamp post')).toBeUndefined();
+    expect(smallSizeOf('the red tractor', 'one in each hand')).toBeUndefined();
     // Nothing of a hand's size, nothing said: as before.
     expect(smallSizeOf('the red tractor')).toBeUndefined();
     expect(smallSizeOf('the yellow rowing boat')).toBeUndefined();

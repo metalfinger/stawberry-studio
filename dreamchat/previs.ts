@@ -1828,7 +1828,10 @@ export function outsideShot(
   // is in the picture and nobody is hidden: its way of looking, a little either side of it, and
   // further off, each rendered small; the one holding them all, clearest, least turned and nearest.
   // Aimed at the car past the group, the frame left the dreamer out of the picture (25 Sep).
-  const solidsSmall = solidsOf(plan, [], name);
+  // What the camera looks round for is who and what is there: a bridge's top rails, laid for which way it runs, are no
+  // reason to move it (night-market m6 lost its edit of m5 to them).
+  const railless = { ...plan, spots: plan.spots.filter((x) => !/^x-rail-/.test(x.id)) };
+  const solidsSmall = solidsOf(railless, [], name);
   const crowded = plan.spots.some((s) => s.many);
   const tiny = 192 * 108 * 0.001;
   let best: { eye: Eye; far: number; cramped: number; score: number } | undefined;
@@ -1857,7 +1860,7 @@ export function outsideShot(
   for (const deg of degs)
     for (const back of [1, 1.35, 1.8]) {
       const cand = place(turnBy(d0, deg), back);
-      const rs = render(crowded ? solidsOf(plan, [], name, cand.eye) : solidsSmall, cand.eye, 192, 108);
+      const rs = render(crowded ? solidsOf(railless, [], name, cand.eye) : solidsSmall, cand.eye, 192, 108);
       const seen = holdAll.map((s) => rs.seen.get(s.id));
       const inFrame = seen.filter((x) => x && x.visible >= tiny).length / holdAll.length;
       const clear = seen.reduce((a, x) => a + (x ? 1 - x.occluded : 0), 0) / holdAll.length;
