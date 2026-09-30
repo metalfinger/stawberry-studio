@@ -104,6 +104,8 @@ export type Blocking = {
    * eyes rises with them. None where no water is measured.
    */
   water?: number;
+  /** The water held under the level its words give, so a boat's riders fit under the ceiling: said high, never in metres. */
+  waterCapped?: true;
 };
 
 /** A side of a place, for someone facing its front. */

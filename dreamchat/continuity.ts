@@ -494,12 +494,18 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
     }
   // Whoever rides a boat on it keeps their head under the ceiling: "almost up to the ceiling" with a boat
   // afloat is as high as they can sit in it.
-  if (water !== null && plan.indoors && plan.spots.some((x) => x.shape === 'vehicle'))
-    water = Math.min(water, Math.max(0.1, (plan.ceiling ?? 3.2) - 1.6));
+  // Held lower than the words have it, it is not said in metres (previs.ts waterWords): "about 2 metres deep" beside
+  // the record's "almost up to the ceiling" (the read of every frozen prompt, 30 Sep).
+  let capped = false;
+  if (water !== null && plan.indoors && plan.spots.some((x) => x.shape === 'vehicle')) {
+    const cap = Math.max(0.1, (plan.ceiling ?? 3.2) - 1.6);
+    capped = water > cap;
+    water = Math.min(water, cap);
+  }
   return {
     ...plan,
     ...(Object.keys(beyond).length ? { outside: { ...beyond, ...(plan.outside ?? {}) } } : {}),
-    ...(water !== null ? { water } : {}),
+    ...(water !== null ? { water, ...(capped ? { waterCapped: true as const } : {}) } : {}),
     spots: plan.spots
       .filter((s) => !(s.id in beyond))
       .filter((s) => (there.has(s.id) || s.id === dreamerId || s.fixture) && !r?.gone.includes(s.id))
