@@ -473,7 +473,11 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
     cameraMode() === 'on'
       ? (() => {
           const up = mounted(given, placeWordsOf(b, momentId));
-          const named = { ...up, spots: sidelessNames(up.spots) };
+          const where = b.places.find((x) => x.id === moment.place)?.name ?? '';
+          const named = {
+            ...up,
+            spots: sidelessNames(up.spots).filter((s) => !(s.fixture && isThePlace(s.name, where))),
+          };
           const cast = rec?.cast;
           if (!cast) return named;
           const dreamer = b.people.find((p) => p.is_dreamer)?.id;
@@ -727,6 +731,31 @@ export function withClimbers(plan: Blocking, acts: { who: string; does: string; 
     );
   }
   return { ...plan, spots };
+}
+
+/**
+ * Whether a fixture's name is the place itself, described: "the office interior with desks, monitors, and people
+ * working", "the office buried in snow, only monitor tops visible" in the office. As blocks on the floor plan the
+ * camera "looked at the office interior", beside "the office buried in snow" (b91f; the read of every frozen prompt,
+ * 30 Sep). The place's own sketch carries it. Never a part of it: "the office door" stays.
+ */
+export function isThePlace(name: string | undefined, place: string): boolean {
+  const bare = (x: string) =>
+    x
+      .toLowerCase()
+      .trim()
+      .replace(/^(?:the|a|an)\s+/, '');
+  const n = bare(name ?? '');
+  const p = bare(place);
+  if (!p || !n.startsWith(p)) return false;
+  const rest = n.slice(p.length);
+  return (
+    rest === '' ||
+    /^,/.test(rest) ||
+    /^\s+(?:interior|itself|with|buried|covered|filled|full|flooded|under|in|at|during|as|seen|lit|empty|now)\b/.test(
+      rest,
+    )
+  );
 }
 
 /** The words of the place a moment happens in: its layout and what stands in it, as the breakdown says them. */

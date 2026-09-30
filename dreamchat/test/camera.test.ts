@@ -32,6 +32,7 @@ import {
   withClimbers,
   withRiders,
   carriedBy,
+  isThePlace,
 } from '../continuity';
 import { type CutSheet, notDrawnFrom } from '../cutsheet';
 import { frozenDreams, loadDream } from '../evals/saved';
@@ -1812,5 +1813,19 @@ describe('where plants grow', () => {
     expect(shot('the edge of the field')).toContain('standing on the edge of the field');
     // Off, as before.
     expect(shot('the tall grass', { DREAMCHAT_CAMERA: undefined })).toContain('standing on the tall grass');
+  });
+});
+
+describe('a fixture that is the place itself', () => {
+  test('is the place, described, never a part of it', () => {
+    // As blocks on the floor plan, the camera "looked at the office interior" beside "the office buried in snow" (b91f).
+    expect(isThePlace('the office interior with desks, monitors, and people working', 'the office')).toBe(true);
+    expect(isThePlace('the office buried in snow, only monitor tops visible', 'the office')).toBe(true);
+    expect(isThePlace('The office', 'the office')).toBe(true);
+    expect(isThePlace('the office door', 'the office')).toBe(false);
+    expect(isThePlace('the office window', 'the office')).toBe(false);
+    expect(isThePlace('the officer', 'the office')).toBe(false);
+    expect(isThePlace(undefined, 'the office')).toBe(false);
+    expect(isThePlace('the window', '')).toBe(false);
   });
 });
