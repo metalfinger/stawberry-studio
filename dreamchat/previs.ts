@@ -1321,17 +1321,22 @@ function thingWords(
       const to = unit({ x: ctx.anchor!.x - s.x, y: ctx.anchor!.y - s.y });
       return f.x * to.x + f.y * to.y > 0.7;
     })();
-  const sitting = on
-    ? ctx.on.includes(on.t.id)
-      ? facesMe
-        ? `, ${pose} across from the dreamer on ${called(on.t.id)}`
+  // Getting in or out of something at the instant: never already sitting in it (the camera rules, plan_acts).
+  const climbing =
+    cameraMode() === 'on' && isPerson(s) && s.climbing ? `, climbing ${s.climbing.how} ${called(s.climbing.of)}` : '';
+  const sitting = climbing
+    ? climbing
+    : on
+      ? ctx.on.includes(on.t.id)
+        ? facesMe
+          ? `, ${pose} across from the dreamer on ${called(on.t.id)}`
+          : on.how === 'in'
+            ? `, beside the dreamer in the same ${bareName(called(on.t.id))}`
+            : `, ${pose} beside the dreamer on the same ${bareName(called(on.t.id))}`
         : on.how === 'in'
-          ? `, beside the dreamer in the same ${bareName(called(on.t.id))}`
-          : `, ${pose} beside the dreamer on the same ${bareName(called(on.t.id))}`
-      : on.how === 'in'
-        ? `, in ${called(on.t.id)}`
-        : `, ${pose} on ${called(on.t.id)}`
-    : '';
+          ? `, in ${called(on.t.id)}`
+          : `, ${pose} on ${called(on.t.id)}`
+      : '';
   const holder = !isPerson(s) && s.heldBy ? s.heldBy : undefined;
   const holds = isPerson(s) && !s.many ? plan.spots.filter((o) => o.heldBy === s.id).map((o) => called(o.id)) : [];
   const next =
@@ -1349,7 +1354,9 @@ function thingWords(
         )
       : undefined;
   const riders = !isPerson(s)
-    ? ctx.spots.filter((o) => isPerson(o) && !o.many && onOf(o, plan)?.t.id === s.id).map((o) => called(o.id))
+    ? ctx.spots
+        .filter((o) => isPerson(o) && !o.many && onOf(o, plan)?.t.id === s.id && !(cameraMode() === 'on' && o.climbing))
+        .map((o) => called(o.id))
     : [];
   const shape = !isPerson(s) ? shapeOf(s, plan) : undefined;
   const how =

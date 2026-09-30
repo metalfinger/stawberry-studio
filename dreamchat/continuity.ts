@@ -528,7 +528,7 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
     capped = water > cap;
     water = Math.min(water, cap);
   }
-  return {
+  const placed: Blocking = {
     ...plan,
     ...(Object.keys(beyond).length ? { outside: { ...beyond, ...(plan.outside ?? {}) } } : {}),
     ...(water !== null ? { water, ...(capped ? { waterCapped: true as const } : {}) } : {}),
@@ -569,6 +569,48 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
         return at;
       }),
   };
+  // Getting in or out of something at the instant, as the moment's typed acts say (the one builder's `plan_acts`).
+  return camera ? withClimbers(placed, r?.acts) : placed;
+}
+
+/** Getting into or out of something, as a typed act says it: "climbs into", "gets out of", "steps aboard". */
+const CLIMB = /^(?:climbs?|gets?|steps?|clambers?|hops?|jumps?|scrambles?)\s+(into|in|aboard|onto|out of|out)$/i;
+
+/**
+ * Whoever the moment's typed acts have climbing into or out of something on the plan is at its side, half in: at the
+ * rim of its long side nearest them, standing, facing into it (Spot.climbing). The dreamer climbing into the yellow
+ * rowing boat was drawn already sitting in it beside the sister (6081 m6; fdd7 m3, 6e80 m5, 538d m5: the read of every
+ * frozen prompt, 30 Sep). Two climbing into one thing are a step apart along it.
+ */
+export function withClimbers(plan: Blocking, acts: { who: string; does: string; to?: string }[] | undefined): Blocking {
+  if (!acts?.length) return plan;
+  let spots = plan.spots;
+  const along = new Map<string, number>();
+  for (const a of acts) {
+    const m = CLIMB.exec(a.does.trim());
+    const t = m && a.to ? spots.find((s) => s.id === a.to && s.kind !== 'person' && !s.fixture) : undefined;
+    const p = t ? spots.find((s) => s.id === a.who && s.kind === 'person' && !s.many) : undefined;
+    if (!m || !t || !p) continue;
+    const f = facing(t, plan);
+    const r = { x: -f.y, y: f.x };
+    const [w, d] = sizeOf(t);
+    // Its long side, the one nearest them; along it, where they are, a step on from anyone climbing it already.
+    const [side, length, half] = w <= d ? [r, f, w / 2] : [f, r, d / 2];
+    const long = w <= d ? d : w;
+    const v = { x: p.x - t.x, y: p.y - t.y };
+    const sign = v.x * side.x + v.y * side.y < 0 ? -1 : 1;
+    const k = along.get(t.id) ?? 0;
+    along.set(t.id, k + 1);
+    const room = Math.max(0, long / 2 - 0.3);
+    const b = Math.max(-room, Math.min(room, v.x * length.x + v.y * length.y + k * 0.6));
+    const off = Math.max(0, half - 0.1);
+    const at = { x: t.x + side.x * sign * off + length.x * b, y: t.y + side.y * sign * off + length.y * b };
+    const how: 'into' | 'out of' = /^out/i.test(m[1]) ? 'out of' : 'into';
+    spots = spots.map((s) =>
+      s.id === p.id ? { ...s, ...at, pose: 'standing' as const, faces: t.id, climbing: { of: t.id, how } } : s,
+    );
+  }
+  return { ...plan, spots };
 }
 
 /** The words of the place a moment happens in: its layout and what stands in it, as the breakdown says them. */

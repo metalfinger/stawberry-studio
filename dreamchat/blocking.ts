@@ -61,6 +61,12 @@ export type Spot = {
    * rules. Without it every fixture stood on the floor, and deep water hid a window high in the wall.
    */
   above?: number;
+  /**
+   * Getting into or out of something at the instant, as the moment's typed act says ("climbs into" the boat): at its
+   * side, half in, standing and facing into it (continuity.ts withClimbers, the camera rules). Drawn already sitting
+   * in it, the dreamer was never climbing in (6081 m6, 30 Sep).
+   */
+  climbing?: { of: string; how: 'into' | 'out of' };
 };
 
 /** Where someone or something (a car, a boat) has moved to at a moment: its new spot, which way it faces, how they are. */
