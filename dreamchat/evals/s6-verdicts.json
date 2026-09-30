@@ -6122,5 +6122,9 @@
   "244634e54298413b": {
     "verdict": "intended",
     "why": "held_acts: who holds what at a moment is what its typed act does at the instant, not what the floor plan left from the scene: the grandfather hands the suitcase over; the floor plan keeps it in his hands as he does."
+  },
+  "4dab3d2240859be8": {
+    "verdict": "intended",
+    "why": "held_acts: who holds what at a moment is what its typed act does at the instant, not what the floor plan left from the scene: the boat passes from the father's hands to the dreamer's as he hands it, and the floor plan keeps it in his hand reaching out (its must-show); the camera moved with it, so picture 4 is no longer near enough to send."
   }
 }
