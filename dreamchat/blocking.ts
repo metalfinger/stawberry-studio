@@ -278,9 +278,11 @@ export function settle(
     const mid = { x: a.x, y: a.y };
     // On something too narrow for two abreast they ride one behind the other, the way it goes: two on one
     // bicycle were sat side by side, as on a bench (the read of every frozen prompt, 30 Sep).
-    const narrow =
-      opts.tandem && vehicles.some((v) => sizeOf(v)[0] < 1 && together.every((b) => onFootprint(b, v, plan)));
-    const along = narrow ? f : r;
+    const narrow = opts.tandem
+      ? vehicles.find((v) => sizeOf(v)[0] < 1 && together.every((b) => onFootprint(b, v, plan)))
+      : undefined;
+    // Along the way it faces, whichever way they turn on it.
+    const along = narrow ? facing(narrow, plan) : r;
     together.forEach((b, k) => {
       const off = narrow ? ((together.length - 1) / 2 - k) * 0.6 : (k - (together.length - 1) / 2) * 0.6;
       Object.assign(b, { x: mid.x + along.x * off, y: mid.y + along.y * off });

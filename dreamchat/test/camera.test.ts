@@ -1,6 +1,6 @@
 import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { assembleCut } from '../assemble';
-import { type Blocking, facing } from '../blocking';
+import { type Blocking, facing, settle } from '../blocking';
 import {
   bodyHeight,
   cameraMode,
@@ -530,6 +530,34 @@ describe('two on a bicycle', () => {
     // Without the camera rules, as before.
     const off = rebuilt('dream-0926-095122-acfd', { ...ON, DREAMCHAT_CAMERA: undefined });
     expect(picture(off, 'm7').prompt).toMatch(/in the old red bicycle/);
+  });
+
+  test('sit along the way it faces, whichever way that is', () => {
+    const plan: Blocking = {
+      front: 'the road',
+      spots: [
+        {
+          id: 'b1',
+          x: 5,
+          y: 5,
+          kind: 'thing',
+          shape: 'vehicle',
+          size: [0.6, 1.8, 1.1],
+          faces: 'left',
+          name: 'the bicycle',
+        },
+        { id: 'p1', x: 5, y: 5, kind: 'person', pose: 'sitting' },
+        { id: 'p2', x: 5, y: 5, kind: 'person', pose: 'sitting' },
+      ],
+    };
+    const settled = settle(plan, { tandem: true });
+    const [a, b] = settled.spots.filter((s) => s.kind === 'person');
+    const f = facing(settled.spots[0], settled);
+    expect(Math.abs((b.x - a.x) * f.y - (b.y - a.y) * f.x)).toBeLessThan(1e-6);
+    expect(Math.hypot(b.x - a.x, b.y - a.y)).toBeCloseTo(0.6, 5);
+    // Without it, side by side across it, as before.
+    const [c, d] = settle(plan).spots.filter((s) => s.kind === 'person');
+    expect(Math.abs((d.x - c.x) * f.x + (d.y - c.y) * f.y)).toBeLessThan(1e-6);
   });
 });
 
