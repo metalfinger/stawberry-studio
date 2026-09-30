@@ -547,7 +547,11 @@ describe('S9 keys', () => {
       await withSwitches(env, async () => {
         for (const name of DREAMS) {
           const { s } = await drawn(name);
-          const value = s.build!.frames!.map((f) => [f.id, currentRecord(f)!.keys, currentRecord(f)!.dream?.keys ?? null]);
+          const value = s.build!.frames!.map((f) => [
+            f.id,
+            currentRecord(f)!.keys,
+            currentRecord(f)!.dream?.keys ?? null,
+          ]);
           hashes[`${name} ${label}`] = hashOf(value);
           raw[`${name} ${label}`] = value;
         }
@@ -559,20 +563,20 @@ describe('S9 keys', () => {
     // neither a code change nor KEYS_VERSION explains it (hashOf itself is architecture-free: a pure integer
     // hash over `stable`'s text, no crypto, no floats).
     if (process.env.S9_RAW) console.log(JSON.stringify(raw, null, 2));
-    expect({ version: KEYS_VERSION, hashes }).toEqual({ version: 3, hashes: GOLDEN });
+    expect({ version: KEYS_VERSION, hashes }).toEqual({ version: 4, hashes: GOLDEN });
   });
 });
 
 /**
  * The keys of the two dreams drawn as above, record off and on, and with the cut sheet and the camera rules
- * on as well, at KEYS_VERSION 3 (the floor plan a mock-up is rendered from keyed rounded, the same on any
- * machine).
+ * on as well, at KEYS_VERSION 4 (the floor plan a mock-up is rendered from keyed rounded, the same on any
+ * machine; 4: where the camera stands said as each one in the picture is turned to it).
  */
 const GOLDEN: Record<string, string> = {
   'dream-0926-062232-a44a record off': '52eb1a3197406',
   'dream-0926-062232-a44a record on': '18f5a4fff235fc',
-  'dream-0926-062232-a44a record, cut sheet and camera on': '177279f221425c',
+  'dream-0926-062232-a44a record, cut sheet and camera on': '1109e4b0447efc',
   'dream-0926-083656-8ceb record off': '655188d6ebd5',
   'dream-0926-083656-8ceb record on': 'f1db2c3d18ff',
-  'dream-0926-083656-8ceb record, cut sheet and camera on': 'c3183c76ba3f3',
+  'dream-0926-083656-8ceb record, cut sheet and camera on': '70bd0a1447c54',
 };

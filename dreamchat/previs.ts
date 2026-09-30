@@ -1698,23 +1698,27 @@ export function outsideShot(
   const all = (b: 'front' | 'side' | 'back') => turned.length > 0 && turned.every((t) => t.b === b);
   const backOne = turned.find((t) => t.b === 'back')?.s;
   const frontOne = turned.find((t) => t.b === 'front')?.s;
-  const from = apart
-    ? fromGroup
-    : pair && !atIt && turned.length === 2 && backOne && frontOne
-      ? `from behind ${name(backOne.id)}, as ${name(backOne.id)} faces ${name(frontOne.id)}`
-      : pair && all('side')
+  // Off the camera rules, as before. atIt needs `faced`, which only one person has: there `them` is their name.
+  const from =
+    cameraMode() !== 'on'
+      ? fromGroup
+      : apart
         ? fromGroup
-        : pair && atIt && all('back')
-          ? `from behind ${them}, as ${them} faces ${name(faced!.id)}`
-          : pair && atIt && all('front')
-            ? `from in front of ${them}, as ${them} faces ${name(faced!.id)}`
-            : all('back')
-              ? `from behind ${them}`
-              : all('front')
-                ? `from in front of ${them}`
-                : all('side') || pair
-                  ? `from beside ${them}`
-                  : fromGroup;
+        : pair && !atIt && turned.length === 2 && backOne && frontOne
+          ? `from behind ${name(backOne.id)}, as ${name(backOne.id)} faces ${name(frontOne.id)}`
+          : pair && all('side')
+            ? fromGroup
+            : pair && atIt && all('back')
+              ? `from behind ${them}, as ${them} faces ${name(faced!.id)}`
+              : pair && atIt && all('front')
+                ? `from in front of ${them}, as ${them} faces ${name(faced!.id)}`
+                : all('back')
+                  ? `from behind ${them}`
+                  : all('front')
+                    ? `from in front of ${them}`
+                    : all('side') || pair
+                      ? `from beside ${them}`
+                      : fromGroup;
   const anchor = people[0];
   // Said in metres: "a few metres off" in a room two metres across read as the prompt at odds with
   // itself, and the tiny room's moment was held (Meads, 25 Sep).
