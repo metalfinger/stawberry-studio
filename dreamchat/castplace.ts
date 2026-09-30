@@ -97,9 +97,13 @@ function wayOf(side: string | null, by: Spot, plan: Blocking): V2 | 'same' {
 /** Whether a moment's words have someone riding, driving or sitting in it (by its head word): it is under them. */
 const ridden = (words: string, head: string) =>
   !!head &&
-  new RegExp(
+  (new RegExp(
     `\\b(?:ride|rides|riding|rode|drive|drives|driving|drove|sit|sits|sitting|sat|climb|climbs|climbing|in the cab of|aboard)\\b[^.;,]*\\b${head}`,
-  ).test(words.toLowerCase());
+  ).test(words.toLowerCase()) ||
+    // "The dreamer is in the tractor, sitting next to the driver" (lighthouse-first m8).
+    new RegExp(
+      `\\b(?:is|are|was|were|sits?|sitting|stays?) (?:now )?in (?:the |a |an |their |his |her )?(?:\\w+ )?${head}\\b`,
+    ).test(words.toLowerCase()));
 
 /**
  * The plan with the reading's things placed that this moment shows in its place: by what the words put each by (its

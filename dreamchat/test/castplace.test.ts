@@ -56,6 +56,14 @@ describe('a cast thing', () => {
     const ridden = withCastSpots(room, reading([thing({ kind: 'vehicle', near: 'p1' })]), moment, 'p1');
     const c1 = ridden.spots.find((s) => s.id === 'c1')!;
     expect([c1.x, c1.y, c1.shape]).toEqual([4, 6, 'vehicle']);
+    // "Is in the tractor, sitting next to the driver" is riding it too (lighthouse-first m8).
+    const inIt = withCastSpots(
+      room,
+      reading([thing({ kind: 'vehicle' })]),
+      { id: 'm1', action: 'Suddenly the dreamer is in the tractor, sitting next to the driver' },
+      'p1',
+    );
+    expect(inIt.spots.find((s) => s.id === 'c1')).toMatchObject({ x: 4, y: 6 });
     // Ahead of the dreamer, who faces the front (toward y = 0): nearer the front.
     const ahead = withCastSpots(
       room,
@@ -159,6 +167,53 @@ describe('bodies', () => {
 });
 
 describe('on a saved dream', () => {
+  test('a thing stays where the scene first showed it, whoever moves after', () => {
+    // Placed against the scene's own plan, before any moment's moves (continuity.ts rawPlanBy), a thing by the
+    // dreamer never follows them round the room from cut to cut: pinned here, as the S6 pane asked (30 Sep).
+    const b = structuredClone(loadDream('dream-0925-231131-affd', false).session.draft!.breakdown!);
+    const me = b.people.find((p) => p.is_dreamer)!.id;
+    for (const m of b.scenes.flatMap((sc) => sc.moments).filter((x) => x.id === 'm4' || x.id === 'm6'))
+      m.things.push('c1');
+    const cast: CastReading = {
+      things: [
+        {
+          id: 'c1',
+          name: 'the folded letters',
+          look: 'white paper',
+          kind: 'thing',
+          moments: [
+            { id: 'm4', where: 'in' },
+            { id: 'm6', where: 'in' },
+          ],
+          near: me,
+          side: 'beside the dreamer',
+          size: null,
+          many: null,
+        },
+      ],
+      bodies: [],
+      fixtures: [],
+    };
+    const none = { moments: {}, before: {}, ends: {}, unsaid: {} } as unknown as RecordPlan;
+    const env = { DREAMCHAT_CAMERA: 'on', DREAMCHAT_CUT_SHEET: 'on', DREAMCHAT_RECORD: 'on' };
+    const was = Object.fromEntries(Object.keys(env).map((k) => [k, process.env[k]]));
+    Object.assign(process.env, env);
+    try {
+      const at = (m: string) => rawPlanBy(b, m, { ...none, cast })!;
+      const c4 = at('m4').spots.find((s) => s.id === 'c1')!;
+      const c6 = at('m6').spots.find((s) => s.id === 'c1')!;
+      const d4 = at('m4').spots.find((s) => s.id === me)!;
+      const d6 = at('m6').spots.find((s) => s.id === me)!;
+      // The dreamer moved; the letters did not.
+      expect(Math.hypot(d6.x - d4.x, d6.y - d4.y)).toBeGreaterThan(0.1);
+      expect([c6.x, c6.y, c6.faces]).toEqual([c4.x, c4.y, c4.faces]);
+    } finally {
+      for (const [k, v] of Object.entries(was))
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+    }
+  });
+
   test('with the reading on the record, its fixtures and things are on the moment’s floor plan; without it, as before', () => {
     const b = structuredClone(loadDream('dream-0926-043003-b0cb', false).session.draft!.breakdown!);
     // As the rebuild casts it before planning (cast.ts withCastThings): in view at the moment that shows it.
