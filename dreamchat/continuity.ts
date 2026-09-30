@@ -847,7 +847,8 @@ export function withPathDeck(plan: Blocking, place: string): Blocking {
     : on.reduce((a, s) => a + s.y, 0) / on.length;
   const wide = bounds ? Math.min(...bounds) : width;
   const long = bounds ? Math.max(40, Math.max(...bounds)) : 40;
-  // A bridge, a pier: its railings along both edges, a metre high, so which way it runs shows on the mock-up. A deck
+  // A bridge, a pier: its railings along both edges, their top rails at hand height, so which way it runs shows on the
+  // mock-up. A deck
   // alone, a few centimetres of grey on a grey floor, could not be told from the floor, and the bicycle was drawn across
   // the bridge again (night-market m5, redrawn).
   const rails = /\b(?:bridge|pier|jetty|boardwalk|walkway|causeway)\b/i.test(place);
@@ -858,7 +859,10 @@ export function withPathDeck(plan: Blocking, place: string): Blocking {
     fixture: true,
     name: k === 1 ? 'the railing' : 'the other railing',
     faces: along,
-    size: [0.08, long, 1],
+    // Its top rail only, at hand height: which way the bridge runs shows, and nobody on it is hidden behind a solid
+    // metre-high wall (the sister behind the dreamer, night-market m7, when the railings were solid).
+    size: [0.06, long, 0.08],
+    above: 0.92,
     x: Math.round((x + r.x * side * (wide / 2)) * 100) / 100,
     y: Math.round((y + r.y * side * (wide / 2)) * 100) / 100,
   });
