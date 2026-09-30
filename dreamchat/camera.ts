@@ -41,6 +41,55 @@ export function cameraMode(): 'off' | 'on' {
   return 'off';
 }
 
+/** A side of the room in a name: "on the left", "left-hand", "right". */
+const SIDE_WORDS = /\b(?:(?:on|to|at) the )?(?:left|right)(?:[- ]hand)?(?: side)?\b/i;
+
+/**
+ * A name without the side of the room it gives ("bookshelf right", "the left door", "shelves on the left"): said
+ * from a camera that faces the other way, "shelves on the right, the left edge of the picture" (the read of every
+ * frozen prompt, 30 Sep). Where each one is in the picture says the side.
+ */
+export function sideless(name: string): string {
+  // "To the left of the door" places it by something else, not by the room: kept.
+  if (!SIDE_WORDS.test(name) || /\b(?:left|right)(?:[- ]hand)?(?: side)? of\b/i.test(name)) return name;
+  const out = name
+    .replace(/\s*\b(?:on|to|at) the (?:left|right)(?:[- ]hand)?(?: side)?\b/gi, '')
+    .replace(/\b(?:left|right)(?:[- ]hand)?\s+/gi, '')
+    .replace(/\s+\b(?:left|right)\b\s*$/i, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+  // Nothing left but a side, or nothing at all: the name is the side, kept.
+  return /[a-z]/i.test(out.replace(/^(?:the|a|an)\b/i, '').replace(/\bside\b/i, '')) ? out : name;
+}
+
+/**
+ * The spots of a plan with no name giving its side of the room (`sideless`), each still told apart: two that
+ * would share a name are that name and "the other" one ("the seat", "the other seat": the grandfather's and the
+ * dreamer's seats both became "the seat"), in the plan's order; three or more keep their names.
+ */
+export function sidelessNames<T extends { name?: string }>(spots: T[]): T[] {
+  const bare = spots.map((s) => (s.name ? sideless(s.name) : undefined));
+  const key = (n: string) => n.toLowerCase();
+  // How many share each name once the sides are gone, and how many of those kept their name as it was.
+  const all = new Map<string, number>();
+  const kept = new Map<string, number>();
+  for (const [i, n] of bare.entries()) {
+    if (!n) continue;
+    all.set(key(n), (all.get(key(n)) ?? 0) + 1);
+    if (n === spots[i].name) kept.set(key(n), (kept.get(key(n)) ?? 0) + 1);
+  }
+  const seen = new Map<string, number>();
+  return spots.map((s, i) => {
+    const n = bare[i];
+    if (!n || n === s.name) return s;
+    const k = key(n);
+    if ((all.get(k) ?? 0) > 2) return s;
+    const nth = (kept.get(k) ?? 0) + (seen.get(k) ?? 0);
+    seen.set(k, (seen.get(k) ?? 0) + 1);
+    return { ...s, name: nth === 0 ? n : `the other ${n.replace(/^(?:the|a|an)\s+/i, '')}` };
+  });
+}
+
 // ── a view, and the brief written for it ─────────────────────────────────────────────────────────
 
 /** The two claims the camera rules take out of a view where they are untrue: nothing else in it changes. */
