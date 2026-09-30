@@ -1656,7 +1656,7 @@ export function outsideShot(
   // One person is named, never "them": "seen from behind them" of a woman walking off alone came
   // back with a man standing beside her (24 Sep).
   const them = people.length === 1 ? name(people[0].id) : 'them';
-  const from = apart
+  const fromGroup = apart
     ? `from behind ${name(near.id)}, over their shoulder`
     : pair
       ? atIt
@@ -1683,6 +1683,38 @@ export function outsideShot(
       (x): x is { s: Spot; seen: Seen } => !!x.seen && (x.seen.visible >= min || (x.seen.visible > 0 && riding(x.s))),
     )
     .sort((a, b) => a.seen.cx - b.seen.cx);
+  // Where the camera stands, said as each one in the picture is turned to it (`turnedTo`'s bins): "from the side, as
+  // they face each other" was said of a camera over one's shoulder, one back to it and one facing it, and "from
+  // behind them" of two in profile (the read of every frozen prompt, 30 Sep).
+  const binOf = (s: Spot): 'front' | 'side' | 'back' => {
+    const f = facing(s, plan);
+    const to = unit({ x: eye.at.x - s.x, y: eye.at.y - s.y });
+    const angle = (Math.acos(Math.max(-1, Math.min(1, f.x * to.x + f.y * to.y))) * 180) / Math.PI;
+    return angle < 70 ? 'front' : angle < 110 ? 'side' : 'back';
+  };
+  const turned = shown
+    .filter((x) => isPerson(x.s) && !x.s.many && people.includes(x.s))
+    .map((x) => ({ s: x.s, b: binOf(x.s) }));
+  const all = (b: 'front' | 'side' | 'back') => turned.length > 0 && turned.every((t) => t.b === b);
+  const backOne = turned.find((t) => t.b === 'back')?.s;
+  const frontOne = turned.find((t) => t.b === 'front')?.s;
+  const from = apart
+    ? fromGroup
+    : pair && !atIt && turned.length === 2 && backOne && frontOne
+      ? `from behind ${name(backOne.id)}, as ${name(backOne.id)} faces ${name(frontOne.id)}`
+      : pair && all('side')
+        ? fromGroup
+        : pair && atIt && all('back')
+          ? `from behind ${them}, as ${them} faces ${name(faced!.id)}`
+          : pair && atIt && all('front')
+            ? `from in front of ${them}, as ${them} faces ${name(faced!.id)}`
+            : all('back')
+              ? `from behind ${them}`
+              : all('front')
+                ? `from in front of ${them}`
+                : all('side') || pair
+                  ? `from beside ${them}`
+                  : fromGroup;
   const anchor = people[0];
   // Said in metres: "a few metres off" in a room two metres across read as the prompt at odds with
   // itself, and the tiny room's moment was held (Meads, 25 Sep).

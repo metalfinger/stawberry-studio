@@ -510,6 +510,24 @@ describe("through the dreamer's own eyes", () => {
   });
 });
 
+describe('where the camera stands, in words', () => {
+  test('is said as each one in the picture is turned to it', () => {
+    // A pair facing each other with the camera along their line: one's back to it, the other facing it.
+    const train = rebuilt('dream-0926-043003-b0cb', ON);
+    expect(shot(picture(train, 'm1').prompt)).toMatch(
+      /^[^:]*: Seen from behind the grandfather, as the grandfather faces the dreamer,/,
+    );
+    // Facing a thing, their back to the camera.
+    const heron = rebuilt('dream-0926-083656-8ceb', ON);
+    expect(shot(picture(heron, 'm4').prompt)).toMatch(/Seen from behind Mr Hale, as Mr Hale faces the board,/);
+    // Two in profile are seen from beside them, never from behind.
+    const library = rebuilt('dream-0926-052843-6081', ON);
+    const m5 = shot(picture(library, 'm5').prompt);
+    expect(m5).toMatch(/Seen from beside them,/);
+    expect(m5).not.toMatch(/Seen from behind them/);
+  });
+});
+
 describe('a reverse angle turns the room', () => {
   test('what is now ahead, on the right and behind the camera, from the floor plan and the place', () => {
     const r = rebuilt('dream-0926-043003-b0cb', ON);
