@@ -1424,3 +1424,28 @@ describe("writing the story needs but does not quote (the owner's choice, 30 Sep
     expect(p).not.toContain('signs, pages and screens stay blank');
   });
 });
+
+describe('the picture before a jump, where image 1 carries the layout', () => {
+  const at = (step: string, id: string, m: string) =>
+    withSwitches(
+      { ...SHEET, DREAMCHAT_CAMERA: 'on', DREAMCHAT_REFS: 'on', DREAMCHAT_ONE_BUILDER: step },
+      () => rebuild(structuredClone(loadDream(id, false).session as Session)).pictures.find((x) => x.id === m)!.prompt,
+    );
+  test('gives no framing of its own: its light and colours, and who is in both', () => {
+    // 0f40 m4: the lift, then the orchard through the dreamer's eyes, with the mock-up as image 1.
+    const before = at('cast_named', 'dream-0926-070314-0f40', 'm4');
+    const after = at('jump_words', 'dream-0926-070314-0f40', 'm4');
+    expect(before).toContain('Keep its framing and the shapes in it where they are');
+    expect(after).not.toContain('Keep its framing');
+    expect(after).toContain(
+      'just before the dream jumps to another place: take only how anyone also in this picture looks, and nothing of its place; the dreamer in it is now the camera, so they are not in this picture. Where everything is comes from Image 1.',
+    );
+    expect(after.split('\n')[0]).toBe(before.split('\n')[0]);
+  });
+  test('within the same place: its light and colours too', () => {
+    const p = at('jump_words', 'dream-0926-012307-4c79', 'm6');
+    expect(p).toContain(
+      'take only its light and colours, and how anyone also in this picture looks. Where everything is comes from Image 1.',
+    );
+  });
+});

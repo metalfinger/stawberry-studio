@@ -411,33 +411,46 @@ export function assembleCut(s: CutSheet): Assembled {
               ? unsketched
               : (x.frame?.visible ?? []).filter((id) => s.visible.includes(id)),
       },
-      (r === 'shift'
-        ? s.camera.eyes === 'dreamer' && x.frame?.eyes !== 'dreamer'
-          ? `${pictureNo(x)}${shows}, just before the dream jumps. Keep its framing and the shapes in it where they are; the dreamer in it is now the camera, so they are not in this picture. The dream changes this: ${shift}.`
-          : x.frame?.place && x.frame.place !== s.place
-            ? `${pictureNo(x)}${shows}, just before the dream jumps to another place. Keep only its composition: where the main shapes and figures sit in the frame, so the two pictures cut together; the place and everything in it are this picture's own. The dream changes this: ${shift}.`
-            : x.turned
-              ? `${pictureNo(x)}${shows}, just before the dream changes it. Keep only its composition: where the main shapes and figures sit in the frame, so the two pictures cut together; this picture faces ${cam.looksAt || 'another side of the place'}. The dream changes this: ${shift}.`
-              : `${pictureNo(x)}${shows}, just before the dream jumps. ${keepAcross(x)}; the dream changes this: ${shift}.`
-        : r === 'seat'
-          ? `${pictureNo(x)}${shows}: the camera is where the dreamer is in it, at their eye height, turned toward ${cam.looksAt || 'what this moment shows'}; what is beside them there is beside the camera here, seen from their place. Nothing else from it: not its camera, framing or angle.`
-          : x.role === 'composition'
-            ? samePlaceLine(
-                `${pictureNo(x)}${shows}`,
-                // "From the shot above" only where the place's own line says so too (as frames.ts).
-                mockUp
-                  ? 'mockup'
-                  : cam.view && !base && !(roomFromCut && !s.refs)
-                    ? 'shot'
-                    : r === 'same_setup'
-                      ? 'setup'
-                      : 'side',
-                cam.size,
-                cam.eyes === 'dreamer' && !!s.dreamer.id && (x.frame?.visible ?? []).includes(s.dreamer.id),
-              )
-            : unsketched.length
-              ? lastSeen(x, unsketched)
-              : `${pictureNo(x)}${shows}: take only ${x.carries.replace(/;.*$/, '')}. Nothing of its place, framing or background. ${NOTHING_ELSE}`) +
+      (r === 'shift' && s.jumpWords && (mockUp || base)
+        ? // With image 1 carrying the layout (the mock-up, or the picture edited), the picture before the jump gives no
+          // framing of its own: two layouts disagreed, and a third-person framing went into the dreamer's own view
+          // (affd m6, 0f40 m4, 4c79 m6; the read of every frozen prompt, 30 Sep).
+          `${pictureNo(x)}${shows}, just before the dream jumps${x.frame?.place && x.frame.place !== s.place ? ' to another place' : ''}: take only ${
+            x.frame?.place && x.frame.place !== s.place
+              ? 'how anyone also in this picture looks, and nothing of its place'
+              : 'its light and colours, and how anyone also in this picture looks'
+          }${
+            s.camera.eyes === 'dreamer' && x.frame?.eyes !== 'dreamer'
+              ? '; the dreamer in it is now the camera, so they are not in this picture'
+              : ''
+          }. Where everything is comes from Image 1. The dream changes this: ${shift}.`
+        : r === 'shift'
+          ? s.camera.eyes === 'dreamer' && x.frame?.eyes !== 'dreamer'
+            ? `${pictureNo(x)}${shows}, just before the dream jumps. Keep its framing and the shapes in it where they are; the dreamer in it is now the camera, so they are not in this picture. The dream changes this: ${shift}.`
+            : x.frame?.place && x.frame.place !== s.place
+              ? `${pictureNo(x)}${shows}, just before the dream jumps to another place. Keep only its composition: where the main shapes and figures sit in the frame, so the two pictures cut together; the place and everything in it are this picture's own. The dream changes this: ${shift}.`
+              : x.turned
+                ? `${pictureNo(x)}${shows}, just before the dream changes it. Keep only its composition: where the main shapes and figures sit in the frame, so the two pictures cut together; this picture faces ${cam.looksAt || 'another side of the place'}. The dream changes this: ${shift}.`
+                : `${pictureNo(x)}${shows}, just before the dream jumps. ${keepAcross(x)}; the dream changes this: ${shift}.`
+          : r === 'seat'
+            ? `${pictureNo(x)}${shows}: the camera is where the dreamer is in it, at their eye height, turned toward ${cam.looksAt || 'what this moment shows'}; what is beside them there is beside the camera here, seen from their place. Nothing else from it: not its camera, framing or angle.`
+            : x.role === 'composition'
+              ? samePlaceLine(
+                  `${pictureNo(x)}${shows}`,
+                  // "From the shot above" only where the place's own line says so too (as frames.ts).
+                  mockUp
+                    ? 'mockup'
+                    : cam.view && !base && !(roomFromCut && !s.refs)
+                      ? 'shot'
+                      : r === 'same_setup'
+                        ? 'setup'
+                        : 'side',
+                  cam.size,
+                  cam.eyes === 'dreamer' && !!s.dreamer.id && (x.frame?.visible ?? []).includes(s.dreamer.id),
+                )
+              : unsketched.length
+                ? lastSeen(x, unsketched)
+                : `${pictureNo(x)}${shows}: take only ${x.carries.replace(/;.*$/, '')}. Nothing of its place, framing or background. ${NOTHING_ELSE}`) +
         strays(x),
     );
   }

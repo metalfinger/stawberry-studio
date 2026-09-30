@@ -328,6 +328,8 @@ export type CutSheet = {
    * seen out past the place.
    */
   conditions?: { name: string; look: string; beyond: boolean }[];
+  /** The picture before a jump gives no framing of its own where image 1 carries the layout (the `jump_words` step). */
+  jumpWords?: true;
   /** What belongs to a take rather than the cut: the judge's findings on the last attempt and on earlier pictures. */
   take: { repairs: string[]; strays: Record<string, string[]> };
   record: RecordLayer | null;
@@ -725,6 +727,7 @@ export function cutSheet(x: CutSheetInput): CutSheet {
       : {}),
     ...(builds('earlier_words') ? { earlierWords: true as const } : {}),
     ...(builds('story_marks') ? { storyMarks: true as const } : {}),
+    ...(builds('jump_words') ? { jumpWords: true as const } : {}),
     ...(() => {
       // Water the camera's own words already measure ("The water stands about 2 metres deep") is said there once,
       // never again as a condition.
