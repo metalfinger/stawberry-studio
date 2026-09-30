@@ -121,11 +121,19 @@ camera words and the cast placement moved what records are keyed by).
   metre past the table, out of the picture of him folding them (affd m4); the fish lies "on the fish stall" (09ea
   m1-m3), the green lamp "on the desks" (6081 m1), the cake on the table (e127). Frozen 7, live 17 pictures, the
   images the same but affd m4's mock-up; three written briefs give way (row 34); prompt cases unchanged.
+- *On lab (the camera rules):* where plants grow they stand in them or among them, never on top: "standing in the
+  tall grass", "with the dreamer in it"; "standing among the empty rows of apple trees", "with Tomas among them".
+  The mouse-sized dreamer was "standing on the tall grass" (d3a1 m1-m3, 9002 m1-m4) and Tomas on the orchard's rows
+  (orchard m5). The edge or end of a field is ground as before. Frozen 1, live 8 pictures, words only.
+- *On lab (the camera rules):* a fixture named as its own place, described ("the office interior with desks,
+  monitors, and people working", "the office buried in snow, only monitor tops visible", in the office), is the
+  place, not a block on its floor plan: the camera "looked at the office interior", "right beside the office buried
+  in snow" (b91f m1, m3-m5). A part of it ("the office door") stays, and so does what the place is named after (the
+  red door, in the place called "the red door"). Frozen 4, live 4 pictures; one written brief gives way.
 - b91f m1's "buried in snow" before it falls is gone (the snow is said across the picture, falling; its look still
   says it settles on the desks, which is m2's).
 - *Next:* the picture test, paid on fal as the owner chose (checkpoint.ts, blind judging).
-- *Known, not fixed:* tall grass and the orchard's rows planned as ground people stand on top of (d3a1, orchard m5);
-  a spot named as the whole room ("the office interior with desks…", b91f). A written shot brief gives way whenever a
+- *Known, not fixed:* a written shot brief gives way whenever a
   fix changes the view's words (ledger row 34, the brief built from the sheet's facts, ends that).
 
 **Earlier landmark (30 Sep, morning, the Mac pane and the S6 pane working together): S5's layout anchor, the S6
