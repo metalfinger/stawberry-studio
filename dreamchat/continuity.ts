@@ -170,7 +170,8 @@ export type CutPlan = {
  * - `light_only`: planned for its light alone;
  * - `has_sketch`: planned for who someone is, and everyone it would show has a sketch of their own;
  * - `seat_replaced_by_view`: the dreamer's seat, where the view is worked out on the floor plan from where they are;
- * - `edit_to_own_camera`: planned as the picture edited, and made its own cut on its floor plan instead.
+ * - `edit_to_own_camera`: planned as the picture edited, and made its own cut on its floor plan instead;
+ * - `not_recorded`: left out with no reason recorded where it was left out (a gap to fix, never a cause to read).
  */
 export type UnsentWhy = {
   code:
@@ -181,7 +182,8 @@ export type UnsentWhy = {
     | 'light_only'
     | 'has_sketch'
     | 'seat_replaced_by_view'
-    | 'edit_to_own_camera';
+    | 'edit_to_own_camera'
+    | 'not_recorded';
   detail: string;
 };
 
@@ -1665,7 +1667,7 @@ function planWith(
         return [];
       });
       for (const r of all.filter((x) => x.kind === 'cut' && !c.refs.some((y) => y.id === x.id)))
-        unsentBy(c, r, why[r.id] ?? { code: 'no_cameras_words_differ', detail: 'left out' });
+        unsentBy(c, r, why[r.id] ?? { code: 'not_recorded', detail: 'left out with no reason recorded' });
     }
     for (const c of cuts) c.changes = countChanges(c);
     // How many changes a cut would carry at once without one in-between picture: its count with that picture
