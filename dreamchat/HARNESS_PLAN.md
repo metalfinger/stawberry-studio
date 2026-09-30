@@ -115,6 +115,12 @@ camera words and the cast placement moved what records are keyed by).
   tractor stayed where the scene began while the plan drove the driver and the dreamer to the field's edge, "outside
   the picture, behind the camera" (affd m9); now it is in the picture, "with the dreamer and the driver in it".
   10 frozen, 11 live pictures; prompt cases unchanged.
+- *On lab (the camera rules, the cast reading):* a cast thing whose side words put it on or at a thing of the place
+  ("at a table") is on it, at the edge nearest whoever it is by; and what rests on something low is said "on the
+  table", never "right beside" it, nor the table beside what is on it. The little boats the father folds stood a
+  metre past the table, out of the picture of him folding them (affd m4); the fish lies "on the fish stall" (09ea
+  m1-m3), the green lamp "on the desks" (6081 m1), the cake on the table (e127). Frozen 7, live 17 pictures, the
+  images the same but affd m4's mock-up; three written briefs give way (row 34); prompt cases unchanged.
 - b91f m1's "buried in snow" before it falls is gone (the snow is said across the picture, falling; its look still
   says it settles on the desks, which is m2's).
 - *Next:* the picture test, paid on fal as the owner chose (checkpoint.ts, blind judging).
