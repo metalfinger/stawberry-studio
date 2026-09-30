@@ -428,10 +428,13 @@ export function viewDream(s: Session, o: ViewOpts): { view: ViewDream; files: Re
     let sc = q.scenes.find((x) => x.id === c.scene);
     if (!sc) {
       const bs = b.scenes.find((x) => x.id === c.scene);
-      const tn = node?.scenes.find((x) => x.breakdownScene === c.scene);
+      // The tree may cut one scene into parts where another is cut to between them (1A, 1B): one node, its number;
+      // several, the number they share, each part's shots keeping their own (1A-1, 1B-1).
+      const tns = node?.scenes.filter((x) => x.breakdownScene === c.scene) ?? [];
+      const tn = tns[0];
       sc = {
         id: c.scene,
-        number: tn?.number ?? null,
+        number: tns.length > 1 ? tn.number.replace(/[A-Z]+$/, '') : (tn?.number ?? null),
         title: bs?.title ?? c.scene,
         place: bs?.place ?? '',
         mood: bs?.mood ?? '',

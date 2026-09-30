@@ -1335,7 +1335,13 @@ describe('an earlier picture for who someone is, as last drawn', () => {
     // 8ceb m5: Mr Hale has turned into an octopus; picture 4 was sent beside it for "his face, hair, build and clothes".
     const p = at('dream-0926-083656-8ceb', 'm5', RS_ON);
     expect(p).toContain('what Mr Hale has turned into, a huge orange octopus');
-    expect(p).not.toContain('who Mr Hale is, as last drawn');
+    // What each "as last drawn" line is sent for: its words after the picture's own "(who, where): ".
+    const sentFor = p
+      .split('\n')
+      .filter((l) => l.includes('as last drawn'))
+      .map((l) => l.slice(l.indexOf('): ') + 3));
+    expect(sentFor.length).toBeGreaterThan(0);
+    expect(sentFor.filter((l) => l.includes('Mr Hale'))).toEqual([]);
   });
 
   test('says an animal by what makes it that one, never a face or clothes', () => {

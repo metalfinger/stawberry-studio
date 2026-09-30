@@ -4,7 +4,7 @@
   "slug": "0f40",
   "title": "the lift that wouldn't stop",
   "source": "frozen",
-  "commit": "646d4bb",
+  "commit": "e2b870f",
   "profile": {
    "name": "harness",
    "full": true
@@ -18,7 +18,7 @@
    "DREAMCHAT_WRITER": "claude"
   },
   "assumes": "all drawn and approved",
-  "made": "2026-09-30T02:35:00.164Z"
+  "made": "2026-09-30T03:26:38.290Z"
  },
  "style": {
   "id": "b",

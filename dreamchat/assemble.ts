@@ -325,12 +325,18 @@ export function assembleCut(s: CutSheet): Assembled {
   };
   // Someone turned into something else is drawn from the in-between picture of what they have turned into: an earlier
   // picture is never sent for who they are beside it.
-  const turnedBy = new Set(s.earlierWords ? usable.filter((x) => x.ghost?.state?.whole).map((x) => x.ghost!.of) : []);
+  const turnedBy = new Set(
+    s.earlierWords
+      ? usable
+          .filter((x) => x.ghost?.state?.whole && s.inView.find((e) => e.id === x.ghost!.of)?.turned)
+          .map((x) => x.ghost!.of)
+      : [],
+  );
 
   // In-between pictures, then earlier moments, while there is room. A person's latest picture, the
   // last kind added, is the first to go.
   // The dream's jump, said with one full stop: its words may end with their own.
-  const shift = s.earlierWords ? s.story.shift.replace(/[.\s]+$/, '') : s.story.shift;
+  const shift = s.earlierWords ? s.story.shift.replace(/[.!?…\s]+$/, '') : s.story.shift;
   // Each part's in-between picture, by its image: with each state said once (S6 row 16) its sketch's "Except"
   // points to it instead of saying the state again.
   const partPictures: { of: string; what: string; now: string; at: number }[] = [];
