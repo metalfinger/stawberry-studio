@@ -1347,7 +1347,8 @@ describe('an earlier picture for who someone is, as last drawn', () => {
   test('says an animal by what makes it that one, never a face or clothes', () => {
     for (const sw of [RS_ON, { ...RS_ON, DREAMCHAT_CAMERA: 'on', DREAMCHAT_REFS: 'on' }]) {
       const p = at('dream-0926-083656-8ceb', 'm5', sw);
-      expect(p).toContain('what the little silver fish is: its kind, size, build, coat and markings, as last drawn');
+      // A shoal, a crowd of animals: more than one.
+      expect(p).toContain('what the little silver fish are: their kind, size, build, coat and markings, as last drawn');
       expect(p).not.toContain('who the little silver fish is');
     }
   });

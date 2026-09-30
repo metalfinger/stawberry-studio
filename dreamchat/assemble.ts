@@ -316,7 +316,9 @@ export function assembleCut(s: CutSheet): Assembled {
       return e?.turned
         ? `what ${name(id)} has turned into`
         : e?.said === 'animal'
-          ? `what ${name(id)} is: its kind, size, build, coat and markings`
+          ? e.group
+            ? `what ${name(id)} are: their kind, size, build, coat and markings`
+            : `what ${name(id)} is: its kind, size, build, coat and markings`
           : e?.said === 'thing' || e?.said === 'place'
             ? `${name(id)}: its shape, materials and colours`
             : `who ${name(id)} ${e?.group ? 'are' : 'is'}: their face, hair, build and clothes`;
