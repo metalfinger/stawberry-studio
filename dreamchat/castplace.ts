@@ -218,18 +218,24 @@ export function withCastFixtures(plan: Blocking, fixtures: CastFixture[], placeI
     const head = headOf(f.name);
     if (!head || has(head)) continue;
     const w = (f.where ?? f.words).toLowerCase();
+    const walls: Side[] = /\b(?:each|both|either) side|\bsides\b/.test(w)
+      ? ['left', 'right']
+      : /\bleft\b/.test(w)
+        ? ['left']
+        : /\bright\b/.test(w)
+          ? ['right']
+          : /\bback\b|\brear\b/.test(w)
+            ? ['back']
+            : /\bfront\b/.test(w)
+              ? ['front']
+              : ['left', 'right'];
+    // Never on top of anyone: a row of desks laid where the dreamer stands buried them (30 Sep).
+    const clear = (x: number, y: number, sw: number, sd: number) =>
+      !spots.some(
+        (o) => o.kind === 'person' && !o.many && Math.abs(o.x - x) < sw / 2 + 0.3 && Math.abs(o.y - y) < sd / 2 + 0.3,
+      );
+    const seating = /\b(?:seat|desk|bench|pew|table|chair|stool)/.test(head);
     if (f.kind === 'opening') {
-      const walls: Side[] = /\b(?:each|both|either) side|\bsides\b/.test(w)
-        ? ['left', 'right']
-        : /\bleft\b/.test(w)
-          ? ['left']
-          : /\bright\b/.test(w)
-            ? ['right']
-            : /\bback\b|\brear\b/.test(w)
-              ? ['back']
-              : /\bfront\b/.test(w)
-                ? ['front']
-                : ['left', 'right'];
       const door = /\bdoor/.test(head);
       for (const wall of walls) {
         const along = wall === 'left' || wall === 'right' ? rd : rw;
@@ -259,6 +265,24 @@ export function withCastFixtures(plan: Blocking, fixtures: CastFixture[], placeI
           });
         }
       }
+    } else if (f.kind === 'row' && !seating) {
+      // Lockers, shelves and cabinets stand along the walls the words give, not across the floor: rows of lockers
+      // laid across the corridor hid the dreamer and the door (30 Sep).
+      for (const wall of walls) {
+        const side = wall === 'left' || wall === 'right';
+        const len = (side ? rd : rw) * 0.7;
+        const at =
+          wall === 'left'
+            ? { x: 0.3, y: rd / 2 }
+            : wall === 'right'
+              ? { x: rw - 0.3, y: rd / 2 }
+              : wall === 'front'
+                ? { x: rw / 2, y: 0.3 }
+                : { x: rw / 2, y: rd - 0.3 };
+        const size: [number, number, number] = side ? [0.5, len, 2] : [len, 0.5, 2];
+        if (clear(at.x, at.y, size[0], size[1]))
+          spots.push({ id: id(), kind: 'thing', fixture: true, name: f.name, ...at, size });
+      }
     } else if (f.kind === 'row') {
       const rows = Math.max(1, Math.min(10, f.count ?? Math.max(2, Math.floor((rd - 3) / 1.2))));
       const tall = /\b(?:desk|table|bench)/.test(head) ? 0.75 : 0.9;
@@ -272,16 +296,17 @@ export function withCastFixtures(plan: Blocking, fixtures: CastFixture[], placeI
         const y = 2 + r * 1.2;
         if (y > rd - 0.6) break;
         for (const [a, b] of halves)
-          spots.push({
-            id: id(),
-            kind: 'thing',
-            fixture: true,
-            name: f.name,
-            x: Math.round(((a + b) / 2) * 100) / 100,
-            y,
-            size: [b - a, 0.5, tall],
-            faces: 'front',
-          });
+          if (clear((a + b) / 2, y, b - a, 0.5))
+            spots.push({
+              id: id(),
+              kind: 'thing',
+              fixture: true,
+              name: f.name,
+              x: Math.round(((a + b) / 2) * 100) / 100,
+              y,
+              size: [b - a, 0.5, tall],
+              faces: 'front',
+            });
       }
     } else if (f.kind === 'aisle') {
       spots.push({

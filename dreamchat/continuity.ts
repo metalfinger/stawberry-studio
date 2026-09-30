@@ -8,7 +8,7 @@
 // an in-between picture that is never a cut. Everything here is pure: the breakdown in, the plan
 // out, and the same breakdown always gives the same plan.
 import type { CastReading } from './cast-types';
-import { withCastBodies, withCastFixtures, withCastSpots } from './castplace';
+import { withCastFixtures, withCastSpots } from './castplace';
 import {
   type Blocking,
   bearing,
@@ -463,8 +463,10 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
           const cast = rec?.cast;
           if (!cast) return named;
           const dreamer = b.people.find((p) => p.is_dreamer)?.id;
-          const bodies = withCastBodies(named, cast.bodies);
-          return withCastSpots(withCastFixtures(bodies, cast.fixtures, moment.place), cast, moment, dreamer);
+          // Each person and creature at its own size and shape (castplace.ts withCastBodies) waits: drawn so, a
+          // terrier and a school of little fish fell under what the words say, and a cat as big as a bus hid the child
+          // beside it (30 Sep); the words must hold them first.
+          return withCastSpots(withCastFixtures(named, cast.fixtures, moment.place), cast, moment, dreamer);
         })()
       : given;
   // Only the moments in the same place count: who was in the tiny room, not who was on the stairs.
@@ -492,9 +494,7 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
   const camera = cameraMode() === 'on';
   const beyond = camera ? outThroughWindows(plan) : {};
   // How high each creature of the dream stands, where its look says how big it is: what water covers of it.
-  const heights = camera
-    ? { ...bodiesOf(b), ...Object.fromEntries((rec?.cast?.bodies ?? []).map((x) => [x.id, x.height_m])) }
-    : {};
+  const heights = camera ? bodiesOf(b) : {};
   const beings = Object.entries(heights).map(([id, height]) => ({
     name: b.people.find((p) => p.id === id)?.name ?? id,
     height,
