@@ -527,6 +527,9 @@ describe('where the camera stands, in words', () => {
     const m5 = shot(picture(library, 'm5').prompt);
     expect(m5).toMatch(/Seen from beside them,/);
     expect(m5).not.toMatch(/Seen from behind them/);
+  });
+});
+
 describe('what hides what', () => {
   test('two that hide parts of each other are said once: the one behind is hidden behind the other', () => {
     // The father and the table were each "partly hidden behind" the other (the read of every frozen prompt, 30 Sep).
@@ -548,6 +551,9 @@ describe('what hides what', () => {
     const m7 = shot(picture(rebuilt('dream-0926-022102-aeea', ON), 'm7').prompt);
     expect(m7).toMatch(/partly hidden behind the table/);
     expect(m7).not.toMatch(/the table[^.;]*partly hidden behind the father/);
+  });
+});
+
 describe('an edit', () => {
   test('keeps the places of the picture it edits: it is given no order of its own', () => {
     // a44a m3 edits picture 2 (the grandfather on the left, the dreamer on the right); said "from in front of them"
@@ -576,6 +582,9 @@ describe('an edit', () => {
         expect([p.id, who(p.id)]).toEqual([p.id, who(base.id)]);
       }
     expect(edits.length).toBeGreaterThan(0);
+  });
+});
+
 describe('two on a bicycle', () => {
   test('ride one behind the other, on it, never in it', () => {
     // Two on one bicycle were sat side by side, as on a bench, and through the dreamer's eyes they were "in" it,
@@ -624,6 +633,9 @@ describe('two on a bicycle', () => {
     // Without it, side by side across it, as before.
     const [c, d] = settle(plan).spots.filter((s) => s.kind === 'person');
     expect(Math.abs((d.x - c.x) * f.x + (d.y - c.y) * f.y)).toBeLessThan(1e-6);
+  });
+});
+
 describe('a name gives no side of the room', () => {
   test('said from a camera facing the other way, "shelves on the right" was at the picture\'s left edge', () => {
     expect(sideless('bookshelf right')).toBe('bookshelf');
