@@ -714,6 +714,17 @@ function render(solids: Solid[], eye: Eye, width: number, height: number): Rende
       ...(worst && hiddenPart >= 0.2 && worst[1] / drawn[s] >= 0.1 ? { hiddenBy: solids[worst[0]].id } : {}),
     });
   });
+  // Two that hide parts of each other are said once: the one the other hides more of is behind it. The father and the
+  // table were each "partly hidden behind" the other (the read of every frozen prompt, 30 Sep).
+  const index = new Map(solids.map((x, i) => [x.id, i]));
+  for (const a of seen.values()) {
+    const b = a.hiddenBy ? seen.get(a.hiddenBy) : undefined;
+    if (!b || b.hiddenBy !== a.id) continue;
+    const [ia, ib] = [index.get(a.id)!, index.get(b.id)!];
+    const byB = (hidden[ia].get(ib) ?? 0) / (drawn[ia] || 1);
+    const byA = (hidden[ib].get(ia) ?? 0) / (drawn[ib] || 1);
+    delete (byB >= byA ? b : a).hiddenBy;
+  }
   const project = (q: V3) => {
     const v = v3(q.x - C.x, q.y - C.y, q.z - C.z);
     const z = dot(v, F);
