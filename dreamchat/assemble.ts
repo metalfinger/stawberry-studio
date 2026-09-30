@@ -304,11 +304,13 @@ export function assembleCut(s: CutSheet): Assembled {
   const lastSeen = (x: SheetEarlier, ids: string[]) => {
     const names = ids.map(name);
     const el = (id: string) => s.inView.find((e) => e.id === id);
+    // Before the step, every earlier picture said as a person's, as framePrompt says it.
     if (
-      ids.every((id) => (el(id)?.said ?? 'person') === 'person' || el(id)?.said === 'people') &&
-      !ids.some((id) => el(id)?.turned)
+      !s.earlierWords ||
+      (ids.every((id) => (el(id)?.said ?? 'person') === 'person' || el(id)?.said === 'people') &&
+        !ids.some((id) => el(id)?.turned))
     )
-      return `${pictureNo(x)}${whoWhere(x)}: who ${names.join(' and ')} ${names.length > 1 || ids.some((id) => el(id)?.group) ? 'are' : 'is'}, as last drawn: their face, hair, build and clothes, exactly. Nothing else from it: not its pose, background or framing.`;
+      return `${pictureNo(x)}${whoWhere(x)}: who ${names.join(' and ')} ${names.length > 1 || (s.earlierWords && ids.some((id) => el(id)?.group)) ? 'are' : 'is'}, as last drawn: their face, hair, build and clothes, exactly. Nothing else from it: not its pose, background or framing.`;
     const each = ids.map((id) => {
       const e = el(id);
       return e?.turned
@@ -323,11 +325,12 @@ export function assembleCut(s: CutSheet): Assembled {
   };
   // Someone turned into something else is drawn from the in-between picture of what they have turned into: an earlier
   // picture is never sent for who they are beside it.
-  const turnedBy = new Set(usable.filter((x) => x.ghost?.state?.whole).map((x) => x.ghost!.of));
+  const turnedBy = new Set(s.earlierWords ? usable.filter((x) => x.ghost?.state?.whole).map((x) => x.ghost!.of) : []);
 
   // In-between pictures, then earlier moments, while there is room. A person's latest picture, the
   // last kind added, is the first to go.
-  const shift = s.story.shift;
+  // The dream's jump, said with one full stop: its words may end with their own.
+  const shift = s.earlierWords ? s.story.shift.replace(/[.\s]+$/, '') : s.story.shift;
   // Each part's in-between picture, by its image: with each state said once (S6 row 16) its sketch's "Except"
   // points to it instead of saying the state again.
   const partPictures: { of: string; what: string; now: string; at: number }[] = [];

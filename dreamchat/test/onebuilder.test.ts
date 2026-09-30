@@ -1339,11 +1339,25 @@ describe('an earlier picture for who someone is, as last drawn', () => {
   });
 
   test('says an animal by what makes it that one, never a face or clothes', () => {
-    for (const sw of [SHEET, RS_ON, { ...RS_ON, DREAMCHAT_CAMERA: 'on', DREAMCHAT_REFS: 'on' }]) {
+    for (const sw of [RS_ON, { ...RS_ON, DREAMCHAT_CAMERA: 'on', DREAMCHAT_REFS: 'on' }]) {
       const p = at('dream-0926-083656-8ceb', 'm5', sw);
       expect(p).toContain('what the little silver fish is: its kind, size, build, coat and markings, as last drawn');
       expect(p).not.toContain('who the little silver fish is');
     }
+  });
+
+  test('before its step, every earlier picture is said as framePrompt says it', () => {
+    const p = at('dream-0926-083656-8ceb', 'm5', { ...SHEET, DREAMCHAT_ONE_BUILDER: 'state_once' });
+    expect(p).toContain('who the little silver fish is, as last drawn: their face, hair, build and clothes');
+  });
+
+  test("the dream's jump is said with one full stop", () => {
+    // 4c79 m6: "the dream changes this: The dreamer is suddenly flying.." before the step.
+    const sw = { ...RS_ON, DREAMCHAT_CAMERA: 'on', DREAMCHAT_REFS: 'on' };
+    const p = at('dream-0926-012307-4c79', 'm6', sw);
+    expect(p).toContain('the dream changes this: The dreamer is suddenly flying.');
+    expect(p).not.toContain('flying..');
+    expect(at('dream-0926-012307-4c79', 'm6', { ...sw, DREAMCHAT_ONE_BUILDER: 'state_once' })).toContain('flying..');
   });
 
   test('says a group as more than one, and a person as before', () => {

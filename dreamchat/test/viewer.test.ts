@@ -370,3 +370,34 @@ describe("a sketch says whether today's prompt is the one it was drawn from", ()
     expect(withTake('failed', true)).toBeNull();
   });
 });
+
+describe('what the tree is called: its own numbers, for the page to label', () => {
+  test("sequences numbered in story order, scenes and shots by the tree's own numbers, each cut's place in its shot", () => {
+    for (const id of dreams)
+      withSwitches(PROFILE, () => {
+        const s = loadDream(id, false).session as Session;
+        const r = rebuild(s);
+        const { view: v } = viewDream(s, { id, source: 'frozen', commit: 't' });
+        expect(v.header.slug).toBe(id.slice(-4));
+        expect(v.tree.map((q) => q.number)).toEqual(v.tree.map((_, i) => i + 1));
+        const nodes = r.dream!.tree!.dream.sequences.flatMap((q) => q.scenes);
+        for (const q of v.tree) {
+          expect([id, q.id, !!q.title]).toEqual([id, q.id, true]);
+          for (const sc of q.scenes) {
+            expect([id, sc.id, sc.number]).toEqual([
+              id,
+              sc.id,
+              nodes.find((x) => x.breakdownScene === sc.id)?.number ?? null,
+            ]);
+            for (const sh of sc.shots) {
+              const tn = nodes.flatMap((x) => x.shots).find((x) => x.cuts.some((c) => c.id === sh.cuts[0]));
+              expect([id, sh.id, sh.number]).toEqual([id, sh.id, tn?.number ?? null]);
+              sh.cuts.forEach((c, i) =>
+                expect([id, c, v.cuts.find((x) => x.id === c)!.shotIndex]).toEqual([id, c, i + 1]),
+              );
+            }
+          }
+        }
+      });
+  });
+});
