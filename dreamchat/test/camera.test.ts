@@ -1511,6 +1511,13 @@ describe('what the moment looks at, put down at their feet', () => {
     const held = { ...field, spots: field.spots.map((s) => (s.id === 't1' ? { ...s, heldBy: 'p1' } : s)) };
     const inHands = withEnv(CAMERA, () => outsideShot(held, ['p1'], 'close', name, at))!;
     expect(inHands.text).not.toContain('seen from the chest down to their feet');
+    // On their very spot, it is with them, never put down: the letters in the suitcase on the grandfather's lap took
+    // the frame down to the floor (a44a m3). Nor what anyone stands, sits or rides on.
+    const onSpot = { ...field, spots: field.spots.map((s) => (s.id === 't1' ? { ...s, x: 10, y: 10 } : s)) };
+    const withThem = withEnv(CAMERA, () =>
+      outsideShot(onSpot, ['p1'], 'close', name, { id: 't1', at: { x: 10, y: 10 } }),
+    )!;
+    expect(withThem.text).not.toContain('down to their feet');
     // Off, as before.
     const off = withEnv({ DREAMCHAT_CAMERA: undefined }, () => outsideShot(field, ['p1'], 'close', name, at))!;
     expect(off.text).toContain('Outside the picture, off to the right: the boat.');

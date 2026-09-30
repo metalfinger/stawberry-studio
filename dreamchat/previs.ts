@@ -2137,7 +2137,10 @@ function lowDown(
 ): { base: number; top: number } | undefined {
   if (isPerson(t) || t.many || t.heldBy || ['steps', 'ground', 'vehicle'].includes(shapeOf(t, plan) ?? ''))
     return undefined;
-  if (plan.spots.some((q) => isPerson(q) && onOf(q, plan)?.t.id === t.id)) return undefined;
+  // On someone's very spot, it is with them, not put down by them: the letters in the suitcase on the grandfather's
+  // lap took the frame down to the floor, and the edit of the picture before was lost (a44a m3).
+  if (plan.spots.some((q) => isPerson(q) && (onOf(q, plan)?.t.id === t.id || Math.hypot(t.x - q.x, t.y - q.y) < 0.1)))
+    return undefined;
   const base = t.above ?? restOf(t, plan, name(t.id))?.z ?? groundAt(t, plan);
   const top = base + sizeOf(t)[2];
   const atFeet = people.some((q) => {
