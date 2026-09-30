@@ -110,7 +110,11 @@ stack, the harness viewer and why each picture is left out are all on lab.** Not
   then, with the build done, the owner's local image machine (no cost per picture) draws the pictures the viewer
   shows, judged there.
 - *For the owner:* the S9 record of a swapped edit (both options in the S5 section); the crowd with no sketch;
-  keeping each sketch's prompt text when drawn.
+  keeping each sketch's prompt text when drawn; post-check fix 2, a moment entering a place (lighthouse-fresh m4,
+  judged "neither" twice, the only such moment in 411): the breakdown sets the unlocking inside the lighthouse, and
+  every fix needs something new, either a floor plan for the outside of a place (its wall and way in, the dreamer and
+  camera before it) or the moment set on the plan it is entered from (the beach, where the door is not placed); which
+  one is the owner's call.
 
 **Latest landmark (29 Sep, end of the cloud session): S6 rows 5-16, and the S5 picture check's verdict.** Read
 this block first; the rest of this section is the history before it. Hand-off: GitHub issue
