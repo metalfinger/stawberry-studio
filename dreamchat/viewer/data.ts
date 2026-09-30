@@ -266,6 +266,7 @@ export function viewDream(s: Session, o: ViewOpts): { view: ViewDream; files: Re
       sequence: tree?.index[p.id]?.sequence ?? '',
       scene: planScene,
       shot: planShot,
+      shotIndex: 0,
       treeDiffers,
       prevCut: before?.id ?? null,
       moment: {
@@ -416,6 +417,9 @@ export function viewDream(s: Session, o: ViewOpts): { view: ViewDream; files: Re
     const node = tree?.dream.sequences.find((q) => q.id === c.sequence);
     const q = seqs.get(c.sequence) ?? {
       id: c.sequence || 'all',
+      number: seqs.size + 1,
+      // The words of the jump that opens it (the moment's own), else its first scene's title below.
+      title: node?.splitBy === 'jump' ? moment.get(node.startsAt)?.shift?.trim() || null : null,
       startsAt: node?.startsAt ?? c.id,
       splitBy: node?.splitBy ?? 'start',
       scenes: [],
@@ -424,9 +428,13 @@ export function viewDream(s: Session, o: ViewOpts): { view: ViewDream; files: Re
     let sc = q.scenes.find((x) => x.id === c.scene);
     if (!sc) {
       const bs = b.scenes.find((x) => x.id === c.scene);
-      const tn = node?.scenes.find((x) => x.breakdownScene === c.scene);
+      // The tree may cut one scene into parts where another is cut to between them (1A, 1B): one node, its number;
+      // several, the number they share, each part's shots keeping their own (1A-1, 1B-1).
+      const tns = node?.scenes.filter((x) => x.breakdownScene === c.scene) ?? [];
+      const tn = tns[0];
       sc = {
         id: c.scene,
+        number: tns.length > 1 ? tn.number.replace(/[A-Z]+$/, '') : (tn?.number ?? null),
         title: bs?.title ?? c.scene,
         place: bs?.place ?? '',
         mood: bs?.mood ?? '',
@@ -434,13 +442,16 @@ export function viewDream(s: Session, o: ViewOpts): { view: ViewDream; files: Re
         shots: [],
       };
       q.scenes.push(sc);
+      if (!q.title) q.title = sc.title;
     }
     let sh = sc.shots.find((x) => x.id === c.shot);
     if (!sh) {
-      sh = { id: c.shot, tags: shotOf(tree, c.id)?.tags ?? [], cuts: [] };
+      const tn = shotOf(tree, c.id);
+      sh = { id: c.shot, number: tn?.number ?? null, tags: tn?.tags ?? [], cuts: [] };
       sc.shots.push(sh);
     }
     sh.cuts.push(c.id);
+    c.shotIndex = sh.cuts.length;
   }
 
   const transcript = (s as { transcript?: { role: string; content: string }[] }).transcript;
@@ -448,6 +459,7 @@ export function viewDream(s: Session, o: ViewOpts): { view: ViewDream; files: Re
     view: {
       header: {
         dream: o.id,
+        slug: o.id.slice(-4),
         title: r.title,
         source: o.source,
         commit: o.commit,

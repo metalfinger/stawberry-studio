@@ -348,10 +348,10 @@ describe('assembleCut reads the sheet and nothing else', () => {
     }
     // It reads the prompt's fields, and never the tree, the record or the tags: those are for the checks.
     // `rules` is on a sheet only with the camera rules on (DREAMCHAT_CAMERA), `refs` only with S5's
-    // references on (DREAMCHAT_REFS), and `once` only with the one builder's steps that say a fact once (S6
-    // rows 14 and on), and each is read where it is.
+    // references on (DREAMCHAT_REFS), `once` only with the one builder's steps that say a fact once (S6
+    // rows 14 and on), and `earlierWords` only with its step; each is read where it is.
     const top = new Set([...read].map((k) => k.split('.')[0]));
-    for (const k of top) expect([...Object.keys(sheets[0]), 'rules', 'refs', 'once']).toContain(k);
+    for (const k of top) expect([...Object.keys(sheets[0]), 'rules', 'refs', 'once', 'earlierWords']).toContain(k);
     for (const k of ['tree', 'record', 'tags', 'relations', 'sources', 'hash', 'flags']) expect(top.has(k)).toBe(false);
   });
 

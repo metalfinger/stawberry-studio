@@ -370,3 +370,50 @@ describe("a sketch says whether today's prompt is the one it was drawn from", ()
     expect(withTake('failed', true)).toBeNull();
   });
 });
+
+describe('what the tree is called: its own numbers, for the page to label', () => {
+  test("sequences numbered in story order, scenes and shots by the tree's own numbers, each cut's place in its shot", () => {
+    for (const id of dreams)
+      withSwitches(PROFILE, () => {
+        const s = loadDream(id, false).session as Session;
+        const r = rebuild(s);
+        const { view: v } = viewDream(s, { id, source: 'frozen', commit: 't' });
+        expect(v.header.slug).toBe(id.slice(-4));
+        expect(v.tree.map((q) => q.number)).toEqual(v.tree.map((_, i) => i + 1));
+        const seqNodes = r.dream!.tree!.dream.sequences;
+        for (const q of v.tree) {
+          const inSeq = seqNodes.find((x) => x.id === q.id)!.scenes;
+          for (const sc of q.scenes) {
+            // Every shot of the scene is one of the tree's shots with the same number; the scene's number is its
+            // part's where the tree has one part of it here, else the number its parts share (1A, 1B → 1).
+            const parts = inSeq.filter((x) => x.breakdownScene === sc.id);
+            const want = parts.length === 1 ? parts[0].number : parts[0].number.replace(/[A-Z]+$/, '');
+            expect([id, sc.id, sc.number]).toEqual([id, sc.id, want]);
+            for (const sh of sc.shots) {
+              const tn = inSeq.flatMap((x) => x.shots).find((x) => x.cuts.some((c) => c.id === sh.cuts[0]));
+              expect([id, sh.id, sh.number]).toEqual([id, sh.id, tn?.number ?? null]);
+              expect(sh.number?.startsWith(sc.number ?? '')).toBe(true);
+              sh.cuts.forEach((c, i) =>
+                expect([id, c, v.cuts.find((x) => x.id === c)!.shotIndex]).toEqual([id, c, i + 1]),
+              );
+            }
+          }
+        }
+      });
+  });
+
+  test('a scene the tree cuts into parts is named by the number its parts share, never by its first part alone', () => {
+    // 8ceb: scene s1 is 1A (m1) and 1B (m2-m7), another scene cut to between them.
+    const { view: v } = view('dream-0926-083656-8ceb');
+    const s1 = v.tree.flatMap((q) => q.scenes).find((x) => x.id === 's1')!;
+    expect(s1.number).toBe('1');
+    expect(s1.shots.map((x) => x.number)).toContain('1B-1');
+  });
+
+  test("a sequence opened by a jump is titled by the jump's own words", () => {
+    const { view: v } = view('dream-0926-070314-0f40');
+    expect(v.tree[1].splitBy).toBe('jump');
+    expect(v.tree[1].title).toBe('instead of a hotel corridor, there is an orchard');
+    expect(v.tree[0].title).toBe('the lift that kept going');
+  });
+});

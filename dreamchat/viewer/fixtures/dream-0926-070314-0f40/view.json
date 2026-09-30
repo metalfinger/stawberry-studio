@@ -1,9 +1,10 @@
 {
  "header": {
   "dream": "dream-0926-070314-0f40",
+  "slug": "0f40",
   "title": "the lift that wouldn't stop",
   "source": "frozen",
-  "commit": "3d148fa",
+  "commit": "e2b870f",
   "profile": {
    "name": "harness",
    "full": true
@@ -17,7 +18,7 @@
    "DREAMCHAT_WRITER": "claude"
   },
   "assumes": "all drawn and approved",
-  "made": "2026-09-30T01:24:51.790Z"
+  "made": "2026-09-30T03:26:38.290Z"
  },
  "style": {
   "id": "b",
@@ -133,11 +134,14 @@
  "tree": [
   {
    "id": "q:m1",
+   "number": 1,
+   "title": "the lift that kept going",
    "startsAt": "m1",
    "splitBy": "start",
    "scenes": [
     {
      "id": "s1",
+     "number": "1",
      "title": "the lift that kept going",
      "place": "l1",
      "mood": "heavy waiting, warm and stuffy, not scary but like it wasn't going to stop",
@@ -151,6 +155,7 @@
      "shots": [
       {
        "id": "s1.sh1",
+       "number": "1-1",
        "tags": [
         "cast",
         "place",
@@ -165,6 +170,7 @@
       },
       {
        "id": "s1.sh2",
+       "number": "1-2",
        "tags": [
         "cast",
         "place",
@@ -182,11 +188,14 @@
   },
   {
    "id": "q:m4",
+   "number": 2,
+   "title": "instead of a hotel corridor, there is an orchard",
    "startsAt": "m4",
    "splitBy": "jump",
    "scenes": [
     {
      "id": "s2",
+     "number": "2",
      "title": "the orchard at dusk",
      "place": "l2",
      "mood": "calm, quiet, open after the lift; the apples glowing and the horse standing still",
@@ -201,6 +210,7 @@
      "shots": [
       {
        "id": "s2.sh1",
+       "number": "2-1",
        "tags": [
         "cast",
         "ground",
@@ -214,6 +224,7 @@
       },
       {
        "id": "s2.sh2",
+       "number": "2-2",
        "tags": [
         "cast",
         "ground",
@@ -228,6 +239,7 @@
       },
       {
        "id": "s2.sh3",
+       "number": "2-3",
        "tags": [
         "cast",
         "place",
@@ -240,6 +252,7 @@
       },
       {
        "id": "s2.sh4",
+       "number": "2-4",
        "tags": [
         "cast",
         "ground",
@@ -263,6 +276,7 @@
    "sequence": "q:m1",
    "scene": "s1",
    "shot": "s1.sh1",
+   "shotIndex": 1,
    "treeDiffers": null,
    "prevCut": null,
    "moment": {
@@ -480,6 +494,7 @@
    "sequence": "q:m1",
    "scene": "s1",
    "shot": "s1.sh2",
+   "shotIndex": 1,
    "treeDiffers": null,
    "prevCut": "m1",
    "moment": {
@@ -600,7 +615,13 @@
      "file": null
     }
    ],
-   "unsent": [],
+   "unsent": [
+    {
+     "key": "picture:m1",
+     "code": "seat_replaced_by_view",
+     "detail": "the dreamer's view is worked out on the floor plan from where they are, so the picture they were seen in is not needed"
+    }
+   ],
    "facts": {
     "inView": [
      {
@@ -702,6 +723,7 @@
    "sequence": "q:m1",
    "scene": "s1",
    "shot": "s1.sh1",
+   "shotIndex": 2,
    "treeDiffers": null,
    "prevCut": "m2",
    "moment": {
@@ -832,7 +854,18 @@
      "file": null
     }
    ],
-   "unsent": [],
+   "unsent": [
+    {
+     "key": "picture:m1",
+     "code": "edit_to_own_camera",
+     "detail": "planned as the picture edited, and made its own cut instead: here Tomas's age is about ten, not so in it; here Tomas's wardrobe is old school uniform, grey shorts and shirt, not so in it"
+    },
+    {
+     "key": "picture:m2",
+     "code": "light_only",
+     "detail": "planned for its light alone"
+    }
+   ],
    "facts": {
     "inView": [
      {
@@ -936,6 +969,7 @@
    "sequence": "q:m4",
    "scene": "s2",
    "shot": "s2.sh1",
+   "shotIndex": 1,
    "treeDiffers": null,
    "prevCut": null,
    "moment": {
@@ -1148,6 +1182,7 @@
    "sequence": "q:m4",
    "scene": "s2",
    "shot": "s2.sh2",
+   "shotIndex": 1,
    "treeDiffers": null,
    "prevCut": "m4",
    "moment": {
@@ -1279,7 +1314,18 @@
      "file": null
     }
    ],
-   "unsent": [],
+   "unsent": [
+    {
+     "key": "picture:m4",
+     "code": "light_only",
+     "detail": "planned for its light alone"
+    },
+    {
+     "key": "picture:m3",
+     "code": "has_sketch",
+     "detail": "planned for who Tomas is; each has a sketch of their own here, or is not in it"
+    }
+   ],
    "facts": {
     "inView": [
      {
@@ -1382,6 +1428,7 @@
    "sequence": "q:m4",
    "scene": "s2",
    "shot": "s2.sh3",
+   "shotIndex": 1,
    "treeDiffers": null,
    "prevCut": "m5",
    "moment": {
@@ -1517,7 +1564,13 @@
      "file": null
     }
    ],
-   "unsent": [],
+   "unsent": [
+    {
+     "key": "picture:m4",
+     "code": "camera_far",
+     "detail": "its camera is 14.0 m away (near is 1.5 m), turned 56° (near is 30°)"
+    }
+   ],
    "facts": {
     "inView": [
      {
@@ -1606,6 +1659,7 @@
    "sequence": "q:m4",
    "scene": "s2",
    "shot": "s2.sh4",
+   "shotIndex": 1,
    "treeDiffers": null,
    "prevCut": "m6",
    "moment": {
@@ -1717,7 +1771,13 @@
      "file": null
     }
    ],
-   "unsent": [],
+   "unsent": [
+    {
+     "key": "picture:m5",
+     "code": "camera_far",
+     "detail": "its camera is 7.0 m away (near is 1.5 m), 2.0 m higher or lower (near is 1 m)"
+    }
+   ],
    "facts": {
     "inView": [
      {

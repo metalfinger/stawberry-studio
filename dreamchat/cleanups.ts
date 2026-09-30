@@ -126,6 +126,12 @@ export const BUILDER_STEPS: readonly string[] = [
   //    sheet's `once.state`, read by the assembler). The sources of a state (the plan's and the record's) are
   //    still two: the rest of the row.
   'state_once',
+  // Not a ledger row: found reading the viewer (30 Sep). An earlier picture's own words: sent for who someone is,
+  //    as last drawn, it says them by what they are (an animal by its kind, size, build, coat and markings, never a
+  //    face or clothes; a group as more than one), and never for someone turned into something else, whose
+  //    in-between picture of what they are now is their one image; the dream's jump is said with one full stop (the
+  //    sheet's `earlierWords`, read by the assembler).
+  'earlier_words',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;
