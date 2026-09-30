@@ -685,7 +685,14 @@ export function withClimbers(plan: Blocking, acts: { who: string; does: string; 
   const along = new Map<string, number>();
   for (const a of acts) {
     const m = CLIMB.exec(a.does.trim());
-    const t = m && a.to ? spots.find((s) => s.id === a.to && s.kind !== 'person' && !s.fixture) : undefined;
+    // Only what people get into or onto to ride or sit: a vehicle or a seat. "Steps onto the stage" or "jumps onto the
+    // table" is no getting in.
+    const t =
+      m && a.to
+        ? spots.find(
+            (s) => s.id === a.to && s.kind !== 'person' && !s.fixture && ['vehicle', 'seat'].includes(shapeOf(s, plan)),
+          )
+        : undefined;
     const p = t ? spots.find((s) => s.id === a.who && s.kind === 'person' && !s.many) : undefined;
     if (!m || !t || !p) continue;
     const f = facing(t, plan);
@@ -695,7 +702,19 @@ export function withClimbers(plan: Blocking, acts: { who: string; does: string; 
     const [side, length, half] = w <= d ? [r, f, w / 2] : [f, r, d / 2];
     const long = w <= d ? d : w;
     const v = { x: p.x - t.x, y: p.y - t.y };
-    const sign = v.x * side.x + v.y * side.y < 0 ? -1 : 1;
+    const across = v.x * side.x + v.y * side.y;
+    // The side they are on; already inside it (placed seated in it), the side with more room: farther from the place's
+    // walls and from anyone else, never against a wall.
+    const roomAt = (sg: number) => {
+      const q = { x: t.x + side.x * sg * (half + 0.3), y: t.y + side.y * sg * (half + 0.3) };
+      const [rw, rd] = roomOf(plan);
+      const walls = plan.indoors ? Math.min(q.x, rw - q.x, q.y, rd - q.y) : Infinity;
+      const others = spots
+        .filter((o) => o.kind === 'person' && o.id !== p.id)
+        .map((o) => Math.hypot(o.x - q.x, o.y - q.y));
+      return Math.min(walls, ...others, 10);
+    };
+    const sign = Math.abs(across) >= half ? (across < 0 ? -1 : 1) : roomAt(-1) > roomAt(1) ? -1 : 1;
     const k = along.get(t.id) ?? 0;
     along.set(t.id, k + 1);
     const room = Math.max(0, long / 2 - 0.3);
