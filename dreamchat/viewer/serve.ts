@@ -12,11 +12,18 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFile
 import { extname, join } from 'node:path';
 import { ANSWERS, nodeStates } from '../evals/viewer-report';
 import { VIEWS } from './build';
+import { localDream, localImage, localRuns, withLocalVerdict } from './local';
 import type { ViewAnswers, ViewDream, ViewHashes, ViewVerdict } from './types';
 
 const FIXTURES = join(import.meta.dir, 'fixtures');
 const PAGE = join(import.meta.dir, 'page.html');
-const TYPES: Record<string, string> = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp' };
+const LOCAL_PAGE = join(import.meta.dir, 'local.html');
+const TYPES: Record<string, string> = {
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+};
 /** A dream's folder or a picture's name: letters and digits first, then those, dots, dashes and underscores. */
 const SAFE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
@@ -37,7 +44,9 @@ const folderOf = (key: string): string | null =>
 export function keyFor(named: string): string | null {
   if (!SAFE.test(named)) return null;
   if (folderOf(named)) return named;
-  const keys = dreams().map((d) => d.key).filter((k) => k.endsWith(named) && k.charAt(k.length - named.length - 1) === '-');
+  const keys = dreams()
+    .map((d) => d.key)
+    .filter((k) => k.endsWith(named) && k.charAt(k.length - named.length - 1) === '-');
   return keys.length === 1 ? keys[0] : null;
 }
 
@@ -66,7 +75,15 @@ function writeWhole(path: string, text: string) {
   renameSync(tmp, path);
 }
 
-export type DreamListed = { key: string; id: string; title: string; source: string; cuts: number; made: string; fixture: boolean };
+export type DreamListed = {
+  key: string;
+  id: string;
+  title: string;
+  source: string;
+  cuts: number;
+  made: string;
+  fixture: boolean;
+};
 
 /** Every dream there is a view of, by title; a view that cannot be read is left out, never the whole list. */
 export function dreams(): DreamListed[] {
@@ -130,10 +147,15 @@ export function withVerdict(
     return { error: 'this has changed since the page showed it: read it again, then judge it', stale: true };
   if (b.verdict !== 'right' && b.verdict !== 'wrong' && b.verdict !== 'unsure')
     return { error: 'the verdict is right, wrong or unsure' };
-  const wrong = Array.isArray(b.wrong) ? [...new Set(b.wrong.filter((x) => (ASPECTS as readonly unknown[]).includes(x)))] : [];
-  if (b.verdict === 'wrong' && !wrong.length) return { error: 'say what is wrong: the layout, the references or the words' };
+  const wrong = Array.isArray(b.wrong)
+    ? [...new Set(b.wrong.filter((x) => (ASPECTS as readonly unknown[]).includes(x)))]
+    : [];
+  if (b.verdict === 'wrong' && !wrong.length)
+    return { error: 'say what is wrong: the layout, the references or the words' };
   if (answers && (answers.dream !== view.header.dream || answers.source !== view.header.source))
-    return { error: `these verdicts are on the ${answers.source} ${answers.dream}, not this ${view.header.source} view` };
+    return {
+      error: `these verdicts are on the ${answers.source} ${answers.dream}, not this ${view.header.source} view`,
+    };
   const note = typeof b.note === 'string' ? b.note.slice(0, 4000) : '';
   const verdict: ViewVerdict = {
     node,
@@ -152,7 +174,12 @@ export function withVerdict(
       ...was,
       verdicts: { ...was.verdicts, [node]: verdict },
       ...(before || was.history
-        ? { history: { ...(was.history ?? {}), ...(before ? { [node]: [...(was.history?.[node] ?? []), before] } : {}) } }
+        ? {
+            history: {
+              ...(was.history ?? {}),
+              ...(before ? { [node]: [...(was.history?.[node] ?? []), before] } : {}),
+            },
+          }
         : {}),
     },
   };
@@ -175,10 +202,39 @@ export function serveViewer(port = 0): { url: string; stop: () => void } {
       const [name, at] = [host.slice(0, host.lastIndexOf(':')), host.slice(host.lastIndexOf(':') + 1)];
       const local = name === '127.0.0.1' || name === 'localhost' || /^[a-z0-9-]+(\.[a-z0-9-]+)*\.localhost$/.test(name);
       if (!local || at !== String(server.port)) return new Response('not here', { status: 403 });
+      // The local image machine's runs (viewer/local.ts): /local, /local/<run>, /local/<run>/<dream>, read by their page.
+      if (req.method === 'GET' && /^\/local(\/[A-Za-z0-9][A-Za-z0-9._-]*){0,2}\/?$/.test(url.pathname))
+        return new Response(Bun.file(LOCAL_PAGE), { headers: { 'content-type': 'text/html; charset=utf-8' } });
+      if (req.method === 'GET' && url.pathname === '/api/local/runs') return json(localRuns());
+      if (req.method === 'GET' && url.pathname === '/api/local/dream') {
+        const got = localDream(url.searchParams.get('run') ?? '', url.searchParams.get('dream') ?? '');
+        return got ? json(got) : json({ error: 'no such run of that dream' }, 404);
+      }
+      if (req.method === 'GET' && url.pathname.startsWith('/local-img/')) {
+        let parts: string[];
+        try {
+          parts = url.pathname.slice('/local-img/'.length).split('/').map(decodeURIComponent);
+        } catch {
+          return notFound();
+        }
+        const path = parts.length === 3 ? localImage(parts[0], parts[1], parts[2]) : null;
+        if (!path) return notFound();
+        return new Response(Bun.file(path), {
+          headers: { 'content-type': TYPES[extname(path).toLowerCase()] ?? 'image/png', 'cache-control': 'max-age=60' },
+        });
+      }
+      if (req.method === 'POST' && url.pathname === '/api/local/verdict') {
+        if (!(req.headers.get('content-type') ?? '').toLowerCase().startsWith('application/json'))
+          return json({ error: 'send the verdict as JSON (content-type: application/json)' }, 415);
+        const next = withLocalVerdict(await req.json().catch(() => null), new Date().toISOString());
+        return 'error' in next ? json({ error: next.error }, next.status) : json(next);
+      }
       // The page, and any address of a dream or a node in it (/0f40, /0f40/m5, /0f40.live/sketch:p1): the page reads it.
       if (
         req.method === 'GET' &&
-        (url.pathname === '/' || url.pathname === '/index.html' || /^\/[A-Za-z0-9][A-Za-z0-9._-]*(\/[A-Za-z0-9:._-]+)?\/?$/.test(url.pathname)) &&
+        (url.pathname === '/' ||
+          url.pathname === '/index.html' ||
+          /^\/[A-Za-z0-9][A-Za-z0-9._-]*(\/[A-Za-z0-9:._-]+)?\/?$/.test(url.pathname)) &&
         !/^\/(api|img)(\/|$)/.test(url.pathname)
       )
         return new Response(Bun.file(PAGE), { headers: { 'content-type': 'text/html; charset=utf-8' } });

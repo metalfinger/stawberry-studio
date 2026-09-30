@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Local runs</title>
+<style>
+:root {
+  --paper: #f3f4f2; --panel: #ffffff; --ink: #16181b; --muted: #5d636b; --faint: #8b9198; --rule: #d9dcd7;
+  --accent: #2b59c3; --accent-soft: #e4ebfa;
+  --right: #1f7a45; --wrong: #b3322a; --partly: #a3680f; --wait: #8b9198;
+  --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0f1113; --panel: #171a1d; --ink: #e7e9ec; --muted: #a1a7ae; --faint: #7a8189; --rule: #2a2f34;
+    --accent: #7ea2ff; --accent-soft: #1d2740; --right: #4fbf7e; --wrong: #ef6b61; --partly: #e2a543; --wait: #7a8189;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0f1113; --panel: #171a1d; --ink: #e7e9ec; --muted: #a1a7ae; --faint: #7a8189; --rule: #2a2f34;
+  --accent: #7ea2ff; --accent-soft: #1d2740; --right: #4fbf7e; --wrong: #ef6b61; --partly: #e2a543; --wait: #7a8189;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--paper); color: var(--ink); font: 14px/1.45 var(--sans); display: grid; grid-template-rows: auto 1fr; }
+button, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mono { font-family: var(--mono); font-size: 12px; }
+.muted { color: var(--muted); }
+.faint { color: var(--faint); }
+
+header.bar { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; padding: 10px 16px; border-bottom: 1px solid var(--rule); background: var(--panel); }
+header.bar h1 { font-size: 15px; margin: 0; font-weight: 650; }
+header.bar select { padding: 5px 8px; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper); max-width: 320px; }
+.facts { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); }
+.facts b { color: var(--ink); font-weight: 600; }
+.spacer { flex: 1; }
+a.back { color: var(--muted); font-size: 12.5px; text-decoration: none; border: 1px solid var(--rule); border-radius: 6px; padding: 4px 10px; }
+a.back:hover { border-color: var(--accent); color: var(--ink); }
+
+main.split { display: grid; grid-template-columns: 280px 1fr; min-height: 0; }
+nav.side { border-right: 1px solid var(--rule); overflow: auto; background: var(--panel); padding: 6px 0 40px; }
+nav.side h2 { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); margin: 14px 14px 4px; font-weight: 600; }
+.dreamrow { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; width: 100%; text-align: left; border: 0; background: none; padding: 6px 14px; cursor: pointer; }
+.dreamrow:hover { background: var(--paper); }
+.dreamrow[aria-current="true"] { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+.dreamrow .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dreamrow .n { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+.meter { grid-column: 1 / -1; height: 4px; background: var(--paper); border-radius: 2px; overflow: hidden; display: flex; }
+.meter i { display: block; height: 100%; }
+.meter .d { background: var(--right); } .meter .f { background: var(--wrong); }
+.picrow { display: flex; gap: 8px; align-items: center; width: 100%; border: 0; background: none; padding: 3px 14px 3px 22px; cursor: pointer; text-align: left; font-size: 12.5px; }
+.picrow:hover { background: var(--paper); }
+.picrow .id { font-family: var(--mono); font-size: 11.5px; color: var(--muted); min-width: 34px; }
+.picrow .what { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dot { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--faint); flex: none; }
+.dot.right { background: var(--right); border-color: var(--right); }
+.dot.partly { background: var(--partly); border-color: var(--partly); }
+.dot.wrong { background: var(--wrong); border-color: var(--wrong); }
+
+section.panel { overflow: auto; min-height: 0; padding: 18px 22px 120px; }
+.dreamhead h2 { margin: 0 0 4px; font-size: 20px; font-weight: 650; }
+.note { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 8px 12px; margin: 10px 0; font-size: 13px; }
+h3.group { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); margin: 26px 0 8px; font-weight: 600; }
+.sketches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.sketch { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 6px; }
+.sketch img { width: 100%; height: 170px; object-fit: contain; background: var(--paper); border-radius: 4px; cursor: zoom-in; display: block; }
+.sketch .cap { font-size: 12px; margin-top: 4px; display: flex; gap: 6px; align-items: center; }
+.cut { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 14px; margin: 0 0 18px; scroll-margin-top: 12px; }
+.cut.focus { border-color: var(--accent); }
+.cuthead { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; margin-bottom: 8px; }
+.cuthead .id { font-family: var(--mono); color: var(--muted); }
+.cuthead .what { font-size: 15px; font-weight: 600; }
+.cutbody { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; }
+.main img { width: 100%; border-radius: 6px; display: block; cursor: zoom-in; background: var(--paper); }
+.placeholder { aspect-ratio: 16 / 9; display: grid; place-items: center; background: var(--paper); border: 1px dashed var(--rule); border-radius: 6px; color: var(--muted); padding: 12px; text-align: center; }
+.placeholder.failed { color: var(--wrong); border-color: var(--wrong); }
+.side h4 { margin: 0 0 6px; font-size: 12px; color: var(--muted); font-weight: 600; }
+.refs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 12px; }
+.ref { font-size: 11.5px; }
+.ref img { width: 100%; height: 80px; object-fit: contain; background: var(--paper); border-radius: 4px; cursor: zoom-in; display: block; }
+.ref .miss { height: 80px; display: grid; place-items: center; background: var(--paper); border-radius: 4px; color: var(--wrong); }
+.dropped { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+.dropped b { color: var(--ink); font-weight: 600; }
+details { margin-top: 10px; }
+details summary { cursor: pointer; color: var(--muted); font-size: 12.5px; }
+pre.prompt { white-space: pre-wrap; font: 12.5px/1.5 var(--mono); background: var(--paper); border: 1px solid var(--rule); border-radius: 6px; padding: 10px; max-height: 420px; overflow: auto; }
+.meta { font-family: var(--mono); font-size: 11.5px; color: var(--faint); margin-top: 8px; }
+.judge { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+.judge button { border: 1px solid var(--rule); background: var(--paper); border-radius: 6px; padding: 5px 12px; cursor: pointer; }
+.judge button[data-v="right"][aria-pressed="true"] { background: var(--right); border-color: var(--right); color: #fff; }
+.judge button[data-v="partly"][aria-pressed="true"] { background: var(--partly); border-color: var(--partly); color: #fff; }
+.judge button[data-v="wrong"][aria-pressed="true"] { background: var(--wrong); border-color: var(--wrong); color: #fff; }
+.judge textarea { flex: 1 1 260px; min-height: 34px; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper); padding: 5px 8px; resize: vertical; }
+.saved { font-size: 12px; color: var(--muted); }
+.lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.85); display: none; place-items: center; z-index: 10; cursor: zoom-out; }
+.lightbox.open { display: grid; }
+.lightbox img { max-width: 96vw; max-height: 94vh; }
+.keys { font-size: 12px; color: var(--faint); }
+@media (max-width: 900px) {
+  main.split { grid-template-columns: 1fr; }
+  nav.side { max-height: 38vh; border-right: 0; border-bottom: 1px solid var(--rule); }
+  .cutbody { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: no-preference) { .cut { transition: border-color .15s; } }
+</style>
+</head>
+<body>
+<header class="bar">
+  <h1>Local runs</h1>
+  <select id="run" aria-label="Run"></select>
+  <div class="facts" id="facts"></div>
+  <span class="spacer"></span>
+  <span class="keys">j / k: next / previous picture · 1 right · 2 partly · 3 wrong</span>
+  <a class="back" href="/">Harness viewer</a>
+</header>
+<main class="split">
+  <nav class="side" id="side" aria-label="Dreams and pictures"></nav>
+  <section class="panel" id="panel"><p class="muted">Loading…</p></section>
+</main>
+<div class="lightbox" id="lightbox" role="dialog" aria-label="Picture, full size"><img alt=""></div>
+<script>
+'use strict';
+const $ = (s, el = document) => el.querySelector(s);
+const el = (tag, attrs = {}, ...kids) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k === 'class') e.className = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v === true ? '' : v);
+  }
+  for (const k of kids.flat()) if (k != null && k !== false) e.append(k instanceof Node ? k : document.createTextNode(String(k)));
+  return e;
+};
+/** Puts children in place of an element's own, arrays flattened and nothing for null. */
+const put = (parent, ...kids) => parent.replaceChildren(...kids.flat(Infinity).filter((k) => k != null && k !== false));
+const state = { runs: [], run: '', dream: '', data: null, focus: 0, timer: null };
+const img = (file) => `/local-img/${encodeURIComponent(state.run)}/${encodeURIComponent(state.dream)}/${encodeURIComponent(file)}`;
+const when = (iso) => (iso ? new Date(iso).toLocaleString([], { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' }) : '');
+
+function route() {
+  const [, , run, dream] = location.pathname.replace(/\/+$/, '').split('/');
+  return { run: run ? decodeURIComponent(run) : '', dream: dream ? decodeURIComponent(dream) : '' };
+}
+function go(run, dream, push = true) {
+  state.run = run; state.dream = dream;
+  const path = `/local/${encodeURIComponent(run)}${dream ? `/${encodeURIComponent(dream)}` : ''}`;
+  if (push && location.pathname !== path) history.pushState({}, '', path);
+  loadDream();
+}
+
+async function loadRuns() {
+  const r = await fetch('/api/local/runs');
+  state.runs = r.ok ? await r.json() : [];
+  const sel = $('#run');
+  put(sel, state.runs.map((x) => el('option', { value: x.run }, `${x.run} · ${x.dreams.length} dreams`)));
+  const want = route();
+  const run = state.runs.find((x) => x.run === want.run) ?? state.runs[0];
+  if (!run) { put($('#panel'), el('p', { class: 'muted' }, 'No local runs yet: evals/local-run.ts writes them to runs/local-draw.')); return; }
+  sel.value = run.run;
+  const dream = run.dreams.find((d) => d.dream === want.dream) ?? run.dreams[0];
+  state.run = run.run; state.dream = dream ? dream.dream : '';
+  loadDream();
+}
+
+async function loadDream(keepScroll = false) {
+  clearTimeout(state.timer);
+  if (!state.dream) { renderSide(); return; }
+  const r = await fetch(`/api/local/dream?run=${encodeURIComponent(state.run)}&dream=${encodeURIComponent(state.dream)}`);
+  state.data = r.ok ? await r.json() : null;
+  const top = $('#panel').scrollTop;
+  renderSide(); renderPanel();
+  if (keepScroll) $('#panel').scrollTop = top;
+  // While anything of it is still to be drawn, look again.
+  if (state.data && state.data.manifest.pictures.some((p) => p.state === 'waiting'))
+    state.timer = setTimeout(async () => { await refreshRuns(); loadDream(true); }, 20000);
+}
+async function refreshRuns() {
+  const r = await fetch('/api/local/runs');
+  if (r.ok) state.runs = await r.json();
+}
+
+function renderSide() {
+  const run = state.runs.find((x) => x.run === state.run);
+  const side = $('#side');
+  put(side, el('h2', {}, 'Dreams'));
+  for (const d of run ? run.dreams : []) {
+    const total = d.done + d.failed + d.waiting || 1;
+    const row = el('button', { class: 'dreamrow', 'aria-current': d.dream === state.dream ? 'true' : null, onclick: () => go(state.run, d.dream) },
+      el('span', { class: 't' }, d.title),
+      el('span', { class: 'n' }, `${d.done}/${total}${d.failed ? ` · ${d.failed} failed` : ''}${d.judged ? ` · ${d.judged} judged` : ''}`),
+      el('span', { class: 'meter' }, el('i', { class: 'd', style: `width:${(100 * d.done) / total}%` }), el('i', { class: 'f', style: `width:${(100 * d.failed) / total}%` })));
+    side.append(row);
+    if (d.dream === state.dream && state.data) {
+      const v = state.data.verdicts;
+      for (const p of state.data.manifest.pictures.filter((x) => x.kind !== 'sketch'))
+        side.append(el('button', { class: 'picrow', onclick: () => focusOn(p.id) },
+          el('span', { class: 'id' }, p.id), el('span', { class: 'what' }, p.name),
+          el('span', { class: `dot ${v[p.id] ? v[p.id].verdict : ''}`, title: v[p.id] ? v[p.id].verdict : 'not judged' })));
+    }
+  }
+  const d = run && run.dreams.find((x) => x.dream === state.dream);
+  put($('#facts'), (d ? [
+    el('span', {}, el('b', {}, d.done), ' drawn'), d.failed ? el('span', {}, el('b', {}, d.failed), ' failed') : null,
+    d.waiting ? el('span', {}, el('b', {}, d.waiting), ' waiting') : null,
+    el('span', {}, 'quality ', el('b', {}, d.quality || '?')), el('span', {}, 'code ', el('b', { class: 'mono' }, d.commit || '?')),
+    d.updated ? el('span', {}, 'updated ', when(d.updated)) : null] : []));
+}
+
+function picture(file, alt) {
+  const i = el('img', { src: img(file), alt, loading: 'lazy' });
+  i.addEventListener('click', () => { const lb = $('#lightbox'); $('img', lb).src = i.src; lb.classList.add('open'); });
+  return i;
+}
+
+function renderPanel() {
+  const panel = $('#panel');
+  if (!state.data) { put(panel, el('p', { class: 'muted' }, 'That run of that dream is not here.')); return; }
+  const m = state.data.manifest, v = state.data.verdicts;
+  const sketches = m.pictures.filter((p) => p.kind === 'sketch');
+  const rest = m.pictures.filter((p) => p.kind !== 'sketch');
+  put(panel,
+    el('div', { class: 'dreamhead' }, el('h2', {}, m.title || m.dream),
+      el('div', { class: 'muted mono' }, `${m.dream} · run ${m.run} · code ${m.commit || '?'} · ${m.quality || ''}${m.started ? ` · started ${when(m.started)}` : ''}`)),
+    m.readings && m.readings.length ? el('div', { class: 'note' }, `Readings not cached, read as no facts: ${m.readings.join(', ')}`) : null,
+    el('h3', { class: 'group' }, `Sketches (${sketches.length})`),
+    el('div', { class: 'sketches' }, sketches.map((p) => el('div', { class: 'sketch' },
+      p.file && p.state === 'done' ? picture(p.file, p.name) : el('div', { class: `placeholder ${p.state}` }, p.state === 'failed' ? `failed: ${p.error || ''}` : p.state),
+      el('div', { class: 'cap' }, el('span', { class: 'mono muted' }, p.id), el('span', {}, p.name))))),
+    el('h3', { class: 'group' }, `Pictures, in story order (${rest.length})`),
+    rest.map((p, i) => cutCard(p, v[p.id], i)));
+}
+
+function cutCard(p, verdict, i) {
+  const sent = p.imagesSent || p.images || [];
+  const dropped = p.dropped || {};
+  const note = el('textarea', { placeholder: 'What is wrong, or what worked (optional)', 'aria-label': `Note on ${p.id}` });
+  note.value = verdict ? verdict.note : '';
+  const saved = el('span', { class: 'saved' }, verdict ? `${verdict.verdict}, ${when(verdict.at)}` : '');
+  const judge = (v2) => save(p.id, v2, note.value, saved, card);
+  const card = el('article', { class: 'cut', id: `c-${p.id}`, 'data-i': i },
+    el('div', { class: 'cuthead' }, el('span', { class: 'id' }, p.id), el('span', { class: 'what' }, p.name),
+      el('span', { class: 'faint mono' }, p.kind === 'ghost' ? 'in-between picture' : '')),
+    el('div', { class: 'cutbody' },
+      el('div', { class: 'main' },
+        p.file && p.state === 'done' ? picture(p.file, p.name)
+          : el('div', { class: `placeholder ${p.state}` }, p.state === 'failed' ? `Failed: ${p.error || 'no reason given'}` : p.state === 'skipped' ? `Skipped${p.notes && p.notes.length ? `: ${p.notes.join('; ')}` : ''}` : 'Waiting to be drawn'),
+        el('div', { class: 'judge' },
+          ['right', 'partly', 'wrong'].map((x) => el('button', { 'data-v': x, 'aria-pressed': verdict && verdict.verdict === x ? 'true' : 'false', onclick: () => judge(x) }, x[0].toUpperCase() + x.slice(1))),
+          note, saved)),
+      el('div', { class: 'side' },
+        el('h4', {}, `Sent with it (${sent.length})`),
+        el('div', { class: 'refs' }, sent.map((x) => el('div', { class: 'ref' },
+          x.file && !x.missing ? picture(x.file, x.name) : el('div', { class: 'miss' }, 'missing'),
+          el('div', {}, `${x.n}. ${x.role}`), el('div', { class: 'faint mono' }, x.name)))),
+        (dropped.images && dropped.images.length) || (dropped.paragraphs && dropped.paragraphs.length) || dropped.chars
+          ? el('div', { class: 'dropped' }, el('b', {}, 'Left out to fit: '),
+              [dropped.images && dropped.images.length ? `images ${dropped.images.join(', ')}` : '',
+               dropped.paragraphs && dropped.paragraphs.length ? `paragraphs ${dropped.paragraphs.join(', ')}` : '',
+               dropped.lines && dropped.lines.length ? `${dropped.lines.length} lines` : '',
+               dropped.chars ? `${dropped.chars} characters` : ''].filter(Boolean).join(' · '))
+          : null,
+        el('div', { class: 'meta' }, [p.quality || '', p.secs ? `${p.secs}s` : '', p.seed != null ? `seed ${p.seed}` : '', p.job || ''].filter(Boolean).join(' · ')))),
+    el('details', {}, el('summary', {}, 'The prompt as sent'), el('pre', { class: 'prompt' }, p.sent || p.prompt || '')),
+    p.prompt && p.sent && p.prompt !== p.sent ? el('details', {}, el('summary', {}, 'The harness prompt, whole'), el('pre', { class: 'prompt' }, p.prompt)) : null);
+  return card;
+}
+
+async function save(id, verdict, note, saved, card) {
+  saved.textContent = 'saving…';
+  const r = await fetch('/api/local/verdict', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ run: state.run, dream: state.dream, id, verdict, note }) });
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) { saved.textContent = body.error || 'not saved'; return; }
+  state.data.verdicts = body.verdicts;
+  for (const b of card.querySelectorAll('.judge button')) b.setAttribute('aria-pressed', b.dataset.v === verdict ? 'true' : 'false');
+  saved.textContent = `${verdict}, saved`;
+  await refreshRuns(); renderSide();
+}
+
+function cards() { return [...document.querySelectorAll('.cut')]; }
+function focusOn(id) {
+  const c = document.getElementById(`c-${id}`);
+  if (!c) return;
+  state.focus = Number(c.dataset.i);
+  for (const x of cards()) x.classList.toggle('focus', x === c);
+  c.scrollIntoView({ block: 'start' });
+}
+document.addEventListener('keydown', (e) => {
+  if (e.target.closest('textarea, select')) return;
+  const all = cards();
+  if (!all.length) return;
+  if (e.key === 'j' || e.key === 'k') {
+    state.focus = Math.max(0, Math.min(all.length - 1, state.focus + (e.key === 'j' ? 1 : -1)));
+    for (const x of all) x.classList.toggle('focus', Number(x.dataset.i) === state.focus);
+    all[state.focus].scrollIntoView({ block: 'start' });
+  } else if (['1', '2', '3'].includes(e.key)) {
+    const b = all[state.focus] && all[state.focus].querySelectorAll('.judge button')[Number(e.key) - 1];
+    if (b) b.click();
+  } else if (e.key === 'Escape') $('#lightbox').classList.remove('open');
+});
+$('#lightbox').addEventListener('click', () => $('#lightbox').classList.remove('open'));
+$('#run').addEventListener('change', (e) => { const run = state.runs.find((x) => x.run === e.target.value); go(run.run, run.dreams[0] ? run.dreams[0].dream : ''); });
+window.addEventListener('popstate', () => { const r = route(); if (r.run) { state.run = r.run; state.dream = r.dream; loadDream(); } });
+loadRuns();
+</script>
+</body>
+</html>
