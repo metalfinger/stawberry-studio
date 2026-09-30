@@ -1780,3 +1780,37 @@ describe('what rests on something', () => {
     expect(off.text).not.toMatch(/the little boats, [^;.]*on the table/);
   });
 });
+
+describe('where plants grow', () => {
+  const garden = (name: string) => ({
+    front: 'the house',
+    spots: [
+      { id: 'p1', x: 10, y: 10, kind: 'person' as const, pose: 'standing' as const },
+      {
+        id: 'x1',
+        x: 10,
+        y: 10,
+        kind: 'thing' as const,
+        fixture: true,
+        shape: 'ground' as const,
+        name,
+        size: [8, 6, 0.05] as [number, number, number],
+      },
+    ],
+  });
+  const shot = (name: string, camera = CAMERA as Record<string, string | undefined>) =>
+    withEnv(camera, () => outsideShot(garden(name), ['p1'], 'wide', (id) => (id === 'p1' ? 'the dreamer' : id)))!.text;
+
+  test('they stand in the grass and among the trees, never on top of them', () => {
+    // "The dreamer, mouse-sized, standing on the tall grass" (d3a1 m1); "standing on the empty rows of apple trees" (orchard m5).
+    expect(shot('the tall grass')).toContain('standing in the tall grass');
+    expect(shot('the tall grass')).toContain('with the dreamer in it');
+    expect(shot('the rows of apple trees')).toContain('standing among the rows of apple trees');
+    expect(shot('the rows of apple trees')).toContain('with the dreamer among them');
+    // Ground that is only ground, or the edge of a field, as before.
+    expect(shot('the lawn')).toContain('standing on the lawn');
+    expect(shot('the edge of the field')).toContain('standing on the edge of the field');
+    // Off, as before.
+    expect(shot('the tall grass', { DREAMCHAT_CAMERA: undefined })).toContain('standing on the tall grass');
+  });
+});

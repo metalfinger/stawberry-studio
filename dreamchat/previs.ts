@@ -555,6 +555,20 @@ const ON_A_WALL = /\b(wall|hanging|hung|hangs|mounted|clocks?|(tele)?phones?)\b/
  * with the clock said to be outside the picture (desert station m3, 26 Sep); the phone and the
  * clock on the kitchen wall were drawn near its floor (grandma's kitchen, 26 Sep).
  */
+/**
+ * How someone is where plants grow, by its name: among trees in rows or a wood, in grass, crops or undergrowth. None
+ * for ground that is only ground.
+ */
+function growsAs(name: string): 'in' | 'among' | undefined {
+  const n = name.toLowerCase();
+  // The edge or the end of a field is the ground beside it.
+  if (/^(?:the |a )?(?:edge|end|side|border|path|track|road|lane)\b/.test(n)) return undefined;
+  if (/\b(?:trees|forest|woods|vines|rows of)\b/.test(n)) return 'among';
+  if (/\b(?:grass|wheat|corn|reeds|rushes|bushes|undergrowth|meadow|heather|ferns|crops|field|orchard)\b/.test(n))
+    return 'in';
+  return undefined;
+}
+
 /** The low thing a small one rests on top of, as `restOf` sets it there: a table, a counter, a bench. */
 function restsOn(s: Spot, plan: Blocking): Spot | undefined {
   if (isPerson(s) || s.heldBy || s.many || shapeOf(s, plan) !== 'block') return undefined;
@@ -1347,6 +1361,10 @@ function thingWords(
   // the way it faces. The girl pedalling in front of the dreamer was "sitting beside the dreamer on the same old red
   // bicycle" (acfd m5-m7; the read of every frozen prompt, 30 Sep). With the camera rules.
   const tandem = on && on.how === 'on' && cameraMode() === 'on' ? tandemPlace(s, on.t, plan) : undefined;
+  // Ground that grows (tall grass, a field of wheat, rows of apple trees): they stand in it or among it, never on top of
+  // it (the mouse-sized dreamer "standing on the tall grass", d3a1 m1-m3; Tomas "standing on the empty rows of apple
+  // trees", orchard m5: the read of every frozen prompt, 30 Sep). With the camera rules.
+  const grown = on && on.how === 'on' && cameraMode() === 'on' ? growsAs(called(on.t.id)) : undefined;
   const sitting = climbing
     ? climbing
     : on
@@ -1364,7 +1382,9 @@ function thingWords(
             ? `, ${pose} in front on ${called(on.t.id)}`
             : tandem === 'back'
               ? `, ${pose} on the back of ${called(on.t.id)}`
-              : `, ${pose} on ${called(on.t.id)}`
+              : grown
+                ? `, ${pose} ${grown} ${called(on.t.id)}`
+                : `, ${pose} on ${called(on.t.id)}`
       : '';
   const holder = !isPerson(s) && s.heldBy ? s.heldBy : undefined;
   const holds = isPerson(s) && !s.many ? plan.spots.filter((o) => o.heldBy === s.id).map((o) => called(o.id)) : [];
@@ -1400,7 +1420,7 @@ function thingWords(
     (holds.length ? `, holding ${holds.join(' and ')}` : '') +
     (holder ? `, in ${called(holder)}'s hands` : '') +
     (riders.length
-      ? `, with ${riders.join(' and ')} ${shape === 'vehicle' ? 'in it' : shape === 'seat' ? 'sitting on it' : 'on it'}`
+      ? `, with ${riders.join(' and ')} ${shape === 'vehicle' ? 'in it' : shape === 'seat' ? 'sitting on it' : cameraMode() === 'on' && growsAs(called(s.id)) === 'among' ? 'among them' : cameraMode() === 'on' && growsAs(called(s.id)) ? 'in it' : 'on it'}`
       : '') +
     (onTop ? `, on ${called(onTop.id)}` : next ? `, right beside ${called(next.id)}` : '');
   const behind =
