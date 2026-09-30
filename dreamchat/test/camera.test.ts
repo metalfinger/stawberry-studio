@@ -1,6 +1,6 @@
 import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { assembleCut } from '../assemble';
-import type { Blocking } from '../blocking';
+import { type Blocking, facing } from '../blocking';
 import {
   bodyHeight,
   cameraMode,
@@ -507,6 +507,29 @@ describe("through the dreamer's own eyes", () => {
   test('someone facing them on the same long seat sits across from them, not beside them', () => {
     const r = rebuilt('dream-0926-043003-b0cb', ON);
     expect(shot(picture(r, 'm3').prompt)).toMatch(/the grandfather, sitting across from the dreamer/);
+  });
+});
+
+describe('two on a bicycle', () => {
+  test('ride one behind the other, on it, never in it', () => {
+    // Two on one bicycle were sat side by side, as on a bench, and through the dreamer's eyes they were "in" it,
+    // framed by "the inside of the old red bicycle … its window" (the read of every frozen prompt, 30 Sep).
+    const r = rebuilt('dream-0926-095122-acfd', ON);
+    const plan = withEnv(ON, () => shotPlan(r.b, 'm3', r.rec))!;
+    const bike = plan.spots.find((s) => s.shape === 'vehicle')!;
+    const [a, b] = plan.spots.filter((s) => s.kind === 'person' && !s.many);
+    const f = facing(bike, plan);
+    const gap = { x: b.x - a.x, y: b.y - a.y };
+    expect(bike.size![0]).toBeLessThan(1);
+    expect(Math.hypot(gap.x, gap.y)).toBeGreaterThan(0.5);
+    // Along its length: the gap between them is the way it faces, not across it.
+    expect(Math.abs(gap.x * f.y - gap.y * f.x)).toBeLessThan(0.05);
+    const m7 = picture(r, 'm7').prompt;
+    expect(m7).toMatch(/The camera is the dreamer's eyes, on the old red bicycle/);
+    expect(m7).not.toMatch(/inside of the old red bicycle|its window/);
+    // Without the camera rules, as before.
+    const off = rebuilt('dream-0926-095122-acfd', { ...ON, DREAMCHAT_CAMERA: undefined });
+    expect(picture(off, 'm7').prompt).toMatch(/in the old red bicycle/);
   });
 });
 

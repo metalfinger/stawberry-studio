@@ -432,7 +432,7 @@ export function placePlan(b: Breakdown, momentId: string): Blocking | undefined 
 
 export function planBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blocking | undefined {
   const raw = rawPlanBy(b, momentId, rec);
-  return raw ? settle(raw) : undefined;
+  return raw ? settle(raw, { tandem: cameraMode() === 'on' }) : undefined;
 }
 
 /**

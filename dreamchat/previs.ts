@@ -1149,7 +1149,12 @@ export function dreamerShot(
       (s) => s.id !== dreamer && !isPerson(s) && !s.heldBy && shapeOf(s, plan) !== 'block' && onFootprint(me, s, plan),
     )
     .map((s) => s.id);
-  const inIt = at.some((id) => plan.spots.find((s) => s.id === id)?.shape === 'vehicle');
+  // In it only where it is wide enough to be in (onOf): on a bicycle, never "the inside of" it and "its window"
+  // (the read of every frozen prompt, 30 Sep).
+  const inIt = at.some((id) => {
+    const v = plan.spots.find((s) => s.id === id);
+    return v?.shape === 'vehicle' && (cameraMode() !== 'on' || sizeOf(v)[0] >= 1);
+  });
   const turnAngle = (() => {
     const d = unit(eye.d);
     const a = (Math.atan2(d.x * rightOf(own).x + d.y * rightOf(own).y, d.x * own.x + d.y * own.y) * 180) / Math.PI;
