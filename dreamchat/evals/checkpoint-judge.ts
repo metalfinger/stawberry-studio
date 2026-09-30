@@ -161,8 +161,8 @@ export function writeWhole(path: string, text: string): void {
 export type MomentScore = {
   id: string;
   why: Why;
-  /** The owner's verdict on the old picture, before. */
-  before: Verdict;
+  /** The owner's verdict on the old picture, before; null for a pair, never judged before. */
+  before: Verdict | null;
   answer: Answer | null;
   /** Whether the owner called the new picture right, and the old one, blind; null when not answered. */
   newRight: boolean | null;
@@ -178,6 +178,8 @@ export type Score = {
   stale: string[];
   faults: { judged: number; of: number; nowRight: number; oldRightNow: number };
   guards: { judged: number; of: number; stillRight: number; oldRightAgain: number };
+  /** Pairs: the old picture drawn now by the harness as it stands, the new with every change; each right or not. */
+  pairs: { judged: number; of: number; newRight: number; oldRight: number };
   moments: MomentScore[];
 };
 
@@ -220,6 +222,7 @@ export function scoreOf(
   const judged = (xs: MomentScore[]) => xs.filter((x) => x.newRight !== null);
   const faults = moments.filter((x) => x.why === 'fault');
   const guards = moments.filter((x) => x.why === 'guard');
+  const pairs = moments.filter((x) => x.why === 'pair');
   return {
     checkpoint: set.name,
     judged: judged(moments).length,
@@ -237,6 +240,12 @@ export function scoreOf(
       stillRight: guards.filter((x) => x.newRight).length,
       oldRightAgain: guards.filter((x) => x.oldRight).length,
     },
+    pairs: {
+      judged: judged(pairs).length,
+      of: pairs.length,
+      newRight: pairs.filter((x) => x.newRight).length,
+      oldRight: pairs.filter((x) => x.oldRight).length,
+    },
     moments,
   };
 }
@@ -244,11 +253,16 @@ export function scoreOf(
 /** The score as lines to read. */
 export function scoreLines(s: Score): string[] {
   const said = (x: MomentScore) =>
-    `${x.id}: the old picture ${x.oldRight ? 'right' : 'not right'}, the new ${x.newRight ? 'right' : 'not right'} (before, the owner called it ${x.before})${x.note ? `: "${x.note}"` : ''}`;
+    `${x.id}: the old picture ${x.oldRight ? 'right' : 'not right'}, the new ${x.newRight ? 'right' : 'not right'}${x.before ? ` (before, the owner called it ${x.before})` : ''}${x.note ? `: "${x.note}"` : ''}`;
   const lines = [
     `Checkpoint ${s.checkpoint}: ${s.judged} of ${s.of} moments judged.`,
     `Faults (the old picture called partly right or wrong before): the new picture right in ${s.faults.nowRight} of ${s.faults.judged} judged (${s.faults.of} in the set); the old one called right this time in ${s.faults.oldRightNow}.`,
     `Guards (the old picture called right before): the new picture still right in ${s.guards.stillRight} of ${s.guards.judged} judged (${s.guards.of} in the set); the old one called right again in ${s.guards.oldRightAgain}.`,
+    ...(s.pairs?.of
+      ? [
+          `Pairs (both drawn now, never judged before): the new picture right in ${s.pairs.newRight} of ${s.pairs.judged} judged, the old in ${s.pairs.oldRight} (${s.pairs.of} in the set).`,
+        ]
+      : []),
   ];
   const group = (title: string, xs: MomentScore[]) => (xs.length ? [``, title, ...xs.map((x) => `  ${said(x)}`)] : []);
   const judged = s.moments.filter((x) => x.newRight !== null);
@@ -268,6 +282,10 @@ export function scoreLines(s: Score): string[] {
     ...group(
       'Guards lost:',
       judged.filter((x) => x.why === 'guard' && !x.newRight),
+    ),
+    ...group(
+      'Pairs:',
+      judged.filter((x) => x.why === 'pair'),
     ),
   );
   const open = s.moments.filter((x) => x.newRight === null && !s.stale.includes(x.id)).map((x) => x.id);

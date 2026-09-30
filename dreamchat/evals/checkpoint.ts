@@ -66,7 +66,7 @@ import {
   writeFileSync,
   writeSync,
 } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, isAbsolute, join, resolve } from 'node:path';
 // Types only, and saved.ts: no module that reads the engine's store is loaded before the store is set.
 import type { WriteFn } from '../implied';
 import type { JevFn } from '../jev';
@@ -275,6 +275,20 @@ function foldersOf(name: string, sessions: string[]): Folders {
   return { data, out, home, media: join(data, 'strawberry-home', 'media') };
 }
 
+/**
+ * A moment's old picture's file: the run's, or for a pair the one its base checkpoint drew (null until drawn); none in
+ * the base checkpoint itself.
+ */
+function oldFileOf(m: SetMoment, f: Folders): string | null {
+  if (m.old.draw === 'none') return null;
+  if (m.old.draw === 'base') {
+    const file = join(dirname(f.out), m.old.from as string, 'results.json');
+    const e = existsSync(file) ? readJson<Results>(file).entries[m.id] : undefined;
+    return e?.state === 'ready' && e.output ? e.output : null;
+  }
+  return isAbsolute(m.old.picture) ? m.old.picture : join(f.data, m.old.picture);
+}
+
 /** A set by its file, or by a checkpoint's name (evals/checkpoint-<name>.json). */
 function setFileOf(target: string): string {
   if (existsSync(target)) return resolve(target);
@@ -422,7 +436,8 @@ type Built = {
   error?: string;
   /** What the old picture was drawn with, where it is known. */
   sent: Sent | null;
-  oldFile: string;
+  /** The old picture's file; null for a pair whose base checkpoint has not drawn it, or in that base checkpoint. */
+  oldFile: string | null;
   /** The picture before, in words: the run's file, or an earlier moment's new picture. */
   before?: string;
 };
@@ -488,7 +503,7 @@ async function buildSet(
         failed = `could not be rebuilt: ${String(e instanceof Error ? e.message : e).slice(0, 300)}`;
       }
     for (const m of mine) {
-      const oldFile = core.pictureFile(f.data, m.old.picture);
+      const oldFile = oldFileOf(m, f);
       const before = core.pictureBefore(saved, m.moment);
       const frame = before ? saved.build?.frames?.find((x) => x.id === before && x.kind === 'cut') : undefined;
       const anew = before ? here[before] : undefined;
@@ -510,7 +525,9 @@ async function buildSet(
       try {
         const today = core.todayOf(d, m.moment, { media: f.media, here, judged: ctx.judged });
         if (today.briefless && !args.allowBriefless) today.refused.push(BRIEFLESS);
-        if (!existsSync(oldFile))
+        if (m.old.draw === 'base' && !oldFile)
+          today.refused.push(`its old picture is not drawn yet: draw checkpoint ${m.old.from} first`);
+        else if (oldFile && !existsSync(oldFile))
           today.refused.push(
             `the old picture's file is not on this machine (${oldFile}): nothing to judge the new one against`,
           );
@@ -687,7 +704,11 @@ export async function dry(
     const m = b.m;
     out.push('', '═'.repeat(100), `${m.id}: ${m.why} (${m.cases.join(', ')})`, `why: ${m.reason}`);
     out.push(
-      `the old picture: ${b.oldFile} (${m.old.draw === 'story' ? 'drawn on the night' : `the paired test's ${m.old.draw} version`}); the owner called it ${m.old.verdict}${m.old.note ? `: "${m.old.note}"` : ''}`,
+      m.old.draw === 'none'
+        ? 'the old picture: none (this checkpoint draws the harness as it stands, for a pair judged in another)'
+        : m.old.draw === 'base'
+          ? `the old picture: ${b.oldFile ?? 'not drawn yet'} (drawn by checkpoint ${m.old.from}, the harness as it stands; never judged)`
+          : `the old picture: ${b.oldFile} (${m.old.draw === 'story' ? 'drawn on the night' : `the paired test's ${m.old.draw} version`}); the owner called it ${m.old.verdict}${m.old.note ? `: "${m.old.note}"` : ''}`,
     );
     out.push(`the moment: ${m.description}`);
     out.push(`the picture before: ${b.before ?? 'none (the first the run drew)'}`);
@@ -1231,7 +1252,9 @@ async function writeJudge(set: CheckpointSet, f: Folders): Promise<JudgeData> {
     const r = results.entries[m.id];
     if (r?.state !== 'ready' || !r.output || !existsSync(r.output)) continue;
     const s = sessionOf(m.session);
-    const old = core.pictureFile(f.data, m.old.picture);
+    const old = oldFileOf(m, f);
+    // In a base checkpoint nothing is judged; a pair whose base picture is not drawn waits for it.
+    if (!old) continue;
     if (!existsSync(old)) throw new Error(`${m.id}: the old picture's file is not on this machine (${old})`);
     // The picture before: the one the new picture was drawn from, as sent (an earlier moment's new
     // picture where the checkpoint drew it first); else the moment before, new where drawn again here.

@@ -1,0 +1,737 @@
+{
+  "about": "Every frozen moment drawable on this machine whose old picture the owner judged (story-pictures.json): drawn once more with the full harness, old against new, judged blind. Faults (partly or wrong) first to see what is put right, guards (right) to see what breaks.",
+  "name": "fal-judged",
+  "step": "S10",
+  "cap_usd": 5.4,
+  "results": "/Users/hirenk/Documents/code/stawberry-studio-dream-chat/dreamchat/runs/checkpoint/fal-judged",
+  "switches": {
+    "DREAMCHAT_RECORD": "on",
+    "DREAMCHAT_CUT_SHEET": "on",
+    "DREAMCHAT_CAMERA": "on",
+    "DREAMCHAT_REFS": "on",
+    "DREAMCHAT_ONE_BUILDER": "on"
+  },
+  "base": "the pictures drawn on the night (all switches off)",
+  "moments": [
+    {
+      "id": "lighthouse-first-m3",
+      "run": "lighthouse-first",
+      "session": "dream-0925-231131-affd",
+      "moment": "m3",
+      "why": "fault",
+      "reason": "old picture lighthouse-first-m3 judged partly: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "lighthouse-first-m3"
+        },
+        "draw": "story",
+        "verdict": "partly",
+        "note": "I don't think something is off that way. Something is off in terms of perspective. Maybe it works, maybe it doesn't work. As in, the camera perspective is like I can see the spiral and I can see the dog and the person, but maybe my physical laws, something is wrong.",
+        "picture": "strawberry-home/media/56a70f3aee9f9d2c83a2cbf7a711ba6c8869c09bb0e135a32bb29cf119faac4c.png"
+      },
+      "description": "The stone steps wind round and round upward, the dog unseen ahead; the dreamer listens to claws on stone."
+    },
+    {
+      "id": "night-market-m1",
+      "run": "night-market",
+      "session": "dream-0926-000545-09ea",
+      "moment": "m1",
+      "why": "guard",
+      "reason": "old picture night-market-m1 judged right: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "night-market-m1"
+        },
+        "draw": "story",
+        "verdict": "right",
+        "note": null,
+        "picture": "strawberry-home/media/85ca69a38da6518022f2733efb39e4a36f4a1c5cd4df1039ccc263c36b277079.png"
+      },
+      "description": "The dreamer and their older sister stand in a crowded night market under strings of little yellow lights, surrounded by hundreds of people."
+    },
+    {
+      "id": "night-market-m2",
+      "run": "night-market",
+      "session": "dream-0926-000545-09ea",
+      "moment": "m2",
+      "why": "fault",
+      "reason": "old picture night-market-m2 judged partly: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "night-market-m2"
+        },
+        "draw": "story",
+        "verdict": "partly",
+        "note": "What I would have liked is maybe the dreamer looking towards fish or something. Otherwise, it looks fine, I guess.",
+        "picture": "strawberry-home/media/b93c80eb051f854c931f7db44f7717ebebaff88560dfb5d07e290fb7fafc000e.png"
+      },
+      "description": "They stop at a stall where an old man has fish laid out on ice. The dreamer's older sister wants to buy fish."
+    },
+    {
+      "id": "heron-m1",
+      "run": "heron",
+      "session": "dream-0926-012307-4c79",
+      "moment": "m1",
+      "why": "guard",
+      "reason": "old picture heron-m1 judged right: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "heron-m1"
+        },
+        "draw": "story",
+        "verdict": "right",
+        "note": null,
+        "picture": "strawberry-home/media/6af96b8f5c0b2c0c541f55387fdfb62a715134c263ea042201bba7dcd139e6ce.png"
+      },
+      "description": "The dreamer walks quickly down a long green corridor with lockers on both sides, heading for a wooden door with a small round window at the end."
+    },
+    {
+      "id": "lighthouse-fresh-m1",
+      "run": "lighthouse-fresh",
+      "session": "dream-0926-022102-aeea",
+      "moment": "m1",
+      "why": "guard",
+      "reason": "old picture lighthouse-fresh-m1 judged right: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "lighthouse-fresh-m1"
+        },
+        "draw": "story",
+        "verdict": "right",
+        "note": null,
+        "picture": "strawberry-home/media/2f6c1a717ec2db3bc6ac06dd0554aa7824b17626a5ac84dcfdfcad38b4d0df23.png"
+      },
+      "description": "The dreamer stands on the grey beach, holding the brass key, while the dog runs ahead toward the distant white lighthouse, looking back over its shoulder."
+    },
+    {
+      "id": "lighthouse-fresh-m2",
+      "run": "lighthouse-fresh",
+      "session": "dream-0926-022102-aeea",
+      "moment": "m2",
+      "why": "guard",
+      "reason": "old picture lighthouse-fresh-m2 judged right: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "lighthouse-fresh-m2"
+        },
+        "draw": "story",
+        "verdict": "right",
+        "note": null,
+        "picture": "strawberry-home/media/ebbb3d86752f3e5802c603024e0b5b1a0e301f07e4ba8c4875b94f99d17c2841.png"
+      },
+      "description": "The dreamer's hand holding the old brass key: heavy and cold, smooth on the bow, rough along the teeth."
+    },
+    {
+      "id": "lighthouse-fresh-m3",
+      "run": "lighthouse-fresh",
+      "session": "dream-0926-022102-aeea",
+      "moment": "m3",
+      "why": "guard",
+      "reason": "old picture lighthouse-fresh-m3 judged right: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "lighthouse-fresh-m3"
+        },
+        "draw": "story",
+        "verdict": "right",
+        "note": null,
+        "picture": "strawberry-home/media/ad24c8efccf1ab001b9dde7122518561ed2d1b9a470a3a6183dfcf0b49735c3f.png"
+      },
+      "description": "The dog pauses and looks back at the dreamer, ears up, as if to say 'come on'."
+    },
+    {
+      "id": "lighthouse-fresh-m9",
+      "run": "lighthouse-fresh",
+      "session": "dream-0926-022102-aeea",
+      "moment": "m9",
+      "why": "guard",
+      "reason": "old picture lighthouse-fresh-m9 judged right: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "lighthouse-fresh-m9"
+        },
+        "draw": "story",
+        "verdict": "right",
+        "note": null,
+        "picture": "strawberry-home/media/38386940261de9c78d48103fb98bca7435fc0f28cb4b69bfdd0616625ae7c7c9.png"
+      },
+      "description": "The dreamer goes to the window and looks out; the sea is gone, replaced by a field of tall yellow grass, and a red tractor drives slowly through it."
+    },
+    {
+      "id": "lighthouse-fresh-m10",
+      "run": "lighthouse-fresh",
+      "session": "dream-0926-022102-aeea",
+      "moment": "m10",
+      "why": "fault",
+      "reason": "old picture lighthouse-fresh-m10 judged wrong: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "lighthouse-fresh-m10"
+        },
+        "draw": "story",
+        "verdict": "wrong",
+        "note": "I don't think this frame was defined in the script, as far as I remember. Why is the tractor inside that room, or whatever this is?",
+        "picture": "strawberry-home/media/01f23d6af7eff6f60a66fb74ccca42b71f13942a44d547148dd94d31b32060a9.png"
+      },
+      "description": "The dreamer is still holding the paper boat in both hands, just in front of them, looking past it at the windows."
+    },
+    {
+      "id": "lighthouse-fresh-m11",
+      "run": "lighthouse-fresh",
+      "session": "dream-0926-022102-aeea",
+      "moment": "m11",
+      "why": "guard",
+      "reason": "old picture lighthouse-fresh-m11 judged right: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "lighthouse-fresh-m11"
+        },
+        "draw": "story",
+        "verdict": "right",
+        "note": null,
+        "picture": "strawberry-home/media/cc67b7fcc796703fba7129bb36022ad07b92165eaa9f894a7152bd09906cd6e5.png"
+      },
+      "description": "The dreamer is in the cab of the red tractor, sitting next to the driver, still holding the paper boat in both hands; the paper feels a little warmer."
+    },
+    {
+      "id": "lighthouse-fresh-m12",
+      "run": "lighthouse-fresh",
+      "session": "dream-0926-022102-aeea",
+      "moment": "m12",
+      "why": "fault",
+      "reason": "old picture lighthouse-fresh-m12 judged partly: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "lighthouse-fresh-m12"
+        },
+        "draw": "story",
+        "verdict": "partly",
+        "note": "Maybe the tractor's perspective didn't change. Could be better, maybe.",
+        "picture": "strawberry-home/media/c89f1ae9a5860290f24d786ea72ccd7475be0df8551c98ceea4a24afc2426ff7.png"
+      },
+      "description": "The cab vibrates with a low rumble; the paper boat trembles in the dreamer's hands; outside the windows the yellow grass bends away from the wheels."
+    },
+    {
+      "id": "lighthouse-fresh-m13",
+      "run": "lighthouse-fresh",
+      "session": "dream-0926-022102-aeea",
+      "moment": "m13",
+      "why": "fault",
+      "reason": "old picture lighthouse-fresh-m13 judged wrong: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "lighthouse-fresh-m13"
+        },
+        "draw": "story",
+        "verdict": "wrong",
+        "note": "The dreamer is gone from this frame. Or if this comes before the dreamer enters the structure, then maybe.",
+        "picture": "strawberry-home/media/aaf8026762265b5dfb4df9e2e9016b43d96333597121d43bfe0a42f27c337c37.png"
+      },
+      "description": "The driver keeps looking straight ahead, both hands on the wheel; their profile is there but the face will not stay in memory."
+    },
+    {
+      "id": "lighthouse-fresh-m14",
+      "run": "lighthouse-fresh",
+      "session": "dream-0926-022102-aeea",
+      "moment": "m14",
+      "why": "fault",
+      "reason": "old picture lighthouse-fresh-m14 judged partly: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "lighthouse-fresh-m14"
+        },
+        "draw": "story",
+        "verdict": "partly",
+        "note": "The reference of the dreamer is wrong. It feels like it's a different person who is sitting beside the father.",
+        "picture": "strawberry-home/media/e60e48894c1bf54a4849c36fd256cf5bda0af071096751d1b6fbd8154e153d7e.png"
+      },
+      "description": "The tractor slows and stops at the edge of the field, where the beach had been, where the sea used to be."
+    },
+    {
+      "id": "lighthouse-fresh-m15",
+      "run": "lighthouse-fresh",
+      "session": "dream-0926-022102-aeea",
+      "moment": "m15",
+      "why": "fault",
+      "reason": "old picture lighthouse-fresh-m15 judged wrong: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "lighthouse-fresh-m15"
+        },
+        "draw": "story",
+        "verdict": "wrong",
+        "note": "Dreamer is supposed to be putting the boat into the sea. In the image, he is putting it on the ground, which is completely wrong.",
+        "picture": "strawberry-home/media/f740fc67b58744c655176de27fd41597b5f830767bc552f59543dc8b9412a57e.png"
+      },
+      "description": "The dreamer gets out of the tractor and puts the paper boat down in the grass; it rests tilted to one side, held by the grass, not falling flat."
+    },
+    {
+      "id": "snow-train-m2",
+      "run": "snow-train",
+      "session": "dream-0926-043003-b0cb",
+      "moment": "m2",
+      "why": "fault",
+      "reason": "old picture snow-train-m2 judged wrong: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "snow-train-m2"
+        },
+        "draw": "story",
+        "verdict": "wrong",
+        "note": "Considering the previous frame, maybe I would have liked it if things would have changed. I'm guessing this frame is from the perspective of the dreamer, but the rest of the things and everything look the same, which is wrong. In terms of continuity, this fails from the previous frame.",
+        "picture": "strawberry-home/media/e3d3eb3eec93a83b413d262bf84073984b66470e913a8f9f59c5fcc41628ca75.png"
+      },
+      "description": "the grandfather holds a brown leather suitcase on his knees, waiting"
+    },
+    {
+      "id": "snow-train-m4",
+      "run": "snow-train",
+      "session": "dream-0926-043003-b0cb",
+      "moment": "m4",
+      "why": "fault",
+      "reason": "old picture snow-train-m4 judged partly: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "snow-train-m4"
+        },
+        "draw": "story",
+        "verdict": "partly",
+        "note": "The suitcase is missing from grandpa, and I don't know, maybe the dreamer has changed.",
+        "picture": "strawberry-home/media/3c4699810275fd2d51ba4c549b120cbf9eb30b23a1593e5b72a96992d7f63ad1.png"
+      },
+      "description": "the train has stopped in the middle of a snowy field; the dreamer and their grandfather walk through deep snow toward a red door standing on its own with only a frame, no house around it"
+    },
+    {
+      "id": "snow-train-m5",
+      "run": "snow-train",
+      "session": "dream-0926-043003-b0cb",
+      "moment": "m5",
+      "why": "fault",
+      "reason": "old picture snow-train-m5 judged partly: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "snow-train-m5"
+        },
+        "draw": "story",
+        "verdict": "partly",
+        "note": null,
+        "picture": "strawberry-home/media/b25e81224248417c0c4ddef6330a5e842d6172dfe6056cbf5836206f272d5cc9.png"
+      },
+      "description": "the grandfather gives the suitcase to the dreamer and nods at the door"
+    },
+    {
+      "id": "snow-train-m6",
+      "run": "snow-train",
+      "session": "dream-0926-043003-b0cb",
+      "moment": "m6",
+      "why": "guard",
+      "reason": "old picture snow-train-m6 judged right: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "snow-train-m6"
+        },
+        "draw": "story",
+        "verdict": "right",
+        "note": null,
+        "picture": "strawberry-home/media/2c40d584d00306e2f35efa1f882e4bd097f4cad0b2614d38ecff7df6a707d3f9.png"
+      },
+      "description": "the dreamer opens the door; on the other side there is warm yellow light"
+    },
+    {
+      "id": "library-1-m1",
+      "run": "library-1",
+      "session": "dream-0926-050424-fdd7",
+      "moment": "m1",
+      "why": "guard",
+      "reason": "old picture library-1-m1 judged right: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "library-1-m1"
+        },
+        "draw": "story",
+        "verdict": "right",
+        "note": null,
+        "picture": "strawberry-home/media/50ca50a5abf660215dd540c254db757e3474676c87d2a0e8c3686431bdc12497.png"
+      },
+      "description": "The dreamer is in the big reading room of the old city library, with green glass lamps on every desk, shelves up to the ceiling, totally quiet."
+    },
+    {
+      "id": "library-2-m1",
+      "run": "library-2",
+      "session": "dream-0926-052843-6081",
+      "moment": "m1",
+      "why": "guard",
+      "reason": "old picture library-2-m1 judged right: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "library-2-m1"
+        },
+        "draw": "story",
+        "verdict": "right",
+        "note": null,
+        "picture": "strawberry-home/media/68c3936fce48098ee2c7af3f6357a6525c0500762e90922ace9eff92b842379e.png"
+      },
+      "description": "The dreamer is in the big reading room with green lamps, quiet."
+    },
+    {
+      "id": "library-2-m2",
+      "run": "library-2",
+      "session": "dream-0926-052843-6081",
+      "moment": "m2",
+      "why": "guard",
+      "reason": "old picture library-2-m2 judged right: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "library-2-m2"
+        },
+        "draw": "story",
+        "verdict": "right",
+        "note": null,
+        "picture": "strawberry-home/media/3800a4e87743ba5d6238f1ef805fb613563507f141096672ee3a1c51e952eac2.png"
+      },
+      "description": "Water starts coming under the doors."
+    },
+    {
+      "id": "library-2-m3",
+      "run": "library-2",
+      "session": "dream-0926-052843-6081",
+      "moment": "m3",
+      "why": "guard",
+      "reason": "old picture library-2-m3 judged right: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "library-2-m3"
+        },
+        "draw": "story",
+        "verdict": "right",
+        "note": null,
+        "picture": "strawberry-home/media/558092ffcfefcf0a50d87ced042ea1a5d35f9e12b3d30c8169349793dda74254.png"
+      },
+      "description": "The water rises over the desks."
+    },
+    {
+      "id": "library-3-m1",
+      "run": "library-3",
+      "session": "dream-0926-055141-6e80",
+      "moment": "m1",
+      "why": "guard",
+      "reason": "old picture library-3-m1 judged right: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "library-3-m1"
+        },
+        "draw": "story",
+        "verdict": "right",
+        "note": null,
+        "picture": "strawberry-home/media/2c541ff111a7c2dcb448cda3484da8dc629af5cfa7be0cd1728b5cd79f49979e.png"
+      },
+      "description": "the dreamer stands by the doors as water slips in under them"
+    },
+    {
+      "id": "library-3-m3",
+      "run": "library-3",
+      "session": "dream-0926-055141-6e80",
+      "moment": "m3",
+      "why": "guard",
+      "reason": "old picture library-3-m3 judged right: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "library-3-m3"
+        },
+        "draw": "story",
+        "verdict": "right",
+        "note": null,
+        "picture": "strawberry-home/media/5d600073a9d2e2d6c876f5d1f274911e14715272d70aaea7ad50924b598454ee.png"
+      },
+      "description": "the water keeps rising, over the desks and everything"
+    },
+    {
+      "id": "library-3-m4",
+      "run": "library-3",
+      "session": "dream-0926-055141-6e80",
+      "moment": "m4",
+      "why": "guard",
+      "reason": "old picture library-3-m4 judged right: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "library-3-m4"
+        },
+        "draw": "story",
+        "verdict": "right",
+        "note": null,
+        "picture": "strawberry-home/media/e38722e04b7e1fbcf687acd9a0c934ae6d25b02c0dedd4344887829bcf4bfd99.png"
+      },
+      "description": "the sister appears in a little yellow rowing boat"
+    },
+    {
+      "id": "library-3-m7",
+      "run": "library-3",
+      "session": "dream-0926-055141-6e80",
+      "moment": "m7",
+      "why": "fault",
+      "reason": "old picture library-3-m7 judged partly: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "library-3-m7"
+        },
+        "draw": "story",
+        "verdict": "partly",
+        "note": null,
+        "picture": "strawberry-home/media/ea9561fe34dab380e5cd69e6cc4bc399284d8c096e7e7e5463701eace50e6c0b.png"
+      },
+      "description": "the sister rows up to the high round window at the top of the room and opens it"
+    },
+    {
+      "id": "library-3-m8",
+      "run": "library-3",
+      "session": "dream-0926-055141-6e80",
+      "moment": "m8",
+      "why": "guard",
+      "reason": "old picture library-3-m8 judged right: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "library-3-m8"
+        },
+        "draw": "story",
+        "verdict": "right",
+        "note": null,
+        "picture": "strawberry-home/media/43243b7b426232fdd8b905aca1831ead025aabe0a2dc4153ab6322364d632c75.png"
+      },
+      "description": "outside the window it is morning, and the whole city is underwater, just rooftops and tops of trees"
+    },
+    {
+      "id": "snow-train-2-m3",
+      "run": "snow-train-2",
+      "session": "dream-0926-062232-a44a",
+      "moment": "m3",
+      "why": "guard",
+      "reason": "old picture snow-train-2-m3 judged right: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "snow-train-2-m3"
+        },
+        "draw": "story",
+        "verdict": "right",
+        "note": null,
+        "picture": "strawberry-home/media/65f44f18d87f543c9f861610a6dcbc3eb5b6991273ca120c3b094eddd0f877a6.png"
+      },
+      "description": "The grandfather opens the suitcase and turns it so the dreamer can see inside: many letters, all addressed to the dreamer."
+    },
+    {
+      "id": "snow-train-2-m5",
+      "run": "snow-train-2",
+      "session": "dream-0926-062232-a44a",
+      "moment": "m5",
+      "why": "guard",
+      "reason": "old picture snow-train-2-m5 judged right: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "snow-train-2-m5"
+        },
+        "draw": "story",
+        "verdict": "right",
+        "note": null,
+        "picture": "strawberry-home/media/6fc38a396c7959c08df845dbc2ed5a3ce5efb59a73657a261d57d602fbeac702.png"
+      },
+      "description": "They walk side by side through the deep snow toward a red door standing on its own, no house or wall."
+    },
+    {
+      "id": "snow-train-2-m6",
+      "run": "snow-train-2",
+      "session": "dream-0926-062232-a44a",
+      "moment": "m6",
+      "why": "guard",
+      "reason": "old picture snow-train-2-m6 judged right: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "snow-train-2-m6"
+        },
+        "draw": "story",
+        "verdict": "right",
+        "note": null,
+        "picture": "strawberry-home/media/50de0d288fb54a39a5eacaf64d23ea505032bf2cf79bb175c63e947167c42cf4.png"
+      },
+      "description": "The grandfather gives the suitcase to the dreamer, holding it out without words, then nods at the door."
+    },
+    {
+      "id": "orchard-m1",
+      "run": "orchard",
+      "session": "dream-0926-070314-0f40",
+      "moment": "m1",
+      "why": "guard",
+      "reason": "old picture orchard-m1 judged right: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "orchard-m1"
+        },
+        "draw": "story",
+        "verdict": "right",
+        "note": null,
+        "picture": "strawberry-home/media/b69d05c48ccb6ba93c359448f6be7dde42aaa8e8de01ed11f42c5ed0c3e57174.png"
+      },
+      "description": "The dreamer and Tomas wait in the tiny brass lift as it keeps climbing far too long."
+    },
+    {
+      "id": "orchard-m2",
+      "run": "orchard",
+      "session": "dream-0926-070314-0f40",
+      "moment": "m2",
+      "why": "guard",
+      "reason": "old picture orchard-m2 judged right: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "orchard-m2"
+        },
+        "draw": "story",
+        "verdict": "right",
+        "note": null,
+        "picture": "strawberry-home/media/a274e2a3891a48ba718960fb7e44c8cc6ff6a51eea6f0cfed0ebe2a232f8ad8a.png"
+      },
+      "description": "The dreamer turns and sees Tomas as a boy of about ten in their old school uniform, staring at the gate."
+    },
+    {
+      "id": "orchard-m3",
+      "run": "orchard",
+      "session": "dream-0926-070314-0f40",
+      "moment": "m3",
+      "why": "guard",
+      "reason": "old picture orchard-m3 judged right: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "orchard-m3"
+        },
+        "draw": "story",
+        "verdict": "right",
+        "note": null,
+        "picture": "strawberry-home/media/54c93ed60c44f6155ea0eea2dff0223e1c96f27a0a1cd8edf05d3ecfbcae4ef0.png"
+      },
+      "description": "They both wait silently, neither saying anything."
+    },
+    {
+      "id": "orchard-m5",
+      "run": "orchard",
+      "session": "dream-0926-070314-0f40",
+      "moment": "m5",
+      "why": "guard",
+      "reason": "old picture orchard-m5 judged right: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "orchard-m5"
+        },
+        "draw": "story",
+        "verdict": "right",
+        "note": null,
+        "picture": "strawberry-home/media/da9604370c2041f3b957ba1a4e5081ecf3802610f168d1b7ce59414c4536e739.png"
+      },
+      "description": "Tomas runs out ahead between the trees."
+    },
+    {
+      "id": "orchard-m6",
+      "run": "orchard",
+      "session": "dream-0926-070314-0f40",
+      "moment": "m6",
+      "why": "guard",
+      "reason": "old picture orchard-m6 judged right: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "orchard-m6"
+        },
+        "draw": "story",
+        "verdict": "right",
+        "note": null,
+        "picture": "strawberry-home/media/8a3214b274b65649ae14cb27e85b6599a735ba73b2765f82127e58b9c1305d21.png"
+      },
+      "description": "The white horse stands very still in the middle of the orchard, lowering its head so the dreamer can touch its nose."
+    },
+    {
+      "id": "orchard-m7",
+      "run": "orchard",
+      "session": "dream-0926-070314-0f40",
+      "moment": "m7",
+      "why": "fault",
+      "reason": "old picture orchard-m7 judged wrong: drawn anew with every harness change on (record, cut sheet, camera rules, references, the one prompt builder)",
+      "cases": [],
+      "old": {
+        "source": {
+          "file": "story-pictures.json",
+          "row": "orchard-m7"
+        },
+        "draw": "story",
+        "verdict": "wrong",
+        "note": "What is this? The person should be gone then. Why is the partial invisibility there? It's wrong.",
+        "picture": "strawberry-home/media/3ba742df3967aa99f0c4e446387bc335849eeeeb8063585be64f62c417054245.png"
+      },
+      "description": "The dreamer looks for Tomas and finds him gone."
+    }
+  ]
+}

@@ -1,0 +1,123 @@
+{
+  "about": "The harness as it stands (every switch off) draws the drawable moments no one has judged, for fal-pairs to judge beside the new pictures. Nothing here is judged. Moments whose new picture needs a sketch the run never drew (the newspaper boats, the red tractor) are left out.",
+  "name": "fal-base",
+  "step": "S10",
+  "cap_usd": 1.05,
+  "results": "/Users/hirenk/Documents/code/stawberry-studio-dream-chat/dreamchat/runs/checkpoint/fal-base",
+  "switches": {},
+  "base": "none: it is the base",
+  "moments": [
+    {
+      "id": "lighthouse-first-m1",
+      "run": "lighthouse-first",
+      "session": "dream-0925-231131-affd",
+      "moment": "m1",
+      "why": "pair",
+      "reason": "no judged old picture on this machine: the harness as it stands (every switch off) against every change on, both drawn now",
+      "cases": [],
+      "old": {
+        "draw": "none",
+        "verdict": null,
+        "note": null,
+        "picture": ""
+      },
+      "description": "The dog runs up the stone stairs ahead of the dreamer, fast, as if he already knows the way."
+    },
+    {
+      "id": "lighthouse-first-m2",
+      "run": "lighthouse-first",
+      "session": "dream-0925-231131-affd",
+      "moment": "m2",
+      "why": "pair",
+      "reason": "no judged old picture on this machine: the harness as it stands (every switch off) against every change on, both drawn now",
+      "cases": [],
+      "old": {
+        "draw": "none",
+        "verdict": null,
+        "note": null,
+        "picture": ""
+      },
+      "description": "The dreamer follows up the stairs, holding the key, listening to the click of the dog's claws echoing on the stone."
+    },
+    {
+      "id": "night-market-m3",
+      "run": "night-market",
+      "session": "dream-0926-000545-09ea",
+      "moment": "m3",
+      "why": "pair",
+      "reason": "no judged old picture on this machine: the harness as it stands (every switch off) against every change on, both drawn now",
+      "cases": [],
+      "old": {
+        "draw": "none",
+        "verdict": null,
+        "note": null,
+        "picture": ""
+      },
+      "description": "A silver fish about as long as the dreamer's arm looks at the dreamer and says their name. No one else reacts."
+    },
+    {
+      "id": "night-market-m4",
+      "run": "night-market",
+      "session": "dream-0926-000545-09ea",
+      "moment": "m4",
+      "why": "pair",
+      "reason": "no judged old picture on this machine: the harness as it stands (every switch off) against every change on, both drawn now",
+      "cases": [],
+      "old": {
+        "draw": "none",
+        "verdict": null,
+        "note": null,
+        "picture": ""
+      },
+      "description": "The old man wraps the fish in newspaper and gives it to the dreamer."
+    },
+    {
+      "id": "night-market-m5",
+      "run": "night-market",
+      "session": "dream-0926-000545-09ea",
+      "moment": "m5",
+      "why": "pair",
+      "reason": "no judged old picture on this machine: the harness as it stands (every switch off) against every change on, both drawn now",
+      "cases": [],
+      "old": {
+        "draw": "none",
+        "verdict": null,
+        "note": null,
+        "picture": ""
+      },
+      "description": "They are on one bicycle, the sister pedalling, the dreamer on the back holding the paper-wrapped fish against their chest."
+    },
+    {
+      "id": "night-market-m7",
+      "run": "night-market",
+      "session": "dream-0926-000545-09ea",
+      "moment": "m7",
+      "why": "pair",
+      "reason": "no judged old picture on this machine: the harness as it stands (every switch off) against every change on, both drawn now",
+      "cases": [],
+      "old": {
+        "draw": "none",
+        "verdict": null,
+        "note": null,
+        "picture": ""
+      },
+      "description": "They ride over a narrow iron bridge above black water, the market lights behind them. The dreamer holds the fish tighter against their chest."
+    },
+    {
+      "id": "heron-m2",
+      "run": "heron",
+      "session": "dream-0926-012307-4c79",
+      "moment": "m2",
+      "why": "pair",
+      "reason": "no judged old picture on this machine: the harness as it stands (every switch off) against every change on, both drawn now",
+      "cases": [],
+      "old": {
+        "draw": "none",
+        "verdict": null,
+        "note": null,
+        "picture": ""
+      },
+      "description": "The dreamer looks through the small round window in the door and sees students sitting in rows at desks, all facing forward."
+    }
+  ]
+}
