@@ -1275,7 +1275,7 @@ export function dreamerShot(
         // What they hold themselves is in their hands, only below the picture (the camera rules).
         camera && s.heldBy === dreamer
           ? `In the dreamer's hands, below the picture: ${called(s.id)}.`
-          : `Outside the picture, ${offTo(eye, s)}: ${called(s.id)}.`,
+          : `Outside the picture, ${offTo(eye, s, camera ? topOf(s, plan, called) : undefined)}: ${called(s.id)}.`,
       ),
     frontLine(plan, eye, r, min),
     // Beyond everything the plan holds, what the moment looks at: the view from the tractor's cab
@@ -1608,7 +1608,7 @@ export function outsideShot(
   const hands = holder
     ? groundAt(holder, plan) + (holder.pose === 'sitting' ? 0.6 : holder.pose === 'lying' ? 0.3 : 0.9)
     : undefined;
-  const tallest =
+  let tallest =
     hands !== undefined
       ? hands + 0.35
       : Math.max(
@@ -1618,8 +1618,19 @@ export function outsideShot(
               (isPerson(s) ? eyeHeight(s.pose) + 0.15 : sizeOf(s)[2]),
           ),
         );
-  const lowest =
+  let lowest =
     hands !== undefined ? hands - 0.2 : size === 'close' ? tallest - 0.7 : size === 'medium' ? tallest * 0.45 : 0;
+  // What the moment looks at, put down at someone's feet and held by nobody, is in the picture: a close look
+  // frames it where it lies, and a medium shot reaches down to it. The boat set down in the grass was under
+  // the bottom of the frame of the dreamer's face, "outside the picture, off to the right" (affd m10, 30 Sep).
+  const low =
+    cameraMode() === 'on' && hands === undefined && size !== 'wide' && lookedSpot && !lookedSpot.heldBy
+      ? lowDown(lookedSpot, people, plan, name, nearestPart)
+      : undefined;
+  if (low && low.top < lowest) {
+    if (size === 'close') tallest = low.top + 0.5;
+    lowest = low.base - 0.1;
+  }
   // At the eyes of those above the water: a whale under the boat set the camera a metre below the two in it,
   // yet "at the height of their eyes" (library, 30 Sep). Everyone under it, the camera is in it with them.
   const dry = people.filter((s) => !underWater(s, plan));
@@ -1769,10 +1780,23 @@ export function outsideShot(
     const on = isPerson(s) && !s.many ? onOf(s, plan) : undefined;
     return on?.how === 'in' && (rr.seen.get(on.t.id)?.visible ?? 0) >= min;
   };
+  // What the moment looks at is in the picture wherever any of it shows, however small: the boat set down in the
+  // grass, in the frame of a medium shot but a few pixels on the mock-up, was "outside the picture" (affd m10). What
+  // someone holds is said in their hands, as before.
+  const lookedIn = (x: { s: Spot; seen: Seen }) =>
+    cameraMode() === 'on' &&
+    x.s.id === lookedSpot?.id &&
+    !x.s.many &&
+    !x.s.heldBy &&
+    x.seen.visible > 0 &&
+    // Small but mostly seen, never mostly hidden: said in the picture from a few pixels behind someone, it would be
+    // drawn whole where the mock-up has it covered.
+    x.seen.occluded <= 0.7;
   const shown = spots
     .map((s) => ({ s, seen: rr.seen.get(s.id) }))
     .filter(
-      (x): x is { s: Spot; seen: Seen } => !!x.seen && (x.seen.visible >= min || (x.seen.visible > 0 && riding(x.s))),
+      (x): x is { s: Spot; seen: Seen } =>
+        !!x.seen && (x.seen.visible >= min || (x.seen.visible > 0 && (riding(x.s) || lookedIn(x as never)))),
     )
     .sort((a, b) => a.seen.cx - b.seen.cx);
   // Where the camera stands, said as each one in the picture is turned to it (`turnedTo`'s bins): "from the side, as
@@ -1885,7 +1909,7 @@ export function outsideShot(
           // "Outside the picture, off to the left: a window" read as windows on the picture's left (30 Sep).
           !isCastPiece(s),
       )
-      .map((s) => `Outside the picture, ${offTo(eye, s)}: ${name(s.id)}.`),
+      .map((s) => `Outside the picture, ${offTo(eye, s, camera ? topOf(s, plan, name) : undefined)}: ${name(s.id)}.`),
     frontLine(plan, eye, rr, min),
     // The place is the inside of something (the red tractor, for its cab): all of it is in there.
     // Said nowhere once the tractor was off the plan, the moments in its cab read as missing it.
@@ -2100,11 +2124,59 @@ function besideOf(s: Spot, plan: Blocking, ids: string[]): Spot | undefined {
 }
 
 /** Which way off the picture something is: to the left, the right, or behind the camera. */
-function offTo(eye: Eye, s: V2 & { above?: number }): string {
+/** How high the top of someone or something is: where it rests, and its height or theirs. */
+function topOf(s: Spot, plan: Blocking, name: (id: string) => string): number {
+  const base = s.above ?? restOf(s, plan, name(s.id))?.z ?? groundAt(s, plan);
+  return base + (isPerson(s) ? eyeHeight(s.pose) + 0.15 : sizeOf(s)[2]);
+}
+
+/**
+ * A thing at someone's feet: within a step of them, all of it below their knees (their own knees: a child's are lower),
+ * and nothing anyone stands, sits or rides on (the seats they sit on, the ramp, the boat they are in: the frame already
+ * holds those as it holds them). How high it lies and how high its top is. A thing the plan gives no size is an
+ * ordinary metre block (`sizeOf`), never at anyone's feet: a key or a letter put down is framed once a reading gives
+ * its size, and till then keeps the frame it had.
+ */
+function lowDown(
+  t: Spot,
+  people: Spot[],
+  plan: Blocking,
+  name: (id: string) => string,
+  nearestPart: (t: Spot, to: V2) => V2,
+): { base: number; top: number } | undefined {
+  if (isPerson(t) || t.many || t.heldBy || ['steps', 'ground', 'vehicle'].includes(shapeOf(t, plan) ?? ''))
+    return undefined;
+  // On someone's very spot, it is with them, not put down by them: the letters in the suitcase on the grandfather's
+  // lap took the frame down to the floor, and the edit of the picture before was lost (a44a m3).
+  if (plan.spots.some((q) => isPerson(q) && (onOf(q, plan)?.t.id === t.id || Math.hypot(t.x - q.x, t.y - q.y) < 0.1)))
+    return undefined;
+  const base = t.above ?? restOf(t, plan, name(t.id))?.z ?? groundAt(t, plan);
+  const top = base + sizeOf(t)[2];
+  const atFeet = people.some((q) => {
+    const p = nearestPart(t, q);
+    const k = q.body === 'human' && q.height ? q.height / STANDING : 1;
+    return Math.hypot(p.x - q.x, p.y - q.y) <= 1 && top <= groundAt(q, plan) + 0.45 * k;
+  });
+  return atFeet ? { base, top } : undefined;
+}
+
+function offTo(
+  eye: Eye,
+  s: V2 & { above?: number },
+  /** How high its top is, with the camera rules: ahead but all of it under the frame is below the picture. */
+  top?: number,
+): string {
   const d = unit(eye.d);
   const v = { x: s.x - eye.at.x, y: s.y - eye.at.y };
   const r = rightOf(d);
   const angle = (Math.atan2(v.x * r.x + v.y * r.y, v.x * d.x + v.y * d.y) * 180) / Math.PI;
+  // Ahead and under the bottom of the frame: below the picture. The boat set down at the dreamer's feet, under a
+  // close shot of their face, was "off to the right" (affd m10, 30 Sep).
+  if (top !== undefined && Math.abs(angle) <= halfViewOf(eye)) {
+    const along = v.x * d.x + v.y * d.y;
+    const bottom = eye.height + along * Math.tan((eye.pitch ?? 0) - (halfTall(eye) * Math.PI) / 180);
+    if (along > 0 && top <= bottom) return 'below it';
+  }
   // Up a wall (the camera rules' mounting), ahead but over the top of the frame: above the picture, never to
   // one side of it ("Outside the picture, above it"). The library's high round window, out over the top of the
   // frame, was "off to the right".
