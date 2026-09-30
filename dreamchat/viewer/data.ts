@@ -15,7 +15,17 @@ import { resolveTree } from '../tree';
 import { sayNow } from '../record';
 import { calledFor, previsFor, type Session, treeInputOf } from '../session';
 import { type Item, sheetPrompt } from '../sheets';
-import type { ViewCut, ViewDream, ViewFile, ViewGhost, ViewHashes, ViewRef, ViewSequence, ViewSheet } from './types';
+import type {
+  ViewCut,
+  ViewDream,
+  ViewFile,
+  ViewGhost,
+  ViewHashes,
+  ViewRef,
+  ViewSequence,
+  ViewSheet,
+  ViewUnsent,
+} from './types';
 
 /** The switches taken as "the harness": everything on, the one builder at every step built. */
 export const PROFILE: Record<string, string> = {
@@ -288,13 +298,25 @@ export function viewDream(s: Session, o: ViewOpts): { view: ViewDream; files: Re
       mockUp,
       links: (plan?.refs ?? []).map((x) => ({ from: x.id, kind: x.kind, relation: x.relation ?? null, role: x.role })),
       refs,
-      // Why each earlier picture the plan chose is not sent (continuity.ts unsentWhy): the plan's own reasons.
-      unsent: (plan?.unsent ?? []).map((x) => ({
-        // Named as the images sent are named (picture:m3, ghost:t1:lid), so the page matches them by one name.
-        key: imageName(r, standIn.picture(x.id)),
-        code: plan?.unsentWhy?.[x.id]?.code ?? 'not_recorded',
-        detail: plan?.unsentWhy?.[x.id]?.detail ?? 'left out with no reason recorded',
-      })),
+      // Why each earlier picture the plan chose is not sent (continuity.ts unsentWhy): the plan's own reasons. One row
+      // per picture, the plan's own reason first.
+      unsent: [
+        ...(plan?.unsent ?? []).map((x): ViewUnsent => ({
+          // Named as the images sent are named (picture:m3, ghost:t1:lid), so the page matches them by one name.
+          key: imageName(r, standIn.picture(x.id)),
+          code: plan?.unsentWhy?.[x.id]?.code ?? 'not_recorded',
+          detail: plan?.unsentWhy?.[x.id]?.detail ?? 'left out with no reason recorded',
+        })),
+        // Chosen by the plan, held back by the owner's verdicts (plan.ts rebuild's withheld).
+        ...(p.withheld ?? []).map((x): ViewUnsent => ({
+          key: imageName(r, standIn.picture(x.id)),
+          code: x.why === 'stale' ? 'stale' : 'judged_wrong',
+          detail:
+            (x.why === 'stale' ? 'its picture changed since it was drawn' : 'its picture was judged wrong') +
+            (x.base ? '; it was the picture to edit, so this one is made from its own shot and mock-up' : ''),
+          ...(x.base ? { base: true as const } : {}),
+        })),
+      ].filter((u, i, all) => all.findIndex((x) => x.key === u.key) === i),
       facts,
       // As the drawing gate reads the plan's issues before a picture is drawn (session.ts gateFindings), from the plan
       // this rebuild made.
