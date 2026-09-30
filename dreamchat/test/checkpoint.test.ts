@@ -252,7 +252,7 @@ describe('proposing a set from the prompt cases', () => {
       ],
     };
     const problems = validateSet(set).join('\n');
-    for (const p of ['name S4 bad', 'why must be fault or guard', 'names its version', 'draw must be', 'verdict must be', 'no file']) expect(problems).toContain(p);
+    for (const p of ['name S4 bad', 'why must be fault, guard or pair', 'names its version', 'draw must be', 'verdict must be', 'no file']) expect(problems).toContain(p);
   });
 });
 
@@ -1166,5 +1166,58 @@ describe('--draw, against a stand-in engine: only what the dry run printed, unde
     await expect(draw(drawArgs(), w.set, w.setFile, w.f, e, { allowFake: true })).rejects.toThrow('another --draw');
     expect(started).toEqual([]);
     expect(existsSync(join(w.f.out, 'draw.lock'))).toBe(true);
+  });
+});
+
+describe('pairs: an old picture drawn now by the harness as it stands, never judged before', () => {
+  const pair = (id: string, draw: 'base' | 'none'): CheckpointSet['moments'][number] => ({
+    id,
+    run: 'r',
+    session: 'dream-0926-043003-b0cb',
+    moment: `m${id.split('-m')[1]}`,
+    why: 'pair',
+    reason: 'no judged old picture',
+    cases: [],
+    description: 'what happens',
+    old: {
+      source: undefined as never,
+      draw,
+      ...(draw === 'base' ? { from: 'fal-base' } : {}),
+      verdict: null,
+      note: null,
+      picture: '',
+    },
+  });
+
+  test('a pair names its base checkpoint and carries no verdict; only a pair is drawn as base or none', () => {
+    expect(validateSet({ name: 'fal-pairs', moments: [pair('a-m1', 'base')] })).toEqual([]);
+    expect(validateSet({ name: 'fal-base', moments: [pair('a-m1', 'none')] })).toEqual([]);
+    const judged = { ...pair('a-m2', 'base'), old: { ...pair('a-m2', 'base').old, verdict: 'right' as const } };
+    expect(validateSet({ name: 'x', moments: [judged] }).join('\n')).toContain("a pair's old picture has no verdict");
+    const noBase = { ...pair('a-m3', 'base'), old: { ...pair('a-m3', 'base').old, from: undefined } };
+    expect(validateSet({ name: 'x', moments: [noBase] }).join('\n')).toContain('a pair names its base checkpoint');
+    const notPair = { ...pair('a-m4', 'base'), why: 'fault' as const };
+    expect(validateSet({ name: 'x', moments: [notPair] }).join('\n')).toContain('only a pair');
+  });
+
+  test('the old picture is A in half of the pairs, as in the faults and guards', () => {
+    const ms = Array.from({ length: 11 }, (_, i) => ({ id: `p-m${i + 1}`, why: 'pair' as const }));
+    const o = abOrder('fal-pairs', ms);
+    expect(Object.keys(o).length).toBe(11);
+    const olds = ms.filter((x) => o[x.id] === 'old').length;
+    expect(Math.abs(olds * 2 - 11)).toBeLessThanOrEqual(1);
+  });
+
+  test('scored apart: how often the new picture is right, and the old', () => {
+    const set = { name: 'fal-pairs', moments: [pair('a-m1', 'base'), pair('a-m2', 'base')] };
+    const key = { 'a-m1': { a: 'old' as const, b: 'new' as const }, 'a-m2': { a: 'new' as const, b: 'old' as const } };
+    const got: Answers = {
+      checkpoint: 'fal-pairs',
+      updated: null,
+      answers: { 'a-m1': { answer: 'b', note: '', at: '' }, 'a-m2': { answer: 'both', note: '', at: '' } },
+    };
+    const s = scoreOf(set, key, got);
+    expect(s.pairs).toEqual({ judged: 2, of: 2, newRight: 2, oldRight: 1 });
+    expect(s.faults.of + s.guards.of).toBe(0);
   });
 });

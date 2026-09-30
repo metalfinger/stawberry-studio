@@ -24,16 +24,27 @@ import { sha256 } from './saved';
 // ── the set ──────────────────────────────────────────────────────────────────────────────────────
 
 /** Why a moment is in a checkpoint: a fault the step should put right, or a picture called right that must stay right. */
-export type Why = 'fault' | 'guard';
+/**
+ * Why a moment is in a set: a fault the owner called partly right or wrong, a guard he called right, or a pair, whose
+ * old picture he never judged and which is drawn in this set's base checkpoint (`old.draw` 'base') to be judged beside
+ * the new one.
+ */
+export type Why = 'fault' | 'guard' | 'pair';
 export type Verdict = 'right' | 'partly' | 'wrong';
 
 /** The old picture a moment is judged against: which drawing it is, the owner's verdict and note on it, and its file. */
 export type OldPicture = {
-  /** The row of the verdict file that holds the owner's verdict on it. */
+  /** The row of the verdict file that holds the owner's verdict on it; none for a pair. */
   source: Source;
-  /** Drawn on the night (story), or one of the paired test's three versions. */
-  draw: Draw;
-  verdict: Verdict;
+  /**
+   * Drawn on the night (story), or one of the paired test's three versions; for a pair, `base`: drawn by the checkpoint
+   * named in `from` under its own switches (the harness as it stands), or `none` in that base checkpoint itself.
+   */
+  draw: Draw | 'base' | 'none';
+  /** The base checkpoint that draws a pair's old picture. */
+  from?: string;
+  /** The owner's verdict on it; null for a pair, whose old picture he has not judged. */
+  verdict: Verdict | null;
   /** The owner's note on it, word for word; null where they wrote none. */
   note: string | null;
   /** Its file, relative to the dreamchat folder that keeps the saved conversations (or absolute). */
@@ -104,7 +115,7 @@ export function validateSet(set: CheckpointSet): string[] {
     seen.add(m.id);
     if (where.has(`${m.session}:${m.moment}`)) out.push(`${at}: ${m.session} ${m.moment} is listed twice`);
     where.add(`${m.session}:${m.moment}`);
-    if (m.why !== 'fault' && m.why !== 'guard') out.push(`${at}: why must be fault or guard`);
+    if (m.why !== 'fault' && m.why !== 'guard' && m.why !== 'pair') out.push(`${at}: why must be fault, guard or pair`);
     if (!/^dream-\d{4}-\d{6}-[0-9a-f]{4}$/.test(m.session ?? '')) out.push(`${at}: session ${m.session} is not a saved dream's id`);
     if (!/^m\d+$/.test(m.moment ?? '')) out.push(`${at}: moment ${m.moment} is not a moment id`);
     if (!m.reason) out.push(`${at}: no reason`);
@@ -114,11 +125,20 @@ export function validateSet(set: CheckpointSet): string[] {
       out.push(`${at}: no old picture`);
       continue;
     }
+    // A pair: its old picture is drawn by a base checkpoint (or this is it), never judged before.
+    if (m.why === 'pair') {
+      if (o.draw !== 'base' && o.draw !== 'none') out.push(`${at}: a pair's old picture is drawn as base or none`);
+      if (o.draw === 'base' && !/^[a-z0-9][a-z0-9-]*$/.test(o.from ?? ''))
+        out.push(`${at}: a pair names its base checkpoint`);
+      if (o.verdict !== null) out.push(`${at}: a pair's old picture has no verdict`);
+      continue;
+    }
+    if (o.draw === 'base' || o.draw === 'none') out.push(`${at}: only a pair's old picture is drawn as base or none`);
     if (o.source?.file !== 'story-pictures.json' && o.source?.file !== 'paired-verdicts.json')
       out.push(`${at}: the old picture's verdict is from story-pictures.json or paired-verdicts.json`);
     if (o.source?.file === 'paired-verdicts.json' && !o.source.version) out.push(`${at}: a paired verdict names its version`);
-    if (!DRAWS.includes(o.draw)) out.push(`${at}: draw must be one of ${DRAWS.join(', ')}`);
-    if (!VERDICTS.includes(o.verdict)) out.push(`${at}: verdict must be right, partly or wrong`);
+    if (!DRAWS.includes(o.draw as Draw)) out.push(`${at}: draw must be one of ${DRAWS.join(', ')}`);
+    if (!VERDICTS.includes(o.verdict as Verdict)) out.push(`${at}: verdict must be right, partly or wrong`);
     if (o.note === undefined) out.push(`${at}: note must be the owner's words or null`);
     if (!o.picture) out.push(`${at}: no file for the old picture`);
   }
@@ -295,6 +315,8 @@ export function oldSentOf(
     const f = frozen?.build?.frames?.find((x) => x.id === moment) as (Item & { sent?: Sent }) | undefined;
     return f?.sent ?? null;
   }
+  // A pair's old picture is drawn in its base checkpoint, which keeps what it sent.
+  if (old.draw === 'base' || old.draw === 'none') return null;
   const e = paired?.entries[`${old.source.row}-${old.draw}`];
   if (!e) return null;
   const nameOf = (key: string) => {
@@ -982,7 +1004,7 @@ export function abOrder(
   const out: Record<string, AB> = {};
   let oldFirst = 0;
   let seen = 0;
-  for (const why of ['fault', 'guard'] as Why[]) {
+  for (const why of ['fault', 'guard', 'pair'] as Why[]) {
     const inGroup = ms.filter((m) => m.why === why);
     // What the key already says stays as it is; the rest are placed to keep the group as near half as it can.
     const kept = inGroup.filter((m) => fixed[m.id]);
