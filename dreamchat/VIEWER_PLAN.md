@@ -108,8 +108,17 @@ What the hashes do and do not follow (29 Sep, from the data side's review and th
   mock-up moves its sha256, and so the chain: a rename lands as "read again", on purpose, since the owner should see it.
 - A change inside an in-between picture or an earlier cut moves that node's own hashes, not those of the cuts that use
   it: each node carries its own verdict.
-- On the 15 frozen dreams the panel's tree and the plan the prompts use group every cut alike (0 badges); ledger row
-  2's disagreement shows on live dreams, whose plan was kept since the moments began.
+- On the 15 frozen dreams the panel's tree and the plan the prompts use group every cut alike (0 badges). Both are
+  made from a plan made now (the panel's re-plans, and so does a rebuild), so ledger row 2's disagreement (the plan kept
+  since the moments began) cannot show in the badge either: it catches only a breakdown completed otherwise or a
+  sketch's status read otherwise. Row 2 is shown when the viewer reads a live dream's kept plan (phase two).
+
+Open, from the data side's re-review (29 Sep), none blocking the viewer:
+
+- A picture rebuilt from its record (S9, `DREAMCHAT_AS_DRAWN`) reads the story record from the saved sketches as they
+  are now, as it did before the viewer's rebuild fix, not as they were when it was drawn; its record's own copies
+  would be exact. Untested; the viewer never takes that path.
+- Frozen copies drop `checkedTakes`, so a sheet's "drawn from" is null on every frozen dream; it shows on live ones.
 
 Saved to `evals/viewer/<dream>.json`, committed like the picture checks' answers, written whole with a temp file
 and a rename.
