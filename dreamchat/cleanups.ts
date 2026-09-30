@@ -132,6 +132,9 @@ export const BUILDER_STEPS: readonly string[] = [
   //    in-between picture of what they are now is their one image; the dream's jump is said with one full stop (the
   //    sheet's `earlierWords`, read by the assembler).
   'earlier_words',
+  // Not a ledger row: found reading every prompt (30 Sep). A colour the dream gives is the colour and what it colours,
+  //    ending at the noun: never what the moment says it does ("grey heron stands", "silver fish about").
+  'told_colours',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;
