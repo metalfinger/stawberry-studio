@@ -421,6 +421,9 @@ function cutPanel(c) {
     el('dt', { text: 'Size' }), el('dd', { text: c.camera.size || c.moment.distance || '—' })));
   out.push(el('div', { class: 'tags' }, c.tags.map((t) => el('span', { class: 'tag', text: t }))));
   if (c.issues.length) out.push(el('div', { class: 'block issues' }, el('h3', { text: 'The plan flags' }), el('ul', {}, c.issues.map((i) => el('li', { text: i })))));
+  // An edit whose picture is held back is made from its own shot instead: said here, not only in the table below.
+  const held = c.unsent.find((u) => u.base);
+  if (held) out.push(el('p', { class: 'block issues held' }, 'Meant to edit ', jump(held.key.replace(/^picture:/, '')), `, whose picture ${held.code === 'stale' ? 'changed since it was drawn' : 'was judged wrong'}: made from its own shot and mock-up instead.`));
 
   // The camera.
   const prev = c.prevCut ? D.cuts.find((x) => x.id === c.prevCut) : null;
