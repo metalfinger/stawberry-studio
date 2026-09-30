@@ -95,7 +95,7 @@ green both ways:
   no outside camera shows both the hands and the field, and the model added a second pair of hands. The frozen dream
   keeps its eyes, so m10 is not redrawn.
 
-Drawn from `b82362d` for the owner to judge blind (\$2.40; \$9.90 spent today in all):
+Drawn from `b82362d` for the owner to judge blind ($2.40; $9.90 spent today in all):
 
 - **fal-redo**: six of the seven he judged not right, drawn again, each against the picture he failed.
 - **pw-a / pw-b**: a blind test of `picture_words` (not on lab): five moments, each drawn with and without the step,
