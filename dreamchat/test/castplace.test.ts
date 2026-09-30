@@ -64,6 +64,31 @@ describe('a cast thing', () => {
       'p1',
     );
     expect(inIt.spots.find((s) => s.id === 'c1')).toMatchObject({ x: 4, y: 6 });
+    // Two sitting with nothing under them beside it (the driver and the dreamer in the open field, affd m9): it is
+    // under them both, whatever the words say of it.
+    const pair: Blocking = {
+      front: 'the beach',
+      spots: [
+        { id: 'p1', x: 50.5, y: 50, kind: 'person', pose: 'sitting' },
+        { id: 'p4', x: 49.5, y: 50, kind: 'person', pose: 'sitting' },
+      ],
+    };
+    const under = withCastSpots(
+      pair,
+      reading([thing({ name: 'the red tractor', kind: 'vehicle' })]),
+      { id: 'm1', action: 'The red tractor drives slowly through the tall yellow grass' },
+      'p1',
+    );
+    expect(under.spots.find((s) => s.id === 'c1')).toMatchObject({ x: 50, y: 50, shape: 'vehicle' });
+    // Standing beside it, they are not in it.
+    const standing = { ...pair, spots: pair.spots.map((s) => ({ ...s, pose: 'standing' as const })) };
+    const beside = withCastSpots(
+      standing,
+      reading([thing({ name: 'the red tractor', kind: 'vehicle' })]),
+      { id: 'm1', action: 'The red tractor drives slowly through the tall yellow grass' },
+      'p1',
+    ).spots.find((s) => s.id === 'c1')!;
+    expect(Math.hypot(beside.x - 50.5, beside.y - 50)).toBeGreaterThan(1);
     // Ahead of the dreamer, who faces the front (toward y = 0): nearer the front.
     const ahead = withCastSpots(
       room,

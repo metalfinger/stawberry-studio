@@ -16,6 +16,7 @@ import {
   type Eye,
   facing,
   type Move,
+  onFootprint,
   outsideOrder,
   roomOf,
   settle,
@@ -41,7 +42,7 @@ import {
   waterLevel,
   wordsAbout,
 } from './camera';
-import { dreamerShot, onOf, outsideShot } from './previs';
+import { dreamerShot, onOf, outsideShot, shapeOf } from './previs';
 import { type Breakdown, hasBefore, isWhole, type Moment, moments, POSITION, type State } from './producer';
 import type { NowOf } from './record';
 import { refsMode, SEVERAL } from './refs';
@@ -570,17 +571,78 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
       }),
   };
   // Getting in or out of something at the instant, as the moment's typed acts say (the one builder's `plan_acts`); who
-  // rides in front and who behind, as the scene's acts in this place last said.
+  // rides in front and who behind, as the scene's acts in this place last said; and what they ride goes with them.
   return camera
     ? withRiders(
-        withClimbers(placed, r?.acts),
+        withClimbers(
+          carriedBy(
+            placed,
+            plan,
+            upTo.map((x) => plan.moves?.[x.id] ?? []),
+          ),
+          r?.acts,
+        ),
         upTo.map((x) => rec?.moments[x.id]?.acts ?? []),
       )
     : placed;
 }
 
-/** Riding in front: pedalling, steering, driving what they ride. */
-const FRONT = /^(?:pedals?|steers?|drives?)$/i;
+/**
+ * A vehicle the plan never moves goes where its seated riders go: those seated on it on the scene's plan, moving
+ * together, carry it by as far as they move. The tractor the cast reading put under the dreamer and the driver stayed
+ * where the scene began while the plan drove them to the field's edge, "outside the picture, behind the camera" (affd
+ * m9, 30 Sep). Once one gets out, it stays with whoever is still seated in it; with nobody seated, where they last sat.
+ */
+export function carriedBy(placed: Blocking, plan: Blocking, moves: Move[][]): Blocking {
+  const owned = new Set(moves.flat().map((m) => m.id));
+  const vehicles = plan.spots.filter((v) => !owned.has(v.id) && shapeOf(v, plan) === 'vehicle' && !v.heldBy);
+  if (!vehicles.length) return placed;
+  const at = new Map<string, { x: number; y: number }>();
+  for (const v of vehicles) {
+    const riders = plan.spots.filter(
+      (p) => p.kind === 'person' && !p.many && p.pose !== 'standing' && onFootprint(p, v, plan),
+    );
+    if (!riders.length) continue;
+    type Pos = { x: number; y: number; pose?: Spot['pose'] };
+    let pos = new Map<string, Pos>(riders.map((p) => [p.id, { x: p.x, y: p.y, pose: p.pose }]));
+    const mean = (ids: string[], m: Map<string, Pos>) => ({
+      x: ids.reduce((a, id) => a + m.get(id)!.x, 0) / ids.length,
+      y: ids.reduce((a, id) => a + m.get(id)!.y, 0) / ids.length,
+    });
+    let spot = { x: v.x, y: v.y };
+    for (const set of moves) {
+      const prev = pos;
+      pos = new Map(prev);
+      for (const mv of set) {
+        const was = pos.get(mv.id);
+        if (was) pos.set(mv.id, { x: mv.x, y: mv.y, pose: mv.pose ?? was.pose });
+      }
+      // Whoever was seated in it and still is; each moved here, together, and onto no other seat or vehicle.
+      const still = riders
+        .map((p) => p.id)
+        .filter((id) => prev.get(id)!.pose !== 'standing' && pos.get(id)!.pose !== 'standing');
+      if (!still.length || !still.every((id) => set.some((m) => m.id === id))) continue;
+      const now = mean(still, pos);
+      const then = mean(still, prev);
+      const together = still.every((id) => Math.hypot(pos.get(id)!.x - now.x, pos.get(id)!.y - now.y) <= 1.5);
+      const elsewhere = still.some((id) =>
+        plan.spots.some(
+          (t) => t.id !== v.id && ['vehicle', 'seat'].includes(shapeOf(t, plan)) && onFootprint(pos.get(id)!, t, plan),
+        ),
+      );
+      if (together && !elsewhere) spot = { x: spot.x + now.x - then.x, y: spot.y + now.y - then.y };
+    }
+    if (Math.hypot(spot.x - v.x, spot.y - v.y) > 1e-9) at.set(v.id, spot);
+  }
+  if (!at.size) return placed;
+  return { ...placed, spots: placed.spots.map((s) => (at.has(s.id) ? { ...s, ...at.get(s.id)! } : s)) };
+}
+
+/**
+ * Riding in front: pedalling or driving what they ride. Not steering: in a canoe or a narrow boat whoever steers sits at
+ * the back.
+ */
+const FRONT = /^(?:pedals?|drives?)$/i;
 /** Riding behind: on its back, or behind whoever rides it. */
 const BACK = /^sits?\s+(?:on the back of|at the back of|behind)$/i;
 

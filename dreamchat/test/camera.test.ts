@@ -31,6 +31,7 @@ import {
   unsettled,
   withClimbers,
   withRiders,
+  carriedBy,
 } from '../continuity';
 import { type CutSheet, notDrawnFrom } from '../cutsheet';
 import { frozenDreams, loadDream } from '../evals/saved';
@@ -1670,5 +1671,55 @@ describe('who rides in front', () => {
     const eyes = withEnv(CAMERA, () => dreamerShot(sat, 'p1', 'p2', name))!;
     expect(eyes.text).toContain('the girl, sitting in front of the dreamer on the same old red bicycle');
     expect(eyes.text).not.toContain('beside the dreamer');
+  });
+});
+
+describe('what they ride goes with them', () => {
+  const field = {
+    front: 'the beach',
+    spots: [
+      { id: 'p1', x: 50.5, y: 50, kind: 'person' as const, pose: 'sitting' as const },
+      { id: 'p4', x: 49.5, y: 50, kind: 'person' as const, pose: 'sitting' as const },
+      {
+        id: 'c1',
+        x: 50,
+        y: 50,
+        kind: 'thing' as const,
+        shape: 'vehicle' as const,
+        size: [1.8, 3.5, 2.2] as [number, number, number],
+      },
+      { id: 't9', x: 30, y: 30, kind: 'thing' as const, shape: 'vehicle' as const },
+    ],
+  };
+  const seated = (id: string, x: number, y: number) => ({ id, x, y, pose: 'sitting' as const });
+
+  test('a vehicle the plan never moves goes where its seated riders go together', () => {
+    // The tractor stayed where the scene began while the plan drove them to the field's edge (affd m9).
+    const moves = [[], [seated('p4', 49.5, 5), seated('p1', 50.5, 5)]];
+    const placed = { ...field, spots: field.spots.map((s) => (s.id === 'p1' || s.id === 'p4' ? { ...s, y: 5 } : s)) };
+    const c1 = carriedBy(placed, field, moves).spots.find((s) => s.id === 'c1')!;
+    expect([c1.x, c1.y]).toEqual([50, 5]);
+    // Nobody rides the other one: it stays.
+    expect(carriedBy(placed, field, moves).spots.find((s) => s.id === 't9')).toMatchObject({ x: 30, y: 30 });
+  });
+
+  test('once one gets out, it stays with whoever is still seated in it', () => {
+    // The dreamer stands to set the boat down; the driver stays in the tractor (affd m10).
+    const moves = [
+      [seated('p4', 49.5, 5), seated('p1', 50.5, 5)],
+      [{ id: 'p1', x: 50, y: 1, pose: 'standing' as const }],
+    ];
+    const placed = {
+      ...field,
+      spots: field.spots.map((s) =>
+        s.id === 'p4' ? { ...s, y: 5 } : s.id === 'p1' ? { ...s, x: 50, y: 1, pose: 'standing' as const } : s,
+      ),
+    };
+    expect(carriedBy(placed, field, moves).spots.find((s) => s.id === 'c1')).toMatchObject({ x: 50, y: 5 });
+    // The one who got out and went on alone does not take it.
+    const walks = [[{ id: 'p1', x: 50.5, y: 20, pose: 'standing' as const }], [{ id: 'p1', x: 50.5, y: 10 }]];
+    expect(carriedBy(field, field, walks).spots.find((s) => s.id === 'c1')).toMatchObject({ x: 50, y: 50 });
+    // Moved by the plan itself, it is the plan's.
+    expect(carriedBy(field, field, [[{ id: 'c1', x: 0, y: 0 }]])).toBe(field);
   });
 });

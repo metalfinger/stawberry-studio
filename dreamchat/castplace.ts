@@ -4,7 +4,7 @@
 // height and shape; and the fixtures a place's own words name that its plan lacks (windows along each side, rows of
 // seats). Pure: the plan and the reading in, the plan out. Nothing already on the plan moves.
 import type { CastBody, CastFixture, CastReading, CastThing } from './cast-types';
-import { type Blocking, facing, rightOf, roomOf, type Side, sizeOf, type Spot, unit } from './blocking';
+import { type Blocking, facing, onFootprint, rightOf, roomOf, type Side, sizeOf, type Spot, unit } from './blocking';
 
 type V2 = { x: number; y: number };
 
@@ -143,13 +143,34 @@ export function withCastSpots(
     const by = spots.find((s) => s.id === (t.near ?? '')) ?? spots.find((s) => s.id === dreamerId);
     const size = sizeFromWords(t.size ?? t.look, t.kind);
     const shape = t.kind === 'vehicle' ? ('vehicle' as const) : undefined;
+    // Ridden: the words put someone in or on it, or whoever it is by sits with nothing under them to sit on. The driver
+    // and the dreamer sat in the open field of affd m9 as the tractor "drives slowly" beside them, empty.
+    const sitsOnNothing = (q: Spot) =>
+      q.kind === 'person' &&
+      !q.many &&
+      q.pose === 'sitting' &&
+      !plan.spots.some(
+        (o) =>
+          o.kind !== 'person' && !o.heldBy && o.shape !== 'ground' && o.shape !== 'steps' && onFootprint(q, o, plan),
+      );
+    const seatless = !!by && sitsOnNothing(by);
     const way = by
-      ? t.kind === 'vehicle' && ridden(words, headOf(t.name))
+      ? t.kind === 'vehicle' && (ridden(words, headOf(t.name)) || seatless)
         ? 'same'
         : wayOf(t.side, by, plan)
       : 'same';
     const from = by ?? { x: plan.indoors ? rw / 2 : 0, y: plan.indoors ? rd / 2 : 0 };
-    let at: V2 = { x: from.x, y: from.y };
+    // Ridden, under everyone sitting on nothing beside whoever it is by, so the driver is in it too.
+    const aboard =
+      way === 'same' && t.kind === 'vehicle' && by
+        ? plan.spots.filter((q) => q.id === by.id || (sitsOnNothing(q) && Math.hypot(q.x - by.x, q.y - by.y) <= 1.5))
+        : [];
+    let at: V2 = aboard.length
+      ? {
+          x: aboard.reduce((a, q) => a + q.x, 0) / aboard.length,
+          y: aboard.reduce((a, q) => a + q.y, 0) / aboard.length,
+        }
+      : { x: from.x, y: from.y };
     if (way !== 'same') {
       const d = unit(way);
       const step = Math.max(1.2, (sizeOf(by as Spot)[1] + size[1]) / 2 + 0.5);
