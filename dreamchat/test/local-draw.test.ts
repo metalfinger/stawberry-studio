@@ -217,7 +217,9 @@ describe('what the fitting never gives up', () => {
     // At most two on the sheet: the third keeps their own image, and the place is what goes.
     expect(f.images.map((x) => x.name)).toEqual(['x1', 'people:x2+x3', 'x4', 'sketch-fish']);
     expect(f.images[1].group?.map((x) => x.name)).toEqual(['x2', 'x3']);
-    expect(f.prompt).toContain('Image 2: who the dreamer and my older sister are, left to right in this one image');
+    expect(f.prompt).toContain(
+      'Image 2: who the dreamer and my older sister are, side by side in this one image only to show how they look, each of them in the picture once, where Image 1 puts them:',
+    );
     expect(f.prompt).toContain('Image 3: who the old man is');
     expect(f.prompt).toContain('Image 4: the fish');
   });

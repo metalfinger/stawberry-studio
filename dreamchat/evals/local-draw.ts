@@ -152,7 +152,7 @@ export function fitMoment(
           if (!theirs.has(n)) return [l];
           return n === sheet.n
             ? [
-                `Image ${n}: who ${said} are, left to right in this one image: each one's face, hair, build and clothes, exactly. They stand side by side here only to show how they look: each of them is in the picture once, where Image 1 puts them, never again as this image stands. Nothing else from it: not their poses, the background or the framing.`,
+                `Image ${n}: who ${said} are, side by side in this one image only to show how they look, each of them in the picture once, where Image 1 puts them: each one's face, hair, build and clothes, exactly. Nothing else from it: not their poses, the background or the framing.`,
               ]
             : [];
         })
