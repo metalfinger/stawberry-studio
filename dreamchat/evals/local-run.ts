@@ -44,6 +44,8 @@ export type RunPicture = {
   endpoint?: 'generate' | 'edit';
   job?: string;
   seed?: number;
+  /** The machine's quality tier it was drawn at. */
+  quality?: string;
   file?: string;
   size?: [number, number];
   secs?: number;
@@ -171,7 +173,7 @@ async function drawDream(
   run: string,
   dreamId: string,
   saved: Session,
-  opts: { quality: string; out: string; commit: string },
+  opts: { quality: { sketch: string; picture: string }; out: string; commit: string },
 ): Promise<RunManifest> {
   const { rebuild, standIn } = await import('../plan');
   const { sheetPrompt, shapeOf } = await import('../sheets');
@@ -188,7 +190,7 @@ async function drawDream(
     dream: dreamId,
     title: r.title,
     commit: opts.commit,
-    quality: opts.quality,
+    quality: `sketches ${opts.quality.sketch}, pictures ${opts.quality.picture}`,
     switches: PROFILE,
     started: was?.started ?? new Date().toISOString(),
     updated: new Date().toISOString(),
@@ -221,8 +223,21 @@ async function drawDream(
     const t0 = Date.now();
     p.endpoint = endpoint;
     p.seed = seedOf(`${dreamId}:${p.kind}:${p.id}`);
+    p.quality = p.kind === 'sketch' ? opts.quality.sketch : opts.quality.picture;
+    // Once more on a failure, then on to the next: one error never stops the night.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      p.state = 'waiting';
+      p.error = undefined;
+      await once(p, endpoint, body);
+      if (p.state === 'done') break;
+    }
+    p.secs = Math.round((Date.now() - t0) / 1000);
+    save();
+    console.log(`${dreamId} ${p.kind} ${p.id}: ${p.state}${p.error ? ` (${p.error.slice(0, 120)})` : ''} ${p.secs}s`);
+  };
+  const once = async (p: RunPicture, endpoint: 'generate' | 'edit', body: Record<string, unknown>) => {
     try {
-      const job = await call(`/v1/${endpoint}`, { ...body, quality: opts.quality, seed: p.seed });
+      const job = await call(`/v1/${endpoint}`, { ...body, quality: p.quality, seed: p.seed });
       p.job = job.id;
       save();
       const done = await finish(job);
@@ -238,9 +253,6 @@ async function drawDream(
       p.state = 'failed';
       p.error = String(e instanceof Error ? e.message : e).slice(0, 500);
     }
-    p.secs = Math.round((Date.now() - t0) / 1000);
-    save();
-    console.log(`${dreamId} ${p.kind} ${p.id}: ${p.state}${p.error ? ` (${p.error.slice(0, 120)})` : ''} ${p.secs}s`);
   };
 
   // 1. Every sketch, from the harness's own sketch prompt, at its own shape.
@@ -337,7 +349,10 @@ if (import.meta.main) {
   };
   const run = val('--run');
   if (!run) throw new Error('--run <name> is needed');
-  const quality = val('--quality') ?? 'fast';
+  const quality = {
+    sketch: val('--sketch-quality') ?? val('--quality') ?? 'fast',
+    picture: val('--quality') ?? 'fast',
+  };
   // The full profile, as every other eval of the harness reads it.
   for (const [k, v] of Object.entries(PROFILE)) process.env[k] ??= v;
   const data = dataDir();
@@ -361,7 +376,9 @@ if (import.meta.main) {
         // A conversation that cannot be read is left out.
       }
     }
-  console.log(`run ${run}: ${dreams.length} dreams, commit ${commit}, ${quality}, into ${join(out, run)}`);
+  console.log(
+    `run ${run}: ${dreams.length} dreams, commit ${commit}, sketches ${quality.sketch}, pictures ${quality.picture}, into ${join(out, run)}`,
+  );
   for (const d of dreams) {
     if (!d.session.draft?.breakdown || !d.session.style) {
       console.log(`${d.id}: no breakdown and style: left out`);
