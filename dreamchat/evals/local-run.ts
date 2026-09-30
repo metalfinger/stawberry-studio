@@ -141,6 +141,10 @@ function asFrame(file: string, out: string): string {
   return r.status === 0 && existsSync(out) ? out : file;
 }
 
+/** Said first to the machine where a picture has images to take looks from (the machine's guide: name each image's part). */
+export const LEAD =
+  'Image 1 is the picture to edit: everyone in it stays exactly where it puts them, once. The other images are references only, for how each one looks: never add a second copy of anyone or anything from them to the picture.\n\n';
+
 // ── a dream ──────────────────────────────────────────────────────────────────────────────────────
 
 /** The dream with its readings, as the corpus reads them (from the caches only), and every sketch not drawn yet. */
@@ -316,8 +320,13 @@ async function drawDream(
     }
     // What this run could not make is left out, as the fitting leaves out what does not fit.
     const have = images.filter((x) => x.file);
-    const fitted = fitMoment(lines, have);
-    e.sent = fitted.prompt.length > MAX_CHARS ? fitted.prompt.slice(0, MAX_CHARS) : fitted.prompt;
+    // With images to take looks from, each image's part is said first, as the machine's own guide advises: from a
+    // person's sketch it drew the dreamer twice, once where the mock-up put them and once as the sketch stands
+    // (lighthouse-first m2, 30 Sep); with this line, once (2 of 2).
+    const lead = have.length > 1 ? LEAD : '';
+    const fitted = fitMoment(lines, have, 0, MAX_CHARS - lead.length);
+    const text = lead + fitted.prompt;
+    e.sent = text.length > MAX_CHARS ? text.slice(0, MAX_CHARS) : text;
     e.imagesSent = fitted.images;
     e.dropped = {
       ...fitted.dropped,
