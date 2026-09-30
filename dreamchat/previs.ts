@@ -66,18 +66,23 @@ const PITCH = (-4 * Math.PI) / 180;
  * A person as a previs artist's mannequin, facing `f`: a round head on a neck, shoulders, arms,
  * and legs as they sit or stand. Two stacked blocks read as boxes, not as someone (24 Sep).
  */
-function mannequin(x: number, y: number, f: V2, pose: Spot['pose'], z0 = 0): (Block | Face[])[] {
+/** A person standing, head to foot, as the mannequin is drawn. */
+const STANDING = 1.74;
+
+function mannequin(x: number, y: number, f: V2, pose: Spot['pose'], z0 = 0, k = 1): (Block | Face[])[] {
   const r = rightOf(f);
+  // `k`: their size to a grown person's (a six-year-old, a giant), everything drawn in proportion.
   const at = (ahead: number, side: number, z: number, w: number, d: number, h: number): Block => ({
-    x: x + f.x * ahead + r.x * side,
-    y: y + f.y * ahead + r.y * side,
-    z: z + z0,
-    w,
-    d,
-    h,
+    x: x + f.x * ahead * k + r.x * side * k,
+    y: y + f.y * ahead * k + r.y * side * k,
+    z: z * k + z0,
+    w: w * k,
+    d: d * k,
+    h: h * k,
     f,
   });
-  const head = (ahead: number, z: number) => sphere(v3(x + f.x * ahead, y + f.y * ahead, z + z0), 0.1, 0.12);
+  const head = (ahead: number, z: number) =>
+    sphere(v3(x + f.x * ahead * k, y + f.y * ahead * k, z * k + z0), 0.1 * k, 0.12 * k);
   if (pose === 'lying') return [at(0, 0, 0, 0.45, 1.5, 0.25), head(0.85, 0.15)];
   if (pose === 'sitting')
     return [
@@ -104,6 +109,64 @@ function mannequin(x: number, y: number, f: V2, pose: Spot['pose'], z0 = 0): (Bl
     at(0, -0.25, 0.86, 0.09, 0.1, 0.58),
     head(0, 1.62),
   ];
+}
+
+/**
+ * A creature at its height (`h`, head or back at the top): four legs, a body and a head; a bird on two long legs
+ * with a neck; a fish long and low; anything else a block. The white horse was drawn as a standing person, the
+ * terrier as tall as the dreamer (the read of every frozen prompt, 30 Sep).
+ */
+function creature(
+  x: number,
+  y: number,
+  f: V2,
+  body: Spot['body'],
+  pose: Spot['pose'],
+  z0: number,
+  h: number,
+): (Block | Face[])[] {
+  const r = rightOf(f);
+  const at = (ahead: number, side: number, z: number, w: number, d: number, tall: number): Block => ({
+    x: x + f.x * ahead + r.x * side,
+    y: y + f.y * ahead + r.y * side,
+    z: z + z0,
+    w,
+    d,
+    h: tall,
+    f,
+  });
+  const ball = (ahead: number, z: number, radius: number) =>
+    sphere(v3(x + f.x * ahead, y + f.y * ahead, z + z0), radius, radius * 1.1);
+  const lying = pose === 'lying';
+  if (body === 'four-legged') {
+    const legs = lying ? 0 : h * 0.5;
+    const [long, wide, deep] = [h * 1.4, h * 0.34, h * 0.32];
+    return [
+      at(0, 0, legs, wide, long, deep), // the body
+      ...(lying
+        ? []
+        : [-1, 1].flatMap((a) => [-1, 1].map((s) => at(a * long * 0.38, s * wide * 0.3, 0, h * 0.09, h * 0.09, legs)))),
+      at(long * 0.5, 0, legs + deep * 0.5, h * 0.14, h * 0.2, h * 0.3), // the neck
+      ball(long * 0.6, legs + deep * 0.5 + h * 0.3, h * 0.12), // the head
+    ];
+  }
+  if (body === 'bird') {
+    const legs = lying ? 0 : h * 0.45;
+    return [
+      ...(lying ? [] : [-1, 1].map((s) => at(0, s * h * 0.05, 0, h * 0.03, h * 0.03, legs))),
+      at(0, 0, legs, h * 0.18, h * 0.36, h * 0.22), // the body
+      at(h * 0.12, 0, legs + h * 0.18, h * 0.05, h * 0.05, h * 0.26), // the neck
+      ball(h * 0.14, legs + h * 0.44 + h * 0.06, h * 0.06), // the head
+    ];
+  }
+  if (body === 'fish') return [at(0, 0, 0, h * 0.5, h * 4, h)];
+  return [at(0, 0, 0, h * 0.6, h * 0.6, h)];
+}
+
+/** Someone or something alive as the mock-up draws them: a creature at its height, a person at theirs. */
+function figure(s: Spot, x: number, y: number, f: V2, z0: number): (Block | Face[])[] {
+  if (s.body && s.body !== 'human' && s.height) return creature(x, y, f, s.body, s.pose, z0, s.height);
+  return mannequin(x, y, f, s.pose ?? 'standing', z0, s.body === 'human' && s.height ? s.height / STANDING : 1);
 }
 
 /** A round solid: a head. Faces of a ball, each facing out from its middle. */
@@ -286,7 +349,7 @@ function solidsOf(
       add(
         s.id,
         0.8,
-        where.flatMap((p) => mannequin(p.x, p.y, f, s.pose ?? 'standing', groundAt(p, plan))),
+        where.flatMap((p) => figure(s, p.x, p.y, f, groundAt(p, plan))),
         name(s.id),
       );
       // A crowd sitting sits on something: rows of seats under them, or the model makes up its own
@@ -307,8 +370,7 @@ function solidsOf(
             { x: p.x - f.x * 0.27, y: p.y - f.y * 0.27, z: 0.42, w: 0.62, d: 0.12, h: 0.5, f },
           ]),
         );
-    } else if (isPerson(s))
-      add(s.id, 0.97, mannequin(s.x, s.y, f, s.pose ?? 'standing', groundAt(s, plan)), name(s.id));
+    } else if (isPerson(s)) add(s.id, 0.97, figure(s, s.x, s.y, f, groundAt(s, plan)), name(s.id));
     else
       add(
         s.id,
@@ -1877,6 +1939,20 @@ function cropOf(
   /** What they stand or sit on, with the camera rules: a boat afloat, a stage, a step. */
   z0 = 0,
 ): string {
+  // A creature is not seen "from the knees up": only where the picture cuts it (the terrier and the horse, 30 Sep).
+  if (s.body && s.body !== 'human' && s.height) {
+    const top = !!seen && seen.y0 < 0.02;
+    const bottom = !!seen && seen.y1 > 0.98;
+    return top && bottom
+      ? 'filling the picture top to bottom'
+      : top
+        ? 'its top out of the picture above'
+        : bottom
+          ? 'its lower part out of the picture below'
+          : 'seen whole';
+  }
+  // A person of another size (a six-year-old, a giant) is cut where their own body is.
+  const k = s.body === 'human' && s.height ? s.height / STANDING : 1;
   const d = unit(eye.d);
   const along = (s.x - eye.at.x) * d.x + (s.y - eye.at.y) * d.y;
   const low = eye.height + along * Math.tan((eye.pitch ?? 0) + (-halfTall(eye) * Math.PI) / 180);
@@ -1885,7 +1961,7 @@ function cropOf(
   // the water line in the picture (the read of every frozen prompt, 30 Sep).
   const [head, shoulders, waist, knees] = (
     sitting ? [1.1, 0.85, 0.5, 0.2] : s.pose === 'lying' ? [0.3, 0.25, 0.15, 0.05] : [1.5, 1.25, 0.85, 0.45]
-  ).map((h) => h + z0);
+  ).map((h) => h * k + z0);
   // Cut at the top too: a close look at their hands has their head out of the picture above. Only
   // where the render has them reach the top edge: by the numbers alone, the dreamer a third of the
   // way down a 14mm picture was said to have their head cut off.

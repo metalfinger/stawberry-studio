@@ -51,6 +51,11 @@ export type Spot = {
    */
   height?: number;
   /**
+   * What shape of body a person or creature has, where a reading of the dream says (with `height`, its height
+   * standing): drawn at that size and so on the mock-up. None, a person's shape at a person's size.
+   */
+  body?: 'human' | 'four-legged' | 'bird' | 'fish' | 'other';
+  /**
    * How far a fixture's bottom is off the floor, in metres, where the place's words put it up a wall or on
    * the ceiling (camera.ts mountOf: "the high round window", "a clock on the wall"): set by the camera
    * rules. Without it every fixture stood on the floor, and deep water hid a window high in the wall.

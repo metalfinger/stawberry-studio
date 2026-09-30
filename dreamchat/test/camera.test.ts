@@ -1,6 +1,6 @@
 import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { assembleCut } from '../assemble';
-import { type Blocking, facing, settle } from '../blocking';
+import { type Blocking, facing, settle, type Spot } from '../blocking';
 import {
   bodyHeight,
   cameraMode,
@@ -660,6 +660,44 @@ describe('a name gives no side of the room', () => {
     expect(m2).not.toMatch(/shelves on the (?:left|right)/);
     const off = shot(picture(rebuilt('dream-0926-055141-6e80', { ...ON, DREAMCHAT_CAMERA: undefined }), 'm2').prompt);
     expect(off).toMatch(/shelves on the (?:left|right)/);
+  });
+});
+
+describe('a creature or a child at their own size', () => {
+  test('a terrier is drawn low beside a grown-up, and seen whole, never from the knees up', () => {
+    // The mock-up drew every one of the dream's people and creatures as a grown-up: the terrier as tall as the
+    // dreamer, the white horse as a standing person (the read of every frozen prompt, 30 Sep). Where a reading of the
+    // dream gives a body and a height, it is drawn so.
+    const plan = (dog: Partial<Spot>): Blocking => ({
+      front: 'the sea',
+      spots: [
+        { id: 'p1', x: 5, y: 5, kind: 'person', faces: 'front' },
+        { id: 'p2', x: 6, y: 5, kind: 'person', faces: 'front', ...dog },
+      ],
+    });
+    const words = (dog: Partial<Spot>) =>
+      withEnv(ON, () =>
+        outsideShot(plan(dog), ['p1', 'p2'], 'wide', (id) => ({ p1: 'the dreamer', p2: 'the dog' })[id] ?? id),
+      )!.text;
+    const small = words({ body: 'four-legged', height: 0.4 });
+    const dog = small.match(/the dog, [^;.]*/)![0];
+    expect(dog).toMatch(/seen whole/);
+    expect(dog).not.toMatch(/knees|waist|shoulders/);
+    // Lower in the picture than the grown-up beside it.
+    const top = (text: string, who: string) => {
+      const m = text.match(new RegExp(`${who}, [^;.]*filling the picture (?:from|around) ([a-z ]+?)(?: to |[;.]|$)`));
+      return m?.[1] ?? '';
+    };
+    expect(top(small, 'the dog')).not.toBe(top(small, 'the dreamer'));
+    // A six-year-old is cut where their own body is: a head lower than a grown-up's.
+    expect(words({ body: 'human', height: 1.15 })).toMatch(/the dog, [^;.]*seen whole/);
+    // Without a reading of it, as before: a person's shape at a person's size.
+    expect(words({})).toBe(
+      withEnv(ON, () =>
+        outsideShot(plan({}), ['p1', 'p2'], 'wide', (id) => ({ p1: 'the dreamer', p2: 'the dog' })[id] ?? id),
+      )!.text,
+    );
+    expect(words({ height: 2 })).toBe(words({}));
   });
 });
 
