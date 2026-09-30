@@ -288,8 +288,13 @@ export function viewDream(s: Session, o: ViewOpts): { view: ViewDream; files: Re
       mockUp,
       links: (plan?.refs ?? []).map((x) => ({ from: x.id, kind: x.kind, relation: x.relation ?? null, role: x.role })),
       refs,
-      // Why each reference the plan chose was not sent: gap 1 (VIEWER_PLAN.md), the Mac pane's.
-      unsent: [],
+      // Why each earlier picture the plan chose is not sent (continuity.ts unsentWhy): the plan's own reasons.
+      unsent: (plan?.unsent ?? []).map((x) => ({
+        // Named as the images sent are named (picture:m3, ghost:t1:lid), so the page matches them by one name.
+        key: imageName(r, standIn.picture(x.id)),
+        code: plan?.unsentWhy?.[x.id]?.code ?? 'not_recorded',
+        detail: plan?.unsentWhy?.[x.id]?.detail ?? 'left out with no reason recorded',
+      })),
       facts,
       // As the drawing gate reads the plan's issues before a picture is drawn (session.ts gateFindings), from the plan
       // this rebuild made.
