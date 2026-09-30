@@ -363,6 +363,11 @@ function solidsOf(
   eye?: Eye,
   /** The camera that is the eyes of whoever is left out: what they hold is in their hands before it. */
   pov?: Eye,
+  /**
+   * For the picture itself: what is ridden drawn as what it is. Where the camera stands and what the words say are
+   * reckoned on its plain block, as the approved shots were.
+   */
+  drawn = false,
 ): Solid[] {
   const solids: Solid[] = [];
   // A fixture of the place is labelled with its own name; everyone and everything else as the story calls them.
@@ -424,7 +429,7 @@ function solidsOf(
           ]),
         );
     } else if (isPerson(s)) add(s.id, 0.97, figure(s, s.x, s.y, f, groundAt(s, plan)), name(s.id));
-    else if (cameraMode() === 'on' && !s.heldBy && shapeOf(s, plan) === 'vehicle' && ASTRIDE.test(name(s.id)))
+    else if (drawn && cameraMode() === 'on' && !s.heldBy && shapeOf(s, plan) === 'vehicle' && ASTRIDE.test(name(s.id)))
       add(s.id, 0.62, astride(s, plan, f), name(s.id));
     else
       add(
@@ -1110,7 +1115,7 @@ export function previsImage(
   // Seen from outside, the crowd leaves a lane to whoever the moment is about, as the view's own words
   // were measured; through the dreamer's eyes, it stands where it stands.
   const r = render(
-    solidsOf(plan, leaveOut, name, leaveOut.length ? undefined : eye, leaveOut.length ? eye : undefined),
+    solidsOf(plan, leaveOut, name, leaveOut.length ? undefined : eye, leaveOut.length ? eye : undefined, true),
     eye,
     width,
     height,
