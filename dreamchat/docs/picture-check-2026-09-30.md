@@ -71,9 +71,42 @@ never inside the place"); the mock-up's layout followed where its shapes are cle
 - **Story data**: a one-seat cab for two riders; a brass key in a silver-only palette; Tomas's sketch already the
   ten-year-old of m2.
 
+## What was done with it (30 Sep, evening)
+
+On lab (`b82362d`), each measured on every saved dream with its changes classified, prompt cases unchanged, the suite
+green both ways:
+
+- **Seen through an opening** (`plan_beyond`, S6): heron m2's students are out past the door, seen through its window.
+- **Colours said once stay told** (`carried_colours`, S6): a colour the dreamer gave something at an earlier moment is
+  still told wherever it is in view: heron's "green corridor" (drawn beige at m2), the silver fish, the yellow boat,
+  the brown leather suitcase, the white lighthouse.
+- **The shot brief's light** (S6): the brief gives the light's source and side, never a time of day the facts do not
+  give ("flat white daylight" at night).
+- **Sides hold** (keep-sides, Mac): riders in one vehicle hold and set the scene's line like anyone; lighthouse-fresh
+  m13 stays on m12's side, and a crossing the moment makes is said.
+- **Across from** (Mac): two sat facing each other are said to sit across from each other (snow-train m2).
+- **The bridge deck** (path-deck, Mac): a way out of doors with no ground on its plan gets its deck under whoever is
+  there, along the way they ride (night-market m5).
+- **Seen looking at it** (lookers, Mac): a camera that those looking at what the moment looks at would stare into costs
+  more, so they are seen from beside, looking (night-market m2).
+- **The breakdown's eyes** (S6, the writer's rule, new dreams only): a moment whose point is what the dreamer holds,
+  with what they look at beyond it, is through their eyes. lighthouse-fresh m10 was told that way ("still holding it
+  in both hands, just in front of me, but I was looking past it at the field") and broken down as seen from outside;
+  no outside camera shows both the hands and the field, and the model added a second pair of hands. The frozen dream
+  keeps its eyes, so m10 is not redrawn.
+
+Drawn from `b82362d` for the owner to judge blind (\$2.40; \$9.90 spent today in all):
+
+- **fal-redo**: six of the seven he judged not right, drawn again, each against the picture he failed.
+- **pw-a / pw-b**: a blind test of `picture_words` (not on lab): five moments, each drawn with and without the step,
+  the two prompts differing by exactly one line and the images and briefs identical. It drops "the unlabelled shapes
+  under people become what they sit on" where nobody in the picture may be sat (43 of 127 frozen pictures; orchard m2's
+  box), and edits an earlier picture keeping faces and clothes but not poses (snow-train-2 m3). It lands only if the
+  owner's verdicts favour it.
+
 ## Next
 
-1. Land the Mac pane's keep-sides, path-deck, facing-from-acts and the never-from-behind rule; then redraw the seven
-   (new side only, $1.05) for the owner to judge against these pictures.
-2. A small blind picture test of `picture_words` (orchard m2 and a few moments it rewords) before it lands.
-3. The shot brief takes its light from the story, or says none.
+1. The owner's verdicts on fal-redo and pw-b; `picture_words` lands or is dropped on them.
+2. Mock-up shapes (Mac): animals, held small props at the hands and at their size, the tractor as parts, near-blank
+   close and first-person mock-ups.
+3. The place sketch pasted as the backdrop (its border and vignette), and states still in progress written as done.
