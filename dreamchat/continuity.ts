@@ -8,6 +8,7 @@
 // an in-between picture that is never a cut. Everything here is pure: the breakdown in, the plan
 // out, and the same breakdown always gives the same plan.
 import type { CastReading } from './cast-types';
+import { withCastFixtures, withCastSpots } from './castplace';
 import {
   type Blocking,
   bearing,
@@ -469,15 +470,24 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
   const scene = b.scenes.find((sc) => sc.moments.some((x) => x.id === momentId));
   const given = placePlan(b, momentId);
   if (!scene || !given) return undefined;
-  // With the camera rules, each fixture the place's words put up a wall or on the ceiling is there, off the
-  // floor (camera.ts mounted): the high round window stood on the floor, under the water.
   // With the camera rules, each fixture the place's words put up a wall or on the ceiling is there, off the floor
-  // (camera.ts mounted), and no name gives the side of the room it is on (camera.ts sideless).
+  // (camera.ts mounted): the high round window stood on the floor, under the water. No name gives the side of the room
+  // it is on (camera.ts sideless). With the cast reading on the record (the one builder's `cast_named` step), what the
+  // moment needs drawn and was never cast is placed, each person and creature is at its own size and shape, and the
+  // place's own fixtures its words name are there (castplace.ts).
+  const moment = scene.moments.find((x) => x.id === momentId)!;
   const plan =
     cameraMode() === 'on'
       ? (() => {
           const up = mounted(given, placeWordsOf(b, momentId));
-          return { ...up, spots: sidelessNames(up.spots) };
+          const named = { ...up, spots: sidelessNames(up.spots) };
+          const cast = rec?.cast;
+          if (!cast) return named;
+          const dreamer = b.people.find((p) => p.is_dreamer)?.id;
+          // Each person and creature at its own size and shape (castplace.ts withCastBodies) waits: drawn so, a
+          // terrier and a school of little fish fell under what the words say, and a cat as big as a bus hid the child
+          // beside it (30 Sep); the words must hold them first.
+          return withCastSpots(withCastFixtures(named, cast.fixtures, moment.place), cast, moment, dreamer);
         })()
       : given;
   // Only the moments in the same place count: who was in the tiny room, not who was on the stairs.
