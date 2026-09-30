@@ -100,14 +100,26 @@ camera words and the cast placement moved what records are keyed by).
   window"): the record's presence rule added whoever the words name. 8ceb m7 only; prompt cases unchanged.
 - *On lab:* `plan_acts`: each moment's typed acts reach planning (`RecordPlan.moments[m].acts`), for poses and riders.
   It moves nothing by itself.
-- *Next (the Mac pane, on plan_acts):* "gets in" drawn mid-climb at the side of what they climb into, not already
-  seated (4: fdd7 m3, 6081 m6, 6e80 m5, 538d m5); then who pedals or drives. b91f m1's "buried in snow" before it falls
-  is gone (the snow is said across the picture, falling; its look still says it settles on the desks, which is m2's).
-  Then the picture test on the owner's local image machine.
+- *On lab, on plan_acts (the camera rules):* whoever climbs into or out of a vehicle or a seat, as the moment's typed
+  act says, stands at its side, half in, facing into it, from the side with room, and is said "climbing into the
+  yellow rowing boat", never already sitting in it and never among who is in it (4: fdd7 m3, 6081 m6, 6e80 m5, 538d
+  m5, de6c m6, 533b m5; through the dreamer's own eyes f202 m7, "the camera is the dreamer's eyes, climbing into…",
+  where the rowing boat had had "the edges of its window" round the view). Frozen 5, live 9 pictures, the rest only
+  "the camera has turned round" after them; prompt cases unchanged.
+- *On lab, on plan_acts (the camera rules):* on a bicycle, whoever pedals or drives rides in front and whoever sits
+  on its back or behind the other at the back, as the scene's acts in the place last said; the words follow where
+  each sits: "sitting in front on", "sitting on the back of", and through the dreamer's own eyes "in front of the
+  dreamer", never "beside the dreamer on the same old red bicycle" (7: acfd m3-m7, 09ea m5, m7, m8). And what they
+  ride goes with them: a vehicle the plan never moves goes where its seated riders go together, and stays with
+  whoever is still seated once one gets out; a cast vehicle is under whoever sits beside it on nothing. The red
+  tractor stayed where the scene began while the plan drove the driver and the dreamer to the field's edge, "outside
+  the picture, behind the camera" (affd m9); now it is in the picture, "with the dreamer and the driver in it".
+  10 frozen, 11 live pictures; prompt cases unchanged.
+- b91f m1's "buried in snow" before it falls is gone (the snow is said across the picture, falling; its look still
+  says it settles on the desks, which is m2's).
+- *Next:* the picture test, paid on fal as the owner chose (checkpoint.ts, blind judging).
 - *Known, not fixed:* tall grass and the orchard's rows planned as ground people stand on top of (d3a1, orchard m5);
-  a spot named as the whole room ("the office interior with desks…", b91f); who rides in front on a bicycle, and who
-  rides in a vehicle the moment's own words name no rider for (the tractor that "drives slowly" at lighthouse-first
-  m9), wait for the typed acts ("pedals", "drives") to reach planning. A written shot brief gives way whenever a
+  a spot named as the whole room ("the office interior with desks…", b91f). A written shot brief gives way whenever a
   fix changes the view's words (ledger row 34, the brief built from the sheet's facts, ends that).
 
 **Earlier landmark (30 Sep, morning, the Mac pane and the S6 pane working together): S5's layout anchor, the S6
