@@ -324,7 +324,18 @@ async function drawDream(
     // person's sketch it drew the dreamer twice, once where the mock-up put them and once as the sketch stands
     // (lighthouse-first m2, 30 Sep); with this line, once (2 of 2).
     const lead = have.length > 1 ? LEAD : '';
-    const fitted = fitMoment(lines, have, 0, MAX_CHARS - lead.length);
+    // The things the moment's action or its one thing to show names, by their sketch's stand-in.
+    const said = `${p.item.fields.action?.value ?? ''} ${p.item.fields.visual_point?.value ?? ''}`.toLowerCase();
+    const named = new Set(
+      r.sheets
+        .filter((s) => s.kind === 'prop')
+        .filter((s) => {
+          const head = (s.name.toLowerCase().match(/[a-z]+/g) ?? []).at(-1);
+          return !!head && new RegExp(`\\b${head}s?\\b`).test(said);
+        })
+        .map((s) => standIn.sketch(s.id)),
+    );
+    const fitted = fitMoment(lines, have, 0, MAX_CHARS - lead.length, named);
     const text = lead + fitted.prompt;
     e.sent = text.length > MAX_CHARS ? text.slice(0, MAX_CHARS) : text;
     e.imagesSent = fitted.images;

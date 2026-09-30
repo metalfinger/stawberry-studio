@@ -59,10 +59,13 @@ export type Fitted = {
 const ROLE_ORDER = ['base', 'identity', 'location', 'prop', 'composition'];
 
 /** Which images a moment keeps: at most MAX_IMAGES, image 1 always, then by role, each role in its own order. */
-export function keptImages(images: Img[]): Img[] {
-  // A role the order does not name comes after every role it does, never with image 1.
+export function keptImages(images: Img[], named: Set<string> = new Set()): Img[] {
+  // A role the order does not name comes after every role it does, never with image 1. A thing the moment's action or
+  // its one thing to show names comes before the place: the mock-up already carries the place's layout, and the
+  // father folding newspaper boats drew a painted wooden one without its sketch (lighthouse-first m4, 30 Sep).
   const rank = (x: Img) => {
     if (x.n === 1) return -1;
+    if (x.role === 'prop' && named.has(x.name)) return 0.5;
     const i = ROLE_ORDER.indexOf(x.role);
     return i < 0 ? ROLE_ORDER.length : i;
   };
@@ -91,8 +94,14 @@ function withoutFirstParen(entry: string): string {
  * picture" sentences, last first. Never what happens, the camera's view, the one thing to show, who is in it, how
  * each one is now, the colours, or the writing line.
  */
-export function fitMoment(lines: Line[], images: Img[], atLeast = 0, max = MAX_CHARS): Fitted {
-  const kept = keptImages(images);
+export function fitMoment(
+  lines: Line[],
+  images: Img[],
+  atLeast = 0,
+  max = MAX_CHARS,
+  named: Set<string> = new Set(),
+): Fitted {
+  const kept = keptImages(images, named);
   const renumber = new Map(kept.map((x, i) => [x.n, i + 1]));
   const droppedImages = images.filter((x) => !renumber.has(x.n)).map((x) => x.name);
   const dropped: Fitted['dropped'] = { images: droppedImages, paragraphs: [], lines: [], chars: 0 };
