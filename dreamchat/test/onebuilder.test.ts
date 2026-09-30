@@ -1595,3 +1595,26 @@ describe("with plan_acts, the moment's acts reach planning", () => {
     expect(r.rec?.moments.m1.acts).toBeUndefined();
   });
 });
+
+describe('who a moment sees through an opening is out past it', () => {
+  const sw = { ...SHEET, DREAMCHAT_CAMERA: 'on', DREAMCHAT_REFS: 'on' };
+  // 4c79 m2: "The dreamer looks through the small round window in the door and sees students sitting in rows".
+  const typed = {
+    m2: {
+      moment: 'm2',
+      facts: [taken({ kind: 'beyond' as const, what: 'p2', through: 'the small round window' })],
+    },
+  };
+  const at = (step: string) =>
+    withSwitches({ ...sw, DREAMCHAT_ONE_BUILDER: step }, () =>
+      rebuild(withReadings('dream-0926-012307-4c79', typed)).pictures.find((p) => p.id === 'm2')!.prompt,
+    );
+  test('before its step, on the camera side of the door; with it, out past the door, seen through its window', () => {
+    expect(at('plan_acts')).toContain('Nearest, close, at the left edge of the picture: the faceless students');
+    const p = at('plan_beyond');
+    expect(p).not.toContain('Nearest, close, at the left edge of the picture: the faceless students');
+    expect(p).toContain(
+      'Out past the wooden door with the small round window, far off outside and never inside the place: the faceless students.',
+    );
+  });
+});

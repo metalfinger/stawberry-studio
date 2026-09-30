@@ -1301,7 +1301,9 @@ export function dreamerShot(
     // ended at its windscreen, and the field it drove through was read as missing (lighthouse, 25 Sep).
     ...(beyond && !toward ? [`Beyond it all, ahead where they look: ${beyond.replace(/[.\s]+$/, '')}.`] : []),
   ];
-  const rules = camera ? waterWords(plan, spots, r, called, eye) : [];
+  // What is out past a window or a door's window, seen through it, through the dreamer's eyes too: the faceless students
+  // through the small round window (heron m2: the owner's picture check, 30 Sep).
+  const rules = camera ? [...waterWords(plan, spots, r, called, eye), ...throughWindows(plan, r, min, called)] : [];
   return {
     eye,
     text: sentences.join(' '),

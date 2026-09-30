@@ -20,6 +20,7 @@ import {
   outsideOrder,
   roomOf,
   settle,
+  type Side,
   sizeOf,
   type Spot,
   unit as unitOf,
@@ -29,6 +30,7 @@ import {
   cameraMode,
   goingIn,
   headWord,
+  isOpening,
   sidelessNames,
   mounted,
   ON_THE_LINE,
@@ -39,6 +41,7 @@ import {
   signedFromLine,
   turnedBetween,
   WATER,
+  wallOf,
   waterLevel,
   wordsAbout,
 } from './camera';
@@ -254,6 +257,8 @@ export type RecordPlan = {
       leaving?: Record<string, string>;
       /** With the one builder's `plan_acts` step: the moment's typed acts (typed.ts), who does what to what, where. */
       acts?: { who: string; does: string; to?: string; where?: string }[];
+      /** With the one builder's `plan_beyond` step: who and what the moment sees out past the place, through what. */
+      beyond?: { what: string; through: string }[];
       now: { of: string; text: string }[];
       /** The same, as typed facts: what `now` says, before it is put in words. */
       facts: NowOf[];
@@ -506,7 +511,7 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
   // never on its floor (camera.ts outThroughWindows); and the water stands as high as the record says it
   // does here, or, where the record's words do not measure it, as high as they last did in this place.
   const camera = cameraMode() === 'on';
-  const beyond = camera ? outThroughWindows(plan) : {};
+  const beyond = camera ? { ...outThroughWindows(plan), ...seenThrough(plan, r?.beyond) } : {};
   // How high each creature of the dream stands, where its look says how big it is: what water covers of it.
   const heights = camera ? bodiesOf(b) : {};
   const beings = Object.entries(heights).map(([id, height]) => ({
@@ -668,6 +673,39 @@ export function withRiders(plan: Blocking, acts: { who: string; does: string; to
       return how ? { ...s, rides: how } : s;
     }),
   };
+}
+
+/**
+ * Who and what the moment's typed reading sees out past the place through an opening (typed.ts `beyond`, the one
+ * builder's `plan_beyond`): out past the wall of the opening whose name says the most of what they are seen through.
+ * The faceless students the dreamer sees "through the small round window in the door" were sat in the corridor, on
+ * the camera's side of the door (heron m2: the owner's picture check, 30 Sep). None where no opening of the place's
+ * plan is named, or the place is not indoors.
+ */
+export function seenThrough(
+  plan: Blocking,
+  facts: { what: string; through: string }[] | undefined,
+): Record<string, Side> {
+  const out: Record<string, Side> = {};
+  if (!facts?.length || !plan.indoors) return out;
+  const openings = plan.spots.filter((s) => isOpening(s) && wallOf(s, plan));
+  const words = (x: string) =>
+    x
+      .toLowerCase()
+      .split(/[^a-z]+/)
+      .filter((w) => w.length > 2 && w !== 'the' && w !== 'its');
+  for (const f of facts) {
+    const who = plan.spots.find((s) => s.id === f.what && !s.fixture && !s.heldBy);
+    if (!who) continue;
+    const want = words(f.through);
+    const best = openings
+      .map((o) => ({ o, n: want.filter((w) => words(o.name ?? '').includes(w)).length }))
+      .filter((x) => x.n > 0)
+      .sort((a, b) => b.n - a.n)[0];
+    const side = best ? wallOf(best.o, plan) : null;
+    if (side) out[who.id] = side;
+  }
+  return out;
 }
 
 /** Getting into or out of something, as a typed act says it: "climbs into", "gets out of", "steps aboard". */

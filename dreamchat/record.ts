@@ -3193,6 +3193,13 @@ export function recordForPlan(
         const acts = takenOf(readings.typed[m.id], m.eyes).acts.map(({ kind: _, ...a }) => a);
         if (acts.length && plan.moments[m.id]) plan.moments[m.id].acts = acts;
       }
+    // With the plan_beyond step, who and what each moment sees out past the place, through what, for the floor plan to
+    // put out past that opening (continuity seenThrough): the students seen through the door's small round window.
+    if (plan && builds('plan_beyond') && readings?.typed)
+      for (const m of record.moments) {
+        const beyond = takenOf(readings.typed[m.id], m.eyes).beyond.map(({ what, through }) => ({ what, through }));
+        if (beyond.length && plan.moments[m.id]) plan.moments[m.id].beyond = beyond;
+      }
     // With the cast_named step, the cast reading as read and checked, for the floor plan to place (continuity rawPlanBy).
     return plan && builds('cast_named') && readings?.cast ? { ...plan, cast: readings.cast } : plan;
   } catch {
