@@ -160,6 +160,9 @@ export const BUILDER_STEPS: readonly string[] = [
   // Not a ledger row: from the owner's picture check (30 Sep). Who and what a moment sees through an opening (a window,
   //    the round window in a door) is out past it on the floor plan, never on the camera's side of it.
   'plan_beyond',
+  // Not a ledger row: from the owner's picture check (30 Sep). A colour the dreamer gave something at an earlier moment
+  //    is still told wherever it is in view ("green corridor", said once at m1).
+  'carried_colours',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;

@@ -81,6 +81,7 @@ import {
   type Shape,
   shapeOf,
   toldColours,
+  coloursIn,
   withoutPose,
 } from './sheets';
 import {
@@ -433,6 +434,25 @@ const nameOf = (sheets: Item[], id: string) => {
   return s ? (s.isDreamer ? 'the dreamer' : pictureName(s.name)) : undefined;
 };
 
+/** The last word of a name, as what a colour phrase colours: "the long green corridor" is a corridor. */
+const headNoun = (name: string) => (name.toLowerCase().match(/[a-z]+/g) ?? []).at(-1) ?? '';
+
+/**
+ * The colours the dream gave, at moments before this one, to whoever and whatever is in view here: each phrase whose
+ * last word is the head of one of their names ("green corridor" of the corridor, "grey heron" of the heron).
+ */
+export function carriedColours(b: Breakdown | undefined, momentId: string, inView: Item[]): string[] {
+  if (!b) return [];
+  const all = moments(b);
+  const at = all.findIndex((m) => m.id === momentId);
+  if (at <= 0) return [];
+  const heads = new Set(inView.map((s) => headNoun(s.name)).filter(Boolean));
+  const out = new Set<string>();
+  for (const m of all.slice(0, at))
+    for (const c of coloursIn(`${m.action ?? ''}. ${m.visual_point ?? ''}`)) if (heads.has(headNoun(c))) out.add(c);
+  return [...out];
+}
+
 /** One cut's sheet, from the moment, its sketches, the plan's earlier pictures and the dream. Pure. */
 export function cutSheet(x: CutSheetInput): CutSheet {
   const { frame, sheets, style } = x;
@@ -463,7 +483,12 @@ export function cutSheet(x: CutSheetInput): CutSheet {
   const writing = writingIn(action, point, ...inView.flatMap((s) => Object.values(s.fields).map((d) => d.value)));
 
   // What the dream itself gives a colour, from what was said of the moment and of each one in view.
-  const told = toldColours(frame, ...inView);
+  // With the carried_colours step, a colour the dreamer gave someone or something at an earlier moment is still told
+  // wherever it is in view: "a long green corridor" at m1 was gone from the corridor's colours at m2, and the picture
+  // drew it beige (heron: the owner's picture check, 30 Sep).
+  const told = builds('carried_colours')
+    ? [...new Set([...toldColours(frame, ...inView), ...carriedColours(x.dream?.breakdown, frame.id, inView)])]
+    : toldColours(frame, ...inView);
   // How each one looks, once (S6 row 8): the story record's base facts, where the builder's looks are on and
   // it holds the element: each field's clauses as the record kept them, a clause guessed or implied (not said,
   // confirmed or read from the story) in the style's shades, as the sketch's words were; fields apart by ";".

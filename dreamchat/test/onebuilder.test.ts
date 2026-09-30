@@ -1618,3 +1618,17 @@ describe('who a moment sees through an opening is out past it', () => {
     );
   });
 });
+
+describe('a colour the dreamer gave stays told where it is in view', () => {
+  const sw = { ...SHEET, DREAMCHAT_CAMERA: 'on', DREAMCHAT_REFS: 'on' };
+  const at = (step: string) =>
+    withSwitches({ ...sw, DREAMCHAT_ONE_BUILDER: step }, () =>
+      rebuild(structuredClone(loadDream('dream-0926-012307-4c79', false).session as Session)).pictures.find(
+        (p) => p.id === 'm2',
+      )!.prompt,
+    );
+  test('4c79 m2: the green corridor said at m1 is still green', () => {
+    expect(at('plan_beyond')).not.toContain('green corridor.');
+    expect(at('carried_colours')).toContain('What the dream itself gives a colour keeps it exactly: green corridor.');
+  });
+});
