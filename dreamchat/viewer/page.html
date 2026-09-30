@@ -405,7 +405,7 @@ function overviewPanel() {
 function cutPanel(c) {
   const out = [];
   const at = placeOf(c.id);
-  if (at) out.push(el('div', { class: 'crumbs' }, el('span', { text: seqLabel(at.q, at.i) }), el('span', { text: sceneLabel(at.sc) }), el('span', { text: shotLabel(at.sh) }), el('span', { text: `${cutLabel(c)} (${c.id})` })));
+  if (at) out.push(el('div', { class: 'crumbs' }, el('span', { text: seqLabel(at.q, at.i) }), el('span', { text: sceneLabel(at.sc) }), el('span', { text: shotLabel(at.sh) }), el('span', { text: `${cutLabel(c)}${at.sh.cuts.length > 1 && c.shotIndex ? ` · ${c.shotIndex} of ${at.sh.cuts.length} in the shot` : ''} (${c.id})` })));
   const scene = D.tree.flatMap((q) => q.scenes).find((sc) => sc.id === c.scene);
   out.push(el('div', { class: 'node-head' }, el('h2', { text: cutLabel(c) }), el('span', { class: 'id', text: c.id }),
     el('span', { class: 'muted', text: `${c.scene} · ${c.shot}` }),
