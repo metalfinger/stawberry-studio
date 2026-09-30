@@ -74,6 +74,11 @@ export type RebuiltPicture = {
   assembled?: Framed['assembled'];
   /** S9: rebuilt from its record of what it was drawn from (the dream as it stood when it was drawn). */
   asDrawn?: true;
+  /**
+   * With S5's references: the earlier pictures its plan names that are not sent because the owner judged them
+   * wrong, and whether it was the picture to edit (then the moment is made from its own shot and mock-up).
+   */
+  withheld?: { id: string; why: 'judged wrong' | 'stale'; base?: true }[];
 };
 
 /** A saved dream's plan and every picture of it, in the order they would be drawn. */
@@ -229,6 +234,9 @@ export function rebuild(
     const planned: PlannedInput[] = (it.frame?.plan?.refs ?? [])
       .map((use) => ({ use, item: byId.get(use.id) }))
       .filter((x): x is PlannedInput => !!x.item && !withheld[x.use.id]);
+    const held = (it.frame?.plan?.refs ?? [])
+      .filter((use) => withheld[use.id])
+      .map((use) => ({ id: use.id, why: withheld[use.id]!, ...(use.role === 'base' ? { base: true as const } : {}) }));
     // An edit whose picture is withheld is made from its own shot and mock-up (continuity.ts unedited).
     const frame = uneditedFrame(it, (id) => !withheld[id]);
     const cut = frame.frame?.plan;
@@ -251,6 +259,7 @@ export function rebuild(
       inView: inViewIn(built, it, sheets),
       ...(built.sheet ? { sheet: built.sheet, differs: built.differs ?? [] } : {}),
       ...(built.assembled ? { assembled: built.assembled } : {}),
+      ...(held.length ? { withheld: held } : {}),
     });
   }
   return {
