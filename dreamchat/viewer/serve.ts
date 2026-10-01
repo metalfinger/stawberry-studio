@@ -12,12 +12,13 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFile
 import { extname, join } from 'node:path';
 import { ANSWERS, nodeStates } from '../evals/viewer-report';
 import { VIEWS } from './build';
-import { localDream, localImage, localRuns, withLocalVerdict } from './local';
+import { localCompare, localDream, localImage, localRuns, withLocalVerdict } from './local';
 import type { ViewAnswers, ViewDream, ViewHashes, ViewVerdict } from './types';
 
 const FIXTURES = join(import.meta.dir, 'fixtures');
 const PAGE = join(import.meta.dir, 'page.html');
 const LOCAL_PAGE = join(import.meta.dir, 'local.html');
+const COMPARE_PAGE = join(import.meta.dir, 'compare.html');
 const TYPES: Record<string, string> = {
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
@@ -205,6 +206,14 @@ export function serveViewer(port = 0): { url: string; stop: () => void } {
       // The local image machine's runs (viewer/local.ts): /local, /local/<run>, /local/<run>/<dream>, read by their page.
       if (req.method === 'GET' && /^\/local(\/[A-Za-z0-9][A-Za-z0-9._-]*){0,2}\/?$/.test(url.pathname))
         return new Response(Bun.file(LOCAL_PAGE), { headers: { 'content-type': 'text/html; charset=utf-8' } });
+      // Two runs of the same dreams side by side: /local-compare/<run>/<other run>/<dream>, read by its page.
+      if (req.method === 'GET' && /^\/local-compare(\/[A-Za-z0-9][A-Za-z0-9._-]*){0,3}\/?$/.test(url.pathname))
+        return new Response(Bun.file(COMPARE_PAGE), { headers: { 'content-type': 'text/html; charset=utf-8' } });
+      if (req.method === 'GET' && url.pathname === '/api/local/compare') {
+        const q = (k: string) => url.searchParams.get(k) ?? '';
+        const got = localCompare(q('a'), q('b'), q('dream') || undefined);
+        return got ? json(got) : json({ error: 'no such pair of runs' }, 404);
+      }
       if (req.method === 'GET' && url.pathname === '/api/local/runs') return json(localRuns());
       if (req.method === 'GET' && url.pathname === '/api/local/dream') {
         const got = localDream(url.searchParams.get('run') ?? '', url.searchParams.get('dream') ?? '');

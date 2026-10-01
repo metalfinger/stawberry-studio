@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compare runs</title>
+<style>
+:root {
+  --paper: #f3f4f2; --panel: #ffffff; --ink: #16181b; --muted: #5d636b; --faint: #8b9198; --rule: #d9dcd7;
+  --accent: #2b59c3; --accent-soft: #e4ebfa;
+  --right: #1f7a45; --wrong: #b3322a; --partly: #a3680f;
+  --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0f1113; --panel: #171a1d; --ink: #e7e9ec; --muted: #a1a7ae; --faint: #7a8189; --rule: #2a2f34;
+    --accent: #7ea2ff; --accent-soft: #1d2740; --right: #4fbf7e; --wrong: #ef6b61; --partly: #e2a543;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0f1113; --panel: #171a1d; --ink: #e7e9ec; --muted: #a1a7ae; --faint: #7a8189; --rule: #2a2f34;
+  --accent: #7ea2ff; --accent-soft: #1d2740; --right: #4fbf7e; --wrong: #ef6b61; --partly: #e2a543;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--paper); color: var(--ink); font: 14px/1.45 var(--sans); display: grid; grid-template-rows: auto 1fr; }
+button, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mono { font-family: var(--mono); font-size: 12px; }
+.muted { color: var(--muted); }
+.faint { color: var(--faint); }
+
+header.bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 10px 16px; border-bottom: 1px solid var(--rule); background: var(--panel); }
+header.bar h1 { font-size: 15px; margin: 0; font-weight: 650; }
+header.bar select { padding: 5px 8px; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper); max-width: 220px; }
+.toggle { border: 1px solid var(--rule); background: var(--paper); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+.toggle[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.spacer { flex: 1; }
+.keys { font-size: 12px; color: var(--faint); }
+a.back { color: var(--muted); font-size: 12.5px; text-decoration: none; border: 1px solid var(--rule); border-radius: 6px; padding: 4px 10px; }
+a.back:hover { border-color: var(--accent); color: var(--ink); }
+
+main.split { display: grid; grid-template-columns: 280px 1fr; min-height: 0; }
+nav.side { border-right: 1px solid var(--rule); overflow: auto; background: var(--panel); padding: 6px 0 40px; }
+nav.side h2 { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); margin: 14px 14px 4px; font-weight: 600; }
+.dreamrow { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; width: 100%; text-align: left; border: 0; background: none; padding: 6px 14px; cursor: pointer; }
+.dreamrow:hover { background: var(--paper); }
+.dreamrow[aria-current="true"] { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+.dreamrow .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dreamrow .n { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+.pairrow { display: flex; gap: 8px; align-items: center; width: 100%; border: 0; background: none; padding: 3px 14px 3px 22px; cursor: pointer; text-align: left; font-size: 12.5px; }
+.pairrow:hover { background: var(--paper); }
+.pairrow .id { font-family: var(--mono); font-size: 11.5px; color: var(--muted); min-width: 34px; }
+.pairrow .what { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dot { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--faint); flex: none; }
+.dot.right { background: var(--right); border-color: var(--right); }
+.dot.partly { background: var(--partly); border-color: var(--partly); }
+.dot.wrong { background: var(--wrong); border-color: var(--wrong); }
+
+section.panel { overflow: auto; min-height: 0; padding: 18px 22px 120px; }
+.dreamhead h2 { margin: 0 0 4px; font-size: 20px; font-weight: 650; }
+.pair { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 14px; margin: 18px 0; scroll-margin-top: 12px; }
+.pair.focus { border-color: var(--accent); }
+.pairhead { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+.pairhead .id { font-family: var(--mono); color: var(--muted); }
+.pairhead .what { font-size: 15px; font-weight: 600; flex: 1 1 320px; }
+.mock { width: 132px; flex: none; }
+.mock img { width: 100%; border-radius: 4px; display: block; cursor: zoom-in; background: var(--paper); }
+.mock .faint { font-size: 11px; }
+.sides { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.sidecol h4 { margin: 0 0 6px; font-size: 12px; font-weight: 600; color: var(--muted); display: flex; gap: 8px; align-items: center; }
+.sidecol img.pic { width: 100%; border-radius: 6px; display: block; cursor: zoom-in; background: var(--paper); }
+.placeholder { aspect-ratio: 16 / 9; display: grid; place-items: center; background: var(--paper); border: 1px dashed var(--rule); border-radius: 6px; color: var(--muted); padding: 12px; text-align: center; }
+.placeholder.failed { color: var(--wrong); border-color: var(--wrong); }
+.judge { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+.judge button { border: 1px solid var(--rule); background: var(--paper); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+.judge button[data-v="right"][aria-pressed="true"] { background: var(--right); border-color: var(--right); color: #fff; }
+.judge button[data-v="partly"][aria-pressed="true"] { background: var(--partly); border-color: var(--partly); color: #fff; }
+.judge button[data-v="wrong"][aria-pressed="true"] { background: var(--wrong); border-color: var(--wrong); color: #fff; }
+.judge textarea { flex: 1 1 200px; min-height: 32px; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper); padding: 4px 8px; resize: vertical; }
+.saved { font-size: 12px; color: var(--muted); }
+details { margin-top: 8px; }
+details summary { cursor: pointer; color: var(--muted); font-size: 12.5px; }
+pre.prompt { white-space: pre-wrap; font: 12px/1.5 var(--mono); background: var(--paper); border: 1px solid var(--rule); border-radius: 6px; padding: 10px; max-height: 360px; overflow: auto; }
+.meta { font-family: var(--mono); font-size: 11.5px; color: var(--faint); margin-top: 6px; }
+.lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.85); display: none; place-items: center; z-index: 10; cursor: zoom-out; }
+.lightbox.open { display: grid; }
+.lightbox img { max-width: 96vw; max-height: 94vh; }
+@media (max-width: 900px) {
+  main.split { grid-template-columns: 1fr; }
+  nav.side { max-height: 34vh; border-right: 0; border-bottom: 1px solid var(--rule); }
+  .sides { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: no-preference) { .pair { transition: border-color .15s; } }
+</style>
+</head>
+<body>
+<header class="bar">
+  <h1>Compare runs</h1>
+  <select id="a" aria-label="First run"></select>
+  <span class="muted">against</span>
+  <select id="b" aria-label="Second run"></select>
+  <button class="toggle" id="blind" aria-pressed="false" title="Hide which run drew which picture, and their prompts">Blind</button>
+  <span class="spacer"></span>
+  <span class="keys">j / k: next / previous · left 1 right 2 partly 3 wrong · right 7 8 9</span>
+  <a class="back" href="/local">Local runs</a>
+</header>
+<main class="split">
+  <nav class="side" id="side" aria-label="Dreams in both runs"></nav>
+  <section class="panel" id="panel"><p class="muted">Loading…</p></section>
+</main>
+<div class="lightbox" id="lightbox" role="dialog" aria-label="Picture, full size"><img alt=""></div>
+<script>
+'use strict';
+const $ = (s, el = document) => el.querySelector(s);
+const el = (tag, attrs = {}, ...kids) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k === 'class') e.className = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v === true ? '' : v);
+  }
+  for (const k of kids.flat()) if (k != null && k !== false) e.append(k instanceof Node ? k : document.createTextNode(String(k)));
+  return e;
+};
+const put = (parent, ...kids) => parent.replaceChildren(...kids.flat(Infinity).filter((k) => k != null && k !== false));
+const BLIND = 'compare-blind';
+const store = { get: (k) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
+const state = { runs: [], a: '', b: '', dream: '', data: null, focus: 0, blind: store.get(BLIND) === '1', fresh: new Set() };
+const img = (run, file) => `/local-img/${encodeURIComponent(run)}/${encodeURIComponent(state.dream)}/${encodeURIComponent(file)}`;
+const when = (iso) => (iso ? new Date(iso).toLocaleString([], { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' }) : '');
+
+function route() {
+  const [, , a, b, dream] = location.pathname.replace(/\/+$/, '').split('/');
+  return { a: a ? decodeURIComponent(a) : '', b: b ? decodeURIComponent(b) : '', dream: dream ? decodeURIComponent(dream) : '' };
+}
+function go(push = true) {
+  const path = `/local-compare/${encodeURIComponent(state.a)}/${encodeURIComponent(state.b)}${state.dream ? `/${encodeURIComponent(state.dream)}` : ''}`;
+  if (push && location.pathname !== path) history.pushState({}, '', path);
+  load();
+}
+
+async function start() {
+  const r = await fetch('/api/local/runs');
+  state.runs = r.ok ? await r.json() : [];
+  const names = state.runs.map((x) => x.run);
+  for (const id of ['a', 'b']) put($(`#${id}`), names.map((n) => el('option', { value: n }, n)));
+  const want = route();
+  // Two runs that share dreams: the ones asked for, else night-2 against the newest other run, else the two newest.
+  const pick = (n, not) => (names.includes(n) && n !== not ? n : '');
+  state.a = pick(want.a) || pick('night-2') || names[1] || names[0] || '';
+  state.b = pick(want.b, state.a) || names.find((n) => n !== state.a) || '';
+  state.dream = want.dream;
+  $('#a').value = state.a; $('#b').value = state.b;
+  $('#blind').setAttribute('aria-pressed', state.blind ? 'true' : 'false');
+  if (!state.a || !state.b) { put($('#panel'), el('p', { class: 'muted' }, 'Two runs are needed to compare: evals/local-run.ts writes them to runs/local-draw.')); return; }
+  load();
+}
+
+async function load(keepScroll = false) {
+  const q = `a=${encodeURIComponent(state.a)}&b=${encodeURIComponent(state.b)}${state.dream ? `&dream=${encodeURIComponent(state.dream)}` : ''}`;
+  const r = await fetch(`/api/local/compare?${q}`);
+  state.data = r.ok ? await r.json() : null;
+  if (state.data && !state.dream && state.data.dreams.length) { state.dream = state.data.dreams[0].dream; return go(false); }
+  const top = $('#panel').scrollTop;
+  renderSide(); renderPanel();
+  if (keepScroll) $('#panel').scrollTop = top;
+}
+
+/** Which side each run's picture is on: as chosen, or, blind, swapped for about half the pictures, the same each time. */
+function sidesOf(id) {
+  if (!state.blind) return ['a', 'b'];
+  let h = 0;
+  for (const c of `${state.dream}/${id}`) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return h % 2 ? ['b', 'a'] : ['a', 'b'];
+}
+const runOf = (side) => (side === 'a' ? state.a : state.b);
+const labelOf = (side, k) => (state.blind ? (k === 0 ? 'Left' : 'Right') : runOf(side));
+
+function renderSide() {
+  const side = $('#side');
+  if (!state.data) { put(side, el('h2', {}, 'No dreams in both runs')); return; }
+  put(side, el('h2', {}, `Dreams in both (${state.data.dreams.length})`));
+  for (const d of state.data.dreams) {
+    side.append(el('button', { class: 'dreamrow', 'aria-current': d.dream === state.dream ? 'true' : null, onclick: () => { state.dream = d.dream; go(); } },
+      el('span', { class: 't' }, d.title), el('span', { class: 'n' }, state.blind ? `${d.a + d.b} drawn` : `${d.a} · ${d.b}`)));
+    if (d.dream === state.dream && state.data.pairs) {
+      const v = state.data.verdicts;
+      for (const p of state.data.pairs) {
+        const [l, r] = sidesOf(p.id);
+        side.append(el('button', { class: 'pairrow', onclick: () => focusOn(p.id) },
+          el('span', { class: 'id' }, p.id), el('span', { class: 'what' }, p.name),
+          [l, r].map((s) => { const x = state.blind && !state.fresh.has(`${s}/${p.id}`) ? null : v[s][p.id]; return el('span', { class: `dot ${x ? x.verdict : ''}`, title: `${labelOf(s, s === l ? 0 : 1)}: ${x ? x.verdict : 'not judged'}` }); })));
+      }
+    }
+  }
+}
+
+function picture(src, alt, cls) {
+  const i = el('img', { src, alt, loading: 'lazy', class: cls || null });
+  i.addEventListener('click', () => { const lb = $('#lightbox'); $('img', lb).src = i.src; lb.classList.add('open'); });
+  return i;
+}
+
+function renderPanel() {
+  const panel = $('#panel');
+  if (!state.data) { put(panel, el('p', { class: 'muted' }, `${state.a} and ${state.b} cannot be compared: one of them is not here, or they are the same run.`)); return; }
+  if (!state.data.pairs) { put(panel, el('p', { class: 'muted' }, 'These two runs have no dream in common yet.')); return; }
+  const d = state.data.dreams.find((x) => x.dream === state.dream);
+  put(panel,
+    el('div', { class: 'dreamhead' }, el('h2', {}, d ? d.title : state.dream),
+      el('div', { class: 'muted mono' }, state.blind ? `${state.dream} · blind: which run drew which is hidden` : `${state.dream} · left ${state.a} · right ${state.b}`)),
+    state.data.pairs.map((p, i) => pairCard(p, i)));
+}
+
+function pairCard(p, i) {
+  const v = state.data.verdicts;
+  const mock = [p.a, p.b].map((x) => x && (x.imagesSent || []).find((r) => r.role === 'base' && /^previs/.test(r.name) && r.file)).find(Boolean);
+  const mockRun = mock ? (p.a && (p.a.imagesSent || []).includes(mock) ? state.a : state.b) : '';
+  const [l, r] = sidesOf(p.id);
+  const card = el('article', { class: 'pair', id: `p-${p.id}`, 'data-i': i },
+    el('div', { class: 'pairhead' },
+      el('span', { class: 'id' }, p.id), el('span', { class: 'what' }, p.name),
+      el('span', { class: 'faint mono' }, p.kind === 'ghost' ? 'in-between picture' : ''),
+      mock ? el('div', { class: 'mock' }, picture(img(mockRun, mock.file), `mock-up of ${p.id}`), el('div', { class: 'faint' }, 'mock-up')) : null),
+    // Blind, an earlier verdict would say which run drew which: none is shown until it is given here.
+    el('div', { class: 'sides' }, [l, r].map((s, k) => sideCol(p, s, k, state.blind && !state.fresh.has(`${s}/${p.id}`) ? null : v[s][p.id]))));
+  return card;
+}
+
+function sideCol(p, s, k, verdict) {
+  const x = p[s];
+  const run = runOf(s);
+  const note = el('textarea', { placeholder: 'What is wrong, or what worked (optional)', 'aria-label': `Note on ${p.id}, ${labelOf(s, k)}` });
+  note.value = verdict ? verdict.note : '';
+  const saved = el('span', { class: 'saved' }, verdict ? `${verdict.verdict}, ${when(verdict.at)}` : '');
+  const col = el('div', { class: 'sidecol', 'data-side': k === 0 ? 'left' : 'right' },
+    el('h4', {}, labelOf(s, k)),
+    x && x.file && x.state === 'done' ? picture(img(run, x.file), `${p.id}, ${labelOf(s, k)}`, 'pic')
+      : el('div', { class: `placeholder ${x ? x.state : ''}` }, !x ? 'Not in this run' : x.state === 'failed' ? `Failed: ${x.error || 'no reason given'}` : x.state === 'skipped' ? 'Skipped' : 'Waiting to be drawn'),
+    x && x.state === 'done' ? el('div', { class: 'judge' },
+      ['right', 'partly', 'wrong'].map((w) => el('button', { 'data-v': w, 'aria-pressed': verdict && verdict.verdict === w ? 'true' : 'false', onclick: () => save(run, s, p.id, w, note.value, saved, col) }, w[0].toUpperCase() + w.slice(1))),
+      note, saved) : null,
+    x && !state.blind ? el('details', {}, el('summary', {}, 'The prompt as sent'), el('pre', { class: 'prompt' }, x.sent || x.prompt || '')) : null,
+    x && !state.blind ? el('div', { class: 'meta' }, [x.quality || '', x.secs ? `${x.secs}s` : '', x.seed != null ? `seed ${x.seed}` : ''].filter(Boolean).join(' · ')) : null);
+  return col;
+}
+
+async function save(run, s, id, verdict, note, saved, col) {
+  saved.textContent = 'saving…';
+  const r = await fetch('/api/local/verdict', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ run, dream: state.dream, id, verdict, note }) });
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) { saved.textContent = body.error || 'not saved'; return; }
+  state.data.verdicts[s] = body.verdicts;
+  state.fresh.add(`${s}/${id}`);
+  for (const b of col.querySelectorAll('.judge button')) b.setAttribute('aria-pressed', b.dataset.v === verdict ? 'true' : 'false');
+  saved.textContent = `${verdict}, saved`;
+  renderSide();
+}
+
+function cards() { return [...document.querySelectorAll('.pair')]; }
+function focusOn(id) {
+  const c = document.getElementById(`p-${id}`);
+  if (!c) return;
+  state.focus = Number(c.dataset.i);
+  for (const x of cards()) x.classList.toggle('focus', x === c);
+  c.scrollIntoView({ block: 'start' });
+}
+document.addEventListener('keydown', (e) => {
+  if (e.target.closest('textarea, select')) return;
+  const all = cards();
+  if (e.key === 'Escape') { $('#lightbox').classList.remove('open'); return; }
+  if (!all.length) return;
+  if (e.key === 'j' || e.key === 'k') {
+    state.focus = Math.max(0, Math.min(all.length - 1, state.focus + (e.key === 'j' ? 1 : -1)));
+    for (const x of all) x.classList.toggle('focus', Number(x.dataset.i) === state.focus);
+    all[state.focus].scrollIntoView({ block: 'start' });
+    return;
+  }
+  const keys = { 1: ['left', 0], 2: ['left', 1], 3: ['left', 2], 7: ['right', 0], 8: ['right', 1], 9: ['right', 2] }[e.key];
+  if (!keys) return;
+  const col = all[state.focus] && all[state.focus].querySelector(`.sidecol[data-side="${keys[0]}"]`);
+  const b = col && col.querySelectorAll('.judge button')[keys[1]];
+  if (b) b.click();
+});
+$('#lightbox').addEventListener('click', () => $('#lightbox').classList.remove('open'));
+for (const id of ['a', 'b'])
+  $(`#${id}`).addEventListener('change', (e) => { state[id] = e.target.value; go(); });
+$('#blind').addEventListener('click', () => {
+  state.blind = !state.blind;
+  store.set(BLIND, state.blind ? '1' : '0');
+  $('#blind').setAttribute('aria-pressed', state.blind ? 'true' : 'false');
+  renderSide(); renderPanel();
+});
+window.addEventListener('popstate', () => { Object.assign(state, route()); $('#a').value = state.a; $('#b').value = state.b; load(); });
+start();
+</script>
+</body>
+</html>

@@ -171,3 +171,49 @@ export function withLocalVerdict(
   renameSync(tmp, path);
   return { verdicts };
 }
+
+/** The pictures of two runs of one dream, side by side by their id: sketches left out (a seeded run shares them). */
+export type LocalPair = {
+  id: string;
+  kind: LocalPicture['kind'];
+  name: string;
+  a: LocalPicture | null;
+  b: LocalPicture | null;
+};
+
+/**
+ * Two runs of the same dreams side by side (the same dreams drawn two ways, say the harness's prompt and another
+ * model's): the dreams both runs have, each with how far each run has got; and, for one of them, its pictures paired by
+ * id in story order, with each run's verdicts. None where either run is not here.
+ */
+export function localCompare(
+  a: string,
+  b: string,
+  dream?: string,
+): {
+  dreams: { dream: string; title: string; a: number; b: number }[];
+  pairs?: LocalPair[];
+  verdicts?: { a: LocalVerdicts; b: LocalVerdicts };
+} | null {
+  if (!SAFE.test(a) || !SAFE.test(b) || a === b) return null;
+  const runs = localRuns();
+  const [ra, rb] = [runs.find((r) => r.run === a), runs.find((r) => r.run === b)];
+  if (!ra || !rb) return null;
+  const dreams = ra.dreams
+    .filter((d) => rb.dreams.some((x) => x.dream === d.dream))
+    .map((d) => ({ dream: d.dream, title: d.title, a: d.done, b: rb.dreams.find((x) => x.dream === d.dream)!.done }));
+  if (!dream) return { dreams };
+  const [da, db] = [localDream(a, dream), localDream(b, dream)];
+  if (!da || !db) return { dreams };
+  const of = (m: LocalManifest) => m.pictures.filter((p) => p.kind !== 'sketch');
+  const ids = [...new Set([...of(da.manifest), ...of(db.manifest)].map((p) => p.id))];
+  const pairs = ids.map((id) => {
+    const [pa, pb] = [
+      of(da.manifest).find((p) => p.id === id) ?? null,
+      of(db.manifest).find((p) => p.id === id) ?? null,
+    ];
+    const p = (pa ?? pb)!;
+    return { id, kind: p.kind, name: p.name, a: pa, b: pb };
+  });
+  return { dreams, pairs, verdicts: { a: da.verdicts, b: db.verdicts } };
+}

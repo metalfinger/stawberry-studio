@@ -5,7 +5,8 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { localDream, localImage, localRuns, withLocalVerdict } from '../viewer/local';
+import { localCompare, localDream, localImage, localRuns, withLocalVerdict } from '../viewer/local';
+import { serveViewer } from '../viewer/serve';
 
 let root = '';
 const was = process.env.LOCAL_RUNS;
@@ -90,5 +91,68 @@ describe('the local runs', () => {
     expect(withLocalVerdict({ run: '../x', dream: 'y', id: 'm1', verdict: 'right' }, at)).toMatchObject({
       status: 404,
     });
+  });
+});
+
+describe('two runs of the same dreams, side by side', () => {
+  const DREAM = 'dream-0926-012307-4c79';
+  beforeAll(() => {
+    // The same dream drawn again in another run (the moments with another prompt), its sketches shared.
+    const dir = join(root, 'qwen-1', DREAM);
+    mkdirSync(join(dir, 'img'), { recursive: true });
+    writeFileSync(join(dir, 'img', 'cut-m1.png'), 'png');
+    writeFileSync(
+      join(dir, 'manifest.json'),
+      JSON.stringify({
+        run: 'qwen-1',
+        dream: DREAM,
+        title: 'The Heron Teacher',
+        updated: '2026-10-01T03:00:00Z',
+        pictures: [
+          { id: 'p1', kind: 'sketch', name: 'you', state: 'done', file: join(dir, 'img', 'sketch-p1.png') },
+          { id: 'm1', kind: 'cut', name: 'The dreamer walks', state: 'done', file: join(dir, 'img', 'cut-m1.png') },
+          { id: 'm4', kind: 'cut', name: 'The heron turns', state: 'waiting' },
+        ],
+      }),
+    );
+  });
+
+  test('the dreams both runs have, and each picture of either run by its id, sketches left out', () => {
+    expect(localCompare('night-1', 'qwen-1')).toEqual({
+      dreams: [{ dream: DREAM, title: 'The Heron Teacher', a: 2, b: 2 }],
+    });
+    const got = localCompare('night-1', 'qwen-1', DREAM)!;
+    expect(got.pairs!.map((p) => [p.id, p.a?.state ?? null, p.b?.state ?? null])).toEqual([
+      ['m1', 'done', 'done'],
+      ['m2', 'waiting', null],
+      ['m3', 'failed', null],
+      ['m4', null, 'waiting'],
+    ]);
+    // Files by name only, as each run's own page has them.
+    expect(got.pairs![0].b!.file).toBe('cut-m1.png');
+    expect(Object.keys(got.verdicts!)).toEqual(['a', 'b']);
+  });
+
+  test("none for a run not here, one run against itself, or a name that is not a run's", () => {
+    expect(localCompare('night-1', 'nowhere')).toBeNull();
+    expect(localCompare('night-1', 'night-1')).toBeNull();
+    expect(localCompare('../night-1', 'qwen-1')).toBeNull();
+  });
+
+  test('its page and its data are served to this machine', async () => {
+    const { url, stop } = serveViewer(0);
+    try {
+      for (const path of ['local-compare', 'local-compare/night-1/qwen-1', `local-compare/night-1/qwen-1/${DREAM}`])
+        expect([path, (await fetch(`${url}${path}`)).headers.get('content-type')]).toEqual([
+          path,
+          'text/html; charset=utf-8',
+        ]);
+      const r = await fetch(`${url}api/local/compare?a=night-1&b=qwen-1&dream=${DREAM}`);
+      expect(r.status).toBe(200);
+      expect(((await r.json()) as { pairs: unknown[] }).pairs).toHaveLength(4);
+      expect((await fetch(`${url}api/local/compare?a=night-1&b=nowhere`)).status).toBe(404);
+    } finally {
+      stop();
+    }
   });
 });
