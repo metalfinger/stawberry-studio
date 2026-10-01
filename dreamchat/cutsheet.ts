@@ -33,7 +33,6 @@ import {
   camerasOf,
   type ContinuityPlan,
   type CutPlan,
-  ATTEND,
   openingNamed,
   pictureName,
   placePlan,
@@ -43,7 +42,6 @@ import {
   relationIn,
   sameByCamera,
   sidesByCamera,
-  spotNamed,
 } from './continuity';
 import { wallsSeen } from './previs';
 import {
@@ -1162,49 +1160,17 @@ function cameraLayer(x: {
       const opening = openingNamed(floor, bw.through);
       const called = opening ? (opening.name ?? named(opening.id)) : null;
       if (!opening || !called) continue;
-      // The opening in the picture: named in the view before what it has outside the picture, as previs throughWindows
-      // keeps its line to an opening the camera sees.
-      if (
-        !new RegExp(`\\b${called.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(
-          (x.plan?.view ?? '').split(/Outside the picture/)[0],
-        )
-      )
-        continue;
-      if (
-        new RegExp(`Outside the picture[^.]*\\b${called.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(
-          x.plan?.view ?? '',
-        )
-      )
+      // The opening in the picture, as previs throughWindows keeps its line to an opening the camera sees: named in the
+      // view outside every "Outside the picture" sentence, and as itself, not as the wall named after it ("the high round
+      // window side", which a camera looks toward with the window above the picture: library-1 m2).
+      const inView = (x.plan?.view ?? '')
+        .split(/(?<=\.)\s+/)
+        .filter((c) => !/^Outside the picture/i.test(c))
+        .join(' ');
+      if (!new RegExp(`\\b${called.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b(?!\\s+side\\b)`, 'i').test(inView))
         continue;
       beyondLines.push(`Out past ${called}, seen only through it: ${what}. The wall around ${called} stays solid.`);
     }
-  // With the `plan_facing` step: whom or what someone in the picture attends to, said, where it is in the picture too (the
-  // floor plan turns them to it: continuity withAttention). The camera's own eyes attend to what the picture shows.
-  const lookLines: string[] = [];
-  if (builds('plan_facing') && floor && eye) {
-    const view = x.plan?.view ?? '';
-    const inPicture = (n: string) =>
-      new RegExp(`\\b${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(view.split(/Outside the picture/)[0]);
-    const seen = new Set<string>();
-    for (const a of x.typed?.acts ?? []) {
-      if (!ATTEND.test(a.does.trim()) || seen.has(a.who)) continue;
-      if (f.eyes === 'dreamer' && a.who === x.dreamerId) continue;
-      const t = spotNamed(floor, a.to);
-      const who = named(a.who);
-      const what = t ? (t.name ?? named(t.id)) : null;
-      if (!t || !what || t.id === a.who || !inPicture(who) || !inPicture(what)) continue;
-      // Only one the plan turned to it (continuity withAttention): a person, never a crowd or a thing, never to what they
-      // hold or stand on. Through the dreamer's eyes, never toward the dreamer: nothing of them is in the picture.
-      const p = floor.spots.find((s) => s.id === a.who);
-      if (!p?.attending || p.faces !== t.id) continue;
-      if (f.eyes === 'dreamer' && t.id === x.dreamerId) continue;
-      // Said once: the view already says it where it turns them to it (previs describe).
-      const v = view.toLowerCase();
-      if (v.includes(`looking at ${what.toLowerCase()}`) || v.includes(`, at ${what.toLowerCase()}`)) continue;
-      seen.add(a.who);
-      lookLines.push(`${who.charAt(0).toUpperCase()}${who.slice(1)} is looking at ${what}.`);
-    }
-  }
   return {
     layer: {
       turn,
@@ -1212,7 +1178,7 @@ function cameraLayer(x: {
       ...(does ? { does } : {}),
       dropped,
       outside,
-      lines: [...(x.plan?.rules ?? []), ...beyondLines, ...lookLines],
+      lines: [...(x.plan?.rules ?? []), ...beyondLines],
     },
     flags,
   };
