@@ -29,15 +29,9 @@ export const API = process.env.IMGAPI_URL ?? 'https://imgapi.metalfinger.xyz';
 export const MAX_CHARS = 4000;
 export const MAX_IMAGES = 4;
 
-/** The full profile every arm starts from: record, sheet, camera rules, references and every builder step. */
-export const PROFILE: Record<string, string> = {
-  DREAMCHAT_WRITER: 'claude',
-  DREAMCHAT_RECORD: 'on',
-  DREAMCHAT_CUT_SHEET: 'on',
-  DREAMCHAT_CAMERA: 'on',
-  DREAMCHAT_REFS: 'on',
-  DREAMCHAT_ONE_BUILDER: 'on',
-};
+import { PROFILE } from './profile';
+
+export { PROFILE };
 
 // ── fitting ──────────────────────────────────────────────────────────────────────────────────────
 

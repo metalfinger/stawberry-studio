@@ -15,6 +15,7 @@
 // fitting dropped, the code's commit) and the pictures. Run it from a worktree pinned to one commit: code moves while a
 // run draws, and a run's pictures are all of one commit.
 
+import './local-env';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
