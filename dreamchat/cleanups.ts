@@ -166,6 +166,9 @@ export const BUILDER_STEPS: readonly string[] = [
   // Not a ledger row: from the night run on the local image machine (1 Oct). A cast thing's sketch is told what it is
   //    with its look and never what it does, and borrows the look of one of its kind the dream already has.
   'cast_looks',
+  // Not a ledger row: from the owner's vehicle pairs (1 Oct). Through the dreamer's eyes, a moment that has them do
+  //    something with their hands shows their hands doing it ("as they open the door"), never "at most" their hands.
+  'own_hands',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;

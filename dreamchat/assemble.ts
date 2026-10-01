@@ -506,13 +506,19 @@ export function assembleCut(s: CutSheet): Assembled {
   // Their own hands or feet may show, in their own clothes. With the camera rules, only their hands
   // and arms, and only where they do something with them: nothing of them otherwise.
   const wear = s.dreamer.wear;
-  const inWear = wear ? `, in ${wear.charAt(0).toLowerCase()}${wear.slice(1)}` : '';
+  // "Wearing a plain beige shirt" is said "in a plain beige shirt", never "in wearing".
+  const worn = wear && s.ownHands ? wear.replace(/^\s*wearing\s+/i, '') : wear;
+  const inWear = worn ? `, in ${worn.charAt(0).toLowerCase()}${worn.slice(1)}` : '';
   const body = s.rules?.body ?? null;
+  // Their hands doing what the moment has them do, said as shown: "at most" let the hand on the door go undrawn.
+  const does = body === 'hands' ? s.rules?.does : undefined;
   const own =
     body === 'self'
       ? `their own body shows as they look down at it${inWear}, never their face`
       : body === 'hands'
-        ? `at most their own hands and arms show${inWear}, and nothing else of them`
+        ? does
+          ? `their own hands and arms show as they ${does}${inWear}, and nothing else of them`
+          : `at most their own hands and arms show${inWear}, and nothing else of them`
         : body === 'none'
           ? "nothing of the dreamer's own body shows, not even their hands: they touch nothing in it"
           : `at most their own hands, arms or feet show${inWear}`;
@@ -521,7 +527,7 @@ export function assembleCut(s: CutSheet): Assembled {
       ? body === 'self'
         ? `The camera is the dreamer's own eyes: their own body shows as they look down at it${inWear}, never their face.`
         : body === 'hands'
-          ? `The camera is the dreamer's own eyes: the dreamer is not in the picture, except their own hands and arms${inWear}, and nothing else of them.`
+          ? `The camera is the dreamer's own eyes: the dreamer is not in the picture, except their own hands and arms${does ? ` as they ${does}` : ''}${inWear}, and nothing else of them.`
           : body === 'none'
             ? "The camera is the dreamer's own eyes: nothing of the dreamer is in the picture, not even their hands: they touch nothing in it."
             : `The camera is the dreamer's own eyes: the dreamer is not in the picture, except perhaps their own hands, arms or feet${inWear}.`

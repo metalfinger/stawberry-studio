@@ -19,6 +19,7 @@ import { assembleCut, type Assembled } from './assemble';
 import { DIRECTIONS, type Eye, type Side } from './blocking';
 import {
   cameraMode,
+  handAct,
   handsIn,
   REVERSE_DEGREES,
   type RoomTurn,
@@ -245,6 +246,8 @@ export type CameraLayer = {
    * themselves), their hands and arms where they do something with them, else nothing of them.
    */
   body: 'self' | 'hands' | 'none' | null;
+  /** With their hands in it, what the dreamer does with them, as the words have them do it ("open the door"). */
+  does?: string;
   /** Earlier pictures not drawn from: the picture before, from the other side of a reverse. */
   dropped: string[];
   /** Who and what in view is only out past the place, by the side it is seen on: far off, never inside it. */
@@ -333,6 +336,8 @@ export type CutSheet = {
   jumpWords?: true;
   /** With the one builder's `plan_beyond` step: what the camera rules add after the view is said with one space. */
   seenThrough?: true;
+  /** With the one builder's `own_hands` step: the dreamer's clothes said as worn ("in a plain beige shirt"). */
+  ownHands?: true;
   /** What belongs to a take rather than the cut: the judge's findings on the last attempt and on earlier pictures. */
   take: { repairs: string[]; strays: Record<string, string[]> };
   record: RecordLayer | null;
@@ -756,6 +761,7 @@ export function cutSheet(x: CutSheetInput): CutSheet {
     ...(builds('story_marks') ? { storyMarks: true as const } : {}),
     ...(builds('jump_words') ? { jumpWords: true as const } : {}),
     ...(builds('plan_beyond') ? { seenThrough: true as const } : {}),
+    ...(builds('own_hands') ? { ownHands: true as const } : {}),
     ...(() => {
       // Water the camera's own words already measure ("The water stands about 2 metres deep") is said there once,
       // never again as a condition.
@@ -1122,7 +1128,11 @@ function cameraLayer(x: {
   // could not leave.
   if (x.plan?.crossed) flags.push(`crossed_line:${x.plan.crossed}`);
   if (x.plan?.sameCamera) flags.push(`same_camera:${x.plan.sameCamera}`);
-  return { layer: { turn, body, dropped, outside, lines: [...(x.plan?.rules ?? [])] }, flags };
+  const does = body === 'hands' && builds('own_hands') ? handAct(words.slice(0, 2)) : null;
+  return {
+    layer: { turn, body, ...(does ? { does } : {}), dropped, outside, lines: [...(x.plan?.rules ?? [])] },
+    flags,
+  };
 }
 
 /** A cut's tags as words for a list: "role:pov", "move:jump", "held". */
