@@ -219,6 +219,10 @@ export const BUILDER_STEPS: readonly string[] = [
   //    says it (looks at, watches, stands at, points at, reaches for), is what they face on the floor plan and what the
   //    words say they look at: the dreamer at the fish stall was turned to the old man (night-market m2).
   'plan_facing',
+  // Not a ledger row: from the counted prompt cases (G2, its one model step). A group told only as a crowd, never
+  //    sketched, is given ordinary clothes for who and where they are, as a guess (wardrobe.ts, one writer reading per
+  //    dream): made real from the mock-up, the exam room's faceless students came out naked (heron m4).
+  'extras_wardrobe',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;

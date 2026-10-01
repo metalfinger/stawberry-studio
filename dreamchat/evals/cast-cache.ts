@@ -6,6 +6,7 @@
 //   DREAMCHAT_WRITER=claude bun run evals/cast-cache.ts --ask            every frozen dream
 //   DREAMCHAT_WRITER=claude bun run evals/cast-cache.ts --ask --live     every saved conversation too (DREAMCHAT_DATA)
 //   bun run evals/cast-cache.ts                                          what each dream's reading holds, from the cache
+//   DREAMCHAT_WRITER=claude bun run evals/cast-cache.ts --wardrobe --ask  each untold group's guessed clothes (wardrobe.ts)
 
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -20,6 +21,7 @@ import {
   writeCast,
 } from '../cast';
 import type { Session } from '../session';
+import { parseWardrobe, type WardrobeReading, wardrobeAsk, withWardrobes } from '../wardrobe';
 import { DIR, sha256 } from './saved';
 
 export const CAST_CACHE = process.env.DREAMCHAT_CAST_CACHE ?? join(DIR, 'runs', 'cast-cache.json');
@@ -74,6 +76,32 @@ export async function castReadingOf(
 }
 
 /**
+ * A dream's guessed clothes for its untold groups (wardrobe.ts), kept in the same cache: from it, or with `ask` from the
+ * writer. Null where the dream has no untold group, or the reading is not cached and not asked.
+ */
+export async function wardrobeOf(
+  s: Session,
+  opts: { ask?: boolean; write?: WriteFn; cacheFile?: string } = {},
+): Promise<{ reading: WardrobeReading; asked: boolean } | null> {
+  const b = s.draft?.breakdown;
+  const messages = b ? wardrobeAsk(b) : null;
+  if (!b || !messages) return null;
+  const file = opts.cacheFile ?? CAST_CACHE;
+  const key = sha256(`wardrobe writer ${castWriterName()}\n${JSON.stringify(messages)}`);
+  const cache = cacheOf(file);
+  let hit = cache[key];
+  let asked = false;
+  if (!hit) {
+    if (!opts.ask) return null;
+    const res = await (opts.write ?? writeCast)(messages);
+    hit = cache[key] = { content: res.content, usage: res.usage };
+    save(file);
+    asked = true;
+  }
+  return { reading: parseWardrobe(hit.content, b), asked };
+}
+
+/**
  * With the one builder's `cast_named` step, a saved dream with its cast reading in (draft.readings.cast) and its
  * things cast in its breakdown, from the cache only. Run after the typed and implied readings are in: they were asked
  * of the breakdown as saved. `missing` where the dream has no cached reading.
@@ -93,6 +121,11 @@ export async function withCast(
     readings: { ...(session.draft?.readings ?? {}), cast: got.reading },
   };
   if (session.build) session.build = { ...session.build, items: withCastItems(session.build.items, got.reading) };
+  // With the `extras_wardrobe` step, each untold group's guessed clothes on its sketch item, from the cache only.
+  if (builds('extras_wardrobe') && session.build) {
+    const w = await wardrobeOf(session, { cacheFile: opts.cacheFile });
+    if (w) session.build = { ...session.build, items: withWardrobes(session.build.items, w.reading) };
+  }
   return { session, missing: false };
 }
 
@@ -120,6 +153,20 @@ if (import.meta.main) {
     dreams.map((d) =>
       limit(async () => {
         try {
+          // --wardrobe: each untold group's guessed clothes (wardrobe.ts), in place of the cast reading.
+          if (args.includes('--wardrobe')) {
+            const w = await wardrobeOf(d.session, { ask });
+            if (w?.asked) askedN++;
+            return console.log(
+              `${d.id}: ${
+                !w
+                  ? 'no untold group, or not cached'
+                  : Object.entries(w.reading)
+                      .map(([id, v]) => `${id}: ${v}`)
+                      .join('; ') || 'none read'
+              }`,
+            );
+          }
           const got = await castReadingOf(d.session, { ask });
           if (!got) return console.log(`${d.id}: not cached${d.session.draft?.breakdown ? '' : ' (no breakdown)'}`);
           if (got.asked) askedN++;
