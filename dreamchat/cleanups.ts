@@ -188,6 +188,17 @@ export const BUILDER_STEPS: readonly string[] = [
   //    it is drawn from), the frames drawn, whether the prep is this dream's, the grounding notes and the goals; built
   //    after 17, the plan a moment is sent from (the step's place in the ledger, here at the end).
   'one_tree',
+  // Not a ledger row: from a dream taken in as a dump (the Barley Degree, 1 Oct). A dream told wholly through the
+  //    dreamer's eyes has its dreamer, as the camera: listed only where seen, they were on no floor plan, and 4 of 7
+  //    moments had no camera. Placed on the plan, never sketched.
+  'dreamer_camera',
+  // Not a ledger row: the owner's rule (1 Oct), never guess the dreamer's sex or age. A guessed (unsaid) clause of their
+  //    sketch that gives either is left out, and a guessed "who they are" with it; what they said of themselves stays.
+  'dreamer_untold',
+  // Not a ledger row: from the merged flow's packets (1 Oct). A sketch never names the dream's other people, places or
+  //    things in its style: "The woman and the ice are rendered with more clarity", in a style's light, drew them into
+  //    the room's sketch and the dreamer's (dream-0923-214527-927a).
+  'sketch_subjects',
   // Not a ledger row: from the counted prompt cases (G2). Whether a vehicle in view is moving at the instant is the typed
   //    reading's motion fact where it gives one, never only a going verb in the moment's words: the tractor's cab "vibrates
   //    with a low rumble" as it drives on, and nothing said which way it went (lighthouse-fresh m12).

@@ -53,7 +53,7 @@ import { callJev } from './jev';
 import { recordForPlan, recordInputsOf } from './record';
 import type { Breakdown } from './producer';
 import { type Session, treeInputWith } from './session';
-import { type Item, sheetPrompt } from './sheets';
+import { type Item, sheetPrompt, subjectWords } from './sheets';
 
 /** One picture as it would be sent: its prompt and its images, in order. */
 export type RebuiltPicture = {
@@ -495,7 +495,7 @@ if (import.meta.main) {
   if (gating)
     for (const sk of sheets) {
       if (only.length && !only.includes(sk.id)) continue;
-      const prompt = sheetPrompt(sk, s.style);
+      const prompt = sheetPrompt(sk, s.style, { others: subjectWords(sheets, sk) });
       console.log(`\n── sketch ${sk.id} ${sk.name}: ${await gateOf(prompt, [], [], [], true)}`);
     }
 

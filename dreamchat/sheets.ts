@@ -442,7 +442,7 @@ export const DREAM_QUALITY =
 
 /** A style's direction about people other than the one a sketch is of: a crowd, people in the background, passers-by. */
 const OTHER_PEOPLE =
-  /\b(?:background (?:people|figures|characters)|(?:people|figures|characters) in the background|crowds?|passers?-?by|bystanders|onlookers|other people|strangers)\b/i;
+  /\b(?:background (?:people|figures|characters)|(?:people|figures|characters) in the background|crowds?|passers?-?by|bystanders|onlookers|other people|strangers|(?:beyond|around|behind) the people|the people (?:being|who|around|nearby)|people being (?:talked|spoken)|anyone (?:else|beyond)|everyone else)\b/i;
 
 export function styleBlock(
   style: StyleOption,
@@ -454,16 +454,36 @@ export function styleBlock(
     saidAbove?: boolean;
     /** For a sketch: the style's way of drawing, without its directions about other people (`sketch_style`). */
     sketch?: boolean;
+    /** For a sketch: the words that name the dream's other people, places and things, never said in its style. */
+    others?: string[];
   } = {},
 ): string {
   // A sketch is of one person, place or thing: "background people softly blurred" put a crowd in every sketch of the
   // Barley Degree (1 Oct). Each technique and each part of the dream's feel that directs other people is left out.
-  const own = (x: string) => !opts.sketch || !OTHER_PEOPLE.test(x);
+  const others = (opts.others ?? []).map((w) => new RegExp(`\\b${w}s?\\b`, 'i'));
+  const own = (x: string) => !opts.sketch || (!OTHER_PEOPLE.test(x) && !others.some((re) => re.test(x)));
   // Clause by clause: "shallow depth of field, background people softly blurred" keeps its depth of field.
   const tokens = opts.sketch
     ? style.tokens.map((t) => t.split(/,\s*/).filter(own).join(', ')).filter(Boolean)
     : style.tokens;
   const whole = style.dream?.trim() || DREAM_QUALITY;
+  // A comparison that names one of the dream's subjects is cut alone (`sketch_subjects`): "plain and even, as in an
+  // ordinary room, with no dramatic shadows" keeps its plain, even light.
+  const unlike = (x: string) => {
+    if (own(x) || !opts.others?.length) return x;
+    const end = /[.;!?]$/.exec(x)?.[0] ?? '';
+    const parts = x.slice(0, x.length - end.length).split(/,\s*/);
+    const kept = parts.filter((p) => !(LIKE.test(p) && !own(p)));
+    return kept.length < parts.length && kept.length ? `${kept.join(', ')}${end}` : x;
+  };
+  // The light, sentence by sentence: "Anything beyond the people being talked to slips out of focus" put others in it.
+  const light = opts.sketch
+    ? (style.lighting_rules ?? '')
+        .split(/(?<=[.;!?])\s+/)
+        .map(unlike)
+        .filter(own)
+        .join(' ')
+    : style.lighting_rules;
   // Part by part and clause by clause: "an airless dream, faces in the crowd blurring past" keeps "an airless dream".
   const feel = opts.sketch
     ? whole
@@ -509,7 +529,7 @@ export function styleBlock(
               ? `Colours: ${colours.join(', ')}, except what the dream itself gives a colour, which keeps it exactly${above}${list}.${skin ? ` ${skin}` : ''}`
               : `Colours, and no others: ${colours.join(', ')}.${skin ? ` ${skin}` : ''}`
       : '',
-    style.lighting_rules ? `Light: ${style.lighting_rules}` : '',
+    light ? `Light: ${light}` : '',
   ]
     .filter(Boolean)
     .join('\n');
@@ -645,6 +665,114 @@ export function withoutPose(look: string, keep = true): string {
 const AGE =
   /\b(?:baby|toddler|child|kid|boy|girl|teen\w*|young|younger|old|older|elderly|aged|middle-aged|adult|\d+s|\d+\s*years?|(?:twent|thirt|fort|fift|sixt|sevent|eight|ninet)ies)\b/i;
 
+/** A clause that compares the light to something: "as in an ordinary room", "as if from an overcast sky", "like a lab". */
+const LIKE = /^(?:as (?:if|in|though|on|at|from|through)|like|such as)\b/i;
+
+/** Words of where: never a subject, and never a name's head ("the street outside" is a street). */
+const WHERE = [
+  'outside',
+  'inside',
+  'outdoors',
+  'indoors',
+  'here',
+  'there',
+  'around',
+  'nearby',
+  'everywhere',
+  'somewhere',
+  'elsewhere',
+  'beyond',
+  'above',
+  'below',
+  'ahead',
+  'behind',
+  'distance',
+  'foreground',
+];
+
+/** A style's own words: never taken for one of the dream's subjects ("the lamp light" takes no light sentence). */
+const STYLE_WORDS = new Set([
+  'light',
+  'lights',
+  'shadow',
+  'shadows',
+  'edge',
+  'edges',
+  'line',
+  'lines',
+  'colour',
+  'color',
+  'glow',
+  'focus',
+  'paper',
+  'ink',
+  'paint',
+  'texture',
+  'background',
+  'figure',
+  'figures',
+  'tone',
+  'tones',
+  'surface',
+  'shape',
+  'shapes',
+  'block',
+  'piece',
+  'part',
+  'pair',
+  'group',
+  'pile',
+  'bunch',
+  'set',
+  'place',
+  'space',
+  'area',
+  'world',
+  'scene',
+  // Where, never what: a place called "outside" names no one thing a style could draw in.
+  ...WHERE,
+]);
+
+/**
+ * The words that name the dream's people, places and things other than `of`, each by its head ("the woman with the ice
+ * horse head" is a woman, "the block of ice" ice; the dreamer, "you", is the dreamer): what a sketch's style may never
+ * say (`sketch_subjects`). Never one the sketch itself draws: a word of its own name, or a thing or place its own look is
+ * made of ("the horse's head", of clear ice, keeps the style's ice). A person its look names stays another's.
+ */
+export function subjectWords(
+  items: Pick<Item, 'id' | 'kind' | 'name' | 'isDreamer'>[],
+  of: Pick<Item, 'id'> & Partial<Pick<Item, 'name' | 'fields' | 'isDreamer'>>,
+): string[] {
+  const wordsOf = (x: string) =>
+    new Set((x.toLowerCase().match(/[a-z]{3,}/g) ?? []).flatMap((w) => [w, w.replace(/s$/, '')]));
+  const own = wordsOf(`${of.name ?? ''}${of.isDreamer ? ' dreamer' : ''}`);
+  const looks = wordsOf(
+    Object.values(of.fields ?? {})
+      .map((d) => d?.value ?? '')
+      .join(' '),
+  );
+  const words = items
+    .filter((i) => i.id !== of.id && (i.kind === 'character' || i.kind === 'prop' || i.kind === 'location'))
+    .flatMap((i) => {
+      if (i.isDreamer) return [{ w: 'dreamer', person: true }];
+      const core = i.name
+        .toLowerCase()
+        .replace(/^(?:the|a|an|my|your|his|her|their)\s+/, '')
+        .split(/\s+(?:with|in|on|at|from|who|that|which|wearing|holding)\s+/)[0]
+        .replace(new RegExp(`(?:\\s+(?:${WHERE.join('|')}))+$`), '');
+      // "the block of ice" is ice as much as a block: each side of "of" gives its head.
+      return core
+        .split(/\s+of\s+/)
+        .map((x) => ({ w: (x.match(/[a-z]+/g) ?? []).at(-1) ?? '', person: i.kind === 'character' }));
+    })
+    .filter(({ w, person }) => w.length > 2 && !STYLE_WORDS.has(w) && !own.has(w) && (person || !looks.has(w)))
+    .map(({ w }) => w);
+  return [...new Set(words)];
+}
+
+/** Words that give someone's sex: the dreamer's is never guessed. */
+const SEX = /\b(?:man|men|woman|women|male|female|boy|girl|guy|lady|gentleman|he|she|his|her|him|hers)\b/i;
+
 /** Words that say nothing of who someone is: whether who they are is already said is decided without them. */
 const SAYS_NOTHING = new Set(['the', 'and', 'who', 'her', 'his', 'with', 'their', 'for', 'from', 'that', 'this']);
 
@@ -681,7 +809,12 @@ export function openedLater(place: Item, actions: string[]): string[] {
 const PEOPLE_IN_NAME =
   /\b(people|persons?|couple of|crowd|someone|sitting|standing|talking|playing|waiting|with (?:the |a |my |your |her |his )?(?:\w+ )?(?:man|woman|men|women|girl|boy|friends?|aunt|uncle|mother|father|brother|sister|family))\b/i;
 
-export function sheetPrompt(item: Item, style: StyleOption): string {
+export function sheetPrompt(
+  item: Item,
+  style: StyleOption,
+  /** The words that name the dream's other people and things (subjectWords): with `sketch_subjects`, never in its style. */
+  opts: { others?: string[] } = {},
+): string {
   // A look that says nothing a picture can keep ("indistinct, like a figure in a hazy memory")
   // would be drawn as a blur.
   const facts = Object.keys(item.fields)
@@ -700,7 +833,16 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
       // A person's look is how they look, never how the sheet poses them: "standing in a relaxed
       // three-quarter view, whole figure from head to feet" stood as the father's whole look, and
       // his age, hair and build were never said (lighthouse, 26 Sep).
-      const own = item.kind === 'character' ? withoutPose(value(item, k), false) : value(item, k);
+      const posed = item.kind === 'character' ? withoutPose(value(item, k), false) : value(item, k);
+      // The dreamer's sex and age are never guessed (the owner, 1 Oct): with the one builder's `dreamer_untold` step, a
+      // guessed clause that gives either is left out ("in her 30s" of "in her 30s, brown hair, average build").
+      const own =
+        builds('dreamer_untold') && item.isDreamer && !item.fields[k]?.said
+          ? posed
+              .split(/\s*[,;]\s*/)
+              .filter((x) => x && !AGE.test(x) && !SEX.test(x))
+              .join(', ')
+          : posed;
       const v = heads.length
         ? own
             .split(/;|,|\s+and\s+/)
@@ -722,7 +864,9 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
   // The dreamer's name says nothing of who they are, so who they are is said with it: "a young
   // adult woman in her early twenties" was left out, and the gate held the sketch for "missing
   // roughly how old they are" after they had said "however you imagine me" (night bus, 25 Sep).
-  const who = item.isDreamer ? value(item, 'identity') : '';
+  // Never a guessed "who they are" for the dreamer with the `dreamer_untold` step: "an adult woman" is a guess.
+  const who =
+    item.isDreamer && (!builds('dreamer_untold') || item.fields.identity?.said) ? value(item, 'identity') : '';
   // Anyone else is named with who they are when only that says their age: the father's guessed
   // "a man in his sixties with short grey hair and a medium build" was left out, and his sketch
   // was held for "missing roughly how old they are; their build; their hair" (lighthouse, 26 Sep).
@@ -841,7 +985,11 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
     without,
     clear,
     repair,
-    styleBlock(style, toldColours(item), { ownColours, ...(builds('sketch_style') ? { sketch: true } : {}) }),
+    styleBlock(style, toldColours(item), {
+      ownColours,
+      ...(builds('sketch_style') ? { sketch: true } : {}),
+      ...(builds('sketch_subjects') && opts.others?.length ? { sketch: true, others: opts.others } : {}),
+    }),
     `${background}${noWords}`,
   ]
     .filter(Boolean)
@@ -856,6 +1004,8 @@ export type SheetEngine = {
   start(input: {
     item: Item;
     style: StyleOption;
+    /** The words naming the dream's other people and things (subjectWords), never said in the sketch's style. */
+    others?: string[];
     sources: { said: string; proposal: string };
     reason: string;
     maxUsd: number;
@@ -1001,7 +1151,7 @@ function approval(
 }
 
 export const liveSheets: SheetEngine = {
-  async start({ item, style, sources, reason, maxUsd }) {
+  async start({ item, style, others, sources, reason, maxUsd }) {
     if (!item.nodeId) throw new Error(`${item.name} is not in the production yet`);
     const node = (await call('inspect', { id: item.nodeId })) as { node: { revision: number } };
     const said: Record<string, { op: 'set'; value: string }> = {};
@@ -1024,7 +1174,7 @@ export const liveSheets: SheetEngine = {
       node_id: item.nodeId,
       provider: PROVIDER,
       model: MODEL,
-      prompt: sheetPrompt(item, style),
+      prompt: sheetPrompt(item, style, { others }),
       intent: `Reference sheet for ${item.name}${item.version > 1 ? `, version ${item.version}` : ''}`,
       settings: settingsFor(shapeOf(item)),
     })) as { id: string; fingerprint: string; spec: { estimate?: { credits?: number | null } } };

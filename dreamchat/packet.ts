@@ -16,7 +16,7 @@ import { type Rebuilt, standIn } from './plan';
 import { onOf } from './previs';
 import { moments, type StyleOption } from './producer';
 import type { NowOf } from './record';
-import { sheetPrompt } from './sheets';
+import { sheetPrompt, subjectWords } from './sheets';
 
 /** The packet's version: a harness reading one checks it. */
 export const PACKET_VERSION = 3;
@@ -315,7 +315,7 @@ export function dreamPacket(
             .filter(([, d]) => !!d?.value)
             .map(([k, d]) => [k, { value: d.value as string, said: !!d.said }]),
         ),
-        prompt: sheetPrompt(s, opts.style),
+        prompt: sheetPrompt(s, opts.style, { others: subjectWords(r.sheets, s) }),
         image: or(s.mediaId),
         group: !!s.several,
         partOf: or(s.partOf),

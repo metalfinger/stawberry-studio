@@ -7,7 +7,7 @@
 // - `place_alone`: a place's sketch says what is there, the place alone and empty; "with no people in it" drew people.
 // A step before them, or the builder off, writes every sketch as before.
 import { describe, expect, test } from 'bun:test';
-import { type Item, sheetPrompt, styleBlock } from '../sheets';
+import { type Item, sheetPrompt, styleBlock, subjectWords } from '../sheets';
 
 function withBuilder<T>(v: string | undefined, fn: () => T): T {
   const was = process.env.DREAMCHAT_ONE_BUILDER;
@@ -181,6 +181,182 @@ describe("the style's way of drawing on a sketch, without its directions about p
     const moment = withBuilder('sketch_style', () => styleBlock(style));
     expect(moment).toContain('background people softly blurred');
     expect(moment).toContain('faces in the crowd half-remembered');
+  });
+});
+
+describe("the style's light and technique on a sketch, without other people", () => {
+  test('a light or technique that puts others in the frame is left out of a sketch; how figures are drawn stays', () => {
+    const talking = {
+      ...style,
+      tokens: ['ink on rough paper', 'slight smudging at the edges of figures'],
+      lighting_rules:
+        'Light falls softly from one side. Anything beyond the people being talked to slips out of focus. Shadows are short.',
+    };
+    const p = withBuilder('sketch_style', () => sheetPrompt(gh, talking));
+    expect(p).toContain('Light: Light falls softly from one side. Shadows are short.');
+    expect(p).not.toContain('beyond the people');
+    expect(p).toContain('slight smudging at the edges of figures');
+    // A moment keeps the light whole.
+    expect(withBuilder('sketch_style', () => styleBlock(talking))).toContain(
+      'Anything beyond the people being talked to',
+    );
+  });
+});
+
+describe("a sketch never names the dream's other people, places or things in its style", () => {
+  // dream-0923-214527-927a: the style's light named the woman and the ice, and they were drawn into the room's sketch.
+  const iced = {
+    ...style,
+    lighting_rules:
+      'The room is seen in soft focus, with no dramatic highlights or shadows. The woman and the ice are rendered with more clarity: the ice transmits light slightly, with internal refractions and subtle caustics. Edges are mostly soft, but the carved features are crisp.',
+  };
+  const item = (id: string, kind: Item['kind'], name: string, isDreamer = false): Item => ({
+    id,
+    kind,
+    name,
+    fields: {},
+    status: 'waiting',
+    version: 0,
+    ...(isDreamer ? { isDreamer } : {}),
+  });
+  const items = [
+    item('p1', 'character', 'you', true),
+    item('p2', 'character', 'the woman with the ice horse head'),
+    item('t1', 'prop', 'the ice'),
+    item('l1', 'location', 'the lab'),
+  ];
+
+  test("each sketch: a style sentence naming another of the dream's people or things is left out, the rest kept", () => {
+    expect(subjectWords(items, items[3])).toEqual(['dreamer', 'woman', 'ice']);
+    // A place too: the lab is never in the woman's sketch by way of its style.
+    expect(subjectWords(items, items[1])).toEqual(['dreamer', 'lab']);
+    for (const it of items) {
+      const p = withBuilder('sketch_subjects', () => sheetPrompt(it, iced, { others: subjectWords(items, it) }));
+      // Hers keeps it: her head is the ice, and the style's ice is how she is drawn.
+      if (it.id === 'p2') expect(p).toContain('The woman and the ice are rendered');
+      else expect(p).not.toContain('The woman and the ice are rendered');
+      expect(p).toContain('The room is seen in soft focus');
+      expect(p).toContain('Edges are mostly soft, but the carved features are crisp.');
+    }
+    // As before without the step, and a moment keeps the whole style.
+    expect(
+      withBuilder(undefined, () => sheetPrompt(items[3], iced, { others: subjectWords(items, items[3]) })),
+    ).toContain('The woman and the ice are rendered');
+    expect(withBuilder('sketch_subjects', () => styleBlock(iced))).toContain('The woman and the ice are rendered');
+  });
+
+  test('a comparison that names one is cut alone, the way of drawing kept', () => {
+    // dream-…-5454: "as in an ordinary room" took the plain, even light with it.
+    const plain = {
+      ...style,
+      lighting_rules:
+        'The light is plain and even, as in an ordinary room, with no dramatic shadows. Edges are soft only from slight defocus.',
+    };
+    const roomed = [items[1], item('l2', 'location', 'the waiting room')];
+    const p = withBuilder('sketch_subjects', () =>
+      sheetPrompt(roomed[0], plain, { others: subjectWords(roomed, roomed[0]) }),
+    );
+    expect(p).toContain(
+      'The light is plain and even, with no dramatic shadows. Edges are soft only from slight defocus.',
+    );
+    expect(p).not.toContain('room');
+  });
+
+  test('only what names a subject is left out, each piece by itself, a word whole', () => {
+    // dream-0923-183614-279d's style: the floating books and the window are cut from the boatman's sketch; the moonlight
+    // ("moon" is a thing of the dream, never "moonlight") and the shadows stay.
+    const moonlit = {
+      ...style,
+      tokens: [
+        'dark green water with subtle reflections',
+        'silvery moonlight with sharp highlights',
+        'slight motion blur on floating books',
+      ],
+      lighting_rules:
+        'The moonlight is bright and silvery, casting a sharp, almost white light through the window onto the water. Shadows are deep and black, with high contrast.',
+    };
+    const dream = [
+      item('p1', 'character', 'the man in the boat'),
+      item('t1', 'prop', 'the floating books'),
+      item('t2', 'prop', 'the moon'),
+      item('t3', 'prop', 'the window'),
+    ];
+    const others = subjectWords(dream, dream[0]);
+    expect(others).toEqual(['books', 'moon', 'window']);
+    const p = withBuilder('sketch_subjects', () => sheetPrompt(dream[0], moonlit, { others }));
+    expect(p).toContain('silvery moonlight with sharp highlights');
+    expect(p).toContain('Light: Shadows are deep and black, with high contrast.');
+    expect(p).not.toContain('floating books');
+    expect(p).not.toContain('through the window');
+    // Every piece left out names one of them.
+    const before = withBuilder(undefined, () => sheetPrompt(dream[0], moonlit));
+    const pieces = [...moonlit.tokens, ...moonlit.lighting_rules.split(/(?<=[.;!?])\s+/)];
+    for (const x of pieces.filter((x) => before.includes(x) && !p.includes(x)))
+      expect(others.some((w) => new RegExp(`\\b${w}\\b`, 'i').test(x))).toBe(true);
+  });
+
+  test("a sketch's own subject is never another's: what it is named, and a thing its own look is made of", () => {
+    // dream-0923-210937-e564, with its cast: the horse's head is clear ice, and keeps the style's ice; the block of ice,
+    // where the woman's head should be (927a), still leaves out the woman.
+    const look = (it: Item, value: string): Item => ({ ...it, fields: { appearance: { value, said: true } } });
+    const dream = [
+      item('p2', 'character', 'the young woman'),
+      look(
+        item('c1', 'prop', 'the block of ice'),
+        "irregular, glittering block of ice where the woman's head should be",
+      ),
+      look(item('c2', 'prop', "the horse's head"), 'beautifully molded, clear ice, with eyes, ears and nostrils'),
+    ];
+    expect(subjectWords(dream, dream[2])).toEqual(['woman']);
+    // Its look is where her head should be: a head is its own, the woman another's.
+    expect(subjectWords(dream, dream[1])).toEqual(['woman']);
+    expect(subjectWords(dream, dream[0])).toEqual(['ice', 'head']);
+    const etched = { ...style, tokens: ['fine, precise linework', 'translucent layers for ice'] };
+    const head = withBuilder('sketch_subjects', () =>
+      sheetPrompt(dream[2], etched, { others: subjectWords(dream, dream[2]) }),
+    );
+    expect(head).toContain('translucent layers for ice');
+  });
+
+  test('a word of where is never a subject: a place called outside, the street outside', () => {
+    const where = [items[1], item('l2', 'location', 'outside'), item('l3', 'location', 'the street outside')];
+    expect(subjectWords(where, where[0])).toEqual(['street']);
+  });
+
+  test("a style's own words are never a subject: a thing called the lamp light takes no light sentence with it", () => {
+    const lit = [...items, item('t2', 'prop', 'the lamp light')];
+    expect(subjectWords(lit, lit[3])).not.toContain('light');
+    // 927a's own name for it: the ice, never "block", a style's word.
+    expect(subjectWords([item('t3', 'prop', 'the block of ice')], items[3])).toEqual(['ice']);
+  });
+});
+
+describe("the dreamer's sketch: never a guessed age or sex", () => {
+  const me: Item = {
+    id: 'p1',
+    kind: 'character',
+    name: 'you',
+    isDreamer: true,
+    fields: {
+      identity: { value: 'an adult woman', said: false },
+      appearance: { value: 'in her 30s, brown hair, average build', said: false },
+      wardrobe: { value: 'a grey coat', said: true },
+    },
+    status: 'waiting',
+    version: 0,
+  };
+  test('a guessed age or sex is left out, what they said and the rest of the guess kept', () => {
+    const p = withBuilder('dreamer_untold', () => sheetPrompt(me, style));
+    expect(p).toContain('A single full-length picture of the dreamer, one person only');
+    expect(p).not.toMatch(/\bwoman\b|30s|\bher\b/);
+    expect(p).toContain('brown hair');
+    expect(p).toContain('average build');
+    expect(p).toContain('a grey coat');
+    // What the dreamer said of themselves stays, age and all.
+    const told = { ...me, fields: { ...me.fields, appearance: { value: 'in her 30s, brown hair', said: true } } };
+    expect(withBuilder('dreamer_untold', () => sheetPrompt(told, style))).toContain('in her 30s');
+    // As before without the step.
+    expect(withBuilder(undefined, () => sheetPrompt(me, style))).toContain('30s');
   });
 });
 
