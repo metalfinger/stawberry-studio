@@ -103,6 +103,7 @@ export const aNoun = (raw: string) => {
 /** The frame's shape in words, as sent in its settings: the model's own examples say both. */
 export const SHAPE_WORDS: Record<Shape, string> = {
   '16:9': 'a landscape 16:9 frame',
+  '9:16': 'a vertical 9:16 frame',
   '4:3': 'a landscape 4:3 frame',
   '2:3': 'a portrait 2:3 frame',
   '1:1': 'a square frame',

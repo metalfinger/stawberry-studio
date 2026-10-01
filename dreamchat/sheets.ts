@@ -2,6 +2,7 @@
 // draw one. Everything goes through Strawberry's own path: the item's fields are patched with
 // their source, a recipe is prepared, approved within the conversation's image cap, queued, and
 // the engine's worker draws it.
+import { frameShape } from './blocking';
 import { builds } from './cleanups';
 import type { AsDrawn, Recast } from './asdrawn';
 import type { CutPlan, GhostPlan } from './continuity';
@@ -1097,10 +1098,12 @@ const MODEL =
  * in words: a person's full-length sketch was drawn small in a wide frame (24 Sep). An in-between
  * reference keeps the shape of the sketch it edits; every moment is a storyboard frame.
  */
-export type Shape = '2:3' | '4:3' | '16:9' | '1:1';
+export type Shape = '2:3' | '4:3' | '16:9' | '1:1' | '9:16';
 export function shapeOf(item: Item): Shape {
   if (item.kind === 'character') return isGroup(item) ? '4:3' : '2:3';
   if (item.kind === 'prop') return '1:1';
+  // A moment is the film's frame (vertical with DREAMCHAT_FRAME=9:16); a place's sketch a reference, landscape.
+  if (item.kind === 'cut') return frameShape();
   return '16:9';
 }
 

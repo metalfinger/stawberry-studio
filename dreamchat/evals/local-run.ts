@@ -19,6 +19,7 @@
 // run draws, and a run's pictures are all of one commit.
 
 import './local-env';
+import { frameShape } from '../blocking';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -91,6 +92,7 @@ export type RunManifest = {
 
 const SIZES: Record<string, [number, number]> = {
   '16:9': [1024, 576],
+  '9:16': [576, 1024],
   '4:3': [1024, 768],
   '2:3': [672, 1024],
   '1:1': [1024, 1024],
@@ -138,16 +140,18 @@ function sizeOf(file: string): [number, number] | null {
 }
 
 /**
- * Image 1 sets the size of what the machine draws: a moment's first image that is not a landscape frame (a person's
- * sketch standing up) is set in a 16:9 frame of plain white first, so the moment comes out a storyboard frame.
+ * Image 1 sets the size of what the machine draws: a moment's first image not in the moment's frame (a person's sketch
+ * standing up in a 16:9 film, a landscape place in a 9:16 one) is set in the frame on plain white first, so the moment
+ * comes out the film's frame.
  */
 function asFrame(file: string, out: string): string {
   const s = sizeOf(file);
   if (!s) return file;
   const [w, h] = s;
-  if (Math.abs(w / h - 16 / 9) < 0.05) return file;
-  const W = Math.max(w, Math.round((h * 16) / 9));
-  const H = Math.round((W * 9) / 16);
+  const [fw, fh] = SIZES[frameShape()];
+  if (Math.abs(w / h - fw / fh) < 0.05) return file;
+  const W = Math.max(w, Math.round((h * fw) / fh));
+  const H = Math.round((W * fh) / fw);
   const r = spawnSync('sips', [
     '-p',
     String(Math.max(H, h)),
@@ -440,7 +444,8 @@ async function drawDream(
       };
       if (q.prompt.length > MAX_CHARS) notes.push(`${q.prompt.length} characters: cut at ${MAX_CHARS}`);
       const first = q.images[0]?.file;
-      if (!first) await draw(e, 'generate', { prompt: e.sent, width: 1024, height: 576 });
+      if (!first)
+        await draw(e, 'generate', { prompt: e.sent, width: SIZES[frameShape()][0], height: SIZES[frameShape()][1] });
       else
         await draw(e, 'edit', {
           prompt: e.sent,
@@ -466,7 +471,8 @@ async function drawDream(
       images: [...images.filter((x) => !x.file).map((x) => x.name), ...fitted.dropped.images],
     };
     if (text.length > MAX_CHARS) notes.push(`${text.length} characters after fitting: cut at ${MAX_CHARS}`);
-    if (!fitted.images.length) await draw(e, 'generate', { prompt: e.sent, width: 1024, height: 576 });
+    if (!fitted.images.length)
+      await draw(e, 'generate', { prompt: e.sent, width: SIZES[frameShape()][0], height: SIZES[frameShape()][1] });
     else {
       const first = fitted.images[0].file as string;
       const framed = kind === 'cut' ? asFrame(first, join(dir, 'img', `frame-${p.id}.png`)) : first;
