@@ -19,7 +19,7 @@ import type { NowOf } from './record';
 import { sheetPrompt, subjectWords } from './sheets';
 
 /** The packet's version: a harness reading one checks it. */
-export const PACKET_VERSION = 3;
+export const PACKET_VERSION = 4;
 
 /** A verdict the owner gave a drawing of this picture: in the story's verdicts, a checkpoint, or a local run. */
 export type VerdictPacket = {
@@ -167,6 +167,8 @@ export type NodePacket = {
     said: boolean;
     /** The only writing the picture may have. */
     writing: string[];
+    /** The time it is set in (era.ts): its own where the dream gives it one, else the dream's; null where none is. */
+    period: string | null;
   };
   who: {
     visible: string[];
@@ -239,6 +241,11 @@ export type DreamPacket = {
     switches: Record<string, string>;
     keys: number;
     writer: string | null;
+    /**
+     * When the dream's world is set (era.ts): `said` where its own words say it (quoted), `given` where it is the date
+     * the dream was recorded, never the dreamer's words; null where neither says, and nothing guessed.
+     */
+    period: { value: string; from: 'said' | 'given'; quote: string | null } | null;
   };
   elements: ElementPacket[];
   ghosts: GhostPacket[];
@@ -304,6 +311,7 @@ export function dreamPacket(
         switches: env.switches,
         keys: env.version,
         writer: process.env.DREAMCHAT_WRITER?.trim() || null,
+        period: r.b.period ? { value: r.b.period.value, from: r.b.period.from, quote: r.b.period.quote ?? null } : null,
       },
       elements: r.sheets.map((s) => ({
         id: s.id,
@@ -315,7 +323,7 @@ export function dreamPacket(
             .filter(([, d]) => !!d?.value)
             .map(([k, d]) => [k, { value: d.value as string, said: !!d.said }]),
         ),
-        prompt: sheetPrompt(s, opts.style, { others: subjectWords(r.sheets, s) }),
+        prompt: sheetPrompt(s, opts.style, { others: subjectWords(r.sheets, s), period: r.b.period?.value }),
         image: or(s.mediaId),
         group: !!s.several,
         partOf: or(s.partOf),
@@ -374,6 +382,7 @@ export function dreamPacket(
             key: !!m.key,
             said: !!m.said,
             writing: sh?.story.writing ?? [],
+            period: m.period ?? r.b.period?.value ?? null,
           },
           who: {
             visible: f.visible,
@@ -693,6 +702,7 @@ export const PACKET_SCHEMA: Schema = {
         key: bool,
         said: bool,
         writing: list(str),
+        period: orNull(str),
       }),
       who: obj({
         visible: list(str),
@@ -812,6 +822,7 @@ export const PACKET_SCHEMA: Schema = {
       switches: map(str),
       keys: count,
       writer: orNull(str),
+      period: orNull(obj({ value: str, from: oneOf('said', 'given'), quote: orNull(str) })),
     }),
     elements: list(ref('element')),
     ghosts: list(ref('ghost')),

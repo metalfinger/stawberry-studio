@@ -1981,7 +1981,10 @@ export class SessionStore {
     if (!s?.build || !s.style || !it) return null;
     if (it.kind !== 'cut' && it.kind !== 'ghost')
       return {
-        prompt: sheetPrompt(it, s.style, { others: subjectWords(s.build.items, it) }),
+        prompt: sheetPrompt(it, s.style, {
+          others: subjectWords(s.build.items, it),
+          period: s.draft?.breakdown?.period?.value,
+        }),
         references: [],
         held: it.held,
       };
@@ -2228,7 +2231,10 @@ export class SessionStore {
                   text,
                   it.kind === 'cut'
                     ? this.framed(s, it, it.layout?.mediaId, 'fix').prompt
-                    : sheetPrompt(it, s.style, { others: subjectWords(s.build.items, it) }),
+                    : sheetPrompt(it, s.style, {
+                        others: subjectWords(s.build.items, it),
+                        period: s.draft?.breakdown?.period?.value,
+                      }),
                 )
                 .catch(() => null)
             : null;
@@ -3937,6 +3943,8 @@ export class SessionStore {
     const style = s.style;
     // The dream's other people and things, never said in this sketch's style (sheets.ts subjectWords).
     const subjects = subjectWords(s.build?.items ?? [], item);
+    // The dream's period (era.ts), told to the sketch.
+    const period = s.draft?.breakdown?.period?.value;
     const sheets = this.deps.sheets;
     // A person nobody described gets words for their look first, as our guesses, so every
     // picture of them carries the same look in words as well as in the image.
@@ -3974,7 +3982,13 @@ export class SessionStore {
     looked
       .then(async () => {
         // The gate, before the sketch is paid for.
-        let findings = await this.gateFindings(s, snapshot, sheetPrompt(snapshot, style, { others: subjects }), [], []);
+        let findings = await this.gateFindings(
+          s,
+          snapshot,
+          sheetPrompt(snapshot, style, { others: subjects, period }),
+          [],
+          [],
+        );
         // A look it is unsure of is reworded, described as a look only and filled where it is thin,
         // before anyone is asked, and read again; what they said keeps its meaning.
         // A redraw's own instruction can be what is at odds: the dreamer's sketch kept a correction
@@ -3987,7 +4001,13 @@ export class SessionStore {
           acted(item, 'repair set aside', findings);
           snapshot.repairFor = (snapshot.repairFor ?? []).filter((r) => !blamed.includes(r));
           if (!snapshot.repairFor.length) snapshot.repairFor = undefined;
-          findings = await this.gateFindings(s, snapshot, sheetPrompt(snapshot, style, { others: subjects }), [], []);
+          findings = await this.gateFindings(
+            s,
+            snapshot,
+            sheetPrompt(snapshot, style, { others: subjects, period }),
+            [],
+            [],
+          );
         }
         // Twice at most, text being nearly free: the Meads's house, reworded to its outside, still
         // listed the stairs and the hallway inside it, and read as unclear (25 Sep).
@@ -3997,7 +4017,7 @@ export class SessionStore {
               item.name,
               kind,
               snapshot.fields,
-              sheetPrompt(snapshot, style, { others: subjects }),
+              sheetPrompt(snapshot, style, { others: subjects, period }),
               findings,
               renderTranscript(s.transcript),
               laterOf(s, item.id),
@@ -4007,7 +4027,13 @@ export class SessionStore {
           if (!fields) break;
           acted(item, 'reworded', findings);
           snapshot.fields = await this.theirWordsOnly(s, snapshot, snapshot.fields, fields);
-          findings = await this.gateFindings(s, snapshot, sheetPrompt(snapshot, style, { others: subjects }), [], []);
+          findings = await this.gateFindings(
+            s,
+            snapshot,
+            sheetPrompt(snapshot, style, { others: subjects, period }),
+            [],
+            [],
+          );
         }
         if (findings.length && ((opts.guess && findings.every(unclearOnly)) || sketchGivesWay(findings))) {
           acted(item, 'drawn although held', findings);
@@ -4020,6 +4046,7 @@ export class SessionStore {
           item: snapshot,
           style,
           others: subjects,
+          period,
           sources: { said: ids.said, proposal: ids.proposal },
           reason: `The person asked to see their dream drawn and settled this profile in conversation; approved within the ${IMAGE_CAP}-picture limit.`,
           maxUsd: MAX_PER_IMAGE,
@@ -4044,7 +4071,7 @@ export class SessionStore {
                 ...(it.checkedTakes ?? []),
                 {
                   version: snapshot.version,
-                  prompt: sha(sheetPrompt(snapshot, style, { others: subjects })),
+                  prompt: sha(sheetPrompt(snapshot, style, { others: subjects, period })),
                   ...(snapshot.gate ? { gate: snapshot.gate } : {}),
                   ...(snapshot.overrode ? { overrode: snapshot.overrode } : {}),
                 },

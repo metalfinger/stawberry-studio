@@ -381,7 +381,7 @@ export function viewDream(s: Session, o: ViewOpts): { view: ViewDream; files: Re
     .map((sk) => {
       const e = cuts.flatMap((p) => p.sheet?.inView ?? []).find((x) => x.id === sk.id);
       const key = `sketch:${sk.id}`;
-      const prompt = sheetPrompt(sk, style, { others: subjectWords(r.sheets, sk) });
+      const prompt = sheetPrompt(sk, style, { others: subjectWords(r.sheets, sk), period: r.b.period?.value });
       const own = item(sk.id);
       const usedBy = [
         ...viewCuts.filter((c) => c.refs.some((x) => x.key === key)).map((c) => c.id),

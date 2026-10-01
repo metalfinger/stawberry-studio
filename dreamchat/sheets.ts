@@ -3,6 +3,7 @@
 // their source, a recipe is prepared, approved within the conversation's image cap, queued, and
 // the engine's worker draws it.
 import { builds } from './cleanups';
+import { periodLine } from './era';
 import type { AsDrawn, Recast } from './asdrawn';
 import type { CutPlan, GhostPlan } from './continuity';
 import { pictureName } from './continuity';
@@ -813,7 +814,8 @@ export function sheetPrompt(
   item: Item,
   style: StyleOption,
   /** The words that name the dream's other people and things (subjectWords): with `sketch_subjects`, never in its style. */
-  opts: { others?: string[] } = {},
+  /** The dream's period (era.ts): with `era`, the time it is drawn in, never in its style. */
+  opts: { others?: string[]; period?: string | null } = {},
 ): string {
   // A look that says nothing a picture can keep ("indistinct, like a figure in a hazy memory")
   // would be drawn as a blur.
@@ -978,9 +980,15 @@ export function sheetPrompt(
     : '';
   const ownColours = new RegExp(COLOUR_WORDS.source, 'i').test(facts);
   const noWords = item.kind === 'prop' && WRITTEN_ON.test(`${item.name} ${facts}`) ? MARKS_ONLY : NO_WORDS;
+  // The dream's time, said apart from how it is drawn: a woodcut stays a woodcut in any decade (`era`).
+  const time =
+    builds('era') && opts.period
+      ? periodLine(opts.period, item.kind === 'cut' || item.kind === 'ghost' ? 'moment' : item.kind)
+      : '';
   return [
     layout,
     facts,
+    time,
     shut,
     without,
     clear,
@@ -1006,6 +1014,8 @@ export type SheetEngine = {
     style: StyleOption;
     /** The words naming the dream's other people and things (subjectWords), never said in the sketch's style. */
     others?: string[];
+    /** The dream's period (era.ts), told to the sketch with `era`. */
+    period?: string;
     sources: { said: string; proposal: string };
     reason: string;
     maxUsd: number;
@@ -1151,7 +1161,7 @@ function approval(
 }
 
 export const liveSheets: SheetEngine = {
-  async start({ item, style, others, sources, reason, maxUsd }) {
+  async start({ item, style, others, period, sources, reason, maxUsd }) {
     if (!item.nodeId) throw new Error(`${item.name} is not in the production yet`);
     const node = (await call('inspect', { id: item.nodeId })) as { node: { revision: number } };
     const said: Record<string, { op: 'set'; value: string }> = {};
@@ -1174,7 +1184,7 @@ export const liveSheets: SheetEngine = {
       node_id: item.nodeId,
       provider: PROVIDER,
       model: MODEL,
-      prompt: sheetPrompt(item, style, { others }),
+      prompt: sheetPrompt(item, style, { others, period }),
       intent: `Reference sheet for ${item.name}${item.version > 1 ? `, version ${item.version}` : ''}`,
       settings: settingsFor(shapeOf(item)),
     })) as { id: string; fingerprint: string; spec: { estimate?: { credits?: number | null } } };

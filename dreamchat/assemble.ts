@@ -8,6 +8,7 @@
 // take from it and nothing else. An edit base goes first (image 1 is the picture to change), or the
 // mock-up where there is none, then the sketches of who and what is in view, then in-between pictures,
 // then earlier moments while there is room.
+import { periodLine } from './era';
 import { sayTurn } from './camera';
 import type { CutSheet, SheetEarlier, SheetElement } from './cutsheet';
 import { aNoun, FRAMING, MAX_IMAGES, NOTHING_ELSE, SHAPE_WORDS, samePlaceLine, sentence, writingLine } from './frames';
@@ -615,6 +616,8 @@ export function assembleCut(s: CutSheet): Assembled {
           .join(' ');
       })(),
     },
+    // The time the picture is set in (era.ts), never in its style: a woodcut stays a woodcut in any decade.
+    { id: 'time', fields: ['period'], text: s.period ? periodLine(s.period, 'moment') : '' },
     {
       id: 'now',
       fields: ['now', 'nowWords', 'states'],

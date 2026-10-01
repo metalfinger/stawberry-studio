@@ -207,6 +207,10 @@ export const BUILDER_STEPS: readonly string[] = [
   'strangest',
   'told_events',
   'thought_outside',
+  // Not a ledger row: from the merged flow's first new dream (the Barley Degree, 1 Oct): a 1957 church meeting drawn
+  //    modern. The dream's period, from its own words or the date it was recorded (era.ts), told to every sketch and
+  //    every moment, a moment the dream sets in another time keeping its own; never in the style.
+  'era',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;

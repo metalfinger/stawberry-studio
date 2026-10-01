@@ -8,6 +8,7 @@
 import { SHAPES, type Blocking, type Move, type Shape, type Side, type Spot } from './blocking';
 import { cameraMode } from './camera';
 import { builds } from './cleanups';
+import type { Era } from './era';
 import { listenOn } from './lib';
 import { type ChatMessage, callDeepseek, type Thinking } from './llm';
 
@@ -42,6 +43,8 @@ export type Thing = { id: string; name: string; fields: { appearance: Detail; ma
 export type Moment = {
   id: string;
   action: string;
+  /** Another time than the rest of the dream, where their words set this moment in it (era.ts). */
+  period?: string;
   /** Person ids in view. */
   visible: string[];
   /** Thing ids in view. */
@@ -197,6 +200,8 @@ export type Breakdown = {
   scenes: Scene[];
   style_options: StyleOption[];
   unknowns: string[];
+  /** When the dream's world is set (era.ts): their words or the date it was recorded; none where neither says. */
+  period?: Era['period'];
 };
 
 export type ProducerFn = (
