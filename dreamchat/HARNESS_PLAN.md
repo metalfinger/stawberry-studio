@@ -28,7 +28,63 @@ current figure and what's next). Writer model: Claude (`DREAMCHAT_WRITER=claude`
 
 ## Where we stopped (27-29 Sep): read this to resume
 
-**Newest landmark (30 Sep, night): the owner's blind picture check on fal, and its misses fixed at their roots.**
+**Newest landmark (1 Oct, night): whole dreams drawn from nothing on the owner's local image machine, what they
+showed, and what was fixed at its root.** Nothing paid. The local machine (Qwen-Image 2.1) drew 11 of the 15 frozen dreams end to end by morning: 186
+pictures (86 sketches, 11 in-between pictures, 89 moments), 0 failed, and about 40 drawn again on the fixes, each from
+nothing: every sketch, every in-between picture and every moment in dependency order, at high quality, within its
+limits of 4 images and 4000 characters a picture (`evals/local-run.ts`, run `night-2`; a manifest per dream with the
+prompt whole and as sent, the images whole and as sent, what was left out, the job, seed and file). The viewer's
+`/local` page shows each picture beside its mock-up and what it was sent, and takes a verdict on each (keys 1-3). Most
+fixes were drawn again on the run's own seeds; vehicle and door pairs are on a blind page for the owner. On lab:
+- *Fitting to the machine's limits (local-run):* night was drawn as day where fitting cut the light line (night-market
+  m2-m5): the light, the colours, what happens, the one thing to show, how each one is and the writing line are never
+  cut, and no prompt is sliced (a sliced m7 lost its one thing to show). Images go image 1, every person, a thing the
+  moment's action or point names, the place, other things, earlier pictures: never a person's sketch for a thing's (the
+  father drawn as the dreamer's double, lighthouse-first m4, m5). Three or more people share one sheet (the fish left
+  out of night-market m3 for a third person's sketch), at most two on it, with "each of them in the picture once, where
+  Image 1 puts them"; two keep their own sketches (two on one sheet came back on two bicycles, 1 of 2 against 2 of 2
+  apart). A place as it now is (the library flooded, an in-between picture) ranks above a named thing: left out for
+  the boat, the library came back a bare grey room with empty shelves (flooded-library m5-m9, water-rising m4-m7). The
+  machine is first told that image 1 is the picture to edit and the rest only how each one looks (the
+  dreamer drawn twice without it).
+- *A cast thing's look never says what it does, and borrows the look of one of its kind:* "the little boats" were wooden
+  rowing boats; now paper boats, like the one the father folds.
+- *Through the dreamer's eyes, what they look at never swamps the frame,* what they are in or on excepted (the river
+  under the boat); an edit from one of their views to the next never says the dreamer left the picture. Frozen 1, live 2.
+- *A door the record has open is open on the plan* (its own state, or its place's part when only one door has that
+  name): the mock-up draws its frame and the door swung back, the dreamer's eyes a step back from it, and something
+  upright within two steps is looked at level (never the stairs they stand on). The red door was one grey slab and the
+  camera looked down at its foot (snow-train m6, judged blind). Frozen 1, live 1. Paired, judged blind by the owner: the
+  old two-panel picture "completely wrong", the new "still okay"; neither right ("I can't see the dreamer opening the
+  door"; "two doors in both"): a figure in the dreamer's own view, the second door from the place's sketch, which has
+  the door in it, and no hand on the door.
+- *One vehicle for two riders.* A bicycle drawn on the mock-up as a grey block came back as two bicycles, one rider each
+  (0 of 2), and "only one bicycle" did not help (0 of 2); drawn as wheels, bar, saddle and handlebars, one (2 of 2), in
+  the picture only: the camera and its words still reckon on the block (reckoned on the bars, cameras moved and a
+  crossing with them). Two sat side by side in a tractor came back as two tractors (a tractor-shaped mock-up 0 of 2);
+  what has one seat (a tractor, a digger, a forklift) has its driver "in the red tractor's one seat" and anyone else
+  "sitting on its mudguard beside the driver": one tractor 2 of 2 paired, 3 of 4 on the run's own pictures. Frozen 2,
+  live 2. Taken back the same night (6b8191b): the owner, judging blind, wants the tractor's two seats, side by side as
+  the picture before had them (the mudguard right in one pair, wrong in the other: "the tractor should have two seats
+  ... suddenly the dreamer shifted to sitting on the wheel"); how many seats a vehicle has is the dream's to say, and
+  two tractors was the local machine's fault (fal drew one). The owner's rule from this: the prompts are written for
+  Nano Banana Pro, and a fault only the local machine makes does not change the harness's words. On one bicycle the riders' order is swapped (the fish-holder in front, 6 of 6), and
+  saying which way it points did not help (0 of 2); he weighs who rides where, and that it holds from the picture
+  before, over how many bicycles there are (the two-bicycle picture with the sister in front judged right).
+- *Earlier the same night:* a bridge's railings are its top rails at hand height, hiding no one and no reason to move
+  the camera; small things are their size (a key, a letter, a paper boat), from their own words or what they are.
+
+Known, not fixed, each with its pictures in `night-2`: someone drawn twice survives the sheet's narrowing, with their
+own sketches too (lighthouse-fresh m1, m14, heron m3, library-underwater m4, m5, underwater-school m3, m5, m6), most often the one small or far in the
+mock-up (a hypothesis for a paired test); the time of day not carried to a later place (the bridge ride in daylight
+after the night market; snow-train m2, m3, m5); a person's sketch pose pulling against the mock-up (lighthouse-first
+m2); a reference pasted whole as a panel (night-market m8); flight not drawn (heron m6); a moment about faces seen from
+behind (heron m4; frozen 1, live 3); the person the moment is about drawn tiny (heron m3; frozen 3, live 6).
+**Question for the owner:** a close shot on what someone holds crops the people holding it at the shoulders
+(lighthouse-first m5; frozen 12, live 26 pictures say "their head out of the picture above"): the insert you want, or
+faces kept?
+
+**Earlier landmark (30 Sep, night): the owner's blind picture check on fal, and its misses fixed at their roots.**
 50 pictures, $7.50, 0 failures, all on bc1a049; judged blind: the harness now right in 36 of 43, the old in 25 (faults
 put right 8/12, guards kept 23/24; pairs 5/7 each). The check, each miss at its root, what his notes teach:
 `docs/picture-check-2026-09-30.md`. `KEYS_VERSION` is 7. On lab since, with the camera rules:
@@ -2144,6 +2200,7 @@ between sessions.
 | S4 checkpoint | S6 | The shot's brief is written from the view and the moments before, never the sheet's facts, so it can contradict them (the whale under the boat, a lamp above 4 m of water, arms drawn back after a handover, someone gone placed at the edge, a head cut off): S6 ledger 34, with its measures and a new prompt case, snow-train-2-m6-instant. |
 | S6 | S4, S1 | The typed readings are keyed by exactly what the writer was asked, and with the camera rules `namesForIds` puts a name where the saved words have an id: library-1 m5 was read again with the camera on (1 writer and 1 Jev call). When row 5 moves `namesForIds` to the builder's default, both keys are cached. |
 | S6 | S2, S7 | With the builder's paragraph ids, the pre-draw check's acting path (DREAMCHAT_CHECKS=act) tells the view's line by its paragraph, so a finding around "What the dreamer sees" now counts as the plan's, as "What the camera sees" did; logging, the default, is unchanged. |
+| S4 (the mock-up's drawn shapes) | S9 | What is ridden astride is drawn on the mock-up as wheels and bars, the picture only (`previs.ts solidsOf(…, drawn)`, 1 Oct): its floor plan and camera are as before, so a picture drawn from the old block-shaped mock-up is not stale by S9, which keys the mock-up by its floor plan and camera, never its pixels. Such pictures are redrawn by hand (`night-2` reset them); key the drawn shapes too if it starts to matter. An open door changes the plan and the camera, so its pictures go stale as they should. |
 
 ## Known debt, by the step that clears it
 
@@ -3111,6 +3168,16 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   suitcase stays shut at m5 and m6. Model calls: 1 writer and 1 Jev (library-1 m5's typed reading with the camera
   on). `bun test`: 784 pass, 2 skipped, 0 fail, with every step switch unset and with every one on (the builder
   too); typecheck clean. No pictures, no money.
+- 1 Oct (night, local machine): 11 dreams (186 pictures) drawn from nothing on the owner's local image machine (run `night-2`, nothing
+  paid), judged picture by picture against its mock-up; every fix measured on every saved dream (same readings both
+  sides), the suite passing with every switch off and on, and landed fast-forward on `lab/dream-chat`: the dreamer's
+  view never swamped by what they look at (fee98b5: frozen 1, live 2); what is ridden astride drawn as it is on the
+  mock-up only (058711d: 0 words); one seat, its driver in it and others on its mudguard (5761510: frozen 2, live 2; taken back, 6b8191b);
+  an open door open on the plan, seen from a step back (ec281f1: frozen 1, live 1); local-run's fitting (light,
+  colours and the one thing to show never cut, no slicing, people before things, sheets for three or more only, a place as it now is before a named thing:
+  460b48d, 8fd004e, b771f9f, 87e2a98, 03fbd15, d69164b, 0787e01, 3c39696) and cast looks (8e485c6). Prompt cases the same at
+  every step. Paired picture tests on the machine (high, the same seed each side) for the vehicles and the door; their
+  pairs on a blind page for the owner. Findings and what is parked: the newest landmark above.
 
 ## Owner's direction (29 Sep): reviews and merges move to the cloud session
 
