@@ -1,0 +1,80 @@
+{
+  "about": "Texture in dumped dreams, labelled by hand from each text (2 Oct, before building): a simile or a reason the dreamer gives, seeable (a picture can show it) or not. A seeable one is kept when some moment's point shows it in what is seen (`shows`, groups of alternatives, every group matching one point); an unseeable one is kept out of every point (`never`). A point copies when it keeps a simile's own words (`copy`) or says 'like' or 'as if' instead of what is seen. Label corrected after the first re-ask run (2 Oct): Neighbours' x5 leaks on being called back or home, not on the direction 'toward outer space', which a picture can show.",
+  "dreams": [
+    {
+      "id": "neighbours",
+      "text": "There was a power cut and everyone in our house went up to the rooftop to sleep. Like we used to do when I was a child. The stars had come down to about the height of the water tanks. Neighbors were picking them with long bamboo sticks. They were glowing yellow and slightly soft. As if someone had steamed mangoes like dumplings. My mother had a whole bucket and kept a pillow over it so they wouldn't jump out. But then she asked me not to take more than two. Leave some for the other people from the neighborhood. I held one against my cheek. I think it hummed. When the light came back, they all went up very quickly. Like they'd been called back home from outer space.",
+      "textures": [
+        {
+          "id": "x1",
+          "says": "the stars glowing yellow and slightly soft, as if someone had steamed mangoes like dumplings",
+          "seeable": true,
+          "shows": [["star"], ["dough|dumpling|bun\\b|buns\\b|puff|plump|squish|pillowy|mochi"]],
+          "copy": "steamed mangoes|like dumplings|as if someone"
+        },
+        {
+          "id": "x2",
+          "says": "a pillow kept over the bucket so the stars would not jump out",
+          "seeable": true,
+          "shows": [["pillow"], ["jump|push|press|bulg|escap|strain|peek|squeez|lift|nudg|poke|bounc|wriggl"]],
+          "copy": "so they wouldn't|so they would not|wouldn't jump out"
+        },
+        {
+          "id": "x3",
+          "says": "as they used to do when the dreamer was a child",
+          "seeable": false,
+          "never": "child|childhood|used to"
+        },
+        {
+          "id": "x4",
+          "says": "the star hummed",
+          "seeable": false,
+          "never": "\\bhum"
+        },
+        {
+          "id": "x5",
+          "says": "like they had been called back home from outer space",
+          "seeable": false,
+          "never": "called back|called home|called them"
+        }
+      ]
+    },
+    {
+      "id": "fan",
+      "text": "In my dream, the city was flooded, but only indoors. Out on the street, it was sunny and dry, just a few puddles. So everyone had carried their soaking wet sofas outside, and sat on them, going about their day. From the street, you could see into every flat, like a fish tank. The water inside was perfectly still, and clear, small fish swam about. I walked up to my neighbor and started complaining about the government, and taxes. He said, we have to be patient. The city will drain it after the monsoon. My laptop was on the dining table, underwater. The screen was lit up, and I could hear faint Teams notifications. Then, I worried I'd left the fan on in my room, so I climbed a steel ladder, ten floors up, to the window with a good view into my room.",
+      "textures": [
+        {
+          "id": "x1",
+          "says": "from the street you could see into every flat, like a fish tank",
+          "seeable": true,
+          "shows": [["flat|window|building|room"], ["water|tank|aquarium|fish"]],
+          "copy": "like a fish tank"
+        },
+        {
+          "id": "x2",
+          "says": "faint Teams notifications from the laptop",
+          "seeable": false,
+          "never": "teams|notification"
+        }
+      ]
+    },
+    {
+      "id": "open-wide",
+      "text": "At the dentist, he tells me to open wide, and my teeth are piano keys now. The black ones at the back. He's pleased. He plays a little something and it sounds like the old Nokia ringtone. He says a C is missing and we'll have to order it from Germany. I'm worried about the price, then he says it's 1200 rupees per note, but he'll do the sharps for free. His assistant is holding a metronome instead of the suction thing. I try to say okay, but I can only hum. Then I'm in the waiting room with the bill and a small paper bag with my old tooth inside. When I try to say something, it comes out sounding like a song with no lyrics.",
+      "textures": [
+        {
+          "id": "x1",
+          "says": "it sounds like the old Nokia ringtone",
+          "seeable": false,
+          "never": "nokia|ringtone"
+        },
+        {
+          "id": "x2",
+          "says": "it comes out sounding like a song with no lyrics",
+          "seeable": false,
+          "never": "lyrics|\\bsong\\b"
+        }
+      ]
+    }
+  ]
+}

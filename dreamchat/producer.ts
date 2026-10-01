@@ -225,10 +225,42 @@ const THOUGHT_OUTSIDE =
 const POINT_RULE = '"visual_point" is the one thing the picture must carry.';
 const CONCRETE_POINT =
   ' It names what they named ("no marzipan anywhere", never "finding nothing"; "the man in the wheelchair", never "the man"), said as what the picture shows: never a sentence of theirs copied, never what would, could or was supposed to happen.';
+/**
+ * With `texture`, a simile or a reason the dreamer gives is kept where a picture can show it, as what is seen, and left
+ * to the narration where only a sound, a smell, a memory or a feeling carries it: the dumped dreams' points dropped the
+ * stars "soft, as if someone had steamed mangoes like dumplings", and carried the ringtone a mouth of piano keys
+ * "sounds like" (the merged flow's retell gate, 2 Oct).
+ */
+const TEXTURE_POINT =
+  ' A simile or a reason they give that a picture can show is kept, as what is seen: hands "like shovels" are "huge, shovel-broad hands"; a door held shut "so the wind couldn\'t get in" is "her shoulder against the door, the wind pushing at it". The one thing to show never says "like" or "as if": it says what the simile looks like. What only a sound, a smell, a memory or a feeling carries (a hum, a tune, a ringtone, a ping or a notification, "as when I was a child") is never in the one thing to show, not even beside what is seen: show what is seen as it happens.';
+/**
+ * A point's simile cut, by its words (`texture`): from "as if", "as though" or "(looks) like" to the next comma. A point
+ * is what the picture shows, and the writer still wrote "all the stars streaking up into the sky, as if called back
+ * home to outer space" (2 of 79). Never emptied: a point that is nothing but a simile is kept.
+ */
+/** The simile clauses a point says, as withoutSimile cuts them. */
+export const similesOf = (point: string): string[] =>
+  point
+    .split(/,\s*/)
+    .map((part) => /\b(?:(?:looks?|looking|seems?|seeming)\s+)?(?:like|as if|as though)\b.*$/i.exec(part)?.[0].trim())
+    .filter((x): x is string => !!x);
+
+export function withoutSimile(point: string): string {
+  const cut = point
+    .split(/,\s*/)
+    .map((part) =>
+      part.replace(/\s*\b(?:(?:looks?|looking|seems?|seeming)\s+)?(?:like|as if|as though)\b.*$/i, '').trim(),
+    )
+    .filter(Boolean)
+    .join(', ');
+  return cut || point;
+}
+
 export const producerSystem = () => {
   let s = builds('names') ? SYSTEM.replace(LOOKS_AT_RULE, LOOKS_AT_RULE + NAMES_NOT_IDS) : SYSTEM;
   if (builds('thought_outside')) s = s.replace(EYES_RULE, EYES_RULE + THOUGHT_OUTSIDE);
-  if (builds('told_events')) s = s.replace(POINT_RULE, POINT_RULE + CONCRETE_POINT);
+  if (builds('told_events'))
+    s = s.replace(POINT_RULE, POINT_RULE + CONCRETE_POINT + (builds('texture') ? TEXTURE_POINT : ''));
   return s;
 };
 
@@ -1438,7 +1470,15 @@ export function normalizeBreakdown(raw: string): { breakdown: Breakdown; notes: 
         distance: mo.distance === 'close' || mo.distance === 'wide' ? mo.distance : 'medium',
         looks_at: str(mo.looks_at, 80),
         feeling: str(mo.feeling, 240),
-        visual_point: str(mo.visual_point, 240).replace(CAMERA_CLAUSE, '').trim(),
+        visual_point: (() => {
+          const point = str(mo.visual_point, 240).replace(CAMERA_CLAUSE, '').trim();
+          if (!builds('texture')) return point;
+          const cut = withoutSimile(point);
+          // What was cut is kept in the notes, a seeable look among it counted by the eval (evals/texture.ts).
+          if (cut !== point)
+            notes.push(`texture: ${str(mo.id) || `moment ${j + 1}`}'s point lost "${similesOf(point).join('", "')}"`);
+          return cut;
+        })(),
         purpose: str(mo.purpose, 120),
         // Code decides the edge case: a scene's first moment continues from nothing.
         continues: j > 0 && mo.continues !== false,

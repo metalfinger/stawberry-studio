@@ -233,6 +233,10 @@ export const BUILDER_STEPS: readonly string[] = [
   //    sketched, is given ordinary clothes for who and where they are, as a guess (wardrobe.ts, one writer reading per
   //    dream): made real from the mock-up, the exam room's faceless students came out naked (heron m4).
   'extras_wardrobe',
+  // Not a ledger row: from the merged flow's retell gate on its dumped dreams (2 Oct). A simile or a reason the dreamer
+  //    gives is kept where a picture can show it, as what is seen ("soft, doughy stars"), never in its own words, and
+  //    left to the narration where only a sound, a memory or a feeling carries it (a hum, a ringtone).
+  'texture',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;
