@@ -74,6 +74,19 @@ fixes were drawn again on the run's own seeds; vehicle and door pairs are on a b
 - *Earlier the same night:* a bridge's railings are its top rails at hand height, hiding no one and no reason to move
   the camera; small things are their size (a key, a letter, a paper boat), from their own words or what they are.
 
+*The morning after, with the owner's verdicts:* own hands where the dreamer does something with them ("their own hands
+and arms show as they open the door", `own_hands`, after "I can't see the dreamer opening the door"); a separate
+prompt writer per model for the local machine only (`evals/qwen-prompt.ts`, `local-run --profile qwen`: the same
+sheet facts, operation first, image 1 the canvas, counts said exactly; the harness's Nano Banana Pro prose unchanged
+byte for byte, `docs/qwen-image-prompts.md`); the viewer's `/local-compare/<run>/<run>/<dream>` sets two runs of the
+same dreams side by side, blind if asked, each run's verdicts kept beside it; a colour-keyed mock-up for that profile
+(`previs.ts previsKeyed`, `session.ts previsKeyedFor`: no labels, each person and creature in a marker colour, each
+thing in its own colour from its words, the room and a crowd in muted colours; the clay frame unchanged) and, as a
+test of the owner's thesis, its things labelled by their short name with a small shapeless one outlined (`labels:
+'things'`). Paired on the local machine, the same seeds, judged blind on the compare page: clay against keyed (6
+moments), then keyed against keyed and labelled (6 moments, one a dream). A colour-keyed or labelled mock-up is the
+local profile's to choose; the harness and fal keep the clay until a fal test says otherwise.
+
 Known, not fixed, each with its pictures in `night-2`: someone drawn twice survives the sheet's narrowing, with their
 own sketches too (lighthouse-fresh m1, m14, heron m3, library-underwater m4, m5, underwater-school m3, m5, m6), most often the one small or far in the
 mock-up (a hypothesis for a paired test); the time of day not carried to a later place (the bridge ride in daylight
