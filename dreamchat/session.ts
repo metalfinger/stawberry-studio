@@ -955,10 +955,14 @@ export function dreamNowOf(s: Pick<Session, 'draft' | 'build' | 'transcript' | '
   // Planning the dream again is the costly part, and every send and every look at staleness asks for it:
   // made once for what it is made from.
   // Keyed by the switches the plan is made under as well (the story record, the camera rules): planned
-  // under one setting, it was read back under another in the same process.
+  // under one setting, it was read back under another in the same process. The references as they act too: they act
+  // only with the cut sheet on, which the drawn record does not key (asdrawn.ts), and a plan made with them idle was
+  // served where they act (the plan-in-force test, run in a process of its own, 1 Oct).
   const key = hashOf({
     version: KEYS_VERSION,
     env: drawnEnv(),
+    refs: refsMode(),
+    cutSheet: (process.env.DREAMCHAT_CUT_SHEET ?? '').trim().toLowerCase(),
     breakdown: s.draft.breakdown,
     readings: s.draft.readings ?? null,
     items: s.build?.items ?? [],

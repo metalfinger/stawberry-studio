@@ -3,7 +3,7 @@
 // for what it sends, and an in-between picture only where an edit carries two changes or more. Every
 // dream here is made up for the rule it tests, each test failing with the switch off; the drawing path is
 // checked against a rebuild on a saved dream.
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -19,6 +19,9 @@ import { chooseRefs, refsMode, SEVERAL, standsFor } from '../refs';
 import { drawingSheet, drawnFrameOf, previsFor, type Session } from '../session';
 import type { Item } from '../sheets';
 import { forgetVerdicts, verdictsIn, withheldOf } from '../verdicts';
+
+// Planning whole dreams: a few seconds each, longer on a machine busy with other runs.
+setDefaultTimeout(30_000);
 
 const detail = (value: string | null = null) => ({ value, said: false });
 
