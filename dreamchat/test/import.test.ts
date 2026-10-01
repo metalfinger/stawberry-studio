@@ -149,6 +149,36 @@ describe('a dumped dream, with no chat', () => {
     }
   });
 
+  test("its look keeps to technique when made: a line naming the dream's own people or things is left out", async () => {
+    const data = mkdtempSync(join(tmpdir(), 'import-'));
+    const named: StyleOption = {
+      ...painted,
+      tokens: [...painted.tokens, 'the grandfather drawn sharper than the rest'],
+      lighting_rules: 'Shadows are cool. The grandfather and the suitcase are rendered with more clarity.',
+    };
+    const { deps } = stubs({
+      ownStyle: async () => named,
+      // Jev reads nothing as content; the breakdown's own names are caught all the same.
+      jev: async (state, questions) => ({
+        questions,
+        state,
+        answers: Object.fromEntries(Object.keys(questions).map((k) => [k, { type: 'noul', noul: 0.01 }])),
+        error: null,
+        ms: 0,
+        usage: null,
+        model: 'stand-in',
+      }),
+    });
+    const got = await importDream(
+      { text: 'A dream.', style: 'a woodcut print', id: 'dream-1001-000003-test', data },
+      deps,
+    );
+    const s = JSON.parse(readFileSync(got.state, 'utf8')) as Session;
+    expect(s.style?.lighting_rules).toBe('Shadows are cool.');
+    expect(s.style?.tokens).toEqual(painted.tokens);
+    expect(s.style?.medium).toBe('a woodcut print');
+  });
+
   test('a photograph is refused, and nothing is saved', async () => {
     const data = mkdtempSync(join(tmpdir(), 'import-'));
     for (const medium of ['a photograph', 'realistic photo, natural light', '']) {

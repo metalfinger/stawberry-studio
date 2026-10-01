@@ -14,7 +14,7 @@ import { moments } from '../producer';
 import { resolveTree } from '../tree';
 import { sayNow } from '../record';
 import { calledFor, previsFor, type Session, treeInputOf } from '../session';
-import { type Item, sheetPrompt } from '../sheets';
+import { type Item, sheetPrompt, subjectWords } from '../sheets';
 import type {
   ViewCut,
   ViewDream,
@@ -381,7 +381,7 @@ export function viewDream(s: Session, o: ViewOpts): { view: ViewDream; files: Re
     .map((sk) => {
       const e = cuts.flatMap((p) => p.sheet?.inView ?? []).find((x) => x.id === sk.id);
       const key = `sketch:${sk.id}`;
-      const prompt = sheetPrompt(sk, style);
+      const prompt = sheetPrompt(sk, style, { others: subjectWords(r.sheets, sk) });
       const own = item(sk.id);
       const usedBy = [
         ...viewCuts.filter((c) => c.refs.some((x) => x.key === key)).map((c) => c.id),

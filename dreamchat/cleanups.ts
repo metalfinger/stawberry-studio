@@ -191,6 +191,10 @@ export const BUILDER_STEPS: readonly string[] = [
   // Not a ledger row: the owner's rule (1 Oct), never guess the dreamer's sex or age. A guessed (unsaid) clause of their
   //    sketch that gives either is left out, and a guessed "who they are" with it; what they said of themselves stays.
   'dreamer_untold',
+  // Not a ledger row: from the merged flow's packets (1 Oct). A sketch never names the dream's other people or things in
+  //    its style: "The woman and the ice are rendered with more clarity", in a style's light, drew them into the room's
+  //    sketch and the dreamer's (dream-0923-214527-927a).
+  'sketch_subjects',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;

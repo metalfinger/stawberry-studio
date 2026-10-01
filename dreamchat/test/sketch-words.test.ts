@@ -7,7 +7,7 @@
 // - `place_alone`: a place's sketch says what is there, the place alone and empty; "with no people in it" drew people.
 // A step before them, or the builder off, writes every sketch as before.
 import { describe, expect, test } from 'bun:test';
-import { type Item, sheetPrompt, styleBlock } from '../sheets';
+import { type Item, sheetPrompt, styleBlock, subjectWords } from '../sheets';
 
 function withBuilder<T>(v: string | undefined, fn: () => T): T {
   const was = process.env.DREAMCHAT_ONE_BUILDER;
@@ -200,6 +200,52 @@ describe("the style's light and technique on a sketch, without other people", ()
     expect(withBuilder('sketch_style', () => styleBlock(talking))).toContain(
       'Anything beyond the people being talked to',
     );
+  });
+});
+
+describe("a sketch never names the dream's other people or things in its style", () => {
+  // dream-0923-214527-927a: the style's light named the woman and the ice, and they were drawn into the room's sketch.
+  const iced = {
+    ...style,
+    lighting_rules:
+      'The room is seen in soft focus, with no dramatic highlights or shadows. The woman and the ice are rendered with more clarity: the ice transmits light slightly, with internal refractions and subtle caustics. Edges are mostly soft, but the carved features are crisp.',
+  };
+  const item = (id: string, kind: Item['kind'], name: string, isDreamer = false): Item => ({
+    id,
+    kind,
+    name,
+    fields: {},
+    status: 'waiting',
+    version: 0,
+    ...(isDreamer ? { isDreamer } : {}),
+  });
+  const items = [
+    item('p1', 'character', 'you', true),
+    item('p2', 'character', 'the woman with the ice horse head'),
+    item('t1', 'prop', 'the ice'),
+    item('l1', 'location', 'the lab'),
+  ];
+
+  test("each sketch: a style sentence naming another of the dream's people or things is left out, the rest kept", () => {
+    expect(subjectWords(items, items[3])).toEqual(['dreamer', 'woman', 'ice']);
+    for (const it of items) {
+      const p = withBuilder('sketch_subjects', () => sheetPrompt(it, iced, { others: subjectWords(items, it) }));
+      expect(p).not.toContain('The woman and the ice are rendered');
+      expect(p).toContain('The room is seen in soft focus');
+      expect(p).toContain('Edges are mostly soft, but the carved features are crisp.');
+    }
+    // As before without the step, and a moment keeps the whole style.
+    expect(
+      withBuilder(undefined, () => sheetPrompt(items[3], iced, { others: subjectWords(items, items[3]) })),
+    ).toContain('The woman and the ice are rendered');
+    expect(withBuilder('sketch_subjects', () => styleBlock(iced))).toContain('The woman and the ice are rendered');
+  });
+
+  test("a style's own words are never a subject: a thing called the lamp light takes no light sentence with it", () => {
+    const lit = [...items, item('t2', 'prop', 'the lamp light')];
+    expect(subjectWords(lit, lit[3])).not.toContain('light');
+    // 927a's own name for it: the ice, never "block", a style's word.
+    expect(subjectWords([item('t3', 'prop', 'the block of ice')], items[3])).toEqual(['ice']);
   });
 });
 

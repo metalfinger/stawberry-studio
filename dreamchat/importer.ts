@@ -3,6 +3,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { dreamConfig } from './dream';
+import { cleanStyles } from './ground';
 import { type JevFn, renderTranscript } from './jev';
 import { initialState } from './lib';
 import { mediumOf, type StyleOption } from './producer';
@@ -73,17 +74,22 @@ export async function importDream(
   if (!transcript.some((t) => t.role === 'user' && t.content)) throw new Error('the dump has nothing the dreamer said');
   const id = input.id ?? newId();
   const draft = await deps.producer(structuredClone(transcript));
+  const b = draft.breakdown;
   // The look, as the dreamer would ask for it, built as the chat builds one they described in their own words.
-  const style = await deps.ownStyle(
+  const made = await deps.ownStyle(
     renderTranscript([...transcript, { role: 'user', content: `I'd like the pictures made as ${input.style}.` }]),
   );
-  if (!style) throw new Error(`no look could be made from "${input.style}"`);
+  if (!made) throw new Error(`no look could be made from "${input.style}"`);
+  // And kept to technique as the chat keeps it, checked against this dream's breakdown: a look that names the dream's
+  // own people or things ("The woman and the ice are rendered with more clarity") draws them into every picture.
+  const style = deps.jev
+    ? (await cleanStyles({ ...b, style_options: [made] }, deps.jev)).breakdown.style_options[0]
+    : made;
   const medium = mediumOf(style);
   if (PHOTO.test(medium) || PHOTO.test(style.name))
     throw new Error(
       `"${input.style}" is made as ${medium}: every dream is drawn in an art style of its own, never a photograph`,
     );
-  const b = draft.breakdown;
   const at = Date.now();
   let s: Session = {
     id,

@@ -256,7 +256,7 @@ async function drawDream(
   },
 ): Promise<RunManifest> {
   const { rebuild, standIn } = await import('../plan');
-  const { sheetPrompt, shapeOf } = await import('../sheets');
+  const { sheetPrompt, shapeOf, subjectWords } = await import('../sheets');
   const { calledFor, previsFor, previsKeyedFor } = await import('../session');
   // Each moment's colour key, where its mock-up was drawn keyed.
   const keys = new Map<string, { id: string; name: string; colour: string }[]>();
@@ -343,7 +343,7 @@ async function drawDream(
   // 1. Every sketch, from the harness's own sketch prompt, at its own shape.
   for (const it of r.sheets) {
     if (it.extras) continue;
-    const prompt = sheetPrompt(it as Item, style);
+    const prompt = sheetPrompt(it as Item, style, { others: subjectWords(r.sheets as Item[], it) });
     const p = entry({ id: it.id, kind: 'sketch', name: it.name, state: 'waiting', prompt, images: [] });
     if (p.state === 'done') continue;
     const [width, height] = SIZES[shapeOf(it as Item)] ?? SIZES['16:9'];
