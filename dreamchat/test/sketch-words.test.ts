@@ -87,6 +87,59 @@ describe('who someone is, on their sketch', () => {
     expect(withBuilder('sketch_who', () => sheetPrompt(friend, style))).not.toMatch(/friend, the dreamer's friend/);
   });
 
+  test("who they are, never a look of theirs: a guessed age, hair or build never says against the dreamer's words", () => {
+    // The father told "in his forties, short brown hair", guessed "a man in his sixties with short grey hair".
+    const father = {
+      ...gh,
+      name: 'the father',
+      fields: {
+        identity: { value: 'a man in his sixties with short grey hair and a medium build', said: false },
+        appearance: { value: 'in his forties, short brown hair', said: true },
+      },
+    };
+    const p = withBuilder('sketch_who', () => sheetPrompt(father, style));
+    expect(p).toContain('picture of the father, a man, one person only');
+    expect(p).not.toMatch(/sixties|grey hair|medium build/);
+  });
+
+  test('only who they are: never where they are, what the story says of them, or how the sketch is drawn', () => {
+    const as = (identity: string, appearance: string, name = 'X') =>
+      withBuilder('sketch_who', () =>
+        sheetPrompt(
+          {
+            ...gh,
+            name,
+            fields: { identity: { value: identity, said: true }, appearance: { value: appearance, said: true } },
+          },
+          style,
+        ),
+      ).split('\n')[0];
+    // From every saved dream's sketches (1 Oct).
+    expect(as('a fish stall vendor, shown alone and in full, in soft watercolour', 'a lined face')).toContain(
+      'picture of X, a fish stall vendor, one person only',
+    );
+    expect(as("the dreamer's grandfather, gone for years", 'grey hair')).toContain(
+      "picture of X, the dreamer's grandfather, one person only",
+    );
+    expect(as('a woman in the tiny room', 'blonde hair in a pageboy')).toContain(
+      'picture of X, a woman, one person only',
+    );
+    // An age their look gives is theirs to say, and the words left read whole: never "an man" or "a ten-year- boy".
+    expect(as('an old man, a fish stall vendor', 'an elderly man about 70 years old')).toContain(
+      'picture of X, one person only',
+    );
+    expect(as('an old woman on the bus', 'in her seventies, white hair')).toContain(
+      'picture of X, a woman, one person only',
+    );
+    expect(as('a ten-year-old boy', 'in his first school uniform, aged 10')).toContain(
+      'picture of X, a boy, one person only',
+    );
+    // Named "your aunt", said "the dreamer's aunt": never "the dreamer's aunt, the dreamer's aunt".
+    expect(as("the dreamer's aunt", 'short brown hair', 'your aunt')).not.toMatch(
+      /the dreamer's aunt, the dreamer's aunt/,
+    );
+  });
+
   test('an age said as before, once, with the step', () => {
     const old = { ...gh, fields: { ...gh.fields, identity: { value: 'an old woman', said: true } } };
     for (const v of ['sketch_who', undefined])

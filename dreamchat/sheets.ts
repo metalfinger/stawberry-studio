@@ -741,17 +741,39 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
     !AGE.test(item.name);
   // With the one builder's `sketch_who` step, who they are is said whether or not it gives their age: "a woman" with no
   // age was dropped, and G.H. was sketched a young man like the dreamer (the Barley Degree, 1 Oct). Not where their
-  // look or name already says every word of it.
-  const known = `${facts} ${item.name}`.toLowerCase();
+  // look or name already says every word of it. Who they are only, never a look of theirs: what follows "with" (hair,
+  // build) is their look's to say, and an age is left out where their look gives one. The father told "in his forties,
+  // short brown hair" would have been said "a man in his sixties with short grey hair" beside it.
+  const whoOnly = (() => {
+    // Only who they are: never where they are ("a woman in the tiny room"), what the story says of them ("gone for
+    // years") or how the sketch is drawn ("shown alone and in full"), all of which follow the first comma or a place.
+    const head = identity.split(
+      /\s*[,;]\s*|\s+with\s+|\s+(?:in|on|at|inside|near)\s+(?=(?:the|a|an|his|her|their)\b)/i,
+    )[0];
+    const aged_ = AGE.test(facts)
+      ? head
+          .replace(
+            /\s*\b[a-z]+-years?-old\b|\s*\bin (?:his|her|their) (?:early |mid-?|late )?(?:twent|thirt|fort|fift|sixt|sevent|eight|ninet)ies\b|\s*\b(?:aged \d+|\d+\s*years? old|\d+s|young|younger|old|older|elderly|middle-aged)\b/gi,
+            '',
+          )
+          .replace(/\s+/g, ' ')
+          .trim()
+      : head;
+    // Read whole once an age is out: "an old man" is "a man", never "an man"; a bare article says no one.
+    const read = aged_.replace(/^an\s+(?=[^aeiou\s])/i, 'a ');
+    return /^(?:a|an|the)?\s*$/i.test(read) ? '' : read;
+  })();
+  // Its name as the picture is told it too: "your aunt" is said "the dreamer's aunt".
+  const known = `${facts} ${item.name} ${pictureName(item.name)}`.toLowerCase();
   const who_ =
     builds('sketch_who') &&
     item.kind === 'character' &&
     !item.isDreamer &&
     !isAnimal(item) &&
     !isGroup(item) &&
-    !!identity &&
-    !VAGUE.test(identity) &&
-    !(identity.toLowerCase().match(/[a-z]{3,}/g) ?? [])
+    !!whoOnly &&
+    !VAGUE.test(whoOnly) &&
+    !(whoOnly.toLowerCase().match(/[a-z]{3,}/g) ?? [])
       .filter((w) => !SAYS_NOTHING.has(w))
       .every((w) => new RegExp(`\\b${w}\\b`).test(known));
   const name = item.isDreamer
@@ -762,9 +784,11 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
       ? // A place named for what happened there ("inside, sitting with couple of people") beside
         // "with no people in it" read as a contradiction, and the sketch was held (Meads, 25 Sep).
         'this place'
-      : aged || who_
+      : aged
         ? `${pictureName(item.name)}, ${identity}`
-        : pictureName(item.name);
+        : who_
+          ? `${pictureName(item.name)}, ${whoOnly}`
+          : pictureName(item.name);
   // A dog sketched as "one person only", "the face and clothes clearly seen", read as unclear and
   // was held (lighthouse, 25 Sep).
   const animal = isAnimal(item);
