@@ -1011,6 +1011,16 @@ export type Render = {
 const BACKGROUND = 0.9;
 const NEAR = 0.05;
 
+/**
+ * A working render's size, `long` pixels along the frame's long side, in the frame's own shape: 192 by 108, or 108 by
+ * 192 upright (DREAMCHAT_FRAME=9:16). Its angle across is the lens's on the frame's width, so a 9:16 frame rendered 192
+ * by 108 saw 13 degrees up and down of its 37: a box on the floor two metres ahead, in the picture, was said outside it.
+ */
+const sized = (long: number): [number, number] => {
+  const short = Math.round((long * 9) / 16);
+  return upright() ? [short, long] : [long, short];
+};
+
 /** The solids as the eye sees them: flat grey, lit from behind the camera, outlined. */
 function render(solids: Solid[], eye: Eye, width: number, height: number): Render {
   const d = unit(eye.d);
@@ -1696,7 +1706,7 @@ export function wallsSeen(plan: Blocking, eye: Eye, leaveOut: string[], name: (i
       const a = angleTo(ways[w]);
       return a < 45 ? [{ wall: w, where: 'ahead' }] : a > 135 ? [{ wall: w, where: 'behind' }] : [];
     });
-  const r = render(solidsOf(plan, leaveOut, name), eye, 192, 108);
+  const r = render(solidsOf(plan, leaveOut, name), eye, ...sized(192));
   const ids = { front: 'front', back: 'back wall', left: 'left wall', right: 'right wall' } as const;
   return (['front', 'back', 'left', 'right'] as const).map((w): WallSeen => {
     const a = angleTo(ways[w]);
@@ -1858,11 +1868,11 @@ export function dreamerShot(
       if (!target || !heart) {
         // Nothing it looks at on the plan: straight ahead, turned only as far as it takes to show who
         // the moment shows.
-        const score = wanted.length ? 2 * shows(render(solidsAt(eye), eye, 192, 108)) - Math.abs(aim) * 0.01 : 0;
+        const score = wanted.length ? 2 * shows(render(solidsAt(eye), eye, ...sized(192))) - Math.abs(aim) * 0.01 : 0;
         if (!best || score > best.score + 1e-9) best = { eye, score };
         continue;
       }
-      const r = render(solidsAt(eye), eye, 192, 108);
+      const r = render(solidsAt(eye), eye, ...sized(192));
       const t = r.seen.get(target.id);
       if (!t) continue;
       // As a camera operator frames past someone close: the heart of what the picture is about
@@ -1898,7 +1908,7 @@ export function dreamerShot(
     }
   if (!best) return null;
   const eye = best!.eye;
-  const r = render(solidsAt(eye), eye, 384, 216);
+  const r = render(solidsAt(eye), eye, ...sized(384));
   const min = 384 * 216 * 0.002;
 
   // What they are on or in (the seat under them, the car they ride in) is where they are, not
@@ -2526,7 +2536,7 @@ export function outsideShot(
   for (const deg of degs)
     for (const back of [1, 1.35, 1.8]) {
       const cand = place(turnBy(d0, deg), back);
-      const rs = render(crowded ? solidsOf(railless, [], name, cand.eye) : solidsSmall, cand.eye, 192, 108);
+      const rs = render(crowded ? solidsOf(railless, [], name, cand.eye) : solidsSmall, cand.eye, ...sized(192));
       const seen = holdAll.map((s) => rs.seen.get(s.id));
       const inFrame = seen.filter((x) => x && x.visible >= tiny).length / holdAll.length;
       const clear = seen.reduce((a, x) => a + (x ? 1 - x.occluded : 0), 0) / holdAll.length;
@@ -2582,7 +2592,7 @@ export function outsideShot(
           ? `from in front of ${them}`
           : `from beside ${them}`;
   const solids = solidsOf(plan, [], name, eye);
-  const rr = render(solids, eye, 384, 216);
+  const rr = render(solids, eye, ...sized(384));
   const min = 384 * 216 * 0.002;
   const spots = plan.spots;
   // Whoever rides in something the picture shows is in it, however little of them shows above its

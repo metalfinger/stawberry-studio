@@ -7,7 +7,7 @@ import { frameShape, halfViewOf } from '../blocking';
 import { SHAPE_WORDS } from '../frames';
 import { loadDream } from '../evals/saved';
 import { rebuild } from '../plan';
-import { previsImage } from '../previs';
+import { dreamerShot, previsImage } from '../previs';
 import type { Session } from '../session';
 import { type Item, shapeOf } from '../sheets';
 
@@ -78,5 +78,26 @@ describe('the frame, landscape by default and vertical with the switch', () => {
     expect(withFrame(undefined, () => sizeOfPng(previsImage(plan as never, eye as never, [], (id) => id)))).toEqual([
       1376, 768,
     ]);
+  });
+
+  test('on, who is in the picture is read over the whole tall frame: a box on the floor two metres ahead is in it', () => {
+    // The working renders kept 192 by 108 upright, so a 9:16 frame was read 13 degrees up and down of its 37: the box,
+    // 31 to 39 degrees below the eye, was said outside the picture. Off, the wide frame's 23 degrees miss it, as before.
+    const plan = {
+      front: 'the far wall',
+      indoors: true,
+      spots: [
+        { id: 'p1', x: 3, y: 5, kind: 'person' as const, pose: 'standing' as const, faces: 'the far wall' },
+        { id: 't1', x: 3, y: 3, kind: 'thing' as const, size: [0.4, 0.4, 0.4] as [number, number, number] },
+      ],
+      room: [6, 6] as [number, number],
+    };
+    const name = (id: string) => (id === 't1' ? 'the small box' : 'the dreamer');
+    const on = withFrame('9:16', () => dreamerShot(plan as never, 'p1', undefined, name, undefined, ['t1']))!;
+    expect(on.inPicture).toContain('t1');
+    expect(on.outside).not.toContain('t1');
+    const off = withFrame(undefined, () => dreamerShot(plan as never, 'p1', undefined, name, undefined, ['t1']))!;
+    expect(off.inPicture).not.toContain('t1');
+    expect(off.outside).toContain('t1');
   });
 });
