@@ -107,11 +107,19 @@ export async function importDream(
   if (!made) throw new Error(`no look could be made from "${input.style}"`);
   // And kept to technique as the chat keeps it, checked against this dream's breakdown: a look that names the dream's
   // own people or things ("The woman and the ice are rendered with more clarity") draws them into every picture.
-  const style = deps.jev
+  const cleaned = deps.jev
     ? (await cleanStyles({ ...b, style_options: [made] }, deps.jev)).breakdown.style_options[0]
     : made;
-  const medium = mediumOf(style);
-  if (PHOTO.test(medium) || PHOTO.test(style.name))
+  // The style asked for is the dream's style, word for word: its name, and what every picture is made as. The writer's
+  // own words for it lost the palette, the line and the fills ("a risograph marker drawing in hot pink, cobalt blue and
+  // mint, scribbled fills, slightly wobbling lines" made as "risograph print of a marker drawing", the merged flow's
+  // imports, 1 Oct). Never cleaned either: "clinic blue" is a colour, not the clinic. The writer's technique, light and
+  // feel are its own, cleaned as above.
+  const asked = input.style.trim();
+  const style: StyleOption = { ...cleaned, name: asked, medium: asked };
+  // A photograph however it is asked for: in the words asked, or in the writer's reading of them ("as it really looked").
+  const medium = mediumOf(made);
+  if (PHOTO.test(asked) || PHOTO.test(medium) || PHOTO.test(made.name))
     throw new Error(
       `"${input.style}" is made as ${medium}: every dream is drawn in an art style of its own, never a photograph`,
     );

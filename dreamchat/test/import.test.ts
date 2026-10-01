@@ -219,6 +219,31 @@ describe('a dumped dream, with no chat', () => {
     }
   });
 
+  test('the style asked for is its style word for word, in every sketch and every moment, never the paraphrase', async () => {
+    // The merged flow's imports (1 Oct): "a risograph marker drawing in hot pink, cobalt blue and mint, scribbled fills,
+    // slightly wobbling lines" came back as "a bright marker drawing printed in pink, blue and mint", made as "risograph
+    // print of a marker drawing": the palette, the line and the fills gone from every prompt.
+    const asked =
+      'a risograph marker drawing in hot pink, cobalt blue and mint, scribbled fills, slightly wobbling lines';
+    const { deps } = stubs({
+      ownStyle: async () => ({
+        ...painted,
+        name: 'a bright marker drawing printed in pink, blue and mint',
+        medium: 'risograph print of a marker drawing',
+      }),
+    });
+    const data = mkdtempSync(join(tmpdir(), 'import-'));
+    const got = await importDream({ text: 'A dream.', style: asked, id: 'dream-1001-000006-test', data }, deps);
+    const s = JSON.parse(readFileSync(got.state, 'utf8')) as Session;
+    expect(s.style?.name).toBe(asked);
+    expect(s.style?.medium).toBe(asked);
+    const { rebuild } = await import('../plan');
+    const { sheetPrompt } = await import('../sheets');
+    const r = rebuild(s);
+    for (const p of r.pictures.filter((x) => x.kind === 'cut')) expect(p.prompt).toContain(asked);
+    expect(sheetPrompt(r.sheets[0], s.style!)).toContain(asked);
+  });
+
   test('a photograph is refused, and nothing is saved', async () => {
     const data = mkdtempSync(join(tmpdir(), 'import-'));
     for (const medium of ['a photograph', 'realistic photo, natural light', '']) {

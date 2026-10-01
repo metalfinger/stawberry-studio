@@ -207,6 +207,32 @@ export const BUILDER_STEPS: readonly string[] = [
   'strangest',
   'told_events',
   'thought_outside',
+  // Not a ledger row: from the counted prompt cases (G2). Whether a vehicle in view is moving at the instant is the typed
+  //    reading's motion fact where it gives one, never only a going verb in the moment's words: the tractor's cab "vibrates
+  //    with a low rumble" as it drives on, and nothing said which way it went (lighthouse-fresh m12).
+  'plan_motion',
+  // Not a ledger row: from the counted prompt cases (G2). What the typed reading has seen out past an opening, where it
+  //    is not someone or something on the floor plan (the drowned city through the high round window), is said there,
+  //    shown only through it, the wall around it solid: nothing bounded the city to the window (library-1 m5).
+  'beyond_words',
+  // Not a ledger row: from the counted prompt cases (G2). Whom or what someone attends to at the instant, as a typed act
+  //    says it (looks at, watches, stands at, points at, reaches for), is what they face on the floor plan and what the
+  //    words say they look at: the dreamer at the fish stall was turned to the old man (night-market m2).
+  'plan_facing',
+  // Not a ledger row: a dumped dream's moments of a crowd alone ("everyone in our house" in the dark, then going up the
+  //    stairs to the roof) had no camera, the camera centred on everyone a moment holds but a crowd; shot on the crowd,
+  //    or what the moment looks at, and never with what it looks at behind the camera (Neighbours, 1 Oct).
+  'crowd_camera',
+  // Not a ledger row: the merged flow's dream 3 (1 Oct). "Reaches" is a hand only reaching out, for or into something:
+  //    "just as the dreamer reaches the man in the wheelchair" is arriving, and was drawn as a huge reaching hand.
+  'reach_arrives',
+  // Not a ledger row: the same dream. Someone the camera leaves outside the picture is not in it: "just outside the
+  //    picture to the left is the man in the wheelchair" went out with his image all the same.
+  'framed_only',
+  // Not a ledger row: from the counted prompt cases (G2, its one model step). A group told only as a crowd, never
+  //    sketched, is given ordinary clothes for who and where they are, as a guess (wardrobe.ts, one writer reading per
+  //    dream): made real from the mock-up, the exam room's faceless students came out naked (heron m4).
+  'extras_wardrobe',
   // Not a ledger row: from the merged flow's first new dream (the Barley Degree, 1 Oct): a 1957 church meeting drawn
   //    modern. The dream's period, from its own words or the date it was recorded (era.ts), told to every sketch and
   //    every moment, a moment the dream sets in another time keeping its own; never in the style.
