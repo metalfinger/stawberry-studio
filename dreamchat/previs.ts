@@ -1365,7 +1365,7 @@ export function previsImage(
   leaveOut: string[],
   name: (id: string) => string,
   width = upright() ? 768 : 1376,
-  height = upright() ? 1376 : 768,
+  height = upright() ? 1344 : 768,
   /** The mock-up's shapes for the local machine (solidsOf `shapes`); off, the frame is as it always was. */
   opts: { shapes?: boolean } = {},
 ): Uint8Array {
@@ -1526,7 +1526,7 @@ export function previsKeyed(
   leaveOut: string[],
   name: (id: string) => string,
   width = upright() ? 768 : 1376,
-  height = upright() ? 1376 : 768,
+  height = upright() ? 1344 : 768,
   /**
    * `labels`: things written by their short name beside them, a small shapeless one outlined (a test of labels on
    * things). `shapes`: the mock-up's shapes (solidsOf).

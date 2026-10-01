@@ -92,7 +92,8 @@ export type RunManifest = {
 
 const SIZES: Record<string, [number, number]> = {
   '16:9': [1024, 576],
-  '9:16': [576, 1024],
+  // The video endpoint's 9:16, so a moment goes on to video uncropped (the harness, fa487c4).
+  '9:16': [768, 1344],
   '4:3': [1024, 768],
   '2:3': [672, 1024],
   '1:1': [1024, 1024],

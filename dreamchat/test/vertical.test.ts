@@ -60,7 +60,7 @@ describe('the frame, landscape by default and vertical with the switch', () => {
     });
   });
 
-  test("on, a moment's prompt says the vertical frame, and its mock-up is drawn 768 by 1376", () => {
+  test("on, a moment's prompt says the vertical frame, and its mock-up is drawn 768 by 1344", () => {
     const s = structuredClone(loadDream('dream-0926-043003-b0cb', false).session) as Session;
     const on = withFrame('9:16', () => rebuild(s).pictures.filter((p) => p.kind === 'cut'));
     for (const p of on) expect(p.prompt).toContain('a vertical 9:16 frame');
@@ -73,7 +73,7 @@ describe('the frame, landscape by default and vertical with the switch', () => {
     };
     const eye = { at: { x: 2, y: 5.5 }, d: { x: 0, y: -1 }, height: 1.6, lens: 24 };
     expect(withFrame('9:16', () => sizeOfPng(previsImage(plan as never, eye as never, [], (id) => id)))).toEqual([
-      768, 1376,
+      768, 1344,
     ]);
     expect(withFrame(undefined, () => sizeOfPng(previsImage(plan as never, eye as never, [], (id) => id)))).toEqual([
       1376, 768,
