@@ -28,7 +28,42 @@ current figure and what's next). Writer model: Claude (`DREAMCHAT_WRITER=claude`
 
 ## Where we stopped (27-29 Sep): read this to resume
 
-**Newest landmark (1 Oct, night): whole dreams drawn from nothing on the owner's local image machine, what they
+**Newest landmark (1 Oct, midday): the mock-up's shapes for the local machine.** Nothing paid. The owner's verdicts
+on qwen-3 (the local machine's own prose for each moment, with the dream's readings), all four dreams: the harness's
+prose right 17, partly 8, wrong 14; the Qwen prose 13, 9, 16. It won affd (7/2/1 against 5/3/2), lost aeea (3/5/7
+against 7/4/4) and b0cb (1/2/3 against 3/0/3), and was about even on 09ea; its lost pictures are people drawn twice (it
+dropped the runner's "each of them once" line) and a colour the dream gives (b0cb m5's red door). The harness's prose
+stays the local default.
+On lab, picture only, behind `--shapes` on the local runner (`previs.ts solidsOf(…, drawn, shapes)`; `previsFor` and
+`previsKeyedFor` take `shapes`; each picture records it):
+- *A tractor with its seats* (`tractorParts`): big wheels behind the riders and small ones ahead, both out past them;
+  its bonnet ahead of their feet, mudguards, a cab's posts and roof where it stands as high as a cab; under each rider
+  sitting on it, the tractor itself up to a short seat with a low back, and a seat of the plan's own lifted onto it
+  (`seatOnTractor`). As a block as high as its doors it was two heads on a box, and where the dreamer sat was never
+  clear (affd m9, aeea m14). Nothing of it under the cab stands higher than that block, which the camera and the words
+  were reckoned on: a bonnet higher hid the riders from the camera low in front of them (affd m8).
+- *Benches face to face* (`benches`): "the seats facing each other" were one slab a seat high that hid the dreamer and
+  the grandfather from the waist down, and the picture sat him on nothing (b0cb m2). Now a bench under each way they
+  face, a low back, and the floor clear between them for their legs.
+- *A chair at a table* (`chairUnder`): indoors, someone sitting on nothing at a table or desk (the father folding
+  boats, affd m4; the dreamer at their desk, b91f m3). None outdoors, where they may sit on the ground.
+Off, every frozen mock-up is byte for byte what it was (108 of 108, clay and keyed); on, 16 moments change, all of them
+these. `test/previs-shapes.test.ts` (18).
+Not in it, each with its reason: *a creature at its own size* (the cast's bodies) moves the picture out of the frame
+the camera was placed for: the dog at 50 cm left a close frame placed for a grown person's mannequin, the boy at 1.4 m
+dropped out of his close-up, the giant dog covered its top; a wide shot (the dog lying in the boat) read well. The
+camera has to be placed for the size first (`castplace.ts withCastBodies`, a words step measured on the corpus).
+*Climbing the stair* (affd m1-m3): the stair is the place itself, with no steps on its plan, drawn as a flat room; a
+climbing figure on a flat floor reads as nothing, so the stair is drawn as the place with the camera's choice of view,
+a words step with a fal check. *A held thing bigger than its holder*: none in the corpus (the suitcases are 0.6 m; the
+"giant" one is the dreamer's eye 0.9 m from it). Next: paired on the local machine, the harness's prose and the clay
+mock-up with and without the shapes on those 16 moments, judged blind, once the owner says go.
+
+The viewer serves a seeded run's pictures from the run that holds them (`viewer/local.ts servedFrom`): qwen-3's
+sketches and in-between pictures were night-2's, recorded by path into its folder, and showed broken; a picture the
+same in both runs shows once, shared.
+
+**Earlier landmark (1 Oct, night): whole dreams drawn from nothing on the owner's local image machine, what they
 showed, and what was fixed at its root.** Nothing paid. The local machine (Qwen-Image 2.1) drew 11 of the 15 frozen dreams end to end by morning: 186
 pictures (86 sketches, 11 in-between pictures, 89 moments), 0 failed, and about 40 drawn again on the fixes, each from
 nothing: every sketch, every in-between picture and every moment in dependency order, at high quality, within its
@@ -2213,7 +2248,7 @@ between sessions.
 | S4 checkpoint | S6 | The shot's brief is written from the view and the moments before, never the sheet's facts, so it can contradict them (the whale under the boat, a lamp above 4 m of water, arms drawn back after a handover, someone gone placed at the edge, a head cut off): S6 ledger 34, with its measures and a new prompt case, snow-train-2-m6-instant. |
 | S6 | S4, S1 | The typed readings are keyed by exactly what the writer was asked, and with the camera rules `namesForIds` puts a name where the saved words have an id: library-1 m5 was read again with the camera on (1 writer and 1 Jev call). When row 5 moves `namesForIds` to the builder's default, both keys are cached. |
 | S6 | S2, S7 | With the builder's paragraph ids, the pre-draw check's acting path (DREAMCHAT_CHECKS=act) tells the view's line by its paragraph, so a finding around "What the dreamer sees" now counts as the plan's, as "What the camera sees" did; logging, the default, is unchanged. |
-| S4 (the mock-up's drawn shapes) | S9 | What is ridden astride is drawn on the mock-up as wheels and bars, the picture only (`previs.ts solidsOf(…, drawn)`, 1 Oct): its floor plan and camera are as before, so a picture drawn from the old block-shaped mock-up is not stale by S9, which keys the mock-up by its floor plan and camera, never its pixels. Such pictures are redrawn by hand (`night-2` reset them); key the drawn shapes too if it starts to matter. An open door changes the plan and the camera, so its pictures go stale as they should. |
+| S4 (the mock-up's drawn shapes) | S9 | What is ridden astride is drawn on the mock-up as wheels and bars, the picture only (`previs.ts solidsOf(…, drawn)`, 1 Oct); with the local runner's `--shapes`, a tractor with its seats, benches face to face and a chair at a table too (`solidsOf(…, drawn, shapes)`, recorded per picture as `shapes`): its floor plan and camera are as before, so a picture drawn from the old block-shaped mock-up is not stale by S9, which keys the mock-up by its floor plan and camera, never its pixels. Such pictures are redrawn by hand (`night-2` reset them); key the drawn shapes too if it starts to matter. An open door changes the plan and the camera, so its pictures go stale as they should. |
 
 ## Known debt, by the step that clears it
 
@@ -3190,7 +3225,14 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   colours and the one thing to show never cut, no slicing, people before things, sheets for three or more only, a place as it now is before a named thing:
   460b48d, 8fd004e, b771f9f, 87e2a98, 03fbd15, d69164b, 0787e01, 3c39696) and cast looks (8e485c6). Prompt cases the same at
   every step. Paired picture tests on the machine (high, the same seed each side) for the vehicles and the door; their
-  pairs on a blind page for the owner. Findings and what is parked: the newest landmark above.
+  pairs on a blind page for the owner. Findings and what is parked: the earlier landmark above.
+- 1 Oct (midday, nothing drawn): the mock-up's shapes for the local machine, picture only, behind `--shapes` (08eae88,
+  d572097): a tractor with its wheels, bonnet, cab and the tractor itself under its riders' seats, never higher than the
+  block the camera and the words were reckoned on; benches under people sitting face to face; a chair at a table or
+  desk indoors. Off, 108 of 108 frozen mock-ups byte for byte as before (clay and keyed); on, 16 moments change, all of
+  them these. `test/previs-shapes.test.ts` (18). `bun test`: 1059 pass, 2 skipped, 0 fail with every switch off and on;
+  typecheck clean. A creature at its own size and the climbing stair parked for words steps (the landmark above). The
+  viewer serves a seeded run's pictures from the run that holds them (149c157). No pictures, no money.
 
 ## Owner's direction (29 Sep): reviews and merges move to the cloud session
 
