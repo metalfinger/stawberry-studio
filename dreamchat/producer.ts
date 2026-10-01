@@ -199,7 +199,12 @@ export type Breakdown = {
   unknowns: string[];
 };
 
-export type ProducerFn = (transcript: string, previous?: Breakdown) => Promise<{ raw: string; ms: number }>;
+export type ProducerFn = (
+  transcript: string,
+  previous?: Breakdown,
+  /** Their telling read first (telling.ts): a note after the conversation, and the ask once more with `previous`. */
+  told?: { note?: string; fix?: string },
+) => Promise<{ raw: string; ms: number }>;
 
 /**
  * With the one builder's names (S6 row 5), the producer is told to write every name as a name: library-1's
@@ -208,8 +213,24 @@ export type ProducerFn = (transcript: string, previous?: Breakdown) => Promise<{
 const NAMES_NOT_IDS =
   '\n- Every word a moment says (action, looks_at, feeling, visual_point, shift, dream, purpose) calls people, places and things by their names ("the train station", "the dreamer"), never by an id ("l2", "p1"). So does the "now" of each "leaves" entry.';
 const LOOKS_AT_RULE = "Through the dreamer's eyes it is what they face.";
-export const producerSystem = () =>
-  builds('names') ? SYSTEM.replace(LOOKS_AT_RULE, LOOKS_AT_RULE + NAMES_NOT_IDS) : SYSTEM;
+/**
+ * With the one builder's `thought_outside`, the dreamer's own thought is seen from outside: told in the first person,
+ * a dream taken in as a dump went wholly through their eyes, and the Barley Degree's realising and explaining had
+ * nothing to show but the room and the woman they talked to ("people milling about", 1 Oct).
+ */
+const EYES_RULE = 'Follow what they said about how they were in it.';
+const THOUGHT_OUTSIDE =
+  " A moment whose one thing is the dreamer's own thought, wish, realisation or words (wondering, realising, asking, explaining, being embarrassed) is seen from outside, the dreamer in it, their face and what they do carrying it: through their own eyes it would show only the room or the person they talk to. It stays through their eyes only where they said they saw it that way.";
+/** With `told_events`, the one thing to show keeps their concrete words: Train's marzipan became "finding nothing". */
+const POINT_RULE = '"visual_point" is the one thing the picture must carry.';
+const CONCRETE_POINT =
+  ' It names what they named ("no marzipan anywhere", never "finding nothing"; "the man in the wheelchair", never "the man"), said as what the picture shows: never a sentence of theirs copied, never what would, could or was supposed to happen.';
+export const producerSystem = () => {
+  let s = builds('names') ? SYSTEM.replace(LOOKS_AT_RULE, LOOKS_AT_RULE + NAMES_NOT_IDS) : SYSTEM;
+  if (builds('thought_outside')) s = s.replace(EYES_RULE, EYES_RULE + THOUGHT_OUTSIDE);
+  if (builds('told_events')) s = s.replace(POINT_RULE, POINT_RULE + CONCRETE_POINT);
+  return s;
+};
 
 const SYSTEM = `You are the producer for Strawberry Studio, a tool that turns a person's dream into a short sequence of pictures. You read a conversation in which a person told their dream to a listener, and you write the production breakdown as JSON. You never talk to the person.
 
@@ -286,14 +307,15 @@ export const PRODUCER_THINKING = (process.env.DREAMCHAT_PRODUCER_THINKING as Thi
  * options. Measured on four dreams with one combined call: 76-143s with thinking on, 29-39s
  * off, most of it spent writing output; splitting it roughly halves the wait.
  */
-export const callProducer: ProducerFn = async (transcript, previous) => {
+export const callProducer: ProducerFn = async (transcript, previous, told) => {
   const story: ChatMessage[] = [
     { role: 'system', content: producerSystem() },
     { role: 'user', content: `The conversation:\n\n${transcript}` },
   ];
+  if (told?.note) story.push({ role: 'user', content: told.note });
   if (previous) {
     const { style_options: _, ...rest } = previous;
-    story.push({ role: 'user', content: `${REVISE}\n\n${JSON.stringify(rest)}` });
+    story.push({ role: 'user', content: `${told?.fix ?? REVISE}\n\n${JSON.stringify(rest)}` });
   }
   const style: ChatMessage[] = [
     { role: 'system', content: STYLE_SYSTEM },

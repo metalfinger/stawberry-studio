@@ -65,7 +65,6 @@ import {
   type Breakdown,
   type Change,
   type Moment,
-  callProducer,
   type Detail,
   moments,
   completeViews,
@@ -157,6 +156,7 @@ import {
   sheetPrompt,
   subjectWords,
 } from './sheets';
+import { draftTold } from './telling';
 import type { JudgedCheck, JudgeOptions } from './judge';
 import { IMPLIED_BAR, impliedFacts, readImplied, type WriteFn } from './implied';
 import { builds, oneBuilder } from './cleanups';
@@ -1579,10 +1579,24 @@ export type StoreDeps = {
 };
 
 /** The real producer: the breakdown, then Jev's check of every detail marked as said. */
-export function liveProducer(jev: JevFn): NonNullable<StoreDeps['producer']> {
+export function liveProducer(
+  jev: JevFn,
+  /** A dream taken in whole (the import): with the one builder's strangest and told_events, its telling read first. */
+  opts: { telling?: boolean } = {},
+): NonNullable<StoreDeps['producer']> {
   return async (transcript, previous) => {
-    const { raw, ms } = await callProducer(renderTranscript(transcript), previous);
+    const told = await draftTold(
+      renderTranscript(transcript),
+      transcript
+        .filter((e) => e.role === 'user')
+        .map((e) => e.content)
+        .join('\n'),
+      previous,
+      { jev, read: opts.telling },
+    );
+    const { raw, ms } = told;
     const { breakdown, notes } = normalizeBreakdown(raw);
+    notes.unshift(...told.notes);
     const g = await ground(breakdown, transcript, jev);
     const c = await linkContinuity(g.breakdown, jev);
     const styled = await cleanStyles(c.breakdown, jev);

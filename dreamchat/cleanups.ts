@@ -199,6 +199,14 @@ export const BUILDER_STEPS: readonly string[] = [
   //    things in its style: "The woman and the ice are rendered with more clarity", in a style's light, drew them into
   //    the room's sketch and the dreamer's (dream-0923-214527-927a).
   'sketch_subjects',
+  // Not a ledger row: from the merged flow's imports (1 Oct). A dream taken in as a dump kept its setup and lost its
+  //    turn (the Barley Degree's mix-up, Train's marzipan, Pool's call): their telling is read first, the strangest fact
+  //    quoted from it and keyed (telling.ts); every told event quoted and checked against the moments, asked for once
+  //    more where one is missing, and the one thing to show keeps their concrete words; the dreamer's own thought seen
+  //    from outside, their face carrying it.
+  'strangest',
+  'told_events',
+  'thought_outside',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;
