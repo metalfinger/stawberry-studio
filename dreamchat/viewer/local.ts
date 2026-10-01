@@ -4,7 +4,7 @@
 // drawn here and no model is asked.
 
 import { existsSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { basename, extname, join } from 'node:path';
+import { basename, dirname, extname, join } from 'node:path';
 
 /** Where the local runs are: the data folder's runs/local-draw (LOCAL_RUNS to look elsewhere). */
 export const localRoot = () =>
@@ -14,7 +14,8 @@ export const localRoot = () =>
 const SAFE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const PICTURE = new Set(['.png', '.jpg', '.jpeg', '.webp']);
 
-export type LocalImage = { n: number; role: string; name: string; file?: string; missing?: boolean };
+/** `from`: the run whose folder holds the file, where it is not this run's own (a run seeded from another). */
+export type LocalImage = { n: number; role: string; name: string; file?: string; from?: string; missing?: boolean };
 export type LocalPicture = {
   id: string;
   kind: 'sketch' | 'ghost' | 'cut';
@@ -29,6 +30,8 @@ export type LocalPicture = {
   job?: string;
   seed?: number;
   file?: string;
+  /** The run whose folder holds the file, where it is not this run's own: a seeded run reuses its source's pictures. */
+  from?: string;
   size?: [number, number];
   secs?: number;
   quality?: string;
@@ -60,8 +63,19 @@ const readJson = <T>(path: string): T | null => {
 const dreamDir = (run: string, dream: string) =>
   SAFE.test(run) && SAFE.test(dream) ? join(localRoot(), run, dream) : null;
 
-/** A picture's file name only, as it is served: never a path. */
-const served = (file?: string) => (file ? basename(file) : undefined);
+/**
+ * A picture's file as served: its name, and, where it lies in another run's folder of the same dream (a run seeded
+ * from it), that run. Only a run's own folder of this dream, under the local runs: never anywhere else.
+ */
+function servedFrom(file: string | undefined, run: string, dream: string): { file?: string; from?: string } {
+  if (!file) return {};
+  const name = basename(file);
+  const dir = dirname(file);
+  const other = basename(dirname(dirname(dir)));
+  const inOther =
+    SAFE.test(other) && other !== run && dir === join(localRoot(), other, dream, 'img') && SAFE.test(name);
+  return inOther ? { file: name, from: other } : { file: name };
+}
 
 /** Every run and every dream in it, newest run first, with how far each has got. */
 export function localRuns(): {
@@ -114,13 +128,13 @@ export function localDream(run: string, dream: string): { manifest: LocalManifes
   const dir = dreamDir(run, dream);
   const m = dir ? readJson<LocalManifest>(join(dir, 'manifest.json')) : null;
   if (!dir || !m) return null;
-  const image = (x: LocalImage): LocalImage => ({ ...x, file: served(x.file) });
+  const image = (x: LocalImage): LocalImage => ({ ...x, ...servedFrom(x.file, run, dream) });
   return {
     manifest: {
       ...m,
       pictures: (m.pictures ?? []).map((p) => ({
         ...p,
-        file: served(p.file),
+        ...servedFrom(p.file, run, dream),
         images: p.images?.map(image),
         imagesSent: p.imagesSent?.map(image),
       })),
@@ -217,7 +231,8 @@ export function localCompare(
       of(db.manifest).find((p) => p.id === id) ?? null,
     ];
     const p = (pa ?? pb)!;
-    const [fa, fb] = [pa?.file ? localImage(a, dream, pa.file) : null, pb?.file ? localImage(b, dream, pb.file) : null];
+    const at = (x: LocalPicture | null, run: string) => (x?.file ? localImage(x.from ?? run, dream, x.file) : null);
+    const [fa, fb] = [at(pa, a), at(pb, b)];
     const same =
       !!fa && !!fb && pa?.state === 'done' && pb?.state === 'done' && readFileSync(fa).equals(readFileSync(fb));
     return { id, kind: p.kind, name: p.name, a: pa, b: pb, ...(same ? { shared: true as const } : {}) };

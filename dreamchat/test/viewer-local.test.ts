@@ -151,6 +151,30 @@ describe('two runs of the same dreams, side by side', () => {
     expect(got.readings).toEqual({ a: [], b: ['typed readings not cached: m1'] });
   });
 
+  test("a seeded run's picture is served from the run that holds it, and is the same picture in both", () => {
+    // A run seeded from another keeps its source's in-between picture where it is: night-1's folder.
+    const dir = join(root, 'qwen-1', DREAM);
+    const first = join(root, 'night-1', DREAM);
+    writeFileSync(join(first, 'img', 'ghost-g2.png'), 'seeded');
+    for (const at of [dir, first]) {
+      const m = JSON.parse(readFileSync(join(at, 'manifest.json'), 'utf8'));
+      m.pictures.push({
+        id: 'g2',
+        kind: 'ghost',
+        name: 'the door, wide',
+        state: 'done',
+        file: join(first, 'img', 'ghost-g2.png'),
+      });
+      writeFileSync(join(at, 'manifest.json'), JSON.stringify(m));
+    }
+    const seen = localDream('qwen-1', DREAM)!.manifest.pictures.find((p) => p.id === 'g2')!;
+    expect([seen.file, seen.from]).toEqual(['ghost-g2.png', 'night-1']);
+    expect(localImage(seen.from!, DREAM, seen.file!)).toBe(join(first, 'img', 'ghost-g2.png'));
+    // Its own pictures name no other run.
+    expect(localDream('qwen-1', DREAM)!.manifest.pictures.find((p) => p.id === 'm1')!.from).toBeUndefined();
+    expect(localCompare('night-1', 'qwen-1', DREAM)!.pairs!.find((p) => p.id === 'g2')!.shared).toBe(true);
+  });
+
   test("none for a run not here, one run against itself, or a name that is not a run's", () => {
     expect(localCompare('night-1', 'nowhere')).toBeNull();
     expect(localCompare('night-1', 'night-1')).toBeNull();
@@ -167,7 +191,7 @@ describe('two runs of the same dreams, side by side', () => {
         ]);
       const r = await fetch(`${url}api/local/compare?a=night-1&b=qwen-1&dream=${DREAM}`);
       expect(r.status).toBe(200);
-      expect(((await r.json()) as { pairs: unknown[] }).pairs).toHaveLength(5);
+      expect(((await r.json()) as { pairs: unknown[] }).pairs).toHaveLength(6);
       expect((await fetch(`${url}api/local/compare?a=night-1&b=nowhere`)).status).toBe(404);
     } finally {
       stop();

@@ -142,7 +142,7 @@ const el = (tag, attrs = {}, ...kids) => {
 /** Puts children in place of an element's own, arrays flattened and nothing for null. */
 const put = (parent, ...kids) => parent.replaceChildren(...kids.flat(Infinity).filter((k) => k != null && k !== false));
 const state = { runs: [], run: '', dream: '', data: null, focus: 0, timer: null };
-const img = (file) => `/local-img/${encodeURIComponent(state.run)}/${encodeURIComponent(state.dream)}/${encodeURIComponent(file)}`;
+const img = (file, from) => `/local-img/${encodeURIComponent(from || state.run)}/${encodeURIComponent(state.dream)}/${encodeURIComponent(file)}`;
 const when = (iso) => (iso ? new Date(iso).toLocaleString([], { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' }) : '');
 
 function route() {
@@ -214,8 +214,8 @@ function renderSide() {
     d.updated ? el('span', {}, 'updated ', when(d.updated)) : null] : []));
 }
 
-function picture(file, alt) {
-  const i = el('img', { src: img(file), alt, loading: 'lazy' });
+function picture(file, alt, from) {
+  const i = el('img', { src: img(file, from), alt, loading: 'lazy' });
   i.addEventListener('click', () => { const lb = $('#lightbox'); $('img', lb).src = i.src; lb.classList.add('open'); });
   return i;
 }
@@ -232,7 +232,7 @@ function renderPanel() {
     m.readings && m.readings.length ? el('div', { class: 'note' }, `Readings not cached, read as no facts: ${m.readings.join(', ')}`) : null,
     el('h3', { class: 'group' }, `Sketches (${sketches.length})`),
     el('div', { class: 'sketches' }, sketches.map((p) => el('div', { class: 'sketch' },
-      p.file && p.state === 'done' ? picture(p.file, p.name) : el('div', { class: `placeholder ${p.state}` }, p.state === 'failed' ? `failed: ${p.error || ''}` : p.state),
+      p.file && p.state === 'done' ? picture(p.file, p.name, p.from) : el('div', { class: `placeholder ${p.state}` }, p.state === 'failed' ? `failed: ${p.error || ''}` : p.state),
       el('div', { class: 'cap' }, el('span', { class: 'mono muted' }, p.id), el('span', {}, p.name))))),
     el('h3', { class: 'group' }, `Pictures, in story order (${rest.length})`),
     rest.map((p, i) => cutCard(p, v[p.id], i)));
@@ -250,7 +250,7 @@ function cutCard(p, verdict, i) {
       el('span', { class: 'faint mono' }, p.kind === 'ghost' ? 'in-between picture' : '')),
     el('div', { class: 'cutbody' },
       el('div', { class: 'main' },
-        p.file && p.state === 'done' ? picture(p.file, p.name)
+        p.file && p.state === 'done' ? picture(p.file, p.name, p.from)
           : el('div', { class: `placeholder ${p.state}` }, p.state === 'failed' ? `Failed: ${p.error || 'no reason given'}` : p.state === 'skipped' ? `Skipped${p.notes && p.notes.length ? `: ${p.notes.join('; ')}` : ''}` : 'Waiting to be drawn'),
         el('div', { class: 'judge' },
           ['right', 'partly', 'wrong'].map((x) => el('button', { 'data-v': x, 'aria-pressed': verdict && verdict.verdict === x ? 'true' : 'false', onclick: () => judge(x) }, x[0].toUpperCase() + x.slice(1))),
@@ -258,7 +258,7 @@ function cutCard(p, verdict, i) {
       el('div', { class: 'side' },
         el('h4', {}, `Sent with it (${sent.length})`),
         el('div', { class: 'refs' }, sent.map((x) => el('div', { class: 'ref' },
-          x.file && !x.missing ? picture(x.file, x.name) : el('div', { class: 'miss' }, 'missing'),
+          x.file && !x.missing ? picture(x.file, x.name, x.from) : el('div', { class: 'miss' }, 'missing'),
           el('div', {}, `${x.n}. ${x.role}`), el('div', { class: 'faint mono' }, x.name)))),
         (dropped.images && dropped.images.length) || (dropped.paragraphs && dropped.paragraphs.length) || dropped.chars
           ? el('div', { class: 'dropped' }, el('b', {}, 'Left out to fit: '),
