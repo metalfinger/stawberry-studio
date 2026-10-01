@@ -38,7 +38,7 @@ describe('S6 row 17: a moment is sent from the plan in force', () => {
       expect(planInForce(s, f)).toBe(true);
       expect(f.frame!.plan).toEqual(now);
       expect(f.needs).toEqual(now.needs);
-      expect(f.frame!.plan!.visible.length).toBeGreaterThan(0);
+      expect((f.frame!.plan!.visible ?? []).length).toBeGreaterThan(0);
       expect(s.build!.plan!.cuts.find((c) => c.id === 'm2')).toEqual(now);
     }));
 
