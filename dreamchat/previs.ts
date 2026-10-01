@@ -1521,8 +1521,6 @@ function thingWords(
   // it (the mouse-sized dreamer "standing on the tall grass", d3a1 m1-m3; Tomas "standing on the empty rows of apple
   // trees", orchard m5: the read of every frozen prompt, 30 Sep). With the camera rules.
   const grown = on && on.how === 'on' && cameraMode() === 'on' ? growsAs(called(on.t.id)) : undefined;
-  // What has one seat: its driver in it, anyone else on its mudguard (the camera rules).
-  const driver = on && on.how === 'in' && cameraMode() === 'on' ? driverOf(on.t, plan, called) : undefined;
   // Seated facing someone seated facing them (the seats facing each other): across from them, never beside them. The
   // dreamer and the grandfather on the train's seats facing each other were drawn side by side (snow-train m2, judged
   // blind, 30 Sep). With the camera rules, seen from outside.
@@ -1542,11 +1540,7 @@ function thingWords(
               ? `, ${pose} ${tandem === 'front' ? 'in front of' : 'behind'} the dreamer on the same ${bareName(called(on.t.id))}`
               : `, ${pose} beside the dreamer on the same ${bareName(called(on.t.id))}`
         : on.how === 'in'
-          ? driver
-            ? driver.id === s.id
-              ? `, in ${called(on.t.id)}'s one seat`
-              : `, sitting on ${called(on.t.id)}'s mudguard beside ${called(driver.id)}`
-            : `, in ${called(on.t.id)}`
+          ? `, in ${called(on.t.id)}`
           : tandem === 'front'
             ? `, ${pose} in front on ${called(on.t.id)}`
             : tandem === 'back'
@@ -1585,17 +1579,14 @@ function thingWords(
         .map((o) => called(o.id))
     : [];
   const shape = !isPerson(s) ? shapeOf(s, plan) : undefined;
-  const drives = riders.length && cameraMode() === 'on' ? driverOf(s, plan, called) : undefined;
   const how =
     sitting +
     (isPerson(s) && !s.many ? `, ${turnedTo(s, plan, eye)}` : '') +
     (holds.length ? `, holding ${holds.join(' and ')}` : '') +
     (holder ? `, in ${called(holder)}'s hands` : '') +
-    (riders.length && drives && riders.includes(called(drives.id))
-      ? `, with ${called(drives.id)} in its seat${riders.length > 1 ? ` and ${riders.filter((x) => x !== called(drives.id)).join(' and ')} on its mudguard` : ''}`
-      : riders.length
-        ? `, with ${riders.join(' and ')} ${shape === 'vehicle' ? (cameraMode() === 'on' && sizeOf(s)[0] < 1 ? 'on it' : 'in it') : shape === 'seat' ? 'sitting on it' : cameraMode() === 'on' && growsAs(called(s.id)) === 'among' ? 'among them' : cameraMode() === 'on' && growsAs(called(s.id)) ? 'in it' : 'on it'}`
-        : '') +
+    (riders.length
+      ? `, with ${riders.join(' and ')} ${shape === 'vehicle' ? (cameraMode() === 'on' && sizeOf(s)[0] < 1 ? 'on it' : 'in it') : shape === 'seat' ? 'sitting on it' : cameraMode() === 'on' && growsAs(called(s.id)) === 'among' ? 'among them' : cameraMode() === 'on' && growsAs(called(s.id)) ? 'in it' : 'on it'}`
+      : '') +
     (onTop ? `, on ${called(onTop.id)}` : next ? `, right beside ${called(next.id)}` : '');
   const behind =
     seen.hiddenBy && seen.hiddenBy !== s.id && ctx.spots.some((o) => o.id === seen.hiddenBy)
@@ -2392,20 +2383,6 @@ export function onOf(p: Spot, plan: Blocking): { t: Spot; how: 'on' | 'in' } | u
   if (seat && p.pose !== 'standing') return { t: seat, how: 'on' };
   const ground = by('steps') ?? by('ground');
   return ground ? { t: ground, how: 'on' } : undefined;
-}
-
-/** What has one seat: whoever drives it has the seat. */
-const ONE_SEAT = /\b(?:tractors?|forklifts?|diggers?|bulldozers?|ride-on mowers?)\b/i;
-
-/**
- * Who drives what has one seat (a tractor) with others riding it: they have its seat, and anyone else rides on its
- * mudguard beside them. Two sat side by side in the red tractor were drawn in two tractors, one each (lighthouse-first
- * m9, drawn on the local machine; said on its mudguard, one tractor in 2 of 2, 1 Oct). None where no one on it drives.
- */
-function driverOf(v: Spot, plan: Blocking, called: (id: string) => string): Spot | undefined {
-  if (shapeOf(v, plan) !== 'vehicle' || !ONE_SEAT.test(called(v.id))) return undefined;
-  const riders = plan.spots.filter((o) => isPerson(o) && !o.many && onOf(o, plan)?.t.id === v.id);
-  return riders.length > 1 ? riders.find((o) => o.rides === 'front') : undefined;
 }
 
 /**
