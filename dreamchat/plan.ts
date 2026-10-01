@@ -495,7 +495,10 @@ if (import.meta.main) {
   if (gating)
     for (const sk of sheets) {
       if (only.length && !only.includes(sk.id)) continue;
-      const prompt = sheetPrompt(sk, s.style, { others: subjectWords(sheets, sk) });
+      const prompt = sheetPrompt(sk, s.style, {
+        others: subjectWords(sheets, sk),
+        period: s.draft?.breakdown?.period?.value,
+      });
       console.log(`\n── sketch ${sk.id} ${sk.name}: ${await gateOf(prompt, [], [], [], true)}`);
     }
 

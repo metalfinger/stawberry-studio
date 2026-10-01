@@ -12,7 +12,7 @@ import { sayTurn } from './camera';
 import type { CutSheet, SheetEarlier, SheetElement } from './cutsheet';
 import { aNoun, FRAMING, MAX_IMAGES, NOTHING_ELSE, SHAPE_WORDS, samePlaceLine, sentence, writingLine } from './frames';
 import { sayNow } from './record';
-import { styleBlock } from './sheets';
+import { periodLine, styleBlock } from './sheets';
 
 /** An image as attached: what it is, its role, what to take from it, and where on the sheet it comes from. */
 export type AssembledRef = {
@@ -615,6 +615,8 @@ export function assembleCut(s: CutSheet): Assembled {
           .join(' ');
       })(),
     },
+    // The time the picture is set in (era.ts), never in its style: a woodcut stays a woodcut in any decade.
+    { id: 'time', fields: ['period'], text: s.period ? periodLine(s.period, 'moment') : '' },
     {
       id: 'now',
       fields: ['now', 'nowWords', 'states'],

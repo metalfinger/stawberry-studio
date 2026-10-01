@@ -237,6 +237,10 @@ export const BUILDER_STEPS: readonly string[] = [
   //    gives is kept where a picture can show it, as what is seen ("soft, doughy stars"), never in its own words, and
   //    left to the narration where only a sound, a memory or a feeling carries it (a hum, a ringtone).
   'texture',
+  // Not a ledger row: from the merged flow's first new dream (the Barley Degree, 1 Oct): a 1957 church meeting drawn
+  //    modern. The dream's period, from its own words or the date it was recorded (era.ts), told to every sketch and
+  //    every moment, a moment the dream sets in another time keeping its own; never in the style.
+  'era',
   // Not a ledger row: from the merged flow's mock-up A/B (2 Oct). The people a moment is about stay in its frame, their
   //    heads in it: close shots came out a chin and a collar, and a look down on the train held a seat-back and knees
   //    (34 of 281 named people with their head cut, the saved dreams). A hand, a held thing or an insert needs no face.

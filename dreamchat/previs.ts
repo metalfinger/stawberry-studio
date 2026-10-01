@@ -26,6 +26,7 @@ import {
   type Spot,
   unit,
   wall,
+  upright,
 } from './blocking';
 import {
   cameraMode,
@@ -721,8 +722,8 @@ export function inFrame(
 ): { height: number; head: boolean; top: number; across: number } | null {
   const p = plan.spots.find((s) => s.id === id);
   if (!p) return null;
-  const width = 192;
-  const height = Math.round((192 * 9) / 16);
+  // In the frame's own shape: upright, 108 across and 192 down (vertical).
+  const [width, height] = sized(192);
   const r = render([], eye, width, height);
   const z = groundAt(p, plan);
   const top = r.project(v3(p.x, p.y, z + eyeHeight(p.pose) + 0.15));
@@ -1084,6 +1085,16 @@ export type Render = {
 const BACKGROUND = 0.9;
 const NEAR = 0.05;
 
+/**
+ * A working render's size, `long` pixels along the frame's long side, in the frame's own shape: 192 by 108, or 108 by
+ * 192 upright (DREAMCHAT_FRAME=9:16). Its angle across is the lens's on the frame's width, so a 9:16 frame rendered 192
+ * by 108 saw 13 degrees up and down of its 37: a box on the floor two metres ahead, in the picture, was said outside it.
+ */
+const sized = (long: number): [number, number] => {
+  const short = Math.round((long * 9) / 16);
+  return upright() ? [short, long] : [long, short];
+};
+
 /** The solids as the eye sees them: flat grey, lit from behind the camera, outlined. */
 function render(solids: Solid[], eye: Eye, width: number, height: number): Render {
   const d = unit(eye.d);
@@ -1437,8 +1448,8 @@ export function previsImage(
   eye: Eye,
   leaveOut: string[],
   name: (id: string) => string,
-  width = 1376,
-  height = 768,
+  width = upright() ? 768 : 1376,
+  height = upright() ? 1344 : 768,
   /** The mock-up's shapes for the local machine (solidsOf `shapes`); off, the frame is as it always was. */
   opts: { shapes?: boolean } = {},
 ): Uint8Array {
@@ -1598,8 +1609,8 @@ export function previsKeyed(
   eye: Eye,
   leaveOut: string[],
   name: (id: string) => string,
-  width = 1376,
-  height = 768,
+  width = upright() ? 768 : 1376,
+  height = upright() ? 1344 : 768,
   /**
    * `labels`: things written by their short name beside them, a small shapeless one outlined (a test of labels on
    * things). `shapes`: the mock-up's shapes (solidsOf).
@@ -1769,7 +1780,7 @@ export function wallsSeen(plan: Blocking, eye: Eye, leaveOut: string[], name: (i
       const a = angleTo(ways[w]);
       return a < 45 ? [{ wall: w, where: 'ahead' }] : a > 135 ? [{ wall: w, where: 'behind' }] : [];
     });
-  const r = render(solidsOf(plan, leaveOut, name), eye, 192, 108);
+  const r = render(solidsOf(plan, leaveOut, name), eye, ...sized(192));
   const ids = { front: 'front', back: 'back wall', left: 'left wall', right: 'right wall' } as const;
   return (['front', 'back', 'left', 'right'] as const).map((w): WallSeen => {
     const a = angleTo(ways[w]);
@@ -1938,11 +1949,11 @@ export function dreamerShot(
       if (!target || !heart) {
         // Nothing it looks at on the plan: straight ahead, turned only as far as it takes to show who
         // the moment shows.
-        const score = wanted.length ? 2 * shows(render(solidsAt(eye), eye, 192, 108)) - Math.abs(aim) * 0.01 : 0;
+        const score = wanted.length ? 2 * shows(render(solidsAt(eye), eye, ...sized(192))) - Math.abs(aim) * 0.01 : 0;
         if (!best || score > best.score + 1e-9) best = { eye, score };
         continue;
       }
-      const r = render(solidsAt(eye), eye, 192, 108);
+      const r = render(solidsAt(eye), eye, ...sized(192));
       const t = r.seen.get(target.id);
       if (!t) continue;
       // As a camera operator frames past someone close: the heart of what the picture is about
@@ -1987,7 +1998,7 @@ export function dreamerShot(
   // Looking down at what they hold never drops the one the moment is about below the frame: old Ethan on the train was a
   // seat-back and his knees (subject_in_frame).
   const eye = fitted ? best!.eye : headsIn(best!.eye, heads, plan, least);
-  const r = render(solidsAt(eye), eye, 384, 216);
+  const r = render(solidsAt(eye), eye, ...sized(384));
   const min = 384 * 216 * 0.002;
 
   // What they are on or in (the seat under them, the car they ride in) is where they are, not
@@ -2521,7 +2532,8 @@ export function outsideShot(
   const eyes = dry.length ? dry : people;
   const height = eyes.length ? eyes.reduce((a, s) => a + eyeHeight(s.pose) + groundAt(s, plan), 0) / eyes.length : 1.5;
   const aim = (tallest + lowest) / 2;
-  const tallAt = (l: number) => Math.atan(Math.tan(Math.atan(18 / l)) * (9 / 16));
+  // Up and down a vertical frame is its long side, 36mm on a full frame.
+  const tallAt = (l: number) => (upright() ? Math.atan(18 / l) : Math.atan(Math.tan(Math.atan(18 / l)) * (9 / 16)));
   // The camera for a way of looking: as far off as the shot needs, `back` times that if it must
   // stand further off to hold everyone, never through a wall.
   const place = (d: V2, back = 1): { eye: Eye; far: number; cramped: number } => {
@@ -2541,7 +2553,7 @@ export function outsideShot(
     const wide = Math.max(...offsets) - Math.min(...offsets) + (size === 'close' ? 0.4 : size === 'medium' ? 1 : 2.5);
     const tall = (tallest - lowest) * (size === 'close' ? 1.3 : size === 'medium' ? 1.25 : 1.8);
     // What the frame must hold, and so how far off a lens of this size must be.
-    const frameTall = Math.max(tall, (wide * 9) / 16);
+    const frameTall = Math.max(tall, upright() ? (wide * 16) / 9 : (wide * 9) / 16);
     let lens = LENS[size];
     let far = (frameTall / 2 / Math.tan(tallAt(lens))) * back;
     let at = { x: c.x - d.x * far, y: c.y - d.y * far };
@@ -2564,7 +2576,11 @@ export function outsideShot(
         at = { x: c.x - d.x * far, y: c.y - d.y * far };
       }
       const need = Math.atan(frameTall / 2 / far);
-      if (need > tallAt(lens)) lens = Math.max(14, Math.round(18 / Math.tan(Math.atan(Math.tan(need) * (16 / 9)))));
+      if (need > tallAt(lens))
+        lens = Math.max(
+          14,
+          Math.round(upright() ? 18 / Math.tan(need) : 18 / Math.tan(Math.atan(Math.tan(need) * (16 / 9)))),
+        );
     }
     // How much closer than the shot needs a wall kept it: a wide moment taken from a step behind
     // the dreamer at the entrance, on a 14mm lens (25 Sep).
@@ -2612,7 +2628,7 @@ export function outsideShot(
   for (const deg of degs)
     for (const back of [1, 1.35, 1.8]) {
       const cand = place(turnBy(d0, deg), back);
-      const rs = render(crowded ? solidsOf(railless, [], name, cand.eye) : solidsSmall, cand.eye, 192, 108);
+      const rs = render(crowded ? solidsOf(railless, [], name, cand.eye) : solidsSmall, cand.eye, ...sized(192));
       const seen = holdAll.map((s) => rs.seen.get(s.id));
       const inFrame = seen.filter((x) => x && x.visible >= tiny).length / holdAll.length;
       const clear = seen.reduce((a, x) => a + (x ? 1 - x.occluded : 0), 0) / holdAll.length;
@@ -2675,7 +2691,7 @@ export function outsideShot(
           ? `from in front of ${them}`
           : `from beside ${them}`;
   const solids = solidsOf(plan, [], name, eye);
-  const rr = render(solids, eye, 384, 216);
+  const rr = render(solids, eye, ...sized(384));
   const min = 384 * 216 * 0.002;
   const spots = plan.spots;
   // Whoever rides in something the picture shows is in it, however little of them shows above its
@@ -2878,8 +2894,9 @@ const bareName = (x: string) =>
     .replace(/^\s*(the|a|an)\s+/i, '')
     .trim();
 
-/** Half the height of a camera's view, in degrees, for a 16:9 frame. */
-const halfTall = (eye: Eye) => (Math.atan(Math.tan((halfViewOf(eye) * Math.PI) / 180) * (9 / 16)) * 180) / Math.PI;
+/** Half the height of a camera's view, in degrees, for its frame: 16:9, or a vertical 9:16. */
+const halfTall = (eye: Eye) =>
+  (Math.atan(Math.tan((halfViewOf(eye) * Math.PI) / 180) * (upright() ? 16 / 9 : 9 / 16)) * 180) / Math.PI;
 
 /**
  * How much of someone the frame holds, where the bottom of the picture cuts them: from the waist

@@ -13,7 +13,7 @@
 // and no other key is needed.
 //
 //   bun --env-file=$HOME/.config/strawberry/dreamchat.env run import.ts --text <dream.txt | transcript.json> \
-//     --style "<a named art style>" [--id <id>] [--title <name>]
+//     --style "<a named art style>" [--id <id>] [--title <name>] [--when <the date it was recorded>]
 //
 // The last line printed is JSON: {"id", "state", "packet", "cuts", "errors"}.
 import './evals/local-env';
@@ -30,7 +30,7 @@ import { importDream, liveDeps } from './importer';
   const style = val('--style');
   if (!file || !style || !existsSync(file)) {
     console.error(
-      'usage: bun run import.ts --text <dream.txt | transcript.json> --style "<a named art style>" [--id <id>] [--title <name>]',
+      'usage: bun run import.ts --text <dream.txt | transcript.json> --style "<a named art style>" [--id <id>] [--title <name>] [--when <date recorded>]',
     );
     process.exit(1);
   }
@@ -41,7 +41,7 @@ import { importDream, liveDeps } from './importer';
   const data = process.env.DREAMCHAT_DATA ? resolve(process.env.DREAMCHAT_DATA) : dataDir();
   try {
     const got = await importDream(
-      { text: readFileSync(file, 'utf8'), style, id: val('--id'), title: val('--title'), data },
+      { text: readFileSync(file, 'utf8'), style, id: val('--id'), title: val('--title'), when: val('--when'), data },
       await liveDeps(),
     );
     console.log(JSON.stringify(got));

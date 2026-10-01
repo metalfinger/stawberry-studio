@@ -2,6 +2,7 @@
 // draw one. Everything goes through Strawberry's own path: the item's fields are patched with
 // their source, a recipe is prepared, approved within the conversation's image cap, queued, and
 // the engine's worker draws it.
+import { frameShape } from './blocking';
 import { builds } from './cleanups';
 import type { AsDrawn, Recast } from './asdrawn';
 import type { CutPlan, GhostPlan } from './continuity';
@@ -806,6 +807,19 @@ export function openedLater(place: Item, actions: string[]): string[] {
 }
 
 /** A place's name that says who is there or what they do in it, rather than what the place is. */
+/** The time (era.ts), told to a sketch by what it is of, or to a moment's whole picture: words only, the assembler's too. */
+export function periodLine(value: string, kind: 'moment' | 'character' | 'location' | 'prop'): string {
+  const what =
+    kind === 'character'
+      ? 'their clothes and hair as they were then'
+      : kind === 'location'
+        ? 'the place and everything in it as it was then'
+        : kind === 'prop'
+          ? 'as it was made then'
+          : 'clothes, hair, rooms, vehicles and things as they were then';
+  return `The time: ${value}: ${what}.`;
+}
+
 const PEOPLE_IN_NAME =
   /\b(people|persons?|couple of|crowd|someone|sitting|standing|talking|playing|waiting|with (?:the |a |my |your |her |his )?(?:\w+ )?(?:man|woman|men|women|girl|boy|friends?|aunt|uncle|mother|father|brother|sister|family))\b/i;
 
@@ -813,7 +827,8 @@ export function sheetPrompt(
   item: Item,
   style: StyleOption,
   /** The words that name the dream's other people and things (subjectWords): with `sketch_subjects`, never in its style. */
-  opts: { others?: string[] } = {},
+  /** The dream's period (era.ts): with `era`, the time it is drawn in, never in its style. */
+  opts: { others?: string[]; period?: string | null } = {},
 ): string {
   // A look that says nothing a picture can keep ("indistinct, like a figure in a hazy memory")
   // would be drawn as a blur.
@@ -978,9 +993,15 @@ export function sheetPrompt(
     : '';
   const ownColours = new RegExp(COLOUR_WORDS.source, 'i').test(facts);
   const noWords = item.kind === 'prop' && WRITTEN_ON.test(`${item.name} ${facts}`) ? MARKS_ONLY : NO_WORDS;
+  // The dream's time, said apart from how it is drawn: a woodcut stays a woodcut in any decade (`era`).
+  const time =
+    builds('era') && opts.period
+      ? periodLine(opts.period, item.kind === 'cut' || item.kind === 'ghost' ? 'moment' : item.kind)
+      : '';
   return [
     layout,
     facts,
+    time,
     shut,
     without,
     clear,
@@ -1006,6 +1027,8 @@ export type SheetEngine = {
     style: StyleOption;
     /** The words naming the dream's other people and things (subjectWords), never said in the sketch's style. */
     others?: string[];
+    /** The dream's period (era.ts), told to the sketch with `era`. */
+    period?: string;
     sources: { said: string; proposal: string };
     reason: string;
     maxUsd: number;
@@ -1097,10 +1120,12 @@ const MODEL =
  * in words: a person's full-length sketch was drawn small in a wide frame (24 Sep). An in-between
  * reference keeps the shape of the sketch it edits; every moment is a storyboard frame.
  */
-export type Shape = '2:3' | '4:3' | '16:9' | '1:1';
+export type Shape = '2:3' | '4:3' | '16:9' | '1:1' | '9:16';
 export function shapeOf(item: Item): Shape {
   if (item.kind === 'character') return isGroup(item) ? '4:3' : '2:3';
   if (item.kind === 'prop') return '1:1';
+  // A moment is the film's frame (vertical with DREAMCHAT_FRAME=9:16); a place's sketch a reference, landscape.
+  if (item.kind === 'cut') return frameShape();
   return '16:9';
 }
 
@@ -1151,7 +1176,7 @@ function approval(
 }
 
 export const liveSheets: SheetEngine = {
-  async start({ item, style, others, sources, reason, maxUsd }) {
+  async start({ item, style, others, period, sources, reason, maxUsd }) {
     if (!item.nodeId) throw new Error(`${item.name} is not in the production yet`);
     const node = (await call('inspect', { id: item.nodeId })) as { node: { revision: number } };
     const said: Record<string, { op: 'set'; value: string }> = {};
@@ -1174,7 +1199,7 @@ export const liveSheets: SheetEngine = {
       node_id: item.nodeId,
       provider: PROVIDER,
       model: MODEL,
-      prompt: sheetPrompt(item, style, { others }),
+      prompt: sheetPrompt(item, style, { others, period }),
       intent: `Reference sheet for ${item.name}${item.version > 1 ? `, version ${item.version}` : ''}`,
       settings: settingsFor(shapeOf(item)),
     })) as { id: string; fingerprint: string; spec: { estimate?: { credits?: number | null } } };

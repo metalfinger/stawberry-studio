@@ -334,6 +334,8 @@ export type CutSheet = {
    * seen out past the place.
    */
   conditions?: { name: string; look: string; beyond: boolean }[];
+  /** With the `era` step: the time the picture is set in, the moment's own or the dream's (era.ts), said once. */
+  period?: string;
   /** The picture before a jump gives no framing of its own where image 1 carries the layout (the `jump_words` step). */
   jumpWords?: true;
   /** With the one builder's `plan_beyond` step: what the camera rules add after the view is said with one space. */
@@ -781,6 +783,11 @@ export function cutSheet(x: CutSheetInput): CutSheet {
           : [],
       );
       return c.length ? { conditions: c } : {};
+    })(),
+    ...(() => {
+      if (!builds('era') || !b) return {};
+      const period = all.find((m) => m.id === frame.id)?.period ?? b.period?.value;
+      return period ? { period } : {};
     })(),
     take: { repairs: [...(frame.repairFor ?? [])], strays },
     record,

@@ -2,7 +2,9 @@
 // switch: the command sets the full profile before anything loads.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { builds } from './cleanups';
 import { dreamConfig } from './dream';
+import { type Era, readEra } from './era';
 import { cleanStyles } from './ground';
 import { type JevFn, renderTranscript } from './jev';
 import { initialState } from './lib';
@@ -23,6 +25,8 @@ export type ImportDeps = {
   typed?: StoreDeps['typed'];
   /** The readings made after the plan: the cast, read and kept as every eval reads it. */
   readings: (s: Session) => Promise<Session>;
+  /** With the one builder's `era`: the dream's period read from its telling, and the date it was recorded (era.ts). */
+  era?: (text: string, given: string | null, moments: { id: string; action: string }[]) => Promise<Era>;
   /** Its node packet written; null where it has none. */
   packet: (
     id: string,
@@ -66,7 +70,15 @@ function newId(at = new Date()): string {
 
 /** A dumped dream, planned as the chat plans one and saved under `data` (state/<id>.json), its packet written. */
 export async function importDream(
-  input: { text: string; style: string; id?: string; title?: string; data: string },
+  input: {
+    text: string;
+    style: string;
+    id?: string;
+    title?: string;
+    /** The date the dream was recorded (`--when`): its period where the dream's own words give none, never theirs. */
+    when?: string;
+    data: string;
+  },
   deps: ImportDeps,
 ): Promise<Imported> {
   const transcript = transcriptOf(input.text);
@@ -75,6 +87,19 @@ export async function importDream(
   const id = input.id ?? newId();
   const draft = await deps.producer(structuredClone(transcript));
   const b = draft.breakdown;
+  // When the dream is set (`era`): its own words first, then the date it was recorded, else none (era.ts).
+  if (builds('era') && deps.era) {
+    const era = await deps.era(
+      transcript
+        .filter((t) => t.role === 'user')
+        .map((t) => t.content)
+        .join('\n'),
+      input.when ?? null,
+      b.scenes.flatMap((sc) => sc.moments).map((m) => ({ id: m.id, action: m.action })),
+    );
+    b.period = era.period;
+    for (const m of b.scenes.flatMap((sc) => sc.moments)) if (era.moments[m.id]) m.period = era.moments[m.id].value;
+  }
   // The look, as the dreamer would ask for it, built as the chat builds one they described in their own words.
   const made = await deps.ownStyle(
     renderTranscript([...transcript, { role: 'user', content: `I'd like the pictures made as ${input.style}.` }]),
@@ -158,7 +183,7 @@ export async function liveDeps(): Promise<ImportDeps> {
   const { liveProducer } = await import('./session');
   const { writeTyped } = await import('./typed');
   const { writeImplied } = await import('./implied');
-  const { castReadingOf, withCast } = await import('./evals/cast-cache');
+  const { castReadingOf, wardrobeOf, withCast } = await import('./evals/cast-cache');
   return {
     producer: liveProducer(callJev, { telling: true }),
     ownStyle,
@@ -167,10 +192,13 @@ export async function liveDeps(): Promise<ImportDeps> {
     supervise: superviseChanges,
     jev: callJev,
     imply: writeImplied,
+    era: (text, given, moments) => readEra(text, given, moments),
     typed: writeTyped,
     // The cast, read from the breakdown as it stands with the others in, and kept where every eval reads it.
     readings: async (s) => {
       await castReadingOf(s, { ask: true });
+      // A crowd's guessed clothes, read into the same cache (extras_wardrobe), for withCast to put on them.
+      await wardrobeOf(s, { ask: true });
       return (await withCast(s)).session as Session;
     },
     // Loaded once the dream is saved: the packets' folder is found by the conversations it holds.
