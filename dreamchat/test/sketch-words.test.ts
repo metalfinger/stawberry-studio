@@ -229,10 +229,12 @@ describe("a sketch never names the dream's other people, places or things in its
   test("each sketch: a style sentence naming another of the dream's people or things is left out, the rest kept", () => {
     expect(subjectWords(items, items[3])).toEqual(['dreamer', 'woman', 'ice']);
     // A place too: the lab is never in the woman's sketch by way of its style.
-    expect(subjectWords(items, items[1])).toEqual(['dreamer', 'ice', 'lab']);
+    expect(subjectWords(items, items[1])).toEqual(['dreamer', 'lab']);
     for (const it of items) {
       const p = withBuilder('sketch_subjects', () => sheetPrompt(it, iced, { others: subjectWords(items, it) }));
-      expect(p).not.toContain('The woman and the ice are rendered');
+      // Hers keeps it: her head is the ice, and the style's ice is how she is drawn.
+      if (it.id === 'p2') expect(p).toContain('The woman and the ice are rendered');
+      else expect(p).not.toContain('The woman and the ice are rendered');
       expect(p).toContain('The room is seen in soft focus');
       expect(p).toContain('Edges are mostly soft, but the carved features are crisp.');
     }
@@ -291,6 +293,29 @@ describe("a sketch never names the dream's other people, places or things in its
     const pieces = [...moonlit.tokens, ...moonlit.lighting_rules.split(/(?<=[.;!?])\s+/)];
     for (const x of pieces.filter((x) => before.includes(x) && !p.includes(x)))
       expect(others.some((w) => new RegExp(`\\b${w}\\b`, 'i').test(x))).toBe(true);
+  });
+
+  test("a sketch's own subject is never another's: what it is named, and a thing its own look is made of", () => {
+    // dream-0923-210937-e564, with its cast: the horse's head is clear ice, and keeps the style's ice; the block of ice,
+    // where the woman's head should be (927a), still leaves out the woman.
+    const look = (it: Item, value: string): Item => ({ ...it, fields: { appearance: { value, said: true } } });
+    const dream = [
+      item('p2', 'character', 'the young woman'),
+      look(
+        item('c1', 'prop', 'the block of ice'),
+        "irregular, glittering block of ice where the woman's head should be",
+      ),
+      look(item('c2', 'prop', "the horse's head"), 'beautifully molded, clear ice, with eyes, ears and nostrils'),
+    ];
+    expect(subjectWords(dream, dream[2])).toEqual(['woman']);
+    // Its look is where her head should be: a head is its own, the woman another's.
+    expect(subjectWords(dream, dream[1])).toEqual(['woman']);
+    expect(subjectWords(dream, dream[0])).toEqual(['ice', 'head']);
+    const etched = { ...style, tokens: ['fine, precise linework', 'translucent layers for ice'] };
+    const head = withBuilder('sketch_subjects', () =>
+      sheetPrompt(dream[2], etched, { others: subjectWords(dream, dream[2]) }),
+    );
+    expect(head).toContain('translucent layers for ice');
   });
 
   test('a word of where is never a subject: a place called outside, the street outside', () => {

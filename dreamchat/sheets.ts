@@ -736,26 +736,37 @@ const STYLE_WORDS = new Set([
 /**
  * The words that name the dream's people, places and things other than `of`, each by its head ("the woman with the ice
  * horse head" is a woman, "the block of ice" ice; the dreamer, "you", is the dreamer): what a sketch's style may never
- * say (`sketch_subjects`).
+ * say (`sketch_subjects`). Never one the sketch itself draws: a word of its own name, or a thing or place its own look is
+ * made of ("the horse's head", of clear ice, keeps the style's ice). A person its look names stays another's.
  */
 export function subjectWords(
   items: Pick<Item, 'id' | 'kind' | 'name' | 'isDreamer'>[],
-  of: Pick<Item, 'id'>,
+  of: Pick<Item, 'id'> & Partial<Pick<Item, 'name' | 'fields' | 'isDreamer'>>,
 ): string[] {
+  const wordsOf = (x: string) =>
+    new Set((x.toLowerCase().match(/[a-z]{3,}/g) ?? []).flatMap((w) => [w, w.replace(/s$/, '')]));
+  const own = wordsOf(`${of.name ?? ''}${of.isDreamer ? ' dreamer' : ''}`);
+  const looks = wordsOf(
+    Object.values(of.fields ?? {})
+      .map((d) => d?.value ?? '')
+      .join(' '),
+  );
   const words = items
     .filter((i) => i.id !== of.id && (i.kind === 'character' || i.kind === 'prop' || i.kind === 'location'))
-    .map((i) => {
-      if (i.isDreamer) return 'dreamer';
+    .flatMap((i) => {
+      if (i.isDreamer) return [{ w: 'dreamer', person: true }];
       const core = i.name
         .toLowerCase()
         .replace(/^(?:the|a|an|my|your|his|her|their)\s+/, '')
         .split(/\s+(?:with|in|on|at|from|who|that|which|wearing|holding)\s+/)[0]
         .replace(new RegExp(`(?:\\s+(?:${WHERE.join('|')}))+$`), '');
       // "the block of ice" is ice as much as a block: each side of "of" gives its head.
-      return core.split(/\s+of\s+/).map((x) => (x.match(/[a-z]+/g) ?? []).at(-1) ?? '');
+      return core
+        .split(/\s+of\s+/)
+        .map((x) => ({ w: (x.match(/[a-z]+/g) ?? []).at(-1) ?? '', person: i.kind === 'character' }));
     })
-    .flat()
-    .filter((w) => w.length > 2 && !STYLE_WORDS.has(w));
+    .filter(({ w, person }) => w.length > 2 && !STYLE_WORDS.has(w) && !own.has(w) && (person || !looks.has(w)))
+    .map(({ w }) => w);
   return [...new Set(words)];
 }
 
