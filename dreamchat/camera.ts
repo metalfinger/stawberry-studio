@@ -713,8 +713,10 @@ export function handsIn(words: string[], holds: boolean): boolean {
 
 /**
  * What the dreamer's own hands do in a moment seen through their eyes, said as their act ("open the door"),
- * from the first clause that has the dreamer do it ("the dreamer opens the door; on the other side…"); null
- * where no clause does (they only hold something, or their hand is only named). "At most their own hands"
+ * from the first clause that has the dreamer do it ("the dreamer opens the door; on the other side…"), holding
+ * included ("hold the boat"); null where no clause does (their hand is only named, they are at the controls), where
+ * it is only what they could do, or where the act is said "holding the lantern" inside a clause about something
+ * else they do ("the dreamer holding the lantern looks down at the river"). "At most their own hands"
  * let a door they open be drawn with no hand on it (snow-train m6, 1 Oct: "I can't see the dreamer opening
  * the door").
  */
@@ -731,6 +733,7 @@ export function handAct(words: string[]): string | null {
     if (/\b(?:can|could|will|would|may|might|shall|should|must)\b/i.test(m[1])) return null;
     // The verb as said after "as they": "opens" is "open", "reaches" "reach", "carries" "carry".
     const v = m[2];
+    if (/ing$/i.test(v)) return null;
     const verb = /(?:ss|us|is)$/i.test(v)
       ? v
       : /ies$/i.test(v)
@@ -738,7 +741,9 @@ export function handAct(words: string[]): string | null {
         : /(?:sh|ch|x|ss|zz)es$/i.test(v)
           ? v.replace(/es$/i, '')
           : v.replace(/^lets\b/i, 'let').replace(/s$/i, '');
-    return `${m[1]}${verb}${m[3]}`.trim().replace(/[\s,]+$/, '');
+    // One act: "and steps through into the light" is the next one, its verb said for "the dreamer".
+    const rest = m[3].replace(/\s+(?:and|then)\s+\w+s\b.*$/i, '');
+    return `${m[1]}${verb}${rest}`.trim().replace(/[\s,]+$/, '');
   }
   return null;
 }
