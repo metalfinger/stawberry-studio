@@ -1473,12 +1473,12 @@ describe('who holds what is what the act at the instant does', () => {
 
   test('before its step, the floor plan as the scene left it', () => {
     const r = run('jump_words');
-    expect(prompt(r, 'm4')).toContain('the boat is in the dreamer\'s hands.');
-    expect(prompt(r, 'm10')).toContain('the boat is in the dreamer\'s hands.');
+    expect(prompt(r, 'm4')).toContain("the boat is in the dreamer's hands.");
+    expect(prompt(r, 'm10')).toContain("the boat is in the dreamer's hands.");
     expect(r.rec?.moments.m5.handed).toBeUndefined();
   });
 
-  test('in the hands of whoever works it; passing from the giver, still in their hands; put down, in no one\'s', () => {
+  test("in the hands of whoever works it; passing from the giver, still in their hands; put down, in no one's", () => {
     const r = run('held_acts');
     // m4: the father still folds it.
     expect(prompt(r, 'm4')).toContain("the boat is in my father's hands.");
@@ -1505,7 +1505,10 @@ describe('who holds what is what the act at the instant does', () => {
 
   test('only the thing the act is done to: a step toward the boat takes nothing', () => {
     const s = withReadings('dream-0925-231131-affd', {
-      m4: { moment: 'm4', facts: [act('p3', 'takes a step toward the boat'), act('p3', 'puts the boat down', 'on the table')] },
+      m4: {
+        moment: 'm4',
+        facts: [act('p3', 'takes a step toward the boat'), act('p3', 'puts the boat down', 'on the table')],
+      },
     });
     const r = withSwitches({ ...sw, DREAMCHAT_ONE_BUILDER: 'held_acts' }, () => rebuild(s));
     // "puts the boat down" is done to the boat; the step toward it is not.
@@ -1527,9 +1530,13 @@ describe('who holds what is what the act at the instant does', () => {
       const me = plan.moves?.m10?.find((x) => x.id === 'p1') ?? plan.spots.find((x) => x.id === 'p1')!;
       plan.moves = {
         ...plan.moves,
-        m10: (plan.moves?.m10 ?? []).filter((x) => x.id !== 't2').map((x) => (x.id === 'p1' ? { ...x, faces: 't2' } : x)),
+        m10: (plan.moves?.m10 ?? [])
+          .filter((x) => x.id !== 't2')
+          .map((x) => (x.id === 'p1' ? { ...x, faces: 't2' } : x)),
       };
-      plan.spots = plan.spots.map((x) => (x.id === 't2' ? { ...x, x: me.x, y: me.y } : x.id === 'p1' ? { ...x, faces: 't2' } : x));
+      plan.spots = plan.spots.map((x) =>
+        x.id === 't2' ? { ...x, x: me.x, y: me.y } : x.id === 'p1' ? { ...x, faces: 't2' } : x,
+      );
       return rawPlanBy(b, 'm10', r.rec);
     })!;
     const me = plan.spots.find((x) => x.id === 'p1')!;
@@ -1565,7 +1572,10 @@ describe('whoever went out through a way out is not drawn back in by a name', ()
     const r = at('gone_out', out);
     expect(r.rec?.moments.m7.gone).toContain('p3');
     expect(r.pictures.find((p) => p.id === 'm7')!.prompt).not.toContain('the little silver fish (animal)');
-    const back = at('gone_out', { ...out, m7: { moment: 'm7', facts: [act('p3', 'swims back in through', 'the window')] } });
+    const back = at('gone_out', {
+      ...out,
+      m7: { moment: 'm7', facts: [act('p3', 'swims back in through', 'the window')] },
+    });
     expect(back.rec?.moments.m7.gone).not.toContain('p3');
   });
 
@@ -1606,11 +1616,17 @@ describe('who a moment sees through an opening is out past it', () => {
     },
   };
   const at = (step: string) =>
-    withSwitches({ ...sw, DREAMCHAT_ONE_BUILDER: step }, () =>
-      rebuild(withReadings('dream-0926-012307-4c79', typed)).pictures.find((p) => p.id === 'm2')!.prompt,
+    withSwitches(
+      { ...sw, DREAMCHAT_ONE_BUILDER: step },
+      () => rebuild(withReadings('dream-0926-012307-4c79', typed)).pictures.find((p) => p.id === 'm2')!.prompt,
     );
   test('before its step, on the camera side of the door; with it, out past the door, seen through its window', () => {
-    expect(at('plan_acts')).toContain('Nearest, close, at the left edge of the picture: the faceless students');
+    // On the camera side: in front of the door, or, looking level through its window, behind the camera.
+    const before = at('plan_acts');
+    expect(before).toMatch(
+      /(?:Nearest, close, at the left edge of the picture|Outside the picture, behind the camera): the faceless students/,
+    );
+    expect(before).not.toContain('Out past the wooden door with the small round window');
     const p = at('plan_beyond');
     expect(p).not.toContain('Nearest, close, at the left edge of the picture: the faceless students');
     expect(p).toContain(
@@ -1622,10 +1638,12 @@ describe('who a moment sees through an opening is out past it', () => {
 describe('a colour the dreamer gave stays told where it is in view', () => {
   const sw = { ...SHEET, DREAMCHAT_CAMERA: 'on', DREAMCHAT_REFS: 'on' };
   const at = (step: string) =>
-    withSwitches({ ...sw, DREAMCHAT_ONE_BUILDER: step }, () =>
-      rebuild(structuredClone(loadDream('dream-0926-012307-4c79', false).session as Session)).pictures.find(
-        (p) => p.id === 'm2',
-      )!.prompt,
+    withSwitches(
+      { ...sw, DREAMCHAT_ONE_BUILDER: step },
+      () =>
+        rebuild(structuredClone(loadDream('dream-0926-012307-4c79', false).session as Session)).pictures.find(
+          (p) => p.id === 'm2',
+        )!.prompt,
     );
   test('4c79 m2: the green corridor said at m1 is still green', () => {
     expect(at('plan_beyond')).not.toContain('green corridor.');
