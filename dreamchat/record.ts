@@ -1525,7 +1525,7 @@ const WAY_OUT = /\b(?:window|door|doorway|gate|hatch|opening|exit|porthole|skyli
  */
 function wentOut(ctx: Ctx, who: string, m: AtMoment): boolean {
   const typed = ctx.readings.typed;
-  if (!builds("gone_out") || !typed) return false;
+  if (!builds('gone_out') || !typed) return false;
   const { moments } = ctx.record;
   // An act of theirs here has them here, whatever went before.
   if (takenOf(typed[m.id], m.eyes).acts.some((a) => a.who === who)) return false;
@@ -2403,11 +2403,13 @@ function staysWithHolder(ctx: Ctx): Violation[] {
 /** A giving act: at the instant, the thing is on its way from the giver's hands to the one given it. */
 const GIVING = /^(?:hands?|gives?|pass(?:es)?|holds? out|offers?)\b/i;
 /** Letting go: from the instant on, it is out of their hands. */
-const LETTING_GO = /^(?:(?:sets?|puts?|lays?)\s+(?:\S+\s+){0,3}down|places?|drops?|lets? go|releases?|throws?|leaves?)\b/i;
+const LETTING_GO =
+  /^(?:(?:sets?|puts?|lays?)\s+(?:\S+\s+){0,3}down|places?|drops?|lets? go|releases?|throws?|leaves?)\b/i;
 /** Where the thing an act is done to ends in its words: what comes after is where or to whom. */
 const OBJECT_ENDS = /\b(?:to|toward|towards|into|onto|by|beside|at|on|in|from|with|past|under|through)\b/i;
 /** Done to a thing with the hands: whoever does it has it in them. */
-const HANDLING = /^(?:holds?|folds?|carr(?:y|ies)|clutch(?:es)?|grips?|lifts?|picks? up|takes?|raises?|hugs?|cradles?|wraps?)\b/i;
+const HANDLING =
+  /^(?:holds?|folds?|carr(?:y|ies)|clutch(?:es)?|grips?|lifts?|picks? up|takes?|raises?|hugs?|cradles?|wraps?)\b/i;
 
 /**
  * With the one builder's `held_acts` step, who holds what at a moment is what its typed act does at the instant
@@ -2425,7 +2427,8 @@ function heldByActs(ctx: Ctx): Violation[] {
     ...moments.flatMap((m) => Object.keys(m.held)),
     ...[...ctx.holders.values()].flatMap((h) => [...Object.keys(h.start), ...Object.keys(h.end)]),
   ]);
-  const living = (id: string | undefined) => !!id && !!elements[id] && elements[id].kind !== 'thing' && elements[id].kind !== 'place';
+  const living = (id: string | undefined) =>
+    !!id && !!elements[id] && elements[id].kind !== 'thing' && elements[id].kind !== 'place';
   // The act is done to the thing: it is the act's "to", or what "does" names before any word of where or to whom
   // ("hands the newspaper-wrapped fish to", "puts the boat down"), never further on ("takes a step toward the boat").
   const actsAt = (m: AtMoment, t: string) => {
@@ -3199,6 +3202,13 @@ export function recordForPlan(
       for (const m of record.moments) {
         const beyond = takenOf(readings.typed[m.id], m.eyes).beyond.map(({ what, through }) => ({ what, through }));
         if (beyond.length && plan.moments[m.id]) plan.moments[m.id].beyond = beyond;
+      }
+    // With the plan_motion step, whether each vehicle in view is moving at the instant, for the plan to send it on its
+    // way (continuity goingOf): the tractor driving on with no going verb in the words.
+    if (plan && builds('plan_motion') && readings?.typed)
+      for (const m of record.moments) {
+        const motion = takenOf(readings.typed[m.id], m.eyes).motion.map(({ who, moving }) => ({ who, moving }));
+        if (motion.length && plan.moments[m.id]) plan.moments[m.id].motion = motion;
       }
     // With the cast_named step, the cast reading as read and checked, for the floor plan to place (continuity rawPlanBy).
     return plan && builds('cast_named') && readings?.cast ? { ...plan, cast: readings.cast } : plan;

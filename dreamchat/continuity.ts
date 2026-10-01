@@ -259,6 +259,8 @@ export type RecordPlan = {
       acts?: { who: string; does: string; to?: string; where?: string }[];
       /** With the one builder's `plan_beyond` step: who and what the moment sees out past the place, through what. */
       beyond?: { what: string; through: string }[];
+      /** With the one builder's `plan_motion` step: each vehicle in view the typed reading says is moving or still. */
+      motion?: { who: string; moving: boolean }[];
       now: { of: string; text: string }[];
       /** The same, as typed facts: what `now` says, before it is put in words. */
       facts: NowOf[];
@@ -1692,8 +1694,10 @@ function planWith(
     const [rw, rd] = roomOf(where);
     for (const v of where.spots) {
       const others = where.spots.filter((o) => o.shape === 'vehicle' && o.id !== v.id).map((o) => o.name ?? name(o.id));
-      if (v.shape !== 'vehicle' || v.heldBy || !goingIn(`${m.action} ${m.visual_point ?? ''}`, name(v.id), others))
-        continue;
+      if (v.shape !== 'vehicle' || v.heldBy) continue;
+      // Moving or still as the typed reading says, where it says (the `plan_motion` step); else as a going verb says.
+      const told = rec?.moments[m.id]?.motion?.find((x) => x.who === v.id)?.moving;
+      if (!(told ?? goingIn(`${m.action} ${m.visual_point ?? ''}`, name(v.id), others))) continue;
       const mv = plan?.moves?.[m.id]?.find((y) => y.id === v.id);
       const was = mv && plan ? before(m, v.id, plan) : undefined;
       const [w, d] = sizeOf(v);
