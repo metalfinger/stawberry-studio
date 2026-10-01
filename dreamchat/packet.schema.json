@@ -1,0 +1,1151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/metalfinger/stawberry-studio/dreamchat/packet.schema.json",
+  "title": "Dream Chat node packet",
+  "description": "Per dream: its sketches, its in-between pictures and a node per cut, with everything a harness needs to draw, check and redraw each picture (dreamchat/packet.ts).",
+  "$defs": {
+    "eye": {
+      "type": "object",
+      "properties": {
+        "at": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": ["x", "y"],
+          "additionalProperties": false
+        },
+        "d": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": ["x", "y"],
+          "additionalProperties": false
+        },
+        "height": {
+          "type": "number"
+        },
+        "pitch": {
+          "type": "number"
+        },
+        "lean": {
+          "enum": ["back", "forward", "left", "right"]
+        },
+        "lens": {
+          "type": "number"
+        }
+      },
+      "required": ["at", "d", "height"],
+      "additionalProperties": false
+    },
+    "spot": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "faces": {
+          "type": "string"
+        },
+        "many": {
+          "type": "boolean"
+        },
+        "kind": {
+          "enum": ["person", "thing"]
+        },
+        "pose": {
+          "enum": ["sitting", "standing", "lying"]
+        },
+        "size": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "shape": {
+          "enum": ["block", "seat", "vehicle", "ground", "steps"]
+        },
+        "heldBy": {
+          "type": "string"
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "spread": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "fixture": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "height": {
+          "type": "number"
+        },
+        "body": {
+          "enum": ["human", "four-legged", "bird", "fish", "other"]
+        },
+        "above": {
+          "type": "number"
+        },
+        "climbing": {
+          "type": "object",
+          "properties": {
+            "of": {
+              "type": "string"
+            },
+            "how": {
+              "enum": ["into", "out of"]
+            }
+          },
+          "required": ["of", "how"],
+          "additionalProperties": false
+        },
+        "rides": {
+          "enum": ["front", "back"]
+        },
+        "open": {
+          "type": "boolean"
+        }
+      },
+      "required": ["id", "x", "y"],
+      "additionalProperties": false
+    },
+    "floorPlan": {
+      "type": "object",
+      "properties": {
+        "front": {
+          "type": "string"
+        },
+        "spots": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/spot"
+          }
+        },
+        "indoors": {
+          "type": "boolean"
+        },
+        "ceiling": {
+          "type": "number"
+        },
+        "room": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "water": {
+          "type": "number"
+        },
+        "waterCapped": {
+          "type": "boolean"
+        },
+        "inside": {
+          "type": "string"
+        },
+        "outside": {
+          "type": "object",
+          "additionalProperties": {
+            "enum": ["front", "back", "left", "right"]
+          }
+        },
+        "looks": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "moves": {},
+        "places": {}
+      },
+      "required": ["front", "spots"],
+      "additionalProperties": false
+    },
+    "nowOf": {
+      "type": "object",
+      "properties": {
+        "of": {
+          "type": "string"
+        },
+        "called": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": ["person", "animal", "group", "crowd", "place", "thing"]
+        },
+        "facts": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "part"
+                  },
+                  "part": {
+                    "type": "string"
+                  },
+                  "what": {
+                    "type": "string"
+                  },
+                  "now": {
+                    "type": "string"
+                  },
+                  "implied": {
+                    "const": true
+                  }
+                },
+                "required": ["kind", "part", "what", "now"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "shut"
+                  },
+                  "why": {
+                    "enum": ["ended", "later"]
+                  },
+                  "part": {
+                    "type": "string"
+                  }
+                },
+                "required": ["kind", "why"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "held"
+                  },
+                  "by": {
+                    "type": "string"
+                  },
+                  "byCalled": {
+                    "type": "string"
+                  },
+                  "from": {
+                    "type": "string"
+                  },
+                  "fromCalled": {
+                    "type": "string"
+                  }
+                },
+                "required": ["kind", "by", "byCalled"],
+                "additionalProperties": false
+              }
+            ]
+          }
+        }
+      },
+      "required": ["of", "called", "name", "kind", "facts"],
+      "additionalProperties": false
+    },
+    "change": {
+      "type": "object",
+      "properties": {
+        "who": {
+          "type": "string"
+        },
+        "what": {
+          "type": "string"
+        },
+        "now": {
+          "type": "string"
+        },
+        "since": {
+          "type": "string"
+        },
+        "whole": {
+          "type": "boolean"
+        },
+        "key": {
+          "type": "string"
+        },
+        "implied": {
+          "type": "boolean"
+        },
+        "part": {
+          "type": "string"
+        }
+      },
+      "required": ["who", "what", "now", "since"],
+      "additionalProperties": false
+    },
+    "criterion": {
+      "type": "object",
+      "properties": {
+        "with": {
+          "type": ["string", "null"]
+        },
+        "text": {
+          "type": "string"
+        },
+        "fix": {
+          "type": "string"
+        }
+      },
+      "required": ["with", "text", "fix"],
+      "additionalProperties": false
+    },
+    "image": {
+      "type": "object",
+      "properties": {
+        "n": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "media": {
+          "type": "string"
+        },
+        "role": {
+          "enum": ["identity", "location", "prop", "base", "composition"]
+        },
+        "instruction": {
+          "type": "string"
+        },
+        "source": {
+          "enum": ["edit", "mockup", "sketch", "ghost", "earlier", null]
+        },
+        "of": {
+          "type": ["string", "null"]
+        },
+        "subjects": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": ["n", "media", "role", "instruction", "source", "of", "subjects"],
+      "additionalProperties": false
+    },
+    "verdict": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "enum": ["story", "checkpoint", "local"]
+        },
+        "run": {
+          "type": "string"
+        },
+        "verdict": {
+          "enum": ["right", "partly", "wrong"]
+        },
+        "note": {
+          "type": "string"
+        },
+        "at": {
+          "type": "string"
+        }
+      },
+      "required": ["source", "verdict"],
+      "additionalProperties": false
+    },
+    "element": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": ["character", "location", "prop"]
+        },
+        "name": {
+          "type": "string"
+        },
+        "isDreamer": {
+          "type": "boolean"
+        },
+        "look": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": "string"
+              },
+              "said": {
+                "type": "boolean"
+              }
+            },
+            "required": ["value", "said"],
+            "additionalProperties": false
+          }
+        },
+        "prompt": {
+          "type": "string",
+          "minLength": 1
+        },
+        "image": {
+          "type": ["string", "null"]
+        },
+        "group": {
+          "type": "boolean"
+        },
+        "partOf": {
+          "type": ["string", "null"]
+        },
+        "extras": {
+          "type": "boolean"
+        }
+      },
+      "required": ["id", "kind", "name", "isDreamer", "look", "prompt", "image", "group", "partOf", "extras"],
+      "additionalProperties": false
+    },
+    "ghost": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": ["state", "view"]
+        },
+        "of": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "change": {
+          "type": "string"
+        },
+        "from": {
+          "type": ["string", "null"]
+        },
+        "after": {
+          "type": ["string", "null"]
+        },
+        "needs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "usedBy": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "depth": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "key": {
+          "type": ["string", "null"]
+        },
+        "shows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "what": {
+                "type": "string"
+              },
+              "now": {
+                "type": "string"
+              }
+            },
+            "required": ["what", "now"],
+            "additionalProperties": false
+          }
+        },
+        "prompt": {
+          "type": "string",
+          "minLength": 1
+        },
+        "images": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/image"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "of",
+        "label",
+        "change",
+        "from",
+        "after",
+        "needs",
+        "usedBy",
+        "depth",
+        "key",
+        "shows",
+        "prompt",
+        "images"
+      ],
+      "additionalProperties": false
+    },
+    "node": {
+      "type": "object",
+      "properties": {
+        "identity": {
+          "type": "object",
+          "properties": {
+            "dream": {
+              "type": "string"
+            },
+            "cut": {
+              "type": "string"
+            },
+            "order": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "sequence": {
+              "type": ["string", "null"]
+            },
+            "scene": {
+              "type": "string"
+            },
+            "shot": {
+              "type": "string"
+            },
+            "prev": {
+              "type": ["string", "null"]
+            },
+            "stage": {
+              "enum": ["waiting", "confirming", "drawing", "ready", "failed"]
+            },
+            "review": {
+              "enum": ["approved", "left", null]
+            }
+          },
+          "required": ["dream", "cut", "order", "sequence", "scene", "shot", "prev", "stage", "review"],
+          "additionalProperties": false
+        },
+        "story": {
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "minLength": 1
+            },
+            "point": {
+              "type": ["string", "null"]
+            },
+            "feeling": {
+              "type": ["string", "null"]
+            },
+            "purpose": {
+              "type": ["string", "null"]
+            },
+            "shift": {
+              "type": ["string", "null"]
+            },
+            "dream": {
+              "type": ["string", "null"]
+            },
+            "key": {
+              "type": "boolean"
+            },
+            "said": {
+              "type": "boolean"
+            },
+            "writing": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": ["action", "point", "feeling", "purpose", "shift", "dream", "key", "said", "writing"],
+          "additionalProperties": false
+        },
+        "who": {
+          "type": "object",
+          "properties": {
+            "visible": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "things": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "inView": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "enum": ["character", "location", "prop"]
+                  },
+                  "isDreamer": {
+                    "type": "boolean"
+                  },
+                  "look": {
+                    "type": ["string", "null"]
+                  },
+                  "image": {
+                    "type": ["string", "null"]
+                  },
+                  "turned": {
+                    "type": ["string", "null"]
+                  },
+                  "changes": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "what": {
+                          "type": "string"
+                        },
+                        "now": {
+                          "type": "string"
+                        },
+                        "part": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["what", "now"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "colours": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": ["id", "name", "kind", "isDreamer", "look", "image", "turned", "changes", "colours"],
+                "additionalProperties": false
+              }
+            },
+            "staging": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "across": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "members": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "group": {
+                    "type": "string"
+                  },
+                  "member": {
+                    "type": "string"
+                  },
+                  "word": {
+                    "type": "string"
+                  }
+                },
+                "required": ["group", "member", "word"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": ["visible", "things", "inView", "staging", "across", "members"],
+          "additionalProperties": false
+        },
+        "state": {
+          "type": "object",
+          "properties": {
+            "now": {
+              "type": ["array", "null"],
+              "items": {
+                "$ref": "#/$defs/nowOf"
+              }
+            },
+            "nowWords": {
+              "type": ["array", "null"],
+              "items": {
+                "type": "string"
+              }
+            },
+            "own": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/change"
+              }
+            },
+            "states": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "who": {
+                    "type": "string"
+                  },
+                  "what": {
+                    "type": "string"
+                  },
+                  "now": {
+                    "type": "string"
+                  }
+                },
+                "required": ["who", "what", "now"],
+                "additionalProperties": false
+              }
+            },
+            "held": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "handed": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "riders": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "on": {
+                    "type": ["string", "null"]
+                  },
+                  "rides": {
+                    "enum": ["front", "back", null]
+                  }
+                },
+                "required": ["id", "on", "rides"],
+                "additionalProperties": false
+              }
+            },
+            "climbers": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "of": {
+                    "type": "string"
+                  },
+                  "how": {
+                    "enum": ["into", "out of"]
+                  }
+                },
+                "required": ["id", "of", "how"],
+                "additionalProperties": false
+              }
+            },
+            "open": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "water": {
+              "type": ["number", "null"]
+            }
+          },
+          "required": ["now", "nowWords", "own", "states", "held", "handed", "riders", "climbers", "open", "water"],
+          "additionalProperties": false
+        },
+        "camera": {
+          "type": "object",
+          "properties": {
+            "eyes": {
+              "enum": ["dreamer", "outside"]
+            },
+            "size": {
+              "enum": ["close", "medium", "wide"]
+            },
+            "looksAt": {
+              "type": ["string", "null"]
+            },
+            "eye": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/eye"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "floorPlan": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/floorPlan"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "previs": {
+              "type": ["string", "null"]
+            },
+            "view": {
+              "type": ["string", "null"]
+            },
+            "brief": {
+              "type": ["string", "null"]
+            },
+            "words": {
+              "type": ["string", "null"]
+            },
+            "rules": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "tags": {
+              "type": ["object", "null"],
+              "properties": {
+                "role": {
+                  "enum": ["pov", "ots", "insert", "single", "two_shot", "group", "wide", "close_up"]
+                },
+                "move": {
+                  "enum": ["first", "same_setup", "same_side", "other_side", "reverse", "other_place", "jump", "seat"]
+                }
+              },
+              "required": ["role", "move"]
+            }
+          },
+          "required": [
+            "eyes",
+            "size",
+            "looksAt",
+            "eye",
+            "floorPlan",
+            "previs",
+            "view",
+            "brief",
+            "words",
+            "rules",
+            "tags"
+          ],
+          "additionalProperties": false
+        },
+        "dependencies": {
+          "type": "object",
+          "properties": {
+            "needs": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "depth": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "refs": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "enum": ["cut", "ghost"]
+                  },
+                  "role": {
+                    "enum": ["base", "composition", "lighting", "identity", "prop", "location"]
+                  },
+                  "relation": {
+                    "enum": ["same_setup", "same_side", "other_side", "other_place", "shift", "seat", null]
+                  },
+                  "carries": {
+                    "type": "string"
+                  },
+                  "who": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "turned": {
+                    "type": "boolean"
+                  }
+                },
+                "required": ["id", "kind", "role", "relation", "carries", "who", "turned"],
+                "additionalProperties": false
+              }
+            },
+            "unsent": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "why": {
+                    "type": ["object", "null"],
+                    "properties": {
+                      "code": {
+                        "enum": [
+                          "reverse",
+                          "camera_far",
+                          "state_differs",
+                          "no_cameras_words_differ",
+                          "light_only",
+                          "has_sketch",
+                          "seat_replaced_by_view",
+                          "edit_to_own_camera",
+                          "not_recorded"
+                        ]
+                      },
+                      "detail": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["code", "detail"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["id", "why"],
+                "additionalProperties": false
+              }
+            },
+            "withheld": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "why": {
+                    "enum": ["judged wrong", "stale"]
+                  },
+                  "base": {
+                    "const": true
+                  }
+                },
+                "required": ["id", "why"],
+                "additionalProperties": false
+              }
+            },
+            "alone": {
+              "type": ["object", "null"],
+              "properties": {
+                "view": {
+                  "type": "string"
+                },
+                "eye": {
+                  "$ref": "#/$defs/eye"
+                }
+              },
+              "required": ["view", "eye"],
+              "additionalProperties": false
+            },
+            "images": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/image"
+              }
+            }
+          },
+          "required": ["needs", "depth", "refs", "unsent", "withheld", "alone", "images"],
+          "additionalProperties": false
+        },
+        "checks": {
+          "type": "object",
+          "properties": {
+            "criteria": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/criterion"
+              }
+            },
+            "sheetHash": {
+              "type": ["string", "null"]
+            },
+            "flags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "differs": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": ["criteria", "sheetHash", "flags", "differs"],
+          "additionalProperties": false
+        },
+        "history": {
+          "type": "object",
+          "properties": {
+            "verdicts": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/verdict"
+              }
+            }
+          },
+          "required": ["verdicts"],
+          "additionalProperties": false
+        },
+        "prompt": {
+          "type": "object",
+          "properties": {
+            "text": {
+              "type": "string",
+              "minLength": 1
+            },
+            "paragraphs": {
+              "type": ["array", "null"],
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  },
+                  "fields": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": ["id", "text", "fields"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": ["text", "paragraphs"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["identity", "story", "who", "state", "camera", "dependencies", "checks", "history", "prompt"],
+      "additionalProperties": false
+    }
+  },
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "dream": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "style": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "required": ["id", "name"],
+          "additionalProperties": false
+        },
+        "switches": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "keys": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "writer": {
+          "type": ["string", "null"]
+        }
+      },
+      "required": ["id", "title", "style", "switches", "keys", "writer"],
+      "additionalProperties": false
+    },
+    "elements": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/element"
+      }
+    },
+    "ghosts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ghost"
+      }
+    },
+    "cuts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/node"
+      }
+    }
+  },
+  "required": ["version", "dream", "elements", "ghosts", "cuts"],
+  "additionalProperties": false
+}
