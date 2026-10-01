@@ -120,6 +120,7 @@ describe('two runs of the same dreams, side by side', () => {
         run: 'qwen-1',
         dream: DREAM,
         title: 'The Heron Teacher',
+        readings: ['typed readings not cached: m1'],
         updated: '2026-10-01T03:00:00Z',
         pictures: [
           { id: 'p1', kind: 'sketch', name: 'you', state: 'done', file: join(dir, 'img', 'sketch-p1.png') },
@@ -146,6 +147,8 @@ describe('two runs of the same dreams, side by side', () => {
     // Files by name only, as each run's own page has them.
     expect(got.pairs!.find((p) => p.id === 'm1')!.b!.file).toBe('cut-m1.png');
     expect(Object.keys(got.verdicts!)).toEqual(['a', 'b']);
+    // What each run drew without, so a run missing its readings is never judged as if it had them.
+    expect(got.readings).toEqual({ a: [], b: ['typed readings not cached: m1'] });
   });
 
   test("none for a run not here, one run against itself, or a name that is not a run's", () => {

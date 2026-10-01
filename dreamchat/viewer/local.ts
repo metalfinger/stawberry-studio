@@ -196,6 +196,8 @@ export function localCompare(
   dreams: { dream: string; title: string; a: number; b: number }[];
   pairs?: LocalPair[];
   verdicts?: { a: LocalVerdicts; b: LocalVerdicts };
+  /** What each run drew without (its readings not cached): two runs that differ in it are not a fair comparison. */
+  readings?: { a: string[]; b: string[] };
 } | null {
   if (!SAFE.test(a) || !SAFE.test(b) || a === b) return null;
   const runs = localRuns();
@@ -220,5 +222,10 @@ export function localCompare(
       !!fa && !!fb && pa?.state === 'done' && pb?.state === 'done' && readFileSync(fa).equals(readFileSync(fb));
     return { id, kind: p.kind, name: p.name, a: pa, b: pb, ...(same ? { shared: true as const } : {}) };
   });
-  return { dreams, pairs, verdicts: { a: da.verdicts, b: db.verdicts } };
+  return {
+    dreams,
+    pairs,
+    verdicts: { a: da.verdicts, b: db.verdicts },
+    readings: { a: da.manifest.readings ?? [], b: db.manifest.readings ?? [] },
+  };
 }
