@@ -440,11 +440,31 @@ export function coloursIn(text: string): string[] {
 export const DREAM_QUALITY =
   'the stillness of a remembered moment, light a little softer than real and edges a little less sure, with no fog, haze or effects added';
 
+/** A style's direction about people other than the one a sketch is of: a crowd, people in the background, passers-by. */
+const OTHER_PEOPLE =
+  /\b(?:background (?:people|figures|characters)|(?:people|figures|characters) in the background|crowds?|passers?-?by|bystanders|onlookers|other people|strangers)\b/i;
+
 export function styleBlock(
   style: StyleOption,
   told: string[] = [],
-  opts: { fromImages?: boolean; ownColours?: boolean; noSkin?: boolean; saidAbove?: boolean } = {},
+  opts: {
+    fromImages?: boolean;
+    ownColours?: boolean;
+    noSkin?: boolean;
+    saidAbove?: boolean;
+    /** For a sketch: the style's way of drawing, without its directions about other people (`sketch_style`). */
+    sketch?: boolean;
+  } = {},
 ): string {
+  // A sketch is of one person, place or thing: "background people softly blurred" put a crowd in every sketch of the
+  // Barley Degree (1 Oct). Each technique and each part of the dream's feel that directs other people is left out.
+  const own = (x: string) => !opts.sketch || !OTHER_PEOPLE.test(x);
+  // Clause by clause: "shallow depth of field, background people softly blurred" keeps its depth of field.
+  const tokens = opts.sketch
+    ? style.tokens.map((t) => t.split(/,\s*/).filter(own).join(', ')).filter(Boolean)
+    : style.tokens;
+  const whole = style.dream?.trim() || DREAM_QUALITY;
+  const feel = opts.sketch ? whole.split(/;\s*/).filter(own).join('; ') : whole;
   const colours = [...new Set(style.palette_hex.map(colourName))];
   const mono = oneColour(style);
   // A photograph of a person in a cold palette still has warm skin; one in black and white does not,
@@ -466,8 +486,8 @@ export function styleBlock(
     `Style: ${style.name}.`,
     `Made as: ${mediumOf(style)}. Every part of the picture is made this way, the same as every other picture of this dream.`,
     // A dream should feel like one whatever it is made as: from how this one felt, never a filter.
-    `It feels like a dream, in every picture: ${style.dream?.trim() || DREAM_QUALITY}.`,
-    style.tokens.length ? `Technique, followed exactly: ${style.tokens.join('; ')}.` : '',
+    `It feels like a dream, in every picture: ${feel || DREAM_QUALITY}.`,
+    tokens.length ? `Technique, followed exactly: ${tokens.join('; ')}.` : '',
     colours.length
       ? mono
         ? shades
@@ -709,6 +729,19 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
     AGE.test(identity) &&
     !AGE.test(facts) &&
     !AGE.test(item.name);
+  // With the one builder's `sketch_who` step, who they are is said whether or not it gives their age: "a woman" with no
+  // age was dropped, and G.H. was sketched a young man like the dreamer (the Barley Degree, 1 Oct). Not where their
+  // look or name already says every word of it.
+  const known = `${facts} ${item.name}`.toLowerCase();
+  const who_ =
+    builds('sketch_who') &&
+    item.kind === 'character' &&
+    !item.isDreamer &&
+    !isAnimal(item) &&
+    !isGroup(item) &&
+    !!identity &&
+    !VAGUE.test(identity) &&
+    !(identity.toLowerCase().match(/[a-z]{3,}/g) ?? []).every((w) => new RegExp(`\\b${w}\\b`).test(known));
   const name = item.isDreamer
     ? who && !VAGUE.test(who) && !/^(the dreamer|you|me|myself|i)$/i.test(who.trim())
       ? `the dreamer, ${who.replace(/^the dreamer,?\s*/i, '').replace(/[\s,.;]+$/, '')}`
@@ -717,7 +750,7 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
       ? // A place named for what happened there ("inside, sitting with couple of people") beside
         // "with no people in it" read as a contradiction, and the sketch was held (Meads, 25 Sep).
         'this place'
-      : aged
+      : aged || who_
         ? `${pictureName(item.name)}, ${identity}`
         : pictureName(item.name);
   // A dog sketched as "one person only", "the face and clothes clearly seen", read as unclear and
@@ -731,7 +764,9 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
           ? `A single full-length picture of ${name}, all of them together and no one else, as they ordinarily look: standing side by side in a relaxed three-quarter view, every figure from head to feet, each face clearly visible.`
           : `A single full-length picture of ${name}, one person only, as they ordinarily look: standing in a relaxed three-quarter view, the whole figure from head to feet, the face clearly visible.`
         : item.kind === 'location'
-          ? `A single wide picture of ${name}, as it ordinarily looks, with no people in it, showing the whole place and how it is laid out.`
+          ? builds('place_alone')
+            ? `A single wide picture of ${name}, as it ordinarily looks: the place alone, empty, showing the whole place and how it is laid out.`
+            : `A single wide picture of ${name}, as it ordinarily looks, with no people in it, showing the whole place and how it is laid out.`
           : isMany(item)
             ? // "The letters", hundreds of them, as "a single clear picture of the letters on its own, as
               // it ordinarily looks" read as at odds with itself, and the sketch was held (snow train, 26 Sep).
@@ -770,7 +805,7 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
     without,
     clear,
     repair,
-    styleBlock(style, toldColours(item), { ownColours }),
+    styleBlock(style, toldColours(item), { ownColours, ...(builds('sketch_style') ? { sketch: true } : {}) }),
     `${background}${noWords}`,
   ]
     .filter(Boolean)
