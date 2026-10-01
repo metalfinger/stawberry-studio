@@ -1182,6 +1182,164 @@ export function previsImage(
   return png(width, height, paint(r, true));
 }
 
+/** One named person, creature or thing on a colour-keyed mock-up, and the colour it is drawn in. */
+export type KeyEntry = { id: string; name: string; colour: string; kind: 'person' | 'crowd' | 'thing' };
+
+type RGB = [number, number, number];
+
+/** Who is who on a colour-keyed mock-up: one flat marker colour per person or creature, well apart. */
+const MARKERS: [string, RGB][] = [
+  ['red', [214, 40, 40]],
+  ['blue', [36, 92, 214]],
+  ['yellow', [240, 196, 25]],
+  ['green', [30, 160, 70]],
+  ['magenta', [200, 40, 170]],
+  ['orange', [240, 120, 20]],
+  ['cyan', [20, 180, 200]],
+  ['purple', [120, 60, 190]],
+];
+
+/**
+ * A thing's own colour, from its words: a colour it is said to be, else what it is or is made of (its head word first:
+ * the fish stall is a stall, not a fish). The local machine keeps image 1's colours, so a thing is drawn in its own
+ * colour, never a person's marker.
+ */
+const COLOUR_WORDS: [RegExp, string, RGB][] = [
+  [/\b(?:red|crimson|scarlet)\b/i, 'red', [178, 52, 44]],
+  [/\bpink\b/i, 'pink', [222, 140, 170]],
+  [/\borange\b/i, 'orange', [214, 120, 48]],
+  [/\byellow\b/i, 'yellow', [222, 190, 60]],
+  [/\bgreen\b/i, 'green', [70, 130, 80]],
+  [/\b(?:blue|navy)\b/i, 'blue', [60, 90, 160]],
+  [/\b(?:purple|violet)\b/i, 'purple', [120, 80, 150]],
+  [/\bbrown\b/i, 'brown', [130, 90, 58]],
+  [/\bblack\b/i, 'black', [52, 52, 56]],
+  [/\bwhite\b/i, 'white', [232, 230, 222]],
+  [/\bsilver\b/i, 'silver', [176, 180, 186]],
+  [/\b(?:gold|golden)\b/i, 'gold', [196, 160, 70]],
+  [/\b(?:grey|gray)\b/i, 'grey', [140, 140, 136]],
+];
+const THING_WORDS: [RegExp, string, RGB][] = [
+  [
+    /^(?:leather|wood|wooden|oak|desks?|tables?|chairs?|benches?|doors?|shel(?:f|ves)|bookshel(?:f|ves)|boats?|cabinets?|wardrobes?|suitcases?|stalls?|crates?|barrels?)$/i,
+    'brown',
+    [138, 102, 70],
+  ],
+  [/^(?:blackboards?|iron|railings?|rails?)$/i, 'black', [52, 52, 56]],
+  [/^(?:paper|newspapers?|snow|letters?|envelopes?)$/i, 'white', [232, 230, 222]],
+  [/^(?:steel|metal|fish|knife|knives)$/i, 'silver', [176, 180, 186]],
+  [/^(?:brass|keys?)$/i, 'gold', [196, 160, 70]],
+  [/^(?:stone|concrete|steps|stairs|wall|walls)$/i, 'grey', [140, 140, 136]],
+  [/^(?:glass|windows?)$/i, 'pale blue', [176, 200, 214]],
+  [/^(?:grass|field|trees?|bush(?:es)?|leaves|orchard|hedges?)$/i, 'green', [96, 136, 80]],
+  [/^(?:water|river|sea|lake|pond)$/i, 'blue', [88, 128, 156]],
+  [/^(?:sand|beach)$/i, 'beige', [210, 196, 160]],
+];
+/** A thing's colour by its words: said, else its head word, else any word it has. */
+export function thingColour(words: string): [string, RGB] {
+  const said = COLOUR_WORDS.find(([re]) => re.test(words));
+  if (said) return [said[1], said[2]];
+  const ws = (words.toLowerCase().match(/[a-z]+/g) ?? []).filter(
+    (w) => !['the', 'a', 'an', 'of', 'my', 'his', 'her', 'their', 'other'].includes(w),
+  );
+  for (const w of [ws.at(-1) ?? '', ...ws.slice(0, -1).reverse()]) {
+    const hit = THING_WORDS.find(([re]) => re.test(w));
+    if (hit) return [hit[1], hit[2]];
+  }
+  return THING_NEUTRAL;
+}
+const THING_NEUTRAL: [string, RGB] = ['grey-brown', [150, 142, 130]];
+
+/** What is not named on a colour-keyed mock-up, in muted colours of what it is: the room, the ground, a crowd. */
+const SURFACES: Record<string, RGB> = {
+  floor: [176, 164, 146],
+  ceiling: [228, 226, 220],
+  'left wall': [214, 210, 200],
+  'right wall': [210, 206, 196],
+  'back wall': [206, 202, 192],
+  front: [202, 198, 188],
+  ground: [150, 158, 134],
+  water: [96, 132, 160],
+};
+const CROWD: [string, RGB] = ['slate grey', [118, 124, 136]];
+const SEATS: RGB = [104, 92, 80];
+const SKY: RGB = [222, 228, 234];
+
+/**
+ * The previs frame of a camera on a plan, colour-keyed for an image model that reads a guide poorly (the local machine,
+ * evals/local-run.ts's qwen profile): no labels; each person and creature in its own flat marker colour, each thing in
+ * its own colour from its words, the room, the ground and a crowd in muted colours of what they are; the same camera,
+ * shapes and shading as the clay frame (previsImage), and the key that says which colour is who.
+ */
+export function previsKeyed(
+  plan: Blocking,
+  eye: Eye,
+  leaveOut: string[],
+  name: (id: string) => string,
+  width = 1376,
+  height = 768,
+): { png: Uint8Array; key: KeyEntry[] } {
+  const solids = solidsOf(
+    plan,
+    leaveOut,
+    name,
+    leaveOut.length ? undefined : eye,
+    leaveOut.length ? eye : undefined,
+    true,
+  );
+  const r = render(solids, eye, width, height);
+  const spotOf = (id: string) => plan.spots.find((x) => x.id === id);
+  const min = width * height * 0.002;
+  const shown = (id: string) => (r.seen.get(id)?.visible ?? 0) >= min;
+  const colours = new Map<number, RGB>();
+  const key: KeyEntry[] = [];
+  // Things first, in their own colours; then people, in markers no thing in view already has.
+  const said = (id: string, label?: string) => spotOf(id)?.name ?? label ?? name(id);
+  const taken = new Set<string>();
+  solids.forEach((sol, k) => {
+    const sp = spotOf(sol.id);
+    if (!sp) {
+      colours.set(k, / seats$/.test(sol.id) ? SEATS : (SURFACES[sol.id] ?? SURFACES['back wall']));
+      return;
+    }
+    if (sp.many) {
+      colours.set(k, CROWD[1]);
+      if (shown(sol.id)) key.push({ id: sol.id, name: said(sol.id, sol.label), colour: CROWD[0], kind: 'crowd' });
+      return;
+    }
+    if (isPerson(sp)) return;
+    const words = said(sol.id, sol.label);
+    const [c, rgb] = thingColour(words);
+    colours.set(k, rgb);
+    if (shown(sol.id)) {
+      taken.add(c);
+      key.push({ id: sol.id, name: words, colour: c, kind: 'thing' });
+    }
+  });
+  // People and creatures, the biggest in the frame first, each its own marker.
+  const markers = MARKERS.filter(([c]) => !taken.has(c));
+  solids
+    .map((sol, k) => ({ sol, k, sp: spotOf(sol.id) }))
+    .filter((x) => x.sp && !x.sp.many && isPerson(x.sp))
+    .sort((a, b) => (r.seen.get(b.sol.id)?.visible ?? 0) - (r.seen.get(a.sol.id)?.visible ?? 0))
+    .forEach((x, n) => {
+      const [c, rgb] = markers[n % markers.length];
+      colours.set(x.k, rgb);
+      if (shown(x.sol.id)) key.push({ id: x.sol.id, name: said(x.sol.id, x.sol.label), colour: c, kind: 'person' });
+    });
+  const rgb = new Uint8Array(width * height * 3);
+  for (let i = 0; i < width * height; i++) {
+    const k = r.solid[i];
+    const base = k >= 0 ? (colours.get(k) ?? THING_NEUTRAL[1]) : SKY;
+    // The clay's own light and outlines, carried onto the colour: lit faces light, edges dark.
+    const f = k >= 0 ? Math.max(0.3, Math.min(1.15, r.lum[i] / Math.max(0.2, solids[k].tone))) : 1;
+    for (let c = 0; c < 3; c++) rgb[i * 3 + c] = Math.max(0, Math.min(255, Math.round(base[c] * f)));
+  }
+  const order = { person: 0, thing: 1, crowd: 2 } as const;
+  key.sort((a, b) => order[a.kind] - order[b.kind]);
+  return { png: png(width, height, rgb), key };
+}
+
 /**
  * Which of a room's walls a camera has ahead, on the picture's left or right, behind it, or out of the
  * picture to one side, read off its render (the camera rules' reverse angle, camera.ts). Indoors, the
