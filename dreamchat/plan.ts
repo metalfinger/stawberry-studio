@@ -52,7 +52,7 @@ import { withheldOf } from './verdicts';
 import { callJev } from './jev';
 import { recordForPlan, recordInputsOf } from './record';
 import type { Breakdown } from './producer';
-import type { Session } from './session';
+import { type Session, treeInputWith } from './session';
 import { type Item, sheetPrompt } from './sheets';
 
 /** One picture as it would be sent: its prompt and its images, in order. */
@@ -163,6 +163,14 @@ export function rebuild(
   const drawnPlan = recorded.size
     ? { ...kept, cuts: kept.cuts.map((c) => recorded.get(c.id)?.moment?.frame.plan ?? heldPlan(c.id) ?? c) }
     : plan;
+  // With the one builder's `one_tree` step (S6 row 2), the tree the panel shows: the same frames, prep, grounding notes
+  // and goals as the session's, from the plan this rebuild draws from.
+  const oneTree = (items: Item[]) => {
+    const treeInput = builds('one_tree')
+      ? treeInputWith({ ...s, transcript: s.transcript ?? [] }, drawnPlan, items)
+      : null;
+    return treeInput ? { treeInput } : {};
+  };
   const dream =
     mode === 'off'
       ? null
@@ -174,6 +182,7 @@ export function rebuild(
           style,
           readings: s.draft?.readings,
           words: inputs.words,
+          ...oneTree(inputs.items),
         });
   // A picture rebuilt from its record (S9) reads the story record as the sketches were kept, not as a rebuild takes
   // them (every one drawn): a sketch not drawn when it was sent was sent with its own words.
@@ -188,6 +197,7 @@ export function rebuild(
           style,
           readings: s.draft?.readings,
           words: inputs.words,
+          ...oneTree(s.build?.items ?? []),
         });
   const pictures = [...buildFrames(b, plan), ...buildGhosts(plan)].map((p): Item => ({
     ...p,

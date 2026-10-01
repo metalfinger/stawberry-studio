@@ -174,6 +174,10 @@ export const BUILDER_STEPS: readonly string[] = [
   //    plan of the last re-plan and the cast it was first put in with, while a rebuild reads the dream as it stands
   //    (2 of 61 moments sent with an out-of-date cast, S9). Row 2 (one tree) needs it.
   'fresh_send',
+  // 2. One tree: the cut sheet reads the tree the panel shows, one plan (the plan made now, each moment held to the plan
+  //    it is drawn from), the frames drawn, whether the prep is this dream's, the grounding notes and the goals; built
+  //    after 17, the plan a moment is sent from (the step's place in the ledger, here at the end).
+  'one_tree',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;
