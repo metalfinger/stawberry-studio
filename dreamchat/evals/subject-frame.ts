@@ -11,7 +11,7 @@ import './local-env';
 import { jevWithModel } from '../jev';
 import { rebuild } from '../plan';
 import { facesNeeded, shotPlan } from '../continuity';
-import { inFrame } from '../previs';
+import { HEIGHT_FOR, inFrame } from '../previs';
 import type { Session } from '../session';
 import { withCast } from './cast-cache';
 import { withImplied } from './implied-cache';
@@ -59,7 +59,7 @@ for (const { id, live: isLive } of ids) {
       // in no mock-up's picture and is drawn through the water.
       const outOf = !(c.sees ?? []).includes(p) && !(f && f.height > 0);
       // By the shot's size: a close shot is a head and shoulders, a medium one from the waist, a wide one all of them.
-      const least = { close: 0, medium: 0.4, wide: 0.7 }[m.distance] ?? 0.5;
+      const least = HEIGHT_FOR[m.distance] ?? 0.5;
       const bad = outOf || !f || f.height < least || !f.head;
       if (bad) {
         lost++;

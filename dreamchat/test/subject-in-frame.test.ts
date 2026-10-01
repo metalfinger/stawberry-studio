@@ -4,7 +4,7 @@
 // time and at most 0.35 radians, until each of those heads is inside the frame (headsIn).
 import { describe, expect, test } from 'bun:test';
 import { facesNeeded } from '../continuity';
-import { headsIn, inFrame } from '../previs';
+import { dreamerShot, headsIn, inFrame } from '../previs';
 
 const b = {
   people: [
@@ -37,6 +37,22 @@ describe('whose face a moment needs', () => {
   });
 });
 
+describe("through the dreamer's own eyes, whose face its point needs", () => {
+  test('whom the point names; one only the action names is where they are, unless the point says him or her', () => {
+    // b0cb m3: the grandfather holds out the letters, and the view of them tilted up to his head.
+    const letters = moment('dreamer', 'Ethan holds out the suitcase full of letters', 'the pile of envelopes');
+    expect(facesNeeded(b as never, letters)).toEqual([]);
+    expect(facesNeeded(b as never, moment('dreamer', 'Ethan turns to them', 'his tired smile'))).toEqual(['p2']);
+    // Seen from outside, as before: whom the action names too.
+    expect(
+      facesNeeded(
+        b as never,
+        moment('outside', 'Ethan holds out the suitcase full of letters', 'the pile of envelopes'),
+      ),
+    ).toEqual(['p2']);
+  });
+});
+
 describe('the camera tilts to hold their heads', () => {
   // Ethan standing two metres ahead; the eye sitting, looking down at what is in its lap.
   const plan = {
@@ -65,5 +81,42 @@ describe('the camera tilts to hold their heads', () => {
 
   test('with no one to hold, the camera as it was', () => {
     expect(headsIn(down, [], plan)).toBe(down);
+  });
+
+  test("then down, the head kept in, to hold as much of them as the moment's size does", () => {
+    const near = {
+      front: 'the gate',
+      spots: [{ id: 'p2', x: 3, y: 4.2, kind: 'person' as const, pose: 'standing' as const, faces: 'the gate' }],
+      room: [8, 8] as [number, number],
+    } as never;
+    const level = { at: { x: 3, y: 5 }, d: { x: 0, y: -1 }, height: 1.6, pitch: -0.07, lens: 24 } as never;
+    expect(inFrame(near, level, 'p2')!.height).toBeLessThan(0.4);
+    const f = inFrame(near, headsIn(level, ['p2'], near, 0.4), 'p2')!;
+    expect(f.height).toBeGreaterThanOrEqual(0.4);
+    expect(f.head).toBe(true);
+    expect(f.top).toBeGreaterThanOrEqual(0.06);
+    // With no size to hold, the head alone.
+    expect(headsIn(level, ['p2'], near)).toBe(level);
+  });
+});
+
+describe("the dreamer's view stands back to hold them at the moment's size", () => {
+  test('half a metre from Tomas, a moment from the waist leans back and holds him from the waist (0f40 m2)', () => {
+    const plan = {
+      front: 'the gate',
+      spots: [
+        { id: 'p1', x: 3, y: 5, kind: 'person' as const, pose: 'standing' as const, faces: 'the gate' },
+        { id: 'p2', x: 3, y: 4.5, kind: 'person' as const, pose: 'standing' as const, faces: 'the gate' },
+      ],
+      room: [8, 8] as [number, number],
+    } as never;
+    const name = (id: string) => (id === 'p2' ? 'Tomas' : 'the dreamer');
+    const before = dreamerShot(plan, 'p1', 'p2', name, undefined, ['p2'])!;
+    expect(inFrame(plan, before.eye, 'p2')!.height).toBeLessThan(0.4);
+    const after = dreamerShot(plan, 'p1', 'p2', name, undefined, ['p2'], ['p2'], 0.4)!;
+    const f = inFrame(plan, after.eye, 'p2')!;
+    expect(f.height).toBeGreaterThanOrEqual(0.4);
+    expect(f.head).toBe(true);
+    expect(after.text).toContain('leaning back');
   });
 });

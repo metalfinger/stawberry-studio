@@ -741,18 +741,26 @@ export function inFrame(
 }
 
 /**
+ * How much of someone's height a shot of each size holds (`subject_in_frame`): a close shot is a head and shoulders, a
+ * medium one from the waist, a wide one all of them.
+ */
+export const HEIGHT_FOR: Record<string, number> = { close: 0, medium: 0.4, wide: 0.7 };
+
+/**
  * The camera tilted, a little at a time, until every head a moment needs (`subject_in_frame`) is inside the frame with a
  * margin: up where one is cut by the top, down where one is below it, at most 20 degrees either way. Close shots of
  * someone came out a chin and a collar, their head above the frame (34 of 281 named people, the saved dreams, 2 Oct).
  */
-export function headsIn(eye: Eye, heads: string[], plan: Blocking): Eye {
+export function headsIn(eye: Eye, heads: string[], plan: Blocking, least = 0): Eye {
   if (!heads.length) return eye;
   let e = eye;
   const start = eye.pitch ?? 0;
-  for (let i = 0; i < 40; i++) {
-    const tops = heads
-      .map((id) => inFrame(plan, e, id))
+  const across = (x: Eye) =>
+    heads
+      .map((id) => inFrame(plan, x, id))
       .filter((f): f is NonNullable<ReturnType<typeof inFrame>> => !!f && f.across >= 0 && f.across <= 1);
+  for (let i = 0; i < 40; i++) {
+    const tops = across(e);
     const up = tops.some((f) => f.top < 0.06);
     const down = tops.some((f) => f.top > 0.94);
     if (up === down) break;
@@ -760,6 +768,18 @@ export function headsIn(eye: Eye, heads: string[], plan: Blocking): Eye {
     if (Math.abs(pitch - start) > 0.35) break;
     e = { ...e, pitch };
   }
+  // Then down, every head kept inside its margin, until they are as much of their height as the moment's size holds: Tomas
+  // a step off, from the chest up at eye level, from the waist with the eyes lowered a little (0f40 m2).
+  if (least)
+    for (let i = 0; i < 40; i++) {
+      const now = across(e);
+      if (!now.length || now.every((f) => f.height >= least) || now.some((f) => f.top < 0.06)) break;
+      const pitch = (e.pitch ?? 0) - 0.015;
+      if (Math.abs(pitch - start) > 0.35) break;
+      const next = { ...e, pitch };
+      if (across(next).some((f) => f.top < 0.06)) break;
+      e = next;
+    }
   return e;
 }
 
@@ -1830,6 +1850,8 @@ export function dreamerShot(
   want: string[] = [],
   /** Whose heads the frame keeps (continuity facesNeeded, `subject_in_frame`): the view tilts to hold them. */
   heads: string[] = [],
+  /** How much of their height the moment's size holds (HEIGHT_FOR): the view leans back to hold it. */
+  least = 0,
 ): { eye: Eye; text: string; rules?: string[]; inPicture: string[]; outside: string[] } | null {
   const me = plan.spots.find((s) => s.id === dreamer);
   if (!me) return null;
@@ -1889,6 +1911,7 @@ export function dreamerShot(
   const near = plan.spots.filter((s) => s.id !== dreamer && s.id !== target?.id && isPerson(s) && !s.many);
   const onIt = !!target && onFootprint(me, target, plan);
   let best: { eye: Eye; score: number } | undefined;
+  const fitted = !!target && !!heart && least > 0;
   // Who the moment shows besides what it looks at: in the picture, where the view can hold them. Looking
   // straight ahead from the tractor's seat left out the driver it was about (lighthouse, 25 Sep).
   const wanted = want.filter((id) => id !== dreamer && id !== target?.id && plan.spots.some((s) => s.id === id));
@@ -1909,7 +1932,9 @@ export function dreamerShot(
             Math.min(0.6, Math.atan2(heart.z - height, Math.max(0.5, Math.hypot(heart.x - at.x, heart.y - at.y)))),
           )
         : PITCH;
-      const eye: Eye = { at, d, height, pitch: Math.abs(pitch) < 0.35 ? PITCH : pitch, ...(lean ? { lean } : {}) };
+      const aimed: Eye = { at, d, height, pitch: Math.abs(pitch) < 0.35 ? PITCH : pitch, ...(lean ? { lean } : {}) };
+      // Held as the moment's size has whom it is about, where it says (subject_in_frame): each view judged as it is framed.
+      const eye = fitted ? headsIn(aimed, heads, plan, least) : aimed;
       if (!target || !heart) {
         // Nothing it looks at on the plan: straight ahead, turned only as far as it takes to show who
         // the moment shows.
@@ -1939,6 +1964,12 @@ export function dreamerShot(
       // At the red door, the mock-up was one grey wall with its label and nothing else (snow-train m6, judged blind).
       // What they are in or on fills the view as it should: the river the boat floats on.
       const swamps = camera && !onIt ? Math.max(0, t.share - 0.6) : 0;
+      // Far enough back to hold whom the moment is about at its size (subject_in_frame), before anything the view prefers:
+      // half a metre from Tomas, a moment from the waist came out from his shoulders up (0f40 m2).
+      const short =
+        heads.length && least
+          ? heads.reduce((a, id) => a + Math.max(0, least - (inFrame(plan, eye, id)?.height ?? 0)), 0) / heads.length
+          : 0;
       const score =
         (2 * clear) / 49 +
         t.visible / Math.max(1, t.drawn) +
@@ -1947,6 +1978,7 @@ export function dreamerShot(
         3 * swamps -
         3 * Math.max(0, close - 0.12) -
         how -
+        10 * short -
         Math.abs(aim) * 0.01 +
         shows(r);
       if (!best || score > best.score + 1e-9) best = { eye, score };
@@ -1954,7 +1986,7 @@ export function dreamerShot(
   if (!best) return null;
   // Looking down at what they hold never drops the one the moment is about below the frame: old Ethan on the train was a
   // seat-back and his knees (subject_in_frame).
-  const eye = headsIn(best!.eye, heads, plan);
+  const eye = fitted ? best!.eye : headsIn(best!.eye, heads, plan, least);
   const r = render(solidsAt(eye), eye, 384, 216);
   const min = 384 * 216 * 0.002;
 

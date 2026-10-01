@@ -46,7 +46,7 @@ import {
   waterLevel,
   wordsAbout,
 } from './camera';
-import { dreamerShot, onOf, outsideShot, shapeOf } from './previs';
+import { HEIGHT_FOR, dreamerShot, onOf, outsideShot, shapeOf } from './previs';
 import { type Breakdown, hasBefore, isWhole, type Moment, moments, POSITION, type State } from './producer';
 import type { NowOf } from './record';
 import { refsMode, SEVERAL } from './refs';
@@ -1093,7 +1093,12 @@ export function facesNeeded(b: Breakdown, m: Moment): string[] {
   // Its one thing to show beginning with a thing ("the key in the lock", "a bucket of stars"): an insert on it.
   const first = words(point).slice(0, 3);
   if (b.things.some((t) => words(t.name).some((w) => first.includes(w)))) return [];
-  const said = new Set(words(`${m.action} ${point}`));
+  // Through the dreamer's own eyes the view is aimed at what they look at, and its one thing to show is what they see: a
+  // face is needed where it names them, or says "he", "her face", with only the action naming them. Held to the
+  // grandfather the action names, the view of the letters he holds out tilted from them to his head (b0cb m3), and the
+  // terrier "just out of sight around the curve" was to be in the picture (cbba m4).
+  const own = m.eyes === 'dreamer' && !/\b(?:he|she|him|her|his|hers|face|faces|smil\w*|expression)\b/i.test(point);
+  const said = new Set(words(own ? point : `${m.action} ${point}`));
   const dreamer = b.people.find((p) => p.is_dreamer)?.id;
   return m.visible.filter((id) => {
     const p = b.people.find((x) => x.id === id);
@@ -2042,6 +2047,7 @@ function planWith(
         toward ? undefined : beyond || undefined,
         seen(m),
         builds('subject_in_frame') ? facesNeeded(b, m) : [],
+        builds('subject_in_frame') ? (HEIGHT_FOR[m.distance] ?? 0) : 0,
       );
       if (v) {
         c.view = v.text;
