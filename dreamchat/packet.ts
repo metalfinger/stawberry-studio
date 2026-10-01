@@ -7,6 +7,7 @@
 // same seed. Written from what a rebuild already has (plan.ts rebuild: the cut sheet, the continuity plan, the floor
 // plans, the story record); nothing on the drawing path calls it, so it changes no prompt, no image and no plan.
 // Checked against its schema (`PACKET_SCHEMA`, written out as packet.schema.json for a harness in any language).
+import { builds } from './cleanups';
 import { drawnEnv } from './asdrawn';
 import type { Blocking, Eye, Spot } from './blocking';
 import { shotPlan } from './continuity';
@@ -361,7 +362,15 @@ export function dreamPacket(
             scene: cp?.scene ?? sh?.scene ?? '',
             shot: cp?.shot ?? sh?.shot ?? '',
             prev: sh ? sh.prev : i > 0 ? cuts[i - 1].id : null,
-            stage: p.item.status,
+            // Never ready without a camera where it has a floor plan, unless it edits a picture (whose camera it keeps):
+            // Neighbours' crowd moments went out "ready" with no eye, view or mock-up (crowd_camera, 1 Oct).
+            stage:
+              builds('crowd_camera') &&
+              !cp?.eye &&
+              !cp?.refs?.some((r) => r.role === 'base') &&
+              !!shotPlan(r.b, p.id, r.rec)
+                ? 'failed'
+                : p.item.status,
             review: p.item.review ?? null,
           },
           story: {

@@ -268,10 +268,16 @@ export function inViewOf(frame: Item, sheets: Item[], shows?: string[], showsEye
   // beside them is between them and what they turn to (24 Sep).
   const sees = (f.plan?.sees ?? []).filter((id) => !listed.includes(id));
   const people = shows ? listed.filter((id) => byId.get(id)?.kind === 'character') : f.visible;
+  // With the one builder's `framed_only`, someone the view says is outside the picture is not in it: no image of them
+  // is sent and they are not listed ("just outside the picture to the left is the man in the wheelchair", his image
+  // sent all the same, the merged flow's dream 3, 1 Oct). Only what the view says is out: the whale under the water
+  // beside the boat is not in the mock-up's frame and is in the picture (library-2 m8). Only people.
+  const out = builds('framed_only') ? new Set(f.plan?.outside ?? []) : null;
   return [
     // Through the dreamer's own eyes the dreamer is the camera, never a face in the picture.
     ...people
       .filter((id) => !((shows ? (showsEyes ?? f.eyes) : f.eyes) === 'dreamer' && byId.get(id)?.isDreamer))
+      .filter((id) => !out?.has(id))
       .map((id) => byId.get(id)),
     ...(shows ? listed.filter((id) => byId.get(id)?.kind !== 'character') : f.things).map((id) => byId.get(id)),
     ...sees.map((id) => byId.get(id)),

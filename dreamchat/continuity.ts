@@ -121,6 +121,8 @@ export type CutPlan = {
   eye?: Eye;
   /** Who and what that view has in the picture: drawn from their sketches like anyone in view. */
   sees?: string[];
+  /** Who and what that view says is outside the picture: with `framed_only`, a person there is not sent (frames.ts). */
+  outside?: string[];
   /**
    * With the camera rules, through the dreamer's own eyes: what they carry that the moment does not name,
    * out of the picture (`unsaidHeld`): off the mock-up, out of "In it" and its images, no hands for it.
@@ -2014,6 +2016,7 @@ function planWith(
         c.view = v.text;
         c.eye = v.eye;
         c.sees = v.inPicture;
+        if (builds('framed_only')) c.outside = v.outside;
         if (v.rules) c.rules = v.rules;
         // Made from its previs, the view needs nothing from the picture the dreamer was seen in:
         // it is neither drawn from nor waited for, so it can be drawn alongside it.
@@ -2027,7 +2030,12 @@ function planWith(
         c.refs = c.refs.filter((r) => r.relation !== 'seat');
       }
     } else {
-      const fromBehind = !!m.looks_at && bare(m.looks_at).includes(bare(plan.front));
+      // Facing what the moment looks at, never with it behind the camera: the front "the wall with the stairs to the roof"
+      // holds the stairs a moment looks at (crowd_camera, Neighbours m8).
+      const fromBehind =
+        !!m.looks_at &&
+        (bare(m.looks_at).includes(bare(plan.front)) ||
+          (builds('crowd_camera') && bare(plan.front).includes(bare(m.looks_at))));
       // A crowd the moment is about goes to the camera too, to be framed and said: "the couple of
       // people" never reached it, and the picture said nobody else was there (25 Sep).
       const ids = [...seen(m), ...m.things].filter((id) => plan.spots.some((s) => s.id === id));
@@ -2104,6 +2112,7 @@ function planWith(
         c.view = v.text;
         c.eye = v.eye;
         c.sees = v.inPicture;
+        if (builds('framed_only')) c.outside = v.outside;
         c.framing = v.framing;
         c.staging = [];
         if (v.rules) c.rules = v.rules;
