@@ -28,7 +28,53 @@ current figure and what's next). Writer model: Claude (`DREAMCHAT_WRITER=claude`
 
 ## Where we stopped (27-29 Sep): read this to resume
 
-**Newest landmark (1 Oct, afternoon): a node packet per picture, for a harness to draw from.** Nothing drawn,
+**Newest landmark (1 Oct, evening): no chat, a dump imported; a sketch's words from the first new dream; the dreamer
+as the camera.** Nothing drawn, nothing paid. The owner's standing rules from today, until the harness is trusted:
+**no chat** (neither Berry nor a simulated dreamer; a transcript or the dream's text goes straight into breakdown →
+tree → everything after), **no dream drawn realistic** (each its own named art style, never a photograph, live chats
+too), and **no re-running old dreams**. Testing is on new dreams only, through the merged flow, which draws on the
+owner's local machine.
+- *Import, with no chat* (`import.ts`, the work in `importer.ts`; on lab at 1dbd032): `bun --env-file=… run import.ts
+  --text <dream.txt | transcript.json> --style "<a named art style>"`. The chat's own steps in its order with no turns:
+  the breakdown drafted, the look built from the named style as the dreamer's words (a photograph refused) and kept to
+  technique against the dream's own breakdown as the chat keeps a look the dreamer described (`cleanStyles`), the
+  sketch list made with none confirmed (an untold look stays a guess, `lookUnknown`), the floor plans, then what each
+  moment implies and its typed facts, then the cameras, the cast read, the dream saved and its packet written; the
+  last line JSON. Only the writer (`claude -p`) and Jev; nothing drawn. On the Barley Degree's transcript, a woodcut
+  print: 8 cuts, 0 breaking the schema, floor plans on both scenes, typed readings for all 8 moments, both mock-ups on
+  every cut, in 1:50. An imported dream's readings are its own: the eval caches never read over them.
+- *A sketch's words* (from "The Barley Degree", DreamBank Dorothea #272, the first new dream through the merged flow;
+  the one builder's steps `sketch_who`, `sketch_style`, `place_alone`; on lab): who someone is is said on their sketch,
+  only that ("G.H., a woman the dreamer knows"; never a guessed age, hair or build against the dreamer's words, never
+  where they are or what the story says of them); a sketch takes the style's way of drawing, never its directions about
+  other people ("background people softly blurred" put a crowd in every sketch); a place's sketch is "the place alone,
+  empty", never "with no people in it", which drew people. Every saved dream: 180 of 398 sketches change, a person's
+  identity lost from 1 instead of 10, "no people" on 0 places instead of 137; 0 of 412 moment prompts move.
+- *The dreamer as the camera* (`dreamer_camera`): a dream seen only through the dreamer's eyes had no dreamer in its
+  breakdown, so its cameras had nowhere to stand (4 of 7 moments in one import of the Barley Degree). The dreamer is now
+  added as the camera, placed on the plan and never sketched, and in no outside moment's cut, mock-up or list of who is
+  there (pinned through a whole import). The merged flow's Barley import (dream-1001-180156-a5e7: all 7 moments
+  through the dreamer's eyes, none listing them, m5 with no camera), planned again from its own breakdown and look: the
+  dreamer on both scenes' plans, an eye on all 7 cuts, in no cut's view and no sketch. *Their age and sex never guessed* (`dreamer_untold`): 48 of 54 dreamer
+  sketches said a guessed age or sex, now 0; only those change.
+- *A sketch never names the dream's other people, places or things in its style* (`sketch_subjects`; 927a's light,
+  "The woman and the ice are rendered with more clarity", drew them into the room's sketch and the dreamer's): a
+  token's clause, a light sentence or a feel clause that names another subject by the head of its name is left out (a
+  comparison alone: "plain and even, as in an ordinary room, with no dramatic shadows" keeps its light); a word of where
+  ("outside") or a style's own word (light, edge, block) is never a subject, nor a word of the sketch's own name or a
+  thing its own look is made of (the horse's head, of clear ice, keeps the style's ice). Every saved dream: 32 of 385
+  sketches change, in 6 dreams, every piece left out naming a subject; no moment prompt moves.
+- *The merge's 13 cuts through the dreamer's eyes with no camera* are all old plans, none from the new dreams: 2 (cbba
+  m9, m12) planned at a second place before the eye was put on the plan (4af2631, 25 Sep; today such a plan is not
+  kept and is asked for again), 11 in 5 dreams with no plan at all. Labelled "legacy" by the merge's check, never
+  re-planned (the owner: no re-running old dreams).
+Queued from the same dream, the owner's order: the dream's era (none in the breakdown: a 1957 church meeting drawn
+modern), then staging (a moment's motion moving no one, a crowd the moment implies never placed, a conversation shot
+as near-identical two-shots). After the merge: the frame goes 9:16 (where Dream Chat fixes 16:9 is listed for the
+merge), then a script stage before the breakdown. Parked behind a blind picture test: one neutral light for a sketch
+in place of the style's scene light.
+
+**Earlier landmark (1 Oct, afternoon): a node packet per picture, for a harness to draw from.** Nothing drawn,
 nothing paid. What Dream Chat hands a harness for every picture it would draw (`packet.ts dreamPacket`, the groups of
 the merge brief's F2): per dream its sketches (prompt, look field by field, said or guessed), its in-between pictures
 (the one change, what each is edited from, who waits for it) and a node per cut: identity (its place in the tree, its
@@ -2270,6 +2316,10 @@ between sessions.
 | S6 | S2, S7 | With the builder's paragraph ids, the pre-draw check's acting path (DREAMCHAT_CHECKS=act) tells the view's line by its paragraph, so a finding around "What the dreamer sees" now counts as the plan's, as "What the camera sees" did; logging, the default, is unchanged. |
 | S4 (the mock-up's drawn shapes) | S9 | What is ridden astride is drawn on the mock-up as wheels and bars, the picture only (`previs.ts solidsOf(…, drawn)`, 1 Oct); with the local runner's `--shapes`, a tractor with its seats, benches face to face and a chair at a table too (`solidsOf(…, drawn, shapes)`, recorded per picture as `shapes`): its floor plan and camera are as before, so a picture drawn from the old block-shaped mock-up is not stale by S9, which keys the mock-up by its floor plan and camera, never its pixels. Such pictures are redrawn by hand (`night-2` reset them); key the drawn shapes too if it starts to matter. An open door changes the plan and the camera, so its pictures go stale as they should. |
 | The node packet (`packet.ts`) | S3, S6, S9 | A projection of the rebuild: the cut sheet (S3), the one builder's paragraphs (S6) and the as-drawn record's switches and keys' version (S9). A field added to the sheet reaches a harness only when the packet and its schema (`PACKET_SCHEMA`, written out as `packet.schema.json`) take it too; one removed fails the build. `evals/packets.ts` over every saved dream is the check, and `PACKET_VERSION` moves with any change to its shape. |
+| The import (`importer.ts`) | S8, the live chat | The import runs the chat's steps in the chat's order with no turns (breakdown, own look kept to technique, sketch list, `planShots` with its readings, the cast); a change to that order or those steps in `session.ts` reaches a dump only when `importDream` takes it too (`test/import.test.ts` holds the order). An imported dream's readings are its own: `withImplied` and `withTyped` leave it as it is. |
+| `sketch_subjects` | S6, the producer's styles | A sketch leaves out a style's words about the dream's other subjects; a moment keeps the whole style, so a style made before `cleanStyles` (or the "as it looked" option) still carries content into every moment. New looks are cleaned when made, the import's too. One neutral light for a sketch, in place of the style's scene light (the local machine copies a reference's light), is parked behind a blind picture test. |
+| `dreamer_camera` | S4, saved plans | The dreamer is added as the camera only when a draft is made; saved dreams keep their plans. 13 cuts through the dreamer's eyes in 6 saved dreams have no camera: 2 planned before the eye was put on the plan (cbba m9, m12), 11 with no plan; the merge labels them legacy, and they are never re-planned (the owner, 1 Oct). |
+| 9:16 (after the merge) | S4, the mock-up, local-run | A moment's frame is 16:9 in the shape sent (`sheets.ts shapeOf`, `settingsFor`), its words (`frames.ts SHAPE_WORDS`), the camera's view (`blocking.ts halfViewOf`, `previs.ts tallAt`/`halfTall`, which take the width as the long side), the mock-up's size (1376×768) and the local machine's (1024×576, a portrait first image padded to landscape). The list is with the merge; one Shape for moments, the view angles read from it, a place's sketch staying 16:9. |
 
 ## Known debt, by the step that clears it
 
@@ -3260,6 +3310,14 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   resolves. local-run's fitting is one function both use (`harnessFitted`). `bun test`: 1069 pass, 2 skipped, 0 fail
   with every switch off and on; typecheck clean. Nothing on the drawing path reads it: no prompt or picture moved. No
   pictures, no money.
+- 1 Oct (evening, nothing drawn): a dump imported with no chat (`import.ts`, `importer.ts`; 0654e6d, 85239b4,
+  1dbd032: 1091 pass, 0 fail off and on, 0 pictures moved); the dreamer as the camera and their age and sex never
+  guessed (`dreamer_camera`, `dreamer_untold`; 8ec1359); a sketch's style never naming the dream's other people, places
+  or things (`sketch_subjects`; cafc3e0, 1094448, 1e8cd4c, de01628), and an imported look kept to technique against its
+  own breakdown. Every saved dream: 32 of 385 sketches change, each piece left out naming a subject; against lab
+  1079de4, 0 of 127 frozen and 0 of 447 live pictures move, prompt cases the same. The merged flow's Barley import
+  planned again with the camera: an eye on all 7 cuts. `bun test`: 1108 pass, 2 skipped, 0 fail with every switch off
+  and on; typecheck clean. No pictures, no money.
 
 ## Owner's direction (29 Sep): reviews and merges move to the cloud session
 
