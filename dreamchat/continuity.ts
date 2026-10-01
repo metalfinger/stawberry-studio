@@ -8,6 +8,7 @@
 // an in-between picture that is never a cut. Everything here is pure: the breakdown in, the plan
 // out, and the same breakdown always gives the same plan.
 import type { CastReading } from './cast-types';
+import { builds } from './cleanups';
 import { smallSizeOf, withCastFixtures, withCastSpots } from './castplace';
 import {
   type Blocking,
@@ -259,6 +260,8 @@ export type RecordPlan = {
       acts?: { who: string; does: string; to?: string; where?: string }[];
       /** With the one builder's `plan_beyond` step: who and what the moment sees out past the place, through what. */
       beyond?: { what: string; through: string }[];
+      /** With the one builder's `plan_motion` step: each vehicle in view the typed reading says is moving or still. */
+      motion?: { who: string; moving: boolean }[];
       now: { of: string; text: string }[];
       /** The same, as typed facts: what `now` says, before it is put in words. */
       facts: NowOf[];
@@ -605,11 +608,21 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
     ? withOpen(
         withRiders(
           withClimbers(
-            carriedBy(
-              sized,
-              plan,
-              upTo.map((x) => plan.moves?.[x.id] ?? []),
-            ),
+            builds('plan_facing')
+              ? withAttention(
+                  carriedBy(
+                    sized,
+                    plan,
+                    upTo.map((x) => plan.moves?.[x.id] ?? []),
+                  ),
+                  r?.acts,
+                  moment.eyes === 'dreamer' ? dreamerId : undefined,
+                )
+              : carriedBy(
+                  sized,
+                  plan,
+                  upTo.map((x) => plan.moves?.[x.id] ?? []),
+                ),
             r?.acts,
           ),
           upTo.map((x) => rec?.moments[x.id]?.acts ?? []),
@@ -750,24 +763,87 @@ export function seenThrough(
 ): Record<string, Side> {
   const out: Record<string, Side> = {};
   if (!facts?.length || !plan.indoors) return out;
-  const openings = plan.spots.filter((s) => isOpening(s) && wallOf(s, plan));
+  for (const f of facts) {
+    const who = plan.spots.find((s) => s.id === f.what && !s.fixture && !s.heldBy);
+    if (!who) continue;
+    const opening = openingNamed(plan, f.through);
+    const side = opening ? wallOf(opening, plan) : null;
+    if (side) out[who.id] = side;
+  }
+  return out;
+}
+
+/**
+ * The opening in a wall of an indoor plan that words name ("through the high round window"): the one whose name shares
+ * the most words with them; none where none does.
+ */
+export function openingNamed(plan: Blocking, through: string): Spot | undefined {
+  if (!plan.indoors) return undefined;
   const words = (x: string) =>
     x
       .toLowerCase()
       .split(/[^a-z]+/)
       .filter((w) => w.length > 2 && w !== 'the' && w !== 'its');
-  for (const f of facts) {
-    const who = plan.spots.find((s) => s.id === f.what && !s.fixture && !s.heldBy);
-    if (!who) continue;
-    const want = words(f.through);
-    const best = openings
-      .map((o) => ({ o, n: want.filter((w) => words(o.name ?? '').includes(w)).length }))
-      .filter((x) => x.n > 0)
-      .sort((a, b) => b.n - a.n)[0];
-    const side = best ? wallOf(best.o, plan) : null;
-    if (side) out[who.id] = side;
+  const want = words(through);
+  return plan.spots
+    .filter((s) => isOpening(s) && wallOf(s, plan))
+    .map((o) => ({ o, n: want.filter((w) => words(o.name ?? '').includes(w)).length }))
+    .filter((x) => x.n > 0)
+    .sort((a, b) => b.n - a.n)[0]?.o;
+}
+
+/** Attending to someone or something, as a typed act says it: looking, watching, standing at it, pointing, reaching. */
+export const ATTEND =
+  /^(?:(?:looks?|stares?|gazes?|peers?|glances?)(?:\s+(?:up|down|out|over|back))?\s+(?:at|into|towards?)|watch(?:es)?|turns?\s+(?:to|towards?)|faces|stands?\s+(?:at|before|in front of)|points?\s+(?:at|to)|reach(?:es)?\s+(?:for|towards?)|reads|studies|examines)$/i;
+
+/**
+ * The spot on a plan that a typed act's `to` names: by its id, else the one whose name shares the most words with it
+ * ("the fish stall" is the stall named "fish stall"); none where none does.
+ */
+export function spotNamed(plan: Blocking, to: string | undefined): Spot | undefined {
+  if (!to) return undefined;
+  const byId = plan.spots.find((s) => s.id === to);
+  if (byId) return byId;
+  const words = (x: string) =>
+    x
+      .toLowerCase()
+      .split(/[^a-z]+/)
+      .filter((w) => w.length > 2 && w !== 'the' && w !== 'its' && w !== 'with');
+  const want = words(to);
+  return plan.spots
+    .map((s) => ({ s, n: want.filter((w) => words(s.name ?? '').includes(w)).length }))
+    .filter((x) => x.n > 0 && x.n >= Math.ceil(want.length / 2))
+    .sort((a, b) => b.n - a.n)[0]?.s;
+}
+
+/**
+ * Whoever a moment's typed acts have attending to someone or something on the plan faces it (the `plan_facing` step):
+ * standing at the fish stall, they look at the stall, never at whoever the floor plan first turned them to. Not one
+ * riding in a vehicle (they face the way it goes), nor the dreamer whose eyes the camera is.
+ */
+export function withAttention(
+  plan: Blocking,
+  acts: { who: string; does: string; to?: string }[] | undefined,
+  camera?: string,
+): Blocking {
+  if (!acts?.length) return plan;
+  const faces = new Map<string, string>();
+  for (const a of acts) {
+    if (!ATTEND.test(a.does.trim()) || a.who === camera) continue;
+    const p = plan.spots.find((s) => s.id === a.who && s.kind === 'person' && !s.many);
+    const t = spotNamed(plan, a.to);
+    // Not themselves, nor what they hold (it is at their own spot), nor what they stand or sit on, nor one riding.
+    if (!p || !t || t.id === p.id || t.heldBy === p.id || onOf(p, plan)?.t.id === t.id) continue;
+    if (onOf(p, plan)?.t.shape === 'vehicle') continue;
+    // Standing at a door or a gate is where someone is, not what they look at: the guard stands at the gate.
+    if (/^stands?\s/i.test(a.does.trim()) && (isOpening(t) || /\bgates?\b/i.test(t.name ?? ''))) continue;
+    faces.set(p.id, t.id);
   }
-  return out;
+  if (!faces.size) return plan;
+  return {
+    ...plan,
+    spots: plan.spots.map((s) => (faces.has(s.id) ? { ...s, faces: faces.get(s.id), attending: true as const } : s)),
+  };
 }
 
 /** Getting into or out of something, as a typed act says it: "climbs into", "gets out of", "steps aboard". */
@@ -1692,8 +1768,10 @@ function planWith(
     const [rw, rd] = roomOf(where);
     for (const v of where.spots) {
       const others = where.spots.filter((o) => o.shape === 'vehicle' && o.id !== v.id).map((o) => o.name ?? name(o.id));
-      if (v.shape !== 'vehicle' || v.heldBy || !goingIn(`${m.action} ${m.visual_point ?? ''}`, name(v.id), others))
-        continue;
+      if (v.shape !== 'vehicle' || v.heldBy) continue;
+      // Moving or still as the typed reading says, where it says (the `plan_motion` step); else as a going verb says.
+      const told = rec?.moments[m.id]?.motion?.find((x) => x.who === v.id)?.moving;
+      if (!(told ?? goingIn(`${m.action} ${m.visual_point ?? ''}`, name(v.id), others))) continue;
       const mv = plan?.moves?.[m.id]?.find((y) => y.id === v.id);
       const was = mv && plan ? before(m, v.id, plan) : undefined;
       const [w, d] = sizeOf(v);

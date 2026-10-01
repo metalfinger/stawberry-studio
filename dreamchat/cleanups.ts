@@ -207,6 +207,18 @@ export const BUILDER_STEPS: readonly string[] = [
   'strangest',
   'told_events',
   'thought_outside',
+  // Not a ledger row: from the counted prompt cases (G2). Whether a vehicle in view is moving at the instant is the typed
+  //    reading's motion fact where it gives one, never only a going verb in the moment's words: the tractor's cab "vibrates
+  //    with a low rumble" as it drives on, and nothing said which way it went (lighthouse-fresh m12).
+  'plan_motion',
+  // Not a ledger row: from the counted prompt cases (G2). What the typed reading has seen out past an opening, where it
+  //    is not someone or something on the floor plan (the drowned city through the high round window), is said there,
+  //    shown only through it, the wall around it solid: nothing bounded the city to the window (library-1 m5).
+  'beyond_words',
+  // Not a ledger row: from the counted prompt cases (G2). Whom or what someone attends to at the instant, as a typed act
+  //    says it (looks at, watches, stands at, points at, reaches for), is what they face on the floor plan and what the
+  //    words say they look at: the dreamer at the fish stall was turned to the old man (night-market m2).
+  'plan_facing',
   // Not a ledger row: the merged flow's dream 3 (1 Oct). "Reaches" is a hand only reaching out, for or into something:
   //    "just as the dreamer reaches the man in the wheelchair" is arriving, and was drawn as a huge reaching hand.
   'reach_arrives',
