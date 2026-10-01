@@ -326,6 +326,11 @@ export type Session = {
   spentCredits?: number;
   /** The shots, planned in the background while the chat went on (see prepareShots). */
   prep?: Prep;
+  /**
+   * A dream never talked through: its text or transcript taken straight in (importer.ts). Its readings are its own,
+   * made as its shots were planned, in the chat's order.
+   */
+  imported?: { at: number; from: 'text' | 'transcript' };
 };
 
 /**

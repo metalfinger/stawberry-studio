@@ -15,7 +15,15 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { join } from 'node:path';
 import { shotPlan } from '../continuity';
 import { jevWithModel } from '../jev';
-import { dreamPacket, PACKET_SCHEMA, type PrevisPacket, type Prompts, validate, type VerdictPacket } from '../packet';
+import {
+  type DreamPacket,
+  dreamPacket,
+  PACKET_SCHEMA,
+  type PrevisPacket,
+  type Prompts,
+  validate,
+  type VerdictPacket,
+} from '../packet';
 import { type Rebuilt, rebuild } from '../plan';
 import { calledFor, previsFor, previsKeyedFor, type Session } from '../session';
 import { verdicts } from '../verdicts';
@@ -27,18 +35,13 @@ import { qwenEdit } from './qwen-prompt';
 import { dataDir, frozenDreams, liveDreams, loadDream } from './saved';
 import { withTyped } from './typed-cache';
 
-const args = process.argv.slice(2);
-const val = (k: string) => {
-  const i = args.indexOf(k);
-  return i >= 0 ? args[i + 1] : undefined;
-};
 const data = dataDir();
 const out = join(data, 'runs', 'packets');
 mkdirSync(out, { recursive: true });
 
-// The schema a harness reads, written beside the packets and in the dream chat's folder.
-const schema = `${JSON.stringify(PACKET_SCHEMA, null, 2)}\n`;
-writeFileSync(join(out, 'packet.schema.json'), schema);
+/** The schema a harness reads, written beside the packets. */
+export const writeSchema = () =>
+  writeFileSync(join(out, 'packet.schema.json'), `${JSON.stringify(PACKET_SCHEMA, null, 2)}\n`);
 
 const sha = (x: string | Uint8Array) => createHash('sha256').update(x).digest('hex');
 const previsDir = join(out, 'previs');
@@ -174,46 +177,42 @@ function historyOf(dream: string): (cut: string) => VerdictPacket[] {
   };
 }
 
-const ids: { id: string; live: boolean }[] = [];
-if (val('--dream')) {
-  const id = val('--dream') as string;
-  ids.push({ id, live: !existsSync(join(import.meta.dir, 'sources', `${id}.json`)) });
-} else {
-  for (const id of frozenDreams()) ids.push({ id, live: false });
-  if (args.includes('--live'))
-    for (const d of liveDreams(data))
-      if (!d.id.includes('/') && !ids.some((x) => x.id === d.id)) ids.push({ id: d.id, live: true });
+const JM = process.env.JEV_EVAL_MODEL ?? 'jev-1.13.0';
+
+/**
+ * A saved dream with its readings from the caches, as the local runner draws it (none asked). An imported one keeps
+ * its own (the caches leave it be) and takes only its cast from the cache.
+ */
+export async function readied(session: Session): Promise<Session> {
+  let s = structuredClone(session);
+  s = (await withImplied(s, { jev: jevWithModel(JM), jevModel: JM })).session as Session;
+  s = (await withTyped(s)).session as Session;
+  s = (await withCast(s)).session as Session;
+  return s;
 }
 
-const JM = process.env.JEV_EVAL_MODEL ?? 'jev-1.13.0';
-const total = {
-  dreams: 0,
-  cuts: 0,
-  packets: 0,
-  broken: 0,
-  plan: 0,
-  now: 0,
-  history: 0,
-  paragraphs: 0,
-  ghosts: 0,
-  elements: 0,
-  mockups: 0,
-  local: 0,
-  written: 0,
+export type Written = {
+  packet: DreamPacket;
+  file: string;
+  errors: string[];
+  cuts: number;
+  n: {
+    plan: number;
+    now: number;
+    history: number;
+    paragraphs: number;
+    mockups: number;
+    local: number;
+    written: number;
+  };
 };
-let failed = false;
-for (const { id, live } of ids) {
-  let session: Session;
-  try {
-    session = structuredClone(loadDream(id, live).session) as Session;
-    session = (await withImplied(session, { jev: jevWithModel(JM), jevModel: JM })).session as Session;
-    session = (await withTyped(session)).session as Session;
-    session = (await withCast(session)).session as Session;
-  } catch (e) {
-    console.log(`${id}: not read: ${String(e instanceof Error ? e.message : e).slice(0, 200)}`);
-    continue;
-  }
-  if (!session.draft?.breakdown || !session.style) continue;
+
+/**
+ * One dream's packet, rebuilt from the session given (its readings in, readied), with its mock-ups and prompts,
+ * checked against the schema and written to runs/packets/<id>.json. Null where it has no breakdown or look yet.
+ */
+export function packetOf(id: string, session: Session): Written | null {
+  if (!session.draft?.breakdown || !session.style) return null;
   const r = rebuild(session);
   const pk = dreamPacket(r, {
     dream: id,
@@ -224,8 +223,9 @@ for (const { id, live } of ids) {
   });
   const errors = validate(PACKET_SCHEMA, pk);
   const cuts = r.pictures.filter((p) => p.kind === 'cut').length;
-  const missing = cuts - pk.cuts.length;
-  writeFileSync(join(out, `${id}.json`), `${JSON.stringify(pk, null, 1)}\n`);
+  const file = join(out, `${id}.json`);
+  writeFileSync(file, `${JSON.stringify(pk, null, 1)}\n`);
+  writeFileSync(indexFile, `${JSON.stringify(index)}\n`);
   const n = {
     plan: pk.cuts.filter((c) => c.camera.floorPlan).length,
     now: pk.cuts.filter((c) => c.state.now?.length).length,
@@ -235,26 +235,75 @@ for (const { id, live } of ids) {
     local: [...pk.cuts, ...pk.ghosts].filter((c) => c.prompts['qwen-image']).length,
     written: pk.cuts.filter((c) => c.prompts['qwen-image-written']).length,
   };
-  total.dreams++;
-  total.cuts += cuts;
-  total.packets += pk.cuts.length;
-  total.broken += errors.length ? 1 : 0;
-  total.plan += n.plan;
-  total.now += n.now;
-  total.history += n.history;
-  total.paragraphs += n.paragraphs;
-  total.mockups += n.mockups;
-  total.local += n.local;
-  total.written += n.written;
-  total.ghosts += pk.ghosts.length;
-  total.elements += pk.elements.length;
-  if (errors.length || missing) failed = true;
-  console.log(
-    `${id}: ${pk.cuts.length}/${cuts} cuts, ${pk.ghosts.length} in-between, ${pk.elements.length} sketches; floor plan ${n.plan}, typed state ${n.now}, verdicts ${n.history}, paragraphs ${n.paragraphs}, mock-ups ${n.mockups}, local prompts ${n.local} (written ${n.written})${errors.length ? `; BROKEN ${errors.length}: ${errors.slice(0, 3).join(' | ')}` : ''}`,
-  );
+  return { packet: pk, file, errors, cuts, n };
 }
-writeFileSync(indexFile, `${JSON.stringify(index)}\n`);
-console.log(
-  `mock-ups: ${counts.rendered} rendered, ${counts.reused} kept from before; packets: ${total.dreams} dreams, ${total.packets}/${total.cuts} cuts, ${total.ghosts} in-between pictures, ${total.elements} sketches; ${total.broken} dreams breaking the schema; cuts with a floor plan ${total.plan}, typed state ${total.now}, the owner's verdicts ${total.history}, paragraph ids ${total.paragraphs}, both mock-ups ${total.mockups}, local prompts ${total.local} (written for it ${total.written}); into ${out}`,
-);
-if (failed) process.exit(1);
+
+if (import.meta.main) {
+  const args = process.argv.slice(2);
+  const val = (k: string) => {
+    const i = args.indexOf(k);
+    return i >= 0 ? args[i + 1] : undefined;
+  };
+  writeSchema();
+  const ids: { id: string; live: boolean }[] = [];
+  if (val('--dream')) {
+    const id = val('--dream') as string;
+    ids.push({ id, live: !existsSync(join(import.meta.dir, 'sources', `${id}.json`)) });
+  } else {
+    for (const id of frozenDreams()) ids.push({ id, live: false });
+    if (args.includes('--live'))
+      for (const d of liveDreams(data))
+        if (!d.id.includes('/') && !ids.some((x) => x.id === d.id)) ids.push({ id: d.id, live: true });
+  }
+
+  const total = {
+    dreams: 0,
+    cuts: 0,
+    packets: 0,
+    broken: 0,
+    plan: 0,
+    now: 0,
+    history: 0,
+    paragraphs: 0,
+    ghosts: 0,
+    elements: 0,
+    mockups: 0,
+    local: 0,
+    written: 0,
+  };
+  let failed = false;
+  for (const { id, live } of ids) {
+    let session: Session;
+    try {
+      session = await readied(loadDream(id, live).session as Session);
+    } catch (e) {
+      console.log(`${id}: not read: ${String(e instanceof Error ? e.message : e).slice(0, 200)}`);
+      continue;
+    }
+    const w = packetOf(id, session);
+    if (!w) continue;
+    const { packet: pk, errors, cuts, n } = w;
+    const missing = cuts - pk.cuts.length;
+    total.dreams++;
+    total.cuts += cuts;
+    total.packets += pk.cuts.length;
+    total.broken += errors.length ? 1 : 0;
+    total.plan += n.plan;
+    total.now += n.now;
+    total.history += n.history;
+    total.paragraphs += n.paragraphs;
+    total.mockups += n.mockups;
+    total.local += n.local;
+    total.written += n.written;
+    total.ghosts += pk.ghosts.length;
+    total.elements += pk.elements.length;
+    if (errors.length || missing) failed = true;
+    console.log(
+      `${id}: ${pk.cuts.length}/${cuts} cuts, ${pk.ghosts.length} in-between, ${pk.elements.length} sketches; floor plan ${n.plan}, typed state ${n.now}, verdicts ${n.history}, paragraphs ${n.paragraphs}, mock-ups ${n.mockups}, local prompts ${n.local} (written ${n.written})${errors.length ? `; BROKEN ${errors.length}: ${errors.slice(0, 3).join(' | ')}` : ''}`,
+    );
+  }
+  console.log(
+    `mock-ups: ${counts.rendered} rendered, ${counts.reused} kept from before; packets: ${total.dreams} dreams, ${total.packets}/${total.cuts} cuts, ${total.ghosts} in-between pictures, ${total.elements} sketches; ${total.broken} dreams breaking the schema; cuts with a floor plan ${total.plan}, typed state ${total.now}, the owner's verdicts ${total.history}, paragraph ids ${total.paragraphs}, both mock-ups ${total.mockups}, local prompts ${total.local} (written for it ${total.written}); into ${out}`,
+  );
+  if (failed) process.exit(1);
+}

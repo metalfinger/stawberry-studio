@@ -29,7 +29,8 @@ export async function withImplied(
   opts: { write?: WriteFn; writer?: string; jev: JevFn; jevModel: string; cacheFile?: string },
 ): Promise<{ session: Session; cost: ImpliedCost; asked: number; cached: number; close: string[] }> {
   const b = s.draft?.breakdown && structuredClone(s.draft.breakdown);
-  if (!b || !s.style) return { session: s, cost: zero(), asked: 0, cached: 0, close: [] };
+  // An imported dream's readings are its own, made as its shots were planned (importer.ts): never the cache's.
+  if (!b || !s.style || s.imported) return { session: s, cost: zero(), asked: 0, cached: 0, close: [] };
   const file = opts.cacheFile ?? IMPLIED_CACHE;
   const cache: Cache = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : {};
   const writer = opts.writer ?? `${WRITER_MODEL} thinking ${IMPLIED_THINKING}`;

@@ -134,6 +134,9 @@ describe('who someone is, on their sketch', () => {
     expect(as('a ten-year-old boy', 'in his first school uniform, aged 10')).toContain(
       'picture of X, a boy, one person only',
     );
+    expect(as('a 10-year-old boy', 'in his first school uniform, aged 10')).toContain(
+      'picture of X, a boy, one person only',
+    );
     // Named "your aunt", said "the dreamer's aunt": never "the dreamer's aunt, the dreamer's aunt".
     expect(as("the dreamer's aunt", 'short brown hair', 'your aunt')).not.toMatch(
       /the dreamer's aunt, the dreamer's aunt/,
