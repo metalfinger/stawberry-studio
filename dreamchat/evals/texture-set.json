@@ -1,5 +1,5 @@
 {
-  "about": "Texture in dumped dreams, labelled by hand from each text (2 Oct, before building): a simile or a reason the dreamer gives, seeable (a picture can show it) or not. A seeable one is kept when some moment's point shows it in what is seen (`shows`, groups of alternatives, every group matching one point); an unseeable one is kept out of every point (`never`). A point copies when it keeps a simile's own words (`copy`) or says 'like' or 'as if' instead of what is seen.",
+  "about": "Texture in dumped dreams, labelled by hand from each text (2 Oct, before building): a simile or a reason the dreamer gives, seeable (a picture can show it) or not. A seeable one is kept when some moment's point shows it in what is seen (`shows`, groups of alternatives, every group matching one point); an unseeable one is kept out of every point (`never`). A point copies when it keeps a simile's own words (`copy`) or says 'like' or 'as if' instead of what is seen. Label corrected after the first re-ask run (2 Oct): Neighbours' x5 leaks on being called back or home, not on the direction 'toward outer space', which a picture can show.",
   "dreams": [
     {
       "id": "neighbours",
@@ -9,7 +9,7 @@
           "id": "x1",
           "says": "the stars glowing yellow and slightly soft, as if someone had steamed mangoes like dumplings",
           "seeable": true,
-          "shows": [["star"], ["soft|doughy|puffy|plump|squish|steam|dumpling|pillowy"]],
+          "shows": [["star"], ["dough|dumpling|bun\\b|buns\\b|puff|plump|squish|pillowy|mochi"]],
           "copy": "steamed mangoes|like dumplings|as if someone"
         },
         {
@@ -35,7 +35,7 @@
           "id": "x5",
           "says": "like they had been called back home from outer space",
           "seeable": false,
-          "never": "outer space|called back|called home"
+          "never": "called back|called home|called them"
         }
       ]
     },
