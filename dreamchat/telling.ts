@@ -115,7 +115,7 @@ export async function untold(b: Breakdown, t: Telling, jev: JevFn): Promise<Gap>
     questions[`e${i}`] = t.essential.includes(e)
       ? {
           type: 'noul',
-          instructions: `A dream is being drawn as these pictures, one for each moment (the state: what happens in it, and the one thing it shows). The person told this: "${e}". Is it the one thing some moment shows ("shows"), with what they named, said or asked in it? Only "happens" having it does not count, nor a "shows" that says it more vaguely ("the dreamer talking to her" where they said what they asked her).`,
+          instructions: `A dream is being drawn as these pictures, one for each moment (the state: what happens in it, and the one thing it shows). The person told this: "${e}". Is it the one thing some moment shows ("shows"), all of it (where it tells two things, both), with what they named, said or asked in it? Only "happens" having it does not count, nor a "shows" that has only part of it or says it more vaguely ("the dreamer talking to her" where they said what they asked her).`,
           criteria: { true: "a moment's one thing to show has it", false: "no moment's one thing to show has it" },
         }
       : {
@@ -129,7 +129,7 @@ export async function untold(b: Breakdown, t: Telling, jev: JevFn): Promise<Gap>
   if (strange && key)
     questions.key = {
       type: 'noul',
-      instructions: `The key moment of a dream being drawn is "${key.action}", its one thing to show "${key.visual_point}". The dream's strangest fact, in the person's words: "${strange.quote}". Does this moment show that fact itself, not only what leads to it or follows it?`,
+      instructions: `The key moment of a dream being drawn has as the one thing its picture shows: "${key.visual_point}" (what happens in it: "${key.action}"). The dream's strangest fact, in the person's words: "${strange.quote}". Does the one thing it shows carry that fact itself, all of it (where the fact is two things, both: "she fainted, and then she danced me out the door" is the faint and the dance), not only what leads to it or follows it? What happens in it alone does not count.`,
       criteria: { true: 'it shows the strangest fact', false: 'it does not' },
     };
   if (!Object.keys(questions).length) return { missing: [], keyed: true, checked: true };
