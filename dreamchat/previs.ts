@@ -709,6 +709,60 @@ function solidsOf(
  * "high round window side", the whole wall was drawn open onto the city (library, 27 Sep): with the camera
  * rules it is then "the wall", and the fixture keeps its own label where it is on it.
  */
+/**
+ * How much of someone the camera's frame holds: the share of their height, from their feet to the top of their head,
+ * inside the picture, and whether their head is in it. The subject-in-frame check (`subject_in_frame`): leaning forward
+ * and looking down, the dreamer's view of old Ethan on the train held a seat-back and his knees (Train m1, 2 Oct).
+ */
+export function inFrame(
+  plan: Blocking,
+  eye: Eye,
+  id: string,
+): { height: number; head: boolean; top: number; across: number } | null {
+  const p = plan.spots.find((s) => s.id === id);
+  if (!p) return null;
+  const width = 192;
+  const height = Math.round((192 * 9) / 16);
+  const r = render([], eye, width, height);
+  const z = groundAt(p, plan);
+  const top = r.project(v3(p.x, p.y, z + eyeHeight(p.pose) + 0.15));
+  const feet = r.project(v3(p.x, p.y, z));
+  if (!top || !feet) return { height: 0, head: false, top: -1, across: -1 };
+  const span = Math.max(1e-6, feet.y - top.y);
+  const inside = Math.max(0, Math.min(height, feet.y) - Math.max(0, top.y));
+  const across = (top.x + feet.x) / 2;
+  const sideways = across >= 0 && across <= width;
+  return {
+    height: sideways ? Math.min(1, inside / span) : 0,
+    head: sideways && top.y >= 0 && top.y <= height,
+    top: top.y / height,
+    across: across / width,
+  };
+}
+
+/**
+ * The camera tilted, a little at a time, until every head a moment needs (`subject_in_frame`) is inside the frame with a
+ * margin: up where one is cut by the top, down where one is below it, at most 20 degrees either way. Close shots of
+ * someone came out a chin and a collar, their head above the frame (34 of 281 named people, the saved dreams, 2 Oct).
+ */
+export function headsIn(eye: Eye, heads: string[], plan: Blocking): Eye {
+  if (!heads.length) return eye;
+  let e = eye;
+  const start = eye.pitch ?? 0;
+  for (let i = 0; i < 40; i++) {
+    const tops = heads
+      .map((id) => inFrame(plan, e, id))
+      .filter((f): f is NonNullable<ReturnType<typeof inFrame>> => !!f && f.across >= 0 && f.across <= 1);
+    const up = tops.some((f) => f.top < 0.06);
+    const down = tops.some((f) => f.top > 0.94);
+    if (up === down) break;
+    const pitch = (e.pitch ?? 0) + (up ? 0.015 : -0.015);
+    if (Math.abs(pitch - start) > 0.35) break;
+    e = { ...e, pitch };
+  }
+  return e;
+}
+
 export function frontLabel(plan: Pick<Blocking, 'front' | 'spots'>): string {
   return cameraMode() === 'on' && frontNamesFixture(plan) ? 'the wall' : plan.front;
 }
@@ -1774,6 +1828,8 @@ export function dreamerShot(
   beyond?: string,
   /** Who the moment shows, to be in the picture: the driver beside them in the cab (25 Sep). */
   want: string[] = [],
+  /** Whose heads the frame keeps (continuity facesNeeded, `subject_in_frame`): the view tilts to hold them. */
+  heads: string[] = [],
 ): { eye: Eye; text: string; rules?: string[]; inPicture: string[]; outside: string[] } | null {
   const me = plan.spots.find((s) => s.id === dreamer);
   if (!me) return null;
@@ -1896,7 +1952,9 @@ export function dreamerShot(
       if (!best || score > best.score + 1e-9) best = { eye, score };
     }
   if (!best) return null;
-  const eye = best!.eye;
+  // Looking down at what they hold never drops the one the moment is about below the frame: old Ethan on the train was a
+  // seat-back and his knees (subject_in_frame).
+  const eye = headsIn(best!.eye, heads, plan);
   const r = render(solidsAt(eye), eye, 384, 216);
   const min = 384 * 216 * 0.002;
 
@@ -2234,6 +2292,8 @@ export function outsideShot(
     /** Vehicles going, by id, the way each goes on the plan. */
     going?: Record<string, V2>;
   },
+  /** Whose heads the frame keeps (continuity facesNeeded, `subject_in_frame`): the camera tilts to hold them. */
+  heads: string[] = [],
 ): {
   eye: Eye;
   text: string;
@@ -2542,7 +2602,13 @@ export function outsideShot(
           }).length / onLookSide.length
         : 0;
       const facesFront = front ? Math.max(0, -cand.eye.d.y) : 0;
+      // Whom the moment names stays in the picture above everything (subject_in_frame): the camera stood with the girl
+      // the moment was about off its edge (fdd7 m4, 2c51 m2).
+      const headsLost = heads.length
+        ? heads.filter((id) => (rs.seen.get(id)?.visible ?? 0) < tiny).length / heads.length
+        : 0;
       const score =
+        -3 * headsLost +
         2 * inFrame +
         clear +
         0.8 * framed +
@@ -2557,7 +2623,8 @@ export function outsideShot(
         cand.cramped * 0.5;
       if (!best || score > best.score + 1e-9) best = { ...cand, score };
     }
-  const { eye, far } = best!;
+  const { eye: placed, far } = best!;
+  const eye = headsIn(placed, heads, plan);
   const d = eye.d;
   const lens = eye.lens ?? LENS[size];
   const toward = together > 0 ? (sum.x * d.x + sum.y * d.y) / Math.hypot(sum.x, sum.y) : 0;
