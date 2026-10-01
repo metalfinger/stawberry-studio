@@ -992,11 +992,9 @@ const dreamsNow = new Map<string, Omit<DreamNow, 'frames' | 'items' | 'style'>>(
 export function planInForce(s: Session, f: Item): boolean {
   if (!builds('fresh_send')) return false;
   const plan = dreamNowOf(s).plan;
-  if (!plan || !s.build || f.kind !== 'cut' || !f.frame || f.review || f.continuityApproved) return false;
+  if (!plan || !s.build || f.kind !== 'cut' || !f.frame) return false;
   const next = plan.cuts.find((c) => c.id === f.id);
-  if (!next) return false;
-  const known = new Set((s.build.frames ?? []).map((x) => x.id));
-  if (![...next.needs, ...next.refs.map((r) => r.id)].every((n) => known.has(n))) return false;
+  if (!next || keepsOwnPlan(s, f, next)) return false;
   f.frame.plan = next;
   f.needs = next.needs;
   s.build.plan = { issues: [], ...plan };
@@ -1065,11 +1063,27 @@ export function drawingSheet(s: Session, momentId: string): CutSheet | null {
  * the moments are drawn from, the prep, the sketches, the story record from the sketches' words and the
  * dreamer's messages. A rebuild (plan.ts) reads the same, so both give a moment the same sheet.
  */
-export function sheetDreamOf(s: Pick<Session, 'draft' | 'build' | 'prep' | 'style' | 'transcript'>): SheetDream | null {
+export function sheetDreamOf(s: TreeSource, threshold = GOAL_THRESHOLD): SheetDream | null {
   const b = s.draft?.breakdown;
+  const { items, words } = recordInputsOf(s);
+  // With the one builder's `one_tree` step (S6 row 2): the tree the panel shows, read whole.
+  if (builds('one_tree') && b) {
+    const plan = treePlanOf(s);
+    const treeInput = plan ? treeInputWith(s, plan, items, threshold) : null;
+    if (plan && treeInput)
+      return sheetDream({
+        breakdown: b,
+        plan,
+        prep: s.prep,
+        items,
+        style: s.style ?? null,
+        readings: s.draft?.readings,
+        words,
+        treeInput,
+      });
+  }
   const plan = s.build?.plan;
   if (!b || !plan) return null;
-  const { items, words } = recordInputsOf(s);
   // A moment planned again keeps its new plan on the moment itself: each is read as it is drawn.
   const frames = s.build?.frames ?? [];
   const drawnFrom = (c: CutPlan) => frames.find((f) => f.id === c.id && f.kind === 'cut')?.frame?.plan ?? c;
@@ -1223,36 +1237,95 @@ export function reconcileGhosts(plan: ContinuityPlan, frames: Item[]): Continuit
   };
 }
 
+/** The confidence a goal is read as met at where no config is at hand: dream.ts's own. */
+const GOAL_THRESHOLD = 0.7;
+
+/** What the dream's tree is read from in a session: the dream, and its goals where the conversation has them. */
+type TreeSource = Pick<Session, 'draft' | 'build' | 'prep' | 'style' | 'transcript'> &
+  Partial<Pick<Session, 'state' | 'askCounts'>>;
+
 /**
  * What the dream's resolved tree is made from (tree.ts): the breakdown as stored, the continuity plan
  * as a re-plan would make it now (never the plan kept since the moments began, whose in-between
  * references may be numbered otherwise), the prep and whether it is for this version of the dream,
- * the sketches and frames, the chosen look, the grounding notes and the goals.
+ * the sketches and frames, the chosen look, the grounding notes and the goals. With the one builder's
+ * `one_tree` step (S6 row 2), the plan is the one tree's (treePlanOf), the plan the cut sheets read too.
  */
-export function treeInputOf(s: Session, threshold: number): TreeInput | null {
+export function treeInputOf(s: TreeSource, threshold = GOAL_THRESHOLD): TreeInput | null {
   const b = s.draft?.breakdown;
   if (!b) return null;
   const frames = s.build?.frames ?? [];
+  const plan = (builds('one_tree') ? treePlanOf(s) : null) ?? reconcileGhosts(planContinuity(b, planRecord(s)), frames);
+  return treeInputWith(s, plan, s.build?.items ?? [], threshold);
+}
+
+/**
+ * The tree's input from a plan and the sketches as read: the one shape the panel's tree and, with the `one_tree` step,
+ * every cut sheet's (session.ts sheetDreamOf, plan.ts rebuild) are resolved from.
+ */
+export function treeInputWith(
+  s: TreeSource,
+  plan: ContinuityPlan,
+  items: Item[],
+  threshold = GOAL_THRESHOLD,
+): TreeInput | null {
+  const b = s.draft?.breakdown;
+  if (!b) return null;
   return {
     breakdown: b,
-    plan: reconcileGhosts(planContinuity(b, planRecord(s)), frames),
+    plan,
     ...(s.prep ? { prep: s.prep, prepFresh: planKey(b) === s.prep.basedOn } : {}),
-    items: s.build?.items ?? [],
-    frames,
+    items,
+    frames: s.build?.frames ?? [],
     style: s.style ?? null,
     ...(recordMode() === 'on' ? recordOfTree(s, b) : {}),
     downgraded: s.draft?.downgraded ?? [],
-    goals: Object.fromEntries(
-      Object.keys(s.state.goals).map((g) => [
-        g,
-        { status: goalStatus(s.state.goals[g], threshold), asked: s.askCounts[g] ?? 0 },
-      ]),
-    ),
+    ...(s.state
+      ? {
+          goals: Object.fromEntries(
+            Object.keys(s.state.goals).map((g) => [
+              g,
+              { status: goalStatus(s.state!.goals[g], threshold), asked: s.askCounts?.[g] ?? 0 },
+            ]),
+          ),
+        }
+      : {}),
   };
 }
 
+/**
+ * Whether a moment keeps its own plan rather than the plan made now: reviewed or approved for its continuity, or the
+ * plan made now needs a picture not in the dream yet (it waits for a re-plan). The one definition of the plan in force,
+ * read where a moment is sent (planInForce) and by the one tree (treePlanOf).
+ */
+export function keepsOwnPlan(s: Pick<Session, 'build'>, f: Item, next: CutPlan): boolean {
+  if (f.review || f.continuityApproved) return true;
+  const known = new Set((s.build?.frames ?? []).map((x) => x.id));
+  return ![...next.needs, ...next.refs.map((r) => r.id)].every((n) => known.has(n));
+}
+
+/**
+ * The plan the dream's one tree reads (S6 row 2): the plan made now (dreamNowOf, which a moment is sent from with the
+ * `fresh_send` step), each moment held to the plan it is drawn from where it keeps its own (reviewed or approved, or
+ * waiting for a re-plan).
+ */
+export function treePlanOf(s: Pick<Session, 'draft' | 'build' | 'transcript' | 'style'>): ContinuityPlan | null {
+  const now = dreamNowOf(s).plan;
+  if (!now) return null;
+  const frames = s.build?.frames ?? [];
+  // Only a moment that keeps its own plan is held to it (keepsOwnPlan): one not sent yet is in the tree as planned now,
+  // never as the plan it was first put in with. Laid over the plan made now: a plan held from an older version of the
+  // harness lacks what is planned since (its references), and takes it from there.
+  const held = (c: CutPlan): CutPlan => {
+    const f = frames.find((x) => x.id === c.id && x.kind === 'cut');
+    const own = f?.frame?.plan;
+    return f && own && keepsOwnPlan(s, f, c) ? { ...c, ...own } : c;
+  };
+  return { issues: [], ...now, cuts: now.cuts.map(held) };
+}
+
 /** The story record the tree's looks and stages are read from (DREAMCHAT_RECORD=on); none if it cannot be made. */
-function recordOfTree(s: Session, b: Breakdown): { record?: StoryRecord } {
+function recordOfTree(s: TreeSource, b: Breakdown): { record?: StoryRecord } {
   try {
     const { items, words } = recordInputsOf(s);
     return { record: oneRecord(b, items, s.draft?.readings, { words, style: s.style }).record };
@@ -2811,7 +2884,7 @@ export class SessionStore {
     };
     const mode = cutSheetMode();
     if (mode === 'off') return framed(input, mode, site);
-    if (once.dream === undefined) once.dream = sheetDreamOf(s);
+    if (once.dream === undefined) once.dream = sheetDreamOf(s, this.cfg.confidence_threshold);
     // Looking at a prompt from a terminal is not a drawing: it is not logged.
     return framed({ ...input, dream: once.dream }, mode, site, site !== 'prompt');
   }
@@ -2836,7 +2909,7 @@ export class SessionStore {
     if (!routedMode()) return undefined;
     if (built.sheet) return cutFactsOf(built.sheet);
     try {
-      if (once.dream === undefined) once.dream = sheetDreamOf(s);
+      if (once.dream === undefined) once.dream = sheetDreamOf(s, this.cfg.confidence_threshold);
       return cutFactsOf(
         cutSheet({
           frame: drawnFrameOf(s, frame, once.withheld),

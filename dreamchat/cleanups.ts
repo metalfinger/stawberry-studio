@@ -184,6 +184,10 @@ export const BUILDER_STEPS: readonly string[] = [
   // Not a ledger row: the same dream. A place's sketch says what is there, the place alone and empty, never "with no
   //    people in it", which drew people (the local machine; the owner: "Just use the Qwen model").
   'place_alone',
+  // 2. One tree: the cut sheet reads the tree the panel shows, one plan (the plan made now, each moment held to the plan
+  //    it is drawn from), the frames drawn, whether the prep is this dream's, the grounding notes and the goals; built
+  //    after 17, the plan a moment is sent from (the step's place in the ledger, here at the end).
+  'one_tree',
   // Not a ledger row: from a dream taken in as a dump (the Barley Degree, 1 Oct). A dream told wholly through the
   //    dreamer's eyes has its dreamer, as the camera: listed only where seen, they were on no floor plan, and 4 of 7
   //    moments had no camera. Placed on the plan, never sketched.
@@ -191,9 +195,9 @@ export const BUILDER_STEPS: readonly string[] = [
   // Not a ledger row: the owner's rule (1 Oct), never guess the dreamer's sex or age. A guessed (unsaid) clause of their
   //    sketch that gives either is left out, and a guessed "who they are" with it; what they said of themselves stays.
   'dreamer_untold',
-  // Not a ledger row: from the merged flow's packets (1 Oct). A sketch never names the dream's other people or things in
-  //    its style: "The woman and the ice are rendered with more clarity", in a style's light, drew them into the room's
-  //    sketch and the dreamer's (dream-0923-214527-927a).
+  // Not a ledger row: from the merged flow's packets (1 Oct). A sketch never names the dream's other people, places or
+  //    things in its style: "The woman and the ice are rendered with more clarity", in a style's light, drew them into
+  //    the room's sketch and the dreamer's (dream-0923-214527-927a).
   'sketch_subjects',
 ];
 

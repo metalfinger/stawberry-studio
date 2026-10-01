@@ -91,6 +91,7 @@ import {
   type DreamTree,
   type Field,
   resolveTree,
+  type TreeInput,
   type TreePrep,
   type TreeRef,
 } from './tree';
@@ -391,6 +392,8 @@ export function sheetDream(x: {
   style: StyleOption | null;
   readings?: Readings;
   words?: string[];
+  /** With the one builder's `one_tree` step: the dream's one tree's input (session.ts treeInputWith), read whole. */
+  treeInput?: TreeInput;
 }): SheetDream {
   let record: StoryRecord | null = null;
   try {
@@ -400,14 +403,16 @@ export function sheetDream(x: {
   }
   let tree: DreamTree | null = null;
   try {
-    tree = resolveTree({
-      breakdown: x.breakdown,
-      plan: x.plan,
-      ...(x.prep ? { prep: x.prep } : {}),
-      items: x.items,
-      style: x.style,
-      ...(record && recordMode() === 'on' ? { record } : {}),
-    });
+    tree = resolveTree(
+      x.treeInput ?? {
+        breakdown: x.breakdown,
+        plan: x.plan,
+        ...(x.prep ? { prep: x.prep } : {}),
+        items: x.items,
+        style: x.style,
+        ...(record && recordMode() === 'on' ? { record } : {}),
+      },
+    );
   } catch {
     tree = null;
   }
