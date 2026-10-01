@@ -1,0 +1,270 @@
+{
+  "about": "Dumped dreams labelled by hand from their text (1 Oct): every told event, the dream's strangest fact, and the concrete nouns its pictures must keep. Each label is groups of alternatives (regular expressions, case ignored): every group must match one moment's action and visual_point together. A breakdown is scored on how many told events some moment carries, whether its key moment carries the strangest fact, and how many concrete nouns a moment's point keeps where its action has them. \"thoughts\" are the told events that are the dreamer's own thought, wish, realisation or words: the moment carrying one is scored on whether the dreamer is seen (eyes outside).",
+  "dreams": [
+    {
+      "id": "barley-degree",
+      "source": "DreamBank dorothea #272 (26 Oct 1957), CC BY-NC-SA 4.0",
+      "text": "I was at a meeting. Eight or ten men \"in informal dress\" filed in and sang. So many more people came in to hear them that a man threw open the sliding doors into the church auditorium. Then the meeting was over, and I wondered if they would play cards now. I went to talk to G.H. She said something about \"barley degrees\". I asked her if I had ever told her about my \"barley degree\", then realized it was some financial transaction of her husband's that she was speaking of, so I explained that \"barley degree\" as I use it was a common slang, and went on to tell her about my Yankton degree.",
+      "events": [
+        {
+          "id": "e1",
+          "says": "at a meeting",
+          "all": [["meeting"]]
+        },
+        {
+          "id": "e2",
+          "says": "eight or ten men in informal dress file in",
+          "all": [["\\bmen\\b"], ["informal|fil(e|es|ed|ing)\\b|come in|comes in|enter"]]
+        },
+        {
+          "id": "e3",
+          "says": "the men sing",
+          "all": [["\\bs(i|a)ng(s|ing)?\\b"]]
+        },
+        {
+          "id": "e4",
+          "says": "so many people come to hear them",
+          "all": [["people|crowd"], ["hear|fill|crowd|pack|press"]]
+        },
+        {
+          "id": "e5",
+          "says": "a man throws open the sliding doors into the church auditorium",
+          "all": [["door"], ["auditorium|church"]]
+        },
+        {
+          "id": "e6",
+          "says": "the meeting is over and the dreamer wonders if they will play cards",
+          "all": [["cards"]]
+        },
+        {
+          "id": "e7",
+          "says": "the dreamer goes to talk to G.H.",
+          "all": [["g\\.? ?h\\b"]]
+        },
+        {
+          "id": "e8",
+          "says": "G.H. says something about barley degrees",
+          "all": [["barley"], ["g\\.? ?h\\b|\\bshe\\b|\\bher\\b"]]
+        },
+        {
+          "id": "e9",
+          "says": "the dreamer asks if they ever told her about their barley degree",
+          "all": [["\\bask"], ["barley"]]
+        },
+        {
+          "id": "e10",
+          "says": "the dreamer realizes she meant a financial transaction of her husband's",
+          "all": [["husband"]]
+        },
+        {
+          "id": "e11",
+          "says": "the dreamer explains that barley degree is a common slang",
+          "all": [["slang"]]
+        },
+        {
+          "id": "e12",
+          "says": "the dreamer tells her about their Yankton degree",
+          "all": [["yankton"]]
+        }
+      ],
+      "strangest": {
+        "says": "the two barley degrees: G.H. means a money matter of her husband's, the dreamer their own degree",
+        "all": [["barley|husband"], ["husband|realiz|realis|dawn|mean|meant|mix|ask|differ"]]
+      },
+      "nouns": ["barley", "cards", "door", "auditorium", "yankton", "husband"],
+      "thoughts": ["e6", "e9", "e10", "e11"]
+    },
+    {
+      "id": "the-train-and-the-lecture",
+      "source": "DreamBank bosnak #15, CC BY-NC-SA 4.0",
+      "text": "I was tired and wanted to take a nap at lunch. Old Ethan was there, and he was very ill; I saw him on the train. There was no medicine for him, but a woman on the train would help. I wanted sweets and couldn't find any; I wanted marzipan. Then I was in a Swiss konditorei, a bakery, near the Springhouse stop, where I had my first practice. A young woman showed me the goods. Then I went on to give a lecture. A very interesting man in a wheelchair came up to me to ask me about things, but other people kept coming up all the time and I couldn't get to him. Finally I had a chance, and I crossed the hall to go to him. It was a light hall. As I walked up to him, one of the loves of my youth came in. I was very happy to see her, but I also wanted to get to the man. She fainted, and then she danced me out the door. I was sorry that I didn't get to see the man.",
+      "events": [
+        {
+          "id": "e1",
+          "says": "tired, the dreamer wants a nap at lunch",
+          "all": [["\\bnap\\b|tired"]]
+        },
+        {
+          "id": "e2",
+          "says": "old Ethan is very ill",
+          "all": [["ethan"], ["\\bill\\b|sick"]]
+        },
+        {
+          "id": "e3",
+          "says": "the dreamer sees Ethan on the train",
+          "all": [["ethan"], ["train"]]
+        },
+        {
+          "id": "e4",
+          "says": "there is no medicine for him",
+          "all": [["medicine"]]
+        },
+        {
+          "id": "e5",
+          "says": "a woman on the train would help",
+          "all": [["woman"], ["help|tend|care"]]
+        },
+        {
+          "id": "e6",
+          "says": "the dreamer wants sweets, can't find any, wants marzipan",
+          "all": [["marzipan"]]
+        },
+        {
+          "id": "e7",
+          "says": "in a Swiss konditorei, a bakery",
+          "all": [["konditorei|bakery"]]
+        },
+        {
+          "id": "e8",
+          "says": "near the Springhouse stop, where they had their first practice",
+          "all": [["springhouse"]]
+        },
+        {
+          "id": "e9",
+          "says": "a young woman shows the dreamer the goods",
+          "all": [["young woman"], ["show"]]
+        },
+        {
+          "id": "e10",
+          "says": "the dreamer goes on to give a lecture",
+          "all": [["lectur"]]
+        },
+        {
+          "id": "e11",
+          "says": "an interesting man in a wheelchair comes up to ask about things",
+          "all": [["wheelchair"], ["ask|comes? up|approach"]]
+        },
+        {
+          "id": "e12",
+          "says": "other people keep coming up and the dreamer can't get to him",
+          "all": [["people|others"], ["keep|crowd|kept|press|between"]]
+        },
+        {
+          "id": "e13",
+          "says": "the dreamer crosses the light hall toward him",
+          "all": [["cross|walk"], ["hall"]]
+        },
+        {
+          "id": "e14",
+          "says": "one of the loves of the dreamer's youth comes in",
+          "all": [["love"], ["youth|young"]]
+        },
+        {
+          "id": "e15",
+          "says": "she faints",
+          "all": [["faint"]]
+        },
+        {
+          "id": "e16",
+          "says": "she dances the dreamer out the door",
+          "all": [["danc"], ["door"]]
+        },
+        {
+          "id": "e17",
+          "says": "the dreamer is sorry not to have seen the man",
+          "all": [["sorry|regret|left behind|unreached|never reach|didn't get|did not get|behind"]]
+        }
+      ],
+      "strangest": {
+        "says": "she faints, and then dances the dreamer out the door, the man in the wheelchair never reached",
+        "all": [["faint|danc"]]
+      },
+      "nouns": [
+        "nap",
+        "ethan",
+        "medicine",
+        "marzipan",
+        "konditorei",
+        "springhouse",
+        "wheelchair",
+        "lectur",
+        "hall",
+        "door"
+      ],
+      "thoughts": ["e1", "e17"]
+    },
+    {
+      "id": "pool-in-the-field",
+      "source": "DreamBank (merge's new dream 3), CC BY-NC-SA 4.0",
+      "text": "I remember a swimming pool in a big field, and I was talking with Miranda, but I don't remember what we were talking about. I remember the colours, green, blue and the white outline of the water. Someone called me, and I remember a microphone, like it was talking; I asked into it, since I wasn't sure if it was a dream. I talked on the microphone for two or three minutes. While I was doing that I could hear background voices from the next room, and I was supposed to talk, but nobody could hear me, and I couldn't talk any louder, so I felt powerless. The field was like the one at my house but maybe ten times bigger, identical, \"as if, in order to place a swimming pool, somebody enlarged the field\", with the plants on the edges, and there was a black dog running. I could see my own house in the background, very far and very out of focus. Nobody was in the swimming pool and the water was calm. It was \"like an out of focus picture\".",
+      "events": [
+        {
+          "id": "e1",
+          "says": "a swimming pool in a big field",
+          "all": [["pool"], ["field"]]
+        },
+        {
+          "id": "e2",
+          "says": "the dreamer talks with Miranda",
+          "all": [["miranda"]]
+        },
+        {
+          "id": "e3",
+          "says": "green, blue and the white outline of the water",
+          "all": [["white"]]
+        },
+        {
+          "id": "e4",
+          "says": "someone calls the dreamer",
+          "all": [["\\bcall|name"]]
+        },
+        {
+          "id": "e5",
+          "says": "a microphone, as if it were talking",
+          "all": [["microphone"]]
+        },
+        {
+          "id": "e6",
+          "says": "the dreamer asks into it whether this is a dream",
+          "all": [["microphone"], ["dream"]]
+        },
+        {
+          "id": "e7",
+          "says": "the dreamer talks on the microphone for two or three minutes",
+          "all": [["microphone"], ["minute|keeps? (talking|speaking)|goes on|on and on|long"]]
+        },
+        {
+          "id": "e8",
+          "says": "background voices from the next room",
+          "all": [["voices"], ["next room|other room"]]
+        },
+        {
+          "id": "e9",
+          "says": "nobody can hear the dreamer, who can't talk louder and feels powerless",
+          "all": [["(nobody|no one|no-one) (can|could) hear|unheard|powerless|can't be heard|cannot be heard"]]
+        },
+        {
+          "id": "e10",
+          "says": "the field is like the one at their house but ten times bigger",
+          "all": [["bigger|huge|vast|enlarged|ten times|enormous"]]
+        },
+        {
+          "id": "e11",
+          "says": "plants on the edges",
+          "all": [["plants"]]
+        },
+        {
+          "id": "e12",
+          "says": "a black dog running",
+          "all": [["black dog"], ["run"]]
+        },
+        {
+          "id": "e13",
+          "says": "their own house far off and out of focus",
+          "all": [["house"], ["far|blur|out of focus"]]
+        },
+        {
+          "id": "e14",
+          "says": "nobody in the pool, the water calm",
+          "all": [["calm|empty|nobody|no one"]]
+        }
+      ],
+      "strangest": {
+        "says": "a microphone that seems to talk, which the dreamer asks whether this is a dream, and nobody can hear them",
+        "all": [["microphone"]]
+      },
+      "nouns": ["pool", "miranda", "microphone", "voices", "plants", "dog", "house"],
+      "thoughts": ["e6", "e9"]
+    }
+  ]
+}
