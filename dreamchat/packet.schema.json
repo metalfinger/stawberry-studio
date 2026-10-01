@@ -331,7 +331,8 @@
           "minimum": 0
         },
         "media": {
-          "type": "string"
+          "type": "string",
+          "description": "An image by name. sketch-<id>: the sketch of elements[<id>], drawn from its prompt. picture-<id>: the cut or in-between picture <id>, once drawn (draw them in the order of their needs). previs-<id>: the cut's mock-up (camera.previs's files). people:<name>+<name>: those sketches side by side on one image, left to right (the local machine's fitting). Anything else is a real media id."
         },
         "role": {
           "enum": ["identity", "location", "prop", "base", "composition"]
@@ -372,6 +373,9 @@
         },
         "at": {
           "type": "string"
+        },
+        "withoutReadings": {
+          "const": true
         }
       },
       "required": ["source", "verdict"],
@@ -413,7 +417,8 @@
           "minLength": 1
         },
         "image": {
-          "type": ["string", "null"]
+          "type": ["string", "null"],
+          "description": "An image by name. sketch-<id>: the sketch of elements[<id>], drawn from its prompt. picture-<id>: the cut or in-between picture <id>, once drawn (draw them in the order of their needs). previs-<id>: the cut's mock-up (camera.previs's files). people:<name>+<name>: those sketches side by side on one image, left to right (the local machine's fitting). Anything else is a real media id."
         },
         "group": {
           "type": "boolean"
@@ -487,9 +492,151 @@
             "additionalProperties": false
           }
         },
-        "prompt": {
-          "type": "string",
-          "minLength": 1
+        "prompts": {
+          "type": "object",
+          "properties": {
+            "nano-banana-pro": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "paragraphs": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string"
+                      },
+                      "fields": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": ["id", "text", "fields"],
+                    "additionalProperties": false
+                  }
+                },
+                "images": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "An image by name. sketch-<id>: the sketch of elements[<id>], drawn from its prompt. picture-<id>: the cut or in-between picture <id>, once drawn (draw them in the order of their needs). previs-<id>: the cut's mock-up (camera.previs's files). people:<name>+<name>: those sketches side by side on one image, left to right (the local machine's fitting). Anything else is a real media id."
+                  }
+                },
+                "dropped": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": ["text", "images"],
+              "additionalProperties": false
+            },
+            "qwen-image": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "paragraphs": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string"
+                      },
+                      "fields": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": ["id", "text", "fields"],
+                    "additionalProperties": false
+                  }
+                },
+                "images": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "An image by name. sketch-<id>: the sketch of elements[<id>], drawn from its prompt. picture-<id>: the cut or in-between picture <id>, once drawn (draw them in the order of their needs). previs-<id>: the cut's mock-up (camera.previs's files). people:<name>+<name>: those sketches side by side on one image, left to right (the local machine's fitting). Anything else is a real media id."
+                  }
+                },
+                "dropped": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": ["text", "images"],
+              "additionalProperties": false
+            },
+            "qwen-image-written": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "paragraphs": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string"
+                      },
+                      "fields": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": ["id", "text", "fields"],
+                    "additionalProperties": false
+                  }
+                },
+                "images": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "An image by name. sketch-<id>: the sketch of elements[<id>], drawn from its prompt. picture-<id>: the cut or in-between picture <id>, once drawn (draw them in the order of their needs). previs-<id>: the cut's mock-up (camera.previs's files). people:<name>+<name>: those sketches side by side on one image, left to right (the local machine's fitting). Anything else is a real media id."
+                  }
+                },
+                "dropped": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": ["text", "images"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["nano-banana-pro"],
+          "additionalProperties": false,
+          "description": "A picture's prompt by image model: nano-banana-pro is Dream Chat's own, whole, by paragraph; qwen-image the same fitted to the local machine's limits (4 images, 4000 characters), its default; qwen-image-written written for that machine from the cut's sheet."
         },
         "images": {
           "type": "array",
@@ -511,7 +658,7 @@
         "depth",
         "key",
         "shows",
-        "prompt",
+        "prompts",
         "images"
       ],
       "additionalProperties": false
@@ -834,7 +981,62 @@
               ]
             },
             "previs": {
-              "type": ["string", "null"]
+              "type": ["object", "null"],
+              "properties": {
+                "media": {
+                  "type": "string"
+                },
+                "clay": {
+                  "type": ["object", "null"],
+                  "properties": {
+                    "file": {
+                      "type": "string"
+                    },
+                    "sha256": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["file", "sha256"],
+                  "additionalProperties": false
+                },
+                "keyed": {
+                  "type": ["object", "null"],
+                  "properties": {
+                    "file": {
+                      "type": "string"
+                    },
+                    "sha256": {
+                      "type": "string"
+                    },
+                    "key": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "colour": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string"
+                          }
+                        },
+                        "required": ["id", "name", "colour", "kind"],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": ["file", "sha256", "key"],
+                  "additionalProperties": false
+                }
+              },
+              "required": ["media", "clay", "keyed"],
+              "additionalProperties": false
             },
             "view": {
               "type": ["string", "null"]
@@ -1045,48 +1247,161 @@
           "required": ["verdicts"],
           "additionalProperties": false
         },
-        "prompt": {
+        "prompts": {
           "type": "object",
           "properties": {
-            "text": {
-              "type": "string",
-              "minLength": 1
-            },
-            "paragraphs": {
-              "type": ["array", "null"],
-              "items": {
-                "type": "object",
-                "properties": {
-                  "id": {
-                    "type": "string"
-                  },
-                  "text": {
-                    "type": "string"
-                  },
-                  "fields": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
+            "nano-banana-pro": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "paragraphs": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string"
+                      },
+                      "fields": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": ["id", "text", "fields"],
+                    "additionalProperties": false
                   }
                 },
-                "required": ["id", "text", "fields"],
-                "additionalProperties": false
-              }
+                "images": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "An image by name. sketch-<id>: the sketch of elements[<id>], drawn from its prompt. picture-<id>: the cut or in-between picture <id>, once drawn (draw them in the order of their needs). previs-<id>: the cut's mock-up (camera.previs's files). people:<name>+<name>: those sketches side by side on one image, left to right (the local machine's fitting). Anything else is a real media id."
+                  }
+                },
+                "dropped": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": ["text", "images"],
+              "additionalProperties": false
+            },
+            "qwen-image": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "paragraphs": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string"
+                      },
+                      "fields": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": ["id", "text", "fields"],
+                    "additionalProperties": false
+                  }
+                },
+                "images": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "An image by name. sketch-<id>: the sketch of elements[<id>], drawn from its prompt. picture-<id>: the cut or in-between picture <id>, once drawn (draw them in the order of their needs). previs-<id>: the cut's mock-up (camera.previs's files). people:<name>+<name>: those sketches side by side on one image, left to right (the local machine's fitting). Anything else is a real media id."
+                  }
+                },
+                "dropped": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": ["text", "images"],
+              "additionalProperties": false
+            },
+            "qwen-image-written": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "paragraphs": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string"
+                      },
+                      "fields": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": ["id", "text", "fields"],
+                    "additionalProperties": false
+                  }
+                },
+                "images": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "An image by name. sketch-<id>: the sketch of elements[<id>], drawn from its prompt. picture-<id>: the cut or in-between picture <id>, once drawn (draw them in the order of their needs). previs-<id>: the cut's mock-up (camera.previs's files). people:<name>+<name>: those sketches side by side on one image, left to right (the local machine's fitting). Anything else is a real media id."
+                  }
+                },
+                "dropped": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": ["text", "images"],
+              "additionalProperties": false
             }
           },
-          "required": ["text", "paragraphs"],
-          "additionalProperties": false
+          "required": ["nano-banana-pro"],
+          "additionalProperties": false,
+          "description": "A picture's prompt by image model: nano-banana-pro is Dream Chat's own, whole, by paragraph; qwen-image the same fitted to the local machine's limits (4 images, 4000 characters), its default; qwen-image-written written for that machine from the cut's sheet."
         }
       },
-      "required": ["identity", "story", "who", "state", "camera", "dependencies", "checks", "history", "prompt"],
+      "required": ["identity", "story", "who", "state", "camera", "dependencies", "checks", "history", "prompts"],
       "additionalProperties": false
     }
   },
   "type": "object",
   "properties": {
     "version": {
-      "const": 1
+      "const": 2
     },
     "dream": {
       "type": "object",

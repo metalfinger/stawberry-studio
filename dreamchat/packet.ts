@@ -19,7 +19,7 @@ import type { NowOf } from './record';
 import { sheetPrompt } from './sheets';
 
 /** The packet's version: a harness reading one checks it. */
-export const PACKET_VERSION = 1;
+export const PACKET_VERSION = 2;
 
 /** A verdict the owner gave a drawing of this picture: in the story's verdicts, a checkpoint, or a local run. */
 export type VerdictPacket = {
@@ -29,6 +29,38 @@ export type VerdictPacket = {
   verdict: 'right' | 'partly' | 'wrong';
   note?: string;
   at?: string;
+  /** A local run drawn without the dream's readings (its manifest lists them missing): not evidence of the harness. */
+  withoutReadings?: true;
+};
+
+/**
+ * A picture's prompt for one image model, with the images it is sent in order (by name: see `ImagePacket.media`):
+ * `nano-banana-pro` is Dream Chat's own, whole, by paragraph; `qwen-image` the same fitted to the local machine's limits
+ * (4 images, 4000 characters), its default; `qwen-image-written` written for that machine from the cut's sheet.
+ */
+export type ModelPrompt = {
+  text: string;
+  paragraphs?: { id: string; text: string; fields: string[] }[];
+  images: string[];
+  /** What the fitting left out, by name. */
+  dropped?: string[];
+};
+export type Prompts = {
+  'nano-banana-pro': ModelPrompt;
+  'qwen-image'?: ModelPrompt;
+  'qwen-image-written'?: ModelPrompt;
+};
+
+/** A cut's mock-up as files beside the packets: its path from the packet's folder and its content's sha256. */
+export type PrevisFile = { file: string; sha256: string };
+/**
+ * A cut's mock-up (previs.ts), rendered from its floor plan through its camera: grey and labelled, as fal is sent it,
+ * and colour-keyed with the key that says which colour is who, as the local machine may be.
+ */
+export type PrevisPacket = {
+  media: string;
+  clay: PrevisFile | null;
+  keyed: (PrevisFile & { key: { id: string; name: string; colour: string; kind: string }[] }) | null;
 };
 
 /** A person, place or thing as it is sketched: its prompt, and its look field by field, said or guessed. */
@@ -73,7 +105,7 @@ export type GhostPacket = {
   depth: number;
   key: string | null;
   shows: { what: string; now: string }[];
-  prompt: string;
+  prompts: Prompts;
   images: ImagePacket[];
 };
 
@@ -156,7 +188,7 @@ export type NodePacket = {
     eye: Eye | null;
     floorPlan: Blocking | null;
     /** Its mock-up, by the name its images use: rendered from the floor plan through the camera (previs.ts). */
-    previs: string | null;
+    previs: PrevisPacket | null;
     view: string | null;
     brief: string | null;
     words: string | null;
@@ -183,7 +215,7 @@ export type NodePacket = {
   };
   checks: { criteria: Criterion[]; sheetHash: string | null; flags: string[]; differs: string[] };
   history: { verdicts: VerdictPacket[] };
-  prompt: { text: string; paragraphs: { id: string; text: string; fields: string[] }[] | null };
+  prompts: Prompts;
 };
 
 export type DreamPacket = {
@@ -226,12 +258,29 @@ function imagesOf(p: Rebuilt['pictures'][number]): ImagePacket[] {
 
 /**
  * A rebuilt dream as packets: its sketches, its in-between pictures and a node per cut, in the order they are drawn.
- * `history` gives the owner's verdicts on earlier drawings of a cut (evals/packets.ts reads them from disk).
+ * `history` gives the owner's verdicts on earlier drawings of a cut, `previs` a cut's mock-up files and `prompts` a
+ * picture's prompts for other models (evals/packets.ts reads and renders them).
  */
 export function dreamPacket(
   r: Rebuilt,
-  opts: { dream: string; style: StyleOption; history: (cut: string) => VerdictPacket[] },
+  opts: {
+    dream: string;
+    style: StyleOption;
+    history: (cut: string) => VerdictPacket[];
+    previs?: (cut: string) => Omit<PrevisPacket, 'media'> | null;
+    prompts?: (p: Rebuilt['pictures'][number]) => Omit<Prompts, 'nano-banana-pro'>;
+  },
 ): DreamPacket {
+  const prompts = (p: Rebuilt['pictures'][number]): Prompts => ({
+    'nano-banana-pro': {
+      text: p.prompt,
+      ...(p.assembled
+        ? { paragraphs: p.assembled.lines.map((l) => ({ id: l.id, text: l.text, fields: l.fields })) }
+        : {}),
+      images: p.references.map((x) => x.media_id),
+    },
+    ...(opts.prompts?.(p) ?? {}),
+  });
   const byMoment = new Map(moments(r.b).map((m) => [m.id, m]));
   const cuts = r.pictures.filter((p) => p.kind === 'cut');
   const env = drawnEnv();
@@ -282,7 +331,7 @@ export function dreamPacket(
             depth: g.depth,
             key: or(g.key),
             shows: (g.shows ?? []).map((x) => ({ what: x.what, now: x.now })),
-            prompt: p.prompt,
+            prompts: prompts(p),
             images: imagesOf(p),
           };
         }),
@@ -369,7 +418,9 @@ export function dreamPacket(
             looksAt: or(f.looksAt),
             eye: cp?.eye ?? null,
             floorPlan: plan,
-            previs: cp?.eye ? standIn.previs(p.id) : null,
+            previs: cp?.eye
+              ? { media: standIn.previs(p.id), ...(opts.previs?.(p.id) ?? { clay: null, keyed: null }) }
+              : null,
             view: sh?.camera.view ?? or(cp?.view),
             brief: sh?.camera.brief ?? or(p.item.shot?.text),
             words: sh?.camera.words ?? or(cp?.camera),
@@ -400,12 +451,7 @@ export function dreamPacket(
             differs: p.differs ?? [],
           },
           history: { verdicts: opts.history(p.id) },
-          prompt: {
-            text: p.prompt,
-            paragraphs: p.assembled
-              ? p.assembled.lines.map((l) => ({ id: l.id, text: l.text, fields: l.fields }))
-              : null,
-          },
+          prompts: prompts(p),
         };
       }),
     };
@@ -437,9 +483,31 @@ const obj = (properties: Record<string, Schema>, optional: string[] = []): Schem
 });
 
 const v2 = obj({ x: num, y: num });
+/** How a harness resolves a picture's images: each by its name, from the packet's own entries. */
+const MEDIA =
+  "An image by name. sketch-<id>: the sketch of elements[<id>], drawn from its prompt. picture-<id>: the cut or in-between picture <id>, once drawn (draw them in the order of their needs). previs-<id>: the cut's mock-up (camera.previs's files). people:<name>+<name>: those sketches side by side on one image, left to right (the local machine's fitting). Anything else is a real media id.";
+const named: Schema = { type: 'string', description: MEDIA };
+const prompt = obj(
+  {
+    text: { type: 'string', minLength: 1 },
+    paragraphs: list(obj({ id: str, text: str, fields: list(str) })),
+    images: list(named),
+    dropped: list(str),
+  },
+  ['paragraphs', 'dropped'],
+);
+const prompts = {
+  ...obj({ 'nano-banana-pro': prompt, 'qwen-image': prompt, 'qwen-image-written': prompt }, [
+    'qwen-image',
+    'qwen-image-written',
+  ]),
+  description:
+    "A picture's prompt by image model: nano-banana-pro is Dream Chat's own, whole, by paragraph; qwen-image the same fitted to the local machine's limits (4 images, 4000 characters), its default; qwen-image-written written for that machine from the cut's sheet.",
+};
+const previsFile = obj({ file: str, sha256: str });
 const image = obj({
   n: count,
-  media: str,
+  media: named,
   role: oneOf('identity', 'location', 'prop', 'base', 'composition'),
   instruction: str,
   source: { enum: ['edit', 'mockup', 'sketch', 'ghost', 'earlier', null] },
@@ -557,8 +625,9 @@ export const PACKET_SCHEMA: Schema = {
         verdict: oneOf('right', 'partly', 'wrong'),
         note: str,
         at: str,
+        withoutReadings: { const: true },
       },
-      ['run', 'note', 'at'],
+      ['run', 'note', 'at', 'withoutReadings'],
     ),
     element: obj({
       id: str,
@@ -567,7 +636,7 @@ export const PACKET_SCHEMA: Schema = {
       isDreamer: bool,
       look: map(obj({ value: str, said: bool })),
       prompt: { type: 'string', minLength: 1 },
-      image: orNull(str),
+      image: orNull(named),
       group: bool,
       partOf: orNull(str),
       extras: bool,
@@ -585,7 +654,7 @@ export const PACKET_SCHEMA: Schema = {
       depth: count,
       key: orNull(str),
       shows: ghostShows,
-      prompt: { type: 'string', minLength: 1 },
+      prompts,
       images: list(ref('image')),
     }),
     node: obj({
@@ -649,7 +718,19 @@ export const PACKET_SCHEMA: Schema = {
         looksAt: orNull(str),
         eye: orNull(ref('eye')),
         floorPlan: orNull(ref('floorPlan')),
-        previs: orNull(str),
+        previs: orNull(
+          obj({
+            media: str,
+            clay: orNull(previsFile),
+            keyed: orNull(
+              obj({
+                file: str,
+                sha256: str,
+                key: list(obj({ id: str, name: str, colour: str, kind: str })),
+              }),
+            ),
+          }),
+        ),
         view: orNull(str),
         brief: orNull(str),
         words: orNull(str),
@@ -704,10 +785,7 @@ export const PACKET_SCHEMA: Schema = {
       }),
       checks: obj({ criteria: list(ref('criterion')), sheetHash: orNull(str), flags: list(str), differs: list(str) }),
       history: obj({ verdicts: list(ref('verdict')) }),
-      prompt: obj({
-        text: { type: 'string', minLength: 1 },
-        paragraphs: orNull(list(obj({ id: str, text: str, fields: list(str) }))),
-      }),
+      prompts,
     }),
   },
   type: 'object',

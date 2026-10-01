@@ -113,7 +113,8 @@ describe('a saved dream as packets', () => {
           for (const [i, c] of pk.cuts.entries()) {
             const p = cuts[i];
             const m = byId.get(p.id)!;
-            expect(c.prompt.text).toBe(p.prompt);
+            expect(c.prompts['nano-banana-pro'].text).toBe(p.prompt);
+            expect(c.prompts['nano-banana-pro'].images).toEqual(p.references.map((x) => x.media_id));
             expect(c.identity.order).toBe(p.item.frame!.order);
             expect(c.story.action).toBe(m.action);
             expect(c.story.point).toBe(m.visual_point || null);
@@ -147,12 +148,54 @@ describe('a saved dream as packets', () => {
       expect(planned.length).toBeGreaterThan(0);
       for (const c of planned) {
         expect(c.camera.floorPlan?.spots.length).toBeGreaterThan(0);
-        expect(c.camera.previs).toBe(`previs-${c.identity.cut}`);
+        expect(c.camera.previs?.media).toBe(`previs-${c.identity.cut}`);
       }
       // The snow train's grandfather sits across from the dreamer, on the seats facing each other, with his suitcase.
       const m2 = pk.cuts.find((c) => c.identity.cut === 'm2')!;
       expect(m2.camera.floorPlan!.spots.some((s) => s.shape === 'seat')).toBe(true);
       expect(m2.state.held).toBeDefined();
+    });
+  });
+
+  test("a cut's mock-up files, its prompts for other models and a run drawn without readings, as they are given", () => {
+    withEnv(FULL, () => {
+      const id = ids[0];
+      const session = loadDream(id, false).session as Session;
+      const r = rebuild(session);
+      const pk = dreamPacket(r, {
+        dream: id,
+        style: session.style!,
+        history: (cut) =>
+          cut === 'm1' ? [{ source: 'local', run: 'qwen-1', verdict: 'wrong', withoutReadings: true }] : [],
+        previs: (cut) => ({
+          clay: { file: `previs/${cut}.png`, sha256: 'a'.repeat(64) },
+          keyed: {
+            file: `previs/${cut}-keyed.png`,
+            sha256: 'b'.repeat(64),
+            key: [{ id: 'p1', name: 'the dreamer', colour: 'red', kind: 'person' }],
+          },
+        }),
+        prompts: (p) => ({ 'qwen-image': { text: `fitted ${p.id}`, images: ['previs-x'], dropped: ['sketch-l1'] } }),
+      });
+      expect(validate(PACKET_SCHEMA, pk)).toEqual([]);
+      const c = pk.cuts.find((x) => x.camera.previs)!;
+      expect(c.camera.previs).toEqual({
+        media: `previs-${c.identity.cut}`,
+        clay: { file: `previs/${c.identity.cut}.png`, sha256: 'a'.repeat(64) },
+        keyed: {
+          file: `previs/${c.identity.cut}-keyed.png`,
+          sha256: 'b'.repeat(64),
+          key: [{ id: 'p1', name: 'the dreamer', colour: 'red', kind: 'person' }],
+        },
+      });
+      expect(c.prompts['qwen-image']).toEqual({
+        text: `fitted ${c.identity.cut}`,
+        images: ['previs-x'],
+        dropped: ['sketch-l1'],
+      });
+      expect(pk.cuts[0].history.verdicts[0].withoutReadings).toBe(true);
+      // A cut with no floor plan has no mock-up to name.
+      for (const x of pk.cuts.filter((y) => !y.camera.eye)) expect(x.camera.previs).toBeNull();
     });
   });
 
