@@ -223,6 +223,12 @@ export const BUILDER_STEPS: readonly string[] = [
   //    stairs to the roof) had no camera, the camera centred on everyone a moment holds but a crowd; shot on the crowd,
   //    or what the moment looks at, and never with what it looks at behind the camera (Neighbours, 1 Oct).
   'crowd_camera',
+  // Not a ledger row: the merged flow's dream 3 (1 Oct). "Reaches" is a hand only reaching out, for or into something:
+  //    "just as the dreamer reaches the man in the wheelchair" is arriving, and was drawn as a huge reaching hand.
+  'reach_arrives',
+  // Not a ledger row: the same dream. Someone the camera leaves outside the picture is not in it: "just outside the
+  //    picture to the left is the man in the wheelchair" went out with his image all the same.
+  'framed_only',
   // Not a ledger row: from the counted prompt cases (G2, its one model step). A group told only as a crowd, never
   //    sketched, is given ordinary clothes for who and where they are, as a guess (wardrobe.ts, one writer reading per
   //    dream): made real from the mock-up, the exam room's faceless students came out naked (heron m4).
