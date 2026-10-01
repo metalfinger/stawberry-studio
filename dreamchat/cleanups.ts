@@ -169,6 +169,11 @@ export const BUILDER_STEPS: readonly string[] = [
   // Not a ledger row: from the owner's vehicle pairs (1 Oct). Through the dreamer's eyes, a moment that has them do
   //    something with their hands shows their hands doing it ("as they open the door"), never "at most" their hands.
   'own_hands',
+  // 17. One copy of a moment, the one in force: a picture is sent from the plan made now, as an in-between picture
+  //    already is, its cast and words refreshed from it (S9's fresh send, its own switch until now). A moment kept the
+  //    plan of the last re-plan and the cast it was first put in with, while a rebuild reads the dream as it stands
+  //    (2 of 61 moments sent with an out-of-date cast, S9). Row 2 (one tree) needs it.
+  'fresh_send',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;

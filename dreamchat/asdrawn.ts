@@ -33,6 +33,7 @@
 // every prompt is written as before.
 import { assembleCut } from './assemble';
 import { cameraMode } from './camera';
+import { builds } from './cleanups';
 import type { CutPlan, GhostPlan } from './continuity';
 import { cutSheet, type CutSheet, ghostName, imageNamesOf, type SheetPrint } from './cutsheet';
 import { approved, type FrameReference, momentFields, type PlannedInput } from './frames';
@@ -46,9 +47,12 @@ export function asDrawnMode(): 'off' | 'on' {
   return (process.env.DREAMCHAT_AS_DRAWN ?? '').trim().toLowerCase() === 'on' ? 'on' : 'off';
 }
 
-/** Whether a picture's copy of itself is refreshed from the plan in force when it is sent: off by default. */
+/**
+ * Whether a picture's copy of itself is refreshed from the plan in force when it is sent: off by default; on with
+ * DREAMCHAT_FRESH_SEND=on, or with the one builder's `fresh_send` step (S6 row 17).
+ */
 export function freshSendMode(): boolean {
-  return (process.env.DREAMCHAT_FRESH_SEND ?? '').trim().toLowerCase() === 'on';
+  return (process.env.DREAMCHAT_FRESH_SEND ?? '').trim().toLowerCase() === 'on' || builds('fresh_send');
 }
 
 // ── the switches and the code a record was kept under ─────────────────────────

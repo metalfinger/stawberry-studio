@@ -2834,6 +2834,9 @@ export class SessionStore {
     // DREAMCHAT_FRESH_SEND=on: the moment's copy of itself (who and what is in it, whether its words are
     // the dreamer's) refreshed from the plan in force as it is sent. A moment kept the cast it was first
     // put in with, which a re-plan does not update (paper-city m5 drawn without the red paper bird).
+    // With the one builder's `fresh_send` step (S6 row 17), its plan is the plan made now, as an in-between picture's
+    // is when it is sent, not the last re-plan's; one reviewed or approved keeps its own, as a re-plan keeps it.
+    if (builds('fresh_send')) this.planNow(s, frame);
     if (freshSendMode()) refreshMoment(frame, momentOf(s, frame.id));
     // The dream the moment's cut sheet reads, made once for this drawing and again after its words change.
     // What is withheld from it (S5's references: judged wrong, or stale) is read once for this drawing, so its
@@ -3403,6 +3406,23 @@ export class SessionStore {
     (s.prep.storyboard ??= {})[frame.id] = check;
     await this.replan(s);
     return true;
+  }
+
+  /**
+   * A moment's plan as the dream is planned now (dreamNowOf, the plan staleness and an in-between picture's send
+   * read), set as a re-plan sets it, and the dream's own copy of its plan with it (S6 row 17). One reviewed or
+   * approved keeps its own, and one whose needs are not all in the dream yet waits for a re-plan, as there.
+   */
+  private planNow(s: Session, f: Item): void {
+    const plan = dreamNowOf(s).plan;
+    if (!plan || !s.build || f.kind !== 'cut' || !f.frame || f.review || f.continuityApproved) return;
+    const next = plan.cuts.find((c) => c.id === f.id);
+    if (!next) return;
+    const known = new Set((s.build.frames ?? []).map((x) => x.id));
+    if (![...next.needs, ...next.refs.map((r) => r.id)].every((n) => known.has(n))) return;
+    f.frame.plan = next;
+    f.needs = next.needs;
+    s.build.plan = { issues: [], ...plan };
   }
 
   private async replan(s: Session, opts: { syncRecords?: boolean } = {}): Promise<void> {

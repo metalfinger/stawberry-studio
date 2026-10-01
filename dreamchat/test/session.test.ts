@@ -1183,9 +1183,12 @@ describe('a whole conversation', () => {
 
   test("S9's fresh send: words reworded into the third person stay the dreamer's where the breakdown says so", async () => {
     const was = process.env.DREAMCHAT_FRESH_SEND;
+    // The one builder's `fresh_send` step turns it on as well: off here is off in both.
+    const builder = process.env.DREAMCHAT_ONE_BUILDER;
     const draw = async (fresh: boolean) => {
       if (fresh) process.env.DREAMCHAT_FRESH_SEND = 'on';
       else delete process.env.DREAMCHAT_FRESH_SEND;
+      delete process.env.DREAMCHAT_ONE_BUILDER;
       // The kitchen told as "you", and put in the third person before it is drawn.
       const told = structuredClone(breakdown);
       told.scenes[0].moments[0].action = 'You stand in the kitchen, with a red board on the wall';
@@ -1217,6 +1220,8 @@ describe('a whole conversation', () => {
     } finally {
       if (was === undefined) delete process.env.DREAMCHAT_FRESH_SEND;
       else process.env.DREAMCHAT_FRESH_SEND = was;
+      if (builder === undefined) delete process.env.DREAMCHAT_ONE_BUILDER;
+      else process.env.DREAMCHAT_ONE_BUILDER = builder;
     }
   });
 

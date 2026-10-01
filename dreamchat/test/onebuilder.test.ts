@@ -1650,3 +1650,31 @@ describe('a colour the dreamer gave stays told where it is in view', () => {
     expect(at('carried_colours')).toContain('What the dream itself gives a colour keeps it exactly: green corridor.');
   });
 });
+
+describe('ledger 17: a moment sent from the plan in force', () => {
+  test("the `fresh_send` step turns S9's fresh send on; a step before it, or the builder off, leaves it to its own switch", async () => {
+    const { freshSendMode } = await import('../asdrawn');
+    const was = { b: process.env.DREAMCHAT_ONE_BUILDER, f: process.env.DREAMCHAT_FRESH_SEND };
+    try {
+      delete process.env.DREAMCHAT_FRESH_SEND;
+      const at = (v: string | undefined) => {
+        if (v === undefined) delete process.env.DREAMCHAT_ONE_BUILDER;
+        else process.env.DREAMCHAT_ONE_BUILDER = v;
+        return freshSendMode();
+      };
+      expect(at(undefined)).toBe(false);
+      expect(at('own_hands')).toBe(false);
+      expect(at('fresh_send')).toBe(true);
+      expect(at('on')).toBe(true);
+      process.env.DREAMCHAT_FRESH_SEND = 'on';
+      expect(at(undefined)).toBe(true);
+    } finally {
+      for (const [k, v] of [
+        ['DREAMCHAT_ONE_BUILDER', was.b],
+        ['DREAMCHAT_FRESH_SEND', was.f],
+      ] as const)
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+    }
+  });
+});
