@@ -115,7 +115,10 @@ export function qwenEdit(
     .map((img, i) => ({ img, ref: refs[i] }))
     .filter((x) => x.img.file && x.ref)
     // Through the dreamer's eyes their sketch has no one to give a face to: their clothes are said in words.
-    .filter((x) => !(pov && x.ref.role === 'identity' && x.ref.of === s.dreamer.id));
+    .filter((x) => !(pov && x.ref.role === 'identity' && x.ref.of === s.dreamer.id))
+    // Through the dreamer's eyes, an earlier picture seen from outside is copied whole, its people and all: the father
+    // and the dreamer of the handover came back into the dreamer's own view of the window (lighthouse-first m6, 1 Oct).
+    .filter((x) => !(pov && x.ref.role === 'composition'));
   // A thing the moment's action or its one thing to show names comes before the place: the mock-up carries the place's
   // layout, and without its sketch the folded newspaper boat came out painted wood (lighthouse-first m4, 30 Sep).
   const said = `${s.story.action} ${s.story.point ?? ''}`.toLowerCase();
@@ -182,6 +185,13 @@ export function qwenEdit(
       `Edit ${tag(1)}, ${medium}: keep its camera, its framing, and everyone and everything in it where they are and as they look, and change only what this moment changes.`,
     );
   else out.push(`A finished picture, ${medium}, in a ${s.camera.shape} frame.`);
+
+  // The camera, as the plan places it: where it stands and what it looks at (the view's first sentence), and what the
+  // rules say is out past the place. Without it a close view of the dog at its own eye level came out from above, and
+  // the dreamer's view out of the window lost the window (lighthouse-first m1, m6, 1 Oct).
+  const shot = (s.camera.view ?? '').split(/(?<=\.)\s+/)[0]?.trim();
+  if (shot) out.push(sentence(shot));
+  for (const line of s.rules?.lines ?? []) out.push(sentence(line));
 
   // 2. The light, early: the place's own light, and the time of day its look gives.
   const place = s.inView.find((e) => e.id === s.place) ?? s.inView.find((e) => e.kind === 'location');
