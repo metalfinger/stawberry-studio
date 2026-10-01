@@ -171,7 +171,7 @@ export function qwenEdit(s: CutSheet, refs: AssembledRef[], images: Img[], lines
     const figure = mockUp ? `The grey figure labelled ${e.name}` : sentence(e.name).replace(/\.$/, '');
     out.push(
       k
-        ? `${figure} becomes ${e.name} from ${tag(k)}: take only their face, hair and clothes from ${tag(k)}${mockUp ? `, and keep the figure's pose${pose ? ` (${pose})` : ''}` : ''}.`
+        ? `${figure} becomes ${e.name} from ${tag(k)}: take only ${e.said === 'animal' ? 'how it looks' : e.said === 'people' ? 'how they look' : 'their face, hair and clothes'} from ${tag(k)}${mockUp ? `, and keep the figure's pose${pose ? ` (${pose})` : ''}` : ''}.`
         : `${figure} becomes ${becomes(e)}${pose && mockUp ? `, ${pose}` : ''}.`,
     );
   }
@@ -186,14 +186,27 @@ export function qwenEdit(s: CutSheet, refs: AssembledRef[], images: Img[], lines
         : `${shape} becomes ${becomes(e)}.`,
     );
   }
-  // 6. Counts, in a sentence of their own.
-  const solo = (e: SheetElement) => !e.group;
-  const n = people.filter(solo).length;
+  // 6. Counts, in a sentence of their own: Qwen takes "Exactly" literally, so only who and what is one of a kind is
+  //    counted; a group or a crowd, and a thing named in the plural ("the little boats", "hundreds of letters"),
+  //    is said after it without a number ("one little boats", and a crowd counted as one person, 1 Oct).
+  const many = (e: SheetElement) =>
+    e.group ||
+    /^(?:the\s+)?(?:hundreds|dozens|many|several|some|a few|lots)\b/i.test(e.name) ||
+    /[^suai']s$/i.test(e.name);
+  // An animal is counted as what it is ("one dog"), never as a person.
+  const solo = people.filter((e) => !many(e) && e.said !== 'animal');
+  const animals = people.filter((e) => !many(e) && e.said === 'animal');
   const counted = [
-    ...(n ? [`${count(n)} ${n === 1 ? 'person' : 'people'} (${people.map((e) => e.name).join(', ')})`] : []),
-    ...things.filter(solo).map((e) => `one ${e.name.replace(/^the\s+/i, '')}`),
+    ...(solo.length
+      ? [`${count(solo.length)} ${solo.length === 1 ? 'person' : 'people'} (${solo.map((e) => e.name).join(', ')})`]
+      : []),
+    ...[...animals, ...things.filter((e) => !many(e))].map((e) => `one ${e.name.replace(/^the\s+/i, '')}`),
   ];
-  if (counted.length) out.push(`Exactly ${counted.join(' and ')} in the picture.`);
+  const besides = [...people, ...things].filter(many).map((e) => e.name);
+  if (counted.length)
+    out.push(
+      `Exactly ${counted.join(' and ')} in the picture${besides.length ? `, with ${besides.join(' and ')}` : ''}.`,
+    );
 
   // 7. The place, by its image: its look, seen from the canvas's camera.
   if (place) {

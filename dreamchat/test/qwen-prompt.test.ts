@@ -78,6 +78,20 @@ describe('qwenEdit: a moment written for Qwen-Image from its sheet', () => {
     expect(m6.images.map((x) => x.name)).not.toContain('sketch-p1');
   });
 
+  test('only one of a kind is counted: a crowd, a thing in the plural and an animal are said as they are', () => {
+    const exactly = (id: string, m: string) =>
+      qwenCuts(id)
+        .find((c) => c.id === m)
+        ?.prompt.match(/Exactly [^.]*\./)?.[0];
+    expect(exactly('dream-0926-000545-09ea', 'm1')).toBe(
+      'Exactly two people (the dreamer, my older sister) and one fish in the picture, with the crowd.',
+    );
+    // Never "one little boats": a thing named in the plural is said without a number.
+    for (const id of frozenDreams())
+      for (const c of qwenCuts(id)) expect(c.prompt).not.toMatch(/Exactly [^.,]*\bone [\w ]*[^suai']s\b/);
+    expect(exactly('dream-0925-231131-affd', 'm1')).toBe('Exactly one dog in the picture.');
+  });
+
   test('every frozen moment fits the machine', () => {
     for (const id of frozenDreams())
       for (const c of qwenCuts(id)) {
