@@ -238,6 +238,13 @@ const TEXTURE_POINT =
  * is what the picture shows, and the writer still wrote "all the stars streaking up into the sky, as if called back
  * home to outer space" (2 of 79). Never emptied: a point that is nothing but a simile is kept.
  */
+/** The simile clauses a point says, as withoutSimile cuts them. */
+export const similesOf = (point: string): string[] =>
+  point
+    .split(/,\s*/)
+    .map((part) => /\b(?:(?:looks?|looking|seems?|seeming)\s+)?(?:like|as if|as though)\b.*$/i.exec(part)?.[0].trim())
+    .filter((x): x is string => !!x);
+
 export function withoutSimile(point: string): string {
   const cut = point
     .split(/,\s*/)
@@ -1463,9 +1470,15 @@ export function normalizeBreakdown(raw: string): { breakdown: Breakdown; notes: 
         distance: mo.distance === 'close' || mo.distance === 'wide' ? mo.distance : 'medium',
         looks_at: str(mo.looks_at, 80),
         feeling: str(mo.feeling, 240),
-        visual_point: (builds('texture') ? withoutSimile : (x: string) => x)(
-          str(mo.visual_point, 240).replace(CAMERA_CLAUSE, '').trim(),
-        ),
+        visual_point: (() => {
+          const point = str(mo.visual_point, 240).replace(CAMERA_CLAUSE, '').trim();
+          if (!builds('texture')) return point;
+          const cut = withoutSimile(point);
+          // What was cut is kept in the notes, a seeable look among it counted by the eval (evals/texture.ts).
+          if (cut !== point)
+            notes.push(`texture: ${str(mo.id) || `moment ${j + 1}`}'s point lost "${similesOf(point).join('", "')}"`);
+          return cut;
+        })(),
         purpose: str(mo.purpose, 120),
         // Code decides the edge case: a scene's first moment continues from nothing.
         continues: j > 0 && mo.continues !== false,

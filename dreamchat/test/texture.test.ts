@@ -85,6 +85,10 @@ describe('a point never says "as if" or "like" (a word check after the writer)',
     const point = (v: string | undefined) =>
       withBuilder(v, () => normalizeBreakdown(raw).breakdown.scenes[0].moments[0].visual_point);
     expect(point('texture')).toBe('all the stars streaking up into the sky');
+    // What was cut is kept in the notes, to be counted.
+    expect(withBuilder('texture', () => normalizeBreakdown(raw).notes)).toContain(
+      `texture: m1's point lost "as if called back home to outer space"`,
+    );
     expect(point('plan_facing')).toBe('all the stars streaking up into the sky, as if called back home to outer space');
   });
 });
