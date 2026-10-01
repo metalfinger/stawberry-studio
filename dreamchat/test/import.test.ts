@@ -25,6 +25,8 @@ const painted: StyleOption = {
   medium: 'a woodcut print',
 };
 
+const FULL = ['DREAMCHAT_RECORD', 'DREAMCHAT_CUT_SHEET', 'DREAMCHAT_CAMERA', 'DREAMCHAT_ONE_BUILDER'];
+
 const stubs = (over: Partial<ImportDeps> = {}): { deps: ImportDeps; asked: string[] } => {
   const asked: string[] = [];
   const deps: ImportDeps = {
@@ -45,6 +47,31 @@ const stubs = (over: Partial<ImportDeps> = {}): { deps: ImportDeps; asked: strin
   };
   return { deps, asked };
 };
+
+describe('an imported dream, read back as any saved one', () => {
+  // Every reader of saved dreams (the corpus, the prompt cases, the checkpoints, the viewer's data, the packets, the
+  // local runner) reads them through these: an imported dream's readings are its own, made as its shots were planned.
+  test("its own implied and typed readings are kept, never the cache's (which has none of it)", async () => {
+    const { withImplied } = await import('../evals/implied-cache');
+    const { withTyped } = await import('../evals/typed-cache');
+    const own = structuredClone(frozen);
+    own.imported = { at: 0, from: 'text' };
+    const typed = { m1: { ask: 'own', facts: { shows: ['p1'] } } } as unknown as NonNullable<
+      NonNullable<Session['draft']>['readings']
+    >['typed'];
+    own.draft = { ...own.draft!, readings: { ...own.draft!.readings, typed, implied: {} } };
+    const empty = join(mkdtempSync(join(tmpdir(), 'cache-')), 'none.json');
+    const t = await withTyped(own, { cacheFile: empty });
+    expect(t.missing).toEqual([]);
+    expect(t.session.draft?.readings?.typed).toEqual(typed);
+    const jev = async () => {
+      throw new Error('Jev is never asked for an imported dream');
+    };
+    const i = await withImplied(own, { jev, jevModel: 'stand-in', cacheFile: empty, write: jev });
+    expect(i.session.draft?.readings?.implied).toEqual({});
+    expect(i.asked).toBe(0);
+  });
+});
 
 describe('a dumped dream, with no chat', () => {
   test('a text is the dreamer telling it; its look is the named style; saved, planned, its packet written', async () => {
@@ -67,6 +94,8 @@ describe('a dumped dream, with no chat', () => {
     expect(s.draft?.status).toBe('ready');
     expect(s.style?.medium).toBe('a woodcut print');
     expect(s.closed).toBe(true);
+    // Known for what it is: a dream taken in from its text, never talked through.
+    expect(s.imported?.from).toBe('text');
     // Every sketch from the breakdown, as the chat lists them, none confirmed and none drawn.
     expect(s.build?.items.map((i) => i.id)).toEqual(buildItems(s.draft!.breakdown!).map((i) => i.id));
     expect(s.build?.items.every((i) => i.status === 'waiting')).toBe(true);
@@ -74,6 +103,50 @@ describe('a dumped dream, with no chat', () => {
     expect(Object.keys(s.prep?.blocking ?? {}).length).toBeGreaterThan(0);
     const r = rebuild(s);
     expect(r.pictures.filter((p) => p.kind === 'cut').length).toBe(6);
+  });
+
+  test("the chat's order: the floor plans, then what each moment implies and its typed facts, then the cameras", async () => {
+    const was = Object.fromEntries(FULL.map((k) => [k, process.env[k]]));
+    for (const k of FULL) process.env[k] = 'on';
+    try {
+      const order: string[] = [];
+      const writer = (name: string) => async () => {
+        order.push(name);
+        return { content: '{}', model: 'stand-in', ms: 0 };
+      };
+      const { deps } = stubs({
+        block: async (b) => {
+          order.push('block');
+          return { breakdown: b, notes: [] };
+        },
+        shot: async () => {
+          order.push('shot');
+          return 'A brief.';
+        },
+        imply: writer('imply'),
+        typed: writer('typed'),
+        // Jev reads beside the writers; a stand-in that answers nothing.
+        jev: async (state, questions) => ({
+          questions,
+          state,
+          answers: {},
+          error: null,
+          ms: 0,
+          usage: null,
+          model: 'stand-in',
+        }),
+      });
+      const data = mkdtempSync(join(tmpdir(), 'import-'));
+      await importDream({ text: 'A dream.', style: 'a woodcut print', id: 'dream-1001-000002-test', data }, deps);
+      const first = (name: string) => order.indexOf(name);
+      expect(first('imply')).toBeGreaterThan(first('block'));
+      expect(first('typed')).toBeGreaterThan(first('block'));
+      expect(first('shot')).toBeGreaterThan(Math.max(first('imply'), first('typed')));
+    } finally {
+      for (const k of FULL)
+        if (was[k] === undefined) delete process.env[k];
+        else process.env[k] = was[k];
+    }
   });
 
   test('a photograph is refused, and nothing is saved', async () => {

@@ -17,7 +17,10 @@ export type ImportDeps = {
   shot?: StoreDeps['shot'];
   supervise?: StoreDeps['supervise'];
   jev?: JevFn;
-  /** The dream with its readings in, read and kept as every eval reads them. */
+  /** The writers of what each moment implies and of its typed facts, read as the shots are planned (planShots). */
+  imply?: StoreDeps['imply'];
+  typed?: StoreDeps['typed'];
+  /** The readings made after the plan: the cast, read and kept as every eval reads it. */
   readings: (s: Session) => Promise<Session>;
   /** Its node packet written; null where it has none. */
   packet: (
@@ -66,6 +69,7 @@ export async function importDream(
   deps: ImportDeps,
 ): Promise<Imported> {
   const transcript = transcriptOf(input.text);
+  const from: 'text' | 'transcript' = transcript.length > 1 || transcript[0]?.role !== 'user' ? 'transcript' : 'text';
   if (!transcript.some((t) => t.role === 'user' && t.content)) throw new Error('the dump has nothing the dreamer said');
   const id = input.id ?? newId();
   const draft = await deps.producer(structuredClone(transcript));
@@ -105,12 +109,23 @@ export async function importDream(
     build: { items: buildItems(b), current: null, checks: 0 },
     images: 0,
     spentUsd: 0,
+    imported: { at, from },
   };
   const dir = join(input.data, 'state');
+  // The chat's order: the floor plans, then what each moment implies and its typed facts (which read the plans'
+  // fixtures and the changes found), then the cameras placed with them. The readings are the dream's own from now on.
   const prep = await planShots(
     b,
     style,
-    { block: deps.block, shot: deps.shot, supervise: deps.supervise, jev: deps.jev, dir: join(dir, id) },
+    {
+      block: deps.block,
+      shot: deps.shot,
+      supervise: deps.supervise,
+      jev: deps.jev,
+      imply: deps.imply,
+      typed: deps.typed,
+      dir: join(dir, id),
+    },
     { ...recordInputsOf(s), readings: s.draft?.readings },
   );
   applyPrep(s, prep);
@@ -124,14 +139,12 @@ export async function importDream(
 
 /** The models and the caches the import reads with, as every eval does. */
 export async function liveDeps(): Promise<ImportDeps> {
-  const { callJev, jevWithModel } = await import('./jev');
+  const { callJev } = await import('./jev');
   const { blockScenes, ownStyle, shotFor, superviseChanges } = await import('./producer');
   const { liveProducer } = await import('./session');
   const { writeTyped } = await import('./typed');
-  const { withImplied } = await import('./evals/implied-cache');
-  const { cachedFns, readTypedDream, TypedCache, withTyped } = await import('./evals/typed-cache');
+  const { writeImplied } = await import('./implied');
   const { castReadingOf, withCast } = await import('./evals/cast-cache');
-  const JM = process.env.JEV_EVAL_MODEL ?? 'jev-1.13.0';
   return {
     producer: liveProducer(callJev),
     ownStyle,
@@ -139,20 +152,12 @@ export async function liveDeps(): Promise<ImportDeps> {
     shot: shotFor,
     supervise: superviseChanges,
     jev: callJev,
+    imply: writeImplied,
+    typed: writeTyped,
+    // The cast, read from the breakdown as it stands with the others in, and kept where every eval reads it.
     readings: async (s) => {
-      // What each moment implies (asked where not kept), its typed facts (asked and kept), and last the cast, which is
-      // read from the breakdown as it stands with the others in.
-      let x = (await withImplied(s, { jev: jevWithModel(JM), jevModel: JM })).session as Session;
-      const cache = new TypedCache();
-      const counts = { writer: { asked: 0, cached: 0, missing: 0 }, jev: { asked: 0, cached: 0, missing: 0 } };
-      await readTypedDream(
-        x,
-        cachedFns(cache, { write: writeTyped, jev: jevWithModel(JM), jevModel: JM, ask: true }, counts),
-      );
-      cache.save();
-      x = (await withTyped(x)).session as Session;
-      await castReadingOf(x, { ask: true });
-      return (await withCast(x)).session as Session;
+      await castReadingOf(s, { ask: true });
+      return (await withCast(s)).session as Session;
     },
     // Loaded once the dream is saved: the packets' folder is found by the conversations it holds.
     packet: async (id, s) => {

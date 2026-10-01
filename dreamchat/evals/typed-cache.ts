@@ -116,6 +116,8 @@ export async function withTyped(
   opts: { cacheFile?: string; jevModel?: string } = {},
 ): Promise<{ session: Session; missing: string[]; read: number }> {
   if (!s.draft?.breakdown) return { session: s, missing: [], read: 0 };
+  // An imported dream's readings are its own, made as its shots were planned (importer.ts): never the cache's.
+  if (s.imported) return { session: s, missing: [], read: Object.keys(s.draft.readings?.typed ?? {}).length };
   const file = opts.cacheFile ?? TYPED_CACHE;
   let cache = loaded.get(file);
   if (!cache) loaded.set(file, (cache = new TypedCache(file)));

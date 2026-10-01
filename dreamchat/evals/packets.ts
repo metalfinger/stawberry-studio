@@ -179,7 +179,10 @@ function historyOf(dream: string): (cut: string) => VerdictPacket[] {
 
 const JM = process.env.JEV_EVAL_MODEL ?? 'jev-1.13.0';
 
-/** A saved dream with its readings from the caches, as the local runner draws it (none asked). */
+/**
+ * A saved dream with its readings from the caches, as the local runner draws it (none asked). An imported one keeps
+ * its own (the caches leave it be) and takes only its cast from the cache.
+ */
 export async function readied(session: Session): Promise<Session> {
   let s = structuredClone(session);
   s = (await withImplied(s, { jev: jevWithModel(JM), jevModel: JM })).session as Session;
