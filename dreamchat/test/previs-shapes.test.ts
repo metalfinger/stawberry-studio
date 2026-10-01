@@ -3,7 +3,7 @@
 // with wheels and a seat under each rider. Picture only: off, every mock-up is byte for byte what it was.
 import { describe, expect, test } from 'bun:test';
 import { type Blocking, facing, rightOf, type Spot } from '../blocking';
-import { benches, chairUnder, previsImage, previsKeyed, tractorParts } from '../previs';
+import { benches, chairUnder, previsImage, previsKeyed, seatOnTractor, tractorParts } from '../previs';
 
 const sha = (png: Uint8Array) => new Bun.CryptoHasher('sha256').update(png).digest('hex').slice(0, 16);
 
@@ -244,20 +244,29 @@ describe('a tractor with its seats', () => {
     ['side by side', field],
     ['one behind the other', tandem],
   ] as const)
-    test(`${k}: four wheels clear of the riders, a seat under each, a back behind them`, () => {
+    test(`${k}: four wheels clear of the riders, the tractor under each and a seat on it, a back behind them`, () => {
       const t = plan.spots[0];
       const riders = plan.spots.filter((s) => s.kind === 'person');
       const { body, seats } = tractorParts(t, plan, facing(t, plan));
       const wheels = body.filter((p) => Array.isArray(p)) as Face[][];
       expect(wheels).toHaveLength(4);
       for (const w of wheels) for (const p of riders) expect(overlaps(extent(w), riderBox(p, plan))).toBe(false);
+      const blocks = body.filter((p) => !Array.isArray(p)) as Box[];
       for (const p of riders) {
-        expect(seats.some((b) => under(b, { x: p.x, y: p.y }) && Math.abs(b.z + b.h - 0.45) < 1e-6)).toBe(true);
         const f = facing(p, plan);
+        const seat = { x: p.x - f.x * 0.1, y: p.y - f.y * 0.1 };
+        // A short seat on the tractor, never a seat-high block on the ground: they sat on stools before it.
+        expect(
+          seats.some((b) => under(b, { x: p.x, y: p.y }) && Math.abs(b.z + b.h - 0.45) < 1e-6 && b.z >= 0.25),
+        ).toBe(true);
+        expect(seats.some((b) => under(b, seat) && b.z < 0.25)).toBe(false);
+        // Under it, the tractor itself, from the ground to the seat.
+        expect(blocks.some((b) => under(b, seat) && b.z < 1e-6 && Math.abs(b.z + b.h - 0.3) < 1e-6)).toBe(true);
         expect(seats.some((b) => under(b, { x: p.x - f.x * 0.32, y: p.y - f.y * 0.32 }) && b.z + b.h > 0.7)).toBe(true);
       }
-      // Nothing of the tractor's own body is where a rider sits, below the top of their head (a cab's roof is over it).
-      for (const b of (body.filter((p) => !Array.isArray(p)) as Box[]).filter((b) => b.z < 1.4))
+      // Nothing of the tractor's own body is where a rider sits, from the seat to the top of their head (a cab's roof
+      // is over it, the tractor under the seat).
+      for (const b of blocks.filter((b) => b.z + b.h > 0.3 + 1e-6 && b.z < 1.4))
         for (const p of riders) expect(overlaps(extent(b), riderBox(p, plan))).toBe(false);
     });
 
@@ -277,7 +286,46 @@ describe('a tractor with its seats', () => {
     expect(front).toHaveLength(2);
     expect(Math.min(...back.map((w) => w.r))).toBeGreaterThan(Math.max(...front.map((w) => w.r)));
     const blocks = body.filter((p) => !Array.isArray(p)) as Box[];
-    expect(blocks.some((b) => along(b.x, b.y) > 0.6 && b.z + b.h > 1)).toBe(true);
+    expect(blocks.some((b) => along(b.x, b.y) > 0.6 && b.z + b.h > 0.8)).toBe(true);
+  });
+
+  test("riders on a seat of the plan's own: the tractor under it, the seat lifted onto it, no second seat", () => {
+    // "The seat" of the tractor in aeea m11, under both riders: drawn twice, one seat stood inside the other; drawn
+    // once on the ground, it was a stool before the tractor again.
+    const seated: Blocking = {
+      ...field,
+      spots: [...field.spots, { id: 'x1', x: 50, y: 5, kind: 'thing', shape: 'seat', size: [1.4, 0.5, 0.5] }],
+    };
+    const t = seated.spots[0];
+    const { body, seats } = tractorParts(t, seated, facing(t, seated));
+    expect(seats).toHaveLength(0);
+    const blocks = body.filter((p) => !Array.isArray(p)) as Box[];
+    for (const p of seated.spots.filter((s) => s.kind === 'person')) {
+      const f = facing(p, seated);
+      const seat = { x: p.x - f.x * 0.1, y: p.y - f.y * 0.1 };
+      expect(blocks.some((b) => under(b, seat) && b.z < 1e-6 && Math.abs(b.z + b.h - 0.3) < 1e-6)).toBe(true);
+    }
+    const lifted = seatOnTractor(seated.spots[3], seated, name) as Box[];
+    expect(lifted).toBeDefined();
+    expect(Math.min(...lifted.map((b) => b.z))).toBeCloseTo(0.3, 6);
+    expect(Math.max(...lifted.map((b) => b.z + b.h))).toBeCloseTo(0.5, 6);
+    // A seat on no tractor, as before.
+    expect(seatOnTractor(compartment.spots[0], compartment, name)).toBeUndefined();
+  });
+
+  test('nothing of it under the cab stands higher than the block the camera and the words were reckoned on', () => {
+    // Its bonnet a quarter of a metre higher, the camera low in front of the riders saw only their hair (affd m8).
+    for (const plan of [field, tandem]) {
+      const t = plan.spots[0];
+      const top = Math.min((t.size as number[])[2], 1.6) * 0.6;
+      const { body } = tractorParts(t, plan, facing(t, plan));
+      for (const part of body) {
+        const zs = Array.isArray(part) ? part.flatMap((q) => q.p.map((p) => p.z)) : [part.z, part.z + part.h];
+        // The cab's posts and roof stand over the riders, thin, and hide nothing of them.
+        if (!Array.isArray(part) && (part.z >= 1.9 || (part.w <= 0.06 && part.d <= 0.06))) continue;
+        expect(Math.max(...zs)).toBeLessThanOrEqual(top + 0.07 + 1e-6);
+      }
+    }
   });
 
   test('with shapes, the field is drawn otherwise; without, as it was', () => {

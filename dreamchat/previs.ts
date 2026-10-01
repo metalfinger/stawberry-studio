@@ -250,10 +250,10 @@ const TRACTOR = /\btractors?\b/i;
 
 /**
  * A tractor as the mock-up draws it with the shapes: its big wheels behind the riders and its small ones ahead, both
- * clear of them; its bonnet ahead of them where there is room, mudguards over the big wheels, and a cab's posts and roof
- * over them where it stands as high as a cab; and a seat with its back under each rider sitting on it. As a block as
- * high as its doors it hid the driver and the dreamer to the shoulders, two heads on a box, and where the dreamer sat
- * was never clear (affd m9, aeea m14, drawn on the local machine, 1 Oct).
+ * clear of them; its bonnet ahead of them where there is room, mudguards over the big wheels, and a cab's posts and
+ * roof over them where it stands as high as a cab; and under each rider sitting on it, itself up to a short seat with
+ * its back. As a block as high as its doors it hid the driver and the dreamer to the shoulders, two heads on a box,
+ * and where the dreamer sat was never clear (affd m9, aeea m14, drawn on the local machine, 1 Oct).
  */
 export function tractorParts(s: Spot, plan: Blocking, f: V2): { body: (Block | Face[])[]; seats: Block[] } {
   const [w, d, h] = sizeOf(s);
@@ -295,7 +295,10 @@ export function tractorParts(s: Spot, plan: Blocking, f: V2): { body: (Block | F
     }
     return across;
   };
-  const big = Math.min(0.75, h * 0.32);
+  // Nothing of it under the cab higher than the block the camera and the words were reckoned on (thingBlocks): its
+  // bonnet a quarter of a metre higher, the camera low in front of the riders saw only their hair (affd m8).
+  const top = Math.min(h, 1.6) * 0.6;
+  const big = Math.min(0.75, h * 0.32, top / 2);
   const back = Math.max(-length / 2 + big, Math.min(0, a0 - 0.05 - big));
   const guards = pair(back, big, 0.3);
   for (const k of [-1, 1])
@@ -310,7 +313,7 @@ export function tractorParts(s: Spot, plan: Blocking, f: V2): { body: (Block | F
       z: z0 + small,
       w: Math.min(0.8, width * 0.5),
       d: length / 2 - 0.05 - from,
-      h: Math.min(1.3, h * 0.55) - small,
+      h: top - small,
       f: ax,
     });
   // A cab over the riders, as high as the tractor stands: four posts and a roof, so they show inside it.
@@ -320,18 +323,54 @@ export function tractorParts(s: Spot, plan: Blocking, f: V2): { body: (Block | F
       for (const k of [-1, 1]) parts.push({ ...at(a, k * cc), z: z0, w: 0.06, d: 0.06, h: 1.95, f: ax });
     parts.push({ ...at((b0 + b1) / 2, 0), z: z0 + 1.95, w: 2 * cc + 0.06, d: b1 - b0 + 0.06, h: 0.06, f: ax });
   }
-  const seats = riders.filter((p) => p.pose === 'sitting').flatMap((p) => seatFor(p, plan, z0));
+  // Under each rider sitting, the tractor itself up to a short seat: a seat a seat high on the ground read as two
+  // people on stools before a tractor. Where they sit on a seat of the plan's own, that seat is lifted onto it
+  // (seatOnTractor), and no second seat stands inside it (aeea m11).
+  const sitting = riders.filter((p) => p.pose === 'sitting');
+  for (const p of sitting) parts.push({ ...seatFor(p, plan, z0)[0], h: TRACTOR_SEAT });
+  const seats = sitting.filter((p) => !planSeat(p, plan, s.id)).flatMap((p) => seatFor(p, plan, z0, TRACTOR_SEAT));
   return { body: parts, seats };
 }
 
+/** How high a tractor stands under a rider's seat. */
+const TRACTOR_SEAT = 0.3;
+
+/** A seat of the plan's own that someone sits on, but `not`. */
+const planSeat = (p: Spot, plan: Blocking, not: string) =>
+  plan.spots.find((t) => t.id !== not && !isPerson(t) && shapeOf(t, plan) === 'seat' && onFootprint(p, t, plan));
+
 /**
- * A seat a seat high under someone sitting, the way they face, its back low behind them: as high as their shoulders, it
- * hid the dreamer at their desk seen from behind (b91f m3).
+ * A seat of the plan's own on a tractor, as the mock-up draws it with the shapes: lifted onto the tractor under it
+ * (tractorParts), as high as it was. On the ground it stood before the tractor, a stool (aeea m11). None for a seat on
+ * no tractor.
  */
-function seatFor(p: Spot, plan: Blocking, z0 = 0): Block[] {
+export function seatOnTractor(seat: Spot, plan: Blocking, called: (id: string) => string): Block[] | undefined {
+  if (shapeOf(seat, plan) !== 'seat' || seat.heldBy) return undefined;
+  const on = plan.spots.find(
+    (t) =>
+      t.id !== seat.id &&
+      !t.heldBy &&
+      shapeOf(t, plan) === 'vehicle' &&
+      TRACTOR.test(called(t.id)) &&
+      onFootprint(seat, t, plan),
+  );
+  if (!on) return undefined;
+  const z0 = afloat(plan);
+  return thingBlocks(seat, plan, called(seat.id)).map((b) => {
+    const top = b.z + b.h;
+    const z = Math.max(b.z, z0 + TRACTOR_SEAT);
+    return { ...b, z, h: Math.max(0.05, top - z) };
+  });
+}
+
+/**
+ * A seat a seat high under someone sitting (from `from` up, where something else is under it), the way they face, its
+ * back low behind them: as high as their shoulders, it hid the dreamer at their desk seen from behind (b91f m3).
+ */
+function seatFor(p: Spot, plan: Blocking, z0 = 0, from = 0): Block[] {
   const f = facing(p, plan);
   return [
-    { x: p.x - f.x * 0.1, y: p.y - f.y * 0.1, z: z0, w: 0.46, d: 0.46, h: 0.45, f },
+    { x: p.x - f.x * 0.1, y: p.y - f.y * 0.1, z: z0 + from, w: 0.46, d: 0.46, h: 0.45 - from, f },
     { x: p.x - f.x * 0.32, y: p.y - f.y * 0.32, z: z0 + 0.45, w: 0.46, d: 0.06, h: 0.3, f },
   ];
 }
@@ -355,9 +394,10 @@ export function chairUnder(p: Spot, plan: Blocking, called?: (id: string) => str
 
 /**
  * A seat its sitters sit on facing each other, as benches (with the shapes): one under each way they face, as long as
- * the seat runs across them, a low back behind them (seatFor), and the floor between them clear for their legs. As one block a seat
- * high, "the seats facing each other" hid the dreamer and the grandfather from the waist down, and the picture sat him
- * on nothing (b0cb m2, drawn on the local machine). A seat they all face one way, or nobody is on, as before.
+ * the seat runs across them, a low back behind them (seatFor), and the floor between them clear for their legs. As one
+ * block a seat high, "the seats facing each other" hid the dreamer and the grandfather from the waist down, and the
+ * picture sat him on nothing (b0cb m2, drawn on the local machine). A seat they all face one way, or nobody is on, as
+ * before.
  */
 export function benches(seat: Spot, plan: Blocking): Block[] | undefined {
   if (seat.shape !== 'seat' || seat.heldBy || sizeOf(seat)[2] > 0.5) return undefined;
@@ -603,6 +643,7 @@ function solidsOf(
     if (leaveOut.includes(s.id)) continue;
     const f = facing(s, plan);
     const bench = drawn && shapes && !isPerson(s) ? benches(s, plan) : undefined;
+    const lifted = drawn && shapes && !isPerson(s) && !bench ? seatOnTractor(s, plan, name) : undefined;
     if (s.many) {
       const where = crowdSpots(s, plan, placed, eye);
       add(
@@ -642,6 +683,7 @@ function solidsOf(
       add(s.id, 0.62, body, name(s.id));
       if (seats.length) add(`${s.id} seats`, 0.55, seats);
     } else if (bench) add(s.id, 0.62, bench, name(s.id));
+    else if (lifted) add(s.id, 0.62, lifted, name(s.id));
     else
       add(
         s.id,
