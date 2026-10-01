@@ -986,11 +986,9 @@ const dreamsNow = new Map<string, Omit<DreamNow, 'frames' | 'items' | 'style'>>(
 export function planInForce(s: Session, f: Item): boolean {
   if (!builds('fresh_send')) return false;
   const plan = dreamNowOf(s).plan;
-  if (!plan || !s.build || f.kind !== 'cut' || !f.frame || f.review || f.continuityApproved) return false;
+  if (!plan || !s.build || f.kind !== 'cut' || !f.frame) return false;
   const next = plan.cuts.find((c) => c.id === f.id);
-  if (!next) return false;
-  const known = new Set((s.build.frames ?? []).map((x) => x.id));
-  if (![...next.needs, ...next.refs.map((r) => r.id)].every((n) => known.has(n))) return false;
+  if (!next || keepsOwnPlan(s, f, next)) return false;
   f.frame.plan = next;
   f.needs = next.needs;
   s.build.plan = { issues: [], ...plan };
@@ -1290,6 +1288,17 @@ export function treeInputWith(
 }
 
 /**
+ * Whether a moment keeps its own plan rather than the plan made now: reviewed or approved for its continuity, or the
+ * plan made now needs a picture not in the dream yet (it waits for a re-plan). The one definition of the plan in force,
+ * read where a moment is sent (planInForce) and by the one tree (treePlanOf).
+ */
+export function keepsOwnPlan(s: Pick<Session, 'build'>, f: Item, next: CutPlan): boolean {
+  if (f.review || f.continuityApproved) return true;
+  const known = new Set((s.build?.frames ?? []).map((x) => x.id));
+  return ![...next.needs, ...next.refs.map((r) => r.id)].every((n) => known.has(n));
+}
+
+/**
  * The plan the dream's one tree reads (S6 row 2): the plan made now (dreamNowOf, which a moment is sent from with the
  * `fresh_send` step), each moment held to the plan it is drawn from where it keeps its own (reviewed or approved, or
  * waiting for a re-plan).
@@ -1298,11 +1307,13 @@ export function treePlanOf(s: Pick<Session, 'draft' | 'build' | 'transcript' | '
   const now = dreamNowOf(s).plan;
   if (!now) return null;
   const frames = s.build?.frames ?? [];
-  // Laid over the plan made now: a plan held from an older version of the harness lacks what is planned since (its
-  // references), and takes it from there.
+  // Only a moment that keeps its own plan is held to it (keepsOwnPlan): one not sent yet is in the tree as planned now,
+  // never as the plan it was first put in with. Laid over the plan made now: a plan held from an older version of the
+  // harness lacks what is planned since (its references), and takes it from there.
   const held = (c: CutPlan): CutPlan => {
-    const own = frames.find((f) => f.id === c.id && f.kind === 'cut')?.frame?.plan;
-    return own ? { ...c, ...own } : c;
+    const f = frames.find((x) => x.id === c.id && x.kind === 'cut');
+    const own = f?.frame?.plan;
+    return f && own && keepsOwnPlan(s, f, c) ? { ...c, ...own } : c;
   };
   return { issues: [], ...now, cuts: now.cuts.map(held) };
 }

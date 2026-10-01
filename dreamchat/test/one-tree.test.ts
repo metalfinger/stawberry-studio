@@ -1,6 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import { loadDream } from '../evals/saved';
-import { type Session, sheetDreamOf, treeInputOf } from '../session';
+import { momentKeys } from '../asdrawn';
+import { dreamConfig } from '../dream';
+import { initialState } from '../lib';
+import { rebuild } from '../plan';
+import { dreamNowOf, type Session, sheetDreamOf, treeInputOf, treePlanOf } from '../session';
 import { resolveTree } from '../tree';
 
 /** Some switches set for one call, put back after. */
@@ -35,6 +39,41 @@ describe('S6 row 2: one tree', () => {
       expect(sheet).toEqual(panel);
     }
   });
+
+  test('a moment not sent yet is in the tree as planned now; one reviewed keeps the plan it was drawn from', () =>
+    withEnv({ DREAMCHAT_RECORD: 'on', DREAMCHAT_CUT_SHEET: 'on', DREAMCHAT_ONE_BUILDER: 'one_tree' }, () => {
+      const s = structuredClone(loadDream('dream-0926-043003-b0cb', false).session) as Session;
+      for (const x of s.build?.frames ?? []) delete x.review;
+      const now = dreamNowOf(s).plan!;
+      const cutOf = (id: string) => now.cuts.find((c) => c.id === id)!;
+      // m2 not sent yet, its stored plan out of date: someone a re-plan dropped. m3 reviewed, its stored plan its own.
+      const m2 = s.build!.frames!.find((x) => x.id === 'm2')!;
+      const m3 = s.build!.frames!.find((x) => x.id === 'm3')!;
+      m2.frame!.plan = { ...cutOf('m2'), visible: ['someone-dropped'] };
+      m3.review = 'approved' as typeof m3.review;
+      m3.frame!.plan = { ...cutOf('m3'), visible: ['kept-as-drawn'] };
+      const plan = treePlanOf(s)!;
+      expect(plan.cuts.find((c) => c.id === 'm2')!.visible).toEqual(cutOf('m2').visible);
+      expect(plan.cuts.find((c) => c.id === 'm3')!.visible).toEqual(['kept-as-drawn']);
+      // And that is the plan the sheets' one tree is resolved from.
+      expect(treeInputOf(s)!.plan).toEqual(plan);
+    }));
+
+  test("the conversation's goals move the sheet's tree, never what makes a picture stale", () =>
+    withEnv({ DREAMCHAT_RECORD: 'on', DREAMCHAT_CUT_SHEET: 'on', DREAMCHAT_ONE_BUILDER: 'one_tree' }, () => {
+      const s = structuredClone(loadDream('dream-0926-043003-b0cb', false).session) as Session;
+      // A saved dream keeps no conversation state: given the goals a new conversation starts with.
+      s.state = initialState(s.id, dreamConfig());
+      s.askCounts = {};
+      // A rebuild's sheets read the one tree too, goals and all (plan.ts treeInputWith).
+      const keys = () => {
+        const p = rebuild(s).pictures.find((x) => x.id === 'm2' && x.kind !== 'ghost')!;
+        return momentKeys(p.sheet!, p.item.fields, (m) => m).keys;
+      };
+      const before = keys();
+      for (const g of Object.keys(s.state.goals)) s.askCounts[g] = (s.askCounts[g] ?? 0) + 3;
+      expect(keys()).toEqual(before);
+    }));
 
   test('before it, a saved dream with no plan kept since its moments began had no tree on its sheets at all', () => {
     const { panel, sheet } = trees('dream-0926-043003-b0cb', 'fresh_send');
