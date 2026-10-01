@@ -121,6 +121,8 @@ export type CutPlan = {
   eye?: Eye;
   /** Who and what that view has in the picture: drawn from their sketches like anyone in view. */
   sees?: string[];
+  /** Who and what that view says is outside the picture: with `framed_only`, a person there is not sent (frames.ts). */
+  outside?: string[];
   /**
    * With the camera rules, through the dreamer's own eyes: what they carry that the moment does not name,
    * out of the picture (`unsaidHeld`): off the mock-up, out of "In it" and its images, no hands for it.
@@ -2014,6 +2016,7 @@ function planWith(
         c.view = v.text;
         c.eye = v.eye;
         c.sees = v.inPicture;
+        if (builds('framed_only')) c.outside = v.outside;
         if (v.rules) c.rules = v.rules;
         // Made from its previs, the view needs nothing from the picture the dreamer was seen in:
         // it is neither drawn from nor waited for, so it can be drawn alongside it.
@@ -2104,6 +2107,7 @@ function planWith(
         c.view = v.text;
         c.eye = v.eye;
         c.sees = v.inPicture;
+        if (builds('framed_only')) c.outside = v.outside;
         c.framing = v.framing;
         c.staging = [];
         if (v.rules) c.rules = v.rules;

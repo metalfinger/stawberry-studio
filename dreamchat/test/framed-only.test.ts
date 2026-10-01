@@ -25,7 +25,7 @@ const sheets = [
   sheet('t1', 'prop', 'the lectern'),
   sheet('l1', 'location', 'the lecture hall'),
 ];
-const frame = (sees?: string[]): Item =>
+const frame = (plan: { sees?: string[]; outside?: string[] } = {}): Item =>
   ({
     id: 'm4',
     kind: 'cut',
@@ -33,13 +33,21 @@ const frame = (sees?: string[]): Item =>
     fields: {},
     status: 'ready',
     version: 1,
-    frame: { visible: ['p2', 'p4'], things: ['t1'], place: 'l1', eyes: 'dreamer', plan: sees ? { sees } : {} },
+    frame: { visible: ['p2', 'p4'], things: ['t1'], place: 'l1', eyes: 'dreamer', plan },
   }) as unknown as Item;
 
 describe('only who the camera holds is in the picture', () => {
   test('with the step, a person the camera leaves out is neither sent nor listed; things and the place stay', () => {
-    const ids = withBuilder('framed_only', () => inViewOf(frame(['p4']), sheets).map((s) => s.id));
+    const ids = withBuilder('framed_only', () =>
+      inViewOf(frame({ sees: ['p4'], outside: ['p2'] }), sheets).map((s) => s.id),
+    );
     expect(ids).toEqual(['p4', 't1', 'l1']);
+  });
+
+  test('only who the view says is outside: one under the water, beside the boat, out of the frame, stays', () => {
+    // library-2 m8: the whale is in the picture under the water, and in no view's frame.
+    const ids = withBuilder('framed_only', () => inViewOf(frame({ sees: ['p4'] }), sheets).map((s) => s.id));
+    expect(ids).toEqual(['p2', 'p4', 't1', 'l1']);
   });
 
   test('with no camera planned, or without the step, as before', () => {
@@ -49,11 +57,8 @@ describe('only who the camera holds is in the picture', () => {
       't1',
       'l1',
     ]);
-    expect(withBuilder(undefined, () => inViewOf(frame(['p4']), sheets).map((s) => s.id))).toEqual([
-      'p2',
-      'p4',
-      't1',
-      'l1',
-    ]);
+    expect(
+      withBuilder(undefined, () => inViewOf(frame({ sees: ['p4'], outside: ['p2'] }), sheets).map((s) => s.id)),
+    ).toEqual(['p2', 'p4', 't1', 'l1']);
   });
 });
