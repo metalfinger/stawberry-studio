@@ -225,10 +225,19 @@ const THOUGHT_OUTSIDE =
 const POINT_RULE = '"visual_point" is the one thing the picture must carry.';
 const CONCRETE_POINT =
   ' It names what they named ("no marzipan anywhere", never "finding nothing"; "the man in the wheelchair", never "the man"), said as what the picture shows: never a sentence of theirs copied, never what would, could or was supposed to happen.';
+/**
+ * With `texture`, a simile or a reason the dreamer gives is kept where a picture can show it, as what is seen, and left
+ * to the narration where only a sound, a smell, a memory or a feeling carries it: the dumped dreams' points dropped the
+ * stars "soft, as if someone had steamed mangoes like dumplings", and carried the ringtone a mouth of piano keys
+ * "sounds like" (the merged flow's retell gate, 2 Oct).
+ */
+const TEXTURE_POINT =
+  ' A simile or a reason they give that a picture can show is kept, as what is seen: hands "like shovels" are "huge, shovel-broad hands"; a door held shut "so the wind couldn\'t get in" is "her shoulder against the door, the wind pushing at it". The one thing to show never says "like" or "as if": it says what the simile looks like. What only a sound, a smell, a memory or a feeling carries (a hum, a tune, a ringtone, a ping or a notification, "as when I was a child") is never in the one thing to show, not even beside what is seen: show what is seen as it happens.';
 export const producerSystem = () => {
   let s = builds('names') ? SYSTEM.replace(LOOKS_AT_RULE, LOOKS_AT_RULE + NAMES_NOT_IDS) : SYSTEM;
   if (builds('thought_outside')) s = s.replace(EYES_RULE, EYES_RULE + THOUGHT_OUTSIDE);
-  if (builds('told_events')) s = s.replace(POINT_RULE, POINT_RULE + CONCRETE_POINT);
+  if (builds('told_events'))
+    s = s.replace(POINT_RULE, POINT_RULE + CONCRETE_POINT + (builds('texture') ? TEXTURE_POINT : ''));
   return s;
 };
 
