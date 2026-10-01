@@ -29,6 +29,11 @@ export type Person = {
    * moments' words and never sketched. No one would know them again.
    */
   extras?: boolean;
+  /**
+   * Only ever the camera: the dreamer of a dream told wholly through their eyes, never seen. Placed on the floor plans
+   * as the eyes each moment is seen through, never sketched (the one builder's `dreamer_camera` step).
+   */
+  camera?: true;
   fields: { identity: Detail; appearance: Detail; wardrobe: Detail; distinctive_features: Detail };
 };
 export type Place = { id: string; name: string; fields: { geography: Detail; landmarks: Detail; light: Detail } };
@@ -1454,6 +1459,28 @@ export function normalizeBreakdown(raw: string): { breakdown: Breakdown; notes: 
       m.id = fresh;
     }
     seen.add(m.id);
+  }
+
+  // A dream told wholly through the dreamer's eyes still has its dreamer, as the camera: listed only where seen, they
+  // were on no floor plan, and its cameras had nowhere to stand (the Barley Degree as a dump, 4 of 7 moments, 1 Oct).
+  if (builds('dreamer_camera') && !people.some((p) => p.is_dreamer) && moments.some((m) => m.eyes === 'dreamer')) {
+    const ids = new Set(people.map((p) => p.id));
+    let n = people.length + 1;
+    while (ids.has(`p${n}`)) n++;
+    people.push({
+      id: `p${n}`,
+      name: 'you',
+      is_dreamer: true,
+      protagonist: false,
+      camera: true,
+      fields: {
+        identity: detail(null),
+        appearance: detail(null),
+        wardrobe: detail(null),
+        distinctive_features: detail(null),
+      },
+    });
+    notes.push('the dreamer, seen through and never seen, added as the camera');
   }
 
   const style_options = normalizeStyles(b.style_options);

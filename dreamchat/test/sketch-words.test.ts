@@ -184,6 +184,54 @@ describe("the style's way of drawing on a sketch, without its directions about p
   });
 });
 
+describe("the style's light and technique on a sketch, without other people", () => {
+  test('a light or technique that puts others in the frame is left out of a sketch; how figures are drawn stays', () => {
+    const talking = {
+      ...style,
+      tokens: ['ink on rough paper', 'slight smudging at the edges of figures'],
+      lighting_rules:
+        'Light falls softly from one side. Anything beyond the people being talked to slips out of focus. Shadows are short.',
+    };
+    const p = withBuilder('sketch_style', () => sheetPrompt(gh, talking));
+    expect(p).toContain('Light: Light falls softly from one side. Shadows are short.');
+    expect(p).not.toContain('beyond the people');
+    expect(p).toContain('slight smudging at the edges of figures');
+    // A moment keeps the light whole.
+    expect(withBuilder('sketch_style', () => styleBlock(talking))).toContain(
+      'Anything beyond the people being talked to',
+    );
+  });
+});
+
+describe("the dreamer's sketch: never a guessed age or sex", () => {
+  const me: Item = {
+    id: 'p1',
+    kind: 'character',
+    name: 'you',
+    isDreamer: true,
+    fields: {
+      identity: { value: 'an adult woman', said: false },
+      appearance: { value: 'in her 30s, brown hair, average build', said: false },
+      wardrobe: { value: 'a grey coat', said: true },
+    },
+    status: 'waiting',
+    version: 0,
+  };
+  test('a guessed age or sex is left out, what they said and the rest of the guess kept', () => {
+    const p = withBuilder('dreamer_untold', () => sheetPrompt(me, style));
+    expect(p).toContain('A single full-length picture of the dreamer, one person only');
+    expect(p).not.toMatch(/\bwoman\b|30s|\bher\b/);
+    expect(p).toContain('brown hair');
+    expect(p).toContain('average build');
+    expect(p).toContain('a grey coat');
+    // What the dreamer said of themselves stays, age and all.
+    const told = { ...me, fields: { ...me.fields, appearance: { value: 'in her 30s, brown hair', said: true } } };
+    expect(withBuilder('dreamer_untold', () => sheetPrompt(told, style))).toContain('in her 30s');
+    // As before without the step.
+    expect(withBuilder(undefined, () => sheetPrompt(me, style))).toContain('30s');
+  });
+});
+
 describe('a place, on its own sketch', () => {
   test('the place alone and empty, said as what is there; as before without the step', () => {
     const p = withBuilder('place_alone', () => sheetPrompt(room, style));

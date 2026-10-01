@@ -184,6 +184,13 @@ export const BUILDER_STEPS: readonly string[] = [
   // Not a ledger row: the same dream. A place's sketch says what is there, the place alone and empty, never "with no
   //    people in it", which drew people (the local machine; the owner: "Just use the Qwen model").
   'place_alone',
+  // Not a ledger row: from a dream taken in as a dump (the Barley Degree, 1 Oct). A dream told wholly through the
+  //    dreamer's eyes has its dreamer, as the camera: listed only where seen, they were on no floor plan, and 4 of 7
+  //    moments had no camera. Placed on the plan, never sketched.
+  'dreamer_camera',
+  // Not a ledger row: the owner's rule (1 Oct), never guess the dreamer's sex or age. A guessed (unsaid) clause of their
+  //    sketch that gives either is left out, and a guessed "who they are" with it; what they said of themselves stays.
+  'dreamer_untold',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;

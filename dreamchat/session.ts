@@ -1578,8 +1578,9 @@ export function buildItems(b: Breakdown): Item[] {
       return it;
     }),
     ...b.things.map((t) => item(t.id, 'prop', t.name, t.fields)),
+    // The dreamer, where they are seen: only ever the camera, they are never sketched.
     ...b.people
-      .filter((p) => p.is_dreamer)
+      .filter((p) => p.is_dreamer && !p.camera)
       .map((p) => Object.assign(item(p.id, 'character', p.name, p.fields, true), { ask: true })),
   ];
   // At least one profile is shown, so the person sees what the pictures will be drawn from.
