@@ -1,4 +1,4 @@
-// "Reaches" is a hand only reaching out, for or into something (the one builder's `reach_arrives`): "an old love walks
+// Reaching someone or somewhere is arriving, not a hand (the one builder's `reach_arrives`): "an old love walks
 // in, just as the dreamer reaches the man in the wheelchair" is arriving, and through the dreamer's eyes it was drawn
 // as a huge reaching hand ("their own hands and arms show as they reach the man in the wheelchair", the merged flow's
 // dream 3, 1 Oct).
@@ -34,6 +34,10 @@ describe('reaching someone is arriving; reaching for something is a hand', () =>
         'the dreamer reaches out to the man in the wheelchair',
         'the dreamer reaches into the water',
         'the dreamer reaches up toward the shelf',
+        'The dreamer can just reach the shelf',
+        'the dreamer reaches the brass handle',
+        'the dreamer reaches out to her',
+        'the dreamer reaches her hand out to the dog',
       ])
         expect(handsIn([w], false)).toBe(true);
       expect(handAct(['the dreamer reaches for the brass handle'])).toContain('reach for the brass handle');

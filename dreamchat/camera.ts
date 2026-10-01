@@ -673,12 +673,14 @@ const NOT_HANDS_AFTER =
 const HAND_VERB = `(?:(?:hold|holds|holding|held|take|takes|taking|took)${NOT_HANDS_AFTER}|(?:hand|hands|handing|handed)\\s+(?:over|it|them|him|her|back)|touch|touches|touching|reach|reaches|reaching|reached|grab|grabs|grabbing|grip|grips|gripping|push|pushes|pushing|pull|pulls|pulling|open|opens|opening|opened|closes|closing|shuts|carry|carries|carrying|pick|picks|picking|give|gives|giving|stroke|strokes|stroking|pat|pats|patting|lift|lifts|lifting|put|puts|putting|press|presses|pressing|knock|knocks|knocking|wave|waves|waving|point|points|pointing|write|writes|writing|fold|folds|folding|cradle|cradles|cradling|row|rows|rowing|climb|climbs|climbing|drive|drives|driving|steer|steers|steering|throw|throws|throwing|threw|catch|catches|catching|caught|eat|eats|eating|ate|drink|drinks|drinking|pour|pours|pouring|pedal|pedals|pedalling|pedaling|paddle|paddles|paddling|swim|swims|swimming|unlock|unlocks|unlocking|lets? go|hug|hugs|hugging|shake|shakes|shaking|brush|brushes|brushing|wipe|wipes|wiping|type|types|typing|draw|draws|drawing|tie|ties|tying|dig|digs|digging)`;
 
 /**
- * "Reaches" is a hand only reaching out, for, into or toward something (the one builder's `reach_arrives`): "just as the
- * dreamer reaches the man in the wheelchair" is arriving, and was drawn as a huge reaching hand (1 Oct).
+ * "Reaches" someone or somewhere is arriving, not a hand (the one builder's `reach_arrives`): "just as the dreamer
+ * reaches the man in the wheelchair" was drawn as a huge reaching hand (1 Oct). Reaching anything else is a hand, as
+ * before ("the dreamer can just reach the shelf", "reaches for the handle").
  */
 const REACH = 'reach|reaches|reaching|reached';
-const REACH_HAND =
-  '(?:reach|reaches|reaching|reached)(?=\\s+(?:out|for|into|in|up|down|across|over|under|behind|toward|towards|through|back|around|past)\\b)';
+const ARRIVED_AT =
+  '(?:man|men|woman|women|boy|boys|girl|girls|child|children|baby|people|person|crowd|stranger|strangers|friend|friends|mother|father|mum|dad|sister|brother|aunt|uncle|grandmother|grandfather|wife|husband|him|them|top|bottom|end|edge|side|far side|other side|shore|bank|house|room|door|doors|gate|corner|landing|platform|station|street|road|bridge|hall|front|back|stairs|steps|foot|summit|surface|beach|field|village|town|city|island)';
+const REACH_HAND = `(?:reach|reaches|reaching|reached)(?:(?=\\s+(?:out|for|into|in|up|down|across|over|under|behind|toward|towards|through|back|around|past)\\b)|(?!\\s+(?:the\\s+|a\\s+|an\\s+|his\\s+|her\\s+|their\\s+|my\\s+|your\\s+|its\\s+)?(?:[\\w'-]+\\s+){0,2}?${ARRIVED_AT}\\b))`;
 const handVerb = () => (builds('reach_arrives') ? HAND_VERB.replace(REACH, REACH_HAND) : HAND_VERB);
 
 /**
