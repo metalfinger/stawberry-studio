@@ -2248,7 +2248,15 @@ export function outsideShot(
   const name = (id: string) => plan.spots.find((s) => s.id === id)?.name ?? called(id);
   const inIt = subjects.map((id) => plan.spots.find((s) => s.id === id)).filter((s): s is Spot => !!s && !s.many);
   const people = inIt.filter((s) => isPerson(s));
-  const group = people.length ? people : inIt;
+  // A moment of a crowd alone is shot on the crowd, else on what it looks at (the one builder's `crowd_camera`):
+  // "everyone in our house" going up the stairs to the roof had no one else in it, and no camera (Neighbours, 1 Oct).
+  const alone = builds('crowd_camera')
+    ? [
+        ...subjects.map((id) => plan.spots.find((s) => s.id === id)).filter((s): s is Spot => !!s && !!s.many),
+        ...(lookAt?.id ? plan.spots.filter((s) => s.id === lookAt.id) : []),
+      ]
+    : [];
+  const group = people.length ? people : inIt.length ? inIt : alone.slice(0, 1);
   if (!group.length) return null;
   let c = {
     x: group.reduce((a, s) => a + s.x, 0) / group.length,

@@ -2030,7 +2030,12 @@ function planWith(
         c.refs = c.refs.filter((r) => r.relation !== 'seat');
       }
     } else {
-      const fromBehind = !!m.looks_at && bare(m.looks_at).includes(bare(plan.front));
+      // Facing what the moment looks at, never with it behind the camera: the front "the wall with the stairs to the roof"
+      // holds the stairs a moment looks at (crowd_camera, Neighbours m8).
+      const fromBehind =
+        !!m.looks_at &&
+        (bare(m.looks_at).includes(bare(plan.front)) ||
+          (builds('crowd_camera') && bare(plan.front).includes(bare(m.looks_at))));
       // A crowd the moment is about goes to the camera too, to be framed and said: "the couple of
       // people" never reached it, and the picture said nobody else was there (25 Sep).
       const ids = [...seen(m), ...m.things].filter((id) => plan.spots.some((s) => s.id === id));
