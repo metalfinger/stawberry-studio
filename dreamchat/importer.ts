@@ -152,7 +152,7 @@ export async function liveDeps(): Promise<ImportDeps> {
   const { writeImplied } = await import('./implied');
   const { castReadingOf, withCast } = await import('./evals/cast-cache');
   return {
-    producer: liveProducer(callJev),
+    producer: liveProducer(callJev, { telling: true }),
     ownStyle,
     block: blockScenes,
     shot: shotFor,

@@ -32,20 +32,22 @@ const TELLING = `A person's dream, as they told it, is below. Read it twice, the
 - "events": every event and fact they told, in their order, each quoted word for word from their telling: a sentence, or a part of one where a sentence tells two things. Leave out only words that tell nothing ("I remember", "I don't know why"). Never reword, never join two sentences, never add anything.
 - "essential": true for an event the dream cannot be retold without (who is there, what happens to them, what is said, asked or realised, the turn and how it ends); false for a colour, a feeling or a detail of how something looks.`;
 
-/** Lowercase, one space, straight quotes: a quote is checked against the telling this way. */
+/**
+ * Their words only, as a quote is checked against the telling: letters, digits and apostrophes, one space between, so
+ * a comma or quote mark the writer adds or drops loses nothing, and a word it invents is still not theirs.
+ */
 const plain = (x: string) =>
   x
     .toLowerCase()
-    .replace(/[‘’]/g, "'")
-    .replace(/[“”]/g, '"')
-    .replace(/["]/g, '')
-    .replace(/\s+/g, ' ')
-    .replace(/[.;,!?]+$/, '')
+    .replace(/[\u2018\u2019`]/g, "'")
+    .replace(/[^a-z0-9']+/g, ' ')
     .trim();
 
-/** A quote that is in their telling, as they said it; anything else is ours, and dropped. */
+/** A quote of at least three words that is in their telling, as they said it; anything else is ours, and dropped. */
 export const quoted = (quote: unknown, text: string): string | null =>
-  typeof quote === 'string' && plain(quote).length >= 3 && plain(text).includes(plain(quote)) ? quote.trim() : null;
+  typeof quote === 'string' && plain(quote).split(' ').length >= 3 && ` ${plain(text)} `.includes(` ${plain(quote)} `)
+    ? quote.trim()
+    : null;
 
 export type WriteFn = (messages: ChatMessage[], opts: { json: true }) => Promise<{ content: string }>;
 
@@ -100,7 +102,8 @@ export function tellingNote(t: Telling): string | undefined {
     : undefined;
 }
 
-export type Gap = { missing: string[]; keyed: boolean };
+/** What the check found; `checked` false where Jev could not be asked (nothing found, nothing asked again). */
+export type Gap = { missing: string[]; keyed: boolean; checked: boolean };
 
 /** Which told events no moment carries, and whether the key moment carries the strangest fact (Jev). */
 export async function untold(b: Breakdown, t: Telling, jev: JevFn): Promise<Gap> {
@@ -129,11 +132,12 @@ export async function untold(b: Breakdown, t: Telling, jev: JevFn): Promise<Gap>
       instructions: `The key moment of a dream being drawn is "${key.action}", its one thing to show "${key.visual_point}". The dream's strangest fact, in the person's words: "${strange.quote}". Does this moment show that fact itself, not only what leads to it or follows it?`,
       criteria: { true: 'it shows the strangest fact', false: 'it does not' },
     };
-  if (!Object.keys(questions).length) return { missing: [], keyed: true };
+  if (!Object.keys(questions).length) return { missing: [], keyed: true, checked: true };
   const state = JSON.stringify({
     moments: ms.map((m) => ({ id: m.id, happens: m.action, shows: m.visual_point })),
   });
-  const call = await jev(state, questions);
+  const call = await jev(state, questions).catch(() => null);
+  if (!call || call.error || !call.answers) return { missing: [], keyed: true, checked: false };
   // Unread is no finding: a question Jev did not answer counts as met.
   const yes = (k: string) => {
     const a = call.answers?.[k];
@@ -142,6 +146,7 @@ export async function untold(b: Breakdown, t: Telling, jev: JevFn): Promise<Gap>
   return {
     missing: events.filter((_, i) => !yes(`e${i}`)),
     keyed: !strange ? true : !!key && yes('key'),
+    checked: true,
   };
 }
 
@@ -173,30 +178,37 @@ export const better = (a: Gap, b: Gap) =>
 
 /**
  * The breakdown, drafted with their telling read first, checked against it, and asked for once more where it falls
- * short (the better of the two kept). With neither step built, or for a revision, the producer as it always was.
+ * short (the better of the two kept). Read only for a dream taken in whole (`read`, the import), until the script
+ * stage: a live chat's drafts are as they were. With neither step built, or for a revision, the producer as it always
+ * was.
  */
 export async function draftTold(
   conversation: string,
   words: string,
   previous: Breakdown | undefined,
-  deps: { jev: JevFn; produce?: ProducerFn; write?: WriteFn },
+  deps: { jev: JevFn; read?: boolean; produce?: ProducerFn; write?: WriteFn },
 ): Promise<{ raw: string; ms: number; notes: string[] }> {
   const produce = deps.produce ?? callProducer;
   const told =
-    !previous && (builds('strangest') || builds('told_events')) ? await readTelling(words, deps.write) : null;
+    deps.read && !previous && (builds('strangest') || builds('told_events'))
+      ? await readTelling(words, deps.write)
+      : null;
   const note = told ? tellingNote(told) : undefined;
   const first = await produce(conversation, previous, note ? { note } : undefined);
   if (!told || !note) return { ...first, notes: [] };
-  const drafted = normalizeBreakdown(first.raw).breakdown;
-  const gap = await untold(drafted, told, deps.jev);
+  const gap = await untold(normalizeBreakdown(first.raw).breakdown, told, deps.jev);
   const said = (g: Gap) =>
-    `${told.events.length - g.missing.length} of ${told.events.length} told events in a moment, the strangest fact ${g.keyed ? 'keyed' : 'not keyed'}`;
+    g.checked
+      ? `${told.events.length - g.missing.length} of ${told.events.length} told events in a moment, the strangest fact ${g.keyed ? 'keyed' : 'not keyed'}`
+      : 'unchecked (Jev failed)';
   const read = `told: the strangest fact "${told.strangest?.quote ?? 'none read'}"`;
-  const fix = fixNote(told, gap);
+  const fix = gap.checked ? fixNote(told, gap) : undefined;
   if (!fix) return { ...first, notes: [`${read}; ${said(gap)}`] };
-  const again = await produce(conversation, drafted, { note, fix });
+  // The draft goes back as the writer wrote it: what normalizing adds (the dreamer as the camera) is ours, and would come
+  // back without what makes it ours.
+  const again = await produce(conversation, JSON.parse(first.raw) as Breakdown, { note, fix });
   const after = await untold(normalizeBreakdown(again.raw).breakdown, told, deps.jev);
-  const take = better(gap, after);
+  const take = after.checked && better(gap, after);
   return {
     raw: take ? again.raw : first.raw,
     ms: first.ms + again.ms,

@@ -3,7 +3,8 @@
 // them, the draft checked against them and asked for once more where it falls short. Every model here is a stand-in.
 import { describe, expect, test } from 'bun:test';
 import type { JevFn } from '../jev';
-import { producerSystem } from '../producer';
+import { normalizeBreakdown, producerSystem } from '../producer';
+import { buildItems } from '../session';
 import { draftTold, fixNote, quoted, readTelling, tellingNote, untold, type WriteFn } from '../telling';
 
 function withBuilder<T>(v: string | undefined, fn: () => T): T {
@@ -105,6 +106,12 @@ describe('their telling, quoted', () => {
   test('a quote is theirs only as they said it; anything of ours is dropped', async () => {
     expect(quoted('then realized it was some financial transaction of her husband’s', BARLEY)).not.toBeNull();
     expect(quoted('the dreamer is embarrassed', BARLEY)).toBeNull();
+    // A comma or quote mark the writer adds or drops loses nothing; a word or two alone is no quote.
+    expect(quoted('told her about my barley degree then realized', BARLEY)).not.toBeNull();
+    expect(quoted('I went to talk to G.H., she said', BARLEY)).not.toBeNull();
+    expect(quoted('barley degrees', BARLEY)).toBeNull();
+    expect(quoted('the meeting was', BARLEY)).not.toBeNull();
+    expect(quoted('meeting was overly', BARLEY)).toBeNull();
     const t = await readTelling(
       BARLEY,
       write({
@@ -175,6 +182,7 @@ describe('the breakdown drafted with their telling', () => {
       const got = await withBuilderAsync(v, () =>
         draftTold('user: the dream', BARLEY, previous, {
           jev: jevSays({}),
+          read: true,
           produce: async (...args) => {
             calls.push(args);
             return { raw: milling, ms: 1 };
@@ -200,6 +208,7 @@ describe('the breakdown drafted with their telling', () => {
     const got = await withBuilderAsync('thought_outside', () =>
       draftTold('user: the dream', BARLEY, undefined, {
         jev,
+        read: true,
         write: write(telling),
         produce: async (...args) => {
           calls.push(args);
@@ -227,6 +236,7 @@ describe('the breakdown drafted with their telling', () => {
     const got = await withBuilderAsync('thought_outside', () =>
       draftTold('user: the dream', BARLEY, undefined, {
         jev: jevSays({ e0: 0.9, e1: 0.1, key: 0.1 }),
+        read: true,
         write: write(telling),
         produce: async (...args) => {
           calls.push(args);
@@ -241,6 +251,7 @@ describe('the breakdown drafted with their telling', () => {
     await withBuilderAsync('thought_outside', () =>
       draftTold('user: the dream', BARLEY, undefined, {
         jev: jevSays({ e0: 0.9, e1: 0.9, key: 0.9 }),
+        read: true,
         write: write(telling),
         produce: async (...args) => {
           once.push(args);
@@ -261,11 +272,78 @@ describe('the breakdown drafted with their telling', () => {
     expect(await withBuilderAsync('thought_outside', () => untold(b, t, jevSays({})))).toEqual({
       missing: [],
       keyed: true,
+      checked: true,
     });
     const asked: string[][] = [];
     await withBuilderAsync('strangest', () => untold(b, t, jevSays({}, asked)));
     expect(asked[0]).toEqual(['key']);
     expect(withBuilder('strangest', () => tellingNote(t))).not.toContain('What they told, in their order');
+  });
+
+  test('a live chat never reads its telling: only a dream taken in whole, until the script stage', async () => {
+    const calls: unknown[][] = [];
+    const got = await withBuilderAsync('thought_outside', () =>
+      draftTold('user: the dream', BARLEY, undefined, {
+        jev: jevSays({}),
+        write: async () => {
+          throw new Error('never read');
+        },
+        produce: async (...args) => {
+          calls.push(args);
+          return { raw: milling, ms: 1 };
+        },
+      }),
+    );
+    expect(calls).toHaveLength(1);
+    expect(calls[0][2]).toBeUndefined();
+    expect(got.notes).toEqual([]);
+  });
+
+  test('a check Jev could not make finds nothing, asks nothing again, and says so', async () => {
+    const calls: unknown[][] = [];
+    const failed: JevFn = async (state, questions) =>
+      ({ questions, state, answers: null, error: 'down', ms: 0, usage: null }) as Awaited<ReturnType<JevFn>>;
+    const got = await withBuilderAsync('thought_outside', () =>
+      draftTold('user: the dream', BARLEY, undefined, {
+        jev: failed,
+        read: true,
+        write: write(telling),
+        produce: async (...args) => {
+          calls.push(args);
+          return { raw: milling, ms: 1 };
+        },
+      }),
+    );
+    expect(calls).toHaveLength(1);
+    expect(got.notes[0]).toContain('unchecked (Jev failed)');
+  });
+
+  test('asked again, the draft goes back as written: a dream through their eyes ends with one dreamer, the camera', async () => {
+    // Normalized, the draft has the dreamer as the camera (dreamer_camera); sent back, a writer keeps them without it.
+    const calls: unknown[][] = [];
+    let n = 0;
+    const jev: JevFn = async (state, questions) =>
+      jevSays(n++ === 0 ? { e0: 0.9, e1: 0.1, key: 0.1 } : { e0: 0.9, e1: 0.9, key: 0.9 })(state, questions);
+    const got = await withBuilderAsync('thought_outside', () =>
+      draftTold('user: the dream', BARLEY, undefined, {
+        jev,
+        read: true,
+        write: write(telling),
+        produce: async (...args) => {
+          calls.push(args);
+          if (calls.length === 1) return { raw: milling, ms: 1 };
+          // The writer returns what it was sent, with every dreamer it saw stripped of what only we know.
+          const sent = structuredClone(args[1]) as unknown as { people: Record<string, unknown>[] };
+          for (const p of sent.people) delete p.camera;
+          return { raw: JSON.stringify(sent), ms: 1 };
+        },
+      }),
+    );
+    const sent = calls[1][1] as unknown as { people: { is_dreamer?: boolean }[] };
+    expect(sent.people.some((p) => p.is_dreamer)).toBe(false);
+    const b = withBuilder('thought_outside', () => normalizeBreakdown(got.raw).breakdown);
+    expect(b.people.filter((p) => p.is_dreamer).map((p) => !!p.camera)).toEqual([true]);
+    expect(buildItems(b).some((i) => i.isDreamer)).toBe(false);
   });
 
   test('an essential event is the one thing some moment shows: asked of the points, named so, asked for so', async () => {

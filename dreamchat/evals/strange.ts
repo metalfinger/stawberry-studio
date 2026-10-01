@@ -78,7 +78,7 @@ if (import.meta.main) {
     await import(`${root}/evals/local-env`);
     const { liveProducer } = await import(`${root}/session`);
     const { callJev } = await import(`${root}/jev`);
-    const producer = liveProducer(callJev);
+    const producer = liveProducer(callJev, { telling: true });
     for (const d of set.dreams.filter((x) => !only || x.id === only))
       for (let i = 0; i < n; i++) {
         const t0 = Date.now();

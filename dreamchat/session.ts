@@ -1575,9 +1575,12 @@ export type StoreDeps = {
 };
 
 /** The real producer: the breakdown, then Jev's check of every detail marked as said. */
-export function liveProducer(jev: JevFn): NonNullable<StoreDeps['producer']> {
+export function liveProducer(
+  jev: JevFn,
+  /** A dream taken in whole (the import): with the one builder's strangest and told_events, its telling read first. */
+  opts: { telling?: boolean } = {},
+): NonNullable<StoreDeps['producer']> {
   return async (transcript, previous) => {
-    // With the one builder's strangest and told_events, their telling is read first (telling.ts).
     const told = await draftTold(
       renderTranscript(transcript),
       transcript
@@ -1585,7 +1588,7 @@ export function liveProducer(jev: JevFn): NonNullable<StoreDeps['producer']> {
         .map((e) => e.content)
         .join('\n'),
       previous,
-      { jev },
+      { jev, read: opts.telling },
     );
     const { raw, ms } = told;
     const { breakdown, notes } = normalizeBreakdown(raw);
