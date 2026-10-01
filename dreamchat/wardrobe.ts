@@ -39,7 +39,11 @@ export function wardrobeAsk(b: Breakdown): ChatMessage[] | null {
   });
   return [
     { role: 'system', content: WARDROBE },
-    { role: 'user', content: `The dream: ${b.logline}\n${b.world_logic ?? ''}\n\nThe groups:\n${lines.join('\n')}` },
+    {
+      role: 'user',
+      // When the dream is set, where it says or was recorded (era.ts): 1957 students are not dressed for today.
+      content: `The dream: ${b.logline}\n${b.world_logic ?? ''}${b.period ? `\nWhen: ${b.period.value}` : ''}\n\nThe groups:\n${lines.join('\n')}`,
+    },
   ];
 }
 

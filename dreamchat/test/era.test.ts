@@ -11,6 +11,7 @@ import type { Breakdown } from '../producer';
 import type { Session } from '../session';
 import { type Item, sheetPrompt } from '../sheets';
 import type { WriteFn } from '../telling';
+import { wardrobeAsk } from '../wardrobe';
 
 function withBuilder<T>(v: string | undefined, fn: () => T): T {
   const was = process.env.DREAMCHAT_ONE_BUILDER;
@@ -155,5 +156,30 @@ describe('the time, told to every sketch and every moment', () => {
       expect(p.prompt).not.toContain(own ? 'the late 1950s' : 'Victorian');
     }
     for (const p of cuts('thought_outside')) expect(p.prompt).not.toContain('The time:');
+  });
+});
+
+describe('a crowd is dressed for its time', () => {
+  test('the clothes question says when the dream is set where it has a period, and nothing new where it has none', () => {
+    const s = structuredClone(loadDream('dream-0926-043003-b0cb', false).session) as Session;
+    const b = s.draft!.breakdown as Breakdown;
+    b.people.push({
+      id: 'p9',
+      name: 'the other passengers',
+      is_dreamer: false,
+      protagonist: false,
+      several: true,
+      extras: true,
+      fields: {
+        identity: { value: null, said: false },
+        appearance: { value: null, said: false },
+        wardrobe: { value: null, said: false },
+        distinctive_features: { value: null, said: false },
+      },
+    } as never);
+    const before = JSON.stringify(wardrobeAsk(b));
+    expect(before).not.toContain('When:');
+    b.period = { value: 'the late 1950s', from: 'given' };
+    expect(JSON.stringify(wardrobeAsk(b))).toContain('When: the late 1950s');
   });
 });
