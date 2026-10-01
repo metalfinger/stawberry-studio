@@ -26,6 +26,7 @@ import {
   type Spot,
   unit,
   wall,
+  upright,
 } from './blocking';
 import {
   cameraMode,
@@ -1363,8 +1364,8 @@ export function previsImage(
   eye: Eye,
   leaveOut: string[],
   name: (id: string) => string,
-  width = 1376,
-  height = 768,
+  width = upright() ? 768 : 1376,
+  height = upright() ? 1344 : 768,
   /** The mock-up's shapes for the local machine (solidsOf `shapes`); off, the frame is as it always was. */
   opts: { shapes?: boolean } = {},
 ): Uint8Array {
@@ -1524,8 +1525,8 @@ export function previsKeyed(
   eye: Eye,
   leaveOut: string[],
   name: (id: string) => string,
-  width = 1376,
-  height = 768,
+  width = upright() ? 768 : 1376,
+  height = upright() ? 1344 : 768,
   /**
    * `labels`: things written by their short name beside them, a small shapeless one outlined (a test of labels on
    * things). `shapes`: the mock-up's shapes (solidsOf).
@@ -2429,7 +2430,8 @@ export function outsideShot(
   const eyes = dry.length ? dry : people;
   const height = eyes.length ? eyes.reduce((a, s) => a + eyeHeight(s.pose) + groundAt(s, plan), 0) / eyes.length : 1.5;
   const aim = (tallest + lowest) / 2;
-  const tallAt = (l: number) => Math.atan(Math.tan(Math.atan(18 / l)) * (9 / 16));
+  // Up and down a vertical frame is its long side, 36mm on a full frame.
+  const tallAt = (l: number) => (upright() ? Math.atan(18 / l) : Math.atan(Math.tan(Math.atan(18 / l)) * (9 / 16)));
   // The camera for a way of looking: as far off as the shot needs, `back` times that if it must
   // stand further off to hold everyone, never through a wall.
   const place = (d: V2, back = 1): { eye: Eye; far: number; cramped: number } => {
@@ -2449,7 +2451,7 @@ export function outsideShot(
     const wide = Math.max(...offsets) - Math.min(...offsets) + (size === 'close' ? 0.4 : size === 'medium' ? 1 : 2.5);
     const tall = (tallest - lowest) * (size === 'close' ? 1.3 : size === 'medium' ? 1.25 : 1.8);
     // What the frame must hold, and so how far off a lens of this size must be.
-    const frameTall = Math.max(tall, (wide * 9) / 16);
+    const frameTall = Math.max(tall, upright() ? (wide * 16) / 9 : (wide * 9) / 16);
     let lens = LENS[size];
     let far = (frameTall / 2 / Math.tan(tallAt(lens))) * back;
     let at = { x: c.x - d.x * far, y: c.y - d.y * far };
@@ -2472,7 +2474,11 @@ export function outsideShot(
         at = { x: c.x - d.x * far, y: c.y - d.y * far };
       }
       const need = Math.atan(frameTall / 2 / far);
-      if (need > tallAt(lens)) lens = Math.max(14, Math.round(18 / Math.tan(Math.atan(Math.tan(need) * (16 / 9)))));
+      if (need > tallAt(lens))
+        lens = Math.max(
+          14,
+          Math.round(upright() ? 18 / Math.tan(need) : 18 / Math.tan(Math.atan(Math.tan(need) * (16 / 9)))),
+        );
     }
     // How much closer than the shot needs a wall kept it: a wide moment taken from a step behind
     // the dreamer at the entrance, on a 14mm lens (25 Sep).
@@ -2779,8 +2785,9 @@ const bareName = (x: string) =>
     .replace(/^\s*(the|a|an)\s+/i, '')
     .trim();
 
-/** Half the height of a camera's view, in degrees, for a 16:9 frame. */
-const halfTall = (eye: Eye) => (Math.atan(Math.tan((halfViewOf(eye) * Math.PI) / 180) * (9 / 16)) * 180) / Math.PI;
+/** Half the height of a camera's view, in degrees, for its frame: 16:9, or a vertical 9:16. */
+const halfTall = (eye: Eye) =>
+  (Math.atan(Math.tan((halfViewOf(eye) * Math.PI) / 180) * (upright() ? 16 / 9 : 9 / 16)) * 180) / Math.PI;
 
 /**
  * How much of someone the frame holds, where the bottom of the picture cuts them: from the waist
