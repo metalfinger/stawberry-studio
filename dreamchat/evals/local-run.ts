@@ -9,6 +9,7 @@
 //   bun run evals/local-run.ts --run night-1 --dream dream-0926-000545-09ea [--quality fast]
 //   bun run evals/local-run.ts --run qwen-1 --frozen --profile qwen   each moment's prompt written for Qwen (qwen-prompt.ts)
 //   … --profile qwen --previs keyed --dream <id> --moments m2,m6     the colour-keyed mock-up, only those moments drawn
+//   … --shapes                                                       every mock-up with its shapes (previs.ts)
 //
 // A dream whose typed or cast readings are not cached is stopped (--allow-missing draws it without them).
 //
@@ -56,6 +57,8 @@ export type RunPicture = {
   profile?: 'harness' | 'qwen';
   /** The mock-up's style, with the qwen profile: the labelled grey one, colour-keyed, or keyed with its things labelled. */
   previs?: 'clay' | 'keyed' | 'keyed-labels';
+  /** Its mock-up drawn with the shapes (previs.ts): benches, a chair at a table, tractors. */
+  shapes?: true;
   file?: string;
   size?: [number, number];
   secs?: number;
@@ -209,6 +212,8 @@ async function drawDream(
     commit: string;
     profile: 'harness' | 'qwen';
     previs: 'clay' | 'keyed' | 'keyed-labels';
+    /** The mock-up's shapes (previs.ts), every mock-up this run draws. */
+    shapes: boolean;
     moments: Set<string> | null;
     allowMissing?: boolean;
   },
@@ -338,15 +343,12 @@ async function drawDream(
         // Keyed only for the moments the qwen profile writes, which say each one by its colour.
         const keyed = opts.previs !== 'clay' && opts.profile === 'qwen' && p.kind !== 'ghost';
         const kv = keyed
-          ? previsKeyedFor(
-              r.b,
-              p.item,
-              called,
-              r.rec,
-              opts.previs === 'keyed-labels' ? { labels: 'things' } : undefined,
-            )
+          ? previsKeyedFor(r.b, p.item, called, r.rec, {
+              ...(opts.previs === 'keyed-labels' ? { labels: 'things' as const } : {}),
+              ...(opts.shapes ? { shapes: true } : {}),
+            })
           : undefined;
-        const pv = kv ?? previsFor(r.b, p.item, called, r.rec);
+        const pv = kv ?? previsFor(r.b, p.item, called, r.rec, opts.shapes ? { shapes: true } : {});
         if (kv) keys.set(p.id, kv.key);
         if (pv) {
           file = join(dir, 'img', `previs-${kv ? 'keyed-' : ''}${p.id}.png`);
@@ -364,7 +366,16 @@ async function drawDream(
     const lines: Line[] = p.assembled?.lines.map((l) => ({ id: l.id, text: l.text })) ?? [
       { id: 'whole', text: p.prompt },
     ];
-    const e = entry({ id: p.id, kind, name: p.item.name, state: 'waiting', prompt: p.prompt, images, notes });
+    const e = entry({
+      id: p.id,
+      kind,
+      name: p.item.name,
+      state: 'waiting',
+      prompt: p.prompt,
+      images,
+      notes,
+      ...(opts.shapes ? { shapes: true as const } : {}),
+    });
     if (e.state === 'done' || drawnIds.has(p.id)) {
       if (e.file) files.set(standIn.picture(p.id), e.file);
       continue;
@@ -470,6 +481,7 @@ if (import.meta.main) {
   };
   const profile = val('--profile') === 'qwen' ? 'qwen' : 'harness';
   const previs = val('--previs') === 'keyed-labels' ? 'keyed-labels' : val('--previs') === 'keyed' ? 'keyed' : 'clay';
+  const shapes = args.includes('--shapes');
   const moments = val('--moments') ? new Set((val('--moments') as string).split(',')) : null;
   // The full profile, as every other eval of the harness reads it.
   for (const [k, v] of Object.entries(PROFILE)) process.env[k] ??= v;
@@ -509,6 +521,7 @@ if (import.meta.main) {
         commit,
         profile,
         previs,
+        shapes,
         moments,
         allowMissing: args.includes('--allow-missing'),
       });

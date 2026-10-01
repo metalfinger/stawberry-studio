@@ -1101,6 +1101,8 @@ export function previsFor(
   frame: Pick<Item, 'id' | 'frame'>,
   called: (id: string) => string,
   rec?: RecordPlan,
+  /** The mock-up's shapes, for the local machine (previs.ts solidsOf): benches, a chair at a table, tractors. */
+  opts: { shapes?: boolean } = {},
 ): { png: Uint8Array; key: string } | undefined {
   const eye = frame.frame?.plan?.eye;
   const plan = eye ? shotPlan(b, frame.id, rec) : undefined;
@@ -1112,6 +1114,9 @@ export function previsFor(
     eye,
     frame.frame?.eyes === 'dreamer' && dreamer ? [dreamer] : [],
     (id) => names[id] ?? id,
+    undefined,
+    undefined,
+    opts,
   );
   return { png, key: new Bun.CryptoHasher('sha256').update(png).digest('hex') };
 }
@@ -1125,8 +1130,8 @@ export function previsKeyedFor(
   frame: Pick<Item, 'id' | 'frame'>,
   called: (id: string) => string,
   rec?: RecordPlan,
-  /** Things written by their short name beside them (previs.ts previsKeyed's `labels`). */
-  opts: { labels?: 'things' } = {},
+  /** Things written by their short name beside them (previs.ts previsKeyed's `labels`); the shapes, as previsFor. */
+  opts: { labels?: 'things'; shapes?: boolean } = {},
 ): { png: Uint8Array; key: KeyEntry[] } | undefined {
   const eye = frame.frame?.plan?.eye;
   const plan = eye ? shotPlan(b, frame.id, rec) : undefined;

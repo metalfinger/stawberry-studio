@@ -245,6 +245,144 @@ function astride(s: Spot, plan: Blocking, f: V2): (Block | Face[])[] {
   ];
 }
 
+/** What is driven sitting up over its wheels, as the mock-up draws it with the shapes: a tractor. */
+const TRACTOR = /\btractors?\b/i;
+
+/**
+ * A tractor as the mock-up draws it with the shapes: its big wheels behind the riders and its small ones ahead, both
+ * clear of them; its bonnet ahead of them where there is room, mudguards over the big wheels, and a cab's posts and roof
+ * over them where it stands as high as a cab; and a seat with its back under each rider sitting on it. As a block as
+ * high as its doors it hid the driver and the dreamer to the shoulders, two heads on a box, and where the dreamer sat
+ * was never clear (affd m9, aeea m14, drawn on the local machine, 1 Oct).
+ */
+export function tractorParts(s: Spot, plan: Blocking, f: V2): { body: (Block | Face[])[]; seats: Block[] } {
+  const [w, d, h] = sizeOf(s);
+  const z0 = afloat(plan);
+  // Along its longer way.
+  const ax = d >= w ? f : rightOf(f);
+  const side = rightOf(ax);
+  const [length, width] = d >= w ? [d, w] : [w, d];
+  const rel = (p: V2) => ({
+    a: (p.x - s.x) * ax.x + (p.y - s.y) * ax.y,
+    c: (p.x - s.x) * side.x + (p.y - s.y) * side.y,
+  });
+  const at = (a: number, c: number) => ({ x: s.x + ax.x * a + side.x * c, y: s.y + ax.y * a + side.y * c });
+  const riders = plan.spots.filter((p) => isPerson(p) && !p.many && onFootprint(p, s, plan));
+  // Where the riders are, from their backs to their feet and a body's width either side, along it and across it.
+  const spans = riders.map((p) => {
+    const g = facing(p, plan);
+    const gr = rightOf(g);
+    const pts = [-0.35, 0.6].flatMap((u) =>
+      [-0.32, 0.32].map((v) => rel({ x: p.x + g.x * u + gr.x * v, y: p.y + g.y * u + gr.y * v })),
+    );
+    return {
+      a0: Math.min(...pts.map((q) => q.a)),
+      a1: Math.max(...pts.map((q) => q.a)),
+      c: Math.max(...pts.map((q) => Math.abs(q.c))),
+    };
+  });
+  const [a0, a1, c] = spans.length
+    ? [Math.min(...spans.map((x) => x.a0)), Math.max(...spans.map((x) => x.a1)), Math.max(...spans.map((x) => x.c))]
+    : [0, 0, 0];
+  const parts: (Block | Face[])[] = [];
+  // A pair of wheels at `a`, either side: out past the riders wherever they are beside them.
+  const pair = (a: number, radius: number, thick: number) => {
+    const beside = a + radius > a0 && a - radius < a1;
+    const across = Math.max(width / 2 - thick / 2, beside ? c + 0.05 + thick / 2 : 0);
+    for (const k of [-1, 1]) {
+      const m = at(a, k * across);
+      parts.push(wheel(v3(m.x, m.y, z0 + radius), ax, radius, thick));
+    }
+    return across;
+  };
+  const big = Math.min(0.75, h * 0.32);
+  const back = Math.max(-length / 2 + big, Math.min(0, a0 - 0.05 - big));
+  const guards = pair(back, big, 0.3);
+  for (const k of [-1, 1])
+    parts.push({ ...at(back, k * guards), z: z0 + 2 * big + 0.02, w: 0.4, d: big * 1.8, h: 0.05, f: ax });
+  const small = big * 0.6;
+  pair(length / 2 - small, small, 0.24);
+  // The bonnet, ahead of the riders' feet to the front.
+  const from = spans.length ? a1 + 0.1 : 0;
+  if (length / 2 - 0.05 - from >= 0.4)
+    parts.push({
+      ...at((from + length / 2 - 0.05) / 2, 0),
+      z: z0 + small,
+      w: Math.min(0.8, width * 0.5),
+      d: length / 2 - 0.05 - from,
+      h: Math.min(1.3, h * 0.55) - small,
+      f: ax,
+    });
+  // A cab over the riders, as high as the tractor stands: four posts and a roof, so they show inside it.
+  if (spans.length && h >= 1.9) {
+    const [b0, b1, cc] = [a0 - 0.1, a1 + 0.05, c + 0.1];
+    for (const a of [b0, b1])
+      for (const k of [-1, 1]) parts.push({ ...at(a, k * cc), z: z0, w: 0.06, d: 0.06, h: 1.95, f: ax });
+    parts.push({ ...at((b0 + b1) / 2, 0), z: z0 + 1.95, w: 2 * cc + 0.06, d: b1 - b0 + 0.06, h: 0.06, f: ax });
+  }
+  const seats = riders.filter((p) => p.pose === 'sitting').flatMap((p) => seatFor(p, plan, z0));
+  return { body: parts, seats };
+}
+
+/**
+ * A seat a seat high under someone sitting, the way they face, its back low behind them: as high as their shoulders, it
+ * hid the dreamer at their desk seen from behind (b91f m3).
+ */
+function seatFor(p: Spot, plan: Blocking, z0 = 0): Block[] {
+  const f = facing(p, plan);
+  return [
+    { x: p.x - f.x * 0.1, y: p.y - f.y * 0.1, z: z0, w: 0.46, d: 0.46, h: 0.45, f },
+    { x: p.x - f.x * 0.32, y: p.y - f.y * 0.32, z: z0 + 0.45, w: 0.46, d: 0.06, h: 0.3, f },
+  ];
+}
+
+/** What someone sits at: a table, a desk, a counter. */
+const AT_A_TABLE = /\b(?:tables?|desks?|counters?|bars?|workbench(?:es)?)\b/i;
+
+/**
+ * A chair under someone sitting at a table or desk indoors with nothing under them (with the shapes). Sitting on
+ * nothing, the father folding boats at the table and the dreamer at their desk were drawn crouched in the air (affd
+ * m4, b91f m3). Outdoors they may sit on the ground, so none there.
+ */
+export function chairUnder(p: Spot, plan: Blocking, called?: (id: string) => string): Block[] | undefined {
+  if (!plan.indoors || !isPerson(p) || p.many || p.pose !== 'sitting') return undefined;
+  const things = plan.spots.filter((t) => t.id !== p.id && !isPerson(t) && !t.heldBy);
+  if (things.some((t) => onFootprint(p, t, plan))) return undefined;
+  if (!things.some((t) => AT_A_TABLE.test(t.name ?? called?.(t.id) ?? '') && onFootprint(p, t, plan, 1.2)))
+    return undefined;
+  return seatFor(p, plan);
+}
+
+/**
+ * A seat its sitters sit on facing each other, as benches (with the shapes): one under each way they face, as long as
+ * the seat runs across them, a low back behind them (seatFor), and the floor between them clear for their legs. As one block a seat
+ * high, "the seats facing each other" hid the dreamer and the grandfather from the waist down, and the picture sat him
+ * on nothing (b0cb m2, drawn on the local machine). A seat they all face one way, or nobody is on, as before.
+ */
+export function benches(seat: Spot, plan: Blocking): Block[] | undefined {
+  if (seat.shape !== 'seat' || seat.heldBy || sizeOf(seat)[2] > 0.5) return undefined;
+  const on = plan.spots.filter((p) => isPerson(p) && !p.many && p.pose === 'sitting' && onFootprint(p, seat, plan));
+  const ways = on.map((p) => facing(p, plan));
+  if (!ways.some((a) => ways.some((b) => a.x * b.x + a.y * b.y < -0.5))) return undefined;
+  const [w, d] = sizeOf(seat);
+  const sf = facing(seat, plan);
+  const sr = rightOf(sf);
+  const out: Block[] = [];
+  const done: { g: V2; at: V2 }[] = [];
+  for (const p of on) {
+    const g = facing(p, plan);
+    const gr = rightOf(g);
+    const across = Math.abs(gr.x * sr.x + gr.y * sr.y) * w + Math.abs(gr.x * sf.x + gr.y * sf.y) * d;
+    const ahead = (p.x - seat.x) * g.x + (p.y - seat.y) * g.y - 0.1;
+    const mid = { x: seat.x + g.x * ahead, y: seat.y + g.y * ahead };
+    if (done.some((o) => o.g.x * g.x + o.g.y * g.y > 0.9 && Math.hypot(o.at.x - mid.x, o.at.y - mid.y) < 0.3)) continue;
+    done.push({ g, at: mid });
+    out.push({ ...mid, z: 0, w: across, d: 0.5, h: 0.45, f: g });
+    out.push({ x: mid.x - g.x * 0.3, y: mid.y - g.y * 0.3, z: 0, w: across, d: 0.1, h: 0.75, f: g });
+  }
+  return out;
+}
+
 /** How far from a door or gate standing open the dreamer's eyes stand: a step back, the whole doorway in view. */
 const STEP_BACK = 1.3;
 
@@ -425,6 +563,11 @@ function solidsOf(
    * reckoned on its plain block, as the approved shots were.
    */
   drawn = false,
+  /**
+   * With the picture (`drawn`), the mock-up's shapes for the local machine: benches, a chair at a table, a tractor with
+   * its seats.
+   */
+  shapes = false,
 ): Solid[] {
   const solids: Solid[] = [];
   // A fixture of the place is labelled with its own name; everyone and everything else as the story calls them.
@@ -459,6 +602,7 @@ function solidsOf(
   for (const s of plan.spots) {
     if (leaveOut.includes(s.id)) continue;
     const f = facing(s, plan);
+    const bench = drawn && shapes && !isPerson(s) ? benches(s, plan) : undefined;
     if (s.many) {
       const where = crowdSpots(s, plan, placed, eye);
       add(
@@ -485,11 +629,19 @@ function solidsOf(
             { x: p.x - f.x * 0.27, y: p.y - f.y * 0.27, z: 0.42, w: 0.62, d: 0.12, h: 0.5, f },
           ]),
         );
-    } else if (isPerson(s)) add(s.id, 0.97, figure(s, s.x, s.y, f, groundAt(s, plan)), name(s.id));
-    else if (drawn && cameraMode() === 'on' && s.open && !s.heldBy)
+    } else if (isPerson(s)) {
+      add(s.id, 0.97, figure(s, s.x, s.y, f, groundAt(s, plan)), name(s.id));
+      const chair = drawn && shapes ? chairUnder(s, plan, name) : undefined;
+      if (chair) add(`${s.id} seats`, 0.55, chair);
+    } else if (drawn && cameraMode() === 'on' && s.open && !s.heldBy)
       add(s.id, 0.62, openParts(thingBlocks(s, plan, name(s.id))), name(s.id));
     else if (drawn && cameraMode() === 'on' && !s.heldBy && shapeOf(s, plan) === 'vehicle' && ASTRIDE.test(name(s.id)))
       add(s.id, 0.62, astride(s, plan, f), name(s.id));
+    else if (drawn && shapes && !s.heldBy && shapeOf(s, plan) === 'vehicle' && TRACTOR.test(name(s.id))) {
+      const { body, seats } = tractorParts(s, plan, f);
+      add(s.id, 0.62, body, name(s.id));
+      if (seats.length) add(`${s.id} seats`, 0.55, seats);
+    } else if (bench) add(s.id, 0.62, bench, name(s.id));
     else
       add(
         s.id,
@@ -1170,11 +1322,21 @@ export function previsImage(
   name: (id: string) => string,
   width = 1376,
   height = 768,
+  /** The mock-up's shapes for the local machine (solidsOf `shapes`); off, the frame is as it always was. */
+  opts: { shapes?: boolean } = {},
 ): Uint8Array {
   // Seen from outside, the crowd leaves a lane to whoever the moment is about, as the view's own words
   // were measured; through the dreamer's eyes, it stands where it stands.
   const r = render(
-    solidsOf(plan, leaveOut, name, leaveOut.length ? undefined : eye, leaveOut.length ? eye : undefined, true),
+    solidsOf(
+      plan,
+      leaveOut,
+      name,
+      leaveOut.length ? undefined : eye,
+      leaveOut.length ? eye : undefined,
+      true,
+      !!opts.shapes,
+    ),
     eye,
     width,
     height,
@@ -1321,8 +1483,11 @@ export function previsKeyed(
   name: (id: string) => string,
   width = 1376,
   height = 768,
-  /** Things written by their short name beside them, a small shapeless one outlined (a test of labels on things). */
-  opts: { labels?: 'things' } = {},
+  /**
+   * `labels`: things written by their short name beside them, a small shapeless one outlined (a test of labels on
+   * things). `shapes`: the mock-up's shapes (solidsOf).
+   */
+  opts: { labels?: 'things'; shapes?: boolean } = {},
 ): { png: Uint8Array; key: KeyEntry[] } {
   const solids = solidsOf(
     plan,
@@ -1331,6 +1496,7 @@ export function previsKeyed(
     leaveOut.length ? undefined : eye,
     leaveOut.length ? eye : undefined,
     true,
+    !!opts.shapes,
   );
   const r = render(solids, eye, width, height);
   const spotOf = (id: string) => plan.spots.find((x) => x.id === id);
