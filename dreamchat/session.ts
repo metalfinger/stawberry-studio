@@ -976,6 +976,27 @@ const momentOf = (s: Pick<Session, 'draft'>, id: string): Moment | undefined =>
 /** The dream planned now, by what it was made from: kept for the last few. */
 const dreamsNow = new Map<string, Omit<DreamNow, 'frames' | 'items' | 'style'>>();
 
+/**
+ * A moment's plan as the dream is planned now, set as a re-plan sets it, and the dream's own copy of its plan with it,
+ * when it is sent with the one builder's `fresh_send` step (S6 row 17); whether it was. Planned now is dreamNowOf's
+ * plan, the one staleness reads and an in-between picture is sent from: its views completed as the breakdown has
+ * them, where a re-plan plans from the breakdown as it is. One reviewed or approved keeps its own, and one whose needs
+ * are not all in the dream yet waits for a re-plan, as there.
+ */
+export function planInForce(s: Session, f: Item): boolean {
+  if (!builds('fresh_send')) return false;
+  const plan = dreamNowOf(s).plan;
+  if (!plan || !s.build || f.kind !== 'cut' || !f.frame || f.review || f.continuityApproved) return false;
+  const next = plan.cuts.find((c) => c.id === f.id);
+  if (!next) return false;
+  const known = new Set((s.build.frames ?? []).map((x) => x.id));
+  if (![...next.needs, ...next.refs.map((r) => r.id)].every((n) => known.has(n))) return false;
+  f.frame.plan = next;
+  f.needs = next.needs;
+  s.build.plan = { issues: [], ...plan };
+  return true;
+}
+
 function planDreamNow(
   s: Pick<Session, 'draft' | 'build' | 'transcript' | 'style'>,
   frames: Item[],
@@ -2836,7 +2857,7 @@ export class SessionStore {
     // put in with, which a re-plan does not update (paper-city m5 drawn without the red paper bird).
     // With the one builder's `fresh_send` step (S6 row 17), its plan is the plan made now, as an in-between picture's
     // is when it is sent, not the last re-plan's; one reviewed or approved keeps its own, as a re-plan keeps it.
-    if (builds('fresh_send')) this.planNow(s, frame);
+    planInForce(s, frame);
     if (freshSendMode()) refreshMoment(frame, momentOf(s, frame.id));
     // The dream the moment's cut sheet reads, made once for this drawing and again after its words change.
     // What is withheld from it (S5's references: judged wrong, or stale) is read once for this drawing, so its
@@ -3406,23 +3427,6 @@ export class SessionStore {
     (s.prep.storyboard ??= {})[frame.id] = check;
     await this.replan(s);
     return true;
-  }
-
-  /**
-   * A moment's plan as the dream is planned now (dreamNowOf, the plan staleness and an in-between picture's send
-   * read), set as a re-plan sets it, and the dream's own copy of its plan with it (S6 row 17). One reviewed or
-   * approved keeps its own, and one whose needs are not all in the dream yet waits for a re-plan, as there.
-   */
-  private planNow(s: Session, f: Item): void {
-    const plan = dreamNowOf(s).plan;
-    if (!plan || !s.build || f.kind !== 'cut' || !f.frame || f.review || f.continuityApproved) return;
-    const next = plan.cuts.find((c) => c.id === f.id);
-    if (!next) return;
-    const known = new Set((s.build.frames ?? []).map((x) => x.id));
-    if (![...next.needs, ...next.refs.map((r) => r.id)].every((n) => known.has(n))) return;
-    f.frame.plan = next;
-    f.needs = next.needs;
-    s.build.plan = { issues: [], ...plan };
   }
 
   private async replan(s: Session, opts: { syncRecords?: boolean } = {}): Promise<void> {
