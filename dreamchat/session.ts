@@ -102,7 +102,7 @@ import type { TreeInput } from './tree';
 import { atSite, inSession, recordJev } from './jevlog';
 import { askFacts, decide, type Reading, STORYBOARD, storyboardActs } from './stages';
 import { planFacts } from './planfacts';
-import { previsImage } from './previs';
+import { type KeyEntry, previsImage, previsKeyed } from './previs';
 import {
   buildFrames,
   buildGhosts,
@@ -1114,6 +1114,24 @@ export function previsFor(
     (id) => names[id] ?? id,
   );
   return { png, key: new Bun.CryptoHasher('sha256').update(png).digest('hex') };
+}
+
+/**
+ * The same frame as previsFor, colour-keyed for the local machine's qwen profile (previs.ts previsKeyed): no labels,
+ * each person and creature in a marker colour, each thing in its own, and the key that says which colour is who.
+ */
+export function previsKeyedFor(
+  b: Breakdown,
+  frame: Pick<Item, 'id' | 'frame'>,
+  called: (id: string) => string,
+  rec?: RecordPlan,
+): { png: Uint8Array; key: KeyEntry[] } | undefined {
+  const eye = frame.frame?.plan?.eye;
+  const plan = eye ? shotPlan(b, frame.id, rec) : undefined;
+  if (!eye || !plan) return undefined;
+  const dreamer = b.people.find((p) => p.is_dreamer)?.id;
+  const names = Object.fromEntries(plan.spots.map((x) => [x.id, called(x.id)]));
+  return previsKeyed(plan, eye, frame.frame?.eyes === 'dreamer' && dreamer ? [dreamer] : [], (id) => names[id] ?? id);
 }
 
 /**
