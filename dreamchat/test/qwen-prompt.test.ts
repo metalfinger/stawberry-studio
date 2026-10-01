@@ -92,6 +92,32 @@ describe('qwenEdit: a moment written for Qwen-Image from its sheet', () => {
     expect(exactly('dream-0925-231131-affd', 'm1')).toBe('Exactly one dog in the picture.');
   });
 
+  test('with a colour-keyed mock-up, each one is said by its colour and no label is spoken of', () => {
+    const m2 = withEnv(PROFILE, () => {
+      const r = rebuild(loadDream('dream-0926-043003-b0cb', false).session as Session, { asDrawn: false });
+      const p = r.pictures.find((x) => x.id === 'm2' && x.kind !== 'ghost');
+      if (!p?.sheet || !p.assembled) throw new Error('no sheet for m2');
+      const images = p.references.map((x, i) => ({
+        n: i + 1,
+        role: x.role,
+        name: x.media_id,
+        file: `${x.media_id}.png`,
+      }));
+      const lines = Object.fromEntries(p.assembled.lines.map((l) => [l.id, l.text]));
+      const key = [
+        { id: 'p2', name: 'the grandfather', colour: 'red' },
+        { id: 'p1', name: 'the dreamer', colour: 'blue' },
+        { id: 't1', name: 'the suitcase', colour: 'brown' },
+      ];
+      return qwenEdit(p.sheet, p.assembled.references, images, lines, key).prompt;
+    });
+    expect(m2.startsWith('Turn the colour-coded mock-up <image1>')).toBe(true);
+    expect(m2).toContain('The red figure becomes the grandfather from <image2>');
+    expect(m2).toContain('The brown shape becomes the suitcase');
+    expect(m2).not.toContain('labelled');
+    expect(m2).not.toContain('grey');
+  });
+
   test('every frozen moment fits the machine', () => {
     for (const id of frozenDreams())
       for (const c of qwenCuts(id)) {

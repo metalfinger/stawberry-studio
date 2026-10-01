@@ -75,11 +75,23 @@ function lightOf(place: SheetElement | undefined): string {
 export type QwenPrompt = { prompt: string; images: Img[] };
 
 /**
+ * A colour-keyed mock-up's key (previs.ts, its 'keyed' style): each one named on the plan by the flat colour it is drawn
+ * in, with no label in the picture. With it, each one is said by its colour ("the red figure"); without it, by its label.
+ */
+export type MockUpKey = { id: string; name: string; colour: string }[];
+
+/**
  * A cut's prompt for Qwen, with the images it sends, in order. `refs` are the assembler's references (one per image
  * offered, in the same order as `images`), `lines` its paragraphs by id, for what happens, how each one is now and the
  * moment's conditions, said as the assembler says them.
  */
-export function qwenEdit(s: CutSheet, refs: AssembledRef[], images: Img[], lines: Record<string, string>): QwenPrompt {
+export function qwenEdit(
+  s: CutSheet,
+  refs: AssembledRef[],
+  images: Img[],
+  lines: Record<string, string>,
+  key?: MockUpKey,
+): QwenPrompt {
   const name = (id: string) => s.names[id] ?? id;
   const pov = s.camera.eyes === 'dreamer';
   // Words said inside a sentence: "Even, shadowless light" is "even, shadowless light"; a name keeps its capital (Tomas).
@@ -131,13 +143,21 @@ export function qwenEdit(s: CutSheet, refs: AssembledRef[], images: Img[], lines
   };
 
   const out: string[] = [];
+  // Each one on the mock-up as it is drawn there: by its colour in a keyed one, by its label in the grey one.
+  const colourOf = (id: string) => key?.find((k) => k.id === id)?.colour;
+  const said1 = (e: SheetElement, what: 'figure' | 'shape') => {
+    const c = colourOf(e.id);
+    return c ? `The ${c} ${what}` : key ? `The ${what} of ${e.name}` : `The grey ${what} labelled ${e.name}`;
+  };
   const base = sent[0]?.ref;
   const mockUp = base?.source === 'mockup';
   const medium = mediumOf(s.style.option);
   // 1. The operation, and what image 1 keeps.
   if (mockUp)
     out.push(
-      `Turn the grey mock-up ${tag(1)} into a finished picture, ${medium}: ${tag(1)} is the canvas, so keep its camera, its framing, and the place, size, pose and facing of every grey figure and shape exactly.`,
+      key
+        ? `Turn the colour-coded mock-up ${tag(1)} into a finished picture, ${medium}: ${tag(1)} is the canvas, so keep its camera, its framing, and the place, size, pose and facing of every figure and shape exactly.`
+        : `Turn the grey mock-up ${tag(1)} into a finished picture, ${medium}: ${tag(1)} is the canvas, so keep its camera, its framing, and the place, size, pose and facing of every grey figure and shape exactly.`,
     );
   else if (base)
     out.push(
@@ -168,7 +188,7 @@ export function qwenEdit(s: CutSheet, refs: AssembledRef[], images: Img[], lines
   for (const e of people) {
     const k = at((r) => r.role === 'identity' && r.subjects.includes(e.id));
     const pose = poseIn(s.camera.view, e.name);
-    const figure = mockUp ? `The grey figure labelled ${e.name}` : sentence(e.name).replace(/\.$/, '');
+    const figure = mockUp ? said1(e, 'figure') : sentence(e.name).replace(/\.$/, '');
     out.push(
       k
         ? `${figure} becomes ${e.name} from ${tag(k)}: take only ${e.said === 'animal' ? 'how it looks' : e.said === 'people' ? 'how they look' : 'their face, hair and clothes'} from ${tag(k)}${mockUp ? `, and keep the figure's pose${pose ? ` (${pose})` : ''}` : ''}.`
@@ -179,7 +199,7 @@ export function qwenEdit(s: CutSheet, refs: AssembledRef[], images: Img[], lines
   const things = s.inView.filter((e) => e.kind === 'prop');
   for (const e of things) {
     const k = at((r) => r.role === 'prop' && r.subjects.includes(e.id));
-    const shape = mockUp ? `The grey shape labelled ${e.name}` : sentence(e.name).replace(/\.$/, '');
+    const shape = mockUp ? said1(e, 'shape') : sentence(e.name).replace(/\.$/, '');
     out.push(
       k
         ? `${shape} becomes the ${e.name.replace(/^the\s+/i, '')} from ${tag(k)}${mockUp ? ', at its size in the canvas' : ''}.`
@@ -234,7 +254,11 @@ export function qwenEdit(s: CutSheet, refs: AssembledRef[], images: Img[], lines
 
   // 9. Writing: what the story writes, as marks; the mock-up's labels go with the grey.
   if (s.story.writing.length) out.push(`The only writing is ${s.story.writing.join(', ')}.`);
-  if (mockUp)
+  if (mockUp && key)
+    out.push(
+      `The flat colours of ${tag(1)} only show who and what is where: everyone and everything takes the colours of their own image and of the story, and every surface in the finished picture is plain.`,
+    );
+  else if (mockUp)
     out.push(
       `Every grey surface of ${tag(1)} becomes the real thing it stands for; its labels only name the shapes, and every surface in the finished picture is plain.`,
     );
