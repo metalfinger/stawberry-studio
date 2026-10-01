@@ -10,6 +10,8 @@
 //   bun run evals/local-run.ts --run qwen-1 --frozen --profile qwen   each moment's prompt written for Qwen (qwen-prompt.ts)
 //   … --profile qwen --previs keyed --dream <id> --moments m2,m6     the colour-keyed mock-up, only those moments drawn
 //
+// A dream whose typed or cast readings are not cached is stopped (--allow-missing draws it without them).
+//
 // Nothing is drawn twice: a run is resumed where it stopped (a picture with its file is kept). Everything is kept under
 // <data>/runs/local-draw/<run>/<dream>/: manifest.json (what each picture was sent, its job, seed and file, what the
 // fitting dropped, the code's commit) and the pictures. Run it from a worktree pinned to one commit: code moves while a
@@ -208,6 +210,7 @@ async function drawDream(
     profile: 'harness' | 'qwen';
     previs: 'clay' | 'keyed' | 'keyed-labels';
     moments: Set<string> | null;
+    allowMissing?: boolean;
   },
 ): Promise<RunManifest> {
   const { rebuild, standIn } = await import('../plan');
@@ -219,6 +222,9 @@ async function drawDream(
   mkdirSync(join(dir, 'img'), { recursive: true });
   const manifestFile = join(dir, 'manifest.json');
   const { session, readings } = await prepared(saved);
+  // A dream drawn without its readings is not the harness's dream: stopped, never drawn quietly without them (the
+  // qwen-1 and qwen-2 runs, 1 Oct, drew whole dreams with every reading missed and said so only in their manifests).
+  if (readings.length && !opts.allowMissing) throw new Error(`readings missing: ${readings.join('; ')}`);
   const r = rebuild(session, { asDrawn: false });
   const style = session.style!;
   const was: RunManifest | null = existsSync(manifestFile) ? JSON.parse(readFileSync(manifestFile, 'utf8')) : null;
@@ -497,7 +503,15 @@ if (import.meta.main) {
       continue;
     }
     try {
-      const mf = await drawDream(run, d.id, d.session, { quality, out, commit, profile, previs, moments });
+      const mf = await drawDream(run, d.id, d.session, {
+        quality,
+        out,
+        commit,
+        profile,
+        previs,
+        moments,
+        allowMissing: args.includes('--allow-missing'),
+      });
       const done = mf.pictures.filter((p) => p.state === 'done').length;
       console.log(`${d.id}: ${done} of ${mf.pictures.length} drawn`);
     } catch (e) {
