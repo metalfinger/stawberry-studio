@@ -7,6 +7,7 @@
 //   bun run evals/local-run.ts --run night-1 --frozen                 every frozen dream
 //   bun run evals/local-run.ts --run night-1 --live                   every saved conversation too
 //   bun run evals/local-run.ts --run night-1 --dream dream-0926-000545-09ea [--quality fast]
+//   bun run evals/local-run.ts --run qwen-1 --frozen --profile qwen   each moment's prompt written for Qwen (qwen-prompt.ts)
 //
 // Nothing is drawn twice: a run is resumed where it stopped (a picture with its file is kept). Everything is kept under
 // <data>/runs/local-draw/<run>/<dream>/: manifest.json (what each picture was sent, its job, seed and file, what the
@@ -19,6 +20,7 @@ import { join } from 'node:path';
 import type { Item } from '../sheets';
 import type { Session } from '../session';
 import { API, type Img, type Line, fitMoment, MAX_CHARS, PROFILE, seedOf } from './local-draw';
+import { qwenEdit } from './qwen-prompt';
 import { commitOf, dataDir, frozenDreams, liveDreams, loadDream } from './saved';
 
 type Job = {
@@ -46,6 +48,8 @@ export type RunPicture = {
   seed?: number;
   /** The machine's quality tier it was drawn at. */
   quality?: string;
+  /** Whose prompt was sent: the harness's, fitted, or the one written for Qwen from the cut's sheet. */
+  profile?: 'harness' | 'qwen';
   file?: string;
   size?: [number, number];
   secs?: number;
@@ -193,7 +197,7 @@ async function drawDream(
   run: string,
   dreamId: string,
   saved: Session,
-  opts: { quality: { sketch: string; picture: string }; out: string; commit: string },
+  opts: { quality: { sketch: string; picture: string }; out: string; commit: string; profile: 'harness' | 'qwen' },
 ): Promise<RunManifest> {
   const { rebuild, standIn } = await import('../plan');
   const { sheetPrompt, shapeOf } = await import('../sheets');
@@ -351,6 +355,36 @@ async function drawDream(
         })
         .map((s) => standIn.sketch(s.id)),
     );
+    // Written for Qwen from the cut's sheet, where it has one; otherwise the harness's own prompt, fitted.
+    if (opts.profile === 'qwen' && kind === 'cut' && p.sheet && p.assembled) {
+      const q = qwenEdit(
+        p.sheet,
+        p.assembled.references,
+        images,
+        Object.fromEntries(p.assembled.lines.map((l) => [l.id, l.text])),
+      );
+      e.profile = 'qwen';
+      e.sent = q.prompt.slice(0, MAX_CHARS);
+      e.imagesSent = q.images;
+      e.dropped = {
+        images: images.filter((x) => !q.images.includes(x)).map((x) => x.name),
+        paragraphs: [],
+        lines: [],
+        chars: 0,
+      };
+      if (q.prompt.length > MAX_CHARS) notes.push(`${q.prompt.length} characters: cut at ${MAX_CHARS}`);
+      const first = q.images[0]?.file;
+      if (!first) await draw(e, 'generate', { prompt: e.sent, width: 1024, height: 576 });
+      else
+        await draw(e, 'edit', {
+          prompt: e.sent,
+          images: q.images.map((x, k) =>
+            dataUri(k === 0 ? asFrame(first, join(dir, 'img', `frame-${p.id}.png`)) : (x.file as string)),
+          ),
+        });
+      if (e.state === 'done' && e.file) files.set(standIn.picture(p.id), e.file);
+      continue;
+    }
     const fitted = fitMoment(lines, have, 0, MAX_CHARS - lead.length, named, true);
     // Everyone's sketch in one image, left to right, where the fitting made them one.
     for (const x of fitted.images)
@@ -396,6 +430,7 @@ if (import.meta.main) {
     sketch: val('--sketch-quality') ?? val('--quality') ?? 'fast',
     picture: val('--quality') ?? 'fast',
   };
+  const profile = val('--profile') === 'qwen' ? 'qwen' : 'harness';
   // The full profile, as every other eval of the harness reads it.
   for (const [k, v] of Object.entries(PROFILE)) process.env[k] ??= v;
   const data = dataDir();
@@ -428,7 +463,7 @@ if (import.meta.main) {
       continue;
     }
     try {
-      const mf = await drawDream(run, d.id, d.session, { quality, out, commit });
+      const mf = await drawDream(run, d.id, d.session, { quality, out, commit, profile });
       const done = mf.pictures.filter((p) => p.state === 'done').length;
       console.log(`${d.id}: ${done} of ${mf.pictures.length} drawn`);
     } catch (e) {
