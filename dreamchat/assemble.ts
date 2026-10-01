@@ -8,12 +8,11 @@
 // take from it and nothing else. An edit base goes first (image 1 is the picture to change), or the
 // mock-up where there is none, then the sketches of who and what is in view, then in-between pictures,
 // then earlier moments while there is room.
-import { periodLine } from './era';
 import { sayTurn } from './camera';
 import type { CutSheet, SheetEarlier, SheetElement } from './cutsheet';
 import { aNoun, FRAMING, MAX_IMAGES, NOTHING_ELSE, SHAPE_WORDS, samePlaceLine, sentence, writingLine } from './frames';
 import { sayNow } from './record';
-import { styleBlock } from './sheets';
+import { periodLine, styleBlock } from './sheets';
 
 /** An image as attached: what it is, its role, what to take from it, and where on the sheet it comes from. */
 export type AssembledRef = {

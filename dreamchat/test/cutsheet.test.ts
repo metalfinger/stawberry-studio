@@ -349,9 +349,23 @@ describe('assembleCut reads the sheet and nothing else', () => {
     // It reads the prompt's fields, and never the tree, the record or the tags: those are for the checks.
     // `rules` is on a sheet only with the camera rules on (DREAMCHAT_CAMERA), `refs` only with S5's
     // references on (DREAMCHAT_REFS), `once` only with the one builder's steps that say a fact once (S6
-    // rows 14 and on), and `earlierWords` only with its step; each is read where it is.
+    // rows 14 and on), `earlierWords` only with its step, and `period` only with `era` on a dream that has one; each
+    // is read where it is.
     const top = new Set([...read].map((k) => k.split('.')[0]));
-    for (const k of top) expect([...Object.keys(sheets[0]), 'rules', 'refs', 'once', 'earlierWords', 'storyMarks', 'conditions', 'jumpWords', 'seenThrough', 'ownHands']).toContain(k);
+    for (const k of top)
+      expect([
+        ...Object.keys(sheets[0]),
+        'rules',
+        'refs',
+        'once',
+        'earlierWords',
+        'storyMarks',
+        'conditions',
+        'jumpWords',
+        'seenThrough',
+        'ownHands',
+        'period',
+      ]).toContain(k);
     for (const k of ['tree', 'record', 'tags', 'relations', 'sources', 'hash', 'flags']) expect(top.has(k)).toBe(false);
   });
 
@@ -422,7 +436,7 @@ describe('assembleCut reads the sheet and nothing else', () => {
         'writingLine',
       ],
       './record': ['sayNow'],
-      './sheets': ['styleBlock'],
+      './sheets': ['periodLine', 'styleBlock'],
     };
     expect(imports.length).toBe(src.match(/^import /gm)?.length ?? 0);
     for (const i of imports) {

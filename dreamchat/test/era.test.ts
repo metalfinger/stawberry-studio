@@ -4,7 +4,8 @@
 // the dream sets in another era keeps its own, never leaking into the others. A sketch and every moment are told the
 // time; the style never is (a woodcut stays a woodcut in any decade). Every model here is a stand-in.
 import { describe, expect, test } from 'bun:test';
-import { eraOf, periodLine, periodOfDate, readEra } from '../era';
+import { eraOf, periodOfDate, readEra } from '../era';
+import { periodLine } from '../sheets';
 import { loadDream } from '../evals/saved';
 import { rebuild } from '../plan';
 import type { Breakdown } from '../producer';

@@ -78,16 +78,3 @@ export async function readEra(
 /** The period a moment is set in: its own where the dream gives it one, else the dream's, else none. */
 export const eraOf = (era: Era | null | undefined, momentId: string): string | null =>
   era?.moments[momentId]?.value ?? era?.period?.value ?? null;
-
-/** The time, told to a sketch by what it is of, or to a moment's whole picture. */
-export function periodLine(value: string, kind: 'moment' | 'character' | 'location' | 'prop'): string {
-  const what =
-    kind === 'character'
-      ? 'their clothes and hair as they were then'
-      : kind === 'location'
-        ? 'the place and everything in it as it was then'
-        : kind === 'prop'
-          ? 'as it was made then'
-          : 'clothes, hair, rooms, vehicles and things as they were then';
-  return `The time: ${value}: ${what}.`;
-}

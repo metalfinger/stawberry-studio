@@ -4,7 +4,6 @@
 // the engine's worker draws it.
 import { frameShape } from './blocking';
 import { builds } from './cleanups';
-import { periodLine } from './era';
 import type { AsDrawn, Recast } from './asdrawn';
 import type { CutPlan, GhostPlan } from './continuity';
 import { pictureName } from './continuity';
@@ -808,6 +807,19 @@ export function openedLater(place: Item, actions: string[]): string[] {
 }
 
 /** A place's name that says who is there or what they do in it, rather than what the place is. */
+/** The time (era.ts), told to a sketch by what it is of, or to a moment's whole picture: words only, the assembler's too. */
+export function periodLine(value: string, kind: 'moment' | 'character' | 'location' | 'prop'): string {
+  const what =
+    kind === 'character'
+      ? 'their clothes and hair as they were then'
+      : kind === 'location'
+        ? 'the place and everything in it as it was then'
+        : kind === 'prop'
+          ? 'as it was made then'
+          : 'clothes, hair, rooms, vehicles and things as they were then';
+  return `The time: ${value}: ${what}.`;
+}
+
 const PEOPLE_IN_NAME =
   /\b(people|persons?|couple of|crowd|someone|sitting|standing|talking|playing|waiting|with (?:the |a |my |your |her |his )?(?:\w+ )?(?:man|woman|men|women|girl|boy|friends?|aunt|uncle|mother|father|brother|sister|family))\b/i;
 
