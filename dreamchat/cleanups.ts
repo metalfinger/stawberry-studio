@@ -229,6 +229,10 @@ export const BUILDER_STEPS: readonly string[] = [
   // Not a ledger row: the same dream. Someone the camera leaves outside the picture is not in it: "just outside the
   //    picture to the left is the man in the wheelchair" went out with his image all the same.
   'framed_only',
+  // Not a ledger row: from the counted prompt cases (G2, its one model step). A group told only as a crowd, never
+  //    sketched, is given ordinary clothes for who and where they are, as a guess (wardrobe.ts, one writer reading per
+  //    dream): made real from the mock-up, the exam room's faceless students came out naked (heron m4).
+  'extras_wardrobe',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;
