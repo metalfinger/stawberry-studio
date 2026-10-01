@@ -66,4 +66,18 @@ describe('the camera tilts to hold their heads', () => {
   test('with no one to hold, the camera as it was', () => {
     expect(headsIn(down, [], plan)).toBe(down);
   });
+
+  test("read in the frame's own shape: a head 27 degrees above the eye is out of 16:9 and in 9:16", () => {
+    const low = { at: { x: 3, y: 4.5 }, d: { x: 0, y: -1 }, height: 1.0, pitch: 0, lens: 24 } as never;
+    const was = process.env.DREAMCHAT_FRAME;
+    try {
+      delete process.env.DREAMCHAT_FRAME;
+      expect(inFrame(plan, low, 'p2')!.head).toBe(false);
+      process.env.DREAMCHAT_FRAME = '9:16';
+      expect(inFrame(plan, low, 'p2')!.head).toBe(true);
+    } finally {
+      if (was === undefined) delete process.env.DREAMCHAT_FRAME;
+      else process.env.DREAMCHAT_FRAME = was;
+    }
+  });
 });

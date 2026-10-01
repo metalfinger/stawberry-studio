@@ -205,9 +205,24 @@ export type Lean = 'back' | 'forward' | 'left' | 'right';
  */
 export type Eye = Camera & { height: number; pitch?: number; lean?: Lean; lens?: number };
 
-/** Half the width of a lens's view, in degrees, on a full frame 36mm across. */
+/** The frame's shape: a storyboard's 16:9, or a phone's 9:16 with DREAMCHAT_FRAME=9:16 (the owner, 1 Oct). */
+export const frameShape = (): '16:9' | '9:16' =>
+  (process.env.DREAMCHAT_FRAME ?? '').trim() === '9:16' ? '9:16' : '16:9';
+
+/** A vertical frame: its width is its short side, so a lens sees less across it and more up and down. */
+export const upright = (): boolean => frameShape() === '9:16';
+
+/**
+ * Half the width of a lens's view, in degrees, on a full frame 36mm across its long side: across a vertical frame,
+ * the short side's 20.25mm.
+ */
 export const halfViewOf = (eye: { lens?: number }) =>
-  eye.lens ? (Math.atan(18 / eye.lens) * 180) / Math.PI : HALF_VIEW;
+  upright()
+    ? (Math.atan(eye.lens ? (18 * 9) / 16 / eye.lens : Math.tan((HALF_VIEW * Math.PI) / 180) * (9 / 16)) * 180) /
+      Math.PI
+    : eye.lens
+      ? (Math.atan(18 / eye.lens) * 180) / Math.PI
+      : HALF_VIEW;
 
 /** Half the width of a 16:9 frame's view, in degrees (a 24mm lens): what is further round is out of it. */
 export const HALF_VIEW = 38;
