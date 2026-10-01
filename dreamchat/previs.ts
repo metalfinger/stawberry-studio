@@ -245,6 +245,63 @@ function astride(s: Spot, plan: Blocking, f: V2): (Block | Face[])[] {
   ];
 }
 
+/** How far from a door or gate standing open the dreamer's eyes stand: a step back, the whole doorway in view. */
+const STEP_BACK = 1.3;
+
+/**
+ * A door or gate standing open, as the mock-up draws it: its frame (two posts and the head) and the door swung back
+ * square to it on its hinge, so the view goes through the doorway. As a closed slab, the dreamer opening the red door
+ * on warm light saw one grey wall and its label (snow-train m6, judged blind).
+ */
+function openParts(blocks: Block[]): Block[] {
+  const b = blocks[0];
+  if (!b || blocks.length > 1 || b.w < 0.5 || b.h < 1) return blocks;
+  const r = rightOf(b.f);
+  const at = (across: number, along: number) => ({
+    x: b.x + r.x * across + b.f.x * along,
+    y: b.y + r.y * across + b.f.y * along,
+  });
+  const post = Math.min(0.12, b.w * 0.1);
+  const head = Math.min(0.15, b.h * 0.08);
+  const leaf = b.w - 2 * post;
+  return [
+    { ...b, ...at(-(b.w / 2 - post / 2), 0), w: post },
+    { ...b, ...at(b.w / 2 - post / 2, 0), w: post },
+    { ...b, z: b.z + b.h - head, h: head },
+    {
+      ...b,
+      ...at(-(b.w / 2 - post) + 0.03, b.d / 2 + leaf / 2),
+      z: b.z + 0.02,
+      w: 0.06,
+      d: leaf,
+      h: b.h - head - 0.04,
+    },
+  ];
+}
+
+/**
+ * The height of the middle of what the dreamer looks at: a person's eyes; a thing's middle, or, with the camera rules,
+ * where it stands taller than the dreamer's own eyes, straight ahead of them. Close at the red door, its middle had the
+ * camera looking down at the ground at its foot (snow-train m6).
+ */
+function heartHeight(target: Spot, plan: Blocking, eyes?: number): number {
+  const base = target.above ?? groundAt(target, plan);
+  if (isPerson(target)) return base + eyeHeight(target.pose) - 0.1;
+  const h = sizeOf(target)[2];
+  return eyes !== undefined && base + h >= eyes ? Math.max(base + h / 2, eyes - 0.1) : base + h / 2;
+}
+
+/**
+ * Whether the dreamer looks at what they look at level, not at its middle: something upright taller than their eyes and
+ * within two steps of them, never the stairs or the ground they are on (their spiral stairs, looked at level from on
+ * them, left no view at all: cbba m4).
+ */
+function lookedLevel(target: Spot, me: Spot, plan: Blocking): boolean {
+  if (isPerson(target) || ['steps', 'ground'].includes(shapeOf(target, plan)) || onFootprint(me, target, plan))
+    return false;
+  return Math.hypot(me.x - target.x, me.y - target.y) <= 2;
+}
+
 /** A block's six faces, each facing out. */
 function blockFaces(b: Block, solid: number): Face[] {
   const r = rightOf(b.f);
@@ -429,6 +486,8 @@ function solidsOf(
           ]),
         );
     } else if (isPerson(s)) add(s.id, 0.97, figure(s, s.x, s.y, f, groundAt(s, plan)), name(s.id));
+    else if (drawn && cameraMode() === 'on' && s.open && !s.heldBy)
+      add(s.id, 0.62, openParts(thingBlocks(s, plan, name(s.id))), name(s.id));
     else if (drawn && cameraMode() === 'on' && !s.heldBy && shapeOf(s, plan) === 'vehicle' && ASTRIDE.test(name(s.id)))
       add(s.id, 0.62, astride(s, plan, f), name(s.id));
     else
@@ -1223,6 +1282,17 @@ export function dreamerShot(
   const side = rightOf(own);
   const target = toward ? plan.spots.find((s) => s.id === toward && s.id !== dreamer) : undefined;
   const camera = cameraMode() === 'on';
+  // At a door or gate standing open (the camera rules): a step back from it, the whole doorway in the picture and what is
+  // on the other side through it. At the red door itself, the view was its edge and the ground at its foot (snow-train
+  // m6, judged blind).
+  const away = camera && target?.open ? Math.hypot(me.x - target.x, me.y - target.y) : Infinity;
+  const stepBack =
+    target && away < STEP_BACK
+      ? (() => {
+          const u = away > 0.01 ? unit({ x: me.x - target.x, y: me.y - target.y }) : { x: -own.x, y: -own.y };
+          return { x: u.x * (STEP_BACK - away), y: u.y * (STEP_BACK - away) };
+        })()
+      : undefined;
   // With the camera rules, what the dreamer holds is in their hands before their eyes, wherever those
   // eyes turn: the picture is rendered again for each way of looking.
   const holding = camera && plan.spots.some((s) => s.heldBy === dreamer);
@@ -1258,8 +1328,7 @@ export function dreamerShot(
         : v3(
             target.x,
             target.y,
-            (target.above ?? groundAt(target, plan)) +
-              (isPerson(target) ? eyeHeight(target.pose) - 0.1 : sizeOf(target)[2] / 2),
+            heartHeight(target, plan, camera && lookedLevel(target, me, plan) ? height : undefined),
           )
     : null;
   const near = plan.spots.filter((s) => s.id !== dreamer && s.id !== target?.id && isPerson(s) && !s.many);
@@ -1272,9 +1341,9 @@ export function dreamerShot(
     wanted.length
       ? wanted.filter((id) => (r.seen.get(id)?.visible ?? 0) >= 192 * 108 * 0.002).length / wanted.length
       : 0;
-  for (const [lean, off, how] of target ? leans : leans.slice(0, 1))
+  for (const [lean, off, how] of target && !stepBack ? leans : leans.slice(0, 1))
     for (const aim of target ? [0, -8, 8, -15, 15, -22, 22] : wanted.length ? [0, -15, 15, -30, 30, -45, 45] : [0]) {
-      const at = { x: me.x + off.x, y: me.y + off.y };
+      const at = { x: me.x + off.x + (stepBack?.x ?? 0), y: me.y + off.y + (stepBack?.y ?? 0) };
       const d = turn(heart ? unit({ x: heart.x - at.x, y: heart.y - at.y }) : own, aim);
       // Tilted to what they look at when it is well above or below them (over 20 degrees): looking
       // straight ahead up a staircase, the dog running up it far above was out of the picture
@@ -1368,7 +1437,7 @@ export function dreamerShot(
     .sort((a, b) => distance(a.s) - distance(b.s));
   const called = (id: string) => plan.spots.find((s) => s.id === id)?.name ?? name(id);
   const sentences = [
-    `The camera is the dreamer's eyes${climbingIn ? `, climbing ${climbingIn.how} ${called(climbingIn.of)}` : at.length ? `, ${inIt ? 'in' : 'on'} ${at.map(called).join(' and ')}` : ''}${pose}${eye.lean ? `, ${LEAN_WORDS[eye.lean]}` : ''}, ${turned}${toward ? `, toward ${called(toward)}` : ''}: it looks toward ${wall(eye.d, plan.front, !!plan.indoors)}. A wide lens, about 24mm.`,
+    `The camera is the dreamer's eyes${climbingIn ? `, climbing ${climbingIn.how} ${called(climbingIn.of)}` : at.length ? `, ${inIt ? 'in' : 'on'} ${at.map(called).join(' and ')}` : ''}${pose}${eye.lean ? `, ${LEAN_WORDS[eye.lean]}` : ''}${stepBack && target ? `, a step back from ${called(target.id)}` : ''}, ${turned}${toward ? `, toward ${called(toward)}` : ''}: it looks toward ${wall(eye.d, plan.front, !!plan.indoors)}. A wide lens, about 24mm.`,
     // Riding in something, what they are in is in the picture: through the dreamer's eyes in the
     // tractor's cab, the tractor was read as missing from its own moment (lighthouse, 25 Sep).
     ...(inIt && at.length
@@ -1452,8 +1521,6 @@ function thingWords(
   // it (the mouse-sized dreamer "standing on the tall grass", d3a1 m1-m3; Tomas "standing on the empty rows of apple
   // trees", orchard m5: the read of every frozen prompt, 30 Sep). With the camera rules.
   const grown = on && on.how === 'on' && cameraMode() === 'on' ? growsAs(called(on.t.id)) : undefined;
-  // What has one seat: its driver in it, anyone else on its mudguard (the camera rules).
-  const driver = on && on.how === 'in' && cameraMode() === 'on' ? driverOf(on.t, plan, called) : undefined;
   // Seated facing someone seated facing them (the seats facing each other): across from them, never beside them. The
   // dreamer and the grandfather on the train's seats facing each other were drawn side by side (snow-train m2, judged
   // blind, 30 Sep). With the camera rules, seen from outside.
@@ -1473,11 +1540,7 @@ function thingWords(
               ? `, ${pose} ${tandem === 'front' ? 'in front of' : 'behind'} the dreamer on the same ${bareName(called(on.t.id))}`
               : `, ${pose} beside the dreamer on the same ${bareName(called(on.t.id))}`
         : on.how === 'in'
-          ? driver
-            ? driver.id === s.id
-              ? `, in ${called(on.t.id)}'s one seat`
-              : `, sitting on ${called(on.t.id)}'s mudguard beside ${called(driver.id)}`
-            : `, in ${called(on.t.id)}`
+          ? `, in ${called(on.t.id)}`
           : tandem === 'front'
             ? `, ${pose} in front on ${called(on.t.id)}`
             : tandem === 'back'
@@ -1516,17 +1579,14 @@ function thingWords(
         .map((o) => called(o.id))
     : [];
   const shape = !isPerson(s) ? shapeOf(s, plan) : undefined;
-  const drives = riders.length && cameraMode() === 'on' ? driverOf(s, plan, called) : undefined;
   const how =
     sitting +
     (isPerson(s) && !s.many ? `, ${turnedTo(s, plan, eye)}` : '') +
     (holds.length ? `, holding ${holds.join(' and ')}` : '') +
     (holder ? `, in ${called(holder)}'s hands` : '') +
-    (riders.length && drives && riders.includes(called(drives.id))
-      ? `, with ${called(drives.id)} in its seat${riders.length > 1 ? ` and ${riders.filter((x) => x !== called(drives.id)).join(' and ')} on its mudguard` : ''}`
-      : riders.length
-        ? `, with ${riders.join(' and ')} ${shape === 'vehicle' ? (cameraMode() === 'on' && sizeOf(s)[0] < 1 ? 'on it' : 'in it') : shape === 'seat' ? 'sitting on it' : cameraMode() === 'on' && growsAs(called(s.id)) === 'among' ? 'among them' : cameraMode() === 'on' && growsAs(called(s.id)) ? 'in it' : 'on it'}`
-        : '') +
+    (riders.length
+      ? `, with ${riders.join(' and ')} ${shape === 'vehicle' ? (cameraMode() === 'on' && sizeOf(s)[0] < 1 ? 'on it' : 'in it') : shape === 'seat' ? 'sitting on it' : cameraMode() === 'on' && growsAs(called(s.id)) === 'among' ? 'among them' : cameraMode() === 'on' && growsAs(called(s.id)) ? 'in it' : 'on it'}`
+      : '') +
     (onTop ? `, on ${called(onTop.id)}` : next ? `, right beside ${called(next.id)}` : '');
   const behind =
     seen.hiddenBy && seen.hiddenBy !== s.id && ctx.spots.some((o) => o.id === seen.hiddenBy)
@@ -2323,20 +2383,6 @@ export function onOf(p: Spot, plan: Blocking): { t: Spot; how: 'on' | 'in' } | u
   if (seat && p.pose !== 'standing') return { t: seat, how: 'on' };
   const ground = by('steps') ?? by('ground');
   return ground ? { t: ground, how: 'on' } : undefined;
-}
-
-/** What has one seat: whoever drives it has the seat. */
-const ONE_SEAT = /\b(?:tractors?|forklifts?|diggers?|bulldozers?|ride-on mowers?)\b/i;
-
-/**
- * Who drives what has one seat (a tractor) with others riding it: they have its seat, and anyone else rides on its
- * mudguard beside them. Two sat side by side in the red tractor were drawn in two tractors, one each (lighthouse-first
- * m9, drawn on the local machine; said on its mudguard, one tractor in 2 of 2, 1 Oct). None where no one on it drives.
- */
-function driverOf(v: Spot, plan: Blocking, called: (id: string) => string): Spot | undefined {
-  if (shapeOf(v, plan) !== 'vehicle' || !ONE_SEAT.test(called(v.id))) return undefined;
-  const riders = plan.spots.filter((o) => isPerson(o) && !o.many && onOf(o, plan)?.t.id === v.id);
-  return riders.length > 1 ? riders.find((o) => o.rides === 'front') : undefined;
 }
 
 /**

@@ -34,6 +34,7 @@ import {
   carriedBy,
   isThePlace,
   withPathDeck,
+  withOpen,
 } from '../continuity';
 import { type CutSheet, notDrawnFrom } from '../cutsheet';
 import { frozenDreams, loadDream } from '../evals/saved';
@@ -1998,48 +1999,130 @@ describe('through their eyes, what they look at never swamps the frame', () => {
   });
 });
 
-describe('what has one seat', () => {
+describe('a door standing open', () => {
   const field = {
-    front: 'the beach',
+    front: 'the snowy field',
     spots: [
-      { id: 'p1', x: 50.5, y: 5, kind: 'person' as const, pose: 'sitting' as const, faces: 'front' },
+      { id: 'p1', x: 10, y: 1.5, kind: 'person' as const, pose: 'standing' as const, faces: 'front' },
       {
-        id: 'p4',
-        x: 49.5,
-        y: 5,
-        kind: 'person' as const,
-        pose: 'sitting' as const,
-        faces: 'front',
-        rides: 'front' as const,
-      },
-      {
-        id: 'c1',
-        x: 50,
-        y: 5,
+        id: 'x2',
+        x: 10,
+        y: 1,
         kind: 'thing' as const,
-        shape: 'vehicle' as const,
-        faces: 'front',
-        size: [1.8, 3.5, 2.2] as [number, number, number],
+        fixture: true,
+        name: 'the red door',
+        size: [1.2, 0.3, 2.2] as [number, number, number],
       },
     ],
   };
-  const name = (id: string) => ({ p1: 'the dreamer', p4: 'the driver', c1: 'the red tractor' })[id] ?? id;
+  const name = (id: string) => ({ p1: 'the dreamer', x2: 'the red door' })[id] ?? id;
+  const opened = [
+    {
+      of: 'l2',
+      called: 'the snowy field',
+      name: 'the snowy field',
+      kind: 'place' as const,
+      facts: [
+        { kind: 'part' as const, part: 'door', what: 'door', now: 'open, faint yellow glow spilling from the doorway' },
+      ],
+    },
+  ];
 
-  test('its driver has its seat, and anyone else rides on its mudguard beside them', () => {
-    // Two sat side by side in the red tractor were drawn in two tractors, one each (lighthouse-first m9, 1 Oct).
-    const shot = withEnv(CAMERA, () => outsideShot(field, ['p1', 'p4', 'c1'], 'wide', name))!;
-    expect(shot.text).toContain("the driver, right of the middle of the picture, in the red tractor's one seat");
-    expect(shot.text).toContain("sitting on the red tractor's mudguard beside the driver");
-    expect(shot.text).toContain('with the driver in its seat and the dreamer on its mudguard');
-    // No one drives it, or it is not a thing of one seat: in it, as before.
-    const nobody = { ...field, spots: field.spots.map((s) => (s.id === 'p4' ? { ...s, rides: undefined } : s)) };
-    expect(withEnv(CAMERA, () => outsideShot(nobody, ['p1', 'p4', 'c1'], 'wide', name))!.text).toContain(
-      'with the dreamer and the driver in it',
-    );
-    const car = (id: string) => (id === 'c1' ? 'the red car' : name(id));
-    expect(withEnv(CAMERA, () => outsideShot(field, ['p1', 'p4', 'c1'], 'wide', car))!.text).not.toContain('mudguard');
+  test('is open on the plan where the record has it open, and only then', () => {
+    // The red door the dreamer opens on warm light (snow-train m6, judged blind).
+    expect(withOpen(field, opened).spots.find((s) => s.id === 'x2')!.open).toBe(true);
+    const shut = [{ ...opened[0], facts: [{ ...opened[0].facts[0], now: 'shut, snow against it' }] }];
+    expect(withOpen(field, shut)).toBe(field);
+    // Only a door or a gate: an open window is not a doorway.
+    const window = [{ ...opened[0], facts: [{ ...opened[0].facts[0], part: 'window', what: 'window' }] }];
+    expect(withOpen(field, window)).toBe(field);
+  });
+  test('opens exactly the door that is open, and never guesses between two', () => {
+    const carriage = {
+      id: 'x3',
+      x: 4,
+      y: 6,
+      kind: 'thing' as const,
+      fixture: true,
+      name: 'the carriage door',
+      size: [0.9, 0.1, 2] as [number, number, number],
+    };
+    const two = { ...field, spots: [...field.spots, carriage] };
+    // Its own state: that door and no other.
+    const own = [
+      {
+        of: 'x3',
+        called: 'the carriage door',
+        name: 'the carriage door',
+        kind: 'thing' as const,
+        facts: [{ kind: 'part' as const, part: 'door', what: 'door', now: 'open, snow blowing in' }],
+      },
+    ];
+    const byOwn = withOpen(two, own);
+    expect(byOwn.spots.find((s) => s.id === 'x3')!.open).toBe(true);
+    expect(byOwn.spots.find((s) => s.id === 'x2')!.open).toBeUndefined();
+    // A place's own door, with two doors on the plan: which one is not said, so neither.
+    expect(withOpen(two, opened)).toBe(two);
+    // A thing on the plan that is not a door (the car with its door open) is not drawn as a doorway.
+    const car = [{ ...own[0], of: 'x1', called: 'the old train' }];
+    const withCar = {
+      ...two,
+      spots: [
+        ...two.spots,
+        {
+          id: 'x1',
+          x: 10,
+          y: 20,
+          kind: 'thing' as const,
+          fixture: true,
+          name: 'the old train',
+          size: [3, 6, 3] as [number, number, number],
+        },
+      ],
+    };
+    expect(withOpen(withCar, car)).toBe(withCar);
+  });
+
+  test("through the dreamer's eyes, a step back from it, never at its edge looking down at its foot", () => {
+    const open = withOpen(field, opened);
+    const shot = withEnv(CAMERA, () => dreamerShot(open, 'p1', 'x2', name))!;
+    expect(shot.text).toContain("The camera is the dreamer's eyes, a step back from the red door");
+    expect(Math.hypot(shot.eye.at.x - 10, shot.eye.at.y - 1)).toBeCloseTo(1.3, 5);
+    // Shut, at it as before, but looking at it straight ahead: taller than their eyes, it is not looked down at.
+    const shut = withEnv(CAMERA, () => dreamerShot(field, 'p1', 'x2', name))!;
+    expect(shut.text).not.toContain('a step back');
+    expect(Math.abs(shut.eye.pitch ?? 0)).toBeLessThan(0.35);
     // Off, as before.
-    const off = withEnv({ DREAMCHAT_CAMERA: undefined }, () => outsideShot(field, ['p1', 'p4', 'c1'], 'wide', name))!;
-    expect(off.text).not.toContain('mudguard');
+    const off = withEnv({ DREAMCHAT_CAMERA: undefined }, () => dreamerShot(open, 'p1', 'x2', name))!;
+    expect(off.text).not.toContain('a step back');
+  });
+  test('the stairs they stand on are looked up the way they climb, as before', () => {
+    // Taken as taller than their eyes, the spiral stairs left the dreamer on them no view at all (cbba m4).
+    const stairs = {
+      front: 'up the spiral',
+      indoors: true,
+      room: [4, 5] as [number, number],
+      spots: [
+        { id: 'p1', x: 2, y: 2.5, kind: 'person' as const, pose: 'standing' as const, faces: 'front' },
+        {
+          id: 'x1',
+          x: 2,
+          y: 2,
+          kind: 'thing' as const,
+          fixture: true,
+          name: 'the spiral stone stairs',
+          shape: 'steps' as const,
+          size: [2, 4, 3] as [number, number, number],
+        },
+      ],
+    };
+    const on = withEnv(CAMERA, () =>
+      dreamerShot(stairs, 'p1', 'x1', (id) => (id === 'x1' ? 'the spiral stone stairs' : 'the dreamer')),
+    );
+    const off = withEnv({ DREAMCHAT_CAMERA: undefined }, () =>
+      dreamerShot(stairs, 'p1', 'x1', (id) => (id === 'x1' ? 'the spiral stone stairs' : 'the dreamer')),
+    );
+    expect(on).not.toBeNull();
+    expect(off).not.toBeNull();
   });
 });
