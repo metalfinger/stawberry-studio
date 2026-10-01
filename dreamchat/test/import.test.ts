@@ -179,6 +179,46 @@ describe('a dumped dream, with no chat', () => {
     expect(s.style?.medium).toBe('a woodcut print');
   });
 
+  test("its era with the step: the date it was recorded given, a moment of the dream's own time kept, saved", async () => {
+    const was = process.env.DREAMCHAT_ONE_BUILDER;
+    try {
+      const asked: unknown[][] = [];
+      const era: ImportDeps['era'] = async (...args) => {
+        asked.push(args);
+        return {
+          period: { value: 'the late 1950s', from: 'given' },
+          moments: { m2: { value: 'the Victorian era', quote: 'x' } },
+        };
+      };
+      process.env.DREAMCHAT_ONE_BUILDER = 'era';
+      const data = mkdtempSync(join(tmpdir(), 'import-'));
+      const text = 'I was at a meeting in the church hall.';
+      const { deps } = stubs({ era });
+      const got = await importDream(
+        { text, style: 'a woodcut print', id: 'dream-1001-000004-test', when: '26 October 1957', data },
+        deps,
+      );
+      expect(asked[0][0]).toBe(text);
+      expect(asked[0][1]).toBe('26 October 1957');
+      const s = JSON.parse(readFileSync(got.state, 'utf8')) as Session;
+      expect(s.draft?.breakdown?.period).toEqual({ value: 'the late 1950s', from: 'given' });
+      const ms = s.draft!.breakdown!.scenes.flatMap((sc) => sc.moments);
+      expect(ms.find((m) => m.id === 'm2')?.period).toBe('the Victorian era');
+      expect(ms.filter((m) => m.period).length).toBe(1);
+      // Without the step, nothing is read.
+      process.env.DREAMCHAT_ONE_BUILDER = 'thought_outside';
+      const off = await importDream(
+        { text, style: 'a woodcut print', id: 'dream-1001-000005-test', when: '26 October 1957', data },
+        deps,
+      );
+      expect(asked).toHaveLength(1);
+      expect((JSON.parse(readFileSync(off.state, 'utf8')) as Session).draft?.breakdown?.period).toBeUndefined();
+    } finally {
+      if (was === undefined) delete process.env.DREAMCHAT_ONE_BUILDER;
+      else process.env.DREAMCHAT_ONE_BUILDER = was;
+    }
+  });
+
   test('the style asked for is its style word for word, in every sketch and every moment, never the paraphrase', async () => {
     // The merged flow's imports (1 Oct): "a risograph marker drawing in hot pink, cobalt blue and mint, scribbled fills,
     // slightly wobbling lines" came back as "a bright marker drawing printed in pink, blue and mint", made as "risograph

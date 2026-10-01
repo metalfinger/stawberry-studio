@@ -348,7 +348,10 @@ async function drawDream(
   // 1. Every sketch, from the harness's own sketch prompt, at its own shape.
   for (const it of r.sheets) {
     if (it.extras) continue;
-    const prompt = sheetPrompt(it as Item, style, { others: subjectWords(r.sheets as Item[], it) });
+    const prompt = sheetPrompt(it as Item, style, {
+      others: subjectWords(r.sheets as Item[], it),
+      period: r.b.period?.value,
+    });
     const p = entry({ id: it.id, kind: 'sketch', name: it.name, state: 'waiting', prompt, images: [] });
     if (p.state === 'done') continue;
     const [width, height] = SIZES[shapeOf(it as Item)] ?? SIZES['16:9'];
