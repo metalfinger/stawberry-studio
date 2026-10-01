@@ -78,6 +78,15 @@ describe('who someone is, on their sketch', () => {
     expect(withBuilder('sketch_who', () => sheetPrompt(said, style)).match(/\bwoman\b/g)).toHaveLength(1);
   });
 
+  test('the words that say who they are decide it, never "the" or "who": a name saying them all is enough', () => {
+    const friend = {
+      ...gh,
+      name: "the dreamer's friend",
+      fields: { ...gh.fields, identity: { value: "the dreamer's friend", said: true } },
+    };
+    expect(withBuilder('sketch_who', () => sheetPrompt(friend, style))).not.toMatch(/friend, the dreamer's friend/);
+  });
+
   test('an age said as before, once, with the step', () => {
     const old = { ...gh, fields: { ...gh.fields, identity: { value: 'an old woman', said: true } } };
     for (const v of ['sketch_who', undefined])
@@ -97,6 +106,19 @@ describe("the style's way of drawing on a sketch, without its directions about p
       expect(p).toContain('edges a little too soft to hold');
       expect(withBuilder(undefined, () => sheetPrompt(item, style))).toContain('background people softly blurred');
     }
+  });
+
+  test('a feel said in one part keeps what is not about people; the generic feel only where nothing is left', () => {
+    const one = { ...style, dream: 'an airless dream, faces in the crowd blurring past' };
+    const p = withBuilder('sketch_style', () => sheetPrompt(gh, one));
+    expect(p).toContain('It feels like a dream, in every picture: an airless dream.');
+    const all = { ...style, dream: 'faces in the crowd blurring past' };
+    expect(withBuilder('sketch_style', () => sheetPrompt(gh, all))).not.toContain('faces in the crowd');
+  });
+
+  test('a crowded place is the place, not its people: "crowded" stays', () => {
+    const busy = { ...style, dream: 'a crowded, airless room' };
+    expect(withBuilder('sketch_style', () => sheetPrompt(room, busy))).toContain('a crowded, airless room');
   });
 
   test('a moment keeps the whole style', () => {

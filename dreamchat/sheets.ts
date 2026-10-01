@@ -464,7 +464,14 @@ export function styleBlock(
     ? style.tokens.map((t) => t.split(/,\s*/).filter(own).join(', ')).filter(Boolean)
     : style.tokens;
   const whole = style.dream?.trim() || DREAM_QUALITY;
-  const feel = opts.sketch ? whole.split(/;\s*/).filter(own).join('; ') : whole;
+  // Part by part and clause by clause: "an airless dream, faces in the crowd blurring past" keeps "an airless dream".
+  const feel = opts.sketch
+    ? whole
+        .split(/;\s*/)
+        .map((part) => part.split(/,\s*/).filter(own).join(', '))
+        .filter(Boolean)
+        .join('; ')
+    : whole;
   const colours = [...new Set(style.palette_hex.map(colourName))];
   const mono = oneColour(style);
   // A photograph of a person in a cold palette still has warm skin; one in black and white does not,
@@ -638,6 +645,9 @@ export function withoutPose(look: string, keep = true): string {
 const AGE =
   /\b(?:baby|toddler|child|kid|boy|girl|teen\w*|young|younger|old|older|elderly|aged|middle-aged|adult|\d+s|\d+\s*years?|(?:twent|thirt|fort|fift|sixt|sevent|eight|ninet)ies)\b/i;
 
+/** Words that say nothing of who someone is: whether who they are is already said is decided without them. */
+const SAYS_NOTHING = new Set(['the', 'and', 'who', 'her', 'his', 'with', 'their', 'for', 'from', 'that', 'this']);
+
 /** A thing that is many of one kind: "the letters", "a stack of old newspapers". */
 export function isMany(item: Pick<Item, 'kind' | 'name'>): boolean {
   if (item.kind !== 'prop') return false;
@@ -741,7 +751,9 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
     !isGroup(item) &&
     !!identity &&
     !VAGUE.test(identity) &&
-    !(identity.toLowerCase().match(/[a-z]{3,}/g) ?? []).every((w) => new RegExp(`\\b${w}\\b`).test(known));
+    !(identity.toLowerCase().match(/[a-z]{3,}/g) ?? [])
+      .filter((w) => !SAYS_NOTHING.has(w))
+      .every((w) => new RegExp(`\\b${w}\\b`).test(known));
   const name = item.isDreamer
     ? who && !VAGUE.test(who) && !/^(the dreamer|you|me|myself|i)$/i.test(who.trim())
       ? `the dreamer, ${who.replace(/^the dreamer,?\s*/i, '').replace(/[\s,.;]+$/, '')}`
