@@ -12,6 +12,7 @@
 import type { AssembledRef } from '../assemble';
 import type { CutSheet, SheetElement } from '../cutsheet';
 import { mediumOf } from '../producer';
+import { shortName } from '../previs';
 import { colourName } from '../sheets';
 import type { Img } from './local-draw';
 
@@ -50,9 +51,6 @@ export function poseIn(view: string | null, name: string): string {
     .slice(0, 4)
     .join(', ');
 }
-
-/** A thing's name as a label says it: "the paper boat" is "paper boat". */
-const shortName = (name: string) => name.replace(/^(?:the|a|an)\s+/i, '').toLowerCase();
 
 /** A look's first clause: what it is, without the rest the image shows. */
 const firstOf = (look: string) => look.split(';')[0].trim();
@@ -160,7 +158,8 @@ export function qwenEdit(
     const c = colourOf(e.id);
     const k = key?.find((x) => x.id === e.id);
     // A thing with a label on the mock-up is said by it: "the marker labelled 'paper boat'".
-    if (k?.labelled) return `The ${c ? `${c} ` : ''}${k.placeholder ? 'marker' : what} labelled '${shortName(e.name)}'`;
+    if (k?.labelled)
+      return `The ${c ? `${c} ` : ''}${k.placeholder ? 'marker' : what} labelled '${shortName(e.name).toLowerCase()}'`;
     // A crowd or a group is many figures in one colour.
     const w = c && (e.group || e.said === 'people') ? `${what}s` : what;
     return c ? `The ${c} ${w}` : key ? `The ${what} of ${e.name}` : `The grey ${what} labelled ${e.name}`;

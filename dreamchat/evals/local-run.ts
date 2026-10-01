@@ -51,8 +51,8 @@ export type RunPicture = {
   quality?: string;
   /** Whose prompt was sent: the harness's, fitted, or the one written for Qwen from the cut's sheet. */
   profile?: 'harness' | 'qwen';
-  /** The mock-up's style, with the qwen profile: the labelled grey one, or colour-keyed (previs.ts previsKeyed). */
-  previs?: 'clay' | 'keyed';
+  /** The mock-up's style, with the qwen profile: the labelled grey one, colour-keyed, or keyed with its things labelled. */
+  previs?: 'clay' | 'keyed' | 'keyed-labels';
   file?: string;
   size?: [number, number];
   secs?: number;
@@ -205,7 +205,7 @@ async function drawDream(
     out: string;
     commit: string;
     profile: 'harness' | 'qwen';
-    previs: 'clay' | 'keyed';
+    previs: 'clay' | 'keyed' | 'keyed-labels';
     moments: Set<string> | null;
   },
 ): Promise<RunManifest> {
@@ -329,8 +329,16 @@ async function drawDream(
           p.item,
         );
         // Keyed only for the moments the qwen profile writes, which say each one by its colour.
-        const keyed = opts.previs === 'keyed' && opts.profile === 'qwen' && p.kind !== 'ghost';
-        const kv = keyed ? previsKeyedFor(r.b, p.item, called, r.rec) : undefined;
+        const keyed = opts.previs !== 'clay' && opts.profile === 'qwen' && p.kind !== 'ghost';
+        const kv = keyed
+          ? previsKeyedFor(
+              r.b,
+              p.item,
+              called,
+              r.rec,
+              opts.previs === 'keyed-labels' ? { labels: 'things' } : undefined,
+            )
+          : undefined;
         const pv = kv ?? previsFor(r.b, p.item, called, r.rec);
         if (kv) keys.set(p.id, kv.key);
         if (pv) {
@@ -386,7 +394,7 @@ async function drawDream(
         keys.get(p.id),
       );
       e.profile = 'qwen';
-      e.previs = keys.has(p.id) ? 'keyed' : 'clay';
+      e.previs = keys.has(p.id) ? opts.previs : 'clay';
       e.sent = q.prompt.slice(0, MAX_CHARS);
       e.imagesSent = q.images;
       e.dropped = {
@@ -454,7 +462,7 @@ if (import.meta.main) {
     picture: val('--quality') ?? 'fast',
   };
   const profile = val('--profile') === 'qwen' ? 'qwen' : 'harness';
-  const previs = val('--previs') === 'keyed' ? 'keyed' : 'clay';
+  const previs = val('--previs') === 'keyed-labels' ? 'keyed-labels' : val('--previs') === 'keyed' ? 'keyed' : 'clay';
   const moments = val('--moments') ? new Set((val('--moments') as string).split(',')) : null;
   // The full profile, as every other eval of the harness reads it.
   for (const [k, v] of Object.entries(PROFILE)) process.env[k] ??= v;
