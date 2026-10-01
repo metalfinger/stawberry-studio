@@ -4,7 +4,7 @@
 import { describe, expect, test } from 'bun:test';
 import { inflateSync } from 'node:zlib';
 import { type Blocking } from '../blocking';
-import { previsImage, previsKeyed, thingColour } from '../previs';
+import { previsImage, previsKeyed, shortName, thingColour } from '../previs';
 
 /** A PNG's pixels back (8-bit RGB, unfiltered, as previs.ts png writes them). */
 function pixels(file: Uint8Array): { width: number; height: number; rgb: Uint8Array } {
@@ -73,5 +73,36 @@ describe('the colour-keyed mock-up', () => {
     expect(thingColour('rows of desks')[0]).toBe('brown');
     expect(thingColour('a window')[0]).toBe('pale blue');
     expect(thingColour('the seats facing each other')[0]).toBe('grey-brown');
+    // What it is made of comes before what it is: the paper boat is paper.
+    expect(thingColour('the paper boat')[0]).toBe('white');
+  });
+
+  test('with labels on things: each thing written by its short name, a small shapeless one outlined, people never', () => {
+    const plan: Blocking = {
+      ...field,
+      spots: [...field.spots, { id: 't2', x: 48.4, y: 5.5, kind: 'thing', size: [0.5, 0.4, 0.3] }],
+    };
+    const called = (id: string) => (id === 't2' ? 'the little paper boat' : name(id));
+    const plain = previsKeyed(plan, eye, [], called, 384, 216);
+    const labelled = previsKeyed(plan, eye, [], called, 384, 216, { labels: 'things' });
+    const by = Object.fromEntries(labelled.key.map((k) => [k.id, k]));
+    expect(by.c1).toMatchObject({ labelled: true });
+    expect(by.c1.placeholder).toBeUndefined();
+    expect(by.t2).toMatchObject({ labelled: true, placeholder: true, colour: 'white' });
+    expect(by.p1.labelled).toBeUndefined();
+    // Without the option: no labels, the same picture as before.
+    expect(plain.key.some((k) => k.labelled)).toBe(false);
+    expect(Buffer.compare(Buffer.from(plain.png), Buffer.from(previsKeyed(plan, eye, [], called, 384, 216).png))).toBe(
+      0,
+    );
+    expect(Buffer.compare(Buffer.from(plain.png), Buffer.from(labelled.png))).not.toBe(0);
+  });
+
+  test("a label is a thing's short name", () => {
+    expect(shortName('the seats facing each other')).toBe('seats');
+    expect(shortName('the empty rows of apple trees where Tomas was')).toBe('apple trees');
+    expect(shortName('the little paper boat')).toBe('paper boat');
+    expect(shortName('hundreds of letters')).toBe('letters');
+    expect(shortName('the fish stall')).toBe('fish stall');
   });
 });

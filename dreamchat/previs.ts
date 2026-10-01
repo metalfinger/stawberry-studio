@@ -1183,7 +1183,16 @@ export function previsImage(
 }
 
 /** One named person, creature or thing on a colour-keyed mock-up, and the colour it is drawn in. */
-export type KeyEntry = { id: string; name: string; colour: string; kind: 'person' | 'crowd' | 'thing' };
+export type KeyEntry = {
+  id: string;
+  name: string;
+  colour: string;
+  kind: 'person' | 'crowd' | 'thing';
+  /** Its short name is written beside it on the mock-up, with a line to it (labels: 'things'). */
+  labelled?: true;
+  /** A small thing the plan has no shape for, drawn with a bright outline round it (labels: 'things'). */
+  placeholder?: true;
+};
 
 type RGB = [number, number, number];
 
@@ -1219,34 +1228,68 @@ const COLOUR_WORDS: [RegExp, string, RGB][] = [
   [/\b(?:gold|golden)\b/i, 'gold', [196, 160, 70]],
   [/\b(?:grey|gray)\b/i, 'grey', [140, 140, 136]],
 ];
+/** What a thing is made of, said anywhere in its words: the paper boat is paper, never the wood of a boat. */
+const MATERIALS: [RegExp, string, RGB][] = [
+  [/^(?:paper|newspaper|snow)$/i, 'white', [232, 230, 222]],
+  [/^(?:leather|wood|wooden|oak)$/i, 'brown', [138, 102, 70]],
+  [/^(?:iron)$/i, 'black', [52, 52, 56]],
+  [/^(?:steel|metal)$/i, 'silver', [176, 180, 186]],
+  [/^(?:brass)$/i, 'gold', [196, 160, 70]],
+  [/^(?:stone|concrete)$/i, 'grey', [140, 140, 136]],
+  [/^(?:glass)$/i, 'pale blue', [176, 200, 214]],
+];
+/** What a thing is, by its head word first: the fish stall is a stall, not a fish. */
 const THING_WORDS: [RegExp, string, RGB][] = [
   [
-    /^(?:leather|wood|wooden|oak|desks?|tables?|chairs?|benches?|doors?|shel(?:f|ves)|bookshel(?:f|ves)|boats?|cabinets?|wardrobes?|suitcases?|stalls?|crates?|barrels?)$/i,
+    /^(?:desks?|tables?|chairs?|benches?|doors?|shel(?:f|ves)|bookshel(?:f|ves)|boats?|cabinets?|wardrobes?|suitcases?|stalls?|crates?|barrels?)$/i,
     'brown',
     [138, 102, 70],
   ],
-  [/^(?:blackboards?|iron|railings?|rails?)$/i, 'black', [52, 52, 56]],
-  [/^(?:paper|newspapers?|snow|letters?|envelopes?)$/i, 'white', [232, 230, 222]],
-  [/^(?:steel|metal|fish|knife|knives)$/i, 'silver', [176, 180, 186]],
-  [/^(?:brass|keys?)$/i, 'gold', [196, 160, 70]],
-  [/^(?:stone|concrete|steps|stairs|wall|walls)$/i, 'grey', [140, 140, 136]],
-  [/^(?:glass|windows?)$/i, 'pale blue', [176, 200, 214]],
-  [/^(?:grass|field|trees?|bush(?:es)?|leaves|orchard|hedges?)$/i, 'green', [96, 136, 80]],
+  [/^(?:blackboards?|railings?|rails?)$/i, 'black', [52, 52, 56]],
+  [/^(?:newspapers?|letters?|envelopes?|books?)$/i, 'white', [232, 230, 222]],
+  [/^(?:fish|knife|knives)$/i, 'silver', [176, 180, 186]],
+  [/^(?:keys?)$/i, 'gold', [196, 160, 70]],
+  [/^(?:steps|stairs|walls?)$/i, 'grey', [140, 140, 136]],
+  [/^(?:windows?)$/i, 'pale blue', [176, 200, 214]],
+  [/^(?:grass|field|trees?|bush(?:es)?|leaves|orchard|hedges?|apples?)$/i, 'green', [96, 136, 80]],
   [/^(?:water|river|sea|lake|pond)$/i, 'blue', [88, 128, 156]],
   [/^(?:sand|beach)$/i, 'beige', [210, 196, 160]],
 ];
-/** A thing's colour by its words: said, else its head word, else any word it has. */
+/** A thing's colour by its words: said, else what it is made of, else its head word, else any word it has. */
 export function thingColour(words: string): [string, RGB] {
   const said = COLOUR_WORDS.find(([re]) => re.test(words));
   if (said) return [said[1], said[2]];
-  const ws = (words.toLowerCase().match(/[a-z]+/g) ?? []).filter(
-    (w) => !['the', 'a', 'an', 'of', 'my', 'his', 'her', 'their', 'other'].includes(w),
-  );
-  for (const w of [ws.at(-1) ?? '', ...ws.slice(0, -1).reverse()]) {
+  const ws = shortName(words).toLowerCase().split(/\s+/).filter(Boolean);
+  const all = words.toLowerCase().match(/[a-z]+/g) ?? [];
+  for (const w of all) {
+    const m = MATERIALS.find(([re]) => re.test(w));
+    if (m) return [m[1], m[2]];
+  }
+  for (const w of [ws.at(-1) ?? '', ...ws.slice(0, -1).reverse(), ...all]) {
     const hit = THING_WORDS.find(([re]) => re.test(w));
     if (hit) return [hit[1], hit[2]];
   }
   return THING_NEUTRAL;
+}
+
+/**
+ * A thing's short name as a label says it: no article, nothing after where it is or what it does ("the seats facing each
+ * other" is "seats"), a heap of something said as the something ("rows of apple trees" is "apple trees"), at most its
+ * last two words.
+ */
+export function shortName(words: string): string {
+  let head = words
+    .replace(/\s*\(.*?\)\s*/g, ' ')
+    .split(
+      /,\s*|\s+(?:where|that|which|who|whose|while|as|when|facing|beside|near|next|on|in|at|with|by|for|from|under|over|behind|inside)\s+/i,
+    )[0]
+    .replace(/^\s*(?:the|a|an|my|his|her|their)\s+/i, '')
+    .trim();
+  const heap = head.match(
+    /^(?:\w+\s+)?(?:rows?|piles?|stacks?|heaps?|hundreds|dozens|lots|bundles?|pairs?|sets?|boxes?)\s+of\s+(.+)$/i,
+  );
+  if (heap) head = heap[1];
+  return head.split(/\s+/).slice(-2).join(' ');
 }
 const THING_NEUTRAL: [string, RGB] = ['grey-brown', [150, 142, 130]];
 
@@ -1278,6 +1321,8 @@ export function previsKeyed(
   name: (id: string) => string,
   width = 1376,
   height = 768,
+  /** Things written by their short name beside them, a small shapeless one outlined (a test of labels on things). */
+  opts: { labels?: 'things' } = {},
 ): { png: Uint8Array; key: KeyEntry[] } {
   const solids = solidsOf(
     plan,
@@ -1335,9 +1380,96 @@ export function previsKeyed(
     const f = k >= 0 ? Math.max(0.3, Math.min(1.15, r.lum[i] / Math.max(0.2, solids[k].tone))) : 1;
     for (let c = 0; c < 3; c++) rgb[i * 3 + c] = Math.max(0, Math.min(255, Math.round(base[c] * f)));
   }
+  if (opts.labels === 'things') labelThings(r, plan, key, colours, rgb);
   const order = { person: 0, thing: 1, crowd: 2 } as const;
   key.sort((a, b) => order[a.kind] - order[b.kind]);
   return { png: png(width, height, rgb), key };
+}
+
+/**
+ * Each named thing on a colour-keyed mock-up written by its short name, in a tag off it where there is room (above it,
+ * else below), with a thin line to it; a small one the plan has no shape for outlined in a bright edge of its own
+ * colour. People and crowds stay by their colour alone.
+ */
+function labelThings(r: Render, plan: Blocking, key: KeyEntry[], colours: Map<number, RGB>, rgb: Uint8Array): void {
+  const { width, height } = r;
+  const scale = Math.max(2, Math.round(width / 460));
+  const set = (x: number, y: number, c: RGB) => {
+    if (x < 0 || y < 0 || x >= width || y >= height) return;
+    const i = (y * width + x) * 3;
+    rgb[i] = c[0];
+    rgb[i + 1] = c[1];
+    rgb[i + 2] = c[2];
+  };
+  const line = (x0: number, y0: number, x1: number, y1: number, c: RGB, t: number) => {
+    const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1);
+    for (let k = 0; k <= n; k++) {
+      const [x, y] = [Math.round(x0 + ((x1 - x0) * k) / n), Math.round(y0 + ((y1 - y0) * k) / n)];
+      for (let dy = 0; dy < t; dy++) for (let dx = 0; dx < t; dx++) set(x + dx, y + dy, c);
+    }
+  };
+  const placed: { x0: number; y0: number; x1: number; y1: number }[] = [];
+  for (const k of key.filter((x) => x.kind === 'thing')) {
+    const seen = r.seen.get(k.id);
+    const n = r.solids.findIndex((x) => x.id === k.id);
+    const spot = plan.spots.find((x) => x.id === k.id);
+    if (!seen || n < 0 || !spot) continue;
+    const box = { x0: seen.x0 * width, y0: seen.y0 * height, x1: seen.x1 * width, y1: seen.y1 * height };
+    // A small thing the plan has no shape for: outlined in a bright edge of its own colour, at its place and size.
+    if (shapeOf(spot, plan) === 'block' && Math.max(...sizeOf(spot)) < 0.6) {
+      const base = colours.get(n) ?? THING_NEUTRAL[1];
+      const top = Math.max(...base, 1);
+      const bright = base.map((c) => Math.round((c * 255) / top)) as RGB;
+      const t = Math.max(2, Math.round(width / 400));
+      const pad = t * 2;
+      const [x0, y0, x1, y1] = [box.x0 - pad, box.y0 - pad, box.x1 + pad, box.y1 + pad].map(Math.round);
+      line(x0, y0, x1, y0, bright, t);
+      line(x0, y1, x1, y1, bright, t);
+      line(x0, y0, x0, y1, bright, t);
+      line(x1, y0, x1, y1, bright, t);
+      k.placeholder = true;
+    }
+    const text = labelText(shortName(k.name));
+    if (!text) continue;
+    const w = text.length * 6 * scale + 4 * scale;
+    const h = 9 * scale + 2 * scale;
+    const gap = 6 * scale;
+    let x0 = Math.round((box.x0 + box.x1) / 2 - w / 2);
+    let y0 = Math.round(box.y0 - gap - h);
+    if (y0 < 2) y0 = Math.round(box.y1 + gap);
+    x0 = Math.max(2, Math.min(width - w - 2, x0));
+    y0 = Math.max(2, Math.min(height - h - 2, y0));
+    for (
+      let step = 1;
+      placed.some((p) => x0 < p.x1 && x0 + w > p.x0 && y0 < p.y1 && y0 + h > p.y0) && step < 12;
+      step++
+    )
+      y0 = Math.max(2, Math.min(height - h - 2, y0 + (step % 2 ? 1 : -1) * step * (h + 2)));
+    placed.push({ x0, y0, x1: x0 + w, y1: y0 + h });
+    // The line from the tag to the thing, drawn first so the tag sits over its end.
+    const [px, py] = roomiest(r, seen);
+    const [lx, ly] = [x0 + w / 2, py < y0 ? y0 : y0 + h];
+    line(Math.round(lx), Math.round(ly), Math.round(px), Math.round(py), [30, 30, 30], Math.max(1, scale - 1));
+    for (let y = y0; y < y0 + h; y++)
+      for (let x = x0; x < x0 + w; x++)
+        set(
+          x,
+          y,
+          y - y0 < scale || y0 + h - y <= scale || x - x0 < scale || x0 + w - x <= scale
+            ? [30, 30, 30]
+            : [250, 250, 250],
+        );
+    [...text].forEach((ch, c) => {
+      const g = GLYPHS[ch] ?? GLYPHS[' '];
+      for (let gy = 0; gy < 7; gy++)
+        for (let gx = 0; gx < 5; gx++)
+          if (g[gy * 5 + gx] === '#')
+            for (let sy = 0; sy < scale; sy++)
+              for (let sx = 0; sx < scale; sx++)
+                set(x0 + 2 * scale + (c * 6 + gx) * scale + sx, y0 + 2 * scale + gy * scale + sy, [20, 20, 20]);
+    });
+    k.labelled = true;
+  }
 }
 
 /**

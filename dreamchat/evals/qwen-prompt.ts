@@ -12,6 +12,7 @@
 import type { AssembledRef } from '../assemble';
 import type { CutSheet, SheetElement } from '../cutsheet';
 import { mediumOf } from '../producer';
+import { shortName } from '../previs';
 import { colourName } from '../sheets';
 import type { Img } from './local-draw';
 
@@ -78,7 +79,15 @@ export type QwenPrompt = { prompt: string; images: Img[] };
  * A colour-keyed mock-up's key (previs.ts, its 'keyed' style): each one named on the plan by the flat colour it is drawn
  * in, with no label in the picture. With it, each one is said by its colour ("the red figure"); without it, by its label.
  */
-export type MockUpKey = { id: string; name: string; colour: string }[];
+export type MockUpKey = {
+  id: string;
+  name: string;
+  colour: string;
+  /** A short label tag on it in the mock-up, its name ("paper boat"). */
+  labelled?: boolean;
+  /** Drawn as a marker where the plan has no shape for it: where it goes and how big, not what it looks like. */
+  placeholder?: boolean;
+}[];
 
 /**
  * A cut's prompt for Qwen, with the images it sends, in order. `refs` are the assembler's references (one per image
@@ -147,6 +156,10 @@ export function qwenEdit(
   const colourOf = (id: string) => key?.find((k) => k.id === id)?.colour;
   const said1 = (e: SheetElement, what: 'figure' | 'shape') => {
     const c = colourOf(e.id);
+    const k = key?.find((x) => x.id === e.id);
+    // A thing with a label on the mock-up is said by it: "the marker labelled 'paper boat'".
+    if (k?.labelled)
+      return `The ${c ? `${c} ` : ''}${k.placeholder ? 'marker' : what} labelled '${shortName(e.name).toLowerCase()}'`;
     // A crowd or a group is many figures in one colour.
     const w = c && (e.group || e.said === 'people') ? `${what}s` : what;
     return c ? `The ${c} ${w}` : key ? `The ${what} of ${e.name}` : `The grey ${what} labelled ${e.name}`;
@@ -266,6 +279,11 @@ export function qwenEdit(
   else if (mockUp)
     out.push(
       `Every grey surface of ${tag(1)} becomes the real thing it stands for; its labels only name the shapes, and every surface in the finished picture is plain.`,
+    );
+  // Labels and markers are notes on the mock-up: what goes where, never drawn.
+  if (mockUp && key?.some((k) => k.labelled))
+    out.push(
+      `The labels and markers in ${tag(1)} are notes that say what goes where: each labelled marker becomes the real thing its label names, at that place and size, and the finished picture has the things only, with the labels and markers gone.`,
     );
 
   // 10. The style, in one sentence, and its colours.

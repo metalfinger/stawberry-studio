@@ -1125,13 +1125,23 @@ export function previsKeyedFor(
   frame: Pick<Item, 'id' | 'frame'>,
   called: (id: string) => string,
   rec?: RecordPlan,
+  /** Things written by their short name beside them (previs.ts previsKeyed's `labels`). */
+  opts: { labels?: 'things' } = {},
 ): { png: Uint8Array; key: KeyEntry[] } | undefined {
   const eye = frame.frame?.plan?.eye;
   const plan = eye ? shotPlan(b, frame.id, rec) : undefined;
   if (!eye || !plan) return undefined;
   const dreamer = b.people.find((p) => p.is_dreamer)?.id;
   const names = Object.fromEntries(plan.spots.map((x) => [x.id, called(x.id)]));
-  return previsKeyed(plan, eye, frame.frame?.eyes === 'dreamer' && dreamer ? [dreamer] : [], (id) => names[id] ?? id);
+  return previsKeyed(
+    plan,
+    eye,
+    frame.frame?.eyes === 'dreamer' && dreamer ? [dreamer] : [],
+    (id) => names[id] ?? id,
+    undefined,
+    undefined,
+    opts,
+  );
 }
 
 /**

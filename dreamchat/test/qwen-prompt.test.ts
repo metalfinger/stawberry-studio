@@ -118,6 +118,28 @@ describe('qwenEdit: a moment written for Qwen-Image from its sheet', () => {
     expect(m2).not.toContain('grey');
   });
 
+  test('a labelled marker is said by its label, and the labels are notes, never drawn', () => {
+    const m2 = withEnv(PROFILE, () => {
+      const r = rebuild(loadDream('dream-0926-043003-b0cb', false).session as Session, { asDrawn: false });
+      const p = r.pictures.find((x) => x.id === 'm2' && x.kind !== 'ghost');
+      if (!p?.sheet || !p.assembled) throw new Error('no sheet for m2');
+      const images = p.references.map((x, i) => ({
+        n: i + 1,
+        role: x.role,
+        name: x.media_id,
+        file: `${x.media_id}.png`,
+      }));
+      const lines = Object.fromEntries(p.assembled.lines.map((l) => [l.id, l.text]));
+      const key = [
+        { id: 'p2', name: 'the grandfather', colour: 'red' },
+        { id: 't1', name: 'the suitcase', colour: 'brown', labelled: true, placeholder: true },
+      ];
+      return qwenEdit(p.sheet, p.assembled.references, images, lines, key).prompt;
+    });
+    expect(m2).toContain("The brown marker labelled 'suitcase' becomes the suitcase");
+    expect(m2).toContain('The labels and markers in <image1> are notes that say what goes where');
+  });
+
   test('every frozen moment fits the machine', () => {
     for (const id of frozenDreams())
       for (const c of qwenCuts(id)) {
