@@ -100,7 +100,20 @@ describe('two runs of the same dreams, side by side', () => {
     // The same dream drawn again in another run (the moments with another prompt), its sketches shared.
     const dir = join(root, 'qwen-1', DREAM);
     mkdirSync(join(dir, 'img'), { recursive: true });
-    writeFileSync(join(dir, 'img', 'cut-m1.png'), 'png');
+    writeFileSync(join(dir, 'img', 'cut-m1.png'), 'another png');
+    // Its in-between picture is the first run's own, byte for byte (a seeded run): the first run has it too.
+    writeFileSync(join(dir, 'img', 'ghost-g1.png'), 'ghost');
+    const first = join(root, 'night-1', DREAM);
+    writeFileSync(join(first, 'img', 'ghost-g1.png'), 'ghost');
+    const m = JSON.parse(readFileSync(join(first, 'manifest.json'), 'utf8'));
+    m.pictures.splice(1, 0, {
+      id: 'g1',
+      kind: 'ghost',
+      name: 'the door, open',
+      state: 'done',
+      file: join(first, 'img', 'ghost-g1.png'),
+    });
+    writeFileSync(join(first, 'manifest.json'), JSON.stringify(m));
     writeFileSync(
       join(dir, 'manifest.json'),
       JSON.stringify({
@@ -110,6 +123,7 @@ describe('two runs of the same dreams, side by side', () => {
         updated: '2026-10-01T03:00:00Z',
         pictures: [
           { id: 'p1', kind: 'sketch', name: 'you', state: 'done', file: join(dir, 'img', 'sketch-p1.png') },
+          { id: 'g1', kind: 'ghost', name: 'the door, open', state: 'done', file: join(dir, 'img', 'ghost-g1.png') },
           { id: 'm1', kind: 'cut', name: 'The dreamer walks', state: 'done', file: join(dir, 'img', 'cut-m1.png') },
           { id: 'm4', kind: 'cut', name: 'The heron turns', state: 'waiting' },
         ],
@@ -119,17 +133,18 @@ describe('two runs of the same dreams, side by side', () => {
 
   test('the dreams both runs have, and each picture of either run by its id, sketches left out', () => {
     expect(localCompare('night-1', 'qwen-1')).toEqual({
-      dreams: [{ dream: DREAM, title: 'The Heron Teacher', a: 2, b: 2 }],
+      dreams: [{ dream: DREAM, title: 'The Heron Teacher', a: 3, b: 3 }],
     });
     const got = localCompare('night-1', 'qwen-1', DREAM)!;
-    expect(got.pairs!.map((p) => [p.id, p.a?.state ?? null, p.b?.state ?? null])).toEqual([
-      ['m1', 'done', 'done'],
-      ['m2', 'waiting', null],
-      ['m3', 'failed', null],
-      ['m4', null, 'waiting'],
+    expect(got.pairs!.map((p) => [p.id, p.a?.state ?? null, p.b?.state ?? null, !!p.shared])).toEqual([
+      ['g1', 'done', 'done', true],
+      ['m1', 'done', 'done', false],
+      ['m2', 'waiting', null, false],
+      ['m3', 'failed', null, false],
+      ['m4', null, 'waiting', false],
     ]);
     // Files by name only, as each run's own page has them.
-    expect(got.pairs![0].b!.file).toBe('cut-m1.png');
+    expect(got.pairs!.find((p) => p.id === 'm1')!.b!.file).toBe('cut-m1.png');
     expect(Object.keys(got.verdicts!)).toEqual(['a', 'b']);
   });
 
@@ -149,7 +164,7 @@ describe('two runs of the same dreams, side by side', () => {
         ]);
       const r = await fetch(`${url}api/local/compare?a=night-1&b=qwen-1&dream=${DREAM}`);
       expect(r.status).toBe(200);
-      expect(((await r.json()) as { pairs: unknown[] }).pairs).toHaveLength(4);
+      expect(((await r.json()) as { pairs: unknown[] }).pairs).toHaveLength(5);
       expect((await fetch(`${url}api/local/compare?a=night-1&b=nowhere`)).status).toBe(404);
     } finally {
       stop();

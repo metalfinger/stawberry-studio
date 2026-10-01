@@ -179,6 +179,8 @@ export type LocalPair = {
   name: string;
   a: LocalPicture | null;
   b: LocalPicture | null;
+  /** The same picture in both runs, byte for byte (a seeded run shares its in-between pictures): nothing to judge. */
+  shared?: true;
 };
 
 /**
@@ -213,7 +215,10 @@ export function localCompare(
       of(db.manifest).find((p) => p.id === id) ?? null,
     ];
     const p = (pa ?? pb)!;
-    return { id, kind: p.kind, name: p.name, a: pa, b: pb };
+    const [fa, fb] = [pa?.file ? localImage(a, dream, pa.file) : null, pb?.file ? localImage(b, dream, pb.file) : null];
+    const same =
+      !!fa && !!fb && pa?.state === 'done' && pb?.state === 'done' && readFileSync(fa).equals(readFileSync(fb));
+    return { id, kind: p.kind, name: p.name, a: pa, b: pb, ...(same ? { shared: true as const } : {}) };
   });
   return { dreams, pairs, verdicts: { a: da.verdicts, b: db.verdicts } };
 }

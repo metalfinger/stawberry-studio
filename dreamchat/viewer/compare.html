@@ -191,7 +191,7 @@ function renderSide() {
       el('span', { class: 't' }, d.title), el('span', { class: 'n' }, state.blind ? `${d.a + d.b} drawn` : `${d.a} · ${d.b}`)));
     if (d.dream === state.dream && state.data.pairs) {
       const v = state.data.verdicts;
-      for (const p of state.data.pairs) {
+      for (const p of state.data.pairs.filter((x) => !x.shared)) {
         const [l, r] = sidesOf(p.id);
         side.append(el('button', { class: 'pairrow', onclick: () => focusOn(p.id) },
           el('span', { class: 'id' }, p.id), el('span', { class: 'what' }, p.name),
@@ -223,6 +223,12 @@ function pairCard(p, i) {
   const mock = [p.a, p.b].map((x) => x && (x.imagesSent || []).find((r) => r.role === 'base' && /^previs/.test(r.name) && r.file)).find(Boolean);
   const mockRun = mock ? (p.a && (p.a.imagesSent || []).includes(mock) ? state.a : state.b) : '';
   const [l, r] = sidesOf(p.id);
+  // The same picture in both runs (a seeded run's in-between pictures): shown once, nothing to judge.
+  if (p.shared)
+    return el('article', { class: 'pair', id: `p-${p.id}`, 'data-i': i },
+      el('div', { class: 'pairhead' }, el('span', { class: 'id' }, p.id), el('span', { class: 'what' }, p.name),
+        el('span', { class: 'faint mono' }, 'the same picture in both runs')),
+      el('div', { class: 'sides' }, el('div', { class: 'sidecol' }, picture(img(state.a, p.a.file), p.name, 'pic'))));
   const card = el('article', { class: 'pair', id: `p-${p.id}`, 'data-i': i },
     el('div', { class: 'pairhead' },
       el('span', { class: 'id' }, p.id), el('span', { class: 'what' }, p.name),
