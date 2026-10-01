@@ -86,6 +86,8 @@ section.panel { overflow: auto; min-height: 0; padding: 18px 22px 120px; }
 details { margin-top: 8px; }
 details summary { cursor: pointer; color: var(--muted); font-size: 12.5px; }
 pre.prompt { white-space: pre-wrap; font: 12px/1.5 var(--mono); background: var(--paper); border: 1px solid var(--rule); border-radius: 6px; padding: 10px; max-height: 360px; overflow: auto; }
+.warn { background: var(--panel); border: 1px solid var(--wrong); border-left-width: 4px; border-radius: 8px; padding: 8px 12px; margin: 10px 0; font-size: 13px; }
+.warn b { color: var(--wrong); }
 .meta { font-family: var(--mono); font-size: 11.5px; color: var(--faint); margin-top: 6px; }
 .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.85); display: none; place-items: center; z-index: 10; cursor: zoom-out; }
 .lightbox.open { display: grid; }
@@ -215,6 +217,9 @@ function renderPanel() {
   put(panel,
     el('div', { class: 'dreamhead' }, el('h2', {}, d ? d.title : state.dream),
       el('div', { class: 'muted mono' }, state.blind ? `${state.dream} · blind: which run drew which is hidden` : `${state.dream} · left ${state.a} · right ${state.b}`)),
+    // A run drawn without the dream's readings is not the same harness: say so before anyone judges it.
+    ['a', 'b'].filter((s) => (state.data.readings?.[s] ?? []).length).map((s) => el('div', { class: 'warn' },
+      el('b', {}, `${runOf(s)} was drawn without the dream's readings`), ` (${state.data.readings[s].join('; ')}): its pictures are not a fair comparison with a run that had them.`)),
     state.data.pairs.map((p, i) => pairCard(p, i)));
 }
 
