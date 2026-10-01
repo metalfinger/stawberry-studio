@@ -668,6 +668,28 @@ const AGE =
 /** A clause that compares the light to something: "as in an ordinary room", "as if from an overcast sky", "like a lab". */
 const LIKE = /^(?:as (?:if|in|though|on|at|from|through)|like|such as)\b/i;
 
+/** Words of where: never a subject, and never a name's head ("the street outside" is a street). */
+const WHERE = [
+  'outside',
+  'inside',
+  'outdoors',
+  'indoors',
+  'here',
+  'there',
+  'around',
+  'nearby',
+  'everywhere',
+  'somewhere',
+  'elsewhere',
+  'beyond',
+  'above',
+  'below',
+  'ahead',
+  'behind',
+  'distance',
+  'foreground',
+];
+
 /** A style's own words: never taken for one of the dream's subjects ("the lamp light" takes no light sentence). */
 const STYLE_WORDS = new Set([
   'light',
@@ -707,6 +729,8 @@ const STYLE_WORDS = new Set([
   'area',
   'world',
   'scene',
+  // Where, never what: a place called "outside" names no one thing a style could draw in.
+  ...WHERE,
 ]);
 
 /**
@@ -725,7 +749,8 @@ export function subjectWords(
       const core = i.name
         .toLowerCase()
         .replace(/^(?:the|a|an|my|your|his|her|their)\s+/, '')
-        .split(/\s+(?:with|in|on|at|from|who|that|which|wearing|holding)\s+/)[0];
+        .split(/\s+(?:with|in|on|at|from|who|that|which|wearing|holding)\s+/)[0]
+        .replace(new RegExp(`(?:\\s+(?:${WHERE.join('|')}))+$`), '');
       // "the block of ice" is ice as much as a block: each side of "of" gives its head.
       return core.split(/\s+of\s+/).map((x) => (x.match(/[a-z]+/g) ?? []).at(-1) ?? '');
     })

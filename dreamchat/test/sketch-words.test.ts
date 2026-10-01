@@ -260,6 +260,44 @@ describe("a sketch never names the dream's other people, places or things in its
     expect(p).not.toContain('room');
   });
 
+  test('only what names a subject is left out, each piece by itself, a word whole', () => {
+    // dream-0923-183614-279d's style: the floating books and the window are cut from the boatman's sketch; the moonlight
+    // ("moon" is a thing of the dream, never "moonlight") and the shadows stay.
+    const moonlit = {
+      ...style,
+      tokens: [
+        'dark green water with subtle reflections',
+        'silvery moonlight with sharp highlights',
+        'slight motion blur on floating books',
+      ],
+      lighting_rules:
+        'The moonlight is bright and silvery, casting a sharp, almost white light through the window onto the water. Shadows are deep and black, with high contrast.',
+    };
+    const dream = [
+      item('p1', 'character', 'the man in the boat'),
+      item('t1', 'prop', 'the floating books'),
+      item('t2', 'prop', 'the moon'),
+      item('t3', 'prop', 'the window'),
+    ];
+    const others = subjectWords(dream, dream[0]);
+    expect(others).toEqual(['books', 'moon', 'window']);
+    const p = withBuilder('sketch_subjects', () => sheetPrompt(dream[0], moonlit, { others }));
+    expect(p).toContain('silvery moonlight with sharp highlights');
+    expect(p).toContain('Light: Shadows are deep and black, with high contrast.');
+    expect(p).not.toContain('floating books');
+    expect(p).not.toContain('through the window');
+    // Every piece left out names one of them.
+    const before = withBuilder(undefined, () => sheetPrompt(dream[0], moonlit));
+    const pieces = [...moonlit.tokens, ...moonlit.lighting_rules.split(/(?<=[.;!?])\s+/)];
+    for (const x of pieces.filter((x) => before.includes(x) && !p.includes(x)))
+      expect(others.some((w) => new RegExp(`\\b${w}\\b`, 'i').test(x))).toBe(true);
+  });
+
+  test('a word of where is never a subject: a place called outside, the street outside', () => {
+    const where = [items[1], item('l2', 'location', 'outside'), item('l3', 'location', 'the street outside')];
+    expect(subjectWords(where, where[0])).toEqual(['street']);
+  });
+
   test("a style's own words are never a subject: a thing called the lamp light takes no light sentence with it", () => {
     const lit = [...items, item('t2', 'prop', 'the lamp light')];
     expect(subjectWords(lit, lit[3])).not.toContain('light');

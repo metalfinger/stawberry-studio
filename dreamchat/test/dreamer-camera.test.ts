@@ -2,9 +2,17 @@
 // `dreamer_camera` step). The producer lists the dreamer only where they are seen, so a dream never seen from outside
 // had no dreamer on its floor plans, and its cameras had nowhere to stand: 4 of 7 moments of the Barley Degree, taken in
 // as a dump, had none (1 Oct). Added as the camera, they are placed on the plan and never sketched.
-import { describe, expect, test } from 'bun:test';
-import { normalizeBreakdown, throughEyes } from '../producer';
-import { buildItems } from '../session';
+import { describe, expect, setDefaultTimeout, test } from 'bun:test';
+import { mkdtempSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { shotPlan } from '../continuity';
+import { importDream } from '../importer';
+import { rebuild } from '../plan';
+import { type Breakdown, normalizeBreakdown, throughEyes } from '../producer';
+import { buildItems, type Session } from '../session';
+
+setDefaultTimeout(120_000);
 
 function withBuilder<T>(v: string | undefined, fn: () => T): T {
   const was = process.env.DREAMCHAT_ONE_BUILDER;
@@ -103,5 +111,69 @@ describe('the dreamer, as the camera', () => {
       ),
     ).breakdown;
     expect(new Set(b.people.map((p) => p.id)).size).toBe(b.people.length);
+  });
+});
+
+describe('the camera dreamer, never a person in the picture', () => {
+  // A dream with a moment through their eyes and one from outside: the dreamer is on the floor plan, as the eyes of the
+  // first, and in no picture of the second, nor its mock-up (never drawn, they would come out a guessed stranger).
+  test('an outside moment has them in no cut, no mock-up and no list of who is there', async () => {
+    const FULL = ['DREAMCHAT_RECORD', 'DREAMCHAT_CUT_SHEET', 'DREAMCHAT_CAMERA', 'DREAMCHAT_ONE_BUILDER'];
+    const was = Object.fromEntries(FULL.map((k) => [k, process.env[k]]));
+    for (const k of FULL) process.env[k] = 'on';
+    try {
+      const { breakdown } = normalizeBreakdown(raw([moment('m1', 'dreamer', ['p1']), moment('m2', 'outside', ['p1'])]));
+      const me = breakdown.people.find((p) => p.camera)!.id;
+      const plan = (b: Breakdown) => {
+        const out = structuredClone(b);
+        out.scenes[0].blocking = {
+          front: 'the stage',
+          spots: [
+            { id: 'p1', x: 3, y: 2, kind: 'person', faces: 'front', pose: 'standing' },
+            { id: me, x: 3, y: 5, kind: 'person', faces: 'p1', pose: 'standing' },
+          ],
+          room: [8, 8],
+          indoors: true,
+        } as NonNullable<Breakdown['scenes'][number]['blocking']>;
+        return out;
+      };
+      const data = mkdtempSync(join(tmpdir(), 'camera-'));
+      const got = await importDream(
+        { text: 'G.H. talked about barley degrees.', style: 'a woodcut print', id: 'dream-1001-000009-test', data },
+        {
+          producer: async () => ({ breakdown: structuredClone(breakdown), downgraded: [], notes: [], ms: 0 }),
+          ownStyle: async () => ({
+            id: 'own',
+            name: 'a woodcut print',
+            medium: 'a woodcut print',
+            line: 'Cut in wood.',
+            tokens: ['bold carved lines'],
+            palette_hex: ['#222222', '#EEE8DD'],
+            lighting_rules: 'Flat light.',
+          }),
+          block: async (b) => ({ breakdown: plan(b), notes: [] }),
+          shot: async () => 'A brief.',
+          supervise: async () => [],
+          readings: async (x) => x,
+          packet: () => null,
+        },
+      );
+      const s = JSON.parse(readFileSync(got.state, 'utf8')) as Session;
+      const r = rebuild(s);
+      const outside = r.pictures.find((p) => p.id.endsWith('m2'))!;
+      expect(outside).toBeDefined();
+      expect(outside.inView.map((i) => i.id)).not.toContain(me);
+      // Named only as whose eyes an earlier picture was seen through, never as someone in this one.
+      expect(outside.prompt.replace(/through the dreamer's eyes/g, '')).not.toMatch(/\bthe dreamer\b|\byou\b/i);
+      expect(shotPlan(r.b, 'm2', r.rec)?.spots.map((x) => x.id)).not.toContain(me);
+      const rec = r.rec?.moments.m2;
+      if (rec) expect([...rec.visible, ...rec.present]).not.toContain(me);
+      // Through their eyes, they are the camera on the plan.
+      expect(r.pictures.find((p) => p.id.endsWith('m1'))?.item.frame?.plan?.eye).toBeDefined();
+    } finally {
+      for (const k of FULL)
+        if (was[k] === undefined) delete process.env[k];
+        else process.env[k] = was[k];
+    }
   });
 });
