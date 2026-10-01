@@ -22,9 +22,10 @@ import './local-env';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { type RebuiltPicture, standIn } from '../plan';
 import type { Item } from '../sheets';
 import type { Session } from '../session';
-import { API, type Img, type Line, fitMoment, MAX_CHARS, PROFILE, seedOf } from './local-draw';
+import { API, type Fitted, type Img, type Line, fitMoment, MAX_CHARS, PROFILE, seedOf } from './local-draw';
 import { qwenEdit } from './qwen-prompt';
 import { commitOf, dataDir, frozenDreams, liveDreams, loadDream } from './saved';
 
@@ -157,6 +158,36 @@ function asFrame(file: string, out: string): string {
 /** Said first to the machine where a picture has images to take looks from (the machine's guide: name each image's part). */
 export const LEAD =
   'Image 1 is the picture to edit: everyone in it stays exactly where it puts them, once. The other images are references only, for how each one looks: never add a second copy of anyone or anything from them to the picture.\n\n';
+
+/**
+ * What the local machine is sent for a picture in the harness's own words: its paragraphs fitted to the machine's limits
+ * (local-draw.ts fitMoment), from the images there are files for, each image's part said first where there are two or
+ * more. Drawn below, and in each node packet's prompts (evals/packets.ts).
+ */
+export function harnessFitted(p: RebuiltPicture, sheets: Item[], images: Img[]): { text: string; fitted: Fitted } {
+  const lines: Line[] = p.assembled?.lines.map((l) => ({ id: l.id, text: l.text })) ?? [
+    { id: 'whole', text: p.prompt },
+  ];
+  // What this run could not make is left out, as the fitting leaves out what does not fit.
+  const have = images.filter((x) => x.file);
+  // With images to take looks from, each image's part is said first, as the machine's own guide advises: from a
+  // person's sketch it drew the dreamer twice, once where the mock-up put them and once as the sketch stands
+  // (lighthouse-first m2, 30 Sep); with this line, once (2 of 2).
+  const lead = have.length > 1 ? LEAD : '';
+  // The things the moment's action or its one thing to show names, by their sketch's stand-in.
+  const said = `${p.item.fields.action?.value ?? ''} ${p.item.fields.visual_point?.value ?? ''}`.toLowerCase();
+  const named = new Set(
+    sheets
+      .filter((s) => s.kind === 'prop')
+      .filter((s) => {
+        const head = (s.name.toLowerCase().match(/[a-z]+/g) ?? []).at(-1);
+        return !!head && new RegExp(`\\b${head}s?\\b`).test(said);
+      })
+      .map((s) => standIn.sketch(s.id)),
+  );
+  const fitted = fitMoment(lines, have, 0, MAX_CHARS - lead.length, named, true);
+  return { text: lead + fitted.prompt, fitted };
+}
 
 /** Sketches side by side, at one height, on white: one image of everyone, left to right. */
 function sheetOf(files: string[], out: string): string {
@@ -363,9 +394,6 @@ async function drawDream(
         ...(file ? { file } : { missing: 'not made in this run' }),
       });
     }
-    const lines: Line[] = p.assembled?.lines.map((l) => ({ id: l.id, text: l.text })) ?? [
-      { id: 'whole', text: p.prompt },
-    ];
     const e = entry({
       id: p.id,
       kind,
@@ -385,23 +413,6 @@ async function drawDream(
       e.state = 'skipped';
       continue;
     }
-    // What this run could not make is left out, as the fitting leaves out what does not fit.
-    const have = images.filter((x) => x.file);
-    // With images to take looks from, each image's part is said first, as the machine's own guide advises: from a
-    // person's sketch it drew the dreamer twice, once where the mock-up put them and once as the sketch stands
-    // (lighthouse-first m2, 30 Sep); with this line, once (2 of 2).
-    const lead = have.length > 1 ? LEAD : '';
-    // The things the moment's action or its one thing to show names, by their sketch's stand-in.
-    const said = `${p.item.fields.action?.value ?? ''} ${p.item.fields.visual_point?.value ?? ''}`.toLowerCase();
-    const named = new Set(
-      r.sheets
-        .filter((s) => s.kind === 'prop')
-        .filter((s) => {
-          const head = (s.name.toLowerCase().match(/[a-z]+/g) ?? []).at(-1);
-          return !!head && new RegExp(`\\b${head}s?\\b`).test(said);
-        })
-        .map((s) => standIn.sketch(s.id)),
-    );
     // Written for Qwen from the cut's sheet, where it has one; otherwise the harness's own prompt, fitted.
     if (opts.profile === 'qwen' && kind === 'cut' && p.sheet && p.assembled) {
       const q = qwenEdit(
@@ -434,7 +445,7 @@ async function drawDream(
       if (e.state === 'done' && e.file) files.set(standIn.picture(p.id), e.file);
       continue;
     }
-    const fitted = fitMoment(lines, have, 0, MAX_CHARS - lead.length, named, true);
+    const { text, fitted } = harnessFitted(p, r.sheets, images);
     // Everyone's sketch in one image, left to right, where the fitting made them one.
     for (const x of fitted.images)
       if (x.group?.length)
@@ -442,7 +453,6 @@ async function drawDream(
           x.group.map((g) => g.file as string),
           join(dir, 'img', `people-${p.id}.png`),
         );
-    const text = lead + fitted.prompt;
     e.sent = text.length > MAX_CHARS ? text.slice(0, MAX_CHARS) : text;
     e.imagesSent = fitted.images;
     e.dropped = {
