@@ -147,8 +147,13 @@ export function qwenEdit(
   const colourOf = (id: string) => key?.find((k) => k.id === id)?.colour;
   const said1 = (e: SheetElement, what: 'figure' | 'shape') => {
     const c = colourOf(e.id);
-    return c ? `The ${c} ${what}` : key ? `The ${what} of ${e.name}` : `The grey ${what} labelled ${e.name}`;
+    // A crowd or a group is many figures in one colour.
+    const w = c && (e.group || e.said === 'people') ? `${what}s` : what;
+    return c ? `The ${c} ${w}` : key ? `The ${what} of ${e.name}` : `The grey ${what} labelled ${e.name}`;
   };
+  const becomeOf = (e: SheetElement) => (colourOf(e.id) && (e.group || e.said === 'people') ? 'become' : 'becomes');
+  const poseWord = (e: SheetElement) =>
+    colourOf(e.id) && (e.group || e.said === 'people') ? 'their poses' : "the figure's pose";
   const base = sent[0]?.ref;
   const mockUp = base?.source === 'mockup';
   const medium = mediumOf(s.style.option);
@@ -191,8 +196,8 @@ export function qwenEdit(
     const figure = mockUp ? said1(e, 'figure') : sentence(e.name).replace(/\.$/, '');
     out.push(
       k
-        ? `${figure} becomes ${e.name} from ${tag(k)}: take only ${e.said === 'animal' ? 'how it looks' : e.said === 'people' ? 'how they look' : 'their face, hair and clothes'} from ${tag(k)}${mockUp ? `, and keep the figure's pose${pose ? ` (${pose})` : ''}` : ''}.`
-        : `${figure} becomes ${becomes(e)}${pose && mockUp ? `, ${pose}` : ''}.`,
+        ? `${figure} ${becomeOf(e)} ${e.name} from ${tag(k)}: take only ${e.said === 'animal' ? 'how it looks' : e.said === 'people' ? 'how they look' : 'their face, hair and clothes'} from ${tag(k)}${mockUp ? `, and keep ${poseWord(e)}${pose ? ` (${pose})` : ''}` : ''}.`
+        : `${figure} ${becomeOf(e)} ${becomes(e)}${pose && mockUp ? `, ${pose}` : ''}.`,
     );
   }
   // 5. The things, by their image, at their size on the canvas.

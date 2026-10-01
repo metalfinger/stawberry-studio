@@ -8,6 +8,7 @@
 //   bun run evals/local-run.ts --run night-1 --live                   every saved conversation too
 //   bun run evals/local-run.ts --run night-1 --dream dream-0926-000545-09ea [--quality fast]
 //   bun run evals/local-run.ts --run qwen-1 --frozen --profile qwen   each moment's prompt written for Qwen (qwen-prompt.ts)
+//   … --profile qwen --previs keyed --dream <id> --moments m2,m6     the colour-keyed mock-up, only those moments drawn
 //
 // Nothing is drawn twice: a run is resumed where it stopped (a picture with its file is kept). Everything is kept under
 // <data>/runs/local-draw/<run>/<dream>/: manifest.json (what each picture was sent, its job, seed and file, what the
@@ -50,6 +51,8 @@ export type RunPicture = {
   quality?: string;
   /** Whose prompt was sent: the harness's, fitted, or the one written for Qwen from the cut's sheet. */
   profile?: 'harness' | 'qwen';
+  /** The mock-up's style, with the qwen profile: the labelled grey one, or colour-keyed (previs.ts previsKeyed). */
+  previs?: 'clay' | 'keyed';
   file?: string;
   size?: [number, number];
   secs?: number;
@@ -197,11 +200,20 @@ async function drawDream(
   run: string,
   dreamId: string,
   saved: Session,
-  opts: { quality: { sketch: string; picture: string }; out: string; commit: string; profile: 'harness' | 'qwen' },
+  opts: {
+    quality: { sketch: string; picture: string };
+    out: string;
+    commit: string;
+    profile: 'harness' | 'qwen';
+    previs: 'clay' | 'keyed';
+    moments: Set<string> | null;
+  },
 ): Promise<RunManifest> {
   const { rebuild, standIn } = await import('../plan');
   const { sheetPrompt, shapeOf } = await import('../sheets');
-  const { calledFor, previsFor } = await import('../session');
+  const { calledFor, previsFor, previsKeyedFor } = await import('../session');
+  // Each moment's colour key, where its mock-up was drawn keyed.
+  const keys = new Map<string, { id: string; name: string; colour: string }[]>();
   const dir = join(opts.out, run, dreamId);
   mkdirSync(join(dir, 'img'), { recursive: true });
   const manifestFile = join(dir, 'manifest.json');
@@ -316,9 +328,13 @@ async function drawDream(
           { build: session.build, draft: session.draft && { ...session.draft, breakdown: r.b } },
           p.item,
         );
-        const pv = previsFor(r.b, p.item, called, r.rec);
+        // Keyed only for the moments the qwen profile writes, which say each one by its colour.
+        const keyed = opts.previs === 'keyed' && opts.profile === 'qwen' && p.kind !== 'ghost';
+        const kv = keyed ? previsKeyedFor(r.b, p.item, called, r.rec) : undefined;
+        const pv = kv ?? previsFor(r.b, p.item, called, r.rec);
+        if (kv) keys.set(p.id, kv.key);
         if (pv) {
-          file = join(dir, 'img', `previs-${p.id}.png`);
+          file = join(dir, 'img', `previs-${kv ? 'keyed-' : ''}${p.id}.png`);
           writeFileSync(file, pv.png);
         }
       }
@@ -336,6 +352,11 @@ async function drawDream(
     const e = entry({ id: p.id, kind, name: p.item.name, state: 'waiting', prompt: p.prompt, images, notes });
     if (e.state === 'done' || drawnIds.has(p.id)) {
       if (e.file) files.set(standIn.picture(p.id), e.file);
+      continue;
+    }
+    // Only the moments asked for: the others come from the run this one was seeded from, or are not drawn.
+    if (opts.moments && !opts.moments.has(p.id)) {
+      e.state = 'skipped';
       continue;
     }
     // What this run could not make is left out, as the fitting leaves out what does not fit.
@@ -362,8 +383,10 @@ async function drawDream(
         p.assembled.references,
         images,
         Object.fromEntries(p.assembled.lines.map((l) => [l.id, l.text])),
+        keys.get(p.id),
       );
       e.profile = 'qwen';
+      e.previs = keys.has(p.id) ? 'keyed' : 'clay';
       e.sent = q.prompt.slice(0, MAX_CHARS);
       e.imagesSent = q.images;
       e.dropped = {
@@ -431,6 +454,8 @@ if (import.meta.main) {
     picture: val('--quality') ?? 'fast',
   };
   const profile = val('--profile') === 'qwen' ? 'qwen' : 'harness';
+  const previs = val('--previs') === 'keyed' ? 'keyed' : 'clay';
+  const moments = val('--moments') ? new Set((val('--moments') as string).split(',')) : null;
   // The full profile, as every other eval of the harness reads it.
   for (const [k, v] of Object.entries(PROFILE)) process.env[k] ??= v;
   const data = dataDir();
@@ -463,7 +488,7 @@ if (import.meta.main) {
       continue;
     }
     try {
-      const mf = await drawDream(run, d.id, d.session, { quality, out, commit, profile });
+      const mf = await drawDream(run, d.id, d.session, { quality, out, commit, profile, previs, moments });
       const done = mf.pictures.filter((p) => p.state === 'done').length;
       console.log(`${d.id}: ${done} of ${mf.pictures.length} drawn`);
     } catch (e) {
