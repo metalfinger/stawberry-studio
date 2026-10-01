@@ -28,7 +28,35 @@ current figure and what's next). Writer model: Claude (`DREAMCHAT_WRITER=claude`
 
 ## Where we stopped (27-29 Sep): read this to resume
 
-**Newest landmark (1 Oct, evening): no chat, a dump imported; a sketch's words from the first new dream; the dreamer
+**Newest landmark (1 Oct, night): a dumped dream keeps its strangeness.** Nothing drawn, nothing paid. The merged
+flow imported three new DreamBank dreams (Barley, Train, Pool) and compared them with chat-made versions of the same
+text: the imports lost each dream's turn (Barley kept "G.H. talking" and "people milling about" and lost the
+barley-degree mix-up and the realising; Train's marzipan became "finding nothing"). Diagnosis: in the chat, the
+dreamer says what stays with them and confirms the retell beat by beat; a dump has neither, so the producer spent its
+moments on the setup and nothing checked what was dropped; and a first-person dump went wholly through the dreamer's
+eyes, where a thought or a realisation has nothing to show. Three steps of the one builder, after `sketch_subjects`
+(27afa2e; `telling.ts`, read only on the import path, `liveProducer(jev, { telling: true })`):
+- *`strangest`*: the telling is read first for its strangest fact, the strangest thing that happens or the turn it
+  comes to, quoted from their words (a quote not in the text, or under three words, is dropped); the producer keys the
+  moment that shows it, and Jev checks the key moment's point carries all of it (the faint and the dance, both).
+- *`told_events`*: every told event, quoted, the essential ones marked; Jev checks each against the moments, an
+  essential one against what some moment shows (the point is what a picture and a stranger both get); the producer
+  is asked once more, naming what is missing, its first draft sent back as it wrote it, and the better kept. A point
+  names what they named as the picture shows it, never a sentence of theirs copied or what would or could happen.
+- *`thought_outside`*: the dreamer's own thought, realisation or words is seen from outside, their face carrying it.
+Measured (`evals/strange.ts`, labels written from each text before building; 3 fresh import drafts of each dream),
+before → after: told events in a moment 112 → 128 of 129; the strangest fact on the key moment's point 4 → 9 of 9;
+concrete nouns as some moment's point 35/59 → 61/69; the dreamer's thought seen 7/16 → 23/23; points told as
+narration 0/62 → 6/86 (all Pool's unseeable "nobody could hear them"). The merged flow's retell gate (a stranger
+retells the dream from its points alone, a judge compares beat by beat): 8 fail and 1 weak → 0 fail, 7 weak, 2 pass,
+no essential beat lost. With every step off the producer's prompt is word for word as before. The proof that it
+generalises is the merge's: three DreamBank dreams this work never saw, run after the owner's mock-up A/B.
+Also from the merge's per-file runs: the dream planned now was cached by keys that left out the cut sheet, so a plan
+made with the references idle was served where they act; the plan-in-force test passed in a whole run only on what an
+earlier file left behind. The cache now keys the references as they act, the test stands alone, and every proof
+runs each test file in a process of its own too (`perfile.sh`).
+
+**Earlier landmark (1 Oct, evening): no chat, a dump imported; a sketch's words from the first new dream; the dreamer
 as the camera.** Nothing drawn, nothing paid. The owner's standing rules from today, until the harness is trusted:
 **no chat** (neither Berry nor a simulated dreamer; a transcript or the dream's text goes straight into breakdown →
 tree → everything after), **no dream drawn realistic** (each its own named art style, never a photograph, live chats
@@ -2319,6 +2347,9 @@ between sessions.
 | The import (`importer.ts`) | S8, the live chat | The import runs the chat's steps in the chat's order with no turns (breakdown, own look kept to technique, sketch list, `planShots` with its readings, the cast); a change to that order or those steps in `session.ts` reaches a dump only when `importDream` takes it too (`test/import.test.ts` holds the order). An imported dream's readings are its own: `withImplied` and `withTyped` leave it as it is. |
 | `sketch_subjects` | S6, the producer's styles | A sketch leaves out a style's words about the dream's other subjects; a moment keeps the whole style, so a style made before `cleanStyles` (or the "as it looked" option) still carries content into every moment. New looks are cleaned when made, the import's too. One neutral light for a sketch, in place of the style's scene light (the local machine copies a reference's light), is parked behind a blind picture test. |
 | `dreamer_camera` | S4, saved plans | The dreamer is added as the camera only when a draft is made; saved dreams keep their plans. 13 cuts through the dreamer's eyes in 6 saved dreams have no camera: 2 planned before the eye was put on the plan (cbba m9, m12), 11 with no plan; the merge labels them legacy, and they are never re-planned (the owner, 1 Oct). |
+| `strangest`, `told_events` (`telling.ts`) | the script stage (after 9:16) | The reading of the telling (the strangest fact first, every told event, their words only) is the script stage's first piece, pulled forward for the import; the script stage extends it with narration and timing, never alongside it. Import only until then: a live chat's drafts are as they were. |
+| `told_events`, `thought_outside` | S6, the merged flow's retell gate | The point is what a picture and a stranger both get: an essential beat or the strangest fact living only in a moment's action is lost to both. The merge's retell gate (a stranger retelling from the points alone) is the second measure beside `evals/strange.ts`, whose narration count is a standing guard. More dreamers are seen from outside, most with their look untold: their sketches stay neutral (`dreamer_untold`). |
+| The plan cache (`dreamNowOf`) | every test, S5, S9 | Keyed by the drawn record's switches, which leave the cut sheet out, it served a plan made with the references idle where they act. It now keys the references as they act; a proof runs every test file in its own process as well as the whole suite (`perfile.sh`), as the merged flow's check-lanes does. |
 | 9:16 (after the merge) | S4, the mock-up, local-run | A moment's frame is 16:9 in the shape sent (`sheets.ts shapeOf`, `settingsFor`), its words (`frames.ts SHAPE_WORDS`), the camera's view (`blocking.ts halfViewOf`, `previs.ts tallAt`/`halfTall`, which take the width as the long side), the mock-up's size (1376×768) and the local machine's (1024×576, a portrait first image padded to landscape). The list is with the merge; one Shape for moments, the view angles read from it, a place's sketch staying 16:9. |
 
 ## Known debt, by the step that clears it
@@ -3318,6 +3349,14 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   1079de4, 0 of 127 frozen and 0 of 447 live pictures move, prompt cases the same. The merged flow's Barley import
   planned again with the camera: an eye on all 7 cuts. `bun test`: 1108 pass, 2 skipped, 0 fail with every switch off
   and on; typecheck clean. No pictures, no money.
+- 1 Oct (night, nothing drawn): a dumped dream keeps its strangeness (`strangest`, `told_events`, `thought_outside`;
+  `telling.ts`, `evals/strange.ts`; e2b27c4, a9892f5, 27afa2e): on 3 fresh import drafts each of Barley, Train and
+  Pool, told events 112 → 128 of 129, the strangest fact keyed 4 → 9 of 9, the retell gate 8 fail → 0 fail (7 weak,
+  2 pass); the corpus 0 of 127 frozen and 0 of 447 live pictures against lab 4a67bbc, prompt cases the same. The plan
+  cache keyed by the references as they act, the plan-in-force test standing alone, more time for the slow
+  whole-dream tests (1034987, 644a34b). `bun test`: 1118 pass, 2 skipped, 0 fail with every switch off and on, and
+  every file in a process of its own (`perfile.sh`) 1118 pass, 0 fail both ways; typecheck clean. No pictures, no
+  money.
 
 ## Owner's direction (29 Sep): reviews and merges move to the cloud session
 
