@@ -1775,7 +1775,7 @@ export function dreamerShot(
   beyond?: string,
   /** Who the moment shows, to be in the picture: the driver beside them in the cab (25 Sep). */
   want: string[] = [],
-): { eye: Eye; text: string; rules?: string[]; inPicture: string[] } | null {
+): { eye: Eye; text: string; rules?: string[]; inPicture: string[]; outside: string[] } | null {
   const me = plan.spots.find((s) => s.id === dreamer);
   if (!me) return null;
   const own = facing(me, plan);
@@ -1936,6 +1936,10 @@ export function dreamerShot(
     .filter((x): x is { s: Spot; seen: Seen } => !!x.seen && x.seen.visible >= min)
     .sort((a, b) => distance(a.s) - distance(b.s));
   const called = (id: string) => plan.spots.find((s) => s.id === id)?.name ?? name(id);
+  // What someone holds is with them: never "outside the picture" while they are in it.
+  const outOfPicture = spots
+    .filter((s) => !shown.some((x) => x.s.id === s.id) && !(s.heldBy && shown.some((x) => x.s.id === s.heldBy)))
+    .filter((s) => !(camera && underWater(s, plan, eye)) && !isCastPiece(s));
   const sentences = [
     `The camera is the dreamer's eyes${climbingIn ? `, climbing ${climbingIn.how} ${called(climbingIn.of)}` : at.length ? `, ${inIt ? 'in' : 'on'} ${at.map(called).join(' and ')}` : ''}${pose}${eye.lean ? `, ${LEAN_WORDS[eye.lean]}` : ''}${stepBack && target ? `, a step back from ${called(target.id)}` : ''}, ${turned}${toward ? `, toward ${called(toward)}` : ''}: it looks toward ${wall(eye.d, plan.front, !!plan.indoors)}. A wide lens, about 24mm.`,
     // Riding in something, what they are in is in the picture: through the dreamer's eyes in the
@@ -1954,16 +1958,12 @@ export function dreamerShot(
       const lead = i === 0 ? 'Nearest' : i === shown.length - 1 && shown.length > 1 ? 'Farthest' : 'Then';
       return `${lead}, ${reach(distance(s))}, ${across(seen)}: ${called(s.id)}${thingWords(s, seen, plan, eye, called, { spots, on: at, anchor: me, inPicture: new Set(shown.map((x) => x.s.id)) })}.`;
     }),
-    // What someone holds is with them: never "outside the picture" while they are in it.
-    ...spots
-      .filter((s) => !shown.some((x) => x.s.id === s.id) && !(s.heldBy && shown.some((x) => x.s.id === s.heldBy)))
-      .filter((s) => !(camera && underWater(s, plan, eye)) && !isCastPiece(s))
-      .map((s) =>
-        // What they hold themselves is in their hands, only below the picture (the camera rules).
-        camera && s.heldBy === dreamer
-          ? `In the dreamer's hands, below the picture: ${called(s.id)}.`
-          : `Outside the picture, ${offTo(eye, s, camera ? topOf(s, plan, called) : undefined)}: ${called(s.id)}.`,
-      ),
+    ...outOfPicture.map((s) =>
+      // What they hold themselves is in their hands, only below the picture (the camera rules).
+      camera && s.heldBy === dreamer
+        ? `In the dreamer's hands, below the picture: ${called(s.id)}.`
+        : `Outside the picture, ${offTo(eye, s, camera ? topOf(s, plan, called) : undefined)}: ${called(s.id)}.`,
+    ),
     frontLine(plan, eye, r, min),
     // Beyond everything the plan holds, what the moment looks at: the view from the tractor's cab
     // ended at its windscreen, and the field it drove through was read as missing (lighthouse, 25 Sep).
@@ -1977,6 +1977,8 @@ export function dreamerShot(
     text: sentences.join(' '),
     ...(rules.length ? { rules } : {}),
     inPicture: [...at, ...shown.map((x) => x.s.id)],
+    // Who and what the view says is outside the picture (framed_only): what the dreamer holds is in their hands.
+    outside: outOfPicture.filter((s) => !(camera && s.heldBy === dreamer)).map((s) => s.id),
   };
 }
 
@@ -2238,6 +2240,8 @@ export function outsideShot(
   text: string;
   rules?: string[];
   inPicture: string[];
+  /** Who and what the view says is outside the picture ("Outside the picture, …"). */
+  outside: string[];
   framing: string[];
   /** Across the line from the cut before: because the moment looks past them, or only there are they all in it. */
   crossed?: 'looks' | 'framing';
@@ -2245,7 +2249,15 @@ export function outsideShot(
   const name = (id: string) => plan.spots.find((s) => s.id === id)?.name ?? called(id);
   const inIt = subjects.map((id) => plan.spots.find((s) => s.id === id)).filter((s): s is Spot => !!s && !s.many);
   const people = inIt.filter((s) => isPerson(s));
-  const group = people.length ? people : inIt;
+  // A moment of a crowd alone is shot on the crowd, else on what it looks at (the one builder's `crowd_camera`):
+  // "everyone in our house" going up the stairs to the roof had no one else in it, and no camera (Neighbours, 1 Oct).
+  const alone = builds('crowd_camera')
+    ? [
+        ...subjects.map((id) => plan.spots.find((s) => s.id === id)).filter((s): s is Spot => !!s && !!s.many),
+        ...(lookAt?.id ? plan.spots.filter((s) => s.id === lookAt.id) : []),
+      ]
+    : [];
+  const group = people.length ? people : inIt.length ? inIt : alone.slice(0, 1);
   if (!group.length) return null;
   let c = {
     x: group.reduce((a, s) => a + s.x, 0) / group.length,
@@ -2678,6 +2690,18 @@ export function outsideShot(
     behind.some((x) => isPerson(x.s)) || (camera && whoShown.some((x) => x.s.many))
       ? ''
       : 'Nobody else is in the picture.';
+  // What is outside the picture, said so: what someone holds is with them, what is under the water is drawn through it,
+  // and the pieces a place's words give (its windows along each side) are said by its walls, never one by one:
+  // "Outside the picture, off to the left: a window" read as windows on the picture's left (30 Sep).
+  const outOfPicture = spots.filter(
+    (s) =>
+      !shown.some((x) => x.s.id === s.id) &&
+      !riding(s) &&
+      (subjects.includes(s.id) || !isPerson(s)) &&
+      !(s.heldBy && shown.some((x) => x.s.id === s.heldBy)) &&
+      !(camera && underWater(s, plan, eye)) &&
+      !isCastPiece(s),
+  );
   const sentences = [
     `Seen ${from}, ${where}, at the height of ${people.length === 1 ? `${them}'s eyes` : 'their eyes'}: the camera looks ${lookedAt ? `at ${lookedAt}, ` : ''}toward ${wall(d, plan.front, !!plan.indoors)}. A ${lens}mm lens.`,
     whoShown.length
@@ -2696,19 +2720,9 @@ export function outsideShot(
     // room's sketch has it (24 Sep).
     // What someone holds is with them: "holding the brass key" beside "outside the picture: the brass
     // key", too small to show from behind them, read as the shot at odds with itself (26 Sep).
-    ...spots
-      .filter(
-        (s) =>
-          !shown.some((x) => x.s.id === s.id) &&
-          !riding(s) &&
-          (subjects.includes(s.id) || !isPerson(s)) &&
-          !(s.heldBy && shown.some((x) => x.s.id === s.heldBy)) &&
-          !(camera && underWater(s, plan, eye)) &&
-          // The pieces a place's words give (its windows along each side) are said by its walls, never one by one:
-          // "Outside the picture, off to the left: a window" read as windows on the picture's left (30 Sep).
-          !isCastPiece(s),
-      )
-      .map((s) => `Outside the picture, ${offTo(eye, s, camera ? topOf(s, plan, name) : undefined)}: ${name(s.id)}.`),
+    ...outOfPicture.map(
+      (s) => `Outside the picture, ${offTo(eye, s, camera ? topOf(s, plan, name) : undefined)}: ${name(s.id)}.`,
+    ),
     frontLine(plan, eye, rr, min),
     // The place is the inside of something (the red tractor, for its cab): all of it is in there.
     // Said nowhere once the tractor was off the plan, the moments in its cab read as missing it.
@@ -2738,6 +2752,8 @@ export function outsideShot(
       ...shown.map((x) => x.s.id),
       ...spots.filter((s) => riding(s) && !shown.some((x) => x.s.id === s.id)).map((s) => s.id),
     ],
+    // Who and what the view says is outside the picture (framed_only).
+    outside: outOfPicture.map((s) => s.id),
     framing: framing(rr, framedPeople, size, name, plan).issues,
   };
 }

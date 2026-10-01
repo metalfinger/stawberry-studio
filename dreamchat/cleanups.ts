@@ -219,6 +219,16 @@ export const BUILDER_STEPS: readonly string[] = [
   //    says it (looks at, watches, stands at, points at, reaches for), is what they face on the floor plan and what the
   //    words say they look at: the dreamer at the fish stall was turned to the old man (night-market m2).
   'plan_facing',
+  // Not a ledger row: a dumped dream's moments of a crowd alone ("everyone in our house" in the dark, then going up the
+  //    stairs to the roof) had no camera, the camera centred on everyone a moment holds but a crowd; shot on the crowd,
+  //    or what the moment looks at, and never with what it looks at behind the camera (Neighbours, 1 Oct).
+  'crowd_camera',
+  // Not a ledger row: the merged flow's dream 3 (1 Oct). "Reaches" is a hand only reaching out, for or into something:
+  //    "just as the dreamer reaches the man in the wheelchair" is arriving, and was drawn as a huge reaching hand.
+  'reach_arrives',
+  // Not a ledger row: the same dream. Someone the camera leaves outside the picture is not in it: "just outside the
+  //    picture to the left is the man in the wheelchair" went out with his image all the same.
+  'framed_only',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;

@@ -5,6 +5,7 @@ import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { frozenDreams, loadDream } from '../evals/saved';
+import type { Spot } from '../blocking';
 import { dreamPacket, PACKET_SCHEMA, validate } from '../packet';
 import { rebuild } from '../plan';
 import { moments } from '../producer';
@@ -235,5 +236,38 @@ describe('a saved dream as packets', () => {
         '$.cuts[0].story: colour is not allowed',
       ]);
     });
+  });
+});
+
+describe('every field a spot can have is in the schema', () => {
+  // A person turned to whom they attend to carried `attending: true`, which the schema did not know: every packet with
+  // one broke it (the merged flow's imports, Open Wide m5, 1 Oct), and no saved dream had one to catch it. Required<Spot>
+  // fails to compile when the floor plan's spot gains a field this list lacks; the schema check, when the schema does.
+  test('a spot with all of them set validates', () => {
+    const all: Required<Spot> = {
+      id: 'p1',
+      x: 1,
+      y: 2,
+      faces: 'p3',
+      attending: true,
+      many: false,
+      kind: 'person',
+      pose: 'standing',
+      size: [0.5, 0.5, 1.7],
+      shape: 'seat',
+      heldBy: 'p2',
+      count: 3,
+      spread: [2, 1],
+      fixture: false,
+      name: 'the dentist',
+      height: 1.7,
+      body: 'human',
+      above: 0.5,
+      climbing: { of: 't1', how: 'into' },
+      rides: 'front',
+      open: true,
+    };
+    const defs = (PACKET_SCHEMA as { $defs: Record<string, unknown> }).$defs;
+    expect(validate(defs.spot as never, all)).toEqual([]);
   });
 });
