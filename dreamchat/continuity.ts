@@ -752,24 +752,33 @@ export function seenThrough(
 ): Record<string, Side> {
   const out: Record<string, Side> = {};
   if (!facts?.length || !plan.indoors) return out;
-  const openings = plan.spots.filter((s) => isOpening(s) && wallOf(s, plan));
+  for (const f of facts) {
+    const who = plan.spots.find((s) => s.id === f.what && !s.fixture && !s.heldBy);
+    if (!who) continue;
+    const opening = openingNamed(plan, f.through);
+    const side = opening ? wallOf(opening, plan) : null;
+    if (side) out[who.id] = side;
+  }
+  return out;
+}
+
+/**
+ * The opening in a wall of an indoor plan that words name ("through the high round window"): the one whose name shares
+ * the most words with them; none where none does.
+ */
+export function openingNamed(plan: Blocking, through: string): Spot | undefined {
+  if (!plan.indoors) return undefined;
   const words = (x: string) =>
     x
       .toLowerCase()
       .split(/[^a-z]+/)
       .filter((w) => w.length > 2 && w !== 'the' && w !== 'its');
-  for (const f of facts) {
-    const who = plan.spots.find((s) => s.id === f.what && !s.fixture && !s.heldBy);
-    if (!who) continue;
-    const want = words(f.through);
-    const best = openings
-      .map((o) => ({ o, n: want.filter((w) => words(o.name ?? '').includes(w)).length }))
-      .filter((x) => x.n > 0)
-      .sort((a, b) => b.n - a.n)[0];
-    const side = best ? wallOf(best.o, plan) : null;
-    if (side) out[who.id] = side;
-  }
-  return out;
+  const want = words(through);
+  return plan.spots
+    .filter((s) => isOpening(s) && wallOf(s, plan))
+    .map((o) => ({ o, n: want.filter((w) => words(o.name ?? '').includes(w)).length }))
+    .filter((x) => x.n > 0)
+    .sort((a, b) => b.n - a.n)[0]?.o;
 }
 
 /** Getting into or out of something, as a typed act says it: "climbs into", "gets out of", "steps aboard". */

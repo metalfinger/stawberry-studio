@@ -33,6 +33,7 @@ import {
   camerasOf,
   type ContinuityPlan,
   type CutPlan,
+  openingNamed,
   pictureName,
   placePlan,
   planBy,
@@ -706,6 +707,7 @@ export function cutSheet(x: CutSheetInput): CutSheet {
           prev: prevMoment ? { id: prevMoment.id, order: at, eye: cams.get(prevMoment.id) ?? null } : null,
           eye: cams.get(frame.id) ?? null,
           dreamerId: dreamer?.id ?? b.people.find((p) => p.is_dreamer)?.id,
+          ...(oneBuilder() ? { typed: takenOf(dream?.typed?.[frame.id], frame.frame?.eyes ?? 'outside') } : {}),
         })
       : null;
   const drawnFrom = rules ? earlier.filter((e) => !rules.layer.dropped.includes(e.id)) : earlier;
@@ -1083,6 +1085,8 @@ function cameraLayer(x: {
   /** This cut's camera as the plan has it: its own, or the picture's it is edited from. */
   eye: Eye | null;
   dreamerId: string | undefined;
+  /** The moment's typed facts as taken (the one builder): what it sees out past an opening. */
+  typed?: TypedMoment;
 }): { layer: CameraLayer; flags: string[] } {
   const f = x.frame.frame!;
   const eye = x.eye;
@@ -1134,8 +1138,42 @@ function cameraLayer(x: {
   if (x.plan?.crossed) flags.push(`crossed_line:${x.plan.crossed}`);
   if (x.plan?.sameCamera) flags.push(`same_camera:${x.plan.sameCamera}`);
   const does = body === 'hands' && builds('own_hands') ? handAct(words.slice(0, 2)) : null;
+  // With the `beyond_words` step: what the moment sees out past an opening that is no one and nothing on the floor plan,
+  // said out past the opening it is seen through, and only there. Not where the view has that opening out of the picture.
+  const beyondLines: string[] = [];
+  if (builds('beyond_words') && floor && eye)
+    for (const bw of x.typed?.beyond ?? []) {
+      // Someone or something of the dream is placed out past the opening by the plan (continuity seenThrough) and said
+      // there already; a place seen through it is said by its name.
+      const place = x.b.places.find((l) => l.id === bw.what);
+      const said = (n: string) => n.trim().toLowerCase();
+      const known =
+        !!x.names[bw.what] ||
+        floor.spots.some((s) => s.id === bw.what || said(s.name ?? '') === said(bw.what)) ||
+        Object.values(x.names).some((n) => said(n) === said(bw.what)) ||
+        (x.plan?.rules ?? []).some((l) => said(l).includes(said(bw.what)));
+      if (known && !place) continue;
+      const what = place ? place.name || named(place.id) : bw.what;
+      const opening = openingNamed(floor, bw.through);
+      const called = opening ? (opening.name ?? named(opening.id)) : null;
+      if (!opening || !called) continue;
+      if (
+        new RegExp(`Outside the picture[^.]*\\b${called.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(
+          x.plan?.view ?? '',
+        )
+      )
+        continue;
+      beyondLines.push(`Out past ${called}, seen only through it: ${what}. The wall around ${called} stays solid.`);
+    }
   return {
-    layer: { turn, body, ...(does ? { does } : {}), dropped, outside, lines: [...(x.plan?.rules ?? [])] },
+    layer: {
+      turn,
+      body,
+      ...(does ? { does } : {}),
+      dropped,
+      outside,
+      lines: [...(x.plan?.rules ?? []), ...beyondLines],
+    },
     flags,
   };
 }

@@ -192,6 +192,10 @@ export const BUILDER_STEPS: readonly string[] = [
   //    reading's motion fact where it gives one, never only a going verb in the moment's words: the tractor's cab "vibrates
   //    with a low rumble" as it drives on, and nothing said which way it went (lighthouse-fresh m12).
   'plan_motion',
+  // Not a ledger row: from the counted prompt cases (G2). What the typed reading has seen out past an opening, where it
+  //    is not someone or something on the floor plan (the drowned city through the high round window), is said there,
+  //    shown only through it, the wall around it solid: nothing bounded the city to the window (library-1 m5).
+  'beyond_words',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;
