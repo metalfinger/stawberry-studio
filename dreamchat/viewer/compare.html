@@ -233,12 +233,12 @@ function pairCard(p, i) {
     return el('article', { class: 'pair', id: `p-${p.id}`, 'data-i': i },
       el('div', { class: 'pairhead' }, el('span', { class: 'id' }, p.id), el('span', { class: 'what' }, p.name),
         el('span', { class: 'faint mono' }, 'the same picture in both runs')),
-      el('div', { class: 'sides' }, el('div', { class: 'sidecol' }, picture(img(state.a, p.a.file), p.name, 'pic'))));
+      el('div', { class: 'sides' }, el('div', { class: 'sidecol' }, picture(img(p.a.from || state.a, p.a.file), p.name, 'pic'))));
   const card = el('article', { class: 'pair', id: `p-${p.id}`, 'data-i': i },
     el('div', { class: 'pairhead' },
       el('span', { class: 'id' }, p.id), el('span', { class: 'what' }, p.name),
       el('span', { class: 'faint mono' }, p.kind === 'ghost' ? 'in-between picture' : ''),
-      mock ? el('div', { class: 'mock' }, picture(img(mockRun, mock.file), `mock-up of ${p.id}`), el('div', { class: 'faint' }, 'mock-up')) : null),
+      mock ? el('div', { class: 'mock' }, picture(img(mock.from || mockRun, mock.file), `mock-up of ${p.id}`), el('div', { class: 'faint' }, 'mock-up')) : null),
     // Blind, an earlier verdict would say which run drew which: none is shown until it is given here.
     el('div', { class: 'sides' }, [l, r].map((s, k) => sideCol(p, s, k, state.blind && !state.fresh.has(`${s}/${p.id}`) ? null : v[s][p.id]))));
   return card;
@@ -252,7 +252,7 @@ function sideCol(p, s, k, verdict) {
   const saved = el('span', { class: 'saved' }, verdict ? `${verdict.verdict}, ${when(verdict.at)}` : '');
   const col = el('div', { class: 'sidecol', 'data-side': k === 0 ? 'left' : 'right' },
     el('h4', {}, labelOf(s, k)),
-    x && x.file && x.state === 'done' ? picture(img(run, x.file), `${p.id}, ${labelOf(s, k)}`, 'pic')
+    x && x.file && x.state === 'done' ? picture(img(x.from || run, x.file), `${p.id}, ${labelOf(s, k)}`, 'pic')
       : el('div', { class: `placeholder ${x ? x.state : ''}` }, !x ? 'Not in this run' : x.state === 'failed' ? `Failed: ${x.error || 'no reason given'}` : x.state === 'skipped' ? 'Skipped' : 'Waiting to be drawn'),
     x && x.state === 'done' ? el('div', { class: 'judge' },
       ['right', 'partly', 'wrong'].map((w) => el('button', { 'data-v': w, 'aria-pressed': verdict && verdict.verdict === w ? 'true' : 'false', onclick: () => save(run, s, p.id, w, note.value, saved, col) }, w[0].toUpperCase() + w.slice(1))),
