@@ -54,8 +54,11 @@ describe('S6 row 17: a moment is sent from the plan in force', () => {
       }
     }));
 
+  // With the references on, a cut waits only for what it sends, and nothing in the undrawn snow train sends anything:
+  // the moment that needs a picture is had with them off, as the plan names its needs. Passing with them on only when
+  // an earlier file left a plan made without them in the cache (dreamNowOf, now keyed by them).
   test('one whose plan made now needs a picture not in the dream yet keeps its own, for a re-plan', () =>
-    withEnv(ON, () => {
+    withEnv({ ...ON, DREAMCHAT_REFS: undefined }, () => {
       const { s } = stale('m2');
       const plan = dreamNowOf(s).plan!;
       const cut = plan.cuts.find((c) => [...c.needs, ...c.refs.map((r) => r.id)].length > 0)!;

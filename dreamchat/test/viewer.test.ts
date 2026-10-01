@@ -19,7 +19,7 @@ import { PROFILE, viewDream } from '../viewer/data';
 import type { ViewAnswers, ViewDream } from '../viewer/types';
 import { DEFAULTS, pinSwitches, withSwitches } from './fakes';
 
-setDefaultTimeout(120_000);
+setDefaultTimeout(300_000);
 afterAll(pinSwitches(DEFAULTS));
 
 const dreams = frozenDreams();

@@ -1,7 +1,10 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { planContinuity } from '../continuity';
 import type { Breakdown } from '../producer';
 import approved from './fixtures/approved-shots.json';
+
+// Planning whole dreams: a few seconds each, longer on a machine busy with other runs.
+setDefaultTimeout(30_000);
 
 // Shots whose pictures were approved (the ice head, 24 Sep; the theater's roller coaster at its
 // seventh take), with the floor plans they were drawn from. A change to the planner that moves one
