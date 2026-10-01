@@ -440,11 +440,38 @@ export function coloursIn(text: string): string[] {
 export const DREAM_QUALITY =
   'the stillness of a remembered moment, light a little softer than real and edges a little less sure, with no fog, haze or effects added';
 
+/** A style's direction about people other than the one a sketch is of: a crowd, people in the background, passers-by. */
+const OTHER_PEOPLE =
+  /\b(?:background (?:people|figures|characters)|(?:people|figures|characters) in the background|crowds?|passers?-?by|bystanders|onlookers|other people|strangers)\b/i;
+
 export function styleBlock(
   style: StyleOption,
   told: string[] = [],
-  opts: { fromImages?: boolean; ownColours?: boolean; noSkin?: boolean; saidAbove?: boolean } = {},
+  opts: {
+    fromImages?: boolean;
+    ownColours?: boolean;
+    noSkin?: boolean;
+    saidAbove?: boolean;
+    /** For a sketch: the style's way of drawing, without its directions about other people (`sketch_style`). */
+    sketch?: boolean;
+  } = {},
 ): string {
+  // A sketch is of one person, place or thing: "background people softly blurred" put a crowd in every sketch of the
+  // Barley Degree (1 Oct). Each technique and each part of the dream's feel that directs other people is left out.
+  const own = (x: string) => !opts.sketch || !OTHER_PEOPLE.test(x);
+  // Clause by clause: "shallow depth of field, background people softly blurred" keeps its depth of field.
+  const tokens = opts.sketch
+    ? style.tokens.map((t) => t.split(/,\s*/).filter(own).join(', ')).filter(Boolean)
+    : style.tokens;
+  const whole = style.dream?.trim() || DREAM_QUALITY;
+  // Part by part and clause by clause: "an airless dream, faces in the crowd blurring past" keeps "an airless dream".
+  const feel = opts.sketch
+    ? whole
+        .split(/;\s*/)
+        .map((part) => part.split(/,\s*/).filter(own).join(', '))
+        .filter(Boolean)
+        .join('; ')
+    : whole;
   const colours = [...new Set(style.palette_hex.map(colourName))];
   const mono = oneColour(style);
   // A photograph of a person in a cold palette still has warm skin; one in black and white does not,
@@ -466,8 +493,8 @@ export function styleBlock(
     `Style: ${style.name}.`,
     `Made as: ${mediumOf(style)}. Every part of the picture is made this way, the same as every other picture of this dream.`,
     // A dream should feel like one whatever it is made as: from how this one felt, never a filter.
-    `It feels like a dream, in every picture: ${style.dream?.trim() || DREAM_QUALITY}.`,
-    style.tokens.length ? `Technique, followed exactly: ${style.tokens.join('; ')}.` : '',
+    `It feels like a dream, in every picture: ${feel || DREAM_QUALITY}.`,
+    tokens.length ? `Technique, followed exactly: ${tokens.join('; ')}.` : '',
     colours.length
       ? mono
         ? shades
@@ -618,6 +645,9 @@ export function withoutPose(look: string, keep = true): string {
 const AGE =
   /\b(?:baby|toddler|child|kid|boy|girl|teen\w*|young|younger|old|older|elderly|aged|middle-aged|adult|\d+s|\d+\s*years?|(?:twent|thirt|fort|fift|sixt|sevent|eight|ninet)ies)\b/i;
 
+/** Words that say nothing of who someone is: whether who they are is already said is decided without them. */
+const SAYS_NOTHING = new Set(['the', 'and', 'who', 'her', 'his', 'with', 'their', 'for', 'from', 'that', 'this']);
+
 /** A thing that is many of one kind: "the letters", "a stack of old newspapers". */
 export function isMany(item: Pick<Item, 'kind' | 'name'>): boolean {
   if (item.kind !== 'prop') return false;
@@ -709,6 +739,43 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
     AGE.test(identity) &&
     !AGE.test(facts) &&
     !AGE.test(item.name);
+  // With the one builder's `sketch_who` step, who they are is said whether or not it gives their age: "a woman" with no
+  // age was dropped, and G.H. was sketched a young man like the dreamer (the Barley Degree, 1 Oct). Not where their
+  // look or name already says every word of it. Who they are only, never a look of theirs: what follows "with" (hair,
+  // build) is their look's to say, and an age is left out where their look gives one. The father told "in his forties,
+  // short brown hair" would have been said "a man in his sixties with short grey hair" beside it.
+  const whoOnly = (() => {
+    // Only who they are: never where they are ("a woman in the tiny room"), what the story says of them ("gone for
+    // years") or how the sketch is drawn ("shown alone and in full"), all of which follow the first comma or a place.
+    const head = identity.split(
+      /\s*[,;]\s*|\s+with\s+|\s+(?:in|on|at|inside|near)\s+(?=(?:the|a|an|his|her|their)\b)/i,
+    )[0];
+    const aged_ = AGE.test(facts)
+      ? head
+          .replace(
+            /\s*\b[a-z]+-years?-old\b|\s*\bin (?:his|her|their) (?:early |mid-?|late )?(?:twent|thirt|fort|fift|sixt|sevent|eight|ninet)ies\b|\s*\b(?:aged \d+|\d+\s*years? old|\d+s|young|younger|old|older|elderly|middle-aged)\b/gi,
+            '',
+          )
+          .replace(/\s+/g, ' ')
+          .trim()
+      : head;
+    // Read whole once an age is out: "an old man" is "a man", never "an man"; a bare article says no one.
+    const read = aged_.replace(/^an\s+(?=[^aeiou\s])/i, 'a ');
+    return /^(?:a|an|the)?\s*$/i.test(read) ? '' : read;
+  })();
+  // Its name as the picture is told it too: "your aunt" is said "the dreamer's aunt".
+  const known = `${facts} ${item.name} ${pictureName(item.name)}`.toLowerCase();
+  const who_ =
+    builds('sketch_who') &&
+    item.kind === 'character' &&
+    !item.isDreamer &&
+    !isAnimal(item) &&
+    !isGroup(item) &&
+    !!whoOnly &&
+    !VAGUE.test(whoOnly) &&
+    !(whoOnly.toLowerCase().match(/[a-z]{3,}/g) ?? [])
+      .filter((w) => !SAYS_NOTHING.has(w))
+      .every((w) => new RegExp(`\\b${w}\\b`).test(known));
   const name = item.isDreamer
     ? who && !VAGUE.test(who) && !/^(the dreamer|you|me|myself|i)$/i.test(who.trim())
       ? `the dreamer, ${who.replace(/^the dreamer,?\s*/i, '').replace(/[\s,.;]+$/, '')}`
@@ -719,7 +786,9 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
         'this place'
       : aged
         ? `${pictureName(item.name)}, ${identity}`
-        : pictureName(item.name);
+        : who_
+          ? `${pictureName(item.name)}, ${whoOnly}`
+          : pictureName(item.name);
   // A dog sketched as "one person only", "the face and clothes clearly seen", read as unclear and
   // was held (lighthouse, 25 Sep).
   const animal = isAnimal(item);
@@ -731,7 +800,9 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
           ? `A single full-length picture of ${name}, all of them together and no one else, as they ordinarily look: standing side by side in a relaxed three-quarter view, every figure from head to feet, each face clearly visible.`
           : `A single full-length picture of ${name}, one person only, as they ordinarily look: standing in a relaxed three-quarter view, the whole figure from head to feet, the face clearly visible.`
         : item.kind === 'location'
-          ? `A single wide picture of ${name}, as it ordinarily looks, with no people in it, showing the whole place and how it is laid out.`
+          ? builds('place_alone')
+            ? `A single wide picture of ${name}, as it ordinarily looks: the place alone, empty, showing the whole place and how it is laid out.`
+            : `A single wide picture of ${name}, as it ordinarily looks, with no people in it, showing the whole place and how it is laid out.`
           : isMany(item)
             ? // "The letters", hundreds of them, as "a single clear picture of the letters on its own, as
               // it ordinarily looks" read as at odds with itself, and the sketch was held (snow train, 26 Sep).
@@ -770,7 +841,7 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
     without,
     clear,
     repair,
-    styleBlock(style, toldColours(item), { ownColours }),
+    styleBlock(style, toldColours(item), { ownColours, ...(builds('sketch_style') ? { sketch: true } : {}) }),
     `${background}${noWords}`,
   ]
     .filter(Boolean)

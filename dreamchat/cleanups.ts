@@ -174,6 +174,16 @@ export const BUILDER_STEPS: readonly string[] = [
   //    plan of the last re-plan and the cast it was first put in with, while a rebuild reads the dream as it stands
   //    (2 of 61 moments sent with an out-of-date cast, S9). Row 2 (one tree) needs it.
   'fresh_send',
+  // Not a ledger row: from the first new dream through the merged flow ("The Barley Degree", 1 Oct). Who someone is
+  //    is said on their sketch, their age or not: "a woman" with no age in it was dropped, and G.H. was sketched a
+  //    young man who looked like the dreamer.
+  'sketch_who',
+  // Not a ledger row: the same dream. A sketch takes the style's way of drawing, never its directions about other
+  //    people: "background people softly blurred" put a crowd in every sketch.
+  'sketch_style',
+  // Not a ledger row: the same dream. A place's sketch says what is there, the place alone and empty, never "with no
+  //    people in it", which drew people (the local machine; the owner: "Just use the Qwen model").
+  'place_alone',
   // 2. One tree: the cut sheet reads the tree the panel shows, one plan (the plan made now, each moment held to the plan
   //    it is drawn from), the frames drawn, whether the prep is this dream's, the grounding notes and the goals; built
   //    after 17, the plan a moment is sent from (the step's place in the ledger, here at the end).

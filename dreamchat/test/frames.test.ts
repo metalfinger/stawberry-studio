@@ -572,7 +572,10 @@ describe("a person's sketch", () => {
       ...father,
       fields: { ...father.fields, appearance: { value: 'in his forties, short brown hair', said: true } },
     };
-    expect(sheetPrompt(told, style)).toContain('A single full-length picture of the father, one person only');
+    // Who he is may be said (the one builder's `sketch_who`: "a man"), never a guessed age, hair or build against his
+    // look as told.
+    expect(sheetPrompt(told, style)).toMatch(/A single full-length picture of the father(?:, a man)?, one person only/);
+    expect(sheetPrompt(told, style)).not.toMatch(/sixties|grey hair|medium build/);
     const cooking = {
       ...father,
       name: 'the cook',
