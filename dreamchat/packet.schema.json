@@ -428,9 +428,25 @@
         },
         "extras": {
           "type": "boolean"
+        },
+        "lookUnknown": {
+          "type": "boolean",
+          "description": "The dreamer never said how they look: their look here is a guess. Ask them, or keep them neutral; never guess their sex or age."
         }
       },
-      "required": ["id", "kind", "name", "isDreamer", "look", "prompt", "image", "group", "partOf", "extras"],
+      "required": [
+        "id",
+        "kind",
+        "name",
+        "isDreamer",
+        "look",
+        "prompt",
+        "image",
+        "group",
+        "partOf",
+        "extras",
+        "lookUnknown"
+      ],
       "additionalProperties": false
     },
     "ghost": {
@@ -1401,7 +1417,7 @@
   "type": "object",
   "properties": {
     "version": {
-      "const": 2
+      "const": 3
     },
     "dream": {
       "type": "object",

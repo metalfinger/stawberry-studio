@@ -199,6 +199,28 @@ describe('a saved dream as packets', () => {
     });
   });
 
+  test("the dreamer's look marked unknown where they never said it, guessed or not; known where they did", () => {
+    withEnv(FULL, () => {
+      const id = ids[0];
+      const session = loadDream(id, false).session as Session;
+      const r = rebuild(session);
+      const said = (s: (typeof r.sheets)[number]) => ['appearance', 'wardrobe'].some((k) => s.fields[k]?.said);
+      const pk = dreamPacket(r, { dream: id, style: session.style!, history: () => [] });
+      for (const e of pk.elements) {
+        const s = r.sheets.find((x) => x.id === e.id)!;
+        expect(e.lookUnknown).toBe(!!s.isDreamer && !said(s));
+      }
+      // The same dream with the dreamer's look never said: unknown, whatever was filled in for it as a guess.
+      const unsaid = structuredClone(r);
+      const me = unsaid.sheets.find((x) => x.isDreamer)!;
+      for (const k of ['appearance', 'wardrobe'])
+        me.fields[k] = { value: 'a man in his thirties, plain clothes', said: false };
+      const guessed = dreamPacket(unsaid, { dream: id, style: session.style!, history: () => [] });
+      expect(guessed.elements.find((e) => e.id === me.id)!.lookUnknown).toBe(true);
+      expect(validate(PACKET_SCHEMA, guessed)).toEqual([]);
+    });
+  });
+
   test('a broken packet is caught', () => {
     withEnv(FULL, () => {
       const id = ids[0];

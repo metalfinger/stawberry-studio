@@ -19,7 +19,7 @@ import type { NowOf } from './record';
 import { sheetPrompt } from './sheets';
 
 /** The packet's version: a harness reading one checks it. */
-export const PACKET_VERSION = 2;
+export const PACKET_VERSION = 3;
 
 /** A verdict the owner gave a drawing of this picture: in the story's verdicts, a checkpoint, or a local run. */
 export type VerdictPacket = {
@@ -79,6 +79,12 @@ export type ElementPacket = {
   group: boolean;
   partOf: string | null;
   extras: boolean;
+  /**
+   * The dreamer never said how they look (their looks and clothes): whatever `look` holds is a guess. Asked in a
+   * conversation ("as they are, or however you imagine them"); where nobody can answer, a harness asks or keeps them
+   * neutral, never guessing their sex or age (the owner, 1 Oct: the Barley Degree's dreamer drawn a man by default).
+   */
+  lookUnknown: boolean;
 };
 
 /** An image a picture is sent, in order, with what it is for. */
@@ -314,6 +320,7 @@ export function dreamPacket(
         group: !!s.several,
         partOf: or(s.partOf),
         extras: !!s.extras,
+        lookUnknown: !!s.isDreamer && !['appearance', 'wardrobe'].some((k) => s.fields[k]?.said),
       })),
       ghosts: r.pictures
         .filter((p) => p.kind === 'ghost')
@@ -642,6 +649,11 @@ export const PACKET_SCHEMA: Schema = {
       group: bool,
       partOf: orNull(str),
       extras: bool,
+      lookUnknown: {
+        type: 'boolean',
+        description:
+          'The dreamer never said how they look: their look here is a guess. Ask them, or keep them neutral; never guess their sex or age.',
+      },
     }),
     ghost: obj({
       id: str,
