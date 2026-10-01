@@ -68,6 +68,12 @@ export type RunPicture = {
   notes?: string[];
 };
 
+/**
+ * Whether a picture is drawn, read afresh: a draw changes it in place, and its state as last compared would say it
+ * still waits.
+ */
+const drawn = (p: RunPicture) => p.state === 'done';
+
 export type RunManifest = {
   run: string;
   dream: string;
@@ -308,7 +314,7 @@ async function drawDream(
       p.state = 'waiting';
       p.error = undefined;
       await once(p, endpoint, body);
-      if (p.state === 'done') break;
+      if (drawn(p)) break;
     }
     p.secs = Math.round((Date.now() - t0) / 1000);
     save();
@@ -345,7 +351,7 @@ async function drawDream(
     p.sent = sent;
     if (sent !== prompt) p.notes = [`prompt cut at ${MAX_CHARS} characters`];
     await draw(p, 'generate', { prompt: sent, width, height });
-    if (p.state === 'done' && p.file) files.set(standIn.sketch(it.id), p.file);
+    if (drawn(p) && p.file) files.set(standIn.sketch(it.id), p.file);
   }
 
   // 2. The in-between pictures and the moments, each once every picture it draws from is drawn.
@@ -442,7 +448,7 @@ async function drawDream(
             dataUri(k === 0 ? asFrame(first, join(dir, 'img', `frame-${p.id}.png`)) : (x.file as string)),
           ),
         });
-      if (e.state === 'done' && e.file) files.set(standIn.picture(p.id), e.file);
+      if (drawn(e) && e.file) files.set(standIn.picture(p.id), e.file);
       continue;
     }
     const { text, fitted } = harnessFitted(p, r.sheets, images);
@@ -469,7 +475,7 @@ async function drawDream(
         images: fitted.images.map((x, k) => dataUri(k === 0 ? framed : (x.file as string))),
       });
     }
-    if (e.state === 'done' && e.file) files.set(standIn.picture(p.id), e.file);
+    if (drawn(e) && e.file) files.set(standIn.picture(p.id), e.file);
   }
   save();
   return m;
@@ -497,7 +503,8 @@ if (import.meta.main) {
   for (const [k, v] of Object.entries(PROFILE)) process.env[k] ??= v;
   const data = dataDir();
   const out = join(data, 'runs', 'local-draw');
-  const commit = commitOf();
+  // Outside a checkout there is no commit to keep.
+  const commit = commitOf() ?? 'unknown';
   const dreams: { id: string; session: Session }[] = [];
   const one = val('--dream');
   if (one)
