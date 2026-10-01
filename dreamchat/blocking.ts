@@ -16,6 +16,8 @@ export type Spot = {
   y: number;
   /** "front", "back", "left", "right", or the id of what they face. People face the front unless said. */
   faces?: string;
+  /** With the one builder's `plan_facing` step: turned to what they face by an act of attending to it (continuity). */
+  attending?: true;
   /** Many alike, spread about it (a crowd, the rows of an audience): said as a group. */
   many?: boolean;
   /** A person (drawn as a mannequin in the previs) or a thing (a block of its size). */

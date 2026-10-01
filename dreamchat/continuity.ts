@@ -832,11 +832,18 @@ export function withAttention(
     if (!ATTEND.test(a.does.trim()) || a.who === camera) continue;
     const p = plan.spots.find((s) => s.id === a.who && s.kind === 'person' && !s.many);
     const t = spotNamed(plan, a.to);
-    if (!p || !t || t.id === p.id || onOf(p, plan)?.t.shape === 'vehicle') continue;
+    // Not themselves, nor what they hold (it is at their own spot), nor what they stand or sit on, nor one riding.
+    if (!p || !t || t.id === p.id || t.heldBy === p.id || onOf(p, plan)?.t.id === t.id) continue;
+    if (onOf(p, plan)?.t.shape === 'vehicle') continue;
+    // Standing at a door or a gate is where someone is, not what they look at: the guard stands at the gate.
+    if (/^stands?\s/i.test(a.does.trim()) && (isOpening(t) || /\bgates?\b/i.test(t.name ?? ''))) continue;
     faces.set(p.id, t.id);
   }
   if (!faces.size) return plan;
-  return { ...plan, spots: plan.spots.map((s) => (faces.has(s.id) ? { ...s, faces: faces.get(s.id) } : s)) };
+  return {
+    ...plan,
+    spots: plan.spots.map((s) => (faces.has(s.id) ? { ...s, faces: faces.get(s.id), attending: true as const } : s)),
+  };
 }
 
 /** Getting into or out of something, as a typed act says it: "climbs into", "gets out of", "steps aboard". */

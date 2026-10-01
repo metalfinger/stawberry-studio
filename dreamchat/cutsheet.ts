@@ -1155,10 +1155,21 @@ function cameraLayer(x: {
         Object.values(x.names).some((n) => said(n) === said(bw.what)) ||
         (x.plan?.rules ?? []).some((l) => said(l).includes(said(bw.what)));
       if (known && !place) continue;
+      // Never the place itself, nor an id with no name to say it by.
+      if (place && place.id === (x.frame.frame?.place ?? '')) continue;
+      if (!place && /^[a-z]\d+$/i.test(bw.what.trim())) continue;
       const what = place ? place.name || named(place.id) : bw.what;
       const opening = openingNamed(floor, bw.through);
       const called = opening ? (opening.name ?? named(opening.id)) : null;
       if (!opening || !called) continue;
+      // The opening in the picture: named in the view before what it has outside the picture, as previs throughWindows
+      // keeps its line to an opening the camera sees.
+      if (
+        !new RegExp(`\\b${called.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(
+          (x.plan?.view ?? '').split(/Outside the picture/)[0],
+        )
+      )
+        continue;
       if (
         new RegExp(`Outside the picture[^.]*\\b${called.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(
           x.plan?.view ?? '',
@@ -1182,8 +1193,14 @@ function cameraLayer(x: {
       const who = named(a.who);
       const what = t ? (t.name ?? named(t.id)) : null;
       if (!t || !what || t.id === a.who || !inPicture(who) || !inPicture(what)) continue;
+      // Only one the plan turned to it (continuity withAttention): a person, never a crowd or a thing, never to what they
+      // hold or stand on. Through the dreamer's eyes, never toward the dreamer: nothing of them is in the picture.
+      const p = floor.spots.find((s) => s.id === a.who);
+      if (!p?.attending || p.faces !== t.id) continue;
+      if (f.eyes === 'dreamer' && t.id === x.dreamerId) continue;
       // Said once: the view already says it where it turns them to it (previs describe).
-      if (view.toLowerCase().includes(`looking at ${what.toLowerCase()}`)) continue;
+      const v = view.toLowerCase();
+      if (v.includes(`looking at ${what.toLowerCase()}`) || v.includes(`, at ${what.toLowerCase()}`)) continue;
       seen.add(a.who);
       lookLines.push(`${who.charAt(0).toUpperCase()}${who.slice(1)} is looking at ${what}.`);
     }
