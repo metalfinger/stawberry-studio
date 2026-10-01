@@ -8,6 +8,7 @@
 // decides every camera, and what the words say the camera sees is read off the same render: the
 // picture and the words cannot disagree.
 import { isCastPiece } from './castplace';
+import { builds } from './cleanups';
 import { deflateSync } from 'node:zlib';
 import {
   type Blocking,
@@ -2077,9 +2078,21 @@ function thingWords(
         .map((o) => called(o.id))
     : [];
   const shape = !isPerson(s) ? shapeOf(s, plan) : undefined;
+  // With the one builder's `plan_facing` step: someone turned to what they attend to (continuity withAttention), where it
+  // is in the picture between them and the camera, is said looking at it, never "facing the camera": the dreamer at the
+  // fish stall looks at the stall, their face toward us only because the stall is (night-market m2).
+  const lookingAt = (() => {
+    if (!builds('plan_facing') || !isPerson(s) || s.many || !s.faces || !ctx.inPicture) return null;
+    const t = plan.spots.find((o) => o.id === s.faces);
+    if (!t || t.id === s.id || !ctx.inPicture.has(t.id)) return null;
+    const near = Math.hypot(eye.at.x - t.x, eye.at.y - t.y) < Math.hypot(eye.at.x - s.x, eye.at.y - s.y);
+    const f = facing(s, plan);
+    const to = unit({ x: eye.at.x - s.x, y: eye.at.y - s.y });
+    return near && f.x * to.x + f.y * to.y > 0.5 ? `looking at ${called(t.id)}` : null;
+  })();
   const how =
     sitting +
-    (isPerson(s) && !s.many ? `, ${turnedTo(s, plan, eye)}` : '') +
+    (isPerson(s) && !s.many ? `, ${lookingAt ?? turnedTo(s, plan, eye)}` : '') +
     (holds.length ? `, holding ${holds.join(' and ')}` : '') +
     (holder ? `, in ${called(holder)}'s hands` : '') +
     (riders.length

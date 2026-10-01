@@ -33,6 +33,7 @@ import {
   camerasOf,
   type ContinuityPlan,
   type CutPlan,
+  ATTEND,
   openingNamed,
   pictureName,
   placePlan,
@@ -42,6 +43,7 @@ import {
   relationIn,
   sameByCamera,
   sidesByCamera,
+  spotNamed,
 } from './continuity';
 import { wallsSeen } from './previs';
 import {
@@ -1165,6 +1167,27 @@ function cameraLayer(x: {
         continue;
       beyondLines.push(`Out past ${called}, seen only through it: ${what}. The wall around ${called} stays solid.`);
     }
+  // With the `plan_facing` step: whom or what someone in the picture attends to, said, where it is in the picture too (the
+  // floor plan turns them to it: continuity withAttention). The camera's own eyes attend to what the picture shows.
+  const lookLines: string[] = [];
+  if (builds('plan_facing') && floor && eye) {
+    const view = x.plan?.view ?? '';
+    const inPicture = (n: string) =>
+      new RegExp(`\\b${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(view.split(/Outside the picture/)[0]);
+    const seen = new Set<string>();
+    for (const a of x.typed?.acts ?? []) {
+      if (!ATTEND.test(a.does.trim()) || seen.has(a.who)) continue;
+      if (f.eyes === 'dreamer' && a.who === x.dreamerId) continue;
+      const t = spotNamed(floor, a.to);
+      const who = named(a.who);
+      const what = t ? (t.name ?? named(t.id)) : null;
+      if (!t || !what || t.id === a.who || !inPicture(who) || !inPicture(what)) continue;
+      // Said once: the view already says it where it turns them to it (previs describe).
+      if (view.toLowerCase().includes(`looking at ${what.toLowerCase()}`)) continue;
+      seen.add(a.who);
+      lookLines.push(`${who.charAt(0).toUpperCase()}${who.slice(1)} is looking at ${what}.`);
+    }
+  }
   return {
     layer: {
       turn,
@@ -1172,7 +1195,7 @@ function cameraLayer(x: {
       ...(does ? { does } : {}),
       dropped,
       outside,
-      lines: [...(x.plan?.rules ?? []), ...beyondLines],
+      lines: [...(x.plan?.rules ?? []), ...beyondLines, ...lookLines],
     },
     flags,
   };

@@ -196,6 +196,10 @@ export const BUILDER_STEPS: readonly string[] = [
   //    is not someone or something on the floor plan (the drowned city through the high round window), is said there,
   //    shown only through it, the wall around it solid: nothing bounded the city to the window (library-1 m5).
   'beyond_words',
+  // Not a ledger row: from the counted prompt cases (G2). Whom or what someone attends to at the instant, as a typed act
+  //    says it (looks at, watches, stands at, points at, reaches for), is what they face on the floor plan and what the
+  //    words say they look at: the dreamer at the fish stall was turned to the old man (night-market m2).
+  'plan_facing',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;
