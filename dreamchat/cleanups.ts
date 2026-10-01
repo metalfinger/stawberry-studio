@@ -207,6 +207,12 @@ export const BUILDER_STEPS: readonly string[] = [
   'strangest',
   'told_events',
   'thought_outside',
+  // Not a ledger row: the merged flow's dream 3 (1 Oct). "Reaches" is a hand only reaching out, for or into something:
+  //    "just as the dreamer reaches the man in the wheelchair" is arriving, and was drawn as a huge reaching hand.
+  'reach_arrives',
+  // Not a ledger row: the same dream. Someone the camera leaves outside the picture is not in it: "just outside the
+  //    picture to the left is the man in the wheelchair" went out with his image all the same.
+  'framed_only',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;

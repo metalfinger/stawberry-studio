@@ -17,7 +17,7 @@
 // of the dream (the water's level, what is held or open) comes from the story record. Off, every plan, sheet
 // and prompt is today's.
 import { type Blocking, type Eye, roomOf, type Side, sizeOf, type Spot } from './blocking';
-import { retired } from './cleanups';
+import { builds, retired } from './cleanups';
 
 const warned = new Set<string>();
 
@@ -673,6 +673,15 @@ const NOT_HANDS_AFTER =
 const HAND_VERB = `(?:(?:hold|holds|holding|held|take|takes|taking|took)${NOT_HANDS_AFTER}|(?:hand|hands|handing|handed)\\s+(?:over|it|them|him|her|back)|touch|touches|touching|reach|reaches|reaching|reached|grab|grabs|grabbing|grip|grips|gripping|push|pushes|pushing|pull|pulls|pulling|open|opens|opening|opened|closes|closing|shuts|carry|carries|carrying|pick|picks|picking|give|gives|giving|stroke|strokes|stroking|pat|pats|patting|lift|lifts|lifting|put|puts|putting|press|presses|pressing|knock|knocks|knocking|wave|waves|waving|point|points|pointing|write|writes|writing|fold|folds|folding|cradle|cradles|cradling|row|rows|rowing|climb|climbs|climbing|drive|drives|driving|steer|steers|steering|throw|throws|throwing|threw|catch|catches|catching|caught|eat|eats|eating|ate|drink|drinks|drinking|pour|pours|pouring|pedal|pedals|pedalling|pedaling|paddle|paddles|paddling|swim|swims|swimming|unlock|unlocks|unlocking|lets? go|hug|hugs|hugging|shake|shakes|shaking|brush|brushes|brushing|wipe|wipes|wiping|type|types|typing|draw|draws|drawing|tie|ties|tying|dig|digs|digging)`;
 
 /**
+ * "Reaches" is a hand only reaching out, for, into or toward something (the one builder's `reach_arrives`): "just as the
+ * dreamer reaches the man in the wheelchair" is arriving, and was drawn as a huge reaching hand (1 Oct).
+ */
+const REACH = 'reach|reaches|reaching|reached';
+const REACH_HAND =
+  '(?:reach|reaches|reaching|reached)(?=\\s+(?:out|for|into|in|up|down|across|over|under|behind|toward|towards|through|back|around|past)\\b)';
+const handVerb = () => (builds('reach_arrives') ? HAND_VERB.replace(REACH, REACH_HAND) : HAND_VERB);
+
+/**
  * Whether a moment seen through the dreamer's eyes is of their own body: they look down at themselves
  * ("their own small body and the gray cardigan", the kitchen that shrank, 26 Sep). Then it shows, as
  * they see it; never their face. A reflection is not it: seen in a mirror, it is a picture of them.
@@ -699,7 +708,10 @@ export function handsIn(words: string[], holds: boolean): boolean {
   if (retired('hands')) return false;
   // The dreamer doing it: "they are close to the edge" is where they are, not a hand closing.
   const who = "(?:the dreamer|you|they|i)(?:\\s+and\\s+(?:the\\s+|their\\s+|your\\s+|my\\s+)?[\\w']+)?";
-  const does = new RegExp(`(?:^|[^\\w'])${who}\\s+(?:(?!(?:are|is|was|were|am)\\b)\\w+\\s+){0,2}?${HAND_VERB}\\b`, 'i');
+  const does = new RegExp(
+    `(?:^|[^\\w'])${who}\\s+(?:(?!(?:are|is|was|were|am)\\b)\\w+\\s+){0,2}?${handVerb()}\\b`,
+    'i',
+  );
   // "Their hand" is the dreamer's only in a clause about the dreamer: "Mara folds their arms" is hers.
   const own = /\b(?:the dreamer's|your|my)\s+(?:own\s+)?(?:\w+\s+)?(?:hands?|arms?|fingers?|palms?)\b/i;
   const their = /\btheir\s+(?:own\s+)?(?:\w+\s+)?(?:hands?|arms?|fingers?|palms?)\b/i;
@@ -723,7 +735,7 @@ export function handsIn(words: string[], holds: boolean): boolean {
 export function handAct(words: string[]): string | null {
   const who = "(?:the dreamer|you|they|i)(?:\\s+and\\s+(?:the\\s+|their\\s+|your\\s+|my\\s+)?[\\w']+)?";
   const does = new RegExp(
-    `(?:^|[^\\w'])${who}\\s+((?:(?!(?:are|is|was|were|am)\\b)\\w+\\s+){0,2}?)(${HAND_VERB})\\b(.*)$`,
+    `(?:^|[^\\w'])${who}\\s+((?:(?!(?:are|is|was|were|am)\\b)\\w+\\s+){0,2}?)(${handVerb()})\\b(.*)$`,
     'i',
   );
   for (const c of words.join('. ').split(/[;.]|,\s+(?=and\b|but\b|then\b|while\b|as\b)/)) {
