@@ -753,7 +753,7 @@ export function sheetPrompt(item: Item, style: StyleOption): string {
     const aged_ = AGE.test(facts)
       ? head
           .replace(
-            /\s*\b[a-z]+-years?-old\b|\s*\bin (?:his|her|their) (?:early |mid-?|late )?(?:twent|thirt|fort|fift|sixt|sevent|eight|ninet)ies\b|\s*\b(?:aged \d+|\d+\s*years? old|\d+s|young|younger|old|older|elderly|middle-aged)\b/gi,
+            /\s*\b[a-z0-9]+-years?-old\b|\s*\bin (?:his|her|their) (?:early |mid-?|late )?(?:twent|thirt|fort|fift|sixt|sevent|eight|ninet)ies\b|\s*\b(?:aged \d+|\d+\s*years? old|\d+s|young|younger|old|older|elderly|middle-aged)\b/gi,
             '',
           )
           .replace(/\s+/g, ' ')
