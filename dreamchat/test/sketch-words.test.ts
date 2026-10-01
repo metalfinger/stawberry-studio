@@ -203,7 +203,7 @@ describe("the style's light and technique on a sketch, without other people", ()
   });
 });
 
-describe("a sketch never names the dream's other people or things in its style", () => {
+describe("a sketch never names the dream's other people, places or things in its style", () => {
   // dream-0923-214527-927a: the style's light named the woman and the ice, and they were drawn into the room's sketch.
   const iced = {
     ...style,
@@ -228,6 +228,8 @@ describe("a sketch never names the dream's other people or things in its style",
 
   test("each sketch: a style sentence naming another of the dream's people or things is left out, the rest kept", () => {
     expect(subjectWords(items, items[3])).toEqual(['dreamer', 'woman', 'ice']);
+    // A place too: the lab is never in the woman's sketch by way of its style.
+    expect(subjectWords(items, items[1])).toEqual(['dreamer', 'ice', 'lab']);
     for (const it of items) {
       const p = withBuilder('sketch_subjects', () => sheetPrompt(it, iced, { others: subjectWords(items, it) }));
       expect(p).not.toContain('The woman and the ice are rendered');
@@ -239,6 +241,23 @@ describe("a sketch never names the dream's other people or things in its style",
       withBuilder(undefined, () => sheetPrompt(items[3], iced, { others: subjectWords(items, items[3]) })),
     ).toContain('The woman and the ice are rendered');
     expect(withBuilder('sketch_subjects', () => styleBlock(iced))).toContain('The woman and the ice are rendered');
+  });
+
+  test('a comparison that names one is cut alone, the way of drawing kept', () => {
+    // dream-…-5454: "as in an ordinary room" took the plain, even light with it.
+    const plain = {
+      ...style,
+      lighting_rules:
+        'The light is plain and even, as in an ordinary room, with no dramatic shadows. Edges are soft only from slight defocus.',
+    };
+    const roomed = [items[1], item('l2', 'location', 'the waiting room')];
+    const p = withBuilder('sketch_subjects', () =>
+      sheetPrompt(roomed[0], plain, { others: subjectWords(roomed, roomed[0]) }),
+    );
+    expect(p).toContain(
+      'The light is plain and even, with no dramatic shadows. Edges are soft only from slight defocus.',
+    );
+    expect(p).not.toContain('room');
   });
 
   test("a style's own words are never a subject: a thing called the lamp light takes no light sentence with it", () => {

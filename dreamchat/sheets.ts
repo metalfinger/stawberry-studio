@@ -454,7 +454,7 @@ export function styleBlock(
     saidAbove?: boolean;
     /** For a sketch: the style's way of drawing, without its directions about other people (`sketch_style`). */
     sketch?: boolean;
-    /** For a sketch: the words that name the dream's other people and things, never said in its style. */
+    /** For a sketch: the words that name the dream's other people, places and things, never said in its style. */
     others?: string[];
   } = {},
 ): string {
@@ -467,10 +467,20 @@ export function styleBlock(
     ? style.tokens.map((t) => t.split(/,\s*/).filter(own).join(', ')).filter(Boolean)
     : style.tokens;
   const whole = style.dream?.trim() || DREAM_QUALITY;
+  // A comparison that names one of the dream's subjects is cut alone (`sketch_subjects`): "plain and even, as in an
+  // ordinary room, with no dramatic shadows" keeps its plain, even light.
+  const unlike = (x: string) => {
+    if (own(x) || !opts.others?.length) return x;
+    const end = /[.;!?]$/.exec(x)?.[0] ?? '';
+    const parts = x.slice(0, x.length - end.length).split(/,\s*/);
+    const kept = parts.filter((p) => !(LIKE.test(p) && !own(p)));
+    return kept.length < parts.length && kept.length ? `${kept.join(', ')}${end}` : x;
+  };
   // The light, sentence by sentence: "Anything beyond the people being talked to slips out of focus" put others in it.
   const light = opts.sketch
     ? (style.lighting_rules ?? '')
         .split(/(?<=[.;!?])\s+/)
+        .map(unlike)
         .filter(own)
         .join(' ')
     : style.lighting_rules;
@@ -655,6 +665,9 @@ export function withoutPose(look: string, keep = true): string {
 const AGE =
   /\b(?:baby|toddler|child|kid|boy|girl|teen\w*|young|younger|old|older|elderly|aged|middle-aged|adult|\d+s|\d+\s*years?|(?:twent|thirt|fort|fift|sixt|sevent|eight|ninet)ies)\b/i;
 
+/** A clause that compares the light to something: "as in an ordinary room", "as if from an overcast sky", "like a lab". */
+const LIKE = /^(?:as (?:if|in|though|on|at|from|through)|like|such as)\b/i;
+
 /** A style's own words: never taken for one of the dream's subjects ("the lamp light" takes no light sentence). */
 const STYLE_WORDS = new Set([
   'light',
@@ -689,19 +702,24 @@ const STYLE_WORDS = new Set([
   'pile',
   'bunch',
   'set',
+  'place',
+  'space',
+  'area',
+  'world',
+  'scene',
 ]);
 
 /**
- * The words that name the dream's people and things other than `of`, each by its head ("the woman with the ice horse
- * head" is a woman, "the block of ice" ice; the dreamer, "you", is the dreamer): what a sketch's style may never say
- * (`sketch_subjects`).
+ * The words that name the dream's people, places and things other than `of`, each by its head ("the woman with the ice
+ * horse head" is a woman, "the block of ice" ice; the dreamer, "you", is the dreamer): what a sketch's style may never
+ * say (`sketch_subjects`).
  */
 export function subjectWords(
   items: Pick<Item, 'id' | 'kind' | 'name' | 'isDreamer'>[],
   of: Pick<Item, 'id'>,
 ): string[] {
   const words = items
-    .filter((i) => i.id !== of.id && (i.kind === 'character' || i.kind === 'prop'))
+    .filter((i) => i.id !== of.id && (i.kind === 'character' || i.kind === 'prop' || i.kind === 'location'))
     .map((i) => {
       if (i.isDreamer) return 'dreamer';
       const core = i.name
