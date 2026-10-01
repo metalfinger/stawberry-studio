@@ -550,6 +550,8 @@ export const PACKET_SCHEMA: Schema = {
         x: num,
         y: num,
         faces: str,
+        // Turned to whom or what they attend to (continuity withAttention, plan_facing).
+        attending: bool,
         many: bool,
         kind: oneOf('person', 'thing'),
         pose: oneOf('sitting', 'standing', 'lying'),
@@ -569,6 +571,7 @@ export const PACKET_SCHEMA: Schema = {
       },
       [
         'faces',
+        'attending',
         'many',
         'kind',
         'pose',

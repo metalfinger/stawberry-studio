@@ -64,6 +64,9 @@
         "faces": {
           "type": "string"
         },
+        "attending": {
+          "type": "boolean"
+        },
         "many": {
           "type": "boolean"
         },
