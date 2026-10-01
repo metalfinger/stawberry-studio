@@ -28,7 +28,27 @@ current figure and what's next). Writer model: Claude (`DREAMCHAT_WRITER=claude`
 
 ## Where we stopped (27-29 Sep): read this to resume
 
-**Newest landmark (1 Oct, midday): the mock-up's shapes for the local machine.** Nothing paid. The owner's verdicts
+**Newest landmark (1 Oct, afternoon): a node packet per picture, for a harness to draw from.** Nothing drawn,
+nothing paid. What Dream Chat hands a harness for every picture it would draw (`packet.ts dreamPacket`, the groups of
+the merge brief's F2): per dream its sketches (prompt, look field by field, said or guessed), its in-between pictures
+(the one change, what each is edited from, who waits for it) and a node per cut: identity (its place in the tree, its
+stage), story (action, the one thing to show, feeling, purpose, the dream's jump, what is impossible, the only writing),
+who and what (in view, left to right), state (typed facts, changes in force, who holds what, riders, climbers, open
+doors, the water), camera (on its floor plan, its mock-up and view words, the rules' lines), dependencies (references
+with role and relation, needs, depth, what is not sent and why, its images in order), checks, the owner's verdicts on
+earlier drawings (the saved story's and every local run's), and Dream Chat's own prompt whole and by paragraph, to
+compare on the same seed. Written from what a rebuild has; nothing on the drawing path calls it, so no prompt, image or
+plan moves. Its schema is written out as `packet.schema.json` (JSON Schema 2020-12) for a harness in any language;
+`evals/packets.ts` writes `runs/packets/<dream>.json` for every saved dream, each cut's mock-up beside it (grey and
+colour-keyed with its key, `runs/packets/previs/<sha256>.png`, made again only where what it is rendered from changed)
+and each picture's prompts by model (`nano-banana-pro` Dream Chat's own; `qwen-image` the same fitted to the local
+machine, `local-run.ts harnessFitted`, the one its verdicts favour; `qwen-image-written`), and checks each: 54 dreams,
+379 of 379 cuts, 33 in-between pictures, 398 sketches, 0 breaking it (233 cuts on a floor plan with both mock-ups, 212
+with typed state, 77 with the owner's verdicts, a local run drawn without its readings marked). `test/packet.test.ts`
+(10). The merge bar's G4. The owner, 1 Oct: testing stops here; more comes after the merge, where the harness has its
+own prompting and judging.
+
+**Earlier landmark (1 Oct, midday): the mock-up's shapes for the local machine.** Nothing paid. The owner's verdicts
 on qwen-3 (the local machine's own prose for each moment, with the dream's readings), all four dreams: the harness's
 prose right 17, partly 8, wrong 14; the Qwen prose 13, 9, 16. It won affd (7/2/1 against 5/3/2), lost aeea (3/5/7
 against 7/4/4) and b0cb (1/2/3 against 3/0/3), and was about even on 09ea; its lost pictures are people drawn twice (it
@@ -2249,6 +2269,7 @@ between sessions.
 | S6 | S4, S1 | The typed readings are keyed by exactly what the writer was asked, and with the camera rules `namesForIds` puts a name where the saved words have an id: library-1 m5 was read again with the camera on (1 writer and 1 Jev call). When row 5 moves `namesForIds` to the builder's default, both keys are cached. |
 | S6 | S2, S7 | With the builder's paragraph ids, the pre-draw check's acting path (DREAMCHAT_CHECKS=act) tells the view's line by its paragraph, so a finding around "What the dreamer sees" now counts as the plan's, as "What the camera sees" did; logging, the default, is unchanged. |
 | S4 (the mock-up's drawn shapes) | S9 | What is ridden astride is drawn on the mock-up as wheels and bars, the picture only (`previs.ts solidsOf(…, drawn)`, 1 Oct); with the local runner's `--shapes`, a tractor with its seats, benches face to face and a chair at a table too (`solidsOf(…, drawn, shapes)`, recorded per picture as `shapes`): its floor plan and camera are as before, so a picture drawn from the old block-shaped mock-up is not stale by S9, which keys the mock-up by its floor plan and camera, never its pixels. Such pictures are redrawn by hand (`night-2` reset them); key the drawn shapes too if it starts to matter. An open door changes the plan and the camera, so its pictures go stale as they should. |
+| The node packet (`packet.ts`) | S3, S6, S9 | A projection of the rebuild: the cut sheet (S3), the one builder's paragraphs (S6) and the as-drawn record's switches and keys' version (S9). A field added to the sheet reaches a harness only when the packet and its schema (`PACKET_SCHEMA`, written out as `packet.schema.json`) take it too; one removed fails the build. `evals/packets.ts` over every saved dream is the check, and `PACKET_VERSION` moves with any change to its shape. |
 
 ## Known debt, by the step that clears it
 
@@ -3233,6 +3254,12 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   them these. `test/previs-shapes.test.ts` (18). `bun test`: 1059 pass, 2 skipped, 0 fail with every switch off and on;
   typecheck clean. A creature at its own size and the climbing stair parked for words steps (the landmark above). The
   viewer serves a seeded run's pictures from the run that holds them (149c157). No pictures, no money.
+- 1 Oct (afternoon, nothing drawn): a node packet per picture for a harness to draw from (`packet.ts`,
+  `packet.schema.json` v2, `evals/packets.ts`; 968d515, 426133c and the notes after): every saved dream, 379 of 379 cuts
+  checked against the schema, 0 breaking it; mock-ups rendered beside them, prompts by model, how each image name
+  resolves. local-run's fitting is one function both use (`harnessFitted`). `bun test`: 1069 pass, 2 skipped, 0 fail
+  with every switch off and on; typecheck clean. Nothing on the drawing path reads it: no prompt or picture moved. No
+  pictures, no money.
 
 ## Owner's direction (29 Sep): reviews and merges move to the cloud session
 

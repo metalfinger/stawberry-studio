@@ -636,7 +636,7 @@
           },
           "required": ["nano-banana-pro"],
           "additionalProperties": false,
-          "description": "A picture's prompt by image model: nano-banana-pro is Dream Chat's own, whole, by paragraph; qwen-image the same fitted to the local machine's limits (4 images, 4000 characters), its default; qwen-image-written written for that machine from the cut's sheet."
+          "description": "A picture's prompt by image model: nano-banana-pro is Dream Chat's own, whole, by paragraph; qwen-image the same fitted to the local machine's limits (4 images, 4000 characters), its default; qwen-image-written written for that machine from the cut's sheet. On the owner's verdicts (four dreams, 1 Oct) qwen-image was right 17 times to qwen-image-written's 13, which drew people twice: take qwen-image. qwen-image-written is written for the grey mock-up (camera.previs.clay); sent with the colour-keyed one, it is to be written again with that mock-up's key."
         },
         "images": {
           "type": "array",
@@ -1391,7 +1391,7 @@
           },
           "required": ["nano-banana-pro"],
           "additionalProperties": false,
-          "description": "A picture's prompt by image model: nano-banana-pro is Dream Chat's own, whole, by paragraph; qwen-image the same fitted to the local machine's limits (4 images, 4000 characters), its default; qwen-image-written written for that machine from the cut's sheet."
+          "description": "A picture's prompt by image model: nano-banana-pro is Dream Chat's own, whole, by paragraph; qwen-image the same fitted to the local machine's limits (4 images, 4000 characters), its default; qwen-image-written written for that machine from the cut's sheet. On the owner's verdicts (four dreams, 1 Oct) qwen-image was right 17 times to qwen-image-written's 13, which drew people twice: take qwen-image. qwen-image-written is written for the grey mock-up (camera.previs.clay); sent with the colour-keyed one, it is to be written again with that mock-up's key."
         }
       },
       "required": ["identity", "story", "who", "state", "camera", "dependencies", "checks", "history", "prompts"],

@@ -36,7 +36,9 @@ export type VerdictPacket = {
 /**
  * A picture's prompt for one image model, with the images it is sent in order (by name: see `ImagePacket.media`):
  * `nano-banana-pro` is Dream Chat's own, whole, by paragraph; `qwen-image` the same fitted to the local machine's limits
- * (4 images, 4000 characters), its default; `qwen-image-written` written for that machine from the cut's sheet.
+ * (4 images, 4000 characters), its default; `qwen-image-written` written for that machine from the cut's sheet. On the
+ * owner's verdicts `qwen-image` is the one to take (right 17 times to 13: the written one drew people twice), and
+ * `qwen-image-written` is written for the grey mock-up, not the colour-keyed one.
  */
 export type ModelPrompt = {
   text: string;
@@ -502,7 +504,7 @@ const prompts = {
     'qwen-image-written',
   ]),
   description:
-    "A picture's prompt by image model: nano-banana-pro is Dream Chat's own, whole, by paragraph; qwen-image the same fitted to the local machine's limits (4 images, 4000 characters), its default; qwen-image-written written for that machine from the cut's sheet.",
+    "A picture's prompt by image model: nano-banana-pro is Dream Chat's own, whole, by paragraph; qwen-image the same fitted to the local machine's limits (4 images, 4000 characters), its default; qwen-image-written written for that machine from the cut's sheet. On the owner's verdicts (four dreams, 1 Oct) qwen-image was right 17 times to qwen-image-written's 13, which drew people twice: take qwen-image. qwen-image-written is written for the grey mock-up (camera.previs.clay); sent with the colour-keyed one, it is to be written again with that mock-up's key.",
 };
 const previsFile = obj({ file: str, sha256: str });
 const image = obj({
