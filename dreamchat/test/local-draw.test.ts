@@ -253,3 +253,19 @@ describe('the people sheet, only where it is needed', () => {
     expect(f.images.map((x) => x.name)).toEqual(['x1', 'x2', 'x3', 'x4']);
   });
 });
+
+describe('the place as it is now', () => {
+  test('an in-between picture of the place keeps its slot before a thing the moment names', () => {
+    const imgs = [
+      img(1, 'base'),
+      img(2, 'identity'),
+      img(3, 'identity'),
+      img(4, 'prop', 'sketch-boat'),
+      img(5, 'location', 'picture-g3'),
+    ];
+    expect(keptImages(imgs, new Set(['sketch-boat'])).map((x) => x.name)).toEqual(['x1', 'x2', 'x3', 'picture-g3']);
+    // A plain place sketch still gives way to the named thing.
+    const plain = [...imgs.slice(0, 4), img(5, 'location', 'sketch-l1')];
+    expect(keptImages(plain, new Set(['sketch-boat'])).map((x) => x.name)).toEqual(['x1', 'x2', 'x3', 'sketch-boat']);
+  });
+});

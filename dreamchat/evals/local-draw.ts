@@ -76,6 +76,10 @@ export function keptImages(images: Img[], named: Set<string> = new Set()): Img[]
     // After everyone in the picture, whose sketch is never given up for a thing: without the father's, the father
     // came out a second copy of the dreamer (lighthouse-first m4, m5, 1 Oct).
     if (x.role === 'prop' && named.has(x.name)) return ROLE_ORDER.indexOf('identity') + 0.5;
+    // The place as it is now, an in-between picture of it (flooded), before a thing the moment names: no words make the
+    // flood again, and without it the library came out a bare grey room (flooded-library m5-m9, water-rising m4-m7: the
+    // night run, 1 Oct). The place's plain sketch still comes after the named thing, the mock-up carrying its layout.
+    if (x.role === 'location' && x.name.startsWith('picture-')) return ROLE_ORDER.indexOf('identity') + 0.25;
     const i = ROLE_ORDER.indexOf(x.role);
     return i < 0 ? ROLE_ORDER.length : i;
   };
