@@ -3,6 +3,8 @@
 // boats) placed by what the dream's words say it is by, at the size they give; each person and creature at its own
 // height and shape; and the fixtures a place's own words name that its plan lacks (windows along each side, rows of
 // seats). Pure: the plan and the reading in, the plan out. Nothing already on the plan moves.
+import { builds } from './cleanups';
+import { CLOSING, putInto, samePart, statedParts } from './partstate';
 import type { SizesReading } from './sizes';
 import type { CastBody, CastFixture, CastReading, CastThing } from './cast-types';
 import { type Blocking, facing, onFootprint, rightOf, roomOf, type Side, sizeOf, type Spot, unit } from './blocking';
@@ -201,6 +203,9 @@ export function withCastSpots(
               : 'front';
       continue;
     }
+    // A fixture of the plan by its name already (`cast_fixture`): that fixture, never a second one beside it. Its own
+    // sketch stays, where the place's words never named it for the place's sketch to draw.
+    if (builds('cast_fixture') && spots.some((s) => s.fixture && !!s.name && sameFixture(t.name, s.name))) continue;
     const by = spots.find((s) => s.id === (t.near ?? '')) ?? spots.find((s) => s.id === dreamerId);
     const size = sizeFromWords(t.size ?? t.look, t.kind);
     const shape = t.kind === 'vehicle' ? ('vehicle' as const) : undefined;
@@ -238,6 +243,10 @@ export function withCastSpots(
           )
         : undefined;
     const from = by ?? { x: plan.indoors ? rw / 2 : 0, y: plan.indoors ? rd / 2 : 0 };
+    // In something the place has, by the moment's words ("among the knives and forks in her cutlery drawer"): inside
+    // it, at its front, resting in it, at a size it holds (`contained`). The knives and forks stood mid-room, a cube as
+    // tall as a table, while the stamp went in among them (the merged flow's fresh Grandmother, m9, 2 Oct).
+    const container = builds('contained') && t.kind === 'thing' ? containerOf(t.name, words, spots) : undefined;
     // Ridden, under everyone sitting on nothing beside whoever it is by, so the driver is in it too.
     const aboard =
       way === 'same' && t.kind === 'vehicle' && by
@@ -249,7 +258,19 @@ export function withCastSpots(
           y: aboard.reduce((a, q) => a + q.y, 0) / aboard.length,
         }
       : { x: from.x, y: from.y };
-    if (surface) {
+    if (container) {
+      // A drawer the moment opens, or puts something into, is pulled out toward the middle of the place: what it holds
+      // is in it there. Anything else holds it inside, out of sight while it is shut.
+      const out = openingOut(container, { ...plan, spots });
+      const [, cd] = sizeOf(container);
+      const named = (x: string) => samePart(x, container.name ?? '');
+      const opened = putInto(words).some(named) || statedParts(words).some((x) => x.state === 'open' && named(x.part));
+      const step =
+        /\bdrawers?\b/i.test(container.name ?? '') && opened
+          ? cd / 2 + drawerPull(container, { ...plan, spots }) / 2
+          : 0;
+      at = { x: container.x + out.x * step, y: container.y + out.y * step };
+    } else if (surface) {
       const f = facing(surface, plan);
       const r = rightOf(f);
       const [sw, sd] = sizeOf(surface);
@@ -267,13 +288,25 @@ export function withCastSpots(
         at = { x: at.x + d.x * 0.6, y: at.y + d.y * 0.6 };
     }
     if (plan.indoors) at = { x: Math.min(rw - 0.3, Math.max(0.3, at.x)), y: Math.min(rd - 0.3, Math.max(0.3, at.y)) };
+    const held = container ? heldIn(t.name, size, container) : size;
     spots.push({
       id,
       kind: 'thing',
       name: t.name,
       x: Math.round(at.x * 100) / 100,
       y: Math.round(at.y * 100) / 100,
-      size,
+      size: held,
+      // In it: a drawer's contents just under its top, anything else's sunk inside it.
+      ...(container
+        ? {
+            above:
+              Math.round(
+                (/\bdrawers?\b/i.test(container.name ?? '')
+                  ? sizeOf(container)[2] - 0.16
+                  : Math.max(0, sizeOf(container)[2] - held[2] - 0.02)) * 100,
+              ) / 100,
+          }
+        : {}),
       ...(shape ? { shape } : {}),
       ...(by?.faces ? { faces: by.faces } : {}),
       ...(t.many
@@ -285,6 +318,90 @@ export function withCastSpots(
   }
   return { ...plan, spots, ...(Object.keys(outside).length ? { outside } : {}) };
 }
+
+/**
+ * What the place has that a moment's words put a thing in, among or inside, in the same clause: a drawer, a box, a
+ * cupboard on the plan, named right after it ("the knives and forks in her cutlery drawer", "a key inside the box").
+ * Only what holds things and closes: never a field, a pond or a doorway, never someone.
+ */
+function containerOf(name: string, words: string, spots: Spot[]): Spot | undefined {
+  const head = headOf(name);
+  if (!head) return undefined;
+  const w = words.toLowerCase();
+  return spots.find((s) => {
+    const of = headOf(s.name ?? '');
+    if (!of || of === head || s.kind === 'person' || s.many || s.heldBy) return false;
+    if (!new RegExp(`^${CLOSING}$`).test(of)) return false;
+    return new RegExp(
+      `\\b${head}\\b[^.;,]{0,40}?\\b(?:in|inside|into|within|among|amongst)\\s+(?:the |a |an |her |his |their |its |my )?(?:[a-z-]+ ){0,2}${of}\\b`,
+    ).test(w);
+  });
+}
+
+/** Cutlery and the like, by what it is: a drawer holds it at its own size. */
+const CUTLERY = /\b(?:knives|knife|forks?|spoons?|cutlery|utensils?)\b/;
+
+/**
+ * A thing's size inside what holds it: its own, a hand's size or so by its name where it has one, never bigger than
+ * the inside of what holds it, and lying flat in it.
+ */
+function heldIn(name: string, size: [number, number, number], container: Spot): [number, number, number] {
+  const own = smallSizeOf(name) ?? (CUTLERY.test(name.toLowerCase()) ? ([0.25, 0.15, 0.04] as const) : size);
+  const [cw, cd, ch] = sizeOf(container);
+  const cm = (x: number) => Math.round(x * 100) / 100;
+  return [cm(Math.min(own[0], cw * 0.8)), cm(Math.min(own[1], cd * 0.8)), cm(Math.min(own[2], ch * 0.3, 0.2))];
+}
+
+/**
+ * Whether a thing's name is a fixture's: every word of it in the fixture's, its last word the same ("the ceiling light"
+ * of "the dead ceiling light"); a one-word name only by that word alone.
+ */
+function sameFixture(name: string, fixture: string): boolean {
+  const words = (x: string) =>
+    x
+      .toLowerCase()
+      .replace(/^(?:the|a|an|some)\s+/, '')
+      .split(/\s+/)
+      .filter(Boolean);
+  const [own, its] = [words(name), words(fixture)];
+  return own.length === 1
+    ? its.length === 1 && its[0] === own[0]
+    : its.at(-1) === own.at(-1) && own.every((w) => its.includes(w));
+}
+
+/** Which way a fixture opens: its front, toward the middle of the place, never into the wall it stands at. */
+export function openingOut(s: Spot, plan: Blocking): V2 {
+  const f = facing(s, plan);
+  const [rw, rd] = roomOf(plan);
+  const out = plan.indoors && (rw / 2 - s.x) * f.x + (rd / 2 - s.y) * f.y < 0 ? -1 : 1;
+  return { x: f.x * out, y: f.y * out };
+}
+
+/**
+ * How much room there is in front of a fixture, the way it opens, before anyone or anything else on the plan that
+ * would stop it: what an open door may take. A small thing never stops a drawer, on the floor below it or in it.
+ */
+export function roomBefore(s: Spot, plan: Blocking, drawer = false): number {
+  const out = openingOut(s, plan);
+  const r = rightOf(out);
+  const [w, d] = sizeOf(s);
+  let free = Infinity;
+  for (const o of plan.spots) {
+    if (o.id === s.id || o.heldBy) continue;
+    const person = o.kind === 'person' || (!o.kind && !!o.pose);
+    if (drawer && !person && Math.max(...sizeOf(o)) <= 0.4) continue;
+    const v = { x: o.x - s.x, y: o.y - s.y };
+    const along = v.x * out.x + v.y * out.y - d / 2;
+    const across = Math.abs(v.x * r.x + v.y * r.y);
+    const half = (person ? 0.25 : sizeOf(o)[0] / 2) + w / 2;
+    if (along > 0 && across < half) free = Math.min(free, along - (person ? 0.2 : sizeOf(o)[1] / 2));
+  }
+  return Math.max(0, free);
+}
+
+/** How far a drawer is pulled out: up to 0.4 m, as far as there is room in front of it. */
+export const drawerPull = (s: Spot, plan: Blocking) =>
+  Math.max(0.1, Math.min(0.4, sizeOf(s)[1] * 0.7, roomBefore(s, plan, true) - 0.05));
 
 /** Which wall a fixture stands by: the nearest. */
 function sideOfWall(s: Spot, plan: Blocking): Side {

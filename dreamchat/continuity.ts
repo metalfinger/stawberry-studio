@@ -10,6 +10,7 @@
 import type { CastReading } from './cast-types';
 import { type DevicesReading, withDevices } from './devices';
 import type { SizesReading } from './sizes';
+import { OPENABLE, samePart } from './partstate';
 import { builds } from './cleanups';
 import { smallSizeOf, withCastFixtures, withCastSpots, withSizes } from './castplace';
 import {
@@ -973,7 +974,6 @@ export function thingsNamed(
 
 /** What opens and shuts to let someone through. */
 const DOORLIKE = /\b(door|gate)s?\b/i;
-
 /**
  * A door or gate the record has open at the moment, open on the plan: the mock-up draws it as its frame with the door
  * swung back, the view going through it (previs.ts). Where the one open is a door on the plan, exactly that one; where
@@ -982,9 +982,15 @@ const DOORLIKE = /\b(door|gate)s?\b/i;
  * one grey wall and its label (snow-train m6, judged blind).
  */
 export function withOpen(plan: Blocking, facts: NowOf[]): Blocking {
-  const OPEN = /^\s*(?:(?:wide|half|partly|slightly)\s+)?open\b|^\s*ajar\b/i;
+  // With `point_state`, a drawer, a lid or a cupboard open as a door is, found by its name (partstate.ts samePart): the
+  // cutlery drawer open as the stamp goes in was drawn a closed block.
+  const stated = builds('point_state');
+  const OPEN = stated
+    ? /^\s*(?:(?:wide|half|partly|slightly|thrown|flung|swung|pushed|pulled|standing|left|now|all)\s+)*open\b|^\s*ajar\b|\bpulled (?:fully |right )?out\b/i
+    : /^\s*(?:(?:wide|half|partly|slightly)\s+)?open\b|^\s*ajar\b/i;
+  const opens = stated ? OPENABLE : DOORLIKE;
   const doorlike = (s: Spot) =>
-    !(s.kind === 'person' || (!s.kind && (!!s.pose || !!s.many))) && !s.heldBy ? s.name?.match(DOORLIKE) : null;
+    !(s.kind === 'person' || (!s.kind && (!!s.pose || !!s.many))) && !s.heldBy ? s.name?.match(opens) : null;
   const ids = new Set<string>();
   for (const f of facts) {
     const open = f.facts.filter((x): x is Extract<typeof x, { kind: 'part' }> => x.kind === 'part' && OPEN.test(x.now));
@@ -996,11 +1002,23 @@ export function withOpen(plan: Blocking, facts: NowOf[]): Blocking {
     }
     if (f.kind !== 'place') continue;
     for (const x of open)
-      for (const w of [x.part, x.what]) {
-        const head = w.match(DOORLIKE)?.[1].toLowerCase();
-        const named = head ? plan.spots.filter((s) => doorlike(s)?.[1].toLowerCase() === head) : [];
-        if (named.length === 1) ids.add(named[0].id);
-      }
+      if (stated) {
+        const named = plan.spots.filter((s) => doorlike(s) && [x.part, x.what].some((w) => samePart(w, s.name ?? '')));
+        // Of several, the one whose name has every word of it: "the sliding doors to the church auditorium" of
+        // "sliding doors", among the corridor's doors.
+        const words = (w: string) => w.toLowerCase().match(/[\p{L}]+/gu) ?? [];
+        const said = [x.part, x.what].sort((a, b) => words(b).length - words(a).length)[0];
+        const whole = named.filter((s) =>
+          words(said).every((k) => words(s.name ?? '').some((n) => n.replace(/s$/, '') === k.replace(/s$/, ''))),
+        );
+        const one = named.length === 1 ? named : whole.length === 1 ? whole : [];
+        if (one.length) ids.add(one[0].id);
+      } else
+        for (const w of [x.part, x.what]) {
+          const head = w.match(opens)?.[1].toLowerCase();
+          const named = head ? plan.spots.filter((s) => doorlike(s)?.[1].toLowerCase() === head) : [];
+          if (named.length === 1) ids.add(named[0].id);
+        }
   }
   if (!ids.size) return plan;
   return { ...plan, spots: plan.spots.map((s) => (ids.has(s.id) ? { ...s, open: true } : s)) };

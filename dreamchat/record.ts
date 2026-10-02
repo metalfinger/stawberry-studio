@@ -14,6 +14,7 @@ import type { CastReading } from './cast-types';
 import type { DevicesReading } from './devices';
 import type { SizesReading } from './sizes';
 import { builds, oneBuilder, retired } from './cleanups';
+import { opposed, samePart, stateOfNow, statedParts } from './partstate';
 import { pictureName, placePlan, type RecordPlan, rawPlanBy } from './continuity';
 import {
   BECOMING,
@@ -1149,6 +1150,103 @@ function passing(ctx: Ctx): Violation[] {
         at: m.id,
         key: c.key,
         detail: `${m.id}'s words imply ${whole ? e.called : `${poss(e.called)} ${x.what}`} is now ${quote(now)}: a change there, implied`,
+        fix: 'add',
+      });
+    }
+  return out;
+}
+
+/**
+ * A part's state a moment's own words give ("the cutlery drawer closed beside her") is its state there (`point_state`):
+ * where the state in force by then, not ended, says the other, a change there, said, that what was carried or
+ * implied never overrides; one implied at that very moment against its words is its words instead, and one said
+ * there is left as it is. Where nothing is in force, a part said open (or the other way from how its look has it), of
+ * the place or of a thing there, is a change there too: "the open window over the sink". Run once the changes' ends
+ * are known.
+ */
+function statedStates(ctx: Ctx): Violation[] {
+  const out: Violation[] = [];
+  const { elements, moments, changes } = ctx.record;
+  for (const m of moments)
+    for (const s of statedParts(`${m.words.action}. ${m.words.visual_point}`)) {
+      const there = new Set([m.place, ...m.shows, ...m.present]);
+      // Of the part said; or, said of a thing itself ("opens the suitcase"), any state of it ("its lid: open").
+      const ofPart = (c: Change) =>
+        !c.copy &&
+        c.kind !== 'presence' &&
+        c.kind !== 'holding' &&
+        there.has(c.who) &&
+        ['place', 'thing'].includes(elements[c.who]?.kind ?? '') &&
+        (samePart(s.part, c.part ?? c.what) ||
+          samePart(s.part, c.what) ||
+          (elements[c.who]?.kind === 'thing' && samePart(s.part, elements[c.who].name) && stateOfNow(c.now) !== null));
+      const inForce = Object.values(changes)
+        .filter((c) => ofPart(c) && at(ctx, c.at) <= at(ctx, m.id) && !(c.until && at(ctx, c.until) <= at(ctx, m.id)))
+        .sort(byOrder(ctx))
+        .at(-1);
+      // One said here by other words than these is left as it is; one made from these words, against what they say
+      // last ("she opens the door … the door closed again behind them"), is what they say last.
+      if (inForce && inForce.at === m.id && inForce.basis !== 'implied' && inForce.from !== `b:${m.id}.action`)
+        continue;
+      if (inForce && !opposed(s.state, stateOfNow(inForce.now))) continue;
+      if (inForce?.at === m.id) {
+        // Implied or made here against what its words say last: what they say.
+        inForce.now = s.state;
+        delete inForce.basis;
+        inForce.from = `b:${m.id}.action`;
+      } else if (inForce)
+        addChange(ctx, {
+          who: inForce.who,
+          at: m.id,
+          kind: inForce.kind,
+          part: inForce.part,
+          what: inForce.what,
+          now: s.state,
+          told: m.told,
+          from: `b:${m.id}.action`,
+        });
+      else {
+        // Nothing in force: a part of the place whose look names it ("the open window over the sink"); never a part
+        // remembered or imagined ("remembering the open window of her childhood bedroom"), nor at the place's first
+        // moment, whose look says how it first is. A thing opened is the readings' and the opening words' to say: said
+        // of it whole, a change here took the place of how it is told and left it shut where it is carried.
+        const sentence = `${m.words.action}. ${m.words.visual_point}`
+          .split(/(?<=[.;!?])\s+/)
+          .find((x) => statedParts(x).some((y) => y.part === s.part));
+        if (/\b(?:remember\w*|recall\w*|dream\w* of|think\w* of|thought of|imagin\w*|memor\w*)\b/i.test(sentence ?? ''))
+          continue;
+        if (moments.find((x) => x.place === m.place)?.id === m.id) continue;
+        const head = new RegExp(`\\b${esc(s.head)}(?:s|es)?\\b`, 'i');
+        const lookOf = (e: RecElement) => [...factsIn(e, ['base'])].map(({ fact }) => fact.text).join('; ');
+        const owner =
+          elements[m.place]?.kind === 'place' &&
+          head.test(lookOf(elements[m.place])) &&
+          ![...there].some((id) => elements[id]?.kind === 'thing' && samePart(s.part, elements[id].name))
+            ? elements[m.place]
+            : undefined;
+        if (!owner) continue;
+        const looks = statedParts(lookOf(owner)).find((x) => samePart(x.part, s.part))?.state ?? null;
+        if (looks === s.state || (s.state !== 'open' && !opposed(s.state, looks))) continue;
+        // Under the name a change of it already has, so it is the same part ("the high window" of "the window").
+        const known = Object.values(changes).find(
+          (c) => c.who === owner.id && !c.copy && (samePart(s.part, c.part ?? c.what) || samePart(s.part, c.what)),
+        );
+        addChange(ctx, {
+          who: owner.id,
+          at: m.id,
+          kind: owner.kind === 'place' ? 'place' : 'part',
+          part: known ? known.part : partName(s.part),
+          what: known ? known.what : s.part,
+          now: s.state,
+          told: m.told,
+          from: `b:${m.id}.action`,
+        });
+      }
+      out.push({
+        rule: 'carried',
+        who: inForce?.who ?? m.place,
+        at: m.id,
+        detail: `${m.id}'s words have the ${s.part} ${s.state}${inForce ? `, the state in force by then ${quote(inForce.now)}` : ''}: a change there`,
         fix: 'add',
       });
     }
@@ -2543,7 +2641,10 @@ function heldBoth(ctx: Ctx): Violation[] {
 function carriedWhileHolds(ctx: Ctx): Violation[] {
   const held = [...staysWithHolder(ctx), ...heldByActs(ctx), ...heldBoth(ctx)];
   ends(ctx);
-  return [...carriedDiff(ctx), ...held];
+  // A part's state its moment's words give, against what is in force by then (`point_state`): its ends known first.
+  const stated = builds('point_state') ? statedStates(ctx) : [];
+  if (stated.length) ends(ctx);
+  return [...stated, ...carriedDiff(ctx), ...held];
 }
 
 /**
@@ -2993,6 +3094,12 @@ export function factsAt(record: StoryRecord, momentId: string): NowOf[] {
       const noun = e.kind === 'place' ? c.what.trim().toLowerCase() : '';
       const head = sing((noun || headOf(e.name).toLowerCase()).split(/\s+/).at(-1) ?? '');
       if (!named.has(head)) continue;
+      // Once, however many later moments open it (`point_state`: a state said and one implied there).
+      if (
+        builds('point_state') &&
+        facts.some((f) => f.kind === 'shut' && f.why === 'later' && (f.part ?? '') === (noun || ''))
+      )
+        continue;
       facts.push({ kind: 'shut', why: 'later', ...(noun ? { part: noun } : {}) });
     }
     if (seen.heldBy)

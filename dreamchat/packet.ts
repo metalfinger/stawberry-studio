@@ -14,6 +14,7 @@ import { shotPlan } from './continuity';
 import type { Criterion, PlanRef, RefRole, Relation, UnsentWhy } from './continuity';
 import type { CutTags } from './cutsheet';
 import { type Rebuilt, standIn } from './plan';
+import { opposed, samePart, stateOfNow, statedParts } from './partstate';
 import { facingOf, onOf, type Facing } from './previs';
 import { type Breakdown, moments, type StyleOption } from './producer';
 import type { NowOf } from './record';
@@ -1099,6 +1100,43 @@ const typeOf = (v: unknown): string =>
   v === null ? 'null' : Array.isArray(v) ? 'array' : typeof v === 'number' ? 'number' : typeof v;
 const fits = (v: unknown, t: string): boolean =>
   t === 'integer' ? Number.isInteger(v) : t === 'number' ? typeof v === 'number' : typeOf(v) === t;
+
+/**
+ * Where a cut's packet says something against its own point: a part its point or action names in one state while its
+ * state, one of its checks or a sentence of its prompt has it in the other ("the cutlery drawer closed beside her",
+ * against "cutlery drawer: open", "is her kitchen's cutlery drawer open?" and "the cutlery drawer is open"). Empty where
+ * nothing does.
+ */
+export function lintPacket(pk: Pick<DreamPacket, 'cuts'>): string[] {
+  const out: string[] = [];
+  for (const c of pk.cuts) {
+    const cut = c.identity.cut;
+    // The action first, then the point, as the story record reads them: what the point says last stands.
+    for (const s of statedParts(`${c.story.action}. ${c.story.point ?? ''}`)) {
+      for (const n of c.state.now ?? [])
+        for (const f of n.facts) {
+          // A thing shut until a later moment opens it, or shut again, is closed.
+          const [name, now] =
+            f.kind === 'part' ? [`${f.part} ${f.what}`, f.now] : f.kind === 'shut' ? [f.part ?? n.name, 'closed'] : [];
+          if (!name || !now) continue;
+          const which = f.kind === 'part' ? [f.part, f.what] : [name];
+          if (which.some((x) => samePart(s.part, x)) && opposed(s.state, stateOfNow(now)))
+            out.push(
+              `${cut}: its point has the ${s.part} ${s.state}; its state has ${n.called}'s ${f.kind === 'part' ? f.what : name} ${now}`,
+            );
+        }
+      for (const k of c.checks.criteria)
+        for (const x of statedParts(k.text))
+          if (samePart(x.part, s.part) && opposed(s.state, x.state))
+            out.push(`${cut}: its point has the ${s.part} ${s.state}; a check asks "${k.text}"`);
+      for (const sentence of c.prompts['nano-banana-pro'].text.split(/(?<=[.!?])\s+/))
+        for (const x of statedParts(sentence))
+          if (samePart(x.part, s.part) && opposed(s.state, x.state))
+            out.push(`${cut}: its point has the ${s.part} ${s.state}; its prompt says "${sentence.trim()}"`);
+    }
+  }
+  return out;
+}
 
 /**
  * Where a value breaks a schema, each break as `<where>: <what>` (`$.cuts[0].story: action is missing`); none where it

@@ -7,8 +7,9 @@
 // better than a description of one. So the layout is rendered here, from the floor plan that
 // decides every camera, and what the words say the camera sees is read off the same render: the
 // picture and the words cannot disagree.
-import { isCastPiece } from './castplace';
+import { drawerPull, isCastPiece, roomBefore } from './castplace';
 import { builds } from './cleanups';
+import { DOORED, LIDDED } from './partstate';
 import { deflateSync, inflateSync } from 'node:zlib';
 import {
   type Blocking,
@@ -442,14 +443,38 @@ const STEP_BACK = 1.3;
  * square to it on its hinge, so the view goes through the doorway. As a closed slab, the dreamer opening the red door
  * on warm light saw one grey wall and its label (snow-train m6, judged blind).
  */
-function openParts(blocks: Block[]): Block[] {
+function openParts(blocks: Block[], name = '', middle?: V2, room = { pull: 0.4, free: Infinity }): Block[] {
   const b = blocks[0];
-  if (!b || blocks.length > 1 || b.w < 0.5 || b.h < 1) return blocks;
+  if (!b || blocks.length > 1) return blocks;
   const r = rightOf(b.f);
   const at = (across: number, along: number) => ({
     x: b.x + r.x * across + b.f.x * along,
     y: b.y + r.y * across + b.f.y * along,
   });
+  // With `point_state`, the side it opens on is the one toward the middle of the place, never into the wall it stands
+  // at: a drawer pulled out of it near its top, no further than the room in front of it (`free`); a cupboard's,
+  // wardrobe's or fridge's door swung out from it, its body kept; a lid stood up at its far side.
+  if (builds('point_state')) {
+    const out = middle && (middle.x - b.x) * b.f.x + (middle.y - b.y) * b.f.y < 0 ? -1 : 1;
+    if (/\bdrawers?\b/i.test(name)) {
+      const pull = room.pull;
+      const deep = Math.min(0.18, b.h * 0.25);
+      return [
+        b,
+        { ...b, ...at(0, out * (b.d / 2 + pull / 2)), z: b.z + b.h - deep - 0.04, w: b.w * 0.8, d: pull, h: deep },
+      ];
+    }
+    if (DOORED.test(name)) {
+      const leaf = Math.max(0.2, Math.min(b.w, room.free - 0.05));
+      return [
+        b,
+        { ...b, ...at(-b.w / 2 + 0.03, out * (b.d / 2 + leaf / 2)), z: b.z + 0.02, w: 0.04, d: leaf, h: b.h * 0.95 },
+      ];
+    }
+    if (LIDDED.test(name))
+      return [b, { ...b, ...at(0, -out * (b.d / 2 - 0.02)), z: b.z + b.h, d: 0.04, h: Math.max(0.05, b.d * 0.9) }];
+  }
+  if (b.w < 0.5 || b.h < 1) return blocks;
   const post = Math.min(0.12, b.w * 0.1);
   const head = Math.min(0.15, b.h * 0.08);
   const leaf = b.w - 2 * post;
@@ -712,7 +737,17 @@ function solidsOf(
       const chair = drawn && shapes ? chairUnder(s, plan, name) : undefined;
       if (chair) add(`${s.id} seats`, 0.55, chair);
     } else if (drawn && cameraMode() === 'on' && s.open && !s.heldBy)
-      add(s.id, 0.62, openParts(thingBlocks(s, plan, name(s.id))), name(s.id));
+      add(
+        s.id,
+        0.62,
+        openParts(
+          thingBlocks(s, plan, name(s.id)),
+          name(s.id),
+          plan.indoors ? { x: roomOf(plan)[0] / 2, y: roomOf(plan)[1] / 2 } : undefined,
+          { pull: drawerPull(s, plan), free: roomBefore(s, plan) },
+        ),
+        name(s.id),
+      );
     else if (drawn && cameraMode() === 'on' && !s.heldBy && shapeOf(s, plan) === 'vehicle' && ASTRIDE.test(name(s.id)))
       add(s.id, 0.62, astride(s, plan, f), name(s.id));
     else if (drawn && shapes && !s.heldBy && shapeOf(s, plan) === 'vehicle' && TRACTOR.test(name(s.id))) {

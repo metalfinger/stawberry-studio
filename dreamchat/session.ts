@@ -3920,9 +3920,10 @@ export class SessionStore {
     if (item.kind === 'location') {
       item.leaveOut = (s.build?.items ?? []).filter((i) => i.kind === 'prop').map((i) => pictureName(i.name));
       const actions = (s.draft?.breakdown?.scenes ?? []).flatMap((sc) => sc.moments).filter((m) => m.place === item.id);
+      // With `point_state`, what they show too: "the open drawer", "the cupboard door stands open".
       const shut = openedLater(
         item,
-        actions.map((m) => m.action),
+        actions.map((m) => (builds('point_state') ? `${m.action}. ${m.visual_point ?? ''}` : m.action)),
       );
       item.shut = shut.length ? shut : undefined;
     }

@@ -279,6 +279,16 @@ export const BUILDER_STEPS: readonly string[] = [
   //    three and her pointing at it, a stranger read every picture. Lettering only the dream's own days and times, put on
   //    in code after; a thought or speech bubble only where no thing shows a said or thought beat better.
   'visible_device',
+  // Not a ledger row: from the merged flow's fresh Grandmother (2 Oct). A part's state a moment's own words give is
+  //    that moment's state: "the cutlery drawer closed beside her" was carried open from the moment before, where the
+  //    stamp went into it, in her state, her check and her prompt, and every take was judged on the drawer.
+  'point_state',
+  // Not a ledger row: from the same Grandmother. A thing a moment's words put in, among or inside something the place
+  //    has is inside it, at a size it holds: "the knives and forks in her cutlery drawer" were a table-high cube mid-room.
+  'contained',
+  // Not a ledger row: from the merged flow's Neighbours (2 Oct). A thing the cast reading names as a fixture its place's
+  //    floor plan has is that fixture: "the dead ceiling light" was a second one, a cube on the floor under it.
+  'cast_fixture',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;

@@ -4,6 +4,7 @@
 // the engine's worker draws it.
 import { frameShape } from './blocking';
 import { builds } from './cleanups';
+import { putInto, samePart, statedParts } from './partstate';
 import type { AsDrawn, Recast } from './asdrawn';
 import type { CutPlan, GhostPlan } from './continuity';
 import { pictureName } from './continuity';
@@ -798,14 +799,35 @@ export function isMany(item: Pick<Item, 'kind' | 'name'>): boolean {
 export function openedLater(place: Item, actions: string[]): string[] {
   const own = `${value(place, 'landmarks')} ${value(place, 'geography')} ${place.name}`.toLowerCase();
   const out = new Set<string>();
-  for (const a of actions)
+  const add = (phrase: string) => {
+    const head = phrase.split(/\s+/).at(-1)!.replace(/s$/, '');
+    if (new RegExp(`\\b${head}s?\\b`).test(own)) out.add(`the ${phrase}`);
+  };
+  for (const a of actions) {
     for (const m of a.matchAll(
       /\bopen(?:s|ed|ing)?\s+(?:the\s+|a\s+|its\s+|their\s+)?((?:[a-z]+\s+){0,2}?(?:door|doors|gate|window|lid|curtains?|shutters?|hatch|trapdoor|cupboard|wardrobe|drawer|chest))\b/gi,
-    )) {
-      const phrase = m[1].toLowerCase();
-      const head = phrase.split(/\s+/).at(-1)!.replace(/s$/, '');
-      if (new RegExp(`\\b${head}s?\\b`).test(own)) out.add(`the ${phrase}`);
+    ))
+      add(m[1].toLowerCase());
+    if (!builds('point_state')) continue;
+    // With `point_state`: what a moment's words have open ("the open drawer", "the cupboard door stands open"), and
+    // what someone puts something into ("puts the stamp into her cutlery drawer"): opened then, shut before. Never
+    // what the place's own look has open, or what is open already as the place is first seen.
+    const first = actions[0] ?? '';
+    const openFrom = (part: string) =>
+      [...statedParts(`${value(place, 'landmarks')}; ${value(place, 'geography')}`)].some(
+        (x) => x.state === 'open' && samePart(x.part, part),
+      ) ||
+      (statedParts(first).some((x) => x.state === 'open' && samePart(x.part, part)) &&
+        !new RegExp(
+          `\\bopen(?:s|ed|ing)?\\s+(?:the\\s+|a\\s+|its\\s+|their\\s+|her\\s+|his\\s+)?(?:[a-z]+\\s+){0,2}${part.split(/\s+/).at(-1)}`,
+          'i',
+        ).test(first));
+    for (const x of statedParts(a)) if (x.state === 'open' && !openFrom(x.part)) add(x.part);
+    for (const x of putInto(a)) {
+      const part = x.replace(/^(?:the|a|an|her|his|their|my|its|your)\s+/, '');
+      if (!openFrom(part)) add(part);
     }
+  }
   return [...out];
 }
 

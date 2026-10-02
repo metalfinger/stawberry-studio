@@ -53,7 +53,7 @@ import { callJev } from './jev';
 import { recordForPlan, recordInputsOf } from './record';
 import type { Breakdown } from './producer';
 import { type Session, treeInputWith } from './session';
-import { type Item, sheetPrompt, subjectWords } from './sheets';
+import { type Item, openedLater, sheetPrompt, subjectWords } from './sheets';
 
 /** One picture as it would be sent: its prompt and its images, in order. */
 export type RebuiltPicture = {
@@ -97,6 +97,19 @@ export type Rebuilt = {
   dream?: SheetDream;
 };
 
+/**
+ * What of a place its moments open, as its sketch is told it shut (`point_state`): from every moment there, what they
+ * do and what they show, besides what its sketch was already told. A dream imported or saved before keeps its own.
+ */
+function shutIn(place: Item, b: Breakdown): Pick<Item, 'shut'> {
+  const words = b.scenes
+    .flatMap((sc) => sc.moments)
+    .filter((m) => m.place === place.id)
+    .map((m) => `${m.action}. ${m.visual_point ?? ''}`);
+  const shut = [...new Set([...(place.shut ?? []), ...openedLater(place, words)])];
+  return shut.length ? { shut } : {};
+}
+
 /** The stand-in image of a sketch, of an earlier picture, and of a moment's mock-up. */
 export const standIn = {
   sketch: (id: string) => `sketch-${id}`,
@@ -130,6 +143,7 @@ export function rebuild(
     status: 'ready',
     mediaId: i.mediaId ?? (i.extras ? undefined : standIn.sketch(i.id)),
     review: i.review ?? 'approved',
+    ...(i.kind === 'location' && builds('point_state') ? shutIn(i, b) : {}),
   }));
   completeViews(b);
   // With DREAMCHAT_RECORD=on, planned from the story record as drawing reads it (session.ts planRecord):

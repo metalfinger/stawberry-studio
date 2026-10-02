@@ -39,4 +39,13 @@ export type CastFixture = {
   words: string;
 };
 
-export type CastReading = { things: CastThing[]; bodies: CastBody[]; fixtures: CastFixture[] };
+export type CastReading = {
+  things: CastThing[];
+  bodies: CastBody[];
+  fixtures: CastFixture[];
+  /**
+   * With `cast_fixture`: the things the reading names that are a fixture of their place already, by the id each would
+   * have had and the moments where it is (all of them where it is never cast): a dream saved with them cast loses them.
+   */
+  asFixture?: { id: string; at: string[] }[];
+};

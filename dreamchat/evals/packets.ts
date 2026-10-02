@@ -15,6 +15,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { join } from 'node:path';
 import { drawnEnv } from '../asdrawn';
 import { frameShape } from '../blocking';
+import { builds } from '../cleanups';
 import { shotPlan } from '../continuity';
 import { jevWithModel } from '../jev';
 import {
@@ -22,6 +23,7 @@ import {
   type DreamPacket,
   dreamPacket,
   type IdPacket,
+  lintPacket,
   PACKET_SCHEMA,
   type PrevisPacket,
   type Prompts,
@@ -287,7 +289,8 @@ export function packetOf(id: string, session: Session): Written | null {
     previs: previsOf(r, session),
     prompts: promptsOf(r),
   });
-  const errors = validate(PACKET_SCHEMA, pk);
+  // With `point_state`, a cut whose packet says something against its own point is an error as the schema's are.
+  const errors = [...validate(PACKET_SCHEMA, pk), ...(builds('point_state') ? lintPacket(pk) : [])];
   const cuts = r.pictures.filter((p) => p.kind === 'cut').length;
   const file = join(out, `${id}.json`);
   writeFileSync(file, `${JSON.stringify(pk, null, 1)}\n`);

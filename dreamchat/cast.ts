@@ -147,6 +147,9 @@ export function parseCast(
     ),
   }));
   const things: CastThing[] = [];
+  // Those that are a fixture of the plan already: numbered as before, so every other thing keeps its id, then left out.
+  const fixtures_ = new Set<number>();
+  const fixtureAts = new Map<number, string[]>();
   for (const x of Array.isArray(raw.things) ? raw.things : []) {
     const t = x as Partial<CastThing>;
     const name = typeof t.name === 'string' ? t.name.trim() : '';
@@ -182,11 +185,24 @@ export function parseCast(
     const held = claimed.filter((m) => hasWord(wordsOf(m.id), head(name)));
     for (const m of claimed) if (!held.includes(m)) dropped.push(`thing "${name}" at ${m.id}: not in its words`);
     if (!held.length) continue;
+    // A fixture its place's floor plan has already, by its name (`cast_fixture`): that fixture, never a second one. "The
+    // dead ceiling light" was cast a cube on the floor under the plan's own (the merged flow's Neighbours m1, 2 Oct).
+    // In each moment whose own plan has it as a fixture already, that fixture; where every one does, never cast.
+    const asFixture = builds('cast_fixture') ? held.filter((m) => fixtureAt(b, name, m.id)) : [];
+    for (const m of asFixture)
+      dropped.push(`thing "${name}" at ${m.id}: the plan's fixture "${fixtureAt(b, name, m.id)}"`);
+    if (asFixture.length && asFixture.length === held.length) fixtures_.add(things.length);
+    if (asFixture.length)
+      fixtureAts.set(
+        things.length,
+        asFixture.map((m) => m.id),
+      );
+    const kept = held.filter((m) => !asFixture.includes(m));
     things.push({
       name,
       look: typeof t.look === 'string' ? t.look.trim() : '',
       kind: t.kind as CastThing['kind'],
-      moments: held,
+      moments: kept.length ? kept : held,
       near: typeof t.near === 'string' && ids.has(t.near) ? t.near : null,
       side: typeof t.side === 'string' && t.side.trim() ? t.side.trim() : null,
       size: typeof t.size === 'string' && t.size.trim() && text.includes(low(t.size)) ? t.size.trim() : null,
@@ -261,7 +277,45 @@ export function parseCast(
     .forEach((t, i) => {
       t.id = castId(i);
     });
-  return { reading: { things, bodies, fixtures }, dropped };
+  const asFixture = [...fixtureAts].map(([i, at]) => ({ id: things[i].id ?? castId(i), at }));
+  return {
+    reading: {
+      things: things.filter((_, i) => !fixtures_.has(i)),
+      bodies,
+      fixtures,
+      ...(asFixture.length ? { asFixture } : {}),
+    },
+    dropped,
+  };
+}
+
+/**
+ * The fixture of a moment's own floor plan named as a thing is: every word of the thing's name in the fixture's, its
+ * last word the same ("the ceiling light" of "the dead ceiling light"), a one-word name only by that word alone.
+ * None where the moment's place has no plan of its own.
+ */
+function fixtureAt(b: Breakdown, name: string, momentId: string): string | undefined {
+  const words = (x: string) => bare(x).split(/\s+/).filter(Boolean);
+  const own = words(name);
+  const sc = b.scenes.find((x) => x.moments.some((m) => m.id === momentId));
+  const m = sc?.moments.find((x) => x.id === momentId);
+  if (!sc || !m) return undefined;
+  const plan = sc.blocking?.places?.[m.place] ?? (sc.place === m.place ? sc.blocking : undefined);
+  // Only what the place's own words name: its sketch draws it, so the thing's own sketch is not needed.
+  const place = b.places.find((x) => x.id === m.place);
+  const said = low(
+    Object.values(place?.fields ?? {})
+      .map((d) => (d as { value?: string | null })?.value ?? '')
+      .join(' '),
+  );
+  if (!own.every((w) => new RegExp(`\\b${w}`).test(said))) return undefined;
+  return plan?.spots.find((s) => {
+    if (!s.fixture || !s.name) return false;
+    const its = words(s.name);
+    return own.length === 1
+      ? its.length === 1 && its[0] === own[0]
+      : its.at(-1) === own.at(-1) && own.every((w) => its.includes(w));
+  })?.name;
 }
 
 /** The things of a reading that are cast as elements: all but weather and matter, which fill the picture. */
@@ -298,6 +352,13 @@ export function castLook(
  * tractor is the same tractor in every moment; a rebuild shows it as not drawn yet.
  */
 export function withCastItems(items: Item[], reading: CastReading | null | undefined): Item[] {
+  // With `cast_fixture`, a cast id saved before that the reading has as its place's fixture in every moment goes.
+  if (builds('cast_named') && builds('cast_fixture') && reading?.asFixture?.length) {
+    const gone = new Set(
+      reading.asFixture.map((x) => x.id).filter((id) => !castable(reading).some((t) => t.id === id)),
+    );
+    items = items.filter((x) => !gone.has(x.id));
+  }
   if (!builds('cast_named') || !reading?.things.length) return items;
   const out = [...items];
   castable(reading).forEach((t, i) => {
@@ -331,6 +392,15 @@ export const castId = (i: number) => `c${i + 1}`;
  * the step, or without a reading, the breakdown as it is.
  */
 export function withCastThings(b: Breakdown, reading: CastReading | null | undefined): Breakdown {
+  // With `cast_fixture`, a cast id saved before that the reading has as its place's fixture goes where it is one, and
+  // from the dream where it is one everywhere.
+  if (builds('cast_named') && builds('cast_fixture') && reading?.asFixture?.length) {
+    b = structuredClone(b);
+    for (const { id, at } of reading.asFixture) {
+      for (const m of momentsOf(b)) if (at.includes(m.id)) m.things = m.things.filter((x) => x !== id);
+      if (!castable(reading).some((t) => t.id === id)) b.things = (b.things ?? []).filter((t) => t.id !== id);
+    }
+  }
   if (!builds('cast_named') || !reading?.things.length) return b;
   const out = structuredClone(b);
   const byId = new Map(momentsOf(out).map((m) => [m.id, m]));
