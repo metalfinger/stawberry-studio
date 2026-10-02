@@ -63,6 +63,11 @@ export type Spot = {
    */
   sized?: 'body' | 'moment';
   /**
+   * Its size set by a change of it the story has made by now (`thing_state`: "the bed sheet, size now a stamp"): the
+   * picture holds it however small, said small where it is a speck.
+   */
+  stated?: true;
+  /**
    * How far a fixture's bottom is off the floor, in metres, where the place's words put it up a wall or on
    * the ceiling (camera.ts mountOf: "the high round window", "a clock on the wall"): set by the camera
    * rules. Without it every fixture stood on the floor, and deep water hid a window high in the wall.

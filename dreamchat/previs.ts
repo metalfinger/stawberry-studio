@@ -2111,7 +2111,8 @@ export function dreamerShot(
   const distance = (s: Spot) => Math.hypot(s.x - eye.at.x, s.y - eye.at.y);
   // Someone at a size of their own (`sizes`) with any of them in view is in the picture, however small: as few pixels,
   // the mouse-sized dreamer beside the cat as big as a bus was said outside it and their sketch was not sent.
-  const anyOf = (x: { s: Spot; seen?: Seen }) => builds('sizes') && !!x.s.sized && (x.seen?.visible ?? 0) > 0;
+  const anyOf = (x: { s: Spot; seen?: Seen }) =>
+    builds('sizes') && (!!x.s.sized || !!x.s.stated) && (x.seen?.visible ?? 0) > 0;
   const shown = spots
     .map((s) => ({ s, seen: r.seen.get(s.id) }))
     .filter((x): x is { s: Spot; seen: Seen } => !!x.seen && (x.seen.visible >= min || anyOf(x)))
@@ -2304,8 +2305,13 @@ function thingWords(
   // How big it is in the frame, read off the render: the image model keeps where each thing is
   // across the picture from the words, and makes up how big it is. The friend beside the
   // dreamer, seen from the waist up in the previs, came back whole and two metres off (24 Sep).
+  // A thing a change has made small (`thing_state`), a few pixels of the working render, is said small: a stamp's one
+  // pixel read as "filling the picture from low down to two thirds of the way down" (Grandmother m9).
+  const speck = !!s.stated && seen.y1 - seen.y0 < 0.06 && seen.x1 - seen.x0 < 0.06;
   const size = !s.many
-    ? `, ${isPerson(s) ? `${cropOf(s, eye, seen, cameraMode() === 'on' ? groundAt(s, plan) : 0)} and ` : ''}${filling(seen)}`
+    ? speck
+      ? ', small in the picture, at its own size'
+      : `, ${isPerson(s) ? `${cropOf(s, eye, seen, cameraMode() === 'on' ? groundAt(s, plan) : 0)} and ` : ''}${filling(seen)}`
     : '';
   // A crowd the dream counts is said by its count: "a couple of people" are the two of them.
   const counted = ['', 'one', 'two', 'three', 'four', 'five', 'six'][s.count ?? 0];
@@ -2847,7 +2853,8 @@ export function outsideShot(
     // drawn whole where the mock-up has it covered.
     x.seen.occluded <= 0.7;
   // Someone at a size of their own (`sizes`) with any of them in view is in the picture, however small.
-  const anyOf = (x: { s: Spot; seen?: Seen }) => builds('sizes') && !!x.s.sized && (x.seen?.visible ?? 0) > 0;
+  const anyOf = (x: { s: Spot; seen?: Seen }) =>
+    builds('sizes') && (!!x.s.sized || !!x.s.stated) && (x.seen?.visible ?? 0) > 0;
   const shown = spots
     .map((s) => ({ s, seen: rr.seen.get(s.id) }))
     .filter(

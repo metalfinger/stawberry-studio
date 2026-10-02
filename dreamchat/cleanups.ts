@@ -257,6 +257,11 @@ export const BUILDER_STEPS: readonly string[] = [
   //    built, never by what people do there (built.ts, one writer reading per dream): "the family meeting", "a room
   //    where the family gathers around a table", came out full of people in 4 of 4 takes, alone and empty all the same.
   'place_built',
+  // Not a ledger row: from the merged flow's Grandmother on Wednesdays (2 Oct). A thing is drawn as the story last left
+  //    it: at the size a change of it gives ("the bed sheet, size now a stamp"), and out of sight once a moment puts it
+  //    into something that closes, until a moment names it again. Folded down to a stamp and put in the cutlery
+  //    drawer, the sheet was a cloth two metres across lying on the drawer in both moments after.
+  'thing_state',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;
