@@ -50,8 +50,9 @@ holds them (`point_state`, `contained`, `cast_fixture`: Grandmother's drawer clo
 kitchen sketched with it shut, the knives and forks in it); and a thing written as it is now, and a dot where a
 thing is too small to find (`written_now`, `tiny_marker`: the bed sheet folded to a stamp written "now the size of a
 stamp", the stamp between their fingers a dot on the keyed mock-up and its id map; packet version 7). New steps are
-paused from 3 Oct while one system design for the whole flow settles (`docs/system-facts-2026-10-03.md` is this side
-as it is). Queued after it, in order: what a moment puts something among is in its container too (the knives and
+paused from 3 Oct while one system design for the whole flow is built (`docs/system-facts-2026-10-03.md` is this side
+as it was); this side's first part of it is the packet contract (`contract.ts`, `docs/packet-contract.md`): version 8
+beside version 7, with fields added only, each cut's stable id, and its contract, null where not built yet. Queued after it, in order: what a moment puts something among is in its container too (the knives and
 forks); holds shared between hands; E3 crowd image with the four-image fit; lettering sized to read; camera masters;
 E4 depth in the vertical frame; transformations; staging and casting (Grandmother's spoken beats among them). The
 merged flow stops at three dreams (Grandmother, Neighbours, Fan) for the owner's walkthrough.
@@ -2394,6 +2395,7 @@ between sessions.
 | `cast_fixture` (`cast.ts`, `castplace.ts`) | the cast reading, the import, S6 sketches | Dropped from the cast only where the place's own words name it, per moment and on that moment's own plan, every other cast id kept (`asFixture` carries what a saved dream loses); else kept with its sketch and left off the plan. A dream imported before keeps its cast until it is imported again. |
 | `written_now` (`cutsheet.ts` `now`, `evals/qwen-prompt.ts`) | S6 (the sheet), `sizes`, transformations | The prompt written for the local machine only (qwen-image-written). How a thing is now where a change of its size, its shape or the whole of it is in force: the latest change of the whole of it and the latest of its size or shape since, this moment's own after those carried; its look keeps all but its size, and a change of the whole of it keeps none. Things, and someone drawn without an image of their own; how someone with one has turned into something else is the transformations step's. |
 | `tiny_marker` (`previs.ts markTiny`) | S4, the mock-up, the packet, `things_in_frame`, `contained` | A thing the moment has in view (its `things`, the breakdown's) with fewer pixels than its dot gets one (a three-hundredth of the frame's long side across, at least 3: 5 at 1376 by 768), on the keyed mock-up and its id map only, never the clay; `marker` in the id map and the key, where it is, never its size. Not out of the frame, nor behind anything but the hand that holds it (its holder within 15 cm, never their body) or the vehicle its holder rides; never over anyone or anything small. Left for their owners: things the moment has in view not on its floor plan (49 in the corpus) or out of its frame (17), and what floats placed under the water. Packet version 7. |
+| The packet contract (`contract.ts`, `docs/packet-contract.md`, `docs/packet_contract.py`) | the packet, the import, every reader of a packet | Version 8 adds fields only; version 7 stays the default (`evals/packets.ts --v8` writes 8). A cut's stable id is from its scene, its place (the location it has in view), its ordinal there and its words, pinned to Unicode 15.0 (`packet-chars.json`), never from its camera: the same with the camera rules off. Ids inside a contract are stable ids; version 7's fields keep version 7's (`aliases` maps them, within the packet). A field null with basis `unknown` holds the cut that needs it, owned here. Each dream's id history (`runs/packets/ids/`) carries a moved moment's earlier id; an edit is a new moment. |
 | `visible_device` (E5, `devices.ts`) | S4, S6, the packet, the import, `things_in_frame`, `story_marks` | One writer reading per dream, cached with the cast's (`--devices`), asked on import. Lettering is the dream's own day or time only, put on in code by the harness from `story.lettering` (the owner, 2 Oct), and taken in code from what a sentence of the moment says is written on the device itself where the reading proposed none (never on a clock, never a time the dreamer did not tell); every other writing stays unreadable marks (`story_marks`), and the story's writing line leaves out what lettering covers. Bubbles: one in a dream at most, only for a moment no thing shows; 27 of the corpus's 58 devices are bubbles, one in a dream each, a rate for the owner to judge. The place's own clock or calendar is the device where it has one; a wall device outdoors stands at eye height beside them. Packet version 5. |
 | `place_built` (`built.ts`) | S6 sketches, the import | A place's sketch alone is told by its build (`Item.built`); its moments, image lines and the record keep the place's name and look. One writer reading per dream, cached with the cast's (`--built`), asked on import; a place whose words say only what it is built of is left as it was. The two words of use left in the corpus are a roof's slopes meeting at its ridge and a bridge over the night market. |
 
@@ -3626,6 +3628,19 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   the frame by the mock-up's own projection and 8 hidden, each read. Against lab 2848e62, 0 of 127 frozen and 0 of
   447 live pictures move; prompt cases the same. `bun test`: 1268 pass, 0 fail off and on, and file by file. Packet
   version 7. No pictures, no money.
+- 3 Oct (night, nothing drawn): the packet contract, version 7 and version 8 (5c3e1fa). Version 8 is version 7 with
+  fields added only: each cut's stable id (`<scene>/<place>/<ordinal>-<hash of its words>.<n>`), aliases from its
+  version 7 id and from an earlier id whose moment only moved, and its contract (camera, the state of everything in
+  view, who is there and why, what it turns on, references, readiness, and the rest of the design's cut), each field
+  null with basis `unknown` until it is built; filled now: the id, scene, shot, camera and how each person faces it. A
+  version 7 packet turned into version 8 (`toV8`, and its Python twin `docs/packet_contract.py`, equal to it byte for
+  byte on Python 3.12 and 3.14) is the one written as version 8. `evals/packet-contract.ts`: the merged flow's two
+  stores as saved, 70 packets of versions 6, 3 and 4, each refused by name at `$.version`; rebuilt at this code, 170
+  packets (85 dreams, 647 cuts) each keeping to its version's schema, version 8 equal to version 7 turned into it 85
+  of 85, no id twice in a dream, no fault unnamed. A one-word edit of a moment's action or point keeps every other
+  id; a cut losing its camera, or the camera rules off, keeps every id. Against lab 9077dfa, 0 of 127 frozen and 0 of
+  447 live pictures move; prompt cases the same. `bun test`: 1286 pass, 0 fail off and on, and file by file. No
+  pictures, no money.
 
 ## Owner's direction (29 Sep): reviews and merges move to the cloud session
 
