@@ -2089,7 +2089,7 @@ export function dreamerShot(
         ? `In the dreamer's hands, below the picture: ${called(s.id)}.`
         : `Outside the picture, ${offTo(eye, s, camera ? topOf(s, plan, called) : undefined)}: ${called(s.id)}.`,
     ),
-    tinyWords(small, called),
+    ...(small.length ? [tinyWords(small, called)] : []),
     frontLine(plan, eye, r, min),
     // Beyond everything the plan holds, what the moment looks at: the view from the tractor's cab
     // ended at its windscreen, and the field it drove through was read as missing (lighthouse, 25 Sep).

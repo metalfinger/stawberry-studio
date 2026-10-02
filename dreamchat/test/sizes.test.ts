@@ -6,7 +6,7 @@ import { describe, expect, test } from 'bun:test';
 import { settle } from '../blocking';
 import { withSizes } from '../castplace';
 import { framedAtSize } from '../continuity';
-import { inFrame, outsideShot } from '../previs';
+import { dreamerShot, inFrame, outsideShot } from '../previs';
 import type { Breakdown } from '../producer';
 import { parseSizes, type SizesReading } from '../sizes';
 
@@ -169,5 +169,16 @@ describe('the camera placed for them', () => {
     expect(v.eye.height).toBeLessThan(0.95);
     const f = inFrame(m3, v.eye, 'p2')!;
     expect(f.height).toBeGreaterThan(0.9);
+  });
+
+  test("with no one at a size of their own, every view's words as before, word for word", () => {
+    const grown = { ...(kitchen as object), spots: (kitchen as { spots: S[] }).spots.filter((x) => x.id !== 'p3') };
+    const say = (step: string) =>
+      withEnv({ ...ON, DREAMCHAT_ONE_BUILDER: step }, () => [
+        dreamerShot(grown as never, 'p1', 'p2', (id) => name({ id }))!.text,
+        outsideShot(grown as never, ['p1', 'p2'], 'medium', (id) => name({ id }))!.text,
+      ]);
+    expect(say('on')).toEqual(say('eyes_aimed'));
+    for (const t of say('on')) expect(t).not.toContain('  ');
   });
 });
