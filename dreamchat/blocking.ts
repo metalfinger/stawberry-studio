@@ -63,6 +63,10 @@ export type Spot = {
    */
   sized?: 'body' | 'moment';
   /**
+   * A crowd moved onto the line from the dreamer's eyes to whom the moment sees past it (`crowd_between`): by their id.
+   */
+  past?: string;
+  /**
    * How far a fixture's bottom is off the floor, in metres, where the place's words put it up a wall or on
    * the ceiling (camera.ts mountOf: "the high round window", "a clock on the wall"): set by the camera
    * rules. Without it every fixture stood on the floor, and deep water hid a window high in the wall.

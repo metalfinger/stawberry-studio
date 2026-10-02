@@ -624,7 +624,7 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
           ),
         }
       : sizedOwn;
-  return camera
+  const out = camera
     ? withOpen(
         withRiders(
           withClimbers(
@@ -650,6 +650,100 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
         r?.facts ?? [],
       )
     : placed;
+  // Through the dreamer's eyes, someone its one thing to show sees past a crowd is seen past it (`crowd_between`).
+  const past =
+    camera && builds('crowd_between') && moment.eyes === 'dreamer' && dreamerId
+      ? seenPast(moment, out, (s) => s.name ?? b.people.find((p) => p.id === s.id)?.name ?? s.id, dreamerId)
+      : undefined;
+  return past ? crowdBetween(out, dreamerId!, past.who, past.crowd) : out;
+}
+
+/**
+ * Someone seen past, through, between, beyond, behind or over the heads of the people of a crowd, said so: a word of
+ * being seen ("glimpsed", "seen", "visible") right before it, and the crowd's name right after, within its first few
+ * words. "Rolling past the people", "looking past the people at the clock" and "standing between the twins" are not.
+ */
+const SEEN_PAST =
+  /\b(?:glimpsed|seen|visible|spotted|(?:half|partly)[- ]hidden|peeking out|showing)\s+(?:(?:just|only|barely|briefly|still|again)\s+)?(?:past|through|between|beyond|behind|over the heads of)\s+((?:the|a|an|all the|those)\s+)?((?:[\w'-]+\s+){0,2}[\w'-]+)/gi;
+
+/**
+ * Who a moment's one thing to show sees past a crowd, and the crowd: the crowd of the plan named right after the words
+ * that say so (never one the dream counts at three or fewer), and the person named nearest before them. Never the
+ * dreamer through whose eyes it is seen; none where the words say no such thing.
+ */
+export function seenPast(
+  m: Pick<Moment, 'visual_point'>,
+  plan: Blocking,
+  name: (s: Spot) => string,
+  dreamer?: string,
+): { who: string; crowd: string } | undefined {
+  const point = m.visual_point ?? '';
+  const crowds = plan.spots.filter((s) => s.many && s.kind !== 'thing' && !(s.count && s.count <= 3));
+  if (!crowds.length) return undefined;
+  const people = plan.spots.filter((s) => !s.many && s.kind === 'person' && s.id !== dreamer);
+  for (const hit of point.matchAll(SEEN_PAST)) {
+    const crowd = crowds.find((s) => mentioned(hit[2], [{ id: s.id, name: name(s) }]).length > 0);
+    if (!crowd) continue;
+    // The one named nearest before: "the woman turns to see the man glimpsed past the people" is the man.
+    const before = point.slice(0, hit.index).toLowerCase();
+    const at = (s: Spot) =>
+      mentioned(before, [{ id: s.id, name: name(s) }]).length
+        ? Math.max(...[name(s).toLowerCase(), headOfName(name(s))].map((w) => before.lastIndexOf(w)))
+        : -1;
+    const who = people
+      .map((s) => ({ s, i: at(s) }))
+      .filter((x) => x.i >= 0)
+      .sort((a, b) => b.i - a.i)[0];
+    if (who) return { who: who.s.id, crowd: crowd.id };
+  }
+  return undefined;
+}
+
+/** What a name is about, as a word to look for: "the man in the wheelchair" is "man". */
+const headOfName = (x: string) => headOf(x) ?? x.toLowerCase();
+
+/**
+ * The crowd moved onto the line from `from` to `who`, nearer `from`: across the line a few metres wide and a row or so
+ * deep, standing, facing `from`, and indoors inside the walls. The mock-up clears a lane through it from `from` to them
+ * (previs.ts crowdSpots), so they are glimpsed between the people. "The man in the wheelchair glimpsed past the people
+ * pressing in" had the people sat in rows at the far end of the hall, the man alone and in clear view across it (the
+ * merged flow's Train m2, 2 Oct).
+ */
+export function crowdBetween(plan: Blocking, from: string, who: string, crowd: string): Blocking {
+  const a = plan.spots.find((s) => s.id === from);
+  const z = plan.spots.find((s) => s.id === who);
+  if (!a || !z) return plan;
+  const d = Math.hypot(z.x - a.x, z.y - a.y);
+  if (d < 1) return plan;
+  const u = { x: (z.x - a.x) / d, y: (z.y - a.y) / d };
+  const t = d < 2.7 ? d / 2 : Math.min(Math.max(0.4 * d, 1.5), d - 1.2);
+  const c = { x: a.x + u.x * t, y: a.y + u.y * t };
+  const [w, dp] = roomOf(plan);
+  // As wide as the walls let it be on either side of the line: a crowd half out of the room is no crowd in it.
+  const room = (half: number) =>
+    !plan.indoors ||
+    [-1, 1].every((k) => {
+      const x = c.x - u.y * half * k;
+      const y = c.y + u.x * half * k;
+      return x >= 0.3 && x <= w - 0.3 && y >= 0.3 && y <= dp - 0.3;
+    });
+  return {
+    ...plan,
+    spots: plan.spots.map((s) => {
+      if (s.id !== crowd) return s;
+      const [across, deep] = s.spread ?? [4, 3];
+      let wide = Math.min(Math.max(across, 3), 5);
+      while (wide > 1.2 && !room(wide / 2)) wide -= 0.2;
+      return {
+        ...s,
+        ...c,
+        faces: from,
+        pose: 'standing' as const,
+        spread: [Math.round(wide * 10) / 10, Math.min(deep, d < 2.7 ? d / 3 : 1.2)] as [number, number],
+        past: who,
+      };
+    }),
+  };
 }
 
 /** What opens and shuts to let someone through. */
@@ -2093,7 +2187,10 @@ function planWith(
         if (unseen.length) c.carriedUnseen = unseen;
       }
       const said = pov.looks?.[m.id];
-      const toward = said && pov.spots.some((s) => s.id === said) ? said : target(m.looks_at);
+      // Looking at whom they see past a crowd the plan put between them (`crowd_between`): turned to "the hall floor",
+      // the man glimpsed past the people was out of the picture, off to its side (the merged flow's Train m6).
+      const past = builds('crowd_between') ? pov.spots.find((s) => s.past)?.past : undefined;
+      const toward = past ?? (said && pov.spots.some((s) => s.id === said) ? said : target(m.looks_at));
       // Who and what they see out past the place's edges is named where they look: the tractor in
       // the field below, out of the lighthouse's window (26 Sep).
       const far = [...m.things, ...seen(m)].filter((id) => pov.outside?.[id]).map(now);

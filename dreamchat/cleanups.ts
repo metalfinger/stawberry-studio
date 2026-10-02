@@ -257,6 +257,11 @@ export const BUILDER_STEPS: readonly string[] = [
   //    built, never by what people do there (built.ts, one writer reading per dream): "the family meeting", "a room
   //    where the family gathers around a table", came out full of people in 4 of 4 takes, alone and empty all the same.
   'place_built',
+  // Not a ledger row: from the merged flow's Train (2 Oct). Someone a moment's one thing to show sees past the people
+  //    of a crowd is seen past them: the crowd stands across the line from the dreamer's eyes to them, a gap left to see
+  //    them through. "The man in the wheelchair glimpsed past the people pressing in" had the people sat in rows at the
+  //    far end of the hall, the man alone and in clear view across it.
+  'crowd_between',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;
