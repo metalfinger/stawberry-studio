@@ -147,12 +147,18 @@ describe('what a verdict was given on', () => {
     const words = withSwitches({ ...PROFILE, DREAMCHAT_ONE_BUILDER: 'look_once' }, () =>
       viewDream(loadDream(id, false).session as Session, { id, source: 'frozen', commit: 'test' }),
     ).view;
-    // Row 16 (state_once) changes m2-m5's words only (Tomas's age and uniform said once).
+    // Row 16 (state_once) changes m2-m5's words only (Tomas's age and uniform said once). A step that moves a camera
+    // moves an image, the mock-up: `subject_in_frame` tilts m1's to keep the heads in, and its chain moves with it.
     const moved = v.cuts.filter((c, i) => c.hashes.words !== words.cuts[i].hashes.words);
-    expect(moved.length).toBeGreaterThan(0);
+    const imagesOf = (c: (typeof v.cuts)[number]) =>
+      JSON.stringify([c.mockUp?.sha256 ?? null, c.camera.eye, c.refs.map((x) => [x.key, x.role, x.source])]);
+    const sameImages = (c: (typeof v.cuts)[number]) =>
+      imagesOf(c) === imagesOf(words.cuts.find((x) => x.id === c.id)!);
+    expect(moved.filter(sameImages).length).toBeGreaterThan(0);
     for (const c of moved) {
       const was = words.cuts.find((x) => x.id === c.id)!;
-      expect([c.id, c.hashes.chain]).toEqual([c.id, was.hashes.chain]);
+      if (sameImages(c)) expect([c.id, c.hashes.chain]).toEqual([c.id, was.hashes.chain]);
+      else expect([c.id, c.hashes.chain]).not.toEqual([c.id, was.hashes.chain]);
     }
     // Without the references switch the images change: the chain moves.
     const noRefs = withSwitches({ ...PROFILE, DREAMCHAT_REFS: undefined }, () =>

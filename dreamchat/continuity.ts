@@ -1080,6 +1080,29 @@ function bodiesOf(b: Breakdown): Record<string, number> {
  * dreamer's eyes, everyone there is where they are; seen from outside, the people are those the
  * moment shows, as the dream tells it, and the things are all there.
  */
+/**
+ * The people a moment's action or its one thing to show names, whose face or presence it needs (`subject_in_frame`):
+ * never the dreamer through their own eyes, never a crowd; none where its one thing to show is a hand, something held
+ * or a close detail, a deliberate insert with no face in it.
+ */
+export function facesNeeded(b: Breakdown, m: Moment): string[] {
+  const point = m.visual_point ?? '';
+  if (/\b(?:hands?|fingers?|palms?|holding|held|grips?|gripping|close-?up|detail|insert)\b/i.test(point)) return [];
+  const STOP = new Set(['the', 'and', 'with', 'who', 'her', 'his', 'their', 'from', 'one', 'old', 'young', 'little']);
+  const words = (x: string) => (x.toLowerCase().match(/[a-z]{3,}/g) ?? []).filter((w) => !STOP.has(w));
+  // Its one thing to show beginning with a thing ("the key in the lock", "a bucket of stars"): an insert on it.
+  const first = words(point).slice(0, 3);
+  if (b.things.some((t) => words(t.name).some((w) => first.includes(w)))) return [];
+  const said = new Set(words(`${m.action} ${point}`));
+  const dreamer = b.people.find((p) => p.is_dreamer)?.id;
+  return m.visible.filter((id) => {
+    const p = b.people.find((x) => x.id === id);
+    if (!p || p.extras || p.several) return false;
+    if (id === dreamer) return m.eyes !== 'dreamer' && said.has('dreamer');
+    return words(p.name).some((w) => said.has(w));
+  });
+}
+
 export function shotPlan(b: Breakdown, momentId: string, rec?: RecordPlan): Blocking | undefined {
   const where = planBy(b, momentId, rec);
   const m = b.scenes.flatMap((sc) => sc.moments).find((x) => x.id === momentId);
@@ -2011,7 +2034,15 @@ function planWith(
       // the field below, out of the lighthouse's window (26 Sep).
       const far = [...m.things, ...seen(m)].filter((id) => pov.outside?.[id]).map(now);
       const beyond = [m.looks_at, far.length ? `${far.join(' and ')}, far off` : ''].filter(Boolean).join(': ');
-      const v = dreamerShot(pov, dreamerId, toward, now, toward ? undefined : beyond || undefined, seen(m));
+      const v = dreamerShot(
+        pov,
+        dreamerId,
+        toward,
+        now,
+        toward ? undefined : beyond || undefined,
+        seen(m),
+        builds('subject_in_frame') ? facesNeeded(b, m) : [],
+      );
       if (v) {
         c.view = v.text;
         c.eye = v.eye;
@@ -2057,6 +2088,8 @@ function planWith(
       // the camera read as the shot at odds with the moment (lighthouse, 25 Sep).
       // The place's own side too, when its words name it: putting the boat down "at the edge where the
       // beach used to be", the front the plan named so, was shot facing away from it (lighthouse, 25 Sep).
+      // Whose heads the frame keeps: the people its words name, where its point needs their face (subject_in_frame).
+      const heads = builds('subject_in_frame') ? facesNeeded(b, m) : [];
       const also = mentioned(`${m.action} ${m.visual_point ?? ''}`, [
         ...where.spots.map((x) => ({ id: x.id, name: nameOf(x) })),
         ...(where.front ? [{ id: 'front', name: where.front }] : []),
@@ -2067,7 +2100,7 @@ function planWith(
       // mock-up and nothing that carried the layout (the S5 picture check, 29 Sep: orchard m3 came out
       // mirrored; lighthouse-first m8's tractor became a car).
       if (refs && base?.role === 'base') {
-        const own = outsideShot(where, ids, m.distance, now, lookAt(m, where), also);
+        const own = outsideShot(where, ids, m.distance, now, lookAt(m, where), also, undefined, heads);
         if (own && !drawnFrom(c, base, own.eye, eyeOf(base.id))) {
           Object.assign(base, { role: 'composition', relation: 'same_side', carries: CARRIES.same_side });
           madeOwn.add(`${c.id}/${base.id}`);
@@ -2075,11 +2108,11 @@ function planWith(
       }
       const edits = c.refs.some((r) => r.role === 'base');
       const rules = opts.camera && !edits ? shotRules(c, m, where) : undefined;
-      const v = edits ? null : outsideShot(where, ids, m.distance, now, lookAt(m, where), also, rules);
+      const v = edits ? null : outsideShot(where, ids, m.distance, now, lookAt(m, where), also, rules, heads);
       // With S5's references the gate compares this camera with the picture's whatever the camera rules, and
       // the cut keeps its own shot for when the picture is not sent after all.
       if ((opts.camera || refs) && edits) {
-        const own = outsideShot(where, ids, m.distance, now, lookAt(m, where), also);
+        const own = outsideShot(where, ids, m.distance, now, lookAt(m, where), also, undefined, heads);
         if (own) c.wouldBe = own.eye;
         // Placed as any cut is, but never moved off the camera of the picture it edits: withheld, that picture is
         // not drawn from, and the same view is still this moment's (the camera rules' "move the camera" is for a
@@ -2097,6 +2130,7 @@ function planWith(
               lookAt(m, where),
               also,
               placed && kept ? { ...placed, avoid: kept.map((e) => e.eye) } : undefined,
+              heads,
             )
           : null;
         if (alone)
