@@ -610,7 +610,20 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
       }
     : placed;
   // Each figure and thing at the size the dream gives it here (castplace.ts withSizes, `sizes`), before any camera.
-  const sizedNow = camera && builds('sizes') && rec?.sizes ? withSizes(sized, rec.sizes, momentId) : sized;
+  const sizedOwn = camera && builds('sizes') && rec?.sizes ? withSizes(sized, rec.sizes, momentId) : sized;
+  // A fish stays under the water it swims in: as big as the reading has it, the whale filling the aisle under the boat
+  // rose through the water with the boat on its back (fdd7 m4).
+  const sizedNow =
+    sizedOwn !== sized && sizedOwn.water
+      ? {
+          ...sizedOwn,
+          spots: sizedOwn.spots.map((x) =>
+            x.body === 'fish' && x.height && x.height > sizedOwn.water! - 0.1
+              ? { ...x, height: Math.max(0.05, sizedOwn.water! - 0.1) }
+              : x,
+          ),
+        }
+      : sizedOwn;
   return camera
     ? withOpen(
         withRiders(

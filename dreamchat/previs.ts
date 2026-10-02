@@ -773,6 +773,33 @@ export function headsIn(eye: Eye, heads: string[], plan: Blocking): Eye {
   return e;
 }
 
+/**
+ * Who is in the frame at a size of their own (`sizes`) but too small for a pixel of the working render: in the picture
+ * all the same, where the frame has them, unless someone else covers that spot. The mouse-sized dreamer beside the cat
+ * as big as a bus, and ant-sized Alina at the grown dreamer's feet, were said outside the picture and not sent.
+ */
+function tinyIn(r: Render, plan: Blocking, spots: Spot[]): { s: Spot; cx: number; cy: number }[] {
+  if (!builds('sizes')) return [];
+  return spots.flatMap((s) => {
+    if (!isPerson(s) || !s.height) return [];
+    const p = r.project(v3(s.x, s.y, groundAt(s, plan) + headTopOf(s) / 2));
+    if (!p || p.x < 0 || p.y < 0 || p.x >= r.width || p.y >= r.height) return [];
+    const k = r.solid[Math.floor(p.y) * r.width + Math.floor(p.x)];
+    const over = k >= 0 ? r.solids[k]?.id : undefined;
+    const by = over && over !== s.id ? plan.spots.find((x) => x.id === over) : undefined;
+    if (by && isPerson(by)) return [];
+    return [{ s, cx: p.x / r.width, cy: p.y / r.height }];
+  });
+}
+
+/** The tiny ones said in the picture, where the frame has them. */
+function tinyWords(small: { s: Spot; cx: number; cy: number }[], called: (id: string) => string): string {
+  if (!small.length) return '';
+  const where = (cx: number, cy: number) =>
+    `${cy > 2 / 3 ? 'low down ' : cy < 1 / 3 ? 'high up ' : ''}${cx < 1 / 3 ? 'on the left' : cx > 2 / 3 ? 'on the right' : 'in the middle'}`;
+  return `Tiny in the picture, at ${small.length > 1 ? 'their' : 'its'} own size: ${small.map((x) => `${called(x.s.id)}, ${where(x.cx, x.cy)}`).join('; ')}.`;
+}
+
 export function frontLabel(plan: Pick<Blocking, 'front' | 'spots'>): string {
   return cameraMode() === 'on' && frontNamesFixture(plan) ? 'the wall' : plan.front;
 }
@@ -2020,14 +2047,23 @@ export function dreamerShot(
     me.pose === 'sitting' ? ', at the height of their eyes sitting' : me.pose === 'lying' ? ', lying down' : '';
   const spots = plan.spots.filter((s) => s.id !== dreamer && !at.includes(s.id));
   const distance = (s: Spot) => Math.hypot(s.x - eye.at.x, s.y - eye.at.y);
+  // Someone at a size of their own (`sizes`) with any of them in view is in the picture, however small: as few pixels,
+  // the mouse-sized dreamer beside the cat as big as a bus was said outside it and their sketch was not sent.
+  const anyOf = (x: { s: Spot; seen?: Seen }) => builds('sizes') && !!x.s.height && (x.seen?.visible ?? 0) > 0;
   const shown = spots
     .map((s) => ({ s, seen: r.seen.get(s.id) }))
-    .filter((x): x is { s: Spot; seen: Seen } => !!x.seen && x.seen.visible >= min)
+    .filter((x): x is { s: Spot; seen: Seen } => !!x.seen && (x.seen.visible >= min || anyOf(x)))
     .sort((a, b) => distance(a.s) - distance(b.s));
+  const small = tinyIn(
+    r,
+    plan,
+    spots.filter((x) => !shown.some((y) => y.s.id === x.id)),
+  );
   const called = (id: string) => plan.spots.find((s) => s.id === id)?.name ?? name(id);
   // What someone holds is with them: never "outside the picture" while they are in it.
   const outOfPicture = spots
     .filter((s) => !shown.some((x) => x.s.id === s.id) && !(s.heldBy && shown.some((x) => x.s.id === s.heldBy)))
+    .filter((s) => !small.some((x) => x.s.id === s.id))
     .filter((s) => !(camera && underWater(s, plan, eye)) && !isCastPiece(s));
   const sentences = [
     `The camera is the dreamer's eyes${climbingIn ? `, climbing ${climbingIn.how} ${called(climbingIn.of)}` : at.length ? `, ${inIt ? 'in' : 'on'} ${at.map(called).join(' and ')}` : ''}${pose}${eye.lean ? `, ${LEAN_WORDS[eye.lean]}` : ''}${stepBack && target ? `, a step back from ${called(target.id)}` : ''}, ${turned}${toward ? `, toward ${called(toward)}` : ''}: it looks toward ${wall(eye.d, plan.front, !!plan.indoors)}. A wide lens, about 24mm.`,
@@ -2053,6 +2089,7 @@ export function dreamerShot(
         ? `In the dreamer's hands, below the picture: ${called(s.id)}.`
         : `Outside the picture, ${offTo(eye, s, camera ? topOf(s, plan, called) : undefined)}: ${called(s.id)}.`,
     ),
+    tinyWords(small, called),
     frontLine(plan, eye, r, min),
     // Beyond everything the plan holds, what the moment looks at: the view from the tractor's cab
     // ended at its windscreen, and the field it drove through was read as missing (lighthouse, 25 Sep).
@@ -2065,7 +2102,7 @@ export function dreamerShot(
     eye,
     text: sentences.join(' '),
     ...(rules.length ? { rules } : {}),
-    inPicture: [...at, ...shown.map((x) => x.s.id)],
+    inPicture: [...at, ...shown.map((x) => x.s.id), ...small.map((x) => x.s.id)],
     // Who and what the view says is outside the picture (framed_only): what the dreamer holds is in their hands.
     outside: outOfPicture.filter((s) => !(camera && s.heldBy === dreamer)).map((s) => s.id),
   };
@@ -2724,13 +2761,22 @@ export function outsideShot(
     // Small but mostly seen, never mostly hidden: said in the picture from a few pixels behind someone, it would be
     // drawn whole where the mock-up has it covered.
     x.seen.occluded <= 0.7;
+  // Someone at a size of their own (`sizes`) with any of them in view is in the picture, however small.
+  const anyOf = (x: { s: Spot; seen?: Seen }) => builds('sizes') && !!x.s.height && (x.seen?.visible ?? 0) > 0;
   const shown = spots
     .map((s) => ({ s, seen: rr.seen.get(s.id) }))
     .filter(
       (x): x is { s: Spot; seen: Seen } =>
-        !!x.seen && (x.seen.visible >= min || (x.seen.visible > 0 && (riding(x.s) || lookedIn(x as never)))),
+        !!x.seen &&
+        (x.seen.visible >= min || (x.seen.visible > 0 && (riding(x.s) || lookedIn(x as never))) || anyOf(x)),
     )
     .sort((a, b) => a.seen.cx - b.seen.cx);
+  // At a size of their own and too small for a pixel, in the picture where the frame has them (`sizes`).
+  const tinies = tinyIn(
+    rr,
+    plan,
+    spots.filter((x) => !shown.some((y) => y.s.id === x.id)),
+  );
   // Where the camera stands, said as each one in the picture is turned to it (`turnedTo`'s bins): "from the side, as
   // they face each other" was said of a camera over one's shoulder, one back to it and one facing it, and "from
   // behind them" of two in profile (the read of every frozen prompt, 30 Sep).
@@ -2808,7 +2854,7 @@ export function outsideShot(
   const keepsClaim = !crossedLine && !(camera && rules?.together);
   // Nor where a crowd is among them: "Nobody else" beside the many of a crowd (the camera rules).
   const nobodyElse =
-    behind.some((x) => isPerson(x.s)) || (camera && whoShown.some((x) => x.s.many))
+    behind.some((x) => isPerson(x.s)) || (camera && whoShown.some((x) => x.s.many)) || tinies.length > 0
       ? ''
       : 'Nobody else is in the picture.';
   // What is outside the picture, said so: what someone holds is with them, what is under the water is drawn through it,
@@ -2817,6 +2863,7 @@ export function outsideShot(
   const outOfPicture = spots.filter(
     (s) =>
       !shown.some((x) => x.s.id === s.id) &&
+      !tinies.some((x) => x.s.id === s.id) &&
       !riding(s) &&
       (subjects.includes(s.id) || !isPerson(s)) &&
       !(s.heldBy && shown.some((x) => x.s.id === s.heldBy)) &&
@@ -2844,6 +2891,7 @@ export function outsideShot(
     ...outOfPicture.map(
       (s) => `Outside the picture, ${offTo(eye, s, camera ? topOf(s, plan, name) : undefined)}: ${name(s.id)}.`,
     ),
+    tinyWords(tinies, called),
     frontLine(plan, eye, rr, min),
     // The place is the inside of something (the red tractor, for its cab): all of it is in there.
     // Said nowhere once the tractor was off the plan, the moments in its cab read as missing it.
@@ -2872,6 +2920,7 @@ export function outsideShot(
       ...(plan.inside ? [plan.inside] : []),
       ...shown.map((x) => x.s.id),
       ...spots.filter((s) => riding(s) && !shown.some((x) => x.s.id === s.id)).map((s) => s.id),
+      ...tinies.map((x) => x.s.id),
     ],
     // Who and what the view says is outside the picture (framed_only).
     outside: outOfPicture.map((s) => s.id),

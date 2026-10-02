@@ -14,7 +14,6 @@ import { BUILDER_STEPS } from '../cleanups';
 import { facesNeeded, shotPlan } from '../continuity';
 import { jevWithModel } from '../jev';
 import { rebuild } from '../plan';
-import { inFrame } from '../previs';
 import type { Session } from '../session';
 import { withCast } from './cast-cache';
 import { withImplied } from './implied-cache';
@@ -48,8 +47,10 @@ for (const dir of dirs)
       load: async () => JSON.parse(readFileSync(join(dir, 'state', f), 'utf8')) as Session,
     });
 
-type Count = { moments: number; sized: number; named: number; inPicture: number; lostWords: number };
-const zero = (): Count => ({ moments: 0, sized: 0, named: 0, inPicture: 0, lostWords: 0 });
+type Count = { moments: number; sized: number; named: number; inPicture: number; lostWords: number; held: number };
+const zero = (): Count => ({ moments: 0, sized: 0, named: 0, inPicture: 0, lostWords: 0, held: 0 });
+/** Who each cut's camera holds, with the step before and with it: anyone it held and holds no more is listed. */
+const holds = { before: new Map<string, string[]>(), after: new Map<string, string[]>() };
 const total = { before: zero(), after: zero() };
 /** Which cuts have a camera, with the step before and with it: one that loses its camera is listed. */
 const eyed = { before: new Set<string>(), after: new Set<string>() };
@@ -69,6 +70,9 @@ async function measure(s: Session, step: string, into: Count, id: string): Promi
     for (const c of r.plan.cuts) {
       if (!c.eye) continue;
       eyed[step === 'on' ? 'after' : 'before'].add(`${id.slice(-4)} ${c.id}`);
+      const people = (c.sees ?? []).filter((x) => r.b.people.some((p) => p.id === x));
+      holds[step === 'on' ? 'after' : 'before'].set(`${id.slice(-4)} ${c.id}`, people);
+      into.held += people.length;
       const m = r.b.scenes.flatMap((sc) => sc.moments).find((x) => x.id === c.id);
       const plan = shotPlan(r.b, c.id, r.rec);
       if (!m || !plan) continue;
@@ -76,8 +80,8 @@ async function measure(s: Session, step: string, into: Count, id: string): Promi
       into.sized += plan.spots.filter((x) => x.height).length;
       for (const p of facesNeeded(r.b, m)) {
         into.named++;
-        const f = inFrame(plan, c.eye, p);
-        if ((c.sees ?? []).includes(p) || (f && f.height > 0)) into.inPicture++;
+        // In what the camera holds and its words say, not only inside the frame: a figure too small to show is not.
+        if ((c.sees ?? []).includes(p)) into.inPicture++;
         else if (step === 'on') out.push(`${id.slice(-4)} ${c.id} ${p}: not in the picture`);
       }
       const words = c.view ?? '';
@@ -112,5 +116,9 @@ for (const { id, load } of sources) {
   await measure(s, 'on', total.after, id);
 }
 for (const k of eyed.before) if (!eyed.after.has(k)) out.push(`${k}: no camera with the step`);
+for (const [k, was] of holds.before) {
+  const lost = was.filter((x) => !(holds.after.get(k) ?? []).includes(x));
+  if (lost.length) out.push(`${k}: the camera no longer holds ${lost.join(', ')}`);
+}
 console.log(JSON.stringify({ dreams: sources.length, step: before, ...total }));
 if (list) for (const l of out) console.log(`  ${l}`);
