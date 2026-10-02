@@ -60,6 +60,15 @@ const afloat = (plan: Blocking) => (plan.water ? Math.max(0, plan.water - 0.15) 
 /** How high someone's eyes are, by how they are. */
 export const eyeHeight = (pose?: Spot['pose']) => (pose === 'sitting' ? 1.2 : pose === 'lying' ? 0.35 : 1.62);
 
+/** A creature drawn in its own shape at its own height (cast bodies, `sizes`), not a person's mannequin. */
+const creatureOf = (s: Spot) => !!s.body && s.body !== 'human' && !!s.height;
+/** How tall someone stands beside a grown person (`sizes`): 1 unless their own height is given. */
+const scaleOf = (s: Spot) => (s.height && !creatureOf(s) ? s.height / STANDING : 1);
+/** How high someone's eyes are above what they stand on: by how they are, and their own size. */
+const eyesOf = (s: Spot) => (creatureOf(s) ? s.height! * 0.8 : eyeHeight(s.pose) * scaleOf(s));
+/** The top of someone's head above what they stand on: by how they are, and their own size. */
+const headTopOf = (s: Spot) => (creatureOf(s) ? s.height! : (eyeHeight(s.pose) + 0.15) * scaleOf(s));
+
 /** The room's height where the plan does not say: an ordinary ceiling. */
 const CEILING = 3.2;
 /** A seated or standing eye looks a little down, as people do at what is before them. */
@@ -466,7 +475,7 @@ function openParts(blocks: Block[]): Block[] {
  */
 function heartHeight(target: Spot, plan: Blocking, eyes?: number): number {
   const base = target.above ?? groundAt(target, plan);
-  if (isPerson(target)) return base + eyeHeight(target.pose) - 0.1;
+  if (isPerson(target)) return base + eyesOf(target) - 0.1 * scaleOf(target);
   const h = sizeOf(target)[2];
   return eyes !== undefined && base + h >= eyes ? Math.max(base + h / 2, eyes - 0.1) : base + h / 2;
 }
@@ -726,7 +735,7 @@ export function inFrame(
   const [width, height] = sized(192);
   const r = render([], eye, width, height);
   const z = groundAt(p, plan);
-  const top = r.project(v3(p.x, p.y, z + eyeHeight(p.pose) + 0.15));
+  const top = r.project(v3(p.x, p.y, z + headTopOf(p)));
   const feet = r.project(v3(p.x, p.y, z));
   if (!top || !feet) return { height: 0, head: false, top: -1, across: -1 };
   const span = Math.max(1e-6, feet.y - top.y);
@@ -782,6 +791,33 @@ export function headsIn(eye: Eye, heads: string[], plan: Blocking, least = 0): E
       e = next;
     }
   return e;
+}
+
+/**
+ * Who is in the frame at a size of their own (`sizes`) but too small for a pixel of the working render: in the picture
+ * all the same, where the frame has them, unless someone else covers that spot. The mouse-sized dreamer beside the cat
+ * as big as a bus, and ant-sized Alina at the grown dreamer's feet, were said outside the picture and not sent.
+ */
+function tinyIn(r: Render, plan: Blocking, spots: Spot[]): { s: Spot; cx: number; cy: number }[] {
+  if (!builds('sizes')) return [];
+  return spots.flatMap((s) => {
+    if (!isPerson(s) || !s.height) return [];
+    const p = r.project(v3(s.x, s.y, groundAt(s, plan) + headTopOf(s) / 2));
+    if (!p || p.x < 0 || p.y < 0 || p.x >= r.width || p.y >= r.height) return [];
+    const k = r.solid[Math.floor(p.y) * r.width + Math.floor(p.x)];
+    const over = k >= 0 ? r.solids[k]?.id : undefined;
+    const by = over && over !== s.id ? plan.spots.find((x) => x.id === over) : undefined;
+    if (by && isPerson(by)) return [];
+    return [{ s, cx: p.x / r.width, cy: p.y / r.height }];
+  });
+}
+
+/** The tiny ones said in the picture, where the frame has them. */
+function tinyWords(small: { s: Spot; cx: number; cy: number }[], called: (id: string) => string): string {
+  if (!small.length) return '';
+  const where = (cx: number, cy: number) =>
+    `${cy > 2 / 3 ? 'low down ' : cy < 1 / 3 ? 'high up ' : ''}${cx < 1 / 3 ? 'on the left' : cx > 2 / 3 ? 'on the right' : 'in the middle'}`;
+  return `Tiny in the picture, at ${small.length > 1 ? 'their' : 'its'} own size: ${small.map((x) => `${called(x.s.id)}, ${where(x.cx, x.cy)}`).join('; ')}.`;
 }
 
 export function frontLabel(plan: Pick<Blocking, 'front' | 'spots'>): string {
@@ -1887,7 +1923,7 @@ export function dreamerShot(
   const solids = solidsOf(plan, [dreamer], name);
   const solidsAt = (eye: Eye) => (holding ? solidsOf(plan, [dreamer], name, undefined, eye) : solids);
   // Their eyes, on whatever they stand on: a bridge's deck, a step of the stairs.
-  const height = eyeHeight(me.pose) + groundAt(me, plan);
+  const height = eyesOf(me) + groundAt(me, plan);
   // How far someone can lean from where they sit or stand, each way, to see past someone close.
   const leans: [Lean | undefined, V2, number][] = [[undefined, { x: 0, y: 0 }, 0]];
   for (const m of [0.3, 0.5])
@@ -1923,6 +1959,9 @@ export function dreamerShot(
   const onIt = !!target && onFootprint(me, target, plan);
   let best: { eye: Eye; score: number } | undefined;
   const fitted = !!target && !!heart && least > 0;
+  // Where they look, straight on from where they are: the view kept with `eyes_aimed` when what they look at shows in
+  // none of the ways of looking.
+  let straight: Eye | undefined;
   // Who the moment shows besides what it looks at: in the picture, where the view can hold them. Looking
   // straight ahead from the tractor's seat left out the driver it was about (lighthouse, 25 Sep).
   const wanted = want.filter((id) => id !== dreamer && id !== target?.id && plan.spots.some((s) => s.id === id));
@@ -1953,7 +1992,11 @@ export function dreamerShot(
         if (!best || score > best.score + 1e-9) best = { eye, score };
         continue;
       }
-      const r = render(solidsAt(eye), eye, ...sized(192));
+      if (!lean && !aim) straight = eye;
+      // What they look at under the water is seen through it (`eyes_aimed`), as the words say it is: its surface hid the
+      // laptop on the dining table from every way of looking (Fan m8).
+      const through = builds('eyes_aimed') && underWater(target, plan, eye);
+      const r = render(through ? solidsAt(eye).filter((x) => x.id !== 'water') : solidsAt(eye), eye, ...sized(192));
       const t = r.seen.get(target.id);
       if (!t) continue;
       // As a camera operator frames past someone close: the heart of what the picture is about
@@ -1994,6 +2037,11 @@ export function dreamerShot(
         shows(r);
       if (!best || score > best.score + 1e-9) best = { eye, score };
     }
+  // Through their own eyes there is always a view where they are on the plan (`eyes_aimed`): what they look at that no
+  // way of looking shows (the laptop on the dining table under the water; a tiny building with a party inside, hidden by
+  // the guests) is looked at all the same, straight on, and the view says what the picture holds. Kept only where it
+  // showed, the cut had no camera and was never drawn (the merged flow's Fan m8 and Shrunk m6, 2 Oct).
+  if (!best && straight && builds('eyes_aimed')) best = { eye: straight, score: -Infinity };
   if (!best) return null;
   // Looking down at what they hold never drops the one the moment is about below the frame: old Ethan on the train was a
   // seat-back and his knees (subject_in_frame).
@@ -2031,14 +2079,23 @@ export function dreamerShot(
     me.pose === 'sitting' ? ', at the height of their eyes sitting' : me.pose === 'lying' ? ', lying down' : '';
   const spots = plan.spots.filter((s) => s.id !== dreamer && !at.includes(s.id));
   const distance = (s: Spot) => Math.hypot(s.x - eye.at.x, s.y - eye.at.y);
+  // Someone at a size of their own (`sizes`) with any of them in view is in the picture, however small: as few pixels,
+  // the mouse-sized dreamer beside the cat as big as a bus was said outside it and their sketch was not sent.
+  const anyOf = (x: { s: Spot; seen?: Seen }) => builds('sizes') && !!x.s.height && (x.seen?.visible ?? 0) > 0;
   const shown = spots
     .map((s) => ({ s, seen: r.seen.get(s.id) }))
-    .filter((x): x is { s: Spot; seen: Seen } => !!x.seen && x.seen.visible >= min)
+    .filter((x): x is { s: Spot; seen: Seen } => !!x.seen && (x.seen.visible >= min || anyOf(x)))
     .sort((a, b) => distance(a.s) - distance(b.s));
+  const small = tinyIn(
+    r,
+    plan,
+    spots.filter((x) => !shown.some((y) => y.s.id === x.id)),
+  );
   const called = (id: string) => plan.spots.find((s) => s.id === id)?.name ?? name(id);
   // What someone holds is with them: never "outside the picture" while they are in it.
   const outOfPicture = spots
     .filter((s) => !shown.some((x) => x.s.id === s.id) && !(s.heldBy && shown.some((x) => x.s.id === s.heldBy)))
+    .filter((s) => !small.some((x) => x.s.id === s.id))
     .filter((s) => !(camera && underWater(s, plan, eye)) && !isCastPiece(s));
   const sentences = [
     `The camera is the dreamer's eyes${climbingIn ? `, climbing ${climbingIn.how} ${called(climbingIn.of)}` : at.length ? `, ${inIt ? 'in' : 'on'} ${at.map(called).join(' and ')}` : ''}${pose}${eye.lean ? `, ${LEAN_WORDS[eye.lean]}` : ''}${stepBack && target ? `, a step back from ${called(target.id)}` : ''}, ${turned}${toward ? `, toward ${called(toward)}` : ''}: it looks toward ${wall(eye.d, plan.front, !!plan.indoors)}. A wide lens, about 24mm.`,
@@ -2064,6 +2121,7 @@ export function dreamerShot(
         ? `In the dreamer's hands, below the picture: ${called(s.id)}.`
         : `Outside the picture, ${offTo(eye, s, camera ? topOf(s, plan, called) : undefined)}: ${called(s.id)}.`,
     ),
+    ...(small.length ? [tinyWords(small, called)] : []),
     frontLine(plan, eye, r, min),
     // Beyond everything the plan holds, what the moment looks at: the view from the tractor's cab
     // ended at its windscreen, and the field it drove through was read as missing (lighthouse, 25 Sep).
@@ -2076,7 +2134,7 @@ export function dreamerShot(
     eye,
     text: sentences.join(' '),
     ...(rules.length ? { rules } : {}),
-    inPicture: [...at, ...shown.map((x) => x.s.id)],
+    inPicture: [...at, ...shown.map((x) => x.s.id), ...small.map((x) => x.s.id)],
     // Who and what the view says is outside the picture (framed_only): what the dreamer holds is in their hands.
     outside: outOfPicture.filter((s) => !(camera && s.heldBy === dreamer)).map((s) => s.id),
   };
@@ -2275,7 +2333,7 @@ function framing(
     // Their whole height and width as the camera sees them, whatever hides part of them: being
     // partly behind a sofa's back is scored apart, and a seated pair seen over it measured short.
     const z = groundAt(p, plan);
-    const head = r.project(v3(p.x, p.y, z + eyeHeight(p.pose) + 0.15));
+    const head = r.project(v3(p.x, p.y, z + headTopOf(p)));
     const feet = r.project(v3(p.x, p.y, z));
     if (!head || !feet) continue;
     const top = Math.max(0, head.y) / r.height;
@@ -2503,18 +2561,40 @@ export function outsideShot(
   const hands = holder
     ? groundAt(holder, plan) + (holder.pose === 'sitting' ? 0.6 : holder.pose === 'lying' ? 0.3 : 0.9)
     : undefined;
-  let tallest =
-    hands !== undefined
-      ? hands + 0.35
-      : Math.max(
-          ...group.map(
-            (s) =>
-              (s.above ?? restOf(s, plan, name(s.id))?.z ?? groundAt(s, plan)) +
-              (isPerson(s) ? eyeHeight(s.pose) + 0.15 : sizeOf(s)[2]),
-          ),
-        );
+  const topAt = (s: Spot) =>
+    (s.above ?? restOf(s, plan, name(s.id))?.z ?? groundAt(s, plan)) + (isPerson(s) ? headTopOf(s) : sizeOf(s)[2]);
+  // Everyone and everything it holds far smaller than a grown person (`sizes`): held whole, from as near as their size
+  // has it. Framed for the grown dreamer beside them, the ant-sized Alina by the piece of orange was a speck (Shrunk m3).
+  const fitted = [...new Set([...group, ...holdAll])];
+  const subject = Math.max(0, ...fitted.map((s) => (isPerson(s) ? headTopOf(s) : sizeOf(s)[2])));
+  const atSize = fitted.some((s) => isPerson(s) && s.height) && subject < STANDING / 10 ? subject / STANDING : 1;
+  let tallest = hands !== undefined ? hands + 0.35 : Math.max(...(atSize < 1 ? fitted : group).map(topAt));
+  // A close shot is a head and shoulders of whoever stands tallest in it, at their own size (`sizes`): a grown person's
+  // 70 cm, an ant-sized one's few millimetres.
+  const top = group.find((s) => topAt(s) === tallest);
+  const band =
+    atSize < 1
+      ? subject * 1.2
+      : top && isPerson(top)
+        ? 0.7 * (creatureOf(top) ? top.height! / STANDING : scaleOf(top))
+        : 0.7;
+  // A medium shot from the waist of whoever stands tallest: measured from what they stand on where their size is their
+  // own (an ant-sized Alina on the kitchen counter is not half the counter's height).
+  const foot = top && isPerson(top) && top.height ? topAt(top) - headTopOf(top) : 0;
   let lowest =
-    hands !== undefined ? hands - 0.2 : size === 'close' ? tallest - 0.7 : size === 'medium' ? tallest * 0.45 : 0;
+    hands !== undefined
+      ? hands - 0.2
+      : size === 'close'
+        ? tallest - band
+        : size === 'medium'
+          ? foot + (tallest - foot) * 0.45
+          : 0;
+  // Whose face the moment needs, at a size of their own (`sizes`), held whole: a medium shot fitted to the cat as big as
+  // a bus had the mouse-sized dreamer beside her under the frame (3cd7 m5, m7).
+  for (const id of heads) {
+    const s = plan.spots.find((x) => x.id === id);
+    if (s?.height && isPerson(s) && group.includes(s)) lowest = Math.min(lowest, topAt(s) - headTopOf(s));
+  }
   // What the moment looks at, put down at someone's feet and held by nobody, is in the picture: a close look
   // frames it where it lies, and a medium shot reaches down to it. The boat set down in the grass was under
   // the bottom of the frame of the dreamer's face, "outside the picture, off to the right" (affd m10, 30 Sep).
@@ -2530,7 +2610,7 @@ export function outsideShot(
   // yet "at the height of their eyes" (library, 30 Sep). Everyone under it, the camera is in it with them.
   const dry = people.filter((s) => !underWater(s, plan));
   const eyes = dry.length ? dry : people;
-  const height = eyes.length ? eyes.reduce((a, s) => a + eyeHeight(s.pose) + groundAt(s, plan), 0) / eyes.length : 1.5;
+  const height = eyes.length ? eyes.reduce((a, s) => a + eyesOf(s) + groundAt(s, plan), 0) / eyes.length : 1.5;
   const aim = (tallest + lowest) / 2;
   // Up and down a vertical frame is its long side, 36mm on a full frame.
   const tallAt = (l: number) => (upright() ? Math.atan(18 / l) : Math.atan(Math.tan(Math.atan(18 / l)) * (9 / 16)));
@@ -2550,7 +2630,8 @@ export function outsideShot(
           : Math.min(1.5, extent(t, plan, r));
       return [o - half, o + half];
     });
-    const wide = Math.max(...offsets) - Math.min(...offsets) + (size === 'close' ? 0.4 : size === 'medium' ? 1 : 2.5);
+    const wide =
+      Math.max(...offsets) - Math.min(...offsets) + (size === 'close' ? 0.4 : size === 'medium' ? 1 : 2.5) * atSize;
     const tall = (tallest - lowest) * (size === 'close' ? 1.3 : size === 'medium' ? 1.25 : 1.8);
     // What the frame must hold, and so how far off a lens of this size must be.
     const frameTall = Math.max(tall, upright() ? (wide * 16) / 9 : (wide * 9) / 16);
@@ -2561,7 +2642,7 @@ export function outsideShot(
     // needs. Behind the dreamer to look at the car past them, the camera stood a metre off and the
     // dreamer filled the picture (25 Sep).
     const ahead = () => Math.min(...people.map((q) => (q.x - at.x) * d.x + (q.y - at.y) * d.y));
-    const minNear = { close: 0.8, medium: 1.6, wide: 3 }[size];
+    const minNear = { close: 0.8, medium: 1.6, wide: 3 }[size] * atSize;
     if (people.length && ahead() < minNear) {
       far += minNear - ahead();
       at = { x: c.x - d.x * far, y: c.y - d.y * far };
@@ -2712,13 +2793,22 @@ export function outsideShot(
     // Small but mostly seen, never mostly hidden: said in the picture from a few pixels behind someone, it would be
     // drawn whole where the mock-up has it covered.
     x.seen.occluded <= 0.7;
+  // Someone at a size of their own (`sizes`) with any of them in view is in the picture, however small.
+  const anyOf = (x: { s: Spot; seen?: Seen }) => builds('sizes') && !!x.s.height && (x.seen?.visible ?? 0) > 0;
   const shown = spots
     .map((s) => ({ s, seen: rr.seen.get(s.id) }))
     .filter(
       (x): x is { s: Spot; seen: Seen } =>
-        !!x.seen && (x.seen.visible >= min || (x.seen.visible > 0 && (riding(x.s) || lookedIn(x as never)))),
+        !!x.seen &&
+        (x.seen.visible >= min || (x.seen.visible > 0 && (riding(x.s) || lookedIn(x as never))) || anyOf(x)),
     )
     .sort((a, b) => a.seen.cx - b.seen.cx);
+  // At a size of their own and too small for a pixel, in the picture where the frame has them (`sizes`).
+  const tinies = tinyIn(
+    rr,
+    plan,
+    spots.filter((x) => !shown.some((y) => y.s.id === x.id)),
+  );
   // Where the camera stands, said as each one in the picture is turned to it (`turnedTo`'s bins): "from the side, as
   // they face each other" was said of a camera over one's shoulder, one back to it and one facing it, and "from
   // behind them" of two in profile (the read of every frozen prompt, 30 Sep).
@@ -2796,7 +2886,7 @@ export function outsideShot(
   const keepsClaim = !crossedLine && !(camera && rules?.together);
   // Nor where a crowd is among them: "Nobody else" beside the many of a crowd (the camera rules).
   const nobodyElse =
-    behind.some((x) => isPerson(x.s)) || (camera && whoShown.some((x) => x.s.many))
+    behind.some((x) => isPerson(x.s)) || (camera && whoShown.some((x) => x.s.many)) || tinies.length > 0
       ? ''
       : 'Nobody else is in the picture.';
   // What is outside the picture, said so: what someone holds is with them, what is under the water is drawn through it,
@@ -2805,6 +2895,7 @@ export function outsideShot(
   const outOfPicture = spots.filter(
     (s) =>
       !shown.some((x) => x.s.id === s.id) &&
+      !tinies.some((x) => x.s.id === s.id) &&
       !riding(s) &&
       (subjects.includes(s.id) || !isPerson(s)) &&
       !(s.heldBy && shown.some((x) => x.s.id === s.heldBy)) &&
@@ -2832,6 +2923,7 @@ export function outsideShot(
     ...outOfPicture.map(
       (s) => `Outside the picture, ${offTo(eye, s, camera ? topOf(s, plan, name) : undefined)}: ${name(s.id)}.`,
     ),
+    tinyWords(tinies, called),
     frontLine(plan, eye, rr, min),
     // The place is the inside of something (the red tractor, for its cab): all of it is in there.
     // Said nowhere once the tractor was off the plan, the moments in its cab read as missing it.
@@ -2860,6 +2952,7 @@ export function outsideShot(
       ...(plan.inside ? [plan.inside] : []),
       ...shown.map((x) => x.s.id),
       ...spots.filter((s) => riding(s) && !shown.some((x) => x.s.id === s.id)).map((s) => s.id),
+      ...tinies.map((x) => x.s.id),
     ],
     // Who and what the view says is outside the picture (framed_only).
     outside: outOfPicture.map((s) => s.id),
@@ -3067,7 +3160,7 @@ function besideOf(s: Spot, plan: Blocking, ids: string[]): Spot | undefined {
 /** How high the top of someone or something is: where it rests, and its height or theirs. */
 function topOf(s: Spot, plan: Blocking, name: (id: string) => string): number {
   const base = s.above ?? restOf(s, plan, name(s.id))?.z ?? groundAt(s, plan);
-  return base + (isPerson(s) ? eyeHeight(s.pose) + 0.15 : sizeOf(s)[2]);
+  return base + (isPerson(s) ? headTopOf(s) : sizeOf(s)[2]);
 }
 
 /**
@@ -3154,7 +3247,7 @@ function underWater(s: Spot, plan: Blocking, eye?: Eye): boolean {
   if (eye && eye.height < plan.water) return false;
   if (isPerson(s) && !s.many && onOf(s, plan)?.t && shapeOf(onOf(s, plan)!.t, plan) === 'vehicle') return false;
   if (!isPerson(s) && (shapeOf(s, plan) === 'vehicle' || s.heldBy)) return false;
-  const top = (s.above ?? groundAt(s, plan)) + (isPerson(s) ? eyeHeight(s.pose) + 0.15 : sizeOf(s)[2]);
+  const top = (s.above ?? groundAt(s, plan)) + (isPerson(s) ? headTopOf(s) : sizeOf(s)[2]);
   return top < plan.water;
 }
 

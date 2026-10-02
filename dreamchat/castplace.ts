@@ -3,6 +3,7 @@
 // boats) placed by what the dream's words say it is by, at the size they give; each person and creature at its own
 // height and shape; and the fixtures a place's own words name that its plan lacks (windows along each side, rows of
 // seats). Pure: the plan and the reading in, the plan out. Nothing already on the plan moves.
+import type { SizesReading } from './sizes';
 import type { CastBody, CastFixture, CastReading, CastThing } from './cast-types';
 import { type Blocking, facing, onFootprint, rightOf, roomOf, type Side, sizeOf, type Spot, unit } from './blocking';
 
@@ -306,6 +307,40 @@ export function withCastBodies(plan: Blocking, bodies: CastBody[]): Blocking {
     spots: plan.spots.map((s) => {
       const b = by.get(s.id);
       return b ? { ...s, height: b.height_m, body: b.shape } : s;
+    }),
+  };
+}
+
+/** A grown person's height, standing, that a figure's own height is measured against. */
+const GROWN = 1.74;
+
+/**
+ * Each figure and thing at the size the dream gives it in this moment (sizes.ts, the one builder's `sizes`): a creature
+ * at its ordinary height and in its shape, someone or something the dream shrinks or grows at its size there, a crowd's
+ * spread with its people. Before the camera is placed for them: drawn at their size in a frame placed for a grown
+ * person, a dog at 50 cm left the close frame and a giant one covered its top (30 Sep).
+ */
+export function withSizes(plan: Blocking, reading: SizesReading, momentId: string): Blocking {
+  const bodies = new Map(reading.bodies.map((x) => [x.id, x]));
+  const now = new Map((reading.moments[momentId] ?? []).map((x) => [x.id, x]));
+  if (!bodies.size && !now.size) return plan;
+  return {
+    ...plan,
+    spots: plan.spots.map((s) => {
+      const body = bodies.get(s.id);
+      const at = now.get(s.id);
+      if (s.kind === 'thing' || (!s.kind && !s.pose && !s.many)) {
+        if (!at) return s;
+        const [w, d, h] = s.size ?? [at.height_m, at.height_m, at.height_m];
+        const k = at.height_m / Math.max(h, 1e-6);
+        return { ...s, size: [w * k, d * k, at.height_m] as [number, number, number] };
+      }
+      const height = at?.height_m ?? body?.height_m;
+      if (height === undefined) return s;
+      const shape = body?.shape ?? 'human';
+      // A crowd's people stand as close as their size has them.
+      const spread = s.many && s.spread ? { spread: s.spread.map((x) => x * Math.min(1, height / GROWN)) } : {};
+      return { ...s, height, body: shape, ...spread } as Spot;
     }),
   };
 }

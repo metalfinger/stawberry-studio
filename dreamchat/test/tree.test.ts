@@ -7,6 +7,7 @@ import { describe, expect, setDefaultTimeout, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { bearing, type Blocking } from '../blocking';
+import { builds } from '../cleanups';
 import { calledIn, planBy, planContinuity as planWithSwitches } from '../continuity';
 import { dreamConfig } from '../dream';
 import type { GroundingNote } from '../ground';
@@ -971,6 +972,8 @@ describe('G. flags on real drift', () => {
         'stale_reading:m1',
         'stale_reading:m2',
         'stale_reading:m3',
+        // With `subject_in_frame`, m4's view tilts to keep the heads in: a reading made on its old words is stale.
+        ...(builds('subject_in_frame') ? ['stale_reading:m4'] : []),
         'stale_reading:m5',
         'stale_reading:m6',
         'stale_reading:m7',
