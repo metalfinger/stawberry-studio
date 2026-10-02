@@ -1103,7 +1103,8 @@ export function framedAtSize(plan: Blocking, ids: string[], m: Moment, name: (s:
   };
   const big = Math.max(0, ...ids.map(height));
   const small = ids.filter((id) => height(id) > 0 && height(id) < big / 10);
-  if (!small.length) return ids;
+  // Only where the dream gives someone a size of their own: a key or a cup the moment shows is an insert, as before.
+  if (!small.some((id) => plan.spots.find((x) => x.id === id)?.height)) return ids;
   const named = mentioned(
     m.visual_point ?? '',
     ids.map((id) => ({ id, name: name(plan.spots.find((x) => x.id === id)!) })),

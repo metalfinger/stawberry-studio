@@ -149,6 +149,13 @@ describe('the camera placed for them', () => {
 
   test("framed for the small ones where the moment's one thing to show names only them", () => {
     expect(framedAtSize(m3, ['p1', 'p2', 'p3', 't1'], moment, name)).toEqual(['p2', 'p3', 't1']);
+    // A small thing alone, with no one at a size of their own, is an insert as before: the frame is everyone's.
+    const key = {
+      ...(kitchen as object),
+      spots: (kitchen as { spots: S[] }).spots.filter((x) => !['p2', 'p3'].includes(x.id)),
+    };
+    const orange = { ...moment, visual_point: 'the piece of orange on the counter' };
+    expect(framedAtSize(key as never, ['p1', 't1'], orange, name)).toEqual(['p1', 't1']);
     // Naming the grown dreamer too, the frame is everyone's, as before.
     const both = { ...moment, visual_point: 'the dreamer frowning down at tiny alina' };
     expect(framedAtSize(m3, ['p1', 'p2', 'p3'], both, name)).toEqual(['p1', 'p2', 'p3']);
