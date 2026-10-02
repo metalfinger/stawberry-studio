@@ -815,18 +815,83 @@ export function headsIn(eye: Eye, heads: string[], plan: Blocking, least = 0): E
  * all the same, where the frame has them, unless someone else covers that spot. The mouse-sized dreamer beside the cat
  * as big as a bus, and ant-sized Alina at the grown dreamer's feet, were said outside the picture and not sent.
  */
-function tinyIn(r: Render, plan: Blocking, spots: Spot[]): { s: Spot; cx: number; cy: number }[] {
+function tinyIn(
+  r: Render,
+  plan: Blocking,
+  spots: Spot[],
+  named: Set<string> = new Set(),
+): { s: Spot; cx: number; cy: number }[] {
   if (!builds('sizes')) return [];
   return spots.flatMap((s) => {
-    if (!isPerson(s) || !s.sized) return [];
-    const p = r.project(v3(s.x, s.y, groundAt(s, plan) + headTopOf(s) / 2));
+    // And a thing the moment's one thing to show names, or one the dream sized, out of anyone's hands (`things_in_frame`):
+    // the stamp laid in the cutlery drawer was said outside the picture, off to the right (fresh Grandmother m9).
+    // Only a small thing (a stamp, a key): a big one with no pixel is hidden or out of the frame, never tiny in it.
+    const thing =
+      builds('things_in_frame') &&
+      !isPerson(s) &&
+      !s.many &&
+      !s.heldBy &&
+      Math.max(...sizeOf(s)) <= 0.5 &&
+      (named.has(s.id) || !!s.stated || !!s.sized);
+    if (!(isPerson(s) && s.sized) && !thing) return [];
+    // A thing where the mock-up draws it: up on the wall, or on what it lies on or hangs from (the stamp on the drawer,
+    // not inside it).
+    const rest = isPerson(s) ? undefined : restOf(s, plan, s.name ?? '');
+    const z = isPerson(s)
+      ? groundAt(s, plan) + headTopOf(s) / 2
+      : (s.above ?? rest?.z ?? groundAt(s, plan)) + sizeOf(s)[2] / 2;
+    const p = r.project(v3(rest?.x ?? s.x, rest?.y ?? s.y, z));
     if (!p || p.x < 0 || p.y < 0 || p.x >= r.width || p.y >= r.height) return [];
     const k = r.solid[Math.floor(p.y) * r.width + Math.floor(p.x)];
     const over = k >= 0 ? r.solids[k]?.id : undefined;
     const by = over && over !== s.id ? plan.spots.find((x) => x.id === over) : undefined;
     if (by && isPerson(by)) return [];
+    // A thing at the very edge of someone is behind them, whatever the render's size (`things_in_frame`): the stamp just
+    // past her back read as in sight from a small render and hidden from the full one (fresh Grandmother m9).
+    if (!isPerson(s) && builds('things_in_frame'))
+      for (const [dx, dy] of [
+        [-1, 0],
+        [1, 0],
+        [0, -1],
+        [0, 1],
+      ]) {
+        const x = Math.floor(p.x) + dx;
+        const y = Math.floor(p.y) + dy;
+        if (x < 0 || y < 0 || x >= r.width || y >= r.height) continue;
+        const k2 = r.solid[y * r.width + x];
+        const near = k2 >= 0 ? plan.spots.find((q) => q.id === r.solids[k2]?.id) : undefined;
+        if (near && isPerson(near)) return [];
+      }
+    // A thing behind anything but what it lies on or hangs from, or the place's own floor and walls behind it, is hidden:
+    // a cabinet in front of it (`things_in_frame`).
+    if (
+      !isPerson(s) &&
+      over &&
+      over !== s.id &&
+      !['floor', 'ground', 'ceiling', 'front', 'left wall', 'right wall', 'back wall'].includes(over)
+    ) {
+      const under = plan.spots.find(
+        (t) =>
+          t.id === over &&
+          !isPerson(t) &&
+          (onFootprint(s, t, plan, 0) || (!!rest && Math.hypot(t.x - s.x, t.y - s.y) < 1)),
+      );
+      if (!under) return [];
+    }
     return [{ s, cx: p.x / r.width, cy: p.y / r.height }];
   });
+}
+
+/**
+ * Whether a thing the moment's one thing to show names is in sight from a camera (`things_in_frame`): some of it seen
+ * and not all hidden, or, too small for a pixel, in the frame with no one in front of it. Never something in someone's
+ * hands, which is with them.
+ */
+function inSight(r: Render, plan: Blocking, s: Spot): boolean {
+  const seen = r.seen.get(s.id);
+  // A few pixels of it are no more than its middle: in the frame, with no one in front of it.
+  if (seen && seen.visible >= r.width * r.height * 0.001) return seen.occluded < 0.9;
+  return tinyIn(r, plan, [s], new Set([s.id])).length > 0;
 }
 
 /** The tiny ones said in the picture, where the frame has them. */
@@ -1922,6 +1987,8 @@ export function dreamerShot(
   heads: string[] = [],
   /** How much of their height the moment's size holds (HEIGHT_FOR): the view leans back to hold it. */
   least = 0,
+  /** The things its one thing to show names (`things_in_frame`): in the picture where the frame has them, however small. */
+  things: string[] = [],
 ): { eye: Eye; text: string; rules?: string[]; inPicture: string[]; outside: string[] } | null {
   const me = plan.spots.find((s) => s.id === dreamer);
   if (!me) return null;
@@ -2012,12 +2079,25 @@ export function dreamerShot(
   // Who the moment shows besides what it looks at: in the picture, where the view can hold them. Looking
   // straight ahead from the tractor's seat left out the driver it was about (lighthouse, 25 Sep).
   const wanted = want.filter((id) => id !== dreamer && id !== target?.id && plan.spots.some((s) => s.id === id));
+  // And the things its one thing to show names, out of anyone's hands (`things_in_frame`): the bucket of stars held down
+  // under a pillow was off to the side of a view turned to the mother (Neighbours m4).
+  const sought = builds('things_in_frame')
+    ? things
+        .map((id) => plan.spots.find((s) => s.id === id))
+        .filter((s): s is Spot => !!s && !s.heldBy && s.id !== target?.id && s.id !== dreamer)
+    : [];
   const shows = (r: ReturnType<typeof render>) =>
-    wanted.length
-      ? wanted.filter((id) => (r.seen.get(id)?.visible ?? 0) >= 192 * 108 * 0.002).length / wanted.length
+    wanted.length + sought.length
+      ? (wanted.filter((id) => (r.seen.get(id)?.visible ?? 0) >= 192 * 108 * 0.002).length +
+          sought.filter((s) => inSight(r, plan, s)).length) /
+        (wanted.length + sought.length)
       : 0;
   for (const [lean, off, how] of best ? [] : target && !stepBack ? leans : leans.slice(0, 1))
-    for (const aim of target ? [0, -8, 8, -15, 15, -22, 22] : wanted.length ? [0, -15, 15, -30, 30, -45, 45] : [0]) {
+    for (const aim of target
+      ? [0, -8, 8, -15, 15, -22, 22]
+      : wanted.length || sought.length
+        ? [0, -15, 15, -30, 30, -45, 45]
+        : [0]) {
       const at = { x: me.x + off.x + (stepBack?.x ?? 0), y: me.y + off.y + (stepBack?.y ?? 0) };
       const d = turn(heart ? unit({ x: heart.x - at.x, y: heart.y - at.y }) : own, aim);
       // Tilted to what they look at when it is well above or below them (over 20 degrees): looking
@@ -2035,7 +2115,10 @@ export function dreamerShot(
       if (!target || !heart) {
         // Nothing it looks at on the plan: straight ahead, turned only as far as it takes to show who
         // the moment shows.
-        const score = wanted.length ? 2 * shows(render(solidsAt(eye), eye, ...sized(192))) - Math.abs(aim) * 0.01 : 0;
+        const score =
+          wanted.length || sought.length
+            ? 2 * shows(render(solidsAt(eye), eye, ...sized(192))) - Math.abs(aim) * 0.01
+            : 0;
         if (!best || score > best.score + 1e-9) best = { eye, score };
         continue;
       }
@@ -2142,6 +2225,7 @@ export function dreamerShot(
     r,
     plan,
     spots.filter((x) => !shown.some((y) => y.s.id === x.id)),
+    new Set(things),
   );
   const called = (id: string) => plan.spots.find((s) => s.id === id)?.name ?? name(id);
   // What someone holds is with them: never "outside the picture" while they are in it.
@@ -2464,6 +2548,8 @@ export function outsideShot(
   heads: string[] = [],
   /** Who else the moment has, left out of a frame placed for what the dream made small (`sizes`): said all the same. */
   others: string[] = [],
+  /** The things its one thing to show names (`things_in_frame`): in the picture where the frame has them, however small. */
+  things: string[] = [],
 ): {
   eye: Eye;
   text: string;
@@ -2781,8 +2867,12 @@ export function outsideShot(
     .filter((s): s is Spot => !!s && !holdAll.includes(s));
   // The place's front, when the words name it: faced, so it is behind whoever is in the picture.
   const front = also.includes('front');
+  // The things its one thing to show names, out of anyone's hands (`things_in_frame`): walked round for too.
+  const wantThings = builds('things_in_frame')
+    ? things.map((id) => plan.spots.find((s) => s.id === id)).filter((s): s is Spot => !!s && !s.heldBy)
+    : [];
   const degs =
-    extra.length || front || (rules?.line && !looks)
+    extra.length || front || (rules?.line && !looks) || wantThings.length
       ? [0, -20, 20, -40, 40, -70, 70, -110, 110, 180]
       : [0, -20, 20, -40, 40, -70, 70];
   // Across the scene's line, or the same camera again on the same people at the same size: each worth
@@ -2826,8 +2916,17 @@ export function outsideShot(
       const headsLost = heads.length
         ? heads.filter((id) => (rs.seen.get(id)?.visible ?? 0) < tiny).length / heads.length
         : 0;
+      // And each thing it names, counted whatever else it names: from behind her, the stamp she laid in the drawer was
+      // hidden by her back, the drawer and the knives in it seen (fresh Grandmother m9). Never at a person's cost: with
+      // things to find, each person lost from the picture costs more than any thing gained.
+      const thingsLost = Math.min(2, wantThings.filter((s) => !inSight(rs, plan, s)).length);
+      const peopleLost = wantThings.length
+        ? framedPeople.filter((s) => (rs.seen.get(s.id)?.visible ?? 0) < tiny).length
+        : 0;
       const score =
-        -3 * headsLost +
+        -3 * headsLost -
+        1.5 * thingsLost -
+        3.1 * peopleLost +
         2 * inFrame +
         clear +
         0.8 * framed +
@@ -2899,6 +2998,7 @@ export function outsideShot(
     rr,
     plan,
     spots.filter((x) => !shown.some((y) => y.s.id === x.id)),
+    new Set(things),
   );
   // Where the camera stands, said as each one in the picture is turned to it (`turnedTo`'s bins): "from the side, as
   // they face each other" was said of a camera over one's shoulder, one back to it and one facing it, and "from
@@ -3014,7 +3114,7 @@ export function outsideShot(
     ...outOfPicture.map(
       (s) => `Outside the picture, ${offTo(eye, s, camera ? topOf(s, plan, name) : undefined)}: ${name(s.id)}.`,
     ),
-    tinyWords(tinies, called),
+    tinyWords(tinies, builds('things_in_frame') ? name : called),
     frontLine(plan, eye, rr, min),
     // The place is the inside of something (the red tractor, for its cab): all of it is in there.
     // Said nowhere once the tractor was off the plan, the moments in its cab read as missing it.

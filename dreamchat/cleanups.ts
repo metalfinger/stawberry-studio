@@ -267,6 +267,11 @@ export const BUILDER_STEPS: readonly string[] = [
   //    them through. "The man in the wheelchair glimpsed past the people pressing in" had the people sat in rows at the
   //    far end of the hall, the man alone and in clear view across it.
   'crowd_between',
+  // Not a ledger row: from the merged flow's fresh Grandmother (2 Oct). The things a moment's one thing to show names are
+  //    in its picture, as the people it names are: "the grandmother laying the stamp among the knives and forks in her
+  //    cutlery drawer" said the stamp outside the picture, off to the right, and a stamp pinched between their fingers
+  //    was framed at its own size, her head out of the picture and the dreamer out of it.
+  'things_in_frame',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;

@@ -892,6 +892,74 @@ export function putAway(
   return out;
 }
 
+/** What a name is about, for a moment's words to name it: its last word before "of", "through", "across" … or a comma. */
+const thingHead = (name: string) =>
+  name
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, ' ')
+    .split(
+      /,|\s(?:of|in|into|with|at|on|from|by|for|to|that|which|who|across|below|above|behind|beside|near|under|over|along|through|outside|inside|beyond)\s/,
+    )[0]
+    .match(/\p{L}+/gu)
+    // A word of what it does or what was done to it is not what it is: "the office buried" is an office.
+    ?.filter(
+      (w, i, all) =>
+        i === 0 || !(w.length > 4 && /(?:ed|ing)$/.test(w) && all.slice(i).every((x) => /(?:ed|ing)$/.test(x))),
+    )
+    .at(-1) ?? '';
+/** Parts of a place, never a thing a moment shows: "the far end of the hall", "their room at night". */
+const PLACE_PART =
+  /^(?:room|rooms|hall|place|wall|walls|floor|ceiling|front|back|side|sides|middle|end|corner|space|area|air|sky|ground|night|day|light|dark|darkness|outside|inside)$/;
+
+/**
+ * The things and fixtures a moment's one thing to show names (`things_in_frame`): by a whole name, or by what it is about,
+ * a whole word, never a part of the place ("the room", "the far end of the hall") and never inside "the size of …".
+ * Of several named only by the same word (the windows along a wall, the desks), the one nearest `near`.
+ */
+export function thingsNamed(
+  point: string,
+  spots: Spot[],
+  namesOf: (s: Spot) => string[],
+  near?: { x: number; y: number },
+): string[] {
+  const words = ` ${point
+    .toLowerCase()
+    .replace(/\bthe size of [^,;.]*/g, ' ')
+    .replace(/[^\p{L}' ]+/gu, ' ')
+    .replace(/\s+/g, ' ')} `;
+  const whole: string[] = [];
+  const byHead = new Map<string, Spot[]>();
+  for (const s of spots) {
+    if (s.kind === 'person' || s.many) continue;
+    const names = namesOf(s).filter(Boolean);
+    const said = names.some((n) => {
+      const w = n
+        .toLowerCase()
+        .replace(/^(?:the|a|an|my|your|his|her|their|its|some)\s+/, '')
+        .replace(/[^\p{L}' ]+/gu, ' ')
+        .trim();
+      return w.split(' ').length > 1 && words.includes(` ${w} `);
+    });
+    if (said) {
+      whole.push(s.id);
+      continue;
+    }
+    for (const n of names) {
+      const h = thingHead(n);
+      if (h.length > 2 && !PLACE_PART.test(h) && words.includes(` ${h} `)) {
+        byHead.set(h, [...(byHead.get(h) ?? []), s]);
+        break;
+      }
+    }
+  }
+  const heads = [...byHead.values()].map((xs) =>
+    near
+      ? [...xs].sort((a, b) => Math.hypot(a.x - near.x, a.y - near.y) - Math.hypot(b.x - near.x, b.y - near.y))[0]
+      : xs[0],
+  );
+  return [...new Set([...whole, ...heads.map((s) => s.id)])];
+}
+
 /** What opens and shuts to let someone through. */
 const DOORLIKE = /\b(door|gate)s?\b/i;
 
@@ -1359,7 +1427,9 @@ export function framedAtSize(plan: Blocking, ids: string[], m: Moment, name: (s:
   const big = Math.max(0, ...ids.map(height));
   // Small beside the biggest, at a size the dream gave it: a key or a cup the moment shows is an insert, as before.
   const tiny = ids.filter((id) => height(id) > 0 && height(id) < big / 10);
-  const small = tiny.filter((id) => at(id).sized);
+  // Never something in someone's hands (`things_in_frame`): its spot is on the floor at their feet, and framed for it the
+  // stamp pinched between their fingers left her head out of the picture and the dreamer out of it (fresh Grandmother m8).
+  const small = tiny.filter((id) => at(id).sized && !(builds('things_in_frame') && at(id).heldBy));
   if (!small.length) return ids;
   const named = mentioned(
     m.visual_point ?? '',
@@ -2283,6 +2353,31 @@ function planWith(
       builds('thing_state') && (b.things ?? []).some((t) => t.id === id)
         ? sizedAs(changed.filter((x) => x.who === id && isSizeChange(x)).at(-1))?.as
         : undefined;
+    // The things a moment's one thing to show names, by their name or by what a change has made them ("the stamp" of the
+    // bed sheet folded down to one), in the picture where its frame has them however small (`things_in_frame`).
+    const pointThings = (m: Moment, where: Blocking) => {
+      // With the camera rules only: with them off, the plan's spots stand in for how the place looks.
+      if (!builds('things_in_frame') || cameraMode() !== 'on') return [];
+      const people = where.spots.filter((s) => s.kind === 'person' && seen(m).includes(s.id));
+      const near = people.length
+        ? {
+            x: people.reduce((a, s) => a + s.x, 0) / people.length,
+            y: people.reduce((a, s) => a + s.y, 0) / people.length,
+          }
+        : undefined;
+      return thingsNamed(
+        m.visual_point ?? '',
+        where.spots.filter((s) => s.id !== dreamerId),
+        (s) => [
+          nameOf(s),
+          ...changed
+            .filter((x) => x.who === s.id && (isSizeChange(x) || isFormChange(x)))
+            .flatMap((x) => (isSizeChange(x) ? [sizedAs(x)?.as ?? ''] : [x.now]))
+            .filter((x) => /^(?:a|an|the)\s/i.test(x.trim()) && x.trim().split(/\s+/).length <= 5),
+        ],
+        near,
+      );
+    };
     const now = (id: string) => {
       const st = changed.find(
         (x) => x.who === id && /^\s*(?:its |their )?(?:form|shape|whole|self|itself|kind)\s*$/i.test(x.what),
@@ -2359,6 +2454,7 @@ function planWith(
         seen(m),
         builds('subject_in_frame') ? facesNeeded(b, m) : [],
         builds('subject_in_frame') ? (HEIGHT_FOR[m.distance] ?? 0) : 0,
+        pointThings(m, pov),
       );
       if (v) {
         c.view = v.text;
@@ -2452,6 +2548,7 @@ function planWith(
           undefined,
           keptHeads,
           others,
+          pointThings(m, where),
         );
         if (own && !drawnFrom(c, base, own.eye, eyeOf(base.id))) {
           Object.assign(base, { role: 'composition', relation: 'same_side', carries: CARRIES.same_side });
@@ -2462,7 +2559,18 @@ function planWith(
       const rules = opts.camera && !edits ? shotRules(c, m, where) : undefined;
       const v = edits
         ? null
-        : outsideShot(where, framed, m.distance, now, lookAt(m, where), alsoNear, rules, keptHeads, others);
+        : outsideShot(
+            where,
+            framed,
+            m.distance,
+            now,
+            lookAt(m, where),
+            alsoNear,
+            rules,
+            keptHeads,
+            others,
+            pointThings(m, where),
+          );
       // With S5's references the gate compares this camera with the picture's whatever the camera rules, and
       // the cut keeps its own shot for when the picture is not sent after all.
       if ((opts.camera || refs) && edits) {
@@ -2476,6 +2584,7 @@ function planWith(
           undefined,
           keptHeads,
           others,
+          pointThings(m, where),
         );
         if (own) c.wouldBe = own.eye;
         // Placed as any cut is, but never moved off the camera of the picture it edits: withheld, that picture is
@@ -2496,6 +2605,7 @@ function planWith(
               placed && kept ? { ...placed, avoid: kept.map((e) => e.eye) } : undefined,
               keptHeads,
               others,
+              pointThings(m, where),
             )
           : null;
         if (alone)
