@@ -40,7 +40,7 @@
           "type": "number"
         },
         "lean": {
-          "enum": ["back", "forward", "left", "right"]
+          "enum": ["back", "forward", "left", "right", "close"]
         },
         "lens": {
           "type": "number"
@@ -113,6 +113,9 @@
         },
         "body": {
           "enum": ["human", "four-legged", "bird", "fish", "other"]
+        },
+        "sized": {
+          "enum": ["body", "moment"]
         },
         "above": {
           "type": "number"

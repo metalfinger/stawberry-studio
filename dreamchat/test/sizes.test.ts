@@ -120,7 +120,7 @@ describe('the plan at the sizes of its moment', () => {
     expect(spot(m2, 'p3')).toMatchObject({ height: 0.005, body: 'other' });
     expect(spot(m2, 'p2').height).toBeUndefined();
     const m3 = withSizes(kitchen, reading, 'm3');
-    expect(spot(m3, 'p2')).toMatchObject({ height: 0.005, body: 'human' });
+    expect(spot(m3, 'p2')).toMatchObject({ height: 0.005, body: 'human', sized: 'moment' });
     expect(spot(m3, 'p1').height).toBeUndefined();
     // A thing is scaled whole to its height.
     const m5 = withSizes(kitchen, reading, 'm5');
@@ -134,6 +134,17 @@ describe('the plan at the sizes of its moment', () => {
     const s = settle(m3 as never);
     expect(spot(s, 'p2')).toMatchObject({ x: 1.68, y: 0.35 });
     expect(spot(s, 'p3')).toMatchObject({ x: 1.62, y: 0.35 });
+    // Ant-sized Alina put on the spot of a building shrunk to her size stands beside it, toward the room, never inside.
+    const m5 = settle({
+      ...(withSizes(kitchen, reading, 'm5') as object),
+      spots: (withSizes(kitchen, reading, 'm5') as { spots: S[] }).spots.map((x) =>
+        x.id === 'p2' ? { ...x, x: 2.6, y: 0.3, height: 0.005, body: 'human', sized: 'moment' } : x,
+      ),
+    } as never);
+    const alina = spot(m5, 'p2');
+    expect(Math.hypot(alina.x - 2.6, alina.y - 0.3)).toBeGreaterThan(0.002);
+    expect(Math.hypot(alina.x - 2.6, alina.y - 0.3)).toBeLessThan(0.01);
+    expect(alina.y).toBeGreaterThan(0.3);
     // Grown, the two would stand side by side 60 cm apart, as before.
     const two = { ...(kitchen as object), spots: [spot(kitchen, 'p2'), { ...spot(kitchen, 'p3'), x: 1.7 }] };
     const g = settle(two as never);
@@ -156,9 +167,12 @@ describe('the camera placed for them', () => {
     };
     const orange = { ...moment, visual_point: 'the piece of orange on the counter' };
     expect(framedAtSize(key as never, ['p1', 't1'], orange, name)).toEqual(['p1', 't1']);
-    // Naming the grown dreamer too, the frame is everyone's, as before.
+    // Naming the grown dreamer too, the frame is still the small ones', the dreamer at its edge (Shrunk m4).
     const both = { ...moment, visual_point: 'the dreamer frowning down at tiny alina' };
-    expect(framedAtSize(m3, ['p1', 'p2', 'p3'], both, name)).toEqual(['p1', 'p2', 'p3']);
+    expect(framedAtSize(m3, ['p1', 'p2', 'p3'], both, name)).toEqual(['p2', 'p3']);
+    // A point naming no one small, the frame is everyone's, as before.
+    const grown = { ...moment, visual_point: 'the dreamer pointing at the counter' };
+    expect(framedAtSize(m3, ['p1', 'p2', 'p3'], grown, name)).toEqual(['p1', 'p2', 'p3']);
   });
 
   test('close on the ant-sized Alina: the camera a few centimetres off, at her eyes, and her whole height in it', () => {
@@ -180,5 +194,19 @@ describe('the camera placed for them', () => {
       ]);
     expect(say('on')).toEqual(say('eyes_aimed'));
     for (const t of say('on')) expect(t).not.toContain('  ');
+  });
+
+  test("through the dreamer's eyes, a building shrunk to an ant's size is looked at from right up close (Shrunk m6)", () => {
+    const m5 = settle(withSizes(kitchen, reading, 'm5') as never);
+    const v = withEnv(ON, () => dreamerShot(m5, 'p1', 't2', (id) => name({ id }))!);
+    const building = spot(m5, 't2');
+    expect(Math.hypot(v.eye.at.x - building.x, v.eye.at.y - building.y)).toBeLessThan(0.05);
+    expect(v.eye.lean).toBe('close');
+    expect(v.text).toContain('bent right down close to it');
+    // Without the step, from where they stand.
+    const off = withEnv({ ...ON, DREAMCHAT_ONE_BUILDER: 'eyes_aimed' }, () =>
+      dreamerShot(m5, 'p1', 't2', (id) => name({ id }))!,
+    );
+    expect(off.eye.at).toEqual({ x: 2, y: 1.1 });
   });
 });

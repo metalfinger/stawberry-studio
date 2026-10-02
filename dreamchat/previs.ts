@@ -61,9 +61,9 @@ const afloat = (plan: Blocking) => (plan.water ? Math.max(0, plan.water - 0.15) 
 export const eyeHeight = (pose?: Spot['pose']) => (pose === 'sitting' ? 1.2 : pose === 'lying' ? 0.35 : 1.62);
 
 /** A creature drawn in its own shape at its own height (cast bodies, `sizes`), not a person's mannequin. */
-const creatureOf = (s: Spot) => !!s.body && s.body !== 'human' && !!s.height;
+const creatureOf = (s: Spot) => !!s.sized && !!s.body && s.body !== 'human' && !!s.height;
 /** How tall someone stands beside a grown person (`sizes`): 1 unless their own height is given. */
-const scaleOf = (s: Spot) => (s.height && !creatureOf(s) ? s.height / STANDING : 1);
+const scaleOf = (s: Spot) => (s.sized && s.body === 'human' && s.height ? s.height / STANDING : 1);
 /** How high someone's eyes are above what they stand on: by how they are, and their own size. */
 const eyesOf = (s: Spot) => (creatureOf(s) ? s.height! * 0.8 : eyeHeight(s.pose) * scaleOf(s));
 /** The top of someone's head above what they stand on: by how they are, and their own size. */
@@ -801,7 +801,7 @@ export function headsIn(eye: Eye, heads: string[], plan: Blocking, least = 0): E
 function tinyIn(r: Render, plan: Blocking, spots: Spot[]): { s: Spot; cx: number; cy: number }[] {
   if (!builds('sizes')) return [];
   return spots.flatMap((s) => {
-    if (!isPerson(s) || !s.height) return [];
+    if (!isPerson(s) || !s.sized) return [];
     const p = r.project(v3(s.x, s.y, groundAt(s, plan) + headTopOf(s) / 2));
     if (!p || p.x < 0 || p.y < 0 || p.x >= r.width || p.y >= r.height) return [];
     const k = r.solid[Math.floor(p.y) * r.width + Math.floor(p.x)];
@@ -959,7 +959,10 @@ function thingBlocks(s: Spot, plan: Blocking, called: string, pov?: Eye): Block[
       return { x: s.x + f.x * mid, y: s.y + f.y * mid, z: 0, w, d: d / n, h: ((i + 1) * h) / n, f };
     });
   }
-  return [{ x: s.x, y: s.y, z: 0, w, d, h, f }];
+  // On the raised ground it stands on, as whoever stands there is (`sizes`): the shrunken building and the piece of
+  // orange on the kitchen counter were drawn on the floor, inside it, and never seen (Shrunk m3-m8).
+  const floor = builds('sizes') && shape === 'block' ? groundAt(s, plan) : 0;
+  return [{ x: s.x, y: s.y, z: floor, w, d, h, f }];
 }
 
 /** How high the middle of something on a wall or a tall cabinet is: about eye height. */
@@ -1133,6 +1136,8 @@ const sized = (long: number): [number, number] => {
 
 /** The solids as the eye sees them: flat grey, lit from behind the camera, outlined. */
 function render(solids: Solid[], eye: Eye, width: number, height: number): Render {
+  // Bent right down to something the dream made small (`sizes`), what is a centimetre off is still in front of the eye.
+  const near = eye.lean === 'close' ? 0.002 : NEAR;
   const d = unit(eye.d);
   const pitch = eye.pitch ?? 0;
   const F = v3(d.x * Math.cos(pitch), d.y * Math.cos(pitch), Math.sin(pitch));
@@ -1170,7 +1175,7 @@ function render(solids: Solid[], eye: Eye, width: number, height: number): Rende
         const v = v3(q.x - C.x, q.y - C.y, q.z - C.z);
         return v3(dot(v, R), dot(v, U), dot(v, F));
       });
-      const poly = clipNear(cam, NEAR);
+      const poly = clipNear(cam, near);
       if (poly.length < 3) continue;
       const pts = poly.map((q) => ({
         x: width / 2 + (focal * q.x) / q.z,
@@ -1276,7 +1281,7 @@ function render(solids: Solid[], eye: Eye, width: number, height: number): Rende
   const project = (q: V3) => {
     const v = v3(q.x - C.x, q.y - C.y, q.z - C.z);
     const z = dot(v, F);
-    return z < NEAR ? null : { x: width / 2 + (focal * dot(v, R)) / z, y: height / 2 - (focal * dot(v, U)) / z };
+    return z < near ? null : { x: width / 2 + (focal * dot(v, R)) / z, y: height / 2 - (focal * dot(v, U)) / z };
   };
   return { width, height, lum: edged, solid: solidAt, solids, seen, project };
 }
@@ -1876,6 +1881,7 @@ const LEAN_WORDS: Record<Lean, string> = {
   forward: 'leaning forward a little',
   left: 'leaning a little to their left',
   right: 'leaning a little to their right',
+  close: 'bent right down close to it',
 };
 
 /**
@@ -1959,6 +1965,30 @@ export function dreamerShot(
   const onIt = !!target && onFootprint(me, target, plan);
   let best: { eye: Eye; score: number } | undefined;
   const fitted = !!target && !!heart && least > 0;
+  // Looking at something the dream has made small (`sizes`), the dreamer's eyes come right down to it, at its height: as
+  // one bends to look in at the windows of a building shrunk to an ant's size. From where they stood it was a speck on
+  // the counter, and the party inside it, the moment's one thing to show, was nowhere (Shrunk m6).
+  const closeAt =
+    builds('sizes') && camera && target?.sized && heart && !inHands
+      ? isPerson(target)
+        ? headTopOf(target)
+        : sizeOf(target)[2]
+      : 0;
+  if (closeAt && heart && closeAt < eyesOf(me) / 10) {
+    const to = unit({ x: heart.x - me.x, y: heart.y - me.y });
+    const far = Math.max(0.01, closeAt * 4);
+    best = {
+      eye: {
+        at: { x: heart.x - to.x * far, y: heart.y - to.y * far },
+        d: to,
+        height: heart.z,
+        pitch: 0,
+        lean: 'close',
+      },
+      score: Infinity,
+    };
+  }
+
   // Where they look, straight on from where they are: the view kept with `eyes_aimed` when what they look at shows in
   // none of the ways of looking.
   let straight: Eye | undefined;
@@ -1969,7 +1999,7 @@ export function dreamerShot(
     wanted.length
       ? wanted.filter((id) => (r.seen.get(id)?.visible ?? 0) >= 192 * 108 * 0.002).length / wanted.length
       : 0;
-  for (const [lean, off, how] of target && !stepBack ? leans : leans.slice(0, 1))
+  for (const [lean, off, how] of best ? [] : target && !stepBack ? leans : leans.slice(0, 1))
     for (const aim of target ? [0, -8, 8, -15, 15, -22, 22] : wanted.length ? [0, -15, 15, -30, 30, -45, 45] : [0]) {
       const at = { x: me.x + off.x + (stepBack?.x ?? 0), y: me.y + off.y + (stepBack?.y ?? 0) };
       const d = turn(heart ? unit({ x: heart.x - at.x, y: heart.y - at.y }) : own, aim);
@@ -2081,7 +2111,7 @@ export function dreamerShot(
   const distance = (s: Spot) => Math.hypot(s.x - eye.at.x, s.y - eye.at.y);
   // Someone at a size of their own (`sizes`) with any of them in view is in the picture, however small: as few pixels,
   // the mouse-sized dreamer beside the cat as big as a bus was said outside it and their sketch was not sent.
-  const anyOf = (x: { s: Spot; seen?: Seen }) => builds('sizes') && !!x.s.height && (x.seen?.visible ?? 0) > 0;
+  const anyOf = (x: { s: Spot; seen?: Seen }) => builds('sizes') && !!x.s.sized && (x.seen?.visible ?? 0) > 0;
   const shown = spots
     .map((s) => ({ s, seen: r.seen.get(s.id) }))
     .filter((x): x is { s: Spot; seen: Seen } => !!x.seen && (x.seen.visible >= min || anyOf(x)))
@@ -2395,6 +2425,8 @@ export function outsideShot(
   },
   /** Whose heads the frame keeps (continuity facesNeeded, `subject_in_frame`): the camera tilts to hold them. */
   heads: string[] = [],
+  /** Who else the moment has, left out of a frame placed for what the dream made small (`sizes`): said all the same. */
+  others: string[] = [],
 ): {
   eye: Eye;
   text: string;
@@ -2565,9 +2597,11 @@ export function outsideShot(
     (s.above ?? restOf(s, plan, name(s.id))?.z ?? groundAt(s, plan)) + (isPerson(s) ? headTopOf(s) : sizeOf(s)[2]);
   // Everyone and everything it holds far smaller than a grown person (`sizes`): held whole, from as near as their size
   // has it. Framed for the grown dreamer beside them, the ant-sized Alina by the piece of orange was a speck (Shrunk m3).
-  const fitted = [...new Set([...group, ...holdAll])];
+  // Its own subjects only: the kitchen counter the moment looks at, under a building shrunk to an ant's size, is where it
+  // stands, not what the frame is the size of (Shrunk m7).
+  const fitted = [...new Set([...group, ...holdAll])].filter((s) => subjects.includes(s.id));
   const subject = Math.max(0, ...fitted.map((s) => (isPerson(s) ? headTopOf(s) : sizeOf(s)[2])));
-  const atSize = fitted.some((s) => isPerson(s) && s.height) && subject < STANDING / 10 ? subject / STANDING : 1;
+  const atSize = fitted.some((s) => s.sized) && subject < STANDING / 10 ? subject / STANDING : 1;
   let tallest = hands !== undefined ? hands + 0.35 : Math.max(...(atSize < 1 ? fitted : group).map(topAt));
   // A close shot is a head and shoulders of whoever stands tallest in it, at their own size (`sizes`): a grown person's
   // 70 cm, an ant-sized one's few millimetres.
@@ -2580,20 +2614,28 @@ export function outsideShot(
         : 0.7;
   // A medium shot from the waist of whoever stands tallest: measured from what they stand on where their size is their
   // own (an ant-sized Alina on the kitchen counter is not half the counter's height).
-  const foot = top && isPerson(top) && top.height ? topAt(top) - headTopOf(top) : 0;
+  const ownTall = (s: Spot) => (isPerson(s) ? headTopOf(s) : sizeOf(s)[2]);
+  const foot =
+    atSize < 1
+      ? Math.min(...fitted.map((s) => topAt(s) - ownTall(s)))
+      : top && isPerson(top) && top.sized
+        ? topAt(top) - headTopOf(top)
+        : 0;
   let lowest =
     hands !== undefined
       ? hands - 0.2
       : size === 'close'
         ? tallest - band
         : size === 'medium'
-          ? foot + (tallest - foot) * 0.45
+          ? atSize < 1
+            ? foot
+            : foot + (tallest - foot) * 0.45
           : 0;
   // Whose face the moment needs, at a size of their own (`sizes`), held whole: a medium shot fitted to the cat as big as
   // a bus had the mouse-sized dreamer beside her under the frame (3cd7 m5, m7).
   for (const id of heads) {
     const s = plan.spots.find((x) => x.id === id);
-    if (s?.height && isPerson(s) && group.includes(s)) lowest = Math.min(lowest, topAt(s) - headTopOf(s));
+    if (s?.sized && isPerson(s) && group.includes(s)) lowest = Math.min(lowest, topAt(s) - headTopOf(s));
   }
   // What the moment looks at, put down at someone's feet and held by nobody, is in the picture: a close look
   // frames it where it lies, and a medium shot reaches down to it. The boat set down in the grass was under
@@ -2610,7 +2652,12 @@ export function outsideShot(
   // yet "at the height of their eyes" (library, 30 Sep). Everyone under it, the camera is in it with them.
   const dry = people.filter((s) => !underWater(s, plan));
   const eyes = dry.length ? dry : people;
-  const height = eyes.length ? eyes.reduce((a, s) => a + eyesOf(s) + groundAt(s, plan), 0) / eyes.length : 1.5;
+  // At their size with no one in it to see from (a building shrunk to an ant's size), at its height (`sizes`).
+  const height = eyes.length
+    ? eyes.reduce((a, s) => a + eyesOf(s) + groundAt(s, plan), 0) / eyes.length
+    : atSize < 1
+      ? foot + subject * 0.6
+      : 1.5;
   const aim = (tallest + lowest) / 2;
   // Up and down a vertical frame is its long side, 36mm on a full frame.
   const tallAt = (l: number) => (upright() ? Math.atan(18 / l) : Math.atan(Math.tan(Math.atan(18 / l)) * (9 / 16)));
@@ -2620,7 +2667,8 @@ export function outsideShot(
     const r = rightOf(d);
     // How much of the place across the camera everyone and everything it holds takes, side to side:
     // a thing as its part nearest them, and as much of it either side as a frame can hold.
-    const offsets = holdAll.flatMap((t) => {
+    // At their size, across as much as they take: not the kitchen counter under the shrunken building (Shrunk m7).
+    const offsets = (atSize < 1 ? fitted : holdAll).flatMap((t) => {
       const q = nearestPart(t, c);
       const o = (q.x - c.x) * r.x + (q.y - c.y) * r.y;
       const half = t.many
@@ -2632,7 +2680,10 @@ export function outsideShot(
     });
     const wide =
       Math.max(...offsets) - Math.min(...offsets) + (size === 'close' ? 0.4 : size === 'medium' ? 1 : 2.5) * atSize;
-    const tall = (tallest - lowest) * (size === 'close' ? 1.3 : size === 'medium' ? 1.25 : 1.8);
+    // At their size, a medium or wide frame holds them whole with room round them: a building shrunk to an ant's size
+    // filled the frame of "tiny Alina going in at its door" (Shrunk m5).
+    const room = atSize < 1 ? (size === 'close' ? 1 : size === 'medium' ? 2.5 : 5) : 1;
+    const tall = (tallest - lowest) * (size === 'close' ? 1.3 : size === 'medium' ? 1.25 : 1.8) * room;
     // What the frame must hold, and so how far off a lens of this size must be.
     const frameTall = Math.max(tall, upright() ? (wide * 16) / 9 : (wide * 9) / 16);
     let lens = LENS[size];
@@ -2666,7 +2717,9 @@ export function outsideShot(
     // How much closer than the shot needs a wall kept it: a wide moment taken from a step behind
     // the dreamer at the entrance, on a 14mm lens (25 Sep).
     const cramped = people.length ? Math.max(0, minNear - ahead()) : 0;
-    return { eye: { at, d, height, pitch: Math.atan2(aim - height, far), lens }, far, cramped };
+    // At their size, a centimetre off is still before the lens (`sizes`): the render's near plane comes in with it.
+    const near = atSize < 1 ? { lean: 'close' as const } : {};
+    return { eye: { at, d, height, pitch: Math.atan2(aim - height, far), lens, ...near }, far, cramped };
   };
   const turnBy = (v: V2, deg: number) => {
     const a = (deg * Math.PI) / 180;
@@ -2794,7 +2847,7 @@ export function outsideShot(
     // drawn whole where the mock-up has it covered.
     x.seen.occluded <= 0.7;
   // Someone at a size of their own (`sizes`) with any of them in view is in the picture, however small.
-  const anyOf = (x: { s: Spot; seen?: Seen }) => builds('sizes') && !!x.s.height && (x.seen?.visible ?? 0) > 0;
+  const anyOf = (x: { s: Spot; seen?: Seen }) => builds('sizes') && !!x.s.sized && (x.seen?.visible ?? 0) > 0;
   const shown = spots
     .map((s) => ({ s, seen: rr.seen.get(s.id) }))
     .filter(
@@ -2897,7 +2950,7 @@ export function outsideShot(
       !shown.some((x) => x.s.id === s.id) &&
       !tinies.some((x) => x.s.id === s.id) &&
       !riding(s) &&
-      (subjects.includes(s.id) || !isPerson(s)) &&
+      (subjects.includes(s.id) || others.includes(s.id) || !isPerson(s)) &&
       !(s.heldBy && shown.some((x) => x.s.id === s.heldBy)) &&
       !(camera && underWater(s, plan, eye)) &&
       !isCastPiece(s),
