@@ -241,6 +241,22 @@ export const BUILDER_STEPS: readonly string[] = [
   //    modern. The dream's period, from its own words or the date it was recorded (era.ts), told to every sketch and
   //    every moment, a moment the dream sets in another time keeping its own; never in the style.
   'era',
+  // Not a ledger row: from the merged flow's mock-up A/B (2 Oct). The people a moment is about stay in its frame, their
+  //    heads in it: close shots came out a chin and a collar, and a look down on the train held a seat-back and knees
+  //    (34 of 281 named people with their head cut, the saved dreams). A hand, a held thing or an insert needs no face.
+  'subject_in_frame',
+  // Not a ledger row: from the merged flow's Fan m8 and Shrunk m6 (2 Oct). Through the dreamer's eyes, what they look
+  //    at that no way of looking shows (under the water, hidden inside a crowd) is looked at all the same, straight on:
+  //    the cut had no camera, was "failed" and never drawn.
+  'eyes_aimed',
+  // Not a ledger row: from the merged flow's Shrinking Hand (2 Oct), and the cast's bodies parked on 30 Sep. Each figure
+  //    and thing at the size the dream's words give it, in each moment they say (sizes.ts), the camera placed for them:
+  //    the ants were a man on the kitchen counter, tiny Alina and her guests full size, hiding the shrunken building.
+  'sizes',
+  // Not a ledger row: from the merged flow's Grandmother on Wednesdays (2 Oct). A place's sketch is told by how it is
+  //    built, never by what people do there (built.ts, one writer reading per dream): "the family meeting", "a room
+  //    where the family gathers around a table", came out full of people in 4 of 4 takes, alone and empty all the same.
+  'place_built',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;

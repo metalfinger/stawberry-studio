@@ -262,6 +262,7 @@ describe('every field a spot can have is in the schema', () => {
       name: 'the dentist',
       height: 1.7,
       body: 'human',
+      sized: 'moment',
       above: 0.5,
       climbing: { of: 't1', how: 'into' },
       rides: 'front',

@@ -58,6 +58,11 @@ export type Spot = {
    */
   body?: 'human' | 'four-legged' | 'bird' | 'fish' | 'other';
   /**
+   * Drawn at a size the dream's words give it (sizes.ts, `sizes`): its ordinary size, as a creature's (`body`: the ants),
+   * or one the dream sets in this moment (`moment`: a shrunken building, ant-sized Alina).
+   */
+  sized?: 'body' | 'moment';
+  /**
    * How far a fixture's bottom is off the floor, in metres, where the place's words put it up a wall or on
    * the ceiling (camera.ts mountOf: "the high round window", "a clock on the wall"): set by the camera
    * rules. Without it every fixture stood on the floor, and deep water hid a window high in the wall.
@@ -197,7 +202,8 @@ export function bearing(from: Vec, d: Vec, to: Vec): { angle: number; distance: 
 export type Camera = { at: Vec; d: Vec };
 
 /** Which way someone leans, from where they sit or stand, to see past someone close. */
-export type Lean = 'back' | 'forward' | 'left' | 'right';
+/** How the dreamer's eyes are moved from where they are: a little each way, or right down to something small. */
+export type Lean = 'back' | 'forward' | 'left' | 'right' | 'close';
 
 /**
  * A camera with a height: someone's eyes, or the lens, and how it tilts (radians, down negative).
@@ -268,10 +274,28 @@ export function settle(
     !t.shape &&
     plan.spots.some((p) => p.kind === 'person' && !p.many && p.pose === 'sitting' && onFootprint(p, t, plan));
   const solids = plan.spots.filter((t) => solidOf(t) && !sat(t));
+  // At a size of their own (`sizes`), solid to them is what stands well over a third of them: ant-sized Alina put on the
+  // spot of a building shrunk to her size stood inside it, unseen, "going in at its door" (Shrunk m5).
+  const solidTo = (s: Spot) =>
+    s.sized && s.height && s.height < 1.74
+      ? plan.spots.filter(
+          (t) =>
+            t.id !== s.id &&
+            t.kind !== 'person' &&
+            !t.many &&
+            !t.heldBy &&
+            (t.shape ?? 'block') === 'block' &&
+            sizeOf(t)[2] > s.height! / 3 &&
+            !sat(t),
+        )
+      : solids;
   const [rw, rd] = roomOf(plan);
   const free = (p: Vec, self: Spot) =>
     !plan.spots.some(
-      (t) => t.id !== self.id && (solidOf(t) || t.shape === 'vehicle') && onFootprint(p, t, plan, 0.1),
+      (t) =>
+        t.id !== self.id &&
+        (solidOf(t) || t.shape === 'vehicle' || solidTo(self).includes(t)) &&
+        onFootprint(p, t, plan, 0.1 * (self.sized && self.height && self.height < 1.74 ? self.height / 1.74 : 1)),
     ) &&
     (!plan.indoors || (p.x >= 0.2 && p.x <= rw - 0.2 && p.y >= 0.2 && p.y <= rd - 0.2));
   // Someone standing is beside a car, not in it: dropped off at the house, the dreamer was said to
@@ -284,8 +308,9 @@ export function settle(
     // Whoever rides in something faces the way it goes: the dreamer and the aunt sat back to back in
     // her car over the bridge (25 Sep).
     if (riding) return { ...s, faces: riding.faces ?? 'front' };
+    const k = s.sized && s.height && s.height < 1.74 ? s.height / 1.74 : 1;
     const t =
-      solids.find((b) => onFootprint(s, b, plan, -0.05)) ??
+      solidTo(s).find((b) => onFootprint(s, b, plan, -0.05 * k)) ??
       // Afloat (the camera rules' water), whoever stands in a boat stays in it: there is only water beside it.
       (s.pose === 'standing' && !plan.water ? vehicles.find((v) => onFootprint(s, v, plan, -0.05)) : undefined);
     if (!t) return s;
@@ -293,25 +318,34 @@ export function settle(
     const [w, d] = sizeOf(t);
     const f = facing(t, plan);
     const r = rightOf(f);
-    const m = 0.35;
+    const m = 0.35 * k;
+    const step = 0.25 * k;
     const round: Vec[] = [];
-    for (let u = -w / 2 - m; u <= w / 2 + m + 1e-9; u += 0.25)
+    for (let u = -w / 2 - m; u <= w / 2 + m + 1e-9; u += step)
       round.push({ x: u, y: d / 2 + m }, { x: u, y: -d / 2 - m });
-    for (let v = -d / 2 - m; v <= d / 2 + m + 1e-9; v += 0.25)
+    for (let v = -d / 2 - m; v <= d / 2 + m + 1e-9; v += step)
       round.push({ x: w / 2 + m, y: v }, { x: -w / 2 - m, y: v });
     const out = round
       .map((o) => ({ x: t.x + r.x * o.x + f.x * o.y, y: t.y + r.y * o.x + f.y * o.y }))
       .filter((p) => free(p, s))
-      .sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
+      .sort((a, b) =>
+        // At a size of their own, every spot round something small is as near: the one toward the middle of the place,
+        // where a camera sees them, not behind it against the wall.
+        k < 1
+          ? Math.hypot(a.x - rw / 2, a.y - rd / 2) - Math.hypot(b.x - rw / 2, b.y - rd / 2)
+          : Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y),
+      )[0];
     return out ? { ...s, x: out.x, y: out.y } : s;
   });
   // Two people on one spot are side by side, across the way they face: in one car over the bridge,
   // the aunt hid the dreamer (25 Sep).
   const people = spots.filter((s) => s.kind === 'person' && !s.many);
+  // At their own size (`sizes`): ant-sized Alina and the ants a few millimetres apart, not pushed off the counter.
+  const kOf = (s: Spot) => (s.sized && s.height ? Math.min(1, s.height / 1.74) : 1);
   const done = new Set<string>();
   for (const a of people) {
     if (done.has(a.id)) continue;
-    const together = people.filter((b) => !done.has(b.id) && Math.hypot(b.x - a.x, b.y - a.y) < 0.3);
+    const together = people.filter((b) => !done.has(b.id) && Math.hypot(b.x - a.x, b.y - a.y) < 0.3 * kOf(a));
     together.forEach((b) => done.add(b.id));
     if (together.length < 2) continue;
     const f = facing(a, { ...plan, spots });
@@ -328,7 +362,8 @@ export function settle(
     const rank = (b: Spot) => (b.rides === 'front' ? 0 : b.rides === 'back' ? 2 : 1);
     if (narrow) together.sort((a, b) => rank(a) - rank(b));
     together.forEach((b, k) => {
-      const off = narrow ? ((together.length - 1) / 2 - k) * 0.6 : (k - (together.length - 1) / 2) * 0.6;
+      const gap = 0.6 * Math.max(...together.map(kOf));
+      const off = narrow ? ((together.length - 1) / 2 - k) * gap : (k - (together.length - 1) / 2) * gap;
       Object.assign(b, { x: mid.x + along.x * off, y: mid.y + along.y * off });
     });
   }

@@ -7,6 +7,8 @@
 //   DREAMCHAT_WRITER=claude bun run evals/cast-cache.ts --ask --live     every saved conversation too (DREAMCHAT_DATA)
 //   bun run evals/cast-cache.ts                                          what each dream's reading holds, from the cache
 //   DREAMCHAT_WRITER=claude bun run evals/cast-cache.ts --wardrobe --ask  each untold group's guessed clothes (wardrobe.ts)
+//   DREAMCHAT_WRITER=claude bun run evals/cast-cache.ts --sizes --ask     how big each figure and thing is (sizes.ts)
+//   DREAMCHAT_WRITER=claude bun run evals/cast-cache.ts --built --ask     each place told by its build (built.ts)
 
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -21,6 +23,8 @@ import {
   writeCast,
 } from '../cast';
 import type { Session } from '../session';
+import { type BuiltReading, builtAsk, parseBuilt, withBuilt } from '../built';
+import { parseSizes, type SizesReading, sizesAsk } from '../sizes';
 import { parseWardrobe, type WardrobeReading, wardrobeAsk, withWardrobes } from '../wardrobe';
 import { DIR, sha256 } from './saved';
 
@@ -102,6 +106,59 @@ export async function wardrobeOf(
 }
 
 /**
+ * How big each figure and thing in a dream is drawn (sizes.ts), kept in the same cache: from it, or with `ask` from the
+ * writer. Null where the dream has no breakdown, or the reading is not cached and not asked.
+ */
+export async function sizesOf(
+  s: Session,
+  opts: { ask?: boolean; write?: WriteFn; cacheFile?: string } = {},
+): Promise<{ reading: SizesReading; dropped: string[]; asked: boolean } | null> {
+  const b = s.draft?.breakdown;
+  if (!b) return null;
+  const text = toldOf(s).join('\n');
+  const messages = sizesAsk(b, text);
+  const file = opts.cacheFile ?? CAST_CACHE;
+  const key = sha256(`sizes writer ${castWriterName()}\n${JSON.stringify(messages)}`);
+  const cache = cacheOf(file);
+  let hit = cache[key];
+  let asked = false;
+  if (!hit) {
+    if (!opts.ask) return null;
+    const res = await (opts.write ?? writeCast)(messages);
+    hit = cache[key] = { content: res.content, usage: res.usage };
+    save(file);
+    asked = true;
+  }
+  return { ...parseSizes(hit.content, b, text), asked };
+}
+
+/**
+ * A dream's places told by how they are built (built.ts), kept in the same cache: from it, or with `ask` from the
+ * writer. Null where the dream has no place sketch, or the reading is not cached and not asked.
+ */
+export async function builtOf(
+  s: Session,
+  opts: { ask?: boolean; write?: WriteFn; cacheFile?: string } = {},
+): Promise<{ reading: BuiltReading; asked: boolean } | null> {
+  const items = s.build?.items ?? [];
+  const messages = builtAsk(items, s.draft?.breakdown?.logline ?? '');
+  if (!messages) return null;
+  const file = opts.cacheFile ?? CAST_CACHE;
+  const key = sha256(`built writer ${castWriterName()}\n${JSON.stringify(messages)}`);
+  const cache = cacheOf(file);
+  let hit = cache[key];
+  let asked = false;
+  if (!hit) {
+    if (!opts.ask) return null;
+    const res = await (opts.write ?? writeCast)(messages);
+    hit = cache[key] = { content: res.content, usage: res.usage };
+    save(file);
+    asked = true;
+  }
+  return { reading: parseBuilt(hit.content, items), asked };
+}
+
+/**
  * With the one builder's `cast_named` step, a saved dream with its cast reading in (draft.readings.cast) and its
  * things cast in its breakdown, from the cache only. Run after the typed and implied readings are in: they were asked
  * of the breakdown as saved. `missing` where the dream has no cached reading.
@@ -125,6 +182,17 @@ export async function withCast(
   if (builds('extras_wardrobe') && session.build) {
     const w = await wardrobeOf(session, { cacheFile: opts.cacheFile });
     if (w) session.build = { ...session.build, items: withWardrobes(session.build.items, w.reading) };
+  }
+  // With the `place_built` step, each place whose words said its use told by how it is built, from the cache only.
+  if (builds('place_built') && session.build) {
+    const p = await builtOf(session, { cacheFile: opts.cacheFile });
+    if (p) session.build = { ...session.build, items: withBuilt(session.build.items, p.reading) };
+  }
+  // With the `sizes` step, how big each figure and thing is, from the cache only, for the floor plan to draw them so:
+  // asked of the dream as it is saved, before the cast puts anything in.
+  if (builds('sizes')) {
+    const z = await sizesOf(s, { cacheFile: opts.cacheFile });
+    if (z) session.draft = { ...session.draft!, readings: { ...(session.draft!.readings ?? {}), sizes: z.reading } };
   }
   return { session, missing: false };
 }
@@ -153,6 +221,36 @@ if (import.meta.main) {
     dreams.map((d) =>
       limit(async () => {
         try {
+          // --built: each place told by its build (built.ts), in place of the cast reading.
+          if (args.includes('--built')) {
+            const p = await builtOf(d.session, { ask });
+            if (p?.asked) askedN++;
+            return console.log(
+              `${d.id}: ${
+                !p
+                  ? 'no place, or not cached'
+                  : Object.entries(p.reading)
+                      .map(([id, v]) => `${id}: ${v.name} | ${v.kind} | ${v.in}`)
+                      .join('; ') || 'none rewritten'
+              }`,
+            );
+          }
+          // --sizes: how big each figure and thing is (sizes.ts), in place of the cast reading.
+          if (args.includes('--sizes')) {
+            const z = await sizesOf(d.session, { ask });
+            if (z?.asked) askedN++;
+            return console.log(
+              `${d.id}: ${
+                !z
+                  ? 'no breakdown, or not cached'
+                  : `bodies ${z.reading.bodies.map((x) => `${x.id} ${x.height_m} m ${x.shape}`).join('; ') || 'none'} | moments ${
+                      Object.entries(z.reading.moments)
+                        .map(([m, l]) => `${m}: ${l.map((x) => `${x.id} ${x.height_m} m`).join(', ')}`)
+                        .join('; ') || 'none'
+                    }${z.dropped.length ? ` | dropped ${z.dropped.join('; ')}` : ''}`
+              }`,
+            );
+          }
           // --wardrobe: each untold group's guessed clothes (wardrobe.ts), in place of the cast reading.
           if (args.includes('--wardrobe')) {
             const w = await wardrobeOf(d.session, { ask });
