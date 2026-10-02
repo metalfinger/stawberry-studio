@@ -22,6 +22,8 @@ Python 3.12 and the newest Python here, for every saved dream.
   have (`$: constructor is not allowed`).
 - **Producer and consumer pairs**: a version 7 packet to a version 7 reader; version 8 to version 8; a version 7
   packet to a version 8 reader through the mapping below.
+- **Nothing below version 7 is upgraded.** A packet of version 6 or older is refused at `$.version`; a replay of an
+  older run needs the reader it was written for, or the dream imported again and its packet written at this code.
 
 ## Version 7 to version 8 (`toV8`)
 
