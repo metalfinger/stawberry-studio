@@ -40,7 +40,9 @@ them (`sizes`: the Shrinking Hand's ants and tiny Alina, a mouse-sized dreamer b
 place's sketch told by how it is built, never by what people do there (`place_built`, for Grandmother's family meeting
 room); and a thing drawn as the story last left it (`thing_state`: Grandmother's bed sheet, folded down to a stamp
 and put in the cutlery drawer); and through the dreamer's eyes, someone glimpsed past a crowd seen past it
-(`crowd_between`, E2: the Train's man in the wheelchair). Next, in the owner's order: E3 crowd image (with Disappear's and Shrunk's crowd moments), E4
+(`crowd_between`, E2: the Train's man in the wheelchair); and the things a moment's point names held in its picture
+as its people are (`things_in_frame`: the stamp laid in the cutlery drawer). Next, in the owner's order: E5 visible
+devices, then E3 crowd image (with Disappear's and Shrunk's crowd moments), E4
 depth in the vertical frame (its test set the 10 moments listed in the overlaps), E5 conversation staging (Grandmother's
 spoken beats). The merged flow stops at three dreams (Grandmother, Neighbours, Fan) for the owner's walkthrough.
 
@@ -2375,6 +2377,7 @@ between sessions.
 | `sizes` (`sizes.ts`) | S4, the cast reading, the packet, E4, E5 | The cast reading's bodies (parked 30 Sep: drawn at their size they left frames placed for a grown person) are drawn through this step's own reading, which also gives each size the dream sets in a moment; every rule keys on a spot the step sized (`sized`: body or moment), never on a bare height (the water rules' `height` judges what covers a whale). A small thing on raised ground stands on it only under this step: the general fix for every thing on a counter, stage or deck is S4's. Staging left for its owners: someone carried by a creature far bigger (the mouse-sized dreamer in the giant cat's grip) is placed on its spot and hidden in it (a held-at-the-mouth placement); someone the moment says is inside a thing (Shrunk m6's party) is settled out of it, beside it, until the typed "in" fact keeps them in. |
 | `thing_state` | S4, S6 (the record's states), `sizes`, the packet | A change of size sets the plan's size only where its words name a thing of a known size (`sizedAs`: the plan's small things, a stamp, a handkerchief); a size the dream's sizes reading gives (`sized`) keeps it. Putting away is read from the moment's words, not the typed acts (Jev did not take Grandmother's "puts the stamp in her cutlery drawer", 0.42): it retires when the typed reading carries a thing put into something that closes. A thing the plan keeps that no moment names is drawn without its change carried; Grandmother m10 was the one case, gone with the drawer, and the rest is S6's. Packet field `stated`. |
 | `crowd_between` (E2) | S4, the mock-up, E4 | Through the dreamer's eyes only: an outside view of someone seen past a crowd is not yet placed behind it (none in the corpus). Read from the point's words, a word of being seen right before "past", "through", "between", "behind" and the crowd's name right after; it retires when the typed reading carries who is seen past whom. The crowd moved stands as a row, standing; an audience seated in its rows between the dreamer and someone is not drawn so. Packet field `past`. |
+| `things_in_frame` | S4, `subject_in_frame`, `sizes`, `thing_state` | The things a point names are read from its words (`thingsNamed`): never a part of the place ("the room", "the far end of the hall"), one of several alike, and by what a change made them only where its words name a thing. Each lost costs a camera less than any person lost. Left for their owners: a cast thing placed behind the camera at a default size (the cake knife, e127 m2: castplace's sizes), a named thing framed out by a frame placed for what the dream made small (Shrunk's piece of orange, `sizes`), and through the dreamer's eyes only where some way of looking holds it. |
 | `place_built` (`built.ts`) | S6 sketches, the import | A place's sketch alone is told by its build (`Item.built`); its moments, image lines and the record keep the place's name and look. One writer reading per dream, cached with the cast's (`--built`), asked on import; a place whose words say only what it is built of is left as it was. The two words of use left in the corpus are a roof's slopes meeting at its ridge and a bridge over the night market. |
 
 ## Known debt, by the step that clears it
@@ -3523,6 +3526,20 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   hand-labelled moments: crowd between the camera and him 0 → 2 of 2, both in the picture 2 → 2, said in that order
   0 → 2; every other cut the same. Against lab, 0 of 127 frozen and 0 of 447 live pictures move; prompt
   cases the same. `bun test`: 1190 pass, 0 fail off and on, and file by file. No pictures, no money.
+- 2 Oct (afternoon, nothing drawn): the things a moment's one thing to show names are in its picture, as the people
+  it names are (`things_in_frame`; 27567fe): by a whole name, by what each is about, or by what a change has made it
+  ("the stamp" of a bed sheet folded down to one), never a part of the place and one of several alike, the camera is
+  placed to hold them, each one lost costing it less than any person lost; the dreamer's eyes aim for them; one too
+  small for a pixel in the frame, with nothing in front of it but what it lies on, is said small in the picture, at its
+  own size; a small thing in someone's hands is never what the frame is placed for. The merged flow's fresh
+  Grandmother: "the grandmother laying the stamp among the knives and forks in her cutlery drawer" was shot from behind
+  her, the stamp hidden by her back and said "outside the picture, off to the right" (m9), and the stamp pinched
+  between their fingers was framed at its own size, her head out of the picture and the dreamer out of it (m8). Now m9
+  is seen from beside them, the stamp on the drawer small in the picture, and m8 is the two of them again.
+  `evals/things-frame.ts --live` and the merged flow's stores, the step before -> with it: things a point names in its
+  picture 207 -> 217 of 246, said outside it 49 -> 37, no person a camera held lost, 15 cuts moved. Against lab
+  0f6160d, 0 of 127 frozen and 6 of 447 live pictures move; prompt cases the same. `bun test`: 1196 pass, 0
+  fail off and on, and file by file. No pictures, no money.
 
 ## Owner's direction (29 Sep): reviews and merges move to the cloud session
 
