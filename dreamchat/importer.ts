@@ -183,7 +183,7 @@ export async function liveDeps(): Promise<ImportDeps> {
   const { liveProducer } = await import('./session');
   const { writeTyped } = await import('./typed');
   const { writeImplied } = await import('./implied');
-  const { builtOf, castReadingOf, sizesOf, wardrobeOf, withCast } = await import('./evals/cast-cache');
+  const { builtOf, castReadingOf, devicesOf, sizesOf, wardrobeOf, withCast } = await import('./evals/cast-cache');
   return {
     producer: liveProducer(callJev, { telling: true }),
     ownStyle,
@@ -203,6 +203,8 @@ export async function liveDeps(): Promise<ImportDeps> {
       await sizesOf(s, { ask: true });
       // Each place whose words said its use, told by how it is built (place_built), into the same cache.
       await builtOf(s, { ask: true });
+      // What shows each moment whose beat is said, a time or a schedule (visible_device), into the same cache.
+      await devicesOf(s, { ask: true });
       return (await withCast(s)).session as Session;
     },
     // Loaded once the dream is saved: the packets' folder is found by the conversations it holds.

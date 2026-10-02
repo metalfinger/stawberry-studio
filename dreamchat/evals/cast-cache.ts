@@ -9,6 +9,7 @@
 //   DREAMCHAT_WRITER=claude bun run evals/cast-cache.ts --wardrobe --ask  each untold group's guessed clothes (wardrobe.ts)
 //   DREAMCHAT_WRITER=claude bun run evals/cast-cache.ts --sizes --ask     how big each figure and thing is (sizes.ts)
 //   DREAMCHAT_WRITER=claude bun run evals/cast-cache.ts --built --ask     each place told by its build (built.ts)
+//   DREAMCHAT_WRITER=claude bun run evals/cast-cache.ts --devices --ask   what shows each said or timed beat (devices.ts)
 
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -25,6 +26,14 @@ import {
 import type { Session } from '../session';
 import { type BuiltReading, builtAsk, parseBuilt, withBuilt } from '../built';
 import { parseSizes, type SizesReading, sizesAsk } from '../sizes';
+import {
+  devicesAsk,
+  type DevicesReading,
+  parseDevices,
+  withDeviceItems,
+  withDeviceThings,
+  withKnown,
+} from '../devices';
 import { parseWardrobe, type WardrobeReading, wardrobeAsk, withWardrobes } from '../wardrobe';
 import { DIR, sha256 } from './saved';
 
@@ -133,6 +142,60 @@ export async function sizesOf(
 }
 
 /**
+ * What shows each moment whose beat is said, a time or a schedule (devices.ts), kept in the same cache: from it, or with
+ * `ask` from the writer. Asked of the dream as it is saved, before the cast puts anything in. Null where the dream has no
+ * breakdown, or the reading is not cached and not asked.
+ */
+export async function devicesOf(
+  s: Session,
+  opts: { ask?: boolean; write?: WriteFn; cacheFile?: string } = {},
+): Promise<{ reading: DevicesReading; dropped: string[]; asked: boolean } | null> {
+  const b = s.draft?.breakdown;
+  if (!b) return null;
+  const text = toldOf(s).join('\n');
+  const messages = devicesAsk(b, text);
+  const file = opts.cacheFile ?? CAST_CACHE;
+  const key = sha256(`devices writer ${castWriterName()}\n${JSON.stringify(messages)}`);
+  const cache = cacheOf(file);
+  let hit = cache[key];
+  let asked = false;
+  if (!hit) {
+    if (!opts.ask) return null;
+    const res = await (opts.write ?? writeCast)(messages);
+    hit = cache[key] = { content: res.content, usage: res.usage };
+    save(file);
+    asked = true;
+  }
+  return { ...parseDevices(hit.content, b, text), asked };
+}
+
+/**
+ * With `visible_device`, a dream with its devices in (draft.readings.devices), each a thing of its breakdown in the
+ * moments it shows and a sketch to be made, from the cache only: asked of the dream as it was before the cast or the
+ * devices were put in, so a dream already carrying them is read as it is.
+ */
+export async function withDevicesCached(
+  s: Session,
+  opts: { cacheFile?: string; from?: Session } = {},
+): Promise<{ session: Session; missing: boolean }> {
+  const { builds } = await import('../cleanups');
+  if (!builds('visible_device') || !s.draft?.breakdown) return { session: s, missing: false };
+  if (s.draft.readings?.devices) return { session: s, missing: false };
+  const got = await devicesOf(opts.from ?? s, { cacheFile: opts.cacheFile });
+  if (!got) return { session: s, missing: true };
+  const session = structuredClone(s);
+  // A device the dream already has (its cast's kitchen clock) is that thing, never a second one.
+  const reading = withKnown(got.reading, session.draft!.breakdown!);
+  session.draft = {
+    ...session.draft!,
+    breakdown: withDeviceThings(session.draft!.breakdown!, reading),
+    readings: { ...(session.draft!.readings ?? {}), devices: reading },
+  };
+  if (session.build) session.build = { ...session.build, items: withDeviceItems(session.build.items, reading) };
+  return { session, missing: false };
+}
+
+/**
  * A dream's places told by how they are built (built.ts), kept in the same cache: from it, or with `ask` from the
  * writer. Null where the dream has no place sketch, or the reading is not cached and not asked.
  */
@@ -170,7 +233,9 @@ export async function withCast(
   const { builds } = await import('../cleanups');
   if (!builds('cast_named') || !s.draft?.breakdown) return { session: s, missing: false };
   const got = await castReadingOf(s, { cacheFile: opts.cacheFile });
-  if (!got) return { session: s, missing: true };
+  // An imported dream keeps its own cast: its devices are put in all the same (`visible_device`).
+  if (!got)
+    return { session: (await withDevicesCached(s, { cacheFile: opts.cacheFile, from: s })).session, missing: true };
   const session = structuredClone(s);
   session.draft = {
     ...session.draft!,
@@ -193,6 +258,12 @@ export async function withCast(
   if (builds('sizes')) {
     const z = await sizesOf(s, { cacheFile: opts.cacheFile });
     if (z) session.draft = { ...session.draft!, readings: { ...(session.draft!.readings ?? {}), sizes: z.reading } };
+  }
+  // With `visible_device`, what shows each moment whose beat is said, a time or a schedule, from the cache only: asked of
+  // the dream as it is saved, before the cast puts anything in.
+  if (builds('visible_device')) {
+    const d = await withDevicesCached(session, { cacheFile: opts.cacheFile, from: s });
+    return { session: d.session, missing: false };
   }
   return { session, missing: false };
 }
@@ -233,6 +304,27 @@ if (import.meta.main) {
                       .map(([id, v]) => `${id}: ${v.name} | ${v.kind} | ${v.in}`)
                       .join('; ') || 'none rewritten'
               }`,
+            );
+          }
+          // --devices: what shows each moment whose beat is said, a time or a schedule (devices.ts).
+          if (args.includes('--devices')) {
+            const v = await devicesOf(d.session, { ask });
+            if (v?.asked) askedN++;
+            return console.log(
+              `${d.id}: ${
+                !v
+                  ? 'no breakdown, or not cached'
+                  : v.reading.devices
+                      .map(
+                        (x) =>
+                          `${x.id} ${x.name} (${x.where}${x.by ? ` by ${x.by}` : ''}${x.lettering ? `, lettered "${x.lettering.text}" on ${x.lettering.on}` : ''}${x.bubble ? `, ${x.bubble} bubble` : ''}): ${Object.entries(
+                            x.moments,
+                          )
+                            .map(([m, a]) => `${m} ${a.shows}${a.act ? ` / ${a.act}` : ''}`)
+                            .join('; ')}`,
+                      )
+                      .join(' | ') || 'none'
+              }${v?.dropped.length ? ` | dropped ${v.dropped.join('; ')}` : ''}`,
             );
           }
           // --sizes: how big each figure and thing is (sizes.ts), in place of the cast reading.

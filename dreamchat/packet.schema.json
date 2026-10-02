@@ -765,9 +765,61 @@
             },
             "period": {
               "type": ["string", "null"]
+            },
+            "device": {
+              "type": ["string", "null"]
+            },
+            "lettering": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "device": {
+                    "enum": ["card", "strip", "sign", "label"]
+                  },
+                  "on": {
+                    "type": "string"
+                  },
+                  "where": {
+                    "type": "string"
+                  },
+                  "box": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 4,
+                    "maxItems": 4
+                  }
+                },
+                "required": ["id", "text", "device", "on", "where"],
+                "additionalProperties": false
+              }
             }
           },
-          "required": ["action", "point", "feeling", "purpose", "shift", "dream", "key", "said", "writing", "period"],
+          "required": [
+            "action",
+            "point",
+            "feeling",
+            "purpose",
+            "shift",
+            "dream",
+            "key",
+            "said",
+            "writing",
+            "period",
+            "device",
+            "lettering"
+          ],
           "additionalProperties": false
         },
         "who": {
@@ -1432,7 +1484,7 @@
   "type": "object",
   "properties": {
     "version": {
-      "const": 4
+      "const": 5
     },
     "dream": {
       "type": "object",

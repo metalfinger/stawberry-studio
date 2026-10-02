@@ -20,7 +20,7 @@ import type { NowOf } from './record';
 import { sheetPrompt, subjectWords } from './sheets';
 
 /** The packet's version: a harness reading one checks it. */
-export const PACKET_VERSION = 4;
+export const PACKET_VERSION = 5;
 
 /** A verdict the owner gave a drawing of this picture: in the story's verdicts, a checkpoint, or a local run. */
 export type VerdictPacket = {
@@ -170,6 +170,20 @@ export type NodePacket = {
     writing: string[];
     /** The time it is set in (era.ts): its own where the dream gives it one, else the dream's; null where none is. */
     period: string | null;
+    /** What in the picture shows its beat, what it shows now and who does what with it (`visible_device`). */
+    device: string | null;
+    /**
+     * The dream's own day or time lettered on what shows its beat, put on in code after drawing, never by the image
+     * model: its lines exactly as they must read, what it is, the thing it is on and where (`visible_device`).
+     */
+    lettering: {
+      id: string;
+      text: string[];
+      device: 'card' | 'strip' | 'sign' | 'label';
+      on: string;
+      where: string;
+      box?: [number, number, number, number];
+    }[];
   };
   who: {
     visible: string[];
@@ -392,6 +406,8 @@ export function dreamPacket(
             said: !!m.said,
             writing: sh?.story.writing ?? [],
             period: m.period ?? r.b.period?.value ?? null,
+            device: sh?.device ?? null,
+            lettering: sh?.lettering ?? [],
           },
           who: {
             visible: f.visible,
@@ -724,6 +740,20 @@ export const PACKET_SCHEMA: Schema = {
         said: bool,
         writing: list(str),
         period: orNull(str),
+        device: orNull(str),
+        lettering: list(
+          obj(
+            {
+              id: str,
+              text: list(str),
+              device: oneOf('card', 'strip', 'sign', 'label'),
+              on: str,
+              where: str,
+              box: { type: 'array', items: num, minItems: 4, maxItems: 4 },
+            },
+            ['box'],
+          ),
+        ),
       }),
       who: obj({
         visible: list(str),

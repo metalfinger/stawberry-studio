@@ -634,6 +634,8 @@ export function assembleCut(s: CutSheet): Assembled {
       fields: ['story.point'],
       text: point ? `The one thing this frame must show: ${sentence(point)}` : '',
     },
+    // What in the picture shows the moment's beat (`visible_device`): a clock's hands, a card held out.
+    { id: 'device', fields: ['device'], text: s.device ? `How the picture shows it: ${sentence(s.device)}` : '' },
     {
       id: 'repairs',
       fields: ['take.repairs'],

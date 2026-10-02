@@ -8,6 +8,7 @@
 // an in-between picture that is never a cut. Everything here is pure: the breakdown in, the plan
 // out, and the same breakdown always gives the same plan.
 import type { CastReading } from './cast-types';
+import { type DevicesReading, withDevices } from './devices';
 import type { SizesReading } from './sizes';
 import { builds } from './cleanups';
 import { smallSizeOf, withCastFixtures, withCastSpots, withSizes } from './castplace';
@@ -247,6 +248,8 @@ export type RecordPlan = {
   cast?: CastReading;
   /** How big each figure and thing is drawn (sizes.ts), with the one builder's `sizes`. */
   sizes?: SizesReading;
+  /** What shows each moment whose beat is said, a time or a schedule (devices.ts), with `visible_device`. */
+  devices?: DevicesReading;
   moments: Record<
     string,
     {
@@ -495,12 +498,15 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
             where,
           );
           const cast = rec?.cast;
-          if (!cast) return named;
           const dreamer = b.people.find((p) => p.is_dreamer)?.id;
           // Each person and creature at its own size and shape (castplace.ts withCastBodies) waits: drawn so, a
           // terrier and a school of little fish fell under what the words say, and a cat as big as a bus hid the child
           // beside it (30 Sep); the words must hold them first.
-          return withCastSpots(withCastFixtures(named, cast.fixtures, moment.place), cast, moment, dreamer);
+          const casted = cast
+            ? withCastSpots(withCastFixtures(named, cast.fixtures, moment.place), cast, moment, dreamer)
+            : named;
+          // What shows the moment's beat, where it is: on the wall, in someone's hands, on the table (`visible_device`).
+          return builds('visible_device') && rec?.devices ? withDevices(casted, rec.devices, moment, dreamer) : casted;
         })()
       : given;
   // Only the moments in the same place count: who was in the tiny room, not who was on the stairs.
@@ -587,7 +593,12 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
         // With the record, a thing is in someone's hands only where the record has it there; as it is handed over, still
         // in the hands of whoever hands it (held_acts: "the boat in the father's hand reaching to the dreamer", affd m5).
         const holder = r?.handed?.[s.id] ?? r?.held[s.id];
-        if (r && things.has(s.id) && (holder ?? null) !== (at.heldBy ?? null)) {
+        // What shows a moment's beat is held as its reading has it (`visible_device`): the record knows nothing of it,
+        // and took the appointment card out of the family's hands to the floor (Grandmother m3).
+        const device =
+          builds('visible_device') &&
+          !!rec?.devices?.devices.some((d) => d.id === s.id && d.where === 'held' && !!d.moments[momentId]);
+        if (r && things.has(s.id) && !device && (holder ?? null) !== (at.heldBy ?? null)) {
           const { heldBy: _, ...loose } = at;
           return holder ? { ...loose, heldBy: holder } : loose;
         }
@@ -2365,18 +2376,30 @@ function planWith(
             y: people.reduce((a, s) => a + s.y, 0) / people.length,
           }
         : undefined;
-      return thingsNamed(
-        m.visual_point ?? '',
-        where.spots.filter((s) => s.id !== dreamerId),
-        (s) => [
-          nameOf(s),
-          ...changed
-            .filter((x) => x.who === s.id && (isSizeChange(x) || isFormChange(x)))
-            .flatMap((x) => (isSizeChange(x) ? [sizedAs(x)?.as ?? ''] : [x.now]))
-            .filter((x) => /^(?:a|an|the)\s/i.test(x.trim()) && x.trim().split(/\s+/).length <= 5),
-        ],
-        near,
-      );
+      // And what shows its beat (`visible_device`): the clock she points at, the card held out, the plate on the table.
+      const devices =
+        builds('visible_device') && rec?.devices
+          ? rec.devices.devices
+              .filter((d) => d.moments[m.id] && d.where !== 'bubble' && where.spots.some((s) => s.id === d.id))
+              .map((d) => d.id)
+          : [];
+      return [
+        ...new Set([
+          ...devices,
+          ...thingsNamed(
+            m.visual_point ?? '',
+            where.spots.filter((s) => s.id !== dreamerId),
+            (s) => [
+              nameOf(s),
+              ...changed
+                .filter((x) => x.who === s.id && (isSizeChange(x) || isFormChange(x)))
+                .flatMap((x) => (isSizeChange(x) ? [sizedAs(x)?.as ?? ''] : [x.now]))
+                .filter((x) => /^(?:a|an|the)\s/i.test(x.trim()) && x.trim().split(/\s+/).length <= 5),
+            ],
+            near,
+          ),
+        ]),
+      ];
     };
     const now = (id: string) => {
       const st = changed.find(

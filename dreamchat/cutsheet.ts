@@ -15,6 +15,7 @@
 // Pure: no model, no files, no clock. Behind DREAMCHAT_CUT_SHEET: off (the default) writes every prompt
 // with framePrompt as before; shadow also builds the sheet, assembles it and logs where it differs from
 // framePrompt; on sends what the sheet assembles.
+import { deviceLine, type DevicesReading, letteringItems } from './devices';
 import { assembleCut, type Assembled } from './assemble';
 import { DIRECTIONS, type Eye, type Side } from './blocking';
 import {
@@ -336,6 +337,13 @@ export type CutSheet = {
   conditions?: { name: string; look: string; beyond: boolean }[];
   /** With the `era` step: the time the picture is set in, the moment's own or the dream's (era.ts), said once. */
   period?: string;
+  /** With `visible_device`: what in the picture shows its beat, what it shows now and who does what with it. */
+  device?: string;
+  /**
+   * With `visible_device`: the words lettered on what shows its beat, the dream's own day or time, put on in code after
+   * the picture is drawn (never by the image model): its lines as they must read, what it is, the thing it is on, where.
+   */
+  lettering?: LetterItem[];
   /** The picture before a jump gives no framing of its own where image 1 carries the layout (the `jump_words` step). */
   jumpWords?: true;
   /** With the one builder's `plan_beyond` step: what the camera rules add after the view is said with one space. */
@@ -378,6 +386,8 @@ export type SheetDream = {
   typed?: Record<string, TypedReading>;
   /** With the one builder's `cast_named` step: the cast reading (cast.ts), from the dream's readings. */
   cast?: CastReading;
+  /** With `visible_device`: what shows each moment whose beat is said, a time or a schedule (devices.ts). */
+  devices?: DevicesReading;
 };
 
 /**
@@ -426,8 +436,21 @@ export function sheetDream(x: {
     ...(cameraMode() === 'on' ? { cameras: Object.fromEntries(camerasOf(x.plan)) } : {}),
     ...(oneBuilder() && x.readings?.typed ? { typed: x.readings.typed } : {}),
     ...(builds('cast_named') && x.readings?.cast ? { cast: x.readings.cast } : {}),
+    ...(builds('visible_device') && x.readings?.devices ? { devices: x.readings.devices } : {}),
   };
 }
+
+/** One piece of lettering, lettered in code on what shows a moment's beat (`visible_device`). */
+export type LetterItem = {
+  id: string;
+  /** Its lines, exactly as they must read. */
+  text: string[];
+  device: 'card' | 'strip' | 'sign' | 'label';
+  /** The thing it is on, by id. */
+  on: string;
+  /** Where it is, in a plain sentence. */
+  where: string;
+};
 
 export type CutSheetInput = {
   /** The moment as the harness holds it: its words (reworded, if they were), its plan, its brief. */
@@ -735,7 +758,19 @@ export function cutSheet(x: CutSheetInput): CutSheet {
       feeling: frame.fields.feeling?.value ?? null,
       point,
       shift: frame.fields.shift?.value ?? '',
-      writing,
+      // What the lettering of the thing that shows its beat puts on in code is never written by the picture too
+      // (`visible_device`): "2-3pm" said as the only writing beside a card left blank for its lettering.
+      writing:
+        builds('visible_device') && dream?.devices
+          ? (() => {
+              const norm = (x: string) => x.toLowerCase().replace(/[^\p{L}\d]+/gu, '');
+              const lettered = letteringItems(dream.devices, frame.id).flatMap((x) => [
+                norm(x.text.join(' ')),
+                ...x.text.map(norm),
+              ]);
+              return writing.filter((w) => !lettered.includes(norm(w)));
+            })()
+          : writing,
     },
     camera: {
       eyes: f.eyes,
@@ -788,6 +823,13 @@ export function cutSheet(x: CutSheetInput): CutSheet {
       if (!builds('era') || !b) return {};
       const period = all.find((m) => m.id === frame.id)?.period ?? b.period?.value;
       return period ? { period } : {};
+    })(),
+    ...(() => {
+      if (!builds('visible_device') || !dream?.devices) return {};
+      const who = (id: string) => (id === dreamer?.id ? 'the dreamer' : (called(id) ?? id));
+      const device = deviceLine(dream.devices, frame.id, who);
+      const lettering = letteringItems(dream.devices, frame.id, who);
+      return { ...(device ? { device } : {}), ...(lettering.length ? { lettering } : {}) };
     })(),
     take: { repairs: [...(frame.repairFor ?? [])], strays },
     record,

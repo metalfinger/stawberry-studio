@@ -272,6 +272,13 @@ export const BUILDER_STEPS: readonly string[] = [
   //    cutlery drawer" said the stamp outside the picture, off to the right, and a stamp pinched between their fingers
   //    was framed at its own size, her head out of the picture and the dreamer out of it.
   'things_in_frame',
+  // E5, from the merged flow's Grandmother on Wednesdays (2 Oct). A moment whose beat is said, asked, a time or a
+  //    schedule shows it by something seen (devices.ts, one writer reading per dream): "only on Wednesdays", "the 2-3pm
+  //    appointment", "asks if she has eaten" and "our slot has gotten over" were each two people standing in a kitchen,
+  //    and its review read none of them; drawn with a week of days, an appointment card, a wall clock going from two to
+  //    three and her pointing at it, a stranger read every picture. Lettering only the dream's own days and times, put on
+  //    in code after; a thought or speech bubble only where no thing shows a said or thought beat better.
+  'visible_device',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;

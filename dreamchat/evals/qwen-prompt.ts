@@ -279,6 +279,8 @@ export function qwenEdit(
   const conditions = strip('conditions', /^$/);
   if (conditions) out.push(sentence(conditions));
   if (s.story.point) out.push(`It shows ${lower(s.story.point.replace(/[.\s]+$/, ''))}.`);
+  // What in the picture shows its beat (`visible_device`): the clock's hands at three, the card held out.
+  if (s.device) out.push(`It shows it by ${lower(s.device.replace(/[.\s]+$/, ''))}.`);
 
   // 9. Writing: what the story writes, as marks; the mock-up's labels go with the grey.
   if (s.story.writing.length) out.push(`The only writing is ${s.story.writing.join(', ')}.`);
