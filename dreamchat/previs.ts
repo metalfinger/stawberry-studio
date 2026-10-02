@@ -1844,6 +1844,9 @@ export function dreamerShot(
   const near = plan.spots.filter((s) => s.id !== dreamer && s.id !== target?.id && isPerson(s) && !s.many);
   const onIt = !!target && onFootprint(me, target, plan);
   let best: { eye: Eye; score: number } | undefined;
+  // Where they look, straight on from where they are: the view kept with `eyes_aimed` when what they look at shows in
+  // none of the ways of looking.
+  let straight: Eye | undefined;
   // Who the moment shows besides what it looks at: in the picture, where the view can hold them. Looking
   // straight ahead from the tractor's seat left out the driver it was about (lighthouse, 25 Sep).
   const wanted = want.filter((id) => id !== dreamer && id !== target?.id && plan.spots.some((s) => s.id === id));
@@ -1872,7 +1875,11 @@ export function dreamerShot(
         if (!best || score > best.score + 1e-9) best = { eye, score };
         continue;
       }
-      const r = render(solidsAt(eye), eye, ...sized(192));
+      if (!lean && !aim) straight = eye;
+      // What they look at under the water is seen through it (`eyes_aimed`), as the words say it is: its surface hid the
+      // laptop on the dining table from every way of looking (Fan m8).
+      const through = builds('eyes_aimed') && underWater(target, plan, eye);
+      const r = render(through ? solidsAt(eye).filter((x) => x.id !== 'water') : solidsAt(eye), eye, ...sized(192));
       const t = r.seen.get(target.id);
       if (!t) continue;
       // As a camera operator frames past someone close: the heart of what the picture is about
@@ -1906,6 +1913,11 @@ export function dreamerShot(
         shows(r);
       if (!best || score > best.score + 1e-9) best = { eye, score };
     }
+  // Through their own eyes there is always a view where they are on the plan (`eyes_aimed`): what they look at that no
+  // way of looking shows (the laptop on the dining table under the water; a tiny building with a party inside, hidden by
+  // the guests) is looked at all the same, straight on, and the view says what the picture holds. Kept only where it
+  // showed, the cut had no camera and was never drawn (the merged flow's Fan m8 and Shrunk m6, 2 Oct).
+  if (!best && straight && builds('eyes_aimed')) best = { eye: straight, score: -Infinity };
   if (!best) return null;
   const eye = best!.eye;
   const r = render(solidsAt(eye), eye, ...sized(384));

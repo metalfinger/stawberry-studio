@@ -241,6 +241,10 @@ export const BUILDER_STEPS: readonly string[] = [
   //    modern. The dream's period, from its own words or the date it was recorded (era.ts), told to every sketch and
   //    every moment, a moment the dream sets in another time keeping its own; never in the style.
   'era',
+  // Not a ledger row: from the merged flow's Fan m8 and Shrunk m6 (2 Oct). Through the dreamer's eyes, what they look
+  //    at that no way of looking shows (under the water, hidden inside a crowd) is looked at all the same, straight on:
+  //    the cut had no camera, was "failed" and never drawn.
+  'eyes_aimed',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;
