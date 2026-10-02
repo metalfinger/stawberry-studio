@@ -863,6 +863,23 @@
                   "turned": {
                     "type": ["string", "null"]
                   },
+                  "facing": {
+                    "type": ["object", "null"],
+                    "properties": {
+                      "view": {
+                        "enum": ["front", "three-quarter front", "profile", "three-quarter back", "back"]
+                      },
+                      "side": {
+                        "enum": ["left", "right", null]
+                      },
+                      "degrees": {
+                        "type": "number"
+                      }
+                    },
+                    "required": ["view", "side", "degrees"],
+                    "additionalProperties": false,
+                    "description": "How a person is turned to the camera the picture is seen through (camera.previs.through's for an edit), in the bins the camera's words use: `side` is which way across the picture they look, null facing the camera or with their back to it; `degrees` is between the way they face and the way to the camera, 0 facing it. Null for a thing, a crowd, and the dreamer through their own eyes; a creature counts as a person. (`turned` is what someone has turned into, not this.)"
+                  },
                   "changes": {
                     "type": "array",
                     "items": {
@@ -889,7 +906,18 @@
                     }
                   }
                 },
-                "required": ["id", "name", "kind", "isDreamer", "look", "image", "turned", "changes", "colours"],
+                "required": [
+                  "id",
+                  "name",
+                  "kind",
+                  "isDreamer",
+                  "look",
+                  "image",
+                  "turned",
+                  "facing",
+                  "changes",
+                  "colours"
+                ],
                 "additionalProperties": false
               }
             },
@@ -1112,13 +1140,207 @@
                         "required": ["id", "name", "colour", "kind"],
                         "additionalProperties": false
                       }
+                    },
+                    "idmap": {
+                      "type": "object",
+                      "properties": {
+                        "file": {
+                          "type": "string"
+                        },
+                        "sha256": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["file", "sha256"],
+                      "additionalProperties": false
+                    },
+                    "ids": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "enum": ["person", "crowd", "thing", "room", "seats", "water"]
+                          },
+                          "rgb": {
+                            "type": "array",
+                            "items": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "minItems": 3,
+                            "maxItems": 3
+                          },
+                          "pixels": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "fixture": {
+                            "type": "boolean"
+                          },
+                          "held": {
+                            "type": "boolean"
+                          },
+                          "ridden": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": ["id", "name", "kind", "rgb", "pixels", "fixture", "held", "ridden"],
+                        "additionalProperties": false,
+                        "description": "One region of an id map (a PNG beside the packet): every pixel of exactly `rgb` is the spot, surface or crowd `id`, black is nothing; `pixels` is how many. A spot is the same colour in every frame and set of a dream. `fixture`: part of the place; `held`: in someone's hands; `ridden`: someone rides on or in it. A creature counts as a person. The colour-keyed mock-up's own colours can give two brown things one brown; the id map never does."
+                      }
                     }
                   },
-                  "required": ["file", "sha256", "key"],
+                  "required": ["file", "sha256", "key", "idmap", "ids"],
                   "additionalProperties": false
+                },
+                "through": {
+                  "type": ["string", "null"],
+                  "description": "The cut whose camera the mock-up is seen through where it is not this cut's own: an edit keeps the camera of the picture it edits, so its mock-up is that camera's with this cut's people where they are now. Null for a cut's own camera."
+                },
+                "set": {
+                  "type": ["object", "null"],
+                  "properties": {
+                    "clay": {
+                      "type": "object",
+                      "properties": {
+                        "file": {
+                          "type": "string"
+                        },
+                        "sha256": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["file", "sha256"],
+                      "additionalProperties": false
+                    },
+                    "keyed": {
+                      "type": "object",
+                      "properties": {
+                        "file": {
+                          "type": "string"
+                        },
+                        "sha256": {
+                          "type": "string"
+                        },
+                        "key": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "colour": {
+                                "type": "string"
+                              },
+                              "kind": {
+                                "type": "string"
+                              }
+                            },
+                            "required": ["id", "name", "colour", "kind"],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": ["file", "sha256", "key"],
+                      "additionalProperties": false
+                    },
+                    "idmap": {
+                      "type": "object",
+                      "properties": {
+                        "file": {
+                          "type": "string"
+                        },
+                        "sha256": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["file", "sha256"],
+                      "additionalProperties": false
+                    },
+                    "ids": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "enum": ["person", "crowd", "thing", "room", "seats", "water"]
+                          },
+                          "rgb": {
+                            "type": "array",
+                            "items": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "minItems": 3,
+                            "maxItems": 3
+                          },
+                          "pixels": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "fixture": {
+                            "type": "boolean"
+                          },
+                          "held": {
+                            "type": "boolean"
+                          },
+                          "ridden": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": ["id", "name", "kind", "rgb", "pixels", "fixture", "held", "ridden"],
+                        "additionalProperties": false,
+                        "description": "One region of an id map (a PNG beside the packet): every pixel of exactly `rgb` is the spot, surface or crowd `id`, black is nothing; `pixels` is how many. A spot is the same colour in every frame and set of a dream. `fixture`: part of the place; `held`: in someone's hands; `ridden`: someone rides on or in it. A creature counts as a person. The colour-keyed mock-up's own colours can give two brown things one brown; the id map never does."
+                      }
+                    },
+                    "frame": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      },
+                      "minItems": 4,
+                      "maxItems": 4
+                    },
+                    "framePx": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "minItems": 4,
+                      "maxItems": 4
+                    }
+                  },
+                  "required": ["clay", "keyed", "idmap", "ids", "frame", "framePx"],
+                  "additionalProperties": false,
+                  "description": "The camera's empty set: the place as this camera frames it with every person, crowd and held thing left out (a sitting crowd's seats kept, where the frame has them), rendered 8% wider and taller than the frame (4% each side) at the frame's own scale, grey (clay), colour-keyed (keyed) and as an id map. `framePx` is where the cut's own frame is in it in the set's whole pixels, [x0, y0, x1, y1] with x1 and y1 just past it and y down from the top; `frame` is the same from 0 to 1 to four places (crop by framePx). Cropped to it, the set's id map is the frame's wherever no one stands and nothing is held. Draw the place once per camera from it, then put the people onto it; a thing someone rides (ids' `ridden`) moves with them."
+                },
+                "names": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "What each spot of the floor plan is called on the mock-ups: a thing's colour on the keyed one comes from its words, so a set rendered again (evals/set-render.ts) takes them."
                 }
               },
-              "required": ["media", "clay", "keyed"],
+              "required": ["media", "clay", "keyed", "through", "set", "names"],
               "additionalProperties": false
             },
             "view": {
@@ -1484,7 +1706,7 @@
   "type": "object",
   "properties": {
     "version": {
-      "const": 5
+      "const": 6
     },
     "dream": {
       "type": "object",
@@ -1558,8 +1780,62 @@
       "items": {
         "$ref": "#/$defs/node"
       }
+    },
+    "places": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "scene": {
+            "type": "string"
+          },
+          "place": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "cameras": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "through": {
+                  "type": "string"
+                },
+                "eye": {
+                  "$ref": "#/$defs/eye"
+                },
+                "eyes": {
+                  "enum": ["dreamer", "outside"]
+                },
+                "cuts": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "sets": {
+                  "type": "array",
+                  "items": {
+                    "type": ["string", "null"]
+                  }
+                }
+              },
+              "required": ["through", "eye", "eyes", "cuts", "sets"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["id", "scene", "place", "name", "cameras"],
+        "additionalProperties": false
+      },
+      "description": "Each floor plan (`<scene>/<place>`: a scene's own, or a place's within it) and every camera its cuts are seen through: each eye once, `through` the cut whose own camera it is, with the cuts seen through it (an edit's through the picture it edits, only on the same plan) and each one's empty set (`sets`, its camera.previs.set id map's sha256, null with none). One camera's cuts can have different sets: a device on the wall in one moment, a drawer left open, a thing put away; draw each distinct set. For drawing a place empty from each direction its cuts use, and their reverses, before any frame: evals/set-render.ts renders a cut's empty set from any eye out of the packet alone, on its camera.floorPlan with its camera.previs.names, in previs.ts's own convention (metres on the plan, x from the left wall, y from the front, `d` the way the camera looks on the plan, `height` of the lens, `pitch` in radians, down negative, `lens` in millimetres on a 36 mm frame; unset, a 76-degree view across a 16:9 frame, about 23 mm)."
     }
   },
-  "required": ["version", "dream", "elements", "ghosts", "cuts"],
+  "required": ["version", "dream", "elements", "ghosts", "cuts", "places"],
   "additionalProperties": false
 }

@@ -11,16 +11,16 @@ import { builds } from './cleanups';
 import { drawnEnv } from './asdrawn';
 import type { Blocking, Eye, Spot } from './blocking';
 import { shotPlan } from './continuity';
-import type { Criterion, RefRole, Relation, UnsentWhy } from './continuity';
+import type { Criterion, PlanRef, RefRole, Relation, UnsentWhy } from './continuity';
 import type { CutTags } from './cutsheet';
 import { type Rebuilt, standIn } from './plan';
-import { onOf } from './previs';
-import { moments, type StyleOption } from './producer';
+import { facingOf, onOf, type Facing } from './previs';
+import { type Breakdown, moments, type StyleOption } from './producer';
 import type { NowOf } from './record';
-import { sheetPrompt, subjectWords } from './sheets';
+import { type Item, sheetPrompt, subjectWords } from './sheets';
 
 /** The packet's version: a harness reading one checks it. */
-export const PACKET_VERSION = 5;
+export const PACKET_VERSION = 6;
 
 /** A verdict the owner gave a drawing of this picture: in the story's verdicts, a checkpoint, or a local run. */
 export type VerdictPacket = {
@@ -63,7 +63,38 @@ export type PrevisFile = { file: string; sha256: string };
 export type PrevisPacket = {
   media: string;
   clay: PrevisFile | null;
-  keyed: (PrevisFile & { key: { id: string; name: string; colour: string; kind: string }[] }) | null;
+  keyed: (PrevisFile & { key: KeyPacket[]; idmap: PrevisFile; ids: IdPacket[] }) | null;
+  /**
+   * The cut whose camera it is seen through, where that is not its own: an edit keeps the camera of the picture it
+   * edits, so its mock-up is that camera's with this cut's people where they are now.
+   */
+  through: string | null;
+  /** The camera's empty set: no person, crowd or held thing in it, a little wider than the frame (previs.ts previsSet). */
+  set: SetPacket | null;
+  /** What each spot of the floor plan is called on the mock-ups: a thing's colour on the keyed one is from its words. */
+  names: Record<string, string>;
+};
+/** Who a colour on a colour-keyed mock-up is. */
+export type KeyPacket = { id: string; name: string; colour: string; kind: string };
+/** One region of an id map: every pixel of that exact colour is it. */
+export type IdPacket = {
+  id: string;
+  name: string;
+  kind: string;
+  rgb: number[];
+  pixels: number;
+  fixture: boolean;
+  held: boolean;
+  ridden: boolean;
+};
+/** A camera's empty set, grey and colour-keyed, with its id map and where the cut's own frame is in it (0 to 1). */
+export type SetPacket = {
+  clay: PrevisFile;
+  keyed: PrevisFile & { key: KeyPacket[] };
+  idmap: PrevisFile;
+  ids: IdPacket[];
+  frame: number[];
+  framePx: number[];
 };
 
 /** A person, place or thing as it is sketched: its prompt, and its look field by field, said or guessed. */
@@ -127,6 +158,8 @@ export type InViewPacket = {
   look: string | null;
   image: string | null;
   turned: string | null;
+  /** How a person is turned to the camera (previs.ts facingOf, the bins its words use); null for anything else. */
+  facing: Facing | null;
   changes: { what: string; now: string; part?: string }[];
   colours: string[];
 };
@@ -265,6 +298,28 @@ export type DreamPacket = {
   elements: ElementPacket[];
   ghosts: GhostPacket[];
   cuts: NodePacket[];
+  places: PlacePacket[];
+};
+
+/**
+ * One floor plan (a scene's place) and every camera its cuts are seen through: for drawing the place empty once from
+ * each, and from its reverse, before any frame (evals/set-render.ts renders its empty set from any eye).
+ */
+export type PlacePacket = {
+  /** `<scene>/<place>`: one floor plan. */
+  id: string;
+  scene: string;
+  place: string;
+  name: string;
+  cameras: {
+    /** The cut whose own camera it is. */
+    through: string;
+    eye: Eye;
+    eyes: 'dreamer' | 'outside';
+    cuts: string[];
+    /** Each cut's empty set (its camera.previs.set id map's sha256), in `cuts`' order; null with none. */
+    sets: (string | null)[];
+  }[];
 };
 
 const or = <T>(x: T | undefined | null | '', none: null = null): T | null => (x === undefined || x === '' ? none : x);
@@ -284,6 +339,39 @@ function imagesOf(p: Rebuilt['pictures'][number]): ImagePacket[] {
       subjects: a?.subjects ?? [],
     };
   });
+}
+
+/**
+ * The camera a cut's picture is seen through: its own where it has one; for an edit, the camera of the picture it
+ * edits (an edit keeps it), back to a picture with a camera of its own. Null with none either way.
+ */
+export function cameraOf(
+  r: Pick<Rebuilt, 'pictures'> & { b?: Breakdown },
+  cut: string,
+): { id: string; eye: Eye; eyes: 'dreamer' | 'outside' } | null {
+  const byId = new Map(r.pictures.filter((x) => x.kind === 'cut').map((x) => [x.id, x]));
+  const seen = new Set<string>();
+  // Only on its own floor plan: a camera placed on another scene's plan stands somewhere else in this one.
+  const plan = r.b ? planKey(r.b, cut) : undefined;
+  for (let id: string | undefined = cut; id && !seen.has(id);) {
+    seen.add(id);
+    if (r.b && planKey(r.b, id) !== plan) return null;
+    const f: Item['frame'] = byId.get(id)?.item.frame;
+    if (f?.plan?.eye) return { id, eye: f.plan.eye, eyes: f.eyes };
+    id = f?.plan?.refs.find((x: PlanRef) => x.kind === 'cut' && x.role === 'base')?.id;
+  }
+  return null;
+}
+
+/**
+ * The floor plan a moment is placed on, `<scene>/<place>`: its place's own within its scene where the scene has one,
+ * else the scene's (continuity.ts placePlan), named by the scene's place.
+ */
+export function planKey(b: Pick<Breakdown, 'scenes'>, momentId: string): string | undefined {
+  const scene = b.scenes.find((sc) => sc.moments.some((x) => x.id === momentId));
+  const m = scene?.moments.find((x) => x.id === momentId);
+  if (!scene || !m) return undefined;
+  return `${scene.id}/${scene.blocking?.places?.[m.place] ? m.place : scene.place}`;
 }
 
 /**
@@ -313,10 +401,40 @@ export function dreamPacket(
   });
   const byMoment = new Map(moments(r.b).map((m) => [m.id, m]));
   const cuts = r.pictures.filter((p) => p.kind === 'cut');
+  const dreamer = r.b.people.find((x) => x.is_dreamer)?.id;
+  // Each cut's mock-up files, asked for once: where it has a camera, its own or a picture's it edits.
+  const pvs = new Map<string, Omit<PrevisPacket, 'media'> | null | undefined>();
+  const pvOf = (cut: string) => {
+    if (!pvs.has(cut)) pvs.set(cut, cameraOf(r, cut) ? opts.previs?.(cut) : undefined);
+    return pvs.get(cut);
+  };
   const env = drawnEnv();
   // As it is written out: what is checked is what a harness reads, nothing undefined left in it.
   return JSON.parse(JSON.stringify(made()));
   function made(): DreamPacket {
+    // Each floor plan's cameras, in the order its cuts are drawn: an eye once, with the cuts seen through it and each
+    // one's empty set, which can differ under one camera (a device on the wall from one moment, a drawer left open).
+    const places: PlacePacket[] = [];
+    for (const p of cuts) {
+      const through = cameraOf(r, p.id);
+      const id = planKey(r.b, p.id);
+      if (!through || !id) continue;
+      let place = places.find((x) => x.id === id);
+      if (!place) {
+        const [scene, at] = id.split('/');
+        const name = r.sheets.find((x) => x.id === at)?.name ?? r.b.places.find((x) => x.id === at)?.name ?? at;
+        place = { id, scene, place: at, name, cameras: [] };
+        places.push(place);
+      }
+      const key = JSON.stringify([through.eye, through.eyes]);
+      const set = pvOf(p.id)?.set?.idmap.sha256 ?? null;
+      const same = place.cameras.find((c) => JSON.stringify([c.eye, c.eyes]) === key);
+      if (same) {
+        same.cuts.push(p.id);
+        same.sets.push(set);
+      } else
+        place.cameras.push({ through: through.id, eye: through.eye, eyes: through.eyes, cuts: [p.id], sets: [set] });
+    }
     return {
       version: PACKET_VERSION,
       dream: {
@@ -375,6 +493,16 @@ export function dreamPacket(
         const sh = p.sheet;
         const plan = cp?.eye ? (shotPlan(r.b, p.id, r.rec) ?? null) : null;
         const spots: Spot[] = plan?.spots ?? [];
+        // The camera its picture is seen through: its own, or for an edit the one of the picture it edits.
+        const through = cameraOf(r, p.id);
+        const seenPlan = through ? (plan ?? shotPlan(r.b, p.id, r.rec) ?? null) : null;
+        const facingIn = (id: string): Facing | null => {
+          const s = seenPlan?.spots.find((x) => x.id === id);
+          const figure = !!s && !s.many && (s.kind === 'person' || (!s.kind && !!s.pose));
+          if (!through || !seenPlan || !figure || (through.eyes === 'dreamer' && id === dreamer)) return null;
+          return facingOf(s, seenPlan, through.eye);
+        };
+        const pv = pvOf(p.id);
         return {
           identity: {
             dream: opts.dream,
@@ -421,6 +549,7 @@ export function dreamPacket(
                   look: e.look,
                   image: e.image,
                   turned: e.turned,
+                  facing: facingIn(e.id),
                   changes: e.changes,
                   colours: e.colours,
                 }))
@@ -432,6 +561,7 @@ export function dreamPacket(
                   look: null,
                   image: or(s.mediaId),
                   turned: null,
+                  facing: facingIn(s.id),
                   changes: [],
                   colours: [],
                 })),
@@ -461,9 +591,15 @@ export function dreamPacket(
             looksAt: or(f.looksAt),
             eye: cp?.eye ?? null,
             floorPlan: plan,
+            // An edit has no camera of its own, and its mock-up is the one of the picture it edits.
             previs: cp?.eye
-              ? { media: standIn.previs(p.id), ...(opts.previs?.(p.id) ?? { clay: null, keyed: null }) }
-              : null,
+              ? {
+                  media: standIn.previs(p.id),
+                  ...(pv ?? { clay: null, keyed: null, through: null, set: null, names: {} }),
+                }
+              : pv
+                ? { media: standIn.previs(p.id), ...pv }
+                : null,
             view: sh?.camera.view ?? or(cp?.view),
             brief: sh?.camera.brief ?? or(p.item.shot?.text),
             words: sh?.camera.words ?? or(cp?.camera),
@@ -497,6 +633,7 @@ export function dreamPacket(
           prompts: prompts(p),
         };
       }),
+      places,
     };
   }
 }
@@ -548,6 +685,39 @@ const prompts = {
     "A picture's prompt by image model: nano-banana-pro is Dream Chat's own, whole, by paragraph; qwen-image the same fitted to the local machine's limits (4 images, 4000 characters), its default; qwen-image-written written for that machine from the cut's sheet. On the owner's verdicts (four dreams, 1 Oct) qwen-image was right 17 times to qwen-image-written's 13, which drew people twice: take qwen-image. qwen-image-written is written for the grey mock-up (camera.previs.clay); sent with the colour-keyed one, it is to be written again with that mock-up's key.",
 };
 const previsFile = obj({ file: str, sha256: str });
+const keyEntry = obj({ id: str, name: str, colour: str, kind: str });
+const PLACES =
+  "Each floor plan (`<scene>/<place>`: a scene's own, or a place's within it) and every camera its cuts are seen through: each eye once, `through` the cut whose own camera it is, with the cuts seen through it (an edit's through the picture it edits, only on the same plan) and each one's empty set (`sets`, its camera.previs.set id map's sha256, null with none). One camera's cuts can have different sets: a device on the wall in one moment, a drawer left open, a thing put away; draw each distinct set. For drawing a place empty from each direction its cuts use, and their reverses, before any frame: evals/set-render.ts renders a cut's empty set from any eye out of the packet alone, on its camera.floorPlan with its camera.previs.names, in previs.ts's own convention (metres on the plan, x from the left wall, y from the front, `d` the way the camera looks on the plan, `height` of the lens, `pitch` in radians, down negative, `lens` in millimetres on a 36 mm frame; unset, a 76-degree view across a 16:9 frame, about 23 mm).";
+const THROUGH =
+  "The cut whose camera the mock-up is seen through where it is not this cut's own: an edit keeps the camera of the picture it edits, so its mock-up is that camera's with this cut's people where they are now. Null for a cut's own camera.";
+const SET =
+  "The camera's empty set: the place as this camera frames it with every person, crowd and held thing left out (a sitting crowd's seats kept, where the frame has them), rendered 8% wider and taller than the frame (4% each side) at the frame's own scale, grey (clay), colour-keyed (keyed) and as an id map. `framePx` is where the cut's own frame is in it in the set's whole pixels, [x0, y0, x1, y1] with x1 and y1 just past it and y down from the top; `frame` is the same from 0 to 1 to four places (crop by framePx). Cropped to it, the set's id map is the frame's wherever no one stands and nothing is held. Draw the place once per camera from it, then put the people onto it; a thing someone rides (ids' `ridden`) moves with them.";
+/**
+ * One region of an id map: every pixel of exactly `rgb` is it, black is nothing; `kind` person, crowd, thing, room (a
+ * wall, the floor, the ground), seats (under a crowd or someone sitting) or water.
+ */
+const idEntry = {
+  ...obj({
+    id: str,
+    name: str,
+    kind: oneOf('person', 'crowd', 'thing', 'room', 'seats', 'water'),
+    rgb: { type: 'array', items: count, minItems: 3, maxItems: 3 },
+    pixels: count,
+    fixture: bool,
+    held: bool,
+    ridden: bool,
+  }),
+  description:
+    "One region of an id map (a PNG beside the packet): every pixel of exactly `rgb` is the spot, surface or crowd `id`, black is nothing; `pixels` is how many. A spot is the same colour in every frame and set of a dream. `fixture`: part of the place; `held`: in someone's hands; `ridden`: someone rides on or in it. A creature counts as a person. The colour-keyed mock-up's own colours can give two brown things one brown; the id map never does.",
+};
+const setSchema = obj({
+  clay: previsFile,
+  keyed: obj({ file: str, sha256: str, key: list(keyEntry) }),
+  idmap: previsFile,
+  ids: list(idEntry),
+  frame: { type: 'array', items: num, minItems: 4, maxItems: 4 },
+  framePx: { type: 'array', items: count, minItems: 4, maxItems: 4 },
+});
 const image = obj({
   n: count,
   media: named,
@@ -767,6 +937,17 @@ export const PACKET_SCHEMA: Schema = {
             look: orNull(str),
             image: orNull(str),
             turned: orNull(str),
+            facing: {
+              ...orNull(
+                obj({
+                  view: oneOf('front', 'three-quarter front', 'profile', 'three-quarter back', 'back'),
+                  side: { enum: ['left', 'right', null] },
+                  degrees: num,
+                }),
+              ),
+              description:
+                "How a person is turned to the camera the picture is seen through (camera.previs.through's for an edit), in the bins the camera's words use: `side` is which way across the picture they look, null facing the camera or with their back to it; `degrees` is between the way they face and the way to the camera, 0 facing it. Null for a thing, a crowd, and the dreamer through their own eyes; a creature counts as a person. (`turned` is what someone has turned into, not this.)",
+            },
             changes: list(obj({ what: str, now: str, part: str }, ['part'])),
             colours: list(str),
           }),
@@ -801,9 +982,18 @@ export const PACKET_SCHEMA: Schema = {
               obj({
                 file: str,
                 sha256: str,
-                key: list(obj({ id: str, name: str, colour: str, kind: str })),
+                key: list(keyEntry),
+                idmap: previsFile,
+                ids: list(idEntry),
               }),
             ),
+            through: { ...orNull(str), description: THROUGH },
+            set: { ...orNull(setSchema), description: SET },
+            names: {
+              ...map(str),
+              description:
+                "What each spot of the floor plan is called on the mock-ups: a thing's colour on the keyed one comes from its words, so a set rendered again (evals/set-render.ts) takes them.",
+            },
           }),
         ),
         view: orNull(str),
@@ -878,8 +1068,28 @@ export const PACKET_SCHEMA: Schema = {
     elements: list(ref('element')),
     ghosts: list(ref('ghost')),
     cuts: list(ref('node')),
+    places: {
+      ...list(
+        obj({
+          id: str,
+          scene: str,
+          place: str,
+          name: str,
+          cameras: list(
+            obj({
+              through: str,
+              eye: ref('eye'),
+              eyes: oneOf('dreamer', 'outside'),
+              cuts: list(str),
+              sets: list(orNull(str)),
+            }),
+          ),
+        }),
+      ),
+      description: PLACES,
+    },
   },
-  required: ['version', 'dream', 'elements', 'ghosts', 'cuts'],
+  required: ['version', 'dream', 'elements', 'ghosts', 'cuts', 'places'],
   additionalProperties: false,
 };
 

@@ -13,11 +13,15 @@ import './local-env';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { drawnEnv } from '../asdrawn';
+import { frameShape } from '../blocking';
 import { shotPlan } from '../continuity';
 import { jevWithModel } from '../jev';
 import {
+  cameraOf,
   type DreamPacket,
   dreamPacket,
+  type IdPacket,
   PACKET_SCHEMA,
   type PrevisPacket,
   type Prompts,
@@ -25,7 +29,7 @@ import {
   type VerdictPacket,
 } from '../packet';
 import { type Rebuilt, rebuild } from '../plan';
-import { calledFor, previsFor, previsKeyedFor, type Session } from '../session';
+import { calledFor, previsFor, previsKeyedFor, previsSetFor, type Session } from '../session';
 import { verdicts } from '../verdicts';
 import { withCast } from './cast-cache';
 import { withImplied } from './implied-cache';
@@ -47,22 +51,48 @@ const sha = (x: string | Uint8Array) => createHash('sha256').update(x).digest('h
 const previsDir = join(out, 'previs');
 mkdirSync(previsDir, { recursive: true });
 const indexFile = join(previsDir, 'index.json');
+type Key = { id: string; name: string; colour: string; kind: string };
+type Ids = IdPacket[];
 type Made = {
   clay: string | null;
   keyed: string | null;
-  key: { id: string; name: string; colour: string; kind: string }[];
+  key: Key[];
+  idmap: string | null;
+  ids: Ids;
+  set: {
+    clay: string;
+    keyed: string;
+    key: Key[];
+    idmap: string;
+    ids: Ids;
+    frame: number[];
+    framePx: number[];
+  } | null;
 };
 const index: Record<string, Made> = existsSync(indexFile) ? JSON.parse(readFileSync(indexFile, 'utf8')) : {};
-// The renderer itself: a change to it renders every mock-up again.
-const renderer = sha(readFileSync(join(import.meta.dir, '..', 'previs.ts')));
+// The renderer itself and the code it draws with: a change to any renders every mock-up again.
+const renderer = sha(
+  ['previs.ts', 'blocking.ts', 'camera.ts', 'castplace.ts', 'cleanups.ts']
+    .map((f) => readFileSync(join(import.meta.dir, '..', f), 'utf8'))
+    .join('\n'),
+);
 const counts = { rendered: 0, reused: 0 };
+const keyOf = (key: Key[]) => key.map((k) => ({ id: k.id, name: k.name, colour: k.colour, kind: k.kind }));
 
-/** A cut's mock-up files, grey and colour-keyed: rendered once for what it is rendered from, kept by content. */
+/**
+ * A cut's mock-up files, grey and colour-keyed with its id map, and its camera's empty set: rendered once for what it
+ * is rendered from, kept by content. An edit's are of the camera of the picture it edits, with its own people.
+ */
 function previsOf(r: Rebuilt, session: Session): (cut: string) => Omit<PrevisPacket, 'media'> | null {
   return (cut) => {
     const p = r.pictures.find((x) => x.kind === 'cut' && x.id === cut);
-    const eye = p?.item.frame?.plan?.eye;
-    if (!p || !eye) return null;
+    const through = cameraOf(r, cut);
+    if (!p?.item.frame?.plan || !through) return null;
+    // Seen through the camera the picture is drawn from: its own, or the one of the picture it edits.
+    const seen = {
+      id: p.id,
+      frame: { ...p.item.frame, eyes: through.eyes, plan: { ...p.item.frame.plan, eye: through.eye } },
+    };
     const called = calledFor(
       { build: session.build, draft: session.draft && { ...session.draft, breakdown: r.b } },
       p.item,
@@ -71,18 +101,23 @@ function previsOf(r: Rebuilt, session: Session): (cut: string) => Omit<PrevisPac
     const input = sha(
       JSON.stringify({
         renderer,
+        // The switches it is drawn under: the camera rules draw open drawers and riders.
+        switches: drawnEnv().switches,
+        frame: frameShape(),
         plan,
-        eye,
-        eyes: p.item.frame?.eyes,
+        eye: through.eye,
+        eyes: through.eyes,
         dreamer: r.b.people.find((x) => x.is_dreamer)?.id ?? null,
         names: (plan?.spots ?? []).map((x) => [x.id, called(x.id)]),
       }),
     );
     let made = index[input];
-    const there = (h: string | null) => !h || existsSync(join(previsDir, `${h}.png`));
-    if (!made || !there(made.clay) || !there(made.keyed)) {
-      const clay = previsFor(r.b, p.item, called, r.rec);
-      const keyed = previsKeyedFor(r.b, p.item, called, r.rec);
+    const there = (...hs: (string | null | undefined)[]) =>
+      hs.every((h) => !h || existsSync(join(previsDir, `${h}.png`)));
+    if (!made?.ids || !there(made.clay, made.keyed, made.idmap, made.set?.clay, made.set?.keyed, made.set?.idmap)) {
+      const clay = previsFor(r.b, seen, called, r.rec);
+      const keyed = previsKeyedFor(r.b, seen, called, r.rec, { idmap: true });
+      const set = previsSetFor(r.b, seen, called, r.rec);
       const keep = (png?: Uint8Array) => {
         if (!png) return null;
         const h = sha(png);
@@ -92,15 +127,43 @@ function previsOf(r: Rebuilt, session: Session): (cut: string) => Omit<PrevisPac
       made = {
         clay: keep(clay?.png),
         keyed: keep(keyed?.png),
-        key: (keyed?.key ?? []).map((k) => ({ id: k.id, name: k.name, colour: k.colour, kind: k.kind })),
+        key: keyOf(keyed?.key ?? []),
+        idmap: keep(keyed?.idmap?.png),
+        ids: keyed?.idmap?.ids ?? [],
+        set: set
+          ? {
+              clay: keep(set.clay)!,
+              keyed: keep(set.keyed)!,
+              key: keyOf(set.key),
+              idmap: keep(set.idmap)!,
+              ids: set.ids,
+              frame: set.frame,
+              framePx: set.framePx,
+            }
+          : null,
       };
       index[input] = made;
       counts.rendered++;
     } else counts.reused++;
     const file = (h: string) => ({ file: `previs/${h}.png`, sha256: h });
     return {
+      names: Object.fromEntries((plan?.spots ?? []).map((x) => [x.id, called(x.id)])),
       clay: made.clay ? file(made.clay) : null,
-      keyed: made.keyed ? { ...file(made.keyed), key: made.key } : null,
+      keyed:
+        made.keyed && made.idmap
+          ? { ...file(made.keyed), key: made.key, idmap: file(made.idmap), ids: made.ids }
+          : null,
+      through: through.id === cut ? null : through.id,
+      set: made.set
+        ? {
+            clay: file(made.set.clay),
+            keyed: { ...file(made.set.keyed), key: made.set.key },
+            idmap: file(made.set.idmap),
+            ids: made.set.ids,
+            frame: made.set.frame,
+            framePx: made.set.framePx,
+          }
+        : null,
     };
   };
 }
@@ -202,6 +265,9 @@ export type Written = {
     history: number;
     paragraphs: number;
     mockups: number;
+    sets: number;
+    through: number;
+    facing: number;
     local: number;
     written: number;
   };
@@ -232,6 +298,9 @@ export function packetOf(id: string, session: Session): Written | null {
     history: pk.cuts.filter((c) => c.history.verdicts.length).length,
     paragraphs: pk.cuts.filter((c) => c.prompts['nano-banana-pro'].paragraphs?.length).length,
     mockups: pk.cuts.filter((c) => c.camera.previs?.clay && c.camera.previs.keyed).length,
+    sets: pk.cuts.filter((c) => c.camera.previs?.set).length,
+    through: pk.cuts.filter((c) => c.camera.previs?.through && c.camera.previs.clay).length,
+    facing: pk.cuts.reduce((a, c) => a + c.who.inView.filter((e) => e.facing).length, 0),
     local: [...pk.cuts, ...pk.ghosts].filter((c) => c.prompts['qwen-image']).length,
     written: pk.cuts.filter((c) => c.prompts['qwen-image-written']).length,
   };
@@ -268,6 +337,9 @@ if (import.meta.main) {
     ghosts: 0,
     elements: 0,
     mockups: 0,
+    sets: 0,
+    through: 0,
+    facing: 0,
     local: 0,
     written: 0,
   };
@@ -293,17 +365,20 @@ if (import.meta.main) {
     total.history += n.history;
     total.paragraphs += n.paragraphs;
     total.mockups += n.mockups;
+    total.sets += n.sets;
+    total.through += n.through;
+    total.facing += n.facing;
     total.local += n.local;
     total.written += n.written;
     total.ghosts += pk.ghosts.length;
     total.elements += pk.elements.length;
     if (errors.length || missing) failed = true;
     console.log(
-      `${id}: ${pk.cuts.length}/${cuts} cuts, ${pk.ghosts.length} in-between, ${pk.elements.length} sketches; floor plan ${n.plan}, typed state ${n.now}, verdicts ${n.history}, paragraphs ${n.paragraphs}, mock-ups ${n.mockups}, local prompts ${n.local} (written ${n.written})${errors.length ? `; BROKEN ${errors.length}: ${errors.slice(0, 3).join(' | ')}` : ''}`,
+      `${id}: ${pk.cuts.length}/${cuts} cuts, ${pk.ghosts.length} in-between, ${pk.elements.length} sketches; floor plan ${n.plan}, typed state ${n.now}, verdicts ${n.history}, paragraphs ${n.paragraphs}, mock-ups ${n.mockups} (empty sets ${n.sets}, through an edited picture's camera ${n.through}), facing ${n.facing}, local prompts ${n.local} (written ${n.written})${errors.length ? `; BROKEN ${errors.length}: ${errors.slice(0, 3).join(' | ')}` : ''}`,
     );
   }
   console.log(
-    `mock-ups: ${counts.rendered} rendered, ${counts.reused} kept from before; packets: ${total.dreams} dreams, ${total.packets}/${total.cuts} cuts, ${total.ghosts} in-between pictures, ${total.elements} sketches; ${total.broken} dreams breaking the schema; cuts with a floor plan ${total.plan}, typed state ${total.now}, the owner's verdicts ${total.history}, paragraph ids ${total.paragraphs}, both mock-ups ${total.mockups}, local prompts ${total.local} (written for it ${total.written}); into ${out}`,
+    `mock-ups: ${counts.rendered} rendered, ${counts.reused} kept from before; packets: ${total.dreams} dreams, ${total.packets}/${total.cuts} cuts, ${total.ghosts} in-between pictures, ${total.elements} sketches; ${total.broken} dreams breaking the schema; cuts with a floor plan ${total.plan}, typed state ${total.now}, the owner's verdicts ${total.history}, paragraph ids ${total.paragraphs}, both mock-ups ${total.mockups} (empty sets ${total.sets}, through an edited picture's camera ${total.through}), people facing ${total.facing}, local prompts ${total.local} (written for it ${total.written}); into ${out}`,
   );
   if (failed) process.exit(1);
 }

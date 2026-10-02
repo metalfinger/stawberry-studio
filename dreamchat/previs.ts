@@ -9,7 +9,7 @@
 // picture and the words cannot disagree.
 import { isCastPiece } from './castplace';
 import { builds } from './cleanups';
-import { deflateSync } from 'node:zlib';
+import { deflateSync, inflateSync } from 'node:zlib';
 import {
   type Blocking,
   type Eye,
@@ -636,6 +636,8 @@ function solidsOf(
    * its seats.
    */
   shapes = false,
+  /** A crowd left out keeps the seats it sits on, where the frame has them: a camera's empty set (previsSet). */
+  seatsKept = false,
 ): Solid[] {
   const solids: Solid[] = [];
   // A fixture of the place is labelled with its own name; everyone and everything else as the story calls them.
@@ -667,8 +669,32 @@ function solidsOf(
   }
   // Where a crowd may not be: where anyone else is, the dreamer whose eyes the camera is included.
   const placed = plan.spots.filter((s) => !s.many);
+  // A crowd sitting sits on something: rows of seats under them, or the model makes up its own
+  // seating around the people (a raised block of armchairs off to one side, 24 Sep). Not where
+  // they sit on a sofa or in a car of the plan's own.
+  const seatsOf = (s: Spot, where: V2[]) => {
+    const f = facing(s, plan);
+    const seatless = where.filter(
+      (p) =>
+        !plan.spots.some(
+          (t) => !isPerson(t) && ['seat', 'vehicle'].includes(shapeOf(t, plan)) && onFootprint(p, t, plan),
+        ),
+    );
+    if (s.pose === 'sitting' && seatless.length)
+      add(
+        `${s.id} seats`,
+        0.55,
+        seatless.flatMap((p) => [
+          { x: p.x, y: p.y, z: 0, w: 0.62, d: 0.6, h: 0.42, f },
+          { x: p.x - f.x * 0.27, y: p.y - f.y * 0.27, z: 0.42, w: 0.62, d: 0.12, h: 0.5, f },
+        ]),
+      );
+  };
   for (const s of plan.spots) {
-    if (leaveOut.includes(s.id)) continue;
+    if (leaveOut.includes(s.id)) {
+      if (seatsKept && s.many) seatsOf(s, crowdSpots(s, plan, placed, eye));
+      continue;
+    }
     const f = facing(s, plan);
     const bench = drawn && shapes && !isPerson(s) ? benches(s, plan) : undefined;
     const lifted = drawn && shapes && !isPerson(s) && !bench ? seatOnTractor(s, plan, name) : undefined;
@@ -680,24 +706,7 @@ function solidsOf(
         where.flatMap((p) => figure(s, p.x, p.y, f, groundAt(p, plan))),
         name(s.id),
       );
-      // A crowd sitting sits on something: rows of seats under them, or the model makes up its own
-      // seating around the people (a raised block of armchairs off to one side, 24 Sep). Not where
-      // they sit on a sofa or in a car of the plan's own.
-      const seatless = where.filter(
-        (p) =>
-          !plan.spots.some(
-            (t) => !isPerson(t) && ['seat', 'vehicle'].includes(shapeOf(t, plan)) && onFootprint(p, t, plan),
-          ),
-      );
-      if (s.pose === 'sitting' && seatless.length)
-        add(
-          `${s.id} seats`,
-          0.55,
-          seatless.flatMap((p) => [
-            { x: p.x, y: p.y, z: 0, w: 0.62, d: 0.6, h: 0.42, f },
-            { x: p.x - f.x * 0.27, y: p.y - f.y * 0.27, z: 0.42, w: 0.62, d: 0.12, h: 0.5, f },
-          ]),
-        );
+      seatsOf(s, where);
     } else if (isPerson(s)) {
       add(s.id, 0.97, figure(s, s.x, s.y, f, groundAt(s, plan)), name(s.id));
       const chair = drawn && shapes ? chairUnder(s, plan, name) : undefined;
@@ -1195,6 +1204,8 @@ export type Seen = {
 export type Render = {
   width: number;
   height: number;
+  /** The frame's own size, in the middle of the render: the render's own size but for a set's overscan. */
+  frame: [number, number];
   lum: Float32Array;
   solid: Int32Array;
   solids: Solid[];
@@ -1216,8 +1227,18 @@ const sized = (long: number): [number, number] => {
   return upright() ? [short, long] : [long, short];
 };
 
-/** The solids as the eye sees them: flat grey, lit from behind the camera, outlined. */
-function render(solids: Solid[], eye: Eye, width: number, height: number): Render {
+/**
+ * The solids as the eye sees them: flat grey, lit from behind the camera, outlined. `frame` is the frame's own size, its
+ * width the one the lens's angle is across; a render bigger than it shows more round the frame at the same scale, the
+ * frame in its middle (a set's overscan).
+ */
+function render(
+  solids: Solid[],
+  eye: Eye,
+  width: number,
+  height: number,
+  frame: [number, number] = [width, height],
+): Render {
   // Bent right down to something the dream made small (`sizes`), what is a centimetre off is still in front of the eye.
   const near = eye.lean === 'close' ? 0.002 : NEAR;
   const d = unit(eye.d);
@@ -1226,7 +1247,7 @@ function render(solids: Solid[], eye: Eye, width: number, height: number): Rende
   const U = v3(-d.x * Math.sin(pitch), -d.y * Math.sin(pitch), Math.cos(pitch));
   const R = v3(-d.y, d.x, 0);
   const C = v3(eye.at.x, eye.at.y, eye.height);
-  const focal = width / 2 / Math.tan((halfViewOf(eye) * Math.PI) / 180);
+  const focal = frame[0] / 2 / Math.tan((halfViewOf(eye) * Math.PI) / 180);
   // Lit from behind the camera, high and to its left, the way a previs is: faces toward it are light.
   const L = (() => {
     const l = v3(
@@ -1365,7 +1386,7 @@ function render(solids: Solid[], eye: Eye, width: number, height: number): Rende
     const z = dot(v, F);
     return z < near ? null : { x: width / 2 + (focal * dot(v, R)) / z, y: height / 2 - (focal * dot(v, U)) / z };
   };
-  return { width, height, lum: edged, solid: solidAt, solids, seen, project };
+  return { width, height, frame, lum: edged, solid: solidAt, solids, seen, project };
 }
 
 // A 5x7 pixel font for the labels: capitals, digits and a few marks.
@@ -1446,7 +1467,9 @@ function paint(r: Render, labelled: boolean): Uint8Array {
     rgb[i] = rgb[i + 1] = rgb[i + 2] = v;
   };
   const placed: { x0: number; y0: number; x1: number; y1: number }[] = [];
-  const min = width * height * 0.002;
+  // Big enough to name, and named inside the frame, by the frame's own size: a set's margin is cut off.
+  const min = r.frame[0] * r.frame[1] * 0.002;
+  const [mx, my] = [(width - r.frame[0]) / 2, (height - r.frame[1]) / 2];
   for (const s of [...r.seen.values()]
     .filter((s) => s.label && s.visible >= min)
     .sort((a, b) => b.visible - a.visible)) {
@@ -1457,15 +1480,15 @@ function paint(r: Render, labelled: boolean): Uint8Array {
     const [px, py] = roomiest(r, s);
     let x0 = Math.round(px - w / 2);
     let y0 = Math.round(py - h / 2);
-    x0 = Math.max(2, Math.min(width - w - 2, x0));
-    y0 = Math.max(2, Math.min(height - h - 2, y0));
+    x0 = Math.max(mx + 2, Math.min(width - mx - w - 2, x0));
+    y0 = Math.max(my + 2, Math.min(height - my - h - 2, y0));
     // Labels never cover each other: one that would is moved down, then up, until it is clear.
     for (
       let step = 1;
       placed.some((p) => x0 < p.x1 && x0 + w > p.x0 && y0 < p.y1 && y0 + h > p.y0) && step < 12;
       step++
     )
-      y0 = Math.max(2, Math.min(height - h - 2, y0 + (step % 2 ? 1 : -1) * step * (h + 2)));
+      y0 = Math.max(my + 2, Math.min(height - my - h - 2, y0 + (step % 2 ? 1 : -1) * step * (h + 2)));
     placed.push({ x0, y0, x1: x0 + w, y1: y0 + h });
     for (let y = y0; y < y0 + h; y++)
       for (let x = x0; x < x0 + w; x++)
@@ -1565,6 +1588,27 @@ export function png(width: number, height: number, rgb: Uint8Array): Uint8Array 
   return out;
 }
 
+/** A PNG `png` wrote, read back to its pixels: for the checks on a mock-up's id map. */
+export function readPng(file: Uint8Array): { width: number; height: number; rgb: Uint8Array } {
+  const view = new DataView(file.buffer, file.byteOffset, file.byteLength);
+  let [width, height, o] = [0, 0, 8];
+  const idat: Uint8Array[] = [];
+  while (o < file.length) {
+    const n = view.getUint32(o);
+    const type = String.fromCharCode(...file.subarray(o + 4, o + 8));
+    if (type === 'IHDR') [width, height] = [view.getUint32(o + 8), view.getUint32(o + 12)];
+    if (type === 'IDAT') idat.push(file.subarray(o + 8, o + 8 + n));
+    o += 12 + n;
+  }
+  const raw = new Uint8Array(inflateSync(Buffer.concat(idat)));
+  const rgb = new Uint8Array(width * height * 3);
+  for (let y = 0; y < height; y++) {
+    if (raw[y * (width * 3 + 1)] !== 0) throw new Error('a filtered scanline: not a PNG png() wrote');
+    rgb.set(raw.subarray(y * (width * 3 + 1) + 1, (y + 1) * (width * 3 + 1)), y * width * 3);
+  }
+  return { width, height, rgb };
+}
+
 /** The previs frame of a camera on a plan, as a PNG a picture can be drawn over. */
 export function previsImage(
   plan: Blocking,
@@ -1573,9 +1617,13 @@ export function previsImage(
   name: (id: string) => string,
   width = upright() ? 768 : 1376,
   height = upright() ? 1344 : 768,
-  /** The mock-up's shapes for the local machine (solidsOf `shapes`); off, the frame is as it always was. */
-  opts: { shapes?: boolean } = {},
+  /**
+   * The mock-up's shapes for the local machine (solidsOf `shapes`); off, the frame is as it always was. `over`: rendered
+   * that much wider and taller than the frame at its own scale (a set's overscan).
+   */
+  opts: { shapes?: boolean; over?: number } = {},
 ): Uint8Array {
+  const [w, h] = overscanned(width, height, opts.over);
   // Seen from outside, the crowd leaves a lane to whoever the moment is about, as the view's own words
   // were measured; through the dreamer's eyes, it stands where it stands.
   const r = render(
@@ -1589,10 +1637,114 @@ export function previsImage(
       !!opts.shapes,
     ),
     eye,
-    width,
-    height,
+    w,
+    h,
+    [width, height],
   );
-  return png(width, height, paint(r, true));
+  return png(w, h, paint(r, true));
+}
+
+/**
+ * A frame's size rendered `over` times wider and taller, in whole pixels the same on each side, so the frame sits on
+ * the set's own pixels; the frame's own without it.
+ */
+const overscanned = (width: number, height: number, over = 1): [number, number] =>
+  over === 1
+    ? [width, height]
+    : [width + 2 * Math.round((width * (over - 1)) / 2), height + 2 * Math.round((height * (over - 1)) / 2)];
+
+/** How much more of the place round its frame a camera's empty set shows: 8% wider and taller, 4% each side. */
+export const SET_OVERSCAN = 1.08;
+
+/** One solid's region on an id map: the exact colour of every pixel of it there, what it is and how many pixels. */
+export type IdEntry = {
+  id: string;
+  name: string;
+  kind: 'person' | 'crowd' | 'thing' | 'room' | 'seats' | 'water';
+  rgb: [number, number, number];
+  pixels: number;
+  /** Part of the place, where it is a thing: it stays where it is from cut to cut. */
+  fixture: boolean;
+  /** In someone's hands. */
+  held: boolean;
+  /** Someone rides on it or in it: it moves with them. */
+  ridden: boolean;
+};
+
+/**
+ * An id map's colour for a solid, by its id: the same spot is the same colour in every frame and set of a dream,
+ * whoever else is in it. Bright, never black, never two alike (a clash moves its blue by one, ids taken in order).
+ */
+function idColour(id: string, taken: Set<number>): RGB {
+  let x = 2166136261;
+  for (const ch of id) x = Math.imul(x ^ ch.codePointAt(0)!, 16777619) >>> 0;
+  const h = (x % 3600) / 600;
+  const s = 0.5 + ((x >>> 12) % 41) / 100;
+  const v = 0.7 + ((x >>> 20) % 28) / 100;
+  const c = v * s;
+  const y = c * (1 - Math.abs((h % 2) - 1));
+  const [r, g, b] = [
+    [c, y, 0],
+    [y, c, 0],
+    [0, c, y],
+    [0, y, c],
+    [y, 0, c],
+    [c, 0, y],
+  ][Math.floor(h) % 6].map((u) => Math.round((u + v - c) * 255));
+  let rgb: RGB = [r, g, b];
+  while (taken.has((rgb[0] << 16) | (rgb[1] << 8) | rgb[2])) rgb = [rgb[0], rgb[1], (rgb[2] + 1) % 256];
+  taken.add((rgb[0] << 16) | (rgb[1] << 8) | rgb[2]);
+  return rgb;
+}
+
+/**
+ * A render's id map: each solid's pixels in one exact colour of its own, nothing in black, and the list that says
+ * which colour is which spot, surface or crowd. A harness masks any fixture or prop by its colour exactly, where a
+ * colour-keyed mock-up gives two brown things one brown.
+ */
+function idMap(r: Render, plan: Blocking): { png: Uint8Array; ids: IdEntry[] } {
+  const taken = new Set<number>([0]);
+  const byId = new Map<string, RGB>();
+  for (const id of [...new Set(r.solids.map((x) => x.id))].sort()) byId.set(id, idColour(id, taken));
+  const counts = new Array<number>(r.solids.length).fill(0);
+  const rgb = new Uint8Array(r.width * r.height * 3);
+  for (let i = 0; i < r.width * r.height; i++) {
+    const k = r.solid[i];
+    if (k < 0) continue;
+    counts[k]++;
+    rgb.set(byId.get(r.solids[k].id)!, i * 3);
+  }
+  const spotOf = (id: string) => plan.spots.find((x) => x.id === id);
+  const kindOf = (id: string): IdEntry['kind'] => {
+    const sp = spotOf(id);
+    if (sp) return sp.many ? 'crowd' : isPerson(sp) ? 'person' : 'thing';
+    return / seats$/.test(id) ? 'seats' : id === 'water' ? 'water' : 'room';
+  };
+  // What someone rides on or in: a vehicle under them, or what they ride as the packet's riders say.
+  const ridden = new Set(
+    plan.spots
+      .filter((x) => isPerson(x) && !x.many)
+      .map((x) => onOf(x, plan)?.t)
+      .filter((t): t is Spot => !!t && shapeOf(t, plan) === 'vehicle')
+      .map((t) => t.id),
+  );
+  const ids = r.solids.flatMap((sol, k): IdEntry[] =>
+    counts[k]
+      ? [
+          {
+            id: sol.id,
+            name: sol.label ?? sol.id,
+            kind: kindOf(sol.id),
+            rgb: byId.get(sol.id)!,
+            pixels: counts[k],
+            fixture: !!spotOf(sol.id)?.fixture,
+            held: !!spotOf(sol.id)?.heldBy,
+            ridden: ridden.has(sol.id),
+          },
+        ]
+      : [],
+  );
+  return { png: png(r.width, r.height, rgb), ids };
 }
 
 /** One named person, creature or thing on a colour-keyed mock-up, and the colour it is drawn in. */
@@ -1736,10 +1888,10 @@ export function previsKeyed(
   height = upright() ? 1344 : 768,
   /**
    * `labels`: things written by their short name beside them, a small shapeless one outlined (a test of labels on
-   * things). `shapes`: the mock-up's shapes (solidsOf).
+   * things). `shapes`: the mock-up's shapes (solidsOf). `idmap`: its id map too, from the same render.
    */
-  opts: { labels?: 'things'; shapes?: boolean } = {},
-): { png: Uint8Array; key: KeyEntry[] } {
+  opts: { labels?: 'things'; shapes?: boolean; idmap?: boolean } = {},
+): { png: Uint8Array; key: KeyEntry[]; idmap?: { png: Uint8Array; ids: IdEntry[] } } {
   const solids = solidsOf(
     plan,
     leaveOut,
@@ -1750,8 +1902,21 @@ export function previsKeyed(
     !!opts.shapes,
   );
   const r = render(solids, eye, width, height);
+  const { rgb, key } = keyedOf(r, plan, name, opts.labels);
+  return { png: png(width, height, rgb), key, ...(opts.idmap ? { idmap: idMap(r, plan) } : {}) };
+}
+
+/** A render colour-keyed (previsKeyed): its pixels, and the key that says which colour is who. */
+function keyedOf(
+  r: Render,
+  plan: Blocking,
+  name: (id: string) => string,
+  labels?: 'things',
+): { rgb: Uint8Array; key: KeyEntry[] } {
+  const { width, height, solids } = r;
   const spotOf = (id: string) => plan.spots.find((x) => x.id === id);
-  const min = width * height * 0.002;
+  // Big enough to key by the frame's own size: a set's margin adds no pixels to the bar.
+  const min = r.frame[0] * r.frame[1] * 0.002;
   const shown = (id: string) => (r.seen.get(id)?.visible ?? 0) >= min;
   const colours = new Map<number, RGB>();
   const key: KeyEntry[] = [];
@@ -1797,10 +1962,60 @@ export function previsKeyed(
     const f = k >= 0 ? Math.max(0.3, Math.min(1.15, r.lum[i] / Math.max(0.2, solids[k].tone))) : 1;
     for (let c = 0; c < 3; c++) rgb[i * 3 + c] = Math.max(0, Math.min(255, Math.round(base[c] * f)));
   }
-  if (opts.labels === 'things') labelThings(r, plan, key, colours, rgb);
+  if (labels === 'things') labelThings(r, plan, key, colours, rgb);
   const order = { person: 0, thing: 1, crowd: 2 } as const;
   key.sort((a, b) => order[a.kind] - order[b.kind]);
-  return { png: png(width, height, rgb), key };
+  return { rgb, key };
+}
+
+/** A camera's empty set (previsSet): grey, colour-keyed with its key, its id map, and where the frame is in it. */
+export type PrevisSet = {
+  clay: Uint8Array;
+  keyed: Uint8Array;
+  key: KeyEntry[];
+  idmap: Uint8Array;
+  ids: IdEntry[];
+  /** The cut's own frame in the set, [x0, y0, x1, y1] from 0 to 1, y down from the top, to 4 places. */
+  frame: [number, number, number, number];
+  /** The same in the set's whole pixels, x1 and y1 just past it: [55, 31, 1431, 799] for a 1376 by 768 frame. */
+  framePx: [number, number, number, number];
+};
+
+/**
+ * A camera's empty set: the place as the camera frames it with every person, crowd and held thing left out (a sitting
+ * crowd's seats kept, where the frame has them), rendered `over` wider and taller than the frame at its own scale, in
+ * whole pixels the same each side, grey and colour-keyed, with its id map, from one render. A harness draws a place
+ * once per camera, empty, then puts the people onto it, so the room stays one room from cut to cut. `lane`: the camera
+ * a crowd clears a lane to, as the cut's own frame has it (its camera, seen from outside; none, through someone's
+ * eyes), so a sitting crowd's seats stand where the frame has them from whichever eye the set is rendered.
+ */
+export function previsSet(
+  plan: Blocking,
+  eye: Eye,
+  name: (id: string) => string,
+  lane: Eye | null,
+  over = SET_OVERSCAN,
+  width = upright() ? 768 : 1376,
+  height = upright() ? 1344 : 768,
+): PrevisSet {
+  const leaveOut = plan.spots.filter((s) => isPerson(s) || s.many || s.heldBy).map((s) => s.id);
+  const solids = solidsOf(plan, leaveOut, name, lane ?? undefined, undefined, true, false, true);
+  const [w, h] = overscanned(width, height, over);
+  const r = render(solids, eye, w, h, [width, height]);
+  const keyed = keyedOf(r, plan, name);
+  const ids = idMap(r, plan);
+  // The frame is the middle of the set, on its whole pixels.
+  const [mx, my] = [(w - width) / 2, (h - height) / 2];
+  const at = (px: number, all: number) => Math.round((px / all) * 10000) / 10000;
+  return {
+    clay: png(w, h, paint(r, true)),
+    keyed: png(w, h, keyed.rgb),
+    key: keyed.key,
+    idmap: ids.png,
+    ids: ids.ids,
+    frame: [at(mx, w), at(my, h), at(mx + width, w), at(my + height, h)],
+    framePx: [mx, my, mx + width, my + height],
+  };
 }
 
 /**
@@ -1943,18 +2158,40 @@ function across(s: Seen): string {
       : `in ${c} of the picture`;
 }
 
-/** How a person is turned to the camera, and which way across the picture they look. */
-export function turnedTo(s: Spot, plan: Blocking, eye: Eye): string {
+/** How someone is turned to a camera, as `turnedTo` says it in words: a harness's own reading of the same bins. */
+export type Facing = {
+  view: 'front' | 'three-quarter front' | 'profile' | 'three-quarter back' | 'back';
+  /** Which way across the picture they look; none facing the camera or with their back to it. */
+  side: 'left' | 'right' | null;
+  /** Degrees between the way they face and the way to the camera: 0 facing it, 180 their back to it. */
+  degrees: number;
+};
+
+/** How a person is turned to the camera, and which way across the picture they look, in `turnedTo`'s bins. */
+export function facingOf(s: Spot, plan: Blocking, eye: Eye): Facing {
   const f = facing(s, plan);
   const to = unit({ x: eye.at.x - s.x, y: eye.at.y - s.y });
   const angle = (Math.acos(Math.max(-1, Math.min(1, f.x * to.x + f.y * to.y))) * 180) / Math.PI;
   const r = rightOf(unit(eye.d));
   const side = f.x * r.x + f.y * r.y > 0 ? 'right' : 'left';
+  const degrees = Math.round(angle);
+  if (angle < 30) return { view: 'front', side: null, degrees };
+  if (angle < 70) return { view: 'three-quarter front', side, degrees };
+  if (angle < 110) return { view: 'profile', side, degrees };
+  if (angle < 150) return { view: 'three-quarter back', side, degrees };
+  return { view: 'back', side: null, degrees };
+}
+
+/** How a person is turned to the camera, and which way across the picture they look. */
+export function turnedTo(s: Spot, plan: Blocking, eye: Eye): string {
+  const { view, side } = facingOf(s, plan, eye);
   const many = !!s.many;
-  if (angle < 30) return many ? 'facing the camera' : 'facing the camera';
-  if (angle < 70) return `turned three-quarters toward the camera, looking toward the ${side} of the picture`;
-  if (angle < 110) return `${many ? 'side on' : 'in profile'}, looking toward the ${side} of the picture`;
-  if (angle < 150) return `seen three-quarters from behind, looking toward the ${side} of the picture`;
+  if (view === 'front') return 'facing the camera';
+  if (view === 'three-quarter front')
+    return `turned three-quarters toward the camera, looking toward the ${side} of the picture`;
+  if (view === 'profile') return `${many ? 'side on' : 'in profile'}, looking toward the ${side} of the picture`;
+  if (view === 'three-quarter back')
+    return `seen three-quarters from behind, looking toward the ${side} of the picture`;
   return many ? 'seen from behind' : 'their back to the camera';
 }
 

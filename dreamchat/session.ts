@@ -101,7 +101,7 @@ import type { TreeInput } from './tree';
 import { atSite, inSession, recordJev } from './jevlog';
 import { askFacts, decide, type Reading, STORYBOARD, storyboardActs } from './stages';
 import { planFacts } from './planfacts';
-import { type KeyEntry, previsImage, previsKeyed } from './previs';
+import { previsImage, previsKeyed, type PrevisSet, previsSet } from './previs';
 import {
   buildFrames,
   buildGhosts,
@@ -1175,9 +1175,12 @@ export function previsKeyedFor(
   frame: Pick<Item, 'id' | 'frame'>,
   called: (id: string) => string,
   rec?: RecordPlan,
-  /** Things written by their short name beside them (previs.ts previsKeyed's `labels`); the shapes, as previsFor. */
-  opts: { labels?: 'things'; shapes?: boolean } = {},
-): { png: Uint8Array; key: KeyEntry[] } | undefined {
+  /**
+   * Things written by their short name beside them (previs.ts previsKeyed's `labels`); the shapes, as previsFor; its id
+   * map from the same render (`idmap`).
+   */
+  opts: { labels?: 'things'; shapes?: boolean; idmap?: boolean } = {},
+): ReturnType<typeof previsKeyed> | undefined {
   const eye = frame.frame?.plan?.eye;
   const plan = eye ? shotPlan(b, frame.id, rec) : undefined;
   if (!eye || !plan) return undefined;
@@ -1192,6 +1195,24 @@ export function previsKeyedFor(
     undefined,
     opts,
   );
+}
+
+/**
+ * A moment's camera's empty set (previs.ts previsSet): its floor plan by then through its camera, with every person,
+ * crowd and held thing left out, a little wider than the frame. None where the moment has no camera on a floor plan.
+ */
+export function previsSetFor(
+  b: Breakdown,
+  frame: Pick<Item, 'id' | 'frame'>,
+  called: (id: string) => string,
+  rec?: RecordPlan,
+): PrevisSet | undefined {
+  const eye = frame.frame?.plan?.eye;
+  const plan = eye ? shotPlan(b, frame.id, rec) : undefined;
+  if (!eye || !plan) return undefined;
+  const dreamer = b.people.find((p) => p.is_dreamer)?.id;
+  const names = Object.fromEntries(plan.spots.map((x) => [x.id, called(x.id)]));
+  return previsSet(plan, eye, (id) => names[id] ?? id, frame.frame?.eyes === 'dreamer' && dreamer ? null : eye);
 }
 
 /**

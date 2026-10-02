@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { frozenDreams, loadDream } from '../evals/saved';
 import type { Spot } from '../blocking';
-import { dreamPacket, PACKET_SCHEMA, validate } from '../packet';
+import { cameraOf, dreamPacket, PACKET_SCHEMA, validate } from '../packet';
 import { rebuild } from '../plan';
 import { moments } from '../producer';
 import type { Session } from '../session';
@@ -174,7 +174,23 @@ describe('a saved dream as packets', () => {
             file: `previs/${cut}-keyed.png`,
             sha256: 'b'.repeat(64),
             key: [{ id: 'p1', name: 'the dreamer', colour: 'red', kind: 'person' }],
+            idmap: { file: `previs/${cut}-ids.png`, sha256: 'c'.repeat(64) },
+            ids: [
+              {
+                id: 'p1',
+                name: 'the dreamer',
+                kind: 'person',
+                rgb: [245, 37, 37],
+                pixels: 120,
+                fixture: false,
+                held: false,
+                ridden: false,
+              },
+            ],
           },
+          through: null,
+          set: null,
+          names: { p1: 'the dreamer' },
         }),
         prompts: (p) => ({ 'qwen-image': { text: `fitted ${p.id}`, images: ['previs-x'], dropped: ['sketch-l1'] } }),
       });
@@ -187,7 +203,23 @@ describe('a saved dream as packets', () => {
           file: `previs/${c.identity.cut}-keyed.png`,
           sha256: 'b'.repeat(64),
           key: [{ id: 'p1', name: 'the dreamer', colour: 'red', kind: 'person' }],
+          idmap: { file: `previs/${c.identity.cut}-ids.png`, sha256: 'c'.repeat(64) },
+          ids: [
+            {
+              id: 'p1',
+              name: 'the dreamer',
+              kind: 'person',
+              rgb: [245, 37, 37],
+              pixels: 120,
+              fixture: false,
+              held: false,
+              ridden: false,
+            },
+          ],
         },
+        through: null,
+        set: null,
+        names: { p1: 'the dreamer' },
       });
       expect(c.prompts['qwen-image']).toEqual({
         text: `fitted ${c.identity.cut}`,
@@ -195,8 +227,10 @@ describe('a saved dream as packets', () => {
         dropped: ['sketch-l1'],
       });
       expect(pk.cuts[0].history.verdicts[0].withoutReadings).toBe(true);
-      // A cut with no floor plan has no mock-up to name.
-      for (const x of pk.cuts.filter((y) => !y.camera.eye)) expect(x.camera.previs).toBeNull();
+      // A cut with no camera of its own, nor a picture it edits with one, has no mock-up to name.
+      for (const x of pk.cuts.filter((y) => !cameraOf(r, y.identity.cut))) expect(x.camera.previs).toBeNull();
+      for (const x of pk.cuts.filter((y) => !y.camera.eye && cameraOf(r, y.identity.cut)))
+        expect(x.camera.previs).not.toBeNull();
     });
   });
 
