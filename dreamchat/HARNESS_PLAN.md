@@ -38,7 +38,8 @@ the point names, framed at the moment's size); the dreamer's eyes always with a 
 for the merged flow's Fan and Shrunk); each figure and thing at the size the dream gives it, with the camera placed for
 them (`sizes`: the Shrinking Hand's ants and tiny Alina, a mouse-sized dreamer beside a cat as big as a bus); and a
 place's sketch told by how it is built, never by what people do there (`place_built`, for Grandmother's family meeting
-room). Next, in the owner's order: E2 crowd between and E3 crowd image (with Disappear's and Shrunk's crowd moments), E4
+room); and a thing drawn as the story last left it (`thing_state`: Grandmother's bed sheet, folded down to a stamp
+and put in the cutlery drawer). Next, in the owner's order: E2 crowd between and E3 crowd image (with Disappear's and Shrunk's crowd moments), E4
 depth in the vertical frame (its test set the 10 moments listed in the overlaps), E5 conversation staging (Grandmother's
 spoken beats). The merged flow stops at three dreams (Grandmother, Neighbours, Fan) for the owner's walkthrough.
 
@@ -2371,6 +2372,7 @@ between sessions.
 | `subject_in_frame` | S4, E4, `sizes` | Whose face a moment needs is read from its words, the dreamer only seen from outside; through the dreamer's own eyes, only where the point names them (d02597b), each view framed for the moment's size. In 9:16 three of the six subjects still lost are 14mm outside shots: E4's. Two outside cameras the guard cannot right within its tilt are camera-placement debts (Known debt, S4). |
 | `eyes_aimed` | S4, the merged flow's packets | A dreamer's-eyes cut on a placed scene with the dreamer on it always has a camera; a cut with no camera and a floor plan is "failed" in its packet (`crowd_camera`), now only where the dreamer is not on the plan. What lies under the water is drawn as the surface in the mock-up (the whale, Fan's laptop): its words carry it. |
 | `sizes` (`sizes.ts`) | S4, the cast reading, the packet, E4, E5 | The cast reading's bodies (parked 30 Sep: drawn at their size they left frames placed for a grown person) are drawn through this step's own reading, which also gives each size the dream sets in a moment; every rule keys on a spot the step sized (`sized`: body or moment), never on a bare height (the water rules' `height` judges what covers a whale). A small thing on raised ground stands on it only under this step: the general fix for every thing on a counter, stage or deck is S4's. Staging left for its owners: someone carried by a creature far bigger (the mouse-sized dreamer in the giant cat's grip) is placed on its spot and hidden in it (a held-at-the-mouth placement); someone the moment says is inside a thing (Shrunk m6's party) is settled out of it, beside it, until the typed "in" fact keeps them in. |
+| `thing_state` | S4, S6 (the record's states), `sizes`, the packet | A change of size sets the plan's size only where its words name a thing of a known size (`sizedAs`: the plan's small things, a stamp, a handkerchief); a size the dream's sizes reading gives (`sized`) keeps it. Putting away is read from the moment's words, not the typed acts (Jev did not take Grandmother's "puts the stamp in her cutlery drawer", 0.42): it retires when the typed reading carries a thing put into something that closes. A thing the plan keeps that no moment names is drawn without its change carried; Grandmother m10 was the one case, gone with the drawer, and the rest is S6's. Packet field `stated`. |
 | `place_built` (`built.ts`) | S6 sketches, the import | A place's sketch alone is told by its build (`Item.built`); its moments, image lines and the record keep the place's name and look. One writer reading per dream, cached with the cast's (`--built`), asked on import; a place whose words say only what it is built of is left as it was. The two words of use left in the corpus are a roof's slopes meeting at its ridge and a bridge over the night market. |
 
 ## Known debt, by the step that clears it
@@ -3486,6 +3488,22 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   roof's slopes meeting at its ridge and a bridge over the night market), 51 places told by their build. Against lab
   d02597b, 0 of 127 frozen and 0 of 447 live moment pictures move (it changes place sketches only); prompt cases the
   same. `bun test`: 1178 pass, 0 fail off and on, and file by file. No pictures, no money.
+- 2 Oct (afternoon, nothing drawn): a thing drawn as the story last left it (`thing_state`; 28db7e6): a change of a
+  thing's size that names a thing of a known size ("a handkerchief", "the size of a stamp") sets its size on the floor
+  plan from the moment it changes, also where a moment carries it without naming it, until the change ends or the thing
+  becomes something else; the view names it by it ("the bed sheet (now the size of a stamp)", as its in-between
+  picture's own words do), and one a few pixels across stays in the picture, said small there. A thing a moment's
+  words put into something that closes (a drawer, a box, a pocket, a bag) is inside it from the next moment, until a
+  moment names it, says it or moves it again; read from what the putting acts on, so "puts her hand into her bag and
+  pulls out the ticket" hides nothing. The merged flow's Grandmother on Wednesdays: the bed sheet folded down to a stamp
+  and put in the cutlery drawer was a cloth two metres across in her hands and lying on the drawer (m7-m9), and drawn
+  there again with its first sketch in the moment after (m10); its picture checks found the full-size cloth in m9 and
+  m10. Now m7 holds the sheet at a handkerchief's size, m8 and m9 at a stamp's, and m10 has none; m8 is placed from
+  its own mock-up, m7's camera having turned 40 degrees with the sheet its real size. `evals/thing-state.ts --live` and
+  the merged flow's stores, the step before -> with it: drawn at its old size 6 -> 0, drawn after being put away 3 -> 0,
+  drawn with a change holding and not carried 3 -> 0, nothing taken off a plan without being put away. Against lab
+  e2aa006, 0 of 127 frozen and 0 of 447 live pictures move; prompt cases the same. `bun test`: 1185 pass, 0 fail off
+  and on, and file by file. No pictures, no money.
 
 ## Owner's direction (29 Sep): reviews and merges move to the cloud session
 
