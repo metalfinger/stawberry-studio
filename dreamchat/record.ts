@@ -11,6 +11,7 @@
 // and the prompts read it too (DREAMCHAT_RECORD=on): what changes is carried from picture to picture,
 // who is there, and who holds what.
 import type { CastReading } from './cast-types';
+import type { SizesReading } from './sizes';
 import { builds, oneBuilder, retired } from './cleanups';
 import { pictureName, placePlan, type RecordPlan, rawPlanBy } from './continuity';
 import {
@@ -218,6 +219,8 @@ export type Readings = {
   typed?: Record<string, TypedReading>;
   /** The cast reading (cast.ts): what the moments need drawn and was never cast, and how big each body is. */
   cast?: CastReading;
+  /** How big each figure and thing is drawn, where the dream's words say (sizes.ts, `sizes`). */
+  sizes?: SizesReading;
 };
 
 /** One implied state of a moment: proposed by the writer, and Jev's reading of it on the moment's words. */
@@ -3210,8 +3213,10 @@ export function recordForPlan(
         const motion = takenOf(readings.typed[m.id], m.eyes).motion.map(({ who, moving }) => ({ who, moving }));
         if (motion.length && plan.moments[m.id]) plan.moments[m.id].motion = motion;
       }
-    // With the cast_named step, the cast reading as read and checked, for the floor plan to place (continuity rawPlanBy).
-    return plan && builds('cast_named') && readings?.cast ? { ...plan, cast: readings.cast } : plan;
+    // With the cast_named step, the cast reading as read and checked, for the floor plan to place (continuity rawPlanBy);
+    // with `sizes`, how big each figure and thing is, for it to draw them so.
+    const cast = plan && builds('cast_named') && readings?.cast ? { ...plan, cast: readings.cast } : plan;
+    return cast && builds('sizes') && readings?.sizes ? { ...cast, sizes: readings.sizes } : cast;
   } catch {
     return undefined;
   }

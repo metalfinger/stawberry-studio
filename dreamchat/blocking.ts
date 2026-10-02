@@ -308,10 +308,12 @@ export function settle(
   // Two people on one spot are side by side, across the way they face: in one car over the bridge,
   // the aunt hid the dreamer (25 Sep).
   const people = spots.filter((s) => s.kind === 'person' && !s.many);
+  // At their own size (`sizes`): ant-sized Alina and the ants a few millimetres apart, not pushed off the counter.
+  const kOf = (s: Spot) => (s.height ? Math.min(1, s.height / 1.74) : 1);
   const done = new Set<string>();
   for (const a of people) {
     if (done.has(a.id)) continue;
-    const together = people.filter((b) => !done.has(b.id) && Math.hypot(b.x - a.x, b.y - a.y) < 0.3);
+    const together = people.filter((b) => !done.has(b.id) && Math.hypot(b.x - a.x, b.y - a.y) < 0.3 * kOf(a));
     together.forEach((b) => done.add(b.id));
     if (together.length < 2) continue;
     const f = facing(a, { ...plan, spots });
@@ -328,7 +330,8 @@ export function settle(
     const rank = (b: Spot) => (b.rides === 'front' ? 0 : b.rides === 'back' ? 2 : 1);
     if (narrow) together.sort((a, b) => rank(a) - rank(b));
     together.forEach((b, k) => {
-      const off = narrow ? ((together.length - 1) / 2 - k) * 0.6 : (k - (together.length - 1) / 2) * 0.6;
+      const gap = 0.6 * Math.max(...together.map(kOf));
+      const off = narrow ? ((together.length - 1) / 2 - k) * gap : (k - (together.length - 1) / 2) * gap;
       Object.assign(b, { x: mid.x + along.x * off, y: mid.y + along.y * off });
     });
   }

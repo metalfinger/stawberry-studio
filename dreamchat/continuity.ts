@@ -8,8 +8,9 @@
 // an in-between picture that is never a cut. Everything here is pure: the breakdown in, the plan
 // out, and the same breakdown always gives the same plan.
 import type { CastReading } from './cast-types';
+import type { SizesReading } from './sizes';
 import { builds } from './cleanups';
-import { smallSizeOf, withCastFixtures, withCastSpots } from './castplace';
+import { smallSizeOf, withCastFixtures, withCastSpots, withSizes } from './castplace';
 import {
   type Blocking,
   bearing,
@@ -244,6 +245,8 @@ export type ContinuityPlan = { cuts: CutPlan[]; ghosts: GhostPlan[]; issues: str
 export type RecordPlan = {
   /** With the one builder's `cast_named` step: the cast reading (cast.ts), for the floor plan to place from. */
   cast?: CastReading;
+  /** How big each figure and thing is drawn (sizes.ts), with the one builder's `sizes`. */
+  sizes?: SizesReading;
   moments: Record<
     string,
     {
@@ -606,6 +609,8 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
         }),
       }
     : placed;
+  // Each figure and thing at the size the dream gives it here (castplace.ts withSizes, `sizes`), before any camera.
+  const sizedNow = camera && builds('sizes') && rec?.sizes ? withSizes(sized, rec.sizes, momentId) : sized;
   return camera
     ? withOpen(
         withRiders(
@@ -613,7 +618,7 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
             builds('plan_facing')
               ? withAttention(
                   carriedBy(
-                    sized,
+                    sizedNow,
                     plan,
                     upTo.map((x) => plan.moves?.[x.id] ?? []),
                   ),
@@ -621,7 +626,7 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
                   moment.eyes === 'dreamer' ? dreamerId : undefined,
                 )
               : carriedBy(
-                  sized,
+                  sizedNow,
                   plan,
                   upTo.map((x) => plan.moves?.[x.id] ?? []),
                 ),
@@ -1085,6 +1090,32 @@ function bodiesOf(b: Breakdown): Record<string, number> {
  * never the dreamer through their own eyes, never a crowd; none where its one thing to show is a hand, something held
  * or a close detail, a deliberate insert with no face in it.
  */
+/**
+ * Who and what the camera fits, at their own size (`sizes`): where the moment's one thing to show names only what the
+ * dream has made small beside someone far bigger, the small ones, and the big are where they fall; otherwise everyone.
+ * The ant-sized Alina by the piece of orange the dreamer points at was a speck under the dreamer's back (Shrunk m3).
+ */
+export function framedAtSize(plan: Blocking, ids: string[], m: Moment, name: (s: Spot) => string): string[] {
+  const height = (id: string) => {
+    const s = plan.spots.find((x) => x.id === id);
+    if (!s) return 0;
+    return s.kind === 'thing' || (!s.kind && !s.pose && !s.many) ? sizeOf(s)[2] : (s.height ?? 1.74);
+  };
+  const big = Math.max(0, ...ids.map(height));
+  const small = ids.filter((id) => height(id) > 0 && height(id) < big / 10);
+  if (!small.length) return ids;
+  const named = mentioned(
+    m.visual_point ?? '',
+    ids.map((id) => ({ id, name: name(plan.spots.find((x) => x.id === id)!) })),
+  );
+  if (!named.length || !named.every((id) => small.includes(id))) return ids;
+  // The small ones it names, and any other small one right by them: not the ants a metre off along the counter.
+  const at = (id: string) => plan.spots.find((x) => x.id === id)!;
+  return small.filter(
+    (id) => named.includes(id) || named.some((n) => Math.hypot(at(id).x - at(n).x, at(id).y - at(n).y) < 0.3),
+  );
+}
+
 export function facesNeeded(b: Breakdown, m: Moment): string[] {
   const point = m.visual_point ?? '';
   if (/\b(?:hands?|fingers?|palms?|holding|held|grips?|gripping|close-?up|detail|insert)\b/i.test(point)) return [];
@@ -2090,17 +2121,36 @@ function planWith(
       // beach used to be", the front the plan named so, was shot facing away from it (lighthouse, 25 Sep).
       // Whose heads the frame keeps: the people its words name, where its point needs their face (subject_in_frame).
       const heads = builds('subject_in_frame') ? facesNeeded(b, m) : [];
+      // Framed at their own size where the moment shows only what the dream has made small (`sizes`).
+      const framed = builds('sizes')
+        ? framedAtSize(where, ids, m, (x) => (x.id === dreamerId ? 'the dreamer' : nameOf(x)))
+        : ids;
+      // Framed for the small ones, only their heads are kept: holding the grown dreamer's too set the camera metres off.
+      const keptHeads = framed === ids ? heads : heads.filter((id) => framed.includes(id));
       const also = mentioned(`${m.action} ${m.visual_point ?? ''}`, [
         ...where.spots.map((x) => ({ id: x.id, name: nameOf(x) })),
         ...(where.front ? [{ id: 'front', name: where.front }] : []),
       ]).filter((id) => !ids.includes(id) && id !== dreamerId);
+      // And only what its words name near them: the ants a metre off along the counter set a frame a metre wide, with
+      // the dreamer standing in it (Shrunk m5).
+      const near = (id: string) => {
+        const a = where.spots.find((x) => x.id === id);
+        return (
+          !!a &&
+          framed.some((f) => {
+            const b = where.spots.find((x) => x.id === f);
+            return !!b && Math.hypot(a.x - b.x, a.y - b.y) < 0.3;
+          })
+        );
+      };
+      const alsoNear = framed === ids ? also : also.filter(near);
       // With S5's references, an edit the gate would not send (its picture's camera far from where this
       // moment's own would stand, or the place not as it stands here) is placed and made from its own mock-up
       // like any other cut. Left an edit, the gate took its picture away later and the cut had no camera, no
       // mock-up and nothing that carried the layout (the S5 picture check, 29 Sep: orchard m3 came out
       // mirrored; lighthouse-first m8's tractor became a car).
       if (refs && base?.role === 'base') {
-        const own = outsideShot(where, ids, m.distance, now, lookAt(m, where), also, undefined, heads);
+        const own = outsideShot(where, framed, m.distance, now, lookAt(m, where), alsoNear, undefined, keptHeads);
         if (own && !drawnFrom(c, base, own.eye, eyeOf(base.id))) {
           Object.assign(base, { role: 'composition', relation: 'same_side', carries: CARRIES.same_side });
           madeOwn.add(`${c.id}/${base.id}`);
@@ -2108,11 +2158,13 @@ function planWith(
       }
       const edits = c.refs.some((r) => r.role === 'base');
       const rules = opts.camera && !edits ? shotRules(c, m, where) : undefined;
-      const v = edits ? null : outsideShot(where, ids, m.distance, now, lookAt(m, where), also, rules, heads);
+      const v = edits
+        ? null
+        : outsideShot(where, framed, m.distance, now, lookAt(m, where), alsoNear, rules, keptHeads);
       // With S5's references the gate compares this camera with the picture's whatever the camera rules, and
       // the cut keeps its own shot for when the picture is not sent after all.
       if ((opts.camera || refs) && edits) {
-        const own = outsideShot(where, ids, m.distance, now, lookAt(m, where), also, undefined, heads);
+        const own = outsideShot(where, framed, m.distance, now, lookAt(m, where), alsoNear, undefined, keptHeads);
         if (own) c.wouldBe = own.eye;
         // Placed as any cut is, but never moved off the camera of the picture it edits: withheld, that picture is
         // not drawn from, and the same view is still this moment's (the camera rules' "move the camera" is for a
@@ -2124,13 +2176,13 @@ function planWith(
         const alone = refs
           ? outsideShot(
               where,
-              ids,
+              framed,
               m.distance,
               now,
               lookAt(m, where),
-              also,
+              alsoNear,
               placed && kept ? { ...placed, avoid: kept.map((e) => e.eye) } : undefined,
-              heads,
+              keptHeads,
             )
           : null;
         if (alone)

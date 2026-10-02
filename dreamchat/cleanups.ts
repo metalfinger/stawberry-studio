@@ -249,6 +249,10 @@ export const BUILDER_STEPS: readonly string[] = [
   //    at that no way of looking shows (under the water, hidden inside a crowd) is looked at all the same, straight on:
   //    the cut had no camera, was "failed" and never drawn.
   'eyes_aimed',
+  // Not a ledger row: from the merged flow's Shrinking Hand (2 Oct), and the cast's bodies parked on 30 Sep. Each figure
+  //    and thing at the size the dream's words give it, in each moment they say (sizes.ts), the camera placed for them:
+  //    the ants were a man on the kitchen counter, tiny Alina and her guests full size, hiding the shrunken building.
+  'sizes',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;
