@@ -1109,6 +1109,19 @@ export const PACKET_SCHEMA: Schema = {
 
 // ── checking a value against a schema ────────────────────────────────────────
 
+/** Whether a value is of the kind a schema is, by its type, its constant or its values alone, not what is inside it. */
+function ofKind(schema: Schema, value: unknown, root: Schema): boolean {
+  if (typeof schema.$ref === 'string') {
+    const def = (root.$defs as Record<string, Schema> | undefined)?.[schema.$ref.replace('#/$defs/', '')];
+    return !!def && ofKind(def, value, root);
+  }
+  if ('const' in schema) return value === schema.const;
+  if (Array.isArray(schema.enum)) return schema.enum.includes(value as never);
+  if (schema.type === undefined) return true;
+  const types = (Array.isArray(schema.type) ? schema.type : [schema.type]) as string[];
+  return types.some((t) => fits(value, t));
+}
+
 const typeOf = (v: unknown): string =>
   v === null ? 'null' : Array.isArray(v) ? 'array' : typeof v === 'number' ? 'number' : typeof v;
 const fits = (v: unknown, t: string): boolean =>
@@ -1165,9 +1178,11 @@ export function validate(schema: Schema, value: unknown, root: Schema = schema, 
   }
   if (Array.isArray(schema.anyOf)) {
     const shapes = schema.anyOf as Schema[];
-    return shapes.some((s) => validate(s, value, root, at).length === 0)
-      ? []
-      : [`${at}: matches none of ${shapes.length} shapes`];
+    const tried = shapes.map((s) => validate(s, value, root, at));
+    if (tried.some((e) => e.length === 0)) return [];
+    // The one shape it is of where one is (an object where an object or null is allowed): its own faults, by name.
+    const near = shapes.flatMap((s, i) => (ofKind(s, value, root) ? [tried[i]] : []));
+    return near.length === 1 ? near[0] : [`${at}: matches none of ${shapes.length} shapes`];
   }
   if ('const' in schema && value !== schema.const) return [`${at}: not ${JSON.stringify(schema.const)}`];
   if (Array.isArray(schema.enum) && !schema.enum.includes(value as never))
@@ -1193,7 +1208,7 @@ export function validate(schema: Schema, value: unknown, root: Schema = schema, 
     const props = (schema.properties ?? {}) as Record<string, Schema>;
     for (const k of (schema.required ?? []) as string[]) if (!(k in o)) out.push(`${at}: ${k} is missing`);
     for (const [k, v] of Object.entries(o)) {
-      if (k in props) out.push(...validate(props[k], v, root, `${at}.${k}`));
+      if (Object.hasOwn(props, k)) out.push(...validate(props[k], v, root, `${at}.${k}`));
       else if (schema.additionalProperties === false) out.push(`${at}: ${k} is not allowed`);
       else if (typeof schema.additionalProperties === 'object')
         out.push(...validate(schema.additionalProperties as Schema, v, root, `${at}.${k}`));

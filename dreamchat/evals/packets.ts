@@ -9,6 +9,8 @@
 //   bun run evals/packets.ts                 every frozen dream
 //   bun run evals/packets.ts --live          every saved conversation too
 //   bun run evals/packets.ts --dream <id>    one
+//   bun run evals/packets.ts --v8            version 8 packets (contract.ts): version 7's fields, each cut's stable id
+//                                            and contract, the aliases from its earlier ids
 import './local-env';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -16,6 +18,16 @@ import { join } from 'node:path';
 import { drawnEnv } from '../asdrawn';
 import { frameShape } from '../blocking';
 import { builds } from '../cleanups';
+import {
+  type DreamPacket8,
+  nextHistory,
+  PACKET_SCHEMA_V8,
+  readIdHistory,
+  stableIds,
+  toV8,
+  validatePacket,
+  writeIdHistory,
+} from '../contract';
 import { shotPlan } from '../continuity';
 import { jevWithModel } from '../jev';
 import {
@@ -27,7 +39,6 @@ import {
   PACKET_SCHEMA,
   type PrevisPacket,
   type Prompts,
-  validate,
   type VerdictPacket,
 } from '../packet';
 import { type Rebuilt, rebuild } from '../plan';
@@ -45,9 +56,15 @@ const data = dataDir();
 const out = join(data, 'runs', 'packets');
 mkdirSync(out, { recursive: true });
 
-/** The schema a harness reads, written beside the packets. */
-export const writeSchema = () =>
+/**
+ * The schemas a harness reads, written beside the packets: each version's by its number, and version 7's under its
+ * old name too, for one version more.
+ */
+export const writeSchema = () => {
   writeFileSync(join(out, 'packet.schema.json'), `${JSON.stringify(PACKET_SCHEMA, null, 2)}\n`);
+  writeFileSync(join(out, 'packet.v7.schema.json'), `${JSON.stringify(PACKET_SCHEMA, null, 2)}\n`);
+  writeFileSync(join(out, 'packet.v8.schema.json'), `${JSON.stringify(PACKET_SCHEMA_V8, null, 2)}\n`);
+};
 
 const sha = (x: string | Uint8Array) => createHash('sha256').update(x).digest('hex');
 const previsDir = join(out, 'previs');
@@ -260,7 +277,7 @@ export async function readied(session: Session): Promise<Session> {
 }
 
 export type Written = {
-  packet: DreamPacket;
+  packet: DreamPacket | DreamPacket8;
   file: string;
   errors: string[];
   cuts: number;
@@ -282,7 +299,7 @@ export type Written = {
  * One dream's packet, rebuilt from the session given (its readings in, readied), with its mock-ups and prompts,
  * checked against the schema and written to runs/packets/<id>.json. Null where it has no breakdown or look yet.
  */
-export function packetOf(id: string, session: Session): Written | null {
+export function packetOf(id: string, session: Session, opts: { v8?: boolean } = {}): Written | null {
   if (!session.draft?.breakdown || !session.style) return null;
   const r = rebuild(session);
   const pk = dreamPacket(r, {
@@ -292,11 +309,18 @@ export function packetOf(id: string, session: Session): Written | null {
     previs: previsOf(r, session),
     prompts: promptsOf(r),
   });
-  // With `point_state`, a cut whose packet says something against its own point is an error as the schema's are.
-  const errors = [...validate(PACKET_SCHEMA, pk), ...(builds('point_state') ? lintPacket(pk) : [])];
-  const cuts = r.pictures.filter((p) => p.kind === 'cut').length;
   const file = join(out, `${id}.json`);
-  writeFileSync(file, `${JSON.stringify(pk, null, 1)}\n`);
+  // Its stable ids over time (runs/packets/ids/<dream>.json), kept with every packet written of either version: an
+  // earlier id whose moment only moved is carried to its new one, in version 8's aliases.
+  mkdirSync(join(out, 'ids'), { recursive: true });
+  const idsFile = join(out, 'ids', `${id}.json`);
+  const history = nextHistory(readIdHistory(idsFile), Object.values(stableIds(pk).cuts));
+  writeIdHistory(idsFile, history);
+  const written = opts.v8 ? toV8(pk, history.aliases) : pk;
+  // With `point_state`, a cut whose packet says something against its own point is an error as the schema's are.
+  const errors = [...validatePacket(written), ...(builds('point_state') ? lintPacket(pk) : [])];
+  const cuts = r.pictures.filter((p) => p.kind === 'cut').length;
+  writeFileSync(file, `${JSON.stringify(written, null, 1)}\n`);
   writeFileSync(indexFile, `${JSON.stringify(index)}\n`);
   const n = {
     plan: pk.cuts.filter((c) => c.camera.floorPlan).length,
@@ -310,7 +334,7 @@ export function packetOf(id: string, session: Session): Written | null {
     local: [...pk.cuts, ...pk.ghosts].filter((c) => c.prompts['qwen-image']).length,
     written: pk.cuts.filter((c) => c.prompts['qwen-image-written']).length,
   };
-  return { packet: pk, file, errors, cuts, n };
+  return { packet: written, file, errors, cuts, n };
 }
 
 if (import.meta.main) {
@@ -358,7 +382,7 @@ if (import.meta.main) {
       console.log(`${id}: not read: ${String(e instanceof Error ? e.message : e).slice(0, 200)}`);
       continue;
     }
-    const w = packetOf(id, session);
+    const w = packetOf(id, session, { v8: args.includes('--v8') });
     if (!w) continue;
     const { packet: pk, errors, cuts, n } = w;
     const missing = cuts - pk.cuts.length;

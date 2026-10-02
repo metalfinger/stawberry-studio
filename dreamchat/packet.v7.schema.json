@@ -1,0 +1,1853 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/metalfinger/stawberry-studio/dreamchat/packet.schema.json",
+  "title": "Dream Chat node packet",
+  "description": "Per dream: its sketches, its in-between pictures and a node per cut, with everything a harness needs to draw, check and redraw each picture (dreamchat/packet.ts).",
+  "$defs": {
+    "eye": {
+      "type": "object",
+      "properties": {
+        "at": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": ["x", "y"],
+          "additionalProperties": false
+        },
+        "d": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": ["x", "y"],
+          "additionalProperties": false
+        },
+        "height": {
+          "type": "number"
+        },
+        "pitch": {
+          "type": "number"
+        },
+        "lean": {
+          "enum": ["back", "forward", "left", "right", "close"]
+        },
+        "lens": {
+          "type": "number"
+        }
+      },
+      "required": ["at", "d", "height"],
+      "additionalProperties": false
+    },
+    "spot": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "faces": {
+          "type": "string"
+        },
+        "attending": {
+          "type": "boolean"
+        },
+        "many": {
+          "type": "boolean"
+        },
+        "kind": {
+          "enum": ["person", "thing"]
+        },
+        "pose": {
+          "enum": ["sitting", "standing", "lying"]
+        },
+        "size": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "shape": {
+          "enum": ["block", "seat", "vehicle", "ground", "steps"]
+        },
+        "heldBy": {
+          "type": "string"
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "spread": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "fixture": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "height": {
+          "type": "number"
+        },
+        "body": {
+          "enum": ["human", "four-legged", "bird", "fish", "other"]
+        },
+        "sized": {
+          "enum": ["body", "moment"]
+        },
+        "stated": {
+          "type": "boolean"
+        },
+        "past": {
+          "type": "string"
+        },
+        "above": {
+          "type": "number"
+        },
+        "climbing": {
+          "type": "object",
+          "properties": {
+            "of": {
+              "type": "string"
+            },
+            "how": {
+              "enum": ["into", "out of"]
+            }
+          },
+          "required": ["of", "how"],
+          "additionalProperties": false
+        },
+        "rides": {
+          "enum": ["front", "back"]
+        },
+        "open": {
+          "type": "boolean"
+        }
+      },
+      "required": ["id", "x", "y"],
+      "additionalProperties": false
+    },
+    "floorPlan": {
+      "type": "object",
+      "properties": {
+        "front": {
+          "type": "string"
+        },
+        "spots": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/spot"
+          }
+        },
+        "indoors": {
+          "type": "boolean"
+        },
+        "ceiling": {
+          "type": "number"
+        },
+        "room": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "water": {
+          "type": "number"
+        },
+        "waterCapped": {
+          "type": "boolean"
+        },
+        "inside": {
+          "type": "string"
+        },
+        "outside": {
+          "type": "object",
+          "additionalProperties": {
+            "enum": ["front", "back", "left", "right"]
+          }
+        },
+        "looks": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "moves": {},
+        "places": {}
+      },
+      "required": ["front", "spots"],
+      "additionalProperties": false
+    },
+    "nowOf": {
+      "type": "object",
+      "properties": {
+        "of": {
+          "type": "string"
+        },
+        "called": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": ["person", "animal", "group", "crowd", "place", "thing"]
+        },
+        "facts": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "part"
+                  },
+                  "part": {
+                    "type": "string"
+                  },
+                  "what": {
+                    "type": "string"
+                  },
+                  "now": {
+                    "type": "string"
+                  },
+                  "implied": {
+                    "const": true
+                  }
+                },
+                "required": ["kind", "part", "what", "now"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "shut"
+                  },
+                  "why": {
+                    "enum": ["ended", "later"]
+                  },
+                  "part": {
+                    "type": "string"
+                  }
+                },
+                "required": ["kind", "why"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "held"
+                  },
+                  "by": {
+                    "type": "string"
+                  },
+                  "byCalled": {
+                    "type": "string"
+                  },
+                  "from": {
+                    "type": "string"
+                  },
+                  "fromCalled": {
+                    "type": "string"
+                  }
+                },
+                "required": ["kind", "by", "byCalled"],
+                "additionalProperties": false
+              }
+            ]
+          }
+        }
+      },
+      "required": ["of", "called", "name", "kind", "facts"],
+      "additionalProperties": false
+    },
+    "change": {
+      "type": "object",
+      "properties": {
+        "who": {
+          "type": "string"
+        },
+        "what": {
+          "type": "string"
+        },
+        "now": {
+          "type": "string"
+        },
+        "since": {
+          "type": "string"
+        },
+        "whole": {
+          "type": "boolean"
+        },
+        "key": {
+          "type": "string"
+        },
+        "implied": {
+          "type": "boolean"
+        },
+        "part": {
+          "type": "string"
+        }
+      },
+      "required": ["who", "what", "now", "since"],
+      "additionalProperties": false
+    },
+    "criterion": {
+      "type": "object",
+      "properties": {
+        "with": {
+          "type": ["string", "null"]
+        },
+        "text": {
+          "type": "string"
+        },
+        "fix": {
+          "type": "string"
+        }
+      },
+      "required": ["with", "text", "fix"],
+      "additionalProperties": false
+    },
+    "image": {
+      "type": "object",
+      "properties": {
+        "n": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "media": {
+          "type": "string",
+          "description": "An image by name. sketch-<id>: the sketch of elements[<id>], drawn from its prompt. picture-<id>: the cut or in-between picture <id>, once drawn (draw them in the order of their needs). previs-<id>: the cut's mock-up (camera.previs's files). people:<name>+<name>: those sketches side by side on one image, left to right (the local machine's fitting). Anything else is a real media id."
+        },
+        "role": {
+          "enum": ["identity", "location", "prop", "base", "composition"]
+        },
+        "instruction": {
+          "type": "string"
+        },
+        "source": {
+          "enum": ["edit", "mockup", "sketch", "ghost", "earlier", null]
+        },
+        "of": {
+          "type": ["string", "null"]
+        },
+        "subjects": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": ["n", "media", "role", "instruction", "source", "of", "subjects"],
+      "additionalProperties": false
+    },
+    "verdict": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "enum": ["story", "checkpoint", "local"]
+        },
+        "run": {
+          "type": "string"
+        },
+        "verdict": {
+          "enum": ["right", "partly", "wrong"]
+        },
+        "note": {
+          "type": "string"
+        },
+        "at": {
+          "type": "string"
+        },
+        "withoutReadings": {
+          "const": true
+        }
+      },
+      "required": ["source", "verdict"],
+      "additionalProperties": false
+    },
+    "element": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": ["character", "location", "prop"]
+        },
+        "name": {
+          "type": "string"
+        },
+        "isDreamer": {
+          "type": "boolean"
+        },
+        "look": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": "string"
+              },
+              "said": {
+                "type": "boolean"
+              }
+            },
+            "required": ["value", "said"],
+            "additionalProperties": false
+          }
+        },
+        "prompt": {
+          "type": "string",
+          "minLength": 1
+        },
+        "image": {
+          "type": ["string", "null"],
+          "description": "An image by name. sketch-<id>: the sketch of elements[<id>], drawn from its prompt. picture-<id>: the cut or in-between picture <id>, once drawn (draw them in the order of their needs). previs-<id>: the cut's mock-up (camera.previs's files). people:<name>+<name>: those sketches side by side on one image, left to right (the local machine's fitting). Anything else is a real media id."
+        },
+        "group": {
+          "type": "boolean"
+        },
+        "partOf": {
+          "type": ["string", "null"]
+        },
+        "extras": {
+          "type": "boolean"
+        },
+        "lookUnknown": {
+          "type": "boolean",
+          "description": "The dreamer never said how they look: their look here is a guess. Ask them, or keep them neutral; never guess their sex or age."
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "name",
+        "isDreamer",
+        "look",
+        "prompt",
+        "image",
+        "group",
+        "partOf",
+        "extras",
+        "lookUnknown"
+      ],
+      "additionalProperties": false
+    },
+    "ghost": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": ["state", "view"]
+        },
+        "of": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "change": {
+          "type": "string"
+        },
+        "from": {
+          "type": ["string", "null"]
+        },
+        "after": {
+          "type": ["string", "null"]
+        },
+        "needs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "usedBy": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "depth": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "key": {
+          "type": ["string", "null"]
+        },
+        "shows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "what": {
+                "type": "string"
+              },
+              "now": {
+                "type": "string"
+              }
+            },
+            "required": ["what", "now"],
+            "additionalProperties": false
+          }
+        },
+        "prompts": {
+          "type": "object",
+          "properties": {
+            "nano-banana-pro": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "paragraphs": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string"
+                      },
+                      "fields": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": ["id", "text", "fields"],
+                    "additionalProperties": false
+                  }
+                },
+                "images": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "An image by name. sketch-<id>: the sketch of elements[<id>], drawn from its prompt. picture-<id>: the cut or in-between picture <id>, once drawn (draw them in the order of their needs). previs-<id>: the cut's mock-up (camera.previs's files). people:<name>+<name>: those sketches side by side on one image, left to right (the local machine's fitting). Anything else is a real media id."
+                  }
+                },
+                "dropped": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": ["text", "images"],
+              "additionalProperties": false
+            },
+            "qwen-image": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "paragraphs": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string"
+                      },
+                      "fields": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": ["id", "text", "fields"],
+                    "additionalProperties": false
+                  }
+                },
+                "images": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "An image by name. sketch-<id>: the sketch of elements[<id>], drawn from its prompt. picture-<id>: the cut or in-between picture <id>, once drawn (draw them in the order of their needs). previs-<id>: the cut's mock-up (camera.previs's files). people:<name>+<name>: those sketches side by side on one image, left to right (the local machine's fitting). Anything else is a real media id."
+                  }
+                },
+                "dropped": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": ["text", "images"],
+              "additionalProperties": false
+            },
+            "qwen-image-written": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "paragraphs": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string"
+                      },
+                      "fields": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": ["id", "text", "fields"],
+                    "additionalProperties": false
+                  }
+                },
+                "images": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "An image by name. sketch-<id>: the sketch of elements[<id>], drawn from its prompt. picture-<id>: the cut or in-between picture <id>, once drawn (draw them in the order of their needs). previs-<id>: the cut's mock-up (camera.previs's files). people:<name>+<name>: those sketches side by side on one image, left to right (the local machine's fitting). Anything else is a real media id."
+                  }
+                },
+                "dropped": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": ["text", "images"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["nano-banana-pro"],
+          "additionalProperties": false,
+          "description": "A picture's prompt by image model: nano-banana-pro is Dream Chat's own, whole, by paragraph; qwen-image the same fitted to the local machine's limits (4 images, 4000 characters), its default; qwen-image-written written for that machine from the cut's sheet. On the owner's verdicts (four dreams, 1 Oct) qwen-image was right 17 times to qwen-image-written's 13, which drew people twice: take qwen-image. qwen-image-written is written for the grey mock-up (camera.previs.clay); sent with the colour-keyed one, it is to be written again with that mock-up's key."
+        },
+        "images": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/image"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "of",
+        "label",
+        "change",
+        "from",
+        "after",
+        "needs",
+        "usedBy",
+        "depth",
+        "key",
+        "shows",
+        "prompts",
+        "images"
+      ],
+      "additionalProperties": false
+    },
+    "node": {
+      "type": "object",
+      "properties": {
+        "identity": {
+          "type": "object",
+          "properties": {
+            "dream": {
+              "type": "string"
+            },
+            "cut": {
+              "type": "string"
+            },
+            "order": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "sequence": {
+              "type": ["string", "null"]
+            },
+            "scene": {
+              "type": "string"
+            },
+            "shot": {
+              "type": "string"
+            },
+            "prev": {
+              "type": ["string", "null"]
+            },
+            "stage": {
+              "enum": ["waiting", "confirming", "drawing", "ready", "failed"]
+            },
+            "review": {
+              "enum": ["approved", "left", null]
+            }
+          },
+          "required": ["dream", "cut", "order", "sequence", "scene", "shot", "prev", "stage", "review"],
+          "additionalProperties": false
+        },
+        "story": {
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "minLength": 1
+            },
+            "point": {
+              "type": ["string", "null"]
+            },
+            "feeling": {
+              "type": ["string", "null"]
+            },
+            "purpose": {
+              "type": ["string", "null"]
+            },
+            "shift": {
+              "type": ["string", "null"]
+            },
+            "dream": {
+              "type": ["string", "null"]
+            },
+            "key": {
+              "type": "boolean"
+            },
+            "said": {
+              "type": "boolean"
+            },
+            "writing": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "period": {
+              "type": ["string", "null"]
+            },
+            "device": {
+              "type": ["string", "null"]
+            },
+            "lettering": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "device": {
+                    "enum": ["card", "strip", "sign", "label"]
+                  },
+                  "on": {
+                    "type": "string"
+                  },
+                  "where": {
+                    "type": "string"
+                  },
+                  "box": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 4,
+                    "maxItems": 4
+                  }
+                },
+                "required": ["id", "text", "device", "on", "where"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "action",
+            "point",
+            "feeling",
+            "purpose",
+            "shift",
+            "dream",
+            "key",
+            "said",
+            "writing",
+            "period",
+            "device",
+            "lettering"
+          ],
+          "additionalProperties": false
+        },
+        "who": {
+          "type": "object",
+          "properties": {
+            "visible": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "things": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "inView": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "enum": ["character", "location", "prop"]
+                  },
+                  "isDreamer": {
+                    "type": "boolean"
+                  },
+                  "look": {
+                    "type": ["string", "null"]
+                  },
+                  "image": {
+                    "type": ["string", "null"]
+                  },
+                  "turned": {
+                    "type": ["string", "null"]
+                  },
+                  "facing": {
+                    "type": ["object", "null"],
+                    "properties": {
+                      "view": {
+                        "enum": ["front", "three-quarter front", "profile", "three-quarter back", "back"]
+                      },
+                      "side": {
+                        "enum": ["left", "right", null]
+                      },
+                      "degrees": {
+                        "type": "number"
+                      }
+                    },
+                    "required": ["view", "side", "degrees"],
+                    "additionalProperties": false,
+                    "description": "How a person is turned to the camera the picture is seen through (camera.previs.through's for an edit), in the bins the camera's words use: `side` is which way across the picture they look, null facing the camera or with their back to it; `degrees` is between the way they face and the way to the camera, 0 facing it. Null for a thing, a crowd, and the dreamer through their own eyes; a creature counts as a person. (`turned` is what someone has turned into, not this.)"
+                  },
+                  "changes": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "what": {
+                          "type": "string"
+                        },
+                        "now": {
+                          "type": "string"
+                        },
+                        "part": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["what", "now"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "colours": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "id",
+                  "name",
+                  "kind",
+                  "isDreamer",
+                  "look",
+                  "image",
+                  "turned",
+                  "facing",
+                  "changes",
+                  "colours"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "staging": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "across": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "members": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "group": {
+                    "type": "string"
+                  },
+                  "member": {
+                    "type": "string"
+                  },
+                  "word": {
+                    "type": "string"
+                  }
+                },
+                "required": ["group", "member", "word"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": ["visible", "things", "inView", "staging", "across", "members"],
+          "additionalProperties": false
+        },
+        "state": {
+          "type": "object",
+          "properties": {
+            "now": {
+              "type": ["array", "null"],
+              "items": {
+                "$ref": "#/$defs/nowOf"
+              }
+            },
+            "nowWords": {
+              "type": ["array", "null"],
+              "items": {
+                "type": "string"
+              }
+            },
+            "own": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/change"
+              }
+            },
+            "states": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "who": {
+                    "type": "string"
+                  },
+                  "what": {
+                    "type": "string"
+                  },
+                  "now": {
+                    "type": "string"
+                  }
+                },
+                "required": ["who", "what", "now"],
+                "additionalProperties": false
+              }
+            },
+            "held": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "handed": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "riders": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "on": {
+                    "type": ["string", "null"]
+                  },
+                  "rides": {
+                    "enum": ["front", "back", null]
+                  }
+                },
+                "required": ["id", "on", "rides"],
+                "additionalProperties": false
+              }
+            },
+            "climbers": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "of": {
+                    "type": "string"
+                  },
+                  "how": {
+                    "enum": ["into", "out of"]
+                  }
+                },
+                "required": ["id", "of", "how"],
+                "additionalProperties": false
+              }
+            },
+            "open": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "water": {
+              "type": ["number", "null"]
+            }
+          },
+          "required": ["now", "nowWords", "own", "states", "held", "handed", "riders", "climbers", "open", "water"],
+          "additionalProperties": false
+        },
+        "camera": {
+          "type": "object",
+          "properties": {
+            "eyes": {
+              "enum": ["dreamer", "outside"]
+            },
+            "size": {
+              "enum": ["close", "medium", "wide"]
+            },
+            "looksAt": {
+              "type": ["string", "null"]
+            },
+            "eye": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/eye"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "floorPlan": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/floorPlan"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "previs": {
+              "type": ["object", "null"],
+              "properties": {
+                "media": {
+                  "type": "string"
+                },
+                "clay": {
+                  "type": ["object", "null"],
+                  "properties": {
+                    "file": {
+                      "type": "string"
+                    },
+                    "sha256": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["file", "sha256"],
+                  "additionalProperties": false
+                },
+                "keyed": {
+                  "type": ["object", "null"],
+                  "properties": {
+                    "file": {
+                      "type": "string"
+                    },
+                    "sha256": {
+                      "type": "string"
+                    },
+                    "key": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "colour": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string"
+                          },
+                          "marker": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": ["id", "name", "colour", "kind"],
+                        "additionalProperties": false
+                      }
+                    },
+                    "idmap": {
+                      "type": "object",
+                      "properties": {
+                        "file": {
+                          "type": "string"
+                        },
+                        "sha256": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["file", "sha256"],
+                      "additionalProperties": false
+                    },
+                    "ids": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "enum": ["person", "crowd", "thing", "room", "seats", "water"]
+                          },
+                          "rgb": {
+                            "type": "array",
+                            "items": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "minItems": 3,
+                            "maxItems": 3
+                          },
+                          "pixels": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "fixture": {
+                            "type": "boolean"
+                          },
+                          "held": {
+                            "type": "boolean"
+                          },
+                          "ridden": {
+                            "type": "boolean"
+                          },
+                          "marker": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": ["id", "name", "kind", "rgb", "pixels", "fixture", "held", "ridden"],
+                        "additionalProperties": false,
+                        "description": "One region of an id map (a PNG beside the packet): every pixel of exactly `rgb` is the spot, surface or crowd `id`, black is nothing; `pixels` is how many. A spot is the same colour in every frame and set of a dream. `fixture`: part of the place; `held`: in someone's hands; `ridden`: someone rides on or in it; `marker`: a thing the moment has in view too small for the frame's pixels, drawn as a dot where it is, never its size (its key entry says so too). A creature counts as a person. The colour-keyed mock-up's own colours can give two brown things one brown; the id map never does."
+                      }
+                    }
+                  },
+                  "required": ["file", "sha256", "key", "idmap", "ids"],
+                  "additionalProperties": false
+                },
+                "through": {
+                  "type": ["string", "null"],
+                  "description": "The cut whose camera the mock-up is seen through where it is not this cut's own: an edit keeps the camera of the picture it edits, so its mock-up is that camera's with this cut's people where they are now. Null for a cut's own camera."
+                },
+                "set": {
+                  "type": ["object", "null"],
+                  "properties": {
+                    "clay": {
+                      "type": "object",
+                      "properties": {
+                        "file": {
+                          "type": "string"
+                        },
+                        "sha256": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["file", "sha256"],
+                      "additionalProperties": false
+                    },
+                    "keyed": {
+                      "type": "object",
+                      "properties": {
+                        "file": {
+                          "type": "string"
+                        },
+                        "sha256": {
+                          "type": "string"
+                        },
+                        "key": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "colour": {
+                                "type": "string"
+                              },
+                              "kind": {
+                                "type": "string"
+                              },
+                              "marker": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": ["id", "name", "colour", "kind"],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": ["file", "sha256", "key"],
+                      "additionalProperties": false
+                    },
+                    "idmap": {
+                      "type": "object",
+                      "properties": {
+                        "file": {
+                          "type": "string"
+                        },
+                        "sha256": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["file", "sha256"],
+                      "additionalProperties": false
+                    },
+                    "ids": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "enum": ["person", "crowd", "thing", "room", "seats", "water"]
+                          },
+                          "rgb": {
+                            "type": "array",
+                            "items": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "minItems": 3,
+                            "maxItems": 3
+                          },
+                          "pixels": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "fixture": {
+                            "type": "boolean"
+                          },
+                          "held": {
+                            "type": "boolean"
+                          },
+                          "ridden": {
+                            "type": "boolean"
+                          },
+                          "marker": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": ["id", "name", "kind", "rgb", "pixels", "fixture", "held", "ridden"],
+                        "additionalProperties": false,
+                        "description": "One region of an id map (a PNG beside the packet): every pixel of exactly `rgb` is the spot, surface or crowd `id`, black is nothing; `pixels` is how many. A spot is the same colour in every frame and set of a dream. `fixture`: part of the place; `held`: in someone's hands; `ridden`: someone rides on or in it; `marker`: a thing the moment has in view too small for the frame's pixels, drawn as a dot where it is, never its size (its key entry says so too). A creature counts as a person. The colour-keyed mock-up's own colours can give two brown things one brown; the id map never does."
+                      }
+                    },
+                    "frame": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      },
+                      "minItems": 4,
+                      "maxItems": 4
+                    },
+                    "framePx": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "minItems": 4,
+                      "maxItems": 4
+                    }
+                  },
+                  "required": ["clay", "keyed", "idmap", "ids", "frame", "framePx"],
+                  "additionalProperties": false,
+                  "description": "The camera's empty set: the place as this camera frames it with every person, crowd and held thing left out (a sitting crowd's seats kept, where the frame has them), rendered 8% wider and taller than the frame (4% each side) at the frame's own scale, grey (clay), colour-keyed (keyed) and as an id map. `framePx` is where the cut's own frame is in it in the set's whole pixels, [x0, y0, x1, y1] with x1 and y1 just past it and y down from the top; `frame` is the same from 0 to 1 to four places (crop by framePx). Cropped to it, the set's id map is the frame's wherever no one stands, nothing is held and nothing is a dot (ids' `marker`). Draw the place once per camera from it, then put the people onto it; a thing someone rides (ids' `ridden`) moves with them."
+                },
+                "names": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "What each spot of the floor plan is called on the mock-ups: a thing's colour on the keyed one comes from its words, so a set rendered again (evals/set-render.ts) takes them."
+                }
+              },
+              "required": ["media", "clay", "keyed", "through", "set", "names"],
+              "additionalProperties": false
+            },
+            "view": {
+              "type": ["string", "null"]
+            },
+            "brief": {
+              "type": ["string", "null"]
+            },
+            "words": {
+              "type": ["string", "null"]
+            },
+            "rules": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "tags": {
+              "type": ["object", "null"],
+              "properties": {
+                "role": {
+                  "enum": ["pov", "ots", "insert", "single", "two_shot", "group", "wide", "close_up"]
+                },
+                "move": {
+                  "enum": ["first", "same_setup", "same_side", "other_side", "reverse", "other_place", "jump", "seat"]
+                }
+              },
+              "required": ["role", "move"]
+            }
+          },
+          "required": [
+            "eyes",
+            "size",
+            "looksAt",
+            "eye",
+            "floorPlan",
+            "previs",
+            "view",
+            "brief",
+            "words",
+            "rules",
+            "tags"
+          ],
+          "additionalProperties": false
+        },
+        "dependencies": {
+          "type": "object",
+          "properties": {
+            "needs": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "depth": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "refs": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "enum": ["cut", "ghost"]
+                  },
+                  "role": {
+                    "enum": ["base", "composition", "lighting", "identity", "prop", "location"]
+                  },
+                  "relation": {
+                    "enum": ["same_setup", "same_side", "other_side", "other_place", "shift", "seat", null]
+                  },
+                  "carries": {
+                    "type": "string"
+                  },
+                  "who": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "turned": {
+                    "type": "boolean"
+                  }
+                },
+                "required": ["id", "kind", "role", "relation", "carries", "who", "turned"],
+                "additionalProperties": false
+              }
+            },
+            "unsent": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "why": {
+                    "type": ["object", "null"],
+                    "properties": {
+                      "code": {
+                        "enum": [
+                          "reverse",
+                          "camera_far",
+                          "state_differs",
+                          "no_cameras_words_differ",
+                          "light_only",
+                          "has_sketch",
+                          "seat_replaced_by_view",
+                          "edit_to_own_camera",
+                          "not_recorded"
+                        ]
+                      },
+                      "detail": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["code", "detail"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["id", "why"],
+                "additionalProperties": false
+              }
+            },
+            "withheld": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "why": {
+                    "enum": ["judged wrong", "stale"]
+                  },
+                  "base": {
+                    "const": true
+                  }
+                },
+                "required": ["id", "why"],
+                "additionalProperties": false
+              }
+            },
+            "alone": {
+              "type": ["object", "null"],
+              "properties": {
+                "view": {
+                  "type": "string"
+                },
+                "eye": {
+                  "$ref": "#/$defs/eye"
+                }
+              },
+              "required": ["view", "eye"],
+              "additionalProperties": false
+            },
+            "images": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/image"
+              }
+            }
+          },
+          "required": ["needs", "depth", "refs", "unsent", "withheld", "alone", "images"],
+          "additionalProperties": false
+        },
+        "checks": {
+          "type": "object",
+          "properties": {
+            "criteria": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/criterion"
+              }
+            },
+            "sheetHash": {
+              "type": ["string", "null"]
+            },
+            "flags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "differs": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": ["criteria", "sheetHash", "flags", "differs"],
+          "additionalProperties": false
+        },
+        "history": {
+          "type": "object",
+          "properties": {
+            "verdicts": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/verdict"
+              }
+            }
+          },
+          "required": ["verdicts"],
+          "additionalProperties": false
+        },
+        "prompts": {
+          "type": "object",
+          "properties": {
+            "nano-banana-pro": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "paragraphs": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string"
+                      },
+                      "fields": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": ["id", "text", "fields"],
+                    "additionalProperties": false
+                  }
+                },
+                "images": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "An image by name. sketch-<id>: the sketch of elements[<id>], drawn from its prompt. picture-<id>: the cut or in-between picture <id>, once drawn (draw them in the order of their needs). previs-<id>: the cut's mock-up (camera.previs's files). people:<name>+<name>: those sketches side by side on one image, left to right (the local machine's fitting). Anything else is a real media id."
+                  }
+                },
+                "dropped": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": ["text", "images"],
+              "additionalProperties": false
+            },
+            "qwen-image": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "paragraphs": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string"
+                      },
+                      "fields": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": ["id", "text", "fields"],
+                    "additionalProperties": false
+                  }
+                },
+                "images": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "An image by name. sketch-<id>: the sketch of elements[<id>], drawn from its prompt. picture-<id>: the cut or in-between picture <id>, once drawn (draw them in the order of their needs). previs-<id>: the cut's mock-up (camera.previs's files). people:<name>+<name>: those sketches side by side on one image, left to right (the local machine's fitting). Anything else is a real media id."
+                  }
+                },
+                "dropped": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": ["text", "images"],
+              "additionalProperties": false
+            },
+            "qwen-image-written": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "paragraphs": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string"
+                      },
+                      "fields": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": ["id", "text", "fields"],
+                    "additionalProperties": false
+                  }
+                },
+                "images": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "An image by name. sketch-<id>: the sketch of elements[<id>], drawn from its prompt. picture-<id>: the cut or in-between picture <id>, once drawn (draw them in the order of their needs). previs-<id>: the cut's mock-up (camera.previs's files). people:<name>+<name>: those sketches side by side on one image, left to right (the local machine's fitting). Anything else is a real media id."
+                  }
+                },
+                "dropped": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": ["text", "images"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["nano-banana-pro"],
+          "additionalProperties": false,
+          "description": "A picture's prompt by image model: nano-banana-pro is Dream Chat's own, whole, by paragraph; qwen-image the same fitted to the local machine's limits (4 images, 4000 characters), its default; qwen-image-written written for that machine from the cut's sheet. On the owner's verdicts (four dreams, 1 Oct) qwen-image was right 17 times to qwen-image-written's 13, which drew people twice: take qwen-image. qwen-image-written is written for the grey mock-up (camera.previs.clay); sent with the colour-keyed one, it is to be written again with that mock-up's key."
+        }
+      },
+      "required": ["identity", "story", "who", "state", "camera", "dependencies", "checks", "history", "prompts"],
+      "additionalProperties": false
+    }
+  },
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": 7
+    },
+    "dream": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "style": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "required": ["id", "name"],
+          "additionalProperties": false
+        },
+        "switches": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "keys": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "writer": {
+          "type": ["string", "null"]
+        },
+        "period": {
+          "type": ["object", "null"],
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "from": {
+              "enum": ["said", "given"]
+            },
+            "quote": {
+              "type": ["string", "null"]
+            }
+          },
+          "required": ["value", "from", "quote"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["id", "title", "style", "switches", "keys", "writer", "period"],
+      "additionalProperties": false
+    },
+    "elements": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/element"
+      }
+    },
+    "ghosts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ghost"
+      }
+    },
+    "cuts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/node"
+      }
+    },
+    "places": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "scene": {
+            "type": "string"
+          },
+          "place": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "cameras": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "through": {
+                  "type": "string"
+                },
+                "eye": {
+                  "$ref": "#/$defs/eye"
+                },
+                "eyes": {
+                  "enum": ["dreamer", "outside"]
+                },
+                "cuts": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "sets": {
+                  "type": "array",
+                  "items": {
+                    "type": ["string", "null"]
+                  }
+                }
+              },
+              "required": ["through", "eye", "eyes", "cuts", "sets"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["id", "scene", "place", "name", "cameras"],
+        "additionalProperties": false
+      },
+      "description": "Each floor plan (`<scene>/<place>`: a scene's own, or a place's within it) and every camera its cuts are seen through: each eye once, `through` the cut whose own camera it is, with the cuts seen through it (an edit's through the picture it edits, only on the same plan) and each one's empty set (`sets`, its camera.previs.set id map's sha256, null with none). One camera's cuts can have different sets: a device on the wall in one moment, a drawer left open, a thing put away; draw each distinct set. For drawing a place empty from each direction its cuts use, and their reverses, before any frame: evals/set-render.ts renders a cut's empty set from any eye out of the packet alone, on its camera.floorPlan with its camera.previs.names, in previs.ts's own convention (metres on the plan, x from the left wall, y from the front, `d` the way the camera looks on the plan, `height` of the lens, `pitch` in radians, down negative, `lens` in millimetres on a 36 mm frame; unset, a 76-degree view across a 16:9 frame, about 23 mm)."
+    }
+  },
+  "required": ["version", "dream", "elements", "ghosts", "cuts", "places"],
+  "additionalProperties": false
+}
