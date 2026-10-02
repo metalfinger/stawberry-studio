@@ -47,10 +47,14 @@ three), its lettering the dream's own day or time, put on in code; and the packe
 once per camera (P5: each camera's empty set, an id map, an edit's mock-up, how each person faces the camera, and
 `evals/set-render.ts` for any eye); and a part's state as the moment says it, places at rest and things in what
 holds them (`point_state`, `contained`, `cast_fixture`: Grandmother's drawer closed at m10 and pulled out at m9, her
-kitchen sketched with it shut, the knives and forks in it). Next, in order: holds shared between hands; E3 crowd
-image with the four-image fit; lettering sized to read; camera masters; E4 depth in the vertical frame;
-transformations; staging and casting (Grandmother's spoken beats among them). The merged flow stops at three dreams
-(Grandmother, Neighbours, Fan) for the owner's walkthrough.
+kitchen sketched with it shut, the knives and forks in it); and a thing written as it is now, and a dot where a
+thing is too small to find (`written_now`, `tiny_marker`: the bed sheet folded to a stamp written "now the size of a
+stamp", the stamp between their fingers a dot on the keyed mock-up and its id map; packet version 7). New steps are
+paused from 3 Oct while one system design for the whole flow settles (`docs/system-facts-2026-10-03.md` is this side
+as it is). Queued after it, in order: what a moment puts something among is in its container too (the knives and
+forks); holds shared between hands; E3 crowd image with the four-image fit; lettering sized to read; camera masters;
+E4 depth in the vertical frame; transformations; staging and casting (Grandmother's spoken beats among them). The
+merged flow stops at three dreams (Grandmother, Neighbours, Fan) for the owner's walkthrough.
 
 **Earlier landmark (1 Oct, night): a dumped dream keeps its strangeness.** Nothing drawn, nothing paid. The merged
 flow imported three new DreamBank dreams (Barley, Train, Pool) and compared them with chat-made versions of the same
@@ -2388,6 +2392,8 @@ between sessions.
 | `point_state` (`partstate.ts`, `record.ts statedStates`, `packet.ts lintPacket`) | S1 (the story record), S4, S6, the packet, the place sketch | A part's state the moment's own words give is a change there where the state in force says the other; with nothing in force, only a part of the place said open (a thing opened is the readings' and the opening words' to say: said whole, it took the place of how the thing was told). A part matched by its name (`samePart`: the shorter all in the longer, or what it is before what it says of where); of several fixtures alike, the one whose name has every word of it, else none (f085's lift has four gates alike: the one opened is never named). Putting something into a drawer is not read as opening it: that is the implied reading's (Grandmother's Wednesdays import has none at m9). The lint fails writing packets with the step on. |
 | `contained` (`castplace.ts`) | S4, the cast reading, `thing_state`, the mock-up | Only a thing, never a vehicle or a creature, only into what holds things and closes (`partstate.ts CLOSING`), never across a clause; a drawer's contents in it pulled out (`drawerPull`, shared with the mock-up) where the moment opens it or puts something in, else inside it, out of sight. |
 | `cast_fixture` (`cast.ts`, `castplace.ts`) | the cast reading, the import, S6 sketches | Dropped from the cast only where the place's own words name it, per moment and on that moment's own plan, every other cast id kept (`asFixture` carries what a saved dream loses); else kept with its sketch and left off the plan. A dream imported before keeps its cast until it is imported again. |
+| `written_now` (`cutsheet.ts` `now`, `evals/qwen-prompt.ts`) | S6 (the sheet), `sizes`, transformations | The prompt written for the local machine only (qwen-image-written). How a thing is now where a change of its size, its shape or the whole of it is in force: the latest change of the whole of it and the latest of its size or shape since, this moment's own after those carried; its look keeps all but its size, and a change of the whole of it keeps none. Things, and someone drawn without an image of their own; how someone with one has turned into something else is the transformations step's. |
+| `tiny_marker` (`previs.ts markTiny`) | S4, the mock-up, the packet, `things_in_frame`, `contained` | A thing the moment has in view (its `things`, the breakdown's) with fewer pixels than its dot gets one (a three-hundredth of the frame's long side across, at least 3: 5 at 1376 by 768), on the keyed mock-up and its id map only, never the clay; `marker` in the id map and the key, where it is, never its size. Not out of the frame, nor behind anything but the hand that holds it (its holder within 15 cm, never their body) or the vehicle its holder rides; never over anyone or anything small. Left for their owners: things the moment has in view not on its floor plan (49 in the corpus) or out of its frame (17), and what floats placed under the water. Packet version 7. |
 | `visible_device` (E5, `devices.ts`) | S4, S6, the packet, the import, `things_in_frame`, `story_marks` | One writer reading per dream, cached with the cast's (`--devices`), asked on import. Lettering is the dream's own day or time only, put on in code by the harness from `story.lettering` (the owner, 2 Oct), and taken in code from what a sentence of the moment says is written on the device itself where the reading proposed none (never on a clock, never a time the dreamer did not tell); every other writing stays unreadable marks (`story_marks`), and the story's writing line leaves out what lettering covers. Bubbles: one in a dream at most, only for a moment no thing shows; 27 of the corpus's 58 devices are bubbles, one in a dream each, a rate for the owner to judge. The place's own clock or calendar is the device where it has one; a wall device outdoors stands at eye height beside them. Packet version 5. |
 | `place_built` (`built.ts`) | S6 sketches, the import | A place's sketch alone is told by its build (`Item.built`); its moments, image lines and the record keep the place's name and look. One writer reading per dream, cached with the cast's (`--built`), asked on import; a place whose words say only what it is built of is left as it was. The two words of use left in the corpus are a roof's slopes meeting at its ridge and a bridge over the night market. |
 
@@ -3607,6 +3613,19 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   exports' eval (`evals/previs-set.ts`) every fault 0 with the steps on. Against lab 0a158a1, 3 of 127 frozen and
   4 of 447 live pictures move; prompt cases the same. `bun test`: 1250 pass, 0 fail off and on, and file by file.
   No pictures, no money.
+- 3 Oct (night, nothing drawn): a thing written as it is now, and a dot where a thing is too small to find
+  (`written_now`, `tiny_marker`; d32c72c). The merged flow's fresh Grandmother had the bed sheet folded down to a
+  handkerchief, then a stamp, written "a plain full-size bed sheet" at every fold in the prompt written for the local
+  machine, and the stamp between their fingers had 20 pixels at m8, no region for a harness to find it by. Now that
+  prompt says how a thing is now where its size, shape or whole changed ("the bed sheet, a plain bed sheet, now the
+  size of a stamp"; "a white dove, the size of a house"), and a thing the moment has in view too small for the frame
+  is a dot where it is on the keyed mock-up and its id map, flagged `marker` there and in the key and said as a dot in
+  the prompt; never where something is in front of it but the hand that holds it. `evals/written-now.ts`, 78 dreams
+  with the merged flow's imports: written prompts saying a changed thing as it was 17 -> 0; Grandmother's folds,
+  labelled by hand, 0 -> 3 of 3; 13 dots, none out of the frame or out of the key; of 25 left with no dot, 17 out of
+  the frame by the mock-up's own projection and 8 hidden, each read. Against lab 2848e62, 0 of 127 frozen and 0 of
+  447 live pictures move; prompt cases the same. `bun test`: 1268 pass, 0 fail off and on, and file by file. Packet
+  version 7. No pictures, no money.
 
 ## Owner's direction (29 Sep): reviews and merges move to the cloud session
 
