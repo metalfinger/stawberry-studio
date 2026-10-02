@@ -7,6 +7,7 @@ import { builds } from './cleanups';
 import type { AsDrawn, Recast } from './asdrawn';
 import type { CutPlan, GhostPlan } from './continuity';
 import { pictureName } from './continuity';
+import type { Built } from './built';
 import { type Detail, mediumOf, oneColour, paletteHue, type StyleOption, VAGUE } from './producer';
 import { cli, REPO, STRAWBERRY_HOME, STRAWBERRY_PYTHON } from './strawberry';
 
@@ -83,6 +84,8 @@ export type Item = {
   leaveOut?: string[];
   /** For a place: what of it a moment opens later ("the red door"), shut in its own picture. */
   shut?: string[];
+  /** For a place whose words said its use: its sketch told by how it is built (built.ts, `place_built`). */
+  built?: Built;
   /**
    * Drawn although a check would have held it: what the checks said. For a moment, only while the
    * checks are measured; for a sketch still unclear after they were asked, drawn on our guess.
@@ -832,8 +835,13 @@ export function sheetPrompt(
 ): string {
   // A look that says nothing a picture can keep ("indistinct, like a figure in a hazy memory")
   // would be drawn as a blur.
-  const facts = Object.keys(item.fields)
-    .filter((k) => LOOK[item.kind].includes(k) && !VAGUE.test(value(item, k)))
+  // A place whose words said its use is told by how it is built (`place_built`): its kind and what is in it, its light
+  // its own.
+  const built = builds('place_built') && item.kind === 'location' ? item.built : undefined;
+  const look = (k: string) =>
+    built && k === 'geography' ? built.kind : built && k === 'landmarks' ? built.in : value(item, k);
+  const facts = [...new Set([...Object.keys(item.fields), ...(built ? ['geography', 'landmarks'] : [])])]
+    .filter((k) => LOOK[item.kind].includes(k) && !VAGUE.test(look(k)))
     .map((k) => {
       // An animal wears nothing: "wears: no clothing, natural brown wiry coat" is said as its coat.
       if (isAnimal(item) && k === 'wardrobe') {
@@ -848,7 +856,7 @@ export function sheetPrompt(
       // A person's look is how they look, never how the sheet poses them: "standing in a relaxed
       // three-quarter view, whole figure from head to feet" stood as the father's whole look, and
       // his age, hair and build were never said (lighthouse, 26 Sep).
-      const posed = item.kind === 'character' ? withoutPose(value(item, k), false) : value(item, k);
+      const posed = item.kind === 'character' ? withoutPose(value(item, k), false) : look(k);
       // The dreamer's sex and age are never guessed (the owner, 1 Oct): with the one builder's `dreamer_untold` step, a
       // guessed clause that gives either is left out ("in her 30s" of "in her 30s, brown hair, average build").
       const own =
@@ -939,15 +947,17 @@ export function sheetPrompt(
     ? who && !VAGUE.test(who) && !/^(the dreamer|you|me|myself|i)$/i.test(who.trim())
       ? `the dreamer, ${who.replace(/^the dreamer,?\s*/i, '').replace(/[\s,.;]+$/, '')}`
       : 'the dreamer'
-    : item.kind === 'location' && PEOPLE_IN_NAME.test(item.name)
-      ? // A place named for what happened there ("inside, sitting with couple of people") beside
-        // "with no people in it" read as a contradiction, and the sketch was held (Meads, 25 Sep).
-        'this place'
-      : aged
-        ? `${pictureName(item.name)}, ${identity}`
-        : who_
-          ? `${pictureName(item.name)}, ${whoOnly}`
-          : pictureName(item.name);
+    : built
+      ? built.name
+      : item.kind === 'location' && PEOPLE_IN_NAME.test(item.name)
+        ? // A place named for what happened there ("inside, sitting with couple of people") beside
+          // "with no people in it" read as a contradiction, and the sketch was held (Meads, 25 Sep).
+          'this place'
+        : aged
+          ? `${pictureName(item.name)}, ${identity}`
+          : who_
+            ? `${pictureName(item.name)}, ${whoOnly}`
+            : pictureName(item.name);
   // A dog sketched as "one person only", "the face and clothes clearly seen", read as unclear and
   // was held (lighthouse, 25 Sep).
   const animal = isAnimal(item);

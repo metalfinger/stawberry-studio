@@ -241,6 +241,10 @@ export const BUILDER_STEPS: readonly string[] = [
   //    modern. The dream's period, from its own words or the date it was recorded (era.ts), told to every sketch and
   //    every moment, a moment the dream sets in another time keeping its own; never in the style.
   'era',
+  // Not a ledger row: from the merged flow's Grandmother on Wednesdays (2 Oct). A place's sketch is told by how it is
+  //    built, never by what people do there (built.ts, one writer reading per dream): "the family meeting", "a room
+  //    where the family gathers around a table", came out full of people in 4 of 4 takes, alone and empty all the same.
+  'place_built',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;

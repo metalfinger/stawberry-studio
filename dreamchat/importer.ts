@@ -183,7 +183,7 @@ export async function liveDeps(): Promise<ImportDeps> {
   const { liveProducer } = await import('./session');
   const { writeTyped } = await import('./typed');
   const { writeImplied } = await import('./implied');
-  const { castReadingOf, wardrobeOf, withCast } = await import('./evals/cast-cache');
+  const { builtOf, castReadingOf, wardrobeOf, withCast } = await import('./evals/cast-cache');
   return {
     producer: liveProducer(callJev, { telling: true }),
     ownStyle,
@@ -199,6 +199,8 @@ export async function liveDeps(): Promise<ImportDeps> {
       await castReadingOf(s, { ask: true });
       // A crowd's guessed clothes, read into the same cache (extras_wardrobe), for withCast to put on them.
       await wardrobeOf(s, { ask: true });
+      // Each place whose words said its use, told by how it is built (place_built), into the same cache.
+      await builtOf(s, { ask: true });
       return (await withCast(s)).session as Session;
     },
     // Loaded once the dream is saved: the packets' folder is found by the conversations it holds.
