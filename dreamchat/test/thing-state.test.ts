@@ -140,6 +140,8 @@ describe('a thing at the size the story last left it', () => {
     expect(sizedAs(size('a stamp', 'm8'))).toEqual({ as: 'a stamp', size: [0.025, 0.03, 0.001] });
     expect(sizedAs(size('the size of a handkerchief', 'm7'))?.as).toBe('a handkerchief');
     expect(sizedAs(size('the size of a key', 'm7'))?.size).toEqual([0.08, 0.03, 0.01]);
+    expect(sizedAs(size('handkerchief-sized', 'm7'))?.as).toBe('a handkerchief');
+    expect(sizedAs(size('a tiny postage stamp', 'm7'))?.size).toEqual([0.025, 0.03, 0.001]);
     for (const now of ['much bigger', 'big enough to hold a key', 'tiny, 2 cm across', 'much smaller than a coin'])
       expect(sizedAs(size(now, 'm7'))).toBeUndefined();
     expect(sizedAs({ what: 'colour', now: 'a stamp' })).toBeUndefined();
@@ -189,6 +191,22 @@ describe('a thing at the size the story last left it', () => {
     const d = withEnv(ON, () => dreamerShot(eyes, 'p2', 't1', name))!;
     expect(d.eye.at).toEqual({ x: 1.7, y: 1.4 });
     expect(d.eye.lean).toBeUndefined();
+  });
+
+  test('sized by the sizes reading instead, a speck is said small all the same, with the step only', () => {
+    const plan = withEnv(ON, () => planBy(b, 'm9', rec)!);
+    const read = {
+      ...plan,
+      spots: plan.spots.map((s) => {
+        if (s.id !== 't1') return s;
+        const { stated: _, ...read } = s;
+        return { ...read, size: [0.035, 0.00125, 0.025] as [number, number, number], sized: 'moment' as const };
+      }),
+    };
+    const name = (id: string) => ({ p1: 'grandmother', t1: 'the bed sheet', x3: 'the cutlery drawer' })[id] ?? id;
+    const say = (step: typeof ON) => withEnv(step, () => outsideShot(read, ['p1', 't1'], 'medium', name))!.text;
+    expect(say(ON)).toMatch(/the bed sheet[^.;]*small in the picture, at its own size/i);
+    expect(say(BEFORE)).not.toContain('small in the picture');
   });
 
   test('the view names it by what it is now, with the step only', () => {

@@ -683,10 +683,12 @@ export function sizedAs(
   st: { what: string; part?: string; now: string } | undefined,
 ): { as: string; size: [number, number, number] } | undefined {
   if (!st || !isSizeChange(st)) return undefined;
+  // "Handkerchief-sized" is the size of a handkerchief.
   const as = st.now
     .trim()
     .replace(SIZE_OF, '')
-    .replace(/[.,;]+$/, '');
+    .replace(/[.,;]+$/, '')
+    .replace(/^(?:an?\s+)?([a-z]+)[- ]sized$/i, (_, w: string) => `${/^[aeiou]/i.test(w) ? 'an' : 'a'} ${w}`);
   if (!/^(?:a|an|one)\s+[a-z' -]+$/i.test(as) || as.split(/\s+/).length > 4) return undefined;
   const size = NOW_SMALL.find(([re]) => re.test(as.toLowerCase()))?.[1] ?? smallSizeOf(as);
   return size ? { as, size } : undefined;

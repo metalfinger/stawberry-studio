@@ -2305,9 +2305,13 @@ function thingWords(
   // How big it is in the frame, read off the render: the image model keeps where each thing is
   // across the picture from the words, and makes up how big it is. The friend beside the
   // dreamer, seen from the waist up in the previs, came back whole and two metres off (24 Sep).
-  // A thing a change has made small (`thing_state`), a few pixels of the working render, is said small: a stamp's one
-  // pixel read as "filling the picture from low down to two thirds of the way down" (Grandmother m9).
-  const speck = !!s.stated && seen.y1 - seen.y0 < 0.06 && seen.x1 - seen.x0 < 0.06;
+  // A thing at a size the dream gives it, by a change of it (`thing_state`) or the sizes reading (`sized`), a few pixels
+  // of the working render, is said small: a stamp's one pixel read as "filling the picture from low down to two thirds
+  // of the way down" (Grandmother m9), and, sized by the reading, "from its middle to two thirds" (its fresh import's m8).
+  const speck =
+    (!!s.stated || (builds('thing_state') && !!s.sized && !isPerson(s))) &&
+    seen.y1 - seen.y0 < 0.06 &&
+    seen.x1 - seen.x0 < 0.06;
   const size = !s.many
     ? speck
       ? ', small in the picture, at its own size'
