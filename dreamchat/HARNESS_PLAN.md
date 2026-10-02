@@ -28,7 +28,21 @@ current figure and what's next). Writer model: Claude (`DREAMCHAT_WRITER=claude`
 
 ## Where we stopped (27-29 Sep): read this to resume
 
-**Newest landmark (1 Oct, night): a dumped dream keeps its strangeness.** Nothing drawn, nothing paid. The merged
+**Newest landmark (2 Oct, night to morning): the merged flow's new dreams staged at their own scale, in their own time,
+with a camera that always has the subject.** Nothing drawn, nothing paid; every step behind its builder switch, measured
+on every saved dream, the suite passing with every switch off and on and every test file alone. Landed in order on lab:
+a dumped dream's texture kept where a picture can show it (`texture`); a vertical frame (`DREAMCHAT_FRAME=9:16`; its
+working renders now read the whole tall frame); the dream's era from its words or recorded date (`era`); the people a
+moment is about kept in frame, heads in (`subject_in_frame`, then its follow-up: through the dreamer's eyes only whom
+the point names, framed at the moment's size); the dreamer's eyes always with a camera on a placed scene (`eyes_aimed`,
+for the merged flow's Fan and Shrunk); each figure and thing at the size the dream gives it, with the camera placed for
+them (`sizes`: the Shrinking Hand's ants and tiny Alina, a mouse-sized dreamer beside a cat as big as a bus); and a
+place's sketch told by how it is built, never by what people do there (`place_built`, for Grandmother's family meeting
+room). Next, in the owner's order: E2 crowd between and E3 crowd image (with Disappear's and Shrunk's crowd moments), E4
+depth in the vertical frame (its test set the 10 moments listed in the overlaps), E5 conversation staging (Grandmother's
+spoken beats). The merged flow stops at three dreams (Grandmother, Neighbours, Fan) for the owner's walkthrough.
+
+**Earlier landmark (1 Oct, night): a dumped dream keeps its strangeness.** Nothing drawn, nothing paid. The merged
 flow imported three new DreamBank dreams (Barley, Train, Pool) and compared them with chat-made versions of the same
 text: the imports lost each dream's turn (Barley kept "G.H. talking" and "people milling about" and lost the
 barley-degree mix-up and the realising; Train's marzipan became "finding nothing"). Diagnosis: in the chat, the
@@ -2350,7 +2364,14 @@ between sessions.
 | `strangest`, `told_events` (`telling.ts`) | the script stage (after 9:16) | The reading of the telling (the strangest fact first, every told event, their words only) is the script stage's first piece, pulled forward for the import; the script stage extends it with narration and timing, never alongside it. Import only until then: a live chat's drafts are as they were. |
 | `told_events`, `thought_outside` | S6, the merged flow's retell gate | The point is what a picture and a stranger both get: an essential beat or the strangest fact living only in a moment's action is lost to both. The merge's retell gate (a stranger retelling from the points alone) is the second measure beside `evals/strange.ts`, whose narration count is a standing guard. More dreamers are seen from outside, most with their look untold: their sketches stay neutral (`dreamer_untold`). |
 | The plan cache (`dreamNowOf`) | every test, S5, S9 | Keyed by the drawn record's switches, which leave the cut sheet out, it served a plan made with the references idle where they act. It now keys the references as they act; a proof runs every test file in its own process as well as the whole suite (`perfile.sh`), as the merged flow's check-lanes does. |
-| 9:16 (after the merge) | S4, the mock-up, local-run | A moment's frame is 16:9 in the shape sent (`sheets.ts shapeOf`, `settingsFor`), its words (`frames.ts SHAPE_WORDS`), the camera's view (`blocking.ts halfViewOf`, `previs.ts tallAt`/`halfTall`, which take the width as the long side), the mock-up's size (1376×768) and the local machine's (1024×576, a portrait first image padded to landscape). The list is with the merge; one Shape for moments, the view angles read from it, a place's sketch staying 16:9. |
+| 9:16 (`DREAMCHAT_FRAME=9:16`, landed c53caf7) | S4, the mock-up, local-run, E4 | One shape for moments (`blocking.ts frameShape`, `upright`): the shape sent (`sheets.ts shapeOf`), its words (`frames.ts SHAPE_WORDS`), the lens's angle across the frame's short side (`halfViewOf`; 24mm is 22.9 degrees either way), how far the camera stands to hold everyone (`tallAt`, `halfTall`, the lens widening), the mock-up (768×1344) and the local machine's frame (768×1344, the video endpoint's 9:16; a first image not in the frame set on white first). A place's sketch stays 16:9, a person's and a thing's their own. Every working render that says who is in the picture takes the frame's shape (`previs.ts sized`): kept 192×108 upright they read 13 of the frame's 37 degrees up and down. Its cost is E4's test set: 10 of 237 moments lose someone they held in 16:9 (09ea m2, aeea m1, e11a m3, cbba m3, b5b5 m7, 72e5 m4, de6c m5, 0886 m4, e127 m1, e127 m3), and 38 moments are on 14mm against 21 (`evals/vertical.ts --live`). Not a builder step: unset, every value is 16:9's, byte for byte. |
+| `texture` (`telling.ts`) | the script stage, the narration | What the picture cannot show (a sound, a memory, a feeling) is left to the narration, never drawn; the merged flow's retell gate reads the points with the narration (`--narrated`), and reports the pictures alone beside it. Import only, as `told_events`. |
+| `era` (`era.ts`) | the live chat, S8, `extras_wardrobe` | The period is read on the import path only (`importDream`, `--when`): a live chat's draft has none until the chat reads it too. It is told in the sketch's and the moment's own line, never the style (`sheets.ts periodLine`, which the assembler may import: words only); `extras_wardrobe` dresses a crowd for it. Packet version 4 (`dream.period`, `story.period`). |
+| `crowd_camera`, `framed_only`, `reach_arrives` | S4 | A crowd moment's camera falls back to the crowd or what it looks at; a cut with a floor plan and no camera is "failed" in its packet, never "ready". Who the view says is outside the picture (`outside`, both views) is neither sent nor listed; who is in no view's frame but drawn through water stays (the whale). Reaching a person or a place is arriving (`camera.ts ARRIVED_AT`), not a hand. |
+| `subject_in_frame` | S4, E4, `sizes` | Whose face a moment needs is read from its words, the dreamer only seen from outside; through the dreamer's own eyes, only where the point names them (d02597b), each view framed for the moment's size. In 9:16 three of the six subjects still lost are 14mm outside shots: E4's. Two outside cameras the guard cannot right within its tilt are camera-placement debts (Known debt, S4). |
+| `eyes_aimed` | S4, the merged flow's packets | A dreamer's-eyes cut on a placed scene with the dreamer on it always has a camera; a cut with no camera and a floor plan is "failed" in its packet (`crowd_camera`), now only where the dreamer is not on the plan. What lies under the water is drawn as the surface in the mock-up (the whale, Fan's laptop): its words carry it. |
+| `sizes` (`sizes.ts`) | S4, the cast reading, the packet, E4, E5 | The cast reading's bodies (parked 30 Sep: drawn at their size they left frames placed for a grown person) are drawn through this step's own reading, which also gives each size the dream sets in a moment; every rule keys on a spot the step sized (`sized`: body or moment), never on a bare height (the water rules' `height` judges what covers a whale). A small thing on raised ground stands on it only under this step: the general fix for every thing on a counter, stage or deck is S4's. Staging left for its owners: someone carried by a creature far bigger (the mouse-sized dreamer in the giant cat's grip) is placed on its spot and hidden in it (a held-at-the-mouth placement); someone the moment says is inside a thing (Shrunk m6's party) is settled out of it, beside it, until the typed "in" fact keeps them in. |
+| `place_built` (`built.ts`) | S6 sketches, the import | A place's sketch alone is told by its build (`Item.built`); its moments, image lines and the record keep the place's name and look. One writer reading per dream, cached with the cast's (`--built`), asked on import; a place whose words say only what it is built of is left as it was. The two words of use left in the corpus are a roof's slopes meeting at its ridge and a bridge over the night market. |
 
 ## Known debt, by the step that clears it
 
@@ -2444,6 +2465,19 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
 - **S4 (camera rules).** A thing held in a view through the dreamer's eyes is placed at its floor-plan spot, not
   in the hands that hold it; and the "Nobody else is in the picture" line can stand beside a list of people who
   are in it.
+- **E5 (conversation staging).** A spoken beat is carried in the picture by its action: the merged flow's review of
+  Grandmother on Wednesdays routes four findings here (being given the 2-3pm slot; asking whether she has eaten in
+  place of the important question; "our slot had gotten over"), each a static two-person composition with no speech,
+  gesture or dismissal cue (the wall clock glanced at, a hand on a shoulder at the door, a schedule checked). The full
+  list is the merged flow's `review/upstream.json` for that story; it is E5's test set with Barley's motion moments.
+- **S4 (camera placement, with the S1 → S4 water-height row).** Two outside cameras the head guard
+  (`subject_in_frame`) cannot right within its 0.35 tilt, because of where the camera is put: f085 m2, 0.32 metres
+  from Tomas in the tiny brass lift on a 14mm lens, aimed 29 degrees down (his head 2% out at the tilt's limit); 6e80
+  m7, the camera 5.45 metres up in the flooded aisle, aimed 55 degrees down while the moment looks at the high round
+  window. The cap stays; the fix is the camera's place and aim (a step to the lift's far corner; the aim over water
+  read from the water's height). And the view's words for a figure seen from almost straight above: 6e80 m7 before the
+  guard said "only the head in the picture" of two riders whose heads were out of it (the mock-up shows their
+  shoulders from above); tilted up by the guard it says their heads are out above, which the mock-up shows.
 - **S6 (`assembleCut`).** Everything S6 retires is in the ledger of the S6 eval, in its order: 16 clean-ups and
   word lists, each with a switch in `cleanups.ts` (the look's `withoutWords`, `VAGUE`, `withoutPose`, member words
   and `inShades`; `withoutGone`; `writingIn` and its speech rule; the record's `STATE_VERB`, `FILLS`, `OPENS`,
@@ -3357,6 +3391,101 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   whole-dream tests (1034987, 644a34b). `bun test`: 1118 pass, 2 skipped, 0 fail with every switch off and on, and
   every file in a process of its own (`perfile.sh`) 1118 pass, 0 fail both ways; typecheck clean. No pictures, no
   money.
+- 1-2 Oct (night, nothing drawn; the merged flow importing six new agency dreams, the work set): fixes landed one at a
+  time, each measured on every saved dream, the suite passing with every switch off and on and every test file in a
+  process of its own, and checked on a fresh import of the dream that showed it: the packet's floor plan takes a person
+  turned to whom they attend to (2e3ea3f; a Required<Spot> test so a new spot field fails to compile until the schema
+  lists it); an imported dream's style is the asked words, verbatim, never cleaned ("clinic blue" is a colour), the
+  writer's technique, light and feel cleaned as before (07c9367; Open Wide's 8 frames and 8 sketches carry it word for
+  word); a moment of a crowd alone gets a camera, on the crowd or what it looks at, never with what it looks at behind
+  the camera, and a cut on a floor plan with no camera is "failed", never "ready" (c71e164, `crowd_camera`; 4 frozen and
+  5 live pictures gain the camera they lacked; Neighbours 8 of 8 cuts with an eye); reaching a person or a place is
+  arriving, not a hand, and a person the view says is outside the picture is not sent (e1d41cc, `reach_arrives`,
+  `framed_only`; the whale under the water stays). `extras_wardrobe` (a crowd told only as a crowd, dressed for who
+  and where they are, one writer reading per dream) landed beside them.
+- 2 Oct (night, nothing drawn): a dumped dream's texture is kept where a picture can show it (`texture`; b8117d9,
+  fe5dbf6, 62a28d3, d22ff3a, landed d69483c): a seeable simile or reason is kept as what is seen ("soft, doughy
+  stars"), a sound, a memory or a feeling left to the narration, and a point never says "like" or "as if" (a word
+  check cuts the clause and notes it). Hand labels: seeable kept as a look 9 of 9, unseeable leaked 1 of 18, 1 copy of
+  the narration; on the merged flow's narration-aware retell gate, the re-ask 18 pass against 17 for the rule alone, 0
+  fail. The corpus against 19fed52: 0 of 127 frozen and 0 of 447 live pictures; it acts on new drafts only. `bun
+  test`: 1142 pass, 0 fail off and on, and file by file.
+- 2 Oct (night, nothing drawn): a vertical frame (`DREAMCHAT_FRAME=9:16`, not a builder step; c3c809b, b8f0f28,
+  c53caf7, landed c53caf7): every moment is drawn 9:16, said in its prompt, asked of fal, its mock-up 768 by 1344, the
+  lens's angle taken across the short side (24mm is 22.9 degrees either way), and how far a camera stands to hold
+  everyone worked out on it; a place's sketch stays 16:9, a person's and a thing's their own. Found before landing:
+  the working renders that say who is in the picture kept 192 by 108 upright, reading 13 degrees up and down of the
+  frame's 37 (a box on the floor two metres ahead, in the picture, said outside it); they now take the frame's shape.
+  Off, against lab d69483c: 0 of 127 frozen and 0 of 447 live pictures, prompt cases the same. On (`evals/vertical.ts`,
+  56 dreams, 237 moments): 10 moments lose someone they held in 16:9, and 38 moments are on the widest lens against
+  21 (E4's test set). `bun test`: 1147 pass, 0 fail off and on, and file by file. No pictures, no money.
+- 2 Oct (night, nothing drawn): a dream's era (`era`, `era.ts`; eb23bf5, 785156c, d7c0676, landed d7c0676): a dream
+  taken in whole is read for its period, from its own words ("when I was a little girl in the 1970s"), else the date
+  it was recorded (`import.ts --when`, as its decade), else none, nothing guessed and a recent date adding nothing; a
+  moment the dream sets in another time keeps its own. Every sketch and moment is told the time, never in the style,
+  and a crowd is dressed for it (`extras_wardrobe` reads it); the packet (v4) carries the period and each moment's.
+  The Barley Degree imported fresh with `--when "26 October 1957"`: "the late 1950s" (given), on all 10 cuts'
+  prompts for both models, the 6 sketches and the crowd's clothes ("late-1950s everyday clothes"), the woodcut style
+  as it was. The corpus against lab c53caf7: 0 of 127 frozen and 0 of 447 live pictures; no saved dream has a
+  period. The time line sits with the style's words, so the assembler still reads only the sheet (d7c0676). `bun
+  test`: 1155 pass, 0 fail off and on, and file by file. No pictures, no money.
+- 2 Oct (night, nothing drawn): the people a moment is about stay in its frame, their heads in it
+  (`subject_in_frame`; c9abf12, 7fee2bd, 24c2654, a166a5b, f4484a1, landed f4484a1): whose face a moment needs is read
+  from its words (`continuity.ts facesNeeded`: whom its action or point names, never a crowd, none for a hand, a held
+  thing, an insert or a point that begins with a thing), and each camera, outside or the dreamer's own, tilts a little
+  at a time, at most 0.35, until those heads are inside the frame with a margin (`previs.ts headsIn`); the outside
+  camera also weighs keeping them where it stands. Whether a head is in is read in the frame's own shape.
+  `evals/subject-frame.ts --live` (56 dreams): 16:9, subjects lost 21 of 189 with the step off, 7 of 183 on, 14mm 20
+  → 20; 9:16, 12 of 189 → 6 of 183, 14mm 37 → 36. Against lab d7c0676, 4 of 127 frozen and 16 of 447 live pictures
+  move, all the guard's: most no longer say a head is out of the picture above, a few take in or leave out a fixture
+  as the camera tilts (bca7 m3's "short empty hallway" falls out at the bottom), 0886 m1's camera stands elsewhere to
+  keep both heads; prompt cases the same. A verdict's chain moves with a camera's mock-up, and a reading made on words
+  the guard changed is stale (two tests that took every camera as fixed). `bun test`: 1161 pass, 0 fail off and on,
+  and file by file. No pictures, no money.
+- 2 Oct (morning, nothing drawn): the dreamer's eyes always have a view on a placed scene (`eyes_aimed`; 57f4706,
+  landed ca19945): what they look at under the water is seen through it, as the words say, and what no way of looking
+  shows (a tiny building hidden by its guests) is looked at straight on from where they are. The merged flow's Fan m8
+  (the laptop on the dining table under the water) and Shrunk m6 had no camera, "failed" and were never drawn.
+  `evals/pov-camera.ts` (the saved dreams and the merged flow's night imports): dreamer's-eyes cuts on a placed scene
+  with no camera 2 of 44 → 0 of 44; the corpus against f4484a1 0 of 127 frozen and 0 of 447 live pictures, prompt
+  cases the same. `bun test`: 1163 pass, 0 fail off and on, and file by file. No pictures, no money.
+- 2 Oct (morning, nothing drawn): each figure and thing at the size the dream's words give it, the camera placed for
+  them (`sizes`, `sizes.ts`; dc37212 to 34a75e7, landed 34a75e7): one writer reading per dream gives each figure that is
+  not a grown person its ordinary height and shape (the ants 5 mm, the terrier 0.3 m, the whale 3 m) and each size the
+  dream sets in the moments it holds (ant-sized Alina, a building shrunk to her size, a mouse-sized dreamer beside a cat
+  as big as a bus), each quoted from the dream's own words, never guessed. Each moment's floor plan draws them so
+  (`sized`: body or moment, in the packet too), settled at their own spacing and out of anything that stands over them,
+  a small thing on raised ground standing on it, before any camera: eye heights, head tops and a shot's bands follow
+  their size; a frame whose one thing to show names something the dream made small is placed for that, low and close,
+  with whoever else it names at its edge and said all the same; through the dreamer's eyes, something made small is
+  looked at from right up close; someone at a size of their own too small for a pixel is said tiny in the picture; a
+  fish stays under its water. The merged flow's Shrinking Hand: the ants a man on the kitchen counter and tiny Alina and
+  her guests full size before; a macro of the giant piece of orange, the ants and tiny Alina, and the shrunken building
+  on the counter after. `evals/sizes.ts --live` (and the Shrinking Hand), the step before → with it: figures at a size
+  of their own 3 → 104, named subjects the camera holds 183 → 184 of 188, people in view in none of its words 3 → 0, no
+  camera lost. Against lab ca19945, 32 of 127 frozen and 93 of 447 live pictures move, every one in a dream with a size
+  reading; prompt cases the same. `bun test`: 1170 pass, 0 fail off and on, and file by file. No pictures, no money.
+- 2 Oct (morning, nothing drawn): through the dreamer's own eyes, the face its point names, held at the moment's size
+  (`subject_in_frame`; 5cd3046, landed d02597b): a face is needed where the point names them, or says "his smile" or
+  "her face", not where only the action does (the view of the letters the grandfather holds out tilted from them to his
+  head, b0cb m3; a terrier "just out of sight around the curve" was to be in the picture, cbba m4), and each view is
+  framed for the moment's size before it is chosen, tilting down with every head kept in and leaning back where a step
+  is needed (half a metre from Tomas, a moment from the waist was his shoulders up, 0f40 m2). `evals/subject-frame.ts
+  --live` against lab 34a75e7: 16:9 lost 9 of 183 → 6 of 177, 9:16 8 of 183 → 6 of 177, the six fewer the action's
+  people through the dreamer's eyes; 1 frozen and 3 live pictures move, each a view no longer pulled to someone only the
+  action names; prompt cases the same. `bun test`: 1173 pass, 0 fail off and on, and file by file. No pictures, no
+  money.
+- 2 Oct (morning, nothing drawn): a place's sketch is told by how it is built, never by what people do there
+  (`place_built`, `built.ts`; 7bc9148, 3787921, landed 3787921): one writer reading per dream says each place named or
+  described by its use (a meeting, a party, a class, waiting, a market, a library) again by its furniture and
+  architecture, where each thing stands and what is clear, adding nothing its words do not give or its use plainly
+  implies, and never who is absent; the sketch alone takes it, its light its own, and the moments keep the place's name,
+  where the people are. The merged flow's Grandmother on Wednesdays: "the family meeting", "a room where the family
+  gathers around a table", came out full of people in 4 of 4 takes, alone and empty all the same. `evals/place-words.ts
+  --live`: place sketches whose own words say a use or the people who come 17 → 2 of 137, 23 → 3 words (the two left a
+  roof's slopes meeting at its ridge and a bridge over the night market), 51 places told by their build. Against lab
+  d02597b, 0 of 127 frozen and 0 of 447 live moment pictures move (it changes place sketches only); prompt cases the
+  same. `bun test`: 1178 pass, 0 fail off and on, and file by file. No pictures, no money.
 
 ## Owner's direction (29 Sep): reviews and merges move to the cloud session
 
