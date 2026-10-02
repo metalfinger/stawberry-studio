@@ -63,6 +63,11 @@ export type Spot = {
    */
   sized?: 'body' | 'moment';
   /**
+   * Its size set by a change of it the story has made by now (`thing_state`: "the bed sheet, size now a stamp"): the
+   * picture holds it however small, said small where it is a speck.
+   */
+  stated?: true;
+  /**
    * A crowd moved onto the line from the dreamer's eyes to whom the moment sees past it (`crowd_between`): by their id.
    */
   past?: string;

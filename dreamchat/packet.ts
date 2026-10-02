@@ -584,6 +584,8 @@ export const PACKET_SCHEMA: Schema = {
         body: oneOf('human', 'four-legged', 'bird', 'fish', 'other'),
         // Drawn at a size the dream's words give it in this moment (sizes.ts, `sizes`).
         sized: oneOf('body', 'moment'),
+        // Sized by a change of it the story has made by now (`thing_state`).
+        stated: bool,
         // A crowd between the camera and whom the moment sees past it (`crowd_between`).
         past: str,
         above: num,
@@ -607,6 +609,7 @@ export const PACKET_SCHEMA: Schema = {
         'height',
         'body',
         'sized',
+        'stated',
         'past',
         'above',
         'climbing',

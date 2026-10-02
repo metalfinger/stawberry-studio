@@ -515,6 +515,10 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
     }),
   );
   for (const id of r?.gone ?? []) there.delete(id);
+  // Put into something that closes at an earlier moment here, it is inside it until a moment names it again
+  // (`thing_state`): the stamp put in the cutlery drawer lay on the drawer as a cloth in the moment after (Grandmother).
+  if (cameraMode() === 'on' && builds('thing_state'))
+    for (const id of putAway(b, moment, upTo, rec, plan.moves)) there.delete(id);
   const things = new Set((b.things ?? []).map((t) => t.id));
   const dreamerId = b.people.find((p) => p.is_dreamer)?.id;
   // Where each person (or car) is by now: their spot, as their latest move up to this moment
@@ -624,6 +628,9 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
           ),
         }
       : sizedOwn;
+  // A thing at the size the latest change of its size here gives (`thing_state`), over any reading's: the bed sheet
+  // folded down to a stamp was a cloth two metres across on the plan, in her fingertips and on the drawer (Grandmother).
+  const stated = camera && builds('thing_state') && rec ? sizedByState(sizedNow, b, momentId, rec) : sizedNow;
   const out = camera
     ? withOpen(
         withRiders(
@@ -631,7 +638,7 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
             builds('plan_facing')
               ? withAttention(
                   carriedBy(
-                    sizedNow,
+                    stated,
                     plan,
                     upTo.map((x) => plan.moves?.[x.id] ?? []),
                   ),
@@ -639,7 +646,7 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
                   moment.eyes === 'dreamer' ? dreamerId : undefined,
                 )
               : carriedBy(
-                  sizedNow,
+                  stated,
                   plan,
                   upTo.map((x) => plan.moves?.[x.id] ?? []),
                 ),
@@ -744,6 +751,143 @@ export function crowdBetween(plan: Blocking, from: string, who: string, crowd: s
       };
     }),
   };
+}
+
+/** A change of a thing's size. */
+const isSizeChange = (st: { what: string; part?: string }) => st.part === 'size' || /^\s*size\s*$/i.test(st.what);
+/** A change of what a thing is: it has become something else, whatever its size was. */
+const isFormChange = (st: { what: string }) =>
+  /^\s*(?:its |their )?(?:form|shape|whole|self|itself|kind)\s*$/i.test(st.what);
+
+/** What a change of size says a thing is now: "the size of a stamp" is a stamp. */
+const SIZE_OF =
+  /^(?:now\s+)?(?:(?:about|roughly|only|just)\s+)?(?:the size of|as (?:small|big|large|tiny|little) as|shrunk(?: down)? to(?: the size of)?|no (?:bigger|larger) than)\s+/i;
+
+/** Things the size of which a change of size names, beyond the small things a plan sizes (castplace.ts smallSizeOf). */
+const NOW_SMALL: [RegExp, [number, number, number]][] = [
+  [/\b(?:postage )?stamps?$/, [0.025, 0.03, 0.001]],
+  [/\b(?:handkerchiefs?|hankies?|napkins?|tissues?|flannels?)$/, [0.3, 0.3, 0.005]],
+];
+
+/**
+ * What a change of size says a thing is now and how big that is, where it names a thing of a known size: "a stamp",
+ * "the size of a handkerchief". None where it names no such thing ("much smaller", "big enough to hold a key").
+ */
+export function sizedAs(
+  st: { what: string; part?: string; now: string } | undefined,
+): { as: string; size: [number, number, number] } | undefined {
+  if (!st || !isSizeChange(st)) return undefined;
+  const as = st.now
+    .trim()
+    .replace(SIZE_OF, '')
+    .replace(/[.,;]+$/, '');
+  if (!/^(?:a|an|one)\s+[a-z' -]+$/i.test(as) || as.split(/\s+/).length > 4) return undefined;
+  const size = NOW_SMALL.find(([re]) => re.test(as.toLowerCase()))?.[1] ?? smallSizeOf(as);
+  return size ? { as, size } : undefined;
+}
+
+/**
+ * Each thing at the size the latest change of what it is gives, where that is a change of its size naming a thing of a
+ * known size (`sizedAs`): the change this moment makes or carries, else the latest an earlier moment made, not ended by
+ * now and not followed by its becoming something else. A thing at a size the dream's sizes reading gives (`sizes`) keeps
+ * it. Marked `stated`: the picture holds it however small.
+ */
+export function sizedByState(plan: Blocking, b: Breakdown, momentId: string, rec: RecordPlan): Blocking {
+  const ms = b.scenes.flatMap((sc) => sc.moments);
+  const order = new Map(ms.map((m, i) => [m.id, i]));
+  const now = order.get(momentId) ?? 0;
+  const ended = (st: State) => {
+    const end = st.key ? rec.ends[st.key] : undefined;
+    return end !== undefined && (order.get(end) ?? Infinity) <= now;
+  };
+  const holding = (id: string): State | undefined => {
+    const r = rec.moments[momentId];
+    const here = [...(r?.own ?? []), ...(r?.carried ?? [])].filter((st) => st.who === id);
+    if (here.some(isFormChange)) return undefined;
+    const sized = here.filter(isSizeChange).at(-1);
+    if (sized) return sized;
+    for (const x of ms.slice(0, now).reverse()) {
+      const own = (rec.moments[x.id]?.own ?? []).filter(
+        (st) => st.who === id && (isSizeChange(st) || isFormChange(st)),
+      );
+      const st = own.at(-1);
+      if (!st) continue;
+      return isSizeChange(st) && !ended(st) ? st : undefined;
+    }
+    return undefined;
+  };
+  let changed = false;
+  const spots = plan.spots.map((s) => {
+    if (s.kind !== 'thing' || s.fixture || s.sized) return s;
+    const got = sizedAs(holding(s.id));
+    if (!got) return s;
+    changed = true;
+    return { ...s, size: got.size, stated: true as const };
+  });
+  return changed ? { ...plan, spots } : plan;
+}
+
+const CLOSING =
+  '(?:drawers?|box(?:es)?|chests?|cupboards?|cabinets?|pockets?|bags?|handbags?|envelopes?|tins?|safes?|trunks?|suitcases?|wardrobes?|lockers?|fridges?|purses?|wallets?|sacks?|sideboards?)';
+const INTO = `\\b(?:back\\s+)?(?:in|into|inside)\\s+((?:the|a|an|her|his|their|my|its|your)\\s+)?((?:[\\w'-]+\\s+){0,2}${CLOSING})\\b`;
+/** Put into something that closes, its object between the verb and "in": "puts the stamp in her cutlery drawer". */
+const PUT_INTO = new RegExp(
+  `\\b(?:puts?|putting|places?|placed|placing|tucks?|tucked|tucking|slips?|slipped|slipping|drops?|dropped|dropping|stuffs?|stuffed|stuffing|locks?|locked|locking|hides?|hid|hiding|stows?|stowed|stowing|files?|filed|filing|slides?|slid|sliding)\\b([^.;,]{1,60}?)${INTO}`,
+  'gi',
+);
+/** Going into something that closes, said of it: "the stamp going into the cutlery drawer". */
+const GOING_INTO = new RegExp(
+  `([\\w'-]+)\\s+(?:going|goes|went|slipping|slips|disappearing|disappears)\\s+${INTO}`,
+  'gi',
+);
+
+/**
+ * The things an earlier moment put into something that closes, its words saying so of that thing (by its name or what
+ * a change has made it, "the stamp"), and no moment since naming it, by id or in its words, or moving it on the plan:
+ * inside it, out of sight. Never the thing it is put into; never what goes in with a hand ("puts her hand into her bag
+ * and pulls out the ticket").
+ */
+export function putAway(
+  b: Breakdown,
+  m: Pick<Moment, 'id' | 'things' | 'visible' | 'action' | 'visual_point'>,
+  upTo: Moment[],
+  rec?: RecordPlan,
+  moves: Record<string, { id: string }[]> = {},
+): string[] {
+  const things = new Map((b.things ?? []).map((t) => [t.id, t.name]));
+  // Its name, and what each change of it in force here has made it ("the size of a stamp": a stamp).
+  const namesAt = (id: string, ...at: string[]) => {
+    const nows = at
+      .flatMap((x) => [...(rec?.moments[x]?.own ?? []), ...(rec?.moments[x]?.carried ?? [])])
+      .filter((st) => st.who === id)
+      .map((st) => st.now.trim().replace(SIZE_OF, ''))
+      .filter((w) => w.split(/\s+/).length <= 4);
+    return [things.get(id)!, ...nows].map((name) => ({ id, name }));
+  };
+  const says = (words: string, id: string, ...at: string[]) => mentioned(words, namesAt(id, ...at)).length > 0;
+  const out: string[] = [];
+  const before = upTo.filter((x) => x.id !== m.id);
+  for (const [k, x] of before.entries()) {
+    const words = `${x.action}. ${x.visual_point ?? ''}`;
+    const put = new Set<string>();
+    for (const id of x.things.filter((t) => things.has(t))) {
+      for (const hit of words.matchAll(PUT_INTO)) if (says(hit[1], id, x.id) && !says(hit[3], id, x.id)) put.add(id);
+      for (const hit of words.matchAll(GOING_INTO)) if (says(hit[1], id, x.id) && !says(hit[3], id, x.id)) put.add(id);
+    }
+    for (const id of put) {
+      const back = [...before.slice(k + 1), m].some((y) => {
+        const r = rec?.moments[y.id];
+        const named = [...y.things, ...y.visible, ...(r ? [...r.things, ...r.visible, ...r.present] : [])];
+        return (
+          named.includes(id) ||
+          says(`${y.action}. ${y.visual_point ?? ''}`, id, x.id, y.id) ||
+          (moves[y.id] ?? []).some((mv) => mv.id === id)
+        );
+      });
+      if (!back && !out.includes(id)) out.push(id);
+    }
+  }
+  return out;
 }
 
 /** What opens and shuts to let someone through. */
@@ -2132,11 +2276,20 @@ function planWith(
     const m = byId.get(c.id)!;
     const changed = [...c.own, ...c.states];
     // What something is called now: the big sofa that has become a roller coaster is the roller coaster.
+    // What a change of its size made it, in the words that say it (`thing_state`): "a stamp".
+    const shrunkTo = (id: string) =>
+      builds('thing_state') && (b.things ?? []).some((t) => t.id === id)
+        ? sizedAs(changed.filter((x) => x.who === id && isSizeChange(x)).at(-1))?.as
+        : undefined;
     const now = (id: string) => {
       const st = changed.find(
         (x) => x.who === id && /^\s*(?:its |their )?(?:form|shape|whole|self|itself|kind)\s*$/i.test(x.what),
       );
-      return st ? `${/^(a|an|the)\s/i.test(st.now) ? '' : 'the '}${st.now} (what ${name(id)} turned into)` : name(id);
+      if (st) return `${/^(a|an|the)\s/i.test(st.now) ? '' : 'the '}${st.now} (what ${name(id)} turned into)`;
+      // Its size said with its name, as its picture's own words say it ("as it is now (size: a stamp)"): the bed sheet
+      // folded down to a stamp was "the bed sheet, filling the picture from its middle to two thirds of the way down".
+      const as = shrunkTo(id);
+      return as ? `${name(id)} (now the size of ${as})` : name(id);
     };
     // A fixture of the place goes by its own name; everyone and everything else as the story calls them.
     const nameOf = (s: { id: string; name?: string }) => s.name ?? name(s.id);
