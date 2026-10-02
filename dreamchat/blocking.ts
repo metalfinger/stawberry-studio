@@ -277,7 +277,7 @@ export function settle(
   // At a size of their own (`sizes`), solid to them is what stands well over a third of them: ant-sized Alina put on the
   // spot of a building shrunk to her size stood inside it, unseen, "going in at its door" (Shrunk m5).
   const solidTo = (s: Spot) =>
-    s.height && s.height < 1.74
+    s.sized && s.height && s.height < 1.74
       ? plan.spots.filter(
           (t) =>
             t.id !== s.id &&
@@ -295,7 +295,7 @@ export function settle(
       (t) =>
         t.id !== self.id &&
         (solidOf(t) || t.shape === 'vehicle' || solidTo(self).includes(t)) &&
-        onFootprint(p, t, plan, 0.1 * (self.height && self.height < 1.74 ? self.height / 1.74 : 1)),
+        onFootprint(p, t, plan, 0.1 * (self.sized && self.height && self.height < 1.74 ? self.height / 1.74 : 1)),
     ) &&
     (!plan.indoors || (p.x >= 0.2 && p.x <= rw - 0.2 && p.y >= 0.2 && p.y <= rd - 0.2));
   // Someone standing is beside a car, not in it: dropped off at the house, the dreamer was said to
@@ -308,7 +308,7 @@ export function settle(
     // Whoever rides in something faces the way it goes: the dreamer and the aunt sat back to back in
     // her car over the bridge (25 Sep).
     if (riding) return { ...s, faces: riding.faces ?? 'front' };
-    const k = s.height && s.height < 1.74 ? s.height / 1.74 : 1;
+    const k = s.sized && s.height && s.height < 1.74 ? s.height / 1.74 : 1;
     const t =
       solidTo(s).find((b) => onFootprint(s, b, plan, -0.05 * k)) ??
       // Afloat (the camera rules' water), whoever stands in a boat stays in it: there is only water beside it.
@@ -341,7 +341,7 @@ export function settle(
   // the aunt hid the dreamer (25 Sep).
   const people = spots.filter((s) => s.kind === 'person' && !s.many);
   // At their own size (`sizes`): ant-sized Alina and the ants a few millimetres apart, not pushed off the counter.
-  const kOf = (s: Spot) => (s.height ? Math.min(1, s.height / 1.74) : 1);
+  const kOf = (s: Spot) => (s.sized && s.height ? Math.min(1, s.height / 1.74) : 1);
   const done = new Set<string>();
   for (const a of people) {
     if (done.has(a.id)) continue;

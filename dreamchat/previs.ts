@@ -61,9 +61,9 @@ const afloat = (plan: Blocking) => (plan.water ? Math.max(0, plan.water - 0.15) 
 export const eyeHeight = (pose?: Spot['pose']) => (pose === 'sitting' ? 1.2 : pose === 'lying' ? 0.35 : 1.62);
 
 /** A creature drawn in its own shape at its own height (cast bodies, `sizes`), not a person's mannequin. */
-const creatureOf = (s: Spot) => !!s.body && s.body !== 'human' && !!s.height;
+const creatureOf = (s: Spot) => !!s.sized && !!s.body && s.body !== 'human' && !!s.height;
 /** How tall someone stands beside a grown person (`sizes`): 1 unless their own height is given. */
-const scaleOf = (s: Spot) => (s.height && !creatureOf(s) ? s.height / STANDING : 1);
+const scaleOf = (s: Spot) => (s.sized && s.body === 'human' && s.height ? s.height / STANDING : 1);
 /** How high someone's eyes are above what they stand on: by how they are, and their own size. */
 const eyesOf = (s: Spot) => (creatureOf(s) ? s.height! * 0.8 : eyeHeight(s.pose) * scaleOf(s));
 /** The top of someone's head above what they stand on: by how they are, and their own size. */
@@ -781,7 +781,7 @@ export function headsIn(eye: Eye, heads: string[], plan: Blocking): Eye {
 function tinyIn(r: Render, plan: Blocking, spots: Spot[]): { s: Spot; cx: number; cy: number }[] {
   if (!builds('sizes')) return [];
   return spots.flatMap((s) => {
-    if (!isPerson(s) || !s.height) return [];
+    if (!isPerson(s) || !s.sized) return [];
     const p = r.project(v3(s.x, s.y, groundAt(s, plan) + headTopOf(s) / 2));
     if (!p || p.x < 0 || p.y < 0 || p.x >= r.width || p.y >= r.height) return [];
     const k = r.solid[Math.floor(p.y) * r.width + Math.floor(p.x)];
@@ -2079,7 +2079,7 @@ export function dreamerShot(
   const distance = (s: Spot) => Math.hypot(s.x - eye.at.x, s.y - eye.at.y);
   // Someone at a size of their own (`sizes`) with any of them in view is in the picture, however small: as few pixels,
   // the mouse-sized dreamer beside the cat as big as a bus was said outside it and their sketch was not sent.
-  const anyOf = (x: { s: Spot; seen?: Seen }) => builds('sizes') && !!x.s.height && (x.seen?.visible ?? 0) > 0;
+  const anyOf = (x: { s: Spot; seen?: Seen }) => builds('sizes') && !!x.s.sized && (x.seen?.visible ?? 0) > 0;
   const shown = spots
     .map((s) => ({ s, seen: r.seen.get(s.id) }))
     .filter((x): x is { s: Spot; seen: Seen } => !!x.seen && (x.seen.visible >= min || anyOf(x)))
@@ -2569,8 +2569,7 @@ export function outsideShot(
   // stands, not what the frame is the size of (Shrunk m7).
   const fitted = [...new Set([...group, ...holdAll])].filter((s) => subjects.includes(s.id));
   const subject = Math.max(0, ...fitted.map((s) => (isPerson(s) ? headTopOf(s) : sizeOf(s)[2])));
-  const atSize =
-    fitted.some((s) => s.sized || (isPerson(s) && s.height)) && subject < STANDING / 10 ? subject / STANDING : 1;
+  const atSize = fitted.some((s) => s.sized) && subject < STANDING / 10 ? subject / STANDING : 1;
   let tallest = hands !== undefined ? hands + 0.35 : Math.max(...(atSize < 1 ? fitted : group).map(topAt));
   // A close shot is a head and shoulders of whoever stands tallest in it, at their own size (`sizes`): a grown person's
   // 70 cm, an ant-sized one's few millimetres.
@@ -2587,7 +2586,7 @@ export function outsideShot(
   const foot =
     atSize < 1
       ? Math.min(...fitted.map((s) => topAt(s) - ownTall(s)))
-      : top && isPerson(top) && top.height
+      : top && isPerson(top) && top.sized
         ? topAt(top) - headTopOf(top)
         : 0;
   let lowest =
@@ -2604,7 +2603,7 @@ export function outsideShot(
   // a bus had the mouse-sized dreamer beside her under the frame (3cd7 m5, m7).
   for (const id of heads) {
     const s = plan.spots.find((x) => x.id === id);
-    if (s?.height && isPerson(s) && group.includes(s)) lowest = Math.min(lowest, topAt(s) - headTopOf(s));
+    if (s?.sized && isPerson(s) && group.includes(s)) lowest = Math.min(lowest, topAt(s) - headTopOf(s));
   }
   // What the moment looks at, put down at someone's feet and held by nobody, is in the picture: a close look
   // frames it where it lies, and a medium shot reaches down to it. The boat set down in the grass was under
@@ -2816,7 +2815,7 @@ export function outsideShot(
     // drawn whole where the mock-up has it covered.
     x.seen.occluded <= 0.7;
   // Someone at a size of their own (`sizes`) with any of them in view is in the picture, however small.
-  const anyOf = (x: { s: Spot; seen?: Seen }) => builds('sizes') && !!x.s.height && (x.seen?.visible ?? 0) > 0;
+  const anyOf = (x: { s: Spot; seen?: Seen }) => builds('sizes') && !!x.s.sized && (x.seen?.visible ?? 0) > 0;
   const shown = spots
     .map((s) => ({ s, seen: rr.seen.get(s.id) }))
     .filter(

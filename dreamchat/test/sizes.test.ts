@@ -120,7 +120,7 @@ describe('the plan at the sizes of its moment', () => {
     expect(spot(m2, 'p3')).toMatchObject({ height: 0.005, body: 'other' });
     expect(spot(m2, 'p2').height).toBeUndefined();
     const m3 = withSizes(kitchen, reading, 'm3');
-    expect(spot(m3, 'p2')).toMatchObject({ height: 0.005, body: 'human' });
+    expect(spot(m3, 'p2')).toMatchObject({ height: 0.005, body: 'human', sized: 'moment' });
     expect(spot(m3, 'p1').height).toBeUndefined();
     // A thing is scaled whole to its height.
     const m5 = withSizes(kitchen, reading, 'm5');
@@ -138,7 +138,7 @@ describe('the plan at the sizes of its moment', () => {
     const m5 = settle({
       ...(withSizes(kitchen, reading, 'm5') as object),
       spots: (withSizes(kitchen, reading, 'm5') as { spots: S[] }).spots.map((x) =>
-        x.id === 'p2' ? { ...x, x: 2.6, y: 0.3, height: 0.005, body: 'human' } : x,
+        x.id === 'p2' ? { ...x, x: 2.6, y: 0.3, height: 0.005, body: 'human', sized: 'moment' } : x,
       ),
     } as never);
     const alina = spot(m5, 'p2');

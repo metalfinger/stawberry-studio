@@ -618,7 +618,7 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
       ? {
           ...sizedOwn,
           spots: sizedOwn.spots.map((x) =>
-            x.body === 'fish' && x.height && x.height > sizedOwn.water! - 0.1
+            x.sized && x.body === 'fish' && x.height && x.height > sizedOwn.water! - 0.1
               ? { ...x, height: Math.max(0.05, sizedOwn.water! - 0.1) }
               : x,
           ),
@@ -1113,7 +1113,7 @@ export function framedAtSize(plan: Blocking, ids: string[], m: Moment, name: (s:
   const height = (id: string) => {
     const s = plan.spots.find((x) => x.id === id);
     if (!s) return 0;
-    return s.kind === 'thing' || (!s.kind && !s.pose && !s.many) ? sizeOf(s)[2] : (s.height ?? 1.74);
+    return s.kind === 'thing' || (!s.kind && !s.pose && !s.many) ? sizeOf(s)[2] : s.sized && s.height ? s.height : 1.74;
   };
   const at = (id: string) => plan.spots.find((x) => x.id === id)!;
   const big = Math.max(0, ...ids.map(height));
