@@ -2033,7 +2033,27 @@
         "must_be_absent": {
           "type": ["array", "null"],
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "entity": {
+                    "type": "string"
+                  },
+                  "state": {
+                    "type": ["string", "null"]
+                  },
+                  "why": {
+                    "type": "string"
+                  }
+                },
+                "required": ["entity", "state", "why"],
+                "additionalProperties": false
+              }
+            ]
           }
         },
         "identity_marks": {
@@ -2057,11 +2077,52 @@
           "additionalProperties": {
             "anyOf": [
               {
-                "type": "integer",
-                "minimum": 0
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  {
+                    "const": "many"
+                  }
+                ]
               },
               {
-                "const": "many"
+                "type": "object",
+                "properties": {
+                  "n": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      {
+                        "const": "many"
+                      }
+                    ]
+                  },
+                  "parts": {
+                    "type": "object",
+                    "properties": {
+                      "hands": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "arms": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "legs": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "required": [],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["n", "parts"],
+                "additionalProperties": false
               }
             ]
           }
@@ -2075,13 +2136,16 @@
                 "type": "string"
               },
               "relation": {
-                "type": "string"
+                "enum": ["left_of", "right_of", "in_front_of", "behind", "on", "inside", "beside", "holding", "feet_on"]
               },
               "b": {
                 "type": "string"
+              },
+              "frame": {
+                "enum": ["screen", "world"]
               }
             },
-            "required": ["a", "relation", "b"],
+            "required": ["a", "relation", "b", "frame"],
             "additionalProperties": false
           }
         },
@@ -2098,6 +2162,10 @@
               },
               "relative_to": {
                 "type": ["string", "null"]
+              },
+              "tolerance": {
+                "type": "number",
+                "minimum": 0
               }
             },
             "required": ["entity", "size_m", "relative_to"],

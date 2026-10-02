@@ -357,3 +357,33 @@ describe('the Python twin (docs/packet_contract.py), byte for byte', () => {
     }
   });
 });
+
+describe('the shapes of the fields not built yet, as the integration lead signed them off', () => {
+  test('must_be_absent, counts, relations and scale take their shapes, and refuse others by name', () => {
+    const v8 = toV8(packetOf(frozenDreams()[0]));
+    const c = v8.cuts[0].contract;
+    const set = (patch: Partial<typeof c>) => {
+      const pk = structuredClone(v8);
+      Object.assign(pk.cuts[0].contract, patch);
+      return validatePacket(pk);
+    };
+    expect(
+      set({
+        must_be_absent: ['t2', { entity: 't1', state: 'full size', why: 'it shrank to a stamp at m8' }],
+        counts: { p1: 1, c1: 'many', p3: { n: 1, parts: { arms: 4 } } },
+        relations: [{ a: 'p1', relation: 'left_of', b: 'p2', frame: 'screen' }],
+        scale: [
+          { entity: 't1', size_m: 0.03, relative_to: 'p2', tolerance: 0.1 },
+          { entity: 'x3', size_m: 0.5, relative_to: null },
+        ],
+      }),
+    ).toEqual([]);
+    expect(set({ relations: [{ a: 'p1', relation: 'near' as never, b: 'p2', frame: 'screen' }] })).toEqual([
+      '$.cuts[0].contract.relations[0].relation: not one of "left_of", "right_of", "in_front_of", "behind", "on", "inside", "beside", "holding", "feet_on"',
+    ]);
+    expect(set({ must_be_absent: [{ entity: 't1' } as never] })).toEqual([
+      '$.cuts[0].contract.must_be_absent[0]: state is missing',
+      '$.cuts[0].contract.must_be_absent[0]: why is missing',
+    ]);
+  });
+});

@@ -127,17 +127,38 @@ export type CutContract = {
     { value: unknown; by: string; confidence: number | null; check: 'mechanical' | 'semantic' }
   > | null;
   must_show: string[] | null;
-  must_be_absent: string[] | null;
+  /** What must not be in the picture: someone or something, or a state of it (the sheet at full size once it shrank). */
+  must_be_absent: (string | { entity: string; state: string | null; why: string })[] | null;
   identity_marks: { entity: string; mark: string }[] | null;
-  counts: Record<string, number | 'many'> | null;
-  relations: { a: string; relation: string; b: string }[] | null;
-  scale: { entity: string; size_m: number; relative_to: string | null }[] | null;
+  /** By entity: how many, or for an unusual body how many and of which parts (a usual body is never stated). */
+  counts: Record<
+    string,
+    number | 'many' | { n: number | 'many'; parts: { hands?: number; arms?: number; legs?: number } }
+  > | null;
+  /** Where two stand to each other: on the picture (`screen`, what is measured on it) or on the floor plan (`world`). */
+  relations: { a: string; relation: Relation; b: string; frame: 'screen' | 'world' }[] | null;
+  /** Its size, and how far from it is still right (`tolerance`, a share of it: 0.2 where not given). */
+  scale: { entity: string; size_m: number; relative_to: string | null; tolerance?: number }[] | null;
   beat: { role: string; retell: string } | null;
   after: string[] | null;
   dial: 'A' | 'B' | 'C' | null;
   /** Each field's basis: `unknown` where it is null because it is not built, or the packet was version 7. */
   basis: Record<string, Basis>;
 };
+
+/** How two stand to each other. */
+export const RELATIONS = [
+  'left_of',
+  'right_of',
+  'in_front_of',
+  'behind',
+  'on',
+  'inside',
+  'beside',
+  'holding',
+  'feet_on',
+] as const;
+export type Relation = (typeof RELATIONS)[number];
 
 /** What a reference is sent for, and only for (the design's closed vocabulary). */
 export const PURPOSES = ['layout', 'place', 'identity', 'state', 'palette', 'prop', 'style'] as const;
@@ -575,11 +596,24 @@ const contractSchema = obj({
   refs: orNull(list(obj({ asset: str, purpose: { enum: [...PURPOSES] }, carries: list(str) }))),
   readiness: orNull(map(obj({ value: any, by: str, confidence: orNull(num), check: oneOf('mechanical', 'semantic') }))),
   must_show: orNull(list(str)),
-  must_be_absent: orNull(list(str)),
+  must_be_absent: orNull(list({ anyOf: [str, obj({ entity: str, state: orNull(str), why: str })] })),
   identity_marks: orNull(list(obj({ entity: str, mark: str }))),
-  counts: orNull(map(many)),
-  relations: orNull(list(obj({ a: str, relation: str, b: str }))),
-  scale: orNull(list(obj({ entity: str, size_m: num, relative_to: orNull(str) }))),
+  counts: orNull(
+    map({
+      anyOf: [
+        many,
+        obj({ n: many, parts: obj({ hands: count, arms: count, legs: count }, ['hands', 'arms', 'legs']) }),
+      ],
+    }),
+  ),
+  relations: orNull(list(obj({ a: str, relation: { enum: [...RELATIONS] }, b: str, frame: oneOf('screen', 'world') }))),
+  scale: orNull(
+    list(
+      obj({ entity: str, size_m: num, relative_to: orNull(str), tolerance: { type: 'number', minimum: 0 } }, [
+        'tolerance',
+      ]),
+    ),
+  ),
   beat: orNull(obj({ role: str, retell: str })),
   after: orNull(list(str)),
   dial: orNullOf('A', 'B', 'C'),

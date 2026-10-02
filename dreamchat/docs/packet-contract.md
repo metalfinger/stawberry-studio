@@ -105,11 +105,15 @@ ids.
 - `turns_on`: `{entity, need: present|recognizable|legible, size_m, min_px}`; `min_px` is the drawing side's.
 - `refs[]`: `{asset, purpose, carries[]}`, `purpose` one of layout, place, identity, state, palette, prop, style.
 - `readiness`: by fact, `{value, by, confidence, check: mechanical|semantic}`.
-- **Shapes proposed here, for the integration lead's sign-off** (the design names these fields without shapes):
-  `must_show[]` and `must_be_absent[]` entity ids; `identity_marks[]` `{entity, mark}`; `counts` by entity, a number or
-  `"many"`; `relations[]` `{a, relation, b}`; `scale[]` `{entity, size_m, relative_to}`; `beat` `{role, retell}`;
-  `after[]` stable cut ids, the told order; `actions[]` `{actor, verb, recipient, hands_to, contact, pose_cue,
-  agent_established_in}`.
+- **Shapes for the fields the design names without one** (signed off by the integration lead, with its four
+  amendments): `must_show[]` entity ids; `must_be_absent[]` an entity id, or `{entity, state, why}` where what must be
+  absent is a state of it (the sheet at full size once it shrank, a drawer open); `identity_marks[]` `{entity, mark}`;
+  `counts` by entity, a number or `"many"`, or `{n, parts: {hands, arms, legs}}` for an unusual body (a usual one is
+  never stated); `relations[]` `{a, relation, b, frame}`, `relation` one of left_of, right_of, in_front_of, behind, on,
+  inside, beside, holding, feet_on, `frame` `screen` (what is measured on the picture) or `world` (the floor plan's);
+  `scale[]` `{entity, size_m, relative_to, tolerance}`, `tolerance` a share of `size_m`, 0.2 where not given; `beat`
+  `{role, retell}`; `after[]` stable cut ids, the told order; `actions[]` `{actor, verb, recipient, hands_to, contact,
+  pose_cue, agent_established_in}`.
 
 ## Acceptance
 
