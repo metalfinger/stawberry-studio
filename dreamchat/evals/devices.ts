@@ -98,6 +98,11 @@ type Count = {
   bubbles: number;
   lettering: number;
   letteringWrong: number;
+  written: number;
+  writtenNoDevice: number;
+  writtenUnlettered: number;
+  writtenOtherText: number;
+  writtenOtherThing: number;
   dreamsWithBubbles: number;
   errors: number;
 };
@@ -111,6 +116,11 @@ const zero = (): Count => ({
   bubbles: 0,
   lettering: 0,
   letteringWrong: 0,
+  written: 0,
+  writtenNoDevice: 0,
+  writtenUnlettered: 0,
+  writtenOtherText: 0,
+  writtenOtherThing: 0,
   dreamsWithBubbles: 0,
   errors: 0,
 });
@@ -124,6 +134,7 @@ const letteringExact = (text: string, dream: string) => {
     ` ${x
       .toLowerCase()
       .replace(/[–—]/g, '-')
+      .replace(/(\d)\.(\d\d)(?=\s*[ap]\.?\s?m)/g, '$1:$2')
       .replace(/(\d)\s*p\.?\s?m\.?/g, '$1pm')
       .replace(/(\d)\s*a\.?\s?m\.?/g, '$1am')
       .replace(/\s*-\s*/g, '-')
@@ -138,6 +149,26 @@ const letteringExact = (text: string, dream: string) => {
       (/^\p{L}{3}$/u.test(t) &&
         new RegExp(`\\s${t}(?:day|nesday|sday|rsday|urday|uary|ruary|ch|il|e|y|ust|tember|ober|ember)s?\\s`).test(d)),
   );
+};
+
+/**
+ * By this eval's own reading, sentence by sentence: one saying something is written, lettered, printed, circled or
+ * marked (never "marked by"), with a time, a day or a capitalised month the dream gives; the date as a word to match.
+ */
+const writtenIn = (words: string, dream: string): { sentence: string; date: string } | null => {
+  const text = words
+    .replace(/[–—]/g, '-')
+    .replace(/(\d)\.(\d\d)(?=\s*[ap]\.?\s?m)/gi, '$1:$2')
+    .replace(/(\d)\s*([ap])\.?\s?m\.?(?=\W|$)/gi, '$1$2m');
+  for (const sentence of text.split(/[.;!?](?=\s|$)/)) {
+    if (!/\b(?:written|lettered|printed|circled|marked(?! by))\b/i.test(sentence)) continue;
+    const date =
+      sentence.match(/\b\d{1,2}(?::\d\d)?(?:-\d{1,2}(?::\d\d)?)?[ap]m\b/i)?.[0] ??
+      sentence.match(/\b(?:mon|tues|wednes|thurs|fri|satur|sun)day/i)?.[0] ??
+      sentence.match(/\b(?:January|February|March|April|June|July|August|September|October|November|December)\b/)?.[0];
+    if (date && letteringExact(/\d/.test(date) ? date : date.slice(0, 3), dream)) return { sentence, date };
+  }
+  return null;
 };
 
 function measure(s: Session, step: string, into: Count, id: string, text: string): void {
@@ -189,6 +220,33 @@ function measure(s: Session, step: string, into: Count, id: string, text: string
     for (const c of r.plan.cuts) {
       views[side].set(`${id} ${c.id}`, `${JSON.stringify(c.eye ?? null)} ${prompts.get(c.id) ?? ''}`);
       const m = r.b.scenes.flatMap((sc) => sc.moments).find((x) => x.id === c.id);
+      // A moment whose words say the dream's own day or time is written on something, and its cut's lettering: no
+      // device, a device unlettered, lettering not of the date said, or lettering on a thing the sentence does not name.
+      const said = m ? writtenIn(`${m.visual_point ?? ''}. ${m.action}`, dreamText) : null;
+      if (said) {
+        into.written++;
+        const mine = devices.filter((d) => d.moments[c.id] && d.where !== 'bubble');
+        const lettered = mine.filter((d) => d.lettering);
+        const flat = (x: string) => x.toLowerCase().replace(/[^\p{L}\d]/gu, '');
+        const named = (d: (typeof mine)[number]) =>
+          (d.name.toLowerCase().match(/\p{L}{4,}/gu) ?? []).some((w) => said.sentence.toLowerCase().includes(w));
+        const why = !mine.length
+          ? 'no device'
+          : !lettered.length
+            ? 'no lettering'
+            : !lettered.some((d) =>
+                  flat(d.lettering!.text).includes(flat(said.date).slice(0, /\d/.test(said.date) ? 99 : 3)),
+                )
+              ? 'other lettering'
+              : !lettered.some(named)
+                ? 'lettering on another thing'
+                : '';
+        if (why === 'no device') into.writtenNoDevice++;
+        if (why === 'no lettering') into.writtenUnlettered++;
+        if (why === 'other lettering') into.writtenOtherText++;
+        if (why === 'lettering on another thing') into.writtenOtherThing++;
+        if (why) out.push(`${side.padEnd(6)} ${id} ${c.id}: "${said.sentence.trim()}" written, ${why}`);
+      }
       if (!m || !grandma) continue;
       const words = `${m.action} ${m.visual_point ?? ''}`;
       const plan = c.eye ? shotPlan(r.b, c.id, r.rec) : undefined;

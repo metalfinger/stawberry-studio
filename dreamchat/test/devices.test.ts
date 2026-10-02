@@ -8,6 +8,7 @@ import type { Blocking } from '../blocking';
 import {
   deviceLine,
   type DevicesReading,
+  letteringFrom,
   letteringItems,
   letteringOf,
   parseDevices,
@@ -645,5 +646,107 @@ describe('the place’s own clock or calendar', () => {
     expect(spots.filter((s) => /calendar/.test(s.name ?? '')).map((s) => [s.id, s.x, s.y])).toEqual([
       ['v1', 0.05, 1.8],
     ]);
+  });
+});
+
+describe("the lettering a moment's own words give", () => {
+  const dream = `${text} The dreamer is told they got the 2-3pm appointment with grandmother.`;
+  const from = (words: string, thing = 'the schedule sheet', told = text) => letteringFrom(words, thing, told, dream);
+  test("what they say is written on the thing, the dream's own day or time, whether or not the reading proposed it", () => {
+    expect(from('the 2-3pm slot written beside their name on the schedule')).toEqual({
+      text: '2-3 PM',
+      on: 'its face',
+    });
+    expect(from('the 2–3 p.m. slot, written beside their name on the schedule')?.text).toBe('2-3 PM');
+    expect(from('the slot from 2 to 3 pm written on the schedule')?.text).toBe('2-3 PM');
+    expect(from('the wall calendar, every Wednesday circled in red', 'the wall calendar')?.text).toBe('WED');
+    expect(from("the calendar with Wednesday's box circled", 'the wall calendar')?.text).toBe('WED');
+  });
+
+  test('never what is not written on it, nor what the dreamer never said, nor on a clock', () => {
+    // Said, read, or written of something else; a clock's hands show the time.
+    expect(from('grandmother says the 2-3pm slot on the schedule is theirs')).toBeUndefined();
+    expect(from('she reads the schedule at 2-3pm')).toBeUndefined();
+    expect(from('the 2-3pm slot written in her diary', 'the kitchen wall clock')).toBeUndefined();
+    expect(from('the 2-3pm slot written on the schedule', 'the plate of food')).toBeUndefined();
+    // A time a moment's words give but the dreamer never did.
+    expect(from('the 4pm slot written on the schedule')).toBeUndefined();
+    // Marked by, printed on a day, "may", nothing of the dream's own.
+    expect(from('a Wednesday marked by rain on the schedule')).toBeUndefined();
+    expect(from('the schedule printed on Wednesday')).toBeUndefined();
+    expect(from('the note on the schedule she may have written')).toBeUndefined();
+    expect(from('a note written in pencil beside their name on the schedule')).toBeUndefined();
+  });
+
+  test("a device the reading gives no lettering takes it from its moment's point", () => {
+    const told = {
+      ...b,
+      scenes: [
+        {
+          id: 's1',
+          moments: [
+            moment({
+              id: 'm3',
+              action: 'The dreamer is told they got the 2-3pm appointment with grandmother.',
+              visual_point:
+                'the dreamer being told they got the 2-3pm appointment, the 2-3pm slot written beside their name on the schedule',
+            }),
+          ],
+        },
+      ],
+    } as unknown as Breakdown;
+    const { reading } = parseDevices(
+      JSON.stringify({
+        devices: [
+          {
+            name: 'the schedule sheet',
+            look: 'a printed sheet of slots and one highlighted row',
+            where: 'held',
+            by: 'p1',
+            moments: {
+              m3: { beat: 'the 2-3pm slot written beside their name', shows: 'one row highlighted', act: '' },
+            },
+          },
+        ],
+      }),
+      told,
+      text,
+    );
+    expect(reading.devices[0].lettering).toEqual({ text: '2-3 PM', on: 'its face' });
+    // The kitchen clock for the same moment: what is written is on the schedule, never on its face.
+    const { reading: clock } = parseDevices(
+      JSON.stringify({
+        devices: [
+          {
+            name: 'the kitchen wall clock',
+            look: 'a round wall clock, plain white face',
+            where: 'wall',
+            by: null,
+            moments: { m3: { beat: 'the 2-3pm slot written beside their name', shows: 'its hands at two', act: '' } },
+          },
+        ],
+      }),
+      told,
+      text,
+    );
+    expect(clock.devices.map((d) => [d.name, d.lettering])).toEqual([['the kitchen wall clock', undefined]]);
+    // A bubble never takes lettering.
+    const { reading: bubble } = parseDevices(
+      JSON.stringify({
+        devices: [
+          {
+            name: 'a schedule',
+            look: 'a sheet of rows',
+            where: 'bubble',
+            bubble: 'thought',
+            by: 'p1',
+            moments: { m3: { beat: 'the 2-3pm slot written beside their name', shows: 'a sheet of rows', act: '' } },
+          },
+        ],
+      }),
+      told,
+      text,
+    );
+    expect(bubble.devices.map((d) => [d.where, d.lettering])).toEqual([['bubble', undefined]]);
   });
 });

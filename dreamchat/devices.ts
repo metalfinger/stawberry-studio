@@ -124,11 +124,13 @@ const without = (x: string, readable: (c: string) => boolean) => {
     .trim();
 };
 
-/** A time or a day as one word: "2–3 p.m." is "2-3pm"; "a Monday" stays a Monday. */
+/** A time or a day as one word: "2–3 p.m." is "2-3pm", "2.30pm" is "2:30pm", "2 to 3 pm" is "2-3pm". */
 const tokenOf = (x: string) =>
   x
     .toLowerCase()
     .replace(/[–—]/g, '-')
+    .replace(/(\d)\.(\d\d)(?=\s*[ap]\.?\s?m)/g, '$1:$2')
+    .replace(/(\d+)\s+(?:to|till|until)\s+(\d+)(?=\s*[ap]\.?\s?m)/g, '$1-$2')
     .replace(/(\d)\s*p\.?\s?m\.?/g, '$1pm')
     .replace(/(\d)\s*a\.?\s?m\.?/g, '$1am')
     .replace(/\s*-\s*/g, '-');
@@ -168,6 +170,66 @@ export function letteringOf(raw: unknown, dream: string): Lettering | undefined 
       : w.length >= 3 && [...named].some((x) => x === w.replace(/s$/, '') || (w.length <= 4 && x.startsWith(w))),
   );
   return ok ? { text, on } : undefined;
+}
+
+/** Words that say something is written on a thing: "the 2-3pm slot written beside their name", "Wednesday circled". */
+const WRITTEN =
+  /\b(?:written|writes?|wrote|marked|lettered|printed|circled|ringed|reads|labell?ed|pencill?ed|inked)\b/gi;
+/** Those words not saying so: "a day marked by rain", "the hawk circled overhead", someone reading a letter. */
+const NOT_WRITTEN =
+  /^(?:marked by|circled (?:over|around|round|above|overhead|back)|reads (?:the|a|an|her|his|their|it|aloud|out))/i;
+/** A time, a day or a month as it may be written: "2-3pm", "Wednesdays", "Wednesday's", "May" (capitalised only). */
+const DATE =
+  /\b\d{1,2}(?::\d\d)?(?:-\d{1,2}(?::\d\d)?)?\s?[ap]m\b|\b(?:mon|tues|wednes|thurs|fri|satur|sun)day(?:s|'s)?\b|\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\b/gi;
+/** Things a time is shown on by hands, never by lettering. */
+const DIAL = /\b(?:clocks?|watch(?:es)?|timers?|sundials?)\b/i;
+
+/**
+ * The lettering a moment's own words give a thing, where a sentence of them says something is written on it, names
+ * it, and the date or time written is close by the word that says so ("the 2-3pm slot written beside their name on the
+ * schedule": "2-3 PM" on the schedule), whether or not the reading proposed it. Each date or time kept only as
+ * letteringOf keeps one: a time the dreamer's own words give (`told`), a day or month the dream names (`dream`); a
+ * day or month by its first three letters. Never on a clock or a watch, whose hands show the time.
+ */
+export function letteringFrom(words: string, thing: string, told: string, dream: string): Lettering | undefined {
+  if (DIAL.test(thing)) return undefined;
+  const own = (thing.toLowerCase().match(/\p{L}{4,}/gu) ?? []).filter((w) => !STOP.has(w));
+  const text = words
+    .replace(/[–—]/g, '-')
+    .replace(/(\d)\.(\d\d)(?=\s*[ap]\.?\s?m)/gi, '$1:$2')
+    .replace(/(\d+)\s+(?:to|till|until)\s+(\d+)(?=\s*[ap]\.?\s?m)/gi, '$1-$2')
+    .replace(/(\d)\s*([ap])\.?\s?m\.?(?=\W|$)/gi, '$1$2m');
+  const found: string[] = [];
+  for (const sentence of text.split(/[.;!?](?=\s|$)/)) {
+    // It says what is written on: the thing by a word of its name ("the schedule" of "the schedule sheet").
+    if (!own.some((w) => new RegExp(`\\b${w}s?\\b`, 'i').test(sentence))) continue;
+    const at = (i: number) => sentence.slice(0, i).split(/\s+/).filter(Boolean).length;
+    const writing = [...sentence.matchAll(WRITTEN)]
+      .filter((m) => !NOT_WRITTEN.test(sentence.slice(m.index)))
+      .map((m) => at(m.index));
+    for (const m of sentence.matchAll(DATE)) {
+      const raw = m[0];
+      // A month by its name only where capitalised ("may come" is no month); after the writing word, "on Monday" is
+      // when it was written, not what.
+      if (/^\p{Ll}/u.test(raw) && !/day/i.test(raw)) continue;
+      const near = writing.filter((w) => Math.abs(w - at(m.index)) <= 6);
+      if (!near.length) continue;
+      if (
+        near.every((w) => w < at(m.index)) &&
+        /\b(?:on|by|until|since|before|after)\s*$/i.test(sentence.slice(0, m.index))
+      )
+        continue;
+      const token = /\d/.test(raw)
+        ? raw.replace(/\s?([ap])m$/i, ' $1M').toUpperCase()
+        : raw
+            .replace(/'s$|s$/i, '')
+            .slice(0, 3)
+            .toUpperCase();
+      const kept = letteringOf({ text: token, on: 'its face' }, /\d/.test(raw) ? told : dream);
+      if (kept && !found.includes(token)) found.push(token);
+    }
+  }
+  return found.length && found.length <= 4 ? { text: found.join(' '), on: 'its face' } : undefined;
 }
 const low = (x: string) => x.toLowerCase().replace(/\s+/g, ' ').trim();
 const words = (x: string, most: number) => x.trim().split(/\s+/).filter(Boolean).length <= most;
@@ -288,6 +350,27 @@ export function parseDevices(content: string, b: Breakdown, text = ''): { readin
       }
     }
     if (!Object.keys(moments).length) continue;
+    // What its moments' own words say is written on it, the dream's own day or time, is its lettering, whether or not
+    // the reading proposed it: the schedule with "the 2-3pm slot written beside their name" letters "2-3 PM". Each
+    // moment read on its own, their dates and times together; a time only as the dreamer told it.
+    const toldWords = text.trim() ? `${text} ${b.logline}` : dream;
+    const fromWords = [
+      ...new Set(
+        Object.keys(moments).flatMap(
+          (mid) =>
+            letteringFrom(
+              `${byMoment.get(mid)!.visual_point ?? ''}. ${byMoment.get(mid)!.action}`,
+              name,
+              toldWords,
+              dream,
+            )?.text.split(' ') ?? [],
+        ),
+      ),
+    ];
+    const told =
+      bubble || lettering || !fromWords.length
+        ? lettering
+        : letteringOf({ text: fromWords.slice(0, 4).join(' '), on: 'its face' }, `${dream} ${toldWords}`);
     const device: Device = {
       id: same?.id ?? '',
       ...(same ? { known: true as const } : {}),
@@ -296,7 +379,7 @@ export function parseDevices(content: string, b: Breakdown, text = ''): { readin
       where,
       by,
       ...(bubble ? { bubble } : {}),
-      ...(lettering ? { lettering } : {}),
+      ...(told ? { lettering: told } : {}),
       moments,
     };
     (bubble ? bubbles : things).push(device);
