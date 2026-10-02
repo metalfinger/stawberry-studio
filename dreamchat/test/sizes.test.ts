@@ -156,9 +156,12 @@ describe('the camera placed for them', () => {
     };
     const orange = { ...moment, visual_point: 'the piece of orange on the counter' };
     expect(framedAtSize(key as never, ['p1', 't1'], orange, name)).toEqual(['p1', 't1']);
-    // Naming the grown dreamer too, the frame is everyone's, as before.
+    // Naming the grown dreamer too, the frame is still the small ones', the dreamer at its edge (Shrunk m4).
     const both = { ...moment, visual_point: 'the dreamer frowning down at tiny alina' };
-    expect(framedAtSize(m3, ['p1', 'p2', 'p3'], both, name)).toEqual(['p1', 'p2', 'p3']);
+    expect(framedAtSize(m3, ['p1', 'p2', 'p3'], both, name)).toEqual(['p2', 'p3']);
+    // A point naming no one small, the frame is everyone's, as before.
+    const grown = { ...moment, visual_point: 'the dreamer pointing at the counter' };
+    expect(framedAtSize(m3, ['p1', 'p2', 'p3'], grown, name)).toEqual(['p1', 'p2', 'p3']);
   });
 
   test('close on the ant-sized Alina: the camera a few centimetres off, at her eyes, and her whole height in it', () => {
@@ -180,5 +183,19 @@ describe('the camera placed for them', () => {
       ]);
     expect(say('on')).toEqual(say('eyes_aimed'));
     for (const t of say('on')) expect(t).not.toContain('  ');
+  });
+
+  test("through the dreamer's eyes, a building shrunk to an ant's size is looked at from right up close (Shrunk m6)", () => {
+    const m5 = settle(withSizes(kitchen, reading, 'm5') as never);
+    const v = withEnv(ON, () => dreamerShot(m5, 'p1', 't2', (id) => name({ id }))!);
+    const building = spot(m5, 't2');
+    expect(Math.hypot(v.eye.at.x - building.x, v.eye.at.y - building.y)).toBeLessThan(0.05);
+    expect(v.eye.lean).toBe('close');
+    expect(v.text).toContain('bent right down close to it');
+    // Without the step, from where they stand.
+    const off = withEnv({ ...ON, DREAMCHAT_ONE_BUILDER: 'eyes_aimed' }, () =>
+      dreamerShot(m5, 'p1', 't2', (id) => name({ id }))!,
+    );
+    expect(off.eye.at).toEqual({ x: 2, y: 1.1 });
   });
 });

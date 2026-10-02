@@ -58,6 +58,11 @@ export type Spot = {
    */
   body?: 'human' | 'four-legged' | 'bird' | 'fish' | 'other';
   /**
+   * Drawn at a size the dream's words give it (sizes.ts, `sizes`): its ordinary size, as a creature's (`body`: the ants),
+   * or one the dream sets in this moment (`moment`: a shrunken building, ant-sized Alina).
+   */
+  sized?: 'body' | 'moment';
+  /**
    * How far a fixture's bottom is off the floor, in metres, where the place's words put it up a wall or on
    * the ceiling (camera.ts mountOf: "the high round window", "a clock on the wall"): set by the camera
    * rules. Without it every fixture stood on the floor, and deep water hid a window high in the wall.
@@ -197,7 +202,8 @@ export function bearing(from: Vec, d: Vec, to: Vec): { angle: number; distance: 
 export type Camera = { at: Vec; d: Vec };
 
 /** Which way someone leans, from where they sit or stand, to see past someone close. */
-export type Lean = 'back' | 'forward' | 'left' | 'right';
+/** How the dreamer's eyes are moved from where they are: a little each way, or right down to something small. */
+export type Lean = 'back' | 'forward' | 'left' | 'right' | 'close';
 
 /**
  * A camera with a height: someone's eyes, or the lens, and how it tilts (radians, down negative).

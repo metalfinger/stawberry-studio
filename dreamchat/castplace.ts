@@ -333,14 +333,14 @@ export function withSizes(plan: Blocking, reading: SizesReading, momentId: strin
         if (!at) return s;
         const [w, d, h] = s.size ?? [at.height_m, at.height_m, at.height_m];
         const k = at.height_m / Math.max(h, 1e-6);
-        return { ...s, size: [w * k, d * k, at.height_m] as [number, number, number] };
+        return { ...s, size: [w * k, d * k, at.height_m] as [number, number, number], sized: 'moment' as const };
       }
       const height = at?.height_m ?? body?.height_m;
       if (height === undefined) return s;
       const shape = body?.shape ?? 'human';
       // A crowd's people stand as close as their size has them.
       const spread = s.many && s.spread ? { spread: s.spread.map((x) => x * Math.min(1, height / GROWN)) } : {};
-      return { ...s, height, body: shape, ...spread } as Spot;
+      return { ...s, height, body: shape, sized: at ? ('moment' as const) : ('body' as const), ...spread } as Spot;
     }),
   };
 }

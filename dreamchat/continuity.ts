@@ -1104,9 +1104,10 @@ function bodiesOf(b: Breakdown): Record<string, number> {
  * or a close detail, a deliberate insert with no face in it.
  */
 /**
- * Who and what the camera fits, at their own size (`sizes`): where the moment's one thing to show names only what the
- * dream has made small beside someone far bigger, the small ones, and the big are where they fall; otherwise everyone.
- * The ant-sized Alina by the piece of orange the dreamer points at was a speck under the dreamer's back (Shrunk m3).
+ * Who and what the camera fits, at their own size (`sizes`): where the moment's one thing to show names anything the
+ * dream has made small beside someone far bigger, the small ones, the big at the edge where they fall; otherwise
+ * everyone. The ant-sized Alina by the piece of orange the dreamer points at was a speck under the dreamer's back, and
+ * "the dreamer frowning down at tiny Alina" was the dreamer's back alone (Shrunk m3, m4).
  */
 export function framedAtSize(plan: Blocking, ids: string[], m: Moment, name: (s: Spot) => string): string[] {
   const height = (id: string) => {
@@ -1114,20 +1115,33 @@ export function framedAtSize(plan: Blocking, ids: string[], m: Moment, name: (s:
     if (!s) return 0;
     return s.kind === 'thing' || (!s.kind && !s.pose && !s.many) ? sizeOf(s)[2] : (s.height ?? 1.74);
   };
+  const at = (id: string) => plan.spots.find((x) => x.id === id)!;
   const big = Math.max(0, ...ids.map(height));
-  const small = ids.filter((id) => height(id) > 0 && height(id) < big / 10);
-  // Only where the dream gives someone a size of their own: a key or a cup the moment shows is an insert, as before.
-  if (!small.some((id) => plan.spots.find((x) => x.id === id)?.height)) return ids;
+  // Small beside the biggest, at a size the dream gave it: a key or a cup the moment shows is an insert, as before.
+  const tiny = ids.filter((id) => height(id) > 0 && height(id) < big / 10);
+  const small = tiny.filter((id) => at(id).sized);
+  if (!small.length) return ids;
   const named = mentioned(
     m.visual_point ?? '',
-    ids.map((id) => ({ id, name: name(plan.spots.find((x) => x.id === id)!) })),
+    ids.map((id) => ({ id, name: name(at(id)) })),
+  ).filter((id) => small.includes(id));
+  if (!named.length) return ids;
+  // Something the dream made small in this moment is framed for whatever else the point names (the giant dreamer at its
+  // edge); a creature only at its ordinary size, only where the point names nothing bigger: "the silver fish pupils at
+  // seaweed-covered desks and Mr Hale writing" keeps Mr Hale (8ceb m3).
+  const all = mentioned(
+    m.visual_point ?? '',
+    ids.map((id) => ({ id, name: name(at(id)) })),
   );
-  if (!named.length || !named.every((id) => small.includes(id))) return ids;
-  // The small ones it names, and any other small one right by them: not the ants a metre off along the counter.
-  const at = (id: string) => plan.spots.find((x) => x.id === id)!;
-  return small.filter(
-    (id) => named.includes(id) || named.some((n) => Math.hypot(at(id).x - at(n).x, at(id).y - at(n).y) < 0.3),
-  );
+  if (!named.some((id) => at(id).sized === 'moment') && !all.every((id) => tiny.includes(id))) return ids;
+  // The small ones it names that stand together, the most of them, and any other small one right by them; the grown
+  // dreamer at their edge, a hand or an eye. "The building shrunk to Alina's size beside the ants, tiny Alina going in
+  // at its door", with the ants a metre off along the counter, is the building and Alina (Shrunk m5).
+  const by = (a: string, b: string) => Math.hypot(at(a).x - at(b).x, at(a).y - at(b).y) < 0.3;
+  const most = named
+    .map((n) => named.filter((o) => by(n, o)))
+    .reduce((a, b) => (b.length > a.length ? b : a), [] as string[]);
+  return tiny.filter((id) => most.includes(id) || most.some((n) => by(id, n)));
 }
 
 export function facesNeeded(b: Breakdown, m: Moment): string[] {
@@ -2158,13 +2172,29 @@ function planWith(
         );
       };
       const alsoNear = framed === ids ? also : also.filter(near);
+      // Who else it has, said where the frame has them or outside it: the cat as big as a bus beside the tiny dreamer.
+      const others = framed === ids ? [] : ids.filter((id) => !framed.includes(id));
+      // Framed at size for what the dream made small, the moment has its own camera, never an earlier picture's: as an
+      // edit of the picture before, tiny Alina going in at the building's door was the grown dreamer's back (Shrunk m5).
+      if (base && framed !== ids && base.role === 'base')
+        Object.assign(base, { role: 'composition', relation: 'same_side', carries: CARRIES.same_side });
       // With S5's references, an edit the gate would not send (its picture's camera far from where this
       // moment's own would stand, or the place not as it stands here) is placed and made from its own mock-up
       // like any other cut. Left an edit, the gate took its picture away later and the cut had no camera, no
       // mock-up and nothing that carried the layout (the S5 picture check, 29 Sep: orchard m3 came out
       // mirrored; lighthouse-first m8's tractor became a car).
       if (refs && base?.role === 'base') {
-        const own = outsideShot(where, framed, m.distance, now, lookAt(m, where), alsoNear, undefined, keptHeads);
+        const own = outsideShot(
+          where,
+          framed,
+          m.distance,
+          now,
+          lookAt(m, where),
+          alsoNear,
+          undefined,
+          keptHeads,
+          others,
+        );
         if (own && !drawnFrom(c, base, own.eye, eyeOf(base.id))) {
           Object.assign(base, { role: 'composition', relation: 'same_side', carries: CARRIES.same_side });
           madeOwn.add(`${c.id}/${base.id}`);
@@ -2174,11 +2204,21 @@ function planWith(
       const rules = opts.camera && !edits ? shotRules(c, m, where) : undefined;
       const v = edits
         ? null
-        : outsideShot(where, framed, m.distance, now, lookAt(m, where), alsoNear, rules, keptHeads);
+        : outsideShot(where, framed, m.distance, now, lookAt(m, where), alsoNear, rules, keptHeads, others);
       // With S5's references the gate compares this camera with the picture's whatever the camera rules, and
       // the cut keeps its own shot for when the picture is not sent after all.
       if ((opts.camera || refs) && edits) {
-        const own = outsideShot(where, framed, m.distance, now, lookAt(m, where), alsoNear, undefined, keptHeads);
+        const own = outsideShot(
+          where,
+          framed,
+          m.distance,
+          now,
+          lookAt(m, where),
+          alsoNear,
+          undefined,
+          keptHeads,
+          others,
+        );
         if (own) c.wouldBe = own.eye;
         // Placed as any cut is, but never moved off the camera of the picture it edits: withheld, that picture is
         // not drawn from, and the same view is still this moment's (the camera rules' "move the camera" is for a
@@ -2197,6 +2237,7 @@ function planWith(
               alsoNear,
               placed && kept ? { ...placed, avoid: kept.map((e) => e.eye) } : undefined,
               keptHeads,
+              others,
             )
           : null;
         if (alone)
