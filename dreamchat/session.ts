@@ -1186,6 +1186,8 @@ export function previsKeyedFor(
   if (!eye || !plan) return undefined;
   const dreamer = b.people.find((p) => p.is_dreamer)?.id;
   const names = Object.fromEntries(plan.spots.map((x) => [x.id, called(x.id)]));
+  // With `tiny_marker`, the things the moment is about marked where they are, too small for the frame's pixels.
+  const marked = builds('tiny_marker') ? (frame.frame?.things ?? []) : [];
   return previsKeyed(
     plan,
     eye,
@@ -1193,7 +1195,7 @@ export function previsKeyedFor(
     (id) => names[id] ?? id,
     undefined,
     undefined,
-    opts,
+    { ...opts, ...(marked.length ? { marked } : {}) },
   );
 }
 

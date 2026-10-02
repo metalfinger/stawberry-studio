@@ -289,6 +289,13 @@ export const BUILDER_STEPS: readonly string[] = [
   // Not a ledger row: from the merged flow's Neighbours (2 Oct). A thing the cast reading names as a fixture its place's
   //    floor plan has is that fixture: "the dead ceiling light" was a second one, a cube on the floor under it.
   'cast_fixture',
+  // Not a ledger row: from the merged flow's Grandmother (2 Oct). The prompt written for the local machine says a thing
+  //    as it is now where its size or the whole of it has changed: the bed sheet folded down to a stamp was written "a
+  //    plain white bed sheet, full size" at every fold.
+  'written_now',
+  // Not a ledger row: from the same Grandmother. A thing the moment is about too small for the frame's pixels is marked
+  //    where it is on the keyed mock-up and its id map: the stamp between their fingers had 20 pixels at m8.
+  'tiny_marker',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;

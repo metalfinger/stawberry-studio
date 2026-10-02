@@ -55,9 +55,58 @@ export function poseIn(view: string | null, name: string): string {
 /** A look's first clause: what it is, without the rest the image shows. */
 const firstOf = (look: string) => look.split(';')[0].trim();
 
-/** Said as what it becomes: with its look where the look says more than a colour ("red" says less than its name). */
-const becomes = (e: SheetElement) =>
-  firstOf(e.look).split(/\s+/).length >= 3 ? `${e.name}, ${firstOf(e.look)}` : e.name;
+/**
+ * How a thing is now, where a change of its size or of the whole of it is in force (the cut sheet's `now`, with
+ * `written_now`): "now the size of a stamp". Its first look would say it "full size": the bed sheet folded down to a
+ * stamp was written a plain white bed sheet, full size, at every fold (the merged flow's Grandmother, m7 to m9, 2 Oct).
+ */
+const nowOf = (e: SheetElement) => {
+  const says = e.now?.says.replace(/^(?:is|are)\s+/i, '').replace(/\.$/, '');
+  return says ? (/\bnow\b/i.test(says) ? says : `now ${says}`) : undefined;
+};
+
+/** A look's clause that is only how big it is, said where a change of its size is in force: "the size of a door". */
+const SIZE_SAID =
+  /^(?:at |in )?(?:its own|actual) size[d]?$|^(?:about |roughly |nearly )?(?:the size of|as (?:big|large|small|tall|long|wide) as)\b|^\d+(?:\.\d+)?\s*(?:mm|cm|m|metres?|meters?|inch(?:es)?|feet|foot|ft)\b/i;
+/** A word of how big it is in a look ("huge", "large", "full size", "king-size", "normal-sized"), and its article. */
+const SIZE_WORD = new RegExp(
+  String.raw`\b(an?\s+)?(?:huge|giant|gigantic|enormous|massive|vast|immense|tiny|miniature|minuscule|oversized|big|large|small|little|(?:full|life|king|queen|normal|regular|ordinary|standard|usual|real|natural|human|average)[- ]?size[d]?)\b(?:\s+and\b|\s*,)?\s*(?=(\w)?)`,
+  'gi',
+);
+/**
+ * A look without its size: what it is and how it looks, but how big is what it is now. "An enormous white bed sheet"
+ * is a white bed sheet; "a huge, heavy wooden chest" a heavy wooden chest.
+ */
+const unsized = (look: string) => {
+  let out = look
+    .split(/,\s+/)
+    .filter((x) => !SIZE_SAID.test(x.trim()))
+    .join(', ');
+  // Again while it changes: "a huge enormous box" is a box.
+  for (let was = ''; was !== out;) {
+    was = out;
+    out = out.replace(SIZE_WORD, (_, art: string | undefined, next: string | undefined) =>
+      art ? `${/^[aeiou]/i.test(next ?? '') ? 'an' : 'a'} ` : '',
+    );
+  }
+  return out
+    .split(/,\s+/)
+    .map((x) => x.trim())
+    .filter((x) => x && !/^(?:an?|the)$/i.test(x))
+    .join(', ');
+};
+
+/**
+ * Said as what it becomes: with its look where the look says more than a colour ("red" says less than its name). Where
+ * its size or shape changed, its look without its size and how it is now; where the whole of it changed, only what it
+ * is now.
+ */
+const becomes = (e: SheetElement) => {
+  const now = nowOf(e);
+  const look = now && !e.now?.whole ? unsized(firstOf(e.look)) : now ? '' : firstOf(e.look);
+  const said = look.split(/\s+/).length >= 3 ? `${e.name}, ${look}` : e.name;
+  return now ? `${said}, ${now}` : said;
+};
 
 /** The place's light, from its own look: the clause that names a light, a time of day or the dark. */
 function lightOf(place: SheetElement | undefined): string {
@@ -87,6 +136,8 @@ export type MockUpKey = {
   labelled?: boolean;
   /** Drawn as a marker where the plan has no shape for it: where it goes and how big, not what it looks like. */
   placeholder?: boolean;
+  /** Too small for the frame's pixels, a dot where it is (`tiny_marker`): where it is, never how big. */
+  marker?: boolean;
 }[];
 
 /**
@@ -168,6 +219,8 @@ export function qwenEdit(
     return c ? `The ${c} ${w}` : key ? `The ${what} of ${e.name}` : `The grey ${what} labelled ${e.name}`;
   };
   const becomeOf = (e: SheetElement) => (colourOf(e.id) && (e.group || e.said === 'people') ? 'become' : 'becomes');
+  // A thing too small for the frame's pixels is a dot where it is (`tiny_marker`): never its size.
+  const dot = (e: SheetElement) => !!key?.find((x) => x.id === e.id)?.marker;
   const poseWord = (e: SheetElement) =>
     colourOf(e.id) && (e.group || e.said === 'people') ? 'their poses' : "the figure's pose";
   const base = sent[0]?.ref;
@@ -177,7 +230,7 @@ export function qwenEdit(
   if (mockUp)
     out.push(
       key
-        ? `Turn the colour-coded mock-up ${tag(1)} into a finished picture, ${medium}: ${tag(1)} is the canvas, so keep its camera, its framing, and the place, size, pose and facing of every figure and shape exactly.`
+        ? `Turn the colour-coded mock-up ${tag(1)} into a finished picture, ${medium}: ${tag(1)} is the canvas, so keep its camera, its framing, and the place, size, pose and facing of every figure and shape exactly${key.some((k) => k.marker) ? ', but a dot only marks where something small is' : ''}.`
         : `Turn the grey mock-up ${tag(1)} into a finished picture, ${medium}: ${tag(1)} is the canvas, so keep its camera, its framing, and the place, size, pose and facing of every grey figure and shape exactly.`,
     );
   else if (base)
@@ -228,10 +281,13 @@ export function qwenEdit(
   for (const e of things) {
     const k = at((r) => r.role === 'prop' && r.subjects.includes(e.id));
     const shape = mockUp ? said1(e, 'shape') : sentence(e.name).replace(/\.$/, '');
+    const c = colourOf(e.id);
     out.push(
-      k
-        ? `${shape} becomes the ${e.name.replace(/^the\s+/i, '')} from ${tag(k)}${mockUp ? ', at its size in the canvas' : ''}.`
-        : `${shape} becomes ${becomes(e)}.`,
+      mockUp && c && dot(e)
+        ? `The ${c} dot marks where ${k ? `the ${e.name.replace(/^the\s+/i, '')} from ${tag(k)}` : becomes(e)} is: draw it there at its own size, small in the picture${k && nowOf(e) ? `, ${nowOf(e)}` : ''}.`
+        : k
+          ? `${shape} becomes the ${e.name.replace(/^the\s+/i, '')} from ${tag(k)}${nowOf(e) ? `, ${nowOf(e)}` : ''}${mockUp ? ', at its size in the canvas' : ''}.`
+          : `${shape} becomes ${becomes(e)}.`,
     );
   }
   // 6. Counts, in a sentence of their own: Qwen takes "Exactly" literally, so only who and what is one of a kind is

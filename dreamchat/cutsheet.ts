@@ -100,6 +100,13 @@ import {
 import { takenOf, type TypedMoment, type TypedReading } from './typed';
 import type { CastReading } from './cast-types';
 
+/**
+ * A change of a thing's size or shape, by its part or its words: "size", "its size", "scale", "shape", "form". The
+ * block of ice melted into a horse's head is still ice (not a change of the whole of it), but no longer a block
+ * (927a m5).
+ */
+const RESIZED = /^\s*(?:its |their |the )?(?:size|scale|shape|form)\s*$/i;
+
 /** Whether the cut sheet runs: off (the default), in shadow beside framePrompt, or on, writing the prompts. */
 export function cutSheetMode(): 'off' | 'shadow' | 'on' {
   const v = (process.env.DREAMCHAT_CUT_SHEET ?? '').trim().toLowerCase();
@@ -137,6 +144,11 @@ export type SheetElement = {
   changes: { what: string; now: string; part?: string }[];
   /** Colours the dream itself gives it: kept in any way of drawing. */
   colours: string[];
+  /**
+   * How it is now where a change of its size, its shape or the whole of it is in force (`written_now`): this moment's
+   * own, else the one carried from the latest moment; `whole` where it has become something else altogether.
+   */
+  now?: { says: string; whole: boolean };
 };
 
 /** An earlier picture the plan draws this cut from, drawn and approved. */
@@ -510,6 +522,30 @@ export function cutSheet(x: CutSheetInput): CutSheet {
   const oneName = builds('names') ? (x.dream?.record ?? null) : null;
   const called = (id: string) => oneName?.elements[id]?.called ?? nameOf(sheets, id);
   const changed = [...(plan?.own ?? []), ...(plan?.states ?? [])];
+  // How each one is now where its size, its shape or the whole of it changed (`written_now`): the latest change of the
+  // whole of it, and the latest of its size or shape since; this moment's own after every one carried, those carried in
+  // the story's order. The bed sheet folded to a handkerchief at m7 and to a stamp at m8 is a stamp at m8, never its
+  // first look's "full size" (the merged flow's Grandmother); a sheet turned into a dove and then grown to the size of a
+  // house is a dove the size of a house.
+  const since = new Map((x.dream?.breakdown ? moments(x.dream.breakdown) : []).map((m, i) => [m.id, i]));
+  const nowOf = (id: string): SheetElement['now'] => {
+    if (!builds('written_now')) return undefined;
+    const here = since.get(frame.id) ?? Infinity;
+    const all = [
+      ...(plan?.states ?? []).map((st) => ({ st, at: since.get(st.since) ?? -1 })),
+      ...(plan?.own ?? []).map((st) => ({ st, at: here })),
+    ]
+      .map((x, i) => ({ ...x, i }))
+      .filter((x) => x.st.who === id && x.st.now.trim())
+      .sort((a, b) => a.at - b.at || a.i - b.i);
+    const whole = all.filter((x) => isWhole(x.st)).at(-1);
+    const sized = all
+      .filter((x) => !isWhole(x.st) && (RESIZED.test(x.st.part ?? '') || RESIZED.test(x.st.what)))
+      .filter((x) => !whole || x.at > whole.at || (x.at === whole.at && x.i > whole.i))
+      .at(-1);
+    if (!whole && !sized) return undefined;
+    return { says: [whole, sized].flatMap((x) => (x ? [x.st.now.trim()] : [])).join(', '), whole: !!whole };
+  };
   const usable = (x.inputs ?? []).filter((i) => approved(i.item) && i.item.mediaId);
   const dreamer = sheets.find((s) => s.isDreamer);
 
@@ -607,6 +643,7 @@ export function cutSheet(x: CutSheetInput): CutSheet {
         .filter((st) => st.who === s.id)
         .map((st) => ({ what: st.what, now: st.now, ...(st.part !== undefined ? { part: st.part } : {}) })),
       colours: toldColours(s),
+      ...(nowOf(s.id) ? { now: nowOf(s.id) } : {}),
     };
   });
 

@@ -53,7 +53,7 @@ const sha = (x: string | Uint8Array) => createHash('sha256').update(x).digest('h
 const previsDir = join(out, 'previs');
 mkdirSync(previsDir, { recursive: true });
 const indexFile = join(previsDir, 'index.json');
-type Key = { id: string; name: string; colour: string; kind: string };
+type Key = { id: string; name: string; colour: string; kind: string; marker?: boolean };
 type Ids = IdPacket[];
 type Made = {
   clay: string | null;
@@ -79,7 +79,8 @@ const renderer = sha(
     .join('\n'),
 );
 const counts = { rendered: 0, reused: 0 };
-const keyOf = (key: Key[]) => key.map((k) => ({ id: k.id, name: k.name, colour: k.colour, kind: k.kind }));
+const keyOf = (key: Key[]) =>
+  key.map((k) => ({ id: k.id, name: k.name, colour: k.colour, kind: k.kind, ...(k.marker ? { marker: true } : {}) }));
 
 /**
  * A cut's mock-up files, grey and colour-keyed with its id map, and its camera's empty set: rendered once for what it
@@ -109,6 +110,8 @@ function previsOf(r: Rebuilt, session: Session): (cut: string) => Omit<PrevisPac
         plan,
         eye: through.eye,
         eyes: through.eyes,
+        // What the moment has in view: marked where it is, too small to see (`tiny_marker`).
+        ...(builds('tiny_marker') ? { things: p.item.frame?.things ?? [] } : {}),
         dreamer: r.b.people.find((x) => x.is_dreamer)?.id ?? null,
         names: (plan?.spots ?? []).map((x) => [x.id, called(x.id)]),
       }),

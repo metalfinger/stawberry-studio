@@ -21,7 +21,7 @@ import type { NowOf } from './record';
 import { type Item, sheetPrompt, subjectWords } from './sheets';
 
 /** The packet's version: a harness reading one checks it. */
-export const PACKET_VERSION = 6;
+export const PACKET_VERSION = 7;
 
 /** A verdict the owner gave a drawing of this picture: in the story's verdicts, a checkpoint, or a local run. */
 export type VerdictPacket = {
@@ -76,7 +76,14 @@ export type PrevisPacket = {
   names: Record<string, string>;
 };
 /** Who a colour on a colour-keyed mock-up is. */
-export type KeyPacket = { id: string; name: string; colour: string; kind: string };
+export type KeyPacket = {
+  id: string;
+  name: string;
+  colour: string;
+  kind: string;
+  /** Too small for the frame's pixels: a dot of its colour where it is, never its size (`tiny_marker`). */
+  marker?: boolean;
+};
 /** One region of an id map: every pixel of that exact colour is it. */
 export type IdPacket = {
   id: string;
@@ -87,6 +94,8 @@ export type IdPacket = {
   fixture: boolean;
   held: boolean;
   ridden: boolean;
+  /** Drawn bigger than it is, a mark where it is: never its size (`tiny_marker`). */
+  marker?: boolean;
 };
 /** A camera's empty set, grey and colour-keyed, with its id map and where the cut's own frame is in it (0 to 1). */
 export type SetPacket = {
@@ -686,30 +695,34 @@ const prompts = {
     "A picture's prompt by image model: nano-banana-pro is Dream Chat's own, whole, by paragraph; qwen-image the same fitted to the local machine's limits (4 images, 4000 characters), its default; qwen-image-written written for that machine from the cut's sheet. On the owner's verdicts (four dreams, 1 Oct) qwen-image was right 17 times to qwen-image-written's 13, which drew people twice: take qwen-image. qwen-image-written is written for the grey mock-up (camera.previs.clay); sent with the colour-keyed one, it is to be written again with that mock-up's key.",
 };
 const previsFile = obj({ file: str, sha256: str });
-const keyEntry = obj({ id: str, name: str, colour: str, kind: str });
+const keyEntry = obj({ id: str, name: str, colour: str, kind: str, marker: bool }, ['marker']);
 const PLACES =
   "Each floor plan (`<scene>/<place>`: a scene's own, or a place's within it) and every camera its cuts are seen through: each eye once, `through` the cut whose own camera it is, with the cuts seen through it (an edit's through the picture it edits, only on the same plan) and each one's empty set (`sets`, its camera.previs.set id map's sha256, null with none). One camera's cuts can have different sets: a device on the wall in one moment, a drawer left open, a thing put away; draw each distinct set. For drawing a place empty from each direction its cuts use, and their reverses, before any frame: evals/set-render.ts renders a cut's empty set from any eye out of the packet alone, on its camera.floorPlan with its camera.previs.names, in previs.ts's own convention (metres on the plan, x from the left wall, y from the front, `d` the way the camera looks on the plan, `height` of the lens, `pitch` in radians, down negative, `lens` in millimetres on a 36 mm frame; unset, a 76-degree view across a 16:9 frame, about 23 mm).";
 const THROUGH =
   "The cut whose camera the mock-up is seen through where it is not this cut's own: an edit keeps the camera of the picture it edits, so its mock-up is that camera's with this cut's people where they are now. Null for a cut's own camera.";
 const SET =
-  "The camera's empty set: the place as this camera frames it with every person, crowd and held thing left out (a sitting crowd's seats kept, where the frame has them), rendered 8% wider and taller than the frame (4% each side) at the frame's own scale, grey (clay), colour-keyed (keyed) and as an id map. `framePx` is where the cut's own frame is in it in the set's whole pixels, [x0, y0, x1, y1] with x1 and y1 just past it and y down from the top; `frame` is the same from 0 to 1 to four places (crop by framePx). Cropped to it, the set's id map is the frame's wherever no one stands and nothing is held. Draw the place once per camera from it, then put the people onto it; a thing someone rides (ids' `ridden`) moves with them.";
+  "The camera's empty set: the place as this camera frames it with every person, crowd and held thing left out (a sitting crowd's seats kept, where the frame has them), rendered 8% wider and taller than the frame (4% each side) at the frame's own scale, grey (clay), colour-keyed (keyed) and as an id map. `framePx` is where the cut's own frame is in it in the set's whole pixels, [x0, y0, x1, y1] with x1 and y1 just past it and y down from the top; `frame` is the same from 0 to 1 to four places (crop by framePx). Cropped to it, the set's id map is the frame's wherever no one stands, nothing is held and nothing is a dot (ids' `marker`). Draw the place once per camera from it, then put the people onto it; a thing someone rides (ids' `ridden`) moves with them.";
 /**
  * One region of an id map: every pixel of exactly `rgb` is it, black is nothing; `kind` person, crowd, thing, room (a
  * wall, the floor, the ground), seats (under a crowd or someone sitting) or water.
  */
 const idEntry = {
-  ...obj({
-    id: str,
-    name: str,
-    kind: oneOf('person', 'crowd', 'thing', 'room', 'seats', 'water'),
-    rgb: { type: 'array', items: count, minItems: 3, maxItems: 3 },
-    pixels: count,
-    fixture: bool,
-    held: bool,
-    ridden: bool,
-  }),
+  ...obj(
+    {
+      id: str,
+      name: str,
+      kind: oneOf('person', 'crowd', 'thing', 'room', 'seats', 'water'),
+      rgb: { type: 'array', items: count, minItems: 3, maxItems: 3 },
+      pixels: count,
+      fixture: bool,
+      held: bool,
+      ridden: bool,
+      marker: bool,
+    },
+    ['marker'],
+  ),
   description:
-    "One region of an id map (a PNG beside the packet): every pixel of exactly `rgb` is the spot, surface or crowd `id`, black is nothing; `pixels` is how many. A spot is the same colour in every frame and set of a dream. `fixture`: part of the place; `held`: in someone's hands; `ridden`: someone rides on or in it. A creature counts as a person. The colour-keyed mock-up's own colours can give two brown things one brown; the id map never does.",
+    "One region of an id map (a PNG beside the packet): every pixel of exactly `rgb` is the spot, surface or crowd `id`, black is nothing; `pixels` is how many. A spot is the same colour in every frame and set of a dream. `fixture`: part of the place; `held`: in someone's hands; `ridden`: someone rides on or in it; `marker`: a thing the moment has in view too small for the frame's pixels, drawn as a dot where it is, never its size (its key entry says so too). A creature counts as a person. The colour-keyed mock-up's own colours can give two brown things one brown; the id map never does.",
 };
 const setSchema = obj({
   clay: previsFile,

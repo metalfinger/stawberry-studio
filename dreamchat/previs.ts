@@ -1247,6 +1247,10 @@ export type Render = {
   seen: Map<string, Seen>;
   /** Where a point on the plan, at a height, lands in the picture; null behind the camera. */
   project: (p: V3) => { x: number; y: number } | null;
+  /** One over how far ahead of the camera what each pixel shows is; 0 where it shows nothing. */
+  depth: Float32Array;
+  /** How far ahead of the camera a point on the plan, at a height, is. */
+  ahead: (p: V3) => number;
 };
 
 const BACKGROUND = 0.9;
@@ -1421,7 +1425,8 @@ function render(
     const z = dot(v, F);
     return z < near ? null : { x: width / 2 + (focal * dot(v, R)) / z, y: height / 2 - (focal * dot(v, U)) / z };
   };
-  return { width, height, frame, lum: edged, solid: solidAt, solids, seen, project };
+  const ahead = (q: V3) => dot(v3(q.x - C.x, q.y - C.y, q.z - C.z), F);
+  return { width, height, frame, lum: edged, solid: solidAt, solids, seen, project, depth, ahead };
 }
 
 // A 5x7 pixel font for the labels: capitals, digits and a few marks.
@@ -1704,6 +1709,11 @@ export type IdEntry = {
   held: boolean;
   /** Someone rides on it or in it: it moves with them. */
   ridden: boolean;
+  /**
+   * Drawn bigger than it is, a mark where it is (`tiny_marker`): a thing the moment is about too small for the frame's
+   * pixels. Where it is, never its size.
+   */
+  marker?: true;
 };
 
 /**
@@ -1737,7 +1747,7 @@ function idColour(id: string, taken: Set<number>): RGB {
  * which colour is which spot, surface or crowd. A harness masks any fixture or prop by its colour exactly, where a
  * colour-keyed mock-up gives two brown things one brown.
  */
-function idMap(r: Render, plan: Blocking): { png: Uint8Array; ids: IdEntry[] } {
+function idMap(r: Render, plan: Blocking, markers = new Set<string>()): { png: Uint8Array; ids: IdEntry[] } {
   const taken = new Set<number>([0]);
   const byId = new Map<string, RGB>();
   for (const id of [...new Set(r.solids.map((x) => x.id))].sort()) byId.set(id, idColour(id, taken));
@@ -1775,11 +1785,121 @@ function idMap(r: Render, plan: Blocking): { png: Uint8Array; ids: IdEntry[] } {
             fixture: !!spotOf(sol.id)?.fixture,
             held: !!spotOf(sol.id)?.heldBy,
             ridden: ridden.has(sol.id),
+            ...(markers.has(sol.id) ? { marker: true as const } : {}),
           },
         ]
       : [],
   );
   return { png: png(r.width, r.height, rgb), ids };
+}
+
+/** A dot's radius in pixels: about a three-hundredth of the frame's long side, never under 3 (5 at 1376 by 768). */
+const dotRadius = (r: Render) => Math.max(3, Math.round(Math.max(r.frame[0], r.frame[1]) / 300));
+
+/** How far in front of a held thing its holder is still the hand that holds it, in metres; further is their body. */
+const HAND = 0.15;
+/** Anyone or anything with fewer pixels than this many dots' worth is too small to draw a dot over. */
+const SMALL = 3;
+
+/**
+ * A thing the moment has in view too small for the frame's pixels marked where it is (`tiny_marker`): a dot of its own
+ * on the render a keyed mock-up and an id map are made from, never the clay, whose sizes stay true. Too small is fewer
+ * pixels than its dot would have. Not out of the frame, nor where anything is in front of it but the hand that holds it
+ * or the vehicle its holder rides (a shut drawer's front, a wall, someone it is behind, its holder's own body, a
+ * suitcase it is in); the dot is never drawn over what is in front of it, over anyone or anything small in the frame,
+ * nor over another's dot. The stamp pinched between their fingers had 20 pixels at m8, and a harness had no region to
+ * find it by (the merged flow's Grandmother, 2 Oct).
+ */
+function markTiny(r: Render, plan: Blocking, ids: string[]): Set<string> {
+  const marked = new Set<string>();
+  const radius = dotRadius(r);
+  let area = 0;
+  for (let y = -radius; y <= radius; y++)
+    for (let x = -radius; x <= radius; x++) if (Math.hypot(x, y) <= radius) area++;
+  const dotted = new Uint8Array(r.width * r.height);
+  // What is in front of what is read from the render as it was drawn, before any dot.
+  const drawn = Int32Array.from(r.solid);
+  // No dot over anyone or anything small in the frame, the moment's or not (a ring held with the stamp): what is big
+  // enough to see loses a dot's pixels at most.
+  const small = new Set(
+    r.solids.flatMap((s, i) =>
+      plan.spots.some((x) => x.id === s.id) && (r.seen.get(s.id)?.visible ?? 0) < SMALL * area ? [i] : [],
+    ),
+  );
+  // The frame in the middle of the render: a set's overscan round it is no place for a dot.
+  const [fx, fy] = [(r.width - r.frame[0]) / 2, (r.height - r.frame[1]) / 2];
+  const inFrame = (x: number, y: number) => x >= fx && y >= fy && x < fx + r.frame[0] && y < fy + r.frame[1];
+  for (const id of ids) {
+    const k = r.solids.findIndex((x) => x.id === id);
+    const sp = plan.spots.find((x) => x.id === id);
+    if (k < 0 || !sp || isPerson(sp) || marked.has(id) || (r.seen.get(id)?.visible ?? 0) >= area) continue;
+    const ps = r.solids[k].faces.flatMap((f) => f.p);
+    if (!ps.length) continue;
+    const span = (f: (q: V3) => number) => Math.max(...ps.map(f)) - Math.min(...ps.map(f));
+    const mid = v3(
+      ps.reduce((a, q) => a + q.x, 0) / ps.length,
+      ps.reduce((a, q) => a + q.y, 0) / ps.length,
+      ps.reduce((a, q) => a + q.z, 0) / ps.length,
+    );
+    const at = r.project(mid);
+    if (!at || !inFrame(at.x, at.y)) continue;
+    // In front of it by more than half its own size is in front of it: anything but the hand that holds it (its
+    // holder within a hand's depth of it, never their body) and the vehicle its holder rides, whose solid stands in for
+    // a cab with windows (the paper boat in the dreamer's hands in the car, 0926 aeea). Another thing in the same hand
+    // is drawn round it: it is in it (the letters in the suitcase).
+    const size = Math.max(...[(q: V3) => q.x, (q: V3) => q.y, (q: V3) => q.z].map(span));
+    const ahead = r.ahead(mid);
+    const far = ahead - Math.max(0.03, size / 2);
+    const holder = sp.heldBy ? plan.spots.find((x) => x.id === sp.heldBy) : undefined;
+    const on = holder ? onOf(holder, plan)?.t : undefined;
+    const ride = on && shapeOf(on, plan) === 'vehicle' ? on.id : undefined;
+    const before = (j: number) => {
+      const o = drawn[j];
+      if (o < 0 || o === k || r.depth[j] <= 0 || 1 / r.depth[j] >= far) return false;
+      const by = r.solids[o].id;
+      return by !== ride && !(by === holder?.id && 1 / r.depth[j] >= ahead - HAND);
+    };
+    if (before(Math.floor(at.y) * r.width + Math.floor(at.x))) continue;
+    let [n, added, x0, x1, y0, y1, sx, sy] = [0, 0, Infinity, -Infinity, Infinity, -Infinity, 0, 0];
+    for (let y = Math.floor(at.y - radius); y <= at.y + radius; y++)
+      for (let x = Math.floor(at.x - radius); x <= at.x + radius; x++) {
+        const j = y * r.width + x;
+        if (!inFrame(x, y) || Math.hypot(x + 0.5 - at.x, y + 0.5 - at.y) > radius || dotted[j] || before(j)) continue;
+        if (drawn[j] !== k && small.has(drawn[j])) continue;
+        const was = r.solid[j];
+        if (was !== k) {
+          const under = was >= 0 ? r.seen.get(r.solids[was].id) : undefined;
+          if (under) under.visible = Math.max(0, under.visible - 1);
+          r.solid[j] = k;
+          added++;
+        }
+        // Flat in its own colour: the clay's light is the thing's own, with no outline across it.
+        r.lum[j] = r.solids[k].tone;
+        dotted[j] = 1;
+        n++;
+        [x0, x1, y0, y1, sx, sy] = [Math.min(x0, x), Math.max(x1, x), Math.min(y0, y), Math.max(y1, y), sx + x, sy + y];
+      }
+    if (!n) continue;
+    const seen = r.seen.get(id);
+    if (seen) seen.visible += added;
+    else
+      r.seen.set(id, {
+        id,
+        label: r.solids[k].label,
+        visible: added,
+        drawn: added,
+        share: added / (r.width * r.height),
+        cx: sx / n / r.width,
+        cy: sy / n / r.height,
+        x0: x0 / r.width,
+        x1: (x1 + 1) / r.width,
+        y0: y0 / r.height,
+        y1: (y1 + 1) / r.height,
+        occluded: 0,
+      });
+    marked.add(id);
+  }
+  return marked;
 }
 
 /** One named person, creature or thing on a colour-keyed mock-up, and the colour it is drawn in. */
@@ -1792,6 +1912,8 @@ export type KeyEntry = {
   labelled?: true;
   /** A small thing the plan has no shape for, drawn with a bright outline round it (labels: 'things'). */
   placeholder?: true;
+  /** Too small for the frame's pixels, drawn as a dot where it is (`tiny_marker`): where it is, never its size. */
+  marker?: true;
 };
 
 type RGB = [number, number, number];
@@ -1923,9 +2045,10 @@ export function previsKeyed(
   height = upright() ? 1344 : 768,
   /**
    * `labels`: things written by their short name beside them, a small shapeless one outlined (a test of labels on
-   * things). `shapes`: the mock-up's shapes (solidsOf). `idmap`: its id map too, from the same render.
+   * things). `shapes`: the mock-up's shapes (solidsOf). `idmap`: its id map too, from the same render. `marked`: the
+   * things the moment has in view, each a dot where it is too small to see (`tiny_marker`, markTiny).
    */
-  opts: { labels?: 'things'; shapes?: boolean; idmap?: boolean } = {},
+  opts: { labels?: 'things'; shapes?: boolean; idmap?: boolean; marked?: string[] } = {},
 ): { png: Uint8Array; key: KeyEntry[]; idmap?: { png: Uint8Array; ids: IdEntry[] } } {
   const solids = solidsOf(
     plan,
@@ -1937,8 +2060,10 @@ export function previsKeyed(
     !!opts.shapes,
   );
   const r = render(solids, eye, width, height);
-  const { rgb, key } = keyedOf(r, plan, name, opts.labels);
-  return { png: png(width, height, rgb), key, ...(opts.idmap ? { idmap: idMap(r, plan) } : {}) };
+  // The things the moment is about too small for the frame's pixels, marked where they are (`marked`).
+  const markers = opts.marked?.length ? markTiny(r, plan, opts.marked) : new Set<string>();
+  const { rgb, key } = keyedOf(r, plan, name, opts.labels, markers, new Set(opts.marked ?? []));
+  return { png: png(width, height, rgb), key, ...(opts.idmap ? { idmap: idMap(r, plan, markers) } : {}) };
 }
 
 /** A render colour-keyed (previsKeyed): its pixels, and the key that says which colour is who. */
@@ -1947,12 +2072,16 @@ function keyedOf(
   plan: Blocking,
   name: (id: string) => string,
   labels?: 'things',
+  /** Marked where they are, too small to see: in the key whatever their size. */
+  tiny = new Set<string>(),
+  /** What the moment has in view, in the key wherever it shows at all (`tiny_marker`). */
+  about = new Set<string>(),
 ): { rgb: Uint8Array; key: KeyEntry[] } {
   const { width, height, solids } = r;
   const spotOf = (id: string) => plan.spots.find((x) => x.id === id);
   // Big enough to key by the frame's own size: a set's margin adds no pixels to the bar.
   const min = r.frame[0] * r.frame[1] * 0.002;
-  const shown = (id: string) => (r.seen.get(id)?.visible ?? 0) >= min;
+  const shown = (id: string) => tiny.has(id) || (r.seen.get(id)?.visible ?? 0) >= (about.has(id) ? 1 : min);
   const colours = new Map<number, RGB>();
   const key: KeyEntry[] = [];
   // Things first, in their own colours; then people, in markers no thing in view already has.
@@ -1966,7 +2095,14 @@ function keyedOf(
     }
     if (sp.many) {
       colours.set(k, CROWD[1]);
-      if (shown(sol.id)) key.push({ id: sol.id, name: said(sol.id, sol.label), colour: CROWD[0], kind: 'crowd' });
+      if (shown(sol.id))
+        key.push({
+          id: sol.id,
+          name: said(sol.id, sol.label),
+          colour: CROWD[0],
+          kind: 'crowd',
+          ...(tiny.has(sol.id) ? { marker: true as const } : {}),
+        });
       return;
     }
     if (isPerson(sp)) return;
@@ -1975,7 +2111,13 @@ function keyedOf(
     colours.set(k, rgb);
     if (shown(sol.id)) {
       taken.add(c);
-      key.push({ id: sol.id, name: words, colour: c, kind: 'thing' });
+      key.push({
+        id: sol.id,
+        name: words,
+        colour: c,
+        kind: 'thing',
+        ...(tiny.has(sol.id) ? { marker: true as const } : {}),
+      });
     }
   });
   // People and creatures, the biggest in the frame first, each its own marker.
