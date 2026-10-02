@@ -43,12 +43,12 @@ and put in the cutlery drawer); and through the dreamer's eyes, someone glimpsed
 (`crowd_between`, E2: the Train's man in the wheelchair); and the things a moment's point names held in its picture
 as its people are (`things_in_frame`: the stamp laid in the cutlery drawer); and a said or timed beat shown by
 something seen (`visible_device`, E5: Grandmother's circled Wednesdays, the appointment card, the kitchen clock at
-three), its lettering the dream's own day or time, put on in code. Next, in order: the packet's exports for drawing
-each place once per camera (an empty set, an id map, an edit's mock-up, how each person faces the camera); state that
-agrees with the point, places at rest and things in what holds them; holds shared between hands; E3 crowd image with
-the four-image fit; lettering sized to read; camera masters; E4 depth in the vertical frame; transformations; staging
-and casting (Grandmother's spoken beats among them). The merged flow stops at three dreams (Grandmother, Neighbours,
-Fan) for the owner's walkthrough.
+three), its lettering the dream's own day or time, put on in code; and the packet's exports for drawing each place
+once per camera (P5: each camera's empty set, an id map, an edit's mock-up, how each person faces the camera, and
+`evals/set-render.ts` for any eye). Next, in order: state that agrees with the point, places at rest and things in
+what holds them; holds shared between hands; E3 crowd image with the four-image fit; lettering sized to read; camera
+masters; E4 depth in the vertical frame; transformations; staging and casting (Grandmother's spoken beats among them).
+The merged flow stops at three dreams (Grandmother, Neighbours, Fan) for the owner's walkthrough.
 
 **Earlier landmark (1 Oct, night): a dumped dream keeps its strangeness.** Nothing drawn, nothing paid. The merged
 flow imported three new DreamBank dreams (Barley, Train, Pool) and compared them with chat-made versions of the same
@@ -2382,6 +2382,7 @@ between sessions.
 | `thing_state` | S4, S6 (the record's states), `sizes`, the packet | A change of size sets the plan's size only where its words name a thing of a known size (`sizedAs`: the plan's small things, a stamp, a handkerchief); a size the dream's sizes reading gives (`sized`) keeps it. Putting away is read from the moment's words, not the typed acts (Jev did not take Grandmother's "puts the stamp in her cutlery drawer", 0.42): it retires when the typed reading carries a thing put into something that closes. A thing the plan keeps that no moment names is drawn without its change carried; Grandmother m10 was the one case, gone with the drawer, and the rest is S6's. Packet field `stated`. |
 | `crowd_between` (E2) | S4, the mock-up, E4 | Through the dreamer's eyes only: an outside view of someone seen past a crowd is not yet placed behind it (none in the corpus). Read from the point's words, a word of being seen right before "past", "through", "between", "behind" and the crowd's name right after; it retires when the typed reading carries who is seen past whom. The crowd moved stands as a row, standing; an audience seated in its rows between the dreamer and someone is not drawn so. Packet field `past`. |
 | `things_in_frame` | S4, `subject_in_frame`, `sizes`, `thing_state` | The things a point names are read from its words (`thingsNamed`): never a part of the place ("the room", "the far end of the hall"), one of several alike, and by what a change made them only where its words name a thing. Each lost costs a camera less than any person lost. Left for their owners: a cast thing placed behind the camera at a default size (the cake knife, e127 m2: castplace's sizes), a named thing framed out by a frame placed for what the dream made small (Shrunk's piece of orange, `sizes`), and through the dreamer's eyes only where some way of looking holds it. |
+| The packet's exports (P5, `previs.ts previsSet`, `evals/set-render.ts`) | S4, the mock-up, the packet, the merged flow's sets | Export only: no prompt, picture or mock-up pixel moves. A camera's empty set leaves out every person, crowd and held thing (a sitting crowd's seats kept, laid out from the cut's own camera whichever eye renders it), 8% wider and taller at the frame's scale, `framePx` on whole pixels. Id-map colours by spot id, so a spot is one colour in every frame and set of a dream; `ridden`, `held` and `fixture` say what moves. An edit's mock-up is through the camera of the picture it edits only on the same floor plan. `places` lists each plan's cameras with each cut's set (one camera's cuts can differ: a device on the wall, a drawer open). Faces are `facing`; `turned` stays what someone has turned into. Packet version 6. |
 | `visible_device` (E5, `devices.ts`) | S4, S6, the packet, the import, `things_in_frame`, `story_marks` | One writer reading per dream, cached with the cast's (`--devices`), asked on import. Lettering is the dream's own day or time only, put on in code by the harness from `story.lettering` (the owner, 2 Oct); every other writing stays unreadable marks (`story_marks`), and the story's writing line leaves out what lettering covers. Bubbles: one in a dream at most, only for a moment no thing shows; 27 of the corpus's 58 devices are bubbles, one in a dream each, a rate for the owner to judge. The place's own clock or calendar is the device where it has one; a wall device outdoors stands at eye height beside them. Packet version 5. |
 | `place_built` (`built.ts`) | S6 sketches, the import | A place's sketch alone is told by its build (`Item.built`); its moments, image lines and the record keep the place's name and look. One writer reading per dream, cached with the cast's (`--built`), asked on import; a place whose words say only what it is built of is left as it was. The two words of use left in the corpus are a roof's slopes meeting at its ridge and a bridge over the night market. |
 
@@ -3560,6 +3561,20 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   picture and said, 0 -> 16 of 16; nothing to read on any; every lettering the dream's own. Corpus: 58 devices, 27
   of them bubbles. Against lab ad0cfd5, 3 of 127 frozen and 19 of 447 live pictures move; prompt cases
   the same. `bun test`: 1213 pass, 0 fail off and on, and file by file. No pictures, no money.
+- 2 Oct (evening, nothing drawn): the packet's exports for drawing each place once per camera (P5; ead5eca): for each
+  cut with a camera, its empty set (`camera.previs.set`: every person, crowd and held thing left out, a sitting crowd's
+  seats kept, 8% wider and taller at the frame's own scale, grey, colour-keyed and as an id map, `framePx` where the
+  frame is in it on whole pixels); the colour-keyed mock-up's id map (`keyed.idmap`, `ids`: every solid one exact colour
+  by its spot id, with what it is, a fixture, held or ridden); an edit's mock-up through the camera of the picture it
+  edits (`through`); how each person in view faces the camera (`who.inView[].facing`, the bins its words use); and
+  `places`, each floor plan's cameras with each cut's set, with `evals/set-render.ts` rendering any cut's empty set from
+  any eye out of the packet alone (the reverse angle across the room, a turn where it stands). The merged flow paints
+  each place once per camera direction, empty, and puts the people onto it. `evals/previs-set.ts`, 54 dreams and 379
+  cuts: 242 sets, 4 edits now with a mock-up, 83 places and 236 cameras; every fault 0 (a set holding someone or losing
+  a thing, a crop a pixel off against the frame or the set at the frame's size, a set the packet alone does not give
+  again byte for byte, a stray or moving id colour, a cut missing from its place's cameras, a facing the camera's
+  words contradict, 347 said). Against lab dad50f0, 0 of 127 frozen and 0 of 447 live pictures move; prompt cases the
+  same. `bun test`: 1226 pass, 0 fail off and on, and file by file. No pictures, no money.
 
 ## Owner's direction (29 Sep): reviews and merges move to the cloud session
 
