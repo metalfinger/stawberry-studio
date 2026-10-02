@@ -45,10 +45,12 @@ as its people are (`things_in_frame`: the stamp laid in the cutlery drawer); and
 something seen (`visible_device`, E5: Grandmother's circled Wednesdays, the appointment card, the kitchen clock at
 three), its lettering the dream's own day or time, put on in code; and the packet's exports for drawing each place
 once per camera (P5: each camera's empty set, an id map, an edit's mock-up, how each person faces the camera, and
-`evals/set-render.ts` for any eye). Next, in order: state that agrees with the point, places at rest and things in
-what holds them; holds shared between hands; E3 crowd image with the four-image fit; lettering sized to read; camera
-masters; E4 depth in the vertical frame; transformations; staging and casting (Grandmother's spoken beats among them).
-The merged flow stops at three dreams (Grandmother, Neighbours, Fan) for the owner's walkthrough.
+`evals/set-render.ts` for any eye); and a part's state as the moment says it, places at rest and things in what
+holds them (`point_state`, `contained`, `cast_fixture`: Grandmother's drawer closed at m10 and pulled out at m9, her
+kitchen sketched with it shut, the knives and forks in it). Next, in order: holds shared between hands; E3 crowd
+image with the four-image fit; lettering sized to read; camera masters; E4 depth in the vertical frame;
+transformations; staging and casting (Grandmother's spoken beats among them). The merged flow stops at three dreams
+(Grandmother, Neighbours, Fan) for the owner's walkthrough.
 
 **Earlier landmark (1 Oct, night): a dumped dream keeps its strangeness.** Nothing drawn, nothing paid. The merged
 flow imported three new DreamBank dreams (Barley, Train, Pool) and compared them with chat-made versions of the same
@@ -2383,6 +2385,9 @@ between sessions.
 | `crowd_between` (E2) | S4, the mock-up, E4 | Through the dreamer's eyes only: an outside view of someone seen past a crowd is not yet placed behind it (none in the corpus). Read from the point's words, a word of being seen right before "past", "through", "between", "behind" and the crowd's name right after; it retires when the typed reading carries who is seen past whom. The crowd moved stands as a row, standing; an audience seated in its rows between the dreamer and someone is not drawn so. Packet field `past`. |
 | `things_in_frame` | S4, `subject_in_frame`, `sizes`, `thing_state` | The things a point names are read from its words (`thingsNamed`): never a part of the place ("the room", "the far end of the hall"), one of several alike, and by what a change made them only where its words name a thing. Each lost costs a camera less than any person lost. Left for their owners: a cast thing placed behind the camera at a default size (the cake knife, e127 m2: castplace's sizes), a named thing framed out by a frame placed for what the dream made small (Shrunk's piece of orange, `sizes`), and through the dreamer's eyes only where some way of looking holds it. |
 | The packet's exports (P5, `previs.ts previsSet`, `evals/set-render.ts`) | S4, the mock-up, the packet, the merged flow's sets | Export only: no prompt, picture or mock-up pixel moves. A camera's empty set leaves out every person, crowd and held thing (a sitting crowd's seats kept, laid out from the cut's own camera whichever eye renders it), 8% wider and taller at the frame's scale, `framePx` on whole pixels. Id-map colours by spot id, so a spot is one colour in every frame and set of a dream; `ridden`, `held` and `fixture` say what moves. An edit's mock-up is through the camera of the picture it edits only on the same floor plan. `places` lists each plan's cameras with each cut's set (one camera's cuts can differ: a device on the wall, a drawer open). Faces are `facing`; `turned` stays what someone has turned into. Packet version 6. |
+| `point_state` (`partstate.ts`, `record.ts statedStates`, `packet.ts lintPacket`) | S1 (the story record), S4, S6, the packet, the place sketch | A part's state the moment's own words give is a change there where the state in force says the other; with nothing in force, only a part of the place said open (a thing opened is the readings' and the opening words' to say: said whole, it took the place of how the thing was told). A part matched by its name (`samePart`: the shorter all in the longer, or what it is before what it says of where); of several fixtures alike, the one whose name has every word of it, else none (f085's lift has four gates alike: the one opened is never named). Putting something into a drawer is not read as opening it: that is the implied reading's (Grandmother's Wednesdays import has none at m9). The lint fails writing packets with the step on. |
+| `contained` (`castplace.ts`) | S4, the cast reading, `thing_state`, the mock-up | Only a thing, never a vehicle or a creature, only into what holds things and closes (`partstate.ts CLOSING`), never across a clause; a drawer's contents in it pulled out (`drawerPull`, shared with the mock-up) where the moment opens it or puts something in, else inside it, out of sight. |
+| `cast_fixture` (`cast.ts`, `castplace.ts`) | the cast reading, the import, S6 sketches | Dropped from the cast only where the place's own words name it, per moment and on that moment's own plan, every other cast id kept (`asFixture` carries what a saved dream loses); else kept with its sketch and left off the plan. A dream imported before keeps its cast until it is imported again. |
 | `visible_device` (E5, `devices.ts`) | S4, S6, the packet, the import, `things_in_frame`, `story_marks` | One writer reading per dream, cached with the cast's (`--devices`), asked on import. Lettering is the dream's own day or time only, put on in code by the harness from `story.lettering` (the owner, 2 Oct), and taken in code from what a sentence of the moment says is written on the device itself where the reading proposed none (never on a clock, never a time the dreamer did not tell); every other writing stays unreadable marks (`story_marks`), and the story's writing line leaves out what lettering covers. Bubbles: one in a dream at most, only for a moment no thing shows; 27 of the corpus's 58 devices are bubbles, one in a dream each, a rate for the owner to judge. The place's own clock or calendar is the device where it has one; a wall device outdoors stands at eye height beside them. Packet version 5. |
 | `place_built` (`built.ts`) | S6 sketches, the import | A place's sketch alone is told by its build (`Item.built`); its moments, image lines and the record keep the place's name and look. One writer reading per dream, cached with the cast's (`--built`), asked on import; a place whose words say only what it is built of is left as it was. The two words of use left in the corpus are a roof's slopes meeting at its ridge and a bridge over the night market. |
 
@@ -3585,6 +3590,23 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   a device with no lettering 4 -> 0 (the calendars whose Wednesdays are marked, now "WED"), the rest 0 either way.
   Against lab 377a9cc, 0 of 127 frozen and 0 of 447 live pictures move; prompt cases the same. `bun test`: 1229 pass,
   0 fail off and on, and file by file. No pictures, no money.
+- 2 Oct (night, nothing drawn): a part's state as the moment says it, places at rest, things in what holds them
+  (`point_state`, `contained`, `cast_fixture`; 31d51a0). The merged flow's fresh Grandmother said "the cutlery drawer
+  closed beside her" at m10 while her state, her check and her prompt carried it open from m9; at m9 the drawer was
+  open in her state and drawn shut; her kitchen's sketch came back with the drawer pulled out and full; the knives and
+  forks the stamp went in among were a table-high cube mid-room; and Neighbours' "dead ceiling light" was cast a second
+  time, a cube on the floor under the plan's own. Now a part's state the moment's words give is its state there; a
+  drawer, a lid or a cupboard the state has open is open on the plan and drawn so (pulled out toward the room as far as
+  there is room, a door swung out, a lid raised); a place's sketch says shut what its moments open or put something into
+  ("The cutlery drawer is shut, as before anyone opens it"); a thing put in, among or inside what holds things is in it
+  at a size it holds; a cast thing named as its place's fixture is that fixture. The packet is linted (`lintPacket`):
+  a point against its state, a check or its prompt. `evals/state-agree.ts`, 79 dreams with the merged flow's imports:
+  lint contradictions 6 -> 0; Grandmother's labelled drawer cuts right 4 -> 6 of 7; things put in a drawer or box
+  placed outside it 2 -> 0; parts open in their state drawn shut 19 -> 1; sketches never told shut what their moments
+  open 11 -> 0; cast things beside the plan's own of their name 10 -> 0; 2 states moved, both read and right. The
+  exports' eval (`evals/previs-set.ts`) every fault 0 with the steps on. Against lab 0a158a1, 3 of 127 frozen and
+  4 of 447 live pictures move; prompt cases the same. `bun test`: 1250 pass, 0 fail off and on, and file by file.
+  No pictures, no money.
 
 ## Owner's direction (29 Sep): reviews and merges move to the cloud session
 
