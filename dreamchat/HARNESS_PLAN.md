@@ -3506,6 +3506,11 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   drawn with a change holding and not carried 3 -> 0, nothing taken off a plan without being put away. Against lab
   e2aa006, 0 of 127 frozen and 0 of 447 live pictures move; prompt cases the same. `bun test`: 1185 pass, 0 fail off
   and on, and file by file. No pictures, no money.
+  Follow-up (9ceb79c): a thing at a size the dream's sizes reading gives, a few pixels across, is said small in the
+  picture as well, and "handkerchief-sized" is read as a size; on a fresh import of Grandmother the stamp the sizes
+  reading had sized read "filling the picture from its middle to two thirds of the way down" on the cutlery drawer
+  (m8), and the handkerchief went by the sheet's name alone (m6). Against lab b32c3dc, 0 of 127 frozen and 0 of 447
+  live pictures move; prompt cases the same. `bun test`: 1191 pass, 0 fail off and on, and file by file.
 - 2 Oct (afternoon, nothing drawn): through the dreamer's eyes, someone glimpsed past a crowd is seen past it
   (`crowd_between`, E2; a136efa): a point that says someone is glimpsed, seen or visible past, through, between, beyond or
   behind the people of a crowd, the crowd named right after, puts the crowd on the line from the dreamer to them,
