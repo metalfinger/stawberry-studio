@@ -41,10 +41,14 @@ place's sketch told by how it is built, never by what people do there (`place_bu
 room); and a thing drawn as the story last left it (`thing_state`: Grandmother's bed sheet, folded down to a stamp
 and put in the cutlery drawer); and through the dreamer's eyes, someone glimpsed past a crowd seen past it
 (`crowd_between`, E2: the Train's man in the wheelchair); and the things a moment's point names held in its picture
-as its people are (`things_in_frame`: the stamp laid in the cutlery drawer). Next, in the owner's order: E5 visible
-devices, then E3 crowd image (with Disappear's and Shrunk's crowd moments), E4
-depth in the vertical frame (its test set the 10 moments listed in the overlaps), E5 conversation staging (Grandmother's
-spoken beats). The merged flow stops at three dreams (Grandmother, Neighbours, Fan) for the owner's walkthrough.
+as its people are (`things_in_frame`: the stamp laid in the cutlery drawer); and a said or timed beat shown by
+something seen (`visible_device`, E5: Grandmother's circled Wednesdays, the appointment card, the kitchen clock at
+three), its lettering the dream's own day or time, put on in code. Next, in order: the packet's exports for drawing
+each place once per camera (an empty set, an id map, an edit's mock-up, how each person faces the camera); state that
+agrees with the point, places at rest and things in what holds them; holds shared between hands; E3 crowd image with
+the four-image fit; lettering sized to read; camera masters; E4 depth in the vertical frame; transformations; staging
+and casting (Grandmother's spoken beats among them). The merged flow stops at three dreams (Grandmother, Neighbours,
+Fan) for the owner's walkthrough.
 
 **Earlier landmark (1 Oct, night): a dumped dream keeps its strangeness.** Nothing drawn, nothing paid. The merged
 flow imported three new DreamBank dreams (Barley, Train, Pool) and compared them with chat-made versions of the same
@@ -2378,6 +2382,7 @@ between sessions.
 | `thing_state` | S4, S6 (the record's states), `sizes`, the packet | A change of size sets the plan's size only where its words name a thing of a known size (`sizedAs`: the plan's small things, a stamp, a handkerchief); a size the dream's sizes reading gives (`sized`) keeps it. Putting away is read from the moment's words, not the typed acts (Jev did not take Grandmother's "puts the stamp in her cutlery drawer", 0.42): it retires when the typed reading carries a thing put into something that closes. A thing the plan keeps that no moment names is drawn without its change carried; Grandmother m10 was the one case, gone with the drawer, and the rest is S6's. Packet field `stated`. |
 | `crowd_between` (E2) | S4, the mock-up, E4 | Through the dreamer's eyes only: an outside view of someone seen past a crowd is not yet placed behind it (none in the corpus). Read from the point's words, a word of being seen right before "past", "through", "between", "behind" and the crowd's name right after; it retires when the typed reading carries who is seen past whom. The crowd moved stands as a row, standing; an audience seated in its rows between the dreamer and someone is not drawn so. Packet field `past`. |
 | `things_in_frame` | S4, `subject_in_frame`, `sizes`, `thing_state` | The things a point names are read from its words (`thingsNamed`): never a part of the place ("the room", "the far end of the hall"), one of several alike, and by what a change made them only where its words name a thing. Each lost costs a camera less than any person lost. Left for their owners: a cast thing placed behind the camera at a default size (the cake knife, e127 m2: castplace's sizes), a named thing framed out by a frame placed for what the dream made small (Shrunk's piece of orange, `sizes`), and through the dreamer's eyes only where some way of looking holds it. |
+| `visible_device` (E5, `devices.ts`) | S4, S6, the packet, the import, `things_in_frame`, `story_marks` | One writer reading per dream, cached with the cast's (`--devices`), asked on import. Lettering is the dream's own day or time only, put on in code by the harness from `story.lettering` (the owner, 2 Oct); every other writing stays unreadable marks (`story_marks`), and the story's writing line leaves out what lettering covers. Bubbles: one in a dream at most, only for a moment no thing shows; 27 of the corpus's 58 devices are bubbles, one in a dream each, a rate for the owner to judge. The place's own clock or calendar is the device where it has one; a wall device outdoors stands at eye height beside them. Packet version 5. |
 | `place_built` (`built.ts`) | S6 sketches, the import | A place's sketch alone is told by its build (`Item.built`); its moments, image lines and the record keep the place's name and look. One writer reading per dream, cached with the cast's (`--built`), asked on import; a place whose words say only what it is built of is left as it was. The two words of use left in the corpus are a roof's slopes meeting at its ridge and a bridge over the night market. |
 
 ## Known debt, by the step that clears it
@@ -3540,6 +3545,21 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   picture 207 -> 217 of 246, said outside it 49 -> 37, no person a camera held lost, 15 cuts moved. Against lab
   0f6160d, 0 of 127 frozen and 6 of 447 live pictures move; prompt cases the same. `bun test`: 1196 pass, 0
   fail off and on, and file by file. No pictures, no money.
+- 2 Oct (evening, nothing drawn): a said or timed beat shows by something seen (`visible_device`, E5; 9ddb4c3): one
+  writer reading per dream gives each moment whose beat is said, asked, a time or a schedule one thing seen that carries
+  it, from the dream's own words where they give one, grounded by code: the beat its moment's own words, whoever holds
+  it in the moment, nothing on it to read but the dream's own day or time, lettered in code after drawing (the owner's
+  call, 2 Oct); a thought or speech bubble with a picture in it only for a moment no thing shows, one in a dream at
+  most. Each device is a thing with its own sketch (a lettered face blank), placed on the floor plan, held in the
+  picture and said ("How the picture shows it: the kitchen clock, its hands at three; the grandmother pointing up at
+  it."); the packet carries `story.device` and `story.lettering`. The merged flow's Grandmother on Wednesdays: "only on
+  Wednesdays", "the 2-3pm appointment", "asks if she has eaten" and "our slot has gotten over" were each two people in
+  a kitchen; now a wall calendar with the Wednesdays circled ("WED" lettered), an appointment card held out ("2-3 PM"),
+  a speech bubble with a plate and a question mark (or a plate untouched), and the kitchen clock at three, her pointing
+  at it. `evals/devices.ts`, the four beats in every version of the dream: a device of the kind it wants, in the
+  picture and said, 0 -> 16 of 16; nothing to read on any; every lettering the dream's own. Corpus: 58 devices, 27
+  of them bubbles. Against lab ad0cfd5, 3 of 127 frozen and 19 of 447 live pictures move; prompt cases
+  the same. `bun test`: 1213 pass, 0 fail off and on, and file by file. No pictures, no money.
 
 ## Owner's direction (29 Sep): reviews and merges move to the cloud session
 
