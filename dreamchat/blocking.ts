@@ -274,10 +274,28 @@ export function settle(
     !t.shape &&
     plan.spots.some((p) => p.kind === 'person' && !p.many && p.pose === 'sitting' && onFootprint(p, t, plan));
   const solids = plan.spots.filter((t) => solidOf(t) && !sat(t));
+  // At a size of their own (`sizes`), solid to them is what stands well over a third of them: ant-sized Alina put on the
+  // spot of a building shrunk to her size stood inside it, unseen, "going in at its door" (Shrunk m5).
+  const solidTo = (s: Spot) =>
+    s.height && s.height < 1.74
+      ? plan.spots.filter(
+          (t) =>
+            t.id !== s.id &&
+            t.kind !== 'person' &&
+            !t.many &&
+            !t.heldBy &&
+            (t.shape ?? 'block') === 'block' &&
+            sizeOf(t)[2] > s.height! / 3 &&
+            !sat(t),
+        )
+      : solids;
   const [rw, rd] = roomOf(plan);
   const free = (p: Vec, self: Spot) =>
     !plan.spots.some(
-      (t) => t.id !== self.id && (solidOf(t) || t.shape === 'vehicle') && onFootprint(p, t, plan, 0.1),
+      (t) =>
+        t.id !== self.id &&
+        (solidOf(t) || t.shape === 'vehicle' || solidTo(self).includes(t)) &&
+        onFootprint(p, t, plan, 0.1 * (self.height && self.height < 1.74 ? self.height / 1.74 : 1)),
     ) &&
     (!plan.indoors || (p.x >= 0.2 && p.x <= rw - 0.2 && p.y >= 0.2 && p.y <= rd - 0.2));
   // Someone standing is beside a car, not in it: dropped off at the house, the dreamer was said to
@@ -290,8 +308,9 @@ export function settle(
     // Whoever rides in something faces the way it goes: the dreamer and the aunt sat back to back in
     // her car over the bridge (25 Sep).
     if (riding) return { ...s, faces: riding.faces ?? 'front' };
+    const k = s.height && s.height < 1.74 ? s.height / 1.74 : 1;
     const t =
-      solids.find((b) => onFootprint(s, b, plan, -0.05)) ??
+      solidTo(s).find((b) => onFootprint(s, b, plan, -0.05 * k)) ??
       // Afloat (the camera rules' water), whoever stands in a boat stays in it: there is only water beside it.
       (s.pose === 'standing' && !plan.water ? vehicles.find((v) => onFootprint(s, v, plan, -0.05)) : undefined);
     if (!t) return s;
@@ -299,16 +318,23 @@ export function settle(
     const [w, d] = sizeOf(t);
     const f = facing(t, plan);
     const r = rightOf(f);
-    const m = 0.35;
+    const m = 0.35 * k;
+    const step = 0.25 * k;
     const round: Vec[] = [];
-    for (let u = -w / 2 - m; u <= w / 2 + m + 1e-9; u += 0.25)
+    for (let u = -w / 2 - m; u <= w / 2 + m + 1e-9; u += step)
       round.push({ x: u, y: d / 2 + m }, { x: u, y: -d / 2 - m });
-    for (let v = -d / 2 - m; v <= d / 2 + m + 1e-9; v += 0.25)
+    for (let v = -d / 2 - m; v <= d / 2 + m + 1e-9; v += step)
       round.push({ x: w / 2 + m, y: v }, { x: -w / 2 - m, y: v });
     const out = round
       .map((o) => ({ x: t.x + r.x * o.x + f.x * o.y, y: t.y + r.y * o.x + f.y * o.y }))
       .filter((p) => free(p, s))
-      .sort((a, b) => Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y))[0];
+      .sort((a, b) =>
+        // At a size of their own, every spot round something small is as near: the one toward the middle of the place,
+        // where a camera sees them, not behind it against the wall.
+        k < 1
+          ? Math.hypot(a.x - rw / 2, a.y - rd / 2) - Math.hypot(b.x - rw / 2, b.y - rd / 2)
+          : Math.hypot(a.x - s.x, a.y - s.y) - Math.hypot(b.x - s.x, b.y - s.y),
+      )[0];
     return out ? { ...s, x: out.x, y: out.y } : s;
   });
   // Two people on one spot are side by side, across the way they face: in one car over the bridge,

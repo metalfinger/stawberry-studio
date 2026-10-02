@@ -134,6 +134,17 @@ describe('the plan at the sizes of its moment', () => {
     const s = settle(m3 as never);
     expect(spot(s, 'p2')).toMatchObject({ x: 1.68, y: 0.35 });
     expect(spot(s, 'p3')).toMatchObject({ x: 1.62, y: 0.35 });
+    // Ant-sized Alina put on the spot of a building shrunk to her size stands beside it, toward the room, never inside.
+    const m5 = settle({
+      ...(withSizes(kitchen, reading, 'm5') as object),
+      spots: (withSizes(kitchen, reading, 'm5') as { spots: S[] }).spots.map((x) =>
+        x.id === 'p2' ? { ...x, x: 2.6, y: 0.3, height: 0.005, body: 'human' } : x,
+      ),
+    } as never);
+    const alina = spot(m5, 'p2');
+    expect(Math.hypot(alina.x - 2.6, alina.y - 0.3)).toBeGreaterThan(0.002);
+    expect(Math.hypot(alina.x - 2.6, alina.y - 0.3)).toBeLessThan(0.01);
+    expect(alina.y).toBeGreaterThan(0.3);
     // Grown, the two would stand side by side 60 cm apart, as before.
     const two = { ...(kitchen as object), spots: [spot(kitchen, 'p2'), { ...spot(kitchen, 'p3'), x: 1.7 }] };
     const g = settle(two as never);
