@@ -586,6 +586,8 @@ export const PACKET_SCHEMA: Schema = {
         sized: oneOf('body', 'moment'),
         // Sized by a change of it the story has made by now (`thing_state`).
         stated: bool,
+        // A crowd between the camera and whom the moment sees past it (`crowd_between`).
+        past: str,
         above: num,
         climbing: obj({ of: str, how: oneOf('into', 'out of') }),
         rides: oneOf('front', 'back'),
@@ -608,6 +610,7 @@ export const PACKET_SCHEMA: Schema = {
         'body',
         'sized',
         'stated',
+        'past',
         'above',
         'climbing',
         'rides',

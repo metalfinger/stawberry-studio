@@ -530,7 +530,24 @@ function crowdSpots(s: Spot, plan: Blocking, avoid: Spot[], eye?: Eye): V2[] {
   // A lane from the camera to the nearest of the others, as a crew clears one through a crowd: the
   // sisters "surrounded by hundreds of people" were shot through rows of them, and hidden (night
   // market, 26 Sep).
-  const lane = eye ? laneOf(eye, avoid) : undefined;
+  // A crowd put between the dreamer and whom they see past it (`crowd_between`) leaves one from where the dreamer
+  // stands to them, whichever way their eyes then turn: through the dreamer's eyes no camera is given here.
+  const faced = s.past && builds('crowd_between') ? avoid.find((o) => o.id === s.faces) : undefined;
+  const seenTo = faced ? avoid.find((o) => o.id === s.past) : undefined;
+  const lane =
+    faced && seenTo
+      ? laneOf(
+          {
+            at: { x: faced.x, y: faced.y },
+            d: unit({ x: seenTo.x - faced.x, y: seenTo.y - faced.y }),
+            height: 1.6,
+            pitch: 0,
+          },
+          [seenTo],
+        )
+      : eye
+        ? laneOf(eye, avoid)
+        : undefined;
   const taken = (p: V2) =>
     (!!lane && lane(p)) ||
     avoid.some((o) =>
@@ -2113,9 +2130,13 @@ export function dreamerShot(
   // the mouse-sized dreamer beside the cat as big as a bus was said outside it and their sketch was not sent.
   const anyOf = (x: { s: Spot; seen?: Seen }) =>
     builds('sizes') && (!!x.s.sized || !!x.s.stated) && (x.seen?.visible ?? 0) > 0;
+  // Whom they see past a crowd put between them (`crowd_between`), however little of them the gap shows: across the
+  // hall, the man glimpsed past the people was said outside the picture.
+  const glimpsed = (x: { s: Spot; seen?: Seen }) =>
+    builds('crowd_between') && plan.spots.some((c) => c.past === x.s.id) && (x.seen?.visible ?? 0) > 0;
   const shown = spots
     .map((s) => ({ s, seen: r.seen.get(s.id) }))
-    .filter((x): x is { s: Spot; seen: Seen } => !!x.seen && (x.seen.visible >= min || anyOf(x)))
+    .filter((x): x is { s: Spot; seen: Seen } => !!x.seen && (x.seen.visible >= min || anyOf(x) || glimpsed(x)))
     .sort((a, b) => distance(a.s) - distance(b.s));
   const small = tinyIn(
     r,
@@ -2298,10 +2319,16 @@ function thingWords(
       ? `, with ${riders.join(' and ')} ${shape === 'vehicle' ? (cameraMode() === 'on' && sizeOf(s)[0] < 1 ? 'on it' : 'in it') : shape === 'seat' ? 'sitting on it' : cameraMode() === 'on' && growsAs(called(s.id)) === 'among' ? 'among them' : cameraMode() === 'on' && growsAs(called(s.id)) ? 'in it' : 'on it'}`
       : '') +
     (onTop ? `, on ${called(onTop.id)}` : next ? `, right beside ${called(next.id)}` : '');
+  // Seen past a crowd the plan put between them and the camera (`crowd_between`), where it is in the picture too.
+  const pastBy = builds('crowd_between')
+    ? ctx.spots.find((o) => o.past === s.id && (ctx.inPicture?.has(o.id) ?? false))
+    : undefined;
   const behind =
     seen.hiddenBy && seen.hiddenBy !== s.id && ctx.spots.some((o) => o.id === seen.hiddenBy)
       ? `, partly hidden behind ${called(seen.hiddenBy)}`
-      : '';
+      : pastBy
+        ? `, seen past ${called(pastBy.id)}`
+        : '';
   // How big it is in the frame, read off the render: the image model keeps where each thing is
   // across the picture from the words, and makes up how big it is. The friend beside the
   // dreamer, seen from the waist up in the previs, came back whole and two metres off (24 Sep).
@@ -2320,7 +2347,7 @@ function thingWords(
   // A crowd the dream counts is said by its count: "a couple of people" are the two of them.
   const counted = ['', 'one', 'two', 'three', 'four', 'five', 'six'][s.count ?? 0];
   return s.many
-    ? `, ${counted ? `the ${counted} of them` : 'many of them'}${ctx.anchor ? rows(s, ctx.anchor, plan, called) : ''}, ${turnedTo({ ...s, ...nearestOf(s, seen, eye, plan) }, plan, eye)}${behind}`
+    ? `, ${counted ? `the ${counted} of them` : 'many of them'}${ctx.anchor ? rows(s, ctx.anchor, plan, called, ctx.inPicture) : ''}, ${turnedTo({ ...s, ...nearestOf(s, seen, eye, plan) }, plan, eye)}${behind}`
     : `${how}${size}${behind}`;
 }
 
@@ -3148,7 +3175,11 @@ function upDown(s: Pick<Seen, 'y0' | 'y1'>): [string, string] {
  * Where a crowd is from the dreamer's place, front to back of the room: in the rows behind theirs,
  * in front of them, or around them, and on seats if they sit.
  */
-function rows(s: Spot, me: Spot, plan: Blocking, called: (id: string) => string): string {
+function rows(s: Spot, me: Spot, plan: Blocking, called: (id: string) => string, shown?: Set<string>): string {
+  // Moved between the camera and whom the moment sees past them (`crowd_between`): where they stand is said so, with
+  // them in the picture.
+  if (s.past && builds('crowd_between'))
+    return shown?.has(s.past) ? `, standing between the camera and ${called(s.past)}` : ', standing';
   // A few people the dream counts sit where they are, not in rows: "the two of them, sitting in rows
   // of seats" of a couple on the sofa beside the dreamer (25 Sep).
   if (s.count && s.count <= 12) {

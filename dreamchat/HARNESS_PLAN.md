@@ -39,7 +39,8 @@ for the merged flow's Fan and Shrunk); each figure and thing at the size the dre
 them (`sizes`: the Shrinking Hand's ants and tiny Alina, a mouse-sized dreamer beside a cat as big as a bus); and a
 place's sketch told by how it is built, never by what people do there (`place_built`, for Grandmother's family meeting
 room); and a thing drawn as the story last left it (`thing_state`: Grandmother's bed sheet, folded down to a stamp
-and put in the cutlery drawer). Next, in the owner's order: E2 crowd between and E3 crowd image (with Disappear's and Shrunk's crowd moments), E4
+and put in the cutlery drawer); and through the dreamer's eyes, someone glimpsed past a crowd seen past it
+(`crowd_between`, E2: the Train's man in the wheelchair). Next, in the owner's order: E3 crowd image (with Disappear's and Shrunk's crowd moments), E4
 depth in the vertical frame (its test set the 10 moments listed in the overlaps), E5 conversation staging (Grandmother's
 spoken beats). The merged flow stops at three dreams (Grandmother, Neighbours, Fan) for the owner's walkthrough.
 
@@ -2373,6 +2374,7 @@ between sessions.
 | `eyes_aimed` | S4, the merged flow's packets | A dreamer's-eyes cut on a placed scene with the dreamer on it always has a camera; a cut with no camera and a floor plan is "failed" in its packet (`crowd_camera`), now only where the dreamer is not on the plan. What lies under the water is drawn as the surface in the mock-up (the whale, Fan's laptop): its words carry it. |
 | `sizes` (`sizes.ts`) | S4, the cast reading, the packet, E4, E5 | The cast reading's bodies (parked 30 Sep: drawn at their size they left frames placed for a grown person) are drawn through this step's own reading, which also gives each size the dream sets in a moment; every rule keys on a spot the step sized (`sized`: body or moment), never on a bare height (the water rules' `height` judges what covers a whale). A small thing on raised ground stands on it only under this step: the general fix for every thing on a counter, stage or deck is S4's. Staging left for its owners: someone carried by a creature far bigger (the mouse-sized dreamer in the giant cat's grip) is placed on its spot and hidden in it (a held-at-the-mouth placement); someone the moment says is inside a thing (Shrunk m6's party) is settled out of it, beside it, until the typed "in" fact keeps them in. |
 | `thing_state` | S4, S6 (the record's states), `sizes`, the packet | A change of size sets the plan's size only where its words name a thing of a known size (`sizedAs`: the plan's small things, a stamp, a handkerchief); a size the dream's sizes reading gives (`sized`) keeps it. Putting away is read from the moment's words, not the typed acts (Jev did not take Grandmother's "puts the stamp in her cutlery drawer", 0.42): it retires when the typed reading carries a thing put into something that closes. A thing the plan keeps that no moment names is drawn without its change carried; Grandmother m10 was the one case, gone with the drawer, and the rest is S6's. Packet field `stated`. |
+| `crowd_between` (E2) | S4, the mock-up, E4 | Through the dreamer's eyes only: an outside view of someone seen past a crowd is not yet placed behind it (none in the corpus). Read from the point's words, a word of being seen right before "past", "through", "between", "behind" and the crowd's name right after; it retires when the typed reading carries who is seen past whom. The crowd moved stands as a row, standing; an audience seated in its rows between the dreamer and someone is not drawn so. Packet field `past`. |
 | `place_built` (`built.ts`) | S6 sketches, the import | A place's sketch alone is told by its build (`Item.built`); its moments, image lines and the record keep the place's name and look. One writer reading per dream, cached with the cast's (`--built`), asked on import; a place whose words say only what it is built of is left as it was. The two words of use left in the corpus are a roof's slopes meeting at its ridge and a bridge over the night market. |
 
 ## Known debt, by the step that clears it
@@ -3504,6 +3506,18 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   drawn with a change holding and not carried 3 -> 0, nothing taken off a plan without being put away. Against lab
   e2aa006, 0 of 127 frozen and 0 of 447 live pictures move; prompt cases the same. `bun test`: 1185 pass, 0 fail off
   and on, and file by file. No pictures, no money.
+- 2 Oct (afternoon, nothing drawn): through the dreamer's eyes, someone glimpsed past a crowd is seen past it
+  (`crowd_between`, E2; a136efa): a point that says someone is glimpsed, seen or visible past, through, between, beyond or
+  behind the people of a crowd, the crowd named right after, puts the crowd on the line from the dreamer to them,
+  nearer the dreamer: a row a few metres across, standing, facing the dreamer, inside the walls. The mock-up clears a
+  gap through it to them, the dreamer looks at them, and the words say the people stand between the camera and them,
+  and them seen past the people, in the picture however little of them the gap shows. The merged flow's Train: "the
+  man in the wheelchair glimpsed past the people pressing in" had the people sat in rows at the far end of the hall,
+  the man alone and in clear view across it (dream 3 m2); in its import the camera turned to the hall floor and the
+  man was out of the picture (c3b3 m6). `evals/crowd-between.ts --live` and the merged flow's stores, its two
+  hand-labelled moments: crowd between the camera and him 0 → 2 of 2, both in the picture 2 → 2, said in that order
+  0 → 2; every other cut the same. Against lab, 0 of 127 frozen and 0 of 447 live pictures move; prompt
+  cases the same. `bun test`: 1190 pass, 0 fail off and on, and file by file. No pictures, no money.
 
 ## Owner's direction (29 Sep): reviews and merges move to the cloud session
 

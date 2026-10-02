@@ -264,6 +264,7 @@ describe('every field a spot can have is in the schema', () => {
       body: 'human',
       sized: 'moment',
       stated: true,
+      past: 'p2',
       above: 0.5,
       climbing: { of: 't1', how: 'into' },
       rides: 'front',

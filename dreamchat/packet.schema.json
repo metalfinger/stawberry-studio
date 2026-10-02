@@ -120,6 +120,9 @@
         "stated": {
           "type": "boolean"
         },
+        "past": {
+          "type": "string"
+        },
         "above": {
           "type": "number"
         },

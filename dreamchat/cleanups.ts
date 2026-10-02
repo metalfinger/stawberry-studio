@@ -262,6 +262,11 @@ export const BUILDER_STEPS: readonly string[] = [
   //    into something that closes, until a moment names it again. Folded down to a stamp and put in the cutlery
   //    drawer, the sheet was a cloth two metres across lying on the drawer in both moments after.
   'thing_state',
+  // Not a ledger row: from the merged flow's Train (2 Oct). Someone a moment's one thing to show sees past the people
+  //    of a crowd is seen past them: the crowd stands across the line from the dreamer's eyes to them, a gap left to see
+  //    them through. "The man in the wheelchair glimpsed past the people pressing in" had the people sat in rows at the
+  //    far end of the hall, the man alone and in clear view across it.
+  'crowd_between',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;
