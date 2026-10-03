@@ -246,7 +246,18 @@ export function withCastSpots(
     // In something the place has, by the moment's words ("among the knives and forks in her cutlery drawer"): inside
     // it, at its front, resting in it, at a size it holds (`contained`). The knives and forks stood mid-room, a cube as
     // tall as a table, while the stamp went in among them (the merged flow's fresh Grandmother, m9, 2 Oct).
-    const container = builds('contained') && t.kind === 'thing' ? containerOf(t.name, words, spots) : undefined;
+    const container =
+      builds('contained') && t.kind === 'thing'
+        ? containerOf(
+            t.name,
+            words,
+            spots,
+            builds('contained_among')
+              ? // Its own word of where it is holds where it is first seen, never where the moment takes it out.
+                { side: t.moments[0]?.id === moment.id ? t.side : null }
+              : undefined,
+          )
+        : undefined;
     // Ridden, under everyone sitting on nothing beside whoever it is by, so the driver is in it too.
     const aboard =
       way === 'same' && t.kind === 'vehicle' && by
@@ -322,20 +333,57 @@ export function withCastSpots(
 /**
  * What the place has that a moment's words put a thing in, among or inside, in the same clause: a drawer, a box, a
  * cupboard on the plan, named right after it ("the knives and forks in her cutlery drawer", "a key inside the box").
- * Only what holds things and closes: never a field, a pond or a doorway, never someone.
+ * With `contained_among` (`among` given): also what something else is put into, among the thing, with nothing but a
+ * comma or a word of how between ("puts the stamp into her open cutlery drawer, among the knives and forks"; never
+ * "into the drawer and wanders out among the trees"); and what the cast reading's own word of where it is says it is
+ * in, ending there (`side`, "in her cutlery drawer"; never "in front of the cupboard", "in the cupboard's shadow"),
+ * where it is first seen and the moment does not take it out. Of several alike (two drawers), the one whose name the
+ * words say whole. Only what holds things and closes: never a field, a pond or a doorway, never someone.
  */
-function containerOf(name: string, words: string, spots: Spot[]): Spot | undefined {
+function containerOf(
+  name: string,
+  words: string,
+  spots: Spot[],
+  among?: { side: string | null | undefined },
+): Spot | undefined {
   const head = headOf(name);
   if (!head) return undefined;
   const w = words.toLowerCase();
-  return spots.find((s) => {
+  // With the step, a name's own ("grandma's drawer") as well.
+  const DET = among
+    ? "(?:the |a |an |her |his |their |its |my |[a-z]+'s )?"
+    : '(?:the |a |an |her |his |their |its |my )?';
+  // A thing's own name, never a word of another ("fork" in "fork-shaped").
+  const thing = `${head}(?![-\\w])`;
+  const sides = (among?.side ?? '').toLowerCase();
+  const takesOut = (of: string) => new RegExp(`\\b(?:out of|from)\\s+${DET}(?:[a-z-]+ ){0,2}${of}\\b`).test(w);
+  const found = spots.flatMap((s): { s: Spot; said: string }[] => {
     const of = headOf(s.name ?? '');
-    if (!of || of === head || s.kind === 'person' || s.many || s.heldBy) return false;
-    if (!new RegExp(`^${CLOSING}$`).test(of)) return false;
-    return new RegExp(
-      `\\b${head}\\b[^.;,]{0,40}?\\b(?:in|inside|into|within|among|amongst)\\s+(?:the |a |an |her |his |their |its |my )?(?:[a-z-]+ ){0,2}${of}\\b`,
-    ).test(w);
+    if (!of || of === head || s.kind === 'person' || s.many || s.heldBy) return [];
+    if (!new RegExp(`^${CLOSING}$`).test(of)) return [];
+    const holds = `${DET}(?:[a-z-]+ ){0,2}${of}\\b`;
+    const a = new RegExp(`\\b${head}\\b[^.;,]{0,40}?\\b(?:in|inside|into|within|among|amongst)\\s+(${holds})`).exec(w);
+    if (a) return [{ s, said: a[1] }];
+    if (!among) return [];
+    const b = new RegExp(
+      `\\b(?:in|inside|into|within)\\s+(${holds}),?\\s+(?:(?:right|deep|tucked|nestled|laid|lying|resting|placed|carefully|gently|in) ){0,2}(?:among|amongst|amid|amidst)\\s+${DET}(?:[a-z-]+ ){0,4}?${thing}`,
+    ).exec(w);
+    if (b) return [{ s, said: b[1] }];
+    const c = new RegExp(
+      `^\\s*(?:in|inside|within|among|amongst)\\s+(${DET}(?:(?!(?:of|front|back|side|top|middle|corner)\\b)[a-z-]+ ){0,2}${of})\\s*(?:[,.;]|$)`,
+    ).exec(sides);
+    if (c && !takesOut(of)) return [{ s, said: c[1] }];
+    return [];
   });
+  if (!among || found.length < 2) return found[0]?.s;
+  // Of several alike, the one whose name has the most of the words said: "her open cutlery drawer" is the cutlery
+  // drawer, not the top drawer.
+  const wordsOf = (x: string) => new Set(x.match(/[a-z]+/g) ?? []);
+  const score = (f: { s: Spot; said: string }) => {
+    const said = wordsOf(f.said);
+    return [...wordsOf((f.s.name ?? '').toLowerCase())].filter((x) => said.has(x)).length;
+  };
+  return found.reduce((best, f) => (score(f) > score(best) ? f : best)).s;
 }
 
 /** Cutlery and the like, by what it is: a drawer holds it at its own size. */

@@ -296,6 +296,10 @@ export const BUILDER_STEPS: readonly string[] = [
   // Not a ledger row: from the same Grandmother. A thing the moment is about too small for the frame's pixels is marked
   //    where it is on the keyed mock-up and its id map: the stamp between their fingers had 20 pixels at m8.
   'tiny_marker',
+  // Not a ledger row: from the merged flow's Grandmother (2 Oct). What a moment puts something among, in what holds
+  //    things, is in it too ("puts the stamp into her open cutlery drawer, among the knives and forks"), and so is a cast
+  //    thing whose own reading says it is in it: the knives and forks were a cube mid-room.
+  'contained_among',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;
