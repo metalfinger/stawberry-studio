@@ -3652,6 +3652,13 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   the merged flow's Grandmother's own, and a cube mid-room is in the pulled-out drawer at a cutlery's size. Against lab
   d6a55a2, 0 of 127 frozen and 0 of 447 live pictures move; prompt cases the same. `bun test`: 1294 pass, 0 fail off
   and on, and file by file. No pictures, no money.
+- 3 Oct (morning, nothing drawn): every Jev call logged with its own id, its retries and repeats (eb5d6f4), for the
+  merged flow's call events (one event per external call, a retry its own pointing at the first). `jev.jsonl` gives
+  each call `callId`; `requestId` where Jev's answer carries one (its documents name none, so null in practice);
+  `attemptOf` on a call tried again because an answer was missing or incomplete (the gate's prompt read once more, the
+  replay's style choice), the last answer used; `repeatOf` on the same questions asked again on purpose, both answers
+  used (a close call averaged). Against lab 23f88ed, 0 of 127 frozen and 0 of 447 live pictures move; prompt cases the
+  same. `bun test`: 1299 pass, 0 fail off and on, and file by file. No pictures, no money.
 
 ## Owner's direction (29 Sep): reviews and merges move to the cloud session
 
