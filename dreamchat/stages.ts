@@ -7,6 +7,7 @@
 // provisional until each question has a labelled set of real cases to set it from.
 import { actsOn } from './gate';
 import type { Question } from './jev';
+import { asRepeatOf } from './jevlog';
 
 /**
  * The stages a dream goes through, in order: what each does, how it is left today, and where the
@@ -198,17 +199,19 @@ export async function askFacts(
   t: Transition,
   key: string,
   state: string,
-  jev: (state: string, questions: Record<string, Question>) => Promise<{ answers: Answers }>,
+  jev: (state: string, questions: Record<string, Question>) => Promise<{ answers: Answers; callId?: string }>,
   within = CLOSE,
 ): Promise<Answers> {
   const questions = factQuestions(t, key);
-  const first = (await jev(state, questions)).answers;
+  const asked = await jev(state, questions);
+  const first = asked.answers;
   const close = t.facts.some((f) => {
     const a = first?.[`${f.id}_${key}`];
     return a?.type === 'noul' && typeof a.noul === 'number' && Math.abs(a.noul - f.bar) < within;
   });
   if (!first || !close) return first;
-  const again = (await jev(state, questions)).answers;
+  // The same questions once more, on purpose, both answers used: logged as a repeat of the first call.
+  const again = (await asRepeatOf(asked.callId, () => jev(state, questions))).answers;
   if (!again) return first;
   return Object.fromEntries(
     Object.entries(first).map(([k, a]) => {

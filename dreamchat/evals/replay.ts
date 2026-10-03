@@ -23,6 +23,7 @@
 // Written: <dir>/<name>/pictures.json (every moment picture in story order, and what was drawn),
 // <dir>/<name>/report.json (as simulate.ts reports a run), and <dir>/judge-data-<label>.json for
 // the judging page, its pictures in <dir>/judge-img/.
+import { asAttemptOf } from '../jevlog';
 import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, extname, join, relative, resolve, sep } from 'node:path';
 import type { JevFn } from '../jev';
@@ -586,8 +587,11 @@ async function runOne(dir: string): Promise<void> {
   const jevRead: string[] = [];
   const choosing: JevFn = async (state, questions) => {
     if (!('style_choice' in questions)) return callJev(state, questions);
-    let call = await callJev(state, questions);
-    for (let i = 0; i < 2 && !call.answers; i++) call = await callJev(state, questions);
+    const first = await callJev(state, questions);
+    let call = first;
+    // Tried again where no answer came: each logged as an attempt of the first.
+    for (let i = 0; i < 2 && !call.answers; i++)
+      call = await asAttemptOf(first.callId, () => callJev(state, questions));
     const own = call.answers?.style_choice;
     jevRead.push(own?.type === 'choice' ? `${own.choice} (${own.confidence.toFixed(2)})` : 'no reading');
     if (!call.answers) return call;

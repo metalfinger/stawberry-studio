@@ -16,6 +16,7 @@ import {
   routedReadings,
 } from './checks';
 import type { JevFn, Question } from './jev';
+import { asAttemptOf } from './jevlog';
 import { MAX_IMAGES } from './frames';
 import type { Item } from './sheets';
 
@@ -348,7 +349,10 @@ export async function readPrompt(
   let call = await jev(prompt, questions);
   // With the checks only logging (or routed), a prompt Jev could not read is drawn without a reading, so
   // it is read once more first: a reading lost is a label S7 never gets.
-  if ((checksMode() === 'log' || routed) && !whole(call)) call = await jev(prompt, questions);
+  if ((checksMode() === 'log' || routed) && !whole(call)) {
+    const first = call;
+    call = await asAttemptOf(first.callId, () => jev(prompt, questions));
+  }
   const noul = (id: string) => {
     const a = call.answers?.[id];
     return a && a.type === 'noul' ? a.noul : null;

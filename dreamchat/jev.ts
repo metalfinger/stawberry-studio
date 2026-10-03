@@ -10,6 +10,7 @@
 // - "they don't remember" per goal;
 // - "have they told it to the end";
 // - how they answered a retelling.
+import { randomUUID } from 'node:crypto';
 import type {
   ClosingNote,
   GoalDef,
@@ -58,6 +59,9 @@ export type JevCall = {
   usage: { input_tokens: number; output_tokens: number } | null;
   /** The model that answered, as Jev names it ("jev-1.13.0" for "jev-latest"). */
   model?: string;
+  /** This call's own id, one per call; and Jev's id for it, where its answer gives one (`x-request-id`). */
+  callId?: string;
+  requestId?: string | null;
 };
 
 export type JevFn = (state: string, questions: Record<string, Question>) => Promise<JevCall>;
@@ -73,6 +77,8 @@ export const callJev: JevFn = async (state, questions) => {
     stateChars: state.length,
     ms: call.ms,
     error: call.error,
+    callId: call.callId,
+    requestId: call.requestId ?? null,
   });
   return call;
 };
@@ -89,7 +95,10 @@ export const jevWithModel =
 async function askJev(state: string, questions: Record<string, Question>, model = MODEL): Promise<JevCall> {
   const key = apiKey();
   const t0 = Date.now();
-  if (key === null) return { questions, state, answers: null, error: 'no JEV_API_KEY', ms: 0, usage: null };
+  const callId = randomUUID();
+  let requestId: string | null = null;
+  if (key === null)
+    return { questions, state, answers: null, error: 'no JEV_API_KEY', ms: 0, usage: null, callId, requestId: null };
   try {
     const res = await fetch(ENDPOINT, {
       method: 'POST',
@@ -97,12 +106,33 @@ async function askJev(state: string, questions: Record<string, Question>, model 
       body: JSON.stringify({ state, model, questions }),
     });
     const ms = Date.now() - t0;
+    requestId = res.headers.get('x-request-id') ?? res.headers.get('request-id') ?? null;
     if (!res.ok)
-      return { questions, state, answers: null, error: `${res.status} ${await res.text()}`, ms, usage: null };
+      return {
+        questions,
+        state,
+        answers: null,
+        error: `${res.status} ${await res.text()}`,
+        ms,
+        usage: null,
+        callId,
+        requestId,
+      };
     const body = (await res.json()) as { answers: Record<string, Answer>; usage: JevCall['usage']; model?: string };
-    return { questions, state, answers: body.answers, error: null, ms, usage: body.usage, model: body.model };
+    return {
+      questions,
+      state,
+      answers: body.answers,
+      error: null,
+      ms,
+      usage: body.usage,
+      model: body.model,
+      callId,
+      requestId,
+    };
   } catch (e) {
-    return { questions, state, answers: null, error: String(e), ms: Date.now() - t0, usage: null };
+    // An answer that came but could not be read keeps Jev's id for it, where it gave one.
+    return { questions, state, answers: null, error: String(e), ms: Date.now() - t0, usage: null, callId, requestId };
   }
 }
 

@@ -11,12 +11,24 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-type Scope = { dir: string; id: string; site?: string };
+type Scope = { dir: string; id: string; site?: string; attemptOf?: string; repeatOf?: string };
 const scope = new AsyncLocalStorage<Scope>();
 
 /** Run `fn` as part of a conversation: every Jev call in it, however deep, is logged there. */
 export function inSession<T>(dir: string | undefined, id: string, fn: () => Promise<T>): Promise<T> {
   return dir ? scope.run({ dir, id }, fn) : fn();
+}
+
+/** Run `fn` with its Jev calls logged as attempts of an earlier call: tried again, its answer missing or incomplete. */
+export function asAttemptOf<T>(callId: string | undefined, fn: () => Promise<T>): Promise<T> {
+  const s = scope.getStore();
+  return s && callId ? scope.run({ ...s, attemptOf: callId, repeatOf: undefined }, fn) : fn();
+}
+
+/** Run `fn` with its Jev calls logged as repeats of an earlier call: its questions asked again on purpose. */
+export function asRepeatOf<T>(callId: string | undefined, fn: () => Promise<T>): Promise<T> {
+  const s = scope.getStore();
+  return s && callId ? scope.run({ ...s, repeatOf: callId, attemptOf: undefined }, fn) : fn();
 }
 
 /** Run `fn` with its Jev calls logged under `site`, where the questions alone would not say. */
@@ -30,6 +42,17 @@ export type JevCallEntry = {
   kind: 'call';
   at: string;
   site: string;
+  /**
+   * This call's own id, made here, one per call; Jev documents no id of its own for a call, so `requestId` is one only
+   * where its answer carries `x-request-id` or `request-id` (null otherwise). `attemptOf`: the call this one tries
+   * again, its answer missing or incomplete (the gate's prompt read once more); the last attempt's answer is the one
+   * used. `repeatOf`: the call whose questions this one asks again on purpose, both answers used (a close call
+   * averaged, stages.ts askFacts). Lines written before 3 Oct have none of these.
+   */
+  callId?: string;
+  requestId?: string | null;
+  attemptOf?: string | null;
+  repeatOf?: string | null;
   questions: string[];
   inputTokens: number | null;
   outputTokens: number | null;
@@ -83,7 +106,13 @@ export function recordJev(entry: Omit<JevCallEntry, 'site' | 'at'> | Omit<Transi
   if (!s) return;
   const line =
     entry.kind === 'call'
-      ? { ...entry, at: new Date().toISOString(), site: s.site ?? siteOf(entry.questions) }
+      ? {
+          ...entry,
+          at: new Date().toISOString(),
+          site: s.site ?? siteOf(entry.questions),
+          attemptOf: entry.attemptOf ?? s.attemptOf ?? null,
+          repeatOf: entry.repeatOf ?? s.repeatOf ?? null,
+        }
       : { ...entry, at: new Date().toISOString() };
   try {
     mkdirSync(join(s.dir, s.id), { recursive: true });
