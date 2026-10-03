@@ -24,7 +24,7 @@ import {
   shotPlan,
   uneditedFrame,
 } from './continuity';
-import { completeViews } from './producer';
+import { completeViews, oneFixture } from './producer';
 import {
   buildFrames,
   buildGhosts,
@@ -146,6 +146,9 @@ export function rebuild(
     ...(i.kind === 'location' && builds('point_state') ? shutIn(i, b) : {}),
   }));
   completeViews(b);
+  // One thing for one thing on each floor plan (`one_fixture`), on this rebuild's own copy, once the moments have every
+  // thing their words name: never on the saved dream.
+  oneFixture(b);
   // With DREAMCHAT_RECORD=on, planned from the story record as drawing reads it (session.ts planRecord):
   // the sketches' words, the dreamer's messages where the dream keeps them, its readings and look.
   const inputs = { ...recordInputsOf(s), items: sheets };
@@ -181,7 +184,14 @@ export function rebuild(
   // and goals as the session's, from the plan this rebuild draws from.
   const oneTree = (items: Item[]) => {
     const treeInput = builds('one_tree')
-      ? treeInputWith({ ...s, transcript: s.transcript ?? [] }, drawnPlan, items)
+      ? treeInputWith(
+          { ...s, transcript: s.transcript ?? [] },
+          drawnPlan,
+          items,
+          undefined,
+          // Of the floor plans this rebuild draws from, one thing for one thing (`one_fixture`).
+          builds('one_fixture') ? b : undefined,
+        )
       : null;
     return treeInput ? { treeInput } : {};
   };

@@ -30,6 +30,20 @@ const headOf = (name: string) =>
     .at(-1)
     ?.replace(/[^a-z-]/g, '') ?? '';
 
+/**
+ * Where a name says where it is or what is with it: "over the sink" of "the window over the sink", "along each side" of
+ * "a row of windows along each side". Never "of": what something is made of or a row of is the thing ("rows of seats").
+ */
+const AFTER_HEAD =
+  /\s+(?:over|above|under|below|beneath|with|on|in|by|beside|near|next to|at|behind|against|along|across|around|all round|all around|covered in|covered with)\s+/i;
+
+/**
+ * The thing itself, before any word of where it is or what is with it (`one_fixture`): "window" of "the window over
+ * the sink", never its "sink"; "seats" of "rows of seats"; the last word of a name with none ("tractor" of "the red
+ * tractor").
+ */
+const thingOf = (name: string) => headOf(name.split(AFTER_HEAD)[0]);
+
 /** How big things the dream compares with are, across, deep and tall, in metres. */
 const LIKE: [RegExp, [number, number, number]][] = [
   [/\bbus(?:es)?\b/, [2.5, 11, 3.2]],
@@ -520,6 +534,38 @@ export function withSizes(plan: Blocking, reading: SizesReading, momentId: strin
 }
 
 /**
+ * Where an opening goes by a fixture of the plan its words name ("over the sink", "over the kitchen sink"): at the wall
+ * nearest that fixture, level with it along the wall and inside its length, sized as a window or a door on that wall.
+ * None where the words name no fixture of the plan.
+ */
+function byFixture(
+  words: string,
+  door: boolean,
+  spots: Spot[],
+  plan: Blocking,
+): Pick<Spot, 'x' | 'y' | 'size'> | undefined {
+  // The fixture's words, to where the phrase ends: "the kitchen sink" of "over the kitchen sink where she washes up",
+  // "the dreamer's bed" of "beside the dreamer's bed".
+  const phrase = words.match(
+    /\b(?:over|above|beside|by|behind|next to|near)\s+(?:the|a|an|her|his|their|my)\s+([\p{L}-]+(?:['’]s)?(?:\s+[\p{L}-]+(?:['’]s)?)*?)(?=\s+(?:and|with|on|in|at|of|to|where|from|near|under|looking|facing|that|which|who)\b|[^\p{L}\s'’-]|\s*$)/u,
+  )?.[1];
+  const at = phrase ? headOf(phrase) : undefined;
+  const f = at ? spots.find((s) => s.fixture && thingOf(s.name ?? '') === at) : undefined;
+  if (!f) return undefined;
+  const [rw, rd] = roomOf(plan);
+  const gaps = { left: f.x, right: rw - f.x, front: f.y, back: rd - f.y };
+  const wall = (Object.keys(gaps) as (keyof typeof gaps)[]).reduce((a, b) => (gaps[b] < gaps[a] ? b : a));
+  const side = wall === 'left' || wall === 'right';
+  const wide = door ? 1 : 1.1;
+  const along = (u: number, len: number) => Math.min(Math.max(u, wide / 2), len - wide / 2);
+  return {
+    x: wall === 'left' ? 0.05 : wall === 'right' ? rw - 0.05 : along(f.x, rw),
+    y: wall === 'front' ? 0.05 : wall === 'back' ? rd - 0.05 : along(f.y, rd),
+    size: side ? [0.1, wide, door ? 2.1 : 1.2] : [wide, 0.1, door ? 2.1 : 1.2],
+  };
+}
+
+/**
  * The fixtures the place's own words name that its plan lacks, on the walls and floor they say: windows (or doors)
  * along a side, up the wall; rows of seats or desks facing the front, split by an aisle where one is named. Only
  * indoors, only where the plan has none of that name.
@@ -530,17 +576,38 @@ export function withCastFixtures(plan: Blocking, fixtures: CastFixture[], placeI
   if (!mine.length) return plan;
   const [rw, rd] = roomOf(plan);
   const spots = [...plan.spots];
-  const has = (head: string) =>
-    spots.some(
-      (s) => headOf(s.name ?? '') === head || headOf(s.name ?? '').replace(/s$/, '') === head.replace(/s$/, ''),
-    );
+  // What the plan has by its name. With `one_fixture`, where its words give one of it, by the thing a name is: "the
+  // window over the sink" is a window, and her kitchen, whose words give one window over the sink, was given two more
+  // beside it (the slice, 3 Oct). Where they give many ("windows all round"), one of them on the plan is not all of them.
+  const one = (f: CastFixture) => builds('one_fixture') && (f.count ?? 1) <= 1 && !/s$/.test(headOf(f.name));
+  const has = (head: string, own: (name: string) => string) =>
+    spots.some((s) => own(s.name ?? '') === head || own(s.name ?? '').replace(/s$/, '') === head.replace(/s$/, ''));
   const aisle = mine.some((f) => f.kind === 'aisle');
   let n = 0;
   const id = () => `cf${++n}`;
   for (const f of mine) {
-    const head = headOf(f.name);
-    if (!head || has(head)) continue;
+    const own = one(f) ? thingOf : headOf;
+    const head = own(f.name);
+    if (!head || has(head, own)) continue;
     const w = (f.where ?? f.words).toLowerCase();
+    // Where its words put it by a fixture of the plan ("over the sink"), on that fixture's wall, above it, one; a wall or
+    // a count its words give wins.
+    const walled =
+      /\b(?:each|both|either) side|\bsides\b|\b(?:left|right|back|rear|front|far)\s+(?:wall|side|end)\b|\bat the (?:front|back|rear|far end)\b|\balong the (?:left|right|back|front)\b|\bon the (?:left|right)\b/.test(
+        w,
+      );
+    const by = one(f) && f.kind === 'opening' && !walled ? byFixture(w, /\bdoor/.test(head), spots, plan) : undefined;
+    if (by) {
+      spots.push({
+        id: id(),
+        kind: 'thing',
+        fixture: true,
+        name: `a ${head.replace(/s$/, '')}`,
+        ...by,
+        ...(/\bdoor/.test(head) ? {} : { above: 1 }),
+      });
+      continue;
+    }
     const walls: Side[] = /\b(?:each|both|either) side|\bsides\b/.test(w)
       ? ['left', 'right']
       : /\bleft\b/.test(w)

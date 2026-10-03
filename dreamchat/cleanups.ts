@@ -305,6 +305,10 @@ export const BUILDER_STEPS: readonly string[] = [
   //    world: the bed sheet folded together, stretched between them, was in the grandmother's hands alone; and handed
   //    over, the record had the one given it where the plan had the one handing it (eight handovers).
   'shared_holds',
+  // Not a ledger row: from the merged flow's slice (3 Oct). One thing for one thing on a place's floor plan: a cast
+  //    thing and the plan's fixture of its name by the cast thing's id (two wall calendars were drawn), a fixture named
+  //    plainly ("the table with schedules and calendars"), and the windows a place's words give (her kitchen had three).
+  'one_fixture',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;

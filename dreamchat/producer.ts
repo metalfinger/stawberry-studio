@@ -1958,6 +1958,128 @@ export function namesForIds(b: Breakdown): string[] {
   return notes;
 }
 
+/** What a fixture's name says is on it ("with monitors" of "desks with monitors"); never what it is made of ("of"). */
+const ON_IT = /\s+(?:with|covered (?:in|with)|full of|piled (?:high )?with|strewn with)\s+/i;
+
+/** A name's words, lower case, without its article, each as one of it: "wall calendar" of "the wall calendars". */
+const nameWords = (x: string) =>
+  x
+    .toLowerCase()
+    .replace(/^(?:the|a|an|some)\s+/, '')
+    .split(/[^\p{L}-]+/u)
+    .filter(Boolean)
+    .map((w) => w.replace(/(?<=[^s])s$/, ''));
+
+/**
+ * The thing a name is, before any word of where it is or what is with it: "window" of "the window over the sink",
+ * "sign" of "the sign on the door"; never cut at "of" ("seat" of "rows of seats").
+ */
+const thingWord = (x: string) => nameWords(thingPart(x)).at(-1) ?? '';
+
+/** A name up to where it says where it is or what is with it: "the window" of "the window with rain and street lights". */
+const thingPart = (x: string) =>
+  x.split(
+    /\s+(?:over|above|under|below|beneath|with|on|in|by|beside|near|next to|at|behind|against|along|across|around|covered|full of|piled|strewn)\s+/i,
+  )[0];
+
+/** A thing's name and a fixture's are the same, articles and plural aside: every word of the one in the other, ending alike. */
+function sameThing(name: string, fixture: string): boolean {
+  const [own, its] = [nameWords(name), nameWords(fixture)];
+  if (!own.length || !its.length) return false;
+  return own.length === 1
+    ? its.length === 1 && its[0] === own[0]
+    : its.at(-1) === own.at(-1) && own.every((w) => its.includes(w));
+}
+
+/**
+ * With the one builder's `one_fixture` step, one thing for one thing on each floor plan of a rebuild's own copy of the
+ * breakdown (plan.ts rebuild, after completeViews, never the saved dream), so the record, the plans, the world at each
+ * cut, the tree and the packet read it alike:
+ * - a fixture named with another thing on it that a moment on the plan has in view and the plan draws as its own spot
+ *   is named without it ("the table with schedules and calendars", the wall calendar its own spot: "the table"), so it
+ *   is never painted onto the fixture as well; what it is made of stays ("the pile of paper boats"), what is on it that
+ *   is no thing seen there ("the desks with green glass lamps"), and what only its name draws ("the window with rain
+ *   and street lights", "the orchard rows with glowing apples");
+ * - a thing a moment on the plan has in view and the one fixture of its name there are one, by the thing's id: the
+ *   family meeting's plan had "the wall calendar" as x2 while the cast had c1 "the wall calendar" with a sketch of its
+ *   own, and the room was painted with one and the frame added the other (the slice, 3 Oct). Whoever faces it, moves
+ *   it or is looked at by it on the plan does so by the thing's id. A cast thing the cast reading took as the place's
+ *   own fixture, that the moment's own words name again (completeViews), is one with it too, by the cast thing's id, so
+ *   its sketch is what is drawn. A device takes over the fixture it is itself (devices.ts), where it stands.
+ */
+export function oneFixture(b: Breakdown): string[] {
+  if (!builds('one_fixture')) return [];
+  const notes: string[] = [];
+  const things = b.things ?? [];
+  for (const sc of b.scenes) {
+    if (!sc.blocking) continue;
+    const whole = sc.blocking;
+    const plans: [string | null, Blocking][] = [
+      [null, whole],
+      ...Object.entries(whole.places ?? {}).map(([k, v]): [string, Blocking] => [k, v]),
+    ];
+    for (const [place, plan] of plans) {
+      const here = sc.moments.filter((m) => (place ? m.place === place : !whole.places?.[m.place]));
+      // First a thing and the one fixture of its name, by the thing's id.
+      const renamed = new Map<string, string>();
+      for (const t of things) {
+        // A device takes over the fixture it is itself (devices.ts withDevices), where it stands.
+        if (/^v\d+$/.test(t.id)) continue;
+        if (plan.spots.some((s) => s.id === t.id) || !here.some((m) => m.things.includes(t.id))) continue;
+        const named = plan.spots.filter(
+          // By what the fixture itself is: "the window with rain and street lights" is no street light.
+          (s) => s.fixture && !!s.name && !renamed.has(s.id) && sameThing(t.name, thingPart(s.name)),
+        );
+        if (named.length !== 1) continue;
+        renamed.set(named[0].id, t.id);
+        notes.push(`${sc.id}: fixture ${named[0].id} "${named[0].name}" is ${t.id}, "${t.name}"`);
+      }
+      if (renamed.size) {
+        const to = (id: string | undefined) => (id && renamed.get(id)) || id;
+        plan.spots = plan.spots.map((s) => ({
+          ...s,
+          id: to(s.id)!,
+          ...(s.faces && renamed.has(s.faces) ? { faces: to(s.faces) } : {}),
+        }));
+        if (plan.moves)
+          plan.moves = Object.fromEntries(
+            Object.entries(plan.moves).map(([m, mvs]) => [
+              m,
+              mvs.map((mv) => ({
+                ...mv,
+                id: to(mv.id)!,
+                ...(mv.faces && renamed.has(mv.faces) ? { faces: to(mv.faces) } : {}),
+              })),
+            ]),
+          );
+        if (plan.looks) plan.looks = Object.fromEntries(Object.entries(plan.looks).map(([m, id]) => [m, to(id)!]));
+      }
+      // Then a fixture named with another thing on it that the plan draws as its own spot as well: without it. Only a
+      // thing a moment on this plan has in view, never one the fixture's name alone draws (the rain and street lights
+      // through "the window with rain and street lights", the apples of "the orchard rows with glowing apples").
+      for (const s of plan.spots) {
+        if (!s.fixture || !s.name) continue;
+        const [plain, ...on] = s.name.split(ON_IT);
+        if (!on.length || !nameWords(plain).length) continue;
+        const tail = nameWords(on.join(' '));
+        const own = thingWord(plain);
+        const drawn = (t: Breakdown['things'][number]) =>
+          plan.spots.some((o) => o !== s && (o.id === t.id || (!!o.name && thingWord(o.name) === thingWord(t.name))));
+        const carried = things.filter((t) => {
+          const w = thingWord(t.name);
+          return !!w && w !== own && tail.includes(w) && here.some((m) => m.things.includes(t.id)) && drawn(t);
+        });
+        if (!carried.length) continue;
+        notes.push(
+          `${sc.id}: fixture ${s.id} "${s.name}" is "${plain.trim()}", ${carried.map((t) => t.id).join(', ')} on it`,
+        );
+        s.name = plain.trim();
+      }
+    }
+  }
+  return notes;
+}
+
 /**
  * The things each moment shows, completed from its own words: a thing is in view where its change
  * happens, where the moment names what it has become, or where it is named and no other thing

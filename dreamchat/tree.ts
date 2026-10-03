@@ -13,6 +13,7 @@
 // Pure: no model calls, no I/O, no clock. It reads what the harness already holds (the breakdown
 // with its floor plans, the continuity plan, and when there, the prep, the sketches and frames,
 // the chosen look, the grounding notes and the conversation's goals) and works the rest out.
+import { builds } from './cleanups';
 import { type Blocking, bearing, type Eye, roomOf, type Shape, sizeOf, type Spot, wall } from './blocking';
 import {
   calledIn,
@@ -755,6 +756,7 @@ export function resolveTree(input: TreeInput): DreamTree {
 
   // ── fixtures: one element per fixture of a place, its x ids on each plan as aliases ──
   const fixtureAt = new Map<string, string>(); // `${planKey}|${x}` → element id
+  const thingIds = new Set((b.things ?? []).map((t) => t.id));
   const fixtureSpot = new Map<string, { spot: Spot; plan: Blocking; key: string; place: string }[]>();
   for (const sc of b.scenes) {
     if (!sc.blocking) continue;
@@ -768,7 +770,8 @@ export function resolveTree(input: TreeInput): DreamTree {
     ];
     for (const [key, place, p] of plans)
       for (const s of p.spots)
-        if (s.fixture) {
+        // A fixture by a thing's id is that thing (`one_fixture`, producer.ts oneFixture), never a second element.
+        if (s.fixture && !(builds('one_fixture') && thingIds.has(s.id))) {
           const id = `${place}/${slug(s.name ?? s.id)}`;
           fixtureAt.set(`${key}|${s.id}`, id);
           fixtureSpot.set(id, [...(fixtureSpot.get(id) ?? []), { spot: s, plan: p, key, place }]);

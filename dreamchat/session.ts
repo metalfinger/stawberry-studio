@@ -1295,13 +1295,19 @@ export function treeInputWith(
   plan: ContinuityPlan,
   items: Item[],
   threshold = GOAL_THRESHOLD,
+  /**
+   * The breakdown the tree is of, where it is not the saved one: a rebuild's own copy, its floor plans with one thing
+   * for one thing (`one_fixture`). The prep is fresh by the saved one, as it was made from it.
+   */
+  shown?: Breakdown,
 ): TreeInput | null {
-  const b = s.draft?.breakdown;
-  if (!b) return null;
+  const saved = s.draft?.breakdown;
+  if (!saved) return null;
+  const b = shown ?? saved;
   return {
     breakdown: b,
     plan,
-    ...(s.prep ? { prep: s.prep, prepFresh: planKey(b) === s.prep.basedOn } : {}),
+    ...(s.prep ? { prep: s.prep, prepFresh: planKey(saved) === s.prep.basedOn } : {}),
     items,
     frames: s.build?.frames ?? [],
     style: s.style ?? null,
