@@ -975,6 +975,24 @@ export function thingsNamed(
 /** What opens and shuts to let someone through. */
 const DOORLIKE = /\b(door|gate)s?\b/i;
 /**
+ * The one fixture of a plan a place's part is (`point_state`): a drawer, a lid, a cupboard, a door, found by its name
+ * (partstate.ts samePart); of several, the one whose name has every word of it ("the sliding doors to the church
+ * auditorium" of "sliding doors", among the corridor's doors); none where that leaves more than one or none. The plan's
+ * open parts (withOpen) and the world's state at a cut (resolvers.ts) find it the same way.
+ */
+export function fixtureOfPart(plan: Blocking, part: string, what: string): Spot | undefined {
+  const doorlike = (s: Spot) =>
+    !(s.kind === 'person' || (!s.kind && (!!s.pose || !!s.many))) && !s.heldBy && OPENABLE.test(s.name ?? '');
+  const named = plan.spots.filter((s) => doorlike(s) && [part, what].some((w) => samePart(w, s.name ?? '')));
+  const words = (w: string) => w.toLowerCase().match(/[\p{L}]+/gu) ?? [];
+  const said = [part, what].sort((a, b) => words(b).length - words(a).length)[0];
+  const whole = named.filter((s) =>
+    words(said).every((k) => words(s.name ?? '').some((n) => n.replace(/s$/, '') === k.replace(/s$/, ''))),
+  );
+  return named.length === 1 ? named[0] : whole.length === 1 ? whole[0] : undefined;
+}
+
+/**
  * A door or gate the record has open at the moment, open on the plan: the mock-up draws it as its frame with the door
  * swung back, the view going through it (previs.ts). Where the one open is a door on the plan, exactly that one; where
  * it is a place's own part ("door: open, faint yellow glow spilling from the doorway"), the one door or gate of the
@@ -1003,16 +1021,8 @@ export function withOpen(plan: Blocking, facts: NowOf[]): Blocking {
     if (f.kind !== 'place') continue;
     for (const x of open)
       if (stated) {
-        const named = plan.spots.filter((s) => doorlike(s) && [x.part, x.what].some((w) => samePart(w, s.name ?? '')));
-        // Of several, the one whose name has every word of it: "the sliding doors to the church auditorium" of
-        // "sliding doors", among the corridor's doors.
-        const words = (w: string) => w.toLowerCase().match(/[\p{L}]+/gu) ?? [];
-        const said = [x.part, x.what].sort((a, b) => words(b).length - words(a).length)[0];
-        const whole = named.filter((s) =>
-          words(said).every((k) => words(s.name ?? '').some((n) => n.replace(/s$/, '') === k.replace(/s$/, ''))),
-        );
-        const one = named.length === 1 ? named : whole.length === 1 ? whole : [];
-        if (one.length) ids.add(one[0].id);
+        const one = fixtureOfPart(plan, x.part, x.what);
+        if (one) ids.add(one.id);
       } else
         for (const w of [x.part, x.what]) {
           const head = w.match(opens)?.[1].toLowerCase();

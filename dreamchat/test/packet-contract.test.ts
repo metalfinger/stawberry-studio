@@ -155,7 +155,7 @@ describe('every saved dream, version 7 and version 8', () => {
     }
   });
 
-  test('a version 7 packet read from its file and turned into version 8 is the one Dream Chat writes, but its moved aliases', () => {
+  test('a version 7 packet read from its file and turned into version 8 is the same as one turned in memory, whatever moved aliases it is given', () => {
     const pk = packetOf(frozenDreams()[0]);
     const read = toV8(JSON.parse(JSON.stringify(pk)) as DreamPacket);
     expect(read).toEqual(JSON.parse(JSON.stringify(toV8(pk))));

@@ -43,6 +43,7 @@ import {
 } from '../packet';
 import { type Rebuilt, rebuild } from '../plan';
 import { calledFor, previsFor, previsKeyedFor, previsSetFor, type Session } from '../session';
+import { withWorld } from '../resolvers';
 import { verdicts } from '../verdicts';
 import { withCast } from './cast-cache';
 import { withImplied } from './implied-cache';
@@ -316,7 +317,8 @@ export function packetOf(id: string, session: Session, opts: { v8?: boolean } = 
   const idsFile = join(out, 'ids', `${id}.json`);
   const history = nextHistory(readIdHistory(idsFile), Object.values(stableIds(pk).cuts));
   writeIdHistory(idsFile, history);
-  const written = opts.v8 ? toV8(pk, history.aliases) : pk;
+  // Version 8 as Dream Chat writes it: with the world's state at each cut, from this rebuild (resolvers.ts).
+  const written = opts.v8 ? withWorld(toV8(pk, history.aliases), r) : pk;
   // With `point_state`, a cut whose packet says something against its own point is an error as the schema's are.
   const errors = [...validatePacket(written), ...(builds('point_state') ? lintPacket(pk) : [])];
   const cuts = r.pictures.filter((p) => p.kind === 'cut').length;

@@ -246,18 +246,7 @@ export function withCastSpots(
     // In something the place has, by the moment's words ("among the knives and forks in her cutlery drawer"): inside
     // it, at its front, resting in it, at a size it holds (`contained`). The knives and forks stood mid-room, a cube as
     // tall as a table, while the stamp went in among them (the merged flow's fresh Grandmother, m9, 2 Oct).
-    const container =
-      builds('contained') && t.kind === 'thing'
-        ? containerOf(
-            t.name,
-            words,
-            spots,
-            builds('contained_among')
-              ? // Its own word of where it is holds where it is first seen, never where the moment takes it out.
-                { side: t.moments[0]?.id === moment.id ? t.side : null }
-              : undefined,
-          )
-        : undefined;
+    const container = containerFor(t, moment.id, words, spots);
     // Ridden, under everyone sitting on nothing beside whoever it is by, so the driver is in it too.
     const aboard =
       way === 'same' && t.kind === 'vehicle' && by
@@ -328,6 +317,26 @@ export function withCastSpots(
     });
   }
   return { ...plan, spots, ...(Object.keys(outside).length ? { outside } : {}) };
+}
+
+/**
+ * What holds a thing at a moment, as its placement puts it in it and the world's state at the moment says it is
+ * (`contained`, `contained_among`; resolvers.ts): only a thing, and the cast reading's own word of where it is only
+ * where it is first seen, never where the moment takes it out. A thing of the floor plan's own has no such word.
+ */
+export function containerFor(
+  t: Pick<CastThing, 'name' | 'kind'> & Partial<Pick<CastThing, 'side' | 'moments'>>,
+  momentId: string,
+  words: string,
+  spots: Spot[],
+): Spot | undefined {
+  if (!builds('contained') || t.kind !== 'thing') return undefined;
+  return containerOf(
+    t.name,
+    words,
+    spots,
+    builds('contained_among') ? { side: t.moments?.[0]?.id === momentId ? (t.side ?? null) : null } : undefined,
+  );
 }
 
 /**
