@@ -385,6 +385,28 @@ export function planKey(b: Pick<Breakdown, 'scenes'>, momentId: string): string 
 }
 
 /**
+ * A floor plan as the packet's version 7 has it: whoever else holds a thing at once (`shared_holds`, the spot's
+ * `heldWith`, and `heldEach`) is left out, as the version 7 spot has no such field; version 8's `world_at` says it (held_by).
+ */
+function planOut(plan: Blocking): Blocking {
+  if (!plan.spots.some((s) => s.heldWith || s.heldEach)) return plan;
+  return { ...plan, spots: plan.spots.map(({ heldWith: _w, heldEach: _e, ...s }) => s) };
+}
+
+/** How each one is, as version 7 has it: a held fact without whoever else holds it at once (as `planOut`). */
+function nowOut(now: NowOf[] | null): NowOf[] | null {
+  if (!now?.some((x) => x.facts.some((f) => f.kind === 'held' && f.with))) return now;
+  return now.map((x) => ({
+    ...x,
+    facts: x.facts.map((f) => {
+      if (f.kind !== 'held') return f;
+      const { with: _w, withCalled: _c, ...held } = f;
+      return held;
+    }),
+  }));
+}
+
+/**
  * A rebuilt dream as packets: its sketches, its in-between pictures and a node per cut, in the order they are drawn.
  * `history` gives the owner's verdicts on earlier drawings of a cut, `previs` a cut's mock-up files and `prompts` a
  * picture's prompts for other models (evals/packets.ts reads and renders them).
@@ -580,7 +602,7 @@ export function dreamPacket(
             members: sh?.members ?? [],
           },
           state: {
-            now: sh?.now ?? cp?.facts ?? null,
+            now: nowOut(sh?.now ?? cp?.facts ?? null),
             nowWords: sh?.nowWords ?? null,
             own: cp?.own ?? [],
             states: sh?.states ?? (cp?.states ?? []).map((x) => ({ who: x.who, what: x.what, now: x.now })),
@@ -600,7 +622,7 @@ export function dreamPacket(
             size: f.distance,
             looksAt: or(f.looksAt),
             eye: cp?.eye ?? null,
-            floorPlan: plan,
+            floorPlan: plan && planOut(plan),
             // An edit has no camera of its own, and its mock-up is the one of the picture it edits.
             previs: cp?.eye
               ? {

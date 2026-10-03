@@ -512,7 +512,7 @@ const many: Schema = { anyOf: [count, { const: 'many' }] };
 const described = (s: Schema, description: string): Schema => ({ ...s, description });
 
 const VALUES =
-  'Typed by `attr`: present true or false; size {m: [w, d, h] in metres, words}; location {place, x, y, above} in the floor plan\'s metres; held_by, inside_of, rides, hands_to, becomes entity ids (rides {on, how: on|in}); open and lit true or false, of `part` where a part; count a whole number or "many"; look and wears words; pose sitting, standing or lying; facing and gaze an entity id or a direction (front, back, left, right); water_level metres.';
+  'Typed by `attr`: present true or false; size {m: [w, d, h] in metres, words}; location {place, x, y, above} in the floor plan\'s metres; held_by an entity id, or where it is in more than one pair of hands at once every one of them in order (handed over, the one handing it, then the one given it; held together, its holder first); inside_of, rides, hands_to, becomes entity ids (rides {on, how: on|in}); open and lit true or false, of `part` where a part; count a whole number or "many"; look and wears words; pose sitting, standing or lying; facing and gaze an entity id or a direction (front, back, left, right); water_level metres.';
 
 const contractSchema = obj({
   id: described(str, "The cut's stable id: `<moment>.<n>`, n from 1."),

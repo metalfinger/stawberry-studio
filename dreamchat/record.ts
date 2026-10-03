@@ -133,6 +133,8 @@ export type Seen = {
   parts: Record<string, string>;
   heldBy?: string;
   handedBy?: string;
+  /** With the one builder's `shared_holds` step: whoever else holds it at once, besides whoever hands it over. */
+  heldWith?: string[];
   ended?: string[];
 };
 
@@ -167,6 +169,13 @@ export type AtMoment = {
   leaving?: Record<string, string>;
   /** With the held_acts step, by thing: who is handing it over here, as a giving act says (not the plan's guess). */
   giving?: Record<string, string>;
+  /**
+   * With the shared_holds step, by thing in more than one pair of hands at once: all of them, in order. Handed over, the
+   * one handing it, then the one given it; held together, its holder first, then the others as their acts come.
+   */
+  hands?: Record<string, string[]>;
+  /** With the shared_holds step: the things held together that are many of it, one or some in each one's hands. */
+  oneEach?: string[];
   /** Each one it shows, and its place. */
   looks: Record<string, Seen>;
   /** The changes that happen here, by key. */
@@ -2515,6 +2524,38 @@ const OBJECT_ENDS = /\b(?:to|toward|towards|into|onto|by|beside|at|on|in|from|wi
 const HANDLING =
   /^(?:holds?|folds?|carr(?:y|ies)|clutch(?:es)?|grips?|lifts?|picks? up|takes?|raises?|hugs?|cradles?|wraps?)\b/i;
 
+/** Someone or something that can hold a thing: neither a thing nor a place. */
+const livingIn = (ctx: Ctx, id: string | undefined) =>
+  !!id &&
+  !!ctx.record.elements[id] &&
+  ctx.record.elements[id].kind !== 'thing' &&
+  ctx.record.elements[id].kind !== 'place';
+
+/**
+ * An act's "to" read as two ids, what it is done to and to whom ("t1 to p2", of the robot that hands Priya the bowls,
+ * night market m2), with the one builder's `shared_holds`; else nothing.
+ */
+function thingTo(ctx: Ctx, to: string | undefined): [string, string] | undefined {
+  const m = builds('shared_holds') ? to?.match(/^(\S+)\s+to\s+(\S+)$/) : null;
+  return m && ctx.record.elements[m[1]] && ctx.record.elements[m[2]] ? [m[1], m[2]] : undefined;
+}
+
+/**
+ * The typed acts of a moment done to a thing: it is the act's "to", or what "does" names before any word of where or to
+ * whom ("hands the newspaper-wrapped fish to", "puts the boat down"), never further on ("takes a step toward the boat").
+ */
+function actsOn(ctx: Ctx, typed: NonNullable<Ctx['readings']['typed']>, m: AtMoment, t: string) {
+  const { elements } = ctx.record;
+  const head = wordsOf(headOf(elements[t]?.name ?? '')).at(-1);
+  return takenOf(typed[m.id], m.eyes).acts.filter((a) => {
+    if (a.who === t) return false;
+    if (a.to === t || thingTo(ctx, a.to)?.[0] === t) return true;
+    if (!head) return false;
+    const named = (x: string) => wordsOf(x.split(OBJECT_ENDS)[0]).slice(0, 5).includes(head);
+    return named(a.does) || (!!a.to && !elements[a.to] && named(a.to));
+  });
+}
+
 /**
  * With the one builder's `held_acts` step, who holds what at a moment is what its typed act does at the instant
  * (typed.ts), not what the floor plan left from the scene: the father still folding the boat he hands over only
@@ -2531,20 +2572,8 @@ function heldByActs(ctx: Ctx): Violation[] {
     ...moments.flatMap((m) => Object.keys(m.held)),
     ...[...ctx.holders.values()].flatMap((h) => [...Object.keys(h.start), ...Object.keys(h.end)]),
   ]);
-  const living = (id: string | undefined) =>
-    !!id && !!elements[id] && elements[id].kind !== 'thing' && elements[id].kind !== 'place';
-  // The act is done to the thing: it is the act's "to", or what "does" names before any word of where or to whom
-  // ("hands the newspaper-wrapped fish to", "puts the boat down"), never further on ("takes a step toward the boat").
-  const actsAt = (m: AtMoment, t: string) => {
-    const head = wordsOf(headOf(elements[t]?.name ?? '')).at(-1);
-    return takenOf(typed[m.id], m.eyes).acts.filter((a) => {
-      if (a.who === t) return false;
-      if (a.to === t) return true;
-      if (!head) return false;
-      const named = (x: string) => wordsOf(x.split(OBJECT_ENDS)[0]).slice(0, 5).includes(head);
-      return named(a.does) || (!!a.to && !elements[a.to] && named(a.to));
-    });
-  };
+  const living = (id: string | undefined) => livingIn(ctx, id);
+  const actsAt = (m: AtMoment, t: string) => actsOn(ctx, typed, m, t);
   for (const t of Object.keys(elements).filter((id) => elements[id].kind === 'thing' && handheld.has(id)))
     moments.forEach((m, i) => {
       if (!there(m, t)) return;
@@ -2554,7 +2583,10 @@ function heldByActs(ctx: Ctx): Violation[] {
       const letGo = acts.find((a) => LETTING_GO.test(a.does));
       const hand = acts.find((a) => HANDLING.test(a.does) && holderThere(ctx, m, a.who));
       if (give) {
-        const to = living(give.to) && give.to !== give.who ? give.to : was && was !== give.who ? was : undefined;
+        // Whom it goes to from an act's "t1 to p2", only where that act is done to this thing.
+        const both = thingTo(ctx, give.to);
+        const whom = living(give.to) ? give.to : both?.[0] === t ? both[1] : undefined;
+        const to = living(whom) && whom !== give.who ? whom : was && was !== give.who ? was : undefined;
         if (to && holderThere(ctx, m, to)) {
           m.held[t] = to;
           m.handed[t] = give.who;
@@ -2630,6 +2662,78 @@ function heldBoth(ctx: Ctx): Violation[] {
   ];
 }
 
+/** Done to a thing with the hands by more than one at once: it is in all their hands (`shared_holds`). */
+const TOGETHER =
+  /^(?:holds?|folds?|carr(?:y|ies)|clutch(?:es)?|grips?|lifts?|raises?|stretch(?:es)?|pinch(?:es)?|brings?\s+together|pulls?|tugs?|spreads?|shakes?\s+out)\b/i;
+/** An act on one's own of something ("holds out their schedules", "lifts her cup"): each their own, never one together. */
+const OWN = /^(?:their|his|her|my|our|its|your)\b/i;
+
+/**
+ * With the one builder's `shared_holds` step, a thing in more than one pair of hands at once is in all of them. Handed
+ * over, it is in the hands of the one handing it and of the one given it: the boat passing from the father's hand to the
+ * dreamer's (affd m5) was in the dreamer's in the record and the father's on the floor plan. Handed over by a giving
+ * act of the moment, never only where the floor plan hands it on (the boat already in the dreamer's hand at aeea m8,
+ * the camera turned to the father had it been his too). Held together, it is in the hands of everyone there whose act
+ * at the instant does something to it with their hands, its holder among them, never each their own: the bed sheet the
+ * grandmother and the dreamer fold together, stretched between them, and then a handkerchief between their joined
+ * fingers, was in the grandmother's hands alone (Grandmother m6, m7); the stamp between her fingertips is hers (m8). Only
+ * a thing the record has in someone's hands, and only hands there.
+ */
+function heldTogether(ctx: Ctx): Violation[] {
+  if (!builds('shared_holds')) return [];
+  const typed = ctx.readings.typed;
+  const out: Violation[] = [];
+  for (const m of ctx.record.moments) {
+    // Found again from what the moment holds each time the rules run: what changed is said, what stayed is not.
+    const was = { hands: m.hands ?? {}, oneEach: m.oneEach ?? [] };
+    const hands: Record<string, string[]> = {};
+    const oneEach: string[] = [];
+    for (const [t, h] of Object.entries(m.held)) {
+      // Handed over by a giving act at the instant (`held_acts`): never only where the floor plan hands it on, where
+      // the moment's acts, read, may have it in the one hand already (the boat at aeea m8).
+      const from = m.giving?.[t];
+      const doing = typed
+        ? uniq(
+            actsOn(ctx, typed, m, t)
+              .filter(
+                (a) =>
+                  TOGETHER.test(a.does) &&
+                  !(a.to && !ctx.record.elements[a.to] && OWN.test(a.to)) &&
+                  livingIn(ctx, a.who) &&
+                  holderThere(ctx, m, a.who),
+              )
+              .map((a) => a.who),
+          )
+        : [];
+      const handover = !!from && from !== h && holderThere(ctx, m, from);
+      const all = handover
+        ? [from, h]
+        : doing.length > 1 && doing.includes(h)
+          ? [h, ...doing.filter((x) => x !== h)]
+          : [];
+      if (!all.length) continue;
+      hands[t] = all;
+      // Many of it, held together: some in each one's hands, never one held between them ("the dreamer and Priya stand
+      // together, eating or holding the glowing bowls of noodles", night market m3).
+      const each = !handover && isAre(called(ctx, t)) === 'are';
+      if (each) oneEach.push(t);
+      if (JSON.stringify(was.hands[t]) !== JSON.stringify(all) || was.oneEach.includes(t) !== each)
+        out.push({
+          rule: 'carried',
+          who: t,
+          at: m.id,
+          detail: `${called(ctx, t)} ${each ? 'are' : 'is'} in ${listOf(all.map((x) => poss(called(ctx, x))))} hands at once at ${m.id}`,
+          fix: 'add',
+        });
+    }
+    if (Object.keys(hands).length) m.hands = hands;
+    else delete m.hands;
+    if (oneEach.length) m.oneEach = oneEach;
+    else delete m.oneEach;
+  }
+  return out;
+}
+
 /**
  * 11. A change is carried only while it holds, and a thing is held only where it is. States were
  * carried after their change was gone: Tomas's old "age and clothing" (hotel orchard, 26 Sep). The birds
@@ -2639,7 +2743,7 @@ function heldBoth(ctx: Ctx): Violation[] {
  * states carry and the record does not, and the other way round, is said.
  */
 function carriedWhileHolds(ctx: Ctx): Violation[] {
-  const held = [...staysWithHolder(ctx), ...heldByActs(ctx), ...heldBoth(ctx)];
+  const held = [...staysWithHolder(ctx), ...heldByActs(ctx), ...heldBoth(ctx), ...heldTogether(ctx)];
   ends(ctx);
   // A part's state its moment's words give, against what is in force by then (`point_state`): its ends known first.
   const stated = builds('point_state') ? statedStates(ctx) : [];
@@ -2714,6 +2818,7 @@ function finish(ctx: Ctx, hash: string): void {
         parts,
         ...(m.held[id] ? { heldBy: m.held[id] } : {}),
         ...(m.handed[id] ? { handedBy: m.handed[id] } : {}),
+        ...withOthers(m, id),
         ...(ended.length ? { ended } : {}),
       };
     }
@@ -2950,6 +3055,12 @@ export function lookAt(record: StoryRecord, momentId: string, id: string): strin
     .join('; ');
 }
 
+/** Whoever else holds a thing at once (`shared_holds`): besides its holder and whoever hands it over. */
+function withOthers(m: AtMoment, id: string): Pick<Seen, 'heldWith'> {
+  const others = (m.hands?.[id] ?? []).filter((x) => x !== m.held[id] && x !== m.handed[id]);
+  return others.length ? { heldWith: others } : {};
+}
+
 export function describeAt(record: StoryRecord, momentId: string): string {
   const m = record.moments.find((x) => x.id === momentId);
   if (!m) return '';
@@ -2957,7 +3068,12 @@ export function describeAt(record: StoryRecord, momentId: string): string {
     const e = record.elements[id];
     if (!e) return id;
     const seen = m.looks[id];
-    const held = seen?.heldBy ? `; in ${poss(record.elements[seen.heldBy]?.called ?? seen.heldBy)} hands` : '';
+    const by = (h: string) => poss(record.elements[h]?.called ?? h);
+    const held = seen?.heldBy
+      ? seen.heldWith?.length
+        ? `; ${isAre(e.called) === 'are' ? 'in' : 'held between'} ${by(seen.heldBy)} hands and ${listOf(seen.heldWith.map(by))}`
+        : `; in ${by(seen.heldBy)} hands`
+      : '';
     return `${e.called}${e.kind === 'crowd' ? ' (a crowd)' : ''}: ${lookAt(record, m.id, id) || 'no look given'}${held}`;
   };
   const place = m.place ? `, in ${lookOf(m.place)}` : '';
@@ -3040,7 +3156,16 @@ const SAID_OF_THEM = (part: string) => LABEL.has(part) || part === 'age' || part
 export type NowFact =
   | { kind: 'part'; part: string; what: string; now: string; implied?: true }
   | { kind: 'shut'; why: 'ended' | 'later'; part?: string }
-  | { kind: 'held'; by: string; byCalled: string; from?: string; fromCalled?: string };
+  | {
+      kind: 'held';
+      by: string;
+      byCalled: string;
+      from?: string;
+      fromCalled?: string;
+      /** Whoever else holds it at once (`shared_holds`), and what each is called. */
+      with?: string[];
+      withCalled?: string[];
+    };
 
 /** Everything that is so of one element at a moment, with what a sentence about it needs. */
 export type NowOf = { of: string; called: string; name: string; kind: ElementKind; facts: NowFact[] };
@@ -3108,6 +3233,7 @@ export function factsAt(record: StoryRecord, momentId: string): NowOf[] {
         by: seen.heldBy,
         byCalled: called(seen.heldBy),
         ...(seen.handedBy ? { from: seen.handedBy, fromCalled: called(seen.handedBy) } : {}),
+        ...(seen.heldWith?.length ? { with: seen.heldWith, withCalled: seen.heldWith.map(called) } : {}),
       });
     if (facts.length) out.push({ of: id, called: e.called, name: e.name, kind: e.kind, facts });
   }
@@ -3149,7 +3275,11 @@ export function sayNow(xs: NowOf[]): { of: string; text: string }[] {
         handed = !!f.from;
         hands = f.from
           ? `${be === 'are' ? 'pass' : 'passes'} from ${poss(f.fromCalled ?? f.from)} hands to ${poss(f.byCalled)}`
-          : `in ${poss(f.byCalled)} hands`;
+          : f.withCalled?.length
+            ? // Held together (`shared_holds`): "held between my grandmother's hands and the dreamer's"; many of it, some in
+              // each one's: "in the dreamer's hands and Priya's".
+              `${be === 'are' ? 'in' : 'held between'} ${poss(f.byCalled)} hands and ${listOf(f.withCalled.map(poss))}`
+            : `in ${poss(f.byCalled)} hands`;
       }
     }
     if (says.length || hands)
@@ -3274,6 +3404,9 @@ export function forPlan(record: StoryRecord): RecordPlan {
           // With the held_acts step, what passes from someone's hands at the instant, by thing: from whom.
           ...(builds('held_acts') && Object.keys(m.giving ?? {}).length ? { handed: { ...m.giving } } : {}),
           ...(builds('held_acts') && Object.keys(m.leaving ?? {}).length ? { leaving: { ...m.leaving } } : {}),
+          // With the shared_holds step, what is in more than one pair of hands at once, by thing: all of them, in order.
+          ...(builds('shared_holds') && Object.keys(m.hands ?? {}).length ? { hands: structuredClone(m.hands!) } : {}),
+          ...(builds('shared_holds') && m.oneEach?.length ? { oneEach: [...m.oneEach] } : {}),
           ...withWords(factsAt(record, m.id)),
         },
       ]),

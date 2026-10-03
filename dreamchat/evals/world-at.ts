@@ -8,9 +8,9 @@
 // out of anyone's hands, in the plan's own frame and at its coordinates; what someone rides, for each one the plan seats
 // on a vehicle; held by for each thing the record or the plan has in someone's hands, the record's holder, else the
 // plan's; inside of for each thing the plan places in what holds it; open for each fixture the plan has open; facing for
-// each person the frame has in view, as the plan has it. Against the plan: gone and on it; held by someone the plan does
-// not put it in the hands of (a handover's two hands); inside something it is not placed in; open where the plan has it
-// shut, or shut where it is open; a value other than the plan's. And two readings of one attribute that disagree.
+// each person the frame has in view, as the plan has it. Against the plan: gone and on it; held by other hands than the
+// plan's; inside something it is not placed in; open where the plan has it shut, or shut where it is open; a value other
+// than the plan's. And two readings of one attribute that disagree.
 //
 //   bun run evals/world-at.ts [--live] [--dir <a dreamchat data folder>]... [--list]
 import './local-env';
@@ -157,19 +157,25 @@ for (const { id, load } of sources) {
       if (v && (v.value as { on: string }).on !== on.t.id)
         wrong(`${e} rides ${JSON.stringify(v.value)}, the plan ${on.t.id}`);
     }
-    // Held by: each thing the record or the plan has in someone's hands; the record's holder, else the plan's.
+    // Held by: each thing the record or the plan has in someone's hands; the record's holder, else the plan's; in more
+    // than one pair of hands at once (`shared_holds`), every one of them, as the record has them.
+    const hands = (x: { heldBy?: string; heldWith?: string[] } | undefined) =>
+      x?.heldBy ? (x.heldWith?.length ? [x.heldBy, ...x.heldWith] : x.heldBy) : undefined;
     for (const thing of new Set([
       ...Object.keys(m.held),
       ...plan.spots.filter((x) => x.heldBy && x.kind !== 'person').map((x) => x.id),
     ])) {
       const v = of(thing, 'held_by');
       due('held_by', v.length > 0, thing);
-      const want = m.held[thing] ?? spot(thing)?.heldBy;
-      if (v.length && v[0].value !== want) wrong(`${thing} held by ${v[0].value}, want ${want}`);
+      const want = m.hands?.[thing] ?? m.held[thing] ?? hands(spot(thing));
+      if (v.length && JSON.stringify(v[0].value) !== JSON.stringify(want))
+        wrong(`${thing} held by ${JSON.stringify(v[0].value)}, want ${JSON.stringify(want)}`);
       const sp = spot(thing);
-      if (v.length && sp?.heldBy && sp.heldBy !== v[0].value) {
+      if (v.length && sp?.heldBy && JSON.stringify(hands(sp)) !== JSON.stringify(v[0].value)) {
         total.against.heldOther++;
-        out.push(`${id} ${p.id}: ${thing} held by ${v[0].value}, on the plan by ${sp.heldBy} (a handover's two hands)`);
+        out.push(
+          `${id} ${p.id}: ${thing} held by ${JSON.stringify(v[0].value)}, on the plan by ${JSON.stringify(hands(sp))}`,
+        );
       }
     }
     // Inside of: each thing the plan places in what holds it; and what it is said in, it is placed in.

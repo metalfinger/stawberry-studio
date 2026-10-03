@@ -265,6 +265,13 @@ export type RecordPlan = {
       handed?: Record<string, string>;
       /** With the one builder's `held_acts` step, by thing: who puts it down here (it lies by them, out of their hands). */
       leaving?: Record<string, string>;
+      /**
+       * With the one builder's `shared_holds` step, by thing in more than one pair of hands at once: all of them, the one
+       * handing it over or its holder first.
+       */
+      hands?: Record<string, string[]>;
+      /** With `shared_holds`: the things held together that are many of it, some in each one's hands. */
+      oneEach?: string[];
       /** With the one builder's `plan_acts` step: the moment's typed acts (typed.ts), who does what to what, where. */
       acts?: { who: string; does: string; to?: string; where?: string }[];
       /** With the one builder's `plan_beyond` step: who and what the moment sees out past the place, through what. */
@@ -593,17 +600,24 @@ export function rawPlanBy(b: Breakdown, momentId: string, rec?: RecordPlan): Blo
         }
         // With the record, a thing is in someone's hands only where the record has it there; as it is handed over, still
         // in the hands of whoever hands it (held_acts: "the boat in the father's hand reaching to the dreamer", affd m5).
-        const holder = r?.handed?.[s.id] ?? r?.held[s.id];
+        // In more than one pair of hands at once, as the record has it (`shared_holds`): the first holds it, the others
+        // with them, between their hands.
+        const hands = r?.hands?.[s.id];
+        const holder = hands?.[0] ?? r?.handed?.[s.id] ?? r?.held[s.id];
         // What shows a moment's beat is held as its reading has it (`visible_device`): the record knows nothing of it,
         // and took the appointment card out of the family's hands to the floor (Grandmother m3).
         const device =
           builds('visible_device') &&
           !!rec?.devices?.devices.some((d) => d.id === s.id && d.where === 'held' && !!d.moments[momentId]);
+        const withOthers = (x: Spot): Spot =>
+          hands && hands.length > 1 && things.has(s.id) && !device && x.heldBy === hands[0]
+            ? { ...x, heldWith: hands.slice(1), ...(r?.oneEach?.includes(s.id) ? { heldEach: true as const } : {}) }
+            : x;
         if (r && things.has(s.id) && !device && (holder ?? null) !== (at.heldBy ?? null)) {
           const { heldBy: _, ...loose } = at;
-          return holder ? { ...loose, heldBy: holder } : loose;
+          return holder ? withOthers({ ...loose, heldBy: holder }) : loose;
         }
-        return at;
+        return withOthers(at);
       }),
   };
   // Getting in or out of something at the instant, as the moment's typed acts say (the one builder's `plan_acts`); who

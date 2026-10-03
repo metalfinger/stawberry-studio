@@ -300,6 +300,11 @@ export const BUILDER_STEPS: readonly string[] = [
   //    things, is in it too ("puts the stamp into her open cutlery drawer, among the knives and forks"), and so is a cast
   //    thing whose own reading says it is in it: the knives and forks were a cube mid-room.
   'contained_among',
+  // Not a ledger row: from the merged flow's Grandmother (2-3 Oct) and the world at each cut. A thing in more than one
+  //    pair of hands at once is in all of them, in the record, on the floor plan and the mock-up, in the prompt and the
+  //    world: the bed sheet folded together, stretched between them, was in the grandmother's hands alone; and handed
+  //    over, the record had the one given it where the plan had the one handing it (eight handovers).
+  'shared_holds',
 ];
 
 let built: { raw: string; steps: Set<string> } | null = null;

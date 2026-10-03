@@ -36,6 +36,13 @@ export type Spot = {
   shape?: Shape;
   /** A thing someone holds or carries: who holds it. It is in their hands, wherever they are. */
   heldBy?: string;
+  /**
+   * In more than one pair of hands at once (`shared_holds`): whoever else holds it, besides `heldBy`. Handed over, the
+   * one given it (`heldBy` hands it); held together, the others. Between their hands, on the mock-up.
+   */
+  heldWith?: string[];
+  /** Many of it held together (`shared_holds`): some in each one's hands, never one held between them. */
+  heldEach?: true;
   /** How many a crowd is, where the dream says: "a couple of people" is 2. */
   count?: number;
   /** How far a crowd spreads, in metres: across the way they face, and deep. */

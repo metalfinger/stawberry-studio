@@ -760,7 +760,13 @@ function solidsOf(
       add(
         s.id,
         shapeOf(s, plan) === 'ground' ? 0.5 : 0.62,
-        thingBlocks(s, plan, name(s.id), s.heldBy && leaveOut.includes(s.heldBy) ? pov : undefined),
+        thingBlocks(
+          s,
+          plan,
+          name(s.id),
+          [s.heldBy, ...(s.heldWith ?? [])].some((h) => !!h && leaveOut.includes(h)) ? pov : undefined,
+          leaveOut,
+        ),
         name(s.id),
       );
   }
@@ -994,6 +1000,65 @@ function groundAt(p: V2, plan: Blocking): number {
   return z;
 }
 
+/** How far past where someone's hands are a thing in them reaches out toward whoever else holds it, in metres. */
+const REACH = 0.35;
+
+/** Everyone whose hands a thing is in: its holder, then whoever else holds it at once (`shared_holds`). */
+const handsOf = (s: Spot): string[] => (s.heldBy ? [s.heldBy, ...(s.heldWith ?? [])] : []);
+
+/**
+ * A thing in more than one pair of hands at once (`shared_holds`, the spot's `heldWith`): between their hands, as wide
+ * across from one to the other as it is, up to the gap between them, and never narrower than one pair of hands holds it
+ * (at most 0.8 m: two standing close hold a bed sheet as one would); held out by the first toward the other where it
+ * cannot reach both. The bed sheet the grandmother and the dreamer fold together, stretched between them, was drawn at
+ * her side, away from the dreamer (Grandmother m6); the boat the father hands the dreamer, at his far side (affd m5).
+ * Each one's hands are before them toward the other, at the height of their hands; the camera's, below its eyes.
+ */
+export function heldBetween(
+  s: Spot,
+  plan: Blocking,
+  size: [number, number, number],
+  pov: Eye | undefined,
+  leaveOut: string[],
+): Block | undefined {
+  const [w, d, h] = size;
+  const holders = [s.heldBy, ...(s.heldWith ?? [])]
+    .map((id) => plan.spots.find((o) => o.id === id))
+    .filter((o): o is Spot => !!o);
+  if (holders.length < 2) return undefined;
+  // With the camera's own hands among them, no taller than it holds anything (`inHands`).
+  const camera = !!pov && holders.some((o) => leaveOut.includes(o.id));
+  const high = Math.min(h, camera ? 0.6 : 1.5);
+  const at = (o: Spot, toward: Spot): V3 => {
+    if (pov && leaveOut.includes(o.id)) {
+      const ahead = unit(pov.d);
+      return v3(pov.at.x + ahead.x * 0.45, pov.at.y + ahead.y * 0.45, pov.height - 0.5 - Math.min(high, 0.6) / 2);
+    }
+    const to = unit({ x: toward.x - o.x, y: toward.y - o.y });
+    const hands = groundAt(o, plan) + (o.pose === 'sitting' ? 0.6 : o.pose === 'lying' ? 0.3 : 0.9);
+    return v3(o.x + to.x * 0.3, o.y + to.y * 0.3, hands);
+  };
+  // The first and the one farthest from them: what it is stretched between.
+  const [a, ...rest] = holders;
+  const b = rest.reduce((x, y) => (Math.hypot(y.x - a.x, y.y - a.y) > Math.hypot(x.x - a.x, x.y - a.y) ? y : x));
+  const [ha, hb] = [at(a, b), at(b, a)];
+  const gap = Math.hypot(hb.x - ha.x, hb.y - ha.y);
+  const dir = gap > 1e-6 ? { x: (hb.x - ha.x) / gap, y: (hb.y - ha.y) / gap } : facing(a, plan);
+  const across = Math.max(Math.min(w, 0.8), Math.min(w, gap));
+  // Reaching both: halfway between their hands, at the height between; else in the first's, held out toward the other.
+  const both = across >= gap - 2 * REACH;
+  const out = both ? gap / 2 : REACH + across / 2;
+  return {
+    x: ha.x + dir.x * out,
+    y: ha.y + dir.y * out,
+    z: both ? (ha.z + hb.z) / 2 : ha.z,
+    w: across,
+    d: Math.min(d, 0.8),
+    h: high,
+    f: rightOf(dir),
+  };
+}
+
 /**
  * A thing as blocks, by what it is: a seat and its back, so who sits on it sits on it, not in it
  * (one block the height of a sofa's back buried the friend to her waist, 24 Sep); a vehicle's body
@@ -1001,49 +1066,53 @@ function groundAt(p: V2, plan: Blocking): number {
  * as a slab as high as it rises; what someone holds, before them at the height of their hands; a
  * small thing on something, where `restOf` puts it. `called` is what it is called.
  */
-function thingBlocks(s: Spot, plan: Blocking, called: string, pov?: Eye): Block[] {
+function thingBlocks(s: Spot, plan: Blocking, called: string, pov?: Eye, leaveOut: string[] = []): Block[] {
   const camera = cameraMode() === 'on';
   // With the camera rules, something held that the plan gives no size is the size of something held.
   const [w, d, h] = camera && s.heldBy && !s.size ? HELD_SIZE : sizeOf(s);
   const f = facing(s, plan);
   const holder = s.heldBy ? plan.spots.find((o) => o.id === s.heldBy) : undefined;
-  if (holder && camera) {
-    const hf = facing(holder, plan);
+  // In someone's hands, with the camera rules; where it is the one whose eyes the camera is, before them and below their
+  // eyes, where they would look down at it, never beside them at their floor-plan spot (camera.ts, A4).
+  const inHands = (o: Spot): Block => {
+    const hf = facing(o, plan);
     const hr = rightOf(hf);
-    // Held by the one whose eyes the camera is: in their hands, before them and below their eyes,
-    // where they would look down at it, never beside them at their floor-plan spot (camera.ts, A4).
-    if (pov) {
+    if (pov && leaveOut.includes(o.id)) {
       const ahead = unit(pov.d);
-      return [
-        {
-          x: pov.at.x + ahead.x * 0.45,
-          y: pov.at.y + ahead.y * 0.45,
-          z: pov.height - 0.5 - Math.min(h, 0.6) / 2,
-          w: Math.min(w, 0.8),
-          d: Math.min(d, 0.8),
-          h: Math.min(h, 0.6),
-          f: ahead,
-        },
-      ];
+      return {
+        x: pov.at.x + ahead.x * 0.45,
+        y: pov.at.y + ahead.y * 0.45,
+        z: pov.height - 0.5 - Math.min(h, 0.6) / 2,
+        w: Math.min(w, 0.8),
+        d: Math.min(d, 0.8),
+        h: Math.min(h, 0.6),
+        f: ahead,
+      };
     }
     // Sitting, what someone holds is on their lap, before them: the suitcase on the grandfather's
     // knees was drawn off to his side, the other third of the picture from him (snow train, m3).
-    const hands = groundAt(holder, plan) + (holder.pose === 'sitting' ? 0.6 : holder.pose === 'lying' ? 0.3 : 0.9);
-    const lap = holder.pose === 'sitting';
+    const hands = groundAt(o, plan) + (o.pose === 'sitting' ? 0.6 : o.pose === 'lying' ? 0.3 : 0.9);
+    const lap = o.pose === 'sitting';
     const side = lap ? 0 : 0.3 + Math.min(w, 0.8) / 2;
     const ahead = lap ? 0.3 : 0.15;
-    return [
-      {
-        x: holder.x + hf.x * ahead + hr.x * side,
-        y: holder.y + hf.y * ahead + hr.y * side,
-        z: hands,
-        w: Math.min(w, 0.8),
-        d: Math.min(d, 0.8),
-        h: Math.min(h, 1.5),
-        f: hf,
-      },
-    ];
+    return {
+      x: o.x + hf.x * ahead + hr.x * side,
+      y: o.y + hf.y * ahead + hr.y * side,
+      z: hands,
+      w: Math.min(w, 0.8),
+      d: Math.min(d, 0.8),
+      h: Math.min(h, 1.5),
+      f: hf,
+    };
+  };
+  // In more than one pair of hands at once (`shared_holds`): between them; many of it, some in each one's hands.
+  if (holder && camera && s.heldWith?.length) {
+    const others = s.heldWith.map((id) => plan.spots.find((o) => o.id === id)).filter((o): o is Spot => !!o);
+    if (s.heldEach && others.length) return [holder, ...others].map(inHands);
+    const between = heldBetween(s, plan, [w, d, h], pov, leaveOut);
+    if (between) return [between];
   }
+  if (holder && camera) return [inHands(holder)];
   if (holder) {
     // In one hand, at their side: held square before them, a string of balloons hid the dreamer's
     // face and chest (25 Sep).
@@ -2423,7 +2492,7 @@ export function dreamerShot(
       : undefined;
   // With the camera rules, what the dreamer holds is in their hands before their eyes, wherever those
   // eyes turn: the picture is rendered again for each way of looking.
-  const holding = camera && plan.spots.some((s) => s.heldBy === dreamer);
+  const holding = camera && plan.spots.some((s) => s.heldBy === dreamer || s.heldWith?.includes(dreamer));
   const solids = solidsOf(plan, [dreamer], name);
   const solidsAt = (eye: Eye) => (holding ? solidsOf(plan, [dreamer], name, undefined, eye) : solids);
   // Their eyes, on whatever they stand on: a bridge's deck, a step of the stairs.
@@ -2447,7 +2516,7 @@ export function dreamerShot(
   // pole's foot (desert station m3, 26 Sep).
   const rest = target ? restOf(target, plan, target.name ?? name(target.id)) : undefined;
   // What they hold, looked at, is in their hands: below their eyes, a little before them.
-  const inHands = camera && !!target && target.heldBy === dreamer;
+  const inHands = camera && !!target && handsOf(target).includes(dreamer);
   const heart = target
     ? inHands
       ? v3(me.x + own.x * 0.45, me.y + own.y * 0.45, height - 0.6)
@@ -2644,7 +2713,7 @@ export function dreamerShot(
   const called = (id: string) => plan.spots.find((s) => s.id === id)?.name ?? name(id);
   // What someone holds is with them: never "outside the picture" while they are in it.
   const outOfPicture = spots
-    .filter((s) => !shown.some((x) => x.s.id === s.id) && !(s.heldBy && shown.some((x) => x.s.id === s.heldBy)))
+    .filter((s) => !shown.some((x) => x.s.id === s.id) && !handsOf(s).some((h) => shown.some((x) => x.s.id === h)))
     .filter((s) => !small.some((x) => x.s.id === s.id))
     .filter((s) => !(camera && underWater(s, plan, eye)) && !isCastPiece(s));
   const sentences = [
@@ -2667,7 +2736,7 @@ export function dreamerShot(
     }),
     ...outOfPicture.map((s) =>
       // What they hold themselves is in their hands, only below the picture (the camera rules).
-      camera && s.heldBy === dreamer
+      camera && handsOf(s).includes(dreamer)
         ? `In the dreamer's hands, below the picture: ${called(s.id)}.`
         : `Outside the picture, ${offTo(eye, s, camera ? topOf(s, plan, called) : undefined)}: ${called(s.id)}.`,
     ),
@@ -2686,7 +2755,7 @@ export function dreamerShot(
     ...(rules.length ? { rules } : {}),
     inPicture: [...at, ...shown.map((x) => x.s.id), ...small.map((x) => x.s.id)],
     // Who and what the view says is outside the picture (framed_only): what the dreamer holds is in their hands.
-    outside: outOfPicture.filter((s) => !(camera && s.heldBy === dreamer)).map((s) => s.id),
+    outside: outOfPicture.filter((s) => !(camera && handsOf(s).includes(dreamer))).map((s) => s.id),
   };
 }
 
@@ -2762,7 +2831,10 @@ function thingWords(
                   : `, ${pose} on ${called(on.t.id)}`
       : '';
   const holder = !isPerson(s) && s.heldBy ? s.heldBy : undefined;
-  const holds = isPerson(s) && !s.many ? plan.spots.filter((o) => o.heldBy === s.id).map((o) => called(o.id)) : [];
+  const holds =
+    isPerson(s) && !s.many
+      ? plan.spots.filter((o) => o.heldBy === s.id || o.heldWith?.includes(s.id)).map((o) => called(o.id))
+      : [];
   // What it rests on, where the mock-up puts it on top of something low (the little boats on the table the father folds
   // them at, affd m4): "on the table", never "right beside" it (the camera rules).
   const onTop = cameraMode() === 'on' && !isPerson(s) && !holder ? restsOn(s, plan) : undefined;
@@ -2812,7 +2884,12 @@ function thingWords(
     sitting +
     (isPerson(s) && !s.many ? `, ${turnedSaid}` : '') +
     (holds.length ? `, holding ${holds.join(' and ')}` : '') +
-    (holder ? `, in ${called(holder)}'s hands` : '') +
+    (holder
+      ? s.heldWith?.length
+        ? // In more than one pair of hands at once (`shared_holds`): between them; many of it, some in each one's.
+          `, ${s.heldEach ? 'in' : 'held between'} ${called(holder)}'s hands and ${s.heldWith.map((o) => `${called(o)}'s`).join(' and ')}`
+        : `, in ${called(holder)}'s hands`
+      : '') +
     (riders.length
       ? `, with ${riders.join(' and ')} ${shape === 'vehicle' ? (cameraMode() === 'on' && sizeOf(s)[0] < 1 ? 'on it' : 'in it') : shape === 'seat' ? 'sitting on it' : cameraMode() === 'on' && growsAs(called(s.id)) === 'among' ? 'among them' : cameraMode() === 'on' && growsAs(called(s.id)) ? 'in it' : 'on it'}`
       : '') +
@@ -3464,10 +3541,21 @@ export function outsideShot(
   // side of the room" did not say it faced the cook the moment is about (25 Sep).
   // Something small in someone's hands is where their hands are: the brass key, too small to show
   // on the mock-up, left "the camera looks toward the sea" for a close look at it (lighthouse m2).
-  const heldBy = lookAt?.id ? spots.find((s) => s.id === lookAt.id)?.heldBy : undefined;
+  // In more than one pair of hands at once (`shared_holds`), in the hands of those of them the picture shows.
+  const lookedThing = lookAt?.id ? spots.find((s) => s.id === lookAt.id) : undefined;
+  const holdersShown = lookedThing ? handsOf(lookedThing).filter((h) => shown.some((x) => x.s.id === h)) : [];
   const lookedAt =
-    lookAt?.id && (shown.some((x) => x.s.id === lookAt.id) || (heldBy && shown.some((x) => x.s.id === heldBy)))
-      ? `${name(lookAt.id)}${heldBy && !shown.some((x) => x.s.id === lookAt.id) ? ` in ${name(heldBy)}'s hands` : ''}`
+    lookAt?.id && (shown.some((x) => x.s.id === lookAt.id) || holdersShown.length)
+      ? `${name(lookAt.id)}${
+          holdersShown.length && !shown.some((x) => x.s.id === lookAt.id)
+            ? holdersShown.length > 1
+              ? ` held between ${name(holdersShown[0])}'s hands and ${holdersShown
+                  .slice(1)
+                  .map((h) => `${name(h)}'s`)
+                  .join(' and ')}`
+              : ` in ${name(holdersShown[0])}'s hands`
+            : ''
+        }`
       : undefined;
   const words = (s: Spot, seen: Seen) =>
     `${name(s.id)}, ${across(seen).replace(/^(in|at) /, '')}${thingWords(s, seen, plan, eye, name, { spots, on: [], anchor, inPicture: new Set(shown.map((x) => x.s.id)) })}`;
@@ -3503,7 +3591,7 @@ export function outsideShot(
       !tinies.some((x) => x.s.id === s.id) &&
       !riding(s) &&
       (subjects.includes(s.id) || others.includes(s.id) || !isPerson(s)) &&
-      !(s.heldBy && shown.some((x) => x.s.id === s.heldBy)) &&
+      !handsOf(s).some((h) => shown.some((x) => x.s.id === h)) &&
       !(camera && underWater(s, plan, eye)) &&
       !isCastPiece(s),
   );

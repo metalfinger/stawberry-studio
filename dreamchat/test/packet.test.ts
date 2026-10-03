@@ -277,8 +277,9 @@ describe('every field a spot can have is in the schema', () => {
   // A person turned to whom they attend to carried `attending: true`, which the schema did not know: every packet with
   // one broke it (the merged flow's imports, Open Wide m5, 1 Oct), and no saved dream had one to catch it. Required<Spot>
   // fails to compile when the floor plan's spot gains a field this list lacks; the schema check, when the schema does.
+  // Whoever else holds a thing at once (`heldWith`, `heldEach`) the packet leaves out of its floor plans (planOut).
   test('a spot with all of them set validates', () => {
-    const all: Required<Spot> = {
+    const all: Required<Omit<Spot, 'heldWith' | 'heldEach'>> = {
       id: 'p1',
       x: 1,
       y: 2,

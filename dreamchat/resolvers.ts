@@ -99,10 +99,14 @@ export function worldOf(r: Rebuilt, cut: string): World {
   }
 
   // Held by: the record's, as the prompt says it; a thing the plan has in someone's hands the record does not, the
-  // plan's.
-  for (const [thing, by] of Object.entries(m.held)) add(value(thing, 'held_by', by, 'record.held', 'read'));
+  // plan's. In more than one pair of hands at once (`shared_holds`), every one of them, in order: handed over, the one
+  // handing it, then the one given it; held together, its holder first.
+  const hands = m.hands ?? {};
+  for (const [thing, by] of Object.entries(m.held))
+    add(value(thing, 'held_by', hands[thing]?.length ? hands[thing] : by, 'record.held', 'read'));
   for (const s of plan.spots)
-    if (s.heldBy && s.kind !== 'person') add(value(s.id, 'held_by', s.heldBy, 'plan.heldBy', 'derived'));
+    if (s.heldBy && s.kind !== 'person')
+      add(value(s.id, 'held_by', s.heldWith?.length ? [s.heldBy, ...s.heldWith] : s.heldBy, 'plan.heldBy', 'derived'));
 
   // Inside of: what holds a cast thing, by the reading its placement put it in by, among what was there before it.
   const cast = (r.dream as { cast?: CastReading } | undefined)?.cast;
