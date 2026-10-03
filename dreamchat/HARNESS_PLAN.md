@@ -53,7 +53,9 @@ stamp", the stamp between their fingers a dot on the keyed mock-up and its id ma
 paused from 3 Oct while one system design for the whole flow is built (`docs/system-facts-2026-10-03.md` is this side
 as it was); this side's first part of it is the packet contract (`contract.ts`, `docs/packet-contract.md`): version 8
 beside version 7, with fields added only, each cut's stable id, and its contract, null where not built yet; then what a
-moment puts something among is in what holds it too (`contained_among`, the kitchen slice's knives and forks). Queued after it, in order: holds shared between hands; E3 crowd image with the four-image fit; lettering sized to read; camera masters;
+moment puts something among is in what holds it too (`contained_among`, the kitchen slice's knives and forks); then
+the world's state at each cut, resolved once where the rebuild decides it (`resolvers.ts`, version 8's `world_at`:
+present, location, rides, held by, inside of, open, facing). Queued after it, in order: holds shared between hands; E3 crowd image with the four-image fit; lettering sized to read; camera masters;
 E4 depth in the vertical frame; transformations; staging and casting (Grandmother's spoken beats among them). The
 merged flow stops at three dreams (Grandmother, Neighbours, Fan) for the owner's walkthrough.
 
@@ -2397,6 +2399,7 @@ between sessions.
 | `written_now` (`cutsheet.ts` `now`, `evals/qwen-prompt.ts`) | S6 (the sheet), `sizes`, transformations | The prompt written for the local machine only (qwen-image-written). How a thing is now where a change of its size, its shape or the whole of it is in force: the latest change of the whole of it and the latest of its size or shape since, this moment's own after those carried; its look keeps all but its size, and a change of the whole of it keeps none. Things, and someone drawn without an image of their own; how someone with one has turned into something else is the transformations step's. |
 | `tiny_marker` (`previs.ts markTiny`) | S4, the mock-up, the packet, `things_in_frame`, `contained` | A thing the moment has in view (its `things`, the breakdown's) with fewer pixels than its dot gets one (a three-hundredth of the frame's long side across, at least 3: 5 at 1376 by 768), on the keyed mock-up and its id map only, never the clay; `marker` in the id map and the key, where it is, never its size. Not out of the frame, nor behind anything but the hand that holds it (its holder within 15 cm, never their body) or the vehicle its holder rides; never over anyone or anything small. Left for their owners: things the moment has in view not on its floor plan (49 in the corpus) or out of its frame (17), and what floats placed under the water. Packet version 7. |
 | The packet contract (`contract.ts`, `docs/packet-contract.md`, `docs/packet_contract.py`) | the packet, the import, every reader of a packet | Version 8 adds fields only; version 7 stays the default (`evals/packets.ts --v8` writes 8). A cut's stable id is from its scene, its place (the location it has in view), its ordinal there and its words, pinned to Unicode 15.0 (`packet-chars.json`), never from its camera: the same with the camera rules off. Ids inside a contract are stable ids; version 7's fields keep version 7's (`aliases` maps them, within the packet). A field null with basis `unknown` holds the cut that needs it, owned here. Each dream's id history (`runs/packets/ids/`) carries a moved moment's earlier id; an edit is a new moment. |
+| The world's state at each cut (`resolvers.ts`, version 8's `world_at`) | the packet contract, the story record, the floor plan, `contained`, `point_state` | Filled only by Dream Chat's writer (`--v8`), from the rebuild; a version 7 packet turned into version 8 keeps it null. Each attribute read where the rebuild decides it: present from the record; location from the plan, in its own frame (`<scene>/<place>`), the writer's where it stands where the writer put it; held by from the record, else the plan; inside of by castplace's own reading (`containerFor`); open on the fixture the part is (`fixtureOfPart`, shared with withOpen); facing from the plan. A handover's two hands (the record names one, the plan the other: 8 in the corpus) are the next step's; what the record has that the plan never placed (97) and what the frame has the record does not (23) are counted apart. Gaze and count follow. |
 | `visible_device` (E5, `devices.ts`) | S4, S6, the packet, the import, `things_in_frame`, `story_marks` | One writer reading per dream, cached with the cast's (`--devices`), asked on import. Lettering is the dream's own day or time only, put on in code by the harness from `story.lettering` (the owner, 2 Oct), and taken in code from what a sentence of the moment says is written on the device itself where the reading proposed none (never on a clock, never a time the dreamer did not tell); every other writing stays unreadable marks (`story_marks`), and the story's writing line leaves out what lettering covers. Bubbles: one in a dream at most, only for a moment no thing shows; 27 of the corpus's 58 devices are bubbles, one in a dream each, a rate for the owner to judge. The place's own clock or calendar is the device where it has one; a wall device outdoors stands at eye height beside them. Packet version 5. |
 | `place_built` (`built.ts`) | S6 sketches, the import | A place's sketch alone is told by its build (`Item.built`); its moments, image lines and the record keep the place's name and look. One writer reading per dream, cached with the cast's (`--built`), asked on import; a place whose words say only what it is built of is left as it was. The two words of use left in the corpus are a roof's slopes meeting at its ridge and a bridge over the night market. |
 
@@ -3659,6 +3662,19 @@ Found in the S1 review (26 Sep) and left for the step it belongs to, so S1 stays
   replay's style choice), the last answer used; `repeatOf` on the same questions asked again on purpose, both answers
   used (a close call averaged). Against lab 23f88ed, 0 of 127 frozen and 0 of 447 live pictures move; prompt cases the
   same. `bun test`: 1299 pass, 0 fail off and on, and file by file. No pictures, no money.
+- 3 Oct (morning, nothing drawn): the world's state at each cut, resolved once where the rebuild decides it
+  (`resolvers.ts`, version 8's `world_at`; 60d5a3a). Present from the story record; location from the moment's floor
+  plan in its own frame, with how high it rests and who placed it (the writer's where it stands where the writer put
+  it); what someone rides; held by, the record's holder as the prompt says it, else the plan's; inside of, by the reading
+  castplace puts a cast thing in by; open, on the fixture a place's part is; facing. Filled only by Dream Chat's writer
+  from its rebuild; a version 7 packet turned into version 8 keeps it null and a check that needs it holds the cut.
+  `evals/world-at.ts`, 79 dreams with the merged flow's imports, what is due taken from the frame and the plan: present
+  1260/1260, location 872/872, rides 74/74, held by 149/149, open 21/21, facing 672/672, inside of 1/2 (the other a wall
+  clock beside lockers, the eval's own reading); no value other than the plan's. Eight handovers keep the record's
+  holder where the plan has the giver's hand: the holds shared between hands, next. The merged flow's stores rebuilt as
+  version 8: 634 of 647 cuts with a world, every packet keeping to its schema. Against lab 9869473, 0 of 127 frozen and 0
+  of 447 live pictures move; prompt cases the same. `bun test`: 1307 pass, 0 fail off and on, and file by file. No
+  pictures, no money.
 
 ## Owner's direction (29 Sep): reviews and merges move to the cloud session
 
